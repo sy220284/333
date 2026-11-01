@@ -164,6 +164,7 @@ mkdir -p "$(dirname "$ENV_FILE")"
   printf 'export DEV333_REPO_ROOT=%q\n' "$REPO_ROOT"
   printf 'export PATH=%q:%q:%q:%q:"$PATH"\n' \
     "$TOOLS_ROOT/node/bin" "$TOOLS_ROOT/bun/bin" "$TOOLS_ROOT/python/bin" "$TOOLS_ROOT/bin"
+  printf 'if [ -d %q ]; then export LD_LIBRARY_PATH=%q:"${LD_LIBRARY_PATH:-}"; fi\n' "$TOOLS_ROOT/python/lib" "$TOOLS_ROOT/python/lib"
 } > "$ENV_FILE"
 if [ "$CONFIGURE_SHELL" = true ]; then
   case "${SHELL##*/}" in

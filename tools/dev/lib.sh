@@ -86,7 +86,11 @@ component_ready() {
       ;;
     python)
       p="$(python_path)" || return 1
-      "$p" -c "import sys; assert sys.version_info >= ($PYTHON_MAJOR, $PYTHON_MINOR)" 2>/dev/null
+      if [ "$p" = "$TOOLS_ROOT/python/bin/python3" ]; then
+        LD_LIBRARY_PATH="$TOOLS_ROOT/python/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" "$p" -c "import sys; assert sys.version_info >= ($PYTHON_MAJOR, $PYTHON_MINOR)" 2>/dev/null
+      else
+        "$p" -c "import sys; assert sys.version_info >= ($PYTHON_MAJOR, $PYTHON_MINOR)" 2>/dev/null
+      fi
       ;;
     actionlint)
       p="$(actionlint_path)" || return 1

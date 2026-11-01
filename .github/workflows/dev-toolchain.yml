@@ -72,6 +72,8 @@ jobs:
           "$RUNNER_TEMP/actionlint-bin/actionlint" .github/workflows/dev-toolchain.yml
       - name: 打包 333 Node / Bun / 依赖 / Python / actionlint 组件
         run: bash tools/dev/package-artifacts.sh "$RUNNER_TEMP/toolchain-artifacts"
+      - name: 解包运行组件，验证离线运行时可移植性
+        run: bash tools/dev/test-runtime-archives.sh "$RUNNER_TEMP/toolchain-artifacts"
 
       - name: 上传安装脚本 bootstrap
         uses: actions/upload-artifact@v4
