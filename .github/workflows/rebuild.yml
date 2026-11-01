@@ -1,0 +1,24 @@
+name: 源码独立重建验证
+on:
+  push:
+    branches: [rebuild/bun-from-src]
+  workflow_dispatch:
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.0
+      - name: 从源码映射恢复精确依赖快照
+        run: node build/restore-dependencies.mjs
+      - name: 仅从 src 源码构建
+        run: bun build/rebuild.mjs
+      - name: 新构建版本和基础交互验收
+        run: |
+          set -euo pipefail
+          test -f dist/main.js
+          node dist/main.js --version | grep -F '2.1.88'
+          node dist/main.js --help | grep -F -- '--print'
