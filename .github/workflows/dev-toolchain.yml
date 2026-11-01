@@ -1,0 +1,217 @@
+name: 333 开发工具链
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/dev/**'
+      - '.github/workflows/dev-toolchain.yml'
+      - 'build/install-public-deps.mjs'
+      - 'build/public-dependencies.lock.json'
+      - 'build/restore-dependencies.mjs'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/dev/**'
+      - '.github/workflows/dev-toolchain.yml'
+      - 'build/install-public-deps.mjs'
+      - 'build/public-dependencies.lock.json'
+      - 'build/restore-dependencies.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: 333-dev-toolchain-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: 生成 333 离线组件
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 校验工具链脚本和源码基线
+        run: |
+          set -euo pipefail
+          for f in tools/dev/*.sh; do bash -n "$f"; done
+          bash tools/dev/setup-toolchain.sh --self-test
+          python3 tools/dev/test-toolchain.py
+      - name: 验证源代码资源与锁定依赖
+        run: |
+          node build/verify-bundled-assets.mjs
+          node build/restore-claude-api.mjs --verify
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 验证 333 独立源码构建和全部回归测试
+        run: |
+          bun build/rebuild.mjs
+          node build/package-release.mjs
+          npm run test:all
+      - name: 准备固定版本 actionlint
+        run: |
+          set -euo pipefail
+          source tools/dev/toolchain-versions.env
+          URL="https://github.com/rhysd/actionlint/releases/download/v$ACTIONLINT_VERSION/actionlint_$ACTIONLINT_VERSION_linux_amd64.tar.gz"
+          curl --fail --location --retry 3 "$URL" -o "$RUNNER_TEMP/actionlint.tar.gz"
+          printf '%s  %s\n' "$ACTIONLINT_LINUX_X64_SHA256" "$RUNNER_TEMP/actionlint.tar.gz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/actionlint-bin"
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP/actionlint-bin" actionlint
+          echo "$RUNNER_TEMP/actionlint-bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/actionlint-bin/actionlint" .github/workflows/dev-toolchain.yml
+      - name: 打包 333 Node / Bun / 依赖 / Python / actionlint 组件
+        run: bash tools/dev/package-artifacts.sh "$RUNNER_TEMP/toolchain-artifacts"
+
+      - name: 上传安装脚本 bootstrap
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-toolchain-bootstrap-latest
+          path: ${{ runner.temp }}/toolchain-artifacts/333-toolchain-bootstrap-latest
+          retention-days: 14
+          if-no-files-found: error
+      - name: 上传 Node 24
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-toolchain-node-latest
+          path: ${{ runner.temp }}/toolchain-artifacts/333-toolchain-node-latest
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+      - name: 上传 Bun 1.4.4
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-toolchain-bun-latest
+          path: ${{ runner.temp }}/toolchain-artifacts/333-toolchain-bun-latest
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+      - name: 上传依赖快照
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-toolchain-source-deps-latest
+          path: ${{ runner.temp }}/toolchain-artifacts/333-toolchain-source-deps-latest
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+      - name: 上传 Python 3.12
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-toolchain-python-latest
+          path: ${{ runner.temp }}/toolchain-artifacts/333-toolchain-python-latest
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+      - name: 上传 actionlint
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-toolchain-actionlint-latest
+          path: ${{ runner.temp }}/toolchain-artifacts/333-toolchain-actionlint-latest
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+      - name: 上传 npm 依赖分片 01
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-toolchain-npm-public-part-01-latest
+          path: ${{ runner.temp }}/toolchain-artifacts/333-toolchain-npm-public-part-01-latest
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+      - name: 上传 npm 依赖分片 02
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-toolchain-npm-public-part-02-latest
+          path: ${{ runner.temp }}/toolchain-artifacts/333-toolchain-npm-public-part-02-latest
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+      - name: 上传 npm 依赖分片 03
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-toolchain-npm-public-part-03-latest
+          path: ${{ runner.temp }}/toolchain-artifacts/333-toolchain-npm-public-part-03-latest
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+      - name: 上传 npm 依赖分片 04
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-toolchain-npm-public-part-04-latest
+          path: ${{ runner.temp }}/toolchain-artifacts/333-toolchain-npm-public-part-04-latest
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+
+  verify-install:
+    name: 离线回装与回归（${{ matrix.profile }}）
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [build, full]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: 333-toolchain-npm-public-part-*-latest
+          path: ${{ runner.temp }}/artifacts
+          merge-multiple: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: 333-toolchain-source-deps-latest
+          path: ${{ runner.temp }}/artifacts/333-toolchain-source-deps-latest
+      - name: 下载 full 档 actionlint
+        if: matrix.profile == 'full'
+        uses: actions/download-artifact@v4
+        with:
+          name: 333-toolchain-actionlint-latest
+          path: ${{ runner.temp }}/artifacts/333-toolchain-actionlint-latest
+      - name: 从 777 式 Artifact 离线安装并检验版本
+        env:
+          DEV333_TOOLCHAIN_ENV_FILE: ${{ runner.temp }}/333-dev.env
+          DEV333_TOOLS_ROOT: ${{ runner.temp }}/333-tools
+          PROFILE: ${{ matrix.profile }}
+        run: |
+          set -euo pipefail
+          bash tools/dev/ai-toolchain.sh plan "$PROFILE"
+          bash tools/dev/ai-toolchain.sh install "$PROFILE" --artifacts-dir "$RUNNER_TEMP/artifacts"
+          bash tools/dev/ai-toolchain.sh check "$PROFILE"
+      - name: 验证恢复依赖可直接重建，且测试通过
+        env:
+          DEV333_TOOLCHAIN_ENV_FILE: ${{ runner.temp }}/333-dev.env
+        run: |
+          set -euo pipefail
+          source "$DEV333_TOOLCHAIN_ENV_FILE"
+          npm run verify
+          git diff --exit-code
+      - name: full 档验证研究索引与工作流检查
+        if: matrix.profile == 'full'
+        env:
+          DEV333_TOOLCHAIN_ENV_FILE: ${{ runner.temp }}/333-dev.env
+        run: |
+          set -euo pipefail
+          source "$DEV333_TOOLCHAIN_ENV_FILE"
+          python3 research/claude-code-2.1.88/generate.py --verify
+          actionlint .github/workflows/dev-toolchain.yml
