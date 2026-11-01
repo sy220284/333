@@ -1,0 +1,4679 @@
+{
+  "schema": 1,
+  "method": "M1 ownership and source-difference worklist; related F mapped as candidates, not semantics acceptance",
+  "counts": {
+    "old_flags": 90,
+    "feature_chains": 61,
+    "flags_due_M1": 14,
+    "flags_with_later_related_task": 76,
+    "chains_due_M1": [
+      "F080"
+    ],
+    "chains_with_later_related_task": 60,
+    "no_isolated_target_token": 89
+  },
+  "flags": [
+    {
+      "flag": "ABLATION_BASELINE",
+      "old_references": 1,
+      "old_sources": [
+        "src/entrypoints/cli.tsx"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "RESTRICTED_INTERNAL_GATE_CANDIDATE",
+      "related_F_candidate": [],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "M1_REQUIRED_CLASSIFICATION",
+      "developer_cards": [],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": true,
+      "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "AGENT_MEMORY_SNAPSHOT",
+      "old_references": 2,
+      "old_sources": [
+        "src/main.tsx",
+        "src/tools/AgentTool/loadAgentsDir.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F024",
+        "F056"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M6",
+          "related_F": [
+            "F024"
+          ]
+        },
+        {
+          "M": "M7",
+          "related_F": [
+            "F056"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "AGENT_TRIGGERS",
+      "old_references": 11,
+      "old_sources": [
+        "src/cli/print.ts",
+        "src/constants/tools.ts",
+        "src/screens/REPL.tsx",
+        "src/skills/bundled/index.ts",
+        "src/tools.ts",
+        "src/tools/ScheduleCronTool/prompt.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F061",
+        "F054"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M6",
+          "related_F": [
+            "F061",
+            "F054"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "AGENT_TRIGGERS_REMOTE",
+      "old_references": 2,
+      "old_sources": [
+        "src/skills/bundled/index.ts",
+        "src/tools.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F061",
+        "F066"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F066"
+          ]
+        },
+        {
+          "M": "M6",
+          "related_F": [
+            "F061"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "ALLOW_TEST_VERSIONS",
+      "old_references": 2,
+      "old_sources": [
+        "src/utils/nativeInstaller/download.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "RESTRICTED_INTERNAL_GATE_CANDIDATE",
+      "related_F_candidate": [],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "M1_REQUIRED_CLASSIFICATION",
+      "developer_cards": [],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": true,
+      "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "ANTI_DISTILLATION_CC",
+      "old_references": 1,
+      "old_sources": [
+        "src/services/api/claude.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "RESTRICTED_INTERNAL_GATE_CANDIDATE",
+      "related_F_candidate": [],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "M1_REQUIRED_CLASSIFICATION",
+      "developer_cards": [],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": true,
+      "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "AUTO_THEME",
+      "old_references": 3,
+      "old_sources": [
+        "src/components/ThemePicker.tsx",
+        "src/components/design-system/ThemeProvider.tsx",
+        "src/tools/ConfigTool/supportedSettings.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F011"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F011"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "AWAY_SUMMARY",
+      "old_references": 2,
+      "old_sources": [
+        "src/hooks/useAwaySummary.ts",
+        "src/screens/REPL.tsx"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F004",
+        "F023"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M4",
+          "related_F": [
+            "F004",
+            "F023"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "BASH_CLASSIFIER",
+      "old_references": 49,
+      "old_sources": [
+        "src/cli/structuredIO.ts",
+        "src/components/messages/UserToolResultMessage/UserToolSuccessMessage.tsx",
+        "src/components/permissions/BashPermissionRequest/BashPermissionRequest.tsx",
+        "src/components/permissions/PermissionDecisionDebugInfo.tsx",
+        "src/components/permissions/PermissionRuleExplanation.tsx",
+        "src/components/permissions/hooks.ts",
+        "src/hooks/toolPermission/PermissionContext.ts",
+        "src/hooks/toolPermission/handlers/coordinatorHandler.ts",
+        "src/hooks/toolPermission/handlers/interactiveHandler.ts",
+        "src/hooks/toolPermission/handlers/swarmWorkerHandler.ts",
+        "src/hooks/toolPermission/permissionLogging.ts",
+        "src/hooks/useCanUseTool.tsx",
+        "src/services/api/withRetry.ts",
+        "src/tools/BashTool/bashPermissions.ts",
+        "src/tools/BashTool/pathValidation.ts",
+        "src/utils/classifierApprovals.ts",
+        "src/utils/messages.ts",
+        "src/utils/permissions/permissions.ts",
+        "src/utils/permissions/yoloClassifier.ts",
+        "src/utils/swarm/inProcessRunner.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F032",
+        "F042"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M3",
+          "related_F": [
+            "F032",
+            "F042"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "BG_SESSIONS",
+      "old_references": 11,
+      "old_sources": [
+        "src/commands/exit/exit.tsx",
+        "src/entrypoints/cli.tsx",
+        "src/main.tsx",
+        "src/query.ts",
+        "src/screens/REPL.tsx",
+        "src/utils/concurrentSessions.ts",
+        "src/utils/conversationRecovery.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F062",
+        "F095"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M4",
+          "related_F": [
+            "F062"
+          ]
+        },
+        {
+          "M": "M8",
+          "related_F": [
+            "F095"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "BREAK_CACHE_COMMAND",
+      "old_references": 2,
+      "old_sources": [
+        "src/context.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F021"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M2",
+          "related_F": [
+            "F021"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "BRIDGE_MODE",
+      "old_references": 29,
+      "old_sources": [
+        "src/bridge/bridgeEnabled.ts",
+        "src/commands.ts",
+        "src/commands/bridge/index.ts",
+        "src/components/PromptInput/PromptInputFooter.tsx",
+        "src/components/Settings/Config.tsx",
+        "src/entrypoints/cli.tsx",
+        "src/hooks/useCanUseTool.tsx",
+        "src/hooks/useReplBridge.tsx",
+        "src/main.tsx",
+        "src/screens/REPL.tsx",
+        "src/tools/BriefTool/attachments.ts",
+        "src/tools/BriefTool/upload.ts",
+        "src/tools/ConfigTool/supportedSettings.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F066",
+        "F067"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F066",
+            "F067"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "BUDDY",
+      "old_references": 18,
+      "old_sources": [
+        "src/buddy/CompanionSprite.tsx",
+        "src/buddy/prompt.ts",
+        "src/buddy/useBuddyNotification.tsx",
+        "src/commands.ts",
+        "src/components/PromptInput/PromptInput.tsx",
+        "src/screens/REPL.tsx",
+        "src/utils/attachments.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F072"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F072"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "BUILDING_CLAUDE_APPS",
+      "old_references": 1,
+      "old_sources": [
+        "src/skills/bundled/index.ts"
+      ],
+      "old_compilation": "enabled",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F051",
+        "F100"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M6",
+          "related_F": [
+            "F051",
+            "F100"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "BUILTIN_EXPLORE_PLAN_AGENTS",
+      "old_references": 1,
+      "old_sources": [
+        "src/tools/AgentTool/builtInAgents.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F007",
+        "F056"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M3",
+          "related_F": [
+            "F007"
+          ]
+        },
+        {
+          "M": "M7",
+          "related_F": [
+            "F056"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "BYOC_ENVIRONMENT_RUNNER",
+      "old_references": 1,
+      "old_sources": [
+        "src/entrypoints/cli.tsx"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F099"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F099"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "CACHED_MICROCOMPACT",
+      "old_references": 12,
+      "old_sources": [
+        "src/constants/prompts.ts",
+        "src/query.ts",
+        "src/services/api/claude.ts",
+        "src/services/api/logging.ts",
+        "src/services/compact/microCompact.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F023",
+        "F086"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M4",
+          "related_F": [
+            "F023",
+            "F086"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "CCR_AUTO_CONNECT",
+      "old_references": 3,
+      "old_sources": [
+        "src/bridge/bridgeEnabled.ts",
+        "src/utils/config.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F066"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F066"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "CCR_MIRROR",
+      "old_references": 4,
+      "old_sources": [
+        "src/bridge/bridgeEnabled.ts",
+        "src/bridge/remoteBridgeCore.ts",
+        "src/main.tsx"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F066"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F066"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "CCR_REMOTE_SETUP",
+      "old_references": 1,
+      "old_sources": [
+        "src/commands.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F066"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F066"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "CHICAGO_MCP",
+      "old_references": 16,
+      "old_sources": [
+        "src/entrypoints/cli.tsx",
+        "src/main.tsx",
+        "src/query.ts",
+        "src/query/stopHooks.ts",
+        "src/services/analytics/metadata.ts",
+        "src/services/mcp/client.ts",
+        "src/services/mcp/config.ts",
+        "src/state/AppStateStore.ts",
+        "src/utils/computerUse/cleanup.ts",
+        "src/utils/computerUse/wrapper.tsx"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F053"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M6",
+          "related_F": [
+            "F053"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "COMMIT_ATTRIBUTION",
+      "old_references": 12,
+      "old_sources": [
+        "src/cli/print.ts",
+        "src/commands/clear/caches.ts",
+        "src/screens/REPL.tsx",
+        "src/services/compact/postCompactCleanup.ts",
+        "src/setup.ts",
+        "src/utils/attribution.ts",
+        "src/utils/sessionRestore.ts",
+        "src/utils/shell/bashProvider.ts",
+        "src/utils/worktree.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F038"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M3",
+          "related_F": [
+            "F038"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "COMPACTION_REMINDERS",
+      "old_references": 1,
+      "old_sources": [
+        "src/utils/attachments.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F023"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M4",
+          "related_F": [
+            "F023"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "CONNECTOR_TEXT",
+      "old_references": 8,
+      "old_sources": [
+        "src/components/Message.tsx",
+        "src/constants/betas.ts",
+        "src/services/api/claude.ts",
+        "src/services/api/logging.ts",
+        "src/utils/messages.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F018",
+        "F053"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M2",
+          "related_F": [
+            "F018"
+          ]
+        },
+        {
+          "M": "M6",
+          "related_F": [
+            "F053"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "CONTEXT_COLLAPSE",
+      "old_references": 23,
+      "old_sources": [
+        "src/commands/context/context-noninteractive.ts",
+        "src/commands/context/context.tsx",
+        "src/components/ContextVisualization.tsx",
+        "src/components/TokenWarning.tsx",
+        "src/query.ts",
+        "src/screens/REPL.tsx",
+        "src/screens/ResumeConversation.tsx",
+        "src/services/compact/autoCompact.ts",
+        "src/services/compact/postCompactCleanup.ts",
+        "src/setup.ts",
+        "src/tools.ts",
+        "src/utils/analyzeContext.ts",
+        "src/utils/sessionRestore.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F023"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M4",
+          "related_F": [
+            "F023"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "COORDINATOR_MODE",
+      "old_references": 32,
+      "old_sources": [
+        "src/QueryEngine.ts",
+        "src/cli/print.ts",
+        "src/commands/clear/conversation.ts",
+        "src/components/PromptInput/PromptInputFooterLeftSide.tsx",
+        "src/coordinator/coordinatorMode.ts",
+        "src/main.tsx",
+        "src/screens/REPL.tsx",
+        "src/screens/ResumeConversation.tsx",
+        "src/tools.ts",
+        "src/tools/AgentTool/AgentTool.tsx",
+        "src/tools/AgentTool/builtInAgents.ts",
+        "src/utils/processUserInput/processSlashCommand.tsx",
+        "src/utils/sessionRestore.ts",
+        "src/utils/systemPrompt.ts",
+        "src/utils/toolPool.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F056"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M7",
+          "related_F": [
+            "F056"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "COWORKER_TYPE_TELEMETRY",
+      "old_references": 2,
+      "old_sources": [
+        "src/services/analytics/metadata.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F080"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "M1_REQUIRED_F080_GAP",
+      "developer_cards": [],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": true,
+      "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "DAEMON",
+      "old_references": 3,
+      "old_sources": [
+        "src/commands.ts",
+        "src/entrypoints/cli.tsx"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F062",
+        "F095"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M4",
+          "related_F": [
+            "F062"
+          ]
+        },
+        {
+          "M": "M8",
+          "related_F": [
+            "F095"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "DIRECT_CONNECT",
+      "old_references": 5,
+      "old_sources": [
+        "src/main.tsx"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F066"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F066"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "DOWNLOAD_USER_SETTINGS",
+      "old_references": 5,
+      "old_sources": [
+        "src/cli/print.ts",
+        "src/commands/reload-plugins/reload-plugins.ts",
+        "src/services/settingsSync/index.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F091",
+        "F099"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F099"
+          ]
+        },
+        {
+          "M": "M6",
+          "related_F": [
+            "F091"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "DUMP_SYSTEM_PROMPT",
+      "old_references": 1,
+      "old_sources": [
+        "src/entrypoints/cli.tsx"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "RESTRICTED_INTERNAL_GATE_CANDIDATE",
+      "related_F_candidate": [],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "M1_REQUIRED_CLASSIFICATION",
+      "developer_cards": [],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": true,
+      "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "ENHANCED_TELEMETRY_BETA",
+      "old_references": 2,
+      "old_sources": [
+        "src/utils/telemetry/sessionTracing.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F080"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "M1_REQUIRED_F080_GAP",
+      "developer_cards": [],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": true,
+      "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "EXPERIMENTAL_SKILL_SEARCH",
+      "old_references": 21,
+      "old_sources": [
+        "src/commands.ts",
+        "src/components/messages/AttachmentMessage.tsx",
+        "src/constants/prompts.ts",
+        "src/query.ts",
+        "src/services/compact/compact.ts",
+        "src/services/mcp/useManageMCPConnections.ts",
+        "src/tools/SkillTool/SkillTool.ts",
+        "src/utils/attachments.ts",
+        "src/utils/messages.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F051"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M6",
+          "related_F": [
+            "F051"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "EXTRACT_MEMORIES",
+      "old_references": 7,
+      "old_sources": [
+        "src/cli/print.ts",
+        "src/memdir/paths.ts",
+        "src/query/stopHooks.ts",
+        "src/utils/backgroundHousekeeping.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F024"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M6",
+          "related_F": [
+            "F024"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "FILE_PERSISTENCE",
+      "old_references": 3,
+      "old_sources": [
+        "src/cli/print.ts",
+        "src/utils/filePersistence/filePersistence.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F026"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M4",
+          "related_F": [
+            "F026"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "FORK_SUBAGENT",
+      "old_references": 5,
+      "old_sources": [
+        "src/commands.ts",
+        "src/commands/branch/index.ts",
+        "src/components/messages/UserTextMessage.tsx",
+        "src/tools/AgentTool/forkSubagent.ts",
+        "src/tools/ToolSearchTool/prompt.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F058"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M7",
+          "related_F": [
+            "F058"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "HARD_FAIL",
+      "old_references": 2,
+      "old_sources": [
+        "src/main.tsx",
+        "src/utils/log.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "RESTRICTED_INTERNAL_GATE_CANDIDATE",
+      "related_F_candidate": [],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "M1_REQUIRED_CLASSIFICATION",
+      "developer_cards": [],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": true,
+      "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "HISTORY_PICKER",
+      "old_references": 4,
+      "old_sources": [
+        "src/components/PromptInput/PromptInput.tsx",
+        "src/hooks/useHistorySearch.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F004"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M4",
+          "related_F": [
+            "F004"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "HISTORY_SNIP",
+      "old_references": 16,
+      "old_sources": [
+        "src/QueryEngine.ts",
+        "src/commands.ts",
+        "src/components/Message.tsx",
+        "src/query.ts",
+        "src/tools.ts",
+        "src/utils/attachments.ts",
+        "src/utils/collapseReadSearch.ts",
+        "src/utils/messages.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F023"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M4",
+          "related_F": [
+            "F023"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "HOOK_PROMPTS",
+      "old_references": 1,
+      "old_sources": [
+        "src/screens/REPL.tsx"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F054"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M6",
+          "related_F": [
+            "F054"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "IS_LIBC_GLIBC",
+      "old_references": 1,
+      "old_sources": [
+        "src/utils/envDynamic.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "RESTRICTED_INTERNAL_GATE_CANDIDATE",
+      "related_F_candidate": [],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "M1_REQUIRED_CLASSIFICATION",
+      "developer_cards": [],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": true,
+      "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "IS_LIBC_MUSL",
+      "old_references": 1,
+      "old_sources": [
+        "src/utils/envDynamic.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "RESTRICTED_INTERNAL_GATE_CANDIDATE",
+      "related_F_candidate": [],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "M1_REQUIRED_CLASSIFICATION",
+      "developer_cards": [],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": true,
+      "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "KAIROS",
+      "old_references": 156,
+      "old_sources": [
+        "src/bridge/bridgeMain.ts",
+        "src/bridge/initReplBridge.ts",
+        "src/cli/print.ts",
+        "src/commands.ts",
+        "src/commands/bridge/bridge.tsx",
+        "src/commands/brief.ts",
+        "src/commands/clear/conversation.ts",
+        "src/components/LogoV2/ChannelsNotice.tsx",
+        "src/components/LogoV2/LogoV2.tsx",
+        "src/components/Messages.tsx",
+        "src/components/PromptInput/Notifications.tsx",
+        "src/components/PromptInput/PromptInput.tsx",
+        "src/components/PromptInput/PromptInputFooterLeftSide.tsx",
+        "src/components/PromptInput/PromptInputQueuedCommands.tsx",
+        "src/components/PromptInput/usePromptInputPlaceholder.ts",
+        "src/components/Settings/Config.tsx",
+        "src/components/Spinner.tsx",
+        "src/components/StatusLine.tsx",
+        "src/components/messages/UserPromptMessage.tsx",
+        "src/components/messages/UserTextMessage.tsx",
+        "src/components/messages/UserToolResultMessage/UserToolSuccessMessage.tsx",
+        "src/constants/prompts.ts",
+        "src/hooks/toolPermission/handlers/interactiveHandler.ts",
+        "src/hooks/useAssistantHistory.ts",
+        "src/hooks/useCanUseTool.tsx",
+        "src/hooks/useGlobalKeybindings.tsx",
+        "src/hooks/useReplBridge.tsx",
+        "src/interactiveHelpers.tsx",
+        "src/keybindings/defaultBindings.ts",
+        "src/main.tsx",
+        "src/memdir/memdir.ts",
+        "src/memdir/paths.ts",
+        "src/screens/REPL.tsx",
+        "src/services/analytics/metadata.ts",
+        "src/services/compact/compact.ts",
+        "src/services/compact/prompt.ts",
+        "src/services/mcp/channelNotification.ts",
+        "src/services/mcp/useManageMCPConnections.ts",
+        "src/skills/bundled/index.ts",
+        "src/tools.ts",
+        "src/tools/AgentTool/AgentTool.tsx",
+        "src/tools/AskUserQuestionTool/AskUserQuestionTool.tsx",
+        "src/tools/BashTool/BashTool.tsx",
+        "src/tools/BriefTool/BriefTool.ts",
+        "src/tools/ConfigTool/supportedSettings.ts",
+        "src/tools/EnterPlanModeTool/EnterPlanModeTool.ts",
+        "src/tools/ExitPlanModeTool/ExitPlanModeV2Tool.ts",
+        "src/tools/PowerShellTool/PowerShellTool.tsx",
+        "src/tools/ScheduleCronTool/prompt.ts",
+        "src/tools/ToolSearchTool/prompt.ts",
+        "src/utils/attachments.ts",
+        "src/utils/conversationRecovery.ts",
+        "src/utils/messageQueueManager.ts",
+        "src/utils/messages.ts",
+        "src/utils/permissions/permissionRuleParser.ts",
+        "src/utils/processUserInput/processSlashCommand.tsx",
+        "src/utils/sessionStorage.ts",
+        "src/utils/settings/types.ts",
+        "src/utils/systemPrompt.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F072",
+        "F061"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F072"
+          ]
+        },
+        {
+          "M": "M6",
+          "related_F": [
+            "F061"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "KAIROS_BRIEF",
+      "old_references": 39,
+      "old_sources": [
+        "src/commands.ts",
+        "src/commands/brief.ts",
+        "src/components/Messages.tsx",
+        "src/components/PromptInput/Notifications.tsx",
+        "src/components/PromptInput/PromptInput.tsx",
+        "src/components/PromptInput/PromptInputQueuedCommands.tsx",
+        "src/components/Settings/Config.tsx",
+        "src/components/Spinner.tsx",
+        "src/components/messages/UserPromptMessage.tsx",
+        "src/components/messages/UserToolResultMessage/UserToolSuccessMessage.tsx",
+        "src/constants/prompts.ts",
+        "src/hooks/useGlobalKeybindings.tsx",
+        "src/keybindings/defaultBindings.ts",
+        "src/main.tsx",
+        "src/tools/BriefTool/BriefTool.ts",
+        "src/tools/ToolSearchTool/prompt.ts",
+        "src/utils/attachments.ts",
+        "src/utils/conversationRecovery.ts",
+        "src/utils/permissions/permissionRuleParser.ts",
+        "src/utils/settings/types.ts"
+      ],
+      "old_compilation": "enabled",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F072"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F072"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "KAIROS_CHANNELS",
+      "old_references": 21,
+      "old_sources": [
+        "src/cli/print.ts",
+        "src/components/LogoV2/ChannelsNotice.tsx",
+        "src/components/LogoV2/LogoV2.tsx",
+        "src/components/messages/UserTextMessage.tsx",
+        "src/hooks/toolPermission/handlers/interactiveHandler.ts",
+        "src/hooks/useCanUseTool.tsx",
+        "src/interactiveHelpers.tsx",
+        "src/main.tsx",
+        "src/services/mcp/channelNotification.ts",
+        "src/services/mcp/useManageMCPConnections.ts",
+        "src/tools/AskUserQuestionTool/AskUserQuestionTool.tsx",
+        "src/tools/EnterPlanModeTool/EnterPlanModeTool.ts",
+        "src/tools/ExitPlanModeTool/ExitPlanModeV2Tool.ts",
+        "src/utils/messageQueueManager.ts",
+        "src/utils/messages.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F072",
+        "F099"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F072",
+            "F099"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "KAIROS_DREAM",
+      "old_references": 1,
+      "old_sources": [
+        "src/skills/bundled/index.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F025"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M6",
+          "related_F": [
+            "F025"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "KAIROS_GITHUB_WEBHOOKS",
+      "old_references": 4,
+      "old_sources": [
+        "src/commands.ts",
+        "src/components/messages/UserTextMessage.tsx",
+        "src/hooks/useReplBridge.tsx",
+        "src/tools.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F061"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M6",
+          "related_F": [
+            "F061"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "KAIROS_PUSH_NOTIFICATION",
+      "old_references": 4,
+      "old_sources": [
+        "src/components/Settings/Config.tsx",
+        "src/tools.ts",
+        "src/tools/ConfigTool/supportedSettings.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F072"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F072"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "LODESTONE",
+      "old_references": 6,
+      "old_sources": [
+        "src/interactiveHelpers.tsx",
+        "src/main.tsx",
+        "src/utils/backgroundHousekeeping.ts",
+        "src/utils/settings/types.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F066",
+        "F099"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F066",
+            "F099"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "MCP_RICH_OUTPUT",
+      "old_references": 3,
+      "old_sources": [
+        "src/tools/MCPTool/UI.tsx"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F053"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M6",
+          "related_F": [
+            "F053"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "MCP_SKILLS",
+      "old_references": 9,
+      "old_sources": [
+        "src/commands.ts",
+        "src/services/mcp/client.ts",
+        "src/services/mcp/useManageMCPConnections.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F051",
+        "F053"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M6",
+          "related_F": [
+            "F051",
+            "F053"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "MEMORY_SHAPE_TELEMETRY",
+      "old_references": 3,
+      "old_sources": [
+        "src/memdir/findRelevantMemories.ts",
+        "src/utils/sessionFileAccessHooks.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F080"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "M1_REQUIRED_F080_GAP",
+      "developer_cards": [],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": true,
+      "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "MESSAGE_ACTIONS",
+      "old_references": 5,
+      "old_sources": [
+        "src/keybindings/defaultBindings.ts",
+        "src/screens/REPL.tsx"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F009"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F009"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "MONITOR_TOOL",
+      "old_references": 13,
+      "old_sources": [
+        "src/components/permissions/PermissionRequest.tsx",
+        "src/components/tasks/BackgroundTasksDialog.tsx",
+        "src/tasks.ts",
+        "src/tasks/LocalShellTask/LocalShellTask.tsx",
+        "src/tools.ts",
+        "src/tools/AgentTool/runAgent.ts",
+        "src/tools/BashTool/BashTool.tsx",
+        "src/tools/BashTool/prompt.ts",
+        "src/tools/PowerShellTool/PowerShellTool.tsx"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F081"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M8",
+          "related_F": [
+            "F081"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "NATIVE_CLIENT_ATTESTATION",
+      "old_references": 1,
+      "old_sources": [
+        "src/constants/system.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F019"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M2",
+          "related_F": [
+            "F019"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "NATIVE_CLIPBOARD_IMAGE",
+      "old_references": 2,
+      "old_sources": [
+        "src/utils/imagePaste.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F009"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F009"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "NEW_INIT",
+      "old_references": 2,
+      "old_sources": [
+        "src/commands/init.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F079"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F079"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "OVERFLOW_TEST_TOOL",
+      "old_references": 2,
+      "old_sources": [
+        "src/tools.ts",
+        "src/utils/permissions/classifierDecision.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "RESTRICTED_INTERNAL_GATE_CANDIDATE",
+      "related_F_candidate": [],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "M1_REQUIRED_CLASSIFICATION",
+      "developer_cards": [],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": true,
+      "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "PERFETTO_TRACING",
+      "old_references": 1,
+      "old_sources": [
+        "src/utils/telemetry/perfettoTracing.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F080"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "M1_REQUIRED_F080_GAP",
+      "developer_cards": [],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": true,
+      "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "POWERSHELL_AUTO_MODE",
+      "old_references": 2,
+      "old_sources": [
+        "src/utils/permissions/permissions.ts",
+        "src/utils/permissions/yoloClassifier.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F033",
+        "F060"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M3",
+          "related_F": [
+            "F033"
+          ]
+        },
+        {
+          "M": "M8",
+          "related_F": [
+            "F060"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "PROACTIVE",
+      "old_references": 37,
+      "old_sources": [
+        "src/cli/print.ts",
+        "src/commands.ts",
+        "src/commands/clear/conversation.ts",
+        "src/components/Messages.tsx",
+        "src/components/PromptInput/PromptInputFooterLeftSide.tsx",
+        "src/components/PromptInput/usePromptInputPlaceholder.ts",
+        "src/constants/prompts.ts",
+        "src/main.tsx",
+        "src/screens/REPL.tsx",
+        "src/services/compact/prompt.ts",
+        "src/tools.ts",
+        "src/tools/AgentTool/AgentTool.tsx",
+        "src/utils/sessionStorage.ts",
+        "src/utils/settings/types.ts",
+        "src/utils/systemPrompt.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F072"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F072"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "PROMPT_CACHE_BREAK_DETECTION",
+      "old_references": 9,
+      "old_sources": [
+        "src/commands/compact/compact.ts",
+        "src/services/api/claude.ts",
+        "src/services/compact/autoCompact.ts",
+        "src/services/compact/compact.ts",
+        "src/services/compact/microCompact.ts",
+        "src/tools/AgentTool/runAgent.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F021"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M2",
+          "related_F": [
+            "F021"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "QUICK_SEARCH",
+      "old_references": 5,
+      "old_sources": [
+        "src/components/PromptInput/PromptInput.tsx",
+        "src/keybindings/defaultBindings.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F031"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M3",
+          "related_F": [
+            "F031"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "REACTIVE_COMPACT",
+      "old_references": 5,
+      "old_sources": [
+        "src/commands/compact/compact.ts",
+        "src/components/TokenWarning.tsx",
+        "src/query.ts",
+        "src/services/compact/autoCompact.ts",
+        "src/utils/analyzeContext.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F023"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M4",
+          "related_F": [
+            "F023"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "REVIEW_ARTIFACT",
+      "old_references": 4,
+      "old_sources": [
+        "src/components/permissions/PermissionRequest.tsx",
+        "src/skills/bundled/index.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F073",
+        "F101"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M6",
+          "related_F": [
+            "F073"
+          ]
+        },
+        {
+          "M": "M9",
+          "related_F": [
+            "F101"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "RUN_SKILL_GENERATOR",
+      "old_references": 1,
+      "old_sources": [
+        "src/skills/bundled/index.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F051"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M6",
+          "related_F": [
+            "F051"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "SELF_HOSTED_RUNNER",
+      "old_references": 1,
+      "old_sources": [
+        "src/entrypoints/cli.tsx"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F095",
+        "F099"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F099"
+          ]
+        },
+        {
+          "M": "M8",
+          "related_F": [
+            "F095"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "SHOT_STATS",
+      "old_references": 10,
+      "old_sources": [
+        "src/components/Stats.tsx",
+        "src/utils/stats.ts",
+        "src/utils/statsCache.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F080"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "M1_REQUIRED_F080_GAP",
+      "developer_cards": [],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": true,
+      "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "SKILL_IMPROVEMENT",
+      "old_references": 1,
+      "old_sources": [
+        "src/utils/hooks/skillImprovement.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F051"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M6",
+          "related_F": [
+            "F051"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "SKIP_DETECTION_WHEN_AUTOUPDATES_DISABLED",
+      "old_references": 1,
+      "old_sources": [
+        "src/components/AutoUpdaterWrapper.tsx"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F079"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F079"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "SLOW_OPERATION_LOGGING",
+      "old_references": 1,
+      "old_sources": [
+        "src/utils/slowOperations.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F080"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "M1_REQUIRED_F080_GAP",
+      "developer_cards": [],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": true,
+      "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "SSH_REMOTE",
+      "old_references": 4,
+      "old_sources": [
+        "src/main.tsx"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F066"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F066"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "STREAMLINED_OUTPUT",
+      "old_references": 1,
+      "old_sources": [
+        "src/cli/print.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F003",
+        "F009"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F003",
+            "F009"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "TEAMMEM",
+      "old_references": 53,
+      "old_sources": [
+        "src/components/memory/MemoryFileSelector.tsx",
+        "src/components/messages/CollapsedReadSearchContent.tsx",
+        "src/components/messages/SystemTextMessage.tsx",
+        "src/components/messages/teamMemCollapsed.tsx",
+        "src/components/messages/teamMemSaved.ts",
+        "src/memdir/memdir.ts",
+        "src/services/extractMemories/extractMemories.ts",
+        "src/services/extractMemories/prompts.ts",
+        "src/services/teamMemorySync/teamMemSecretGuard.ts",
+        "src/services/teamMemorySync/watcher.ts",
+        "src/setup.ts",
+        "src/utils/claudemd.ts",
+        "src/utils/collapseReadSearch.ts",
+        "src/utils/config.ts",
+        "src/utils/memory/types.ts",
+        "src/utils/memoryFileDetection.ts",
+        "src/utils/sessionFileAccessHooks.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F024",
+        "F056"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M6",
+          "related_F": [
+            "F024"
+          ]
+        },
+        {
+          "M": "M7",
+          "related_F": [
+            "F056"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "TEMPLATES",
+      "old_references": 6,
+      "old_sources": [
+        "src/entrypoints/cli.tsx",
+        "src/query.ts",
+        "src/query/stopHooks.ts",
+        "src/utils/markdownConfigLoader.ts",
+        "src/utils/permissions/filesystem.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "AMBIGUOUS_GENERIC_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F075"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M6",
+          "related_F": [
+            "F075"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "TERMINAL_PANEL",
+      "old_references": 5,
+      "old_sources": [
+        "src/components/PromptInput/PromptInputHelpMenu.tsx",
+        "src/hooks/useGlobalKeybindings.tsx",
+        "src/keybindings/defaultBindings.ts",
+        "src/tools.ts",
+        "src/utils/permissions/classifierDecision.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F009"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F009"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "TOKEN_BUDGET",
+      "old_references": 9,
+      "old_sources": [
+        "src/components/PromptInput/PromptInput.tsx",
+        "src/components/Spinner.tsx",
+        "src/constants/prompts.ts",
+        "src/query.ts",
+        "src/screens/REPL.tsx",
+        "src/utils/attachments.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F027"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M2",
+          "related_F": [
+            "F027"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "TORCH",
+      "old_references": 1,
+      "old_sources": [
+        "src/commands.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F018"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M2",
+          "related_F": [
+            "F018"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "TRANSCRIPT_CLASSIFIER",
+      "old_references": 110,
+      "old_sources": [
+        "src/cli/print.ts",
+        "src/cli/structuredIO.ts",
+        "src/commands/login/login.tsx",
+        "src/components/PromptInput/PromptInput.tsx",
+        "src/components/Settings/Config.tsx",
+        "src/components/messages/UserToolResultMessage/UserToolErrorMessage.tsx",
+        "src/components/messages/UserToolResultMessage/UserToolSuccessMessage.tsx",
+        "src/components/permissions/ExitPlanModePermissionRequest/ExitPlanModePermissionRequest.tsx",
+        "src/components/permissions/PermissionDecisionDebugInfo.tsx",
+        "src/components/permissions/PermissionRuleExplanation.tsx",
+        "src/components/permissions/hooks.ts",
+        "src/constants/betas.ts",
+        "src/hooks/notifs/useAutoModeUnavailableNotification.ts",
+        "src/hooks/toolPermission/PermissionContext.ts",
+        "src/hooks/toolPermission/handlers/interactiveHandler.ts",
+        "src/hooks/toolPermission/permissionLogging.ts",
+        "src/hooks/useCanUseTool.tsx",
+        "src/hooks/useReplBridge.tsx",
+        "src/interactiveHelpers.tsx",
+        "src/main.tsx",
+        "src/migrations/resetAutoModeOptInForDefaultOffer.ts",
+        "src/screens/REPL.tsx",
+        "src/services/api/claude.ts",
+        "src/services/tools/toolExecution.ts",
+        "src/tools/AgentTool/AgentTool.tsx",
+        "src/tools/AgentTool/agentToolUtils.ts",
+        "src/tools/AgentTool/runAgent.ts",
+        "src/tools/BashTool/bashPermissions.ts",
+        "src/tools/ConfigTool/supportedSettings.ts",
+        "src/tools/ExitPlanModeTool/ExitPlanModeV2Tool.ts",
+        "src/tools/NotebookEditTool/NotebookEditTool.ts",
+        "src/types/permissions.ts",
+        "src/utils/attachments.ts",
+        "src/utils/autoModeDenials.ts",
+        "src/utils/betas.ts",
+        "src/utils/classifierApprovals.ts",
+        "src/utils/permissions/PermissionMode.ts",
+        "src/utils/permissions/autoModeState.ts",
+        "src/utils/permissions/bypassPermissionsKillswitch.ts",
+        "src/utils/permissions/getNextPermissionMode.ts",
+        "src/utils/permissions/permissionSetup.ts",
+        "src/utils/permissions/permissions.ts",
+        "src/utils/permissions/yoloClassifier.ts",
+        "src/utils/settings/settings.ts",
+        "src/utils/settings/types.ts",
+        "src/utils/toolResultStorage.ts"
+      ],
+      "old_compilation": "enabled",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F042",
+        "F043"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M3",
+          "related_F": [
+            "F042",
+            "F043"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "TREE_SITTER_BASH",
+      "old_references": 3,
+      "old_sources": [
+        "src/utils/bash/parser.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F032"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M3",
+          "related_F": [
+            "F032"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "TREE_SITTER_BASH_SHADOW",
+      "old_references": 5,
+      "old_sources": [
+        "src/tools/BashTool/bashPermissions.ts",
+        "src/utils/bash/parser.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F032"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M3",
+          "related_F": [
+            "F032"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "UDS_INBOX",
+      "old_references": 18,
+      "old_sources": [
+        "src/cli/print.ts",
+        "src/commands.ts",
+        "src/components/messages/UserTextMessage.tsx",
+        "src/main.tsx",
+        "src/setup.ts",
+        "src/tools.ts",
+        "src/tools/SendMessageTool/SendMessageTool.ts",
+        "src/tools/SendMessageTool/prompt.ts",
+        "src/utils/concurrentSessions.ts",
+        "src/utils/messages/systemInit.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F066"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F066"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "ULTRAPLAN",
+      "old_references": 10,
+      "old_sources": [
+        "src/commands.ts",
+        "src/components/PromptInput/PromptInput.tsx",
+        "src/components/permissions/ExitPlanModePermissionRequest/ExitPlanModePermissionRequest.tsx",
+        "src/screens/REPL.tsx",
+        "src/utils/processUserInput/processUserInput.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F007"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M3",
+          "related_F": [
+            "F007"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "ULTRATHINK",
+      "old_references": 1,
+      "old_sources": [
+        "src/utils/thinking.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F017"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M2",
+          "related_F": [
+            "F017"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "UNATTENDED_RETRY",
+      "old_references": 1,
+      "old_sources": [
+        "src/services/api/withRetry.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F020"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M2",
+          "related_F": [
+            "F020"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "UPLOAD_USER_SETTINGS",
+      "old_references": 2,
+      "old_sources": [
+        "src/main.tsx",
+        "src/services/settingsSync/index.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F091",
+        "F099"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F099"
+          ]
+        },
+        {
+          "M": "M6",
+          "related_F": [
+            "F091"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "VERIFICATION_AGENT",
+      "old_references": 4,
+      "old_sources": [
+        "src/constants/prompts.ts",
+        "src/tools/AgentTool/builtInAgents.ts",
+        "src/tools/TaskUpdateTool/TaskUpdateTool.ts",
+        "src/tools/TodoWriteTool/TodoWriteTool.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F064"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M7",
+          "related_F": [
+            "F064"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "VOICE_MODE",
+      "old_references": 49,
+      "old_sources": [
+        "src/commands.ts",
+        "src/components/LogoV2/VoiceModeNotice.tsx",
+        "src/components/PromptInput/Notifications.tsx",
+        "src/components/PromptInput/PromptInputFooterLeftSide.tsx",
+        "src/components/PromptInput/VoiceIndicator.tsx",
+        "src/components/TextInput.tsx",
+        "src/hooks/useVoiceIntegration.tsx",
+        "src/keybindings/defaultBindings.ts",
+        "src/screens/REPL.tsx",
+        "src/services/voiceStreamSTT.ts",
+        "src/state/AppState.tsx",
+        "src/tools/ConfigTool/ConfigTool.ts",
+        "src/tools/ConfigTool/prompt.ts",
+        "src/tools/ConfigTool/supportedSettings.ts",
+        "src/utils/settings/types.ts",
+        "src/voice/voiceModeEnabled.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F013"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M5",
+          "related_F": [
+            "F013"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "WEB_BROWSER_TOOL",
+      "old_references": 4,
+      "old_sources": [
+        "src/main.tsx",
+        "src/screens/REPL.tsx",
+        "src/tools.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F037"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M3",
+          "related_F": [
+            "F037"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    },
+    {
+      "flag": "WORKFLOW_SCRIPTS",
+      "old_references": 10,
+      "old_sources": [
+        "src/commands.ts",
+        "src/components/permissions/PermissionRequest.tsx",
+        "src/components/tasks/BackgroundTasksDialog.tsx",
+        "src/constants/tools.ts",
+        "src/tasks.ts",
+        "src/tools.ts",
+        "src/utils/permissions/classifierDecision.ts"
+      ],
+      "old_compilation": "not_requested",
+      "target_same_named_token_found": "NO_ISOLATED_TOKEN",
+      "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
+      "legacy_interpretation": "COMPILE_TIME_GATE_CONFIRMED_BY_OLD_SOURCE",
+      "related_F_candidate": [
+        "F082",
+        "F083"
+      ],
+      "target_formalized": "UNVERIFIED",
+      "target_behavior_source": null,
+      "old_vs_new_delta": null,
+      "enable_conditions": null,
+      "handoff_path": "LATER_CARD_HAS_RELATED_F",
+      "developer_cards": [
+        {
+          "M": "M8",
+          "related_F": [
+            "F082",
+            "F083"
+          ]
+        }
+      ],
+      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "M1_required": false,
+      "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+    }
+  ],
+  "chain_features": [
+    {
+      "id": "F001",
+      "title": "交互式终端聊天",
+      "legacy_sources": [
+        "src/main.tsx",
+        "src/ink.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-6d8swme1.js:303",
+      "check_static": "--resume",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M5"
+      ],
+      "downstream_scenarios": [
+        "E01",
+        "E24",
+        "E33",
+        "E35"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F002",
+      "title": "一次性 `-p` 执行",
+      "legacy_sources": [
+        "src/cli/print.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-6d8swme1.js:741",
+      "check_static": "--print",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M5"
+      ],
+      "downstream_scenarios": [
+        "E01"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F003",
+      "title": "JSON、stream-json 非交互",
+      "legacy_sources": [
+        "src/cli/structuredIO.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-6d8swme1.js:702",
+      "check_static": "stream-json",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M5"
+      ],
+      "downstream_scenarios": [
+        "E23",
+        "E24",
+        "E66"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F004",
+      "title": "会话恢复与历史选择",
+      "legacy_sources": [
+        "src/commands/resume",
+        "src/history.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-mh7sh27p.js:702",
+      "check_static": "--resume",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M4"
+      ],
+      "downstream_scenarios": [
+        "E33"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F006",
+      "title": "会话导出、分享",
+      "legacy_sources": [
+        "src/commands/export",
+        "share"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-3827ysmv.js:262",
+      "check_static": "/share",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M4"
+      ],
+      "downstream_scenarios": [
+        "E36"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F007",
+      "title": "任务计划与审批",
+      "legacy_sources": [
+        "src/commands/plan",
+        "ExitPlanModeTool"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-kmt6qr99.js:29",
+      "check_static": "--permission-mode",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E03",
+        "E04"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F008",
+      "title": "交互式追问",
+      "legacy_sources": [
+        "src/tools/AskUserQuestionTool"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-f3ak9604.js:199",
+      "check_static": "ask_user_question",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M5"
+      ],
+      "downstream_scenarios": [
+        "E37"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F009",
+      "title": "TUI 会话、全屏与 Diff",
+      "legacy_sources": [
+        "src/components",
+        "src/commands/diff"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:40824",
+      "check_static": "/tui",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M5"
+      ],
+      "downstream_scenarios": [
+        "E37",
+        "E53"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F010",
+      "title": "撤销和回退",
+      "legacy_sources": [
+        "src/commands/rewind"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-7rnqxvcm.js:9662",
+      "check_static": "--rewind-files",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E20"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F011",
+      "title": "主题、键位、Vim 设置",
+      "legacy_sources": [
+        "src/keybindings",
+        "src/vim",
+        "src/commands/theme"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:16731",
+      "check_static": "/config",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M5"
+      ],
+      "downstream_scenarios": [
+        "E37",
+        "E53",
+        "E59"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F012",
+      "title": "状态栏与用量",
+      "legacy_sources": [
+        "src/commands/status",
+        "cost"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:1185",
+      "check_static": "/status",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M5"
+      ],
+      "downstream_scenarios": [
+        "E26",
+        "E33"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F013",
+      "title": "语音输入",
+      "legacy_sources": [
+        "src/commands/voice/",
+        "src/voice/",
+        "src/services/voice.ts",
+        "src/services/voiceStreamSTT.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-1g7w7v7r.js:56",
+      "check_static": "audio-capture",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M5"
+      ],
+      "downstream_scenarios": [
+        "E26"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F014",
+      "title": "多目录项目与 Worktree",
+      "legacy_sources": [
+        "src/commands/add-dir",
+        "EnterWorktreeTool"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:38857",
+      "check_static": "--add-dir",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E38"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F015",
+      "title": "Agent 模型-工具循环",
+      "legacy_sources": [
+        "src/QueryEngine.ts",
+        "src/query.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-2pjf4p7s.js:1016",
+      "check_static": "tool_use",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M2"
+      ],
+      "downstream_scenarios": [
+        "E02",
+        "E15",
+        "E27",
+        "L07"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F016",
+      "title": "流式块与思考内容",
+      "legacy_sources": [
+        "src/services/api/claude.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-bbw420pv.js:488",
+      "check_static": "message_delta",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M2"
+      ],
+      "downstream_scenarios": [
+        "E18"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F017",
+      "title": "模型选择、切换及上下文能力",
+      "legacy_sources": [
+        "src/commands/model"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-6d8swme1.js:1875",
+      "check_static": "--fallback-model",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M2"
+      ],
+      "downstream_scenarios": [
+        "E18",
+        "L07",
+        "L08"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F018",
+      "title": "可扩展模型适配",
+      "legacy_sources": [
+        "src/utils/model"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-4a46xy3v.js:223",
+      "check_static": "ANTHROPIC_BASE_URL",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M2"
+      ],
+      "downstream_scenarios": [
+        "E18",
+        "E52"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F019",
+      "title": "登录、凭证与刷新",
+      "legacy_sources": [
+        "src/cli/handlers/auth.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-0bk2wq2d.js:4523",
+      "check_static": "auth login",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M2"
+      ],
+      "downstream_scenarios": [
+        "E01"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F020",
+      "title": "限流、重试、取消",
+      "legacy_sources": [
+        "src/services/api/withRetry.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:3556",
+      "check_static": "retry-after",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M2"
+      ],
+      "downstream_scenarios": [
+        "E15",
+        "E34",
+        "E52"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F023",
+      "title": "长上下文压缩与恢复",
+      "legacy_sources": [
+        "src/services/compact/"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-460hw2jb.js:17",
+      "check_static": "/compact",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M4"
+      ],
+      "downstream_scenarios": [
+        "E09",
+        "E16",
+        "E51"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F027",
+      "title": "运行成本与令牌统计",
+      "legacy_sources": [
+        "src/services/api/usage.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-at88wjsn.js:1767",
+      "check_static": "output_tokens",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M2"
+      ],
+      "downstream_scenarios": [
+        "E39"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F029",
+      "title": "Write 文件",
+      "legacy_sources": [
+        "src/tools/FileWriteTool"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:28939",
+      "check_static": "FileWriteTool",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E03",
+        "E19"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F031",
+      "title": "Glob/Grep 搜索",
+      "legacy_sources": [
+        "src/tools/GlobTool",
+        "GrepTool"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-dcgwjwpg.js:45",
+      "check_static": "GlobTool",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E02"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F032",
+      "title": "Bash 命令与进程",
+      "legacy_sources": [
+        "src/tools/BashTool"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:56782",
+      "check_static": "BashTool",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E03",
+        "E08",
+        "E23",
+        "E46",
+        "E60"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F033",
+      "title": "PowerShell",
+      "legacy_sources": [
+        "src/tools/PowerShellTool"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-3ykk7zcv.js:2123",
+      "check_static": "PowerShellTool",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E40"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F034",
+      "title": "Notebook 编辑",
+      "legacy_sources": [
+        "src/tools/NotebookEditTool"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:52347",
+      "check_static": "NotebookEdit",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E41"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F035",
+      "title": "LSP 语义查询",
+      "legacy_sources": [
+        "src/tools/LSPTool"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-pp7zwndm.js:1564",
+      "check_static": "textDocument/definition",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E42"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F036",
+      "title": "网络检索与网页读取",
+      "legacy_sources": [
+        "src/tools/WebSearchTool",
+        "WebFetchTool"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-89p7tfyk.js:530",
+      "check_static": "WebSearch",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E06"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F037",
+      "title": "Chrome/浏览器交互",
+      "legacy_sources": [
+        "src/commands/chrome"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-dmtyt8s1.js:9",
+      "check_static": "computer_use",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E08",
+        "E30"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F038",
+      "title": "Git 提交、推送、PR",
+      "legacy_sources": [
+        "src/commands/commit.ts",
+        "commit-push-pr.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:33395",
+      "check_static": "commit-push-pr",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E03",
+        "E20",
+        "E32"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F039",
+      "title": "工具发现与 Schema",
+      "legacy_sources": [
+        "src/tools/ToolSearchTool"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-34bfdsb0.js:1967",
+      "check_static": "ToolSearch",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E21"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F040",
+      "title": "工具截断、错误、取消",
+      "legacy_sources": [
+        "src/Tool.ts",
+        "src/tools/utils.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-89p7tfyk.js:603",
+      "check_static": "tool_result",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E19",
+        "E23",
+        "E34"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F041",
+      "title": "权限模式与细粒度规则",
+      "legacy_sources": [
+        "src/utils/permissions/PermissionMode.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-sr1bpqdt.js:376",
+      "check_static": "--permission-mode",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E04",
+        "E05",
+        "E31",
+        "E60",
+        "E64"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F043",
+      "title": "自动模式 HARD/SOFT/ALLOW 分级",
+      "legacy_sources": [
+        "src/utils/permissions/permissionRuleParser.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:19164",
+      "check_static": "HARD BLOCK",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E05",
+        "E31",
+        "E32",
+        "E49",
+        "E60",
+        "L06"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F047",
+      "title": "不可信页面/项目文件指令隔离",
+      "legacy_sources": [
+        "src/constants/prompts.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:41652",
+      "check_static": "prompt injection",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E06",
+        "E07",
+        "E17",
+        "E22",
+        "E62"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F048",
+      "title": "浏览器/CI/外网外传保护",
+      "legacy_sources": [
+        "src/utils/permissions/"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-5rw2zfa0.js:670",
+      "check_static": "exfiltrat",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E05",
+        "E06",
+        "E32",
+        "L06"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F049",
+      "title": "工作区沙盒与软链保护",
+      "legacy_sources": [
+        "src/utils/sandbox/"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-1ww4jg8j.js:12330",
+      "check_static": "allowNestedUserNamespaces",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E08",
+        "E61"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F050",
+      "title": "破坏性操作/共享资源审批",
+      "legacy_sources": [
+        "src/utils/permissions/denialTracking.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-3fdpcjpk.js:124",
+      "check_static": "PermissionRequest",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E20",
+        "E31",
+        "E55",
+        "E68"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F051",
+      "title": "技能加载与调用",
+      "legacy_sources": [
+        "src/tools/SkillTool",
+        "src/commands/skills"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:2792",
+      "check_static": "/skills",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M6"
+      ],
+      "downstream_scenarios": [
+        "E43"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F052",
+      "title": "插件安装、管理、卸载",
+      "legacy_sources": [
+        "src/cli/handlers/plugins.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-7kz3kchp.js:210",
+      "check_static": "--plugin-dir",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M6"
+      ],
+      "downstream_scenarios": [
+        "E22",
+        "E56",
+        "E62",
+        "E68"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F053",
+      "title": "MCP 资源与工具",
+      "legacy_sources": [
+        "src/cli/handlers/mcp.tsx",
+        "src/tools/MCPTool"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-at88wjsn.js:1783",
+      "check_static": "--mcp-config",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M6"
+      ],
+      "downstream_scenarios": [
+        "E07",
+        "E21",
+        "E57"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F054",
+      "title": "生命周期 Hook 与失败处理",
+      "legacy_sources": [
+        "src/commands/hooks"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-at88wjsn.js:1786",
+      "check_static": "PreToolUse",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M6"
+      ],
+      "downstream_scenarios": [
+        "E21",
+        "E22"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F055",
+      "title": "SDK 集成",
+      "legacy_sources": [
+        "src/entrypoints/",
+        "sdk-tools.d.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-6d8swme1.js:1655",
+      "check_static": "--sdk-url",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M5"
+      ],
+      "downstream_scenarios": [
+        "E24",
+        "E35",
+        "L10"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F061",
+      "title": "可选定时执行入口",
+      "legacy_sources": [
+        "src/tools/ScheduleCronTool"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-62bczwa8.js:222",
+      "check_static": "/schedule",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M6"
+      ],
+      "downstream_scenarios": [
+        "E10",
+        "E11"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F062",
+      "title": "后台工作、任务列表、输出文件与恢复",
+      "legacy_sources": [
+        "src/tasks",
+        "src/tools/TaskListTool"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-05z051sc.js:2198",
+      "check_static": "--bg",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M4"
+      ],
+      "downstream_scenarios": [
+        "E14",
+        "E58",
+        "E63",
+        "L03",
+        "L09",
+        "L14"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F066",
+      "title": "远程 Bridge 与配对",
+      "legacy_sources": [
+        "src/bridge/"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-8w56k4pg.js:21",
+      "check_static": "--remote-control",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M5"
+      ],
+      "downstream_scenarios": [
+        "E24",
+        "E25",
+        "E67"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F067",
+      "title": "WebSocket/SSE",
+      "legacy_sources": [
+        "src/cli/transports/"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:59070",
+      "check_static": "WebSocket",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M5"
+      ],
+      "downstream_scenarios": [
+        "E15",
+        "E25",
+        "E34"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F068",
+      "title": "桌面与移动平台入口",
+      "legacy_sources": [
+        "src/commands/desktop",
+        "mobile"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-c3npf81n.js:70",
+      "check_static": "--desktop",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M5"
+      ],
+      "downstream_scenarios": [
+        "E25",
+        "E33"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F075",
+      "title": "Artifact 模板与页面",
+      "legacy_sources": [],
+      "old_presence_class": "OLD_EQUIVALENT_NOT_LOCATED",
+      "target_first_anchor": "chunk-ghkyq94m.js:3978",
+      "check_static": "/artifact",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M6"
+      ],
+      "downstream_scenarios": [
+        "E29"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F076",
+      "title": "浏览器与 Claude Test 附件",
+      "legacy_sources": [],
+      "old_presence_class": "OLD_EQUIVALENT_NOT_LOCATED",
+      "target_first_anchor": "chunk-ajtyjx88.js:11844",
+      "check_static": "claude_test_draft",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M6"
+      ],
+      "downstream_scenarios": [
+        "E30"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F077",
+      "title": "设计系统同步附件",
+      "legacy_sources": [],
+      "old_presence_class": "OLD_EQUIVALENT_NOT_LOCATED",
+      "target_first_anchor": "chunk-5kfjd6mt.js:121",
+      "check_static": "designSystem",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M6"
+      ],
+      "downstream_scenarios": [
+        "E30"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F079",
+      "title": "诊断和环境检查",
+      "legacy_sources": [
+        "src/commands/doctor"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-n7dvjfwp.js:1657",
+      "check_static": "doctor",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M5"
+      ],
+      "downstream_scenarios": [
+        "E01",
+        "E26",
+        "E35"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F080",
+      "title": "日志、隐私和性能统计",
+      "legacy_sources": [
+        "src/services/api/logging.ts"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-at88wjsn.js:814",
+      "check_static": "OpenTelemetry",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [],
+      "downstream_scenarios": [
+        "E35"
+      ],
+      "M1_required": true,
+      "responsibility": "M1_IMPLEMENT_IF_TARGET_NEW_DELTA",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F086",
+      "title": "空闲压缩与小窗口模型切换",
+      "legacy_sources": [],
+      "old_presence_class": "OLD_EQUIVALENT_NOT_LOCATED",
+      "target_first_anchor": "chunk-55823wbc.js:462",
+      "check_static": "CLAUDE_CODE_AUTO_COMPACT_WINDOW",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M4"
+      ],
+      "downstream_scenarios": [
+        "E51"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F087",
+      "title": "跨提供者协议退让",
+      "legacy_sources": [],
+      "old_presence_class": "OLD_EQUIVALENT_NOT_LOCATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:43175",
+      "check_static": "beta header",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M2"
+      ],
+      "downstream_scenarios": [
+        "E52"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F088",
+      "title": "全屏 TUI Diff 与快捷键终态",
+      "legacy_sources": [],
+      "old_presence_class": "OLD_EQUIVALENT_NOT_LOCATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:40824",
+      "check_static": "/tui fullscreen",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M5"
+      ],
+      "downstream_scenarios": [
+        "E53"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F089",
+      "title": "Agent 后台生命周期与模型继承",
+      "legacy_sources": [],
+      "old_presence_class": "OLD_EQUIVALENT_NOT_LOCATED",
+      "target_first_anchor": "chunk-at88wjsn.js:1794",
+      "check_static": "parent_tool_use_id",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M7"
+      ],
+      "downstream_scenarios": [
+        "E54",
+        "L09"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F090",
+      "title": "安全事件可审计",
+      "legacy_sources": [
+        "claude_code.safety_event"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:67780",
+      "check_static": "tool_decision",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M3"
+      ],
+      "downstream_scenarios": [
+        "E55"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F091",
+      "title": "云端启用技能与插件同步",
+      "legacy_sources": [],
+      "old_presence_class": "OLD_EQUIVALENT_NOT_LOCATED",
+      "target_first_anchor": "chunk-j0tbz6ra.js:44970",
+      "check_static": "synced plugin",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M6"
+      ],
+      "downstream_scenarios": [
+        "E56"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F092",
+      "title": "非交互 MCP 询问超时",
+      "legacy_sources": [],
+      "old_presence_class": "OLD_EQUIVALENT_NOT_LOCATED",
+      "target_first_anchor": "chunk-n7dvjfwp.js:2401",
+      "check_static": "PermissionRequest",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M6"
+      ],
+      "downstream_scenarios": [
+        "E57"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    },
+    {
+      "id": "F102",
+      "title": "**云端 Ultrareview 与本地 Ultra 级深审分流**",
+      "legacy_sources": [
+        "reviewRemote.ts:128–300",
+        "/code-review ultra"
+      ],
+      "old_presence_class": "OLD_SOURCE_RELATED",
+      "target_first_anchor": "chunk-kfdf5pq3.js:892",
+      "check_static": "ultrareview",
+      "is_added_in_2_1_310": "UNVERIFIED",
+      "delta_from_2_1_88": null,
+      "target_full_chain": "UNVERIFIED",
+      "downstream_tasks": [
+        "M9"
+      ],
+      "downstream_scenarios": [
+        "L12",
+        "L16"
+      ],
+      "M1_required": false,
+      "responsibility": "M1_COMPARE_THEN_HANDOFF",
+      "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
+      "status": "COMPARISON_PENDING"
+    }
+  ]
+}
