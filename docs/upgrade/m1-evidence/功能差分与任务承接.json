@@ -3289,7 +3289,15 @@
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
       "static_lead_is_equivalent": null,
       "target_code_anchor": "chunk-taha171j.js:232; chunk-h2tyaevk.js:119",
-      "entry_consumer": "Target initializePerfettoTracing runtime env accessor; bootstrap path needs confirmation"
+      "entry_consumer": "Target initializePerfettoTracing runtime env accessor; bootstrap path needs confirmation",
+      "M1_implemented_facets": [
+        {
+          "behavior": "explicit trusted CLAUDE_CODE_PERFETTO_TRACE now enabled in independent build rather than compiled out",
+          "source": "src/utils/telemetry/perfettoTracing.ts:253-335",
+          "test": "tests/m1-telemetry-policy.test.mjs",
+          "state": "IMPLEMENTED_PENDING_REAL_TRACE_RUNTIME_REPLAY"
+        }
+      ]
     },
     {
       "flag": "POWERSHELL_AUTO_MODE",
@@ -6798,7 +6806,8 @@
       "old_source_proven": true,
       "M1_implemented_facets": [
         "2.1.282 untrusted project/local telemetry export and content enabling blocked at both settings-application paths",
-        "2.1.310 enhanced-tracing opt-in runtime gate, default disabled, without old feature() compilation gate"
+        "2.1.310 enhanced-tracing opt-in runtime gate, default disabled, without old feature() compilation gate",
+        "Legacy PERFETTO_TRACING compile gate replaced by explicit runtime gate, with project-scope export path protection"
       ],
       "new_source_evidence": "chunk-h2tyaevk.js:258-297; chunk-5rw2zfa0.js:1310; chunk-taha171j.js:261-264"
     },
