@@ -128,12 +128,10 @@ if (existsSync(lock)) {
     throw Error('Frozen npm package manifest does not match build/install-public-deps.mjs');
   }
   copyFileSync(lock,activeLock);
-} else if (!existsSync(activeLock)) {
-  // One-time bootstrap. The resulting lock must be committed before release.
-  npm(['install','--prefix',npmroot,'--ignore-scripts','--no-audit','--no-fund','--legacy-peer-deps']);
+} else {
+  throw Error('Missing checked-in build/public-dependencies.lock.json. Rebuild requires a pinned dependency graph.');
 }
-if (!existsSync(activeLock)) throw Error('A public dependency lockfile was not created');
-if (!existsSync(lock)) copyFileSync(activeLock,lock);
+if (!existsSync(activeLock)) throw Error('The pinned dependency lockfile was not copied');
 const digest = createHash('sha256').update(readFileSync(lock)).digest('hex');
 const marker = join(npmroot,'.installed-sha256');
 const cached = existsSync(marker) && existsSync(join(npmroot,'node_modules','react','package.json')) && readFileSync(marker,'utf8') === digest;
