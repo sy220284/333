@@ -1,3 +1,5 @@
+import type { OAuthTokens } from '../../services/oauth/types.js'
+
 /** Credential storage contract, verified against each 2.1.88 backend and consumer. */
 export interface SecureStorage {
   readonly name: string
@@ -30,14 +32,7 @@ export interface StoredMcpOAuth {
 
 /** Data stored in macOS Keychain or .credentials.json, not ordinary settings. */
 export interface SecureStorageData {
-  claudeAiOauth?: {
-    accessToken: string
-    refreshToken: string | null
-    expiresAt: number | null
-    scopes: string[]
-    subscriptionType: string | null
-    rateLimitTier: string | null
-  }
+  claudeAiOauth?: OAuthTokens
   mcpOAuth?: Record<string, StoredMcpOAuth>
   mcpOAuthClientConfig?: Record<string, { clientSecret?: string }>
   mcpXaaIdp?: Record<string, { idToken: string; expiresAt: number }>
