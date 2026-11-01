@@ -192,16 +192,18 @@
       "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
       "legacy_interpretation": "RESTRICTED_INTERNAL_GATE_CANDIDATE",
       "related_F_candidate": [],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "src/services/api/claude.ts; 2.1.310 JS fake_tools literal not found",
+      "old_vs_new_delta": "旧版仅在首方 CLI 与相应 Beta 允许时附加 anti-distillation 请求标记；新版未找到同名协议字段。属于协议层内部差异，后续需检查新版实际 HTTP 请求头和 Beta 参数，不能按名称删除行为。",
       "enable_conditions": null,
       "handoff_path": "M1_REQUIRED_CLASSIFICATION",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "OLD_1P_PROTOCOL_ONLY_NO_PUBLIC_SWITCH",
+      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE"
     },
     {
       "flag": "AUTO_THEME",
@@ -975,16 +977,18 @@
       "related_F_candidate": [
         "F080"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "src/services/analytics/metadata.ts; 2.1.310 JS coworkerType literal not found",
+      "old_vs_new_delta": "旧版只把 COWORKER_TYPE 环境字段写入指标元数据且门控避免在公开包出现名称；新版未检到同字段，但远程宿主遥测体系已有变化。M1 确认这项不是用户独立功能，仍须核对数据最小化。",
       "enable_conditions": null,
       "handoff_path": "M1_REQUIRED_F080_GAP",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "OLD_INTERNAL_ANALYTICS_ATTRIBUTE",
+      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE"
     },
     {
       "flag": "DAEMON",
@@ -1133,16 +1137,18 @@
       "related_F_candidate": [
         "F080"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "chunk-taha171j.js:261; src/utils/telemetry/sessionTracing.ts",
+      "old_vs_new_delta": "旧版 isEnhancedTelemetryEnabled 由 ENHANCED_TELEMETRY_BETA 编译开关总控；新版 ULo 用环境变量 CLAUDE_CODE_ENHANCED_TELEMETRY_BETA/ENABLE_ENHANCED_TELEMETRY_BETA 判断，运行时选择追踪。M1/F080 须补可选运行时启用与可信来源保护。",
       "enable_conditions": null,
       "handoff_path": "M1_REQUIRED_F080_GAP",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "NEW_RUNTIME_TRACE_ENABLEMENT",
+      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE"
     },
     {
       "flag": "EXPERIMENTAL_SKILL_SEARCH",
@@ -1867,16 +1873,18 @@
       "related_F_candidate": [
         "F080"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "src/memdir/findRelevantMemories.ts; src/utils/sessionFileAccessHooks.ts; 2.1.310 JS memoryRecallShape literal not found",
+      "old_vs_new_delta": "旧版对记忆检索结果数、文件年龄与访问行为做内部统计；新版未检到旧统计函数名。实际功能属于内部可观测性，用户记忆召回能力另在 M6。",
       "enable_conditions": null,
       "handoff_path": "M1_REQUIRED_F080_GAP",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "OLD_INTERNAL_MEMORY_RECALL_METRICS",
+      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE"
     },
     {
       "flag": "MESSAGE_ACTIONS",
@@ -2082,16 +2090,18 @@
       "related_F_candidate": [
         "F080"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "chunk-taha171j.js:232; chunk-x3dkgs4r.js:1802",
+      "old_vs_new_delta": "旧版 PERFETTO_TRACING 编译开关控制本地性能追踪；新版保留 CLAUDE_CODE_PERFETTO_TRACE 环境启用及性能 span 清理路径。M1/F080 要核对用户授权、性能消耗、退出清理。",
       "enable_conditions": null,
       "handoff_path": "M1_REQUIRED_F080_GAP",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "NEW_PERFETTO_RUNTIME_CONFIGURATION",
+      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE"
     },
     {
       "flag": "POWERSHELL_AUTO_MODE",
@@ -2403,16 +2413,18 @@
       "related_F_candidate": [
         "F080"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "chunk-ex7g3k30.js:1323,1326,1442-1456",
+      "old_vs_new_delta": "旧版 Stats 组件中 shotDistribution 受 SHOT_STATS 编译门控；新版 stats-cache 仍保留并解析 shotDistribution 字段，未证实新版实际统计生产者或 UI 展示。M1/F080 不得仅以缓存字段认定正式转正。",
       "enable_conditions": null,
       "handoff_path": "M1_REQUIRED_F080_GAP",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "NEW_STATS_CACHE_FIELD_BUT_DISPLAY_UNPROVEN",
+      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE"
     },
     {
       "flag": "SKILL_IMPROVEMENT",
@@ -2489,16 +2501,18 @@
       "related_F_candidate": [
         "F080"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "chunk-wrtp8qz8.js:1621,2564",
+      "old_vs_new_delta": "旧版 slowLoggingAnt 由 SLOW_OPERATION_LOGGING 编译门控，外部版走 slowLoggingExternal；新版 host.diagnostics.slowOperations 有慢操作读取路径，统计采集与暴露仍需跟踪调用。M1/F080 审核其用户可见程度后补齐。",
       "enable_conditions": null,
       "handoff_path": "M1_REQUIRED_F080_GAP",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "NEW_DIAGNOSTICS_SLOW_OPERATIONS",
+      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE"
     },
     {
       "flag": "SSH_REMOTE",
