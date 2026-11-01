@@ -59,6 +59,8 @@ jobs:
         run: node --test tests/cli-parity.test.mjs
       - name: 模拟模型回调与本地 Read 工具端到端差分验收
         run: node --test tests/model-loop-local.test.mjs
+      - name: Glob 与 Grep 文件搜索模型工具往返差分验收
+        run: node --test tests/search-loop-local.test.mjs
       - name: 保存独立重建版发行产物
         uses: actions/upload-artifact@v4
         with:
