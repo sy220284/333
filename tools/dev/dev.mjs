@@ -67,7 +67,7 @@ function typescript(checkChanged) {
   if (!checkChanged) {
     process.stdout.write(result.stdout);
     process.stderr.write(result.stderr);
-    if (result.status) throw new Error('完整 TypeScript 类型检查未通过，共 ' + errors.length + ' 个错误');
+    if (result.status) throw new Error(`完整 TypeScript 类型检查未通过，共 ${errors.length} 个错误`);
     console.log('[OK] 全量 TypeScript 类型检查通过');
     return;
   }
