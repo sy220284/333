@@ -36,6 +36,11 @@ function output(command, args) {
   return result;
 }
 function changed() {
+  if (process.env.DEV333_DIFF_STAGED === '1') {
+    const staged = output('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMR']);
+    if (staged.status !== 0) throw new Error(staged.stderr);
+    return [...new Set(staged.stdout.split(/\r?\n/).map(normalizePath).filter(Boolean))].sort();
+  }
   const base = process.env.DEV333_DIFF_BASE ?? process.env.GITHUB_BASE_REF;
   let result;
   if (base) {
@@ -76,7 +81,7 @@ function typescript(checkChanged) {
 }
 function lint(all) {
   if (!existsSync(bin('biome'))) throw new Error('缺失 Biome，先运行 npm install --prefix tools/dev');
-  const files = all ? ['src', 'native', 'build', 'tests', 'tools/dev'] : [...new Set([...checkedFiles(), 'tools/dev/quality-core.mjs', 'tools/dev/dev.mjs', 'tools/dev/watch.mjs', 'tools/dev/native-smoke.mjs'])];
+  const files = all ? ['src', 'native', 'build', 'tests', 'tools/dev'] : [...new Set([...checkedFiles(), 'tools/dev/quality-core.mjs', 'tools/dev/dev.mjs', 'tools/dev/watch.mjs', 'tools/dev/native-smoke.mjs', 'tools/dev/portable.mjs', 'tools/dev/audit-report.mjs'])];
   if (!files.length) { console.log('[333-dev] 没有需要检查的文件'); return; }
   toolRun('biome', ['lint', '--no-errors-on-unmatched', ...files]);
 }
@@ -103,10 +108,25 @@ switch (command) {
     break;
   }
   case 'watch': run(process.execPath, ['tools/dev/watch.mjs']); break;
+  case 'hooks:install': {
+    const active = output('git', ['config', '--local', '--get', 'core.hooksPath']);
+    if (active.status === 0 && active.stdout.trim() !== 'tools/dev/hooks') throw new Error('已有其他 Git hooksPath 配置，拒绝覆盖');
+    run('git', ['config', '--local', 'core.hooksPath', 'tools/dev/hooks']);
+    console.log('[OK] 已启用仓库提交前检查');
+    break;
+  }
+  case 'hooks:remove': {
+    const active = output('git', ['config', '--local', '--get', 'core.hooksPath']);
+    if (active.stdout.trim() !== 'tools/dev/hooks') throw new Error('未安装本工具链钩子，拒绝覆盖其他设置');
+    run('git', ['config', '--local', '--unset', 'core.hooksPath']);
+    break;
+  }
   case 'native': run(process.execPath, ['tools/dev/native-smoke.mjs']); break;
   case 'coverage':
     run(process.execPath, ['--test', '--experimental-test-coverage', '--test-coverage-include=tools/dev/quality-core.mjs', '--test-coverage-lines=90', 'tests/dev-tooling.test.mjs']);
     break;
+  case 'portable:pack': run(process.execPath, ['tools/dev/portable.mjs', 'pack', process.argv[3] ?? '']); break;
+  case 'portable:install': run(process.execPath, ['tools/dev/portable.mjs', 'install', process.argv[3] ?? '']); break;
   case 'security': npmRun(['audit', '--prefix', '.rebuild/public', '--audit-level=high']); break;
   case 'sbom': npmRun(['sbom', '--prefix', '.rebuild/public', '--sbom-format=cyclonedx']); break;
   case 'verify':
@@ -117,5 +137,5 @@ switch (command) {
     run(process.execPath, ['tools/dev/dev.mjs', 'native']);
     break;
   default:
-    console.log('333 开发命令: bootstrap | doctor | typecheck | typecheck:all | lint | lint:all | format | watch | coverage | native | security | sbom | verify');
+    console.log('333 开发命令: bootstrap | doctor | typecheck | typecheck:all | lint | lint:all | format | watch | coverage | native | security | sbom | hooks:install | hooks:remove | portable:pack | portable:install | verify');
 }
