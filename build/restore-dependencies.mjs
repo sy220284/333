@@ -32,6 +32,14 @@ for (const [rel, content] of [...entries].sort(([a], [b]) => a.localeCompare(b))
   const hash = createHash('sha256').update(content).digest('hex');
   results.push({ path: rel, sha256: hash, bytes: Buffer.byteLength(content) });
 }
+// The public lodash-es entry file was reduced away by the original bundle. Recreate
+// only the exact named exports imported by src/ instead of loading every unused module.
+const lodashExports = ['isEqual', 'memoize'];
+for (const name of lodashExports) {
+  if (!entries.has('node_modules/lodash-es/' + name + '.js')) throw Error('Missing lodash-es export: ' + name);
+}
+await writeFile(resolve(output, 'node_modules/lodash-es/entrypoint.js'),
+  lodashExports.map(name => "export { default as " + name + " } from './" + name + ".js';").join('\\n') + '\\n');
 const report = { sourceMapSha256: expectedHash, files: results.length, packages: packages.size, entries: results };
 await writeFile(resolve(root, '.rebuild/dependency-manifest.json'), JSON.stringify(report, null, 2) + '\n');
 console.log('Recovered and pinned ' + results.length + ' dependency files from ' + packages.size + ' packages');
