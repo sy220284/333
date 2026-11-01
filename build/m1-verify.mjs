@@ -17,6 +17,7 @@ const changes = [1, 2, 3].flatMap(i => {
 });
 const coverage = readJson(join(root, 'docs/upgrade/upgrade-coverage.json'));
 const routing = readJson(join(evidenceDir, '功能差分与任务承接.json'));
+const legacyCallSites = readJson(join(evidenceDir, 'legacy-call-sites.json'));
 const plannedByF = new Map(coverage.features.map(f => [f.id, f.tasks.filter(t => /^M[2-9]$/.test(t))]));
 
 const validTasks = new Set(coverage.tasks.map(x => x.id));
@@ -80,6 +81,11 @@ function checkAll() {
     'assistant','cachedMicrocompact','contextCollapse'].sort());
   assert.ok(missingModules.every(row => row.target_state === 'UNVERIFIED'));
 
+  assert.equal(legacyCallSites.total_flags, 90);
+  assert.equal(legacyCallSites.total_legacy_refs, 972);
+  assert.equal(legacyCallSites.records.length, 90);
+  const calledByFlag = new Map(legacyCallSites.records.map(item => [item.flag, item]));
+  assert.equal(calledByFlag.size, 90);
   assert.equal(flagSet.length, 90, 'M1 requires exactly 90 legacy flags');
   assert.equal(flagSet.reduce((sum, f) => sum + f.legacy_count, 0), 972);
   assert.equal(new Set(flagSet.map(f => f.flag)).size, 90);
@@ -92,6 +98,15 @@ function checkAll() {
     assert.deepEqual(f.old_sources, original.affected_sources);
     assert.equal(f.old_compilation_state, original.compilation_state_333);
     assert.equal(f.owner_M, gapByName.get(f.flag));
+    const calls=calledByFlag.get(f.flag);
+    assert.ok(calls, 'Missing exact legacy caller '+f.flag);
+    assert.equal(calls.source_references.length, f.legacy_count);
+    assert.ok(calls.source_references.every(site =>
+      typeof site.source === 'string' && site.source.startsWith('src/') &&
+      Number.isInteger(site.line) && site.line>0 && hasText(site.context)));
+    assert.ok(calls.source_references.every(site =>
+      site.context.includes('feature(') || site.context.includes('feature (') ||
+      site.context.includes(f.flag)), 'Missing original feature guard');
     assert.ok(Array.isArray(f.old_sources) && f.old_sources.length > 0);
     assert.ok(['INDEXED','ANCHOR_IDENTIFIED','CALL_CHAIN_CONFIRMED','TARGET_SEMANTICS_CONFIRMED',
       'IMPLEMENTED','TESTED','ACCEPTED'].includes(f.status));
@@ -103,6 +118,14 @@ function checkAll() {
     assert.ok(validFeatures.has(item.F_id), 'Unmapped feature: ' + item.F_id);
     assert.match(item.first_code_anchor, /^chunk-[a-z0-9]+\.js:\d+$/);
     assert.ok(hasText(item.static_keyword));
+    assert.ok(Array.isArray(item.candidate_evidence) && item.candidate_evidence.length>0);
+    assert.equal(item.candidate_count,item.candidate_evidence.length);
+    for(const candidate of item.candidate_evidence){
+      assert.match(candidate.location,/^chunk-[a-z0-9]+\\.js:\\d+$/);
+      assert.ok(hasText(candidate.code_snippet));
+      assert.equal(candidate.release_runtime_verified,false,
+        'A static snippet cannot be treated as verified runtime execution');
+    }
     const first = standardsById.get(item.F_id);
     assert.ok(first, 'Missing feature from M1 source standard');
     assert.equal(item.first_code_anchor, first.anchor);
@@ -165,6 +188,12 @@ function checkAll() {
   assert.equal((envIntegration.match(/resolveProjectTelemetryEnv\(/g)??[]).length,2,
     'F080 privacy policy must apply before trust and after trust');
 
+  assert.equal(anchorSet.reduce((n,x)=>n+x.candidate_evidence.length,0),287,
+    'M1 requires all 287 static candidate source samples');
+  assert.equal(routing.flags.filter(x=>x.target_static_leads?.length).length,89);
+  assert.ok(routing.flags.every(x => x.target_lead_assessment),
+    'All 90 flags require candidate evidence and misleading-hit classification');
+  assert.equal(routing.flags.filter(x=>x.static_lead_is_equivalent===false).length,27);
   const accepted = {
     flags: flagSet.filter(verifiedFlag).length,
     anchors: anchorSet.filter(verifiedAnchor).length,
@@ -197,6 +226,8 @@ function verifyOfficialChangelog(path) {
     assert.equal(row.ordinal,ordinal);
     assert.equal(row.source_line,i+1);
     assert.equal(row.source_length,lines[i].slice(2).trim().length);
+    assert.equal(row.source_text,lines[i].slice(2).trim(),
+      'Official changelog source text differs at '+row.id);
   }
   assert.equal(cursor,6313,'Official changelog row count differs');
 }
