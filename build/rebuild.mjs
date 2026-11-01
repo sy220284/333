@@ -75,7 +75,6 @@ const excluded = new Set([
   'commands/assistant/assistant.js',
   'compact/cachedMicrocompact.js',
   'contextCollapse/index.js',
-  'filePersistence/types.js',
 ]);
 const marker = '__unavailable_release_feature__';
 const unresolved = new Set();
