@@ -1,0 +1,35 @@
+name: 333 Bun 类型依赖锁更新候选
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/governance-bun-types.yml'
+      - 'tools/governance/**'
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: 生成精确 Bun 类型锁
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: 更新开发类型锁
+        run: |
+          npm install --prefix tools/dev --package-lock-only --save-dev --save-exact @types/bun@1.4.4 --ignore-scripts --no-audit --no-fund
+          echo 'BUN_LOCK_BEGIN'
+          base64 -w0 tools/dev/package-lock.json
+          echo
+          echo 'BUN_LOCK_END'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 333-bun-types-lock
+          path: |
+            tools/dev/package.json
+            tools/dev/package-lock.json
+          if-no-files-found: error

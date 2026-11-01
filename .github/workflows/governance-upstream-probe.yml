@@ -1,0 +1,55 @@
+name: 333 新版本类型源码补全可行性核查
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/governance/upstream-map-probe.mjs'
+      - '.github/workflows/governance-upstream-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  source-probe:
+    name: 从官方包核查缺失类型源码
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: 生成已有缺失模块基线
+        run: |
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+          set +e
+          node tools/dev/dev.mjs typecheck:all > /tmp/333-types.log 2>&1
+          set -e
+          mkdir -p .rebuild/governance
+          node tools/governance/summarize.mjs types /tmp/333-types.log .rebuild/governance/type-report.json
+          node tools/governance/missing-sources.mjs .rebuild/governance/type-report.json .rebuild/governance/missing-sources.json
+      - name: 下载官方 2.1.310 包并核对是否包含源码映射
+        run: |
+          mkdir -p .rebuild/governance/upstream
+          npm pack @anthropic-ai/claude-code@2.1.310 --pack-destination .rebuild/governance/upstream --silent
+          pkg=$(find .rebuild/governance/upstream -name '*.tgz' -print -quit)
+          tar -xzf "$pkg" -C .rebuild/governance/upstream
+          mapfile=.rebuild/governance/upstream/package/cli.js.map
+          if [ ! -s "$mapfile" ]; then
+            echo '官方包未提供 cli.js.map，无法从发布包获取缺失源码' > .rebuild/governance/upstream/unavailable.txt
+          else
+            node tools/governance/upstream-map-probe.mjs .rebuild/governance/missing-sources.json "$mapfile" .rebuild/governance/upstream-candidates.json
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 333-upstream-source-candidates
+          path: |
+            .rebuild/governance/missing-sources.json
+            .rebuild/governance/upstream-candidates.json
+            .rebuild/governance/upstream/unavailable.txt
+          retention-days: 60
+          if-no-files-found: warn

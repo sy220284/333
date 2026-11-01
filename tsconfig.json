@@ -12,12 +12,30 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "src/*": ["src/*"],
-      "audio-capture-napi": ["native/audio-capture-src/index.ts"],
-      "image-processor-napi": ["native/image-processor-src/index.ts"],
-      "modifiers-napi": ["native/modifiers-napi-src/index.ts"],
-      "url-handler-napi": ["native/url-handler-src/index.ts"]
-    }
+      "src/*": [
+        "src/*"
+      ],
+      "audio-capture-napi": [
+        "native/audio-capture-src/index.ts"
+      ],
+      "image-processor-napi": [
+        "native/image-processor-src/index.ts"
+      ],
+      "modifiers-napi": [
+        "native/modifiers-napi-src/index.ts"
+      ],
+      "url-handler-napi": [
+        "native/url-handler-src/index.ts"
+      ]
+    },
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
+    ]
   },
-  "include": ["src", "native"]
+  "include": [
+    "src",
+    "native"
+  ]
 }

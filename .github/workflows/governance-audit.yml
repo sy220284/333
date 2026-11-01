@@ -1,0 +1,87 @@
+name: 333 类型与依赖安全独立治理
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/governance/**'
+      - 'tools/dev/**'
+      - 'src/**'
+      - 'native/**'
+      - 'build/**'
+      - 'tsconfig.json'
+      - '.github/workflows/governance-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/governance/**'
+      - 'tools/dev/**'
+      - 'src/**'
+      - 'native/**'
+      - 'build/**'
+      - 'tsconfig.json'
+      - '.github/workflows/governance-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: 保存逐条类型诊断与依赖安全溯源
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 安装冻结开发工具和源码依赖
+        run: |
+          npm run dev:bootstrap
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 确保 SDK 类型由真实 Zod 模式正确生成
+        run: node tools/governance/regenerate-sdk-types.mjs --check
+      - name: 执行完整 TypeScript 类型诊断并保留实际失败结果
+        run: |
+          mkdir -p .rebuild/governance
+          set +e
+          npm run dev:typecheck:all > .rebuild/governance/typescript.log 2>&1
+          result=$?
+          set -e
+          printf 'TypeScript full check status: %s\n' "$result"
+          node tools/governance/summarize.mjs types .rebuild/governance/typescript.log .rebuild/governance/type-report.json
+      - name: 根据原始源码映射逐项核查缺失文件
+        run: node tools/governance/missing-sources.mjs .rebuild/governance/type-report.json .rebuild/governance/missing-sources.json
+      - name: 提取所有缺失模块的导出与消费者调用契约
+        run: node tools/governance/contract-trace.mjs .rebuild/governance/missing-sources.json .rebuild/governance/missing-contracts.json
+      - name: 审计全部冻结依赖及漏洞链路
+        run: |
+          set +e
+          npm audit --prefix .rebuild/public --json > .rebuild/governance/audit.json
+          result=$?
+          set -e
+          printf 'npm audit exit status: %s\n' "$result"
+          node tools/governance/summarize.mjs audit .rebuild/governance/audit.json .rebuild/governance/audit-summary.json
+          node tools/governance/assert-security.mjs .rebuild/governance/audit-summary.json
+      - name: 上传完整逐项证据
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-governance-evidence
+          path: |
+            .rebuild/governance/typescript.log
+            .rebuild/governance/type-report.json
+            .rebuild/governance/missing-sources.json
+            .rebuild/governance/missing-contracts.json
+            .rebuild/governance/audit.json
+            .rebuild/governance/audit-summary.json
+          retention-days: 90
+          if-no-files-found: error
+      - name: 完整类型零错误作为治理关单条件
+        run: node tools/governance/assert-types.mjs .rebuild/governance/type-report.json

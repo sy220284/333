@@ -1,0 +1,82 @@
+name: 333 高风险依赖兼容性验证
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/governance-security-probe.yml'
+      - 'tools/governance/**'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: 隔离环境验证依赖升级和行为差分
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 冻结基线构建及回归
+        run: npm run verify
+      - name: 候选升级和安全检查
+        run: |
+          npm pkg set dependencies.zod=4.6.6 overrides.tmp=0.2.7 'overrides.zod=$zod' --prefix .rebuild/public
+          npm install --prefix .rebuild/public --legacy-peer-deps --ignore-scripts --no-audit --no-fund --save-exact zod@4.6.6 sharp@0.35.5 @opentelemetry/exporter-prometheus@0.300.0
+          mkdir -p .rebuild/governance
+          set +e
+          npm audit --prefix .rebuild/public --json > .rebuild/governance/probe-audit.json
+          code=$?
+          set -e
+          echo "审计退出码: $code"
+          node tools/governance/summarize.mjs audit .rebuild/governance/probe-audit.json .rebuild/governance/probe-audit-summary.json
+      - name: 插件、沙盒、图像与遥测接口专项检查
+        run: |
+          node --input-type=module <<'EOF'
+          import * as mcpbModule from '@anthropic-ai/mcpb'
+          const McpbManifestSchema = mcpbModule.v0_2?.McpbManifestSchema ?? mcpbModule.default?.v0_2?.McpbManifestSchema
+          if (!McpbManifestSchema) throw Error('MCPB 清单验证 API 缺失: ' + Object.keys(mcpbModule).join(','))
+          import { SandboxRuntimeConfigSchema } from '@anthropic-ai/sandbox-runtime'
+          import sharp from 'sharp'
+          import { PrometheusExporter } from '@opentelemetry/exporter-prometheus'
+          import tmp from 'tmp'
+          const invalid = McpbManifestSchema.safeParse({manifest_version:'0.1', name: ''})
+          if (invalid.success || !Array.isArray(invalid.error.issues)) throw Error('MCPB 清单校验异常')
+          const sandbox = SandboxRuntimeConfigSchema.safeParse({})
+          if (!sandbox || typeof sandbox.success !== 'boolean') throw Error('沙盒配置检查不可用')
+          const png = await sharp({ create: { width: 2, height: 2, channels: 3, background: {r: 1,g: 2,b: 3} } }).png().toBuffer()
+          const decoded = await sharp(png).metadata()
+          if (decoded.width !== 2 || decoded.height !== 2) throw Error('图像创建或解码失败')
+          if (typeof PrometheusExporter !== 'function') throw Error('PrometheusExporter 导出缺失')
+          const f = tmp.fileSync({prefix:'333-security-probe-'})
+          f.removeCallback()
+          console.log('[OK] 四项真实依赖接口正常')
+          EOF
+      - name: 候选依赖真实编译及现有功能测试
+        run: |
+          bun build/rebuild.mjs
+          node build/package-release.mjs
+          npm run test:all
+      - name: 输出通过完整回归的候选冻结依赖锁
+        run: |
+          echo 'SECURITY_LOCK_BEGIN'
+          base64 -w16384 .rebuild/public/package-lock.json
+          echo 'SECURITY_LOCK_END'
+      - name: 保存实际候选结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-security-probe
+          path: |
+            .rebuild/public/package.json
+            .rebuild/public/package-lock.json
+            .rebuild/governance/probe-audit.json
+            .rebuild/governance/probe-audit-summary.json
+          retention-days: 30
+          if-no-files-found: ignore
