@@ -12,7 +12,6 @@
 
 import { context as otelContext, type Span, trace } from '@opentelemetry/api'
 import { AsyncLocalStorage } from 'async_hooks'
-import type { AssistantMessage, UserMessage } from '../../types/message.js'
 import { isEnvTruthy } from '../envUtils.js'
 import { getTelemetryAttributes } from '../telemetryAttributes.js'
 import { isEnhancedTracingOptedIn } from './projectTelemetryPolicy.mjs'
@@ -43,7 +42,7 @@ export type { Span }
 export { isBetaTracingEnabled, type LLMRequestNewContext }
 
 // Message type for API calls (UserMessage or AssistantMessage)
-type APIMessage = UserMessage | AssistantMessage
+type APIMessage = NonNullable<Parameters<typeof addBetaLLMRequestAttributes>[2]>[number]
 
 type SpanType =
   | 'interaction'
