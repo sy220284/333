@@ -57,6 +57,8 @@ jobs:
           set -e
           printf 'TypeScript full check status: %s\n' "$result"
           node tools/governance/summarize.mjs types .rebuild/governance/typescript.log .rebuild/governance/type-report.json
+      - name: 根据原始源码映射逐项核查缺失文件
+        run: node tools/governance/missing-sources.mjs .rebuild/governance/type-report.json .rebuild/governance/missing-sources.json
       - name: 审计全部冻结依赖及漏洞链路
         run: |
           set +e
@@ -73,7 +75,10 @@ jobs:
           path: |
             .rebuild/governance/typescript.log
             .rebuild/governance/type-report.json
+            .rebuild/governance/missing-sources.json
             .rebuild/governance/audit.json
             .rebuild/governance/audit-summary.json
           retention-days: 90
           if-no-files-found: error
+      - name: 完整类型零错误作为治理关单条件
+        run: node tools/governance/assert-types.mjs .rebuild/governance/type-report.json
