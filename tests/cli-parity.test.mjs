@@ -59,7 +59,24 @@ for (const args of [
     const baseline = sections(originalHelp(args));
     const rebuilt = sections(compiledHelp(args));
     assert.ok(baseline.flags.length + baseline.commands.length > 0, 'Empty baseline command metadata');
-    assert.deepEqual(rebuilt, baseline, 'CLI public options and subcommands differ from 2.1.88 original');
+    // 2.1.310 changes intentionally expand the top-level CLI. Keep the old
+    // baseline as an exact guard for every unchanged command/option.
+    if (args.length === 1 && args[0] === '--help') {
+      const expectedAdded = ['--autocompact'];
+      assert.deepEqual(rebuilt.flags.filter(flag => !baseline.flags.includes(flag)), expectedAdded,
+        'Unexpected extra CLI option beyond reviewed 2.1.310 migration');
+      assert.deepEqual(baseline.flags.filter(flag => !rebuilt.flags.includes(flag)), [],
+        'Old CLI options were removed unexpectedly');
+      assert.deepEqual(rebuilt.commands, baseline.commands,
+        'Existing CLI commands changed unexpectedly');
+      const help = compiledHelp(args);
+      assert.match(help, /--fallback-model <models>/,
+        'Ordered fallback model interface missing');
+      assert.match(help, /--autocompact <auto\|tokens>/,
+        'Auto-compact window interface missing');
+    } else {
+      assert.deepEqual(rebuilt, baseline, 'Unchanged CLI options or subcommands differ from 2.1.88 original');
+    }
   });
 }
 test('legacy -d2e alias is accepted by reconstructed Commander configuration', () => {
