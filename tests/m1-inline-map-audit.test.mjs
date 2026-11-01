@@ -51,3 +51,23 @@ test('错误的内嵌Source Map不得静默跳过', () => {
     rmSync(work, { recursive: true, force: true })
   }
 })
+
+test('遇到无效base64和不受支持的映射声明时不能静默计为无映射', () => {
+  const work = mkdtempSync(join(tmpdir(), 'm1-inline-map-reject-'))
+  try {
+    const report = join(work, 'report.json')
+    writeFileSync(join(work, 'invalid.ts'), 'const ok = true;\\n//# sourceMappingURL=data:application/json;base64,@@@')
+    let result = spawnSync('python3', [script, '--source-dir', work,
+      '--output', report], { encoding: 'utf8', timeout: 10000 })
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /Error|Traceback|Source Map/)
+
+    writeFileSync(join(work, 'invalid.ts'), 'const ok = true;\\n//# sourceMappingURL=data:application/json;broken,@@@@')
+    result = spawnSync('python3', [script, '--source-dir', work,
+      '--output', report], { encoding: 'utf8', timeout: 10000 })
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /损坏或不受支持/)
+  } finally {
+    rmSync(work, { recursive: true, force: true })
+  }
+})
