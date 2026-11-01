@@ -42,6 +42,22 @@ export function isPrivilegedTelemetrySetting(name, value) {
       key === 'OTEL_SERVICE_NAME' ||
       key === 'OTEL_LOG_RAW_API_BODIES') return Boolean(String(value).trim()) && !['false','off','none','0'].includes(String(value).trim().toLowerCase())
 
+  // 2.1.310 source: chunk-5rw2zfa0.js:1308-1310 and
+  // chunk-h2tyaevk.js:258. These export and content-capture variables
+  // also cross the project-settings trust boundary.
+  if (key === 'OTEL_LOG_ASSISTANT_RESPONSES') return truthy(value)
+  if (key === 'OTEL_EXPORTER_PROMETHEUS_HOST' ||
+      key === 'OTEL_EXPORTER_PROMETHEUS_PORT')
+    return Boolean(String(value).trim())
+  if (key.startsWith('ANT_OTEL_'))
+    return Boolean(String(value).trim()) &&
+      String(value).trim().toLowerCase() !== 'none'
+  if (key === 'OTEL_TRACES_SAMPLER')
+    return Boolean(String(value).trim()) &&
+      String(value).trim().toLowerCase() !== 'always_off'
+  if (key === 'OTEL_TRACES_SAMPLER_ARG')
+    return Boolean(String(value).trim())
+
   if (key.startsWith('OTEL_EXPORTER_')) return Boolean(String(value).trim())
   if (/^OTEL_(?:TRACES|LOGS|METRICS)_EXPORTER$/.test(key)) {
     return Boolean(String(value).trim()) && String(value).trim().toLowerCase() !== 'none'
