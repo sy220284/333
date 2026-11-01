@@ -39,7 +39,7 @@ for (const name of lodashExports) {
   if (!entries.has('node_modules/lodash-es/' + name + '.js')) throw Error('Missing lodash-es export: ' + name);
 }
 await writeFile(resolve(output, 'node_modules/lodash-es/entrypoint.js'),
-  lodashExports.map(name => "export { default as " + name + " } from './" + name + ".js';").join('\\n') + '\\n');
+  lodashExports.map(name => "export { default as " + name + " } from './" + name + ".js';").join('\n') + '\n');
 const report = { sourceMapSha256: expectedHash, files: results.length, packages: packages.size, entries: results };
 await writeFile(resolve(root, '.rebuild/dependency-manifest.json'), JSON.stringify(report, null, 2) + '\n');
 console.log('Recovered and pinned ' + results.length + ' dependency files from ' + packages.size + ' packages');
