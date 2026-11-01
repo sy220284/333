@@ -72,7 +72,7 @@ test('original and rebuilt versions both execute Glob and Grep through model-too
           stop='tool_use';
         } else if(state.count===2) {
           const last=JSON.stringify(msg.messages.at(-1));
-          assert.match(last, state.tool === 'Glob' ? /example\\.txt/ : /FIXTURE_333_READ_RESULT/);
+          assert.match(last, state.tool === 'Glob' ? /example\.txt/ : /FIXTURE_333_READ_RESULT/);
           state.sawToolResult=true;
           content=[
             SSE('content_block_start',{type:'content_block_start',index:0,content_block:{type:'text',text:''}}),
