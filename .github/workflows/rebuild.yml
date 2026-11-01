@@ -25,7 +25,7 @@ jobs:
         run: node build/restore-bundled-assets.mjs
       - name: 将恢复资源保存到源代码
         run: |
-          git add src/skills/bundled/verify src/utils/ultraplan/prompt.txt
+          git add src/skills/bundled/verify src/utils/ultraplan/prompt.txt src/utils/permissions/yolo-classifier-prompts
           if ! git diff --cached --quiet; then
             git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "恢复 2.1.88 原始技能与规划提示词资源"
             git push origin HEAD:rebuild/bun-from-src
