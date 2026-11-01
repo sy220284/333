@@ -65,6 +65,7 @@ jobs:
           set -e
           printf 'npm audit exit status: %s\n' "$result"
           node tools/governance/summarize.mjs audit .rebuild/governance/audit.json .rebuild/governance/audit-summary.json
+          node tools/governance/assert-security.mjs .rebuild/governance/audit-summary.json
       - name: 上传完整逐项证据
         uses: actions/upload-artifact@v4
         with:
