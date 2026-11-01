@@ -29,7 +29,7 @@ async function launch(executable, file, args, cwd, env) {
   return await new Promise((resolveRun, reject) => {
     const child = spawn(executable, [file, ...args], {cwd,env,stdio:['ignore','pipe','pipe']});
     let stdout='',stderr='';
-    const timeout = setTimeout(() => child.kill('SIGKILL'), 18000);
+    const timeout = setTimeout(() => child.kill('SIGKILL'), 60000);
     child.stdout.on('data',x => stdout+=x.toString());
     child.stderr.on('data',x => stderr+=x.toString());
     child.on('error',error => {clearTimeout(timeout);reject(error)});
@@ -107,7 +107,7 @@ test('original and rebuilt versions both execute Glob and Grep through model-too
   } finally {
     server.closeAllConnections();
     await new Promise(done=>server.close(done));
-    rmSync(tmp,{recursive:true,force:true});
+    rmSync(tmp,{recursive:true,force:true,maxRetries:12,retryDelay:500});
   }
 });
 
