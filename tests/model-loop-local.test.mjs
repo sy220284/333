@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 
@@ -103,6 +103,89 @@ test('original and independent rebuild both perform model-tool-model file read l
       assert.equal(result.is_error,false,name+' returned an error');
       assert.equal(result.num_turns,2,name+' executed wrong number of model turns');
       assert.deepEqual(sessions.get(name),{count:2,sawToolResult:true},name+' Read tool result was not submitted to the model');
+    }
+  } finally {
+    server.closeAllConnections();
+    await new Promise(done=>server.close(done));
+    rmSync(tmp,{recursive:true,force:true});
+  }
+});
+
+
+test('original and rebuilt CLIs execute Read → Edit → Write → Read with matching file outcomes', async () => {
+  mkdirSync(join(root,'.rebuild'),{recursive:true});
+  const tmp=mkdtempSync(join(root,'.rebuild','333-edit-loop-'));
+  const first=join(tmp,'example.txt'), second=join(tmp,'created.txt');
+  const before='BEFORE_333_EDIT_VALUE', after='AFTER_333_EDIT_VALUE', created='CREATED_BY_333_WRITE';
+  const finalAnswer='MOCK_AGENT_EDIT_WRITE_OK';
+  const sessions=new Map();
+  let active='none';
+  const actions=[
+    {name:'Read',input:{file_path:'example.txt'},toolId:'toolu_333_read_before'},
+    {name:'Edit',input:{file_path:'example.txt',old_string:before,new_string:after},toolId:'toolu_333_edit'},
+    {name:'Write',input:{file_path:'created.txt',content:created},toolId:'toolu_333_write'},
+    {name:'Read',input:{file_path:'created.txt'},toolId:'toolu_333_read_after'},
+  ];
+  const server=createServer((req,res)=>{
+    if(req.method==='HEAD') {res.writeHead(200);res.end();return}
+    if(req.method!=='POST'||!req.url.startsWith('/v1/messages')) {res.writeHead(404);res.end();return}
+    const parts=[];
+    req.on('data',c=>parts.push(c));
+    req.on('end',()=>{
+      try {
+        const message=JSON.parse(Buffer.concat(parts).toString('utf8'));
+        assert.equal(message.model,model);
+        const state=sessions.get(active);
+        state.count++;
+        const i=state.count-1;
+        const last=JSON.stringify(message.messages.at(-1));
+        if(i===1) assert.match(last,/BEFORE_333_EDIT_VALUE/);
+        if(i===2) assert.match(last,/toolu_333_edit/);
+        if(i===3) assert.match(last,/toolu_333_write/);
+        if(i===4) assert.match(last,/CREATED_BY_333_WRITE/);
+        let blocks,stop;
+        if(i<actions.length) {
+          const a=actions[i];
+          blocks=[
+            SSE('content_block_start',{type:'content_block_start',index:0,content_block:{type:'tool_use',id:a.toolId,name:a.name,input:{}}}),
+            SSE('content_block_delta',{type:'content_block_delta',index:0,delta:{type:'input_json_delta',partial_json:JSON.stringify(a.input)}}),
+            SSE('content_block_stop',{type:'content_block_stop',index:0})
+          ];
+          stop='tool_use';
+        } else if(i===actions.length) {
+          state.sawAllToolResults=true;
+          blocks=[
+            SSE('content_block_start',{type:'content_block_start',index:0,content_block:{type:'text',text:''}}),
+            SSE('content_block_delta',{type:'content_block_delta',index:0,delta:{type:'text_delta',text:finalAnswer}}),
+            SSE('content_block_stop',{type:'content_block_stop',index:0}),
+          ];
+          stop='end_turn';
+        } else throw Error('Unexpected extra model request '+state.count);
+        res.writeHead(200,{'content-type':'text/event-stream'});
+        res.end(responseBlocks(blocks,stop,state.count));
+      } catch(error){res.writeHead(400);res.end(String(error))}
+    });
+  });
+  try {
+    await new Promise(done=>server.listen(0,'127.0.0.1',done));
+    const baseUrl='http://127.0.0.1:'+server.address().port;
+    const env={...process.env,ANTHROPIC_BASE_URL:baseUrl,ANTHROPIC_API_KEY:'sk-333-local-fixture',
+      DISABLE_TELEMETRY:'1',CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1',CI:'true',NO_COLOR:'1'};
+    const args=['--bare','-p','Read and edit example.txt, create created.txt, then read it',
+      '--tools','Read,Edit,Write','--permission-mode','acceptEdits','--model',model,'--output-format','json','--max-turns','5'];
+    for(const [name,exe,file] of [
+      ['original',process.execPath,join(root,'cli.js')],
+      ['rebuilt','bun',join(root,'dist/cli.js')]
+    ]){
+      writeFileSync(first,before+'\n');
+      rmSync(second,{force:true});
+      active=name;sessions.set(name,{count:0,sawAllToolResults:false});
+      const result=await launch(exe,file,args,tmp,env);
+      assert.equal(result.is_error,false,name+' execution error');
+      assert.equal(result.result,finalAnswer,name+' output mismatch');
+      assert.equal(readFileSync(first,'utf8'),after+'\n',name+' file edit mismatch');
+      assert.equal(readFileSync(second,'utf8'),created,name+' file write mismatch');
+      assert.deepEqual(sessions.get(name),{count:5,sawAllToolResults:true},name+' tool chain mismatch');
     }
   } finally {
     server.closeAllConnections();
