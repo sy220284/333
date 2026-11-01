@@ -94,11 +94,29 @@ export function isPrivilegedTelemetrySetting(name, value) {
 export function resolveProjectTelemetryEnv(mergedEnv, trustedEnv) {
   const result = { ...mergedEnv }
   for (const [key, value] of Object.entries(result)) {
-    if (!isPrivilegedTelemetrySetting(key, value)) continue
+    const upper = key.toUpperCase()
+    const privileged = isPrivilegedTelemetrySetting(key, value)
+    // Target 2.1.310's project-scoped safe reductions are accepted only
+    // when no trusted setting supplies the same key (Jsr in
+    // chunk-h2tyaevk.js). A project setting "none" must never silently
+    // override an administrator's explicit exporter choice.
+    const controlled = upper.startsWith('OTEL_') ||
+      upper.startsWith('ANT_OTEL_') ||
+      upper === 'CLAUDE_CODE_ENABLE_TELEMETRY' ||
+      upper === 'CLAUDE_CODE_ENHANCED_TELEMETRY_BETA' ||
+      upper === 'ENABLE_ENHANCED_TELEMETRY_BETA' ||
+      upper === 'CLAUDE_CODE_ENABLE_BETA_TRACING' ||
+      upper === 'ENABLE_BETA_TRACING_DETAILED' ||
+      upper === 'BETA_TRACING_ENDPOINT' ||
+      upper.startsWith('CLAUDE_CODE_PERFETTO_')
+    if (!controlled && !privileged) continue
     const trustedEntry = Object.entries(trustedEnv)
-      .find(([candidate]) => candidate.toUpperCase() === key.toUpperCase())
-    if (trustedEntry) result[key] = trustedEntry[1]
-    else delete result[key]
+      .find(([candidate]) => candidate.toUpperCase() === upper)
+    if (trustedEntry) {
+      result[key] = trustedEntry[1]
+    } else if (privileged) {
+      delete result[key]
+    }
   }
   return result
 }
