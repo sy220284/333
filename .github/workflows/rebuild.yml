@@ -20,7 +20,7 @@ jobs:
           path: |
             ~/.npm
             .rebuild/public
-          key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs') }}
+          key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
       - name: 恢复并校验原版内嵌资源
         run: node build/restore-bundled-assets.mjs
       - name: 将恢复资源保存到源代码
@@ -34,13 +34,20 @@ jobs:
         run: node build/restore-dependencies.mjs
       - name: 安装缺失的完整第三方依赖
         run: node build/install-public-deps.mjs
+      - name: 提交依赖版本锁定文件
+        run: |
+          git add build/public-dependencies.lock.json
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "固定完整公共依赖版本与完整性校验"
+            git push origin HEAD:rebuild/bun-from-src
+          fi
       - uses: actions/cache/save@v4
         if: steps.npm-cache.outputs.cache-hit != 'true'
         with:
           path: |
             ~/.npm
             .rebuild/public
-          key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs') }}
+          key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
       - name: 仅从 src 源码构建
         run: bun build/rebuild.mjs
       - name: 新构建版本和基础交互验收
