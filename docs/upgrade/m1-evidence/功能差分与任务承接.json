@@ -361,8 +361,8 @@
         "F011"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-rf7g1m78.js:31,84,94; chunk-ex7g3k30.js:306",
+      "old_vs_new_delta": "新版 ThemeProvider 上下文保存 themeSetting、resolvedTheme、preview 和自定义主题，配置有 Appearance.theme；旧 AUTO_THEME 开关对自动系统主题的作用，当前仅证明主题系统存在，尚无法证实旧 auto 模式是否默认转正。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -373,7 +373,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -392,7 +392,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 88,
       "target_lead_assessment": "插件推荐的 theme 字段不是旧自动主题切换功能",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M5/F011：检验旧 AUTO_THEME 自动选择→新版 themeSetting 状态→外观切换→持久化和 TUI 实际配色",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "target_evidence_grade": "STATIC_ACTUAL_FUNCTION_CODE_PATH; RUNTIME_PENDING"
     },
     {
       "flag": "AWAY_SUMMARY",
@@ -599,8 +602,8 @@
         "F021"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-0v8111n2.js:161; chunk-wany0nxw.js:579-580,675",
+      "old_vs_new_delta": "新版 promptCacheBreak 是会话级 HashSalt、prevStateBySource、pendingPersist、summaryForks 和 classifierLines 的持久状态，存在真实使用/读取函数；但旧 BREAK_CACHE_COMMAND 是手动断缓存命令，当前不能凭内部状态认定命令注册。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -611,7 +614,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -630,7 +633,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 13,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M2/F021：追旧 BREAK_CACHE_COMMAND 实际入口与新版缓存断点写入→读取→恢复/成本",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "target_evidence_grade": "STATIC_ACTUAL_FUNCTION_CODE_PATH; RUNTIME_PENDING"
     },
     {
       "flag": "BRIDGE_MODE",
@@ -659,8 +665,8 @@
         "F067"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-kfdf5pq3.js:794-795,1014; chunk-mh7sh27p.js:721,728",
+      "old_vs_new_delta": "新版桥接是否连接由 remoteControlFlag、CLAUDE_CODE_REMOTE、会话返回设置和 autoConnectDefault 决定，主 REPL 会选择对应会话初始化；旧 BRIDGE_MODE 的通道入站/出站及 SDK 模式不能仅凭 --remote-control 帮助推断等价。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -672,7 +678,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -696,7 +702,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 225,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M5/F066/F067：端到端注册→配置→连接→双向流→中断重连与认证",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "target_evidence_grade": "STATIC_ACTUAL_FUNCTION_CODE_PATH; RUNTIME_PENDING"
     },
     {
       "flag": "BUDDY",
@@ -769,8 +778,8 @@
         "F100"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-20rt2hzh.js:97; chunk-4wh6grjv.js:64",
+      "old_vs_new_delta": "新版存在 /claude-api 引导技能、Ant CLI 执行参数和远端 Agent/env/vault id 验证；目标技能资源自身可能缺失，须确认旧版只启用 BUILDING_CLAUDE_APPS 的内置技能同新版是否相同。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -782,7 +791,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -801,7 +810,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 7,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M6/F051/F100：技能实际注册、资源展开、账号/权限、子命令执行与错误处理",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "target_evidence_grade": "STATIC_ACTUAL_FUNCTION_CODE_PATH; RUNTIME_PENDING"
     },
     {
       "flag": "BUILTIN_EXPLORE_PLAN_AGENTS",
@@ -818,8 +830,8 @@
         "F056"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-5qtb3hv4.js:154,243",
+      "old_vs_new_delta": "新版在 Worker 提示词中可引用 reviewer、verifier、planner，并通过 subagent_type 选择代理；它是提示词/可用代理语义，尚未证明旧版 Explore/Plan 两种专用 Agent 以同名默认注册。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -836,7 +848,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -860,7 +872,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 340,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M7/F056/F007：检查完整 built-in agent registry/模型、工具授权和 Explore/Plan 触发",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "target_evidence_grade": "STATIC_ACTUAL_FUNCTION_CODE_PATH; RUNTIME_PENDING"
     },
     {
       "flag": "BYOC_ENVIRONMENT_RUNNER",
@@ -876,8 +891,8 @@
         "F099"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-6d8swme1.js:591,688; chunk-sr1bpqdt.js:359",
+      "old_vs_new_delta": "新版 --environment 校验 self-hosted 环境 ID ccpool_* 并明确云端会话不能使用 self-hosted operator tools；与旧 BYOC_ENVIRONMENT_RUNNER 构建门控同属于运行环境选择，但部署进程执行仍需验。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -888,7 +903,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -912,7 +927,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 23,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M5/F099：远端环境 CLI 入口、凭据、命令转发、错误退出；M8 runner 负责执行生命周期",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "target_evidence_grade": "STATIC_ACTUAL_FUNCTION_CODE_PATH; RUNTIME_PENDING"
     },
     {
       "flag": "CACHED_MICROCOMPACT",
@@ -989,8 +1007,8 @@
         "F066"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-j0tbz6ra.js:59031; chunk-1ah418qv.js:483,494,516,530",
+      "old_vs_new_delta": "新版 IDE 自动连接由 user autoConnectIde、CLI Flag、当前 IDE 状态和 SSE 端口决定；提供启用/禁用交互并保存配置。旧 CCR_AUTO_CONNECT 已有桥接模块，属于已有能力扩展/条件优化。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -1001,7 +1019,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -1025,7 +1043,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 49,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M5/F066：分配置优先级验证自动连接/拒绝/会话重连与平台 IDE",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "target_evidence_grade": "STATIC_ACTUAL_FUNCTION_CODE_PATH; RUNTIME_PENDING"
     },
     {
       "flag": "CCR_MIRROR",
@@ -1043,8 +1064,8 @@
         "F066"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-kfdf5pq3.js:794-795",
+      "old_vs_new_delta": "新版桥接判定区分 replBridgeEnabled、replBridgeOutboundOnly、explicit 与 reattachSession，受 CLAUDE_BRIDGE_REATTACH_SESSION、REATTAch_OUTBOUND_ONLY 和 remoteControlFlag 约束；旧 CCR_MIRROR 的镜像模式默认范围仍需核实。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -1055,7 +1076,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -1069,7 +1090,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 1,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M5/F066：入站/出站镜像数据一致性、权限隔离、断线重建",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "target_evidence_grade": "STATIC_ACTUAL_FUNCTION_CODE_PATH; RUNTIME_PENDING"
     },
     {
       "flag": "CCR_REMOTE_SETUP",
@@ -1085,8 +1109,8 @@
         "F066"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-kfdf5pq3.js:794-795; chunk-142mjqaf.js:1765",
+      "old_vs_new_delta": "新版 remote control 入口有 user/default 自动开关和 --remote-control-session-name-prefix 参数；旧远程设置命令是否继续存在，需沿实际命令注册追踪，不能仅当替代成立。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -1097,7 +1121,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -1116,7 +1140,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 7,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M5/F066：配对设置/保存、远端会话命名和冲突重连",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "target_evidence_grade": "STATIC_ACTUAL_FUNCTION_CODE_PATH; RUNTIME_PENDING"
     },
     {
       "flag": "CHICAGO_MCP",
@@ -1250,8 +1277,8 @@
         "F023"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-2sq2cy74.js:452; chunk-460hw2jb.js:17",
+      "old_vs_new_delta": "新版实时分析上下文占用，报告百分比，区别 autoCompactEnabled/环境禁用，并给出 /compact 操作建议；这是实际提醒 UI 分支，但旧 COMPACTION_REMINDERS 提示消息的准确时机和新模型窗口阈值尚待 M4。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -1262,7 +1289,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -1281,7 +1308,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 13,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M4/F023：满载前提醒→条件读取→TUI/非交互显示与阈值负例",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "target_evidence_grade": "STATIC_ACTUAL_FUNCTION_CODE_PATH; RUNTIME_PENDING"
     },
     {
       "flag": "CONNECTOR_TEXT",
@@ -1372,8 +1402,8 @@
         "F023"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-2sq2cy74.js:452; chunk-0v8111n2.js:161; chunk-wany0nxw.js:675",
+      "old_vs_new_delta": "新版有上下文压缩警告以及会话缓存断点持久状态；这两组源函数未证明与旧 contextCollapse 折叠摘要逻辑一一等价，故不认定已转正。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -1384,7 +1414,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -1408,7 +1438,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 54,
       "target_lead_assessment": "compaction 提示不同于旧版 contextCollapse 状态压缩函数",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M4/F023：实际 contextCollapse 入口/触发→摘要写盘→回放恢复与取消",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "target_evidence_grade": "STATIC_ACTUAL_FUNCTION_CODE_PATH; RUNTIME_PENDING"
     },
     {
       "flag": "COORDINATOR_MODE",
@@ -1533,8 +1566,8 @@
         "F095"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-05z051sc.js:528; chunk-0jdj81n1.js:1",
+      "old_vs_new_delta": "新版会话管理 API 具备 listJobs/listAliveDaemonJobs/adoptRosterOrphans/listRemoteSessions/interruptRemoteSession 方法，明确 removeRemoteSession 可返回 gate_off，部分远端操作受版本门控；旧 DAEMON 入口是否开放须检查 CLI daemon subcommand 和操作。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -1551,7 +1584,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -1575,7 +1608,10 @@
       "archive_exact_same_name_files": 6,
       "archive_similar_candidate_file_count": 95,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M4/F062 + M8/F095：守护进程注册、任务清理、孤儿收养、权限和崩溃恢复",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "target_evidence_grade": "STATIC_ACTUAL_FUNCTION_CODE_PATH; RUNTIME_PENDING"
     },
     {
       "flag": "DIRECT_CONNECT",
@@ -1591,8 +1627,8 @@
         "F066"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-j0tbz6ra.js:59031; chunk-kfdf5pq3.js:794",
+      "old_vs_new_delta": "新版确实存在 IDE autoConnect 与 Remote Control bridge 分支；旧 DIRECT_CONNECT 直连网络建立和握手协议可能独立，不能凭通用 connect 字符串认定转正。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -1603,7 +1639,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -1627,7 +1663,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 406,
       "target_lead_assessment": "connect 为通用 WebSocket 重连函数，功能等价需检查实际连接路径",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M5/F066：真实 socket 建立、握手、token 校验和网络中断退路",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "target_evidence_grade": "STATIC_ACTUAL_FUNCTION_CODE_PATH; RUNTIME_PENDING"
     },
     {
       "flag": "DOWNLOAD_USER_SETTINGS",
