@@ -22,6 +22,8 @@ jobs:
       - name: 提交已核验研究数据到原分支
         run: |
           git add research/claude-code-2.1.88/
+          git add -f research/claude-code-2.1.88/dependencies/node_modules/
+          test "$(git ls-files --cached research/claude-code-2.1.88/dependencies/node_modules/ | wc -l)" -eq 2850
           if ! git diff --cached --quiet; then
             git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "完整提取 2.1.88 依赖源码、功能开关、环境变量和位置映射"
             git push origin HEAD:research/2.1.88-complete-map
