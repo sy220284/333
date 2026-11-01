@@ -3206,7 +3206,15 @@
       "candidate_count": 4,
       "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
       "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
-      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution",
+      "verified_entry_branch": "Artifact publish/read schema and permission state",
+      "verified_execution_candidates": [
+        "chunk-ghkyq94m.js:3976-3983",
+        "chunk-ghkyq94m.js:4943-4961"
+      ],
+      "positive_branch_description": "Artifact create permitted only by actual authorization and user-consent context",
+      "negative_branch_description": "no live human consent surface returns explicit deny at 4954-55",
+      "function_link_grade": "ENTRY_AND_CONSUMER_PARTIAL_NO_END_TO_END_TEST"
     },
     {
       "F_id": "F076",
@@ -3269,7 +3277,17 @@
       "candidate_count": 5,
       "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
       "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
-      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution",
+      "verified_entry_branch": "interactive /claude-test builtin skill",
+      "verified_execution_candidates": [
+        "chunk-pmkym69z.js:439-499",
+        "chunk-pmkym69z.js:1384-1395",
+        "chunk-pmkym69z.js:1887",
+        "chunk-pmkym69z.js:1922-1945"
+      ],
+      "positive_branch_description": "browser runner evaluates saved specs and emits draft/run outcome events",
+      "negative_branch_description": "-p prohibited and missing browser helper or node yields explicit startup failure",
+      "function_link_grade": "ENTRY_AND_CONSUMER_PARTIAL_NO_END_TO_END_TEST"
     },
     {
       "F_id": "F077",
@@ -3332,7 +3350,17 @@
       "candidate_count": 5,
       "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
       "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
-      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution",
+      "verified_entry_branch": "/design-sync command registration → DesignSyncTool",
+      "verified_execution_candidates": [
+        "chunk-n7dvjfwp.js:1608-1647",
+        "chunk-vs02frgz.js:169",
+        "chunk-vs02frgz.js:250-267",
+        "chunk-vs02frgz.js:293-347"
+      ],
+      "positive_branch_description": "authenticated allowed providers send design-system bundled component content",
+      "negative_branch_description": "no interactive login, unsupported provider or nonessential-traffic restriction refuses execution",
+      "function_link_grade": "ENTRY_AND_CONSUMER_PARTIAL_NO_END_TO_END_TEST"
     },
     {
       "F_id": "F079",
