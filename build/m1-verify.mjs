@@ -120,8 +120,8 @@ function checkAll() {
     if (row.target_state !== 'RETIRED_WITH_NOOP') continue;
     assert.equal(row.module, 'SnapshotUpdateDialog',
       'Do not mark other missing modules retired without a verified target source contract');
-    assert.match(row.new_execution_path, /chunk-0x2m04n3\\.js:684/);
-    assert.match(row.comparison_evidence, /return \\"keep\\"/);
+    assert.match(row.new_execution_path, /chunk-0x2m04n3\.js:684/);
+    assert.match(row.comparison_evidence, /return "keep"/);
     assert.equal(row.M1_evidence_grade, 'TARGET_SOURCE_CONTRACT_CONFIRMED');
   }
 
