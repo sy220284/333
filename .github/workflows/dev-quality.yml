@@ -1,0 +1,99 @@
+name: 333 开发质量与跨平台工具验证
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/dev/**'
+      - 'src/**'
+      - 'native/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'tsconfig.json'
+      - 'biome.json'
+      - '.github/workflows/dev-quality.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/dev/**'
+      - 'src/**'
+      - 'native/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'tsconfig.json'
+      - 'biome.json'
+      - '.github/workflows/dev-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: 开发工具与原生验证（${{ matrix.os }}）
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 55
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 安装独立开发工具与平台编译器
+        run: npm run dev:bootstrap
+      - name: 锁文件生成检查（后续固定进主线）
+        if: runner.os == 'Linux'
+        run: |
+          printf 'DEV_LOCK_BEGIN\n'
+          base64 -w0 tools/dev/package-lock.json
+          printf '\nDEV_LOCK_END\n'
+      - name: 准备源码映射和冻结依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 变更文件类型检查、Biome、覆盖率和原生加载
+        env:
+          DEV333_DIFF_BASE: main
+        run: npm run dev:verify
+      - name: Linux ShellCheck
+        if: runner.os == 'Linux'
+        run: |
+          shellcheck --version
+          shellcheck tools/dev/*.sh
+
+  security:
+    name: 冻结依赖安全审计（公开报告）
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: 从锁文件准备完整 npm 依赖
+        run: node build/install-public-deps.mjs
+      - name: 审计已冻结依赖
+        run: |
+          set +e
+          npm audit --prefix .rebuild/public --json > "$RUNNER_TEMP/dependency-audit.json"
+          rc=$?
+          set -e
+          echo "npm audit 退出码: $rc"
+          node tools/dev/audit-report.mjs "$RUNNER_TEMP/dependency-audit.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 333-dependency-audit
+          path: ${{ runner.temp }}/dependency-audit.json
+          retention-days: 14
+          if-no-files-found: error
