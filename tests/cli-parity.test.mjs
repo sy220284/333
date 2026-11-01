@@ -41,7 +41,7 @@ function sections(output) {
       if (match) flags.push(match[1]);
     }
     if (section === 'Commands') {
-      const match = line.match(/^\s+([a-z][a-z0-9_-]*)(?:\s|\||$)/i);
+      const match = line.match(/^ {2}([a-z][a-z0-9_-]*)(?:\s|\||$)/i);
       if (match) commands.push(match[1]);
     }
   }
