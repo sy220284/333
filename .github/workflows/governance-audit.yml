@@ -1,0 +1,76 @@
+name: 333 类型与依赖安全独立治理
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/governance/**'
+      - 'tools/dev/**'
+      - 'src/**'
+      - 'native/**'
+      - 'build/**'
+      - 'tsconfig.json'
+      - '.github/workflows/governance-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/governance/**'
+      - 'tools/dev/**'
+      - 'src/**'
+      - 'native/**'
+      - 'build/**'
+      - 'tsconfig.json'
+      - '.github/workflows/governance-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: 保存逐条类型诊断与依赖安全溯源
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 安装冻结开发工具和源码依赖
+        run: |
+          npm run dev:bootstrap
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 执行完整 TypeScript 类型诊断并保留实际失败结果
+        run: |
+          mkdir -p .rebuild/governance
+          set +e
+          npm run dev:typecheck:all > .rebuild/governance/typescript.log 2>&1
+          result=$?
+          set -e
+          printf 'TypeScript full check status: %s\n' "$result"
+          node tools/governance/summarize.mjs types .rebuild/governance/typescript.log .rebuild/governance/type-report.json
+      - name: 审计全部冻结依赖及漏洞链路
+        run: |
+          set +e
+          npm audit --prefix .rebuild/public --json > .rebuild/governance/audit.json
+          result=$?
+          set -e
+          printf 'npm audit exit status: %s\n' "$result"
+          node tools/governance/summarize.mjs audit .rebuild/governance/audit.json .rebuild/governance/audit-summary.json
+      - name: 上传完整逐项证据
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-governance-evidence
+          path: |
+            .rebuild/governance/typescript.log
+            .rebuild/governance/type-report.json
+            .rebuild/governance/audit.json
+            .rebuild/governance/audit-summary.json
+          retention-days: 90
+          if-no-files-found: error
