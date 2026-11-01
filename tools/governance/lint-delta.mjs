@@ -49,7 +49,7 @@ const staged = process.env.DEV333_DIFF_STAGED === '1';
 const ref = base.startsWith('origin/') ? base : `origin/${base}`;
 const delta = staged ? git(['diff','--cached','--name-only','--diff-filter=ACMR']) : git(['diff','--name-only','--diff-filter=ACMR',`${ref}...HEAD`]);
 const uncommitted = staged ? '' : git(['diff','--name-only','--diff-filter=ACMR']);
-const files = [...new Set((delta + '\n' + uncommitted).split(/\r?\n/).map(x => x.replaceAll('\\','/')).filter(x => /\.(ts|tsx|mjs|js|jsx|cjs)$/.test(x) && existsSync(resolve(root, x)) && !x.startsWith('research/')))].sort();
+const files = [...new Set(`${delta}\n${uncommitted}`.split(/\r?\n/).map(x => x.replaceAll('\\','/')).filter(x => /\.(ts|tsx|mjs|js|jsx|cjs)$/.test(x) && existsSync(resolve(root, x)) && !x.startsWith('research/')))].sort();
 const report = { base: staged ? 'HEAD（暂存版本）' : ref, checkedFiles: files.length, baseline: 0, current: 0, introduced: [], existing: [] };
 const temporaryRoot=resolve(root,'.lint-governance-baseline');
 try {
@@ -80,7 +80,7 @@ for (const file of files) {
 
 const destination = resolve(root, '.rebuild/governance/lint-delta.json');
 mkdirSync(dirname(destination), {recursive:true});
-writeFileSync(destination, JSON.stringify(report,null,2)+'\n');
+writeFileSync(destination, `${JSON.stringify(report,null,2)}\n`);
 console.log(`[333-lint] 扫描文件 ${report.checkedFiles}，原版诊断 ${report.baseline}，当前诊断 ${report.current}，新增 ${report.introduced.length}`);
 for (const d of report.introduced.slice(0,100)) console.error(`${d.file} ${d.category}：${d.description}`);
 if (report.introduced.length) process.exitCode = 1;
