@@ -3,6 +3,7 @@ import { type GroveDecision, GroveDialog, PrivacySettingsDialog } from '../../co
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../services/analytics/index.js';
 import { getGroveNoticeConfig, getGroveSettings, isQualifiedForGrove } from '../../services/api/grove.js';
 import type { LocalJSXCommandOnDone } from '../../types/command.js';
+import { fetchPrivacySettingsFresh } from './fetchPrivacySettings.mjs';
 const FALLBACK_MESSAGE = 'Review and manage your privacy settings at https://claude.ai/settings/data-privacy-controls';
 const FETCH_ERROR_MESSAGE = 'Unable to fetch your privacy settings at this time. Check https://claude.ai/settings/data-privacy-controls';
 export async function call(onDone: LocalJSXCommandOnDone): Promise<React.ReactNode | null> {
@@ -11,16 +12,12 @@ export async function call(onDone: LocalJSXCommandOnDone): Promise<React.ReactNo
     onDone(FALLBACK_MESSAGE);
     return null;
   }
-  // The privacy dialog must display a fresh server value, never a cached
-  // previous answer from an earlier /privacy-settings invocation.
-  getGroveSettings.cache.clear?.();
-  const [settingsResult, configResult] = await Promise.all([getGroveSettings(), getGroveNoticeConfig()]);
-  if (!settingsResult.success || !configResult.success) {
+  const current = await fetchPrivacySettingsFresh(getGroveSettings, getGroveNoticeConfig);
+  if (!current.success) {
     onDone(FETCH_ERROR_MESSAGE);
     return null;
   }
-  const settings = settingsResult.data;
-  const config = configResult.data;
+  const { settings, config } = current;
   async function onDoneWithDecision(decision: GroveDecision) {
     if (decision === 'escape' || decision === 'defer') {
       onDone('Privacy settings dialog dismissed', {
