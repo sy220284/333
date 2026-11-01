@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: '22'
       - name: 验证任务卡、功能、场景及旧开关/新锚点/版本记录
-        run: node --test tests/upgrade-coverage.test.mjs tests/m1-verify.test.mjs
+        run: node --test tests/upgrade-coverage.test.mjs tests/m1-verify.test.mjs tests/m1-telemetry-policy.test.mjs
       - name: 下载固定发行版的官方变更记录
         run: |
           curl --fail --location --show-error --silent --retry 3 \
