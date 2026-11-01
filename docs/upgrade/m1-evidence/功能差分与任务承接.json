@@ -6696,12 +6696,12 @@
       "id": "F075",
       "title": "Artifact 模板与页面",
       "legacy_sources": [],
-      "old_presence_class": "OLD_EQUIVALENT_NOT_LOCATED",
+      "old_presence_class": "OLD_DIRECT_EQUIVALENT_NOT_IDENTIFIED_NEEDS_FINAL_RECHECK",
       "target_first_anchor": "chunk-ghkyq94m.js:3978",
       "check_static": "/artifact",
-      "is_added_in_2_1_310": "UNVERIFIED",
-      "delta_from_2_1_88": null,
-      "target_full_chain": "UNVERIFIED",
+      "is_added_in_2_1_310": "NEW_OR_MATERIALLY_EXPANDED_FEATURE_SOURCE_CONFIRMED",
+      "delta_from_2_1_88": "旧版存在 ReviewArtifact 等周边能力，但没有找到与新版 Artifact publish/template/page 对等的完整正式入口。按新版扩展能力移交 M6，不能以 ReviewArtifact 名称相似认定旧版已实现。",
+      "target_full_chain": "PARTIAL_CODE_PATH_VERIFIED_PERMISSION_AND_FAILURE_CHECKS_PRESENT",
       "downstream_tasks": [
         "M6"
       ],
@@ -6711,22 +6711,29 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING",
+      "status": "M1_SOURCE_REVIEWED_NOT_FULL_CHAIN",
       "old_source_checks": [],
       "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
       "old_source_proven": false,
-      "legacy_implementation_note": "No matched 2.1.88 primary CLI feature source; may be 2.1.310 packaged resource/extension. Require a real consumer before declaring user-facing new function"
+      "legacy_implementation_note": "No matched 2.1.88 primary CLI feature source; may be 2.1.310 packaged resource/extension. Require a real consumer before declaring user-facing new function",
+      "target_verified_source_branches": [
+        "chunk-ghkyq94m.js:3976-3983",
+        "chunk-ghkyq94m.js:4943-4961"
+      ],
+      "target_partial_actual_consumer": "Artifact publish/read 由原生工具 schema 与操作发起；对新 Artifact 的写入先检查可创建、会话信任及权限，Cowork 无人工批准界面则拒绝，允许时向目标 Artifact 动作传递更新参数。",
+      "downstream_acceptance": "M6：页面 publish/update/read、模板加载、权限来源、已有 URL 更新、不支持的账号/网络条件、无交互拒绝、跨轮状态及取消。",
+      "new_source_evidence": "chunk-ghkyq94m.js:3976-3983; chunk-ghkyq94m.js:4943-4961"
     },
     {
       "id": "F076",
       "title": "浏览器与 Claude Test 附件",
       "legacy_sources": [],
-      "old_presence_class": "OLD_EQUIVALENT_NOT_LOCATED",
+      "old_presence_class": "OLD_DIRECT_EQUIVALENT_NOT_IDENTIFIED_NEEDS_FINAL_RECHECK",
       "target_first_anchor": "chunk-ajtyjx88.js:11844",
       "check_static": "claude_test_draft",
-      "is_added_in_2_1_310": "UNVERIFIED",
-      "delta_from_2_1_88": null,
-      "target_full_chain": "UNVERIFIED",
+      "is_added_in_2_1_310": "NEW_OR_MATERIALLY_EXPANDED_FEATURE_SOURCE_CONFIRMED",
+      "delta_from_2_1_88": "旧版 2.1.88 未发现 /claude-test 内置技能、隔离浏览器 helper 与分工代理的完整链路；新版属于可定位的扩展功能，源文件未对齐和辅助资源缺失部分交 M6 实施。内部 usage 事件不能代替测试能力本身。",
+      "target_full_chain": "PARTIAL_CODE_PATH_VERIFIED_PERMISSION_AND_FAILURE_CHECKS_PRESENT",
       "downstream_tasks": [
         "M6"
       ],
@@ -6736,22 +6743,31 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING",
+      "status": "M1_SOURCE_REVIEWED_NOT_FULL_CHAIN",
       "old_source_checks": [],
       "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
       "old_source_proven": false,
-      "legacy_implementation_note": "No matched 2.1.88 primary CLI feature source; may be 2.1.310 packaged resource/extension. Require a real consumer before declaring user-facing new function"
+      "legacy_implementation_note": "No matched 2.1.88 primary CLI feature source; may be 2.1.310 packaged resource/extension. Require a real consumer before declaring user-facing new function",
+      "target_verified_source_branches": [
+        "chunk-pmkym69z.js:439-499",
+        "chunk-pmkym69z.js:1384-1395",
+        "chunk-pmkym69z.js:1887",
+        "chunk-pmkym69z.js:1922-1945"
+      ],
+      "target_partial_actual_consumer": "内置 /claude-test 技能在交互式 CLI 中激活；后台 spec 作者生成 proposed 草案、只读代码映射器解析 Web 应用、封闭浏览器 runner 执行 specs 并产出截图/通过或失败报告；运行结果按保存目录提交 usage events。若未授权、找不到 Node、helper 改动或在 -p 启动，则以明示错误退出。",
+      "downstream_acceptance": "M6：旧仓是否已有类似插件？检查注册与启用→spec 建立→read-only mapper→隔离 browser runner→PASS/FAIL 截图→缓存恢复→无 TTY/不可信权限拒绝。",
+      "new_source_evidence": "chunk-pmkym69z.js:439-499; chunk-pmkym69z.js:1384-1395; chunk-pmkym69z.js:1887; chunk-pmkym69z.js:1922-1945"
     },
     {
       "id": "F077",
       "title": "设计系统同步附件",
       "legacy_sources": [],
-      "old_presence_class": "OLD_EQUIVALENT_NOT_LOCATED",
+      "old_presence_class": "OLD_DIRECT_EQUIVALENT_NOT_IDENTIFIED_NEEDS_FINAL_RECHECK",
       "target_first_anchor": "chunk-5kfjd6mt.js:121",
       "check_static": "designSystem",
-      "is_added_in_2_1_310": "UNVERIFIED",
-      "delta_from_2_1_88": null,
-      "target_full_chain": "UNVERIFIED",
+      "is_added_in_2_1_310": "NEW_OR_MATERIALLY_EXPANDED_FEATURE_SOURCE_CONFIRMED",
+      "delta_from_2_1_88": "旧版未定位到 /design-sync 专用命令/转换器/完整网络调用链；新版有实际命令与工具，但依赖授权的远端服务，属于条件可用而非默认离线能力。",
+      "target_full_chain": "PARTIAL_CODE_PATH_VERIFIED_PERMISSION_AND_FAILURE_CHECKS_PRESENT",
       "downstream_tasks": [
         "M6"
       ],
@@ -6761,11 +6777,19 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING",
+      "status": "M1_SOURCE_REVIEWED_NOT_FULL_CHAIN",
       "old_source_checks": [],
       "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
       "old_source_proven": false,
-      "legacy_implementation_note": "No matched 2.1.88 primary CLI feature source; may be 2.1.310 packaged resource/extension. Require a real consumer before declaring user-facing new function"
+      "legacy_implementation_note": "No matched 2.1.88 primary CLI feature source; may be 2.1.310 packaged resource/extension. Require a real consumer before declaring user-facing new function",
+      "target_verified_source_branches": [
+        "chunk-n7dvjfwp.js:1608-1647",
+        "chunk-vs02frgz.js:169,250-267,293-347,464",
+        "chunk-ghkyq94m.js:1352-1356"
+      ],
+      "target_partial_actual_consumer": "`/design-sync` 作为可调用命令注册，动作将本地 React/Storybook 组件打包上传至设计系统服务；DesignSyncTool 通过登录状态、授权范围、Provider 是否支持及非必要流量限制判断是否可执行；目标 Design System 使用类型列表和权限校验选择。",
+      "downstream_acceptance": "M6：检查独立命令→auth/Provider/网络策略→本地组件扫描→打包上传→远端回执/恢复与无TTY拒绝；兼顾 2026-12-14 独立 Claude Design 下线变更，不可未经验证静默当作永久可用。",
+      "new_source_evidence": "chunk-n7dvjfwp.js:1608-1647; chunk-vs02frgz.js:169,250-267,293-347,464; chunk-ghkyq94m.js:1352-1356"
     },
     {
       "id": "F079",
