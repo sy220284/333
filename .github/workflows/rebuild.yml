@@ -74,4 +74,18 @@ jobs:
           path: dist/
           retention-days: 14
           if-no-files-found: error
-
+  research-integrity:
+    name: 核验全量源码映射研究数据
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 对照原始 cli.js.map 全量只读复核研究目录
+        run: python3 research/claude-code-2.1.88/generate.py --verify
+      - name: 确认复核流程没有改写任何文件
+        run: test -z "$(git status --porcelain)"
