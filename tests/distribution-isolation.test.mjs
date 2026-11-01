@@ -3,10 +3,11 @@ import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 
-const root = new URL('../', import.meta.url).pathname;
+const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const releaseDir = join(root, 'dist');
 
 function invoke(command, args, cwd) {
@@ -29,7 +30,7 @@ test('distributable starts outside repository with no source tree, original CLI,
     const output = readFileSync(join(packageDir,'cli.js'));
     assert.notEqual(createHash('sha256').update(source).digest('hex'),createHash('sha256').update(output).digest('hex'));
     const version=invoke('bun',[join(packageDir,'cli.js'),'--version'],isolation);
-    assert.match(version,/2\\.1\\.88 \\(Claude Code\\)/);
+    assert.match(version,/2\.1\.88 \(Claude Code\)/);
     const help=invoke(process.execPath,[join(packageDir,'launcher.cjs'),'--help'],isolation);
     assert.match(help,/--print/);
     const plugin=invoke('bun',[join(packageDir,'cli.js'),'plugin','--help'],isolation);
