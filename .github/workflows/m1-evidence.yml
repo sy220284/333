@@ -21,6 +21,10 @@ on:
       - 'tests/m1-feedback-types.fixture.ts'
       - 'src/components/FeedbackSurvey/utils.ts'
       - 'build/m1-source-gap-ast.mjs'
+      - 'build/m1-inline-source-map-audit.py'
+      - 'tests/m1-inline-map-audit.test.mjs'
+      - 'src/components/wizard/types.ts'
+      - 'src/services/tips/types.ts'
       - 'src/types/fileSuggestion.ts'
       - 'src/types/statusLine.ts'
       - 'src/dialogLaunchers.tsx'
@@ -43,7 +47,7 @@ jobs:
         with:
           node-version: '22'
       - name: 验证任务卡、功能、场景及旧开关/新锚点/版本记录
-        run: node --test tests/upgrade-coverage.test.mjs tests/m1-verify.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs tests/m1-privacy-settings.test.mjs tests/m1-snapshot-terminal-behavior.test.mjs tests/m1-source-gap-audit.test.mjs
+        run: node --test tests/upgrade-coverage.test.mjs tests/m1-verify.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs tests/m1-privacy-settings.test.mjs tests/m1-snapshot-terminal-behavior.test.mjs tests/m1-source-gap-audit.test.mjs tests/m1-inline-map-audit.test.mjs
       - name: 安装固定TypeScript校验器
         run: npm install --prefix "${RUNNER_TEMP}/m1-typescript" --no-save --package-lock=false --ignore-scripts --no-audit --no-fund typescript@5.9.3
       - name: 编译已恢复类型的正反向契约
@@ -55,6 +59,15 @@ jobs:
         with:
           name: m1-current-source-gaps
           path: ${{ runner.temp }}/m1-current-source-gaps.json
+          retention-days: 30
+          if-no-files-found: error
+      - name: 校验旧版内嵌原始Source Map及恢复索引
+        run: python3 build/m1-inline-source-map-audit.py --source-dir src --output "${RUNNER_TEMP}/m1-inline-source-snapshots.json"
+      - name: 保存可追溯原始TypeScript来源快照摘要
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-inline-source-snapshots
+          path: ${{ runner.temp }}/m1-inline-source-snapshots.json
           retention-days: 30
           if-no-files-found: error
       - name: 下载固定发行版的官方变更记录
