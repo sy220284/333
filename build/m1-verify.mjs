@@ -37,12 +37,35 @@ function verifiedChange(x) {
       (x.applicability === 'NOT_APPLICABLE' && hasText(x.scope_exclusion_evidence)));
 }
 function checkAll() {
+  const originalFlags = readJson(join(root, 'research/claude-code-2.1.88/features/feature-index.json'));
+  const gapDoc = readFileSync(join(root, 'docs/upgrade/2.1.310-升级缺口与逐项核查清单.md'), 'utf8');
+  const standardsDoc = readFileSync(join(root, 'docs/upgrade/2.1.310-三项全量证据补证与关单规范.md'), 'utf8');
+  const originalByName = new Map(originalFlags.map(item => [item.flag, item]));
+  const gapByName = new Map([...gapDoc.matchAll(/^\|\s*`([A-Z][A-Z0-9_]+)`\s*\|\s*\d+\s*\|\s*[^|]+\|\s*(M\d+)\s*\|/gm)]
+    .map(match => [match[1], match[2]]));
+  assert.equal(originalByName.size, 90);
+  assert.equal(gapByName.size, 90);
+  const standardsById = new Map([...standardsDoc.matchAll(/^\|\s*(F\d{3})\s*\|\s*`([^`]+)`\s*\|\s*`([^`]+)`/gm)]
+    .map(match => [match[1], {anchor: match[2], keyword: match[3]}]));
+  assert.equal(standardsById.size, 61);
+  const missingModules = readJson(join(evidenceDir, 'missing-modules.json')).records;
+  assert.deepEqual(missingModules.map(row => row.module).sort(),
+    ['VerifyPlanExecutionTool','snipCompact','SnapshotUpdateDialog','AssistantSessionChooser',
+    'assistant','cachedMicrocompact','contextCollapse'].sort());
+  assert.ok(missingModules.every(row => row.target_state === 'UNVERIFIED'));
+
   assert.equal(flagSet.length, 90, 'M1 requires exactly 90 legacy flags');
   assert.equal(flagSet.reduce((sum, f) => sum + f.legacy_count, 0), 972);
   assert.equal(new Set(flagSet.map(f => f.flag)).size, 90);
   for (const f of flagSet) {
     assert.match(f.flag, /^[A-Z][A-Z0-9_]+$/);
     assert.ok(validTasks.has(f.owner_M), 'Missing task responsibility: ' + f.flag);
+    const original = originalByName.get(f.flag);
+    assert.ok(original, 'Legacy flag missing from original research: '+f.flag);
+    assert.equal(f.legacy_count, original.references);
+    assert.deepEqual(f.old_sources, original.affected_sources);
+    assert.equal(f.old_compilation_state, original.compilation_state_333);
+    assert.equal(f.owner_M, gapByName.get(f.flag));
     assert.ok(Array.isArray(f.old_sources) && f.old_sources.length > 0);
     assert.ok(['INDEXED','ANCHOR_IDENTIFIED','CALL_CHAIN_CONFIRMED','TARGET_SEMANTICS_CONFIRMED',
       'IMPLEMENTED','TESTED','ACCEPTED'].includes(f.status));
@@ -54,6 +77,10 @@ function checkAll() {
     assert.ok(validFeatures.has(item.F_id), 'Unmapped feature: ' + item.F_id);
     assert.match(item.first_code_anchor, /^chunk-[a-z0-9]+\.js:\d+$/);
     assert.ok(hasText(item.static_keyword));
+    const first = standardsById.get(item.F_id);
+    assert.ok(first, 'Missing feature from M1 source standard');
+    assert.equal(item.first_code_anchor, first.anchor);
+    assert.equal(item.static_keyword, first.keyword);
     assert.ok(Array.isArray(item.old_sources));
     assert.ok(item.owner_M.every(m => validTasks.has(m)));
     assert.ok(item.related_scenarios.length > 0);
