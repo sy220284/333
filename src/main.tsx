@@ -1000,7 +1000,7 @@ async function run(): Promise<CommanderCommand> {
       throw new InvalidArgumentError(`It must be one of: ${allowed.join(', ')}`);
     }
     return value;
-  })).option('--agent <agent>', `Agent for the current session. Overrides the 'agent' setting.`).option('--betas <betas...>', 'Beta headers to include in API requests (API key users only)').option('--fallback-model <models>', 'Comma-separated fallback models tried in order when the active model is overloaded (only works with --print)').addOption(new Option('--autocompact <auto|tokens>', 'Auto-compact context window (auto, or 100k–1M tokens)').argParser(value => {
+  })).option('--agent <agent>', `Agent for the current session. Overrides the 'agent' setting.`).option('--betas <betas...>', 'Beta headers to include in API requests (API key users only)').option('--fallback-model <model>', 'Comma-separated fallback model(s) tried in order when the active model is overloaded or unavailable; primary is retried at each new user turn').addOption(new Option('--autocompact <auto|tokens>', 'Auto-compact context window (auto, or 100k–1M tokens)').argParser(value => {
     const parsed = parseAutoCompactWindowOption(value);
     if (parsed === undefined) throw new InvalidArgumentError("It must be 'auto', or between 100k and 1M (e.g. 500k, 200000, or 200 as shorthand)");
     return parsed;
@@ -3093,6 +3093,7 @@ async function run(): Promise<CommanderCommand> {
       strictMcpConfig,
       systemPrompt,
       appendSystemPrompt,
+      fallbackModel: userSpecifiedFallbackModel,
       taskListId,
       thinkingConfig,
       ...(uploaderReady && {
