@@ -114,7 +114,7 @@ const result = await Bun.build({
   format: 'esm',
   sourcemap: 'external',
   splitting: false,
-  features: [],
+  features: ['TRANSCRIPT_CLASSIFIER', 'KAIROS_BRIEF'],
   minify: true,
   jsx: { runtime: 'classic', factory: 'React.createElement', fragment: 'React.Fragment', importSource: 'react', sideEffects: false, development: false },
   define: {
