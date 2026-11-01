@@ -76,6 +76,9 @@ const plugin = {
         return;
       }
       if (native[id]) return { path: join(root, 'native', native[id], 'index.ts') };
+      const ns = id.startsWith('@') ? id.split('/').slice(0,2).join('/') : id.split('/')[0];
+      // Resolve complete published package metadata first; preserve map snapshots for internal packages.
+      if (ns !== '@ant/computer-use-mcp' && ns !== '@ant/claude-for-chrome-mcp' && ns !== '@ant/computer-use-input' && ns !== '@ant/computer-use-swift' && existsSync(join(root, 'node_modules', ns, 'package.json'))) return;
       const path = resolvePackage(id);
       if (path) return { path };
       unresolved.add(id);
