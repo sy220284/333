@@ -35,7 +35,23 @@
       "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "LEGACY_INTERNAL_EVAL_GATE",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-1z6trapv.js",
+          "line": 627,
+          "keyword": "ablation"
+        },
+        {
+          "file": "chunk-563gzepf.js",
+          "line": 1205,
+          "keyword": "ablation"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 6,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "AGENT_MEMORY_SNAPSHOT",
@@ -74,7 +90,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 46238,
+          "keyword": "memorySnapshot"
+        },
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 42197,
+          "keyword": "agentMemory"
+        },
+        {
+          "file": "chunk-c57c64b0.js",
+          "line": 115,
+          "keyword": "memorySnapshot"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 8,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "AGENT_TRIGGERS",
@@ -114,7 +151,28 @@
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "CRON_SCHEDULER_MODULE_PRESENT",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-0dja0qpg.js",
+          "line": 68,
+          "keyword": "schedule"
+        },
+        {
+          "file": "chunk-0dja0qpg.js",
+          "line": 68,
+          "keyword": "cron"
+        },
+        {
+          "file": "chunk-0m847w4m.js",
+          "line": 26,
+          "keyword": "schedule"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 136,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "AGENT_TRIGGERS_REMOTE",
@@ -155,7 +213,28 @@
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "REMOTE_TRIGGER_TOOL_EXPORTED",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-mq1a69zj.js",
+          "line": 462,
+          "keyword": "remoteTrigger"
+        },
+        {
+          "file": "chunk-mq1a69zj.js",
+          "line": 346,
+          "keyword": "schedule"
+        },
+        {
+          "file": "chunk-pp7zwndm.js",
+          "line": 2209,
+          "keyword": "remoteTrigger"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 136,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "ALLOW_TEST_VERSIONS",
@@ -179,7 +258,18 @@
       "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "LEGACY_INTERNAL_TEST_GATE",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-n7dvjfwp.js",
+          "line": 1674,
+          "keyword": "test-version"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 1,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "ANTI_DISTILLATION_CC",
@@ -203,7 +293,23 @@
       "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "OLD_1P_PROTOCOL_ONLY_NO_PUBLIC_SWITCH",
-      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE"
+      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 50330,
+          "keyword": "firstPartyBeta"
+        },
+        {
+          "file": "chunk-wf28mfqa.js",
+          "line": 437,
+          "keyword": "firstPartyBeta"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 2,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "AUTO_THEME",
@@ -236,7 +342,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-05abnese.js",
+          "line": 14,
+          "keyword": "theme"
+        },
+        {
+          "file": "chunk-0bebdad1.js",
+          "line": 310,
+          "keyword": "theme"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 88,
+      "target_lead_assessment": "插件推荐的 theme 字段不是旧自动主题切换功能",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "AWAY_SUMMARY",
@@ -270,7 +392,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-0v24azm8.js",
+          "line": 32,
+          "keyword": "awaySummary"
+        },
+        {
+          "file": "chunk-5rw2zfa0.js",
+          "line": 1744,
+          "keyword": "awaySummary"
+        }
+      ],
+      "archive_exact_same_name_files": 3,
+      "archive_similar_candidate_file_count": 9,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "BASH_CLASSIFIER",
@@ -324,7 +462,23 @@
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "BASH_PERMISSION_HANDLER_PRESENT",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-25j20xpc.js",
+          "line": 373,
+          "keyword": "bashPermissions"
+        },
+        {
+          "file": "chunk-2pjf4p7s.js",
+          "line": 568,
+          "keyword": "bashCommandClamp"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 13,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "BG_SESSIONS",
@@ -368,7 +522,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-kfdf5pq3.js",
+          "line": 679,
+          "keyword": "--bg"
+        },
+        {
+          "file": "chunk-kfdf5pq3.js",
+          "line": 866,
+          "keyword": "backgroundSession"
+        },
+        {
+          "file": "cli.js",
+          "line": 98,
+          "keyword": "--bg"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 63,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "BREAK_CACHE_COMMAND",
@@ -399,7 +574,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-0v8111n2.js",
+          "line": 161,
+          "keyword": "promptCache"
+        },
+        {
+          "file": "chunk-5rw2zfa0.js",
+          "line": 1744,
+          "keyword": "promptCache"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 13,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "BRIDGE_MODE",
@@ -444,7 +635,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-mh7sh27p.js",
+          "line": 728,
+          "keyword": "--remote-control"
+        },
+        {
+          "file": "chunk-mh7sh27p.js",
+          "line": 721,
+          "keyword": "--sdk-url"
+        },
+        {
+          "file": "chunk-c3npf81n.js",
+          "line": 20,
+          "keyword": "--remote-control"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 225,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "BUDDY",
@@ -481,7 +693,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-65wf35er.js",
+          "line": 303,
+          "keyword": "buddy"
+        },
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 33895,
+          "keyword": "buddy"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 3,
+      "target_lead_assessment": "首个 buddy 命中 PlistBuddy；另一个是入门伙伴提示词，未证明旧版 CompanionSprite 功能",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "BUILDING_CLAUDE_APPS",
@@ -514,7 +742,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-20rt2hzh.js",
+          "line": 97,
+          "keyword": "claude-api"
+        },
+        {
+          "file": "chunk-4wh6grjv.js",
+          "line": 64,
+          "keyword": "claude-api"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 7,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "BUILTIN_EXPLORE_PLAN_AGENTS",
@@ -552,7 +796,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-5qtb3hv4.js",
+          "line": 243,
+          "keyword": "Explore"
+        },
+        {
+          "file": "chunk-5qtb3hv4.js",
+          "line": 154,
+          "keyword": "Plan"
+        },
+        {
+          "file": "chunk-5rw2zfa0.js",
+          "line": 1339,
+          "keyword": "Explore"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 340,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "BYOC_ENVIRONMENT_RUNNER",
@@ -583,7 +848,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-6d8swme1.js",
+          "line": 591,
+          "keyword": "self-hosted runner"
+        },
+        {
+          "file": "chunk-6d8swme1.js",
+          "line": 688,
+          "keyword": "--environment"
+        },
+        {
+          "file": "chunk-g5hxk6wx.js",
+          "line": 157,
+          "keyword": "self-hosted runner"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 23,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "CACHED_MICROCOMPACT",
@@ -622,7 +908,28 @@
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "MICROCOMPACT_HISTORY_EVENT_PRESENT",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-ajtyjx88.js",
+          "line": 10493,
+          "keyword": "microcompact"
+        },
+        {
+          "file": "chunk-ajtyjx88.js",
+          "line": 240,
+          "keyword": "cache"
+        },
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 50235,
+          "keyword": "microcompact"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 407,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "CCR_AUTO_CONNECT",
@@ -654,7 +961,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 59031,
+          "keyword": "autoConnect"
+        },
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 36419,
+          "keyword": "remote-control"
+        },
+        {
+          "file": "chunk-kfdf5pq3.js",
+          "line": 794,
+          "keyword": "autoConnect"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 49,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "CCR_MIRROR",
@@ -687,7 +1015,18 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-kfdf5pq3.js",
+          "line": 794,
+          "keyword": "ccrMirror"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 1,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "CCR_REMOTE_SETUP",
@@ -718,7 +1057,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-142mjqaf.js",
+          "line": 1765,
+          "keyword": "--remote-control"
+        },
+        {
+          "file": "chunk-5rw2zfa0.js",
+          "line": 1744,
+          "keyword": "--remote-control"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 7,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "CHICAGO_MCP",
@@ -758,7 +1113,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-00h33g5z.js",
+          "line": 14,
+          "keyword": "mcp"
+        },
+        {
+          "file": "chunk-01ett990.js",
+          "line": 32,
+          "keyword": "mcp"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 489,
+      "target_lead_assessment": "只命中通用 MCP 单词，不能证明 CHICAGO 专用服务或迁移路径",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "COMMIT_ATTRIBUTION",
@@ -799,7 +1170,28 @@
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "GIT_ATTRIBUTION_LOGIC_PRESENT",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 29794,
+          "keyword": "Co-Authored-By"
+        },
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 495,
+          "keyword": "attribution"
+        },
+        {
+          "file": "chunk-0hcnhpx5.js",
+          "line": 69,
+          "keyword": "attribution"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 83,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "COMPACTION_REMINDERS",
@@ -830,7 +1222,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-2sq2cy74.js",
+          "line": 452,
+          "keyword": "/compact"
+        },
+        {
+          "file": "chunk-460hw2jb.js",
+          "line": 17,
+          "keyword": "/compact"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 13,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "CONNECTOR_TEXT",
@@ -872,7 +1280,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-01ett990.js",
+          "line": 113,
+          "keyword": "connector"
+        },
+        {
+          "file": "chunk-01ett990.js",
+          "line": 32,
+          "keyword": "mcp"
+        },
+        {
+          "file": "chunk-14k612dp.js",
+          "line": 46,
+          "keyword": "connector"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 512,
+      "target_lead_assessment": "只命中 connector/MCP 基础说明，未证明旧版 connector text 专用分支",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "CONTEXT_COLLAPSE",
@@ -915,7 +1344,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-2sq2cy74.js",
+          "line": 452,
+          "keyword": "compaction"
+        },
+        {
+          "file": "chunk-2sq2cy74.js",
+          "line": 452,
+          "keyword": "/compact"
+        },
+        {
+          "file": "chunk-460hw2jb.js",
+          "line": 19,
+          "keyword": "compaction"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 54,
+      "target_lead_assessment": "compaction 提示不同于旧版 contextCollapse 状态压缩函数",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "COORDINATOR_MODE",
@@ -962,7 +1412,28 @@
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "COORDINATOR_MODULE_PRESENT",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-475stacc.js",
+          "line": 554,
+          "keyword": "coordinator"
+        },
+        {
+          "file": "chunk-475stacc.js",
+          "line": 554,
+          "keyword": "teammate"
+        },
+        {
+          "file": "chunk-6d8swme1.js",
+          "line": 310,
+          "keyword": "coordinator"
+        }
+      ],
+      "archive_exact_same_name_files": 5,
+      "archive_similar_candidate_file_count": 145,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "COWORKER_TYPE_TELEMETRY",
@@ -988,7 +1459,18 @@
       "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "OLD_INTERNAL_ANALYTICS_ATTRIBUTE",
-      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE"
+      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-ajtyjx88.js",
+          "line": 11654,
+          "keyword": "coworker_type"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 1,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "DAEMON",
@@ -1027,7 +1509,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-05z051sc.js",
+          "line": 528,
+          "keyword": "daemon"
+        },
+        {
+          "file": "chunk-05z051sc.js",
+          "line": 2198,
+          "keyword": "--bg"
+        },
+        {
+          "file": "chunk-5rw2zfa0.js",
+          "line": 1744,
+          "keyword": "daemon"
+        }
+      ],
+      "archive_exact_same_name_files": 6,
+      "archive_similar_candidate_file_count": 95,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "DIRECT_CONNECT",
@@ -1058,7 +1561,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-142mjqaf.js",
+          "line": 469,
+          "keyword": "connect"
+        },
+        {
+          "file": "chunk-142mjqaf.js",
+          "line": 1765,
+          "keyword": "--remote-control"
+        },
+        {
+          "file": "chunk-5rw2zfa0.js",
+          "line": 647,
+          "keyword": "connect"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 406,
+      "target_lead_assessment": "connect 为通用 WebSocket 重连函数，功能等价需检查实际连接路径",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "DOWNLOAD_USER_SETTINGS",
@@ -1098,7 +1622,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-0yqhf2py.js",
+          "line": 230,
+          "keyword": "userSettings"
+        },
+        {
+          "file": "chunk-1e5yp9hx.js",
+          "line": 28,
+          "keyword": "userSettings"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 121,
+      "target_lead_assessment": "userSettings 字符串仅证明设置系统存在，未证明下载用户设置功能",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "DUMP_SYSTEM_PROMPT",
@@ -1122,7 +1662,28 @@
       "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "LEGACY_INTERNAL_EVAL_GATE",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-at88wjsn.js",
+          "line": 1799,
+          "keyword": "--system-prompt"
+        },
+        {
+          "file": "chunk-at88wjsn.js",
+          "line": 1799,
+          "keyword": "systemPromptSnapshot"
+        },
+        {
+          "file": "chunk-fnsjs1v2.js",
+          "line": 309,
+          "keyword": "--system-prompt"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 18,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "ENHANCED_TELEMETRY_BETA",
@@ -1158,7 +1719,28 @@
           "state": "IMPLEMENTED_SOURCE_AND_UNIT_TEST_PENDING_LATEST_CI",
           "caution": "Other F080 telemetry/tracing, privacy and performance behavior not fully accepted"
         }
-      ]
+      ],
+      "target_static_leads": [
+        {
+          "file": "chunk-5rw2zfa0.js",
+          "line": 1744,
+          "keyword": "opentelemetry"
+        },
+        {
+          "file": "chunk-5rw2zfa0.js",
+          "line": 1308,
+          "keyword": "OTEL_"
+        },
+        {
+          "file": "chunk-87yn4n4k.js",
+          "line": 870,
+          "keyword": "opentelemetry"
+        }
+      ],
+      "archive_exact_same_name_files": 4,
+      "archive_similar_candidate_file_count": 28,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "EXPERIMENTAL_SKILL_SEARCH",
@@ -1197,7 +1779,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 54471,
+          "keyword": "skillSearch"
+        },
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 30336,
+          "keyword": "ToolSearch"
+        },
+        {
+          "file": "chunk-5rw2zfa0.js",
+          "line": 4008,
+          "keyword": "ToolSearch"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 45,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "EXTRACT_MEMORIES",
@@ -1231,7 +1834,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-tqjdehqd.js",
+          "line": 1582,
+          "keyword": "extractMemories"
+        },
+        {
+          "file": "chunk-tqjdehqd.js",
+          "line": 339,
+          "keyword": "memory"
+        },
+        {
+          "file": "chunk-0bbb50s7.js",
+          "line": 301,
+          "keyword": "memory"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 234,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "FILE_PERSISTENCE",
@@ -1263,7 +1887,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-2pjf4p7s.js",
+          "line": 1179,
+          "keyword": "persist"
+        },
+        {
+          "file": "chunk-2pjf4p7s.js",
+          "line": 602,
+          "keyword": "journal"
+        },
+        {
+          "file": "chunk-3827ysmv.js",
+          "line": 1521,
+          "keyword": "persist"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 229,
+      "target_lead_assessment": "Workflow journal 只证明工作流自身落盘，不能推出旧通用 file persistence 等价",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "FORK_SUBAGENT",
@@ -1300,7 +1945,28 @@
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "FORK_AGENT_DEFINITION_PRESENT",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 41529,
+          "keyword": "subagent_type: \"fork\""
+        },
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 1628,
+          "keyword": "fork"
+        },
+        {
+          "file": "chunk-qnd362wh.js",
+          "line": 173,
+          "keyword": "subagent_type: \"fork\""
+        }
+      ],
+      "archive_exact_same_name_files": 4,
+      "archive_similar_candidate_file_count": 134,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "HARD_FAIL",
@@ -1325,7 +1991,23 @@
       "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "LEGACY_DIAGNOSTIC_GATE",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-ewvf3tep.js",
+          "line": 172,
+          "keyword": "hardFail"
+        },
+        {
+          "file": "chunk-m59vztgd.js",
+          "line": 44,
+          "keyword": "hardFail"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 3,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "HISTORY_PICKER",
@@ -1357,7 +2039,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-6z861t7d.js",
+          "line": 121,
+          "keyword": "--resume"
+        },
+        {
+          "file": "chunk-6z861t7d.js",
+          "line": 113,
+          "keyword": "/resume"
+        },
+        {
+          "file": "chunk-at88wjsn.js",
+          "line": 1783,
+          "keyword": "--resume"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 46,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "HISTORY_SNIP",
@@ -1395,7 +2098,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-92hm4yb6.js",
+          "line": 4726,
+          "keyword": "snip"
+        },
+        {
+          "file": "chunk-92hm4yb6.js",
+          "line": 739,
+          "keyword": "history"
+        },
+        {
+          "file": "chunk-ajtyjx88.js",
+          "line": 11844,
+          "keyword": "snip"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 131,
+      "target_lead_assessment": "snip 字符串无法确定旧版 SnipTool 仍注册",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "HOOK_PROMPTS",
@@ -1426,7 +2150,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 18326,
+          "keyword": "HookEvent"
+        },
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 61627,
+          "keyword": "hook_prompt"
+        },
+        {
+          "file": "chunk-20rt2hzh.js",
+          "line": 132,
+          "keyword": "HookEvent"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 58,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "IS_LIBC_GLIBC",
@@ -1450,7 +2195,18 @@
       "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "LEGACY_PLATFORM_BUILD_GATE",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-sr1bpqdt.js",
+          "line": 552,
+          "keyword": "glibc"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 1,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "IS_LIBC_MUSL",
@@ -1474,7 +2230,23 @@
       "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "LEGACY_PLATFORM_BUILD_GATE",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-2ctyt5p9.js",
+          "line": 17,
+          "keyword": "musl"
+        },
+        {
+          "file": "chunk-5ns6j8e0.js",
+          "line": 15,
+          "keyword": "musl"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 6,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "KAIROS",
@@ -1570,7 +2342,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-at88wjsn.js",
+          "line": 1798,
+          "keyword": "/goal"
+        },
+        {
+          "file": "chunk-at88wjsn.js",
+          "line": 1787,
+          "keyword": "routine"
+        },
+        {
+          "file": "chunk-mdxeekqd.js",
+          "line": 12862,
+          "keyword": "/goal"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 100,
+      "target_lead_assessment": "/goal、routine 与 KAIROS 主动体系不是同一个入口，须按实际用户行为分别比较",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "KAIROS_BRIEF",
@@ -1620,7 +2413,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-05z051sc.js",
+          "line": 1937,
+          "keyword": "summary"
+        },
+        {
+          "file": "chunk-05z051sc.js",
+          "line": 528,
+          "keyword": "routine"
+        },
+        {
+          "file": "chunk-1ww4jg8j.js",
+          "line": 14990,
+          "keyword": "summary"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 224,
+      "target_lead_assessment": "summary/routine 是泛化词，不证明旧版 brief 工具等价",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "KAIROS_CHANNELS",
@@ -1667,7 +2481,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-5rw2zfa0.js",
+          "line": 1744,
+          "keyword": "--channels"
+        },
+        {
+          "file": "chunk-5rw2zfa0.js",
+          "line": 1151,
+          "keyword": "channel"
+        },
+        {
+          "file": "chunk-6d8swme1.js",
+          "line": 1875,
+          "keyword": "--channels"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 198,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "KAIROS_DREAM",
@@ -1698,7 +2533,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-1vw5s89k.js",
+          "line": 55,
+          "keyword": "dream"
+        },
+        {
+          "file": "chunk-1vw5s89k.js",
+          "line": 55,
+          "keyword": "autoDream"
+        },
+        {
+          "file": "chunk-5rw2zfa0.js",
+          "line": 1744,
+          "keyword": "dream"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 24,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "KAIROS_GITHUB_WEBHOOKS",
@@ -1732,7 +2588,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-0mztaezn.js",
+          "line": 615,
+          "keyword": "webhook"
+        },
+        {
+          "file": "chunk-4kxznmzw.js",
+          "line": 1186,
+          "keyword": "webhook"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 26,
+      "target_lead_assessment": "通用 webhook 字段无法证实 KAIROS GitHub webhook 的注册路径",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "KAIROS_PUSH_NOTIFICATION",
@@ -1765,7 +2637,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-5q1fx7z3.js",
+          "line": 155,
+          "keyword": "pushNotification"
+        },
+        {
+          "file": "chunk-5q1fx7z3.js",
+          "line": 155,
+          "keyword": "notification"
+        },
+        {
+          "file": "chunk-at88wjsn.js",
+          "line": 1798,
+          "keyword": "pushNotification"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 174,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "LODESTONE",
@@ -1801,7 +2694,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-5rw2zfa0.js",
+          "line": 1151,
+          "keyword": "deepLink"
+        },
+        {
+          "file": "chunk-5rw2zfa0.js",
+          "line": 1151,
+          "keyword": "disableDeepLinkRegistration"
+        },
+        {
+          "file": "chunk-705btg35.js",
+          "line": 126,
+          "keyword": "deepLink"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 8,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "MCP_RICH_OUTPUT",
@@ -1832,7 +2746,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-00h33g5z.js",
+          "line": 14,
+          "keyword": "mcp"
+        },
+        {
+          "file": "chunk-01ett990.js",
+          "line": 32,
+          "keyword": "mcp"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 489,
+      "target_lead_assessment": "普通 MCP 字符串不证明旧版富文本渲染能力",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "MCP_SKILLS",
@@ -1867,7 +2797,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-7k95knd7.js",
+          "line": 40,
+          "keyword": "mcp skills"
+        },
+        {
+          "file": "chunk-7k95knd7.js",
+          "line": 27,
+          "keyword": "mcp"
+        },
+        {
+          "file": "chunk-aejx5ydy.js",
+          "line": 3803,
+          "keyword": "mcp skills"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 490,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "MEMORY_SHAPE_TELEMETRY",
@@ -1894,7 +2845,23 @@
       "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "OLD_INTERNAL_MEMORY_RECALL_METRICS",
-      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE"
+      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-05z051sc.js",
+          "line": 3628,
+          "keyword": "memory"
+        },
+        {
+          "file": "chunk-0bbb50s7.js",
+          "line": 301,
+          "keyword": "memory"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 229,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "MESSAGE_ACTIONS",
@@ -1926,7 +2893,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-03htth44.js",
+          "line": 466,
+          "keyword": "action"
+        },
+        {
+          "file": "chunk-05z051sc.js",
+          "line": 767,
+          "keyword": "action"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 402,
+      "target_lead_assessment": "通用 action 事件不是 PromptInput 消息动作菜单",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "MONITOR_TOOL",
@@ -1967,7 +2950,28 @@
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "PUBLIC_MONITOR_REGISTERED",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-cqd2httk.js",
+          "line": 665,
+          "keyword": "monitorTool"
+        },
+        {
+          "file": "chunk-cqd2httk.js",
+          "line": 229,
+          "keyword": "Monitor"
+        },
+        {
+          "file": "chunk-ntrt1a7a.js",
+          "line": 424,
+          "keyword": "monitorTool"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 92,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "NATIVE_CLIENT_ATTESTATION",
@@ -1998,7 +3002,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-28mb9yt2.js",
+          "line": 426,
+          "keyword": "attestation"
+        },
+        {
+          "file": "chunk-5pvwgrjf.js",
+          "line": 875,
+          "keyword": "attestation"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 30,
+      "target_lead_assessment": "attestation_mismatch 与旧版 cch=00000 客户端证明机制不等价",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "NATIVE_CLIPBOARD_IMAGE",
@@ -2029,7 +3049,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-f451a1hs.js",
+          "line": 54,
+          "keyword": "clipboard-napi"
+        },
+        {
+          "file": "chunk-f451a1hs.js",
+          "line": 54,
+          "keyword": "clipboard"
+        },
+        {
+          "file": "chunk-05z051sc.js",
+          "line": 1216,
+          "keyword": "clipboard"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 151,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "NEW_INIT",
@@ -2060,7 +3101,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-0szbzt7f.js",
+          "line": 19,
+          "keyword": "/init"
+        },
+        {
+          "file": "chunk-34bfdsb0.js",
+          "line": 616,
+          "keyword": "/init"
+        }
+      ],
+      "archive_exact_same_name_files": 2,
+      "archive_similar_candidate_file_count": 20,
+      "target_lead_assessment": "/init 首命中 MCP notifications/initialized，不能证明 CLI 新版 /init 命令行为",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "OVERFLOW_TEST_TOOL",
@@ -2085,7 +3142,12 @@
       "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "NO_TARGET_EQUIVALENT_LOCATED",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 0,
+      "target_lead_assessment": "NO_CANDIDATE",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "PERFETTO_TRACING",
@@ -2111,7 +3173,23 @@
       "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "NEW_PERFETTO_RUNTIME_CONFIGURATION",
-      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE"
+      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-cj37hmns.js",
+          "line": 25,
+          "keyword": "perfetto"
+        },
+        {
+          "file": "chunk-h2tyaevk.js",
+          "line": 119,
+          "keyword": "perfetto"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 4,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "POWERSHELL_AUTO_MODE",
@@ -2150,7 +3228,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 57457,
+          "keyword": "PowerShellTool"
+        },
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 1208,
+          "keyword": "powershell"
+        },
+        {
+          "file": "chunk-pp7zwndm.js",
+          "line": 2213,
+          "keyword": "PowerShellTool"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 126,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "PROACTIVE",
@@ -2195,7 +3294,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-mdxeekqd.js",
+          "line": 1037,
+          "keyword": "proactivity"
+        },
+        {
+          "file": "chunk-mdxeekqd.js",
+          "line": 30785,
+          "keyword": "proactive"
+        },
+        {
+          "file": "chunk-5rw2zfa0.js",
+          "line": 1744,
+          "keyword": "proactive"
+        }
+      ],
+      "archive_exact_same_name_files": 6,
+      "archive_similar_candidate_file_count": 90,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "PROMPT_CACHE_BREAK_DETECTION",
@@ -2231,7 +3351,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 51836,
+          "keyword": "cache_break"
+        },
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 8940,
+          "keyword": "cache_creation_input_tokens"
+        },
+        {
+          "file": "chunk-wany0nxw.js",
+          "line": 999,
+          "keyword": "cache_break"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 34,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "QUICK_SEARCH",
@@ -2263,7 +3404,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-34bfdsb0.js",
+          "line": 1966,
+          "keyword": "/search"
+        },
+        {
+          "file": "chunk-5z6t3gwt.js",
+          "line": 19,
+          "keyword": "/search"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 16,
+      "target_lead_assessment": "/search 候选为工具检索的 searchHint，不能证明旧版快捷键搜索",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "REACTIVE_COMPACT",
@@ -2298,7 +3455,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 46075,
+          "keyword": "reactiveCompact"
+        },
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 2527,
+          "keyword": "/compact"
+        },
+        {
+          "file": "chunk-2sq2cy74.js",
+          "line": 452,
+          "keyword": "/compact"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 54,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "REVIEW_ARTIFACT",
@@ -2337,7 +3515,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-03htth44.js",
+          "line": 465,
+          "keyword": "artifact"
+        },
+        {
+          "file": "chunk-05z051sc.js",
+          "line": 1560,
+          "keyword": "artifact"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 226,
+      "target_lead_assessment": "artifact 字段或资源不代表旧 ReviewArtifactTool 实际注册",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "RUN_SKILL_GENERATOR",
@@ -2368,7 +3562,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 33609,
+          "keyword": "skill-creator"
+        },
+        {
+          "file": "chunk-n7dvjfwp.js",
+          "line": 2768,
+          "keyword": "skillGenerator"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 3,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "SELF_HOSTED_RUNNER",
@@ -2406,7 +3616,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-6d8swme1.js",
+          "line": 591,
+          "keyword": "self-hosted runner"
+        },
+        {
+          "file": "chunk-6d8swme1.js",
+          "line": 1818,
+          "keyword": "selfHostedRunner"
+        },
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 34206,
+          "keyword": "self-hosted runner"
+        }
+      ],
+      "archive_exact_same_name_files": 12,
+      "archive_similar_candidate_file_count": 33,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "SHOT_STATS",
@@ -2434,7 +3665,28 @@
       "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "NEW_STATS_CACHE_FIELD_BUT_DISPLAY_UNPROVEN",
-      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE"
+      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-3fa21dzg.js",
+          "line": 20,
+          "keyword": "screenshot"
+        },
+        {
+          "file": "chunk-3fa21dzg.js",
+          "line": 26,
+          "keyword": "metrics"
+        },
+        {
+          "file": "chunk-5rw2zfa0.js",
+          "line": 1397,
+          "keyword": "screenshot"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 92,
+      "target_lead_assessment": "截图统计不是旧版 shotDistribution，需检查新版 Stats 的同名数据字段",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "SKILL_IMPROVEMENT",
@@ -2465,7 +3717,18 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 33609,
+          "keyword": "skill-creator"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 1,
+      "target_lead_assessment": "skill-creator 与原技能自动改善任务不同",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "SKIP_DETECTION_WHEN_AUTOUPDATES_DISABLED",
@@ -2496,7 +3759,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-ng9bf6hw.js",
+          "line": 119,
+          "keyword": "isAutoUpdaterDisabled"
+        },
+        {
+          "file": "chunk-s6eb4jds.js",
+          "line": 9785,
+          "keyword": "disableAutoUpdate"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 2,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "SLOW_OPERATION_LOGGING",
@@ -2522,7 +3801,23 @@
       "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "NEW_DIAGNOSTICS_SLOW_OPERATIONS",
-      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE"
+      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-142mjqaf.js",
+          "line": 1037,
+          "keyword": "duration_ms"
+        },
+        {
+          "file": "chunk-14daspfw.js",
+          "line": 24,
+          "keyword": "duration_ms"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 83,
+      "target_lead_assessment": "duration_ms 只是通用指标，不能证明旧版 slowLogging 等价",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "SSH_REMOTE",
@@ -2553,7 +3848,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-s6eb4jds.js",
+          "line": 9765,
+          "keyword": "sshRemote"
+        },
+        {
+          "file": "chunk-s6eb4jds.js",
+          "line": 9765,
+          "keyword": "ssh "
+        },
+        {
+          "file": "chunk-1ww4jg8j.js",
+          "line": 4458,
+          "keyword": "ssh "
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 495,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "STREAMLINED_OUTPUT",
@@ -2586,7 +3902,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-563gzepf.js",
+          "line": 2694,
+          "keyword": "stream-json"
+        },
+        {
+          "file": "chunk-5rbbn9bc.js",
+          "line": 54,
+          "keyword": "stream-json"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 17,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "TEAMMEM",
@@ -2642,7 +3974,28 @@
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "TEAM_MEMORY_COUNTERS_PRESENT",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 84075,
+          "keyword": "teamMemory"
+        },
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 906,
+          "keyword": "teammate"
+        },
+        {
+          "file": "chunk-92hm4yb6.js",
+          "line": 3850,
+          "keyword": "teamMemory"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 117,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "TEMPLATES",
@@ -2677,7 +4030,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-0hcnhpx5.js",
+          "line": 69,
+          "keyword": "template"
+        },
+        {
+          "file": "chunk-0hcnhpx5.js",
+          "line": 67,
+          "keyword": "/artifact"
+        },
+        {
+          "file": "chunk-2zzds0nf.js",
+          "line": 259,
+          "keyword": "template"
+        }
+      ],
+      "archive_exact_same_name_files": 1,
+      "archive_similar_candidate_file_count": 119,
+      "target_lead_assessment": "artifact 模板字段与旧版 new/list/reply 命令不同，需追踪目标 CLI 注册",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "TERMINAL_PANEL",
@@ -2712,7 +4086,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-05z051sc.js",
+          "line": 176,
+          "keyword": "terminal"
+        },
+        {
+          "file": "chunk-05z051sc.js",
+          "line": 1568,
+          "keyword": "shell"
+        },
+        {
+          "file": "chunk-0etgpjzx.js",
+          "line": 84,
+          "keyword": "terminal"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 381,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "TOKEN_BUDGET",
@@ -2748,7 +4143,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-8w56k4pg.js",
+          "line": 21,
+          "keyword": "--task-budget"
+        },
+        {
+          "file": "chunk-8w56k4pg.js",
+          "line": 21,
+          "keyword": "--max-budget-usd"
+        },
+        {
+          "file": "chunk-c3npf81n.js",
+          "line": 20,
+          "keyword": "--task-budget"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 11,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "TORCH",
@@ -2779,7 +4195,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-h2tyaevk.js",
+          "line": 117,
+          "keyword": "torch"
+        },
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 44312,
+          "keyword": "torch"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 3,
+      "target_lead_assessment": "torch 匹配机器学习框架库列表，不能证明旧版 /torch 命令存在",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "TRANSCRIPT_CLASSIFIER",
@@ -2859,7 +4291,28 @@
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "AUTO_MODE_CLASSIFIER_BRANCH_PRESENT",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 67727,
+          "keyword": "classifier_verdict"
+        },
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 1790,
+          "keyword": "autoMode"
+        },
+        {
+          "file": "chunk-7rnqxvcm.js",
+          "line": 11497,
+          "keyword": "autoMode"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 95,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "TREE_SITTER_BASH",
@@ -2890,7 +4343,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-gv3j9e36.js",
+          "line": 2816,
+          "keyword": "tree-sitter"
+        },
+        {
+          "file": "chunk-j0tbz6ra.js",
+          "line": 21230,
+          "keyword": "TreeSitter"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 2,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "TREE_SITTER_BASH_SHADOW",
@@ -2922,7 +4391,18 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-gv3j9e36.js",
+          "line": 2816,
+          "keyword": "tree-sitter"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 1,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "UDS_INBOX",
@@ -2962,7 +4442,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-15ff8yw7.js",
+          "line": 23,
+          "keyword": "udsInbox"
+        },
+        {
+          "file": "chunk-15ff8yw7.js",
+          "line": 23,
+          "keyword": "inbox"
+        },
+        {
+          "file": "chunk-at88wjsn.js",
+          "line": 1799,
+          "keyword": "unix socket"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 61,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "ULTRAPLAN",
@@ -2997,7 +4498,28 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-mh7sh27p.js",
+          "line": 702,
+          "keyword": "--plan"
+        },
+        {
+          "file": "chunk-mh7sh27p.js",
+          "line": 702,
+          "keyword": "plan mode"
+        },
+        {
+          "file": "chunk-at88wjsn.js",
+          "line": 1799,
+          "keyword": "ultraplan"
+        }
+      ],
+      "archive_exact_same_name_files": 2,
+      "archive_similar_candidate_file_count": 56,
+      "target_lead_assessment": "--plan-mode-instructions 与旧版 UltraPlan 独立交互不等价",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "ULTRATHINK",
@@ -3028,7 +4550,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-8w56k4pg.js",
+          "line": 21,
+          "keyword": "--max-thinking-tokens"
+        },
+        {
+          "file": "chunk-c3npf81n.js",
+          "line": 20,
+          "keyword": "--max-thinking-tokens"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 10,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "UNATTENDED_RETRY",
@@ -3059,7 +4597,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-0bk2wq2d.js",
+          "line": 619,
+          "keyword": "retry-after"
+        },
+        {
+          "file": "chunk-0hcnhpx5.js",
+          "line": 157,
+          "keyword": "retry-after"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 28,
+      "target_lead_assessment": "Retry-After 头只证明 HTTP 使用，不能证明无人值守恢复",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "UPLOAD_USER_SETTINGS",
@@ -3098,7 +4652,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-0yqhf2py.js",
+          "line": 230,
+          "keyword": "userSettings"
+        },
+        {
+          "file": "chunk-1e5yp9hx.js",
+          "line": 28,
+          "keyword": "userSettings"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 120,
+      "target_lead_assessment": "userSettings 普通配置访问不等于云端设置上传",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "VERIFICATION_AGENT",
@@ -3132,7 +4702,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-5qtb3hv4.js",
+          "line": 95,
+          "keyword": "/verify"
+        },
+        {
+          "file": "chunk-ar74b8kt.js",
+          "line": 1541,
+          "keyword": "/verify"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 5,
+      "target_lead_assessment": "/verify 可能为技能文案，与旧版 Verifier Agent 不等价",
+      "static_lead_is_equivalent": false
     },
     {
       "flag": "VOICE_MODE",
@@ -3180,7 +4766,28 @@
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "NATIVE_AUDIO_LOADER_PRESENT",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-1g7w7v7r.js",
+          "line": 56,
+          "keyword": "audio-capture"
+        },
+        {
+          "file": "chunk-1g7w7v7r.js",
+          "line": 74,
+          "keyword": "microphone"
+        },
+        {
+          "file": "chunk-2ctyt5p9.js",
+          "line": 17,
+          "keyword": "audio-capture"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 11,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "WEB_BROWSER_TOOL",
@@ -3213,7 +4820,23 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_leads": [
+        {
+          "file": "chunk-cj37hmns.js",
+          "line": 31,
+          "keyword": "computer_use"
+        },
+        {
+          "file": "chunk-dmtyt8s1.js",
+          "line": 9,
+          "keyword": "computer_use"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 13,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     },
     {
       "flag": "WORKFLOW_SCRIPTS",
@@ -3254,7 +4877,28 @@
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "LOCAL_WORKFLOW_CODE_PRESENT",
-      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE",
+      "target_static_leads": [
+        {
+          "file": "chunk-2pjf4p7s.js",
+          "line": 1694,
+          "keyword": "local_workflow"
+        },
+        {
+          "file": "chunk-2pjf4p7s.js",
+          "line": 445,
+          "keyword": "workflow("
+        },
+        {
+          "file": "chunk-y8f7x7xv.js",
+          "line": 1190,
+          "keyword": "local_workflow"
+        }
+      ],
+      "archive_exact_same_name_files": 0,
+      "archive_similar_candidate_file_count": 32,
+      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "static_lead_is_equivalent": null
     }
   ],
   "chain_features": [
