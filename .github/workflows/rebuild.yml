@@ -1,7 +1,7 @@
 name: 源码独立重建验证
 on:
   push:
-    branches: [main, rebuild/bun-from-src]
+    branches: [main, rebuild/bun-from-src, recovery/claude-api-assets]
   workflow_dispatch:
 jobs:
   rebuild:
@@ -30,6 +30,8 @@ jobs:
           key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
       - name: 校验已入库的原始发行资源
         run: node build/verify-bundled-assets.mjs
+      - name: 校验 Claude API 原始 26 份技能资源
+        run: node build/restore-claude-api.mjs --verify
       - name: 从源码映射恢复精确依赖快照
         run: node build/restore-dependencies.mjs
       - name: 安装缺失的完整第三方依赖
