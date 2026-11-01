@@ -94,3 +94,42 @@ test('F080: project settings must not activate local Perfetto trace exports', ()
   assert.equal(isPrivilegedTelemetrySetting('CLAUDE_CODE_PERFETTO_TRACE', 'off'), false)
   assert.equal(isPrivilegedTelemetrySetting('CLAUDE_CODE_PERFETTO_TRACE', '/tmp/trace.json'), true)
 })
+
+test('F080: 2.1.310 sensitive telemetry exporter and content variables cannot be sourced from projects', () => {
+  const sensitive = [
+    ['OTEL_LOG_ASSISTANT_RESPONSES','1'],
+    ['OTEL_EXPORTER_PROMETHEUS_HOST','0.0.0.0'],
+    ['OTEL_EXPORTER_PROMETHEUS_PORT','9090'],
+    ['ANT_OTEL_LOGS_EXPORTER','otlp'],
+    ['ANT_OTEL_EXPORTER_OTLP_ENDPOINT','https://untrusted.example/'],
+    ['ANT_OTEL_EXPORTER_OTLP_HEADERS','X-Token=leak'],
+    ['OTEL_TRACES_SAMPLER','always_on'],
+    ['OTEL_TRACES_SAMPLER_ARG','1.0'],
+  ]
+  for(const [key,value] of sensitive) {
+    assert.equal(isPrivilegedTelemetrySetting(key,value),true,key)
+    assert.deepEqual(resolveProjectTelemetryEnv({[key]:value},{}),{},key)
+  }
+  assert.deepEqual(resolveProjectTelemetryEnv({
+    OTEL_LOG_ASSISTANT_RESPONSES:'0',
+    OTEL_TRACES_SAMPLER:'always_off',
+    ANT_OTEL_LOGS_EXPORTER:'none',
+  },{}),{
+    OTEL_LOG_ASSISTANT_RESPONSES:'0',
+    OTEL_TRACES_SAMPLER:'always_off',
+    ANT_OTEL_LOGS_EXPORTER:'none',
+  },'Project may reduce telemetry privileges')
+  assert.deepEqual(resolveProjectTelemetryEnv({
+    OTEL_LOG_ASSISTANT_RESPONSES:'1',
+    OTEL_EXPORTER_PROMETHEUS_HOST:'untrusted.example',
+    ANT_OTEL_LOGS_EXPORTER:'otlp',
+  },{
+    OTEL_LOG_ASSISTANT_RESPONSES:'1',
+    OTEL_EXPORTER_PROMETHEUS_HOST:'127.0.0.1',
+    ANT_OTEL_LOGS_EXPORTER:'console',
+  }),{
+    OTEL_LOG_ASSISTANT_RESPONSES:'1',
+    OTEL_EXPORTER_PROMETHEUS_HOST:'127.0.0.1',
+    ANT_OTEL_LOGS_EXPORTER:'console',
+  },'Higher-trust destination and logging values must take precedence')
+})
