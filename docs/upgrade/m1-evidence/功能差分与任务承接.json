@@ -149,7 +149,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -190,7 +190,8 @@
       "upgrade_assignment": {
         "owner_M": "M6",
         "type": "SOURCE_VERIFIED_HANDOFF_TARGET_RUNTIME_TO_CARD"
-      }
+      },
+      "verified_next_implementation_task": "M6/F061：CronCreate 工具注册→日程权限→本地/远端调度→定时触发→删除/禁用及失败恢复，绝不默认自动创建"
     },
     {
       "flag": "AGENT_TRIGGERS_REMOTE",
@@ -226,7 +227,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -268,7 +269,8 @@
       "upgrade_assignment": {
         "owner_M": "M6",
         "type": "SOURCE_VERIFIED_HANDOFF_TARGET_RUNTIME_TO_CARD"
-      }
+      },
+      "verified_next_implementation_task": "M6/F061：RemoteTriggerTool 注册→请求来源鉴权→异步触发→受权代理接收→撤销；M5/F066 远端桥接"
     },
     {
       "flag": "ALLOW_TEST_VERSIONS",
@@ -497,7 +499,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -518,7 +520,8 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 13,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M3/F032：Bash 命令分析→规则/分类器审批→执行拒绝→安全日志，验证 compound/shell metacharacter"
     },
     {
       "flag": "BG_SESSIONS",
@@ -964,7 +967,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -990,7 +993,8 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 407,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M4/F023：微压缩条件→cache boundary→写盘→下轮上下文继续、异常回退及取消"
     },
     {
       "flag": "CCR_AUTO_CONNECT",
@@ -1238,7 +1242,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -1264,7 +1268,8 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 83,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M3/F038：user/managed attribution 配置→Git 提交内容/Co-Authored-By→禁用、覆写和泄露负例"
     },
     {
       "flag": "COMPACTION_REMINDERS",
@@ -1489,7 +1494,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -1515,7 +1520,8 @@
       "archive_exact_same_name_files": 5,
       "archive_similar_candidate_file_count": 145,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M7/F056：Coordinator 注册与 worker 派发→Agent 工具授权→消息同步→失败仲裁"
     },
     {
       "flag": "COWORKER_TYPE_TELEMETRY",
@@ -2042,7 +2048,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -2068,7 +2074,8 @@
       "archive_exact_same_name_files": 4,
       "archive_similar_candidate_file_count": 134,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M7/F058：fork subagent_type 生成→父子上下文隔离→继承权限→退出与取消"
     },
     {
       "flag": "HARD_FAIL",
@@ -2539,7 +2546,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BRANCH_CONFIRMED_LATER_CARD_HANDOFF",
@@ -2570,7 +2577,8 @@
       "upgrade_assignment": {
         "owner_M": "M6",
         "type": "M1_FINAL_VERSION_CONDITION_SOURCE_VERIFIED_HANDOFF_FOR_RUNTIME"
-      }
+      },
+      "verified_next_implementation_task": "M5/F072：/brief 命令用户启用→输入通知→确认/失败与离线同步"
     },
     {
       "flag": "KAIROS_CHANNELS",
@@ -2727,7 +2735,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BRANCH_CONFIRMED_LATER_CARD_HANDOFF",
@@ -2753,7 +2761,8 @@
       "upgrade_assignment": {
         "owner_M": "M6",
         "type": "M1_FINAL_VERSION_CONDITION_SOURCE_VERIFIED_HANDOFF_FOR_RUNTIME"
-      }
+      },
+      "verified_next_implementation_task": "M6/F061：SubscribePR 权限→GitHub webhook 来源验证→事件订阅→取消/重连，不能把订阅泛化为自动执行"
     },
     {
       "flag": "KAIROS_PUSH_NOTIFICATION",
@@ -3125,7 +3134,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -3168,7 +3177,8 @@
       "upgrade_assignment": {
         "owner_M": "M8",
         "type": "SOURCE_VERIFIED_HANDOFF_TARGET_RUNTIME_TO_CARD"
-      }
+      },
+      "verified_next_implementation_task": "M8/F081：Monitor tool 注册→授权→前台 sleep 限制→MCP 监控事件→任务通知、清理与异常回退"
     },
     {
       "flag": "NATIVE_CLIENT_ATTESTATION",
@@ -3196,7 +3206,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -3218,7 +3228,8 @@
       "static_lead_is_equivalent": false,
       "target_static_observation": "TARGET_ATTESTATION_INTEGRATION_UNVERIFIED",
       "target_code_anchor": "chunk-28mb9yt2.js:426; chunk-5pvwgrjf.js:875",
-      "target_evidence_grade": "TARGET_EXTRACTED_JS_EXACT_SYMBOL_SCAN_PLUS_OLD_CODE"
+      "target_evidence_grade": "TARGET_EXTRACTED_JS_EXACT_SYMBOL_SCAN_PLUS_OLD_CODE",
+      "verified_next_implementation_task": "M2/F019：目标网络客户端 attestation 来源与占位符替换→签名/握手→失败认证，禁止把旧内部开关误作 UI 功能"
     },
     {
       "flag": "NATIVE_CLIPBOARD_IMAGE",
@@ -4225,7 +4236,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -4251,7 +4262,8 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 117,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M6/F024 & M7/F056：团队记忆数据文件/同步→队员隔离读写→权限拒绝→冲突与回收"
     },
     {
       "flag": "TEMPLATES",
@@ -4554,7 +4566,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -4580,7 +4592,8 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 95,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M3/F042：transcript 分类器调用→verdict→权限优先级→模型拒绝及安全审计"
     },
     {
       "flag": "TREE_SITTER_BASH",
@@ -4772,7 +4785,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BRANCH_CONFIRMED_LATER_CARD_HANDOFF",
@@ -4803,7 +4816,8 @@
       "upgrade_assignment": {
         "owner_M": "M3",
         "type": "M1_FINAL_VERSION_CONDITION_SOURCE_VERIFIED_HANDOFF_FOR_RUNTIME"
-      }
+      },
+      "verified_next_implementation_task": "M3/F007：确认 2.1.310 仍带 tengu_ultraplan_config.enabled 条件入口但非默认正式功能，维持受限状态，检验无启用条件时不能进入远端 Ultraplan"
     },
     {
       "flag": "ULTRATHINK",
@@ -5057,7 +5071,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -5083,7 +5097,8 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 11,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M5/F013：录音设备权限→捕获→转写→TUI 文本插入→无硬件与主动取消"
     },
     {
       "flag": "WEB_BROWSER_TOOL",
@@ -5171,7 +5186,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -5213,7 +5228,8 @@
       "upgrade_assignment": {
         "owner_M": "M8",
         "type": "SOURCE_VERIFIED_HANDOFF_TARGET_RUNTIME_TO_CARD"
-      }
+      },
+      "verified_next_implementation_task": "M8/F082/F083：WorkflowTool 初始化→step DAG/worker→journal 原子写入→重启与副作用去重"
     }
   ],
   "chain_features": [
