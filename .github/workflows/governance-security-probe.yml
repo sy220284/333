@@ -40,7 +40,7 @@ jobs:
         run: |
           node --input-type=module <<'EOF'
           import * as mcpbModule from '@anthropic-ai/mcpb'
-          const McpbManifestSchema = mcpbModule.vAny ?? mcpbModule.default?.vAny
+          const McpbManifestSchema = mcpbModule.v0_2?.McpbManifestSchema ?? mcpbModule.default?.v0_2?.McpbManifestSchema
           if (!McpbManifestSchema) throw Error('MCPB 清单验证 API 缺失: ' + Object.keys(mcpbModule).join(','))
           import { SandboxRuntimeConfigSchema } from '@anthropic-ai/sandbox-runtime'
           import sharp from 'sharp'
