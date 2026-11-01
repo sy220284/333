@@ -11,8 +11,9 @@ import re
 from pathlib import Path
 
 SOURCE_MAP = re.compile(
-    r"sourceMappingURL=data:application/json(?:;charset=utf-8)?;base64,([A-Za-z0-9+/=]+)"
+    r"sourceMappingURL=data:application/json(?:;charset=utf-8)?;base64,([^\\s]+)"
 )
+SOURCE_MAP_PREFIX = "sourceMappingURL=data:application/json"
 EXTENSIONS = {".ts", ".tsx", ".js", ".mjs", ".mts", ".cts"}
 
 
@@ -31,7 +32,11 @@ def audit(root: Path, recover_to: Path | None = None) -> dict:
         text = file.read_text("utf-8")
         match = SOURCE_MAP.search(text)
         if not match:
+            if SOURCE_MAP_PREFIX in text:
+                raise ValueError(f"检测到损坏或不受支持的内嵌 Source Map: {relative}")
             continue
+        if len(SOURCE_MAP.findall(text)) != 1:
+            raise ValueError(f"同一文件出现多个内嵌 Source Map，必须人工核实: {relative}")
         count += 1
         raw = base64.b64decode(match.group(1), validate=True)
         source_map = json.loads(raw)
