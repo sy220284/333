@@ -19,5 +19,5 @@ const findings=gaps.entries.filter(item=>item.needsRecovery).map(item=>{
 const candidates=findings.filter(item=>item.matching.some(x=>x.hasContent));
 const report={release:'2.1.310',totalMissing:findings.length,matchedContent:candidates.length,matchedReferences:candidates.reduce((n,x)=>n+x.references,0),candidates,unavailable:findings.filter(x=>!x.matching.some(m=>m.hasContent)).map(x=>({path:x.target,references:x.references}))};
 mkdirSync(dirname(resolve(outputFile)),{recursive:true});
-writeFileSync(outputFile,JSON.stringify(report,null,2)+'\n');
+writeFileSync(outputFile,`${JSON.stringify(report,null,2)}\n`);
 console.log(`[333-upstream] 旧版缺失 ${report.totalMissing} 个模块；新版源码映射可恢复 ${report.matchedContent} 个；覆盖 ${report.matchedReferences} 处引用`);
