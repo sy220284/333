@@ -1148,7 +1148,17 @@
       "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
       "target_static_observation": "NEW_RUNTIME_TRACE_ENABLEMENT",
-      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE"
+      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE",
+      "M1_implemented_facets": [
+        {
+          "behavior": "2.1.310 runtime enhanced-tracing opt-in replaces 2.1.88 compile-time gate",
+          "source_2_1_310": "chunk-taha171j.js:261-264",
+          "source_333": "src/utils/telemetry/sessionTracing.ts; src/utils/telemetry/projectTelemetryPolicy.mjs",
+          "tests": "tests/m1-telemetry-policy.test.mjs",
+          "state": "IMPLEMENTED_SOURCE_AND_UNIT_TEST_PENDING_LATEST_CI",
+          "caution": "Other F080 telemetry/tracing, privacy and performance behavior not fully accepted"
+        }
+      ]
     },
     {
       "flag": "EXPERIMENTAL_SKILL_SEARCH",
@@ -4997,7 +5007,7 @@
       "target_first_anchor": "chunk-at88wjsn.js:814",
       "check_static": "OpenTelemetry",
       "is_added_in_2_1_310": "UNVERIFIED",
-      "delta_from_2_1_88": null,
+      "delta_from_2_1_88": "New runtime opt-in tracing and stronger project-vs-user telemetry export trust boundary implemented; full F080 semantic difference and runtime span verification still pending",
       "target_full_chain": "UNVERIFIED",
       "downstream_tasks": [],
       "downstream_scenarios": [
@@ -5006,7 +5016,7 @@
       "M1_required": true,
       "responsibility": "M1_IMPLEMENT_IF_TARGET_NEW_DELTA",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING",
+      "status": "M1_IMPLEMENTATION_IN_PROGRESS",
       "old_source_checks": [
         {
           "path": "src/services/api/logging.ts",
@@ -5014,7 +5024,12 @@
         }
       ],
       "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
-      "old_source_proven": true
+      "old_source_proven": true,
+      "M1_implemented_facets": [
+        "2.1.282 untrusted project/local telemetry export and content enabling blocked at both settings-application paths",
+        "2.1.310 enhanced-tracing opt-in runtime gate, default disabled, without old feature() compilation gate"
+      ],
+      "new_source_evidence": "chunk-h2tyaevk.js:258-297; chunk-5rw2zfa0.js:1310; chunk-taha171j.js:261-264"
     },
     {
       "id": "F086",
