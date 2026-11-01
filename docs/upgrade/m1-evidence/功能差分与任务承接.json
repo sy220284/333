@@ -6855,9 +6855,17 @@
       "M1_implemented_facets": [
         "2.1.282 untrusted project/local telemetry export and content enabling blocked at both settings-application paths",
         "2.1.310 enhanced-tracing opt-in runtime gate, default disabled, without old feature() compilation gate",
-        "Legacy PERFETTO_TRACING compile gate replaced by explicit runtime gate, with project-scope export path protection"
+        "Legacy PERFETTO_TRACING compile gate replaced by explicit runtime gate, with project-scope export path protection",
+        "2.1.309 privacy-settings now invalidates memoized account settings, rejects incomplete privacy-config fetch, and confirms the refreshed Help improve our AI models value; tested in tests/m1-privacy-settings.test.mjs"
       ],
-      "new_source_evidence": "chunk-h2tyaevk.js:258-297; chunk-5rw2zfa0.js:1310; chunk-taha171j.js:261-264"
+      "new_source_evidence": "chunk-h2tyaevk.js:258-297; chunk-5rw2zfa0.js:1310; chunk-taha171j.js:261-264; chunk-ewrb9nj3.js:470-484",
+      "M1_source_changes": [
+        "src/commands/privacy-settings/privacy-settings.tsx",
+        "src/commands/privacy-settings/fetchPrivacySettings.mjs"
+      ],
+      "M1_tests": [
+        "tests/m1-privacy-settings.test.mjs"
+      ]
     },
     {
       "id": "F086",
