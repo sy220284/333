@@ -407,8 +407,8 @@
         "F023"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-whnycq3s.js:23-24; chunk-f3ak9604.js:181",
+      "old_vs_new_delta": "新版明确保留 awaySummaryEnabled 状态门控和设置界面 Session recap 开关，设置事件会修改状态并写入配置。旧版有 useAwaySummary 与 REPL 开关，属于受控旧能力的正式交互入口；实际模型生成 recap 仍需 M4 核查。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -420,7 +420,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -439,7 +439,10 @@
       "archive_exact_same_name_files": 3,
       "archive_similar_candidate_file_count": 9,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M4：旧 useAwaySummary → 新 Session recap 触发→权限→模型生成→应用状态→异常恢复全链路",
+      "static_evidence_grade": "TARGET_EXECUTION_BRANCH_REVIEWED; FUNCTIONAL_RUNTIME_NOT_VERIFIED",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED"
     },
     {
       "flag": "BASH_CLASSIFIER",
@@ -532,8 +535,8 @@
         "F095"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-kfdf5pq3.js:866; cli.js:98; chunk-7j5nm2vr.js:1821-1847",
+      "old_vs_new_delta": "新版 CLI 解析器具有 --bg 启动分支，后台会话有自动回复不可恢复提示与单独恢复建议；旧版 BG_SESSIONS 编译门控与主线默认构建关闭。是否默认开放及真正持久化生命周期交 M4，不能仅凭参数字符串签收。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -550,7 +553,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -574,7 +577,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 63,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M4：CLI --bg →后台进程→会话数据→通知→失败重连/恢复/中断负例",
+      "static_evidence_grade": "TARGET_EXECUTION_BRANCH_REVIEWED; FUNCTIONAL_RUNTIME_NOT_VERIFIED",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED"
     },
     {
       "flag": "BREAK_CACHE_COMMAND",
@@ -709,8 +715,8 @@
         "F072"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-65wf35er.js:303-305; chunk-j0tbz6ra.js:33894-33900",
+      "old_vs_new_delta": "新版命中源分别是 macOS 系统 PlistBuddy 可选键配置以及 onboarding buddy 提示词；均不等同旧版 src/buddy/CompanionSprite.tsx 的像素伙伴及其状态。新版正式用户功能仍未证实。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -721,7 +727,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -740,7 +746,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 3,
       "target_lead_assessment": "首个 buddy 命中 PlistBuddy；另一个是入门伙伴提示词，未证明旧版 CompanionSprite 功能",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M6：查 CompanionSprite/Sprite/TUI 动画注册，若新版已删除只处理旧功能退场，不能恢复为默认功能",
+      "static_evidence_grade": "TARGET_EXECUTION_BRANCH_REVIEWED; FUNCTIONAL_RUNTIME_NOT_VERIFIED",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED"
     },
     {
       "flag": "BUILDING_CLAUDE_APPS",
@@ -1852,8 +1861,8 @@
         "F024"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-tqjdehqd.js:1581-1584; chunk-sagkb0t3.js:414",
+      "old_vs_new_delta": "新版仅在主代理且满足 qnt() 或笔记本 host 的 extraction 状态时执行 executeExtractMemories，并按 sync 条件等待；确认真实调用者和异步执行分支，旧版对应 src/memdir、src/cli/print.ts。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -1864,7 +1873,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -1888,7 +1897,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 234,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M6：核对旧版提取时机、主代理隔离、同步等待及记忆写入权限与源文件恢复",
+      "static_evidence_grade": "TARGET_EXECUTION_BRANCH_REVIEWED; FUNCTIONAL_RUNTIME_NOT_VERIFIED",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED"
     },
     {
       "flag": "FILE_PERSISTENCE",
@@ -2116,8 +2128,8 @@
         "F023"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-92hm4yb6.js:4726-4728",
+      "old_vs_new_delta": "新版包含压缩后读取完整 transcript 的提示和 compact 边界，未发现与旧版 SnipTool 一一对应的可用工具注册。该提示属于上下文恢复的功能线索，不能作为旧 SnipTool 转正证据。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -2128,7 +2140,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -2152,7 +2164,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 131,
       "target_lead_assessment": "snip 字符串无法确定旧版 SnipTool 仍注册",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M4：分别核查历史裁剪/归档、SnipTool 入口、恢复与压缩前后语义；如目标无工具，给出删除/替代对照",
+      "static_evidence_grade": "TARGET_EXECUTION_BRANCH_REVIEWED; FUNCTIONAL_RUNTIME_NOT_VERIFIED",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED"
     },
     {
       "flag": "HOOK_PROMPTS",
@@ -2573,8 +2588,8 @@
         "F025"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-zsyd2kjt.js:33-35,161-198,199-233; chunk-kqkn29pt.js:79-88",
+      "old_vs_new_delta": "新版 autoDreamEnabled 可由用户设置开启，启动条件还需满足底层 u9t 门控，扫描节流、记忆写入权限、锁持有者、AbortController 和会话数量均有执行分支。已确认新版真实存在自动记忆整合实现，不应将同名消失认定删除。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -2585,7 +2600,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -2609,7 +2624,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 24,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M6：旧仅被门控的 Dream → 新用户启用+限制+多会话合并；模拟锁、权限失败、取消、持久化",
+      "static_evidence_grade": "TARGET_EXECUTION_BRANCH_REVIEWED; FUNCTIONAL_RUNTIME_NOT_VERIFIED",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED"
     },
     {
       "flag": "KAIROS_GITHUB_WEBHOOKS",
@@ -2859,8 +2877,8 @@
         "F053"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-7k95knd7.js:39-42",
+      "old_vs_new_delta": "新版有 MCP skills 统计逻辑：从服务器加载但未调用的技能会进入警告，说明服务端提供技能的消费模型存在；旧版 src/services/mcp/client.ts 门控。需进一步追实际 MCP 资源发现和运行的授权路径。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -2872,7 +2890,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -2896,7 +2914,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 490,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M6：MCP server 技能发现、注入、重连、工具权限和卸载同步",
+      "static_evidence_grade": "TARGET_EXECUTION_BRANCH_REVIEWED; FUNCTIONAL_RUNTIME_NOT_VERIFIED",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED"
     },
     {
       "flag": "MEMORY_SHAPE_TELEMETRY",
@@ -3184,8 +3205,8 @@
         "F079"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-0szbzt7f.js:19",
+      "old_vs_new_delta": "旧版 src/commands/init.ts 门控。早期所谓新版 /init 命中是 MCP 初始化结构，属于不同的协议用途；不能据此认定旧 /init 已转正。需检查 CLI /init 真正命令注册或是否退场。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -3196,7 +3217,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -3215,7 +3236,10 @@
       "archive_exact_same_name_files": 2,
       "archive_similar_candidate_file_count": 20,
       "target_lead_assessment": "/init 首命中 MCP notifications/initialized，不能证明 CLI 新版 /init 命令行为",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M5：确认真实 /init 命令入口及初始化生成结果，不得以 MCP notifications/initialized 替代",
+      "static_evidence_grade": "TARGET_EXECUTION_BRANCH_REVIEWED; FUNCTIONAL_RUNTIME_NOT_VERIFIED",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED"
     },
     {
       "flag": "OVERFLOW_TEST_TOOL",
