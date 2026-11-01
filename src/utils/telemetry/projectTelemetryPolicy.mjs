@@ -22,6 +22,15 @@ export function isEnhancedTracingOptedIn(env) {
 
 export function isPrivilegedTelemetrySetting(name, value) {
   const key = name.toUpperCase()
+  // A lower-trust project must not undo a user/managed decision to disable
+  // collection or nonessential network traffic. False is the privileged
+  // direction for these inverse switches.
+  if (key === 'DISABLE_TELEMETRY' ||
+      key === 'DO_NOT_TRACK' ||
+      key === 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC' ||
+      key === 'DISABLE_ERROR_REPORTING') {
+    return !truthy(value)
+  }
   if (key === 'CLAUDE_CODE_ENABLE_TELEMETRY' ||
       key === 'CLAUDE_CODE_ENHANCED_TELEMETRY_BETA' ||
       key === 'ENABLE_ENHANCED_TELEMETRY_BETA' ||
