@@ -14,7 +14,7 @@ jobs:
       run:
         shell: bash
     permissions:
-      contents: write
+      contents: read
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -28,26 +28,12 @@ jobs:
             ~/.npm
             .rebuild/public
           key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
-      - name: 恢复并校验原版内嵌资源
-        run: node build/restore-bundled-assets.mjs
-      - name: 将恢复资源保存到源代码
-        run: |
-          git add src/skills/bundled/verify src/utils/ultraplan/prompt.txt src/utils/permissions/yolo-classifier-prompts
-          if ! git diff --cached --quiet; then
-            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "恢复 2.1.88 原始技能与规划提示词资源"
-            git push origin HEAD:rebuild/bun-from-src
-          fi
+      - name: 校验已入库的原始发行资源
+        run: node build/verify-bundled-assets.mjs
       - name: 从源码映射恢复精确依赖快照
         run: node build/restore-dependencies.mjs
       - name: 安装缺失的完整第三方依赖
         run: node build/install-public-deps.mjs
-      - name: 提交依赖版本锁定文件
-        run: |
-          git add build/public-dependencies.lock.json
-          if ! git diff --cached --quiet; then
-            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "固定完整公共依赖版本与完整性校验"
-            git push origin HEAD:rebuild/bun-from-src
-          fi
       - uses: actions/cache/save@v4
         if: steps.npm-cache.outputs.cache-hit != 'true'
         with:
