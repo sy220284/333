@@ -33,7 +33,7 @@ const packageEntry = {
   'marked': 'marked/lib/marked.esm.js',
   'ajv': 'ajv/dist/ajv.js',
   'zod/v3': 'zod/v3/external.js',
-  'lodash-es': 'lodash-es/lodash.js',
+  'lodash-es': 'lodash-es/entrypoint.js',
   '@azure/msal-common/node': '@azure/msal-common/dist/index-node.mjs',
   '@opentelemetry/otlp-exporter-base/node-http': '@opentelemetry/otlp-exporter-base/build/src/index-node-http.js',
   'react-reconciler': 'react-reconciler/cjs/react-reconciler.production.js',
