@@ -132,9 +132,9 @@
         "F061",
         "F054"
       ],
-      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_formalized": "TOOL_REGISTRATION_SOURCE_CONFIRMED_RUNTIME_PENDING",
       "target_behavior_source": "chunk-0dja0qpg.js:68",
-      "old_vs_new_delta": "新版存在 createCronScheduler 调度者，仅说明定时执行路径；旧版 Agent Trigger 的完整条件和消息来源需 M6 核实，且默认禁止自动创建。",
+      "old_vs_new_delta": "旧版 AGENT_TRIGGERS 编译开关控制 Cron 工具注册；新版有直接工具总线入口，M6 检查授权、创建、取消、恢复和非法来源。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -172,7 +172,22 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 136,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "target_registration_evidence": {
+        "surface": "CronCreateTool/CronDeleteTool/CronListTool",
+        "code_anchors": [
+          "chunk-pp7zwndm.js:2209",
+          "chunk-pp7zwndm.js:2215"
+        ],
+        "observation": "新版三个 Cron 工具已加入工具总线候选列表，属于正式工具登记；是否可调用及持久执行受用户授权、运行环境和会话策略控制。",
+        "evidence_grade": "REGISTERED_TOOL_SURFACE_CONFIRMED"
+      },
+      "target_code_anchor": "chunk-pp7zwndm.js:2209; chunk-pp7zwndm.js:2215",
+      "entry_consumer": "chunk-pp7zwndm.js:2215 getTools() candidate list",
+      "upgrade_assignment": {
+        "owner_M": "M6",
+        "type": "SOURCE_VERIFIED_HANDOFF_TARGET_RUNTIME_TO_CARD"
+      }
     },
     {
       "flag": "AGENT_TRIGGERS_REMOTE",
@@ -189,9 +204,9 @@
         "F061",
         "F066"
       ],
-      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_formalized": "TOOL_REGISTRATION_SOURCE_CONFIRMED_RUNTIME_PENDING",
       "target_behavior_source": "chunk-mq1a69zj.js:462",
-      "old_vs_new_delta": "新版导出 RemoteTriggerTool，仍须检验是否在工具总线注册、权限与使用条件，M6。",
+      "old_vs_new_delta": "旧版 AGENT_TRIGGERS_REMOTE 受编译门控；新版可达真实 RemoteTriggerTool 并由工具总线承接，M6 实测远程触发前置权限与来源。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -234,7 +249,23 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 136,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "target_registration_evidence": {
+        "surface": "RemoteTriggerTool",
+        "code_anchors": [
+          "chunk-pp7zwndm.js:2209",
+          "chunk-pp7zwndm.js:2215",
+          "chunk-mq1a69zj.js:462"
+        ],
+        "observation": "新版 RemoteTriggerTool 由默认工具总线条件保留 Xr 注册，实际能力仍受 RemoteTriggerTool 自身条件与权限判定影响。",
+        "evidence_grade": "REGISTERED_TOOL_SURFACE_CONFIRMED"
+      },
+      "target_code_anchor": "chunk-pp7zwndm.js:2209; chunk-pp7zwndm.js:2215; chunk-mq1a69zj.js:462",
+      "entry_consumer": "chunk-pp7zwndm.js:2215 getTools() candidate list",
+      "upgrade_assignment": {
+        "owner_M": "M6",
+        "type": "SOURCE_VERIFIED_HANDOFF_TARGET_RUNTIME_TO_CARD"
+      }
     },
     {
       "flag": "ALLOW_TEST_VERSIONS",
@@ -2320,9 +2351,9 @@
         "F072",
         "F061"
       ],
-      "target_formalized": "UNVERIFIED",
+      "target_formalized": "PARTIAL_USER_SURFACE_UNVERIFIED",
       "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "old_vs_new_delta": "M6 需完整比较主动互动、计划、文件、提醒、授权及多入口；不可将 /goal 或工具名称命中计为 KAIROS 已整体转正。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -2363,7 +2394,22 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 100,
       "target_lead_assessment": "/goal、routine 与 KAIROS 主动体系不是同一个入口，须按实际用户行为分别比较",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "target_registration_evidence": {
+        "surface": "SendUserFileTool/ProposeGoalTool",
+        "code_anchors": [
+          "chunk-pp7zwndm.js:2209",
+          "chunk-pp7zwndm.js:2215"
+        ],
+        "observation": "新版工具总线存在 SendUserFileTool 与 ProposeGoalTool，但这两项无法覆盖旧 KAIROS 的156处引用和全部主动互动语义。",
+        "evidence_grade": "PARTIAL_REPLACEMENT_MUST_CHECK"
+      },
+      "target_code_anchor": "chunk-pp7zwndm.js:2209; chunk-pp7zwndm.js:2215",
+      "entry_consumer": "chunk-pp7zwndm.js:2215 getTools() candidate list",
+      "upgrade_assignment": {
+        "owner_M": "M6",
+        "type": "SOURCE_VERIFIED_HANDOFF_TARGET_RUNTIME_TO_CARD"
+      }
     },
     {
       "flag": "KAIROS_BRIEF",
@@ -2621,9 +2667,9 @@
       "related_F_candidate": [
         "F072"
       ],
-      "target_formalized": "UNVERIFIED",
+      "target_formalized": "TOOL_REGISTRATION_SOURCE_CONFIRMED_RUNTIME_PENDING",
       "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "old_vs_new_delta": "M5 需对照旧 KAIROS 推送组件，补齐推送授权、在线条件、失败与设备通道。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -2658,7 +2704,23 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 174,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "target_registration_evidence": {
+        "surface": "PushNotificationTool",
+        "code_anchors": [
+          "chunk-pp7zwndm.js:2209",
+          "chunk-pp7zwndm.js:2215",
+          "chunk-5q1fx7z3.js:155"
+        ],
+        "observation": "新版默认工具总线出现 PushNotificationTool，原 KAIROS_PUSH_NOTIFICATION 编译开关字面不再需要；用户/设备推送仍需要渠道注册和权限。",
+        "evidence_grade": "REGISTERED_TOOL_SURFACE_CONFIRMED"
+      },
+      "target_code_anchor": "chunk-pp7zwndm.js:2209; chunk-pp7zwndm.js:2215; chunk-5q1fx7z3.js:155",
+      "entry_consumer": "chunk-pp7zwndm.js:2215 getTools() candidate list",
+      "upgrade_assignment": {
+        "owner_M": "M5",
+        "type": "SOURCE_VERIFIED_HANDOFF_TARGET_RUNTIME_TO_CARD"
+      }
     },
     {
       "flag": "LODESTONE",
@@ -2932,9 +2994,9 @@
       "related_F_candidate": [
         "F081"
       ],
-      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_formalized": "TOOL_REGISTRATION_SOURCE_CONFIRMED_RUNTIME_PENDING",
       "target_behavior_source": "2.1.310 CHANGELOG.md:5; chunk-j0tbz6ra.js:30632,30105,87131",
-      "old_vs_new_delta": "旧版工具及 MCP MonitorTask 受编译开关控制；新版注册 tools:Monitor 并阻止超长前台 sleep。M8 要补工具、授权、后台生命周期及遥测关闭路径。",
+      "old_vs_new_delta": "旧版 MONITOR_TOOL 编译门控下注册；新版工具注册在默认工具集合，平台可用性从 runtime 的 isEnabled 判断。M8 实现并验证权限、插件监听及后台事件。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -2971,7 +3033,24 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 92,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "target_registration_evidence": {
+        "surface": "MonitorTool",
+        "code_anchors": [
+          "chunk-pp7zwndm.js:2209",
+          "chunk-pp7zwndm.js:2215",
+          "chunk-a9gdafcf.js:262-270",
+          "chunk-wany0nxw.js:1556-1558"
+        ],
+        "observation": "新版 MonitorTool 已由默认工具总线注册；isEnabled 在非 Windows 平台为 true，在 Windows 依赖 Git Bash，另受会话工具策略控制。",
+        "evidence_grade": "REGISTRY_CONSUMER_AND_PLATFORM_ENABLE_CONFIRMED"
+      },
+      "target_code_anchor": "chunk-pp7zwndm.js:2209; chunk-pp7zwndm.js:2215; chunk-a9gdafcf.js:262-270; chunk-wany0nxw.js:1556-1558",
+      "entry_consumer": "chunk-pp7zwndm.js:2215 getTools() candidate list",
+      "upgrade_assignment": {
+        "owner_M": "M8",
+        "type": "SOURCE_VERIFIED_HANDOFF_TARGET_RUNTIME_TO_CARD"
+      }
     },
     {
       "flag": "NATIVE_CLIENT_ATTESTATION",
@@ -4858,9 +4937,9 @@
         "F082",
         "F083"
       ],
-      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_formalized": "TOOL_REGISTRATION_SOURCE_CONFIRMED_RUNTIME_PENDING",
       "target_behavior_source": "chunk-2pjf4p7s.js:1694,1708-1709",
-      "old_vs_new_delta": "旧版仅有 WORKFLOW_SCRIPTS 的条件注册和部分任务引用；新版 local_workflow、journal、恢复代码存在，M8 必须补完整执行与不重复副作用。",
+      "old_vs_new_delta": "旧版仅条件注册，局部执行引擎缺失；新版有本地 WorkflowTool、执行及 journal，M8 必须移植完整引擎和恢复保障。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -4898,7 +4977,23 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 32,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "target_registration_evidence": {
+        "surface": "WorkflowTool",
+        "code_anchors": [
+          "chunk-pp7zwndm.js:2212-2216",
+          "chunk-y8f7x7xv.js:1190",
+          "chunk-2pjf4p7s.js:1694"
+        ],
+        "observation": "新版工具总线初始化内建工作流后，将 WorkflowTool 固定加入工具候选集合；调度执行与权限检查仍须按条件验收。",
+        "evidence_grade": "REGISTERED_EXECUTION_SURFACE_CONFIRMED"
+      },
+      "target_code_anchor": "chunk-pp7zwndm.js:2212-2216; chunk-y8f7x7xv.js:1190; chunk-2pjf4p7s.js:1694",
+      "entry_consumer": "chunk-pp7zwndm.js:2215 getTools() candidate list",
+      "upgrade_assignment": {
+        "owner_M": "M8",
+        "type": "SOURCE_VERIFIED_HANDOFF_TARGET_RUNTIME_TO_CARD"
+      }
     }
   ],
   "chain_features": [
