@@ -63,7 +63,7 @@ jobs:
         run: |
           set -euo pipefail
           source tools/dev/toolchain-versions.env
-          URL="https://github.com/rhysd/actionlint/releases/download/v$ACTIONLINT_VERSION/actionlint_$ACTIONLINT_VERSION_linux_amd64.tar.gz"
+          URL="https://github.com/rhysd/actionlint/releases/download/v$ACTIONLINT_VERSION/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
           curl --fail --location --retry 3 "$URL" -o "$RUNNER_TEMP/actionlint.tar.gz"
           printf '%s  %s\n' "$ACTIONLINT_LINUX_X64_SHA256" "$RUNNER_TEMP/actionlint.tar.gz" | sha256sum -c -
           mkdir -p "$RUNNER_TEMP/actionlint-bin"
