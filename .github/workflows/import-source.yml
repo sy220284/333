@@ -1,0 +1,44 @@
+name: 一次性导入 Claude Code 2.1.88 源码
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/import-source.yml
+permissions:
+  contents: write
+jobs:
+  import-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 检出 333 仓库
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: 获取已验证的原始文件快照
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --quiet https://github.com/Exhen/claude-code-2.1.88.git /tmp/claude-source
+          git -C /tmp/claude-source checkout --quiet --detach c8cd253554319f32ff64ff7000636199f720c9bc
+          actual_tree="$(git -C /tmp/claude-source rev-parse HEAD^{tree})"
+          test "$actual_tree" = "f8634b3646ab4b5b01572343ec0b2e497450d859"
+          test "$(git -C /tmp/claude-source ls-files | wc -l | xargs)" = "1926"
+      - name: 导入完整源码并核验
+        shell: bash
+        run: |
+          set -euo pipefail
+          rsync -a --exclude='.git' /tmp/claude-source/ ./
+          rm -f .initialization.txt
+          git add -A
+          test "$(git ls-files -- source vendor | wc -l | xargs)" = "1919"
+          test "$(git ls-files -- cli.js cli.js.map package.json sdk-tools.d.ts README.md LICENSE.md bun.lock | wc -l | xargs)" = "7"
+          test "$(git hash-object cli.js.map)" = "75e771fc04b253bda8dc1c865d54d76d11d5a4d0"
+          test "$(git hash-object source/src/QueryEngine.ts)" = "0a80c6139b91551d105092016b9f8ce3240d37b0"
+          git diff --cached --stat | tail -8
+      - name: 提交源代码到 main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "导入 Claude Code 2.1.88 全量源码"
+          git push origin HEAD:main
