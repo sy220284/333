@@ -20,23 +20,43 @@ const validFeatures = new Set(coverage.features.map(x => x.id));
 const validScenarios = new Set(coverage.scenarios.map(x => x.id));
 const hasText = x => typeof x === 'string' && x.trim().length > 0;
 function verifiedFlag(f) {
-  return f.target_category !== 'UNVERIFIED' &&
-    hasText(f.target_category) && hasText(f.target_code_anchor) &&
-    hasText(f.entry_consumer) && hasText(f.trigger_conditions) &&
-    hasText(f.target_evidence) && f.related_F.every(x => validFeatures.has(x)) &&
-    f.status === 'ACCEPTED';
+  const row = routing.flags.find(item => item.flag === f.flag);
+  if (!row) return false;
+  return row.target_formalized !== 'UNVERIFIED' &&
+    hasText(row.target_formalized) &&
+    hasText(row.target_behavior_source) &&
+    hasText(row.old_vs_new_delta) &&
+    hasText(row.enable_conditions) &&
+    row.assignment_verified === 'CODE_REVIEWED' &&
+    (row.M1_required
+      ? row.status === 'M1_IMPLEMENTED_TESTED_OR_INTERNAL_VERIFIED'
+      : row.status === 'M1_SOURCE_VERIFIED_AND_HANDOFF_READY');
 }
 function verifiedAnchor(f) {
-  return ['CALL_CHAIN_CONFIRMED', 'TARGET_SEMANTICS_CONFIRMED', 'ACCEPTED'].includes(f.status) &&
-    ['target_entry','consumer','permission_path','result_path','failure_path','cancellation_path',
-    'resume_path','runtime_test','final_semantics'].every(key => hasText(f[key]));
+  const row = routing.chain_features.find(item => item.id === f.F_id);
+  if (!row) return false;
+  return row.is_added_in_2_1_310 !== 'UNVERIFIED' &&
+    row.old_presence_class !== 'OLD_EQUIVALENT_NOT_LOCATED' &&
+    row.target_full_chain !== 'UNVERIFIED' &&
+    hasText(row.delta_from_2_1_88) &&
+    hasText(row.new_source_evidence) &&
+    (row.M1_required
+      ? row.status === 'M1_IMPLEMENTED_TESTED'
+      : row.status === 'M1_SOURCE_VERIFIED_AND_HANDOFF_READY');
 }
 function verifiedChange(x) {
-  return x.review_status === 'ACCEPTED' &&
-    hasText(x.final_2_1_310_behavior) && hasText(x.applicability) &&
-    hasText(x.later_override) && x.evidence_level !== 'INDEXED' &&
+  // M1 confirms version-specific target semantics and implementation owner.
+  // Runtime F/E/L acceptance belongs to M2-M9, with final M10 signoff.
+  return x.review_status === 'M1_CLASSIFIED' &&
+    hasText(x.final_2_1_310_behavior) &&
+    hasText(x.applicability) &&
+    hasText(x.later_override) &&
+    hasText(x.owner_M_verified) &&
     (x.related_F_confirmed.some(id => validFeatures.has(id)) ||
-      (x.applicability === 'NOT_APPLICABLE' && hasText(x.scope_exclusion_evidence)));
+     (x.applicability === 'NOT_APPLICABLE' &&
+      hasText(x.scope_exclusion_evidence))) &&
+    (x.evidence_level === 'TARGET_SOURCE_CONFIRMED' ||
+     x.evidence_level === 'CHANGELOG_UNSPECIFIED_WITH_BOUNDARY');
 }
 function checkAll() {
   const originalFlags = readJson(join(root, 'research/claude-code-2.1.88/features/feature-index.json'));
