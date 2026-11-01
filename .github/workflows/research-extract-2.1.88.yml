@@ -1,0 +1,28 @@
+name: 提取 2.1.88 全量研究数据
+on:
+  push:
+    branches: [research/2.1.88-complete-map]
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 完整提取 2850 个依赖源码及 90 种开关和所有映射记录
+        run: python3 research/claude-code-2.1.88/generate.py
+      - name: 按原始映射逐文件复查全部研究数据
+        run: python3 research/claude-code-2.1.88/generate.py --verify
+      - name: 提交已核验研究数据到原分支
+        run: |
+          git add research/claude-code-2.1.88/
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "完整提取 2.1.88 依赖源码、功能开关、环境变量和位置映射"
+            git push origin HEAD:research/2.1.88-complete-map
+          fi
