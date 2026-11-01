@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isPrivilegedTelemetrySetting, resolveProjectTelemetryEnv } from '../src/utils/telemetry/projectTelemetryPolicy.mjs'
+import { isPrivilegedTelemetrySetting, resolveProjectTelemetryEnv, isEnhancedTracingOptedIn } from '../src/utils/telemetry/projectTelemetryPolicy.mjs'
 
 test('F080: project settings cannot switch on telemetry or export private content', () => {
   const merged = {
@@ -60,4 +60,20 @@ test('F080: URL, raw body, detailed tracing and metric attributes require truste
     assert.equal(isPrivilegedTelemetrySetting(name, '1'), true, name)
     assert.ok(!(name in resolveProjectTelemetryEnv({[name]:'1'}, {})), name)
   }
+})
+
+test('F080: target enhanced telemetry is opt-in at runtime and disabled by default', () => {
+  assert.equal(isEnhancedTracingOptedIn({}), false)
+  assert.equal(isEnhancedTracingOptedIn({USER_TYPE:'ant'}), false)
+  assert.equal(isEnhancedTracingOptedIn({CLAUDE_CODE_ENHANCED_TELEMETRY_BETA:'true'}), true)
+  assert.equal(isEnhancedTracingOptedIn({ENABLE_ENHANCED_TELEMETRY_BETA:'1'}), true)
+  assert.equal(isEnhancedTracingOptedIn({
+    CLAUDE_CODE_ENHANCED_TELEMETRY_BETA:'false',
+    ENABLE_ENHANCED_TELEMETRY_BETA:'1'
+  }),false, 'Higher priority variable explicitly disables tracing')
+  assert.equal(isEnhancedTracingOptedIn({ENABLE_ENHANCED_TELEMETRY_BETA:'0'}),false)
+  const attemptedProjectEnv = resolveProjectTelemetryEnv({
+    ENABLE_ENHANCED_TELEMETRY_BETA:'1'
+  }, {})
+  assert.equal(isEnhancedTracingOptedIn(attemptedProjectEnv),false)
 })
