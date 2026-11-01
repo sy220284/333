@@ -87,16 +87,26 @@ const plugin = {
 };
 mkdirSync(join(root, 'dist'), { recursive: true });
 const result = await Bun.build({
-  entrypoints: [join(root, 'src/main.tsx')],
+  entrypoints: [join(root, 'src/entrypoints/cli.tsx')],
   outdir: join(root, 'dist'),
-  target: 'node',
+  target: 'bun',
   format: 'esm',
   sourcemap: 'external',
   splitting: false,
   features: [],
   minify: false,
   jsx: { runtime: 'classic', factory: 'React.createElement', fragment: 'React.Fragment', importSource: 'react', sideEffects: false, development: false },
-  define: { 'process.env.USER_TYPE': '"external"', 'process.env.NODE_ENV': '"production"' },
+  define: {
+    'process.env.USER_TYPE': '"external"',
+    'process.env.NODE_ENV': '"production"',
+    'MACRO.VERSION': '"2.1.88"',
+    'MACRO.BUILD_TIME': JSON.stringify(new Date().toISOString()),
+    'MACRO.FEEDBACK_CHANNEL': '"#claude-code"',
+    'MACRO.ISSUES_EXPLAINER': '"report the issue using /bug"',
+    'MACRO.PACKAGE_URL': '"@anthropic-ai/claude-code"',
+    'MACRO.NATIVE_PACKAGE_URL': '"@anthropic-ai/claude-code"',
+    'MACRO.VERSION_CHANGELOG': '""',
+  },
   plugins: [plugin],
 });
 if (!result.success) {
