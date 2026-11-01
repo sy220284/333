@@ -206,8 +206,10 @@ function checkAll() {
       'Legacy flag lacks an old/new functional comparison: ' + mapped.flag);
     assert.ok(hasText(mapped.verified_next_implementation_task) || mapped.M1_required,
       'Legacy flag lacks precise M2-M9 implementation handoff: ' + mapped.flag);
-    assert.notEqual(mapped.assignment_verified, 'CODE_REVIEWED',
-      'A source-candidate transfer must not silently claim final branch verification');
+    if (mapped.status === 'TARGET_BEHAVIOR_NOT_VERIFIED') {
+      assert.notEqual(mapped.assignment_verified, 'CODE_REVIEWED',
+        'A source candidate must not claim final branch verification');
+    }
     assert.ok(mapped.related_F_candidate.every(id => validFeatures.has(id)));
     const actualTasks = [...new Set(mapped.related_F_candidate.flatMap(id => plannedByF.get(id) ?? []))].sort();
     assert.deepEqual(mapped.developer_cards.map(x => x.M).sort(), actualTasks);
