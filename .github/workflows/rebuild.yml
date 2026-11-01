@@ -21,6 +21,6 @@ jobs:
       - name: 新构建版本和基础交互验收
         run: |
           set -euo pipefail
-          test -f dist/main.js
-          node dist/main.js --version | grep -F '2.1.88'
-          node dist/main.js --help | grep -F -- '--print'
+          test -f dist/cli.js
+          bun dist/cli.js --version | grep -F '2.1.88'
+          bun dist/cli.js --help | grep -F -- '--print'
