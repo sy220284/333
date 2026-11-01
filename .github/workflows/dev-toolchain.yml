@@ -62,6 +62,7 @@ jobs:
       - name: 准备固定版本 actionlint
         run: |
           set -euo pipefail
+          # shellcheck source=/dev/null
           source tools/dev/toolchain-versions.env
           URL="https://github.com/rhysd/actionlint/releases/download/v$ACTIONLINT_VERSION/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
           curl --fail --location --retry 3 "$URL" -o "$RUNNER_TEMP/actionlint.tar.gz"
@@ -69,8 +70,10 @@ jobs:
           mkdir -p "$RUNNER_TEMP/actionlint-bin"
           tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP/actionlint-bin" actionlint
           echo "$RUNNER_TEMP/actionlint-bin" >> "$GITHUB_PATH"
-          "$RUNNER_TEMP/actionlint-bin/actionlint" .github/workflows/dev-toolchain.yml
-      - name: 打包 333 Node / Bun / 依赖 / Python / actionlint 组件
+          "$RUNNER_TEMP/actionlint-bin/actionlint" .github/workflows/dev-toolchain.yml .github/workflows/dev-quality.yml .github/workflows/codeql.yml
+      - name: 安装固定版本开发工具（生成离线 dev-tools 组件）
+        run: npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+      - name: 打包 333 Node / Bun / 依赖 / Python / actionlint / dev-tools 组件
         run: bash tools/dev/package-artifacts.sh "$RUNNER_TEMP/toolchain-artifacts"
       - name: 解包运行组件，验证离线运行时可移植性
         run: bash tools/dev/test-runtime-archives.sh "$RUNNER_TEMP/toolchain-artifacts"
@@ -122,6 +125,14 @@ jobs:
           retention-days: 14
           compression-level: 0
           if-no-files-found: error
+      - name: 上传开发工具 dev-tools
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-toolchain-dev-tools-latest
+          path: ${{ runner.temp }}/toolchain-artifacts/333-toolchain-dev-tools-latest
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
       - name: 上传 npm 依赖分片 01
         uses: actions/upload-artifact@v4
         with:
@@ -163,9 +174,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile: [build, full]
+        profile: [build, full, dev]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -185,11 +198,17 @@ jobs:
           name: 333-toolchain-source-deps-latest
           path: ${{ runner.temp }}/artifacts/333-toolchain-source-deps-latest
       - name: 下载 full 档 actionlint
-        if: matrix.profile == 'full'
+        if: matrix.profile != 'build'
         uses: actions/download-artifact@v4
         with:
           name: 333-toolchain-actionlint-latest
           path: ${{ runner.temp }}/artifacts/333-toolchain-actionlint-latest
+      - name: 下载 dev 档开发工具
+        if: matrix.profile == 'dev'
+        uses: actions/download-artifact@v4
+        with:
+          name: 333-toolchain-dev-tools-latest
+          path: ${{ runner.temp }}/artifacts/333-toolchain-dev-tools-latest
       - name: 从 777 式 Artifact 离线安装并检验版本
         env:
           DEV333_TOOLCHAIN_ENV_FILE: ${{ runner.temp }}/333-dev.env
@@ -209,8 +228,8 @@ jobs:
           source "$DEV333_TOOLCHAIN_ENV_FILE"
           npm run verify
           git diff --exit-code
-      - name: full 档验证研究索引与工作流检查
-        if: matrix.profile == 'full'
+      - name: full / dev 档验证研究索引与工作流检查
+        if: matrix.profile != 'build'
         env:
           DEV333_TOOLCHAIN_ENV_FILE: ${{ runner.temp }}/333-dev.env
         run: |
@@ -219,3 +238,12 @@ jobs:
           source "$DEV333_TOOLCHAIN_ENV_FILE"
           python3 research/claude-code-2.1.88/generate.py --verify
           actionlint .github/workflows/dev-toolchain.yml
+      - name: dev 档真实运行开发质量验收
+        if: matrix.profile == 'dev'
+        env:
+          DEV333_TOOLCHAIN_ENV_FILE: ${{ runner.temp }}/333-dev.env
+          DEV333_DIFF_BASE: main
+        run: |
+          # shellcheck source=/dev/null
+          source "$DEV333_TOOLCHAIN_ENV_FILE"
+          node tools/dev/dev.mjs verify

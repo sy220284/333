@@ -57,3 +57,25 @@ npm run verify
 \`.github/workflows/dev-toolchain.yml\` 在工具链相关代码更新时，构建并上传组件，随后使用独立 runner 回装 build 和 full 环境、实际执行源码重建、完整测试及研究数据验收。**没有定时工作流**；现有 rebuild.yml 仍负责三平台功能重建。
 
 工具链缓存仅供匹配当前 333 的冻结依赖快照使用；原始发行 CLI \`cli.js\` 仅用于既有行为对照，工具链不把它作为独立构建程序的一部分。仓库运行构建脚本时，依旧需要本项目自身的源码及发行资源。
+
+## 开发套件 dev
+
+`dev` 包含 `full`，增加独立的 TypeScript 5.9.3、Biome 2.6.3 和 Node/React 类型声明。
+这些依赖放在 `tools/dev`，不混入原版 CLI 的冻结发行依赖。
+Linux/WSL x64 通过同一 Artifact 安装器离线部署 `dev-tools`；macOS、Windows 可执行
+`npm run dev:bootstrap` 安装平台对应的开发二进制，并使用相同的开发检查命令。
+
+```bash
+bash tools/dev/ai-toolchain.sh plan dev
+bash tools/dev/ai-toolchain.sh install dev --artifacts-dir ./artifacts
+npm run dev:verify
+npm run dev:watch
+npm run dev:typecheck:all
+npm run dev:lint:all
+npm run dev:security
+npm run dev:sbom
+```
+
+开发工具说明见 [DEVELOPMENT.md](DEVELOPMENT.md)。
+
+三个桌面系统的 dev-tools 专项离线包、恢复命令和本地提交检查操作，见 [DEVELOPMENT.md](DEVELOPMENT.md)。

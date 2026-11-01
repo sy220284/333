@@ -1,0 +1,12 @@
+{
+  "name": "333-development-tools",
+  "private": true,
+  "version": "1.0.0",
+  "description": "333 独立开发工具依赖，与发行包依赖隔离",
+  "devDependencies": {
+    "@biomejs/biome": "2.6.3",
+    "@types/node": "24.10.0",
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  }
+}
