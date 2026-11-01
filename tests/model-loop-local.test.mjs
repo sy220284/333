@@ -122,8 +122,8 @@ test('original and rebuilt CLIs execute Read → Edit → Write → Read with ma
   let active='none';
   const actions=[
     {name:'Read',input:{file_path:'example.txt'},toolId:'toolu_333_read_before'},
-    {name:'Edit',input:{file_path:'example.txt',old_string:before,new_string:after},toolId:'toolu_333_edit'},
-    {name:'Write',input:{file_path:'created.txt',content:created},toolId:'toolu_333_write'},
+    {name:'Edit',input:{file_path:first,old_string:before,new_string:after},toolId:'toolu_333_edit'},
+    {name:'Write',input:{file_path:second,content:created},toolId:'toolu_333_write'},
     {name:'Read',input:{file_path:'created.txt'},toolId:'toolu_333_read_after'},
   ];
   const server=createServer((req,res)=>{
