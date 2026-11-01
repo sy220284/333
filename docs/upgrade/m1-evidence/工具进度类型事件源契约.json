@@ -1,0 +1,211 @@
+{
+  "schema": 1,
+  "baseline": "2.1.88",
+  "target": "2.1.310",
+  "source_grade": "ORIGINAL_PRODUCER_CONSUMER_STATIC_CONTRACT",
+  "import_source": "src/types/tools.js",
+  "legacy_references": 18,
+  "imported_symbols": 11,
+  "record_count": 11,
+  "records": [
+    {
+      "type": "BashProgress",
+      "tag": "bash_progress",
+      "producers": [
+        "src/tools/BashTool/BashTool.tsx:663-677"
+      ],
+      "required": [
+        "type",
+        "output",
+        "fullOutput",
+        "elapsedTimeSeconds",
+        "totalLines",
+        "totalBytes"
+      ],
+      "conditional": [
+        "taskId",
+        "timeoutMs"
+      ],
+      "consumers": [
+        "src/tools/BashTool/UI.tsx:131-153",
+        "src/tools/AgentTool/AgentTool.tsx:1083-1088"
+      ],
+      "status": "PRODUCER_AND_CONSUMER_IDENTIFIED"
+    },
+    {
+      "type": "PowerShellProgress",
+      "tag": "powershell_progress",
+      "producers": [
+        "src/tools/PowerShellTool/PowerShellTool.tsx:470-484"
+      ],
+      "required": [
+        "type",
+        "output",
+        "fullOutput",
+        "elapsedTimeSeconds",
+        "totalLines",
+        "totalBytes"
+      ],
+      "conditional": [
+        "timeoutMs",
+        "taskId"
+      ],
+      "consumers": [
+        "src/tools/PowerShellTool/UI.tsx",
+        "src/tools/AgentTool/AgentTool.tsx:1083-1088"
+      ],
+      "status": "PRODUCER_AND_CONSUMER_IDENTIFIED"
+    },
+    {
+      "type": "AgentToolProgress",
+      "tag": "agent_progress",
+      "producers": [
+        "src/tools/AgentTool/AgentTool.tsx:795-805",
+        "src/tools/AgentTool/AgentTool.tsx:1110-1122"
+      ],
+      "required": [
+        "type",
+        "message",
+        "prompt",
+        "agentId"
+      ],
+      "conditional": [],
+      "consumers": [
+        "src/tools/AgentTool/UI.tsx:37-45",
+        "src/tools/AgentTool/UI.tsx:100-103"
+      ],
+      "status": "PRODUCER_AND_CONSUMER_IDENTIFIED;DEPENDS_ON_MESSAGE_UNION"
+    },
+    {
+      "type": "SkillToolProgress",
+      "tag": "skill_progress",
+      "producers": [
+        "src/tools/SkillTool/SkillTool.ts:245-259"
+      ],
+      "required": [
+        "type",
+        "message",
+        "prompt",
+        "agentId"
+      ],
+      "conditional": [],
+      "consumers": [
+        "src/Tool.ts:49-58"
+      ],
+      "status": "PRODUCER_IDENTIFIED;DEPENDS_ON_MESSAGE_UNION"
+    },
+    {
+      "type": "MCPProgress",
+      "tag": "mcp_progress",
+      "producers": [
+        "src/services/mcp/client.ts:1847-1855",
+        "src/services/mcp/client.ts:1885-1894",
+        "src/services/mcp/client.ts:1926-1935",
+        "src/services/mcp/client.ts:3102-3113"
+      ],
+      "required": [
+        "type",
+        "status",
+        "serverName",
+        "toolName"
+      ],
+      "conditional": [
+        "elapsedTimeMs",
+        "progress",
+        "total",
+        "progressMessage"
+      ],
+      "stateValues": [
+        "started",
+        "progress",
+        "completed",
+        "failed"
+      ],
+      "consumers": [
+        "src/tools/MCPTool/UI.tsx:57-88"
+      ],
+      "status": "PRODUCER_AND_CONSUMER_IDENTIFIED"
+    },
+    {
+      "type": "WebSearchProgress",
+      "tag": "query_update | search_results_received",
+      "producers": [
+        "src/tools/WebSearchTool/WebSearchTool.ts:345-354",
+        "src/tools/WebSearchTool/WebSearchTool.ts:375-385"
+      ],
+      "requiredByVariant": {
+        "query_update": [
+          "type",
+          "query"
+        ],
+        "search_results_received": [
+          "type",
+          "query",
+          "resultCount"
+        ]
+      },
+      "consumers": [
+        "src/tools/WebSearchTool/WebSearchTool.ts:434"
+      ],
+      "status": "PRODUCER_IDENTIFIED"
+    },
+    {
+      "type": "TaskOutputProgress",
+      "tag": "waiting_for_task",
+      "producers": [
+        "src/tools/TaskOutputTool/TaskOutputTool.tsx:242-252"
+      ],
+      "required": [
+        "type",
+        "taskDescription",
+        "taskType"
+      ],
+      "consumers": [
+        "src/Tool.ts:49-58"
+      ],
+      "status": "PRODUCER_IDENTIFIED"
+    },
+    {
+      "type": "ShellProgress",
+      "tag": "bash_progress | powershell_progress",
+      "producers": [
+        "src/tools/BashTool/BashTool.tsx:663-677",
+        "src/tools/PowerShellTool/PowerShellTool.tsx:470-484"
+      ],
+      "consumers": [
+        "src/components/BashModeProgress.tsx:33-35",
+        "src/tools/AgentTool/AgentTool.tsx:1083-1088"
+      ],
+      "status": "UNION_INFERRED_FROM_RUNTIME_DISCRIMINANT"
+    },
+    {
+      "type": "REPLToolProgress",
+      "producers": [],
+      "consumers": [
+        "src/Tool.ts:49-73"
+      ],
+      "status": "TYPE_REFERENCE_ONLY;REQUIRE_TARGET_AND_OLD_CONTRACT"
+    },
+    {
+      "type": "SdkWorkflowProgress",
+      "producers": [],
+      "consumers": [
+        "src/utils/sdkEventQueue.ts:17-33",
+        "src/utils/task/sdkProgress.ts:4-35"
+      ],
+      "status": "TYPE_REFERENCE_ONLY;LEGACY_PRODUCER_NOT_FOUND"
+    },
+    {
+      "type": "ToolProgressData",
+      "producers": [
+        "src/Tool.ts:303-338"
+      ],
+      "consumers": [
+        "src/services/tools/toolExecution.ts:611",
+        "src/components/messages/AssistantToolUseMessage.tsx:340"
+      ],
+      "status": "UNION_CONTRACT_PARTIAL;MESSAGE_TYPES_UNRESOLVED"
+    }
+  ],
+  "note": "类型来源由真实输入输出推断；新版终态与整链运行验收仍须独立核对。不可用any或空模块掩盖未恢复的消息协议。"
+}
