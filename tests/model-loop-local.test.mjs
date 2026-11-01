@@ -66,7 +66,7 @@ test('original and independent rebuild both perform model-tool-model file read l
         if(state.count===1) {
           content=[
             SSE('content_block_start',{type:'content_block_start',index:0,content_block:{type:'tool_use',id:'toolu_333_file_read',name:'Read',input:{}}}),
-            SSE('content_block_delta',{type:'content_block_delta',index:0,delta:{type:'input_json_delta',partial_json:JSON.stringify({file_path:filename})}}),
+            SSE('content_block_delta',{type:'content_block_delta',index:0,delta:{type:'input_json_delta',partial_json:JSON.stringify({file_path:'example.txt'})}}),
             SSE('content_block_stop',{type:'content_block_stop',index:0})
           ];
           stop='tool_use';
