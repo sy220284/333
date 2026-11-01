@@ -42,8 +42,19 @@ jobs:
           node-version: '22'
       - name: 验证任务卡、功能、场景及旧开关/新锚点/版本记录
         run: node --test tests/upgrade-coverage.test.mjs tests/m1-verify.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs tests/m1-privacy-settings.test.mjs tests/m1-snapshot-terminal-behavior.test.mjs tests/m1-source-gap-audit.test.mjs
-      - name: 编译Notebook类型的正反向契约
-        run: npx --yes --package typescript@5.9.3 -- tsc --strict --noEmit --skipLibCheck --target ES2023 --module ESNext --moduleResolution Bundler tests/m1-notebook-types.fixture.ts tests/m1-core-types.fixture.ts
+      - name: 安装固定TypeScript校验器
+        run: npm install --prefix "${RUNNER_TEMP}/m1-typescript" --no-save --package-lock=false --ignore-scripts --no-audit --no-fund typescript@5.9.3
+      - name: 编译已恢复类型的正反向契约
+        run: node "${RUNNER_TEMP}/m1-typescript/node_modules/typescript/lib/tsc.js" --strict --noEmit --skipLibCheck --target ES2023 --module ESNext --moduleResolution Bundler tests/m1-notebook-types.fixture.ts tests/m1-core-types.fixture.ts
+      - name: 扫描当前分支的实际缺失类型与运行模块
+        run: node build/m1-source-gap-ast.mjs --old-src src --typescript-module "${RUNNER_TEMP}/m1-typescript/node_modules/typescript/lib/typescript.js" --out "${RUNNER_TEMP}/m1-current-source-gaps.json"
+      - name: 保存逐路径导入与符号契约证据
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-current-source-gaps
+          path: ${{ runner.temp }}/m1-current-source-gaps.json
+          retention-days: 30
+          if-no-files-found: error
       - name: 下载固定发行版的官方变更记录
         run: |
           curl --fail --location --show-error --silent --retry 3 \
