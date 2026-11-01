@@ -1168,8 +1168,8 @@
         "F053"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-00h33g5z.js:14; chunk-01ett990.js:32",
+      "old_vs_new_delta": "新版候选只有通用 e.isMcp 与 mcp__ 工具命名体系，未证明旧版特定 CHICAGO_MCP 功能。需按旧版注册的具体 MCP 身份和服务入口寻找目标等价。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -1180,7 +1180,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -1199,7 +1199,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 489,
       "target_lead_assessment": "只命中通用 MCP 单词，不能证明 CHICAGO 专用服务或迁移路径",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M6/F053：注册服务器 ID、工具发现、真正 MCP 请求、权限和取消",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "COMMIT_ATTRIBUTION",
@@ -1332,8 +1335,8 @@
         "F053"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-01ett990.js:113,32",
+      "old_vs_new_delta": "目标词出现在 Token 解释文字和 MCP 通用前缀，未找到旧版 CONNECTOR_TEXT 特殊文本块的解析/渲染分支，不能认定新版功能保留。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -1350,7 +1353,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -1374,7 +1377,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 512,
       "target_lead_assessment": "只命中 connector/MCP 基础说明，未证明旧版 connector text 专用分支",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M2/F018、M6/F053：旧 ConnectorText payload schema→目标 API stream→渲染，分成功/空值/恶意内容",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "CONTEXT_COLLAPSE",
@@ -1685,8 +1691,8 @@
         "F099"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-0yqhf2py.js:230; chunk-1e5yp9hx.js:28",
+      "old_vs_new_delta": "target 有 userSettings 来源与本地写失败检查；命中旧下载用户设置开关是泛化路径，没有证明远端下载用户配置语义。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -1703,7 +1709,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -1722,7 +1728,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 121,
       "target_lead_assessment": "userSettings 字符串仅证明设置系统存在，未证明下载用户设置功能",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M5/F091/F099：真正用户设置源、下载请求、信任/覆盖及错误回滚",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "DUMP_SYSTEM_PROMPT",
@@ -1848,8 +1857,8 @@
         "F051"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-j0tbz6ra.js:32584-32627,30632",
+      "old_vs_new_delta": "目标版真正 ToolSearch 实现支持 select/关键词搜索、MCP 服务刷新后重新选择和找不到时返回空结果；旧 EXPERIMENTAL_SKILL_SEARCH 是单独技能检索门控，必须区分 ToolSearch 与 SkillSearch 两套消费者。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -1860,7 +1869,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -1884,7 +1893,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 45,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M6/F051：技能索引发现→权重→调用 Skill，而 M3 ToolSearch 独立补验",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "EXTRACT_MEMORIES",
@@ -1959,8 +1971,8 @@
         "F026"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-2pjf4p7s.js:602,1179",
+      "old_vs_new_delta": "新版 Workflow 使用 journals, 有自动持久化与 agent run 状态，但旧通用 FILE_PERSISTENCE 范围跨任务和会话；当前目标位置只证明 Workflow 自己的落盘行为。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -1971,7 +1983,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -1995,7 +2007,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 229,
       "target_lead_assessment": "Workflow journal 只证明工作流自身落盘，不能推出旧通用 file persistence 等价",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M4/F026：文件存储、写入冲突、失败/崩溃重启；M8 独立验证 Workflow 日志",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "FORK_SUBAGENT",
@@ -2111,8 +2126,8 @@
         "F004"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-6z861t7d.js:113,121",
+      "old_vs_new_delta": "新版崩溃提示主动引导 /resume，CLI 分支会传 --resume，说明会话恢复入口存在；旧 history picker 交互列表的模态窗口尚未找到消费者。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -2123,7 +2138,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -2147,7 +2162,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 46,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M5/F004：历史搜索入口→弹窗选择→恢复→异常索引数据",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "HISTORY_SNIP",
@@ -2225,8 +2243,8 @@
         "F054"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-j0tbz6ra.js:18326,61627",
+      "old_vs_new_delta": "目标版带有 PermissionRequest hookSpecificOutput 解析和 hook_prompt 独立模型调用（tools:[]、无交互会话、不准越权调用），说明实际 Prompt Hook 有执行者和权限上下文。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -2237,7 +2255,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -2261,7 +2279,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 58,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M6/F054：Hook prompt run→预处理→工具结果/错误→拒绝规则→取消",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "IS_LIBC_GLIBC",
@@ -2411,8 +2432,8 @@
         "F061"
       ],
       "target_formalized": "PARTIAL_USER_SURFACE_UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": "M6 需完整比较主动互动、计划、文件、提醒、授权及多入口；不可将 /goal 或工具名称命中计为 KAIROS 已整体转正。",
+      "target_behavior_source": "chunk-at88wjsn.js:1787,1798; chunk-62bczwa8.js:215-230",
+      "old_vs_new_delta": "早期 /goal/routine 候选只是结构化系统事件，不能证明旧 KAIROS 主动桥接实现原样存在；新版有独立调度/通知体系，须按 Goal/Routine 的真正消费者和条件单独对照。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -2429,7 +2450,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -2468,7 +2489,10 @@
       "upgrade_assignment": {
         "owner_M": "M6",
         "type": "SOURCE_VERIFIED_HANDOFF_TARGET_RUNTIME_TO_CARD"
-      }
+      },
+      "verified_next_implementation_task": "M6/F072/F061：主动意图、通知和 session 事件源归属，默认不创建计划任务",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "KAIROS_BRIEF",
@@ -2577,8 +2601,8 @@
         "F099"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-mh7sh27p.js:721; chunk-5rw2zfa0.js:1744",
+      "old_vs_new_delta": "新版 CLI --channels 参数可指定有入站推送的 MCP 服务器，运行时受允许列表及来源校验；目标 settings 数据结构亦包含 channels，不能等同旧 KAIROS_CHANNELS 全部功能或默认开启。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -2590,7 +2614,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -2614,7 +2638,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 198,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M5/F099、M6/F053：MCP Channel 注册、消息 push、鉴权/断连和退出",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "KAIROS_DREAM",
@@ -2819,8 +2846,8 @@
         "F099"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-5rw2zfa0.js:1151; chunk-j0tbz6ra.js:36419",
+      "old_vs_new_delta": "新版项目/配置来源有 disableDeepLinkRegistration、会话遥控目录；这些只是 deep link 功能片段，尚未证明旧 LODESTONE 原型名称或调用链延续。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -2832,7 +2859,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -2856,7 +2883,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 8,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M5/F066/F099：deeplink 注册→URI 校验→会话路由→异常与反注入",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "MCP_RICH_OUTPUT",
@@ -2872,8 +2902,8 @@
         "F053"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-00h33g5z.js:14; chunk-01ett990.js:32",
+      "old_vs_new_delta": "新版候选仅有 isMcp 和 mcp__ 名称，未找到旧版 MCPTool UI 富文本组件对应的实际格式选择器，不能把普通 MCP 出现误记为 UI 转正。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -2884,7 +2914,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -2903,7 +2933,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 489,
       "target_lead_assessment": "普通 MCP 字符串不证明旧版富文本渲染能力",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M6/F053：返回 contentType→文本/富组件解析→截断与安全渲染",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "MCP_SKILLS",
@@ -3022,8 +3055,8 @@
         "F009"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-03htth44.js:466; chunk-05z051sc.js:767",
+      "old_vs_new_delta": "目标 action 命中来自 Artifact 命令纠错规则、后台 Agent 行为埋点，均不是旧版 PromptInput 的消息操作菜单；旧功能在目标版是否转正未证实。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -3034,7 +3067,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -3053,7 +3086,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 402,
       "target_lead_assessment": "通用 action 事件不是 PromptInput 消息动作菜单",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M5/F009：PromptInput 编辑/回复行为菜单的真实注册、权限及回撤",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "MONITOR_TOOL",
@@ -3387,8 +3423,8 @@
         "F060"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-j0tbz6ra.js:57457; chunk-j0tbz6ra.js:1208",
+      "old_vs_new_delta": "新版有 import PowerShellTool 的实际导出入口、平台分类器和工具权限分支；旧 POWERSHELL_AUTO_MODE 还涉及自动授权模式，须按 permissions policy 和 tool validateInput 逐条核对。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -3405,7 +3441,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -3429,7 +3465,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 126,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M3/F033/F060：PowerShell 命令分类、自动/人工权限优先级、Windows 原生实测",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "PROACTIVE",
@@ -3459,8 +3498,8 @@
         "F072"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-mdxeekqd.js:1037,30785; chunk-5qtb3hv4.js:154",
+      "old_vs_new_delta": "新版 CLI/agent 启动选项包括 --proactivity，且 Agent 描述引导主动执行，但并未证明旧 PROACTIVE 与 KAIROS 的同一任务调度与用户通知链。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -3471,7 +3510,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -3495,7 +3534,10 @@
       "archive_exact_same_name_files": 6,
       "archive_similar_candidate_file_count": 90,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M6/F072：主动建议触发→模型决策→用户可见提醒→许可→回退",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "PROMPT_CACHE_BREAK_DETECTION",
@@ -3516,8 +3558,8 @@
         "F021"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-j0tbz6ra.js:51836; chunk-0v8111n2.js:161",
+      "old_vs_new_delta": "新版真实发出 tengu_api_cache_breakpoints 事件，记录 skipCacheWrite、forkPointPinned、markerCount 等，跟踪旧缓存断点侦测能力有共享关键对象；仍需确认回滚、增量、费用差异。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -3528,7 +3570,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -3552,7 +3594,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 34,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M2/F021：缓存标记输出、命中率、不可复用断点以及特殊 Provider 条件",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "QUICK_SEARCH",
@@ -3569,8 +3614,8 @@
         "F031"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-34bfdsb0.js:1966; chunk-5z6t3gwt.js:19",
+      "old_vs_new_delta": "新版 /search 命中为 MCP metadata searchHint/通用工具发现，与旧 QUICK_SEARCH（PromptInput 快捷键触发搜索）不是一回事。目标 TUI 快捷搜索真实消费者尚未定位。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -3581,7 +3626,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -3600,7 +3645,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 16,
       "target_lead_assessment": "/search 候选为工具检索的 searchHint，不能证明旧版快捷键搜索",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M5/F009、M3/F031：TUI 组合键→文件搜索/消息搜索模式→取消键处理",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "REACTIVE_COMPACT",
@@ -3677,8 +3725,8 @@
         "F101"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-03htth44.js:465; chunk-05z051sc.js:1560; chunk-ghkyq94m.js:3976-3983",
+      "old_vs_new_delta": "新版有 Artifact API/发布/评论等路径，但旧 ReviewArtifactTool 注册与 Prompt UI review approval 不等于新 Artifact 工具，须分别对照。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -3695,7 +3743,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -3714,7 +3762,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 226,
       "target_lead_assessment": "artifact 字段或资源不代表旧 ReviewArtifactTool 实际注册",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M6/F073、M9/F101：真实 review tool 消费者、确认/拒绝、评论同步",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "RUN_SKILL_GENERATOR",
@@ -3730,8 +3781,8 @@
         "F051"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-n7dvjfwp.js:2768; chunk-j0tbz6ra.js:33609",
+      "old_vs_new_delta": "新版已注册一组 built-in skills，同时明确推荐 /plugin install skill-creator@claude-plugins-official 的外部插件；旧 RUN_SKILL_GENERATOR 是内部自动化任务，插件建议不能证明旧功能已正式开放。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -3742,7 +3793,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -3761,7 +3812,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 3,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M6/F051：技能构建器插件安装、受信调用、产生文件/校验",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "SELF_HOSTED_RUNNER",
@@ -3890,8 +3944,8 @@
         "F051"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-j0tbz6ra.js:33609; chunk-n7dvjfwp.js:2768",
+      "old_vs_new_delta": "新版官方说明指向外部 skill-creator 插件，允许创建/改善技能；旧 SKILL_IMPROVEMENT 属条件化自动评估/提升，不能仅凭官方插件文案认定等价。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -3902,7 +3956,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -3916,7 +3970,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 1,
       "target_lead_assessment": "skill-creator 与原技能自动改善任务不同",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M6/F051：技能评估/优化真正执行、用户授权、原技能回滚",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "SKIP_DETECTION_WHEN_AUTOUPDATES_DISABLED",
@@ -3932,8 +3989,8 @@
         "F079"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-ng9bf6hw.js:119; chunk-s6eb4jds.js:9785",
+      "old_vs_new_delta": "新版存在 isAutoUpdaterDisabled 配置和 Desktop 关闭自动更新字段，未证明旧跳过安装检测的判断分支完全一致，必须检查安装器实际启动行为。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -3944,7 +4001,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -3963,7 +4020,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 2,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M5/F079：禁用自动更新→跳过检测→启动不联网→打开恢复",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "SLOW_OPERATION_LOGGING",
@@ -4023,8 +4083,8 @@
         "F066"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-s6eb4jds.js:9765; chunk-j0tbz6ra.js:59031",
+      "old_vs_new_delta": "新版候选源来自 Desktop 的配置 schema 中 sshRemote 字段，并非终端 SSH 会话连接执行器；旧 SSH_REMOTE 的握手和权限扩展尚未证实。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -4035,7 +4095,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -4059,7 +4119,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 495,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M5/F066：SSH 隧道/认证→连接成功→断线重试及权限边界",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "STREAMLINED_OUTPUT",
@@ -4076,8 +4139,8 @@
         "F009"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-563gzepf.js:2694; chunk-5rbbn9bc.js:54",
+      "old_vs_new_delta": "新版真实非交互 stream-json CLI 启动和输入格式判定分支存在；旧 STREAMLINED_OUTPUT 单独输出简化门控，不可由协议名同一就推断完整输出行为等价。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -4089,7 +4152,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -4108,7 +4171,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 17,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M5/F003：stream-json 序列化、--verbose、事件顺序、取消及无TTY",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "TEAMMEM",
@@ -4205,8 +4271,8 @@
         "F075"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-0hcnhpx5.js:67-69",
+      "old_vs_new_delta": "新版候选实际是 Artifact MCP route/pin/publish 模板功能，旧 TEMPLATES 还在 CLI new/list/reply 中条件注册，两者用途不等价，禁止错认自动迁移。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -4217,7 +4283,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -4241,7 +4307,10 @@
       "archive_exact_same_name_files": 1,
       "archive_similar_candidate_file_count": 119,
       "target_lead_assessment": "artifact 模板字段与旧版 new/list/reply 命令不同，需追踪目标 CLI 注册",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M6/F075：Artifact 模板与旧 CLI new/list/reply 目标终态分别核实",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "TERMINAL_PANEL",
@@ -4261,8 +4330,8 @@
         "F009"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-05z051sc.js:176; chunk-ex7g3k30.js:306",
+      "old_vs_new_delta": "新版终端卸载时 cleanupTerminalModes，并有 Appearance 设置树；此代码不足以证明旧专用 TERMINAL_PANEL 交互功能已保留，需查 TUI 入口/退出模式。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -4273,7 +4342,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -4297,7 +4366,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 381,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M5/F009：主终端面板渲染/键鼠输入、状态还原、异常退出",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "TOKEN_BUDGET",
@@ -4318,8 +4390,8 @@
         "F027"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-8w56k4pg.js:21; chunk-mh7sh27p.js:721",
+      "old_vs_new_delta": "新版模型执行参数包含 --task-budget/--max-budget-usd，旧 TOKEN_BUDGET 控制令牌额度，金额预算与 token 截断不同；实际 token 计数/成本限制必须看调用源。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -4330,7 +4402,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -4354,7 +4426,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 11,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M2/F027：token/美元限额、费用记录、超限拒绝和恢复",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "TORCH",
@@ -4370,8 +4445,8 @@
         "F018"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-h2tyaevk.js:117; chunk-j0tbz6ra.js:44312",
+      "old_vs_new_delta": "新版 torch 关键词出现于配置环境/允许访问的 docs.pytorch.org 白名单，与旧 /torch 命令完全无关；没有证明原命令正式开放。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -4382,7 +4457,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -4401,7 +4476,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 3,
       "target_lead_assessment": "torch 匹配机器学习框架库列表，不能证明旧版 /torch 命令存在",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M2/F018：旧 torch 模型/命令真实用途→新 Provider 能力或删除，不得按 pytorch 字符串转正",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "TRANSCRIPT_CLASSIFIER",
@@ -4518,8 +4596,8 @@
         "F032"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-gv3j9e36.js:2816; chunk-j0tbz6ra.js:21230",
+      "old_vs_new_delta": "新版 Bash 静态解析确有 tree-sitter 错误处理：shell keyword 被误当命令名时提供专用错误，并有 treeSitterAnalysis；旧 TREE_SITTER_BASH 编译门控由 M3 完整比对授权决策。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -4530,7 +4608,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -4549,7 +4627,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 2,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M3/F032：Bash AST parser、命令分割/管道、权限负例、系统差异",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "TREE_SITTER_BASH_SHADOW",
@@ -4566,8 +4647,8 @@
         "F032"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-gv3j9e36.js:2816",
+      "old_vs_new_delta": "新版目标 tree-sitter 解析源可达；旧 SHADOW 是仅观察验证/对照的内部门控，不能自动在正式 CLI 开启影子执行。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -4578,7 +4659,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -4592,7 +4673,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 1,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M3/F032：影子 parser 禁止副作用、差分日志隐私、实验门控",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "UDS_INBOX",
@@ -4617,8 +4701,8 @@
         "F066"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-15ff8yw7.js:23; chunk-kfdf5pq3.js:794",
+      "old_vs_new_delta": "新版确实定义 udsInboxShape 共享消息 schema，主桥接受远控条件激活；未从 schema 导出证明旧 UDS_INBOX socket 实际监听和消息分发。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -4629,7 +4713,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -4653,7 +4737,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 61,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M5/F066：UNIX Socket 初始化、收件箱读写及跨会话隔离",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "ULTRAPLAN",
@@ -4732,8 +4819,8 @@
         "F017"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-8w56k4pg.js:21; chunk-mh7sh27p.js:721",
+      "old_vs_new_delta": "目标 CLI 参数表包含 --max-thinking-tokens，旧 ULTRATHINK 是特殊思考预算/提示词强化门控；需区分 tokens 可调与内部 ultra 模式是否转正。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -4744,7 +4831,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -4763,7 +4850,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 10,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M2/F017：thinking token 上限、effort、Provider 接受范围和预算",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "UNATTENDED_RETRY",
@@ -4779,8 +4869,8 @@
         "F020"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-0hcnhpx5.js:157; chunk-0bk2wq2d.js:619",
+      "old_vs_new_delta": "目标对 API 503 + Retry-After 分支有实际重试时间响应，但这只证明服务端 retry-after 传播，不证明旧 UNATTENDED_RETRY 自动重试/恢复的完整状态机。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -4791,7 +4881,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -4810,7 +4900,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 28,
       "target_lead_assessment": "Retry-After 头只证明 HTTP 使用，不能证明无人值守恢复",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M2/F020：可重试错误矩阵、退避、手动/自动恢复和重复副作用",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "UPLOAD_USER_SETTINGS",
@@ -4828,8 +4921,8 @@
         "F099"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-0yqhf2py.js:230; chunk-1e5yp9hx.js:28",
+      "old_vs_new_delta": "新版用户设置文件持久化会验证落盘结果并返回失败原因，不能证明旧版 UPLOAD_USER_SETTINGS 远端上传/同步，业务语义不能同名映射。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -4846,7 +4939,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -4865,7 +4958,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 120,
       "target_lead_assessment": "userSettings 普通配置访问不等于云端设置上传",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M6/F091 + M5/F099：本地设置→远端同步→回执→失败回滚与租户边界",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "VERIFICATION_AGENT",
@@ -4884,8 +4980,8 @@
         "F064"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-5qtb3hv4.js:95,154; chunk-j0tbz6ra.js:34117-34199",
+      "old_vs_new_delta": "新版通用 Worker 提示词能选择专门 reviewer/verifier/planner，并有实际 security-review builtin agent；旧 VERIFICATION_AGENT 对工作完成的独立验证流程须以 Agent registry 具体实体确认。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -4896,7 +4992,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -4915,7 +5011,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 5,
       "target_lead_assessment": "/verify 可能为技能文案，与旧版 Verifier Agent 不等价",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "verified_next_implementation_task": "M7/F064：独立验证代理调用、差分证据和失败回退",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "VOICE_MODE",
@@ -5002,8 +5101,8 @@
         "F037"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-cj37hmns.js:31; chunk-dmtyt8s1.js:9; chunk-j0tbz6ra.js:30632",
+      "old_vs_new_delta": "新版内置工具总线和屏幕通知包含 computer_use 及 Chrome/browser 工具候选，授权依赖 provider/账号/工具规则；旧 WEB_BROWSER_TOOL 编译门控是否转正须核其真正执行插件/会话。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -5014,7 +5113,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -5033,7 +5132,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 13,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M3/F037：浏览器调用准入、用户授权、工具执行结果、退出隔离",
+      "source_review_status": "CANDIDATE_VALIDITY_REVIEWED",
+      "target_evidence_grade": "TARGET_SOURCE_EVIDENCE_ONLY_NO_RUNTIME"
     },
     {
       "flag": "WORKFLOW_SCRIPTS",
