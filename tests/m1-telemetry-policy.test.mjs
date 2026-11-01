@@ -77,3 +77,20 @@ test('F080: target enhanced telemetry is opt-in at runtime and disabled by defau
   }, {})
   assert.equal(isEnhancedTracingOptedIn(attemptedProjectEnv),false)
 })
+
+test('F080: project settings must not activate local Perfetto trace exports', () => {
+  const untrusted = resolveProjectTelemetryEnv({
+    CLAUDE_CODE_PERFETTO_TRACE: '/tmp/unsafe-trace.json',
+    CLAUDE_CODE_PERFETTO_WRITE_INTERVAL_S: '1',
+  }, {})
+  assert.equal('CLAUDE_CODE_PERFETTO_TRACE' in untrusted, false)
+  assert.equal('CLAUDE_CODE_PERFETTO_WRITE_INTERVAL_S' in untrusted, false)
+  const explicitlyAuthorized = resolveProjectTelemetryEnv({
+    CLAUDE_CODE_PERFETTO_TRACE: '/tmp/untrusted-destination',
+  }, {
+    CLAUDE_CODE_PERFETTO_TRACE: '1',
+  })
+  assert.equal(explicitlyAuthorized.CLAUDE_CODE_PERFETTO_TRACE, '1')
+  assert.equal(isPrivilegedTelemetrySetting('CLAUDE_CODE_PERFETTO_TRACE', 'off'), false)
+  assert.equal(isPrivilegedTelemetrySetting('CLAUDE_CODE_PERFETTO_TRACE', '/tmp/trace.json'), true)
+})
