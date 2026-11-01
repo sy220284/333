@@ -1,0 +1,4246 @@
+[
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ALACRITTY_LOG"
+  },
+  {
+    "affected_sources": [
+      "src/utils/computerUse/gates.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ALLOW_ANT_COMPUTER_USE_MCP"
+  },
+  {
+    "affected_sources": [
+      "src/cli/handlers/auth.ts",
+      "src/components/Onboarding.tsx",
+      "src/components/Settings/Config.tsx",
+      "src/interactiveHelpers.tsx",
+      "src/services/api/errors.ts",
+      "src/utils/auth.ts"
+    ],
+    "references": 16,
+    "source_files": 6,
+    "variable": "ANTHROPIC_API_KEY"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/client.ts",
+      "src/utils/auth.ts"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "ANTHROPIC_AUTH_TOKEN"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/services/analytics/firstPartyEventLoggingExporter.ts",
+      "src/services/analytics/growthbook.ts",
+      "src/services/api/filesApi.ts",
+      "src/services/api/logging.ts",
+      "src/tools/BriefTool/upload.ts",
+      "src/upstreamproxy/upstreamproxy.ts",
+      "src/utils/apiPreconnect.ts",
+      "src/utils/model/providers.ts",
+      "src/utils/status.tsx",
+      "src/utils/toolSearch.ts"
+    ],
+    "references": 13,
+    "source_files": 11,
+    "variable": "ANTHROPIC_BASE_URL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/model/bedrock.ts"
+    ],
+    "references": 4,
+    "source_files": 1,
+    "variable": "ANTHROPIC_BEDROCK_BASE_URL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/betas.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "ANTHROPIC_BETAS"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/client.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "ANTHROPIC_CUSTOM_HEADERS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/model/modelOptions.ts",
+      "src/utils/model/validateModel.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "ANTHROPIC_CUSTOM_MODEL_OPTION"
+  },
+  {
+    "affected_sources": [
+      "src/utils/model/modelOptions.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION"
+  },
+  {
+    "affected_sources": [
+      "src/utils/model/modelOptions.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ANTHROPIC_CUSTOM_MODEL_OPTION_NAME"
+  },
+  {
+    "affected_sources": [
+      "src/utils/model/model.ts",
+      "src/utils/model/modelOptions.ts"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "ANTHROPIC_DEFAULT_HAIKU_MODEL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/model/modelOptions.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "ANTHROPIC_DEFAULT_HAIKU_MODEL_DESCRIPTION"
+  },
+  {
+    "affected_sources": [
+      "src/utils/model/modelOptions.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME"
+  },
+  {
+    "affected_sources": [
+      "src/utils/model/model.ts",
+      "src/utils/model/modelOptions.ts"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "ANTHROPIC_DEFAULT_OPUS_MODEL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/model/modelOptions.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "ANTHROPIC_DEFAULT_OPUS_MODEL_DESCRIPTION"
+  },
+  {
+    "affected_sources": [
+      "src/utils/model/modelOptions.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ANTHROPIC_DEFAULT_OPUS_MODEL_NAME"
+  },
+  {
+    "affected_sources": [
+      "src/utils/model/model.ts",
+      "src/utils/model/modelOptions.ts"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "ANTHROPIC_DEFAULT_SONNET_MODEL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/model/modelOptions.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "ANTHROPIC_DEFAULT_SONNET_MODEL_DESCRIPTION"
+  },
+  {
+    "affected_sources": [
+      "src/utils/model/modelOptions.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ANTHROPIC_DEFAULT_SONNET_MODEL_NAME"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/client.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ANTHROPIC_FOUNDRY_API_KEY"
+  },
+  {
+    "affected_sources": [
+      "src/utils/status.tsx"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ANTHROPIC_FOUNDRY_BASE_URL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/status.tsx"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ANTHROPIC_FOUNDRY_RESOURCE"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/services/api/errors.ts",
+      "src/services/api/logging.ts",
+      "src/utils/model/model.ts"
+    ],
+    "references": 5,
+    "source_files": 4,
+    "variable": "ANTHROPIC_MODEL"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/logging.ts",
+      "src/utils/model/model.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "ANTHROPIC_SMALL_FAST_MODEL"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/client.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION"
+  },
+  {
+    "affected_sources": [
+      "src/utils/apiPreconnect.ts",
+      "src/utils/auth.ts",
+      "src/utils/managedEnv.ts",
+      "src/utils/proxy.ts"
+    ],
+    "references": 5,
+    "source_files": 4,
+    "variable": "ANTHROPIC_UNIX_SOCKET"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/client.ts",
+      "src/utils/status.tsx"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "ANTHROPIC_VERTEX_PROJECT_ID"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/bigqueryExporter.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "ANT_CLAUDE_CODE_METRICS_ENDPOINT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "ANT_OTEL_EXPORTER_OTLP_ENDPOINT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "ANT_OTEL_EXPORTER_OTLP_HEADERS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "ANT_OTEL_EXPORTER_OTLP_PROTOCOL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "ANT_OTEL_LOGS_EXPORTER"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "ANT_OTEL_METRICS_EXPORTER"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "ANT_OTEL_TRACES_EXPORTER"
+  },
+  {
+    "affected_sources": [
+      "src/services/compact/apiMicrocompact.ts"
+    ],
+    "references": 4,
+    "source_files": 1,
+    "variable": "API_MAX_INPUT_TOKENS"
+  },
+  {
+    "affected_sources": [
+      "src/services/compact/apiMicrocompact.ts"
+    ],
+    "references": 4,
+    "source_files": 1,
+    "variable": "API_TARGET_INPUT_TOKENS"
+  },
+  {
+    "affected_sources": [
+      "src/components/messages/AssistantTextMessage.tsx",
+      "src/components/messages/SystemAPIErrorMessage.tsx",
+      "src/services/api/claude.ts",
+      "src/services/api/client.ts"
+    ],
+    "references": 6,
+    "source_files": 4,
+    "variable": "API_TIMEOUT_MS"
+  },
+  {
+    "affected_sources": [
+      "src/commands/terminalSetup/terminalSetup.tsx",
+      "src/utils/claudeInChrome/setup.ts",
+      "src/utils/jetbrains.ts"
+    ],
+    "references": 3,
+    "source_files": 3,
+    "variable": "APPDATA"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "APP_URL"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/client.ts",
+      "src/utils/model/bedrock.ts"
+    ],
+    "references": 4,
+    "source_files": 2,
+    "variable": "AWS_BEARER_TOKEN_BEDROCK"
+  },
+  {
+    "affected_sources": [
+      "src/utils/envUtils.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "AWS_DEFAULT_REGION"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "AWS_EXECUTION_ENV"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "AWS_LAMBDA_FUNCTION_NAME"
+  },
+  {
+    "affected_sources": [
+      "src/utils/envUtils.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "AWS_REGION"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "AZURE_FUNCTIONS_ENVIRONMENT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/shell/outputLimits.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "BASH_MAX_OUTPUT_LENGTH"
+  },
+  {
+    "affected_sources": [
+      "src/native-ts/color-diff/index.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "BAT_THEME"
+  },
+  {
+    "affected_sources": [
+      "src/utils/status.tsx"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "BEDROCK_BASE_URL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/betaSessionTracing.ts",
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "BETA_TRACING_ENDPOINT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/browser.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "BROWSER"
+  },
+  {
+    "affected_sources": [
+      "src/commands/review/reviewRemote.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "BUGHUNTER_DEV_BUNDLE_B64"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "BUILDKITE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/background/remote/remoteSession.ts",
+      "src/utils/teleport.tsx"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CCR_ENABLE_BUNDLE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/background/remote/remoteSession.ts",
+      "src/utils/teleport.tsx"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CCR_FORCE_BUNDLE"
+  },
+  {
+    "affected_sources": [
+      "src/upstreamproxy/upstreamproxy.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CCR_UPSTREAM_PROXY_ENABLED"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CF_PAGES"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/metadata.ts",
+      "src/services/vcr.ts",
+      "src/utils/auth.ts",
+      "src/utils/env.ts",
+      "src/utils/renderOptions.ts"
+    ],
+    "references": 6,
+    "source_files": 5,
+    "variable": "CI"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CIRCLECI"
+  },
+  {
+    "affected_sources": [
+      "src/interactiveHelpers.tsx",
+      "src/services/analytics/metadata.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUBBIT"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/sessionIngress.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_AFTER_LAST_COMPACT"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/client.ts",
+      "src/utils/http.ts"
+    ],
+    "references": 5,
+    "source_files": 2,
+    "variable": "CLAUDE_AGENT_SDK_CLIENT_APP"
+  },
+  {
+    "affected_sources": [
+      "src/tools/AgentTool/builtInAgents.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_AGENT_SDK_DISABLE_BUILTIN_AGENTS"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/client.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_AGENT_SDK_MCP_NO_PREFIX"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/metadata.ts",
+      "src/utils/http.ts"
+    ],
+    "references": 6,
+    "source_files": 2,
+    "variable": "CLAUDE_AGENT_SDK_VERSION"
+  },
+  {
+    "affected_sources": [
+      "src/services/compact/autoCompact.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE"
+  },
+  {
+    "affected_sources": [
+      "src/tools/AgentTool/AgentTool.tsx"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_AUTO_BACKGROUND_TASKS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/envUtils.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR"
+  },
+  {
+    "affected_sources": [
+      "src/bridge/bridgeConfig.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_BRIDGE_BASE_URL"
+  },
+  {
+    "affected_sources": [
+      "src/bridge/bridgeConfig.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_BRIDGE_OAUTH_TOKEN"
+  },
+  {
+    "affected_sources": [
+      "src/bridge/bridgeMain.ts",
+      "src/bridge/initReplBridge.ts"
+    ],
+    "references": 6,
+    "source_files": 2,
+    "variable": "CLAUDE_BRIDGE_SESSION_INGRESS_URL"
+  },
+  {
+    "affected_sources": [
+      "src/bridge/bridgeMain.ts",
+      "src/bridge/replBridge.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_BRIDGE_USE_CCR_V2"
+  },
+  {
+    "affected_sources": [
+      "src/utils/claudeInChrome/mcpServer.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CHROME_PERMISSION_MODE"
+  },
+  {
+    "affected_sources": [
+      "src/entrypoints/cli.tsx"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_ABLATION_BASELINE"
+  },
+  {
+    "affected_sources": [
+      "src/components/TextInput.tsx",
+      "src/ink/components/App.tsx"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_ACCESSIBILITY"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetryAttributes.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_ACCOUNT_TAGGED_ID"
+  },
+  {
+    "affected_sources": [
+      "src/services/oauth/client.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_ACCOUNT_UUID"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/services/analytics/metadata.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_ACTION"
+  },
+  {
+    "affected_sources": [
+      "src/utils/claudemd.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/client.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_ADDITIONAL_PROTECTION"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/utils/concurrentSessions.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_AGENT"
+  },
+  {
+    "affected_sources": [
+      "src/tools/AgentTool/prompt.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_AGENT_LIST_IN_MESSAGES"
+  },
+  {
+    "affected_sources": [
+      "src/utils/effort.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_ALWAYS_ENABLE_EFFORT"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/filesApi.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_API_BASE_URL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/auth.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR"
+  },
+  {
+    "affected_sources": [
+      "src/utils/auth.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_API_KEY_HELPER_TTL_MS"
+  },
+  {
+    "affected_sources": [
+      "src/constants/system.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_ATTRIBUTION_HEADER"
+  },
+  {
+    "affected_sources": [
+      "src/services/compact/autoCompact.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_AUTO_COMPACT_WINDOW"
+  },
+  {
+    "affected_sources": [
+      "src/hooks/useIDEIntegration.tsx"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_AUTO_CONNECT_IDE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/permissions/yoloClassifier.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_AUTO_MODE_MODEL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/gitDiff.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_BASE_REF"
+  },
+  {
+    "affected_sources": [
+      "src/tools/BashTool/BashTool.tsx"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_BASH_SANDBOX_SHOW_INDICATOR"
+  },
+  {
+    "affected_sources": [
+      "src/services/compact/autoCompact.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_BLOCKING_LIMIT_OVERRIDE"
+  },
+  {
+    "affected_sources": [
+      "src/components/Spinner.tsx",
+      "src/components/messages/UserPromptMessage.tsx",
+      "src/main.tsx",
+      "src/tools/BriefTool/BriefTool.ts"
+    ],
+    "references": 4,
+    "source_files": 4,
+    "variable": "CLAUDE_CODE_BRIEF"
+  },
+  {
+    "affected_sources": [
+      "src/tools/BriefTool/attachments.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_BRIEF_UPLOAD"
+  },
+  {
+    "affected_sources": [
+      "src/setup.ts",
+      "src/utils/envDynamic.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_BUBBLEWRAP"
+  },
+  {
+    "affected_sources": [
+      "src/bridge/bridgeEnabled.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_CCR_MIRROR"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/utils/apiPreconnect.ts",
+      "src/utils/mtls.ts",
+      "src/utils/status.tsx"
+    ],
+    "references": 6,
+    "source_files": 4,
+    "variable": "CLAUDE_CODE_CLIENT_CERT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/apiPreconnect.ts",
+      "src/utils/mtls.ts",
+      "src/utils/status.tsx"
+    ],
+    "references": 5,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_CLIENT_KEY"
+  },
+  {
+    "affected_sources": [
+      "src/utils/mtls.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_CLIENT_KEY_PASSPHRASE"
+  },
+  {
+    "affected_sources": [
+      "src/ink/reconciler.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_COMMIT_LOG"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/metadata.ts",
+      "src/services/api/client.ts",
+      "src/utils/queryHelpers.ts"
+    ],
+    "references": 4,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_CONTAINER_ID"
+  },
+  {
+    "affected_sources": [
+      "src/coordinator/coordinatorMode.ts",
+      "src/main.tsx",
+      "src/tools/AgentTool/AgentTool.tsx",
+      "src/tools/AgentTool/builtInAgents.ts",
+      "src/utils/processUserInput/processSlashCommand.tsx",
+      "src/utils/systemPrompt.ts"
+    ],
+    "references": 9,
+    "source_files": 6,
+    "variable": "CLAUDE_CODE_COORDINATOR_MODE"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/metadata.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_COWORKER_TYPE"
+  },
+  {
+    "affected_sources": [
+      "src/constants/oauth.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_CUSTOM_OAUTH_URL"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/datadog.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DATADOG_FLUSH_INTERVAL_MS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/debug.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DEBUG_LOGS_DIR"
+  },
+  {
+    "affected_sources": [
+      "src/utils/debug.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DEBUG_LOG_LEVEL"
+  },
+  {
+    "affected_sources": [
+      "src/ink/reconciler.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DEBUG_REPAINTS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/diagLogs.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DIAGNOSTICS_FILE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/context.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_1M_CONTEXT"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/claude.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING"
+  },
+  {
+    "affected_sources": [
+      "src/utils/advisor.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_ADVISOR_TOOL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/attachments.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_ATTACHMENTS"
+  },
+  {
+    "affected_sources": [
+      "src/memdir/memdir.ts",
+      "src/memdir/paths.ts"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_DISABLE_AUTO_MEMORY"
+  },
+  {
+    "affected_sources": [
+      "src/components/SessionBackgroundHint.tsx",
+      "src/tools/AgentTool/AgentTool.tsx",
+      "src/tools/AgentTool/prompt.ts",
+      "src/tools/BashTool/BashTool.tsx",
+      "src/tools/BashTool/UI.tsx",
+      "src/tools/BashTool/prompt.ts",
+      "src/tools/PowerShellTool/PowerShellTool.tsx",
+      "src/tools/PowerShellTool/prompt.ts"
+    ],
+    "references": 9,
+    "source_files": 8,
+    "variable": "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS"
+  },
+  {
+    "affected_sources": [
+      "src/context.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_CLAUDE_MDS"
+  },
+  {
+    "affected_sources": [
+      "src/tools/BashTool/bashPermissions.ts"
+    ],
+    "references": 4,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_COMMAND_INJECTION_CHECK"
+  },
+  {
+    "affected_sources": [
+      "src/tools/ScheduleCronTool/prompt.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_CRON"
+  },
+  {
+    "affected_sources": [
+      "src/utils/api.ts",
+      "src/utils/betas.ts",
+      "src/utils/toolSearch.ts"
+    ],
+    "references": 4,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS"
+  },
+  {
+    "affected_sources": [
+      "src/query/config.ts",
+      "src/utils/fastMode.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_DISABLE_FAST_MODE"
+  },
+  {
+    "affected_sources": [
+      "src/components/FeedbackSurvey/useFeedbackSurvey.tsx",
+      "src/components/FeedbackSurvey/useMemorySurvey.tsx",
+      "src/components/FeedbackSurvey/usePostCompactSurvey.tsx"
+    ],
+    "references": 3,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY"
+  },
+  {
+    "affected_sources": [
+      "src/components/Settings/Config.tsx",
+      "src/utils/fileHistory.ts"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING"
+  },
+  {
+    "affected_sources": [
+      "src/utils/gitSettings.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/model/model.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_LEGACY_MODEL_REMAP"
+  },
+  {
+    "affected_sources": [
+      "src/screens/REPL.tsx"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_MESSAGE_ACTIONS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/fullscreen.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_MOUSE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/fullscreen.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_MOUSE_CLICKS"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/officialRegistry.ts",
+      "src/utils/privacyLevel.ts"
+    ],
+    "references": 4,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/claude.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK"
+  },
+  {
+    "affected_sources": [
+      "src/utils/plugins/officialMarketplaceStartupCheck.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_OFFICIAL_MARKETPLACE_AUTOINSTALL"
+  },
+  {
+    "affected_sources": [
+      "src/skills/loadSkillsDir.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_POLICY_SKILLS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/sessionStorage.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_PRECOMPACT_SKIP"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/screens/REPL.tsx",
+      "src/utils/gracefulShutdown.ts"
+    ],
+    "references": 3,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_DISABLE_TERMINAL_TITLE"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/claude.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DISABLE_THINKING"
+  },
+  {
+    "affected_sources": [
+      "src/components/Messages.tsx",
+      "src/screens/REPL.tsx"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_DISABLE_VIRTUAL_SCROLL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/bash/ShellSnapshot.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DONT_INHERIT_ENV"
+  },
+  {
+    "affected_sources": [
+      "src/utils/permissions/yoloClassifier.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_DUMP_AUTO_MODE"
+  },
+  {
+    "affected_sources": [
+      "src/QueryEngine.ts"
+    ],
+    "references": 6,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_EAGER_FLUSH"
+  },
+  {
+    "affected_sources": [
+      "src/commands/effort/effort.tsx",
+      "src/utils/effort.ts"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_EFFORT_LEVEL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/sessionState.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS"
+  },
+  {
+    "affected_sources": [
+      "src/query/config.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_EMIT_TOOL_USE_SUMMARIES"
+  },
+  {
+    "affected_sources": [
+      "src/utils/claudeInChrome/setup.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_ENABLE_CFC"
+  },
+  {
+    "affected_sources": [
+      "src/utils/api.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING"
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts",
+      "src/query/stopHooks.ts",
+      "src/services/PromptSuggestion/promptSuggestion.ts"
+    ],
+    "references": 3,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION"
+  },
+  {
+    "affected_sources": [
+      "src/utils/fileHistory.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING"
+  },
+  {
+    "affected_sources": [
+      "src/utils/tasks.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_ENABLE_TASKS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_ENABLE_TELEMETRY"
+  },
+  {
+    "affected_sources": [
+      "src/utils/attachments.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_ENABLE_TOKEN_USAGE_ATTACHMENT"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/xaaIdpLogin.ts",
+      "src/utils/settings/types.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_ENABLE_XAA"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/sessionTracing.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_ENHANCED_TELEMETRY_BETA"
+  },
+  {
+    "affected_sources": [
+      "src/components/mcp/MCPRemoteServerMenu.tsx",
+      "src/constants/system.ts",
+      "src/main.tsx",
+      "src/services/analytics/metadata.ts",
+      "src/services/api/claude.ts",
+      "src/services/remoteManagedSettings/syncCache.ts",
+      "src/setup.ts",
+      "src/tools/AgentTool/builtInAgents.ts",
+      "src/tools/REPLTool/constants.ts",
+      "src/utils/auth.ts",
+      "src/utils/betas.ts",
+      "src/utils/commitAttribution.ts",
+      "src/utils/concurrentSessions.ts",
+      "src/utils/embeddedTools.ts",
+      "src/utils/headlessProfiler.ts",
+      "src/utils/http.ts",
+      "src/utils/managedEnv.ts",
+      "src/utils/permissions/permissionSetup.ts",
+      "src/utils/sessionStorage.ts",
+      "src/utils/settings/applySettingsChange.ts"
+    ],
+    "references": 41,
+    "source_files": 20,
+    "variable": "CLAUDE_CODE_ENTRYPOINT"
+  },
+  {
+    "affected_sources": [
+      "src/cli/remoteIO.ts",
+      "src/main.tsx",
+      "src/utils/filePersistence/outputsScanner.ts"
+    ],
+    "references": 3,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_ENVIRONMENT_KIND"
+  },
+  {
+    "affected_sources": [
+      "src/cli/remoteIO.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_ENVIRONMENT_RUNNER_VERSION"
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts",
+      "src/hooks/useAfterFirstRender.ts",
+      "src/main.tsx"
+    ],
+    "references": 3,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_EXIT_AFTER_FIRST_RENDER"
+  },
+  {
+    "affected_sources": [
+      "src/utils/idleTimeout.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_EXIT_AFTER_STOP_DELAY"
+  },
+  {
+    "affected_sources": [
+      "src/utils/agentSwarmsEnabled.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/claude.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_EXTRA_BODY"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/claude.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_EXTRA_METADATA"
+  },
+  {
+    "affected_sources": [
+      "src/tools/FileReadTool/limits.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_FILE_READ_MAX_OUTPUT_TOKENS"
+  },
+  {
+    "affected_sources": [
+      "src/components/LogoV2/LogoV2.tsx"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_FORCE_FULL_LOGO"
+  },
+  {
+    "affected_sources": [
+      "src/interactiveHelpers.tsx"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_FRAME_TIMING_LOG"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/growthbook.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_GB_BASE_URL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/windowsPaths.ts"
+    ],
+    "references": 4,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_GIT_BASH_PATH"
+  },
+  {
+    "affected_sources": [
+      "src/utils/glob.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_GLOB_HIDDEN"
+  },
+  {
+    "affected_sources": [
+      "src/utils/glob.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_GLOB_NO_IGNORE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/ripgrep.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_GLOB_TIMEOUT_SECONDS"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/metadata.ts",
+      "src/utils/env.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_HOST_PLATFORM"
+  },
+  {
+    "affected_sources": [
+      "src/utils/ide.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_IDE_HOST_OVERRIDE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/ide.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/ide.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_IDE_SKIP_VALID_CHECK"
+  },
+  {
+    "affected_sources": [
+      "src/screens/REPL.tsx"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_IDLE_THRESHOLD_MINUTES"
+  },
+  {
+    "affected_sources": [
+      "src/screens/REPL.tsx"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_IDLE_TOKEN_THRESHOLD"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_INCLUDE_PARTIAL_MESSAGES"
+  },
+  {
+    "affected_sources": [
+      "src/QueryEngine.ts"
+    ],
+    "references": 6,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_IS_COWORK"
+  },
+  {
+    "affected_sources": [
+      "src/utils/permissions/yoloClassifier.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_JSONL_TRANSCRIPT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/settings/managedPath.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_MANAGED_SETTINGS_PATH"
+  },
+  {
+    "affected_sources": [
+      "src/utils/context.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_MAX_CONTEXT_TOKENS"
+  },
+  {
+    "affected_sources": [
+      "src/query.ts",
+      "src/services/api/claude.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_MAX_OUTPUT_TOKENS"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/withRetry.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_MAX_RETRIES"
+  },
+  {
+    "affected_sources": [
+      "src/services/tools/toolOrchestration.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY"
+  },
+  {
+    "affected_sources": [
+      "src/utils/mcpInstructionsDelta.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_MCP_INSTR_DELTA"
+  },
+  {
+    "affected_sources": [
+      "src/utils/concurrentSessions.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_MESSAGING_SOCKET"
+  },
+  {
+    "affected_sources": [
+      "src/commands/init.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_NEW_INIT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/fullscreen.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_NO_FLICKER"
+  },
+  {
+    "affected_sources": [
+      "src/constants/oauth.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_OAUTH_CLIENT_ID"
+  },
+  {
+    "affected_sources": [
+      "src/cli/handlers/auth.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_OAUTH_REFRESH_TOKEN"
+  },
+  {
+    "affected_sources": [
+      "src/cli/handlers/auth.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_OAUTH_SCOPES"
+  },
+  {
+    "affected_sources": [
+      "src/utils/auth.ts"
+    ],
+    "references": 6,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_OAUTH_TOKEN"
+  },
+  {
+    "affected_sources": [
+      "src/utils/auth.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR"
+  },
+  {
+    "affected_sources": [
+      "src/services/oauth/client.ts",
+      "src/utils/sessionIngressAuth.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_ORGANIZATION_UUID"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_OTEL_FLUSH_TIMEOUT_MS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/auth.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_OTEL_HEADERS_HELPER_DEBOUNCE_MS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_OTEL_SHUTDOWN_TIMEOUT_MS"
+  },
+  {
+    "affected_sources": [
+      "src/constants/common.ts"
+    ],
+    "references": 4,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_OVERRIDE_DATE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/perfettoTracing.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_PERFETTO_TRACE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/perfettoTracing.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_PERFETTO_WRITE_INTERVAL_S"
+  },
+  {
+    "affected_sources": [
+      "src/utils/planModeV2.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_PLAN_MODE_INTERVIEW_PHASE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/teammate.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_PLAN_MODE_REQUIRED"
+  },
+  {
+    "affected_sources": [
+      "src/utils/planModeV2.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_PLAN_V2_AGENT_COUNT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/planModeV2.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_PLAN_V2_EXPLORE_AGENT_COUNT"
+  },
+  {
+    "affected_sources": [
+      "src/hooks/useManagePlugins.ts",
+      "src/utils/plugins/pluginDirectories.ts",
+      "src/utils/plugins/zipCache.ts"
+    ],
+    "references": 3,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_PLUGIN_CACHE_DIR"
+  },
+  {
+    "affected_sources": [
+      "src/utils/plugins/marketplaceManager.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_PLUGIN_GIT_TIMEOUT_MS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/plugins/pluginDirectories.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_PLUGIN_SEED_DIR"
+  },
+  {
+    "affected_sources": [
+      "src/utils/plugins/zipCache.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_PLUGIN_USE_ZIP_CACHE"
+  },
+  {
+    "affected_sources": [
+      "src/cli/transports/transportUtils.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_POST_FOR_SESSION_INGRESS_V2"
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts",
+      "src/main.tsx"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_PROACTIVE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/queryProfiler.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_PROFILE_QUERY"
+  },
+  {
+    "affected_sources": [
+      "src/utils/headlessProfiler.ts",
+      "src/utils/startupProfiler.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_PROFILE_STARTUP"
+  },
+  {
+    "affected_sources": [
+      "src/utils/managedEnv.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST"
+  },
+  {
+    "affected_sources": [
+      "src/utils/proxy.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_PROXY_RESOLVES_HOSTS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/powershell/parser.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_PWSH_PARSE_TIMEOUT_MS"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_QUESTION_PREVIEW_FORMAT"
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts",
+      "src/cli/transports/WebSocketTransport.ts",
+      "src/commands/reload-plugins/reload-plugins.ts",
+      "src/components/PromptInput/Notifications.tsx",
+      "src/context.ts",
+      "src/entrypoints/cli.tsx",
+      "src/entrypoints/init.ts",
+      "src/main.tsx",
+      "src/memdir/paths.ts",
+      "src/services/analytics/metadata.ts",
+      "src/services/api/claude.ts",
+      "src/services/api/errors.ts",
+      "src/services/api/withRetry.ts",
+      "src/services/voice.ts",
+      "src/tools/FileEditTool/FileEditTool.ts",
+      "src/tools/FileWriteTool/FileWriteTool.ts",
+      "src/upstreamproxy/upstreamproxy.ts",
+      "src/utils/auth.ts",
+      "src/utils/authFileDescriptor.ts",
+      "src/utils/permissions/permissionSetup.ts",
+      "src/utils/plugins/marketplaceManager.ts",
+      "src/utils/plugins/pluginLoader.ts",
+      "src/utils/queryHelpers.ts"
+    ],
+    "references": 27,
+    "source_files": 23,
+    "variable": "CLAUDE_CODE_REMOTE"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/metadata.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE"
+  },
+  {
+    "affected_sources": [
+      "src/memdir/paths.ts",
+      "src/tools/AgentTool/agentMemory.ts"
+    ],
+    "references": 7,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_REMOTE_MEMORY_DIR"
+  },
+  {
+    "affected_sources": [
+      "src/utils/sessionActivity.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_REMOTE_SEND_KEEPALIVES"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/services/analytics/metadata.ts",
+      "src/services/api/client.ts",
+      "src/upstreamproxy/upstreamproxy.ts",
+      "src/utils/attribution.ts",
+      "src/utils/filePersistence/filePersistence.ts"
+    ],
+    "references": 9,
+    "source_files": 6,
+    "variable": "CLAUDE_CODE_REMOTE_SESSION_ID"
+  },
+  {
+    "affected_sources": [
+      "src/tools/REPLTool/constants.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_REPL"
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_RESUME_INTERRUPTED_TURN"
+  },
+  {
+    "affected_sources": [
+      "src/utils/sessionStorage.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT"
+  },
+  {
+    "affected_sources": [
+      "src/components/ScrollKeybindingHandler.tsx"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_SCROLL_SPEED"
+  },
+  {
+    "affected_sources": [
+      "src/utils/hooks.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS"
+  },
+  {
+    "affected_sources": [
+      "src/bridge/remoteBridgeCore.ts",
+      "src/main.tsx",
+      "src/utils/sessionIngressAuth.ts"
+    ],
+    "references": 4,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_SESSION_ACCESS_TOKEN"
+  },
+  {
+    "affected_sources": [
+      "src/commands/clear/conversation.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_SESSION_ID"
+  },
+  {
+    "affected_sources": [
+      "src/utils/concurrentSessions.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_SESSION_KIND"
+  },
+  {
+    "affected_sources": [
+      "src/utils/concurrentSessions.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_SESSION_LOG"
+  },
+  {
+    "affected_sources": [
+      "src/utils/concurrentSessions.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_SESSION_NAME"
+  },
+  {
+    "affected_sources": [
+      "src/utils/Shell.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_SHELL"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/client.ts",
+      "src/utils/hooks.ts",
+      "src/utils/shell/bashProvider.ts"
+    ],
+    "references": 7,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_SHELL_PREFIX"
+  },
+  {
+    "affected_sources": [
+      "src/constants/prompts.ts",
+      "src/coordinator/coordinatorMode.ts",
+      "src/entrypoints/cli.tsx",
+      "src/main.tsx",
+      "src/memdir/paths.ts",
+      "src/tools.ts",
+      "src/tools/AgentTool/loadAgentsDir.ts",
+      "src/tools/BashTool/prompt.ts",
+      "src/tools/FileEditTool/FileEditTool.ts",
+      "src/tools/FileReadTool/FileReadTool.ts",
+      "src/utils/analyzeContext.ts",
+      "src/utils/attachments.ts",
+      "src/utils/envUtils.ts",
+      "src/utils/hooks.ts"
+    ],
+    "references": 16,
+    "source_files": 14,
+    "variable": "CLAUDE_CODE_SIMPLE"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/services/api/client.ts",
+      "src/utils/model/bedrock.ts",
+      "src/utils/status.tsx"
+    ],
+    "references": 6,
+    "source_files": 4,
+    "variable": "CLAUDE_CODE_SKIP_BEDROCK_AUTH"
+  },
+  {
+    "affected_sources": [
+      "src/utils/fastMode.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_SKIP_FAST_MODE_NETWORK_ERRORS"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/client.ts",
+      "src/utils/status.tsx"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_SKIP_FOUNDRY_AUTH"
+  },
+  {
+    "affected_sources": [
+      "src/history.ts",
+      "src/utils/sessionStorage.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_SKIP_PROMPT_HISTORY"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/services/api/client.ts",
+      "src/utils/status.tsx"
+    ],
+    "references": 4,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_SKIP_VERTEX_AUTH"
+  },
+  {
+    "affected_sources": [
+      "src/utils/slowOperations.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_SLOW_OPERATION_THRESHOLD_MS"
+  },
+  {
+    "affected_sources": [
+      "src/hooks/useIDEIntegration.tsx",
+      "src/utils/ide.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_SSE_PORT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/nativeInstaller/download.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_STALL_TIMEOUT_MS_FOR_TESTING"
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_STREAMLINED_OUTPUT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/model/agent.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_SUBAGENT_MODEL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/subprocessEnv.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB"
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts",
+      "src/setup.ts",
+      "src/utils/plugins/pluginLoader.ts"
+    ],
+    "references": 3,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_SYNC_PLUGIN_INSTALL"
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_SYNC_PLUGIN_INSTALL_TIMEOUT_MS"
+  },
+  {
+    "affected_sources": [
+      "src/components/StructuredDiff/colorDiff.ts",
+      "src/components/ThemePicker.tsx",
+      "src/native-ts/color-diff/index.ts"
+    ],
+    "references": 3,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_SYNTAX_HIGHLIGHT"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/metadata.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_TAGS"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/utils/tasks.ts"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_TASK_LIST_ID"
+  },
+  {
+    "affected_sources": [
+      "src/utils/asciicast.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_TERMINAL_RECORDING"
+  },
+  {
+    "affected_sources": [
+      "src/services/vcr.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_TEST_FIXTURES_ROOT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/Shell.ts",
+      "src/utils/imagePaste.ts",
+      "src/utils/permissions/filesystem.ts"
+    ],
+    "references": 3,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_TMPDIR"
+  },
+  {
+    "affected_sources": [
+      "src/components/LogoV2/LogoV2.tsx"
+    ],
+    "references": 8,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_TMUX_PREFIX"
+  },
+  {
+    "affected_sources": [
+      "src/components/LogoV2/LogoV2.tsx"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_TMUX_PREFIX_CONFLICTS"
+  },
+  {
+    "affected_sources": [
+      "src/components/LogoV2/LogoV2.tsx"
+    ],
+    "references": 4,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_TMUX_SESSION"
+  },
+  {
+    "affected_sources": [
+      "src/ink/colorize.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_TMUX_TRUECOLOR"
+  },
+  {
+    "affected_sources": [
+      "src/utils/permissions/yoloClassifier.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_TWO_STAGE_CLASSIFIER"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/withRetry.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_UNATTENDED_RETRY"
+  },
+  {
+    "affected_sources": [
+      "src/utils/undercover.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_UNDERCOVER"
+  },
+  {
+    "affected_sources": [
+      "src/services/oauth/client.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_USER_EMAIL"
+  },
+  {
+    "affected_sources": [
+      "src/commands/feedback/index.ts",
+      "src/main.tsx",
+      "src/services/analytics/config.ts",
+      "src/services/api/client.ts",
+      "src/services/api/errors.ts",
+      "src/services/api/withRetry.ts",
+      "src/services/tokenEstimation.ts",
+      "src/utils/apiPreconnect.ts",
+      "src/utils/auth.ts",
+      "src/utils/log.ts",
+      "src/utils/model/providers.ts"
+    ],
+    "references": 14,
+    "source_files": 11,
+    "variable": "CLAUDE_CODE_USE_BEDROCK"
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts",
+      "src/cli/remoteIO.ts",
+      "src/cli/transports/transportUtils.ts"
+    ],
+    "references": 4,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_USE_CCR_V2"
+  },
+  {
+    "affected_sources": [
+      "src/utils/plugins/pluginDirectories.ts",
+      "src/utils/settings/settings.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_USE_COWORK_PLUGINS"
+  },
+  {
+    "affected_sources": [
+      "src/commands/feedback/index.ts",
+      "src/services/analytics/config.ts",
+      "src/services/api/client.ts",
+      "src/utils/apiPreconnect.ts",
+      "src/utils/auth.ts",
+      "src/utils/log.ts",
+      "src/utils/model/providers.ts"
+    ],
+    "references": 9,
+    "source_files": 7,
+    "variable": "CLAUDE_CODE_USE_FOUNDRY"
+  },
+  {
+    "affected_sources": [
+      "src/utils/markdownConfigLoader.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_USE_NATIVE_FILE_SEARCH"
+  },
+  {
+    "affected_sources": [
+      "src/services/tips/tipRegistry.ts",
+      "src/utils/shell/shellToolUtils.ts"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_USE_POWERSHELL_TOOL"
+  },
+  {
+    "affected_sources": [
+      "src/commands/feedback/index.ts",
+      "src/main.tsx",
+      "src/services/analytics/config.ts",
+      "src/services/api/client.ts",
+      "src/services/api/withRetry.ts",
+      "src/services/tokenEstimation.ts",
+      "src/utils/apiPreconnect.ts",
+      "src/utils/auth.ts",
+      "src/utils/log.ts",
+      "src/utils/model/providers.ts"
+    ],
+    "references": 13,
+    "source_files": 10,
+    "variable": "CLAUDE_CODE_USE_VERTEX"
+  },
+  {
+    "affected_sources": [
+      "src/tools.ts",
+      "src/utils/attachments.ts",
+      "src/utils/messages.ts"
+    ],
+    "references": 3,
+    "source_files": 3,
+    "variable": "CLAUDE_CODE_VERIFY_PLAN"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/utils/sessionIngressAuth.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR"
+  },
+  {
+    "affected_sources": [
+      "src/cli/transports/ccrClient.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_WORKER_EPOCH"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/events.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_CODE_WORKSPACE_HOST_PATHS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts",
+      "src/utils/envUtils.ts",
+      "src/utils/secureStorage/macOsKeychainHelpers.ts"
+    ],
+    "references": 4,
+    "source_files": 3,
+    "variable": "CLAUDE_CONFIG_DIR"
+  },
+  {
+    "affected_sources": [
+      "src/memdir/memdir.ts",
+      "src/tools/AgentTool/agentMemory.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "CLAUDE_COWORK_MEMORY_EXTRA_GUIDELINES"
+  },
+  {
+    "affected_sources": [
+      "src/memdir/paths.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_COWORK_MEMORY_PATH_OVERRIDE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/warningHandler.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_DEBUG"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/claude.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_ENABLE_STREAM_WATCHDOG"
+  },
+  {
+    "affected_sources": [
+      "src/utils/sessionEnvironment.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_ENV_FILE"
+  },
+  {
+    "affected_sources": [
+      "src/components/FeedbackSurvey/useFeedbackSurvey.tsx"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_FORCE_DISPLAY_SURVEY"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/growthbook.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_INTERNAL_FC_OVERRIDES"
+  },
+  {
+    "affected_sources": [
+      "src/query/stopHooks.ts",
+      "src/utils/permissions/filesystem.ts"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "CLAUDE_JOB_DIR"
+  },
+  {
+    "affected_sources": [
+      "src/constants/oauth.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_LOCAL_OAUTH_API_BASE"
+  },
+  {
+    "affected_sources": [
+      "src/constants/oauth.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_LOCAL_OAUTH_APPS_BASE"
+  },
+  {
+    "affected_sources": [
+      "src/constants/oauth.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_LOCAL_OAUTH_CONSOLE_BASE"
+  },
+  {
+    "affected_sources": [
+      "src/services/mockRateLimits.ts"
+    ],
+    "references": 3,
+    "source_files": 1,
+    "variable": "CLAUDE_MOCK_HEADERLESS_429"
+  },
+  {
+    "affected_sources": [
+      "src/screens/REPL.tsx"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_MORERIGHT"
+  },
+  {
+    "affected_sources": [
+      "src/tools/REPLTool/constants.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_REPL_MODE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/sessionIngressAuth.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_SESSION_INGRESS_TOKEN_FILE"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/claude.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLAUDE_STREAM_IDLE_TIMEOUT_MS"
+  },
+  {
+    "affected_sources": [
+      "src/bridge/trustedDevice.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "CLAUDE_TRUSTED_DEVICE_TOKEN"
+  },
+  {
+    "affected_sources": [
+      "src/utils/envUtils.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CLOUD_ML_REGION"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CODESPACES"
+  },
+  {
+    "affected_sources": [
+      "src/native-ts/color-diff/index.ts",
+      "src/services/tips/tipRegistry.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "COLORTERM"
+  },
+  {
+    "affected_sources": [
+      "src/utils/user.ts"
+    ],
+    "references": 4,
+    "source_files": 1,
+    "variable": "COO_CREATOR"
+  },
+  {
+    "affected_sources": [
+      "src/utils/envUtils.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "COO_RUNNING_ON_HOMESPACE"
+  },
+  {
+    "affected_sources": [
+      "src/entrypoints/cli.tsx"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "COREPACK_ENABLE_AUTO_PIN"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "CURSOR_TRACE_ID"
+  },
+  {
+    "affected_sources": [
+      "src/utils/debug.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DEBUG"
+  },
+  {
+    "affected_sources": [
+      "src/utils/debug.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DEBUG_SDK"
+  },
+  {
+    "affected_sources": [
+      "src/components/LogoV2/LogoV2.tsx",
+      "src/utils/logoV2Utils.ts"
+    ],
+    "references": 6,
+    "source_files": 2,
+    "variable": "DEMO_VERSION"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DENO_DEPLOYMENT_ID"
+  },
+  {
+    "affected_sources": [
+      "src/migrations/migrateAutoUpdatesToSettings.ts",
+      "src/utils/config.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "DISABLE_AUTOUPDATER"
+  },
+  {
+    "affected_sources": [
+      "src/services/compact/autoCompact.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_AUTO_COMPACT"
+  },
+  {
+    "affected_sources": [
+      "src/commands/feedback/index.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_BUG_COMMAND"
+  },
+  {
+    "affected_sources": [
+      "src/services/compact/sessionMemoryCompact.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_CLAUDE_CODE_SM_COMPACT"
+  },
+  {
+    "affected_sources": [
+      "src/commands/compact/index.ts",
+      "src/services/compact/autoCompact.ts"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "DISABLE_COMPACT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/billing.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_COST_WARNINGS"
+  },
+  {
+    "affected_sources": [
+      "src/commands/doctor/index.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_DOCTOR_COMMAND"
+  },
+  {
+    "affected_sources": [
+      "src/utils/log.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_ERROR_REPORTING"
+  },
+  {
+    "affected_sources": [
+      "src/commands/extra-usage/index.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_EXTRA_USAGE_COMMAND"
+  },
+  {
+    "affected_sources": [
+      "src/commands/feedback/index.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_FEEDBACK_COMMAND"
+  },
+  {
+    "affected_sources": [
+      "src/hooks/notifs/useNpmDeprecationNotification.tsx",
+      "src/utils/doctorDiagnostic.ts",
+      "src/utils/nativeInstaller/installer.ts"
+    ],
+    "references": 3,
+    "source_files": 3,
+    "variable": "DISABLE_INSTALLATION_CHECKS"
+  },
+  {
+    "affected_sources": [
+      "src/commands/install-github-app/index.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_INSTALL_GITHUB_APP_COMMAND"
+  },
+  {
+    "affected_sources": [
+      "src/utils/betas.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_INTERLEAVED_THINKING"
+  },
+  {
+    "affected_sources": [
+      "src/commands/login/index.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_LOGIN_COMMAND"
+  },
+  {
+    "affected_sources": [
+      "src/commands/logout/index.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_LOGOUT_COMMAND"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/claude.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_PROMPT_CACHING"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/claude.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_PROMPT_CACHING_HAIKU"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/claude.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_PROMPT_CACHING_OPUS"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/claude.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_PROMPT_CACHING_SONNET"
+  },
+  {
+    "affected_sources": [
+      "src/utils/privacyLevel.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_TELEMETRY"
+  },
+  {
+    "affected_sources": [
+      "src/commands/upgrade/index.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DISABLE_UPGRADE_COMMAND"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "DYNO"
+  },
+  {
+    "affected_sources": [
+      "src/commands/memory/memory.tsx",
+      "src/utils/editor.ts"
+    ],
+    "references": 4,
+    "source_files": 2,
+    "variable": "EDITOR"
+  },
+  {
+    "affected_sources": [
+      "src/utils/embeddedTools.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "EMBEDDED_SEARCH_TOOLS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/betaSessionTracing.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ENABLE_BETA_TRACING_DETAILED"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/claudeai.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ENABLE_CLAUDEAI_MCP_SERVERS"
+  },
+  {
+    "affected_sources": [
+      "src/services/compact/sessionMemoryCompact.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ENABLE_CLAUDE_CODE_SM_COMPACT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/sessionTracing.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ENABLE_ENHANCED_TELEMETRY_BETA"
+  },
+  {
+    "affected_sources": [
+      "src/constants/keys.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ENABLE_GROWTHBOOK_DEV"
+  },
+  {
+    "affected_sources": [
+      "src/utils/nativeInstaller/installer.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "ENABLE_LOCKLESS_UPDATES"
+  },
+  {
+    "affected_sources": [
+      "src/tools.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ENABLE_LSP_TOOL"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/client.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ENABLE_MCP_LARGE_OUTPUT_FILES"
+  },
+  {
+    "affected_sources": [
+      "src/utils/nativeInstaller/pidLock.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ENABLE_PID_BASED_VERSION_LOCKING"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/claude.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ENABLE_PROMPT_CACHING_1H_BEDROCK"
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts",
+      "src/utils/sessionStorage.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "ENABLE_SESSION_PERSISTENCE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/toolSearch.ts"
+    ],
+    "references": 6,
+    "source_files": 1,
+    "variable": "ENABLE_TOOL_SEARCH"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/withRetry.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "FALLBACK_FOR_ALL_PRIMARY_MODELS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "FLY_APP_NAME"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "FLY_MACHINE_ID"
+  },
+  {
+    "affected_sources": [
+      "src/utils/config.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "FORCE_AUTOUPDATE_PLUGINS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/ide.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "FORCE_CODE_TERMINAL"
+  },
+  {
+    "affected_sources": [
+      "src/services/vcr.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "FORCE_VCR"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/services/analytics/metadata.ts",
+      "src/utils/env.ts",
+      "src/utils/user.ts"
+    ],
+    "references": 5,
+    "source_files": 4,
+    "variable": "GITHUB_ACTIONS"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "GITHUB_ACTION_INPUTS"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/metadata.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "GITHUB_ACTION_PATH"
+  },
+  {
+    "affected_sources": [
+      "src/utils/user.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "GITHUB_ACTOR"
+  },
+  {
+    "affected_sources": [
+      "src/utils/user.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "GITHUB_ACTOR_ID"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/metadata.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "GITHUB_EVENT_NAME"
+  },
+  {
+    "affected_sources": [
+      "src/utils/user.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "GITHUB_REPOSITORY"
+  },
+  {
+    "affected_sources": [
+      "src/utils/user.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "GITHUB_REPOSITORY_ID"
+  },
+  {
+    "affected_sources": [
+      "src/utils/user.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "GITHUB_REPOSITORY_OWNER"
+  },
+  {
+    "affected_sources": [
+      "src/utils/user.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "GITHUB_REPOSITORY_OWNER_ID"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "GITLAB_CI"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "GITPOD_WORKSPACE_ID"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "GNOME_TERMINAL_SERVICE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "GOOGLE_CLOUD_PROJECT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/xdg.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "HOME"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/client.ts",
+      "src/upstreamproxy/upstreamproxy.ts",
+      "src/utils/apiPreconnect.ts"
+    ],
+    "references": 3,
+    "source_files": 3,
+    "variable": "HTTPS_PROXY"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/client.ts",
+      "src/utils/apiPreconnect.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "HTTP_PROXY"
+  },
+  {
+    "affected_sources": [
+      "src/commands.ts",
+      "src/components/LogoV2/LogoV2.tsx",
+      "src/components/messages/AttachmentMessage.tsx",
+      "src/interactiveHelpers.tsx",
+      "src/projectOnboardingState.ts",
+      "src/utils/status.tsx"
+    ],
+    "references": 9,
+    "source_files": 6,
+    "variable": "IS_DEMO"
+  },
+  {
+    "affected_sources": [
+      "src/services/api/withRetry.ts",
+      "src/setup.ts"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "IS_SANDBOX"
+  },
+  {
+    "affected_sources": [
+      "src/utils/swarm/backends/ITermBackend.ts",
+      "src/utils/swarm/backends/detection.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "ITERM_SESSION_ID"
+  },
+  {
+    "affected_sources": [
+      "src/ink/terminal.ts",
+      "src/utils/env.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "KITTY_WINDOW_ID"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "KONSOLE_VERSION"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "KUBERNETES_SERVICE_HOST"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "K_SERVICE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/formatBriefTimestamp.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "LANG"
+  },
+  {
+    "affected_sources": [
+      "src/utils/formatBriefTimestamp.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "LC_ALL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/formatBriefTimestamp.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "LC_TIME"
+  },
+  {
+    "affected_sources": [
+      "src/utils/desktopDeepLink.ts",
+      "src/utils/jetbrains.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "LOCALAPPDATA"
+  },
+  {
+    "affected_sources": [
+      "src/utils/claudeInChrome/mcpServer.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "LOCAL_BRIDGE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/mcpValidation.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "MAX_MCP_OUTPUT_TOKENS"
+  },
+  {
+    "affected_sources": [
+      "src/QueryEngine.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "MAX_STRUCTURED_OUTPUT_RETRIES"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/utils/thinking.ts"
+    ],
+    "references": 4,
+    "source_files": 2,
+    "variable": "MAX_THINKING_TOKENS"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/auth.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "MCP_CLIENT_SECRET"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/oauthPort.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "MCP_OAUTH_CALLBACK_PORT"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/auth.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "MCP_OAUTH_CLIENT_METADATA_URL"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/client.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "MCP_REMOTE_SERVER_CONNECTION_BATCH_SIZE"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/client.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "MCP_SERVER_CONNECTION_BATCH_SIZE"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/client.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "MCP_TIMEOUT"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/client.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "MCP_TOOL_TIMEOUT"
+  },
+  {
+    "affected_sources": [
+      "src/commands/mcp/xaaIdpCommand.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "MCP_XAA_IDP_CLIENT_SECRET"
+  },
+  {
+    "affected_sources": [
+      "src/utils/computerUse/gates.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "MONOREPO_ROOT_DIR"
+  },
+  {
+    "affected_sources": [
+      "src/ink/clearTerminal.ts",
+      "src/utils/env.ts"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "MSYSTEM"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "NETLIFY"
+  },
+  {
+    "affected_sources": [
+      "src/bootstrap/state.ts",
+      "src/context.ts",
+      "src/hooks/useDynamicConfig.ts",
+      "src/hooks/useNotifyAfterTimeout.ts",
+      "src/ink/reconciler.ts",
+      "src/services/analytics/config.ts",
+      "src/services/analytics/datadog.ts",
+      "src/services/analytics/firstPartyEventLogger.ts",
+      "src/services/analytics/growthbook.ts",
+      "src/services/vcr.ts",
+      "src/setup.ts",
+      "src/tools.ts",
+      "src/tools/GrepTool/GrepTool.ts",
+      "src/utils/Shell.ts",
+      "src/utils/api.ts",
+      "src/utils/attachments.ts",
+      "src/utils/auth.ts",
+      "src/utils/autoUpdater.ts",
+      "src/utils/config.ts",
+      "src/utils/debug.ts",
+      "src/utils/desktopDeepLink.ts",
+      "src/utils/doctorDiagnostic.ts",
+      "src/utils/exampleCommands.ts",
+      "src/utils/git/gitFilesystem.ts",
+      "src/utils/gracefulShutdown.ts",
+      "src/utils/messages.ts",
+      "src/utils/ripgrep.ts",
+      "src/utils/sessionStorage.ts",
+      "src/utils/shell/prefix.ts",
+      "src/utils/slowOperations.ts",
+      "src/utils/telemetry/events.ts",
+      "src/utils/warningHandler.ts"
+    ],
+    "references": 43,
+    "source_files": 32,
+    "variable": "NODE_ENV"
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/utils/caCerts.ts",
+      "src/utils/caCertsConfig.ts",
+      "src/utils/mtls.ts",
+      "src/utils/status.tsx"
+    ],
+    "references": 9,
+    "source_files": 5,
+    "variable": "NODE_EXTRA_CA_CERTS"
+  },
+  {
+    "affected_sources": [
+      "src/entrypoints/cli.tsx",
+      "src/main.tsx",
+      "src/services/mcp/client.ts",
+      "src/utils/envUtils.ts"
+    ],
+    "references": 6,
+    "source_files": 4,
+    "variable": "NODE_OPTIONS"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/client.ts",
+      "src/utils/proxy.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "NO_PROXY"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 3,
+    "source_files": 1,
+    "variable": "OTEL_EXPORTER_OTLP_ENDPOINT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "OTEL_EXPORTER_OTLP_HEADERS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "OTEL_EXPORTER_OTLP_LOGS_PROTOCOL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "OTEL_EXPORTER_OTLP_METRICS_PROTOCOL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 4,
+    "source_files": 1,
+    "variable": "OTEL_EXPORTER_OTLP_PROTOCOL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "OTEL_EXPORTER_OTLP_TRACES_PROTOCOL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "OTEL_LOGS_EXPORTER"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/firstPartyEventLogger.ts",
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "OTEL_LOGS_EXPORT_INTERVAL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/sessionTracing.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "OTEL_LOG_TOOL_CONTENT"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/metadata.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "OTEL_LOG_TOOL_DETAILS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/events.ts",
+      "src/utils/telemetry/sessionTracing.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "OTEL_LOG_USER_PROMPTS"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "OTEL_METRICS_EXPORTER"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "OTEL_METRIC_EXPORT_INTERVAL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "OTEL_TRACES_EXPORTER"
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/instrumentation.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "OTEL_TRACES_EXPORT_INTERVAL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/platform.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "P4PORT"
+  },
+  {
+    "affected_sources": [
+      "src/commands/terminalSetup/terminalSetup.tsx",
+      "src/utils/bash/ShellSnapshot.ts",
+      "src/utils/doctorDiagnostic.ts",
+      "src/utils/nativeInstaller/installer.ts"
+    ],
+    "references": 5,
+    "source_files": 4,
+    "variable": "PATH"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "PROJECT_DOMAIN"
+  },
+  {
+    "affected_sources": [
+      "src/utils/permissions/permissionSetup.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "PWD"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "RAILWAY_ENVIRONMENT_NAME"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "RAILWAY_SERVICE_NAME"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "RENDER"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "REPL_ID"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "REPL_SLUG"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/metadata.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "RUNNER_ENVIRONMENT"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/metadata.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "RUNNER_OS"
+  },
+  {
+    "affected_sources": [
+      "src/commands/commit-push-pr.ts",
+      "src/commands/insights.ts"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "SAFEUSER"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "SESSIONNAME"
+  },
+  {
+    "affected_sources": [
+      "src/commands/ultraplan.tsx",
+      "src/tasks/RemoteAgentTask/RemoteAgentTask.tsx",
+      "src/utils/attribution.ts"
+    ],
+    "references": 5,
+    "source_files": 3,
+    "variable": "SESSION_INGRESS_URL"
+  },
+  {
+    "affected_sources": [
+      "src/constants/prompts.ts",
+      "src/utils/Shell.ts",
+      "src/utils/asciicast.ts",
+      "src/utils/completionCache.ts",
+      "src/utils/localInstaller.ts",
+      "src/utils/terminalPanel.ts",
+      "src/utils/windowsPaths.ts"
+    ],
+    "references": 8,
+    "source_files": 7,
+    "variable": "SHELL"
+  },
+  {
+    "affected_sources": [
+      "src/tools/SkillTool/prompt.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "SLASH_COMMAND_TOOL_CHAR_BUDGET"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "SPACE_CREATOR_USER_ID"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "SSH_CLIENT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "SSH_CONNECTION"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "SSH_TTY"
+  },
+  {
+    "affected_sources": [
+      "src/upstreamproxy/upstreamproxy.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "SSL_CERT_FILE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "STY"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/metadata.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "SWE_BENCH_INSTANCE_ID"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/metadata.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "SWE_BENCH_RUN_ID"
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/metadata.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "SWE_BENCH_TASK_ID"
+  },
+  {
+    "affected_sources": [
+      "src/utils/task/outputFormatting.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "TASK_MAX_OUTPUT_LENGTH"
+  },
+  {
+    "affected_sources": [
+      "src/services/teamMemorySync/index.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "TEAM_MEMORY_SYNC_URL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/imagePaste.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "TEMP"
+  },
+  {
+    "affected_sources": [
+      "src/components/Spinner/utils.ts",
+      "src/ink/terminal.ts",
+      "src/utils/asciicast.ts",
+      "src/utils/env.ts",
+      "src/utils/fullscreen.ts"
+    ],
+    "references": 10,
+    "source_files": 5,
+    "variable": "TERM"
+  },
+  {
+    "affected_sources": [
+      "src/utils/deepLink/terminalLauncher.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "TERMINAL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts",
+      "src/utils/envDynamic.ts"
+    ],
+    "references": 4,
+    "source_files": 2,
+    "variable": "TERMINAL_EMULATOR"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "TERMINATOR_UUID"
+  },
+  {
+    "affected_sources": [
+      "src/components/ScrollKeybindingHandler.tsx",
+      "src/ink/clearTerminal.ts",
+      "src/ink/colorize.ts",
+      "src/ink/components/App.tsx",
+      "src/ink/render-node-to-output.ts",
+      "src/ink/terminal.ts",
+      "src/utils/deepLink/terminalLauncher.ts",
+      "src/utils/deepLink/terminalPreference.ts",
+      "src/utils/env.ts",
+      "src/utils/fullscreen.ts",
+      "src/utils/swarm/backends/detection.ts"
+    ],
+    "references": 17,
+    "source_files": 11,
+    "variable": "TERM_PROGRAM"
+  },
+  {
+    "affected_sources": [
+      "src/ink/clearTerminal.ts",
+      "src/ink/terminal.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "TERM_PROGRAM_VERSION"
+  },
+  {
+    "affected_sources": [
+      "src/utils/sessionStorage.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "TEST_ENABLE_SESSION_PERSISTENCE"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "TILIX_ID"
+  },
+  {
+    "affected_sources": [
+      "src/utils/tmuxSocket.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "TMPDIR"
+  },
+  {
+    "affected_sources": [
+      "src/ink/colorize.ts",
+      "src/ink/terminal.ts",
+      "src/utils/env.ts",
+      "src/utils/fullscreen.ts",
+      "src/utils/swarm/backends/detection.ts",
+      "src/utils/worktree.ts"
+    ],
+    "references": 10,
+    "source_files": 6,
+    "variable": "TMUX"
+  },
+  {
+    "affected_sources": [
+      "src/utils/swarm/backends/detection.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "TMUX_PANE"
+  },
+  {
+    "affected_sources": [
+      "src/commands/ultraplan.tsx"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "ULTRAPLAN_PROMPT_FILE"
+  },
+  {
+    "affected_sources": [
+      "src/commands/commit-push-pr.ts",
+      "src/commands/insights.ts",
+      "src/utils/claudeInChrome/common.ts",
+      "src/utils/secureStorage/macOsKeychainHelpers.ts"
+    ],
+    "references": 5,
+    "source_files": 4,
+    "variable": "USER"
+  },
+  {
+    "affected_sources": [
+      "src/utils/claudeInChrome/common.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "USERNAME"
+  },
+  {
+    "affected_sources": [
+      "src/utils/claudeDesktop.ts",
+      "src/utils/file.ts",
+      "src/utils/ide.ts"
+    ],
+    "references": 6,
+    "source_files": 3,
+    "variable": "USERPROFILE"
+  },
+  {
+    "affected_sources": [
+      "src/bootstrap/state.ts",
+      "src/bridge/bridgeConfig.ts",
+      "src/bridge/bridgeMain.ts",
+      "src/bridge/bridgeUI.ts",
+      "src/bridge/initReplBridge.ts",
+      "src/bridge/replBridge.ts",
+      "src/bridge/sessionRunner.ts",
+      "src/cli/print.ts",
+      "src/cli/update.ts",
+      "src/commands.ts",
+      "src/commands/bridge-kick.ts",
+      "src/commands/clear/caches.ts",
+      "src/commands/clear/conversation.ts",
+      "src/commands/commit-push-pr.ts",
+      "src/commands/commit.ts",
+      "src/commands/context/context-noninteractive.ts",
+      "src/commands/cost/cost.ts",
+      "src/commands/cost/index.ts",
+      "src/commands/createMovedToPluginCommand.ts",
+      "src/commands/feedback/index.ts",
+      "src/commands/files/index.ts",
+      "src/commands/init.ts",
+      "src/commands/insights.ts",
+      "src/commands/tag/index.ts",
+      "src/commands/thinkback-play/thinkback-play.ts",
+      "src/commands/version.ts",
+      "src/components/permissions/hooks.ts",
+      "src/constants/betas.ts",
+      "src/constants/keys.ts",
+      "src/constants/oauth.ts",
+      "src/constants/prompts.ts",
+      "src/constants/tools.ts",
+      "src/hooks/useAfterFirstRender.ts",
+      "src/hooks/useIssueFlagBanner.ts",
+      "src/hooks/useManagePlugins.ts",
+      "src/hooks/usePromptSuggestion.ts",
+      "src/ink/termio/osc.ts",
+      "src/migrations/migrateFennecToOpus.ts",
+      "src/query.ts",
+      "src/query/config.ts",
+      "src/services/MagicDocs/magicDocs.ts",
+      "src/services/PromptSuggestion/promptSuggestion.ts",
+      "src/services/PromptSuggestion/speculation.ts",
+      "src/services/SessionMemory/sessionMemory.ts",
+      "src/services/analytics/datadog.ts",
+      "src/services/analytics/firstPartyEventLogger.ts",
+      "src/services/analytics/firstPartyEventLoggingExporter.ts",
+      "src/services/analytics/growthbook.ts",
+      "src/services/analytics/index.ts",
+      "src/services/analytics/metadata.ts",
+      "src/services/api/claude.ts",
+      "src/services/api/client.ts",
+      "src/services/api/dumpPrompts.ts",
+      "src/services/api/errors.ts",
+      "src/services/api/logging.ts",
+      "src/services/api/withRetry.ts",
+      "src/services/compact/apiMicrocompact.ts",
+      "src/services/compact/sessionMemoryCompact.ts",
+      "src/services/extractMemories/extractMemories.ts",
+      "src/services/internalLogging.ts",
+      "src/services/mcp/useManageMCPConnections.ts",
+      "src/services/mcp/vscodeSdkMcp.ts",
+      "src/services/mockRateLimits.ts",
+      "src/services/rateLimitMessages.ts",
+      "src/services/tips/tipRegistry.ts",
+      "src/services/tools/toolExecution.ts",
+      "src/services/vcr.ts",
+      "src/setup.ts",
+      "src/skills/bundled/debug.ts",
+      "src/skills/bundled/loremIpsum.ts",
+      "src/skills/bundled/remember.ts",
+      "src/skills/bundled/skillify.ts",
+      "src/skills/bundled/stuck.ts",
+      "src/skills/bundled/verify.ts",
+      "src/state/onChangeAppState.ts",
+      "src/tools.ts",
+      "src/tools/AgentTool/built-in/exploreAgent.ts",
+      "src/tools/AgentTool/loadAgentsDir.ts",
+      "src/tools/AgentTool/prompt.ts",
+      "src/tools/AgentTool/runAgent.ts",
+      "src/tools/BashTool/bashPermissions.ts",
+      "src/tools/BashTool/prompt.ts",
+      "src/tools/BashTool/readOnlyValidation.ts",
+      "src/tools/BashTool/shouldUseSandbox.ts",
+      "src/tools/ConfigTool/supportedSettings.ts",
+      "src/tools/EnterPlanModeTool/prompt.ts",
+      "src/tools/FileEditTool/prompt.ts",
+      "src/tools/PowerShellTool/readOnlyValidation.ts",
+      "src/tools/REPLTool/constants.ts",
+      "src/tools/SkillTool/SkillTool.ts",
+      "src/tools/SkillTool/prompt.ts",
+      "src/tools/TaskStopTool/TaskStopTool.ts",
+      "src/tools/ToolSearchTool/prompt.ts",
+      "src/tools/WebFetchTool/utils.ts",
+      "src/utils/Shell.ts",
+      "src/utils/advisor.ts",
+      "src/utils/agentSwarmsEnabled.ts",
+      "src/utils/analyzeContext.ts",
+      "src/utils/asciicast.ts",
+      "src/utils/attachments.ts",
+      "src/utils/attribution.ts",
+      "src/utils/autoUpdater.ts",
+      "src/utils/backgroundHousekeeping.ts",
+      "src/utils/betas.ts",
+      "src/utils/claudeInChrome/chromeNativeHost.ts",
+      "src/utils/claudeInChrome/mcpServer.ts",
+      "src/utils/claudeInChrome/setup.ts",
+      "src/utils/claudeInChrome/setupPortable.ts",
+      "src/utils/cleanup.ts",
+      "src/utils/computerUse/gates.ts",
+      "src/utils/context.ts",
+      "src/utils/crossProjectResume.ts",
+      "src/utils/debug.ts",
+      "src/utils/effort.ts",
+      "src/utils/envUtils.ts",
+      "src/utils/errorLogSink.ts",
+      "src/utils/fastMode.ts",
+      "src/utils/fullscreen.ts",
+      "src/utils/headlessProfiler.ts",
+      "src/utils/hooks/hooksConfigManager.ts",
+      "src/utils/http.ts",
+      "src/utils/ide.ts",
+      "src/utils/immediateCommand.ts",
+      "src/utils/log.ts",
+      "src/utils/logoV2Utils.ts",
+      "src/utils/mcpInstructionsDelta.ts",
+      "src/utils/messages.ts",
+      "src/utils/model/antModels.ts",
+      "src/utils/model/model.ts",
+      "src/utils/model/modelCapabilities.ts",
+      "src/utils/model/modelOptions.ts",
+      "src/utils/model/providers.ts",
+      "src/utils/nativeInstaller/download.ts",
+      "src/utils/permissions/PermissionMode.ts",
+      "src/utils/permissions/classifierDecision.ts",
+      "src/utils/permissions/dangerousPatterns.ts",
+      "src/utils/permissions/getNextPermissionMode.ts",
+      "src/utils/permissions/permissionSetup.ts",
+      "src/utils/permissions/permissions.ts",
+      "src/utils/permissions/yoloClassifier.ts",
+      "src/utils/planModeV2.ts",
+      "src/utils/releaseNotes.ts",
+      "src/utils/sessionStorage.ts",
+      "src/utils/settings/applySettingsChange.ts",
+      "src/utils/settings/managedPath.ts",
+      "src/utils/settings/mdm/constants.ts",
+      "src/utils/settings/settings.ts",
+      "src/utils/settings/types.ts",
+      "src/utils/shell/bashProvider.ts",
+      "src/utils/shell/shellToolUtils.ts",
+      "src/utils/slowOperations.ts",
+      "src/utils/startupProfiler.ts",
+      "src/utils/swarm/inProcessRunner.ts",
+      "src/utils/systemPrompt.ts",
+      "src/utils/tasks.ts",
+      "src/utils/telemetry/betaSessionTracing.ts",
+      "src/utils/telemetry/bigqueryExporter.ts",
+      "src/utils/telemetry/instrumentation.ts",
+      "src/utils/telemetry/sessionTracing.ts",
+      "src/utils/thinking.ts",
+      "src/utils/toolSearch.ts",
+      "src/utils/undercover.ts",
+      "src/utils/user.ts",
+      "src/utils/warningHandler.ts",
+      "src/utils/worktree.ts"
+    ],
+    "references": 357,
+    "source_files": 165,
+    "variable": "USER_TYPE"
+  },
+  {
+    "affected_sources": [
+      "src/services/compact/apiMicrocompact.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "USE_API_CLEAR_TOOL_RESULTS"
+  },
+  {
+    "affected_sources": [
+      "src/services/compact/apiMicrocompact.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "USE_API_CLEAR_TOOL_USES"
+  },
+  {
+    "affected_sources": [
+      "src/utils/betas.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "USE_API_CONTEXT_MANAGEMENT"
+  },
+  {
+    "affected_sources": [
+      "src/utils/ripgrep.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "USE_BUILTIN_RIPGREP"
+  },
+  {
+    "affected_sources": [
+      "src/utils/betas.ts"
+    ],
+    "references": 2,
+    "source_files": 1,
+    "variable": "USE_CONNECTOR_TEXT_SUMMARIZATION"
+  },
+  {
+    "affected_sources": [
+      "src/constants/oauth.ts",
+      "src/utils/claudeInChrome/mcpServer.ts"
+    ],
+    "references": 3,
+    "source_files": 2,
+    "variable": "USE_LOCAL_OAUTH"
+  },
+  {
+    "affected_sources": [
+      "src/constants/oauth.ts",
+      "src/services/api/client.ts",
+      "src/utils/claudeInChrome/mcpServer.ts"
+    ],
+    "references": 3,
+    "source_files": 3,
+    "variable": "USE_STAGING_OAUTH"
+  },
+  {
+    "affected_sources": [
+      "src/services/mcp/client.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "UV_THREADPOOL_SIZE"
+  },
+  {
+    "affected_sources": [
+      "src/services/vcr.ts"
+    ],
+    "references": 3,
+    "source_files": 1,
+    "variable": "VCR_RECORD"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "VERCEL"
+  },
+  {
+    "affected_sources": [
+      "src/utils/status.tsx"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "VERTEX_BASE_URL"
+  },
+  {
+    "affected_sources": [
+      "src/commands/memory/memory.tsx",
+      "src/utils/editor.ts"
+    ],
+    "references": 4,
+    "source_files": 2,
+    "variable": "VISUAL"
+  },
+  {
+    "affected_sources": [
+      "src/services/voiceStreamSTT.ts"
+    ],
+    "references": 3,
+    "source_files": 1,
+    "variable": "VOICE_STREAM_BASE_URL"
+  },
+  {
+    "affected_sources": [
+      "src/commands/terminalSetup/terminalSetup.tsx",
+      "src/utils/env.ts"
+    ],
+    "references": 4,
+    "source_files": 2,
+    "variable": "VSCODE_GIT_ASKPASS_MAIN"
+  },
+  {
+    "affected_sources": [
+      "src/ink/terminal.ts",
+      "src/utils/env.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "VTE_VERSION"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "WEBSITE_SITE_NAME"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "WEBSITE_SKU"
+  },
+  {
+    "affected_sources": [
+      "src/hooks/useDiffInIDE.ts",
+      "src/utils/env.ts",
+      "src/utils/ide.ts"
+    ],
+    "references": 8,
+    "source_files": 3,
+    "variable": "WSL_DISTRO_NAME"
+  },
+  {
+    "affected_sources": [
+      "src/ink/clearTerminal.ts",
+      "src/ink/terminal.ts",
+      "src/utils/env.ts"
+    ],
+    "references": 5,
+    "source_files": 3,
+    "variable": "WT_SESSION"
+  },
+  {
+    "affected_sources": [
+      "src/commands/terminalSetup/terminalSetup.tsx",
+      "src/utils/completionCache.ts"
+    ],
+    "references": 2,
+    "source_files": 2,
+    "variable": "XDG_CONFIG_HOME"
+  },
+  {
+    "affected_sources": [
+      "src/utils/env.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "XTERM_VERSION"
+  },
+  {
+    "affected_sources": [
+      "src/ink/terminal.ts"
+    ],
+    "references": 1,
+    "source_files": 1,
+    "variable": "ZED_TERM"
+  }
+]
