@@ -1,0 +1,1419 @@
+{
+  "schema": 1,
+  "target": "2.1.310",
+  "records": [
+    {
+      "F_id": "F001",
+      "first_code_anchor": "chunk-6d8swme1.js:303",
+      "static_keyword": "--resume",
+      "old_source": "交互式终端聊天",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E01",
+        "E24",
+        "E33",
+        "E35"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F002",
+      "first_code_anchor": "chunk-6d8swme1.js:741",
+      "static_keyword": "--print",
+      "old_source": "一次性 `-p` 执行",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E01"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F003",
+      "first_code_anchor": "chunk-6d8swme1.js:702",
+      "static_keyword": "stream-json",
+      "old_source": "JSON、stream-json 非交互",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E23",
+        "E24",
+        "E66"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F004",
+      "first_code_anchor": "chunk-mh7sh27p.js:702",
+      "static_keyword": "--resume",
+      "old_source": "会话恢复与历史选择",
+      "owner_M": [
+        "M4"
+      ],
+      "related_scenarios": [
+        "E33"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F006",
+      "first_code_anchor": "chunk-3827ysmv.js:262",
+      "static_keyword": "/share",
+      "old_source": "会话导出、分享",
+      "owner_M": [
+        "M4"
+      ],
+      "related_scenarios": [
+        "E36"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F007",
+      "first_code_anchor": "chunk-kmt6qr99.js:29",
+      "static_keyword": "--permission-mode",
+      "old_source": "任务计划与审批",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E03",
+        "E04"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F008",
+      "first_code_anchor": "chunk-f3ak9604.js:199",
+      "static_keyword": "ask_user_question",
+      "old_source": "交互式追问",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E37"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F009",
+      "first_code_anchor": "chunk-j0tbz6ra.js:40824",
+      "static_keyword": "/tui",
+      "old_source": "TUI 会话、全屏与 Diff",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E37",
+        "E53"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F010",
+      "first_code_anchor": "chunk-7rnqxvcm.js:9662",
+      "static_keyword": "--rewind-files",
+      "old_source": "撤销和回退",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E20"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F011",
+      "first_code_anchor": "chunk-j0tbz6ra.js:16731",
+      "static_keyword": "/config",
+      "old_source": "主题、键位、Vim 设置",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E37",
+        "E53",
+        "E59"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F012",
+      "first_code_anchor": "chunk-j0tbz6ra.js:1185",
+      "static_keyword": "/status",
+      "old_source": "状态栏与用量",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E26",
+        "E33"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F013",
+      "first_code_anchor": "chunk-1g7w7v7r.js:56",
+      "static_keyword": "audio-capture",
+      "old_source": "语音输入",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E26"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F014",
+      "first_code_anchor": "chunk-j0tbz6ra.js:38857",
+      "static_keyword": "--add-dir",
+      "old_source": "多目录项目与 Worktree",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E38"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F015",
+      "first_code_anchor": "chunk-2pjf4p7s.js:1016",
+      "static_keyword": "tool_use",
+      "old_source": "Agent 模型-工具循环",
+      "owner_M": [
+        "M2"
+      ],
+      "related_scenarios": [
+        "E02",
+        "E15",
+        "E27",
+        "L07"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F016",
+      "first_code_anchor": "chunk-bbw420pv.js:488",
+      "static_keyword": "message_delta",
+      "old_source": "流式块与思考内容",
+      "owner_M": [
+        "M2"
+      ],
+      "related_scenarios": [
+        "E18"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F017",
+      "first_code_anchor": "chunk-6d8swme1.js:1875",
+      "static_keyword": "--fallback-model",
+      "old_source": "模型选择、切换及上下文能力",
+      "owner_M": [
+        "M2"
+      ],
+      "related_scenarios": [
+        "E18",
+        "L07",
+        "L08"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F018",
+      "first_code_anchor": "chunk-4a46xy3v.js:223",
+      "static_keyword": "ANTHROPIC_BASE_URL",
+      "old_source": "可扩展模型适配",
+      "owner_M": [
+        "M2"
+      ],
+      "related_scenarios": [
+        "E18",
+        "E52"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F019",
+      "first_code_anchor": "chunk-0bk2wq2d.js:4523",
+      "static_keyword": "auth login",
+      "old_source": "登录、凭证与刷新",
+      "owner_M": [
+        "M2"
+      ],
+      "related_scenarios": [
+        "E01"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F020",
+      "first_code_anchor": "chunk-j0tbz6ra.js:3556",
+      "static_keyword": "retry-after",
+      "old_source": "限流、重试、取消",
+      "owner_M": [
+        "M2"
+      ],
+      "related_scenarios": [
+        "E15",
+        "E34",
+        "E52"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F023",
+      "first_code_anchor": "chunk-460hw2jb.js:17",
+      "static_keyword": "/compact",
+      "old_source": "长上下文压缩与恢复",
+      "owner_M": [
+        "M4"
+      ],
+      "related_scenarios": [
+        "E09",
+        "E16",
+        "E51"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F027",
+      "first_code_anchor": "chunk-at88wjsn.js:1767",
+      "static_keyword": "output_tokens",
+      "old_source": "运行成本与令牌统计",
+      "owner_M": [
+        "M2"
+      ],
+      "related_scenarios": [
+        "E39"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F029",
+      "first_code_anchor": "chunk-j0tbz6ra.js:28939",
+      "static_keyword": "FileWriteTool",
+      "old_source": "Write 文件",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E03",
+        "E19"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F031",
+      "first_code_anchor": "chunk-dcgwjwpg.js:45",
+      "static_keyword": "GlobTool",
+      "old_source": "Glob/Grep 搜索",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E02"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F032",
+      "first_code_anchor": "chunk-j0tbz6ra.js:56782",
+      "static_keyword": "BashTool",
+      "old_source": "Bash 命令与进程",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E03",
+        "E08",
+        "E23",
+        "E46",
+        "E60"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F033",
+      "first_code_anchor": "chunk-3ykk7zcv.js:2123",
+      "static_keyword": "PowerShellTool",
+      "old_source": "PowerShell",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E40"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F034",
+      "first_code_anchor": "chunk-j0tbz6ra.js:52347",
+      "static_keyword": "NotebookEdit",
+      "old_source": "Notebook 编辑",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E41"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F035",
+      "first_code_anchor": "chunk-pp7zwndm.js:1564",
+      "static_keyword": "textDocument/definition",
+      "old_source": "LSP 语义查询",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E42"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F036",
+      "first_code_anchor": "chunk-89p7tfyk.js:530",
+      "static_keyword": "WebSearch",
+      "old_source": "网络检索与网页读取",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E06"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F037",
+      "first_code_anchor": "chunk-dmtyt8s1.js:9",
+      "static_keyword": "computer_use",
+      "old_source": "Chrome/浏览器交互",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E08",
+        "E30"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F038",
+      "first_code_anchor": "chunk-j0tbz6ra.js:33395",
+      "static_keyword": "commit-push-pr",
+      "old_source": "Git 提交、推送、PR",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E03",
+        "E20",
+        "E32"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F039",
+      "first_code_anchor": "chunk-34bfdsb0.js:1967",
+      "static_keyword": "ToolSearch",
+      "old_source": "工具发现与 Schema",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E21"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F040",
+      "first_code_anchor": "chunk-89p7tfyk.js:603",
+      "static_keyword": "tool_result",
+      "old_source": "工具截断、错误、取消",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E19",
+        "E23",
+        "E34"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F041",
+      "first_code_anchor": "chunk-sr1bpqdt.js:376",
+      "static_keyword": "--permission-mode",
+      "old_source": "权限模式与细粒度规则",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E04",
+        "E05",
+        "E31",
+        "E60",
+        "E64"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F043",
+      "first_code_anchor": "chunk-j0tbz6ra.js:19164",
+      "static_keyword": "HARD BLOCK",
+      "old_source": "自动模式 HARD/SOFT/ALLOW 分级",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E05",
+        "E31",
+        "E32",
+        "E49",
+        "E60",
+        "L06"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F047",
+      "first_code_anchor": "chunk-j0tbz6ra.js:41652",
+      "static_keyword": "prompt injection",
+      "old_source": "不可信页面/项目文件指令隔离",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E06",
+        "E07",
+        "E17",
+        "E22",
+        "E62"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F048",
+      "first_code_anchor": "chunk-5rw2zfa0.js:670",
+      "static_keyword": "exfiltrat",
+      "old_source": "浏览器/CI/外网外传保护",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E05",
+        "E06",
+        "E32",
+        "L06"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F049",
+      "first_code_anchor": "chunk-1ww4jg8j.js:12330",
+      "static_keyword": "allowNestedUserNamespaces",
+      "old_source": "工作区沙盒与软链保护",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E08",
+        "E61"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F050",
+      "first_code_anchor": "chunk-3fdpcjpk.js:124",
+      "static_keyword": "PermissionRequest",
+      "old_source": "破坏性操作/共享资源审批",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E20",
+        "E31",
+        "E55",
+        "E68"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F051",
+      "first_code_anchor": "chunk-j0tbz6ra.js:2792",
+      "static_keyword": "/skills",
+      "old_source": "技能加载与调用",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E43"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F052",
+      "first_code_anchor": "chunk-7kz3kchp.js:210",
+      "static_keyword": "--plugin-dir",
+      "old_source": "插件安装、管理、卸载",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E22",
+        "E56",
+        "E62",
+        "E68"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F053",
+      "first_code_anchor": "chunk-at88wjsn.js:1783",
+      "static_keyword": "--mcp-config",
+      "old_source": "MCP 资源与工具",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E07",
+        "E21",
+        "E57"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F054",
+      "first_code_anchor": "chunk-at88wjsn.js:1786",
+      "static_keyword": "PreToolUse",
+      "old_source": "生命周期 Hook 与失败处理",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E21",
+        "E22"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F055",
+      "first_code_anchor": "chunk-6d8swme1.js:1655",
+      "static_keyword": "--sdk-url",
+      "old_source": "SDK 集成",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E24",
+        "E35",
+        "L10"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F061",
+      "first_code_anchor": "chunk-62bczwa8.js:222",
+      "static_keyword": "/schedule",
+      "old_source": "可选定时执行入口",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E10",
+        "E11"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F062",
+      "first_code_anchor": "chunk-05z051sc.js:2198",
+      "static_keyword": "--bg",
+      "old_source": "后台工作、任务列表、输出文件与恢复",
+      "owner_M": [
+        "M4"
+      ],
+      "related_scenarios": [
+        "E14",
+        "E58",
+        "E63",
+        "L03",
+        "L09",
+        "L14"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F066",
+      "first_code_anchor": "chunk-8w56k4pg.js:21",
+      "static_keyword": "--remote-control",
+      "old_source": "远程 Bridge 与配对",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E24",
+        "E25",
+        "E67"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F067",
+      "first_code_anchor": "chunk-j0tbz6ra.js:59070",
+      "static_keyword": "WebSocket",
+      "old_source": "WebSocket/SSE",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E15",
+        "E25",
+        "E34"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F068",
+      "first_code_anchor": "chunk-c3npf81n.js:70",
+      "static_keyword": "--desktop",
+      "old_source": "桌面与移动平台入口",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E25",
+        "E33"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F075",
+      "first_code_anchor": "chunk-ghkyq94m.js:3978",
+      "static_keyword": "/artifact",
+      "old_source": "Artifact 模板与页面",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E29"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F076",
+      "first_code_anchor": "chunk-ajtyjx88.js:11844",
+      "static_keyword": "claude_test_draft",
+      "old_source": "浏览器与 Claude Test 附件",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E30"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F077",
+      "first_code_anchor": "chunk-5kfjd6mt.js:121",
+      "static_keyword": "designSystem",
+      "old_source": "设计系统同步附件",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E30"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F079",
+      "first_code_anchor": "chunk-n7dvjfwp.js:1657",
+      "static_keyword": "doctor",
+      "old_source": "诊断和环境检查",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E01",
+        "E26",
+        "E35"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F080",
+      "first_code_anchor": "chunk-at88wjsn.js:814",
+      "static_keyword": "OpenTelemetry",
+      "old_source": "日志、隐私和性能统计",
+      "owner_M": [],
+      "related_scenarios": [
+        "E35"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F086",
+      "first_code_anchor": "chunk-55823wbc.js:462",
+      "static_keyword": "CLAUDE_CODE_AUTO_COMPACT_WINDOW",
+      "old_source": "空闲压缩与小窗口模型切换",
+      "owner_M": [
+        "M4"
+      ],
+      "related_scenarios": [
+        "E51"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F087",
+      "first_code_anchor": "chunk-j0tbz6ra.js:43175",
+      "static_keyword": "beta header",
+      "old_source": "跨提供者协议退让",
+      "owner_M": [
+        "M2"
+      ],
+      "related_scenarios": [
+        "E52"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F088",
+      "first_code_anchor": "chunk-j0tbz6ra.js:40824",
+      "static_keyword": "/tui fullscreen",
+      "old_source": "全屏 TUI Diff 与快捷键终态",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E53"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F089",
+      "first_code_anchor": "chunk-at88wjsn.js:1794",
+      "static_keyword": "parent_tool_use_id",
+      "old_source": "Agent 后台生命周期与模型继承",
+      "owner_M": [
+        "M7"
+      ],
+      "related_scenarios": [
+        "E54",
+        "L09"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F090",
+      "first_code_anchor": "chunk-j0tbz6ra.js:67780",
+      "static_keyword": "tool_decision",
+      "old_source": "安全事件可审计",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E55"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F091",
+      "first_code_anchor": "chunk-j0tbz6ra.js:44970",
+      "static_keyword": "synced plugin",
+      "old_source": "云端启用技能与插件同步",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E56"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F092",
+      "first_code_anchor": "chunk-n7dvjfwp.js:2401",
+      "static_keyword": "PermissionRequest",
+      "old_source": "非交互 MCP 询问超时",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E57"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    },
+    {
+      "F_id": "F102",
+      "first_code_anchor": "chunk-kfdf5pq3.js:892",
+      "static_keyword": "ultrareview",
+      "old_source": "**云端 Ultrareview 与本地 Ultra 级深审分流**",
+      "owner_M": [
+        "M9"
+      ],
+      "related_scenarios": [
+        "L12",
+        "L16"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED"
+    }
+  ]
+}
