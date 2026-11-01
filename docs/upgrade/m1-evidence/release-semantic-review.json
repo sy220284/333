@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "review_policy": "Only code-confirmed release changes are overlaid; all other 6313 source rows remain UNVERIFIED",
+  "items": [
+    {
+      "id": "2.1.309#024",
+      "source_line": 57,
+      "source_blob": "eab938de43f5584aa4417b95b601b63822bc2417",
+      "evidence_level": "TARGET_SOURCE_CONFIRMED",
+      "review_status": "M1_SOURCE_CONFIRMED_PENDING_CI",
+      "final_2_1_310_behavior": "Opening /privacy-settings first invalidates memoized account settings; account settings and notice configuration must both load successfully or the user sees a fetch-error message. Successful confirmation displays Help improve our AI models with the refreshed server value.",
+      "applicability": "IN_SCOPE_M1",
+      "later_override": "Final target code chunk-ewrb9nj3.js:470-484 confirms this effective 2.1.310 behavior",
+      "owner_M_verified": "M1",
+      "related_F_confirmed": [
+        "F080"
+      ],
+      "target_code_anchors": [
+        "chunk-ewrb9nj3.js:470-484"
+      ],
+      "old_code_anchors": [
+        "src/commands/privacy-settings/privacy-settings.tsx",
+        "src/services/api/grove.ts"
+      ],
+      "implemented_source": [
+        "src/commands/privacy-settings/fetchPrivacySettings.mjs",
+        "src/commands/privacy-settings/privacy-settings.tsx"
+      ],
+      "implementation_commits": [
+        "c30e55030e4aaaec202370b77f5ad65100b0c1cc",
+        "861bb7c6fb7f89fe20fbe6444e5da39b91ed3287"
+      ],
+      "tests": [
+        "tests/m1-privacy-settings.test.mjs"
+      ],
+      "release_negative": "API account-settings failure OR notice-configuration failure, stale cache across two calls",
+      "release_positive": "Refresh memoized account state before display; confirmed server value after successful fetch",
+      "audit_status": "Source implementation complete; latest CI pending"
+    }
+  ]
+}
