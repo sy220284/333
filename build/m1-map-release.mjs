@@ -97,7 +97,7 @@ const RULES=[
 ['F084',/\b(?:plugin API|mod API|mod's tool|mod's agent|mod hook)\b/i],
 ['F085',/\b(?:auto-mode-setup|auto mode setup|auto mode onboarding)\b/i],
 ['F086',/\b(?:idle compaction|autocompact|compact window|small context model)\b/i],
-['F087',/\b(?:beta header|gateway retry|unsupported beta|compatible server)\b/i],
+['F087',/\b(?:beta header|gateway retry|unsupported beta|compatible server|reject the .effort-|mid-conversation system messages|retry without them)\b/i],
 ['F088',/\b(?:\/tui fullscreen|\/diff|Ctrl\+L|full-screen diff|terminal image)\b/i],
 ['F089',/\b(?:parent_tool_use_id|background subagent|agent model inheritance|agent lifecycle)\b/i],
 ['F090',/\b(?:safety_event|tool_decision|permission audit|safety audit)\b/i],
