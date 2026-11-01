@@ -49,3 +49,5 @@ jobs:
           test -f dist/cli.js
           bun dist/cli.js --version | grep -F '2.1.88'
           bun dist/cli.js --help | grep -F -- '--print'
+      - name: 与原版 CLI 参数和命令差分验收
+        run: node --test tests/cli-parity.test.mjs
