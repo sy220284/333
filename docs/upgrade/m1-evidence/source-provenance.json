@@ -10,19 +10,16 @@
   "change_count": 6313,
   "change_groups": [
     {
-      "from": "2.1.310",
-      "to": "2.1.236",
-      "file": "changelog-1.json"
+      "file": "changelog-1.json",
+      "count": 2100
     },
     {
-      "from": "2.1.235",
-      "to": "2.1.162",
-      "file": "changelog-2.json"
+      "file": "changelog-2.json",
+      "count": 2100
     },
     {
-      "from": "2.1.161",
-      "to": "2.1.89",
-      "file": "changelog-3.json"
+      "file": "changelog-3.json",
+      "count": 2113
     }
   ]
 }
