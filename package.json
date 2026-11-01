@@ -20,7 +20,7 @@
     "rebuild": "node build/verify-bundled-assets.mjs && node build/restore-claude-api.mjs --verify && node build/restore-dependencies.mjs && node build/install-public-deps.mjs && bun build/rebuild.mjs && node build/package-release.mjs",
     "test:parity": "node --test tests/cli-parity.test.mjs",
     "test:release": "node --test tests/release-integrity.test.mjs",
-    "test:all": "node --test tests/fallback-model-chain.test.mjs tests/claude-api-skill.test.mjs tests/cli-parity.test.mjs tests/distribution-isolation.test.mjs tests/model-loop-local.test.mjs tests/release-integrity.test.mjs tests/search-loop-local.test.mjs",
+    "test:all": "node --test tests/auto-compact-window.test.mjs tests/fallback-model-chain.test.mjs tests/claude-api-skill.test.mjs tests/cli-parity.test.mjs tests/distribution-isolation.test.mjs tests/model-loop-local.test.mjs tests/release-integrity.test.mjs tests/search-loop-local.test.mjs",
     "verify": "npm run rebuild && npm run test:all"
   },
   "dependencies": {},
