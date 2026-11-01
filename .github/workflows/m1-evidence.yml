@@ -1,0 +1,37 @@
+name: M1 源证据与关单门槛核验
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'build/m1-verify.mjs'
+      - 'build/upgrade-coverage.mjs'
+      - 'docs/upgrade/m1-evidence/**'
+      - 'docs/upgrade/upgrade-coverage.json'
+      - 'docs/upgrade/2.1.310-*.md'
+      - 'tests/m1-verify.test.mjs'
+      - 'tests/upgrade-coverage.test.mjs'
+      - '.github/workflows/m1-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  m1-source-evidence:
+    name: 校验完整源码索引与官方原始变更
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 验证任务卡、功能、场景及旧开关/新锚点/版本记录
+        run: node --test tests/upgrade-coverage.test.mjs tests/m1-verify.test.mjs
+      - name: 下载固定发行版的官方变更记录
+        run: |
+          curl --fail --location --show-error --silent --retry 3 \
+            'https://raw.githubusercontent.com/anthropics/claude-code/v2.1.310/CHANGELOG.md' \
+            --output "${RUNNER_TEMP}/claude-changelog-2.1.310.md"
+      - name: 用 Git Blob SHA 与逐行位置复核六千余项原始记录
+        run: node build/m1-verify.mjs --changelog "${RUNNER_TEMP}/claude-changelog-2.1.310.md"
+      - name: 确认只读验证没有改写研究数据
+        run: test -z "$(git status --porcelain)"
