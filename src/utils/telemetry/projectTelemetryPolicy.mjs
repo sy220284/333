@@ -16,6 +16,11 @@ export function isPrivilegedTelemetrySetting(name, value) {
       key === 'ENABLE_ENHANCED_TELEMETRY_BETA' ||
       key === 'CLAUDE_CODE_ENABLE_BETA_TRACING') return truthy(value)
 
+  // Detailed tracing can export complete prompts and tool data through its
+  // own endpoint even when ordinary OpenTelemetry export is disabled.
+  if (key === 'ENABLE_BETA_TRACING_DETAILED') return truthy(value)
+  if (key === 'BETA_TRACING_ENDPOINT') return Boolean(String(value).trim())
+
   if (key === 'OTEL_RESOURCE_ATTRIBUTES' ||
       key === 'OTEL_SERVICE_NAME' ||
       key === 'OTEL_LOG_RAW_API_BODIES') return Boolean(String(value).trim()) && !['false','off','none','0'].includes(String(value).trim().toLowerCase())
