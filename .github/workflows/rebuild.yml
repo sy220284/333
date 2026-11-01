@@ -14,6 +14,8 @@ jobs:
           bun-version: 1.4.4
       - name: 从源码映射恢复精确依赖快照
         run: node build/restore-dependencies.mjs
+      - name: 安装缺失的完整第三方依赖
+        run: node build/install-public-deps.mjs
       - name: 仅从 src 源码构建
         run: bun build/rebuild.mjs
       - name: 新构建版本和基础交互验收
