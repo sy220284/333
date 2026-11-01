@@ -43,9 +43,8 @@ test('F080: an untrusted project can still turn off telemetry and exporters', ()
     DISABLE_TELEMETRY: '1',
     PROJECT_TAG: 'safe'
   }
-  assert.deepEqual(resolveProjectTelemetryEnv(input, {
-    CLAUDE_CODE_ENABLE_TELEMETRY: 'true'
-  }), input)
+  assert.deepEqual(resolveProjectTelemetryEnv(input, {}), input,
+    'A project can disable collection when no higher-trust source owns it')
 })
 
 test('F080: URL, raw body, detailed tracing and metric attributes require trusted source', () => {
@@ -188,4 +187,25 @@ test('F080: telemetry settings introduced by the target build cannot bypass proj
     OTEL_LOG_USER_PROMPTS: 'false',
     DISABLE_TELEMETRY: '1',
   }, 'Project must retain an explicit ability to reduce data collection')
+})
+
+test('F080: a project cannot override a user or managed exporter choice even with a nominal safe-disabling value', () => {
+  const merged = {
+    OTEL_TRACES_EXPORTER: 'none',
+    OTEL_LOGS_EXPORTER: 'none',
+    OTEL_LOG_USER_PROMPTS: 'false',
+    CLAUDE_CODE_ENABLE_TELEMETRY: '0',
+    OTEL_METRICS_EXPORTER: 'none'
+  }
+  const trusted = {
+    OTEL_TRACES_EXPORTER: 'otlp',
+    OTEL_LOGS_EXPORTER: 'console',
+    OTEL_LOG_USER_PROMPTS: '1',
+    CLAUDE_CODE_ENABLE_TELEMETRY: 'true',
+    OTEL_METRICS_EXPORTER: 'otlp'
+  }
+  assert.deepEqual(resolveProjectTelemetryEnv(merged, trusted), trusted,
+    'Target 2.1.310 Jsr() rejects project reductions if a trusted source explicitly sets that key')
+  assert.deepEqual(resolveProjectTelemetryEnv(merged, {}), merged,
+    'Safe reductions remain permitted when no trusted configuration exists')
 })
