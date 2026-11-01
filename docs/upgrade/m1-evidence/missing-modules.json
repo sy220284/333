@@ -164,7 +164,7 @@
       "developer_task": "M4",
       "feature_ref": "F023",
       "target_semantic_candidate": "chunk-ajtyjx88.js:10493",
-      "handoff_missing_equivalence": "新版会话标记存在 microcompact_boundary，需实证缓存失效、短压缩、回滚与恢复",
+      "handoff_missing_equivalence": "M4 must implement target keep-recent tool output eviction, persistence and request/stream fallback behavior against actual target 2.1.310 inputs, not reintroduce legacy cache_edits protocol without evidence; verify 20k token threshold, 12 recent calls, image/document placeholders, repeated clears and reversible overflow retries.",
       "M1_evidence_grade": "STATIC_TARGET_CANDIDATE",
       "old_contract": "CACHED_MICROCOMPACT 下需创建 CachedMCState，按工具顺序与已发送结果生成 cache_edits；旧 src/services/compact/microCompact.ts:56-134,305-380 依赖状态和注册/标记/回滚函数。",
       "old_consumers": [
@@ -175,7 +175,17 @@
       "rebuild_requirement": "M4 先验证目标模型 API 是否支持 cache_edits 以及缓存命中/失效语义；若目标已退场则清理被禁功能导入，否则基于旧状态机重建并实测。",
       "original_2_1_88_source_map_content_found": false,
       "original_2_1_88_source_zip_implementation_found": false,
-      "review_scope": "原始2.1.88源码ZIP + cli.js.map sources/sourcesContent + 2.1.310完整反编译包"
+      "review_scope": "原始2.1.88源码ZIP + cli.js.map sources/sourcesContent + 2.1.310完整反编译包",
+      "target_actual_source_contract": {
+        "selection": "chunk-wany0nxw.js:1589-1614 PWo: qualified tool_use IDs, retain most recent Math.max(1,keepRecent), only uncleared user/tool_result candidates, count text+image+document tokens",
+        "threshold": "chunk-wany0nxw.js:1575,1620-1626: 20000 estimated saved tokens minimum, optional content persist, replace content while preserving structured messages, return messages/tokensSaved/clearedIds/clearedContent",
+        "parameters": "chunk-wany0nxw.js:1629 Ln: minIdleSeconds=3900, keepToolUses=12, clearAtLeastTokens=20000, triggerToolUsesBelowCount=3, minTriggerToolUses=27; not necessarily applied to every invocation",
+        "recovery": "chunk-j0tbz6ra.js:51216-51218 applies onRequestError results; 51722-51724 onStreamFallback; both set microcompact marks and carry clearedIds/clearedContent",
+        "persistence": "chunk-wany0nxw.js:1621-1626 uses await persist(content,tool_use_id) and keeps per-ID map; all applicable side effects must be preserved in reconstruction",
+        "old_difference": "2.1.88 src/services/compact/microCompact.ts:52-78,300-348 references CachedMCState, CacheEditsBlock and pendingCacheEdits; local message content is not modified in old cached path; target version clears/replaces local tool_result content and stores it optionally."
+      },
+      "target_source_level": "TARGET_EXECUTION_BRANCH_IDENTIFIED_NOT_EQUIVALENT",
+      "old_source_recovery_status": "NO_DIRECT_SOURCE_FOR_OLD_CACHEDMC"
     },
     {
       "module": "contextCollapse",
