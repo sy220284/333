@@ -44,25 +44,23 @@ ln -s "$(pwd)/cli.js" /usr/local/bin/claude
 ## 独立源码重建（333 工程）
 
 本仓库已经建立直接从 `src/entrypoints/cli.tsx` 构建 CLI 的流程。
-原始 `cli.js` 仅用于基线对照和提取缺失的发行资源，不进入新程序的构建或运行链路。
+原始 `cli.js` 仅用于原版行为差分。正常重建直接校验已入库资源，从 `src/` 构建新程序，不会调用旧版 `cli.js` 作为构建或运行入口。`cli.js.map` 当前仍作为冻结的第三方依赖源码数据。
 
 **环境：** Node.js 18+、Bun 1.4.4+、Git 和 npm。构建时需要网络下载公开依赖；后续由 `build/public-dependencies.lock.json` 固定版本及完整性校验。
 
 ```sh
 git clone https://github.com/sy220284/333.git
 cd 333
-git switch rebuild/bun-from-src
-npm run rebuild
+npm run verify
 bun dist/cli.js --version
 node dist/launcher.cjs --help
-npm run test:parity
-npm run test:release
 ```
 
 执行 `npm run rebuild` 会校验原版技能资源、从 `cli.js.map` 还原冻结依赖快照、按锁文件安装完整 npm 依赖、编译 `src/` 并生成包含平台二进制资源的 `dist/` 发行目录。
+`npm run verify` 会先执行完整源码重建，再运行 CLI 命令差分、脱离仓库运行、文件读写、Glob/Grep 搜索和发行完整性测试。仅需构建时可执行 `npm run rebuild`，仅需回归测试时可执行 `npm run test:all`。
 `dist/integrity.json` 保存发行文件的 SHA-256 校验清单。CI 验证原版与重建版公开命令和参数是否一致。
 
-**当前边界：** 从源代码重建并通过版本号、CLI 帮助、公开参数差分与发行文件完整性验证；涉及账户鉴权、真实模型请求、原生平台能力和全面端到端行为的验收另行核对。原代码中存在只有特定编译功能开关才能启用的内部功能；构建时严格拒绝无法实现的禁用模块残留。
+**当前边界：** 已在 Linux、macOS、Windows 验证源码编译、发行包独立启动、公开 CLI 参数差分，以及使用本地模拟模型进行 Read、Edit、Write、Glob、Grep 工具往返与文件结果检查。真实账户登录、在线模型请求、全量 MCP/插件、所有原生模块及全部功能一致性仍需专项验收。原代码中存在只有特定编译功能开关才能启用的内部功能；构建时严格拒绝无法实现的禁用模块残留。
 
 ## Directory layout
 
