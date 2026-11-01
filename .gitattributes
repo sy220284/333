@@ -11,3 +11,6 @@
 *.node binary
 *.exe binary
 vendor/ripgrep/**/rg binary
+
+# Preserve the original CRLF bytes from cli.js.map in archived dependency sources
+research/claude-code-2.1.88/dependencies/node_modules/** -text

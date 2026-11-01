@@ -1,0 +1,20 @@
+{
+  "bracket_env_references": 16,
+  "bracket_env_variable_count": 13,
+  "decoded_mapping_segments": 2068722,
+  "dependency_source_bytes": 16915042,
+  "environment_references": 1452,
+  "environment_variable_count": 469,
+  "feature_flag_count": 90,
+  "feature_references": 972,
+  "generated_lines": 16666,
+  "native_adapters": 4,
+  "original_mapping_chars": 10951046,
+  "packages": 316,
+  "project_sources": 1902,
+  "source_map_bytes": 59766257,
+  "source_map_sha256": "7965012b7a5fc9e09d8d747a04c5c32b94696924536e217f686bb1e7ee70a657",
+  "third_party_source_files": 2850,
+  "total_sources": 4756,
+  "unmapped_segments": 0
+}

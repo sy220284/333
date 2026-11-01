@@ -1,0 +1,12 @@
+{
+  "decoded_segments": 2068722,
+  "format": "source-map-v3; Base64 VLQ, relative fields",
+  "generated_lines": 16666,
+  "mapped_segments": 2068722,
+  "original_mapping_characters": 10951046,
+  "source_count": 4756,
+  "source_map_names_count": 0,
+  "source_map_sha256": "7965012b7a5fc9e09d8d747a04c5c32b94696924536e217f686bb1e7ee70a657",
+  "source_paths_without_segments": [],
+  "unmapped_segments": 0
+}

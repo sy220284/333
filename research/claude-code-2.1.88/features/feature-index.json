@@ -1,0 +1,1202 @@
+[
+  {
+    "affected_sources": [
+      "src/entrypoints/cli.tsx"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "ABLATION_BASELINE",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/tools/AgentTool/loadAgentsDir.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "AGENT_MEMORY_SNAPSHOT",
+    "references": 2,
+    "source_files": 2
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts",
+      "src/constants/tools.ts",
+      "src/screens/REPL.tsx",
+      "src/skills/bundled/index.ts",
+      "src/tools.ts",
+      "src/tools/ScheduleCronTool/prompt.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "AGENT_TRIGGERS",
+    "references": 11,
+    "source_files": 6
+  },
+  {
+    "affected_sources": [
+      "src/skills/bundled/index.ts",
+      "src/tools.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "AGENT_TRIGGERS_REMOTE",
+    "references": 2,
+    "source_files": 2
+  },
+  {
+    "affected_sources": [
+      "src/utils/nativeInstaller/download.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "ALLOW_TEST_VERSIONS",
+    "references": 2,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/services/api/claude.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "ANTI_DISTILLATION_CC",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/components/ThemePicker.tsx",
+      "src/components/design-system/ThemeProvider.tsx",
+      "src/tools/ConfigTool/supportedSettings.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "AUTO_THEME",
+    "references": 3,
+    "source_files": 3
+  },
+  {
+    "affected_sources": [
+      "src/hooks/useAwaySummary.ts",
+      "src/screens/REPL.tsx"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "AWAY_SUMMARY",
+    "references": 2,
+    "source_files": 2
+  },
+  {
+    "affected_sources": [
+      "src/cli/structuredIO.ts",
+      "src/components/messages/UserToolResultMessage/UserToolSuccessMessage.tsx",
+      "src/components/permissions/BashPermissionRequest/BashPermissionRequest.tsx",
+      "src/components/permissions/PermissionDecisionDebugInfo.tsx",
+      "src/components/permissions/PermissionRuleExplanation.tsx",
+      "src/components/permissions/hooks.ts",
+      "src/hooks/toolPermission/PermissionContext.ts",
+      "src/hooks/toolPermission/handlers/coordinatorHandler.ts",
+      "src/hooks/toolPermission/handlers/interactiveHandler.ts",
+      "src/hooks/toolPermission/handlers/swarmWorkerHandler.ts",
+      "src/hooks/toolPermission/permissionLogging.ts",
+      "src/hooks/useCanUseTool.tsx",
+      "src/services/api/withRetry.ts",
+      "src/tools/BashTool/bashPermissions.ts",
+      "src/tools/BashTool/pathValidation.ts",
+      "src/utils/classifierApprovals.ts",
+      "src/utils/messages.ts",
+      "src/utils/permissions/permissions.ts",
+      "src/utils/permissions/yoloClassifier.ts",
+      "src/utils/swarm/inProcessRunner.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "BASH_CLASSIFIER",
+    "references": 49,
+    "source_files": 20
+  },
+  {
+    "affected_sources": [
+      "src/commands/exit/exit.tsx",
+      "src/entrypoints/cli.tsx",
+      "src/main.tsx",
+      "src/query.ts",
+      "src/screens/REPL.tsx",
+      "src/utils/concurrentSessions.ts",
+      "src/utils/conversationRecovery.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "BG_SESSIONS",
+    "references": 11,
+    "source_files": 7
+  },
+  {
+    "affected_sources": [
+      "src/context.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "BREAK_CACHE_COMMAND",
+    "references": 2,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/bridge/bridgeEnabled.ts",
+      "src/commands.ts",
+      "src/commands/bridge/index.ts",
+      "src/components/PromptInput/PromptInputFooter.tsx",
+      "src/components/Settings/Config.tsx",
+      "src/entrypoints/cli.tsx",
+      "src/hooks/useCanUseTool.tsx",
+      "src/hooks/useReplBridge.tsx",
+      "src/main.tsx",
+      "src/screens/REPL.tsx",
+      "src/tools/BriefTool/attachments.ts",
+      "src/tools/BriefTool/upload.ts",
+      "src/tools/ConfigTool/supportedSettings.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "BRIDGE_MODE",
+    "references": 29,
+    "source_files": 13
+  },
+  {
+    "affected_sources": [
+      "src/buddy/CompanionSprite.tsx",
+      "src/buddy/prompt.ts",
+      "src/buddy/useBuddyNotification.tsx",
+      "src/commands.ts",
+      "src/components/PromptInput/PromptInput.tsx",
+      "src/screens/REPL.tsx",
+      "src/utils/attachments.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "BUDDY",
+    "references": 18,
+    "source_files": 7
+  },
+  {
+    "affected_sources": [
+      "src/skills/bundled/index.ts"
+    ],
+    "compilation_state_333": "enabled",
+    "flag": "BUILDING_CLAUDE_APPS",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/tools/AgentTool/builtInAgents.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "BUILTIN_EXPLORE_PLAN_AGENTS",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/entrypoints/cli.tsx"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "BYOC_ENVIRONMENT_RUNNER",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/constants/prompts.ts",
+      "src/query.ts",
+      "src/services/api/claude.ts",
+      "src/services/api/logging.ts",
+      "src/services/compact/microCompact.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "CACHED_MICROCOMPACT",
+    "references": 12,
+    "source_files": 5
+  },
+  {
+    "affected_sources": [
+      "src/bridge/bridgeEnabled.ts",
+      "src/utils/config.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "CCR_AUTO_CONNECT",
+    "references": 3,
+    "source_files": 2
+  },
+  {
+    "affected_sources": [
+      "src/bridge/bridgeEnabled.ts",
+      "src/bridge/remoteBridgeCore.ts",
+      "src/main.tsx"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "CCR_MIRROR",
+    "references": 4,
+    "source_files": 3
+  },
+  {
+    "affected_sources": [
+      "src/commands.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "CCR_REMOTE_SETUP",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/entrypoints/cli.tsx",
+      "src/main.tsx",
+      "src/query.ts",
+      "src/query/stopHooks.ts",
+      "src/services/analytics/metadata.ts",
+      "src/services/mcp/client.ts",
+      "src/services/mcp/config.ts",
+      "src/state/AppStateStore.ts",
+      "src/utils/computerUse/cleanup.ts",
+      "src/utils/computerUse/wrapper.tsx"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "CHICAGO_MCP",
+    "references": 16,
+    "source_files": 10
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts",
+      "src/commands/clear/caches.ts",
+      "src/screens/REPL.tsx",
+      "src/services/compact/postCompactCleanup.ts",
+      "src/setup.ts",
+      "src/utils/attribution.ts",
+      "src/utils/sessionRestore.ts",
+      "src/utils/shell/bashProvider.ts",
+      "src/utils/worktree.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "COMMIT_ATTRIBUTION",
+    "references": 12,
+    "source_files": 9
+  },
+  {
+    "affected_sources": [
+      "src/utils/attachments.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "COMPACTION_REMINDERS",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/components/Message.tsx",
+      "src/constants/betas.ts",
+      "src/services/api/claude.ts",
+      "src/services/api/logging.ts",
+      "src/utils/messages.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "CONNECTOR_TEXT",
+    "references": 8,
+    "source_files": 5
+  },
+  {
+    "affected_sources": [
+      "src/commands/context/context-noninteractive.ts",
+      "src/commands/context/context.tsx",
+      "src/components/ContextVisualization.tsx",
+      "src/components/TokenWarning.tsx",
+      "src/query.ts",
+      "src/screens/REPL.tsx",
+      "src/screens/ResumeConversation.tsx",
+      "src/services/compact/autoCompact.ts",
+      "src/services/compact/postCompactCleanup.ts",
+      "src/setup.ts",
+      "src/tools.ts",
+      "src/utils/analyzeContext.ts",
+      "src/utils/sessionRestore.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "CONTEXT_COLLAPSE",
+    "references": 23,
+    "source_files": 13
+  },
+  {
+    "affected_sources": [
+      "src/QueryEngine.ts",
+      "src/cli/print.ts",
+      "src/commands/clear/conversation.ts",
+      "src/components/PromptInput/PromptInputFooterLeftSide.tsx",
+      "src/coordinator/coordinatorMode.ts",
+      "src/main.tsx",
+      "src/screens/REPL.tsx",
+      "src/screens/ResumeConversation.tsx",
+      "src/tools.ts",
+      "src/tools/AgentTool/AgentTool.tsx",
+      "src/tools/AgentTool/builtInAgents.ts",
+      "src/utils/processUserInput/processSlashCommand.tsx",
+      "src/utils/sessionRestore.ts",
+      "src/utils/systemPrompt.ts",
+      "src/utils/toolPool.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "COORDINATOR_MODE",
+    "references": 32,
+    "source_files": 15
+  },
+  {
+    "affected_sources": [
+      "src/services/analytics/metadata.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "COWORKER_TYPE_TELEMETRY",
+    "references": 2,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/commands.ts",
+      "src/entrypoints/cli.tsx"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "DAEMON",
+    "references": 3,
+    "source_files": 2
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "DIRECT_CONNECT",
+    "references": 5,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts",
+      "src/commands/reload-plugins/reload-plugins.ts",
+      "src/services/settingsSync/index.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "DOWNLOAD_USER_SETTINGS",
+    "references": 5,
+    "source_files": 3
+  },
+  {
+    "affected_sources": [
+      "src/entrypoints/cli.tsx"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "DUMP_SYSTEM_PROMPT",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/sessionTracing.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "ENHANCED_TELEMETRY_BETA",
+    "references": 2,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/commands.ts",
+      "src/components/messages/AttachmentMessage.tsx",
+      "src/constants/prompts.ts",
+      "src/query.ts",
+      "src/services/compact/compact.ts",
+      "src/services/mcp/useManageMCPConnections.ts",
+      "src/tools/SkillTool/SkillTool.ts",
+      "src/utils/attachments.ts",
+      "src/utils/messages.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "EXPERIMENTAL_SKILL_SEARCH",
+    "references": 21,
+    "source_files": 9
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts",
+      "src/memdir/paths.ts",
+      "src/query/stopHooks.ts",
+      "src/utils/backgroundHousekeeping.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "EXTRACT_MEMORIES",
+    "references": 7,
+    "source_files": 4
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts",
+      "src/utils/filePersistence/filePersistence.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "FILE_PERSISTENCE",
+    "references": 3,
+    "source_files": 2
+  },
+  {
+    "affected_sources": [
+      "src/commands.ts",
+      "src/commands/branch/index.ts",
+      "src/components/messages/UserTextMessage.tsx",
+      "src/tools/AgentTool/forkSubagent.ts",
+      "src/tools/ToolSearchTool/prompt.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "FORK_SUBAGENT",
+    "references": 5,
+    "source_files": 5
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/utils/log.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "HARD_FAIL",
+    "references": 2,
+    "source_files": 2
+  },
+  {
+    "affected_sources": [
+      "src/components/PromptInput/PromptInput.tsx",
+      "src/hooks/useHistorySearch.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "HISTORY_PICKER",
+    "references": 4,
+    "source_files": 2
+  },
+  {
+    "affected_sources": [
+      "src/QueryEngine.ts",
+      "src/commands.ts",
+      "src/components/Message.tsx",
+      "src/query.ts",
+      "src/tools.ts",
+      "src/utils/attachments.ts",
+      "src/utils/collapseReadSearch.ts",
+      "src/utils/messages.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "HISTORY_SNIP",
+    "references": 16,
+    "source_files": 8
+  },
+  {
+    "affected_sources": [
+      "src/screens/REPL.tsx"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "HOOK_PROMPTS",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/utils/envDynamic.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "IS_LIBC_GLIBC",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/utils/envDynamic.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "IS_LIBC_MUSL",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/bridge/bridgeMain.ts",
+      "src/bridge/initReplBridge.ts",
+      "src/cli/print.ts",
+      "src/commands.ts",
+      "src/commands/bridge/bridge.tsx",
+      "src/commands/brief.ts",
+      "src/commands/clear/conversation.ts",
+      "src/components/LogoV2/ChannelsNotice.tsx",
+      "src/components/LogoV2/LogoV2.tsx",
+      "src/components/Messages.tsx",
+      "src/components/PromptInput/Notifications.tsx",
+      "src/components/PromptInput/PromptInput.tsx",
+      "src/components/PromptInput/PromptInputFooterLeftSide.tsx",
+      "src/components/PromptInput/PromptInputQueuedCommands.tsx",
+      "src/components/PromptInput/usePromptInputPlaceholder.ts",
+      "src/components/Settings/Config.tsx",
+      "src/components/Spinner.tsx",
+      "src/components/StatusLine.tsx",
+      "src/components/messages/UserPromptMessage.tsx",
+      "src/components/messages/UserTextMessage.tsx",
+      "src/components/messages/UserToolResultMessage/UserToolSuccessMessage.tsx",
+      "src/constants/prompts.ts",
+      "src/hooks/toolPermission/handlers/interactiveHandler.ts",
+      "src/hooks/useAssistantHistory.ts",
+      "src/hooks/useCanUseTool.tsx",
+      "src/hooks/useGlobalKeybindings.tsx",
+      "src/hooks/useReplBridge.tsx",
+      "src/interactiveHelpers.tsx",
+      "src/keybindings/defaultBindings.ts",
+      "src/main.tsx",
+      "src/memdir/memdir.ts",
+      "src/memdir/paths.ts",
+      "src/screens/REPL.tsx",
+      "src/services/analytics/metadata.ts",
+      "src/services/compact/compact.ts",
+      "src/services/compact/prompt.ts",
+      "src/services/mcp/channelNotification.ts",
+      "src/services/mcp/useManageMCPConnections.ts",
+      "src/skills/bundled/index.ts",
+      "src/tools.ts",
+      "src/tools/AgentTool/AgentTool.tsx",
+      "src/tools/AskUserQuestionTool/AskUserQuestionTool.tsx",
+      "src/tools/BashTool/BashTool.tsx",
+      "src/tools/BriefTool/BriefTool.ts",
+      "src/tools/ConfigTool/supportedSettings.ts",
+      "src/tools/EnterPlanModeTool/EnterPlanModeTool.ts",
+      "src/tools/ExitPlanModeTool/ExitPlanModeV2Tool.ts",
+      "src/tools/PowerShellTool/PowerShellTool.tsx",
+      "src/tools/ScheduleCronTool/prompt.ts",
+      "src/tools/ToolSearchTool/prompt.ts",
+      "src/utils/attachments.ts",
+      "src/utils/conversationRecovery.ts",
+      "src/utils/messageQueueManager.ts",
+      "src/utils/messages.ts",
+      "src/utils/permissions/permissionRuleParser.ts",
+      "src/utils/processUserInput/processSlashCommand.tsx",
+      "src/utils/sessionStorage.ts",
+      "src/utils/settings/types.ts",
+      "src/utils/systemPrompt.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "KAIROS",
+    "references": 156,
+    "source_files": 59
+  },
+  {
+    "affected_sources": [
+      "src/commands.ts",
+      "src/commands/brief.ts",
+      "src/components/Messages.tsx",
+      "src/components/PromptInput/Notifications.tsx",
+      "src/components/PromptInput/PromptInput.tsx",
+      "src/components/PromptInput/PromptInputQueuedCommands.tsx",
+      "src/components/Settings/Config.tsx",
+      "src/components/Spinner.tsx",
+      "src/components/messages/UserPromptMessage.tsx",
+      "src/components/messages/UserToolResultMessage/UserToolSuccessMessage.tsx",
+      "src/constants/prompts.ts",
+      "src/hooks/useGlobalKeybindings.tsx",
+      "src/keybindings/defaultBindings.ts",
+      "src/main.tsx",
+      "src/tools/BriefTool/BriefTool.ts",
+      "src/tools/ToolSearchTool/prompt.ts",
+      "src/utils/attachments.ts",
+      "src/utils/conversationRecovery.ts",
+      "src/utils/permissions/permissionRuleParser.ts",
+      "src/utils/settings/types.ts"
+    ],
+    "compilation_state_333": "enabled",
+    "flag": "KAIROS_BRIEF",
+    "references": 39,
+    "source_files": 20
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts",
+      "src/components/LogoV2/ChannelsNotice.tsx",
+      "src/components/LogoV2/LogoV2.tsx",
+      "src/components/messages/UserTextMessage.tsx",
+      "src/hooks/toolPermission/handlers/interactiveHandler.ts",
+      "src/hooks/useCanUseTool.tsx",
+      "src/interactiveHelpers.tsx",
+      "src/main.tsx",
+      "src/services/mcp/channelNotification.ts",
+      "src/services/mcp/useManageMCPConnections.ts",
+      "src/tools/AskUserQuestionTool/AskUserQuestionTool.tsx",
+      "src/tools/EnterPlanModeTool/EnterPlanModeTool.ts",
+      "src/tools/ExitPlanModeTool/ExitPlanModeV2Tool.ts",
+      "src/utils/messageQueueManager.ts",
+      "src/utils/messages.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "KAIROS_CHANNELS",
+    "references": 21,
+    "source_files": 15
+  },
+  {
+    "affected_sources": [
+      "src/skills/bundled/index.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "KAIROS_DREAM",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/commands.ts",
+      "src/components/messages/UserTextMessage.tsx",
+      "src/hooks/useReplBridge.tsx",
+      "src/tools.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "KAIROS_GITHUB_WEBHOOKS",
+    "references": 4,
+    "source_files": 4
+  },
+  {
+    "affected_sources": [
+      "src/components/Settings/Config.tsx",
+      "src/tools.ts",
+      "src/tools/ConfigTool/supportedSettings.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "KAIROS_PUSH_NOTIFICATION",
+    "references": 4,
+    "source_files": 3
+  },
+  {
+    "affected_sources": [
+      "src/interactiveHelpers.tsx",
+      "src/main.tsx",
+      "src/utils/backgroundHousekeeping.ts",
+      "src/utils/settings/types.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "LODESTONE",
+    "references": 6,
+    "source_files": 4
+  },
+  {
+    "affected_sources": [
+      "src/tools/MCPTool/UI.tsx"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "MCP_RICH_OUTPUT",
+    "references": 3,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/commands.ts",
+      "src/services/mcp/client.ts",
+      "src/services/mcp/useManageMCPConnections.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "MCP_SKILLS",
+    "references": 9,
+    "source_files": 3
+  },
+  {
+    "affected_sources": [
+      "src/memdir/findRelevantMemories.ts",
+      "src/utils/sessionFileAccessHooks.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "MEMORY_SHAPE_TELEMETRY",
+    "references": 3,
+    "source_files": 2
+  },
+  {
+    "affected_sources": [
+      "src/keybindings/defaultBindings.ts",
+      "src/screens/REPL.tsx"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "MESSAGE_ACTIONS",
+    "references": 5,
+    "source_files": 2
+  },
+  {
+    "affected_sources": [
+      "src/components/permissions/PermissionRequest.tsx",
+      "src/components/tasks/BackgroundTasksDialog.tsx",
+      "src/tasks.ts",
+      "src/tasks/LocalShellTask/LocalShellTask.tsx",
+      "src/tools.ts",
+      "src/tools/AgentTool/runAgent.ts",
+      "src/tools/BashTool/BashTool.tsx",
+      "src/tools/BashTool/prompt.ts",
+      "src/tools/PowerShellTool/PowerShellTool.tsx"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "MONITOR_TOOL",
+    "references": 13,
+    "source_files": 9
+  },
+  {
+    "affected_sources": [
+      "src/constants/system.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "NATIVE_CLIENT_ATTESTATION",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/utils/imagePaste.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "NATIVE_CLIPBOARD_IMAGE",
+    "references": 2,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/commands/init.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "NEW_INIT",
+    "references": 2,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/tools.ts",
+      "src/utils/permissions/classifierDecision.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "OVERFLOW_TEST_TOOL",
+    "references": 2,
+    "source_files": 2
+  },
+  {
+    "affected_sources": [
+      "src/utils/telemetry/perfettoTracing.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "PERFETTO_TRACING",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/utils/permissions/permissions.ts",
+      "src/utils/permissions/yoloClassifier.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "POWERSHELL_AUTO_MODE",
+    "references": 2,
+    "source_files": 2
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts",
+      "src/commands.ts",
+      "src/commands/clear/conversation.ts",
+      "src/components/Messages.tsx",
+      "src/components/PromptInput/PromptInputFooterLeftSide.tsx",
+      "src/components/PromptInput/usePromptInputPlaceholder.ts",
+      "src/constants/prompts.ts",
+      "src/main.tsx",
+      "src/screens/REPL.tsx",
+      "src/services/compact/prompt.ts",
+      "src/tools.ts",
+      "src/tools/AgentTool/AgentTool.tsx",
+      "src/utils/sessionStorage.ts",
+      "src/utils/settings/types.ts",
+      "src/utils/systemPrompt.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "PROACTIVE",
+    "references": 37,
+    "source_files": 15
+  },
+  {
+    "affected_sources": [
+      "src/commands/compact/compact.ts",
+      "src/services/api/claude.ts",
+      "src/services/compact/autoCompact.ts",
+      "src/services/compact/compact.ts",
+      "src/services/compact/microCompact.ts",
+      "src/tools/AgentTool/runAgent.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "PROMPT_CACHE_BREAK_DETECTION",
+    "references": 9,
+    "source_files": 6
+  },
+  {
+    "affected_sources": [
+      "src/components/PromptInput/PromptInput.tsx",
+      "src/keybindings/defaultBindings.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "QUICK_SEARCH",
+    "references": 5,
+    "source_files": 2
+  },
+  {
+    "affected_sources": [
+      "src/commands/compact/compact.ts",
+      "src/components/TokenWarning.tsx",
+      "src/query.ts",
+      "src/services/compact/autoCompact.ts",
+      "src/utils/analyzeContext.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "REACTIVE_COMPACT",
+    "references": 5,
+    "source_files": 5
+  },
+  {
+    "affected_sources": [
+      "src/components/permissions/PermissionRequest.tsx",
+      "src/skills/bundled/index.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "REVIEW_ARTIFACT",
+    "references": 4,
+    "source_files": 2
+  },
+  {
+    "affected_sources": [
+      "src/skills/bundled/index.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "RUN_SKILL_GENERATOR",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/entrypoints/cli.tsx"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "SELF_HOSTED_RUNNER",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/components/Stats.tsx",
+      "src/utils/stats.ts",
+      "src/utils/statsCache.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "SHOT_STATS",
+    "references": 10,
+    "source_files": 3
+  },
+  {
+    "affected_sources": [
+      "src/utils/hooks/skillImprovement.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "SKILL_IMPROVEMENT",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/components/AutoUpdaterWrapper.tsx"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "SKIP_DETECTION_WHEN_AUTOUPDATES_DISABLED",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/utils/slowOperations.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "SLOW_OPERATION_LOGGING",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "SSH_REMOTE",
+    "references": 4,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "STREAMLINED_OUTPUT",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/components/memory/MemoryFileSelector.tsx",
+      "src/components/messages/CollapsedReadSearchContent.tsx",
+      "src/components/messages/SystemTextMessage.tsx",
+      "src/components/messages/teamMemCollapsed.tsx",
+      "src/components/messages/teamMemSaved.ts",
+      "src/memdir/memdir.ts",
+      "src/services/extractMemories/extractMemories.ts",
+      "src/services/extractMemories/prompts.ts",
+      "src/services/teamMemorySync/teamMemSecretGuard.ts",
+      "src/services/teamMemorySync/watcher.ts",
+      "src/setup.ts",
+      "src/utils/claudemd.ts",
+      "src/utils/collapseReadSearch.ts",
+      "src/utils/config.ts",
+      "src/utils/memory/types.ts",
+      "src/utils/memoryFileDetection.ts",
+      "src/utils/sessionFileAccessHooks.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "TEAMMEM",
+    "references": 53,
+    "source_files": 17
+  },
+  {
+    "affected_sources": [
+      "src/entrypoints/cli.tsx",
+      "src/query.ts",
+      "src/query/stopHooks.ts",
+      "src/utils/markdownConfigLoader.ts",
+      "src/utils/permissions/filesystem.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "TEMPLATES",
+    "references": 6,
+    "source_files": 5
+  },
+  {
+    "affected_sources": [
+      "src/components/PromptInput/PromptInputHelpMenu.tsx",
+      "src/hooks/useGlobalKeybindings.tsx",
+      "src/keybindings/defaultBindings.ts",
+      "src/tools.ts",
+      "src/utils/permissions/classifierDecision.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "TERMINAL_PANEL",
+    "references": 5,
+    "source_files": 5
+  },
+  {
+    "affected_sources": [
+      "src/components/PromptInput/PromptInput.tsx",
+      "src/components/Spinner.tsx",
+      "src/constants/prompts.ts",
+      "src/query.ts",
+      "src/screens/REPL.tsx",
+      "src/utils/attachments.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "TOKEN_BUDGET",
+    "references": 9,
+    "source_files": 6
+  },
+  {
+    "affected_sources": [
+      "src/commands.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "TORCH",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts",
+      "src/cli/structuredIO.ts",
+      "src/commands/login/login.tsx",
+      "src/components/PromptInput/PromptInput.tsx",
+      "src/components/Settings/Config.tsx",
+      "src/components/messages/UserToolResultMessage/UserToolErrorMessage.tsx",
+      "src/components/messages/UserToolResultMessage/UserToolSuccessMessage.tsx",
+      "src/components/permissions/ExitPlanModePermissionRequest/ExitPlanModePermissionRequest.tsx",
+      "src/components/permissions/PermissionDecisionDebugInfo.tsx",
+      "src/components/permissions/PermissionRuleExplanation.tsx",
+      "src/components/permissions/hooks.ts",
+      "src/constants/betas.ts",
+      "src/hooks/notifs/useAutoModeUnavailableNotification.ts",
+      "src/hooks/toolPermission/PermissionContext.ts",
+      "src/hooks/toolPermission/handlers/interactiveHandler.ts",
+      "src/hooks/toolPermission/permissionLogging.ts",
+      "src/hooks/useCanUseTool.tsx",
+      "src/hooks/useReplBridge.tsx",
+      "src/interactiveHelpers.tsx",
+      "src/main.tsx",
+      "src/migrations/resetAutoModeOptInForDefaultOffer.ts",
+      "src/screens/REPL.tsx",
+      "src/services/api/claude.ts",
+      "src/services/tools/toolExecution.ts",
+      "src/tools/AgentTool/AgentTool.tsx",
+      "src/tools/AgentTool/agentToolUtils.ts",
+      "src/tools/AgentTool/runAgent.ts",
+      "src/tools/BashTool/bashPermissions.ts",
+      "src/tools/ConfigTool/supportedSettings.ts",
+      "src/tools/ExitPlanModeTool/ExitPlanModeV2Tool.ts",
+      "src/tools/NotebookEditTool/NotebookEditTool.ts",
+      "src/types/permissions.ts",
+      "src/utils/attachments.ts",
+      "src/utils/autoModeDenials.ts",
+      "src/utils/betas.ts",
+      "src/utils/classifierApprovals.ts",
+      "src/utils/permissions/PermissionMode.ts",
+      "src/utils/permissions/autoModeState.ts",
+      "src/utils/permissions/bypassPermissionsKillswitch.ts",
+      "src/utils/permissions/getNextPermissionMode.ts",
+      "src/utils/permissions/permissionSetup.ts",
+      "src/utils/permissions/permissions.ts",
+      "src/utils/permissions/yoloClassifier.ts",
+      "src/utils/settings/settings.ts",
+      "src/utils/settings/types.ts",
+      "src/utils/toolResultStorage.ts"
+    ],
+    "compilation_state_333": "enabled",
+    "flag": "TRANSCRIPT_CLASSIFIER",
+    "references": 110,
+    "source_files": 46
+  },
+  {
+    "affected_sources": [
+      "src/utils/bash/parser.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "TREE_SITTER_BASH",
+    "references": 3,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/tools/BashTool/bashPermissions.ts",
+      "src/utils/bash/parser.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "TREE_SITTER_BASH_SHADOW",
+    "references": 5,
+    "source_files": 2
+  },
+  {
+    "affected_sources": [
+      "src/cli/print.ts",
+      "src/commands.ts",
+      "src/components/messages/UserTextMessage.tsx",
+      "src/main.tsx",
+      "src/setup.ts",
+      "src/tools.ts",
+      "src/tools/SendMessageTool/SendMessageTool.ts",
+      "src/tools/SendMessageTool/prompt.ts",
+      "src/utils/concurrentSessions.ts",
+      "src/utils/messages/systemInit.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "UDS_INBOX",
+    "references": 18,
+    "source_files": 10
+  },
+  {
+    "affected_sources": [
+      "src/commands.ts",
+      "src/components/PromptInput/PromptInput.tsx",
+      "src/components/permissions/ExitPlanModePermissionRequest/ExitPlanModePermissionRequest.tsx",
+      "src/screens/REPL.tsx",
+      "src/utils/processUserInput/processUserInput.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "ULTRAPLAN",
+    "references": 10,
+    "source_files": 5
+  },
+  {
+    "affected_sources": [
+      "src/utils/thinking.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "ULTRATHINK",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/services/api/withRetry.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "UNATTENDED_RETRY",
+    "references": 1,
+    "source_files": 1
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/services/settingsSync/index.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "UPLOAD_USER_SETTINGS",
+    "references": 2,
+    "source_files": 2
+  },
+  {
+    "affected_sources": [
+      "src/constants/prompts.ts",
+      "src/tools/AgentTool/builtInAgents.ts",
+      "src/tools/TaskUpdateTool/TaskUpdateTool.ts",
+      "src/tools/TodoWriteTool/TodoWriteTool.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "VERIFICATION_AGENT",
+    "references": 4,
+    "source_files": 4
+  },
+  {
+    "affected_sources": [
+      "src/commands.ts",
+      "src/components/LogoV2/VoiceModeNotice.tsx",
+      "src/components/PromptInput/Notifications.tsx",
+      "src/components/PromptInput/PromptInputFooterLeftSide.tsx",
+      "src/components/PromptInput/VoiceIndicator.tsx",
+      "src/components/TextInput.tsx",
+      "src/hooks/useVoiceIntegration.tsx",
+      "src/keybindings/defaultBindings.ts",
+      "src/screens/REPL.tsx",
+      "src/services/voiceStreamSTT.ts",
+      "src/state/AppState.tsx",
+      "src/tools/ConfigTool/ConfigTool.ts",
+      "src/tools/ConfigTool/prompt.ts",
+      "src/tools/ConfigTool/supportedSettings.ts",
+      "src/utils/settings/types.ts",
+      "src/voice/voiceModeEnabled.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "VOICE_MODE",
+    "references": 49,
+    "source_files": 16
+  },
+  {
+    "affected_sources": [
+      "src/main.tsx",
+      "src/screens/REPL.tsx",
+      "src/tools.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "WEB_BROWSER_TOOL",
+    "references": 4,
+    "source_files": 3
+  },
+  {
+    "affected_sources": [
+      "src/commands.ts",
+      "src/components/permissions/PermissionRequest.tsx",
+      "src/components/tasks/BackgroundTasksDialog.tsx",
+      "src/constants/tools.ts",
+      "src/tasks.ts",
+      "src/tools.ts",
+      "src/utils/permissions/classifierDecision.ts"
+    ],
+    "compilation_state_333": "not_requested",
+    "flag": "WORKFLOW_SCRIPTS",
+    "references": 10,
+    "source_files": 7
+  }
+]
