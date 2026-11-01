@@ -54,6 +54,7 @@ test('F080: URL, raw body, detailed tracing and metric attributes require truste
     'OTEL_LOG_RAW_API_BODIES', 'OTEL_LOG_MANAGED_SETTINGS',
     'OTEL_METRICS_INCLUDE_ACCOUNT_UUID', 'OTEL_TRACES_EXPORTER',
     'CLAUDE_CODE_ENHANCED_TELEMETRY_BETA',
+    'ENABLE_BETA_TRACING_DETAILED', 'BETA_TRACING_ENDPOINT',
   ]
   for (const name of fields) {
     assert.equal(isPrivilegedTelemetrySetting(name, '1'), true, name)
