@@ -2257,14 +2257,12 @@ async function run(): Promise<CommanderCommand> {
       // Check for pending agent memory snapshot updates (only for --agent mode, ant-only)
       if (feature('AGENT_MEMORY_SNAPSHOT') && mainThreadAgentDefinition && isCustomAgent(mainThreadAgentDefinition) && mainThreadAgentDefinition.memory && mainThreadAgentDefinition.pendingSnapshotUpdate) {
         const agentDef = mainThreadAgentDefinition;
-        const choice = await launchSnapshotUpdateDialog(root, {
+        await launchSnapshotUpdateDialog(root, {
           agentType: agentDef.agentType,
           scope: agentDef.memory!,
           snapshotTimestamp: agentDef.pendingSnapshotUpdate!.snapshotTimestamp
         });
-        // 2.1.310 的 launchSnapshotUpdateDialog 固定返回 keep。
-        // 清理旧版仅在 merge 分支使用、目标发行版已不存在的组件引用。
-        void choice;
+        // 目标版固定 keep；清除一次性 pending 标记后继续会话。
         agentDef.pendingSnapshotUpdate = undefined;
       }
 
