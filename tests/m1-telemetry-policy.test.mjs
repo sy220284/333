@@ -133,3 +133,19 @@ test('F080: 2.1.310 sensitive telemetry exporter and content variables cannot be
     ANT_OTEL_LOGS_EXPORTER:'console',
   },'Higher-trust destination and logging values must take precedence')
 })
+
+test('F080: project/local settings cannot turn off a trusted privacy-disable switch', () => {
+  for (const key of [
+    'DISABLE_TELEMETRY',
+    'DO_NOT_TRACK',
+    'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC',
+    'DISABLE_ERROR_REPORTING',
+  ]) {
+    assert.equal(isPrivilegedTelemetrySetting(key, 'false'),true,key)
+    assert.equal(isPrivilegedTelemetrySetting(key, '0'),true,key)
+    assert.equal(isPrivilegedTelemetrySetting(key, '1'),false,key)
+    assert.deepEqual(resolveProjectTelemetryEnv({[key]:'false'}, {}), {},key)
+    assert.deepEqual(resolveProjectTelemetryEnv({[key]:'false'}, {[key]:'1'}), {[key]:'1'}, key)
+    assert.deepEqual(resolveProjectTelemetryEnv({[key]:'1'}, {[key]:'0'}), {[key]:'1'}, key)
+  }
+})
