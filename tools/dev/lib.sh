@@ -8,6 +8,7 @@ load_manifest() {
   # shellcheck disable=SC1090
   source "$TOOLCHAIN_DIR/toolchain-components.env"
   TOOLS_ROOT="${DEV333_TOOLS_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/333-dev}"
+  # shellcheck disable=SC2034  # read by tools/dev/install.sh after sourcing lib.sh
   ENV_FILE="${DEV333_TOOLCHAIN_ENV_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/333/dev-toolchain.env}"
   REPO_ROOT="${DEV333_REPO_ROOT:-$PWD}"
 }
@@ -17,7 +18,8 @@ require_repo() {
 detect_arch() {
   [ "$(uname -s)" = Linux ] || die "离线组件支持 Linux/WSL x64；macOS/Windows 使用 rebuild.yml"
   case "$(uname -m)" in
-    x86_64|amd64) ARCH_KIND=x64 ;;
+    x86_64|amd64) # shellcheck disable=SC2034
+                  ARCH_KIND=x64 ;;
     *) die "当前发布组件仅支持 Linux x64：$(uname -m)" ;;
   esac
 }

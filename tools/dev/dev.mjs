@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve, join } from 'node:path';
 import { parseTypeScriptErrors, normalizePath } from './quality-core.mjs';
@@ -39,7 +39,11 @@ function isSource(file) { return /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(file) && !fil
 function checkedFiles() { return changed().filter(isSource).filter(file => existsSync(resolve(root, file))); }
 function typescript(checkChanged) {
   if (!existsSync(bin('tsc'))) throw new Error('缺失 TypeScript，先运行 npm install --prefix tools/dev');
-  const result = output(bin('tsc'), ['--noEmit', '--pretty', 'false', '-p', 'tsconfig.json']);
+  const config = resolve(root, '.rebuild/tsconfig.dev.json');
+  mkdirSync(resolve(root, '.rebuild'), { recursive: true });
+  const typeRoots = [resolve(tools, '../@types'), resolve(root, 'node_modules/@types')];
+  writeFileSync(config, JSON.stringify({ extends: '../tsconfig.json', compilerOptions: { typeRoots, types: ['node', 'react'] } }, null, 2) + '\n');
+  const result = output(bin('tsc'), ['--noEmit', '--pretty', 'false', '-p', config]);
   const errors = parseTypeScriptErrors(result.stdout + '\n' + result.stderr);
   if (!checkChanged) {
     process.stdout.write(result.stdout);
@@ -62,7 +66,7 @@ function lint(all) {
   if (!files.length) { console.log('[333-dev] 没有需要检查的文件'); return; }
   run(bin('biome'), ['lint', '--no-errors-on-unmatched', ...files]);
 }
-function boot() { run('npm', ['install', '--prefix', 'tools/dev', '--ignore-scripts', '--no-audit', '--no-fund']); }
+function boot() { run('npm', ['ci', '--prefix', 'tools/dev', '--ignore-scripts', '--no-audit', '--no-fund']); }
 const command = process.argv[2] ?? 'help';
 switch (command) {
   case 'bootstrap': boot(); break;

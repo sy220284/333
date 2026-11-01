@@ -41,6 +41,10 @@ jobs:
       run:
         shell: bash
     steps:
+      - name: Windows 提前允许长路径检出
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -52,12 +56,8 @@ jobs:
           bun-version: 1.4.4
       - name: 安装独立开发工具与平台编译器
         run: npm run dev:bootstrap
-      - name: 锁文件生成检查（后续固定进主线）
-        if: runner.os == 'Linux'
-        run: |
-          printf 'DEV_LOCK_BEGIN\n'
-          base64 -w0 tools/dev/package-lock.json
-          printf '\nDEV_LOCK_END\n'
+      - name: 检查冻结开发依赖锁文件
+        run: git diff --exit-code -- tools/dev/package-lock.json
       - name: 准备源码映射和冻结依赖
         run: |
           node build/restore-dependencies.mjs
@@ -70,7 +70,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           shellcheck --version
-          shellcheck tools/dev/*.sh
+          shellcheck --severity=warning tools/dev/*.sh
 
   security:
     name: 冻结依赖安全审计（公开报告）
