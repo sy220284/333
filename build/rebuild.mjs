@@ -64,10 +64,30 @@ function localFile(id) {
   const base = join(root, id);
   return [base,base.replace(/\.js$/,'.ts'),base.replace(/\.js$/,'.tsx'),join(base,'index.ts')].find(isFile);
 }
+// Modules absent from the published 2.1.88 source map belong to disabled
+// release feature gates. We do not synthesize replacement implementations.
+// A strict post-build check rejects any reachable reference to these entries.
+const excluded = new Set([
+  'VerifyPlanExecutionTool/VerifyPlanExecutionTool.js',
+  'compact/snipCompact.js',
+  'components/agents/SnapshotUpdateDialog.js',
+  'assistant/AssistantSessionChooser.js',
+  'commands/assistant/assistant.js',
+  'compact/cachedMicrocompact.js',
+  'contextCollapse/index.js',
+  'filePersistence/types.js',
+]);
+const marker = '__unavailable_release_feature__';
 const unresolved = new Set();
 const plugin = {
   name: 'frozen-release-dependencies',
   setup(build) {
+    build.onResolve({ filter: /\\.js$/ }, args => {
+      const normalized = args.path.replaceAll('\\\\', '/');
+      if ([...excluded].some(p => normalized.endsWith(p))) {
+        return { path: marker + '/' + normalized.replaceAll('.', '_').replaceAll('/', '_'), external: true };
+      }
+    });
     build.onResolve({ filter: /^[^./]/ }, args => {
       const id = args.path;
       if (id.startsWith('node:') || id.startsWith('bun:') || builtins.has(id)) return;
@@ -116,5 +136,12 @@ if (!result.success) {
   console.error('Unresolved public dependency modules: ' + [...unresolved].sort().join(', '));
   process.exitCode = 1;
 } else {
+  const leaked = [];
+  for (const output of result.outputs) {
+    if (output.path.endsWith('.map')) continue;
+    const emitted = await output.text();
+    if (emitted.includes(marker)) leaked.push(output.path);
+  }
+  if (leaked.length) throw Error('Disabled-source reference leaked into release build: ' + leaked.join(', '));
   console.log('Compiled ' + result.outputs.length + ' artifacts from extracted source');
 }
