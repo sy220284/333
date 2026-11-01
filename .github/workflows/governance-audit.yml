@@ -46,6 +46,8 @@ jobs:
           npm run dev:bootstrap
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
+      - name: 确保 SDK 类型由真实 Zod 模式正确生成
+        run: node tools/governance/regenerate-sdk-types.mjs --check
       - name: 执行完整 TypeScript 类型诊断并保留实际失败结果
         run: |
           mkdir -p .rebuild/governance
