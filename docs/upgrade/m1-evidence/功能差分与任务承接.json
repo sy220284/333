@@ -3221,7 +3221,19 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/main.tsx",
+          "presence": "FILE_PRESENT"
+        },
+        {
+          "path": "src/ink.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F002",
@@ -3244,7 +3256,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/cli/print.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F003",
@@ -3269,7 +3289,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/cli/structuredIO.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F004",
@@ -3293,7 +3321,19 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/commands/resume",
+          "presence": "DIR_PRESENT"
+        },
+        {
+          "path": "src/history.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F006",
@@ -3317,7 +3357,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/commands/export",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F007",
@@ -3342,7 +3390,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/commands/plan",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F008",
@@ -3365,7 +3421,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/tools/AskUserQuestionTool",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F009",
@@ -3390,7 +3454,19 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/components",
+          "presence": "DIR_PRESENT"
+        },
+        {
+          "path": "src/commands/diff",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F010",
@@ -3413,7 +3489,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/commands/rewind",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F011",
@@ -3440,7 +3524,23 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/keybindings",
+          "presence": "DIR_PRESENT"
+        },
+        {
+          "path": "src/vim",
+          "presence": "DIR_PRESENT"
+        },
+        {
+          "path": "src/commands/theme",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F012",
@@ -3465,7 +3565,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/commands/status",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F013",
@@ -3491,7 +3599,27 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/commands/voice/",
+          "presence": "DIR_PRESENT"
+        },
+        {
+          "path": "src/voice/",
+          "presence": "DIR_PRESENT"
+        },
+        {
+          "path": "src/services/voice.ts",
+          "presence": "FILE_PRESENT"
+        },
+        {
+          "path": "src/services/voiceStreamSTT.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F014",
@@ -3515,7 +3643,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/commands/add-dir",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F015",
@@ -3542,7 +3678,19 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/QueryEngine.ts",
+          "presence": "FILE_PRESENT"
+        },
+        {
+          "path": "src/query.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F016",
@@ -3565,7 +3713,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/services/api/claude.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F017",
@@ -3590,7 +3746,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/commands/model",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F018",
@@ -3614,7 +3778,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/utils/model",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F019",
@@ -3637,7 +3809,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/cli/handlers/auth.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F020",
@@ -3662,7 +3842,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/services/api/withRetry.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F023",
@@ -3687,7 +3875,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/services/compact/",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F027",
@@ -3710,7 +3906,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/services/api/usage.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F029",
@@ -3734,7 +3938,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/tools/FileWriteTool",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F031",
@@ -3758,7 +3970,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/tools/GlobTool",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F032",
@@ -3785,7 +4005,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/tools/BashTool",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F033",
@@ -3808,7 +4036,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/tools/PowerShellTool",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F034",
@@ -3831,7 +4067,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/tools/NotebookEditTool",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F035",
@@ -3854,7 +4098,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/tools/LSPTool",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F036",
@@ -3878,7 +4130,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/tools/WebSearchTool",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F037",
@@ -3902,7 +4162,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/commands/chrome",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F038",
@@ -3928,7 +4196,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/commands/commit.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F039",
@@ -3951,7 +4227,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/tools/ToolSearchTool",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F040",
@@ -3977,7 +4261,19 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/Tool.ts",
+          "presence": "FILE_PRESENT"
+        },
+        {
+          "path": "src/tools/utils.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F041",
@@ -4004,7 +4300,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/utils/permissions/PermissionMode.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F043",
@@ -4032,7 +4336,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/utils/permissions/permissionRuleParser.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F047",
@@ -4059,7 +4371,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/constants/prompts.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F048",
@@ -4085,7 +4405,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/utils/permissions/",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F049",
@@ -4109,7 +4437,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/utils/sandbox/",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F050",
@@ -4135,7 +4471,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/utils/permissions/denialTracking.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F051",
@@ -4159,7 +4503,19 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/tools/SkillTool",
+          "presence": "DIR_PRESENT"
+        },
+        {
+          "path": "src/commands/skills",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F052",
@@ -4185,7 +4541,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/cli/handlers/plugins.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F053",
@@ -4211,7 +4575,19 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/cli/handlers/mcp.tsx",
+          "presence": "FILE_PRESENT"
+        },
+        {
+          "path": "src/tools/MCPTool",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F054",
@@ -4235,7 +4611,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/commands/hooks",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F055",
@@ -4261,7 +4645,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/entrypoints/",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F061",
@@ -4285,7 +4677,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/tools/ScheduleCronTool",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F062",
@@ -4314,7 +4714,19 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/tasks",
+          "presence": "DIR_PRESENT"
+        },
+        {
+          "path": "src/tools/TaskListTool",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F066",
@@ -4339,7 +4751,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/bridge/",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F067",
@@ -4364,7 +4784,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/cli/transports/",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F068",
@@ -4389,7 +4817,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/commands/desktop",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F075",
@@ -4410,7 +4846,11 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": false,
+      "legacy_implementation_note": "No matched 2.1.88 primary CLI feature source; may be 2.1.310 packaged resource/extension. Require a real consumer before declaring user-facing new function"
     },
     {
       "id": "F076",
@@ -4431,7 +4871,11 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": false,
+      "legacy_implementation_note": "No matched 2.1.88 primary CLI feature source; may be 2.1.310 packaged resource/extension. Require a real consumer before declaring user-facing new function"
     },
     {
       "id": "F077",
@@ -4452,7 +4896,11 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": false,
+      "legacy_implementation_note": "No matched 2.1.88 primary CLI feature source; may be 2.1.310 packaged resource/extension. Require a real consumer before declaring user-facing new function"
     },
     {
       "id": "F079",
@@ -4477,7 +4925,15 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/commands/doctor",
+          "presence": "DIR_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F080",
@@ -4498,7 +4954,15 @@
       "M1_required": true,
       "responsibility": "M1_IMPLEMENT_IF_TARGET_NEW_DELTA",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/services/api/logging.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true
     },
     {
       "id": "F086",
@@ -4519,7 +4983,16 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/services/compact/autoCompact.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true,
+      "legacy_implementation_note": "Identified an existing 2.1.88 component analogous to the target 2.1.310 behavior; feature-level semantic diff still required"
     },
     {
       "id": "F087",
@@ -4540,7 +5013,16 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/services/api/withRetry.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true,
+      "legacy_implementation_note": "Identified an existing 2.1.88 component analogous to the target 2.1.310 behavior; feature-level semantic diff still required"
     },
     {
       "id": "F088",
@@ -4561,7 +5043,16 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/screens/REPL.tsx",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true,
+      "legacy_implementation_note": "Identified an existing 2.1.88 component analogous to the target 2.1.310 behavior; feature-level semantic diff still required"
     },
     {
       "id": "F089",
@@ -4583,7 +5074,16 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/tools/AgentTool/runAgent.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true,
+      "legacy_implementation_note": "Identified an existing 2.1.88 component analogous to the target 2.1.310 behavior; feature-level semantic diff still required"
     },
     {
       "id": "F090",
@@ -4606,7 +5106,16 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/utils/telemetry/events.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true,
+      "legacy_implementation_note": "Old logging events existed, but claude_code.safety_event was introduced in 2.1.307; the exact new event remains an F090 M3 implementation delta"
     },
     {
       "id": "F091",
@@ -4627,7 +5136,16 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/cli/handlers/plugins.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true,
+      "legacy_implementation_note": "Identified an existing 2.1.88 component analogous to the target 2.1.310 behavior; feature-level semantic diff still required"
     },
     {
       "id": "F092",
@@ -4648,7 +5166,16 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/services/mcp/client.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true,
+      "legacy_implementation_note": "Identified an existing 2.1.88 component analogous to the target 2.1.310 behavior; feature-level semantic diff still required"
     },
     {
       "id": "F102",
@@ -4673,7 +5200,16 @@
       "M1_required": false,
       "responsibility": "M1_COMPARE_THEN_HANDOFF",
       "must_check": "Both old and new entry -> consumer -> enable condition -> permission -> observable result, then classify added/expanded/same/replaced/removed",
-      "status": "COMPARISON_PENDING"
+      "status": "COMPARISON_PENDING",
+      "old_source_checks": [
+        {
+          "path": "src/commands/review/reviewRemote.ts",
+          "presence": "FILE_PRESENT"
+        }
+      ],
+      "old_source_recheck_tree_sha": "31efcc10b433feb7ef3927e099b89cd63b6e83e0",
+      "old_source_proven": true,
+      "legacy_implementation_note": "Identified an existing 2.1.88 component analogous to the target 2.1.310 behavior; feature-level semantic diff still required"
     }
   ]
 }
