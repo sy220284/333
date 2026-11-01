@@ -66,7 +66,7 @@ test('original and rebuilt versions both execute Glob and Grep through model-too
         if(state.count===1) {
           content=[
             SSE('content_block_start',{type:'content_block_start',index:0,content_block:{type:'tool_use',id:'toolu_333_search',name:state.tool,input:{}}}),
-            SSE('content_block_delta',{type:'content_block_delta',index:0,delta:{type:'input_json_delta',partial_json:JSON.stringify(state.tool === 'Glob' ? {pattern:'*.txt'} : {pattern:'FIXTURE_333_READ_RESULT',output_mode:'content'})}}),
+            SSE('content_block_delta',{type:'content_block_delta',index:0,delta:{type:'input_json_delta',partial_json:JSON.stringify(state.tool === 'Glob' ? {pattern:'*.txt',path:tmp} : {pattern:'FIXTURE_333_READ_RESULT',path:tmp,output_mode:'content'})}}),
             SSE('content_block_stop',{type:'content_block_stop',index:0})
           ];
           stop='tool_use';
@@ -98,7 +98,7 @@ test('original and rebuilt versions both execute Glob and Grep through model-too
     ]) {
       active=tool+'-'+name;
       sessions.set(active,{count:0,sawToolResult:false,tool});
-      const result=await launch(executable,file,[...baseArgs,'--tools',tool],tmp,env);
+      const result=await launch(executable,file,[...baseArgs,'--tools',tool],root,env);
       assert.equal(result.result,reply,active+' answer mismatch');
       assert.equal(result.is_error,false,active+' returned an error');
       assert.equal(result.num_turns,2,active+' executed wrong number of model turns');
