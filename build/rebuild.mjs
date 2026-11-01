@@ -82,8 +82,8 @@ const unresolved = new Set();
 const plugin = {
   name: 'frozen-release-dependencies',
   setup(build) {
-    build.onResolve({ filter: /\\.js$/ }, args => {
-      const normalized = args.path.replaceAll('\\\\', '/');
+    build.onResolve({ filter: /\.js$/ }, args => {
+      const normalized = args.path.replaceAll('\\', '/');
       if ([...excluded].some(p => normalized.endsWith(p))) {
         return { path: marker + '/' + normalized.replaceAll('.', '_').replaceAll('/', '_'), external: true };
       }
