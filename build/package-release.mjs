@@ -44,7 +44,7 @@ node launcher.cjs --help
 The \`vendor/\` directory contains platform-specific precompiled files. Install
 any platform-specific optional native libraries separately where needed.
 This package preserves the original project's proprietary license notice.
-\`);
+`);
 const files=[];
 function walk(dir) {
  for(const entry of readdirSync(dir,{withFileTypes:true})){
