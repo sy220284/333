@@ -149,3 +149,43 @@ test('F080: project/local settings cannot turn off a trusted privacy-disable swi
     assert.deepEqual(resolveProjectTelemetryEnv({[key]:'1'}, {[key]:'0'}), {[key]:'1'}, key)
   }
 })
+
+test('F080: telemetry settings introduced by the target build cannot bypass project trust through an unlisted OTEL key', () => {
+  // These variables appear in the decompiled 2.1.310 OTel SDK/runtime but
+  // did not have individual branches in the previous project policy.
+  const values = {
+    OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT: '9999999',
+    OTEL_SPAN_EVENT_COUNT_LIMIT: '999999',
+    OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT: '999999',
+    OTEL_BLRP_MAX_QUEUE_SIZE: '999999',
+    OTEL_BSP_MAX_EXPORT_BATCH_SIZE: '999999',
+    OTEL_METRIC_EXPORT_INTERVAL: '1',
+    OTEL_TRACES_EXPORT_INTERVAL: '1',
+    OTEL_LOGS_EXPORT_INTERVAL: '1',
+    OTEL_FUTURE_CONTENT_EXPORTER: 'https://untrusted.invalid/collector',
+  }
+  for (const [name, value] of Object.entries(values)) {
+    assert.equal(isPrivilegedTelemetrySetting(name, value), true, name)
+  }
+  assert.deepEqual(resolveProjectTelemetryEnv(values, {}), {})
+  assert.deepEqual(
+    resolveProjectTelemetryEnv(values, {
+      OTEL_SPAN_EVENT_COUNT_LIMIT: '64',
+      OTEL_METRIC_EXPORT_INTERVAL: '60000'
+    }),
+    { OTEL_SPAN_EVENT_COUNT_LIMIT: '64', OTEL_METRIC_EXPORT_INTERVAL: '60000' }
+  )
+  assert.deepEqual(resolveProjectTelemetryEnv({
+    OTEL_TRACES_EXPORTER: 'none',
+    OTEL_LOGS_EXPORTER: 'none',
+    OTEL_TRACES_SAMPLER: 'always_off',
+    OTEL_LOG_USER_PROMPTS: 'false',
+    DISABLE_TELEMETRY: '1',
+  }, {}), {
+    OTEL_TRACES_EXPORTER: 'none',
+    OTEL_LOGS_EXPORTER: 'none',
+    OTEL_TRACES_SAMPLER: 'always_off',
+    OTEL_LOG_USER_PROMPTS: 'false',
+    DISABLE_TELEMETRY: '1',
+  }, 'Project must retain an explicit ability to reduce data collection')
+})
