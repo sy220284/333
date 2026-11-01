@@ -59,6 +59,8 @@ jobs:
           node tools/governance/summarize.mjs types .rebuild/governance/typescript.log .rebuild/governance/type-report.json
       - name: 根据原始源码映射逐项核查缺失文件
         run: node tools/governance/missing-sources.mjs .rebuild/governance/type-report.json .rebuild/governance/missing-sources.json
+      - name: 提取所有缺失模块的导出与消费者调用契约
+        run: node tools/governance/contract-trace.mjs .rebuild/governance/missing-sources.json .rebuild/governance/missing-contracts.json
       - name: 审计全部冻结依赖及漏洞链路
         run: |
           set +e
@@ -76,6 +78,7 @@ jobs:
             .rebuild/governance/typescript.log
             .rebuild/governance/type-report.json
             .rebuild/governance/missing-sources.json
+            .rebuild/governance/missing-contracts.json
             .rebuild/governance/audit.json
             .rebuild/governance/audit-summary.json
           retention-days: 90
