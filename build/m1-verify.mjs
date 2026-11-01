@@ -15,6 +15,44 @@ const changes = [1, 2, 3].flatMap(i => {
   assert.equal(part.source_blob ?? source.official_changelog_blob, source.official_changelog_blob);
   return part.records;
 });
+// Each reviewed change stays separate from the immutable original release index.
+// Never count a lexical candidate as a signed-off semantic update.
+const releaseReviews = readJson(join(evidenceDir, 'release-semantic-review.json')).items;
+const changeById = new Map(changes.map(row => [row.id, row]));
+assert.equal(changeById.size, 6313, 'Original source rows must stay unique');
+assert.equal(new Set(releaseReviews.map(row => row.id)).size, releaseReviews.length);
+for(const reviewed of releaseReviews) {
+  const row = changeById.get(reviewed.id);
+  assert.ok(row, 'Unknown reviewed changelog item: ' + reviewed.id);
+  assert.equal(reviewed.source_line, row.source_line);
+  assert.equal(reviewed.source_blob, source.official_changelog_blob);
+  assert.equal(reviewed.evidence_level, 'TARGET_SOURCE_CONFIRMED');
+  assert.ok(Array.isArray(reviewed.related_F_confirmed) &&
+            reviewed.related_F_confirmed.length>0);
+  assert.ok(Array.isArray(reviewed.target_code_anchors) &&
+            reviewed.target_code_anchors.length>0);
+  assert.ok(Array.isArray(reviewed.tests) && reviewed.tests.length>0);
+  for(const path of [...reviewed.implemented_source,...reviewed.tests]) {
+    assert.ok(existsSync(join(root,path)), 'Missing implementation or test: '+path);
+  }
+  // Preserve original release description and source position; overlays may
+  // only set reviewed semantics and implementation proof fields.
+  for(const key of ['source_line','source_blob','id','source_text','version','ordinal']) {
+    assert.equal(key==='source_line'?reviewed[key]??row[key]:
+                 key==='source_blob'?reviewed[key]??source.official_changelog_blob:row[key],
+                 key==='source_blob'?source.official_changelog_blob:row[key]);
+  }
+  Object.assign(row, {
+    review_status:reviewed.review_status,
+    evidence_level:reviewed.evidence_level,
+    applicability:reviewed.applicability,
+    final_2_1_310_behavior:reviewed.final_2_1_310_behavior,
+    later_override:reviewed.later_override,
+    owner_M_verified:reviewed.owner_M_verified,
+    related_F_confirmed:reviewed.related_F_confirmed,
+    scope_exclusion_evidence:reviewed.scope_exclusion_evidence,
+  });
+}
 const coverage = readJson(join(root, 'docs/upgrade/upgrade-coverage.json'));
 const routing = readJson(join(evidenceDir, '功能差分与任务承接.json'));
 const legacyCallSites = readJson(join(evidenceDir, 'legacy-call-sites.json'));
