@@ -16,7 +16,12 @@
       "target_static_candidates": [
         "chunk-j0tbz6ra.js:35379"
       ],
-      "static_observation": "仅识别到 verify_plan_reminder 字符串，未找到旧类的可直接迁入代码"
+      "static_observation": "仅识别到 verify_plan_reminder 字符串，未找到旧类的可直接迁入代码",
+      "developer_task": "M7",
+      "feature_ref": "F064",
+      "target_semantic_candidate": "chunk-j0tbz6ra.js:35379",
+      "handoff_missing_equivalence": "新版有 verify_plan_reminder 附件类型，尚未证实 VerifyPlanExecutionTool 的等价执行者；M7 验证/审查 Agent 完整功能判断",
+      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE"
     },
     {
       "module": "snipCompact",
@@ -29,7 +34,12 @@
       ],
       "status": "INDEXED",
       "target_static_candidates": [],
-      "static_observation": "旧模块名及指定检索线索未命中；仍需检查重命名、条件编译与实际功能"
+      "static_observation": "旧模块名及指定检索线索未命中；仍需检查重命名、条件编译与实际功能",
+      "developer_task": "M4",
+      "feature_ref": "F023",
+      "target_semantic_candidate": "chunk-92hm4yb6.js:4726-4728",
+      "handoff_missing_equivalence": "新版有压缩后读取历史 transcript 的上下文提示，尚未证实旧 snipCompact 子模块等价",
+      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE"
     },
     {
       "module": "SnapshotUpdateDialog",
@@ -44,7 +54,12 @@
       "target_static_candidates": [
         "chunk-0x2m04n3.js:752"
       ],
-      "static_observation": "目标版存在 launchSnapshotUpdateDialog 导出；待核验功能与旧模块是否等价"
+      "static_observation": "目标版存在 launchSnapshotUpdateDialog 导出；待核验功能与旧模块是否等价",
+      "developer_task": "M5",
+      "feature_ref": "F004",
+      "target_semantic_candidate": "chunk-0x2m04n3.js:752",
+      "handoff_missing_equivalence": "新版 UI 模块导出 launchSnapshotUpdateDialog；需要在 M5 实证触发按钮与 Dialog 的用户实际操作",
+      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE"
     },
     {
       "module": "AssistantSessionChooser",
@@ -57,7 +72,12 @@
       ],
       "status": "INDEXED",
       "target_static_candidates": [],
-      "static_observation": "旧模块名及指定检索线索未命中；仍需检查重命名、条件编译与实际功能"
+      "static_observation": "旧模块名及指定检索线索未命中；仍需检查重命名、条件编译与实际功能",
+      "developer_task": "M4",
+      "feature_ref": "F004",
+      "target_semantic_candidate": "chunk-mh7sh27p.js:702",
+      "handoff_missing_equivalence": "新版 CLI 具有 --resume/--continue 和会话选择参数，需区分 REPL chooser 与纯命令行帮助",
+      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE"
     },
     {
       "module": "assistant",
@@ -70,7 +90,12 @@
       ],
       "status": "INDEXED",
       "target_static_candidates": [],
-      "static_observation": "旧模块名及指定检索线索未命中；仍需检查重命名、条件编译与实际功能"
+      "static_observation": "旧模块名及指定检索线索未命中；仍需检查重命名、条件编译与实际功能",
+      "developer_task": "M2",
+      "feature_ref": "F015",
+      "target_semantic_candidate": "chunk-j0tbz6ra.js:34465",
+      "handoff_missing_equivalence": "新版实际 Assistant 消息与 Query Engine 相关模块存在；缺失文件名过于通用，须在 M2 以入口语义比对，不能新建同名空模块",
+      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE"
     },
     {
       "module": "cachedMicrocompact",
@@ -85,7 +110,12 @@
       "target_static_candidates": [
         "chunk-wany0nxw.js:1625"
       ],
-      "static_observation": "目标版存在 time-based microcompact 处理分支；旧文件名未按原样命中"
+      "static_observation": "目标版存在 time-based microcompact 处理分支；旧文件名未按原样命中",
+      "developer_task": "M4",
+      "feature_ref": "F023",
+      "target_semantic_candidate": "chunk-ajtyjx88.js:10493",
+      "handoff_missing_equivalence": "新版会话标记存在 microcompact_boundary，需实证缓存失效、短压缩、回滚与恢复",
+      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE"
     },
     {
       "module": "contextCollapse",
@@ -98,7 +128,12 @@
       ],
       "status": "INDEXED",
       "target_static_candidates": [],
-      "static_observation": "旧模块名及指定检索线索未命中；仍需检查重命名、条件编译与实际功能"
+      "static_observation": "旧模块名及指定检索线索未命中；仍需检查重命名、条件编译与实际功能",
+      "developer_task": "M4",
+      "feature_ref": "F023",
+      "target_semantic_candidate": "chunk-2sq2cy74.js:452",
+      "handoff_missing_equivalence": "目标有上下文压缩实际消费路径的辅助信息，旧 contextCollapse 独立对象是否合并进 compact 待完整调用核查",
+      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE"
     }
   ]
 }
