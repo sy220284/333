@@ -17,7 +17,7 @@ test('处理重复文件并拒绝仓库外文件', () => {
   const root = process.cwd();
   assert.deepEqual(relativeFiles(root, ['src/a.ts', 'src/a.ts', './tests/a.mjs']), ['src/a.ts', 'tests/a.mjs']);
   assert.throws(() => relativeFiles(root, ['../outside.ts']), /拒绝仓库外路径/);
-  assert.equal(join(root, 'src/a.ts').endsWith('src/a.ts'), true);
+  assert.equal(normalizePath(join(root, 'src/a.ts')).endsWith('src/a.ts'), true);
 });
 
 test('检查 ELF、Mach-O、PE 原生文件标识', () => {
