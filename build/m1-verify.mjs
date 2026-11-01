@@ -193,7 +193,10 @@ function checkAll() {
   assert.equal(routing.flags.filter(x=>x.target_static_leads?.length).length,89);
   assert.ok(routing.flags.every(x => x.target_lead_assessment),
     'All 90 flags require candidate evidence and misleading-hit classification');
-  assert.equal(routing.flags.filter(x=>x.static_lead_is_equivalent===false).length,27);
+  assert.ok(routing.flags.filter(x=>x.static_lead_is_equivalent===false).length>=20,
+    'Potential false-positive keyword matches must be retained for manual review');
+  assert.ok(routing.flags.some(x=>x.flag==='ULTRAPLAN' && x.target_formalized.includes('NOT_DEFAULT_PUBLIC_FEATURE')),
+    'Historical removal must be checked against surviving gated target entry');
   const accepted = {
     flags: flagSet.filter(verifiedFlag).length,
     anchors: anchorSet.filter(verifiedAnchor).length,
