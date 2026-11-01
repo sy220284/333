@@ -2262,13 +2262,9 @@ async function run(): Promise<CommanderCommand> {
           scope: agentDef.memory!,
           snapshotTimestamp: agentDef.pendingSnapshotUpdate!.snapshotTimestamp
         });
-        if (choice === 'merge') {
-          const {
-            buildMergePrompt
-          } = await import('./components/agents/SnapshotUpdateDialog.js');
-          const mergePrompt = buildMergePrompt(agentDef.agentType, agentDef.memory!);
-          inputPrompt = inputPrompt ? `${mergePrompt}\n\n${inputPrompt}` : mergePrompt;
-        }
+        // 2.1.310 的 launchSnapshotUpdateDialog 固定返回 keep。
+        // 清理旧版仅在 merge 分支使用、目标发行版已不存在的组件引用。
+        void choice;
         agentDef.pendingSnapshotUpdate = undefined;
       }
 
