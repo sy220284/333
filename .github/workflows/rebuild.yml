@@ -65,6 +65,8 @@ jobs:
         run: node --test tests/distribution-isolation.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
         run: node --test tests/cli-parity.test.mjs
+      - name: 核对升级任务卡与功能场景映射及新增行为边界
+        run: node --test tests/upgrade-coverage.test.mjs tests/fallback-model-chain.test.mjs tests/auto-compact-window.test.mjs
       - name: 模拟模型回调与本地 Read 工具端到端差分验收
         run: node --test tests/model-loop-local.test.mjs
       - name: Glob 与 Grep 文件搜索模型工具往返差分验收
