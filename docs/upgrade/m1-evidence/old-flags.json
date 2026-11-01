@@ -1350,7 +1350,19 @@
       "target_version": "2.1.310",
       "target_evidence": null,
       "status": "INDEXED",
-      "next_required": "Verify final target branch, executable entrypoint, permissions, effects and negative runtime test"
+      "next_required": "Confirm built release 2.1.310 does not expose this internal test-only tool; do not turn on OVERFLOW_TEST_TOOL or invent a placeholder",
+      "old_contract_evidence": [
+        "2.1.88 src/tools.ts:105-109: feature('OVERFLOW_TEST_TOOL') 控制 require './tools/OverflowTestTool/OverflowTestTool.js'",
+        "2.1.88 src/tools.ts:221: 非默认工具注册列表，仅在编译开关启用时加入",
+        "2.1.88 src/utils/permissions/classifierDecision.ts:32-35,90: 与同一功能开关绑定的安全白名单名称",
+        "2.1.88 ZIP 内不存在 src/tools/OverflowTestTool/ 子目录"
+      ],
+      "target_search_evidence": [
+        "2.1.310 只读反编译模块扫描未找到旧开关独立同名令牌",
+        "无已证实与旧 OverflowTestTool 一一等价的目标执行器"
+      ],
+      "provisional_classification": "INTERNAL_TEST_CONDITIONAL_BUILD_NOT_DEFAULT",
+      "target_version_semantics_verified": false
     },
     {
       "flag": "PERFETTO_TRACING",
