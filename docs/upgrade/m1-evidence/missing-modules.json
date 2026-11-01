@@ -1,0 +1,84 @@
+{
+  "schema": 1,
+  "baseline": "2.1.88",
+  "target": "2.1.310",
+  "records": [
+    {
+      "module": "VerifyPlanExecutionTool",
+      "old_source_gap_confirmed": true,
+      "target_state": "UNVERIFIED",
+      "new_execution_path": null,
+      "comparison_evidence": null,
+      "owner_M": [
+        "M1"
+      ],
+      "status": "INDEXED"
+    },
+    {
+      "module": "snipCompact",
+      "old_source_gap_confirmed": true,
+      "target_state": "UNVERIFIED",
+      "new_execution_path": null,
+      "comparison_evidence": null,
+      "owner_M": [
+        "M1"
+      ],
+      "status": "INDEXED"
+    },
+    {
+      "module": "SnapshotUpdateDialog",
+      "old_source_gap_confirmed": true,
+      "target_state": "UNVERIFIED",
+      "new_execution_path": null,
+      "comparison_evidence": null,
+      "owner_M": [
+        "M1"
+      ],
+      "status": "INDEXED"
+    },
+    {
+      "module": "AssistantSessionChooser",
+      "old_source_gap_confirmed": true,
+      "target_state": "UNVERIFIED",
+      "new_execution_path": null,
+      "comparison_evidence": null,
+      "owner_M": [
+        "M1"
+      ],
+      "status": "INDEXED"
+    },
+    {
+      "module": "assistant",
+      "old_source_gap_confirmed": true,
+      "target_state": "UNVERIFIED",
+      "new_execution_path": null,
+      "comparison_evidence": null,
+      "owner_M": [
+        "M1"
+      ],
+      "status": "INDEXED"
+    },
+    {
+      "module": "cachedMicrocompact",
+      "old_source_gap_confirmed": true,
+      "target_state": "UNVERIFIED",
+      "new_execution_path": null,
+      "comparison_evidence": null,
+      "owner_M": [
+        "M1"
+      ],
+      "status": "INDEXED"
+    },
+    {
+      "module": "contextCollapse",
+      "old_source_gap_confirmed": true,
+      "target_state": "UNVERIFIED",
+      "new_execution_path": null,
+      "comparison_evidence": null,
+      "owner_M": [
+        "M1"
+      ],
+      "status": "INDEXED"
+    }
+  ]
+}
