@@ -1,6 +1,7 @@
-import { mkdirSync, symlinkSync, existsSync, writeFileSync } from 'node:fs';
+import { mkdirSync, symlinkSync, existsSync, writeFileSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 const root = resolve(import.meta.dirname,'..');
 const npmroot = join(root,'.rebuild/public');
 mkdirSync(npmroot,{recursive:true});
@@ -110,7 +111,16 @@ const versions = {
   "zod": "^3.25.0"
 };
 writeFileSync(join(npmroot,'package.json'), JSON.stringify({private:true,name:'release-rebuild-dependencies',version:'2.1.88',dependencies:versions},null,2)+'\n');
-execFileSync('npm',['install','--prefix',npmroot,'--ignore-scripts','--no-audit','--no-fund','--legacy-peer-deps'],{stdio:'inherit'});
+const manifest = JSON.stringify(versions);
+const digest = createHash('sha256').update(manifest).digest('hex');
+const marker = join(npmroot,'.installed-sha256');
+const cached = existsSync(marker) && existsSync(join(npmroot,'node_modules','react','package.json')) && readFileSync(marker,'utf8') === digest;
+if (!cached) {
+  execFileSync('npm',['install','--prefix',npmroot,'--ignore-scripts','--no-audit','--no-fund','--legacy-peer-deps'],{stdio:'inherit'});
+  writeFileSync(marker,digest);
+} else {
+  console.log('Reusing previously installed exact dependency selection');
+}
 if (!existsSync(join(npmroot,'node_modules'))) throw Error('npm dependency install failed');
 symlinkSync(join(npmroot,'node_modules'),join(root,'node_modules'),'dir');
 console.log('Installed published dependencies for independent source rebuild');

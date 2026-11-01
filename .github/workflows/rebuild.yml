@@ -14,6 +14,12 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            .rebuild/public
+          key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs') }}
       - name: 恢复并校验原版内嵌资源
         run: node build/restore-bundled-assets.mjs
       - name: 将恢复资源保存到源代码

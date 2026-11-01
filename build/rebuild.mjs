@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { builtinModules } from 'node:module';
-import { join, resolve } from 'node:path';
+import { join, resolve, dirname } from 'node:path';
 
 if (typeof Bun === 'undefined' || !Bun.build) throw Error('Bun bundler required');
 const root = resolve(import.meta.dir, '..');
@@ -83,7 +83,7 @@ const plugin = {
   name: 'frozen-release-dependencies',
   setup(build) {
     build.onResolve({ filter: /\.js$/ }, args => {
-      const normalized = args.path.replaceAll('\\', '/');
+      const normalized = args.importer ? resolve(dirname(args.importer), args.path).replaceAll('\\', '/') : args.path;
       if ([...excluded].some(p => normalized.endsWith(p))) {
         return { path: marker + '/' + normalized.replaceAll('.', '_').replaceAll('/', '_'), external: true };
       }
