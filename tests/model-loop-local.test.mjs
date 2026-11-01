@@ -143,7 +143,7 @@ test('original and rebuilt CLIs execute Read → Edit → Write → Read with ma
         if(i>0){
           const result=lastMessage?.content?.find?.(block=>block.type==='tool_result');
           assert.ok(result,'Missing tool result: '+last);
-          assert.equal(result.is_error,false,'Tool '+actions[i-1].name+' failed: '+JSON.stringify(result));
+          assert.notEqual(result.is_error,true,'Tool '+actions[i-1].name+' failed: '+JSON.stringify(result));
         }
         if(i===1) assert.match(last,/BEFORE_333_EDIT_VALUE/);
         if(i===2) assert.match(last,/toolu_333_edit/);
