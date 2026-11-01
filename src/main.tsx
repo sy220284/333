@@ -1,4 +1,3 @@
-import { parseFallbackModels } from './services/api/fallbackModels.mjs'
 // These side-effects must run before all other imports:
 // 1. profileCheckpoint marks entry before heavy module evaluation begins
 // 2. startMdmRawRead fires MDM subprocesses (plutil/reg query) so they run in
@@ -20,6 +19,7 @@ import { ensureKeychainPrefetchCompleted, startKeychainPrefetch } from './utils/
 // eslint-disable-next-line custom-rules/no-top-level-side-effects
 startKeychainPrefetch();
 import { feature } from 'bun:bundle';
+import { parseFallbackModels } from './services/api/fallbackModels.mjs';
 import { Command as CommanderCommand, InvalidArgumentError, Option } from '@commander-js/extra-typings';
 import chalk from 'chalk';
 import { readFileSync } from 'fs';
