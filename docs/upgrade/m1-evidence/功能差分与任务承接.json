@@ -1479,18 +1479,18 @@
       "related_F_candidate": [
         "F080"
       ],
-      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
-      "target_behavior_source": "src/services/analytics/metadata.ts; 2.1.310 JS coworkerType literal not found",
-      "old_vs_new_delta": "旧版只把 COWORKER_TYPE 环境字段写入指标元数据且门控避免在公开包出现名称；新版未检到同字段，但远程宿主遥测体系已有变化。M1 确认这项不是用户独立功能，仍须核对数据最小化。",
-      "enable_conditions": null,
+      "target_formalized": "INTERNAL_METADATA_SCHEMA_ONLY; NO_PUBLIC_FEATURE",
+      "target_behavior_source": "all target 2550 JS coworker_type references confined to chunk-ajtyjx88.js:11654-11691; 2.1.88 src/services/analytics/metadata.ts",
+      "old_vs_new_delta": "Old compiler switch added coworkerType attribute in analytics metadata. Target has coworker_type only inside serialization schema/fromPartial of environment metadata; no direct same-name event-emitter observed. Treat as schema compatibility, not public functionality.",
+      "enable_conditions": "Internal session telemetry serializer, depending on telemetry configuration",
       "handoff_path": "M1_REQUIRED_F080_GAP",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
-      "target_static_observation": "OLD_INTERNAL_ANALYTICS_ATTRIBUTE",
-      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE",
+      "target_static_observation": "TARGET_PROTO_SCHEMA_FIELD_ONLY",
+      "target_evidence_grade": "TARGET_EXTRACTED_JS_EXACT_SYMBOL_SCAN_PLUS_OLD_CODE",
       "target_static_leads": [
         {
           "file": "chunk-ajtyjx88.js",
@@ -1500,8 +1500,10 @@
       ],
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 1,
-      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "target_lead_assessment": "PROTO_SCHEMA_NOT_USER_FEATURE",
+      "static_lead_is_equivalent": null,
+      "target_code_anchor": "chunk-ajtyjx88.js:11654-11691",
+      "entry_consumer": "Environment metadata protobuf schema encoding/decoding"
     },
     {
       "flag": "DAEMON",
@@ -2910,18 +2912,18 @@
       "related_F_candidate": [
         "F080"
       ],
-      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
-      "target_behavior_source": "src/memdir/findRelevantMemories.ts; src/utils/sessionFileAccessHooks.ts; 2.1.310 JS memoryRecallShape literal not found",
-      "old_vs_new_delta": "旧版对记忆检索结果数、文件年龄与访问行为做内部统计；新版未检到旧统计函数名。实际功能属于内部可观测性，用户记忆召回能力另在 M6。",
-      "enable_conditions": null,
+      "target_formalized": "OLD_INTERNAL_INSTRUMENTATION_NOT_CONFIRMED_PUBLIC",
+      "target_behavior_source": "2.1.88 src/memdir/findRelevantMemories.ts; src/utils/sessionFileAccessHooks.ts; exact memoryRecallShape search across 2550 target JS returned no matches",
+      "old_vs_new_delta": "Old gate logs shape of memory search and session file accesses; new code no longer includes the matching symbol; autonomous memory recall itself remains F024 under M6. No reason to enable old telemetry by default.",
+      "enable_conditions": "Old build flag; target memory and analytics conditions require separate verification",
       "handoff_path": "M1_REQUIRED_F080_GAP",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
-      "target_static_observation": "OLD_INTERNAL_MEMORY_RECALL_METRICS",
-      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE",
+      "target_static_observation": "OLD_INTERNAL_MEMORY_RECALL_METRIC_NO_TARGET_IDENTIFIER",
+      "target_evidence_grade": "TARGET_EXTRACTED_JS_EXACT_SYMBOL_SCAN_PLUS_OLD_CODE",
       "target_static_leads": [
         {
           "file": "chunk-05z051sc.js",
@@ -2936,7 +2938,7 @@
       ],
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 229,
-      "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
+      "target_lead_assessment": "NO_IDENTICAL_TARGET_EMITTER",
       "static_lead_is_equivalent": null
     },
     {
@@ -3079,10 +3081,10 @@
       "related_F_candidate": [
         "F019"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
-      "enable_conditions": null,
+      "target_formalized": "INTERNAL_PROTOCOL_HEADER_NOT_USER_FEATURE",
+      "target_behavior_source": "2.1.88 src/constants/system.ts:82; 2.1.310 target attestation references chunk-28mb9yt2.js:426 and chunk-5pvwgrjf.js:875",
+      "old_vs_new_delta": "Old internal compile-time cch=00000 client attestation placeholder injected into system metadata. Target has attestation checks but may refer to different protocol security. Not an end-user feature; API protocol M2 should verify target actual request headers as needed.",
+      "enable_conditions": "Native/Bun API client attestation support and provider; internal implementation",
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
         {
@@ -3111,7 +3113,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 30,
       "target_lead_assessment": "attestation_mismatch 与旧版 cch=00000 客户端证明机制不等价",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "target_static_observation": "TARGET_ATTESTATION_INTEGRATION_UNVERIFIED",
+      "target_code_anchor": "chunk-28mb9yt2.js:426; chunk-5pvwgrjf.js:875",
+      "target_evidence_grade": "TARGET_EXTRACTED_JS_EXACT_SYMBOL_SCAN_PLUS_OLD_CODE"
     },
     {
       "flag": "NATIVE_CLIPBOARD_IMAGE",
@@ -3255,18 +3260,18 @@
       "related_F_candidate": [
         "F080"
       ],
-      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
-      "target_behavior_source": "chunk-taha171j.js:232; chunk-x3dkgs4r.js:1802",
-      "old_vs_new_delta": "旧版 PERFETTO_TRACING 编译开关控制本地性能追踪；新版保留 CLAUDE_CODE_PERFETTO_TRACE 环境启用及性能 span 清理路径。M1/F080 要核对用户授权、性能消耗、退出清理。",
-      "enable_conditions": null,
+      "target_formalized": "TARGET_RUNTIME_OPT_IN_INTERNAL_DIAGNOSTICS",
+      "target_behavior_source": "chunk-taha171j.js:232; chunk-h2tyaevk.js:119; src/utils/telemetry/perfettoTracing.ts",
+      "old_vs_new_delta": "Old compile-time PERFETTO_TRACING gated Perfetto tracing; target has CLAUDE_CODE_PERFETTO_TRACE runtime variable and function initializePerfettoTracing, with 3 target files referring to it. Internal opt-in diagnosis, not an unconditional formal public feature.",
+      "enable_conditions": "CLAUDE_CODE_PERFETTO_TRACE environment value and platform tracing support",
       "handoff_path": "M1_REQUIRED_F080_GAP",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
-      "target_static_observation": "NEW_PERFETTO_RUNTIME_CONFIGURATION",
-      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE",
+      "target_static_observation": "TARGET_RUNTIME_PERFETTO_TRACE_OPT_IN",
+      "target_evidence_grade": "TARGET_EXTRACTED_JS_EXACT_SYMBOL_SCAN_PLUS_OLD_CODE",
       "target_static_leads": [
         {
           "file": "chunk-cj37hmns.js",
@@ -3282,7 +3287,9 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 4,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "target_code_anchor": "chunk-taha171j.js:232; chunk-h2tyaevk.js:119",
+      "entry_consumer": "Target initializePerfettoTracing runtime env accessor; bootstrap path needs confirmation"
     },
     {
       "flag": "POWERSHELL_AUTO_MODE",
@@ -3747,18 +3754,18 @@
       "related_F_candidate": [
         "F080"
       ],
-      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
-      "target_behavior_source": "chunk-ex7g3k30.js:1323,1326,1442-1456",
-      "old_vs_new_delta": "旧版 Stats 组件中 shotDistribution 受 SHOT_STATS 编译门控；新版 stats-cache 仍保留并解析 shotDistribution 字段，未证实新版实际统计生产者或 UI 展示。M1/F080 不得仅以缓存字段认定正式转正。",
-      "enable_conditions": null,
+      "target_formalized": "NO_EVIDENCE_OF_FORMALIZED_TARGET_FEATURE; LEGACY_CACHE_COMPATIBILITY",
+      "target_behavior_source": "all target 2550 JS exact shotDistribution references in chunk-ex7g3k30.js:1323,1326,1442-1456; 2.1.88 src/utils/stats.ts and src/components/Stats.tsx",
+      "old_vs_new_delta": "Old compile-gated SHOT_STATS computed a distribution and rendered it in Stats. 2.1.310 source contains only stats cache defaults/loading and migration of shotDistribution, with no same-name producer or UI in the 2550 extracted JS files. This supports retention of legacy cache compatibility, not public feature promotion; verify if renamed producer exists before removal.",
+      "enable_conditions": "Stats cache restoration only; no confirmed user opt-in for live shot statistics",
       "handoff_path": "M1_REQUIRED_F080_GAP",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
-      "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
+      "M1_next_step": "Check equivalent renamed producer/UI before closing as retired user feature; do not activate old internal compiler gate blindly",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
-      "target_static_observation": "NEW_STATS_CACHE_FIELD_BUT_DISPLAY_UNPROVEN",
-      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE",
+      "target_static_observation": "TARGET_CACHE_READ_COMPAT_ONLY_NO_ACTIVE_PRODUCER_IN_EXTRACTED_JS",
+      "target_evidence_grade": "TARGET_EXTRACTED_JS_EXACT_SYMBOL_SCAN_PLUS_OLD_CODE",
       "target_static_leads": [
         {
           "file": "chunk-3fa21dzg.js",
@@ -3778,8 +3785,10 @@
       ],
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 92,
-      "target_lead_assessment": "截图统计不是旧版 shotDistribution，需检查新版 Stats 的同名数据字段",
-      "static_lead_is_equivalent": false
+      "target_lead_assessment": "LEGACY_CACHE_FIELD_SURVIVES_WITHOUT_MATCHING_TARGET_PRODUCER",
+      "static_lead_is_equivalent": false,
+      "target_code_anchor": "chunk-ex7g3k30.js:1323,1326,1442-1456",
+      "entry_consumer": "Stats cache loader and migration in chunk-ex7g3k30.js"
     },
     {
       "flag": "SKILL_IMPROVEMENT",
@@ -3883,18 +3892,18 @@
       "related_F_candidate": [
         "F080"
       ],
-      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
-      "target_behavior_source": "chunk-wrtp8qz8.js:1621,2564",
-      "old_vs_new_delta": "旧版 slowLoggingAnt 由 SLOW_OPERATION_LOGGING 编译门控，外部版走 slowLoggingExternal；新版 host.diagnostics.slowOperations 有慢操作读取路径，统计采集与暴露仍需跟踪调用。M1/F080 审核其用户可见程度后补齐。",
-      "enable_conditions": null,
+      "target_formalized": "TARGET_INTERNAL_DIAGNOSTICS_PATH_RETAINED_NOT_PUBLIC",
+      "target_behavior_source": "chunk-wrtp8qz8.js:1621,2564; 2.1.88 src/utils/slowOperations.ts",
+      "old_vs_new_delta": "Old SLOW_OPERATION_LOGGING selects a separate internal logger at compile time; target exposes host.diagnostics.slowOperations() accessor and diagnostics collector. Diagnostic path is retained but no evidence that it is automatically exposed as public CLI feature.",
+      "enable_conditions": "Diagnostics collector lifetime, no demonstrated user-visible switch",
       "handoff_path": "M1_REQUIRED_F080_GAP",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Compare F080 telemetry safety/privacy/performance, implement missing 2.1.310 user-visible deltas and real tests",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
-      "target_static_observation": "NEW_DIAGNOSTICS_SLOW_OPERATIONS",
-      "target_evidence_grade": "STATIC_OLD_NEW_FUNCTION_EVIDENCE",
+      "target_static_observation": "TARGET_HOST_DIAGNOSTICS_SLOW_OPERATIONS",
+      "target_evidence_grade": "TARGET_EXTRACTED_JS_EXACT_SYMBOL_SCAN_PLUS_OLD_CODE",
       "target_static_leads": [
         {
           "file": "chunk-142mjqaf.js",
@@ -3910,7 +3919,9 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 83,
       "target_lead_assessment": "duration_ms 只是通用指标，不能证明旧版 slowLogging 等价",
-      "static_lead_is_equivalent": false
+      "static_lead_is_equivalent": false,
+      "target_code_anchor": "chunk-wrtp8qz8.js:1621,2564",
+      "entry_consumer": "Target diagnostics accessor fIi() obtains n().host.diagnostics.slowOperations()"
     },
     {
       "flag": "SSH_REMOTE",
