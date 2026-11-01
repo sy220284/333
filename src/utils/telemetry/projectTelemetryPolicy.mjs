@@ -91,7 +91,18 @@ export function isPrivilegedTelemetrySetting(name, value) {
  * merged settings. Existing process-spawn env is not touched. Lower-trust
  * settings are still allowed to *disable* exports and content capture.
  */
+let ignoredProjectTelemetryEnvKeys = []
+
+/**
+ * Names only (never secret values). Used by /status and /doctor to explain
+ * which project settings were not applied. Recomputed on each settings pass.
+ */
+export function getIgnoredProjectTelemetryEnvKeys() {
+  return [...ignoredProjectTelemetryEnvKeys]
+}
+
 export function resolveProjectTelemetryEnv(mergedEnv, trustedEnv) {
+  const ignored = new Set()
   const result = { ...mergedEnv }
   for (const [key, value] of Object.entries(result)) {
     const upper = key.toUpperCase()
@@ -113,10 +124,13 @@ export function resolveProjectTelemetryEnv(mergedEnv, trustedEnv) {
     const trustedEntry = Object.entries(trustedEnv)
       .find(([candidate]) => candidate.toUpperCase() === upper)
     if (trustedEntry) {
+      if (result[key] !== trustedEntry[1]) ignored.add(upper)
       result[key] = trustedEntry[1]
     } else if (privileged) {
+      ignored.add(upper)
       delete result[key]
     }
   }
+  ignoredProjectTelemetryEnvKeys = [...ignored].sort()
   return result
 }
