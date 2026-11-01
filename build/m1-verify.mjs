@@ -121,7 +121,7 @@ function checkAll() {
     assert.ok(Array.isArray(item.candidate_evidence) && item.candidate_evidence.length>0);
     assert.equal(item.candidate_count,item.candidate_evidence.length);
     for(const candidate of item.candidate_evidence){
-      assert.match(candidate.location,/^chunk-[a-z0-9]+\\.js:\\d+$/);
+      assert.match(candidate.location,/^chunk-[a-z0-9]+\.js:\d+$/);
       assert.ok(hasText(candidate.code_snippet));
       assert.equal(candidate.release_runtime_verified,false,
         'A static snippet cannot be treated as verified runtime execution');
