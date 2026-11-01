@@ -26,15 +26,18 @@ type ResumeConversationProps = React.ComponentProps<typeof import('./screens/Res
  * Site ~3173: SnapshotUpdateDialog (agent memory snapshot update prompt).
  * Original callback wiring: onComplete={done}, onCancel={() => done('keep')}.
  */
-export async function launchSnapshotUpdateDialog(root: Root, props: {
+/**
+ * 2.1.310 源码证据：chunk-0x2m04n3.js:684
+ *   async function J(o, t) { return "keep"; }
+ * 目标版不会显示快照更新弹窗，也不会自动执行 merge/replace。
+ * 保留旧函数签名，避免调用者行为和返回值发生额外变化。
+ */
+export async function launchSnapshotUpdateDialog(_root: Root, _props: {
   agentType: string;
   scope: AgentMemoryScope;
   snapshotTimestamp: string;
 }): Promise<'merge' | 'keep' | 'replace'> {
-  const {
-    SnapshotUpdateDialog
-  } = await import('./components/agents/SnapshotUpdateDialog.js');
-  return showSetupDialog<'merge' | 'keep' | 'replace'>(root, done => <SnapshotUpdateDialog agentType={props.agentType} scope={props.scope} snapshotTimestamp={props.snapshotTimestamp} onComplete={done} onCancel={() => done('keep')} />);
+  return 'keep';
 }
 
 /**
