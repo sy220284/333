@@ -63,6 +63,8 @@ jobs:
         run: node --test tests/model-loop-local.test.mjs
       - name: Glob 与 Grep 文件搜索模型工具往返差分验收
         run: node --test tests/search-loop-local.test.mjs
+      - name: 验收已恢复 Claude API 内置技能的全部原文进入新版 CLI
+        run: node --test tests/claude-api-skill.test.mjs
       - name: 保存独立重建版发行产物
         uses: actions/upload-artifact@v4
         with:
