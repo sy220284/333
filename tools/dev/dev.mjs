@@ -61,7 +61,7 @@ function typescript(checkChanged) {
   const config = resolve(root, '.rebuild/tsconfig.dev.json');
   mkdirSync(resolve(root, '.rebuild'), { recursive: true });
   const typeRoots = [resolve(tools, '../@types'), resolve(root, 'node_modules/@types')];
-  writeFileSync(config, JSON.stringify({ extends: '../tsconfig.json', compilerOptions: { typeRoots, types: ['node', 'react'] } }, null, 2) + '\n');
+  writeFileSync(config, JSON.stringify({ extends: '../tsconfig.json', compilerOptions: { typeRoots, types: ['node', 'react', 'bun'] } }, null, 2) + '\n');
   const result = toolOutput('tsc', ['--noEmit', '--pretty', 'false', '-p', config]);
   const errors = parseTypeScriptErrors(result.stdout + '\n' + result.stderr);
   if (!checkChanged) {
