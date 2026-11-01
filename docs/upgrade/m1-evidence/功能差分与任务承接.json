@@ -24,16 +24,18 @@
       "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
       "legacy_interpretation": "RESTRICTED_INTERNAL_GATE_CANDIDATE",
       "related_F_candidate": [],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "2.1.88 src/entrypoints/cli.tsx:21; 2.1.310 2550 JS exact-token scan",
+      "old_vs_new_delta": "旧版仅供内部 ablation baseline 测评的条件执行，不可迁入正式 CLI。",
       "enable_conditions": null,
       "handoff_path": "M1_REQUIRED_CLASSIFICATION",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "LEGACY_INTERNAL_EVAL_GATE",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "AGENT_MEMORY_SNAPSHOT",
@@ -93,9 +95,9 @@
         "F061",
         "F054"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "chunk-0dja0qpg.js:68",
+      "old_vs_new_delta": "新版存在 createCronScheduler 调度者，仅说明定时执行路径；旧版 Agent Trigger 的完整条件和消息来源需 M6 核实，且默认禁止自动创建。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -110,7 +112,9 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "CRON_SCHEDULER_MODULE_PRESENT",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "AGENT_TRIGGERS_REMOTE",
@@ -127,9 +131,9 @@
         "F061",
         "F066"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "chunk-mq1a69zj.js:462",
+      "old_vs_new_delta": "新版导出 RemoteTriggerTool，仍须检验是否在工具总线注册、权限与使用条件，M6。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -149,7 +153,9 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "REMOTE_TRIGGER_TOOL_EXPORTED",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "ALLOW_TEST_VERSIONS",
@@ -162,16 +168,18 @@
       "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
       "legacy_interpretation": "RESTRICTED_INTERNAL_GATE_CANDIDATE",
       "related_F_candidate": [],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "2.1.88 src/utils/nativeInstaller/download.ts; 2.1.310 2550 JS exact-token scan",
+      "old_vs_new_delta": "旧版用于 99.99.* 安装器测试版条件放行，未证实新版任何正式用户能力；M1 确认仅内部功能与目标安装器处理后归档。",
       "enable_conditions": null,
       "handoff_path": "M1_REQUIRED_CLASSIFICATION",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "LEGACY_INTERNAL_TEST_GATE",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "ANTI_DISTILLATION_CC",
@@ -295,9 +303,9 @@
         "F032",
         "F042"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "chunk-25j20xpc.js:373",
+      "old_vs_new_delta": "新版有 bashPermissions 上下文；它是否继承旧分类器的拒绝和允许逻辑必须沿执行链比较。M3。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -312,7 +320,9 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "BASH_PERMISSION_HANDLER_PRESENT",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "BG_SESSIONS",
@@ -591,9 +601,9 @@
         "F023",
         "F086"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "chunk-ajtyjx88.js:10493",
+      "old_vs_new_delta": "新版包含 microcompact_boundary 事件语义，旧版有缓存微压缩功能门控；M4 必须核对状态恢复与压缩边界。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -608,7 +618,9 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "MICROCOMPACT_HISTORY_EVENT_PRESENT",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "CCR_AUTO_CONNECT",
@@ -767,9 +779,9 @@
       "related_F_candidate": [
         "F038"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "chunk-j0tbz6ra.js:29794",
+      "old_vs_new_delta": "新版读取 attribution 并生成 Co-Authored-By；旧版门控实现需要按目标配置对齐，M3 Git 提交语义。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -783,7 +795,9 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "GIT_ATTRIBUTION_LOGIC_PRESENT",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "COMPACTION_REMINDERS",
@@ -928,9 +942,9 @@
       "related_F_candidate": [
         "F056"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "chunk-475stacc.js:554",
+      "old_vs_new_delta": "新版协调者模块导出；旧版用 COORDINATOR_MODE 门控，M7 必须核对默认注册、Worker 分工和实际协作。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -944,7 +958,9 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "COORDINATOR_MODULE_PRESENT",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "COWORKER_TYPE_TELEMETRY",
@@ -1091,16 +1107,18 @@
       "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
       "legacy_interpretation": "RESTRICTED_INTERNAL_GATE_CANDIDATE",
       "related_F_candidate": [],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "2.1.88 src/entrypoints/cli.tsx; 2.1.310 2550 JS exact-token scan",
+      "old_vs_new_delta": "旧版在外部构建时消除，属于内部敏感度评估工具，不能当新版本用户特性迁入。",
       "enable_conditions": null,
       "handoff_path": "M1_REQUIRED_CLASSIFICATION",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "LEGACY_INTERNAL_EVAL_GATE",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "ENHANCED_TELEMETRY_BETA",
@@ -1248,9 +1266,9 @@
       "related_F_candidate": [
         "F058"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "chunk-j0tbz6ra.js:41529",
+      "old_vs_new_delta": "新版 fork 代理定义要求显式选择 subagent_type，旧版功能受 FORK_SUBAGENT 开关限制；归入 M7 的隔离和继承测试。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -1264,7 +1282,9 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "FORK_AGENT_DEFINITION_PRESENT",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "HARD_FAIL",
@@ -1278,16 +1298,18 @@
       "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
       "legacy_interpretation": "RESTRICTED_INTERNAL_GATE_CANDIDATE",
       "related_F_candidate": [],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "2.1.88 src/utils/log.ts; 2.1.310 chunk-ewvf3tep.js:172",
+      "old_vs_new_delta": "旧版调试强制崩溃；新版有 hardFailMode 名称，但需验证有效开关及风险。M1 判断为内部诊断后处理。",
       "enable_conditions": null,
       "handoff_path": "M1_REQUIRED_CLASSIFICATION",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "LEGACY_DIAGNOSTIC_GATE",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "HISTORY_PICKER",
@@ -1401,16 +1423,18 @@
       "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
       "legacy_interpretation": "RESTRICTED_INTERNAL_GATE_CANDIDATE",
       "related_F_candidate": [],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "2.1.88 src/utils/envDynamic.ts; 2.1.310 chunk-sr1bpqdt.js:552",
+      "old_vs_new_delta": "旧版编译期强制 glibc 判断；新版安装器按 Linux libc 选择/错误提示，M1 只需验证适用平台，无用户能力迁入。",
       "enable_conditions": null,
       "handoff_path": "M1_REQUIRED_CLASSIFICATION",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "LEGACY_PLATFORM_BUILD_GATE",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "IS_LIBC_MUSL",
@@ -1423,16 +1447,18 @@
       "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
       "legacy_interpretation": "RESTRICTED_INTERNAL_GATE_CANDIDATE",
       "related_F_candidate": [],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "2.1.88 src/utils/envDynamic.ts; 2.1.310 chunk-2ctyt5p9.js:17",
+      "old_vs_new_delta": "旧版编译期强制 musl 判断；新版原生模块优先匹配 Linux libc，M1 只需验证平台适配，无用户能力迁入。",
       "enable_conditions": null,
       "handoff_path": "M1_REQUIRED_CLASSIFICATION",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "LEGACY_PLATFORM_BUILD_GATE",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "KAIROS",
@@ -1905,9 +1931,9 @@
       "related_F_candidate": [
         "F081"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "2.1.310 CHANGELOG.md:5; chunk-j0tbz6ra.js:30632,30105,87131",
+      "old_vs_new_delta": "旧版工具及 MCP MonitorTask 受编译开关控制；新版注册 tools:Monitor 并阻止超长前台 sleep。M8 要补工具、授权、后台生命周期及遥测关闭路径。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -1921,7 +1947,9 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "PUBLIC_MONITOR_REGISTERED",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "NATIVE_CLIENT_ATTESTATION",
@@ -2028,16 +2056,18 @@
       "target_token_test_method": "Exact case-sensitive token boundary scan of 2550 extracted JS; token absence does not prove absent behavior",
       "legacy_interpretation": "RESTRICTED_INTERNAL_GATE_CANDIDATE",
       "related_F_candidate": [],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "2.1.88 src/tools.ts; src/utils/permissions/classifierDecision.ts; 2.1.310 2550 JS exact-token scan",
+      "old_vs_new_delta": "旧版原始用途是内部溢出测试工具。目标版暂未发现同等正式功能；M1 继续核实测试实现是否保留及有无用户体验变化，严禁因此默认启用。",
       "enable_conditions": null,
       "handoff_path": "M1_REQUIRED_CLASSIFICATION",
       "developer_cards": [],
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": true,
       "M1_next_step": "Verify internal-only/retired/new public surface; if feature remains public, implement in M1",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "NO_TARGET_EQUIVALENT_LOCATED",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "PERFETTO_TRACING",
@@ -2564,9 +2594,9 @@
         "F024",
         "F056"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "chunk-j0tbz6ra.js:84075",
+      "old_vs_new_delta": "旧版有 team memory 写读路径；新版 teamMemoryRead/Search/Write 统计存在，尚需证明存储和同步路径。M6 记忆、M7 协作任务。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -2586,7 +2616,9 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "TEAM_MEMORY_COUNTERS_PRESENT",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "TEMPLATES",
@@ -2784,9 +2816,9 @@
         "F042",
         "F043"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "chunk-j0tbz6ra.js:67727",
+      "old_vs_new_delta": "旧版单独 transcript 门控；新版 auto-mode classifier_verdict 和 block 类别存在；不得将分类器判定等同可绕过规则的授权。M3 补完整策略。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -2801,7 +2833,9 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "AUTO_MODE_CLASSIFIER_BRANCH_PRESENT",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "TREE_SITTER_BASH",
@@ -3104,9 +3138,9 @@
       "related_F_candidate": [
         "F013"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "chunk-1g7w7v7r.js:56; chunk-2ctyt5p9.js:17",
+      "old_vs_new_delta": "旧版语音入口受 VOICE_MODE 门控；新版存在音频捕获按平台加载，M5 须确认默认可用、设备授权与取消。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -3120,7 +3154,9 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "NATIVE_AUDIO_LOADER_PRESENT",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     },
     {
       "flag": "WEB_BROWSER_TOOL",
@@ -3175,9 +3211,9 @@
         "F082",
         "F083"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_formalized": "SOURCE_INDICATES_FEATURE_OR_INTERNAL_USAGE; RUNTIME_UNVERIFIED",
+      "target_behavior_source": "chunk-2pjf4p7s.js:1694,1708-1709",
+      "old_vs_new_delta": "旧版仅有 WORKFLOW_SCRIPTS 的条件注册和部分任务引用；新版 local_workflow、journal、恢复代码存在，M8 必须补完整执行与不重复副作用。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -3192,7 +3228,9 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED"
+      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "target_static_observation": "LOCAL_WORKFLOW_CODE_PRESENT",
+      "target_evidence_grade": "STATIC_FUNCTION_BRANCH_OR_OLD_INTERNAL_SOURCE"
     }
   ],
   "chain_features": [
