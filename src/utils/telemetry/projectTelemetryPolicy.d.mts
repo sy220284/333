@@ -12,3 +12,6 @@ export declare function resolveProjectTelemetryEnv(
 export declare function isEnhancedTracingOptedIn(
   env: Record<string, string | undefined>,
 ): boolean
+
+/** Case-normalized names of project/local telemetry settings ignored on the last merge. */
+export declare function getIgnoredProjectTelemetryEnvKeys(): string[]
