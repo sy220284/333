@@ -69,8 +69,8 @@
         "F056"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-j0tbz6ra.js:46238-46240",
+      "old_vs_new_delta": "新版调用对象维护 memorySnapshots Map 且 startQuery 清空快照、递增查询计数；已证明目标版存在单轮记忆快照状态，旧版 AGENT_MEMORY_SNAPSHOT 编译门控所管的跨轮持久化/上下文继承尚未证实。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -87,7 +87,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -111,7 +111,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 8,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M7：核实 agent Memory Snapshot 实际消费者、跨轮快照复原、Fork 隔离与取消恢复",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "static_evidence_grade": "REAL_CODE_BRANCH; END_TO_END_NOT_VERIFIED"
     },
     {
       "flag": "AGENT_TRIGGERS",
@@ -2702,8 +2705,8 @@
         "F072"
       ],
       "target_formalized": "TOOL_REGISTRATION_SOURCE_CONFIRMED_RUNTIME_PENDING",
-      "target_behavior_source": null,
-      "old_vs_new_delta": "M5 需对照旧 KAIROS 推送组件，补齐推送授权、在线条件、失败与设备通道。",
+      "target_behavior_source": "chunk-5q1fx7z3.js:155-157",
+      "old_vs_new_delta": "新版存在主动通知正文 schema 和 pushSent/localSent 结果，并能区分 config_off、user_present、no_transport；旧版通知受编译门控。已定位权限和拒绝类型，远端推送实际发送实现仍待 M5/M6。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -2714,7 +2717,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -2754,7 +2757,10 @@
       "upgrade_assignment": {
         "owner_M": "M5",
         "type": "SOURCE_VERIFIED_HANDOFF_TARGET_RUNTIME_TO_CARD"
-      }
+      },
+      "verified_next_implementation_task": "M5/M6：推送消息注册→用户在场条件→传输选择→成功及禁用分支→通知回执",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "static_evidence_grade": "REAL_CODE_BRANCH; END_TO_END_NOT_VERIFIED"
     },
     {
       "flag": "LODESTONE",
@@ -3153,8 +3159,8 @@
         "F009"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-f451a1hs.js:54-56",
+      "old_vs_new_delta": "新版按平台依次加载 clipboard-napi 的 Linux x64 与 musl 原生模块，说明原生图片剪贴板依赖仍存在；旧版只有 NATIVE_CLIPBOARD_IMAGE 条件分支，是否正确识别图像格式及 TUI 粘贴后处理归 M5。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -3165,7 +3171,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -3189,7 +3195,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 151,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M5：原生剪贴板加载→图片内容→附件转换→输入组件显示及无原生库降级",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "static_evidence_grade": "REAL_CODE_BRANCH; END_TO_END_NOT_VERIFIED"
     },
     {
       "flag": "NEW_INIT",
@@ -3572,8 +3581,8 @@
         "F023"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-j0tbz6ra.js:46075-46077",
+      "old_vs_new_delta": "新版 reactiveCompact 处理有已尝试、预先压缩交换和运行时条件保护；旧版 REACTIVE_COMPACT 编译门控已关闭。目标真实压缩时序、恢复和重试还需 M4 实证。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -3584,7 +3593,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -3608,7 +3617,10 @@
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 54,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M4：自动压缩触发条件、保护窗口、hasAttemptedReactiveCompact 边界、crash 恢复",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "static_evidence_grade": "REAL_CODE_BRANCH; END_TO_END_NOT_VERIFIED"
     },
     {
       "flag": "REVIEW_ARTIFACT",
@@ -3727,8 +3739,8 @@
         "F099"
       ],
       "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
+      "target_behavior_source": "chunk-6d8swme1.js:1818-1820; chunk-g5hxk6wx.js:157",
+      "old_vs_new_delta": "新版实际区分 isSelfHostedRunnerChild 并调用 child 分支；还存在 self-hosted runner 运行入口。旧版 SELF_HOSTED_RUNNER 未启用，需检查后台运行器身份认证和主线适配。",
       "enable_conditions": null,
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
@@ -3745,7 +3757,7 @@
           ]
         }
       ],
-      "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
+      "assignment_verified": "SOURCE_HANDOFF_CANDIDATE",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
       "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
@@ -3769,7 +3781,10 @@
       "archive_exact_same_name_files": 12,
       "archive_similar_candidate_file_count": 33,
       "target_lead_assessment": "STATIC_KEYWORD_PRESENT_BUT_EXECUTION_AND_DEFAULT_UNKNOWN",
-      "static_lead_is_equivalent": null
+      "static_lead_is_equivalent": null,
+      "verified_next_implementation_task": "M8：runner CLI→进程隔离→任务领取、完成和退出语义；M5 的远程连接通道专门验证",
+      "source_review_status": "TARGET_BRANCH_SPECIFIC_REVIEWED",
+      "static_evidence_grade": "REAL_CODE_BRANCH; END_TO_END_NOT_VERIFIED"
     },
     {
       "flag": "SHOT_STATS",
