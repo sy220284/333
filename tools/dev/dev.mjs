@@ -80,11 +80,14 @@ function typescript(checkChanged) {
   if (errors.length) console.log('[333-dev] 既有源文件的类型问题仍需修复；可运行 npm run typecheck:all 查看完整诊断');
 }
 function lint(all) {
-  if (!existsSync(bin('biome'))) throw new Error('缺失 Biome，先运行 npm install --prefix tools/dev');
-  const files = all ? ['src', 'native', 'build', 'tests', 'tools/dev'] : [...new Set([...checkedFiles(), 'tools/dev/quality-core.mjs', 'tools/dev/dev.mjs', 'tools/dev/watch.mjs', 'tools/dev/native-smoke.mjs', 'tools/dev/portable.mjs', 'tools/dev/audit-report.mjs'])];
-  if (!files.length) { console.log('[333-dev] 没有需要检查的文件'); return; }
-  toolRun('biome', ['lint', '--no-errors-on-unmatched', ...files]);
+  if (!existsSync(bin('biome'))) throw new Error('缺失 Biome，请先安装已冻结的开发工具');
+  if (!all) {
+    run(process.execPath, ['tools/governance/lint-delta.mjs']);
+    return;
+  }
+  run(bin('biome'), ['lint', '--no-errors-on-unmatched', 'src', 'native', 'build', 'tests', 'tools/dev', 'tools/governance']);
 }
+
 function boot() { npmRun(['ci', '--prefix', 'tools/dev', '--ignore-scripts', '--no-audit', '--no-fund']); }
 const command = process.argv[2] ?? 'help';
 switch (command) {
