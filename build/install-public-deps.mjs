@@ -1,4 +1,4 @@
-import { mkdirSync, symlinkSync, existsSync, writeFileSync, readFileSync, copyFileSync } from 'node:fs';
+import { mkdirSync, symlinkSync, existsSync, realpathSync, writeFileSync, readFileSync, copyFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -142,5 +142,13 @@ if (!cached) {
   console.log('Reusing installed packages from the frozen npm dependency lock');
 }
 if (!existsSync(join(npmroot,'node_modules'))) throw Error('npm dependency install failed');
-symlinkSync(join(npmroot,'node_modules'),join(root,'node_modules'),process.platform === 'win32' ? 'junction' : 'dir');
+const nodeModules = join(root,'node_modules');
+const publicNodeModules = join(npmroot,'node_modules');
+if (existsSync(nodeModules)) {
+  if (realpathSync(nodeModules) !== realpathSync(publicNodeModules)) {
+    throw Error('Root node_modules does not refer to the frozen public dependencies');
+  }
+} else {
+  symlinkSync(publicNodeModules,nodeModules,process.platform === 'win32' ? 'junction' : 'dir');
+}
 console.log('Installed published dependencies for independent source rebuild');

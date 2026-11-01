@@ -43,6 +43,9 @@ ln -s "$(pwd)/cli.js" /usr/local/bin/claude
 
 ## 独立源码重建（333 工程）
 
+**777 式离线工具链：** 版本锁定、GitHub Actions 分片组件、按需安装、离线依赖恢复和安装后校验，见 [333 开发工具链说明](docs/DEVELOPMENT_TOOLCHAIN.md)。
+
+
 本仓库已经建立直接从 `src/entrypoints/cli.tsx` 构建 CLI 的流程。
 原始 `cli.js` 仅用于原版行为差分。正常重建直接校验已入库资源，从 `src/` 构建新程序，不会调用旧版 `cli.js` 作为构建或运行入口。`cli.js.map` 当前仍作为冻结的第三方依赖源码数据。
 
