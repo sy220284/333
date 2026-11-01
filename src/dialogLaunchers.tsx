@@ -23,8 +23,8 @@ import type { ValidationError } from './utils/settings/validation.js';
 type ResumeConversationProps = React.ComponentProps<typeof import('./screens/ResumeConversation.js').ResumeConversation>;
 
 /**
- * Site ~3173: SnapshotUpdateDialog (agent memory snapshot update prompt).
- * Original callback wiring: onComplete={done}, onCancel={() => done('keep')}.
+ * Site ~3173: 旧版快照更新弹窗入口；2.1.310 统一选择 keep。
+ * 函数签名保留供既有调用者安全清理 pendingSnapshotUpdate。
  */
 /**
  * 2.1.310 源码证据：chunk-0x2m04n3.js:684
