@@ -19,6 +19,10 @@ jobs:
       contents: read
     timeout-minutes: 25
     steps:
+      - name: Windows 提前启用 Git 长路径（完整保留嵌套依赖源码）
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
