@@ -10,7 +10,7 @@ const root = resolve(import.meta.dirname, '..');
 const model = 'claude-sonnet-4-6';
 const reply = 'MOCK_AGENT_READ_OK_333';
 const fixtureContent = 'FIXTURE_333_READ_RESULT';
-const SSE = (event, data) => 'event: ' + event + '\\ndata: ' + JSON.stringify(data) + '\\n\\n';
+const SSE = (event, data) => 'event: ' + event + '\ndata: ' + JSON.stringify(data) + '\n\n';
 
 function responseBlocks(content, stopReason, index) {
   const id = 'msg_333_mock_' + index;
