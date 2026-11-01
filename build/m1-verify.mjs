@@ -12,6 +12,8 @@ const flagSet = readJson(join(evidenceDir, 'old-flags.json')).records;
 const anchorSet = readJson(join(evidenceDir, 'new-code-anchors.json')).records;
 const changes = [1, 2, 3].flatMap(i => readJson(join(evidenceDir, 'changelog-' + i + '.json')).records);
 const coverage = readJson(join(root, 'docs/upgrade/upgrade-coverage.json'));
+const routing = readJson(join(evidenceDir, '功能差分与任务承接.json'));
+const plannedByF = new Map(coverage.features.map(f => [f.id, f.tasks.filter(t => /^M[2-9]$/.test(t))]));
 
 const validTasks = new Set(coverage.tasks.map(x => x.id));
 const validFeatures = new Set(coverage.features.map(x => x.id));
@@ -103,6 +105,42 @@ function checkAll() {
     assert.ok(record.related_M_candidate.every(m => validTasks.has(m)));
     assert.ok(record.related_F_confirmed.every(f => validFeatures.has(f)));
   }
+  // An old compiler switch is not an upgrade task by itself: its target
+  // behavior must be mapped to a real implementation task. Or M1 must own it.
+  assert.equal(routing.flags.length, 90);
+  assert.equal(routing.chain_features.length, 61);
+  const flagByName = new Map(routing.flags.map(x => [x.flag, x]));
+  const chainById = new Map(routing.chain_features.map(x => [x.id, x]));
+  assert.equal(flagByName.size, 90);
+  assert.equal(chainById.size, 61);
+  for (const entry of flagSet) {
+    const mapped = flagByName.get(entry.flag);
+    assert.ok(mapped, 'M1 old flag missing classification: '+entry.flag);
+    assert.equal(mapped.old_references, entry.legacy_count);
+    assert.ok(mapped.related_F_candidate.every(id => validFeatures.has(id)));
+    const actualTasks = [...new Set(mapped.related_F_candidate.flatMap(id => plannedByF.get(id) ?? []))].sort();
+    assert.deepEqual(mapped.developer_cards.map(x => x.M).sort(), actualTasks);
+    assert.equal(mapped.M1_required, actualTasks.length === 0 || mapped.related_F_candidate.includes('F080'),
+      'M1 responsibility missing: '+mapped.flag);
+    assert.equal(mapped.M1_required || mapped.developer_cards.length>0,true);
+  }
+  for (const entry of anchorSet) {
+    const mapped = chainById.get(entry.F_id);
+    assert.ok(mapped,'M1 new-chain missing classification: '+entry.F_id);
+    assert.equal(mapped.target_first_anchor,entry.first_code_anchor);
+    assert.deepEqual(mapped.downstream_tasks, plannedByF.get(entry.F_id));
+    assert.equal(mapped.M1_required,mapped.downstream_tasks.length === 0,
+      'M1 must implement any uncovered newly discovered feature: '+entry.F_id);
+    assert.ok(mapped.M1_required || mapped.downstream_tasks.length > 0);
+  }
+  assert.deepEqual(routing.chain_features.filter(x => x.M1_required).map(x=>x.id),['F080']);
+  // The single currently uncovered capability has implementation in M1.
+  const telemetryPolicy=readFileSync(join(root,'src/utils/telemetry/projectTelemetryPolicy.mjs'),'utf8');
+  const envIntegration=readFileSync(join(root,'src/utils/managedEnv.ts'),'utf8');
+  assert.ok(telemetryPolicy.includes('isPrivilegedTelemetrySetting'));
+  assert.equal((envIntegration.match(/resolveProjectTelemetryEnv\\(/g)??[]).length,2,
+    'F080 privacy policy must apply before trust and after trust');
+
   const accepted = {
     flags: flagSet.filter(verifiedFlag).length,
     anchors: anchorSet.filter(verifiedAnchor).length,
