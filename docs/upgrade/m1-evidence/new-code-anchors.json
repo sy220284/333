@@ -128,7 +128,13 @@
       "old_sources": [
         "src/commands/export",
         "share"
-      ]
+      ],
+      "additional_static_branches": [
+        "chunk-3827ysmv.js:259-265",
+        "chunk-5nwfcyzp.js:184-187"
+      ],
+      "static_semantics_observation": "/share 的分支会根据可用凭据、Provider 和用户配置决定普通提交或生成本地打包；已定位条件判定及界面调用，尚未核实脱敏、附件和远端实际行为。",
+      "static_evidence_scope": "SOURCE_ONLY; no runtime or full call-chain signoff"
     },
     {
       "F_id": "F007",
@@ -737,7 +743,13 @@
       "status": "ANCHOR_IDENTIFIED",
       "old_sources": [
         "src/commands/chrome"
-      ]
+      ],
+      "additional_static_branches": [
+        "chunk-dmtyt8s1.js:9",
+        "chunk-j0tbz6ra.js:54339-54352"
+      ],
+      "static_semantics_observation": "找到电脑操作通知类型及工具规则允许的权限分支；该证据仅覆盖通知/允许判定，尚未证明 Chrome 执行工具的消费者与实际结果。",
+      "static_evidence_scope": "SOURCE_ONLY; no runtime or full call-chain signoff"
     },
     {
       "F_id": "F038",
@@ -979,7 +991,12 @@
       "status": "ANCHOR_IDENTIFIED",
       "old_sources": [
         "src/utils/permissions/denialTracking.ts"
-      ]
+      ],
+      "additional_static_branches": [
+        "chunk-3fdpcjpk.js:114-140"
+      ],
+      "static_semantics_observation": "服务端 MCP 调用会检查设置可读性及元信息中的工具权限请求；无法读取配置时返回错误、禁止运行。该分支不能覆盖全部破坏性操作/共享资源审批。",
+      "static_evidence_scope": "SOURCE_ONLY; no runtime or full call-chain signoff"
     },
     {
       "F_id": "F051",
@@ -1135,7 +1152,13 @@
       "status": "ANCHOR_IDENTIFIED",
       "old_sources": [
         "src/tools/ScheduleCronTool"
-      ]
+      ],
+      "additional_static_branches": [
+        "chunk-8mtqgphq.js:13-18",
+        "chunk-62bczwa8.js:215-230"
+      ],
+      "static_semantics_observation": "本地 CronCreate 创建受环境变量和运行时门控限制，持久化另有独立开关；提示路径区分云端日程和仅当前会话。未发起任何调度操作，尚无实际持久化/执行复验。",
+      "static_evidence_scope": "SOURCE_ONLY; no runtime or full call-chain signoff"
     },
     {
       "F_id": "F062",
@@ -1379,7 +1402,12 @@
       "runtime_test": null,
       "final_semantics": null,
       "status": "ANCHOR_IDENTIFIED",
-      "old_sources": []
+      "old_sources": [],
+      "additional_static_branches": [
+        "chunk-55823wbc.js:456-483"
+      ],
+      "static_semantics_observation": "自动压缩窗口面板读取设置/模型上限及环境变量，UI 按 100k 至 1M 边界调整；该证据尚未覆盖实际模型压缩与崩溃恢复。",
+      "static_evidence_scope": "SOURCE_ONLY; no runtime or full call-chain signoff"
     },
     {
       "F_id": "F087",
