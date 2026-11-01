@@ -18,6 +18,8 @@ on:
       - 'src/types/notebook.ts'
       - 'tests/m1-notebook-types.fixture.ts'
       - 'tests/m1-core-types.fixture.ts'
+      - 'tests/m1-feedback-types.fixture.ts'
+      - 'src/components/FeedbackSurvey/utils.ts'
       - 'build/m1-source-gap-ast.mjs'
       - 'src/types/fileSuggestion.ts'
       - 'src/types/statusLine.ts'
@@ -45,7 +47,7 @@ jobs:
       - name: 安装固定TypeScript校验器
         run: npm install --prefix "${RUNNER_TEMP}/m1-typescript" --no-save --package-lock=false --ignore-scripts --no-audit --no-fund typescript@5.9.3
       - name: 编译已恢复类型的正反向契约
-        run: node "${RUNNER_TEMP}/m1-typescript/node_modules/typescript/lib/tsc.js" --strict --noEmit --skipLibCheck --target ES2023 --module ESNext --moduleResolution Bundler tests/m1-notebook-types.fixture.ts tests/m1-core-types.fixture.ts
+        run: node "${RUNNER_TEMP}/m1-typescript/node_modules/typescript/lib/tsc.js" --strict --noEmit --skipLibCheck --target ES2023 --module ESNext --moduleResolution Bundler tests/m1-notebook-types.fixture.ts tests/m1-core-types.fixture.ts tests/m1-feedback-types.fixture.ts
       - name: 扫描当前分支的实际缺失类型与运行模块
         run: node build/m1-source-gap-ast.mjs --old-src src --typescript-module "${RUNNER_TEMP}/m1-typescript/node_modules/typescript/lib/typescript.js" --out "${RUNNER_TEMP}/m1-current-source-gaps.json"
       - name: 保存逐路径导入与符号契约证据
