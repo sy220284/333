@@ -41,30 +41,46 @@ npm install -g @anthropic-ai/claude-code@2.1.88
 ln -s "$(pwd)/cli.js" /usr/local/bin/claude
 ```
 
-## Rebuilding from source
+## 独立源码重建（333 工程）
 
-Rebuilding from the extracted source is **not feasible** because:
+本仓库已经建立直接从 `src/entrypoints/cli.tsx` 构建 CLI 的流程。
+原始 `cli.js` 仅用于基线对照和提取缺失的发行资源，不进入新程序的构建或运行链路。
 
-- The code uses `import { feature } from 'bun:bundle'` (Bun bundler compile-time API)
-- The original `package.json` with ~hundreds of build/dev dependencies is not published
-- Build configuration (tsconfig, bundler config) is not included in the source map
-- 2,850 bundled `node_modules` dependencies are only present as source map entries
+**环境：** Node.js 18+、Bun 1.4.4+、Git 和 npm。构建时需要网络下载公开依赖；后续由 `build/public-dependencies.lock.json` 固定版本及完整性校验。
 
-The extracted `src/` and `native/` trees (1,906 files, 35 MB) are useful for **reading and studying** the internals, not for rebuilding.
+```sh
+git clone https://github.com/sy220284/333.git
+cd 333
+git switch rebuild/bun-from-src
+npm run rebuild
+bun dist/cli.js --version
+node dist/launcher.cjs --help
+npm run test:parity
+npm run test:release
+```
+
+执行 `npm run rebuild` 会校验原版技能资源、从 `cli.js.map` 还原冻结依赖快照、按锁文件安装完整 npm 依赖、编译 `src/` 并生成包含平台二进制资源的 `dist/` 发行目录。
+`dist/integrity.json` 保存发行文件的 SHA-256 校验清单。CI 验证原版与重建版公开命令和参数是否一致。
+
+**当前边界：** 从源代码重建并通过版本号、CLI 帮助、公开参数差分与发行文件完整性验证；涉及账户鉴权、真实模型请求、原生平台能力和全面端到端行为的验收另行核对。原代码中存在只有特定编译功能开关才能启用的内部功能；构建时严格拒绝无法实现的禁用模块残留。
 
 ## Directory layout
 
 ```
-src/             # 1,902 extracted TypeScript/TSX application files
-native/          # 4 extracted native-module TypeScript stubs
-vendor/          # prebuilt platform-specific native binaries and ripgrep
-cli.js           # 13 MB self-contained Node.js bundle (the actual executable)
-cli.js.map       # 57 MB original source map (preserved for provenance)
-sdk-tools.d.ts   # published SDK tool type definitions
-package.json     # published package manifest (no build deps)
-bun.lock         # published lock file
-LICENSE.md       # original license notice
-README.md        # project overview and source-extraction guide
+src/               # 1,902 个提取的 TypeScript / TSX 应用源码文件
+native/            # 4 个原生模块 TypeScript 适配文件
+vendor/            # macOS / Linux / Windows 预编译辅助程序
+build/             # 依赖恢复、独立编译、发行打包与版本锁
+tests/             # CLI 原版差分和独立发行完整性验收
+.github/workflows/ # GitHub Actions 自动编译与验收
+dist/              # 新版独立发行产物，按需生成（不入库）
+cli.js             # 2.1.88 原发行可执行文件，仅供行为基线
+cli.js.map         # 2.1.88 原始源码映射与冻结依赖数据
+sdk-tools.d.ts     # 发布版 SDK 类型声明
+package.json       # 构建命令及原版包元数据
+bun.lock           # 原始发布文件的 Bun 锁
+README.md          # 本文档
+LICENSE.md         # Anthropic 原始法律与许可告知
 ```
 
 ---
