@@ -27,7 +27,7 @@ jobs:
         run: npm run verify
       - name: 候选升级和安全检查
         run: |
-          npm pkg set overrides.tmp=0.2.6 --prefix .rebuild/public
+          npm pkg set overrides.tmp=0.2.7 overrides.zod=4.6.6 --prefix .rebuild/public
           npm install --prefix .rebuild/public --legacy-peer-deps --ignore-scripts --no-audit --no-fund --save-exact zod@4.6.6 sharp@0.35.5 @opentelemetry/exporter-prometheus@0.300.0
           mkdir -p .rebuild/governance
           set +e
@@ -36,6 +36,26 @@ jobs:
           set -e
           echo "审计退出码: $code"
           node tools/governance/summarize.mjs audit .rebuild/governance/probe-audit.json .rebuild/governance/probe-audit-summary.json
+      - name: 插件、沙盒、图像与遥测接口专项检查
+        run: |
+          node --input-type=module <<'EOF'
+          import { McpbManifestSchema } from '@anthropic-ai/mcpb'
+          import { SandboxRuntimeConfigSchema } from '@anthropic-ai/sandbox-runtime'
+          import sharp from 'sharp'
+          import { PrometheusExporter } from '@opentelemetry/exporter-prometheus'
+          import tmp from 'tmp'
+          const invalid = McpbManifestSchema.safeParse({manifest_version:'0.1', name: ''})
+          if (invalid.success || !Array.isArray(invalid.error.issues)) throw Error('MCPB 清单校验异常')
+          const sandbox = SandboxRuntimeConfigSchema.safeParse({})
+          if (!sandbox || typeof sandbox.success !== 'boolean') throw Error('沙盒配置检查不可用')
+          const png = await sharp({ create: { width: 2, height: 2, channels: 3, background: {r: 1,g: 2,b: 3} } }).png().toBuffer()
+          const decoded = await sharp(png).metadata()
+          if (decoded.width !== 2 || decoded.height !== 2) throw Error('图像创建或解码失败')
+          if (typeof PrometheusExporter !== 'function') throw Error('PrometheusExporter 导出缺失')
+          const f = tmp.fileSync({prefix:'333-security-probe-'})
+          f.removeCallback()
+          console.log('[OK] 四项真实依赖接口正常')
+          EOF
       - name: 候选依赖真实编译及现有功能测试
         run: |
           bun build/rebuild.mjs
