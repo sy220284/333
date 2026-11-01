@@ -15,6 +15,8 @@ on:
       - 'tests/m1-source-gap-audit.test.mjs'
       - 'build/m1-source-gap-audit.py'
       - 'src/types/messageQueueTypes.ts'
+      - 'src/types/fileSuggestion.ts'
+      - 'src/types/statusLine.ts'
       - 'src/dialogLaunchers.tsx'
       - 'src/main.tsx'
       - 'src/commands/privacy-settings/**'
