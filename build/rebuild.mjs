@@ -19,13 +19,33 @@ function isFile(f) {
 function candidates(base) {
   const options = [];
   for (const ext of ['', '.js', '.mjs', '.cjs', '.ts', '.tsx', '.json']) options.push(base + ext);
-  const prefixes = ['', 'source', 'src', 'build/src', 'build', 'dist/esm', 'dist/mjs', 'dist', 'lib', 'esm', 'cjs'];
+  const prefixes = ['', 'source', 'src', 'build/src', 'build', 'dist/esm', 'dist/mjs', 'dist-cjs', 'dist', 'lib', 'esm', 'cjs'];
   for (const prefix of prefixes) for (const entry of ['index.js','index.mjs','index.ts','index.tsx','index.cjs']) {
     options.push(join(base, prefix, entry));
   }
   return options;
 }
+// Original package.json export maps were not included in cli.js.map.
+// These entries point only to files that are present in the verified snapshot.
+const packageEntry = {
+  'chalk': 'chalk/source/index.js',
+  'diff': 'diff/libesm/index.js',
+  'marked': 'marked/lib/marked.esm.js',
+  'ajv': 'ajv/dist/ajv.js',
+  'zod/v3': 'zod/v3/external.js',
+  'lodash-es': 'lodash-es/lodash.js',
+  '@azure/msal-common/node': '@azure/msal-common/dist/index-node.mjs',
+  '@opentelemetry/otlp-exporter-base/node-http': '@opentelemetry/otlp-exporter-base/build/src/index-node-http.js',
+  'react-reconciler': 'react-reconciler/cjs/react-reconciler.production.js',
+  'react-reconciler/constants.js': 'react-reconciler/cjs/react-reconciler-constants.production.js',
+  '@aws-sdk/client-bedrock': '@aws-sdk/client-bedrock/dist-cjs/index.js',
+  '@smithy/core': '@smithy/core/dist-cjs/index.js',
+  '@aws-sdk/credential-provider-node': '@aws-sdk/credential-provider-node/dist-cjs/index.js',
+  '#ansi-styles': 'chalk/source/vendor/ansi-styles/index.js',
+  '#supports-color': 'chalk/source/vendor/supports-color/index.js'
+};
 function resolvePackage(moduleId) {
+  if (packageEntry[moduleId] && isFile(join(snapshot, packageEntry[moduleId]))) return join(snapshot, packageEntry[moduleId]);
   if (moduleId === 'react') return join(snapshot, 'react/cjs/react.production.js');
   if (moduleId === 'react/compiler-runtime') return join(snapshot, 'react/cjs/react-compiler-runtime.production.js');
   const parts = moduleId.split('/');
