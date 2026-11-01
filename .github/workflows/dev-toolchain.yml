@@ -203,6 +203,7 @@ jobs:
           DEV333_TOOLCHAIN_ENV_FILE: ${{ runner.temp }}/333-dev.env
         run: |
           set -euo pipefail
+          # shellcheck source=/dev/null
           source "$DEV333_TOOLCHAIN_ENV_FILE"
           npm run verify
           git diff --exit-code
@@ -212,6 +213,7 @@ jobs:
           DEV333_TOOLCHAIN_ENV_FILE: ${{ runner.temp }}/333-dev.env
         run: |
           set -euo pipefail
+          # shellcheck source=/dev/null
           source "$DEV333_TOOLCHAIN_ENV_FILE"
           python3 research/claude-code-2.1.88/generate.py --verify
           actionlint .github/workflows/dev-toolchain.yml
