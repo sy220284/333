@@ -115,7 +115,15 @@ function checkAll() {
   assert.deepEqual(missingModules.map(row => row.module).sort(),
     ['VerifyPlanExecutionTool','snipCompact','SnapshotUpdateDialog','AssistantSessionChooser',
     'assistant','cachedMicrocompact','contextCollapse'].sort());
-  assert.ok(missingModules.every(row => row.target_state === 'UNVERIFIED'));
+  assert.ok(missingModules.every(row => ['UNVERIFIED', 'RETIRED_WITH_NOOP'].includes(row.target_state)));
+  for (const row of missingModules) {
+    if (row.target_state !== 'RETIRED_WITH_NOOP') continue;
+    assert.equal(row.module, 'SnapshotUpdateDialog',
+      'Do not mark other missing modules retired without a verified target source contract');
+    assert.match(row.new_execution_path, /chunk-0x2m04n3\\.js:684/);
+    assert.match(row.comparison_evidence, /return \\"keep\\"/);
+    assert.equal(row.M1_evidence_grade, 'TARGET_SOURCE_CONTRACT_CONFIRMED');
+  }
 
   assert.equal(legacyCallSites.total_flags, 90);
   assert.equal(legacyCallSites.total_legacy_refs, 972);
