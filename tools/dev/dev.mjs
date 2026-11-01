@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { resolve, join } from 'node:path';
+import { resolve, join, dirname } from 'node:path';
 import { parseTypeScriptErrors, normalizePath } from './quality-core.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
@@ -11,10 +11,24 @@ const secondary = resolve(root, 'tools/dev/node_modules/.bin');
 const tools = existsSync(primary) ? primary : secondary;
 const ext = process.platform === 'win32' ? '.cmd' : '';
 const bin = name => join(tools, name + ext);
+const cliScript = name => resolve(tools, '../' + (name === 'tsc' ? 'typescript/bin/tsc' : '@biomejs/biome/bin/biome'));
+const npmCli = resolve(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js');
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, { cwd: root, stdio: 'inherit', ...options });
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error('命令失败（' + result.status + '）: ' + command + ' ' + args.join(' '));
+}
+function toolRun(name, args) {
+  if (process.platform === 'win32') run(process.execPath, [cliScript(name), ...args]);
+  else run(bin(name), args);
+}
+function toolOutput(name, args) {
+  if (process.platform === 'win32') return output(process.execPath, [cliScript(name), ...args]);
+  return output(bin(name), args);
+}
+function npmRun(args) {
+  if (process.platform === 'win32') run(process.execPath, [npmCli, ...args]);
+  else run('npm', args);
 }
 function output(command, args) {
   const result = spawnSync(command, args, { cwd: root, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
@@ -43,7 +57,7 @@ function typescript(checkChanged) {
   mkdirSync(resolve(root, '.rebuild'), { recursive: true });
   const typeRoots = [resolve(tools, '../@types'), resolve(root, 'node_modules/@types')];
   writeFileSync(config, JSON.stringify({ extends: '../tsconfig.json', compilerOptions: { typeRoots, types: ['node', 'react'] } }, null, 2) + '\n');
-  const result = output(bin('tsc'), ['--noEmit', '--pretty', 'false', '-p', config]);
+  const result = toolOutput('tsc', ['--noEmit', '--pretty', 'false', '-p', config]);
   const errors = parseTypeScriptErrors(result.stdout + '\n' + result.stderr);
   if (!checkChanged) {
     process.stdout.write(result.stdout);
@@ -64,16 +78,16 @@ function lint(all) {
   if (!existsSync(bin('biome'))) throw new Error('缺失 Biome，先运行 npm install --prefix tools/dev');
   const files = all ? ['src', 'native', 'build', 'tests', 'tools/dev'] : [...new Set([...checkedFiles(), 'tools/dev/quality-core.mjs', 'tools/dev/dev.mjs', 'tools/dev/watch.mjs', 'tools/dev/native-smoke.mjs'])];
   if (!files.length) { console.log('[333-dev] 没有需要检查的文件'); return; }
-  run(bin('biome'), ['lint', '--no-errors-on-unmatched', ...files]);
+  toolRun('biome', ['lint', '--no-errors-on-unmatched', ...files]);
 }
-function boot() { run('npm', ['ci', '--prefix', 'tools/dev', '--ignore-scripts', '--no-audit', '--no-fund']); }
+function boot() { npmRun(['ci', '--prefix', 'tools/dev', '--ignore-scripts', '--no-audit', '--no-fund']); }
 const command = process.argv[2] ?? 'help';
 switch (command) {
   case 'bootstrap': boot(); break;
   case 'doctor':
     for (const name of ['tsc', 'biome']) {
       if (!existsSync(bin(name))) throw new Error(name + ' 未安装');
-      run(bin(name), ['--version']);
+      toolRun(name, ['--version']);
     }
     run('git', ['--version']);
     run('bun', ['--version']);
@@ -85,7 +99,7 @@ switch (command) {
   case 'lint:all': lint(true); break;
   case 'format': {
     const files = checkedFiles();
-    if (files.length) run(bin('biome'), ['format', '--write', ...files]);
+    if (files.length) toolRun('biome', ['format', '--write', ...files]);
     break;
   }
   case 'watch': run(process.execPath, ['tools/dev/watch.mjs']); break;
@@ -93,8 +107,8 @@ switch (command) {
   case 'coverage':
     run(process.execPath, ['--test', '--experimental-test-coverage', '--test-coverage-include=tools/dev/quality-core.mjs', '--test-coverage-lines=90', 'tests/dev-tooling.test.mjs']);
     break;
-  case 'security': run('npm', ['audit', '--prefix', '.rebuild/public', '--audit-level=high']); break;
-  case 'sbom': run('npm', ['sbom', '--prefix', '.rebuild/public', '--sbom-format=cyclonedx']); break;
+  case 'security': npmRun(['audit', '--prefix', '.rebuild/public', '--audit-level=high']); break;
+  case 'sbom': npmRun(['sbom', '--prefix', '.rebuild/public', '--sbom-format=cyclonedx']); break;
   case 'verify':
     run(process.execPath, ['tools/dev/dev.mjs', 'doctor']);
     run(process.execPath, ['tools/dev/dev.mjs', 'lint']);
