@@ -200,6 +200,14 @@ function checkAll() {
     const mapped = flagByName.get(entry.flag);
     assert.ok(mapped, 'M1 old flag missing classification: '+entry.flag);
     assert.equal(mapped.old_references, entry.legacy_count);
+    assert.ok(hasText(mapped.target_behavior_source),
+      'Legacy flag lacks a reviewed target branch or recorded mismatch: ' + mapped.flag);
+    assert.ok(hasText(mapped.old_vs_new_delta),
+      'Legacy flag lacks an old/new functional comparison: ' + mapped.flag);
+    assert.ok(hasText(mapped.verified_next_implementation_task) || mapped.M1_required,
+      'Legacy flag lacks precise M2-M9 implementation handoff: ' + mapped.flag);
+    assert.notEqual(mapped.assignment_verified, 'CODE_REVIEWED',
+      'A source-candidate transfer must not silently claim final branch verification');
     assert.ok(mapped.related_F_candidate.every(id => validFeatures.has(id)));
     const actualTasks = [...new Set(mapped.related_F_candidate.flatMap(id => plannedByF.get(id) ?? []))].sort();
     assert.deepEqual(mapped.developer_cards.map(x => x.M).sort(), actualTasks);
@@ -241,6 +249,12 @@ function checkAll() {
   return { source_blob:source.official_changelog_blob, source_archive_sha256:source.decompiled_library_sha256,
     total: { flags:90, anchors:61, changes:6313, versions:180, feature_links:coverage.features.length,
       scenario_links:coverage.scenarios.length }, accepted,
+    source_review: {
+      flags_first_pass_with_comparison: routing.flags.filter(r => hasText(r.target_behavior_source) && hasText(r.old_vs_new_delta)).length,
+      functions_with_actual_entry_and_consumer: routing.chain_features.filter(r => Boolean(r.target_verified_source_branches?.length)).length,
+      release_semantics_source_confirmed:releaseReviews.filter(r => r.review_status === 'M1_CLASSIFIED').length,
+      release_semantics_without_signoff:6313-releaseReviews.filter(r => r.review_status === 'M1_CLASSIFIED').length,
+    },
     m1_closed: accepted.flags===90 && accepted.anchors===61 && accepted.changes===6313 };
 }
 function verifyOfficialChangelog(path) {
