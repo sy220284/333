@@ -15,7 +15,7 @@ if (kind === 'types') {
     line: Number(m[2]), column: Number(m[3]), code: m[4], message: m[5].trim(),
   }));
   if (!diagnostics.length && !raw.includes('Found 0 errors') && !raw.includes('[OK] 全量 TypeScript 类型检查通过')) {
-    throw new Error('No parseable TypeScript diagnostics; check tool startup and log encoding: ' + raw.slice(-1200));
+    throw new Error(`No parseable TypeScript diagnostics; check tool startup and log encoding: ${raw.slice(-1200)}`);
   }
   const byCode = Object.create(null);
   const byFile = Object.create(null);
@@ -52,7 +52,7 @@ if (kind === 'types') {
   report = { ...audit.metadata, high: vulnerabilities.filter(x => ['high','critical'].includes(x.severity)), vulnerabilities };
 }
 mkdirSync(dirname(resolve(destination)), { recursive: true });
-writeFileSync(destination, JSON.stringify(report, null, 2) + '\n');
+writeFileSync(destination, `${JSON.stringify(report, null, 2)}\n`);
 console.log(JSON.stringify({
   kind, output: destination,
   total: kind === 'types' ? report.total : report.vulnerabilities.length,

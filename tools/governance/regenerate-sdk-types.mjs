@@ -11,14 +11,14 @@ const result = [
   "import type { z } from 'zod/v4'",
   "import type * as schemas from './coreSchemas.js'",
   "",
-  ...matches.map(name => "export type " + name.slice(0, -6) + " = z.infer<ReturnType<typeof schemas." + name + ">>"),
+  ...matches.map(name => `export type ${name.slice(0, -6)} = z.infer<ReturnType<typeof schemas.${name}>>`),
   "",
 ].join('\n');
 const dest = resolve(root, 'src/entrypoints/sdk/coreTypes.generated.ts');
 if (process.argv.includes('--check')) {
   if (readFileSync(dest, 'utf8') !== result) throw new Error('coreTypes.generated.ts 不符合 coreSchemas.ts 的最新类型');
-  console.log('[OK] ' + matches.length + ' 项 SDK 类型与模式声明一致');
+  console.log(`[OK] ${matches.length} 项 SDK 类型与模式声明一致`);
 } else {
   writeFileSync(dest, result);
-  console.log('[OK] 已生成 ' + matches.length + ' 项强类型 SDK 声明');
+  console.log(`[OK] 已生成 ${matches.length} 项强类型 SDK 声明`);
 }
