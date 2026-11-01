@@ -6,12 +6,23 @@ on:
 jobs:
   rebuild:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
+      - name: 恢复并校验原版内嵌资源
+        run: node build/restore-bundled-assets.mjs
+      - name: 将恢复资源保存到源代码
+        run: |
+          git add src/skills/bundled/verify src/utils/ultraplan/prompt.txt
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "恢复 2.1.88 原始技能与规划提示词资源"
+            git push origin HEAD:rebuild/bun-from-src
+          fi
       - name: 从源码映射恢复精确依赖快照
         run: node build/restore-dependencies.mjs
       - name: 安装缺失的完整第三方依赖
