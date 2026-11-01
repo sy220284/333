@@ -27,7 +27,7 @@ jobs:
         run: npm run verify
       - name: 候选升级和安全检查
         run: |
-          npm pkg set overrides.tmp=0.2.7 overrides.zod=4.6.6 --prefix .rebuild/public
+          npm pkg set dependencies.zod=4.6.6 overrides.tmp=0.2.7 'overrides.zod=$zod' --prefix .rebuild/public
           npm install --prefix .rebuild/public --legacy-peer-deps --ignore-scripts --no-audit --no-fund --save-exact zod@4.6.6 sharp@0.35.5 @opentelemetry/exporter-prometheus@0.300.0
           mkdir -p .rebuild/governance
           set +e
