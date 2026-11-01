@@ -12,6 +12,7 @@ const native = {
   'image-processor-napi': 'image-processor-src',
   'modifiers-napi': 'modifiers-napi-src',
   'url-handler-napi': 'url-handler-src',
+  'color-diff-napi': '../src/native-ts/color-diff',
 };
 function isFile(f) {
   return existsSync(f) && statSync(f).isFile();
@@ -75,6 +76,7 @@ const plugin = {
         if (path) return { path };
         return;
       }
+      if (id === 'color-diff-napi') return { path: join(root, 'src/native-ts/color-diff/index.ts') };
       if (native[id]) return { path: join(root, 'native', native[id], 'index.ts') };
       const ns = id.startsWith('@') ? id.split('/').slice(0,2).join('/') : id.split('/')[0];
       // Resolve complete published package metadata first; preserve map snapshots for internal packages.
