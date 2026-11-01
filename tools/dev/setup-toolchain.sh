@@ -12,7 +12,7 @@ while [ "$#" -gt 0 ]; do
     --check) MODE=check ;;
     --plan) MODE=plan ;;
     --self-test) MODE=self-test ;;
-    -h|--help) echo '用法: bash tools/dev/setup-toolchain.sh [--check|--plan|--self-test] [--profile build|full]'; exit 0 ;;
+    -h|--help) echo '用法: bash tools/dev/setup-toolchain.sh [--check|--plan|--self-test] [--profile build|full|dev]'; exit 0 ;;
     *) die "未知参数：$1" ;;
   esac
   shift

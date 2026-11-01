@@ -14,19 +14,20 @@ usage() {
   cat <<'EOF'
 333 开发工具链（来自 777 的按需、锁版、离线 Artifact 安装机制）
 
-bash tools/dev/ai-toolchain.sh plan [build|full]
-bash tools/dev/ai-toolchain.sh check [build|full]
-bash tools/dev/ai-toolchain.sh install [build|full] --artifacts-dir PATH [--configure-shell]
+bash tools/dev/ai-toolchain.sh plan [build|full|dev]
+bash tools/dev/ai-toolchain.sh check [build|full|dev]
+bash tools/dev/ai-toolchain.sh install [build|full|dev] --artifacts-dir PATH [--configure-shell]
 
 build: Node.js 24、Bun 1.4.4、固定 npm 依赖缓存、从 cli.js.map 恢复的依赖快照
 full : 额外包含 Python 3.12 与 actionlint 1.7.12
+dev  : 再包含 TypeScript、Biome、类型声明、原生验证和开发脚本
 Linux/WSL x64；macOS/Windows 继续使用 rebuild.yml 的三平台构建。
 组件必须来自当前 333 仓库 dev-toolchain.yml 生成的 GitHub Actions Artifacts。
 EOF
 }
 case "$COMMAND" in
   plan|check|install)
-    if [ "$#" -gt 0 ] && { [ "$1" = build ] || [ "$1" = full ]; }; then PROFILE="$1"; shift; fi ;;
+    if [ "$#" -gt 0 ] && { [ "$1" = build ] || [ "$1" = full ] || [ "$1" = dev ]; }; then PROFILE="$1"; shift; fi ;;
   help|-h|--help) usage; exit 0 ;;
   *) die "未知命令：$COMMAND" ;;
 esac
@@ -55,7 +56,7 @@ for root in "$TOOLS_ROOT" "$REPO_ROOT" "$ENV_FILE"; do
   [ -n "$root" ] && [ "$root" != / ] && [ "$root" != "$HOME" ] || die "拒绝危险目标目录：$root"
 done
 # 复制后的运行时优先于宿主工具；后续组件验证使用同一版本。
-export PATH="$TOOLS_ROOT/node/bin:$TOOLS_ROOT/bun/bin:$TOOLS_ROOT/python/bin:$TOOLS_ROOT/bin:$PATH"
+export PATH="$TOOLS_ROOT/dev-tools/node_modules/.bin:$TOOLS_ROOT/node/bin:$TOOLS_ROOT/bun/bin:$TOOLS_ROOT/python/bin:$TOOLS_ROOT/bin:$PATH"
 
 artifact_dir() {
   local name="$1"
@@ -121,6 +122,7 @@ install_component() (
   unpack_component "$comp" "$temp"
   case "$comp" in
     node) replace_dir "$temp/node" "$TOOLS_ROOT/node" ;;
+    dev-tools) replace_dir "$temp/dev-tools" "$TOOLS_ROOT/dev-tools" ;;
     bun) replace_dir "$temp/bun" "$TOOLS_ROOT/bun" ;;
     python) replace_dir "$temp/python" "$TOOLS_ROOT/python" ;;
     actionlint)
@@ -162,8 +164,8 @@ mkdir -p "$(dirname "$ENV_FILE")"
   printf '# 333 离线工具链；由 tools/dev/install.sh 写入\n'
   printf 'export DEV333_TOOLS_ROOT=%q\n' "$TOOLS_ROOT"
   printf 'export DEV333_REPO_ROOT=%q\n' "$REPO_ROOT"
-  printf 'export PATH=%q:%q:%q:%q:"$PATH"\n' \
-    "$TOOLS_ROOT/node/bin" "$TOOLS_ROOT/bun/bin" "$TOOLS_ROOT/python/bin" "$TOOLS_ROOT/bin"
+  printf 'export PATH=%q:%q:%q:%q:%q:"$PATH"\n' \
+    "$TOOLS_ROOT/dev-tools/node_modules/.bin" "$TOOLS_ROOT/node/bin" "$TOOLS_ROOT/bun/bin" "$TOOLS_ROOT/python/bin" "$TOOLS_ROOT/bin"
   printf 'if [ -d %q ]; then export LD_LIBRARY_PATH=%q:"${LD_LIBRARY_PATH:-}"; fi\n' "$TOOLS_ROOT/python/lib" "$TOOLS_ROOT/python/lib"
 } > "$ENV_FILE"
 if [ "$CONFIGURE_SHELL" = true ]; then

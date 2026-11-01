@@ -21,7 +21,7 @@ detect_arch() {
     *) die "当前发布组件仅支持 Linux x64：$(uname -m)" ;;
   esac
 }
-assert_profile() { case "$1" in build|full) ;; *) die "仅支持 build/full：$1";; esac; }
+assert_profile() { case "$1" in build|full|dev) ;; *) die "仅支持 build/full/dev：$1";; esac; }
 component_parts() { if [ "$1" = npm-public ]; then echo "$NPM_PUBLIC_PARTS"; else echo 1; fi; }
 artifacts_for() {
   local count i
@@ -31,7 +31,8 @@ artifacts_for() {
 }
 components_for() {
   printf '%s\n' $BUILD_COMPONENTS
-  if [ "$1" = full ]; then printf '%s\n' $FULL_EXTRA_COMPONENTS; fi
+  if [ "$1" = full ] || [ "$1" = dev ]; then printf '%s\n' $FULL_EXTRA_COMPONENTS; fi
+  if [ "$1" = dev ]; then printf '%s\n' $DEV_EXTRA_COMPONENTS; fi
 }
 node_path() {
   if [ -x "$TOOLS_ROOT/node/bin/node" ]; then echo "$TOOLS_ROOT/node/bin/node"
@@ -95,6 +96,13 @@ component_ready() {
     actionlint)
       p="$(actionlint_path)" || return 1
       "$p" -version 2>/dev/null | grep -Fq "$ACTIONLINT_VERSION"
+      ;;
+    dev-tools)
+      local dev_bin="$TOOLS_ROOT/dev-tools/node_modules/.bin"
+      [ -x "$dev_bin/tsc" ] || dev_bin="$TOOLCHAIN_DIR/node_modules/.bin"
+      [ -x "$dev_bin/tsc" ] && [ -x "$dev_bin/biome" ] &&
+        [ "$("$dev_bin/tsc" --version 2>/dev/null)" = 'Version 5.9.3' ] &&
+        "$dev_bin/biome" --version 2>/dev/null | grep -Fq '2.6.3'
       ;;
     *) die "未知组件：$1" ;;
   esac

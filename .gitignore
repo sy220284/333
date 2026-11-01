@@ -1,3 +1,5 @@
 .rebuild/
 dist/
 node_modules/
+tools/dev/node_modules/
+tools/dev/package-lock.json

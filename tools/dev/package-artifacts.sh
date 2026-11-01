@@ -7,7 +7,7 @@ source "$TOOLCHAIN_DIR/lib.sh"
 load_manifest
 detect_arch
 require_repo
-for c in node bun npm-public source-deps python actionlint; do
+for c in node bun npm-public source-deps python actionlint dev-tools; do
   component_ready "$c" || die "打包前未通过组件检测：$c"
 done
 OUT="${1:-}"
@@ -103,12 +103,21 @@ cp "$(actionlint_path)" "$ACTION_STAGE/bin/actionlint"
 chmod +x "$ACTION_STAGE/bin/actionlint"
 make_component actionlint "$ACTION_STAGE"
 
+DEV_STAGE="$(new_stage dev-tools)"
+mkdir -p "$DEV_STAGE/dev-tools"
+cp -a "$TOOLCHAIN_DIR/node_modules" "$DEV_STAGE/dev-tools/node_modules"
+cp "$TOOLCHAIN_DIR/package.json" "$DEV_STAGE/dev-tools/package.json"
+if [ -f "$TOOLCHAIN_DIR/package-lock.json" ]; then cp "$TOOLCHAIN_DIR/package-lock.json" "$DEV_STAGE/dev-tools/package-lock.json"; fi
+make_component dev-tools "$DEV_STAGE"
+
 BOOT="$OUT/333-toolchain-bootstrap-latest"
 mkdir -p "$BOOT/tools"
-cp -a "$TOOLCHAIN_DIR" "$BOOT/tools/dev"
+mkdir -p "$BOOT/tools/dev"
+find "$TOOLCHAIN_DIR" -maxdepth 1 -type f -exec cp {} "$BOOT/tools/dev/" \;
 cat > "$BOOT/组件清单.txt" <<EOF
 333 工具链 build：$(printf '%s ' $BUILD_COMPONENTS)
 333 工具链 full 额外：$(printf '%s ' $FULL_EXTRA_COMPONENTS)
+333 工具链 dev 额外：$(printf '%s ' $DEV_EXTRA_COMPONENTS)
 npm-public 共 $NPM_PUBLIC_PARTS 片。
 需在 333 仓库根目录执行 tools/dev/ai-toolchain.sh plan，
 根据输出下载 GitHub Actions 对应 Artifact，全部解压到同一 artifacts 目录。
