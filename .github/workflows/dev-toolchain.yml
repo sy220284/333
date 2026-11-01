@@ -242,5 +242,6 @@ jobs:
           DEV333_TOOLCHAIN_ENV_FILE: ${{ runner.temp }}/333-dev.env
           DEV333_DIFF_BASE: main
         run: |
+          # shellcheck source=/dev/null
           source "$DEV333_TOOLCHAIN_ENV_FILE"
           node tools/dev/dev.mjs verify
