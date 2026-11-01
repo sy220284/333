@@ -9,6 +9,17 @@
  */
 const truthy = v => ['true','1','yes','on'].includes(String(v).trim().toLowerCase())
 
+/**
+ * The target 2.1.310 runtime trace gate is explicit opt-in only.
+ * Either trusted environment variable can enable it; no test/internal
+ * build flag and no automatic usage-based rollout changes that result.
+ */
+export function isEnhancedTracingOptedIn(env) {
+  const value = env.CLAUDE_CODE_ENHANCED_TELEMETRY_BETA ??
+    env.ENABLE_ENHANCED_TELEMETRY_BETA
+  return truthy(value)
+}
+
 export function isPrivilegedTelemetrySetting(name, value) {
   const key = name.toUpperCase()
   if (key === 'CLAUDE_CODE_ENABLE_TELEMETRY' ||
