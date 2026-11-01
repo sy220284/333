@@ -58,6 +58,20 @@ jobs:
         run: npm run dev:bootstrap
       - name: 检查冻结开发依赖锁文件
         run: git diff --exit-code -- tools/dev/package-lock.json
+      - name: 封装跨平台离线开发工具
+        run: node tools/dev/portable.mjs pack "$RUNNER_TEMP/333-portable-dev"
+      - name: 在新目录独立解包并验证开发工具
+        run: |
+          mv tools/dev/node_modules "$RUNNER_TEMP/dev-tools-before-test"
+          node tools/dev/portable.mjs install "$RUNNER_TEMP/333-portable-dev"
+          npm run dev:doctor
+      - name: 上传平台开发工具离线包
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-dev-tools-${{ runner.os }}-${{ runner.arch }}
+          path: ${{ runner.temp }}/333-portable-dev/
+          retention-days: 90
+          if-no-files-found: error
       - name: 准备源码映射和冻结依赖
         run: |
           node build/restore-dependencies.mjs

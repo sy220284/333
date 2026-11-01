@@ -41,3 +41,21 @@ VS Code 可使用“333：调试重建 CLI（Bun）”启动配置，它会先�
 开发质量工作流在 Linux、macOS、Windows 上执行版本检查、代码规范、类型诊断、开发工具覆盖率和平台原生模块检查。
 Linux 离线安装还通过工具链的 `dev` 档单独验收。
 安全检查需要访问 npm 漏洞数据库；已冻结的公开依赖可能存在上游漏洞，必须保存并审核实际报告，不通过删掉依赖掩盖。
+
+## 提交前检查（按需启用）
+
+`npm run dev:hooks` 安装当前仓库的 Git 提交前检查，`npm run dev:unhooks` 撤销。
+检查只针对已暂存的变更文件，已有其他 `core.hooksPath` 配置时不会覆盖。
+
+## macOS、Windows、Linux 跨平台离线开发工具包
+
+开发质量 CI 会在每个系统上传对应的 `333-dev-tools-系统-架构` 离线 Artifact，保留 90 天。
+将下载的 Artifact 解压到独立目录，且已经具备 Node.js 24 后，执行：
+
+```bash
+node tools/dev/portable.mjs install /path/to/extracted-artifact
+npm run dev:doctor
+```
+
+离线安装器核对平台、CPU、Node 主版本、开发依赖锁文件摘要和压缩包 SHA-256，再解包并真实启动 TypeScript 与 Biome 校验。
+已有开发工具不会被覆盖。跨平台包包含独立 TypeScript、Biome 和类型声明，完整 CLI 的构建依赖仍需冻结的 npm 与源码快照（Linux/WSL x64 当前由原工具链提供离线组件）。

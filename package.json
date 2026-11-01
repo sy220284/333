@@ -34,7 +34,11 @@
     "dev:native": "node tools/dev/dev.mjs native",
     "dev:security": "node tools/dev/dev.mjs security",
     "dev:sbom": "node tools/dev/dev.mjs sbom",
-    "dev:verify": "node tools/dev/dev.mjs verify"
+    "dev:verify": "node tools/dev/dev.mjs verify",
+    "dev:hooks": "node tools/dev/dev.mjs hooks:install",
+    "dev:unhooks": "node tools/dev/dev.mjs hooks:remove",
+    "dev:portable:pack": "node tools/dev/portable.mjs pack",
+    "dev:portable:install": "node tools/dev/portable.mjs install"
   },
   "dependencies": {},
   "optionalDependencies": {

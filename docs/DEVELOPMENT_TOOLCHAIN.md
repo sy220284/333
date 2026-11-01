@@ -77,3 +77,5 @@ npm run dev:sbom
 ```
 
 开发工具说明见 [DEVELOPMENT.md](DEVELOPMENT.md)。
+
+三个桌面系统的 dev-tools 专项离线包、恢复命令和本地提交检查操作，见 [DEVELOPMENT.md](DEVELOPMENT.md)。
