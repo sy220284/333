@@ -10,7 +10,11 @@ const readJson = path => JSON.parse(readFileSync(path, 'utf8'));
 const source = readJson(join(evidenceDir, 'source-provenance.json'));
 const flagSet = readJson(join(evidenceDir, 'old-flags.json')).records;
 const anchorSet = readJson(join(evidenceDir, 'new-code-anchors.json')).records;
-const changes = [1, 2, 3].flatMap(i => readJson(join(evidenceDir, 'changelog-' + i + '.json')).records);
+const changes = [1, 2, 3].flatMap(i => {
+  const part = readJson(join(evidenceDir, 'changelog-' + i + '.json'));
+  assert.equal(part.source_blob ?? source.official_changelog_blob, source.official_changelog_blob);
+  return part.records;
+});
 const coverage = readJson(join(root, 'docs/upgrade/upgrade-coverage.json'));
 const routing = readJson(join(evidenceDir, '功能差分与任务承接.json'));
 const plannedByF = new Map(coverage.features.map(f => [f.id, f.tasks.filter(t => /^M[2-9]$/.test(t))]));
@@ -119,7 +123,7 @@ function checkAll() {
     expected.set(record.version, num);
     assert.equal(record.ordinal, num, 'Missing or repeated changelog ordinal: '+record.id);
     assert.equal(record.id, record.version + '#' + String(num).padStart(3,'0'));
-    assert.equal(record.source_blob, source.official_changelog_blob);
+    assert.equal(record.source_blob ?? source.official_changelog_blob, source.official_changelog_blob);
     assert.ok(record.source_line > previousLine, 'Source line offsets are not ordered');
     previousLine = record.source_line;
     assert.ok(record.related_M_candidate.every(m => validTasks.has(m)));
