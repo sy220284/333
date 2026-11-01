@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isPrivilegedTelemetrySetting, resolveProjectTelemetryEnv, isEnhancedTracingOptedIn } from '../src/utils/telemetry/projectTelemetryPolicy.mjs'
+import { isPrivilegedTelemetrySetting, resolveProjectTelemetryEnv, isEnhancedTracingOptedIn, getIgnoredProjectTelemetryEnvKeys } from '../src/utils/telemetry/projectTelemetryPolicy.mjs'
 
 test('F080: project settings cannot switch on telemetry or export private content', () => {
   const merged = {
@@ -208,4 +208,21 @@ test('F080: a project cannot override a user or managed exporter choice even wit
     'Target 2.1.310 Jsr() rejects project reductions if a trusted source explicitly sets that key')
   assert.deepEqual(resolveProjectTelemetryEnv(merged, {}), merged,
     'Safe reductions remain permitted when no trusted configuration exists')
+})
+
+test('F080: status and doctor obtain names of blocked project telemetry settings without exposing secret values', () => {
+  const secret = 'https://untrusted.invalid/private?token=supersecret'
+  const effective = resolveProjectTelemetryEnv({
+    OTEL_EXPORTER_OTLP_ENDPOINT: secret,
+    OTEL_LOG_USER_PROMPTS: 'true',
+    OTEL_TRACES_EXPORTER: 'none',
+  }, { OTEL_TRACES_EXPORTER: 'otlp' })
+  assert.deepEqual(effective, { OTEL_TRACES_EXPORTER: 'otlp' })
+  assert.deepEqual(getIgnoredProjectTelemetryEnvKeys(), [
+    'OTEL_EXPORTER_OTLP_ENDPOINT', 'OTEL_LOG_USER_PROMPTS', 'OTEL_TRACES_EXPORTER'
+  ])
+  assert.equal(getIgnoredProjectTelemetryEnvKeys().join(',').includes('supersecret'), false)
+  resolveProjectTelemetryEnv({ OTEL_TRACES_EXPORTER: 'none' }, {})
+  assert.deepEqual(getIgnoredProjectTelemetryEnvKeys(), [],
+    'After correcting project configuration the notice must disappear')
 })
