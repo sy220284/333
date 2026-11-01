@@ -12,7 +12,11 @@
       "owner_M": [
         "M1"
       ],
-      "status": "INDEXED"
+      "status": "INDEXED",
+      "target_static_candidates": [
+        "chunk-j0tbz6ra.js:35379"
+      ],
+      "static_observation": "仅识别到 verify_plan_reminder 字符串，未找到旧类的可直接迁入代码"
     },
     {
       "module": "snipCompact",
@@ -23,7 +27,9 @@
       "owner_M": [
         "M1"
       ],
-      "status": "INDEXED"
+      "status": "INDEXED",
+      "target_static_candidates": [],
+      "static_observation": "旧模块名及指定检索线索未命中；仍需检查重命名、条件编译与实际功能"
     },
     {
       "module": "SnapshotUpdateDialog",
@@ -34,7 +40,11 @@
       "owner_M": [
         "M1"
       ],
-      "status": "INDEXED"
+      "status": "INDEXED",
+      "target_static_candidates": [
+        "chunk-0x2m04n3.js:752"
+      ],
+      "static_observation": "目标版存在 launchSnapshotUpdateDialog 导出；待核验功能与旧模块是否等价"
     },
     {
       "module": "AssistantSessionChooser",
@@ -45,7 +55,9 @@
       "owner_M": [
         "M1"
       ],
-      "status": "INDEXED"
+      "status": "INDEXED",
+      "target_static_candidates": [],
+      "static_observation": "旧模块名及指定检索线索未命中；仍需检查重命名、条件编译与实际功能"
     },
     {
       "module": "assistant",
@@ -56,7 +68,9 @@
       "owner_M": [
         "M1"
       ],
-      "status": "INDEXED"
+      "status": "INDEXED",
+      "target_static_candidates": [],
+      "static_observation": "旧模块名及指定检索线索未命中；仍需检查重命名、条件编译与实际功能"
     },
     {
       "module": "cachedMicrocompact",
@@ -67,7 +81,11 @@
       "owner_M": [
         "M1"
       ],
-      "status": "INDEXED"
+      "status": "INDEXED",
+      "target_static_candidates": [
+        "chunk-wany0nxw.js:1625"
+      ],
+      "static_observation": "目标版存在 time-based microcompact 处理分支；旧文件名未按原样命中"
     },
     {
       "module": "contextCollapse",
@@ -78,7 +96,9 @@
       "owner_M": [
         "M1"
       ],
-      "status": "INDEXED"
+      "status": "INDEXED",
+      "target_static_candidates": [],
+      "static_observation": "旧模块名及指定检索线索未命中；仍需检查重命名、条件编译与实际功能"
     }
   ]
 }
