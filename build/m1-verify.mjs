@@ -37,10 +37,8 @@ for(const reviewed of releaseReviews) {
   }
   // Preserve original release description and source position; overlays may
   // only set reviewed semantics and implementation proof fields.
-  for(const key of ['source_line','source_blob','id','source_text','version','ordinal']) {
-    assert.equal(key==='source_line'?reviewed[key]??row[key]:
-                 key==='source_blob'?reviewed[key]??source.official_changelog_blob:row[key],
-                 key==='source_blob'?source.official_changelog_blob:row[key]);
+  for(const key of ['source_text','version','ordinal','verb_candidate','related_M_candidate']) {
+    assert.equal(reviewed[key], undefined, 'Reviewed overlay must not rewrite immutable source field '+key);
   }
   Object.assign(row, {
     review_status:reviewed.review_status,
