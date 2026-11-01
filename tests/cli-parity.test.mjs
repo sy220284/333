@@ -70,7 +70,7 @@ for (const args of [
       assert.deepEqual(rebuilt.commands, baseline.commands,
         'Existing CLI commands changed unexpectedly');
       const help = compiledHelp(args);
-      assert.match(help, /--fallback-model <models>/,
+      assert.match(help, /--fallback-model <model>/,
         'Ordered fallback model interface missing');
       assert.match(help, /--autocompact <auto\|tokens>/,
         'Auto-compact window interface missing');
