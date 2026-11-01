@@ -135,5 +135,5 @@ if (!cached) {
   console.log('Reusing installed packages from the frozen npm dependency lock');
 }
 if (!existsSync(join(npmroot,'node_modules'))) throw Error('npm dependency install failed');
-symlinkSync(join(npmroot,'node_modules'),join(root,'node_modules'),'dir');
+symlinkSync(join(npmroot,'node_modules'),join(root,'node_modules'),process.platform === 'win32' ? 'junction' : 'dir');
 console.log('Installed published dependencies for independent source rebuild');
