@@ -2443,10 +2443,10 @@
       "related_F_candidate": [
         "F072"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
-      "enable_conditions": null,
+      "target_formalized": "CONDITIONAL_TARGET_FEATURE_NOT_DEFAULT",
+      "target_behavior_source": "chunk-egrbwnxe.js:15-20; chunk-ag9wqm8n.js:121-134; official changelog 2.1.101 line 6554",
+      "old_vs_new_delta": "Old KAIROS_BRIEF compile guard covers brief-only delivery. Target retains /brief slash command as local-jsx with user setting enable_slash_command default false; eligibility CLAUDE_CODE_BRIEF || feature rollout tengu_kairos_brief; authorized toggling updates isBriefOnly.",
+      "enable_conditions": "tengu_kairos_brief_config.enable_slash_command (defaults false), and when turning on CLAUDE_CODE_BRIEF or tengu_kairos_brief rollout",
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
         {
@@ -2459,7 +2459,7 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "status": "TARGET_BRANCH_CONFIRMED_LATER_CARD_HANDOFF",
       "target_static_leads": [
         {
           "file": "chunk-05z051sc.js",
@@ -2479,8 +2479,15 @@
       ],
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 224,
-      "target_lead_assessment": "summary/routine 是泛化词，不证明旧版 brief 工具等价",
-      "static_lead_is_equivalent": false
+      "target_lead_assessment": "REAL_GATED_BRIEF_COMMAND_FOUND",
+      "static_lead_is_equivalent": null,
+      "target_static_observation": "TARGET_BRIEF_SLASH_COMMAND_ACCOUNT_GATED",
+      "target_code_anchor": "chunk-egrbwnxe.js:15; chunk-ag9wqm8n.js:121-134",
+      "entry_consumer": "chunk-ag9wqm8n.js:123 brief command call() updates apply_flag_settings",
+      "upgrade_assignment": {
+        "owner_M": "M6",
+        "type": "M1_FINAL_VERSION_CONDITION_SOURCE_VERIFIED_HANDOFF_FOR_RUNTIME"
+      }
     },
     {
       "flag": "KAIROS_CHANNELS",
@@ -2618,10 +2625,10 @@
       "related_F_candidate": [
         "F061"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
-      "enable_conditions": null,
+      "target_formalized": "REGISTERED_TARGET_TOOL_CODE; REAL_RUNTIME_AND_USER_AUTH_REQUIRED",
+      "target_behavior_source": "chunk-j0tbz6ra.js:72061-72076; chunk-xkdyhaxm.js:1671-1678; chunk-0mztaezn.js:661",
+      "old_vs_new_delta": "Old KAIROS_GITHUB_WEBHOOKS conditionally registers SubscribePR and session UI; target still defines SubscribePR with permission dialog and remote bridge subscribePR/unsubscribePR methods. M6 must check actual registry/permissions and remote session external-event wake; no background subscriptions are authorized in this M1 inspection.",
+      "enable_conditions": "Remote-control daemon session, usable authenticated bridge, explicit permission dialog",
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
         {
@@ -2634,7 +2641,7 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "status": "TARGET_BRANCH_CONFIRMED_LATER_CARD_HANDOFF",
       "target_static_leads": [
         {
           "file": "chunk-0mztaezn.js",
@@ -2649,8 +2656,15 @@
       ],
       "archive_exact_same_name_files": 0,
       "archive_similar_candidate_file_count": 26,
-      "target_lead_assessment": "通用 webhook 字段无法证实 KAIROS GitHub webhook 的注册路径",
-      "static_lead_is_equivalent": false
+      "target_lead_assessment": "REAL_GITHUB_PR_SUBSCRIPTION_BEHAVIOR_FOUND",
+      "static_lead_is_equivalent": null,
+      "target_static_observation": "TARGET_SUBSCRIBE_PR_COMMAND_WITH_REMOTE_SESSION_INBOX",
+      "target_code_anchor": "chunk-j0tbz6ra.js:72061; chunk-xkdyhaxm.js:1672",
+      "entry_consumer": "chunk-xkdyhaxm.js:1672 subscribePR calls zZe('subscribe'); explicit tool declared chunk-j0tbz6ra.js:72061",
+      "upgrade_assignment": {
+        "owner_M": "M6",
+        "type": "M1_FINAL_VERSION_CONDITION_SOURCE_VERIFIED_HANDOFF_FOR_RUNTIME"
+      }
     },
     {
       "flag": "KAIROS_PUSH_NOTIFICATION",
@@ -4561,10 +4575,10 @@
       "related_F_candidate": [
         "F007"
       ],
-      "target_formalized": "UNVERIFIED",
-      "target_behavior_source": null,
-      "old_vs_new_delta": null,
-      "enable_conditions": null,
+      "target_formalized": "NOT_DEFAULT_PUBLIC_FEATURE; SOURCE_CONDITIONALLY_REGISTERED",
+      "target_behavior_source": "official CHANGELOG 2.1.222 line 4194: Removed ultraplan feature; 2.1.310 chunk-j0tbz6ra.js:40525,40593-40659,40852",
+      "old_vs_new_delta": "2.1.88 ULTRAPLAN gate controls /ultraplan, remote planning dialogs; 2.1.222 says Removed ultraplan feature, but 2.1.310 still includes command registration with availability claude-ai and isEnabled: X4(). X4() requires tengu_ultraplan_config.enabled===true, cloud eligibility and additional platform guard. Treat as disabled by default with conditional retained code, not universal availability nor certain permanent deletion.",
+      "enable_conditions": "tengu_ultraplan_config.enabled===true && tbt() && !Pn(); cloud account, allow_remote_sessions, authorization and explicit consent",
       "handoff_path": "LATER_CARD_HAS_RELATED_F",
       "developer_cards": [
         {
@@ -4577,7 +4591,7 @@
       "assignment_verified": "MAPPING_ONLY_NEEDS_SEMANTIC_AUDIT",
       "M1_required": false,
       "M1_next_step": "Prove target reachable behavior and old-version implementation, then pass precise delta and runtime criteria to developer card",
-      "status": "TARGET_BEHAVIOR_NOT_VERIFIED",
+      "status": "TARGET_BRANCH_CONFIRMED_LATER_CARD_HANDOFF",
       "target_static_leads": [
         {
           "file": "chunk-mh7sh27p.js",
@@ -4597,8 +4611,15 @@
       ],
       "archive_exact_same_name_files": 2,
       "archive_similar_candidate_file_count": 56,
-      "target_lead_assessment": "--plan-mode-instructions 与旧版 UltraPlan 独立交互不等价",
-      "static_lead_is_equivalent": false
+      "target_lead_assessment": "REAL_COMMAND_CONDITIONALLY_REGISTERED_AFTER_RELEASE_REMOVAL",
+      "static_lead_is_equivalent": null,
+      "target_static_observation": "RETIRED_IN_CHANGELOG_BUT_CONDITIONALLY_REGISTERED_SOURCE_REMAINS",
+      "target_code_anchor": "chunk-j0tbz6ra.js:40525; chunk-j0tbz6ra.js:40659; chunk-j0tbz6ra.js:40852",
+      "entry_consumer": "chunk-j0tbz6ra.js:40852 command registration; chunk-j0tbz6ra.js:40659 isEnabled gate",
+      "upgrade_assignment": {
+        "owner_M": "M3",
+        "type": "M1_FINAL_VERSION_CONDITION_SOURCE_VERIFIED_HANDOFF_FOR_RUNTIME"
+      }
     },
     {
       "flag": "ULTRATHINK",
