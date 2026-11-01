@@ -12,8 +12,8 @@ const expected = JSON.parse(readFileSync(join(devDir, 'package.json'), 'utf8')).
 function hash(file) {
   return createHash('sha256').update(readFileSync(file)).digest('hex');
 }
-function exec(exe, args) {
-  const r = spawnSync(exe, args, { cwd: devDir, encoding: 'utf8', timeout: 120000 });
+function exec(exe, args, workingDirectory = devDir) {
+  const r = spawnSync(exe, args, { cwd: workingDirectory, encoding: 'utf8', timeout: 120000 });
   if (r.error || r.status !== 0) throw new Error('命令执行失败: ' + exe + ' ' + args.join(' ') + ': ' + (r.error?.message ?? r.stderr));
   return r.stdout.trim();
 }
@@ -33,7 +33,7 @@ const manifestPath = join(folder, 'manifest.json');
 if (operation === 'pack') {
   validate(target);
   mkdirSync(folder, { recursive: true });
-  exec('tar', ['-czf', archive.replaceAll('\\', '/'), '-C', devDir.replaceAll('\\', '/'), 'node_modules']);
+  exec('tar', ['-czf', 'payload.tar.gz', '-C', devDir.replaceAll('\\', '/'), 'node_modules'], folder);
   writeFileSync(manifestPath, JSON.stringify({
     schema: 1, component: '333-dev-tools', platform: process.platform, arch: process.arch,
     nodeMajor: Number(process.versions.node.split('.')[0]),
@@ -53,11 +53,11 @@ if (operation === 'pack') {
   if (existsSync(target)) throw new Error('现有 node_modules 已存在，拒绝覆盖');
   const temp = mkdtempSync(join(devDir, '.dev-tools-unpack-'));
   try {
-    const paths = exec('tar', ['-tzf', archive.replaceAll('\\', '/')]).split(/\r?\n/);
+    const paths = exec('tar', ['-tzf', 'payload.tar.gz'], folder).split(/\r?\n/);
     if (paths.some(path => path.startsWith('/') || path.split('/').includes('..') || !path.startsWith('node_modules/'))) {
       throw new Error('离线包存在不安全路径');
     }
-    exec('tar', ['-xzf', archive.replaceAll('\\', '/'), '-C', temp.replaceAll('\\', '/')]);
+    exec('tar', ['-xzf', 'payload.tar.gz', '-C', temp.replaceAll('\\', '/')], folder);
     const extracted = join(temp, 'node_modules');
     validate(extracted);
     renameSync(extracted, target);
