@@ -39,7 +39,9 @@ jobs:
       - name: 插件、沙盒、图像与遥测接口专项检查
         run: |
           node --input-type=module <<'EOF'
-          import { McpbManifestSchema } from '@anthropic-ai/mcpb'
+          import * as mcpbModule from '@anthropic-ai/mcpb'
+          const McpbManifestSchema = mcpbModule.McpbManifestSchema ?? mcpbModule.default?.McpbManifestSchema
+          if (!McpbManifestSchema) throw Error('MCPB 清单验证 API 缺失: ' + Object.keys(mcpbModule).join(','))
           import { SandboxRuntimeConfigSchema } from '@anthropic-ai/sandbox-runtime'
           import sharp from 'sharp'
           import { PrometheusExporter } from '@opentelemetry/exporter-prometheus'
