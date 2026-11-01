@@ -544,6 +544,8 @@ export type Props = {
   strictMcpConfig?: boolean;
   systemPrompt?: string;
   appendSystemPrompt?: string;
+  // CLI-configured ordered fallback chain, reinitialized for every user turn.
+  fallbackModel?: string;
   // Optional callback invoked before query execution
   // Called after user message is added to conversation but before API call
   // Return false to prevent query execution
@@ -584,6 +586,7 @@ export function REPL({
   strictMcpConfig = false,
   systemPrompt: customSystemPrompt,
   appendSystemPrompt,
+  fallbackModel,
   onBeforeQuery,
   onTurnComplete,
   disabled = false,
@@ -2796,6 +2799,7 @@ export function REPL({
       systemContext,
       canUseTool,
       toolUseContext,
+      fallbackModel,
       querySource: getQuerySourceForREPL()
     })) {
       onQueryEvent(event);
