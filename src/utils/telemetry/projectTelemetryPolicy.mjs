@@ -29,6 +29,12 @@ export function isPrivilegedTelemetrySetting(name, value) {
 
   // Detailed tracing can export complete prompts and tool data through its
   // own endpoint even when ordinary OpenTelemetry export is disabled.
+  if (key === 'CLAUDE_CODE_PERFETTO_TRACE') {
+    const normalized=String(value).trim().toLowerCase()
+    return Boolean(normalized) && !['off','false','0','no'].includes(normalized)
+  }
+  if (key === 'CLAUDE_CODE_PERFETTO_WRITE_INTERVAL_S')
+    return Number(value)>0
   if (key === 'ENABLE_BETA_TRACING_DETAILED') return truthy(value)
   if (key === 'BETA_TRACING_ENDPOINT') return Boolean(String(value).trim())
 
