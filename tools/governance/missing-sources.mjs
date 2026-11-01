@@ -45,6 +45,6 @@ const result={
   missingExternalModules:entries.filter(x=>!x.internal).length,entries
 };
 mkdirSync(dirname(resolve(outputFile)),{recursive:true});
-writeFileSync(outputFile,JSON.stringify(result,null,2)+'\n');
-console.log('[333-governance] 缺失内部模块 '+result.missingInternalFiles+' 处；引用 '+result.referencesToMissingInternal+' 处；外部模块 '+result.missingExternalModules+' 处');
-console.log('[333-governance] 高频缺失：'+entries.filter(x=>x.needsRecovery).slice(0,12).map(x=>x.target+'('+x.references+')').join('、'));
+writeFileSync(outputFile,`${JSON.stringify(result,null,2)}\n`);
+console.log(`[333-governance] 缺失内部模块 ${result.missingInternalFiles} 处；引用 ${result.referencesToMissingInternal} 处；外部模块 ${result.missingExternalModules} 处`);
+console.log(`[333-governance] 高频缺失：${entries.filter(x=>x.needsRecovery).slice(0,12).map(x=>`${x.target}(${x.references})`).join('、')}`);
