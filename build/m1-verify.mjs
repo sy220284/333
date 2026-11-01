@@ -138,7 +138,7 @@ function checkAll() {
   const telemetryPolicy=readFileSync(join(root,'src/utils/telemetry/projectTelemetryPolicy.mjs'),'utf8');
   const envIntegration=readFileSync(join(root,'src/utils/managedEnv.ts'),'utf8');
   assert.ok(telemetryPolicy.includes('isPrivilegedTelemetrySetting'));
-  assert.equal((envIntegration.match(/resolveProjectTelemetryEnv\\(/g)??[]).length,2,
+  assert.equal((envIntegration.match(/resolveProjectTelemetryEnv\(/g)??[]).length,2,
     'F080 privacy policy must apply before trust and after trust');
 
   const accepted = {
