@@ -1,7 +1,16 @@
 import { mkdirSync, symlinkSync, existsSync, writeFileSync, readFileSync, copyFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { join, resolve } from 'node:path';
+import { join, resolve, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
+function npm(args) {
+  if (process.platform === 'win32') {
+    const entry = join(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js');
+    if (!existsSync(entry)) throw Error('npm CLI missing from the installed Node runtime: ' + entry);
+    execFileSync(process.execPath, [entry, ...args], {stdio:'inherit'});
+    return;
+  }
+  execFileSync('npm', args, {stdio:'inherit'});
+}
 const root = resolve(import.meta.dirname,'..');
 const npmroot = join(root,'.rebuild/public');
 mkdirSync(npmroot,{recursive:true});
@@ -121,7 +130,7 @@ if (existsSync(lock)) {
   copyFileSync(lock,activeLock);
 } else if (!existsSync(activeLock)) {
   // One-time bootstrap. The resulting lock must be committed before release.
-  execFileSync('npm',['install','--prefix',npmroot,'--ignore-scripts','--no-audit','--no-fund','--legacy-peer-deps'],{stdio:'inherit'});
+  npm(['install','--prefix',npmroot,'--ignore-scripts','--no-audit','--no-fund','--legacy-peer-deps']);
 }
 if (!existsSync(activeLock)) throw Error('A public dependency lockfile was not created');
 if (!existsSync(lock)) copyFileSync(activeLock,lock);
@@ -129,7 +138,7 @@ const digest = createHash('sha256').update(readFileSync(lock)).digest('hex');
 const marker = join(npmroot,'.installed-sha256');
 const cached = existsSync(marker) && existsSync(join(npmroot,'node_modules','react','package.json')) && readFileSync(marker,'utf8') === digest;
 if (!cached) {
-  execFileSync('npm',['ci','--prefix',npmroot,'--ignore-scripts','--no-audit','--no-fund','--legacy-peer-deps'],{stdio:'inherit'});
+  npm(['ci','--prefix',npmroot,'--ignore-scripts','--no-audit','--no-fund','--legacy-peer-deps']);
   writeFileSync(marker,digest);
 } else {
   console.log('Reusing installed packages from the frozen npm dependency lock');
