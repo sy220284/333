@@ -1,7 +1,7 @@
 name: 源码独立重建验证
 on:
   push:
-    branches: [rebuild/bun-from-src]
+    branches: [main, rebuild/bun-from-src]
   workflow_dispatch:
 jobs:
   rebuild:
