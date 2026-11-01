@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 
@@ -43,7 +42,8 @@ async function launch(executable, file, args, cwd, env) {
 }
 
 test('original and independent rebuild both perform model-tool-model file read loop', async () => {
-  const tmp=mkdtempSync(join(tmpdir(),'333-model-loop-'));
+  mkdirSync(join(root,'.rebuild'),{recursive:true});
+  const tmp=mkdtempSync(join(root,'.rebuild','333-model-loop-'));
   const filename=join(tmp,'example.txt');
   writeFileSync(filename,fixtureContent+'\n');
   const sessions=new Map();
