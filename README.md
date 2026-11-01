@@ -7,14 +7,16 @@ This directory contains the source code of `@anthropic-ai/claude-code@2.1.88`, e
 ```sh
 npm pack @anthropic-ai/claude-code@2.1.88
 tar xzf anthropic-ai-claude-code-2.1.88.tgz
-# Extract sources from cli.js.map into source/
+# Extract sources from cli.js.map into src/ and native/
 node -e '
 const fs = require("fs"), path = require("path");
 const map = JSON.parse(fs.readFileSync("cli.js.map", "utf8"));
 for (let i = 0; i < map.sources.length; i++) {
   if (map.sourcesContent[i] == null || map.sources[i].includes("node_modules")) continue;
   const rel = map.sources[i].replace(/^\.\.\//g, "");
-  const out = path.join("source", rel);
+  const out = rel.startsWith("vendor/")
+    ? path.join("native", rel.slice("vendor/".length))
+    : rel;
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, map.sourcesContent[i]);
 }'
@@ -48,18 +50,21 @@ Rebuilding from the extracted source is **not feasible** because:
 - Build configuration (tsconfig, bundler config) is not included in the source map
 - 2,850 bundled `node_modules` dependencies are only present as source map entries
 
-The extracted `source/` tree (1,906 files, 35 MB) is useful for **reading and studying** the internals, not for rebuilding.
+The extracted `src/` and `native/` trees (1,906 files, 35 MB) are useful for **reading and studying** the internals, not for rebuilding.
 
 ## Directory layout
 
 ```
+src/             # 1,902 extracted TypeScript/TSX application files
+native/          # 4 extracted native-module TypeScript stubs
+vendor/          # prebuilt platform-specific native binaries and ripgrep
 cli.js           # 13 MB self-contained Node.js bundle (the actual executable)
-cli.js.map       # 57 MB source map (contains all original sources)
-source/          # extracted source tree:
-  src/           #   1,902 TypeScript/TSX application files
-  vendor/        #   4 native module source stubs
+cli.js.map       # 57 MB original source map (preserved for provenance)
+sdk-tools.d.ts   # published SDK tool type definitions
 package.json     # published package manifest (no build deps)
-README.md        # this file
+bun.lock         # published lock file
+LICENSE.md       # original license notice
+README.md        # project overview and source-extraction guide
 ```
 
 ---
