@@ -63,6 +63,11 @@ jobs:
           bun build/rebuild.mjs
           node build/package-release.mjs
           npm run test:all
+      - name: 输出通过完整回归的候选冻结依赖锁
+        run: |
+          echo 'SECURITY_LOCK_BEGIN'
+          base64 -w16384 .rebuild/public/package-lock.json
+          echo 'SECURITY_LOCK_END'
       - name: 保存实际候选结果
         if: always()
         uses: actions/upload-artifact@v4
