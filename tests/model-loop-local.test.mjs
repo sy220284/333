@@ -177,7 +177,7 @@ test('original and rebuilt CLIs execute Read → Edit → Write → Read with ma
     const baseUrl='http://127.0.0.1:'+server.address().port;
     const env={...process.env,ANTHROPIC_BASE_URL:baseUrl,ANTHROPIC_API_KEY:'sk-333-local-fixture',
       DISABLE_TELEMETRY:'1',CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1',CI:'true',NO_COLOR:'1'};
-    const args=['--bare','-p','Read and edit example.txt, create created.txt, then read it',
+    const args=['-p','Read and edit example.txt, create created.txt, then read it',
       '--tools','Read,Edit,Write','--permission-mode','acceptEdits','--model',model,'--output-format','json','--max-turns','5'];
     for(const [name,exe,file] of [
       ['original',process.execPath,join(root,'cli.js')],
