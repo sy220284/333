@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import ts from '../dev/node_modules/typescript/lib/typescript.js';
-import { readFileSync, writeFileSync, readdirSync, existsSync, statSync, mkdirSync } from 'node:fs';
-import { dirname, relative, resolve, extname, join } from 'node:path';
+import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'node:fs';
+import { dirname, relative, resolve, join } from 'node:path';
 const root = resolve(import.meta.dirname, '../..');
 const missingPath = process.argv[2], outputPath = process.argv[3];
 if(!missingPath || !outputPath) throw new Error('用法：contract-trace.mjs missing-sources.json output.json');
@@ -9,7 +9,7 @@ const missing = JSON.parse(readFileSync(missingPath,'utf8'));
 if(!Array.isArray(missing.entries)) throw new Error('缺失模块索引格式异常');
 const targets = new Map(missing.entries.filter(e=>e.needsRecovery || !e.internal).map(e=>[e.target,e]));
 function walk(dir) {
-  let out=[];
+  const out=[];
   if(!existsSync(dir)) return out;
   for(const item of readdirSync(dir,{withFileTypes:true})) {
     const absolute=join(dir,item.name);
@@ -26,7 +26,7 @@ for(const file of walk(resolve(root,'src'))) {
   function lookup(request){
     if(!request.startsWith('.')) return targets.get(request) ? request : null;
     const absolute=resolve(dirname(file),request.replace(/\.(js|mjs|cjs)$/,''));
-    const candidate=relative(root,absolute).replaceAll('\\','/')+'.ts';
+    const candidate=`${relative(root,absolute).replaceAll('\\','/')}.ts`;
     if(targets.has(candidate)) return candidate;
     const alt=candidate.replace(/\.ts$/,'/index.ts');
     return targets.has(alt)?alt:null;
@@ -91,5 +91,5 @@ const summary={
   top:out.slice(0,25).map(x=>({target:x.target,kind:x.kind,references:x.originalMissingReferences,symbols:x.symbols.map(z=>z.name)}))
 };
 mkdirSync(dirname(resolve(outputPath)),{recursive:true});
-writeFileSync(outputPath,JSON.stringify({summary,entries:out},null,2)+'\n');
-console.log('[333-contracts] '+JSON.stringify(summary));
+writeFileSync(outputPath,`${JSON.stringify({summary,entries:out},null,2)}\n`);
+console.log(`[333-contracts] ${JSON.stringify(summary)}`);
