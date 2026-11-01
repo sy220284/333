@@ -141,7 +141,7 @@ if (!result.success) {
     if (output.path.endsWith('.map')) continue;
     const emitted = await output.text();
     if (emitted.includes(marker)) {
-      const references = [...emitted.matchAll(/__unavailable_release_feature__\\/[a-zA-Z0-9_]+/g)].map(x => x[0]);
+      const references = [...emitted.matchAll(/__unavailable_release_feature__\/[a-zA-Z0-9_]+/g)].map(x => x[0]);
       console.error('Unexpected disabled feature import in ' + output.path + ': ' + [...new Set(references)].join(', '));
       leaked.push(output.path);
     }
