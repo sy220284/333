@@ -59,3 +59,9 @@ npm run dev:doctor
 
 离线安装器核对平台、CPU、Node 主版本、开发依赖锁文件摘要和压缩包 SHA-256，再解包并真实启动 TypeScript 与 Biome 校验。
 已有开发工具不会被覆盖。跨平台包包含独立 TypeScript、Biome 和类型声明，完整 CLI 的构建依赖仍需冻结的 npm 与源码快照（Linux/WSL x64 当前由原工具链提供离线组件）。
+
+## 代码安全静态扫描
+
+`.github/workflows/codeql.yml` 在代码修改时使用 CodeQL 的 JavaScript/TypeScript 安全扩展规则检查 `src`、`native`、`build`、`tools/dev`、`tests`。
+数据提交到 GitHub Code Scanning；排除历史研究快照和依赖缓存以避免重复扫描第三方源码。无需定时工作流。
+依赖漏洞另由 `dev-quality.yml` 自动生成公开的 npm 审计报告；由于发行版依赖被冻结，已知漏洞需要独立评估后升级依赖或代码实现。

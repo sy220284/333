@@ -4,7 +4,7 @@
     "ignoreUnknown": true,
     "includes": ["**", "!research/**", "!dist/**", "!.rebuild/**", "!tools/dev/node_modules/**", "!node_modules/**"]
   },
-  "formatter": { "enabled": false },
+  "formatter": { "enabled": true },
   "assist": { "enabled": false },
   "linter": {
     "enabled": true,

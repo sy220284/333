@@ -1,0 +1,13 @@
+name: "333 静态安全扫描"
+paths:
+  - src
+  - native
+  - build
+  - tools/dev
+  - tests
+paths-ignore:
+  - '**/node_modules/**'
+  - '**/.rebuild/**'
+  - '**/dist/**'
+queries:
+  - uses: security-extended
