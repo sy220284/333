@@ -23,12 +23,12 @@ export type {
 // Re-export core types (common serializable types)
 export * from './sdk/coreTypes.js'
 // Re-export runtime types (callbacks, interfaces with methods)
-export * from './sdk/runtimeTypes.js'
+export type * from './sdk/runtimeTypes.js'
 
 // Re-export settings types (generated from settings JSON schema)
 export type { Settings } from './sdk/settingsTypes.generated.js'
 // Re-export tool types (all marked @internal until SDK API stabilizes)
-export * from './sdk/toolTypes.js'
+export type * from './sdk/toolTypes.js'
 
 // ============================================================================
 // Functions

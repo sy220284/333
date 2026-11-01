@@ -16,7 +16,10 @@
     "url": "https://github.com/anthropics/claude-code/issues"
   },
   "scripts": {
-    "prepare": "node -e \"if (!process.env.AUTHORIZED) { console.error('ERROR: Direct publishing is not allowed.\\nPlease see the release workflow documentation to publish this package.'); process.exit(1); }\""
+    "prepare": "node -e \"if (!process.env.AUTHORIZED) { console.error('ERROR: Direct publishing is not allowed.\\nPlease see the release workflow documentation to publish this package.'); process.exit(1); }\"",
+    "rebuild": "node build/verify-bundled-assets.mjs && node build/restore-dependencies.mjs && node build/install-public-deps.mjs && bun build/rebuild.mjs && node build/package-release.mjs",
+    "test:parity": "node --test tests/cli-parity.test.mjs",
+    "test:release": "node --test tests/release-integrity.test.mjs"
   },
   "dependencies": {},
   "optionalDependencies": {

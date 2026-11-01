@@ -1,0 +1,3 @@
+.rebuild/
+dist/
+node_modules/
