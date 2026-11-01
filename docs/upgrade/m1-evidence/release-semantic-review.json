@@ -42,6 +42,92 @@
         41310591787,
         41310591695
       ]
+    },
+    {
+      "id": "2.1.282#060",
+      "source_line": 2004,
+      "source_blob": "eab938de43f5584aa4417b95b601b63822bc2417",
+      "evidence_level": "TARGET_SOURCE_CONFIRMED",
+      "review_status": "M1_CLASSIFIED",
+      "final_2_1_310_behavior": "Project/local settings cannot enable OpenTelemetry export, collector endpoints or prompt/tool content capture. Target code supports tightly limited explicit reductions from lower-trust sources only when no trusted source defines the key; newly discovered OTEL_* knobs receive conservative filtering in 333.",
+      "applicability": "IN_SCOPE_M1",
+      "later_override": "Final 2.1.310 chunk-h2tyaevk.js:115-125,258-275 defines protected keys, trusted-source exception and ignored lower-trust settings. All tested behavior remains present in 2.1.310.",
+      "owner_M_verified": "M1",
+      "related_F_confirmed": [
+        "F080"
+      ],
+      "target_code_anchors": [
+        "chunk-h2tyaevk.js:115-125",
+        "chunk-h2tyaevk.js:258-275",
+        "chunk-5rw2zfa0.js:1308-1310"
+      ],
+      "old_code_anchors": [
+        "src/utils/managedEnv.ts",
+        "src/utils/managedEnvConstants.ts"
+      ],
+      "implemented_source": [
+        "src/utils/telemetry/projectTelemetryPolicy.mjs",
+        "src/utils/managedEnv.ts"
+      ],
+      "implementation_commits": [
+        "84a132c5b66985f702a1b25dd8332be7b823b3f4",
+        "f1636347dfff833be8444b5af334b98041379848",
+        "7f4e4fd416826af5cc364a51fe6e50cb2de89d58"
+      ],
+      "tests": [
+        "tests/m1-telemetry-policy.test.mjs"
+      ],
+      "release_positive": "Known safe-disable values without explicit trusted override remain allowed; user/admin source wins when explicitly configured",
+      "release_negative": "Project-only OTEL exporter, collector endpoint, Prometheus socket, content logging and newly added trace configuration do not alter process environment",
+      "audit_status": "Source+implementation reviewed; tests in latest M1 CI passed; cross-platform checks pass; CodeQL scan remains running",
+      "acceptance_workflow_runs": [
+        41312555476,
+        41312555456,
+        41312555471
+      ]
+    },
+    {
+      "id": "2.1.251#008",
+      "source_line": 3435,
+      "source_blob": "eab938de43f5584aa4417b95b601b63822bc2417",
+      "evidence_level": "TARGET_SOURCE_CONFIRMED",
+      "review_status": "M1_CLASSIFIED",
+      "final_2_1_310_behavior": "Detailed beta tracing and raw API body logging may not be enabled or redirected by untrusted project/local settings. The settings-derived beta tracing endpoint is not allowed to bypass an exporter destination pinned by higher-trust user or managed configuration.",
+      "applicability": "IN_SCOPE_M1",
+      "later_override": "Target 2.1.310 chunk-h2tyaevk.js:123,258-275 contains the project/local setting-source restriction and Jsr trusted-source check; chunk-5rw2zfa0.js:1308-1310 includes content logging variables.",
+      "owner_M_verified": "M1",
+      "related_F_confirmed": [
+        "F080"
+      ],
+      "target_code_anchors": [
+        "chunk-h2tyaevk.js:123",
+        "chunk-h2tyaevk.js:258-275",
+        "chunk-5rw2zfa0.js:1308-1310"
+      ],
+      "old_code_anchors": [
+        "src/utils/managedEnv.ts",
+        "src/utils/telemetry/betaSessionTracing.ts"
+      ],
+      "implemented_source": [
+        "src/utils/telemetry/projectTelemetryPolicy.mjs",
+        "src/utils/managedEnv.ts"
+      ],
+      "implementation_commits": [
+        "84a132c5b66985f702a1b25dd8332be7b823b3f4",
+        "f1636347dfff833be8444b5af334b98041379848",
+        "7f4e4fd416826af5cc364a51fe6e50cb2de89d58"
+      ],
+      "tests": [
+        "tests/m1-telemetry-policy.test.mjs"
+      ],
+      "release_positive": "Trusted settings remain authoritative and project may not override an explicit exporter choice",
+      "release_negative": "Project-controlled ENABLE_BETA_TRACING_DETAILED, BETA_TRACING_ENDPOINT, OTEL_LOG_RAW_API_BODIES and destination override are rejected",
+      "audit_status": "Source+implementation reviewed; tests in latest M1 CI passed; cross-platform checks pass; CodeQL scan remains running",
+      "acceptance_workflow_runs": [
+        41312555476,
+        41312555456,
+        41312555471
+      ]
     }
   ]
 }
