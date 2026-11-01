@@ -116,7 +116,7 @@ const result = await Bun.build({
   sourcemap: 'external',
   splitting: false,
   features: [],
-  minify: false,
+  minify: true,
   jsx: { runtime: 'classic', factory: 'React.createElement', fragment: 'React.Fragment', importSource: 'react', sideEffects: false, development: false },
   define: {
     'process.env.USER_TYPE': '"external"',
@@ -140,7 +140,11 @@ if (!result.success) {
   for (const output of result.outputs) {
     if (output.path.endsWith('.map')) continue;
     const emitted = await output.text();
-    if (emitted.includes(marker)) leaked.push(output.path);
+    if (emitted.includes(marker)) {
+      const references = [...emitted.matchAll(/__unavailable_release_feature__\\/[a-zA-Z0-9_]+/g)].map(x => x[0]);
+      console.error('Unexpected disabled feature import in ' + output.path + ': ' + [...new Set(references)].join(', '));
+      leaked.push(output.path);
+    }
   }
   if (leaked.length) throw Error('Disabled-source reference leaked into release build: ' + leaked.join(', '));
   console.log('Compiled ' + result.outputs.length + ' artifacts from extracted source');
