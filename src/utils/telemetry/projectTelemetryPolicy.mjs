@@ -74,6 +74,14 @@ export function isPrivilegedTelemetrySetting(name, value) {
 
   if (/^OTEL_LOG_(?:USER_PROMPTS|TOOL_CONTENT|TOOL_DETAILS|MANAGED_SETTINGS)$/.test(key)) return truthy(value)
   if (key.startsWith('OTEL_METRICS_INCLUDE_')) return truthy(value)
+
+  // 2.1.310 contains additional OpenTelemetry knobs for trace limits,
+  // export batching and periodic delivery. Keeping an allowlist of only
+  // today's sensitive names makes a newly added exporter/config option
+  // editable from an untrusted project tomorrow. Require a trusted source
+  // for every other OTEL_* setting. The explicit reductions above (such as
+  // an exporter set to "none") remain allowed.
+  if (key.startsWith('OTEL_')) return true
   return false
 }
 
