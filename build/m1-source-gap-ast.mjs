@@ -35,14 +35,14 @@ for (const file of files) {
   const importer = relative(root, file).replaceAll('\\', '/')
   const sourceText = readFileSync(file, 'utf8')
   const tree = ts.createSourceFile(file, sourceText, ts.ScriptTarget.Latest, true)
-  function record(specifier, kind, node) {
+  function record(specifier, kind, node, symbols = []) {
     if (!specifier.startsWith('.')) return
     internal++
     const match = lookup(importer, specifier)
     if (match.present) { resolved++; return }
     if (kind === 'type') typeOnly++; else runtime++
     const sites = missing.get(match.target) ?? []
-    sites.push({ importer, line: tree.getLineAndCharacterOfPosition(node.getStart(tree)).line + 1, specifier, kind })
+    sites.push({ importer, line: tree.getLineAndCharacterOfPosition(node.getStart(tree)).line + 1, specifier, kind, symbols })
     missing.set(match.target, sites)
   }
   function visit(node) {
@@ -51,15 +51,20 @@ for (const file of files) {
       const type = !!clause?.isTypeOnly || (!!clause && !clause.name &&
         !!clause.namedBindings && ts.isNamedImports(clause.namedBindings) &&
         clause.namedBindings.elements.length > 0 && clause.namedBindings.elements.every(x => x.isTypeOnly))
-      record(node.moduleSpecifier.text, type ? 'type' : 'runtime', node)
+      const symbols = clause?.namedBindings && ts.isNamedImports(clause.namedBindings)
+        ? clause.namedBindings.elements.map(x => (x.propertyName ?? x.name).text)
+        : clause?.namedBindings && ts.isNamespaceImport(clause.namedBindings) ? ['*'] : clause?.name ? ['default'] : []
+      record(node.moduleSpecifier.text, type ? 'type' : 'runtime', node, symbols)
     } else if (ts.isExportDeclaration(node) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
-      record(node.moduleSpecifier.text, node.isTypeOnly ? 'type' : 'runtime', node)
+      const symbols = node.exportClause && ts.isNamedExports(node.exportClause)
+        ? node.exportClause.elements.map(x => (x.propertyName ?? x.name).text) : ['*']
+      record(node.moduleSpecifier.text, node.isTypeOnly ? 'type' : 'runtime', node, symbols)
     } else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument) && ts.isStringLiteral(node.argument.literal)) {
-      record(node.argument.literal.text, 'type', node)
+      record(node.argument.literal.text, 'type', node, [node.qualifier?.getText(tree) ?? '*'])
     } else if (ts.isCallExpression(node) && node.arguments.length && ts.isStringLiteral(node.arguments[0]) &&
       (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
       (ts.isIdentifier(node.expression) && node.expression.text === 'require'))) {
-      record(node.arguments[0].text, 'runtime', node)
+      record(node.arguments[0].text, 'runtime', node, ['*'])
     }
     ts.forEachChild(node, visit)
   }
@@ -67,7 +72,8 @@ for (const file of files) {
 }
 const records = [...missing].map(([module, sites]) => ({
   module, total: sites.length, typeOnly: sites.filter(x => x.kind === 'type').length,
-  runtime: sites.filter(x => x.kind === 'runtime').length, sites,
+  runtime: sites.filter(x => x.kind === 'runtime').length,
+  importedSymbols: [...new Set(sites.flatMap(x => x.symbols))].sort(), sites,
 })).sort((a, b) => b.total - a.total || a.module.localeCompare(b.module))
 const report = {
   schema: 1, sourceFiles: files.length, uniqueMissingPaths: records.length,
