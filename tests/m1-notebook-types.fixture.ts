@@ -45,4 +45,20 @@ const invalidImage: NotebookCellSource = {
   // @ts-expect-error model tool image content cannot use GIF MIME
   outputs: [{ output_type: 'display_data', image: { image_data: '', media_type: 'image/gif' } }],
 }
-void [notebook, cell, error, rendered, unknownCell, brokenError, invalidImage]
+// Real nbformat rich media includes structured JSON, not just plain text/image bytes.
+const richOutput: NotebookCellOutput = {
+  output_type: 'display_data',
+  data: {
+    'text/plain': ['a', 'b'],
+    'application/vnd.plotly.v1+json': { series: [1, 2] },
+    'image/png': 'aGVsbG8=',
+  },
+}
+const invalidPlainText: NotebookCellOutput = {
+  output_type: 'display_data',
+  data: {
+    // @ts-expect-error text/plain must stay string or string[] for the reader
+    'text/plain': { unexpected: true },
+  },
+}
+void [notebook, cell, error, rendered, unknownCell, brokenError, invalidImage, richOutput, invalidPlainText]
