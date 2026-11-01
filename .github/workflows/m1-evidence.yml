@@ -10,6 +10,8 @@ on:
       - 'docs/upgrade/upgrade-coverage.json'
       - 'docs/upgrade/2.1.310-*.md'
       - 'tests/m1-verify.test.mjs'
+      - 'tests/m1-privacy-settings.test.mjs'
+      - 'src/commands/privacy-settings/**'
       - 'tests/m1-release-routing.test.mjs'
       - 'tests/upgrade-coverage.test.mjs'
       - '.github/workflows/m1-evidence.yml'
@@ -27,7 +29,7 @@ jobs:
         with:
           node-version: '22'
       - name: 验证任务卡、功能、场景及旧开关/新锚点/版本记录
-        run: node --test tests/upgrade-coverage.test.mjs tests/m1-verify.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs
+        run: node --test tests/upgrade-coverage.test.mjs tests/m1-verify.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs tests/m1-privacy-settings.test.mjs
       - name: 下载固定发行版的官方变更记录
         run: |
           curl --fail --location --show-error --silent --retry 3 \
