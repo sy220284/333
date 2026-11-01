@@ -1,4 +1,4 @@
-import { mkdirSync, symlinkSync, existsSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdirSync, symlinkSync, existsSync, writeFileSync, readFileSync, copyFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -111,15 +111,28 @@ const versions = {
   "zod": "^3.25.0"
 };
 writeFileSync(join(npmroot,'package.json'), JSON.stringify({private:true,name:'release-rebuild-dependencies',version:'2.1.88',dependencies:versions},null,2)+'\n');
-const manifest = JSON.stringify(versions);
-const digest = createHash('sha256').update(manifest).digest('hex');
+const lock = join(root,'build/public-dependencies.lock.json');
+const activeLock = join(npmroot,'package-lock.json');
+if (existsSync(lock)) {
+  const pinned = JSON.parse(readFileSync(lock,'utf8'));
+  if (JSON.stringify(pinned.packages?.['']?.dependencies) !== JSON.stringify(versions)) {
+    throw Error('Frozen npm package manifest does not match build/install-public-deps.mjs');
+  }
+  copyFileSync(lock,activeLock);
+} else if (!existsSync(activeLock)) {
+  // One-time bootstrap. The resulting lock must be committed before release.
+  execFileSync('npm',['install','--prefix',npmroot,'--ignore-scripts','--no-audit','--no-fund','--legacy-peer-deps'],{stdio:'inherit'});
+}
+if (!existsSync(activeLock)) throw Error('A public dependency lockfile was not created');
+if (!existsSync(lock)) copyFileSync(activeLock,lock);
+const digest = createHash('sha256').update(readFileSync(lock)).digest('hex');
 const marker = join(npmroot,'.installed-sha256');
 const cached = existsSync(marker) && existsSync(join(npmroot,'node_modules','react','package.json')) && readFileSync(marker,'utf8') === digest;
 if (!cached) {
-  execFileSync('npm',['install','--prefix',npmroot,'--ignore-scripts','--no-audit','--no-fund','--legacy-peer-deps'],{stdio:'inherit'});
+  execFileSync('npm',['ci','--prefix',npmroot,'--ignore-scripts','--no-audit','--no-fund','--legacy-peer-deps'],{stdio:'inherit'});
   writeFileSync(marker,digest);
 } else {
-  console.log('Reusing previously installed exact dependency selection');
+  console.log('Reusing installed packages from the frozen npm dependency lock');
 }
 if (!existsSync(join(npmroot,'node_modules'))) throw Error('npm dependency install failed');
 symlinkSync(join(npmroot,'node_modules'),join(root,'node_modules'),'dir');
