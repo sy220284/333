@@ -7,7 +7,7 @@
       "source_line": 57,
       "source_blob": "eab938de43f5584aa4417b95b601b63822bc2417",
       "evidence_level": "TARGET_SOURCE_CONFIRMED",
-      "review_status": "M1_SOURCE_CONFIRMED_PENDING_CI",
+      "review_status": "M1_CLASSIFIED",
       "final_2_1_310_behavior": "Opening /privacy-settings first invalidates memoized account settings; account settings and notice configuration must both load successfully or the user sees a fetch-error message. Successful confirmation displays Help improve our AI models with the refreshed server value.",
       "applicability": "IN_SCOPE_M1",
       "later_override": "Final target code chunk-ewrb9nj3.js:470-484 confirms this effective 2.1.310 behavior",
@@ -35,7 +35,13 @@
       ],
       "release_negative": "API account-settings failure OR notice-configuration failure, stale cache across two calls",
       "release_positive": "Refresh memoized account state before display; confirmed server value after successful fetch",
-      "audit_status": "Source implementation complete; latest CI pending"
+      "audit_status": "M1 source behavior and implementation test passed; workflows 41310591694 (source), 41310591668 (Linux/macOS/Windows rebuild), 41310591787 (cross-platform dev quality), 41310591695 (CodeQL) all success on 61aa7e9bab6a3c242ea5496666033fb04042841b",
+      "acceptance_workflow_runs": [
+        41310591694,
+        41310591668,
+        41310591787,
+        41310591695
+      ]
     }
   ]
 }
