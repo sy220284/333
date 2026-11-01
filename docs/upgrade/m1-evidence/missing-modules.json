@@ -21,7 +21,17 @@
       "feature_ref": "F064",
       "target_semantic_candidate": "chunk-j0tbz6ra.js:35379",
       "handoff_missing_equivalence": "新版有 verify_plan_reminder 附件类型，尚未证实 VerifyPlanExecutionTool 的等价执行者；M7 验证/审查 Agent 完整功能判断",
-      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE"
+      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE",
+      "old_contract": "在旧版 src/tools.ts:91-95 由 CLAUDE_CODE_VERIFY_PLAN 环境变量条件加载的计划验证工具，需返回工具定义与执行结果；旧源码/Source Map 无实现。",
+      "old_consumers": [
+        "src/tools.ts:91-95",
+        "src/tools.ts:231"
+      ],
+      "target_evidence": "新版 chunk-j0tbz6ra.js:35379 的 verify_plan_reminder 为附件/提示符文本，不构成 VerifyPlanExecutionTool 工具实现。",
+      "rebuild_requirement": "M7 根据旧 Tool 定义/注册约束、权限和最终结果通道推导实现；须先确认2.1.310是否保留独立验证工具。",
+      "original_2_1_88_source_map_content_found": false,
+      "original_2_1_88_source_zip_implementation_found": false,
+      "review_scope": "原始2.1.88源码ZIP + cli.js.map sources/sourcesContent + 2.1.310完整反编译包"
     },
     {
       "module": "snipCompact",
@@ -39,18 +49,28 @@
       "feature_ref": "F023",
       "target_semantic_candidate": "chunk-92hm4yb6.js:4726-4728",
       "handoff_missing_equivalence": "新版有压缩后读取历史 transcript 的上下文提示，尚未证实旧 snipCompact 子模块等价",
-      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE"
+      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE",
+      "old_contract": "HISTORY_SNIP 条件启用；src/query.ts:403 调用 snipCompactIfNeeded(messagesForQuery)，需要返回 {messages,tokensFreed,boundaryMessage?}；边界消息供 UI 和序列化处理。",
+      "old_consumers": [
+        "src/query.ts:113-116",
+        "src/query.ts:399-412"
+      ],
+      "target_evidence": "目标 JS 中未发现同名函数；chunk-92hm4yb6.js:4726-4728 的 transcript 提示无法证明具备 snip 的裁剪规则。",
+      "rebuild_requirement": "M4 实际核实上下文短裁剪窗口、边界、token 估计及自动压缩交互；需要时基于原接口重建。",
+      "original_2_1_88_source_map_content_found": false,
+      "original_2_1_88_source_zip_implementation_found": false,
+      "review_scope": "原始2.1.88源码ZIP + cli.js.map sources/sourcesContent + 2.1.310完整反编译包"
     },
     {
       "module": "SnapshotUpdateDialog",
       "old_source_gap_confirmed": true,
-      "target_state": "UNVERIFIED",
-      "new_execution_path": null,
-      "comparison_evidence": null,
+      "target_state": "RETIRED_WITH_NOOP",
+      "new_execution_path": "chunk-0x2m04n3.js:684,752 -> src/dialogLaunchers.tsx launchSnapshotUpdateDialog",
+      "comparison_evidence": "目标 chunk-0x2m04n3.js:684 `async function J(o,t) { return \"keep\"; }`，并于 :752 将 J 导出为 launchSnapshotUpdateDialog。",
       "owner_M": [
         "M1"
       ],
-      "status": "INDEXED",
+      "status": "CONTRACT_CONFIRMED_CODE_INTEGRATED",
       "target_static_candidates": [
         "chunk-0x2m04n3.js:752"
       ],
@@ -58,8 +78,18 @@
       "developer_task": "M5",
       "feature_ref": "F004",
       "target_semantic_candidate": "chunk-0x2m04n3.js:752",
-      "handoff_missing_equivalence": "新版 UI 模块导出 launchSnapshotUpdateDialog；需要在 M5 实证触发按钮与 Dialog 的用户实际操作",
-      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE"
+      "handoff_missing_equivalence": "目标版已退场旧快照更新对话框，当前 M1 源码固定返回 keep；实际回归及 CI 验收须核查。",
+      "M1_evidence_grade": "TARGET_SOURCE_CONTRACT_CONFIRMED",
+      "old_contract": "旧 src/dialogLaunchers.tsx 通过缺失 JSX 组件显示 merge/keep/replace；main.tsx 仅在 merge 时拼装合并提示。",
+      "old_consumers": [
+        "src/dialogLaunchers.tsx:26-38",
+        "src/main.tsx:2258-2273"
+      ],
+      "target_evidence": "目标 chunk-0x2m04n3.js:684 `async function J(o,t) { return \"keep\"; }`，并于 :752 将 J 导出为 launchSnapshotUpdateDialog。",
+      "rebuild_requirement": "目标版已明确将 UI 退场、固定 keep；M1 删除旧组件调用并保留终态，后续验证 Agent snapshot 其余状态不被意外更改。",
+      "original_2_1_88_source_map_content_found": false,
+      "original_2_1_88_source_zip_implementation_found": false,
+      "review_scope": "原始2.1.88源码ZIP + cli.js.map sources/sourcesContent + 2.1.310完整反编译包"
     },
     {
       "module": "AssistantSessionChooser",
@@ -77,7 +107,17 @@
       "feature_ref": "F004",
       "target_semantic_candidate": "chunk-mh7sh27p.js:702",
       "handoff_missing_equivalence": "新版 CLI 具有 --resume/--continue 和会话选择参数，需区分 REPL chooser 与纯命令行帮助",
-      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE"
+      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE",
+      "old_contract": "旧 src/dialogLaunchers.tsx:58-64 弹出 sessions 多项选择并返回 session id 或 null；src/main.tsx:3266-3310 会话发现后按零/一/多个会话分支决定连接。",
+      "old_consumers": [
+        "src/dialogLaunchers.tsx:55-65",
+        "src/main.tsx:3266-3310"
+      ],
+      "target_evidence": "新版 CLI 存在 assistant 与继续会话入口，但无同名 chooser 或 discoverAssistantSessions；简单将 resume 选项当作 chooser 不满足旧契约。",
+      "rebuild_requirement": "M4/M5 逐个核实桥接会话枚举、选择、取消、连接鉴权和失败分支，再按真实接口重建。",
+      "original_2_1_88_source_map_content_found": false,
+      "original_2_1_88_source_zip_implementation_found": false,
+      "review_scope": "原始2.1.88源码ZIP + cli.js.map sources/sourcesContent + 2.1.310完整反编译包"
     },
     {
       "module": "assistant",
@@ -95,7 +135,17 @@
       "feature_ref": "F015",
       "target_semantic_candidate": "chunk-j0tbz6ra.js:34465",
       "handoff_missing_equivalence": "新版实际 Assistant 消息与 Query Engine 相关模块存在；缺失文件名过于通用，须在 M2 以入口语义比对，不能新建同名空模块",
-      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE"
+      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE",
+      "old_contract": "旧 src/assistant/index.js、gate.js 和 sessionDiscovery.js 等多种桥接入口缺失；并非单一通用 assistant 消息类型。",
+      "old_consumers": [
+        "src/main.tsx:3266",
+        "src/dialogLaunchers.tsx:10,58-64"
+      ],
+      "target_evidence": "chunk-j0tbz6ra.js:34465 的 Assistant 内容消息，不足以证明旧 assistant bridge 会话功能存在。",
+      "rebuild_requirement": "M2/M5 分别核对消息通道和 assistant bridge 会话管理；分模块识别消费者，禁止同名空导出。",
+      "original_2_1_88_source_map_content_found": false,
+      "original_2_1_88_source_zip_implementation_found": false,
+      "review_scope": "原始2.1.88源码ZIP + cli.js.map sources/sourcesContent + 2.1.310完整反编译包"
     },
     {
       "module": "cachedMicrocompact",
@@ -115,7 +165,17 @@
       "feature_ref": "F023",
       "target_semantic_candidate": "chunk-ajtyjx88.js:10493",
       "handoff_missing_equivalence": "新版会话标记存在 microcompact_boundary，需实证缓存失效、短压缩、回滚与恢复",
-      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE"
+      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE",
+      "old_contract": "CACHED_MICROCOMPACT 下需创建 CachedMCState，按工具顺序与已发送结果生成 cache_edits；旧 src/services/compact/microCompact.ts:56-134,305-380 依赖状态和注册/标记/回滚函数。",
+      "old_consumers": [
+        "src/services/compact/microCompact.ts:56-135",
+        "src/services/compact/microCompact.ts:305-375"
+      ],
+      "target_evidence": "新版 chunk-wany0nxw.js:1610+ 的 time-based microcompact 清理本地消息，与旧 API cache_edits 协议并非同一语义；未检出 cache_edits。",
+      "rebuild_requirement": "M4 先验证目标模型 API 是否支持 cache_edits 以及缓存命中/失效语义；若目标已退场则清理被禁功能导入，否则基于旧状态机重建并实测。",
+      "original_2_1_88_source_map_content_found": false,
+      "original_2_1_88_source_zip_implementation_found": false,
+      "review_scope": "原始2.1.88源码ZIP + cli.js.map sources/sourcesContent + 2.1.310完整反编译包"
     },
     {
       "module": "contextCollapse",
@@ -133,7 +193,18 @@
       "feature_ref": "F023",
       "target_semantic_candidate": "chunk-2sq2cy74.js:452",
       "handoff_missing_equivalence": "目标有上下文压缩实际消费路径的辅助信息，旧 contextCollapse 独立对象是否合并进 compact 待完整调用核查",
-      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE"
+      "M1_evidence_grade": "STATIC_TARGET_CANDIDATE",
+      "old_contract": "CONTEXT_COLLAPSE 条件启用，query.ts:441 调用 applyCollapsesIfNeeded，:618 判断 isContextCollapseEnabled，:802 判断 isWithheldPromptTooLong，:1094 用 recoverFromOverflow 做一次回滚后重试；含独立日志/快照。",
+      "old_consumers": [
+        "src/query.ts:18-20",
+        "src/query.ts:440-449",
+        "src/query.ts:1091-1115"
+      ],
+      "target_evidence": "目标新版没有同名 contextCollapse 条目；常规 compact 的提示词不足以证明保存提交日志、读时投影及 413 溢出回滚这条链路。",
+      "rebuild_requirement": "M4 必须以新版真实压缩恢复机制核对投影/持久化/失败恢复；仍必需的功能按原状态机和用户可观察行为重新实现。",
+      "original_2_1_88_source_map_content_found": false,
+      "original_2_1_88_source_zip_implementation_found": false,
+      "review_scope": "原始2.1.88源码ZIP + cli.js.map sources/sourcesContent + 2.1.310完整反编译包"
     }
   ]
 }
