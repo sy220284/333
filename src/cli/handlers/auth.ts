@@ -159,7 +159,7 @@ export async function authLogin({
 
       const orgResult = await validateForceLoginOrg()
       if (orgResult.valid === false) {
-        process.stderr.write(orgResult.message + '\n')
+        process.stderr.write(`${orgResult.message}\n`)
         process.exit(1)
       }
 
@@ -179,7 +179,7 @@ export async function authLogin({
       logError(err)
       const sslHint = getSSLErrorHint(err)
       process.stderr.write(
-        `Login failed: ${errorMessage(err)}\n${sslHint ? sslHint + '\n' : ''}`,
+        `Login failed: ${errorMessage(err)}\n${sslHint ? `${sslHint}\n` : ''}`,
       )
       process.exit(1)
     }
@@ -209,7 +209,7 @@ export async function authLogin({
 
     const orgResult = await validateForceLoginOrg()
     if (orgResult.valid === false) {
-      process.stderr.write(orgResult.message + '\n')
+      process.stderr.write(`${orgResult.message}\n`)
       process.exit(1)
     }
 
@@ -221,7 +221,7 @@ export async function authLogin({
     logError(err)
     const sslHint = getSSLErrorHint(err)
     process.stderr.write(
-      `Login failed: ${errorMessage(err)}\n${sslHint ? sslHint + '\n' : ''}`,
+      `Login failed: ${errorMessage(err)}\n${sslHint ? `${sslHint}\n` : ''}`,
     )
     process.exit(1)
   } finally {
@@ -313,7 +313,7 @@ export async function authStatus(opts: {
       output.subscriptionType = subscriptionType ?? null
     }
 
-    process.stdout.write(jsonStringify(output, null, 2) + '\n')
+    process.stdout.write(`${jsonStringify(output, null, 2)}\n`)
   }
   process.exit(loggedIn ? 0 : 1)
 }
