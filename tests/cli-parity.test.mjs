@@ -55,7 +55,7 @@ for (const args of [
   ['--help'], ['auth','--help'], ['auth','login','--help'], ['mcp','--help'],
   ['mcp','add','--help'], ['plugin','--help'], ['agents','--help'],
 ]) {
-  test('CLI options and commands parity: ' + args.join(' '), () => {
+  test(`CLI options and commands parity: ${args.join(' ')}`, () => {
     const baseline = sections(originalHelp(args));
     const rebuilt = sections(compiledHelp(args));
     assert.ok(baseline.flags.length + baseline.commands.length > 0, 'Empty baseline command metadata');
