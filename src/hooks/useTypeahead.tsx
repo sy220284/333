@@ -183,9 +183,9 @@ export function applyShellSuggestion(suggestion: SuggestionItem, input: string, 
   // Prepare the replacement text based on completion type
   let replacementText: string;
   if (completionType === 'variable') {
-    replacementText = '$' + suggestion.displayText + ' ';
+    replacementText = `${suggestion.displayText} `;
   } else if (completionType === 'command') {
-    replacementText = suggestion.displayText + ' ';
+    replacementText = `${suggestion.displayText} `;
   } else {
     replacementText = suggestion.displayText;
   }
@@ -199,7 +199,7 @@ function applyTriggerSuggestion(suggestion: SuggestionItem, input: string, curso
   if (!m || m.index === undefined) return;
   const prefixStart = m.index + (m[1]?.length ?? 0);
   const before = input.slice(0, prefixStart);
-  const newInput = before + suggestion.displayText + ' ' + input.slice(cursorOffset);
+  const newInput = before + `${suggestion.displayText} ` + input.slice(cursorOffset);
   onInputChange(newInput);
   setCursorOffset(before.length + suggestion.displayText.length + 1);
 }
@@ -243,7 +243,7 @@ export function applyDirectorySuggestion(input: string, suggestionId: string, to
   const after = input.slice(tokenStartPos + tokenLength);
   // Always add @ prefix - if token already has it, we're replacing
   // the whole token (including @) with @suggestion.id
-  const replacement = '@' + suggestionId + suffix;
+  const replacement = `@${suggestionId}${suffix}`;
   const newInput = before + replacement + after;
   return {
     newInput,
@@ -926,7 +926,7 @@ export function useTypeahead({
         // Replace the partial command with the full command + space
         const before = input.slice(0, midInputCommand.startPos);
         const after = input.slice(midInputCommand.startPos + midInputCommand.token.length);
-        const newInput = before + '/' + effectiveGhostText.fullCommand + ' ' + after;
+        const newInput = `${before}/${effectiveGhostText.fullCommand} ${after}`;
         const newCursorOffset = midInputCommand.startPos + 1 + effectiveGhostText.fullCommand.length + 1;
         onInputChange(newInput);
         setCursorOffset(newCursorOffset);
