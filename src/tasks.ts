@@ -7,7 +7,7 @@ import { RemoteAgentTask } from './tasks/RemoteAgentTask/RemoteAgentTask.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { LocalWorkflowTask } from './tasks/LocalWorkflowTask/LocalWorkflowTask.js'
-import { MonitorMcpTask } from './tasks/MonitorMcpTask/MonitorMcpTask.js'
+import { MonitorWsTask } from './tasks/MonitorWsTask/MonitorWsTask.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 /**
@@ -23,7 +23,7 @@ export function getAllTasks(): Task[] {
     DreamTask,
   ]
   tasks.push(LocalWorkflowTask)
-  tasks.push(MonitorMcpTask)
+  tasks.push(MonitorWsTask)
   return tasks
 }
 
