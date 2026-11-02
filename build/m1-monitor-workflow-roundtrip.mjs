@@ -19,7 +19,7 @@ if(hash.digest('hex')!=='b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a83
 const script=["export const meta={name:'probe-return',description:'Pure workflow',phases:[{title:'Run'}]}",
  "phase('Run')","return {answer:42}"].join('\n')
 const bodyFor={
- Monitor:{description:'Probe one command',command:'printf EVENT_333',timeout_ms:1000},
+ Monitor:{description:'Probe one command',command:"printf 'OUT_333\\n'; printf 'ERR_333\\n' >&2",timeout_ms:1000},
  Workflow:{script},
 }
 const frame=(event,data)=>`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
@@ -91,13 +91,29 @@ async function run(exe,toolName){
     for(const block of message.content)if(block.type==='tool_result')resultBlocks.push(block)
   const own=resultBlocks.find(b=>b.tool_use_id==='toolu_01_333_roundtrip_1')
   const serialized=typeof own?.content==='string'?own.content:JSON.stringify(own?.content??'')
+  // Check the actual next model request instead of just the tool's "started" receipt.
+  // Only stdout becomes a Monitor event; stderr must remain available in the task log.
+  const eventNotices=[]
+  for(const request of requests)for(const message of request.messages??[]){
+   if(message?.role!=='user')continue
+   const content=typeof message.content==='string'?message.content:
+     Array.isArray(message.content)?message.content.filter(x=>x?.type==='text').map(x=>x.text??'').join('\n'):''
+   for(const match of content.matchAll(/<task-notification>[\s\S]*?<\/task-notification>/g))eventNotices.push(match[0])
+  }
+  const events=eventNotices.flatMap(notice=>[...notice.matchAll(/<event>([\s\S]*?)<\/event>/g)].map(m=>m[1]))
+  const terminalStatuses=eventNotices.flatMap(notice=>[...notice.matchAll(/<status>([\s\S]*?)<\/status>/g)].map(m=>m[1]))
+  const paths=eventNotices.flatMap(notice=>[...notice.matchAll(/<output-file>([\s\S]*?)<\/output-file>/g)].map(m=>m[1]))
+  const readableFiles=paths.filter(path=>existsSync(path)).map(path=>({path,content:readFileSync(path,'utf8')}))
+  const monitorOutputPersisted=readableFiles.some(x=>x.content.includes('OUT_333')&&x.content.includes('ERR_333'))
+  const monitorEventsMatch=events.length===1&&events[0]==='OUT_333'&&terminalStatuses.includes('completed')
   const saved=toolName==='Workflow'?collectWorkflowRuns(home):[]
   const persisted=saved.some(item=>item.status==='completed'&&item.answer===42&&item.workflowName==='probe-return')
   const ok=exit===0&&requests.length>=3&&
    (toolName==='Workflow'?serialized.includes('Workflow launched in background')&&
       serialized.includes('Run ID: wf_')&&serialized.includes('Script file:')&&persisted:
-    serialized.includes('Monitor started')&&serialized.includes('task '))
+    serialized.includes('Monitor started')&&serialized.includes('task ')&&monitorEventsMatch&&monitorOutputPersisted)
   return {tool:toolName,ok,exit,signal,calls:requests.length,
+   ...(toolName==='Monitor'?{monitorEvents:events,monitorStatuses:terminalStatuses,monitorOutputPersisted,monitorEventsMatch,monitorNotifications:eventNotices.map(x=>x.slice(0,650))}:{}),
    ...(toolName==='Workflow'?{savedRuns:saved}:{}),
    toolResponse:serialized.slice(0,2000),stdout:output.slice(-350),stderr:error.slice(-350)}
  }finally{
