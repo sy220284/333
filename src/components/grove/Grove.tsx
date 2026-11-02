@@ -53,7 +53,7 @@ function GracePeriodContentBody() {
   }
   let t4;
   if ($[4] === Symbol.for("react.memo_cache_sentinel")) {
-    t4 = <Box paddingLeft={1}><Text>{t2}{t3}<Text>——允许使用你的聊天及编程会话训练和改进 Anthropic AI 模型。可随时在隐私设置中修改 (<Link url="https://claude.ai/settings/data-privacy-controls" />).</Text></Text></Box>;
+    t4 = <Box paddingLeft={1}><Text>{t2}{t3}<Text>——允许使用你的聊天及编程会话训练和改进 Anthropic AI 模型。可随时在隐私设置中修改 (<Link url="https://claude.ai/settings/data-privacy-controls" />）。</Text></Text></Box>;
     $[4] = t4;
   } else {
     t4 = $[4];
@@ -81,7 +81,7 @@ function GracePeriodContentBody() {
   }
   let t8;
   if ($[8] === Symbol.for("react.memo_cache_sentinel")) {
-    t8 = <>{t0}{t5}<Text>了解更多（{t6})，或阅读更新后的消费者条款（{t7})）和隐私政策（<Link url="https://anthropic.com/legal/privacy" />)</Text></>;
+    t8 = <>{t0}{t5}<Text>了解更多（{t6}），或阅读更新后的消费者条款（{t7}）和隐私政策（<Link url="https://anthropic.com/legal/privacy" />）</Text></>;
     $[8] = t8;
   } else {
     t8 = $[8];
@@ -134,7 +134,7 @@ function PostGracePeriodContentBody() {
   }
   let t6;
   if ($[6] === Symbol.for("react.memo_cache_sentinel")) {
-    t6 = <>{t0}{t3}<Text>了解更多（{t4})，或阅读更新后的消费者条款（{t5})）和隐私政策（<Link url="https://anthropic.com/legal/privacy" />)</Text></>;
+    t6 = <>{t0}{t3}<Text>了解更多（{t4}），或阅读更新后的消费者条款（{t5}）和隐私政策（<Link url="https://anthropic.com/legal/privacy" />）</Text></>;
     $[6] = t6;
   } else {
     t6 = $[6];
@@ -235,13 +235,13 @@ export function GroveDialog(t0) {
   let t4;
   if ($[8] !== groveConfig?.domain_excluded) {
     t4 = groveConfig?.domain_excluded ? [{
-      label: "Accept terms \xB7 帮助改进 Claude: OFF (for emails with your domain)",
+      label: "接受条款 \xB7 帮助改进 Claude：关闭（适用于你的域名邮箱）",
       value: "accept_opt_out"
     }] : [{
-      label: "Accept terms \xB7 帮助改进 Claude: ON",
+      label: "接受条款 \xB7 帮助改进 Claude：开启",
       value: "accept_opt_in"
     }, {
-      label: "Accept terms \xB7 帮助改进 Claude: OFF",
+      label: "接受条款 \xB7 帮助改进 Claude：关闭",
       value: "accept_opt_out"
     }];
     $[8] = groveConfig?.domain_excluded;
