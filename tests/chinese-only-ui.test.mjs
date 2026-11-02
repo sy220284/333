@@ -57,3 +57,12 @@ test('授权与认证弹窗显示中文', () => {
   assert.match(read('src/components/AwsAuthStatusBox.tsx'), /云服务身份验证/)
   assert.match(read('src/components/AutoModeOptInDialog.tsx'), /启用自动模式？/)
 })
+
+test('权限告警、插件推荐和开发渠道界面显示中文且行为标识不变', () => {
+  assert.match(read('src/components/BypassPermissionsModeDialog.tsx'), /跳过权限确认模式/)
+  assert.match(read('src/components/ClaudeMdExternalIncludesDialog.tsx'), /允许 CLAUDE\.md 引用外部文件吗/)
+  assert.match(read('src/components/ClaudeCodeHint/PluginHintMenu.tsx'), /插件推荐/)
+  assert.match(read('src/components/DevChannelsDialog.tsx'), /正在加载开发频道/)
+  assert.match(read('src/components/ChannelDowngradeDialog.tsx'), /切换至稳定渠道/)
+  assert.match(read('src/components/CostThresholdDialog.tsx'), /本次会话已使用 5 美元/)
+})
