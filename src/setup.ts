@@ -1,5 +1,6 @@
 /* eslint-disable custom-rules/no-process-exit */
 
+import { isCrossSessionMessagingEnabled } from './utils/crossSessionMessaging.js'
 import { feature } from 'bun:bundle'
 import chalk from 'chalk'
 import {
@@ -92,12 +93,9 @@ export async function setup(
     // --messaging-socket-path is passed. Awaited so the server is bound
     // and $CLAUDE_CODE_MESSAGING_SOCKET is exported before any hook
     // (SessionStart in particular) can spawn and snapshot process.env.
-    if (feature('UDS_INBOX')) {
+    if (isCrossSessionMessagingEnabled()) {
       const m = await import('./utils/udsMessaging.js')
-      await m.startUdsMessaging(
-        messagingSocketPath ?? m.getDefaultUdsSocketPath(),
-        { isExplicit: messagingSocketPath !== undefined },
-      )
+      await m.startUdsMessaging(messagingSocketPath ?? m.getDefaultUdsSocketPath())
     }
   }
 
