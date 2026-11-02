@@ -1331,7 +1331,7 @@ async function streamCompactSummary({
         const event = next.value
         // Generators may yield void while waiting for a stream event. Such a
         // tick cannot carry content or assistant state.
-        if (event === undefined) {
+        if (typeof event !== 'object' || event === null) {
           next = await streamIter.next()
           continue
         }
