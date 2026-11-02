@@ -92,7 +92,7 @@ def probe(executable,mode,timeout):
                 'flat_welcome':'Welcome to Claude Code' in text,
                 'connection_status':'Checking connectivity' in text,
                 'offline_failure_visible':'Unable to connect to Anthropic services' in text,
-                'prompt_ready':bool(re.search(r'(?m)(?:^|\n)\s*\$\s*
+                'prompt_ready': ('❯' in text or text.rstrip().endswith('$')),
                 'stage': ('theme-onboarding' if 'Choose the text style' in text
                            else 'workspace-trust' if 'trust' in text.lower() and 'folder' in text.lower()
                            else 'session'),
