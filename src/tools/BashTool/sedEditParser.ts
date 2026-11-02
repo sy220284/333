@@ -91,11 +91,13 @@ export function parseSedEditCommand(command: string): SedEditInfo | null {
 
     // Handle -i flag (with or without backup suffix)
     if (arg === '-i' || arg === '--in-place') {
+      // macOS BSD sed requires an explicit separate empty backup suffix,
+      // whereas GNU sed interprets that argument as an edit script.
+      if (arg === '--in-place' && process.platform === 'darwin') return null
+      const hasEmptySuffix = args[i + 1] === ''
+      if ((process.platform === 'darwin') !== hasEmptySuffix) return null
       hasInPlaceFlag = true
-      i++
-      // An explicit empty suffix is supported on BSD sed. A non-empty
-      // backup suffix writes an additional file, which this preview cannot do.
-      if (args[i] === '') i++
+      i += hasEmptySuffix ? 2 : 1
       continue
     }
     if (arg.startsWith('-i')) {
