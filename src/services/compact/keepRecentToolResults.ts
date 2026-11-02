@@ -11,6 +11,10 @@ export const CONTEXT_HINT_KEEP_RECENT = 5
 export const CONTEXT_HINT_MIN_SAVING_TOKENS = 20_000
 export const CLEARED_TOOL_RESULT = '[Old tool result content cleared]'
 export const PERSISTED_TOOL_RESULT_PREFIX = '<persisted-output>'
+// 2.1.310 chunk-wany0nxw.js Wmn/Ol: preserve external artifact provenance
+// when a large tool result is replaced by a persisted-output reference.
+export const EXTERNAL_ARTIFACT_PROVENANCE = '<artifact-content-authored-by-others/>\n'
+const EXTERNAL_ARTIFACT_TAG = '<artifact-content-authored-by-others/>'
 
 export type PersistToolOutput = (
   content: ToolResultBlockParam['content'],
@@ -33,12 +37,20 @@ export type KeepRecentOptions = {
   estimateTextTokens?: (text: string) => number
 }
 
+function hasExternalArtifactProvenance(content: ToolResultBlockParam['content']): boolean {
+  if (typeof content === 'string') return content.includes(EXTERNAL_ARTIFACT_TAG)
+  return Array.isArray(content) && content.some(
+    part => part.type === 'text' && part.text.includes(EXTERNAL_ARTIFACT_TAG),
+  )
+}
+
 function alreadyCleared(content: ToolResultBlockParam['content']): boolean {
   if (typeof content !== 'string') return false
-  const candidate = content.startsWith(CLEARED_TOOL_RESULT)
-    ? content.slice(CLEARED_TOOL_RESULT.length)
+  const candidate = content.startsWith(EXTERNAL_ARTIFACT_PROVENANCE)
+    ? content.slice(EXTERNAL_ARTIFACT_PROVENANCE.length)
     : content
-  return candidate === '' || candidate.startsWith(PERSISTED_TOOL_RESULT_PREFIX)
+  return candidate === CLEARED_TOOL_RESULT ||
+    candidate.startsWith(PERSISTED_TOOL_RESULT_PREFIX)
 }
 
 function countResultTokens(
@@ -121,10 +133,15 @@ export async function keepRecentToolResults(
       if (block.type !== 'tool_result' || !clearedIds.has(block.tool_use_id)) return block
       const hasMedia =
         Array.isArray(block.content) &&
-        block.content.some(part => part.type !== 'text')
-      const content = hasMedia
+        block.content.some(part => part.type === 'image' || part.type === 'document')
+      const replacement = hasMedia
         ? CLEARED_TOOL_RESULT
         : (clearedContent.get(block.tool_use_id) ?? CLEARED_TOOL_RESULT)
+      const content = !hasMedia &&
+          !replacement.startsWith(EXTERNAL_ARTIFACT_PROVENANCE) &&
+          hasExternalArtifactProvenance(block.content)
+        ? EXTERNAL_ARTIFACT_PROVENANCE + replacement
+        : replacement
       if (block.content === content) return block
       changed = true
       return { ...block, content }
