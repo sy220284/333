@@ -38,7 +38,7 @@ export const TIME_BASED_MC_CLEARED_MESSAGE = '[Old tool result content cleared]'
 const IMAGE_MAX_TOKEN_SIZE = 2000
 
 // Only compact these tools
-const COMPACTABLE_TOOLS = new Set<string>([
+export const COMPACTABLE_TOOLS = new Set<string>([
   FILE_READ_TOOL_NAME,
   ...SHELL_TOOL_NAMES,
   GREP_TOOL_NAME,
