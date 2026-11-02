@@ -405,6 +405,7 @@ async function applySedEdit(simulatedEdit: {
   // A preview is bound to the file content the user approved. A file may
   // change while the permission dialog is open; never overwrite newer edits.
   assertSedPreviewUnchanged(filePath, originalContent, oldContent);
+  assertApprovedTarget();
 
   // Track file history before making changes (for undo support)
   if (fileHistoryEnabled() && parentMessage) {
