@@ -73,7 +73,9 @@ async function probe(executable, mode) {
     const displays = events.map(message => message.thinking_display ?? null)
     const expectedTypes = ['message_start:', 'content_block_start:thinking', 'content_block_delta:thinking_delta', 'content_block_delta:signature_delta', 'content_block_stop:', 'content_block_start:text', 'content_block_delta:text_delta', 'content_block_stop:', 'message_delta:', 'message_stop:']
     const expectedDisplays = [mode.display, mode.display, mode.display, null, null, null, null, null, null, null]
-    const sentExpected = mode.name !== 'explicit' || requestThinking?.type === 'adaptive' && requestThinking?.display === 'summarized'
+    const sentExpected = mode.name === 'explicit'
+      ? requestThinking?.type === 'adaptive' && requestThinking?.display === 'summarized'
+      : requestThinking === undefined
     const result = messages.findLast(message => message.type === 'result')
     const passed = code === 0 && requests > 0 && sentExpected &&
       JSON.stringify(types) === JSON.stringify(expectedTypes) && JSON.stringify(displays) === JSON.stringify(expectedDisplays) &&
