@@ -13,7 +13,7 @@ import { getAgentName, getTeamName } from '../../utils/teammate.js'
 import { discoverAuthenticatedPeers } from '../../bridge/peerDiscovery.js'
 import { rememberAccountRecipients } from '../../utils/accountPeerDirectory.mjs'
 import { getMessagingSocketPath } from '../../utils/udsMessaging.js'
-import { buildAgentListing, listReachableTeammates } from './peerListing.mjs'
+import { buildAgentListing, hideTeammateNamesInSubagents, listReachableTeammates } from './peerListing.mjs'
 
 const canSendMessage = (tools: readonly { name: string }[]): boolean =>
   tools.some(tool => tool.name === 'SendMessage')
@@ -59,7 +59,7 @@ export const ListAgentsTool = buildTool({
     const teamName = getTeamName(state.teamContext)
     const selfName = isAgentSwarmsEnabled() && teamName ? getAgentName() || TEAM_LEAD_NAME : ''
     const teamFile = teamName ? await readTeamFileAsync(teamName) : null
-    const teammates = listReachableTeammates(teamFile, selfName, state.teamContext?.teammates)
+    const teammates = listReachableTeammates(teamFile, selfName, state.teamContext?.teammates, state.tasks)
     const { peers: localSessions, unreadable } = await listLiveLocalPeers(join(getClaudeConfigHomeDir(), 'sessions'))
     const account = await discoverAuthenticatedPeers(localSessions)
     rememberAccountRecipients(account.peers)
@@ -75,7 +75,8 @@ export const ListAgentsTool = buildTool({
         type: task.agentType, status: task.status }]
     })
     return { data: buildAgentListing({
-      self, subagents, teammates, sessions, query: input.q, localUnreadable: unreadable,
+      self, subagents: hideTeammateNamesInSubagents(subagents, state.teamContext?.teammates),
+      teammates, sessions, query: input.q, localUnreadable: unreadable,
       accountNotes: account.notes,
       canSend: canSendMessage(options.refreshTools?.() ?? options.tools),
     }) }
