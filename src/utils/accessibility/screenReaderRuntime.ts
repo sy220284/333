@@ -19,9 +19,17 @@ export function getScreenReaderMode() {
 export function isScreenReaderEnabled(): boolean {
   return getScreenReaderMode().enabled
 }
+let startupActivationSource: string | undefined
+
 export function getScreenReaderActivationSource(): string | undefined {
-  return getScreenReaderMode().source
+  // The parent process exports CLAUDE_AX_SCREEN_READER to child CLIs.
+  // Preserve the first trusted source before that export changes precedence.
+  return startupActivationSource ?? getScreenReaderMode().source
 }
 export function getScreenReaderSubprocessEnvironment(): Record<string,string> {
-  return screenReaderChildEnvironment(getScreenReaderMode())
+  const mode = getScreenReaderMode()
+  if (mode.enabled && startupActivationSource === undefined) {
+    startupActivationSource = mode.source
+  }
+  return screenReaderChildEnvironment(mode)
 }

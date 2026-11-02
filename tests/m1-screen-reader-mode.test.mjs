@@ -32,7 +32,9 @@ test('CLI, settings and actual Ink rendering are connected',async()=>{
  assert.match(settings,/axScreenReader:\s*z\s*\.boolean\(\)\s*\.optional\(\)/)
  assert.match(ink,/flattenAccessibleTree\(this\.rootNode\)/)
  assert.match(ink,/accessibleOutputDelta\(/)
- assert.ok(ink.includes('Screen Reader Mode: on via ${screenReader.source}'))
+ assert.ok(ink.includes('Screen Reader Mode: on via ${getScreenReaderActivationSource()}'))
+ assert.match(gate,/startupActivationSource/)
+ assert.match(gate,/startupActivationSource = mode\.source/)
  assert.match(gate,/getSettingsForSource\(/)
 })
 

@@ -45,6 +45,9 @@ def probe(executable,mode,timeout):
         cmd=[str(Path(executable).resolve())]
         if mode=='flag': cmd.append('--ax-screen-reader')
         if mode=='env': env['CLAUDE_AX_SCREEN_READER']='1'
+        if mode=='settings':
+            (root/'.claude').mkdir()
+            (root/'.claude'/'settings.json').write_text('{"axScreenReader":true}',encoding='utf8')
         master,slave=pty.openpty()
         fcntl.ioctl(slave,termios.TIOCSWINSZ,struct.pack('HHHH',40,120,0,0))
         proc=subprocess.Popen(cmd,cwd=project,env=env,stdin=slave,stdout=slave,
@@ -78,7 +81,7 @@ def probe(executable,mode,timeout):
                 'text_excerpt':text[:450]}
 
 def validate(label,cases):
-    basic,ax,env=cases
+    basic,ax,env,settings=cases
     assert all(c['bytes'] for c in cases),(label,cases)
     assert not basic['activation_banner'],(label,'AX enabled without flag',basic)
     assert ax['activation_banner'],(label,'AX banner missing',ax)
@@ -87,7 +90,10 @@ def validate(label,cases):
     assert env['activation_banner'],(label,'AX env banner missing',env)
     assert env['flat_welcome'],(label,'AX env flat welcome missing',env)
     assert env['connection_status'],(label,'AX env connection status missing',env)
-    assert all(c['cursor_control_sequences']<basic['cursor_control_sequences'] for c in (ax,env)),(
+    assert settings['activation_banner'],(label,'AX trusted settings banner missing',settings)
+    assert settings['flat_welcome'],(label,'AX settings flat welcome missing',settings)
+    assert settings['connection_status'],(label,'AX settings connection status missing',settings)
+    assert all(c['cursor_control_sequences']<basic['cursor_control_sequences'] for c in (ax,env,settings)),(
         label,'AX terminal cursor/animation suppression missing',cases)
 
 def main():
@@ -106,7 +112,7 @@ def main():
     binaries=[('official',a.reference)]
     if a.candidate: binaries.append(('candidate',a.candidate))
     for label,executable in binaries:
-        cases=[probe(executable,mode,a.timeout) for mode in ('off','flag','env')]
+        cases=[probe(executable,mode,a.timeout) for mode in ('off','flag','env','settings')]
         report['results'][label]=cases
         try: validate(label,cases)
         except AssertionError as e: failures.append(str(e))

@@ -7,7 +7,7 @@
     "chunk-mh7sh27p.js:721 AX CLI argument",
     "chunk-dzh36vh3.js:1265 AX env and settings"
   ],
-  "method": "2026-11-02 official 2.1.310 x64 real Linux PTY isolated HOME/CWD, 8-second no-flag/flag/env comparison",
+  "method": "2026-11-02 official 2.1.310 x64 real Linux PTY, isolated HOME/CWD, 8s each: off/flag/env/trusted-user-settings",
   "observed": {
     "without_flag": {
       "bytes": 1214,
@@ -27,10 +27,17 @@
       "ax_banner": "[Screen Reader Mode: on via env]",
       "flat_welcome": true,
       "connectivity_status": true
+    },
+    "with_settings": {
+      "bytes": 549,
+      "csi_cursor_controls": 25,
+      "ax_banner": "[Screen Reader Mode: on via settings]",
+      "flat_welcome": true,
+      "connectivity_status": true
     }
   },
   "candidate": "PENDING_PR7_CI",
   "scope": "startup and connectivity status only",
   "M10_acceptance": "UNVERIFIED",
-  "note": "CSI counts are capture-time observations and may vary; automated tests assert relative differences. Full interactive E2E still unverified."
+  "note": "Official PTY settings mode reproduced from HOME/.claude/settings.json axScreenReader=true. CSI counts are non-deterministic sample values; CI verifies relative cursor suppression, source banner, welcome and connection output."
 }
