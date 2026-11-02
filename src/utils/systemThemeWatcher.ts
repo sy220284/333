@@ -31,7 +31,7 @@ export function watchSystemTheme(
     querying = true
     try {
       const basicQuery = oscColor(11)
-      let reply: Awaited<ReturnType<typeof querier.send>>
+      let reply: { type: 'osc'; code: number; data: string } | undefined
       let method = 'direct'
 
       if (multiplexer) {
@@ -81,10 +81,11 @@ export function watchSystemTheme(
       setCachedSystemTheme(theme)
       onChange(theme)
     } catch (error) {
+      // The watcher owns the asynchronous query; propagate errors into the
+      // diagnostic log without creating an unhandled promise rejection.
       logForDebugging(
         `systemTheme: OSC 11 query failed: ${error instanceof Error ? error.message : String(error)}`,
       )
-      throw error
     } finally {
       querying = false
     }
