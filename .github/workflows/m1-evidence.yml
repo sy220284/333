@@ -41,6 +41,7 @@ on:
       - 'src/cli/transports/ccrClient.ts'
       - 'src/entrypoints/sdk/streamEventMapper.ts'
       - 'src/entrypoints/sdk/coreSchemas.ts'
+      - 'tests/m1-sdk-message-contract.test.ts'
       - 'src/services/api/claude.ts'
       - 'src/remote/sdkMessageAdapter.ts'
       - 'src/types/message.ts'
@@ -324,6 +325,8 @@ jobs:
         run: bun test tests/m1-uds-roundtrip.test.ts
       - name: 对照新版Computer Use系统级敏感应用权限识别
         run: bun test tests/m1-computer-use-sentinel.test.ts
+      - name: 验证 SDK 助手、用户及 UUID 核心消息结构
+        run: bun test tests/m1-sdk-message-contract.test.ts
       - name: 验证 SDK 流事件模式与远程合并的 Bun 运行链路
         run: bun test tests/sdk-stream-events.test.ts tests/sdk-stream-accumulator.test.ts tests/m1-ccr-close.test.ts
       - name: 从当前M1源码独立构建候选程序
