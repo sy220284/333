@@ -10,7 +10,7 @@
   "environment": {
     "CLAUDE_CODE_SIMPLE": "unset",
     "ANTHROPIC_BASE_URL": "http://127.0.0.1:<random port>",
-    "ANHTROPIC_API_KEY": "fake local only"
+    "ANTHROPIC_API_KEY": "fake local only"
   },
   "options": [
     "-p",
