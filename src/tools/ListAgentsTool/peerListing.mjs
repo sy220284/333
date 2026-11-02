@@ -1,16 +1,20 @@
 /** Team mailbox recipients are distinct from static agent templates. */
-export function listReachableTeammates(teamFile, selfName) {
-  if (!teamFile || !Array.isArray(teamFile.members)) return []
+export function listReachableTeammates(teamFile, selfName, liveTeammates = {}) {
   const seen = new Set([selfName.toLowerCase()])
   const agents = []
-  for (const member of teamFile.members) {
+  const include = member => {
     const name = member?.name
-    if (typeof name !== 'string' || !name.trim() || name.includes('@')) continue
+    if (typeof name !== 'string' || !name.trim() || name.includes('@')) return
     const key = name.toLowerCase()
-    if (seen.has(key)) continue
+    if (seen.has(key)) return
     seen.add(key)
-    agents.push({ name, to: name, channel: 'team', ...(member.agentType ? { type: member.agentType } : {}) })
+    agents.push({ name, to: name, channel: 'team',
+      ...(member.agentType ? { type: member.agentType } : {}),
+      ...(member.status ? { status: member.status } : {}) })
   }
+  // Active in-process teammates may not yet be present in the persisted roster.
+  for (const member of Object.values(liveTeammates ?? {})) include(member)
+  for (const member of Array.isArray(teamFile?.members) ? teamFile.members : []) include(member)
   return agents
 }
 /** Text and structured output are produced from the same filtered records. */
