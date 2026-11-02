@@ -71,10 +71,11 @@ import {
   loadConversationForResume,
   type TurnInterruptionState,
 } from 'src/utils/conversationRecovery.js'
-import type {
-  MCPServerConnection,
-  McpSdkServerConfig,
-  ScopedMcpServerConfig,
+import {
+  isMcpStdioServerConfig,
+  type MCPServerConnection,
+  type McpSdkServerConfig,
+  type ScopedMcpServerConfig,
 } from 'src/services/mcp/types.js'
 import {
   ChannelMessageNotificationSchema,
@@ -1653,10 +1654,7 @@ function runHeadlessStreaming(
           url: connection.config.url,
           id: connection.config.id,
         }
-      } else if (
-        connection.config.type === 'stdio' ||
-        connection.config.type === undefined
-      ) {
+      } else if (isMcpStdioServerConfig(connection.config)) {
         config = {
           type: 'stdio' as const,
           command: connection.config.command,
