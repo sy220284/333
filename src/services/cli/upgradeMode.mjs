@@ -23,3 +23,13 @@ export function parsePromptSuggestions(value) {
   if (['false', '0', 'no', 'off'].includes(str)) return false
   throw new Error('Allowed choices are true, false, 1, 0, yes, no, on, off.')
 }
+
+/** A host cannot be asked when --permission-prompts none is selected. */
+export function denyUnansweredPrompt(decision) {
+  if (decision.behavior !== 'ask') return decision
+  return {
+    behavior: 'deny',
+    message: decision.message || 'Permission denied: prompting disabled (--permission-prompts none)',
+    decisionReason: decision.decisionReason ?? { type: 'mode', mode: 'dontAsk' },
+  }
+}
