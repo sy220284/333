@@ -1,0 +1,67 @@
+name: M1 屏幕阅读器官方x64与重建版真实PTY对照
+
+on:
+  pull_request:
+    paths:
+      - 'src/ink/ink.tsx'
+      - 'src/utils/accessibility/screenReaderMode.mjs'
+      - 'src/utils/accessibility/screenReaderRuntime.ts'
+      - 'tests/m1-screen-reader-mode.test.mjs'
+      - 'tests/m1-screen-reader-terminal-parity.py'
+      - '.github/workflows/m1-screen-reader-real-pty.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A validation of a specific source revision must finish even if PR7 advances.
+concurrency:
+  group: m1-screen-reader-pty-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  official-vs-candidate-pty:
+    name: 官方2.1.310与重建版四模式终端行为
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 屏幕阅读器模式与可信配置来源单测
+        run: node --test tests/m1-screen-reader-mode.test.mjs
+      - name: 恢复当前版本的真实构建依赖
+        run: |
+          node build/verify-bundled-assets.mjs
+          node build/restore-claude-api.mjs --verify
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 独立构建PR7候选CLI
+        run: bun build/rebuild.mjs
+      - name: 固定校验2.1.310官方x64并创建候选启动器
+        run: |
+          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
+            "https://downloads.claude.ai/claude-code-releases/2.1.310/linux-x64/claude" \
+            --output "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
+          echo "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  ${RUNNER_TEMP}/claude-2.1.310-linux-x64" | sha256sum --check
+          chmod 700 "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
+          printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-candidate-cli"
+          chmod 700 "${RUNNER_TEMP}/m1-candidate-cli"
+      - name: 用真实PTY检测关闭、flag、env、settings四种来源与启动输出
+        run: |
+          python3 tests/m1-screen-reader-terminal-parity.py \
+            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --candidate "${RUNNER_TEMP}/m1-candidate-cli" \
+            --report "${RUNNER_TEMP}/m1-screen-reader-real-pty.json"
+      - name: 保存实测终端差分和每种启用来源
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-screen-reader-actual-pty
+          path: ${{ runner.temp }}/m1-screen-reader-real-pty.json
+          if-no-files-found: warn
+          retention-days: 30
