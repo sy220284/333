@@ -220,6 +220,7 @@ jobs:
             --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
             --allow-candidate-diff true \
+            --require-candidate-cases "mcp_help,plugin_help,mcp_list_empty,plugin_list_empty,invalid_output,invalid_permission,json_without_login,stream_without_login" \
             --report "${RUNNER_TEMP}/m1-x64-current-differential.json"
       - name: 按v4把原版x64差异转换为源码修改责任和验收任务
         run: |
