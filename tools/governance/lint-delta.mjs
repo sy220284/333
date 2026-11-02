@@ -4,8 +4,15 @@ import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '../..');
-const tools = resolve(root, 'tools/dev/node_modules');
+// Use the same selected toolchain installation as tools/dev/dev.mjs.
+// Portable/offline installs live outside the repository and must not depend
+// on the bootstrap-only tools/dev/node_modules path.
+const home = process.env.DEV333_TOOLS_ROOT ?? join(process.env.HOME ?? process.env.USERPROFILE ?? '.', '.local/share/333-dev');
+const external = resolve(home, 'dev-tools/node_modules');
+const local = resolve(root, 'tools/dev/node_modules');
+const tools = existsSync(join(external, '@biomejs/biome/bin/biome')) ? external : local;
 const cli = join(tools, '@biomejs/biome/bin/biome');
+if (!existsSync(cli)) throw new Error(`未发现 Biome：${cli}，请先安装开发工具链`);
 const base = process.env.DEV333_DIFF_BASE || process.env.GITHUB_BASE_REF || 'main';
 
 function run(program, args, options = {}) {
