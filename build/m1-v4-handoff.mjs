@@ -76,11 +76,12 @@ export function buildHandoff(reference, catalog, coverage, sourceRoot = root) {
       implementation_commits:[], integration_test_runs:[], accepted:false,
     }
   })
-  assert.equal(differences.length, catalog.candidate_failures,
-    '当前差异计数发生变化，必须更新任务归属，不可使用旧版差分假签收')
-  assert.equal(differences.length, definitions.size,
-    '所有开发卡必须与当前真实失败一一对应，已修复项须移入验证记录')
-
+  assert.ok(differences.length <= catalog.candidate_failures,
+    '发现超过已登记六项的新增差异，请先补真实旧函数与开发责任')
+  const newlyMatching = [...definitions.keys()].filter(id => rebuilt.get(id).pass === true)
+    .map(id => ({id, state:'CLI_CASE_NOW_MATCHED_NEEDS_FULL_FUNCTION_SIGNOFF'}))
+  assert.equal(differences.length + newlyMatching.length, definitions.size,
+    '每条先前确认的差异必须出现在未修复或CLI回归成功列表')
   const verifiedBaseline = [...rebuilt.values()]
     .filter(row => row.pass === true)
     .map(row => ({id:row.id, state:'CLI_BASELINE_ONLY_NOT_FULL_FEATURE_SIGNOFF'}))
@@ -91,7 +92,7 @@ export function buildHandoff(reference, catalog, coverage, sourceRoot = root) {
     reference_sha256:reference.reference_sha256,
     case_count:original.size, target_reference_passed:reference.reference.passed,
     candidate_baseline_passed:reference.candidate.passed,
-    confirmed_differences:differences.length, differences, verifiedBaseline,
+    confirmed_differences:differences.length, differences, newlyMatching, verifiedBaseline,
     development_owners:unique(differences.map(x => x.owner)),
     signoff_note:'M1完成对比和可执行交接；后续必须由实际源码提交、调用链与同环境原版行为测试单独验收。',
   }
