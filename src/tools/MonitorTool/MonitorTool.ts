@@ -83,13 +83,37 @@ export const MonitorTool=buildTool({
     const setAppState=context.setAppStateForTasks??context.setAppState
     let taskId:string|undefined
     let buffered=''
+    let flushTimer:ReturnType<typeof setTimeout>|undefined
+    let completed=false
     const pendingLines:string[]=[]
-    const emitLine=(line:string)=>{
-      if(!line.trim())return
-      if(!taskId){pendingLines.push(line);return}
+    const notifyLine=(line:string)=>{
+      if(!taskId)return
       const toolUseIdLine=context.toolUseId?`<tool-use-id>${escapeXml(context.toolUseId)}</tool-use-id>\n`:''
       enqueuePendingNotification({mode:'task-notification',priority:'next',agentId:context.agentId,
         value:`<task-notification>\n<task-id>${escapeXml(taskId)}</task-id>\n${toolUseIdLine}<output-file>${escapeXml(getTaskOutputPath(taskId))}</output-file>\n<event>${escapeXml(line)}</event>\n</task-notification>`})
+    }
+    const flushEvents=()=>{
+      flushTimer=undefined
+      if(completed)return
+      for(const line of pendingLines.splice(0))notifyLine(line)
+    }
+    const scheduleEvents=()=>{
+      if(!taskId||completed||flushTimer||pendingLines.length===0)return
+      flushTimer=setTimeout(flushEvents,100)
+      flushTimer.unref?.()
+    }
+    const emitLine=(line:string)=>{
+      if(!line.trim())return
+      pendingLines.push(line)
+      scheduleEvents()
+    }
+    const drainMonitorEvents=()=>{
+      completed=true
+      if(flushTimer)clearTimeout(flushTimer)
+      flushTimer=undefined
+      if(buffered.trim())pendingLines.push(buffered)
+      buffered=''
+      return pendingLines.splice(0)
     }
     const shell=await exec(command,abortController.signal,'bash',{
       timeout:timeoutMs,
@@ -106,15 +130,12 @@ export const MonitorTool=buildTool({
       },
     })
     const handle=await spawnShellTask({command:command,description:input.description,
-      shellCommand:shell,toolUseId:context.toolUseId,agentId:context.agentId,kind:'monitor'},
+      shellCommand:shell,toolUseId:context.toolUseId,agentId:context.agentId,kind:'monitor',
+      drainMonitorEvents},
       {abortController,getAppState,setAppState})
     taskId=handle.taskId
-    // Very short commands can finish before spawnShellTask returns its task ID.
-    // Publish their buffered lines after registration instead of dropping them.
-    for(const line of pendingLines)emitLine(line)
-    pendingLines.length=0
-    void shell.result.then(()=>{if(buffered){emitLine(buffered);buffered=''}},
-      ()=>{if(buffered){emitLine(buffered);buffered=''}})
+    // Stream events after registration if the task is still running.
+    scheduleEvents()
     {
       const timer=setTimeout(()=>{
         if(getAppState().tasks[handle.taskId]?.status!=='running')return
