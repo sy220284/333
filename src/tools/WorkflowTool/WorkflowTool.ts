@@ -109,6 +109,6 @@ export const WorkflowTool=buildTool({
   },
   mapToolResultToToolResultBlockParam(data:Output,toolUseID:string){
     return {type:'tool_result' as const,tool_use_id:toolUseID,
-      content:`Workflow launched in background. Task ID: ${data.taskId}\nSummary: ${data.summary}\nTranscript dir: ${data.transcriptDir}\nScript file: ${data.scriptPath}\nRun ID: ${data.runId}\nUse TaskStop to cancel or resumeFromRunId to resume after completion.`}
+      content:`Workflow launched in background. Task ID: ${data.taskId}\nSummary: ${data.summary}\nTranscript dir: ${data.transcriptDir}\nScript file: ${data.scriptPath}\n(Edit this file with Write/Edit and re-invoke Workflow with {scriptPath: ${JSON.stringify(data.scriptPath)}} to iterate without resending the script.)\nRun ID: ${data.runId}\nTo resume after editing the script: Workflow({scriptPath: ${JSON.stringify(data.scriptPath)}, resumeFromRunId: ${JSON.stringify(data.runId)}}) — completed agents return cached results (cached results may themselves be empty — inspect journal.jsonl before assuming there is something to recover).\n\nYou will be notified when it completes. Use /workflows to review or stop the run.`}
   },
 } satisfies ToolDef<InputSchema,Output>)

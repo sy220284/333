@@ -125,6 +125,6 @@ export const MonitorTool=buildTool({
     const duration=data.persistent?'persistent — runs until TaskStop or session end':
       `expires in ${data.timeoutMs}ms unless the source ends first`
     return {type:'tool_result' as const,tool_use_id:toolUseID,
-      content:`Monitor started (task ${data.taskId}, ${duration}). You will be notified on each event. Keep working — do not poll or sleep.`}
+      content:`Monitor started (task ${data.taskId}, ${duration}; you get one notice at expiry — re-arm if you still need the watch). You will be notified on each event. Keep working — do not poll or sleep. Events may arrive while you are waiting for the user — an event is not their reply.`}
   },
 } satisfies ToolDef<InputSchema,Output>)
