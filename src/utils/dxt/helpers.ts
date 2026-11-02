@@ -19,14 +19,9 @@ export async function validateManifest(
   const parseResult = v0_2.McpbManifestSchema.safeParse(manifestJson)
 
   if (!parseResult.success) {
-    const errors = parseResult.error.flatten()
-    const errorMessages = [
-      ...Object.entries(errors.fieldErrors).map(
-        ([field, errs]) => `${field}: ${errs?.join(', ')}`,
-      ),
-      ...(errors.formErrors || []),
-    ]
-      .filter(Boolean)
+    // Keep the schema's exact field path and message for every failure.
+    const errorMessages = parseResult.error.issues
+      .map(issue => `${issue.path.join('.') || 'manifest'}: ${issue.message}`)
       .join('; ')
 
     throw new Error(`Invalid manifest: ${errorMessages}`)

@@ -77,10 +77,7 @@ function startStallWatchdog(taskId: string, description: string, kind: BashTaskK
         // signal and an unknown value falls through to 'completed',
         // falsely closing the task for SDK consumers. Statusless
         // notifications are skipped by the SDK emitter (progress ping).
-        const eventLines = kind === 'monitor'
-    ? events.map(line => `\n<event>${escapeXml(line)}</event>`).join('')
-    : '';
-  const message = `<${TASK_NOTIFICATION_TAG}>
+        const message = `<${TASK_NOTIFICATION_TAG}>
 <${TASK_ID_TAG}>${taskId}</${TASK_ID_TAG}>${toolUseIdLine}
 <${OUTPUT_FILE_TAG}>${outputPath}</${OUTPUT_FILE_TAG}>
 <${SUMMARY_TAG}>${escapeXml(summary)}</${SUMMARY_TAG}>
@@ -160,6 +157,9 @@ function enqueueShellNotification(taskId: string, description: string, status: '
   }
   const outputPath = getTaskOutputPath(taskId);
   const toolUseIdLine = toolUseId ? `\n<${TOOL_USE_ID_TAG}>${toolUseId}</${TOOL_USE_ID_TAG}>` : '';
+  const eventLines = kind === 'monitor'
+    ? events.map(line => `\n<event>${escapeXml(line)}</event>`).join('')
+    : '';
   const message = `<${TASK_NOTIFICATION_TAG}>
 <${TASK_ID_TAG}>${taskId}</${TASK_ID_TAG}>${toolUseIdLine}
 <${OUTPUT_FILE_TAG}>${outputPath}</${OUTPUT_FILE_TAG}>
