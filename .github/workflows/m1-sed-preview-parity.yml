@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'src/tools/BashTool/sedEditParser.ts'
+      - 'src/tools/BashTool/BashTool.tsx'
+      - 'src/components/permissions/SedEditPermissionRequest/SedEditPermissionRequest.tsx'
       - 'tests/sed-edit-parity.test.ts'
       - '.github/workflows/m1-sed-preview-parity.yml'
   workflow_dispatch:
