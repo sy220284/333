@@ -384,6 +384,28 @@ function backgroundTask(taskId: string, getAppState: () => AppState, setAppState
       const finalStatus = result.code === 0 ? 'completed' : 'failed';
       enqueueShellNotification(taskId, description, finalStatus, result.code, setAppState, toolUseId, kind, agentId);
     }
+  }).catch(error => {
+    logError(toError(error));
+    let wasKilled = false;
+    let cleanupFn: (() => void) | undefined;
+    updateTaskState<LocalShellTaskState>(taskId, setAppState, task => {
+      if (task.status === 'killed') {
+        wasKilled = true;
+        return task;
+      }
+      cleanupFn = task.unregisterCleanup;
+      return {
+        ...task,
+        status: 'failed',
+        shellCommand: null,
+        unregisterCleanup: undefined,
+        endTime: Date.now()
+      };
+    });
+    cleanupFn?.();
+    enqueueShellNotification(taskId, description, wasKilled ? 'killed' : 'failed', undefined, setAppState, toolUseId, kind, agentId);
+  }).finally(() => {
+    cancelStallWatchdog();
     void evictTaskOutput(taskId);
   });
   return true;
