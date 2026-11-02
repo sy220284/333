@@ -43,6 +43,17 @@ test('actual NotebookEditTool validates, edits, inserts and deletes cells on dis
     writeFileSync(notebook_path, JSON.stringify(makeNotebook()))
     const readFileState = new Map()
     const context = { readFileState, updateFileHistoryState: () => {} } as unknown as ToolUseContext
+
+    // UNC paths must be rejected before filesystem access. A successful
+    // validateInput must never route a remote share into NotebookEdit.call.
+    for (const unsafePath of ['//example.invalid/share/remote.ipynb', '\\\\\\\\example.invalid\\\\share\\\\remote.ipynb']) {
+      const uncInput = { notebook_path: unsafePath, cell_id: 'cell-0', new_source: 'unsafe-write' }
+      const validation = await NotebookEditTool.validateInput(uncInput, context)
+      expect(validation.result).toBe(false)
+      expect(validation.message).toMatch(/UNC notebook paths are not supported/)
+      const attemptedWrite = await NotebookEditTool.call(uncInput, context, undefined, { uuid: 'unc-test' } as never)
+      expect(attemptedWrite.data.error).toMatch(/UNC notebook paths are not supported/)
+    }
     const markRead = () => readFileState.set(notebook_path, { timestamp: getFileModificationTime(notebook_path), content: readFileSync(notebook_path, 'utf8'), offset: undefined, limit: undefined })
     const perform = async (input: { notebook_path: string; cell_id?: string; cell_type?: 'code' | 'markdown'; new_source: string; edit_mode?: 'insert' | 'replace' | 'delete' }) =>
       NotebookEditTool.call(input, context, undefined, { uuid: 'notebook-test' } as never)
