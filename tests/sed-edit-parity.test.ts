@@ -40,6 +40,12 @@ describe('Bash sed preview matches real GNU sed -i', () => {
           '-i ' + (process.platform === 'darwin' ? "'' " : '') +
           "'" + fixture.expr + "' " + file
         const parsed = parseSedEditCommand(command)
+        if (process.platform === 'darwin' && fixture.name === 'BRE escaped plus') {
+          // BSD sed does not support GNU's \+ BRE extension. The command
+          // should execute through Bash with its native semantics.
+          expect(parsed).toBeNull()
+          return
+        }
         expect(parsed).not.toBeNull()
         if (!parsed) throw new Error(`sed preview rejected expected expression: ${command}`)
         const candidate = applySedSubstitution(fixture.input, parsed)
@@ -59,7 +65,10 @@ describe('Bash sed preview matches real GNU sed -i', () => {
   })
 
   test('dot-prefixed file path remains a file path, not an -i suffix', () => {
-    expect(parseSedEditCommand("sed -i 's/a/b/' .env")?.filePath).toBe('.env')
+    const command = process.platform === 'darwin'
+      ? "sed -i '' 's/a/b/' .env"
+      : "sed -i 's/a/b/' .env"
+    expect(parseSedEditCommand(command)?.filePath).toBe('.env')
   })
 
   test('complex or unrepresentable sed commands remain on the Bash execution path', () => {
