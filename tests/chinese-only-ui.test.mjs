@@ -135,3 +135,11 @@ test('沙箱标签和代理创建向导中文化且 Tab 内部标识稳定', () 
   assert.match(s, /defaultTab="Mode"/)
   assert.match(read('src/components/agents/new-agent-creation/wizard-steps/ConfirmStep.tsx'), /系统提示词/)
 })
+
+test('权限审批与文件夹授权界面显示中文且规则 ID 不变', () => {
+  const ui=read('src/components/permissions/rules/PermissionRuleList.tsx')
+  assert.match(ui,/id="allow" title="允许"/)
+  assert.match(ui,/id="deny" title="拒绝"/)
+  assert.match(read('src/components/permissions/EnterPlanModePermissionRequest/EnterPlanModePermissionRequest.tsx'), /进入规划模式/)
+  assert.match(read('src/components/permissions/rules/AddWorkspaceDirectory.tsx'), /将目录添加到工作区/)
+})
