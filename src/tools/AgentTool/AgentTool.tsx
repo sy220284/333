@@ -1064,8 +1064,8 @@ export const AgentTool = buildTool({
             // Async iterators may finish with a void return value. The
             // progress and transcript paths below require a real Message.
             const message = result.value;
-            if (message === undefined) {
-              throw new Error('Subagent stream yielded an undefined message before completion');
+            if (typeof message !== 'object' || message === null) {
+              throw new Error('Subagent stream yielded an invalid message before completion');
             }
             agentMessages.push(message);
 
