@@ -7,7 +7,9 @@
  * @see scripts/generate-sdk-types.ts for type generation
  */
 
-import type { BetaRawMessageStreamEvent } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+import type { BetaMessage, BetaRawMessageStreamEvent } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import type { UUID } from 'node:crypto'
 import { z } from 'zod/v4'
 import { lazySchema } from '../../utils/lazySchema.js'
 
@@ -1235,11 +1237,41 @@ export const RewindFilesResultSchema = lazySchema(() =>
 // The generation script uses TypeOverrideMap to output the correct TS type references.
 // This allows us to define SDK message types in Zod while maintaining proper typing.
 
-/** Placeholder for APIUserMessage from @anthropic-ai/sdk */
-export const APIUserMessagePlaceholder = lazySchema(() => z.unknown())
+/** A SDK user message contains a typed user role and text or API blocks.
+ * Keep content blocks extensible: newer tools add block variants.
+ */
+export type SDKUserContent = { role: 'user'; content: string | ContentBlockParam[] }
 
-/** Placeholder for APIAssistantMessage from @anthropic-ai/sdk */
-export const APIAssistantMessagePlaceholder = lazySchema(() => z.unknown())
+function isSDKUserContent(value: unknown): value is SDKUserContent {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const message = value as Record<string, unknown>
+  if (message.role !== 'user') return false
+  if (typeof message.content === 'string') return true
+  return Array.isArray(message.content) &&
+    message.content.every(block =>
+      block !== null && typeof block === 'object' &&
+      typeof (block as Record<string, unknown>).type === 'string')
+}
+
+export const APIUserMessagePlaceholder = lazySchema(() =>
+  z.custom<SDKUserContent>(isSDKUserContent, 'Expected SDK user message content'),
+)
+
+/** Assistant messages are sent from the native SDK as full API messages.
+ * Validate the envelope before exposing it to REPL renderers or CCR adapters.
+ */
+function isAPIAssistantMessage(value: unknown): value is BetaMessage {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const message = value as Record<string, unknown>
+  return message.type === 'message' && message.role === 'assistant' &&
+    typeof message.id === 'string' && typeof message.model === 'string' &&
+    Array.isArray(message.content) &&
+    message.content.every(block => block !== null && typeof block === 'object' &&
+      typeof (block as Record<string, unknown>).type === 'string')
+}
+export const APIAssistantMessagePlaceholder = lazySchema(() =>
+  z.custom<BetaMessage>(isAPIAssistantMessage, 'Expected SDK assistant API message'),
+)
 
 /** Placeholder for RawMessageStreamEvent from @anthropic-ai/sdk */
 /**
@@ -1287,7 +1319,13 @@ export const RawMessageStreamEventPlaceholder = lazySchema(() =>
 )
 
 /** Placeholder for UUID from crypto */
-export const UUIDPlaceholder = lazySchema(() => z.string())
+export const UUIDPlaceholder = lazySchema(() =>
+  z.custom<UUID>(
+    value => typeof value === 'string' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value),
+    'Expected canonical UUID',
+  ),
+)
 
 /** Placeholder for NonNullableUsage (mapped type over Usage) */
 export const NonNullableUsagePlaceholder = lazySchema(() => z.unknown())
