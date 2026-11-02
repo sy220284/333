@@ -19,7 +19,7 @@ import type {
 } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { Stream } from '@anthropic-ai/sdk/streaming.mjs'
-import { createHash, randomUUID } from 'crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { resolvePromptSnapshot, promptSnapshotMode } from '../cli/systemPromptSnapshot.mjs'
 import { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from '../../constants/systemPromptBoundary.js'
 import {
