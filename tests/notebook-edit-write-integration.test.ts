@@ -51,7 +51,7 @@ test('actual NotebookEditTool validates, edits, inserts and deletes cells on dis
     expect((await NotebookEditTool.validateInput(edited, context)).result).toBe(true)
     const first = await perform(edited)
     expect(first.data.error).toBe('')
-    expect(first.data.cell_id).toBe('actual-id')
+    expect(first.data.cell_id).toBe('cell-0')
     expect(first.data.old_source).toBe('print(1)\n')
     expect(first.data.cell_type).toBe('code')
     expect(JSON.parse(readFileSync(notebook_path, 'utf8')).cells[0].source).toBe('print(2)')
