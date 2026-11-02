@@ -52,6 +52,7 @@ type Props = {
   }) => void;
   toolUseContext: ToolUseContext;
   initialDetailTaskId?: string;
+  onlyWorkflows?: boolean;
 };
 type ListItem = {
   id: string;
@@ -110,14 +111,15 @@ import { killMonitorWs } from '../../tasks/MonitorWsTask/MonitorWsTask.js'
 
 
 // Helper to get filtered background tasks (excludes foregrounded local_agent)
-function getSelectableBackgroundTasks(tasks: Record<string, TaskState> | undefined, foregroundedTaskId: string | undefined): TaskState[] {
-  const backgroundTasks = Object.values(tasks ?? {}).filter(isBackgroundTask);
+function getSelectableBackgroundTasks(tasks: Record<string, TaskState> | undefined, foregroundedTaskId: string | undefined, onlyWorkflows = false): TaskState[] {
+  const backgroundTasks = Object.values(tasks ?? {}).filter(task => isBackgroundTask(task) && (!onlyWorkflows || task.type === 'local_workflow'));
   return backgroundTasks.filter(task => !(task.type === 'local_agent' && task.id === foregroundedTaskId));
 }
 export function BackgroundTasksDialog({
   onDone,
   toolUseContext,
-  initialDetailTaskId
+  initialDetailTaskId,
+  onlyWorkflows = false
 }: Props): React.ReactNode {
   const tasks = useAppState(s => s.tasks);
   const foregroundedTaskId = useAppState(s_0 => s_0.foregroundedTaskId);
@@ -139,7 +141,7 @@ export function BackgroundTasksDialog({
         itemId: initialDetailTaskId
       };
     }
-    const allItems = getSelectableBackgroundTasks(typedTasks, foregroundedTaskId);
+    const allItems = getSelectableBackgroundTasks(typedTasks, foregroundedTaskId, onlyWorkflows);
     if (allItems.length === 1) {
       skippedListOnMount.current = true;
       return {
@@ -169,7 +171,7 @@ export function BackgroundTasksDialog({
     allSelectableItems
   } = useMemo(() => {
     // Filter to only show running/pending background tasks, matching the status bar count
-    const backgroundTasks = Object.values(typedTasks ?? {}).filter(isBackgroundTask);
+    const backgroundTasks = Object.values(typedTasks ?? {}).filter(task => isBackgroundTask(task) && (!onlyWorkflows || task.type === 'local_workflow'));
     const allItems_0 = backgroundTasks.map(toListItem);
     const sorted = allItems_0.sort((a, b) => {
       const aStatus = a.status;
@@ -209,7 +211,7 @@ export function BackgroundTasksDialog({
       // visually downward.
       allSelectableItems: [...leaderItem, ...teammates, ...bash, ...monitorWs, ...remote, ...agent, ...workflows, ...dreamTasks]
     };
-  }, [typedTasks, foregroundedTaskId, showSpinnerTree]);
+  }, [typedTasks, foregroundedTaskId, onlyWorkflows, showSpinnerTree]);
   const currentSelection = allSelectableItems[selectedIndex] ?? null;
 
   // Use configurable keybindings for standard navigation and confirm/cancel.
@@ -413,7 +415,7 @@ export function BackgroundTasksDialog({
   }
   return <Box flexDirection="column" tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
       <Dialog title="Background tasks" subtitle={<>{subtitle}</>} onCancel={handleCancel} color="background" inputGuide={renderInputGuide}>
-        {allSelectableItems.length === 0 ? <Text dimColor>No tasks currently running</Text> : <Box flexDirection="column">
+        {allSelectableItems.length === 0 ? <Text dimColor>{onlyWorkflows ? 'No workflows currently running' : 'No tasks currently running'}</Text> : <Box flexDirection="column">
             {teammateTasks.length > 0 && <Box flexDirection="column">
                 {(bashTasks.length > 0 || remoteSessions.length > 0 || agentTasks.length > 0) && <Text dimColor>
                     <Text bold>{'  '}Agents</Text> (
