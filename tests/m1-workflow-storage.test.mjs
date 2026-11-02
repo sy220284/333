@@ -33,7 +33,7 @@ test('official Workflow summary is atomically written and contains final JSON da
   const parent=await readFile(path,'utf8')
   assert.match(parent,/"status":"completed"/)
   const {readdir}=await import('node:fs/promises')
-  assert.deepEqual((await readdir(join(dir,session,'workflows'))).sort(),[run+'.json'])
+  assert.deepEqual((await readdir(join(dir,session,'workflows'))).sort(),[`${run}.json`])
  }finally{await rm(dir,{recursive:true,force:true})}
 })
 

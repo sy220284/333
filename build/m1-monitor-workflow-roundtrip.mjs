@@ -22,11 +22,11 @@ const bodyFor={
  Monitor:{description:'Probe one command',command:'printf EVENT_333',timeout_ms:1000},
  Workflow:{script},
 }
-const frame=(event,data)=>'event: '+event+'\ndata: '+JSON.stringify(data)+'\n\n'
+const frame=(event,data)=>`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
 function response(model,name,input,n){
- const tool=!!name,id='toolu_01_333_roundtrip_'+n
+ const tool=!!name,id=`toolu_01_333_roundtrip_${n}`
  const pairs=[
- ['message_start',{type:'message_start',message:{id:'msg_01_roundtrip_'+n,type:'message',role:'assistant',model,content:[],stop_reason:null,stop_sequence:null,usage:{input_tokens:150,output_tokens:20,cache_creation_input_tokens:0,cache_read_input_tokens:0}}}],
+ ['message_start',{type:'message_start',message:{id:`msg_01_roundtrip_${n}`,type:'message',role:'assistant',model,content:[],stop_reason:null,stop_sequence:null,usage:{input_tokens:150,output_tokens:20,cache_creation_input_tokens:0,cache_read_input_tokens:0}}}],
  ['content_block_start',{type:'content_block_start',index:0,content_block:tool?{type:'tool_use',id,name,input:{}}:{type:'text',text:''}}],
  ['content_block_delta',{type:'content_block_delta',index:0,delta:tool?{type:'input_json_delta',partial_json:JSON.stringify(input)}:{type:'text_delta',text:'ROUNDTRIP_COMPLETE'}}],
  ['content_block_stop',{type:'content_block_stop',index:0}],
@@ -74,7 +74,7 @@ async function run(exe,toolName){
   for(const [k,v] of Object.entries(process.env))
    if(!/CLAUDE|ANTHROPIC|TOKEN|SECRET|PASSWORD|API_KEY|AWS_|GOOGLE_|OPENAI_|GITHUB_|PROXY/i.test(k))env[k]=v
   Object.assign(env,{HOME:home,USERPROFILE:home,XDG_CONFIG_HOME:home,XDG_CACHE_HOME:home,
-   ANTHROPIC_API_KEY:'local-roundtrip-only-key',ANTHROPIC_BASE_URL:'http://127.0.0.1:'+server.address().port,
+   ANTHROPIC_API_KEY:'local-roundtrip-only-key',ANTHROPIC_BASE_URL:`http://127.0.0.1:${server.address().port}`,
    DISABLE_TELEMETRY:'1',DISABLE_ERROR_REPORTING:'1',CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1',
    NO_PROXY:'127.0.0.1,localhost',HTTP_PROXY:'',HTTPS_PROXY:'',ALL_PROXY:''})
   const child=spawn(resolve(exe),['--print','--output-format','json','--max-turns','5',
@@ -110,7 +110,7 @@ for(const name of ['Monitor','Workflow']){
  report[name]={official:await run(opt['--reference'],name),candidate:await run(opt['--candidate'],name)}
 }
 mkdirSync(dirname(resolve(opt['--report'])),{recursive:true})
-writeFileSync(resolve(opt['--report']),JSON.stringify(report,null,2)+'\n')
+writeFileSync(resolve(opt['--report']),`${JSON.stringify(report,null,2)}\n`)
 console.log(JSON.stringify(Object.fromEntries(Object.entries(report).map(([k,v])=>[k,{
  official:v.official.ok,candidate:v.candidate.ok,officialCalls:v.official.calls,candidateCalls:v.candidate.calls
 }]))))

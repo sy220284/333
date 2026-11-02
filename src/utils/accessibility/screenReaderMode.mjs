@@ -46,19 +46,19 @@ export function flattenAccessibleTree(root) {
 export function accessibleOutputDelta(previous='',current='') {
   if(current===previous) return ''
   if(!current) return ''
-  if(!previous) return current+'\n'
-  if(current.startsWith(previous)) return current.slice(previous.length)+'\n'
+  if(!previous) return `${current}\n`
+  if(current.startsWith(previous)) return `${current.slice(previous.length)}\n`
   const oldLines=previous.split('\n'),lines=current.split('\n')
   let common=0
   while(common<oldLines.length && common<lines.length && oldLines[common]===lines[common]) common++
   if (common===oldLines.length-1 && lines.length===oldLines.length &&
       lines[common].startsWith(oldLines[common])) {
-    return lines[common].slice(oldLines[common].length)+'\n'
+    return `${lines[common].slice(oldLines[common].length)}\n`
   }
   // On edits, announce only the changed tail; never erase the terminal
   // transcript with escape sequences (screen readers need persistent text).
   const changed=lines.slice(common).join('\n').trim()
-  return changed ? changed+'\n' : ''
+  return changed ? `${changed}\n` : ''
 }
 
 /** Bounded announcement queue aligned with the official 2.1.310 startup

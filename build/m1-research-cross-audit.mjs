@@ -118,5 +118,5 @@ const report = {
   rows,
 }
 mkdirSync(dirname(resolve(out)), { recursive: true })
-writeFileSync(resolve(out), JSON.stringify(report, null, 2) + '\n')
+writeFileSync(resolve(out), `${JSON.stringify(report, null, 2)}\n`)
 console.log(JSON.stringify(report.summary))

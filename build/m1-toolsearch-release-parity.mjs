@@ -20,12 +20,12 @@ const names = ['Monitor','Workflow','VerifyPlanExecution','Snip','TaskOutput','W
 const foundOnTarget = ['Monitor','Workflow','Bash','Read','ListAgents']
 const absentOnTarget = names.filter(n => !foundOnTarget.includes(n))
 const toolUseId = 'toolu_01_333_source_gap_check'
-const frame = (event, data) => 'event: '+event+'\ndata: '+JSON.stringify(data)+'\n\n'
+const frame = (event, data) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
 function sse(model, toolCall) {
   const chunks = [
     ['message_start',{type:'message_start',message:{id:toolCall?'msg_01_gap_search':'msg_02_gap_finish',type:'message',role:'assistant',model,content:[],stop_reason:null,stop_sequence:null,usage:{input_tokens:200,output_tokens:20,cache_creation_input_tokens:0,cache_read_input_tokens:0}}}],
     ['content_block_start',{type:'content_block_start',index:0,content_block:toolCall?{type:'tool_use',id:toolUseId,name:'ToolSearch',input:{}}:{type:'text',text:''}}],
-    ['content_block_delta',{type:'content_block_delta',index:0,delta:toolCall?{type:'input_json_delta',partial_json:JSON.stringify({query:'select:'+names.join(',')})}:{type:'text_delta',text:'DISCOVERY_COMPLETE'}}],
+    ['content_block_delta',{type:'content_block_delta',index:0,delta:toolCall?{type:'input_json_delta',partial_json:JSON.stringify({query:`select:${names.join(',')}`})}:{type:'text_delta',text:'DISCOVERY_COMPLETE'}}],
     ['content_block_stop',{type:'content_block_stop',index:0}],
     ['message_delta',{type:'message_delta',delta:{stop_reason:toolCall?'tool_use':'end_turn',stop_sequence:null},usage:{output_tokens:20}}],
     ['message_stop',{type:'message_stop'}],
@@ -47,7 +47,7 @@ async function probe(exe, toolSearchOverride) {
     server.listen(0,'127.0.0.1');await once(server,'listening')
     const env={}
     for(const [k,v] of Object.entries(process.env))if(!/CLAUDE|ANTHROPIC|TOKEN|SECRET|PASSWORD|API_KEY|AWS_|GOOGLE_|OPENAI_|GITHUB_/i.test(k))env[k]=v
-    Object.assign(env,{HOME:home,USERPROFILE:home,XDG_CONFIG_HOME:home,XDG_CACHE_HOME:home,ANTHROPIC_API_KEY:'local-only-test-key',ANTHROPIC_BASE_URL:'http://127.0.0.1:'+server.address().port,DISABLE_TELEMETRY:'1',DISABLE_ERROR_REPORTING:'1',CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1',NO_PROXY:'127.0.0.1,localhost',HTTP_PROXY:'',HTTPS_PROXY:''})
+    Object.assign(env,{HOME:home,USERPROFILE:home,XDG_CONFIG_HOME:home,XDG_CACHE_HOME:home,ANTHROPIC_API_KEY:'local-only-test-key',ANTHROPIC_BASE_URL:`http://127.0.0.1:${server.address().port}`,DISABLE_TELEMETRY:'1',DISABLE_ERROR_REPORTING:'1',CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1',NO_PROXY:'127.0.0.1,localhost',HTTP_PROXY:'',HTTPS_PROXY:''})
     if (toolSearchOverride !== undefined) env.ENABLE_TOOL_SEARCH = toolSearchOverride
     const child=spawn(resolve(exe),['--print','--output-format','json','--max-turns','3','--no-session-persistence','Check tools'],{cwd:home,env,stdio:['ignore','pipe','pipe']})
     let stdout='',stderr=''
@@ -87,7 +87,7 @@ const stable = value => JSON.stringify(value,(key,v)=>
 const overlappingSchemaMatches = candidate ? Object.fromEntries(candidate.discovered.filter(name => reference.discovered.includes(name)).map(name => [name, reference.deferredSchemas[name]?.input_schema !== undefined && candidate.deferredSchemas[name]?.input_schema !== undefined && stable(reference.deferredSchemas[name].input_schema) === stable(candidate.deferredSchemas[name].input_schema)])) : null
 const report={officialSha,names,reference,candidate,overlappingSchemaMatches,disabledReference,disabledCandidate,disabledMatchesTarget,referencePass,candidateMatches,candidateBaseDiscoveryPass,scope:'ordinary CLI --print ToolSearch with isolated model API'}
 mkdirSync(dirname(resolve(opt['--report'])),{recursive:true})
-writeFileSync(resolve(opt['--report']),JSON.stringify(report,null,2)+'\n')
+writeFileSync(resolve(opt['--report']),`${JSON.stringify(report,null,2)}\n`)
 console.log(JSON.stringify({referencePass,candidateMatches,candidateBaseDiscoveryPass,disabledMatchesTarget,referenceDiscovered:reference.discovered,candidateDiscovered:candidate?.discovered??null}))
 if(candidate && Object.values(overlappingSchemaMatches).some(v=>v===false) && opt['--strict-schemas']==='true')process.exitCode=1
 if(!referencePass || !disabledMatchesTarget || (candidate && !candidateBaseDiscoveryPass) || (candidate && !candidateMatches && opt['--allow-candidate-diff']!=='true'))process.exitCode=1

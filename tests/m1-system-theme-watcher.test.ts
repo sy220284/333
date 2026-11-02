@@ -12,7 +12,7 @@ describe('2.1.310 terminal OSC11 and theme push', () => {
     for (const [digit, dark] of [['1', true], ['2', false]] as const) {
       const [items] = parseMultipleKeypresses(
         INITIAL_STATE,
-        '\x1b[?997;' + digit + 'n',
+        `\x1b[?997;${digit}n`,
       )
       const event = items.find(item => item.kind === 'response')
       expect(event?.kind).toBe('response')

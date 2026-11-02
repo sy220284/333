@@ -7,7 +7,7 @@ const results=await parallel([()=>agent('first'),()=>agent('second')])
 log(results.join(','))`
 test('Workflow validates metadata and deterministic scripts',()=>{
  const parsed=validateWorkflowScript(script);assert.equal(parsed.meta.name,'review')
- assert.throws(()=>validateWorkflowScript(script+'\nDate.now()'),/deterministic/)
+ assert.throws(()=>validateWorkflowScript(`${script}\nDate.now()`),/deterministic/)
  assert.throws(()=>validateWorkflowScript('agent("hello")'),/requires export/)
 })
 test('Workflow meta is parsed as literal data, without executing expressions before approval',()=>{
@@ -86,7 +86,7 @@ globalThis.String=(error)=>{if(error&&typeof error==='object'){const p=error.con
 ${body}`
     const options={script:source,agent:async()=>'',onPhase:()=>{throw new Error('host-phase-rejected')},
       onLog:()=>{throw new Error('host-log-rejected')}}
-    await assert.rejects(()=>executeWorkflowScript(options),new RegExp('host-'+mode+'-rejected'))
+    await assert.rejects(()=>executeWorkflowScript(options),new RegExp(`host-${mode}-rejected`))
   }
 })
 

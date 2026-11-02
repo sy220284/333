@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 async function source(path) {
-  return readFile(new URL('../'+path, import.meta.url), 'utf8')
+  return readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 }
 
 test('2.1.310 uses monitor_ws for WebSocket watches, not the unrelated monitor_mcp task', async () => {
