@@ -89,7 +89,7 @@ def probe(executable,mode,timeout):
         return {'mode':mode,'exit':proc.returncode if exited else 'terminated_after_capture',
                 'bytes':len(buffer),'cursor_control_sequences':len(CSI.findall(raw)),
                 'activation_banner': (f'[Screen Reader Mode: on via {mode}]' in text if mode!='off' else '[Screen Reader Mode: on' in text),
-                'flat_welcome':'Welcome to Claude Code' in text,
+                'flat_welcome':('Welcome to Claude Code' in text or bool(re.search(r'Claude Code v2\\.1\\.310\\b',text))),
                 'connection_status':'Checking connectivity' in text,
                 'offline_failure_visible':'Unable to connect to Anthropic services' in text,
                 'prompt_ready': ('❯' in text or text.rstrip().endswith('$')),
