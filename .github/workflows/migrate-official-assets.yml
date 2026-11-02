@@ -1,0 +1,60 @@
+name: 2.1.310 新版内嵌资源迁移
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - '.github/workflows/migrate-official-assets.yml'
+      - 'tools/upgrade/extract-official-assets.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate-official-resources:
+    name: 下载官方校验版并迁移验证技能与权限提示词
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: upgrade/2.1.310-m1-evidence
+          persist-credentials: true
+      - name: 下载锁定 SHA 的 2.1.310 Linux x64 官方发行程序
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
+            'https://downloads.claude.ai/claude-code-releases/2.1.310/linux-x64/claude' \
+            --output "${RUNNER_TEMP}/claude-2.1.310"
+          echo 'b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  '"${RUNNER_TEMP}/claude-2.1.310" | sha256sum --check
+      - name: 从内嵌压缩帧精确恢复两个新版资源并写入受控路径
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/upgrade/extract-official-assets.py --binary "${RUNNER_TEMP}/claude-2.1.310" --write
+          python3 tools/upgrade/extract-official-assets.py --binary "${RUNNER_TEMP}/claude-2.1.310"
+          node build/verify-bundled-assets.mjs
+      - name: 把验证过的新资源提交回 PR 升级分支
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/skills/bundled/verify/SKILL.md src/utils/permissions/yolo-classifier-prompts/permissions_external.txt
+          if git diff --staged --quiet; then
+            echo 'Official assets already migrated; no new commit.'
+            exit 0
+          fi
+          git commit -m 'M6：从官方2.1.310发行包精确替换验证技能及权限提示词资源'
+          for attempt in 1 2 3 4; do
+            if git push origin HEAD:upgrade/2.1.310-m1-evidence; then
+              echo 'Official assets committed to PR branch.'
+              exit 0
+            fi
+            echo "Branch moved during attempt ${attempt}; rebasing."
+            git fetch origin upgrade/2.1.310-m1-evidence
+            git rebase origin/upgrade/2.1.310-m1-evidence
+          done
+          echo 'Could not fast-forward PR branch; refusing non-fast-forward push.'
+          exit 1
