@@ -40,3 +40,32 @@ test('all rejects an invalid concurrency cap before silently dropping generators
   }
   expect(await toArray(all([values()], Infinity))).toEqual(['kept'])
 })
+
+test('all enforces concurrency cap and advances queued generators after a stream ends', async () => {
+  const active = {count: 0, peak: 0}
+  const started: number[] = []
+  async function* task(id: number): AsyncGenerator<string, void> {
+    started.push(id)
+    active.count++
+    active.peak = Math.max(active.peak, active.count)
+    try {
+      await Promise.resolve()
+      yield `task-${id}`
+    } finally {
+      active.count--
+    }
+  }
+  const values = await toArray(all([task(1), task(2), task(3), task(4)], 2))
+  expect(values.sort()).toEqual(['task-1', 'task-2', 'task-3', 'task-4'])
+  expect(started).toEqual([1, 2, 3, 4])
+  expect(active.peak).toBe(2)
+  expect(active.count).toBe(0)
+})
+
+test('all propagates a generator failure instead of treating it as completion', async () => {
+  async function* broken(): AsyncGenerator<string, void> {
+    yield 'before error'
+    throw new Error('upstream failed')
+  }
+  await expect(toArray(all([broken()], 1))).rejects.toThrow('upstream failed')
+})
