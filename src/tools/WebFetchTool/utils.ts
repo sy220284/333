@@ -430,7 +430,10 @@ export async function getURLMarkdownContent(
   // This lets GC reclaim up to MAX_HTTP_CONTENT_LENGTH (10MB) before Turndown
   // builds its DOM tree (which can be 3-5x the HTML size).
   ;(response as { data: unknown }).data = null
-  const contentType = response.headers['content-type'] ?? ''
+  const rawContentType = response.headers['content-type']
+  // Axios header values may also be arrays or header objects. The content-type
+  // parser and binary persistence require a single HTTP media type string.
+  const contentType = typeof rawContentType === 'string' ? rawContentType : ''
 
   // Binary content: save raw bytes to disk with a proper extension so Claude
   // can inspect the file later. We still fall through to the utf-8 decode +
