@@ -516,7 +516,7 @@ export function useReplBridge(messages: Message[], setMessages: (action: React.S
             return;
           }
           handleRef.current = handle_0;
-          setReplBridgeHandle(handle_0);
+          setReplBridgeHandle(handle_0, outboundOnly);
           consecutiveFailuresRef.current = 0;
           // Skip initial messages in the forwarding effect — they were
           // already loaded as session events during creation.
@@ -655,7 +655,7 @@ export function useReplBridge(messages: Message[], setMessages: (action: React.S
           logForDebugging(`[bridge:repl] Hook cleanup: starting teardown for env=${handleRef.current.environmentId} session=${handleRef.current.bridgeSessionId}`);
           teardownPromiseRef.current = handleRef.current.teardown();
           handleRef.current = null;
-          setReplBridgeHandle(null);
+          setReplBridgeHandle(null, false);
         }
         setAppState(prev_19 => {
           if (!prev_19.replBridgeConnected && !prev_19.replBridgeSessionActive && !prev_19.replBridgeError) {
