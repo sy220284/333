@@ -151,4 +151,27 @@ if (candidateCases) {
     mismatch_ids: candidateMismatches.map(x => x.id),
   }))
 }
-if (failedReference.length || (candidateMismatches.length && !evidenceOnly)) process.exitCode = 1
+// Evidence collection may retain known target differences, but previously
+// proven product behaviors are mandatory. Their regression must fail CI.
+const requiredCandidateIds = (args['--require-candidate-cases'] ?? '')
+  .split(',').map(id => id.trim()).filter(Boolean)
+const knownIds = new Set(cases.map(test => test.id))
+const invalidRequiredIds = requiredCandidateIds.filter(id => !knownIds.has(id))
+if (invalidRequiredIds.length) {
+  throw new Error('未知的强制回归用例: ' + invalidRequiredIds.join(', '))
+}
+if (requiredCandidateIds.length && !candidateCases) {
+  throw new Error('强制候选用例需要真实传入 --candidate')
+}
+const mustPass = new Set(requiredCandidateIds)
+const failedRequired = candidateCases?.filter(test =>
+  mustPass.has(test.id) && !test.pass) ?? []
+if (requiredCandidateIds.length) {
+  console.log(JSON.stringify({
+    mandatory_candidate_cases: requiredCandidateIds,
+    mandatory_candidate_passed: requiredCandidateIds.length - failedRequired.length,
+    mandatory_candidate_failed: failedRequired.map(test => test.id),
+  }))
+}
+if (failedReference.length || failedRequired.length ||
+    (candidateMismatches.length && !evidenceOnly)) process.exitCode = 1
