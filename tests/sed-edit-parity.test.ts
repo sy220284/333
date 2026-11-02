@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   applySedSubstitution,
+  assertSedPreviewUnchanged,
   parseSedEditCommand,
 } from '../src/tools/BashTool/sedEditParser.ts'
 
@@ -48,6 +49,11 @@ describe('Bash sed preview matches real GNU sed -i', () => {
       }
     })
   }
+
+  test('the approved edit refuses to overwrite content changed after preview', () => {
+    expect(() => assertSedPreviewUnchanged('file.txt', 'before\r\n', 'before\n')).not.toThrow()
+    expect(() => assertSedPreviewUnchanged('file.txt', 'later\n', 'before\n')).toThrow(/changed after the sed edit preview/)
+  })
 
   test('dot-prefixed file path remains a file path, not an -i suffix', () => {
     expect(parseSedEditCommand("sed -i 's/a/b/' .env")?.filePath).toBe('.env')
