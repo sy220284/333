@@ -74,6 +74,9 @@ describe('Bash sed preview matches real GNU sed -i', () => {
       "sed -i 's/a/b/' file.txt > output.txt",
       "sed -i 's/a/b/' *.txt",
       "sed -i 's/a/b/' file.txt; echo done",
+      ...(process.platform === 'darwin'
+        ? ["sed -i 's/a/b/' file.txt", "sed --in-place 's/a/b/' file.txt"]
+        : ["sed -i '' 's/a/b/' file.txt"]),
     ]
     for (const command of unsupported) {
       expect(parseSedEditCommand(command)).toBeNull()
