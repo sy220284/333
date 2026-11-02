@@ -167,7 +167,6 @@ export async function launchWorkflow(
           const key=nextCacheKey(prompt,options)
           if(cached.has(key))return cached.get(key)
           const agentId=`a${index+1}`
-          let result:unknown
           for(;;){
           const control:AgentControl={abort:new AbortController(),action:null}
           job.agents.set(agentId,control)
