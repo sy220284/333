@@ -37,15 +37,20 @@ def probe(executable,mode,timeout):
         # The official and rebuilt CLIs need the same trusted first-launch state.
         # Without this, GitHub runners enter theme/onboarding instead of a
         # connectivity session, so status assertions would inspect wrong UI.
-        (root/'.claude.json').write_text(json.dumps({
+        global_config={
             'hasCompletedOnboarding':True,
             'lastOnboardingVersion':'2.1.310',
             'theme':'dark',
             'customApiKeyResponses':{'approved':['local-only'],'rejected':[]},
             'projects':{str(project):{'hasTrustDialogAccepted':True}},
-        }),encoding='utf8')
+        }
+        config_home=root/'.claude'
+        config_home.mkdir()
+        # Both historical HOME and explicit CLAUDE_CONFIG_DIR locations.
+        for config_file in (root/'.claude.json',config_home/'.claude.json',config_home/'.config.json'):
+            config_file.write_text(json.dumps(global_config),encoding='utf8')
         env={k:v for k,v in os.environ.items() if not any(s in k.upper() for s in SECRETS)}
-        env.update({'HOME':str(root),'XDG_CONFIG_HOME':str(root/'.config'),
+        env.update({'HOME':str(root),'CLAUDE_CONFIG_DIR':str(config_home),'XDG_CONFIG_HOME':str(root/'.config'),
                     'XDG_CACHE_HOME':str(root/'.cache'),'TERM':'xterm-256color',
                     'NO_COLOR':'1','ANTHROPIC_API_KEY':'local-only',
                     'ANTHROPIC_BASE_URL':'http://127.0.0.1:9',
@@ -56,8 +61,7 @@ def probe(executable,mode,timeout):
         if mode=='flag': cmd.append('--ax-screen-reader')
         if mode=='env': env['CLAUDE_AX_SCREEN_READER']='1'
         if mode=='settings':
-            (root/'.claude').mkdir()
-            (root/'.claude'/'settings.json').write_text('{"axScreenReader":true}',encoding='utf8')
+            (config_home/'settings.json').write_text('{"axScreenReader":true}',encoding='utf8')
         master,slave=pty.openpty()
         fcntl.ioctl(slave,termios.TIOCSWINSZ,struct.pack('HHHH',40,120,0,0))
         proc=subprocess.Popen(cmd,cwd=project,env=env,stdin=slave,stdout=slave,
@@ -88,7 +92,11 @@ def probe(executable,mode,timeout):
                 'flat_welcome':'Welcome to Claude Code' in text,
                 'connection_status':'Checking connectivity' in text,
                 'offline_failure_visible':'Unable to connect to Anthropic services' in text,
-                'text_excerpt':text[:450]}
+                'stage': ('theme-onboarding' if 'Choose the text style' in text
+                           else 'workspace-trust' if 'trust' in text.lower() and 'folder' in text.lower()
+                           else 'session'),
+                 'has_decorative_art': ('████' in text or '░░░' in text or '…………………………………………' in text),
+                 'text_excerpt':text[:450]}
 
 def validate(label,cases):
     basic,ax,env,settings=cases
@@ -96,13 +104,19 @@ def validate(label,cases):
     assert not basic['activation_banner'],(label,'AX enabled without flag',basic)
     assert ax['activation_banner'],(label,'AX banner missing',ax)
     assert ax['flat_welcome'],(label,'Actual flat welcome missing',ax)
-    assert ax['connection_status'] or ax['offline_failure_visible'],(label,'Missing connection status or final error',ax)
+    if ax['stage']=='session':
+        assert ax['connection_status'] or ax['offline_failure_visible'],(label,'Missing connection status or final error',ax)
+    assert not ax['has_decorative_art'],(label,'AX still contains decorative ASCII art',ax)
     assert env['activation_banner'],(label,'AX env banner missing',env)
     assert env['flat_welcome'],(label,'AX env flat welcome missing',env)
-    assert env['connection_status'] or env['offline_failure_visible'],(label,'AX env has neither status nor final error',env)
+    if env['stage']=='session':
+        assert env['connection_status'] or env['offline_failure_visible'],(label,'AX env has neither status nor final error',env)
+    assert not env['has_decorative_art'],(label,'AX env still contains decorative ASCII art',env)
     assert settings['activation_banner'],(label,'AX trusted settings banner missing',settings)
     assert settings['flat_welcome'],(label,'AX settings flat welcome missing',settings)
-    assert settings['connection_status'] or settings['offline_failure_visible'],(label,'AX settings has neither status nor final error',settings)
+    if settings['stage']=='session':
+        assert settings['connection_status'] or settings['offline_failure_visible'],(label,'AX settings has neither status nor final error',settings)
+    assert not settings['has_decorative_art'],(label,'AX settings still contains decorative ASCII art',settings)
     assert all(c['cursor_control_sequences']<basic['cursor_control_sequences'] for c in (ax,env,settings)),(
         label,'AX terminal cursor/animation suppression missing',cases)
 
@@ -126,6 +140,11 @@ def main():
         report['results'][label]=cases
         try: validate(label,cases)
         except AssertionError as e: failures.append(str(e))
+    if 'candidate' in report['results']:
+        for original,rebuild in zip(report['results']['official'],report['results']['candidate']):
+            if original['stage'] != rebuild['stage']:
+                failures.append(
+                    f"Startup screens differ: {original['mode']} official={original['stage']} candidate={rebuild['stage']}")
     dest=Path(a.report)
     dest.parent.mkdir(parents=True,exist_ok=True)
     dest.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
