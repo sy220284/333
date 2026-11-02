@@ -61,7 +61,8 @@ jobs:
         run: |
           set -euo pipefail
           test -f dist/cli.js
-          bun dist/cli.js --version | grep -Fx "$(node -p \"require(\'./package.json\').version\") (Claude Code)"
+          expected_version=$(node -p "require('./package.json').version")
+          test "$(bun dist/cli.js --version)" = "$expected_version (Claude Code)"
           bun dist/cli.js --help | grep -F -- '--print'
       - name: 打包独立发行程序和平台资源
         run: node build/package-release.mjs
