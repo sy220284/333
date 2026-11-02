@@ -241,6 +241,28 @@ export async function spawnShellTask(input: LocalShellSpawnInput & {
       };
     });
     enqueueShellNotification(taskId, description, wasKilled ? 'killed' : result.code === 0 ? 'completed' : 'failed', result.code, setAppState, toolUseId, kind, agentId);
+  }).catch(error => {
+    // Shell process setup, output flushing and exit can all reject. A failed
+    // task must leave the running state and issue exactly one terminal notice.
+    logError(toError(error));
+    let wasKilled = false;
+    updateTaskState<LocalShellTaskState>(taskId, setAppState, task => {
+      if (task.status === 'killed') {
+        wasKilled = true;
+        return task;
+      }
+      return {
+        ...task,
+        status: 'failed',
+        shellCommand: null,
+        unregisterCleanup: undefined,
+        endTime: Date.now()
+      };
+    });
+    enqueueShellNotification(taskId, description, wasKilled ? 'killed' : 'failed', undefined, setAppState, toolUseId, kind, agentId);
+  }).finally(() => {
+    cancelStallWatchdog();
+    unregisterCleanup();
     void evictTaskOutput(taskId);
   });
   return {
