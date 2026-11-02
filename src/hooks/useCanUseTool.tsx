@@ -132,11 +132,18 @@ function useCanUseTool(setToolUseConfirmQueue, setToolPermissionContext) {
                   if (ctx.resolveIfAborted(resolve)) {
                     return;
                   }
-                  if (raceResult.type === "result" && raceResult.result.matches && raceResult.result.confidence === "high" && feature("BASH_CLASSIFIER")) {
+                  const candidate = typeof raceResult === 'object' && raceResult !== null &&
+                    'type' in raceResult && raceResult.type === 'result' &&
+                    'result' in raceResult && typeof raceResult.result === 'object' && raceResult.result !== null
+                    ? raceResult.result : null;
+                  const accepted = candidate !== null && 'matches' in candidate &&
+                    candidate.matches === true && 'confidence' in candidate && candidate.confidence === 'high';
+                  if (accepted && feature("BASH_CLASSIFIER")) {
                     consumeSpeculativeClassifierCheck((input as {
                       command: string;
                     }).command);
-                    const matchedRule = raceResult.result.matchedDescription ?? undefined;
+                    const matchedRule = candidate && 'matchedDescription' in candidate &&
+                      typeof candidate.matchedDescription === 'string' ? candidate.matchedDescription : undefined;
                     if (matchedRule) {
                       setClassifierApproval(toolUseID, matchedRule);
                     }
@@ -150,7 +157,7 @@ function useCanUseTool(setToolUseConfirmQueue, setToolPermissionContext) {
                       decisionReason: {
                         type: "classifier" as const,
                         classifier: "bash_allow" as const,
-                        reason: `Allowed by prompt rule: "${raceResult.result.matchedDescription}"`
+                        reason: `Allowed by prompt rule: "${matchedRule ?? ''}"`
                       }
                     }));
                     return;
