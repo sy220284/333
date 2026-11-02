@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { getOauthConfig } from '../constants/oauth.js'
 import { errorMessage } from '../utils/errors.js'
 import { wrapCrossSessionMessage } from '../utils/peerMessageEnvelope.mjs'
+import { peerIdentityKey } from '../utils/accountPeerDirectory.mjs'
 import { getSelfBridgeCompatId } from './replBridgeHandle.js'
 import {
   CCR_BYOC_BETA,
@@ -19,6 +20,7 @@ import { toCompatSessionId } from './sessionIdCompat.js'
 export async function postInterClaudeMessage(
   targetSessionId: string,
   text: string,
+  expectedIdentityKey?: string | null,
 ): Promise<{ ok: boolean; error?: string; msgId?: string }> {
   const sessionId = toCompatSessionId(targetSessionId)
   if (!/^session_[A-Za-z0-9_-]+$/.test(sessionId)) {
@@ -31,6 +33,10 @@ export async function postInterClaudeMessage(
     ;({ accessToken, orgUUID } = await prepareApiRequest())
   } catch (error) {
     return { ok: false, error: `auth: ${errorMessage(error)}` }
+  }
+  if (expectedIdentityKey !== undefined &&
+      peerIdentityKey(accessToken, orgUUID) !== expectedIdentityKey) {
+    return { ok: false, error: 'authenticated account changed before remote delivery' }
   }
   const msgId = randomUUID()
   const event = {
