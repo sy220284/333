@@ -1,0 +1,754 @@
+{
+  "version": "2.1.310",
+  "archive_sha256": "7ea6528d27dd2a6ea05a4a27685616c19e53d9655245e3fb335e2e6d841f9cf9",
+  "mapping_module": "04_逐模块可阅读JavaScript/chunk-7kf9j3c4.js",
+  "mapping_module_sha256": "8853b14360e8e722b0aa1b0bcabb07aec51a973f56cca987d656dec4dbea8e57",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "sha256": "023d75c931c6be7a252e30d7e05bea7db3ace2ced8aedf20bec91ecfce8b0a12",
+      "source": "02_解压文本与资源/SKILL-1755097b.md",
+      "source_sha256": "023d75c931c6be7a252e30d7e05bea7db3ace2ced8aedf20bec91ecfce8b0a12",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "csharp/claude-api/README.md",
+      "sha256": "b65f91344a99b2210258ec76b2f42af2dd7e506ae7dea62f1e7321c69e8c580e",
+      "source": "02_解压文本与资源/README-b02de282.md",
+      "source_sha256": "b65f91344a99b2210258ec76b2f42af2dd7e506ae7dea62f1e7321c69e8c580e",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "csharp/claude-api/batches.md",
+      "sha256": "610e9e6ce246e676df16c218c5e826ba2b174d1dc461b334f78eb474d0b9fc01",
+      "source": "01_完整嵌入文件_原样/batches-azab338a.md",
+      "source_sha256": "610e9e6ce246e676df16c218c5e826ba2b174d1dc461b334f78eb474d0b9fc01",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "csharp/claude-api/files-api.md",
+      "sha256": "766ccf5dca9ef3caba8cefeddde10f6d171a7bd2ff4c97689462fad2d0d18e4b",
+      "source": "01_完整嵌入文件_原样/files-api-h174sj6q.md",
+      "source_sha256": "766ccf5dca9ef3caba8cefeddde10f6d171a7bd2ff4c97689462fad2d0d18e4b",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "csharp/claude-api/opentelemetry.md",
+      "sha256": "58f011deb089d2a00740c68fcb399014a1bf066c3f4b46b61b30cecd7a11ccb2",
+      "source": "01_完整嵌入文件_原样/opentelemetry-a5cc3j2q.md",
+      "source_sha256": "58f011deb089d2a00740c68fcb399014a1bf066c3f4b46b61b30cecd7a11ccb2",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "csharp/claude-api/streaming.md",
+      "sha256": "d9aa41be9e46e0055a59a11b0ee71502beaf81199e54576246327dd078c8623c",
+      "source": "01_完整嵌入文件_原样/streaming-h393f7mp.md",
+      "source_sha256": "d9aa41be9e46e0055a59a11b0ee71502beaf81199e54576246327dd078c8623c",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "csharp/claude-api/tool-use.md",
+      "sha256": "092aa01d23d6177bd8a9f2f953ae781095c5bcd14cc76a6501371162d12f8481",
+      "source": "01_完整嵌入文件_原样/tool-use-h7r7zec1.md",
+      "source_sha256": "092aa01d23d6177bd8a9f2f953ae781095c5bcd14cc76a6501371162d12f8481",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "curl/examples.md",
+      "sha256": "c43a4281c32d49e374f96640a3e68240d0348757a75a5696843f4b0c1edd3a37",
+      "source": "02_解压文本与资源/examples-edce50f1.md",
+      "source_sha256": "c43a4281c32d49e374f96640a3e68240d0348757a75a5696843f4b0c1edd3a37",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "curl/managed-agents.md",
+      "sha256": "9617c59de9929c99714368ecd3edf4cfbd6303f45fe8a24cf8b89fb14dd41e29",
+      "source": "02_解压文本与资源/managed-agents-ffd8c358.md",
+      "source_sha256": "9617c59de9929c99714368ecd3edf4cfbd6303f45fe8a24cf8b89fb14dd41e29",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "go/claude-api/README.md",
+      "sha256": "a94ac3749f669572640afa19ef48765a48e36c0ded4c3402e13b7296a505fe45",
+      "source": "02_解压文本与资源/README-51f12603.md",
+      "source_sha256": "a94ac3749f669572640afa19ef48765a48e36c0ded4c3402e13b7296a505fe45",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "go/claude-api/files-api.md",
+      "sha256": "7bf67ece5e4d18b1fb07085a55b680420cc7bd4de94a1fb2bb73cb23f39c20f0",
+      "source": "01_完整嵌入文件_原样/files-api-9r91z451.md",
+      "source_sha256": "7bf67ece5e4d18b1fb07085a55b680420cc7bd4de94a1fb2bb73cb23f39c20f0",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "go/claude-api/opentelemetry.md",
+      "sha256": "900bc47c139d4e12302ceec37cf5a8e7e7ae2c1e6d3135492023981745699fc5",
+      "source": "01_完整嵌入文件_原样/opentelemetry-26ah6r5h.md",
+      "source_sha256": "900bc47c139d4e12302ceec37cf5a8e7e7ae2c1e6d3135492023981745699fc5",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "go/claude-api/streaming.md",
+      "sha256": "a823de50c841c161a1f491470eccd5118e00b8027724cd7d92a1da7316abe7ff",
+      "source": "01_完整嵌入文件_原样/streaming-z3xabcf3.md",
+      "source_sha256": "a823de50c841c161a1f491470eccd5118e00b8027724cd7d92a1da7316abe7ff",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "go/claude-api/tool-use.md",
+      "sha256": "2b44e0aa84ec106fe9f3ba9ac2666fddf32d49cd4a8bf83f13f3ba3262573945",
+      "source": "02_解压文本与资源/tool-use-582a7836.md",
+      "source_sha256": "2b44e0aa84ec106fe9f3ba9ac2666fddf32d49cd4a8bf83f13f3ba3262573945",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "go/managed-agents/README.md",
+      "sha256": "8a78f9a562fa75e3111e0a989988ee45c7cf735f946ec9f55390dff557ac2d1d",
+      "source": "02_解压文本与资源/README-7a1fe9f0.md",
+      "source_sha256": "8a78f9a562fa75e3111e0a989988ee45c7cf735f946ec9f55390dff557ac2d1d",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "java/claude-api/README.md",
+      "sha256": "c05f55081871237e876d802a57713a43923663292eafc4c53af5f68fcda05900",
+      "source": "02_解压文本与资源/README-74fc4077.md",
+      "source_sha256": "c05f55081871237e876d802a57713a43923663292eafc4c53af5f68fcda05900",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "java/claude-api/files-api.md",
+      "sha256": "1c792f3421de32f42a56235327f87807a5579340726bba677ec13e05f9b493c7",
+      "source": "01_完整嵌入文件_原样/files-api-gjyn8jqt.md",
+      "source_sha256": "1c792f3421de32f42a56235327f87807a5579340726bba677ec13e05f9b493c7",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "java/claude-api/opentelemetry.md",
+      "sha256": "939edd41104bf18b85e83ffef6b6fdb46b72169a99ab0ba654497a6cf93c9fff",
+      "source": "01_完整嵌入文件_原样/opentelemetry-n5e363c1.md",
+      "source_sha256": "939edd41104bf18b85e83ffef6b6fdb46b72169a99ab0ba654497a6cf93c9fff",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "java/claude-api/streaming.md",
+      "sha256": "9e010d6b689fcec932b16a66b1e70ce7504b33450339aeb6728e83c01e077a68",
+      "source": "01_完整嵌入文件_原样/streaming-jhkcqra8.md",
+      "source_sha256": "9e010d6b689fcec932b16a66b1e70ce7504b33450339aeb6728e83c01e077a68",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "java/claude-api/tool-use.md",
+      "sha256": "c7cf4ed716dbbe472455a019a6e33351d7f3a75ec1a5b554ea50a9684dbf24af",
+      "source": "02_解压文本与资源/tool-use-0ba43b6b.md",
+      "source_sha256": "c7cf4ed716dbbe472455a019a6e33351d7f3a75ec1a5b554ea50a9684dbf24af",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "java/managed-agents/README.md",
+      "sha256": "eb387eb81f825b631a405b3dcf29316eecfda633cbd96c1a3ed7683ae370191c",
+      "source": "02_解压文本与资源/README-f73e91a6.md",
+      "source_sha256": "eb387eb81f825b631a405b3dcf29316eecfda633cbd96c1a3ed7683ae370191c",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "php/claude-api/README.md",
+      "sha256": "9aa96d604d5b73c29690f1521f9e3560d12f78e42cd31e2154c644331ff3c0ad",
+      "source": "01_完整嵌入文件_原样/README-ed5aeh0k.md",
+      "source_sha256": "9aa96d604d5b73c29690f1521f9e3560d12f78e42cd31e2154c644331ff3c0ad",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "php/claude-api/batches.md",
+      "sha256": "0e81fcd4cf93107086d1f809185bc39f238c66fa106cbfa01e263c0afe6c7bb8",
+      "source": "01_完整嵌入文件_原样/batches-fqqffaw8.md",
+      "source_sha256": "0e81fcd4cf93107086d1f809185bc39f238c66fa106cbfa01e263c0afe6c7bb8",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "php/claude-api/files-api.md",
+      "sha256": "0715a0d4cce88fd885f57bd33b4654071a9068d5f8a892143b062c78fe51afc9",
+      "source": "01_完整嵌入文件_原样/files-api-cbspt4rc.md",
+      "source_sha256": "0715a0d4cce88fd885f57bd33b4654071a9068d5f8a892143b062c78fe51afc9",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "php/claude-api/opentelemetry.md",
+      "sha256": "e7bc09cdaa21392601a8950d0057f6cc32cb4d53713d7bf32b671010385db0d4",
+      "source": "01_完整嵌入文件_原样/opentelemetry-z2ncngqw.md",
+      "source_sha256": "e7bc09cdaa21392601a8950d0057f6cc32cb4d53713d7bf32b671010385db0d4",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "php/claude-api/streaming.md",
+      "sha256": "90a0ab9a15123637e3a51c7e891d18435f12cb5eb601de51e2129090e10a5f1e",
+      "source": "01_完整嵌入文件_原样/streaming-1ym052nm.md",
+      "source_sha256": "90a0ab9a15123637e3a51c7e891d18435f12cb5eb601de51e2129090e10a5f1e",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "php/claude-api/tool-use.md",
+      "sha256": "ebde4ebb0529d5cf1d79f32259077e7b59c8e5827bf1c207b6635a03200931cb",
+      "source": "02_解压文本与资源/tool-use-49b89f92.md",
+      "source_sha256": "ebde4ebb0529d5cf1d79f32259077e7b59c8e5827bf1c207b6635a03200931cb",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "php/managed-agents/README.md",
+      "sha256": "91cbf020c309158a07cc76fc9ddd2b308a464bd43ca10b6b6ebf3264668435a2",
+      "source": "02_解压文本与资源/README-29cff9e7.md",
+      "source_sha256": "91cbf020c309158a07cc76fc9ddd2b308a464bd43ca10b6b6ebf3264668435a2",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "python/claude-api/README.md",
+      "sha256": "a749b38768bb3d236cdc84bf330b427fba5f11837bf053adff12a630319ae341",
+      "source": "02_解压文本与资源/README-9ed2461c.md",
+      "source_sha256": "a749b38768bb3d236cdc84bf330b427fba5f11837bf053adff12a630319ae341",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "python/claude-api/batches.md",
+      "sha256": "62756d8f098854e60f3439799bea0ba49cbe369c27884f4eecf26606e85a43a2",
+      "source": "01_完整嵌入文件_原样/batches-tmdzz8fs.md",
+      "source_sha256": "62756d8f098854e60f3439799bea0ba49cbe369c27884f4eecf26606e85a43a2",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "python/claude-api/files-api.md",
+      "sha256": "a2abcf465e6c48f9722cfddeab8662efaa96f468e074456a55dc28d64c6b0232",
+      "source": "01_完整嵌入文件_原样/files-api-0t33d0q1.md",
+      "source_sha256": "a2abcf465e6c48f9722cfddeab8662efaa96f468e074456a55dc28d64c6b0232",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "python/claude-api/opentelemetry.md",
+      "sha256": "798d869e7c4a5e8c3d646ccbdb2298e6f805718143b6e3e22c04fa31b90bf1fb",
+      "source": "01_完整嵌入文件_原样/opentelemetry-3fdcpdte.md",
+      "source_sha256": "798d869e7c4a5e8c3d646ccbdb2298e6f805718143b6e3e22c04fa31b90bf1fb",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "python/claude-api/sdk-upgrade.md",
+      "sha256": "52d7ee3f507b5c10494fc9fa868edeae05681ddf221edf0f1e14430887c09621",
+      "source": "02_解压文本与资源/sdk-upgrade-d991ae22.md",
+      "source_sha256": "52d7ee3f507b5c10494fc9fa868edeae05681ddf221edf0f1e14430887c09621",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "python/claude-api/streaming.md",
+      "sha256": "fbcbbd15ea88c9505c7b21cef7cf4e7316d5414d00275cf46223766b3d9f67fa",
+      "source": "02_解压文本与资源/streaming-fbb1ea6d.md",
+      "source_sha256": "fbcbbd15ea88c9505c7b21cef7cf4e7316d5414d00275cf46223766b3d9f67fa",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "python/claude-api/tool-use.md",
+      "sha256": "2259557f33fcd76291cb8445ccd0c0566d461a187c91dea4225f20caece1b2a8",
+      "source": "02_解压文本与资源/tool-use-1b429d2c.md",
+      "source_sha256": "2259557f33fcd76291cb8445ccd0c0566d461a187c91dea4225f20caece1b2a8",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "python/managed-agents/README.md",
+      "sha256": "1da1fcc14ec04756004b0d27d016b5a4d66681304a4d1a70d85c751c2980529f",
+      "source": "02_解压文本与资源/README-74802ac4.md",
+      "source_sha256": "1da1fcc14ec04756004b0d27d016b5a4d66681304a4d1a70d85c751c2980529f",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "ruby/claude-api/README.md",
+      "sha256": "ed597c383f10dd6b63a84e11de9f085659ae32ba901dbc01866b4da78a37f20b",
+      "source": "01_完整嵌入文件_原样/README-qjqxhy5f.md",
+      "source_sha256": "ed597c383f10dd6b63a84e11de9f085659ae32ba901dbc01866b4da78a37f20b",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "ruby/claude-api/opentelemetry.md",
+      "sha256": "0fcba3938aef3e5c2676baa6d427c6b702b71471f606fe4c04c079d1674c1577",
+      "source": "01_完整嵌入文件_原样/opentelemetry-y8cvd8yg.md",
+      "source_sha256": "0fcba3938aef3e5c2676baa6d427c6b702b71471f606fe4c04c079d1674c1577",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "ruby/claude-api/streaming.md",
+      "sha256": "aa12ad5001565f869444d68db1860cb1fd6051749953124ea9a67bfd2dae1299",
+      "source": "01_完整嵌入文件_原样/streaming-pjtdae2j.md",
+      "source_sha256": "aa12ad5001565f869444d68db1860cb1fd6051749953124ea9a67bfd2dae1299",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "ruby/claude-api/tool-use.md",
+      "sha256": "4bbea4c52b34b10f84a74a770a1a4c1be0906fb9e748ee0437791cae67bebd40",
+      "source": "01_完整嵌入文件_原样/tool-use-4gvjkhwj.md",
+      "source_sha256": "e9c2b0f3ba9b330cf3505716bd822d8df367b209a8338bb8dca7966f513fff6d",
+      "source_encoding": "utf-16le"
+    },
+    {
+      "path": "ruby/managed-agents/README.md",
+      "sha256": "9c87b0c2fd92ecbf45c5133878557965ae91fd06e3ba667566e3a44d891f5ccf",
+      "source": "02_解压文本与资源/README-d26070a5.md",
+      "source_sha256": "9c87b0c2fd92ecbf45c5133878557965ae91fd06e3ba667566e3a44d891f5ccf",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/admin-api.md",
+      "sha256": "e24e5ddcbeb918d35194f70023af8f6d47b35012db26154b1a23686f308f8fe1",
+      "source": "02_解压文本与资源/admin-api-4b056a98.md",
+      "source_sha256": "e24e5ddcbeb918d35194f70023af8f6d47b35012db26154b1a23686f308f8fe1",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/agent-design.md",
+      "sha256": "9960728faf6976a2ddfceed02ed72af122d3b2558af573a9a0ea207b3adec2bc",
+      "source": "02_解压文本与资源/agent-design-fa62971c.md",
+      "source_sha256": "9960728faf6976a2ddfceed02ed72af122d3b2558af573a9a0ea207b3adec2bc",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/anthropic-cli.md",
+      "sha256": "5cb93ecee4f6e427072312dc690b9de8db54f2f0ec595eedc88fc02f5e1fd6ca",
+      "source": "02_解压文本与资源/anthropic-cli-cd9f2868.md",
+      "source_sha256": "5cb93ecee4f6e427072312dc690b9de8db54f2f0ec595eedc88fc02f5e1fd6ca",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/api-version-migration.md",
+      "sha256": "aa2ce93b01a1de378e21177bbeb42faa8bd17e1b521e624f9baa7a46bc00baf0",
+      "source": "02_解压文本与资源/api-version-migration-f8391d66.md",
+      "source_sha256": "aa2ce93b01a1de378e21177bbeb42faa8bd17e1b521e624f9baa7a46bc00baf0",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/claude-platform-on-aws.md",
+      "sha256": "350d655711cb98e9e5d2ea89ac1445ad8d5ba7f622c39705cfc8e8d83704df48",
+      "source": "01_完整嵌入文件_原样/claude-platform-on-aws-qejnkpky.md",
+      "source_sha256": "350d655711cb98e9e5d2ea89ac1445ad8d5ba7f622c39705cfc8e8d83704df48",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/cost-optimization.md",
+      "sha256": "eba32b8954e1c47913b134c726e481d538bd8df19c5aa83befff75bede50188f",
+      "source": "02_解压文本与资源/cost-optimization-df985707.md",
+      "source_sha256": "eba32b8954e1c47913b134c726e481d538bd8df19c5aa83befff75bede50188f",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/error-codes.md",
+      "sha256": "4d48cd8ea60fe26514e4c9b4b61f0f4e965874b89efb0be7de85c14013a54996",
+      "source": "02_解压文本与资源/error-codes-4eee6402.md",
+      "source_sha256": "4d48cd8ea60fe26514e4c9b4b61f0f4e965874b89efb0be7de85c14013a54996",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/evals/build-eval.md",
+      "sha256": "c08e4aaf8be1f2ad6f75b62bdffff27241de55fea94cfa6650b4030cbc67bd0a",
+      "source": "02_解压文本与资源/build-eval-e9acb85b.md",
+      "source_sha256": "c08e4aaf8be1f2ad6f75b62bdffff27241de55fea94cfa6650b4030cbc67bd0a",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/evals/cost-hillclimb.md",
+      "sha256": "dd46a354fed24d96c7f9acf42f9da64f5cceaa797949662d82374fd2cf7a3515",
+      "source": "02_解压文本与资源/cost-hillclimb-be195324.md",
+      "source_sha256": "dd46a354fed24d96c7f9acf42f9da64f5cceaa797949662d82374fd2cf7a3515",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/evals/eval-audit.md",
+      "sha256": "a013f8eb0452c51c5a31860df0fb47219dcdb4da507092fc98867225095026ba",
+      "source": "02_解压文本与资源/eval-audit-d52687b9.md",
+      "source_sha256": "a013f8eb0452c51c5a31860df0fb47219dcdb4da507092fc98867225095026ba",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/evals/eval-hillclimb.md",
+      "sha256": "1c1529ed51351934563f01cc98696d70c3089275789fa21996d797ac76a392e7",
+      "source": "02_解压文本与资源/eval-hillclimb-643520d6.md",
+      "source_sha256": "1c1529ed51351934563f01cc98696d70c3089275789fa21996d797ac76a392e7",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/evals/report/SCHEMA.md",
+      "sha256": "9a83404a9b3c413113df39d9bdf08e003ff4d6a75386f4010887da3298766687",
+      "source": "02_解压文本与资源/SCHEMA-7cf439b0.md",
+      "source_sha256": "9a83404a9b3c413113df39d9bdf08e003ff4d6a75386f4010887da3298766687",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/evals/report/build-report-lite.mjs",
+      "sha256": "af79ca5fa5f06747dbcaa1d40017c8c8e81e0aa11cb8e32b848043893cdb03c7",
+      "source": "01_完整嵌入文件_原样/build-report-lite-jwtbvm49.mjs",
+      "source_sha256": "af79ca5fa5f06747dbcaa1d40017c8c8e81e0aa11cb8e32b848043893cdb03c7",
+      "source_encoding": "utf-8",
+      "stored_path": "shared/evals/report/build-report-lite.mjs.txt"
+    },
+    {
+      "path": "shared/evals/report/runner-scaffold.mjs",
+      "sha256": "c3a87ba4b94b3018b83c075d5148ba7760580aa447699d513d45ab55b82a531a",
+      "source": "01_完整嵌入文件_原样/runner-scaffold-q2rf9gg9.mjs",
+      "source_sha256": "c3a87ba4b94b3018b83c075d5148ba7760580aa447699d513d45ab55b82a531a",
+      "source_encoding": "utf-8",
+      "stored_path": "shared/evals/report/runner-scaffold.mjs.txt"
+    },
+    {
+      "path": "shared/google-cloud-anthropic-managed.md",
+      "sha256": "681dc6da16f557d27f86e393df6430328d7d6885e4de5a3fcf3063d187ff9281",
+      "source": "02_解压文本与资源/google-cloud-anthropic-managed-690a44d5.md",
+      "source_sha256": "681dc6da16f557d27f86e393df6430328d7d6885e4de5a3fcf3063d187ff9281",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/live-sources.md",
+      "sha256": "9c4ffa565174e1e985be9236cba6deba9f97723966e71e199c318050646611bf",
+      "source": "02_解压文本与资源/live-sources-de7dea53.md",
+      "source_sha256": "9c4ffa565174e1e985be9236cba6deba9f97723966e71e199c318050646611bf",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-api-reference.md",
+      "sha256": "6dd5cd6036590128df521b1dc571ed6f1c19178dfc9d5f043a1a8abfe369b530",
+      "source": "02_解压文本与资源/managed-agents-api-reference-5249320e.md",
+      "source_sha256": "6dd5cd6036590128df521b1dc571ed6f1c19178dfc9d5f043a1a8abfe369b530",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-client-patterns.md",
+      "sha256": "043d7eeff816ca4afddfabe07f19ce6586e4aab3b973a66d10811dfb7d1b12fc",
+      "source": "02_解压文本与资源/managed-agents-client-patterns-05c93984.md",
+      "source_sha256": "043d7eeff816ca4afddfabe07f19ce6586e4aab3b973a66d10811dfb7d1b12fc",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-core.md",
+      "sha256": "026bf66edb5544f3cf1e8a911846f0ef98199e3660e17ca821bcb1abf75c1cfc",
+      "source": "02_解压文本与资源/managed-agents-core-c5fcb8e4.md",
+      "source_sha256": "026bf66edb5544f3cf1e8a911846f0ef98199e3660e17ca821bcb1abf75c1cfc",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-environments.md",
+      "sha256": "65aab030e73d1bccd6b8fbea769da1f59add506e8ba00d52cb2bb8c3c451fe26",
+      "source": "02_解压文本与资源/managed-agents-environments-2c396a08.md",
+      "source_sha256": "65aab030e73d1bccd6b8fbea769da1f59add506e8ba00d52cb2bb8c3c451fe26",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-events.md",
+      "sha256": "77a409fe06490b1941a51cf2192e26f485852c2a699c393cc267ae60f0da5b0c",
+      "source": "02_解压文本与资源/managed-agents-events-98177506.md",
+      "source_sha256": "77a409fe06490b1941a51cf2192e26f485852c2a699c393cc267ae60f0da5b0c",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-memory.md",
+      "sha256": "ab45ddaf130730d37bf818c68a0fb81b42e45b03dff9d0a0e19df54083a7a884",
+      "source": "02_解压文本与资源/managed-agents-memory-3a172a12.md",
+      "source_sha256": "ab45ddaf130730d37bf818c68a0fb81b42e45b03dff9d0a0e19df54083a7a884",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-multiagent.md",
+      "sha256": "4ca48a92b81df214f9fc3dba48d622a3d0d45f358a4b47ccbe98bba74ada0b4b",
+      "source": "02_解压文本与资源/managed-agents-multiagent-2391e3af.md",
+      "source_sha256": "4ca48a92b81df214f9fc3dba48d622a3d0d45f358a4b47ccbe98bba74ada0b4b",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-onboarding-from-quickstart.md",
+      "sha256": "a4f78c5dced3f345749e253156666322abaea22da58901c6f11aa23ff8000d1e",
+      "source": "02_解压文本与资源/managed-agents-onboarding-from-quickstart-3ad1d0c1.md",
+      "source_sha256": "a4f78c5dced3f345749e253156666322abaea22da58901c6f11aa23ff8000d1e",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-onboarding-from-url.md",
+      "sha256": "cb8150ac025ecd7c1d4748708b14ec31dc98fab77df68177b4638dab615289b2",
+      "source": "02_解压文本与资源/managed-agents-onboarding-from-url-10200722.md",
+      "source_sha256": "cb8150ac025ecd7c1d4748708b14ec31dc98fab77df68177b4638dab615289b2",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-onboarding.md",
+      "sha256": "5b94f354dd4f5256b333bca4bf1eb679cf88e8f63388226f142495bc3fd04bd2",
+      "source": "02_解压文本与资源/managed-agents-onboarding-0b38bb5f.md",
+      "source_sha256": "5b94f354dd4f5256b333bca4bf1eb679cf88e8f63388226f142495bc3fd04bd2",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-outcomes.md",
+      "sha256": "d36e1703b5d4f72c3e5463437699b0057ff18b4d915ba255742571a7e787821e",
+      "source": "02_解压文本与资源/managed-agents-outcomes-bad5446f.md",
+      "source_sha256": "d36e1703b5d4f72c3e5463437699b0057ff18b4d915ba255742571a7e787821e",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-overview.md",
+      "sha256": "fcc7728e20b9df6ef98cf46ec434b33ce1c4f02f3892187723f54aa898993381",
+      "source": "02_解压文本与资源/managed-agents-overview-0d09c3a4.md",
+      "source_sha256": "fcc7728e20b9df6ef98cf46ec434b33ce1c4f02f3892187723f54aa898993381",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/bug-hunter.md",
+      "sha256": "e7529cf183237046b1ef099e21f0ec9f8eef94fc2bc77050b52378ee9e7a4146",
+      "source": "01_完整嵌入文件_原样/bug-hunter-t77r14b6.md",
+      "source_sha256": "e7529cf183237046b1ef099e21f0ec9f8eef94fc2bc77050b52378ee9e7a4146",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/contract-tracker.md",
+      "sha256": "794e23e8dbd2df46d57f2f8fe4b6f893fa987deb47daa78c7bb36b99f7dd499f",
+      "source": "01_完整嵌入文件_原样/contract-tracker-56hvtgvv.md",
+      "source_sha256": "794e23e8dbd2df46d57f2f8fe4b6f893fa987deb47daa78c7bb36b99f7dd499f",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/data-analyst.md",
+      "sha256": "7c49347389e7b372f3a0ae72d1c9b3a45732656cc2ac7241b7901faa57aa2a08",
+      "source": "01_完整嵌入文件_原样/data-analyst-mftdhs5h.md",
+      "source_sha256": "7c49347389e7b372f3a0ae72d1c9b3a45732656cc2ac7241b7901faa57aa2a08",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/deep-researcher.md",
+      "sha256": "5bfac67f99ff5a9057a93dc18a80f135bf9d6e8089088b0fad30be150c1c54e8",
+      "source": "01_完整嵌入文件_原样/deep-researcher-kr59y5yh.md",
+      "source_sha256": "5bfac67f99ff5a9057a93dc18a80f135bf9d6e8089088b0fad30be150c1c54e8",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/explainer-video-maker.md",
+      "sha256": "725b495062159e5215b3e5885fbfc781fdee2f7505bec71ac9329bcb98cba888",
+      "source": "01_完整嵌入文件_原样/explainer-video-maker-sm29032a.md",
+      "source_sha256": "725b495062159e5215b3e5885fbfc781fdee2f7505bec71ac9329bcb98cba888",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/field-monitor.md",
+      "sha256": "f0ed1fe506ae642a807d66b4fb5a5a3b01912ae4dcc7482798ff60f17ed7ef6e",
+      "source": "01_完整嵌入文件_原样/field-monitor-g66mv9dp.md",
+      "source_sha256": "f0ed1fe506ae642a807d66b4fb5a5a3b01912ae4dcc7482798ff60f17ed7ef6e",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/incident-commander.md",
+      "sha256": "d72b3ab03e48caa2d1b6a17e3c51df28bde3ea840d580c66af1a5014e967cca8",
+      "source": "01_完整嵌入文件_原样/incident-commander-ks44x788.md",
+      "source_sha256": "d72b3ab03e48caa2d1b6a17e3c51df28bde3ea840d580c66af1a5014e967cca8",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/performance-tuner.md",
+      "sha256": "ad392a2f5acf2a5899f6154f7558fc5daa9a0f9d2e311496cef82998968ad1d2",
+      "source": "02_解压文本与资源/performance-tuner-6c866b59.md",
+      "source_sha256": "ad392a2f5acf2a5899f6154f7558fc5daa9a0f9d2e311496cef82998968ad1d2",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/sprint-retro-facilitator.md",
+      "sha256": "8c35991555fb11f0dedda77e5750072f8c6007c31cf81131b4aff1028bae34df",
+      "source": "01_完整嵌入文件_原样/sprint-retro-facilitator-tmga9swn.md",
+      "source_sha256": "8c35991555fb11f0dedda77e5750072f8c6007c31cf81131b4aff1028bae34df",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/structured-extractor.md",
+      "sha256": "452c38bd10ebf31a875904125572915cda852849611fa340221e6561f1fcb60f",
+      "source": "01_完整嵌入文件_原样/structured-extractor-rec1wxww.md",
+      "source_sha256": "452c38bd10ebf31a875904125572915cda852849611fa340221e6561f1fcb60f",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/support-agent.md",
+      "sha256": "1485fff930c269be340ab34801a82eb2bfaf0cd5a66429035f41053d0ec5ba32",
+      "source": "01_完整嵌入文件_原样/support-agent-drb7j85g.md",
+      "source_sha256": "1485fff930c269be340ab34801a82eb2bfaf0cd5a66429035f41053d0ec5ba32",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/support-to-eng-escalator.md",
+      "sha256": "76bc7d1c6427e2617a6ebe3aa0f108cbe5a0d7501ddb1e64faaff3d85ea1bcd3",
+      "source": "01_完整嵌入文件_原样/support-to-eng-escalator-qqj4c1c7.md",
+      "source_sha256": "76bc7d1c6427e2617a6ebe3aa0f108cbe5a0d7501ddb1e64faaff3d85ea1bcd3",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/watchlist-scanner.md",
+      "sha256": "d09230e53328dfe895d1924da49cb0e75b4045ce6810e2a2e62c08e5c548e72d",
+      "source": "01_完整嵌入文件_原样/watchlist-scanner-kfkrzjrr.md",
+      "source_sha256": "d09230e53328dfe895d1924da49cb0e75b4045ce6810e2a2e62c08e5c548e72d",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-scheduled-deployments.md",
+      "sha256": "0f797a414f772f228ebfa7894daf42aab3a1d6930376b1ac574dff1e8e0475b1",
+      "source": "02_解压文本与资源/managed-agents-scheduled-deployments-7c6a1a7e.md",
+      "source_sha256": "0f797a414f772f228ebfa7894daf42aab3a1d6930376b1ac574dff1e8e0475b1",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-secure.md",
+      "sha256": "2cc933a98354d8af69a27a829e88316aefc6c9995946f1331e5dadb8a929080d",
+      "source": "02_解压文本与资源/managed-agents-secure-8f1a4973.md",
+      "source_sha256": "2cc933a98354d8af69a27a829e88316aefc6c9995946f1331e5dadb8a929080d",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-self-hosted-sandboxes.md",
+      "sha256": "66b99904806e3a6712dac009952a765f7fd7556982c61cfef99c6fad5ed34631",
+      "source": "02_解压文本与资源/managed-agents-self-hosted-sandboxes-b2d3e09c.md",
+      "source_sha256": "66b99904806e3a6712dac009952a765f7fd7556982c61cfef99c6fad5ed34631",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-tools.md",
+      "sha256": "815560d3707ef77ccab1cd979470f886fc51f4c23cff3eaee7339e03a69dc51e",
+      "source": "02_解压文本与资源/managed-agents-tools-7cc8a37b.md",
+      "source_sha256": "815560d3707ef77ccab1cd979470f886fc51f4c23cff3eaee7339e03a69dc51e",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/managed-agents-webhooks.md",
+      "sha256": "38746f77a3ee971f9b1f7d47cec9e753131bf271fd795aed5c3da1764c9a6ac1",
+      "source": "02_解压文本与资源/managed-agents-webhooks-c9326ad3.md",
+      "source_sha256": "38746f77a3ee971f9b1f7d47cec9e753131bf271fd795aed5c3da1764c9a6ac1",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/model-migration.md",
+      "sha256": "bc7eae25a33ba34a6208a72bda1aff6ccb4b5ffab088721bbc0c82dbcd6380f2",
+      "source": "02_解压文本与资源/model-migration-7891819d.md",
+      "source_sha256": "bc7eae25a33ba34a6208a72bda1aff6ccb4b5ffab088721bbc0c82dbcd6380f2",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/models.md",
+      "sha256": "82ac828e6b9ddd1eb77f8e053f1e76ccb9cae4af73a4ebc2bb4afe18f3765868",
+      "source": "02_解压文本与资源/models-176e5f7a.md",
+      "source_sha256": "82ac828e6b9ddd1eb77f8e053f1e76ccb9cae4af73a4ebc2bb4afe18f3765868",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/opentelemetry.md",
+      "sha256": "b7d961138760e1a260c366c5ef97700340bf5d7a6b67a14d465bba256a684eef",
+      "source": "02_解压文本与资源/opentelemetry-abc03100.md",
+      "source_sha256": "b7d961138760e1a260c366c5ef97700340bf5d7a6b67a14d465bba256a684eef",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/platform-availability.md",
+      "sha256": "1b0c4181cbd01bedef4d1f70dea3d0c3f346e7ca7ab674071c662c30b67e85a4",
+      "source": "02_解压文本与资源/platform-availability-7671ac66.md",
+      "source_sha256": "1b0c4181cbd01bedef4d1f70dea3d0c3f346e7ca7ab674071c662c30b67e85a4",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/preserved-thinking-migration.md",
+      "sha256": "eb051c0f32b6ebc0ca563b66837ac8cfd52f7dd95d91352667b6e8531c426e3a",
+      "source": "02_解压文本与资源/preserved-thinking-migration-84258a5d.md",
+      "source_sha256": "eb051c0f32b6ebc0ca563b66837ac8cfd52f7dd95d91352667b6e8531c426e3a",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/preserved-thinking-migration/causes.md",
+      "sha256": "3ffa29732f290b35cf893c2a6c8f86038f9f689ea35d3a5e4771f34e3bb212e0",
+      "source": "02_解压文本与资源/causes-dedf5d6e.md",
+      "source_sha256": "3ffa29732f290b35cf893c2a6c8f86038f9f689ea35d3a5e4771f34e3bb212e0",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/preserved-thinking-migration/drop_block_probe.py",
+      "sha256": "6dae043c8215fd1c1dd1d42a37580b476423e4e0a461f9a230a86a9f3dda3f3b",
+      "source": "02_解压文本与资源/drop_block_probe-bcdfaa4d.py",
+      "source_sha256": "6dae043c8215fd1c1dd1d42a37580b476423e4e0a461f9a230a86a9f3dda3f3b",
+      "source_encoding": "utf-8",
+      "stored_path": "shared/preserved-thinking-migration/drop_block_probe.py.txt"
+    },
+    {
+      "path": "shared/preserved-thinking-migration/prefix_diff.py",
+      "sha256": "734934b81b5f26e9ed2f8f51f44fed6554233de4f37b22a8845ae4ffcb622ac0",
+      "source": "02_解压文本与资源/prefix_diff-69deb9d3.py",
+      "source_sha256": "734934b81b5f26e9ed2f8f51f44fed6554233de4f37b22a8845ae4ffcb622ac0",
+      "source_encoding": "utf-8",
+      "stored_path": "shared/preserved-thinking-migration/prefix_diff.py.txt"
+    },
+    {
+      "path": "shared/prompt-audit.md",
+      "sha256": "7379b10b6707d6f185ac08e751058bb2795145bf4fa71a267fe2940ce2915399",
+      "source": "02_解压文本与资源/prompt-audit-c0e24c48.md",
+      "source_sha256": "7379b10b6707d6f185ac08e751058bb2795145bf4fa71a267fe2940ce2915399",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/prompt-caching.md",
+      "sha256": "9c55ae1eafddf61765326d250880479646f67ba5f1e9d663fa835798dc5c79fc",
+      "source": "02_解压文本与资源/prompt-caching-44ffa968.md",
+      "source_sha256": "9c55ae1eafddf61765326d250880479646f67ba5f1e9d663fa835798dc5c79fc",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/token-counting.md",
+      "sha256": "5ca71e961ce1ec436e8c0481747bab2c3bd3b6159d307f0ff4eb45ad01ff4a8e",
+      "source": "01_完整嵌入文件_原样/token-counting-znjwtf00.md",
+      "source_sha256": "5ca71e961ce1ec436e8c0481747bab2c3bd3b6159d307f0ff4eb45ad01ff4a8e",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "shared/tool-use-concepts.md",
+      "sha256": "ff8c6318510dfe2d78040d3b887bc32648c91bb814d614591ba02f8140c5c9d2",
+      "source": "02_解压文本与资源/tool-use-concepts-c2460f49.md",
+      "source_sha256": "ff8c6318510dfe2d78040d3b887bc32648c91bb814d614591ba02f8140c5c9d2",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "typescript/claude-api/README.md",
+      "sha256": "775d6396ada3c327ede07c0b7d340336c93581a938509eb098ae8000a9f59542",
+      "source": "02_解压文本与资源/README-4f0b5262.md",
+      "source_sha256": "775d6396ada3c327ede07c0b7d340336c93581a938509eb098ae8000a9f59542",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "typescript/claude-api/batches.md",
+      "sha256": "5c7d37ac6169aec0c9c1e9b666ea3dff6acf77be89bae86ccdc191ddf26f8f53",
+      "source": "01_完整嵌入文件_原样/batches-s5ra532b.md",
+      "source_sha256": "5c7d37ac6169aec0c9c1e9b666ea3dff6acf77be89bae86ccdc191ddf26f8f53",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "typescript/claude-api/files-api.md",
+      "sha256": "b87751f1984fc6592319f47cbbffb184b46a9f726ac2ec6036ccd0a0c5a3bc10",
+      "source": "01_完整嵌入文件_原样/files-api-m5wzhchy.md",
+      "source_sha256": "b87751f1984fc6592319f47cbbffb184b46a9f726ac2ec6036ccd0a0c5a3bc10",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "typescript/claude-api/opentelemetry.md",
+      "sha256": "6cc69fe0a60b62aa959795a33a46a1e1f7820ca3243a9af186ac8a5e2ba4a1f7",
+      "source": "01_完整嵌入文件_原样/opentelemetry-qf3594ft.md",
+      "source_sha256": "6cc69fe0a60b62aa959795a33a46a1e1f7820ca3243a9af186ac8a5e2ba4a1f7",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "typescript/claude-api/streaming.md",
+      "sha256": "5e6e3a7b57eef6fe67dee93d38e602860ef282284a8711e8b6572e9b1002e516",
+      "source": "02_解压文本与资源/streaming-e0e3c46f.md",
+      "source_sha256": "5e6e3a7b57eef6fe67dee93d38e602860ef282284a8711e8b6572e9b1002e516",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "typescript/claude-api/tool-use.md",
+      "sha256": "b1a11cbd5ccf4942a671aee9815dd4b9dc97ac6d835a88caa6225a7fa6dc72b7",
+      "source": "02_解压文本与资源/tool-use-277d8154.md",
+      "source_sha256": "b1a11cbd5ccf4942a671aee9815dd4b9dc97ac6d835a88caa6225a7fa6dc72b7",
+      "source_encoding": "utf-8"
+    },
+    {
+      "path": "typescript/managed-agents/README.md",
+      "sha256": "c4d0cc1c6154326aff567fe20567ee5fc7bb63a758453a06b475597594ebf37b",
+      "source": "02_解压文本与资源/README-c729f2c2.md",
+      "source_sha256": "c4d0cc1c6154326aff567fe20567ee5fc7bb63a758453a06b475597594ebf37b",
+      "source_encoding": "utf-8"
+    }
+  ]
+}

@@ -53,6 +53,18 @@ class ThreadingHTTPServer(ThreadingMixIn, http.server.HTTPServer):
     daemon_threads = True
 
 
+def validate_stream_events(frames):
+    """UI invalidation is conditional on an active UI surface, not every stream."""
+    init = next((i for i, frame in enumerate(frames)
+                 if frame.get("type") == "system" and frame.get("subtype") == "init"), None)
+    result = next((i for i, frame in enumerate(frames) if frame.get("type") == "result"), None)
+    assert init is not None and result is not None and init < result, frames
+    invalidations = [frame for frame in frames
+                     if frame.get("type") == "system" and frame.get("subtype") == "ui_invalidate"]
+    assert all(frame.get("event") == "ui.render" for frame in invalidations), invalidations
+    return len(invalidations)
+
+
 def run_mode(binary, mode, scratch):
     requests = []
     fixture = pathlib.Path(scratch, "fixture.txt")
@@ -142,11 +154,7 @@ def run_mode(binary, mode, scratch):
     assert all(request["model"] == MODEL for request in requests)
     assert all(request["stream"] is True for request in requests)
     if mode == "stream":
-        flow = [(frame.get("type"), frame.get("subtype")) for frame in frames]
-        init_at = flow.index(("system", "init"))
-        invalidated_at = flow.index(("system", "ui_invalidate"))
-        result_at = next(index for index, item in enumerate(flow) if item[0] == "result")
-        assert invalidated_at < init_at < result_at, flow
+        invalidation_count = validate_stream_events(frames)
     if mode == "read":
         assert "Read" in requests[0]["tools"]
         result = requests[1]["results"]
@@ -159,7 +167,8 @@ def run_mode(binary, mode, scratch):
         assert FIXTURE not in str(result[0].get("content"))
     return {"case": mode, "passed": True, "requests": len(requests),
             "exit_code": run.returncode, "elapsed_s": round(time.monotonic()-started, 3),
-            "tool_names": requests[0]["tools"], "terminal_reason": final["terminal_reason"]}
+            "tool_names": requests[0]["tools"], "terminal_reason": final["terminal_reason"],
+            **({"ui_invalidation_count": invalidation_count} if mode == "stream" else {})}
 
 
 def main():

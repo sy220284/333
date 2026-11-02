@@ -14,3 +14,6 @@ vendor/ripgrep/**/rg binary
 
 # Preserve the original CRLF bytes from cli.js.map in archived dependency sources
 research/claude-code-2.1.88/dependencies/node_modules/** -text
+
+# Preserve the original whitespace in pinned upstream skill reference data.
+src/skills/bundled/claude-api/** whitespace=-blank-at-eol,-blank-at-eof

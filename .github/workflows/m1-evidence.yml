@@ -29,6 +29,7 @@ on:
       - 'tests/m1-v4-handoff.test.mjs'
       - 'tests/m1-doctor-source-restoration.test.mjs'
       - 'tests/m1-x64-local-api.py'
+      - 'tests/m1_x64_stream_events_test.py'
       - 'tests/m1-inline-map-audit.test.mjs'
       - 'src/components/wizard/types.ts'
       - 'src/services/tips/types.ts'
@@ -124,6 +125,7 @@ jobs:
             --report "${RUNNER_TEMP}/m1-reference-linux-x64.json"
       - name: 运行本机模拟API流式/Read工具权限闭环
         run: |
+          python3 -m unittest discover -s tests -p 'm1_x64_stream_events_test.py'
           python3 tests/m1-x64-local-api.py \
             --binary "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
             --report "${RUNNER_TEMP}/m1-x64-local-api.json"
