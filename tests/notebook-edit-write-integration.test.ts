@@ -23,6 +23,16 @@ test('actual NotebookEditTool validates, edits, inserts and deletes cells on dis
   const notebook_path = join(dir, 'real.ipynb')
   try {
     const { NotebookEditTool } = await import('../src/tools/NotebookEditTool/NotebookEditTool.ts')
+    expect(NotebookEditTool.toAutoClassifierInput({
+      notebook_path, cell_id: 'cell-0', new_source: 'print(2)',
+    })).toEqual({
+      notebook_path, mode: 'replace', cell_id: 'cell-0', adds: 'print(2)',
+    })
+    expect(NotebookEditTool.toAutoClassifierInput({
+      notebook_path, cell_id: 'actual-id', new_source: '', edit_mode: 'delete',
+    })).toEqual({
+      notebook_path, mode: 'delete', cell_id: 'actual-id', ignored_source: '',
+    })
     const { getFileModificationTime } = await import('../src/utils/file.js')
     writeFileSync(notebook_path, JSON.stringify(makeNotebook()))
     const readFileState = new Map()
