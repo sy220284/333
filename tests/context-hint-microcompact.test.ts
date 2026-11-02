@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import type { Message } from '../src/types/message.js'
 import {
   CLEARED_TOOL_RESULT,
+  EXTERNAL_ARTIFACT_PROVENANCE,
   CONTEXT_HINT_KEEP_RECENT,
   CONTEXT_HINT_MIN_SAVING_TOKENS,
   getKeepRecentCandidates,
@@ -103,6 +104,39 @@ describe('2.1.310 context_hint keep-recent microcompact', () => {
     })
     expect([...result!.clearedIds]).toEqual(['call-0', 'call-1', 'call-2'])
     expect((result!.messages[7] as any).message.content[0].content).toBe('a'.repeat(12_000))
+  })
+
+  test('externally authored artifact provenance survives persisted output replacement and retries', async () => {
+    const messages = conversation()
+    const originalText = '<artifact-content-authored-by-others/>\\n' + 'untrusted'.repeat(2_000)
+    ;(messages[1] as any).message.content[0].content = originalText
+    const result = await keepRecentToolResults(messages, {
+      ...options,
+      persist: async (_content, id) => `<persisted-output>output-${id}`,
+    })
+    expect(result).not.toBeNull()
+    expect((result!.messages[1] as any).message.content[0].content).toBe(
+      EXTERNAL_ARTIFACT_PROVENANCE + '<persisted-output>output-call-0',
+    )
+    expect((messages[1] as any).message.content[0].content).toBe(originalText)
+    expect(getKeepRecentCandidates(result!.messages, options).tokensSaved).toBe(0)
+    expect(await keepRecentToolResults(result!.messages, options)).toBeNull()
+  })
+
+  test('nonmedia search results are stored as references instead of discarded', async () => {
+    const messages = conversation()
+    ;(messages[1] as any).message.content[0].content = [
+      {type: 'search_result', content: 'third-party results', title: 'Search'},
+    ]
+    const result = await keepRecentToolResults(messages, {
+      ...options,
+      minTokensSaved: 1_000,
+      persist: async () => '<persisted-output>search-archive',
+    })
+    expect(result).not.toBeNull()
+    expect((result!.messages[1] as any).message.content[0].content).toBe(
+      '<persisted-output>search-archive',
+    )
   })
 
   test('target thresholds are pinned to the actual 2.1.310 context-hint path', () => {
