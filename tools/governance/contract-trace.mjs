@@ -8,6 +8,66 @@ if(!missingPath || !outputPath) throw new Error('用法：contract-trace.mjs mis
 const missing = JSON.parse(readFileSync(missingPath,'utf8'));
 if(!Array.isArray(missing.entries)) throw new Error('缺失模块索引格式异常');
 const targets = new Map(missing.entries.filter(e=>e.needsRecovery || !e.internal).map(e=>[e.target,e]));
+// Use the real shipping bundle's feature selection rather than treating every
+// syntactic require() as a reachable release feature. Only prove exclusions;
+// anything we cannot prove stays a potentially reachable runtime dependency.
+const rebuildSource = readFileSync(resolve(root, 'build/rebuild.mjs'), 'utf8');
+const releaseFeatureMatch = rebuildSource.match(/features:\s*\[([^\]]+)\]/);
+if (!releaseFeatureMatch) throw new Error('无法从正式构建中读取 features，拒绝推断运行时可达性');
+const releaseFeatures = new Set(
+  [...releaseFeatureMatch[1].matchAll(/['"]([A-Z][A-Z_0-9]+)['"]/g)].map(x => x[1]),
+);
+const externalRelease = /['"]process\.env\.USER_TYPE['"]\s*:\s*['"](?:\\")?external/.test(rebuildSource);
+if (!externalRelease) throw new Error('无法确认正式构建为外部用户，拒绝排除内部命令');
+
+// true/false means statically provable; null means runtime-dependent.
+function compileCondition(n, source) {
+  if (ts.isParenthesizedExpression(n)) return compileCondition(n.expression, source);
+  if (ts.isCallExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === 'feature') {
+    if (n.arguments.length !== 1 || !ts.isStringLiteral(n.arguments[0])) return null;
+    return releaseFeatures.has(n.arguments[0].text);
+  }
+  if (ts.isPrefixUnaryExpression(n) && n.operator === ts.SyntaxKind.ExclamationToken) {
+    const value = compileCondition(n.operand, source);
+    return value === null ? null : !value;
+  }
+  if (ts.isBinaryExpression(n)) {
+    const op = n.operatorToken.kind;
+    if (op === ts.SyntaxKind.AmpersandAmpersandToken) {
+      const left = compileCondition(n.left, source);
+      const right = compileCondition(n.right, source);
+      return left === false || right === false ? false : left === true && right === true ? true : null;
+    }
+    if (op === ts.SyntaxKind.BarBarToken) {
+      const left = compileCondition(n.left, source);
+      const right = compileCondition(n.right, source);
+      return left === true || right === true ? true : left === false && right === false ? false : null;
+    }
+    if (externalRelease && (op === ts.SyntaxKind.EqualsEqualsEqualsToken || op === ts.SyntaxKind.EqualsEqualsToken)) {
+      const left = n.left.getText(source).replaceAll(' ', '');
+      const right = n.right.getText(source).replaceAll(' ', '');
+      if (left === 'process.env.USER_TYPE' && /^['"](?:ant|external)['"]$/.test(right)) return right.includes('external');
+      if (right === 'process.env.USER_TYPE' && /^['"](?:ant|external)['"]$/.test(left)) return left.includes('external');
+    }
+  }
+  return null;
+}
+function isExcludedByReleaseBuild(node, source) {
+  for (let n = node; n.parent; n = n.parent) {
+    const parent = n.parent;
+    if (ts.isIfStatement(parent)) {
+      const condition = compileCondition(parent.expression, source);
+      if (condition === false && n === parent.thenStatement) return true;
+      if (condition === true && n === parent.elseStatement) return true;
+    }
+    if (ts.isConditionalExpression(parent)) {
+      const condition = compileCondition(parent.condition, source);
+      if (condition === false && n === parent.whenTrue) return true;
+      if (condition === true && n === parent.whenFalse) return true;
+    }
+  }
+  return false;
+}
 function walk(dir) {
   const out=[];
   if(!existsSync(dir)) return out;
@@ -18,7 +78,7 @@ function walk(dir) {
   }
   return out;
 }
-const records=new Map([...targets].map(([target,meta])=>[target,{target,referencedIn:0,typeOnlyReferences:0,importedSymbols:new Map(),locations:[],classification:'unclassified',originalMissingReferences:meta.references,reachableAtRuntime:false}]));
+const records=new Map([...targets].map(([target,meta])=>[target,{target,referencedIn:0,typeOnlyReferences:0,importedSymbols:new Map(),locations:[],classification:'unclassified',originalMissingReferences:meta.references,reachableAtRuntime:false,runtimeSites:0,provenExcludedSites:0}]));
 for(const file of walk(resolve(root,'src'))) {
   const filePath=relative(root,file).replaceAll('\\','/');
   const code=readFileSync(file,'utf8');
@@ -35,14 +95,20 @@ for(const file of walk(resolve(root,'src'))) {
     const item=records.get(target); if(!item) return;
     item.referencedIn++;
     if(typeOnly) item.typeOnlyReferences++;
-    else item.reachableAtRuntime=true;
+    else {
+      item.runtimeSites++;
+      if (isExcludedByReleaseBuild(node, source)) item.provenExcludedSites++;
+      else item.reachableAtRuntime=true;
+    }
     const ref=item.importedSymbols.get(name)??{name,imports:0,typeOnlyImports:0,consumers:[]};
     ref.imports++;
     if(typeOnly) ref.typeOnlyImports++;
     const line=source.getLineAndCharacterOfPosition(node.getStart(source)).line+1;
     ref.consumers.push({file:filePath,line,as:alias,kind});
     item.importedSymbols.set(name,ref);
-    item.locations.push({file:filePath,line,kind,name,as:alias,typeOnly});
+    item.locations.push({file:filePath,line,kind,name,as:alias,typeOnly,
+      releaseReachability: typeOnly ? 'type-only' : isExcludedByReleaseBuild(node, source) ? 'excluded-by-build' : 'potentially-reachable',
+    });
   }
   for(const node of source.statements) {
     if(ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)){
@@ -81,6 +147,7 @@ const out=[...records.values()].map(item=>{
   return {
     target:item.target,kind:item.classification,originalMissingReferences:item.originalMissingReferences,importSites:item.referencedIn,
     uniqueConsumers:new Set(item.locations.map(x=>x.file)).size,symbols:syms,locations:item.locations,
+    runtimeSites:item.runtimeSites,provenExcludedSites:item.provenExcludedSites,
   };
 }).sort((a,b)=>b.originalMissingReferences-a.originalMissingReferences);
 const summary={
@@ -88,6 +155,10 @@ const summary={
   typeOnly:out.filter(x=>x.kind==='type-only').length,
   runtimeRequired:out.filter(x=>x.kind==='runtime-required').length,
   unreferenced:out.filter(x=>x.kind==='not-found-in-current-src').length,
+  releaseGatedOnly:out.filter(x=>x.runtimeSites>0&&x.runtimeSites===x.provenExcludedSites).length,
+  releaseGatedReferences:out.reduce((n,x)=>n+x.provenExcludedSites,0),
+  potentiallyReachableReferences:out.reduce((n,x)=>n+x.runtimeSites-x.provenExcludedSites,0),
+  enabledBuildFeatures:[...releaseFeatures].sort(),
   top:out.slice(0,25).map(x=>({target:x.target,kind:x.kind,references:x.originalMissingReferences,symbols:x.symbols.map(z=>z.name)}))
 };
 mkdirSync(dirname(resolve(outputPath)),{recursive:true});
