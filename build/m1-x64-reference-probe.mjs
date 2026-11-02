@@ -158,7 +158,7 @@ const requiredCandidateIds = (args['--require-candidate-cases'] ?? '')
 const knownIds = new Set(cases.map(test => test.id))
 const invalidRequiredIds = requiredCandidateIds.filter(id => !knownIds.has(id))
 if (invalidRequiredIds.length) {
-  throw new Error('未知的强制回归用例: ' + invalidRequiredIds.join(', '))
+  throw new Error(`未知的强制回归用例: ${invalidRequiredIds.join(', ')}`)
 }
 if (requiredCandidateIds.length && !candidateCases) {
   throw new Error('强制候选用例需要真实传入 --candidate')
