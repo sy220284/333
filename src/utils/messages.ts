@@ -3036,10 +3036,12 @@ export function handleMessageFromStream(
         case 'mcp_tool_use':
         case 'mcp_tool_result':
         case 'container_upload':
+        default:
+          // SDK may add result block discriminants before the installed type
+          // definitions catch up; they remain tool-output, not text/thinking.
           onSetStreamMode('tool-input')
           return
       }
-      return
     case 'content_block_delta':
       switch (message.event.delta.type) {
         case 'text_delta': {
