@@ -24,7 +24,7 @@ import { isENOENT, ShellError } from '../../utils/errors.js';
 import { detectFileEncoding, detectLineEndings, getFileModificationTime, writeTextContent } from '../../utils/file.js';
 import { fileHistoryEnabled, fileHistoryTrackEdit } from '../../utils/fileHistory.js';
 import { truncate } from '../../utils/format.js';
-import { getFsImplementation } from '../../utils/fsOperations.js';
+import { getFsImplementation, safeResolvePath } from '../../utils/fsOperations.js';
 import { lazySchema } from '../../utils/lazySchema.js';
 import { expandPath } from '../../utils/path.js';
 import type { PermissionResult } from '../../utils/permissions/PermissionResult.js';
@@ -244,7 +244,8 @@ For commands that are harder to parse at a glance (piped commands, obscure flags
   _simulatedSedEdit: z.object({
     filePath: z.string(),
     oldContent: z.string(),
-    newContent: z.string()
+    newContent: z.string(),
+    targetPath: z.string().optional()
   }).optional().describe('Internal: pre-computed sed edit result from preview')
 }));
 
@@ -363,14 +364,23 @@ async function applySedEdit(simulatedEdit: {
   filePath: string;
   oldContent: string;
   newContent: string;
+  targetPath?: string;
 }, toolUseContext: SimulatedSedEditContext, parentMessage?: AssistantMessage): Promise<SimulatedSedEditResult> {
   const {
     filePath,
     oldContent,
-    newContent
+    newContent,
+    targetPath
   } = simulatedEdit;
   const absoluteFilePath = expandPath(filePath);
   const fs = getFsImplementation();
+  const assertApprovedTarget = () => {
+    const actual = safeResolvePath(fs, absoluteFilePath);
+    if (!targetPath || !actual.isCanonical || actual.resolvedPath !== targetPath) {
+      throw new Error(`The file target changed after the sed edit preview: ${filePath}. Review the new target and retry.`);
+    }
+  };
+  assertApprovedTarget();
 
   // Read original content for VS Code notification
   const encoding = detectFileEncoding(absoluteFilePath);
@@ -401,10 +411,10 @@ async function applySedEdit(simulatedEdit: {
     await fileHistoryTrackEdit(toolUseContext.updateFileHistoryState, absoluteFilePath, parentMessage.uuid);
   }
 
-  // Recheck after async backup work, immediately before the synchronous
-  // write, so an intervening external edit cannot silently be lost.
+  // Recheck both the approved target and its contents after any async backup.
   const beforeWrite = await fs.readFile(absoluteFilePath, { encoding });
   assertSedPreviewUnchanged(filePath, beforeWrite, oldContent);
+  assertApprovedTarget();
 
   // Detect line endings and write new content
   const endings = detectLineEndings(absoluteFilePath);
