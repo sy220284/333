@@ -60,6 +60,8 @@ export function KeyboardShortcutHint(t0) {
     toggle: '切换', 'toggle tasks': '切换任务',
     'toggle agent list': '切换代理列表',
     'show shortcuts': '显示快捷键',
+    'show tasks': '显示任务', 'hide tasks': '隐藏任务',
+    'show teammates': '显示协作代理',
     'return to main': '返回主界面', 'show options': '显示选项',
     'show all': '显示全部', 'toggle details': '切换详情',
   }

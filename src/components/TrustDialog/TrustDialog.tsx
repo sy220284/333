@@ -205,8 +205,8 @@ export function TrustDialog(t0) {
   let t18;
   if ($[20] === Symbol.for("react.memo_cache_sentinel")) {
     t16 = <Text bold={true}>{getFsImplementation().cwd()}</Text>;
-    t17 = <Text>安全确认：这是你创建或信任的项目吗？例如自己的代码、可靠的开源项目或团队项目。如果不确定，请先检查此目录中{"'"}的内容。</Text>;
-    t18 = <Text>Claude Code{"'"}ll be able to read, edit, and execute files here.</Text>;
+    t17 = <Text>安全确认：这是你创建或信任的项目吗？例如自己的代码、可靠的开源项目或团队项目。如果不确定，请先检查此目录中的内容。</Text>;
+    t18 = <Text>Claude Code 将能够读取、修改并执行此目录中的文件。</Text>;
     $[20] = t16;
     $[21] = t17;
     $[22] = t18;

@@ -32,3 +32,9 @@ test('权限确认和模型选择的可见文案使用中文', () => {
   assert.match(read('src/components/ModelPicker.tsx'), /选择模型/)
   assert.match(read('src/components/OutputStylePicker.tsx'), /回答风格/)
 })
+
+test('信任对话框没有遗留英文句段', () => {
+  const dialog = read('src/components/TrustDialog/TrustDialog.tsx')
+  assert.match(dialog, /Claude Code 将能够读取、修改并执行此目录中的文件/)
+  assert.doesNotMatch(dialog, /Quick safety check|Yes, I trust this folder|No, exit/)
+})

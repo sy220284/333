@@ -801,7 +801,7 @@ export function Config({
   }, {
     id: 'model',
     label: '模型',
-    value: mainLoopModel === null ? 'Default (recommended)' : mainLoopModel,
+    value: mainLoopModel === null ? '默认（推荐）' : mainLoopModel,
     type: 'managedEnum' as const,
     onChange: onChangeMainModelConfig
   }, ...(isConnectedToIde ? [{
@@ -884,7 +884,7 @@ export function Config({
   // Teammate mode (only shown when agent swarms are enabled)
   ...(isAgentSwarmsEnabled() ? (() => {
     const cliOverride = getCliTeammateModeOverride();
-    const label = cliOverride ? `Teammate mode [overridden: ${cliOverride}]` : 'Teammate mode';
+    const label = cliOverride ? `协作代理模式（命令行覆盖：${cliOverride}）` : '协作代理模式';
     return [{
       id: 'teammateMode',
       label,
@@ -987,7 +987,7 @@ export function Config({
                   {normalizeApiKeyForConfig(process.env.ANTHROPIC_API_KEY)}
                 </Text>
               </Text>,
-    searchText: 'Use custom API key',
+    searchText: '使用自定义 API 密钥',
     value: Boolean(process.env.ANTHROPIC_API_KEY && globalConfig.customApiKeyResponses?.approved?.includes(normalizeApiKeyForConfig(process.env.ANTHROPIC_API_KEY))),
     type: 'boolean' as const,
     onChange(useCustomKey: boolean) {
@@ -1155,7 +1155,7 @@ export function Config({
     if (formattedChanges.length > 0) {
       onClose(formattedChanges.join('\n'));
     } else {
-      onClose('Config dialog dismissed', {
+      onClose('已关闭设置面板', {
         display: 'system'
       });
     }
@@ -1244,7 +1244,7 @@ export function Config({
     if (isDirty.current) {
       revertChanges();
     }
-    onClose('Config dialog dismissed', {
+    onClose('已关闭设置面板', {
       display: 'system'
     });
   }, [showSubmenu, revertChanges, onClose]);
@@ -1466,7 +1466,7 @@ export function Config({
             </Byline>
           </Text>
         </> : showSubmenu === 'TeammateModel' ? <>
-          <ModelPicker initial={globalConfig.teammateDefaultModel ?? null} skipSettingsWrite headerText="Default model for newly spawned teammates. The leader can override via the tool call's model parameter." onSelect={(model_1, _effort_0) => {
+          <ModelPicker initial={globalConfig.teammateDefaultModel ?? null} skipSettingsWrite headerText="新启动的协作代理使用此默认模型。主代理可在工具调用中指定其他模型。" onSelect={(model_1, _effort_0) => {
         setShowSubmenu(null);
         setTabsHidden(false);
         // First-open-then-Enter from unset: picker highlights "Default"
@@ -1544,7 +1544,7 @@ export function Config({
     }} hideBorder hideInputGuide>
           {autoUpdaterDisabledReason?.type !== 'config' ? <>
               <Text>
-                {autoUpdaterDisabledReason?.type === 'env' ? 'Auto-updates are controlled by an environment variable and cannot be changed here.' : 'Auto-updates are disabled in development builds.'}
+                {autoUpdaterDisabledReason?.type === 'env' ? '自动更新由环境变量控制，请在环境配置中修改。' : '开发版已停用自动更新。'}
               </Text>
               {autoUpdaterDisabledReason?.type === 'env' && <Text dimColor>
                   取消设置 {autoUpdaterDisabledReason.envVar} 后可重新启用
@@ -1702,13 +1702,13 @@ function teammateModelDisplayString(value: string | null | undefined): string {
   return modelDisplayString(value);
 }
 const THEME_LABELS: Record<string, string> = {
-  auto: 'Auto (match terminal)',
-  dark: 'Dark mode',
-  light: 'Light mode',
-  'dark-daltonized': 'Dark mode (colorblind-friendly)',
-  'light-daltonized': 'Light mode (colorblind-friendly)',
-  'dark-ansi': 'Dark mode (ANSI colors only)',
-  'light-ansi': 'Light mode (ANSI colors only)'
+  auto: '自动匹配终端',
+  dark: '深色模式',
+  light: '浅色模式',
+  'dark-daltonized': '深色模式（色觉友好）',
+  'light-daltonized': '浅色模式（色觉友好）',
+  'dark-ansi': '深色模式（仅 ANSI 色彩）',
+  'light-ansi': '浅色模式（仅 ANSI 色彩）'
 };
 function NotifChannelLabel(t0) {
   const $ = _c(4);
@@ -1718,7 +1718,7 @@ function NotifChannelLabel(t0) {
   switch (value) {
     case "auto":
       {
-        return "Auto";
+        return "自动";
       }
     case "iterm2":
       {
@@ -1735,7 +1735,7 @@ function NotifChannelLabel(t0) {
       {
         let t1;
         if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
-          t1 = <Text>Terminal Bell <Text dimColor={true}>(\a)</Text></Text>;
+          t1 = <Text>终端提示音 <Text dimColor={true}>(\a)</Text></Text>;
           $[1] = t1;
         } else {
           t1 = $[1];
@@ -1766,11 +1766,11 @@ function NotifChannelLabel(t0) {
       }
     case "iterm2_with_bell":
       {
-        return "iTerm2 w/ Bell";
+        return "iTerm2 + 提示音";
       }
     case "notifications_disabled":
       {
-        return "Disabled";
+        return "已禁用";
       }
     default:
       {

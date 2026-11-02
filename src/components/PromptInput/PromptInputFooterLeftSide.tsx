@@ -485,17 +485,17 @@ function getSpinnerHintParts(isLoading: boolean, escShortcut: string, todosShort
     // Cycling: none → tasks → teammates → none
     switch (expandedView) {
       case 'none':
-        toggleAction = 'show tasks';
+        toggleAction = '显示任务';
         break;
       case 'tasks':
-        toggleAction = 'show teammates';
+        toggleAction = '显示协作代理';
         break;
       case 'teammates':
         toggleAction = 'hide';
         break;
     }
   } else {
-    toggleAction = expandedView === 'tasks' ? 'hide tasks' : 'show tasks';
+    toggleAction = expandedView === 'tasks' ? '隐藏任务' : '显示任务';
   }
 
   // Show the toggle hint only when there are task items to display or

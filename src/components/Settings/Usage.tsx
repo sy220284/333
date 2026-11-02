@@ -295,7 +295,7 @@ function ExtraUsageSection(t0) {
   if (extraUsage.monthly_limit === null) {
     let t1;
     if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
-      t1 = <Box flexDirection="column"><Text bold={true}>{EXTRA_USAGE_SECTION_TITLE}</Text><Text dimColor={true}>Unlimited</Text></Box>;
+      t1 = <Box flexDirection="column"><Text bold={true}>{EXTRA_USAGE_SECTION_TITLE}</Text><Text dimColor={true}>不限量</Text></Box>;
       $[1] = t1;
     } else {
       t1 = $[1];
