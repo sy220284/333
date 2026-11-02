@@ -20,19 +20,11 @@ export async function returnValue<A>(
   }
 }
 
-type QueuedGenerator<A> =
-  | {
-      done: false
-      value: A
-      generator: AsyncGenerator<A, void>
-      promise: Promise<QueuedGenerator<A>>
-    }
-  | {
-      done: true
-      value: void
-      generator: AsyncGenerator<A, void>
-      promise: Promise<QueuedGenerator<A>>
-    }
+type QueuedGenerator<A> = {
+  result: IteratorResult<A, void>
+  generator: AsyncGenerator<A, void>
+  promise: Promise<QueuedGenerator<A>>
+}
 
 // Run all generators concurrently up to a concurrency cap, yielding values as they come in
 export async function* all<A>(
@@ -46,9 +38,7 @@ export async function* all<A>(
   const next = (generator: AsyncGenerator<A, void>) => {
     const promise: Promise<QueuedGenerator<A>> = generator
       .next()
-      .then(result => result.done
-        ? { done: true as const, value: result.value, generator, promise }
-        : { done: false as const, value: result.value, generator, promise })
+      .then(result => ({ result, generator, promise }))
     return promise
   }
   const waiting = [...generators]
@@ -61,14 +51,13 @@ export async function* all<A>(
   }
 
   while (promises.size > 0) {
-    const { done, value, generator, promise } = await Promise.race(promises)
+    const { result, generator, promise } = await Promise.race(promises)
     promises.delete(promise)
 
-    if (!done) {
+    if (result.done !== true) {
       promises.add(next(generator))
-      // TODO: Clean this up
-      if (value !== undefined) {
-        yield value
+      if (result.value !== undefined) {
+        yield result.value
       }
     } else if (waiting.length > 0) {
       // Start a new generator when one finishes
