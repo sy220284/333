@@ -2386,7 +2386,7 @@ async function run(): Promise<CommanderCommand> {
       // in managed settings). Runs after onboarding so managed settings and
       // login state are fully loaded.
       const orgValidation = await validateForceLoginOrg();
-      if (!orgValidation.valid) {
+      if (orgValidation.valid === false) {
         await exitWithError(root, orgValidation.message);
       }
     }
@@ -2698,7 +2698,7 @@ async function run(): Promise<CommanderCommand> {
       profileCheckpoint('before_validateForceLoginOrg');
       // Validate org restriction for non-interactive sessions
       const orgValidation = await validateForceLoginOrg();
-      if (!orgValidation.valid) {
+      if (orgValidation.valid === false) {
         process.stderr.write(`${orgValidation.message}\n`);
         process.exit(1);
       }
