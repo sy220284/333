@@ -1,4 +1,5 @@
 import vm from 'node:vm'
+import { parseWorkflowMetaLiteral } from './workflowMetaParser.mjs'
 import {createHash} from 'node:crypto'
 const metaPattern=/\bexport\s+const\s+meta\s*=\s*/
 export function workflowMeta(script){
@@ -15,7 +16,7 @@ export function workflowMeta(script){
   if(c==='}'&&--depth===0){end=i+1;break}
  }
  if(end<0)throw Error('Unclosed workflow meta object')
- const value=vm.runInNewContext('('+script.slice(open,end)+')',{}, {timeout:500,contextCodeGeneration:{strings:false,wasm:false}})
+ const value=parseWorkflowMetaLiteral(script.slice(open,end))
  if(!value||typeof value.name!=='string'||!/^[\w-]{1,80}$/.test(value.name)||
    typeof value.description!=='string'||!value.description.trim()||
    value.phases!==undefined&&(!Array.isArray(value.phases)||value.phases.some(p=>typeof p.title!=='string'||typeof p.detail!=='string')))
