@@ -19,10 +19,10 @@ test('real cross-process UDS message is accepted and reaches receiver queue', as
   child.once('exit', () => onOutput())
   function waitFor(marker: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Timeout ' + marker + '; ' + output + '; ' + stderr)), 15000)
+      const timeout = setTimeout(() => reject(new Error(`Timeout ${marker}; ${output}; ${stderr}`)), 15000)
       onOutput = () => {
         if (output.includes(marker)) { clearTimeout(timeout); resolve() }
-        else if (child.exitCode !== null) { clearTimeout(timeout); reject(new Error('Receiver exited ' + child.exitCode + ': ' + stderr)) }
+        else if (child.exitCode !== null) { clearTimeout(timeout); reject(new Error(`Receiver exited ${child.exitCode}: ${stderr}`)) }
       }
       onOutput()
     })

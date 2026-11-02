@@ -41,6 +41,8 @@ on:
       - 'src/services/tips/tipScheduler.ts'
       - 'tests/m1-spinner-tips.test.mjs'
       - 'tests/m1-list-agents.test.mjs'
+      - 'tests/m1-uds-roundtrip.test.ts'
+      - 'tests/fixtures/m1-uds-receiver.ts'
       - 'src/tools/ListAgentsTool/**'
       - 'tests/m1-taskoutput-retirement.test.mjs'
       - 'src/services/tips/tipEligibility.d.mts'
