@@ -2778,7 +2778,10 @@ export function extractAtMentionedFiles(content: string): string[] {
   }
 
   // Extract regular mentions
-  const regularMatchArray = content.match(regularAtMentionRegex) || []
+  const regularMatchArray = Array.from(
+    content.matchAll(regularAtMentionRegex),
+    match => match[0],
+  )
   regularMatchArray.forEach(match => {
     const filename = match.slice(match.indexOf('@') + 1)
     // Don't include if it starts with a quote (already handled as quoted)
