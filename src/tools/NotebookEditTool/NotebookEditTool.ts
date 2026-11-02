@@ -1,4 +1,3 @@
-import { feature } from 'bun:bundle'
 import { extname, isAbsolute, resolve } from 'node:path'
 import {
   fileHistoryEnabled,
@@ -120,11 +119,18 @@ export const NotebookEditTool = buildTool({
     return outputSchema()
   },
   toAutoClassifierInput(input) {
-    if (feature('TRANSCRIPT_CLASSIFIER')) {
-      const mode = input.edit_mode ?? 'replace'
-      return `${input.notebook_path} ${mode}: ${input.new_source}`
+    // 2.1.310 sends structured source additions/deletions to the auto-mode
+    // classifier. Returning '' suppresses the safety review entirely.
+    const mode = input.edit_mode ?? 'replace'
+    return {
+      notebook_path: input.notebook_path,
+      mode,
+      ...(input.cell_id !== undefined && { cell_id: input.cell_id }),
+      ...(mode !== 'delete' && input.cell_type !== undefined && { cell_type: input.cell_type }),
+      ...(mode === 'delete'
+        ? { ignored_source: input.new_source }
+        : { adds: input.new_source }),
     }
-    return ''
   },
   getPath(input): string {
     return input.notebook_path
