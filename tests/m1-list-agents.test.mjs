@@ -92,3 +92,16 @@ test('cross-session gate and acknowledgements are explicit',async()=>{
   assert.match(server,/chmod\(socketPath, 0o600\)/)
   assert.match(server,/socket\.end\('OK\\n'\)/)
 })
+
+test('active in-process teammates remain discoverable without a team file',()=>{
+ const active={member:{name:'runner',agentType:'general-purpose',status:'running'}}
+ assert.deepEqual(listReachableTeammates(null,'lead',active),[
+   {name:'runner',to:'runner',channel:'team',type:'general-purpose',status:'running'}])
+ const peers=listReachableTeammates({members:[{name:'RUNNER'},{name:'second'}]},'lead',active)
+ assert.deepEqual(peers.map(p=>p.name),['runner','second'])
+})
+test('ListPeers legacy loader is removed while ListAgents remains registered',async()=>{
+ const tools=await source('src/tools.ts')
+ assert.match(tools,/ListAgentsTool,/)
+ assert.doesNotMatch(tools,/const ListPeersTool = feature\('UDS_INBOX'\)/)
+})
