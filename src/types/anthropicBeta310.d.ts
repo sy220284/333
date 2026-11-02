@@ -21,7 +21,7 @@ declare module '@anthropic-ai/sdk/resources/beta/messages/messages.mjs' {
   }
 
   interface BetaOutputConfig {
-    effort?: string
+    effort?: 'low' | 'medium' | 'high' | 'max'
     format?: BetaJSONOutputFormat
   }
 

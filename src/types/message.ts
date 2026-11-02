@@ -71,6 +71,8 @@ export interface AssistantMessage extends MessageHeader {
   errorDetails?: string
   isApiErrorMessage?: boolean
   advisorModel?: string
+  /** Internal 2.1.310 message_delta metadata, intentionally opaque. */
+  research?: unknown
   thinkingDurationMs?: number
   thinkingDisplay?: string
   parent_tool_use_id?: string | null

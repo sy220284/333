@@ -67,7 +67,6 @@ const FOREGROUND_529_RETRY_SOURCES = new Set<QuerySource>([
   'sdk',
   'agent:custom',
   'agent:default',
-  'agent:builtin',
   'compact',
   'hook_agent',
   'hook_prompt',
@@ -84,7 +83,9 @@ const FOREGROUND_529_RETRY_SOURCES = new Set<QuerySource>([
 function shouldRetry529(querySource: QuerySource | undefined): boolean {
   // undefined → retry (conservative for untagged call paths)
   return (
-    querySource === undefined || FOREGROUND_529_RETRY_SOURCES.has(querySource)
+    querySource === undefined ||
+    querySource.startsWith('agent:builtin:') ||
+    FOREGROUND_529_RETRY_SOURCES.has(querySource)
   )
 }
 

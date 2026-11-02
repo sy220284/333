@@ -4152,8 +4152,8 @@ async function run(): Promise<CommanderCommand> {
   // which redirects to the main command with full TUI support.
   if (feature('DIRECT_CONNECT')) {
     program.command('open <cc-url>').description('Connect to a Claude Code server (internal — use cc:// URLs)').option('-p, --print [prompt]', 'Print mode (headless)').option('--output-format <format>', 'Output format: text, json, stream-json', 'text').action(async (ccUrl: string, opts: {
-      print?: string | boolean;
-      outputFormat: string;
+      print?: string | true;
+      outputFormat?: string;
     }) => {
       const {
         parseConnectUrl
@@ -4186,7 +4186,7 @@ async function run(): Promise<CommanderCommand> {
       } = await import('./server/connectHeadless.js');
       const prompt = typeof opts.print === 'string' ? opts.print : '';
       const interactive = opts.print === true;
-      await runConnectHeadless(connectConfig, prompt, opts.outputFormat, interactive);
+      await runConnectHeadless(connectConfig, prompt, opts.outputFormat ?? 'text', interactive);
     });
   }
 

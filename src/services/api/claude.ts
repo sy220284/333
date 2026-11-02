@@ -1727,7 +1727,7 @@ async function* queryModel(
     // Fast mode: header is latched session-stable (cache-safe), but
     // `speed='fast'` stays dynamic so cooldown still suppresses the actual
     // fast-mode request without changing the cache key.
-    let speed: BetaMessageStreamParams['speed']
+    let speed: 'standard' | 'fast' | undefined
     const isFastModeForRetry =
       isFastModeEnabled() &&
       isFastModeAvailable() &&
@@ -2397,7 +2397,7 @@ async function* queryModel(
               })
             }
 
-            if (stopReason === 'model_context_window_exceeded') {
+            if (String(stopReason) === 'model_context_window_exceeded') {
               logEvent('tengu_context_window_exceeded', {
                 max_tokens: maxOutputTokens,
                 output_tokens: usage.output_tokens,
