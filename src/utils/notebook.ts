@@ -19,6 +19,18 @@ import { jsonParse } from './slowOperations.js'
 
 const LARGE_OUTPUT_THRESHOLD = 10000
 
+/** Exact 2.1.310 minimum Notebook cell-shape requirement, shared by Read/Edit. */
+export function isValidNotebookContent(value: unknown): value is NotebookContent {
+  if (value === null || typeof value !== 'object') return false
+  const cells = (value as { cells?: unknown }).cells
+  return Array.isArray(cells) && cells.every(cell =>
+    cell !== null &&
+    typeof cell === 'object' &&
+    (typeof cell.source === 'string' ||
+      (Array.isArray(cell.source) && cell.source.every((line: unknown) => typeof line === 'string'))),
+  )
+}
+
 function isLargeOutputs(
   outputs: (NotebookCellSourceOutput | undefined)[],
 ): boolean {
@@ -168,8 +180,11 @@ export async function readNotebook(
   const fullPath = expandPath(notebookPath)
   const buffer = await getFsImplementation().readFileBytes(fullPath)
   const content = buffer.toString('utf-8')
-  const notebook = jsonParse(content) as NotebookContent
-  const language = notebook.metadata.language_info?.name ?? 'python'
+  const notebook: unknown = jsonParse(content)
+  if (!isValidNotebookContent(notebook)) {
+    throw new Error('Notebook cells are missing or contain invalid source content.')
+  }
+  const language = notebook.metadata?.language_info?.name ?? 'python'
   if (cellId) {
     const cell = notebook.cells.find(c => c.id === cellId)
     if (!cell) {
