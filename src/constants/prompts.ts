@@ -111,8 +111,8 @@ export const CLAUDE_CODE_DOCS_MAP_URL =
  * - src/utils/api.ts (splitSysPromptPrefix)
  * - src/services/api/claude.ts (buildSystemPromptBlocks)
  */
-export const SYSTEM_PROMPT_DYNAMIC_BOUNDARY =
-  '__SYSTEM_PROMPT_DYNAMIC_BOUNDARY__'
+export { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from './systemPromptBoundary.js'
+import { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from './systemPromptBoundary.js'
 
 // @[MODEL LAUNCH]: Update the latest frontier model.
 const FRONTIER_MODEL_NAME = 'Claude Opus 4.6'
