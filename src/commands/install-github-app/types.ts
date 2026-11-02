@@ -29,7 +29,7 @@ export interface State {
   selectedWorkflows: Workflow[]
   selectedApiKeyOption: 'existing' | 'new' | 'oauth'
   authType: 'api_key' | 'oauth_token'
-  workflowAction?: 'skip' | 'overwrite'
+  workflowAction?: 'skip' | 'update'
   error?: string
   errorReason?: string
   errorInstructions?: string[]
