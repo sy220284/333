@@ -49,6 +49,9 @@ const KITTY_FLAGS_RE = /^\x1b\[\?(\d+)u$/
 // Ctrl+F3 = CSI 1;5 R, etc.) — plain CSI row;col R is genuinely ambiguous.
 // eslint-disable-next-line no-control-regex
 const CURSOR_POSITION_RE = /^\x1b\[\?(\d+);(\d+)R$/
+// 2.1.310: CSI ? 997 ; 1/2 n — unsolicited dark/light theme notification.
+// eslint-disable-next-line no-control-regex
+const THEME_NOTIFICATION_RE = /^\x1b\[\?997;([12])n$/
 // OSC response: OSC code ; data (BEL|ST)
 // eslint-disable-next-line no-control-regex
 const OSC_RESPONSE_RE = /^\x1b\](\d+);(.*?)(?:\x07|\x1b\\)$/s
@@ -106,6 +109,7 @@ export type TerminalResponse =
   | { type: 'cursorPosition'; row: number; col: number }
   /** OSC response: generic operating-system-command reply (e.g. OSC 11 bg color) */
   | { type: 'osc'; code: number; data: string }
+  | { type: 'themeNotify'; dark: boolean }
   /** XTVERSION: terminal name/version string (answer to CSI > 0 q).
    *  Example values: "xterm.js(5.5.0)", "ghostty 1.2.0", "iTerm2 3.6". */
   | { type: 'xtversion'; name: string }
@@ -142,6 +146,10 @@ function parseTerminalResponse(s: string): TerminalResponse | null {
 
     if ((m = KITTY_FLAGS_RE.exec(s))) {
       return { type: 'kittyKeyboard', flags: parseInt(m[1]!, 10) }
+    }
+
+    if ((m = THEME_NOTIFICATION_RE.exec(s))) {
+      return { type: 'themeNotify', dark: m[1] === '1' }
     }
 
     if ((m = CURSOR_POSITION_RE.exec(s))) {
