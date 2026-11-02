@@ -60,12 +60,16 @@ export class TaskOutput {
     onProgress: ProgressCallback | null,
     stdoutToFile = false,
     maxMemory: number = DEFAULT_MAX_MEMORY,
+    persistPipeOutput = false,
   ) {
     this.taskId = taskId
     this.path = getTaskOutputPath(taskId)
     this.stdoutToFile = stdoutToFile
     this.#maxMemory = maxMemory
     this.#onProgress = onProgress
+    // Monitor streams stdout events separately while retaining a readable
+    // on-disk task log containing both stdout and stderr.
+    if (persistPipeOutput && !stdoutToFile) this.#disk = new DiskTaskOutput(taskId)
 
     // Register for polling when stdout goes to a file and progress is needed.
     // Actual polling is started/stopped by React via startPolling/stopPolling.

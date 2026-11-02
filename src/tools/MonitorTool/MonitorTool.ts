@@ -10,6 +10,8 @@ import { startWebSocketMonitor } from '../../tasks/MonitorWsTask/MonitorWsTask.j
 import { enqueuePendingNotification } from '../../utils/messageQueueManager.js'
 import { isPublicIp, validateMonitorArguments, validateMonitorWsUrl } from '../../utils/monitorProtocol.mjs'
 import { lazySchema } from '../../utils/lazySchema.js'
+import { getTaskOutputPath } from '../../utils/task/diskOutput.js'
+import { escapeXml } from '../../utils/xml.js'
 
 const inputSchema = lazySchema(() => z.strictObject({
   description:z.string().describe('Short human-readable description of what you are monitoring (shown in notifications).'),
@@ -80,21 +82,21 @@ export const MonitorTool=buildTool({
     const {abortController,getAppState}=context
     const setAppState=context.setAppStateForTasks??context.setAppState
     let taskId:string|undefined
-    let lastOutput='',buffered=''
+    let buffered=''
     const pendingLines:string[]=[]
     const emitLine=(line:string)=>{
       if(!line.trim())return
       if(!taskId){pendingLines.push(line);return}
-      enqueuePendingNotification({mode:'task-notification',priority:'next',
-        value:`Monitor "${input.description}" [task ${taskId}]: ${line}`})
+      const toolUseIdLine=context.toolUseId?`<tool-use-id>${escapeXml(context.toolUseId)}</tool-use-id>\n`:''
+      enqueuePendingNotification({mode:'task-notification',priority:'next',agentId:context.agentId,
+        value:`<task-notification>\n<task-id>${escapeXml(taskId)}</task-id>\n${toolUseIdLine}<output-file>${escapeXml(getTaskOutputPath(taskId))}</output-file>\n<event>${escapeXml(line)}</event>\n</task-notification>`})
     }
     const shell=await exec(command,abortController.signal,'bash',{
       timeout:timeoutMs,
       shouldUseSandbox:shouldUseSandbox({command:command}),
-      onProgress(_last,all){
-        const full=typeof all==='string'?all:''
-        const delta=full.startsWith(lastOutput)?full.slice(lastOutput.length):full
-        lastOutput=full;buffered+=delta
+      persistPipeOutput:true,
+      onStdout(chunk){
+        buffered+=chunk
         let next=buffered.indexOf('\n')
         while(next>=0){
           const line=buffered.slice(0,next);buffered=buffered.slice(next+1)

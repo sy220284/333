@@ -172,6 +172,8 @@ export type ExecOptions = {
   shouldAutoBackground?: boolean
   /** When provided, stdout is piped (not sent to file) and this callback fires on each data chunk. */
   onStdout?: (data: string) => void
+  /** Persist streamed stdout and stderr to the background task output file. */
+  persistPipeOutput?: boolean
 }
 
 /**
@@ -191,6 +193,7 @@ export async function exec(
     shouldUseSandbox,
     shouldAutoBackground,
     onStdout,
+    persistPipeOutput,
   } = options ?? {}
   const commandTimeout = timeout || DEFAULT_TIMEOUT
 
@@ -283,7 +286,7 @@ export async function exec(
   // This lets callers receive real-time stdout callbacks.
   const usePipeMode = !!onStdout
   const taskId = generateTaskId('local_bash')
-  const taskOutput = new TaskOutput(taskId, onProgress ?? null, !usePipeMode)
+  const taskOutput = new TaskOutput(taskId, onProgress ?? null, !usePipeMode, undefined, persistPipeOutput ?? false)
   await mkdir(getTaskOutputDir(), { recursive: true })
 
   // In file mode, both stdout and stderr go to the same file fd.
