@@ -62,6 +62,9 @@ export async function startUdsMessaging(socketPath = getDefaultUdsSocketPath()):
   registerCleanup(async () => {
     await new Promise<void>(resolve => server.close(() => resolve()))
     await unlink(socketPath)
-    if (currentPath === socketPath) currentPath = undefined
+    if (currentPath === socketPath) {
+      currentPath = undefined
+      if (process.env.CLAUDE_CODE_MESSAGING_SOCKET === socketPath) delete process.env.CLAUDE_CODE_MESSAGING_SOCKET
+    }
   })
 }
