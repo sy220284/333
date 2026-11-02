@@ -15,7 +15,11 @@ permissions:
 
 jobs:
   sed-preview-parity:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -26,5 +30,5 @@ jobs:
         run: |
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
-      - name: 使用 GNU sed 实测编辑预览与实际写入一致
+      - name: 对照本机 GNU/BSD sed 验证预览与真实文件写入
         run: bun test tests/sed-edit-parity.test.ts
