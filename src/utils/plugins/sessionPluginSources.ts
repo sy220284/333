@@ -4,7 +4,7 @@ import { mkdtemp, readFile, readdir, rm, writeFile, stat } from 'node:fs/promise
 import { isIP } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { extractZipToDirectory } from './zipCache.js'
+import { extractSessionZip } from './sessionZipExtractor.js'
 import { registerCleanup } from '../cleanupRegistry.js'
 
 const MAX_ZIP_BYTES = 64 * 1024 * 1024
@@ -124,7 +124,7 @@ export async function prepareSessionPluginPaths(directories: string[], urls: str
     const buf = await readFile(location)
     if (buf.length>MAX_ZIP_BYTES) throw new Error('Local inline plugin ZIP exceeds 64 MiB')
     const dest=join(root,String(count++))
-    await extractZipToDirectory(location,dest)
+    await extractSessionZip(location,dest)
     paths.push(...await pluginRoots(dest))
   }
   for (const url of urls) {
@@ -132,7 +132,7 @@ export async function prepareSessionPluginPaths(directories: string[], urls: str
     const archive=join(root,`${count}-${randomBytes(4).toString('hex')}.zip`)
     const dest=join(root,String(count++))
     await writeFile(archive,buf,{mode:0o600})
-    await extractZipToDirectory(archive,dest)
+    await extractSessionZip(archive,dest)
     paths.push(...await pluginRoots(dest))
   }
   return paths
