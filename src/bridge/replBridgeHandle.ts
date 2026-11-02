@@ -14,9 +14,21 @@ import { toCompatSessionId } from './sessionIdCompat.js'
  */
 
 let handle: ReplBridgeHandle | null = null
+let outboundOnly = false
 
-export function setReplBridgeHandle(h: ReplBridgeHandle | null): void {
+// The CCR mirror can upload session events but cannot receive peer traffic.
+// Keep that capability alongside the one process-wide bridge handle so
+// message tools and the deferred-tool picker apply the same live gate.
+export function isReplBridgeActive(): boolean {
+  return handle !== null && !outboundOnly
+}
+
+export function setReplBridgeHandle(
+  h: ReplBridgeHandle | null,
+  isOutboundOnly: boolean,
+): void {
   handle = h
+  outboundOnly = isOutboundOnly
   // Publish (or clear) our bridge session ID in the session record so other
   // local peers can dedup us out of their bridge list — local is preferred.
   void updateSessionBridgeId(getSelfBridgeCompatId() ?? null).catch(() => {})
