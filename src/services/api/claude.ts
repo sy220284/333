@@ -222,6 +222,7 @@ import {
   logEvent,
 } from '../analytics/index.js'
 import {
+  COMPACTABLE_TOOLS,
   consumePendingCacheEdits,
   getPinnedCacheEdits,
   markToolsSentToAPIState,
@@ -231,6 +232,11 @@ import { getInitializationStatus } from '../lsp/manager.js'
 import { isToolFromMcpServer } from '../mcp/utils.js'
 import { withStreamingVCR, withVCR } from '../vcr.js'
 import { CLIENT_REQUEST_ID_HEADER, getAnthropicClient } from './client.js'
+import {
+  ContextHintRecoveryError,
+  createContextHintController,
+  type HintError,
+} from './contextHintController.js'
 import {
   API_ERROR_MESSAGE_PREFIX,
   CUSTOM_OFF_SWITCH_MESSAGE,
@@ -1023,10 +1029,28 @@ async function* queryModel(
   tools: Tools,
   signal: AbortSignal,
   options: Options,
+  contextHintRetried = false,
 ): AsyncGenerator<
   StreamEvent | AssistantMessage | SystemAPIErrorMessage,
   void
 > {
+  const originalSystemPrompt = systemPrompt
+  const contextHintController = contextHintRetried
+    ? null
+    : createContextHintController({
+        enabled: getFeatureValue_CACHED_MAY_BE_STALE('tengu_hazel_osprey', false),
+        firstParty: shouldIncludeFirstPartyOnlyBetas(),
+        querySource: options.querySource,
+        compactableTools: COMPACTABLE_TOOLS,
+        is529Error: error => error.status === 529,
+        persist: async (content, toolUseId) => {
+          if (!content) return null
+          const { persistToolResult } = await import('../../utils/toolResultStorage.js')
+          const result = await persistToolResult(content, toolUseId)
+          if ('error' in result) throw new Error(result.error)
+          return `<persisted-output>Tool result saved to: ${result.filepath}\n\nUse Read to view</persisted-output>`
+        },
+      })
   // Check cheap conditions first — the off-switch await blocks on GrowthBook
   // init (~10ms). For non-Opus models (haiku, sonnet) this skips the await
   // entirely. Subscribers don't hit this path at all.
@@ -1610,6 +1634,11 @@ async function* queryModel(
           ]
         : []
     const extraBodyParams = getExtraBodyParams(bedrockBetas)
+    const hintRequest = contextHintController?.buildRequestParams(messages)
+    if (hintRequest) {
+      if (!betasParams.includes(hintRequest.beta)) betasParams.push(hintRequest.beta)
+      if (hintRequest.body) Object.assign(extraBodyParams, hintRequest.body)
+    }
 
     const outputConfig: BetaOutputConfig = {
       ...((extraBodyParams.output_config as BetaOutputConfig) ?? {}),
@@ -1874,17 +1903,27 @@ async function* queryModel(
         // BetaMessageStream calls partialParse() on every input_json_delta, which we don't need
         // since we handle tool input accumulation ourselves
         // biome-ignore lint/plugin: main conversation loop handles attribution separately
-        const result = await anthropic.beta.messages
-          .create(
-            { ...params, stream: true },
-            {
-              signal,
-              ...(clientRequestId && {
-                headers: { [CLIENT_REQUEST_ID_HEADER]: clientRequestId },
-              }),
-            },
+        let result
+        try {
+          result = await anthropic.beta.messages
+            .create(
+              { ...params, stream: true },
+              {
+                signal,
+                ...(clientRequestId && {
+                  headers: { [CLIENT_REQUEST_ID_HEADER]: clientRequestId },
+                }),
+              },
+            )
+            .withResponse()
+        } catch (error) {
+          const recovery = await contextHintController?.onRequestError(
+            error as HintError,
+            messages,
           )
-          .withResponse()
+          if (recovery) throw new ContextHintRecoveryError(recovery)
+          throw error
+        }
         queryCheckpoint('query_response_headers_received')
         streamRequestId = result.request_id
         streamResponse = result.response
@@ -2486,6 +2525,15 @@ async function* queryModel(
         })
       }
 
+      if (
+        !signal.aborted &&
+        newMessages.length === 0 &&
+        contextHintController?.classifyStreamError(streamingError as HintError)
+      ) {
+        const recovery = await contextHintController.onStreamFallback(messages)
+        if (recovery) throw new ContextHintRecoveryError(recovery)
+      }
+
       if (streamingError instanceof APIUserAbortError) {
         // Check if the abort signal was triggered by the user (ESC key)
         // If the signal is aborted, it's a user-initiated abort
@@ -2651,6 +2699,23 @@ async function* queryModel(
       clearStreamIdleTimers()
     }
   } catch (errorFromRetry) {
+    const retryCause =
+      errorFromRetry instanceof CannotRetryError
+        ? errorFromRetry.originalError
+        : errorFromRetry
+    if (retryCause instanceof ContextHintRecoveryError) {
+      releaseStreamResources()
+      yield* queryModel(
+        retryCause.recovery.messages,
+        originalSystemPrompt,
+        thinkingConfig,
+        tools,
+        signal,
+        options,
+        true,
+      )
+      return
+    }
     // FallbackTriggeredError must propagate to query.ts, which performs the
     // actual model switch. Swallowing it here would turn the fallback into a
     // no-op — the user would just see "Model fallback triggered: X -> Y" as
