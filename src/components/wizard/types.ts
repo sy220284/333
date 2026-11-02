@@ -14,7 +14,7 @@ import type {
 
 export type WizardStepComponent<
   T extends Record<string, unknown> = Record<string, unknown>,
-> = ComponentType
+> = ComponentType<{ readonly wizardData?: T }>
 
 export type WizardProviderProps<T extends Record<string, unknown>> = {
   steps: WizardStepComponent<T>[]
