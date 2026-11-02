@@ -17,6 +17,19 @@
 6. 目标版写入由按路径串行机制与可重复检查的文件读写操作包裹；必须在后续关单中复验并发编辑、符号链接、非普通文件、文件历史及失败恢复。
 7. 目标版允许 `metadata` 缺失，仅要求 `cells` 为数组、每个 cell 的 `source` 为字符串或字符串数组；本轮按这一真实格式条件调整初步验证。
 
+## 官方 2.1.310 x64 同场景真实运行（已确认）
+
+使用资料库官方 Linux x64 可执行程序（SHA-256 `b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56`），隔离 HOME/工作目录、禁用遥测，以 localhost 伪造 Anthropic SSE 模型响应并要求真实程序执行四次模型往返：
+
+1. `Read` 读取 `e41.ipynb` 的 `stable-cell`，模型实际收到 `print(1)`。
+2. 调用 `NotebookEdit` 将该单元格替换为 `print(2)`，工具真实返回 `Updated cell stable-cell with print(2)`。
+3. 再次调用 `Read`，模型实际收到 `print(2)`，没有返回过期的 `file_unchanged`。
+4. 模型最终返回测试标记，CLI 退出码 **0**；最终磁盘文件中同一 `stable-cell` 的源内容确实为 `print(2)`。
+
+**注册条件复查**：常规模式下模型首轮可见 `ToolSearch` 与 `DeferredToolPlaceholder`，系统提示明确列出延迟可用的 `NotebookEdit`；简化模式 `CLAUDE_CODE_SIMPLE=1` 会省略该发现机制，直接请求 NotebookEdit 返回不可用。早期将简化模式的失败误当成正式发行包默认禁用，已经通过清除该变量的正例重新验证并纠正。虽然 `chunk-gmxe4kpt.js:663` 有硬编码关闭的 `RU()`，它只影响 `chunk-p8z8s65a.js:4192–4194` 的一条扩展工具装载路径，**不能据此推断正常模式的延迟工具不存在**。
+
+实测摘要见 [`F034-Notebook-官方x64-E41实测.json`](./F034-Notebook-官方x64-E41实测.json)。相同本地假模型/临时文件测试协议已沉淀为 [`tests/m1-notebook-e41-cli.mjs`](../../../tests/m1-notebook-e41-cli.mjs)，可对官方二进制与 333 重建后的 CLI 复跑。此项证据验证了**官方原版** E41，333 候选版的完整 CLI 运行仍以其 GitHub Actions 检查为准。
+
 ## 333 的实际代码修复与测试
 
 - 正式工具入口仍为 `src/tools/NotebookEditTool/NotebookEditTool.ts`，通过 `notebookMutation.ts` 共享校验与实际修改逻辑。
@@ -28,11 +41,11 @@
 - `tests/notebook-read-edit-integration.test.ts`：真正通过 `FileReadTool.call` → `NotebookEditTool.validateInput/call` → `FileReadTool.call`，验证旧缓存不得掩盖新内容。
 - `.github/workflows/m1-sed-preview-parity.yml`：Linux/macOS/Windows 执行专用测试与逐文件 Biome，Linux/macOS 额外运行 GNU/BSD sed 真实文件差分。
 
-- `tests/notebook-edit-write-integration.test.ts` 还验证自动分类器必须传出新增源内容和删除操作，避免旧版条件关闭时传空字符串。
+- `tests/notebook-edit-write-integration.test.ts` 验证自动分类器的两种正式模式：默认输出可读的编辑摘要，`CLAUDE_CODE_AUTO_MODE_EDIT_REMOVAL` 启用后发送结构化 `adds/ignored_source`；两个分支都参与审查。
 - `src/utils/notebookCells.ts` 作为独立、无重型工具依赖的源数据契约，供 Read、NotebookEdit 共同复用。
 
 ## 准确状态
 
-`F034` 已找到目标实现及实际消费者，部分合同有 333 修改和跨平台测试，可登记为 **CONTRACT_CONFIRMED + IMPLEMENTED + INTEGRATED + TESTED（所列子合同）**。最后的 M10 **ACCEPTED** 必须等目标版正式可执行程序同条件回归与跨工具文件锁/权限/软链/异常路径差分完成后签署；所有分支覆盖不能只依据此项新增测试认定完结。
+`F034` 已找到目标实现及实际消费者，部分合同有 333 修改和跨平台测试，可登记为 **CONTRACT_CONFIRMED + IMPLEMENTED + INTEGRATED + TESTED（所列子合同）**。最后的 M10 **ACCEPTED** 必须等 333 重建版 CLI 在同一个 E41 测试中通过，并对跨工具文件锁/权限/软链/异常路径完成差分验收后签署；所有分支覆盖不能只依据此项新增测试认定完结。
 
 此文记录可复跑的目标源码锚点和验收范围；状态统计以每次实际 GitHub Actions 通过结果为准。
