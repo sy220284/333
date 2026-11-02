@@ -51,11 +51,9 @@ function countResultTokens(
   if (!Array.isArray(content)) return 0
   return content.reduce((total, part) => {
     if (part.type === 'text') return total + estimate(part.text)
-    if (part.type === 'image' || part.type === 'document') return total + 2000
-    if (part.type === 'search_result') {
-      return total + estimate(JSON.stringify(part.content))
-    }
-    return total
+    // The public SDK currently types inline results as text | image.
+    // Document blocks from newer servers also take the same ~2k estimate.
+    return total + 2000
   }, 0)
 }
 
@@ -123,7 +121,7 @@ export async function keepRecentToolResults(
       if (block.type !== 'tool_result' || !clearedIds.has(block.tool_use_id)) return block
       const hasMedia =
         Array.isArray(block.content) &&
-        block.content.some(part => part.type === 'image' || part.type === 'document')
+        block.content.some(part => part.type !== 'text')
       const content = hasMedia
         ? CLEARED_TOOL_RESULT
         : (clearedContent.get(block.tool_use_id) ?? CLEARED_TOOL_RESULT)
