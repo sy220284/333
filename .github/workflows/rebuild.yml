@@ -61,7 +61,7 @@ jobs:
         run: |
           set -euo pipefail
           test -f dist/cli.js
-          bun dist/cli.js --version | grep -F '2.1.88'
+          bun dist/cli.js --version | grep -Fx "$(node -p \"require(\'./package.json\').version\") (Claude Code)"
           bun dist/cli.js --help | grep -F -- '--print'
       - name: 打包独立发行程序和平台资源
         run: node build/package-release.mjs
@@ -115,7 +115,7 @@ jobs:
       - name: 保存独立重建版发行产物
         uses: actions/upload-artifact@v4
         with:
-          name: rebuilt-claude-2.1.88-${{ matrix.os }}
+          name: rebuilt-claude-2.1.310-${{ matrix.os }}
           path: dist/
           retention-days: 14
           if-no-files-found: error
