@@ -28,8 +28,11 @@ describe('2.1.310 结构化Diff的TypeScript实现链路', () => {
       const lines = new ColorDiff(hunk, null, 'notes.txt').render('dark', 80, false)
       expect(lines).not.toBeNull()
       expect(lines?.length).toBeGreaterThan(0)
-      expect(lines?.join('')).toContain('old value')
-      expect(lines?.join('')).toContain('new value')
+      // The renderer places ANSI colors between word-diff spans; inspect
+      // the visible terminal text rather than ANSI-encoded byte adjacency.
+      const visibleDiff = Bun.stripANSI(lines!.join(''))
+      expect(visibleDiff).toContain('old value')
+      expect(visibleDiff).toContain('new value')
 
       const file = new ColorFile('one\ntwo\n', 'notes.txt').render('dark', 80, false)
       expect(file?.length).toBe(2)
