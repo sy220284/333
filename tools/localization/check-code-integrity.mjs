@@ -30,7 +30,8 @@ function inspect(path) {
   function visit(node) {
     // Language-alias dictionaries may legitimately use native words as keys
     // (e.g. { 日本語: 'ja' }). Check references/declarations, not these keys.
-    const dictionaryKey = node.parent !== undefined && ts.isPropertyAssignment(node.parent) && node.parent.name === node
+    const parent = node.parent
+    const dictionaryKey = parent != null && ts.isPropertyAssignment(parent) && parent.name === node
     if (ts.isIdentifier(node) && HAN.test(node.text) && !dictionaryKey) {
       const {line, character} = source.getLineAndCharacterOfPosition(node.getStart(source))
       violations.push(`${path}:${line+1}:${character+1} translated identifier ${node.text}`)
