@@ -6,3 +6,12 @@ export type DeepImmutable<T> =
   T extends readonly (infer Item)[] ? readonly DeepImmutable<Item>[] :
   T extends object ? { readonly [P in keyof T]: DeepImmutable<T[P]> } :
   T
+
+/**
+ * Enumerate each complete ordering of a finite literal union. Used by the
+ * command queue's NON_EDITABLE_MODES declaration to enforce every variant is
+ * represented exactly once at compile time.
+ */
+export type Permutations<T, Current = T> =
+  [T] extends [never] ? [] :
+  T extends Current ? [T, ...Permutations<Exclude<Current, T>>] : never
