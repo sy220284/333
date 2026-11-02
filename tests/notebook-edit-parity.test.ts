@@ -110,7 +110,7 @@ test('Notebook replace/delete requires ID; insert requires cell type', () => {
 test('Notebook rejects malformed cell metadata/array before mutating', () => {
   const nb = notebook()
   const bad = { ...nb, cells: null } as unknown as NotebookContent
-  expect(() => applyNotebookEdit(bad, { cell_type: 'code', new_source: 'x', edit_mode: 'insert' })).toThrow(/required nbformat/)
+  expect(() => applyNotebookEdit(bad, { cell_type: 'code', new_source: 'x', edit_mode: 'insert' })).toThrow(/valid cells and cell source/)
 })
 
 test('Notebook mutation retains document-level metadata and other cells', () => {
