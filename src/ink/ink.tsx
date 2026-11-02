@@ -1502,10 +1502,18 @@ export default class Ink {
     this.restoreStderr?.();
     this.unsubscribeTTYHandlers?.();
 
-    // Non-TTY environments don't handle erasing ansi escapes well, so it's better to
-    // only render last frame of non-static output
-    const diff = this.log.renderPreviousOutput_DEPRECATED(this.frontFrame);
-    writeDiffToTerminal(this.terminal, optimize(diff));
+    // Accessibility output is a persistent text transcript. Drain queued
+    // announcements before exit, without replaying the normal frame diff.
+    if (isScreenReaderEnabled()) {
+      this.accessibleAnnouncements.endStartupQuiet();
+      for (const announcement of this.accessibleAnnouncements.drain()) {
+        this.options.stdout.write(announcement);
+      }
+    } else {
+      // On the standard terminal, restore the previous framed output.
+      const diff = this.log.renderPreviousOutput_DEPRECATED(this.frontFrame);
+      writeDiffToTerminal(this.terminal, optimize(diff));
+    }
 
     // Clean up terminal modes synchronously before process exit.
     // React's componentWillUnmount won't run in time when process.exit() is called,
@@ -1550,6 +1558,10 @@ export default class Ink {
     if (this.drainTimer !== null) {
       clearTimeout(this.drainTimer);
       this.drainTimer = null;
+    }
+    if (this.accessibleFlushTimer !== null) {
+      clearTimeout(this.accessibleFlushTimer);
+      this.accessibleFlushTimer = null;
     }
 
     reconciler.updateContainerSync(null, this.container, null, noop);
