@@ -22,6 +22,7 @@ on:
       - 'src/components/FeedbackSurvey/utils.ts'
       - 'build/m1-source-gap-ast.mjs'
       - 'build/m1-inline-source-map-audit.py'
+      - 'build/m1-x64-reference-probe.mjs'
       - 'tests/m1-inline-map-audit.test.mjs'
       - 'src/components/wizard/types.ts'
       - 'src/services/tips/types.ts'
@@ -79,3 +80,33 @@ jobs:
         run: node build/m1-verify.mjs --changelog "${RUNNER_TEMP}/claude-changelog-2.1.310.md"
       - name: 确认只读验证没有改写研究数据
         run: test -z "$(git status --porcelain)"
+
+  m1-reference-linux-x64:
+    name: 2.1.310 原版 Linux x64 真实 CLI 对照
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 下载固定目标版官方 x64 程序
+        run: |
+          curl --fail --location --silent --show-error --retry 3 \
+            "https://downloads.claude.ai/claude-code-releases/2.1.310/linux-x64/claude" \
+            --output "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
+          echo "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  ${RUNNER_TEMP}/claude-2.1.310-linux-x64" | sha256sum --check
+          chmod 700 "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
+      - name: 使用隔离配置实际运行官方 x64 无授权功能矩阵
+        run: |
+          node build/m1-x64-reference-probe.mjs \
+            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --report "${RUNNER_TEMP}/m1-reference-linux-x64.json"
+      - name: 保存实测退出码与契约判定
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-reference-linux-x64-probe
+          path: ${{ runner.temp }}/m1-reference-linux-x64.json
+          if-no-files-found: warn
+          retention-days: 30
