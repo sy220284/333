@@ -48,6 +48,10 @@ on:
       - 'src/types/statusLine.ts'
       - 'src/dialogLaunchers.tsx'
       - 'src/main.tsx'
+      - 'src/ink/ink.tsx'
+      - 'src/ink/components/App.tsx'
+      - 'src/ink/events/paste-event.ts'
+      - 'tests/m1-ink-paste-event.test.mjs'
       - 'src/commands/privacy-settings/**'
       - 'tests/m1-release-routing.test.mjs'
       - 'tests/upgrade-coverage.test.mjs'
@@ -75,6 +79,11 @@ jobs:
         run: npm install --prefix "${RUNNER_TEMP}/m1-typescript" --no-save --package-lock=false --ignore-scripts --no-audit --no-fund typescript@5.9.3
       - name: 编译已恢复类型的正反向契约
         run: node "${RUNNER_TEMP}/m1-typescript/node_modules/typescript/lib/tsc.js" --strict --noEmit --skipLibCheck --target ES2023 --module ESNext --moduleResolution Bundler tests/m1-notebook-types.fixture.ts tests/m1-core-types.fixture.ts tests/m1-feedback-types.fixture.ts
+      - name: 编译并执行新版终端粘贴事件协议回归
+        run: |
+          printf 'declare const Bun: { stripANSI(input: string): string }\n' > "${RUNNER_TEMP}/m1-bun-ambient.d.ts"
+          node "${RUNNER_TEMP}/m1-typescript/node_modules/typescript/lib/tsc.js" --strict --skipLibCheck --target ES2023 --module CommonJS --moduleResolution Node --rootDir src/ink --outDir "${RUNNER_TEMP}/m1-ink-events" src/ink/events/paste-event.ts "${RUNNER_TEMP}/m1-bun-ambient.d.ts"
+          M1_INK_EVENTS_DIR="${RUNNER_TEMP}/m1-ink-events" node --test tests/m1-ink-paste-event.test.mjs
       - name: 扫描当前分支的实际缺失类型与运行模块
         run: node build/m1-source-gap-ast.mjs --old-src src --typescript-module "${RUNNER_TEMP}/m1-typescript/node_modules/typescript/lib/typescript.js" --out "${RUNNER_TEMP}/m1-current-source-gaps.json"
       - name: 保存逐路径导入与符号契约证据
