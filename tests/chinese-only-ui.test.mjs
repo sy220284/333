@@ -143,3 +143,9 @@ test('权限审批与文件夹授权界面显示中文且规则 ID 不变', () =
   assert.match(read('src/components/permissions/EnterPlanModePermissionRequest/EnterPlanModePermissionRequest.tsx'), /进入规划模式/)
   assert.match(read('src/components/permissions/rules/AddWorkspaceDirectory.tsx'), /将目录添加到工作区/)
 })
+
+test('macOS 权限设置深链保持系统原始标识', () => {
+  const src = read('src/components/permissions/ComputerUseApproval/ComputerUseApproval.tsx')
+  assert.match(src, /Privacy_Accessibility/)
+  assert.doesNotMatch(src, /Privacy_辅助功能/)
+})

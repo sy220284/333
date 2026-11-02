@@ -107,7 +107,7 @@ function ComputerUseTccPanel(t0) {
       switch (value) {
         case "open_accessibility":
           {
-            execFileNoThrow("open", ["x-apple.systempreferences:com.apple.preference.security?Privacy_辅助功能"], {
+            execFileNoThrow("open", ["x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"], {
               useCwd: false
             });
             return;
