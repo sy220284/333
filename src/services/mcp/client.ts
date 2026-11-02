@@ -135,6 +135,7 @@ import { markClaudeAiMcpConnected } from './claudeai.js'
 import { getAllMcpConfigs, isMcpServerDisabled } from './config.js'
 import { getMcpServerHeaders } from './headersHelper.js'
 import { SdkControlClientTransport } from './SdkControlTransport.js'
+import { isMcpStdioServerConfig } from './types.js'
 import type {
   ConnectedMCPServer,
   MCPServerConnection,
@@ -903,7 +904,7 @@ export const connectToServer = memoize(
         )
         logMCPDebug(name, `claude.ai proxy transport created successfully`)
       } else if (
-        (serverRef.type === 'stdio' || !serverRef.type) &&
+        isMcpStdioServerConfig(serverRef) &&
         isClaudeInChromeMCPServer(name)
       ) {
         // The extension must see the native host manifest before its first
@@ -931,7 +932,7 @@ export const connectToServer = memoize(
         logMCPDebug(name, `In-process Chrome MCP server started`)
       } else if (
         feature('CHICAGO_MCP') &&
-        (serverRef.type === 'stdio' || !serverRef.type) &&
+        isMcpStdioServerConfig(serverRef) &&
         isComputerUseMCPServer!(name)
       ) {
         // Run the Computer Use MCP server in-process — same rationale as
@@ -948,7 +949,7 @@ export const connectToServer = memoize(
         await inProcessServer.connect(serverTransport)
         transport = clientTransport
         logMCPDebug(name, `In-process Computer Use MCP server started`)
-      } else if (serverRef.type === 'stdio' || !serverRef.type) {
+      } else if isMcpStdioServerConfig(serverRef) {
         const finalCommand =
           process.env.CLAUDE_CODE_SHELL_PREFIX || serverRef.command
         const finalArgs = process.env.CLAUDE_CODE_SHELL_PREFIX
@@ -972,7 +973,7 @@ export const connectToServer = memoize(
       // Store handler reference for cleanup to prevent memory leaks
       let stderrHandler: ((data: Buffer) => void) | undefined
       let stderrOutput = ''
-      if (serverRef.type === 'stdio' || !serverRef.type) {
+      if isMcpStdioServerConfig(serverRef) {
         const stdioTransport = transport as StdioClientTransport
         if (stdioTransport.stderr) {
           stderrHandler = (data: Buffer) => {
@@ -1425,7 +1426,7 @@ export const connectToServer = memoize(
         }
 
         // Remove stderr event listener to prevent memory leaks
-        if (stderrHandler && (serverRef.type === 'stdio' || !serverRef.type)) {
+        if (stderrHandler && isMcpStdioServerConfig(serverRef)) {
           const stdioTransport = transport as StdioClientTransport
           stdioTransport.stderr?.off('data', stderrHandler)
         }
