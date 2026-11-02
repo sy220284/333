@@ -137,11 +137,21 @@
         "src/entrypoints/sdk/streamEventMapper.ts"
       ],
       "tests": [
-        "build/m1-sdk-stream-wire-parity.mjs"
+        "build/m1-sdk-stream-wire-parity.mjs",
+        "tests/m1-sdk-stream-mapping.test.mjs"
       ],
       "stage": "SPECIAL_CI",
       "acceptance": "UNVERIFIED",
-      "remaining": "多Agent事件取消与重连"
+      "remaining": "多Agent事件取消与重连",
+      "sdk_uuid_gap_evidence": {
+        "commits": [
+          "a281d5c0",
+          "95ed0a25"
+        ],
+        "result": "SDK stream event source comparison CI passed, UUID argument contract aligned",
+        "workflow": "https://github.com/sy220284/333/actions/runs/41463433408",
+        "acceptance": "UNVERIFIED"
+      }
     },
     {
       "id": "G07",
@@ -351,9 +361,58 @@
       "stage": "PARTIAL_RUNTIME",
       "acceptance": "UNVERIFIED",
       "remaining": "并行Agent实际执行"
+    },
+    {
+      "id": "G19",
+      "name": "MCP服务器调用入口真实参数校验",
+      "features": [
+        "F053",
+        "F039"
+      ],
+      "code": [
+        "src/entrypoints/mcp.ts",
+        "src/entrypoints/mcpInputValidation.ts"
+      ],
+      "tests": [
+        "tests/m1-mcp-argument-validation.test.ts"
+      ],
+      "stage": "SPECIAL_CI",
+      "acceptance": "UNVERIFIED",
+      "remaining": "同官方2.1.310原版进行真实MCP客户端list/call权限、错误回复及各工具Schema矩阵对照",
+      "closed_gap_evidence": {
+        "scope": "MCP server calls validate strict real tool input schemas before tool permission or execution",
+        "commits": [
+          "115d9a15",
+          "1079b925",
+          "8525c30b",
+          "58fb5be3",
+          "814ad616"
+        ],
+        "focused_ci": "https://github.com/sy220284/333/actions/runs/41463433508",
+        "ci_result": "PASS_MCP_ARGUMENT_VALIDATION_STEP",
+        "boundary": "Unit tests of invalid and valid schema inputs pass; end-to-end official candidate MCP parity awaits M10"
+      }
     }
   ],
   "latest_gap_closure_source_commit": "563feee3cddbce06a3212ffab1d0cbe89a3d76d8",
   "latest_focused_build_ci": "https://github.com/sy220284/333/actions/runs/41458494267",
-  "full_M10_acceptance": "UNVERIFIED"
+  "full_M10_acceptance": "UNVERIFIED",
+  "maintenance_fixes": [
+    {
+      "id": "generator-queue-typing",
+      "code": [
+        "src/utils/generators.ts"
+      ],
+      "tests": [
+        "tests/m1-generators.test.ts"
+      ],
+      "commits": [
+        "3237a0dc",
+        "43c96d9e"
+      ],
+      "status": "FOCUSED_CI_PASS",
+      "workflow": "https://github.com/sy220284/333/actions/runs/41463433508",
+      "remaining": "其它真实工具执行和取消链路仍需M10"
+    }
+  ]
 }
