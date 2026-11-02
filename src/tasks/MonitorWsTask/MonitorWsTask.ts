@@ -22,7 +22,7 @@ function notify(taskId: string, description: string, content: string, agentId?: 
   enqueuePendingNotification({mode:'task-notification',priority:'next',agentId,
     value:`<task-notification>\n<task-id>${escapeXml(taskId)}</task-id>\n<summary>Monitor event: "${escapeXml(description)}"</summary>\n<event>${escapeXml(content)}</event>\n</task-notification>`})
 }
-function terminate(taskId: string, setAppState: SetAppState, status: 'completed' | 'failed' | 'killed', description: string) {
+function terminate(taskId: string, setAppState: SetAppState, status: 'completed' | 'failed' | 'killed') {
   const handle = sockets.get(taskId)
   if (!handle) return
   sockets.delete(taskId)
@@ -39,7 +39,7 @@ export const MonitorWsTask: Task = {
     const h=sockets.get(id)
     if (!h) throw new Error(`Monitor ${id} is no longer running`)
     notify(id,'WebSocket','[WebSocket stopped]',h.agentId)
-    terminate(id,setAppState,'killed','WebSocket')
+    terminate(id,setAppState,'killed')
   },
 }
 export async function startWebSocketMonitor(input: {
@@ -72,7 +72,7 @@ export async function startWebSocketMonitor(input: {
     h.timer=setTimeout(()=>{
       if (!sockets.has(id)) return
       notify(id,input.description,'[WebSocket monitor deadline reached]',context.agentId)
-      terminate(id,context.setAppState,'completed',input.description)
+      terminate(id,context.setAppState,'completed')
     },input.timeoutMs)
     h.timer.unref?.()
   }
@@ -83,12 +83,12 @@ export async function startWebSocketMonitor(input: {
   socket.on('error',error=>{
     if(!sockets.has(id)) return
     notify(id,input.description,`[WebSocket error: ${error.message}]`,context.agentId)
-    terminate(id,context.setAppState,'failed',input.description)
+    terminate(id,context.setAppState,'failed')
   })
   socket.on('close',(code)=>{
     if(!sockets.has(id)) return
     notify(id,input.description,`[WebSocket closed: ${code}]`,context.agentId)
-    terminate(id,context.setAppState,'completed',input.description)
+    terminate(id,context.setAppState,'completed')
   })
   return id
 }
@@ -106,6 +106,6 @@ export function killMonitorWsTasksForAgent(
   for(const [id,handle] of sockets){
     if(handle.agentId!==agentId)continue
     notify(id,'agent session ended','[WebSocket stopped]',agentId)
-    terminate(id,setAppState,'killed','agent session ended')
+    terminate(id,setAppState,'killed')
   }
 }
