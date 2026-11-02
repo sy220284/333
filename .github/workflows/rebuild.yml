@@ -71,6 +71,26 @@ jobs:
         run: node --test tests/tool-presets.test.mjs
       - name: 模拟 529 过载并验证 2.1.310 三段模型回退
         run: node --test tests/fallback-529-integration.test.mjs
+      - name: 缓存官方 2.1.310 Linux x64 行为基准
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: .rebuild/oracle/claude
+          key: claude-2.1.310-linux-x64-b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56
+      - name: 校验并运行官方固定版本 x64 差分基准
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          mkdir -p .rebuild/oracle
+          if [ ! -f .rebuild/oracle/claude ]; then
+            curl --fail --location --silent --show-error --retry 3 \
+              https://downloads.claude.ai/claude-code-releases/2.1.310/linux-x64/claude \
+              --output .rebuild/oracle/claude
+          fi
+          echo "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  .rebuild/oracle/claude" | sha256sum --check
+          chmod 755 .rebuild/oracle/claude
+          .rebuild/oracle/claude --version | grep -F '2.1.310'
+          CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/fallback-529-integration.test.mjs
       - name: 模拟模型回调与本地 Read 工具端到端差分验收
         run: node --test tests/model-loop-local.test.mjs
       - name: Glob 与 Grep 文件搜索模型工具往返差分验收
