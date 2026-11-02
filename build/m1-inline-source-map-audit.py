@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 
 # Match only actual source-map annotation comments, not sample source strings or documentation.
-DIRECTIVE = re.compile(r"(?m)^[ \\t]*(?://[#@]|/\\*[#@])\\s*sourceMappingURL=([^\\r\\n]+)$")
+DIRECTIVE = re.compile(r"(?m)^[ \t]*(?://[#@]|/\*[#@])\s*sourceMappingURL=([^\r\n]+)$")
 SOURCE_MAP = re.compile(r"^data:application/json(?:;charset=utf-8)?;base64,([A-Za-z0-9+/=]+)$")
 EXTENSIONS = {".ts", ".tsx", ".js", ".mjs", ".mts", ".cts"}
 
