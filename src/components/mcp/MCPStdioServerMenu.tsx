@@ -4,7 +4,7 @@ import type { CommandResultDisplay } from '../../commands.js';
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js';
 import { Box, color, Text, useTheme } from '../../ink.js';
 import { getMcpConfigByName } from '../../services/mcp/config.js';
-import { useMcp重新连接, useMcpToggleEnabled } from '../../services/mcp/MCPConnectionManager.js';
+import { useMcpReconnect, useMcpToggleEnabled } from '../../services/mcp/MCPConnectionManager.js';
 import { describeMcpConfigFilePath, filterMcpPromptsByServer } from '../../services/mcp/utils.js';
 import { useAppState } from '../../state/AppState.js';
 import { errorMessage } from '../../utils/errors.js';
@@ -16,7 +16,7 @@ import { KeyboardShortcutHint } from '../design-system/KeyboardShortcutHint.js';
 import { Spinner } from '../Spinner.js';
 import { CapabilitiesSection } from './CapabilitiesSection.js';
 import type { StdioServerInfo } from './types.js';
-import { handle重新连接Error, handle重新连接Result } from './utils/reconnectHelpers.js';
+import { handleReconnectError, handleReconnectResult } from './utils/reconnectHelpers.js';
 type Props = {
   server: StdioServerInfo;
   serverToolsCount: number;
@@ -38,9 +38,9 @@ export function MCPStdioServerMenu({
   const [theme] = useTheme();
   const exitState = useExitOnCtrlCDWithKeybindings();
   const mcp = useAppState(s => s.mcp);
-  const reconnectMcpServer = useMcp重新连接();
+  const reconnectMcpServer = useMcpReconnect();
   const toggleMcpServer = useMcpToggleEnabled();
-  const [is重新连接ing, setIs重新连接ing] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
   const handleToggleEnabled = React.useCallback(async () => {
     const wasEnabled = server.client.type !== 'disabled';
     try {
@@ -85,10 +85,10 @@ export function MCPStdioServerMenu({
       value: 'back'
     });
   }
-  if (is重新连接ing) {
+  if (isReconnecting) {
     return <Box flexDirection="column" gap={1} padding={1}>
         <Text color="text">
-          重新连接ing to <Text bold>{server.name}</Text>
+          正在重新连接 <Text bold>{server.name}</Text>
         </Text>
         <Box>
           <Spinner />
@@ -142,17 +142,17 @@ export function MCPStdioServerMenu({
           if (value === 'tools') {
             onViewTools();
           } else if (value === 'reconnectMcpServer') {
-            setIs重新连接ing(true);
+            setIsReconnecting(true);
             try {
               const result = await reconnectMcpServer(server.name);
               const {
                 message
-              } = handle重新连接Result(result, server.name);
+              } = handleReconnectResult(result, server.name);
               onComplete?.(message);
             } catch (err_0) {
-              onComplete?.(handle重新连接Error(err_0, server.name));
+              onComplete?.(handleReconnectError(err_0, server.name));
             } finally {
-              setIs重新连接ing(false);
+              setIsReconnecting(false);
             }
           } else if (value === 'toggle-enabled') {
             await handleToggleEnabled();
