@@ -229,7 +229,7 @@ export function mapNotebookCellsToToolResult(
         const prev = acc[acc.length - 1]
         if (prev && prev.type === 'text' && curr.type === 'text') {
           // Merge the text blocks
-          prev.text += '\n' + curr.text
+          prev.text += `\n${curr.text}`
           return acc
         }
 
@@ -243,9 +243,9 @@ export function mapNotebookCellsToToolResult(
 
 export function parseCellId(cellId: string): number | undefined {
   const match = cellId.match(/^cell-(\d+)$/)
-  if (match && match[1]) {
+  if (match?.[1]) {
     const index = parseInt(match[1], 10)
-    return isNaN(index) ? undefined : index
+    return Number.isNaN(index) ? undefined : index
   }
   return undefined
 }
