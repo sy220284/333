@@ -3,7 +3,7 @@ import { lookup } from 'node:dns/promises'
 import { mkdtemp, readFile, readdir, rm, writeFile, stat } from 'node:fs/promises'
 import { isIP } from 'node:net'
 import { tmpdir } from 'node:os'
-import { basename, join, resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 import { extractZipToDirectory } from './zipCache.js'
 import { registerCleanup } from '../cleanupRegistry.js'
 
