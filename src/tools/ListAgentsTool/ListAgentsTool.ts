@@ -10,7 +10,7 @@ import { listLiveLocalPeers, peerRef } from '../../utils/livePeerSessions.mjs'
 import { TEAM_LEAD_NAME } from '../../utils/swarm/constants.js'
 import { readTeamFileAsync } from '../../utils/swarm/teamHelpers.js'
 import { getAgentName, getTeamName } from '../../utils/teammate.js'
-import { discoverAuthenticatedPeers } from '../../bridge/peerDiscovery.js'
+import { discoverAuthenticatedPeers, getCurrentPeerIdentityKey } from '../../bridge/peerDiscovery.js'
 import { rememberAccountRecipients } from '../../utils/accountPeerDirectory.mjs'
 import { getMessagingSocketPath } from '../../utils/udsMessaging.js'
 import { buildAgentListing, hideTeammateNamesInSubagents, listReachableTeammates } from './peerListing.mjs'
@@ -61,7 +61,12 @@ export const ListAgentsTool = buildTool({
     const teamFile = teamName ? await readTeamFileAsync(teamName) : null
     const teammates = listReachableTeammates(teamFile, selfName, state.teamContext?.teammates, state.tasks)
     const { peers: localSessions, unreadable } = await listLiveLocalPeers(join(getClaudeConfigHomeDir(), 'sessions'))
-    const account = await discoverAuthenticatedPeers(localSessions)
+    const discoveredAccount = await discoverAuthenticatedPeers(localSessions)
+    const currentIdentity = await getCurrentPeerIdentityKey()
+    // The authenticated account may change while the remote inventory is being fetched.
+    const account = discoveredAccount.identityKey === currentIdentity
+      ? discoveredAccount
+      : { peers: [], notes: [{ kind: 'account_changed', text: '(account changed during listing; retry to discover current sessions)' }], available: false, identityKey: currentIdentity }
     rememberAccountRecipients(account.peers, Date.now(), account.identityKey)
     const sessions = [...localSessions, ...account.peers]
     // Use the socket actually bound by this process, not a stale inherited env value.
