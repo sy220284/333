@@ -49,7 +49,7 @@ test('Monitor WebSocket permission delegates authorized bypass to the central en
  assert.match(code,/await verifyWsHost\(input.ws.url\)/)
  const engine=await readFile(new URL('../src/utils/permissions/permissions.ts',import.meta.url),'utf8')
  assert.match(engine,/appState.toolPermissionContext.mode === 'bypassPermissions'/)
- assert.match(engine,/toolPermissionResult.decisionReason?.type === 'safetyCheck'/)
+ assert.match(engine,/toolPermissionResult\.decisionReason\?\.type === 'safetyCheck'/)
 })
 
 test('Monitor accepts fractional millisecond values within official numeric schema range',()=>{
