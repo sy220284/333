@@ -45,7 +45,7 @@ test('virtual-text container splits semantic sibling labels but preserves inline
   label('~/project'),
  ]}]}
  assert.equal(flattenAccessibleTree(tree),
-   'Claude Code v2.1.310\\nSonnet 4.6 · API Usage Billing\\n~/project')
+   'Claude Code v2.1.310\nSonnet 4.6 · API Usage Billing\n~/project')
 })
 
 test('CLI, settings and actual Ink rendering are connected',async()=>{
