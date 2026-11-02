@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'src/ink/ink.tsx'
+      - 'src/components/Messages.tsx'
       - 'src/components/LogoV2/LogoV2.tsx'
       - 'src/components/LogoV2/CondensedLogo.tsx'
       - 'src/main.tsx'
