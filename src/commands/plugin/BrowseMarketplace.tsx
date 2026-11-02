@@ -328,7 +328,7 @@ export function BrowseMarketplace({
         marketplaceName: plugin_1.marketplaceName,
         scope: 'user'
       });
-      if (result.success) {
+      if (result.success === true) {
         successCount_0++;
       } else {
         failureCount++;
@@ -377,7 +377,7 @@ export function BrowseMarketplace({
       marketplaceName: plugin_2.marketplaceName,
       scope
     });
-    if (result_0.success) {
+    if (result_0.success === true) {
       const loaded = await findPluginOptionsTarget(plugin_2.pluginId);
       if (loaded) {
         setIsInstalling(false);
