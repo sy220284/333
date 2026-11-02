@@ -313,7 +313,7 @@ function getCollapsibleToolInfo(
     // For grouped tool uses, check the first message's input
     const firstContent = msg.messages[0]?.message.content[0]
     const info = getSearchOrReadFromContent(
-      firstContent
+      firstContent?.type === 'tool_use'
         ? { type: 'tool_use', name: msg.toolName, input: firstContent.input }
         : undefined,
       tools,
