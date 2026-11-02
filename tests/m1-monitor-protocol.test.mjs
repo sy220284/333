@@ -34,6 +34,6 @@ test('public Monitor aligns timeout cap and does not discard stdout produced bef
   assert.equal(code.includes('Math.min(input.timeout_ms,600000)'), true)
   assert.equal(code.includes('pendingLines.push(line)'), true)
   assert.equal(code.includes('for(const line of pendingLines)emitLine(line)'), true)
-  const ws=await readFile(new URL('../src/tasks/MonitorMcpTask/MonitorMcpTask.ts',import.meta.url),'utf8')
+  const ws=await readFile(new URL('../src/tasks/MonitorWsTask/MonitorWsTask.ts',import.meta.url),'utf8')
   assert.equal(ws.includes("url.hostname.replace("),true)
 })
