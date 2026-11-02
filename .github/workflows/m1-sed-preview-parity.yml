@@ -8,6 +8,7 @@ on:
       - 'src/components/permissions/SedEditPermissionRequest/SedEditPermissionRequest.tsx'
       - 'tests/sed-edit-parity.test.ts'
       - 'tests/sed-edit-write-integration.test.ts'
+      - 'tests/sed-edit-native-resolve.preload.ts'
       - '.github/workflows/m1-sed-preview-parity.yml'
   workflow_dispatch:
 
@@ -34,4 +35,4 @@ jobs:
       - name: 对照本机 GNU/BSD sed 验证预览与真实文件写入
         run: bun test tests/sed-edit-parity.test.ts
       - name: 验证实际 BashTool 写入及并发编辑保护
-        run: bun test tests/sed-edit-write-integration.test.ts
+        run: bun test --preload ./tests/sed-edit-native-resolve.preload.ts tests/sed-edit-write-integration.test.ts
