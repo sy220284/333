@@ -1,31 +1,25 @@
 import type { LocalJSXCommandOnDone } from '../../types/command.js'
 
 /**
- * Restored from the actual PluginSettings state constructors and every
- * setViewState consumer in AddMarketplace/BrowseMarketplace/ManagePlugins.
- * Keep each screen's payload tied to its discriminant.
+ * PluginSettings reads targetMarketplace/targetPlugin before narrowing a view.
+ * Those fields remain optional on the common state, while each action still
+ * receives a discriminant and its required routing data.
  */
-export type ViewState =
+type PluginNavigation = {
+  targetMarketplace?: string
+  targetPlugin?: string
+  action?: 'uninstall' | 'enable' | 'disable' | 'remove' | 'update'
+}
+
+export type ViewState = PluginNavigation & (
   | { type: 'menu' | 'help' | 'marketplace-list' | 'marketplace-menu' }
   | { type: 'validate'; path?: string }
   | { type: 'add-marketplace'; initialValue?: string }
-  | { type: 'discover-plugins'; targetPlugin?: string }
-  | {
-      type: 'browse-marketplace'
-      targetMarketplace: string
-      targetPlugin?: string
-    }
-  | {
-      type: 'manage-plugins'
-      targetPlugin?: string
-      targetMarketplace?: string
-      action?: 'uninstall' | 'enable' | 'disable'
-    }
-  | {
-      type: 'manage-marketplaces'
-      targetMarketplace?: string
-      action?: 'remove' | 'update'
-    }
+  | { type: 'discover-plugins' }
+  | { type: 'browse-marketplace'; targetMarketplace: string }
+  | { type: 'manage-plugins' }
+  | { type: 'manage-marketplaces' }
+)
 
 export interface PluginSettingsProps {
   onComplete: LocalJSXCommandOnDone
