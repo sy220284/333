@@ -26,6 +26,7 @@ on:
       - 'build/m1-x64-reference-probe.mjs'
       - 'build/m1-413-recovery-probe.mjs'
       - 'build/m1-toolsearch-release-parity.mjs'
+      - 'build/m1-monitor-workflow-roundtrip.mjs'
       - 'build/m1-sdk-stream-wire-parity.mjs'
       - 'build/m1-sdk-thinking-display-parity.mjs'
       - 'tests/m1-thinking-display.test.mjs'
@@ -358,6 +359,12 @@ jobs:
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
             --allow-candidate-diff true \
             --report "${RUNNER_TEMP}/m1-toolsearch-differential.json"
+      - name: 用真实 CLI 与本机模拟 API 验收 Monitor 和纯脚本 Workflow
+        run: |
+          node build/m1-monitor-workflow-roundtrip.mjs \
+            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --candidate "${RUNNER_TEMP}/m1-current-cli" \
+            --report "${RUNNER_TEMP}/m1-monitor-workflow-roundtrip.json"
       - name: 按v4把原版x64差异转换为源码修改责任和验收任务
         run: |
           node build/m1-v4-handoff.mjs \
@@ -379,6 +386,7 @@ jobs:
             ${{ runner.temp }}/m1-cli-startup-diagnostics.json
             ${{ runner.temp }}/m1-413-recovery-differential.json
             ${{ runner.temp }}/m1-toolsearch-differential.json
+            ${{ runner.temp }}/m1-monitor-workflow-roundtrip.json
             ${{ runner.temp }}/m1-sdk-stream-wire.json
             ${{ runner.temp }}/m1-sdk-thinking-display.json
           retention-days: 30
