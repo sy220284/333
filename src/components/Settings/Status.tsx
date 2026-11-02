@@ -201,12 +201,12 @@ function _temp2(s_0) {
 function _temp(s) {
   return s.mainLoopModel;
 }
-function Diagnostics(t0) {
+function Diagnostics(t0: { promise: Promise<Diagnostic[]> }) {
   const $ = _c(5);
   const {
     promise
   } = t0;
-  const diagnostics = use(promise);
+  const diagnostics = use<Diagnostic[]>(promise);
   if (diagnostics.length === 0) {
     return null;
   }
