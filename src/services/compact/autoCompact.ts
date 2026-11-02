@@ -367,3 +367,62 @@ export async function autoCompactIfNeeded(
     return { wasCompacted: false, consecutiveFailures: nextFailures }
   }
 }
+
+
+/**
+ * Public-release 413 recovery. In 2.1.310, a two-turn conversation that
+ * receives a prompt-too-long error runs a compact summary and retries the
+ * original user turn. The old REACTIVE_COMPACT feature() block is ant-only
+ * and tree-shaken from the public build, so its dynamic import cannot serve
+ * as the public fallback.
+ *
+ * Reuse the same complete compaction pipeline as proactive autocompact,
+ * including pre/post hooks, transcript boundary, file/skill restoration and
+ * cache updates. It is single-shot per query to prevent infinite 413 loops.
+ */
+export async function tryRecoverFrom413WithCompact(
+  messages: Message[],
+  toolUseContext: ToolUseContext,
+  cacheSafeParams: CacheSafeParams,
+  querySource: QuerySource,
+  alreadyAttempted: boolean,
+): Promise<CompactionResult | null> {
+  if (
+    alreadyAttempted ||
+    !isAutoCompactEnabled() ||
+    querySource === 'compact' ||
+    querySource === 'session_memory' ||
+    toolUseContext.abortController.signal.aborted
+  ) {
+    return null
+  }
+
+  // A single user exchange has no older turn to summarize. The target x64
+  // reports a terminal prompt_too_long here rather than issuing more calls.
+  const userTurns = messages.filter(
+    message => message.type === 'user' && !message.isCompactSummary,
+  ).length
+  if (userTurns < 2) return null
+
+  try {
+    const result = await compactConversation(
+      messages,
+      toolUseContext,
+      cacheSafeParams,
+      true,
+      undefined,
+      true,
+      { isRecompactionInChain: false, turnsSincePreviousCompact: -1,
+        autoCompactThreshold: getAutoCompactThreshold(toolUseContext.options.mainLoopModel), querySource },
+    )
+    setLastSummarizedMessageId(undefined)
+    runPostCompactCleanup(querySource)
+    logForDebugging('413 recovery: compacted history and ready to retry request')
+    return result
+  } catch (error) {
+    // Preserve the original 413 as the public result; record the concrete
+    // compaction failure for diagnosis rather than hiding it.
+    logError(error)
+    return null
+  }
+}
