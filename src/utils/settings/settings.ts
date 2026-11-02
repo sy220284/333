@@ -827,7 +827,8 @@ function loadSettingsFromDisk(): SettingsWithErrors {
  */
 export function getInitialSettings(): SettingsJson {
   const { settings } = getSettingsWithErrors()
-  return settings || {}
+  // Ignore legacy language preferences when computing effective settings.
+  return { ...(settings || {}), language: '简体中文' }
 }
 
 /**

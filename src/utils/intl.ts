@@ -60,7 +60,7 @@ export function getRelativeTimeFormat(
   const key = `${style}:${numeric}`
   let rtf = rtfCache.get(key)
   if (!rtf) {
-    rtf = new Intl.RelativeTimeFormat('en', { style, numeric })
+    rtf = new Intl.RelativeTimeFormat('zh-CN', { style, numeric })
     rtfCache.set(key, rtf)
   }
   return rtf

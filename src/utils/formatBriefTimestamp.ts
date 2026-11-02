@@ -22,7 +22,7 @@ export function formatBriefTimestamp(
     return ''
   }
 
-  const locale = getLocale()
+  const locale = 'zh-CN'
   const dayDiff = startOfDay(now) - startOfDay(d)
   const daysAgo = Math.round(dayDiff / 86_400_000)
 
@@ -50,32 +50,7 @@ export function formatBriefTimestamp(
   })
 }
 
-/**
- * Derive a BCP 47 locale tag from POSIX env vars.
- * LC_ALL > LC_TIME > LANG, falls back to undefined (system default).
- * Converts POSIX format (en_GB.UTF-8) to BCP 47 (en-GB).
- */
-function getLocale(): string | undefined {
-  const raw =
-    process.env.LC_ALL || process.env.LC_TIME || process.env.LANG || ''
-  if (!raw || raw === 'C' || raw === 'POSIX') {
-    return undefined
-  }
-  // Strip codeset (.UTF-8) and modifier (@euro), replace _ with -
-  const base = raw.split('.')[0]!.split('@')[0]!
-  if (!base) {
-    return undefined
-  }
-  const tag = base.replaceAll('_', '-')
-  // Validate by trying to construct an Intl locale — invalid tags throw
-  try {
-    new Intl.DateTimeFormat(tag)
-    return tag
-  } catch {
-    return undefined
-  }
-}
-
+/** Interface dates always use Simplified Chinese. */
 function startOfDay(d: Date): number {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
 }

@@ -139,13 +139,9 @@ function getAntModelOverrideSection(): string | null {
   return getAntModelOverrideConfig()?.defaultSystemPromptSuffix || null
 }
 
-function getLanguageSection(
-  languagePreference: string | undefined,
-): string | null {
-  if (!languagePreference) return null
-
+function getLanguageSection(): string {
   return `# Language
-Always respond in ${languagePreference}. Use ${languagePreference} for all explanations, comments, and communications with the user. Technical terms and code identifiers should remain in their original form.`
+Always respond in Simplified Chinese (简体中文). Use Simplified Chinese for all explanations, comments, and communications with the user. Keep programming language names, commands, paths, API names, and code identifiers unchanged.`
 }
 
 function getOutputStyleSection(
@@ -475,7 +471,7 @@ ${CYBER_RISK_INSTRUCTION}`,
       getSystemRemindersSection(),
       await loadMemoryPrompt(),
       envInfo,
-      getLanguageSection(settings.language),
+      getLanguageSection(),
       // When delta enabled, instructions are announced via persisted
       // mcp_instructions_delta attachments (attachments.ts) instead.
       isMcpInstructionsDeltaEnabled()
@@ -500,7 +496,7 @@ ${CYBER_RISK_INSTRUCTION}`,
       computeSimpleEnvInfo(model, additionalWorkingDirectories),
     ),
     systemPromptSection('language', () =>
-      getLanguageSection(settings.language),
+      getLanguageSection(),
     ),
     systemPromptSection('output_style', () =>
       getOutputStyleSection(outputStyleConfig),

@@ -111,25 +111,25 @@ export function ThemePicker(t0) {
   let t10;
   if ($[7] === Symbol.for("react.memo_cache_sentinel")) {
     t10 = [...(feature("AUTO_THEME") ? [{
-      label: "Auto (match terminal)",
+      label: "自动匹配终端",
       value: "auto" as const
     }] : []), {
-      label: "Dark mode",
+      label: "深色模式",
       value: "dark"
     }, {
-      label: "Light mode",
+      label: "浅色模式",
       value: "light"
     }, {
-      label: "Dark mode (colorblind-friendly)",
+      label: "深色模式（色觉友好）",
       value: "dark-daltonized"
     }, {
-      label: "Light mode (colorblind-friendly)",
+      label: "浅色模式（色觉友好）",
       value: "light-daltonized"
     }, {
-      label: "Dark mode (ANSI colors only)",
+      label: "深色模式（仅 ANSI 色彩）",
       value: "dark-ansi"
     }, {
-      label: "Light mode (ANSI colors only)",
+      label: "浅色模式（仅 ANSI 色彩）",
       value: "light-ansi"
     }];
     $[7] = t10;
@@ -139,7 +139,7 @@ export function ThemePicker(t0) {
   const themeOptions = t10;
   let t11;
   if ($[8] !== showIntroText) {
-    t11 = showIntroText ? <Text>Let's get started.</Text> : <Text bold={true} color="permission">Theme</Text>;
+    t11 = showIntroText ? <Text>开始设置。</Text> : <Text bold={true} color="permission">界面主题</Text>;
     $[8] = showIntroText;
     $[9] = t11;
   } else {
@@ -147,7 +147,7 @@ export function ThemePicker(t0) {
   }
   let t12;
   if ($[10] === Symbol.for("react.memo_cache_sentinel")) {
-    t12 = <Text bold={true}>Choose the text style that looks best with your terminal</Text>;
+    t12 = <Text bold={true}>选择适合当前终端的文字样式</Text>;
     $[10] = t12;
   } else {
     t12 = $[10];

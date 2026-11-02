@@ -26,7 +26,6 @@ import { ChannelDowngradeDialog, type ChannelDowngradeChoice } from '../ChannelD
 import { Dialog } from '../design-system/Dialog.js';
 import { Select } from '../CustomSelect/index.js';
 import { OutputStylePicker } from '../OutputStylePicker.js';
-import { LanguagePicker } from '../LanguagePicker.js';
 import { getExternalClaudeMdIncludes, getMemoryFiles, hasExternalClaudeMdIncludes } from 'src/utils/claudemd.js';
 import { KeyboardShortcutHint } from '../design-system/KeyboardShortcutHint.js';
 import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint.js';
@@ -81,7 +80,7 @@ type Setting = (SettingBase & {
   onChange(value: string): void;
   type: 'managedEnum';
 });
-type SubMenu = 'Theme' | 'Model' | 'TeammateModel' | 'ExternalIncludes' | 'OutputStyle' | 'ChannelDowngrade' | 'Language' | 'EnableAutoUpdates';
+type SubMenu = 'Theme' | 'Model' | 'TeammateModel' | 'ExternalIncludes' | 'OutputStyle' | 'ChannelDowngrade' | 'EnableAutoUpdates';
 export function Config({
   onClose,
   context,
@@ -102,8 +101,6 @@ export function Config({
   const initialSettingsData = React.useRef(getInitialSettings());
   const [currentOutputStyle, setCurrentOutputStyle] = useState<OutputStyle>(settingsData?.outputStyle || DEFAULT_OUTPUT_STYLE_NAME);
   const initialOutputStyle = React.useRef(currentOutputStyle);
-  const [currentLanguage, setCurrentLanguage] = useState<string | undefined>(settingsData?.language);
-  const initialLanguage = React.useRef(currentLanguage);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollOffset, setScrollOffset] = useState(0);
   const [isSearchMode, setIsSearchMode] = useState(true);
@@ -265,7 +262,7 @@ export function Config({
   // Global settings
   {
     id: 'autoCompactEnabled',
-    label: 'Auto-compact',
+    label: '自动压缩上下文',
     value: globalConfig.autoCompactEnabled,
     type: 'boolean' as const,
     onChange(autoCompactEnabled: boolean) {
@@ -283,7 +280,7 @@ export function Config({
     }
   }, {
     id: 'spinnerTipsEnabled',
-    label: 'Show tips',
+    label: '显示使用提示',
     value: settingsData?.spinnerTipsEnabled ?? true,
     type: 'boolean' as const,
     onChange(spinnerTipsEnabled: boolean) {
@@ -301,7 +298,7 @@ export function Config({
     }
   }, {
     id: 'prefersReducedMotion',
-    label: 'Reduce motion',
+    label: '减少动画效果',
     value: settingsData?.prefersReducedMotion ?? false,
     type: 'boolean' as const,
     onChange(prefersReducedMotion: boolean) {
@@ -326,7 +323,7 @@ export function Config({
     }
   }, {
     id: 'thinkingEnabled',
-    label: 'Thinking mode',
+    label: '思考模式',
     value: thinkingEnabled ?? true,
     type: 'boolean' as const,
     onChange(enabled: boolean) {
@@ -345,7 +342,7 @@ export function Config({
   // Fast mode toggle (ant-only, eliminated from external builds)
   ...(isFastModeEnabled() && isFastModeAvailable() ? [{
     id: 'fastMode',
-    label: `Fast mode (${FAST_MODE_MODEL_DISPLAY} only)`,
+    label: `快速模式（仅限 ${FAST_MODE_MODEL_DISPLAY}）`,
     value: !!isFastMode,
     type: 'boolean' as const,
     onChange(enabled_0: boolean) {
@@ -378,7 +375,7 @@ export function Config({
     }
   }] : []), ...(getFeatureValue_CACHED_MAY_BE_STALE('tengu_chomp_inflection', false) ? [{
     id: 'promptSuggestionEnabled',
-    label: 'Prompt suggestions',
+    label: '输入建议',
     value: promptSuggestionEnabled,
     type: 'boolean' as const,
     onChange(enabled_1: boolean) {
@@ -394,7 +391,7 @@ export function Config({
   // Speculation toggle (ant-only)
   ...(process.env.USER_TYPE === 'ant' ? [{
     id: 'speculationEnabled',
-    label: 'Speculative execution',
+    label: '预测性执行',
     value: globalConfig.speculationEnabled ?? true,
     type: 'boolean' as const,
     onChange(enabled_2: boolean) {
@@ -415,7 +412,7 @@ export function Config({
     }
   }] : []), ...(isFileCheckpointingAvailable ? [{
     id: 'fileCheckpointingEnabled',
-    label: 'Rewind code (checkpoints)',
+    label: '代码回退（检查点）',
     value: globalConfig.fileCheckpointingEnabled,
     type: 'boolean' as const,
     onChange(enabled_3: boolean) {
@@ -433,13 +430,13 @@ export function Config({
     }
   }] : []), {
     id: 'verbose',
-    label: 'Verbose output',
+    label: '详细输出',
     value: verbose,
     type: 'boolean',
     onChange: onChangeVerbose
   }, {
     id: 'terminalProgressBarEnabled',
-    label: 'Terminal progress bar',
+    label: '终端进度条',
     value: globalConfig.terminalProgressBarEnabled,
     type: 'boolean' as const,
     onChange(terminalProgressBarEnabled: boolean) {
@@ -457,7 +454,7 @@ export function Config({
     }
   }, ...(getFeatureValue_CACHED_MAY_BE_STALE('tengu_terminal_sidebar', false) ? [{
     id: 'showStatusInTerminalTab',
-    label: 'Show status in terminal tab',
+    label: '终端标签页显示状态',
     value: globalConfig.showStatusInTerminalTab ?? false,
     type: 'boolean' as const,
     onChange(showStatusInTerminalTab: boolean) {
@@ -475,7 +472,7 @@ export function Config({
     }
   }] : []), {
     id: 'showTurnDuration',
-    label: 'Show turn duration',
+    label: '显示对话耗时',
     value: globalConfig.showTurnDuration,
     type: 'boolean' as const,
     onChange(showTurnDuration: boolean) {
@@ -493,7 +490,7 @@ export function Config({
     }
   }, {
     id: 'defaultPermissionMode',
-    label: 'Default permission mode',
+    label: '默认权限模式',
     value: settingsData?.permissions?.defaultMode || 'default',
     options: (() => {
       const priorityOrder: PermissionMode[] = ['default', 'plan'];
@@ -543,7 +540,7 @@ export function Config({
     }
   }, ...(feature('TRANSCRIPT_CLASSIFIER') && showAutoInDefaultModePicker ? [{
     id: 'useAutoModeDuringPlan',
-    label: 'Use auto mode during plan',
+    label: '规划期间使用自动模式',
     value: (settingsData as {
       useAutoModeDuringPlan?: boolean;
     } | undefined)?.useAutoModeDuringPlan ?? true,
@@ -574,7 +571,7 @@ export function Config({
     }
   }] : []), {
     id: 'respectGitignore',
-    label: 'Respect .gitignore in file picker',
+    label: '文件选择时遵守 .gitignore',
     value: globalConfig.respectGitignore,
     type: 'boolean' as const,
     onChange(respectGitignore: boolean) {
@@ -592,7 +589,7 @@ export function Config({
     }
   }, {
     id: 'copyFullResponse',
-    label: 'Always copy full response (skip /copy picker)',
+    label: '始终复制完整回答',
     value: globalConfig.copyFullResponse,
     type: 'boolean' as const,
     onChange(copyFullResponse: boolean) {
@@ -614,7 +611,7 @@ export function Config({
   // alt-screen mode). In inline mode the terminal emulator owns selection.
   ...(isFullscreenEnvEnabled() ? [{
     id: 'copyOnSelect',
-    label: 'Copy on select',
+    label: '选中即复制',
     value: globalConfig.copyOnSelect ?? true,
     type: 'boolean' as const,
     onChange(copyOnSelect: boolean) {
@@ -635,13 +632,13 @@ export function Config({
   // autoUpdates setting is hidden - use DISABLE_AUTOUPDATER env var to control
   autoUpdaterDisabledReason ? {
     id: 'autoUpdatesChannel',
-    label: 'Auto-update channel',
+    label: '自动更新渠道',
     value: 'disabled',
     type: 'managedEnum' as const,
     onChange() {}
   } : {
     id: 'autoUpdatesChannel',
-    label: 'Auto-update channel',
+    label: '自动更新渠道',
     value: settingsData?.autoUpdatesChannel ?? 'latest',
     type: 'managedEnum' as const,
     onChange() {
@@ -649,7 +646,7 @@ export function Config({
     }
   }, {
     id: 'theme',
-    label: 'Theme',
+    label: '界面主题',
     value: themeSetting,
     type: 'managedEnum',
     onChange: setTheme
@@ -671,7 +668,7 @@ export function Config({
     }
   }, ...(feature('KAIROS') || feature('KAIROS_PUSH_NOTIFICATION') ? [{
     id: 'taskCompleteNotifEnabled',
-    label: 'Push when idle',
+    label: '空闲时推送',
     value: globalConfig.taskCompleteNotifEnabled ?? false,
     type: 'boolean' as const,
     onChange(taskCompleteNotifEnabled: boolean) {
@@ -686,7 +683,7 @@ export function Config({
     }
   }, {
     id: 'inputNeededNotifEnabled',
-    label: 'Push when input needed',
+    label: '需要输入时推送',
     value: globalConfig.inputNeededNotifEnabled ?? false,
     type: 'boolean' as const,
     onChange(inputNeededNotifEnabled: boolean) {
@@ -701,7 +698,7 @@ export function Config({
     }
   }, {
     id: 'agentPushNotifEnabled',
-    label: 'Push when Claude decides',
+    label: '智能决定推送时机',
     value: globalConfig.agentPushNotifEnabled ?? false,
     type: 'boolean' as const,
     onChange(agentPushNotifEnabled: boolean) {
@@ -716,13 +713,13 @@ export function Config({
     }
   }] : []), {
     id: 'outputStyle',
-    label: 'Output style',
+    label: '回答风格',
     value: currentOutputStyle,
     type: 'managedEnum' as const,
     onChange: () => {} // handled by OutputStylePicker submenu
   }, ...(showDefaultViewPicker ? [{
     id: 'defaultView',
-    label: 'What you see by default',
+    label: '默认视图',
     // 'default' means the setting is unset — currently resolves to
     // transcript (main.tsx falls through when defaultView !== 'chat').
     // String() narrows the conditional-schema-spread union to string.
@@ -760,14 +757,8 @@ export function Config({
       });
     }
   }] : []), {
-    id: 'language',
-    label: 'Language',
-    value: currentLanguage ?? 'Default (English)',
-    type: 'managedEnum' as const,
-    onChange: () => {} // handled by LanguagePicker submenu
-  }, {
     id: 'editorMode',
-    label: 'Editor mode',
+    label: '编辑模式',
     // Convert 'emacs' to 'normal' for backward compatibility
     value: globalConfig.editorMode === 'emacs' ? 'normal' : globalConfig.editorMode || 'normal',
     options: ['normal', 'vim'],
@@ -788,7 +779,7 @@ export function Config({
     }
   }, {
     id: 'prStatusFooterEnabled',
-    label: 'Show PR status footer',
+    label: '显示 PR 状态栏',
     value: globalConfig.prStatusFooterEnabled ?? true,
     type: 'boolean' as const,
     onChange(enabled_4: boolean) {
@@ -809,13 +800,13 @@ export function Config({
     }
   }, {
     id: 'model',
-    label: 'Model',
+    label: '模型',
     value: mainLoopModel === null ? 'Default (recommended)' : mainLoopModel,
     type: 'managedEnum' as const,
     onChange: onChangeMainModelConfig
   }, ...(isConnectedToIde ? [{
     id: 'diffTool',
-    label: 'Diff tool',
+    label: '差异对比工具',
     value: globalConfig.diffTool ?? 'auto',
     options: ['terminal', 'auto'],
     type: 'enum' as const,
@@ -835,7 +826,7 @@ export function Config({
     }
   }] : []), ...(!isSupportedTerminal() ? [{
     id: 'autoConnectIde',
-    label: 'Auto-connect to IDE (external terminal)',
+    label: '自动连接 IDE（外部终端）',
     value: globalConfig.autoConnectIde ?? false,
     type: 'boolean' as const,
     onChange(autoConnectIde: boolean) {
@@ -854,7 +845,7 @@ export function Config({
     }
   }] : []), ...(isSupportedTerminal() ? [{
     id: 'autoInstallIdeExtension',
-    label: 'Auto-install IDE extension',
+    label: '自动安装 IDE 扩展',
     value: globalConfig.autoInstallIdeExtension ?? true,
     type: 'boolean' as const,
     onChange(autoInstallIdeExtension: boolean) {
@@ -873,7 +864,7 @@ export function Config({
     }
   }] : []), {
     id: 'claudeInChromeDefaultEnabled',
-    label: 'Claude in Chrome enabled by default',
+    label: '默认启用 Chrome 集成',
     value: globalConfig.claudeInChromeDefaultEnabled ?? true,
     type: 'boolean' as const,
     onChange(enabled_5: boolean) {
@@ -920,7 +911,7 @@ export function Config({
       }
     }, {
       id: 'teammateDefaultModel',
-      label: 'Default teammate model',
+      label: '协作代理默认模型',
       value: teammateModelDisplayString(globalConfig.teammateDefaultModel),
       type: 'managedEnum' as const,
       onChange() {}
@@ -929,7 +920,7 @@ export function Config({
   // Remote at startup toggle — gated on build flag + GrowthBook + policy
   ...(feature('BRIDGE_MODE') && isBridgeEnabled() ? [{
     id: 'remoteControlAtStartup',
-    label: 'Enable Remote Control for all sessions',
+    label: '所有会话启用远程控制',
     value: globalConfig.remoteControlAtStartup === undefined ? 'default' : String(globalConfig.remoteControlAtStartup),
     options: ['true', 'false', 'default'],
     type: 'enum' as const,
@@ -975,7 +966,7 @@ export function Config({
     }
   }] : []), ...(shouldShowExternalIncludesToggle ? [{
     id: 'showExternalIncludesDialog',
-    label: 'External CLAUDE.md includes',
+    label: '外部 CLAUDE.md 引用',
     value: (() => {
       const projectConfig = getCurrentProjectConfig();
       if (projectConfig.hasClaudeMdExternalIncludesApproved) {
@@ -1097,7 +1088,7 @@ export function Config({
         key: key as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         value: value_2 as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
       });
-      return `Set ${key} to ${chalk.bold(value_2)}`;
+      return `已将 ${key} 设置为 ${chalk.bold(value_2)}`;
     });
     // Check for API key changes
     // On homespace, ANTHROPIC_API_KEY is preserved in process.env for child
@@ -1113,22 +1104,19 @@ export function Config({
       });
     }
     if (globalConfig.theme !== initialConfig.current.theme) {
-      formattedChanges.push(`Set theme to ${chalk.bold(globalConfig.theme)}`);
+      formattedChanges.push(`已将主题设置为 ${chalk.bold(globalConfig.theme)}`);
     }
     if (globalConfig.preferredNotifChannel !== initialConfig.current.preferredNotifChannel) {
-      formattedChanges.push(`Set notifications to ${chalk.bold(globalConfig.preferredNotifChannel)}`);
+      formattedChanges.push(`已将通知方式设置为 ${chalk.bold(globalConfig.preferredNotifChannel)}`);
     }
     if (currentOutputStyle !== initialOutputStyle.current) {
-      formattedChanges.push(`Set output style to ${chalk.bold(currentOutputStyle)}`);
-    }
-    if (currentLanguage !== initialLanguage.current) {
-      formattedChanges.push(`Set response language to ${chalk.bold(currentLanguage ?? 'Default (English)')}`);
+      formattedChanges.push(`已将回答风格设置为 ${chalk.bold(currentOutputStyle)}`);
     }
     if (globalConfig.editorMode !== initialConfig.current.editorMode) {
-      formattedChanges.push(`Set editor mode to ${chalk.bold(globalConfig.editorMode || 'emacs')}`);
+      formattedChanges.push(`已将编辑模式设置为 ${chalk.bold(globalConfig.editorMode || 'emacs')}`);
     }
     if (globalConfig.diffTool !== initialConfig.current.diffTool) {
-      formattedChanges.push(`Set diff tool to ${chalk.bold(globalConfig.diffTool)}`);
+      formattedChanges.push(`已将差异对比工具设置为 ${chalk.bold(globalConfig.diffTool)}`);
     }
     if (globalConfig.autoConnectIde !== initialConfig.current.autoConnectIde) {
       formattedChanges.push(`${globalConfig.autoConnectIde ? 'Enabled' : 'Disabled'} auto-connect to IDE`);
@@ -1171,7 +1159,7 @@ export function Config({
         display: 'system'
       });
     }
-  }, [showSubmenu, changes, globalConfig, mainLoopModel, currentOutputStyle, currentLanguage, settingsData?.autoUpdatesChannel, isFastModeEnabled() ? (settingsData as Record<string, unknown> | undefined)?.fastMode : undefined, onClose]);
+  }, [showSubmenu, changes, globalConfig, mainLoopModel, currentOutputStyle, settingsData?.autoUpdatesChannel, isFastModeEnabled() ? (settingsData as Record<string, unknown> | undefined)?.fastMode : undefined, onClose]);
 
   // Restore all state stores to their mount-time snapshots. Changes are
   // applied to disk/AppState immediately on toggle, so "cancel" means
@@ -1203,7 +1191,6 @@ export function Config({
       promptSuggestionEnabled: iu?.promptSuggestionEnabled,
       autoUpdatesChannel: iu?.autoUpdatesChannel,
       minimumVersion: iu?.minimumVersion,
-      language: iu?.language,
       ...(feature('TRANSCRIPT_CLASSIFIER') ? {
         useAutoModeDuringPlan: (iu as {
           useAutoModeDuringPlan?: boolean;
@@ -1297,7 +1284,7 @@ export function Config({
       }
       return;
     }
-    if (setting_0.id === 'theme' || setting_0.id === 'model' || setting_0.id === 'teammateDefaultModel' || setting_0.id === 'showExternalIncludesDialog' || setting_0.id === 'outputStyle' || setting_0.id === 'language') {
+    if (setting_0.id === 'theme' || setting_0.id === 'model' || setting_0.id === 'teammateDefaultModel' || setting_0.id === 'showExternalIncludesDialog' || setting_0.id === 'outputStyle') {
       // managedEnum items open a submenu — isDirty is set by the submenu's
       // completion callback, not here (submenu may be cancelled).
       switch (setting_0.id) {
@@ -1319,10 +1306,6 @@ export function Config({
           return;
         case 'outputStyle':
           setShowSubmenu('OutputStyle');
-          setTabsHidden(true);
-          return;
-        case 'language':
-          setShowSubmenu('Language');
           setTabsHidden(true);
           return;
       }
@@ -1555,32 +1538,7 @@ export function Config({
               <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
             </Byline>
           </Text>
-        </> : showSubmenu === 'Language' ? <>
-          <LanguagePicker initialLanguage={currentLanguage} onComplete={language => {
-        isDirty.current = true;
-        setCurrentLanguage(language);
-        setShowSubmenu(null);
-        setTabsHidden(false);
-
-        // Save to user settings
-        updateSettingsForSource('userSettings', {
-          language
-        });
-        void logEvent('tengu_language_changed', {
-          language: (language ?? 'default') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          source: 'config_panel' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-        });
-      }} onCancel={() => {
-        setShowSubmenu(null);
-        setTabsHidden(false);
-      }} />
-          <Text dimColor>
-            <Byline>
-              <KeyboardShortcutHint shortcut="Enter" action="confirm" />
-              <ConfigurableShortcutHint action="confirm:no" context="Settings" fallback="Esc" description="cancel" />
-            </Byline>
-          </Text>
-        </> : showSubmenu === 'EnableAutoUpdates' ? <Dialog title="Enable Auto-Updates" onCancel={() => {
+        </> : showSubmenu === 'EnableAutoUpdates' ? <Dialog title="启用自动更新" onCancel={() => {
       setShowSubmenu(null);
       setTabsHidden(false);
     }} hideBorder hideInputGuide>
@@ -1593,10 +1551,10 @@ export function Config({
                   auto-updates.
                 </Text>}
             </> : <Select options={[{
-        label: 'Enable with latest channel',
+        label: '启用最新版本渠道',
         value: 'latest'
       }, {
-        label: 'Enable with stable channel',
+        label: '启用稳定版本渠道',
         value: 'stable'
       }]} onChange={(channel: string) => {
         isDirty.current = true;
@@ -1652,13 +1610,14 @@ export function Config({
         minimum_version_set: choice === 'stay'
       });
     }} /> : <Box flexDirection="column" gap={1} marginY={insideModal ? undefined : 1}>
-          <SearchBox query={searchQuery} isFocused={isSearchMode && !headerFocused} isTerminalFocused={isTerminalFocused} cursorOffset={searchCursorOffset} placeholder="Search settings…" />
+          <Text dimColor>显示语言：简体中文（固定）</Text>
+          <SearchBox query={searchQuery} isFocused={isSearchMode && !headerFocused} isTerminalFocused={isTerminalFocused} cursorOffset={searchCursorOffset} placeholder="搜索设置…" />
           <Box flexDirection="column">
             {filteredSettingsItems.length === 0 ? <Text dimColor italic>
-                No settings match &quot;{searchQuery}&quot;
+                没有匹配的设置：&quot;{searchQuery}&quot;
               </Text> : <>
                 {scrollOffset > 0 && <Text dimColor>
-                    {figures.arrowUp} {scrollOffset} more above
+                    {figures.arrowUp} {scrollOffset} 项位于上方
                   </Text>}
                 {filteredSettingsItems.slice(scrollOffset, scrollOffset + maxVisible).map((setting_2, i) => {
             const actualIndex = scrollOffset + i;
@@ -1678,9 +1637,9 @@ export function Config({
                                 </Text>
                                 {showThinkingWarning && setting_2.id === 'thinkingEnabled' && <Text color="warning">
                                       {' '}
-                                      Changing thinking mode mid-conversation
-                                      will increase latency and may reduce
-                                      quality.
+                                      在对话中切换思考模式
+                                      可能增加等待时间，并影响
+                                      回答质量。
                                     </Text>}
                               </> : setting_2.id === 'theme' ? <Text color={isSelected ? 'suggestion' : undefined}>
                                 {THEME_LABELS[setting_2.value.toString()] ?? setting_2.value.toString()}
@@ -1707,7 +1666,7 @@ export function Config({
                 {scrollOffset + maxVisible < filteredSettingsItems.length && <Text dimColor>
                     {figures.arrowDown}{' '}
                     {filteredSettingsItems.length - scrollOffset - maxVisible}{' '}
-                    more below
+                    项位于下方
                   </Text>}
               </>}
           </Box>
@@ -1719,7 +1678,7 @@ export function Config({
               </Byline>
             </Text> : isSearchMode ? <Text dimColor>
               <Byline>
-                <Text>Type to filter</Text>
+                <Text>输入文字筛选</Text>
                 <KeyboardShortcutHint shortcut="Enter/↓" action="select" />
                 <KeyboardShortcutHint shortcut="↑" action="tabs" />
                 <ConfigurableShortcutHint action="confirm:no" context="Settings" fallback="Esc" description="clear" />

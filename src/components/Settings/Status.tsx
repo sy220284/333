@@ -19,18 +19,18 @@ type Props = {
 function buildPrimarySection(): Property[] {
   const sessionId = getSessionId();
   const customTitle = getCurrentSessionTitle(sessionId);
-  const nameValue = customTitle ?? <Text dimColor>/rename to add a name</Text>;
+  const nameValue = customTitle ?? <Text dimColor>/rename 可为会话命名</Text>;
   return [{
-    label: 'Version',
+    label: '版本',
     value: MACRO.VERSION
   }, {
-    label: 'Session name',
+    label: '会话名称',
     value: nameValue
   }, {
-    label: 'Session ID',
+    label: '会话编号',
     value: sessionId
   }, {
-    label: 'cwd',
+    label: '工作目录',
     value: getCwd()
   }, ...buildAccountProperties(), ...buildAPIProviderProperties()];
 }
@@ -47,7 +47,7 @@ function buildSecondarySection({
 }): Property[] {
   const modelLabel = getModelDisplayLabel(mainLoopModel);
   return [{
-    label: 'Model',
+    label: '模型',
     value: modelLabel
   }, ...buildIDEProperties(mcp.clients, context.options.ideInstallationStatus, theme), ...buildMcpProperties(mcp.clients, theme), ...buildSandboxProperties(), ...buildSettingSourcesProperties()];
 }
@@ -212,7 +212,7 @@ function Diagnostics(t0: { promise: Promise<Diagnostic[]> }) {
   }
   let t1;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
-    t1 = <Text bold={true}>System Diagnostics</Text>;
+    t1 = <Text bold={true}>系统诊断</Text>;
     $[0] = t1;
   } else {
     t1 = $[0];
