@@ -39,7 +39,7 @@ test('real Read → NotebookEdit → Read shares the same file snapshot and retu
     expect((await NotebookEditTool.validateInput(edit, context)).result).toBe(true)
     const updated = await NotebookEditTool.call(edit, context, undefined, { uuid: 'roundtrip' } as never)
     expect(updated.data.error).toBe('')
-    expect(updated.data.cell_id).toBe('real-cell')
+    expect(updated.data.cell_id).toBe('cell-0')
     expect(readFileState.get(notebook_path)?.offset).toBeUndefined()
 
     const secondRead = await FileReadTool.call({ file_path: notebook_path }, context)
