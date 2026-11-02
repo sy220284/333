@@ -227,6 +227,7 @@ import { useChromeExtensionNotification } from 'src/hooks/useChromeExtensionNoti
 import { useOfficialMarketplaceNotification } from 'src/hooks/useOfficialMarketplaceNotification.js';
 import { usePromptsFromClaudeInChrome } from 'src/hooks/usePromptsFromClaudeInChrome.js';
 import { getTipToShowOnSpinner, recordShownTip } from 'src/services/tips/tipScheduler.js';
+import { contentSafe as getSafeTipContent } from 'src/services/tips/tipRegistry.js';
 import type { Theme } from 'src/utils/theme.js';
 import { checkAndDisableBypassPermissionsIfNeeded, checkAndDisableAutoModeIfNeeded, useKickOffCheckAndDisableBypassPermissionsIfNeeded, useKickOffCheckAndDisableAutoModeIfNeeded } from 'src/utils/permissions/bypassPermissionsKillswitch.js';
 import { SandboxManager } from 'src/utils/sandbox/sandbox-adapter.js';
@@ -1535,23 +1536,29 @@ export function REPL({
       bashTools: bashTools.current
     }).then(async tip => {
       if (tip) {
-        const content = await tip.content({
-          theme
-        });
-        setAppState(prev => ({
-          ...prev,
-          spinnerTip: content
-        }));
-        recordShownTip(tip);
-      } else {
-        setAppState(prev => {
-          if (prev.spinnerTip === undefined) return prev;
-          return {
+        const content = await getSafeTipContent(tip, theme);
+        if (content !== '') {
+          setAppState(prev => ({
             ...prev,
-            spinnerTip: undefined
-          };
-        });
+            spinnerTip: content
+          }));
+          recordShownTip(tip);
+          return;
+        }
       }
+      setAppState(prev => {
+        if (prev.spinnerTip === undefined) return prev;
+        return {
+          ...prev,
+          spinnerTip: undefined
+        };
+      });
+    }).catch(error => {
+      // Picking tips must not interrupt a user query or corrupt the spinner.
+      logForDebugging(`spinner tip failed: ${error}`, { level: 'warn' });
+      setAppState(prev =>
+        prev.spinnerTip === undefined ? prev : { ...prev, spinnerTip: undefined }
+      );
     });
   }, [setAppState, theme]);
 

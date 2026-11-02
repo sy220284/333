@@ -696,6 +696,20 @@ const tipCommands: Readonly<Record<string, string>> = {
 
 /** Failed tip eligibility checks must not be retried on every spinner turn. */
 const failedTipIds = new Set<string>()
+/** 2.1.310: a broken spinner tip is not retried for the current process. */
+export async function contentSafe(
+  tip: Tip,
+  theme: import('../../utils/theme.js').ThemeName,
+): Promise<string> {
+  try {
+    return await tip.content({ theme })
+  } catch (error) {
+    failedTipIds.add(tip.id)
+    logForDebugging(`tip content threw: ${error}`, { level: 'warn' })
+    return ''
+  }
+}
+
 
 export async function getRelevantTips(context?: TipContext): Promise<Tip[]> {
   const settings = getInitialSettings()
