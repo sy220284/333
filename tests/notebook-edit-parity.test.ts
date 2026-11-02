@@ -1,4 +1,7 @@
 import { expect, test } from 'bun:test'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { applyNotebookEdit, isValidNotebookContent, locateNotebookEdit, MAX_NOTEBOOK_BYTES } from '../src/tools/NotebookEditTool/notebookMutation.js'
 import { withNotebookFileLock } from '../src/utils/notebookFileLock.js'
 import type { NotebookContent } from '../src/types/notebook.js'
@@ -157,6 +160,38 @@ test('Notebook writes on the same file are serialized while independent files pr
   unlockFirst()
   await Promise.all([first, second])
   expect(events).toEqual(['first-start', 'other-file', 'first-end', 'second-start'])
+})
+
+test('Notebook edits through a symlinked directory share the same file lock', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'm1-notebook-alias-'))
+  const actualDir = join(root, 'actual')
+  const aliasDir = join(root, 'alias')
+  mkdirSync(actualDir)
+  const actual = join(actualDir, 'book.ipynb')
+  writeFileSync(actual, JSON.stringify(notebook()))
+  try {
+    symlinkSync(actualDir, aliasDir, process.platform === 'win32' ? 'junction' : 'dir')
+    const alias = join(aliasDir, 'book.ipynb')
+    const events: string[] = []
+    let release: () => void = () => {}
+    const waitForFirst = new Promise<void>(resolve => { release = resolve })
+    const first = withNotebookFileLock(actual, async () => {
+      events.push('first')
+      await waitForFirst
+      events.push('first-finished')
+    })
+    const second = withNotebookFileLock(alias, async () => {
+      events.push('alias')
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(events).toEqual(['first'])
+    release()
+    await Promise.all([first, second])
+    expect(events).toEqual(['first', 'first-finished', 'alias'])
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })
 
 test('Notebook file lock is released even when a write fails', async () => {
