@@ -71,7 +71,7 @@ for (const args of [
       assert.deepEqual(added.filter(flag => !approvedAdded.has(flag)), [],
         'Unexpected extra CLI option beyond reviewed 2.1.310 migration');
       for(const required of ['--autocompact','--restricted','--safe-mode','--permission-prompts','--prompt-suggestions','--teleport']){
-        assert.ok(added.includes(required), 'Expected reviewed 2.1.310 option missing: '+required);
+        assert.ok(added.includes(required), `Expected reviewed 2.1.310 option missing: ${required}`);
       }
       assert.deepEqual(baseline.flags.filter(flag => !rebuilt.flags.includes(flag)), [],
         'Old CLI options were removed unexpectedly');
