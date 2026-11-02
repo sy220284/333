@@ -637,8 +637,8 @@ function parseKeypress(s: string = ''): ParsedKey {
 
   // Handle CSI u (kitty keyboard protocol): ESC [ codepoint [; modifier] u
   // Example: ESC[13;2u = Shift+Enter, ESC[27u = Escape (no modifiers)
-  let match: RegExpExecArray | null
-  if ((match = CSI_U_RE.exec(s))) {
+  let match = CSI_U_RE.exec(s)
+  if (match) {
     const codepoint = parseInt(match[1]!, 10)
     // Modifier defaults to 1 (no modifiers) when not present
     const modifier = match[2] ? parseInt(match[2], 10) : 1
@@ -662,7 +662,8 @@ function parseKeypress(s: string = ''): ParsedKey {
   // Handle xterm modifyOtherKeys: ESC [ 27 ; modifier ; keycode ~
   // Must run before FN_KEY_RE — FN_KEY_RE only allows 2 params before ~ and
   // would leave the tail as garbage if it partially matched.
-  if ((match = MODIFY_OTHER_KEYS_RE.exec(s))) {
+  match = MODIFY_OTHER_KEYS_RE.exec(s)
+  if (match) {
     const mods = decodeModifier(parseInt(match[1]!, 10))
     const name = keycodeToName(parseInt(match[2]!, 10))
     return {
@@ -686,7 +687,8 @@ function parseKeypress(s: string = ''): ParsedKey {
   // + direction while ignoring modifier bits (Shift=0x04, Meta=0x08,
   // Ctrl=0x10) — modified wheel events (e.g. Ctrl+scroll, button=80)
   // should still be recognized as wheelup/wheeldown.
-  if ((match = SGR_MOUSE_RE.exec(s))) {
+  match = SGR_MOUSE_RE.exec(s)
+  if (match) {
     const button = parseInt(match[1]!, 10)
     if ((button & 0x43) === 0x40) return createNavKey(s, 'wheelup', false)
     if ((button & 0x43) === 0x41) return createNavKey(s, 'wheeldown', false)
