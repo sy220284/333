@@ -3145,23 +3145,6 @@ async function run(): Promise<CommanderCommand> {
     // The public 2.1.310 x64 release omits the private internal-only
     // session environment uploader. The public session executes its normal
     // onTurnComplete path without attempting to import that absent module.
-    /* Old internal-only uploader removed from public target.
-    // Set up per-turn session environment data uploader (ant-only build).
-    // Default-enabled for all ant users when working in an Anthropic-owned
-    // repo. Captures git/filesystem state (NOT transcripts) at each turn so
-    // environments can be recreated at any user message index. Gating:
-    //   - Build-time: this import is stubbed in external builds.
-    //   - Runtime: uploader checks github.com/anthropics/* remote + gcloud auth.
-    //   - Safety: CLAUDE_CODE_DISABLE_SESSION_DATA_UPLOAD=1 bypasses (tests set this).
-    // Import is dynamic + async to avoid adding startup latency.
-    const sessionUploaderPromise = process.env.USER_TYPE === 'ant' ? import('./utils/sessionDataUploader.js') : null;
-
-    // Defer session uploader resolution to the onTurnComplete callback to avoid
-    // adding a new top-level await in main.tsx (performance-critical path).
-    // The per-turn auth logic in sessionDataUploader.ts handles unauthenticated
-    // state gracefully (re-checks each turn, so auth recovery mid-session works).
-    const uploaderReady = sessionUploaderPromise ? sessionUploaderPromise.then(mod => mod.createSessionTurnUploader()).catch(() => null) : null;
-    */
     const sessionConfig = {
       debug: debug || debugToStderr,
       commands: [...commands, ...mcpCommands],
