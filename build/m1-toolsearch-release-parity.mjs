@@ -32,7 +32,7 @@ function sse(model, toolCall) {
   ]
   return chunks.map(([e,d])=>frame(e,d)).join('')
 }
-async function probe(exe) {
+async function probe(exe, toolSearchOverride) {
   const home = mkdtempSync(join(tmpdir(),'333-toolsearch-'))
   const requests = []
   const server = createServer(async(req,res)=>{
@@ -48,6 +48,7 @@ async function probe(exe) {
     const env={}
     for(const [k,v] of Object.entries(process.env))if(!/CLAUDE|ANTHROPIC|TOKEN|SECRET|PASSWORD|API_KEY|AWS_|GOOGLE_|OPENAI_|GITHUB_/i.test(k))env[k]=v
     Object.assign(env,{HOME:home,USERPROFILE:home,XDG_CONFIG_HOME:home,XDG_CACHE_HOME:home,ANTHROPIC_API_KEY:'local-only-test-key',ANTHROPIC_BASE_URL:'http://127.0.0.1:'+server.address().port,DISABLE_TELEMETRY:'1',DISABLE_ERROR_REPORTING:'1',CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1',NO_PROXY:'127.0.0.1,localhost',HTTP_PROXY:'',HTTPS_PROXY:''})
+    if (toolSearchOverride !== undefined) env.ENABLE_TOOL_SEARCH = toolSearchOverride
     const child=spawn(resolve(exe),['--print','--output-format','json','--max-turns','3','--no-session-persistence','Check tools'],{cwd:home,env,stdio:['ignore','pipe','pipe']})
     let stdout='',stderr=''
     child.stdout.on('data',x=>stdout+=x);child.stderr.on('data',x=>stderr+=x)
@@ -72,11 +73,15 @@ async function probe(exe) {
 }
 const reference=await probe(opt['--reference'])
 const candidate=opt['--candidate']?await probe(opt['--candidate']):null
+const disabledReference = await probe(opt['--reference'], 'false')
+const disabledCandidate = opt['--candidate'] ? await probe(opt['--candidate'], 'false') : null
+const disabledMatchesTarget = !disabledReference.initialTools.includes('ToolSearch') && (disabledCandidate === null || !disabledCandidate.initialTools.includes('ToolSearch'))
+
 const referencePass=reference.exitCode===0&&reference.calls===2&&reference.result==='DISCOVERY_COMPLETE'&&foundOnTarget.every(n=>reference.discovered.includes(n))&&absentOnTarget.every(n=>!reference.discovered.includes(n))
 const candidateMatches=candidate?candidate.exitCode===reference.exitCode&&candidate.calls===reference.calls&&candidate.result===reference.result&&JSON.stringify(candidate.discovered)===JSON.stringify(reference.discovered):null
 const candidateBaseDiscoveryPass = candidate ? candidate.exitCode === 0 && candidate.calls === 2 && candidate.result === 'DISCOVERY_COMPLETE' && candidate.initialTools.includes('ToolSearch') && ['Bash', 'Read'].every(name => candidate.discovered.includes(name)) : null
-const report={officialSha,names,reference,candidate,referencePass,candidateMatches,candidateBaseDiscoveryPass,scope:'ordinary CLI --print ToolSearch with isolated model API'}
+const report={officialSha,names,reference,candidate,disabledReference,disabledCandidate,disabledMatchesTarget,referencePass,candidateMatches,candidateBaseDiscoveryPass,scope:'ordinary CLI --print ToolSearch with isolated model API'}
 mkdirSync(dirname(resolve(opt['--report'])),{recursive:true})
 writeFileSync(resolve(opt['--report']),JSON.stringify(report,null,2)+'\n')
-console.log(JSON.stringify({referencePass,candidateMatches,candidateBaseDiscoveryPass,referenceDiscovered:reference.discovered,candidateDiscovered:candidate?.discovered??null}))
-if(!referencePass || (candidate && !candidateBaseDiscoveryPass) || (candidate && !candidateMatches && opt['--allow-candidate-diff']!=='true'))process.exitCode=1
+console.log(JSON.stringify({referencePass,candidateMatches,candidateBaseDiscoveryPass,disabledMatchesTarget,referenceDiscovered:reference.discovered,candidateDiscovered:candidate?.discovered??null}))
+if(!referencePass || !disabledMatchesTarget || (candidate && !candidateBaseDiscoveryPass) || (candidate && !candidateMatches && opt['--allow-candidate-diff']!=='true'))process.exitCode=1
