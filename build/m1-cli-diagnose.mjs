@@ -50,7 +50,7 @@ try {
   rmSync(root,{recursive:true,force:true})
 }
 const dest=resolve(args[output+1]);mkdirSync(dirname(dest),{recursive:true})
-writeFileSync(dest,JSON.stringify({schema:1,scope:'ISOLATED_CANDIDATE_DEBUG_RUN_ONLY',
-  records},null,2)+'\n')
+writeFileSync(dest,`${JSON.stringify({schema:1,scope:'ISOLATED_CANDIDATE_DEBUG_RUN_ONLY',
+  records},null,2)}\n`)
 console.log(JSON.stringify(records.map(r=>({id:r.id,exit:r.exit_code,
   debug:r.debug_file_created,bytes:r.debug_log_tail.length}))))
