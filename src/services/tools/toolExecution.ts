@@ -811,7 +811,7 @@ async function checkPermissionsAndCallTool(
       case 'message':
         if (result.message.message.type === 'progress' && result.message.message.data.type === 'hook_progress') {
           const hookProgress = result.message.message
-          onToolProgress({ ...hookProgress, data: hookProgress.data })
+          onToolProgress({ ...hookProgress, data: hookProgress.data as HookProgress } satisfies ProgressMessage<HookProgress>)
         } else {
           resultingMessages.push(result.message)
           const att = result.message.message.type === 'attachment'

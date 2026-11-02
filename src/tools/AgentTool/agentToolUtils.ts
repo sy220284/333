@@ -352,7 +352,13 @@ export function finalizeAgentTool(
     totalDurationMs: Date.now() - startTime,
     totalTokens,
     totalToolUseCount,
-    usage: lastAssistantMessage.message.usage,
+    usage: {
+      ...lastAssistantMessage.message.usage,
+      server_tool_use: {
+        web_search_requests: lastAssistantMessage.message.usage.server_tool_use?.web_search_requests ?? 0,
+        web_fetch_requests: lastAssistantMessage.message.usage.server_tool_use?.web_fetch_requests ?? 0,
+      },
+    },
   }
 }
 
