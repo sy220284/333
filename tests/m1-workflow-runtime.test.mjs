@@ -89,3 +89,18 @@ ${body}`
     await assert.rejects(()=>executeWorkflowScript(options),new RegExp('host-'+mode+'-rejected'))
   }
 })
+
+test('Workflow preserves its final JSON result, including a pure script with no agents',async()=>{
+ const script=`export const meta={name:'return-test',description:'Result'}
+ phase('Verify')
+ return {answer:42,done:true}`
+ const completion=await executeWorkflowScript({script,agent:async()=>''})
+ assert.deepEqual(completion.result,{answer:42,done:true})
+})
+test('Workflow pipeline returns the final result without losing concurrent agent responses',async()=>{
+ const script=`export const meta={name:'pipeline-result',description:'Result'}
+ const results=await parallel([()=>agent('a'),()=>agent('b')])
+ return results.join(',')`
+ const completion=await executeWorkflowScript({script,agent:async prompt=>prompt.toUpperCase()})
+ assert.equal(completion.result,'A,B')
+})

@@ -27,6 +27,7 @@ export function WorkflowDetailDialog({workflow,onDone,onKill,onSkipAgent,onRetry
       <Text>Current phase: {workflow.phase??'starting'}</Text>
       <Text>Script: {workflow.scriptPath??'inline'}</Text>
       <Text>Journal: {workflow.transcriptDir}/journal.jsonl</Text>
+      {workflow.status==='completed'&&<Text>Result: {JSON.stringify(workflow.result??null)?.slice(0,4000)}</Text>}
       {agents.length===0?<Text>No agent call currently active</Text>:
         agents.map(agent=><Text key={agent.agentId}>{agent.agentId}: {agent.description}</Text>)}
       <Text dimColor>← back · x stop workflow · s skip current agent · r retry current agent</Text>

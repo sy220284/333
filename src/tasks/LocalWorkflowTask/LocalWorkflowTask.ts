@@ -22,6 +22,7 @@ export type LocalWorkflowTaskState = TaskStateBase & {
   phase?: string
   scriptPath?: string
   transcriptDir: string
+  result?: unknown
 }
 type AgentControl={abort:AbortController,action:null|'skip'|'retry'}
 type Job={abort:AbortController,unregister:()=>void,runId:string,agents:Map<string,AgentControl>}
@@ -126,7 +127,7 @@ export async function launchWorkflow(
     const nextCacheKey=createWorkflowCallCounter()
     try{
       await journalEvent({type:'start',taskId:id,runId,scriptHash:parsed.hash})
-      await executeWorkflowScript({
+      const completion=await executeWorkflowScript({
         script:input.script,args:input.args??{},signal:abort.signal,
         onPhase:phase=>{
           updateTaskState<LocalWorkflowTaskState>(id,setAppState,t=>({...t,phase}))
@@ -183,7 +184,8 @@ export async function launchWorkflow(
         },
       })
       await writes
-      await journalEvent({type:'complete'})
+      await journalEvent({type:'complete',result:completion.result})
+      updateTaskState<LocalWorkflowTaskState>(id,setAppState,t=>({...t,result:completion.result}))
       finish(id,setAppState,'completed',`completed ${parsed.meta.name}`)
     }catch(error){
       await journalEvent({type:abort.signal.aborted?'cancelled':'failed',error:String(error)})

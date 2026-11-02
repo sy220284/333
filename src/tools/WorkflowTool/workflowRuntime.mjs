@@ -117,7 +117,12 @@ export async function executeWorkflowScript({script,args={},agent,onPhase=()=>{}
   Object.assign(context,api)
   check()
   const result=new vm.Script('(async()=>{\n'+runnable+'\n})()').runInContext(context,{timeout:500})
-  await result
+  const value=await result
   check()
-  return meta
+  // The completion result is a plain JSON value, never a live VM object.
+  // Clone at the boundary so journal serialization cannot retain sandbox
+  // prototypes or expose a function to callers.
+  const serialized=JSON.stringify(value===undefined?null:value)
+  if(serialized===undefined)throw new Error('Workflow result must be JSON serializable')
+  return {meta,result:JSON.parse(serialized)}
 }
