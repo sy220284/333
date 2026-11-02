@@ -52,3 +52,13 @@ test('旧版基准哈希变化时拒绝错误版本对照',()=>{
   const data=reference();data.reference_sha256='not-2.1.310'
   assert.throws(()=>buildHandoff(data,mapping,coverage,root),/原版 ELF 哈希/)
 })
+
+test('代码升级令一项旧差异通过时，自动迁移到待完整验收而不要求人工重建台账',()=>{
+  const data=reference()
+  data.candidate.cases.find(x=>x.id==='mcp_list_empty').pass=true
+  data.candidate.passed=5
+  const out=buildHandoff(data,mapping,coverage,root)
+  assert.equal(out.confirmed_differences,5)
+  assert.ok(out.newlyMatching.some(x=>x.id==='mcp_list_empty'))
+  assert.ok(out.differences.every(x=>!x.accepted))
+})
