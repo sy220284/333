@@ -79,10 +79,12 @@ export function execSyncWithDefaults_DEPRECATED(
       reject: false, // Don't throw on non-zero exit codes
       input,
     })
-    if (!result.stdout) {
-      return null
-    }
-    return result.stdout.trim() || null
+    const output = typeof result.stdout === 'string'
+      ? result.stdout
+      : Array.isArray(result.stdout) && result.stdout.every(line => typeof line === 'string')
+        ? result.stdout.join('\n')
+        : null
+    return output?.trim() || null
   } catch {
     return null
   }
