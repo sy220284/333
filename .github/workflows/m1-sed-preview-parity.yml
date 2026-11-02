@@ -16,6 +16,7 @@ on:
       - 'tests/notebook-edit-parity.test.ts'
       - 'tests/notebook-edit-write-integration.test.ts'
       - 'tests/notebook-read-edit-integration.test.ts'
+      - 'tests/m1-notebook-e41-cli.mjs'
       - 'tests/m1-link-production-adapters.mjs'
       - '.github/workflows/m1-sed-preview-parity.yml'
   workflow_dispatch:
@@ -49,7 +50,7 @@ jobs:
       - name: 仅检查本 PR 修改的 TypeScript 文件（独立于历史质量基线）
         run: |
           npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
-          node tools/dev/node_modules/@biomejs/biome/bin/biome lint --no-errors-on-unmatched src/components/permissions/SedEditPermissionRequest/SedEditPermissionRequest.tsx src/tools/BashTool/BashTool.tsx src/tools/BashTool/sedEditParser.ts src/tools/NotebookEditTool/NotebookEditTool.ts src/tools/NotebookEditTool/notebookMutation.ts src/utils/notebook.ts src/utils/notebookCells.ts src/utils/notebookFileLock.ts tests/notebook-edit-parity.test.ts tests/notebook-edit-write-integration.test.ts tests/notebook-read-edit-integration.test.ts tests/sed-edit-parity.test.ts tests/sed-edit-write-integration.test.ts tests/m1-link-production-adapters.mjs
+          node tools/dev/node_modules/@biomejs/biome/bin/biome lint --no-errors-on-unmatched src/components/permissions/SedEditPermissionRequest/SedEditPermissionRequest.tsx src/tools/BashTool/BashTool.tsx src/tools/BashTool/sedEditParser.ts src/tools/NotebookEditTool/NotebookEditTool.ts src/tools/NotebookEditTool/notebookMutation.ts src/utils/notebook.ts src/utils/notebookCells.ts src/utils/notebookFileLock.ts tests/notebook-edit-parity.test.ts tests/notebook-edit-write-integration.test.ts tests/notebook-read-edit-integration.test.ts tests/m1-notebook-e41-cli.mjs tests/sed-edit-parity.test.ts tests/sed-edit-write-integration.test.ts tests/m1-link-production-adapters.mjs
       - name: 对照本机 GNU/BSD sed 验证预览与真实文件写入
         run: bun test tests/sed-edit-parity.test.ts
       - name: Notebook 单元格身份、类型变更与格式一致性
@@ -58,6 +59,11 @@ jobs:
         run: |
           node tests/m1-link-production-adapters.mjs
           bun test tests/sed-edit-write-integration.test.ts tests/notebook-edit-write-integration.test.ts tests/notebook-read-edit-integration.test.ts
+      - name: 独立构建后以模拟模型验证真实 CLI 的 Notebook E41 完整回路
+        if: runner.os == 'Linux'
+        run: |
+          bun build/rebuild.mjs
+          node tests/m1-notebook-e41-cli.mjs bun dist/cli.js
 
   notebook-windows:
     name: Notebook 原位编辑（Windows）
