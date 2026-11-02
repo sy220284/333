@@ -26,7 +26,8 @@ type OutputSchema=ReturnType<typeof outputSchema>
 type Output=z.infer<OutputSchema>
 async function verifyWsHost(raw:string){
   const url=validateMonitorWsUrl(raw)
-  const addresses=await lookup(url.hostname,{all:true})
+  const host = url.hostname.replace(/^\[|\]$/g, '')
+  const addresses=await lookup(host,{all:true})
   if(!addresses.length||addresses.some(a=>!isPublicIp(a.address)))
     throw new Error('WebSocket host resolves to a private, link-local, or metadata address')
 }
