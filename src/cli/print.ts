@@ -90,6 +90,7 @@ import {
 import { parsePluginIdentifier } from 'src/utils/plugins/pluginIdentifier.js'
 import { validateUuid } from 'src/utils/uuid.js'
 import { fromArray } from 'src/utils/generators.js'
+import { parseSdkTransportMessage } from 'src/services/mcp/validateSdkTransportMessage.js'
 import { ask } from 'src/QueryEngine.js'
 import type { PermissionPromptTool } from 'src/utils/queryHelpers.js'
 import {
@@ -2985,21 +2986,28 @@ function runHeadlessStreaming(
             sendControlResponseError(message, errorMessage(error))
           }
         } else if (message.request.subtype === 'mcp_message') {
-          // Handle MCP notifications from SDK servers
-          const mcpRequest = message.request
-          const sdkClient = sdkClients.find(
-            client => client.name === mcpRequest.server_name,
-          )
-          // Check client exists - dynamically added SDK servers may have
-          // placeholder clients with null client until updateSdkMcp() runs
-          if (
-            sdkClient &&
-            sdkClient.type === 'connected' &&
-            sdkClient.client?.transport?.onmessage
-          ) {
-            sdkClient.client.transport.onmessage(mcpRequest.message)
+          // Validate the untrusted protocol payload before dispatching it to
+          // a connected SDK MCP transport. Invalid JSON-RPC reports an error
+          // instead of acknowledging an undelivered message as successful.
+          try {
+            const mcpRequest = message.request
+            const parsedMessage = parseSdkTransportMessage(mcpRequest.message)
+            const sdkClient = sdkClients.find(
+              client => client.name === mcpRequest.server_name,
+            )
+            // Dynamically added SDK servers may have placeholder connections
+            // until updateSdkMcp() completes.
+            if (
+              sdkClient &&
+              sdkClient.type === 'connected' &&
+              sdkClient.client?.transport?.onmessage
+            ) {
+              sdkClient.client.transport.onmessage(parsedMessage)
+            }
+            sendControlResponseSuccess(message)
+          } catch (error) {
+            sendControlResponseError(message, errorMessage(error))
           }
-          sendControlResponseSuccess(message)
         } else if (message.request.subtype === 'rewind_files') {
           const appState = getAppState()
           const result = await handleRewindFiles(
