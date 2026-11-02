@@ -20,6 +20,12 @@ jobs:
         with:
           ref: upgrade/2.1.310-m1-evidence
           persist-credentials: true
+      - name: 同步最新PR分支资源校验基线
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin upgrade/2.1.310-m1-evidence
+          git checkout -B upgrade/2.1.310-m1-evidence origin/upgrade/2.1.310-m1-evidence
       - name: 下载锁定 SHA 的 2.1.310 Linux x64 官方发行程序
         shell: bash
         run: |
