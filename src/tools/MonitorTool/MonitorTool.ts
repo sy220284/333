@@ -62,7 +62,8 @@ export const MonitorTool=buildTool({
         message:`Monitor will open a WebSocket to ${input.ws.url}`,
         decisionReason:{type:'safetyCheck' as const,reason:'WebSocket outbound connection requires explicit consent',classifierApprovable:false}}
     }
-    return BashTool.checkPermissions({command:input.command!,description:input.description,run_in_background:true},context)
+    if (typeof input.command !== 'string') throw new Error('Monitor command missing after validation')
+    return BashTool.checkPermissions({command:input.command,description:input.description,run_in_background:true},context)
   },
   async call(input,context){
     // The 2.1.310 public schema accepts up to 3,600,000ms but caps
@@ -74,6 +75,8 @@ export const MonitorTool=buildTool({
         {setAppState:context.setAppStateForTasks??context.setAppState,toolUseId:context.toolUseId,agentId:context.agentId})
       return {data:{taskId:id,timeoutMs,persistent:false}}
     }
+    if (typeof input.command !== 'string') throw new Error('Monitor command missing after validation')
+    const command=input.command
     const {abortController,getAppState}=context
     const setAppState=context.setAppStateForTasks??context.setAppState
     let taskId:string|undefined
@@ -85,21 +88,22 @@ export const MonitorTool=buildTool({
       enqueuePendingNotification({mode:'task-notification',priority:'next',
         value:`Monitor "${input.description}" [task ${taskId}]: ${line}`})
     }
-    const shell=await exec(input.command!,abortController.signal,'bash',{
+    const shell=await exec(command,abortController.signal,'bash',{
       timeout:timeoutMs,
-      shouldUseSandbox:shouldUseSandbox({command:input.command!}),
+      shouldUseSandbox:shouldUseSandbox({command:command}),
       onProgress(_last,all){
         const full=typeof all==='string'?all:''
         const delta=full.startsWith(lastOutput)?full.slice(lastOutput.length):full
         lastOutput=full;buffered+=delta
-        let next
-        while((next=buffered.indexOf('\n'))>=0){
+        let next=buffered.indexOf('\n')
+        while(next>=0){
           const line=buffered.slice(0,next);buffered=buffered.slice(next+1)
           emitLine(line)
+          next=buffered.indexOf('\n')
         }
       },
     })
-    const handle=await spawnShellTask({command:input.command!,description:input.description,
+    const handle=await spawnShellTask({command:command,description:input.description,
       shellCommand:shell,toolUseId:context.toolUseId,agentId:context.agentId,kind:'monitor'},
       {abortController,getAppState,setAppState})
     taskId=handle.taskId
