@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "reference_release": "2.1.310",
+  "candidate_basis": "333 2.1.88 source independent Bun build",
+  "source_commit": "97069804da5a373e2e4dc917dca94244ad470271",
+  "github_actions_run": 41379545209,
+  "artifact_id": 13112592741,
+  "artifact_name": "m1-x64-source-differential",
+  "reference_sha256": "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56",
+  "scope": "Linux x64, temporary HOME, credential-free CLI contracts; true command executions, no remote LLM",
+  "reference_passed": 10,
+  "candidate_passed": 4,
+  "total": 10,
+  "cases": [
+    {
+      "id": "version",
+      "official_pass": true,
+      "candidate_pass": false,
+      "delta": "重建版仍自报2.1.88，未升级为目标2.1.310"
+    },
+    {
+      "id": "help",
+      "official_pass": true,
+      "candidate_pass": false,
+      "delta": "新命令参数 --autocompact、--ax-screen-reader 未同时满足目标版"
+    },
+    {
+      "id": "mcp_help",
+      "official_pass": true,
+      "candidate_pass": true,
+      "delta": "实际二进制/源码构建均成功显示mcp命令"
+    },
+    {
+      "id": "plugin_help",
+      "official_pass": true,
+      "candidate_pass": true,
+      "delta": "两版均正常显示插件帮助"
+    },
+    {
+      "id": "mcp_list_empty",
+      "official_pass": true,
+      "candidate_pass": false,
+      "delta": "隔离配置下空MCP列表的用户可见输出不一致"
+    },
+    {
+      "id": "plugin_list_empty",
+      "official_pass": true,
+      "candidate_pass": false,
+      "delta": "隔离配置下空插件列表的用户可见输出不一致"
+    },
+    {
+      "id": "invalid_output",
+      "official_pass": true,
+      "candidate_pass": true,
+      "delta": "两版均拒绝非法输出格式，退出码1"
+    },
+    {
+      "id": "invalid_permission",
+      "official_pass": true,
+      "candidate_pass": true,
+      "delta": "两版均拒绝非法权限模式，退出码1"
+    },
+    {
+      "id": "json_without_login",
+      "official_pass": true,
+      "candidate_pass": false,
+      "delta": "目标版返回terminal_reason=api_error的结构化错误；当前源码不符合目标JSON契约"
+    },
+    {
+      "id": "stream_without_login",
+      "official_pass": true,
+      "candidate_pass": false,
+      "delta": "目标版返回init/result结构化未登录错误且退出码1；当前源码退出码0或字段差异"
+    }
+  ],
+  "total_mismatches": 6,
+  "acceptance": "M1 source comparison evidence only; do not equate with completed implementation",
+  "next_owner": [
+    "M5",
+    "M10"
+  ],
+  "status": "VERSION_DELTA_CONFIRMED_NOT_IMPLEMENTED",
+  "related": [
+    {
+      "feature": "F009",
+      "scope": "terminal CLI, help, stdout/stderr, MCP/plugin commands"
+    },
+    {
+      "feature": "F003",
+      "scope": "json/stream-json error responses"
+    }
+  ]
+}
