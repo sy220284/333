@@ -387,14 +387,12 @@ async function initializeBetaTracing(
 
   // Initialize log exporter
   const logExporter = new OTLPLogExporter(logHttpConfig)
-  const loggerProvider = new LoggerProvider({
-    resource,
-    processors: [
-      new BatchLogRecordProcessor(logExporter, {
-        scheduledDelayMillis: DEFAULT_LOGS_EXPORT_INTERVAL_MS,
-      }),
-    ],
-  })
+  const loggerProvider = new LoggerProvider({ resource })
+  loggerProvider.addLogRecordProcessor(
+    new BatchLogRecordProcessor(logExporter, {
+      scheduledDelayMillis: DEFAULT_LOGS_EXPORT_INTERVAL_MS,
+    }),
+  )
 
   logs.setGlobalLoggerProvider(loggerProvider)
   setLoggerProvider(loggerProvider)
@@ -580,19 +578,17 @@ export async function initializeTelemetry() {
     )
 
     if (logExporters.length > 0) {
-      const loggerProvider = new LoggerProvider({
-        resource,
-        // Add batch processors for each exporter
-        processors: logExporters.map(
-          exporter =>
-            new BatchLogRecordProcessor(exporter, {
-              scheduledDelayMillis: parseInt(
-                process.env.OTEL_LOGS_EXPORT_INTERVAL ||
-                  DEFAULT_LOGS_EXPORT_INTERVAL_MS.toString(),
-              ),
-            }),
-        ),
-      })
+      const loggerProvider = new LoggerProvider({ resource })
+      for (const exporter of logExporters) {
+        loggerProvider.addLogRecordProcessor(
+          new BatchLogRecordProcessor(exporter, {
+            scheduledDelayMillis: parseInt(
+              process.env.OTEL_LOGS_EXPORT_INTERVAL ||
+                DEFAULT_LOGS_EXPORT_INTERVAL_MS.toString(),
+            ),
+          }),
+        )
+      }
 
       // Register the logger provider globally
       logs.setGlobalLoggerProvider(loggerProvider)
