@@ -1,6 +1,5 @@
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { Message } from '../../types/message.js'
-import { roughTokenCountEstimation } from '../tokenEstimation.js'
 
 /**
  * The 2.1.310 context_hint rejection path, reconstructed from
@@ -82,7 +81,9 @@ export function getKeepRecentCandidates(
   const clear = new Set(qualifiedIds.filter(id => !keep.has(id)))
   const candidates: ToolResultBlockParam[] = []
   let tokensSaved = 0
-  const estimate = options.estimateTextTokens ?? roughTokenCountEstimation
+  // Match roughTokenCountEstimation's Math.round(length / 4) without loading
+  // the entire API/model/renderer module graph in compact-only tests.
+  const estimate = options.estimateTextTokens ?? ((text: string) => Math.round(text.length / 4))
   for (const message of messages) {
     if (message.type !== 'user' || !Array.isArray(message.message.content)) continue
     for (const block of message.message.content) {
