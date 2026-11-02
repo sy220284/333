@@ -2,7 +2,9 @@ import { z } from 'zod/v4'
 import { join, resolve, sep } from 'node:path'
 import { readFile, realpath } from 'node:fs/promises'
 import { getCwd } from '../../utils/cwd.js'
-import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
+import { getSessionProjectDir, getOriginalCwd } from '../../bootstrap/state.js'
+import { getProjectDir } from '../../utils/sessionStorage.js'
+import { workflowRunDirectory, workflowSessionScripts } from '../../tasks/LocalWorkflowTask/workflowStoragePaths.mjs'
 import { getSessionId } from '../../bootstrap/state.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { lazySchema } from '../../utils/lazySchema.js'
@@ -32,20 +34,29 @@ async function resolveScript(input:z.infer<InputSchema>) {
     const workspace=await realpath(getCwd())
     const path=await realpath(resolve(workspace,input.scriptPath))
     const isWorkspaceFile=path.startsWith(workspace+sep)
-    const sessionRoot=resolve(getClaudeConfigHomeDir(),'workflow-runs')
-    const isStoredWorkflow=path.startsWith(sessionRoot+sep) && /^wf_[a-z0-9-]{6,}$/.test(path.slice(sessionRoot.length+1).split(sep)[0]??'') && path.endsWith(sep+'script.mjs')
+    const projectDir=getSessionProjectDir()??getProjectDir(getOriginalCwd())
+    const scriptDir=workflowSessionScripts(projectDir,getSessionId())
+    const runId=/-((?:wf_[0-9a-f]{8}-[0-9a-f]{3}))\.js$/.exec(path)?.[1]
+    const isStoredWorkflow=path.startsWith(scriptDir+sep)&&!!runId
     if(!isWorkspaceFile&&!isStoredWorkflow)throw new Error('Workflow script path is outside the workspace or session workflow directory')
     if(isStoredWorkflow){
-      const runId=path.slice(sessionRoot.length+1).split(sep)[0]!
-      const metadata=JSON.parse(await readFile(join(sessionRoot,runId,'metadata.json'),'utf8'))
-      if(metadata.sessionId!==getSessionId())throw new Error('Workflow script belongs to another session')
+      const metadata=JSON.parse(await readFile(join(workflowRunDirectory(projectDir,getSessionId(),runId),'metadata.json'),'utf8'))
+      if(metadata.sessionId!==getSessionId()||metadata.scriptPath!==path)
+        throw new Error('Workflow script belongs to another session')
     }
     return readFile(path,'utf8')
   }
   if(input.script!==undefined)return input.script
   if(input.resumeFromRunId && !input.name){
     if(!/^wf_[a-z0-9-]{6,}$/.test(input.resumeFromRunId))throw new Error('Invalid resumeFromRunId')
-    return readFile(join(getClaudeConfigHomeDir(),'workflow-runs',input.resumeFromRunId,'script.mjs'),'utf8')
+    const projectDir=getSessionProjectDir()??getProjectDir(getOriginalCwd())
+    const dir=workflowRunDirectory(projectDir,getSessionId(),input.resumeFromRunId)
+    const metadata=JSON.parse(await readFile(join(dir,'metadata.json'),'utf8'))
+    const scripts=workflowSessionScripts(projectDir,getSessionId())+sep
+    if(metadata.sessionId!==getSessionId()||!metadata.scriptPath?.startsWith(scripts)||
+      !metadata.scriptPath.endsWith(`-${input.resumeFromRunId}.js`))
+      throw new Error('Workflow resume script identity is invalid')
+    return readFile(metadata.scriptPath,'utf8')
   }
   const root=await realpath(getCwd())
   const candidate=input.name&&/^[a-zA-Z][a-zA-Z0-9_-]{0,79}$/.test(input.name)?

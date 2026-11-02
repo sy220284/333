@@ -71,6 +71,8 @@ on:
       - 'tests/m1-workflow-cache.test.mjs'
       - 'src/tasks/LocalWorkflowTask/workflowCacheKeys.mjs'
       - 'tests/m1-workflow-runtime.test.mjs'
+      - 'tests/m1-workflow-storage.test.mjs'
+      - 'src/tasks/LocalWorkflowTask/workflowStoragePaths.mjs'
       - 'src/tools/WorkflowTool/**'
       - 'src/tasks/LocalWorkflowTask/**'
       - 'tests/m1-monitor-protocol.test.mjs'
@@ -132,7 +134,7 @@ jobs:
         with:
           node-version: '22'
       - name: 验证任务卡、功能、场景及旧开关/新锚点/版本记录
-        run: node --test tests/m1-workflow-cache.test.mjs tests/m1-workflow-runtime.test.mjs tests/m1-monitor-protocol.test.mjs tests/m1-monitor-task-identity.test.mjs tests/m1-account-peer-discovery.test.mjs tests/upgrade-coverage.test.mjs tests/m1-verify.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs tests/m1-privacy-settings.test.mjs tests/m1-snapshot-terminal-behavior.test.mjs tests/m1-source-gap-audit.test.mjs tests/m1-inline-map-audit.test.mjs tests/m1-v4-handoff.test.mjs tests/m1-doctor-source-restoration.test.mjs tests/m1-spinner-tips.test.mjs tests/m1-custom-spinner-tips.test.mjs tests/m1-list-agents.test.mjs tests/m1-taskoutput-retirement.test.mjs
+        run: node --test tests/m1-workflow-cache.test.mjs tests/m1-workflow-storage.test.mjs tests/m1-workflow-runtime.test.mjs tests/m1-monitor-protocol.test.mjs tests/m1-monitor-task-identity.test.mjs tests/m1-account-peer-discovery.test.mjs tests/upgrade-coverage.test.mjs tests/m1-verify.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs tests/m1-privacy-settings.test.mjs tests/m1-snapshot-terminal-behavior.test.mjs tests/m1-source-gap-audit.test.mjs tests/m1-inline-map-audit.test.mjs tests/m1-v4-handoff.test.mjs tests/m1-doctor-source-restoration.test.mjs tests/m1-spinner-tips.test.mjs tests/m1-custom-spinner-tips.test.mjs tests/m1-list-agents.test.mjs tests/m1-taskoutput-retirement.test.mjs
       - name: 验证远程流事件合并及 SDK 字段映射
         run: node --test tests/m1-sdk-stream-coalescing.test.mjs tests/m1-sdk-stream-mapping.test.mjs tests/m1-thinking-display.test.mjs
       - name: 生成PR7前研究库90项功能开关的三版本源码差分
