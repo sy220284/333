@@ -1,5 +1,5 @@
 import { c as _c } from "react/compiler-runtime";
-import { basename, relative } from 'path';
+import { basename, relative } from 'node:path';
 import React, { Suspense, use, useMemo } from 'react';
 import { FileEditToolDiff } from 'src/components/FileEditToolDiff.js';
 import { getCwd } from 'src/utils/cwd.js';
@@ -20,8 +20,8 @@ type FileReadResult = {
 };
 export function SedEditPermissionRequest(t0) {
   const $ = _c(9);
-  let props;
-  let sedInfo;
+  let props: PermissionRequestProps;
+  let sedInfo: SedEditInfo;
   if ($[0] !== t0) {
     ({
       sedInfo,
@@ -37,7 +37,7 @@ export function SedEditPermissionRequest(t0) {
   const {
     filePath
   } = sedInfo;
-  let t1;
+  let t1: Promise<FileReadResult>;
   if ($[3] !== filePath) {
     t1 = (async () => {
       const encoding = detectEncodingForResolvedPath(filePath);
