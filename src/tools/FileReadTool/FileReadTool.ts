@@ -898,7 +898,7 @@ async function callInner(
         resolvedFilePath,
         parsedRange ?? undefined,
       )
-      if (!extractResult.success) {
+      if (extractResult.success === false) {
         throw new Error(extractResult.error.message)
       }
       logEvent('tengu_pdf_page_extraction', {
@@ -961,7 +961,7 @@ async function callInner(
 
     if (shouldExtractPages) {
       const extractResult = await extractPDFPages(resolvedFilePath)
-      if (extractResult.success) {
+      if (extractResult.success === true) {
         logEvent('tengu_pdf_page_extraction', {
           success: true,
           pageCount: extractResult.data.file.count,
@@ -985,7 +985,7 @@ async function callInner(
     }
 
     const readResult = await readPDF(resolvedFilePath)
-    if (!readResult.success) {
+    if (readResult.success === false) {
       throw new Error(readResult.error.message)
     }
     const pdfData = readResult.data
