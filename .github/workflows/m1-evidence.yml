@@ -110,3 +110,44 @@ jobs:
           path: ${{ runner.temp }}/m1-reference-linux-x64.json
           if-no-files-found: warn
           retention-days: 30
+
+  m1-biome-safe-fix-evidence:
+    name: M1 安全修复建议补丁（不自动提交）
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 安装锁定版本的Biome
+        run: npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+      - name: 对本PR源文件生成安全修复建议
+        shell: bash
+        run: |
+          git fetch origin main
+          mapfile -d '' changed < <(git diff -z --name-only --diff-filter=ACM origin/main...HEAD -- '*.ts' '*.tsx' '*.js' '*.mjs')
+          echo "待核实文件数: ${#changed[@]}"
+          if (( ${#changed[@]} )); then
+            set +e
+            tools/dev/node_modules/.bin/biome lint --write --no-errors-on-unmatched "${changed[@]}"
+            rc=$?
+            set -e
+            echo "Biome 自动修复后的退出码: $rc"
+          fi
+          git diff --binary > "$RUNNER_TEMP/m1-biome-safe-fix.patch"
+          git diff --name-only > "$RUNNER_TEMP/m1-biome-changed-files.txt"
+          test -s "$RUNNER_TEMP/m1-biome-safe-fix.patch" || echo "当前没有可自动安全修复的变化" > "$RUNNER_TEMP/m1-biome-no-safe-fixes.txt"
+      - name: 上传未应用的安全修复建议供逐文件审查
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-biome-safe-fix-review
+          path: |
+            ${{ runner.temp }}/m1-biome-safe-fix.patch
+            ${{ runner.temp }}/m1-biome-changed-files.txt
+            ${{ runner.temp }}/m1-biome-no-safe-fixes.txt
+          retention-days: 7
+          if-no-files-found: warn
