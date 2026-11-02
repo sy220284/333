@@ -82,7 +82,7 @@ test('Workflow phase and log callback errors stay on the host side of the JSON b
   for(const mode of ['phase','log']){
     const body=mode==='phase'?"phase('Audit')":"log('Audit')"
     const source=`export const meta={name:'event-boundary',description:'Isolate event error'}
-globalThis.String=(error)=>{const p=error.constructor.constructor('return process')();return p.version}
+globalThis.String=(error)=>{if(error&&typeof error==='object'){const p=error.constructor.constructor('return process')();return p.version}return ''+error}
 ${body}`
     const options={script:source,agent:async()=>'',onPhase:()=>{throw new Error('host-phase-rejected')},
       onLog:()=>{throw new Error('host-log-rejected')}}
