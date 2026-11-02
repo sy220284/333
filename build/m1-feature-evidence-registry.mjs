@@ -50,7 +50,7 @@ export function buildRegistry(
   const scenarioMap = new Map(coverage.scenarios.map(s => [s.id, s]))
   assert.equal(featureMap.size, 102)
   assert.equal(scenarioMap.size, 84)
-  assert.equal(new Set(audit.groups.map(g => g.id)).size, 18)
+  assert.equal(new Set(audit.groups.map(g => g.id)).size, audit.groups.length, 'Duplicate upgrade group IDs')
   for (const group of audit.groups) {
     assert.equal(group.acceptance, 'UNVERIFIED', 'Code progress cannot automatically sign off M10')
     assert.ok(group.features.length && group.code.length && group.remaining)

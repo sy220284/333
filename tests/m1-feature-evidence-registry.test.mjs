@@ -77,7 +77,7 @@ test('separate official, rebuilt and parity reports are required for M10 proof',
     id: 'F034',
     status: 'VERIFIED',
     official: {
-      executable_sha256: 'b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56',
+      executable_sha256: 'b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56',
       source_anchor: 'chunk-j0tbz6ra.js:83810', result: 'PASS',
       report: 'docs/upgrade/m1-evidence/F034-Notebook-官方x64-E41实测.json',
     },
