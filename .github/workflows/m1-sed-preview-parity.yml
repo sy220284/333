@@ -53,6 +53,9 @@ jobs:
       run:
         shell: bash
     steps:
+      - name: 允许检出研究档案中的 Windows 长路径
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
