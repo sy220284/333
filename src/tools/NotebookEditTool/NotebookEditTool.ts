@@ -11,13 +11,15 @@ import { getCwd } from '../../utils/cwd.js'
 import { isENOENT } from '../../utils/errors.js'
 import { getFileModificationTime, writeTextContent } from '../../utils/file.js'
 import { readFileSyncWithMetadata } from '../../utils/fileRead.js'
+import { getFsImplementation } from '../../utils/fsOperations.js'
 import { safeParseJSON } from '../../utils/json.js'
 import { lazySchema } from '../../utils/lazySchema.js'
+import { expandPath } from '../../utils/path.js'
 import { checkWritePermissionForTool } from '../../utils/permissions/filesystem.js'
 import type { PermissionDecision } from '../../utils/permissions/PermissionResult.js'
 import { jsonParse, jsonStringify } from '../../utils/slowOperations.js'
 import { NOTEBOOK_EDIT_TOOL_NAME } from './constants.js'
-import { applyNotebookEdit, locateNotebookEdit } from './notebookMutation.js'
+import { applyNotebookEdit, isValidNotebookContent, locateNotebookEdit, MAX_NOTEBOOK_BYTES } from './notebookMutation.js'
 import { DESCRIPTION, PROMPT } from './prompt.js'
 import {
   getToolUseSummary,
@@ -62,6 +64,10 @@ export const outputSchema = lazySchema(() =>
     new_source: z
       .string()
       .describe('The new source code that was written to the cell'),
+    old_source: z
+      .string()
+      .optional()
+      .describe('Previous source of the replaced or deleted cell'),
     cell_id: z
       .string()
       .optional()
@@ -121,6 +127,11 @@ export const NotebookEditTool = buildTool({
   },
   getPath(input): string {
     return input.notebook_path
+  },
+  backfillObservableInput(input) {
+    if (typeof input.notebook_path === 'string') {
+      input.notebook_path = expandPath(input.notebook_path)
+    }
   },
   async checkPermissions(input, context): Promise<PermissionDecision> {
     const appState = context.getAppState()
@@ -227,13 +238,35 @@ export const NotebookEditTool = buildTool({
         errorCode: 9,
       }
     }
-    if (getFileModificationTime(fullPath) > readTimestamp.timestamp) {
-      return {
-        result: false,
-        message:
-          'File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.',
-        errorCode: 10,
+    // The 2.1.310 tool limits both source and updated notebooks to 100 MiB.
+    // Stat before reading: giant notebooks must be rejected without allocating
+    // the entire file into a JavaScript string.
+    try {
+      const stats = getFsImplementation().statSync(fullPath)
+      if (stats.size > MAX_NOTEBOOK_BYTES) {
+        return {
+          result: false,
+          message: 'Notebook is too large to edit (maximum 100 MiB).',
+          errorCode: 13,
+        }
       }
+      if (Math.floor(stats.mtimeMs) > readTimestamp.timestamp) {
+        return {
+          result: false,
+          message:
+            'File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.',
+          errorCode: 10,
+        }
+      }
+    } catch (error) {
+      if (isENOENT(error)) {
+        return {
+          result: false,
+          message: 'Notebook file does not exist.',
+          errorCode: 1,
+        }
+      }
+      throw error
     }
 
     let content: string
@@ -250,10 +283,10 @@ export const NotebookEditTool = buildTool({
       throw e
     }
     const notebook = safeParseJSON(content) as NotebookContent | null
-    if (!notebook) {
+    if (!isValidNotebookContent(notebook)) {
       return {
         result: false,
-        message: 'Notebook is not valid JSON.',
+        message: 'Notebook cells are missing or contain invalid source content.',
         errorCode: 6,
       }
     }
@@ -288,6 +321,9 @@ export const NotebookEditTool = buildTool({
       : resolve(getCwd(), notebook_path)
 
     try {
+      if (getFsImplementation().statSync(fullPath).size > MAX_NOTEBOOK_BYTES) {
+        throw new Error('Notebook is too large to edit (maximum 100 MiB).')
+      }
       // readFileSyncWithMetadata gives content + encoding + line endings in
       // one safeResolvePath + readFileSync pass, replacing the previous
       // detectFileEncoding + readFile + detectLineEndings chain (each of
@@ -334,10 +370,19 @@ export const NotebookEditTool = buildTool({
         new_source,
         edit_mode: originalEditMode,
       })
-      const language = notebook.metadata.language_info?.name ?? 'python'
+      const language = notebook.metadata?.language_info?.name ?? 'python'
       // Write back to file
       const IPYNB_INDENT = 1
       const updatedContent = jsonStringify(notebook, null, IPYNB_INDENT)
+      const encodedContent =
+        lineEndings === 'CRLF'
+          ? updatedContent.replaceAll('\r\n', '\n').replaceAll('\n', '\r\n')
+          : updatedContent
+      if (Buffer.byteLength(encodedContent, encoding) > MAX_NOTEBOOK_BYTES) {
+        throw new Error(
+          'Edit rejected: the updated notebook exceeds the maximum readable size (100 MiB). The file was left unchanged.',
+        )
+      }
       if (getFileModificationTime(fullPath) > snapshot.timestamp) {
         throw new Error('Notebook changed during edit preparation. Read it again before editing.')
       }
@@ -365,6 +410,7 @@ export const NotebookEditTool = buildTool({
       })
       const data = {
         new_source,
+        old_source: mutation.old_source,
         cell_type: mutation.cell_type,
         language,
         edit_mode: mutation.edit_mode,
