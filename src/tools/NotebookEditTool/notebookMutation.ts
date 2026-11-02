@@ -15,7 +15,7 @@ export interface NotebookMutationInput {
 
 export interface NotebookMutationResult {
   cell_id?: string
-  cell_type: NotebookCell['cell_type']
+  cell_type: EditableCellType
   edit_mode: NotebookEditMode
   cell_index: number
   old_source?: string
@@ -112,26 +112,29 @@ export function applyNotebookEdit(
     notebook.cells.splice(index, 1)
     return {
       cell_id: returnedId,
-      cell_type: originalType,
+      cell_type: input.cell_type ?? 'code',
       edit_mode: mode,
       cell_index: index,
       old_source,
     }
   }
 
-  const cell_type = input.cell_type ?? originalType
+  // Official 2.1.310 clears execution state according to the cell's
+  // PREVIOUS type. A subsequent type switch keeps the old execution fields.
+  // Do not normalize fields after the switch: the target x64 preserves them.
   cell.source = input.new_source
-  cell.cell_type = cell_type
-  if (cell_type === 'code') {
+  if (originalType === 'code') {
     cell.execution_count = null
     cell.outputs = []
-  } else {
-    delete cell.execution_count
-    delete cell.outputs
+  }
+  if (input.cell_type && input.cell_type !== originalType) {
+    cell.cell_type = input.cell_type
   }
   return {
     cell_id: returnedId,
-    cell_type,
+    // 2.1.310's output is based on input.cell_type, defaulting to "code",
+    // even when the stored cell was originally markdown or raw.
+    cell_type: input.cell_type ?? 'code',
     edit_mode: mode,
     cell_index: index,
     old_source,
