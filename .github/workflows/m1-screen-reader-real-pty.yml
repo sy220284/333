@@ -26,6 +26,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - name: 验证终端对照脚本语法
+        run: python3 -m py_compile tests/m1-screen-reader-terminal-parity.py
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
