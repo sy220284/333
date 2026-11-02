@@ -105,3 +105,29 @@ test('a live bridge does not override an explicit no-peer-messaging policy', () 
  assert.equal(peers[0].unreachableFromHere,true)
  assert.equal(peers[0].address,undefined)
 })
+
+test('failed listing preserves visible rows but cannot advertise a destination',async()=>{
+ const peers=await discoverAccountPeers({
+  baseUrl:'https://example.test',accessToken:'test',orgUUID:'org',
+  request:async url=>new URL(url).pathname==='/v1/sessions'
+    ? {status:200,data:{data:[{id:'session_ok',title:'Live',status:'active'}],has_more:false}}
+    : {status:503,data:{}},
+ })
+ assert.equal(peers.peers.length,1)
+ assert.equal(peers.peers[0].address,undefined)
+ assert.equal(peers.peers[0].unreachableFromHere,true)
+ assert.equal(peers.notes.some(note=>note.kind==='cloud_list_failed'),true)
+})
+test('nonterminating or truncated pagination never yields an addressable peer',async()=>{
+ const result=await discoverAccountPeers({
+  baseUrl:'https://example.test',accessToken:'test',orgUUID:'org',
+  request:async url=>new URL(url).pathname==='/v1/sessions'
+    ? {status:200,data:{data:[{id:'session_loop',title:'Loop',status:'active'}],
+      has_more:true,last_id:'repeated'}}
+    : {status:200,data:{data:[]}},
+ })
+ assert.equal(result.peers.length,1)
+ assert.equal(result.peers[0].address,undefined)
+ assert.equal(result.notes.some(note=>note.kind==='account_list_failed'),true)
+ assert.equal(result.notes.some(note=>note.kind==='list_truncated'),true)
+})
