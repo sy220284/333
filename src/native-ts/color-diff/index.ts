@@ -488,15 +488,22 @@ function flattenHljs(
 // fail loudly (via logError) instead of a silent try/catch swallow — the
 // prior `as unknown as` cast hid a version mismatch (_emitter vs emitter,
 // scope vs kind) behind a silent gray fallback.
-function hasRootNode(emitter: unknown): emitter is { rootNode: HljsNode } {
-  return (
-    typeof emitter === 'object' &&
-    emitter !== null &&
-    'rootNode' in emitter &&
-    typeof emitter.rootNode === 'object' &&
-    emitter.rootNode !== null &&
-    'children' in emitter.rootNode
-  )
+function getEmitterRoot(result: unknown): HljsNode | null {
+  if (typeof result !== 'object' || result === null) return null
+  const typed = result as { _emitter?: unknown; emitter?: unknown }
+  // The published 2.1.88 highlight.js source uses result.emitter.root.
+  // Current public highlight.js versions expose result._emitter.rootNode.
+  // Both are real library contracts; keep the same parsed token tree.
+  for (const candidate of [typed._emitter, typed.emitter]) {
+    if (typeof candidate !== 'object' || candidate === null) continue
+    const shape = candidate as { rootNode?: unknown; root?: unknown }
+    const root = shape.rootNode ?? shape.root
+    if (typeof root !== 'object' || root === null) continue
+    if (Array.isArray((root as { children?: unknown }).children)) {
+      return root as HljsNode
+    }
+  }
+  return null
 }
 
 let loggedEmitterShapeError = false
@@ -521,20 +528,21 @@ function highlightLine(
     // hljs throws on unknown language despite ignoreIllegals
     return [[defaultStyle(theme), code]]
   }
-  const emitter = result._emitter
-  if (!hasRootNode(emitter)) {
+  const emitterRoot = getEmitterRoot(result)
+  if (!emitterRoot) {
     if (!loggedEmitterShapeError) {
       loggedEmitterShapeError = true
+      const emitter = result as { emitter?: unknown; _emitter?: unknown }
       logError(
         new Error(
-          `color-diff: hljs emitter shape mismatch (keys: ${Object.keys(result._emitter ?? {}).join(',')}). Syntax highlighting disabled.`,
+          `color-diff: highlight.js emitter shape mismatch (keys: ${Object.keys(emitter._emitter ?? emitter.emitter ?? {}).join(',')}). Syntax highlighting disabled.`,
         ),
       )
     }
     return [[defaultStyle(theme), code]]
   }
   const blocks: Block[] = []
-  flattenHljs(emitter.rootNode, theme, undefined, blocks)
+  flattenHljs(emitterRoot, theme, undefined, blocks)
   return blocks
 }
 
