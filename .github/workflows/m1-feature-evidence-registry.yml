@@ -1,0 +1,49 @@
+name: M1 102项功能与84场景证据签收契约验收
+on:
+  pull_request:
+    paths:
+      - 'build/m1-feature-evidence-registry.mjs'
+      - 'tests/m1-feature-evidence-registry.test.mjs'
+      - 'docs/upgrade/m1-evidence/PR7-18组功能链证据审计.json'
+      - 'docs/upgrade/m1-evidence/PR7-M10-功能及场景签收.json'
+      - 'docs/upgrade/upgrade-coverage.json'
+      - '.github/workflows/m1-feature-evidence-registry.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: m1-feature-signoff-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  evidence-registry:
+    name: 102能力84场景正反向契约独立验证
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 检查注册器和测试语法
+        run: |
+          node --check build/m1-feature-evidence-registry.mjs
+          node --check tests/m1-feature-evidence-registry.test.mjs
+      - name: 验证代码升级与正式签收相互独立
+        run: node --test tests/m1-feature-evidence-registry.test.mjs
+      - name: 保存本提交的验收统计快照
+        run: |
+          node build/m1-feature-evidence-registry.mjs --report "${RUNNER_TEMP}/m1-feature-signoff-registry.json"
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const r = JSON.parse(readFileSync(process.env.RUNNER_TEMP + "/m1-feature-signoff-registry.json","utf8"));
+            if(r.counts.features !== 102 || r.counts.scenarios !== 84 || r.counts.source_groups < 18) process.exit(1);
+            console.log(JSON.stringify(r.counts));
+          '
+      - name: 上传独立的验收证据快照
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-feature-signoff-${{ github.sha }}
+          path: ${{ runner.temp }}/m1-feature-signoff-registry.json
+          if-no-files-found: warn
+          retention-days: 30
