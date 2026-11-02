@@ -8,11 +8,11 @@ const active = row => row.acceptsPeerMessages !== false && !row.unreachableFromH
  * Control endpoint establishes a bridge address (2.1.310 chunk-xje85fg4).
  * Merge identity first so one session cannot appear twice or shadow its route.
  */
-export function mergeSessionPeers({ local = [], cloud = [], bridge = [], selfId } = {}) {
+export function mergeSessionPeers({ local = [], cloud = [], bridge = [], selfId, verifiedAccountList = true } = {}) {
   const seen = new Set(local.map(p => canonicalId(p.bridgeSessionId)).filter(Boolean))
   if (canonicalId(selfId)) seen.add(canonicalId(selfId))
   const bridgeById = new Map()
-  const bridgeReachable = row => !!row && active({
+  const bridgeReachable = row => verifiedAccountList && !!row && active({
     status: row.offline ? 'offline' : row.status,
     acceptsPeerMessages: row.acceptsPeerMessages,
     unreachableFromHere: row.unreachableFromHere,
@@ -80,6 +80,7 @@ export function resolveAdvertisedRemoteRecipient(token, time = Date.now()) {
 async function walk(request, endpoint, headers, maxPages, cursorKey, normalize) {
   const rows=[], ids=new Set()
   let cursor=null, truncated=false
+  const seenCursors=new Set()
   for (let page=0;page<maxPages;page++) {
     const url=new URL(endpoint)
     if(cursor) url.searchParams.set(cursorKey,cursor)
@@ -95,6 +96,8 @@ async function walk(request, endpoint, headers, maxPages, cursorKey, normalize) 
     cursor=cursorKey==='cursor' ? reply.data.next_cursor :
       reply.data.has_more ? reply.data.last_id : null
     if(!cursor) break
+    if(seenCursors.has(cursor)) return {rows,failed:true,truncated:true}
+    seenCursors.add(cursor)
     if(page===maxPages-1) truncated=true
   }
   return { rows, failed:false, truncated }
@@ -126,5 +129,9 @@ export async function discoverAccountPeers({request,baseUrl,accessToken,orgUUID,
   if(cloud.failed) notes.push({kind:'cloud_list_failed',text:'(cloud session list could not be fetched just now — a later listing retries)'})
   if(bridge.failed) notes.push({kind:'account_list_failed',text:'(Remote Control session list could not be fetched just now — a later listing retries)'})
   if(cloud.truncated||bridge.truncated) notes.push({kind:'list_truncated',text:'(session list exceeded the page limit; some sessions are missing)'})
-  return { peers:mergeSessionPeers({local,cloud:cloud.rows,bridge:bridge.rows,selfId}),notes,available:true }
+  // Partial account enumeration cannot prove that a name is unique. Keep
+  // the rows visible, but never advertise an address from incomplete pages.
+  const verifiedAccountList = !cloud.failed && !bridge.failed &&
+    !cloud.truncated && !bridge.truncated
+  return { peers:mergeSessionPeers({local,cloud:cloud.rows,bridge:bridge.rows,selfId,verifiedAccountList}),notes,available:true }
 }
