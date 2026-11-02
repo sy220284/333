@@ -1,6 +1,8 @@
 import { feature } from 'bun:bundle';
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
 import { copyFile, stat as fsStat, truncate as fsTruncate, link } from 'node:fs/promises';
+// biome-ignore lint/correctness/noUnusedImports: The classic JSX transform references React as its implicit factory.
+import * as React from 'react';
 import type { CanUseToolFn } from 'src/hooks/useCanUseTool.js';
 import type { AppState } from 'src/state/AppState.js';
 import { z } from 'zod/v4';
@@ -667,11 +669,17 @@ export const BashTool = buildTool({
         agentId: toolUseContext.agentId
       });
 
-      // Consume the generator and capture the return value
-      let generatorResult = await commandGenerator.next();
-      do {
-        if (!generatorResult.done && onProgress) {
-          const progress = generatorResult.value;
+      // Read each progress event until the generator returns its final result.
+      // Using the done discriminator preserves the distinct event/return
+      // types instead of allowing a final ExecResult into the progress handler.
+      for (;;) {
+        const step = await commandGenerator.next();
+        if (step.done === true) {
+          result = step.value;
+          break;
+        }
+        if (onProgress) {
+          const progress = step.value;
           onProgress({
             toolUseID: `bash-progress-${progressCounter++}`,
             data: {
@@ -686,11 +694,7 @@ export const BashTool = buildTool({
             }
           });
         }
-        if (!generatorResult.done) generatorResult = await commandGenerator.next();
-      } while (!generatorResult.done);
-
-      // Get the final result from the generator's return value
-      result = generatorResult.value;
+      }
       trackGitOperations(input.command, result.code, result.stdout);
       const isInterrupt = result.interrupted && abortController.signal.reason === 'interrupt';
 
