@@ -285,7 +285,7 @@ export const PermissionUpdateSchema = lazySchema(() =>
     }),
     z.object({
       type: z.literal('setMode'),
-      mode: z.lazy(() => PermissionModeSchema()),
+      mode: PermissionModeSchema(),
       destination: PermissionUpdateDestinationSchema(),
     }),
     z.object({
