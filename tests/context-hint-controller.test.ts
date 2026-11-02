@@ -5,6 +5,11 @@ import {
   createContextHintController,
 } from '../src/services/api/contextHintController.js'
 
+function requireController<T>(controller: T | null | undefined): T {
+  if (controller == null) throw new Error('Expected an initialized context-hint controller')
+  return controller
+}
+
 const base = {
   enabled: true,
   firstParty: true,
@@ -31,8 +36,8 @@ describe('context_hint request and recovery', () => {
   test('only first-party main thread receives the beta', () => {
     expect(createContextHintController({ ...base, firstParty: false })).toBeNull()
     expect(createContextHintController({ ...base, querySource: 'agent:default' })).toBeNull()
-    expect(createContextHintController({ ...base, enabled: false })!.buildRequestParams(sample())).toBeNull()
-    const c = createContextHintController(base)!
+    expect(requireController(createContextHintController({ ...base, enabled: false })).buildRequestParams(sample())).toBeNull()
+    const c = requireController(createContextHintController(base))
     expect(c.buildRequestParams(sample())).toEqual({
       beta: CONTEXT_HINT_BETA,
       body: { context_hint: { enabled: true, target_tokens_saved: 75_000 } },
@@ -40,7 +45,7 @@ describe('context_hint request and recovery', () => {
   })
 
   test.each([422, 424])('HTTP %i reclaims old tool results, then disables hint once', async status => {
-    const c = createContextHintController(base)!
+    const c = requireController(createContextHintController(base))
     c.buildRequestParams(sample())
     const recovered = await c.onRequestError({ status }, sample())
     expect(recovered?.clearedIds.size).toBe(2)
@@ -50,7 +55,7 @@ describe('context_hint request and recovery', () => {
   })
 
   test('unrecognized beta 400 retries without deleting user data', async () => {
-    const c = createContextHintController(base)!
+    const c = requireController(createContextHintController(base))
     const original = sample()
     c.buildRequestParams(original)
     const recovered = await c.onRequestError({ status: 400, message: 'Unexpected value in anthropic-beta' }, original)
@@ -60,18 +65,18 @@ describe('context_hint request and recovery', () => {
   })
 
   test('409 and 529 disable hint but follow their own retry semantics', async () => {
-    const c = createContextHintController({ ...base, is529Error: e => e.status === 529 })!
+    const c = requireController(createContextHintController({ ...base, is529Error: e => e.status === 529 }))
     c.buildRequestParams(sample())
     expect(await c.onRequestError({ status: 409 }, sample())).toBeNull()
     expect(c.buildRequestParams(sample())).toBeNull()
-    const c2 = createContextHintController({ ...base, is529Error: e => e.status === 529 })!
+    const c2 = requireController(createContextHintController({ ...base, is529Error: e => e.status === 529 }))
     c2.buildRequestParams(sample())
     expect(await c2.onRequestError({ status: 529 }, sample())).toBeNull()
     expect(c2.buildRequestParams(sample())).toBeNull()
   })
 
   test('only eligible invalid_request_error without HTTP status is a stream fallback', async () => {
-    const c = createContextHintController(base)!
+    const c = requireController(createContextHintController(base))
     c.buildRequestParams(sample())
     expect(c.classifyStreamError({ status: 400, error: { error: { type: 'invalid_request_error' } } })).toBe(false)
     expect(c.classifyStreamError({ error: { error: { type: 'invalid_request_error' } } })).toBe(true)
