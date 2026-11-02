@@ -71,3 +71,23 @@ test('遇到无效base64和不受支持的映射声明时不能静默计为无�
     rmSync(work, { recursive: true, force: true })
   }
 })
+
+test('样例字符串内的sourceMappingURL不得误识别为真实注释', () => {
+  const work = mkdtempSync(join(tmpdir(), 'm1-inline-map-text-'))
+  try {
+    const source = join(work, 'sample.ts')
+    writeFileSync(source, [
+      "const example = 'sourceMappingURL=data:application/json;base64,@@@'",
+      'const x = 1',
+      '',
+    ].join('\\n'))
+    const report = join(work, 'result.json')
+    execFileSync('python3', [script, '--source-dir', work, '--output', report],
+      { encoding: 'utf8', timeout: 10000 })
+    const found = JSON.parse(readFileSync(report, 'utf8'))
+    assert.equal(found.files_with_inline_maps, 0)
+    assert.equal(found.original_sources_recovered, 0)
+  } finally {
+    rmSync(work, { recursive: true, force: true })
+  }
+})
