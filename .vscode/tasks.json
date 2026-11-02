@@ -1,0 +1,12 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "333：源码重建",
+      "type": "shell",
+      "command": "npm run rebuild",
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}

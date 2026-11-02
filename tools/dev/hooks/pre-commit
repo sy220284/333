@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+# 仅检查已暂存的变更，不修改工作区。
+export DEV333_DIFF_STAGED=1
+node tools/dev/dev.mjs lint
+node tools/dev/dev.mjs typecheck
