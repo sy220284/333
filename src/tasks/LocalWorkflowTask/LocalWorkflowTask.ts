@@ -9,7 +9,7 @@ import { executeWorkflowScript, validateWorkflowScript } from '../../tools/Workf
 import { registerCleanup } from '../../utils/cleanupRegistry.js'
 import { getProjectDir } from '../../utils/sessionStorage.js'
 import { workflowSessionScripts, workflowPaths } from './workflowStoragePaths.mjs'
-import { readWorkflowSummary, writeWorkflowSummary } from './workflowSummaryStore.mjs'
+import { readWorkflowSummary, createWorkflowSummaryRecorder } from './workflowSummaryStore.mjs'
 import { enqueuePendingNotification } from '../../utils/messageQueueManager.js'
 import { registerTask, updateTaskState } from '../../utils/task/framework.js'
 import { createWorkflowCallCounter } from './workflowCacheKeys.mjs'
@@ -110,26 +110,18 @@ export async function launchWorkflow(
   const id=generateTaskId('local_workflow')
   const startedAt=Date.now()
   let callCount=0
-  let summaryRecord:Record<string,unknown>={
+  const initialRecord:Record<string,unknown>={
     runId,sessionId:getSessionId(),timestamp:new Date(startedAt).toISOString(),
     taskId:id,script:input.script,scriptPath,result:null,agentCount:0,logs:[],
     durationMs:0,summary:parsed.meta.description,workflowName:parsed.meta.name,
     status:'running',startTime:startedAt,phases:parsed.meta.phases,
     workflowProgress:[],totalTokens:0,totalToolCalls:0,
   }
-  let recordWrites=Promise.resolve()
-  function updateSummary(patch:Record<string,unknown>):Promise<void>{
-    summaryRecord={...summaryRecord,...patch}
-    const snapshot={...summaryRecord}
-    recordWrites=recordWrites.then(()=>writeWorkflowSummary(paths.summaryPath,snapshot))
-    return recordWrites
-  }
-  function persistFinal(status:'completed'|'failed'|'killed',value?:unknown,error?:string):Promise<void>{
-    if(summaryRecord.status==='completed'||summaryRecord.status==='failed'||summaryRecord.status==='killed')
-      return recordWrites
-    return updateSummary({status,result:value??null,
+  const recorder=createWorkflowSummaryRecorder(paths.summaryPath,initialRecord)
+  const updateSummary=(patch:Record<string,unknown>):Promise<void>=>recorder.update(patch)
+  const persistFinal=(status:'completed'|'failed'|'killed',value?:unknown,error?:string):Promise<void>=>
+    recorder.finish({status,result:value??null,
       ...(error?{error}:{}),durationMs:Date.now()-startedAt,agentCount:callCount})
-  }
   // The run must have a durable identity before it is visible as an active task.
   await updateSummary({})
   const task:LocalWorkflowTaskState={
@@ -159,12 +151,12 @@ export async function launchWorkflow(
         script:input.script,args:input.args??{},signal:abort.signal,
         onPhase:phase=>{
           updateTaskState<LocalWorkflowTaskState>(id,setAppState,t=>({...t,phase}))
-          const stages=(summaryRecord.workflowProgress as Array<{type:string,index:number,title:string}>)
+          const stages=(recorder.snapshot.workflowProgress as Array<{type:string,index:number,title:string}>)
           void updateSummary({workflowProgress:[...stages,{type:'workflow_phase',index:stages.length+1,title:phase}]})
           void journalEvent({type:'phase',phase})
         },
         onLog:message=>{
-          const logs=summaryRecord.logs as string[]
+          const logs=recorder.snapshot.logs as string[]
           void updateSummary({logs:[...logs,message]})
           void journalEvent({type:'log',message})
         },
@@ -220,8 +212,10 @@ export async function launchWorkflow(
       await writes
       await journalEvent({type:'complete',result:completion.result})
       await persistFinal('completed',completion.result)
-      updateTaskState<LocalWorkflowTaskState>(id,setAppState,t=>({...t,result:completion.result}))
-      finish(id,setAppState,'completed',`completed ${parsed.meta.name}`)
+      if(active.get(id)===job&&recorder.snapshot.status==='completed'){
+        updateTaskState<LocalWorkflowTaskState>(id,setAppState,t=>({...t,result:completion.result}))
+        finish(id,setAppState,'completed',`completed ${parsed.meta.name}`)
+      }
     }catch(error){
       await journalEvent({type:abort.signal.aborted?'cancelled':'failed',error:String(error)})
       await persistFinal(abort.signal.aborted?'killed':'failed',undefined,String(error))
