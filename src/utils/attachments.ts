@@ -584,6 +584,14 @@ export type Attachment =
   | {
       type: 'auto_mode_exit'
     }
+  // These no-content control attachments are explicitly recognized by the
+  // 2.1.310 message normalizer and must remain in the discriminated union.
+  | {
+      type: 'pen_mode_enter'
+    }
+  | {
+      type: 'pen_mode_exit'
+    }
   | {
       type: 'critical_system_reminder'
       content: string
