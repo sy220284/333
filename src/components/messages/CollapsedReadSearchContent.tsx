@@ -198,23 +198,9 @@ export function CollapsedReadSearchContent({
     incomingHint = lastRead !== undefined ? getDisplayPath(lastRead) : lastSearch;
   }
 
-  // Active REPL calls emit repl_tool_call progress with the current inner
-  // tool's name+input. Virtual messages don't arrive until REPL completes,
-  // so this is the only source of a live hint during execution.
-  if (isActiveGroup) {
-    for (const id_0 of toolUseIds) {
-      if (!inProgressToolUseIDs.has(id_0)) continue;
-      const latest = lookups.progressMessagesByToolUseID.get(id_0)?.at(-1)?.data;
-      if (latest?.type === 'repl_tool_call' && latest.phase === 'start') {
-        const input = latest.toolInput as {
-          command?: string;
-          pattern?: string;
-          file_path?: string;
-        };
-        incomingHint = input.file_path ?? (input.pattern ? `"${input.pattern}"` : undefined) ?? input.command ?? latest.toolName;
-      }
-    }
-  }
+  // The REPL protocol currently publishes only 'repl_progress' output,
+  // not structured inner tool-start events. Use the last actual read/search
+  // path above until an upstream tool event exists.
   const displayedHint = useMinDisplayTime(incomingHint, MIN_HINT_DISPLAY_MS);
 
   // In verbose mode, render each tool use with its 1-line result summary

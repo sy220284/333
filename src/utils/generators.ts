@@ -14,11 +14,10 @@ export async function lastX<A>(as: AsyncGenerator<A>): Promise<A> {
 export async function returnValue<A>(
   as: AsyncGenerator<unknown, A>,
 ): Promise<A> {
-  let e
-  do {
-    e = await as.next()
-  } while (!e.done)
-  return e.value
+  while (true) {
+    const result = await as.next()
+    if (result.done) return result.value
+  }
 }
 
 type QueuedGenerator<A> = {
