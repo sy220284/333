@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto'
-import type { ControlOperator, ParseEntry } from 'shell-quote'
+import type { ParseEntry } from 'shell-quote'
 import {
   type CommandPrefixResult,
   type CommandSubcommandPrefixResult,

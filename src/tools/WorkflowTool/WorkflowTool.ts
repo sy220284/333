@@ -89,7 +89,7 @@ export const WorkflowTool=buildTool({
       return {result:true as const}
     }catch(error){return {result:false as const,message:error instanceof Error?error.message:String(error),errorCode:9}}
   },
-  async checkPermissions(input,context){
+  async checkPermissions(input){
     const script=await resolveScript(input)
     const parsed=validateWorkflowScript(script)
     // 2.1.310 chunk-y8f7x7xv.js:1490–1507 delegates dynamic

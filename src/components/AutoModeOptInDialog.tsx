@@ -77,10 +77,10 @@ export function AutoModeOptInDialog(t0) {
   }
   let t4;
   if ($[5] === Symbol.for("react.memo_cache_sentinel")) {
-    t4 = true ? [{
+    t4 = [{
       label: "是，并设为默认模式",
       value: "accept-default" as const
-    }] : [];
+    }];
     $[5] = t4;
   } else {
     t4 = $[5];
