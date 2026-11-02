@@ -1,8 +1,20 @@
 import { isIP } from 'node:net'
+/** 2.1.310 Monitor checks the fully parsed endpoint, including mapped IPv4. */
+function mappedV4(ip) {
+  if (isIP(ip) !== 6) return null
+  const normalized = new URL(`http://[${ip}]/`).hostname.slice(1, -1)
+  const match = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(normalized)
+  if (!match) return null
+  const high = Number.parseInt(match[1], 16)
+  const low = Number.parseInt(match[2], 16)
+  return `${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`
+}
 export function isPublicIp(ip) {
+  const mapped = mappedV4(ip)
+  if (mapped !== null) return isPublicIp(mapped)
   if (isIP(ip) === 4) {
     const p = ip.split('.').map(Number)
-    if (p[0] === 0 || p[0] === 10 || p[0] === 127 || p[0] >= 224 ||
+    if (p[0] === 0 || p[0] === 10 || p[0] >= 224 ||
         p[0] === 169 && p[1] === 254 || p[0] === 172 && p[1] >= 16 && p[1] <= 31 ||
         p[0] === 192 && (p[1] === 168 || p[1] === 0 && p[2] === 0 || p[1] === 0 && p[2] === 2) ||
         p[0] === 100 && p[1] >= 64 && p[1] <= 127 ||
@@ -12,11 +24,10 @@ export function isPublicIp(ip) {
   }
   if (isIP(ip) !== 6) return false
   const n = ip.toLowerCase()
-  if (n === '::' || n === '::1' || n.startsWith('fc') || n.startsWith('fd') ||
+  if (n === '::' || n.startsWith('fc') || n.startsWith('fd') ||
       n.startsWith('fe8') || n.startsWith('fe9') || n.startsWith('fea') ||
       n.startsWith('feb') || n.startsWith('ff') || n.startsWith('2001:db8:')) return false
-  const v4 = /^(?:::ffff:)(\d+\.\d+\.\d+\.\d+)$/.exec(n)
-  return v4 ? isPublicIp(v4[1]) : true
+  return true
 }
 export function validateMonitorWsUrl(value) {
   if (typeof value !== 'string' || /[^\x20-\x7e]/.test(value)) throw new Error('WebSocket URL must be printable ASCII')
