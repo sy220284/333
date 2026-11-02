@@ -62,9 +62,17 @@ for (const args of [
     // 2.1.310 changes intentionally expand the top-level CLI. Keep the old
     // baseline as an exact guard for every unchanged command/option.
     if (args.length === 1 && args[0] === '--help') {
-      const expectedAdded = ['--autocompact'];
-      assert.deepEqual(rebuilt.flags.filter(flag => !baseline.flags.includes(flag)), expectedAdded,
+      const approvedAdded = new Set([
+        '--autocompact', '--permission-prompts', '--prompt-suggestions',
+        '--restricted', '--safe-mode', '--teleport',
+        '--remote-control', '--remote-control-session-name-prefix',
+      ]);
+      const added = rebuilt.flags.filter(flag => !baseline.flags.includes(flag));
+      assert.deepEqual(added.filter(flag => !approvedAdded.has(flag)), [],
         'Unexpected extra CLI option beyond reviewed 2.1.310 migration');
+      for(const required of ['--autocompact','--restricted','--safe-mode','--permission-prompts','--prompt-suggestions','--teleport']){
+        assert.ok(added.includes(required), 'Expected reviewed 2.1.310 option missing: '+required);
+      }
       assert.deepEqual(baseline.flags.filter(flag => !rebuilt.flags.includes(flag)), [],
         'Old CLI options were removed unexpectedly');
       assert.deepEqual(rebuilt.commands, baseline.commands,
