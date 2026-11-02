@@ -19,6 +19,11 @@ import { ensureKeychainPrefetchCompleted, startKeychainPrefetch } from './utils/
 // eslint-disable-next-line custom-rules/no-top-level-side-effects
 startKeychainPrefetch();
 import { feature } from 'bun:bundle';
+import { parseFallbackModels } from './services/api/fallbackModels.mjs';
+import { parsePromptSuggestions, restrictedToolDenyList } from './services/cli/upgradeMode.mjs';
+import { resolveCloudTarget, validateCloudEnvironment } from './services/cli/cloudTarget.mjs';
+import { parseAutoCompactWindowOption } from './services/api/autoCompactWindow.mjs';
+import { setCliAutoCompactWindow } from './services/compact/autoCompact.js';
 import { Command as CommanderCommand, InvalidArgumentError, Option } from '@commander-js/extra-typings';
 import chalk from 'chalk';
 import { readFileSync } from 'fs';
@@ -501,16 +506,34 @@ function loadSettingSourcesFromFlag(settingSourcesArg: string): void {
  */
 function eagerLoadSettings(): void {
   profileCheckpoint('eagerLoadSettings_start');
-  // Parse --settings flag early to ensure settings are loaded before init()
+  // Managed policy still loads, but --safe-mode discards every user-controlled
+  // settings source, including --settings. Restricted mode retains the explicit
+  // --settings overlay while suppressing user/project/local settings files.
+  const safeMode = process.argv.includes('--safe-mode');
+  const restricted = process.argv.includes('--restricted');
+  if (restricted) process.env.CLAUDE_CODE_RESTRICTED = '1';
+  if (safeMode) {
+    // A safe session still honors security denials in project/user settings.
+    // The settings merger retains only deny rules from these untrusted sources.
+    process.env.CLAUDE_CODE_SAFE_MODE = '1';
+    process.env.CLAUDE_CODE_DISABLE_CLAUDE_MDS = '1';
+  }
   const settingsFile = eagerParseCliFlag('--settings');
-  if (settingsFile) {
+  if (settingsFile && !safeMode) {
     loadSettingsFromFlag(settingsFile);
   }
-
-  // Parse --setting-sources flag early to control which sources are loaded
-  const settingSourcesArg = eagerParseCliFlag('--setting-sources');
-  if (settingSourcesArg !== undefined) {
-    loadSettingSourcesFromFlag(settingSourcesArg);
+  if (safeMode) {
+    // Keep sources readable solely for their permissions.deny rules; all other
+    // untrusted values are discarded in settings.ts.
+    resetSettingsCache();
+  } else if (restricted) {
+    setAllowedSettingSources([]);
+    resetSettingsCache();
+  } else {
+    const settingSourcesArg = eagerParseCliFlag('--setting-sources');
+    if (settingSourcesArg !== undefined) {
+      loadSettingSourcesFromFlag(settingSourcesArg);
+    }
   }
   profileCheckpoint('eagerLoadSettings_end');
 }
@@ -943,7 +966,7 @@ async function run(): Promise<CommanderCommand> {
     // builds the type as options are added. Narrow with a runtime guard;
     // the collect accumulator + [] default guarantee string[] in practice.
     const pluginDir = thisCommand.getOptionValue('pluginDir');
-    if (Array.isArray(pluginDir) && pluginDir.length > 0 && pluginDir.every(p => typeof p === 'string')) {
+    if (!process.argv.includes('--safe-mode') && Array.isArray(pluginDir) && pluginDir.length > 0 && pluginDir.every(p => typeof p === 'string')) {
       setInlinePlugins(pluginDir);
       clearPluginCache('preAction: --plugin-dir inline plugins');
     }
@@ -997,7 +1020,11 @@ async function run(): Promise<CommanderCommand> {
       throw new InvalidArgumentError(`It must be one of: ${allowed.join(', ')}`);
     }
     return value;
-  })).option('--agent <agent>', `Agent for the current session. Overrides the 'agent' setting.`).option('--betas <betas...>', 'Beta headers to include in API requests (API key users only)').option('--fallback-model <model>', 'Enable automatic fallback to specified model when default model is overloaded (only works with --print)').addOption(new Option('--workload <tag>', 'Workload tag for billing-header attribution (cc_workload). Process-scoped; set by SDK daemon callers that spawn subprocesses for cron work. (only works with --print)').hideHelp()).option('--settings <file-or-json>', 'Path to a settings JSON file or a JSON string to load additional settings from').option('--add-dir <directories...>', 'Additional directories to allow tool access to').option('--ide', 'Automatically connect to IDE on startup if exactly one valid IDE is available', () => true).option('--strict-mcp-config', 'Only use MCP servers from --mcp-config, ignoring all other MCP configurations', () => true).option('--session-id <uuid>', 'Use a specific session ID for the conversation (must be a valid UUID)').option('-n, --name <name>', 'Set a display name for this session (shown in /resume and terminal title)').option('--agents <json>', 'JSON object defining custom agents (e.g. \'{"reviewer": {"description": "Reviews code", "prompt": "You are a code reviewer"}}\')').option('--setting-sources <sources>', 'Comma-separated list of setting sources to load (user, project, local).')
+  })).option('--agent <agent>', `Agent for the current session. Overrides the 'agent' setting.`).option('--betas <betas...>', 'Beta headers to include in API requests (API key users only)').option('--fallback-model <model>', 'Comma-separated fallback model(s) tried in order when the active model is overloaded or unavailable; primary is retried at each new user turn').addOption(new Option('--autocompact <auto|tokens>', 'Auto-compact context window (auto, or 100k–1M tokens)').argParser(value => {
+    const parsed = parseAutoCompactWindowOption(value);
+    if (parsed === undefined) throw new InvalidArgumentError("It must be 'auto', or between 100k and 1M (e.g. 500k, 200000, or 200 as shorthand)");
+    return parsed;
+  })).addOption(new Option('--workload <tag>', 'Workload tag for billing-header attribution (cc_workload). Process-scoped; set by SDK daemon callers that spawn subprocesses for cron work. (only works with --print)').hideHelp()).option('--settings <file-or-json>', 'Path to a settings JSON file or a JSON string to load additional settings from').option('--add-dir <directories...>', 'Additional directories to allow tool access to').option('--ide', 'Automatically connect to IDE on startup if exactly one valid IDE is available', () => true).option('--strict-mcp-config', 'Only use MCP servers from --mcp-config, ignoring all other MCP configurations', () => true).option('--session-id <uuid>', 'Use a specific session ID for the conversation (must be a valid UUID)').option('-n, --name <name>', 'Set a display name for this session (shown in /resume and terminal title)').option('--agents <json>', 'JSON object defining custom agents (e.g. \'{"reviewer": {"description": "Reviews code", "prompt": "You are a code reviewer"}}\')').option('--setting-sources <sources>', 'Comma-separated list of setting sources to load (user, project, local).')
   // gh-33508: <paths...> (variadic) consumed everything until the next
   // --flag. `claude --plugin-dir /path mcp add --transport http` swallowed
   // `mcp` and `add` as paths, then choked on --transport as an unknown
@@ -1087,6 +1114,18 @@ async function run(): Promise<CommanderCommand> {
         }
       }
     }
+    const safeMode = Boolean((options as { safeMode?: boolean }).safeMode);
+    const restricted = Boolean((options as { restricted?: boolean }).restricted);
+    if (restricted && (options.dangerouslySkipPermissions || options.permissionMode === 'bypassPermissions')) {
+      throw new InvalidArgumentError('--restricted refuses bypassPermissions');
+    }
+    const suggestionOverride = parsePromptSuggestions((options as { promptSuggestions?: string | boolean }).promptSuggestions);
+    if (suggestionOverride !== undefined) {
+      process.env.CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION = String(suggestionOverride);
+    }
+    if (suggestionOverride && (options.outputFormat !== 'stream-json' || !options.print)) {
+      throw new InvalidArgumentError('--prompt-suggestions requires --print and --output-format=stream-json');
+    }
     const {
       debug = false,
       debugToStderr = false,
@@ -1095,7 +1134,7 @@ async function run(): Promise<CommanderCommand> {
       tools: baseTools = [],
       allowedTools = [],
       disallowedTools = [],
-      mcpConfig = [],
+      mcpConfig: requestedMcpConfig = [],
       permissionMode: permissionModeCli,
       addDir = [],
       fallbackModel,
@@ -1105,13 +1144,17 @@ async function run(): Promise<CommanderCommand> {
       includeHookEvents,
       includePartialMessages
     } = options;
+    const mcpConfig = safeMode ? [] : requestedMcpConfig;
+    const effectiveDisallowedTools = restricted
+      ? restrictedToolDenyList(baseTools, disallowedTools)
+      : disallowedTools;
     if (options.prefill) {
       seedEarlyInput(options.prefill);
     }
 
     // Promise for file downloads - started early, awaited before REPL renders
     let fileDownloadPromise: Promise<DownloadResult[]> | undefined;
-    const agentsJson = options.agents;
+    const agentsJson = safeMode ? undefined : options.agents;
     const agentCli = options.agent;
     if (feature('BG_SESSIONS') && agentCli) {
       process.env.CLAUDE_CODE_AGENT = agentCli;
@@ -1125,13 +1168,16 @@ async function run(): Promise<CommanderCommand> {
     let outputFormat = options.outputFormat;
     let inputFormat = options.inputFormat;
     let verbose = options.verbose ?? getGlobalConfig().verbose;
+    // The print streaming transport writes SDK messages only in verbose mode.
+    // Explicit prompt suggestions must not be silently discarded on stdout.
+    if (suggestionOverride === true) verbose = true;
     let print = options.print;
     const init = options.init ?? false;
     const initOnly = options.initOnly ?? false;
     const maintenance = options.maintenance ?? false;
 
     // Extract disable slash commands flag
-    const disableSlashCommands = options.disableSlashCommands || false;
+    const disableSlashCommands = options.disableSlashCommands || safeMode;
 
     // Extract tasks mode options (ant-only)
     const tasksOption = process.env.USER_TYPE === 'ant' && (options as {
@@ -1252,14 +1298,32 @@ async function run(): Promise<CommanderCommand> {
     }
 
     // Extract teleport option
-    const teleport = (options as {
+    let teleport = (options as {
       teleport?: string | true;
     }).teleport ?? null;
-
-    // Extract remote option (can be true if no description provided, or a string)
-    const remoteOption = (options as {
-      remote?: string | true;
-    }).remote;
+    const cloudFlag = (options as { cloud?: string | true }).cloud;
+    const cloudEnvironment = validateCloudEnvironment((options as { environment?: string }).environment);
+    const snapshotFlag = (options as { systemPromptSnapshot?: string }).systemPromptSnapshot;
+    if (snapshotFlag !== undefined) process.env.CLAUDE_CODE_SYSTEM_PROMPT_SNAPSHOT = snapshotFlag;
+    if (cloudFlag !== undefined && restricted) {
+      throw new InvalidArgumentError('Cloud sessions cannot be created from a --restricted session');
+    }
+    if (cloudEnvironment && restricted) {
+      throw new InvalidArgumentError('--environment cannot be used from a --restricted session');
+    }
+    if (cloudFlag !== undefined && (options as { remote?: string | true }).remote !== undefined) {
+      throw new InvalidArgumentError('Use either --cloud or --remote for a session, not both');
+    }
+    const cloudTarget = cloudFlag !== undefined || cloudEnvironment !== undefined
+      ? resolveCloudTarget(cloudFlag, prompt)
+      : null;
+    const remoteOption = cloudTarget?.kind === 'create'
+      ? cloudTarget.description
+      : (options as { remote?: string | true }).remote;
+    if (cloudTarget?.kind === 'attach') {
+      if (cloudEnvironment) throw new InvalidArgumentError('--environment creates a new session; it cannot attach to an existing one');
+      teleport = cloudTarget.sessionId;
+    }
     const remote = remoteOption === true ? '' : remoteOption ?? null;
 
     // Extract --remote-control / --rc flag (enable bridge in interactive session)
@@ -1272,6 +1336,13 @@ async function run(): Promise<CommanderCommand> {
     // trust is established and GrowthBook has auth headers.
     let remoteControl = false;
     const remoteControlName = typeof remoteControlOption === 'string' && remoteControlOption.length > 0 ? remoteControlOption : undefined;
+    const remoteControlPrefix = (options as { remoteControlSessionNamePrefix?: string }).remoteControlSessionNamePrefix;
+    if (remoteControlPrefix !== undefined) {
+      if (!remoteControlPrefix.trim() || /[\\r\\n\\0]/.test(remoteControlPrefix) || remoteControlPrefix.length > 100) {
+        throw new InvalidArgumentError('--remote-control-session-name-prefix expects a non-empty name up to 100 characters');
+      }
+      process.env.CLAUDE_CODE_REMOTE_CONTROL_NAME_PREFIX = remoteControlPrefix.trim();
+    }
 
     // Validate session ID if provided
     if (sessionId) {
@@ -1333,10 +1404,16 @@ async function run(): Promise<CommanderCommand> {
     // Get isNonInteractiveSession from state (was set before init())
     const isNonInteractiveSession = getIsNonInteractiveSession();
 
-    // Validate that fallback model is different from main model
-    if (fallbackModel && options.model && fallbackModel === options.model) {
-      process.stderr.write(chalk.red('Error: Fallback model cannot be the same as the main model. Please specify a different model for --fallback-model.\n'));
+    // Parse and validate the ordered fallback chain before any model request.
+    let parsedFallbackModels: string[];
+    try {
+      parsedFallbackModels = parseFallbackModels(fallbackModel, options.model);
+    } catch (error) {
+      process.stderr.write(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}\n`));
       process.exit(1);
+    }
+    if (options.autocompact !== undefined) {
+      setCliAutoCompactWindow(options.autocompact);
     }
 
     // Handle system prompt options
@@ -1746,7 +1823,7 @@ async function run(): Promise<CommanderCommand> {
     // loop during the fs I/O instead of blocking it. See #19661.
     const initResult = await initializeToolPermissionContext({
       allowedToolsCli: allowedTools,
-      disallowedToolsCli: disallowedTools,
+      disallowedToolsCli: effectiveDisallowedTools,
       baseToolsCli: baseTools,
       permissionMode,
       allowDangerouslySkipPermissions,
@@ -2017,7 +2094,7 @@ async function run(): Promise<CommanderCommand> {
     // Special case the default model with the null keyword
     // NOTE: Model resolution happens after setup() to ensure trust is established before AWS auth
     const userSpecifiedModel = options.model === 'default' ? getDefaultMainLoopModel() : options.model;
-    const userSpecifiedFallbackModel = fallbackModel === 'default' ? getDefaultMainLoopModel() : fallbackModel;
+    const userSpecifiedFallbackModel = parsedFallbackModels.map(model => model === 'default' ? getDefaultMainLoopModel() : model).join(',') || undefined;
 
     // Reuse preSetupCwd unless setup() chdir'd (worktreeEnabled). Saves a
     // getCwd() syscall in the common path.
@@ -2833,6 +2910,7 @@ async function run(): Promise<CommanderCommand> {
         outputFormat: outputFormat,
         jsonSchema,
         permissionPromptToolName: options.permissionPromptTool,
+        permissionPrompts: (options as { permissionPrompts?: 'host' | 'none' }).permissionPrompts ?? 'host',
         allowedTools,
         thinkingConfig,
         maxTurns: options.maxTurns,
@@ -2853,6 +2931,7 @@ async function run(): Promise<CommanderCommand> {
         rewindFiles: options.rewindFiles,
         enableAuthStatus: options.enableAuthStatus,
         agent: agentCli,
+        promptSuggestions: suggestionOverride === true,
         workload: options.workload,
         setupTrigger: setupTrigger ?? undefined,
         sessionStartHooksPromise
@@ -3080,6 +3159,7 @@ async function run(): Promise<CommanderCommand> {
       strictMcpConfig,
       systemPrompt,
       appendSystemPrompt,
+      fallbackModel: userSpecifiedFallbackModel,
       taskListId,
       thinkingConfig,
       ...(uploaderReady && {
@@ -3421,7 +3501,7 @@ async function run(): Promise<CommanderCommand> {
 
         // Pass current branch so CCR clones the repo at the right revision
         const currentBranch = await getBranch();
-        const createdSession = await teleportToRemoteWithErrorHandling(root, hasInitialPrompt ? remote : null, new AbortController().signal, currentBranch || undefined);
+        const createdSession = await teleportToRemoteWithErrorHandling(root, hasInitialPrompt ? remote : null, new AbortController().signal, currentBranch || undefined, cloudEnvironment);
         if (!createdSession) {
           logEvent('tengu_remote_create_session_error', {
             error: 'unable_to_create_session' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
@@ -3807,6 +3887,18 @@ async function run(): Promise<CommanderCommand> {
     }
   }).version(`${MACRO.VERSION} (Claude Code)`, '-v, --version', 'Output the version number');
 
+  // 2.1.310 options with functional consumers in this source tree.
+  program.option('--restricted', 'Restrict command execution, WebFetch and untrusted settings unless explicitly authorized');
+  program.option('--cloud [description]', 'Create a cloud session or attach by session ID or claude.ai/code URL');
+  program.option('--environment <environment_id>', 'Create a session on the given self-hosted ccpool environment');
+  program.addOption(new Option('--system-prompt-snapshot <mode>', 'Persist the complete initial system prompt until compaction')
+    .choices(['on','off']));
+  program.option('--safe-mode', 'Ignore non-managed customizations and run with built-in features');
+  program.addOption(new Option('--permission-prompts <target>', 'Who answers permission prompts: host or none')
+    .choices(['host', 'none']).default('host'));
+  program.addOption(new Option('--prompt-suggestions [value]', 'Enable prompt suggestions (stream-json print mode)')
+    .argParser(value => parsePromptSuggestions(value)).preset(true));
+
   // Worktree flags
   program.option('-w, --worktree [name]', 'Create a new git worktree for this session (optionally specify a name)');
   program.option('--tmux', 'Create a tmux session for the worktree (requires --worktree). Uses iTerm2 native panes when available; use --tmux=classic for traditional tmux.');
@@ -3861,10 +3953,11 @@ async function run(): Promise<CommanderCommand> {
   program.addOption(new Option('--sdk-url <url>', 'Use remote WebSocket endpoint for SDK I/O streaming (only with -p and stream-json format)').hideHelp());
 
   // Enable teleport/remote flags for all builds but keep them undocumented until GA
-  program.addOption(new Option('--teleport [session]', 'Resume a teleport session, optionally specify session ID').hideHelp());
+  program.addOption(new Option('--teleport [session]', 'Resume a teleport session, optionally specify session ID'));
   program.addOption(new Option('--remote [description]', 'Create a remote session with the given description').hideHelp());
   if (feature('BRIDGE_MODE')) {
-    program.addOption(new Option('--remote-control [name]', 'Start an interactive session with Remote Control enabled (optionally named)').argParser(value => value || true).hideHelp());
+    program.addOption(new Option('--remote-control [name]', 'Start an interactive session with Remote Control enabled (optionally named)').argParser(value => value || true));
+    program.addOption(new Option('--remote-control-session-name-prefix <prefix>', 'Prefix for auto-generated Remote Control session names'));
     program.addOption(new Option('--rc [name]', 'Alias for --remote-control').argParser(value => value || true).hideHelp());
   }
   if (feature('HARD_FAIL')) {

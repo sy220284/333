@@ -59,7 +59,32 @@ for (const args of [
     const baseline = sections(originalHelp(args));
     const rebuilt = sections(compiledHelp(args));
     assert.ok(baseline.flags.length + baseline.commands.length > 0, 'Empty baseline command metadata');
-    assert.deepEqual(rebuilt, baseline, 'CLI public options and subcommands differ from 2.1.88 original');
+    // 2.1.310 changes intentionally expand the top-level CLI. Keep the old
+    // baseline as an exact guard for every unchanged command/option.
+    if (args.length === 1 && args[0] === '--help') {
+      const approvedAdded = new Set([
+        '--autocompact', '--permission-prompts', '--prompt-suggestions',
+        '--restricted', '--safe-mode', '--teleport', '--cloud', '--environment',
+        '--remote-control', '--remote-control-session-name-prefix', '--system-prompt-snapshot',
+      ]);
+      const added = rebuilt.flags.filter(flag => !baseline.flags.includes(flag));
+      assert.deepEqual(added.filter(flag => !approvedAdded.has(flag)), [],
+        'Unexpected extra CLI option beyond reviewed 2.1.310 migration');
+      for(const required of ['--autocompact','--restricted','--safe-mode','--permission-prompts','--prompt-suggestions','--teleport']){
+        assert.ok(added.includes(required), 'Expected reviewed 2.1.310 option missing: '+required);
+      }
+      assert.deepEqual(baseline.flags.filter(flag => !rebuilt.flags.includes(flag)), [],
+        'Old CLI options were removed unexpectedly');
+      assert.deepEqual(rebuilt.commands, baseline.commands,
+        'Existing CLI commands changed unexpectedly');
+      const help = compiledHelp(args);
+      assert.match(help, /--fallback-model <model>/,
+        'Ordered fallback model interface missing');
+      assert.match(help, /--autocompact <auto\|tokens>/,
+        'Auto-compact window interface missing');
+    } else {
+      assert.deepEqual(rebuilt, baseline, 'Unchanged CLI options or subcommands differ from 2.1.88 original');
+    }
   });
 }
 test('legacy -d2e alias is accepted by reconstructed Commander configuration', () => {

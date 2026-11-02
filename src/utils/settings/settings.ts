@@ -306,14 +306,28 @@ export function getRelativeSettingsFilePathForSource(
   }
 }
 
+/**
+ * Native 2.1.310 safe mode disables untrusted customizations but does not
+ * remove explicit security denial rules. Dropping a project deny would turn
+ * a previously prohibited tool into an allowed one.
+ */
+function safeModeSettings(source: SettingSource, settings: SettingsJson | null): SettingsJson | null {
+  if (!settings || !isEnvTruthy(process.env.CLAUDE_CODE_SAFE_MODE) || source === 'policySettings') return settings
+  const denies = settings.permissions?.deny
+  return Array.isArray(denies) && denies.length > 0
+    ? { permissions: { deny: denies } }
+    : null
+}
+
 export function getSettingsForSource(
   source: SettingSource,
 ): SettingsJson | null {
   const cached = getCachedSettingsForSource(source)
   if (cached !== undefined) return cached
   const result = getSettingsForSourceUncached(source)
-  setCachedSettingsForSource(source, result)
-  return result
+  const filtered = safeModeSettings(source, result)
+  setCachedSettingsForSource(source, filtered)
+  return filtered
 }
 
 function getSettingsForSourceUncached(
@@ -757,10 +771,11 @@ function loadSettingsFromDisk(): SettingsWithErrors {
             }
           }
 
-          if (settings) {
+          const allowedSettings = safeModeSettings(source, settings)
+          if (allowedSettings) {
             mergedSettings = mergeWith(
               mergedSettings,
-              settings,
+              allowedSettings,
               settingsMergeCustomizer,
             )
           }
@@ -772,10 +787,11 @@ function loadSettingsFromDisk(): SettingsWithErrors {
         const inlineSettings = getFlagSettingsInline()
         if (inlineSettings) {
           const parsed = SettingsSchema().safeParse(inlineSettings)
-          if (parsed.success) {
+          const allowed = parsed.success ? safeModeSettings(source, parsed.data) : null
+          if (allowed) {
             mergedSettings = mergeWith(
               mergedSettings,
-              parsed.data,
+              allowed,
               settingsMergeCustomizer,
             )
           }

@@ -1,3 +1,4 @@
+import { createFallbackModelChain } from './services/api/fallbackModels.mjs'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import type {
   ToolResultBlockParam,
@@ -261,6 +262,8 @@ async function* queryLoop(
     skipCacheWrite,
   } = params
   const deps = params.deps ?? productionDeps()
+  // Preserve fallback progress across model/tool turns; a failed model is never retried through the chain.
+  const fallbackChain = createFallbackModelChain(fallbackModel)
 
   // Mutable cross-iteration state. The loop body destructures this at the top
   // of each iteration so reads stay bare-name (`messages`, `toolUseContext`).
@@ -674,7 +677,7 @@ async function* queryLoop(
               toolChoice: undefined,
               isNonInteractiveSession:
                 toolUseContext.options.isNonInteractiveSession,
-              fallbackModel,
+              fallbackModel: fallbackChain.next(currentModel),
               onStreamingFallback: () => {
                 streamingFallbackOccured = true
               },
@@ -891,9 +894,11 @@ async function* queryLoop(
             }
           }
         } catch (innerError) {
-          if (innerError instanceof FallbackTriggeredError && fallbackModel) {
-            // Fallback was triggered - switch model and retry
-            currentModel = fallbackModel
+          if (innerError instanceof FallbackTriggeredError && fallbackChain.next(currentModel)) {
+            // The retry layer reported overload; advance exactly one hop.
+            // Never revisit an exhausted model, even on another tool turn.
+            const nextFallbackModel = fallbackChain.advance(currentModel)!
+            currentModel = nextFallbackModel
             attemptWithFallback = true
 
             // Clear assistant messages since we'll retry the entire request
@@ -919,7 +924,7 @@ async function* queryLoop(
             }
 
             // Update tool use context with new model
-            toolUseContext.options.mainLoopModel = fallbackModel
+            toolUseContext.options.mainLoopModel = nextFallbackModel
 
             // Thinking signatures are model-bound: replaying a protected-thinking
             // block (e.g. capybara) to an unprotected fallback (e.g. opus) 400s.
@@ -933,7 +938,7 @@ async function* queryLoop(
               original_model:
                 innerError.originalModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
               fallback_model:
-                fallbackModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                nextFallbackModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
               entrypoint:
                 'cli' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
               queryChainId: queryChainIdForAnalytics,

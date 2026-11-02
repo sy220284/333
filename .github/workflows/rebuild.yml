@@ -1,7 +1,7 @@
 name: 源码独立重建验证
 on:
   push:
-    branches: [main, rebuild/bun-from-src]
+    branches: [main, rebuild/bun-from-src, upgrade/2.1.310-m1-m10-migration]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -65,6 +65,44 @@ jobs:
         run: node --test tests/distribution-isolation.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
         run: node --test tests/cli-parity.test.mjs
+      - name: 核对升级任务卡与功能场景映射及新增行为边界
+        run: node --test tests/upgrade-coverage.test.mjs tests/fallback-model-chain.test.mjs tests/auto-compact-window.test.mjs
+      - name: --tools default、指定工具与空工具实际模型请求差分验收
+        run: node --test tests/tool-presets.test.mjs
+      - name: 模拟 529 过载并验证 2.1.310 三段模型回退
+        run: node --test tests/fallback-529-integration.test.mjs
+      - name: 缓存官方 2.1.310 Linux x64 行为基准
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: .rebuild/oracle/claude
+          key: claude-2.1.310-linux-x64-b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56
+      - name: 校验并运行官方固定版本 x64 差分基准
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          mkdir -p .rebuild/oracle
+          if [ ! -f .rebuild/oracle/claude ]; then
+            curl --fail --location --silent --show-error --retry 3 \
+              https://downloads.claude.ai/claude-code-releases/2.1.310/linux-x64/claude \
+              --output .rebuild/oracle/claude
+          fi
+          echo "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  .rebuild/oracle/claude" | sha256sum --check
+          chmod 755 .rebuild/oracle/claude
+          .rebuild/oracle/claude --version | grep -F '2.1.310'
+          CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/fallback-529-integration.test.mjs
+      - name: 2.1.310 模式规则单元测试
+        run: node --test tests/upgrade-mode-options.test.mjs
+      - name: 云会话目标及自托管环境参数回归
+        run: node --test tests/cloud-target.test.mjs
+      - name: 受限与安全模式实际权限及模型工具清单差分验收
+        run: |
+          set -euo pipefail
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/upgrade-mode-integration.test.mjs
+          else
+            node --test tests/upgrade-mode-integration.test.mjs
+          fi
       - name: 模拟模型回调与本地 Read 工具端到端差分验收
         run: node --test tests/model-loop-local.test.mjs
       - name: Glob 与 Grep 文件搜索模型工具往返差分验收

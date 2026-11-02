@@ -1047,6 +1047,18 @@ export function checkReadPermissionForTool(
   // 6× = 30 syscalls per Read permission check).
   const pathsToCheck = getPathsForPermissionCheck(path)
 
+  // A restricted session cannot authorize a file outside cwd and --add-dir,
+  // even through an existing broad allow rule. Both input and symlink target
+  // are checked by pathInAllowedWorkingPath.
+  if (process.env.CLAUDE_CODE_RESTRICTED === '1' &&
+      !pathInAllowedWorkingPath(path, toolPermissionContext, pathsToCheck)) {
+    return {
+      behavior: 'deny',
+      message: `Restricted mode: reading outside allowed working directories is forbidden: ${path}`,
+      decisionReason: {type:'workingDir',reason:'Restricted session file confinement'},
+    }
+  }
+
   // 1. Defense-in-depth: Block UNC paths early (before other checks)
   // This catches paths starting with \\ or // that could access network resources
   // This may catch some UNC patterns not detected by containsVulnerableUncPath
@@ -1219,6 +1231,14 @@ export function checkWritePermissionForTool<Input extends AnyObject>(
   // 1. Check for deny rules - check both the original path and resolved symlink path
   const pathsToCheck =
     precomputedPathsToCheck ?? getPathsForPermissionCheck(path)
+  if (process.env.CLAUDE_CODE_RESTRICTED === '1' &&
+      !pathInAllowedWorkingPath(path, toolPermissionContext, pathsToCheck)) {
+    return {
+      behavior: 'deny',
+      message: `Restricted mode: writing outside allowed working directories is forbidden: ${path}`,
+      decisionReason: {type:'workingDir',reason:'Restricted session file confinement'},
+    }
+  }
   for (const pathToCheck of pathsToCheck) {
     const denyRule = matchingRuleForInput(
       pathToCheck,
