@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 // Claude Code 2.1.310 account session population: cloud and Remote Control.
 const validId = /^(?:cse|session)_[A-Za-z0-9_-]+$/
 export const canonicalId = id => validId.test(id ?? '') ? id.replace(/^(?:cse|session)_/, '') : ''
@@ -13,7 +14,7 @@ export function mergeSessionPeers({ local = [], cloud = [], bridge = [], selfId 
       if (!key || existing.has(key)) continue
       existing.add(key)
       const status = row.offline ? 'offline' : row.workerStatus ?? row.status ?? 'unknown'
-      const peer = { name: String(row.title || '(untitled)'), id: row.id, ref: key.slice(0,6),
+      const peer = { name: String(row.title || '(untitled)'), id: row.id, ref: createHash('sha256').update(key).digest('hex').slice(0,6),
         kind: row.remoteControl ? 'remote_control' : source, status,
         acceptsPeerMessages: row.acceptsPeerMessages !== false,
         unreachableFromHere: !!row.unreachableFromHere || row.offline === true }
