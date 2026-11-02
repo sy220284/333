@@ -245,6 +245,8 @@ jobs:
           node build/restore-claude-api.mjs --verify
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
+      - name: 复核新版微压缩来源标记及工具结果持久化
+        run: bun test tests/context-hint-microcompact.test.ts
       - name: 验证2.1.310自动主题通知、OSC11查询及取消订阅的运行行为
         run: bun test tests/m1-system-theme-watcher.test.ts
       - name: 验证2.1.310双时钟阻塞检测与SIGCONT清理
