@@ -2,6 +2,7 @@
  * Project/local settings can request a warning but cannot enable this mode.
  * The caller supplies settings by source; no merged untrusted settings are read.
  */
+const ANSI_CONTROL_SEQUENCE = new RegExp(`${String.fromCharCode(27)}\\[[0-?]*[ -/]*[@-~]`, 'g')
 export function resolveScreenReaderMode({argv=[],env={},trustedSettings=[]}={}) {
   if (argv.includes('--ax-screen-reader')) return {enabled:true,source:'flag'}
   if (Object.hasOwn(env,'CLAUDE_AX_SCREEN_READER')) {
@@ -53,7 +54,7 @@ export function flattenAccessibleTree(root) {
     if(block) flush()
   }
   walk(root)
-  return blocks.join('\n').replace(/\x1b\[[0-?]*[ -/]*[@-~]/g,'')
+  return blocks.join('\n').replace(ANSI_CONTROL_SEQUENCE,'')
     .replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim()
 }
 export function accessibleOutputDelta(previous='',current='') {

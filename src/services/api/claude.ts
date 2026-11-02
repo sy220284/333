@@ -1907,7 +1907,11 @@ async function* queryModel(
         // BetaMessageStream calls partialParse() on every input_json_delta, which we don't need
         // since we handle tool input accumulation ourselves
         // biome-ignore lint/plugin: main conversation loop handles attribution separately
-        let result
+        let result: {
+          request_id: string | null
+          response: Response
+          data: Stream<BetaRawMessageStreamEvent>
+        }
         try {
           result = await anthropic.beta.messages
             .create(
