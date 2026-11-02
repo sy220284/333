@@ -91,6 +91,9 @@ jobs:
       - name: 对原版和当前构建版实际验证安全模式与工具权限
         if: runner.os == 'Linux'
         run: CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/upgrade-mode-integration.test.mjs
+      - name: 验证系统提示词在实际模型请求中的分层及磁盘快照
+        if: runner.os == 'Linux'
+        run: node --test tests/system-prompt-api-roundtrip.test.mjs
       - name: 模拟模型回调与本地 Read 工具端到端差分验收
         run: node --test tests/model-loop-local.test.mjs
       - name: Glob 与 Grep 文件搜索模型工具往返差分验收
