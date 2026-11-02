@@ -20,6 +20,7 @@ import { ensureKeychainPrefetchCompleted, startKeychainPrefetch } from './utils/
 startKeychainPrefetch();
 import { feature } from 'bun:bundle';
 import { parseFallbackModels } from './services/api/fallbackModels.mjs';
+import { parsePromptSuggestions, restrictedToolDenyList } from './services/cli/upgradeMode.mjs';
 import { parseAutoCompactWindowOption } from './services/api/autoCompactWindow.mjs';
 import { setCliAutoCompactWindow } from './services/compact/autoCompact.js';
 import { Command as CommanderCommand, InvalidArgumentError, Option } from '@commander-js/extra-typings';
@@ -504,16 +505,23 @@ function loadSettingSourcesFromFlag(settingSourcesArg: string): void {
  */
 function eagerLoadSettings(): void {
   profileCheckpoint('eagerLoadSettings_start');
-  // Parse --settings flag early to ensure settings are loaded before init()
+  // Managed policy still loads, but --safe-mode discards every user-controlled
+  // settings source, including --settings. Restricted mode retains the explicit
+  // --settings overlay while suppressing user/project/local settings files.
+  const safeMode = process.argv.includes('--safe-mode');
+  const restricted = process.argv.includes('--restricted');
   const settingsFile = eagerParseCliFlag('--settings');
-  if (settingsFile) {
+  if (settingsFile && !safeMode) {
     loadSettingsFromFlag(settingsFile);
   }
-
-  // Parse --setting-sources flag early to control which sources are loaded
-  const settingSourcesArg = eagerParseCliFlag('--setting-sources');
-  if (settingSourcesArg !== undefined) {
-    loadSettingSourcesFromFlag(settingSourcesArg);
+  if (safeMode || restricted) {
+    setAllowedSettingSources([]);
+    resetSettingsCache();
+  } else {
+    const settingSourcesArg = eagerParseCliFlag('--setting-sources');
+    if (settingSourcesArg !== undefined) {
+      loadSettingSourcesFromFlag(settingSourcesArg);
+    }
   }
   profileCheckpoint('eagerLoadSettings_end');
 }
@@ -946,7 +954,7 @@ async function run(): Promise<CommanderCommand> {
     // builds the type as options are added. Narrow with a runtime guard;
     // the collect accumulator + [] default guarantee string[] in practice.
     const pluginDir = thisCommand.getOptionValue('pluginDir');
-    if (Array.isArray(pluginDir) && pluginDir.length > 0 && pluginDir.every(p => typeof p === 'string')) {
+    if (!process.argv.includes('--safe-mode') && Array.isArray(pluginDir) && pluginDir.length > 0 && pluginDir.every(p => typeof p === 'string')) {
       setInlinePlugins(pluginDir);
       clearPluginCache('preAction: --plugin-dir inline plugins');
     }
@@ -1094,6 +1102,18 @@ async function run(): Promise<CommanderCommand> {
         }
       }
     }
+    const safeMode = Boolean((options as { safeMode?: boolean }).safeMode);
+    const restricted = Boolean((options as { restricted?: boolean }).restricted);
+    if (restricted && (options.dangerouslySkipPermissions || options.permissionMode === 'bypassPermissions')) {
+      throw new InvalidArgumentError('--restricted refuses bypassPermissions');
+    }
+    const suggestionOverride = parsePromptSuggestions((options as { promptSuggestions?: string | boolean }).promptSuggestions);
+    if (suggestionOverride !== undefined) {
+      process.env.CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION = String(suggestionOverride);
+    }
+    if (suggestionOverride && (options.outputFormat !== 'stream-json' || !options.print)) {
+      throw new InvalidArgumentError('--prompt-suggestions requires --print and --output-format=stream-json');
+    }
     const {
       debug = false,
       debugToStderr = false,
@@ -1102,7 +1122,7 @@ async function run(): Promise<CommanderCommand> {
       tools: baseTools = [],
       allowedTools = [],
       disallowedTools = [],
-      mcpConfig = [],
+      mcpConfig: requestedMcpConfig = [],
       permissionMode: permissionModeCli,
       addDir = [],
       fallbackModel,
@@ -1112,13 +1132,17 @@ async function run(): Promise<CommanderCommand> {
       includeHookEvents,
       includePartialMessages
     } = options;
+    const mcpConfig = safeMode ? [] : requestedMcpConfig;
+    const effectiveDisallowedTools = restricted
+      ? restrictedToolDenyList(baseTools, disallowedTools)
+      : disallowedTools;
     if (options.prefill) {
       seedEarlyInput(options.prefill);
     }
 
     // Promise for file downloads - started early, awaited before REPL renders
     let fileDownloadPromise: Promise<DownloadResult[]> | undefined;
-    const agentsJson = options.agents;
+    const agentsJson = safeMode ? undefined : options.agents;
     const agentCli = options.agent;
     if (feature('BG_SESSIONS') && agentCli) {
       process.env.CLAUDE_CODE_AGENT = agentCli;
@@ -1138,7 +1162,7 @@ async function run(): Promise<CommanderCommand> {
     const maintenance = options.maintenance ?? false;
 
     // Extract disable slash commands flag
-    const disableSlashCommands = options.disableSlashCommands || false;
+    const disableSlashCommands = options.disableSlashCommands || safeMode;
 
     // Extract tasks mode options (ant-only)
     const tasksOption = "external" === 'ant' && (options as {
@@ -1759,7 +1783,7 @@ async function run(): Promise<CommanderCommand> {
     // loop during the fs I/O instead of blocking it. See #19661.
     const initResult = await initializeToolPermissionContext({
       allowedToolsCli: allowedTools,
-      disallowedToolsCli: disallowedTools,
+      disallowedToolsCli: effectiveDisallowedTools,
       baseToolsCli: baseTools,
       permissionMode,
       allowDangerouslySkipPermissions,
@@ -3821,6 +3845,12 @@ async function run(): Promise<CommanderCommand> {
     }
   }).version(`${MACRO.VERSION} (Claude Code)`, '-v, --version', 'Output the version number');
 
+  // 2.1.310 options with functional consumers in this source tree.
+  program.option('--restricted', 'Restrict command execution, WebFetch and untrusted settings unless explicitly authorized');
+  program.option('--safe-mode', 'Ignore non-managed customizations and run with built-in features');
+  program.addOption(new Option('--prompt-suggestions [value]', 'Enable prompt suggestions (stream-json print mode)')
+    .argParser(value => parsePromptSuggestions(value)).preset(true));
+
   // Worktree flags
   program.option('-w, --worktree [name]', 'Create a new git worktree for this session (optionally specify a name)');
   program.option('--tmux', 'Create a tmux session for the worktree (requires --worktree). Uses iTerm2 native panes when available; use --tmux=classic for traditional tmux.');
@@ -3875,7 +3905,7 @@ async function run(): Promise<CommanderCommand> {
   program.addOption(new Option('--sdk-url <url>', 'Use remote WebSocket endpoint for SDK I/O streaming (only with -p and stream-json format)').hideHelp());
 
   // Enable teleport/remote flags for all builds but keep them undocumented until GA
-  program.addOption(new Option('--teleport [session]', 'Resume a teleport session, optionally specify session ID').hideHelp());
+  program.addOption(new Option('--teleport [session]', 'Resume a teleport session, optionally specify session ID'));
   program.addOption(new Option('--remote [description]', 'Create a remote session with the given description').hideHelp());
   if (feature('BRIDGE_MODE')) {
     program.addOption(new Option('--remote-control [name]', 'Start an interactive session with Remote Control enabled (optionally named)').argParser(value => value || true).hideHelp());
