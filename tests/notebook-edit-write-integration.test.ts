@@ -79,6 +79,17 @@ test('actual NotebookEditTool validates, edits, inserts and deletes cells on dis
     expect(recovered.data.error).toBe('')
     expect(JSON.parse(readFileSync(notebook_path, 'utf8')).cells[1].source).toBe('updated')
 
+    // Two parallel edits with the same original Read must be serialized.
+    // The second request cannot borrow the refreshed state from the first.
+    markRead()
+    const concurrent = await Promise.all([
+      perform({ notebook_path, cell_id: 'second', new_source: 'first-wins' }),
+      perform({ notebook_path, cell_id: 'second', new_source: 'second-must-retry' }),
+    ])
+    expect(concurrent[0].data.error).toBe('')
+    expect(concurrent[1].data.error).toMatch(/concurrent edit/)
+    expect(JSON.parse(readFileSync(notebook_path, 'utf8')).cells[1].source).toBe('first-wins')
+
     // The model-facing schema cannot submit internal write state.
     expect(NotebookEditTool.inputSchema.safeParse({ ...edited, _allowStale: true }).success).toBe(false)
   } finally {
