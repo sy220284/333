@@ -1156,6 +1156,9 @@ async function run(): Promise<CommanderCommand> {
     let outputFormat = options.outputFormat;
     let inputFormat = options.inputFormat;
     let verbose = options.verbose ?? getGlobalConfig().verbose;
+    // The print streaming transport writes SDK messages only in verbose mode.
+    // Explicit prompt suggestions must not be silently discarded on stdout.
+    if (suggestionOverride === true) verbose = true;
     let print = options.print;
     const init = options.init ?? false;
     const initOnly = options.initOnly ?? false;
@@ -2890,6 +2893,7 @@ async function run(): Promise<CommanderCommand> {
         rewindFiles: options.rewindFiles,
         enableAuthStatus: options.enableAuthStatus,
         agent: agentCli,
+        promptSuggestions: suggestionOverride === true,
         workload: options.workload,
         setupTrigger: setupTrigger ?? undefined,
         sessionStartHooksPromise
