@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -17,7 +17,10 @@ const adapters = {
 for (const [name, localPath] of Object.entries(adapters)) {
   const target = join(root, localPath)
   if (!existsSync(target)) throw new Error(`Missing production adapter: ${target}`)
-  const packageDir = join(root, 'node_modules', name)
+  // In 333 the public node_modules directory may be a symlink into
+  // .rebuild/public/node_modules. Compute relative paths from the physical
+  // location Bun resolves, or an ESM re-export would point outside the repo.
+  const packageDir = join(realpathSync(join(root, 'node_modules')), name)
   if (existsSync(packageDir)) throw new Error(`Unexpected pre-existing package: ${name}`)
   mkdirSync(packageDir, { recursive: true })
   const importPath = relative(packageDir, target).replaceAll('\\', '/')
