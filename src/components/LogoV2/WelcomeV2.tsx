@@ -2,10 +2,13 @@ import { c as _c } from "react/compiler-runtime";
 import React from 'react';
 import { Box, Text, useTheme } from 'src/ink.js';
 import { env } from '../../utils/env.js';
+import { isScreenReaderEnabled } from '../../utils/accessibility/screenReaderRuntime.js';
 const WELCOME_V2_WIDTH = 58;
 export function WelcomeV2() {
   const $ = _c(35);
   const [theme] = useTheme();
+  // Match the official accessible welcome: no decorative ASCII image.
+  if (isScreenReaderEnabled()) return <Text>Welcome to Claude Code v{MACRO.VERSION}</Text>;
   if (env.terminal === "Apple_Terminal") {
     let t0;
     if ($[0] !== theme) {
