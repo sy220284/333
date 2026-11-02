@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { applyNotebookEdit, locateNotebookEdit } from '../src/tools/NotebookEditTool/notebookMutation.js'
+import { applyNotebookEdit, isValidNotebookContent, locateNotebookEdit, MAX_NOTEBOOK_BYTES } from '../src/tools/NotebookEditTool/notebookMutation.js'
 import type { NotebookContent } from '../src/types/notebook.js'
 
 const notebook = (minor = 5): NotebookContent => ({
@@ -28,6 +28,7 @@ test('Notebook positional replacement preserves the actual stable cell ID', () =
   const nb = notebook()
   const result = applyNotebookEdit(nb, { cell_id: 'cell-0', new_source: 'print(2)' })
   expect(result.cell_id).toBe('first')
+  expect(result.old_source).toBe('print(1)\n')
   expect(nb.cells[0]?.id).toBe('first')
   expect(nb.cells[0]?.execution_count).toBeNull()
   expect(nb.cells[0]?.outputs).toEqual([])
@@ -39,7 +40,8 @@ test('Notebook insert after anchor yields unique nbformat 4.5 ID, keeping neighb
   const a = applyNotebookEdit(nb, { cell_id: 'first', cell_type: 'code', new_source: 'a', edit_mode: 'insert' })
   const b = applyNotebookEdit(nb, { cell_id: a.cell_id, cell_type: 'markdown', new_source: 'b', edit_mode: 'insert' })
   expect(nb.cells.map(c => c.id)).toEqual(['first', a.cell_id, b.cell_id, 'second'])
-  expect(a.cell_id).toMatch(/^[\w-]{1,64}$/)
+  expect(a.cell_id).toMatch(/^[0-9a-f]{8}$/)
+  expect(b.cell_id).toMatch(/^[0-9a-f]{8}$/)
   expect(b.cell_id).not.toBe(a.cell_id)
   expect(nb.cells[1]?.outputs).toEqual([])
   expect(nb.cells[2]?.outputs).toBeUndefined()
@@ -74,7 +76,7 @@ test('Notebook markdown to code initializes executable fields', () => {
 test('Notebook delete reports the deleted cell and leaves the other intact', () => {
   const nb = notebook()
   const r = applyNotebookEdit(nb, { cell_id: 'cell-0', new_source: '', edit_mode: 'delete' })
-  expect(r).toEqual({ cell_id: 'first', cell_type: 'code', edit_mode: 'delete', cell_index: 0 })
+  expect(r).toEqual({ cell_id: 'first', cell_type: 'code', edit_mode: 'delete', cell_index: 0, old_source: 'print(1)\n' })
   expect(nb.cells.map(c => c.id)).toEqual(['second'])
 })
 
@@ -117,4 +119,17 @@ test('Notebook mutation retains document-level metadata and other cells', () => 
   applyNotebookEdit(nb, { cell_id: 'first', new_source: 'print(3)' })
   expect(nb.cells[1]).toEqual(previous)
   expect(nb.metadata.custom).toEqual({ preserved: true })
+})
+
+test('2.1.310 notebook cell-source contract accepts missing optional metadata and rejects malformed sources', () => {
+  const legacy = { cells: [{ cell_type: 'markdown', source: ['first', 'second'] }] }
+  expect(isValidNotebookContent(legacy)).toBe(true)
+  const result = applyNotebookEdit(legacy as unknown as NotebookContent, {
+    cell_id: 'cell-0', new_source: 'joined',
+  })
+  expect(result.old_source).toBe('firstsecond')
+  expect(isValidNotebookContent({ cells: [{ cell_type: 'markdown', source: [1, 'bad'] }] })).toBe(false)
+  expect(isValidNotebookContent({ cells: [null] })).toBe(false)
+  expect(isValidNotebookContent({ cells: 'invalid' })).toBe(false)
+  expect(MAX_NOTEBOOK_BYTES).toBe(104857600)
 })
