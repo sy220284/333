@@ -182,7 +182,7 @@ function AskUserQuestionPermissionRequestBody(t0) {
         mediaType: mediaType || "image/png",
         filename: filename || "Pasted image",
         dimensions
-      };
+      } satisfies PastedContent;
       cacheImagePath(newContent);
       storeImage(newContent);
       setPastedContentsByQuestion(prev => ({
