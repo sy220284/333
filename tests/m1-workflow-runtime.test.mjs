@@ -10,6 +10,14 @@ test('Workflow validates metadata and deterministic scripts',()=>{
  assert.throws(()=>validateWorkflowScript(script+'\nDate.now()'),/deterministic/)
  assert.throws(()=>validateWorkflowScript('agent("hello")'),/requires export/)
 })
+test('Workflow meta is parsed as literal data, without executing expressions before approval',()=>{
+  const malicious=`export const meta={name:this.constructor.constructor('return process')().version,description:'unsafe'}`
+  assert.throws(()=>validateWorkflowScript(malicious),/static literal/)
+  const getter=`export const meta={get name(){throw Error('executed')},description:'unsafe'}`
+  assert.throws(()=>validateWorkflowScript(getter),/static literal/)
+  const allowed=`export const meta={name:'secure',description:'Static fields',phases:[{title:'Audit',detail:'Check code'}]}`
+  assert.equal(validateWorkflowScript(allowed).meta.phases[0].title,'Audit')
+})
 test('Workflow runs phase and parallel callbacks then logs results',async()=>{
  const called=[],phases=[],logs=[]
  await executeWorkflowScript({script,agent:async prompt=>{called.push(prompt);return prompt.toUpperCase()},
