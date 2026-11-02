@@ -139,7 +139,7 @@ try {
   // Test the actual normal-mode contract, not that intentionally smaller set.
   delete env.CLAUDE_CODE_SIMPLE
   const args = [...prefix, '-p', 'Read and edit the notebook, then read it again',
-    '--tools', 'default', '--permission-mode', 'acceptEdits',
+    '--permission-mode', 'acceptEdits',
     '--model', model, '--output-format', 'json', '--max-turns', '4']
   const child = spawn(executable, args, { cwd: temporary, env, stdio: ['ignore', 'pipe', 'pipe'] })
   let stdout = ''
