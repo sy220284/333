@@ -52,3 +52,14 @@ test('Workflow duplicate meta names fail closed instead of executing an arbitrar
   await assert.rejects(()=>resolveNamedWorkflowFile(root,'duplicate'),/ambiguous/)
  }finally{await rm(root,{force:true,recursive:true})}
 })
+
+test('named workflow resolution accepts the same identifier characters as metadata validation',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'m1-workflow-names-digits-'))
+ try{
+  const folder=join(root,'.claude','workflows')
+  await mkdir(folder,{recursive:true})
+  await writeFile(join(folder,'file.js'),"export const meta={name:'2026_audit',description:'audit'}")
+  const {resolveNamedWorkflowFile}=await import('../src/tools/WorkflowTool/workflowCommandIndex.mjs')
+  assert.equal(await resolveNamedWorkflowFile(root,'2026_audit'),join(folder,'file.js'))
+ }finally{await rm(root,{force:true,recursive:true})}
+})

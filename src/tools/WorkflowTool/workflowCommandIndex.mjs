@@ -27,7 +27,7 @@ export async function listWorkflowFiles(cwd,{onError}={}){
  * Never silently select one of multiple definitions with the same name.
  */
 export async function resolveNamedWorkflowFile(cwd,name){
- if(typeof name!=='string'||!/^[A-Za-z][A-Za-z0-9_-]{0,79}$/.test(name))
+ if(typeof name!=='string'||!/^[\w-]{1,80}$/.test(name))
   throw new Error('Invalid workflow name')
  const errors=[]
  const records=await listWorkflowFiles(cwd,{onError:error=>errors.push(error)})
