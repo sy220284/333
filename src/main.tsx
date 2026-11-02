@@ -966,9 +966,16 @@ async function run(): Promise<CommanderCommand> {
     // builds the type as options are added. Narrow with a runtime guard;
     // the collect accumulator + [] default guarantee string[] in practice.
     const pluginDir = thisCommand.getOptionValue('pluginDir');
-    if (!process.argv.includes('--safe-mode') && Array.isArray(pluginDir) && pluginDir.length > 0 && pluginDir.every(p => typeof p === 'string')) {
-      setInlinePlugins(pluginDir);
-      clearPluginCache('preAction: --plugin-dir inline plugins');
+    const pluginUrl = thisCommand.getOptionValue('pluginUrl');
+    if (!process.argv.includes('--safe-mode')) {
+      const dirs = Array.isArray(pluginDir) && pluginDir.every(p => typeof p === 'string') ? pluginDir as string[] : [];
+      const urls = Array.isArray(pluginUrl) && pluginUrl.every(p => typeof p === 'string') ? pluginUrl as string[] : [];
+      if (dirs.length || urls.length) {
+        const { prepareSessionPluginPaths } = await import('./utils/plugins/sessionPluginSources.js');
+        const sources = await prepareSessionPluginPaths(dirs, urls);
+        setInlinePlugins(sources);
+        clearPluginCache('preAction: --plugin-dir or --plugin-url inline plugins');
+      }
     }
     runMigrations();
     profileCheckpoint('preAction_after_migrations');
@@ -1030,7 +1037,7 @@ async function run(): Promise<CommanderCommand> {
   // `mcp` and `add` as paths, then choked on --transport as an unknown
   // top-level option. Single-value + collect accumulator means each
   // --plugin-dir takes exactly one arg; repeat the flag for multiple dirs.
-  .option('--plugin-dir <path>', 'Load plugins from a directory for this session only (repeatable: --plugin-dir A --plugin-dir B)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Claude in Chrome integration').option('--no-chrome', 'Disable Claude in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)').action(async (prompt, options) => {
+  .option('--plugin-dir <path>', 'Load plugins from a directory or .zip for this session only (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--plugin-url <url>', 'Fetch a plugin .zip from HTTPS for this session only (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Claude in Chrome integration').option('--no-chrome', 'Disable Claude in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)').action(async (prompt, options) => {
     profileCheckpoint('action_handler_start');
 
     // --bare = one-switch minimal mode. Sets SIMPLE so all the existing
