@@ -1,6 +1,7 @@
 import { randomUUID, createHash } from 'node:crypto'
 import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { getSessionId } from '../../bootstrap/state.js'
 import { createTaskStateBase, generateTaskId, type Task, type TaskStateBase, type SetAppState } from '../../Task.js'
 import type { ToolUseContext } from '../../Tool.js'
 import { AgentTool } from '../../tools/AgentTool/AgentTool.js'
@@ -21,10 +22,10 @@ export type LocalWorkflowTaskState = TaskStateBase & {
   transcriptDir: string
 }
 type AgentControl={abort:AbortController,action:null|'skip'|'retry'}
-type Job={abort:AbortController,unregister:()=>void,agents:Map<string,AgentControl>}
+type Job={abort:AbortController,unregister:()=>void,runId:string,agents:Map<string,AgentControl>}
 const active=new Map<string,Job>()
 function folder(runId:string) {
-  if(!/^wf_[a-f0-9]{12}$/.test(runId))throw new Error('Invalid workflow run ID')
+  if(!/^wf_[a-z0-9-]{6,}$/.test(runId))throw new Error('Invalid workflow run ID')
   return join(getClaudeConfigHomeDir(),'workflow-runs',runId)
 }
 function tell(id:string,message:string) {
@@ -67,7 +68,7 @@ export function retryWorkflowAgent(taskId:string,agentId:string,_setAppState:Set
   changeAgent(taskId,agentId,'retry')
 }
 export async function launchWorkflow(
-  input:{script:string,args?:Record<string,unknown>,resumeFromRunId?:string,scriptPath?:string},
+  input:{script:string,args?:unknown,resumeFromRunId?:string,scriptPath?:string},
   context:ToolUseContext,
   canUseTool:Parameters<typeof AgentTool.call>[2],
   parentMessage:Parameters<typeof AgentTool.call>[3],
@@ -82,7 +83,8 @@ export async function launchWorkflow(
   const cached=new Map<string,unknown>()
   if(input.resumeFromRunId){
     const existing=JSON.parse(await readFile(join(dir,'metadata.json'),'utf8')) as {runId:string}
-    if(existing.runId!==runId)throw new Error('Workflow resume ID does not match journal')
+    if(existing.runId!==runId || existing.sessionId!==getSessionId()) throw new Error('Workflow resume belongs to another session')
+    if([...active.values()].some(job=>job.runId===runId)) throw new Error('Stop the prior workflow before resuming the run')
     const text=await readFile(journal,'utf8')
     for(const line of text.split('\n')){
       if(!line.trim())continue
@@ -91,7 +93,7 @@ export async function launchWorkflow(
     }
   }else {
     await writeFile(scriptPath,input.script,{flag:'wx',mode:0o600})
-    await writeFile(join(dir,'metadata.json'),JSON.stringify({runId,meta:parsed.meta,hash:parsed.hash}),{flag:'wx',mode:0o600})
+    await writeFile(join(dir,'metadata.json'),JSON.stringify({runId,sessionId:getSessionId(),meta:parsed.meta,hash:parsed.hash}),{flag:'wx',mode:0o600})
   }
   const id=generateTaskId('local_workflow')
   const task:LocalWorkflowTaskState={
@@ -101,7 +103,7 @@ export async function launchWorkflow(
   }
   const abort=new AbortController()
   const unregister=registerCleanup(async()=>{abort.abort();finish(id,setAppState,'killed','session ended')})
-  const job:Job={abort,unregister,agents:new Map()}
+  const job:Job={abort,unregister,runId,agents:new Map()}
   active.set(id,job)
   registerTask(task,setAppState)
   let writes=Promise.resolve()
@@ -123,7 +125,7 @@ export async function launchWorkflow(
         agent:async(prompt:string,options:Record<string,unknown>)=>{
           if(abort.signal.aborted)throw new Error('Workflow cancelled')
           const index=count++
-          const key=createHash('sha256').update(JSON.stringify({index,prompt,options})).digest('hex')
+          const key=createHash('sha256').update(JSON.stringify({prompt,options})).digest('hex')
           if(cached.has(key))return cached.get(key)
           const agentId=`a${index+1}`
           let result:unknown
