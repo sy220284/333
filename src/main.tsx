@@ -3142,6 +3142,10 @@ async function run(): Promise<CommanderCommand> {
       logSessionTelemetry();
     });
 
+    // The public 2.1.310 x64 release omits the private internal-only
+    // session environment uploader. The public session executes its normal
+    // onTurnComplete path without attempting to import that absent module.
+    /* Old internal-only uploader removed from public target.
     // Set up per-turn session environment data uploader (ant-only build).
     // Default-enabled for all ant users when working in an Anthropic-owned
     // repo. Captures git/filesystem state (NOT transcripts) at each turn so
@@ -3157,6 +3161,7 @@ async function run(): Promise<CommanderCommand> {
     // The per-turn auth logic in sessionDataUploader.ts handles unauthenticated
     // state gracefully (re-checks each turn, so auth recovery mid-session works).
     const uploaderReady = sessionUploaderPromise ? sessionUploaderPromise.then(mod => mod.createSessionTurnUploader()).catch(() => null) : null;
+    */
     const sessionConfig = {
       debug: debug || debugToStderr,
       commands: [...commands, ...mcpCommands],
@@ -3172,11 +3177,6 @@ async function run(): Promise<CommanderCommand> {
       fallbackModel: userSpecifiedFallbackModel,
       taskListId,
       thinkingConfig,
-      ...(uploaderReady && {
-        onTurnComplete: (messages: MessageType[]) => {
-          void uploaderReady.then(uploader => uploader?.(messages));
-        }
-      })
     };
 
     // Shared context for processResumedConversation calls
