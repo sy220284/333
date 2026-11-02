@@ -43,6 +43,7 @@ import { useAppState } from '../../state/AppState.js';
 import { getEffortSuffix } from '../../utils/effort.js';
 import { useMainLoopModel } from '../../hooks/useMainLoopModel.js';
 import { renderModelSetting } from '../../utils/model/model.js';
+import { isScreenReaderEnabled } from '../../utils/accessibility/screenReaderRuntime.js';
 const LEFT_PANEL_MAX_WIDTH = 50;
 export function LogoV2() {
   const $ = _c(94);
@@ -176,6 +177,17 @@ export function LogoV2() {
     t10 = $[14];
   }
   const modelDisplayName = t10;
+  if (isScreenReaderEnabled()) {
+    // Accessibility uses the same live model, billing and workspace metadata
+    // as the normal logo, without Clawd art, decorative borders or animation.
+    return <Box flexDirection="column">
+      <Text>Claude Code v{version}</Text>
+      <Text>{fullModelDisplayName}{effortSuffix} · {billingType}</Text>
+      <Text>{agentName ? `@${agentName} · ${cwd}` : cwd}</Text>
+      {announcement && <Text>{announcement}</Text>}
+      {showSandboxStatus && <Text>Bash 命令将在沙箱中运行，可使用 /sandbox 关闭。</Text>}
+    </Box>;
+  }
   if (!hasReleaseNotes && !showOnboarding && !isEnvTruthy(process.env.CLAUDE_CODE_FORCE_FULL_LOGO)) {
     let t11;
     let t12;
