@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "target_version": "2.1.310",
+  "description": "M10 official signed acceptance ledger. Each signed item requires target decompile anchor, real official x64, candidate commit and CI, parity artifact, human review. Empty ledger means no verified features or E/L scenarios.",
+  "features": [],
+  "scenarios": []
+}
