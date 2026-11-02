@@ -205,7 +205,21 @@ type RejectionDiffData = {
 } | {
   type: 'error';
 };
-function WriteRejectionDiff(t0) {
+type WriteRejectionDiffProps = {
+  filePath: string
+  content: string
+  style?: 'condensed'
+  verbose: boolean
+}
+type WriteRejectionBodyProps = {
+  promise: Promise<RejectionDiffData>
+  filePath: string
+  firstLine: string | null
+  createFallback: React.ReactNode
+  style?: 'condensed'
+  verbose: boolean
+}
+function WriteRejectionDiff(t0: WriteRejectionDiffProps) {
   const $ = _c(20);
   const {
     filePath,
@@ -268,7 +282,7 @@ function WriteRejectionDiff(t0) {
   }
   return t5;
 }
-function WriteRejectionBody(t0) {
+function WriteRejectionBody(t0: WriteRejectionBodyProps) {
   const $ = _c(8);
   const {
     promise,
