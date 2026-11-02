@@ -10,6 +10,7 @@ import { getSessionId } from '../../bootstrap/state.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { lazySchema } from '../../utils/lazySchema.js'
 import { validateWorkflowScript } from './workflowRuntime.mjs'
+import { resolveNamedWorkflowFile } from './workflowCommandIndex.mjs'
 import { launchWorkflow } from '../../tasks/LocalWorkflowTask/LocalWorkflowTask.js'
 
 const inputSchema=lazySchema(()=>z.strictObject({
@@ -60,8 +61,7 @@ async function resolveScript(input:z.infer<InputSchema>) {
     return readFile(metadata.scriptPath,'utf8')
   }
   const root=await realpath(getCwd())
-  const candidate=input.name&&/^[a-zA-Z][a-zA-Z0-9_-]{0,79}$/.test(input.name)?
-    join(root,'.claude','workflows',`${input.name}.mjs`):null
+  const candidate=input.name?await resolveNamedWorkflowFile(root,input.name):null
   if(!candidate)throw new Error('Provide a workflow script, name, or scriptPath')
   const path=await realpath(candidate)
   if(!path.startsWith(root+sep))throw new Error('Workflow script path is outside the trusted workspace')

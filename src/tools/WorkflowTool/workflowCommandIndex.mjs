@@ -21,3 +21,22 @@ export async function listWorkflowFiles(cwd,{onError}={}){
  }
  return commands.sort((a,b)=>a.name.localeCompare(b.name))
 }
+
+/**
+ * A named workflow is identified by the name in meta, not its disk basename.
+ * Never silently select one of multiple definitions with the same name.
+ */
+export async function resolveNamedWorkflowFile(cwd,name){
+ if(typeof name!=='string'||!/^[A-Za-z][A-Za-z0-9_-]{0,79}$/.test(name))
+  throw new Error('Invalid workflow name')
+ const errors=[]
+ const records=await listWorkflowFiles(cwd,{onError:error=>errors.push(error)})
+ const matches=records.filter(record=>record.name===name)
+ if(matches.length>1)
+  throw new Error(`Workflow name ${name} is ambiguous: ${matches.map(v=>v.file).join(', ')}`)
+ if(matches.length===0){
+  const suffix=errors.length?` (${errors.length} invalid saved workflow files)`:''
+  throw new Error(`Workflow ${name} was not found${suffix}`)
+ }
+ return matches[0].file
+}

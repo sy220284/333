@@ -29,3 +29,26 @@ test('malformed workflow is reported and cannot break valid saved workflows',asy
   assert.match(String(errors[0].error),/static literal/)
  }finally{await rm(root,{force:true,recursive:true})}
 })
+
+test('Workflow name resolves by declared meta.name, including .js files and mismatched basename',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'m1-workflow-names-'))
+ try{
+  const folder=join(root,'.claude','workflows')
+  await mkdir(folder,{recursive:true})
+  await writeFile(join(folder,'draft.js'),"export const meta={name:'published',description:'review'}")
+  const {resolveNamedWorkflowFile}=await import('../src/tools/WorkflowTool/workflowCommandIndex.mjs')
+  assert.equal(await resolveNamedWorkflowFile(root,'published'),join(folder,'draft.js'))
+  await assert.rejects(()=>resolveNamedWorkflowFile(root,'draft'),/was not found/)
+ }finally{await rm(root,{force:true,recursive:true})}
+})
+test('Workflow duplicate meta names fail closed instead of executing an arbitrary script',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'m1-workflow-duplicates-'))
+ try{
+  const folder=join(root,'.claude','workflows')
+  await mkdir(folder,{recursive:true})
+  await writeFile(join(folder,'one.js'),"export const meta={name:'duplicate',description:'a'}")
+  await writeFile(join(folder,'two.mjs'),"export const meta={name:'duplicate',description:'b'}")
+  const {resolveNamedWorkflowFile}=await import('../src/tools/WorkflowTool/workflowCommandIndex.mjs')
+  await assert.rejects(()=>resolveNamedWorkflowFile(root,'duplicate'),/ambiguous/)
+ }finally{await rm(root,{force:true,recursive:true})}
+})
