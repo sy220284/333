@@ -44,3 +44,26 @@ jobs:
         run: |
           node tests/m1-link-production-adapters.mjs
           bun test tests/sed-edit-write-integration.test.ts tests/notebook-edit-write-integration.test.ts
+
+  notebook-windows:
+    name: Notebook 原位编辑（Windows）
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 恢复原版依赖环境
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: Notebook 目标定位与格式回归
+        run: bun test tests/notebook-edit-parity.test.ts
+      - name: Notebook 实际磁盘写入及外部修改保护
+        run: |
+          node tests/m1-link-production-adapters.mjs
+          bun test tests/notebook-edit-write-integration.test.ts
