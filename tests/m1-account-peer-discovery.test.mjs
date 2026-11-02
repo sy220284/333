@@ -84,3 +84,24 @@ test('cloud + Remote Control share one listing entry with the real connected rou
  const offline=mergeSessionPeers({cloud:args.cloud,bridge:[{...args.bridge[0],offline:true}]})
  assert.equal(offline[0].address,undefined)
 })
+
+test('a reconnected live Remote Control supersedes an offline cloud snapshot', () => {
+ const peers=mergeSessionPeers({
+   cloud:[{id:'cse_recovery',title:'Cloud snapshot',offline:true,status:'offline'}],
+   bridge:[{id:'session_recovery',title:'Live Remote Control',status:'active'}],
+ })
+ assert.equal(peers.length,1)
+ assert.equal(peers[0].status,'active')
+ assert.equal(peers[0].unreachableFromHere,false)
+ assert.equal(peers[0].address,'bridge:session_recovery')
+ assert.equal(resolveRemoteRecipient(peers,'Cloud snapshot'),'bridge:session_recovery')
+})
+test('a live bridge does not override an explicit no-peer-messaging policy', () => {
+ const peers=mergeSessionPeers({
+   cloud:[{id:'cse_policy',title:'Restricted',status:'active',acceptsPeerMessages:false}],
+   bridge:[{id:'session_policy',status:'active',acceptsPeerMessages:true}],
+ })
+ assert.equal(peers.length,1)
+ assert.equal(peers[0].unreachableFromHere,true)
+ assert.equal(peers[0].address,undefined)
+})
