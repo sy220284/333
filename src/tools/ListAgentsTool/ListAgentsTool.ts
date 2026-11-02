@@ -1,6 +1,6 @@
 import { basename, join } from 'node:path'
 import { z } from 'zod/v4'
-import { getOriginalCwd, getSessionId } from '../../bootstrap/state.js'
+import { getOriginalCwd } from '../../bootstrap/state.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js'
 import { isCrossSessionMessagingEnabled } from '../../utils/crossSessionMessaging.js'
@@ -12,7 +12,11 @@ import { readTeamFileAsync } from '../../utils/swarm/teamHelpers.js'
 import { getAgentName, getTeamName } from '../../utils/teammate.js'
 import { discoverAuthenticatedPeers } from '../../bridge/peerDiscovery.js'
 import { rememberAccountRecipients } from '../../utils/accountPeerDirectory.mjs'
+import { getMessagingSocketPath } from '../../utils/udsMessaging.js'
 import { buildAgentListing, listReachableTeammates } from './peerListing.mjs'
+
+const canSendMessage = (tools: readonly { name: string }[]): boolean =>
+  tools.some(tool => tool.name === 'SendMessage')
 
 const inputSchema = lazySchema(() => z.strictObject({
   channel: z.string().max(256).optional().describe('Not available in this build; leave unset.'),
@@ -37,8 +41,12 @@ export const ListAgentsTool = buildTool({
   searchHint: 'list agents you can SendMessage to',
   maxResultSizeChars: 10_000,
   userFacingName() { return 'ListAgents' },
-  async description() { return 'List reachable agents and Claude sessions, including teammates and other local sessions.' },
-  async prompt() { return 'Lists agents you can SendMessage to. Copy the row name exactly; append [ref] for ambiguous names. Optional channel and q arguments may be omitted.' },
+  async description(_input, { tools }) { return canSendMessage(tools)
+    ? 'List reachable agents and Claude sessions you can SendMessage to.'
+    : 'List agents and Claude sessions; SendMessage is not available among your tools.' },
+  async prompt({ tools }) { return canSendMessage(tools)
+    ? 'Lists reachable agents you can SendMessage to. Copy the address exactly; append [ref] to disambiguate names.'
+    : 'Lists agents and Claude sessions for information. SendMessage is unavailable in this tool context; listed addresses cannot be used for messaging.' },
   get inputSchema(): InputSchema { return inputSchema() },
   get outputSchema(): OutputSchema { return outputSchema() },
   isEnabled() { return isCrossSessionMessagingEnabled() },
@@ -46,7 +54,7 @@ export const ListAgentsTool = buildTool({
   isConcurrencySafe() { return true },
   async validateInput() { return { result: true as const } },
   renderToolUseMessage() { return null },
-  async call(input, { getAppState }) {
+  async call(input, { getAppState, options }) {
     const state = getAppState()
     const teamName = getTeamName(state.teamContext)
     const selfName = isAgentSwarmsEnabled() && teamName ? getAgentName() || TEAM_LEAD_NAME : ''
@@ -56,9 +64,10 @@ export const ListAgentsTool = buildTool({
     const account = await discoverAuthenticatedPeers(localSessions)
     rememberAccountRecipients(account.peers)
     const sessions = [...localSessions, ...account.peers]
-    const ownSocket = process.env.CLAUDE_CODE_MESSAGING_SOCKET
+    // Use the socket actually bound by this process, not a stale inherited env value.
+    const ownSocket = getMessagingSocketPath()
     const ownName = process.env.CLAUDE_CODE_SESSION_NAME || basename(getOriginalCwd()) || 'Claude session'
-    const self = ownSocket ? `${ownName} [${peerRef(ownSocket)}]` : `${ownName} [${getSessionId().slice(0, 6)}]`
+    const self = ownSocket ? `${ownName} [${peerRef(ownSocket)}]` : undefined
     const subagents = Object.values(state.tasks).flatMap(task => {
       if (task?.type !== 'local_agent' || task.agentType === 'main-session') return []
       return [{ id: task.id,
@@ -67,7 +76,8 @@ export const ListAgentsTool = buildTool({
     })
     return { data: buildAgentListing({
       self, subagents, teammates, sessions, query: input.q, localUnreadable: unreadable,
-      accountNotes: account.notes, canSend: true,
+      accountNotes: account.notes,
+      canSend: canSendMessage(options.refreshTools?.() ?? options.tools),
     }) }
   },
   mapToolResultToToolResultBlockParam(content: Output, toolUseID: string) {
