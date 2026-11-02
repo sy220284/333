@@ -134,7 +134,7 @@ function Highlighted(t0) {
   } else {
     t1 = $[0];
   }
-  const hl = use(t1);
+  const hl = use<Awaited<ReturnType<typeof getCliHighlightPromise>>>(t1);
   let t2;
   if ($[1] !== codeWithSpaces || $[2] !== hl || $[3] !== language) {
     bb0: {
