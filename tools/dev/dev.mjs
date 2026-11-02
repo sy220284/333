@@ -11,7 +11,7 @@ const secondary = resolve(root, 'tools/dev/node_modules/.bin');
 const tools = existsSync(primary) ? primary : secondary;
 const ext = process.platform === 'win32' ? '.cmd' : '';
 const bin = name => join(tools, name + ext);
-const cliScript = name => resolve(tools, '../' + (name === 'tsc' ? 'typescript/bin/tsc' : '@biomejs/biome/bin/biome'));
+const cliScript = name => resolve(tools, `../${name === 'tsc' ? 'typescript/bin/tsc' : '@biomejs/biome/bin/biome'}`);
 const npmCli = resolve(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js');
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, { cwd: root, stdio: 'inherit', ...options });
@@ -44,15 +44,15 @@ function changed() {
   const base = process.env.DEV333_DIFF_BASE ?? process.env.GITHUB_BASE_REF;
   let result;
   if (base) {
-    const baseRef = base.startsWith('origin/') ? base : 'origin/' + base;
-    result = output('git', ['diff', '--name-only', baseRef + '...HEAD']);
+    const baseRef = base.startsWith('origin/') ? base : `origin/${base}`;
+    result = output('git', ['diff', '--name-only', `${baseRef}...HEAD`]);
   } else {
     result = output('git', ['diff', '--name-only', 'HEAD~1', 'HEAD']);
   }
-  if (result.status !== 0) throw new Error('无法确定代码比较基线，请检查 Git 历史或 DEV333_DIFF_BASE: ' + result.stderr);
+  if (result.status !== 0) throw new Error(`无法确定代码比较基线，请检查 Git 历史或 DEV333_DIFF_BASE: ${result.stderr}`);
   const pending = output('git', ['diff', '--name-only', 'HEAD']);
   if (pending.status !== 0) throw new Error(pending.stderr);
-  return [...new Set((result.stdout + '\n' + pending.stdout).split(/\r?\n/).map(normalizePath).filter(Boolean))].sort();
+  return [...new Set((`${result.stdout}\n${pending.stdout}`).split(/\r?\n/).map(normalizePath).filter(Boolean))].sort();
 }
 function isSource(file) { return /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(file) && !file.startsWith('research/'); }
 function checkedFiles() { return changed().filter(isSource).filter(file => existsSync(resolve(root, file))); }
@@ -63,7 +63,7 @@ function typescript(checkChanged) {
   const typeRoots = [resolve(tools, '../@types'), resolve(root, 'node_modules/@types')];
   writeFileSync(config, `${JSON.stringify({ extends: '../tsconfig.json', compilerOptions: { typeRoots, types: ['node', 'react', 'bun'] } }, null, 2)}\n`);
   const result = toolOutput('tsc', ['--noEmit', '--pretty', 'false', '-p', config]);
-  const errors = parseTypeScriptErrors(result.stdout + '\n' + result.stderr);
+  const errors = parseTypeScriptErrors(`${result.stdout}\n${result.stderr}`);
   if (!checkChanged) {
     process.stdout.write(result.stdout);
     process.stderr.write(result.stderr);
@@ -71,7 +71,7 @@ function typescript(checkChanged) {
     console.log('[OK] 全量 TypeScript 类型检查通过');
     return;
   }
-  if (result.status !== 0 && errors.length === 0) throw new Error('TypeScript 未产生可解析的诊断: ' + result.stdout.slice(0, 2000));
+  if (result.status !== 0 && errors.length === 0) throw new Error(`TypeScript 未产生可解析的诊断: ${result.stdout.slice(0, 2000)}`);
   const changedHunks = new Map();
   const base = process.env.DEV333_DIFF_BASE ?? process.env.GITHUB_BASE_REF;
   const comparison = process.env.DEV333_DIFF_STAGED === '1'
@@ -124,7 +124,7 @@ switch (command) {
   case 'bootstrap': boot(); break;
   case 'doctor':
     for (const name of ['tsc', 'biome']) {
-      if (!existsSync(bin(name))) throw new Error(name + ' 未安装');
+      if (!existsSync(bin(name))) throw new Error(`${name} 未安装`);
       toolRun(name, ['--version']);
     }
     run('git', ['--version']);
