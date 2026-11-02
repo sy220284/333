@@ -57,13 +57,17 @@ export function getComputerUseHostAdapter(): ComputerUseHostAdapter {
     // cleanup.ts always unhides at turn end — no user preference to disable it.
     getAutoUnhideEnabled: () => true,
 
-    // Pixel-validation JPEG decode+crop. MUST be synchronous (the package
-    // does `patch1.equals(patch2)` directly on the return value). Cowork uses
-    // Electron's `nativeImage` (sync); our `image-processor-napi` is
-    // sharp-compatible and async-only. Returning null → validation skipped,
-    // click proceeds — the designed fallback per `PixelCompareResult.skipped`.
-    // The sub-gate defaults to false anyway.
-    cropRawPatch: () => null,
+    // Pixel validation must complete before a click. The current bundled
+    // image processor exposes only async JPEG transforms, while the upstream
+    // MCP package requires synchronous cropped patches. Returning null lets
+    // an explicitly enabled validation silently skip and proceed with input.
+    // Refuse the operation until a synchronous native crop implementation is
+    // available; the default-disabled gate is unaffected.
+    cropRawPatch: () => {
+      throw new Error(
+        'Computer Use pixel validation requires synchronous native JPEG cropping; the installed image processor does not provide it',
+      )
+    },
   }
   return cached
 }
