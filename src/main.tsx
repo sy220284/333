@@ -1126,6 +1126,10 @@ async function run(): Promise<CommanderCommand> {
     if (restricted && (options.dangerouslySkipPermissions || options.permissionMode === 'bypassPermissions')) {
       throw new InvalidArgumentError('--restricted refuses bypassPermissions');
     }
+    if ((options as { excludeDynamicSystemPromptSections?: boolean }).excludeDynamicSystemPromptSections
+      && !options.systemPrompt && !options.systemPromptFile) {
+      process.env.CLAUDE_CODE_EXCLUDE_DYNAMIC_SYSTEM_PROMPT_SECTIONS = '1';
+    }
     const suggestionOverride = parsePromptSuggestions((options as { promptSuggestions?: string | boolean }).promptSuggestions);
     if (suggestionOverride !== undefined) {
       process.env.CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION = String(suggestionOverride);
@@ -3896,6 +3900,7 @@ async function run(): Promise<CommanderCommand> {
 
   // 2.1.310 options with functional consumers in this source tree.
   program.option('--restricted', 'Restrict command execution, WebFetch and untrusted settings unless explicitly authorized');
+  program.option('--exclude-dynamic-system-prompt-sections', 'Move per-machine system sections into the first user message for shared prompt caching');
   program.option('--cloud [description]', 'Create a cloud session or attach by session ID or claude.ai/code URL');
   program.option('--environment <environment_id>', 'Create a session on the given self-hosted ccpool environment');
   program.addOption(new Option('--system-prompt-snapshot <mode>', 'Persist the complete initial system prompt until compaction')
