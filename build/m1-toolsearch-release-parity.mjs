@@ -65,7 +65,8 @@ async function probe(exe, toolSearchOverride) {
     }
     let parsed
     try{parsed=JSON.parse(stdout)}catch{parsed={result:stdout.slice(-400)}}
-    return {exitCode,signal,calls:requests.length,initialTools:requests[0]?.tools??[],discovered:[...refs].sort(),result:parsed.result,isError:parsed.is_error,stderr:stderr.slice(-300)}
+    const deferredSchemas = Object.fromEntries((requests[1]?.tools ?? []).filter(tool => refs.has(tool.name)).map(tool => [tool.name, { input_schema: tool.input_schema, description: tool.description }]))
+    return {exitCode,signal,calls:requests.length,initialTools:requests[0]?.tools??[],discovered:[...refs].sort(),deferredSchemas,result:parsed.result,isError:parsed.is_error,stderr:stderr.slice(-300)}
   }finally{
     await new Promise(done=>server.close(done))
     rmSync(home,{recursive:true,force:true})
@@ -80,7 +81,8 @@ const disabledMatchesTarget = !disabledReference.initialTools.includes('ToolSear
 const referencePass=reference.exitCode===0&&reference.calls===2&&reference.result==='DISCOVERY_COMPLETE'&&foundOnTarget.every(n=>reference.discovered.includes(n))&&absentOnTarget.every(n=>!reference.discovered.includes(n))
 const candidateMatches=candidate?candidate.exitCode===reference.exitCode&&candidate.calls===reference.calls&&candidate.result===reference.result&&JSON.stringify(candidate.discovered)===JSON.stringify(reference.discovered):null
 const candidateBaseDiscoveryPass = candidate ? candidate.exitCode === 0 && candidate.calls === 2 && candidate.result === 'DISCOVERY_COMPLETE' && candidate.initialTools.includes('ToolSearch') && ['Bash', 'Read'].every(name => candidate.discovered.includes(name)) : null
-const report={officialSha,names,reference,candidate,disabledReference,disabledCandidate,disabledMatchesTarget,referencePass,candidateMatches,candidateBaseDiscoveryPass,scope:'ordinary CLI --print ToolSearch with isolated model API'}
+const overlappingSchemaMatches = candidate ? Object.fromEntries(candidate.discovered.filter(name => reference.discovered.includes(name)).map(name => [name, JSON.stringify(reference.deferredSchemas[name]?.input_schema) === JSON.stringify(candidate.deferredSchemas[name]?.input_schema)])) : null
+const report={officialSha,names,reference,candidate,overlappingSchemaMatches,disabledReference,disabledCandidate,disabledMatchesTarget,referencePass,candidateMatches,candidateBaseDiscoveryPass,scope:'ordinary CLI --print ToolSearch with isolated model API'}
 mkdirSync(dirname(resolve(opt['--report'])),{recursive:true})
 writeFileSync(resolve(opt['--report']),JSON.stringify(report,null,2)+'\n')
 console.log(JSON.stringify({referencePass,candidateMatches,candidateBaseDiscoveryPass,disabledMatchesTarget,referenceDiscovered:reference.discovered,candidateDiscovered:candidate?.discovered??null}))
