@@ -1,7 +1,7 @@
 name: 源码独立重建验证
 on:
   push:
-    branches: [main, rebuild/bun-from-src]
+    branches: [main, rebuild/bun-from-src, upgrade/2.1.310-m1-m10-migration]
   pull_request:
     branches: [main]
   workflow_dispatch:
