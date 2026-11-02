@@ -272,15 +272,11 @@ export function getAnthropicApiKeyWithSource(
       }
     }
 
-    if (
-      !apiKeyEnv &&
-      !process.env.CLAUDE_CODE_OAUTH_TOKEN &&
-      !process.env.CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR
-    ) {
-      throw new Error(
-        'ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN env var is required',
-      )
-    }
+    // CI mode restricts API-key lookup to explicitly supplied credentials.
+    // Offline commands (mcp/plugin list, help) still need a valid no-key
+    // result. Authentication is enforced when making a model request; a
+    // lookup-time throw can otherwise abort startup before the CLI prints its
+    // result and incorrectly leave a zero exit code.
 
     if (apiKeyEnv) {
       return {
