@@ -486,6 +486,7 @@ export async function runHeadless(
     enableAuthStatus: boolean | undefined
     agent: string | undefined
     workload: string | undefined
+    promptSuggestions?: boolean | undefined
     setupTrigger?: 'init' | 'maintenance' | undefined
     sessionStartHooksPromise?: ReturnType<typeof processSessionStartHooks>
     setSDKStatus?: (status: SDKStatus) => void
