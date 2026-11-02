@@ -4,7 +4,9 @@ export function recordTipShown(tipId: string): void {
   const numStartups = getGlobalConfig().numStartups
   saveGlobalConfig(c => {
     const history = c.tipsHistory ?? {}
-    if (history[tipId] === numStartups) return c
+    // Each successfully displayed spinner tip counts as an impression.
+    // The REPL suppresses duplicate selections within a turn. Session cooldown
+    // remains tracked separately by the last startup number.
     return {
       ...c,
       tipsHistory: { ...history, [tipId]: numStartups },
