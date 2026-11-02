@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { extname, isAbsolute, resolve } from 'path'
+import { extname, isAbsolute, resolve } from 'node:path'
 import {
   fileHistoryEnabled,
   fileHistoryTrackEdit,
