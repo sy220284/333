@@ -37,3 +37,8 @@ test('public Monitor aligns timeout cap and does not discard stdout produced bef
   const ws=await readFile(new URL('../src/tasks/MonitorWsTask/MonitorWsTask.ts',import.meta.url),'utf8')
   assert.equal(ws.includes("url.hostname.replace("),true)
 })
+
+test('Monitor accepts fractional millisecond values within official numeric schema range',()=>{
+ assert.doesNotThrow(()=>validateMonitorArguments({description:'observe',command:'echo hi',timeout_ms:1000.5}))
+ assert.throws(()=>validateMonitorArguments({description:'observe',command:'echo hi',timeout_ms:Number.POSITIVE_INFINITY}),/timeout_ms/)
+})

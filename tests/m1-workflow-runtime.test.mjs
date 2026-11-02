@@ -28,3 +28,17 @@ test('Workflow refuses cancelled run before dispatch',async()=>{
  const ac=new AbortController();ac.abort()
  await assert.rejects(()=>executeWorkflowScript({script,signal:ac.signal,agent:async()=>{throw Error('called')}}),/cancelled/)
 })
+
+test('Workflow accepts JSON arrays and scalar args unchanged',async()=>{
+ const run=`export const meta={name:'args',description:'JSON types'}
+ log(Array.isArray(args)?args.join('|'):String(args))`
+ const got=[]
+ await executeWorkflowScript({script:run,args:['a','b'],agent:async()=>'',onLog:s=>got.push(s)})
+ await executeWorkflowScript({script:run,args:'one',agent:async()=>'',onLog:s=>got.push(s)})
+ assert.deepEqual(got,['a|b','one'])
+})
+test('Workflow script limit matches official x64 524288 characters',()=>{
+ const prefix="export const meta={name:'max',description:'boundary'}\n"
+ assert.doesNotThrow(()=>validateWorkflowScript(prefix+' '.repeat(524288-prefix.length)))
+ assert.throws(()=>validateWorkflowScript(prefix+' '.repeat(524289-prefix.length)),/524288/)
+})

@@ -51,6 +51,6 @@ export function validateMonitorArguments(value) {
       throw new Error('Invalid WebSocket protocols')
     }
   }
-  if (value.timeout_ms !== undefined && (!Number.isInteger(value.timeout_ms) ||
+  if (value.timeout_ms !== undefined && (!Number.isFinite(value.timeout_ms) ||
       value.timeout_ms < 1000 || value.timeout_ms > 3600000)) throw new Error('timeout_ms must be between 1000 and 3600000')
 }

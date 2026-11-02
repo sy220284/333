@@ -83,7 +83,9 @@ export const WorkflowTool=buildTool({
     const parsed=validateWorkflowScript(script)
     return {behavior:'ask' as const,
       message:`Review dynamic workflow before running: ${parsed.meta.name} — ${parsed.meta.description}\n\n${script}`,
-      updatedInput:input,
+      // Freeze the actual approved script in the post-permission tool input.
+      // A file may change between displaying the approval prompt and call().
+      updatedInput:{script,args:input.args,resumeFromRunId:input.resumeFromRunId},
       decisionReason:{type:'safetyCheck' as const,reason:'Workflow can launch agents and run user-approved code',classifierApprovable:false}}
   },
   async call(input,context,canUseTool,parentMessage){
