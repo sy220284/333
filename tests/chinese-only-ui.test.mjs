@@ -104,3 +104,11 @@ test('插件管理页面保留内部标签标识并使用中文', () => {
   assert.match(read('src/commands/plugin/DiscoverPlugins.tsx'), /发现插件/)
   assert.match(read('src/components/mcp/MCPStdioServerMenu.tsx'), /查看工具/)
 })
+
+test('搜索、IDE 接入及远程控制界面文案为中文', () => {
+  assert.match(read('src/components/GlobalSearchDialog.tsx'), /全局搜索/)
+  assert.match(read('src/components/QuickOpenDialog.tsx'), /快速打开/)
+  assert.match(read('src/components/IdeAutoConnectDialog.tsx'), /IDE 自动连接/)
+  assert.match(read('src/components/RemoteCallout.tsx'), /远程控制/)
+  assert.match(read('src/components/HistorySearchDialog.tsx'), /搜索历史输入/)
+})
