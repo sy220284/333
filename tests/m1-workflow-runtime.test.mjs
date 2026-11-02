@@ -42,3 +42,19 @@ test('Workflow script limit matches official x64 524288 characters',()=>{
  assert.doesNotThrow(()=>validateWorkflowScript(prefix+' '.repeat(524288-prefix.length)))
  assert.throws(()=>validateWorkflowScript(prefix+' '.repeat(524289-prefix.length)),/524288/)
 })
+
+test('Workflow host constructors cannot escape into the parent process',async()=>{
+  const source=`export const meta={name:'escape',description:'Check isolation'}
+const host=agent.constructor.constructor('return process')()
+log(host.version)`
+  await assert.rejects(()=>executeWorkflowScript({script:source,agent:async()=>''}),/Code generation from strings disallowed|not allowed/i)
+})
+test('Workflow args and Agent results are sandbox-owned objects',async()=>{
+  const source=`export const meta={name:'isolate',description:'Object isolation'}
+const received=await agent('respond')
+const host1=args.constructor.constructor('return process')()
+log(host1.version)
+const host2=received.constructor.constructor('return process')()
+log(host2.version)`
+  await assert.rejects(()=>executeWorkflowScript({script:source,args:{x:1},agent:async()=>({safe:true})}),/Code generation from strings disallowed|not allowed/i)
+})

@@ -34,19 +34,69 @@ export function validateWorkflowScript(script){
  return {meta,runnable,hash:createHash('sha256').update(script).digest('hex')}
 }
 /** @param {{script:string,args?:unknown,agent:(prompt:string,options?:Record<string,unknown>)=>Promise<unknown>,onPhase?:(phase:string)=>void,onLog?:(message:string)=>void,signal?:AbortSignal}} config */
+/** @param {{script:string,args?:unknown,agent:(prompt:string,options?:Record<string,unknown>)=>Promise<unknown>,onPhase?:(name:string)=>void,onLog?:(line:string)=>void,signal?:AbortSignal}} input */
 export async function executeWorkflowScript({script,args={},agent,onPhase=()=>{},onLog=()=>{},signal}){
- const {meta,runnable}=validateWorkflowScript(script)
- const check=()=>{if(signal?.aborted)throw Error('Workflow cancelled')}
- const scope={
-  args,
-  agent:async(prompt,options={})=>{check();if(typeof prompt!=='string'||!prompt.trim())throw Error('agent() needs prompt');return agent(prompt,options)},
-  phase:value=>{check();if(typeof value!=='string'||!value.trim())throw Error('phase() needs a title');onPhase(value)},
-  log:(...xs)=>{check();onLog(xs.map(String).join(' '))},
-  parallel:async fs=>{check();if(!Array.isArray(fs)||fs.length>20||fs.some(f=>typeof f!=='function'))throw Error('parallel requires at most 20 callbacks');return Promise.all(fs.map(f=>f()))},
-  pipeline:async(items,...stages)=>{check();if(!Array.isArray(items)||items.length>100||stages.some(f=>typeof f!=='function'))throw Error('pipeline needs items and callbacks');let values=items;for(const stage of stages){check();values=await Promise.all(values.map((v,i)=>stage(v,i)))}return values},
- }
- check()
- await new vm.Script('(async()=>{\n'+runnable+'\n})()').runInNewContext(scope,{timeout:500,contextCodeGeneration:{strings:false,wasm:false}})
- check()
- return meta
+  const {meta,runnable}=validateWorkflowScript(script)
+  const check=()=>{if(signal?.aborted)throw new Error('Workflow cancelled')}
+  check()
+
+  // Host functions, host promises and host objects must never be placed in the
+  // untrusted realm. Their Function constructors otherwise escape vm's
+  // codeGeneration:false setting (agent.constructor.constructor(...)).
+  const bridge={
+    async agent(payload){
+      check()
+      const [prompt,options]=JSON.parse(payload)
+      if(typeof prompt!=='string'||!prompt.trim())throw new Error('agent() needs prompt')
+      const output=await agent(prompt,options)
+      check()
+      return JSON.stringify(output===undefined?null:output)
+    },
+    phase(title){check();onPhase(title)},
+    log(value){check();onLog(value)},
+  }
+  const context=vm.createContext({
+    __wfBridge:bridge,
+    __wfArgs:JSON.stringify(args===undefined?{}:args),
+  },{codeGeneration:{strings:false,wasm:false}})
+  // This bootstrap is trusted source. The host bridge is captured in a
+  // private closure and removed from globalThis before user script execution.
+  const bootstrap=[
+    '((bridge)=>{',
+    '  const agent=async(prompt,options={})=>{',
+    '    try { return JSON.parse(await bridge.agent(JSON.stringify([prompt,options]))) }',
+    '    catch(error) { throw new Error(String(error)) }',
+    '  };',
+    '  const phase=(value)=>{',
+    '    if(typeof value!=="string"||!value.trim())throw new Error("phase() needs a title");',
+    '    try { bridge.phase(value) } catch(error) { throw new Error(String(error)) }',
+    '  };',
+    '  const log=(...items)=>{',
+    '    try { bridge.log(items.map(String).join(" ")) } catch(error) { throw new Error(String(error)) }',
+    '  };',
+    '  const parallel=async(fs)=>{',
+    '    if(!Array.isArray(fs)||fs.length>20||fs.some(f=>typeof f!=="function"))',
+    '      throw new Error("parallel requires at most 20 callbacks");',
+    '    return Promise.all(fs.map(f=>f()));',
+    '  };',
+    '  const pipeline=async(items,...stages)=>{',
+    '    if(!Array.isArray(items)||items.length>100||stages.some(f=>typeof f!=="function"))',
+    '      throw new Error("pipeline needs items and callbacks");',
+    '    let values=items;',
+    '    for(const stage of stages)values=await Promise.all(values.map((v,i)=>stage(v,i)));',
+    '    return values;',
+    '  };',
+    '  return {agent,phase,log,parallel,pipeline};',
+    '})(globalThis.__wfBridge)',
+  ].join('\n')
+  const api=vm.runInContext(bootstrap,context,{timeout:500})
+  context.args=vm.runInContext('JSON.parse(globalThis.__wfArgs)',context,{timeout:500})
+  delete context.__wfBridge
+  delete context.__wfArgs
+  Object.assign(context,api)
+  check()
+  const result=new vm.Script('(async()=>{\n'+runnable+'\n})()').runInContext(context,{timeout:500})
+  await result
+  check()
+  return meta
 }
