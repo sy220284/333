@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 import type { SDKPartialAssistantMessage } from 'src/entrypoints/sdk/coreTypes.generated.js'
 import type { StdoutMessage } from 'src/entrypoints/sdk/controlTypes.js'
 import { decodeJwtExpiry } from '../../bridge/jwtUtils.js'
