@@ -2,7 +2,7 @@
 // Exercise real Monitor/Workflow tool use on native 2.1.310 and rebuilt CLI.
 // The fake model API requests only a shell printf and a pure, no-agent workflow.
 import {createHash} from 'node:crypto'
-import {createReadStream,mkdtempSync,rmSync,mkdirSync,writeFileSync} from 'node:fs'
+import {createReadStream,mkdtempSync,rmSync,mkdirSync,writeFileSync,readdirSync,readFileSync,existsSync} from 'node:fs'
 import {createServer} from 'node:http'
 import {tmpdir} from 'node:os'
 import {join,resolve,dirname} from 'node:path'
@@ -34,6 +34,25 @@ function response(model,name,input,n){
  ['message_stop',{type:'message_stop'}],
  ]
  return pairs.map(([e,d])=>frame(e,d)).join('')
+}
+function collectWorkflowRuns(home){
+ const root=join(home,'.claude','projects')
+ if(!existsSync(root))return []
+ const items=[]
+ function visit(directory,depth){
+  if(depth>7)return
+  for(const entry of readdirSync(directory,{withFileTypes:true})){
+   const path=join(directory,entry.name)
+   if(entry.isDirectory()){visit(path,depth+1);continue}
+   if(!entry.isFile()||!/^wf_[0-9a-f]{8}-[0-9a-f]{3}\.json$/.test(entry.name))continue
+   if(directory.split(/[\/\\]/).at(-1)!=='workflows')continue
+   const data=JSON.parse(readFileSync(path,'utf8'))
+   items.push({runId:data.runId,status:data.status,answer:data.result?.answer,
+    workflowName:data.workflowName,scriptPath:data.scriptPath})
+  }
+ }
+ visit(root,0)
+ return items
 }
 async function run(exe,toolName){
  const home=mkdtempSync(join(tmpdir(),'333-roundtrip-'))
@@ -72,11 +91,15 @@ async function run(exe,toolName){
     for(const block of message.content)if(block.type==='tool_result')resultBlocks.push(block)
   const own=resultBlocks.find(b=>b.tool_use_id==='toolu_01_333_roundtrip_1')
   const serialized=typeof own?.content==='string'?own.content:JSON.stringify(own?.content??'')
+  const saved=toolName==='Workflow'?collectWorkflowRuns(home):[]
+  const persisted=saved.some(item=>item.status==='completed'&&item.answer===42&&item.workflowName==='probe-return')
   const ok=exit===0&&requests.length>=3&&
-   (toolName==='Workflow'?serialized.includes('Workflow launched in background')&&serialized.includes('Run ID: wf_')&&serialized.includes('Script file:'):
+   (toolName==='Workflow'?serialized.includes('Workflow launched in background')&&
+      serialized.includes('Run ID: wf_')&&serialized.includes('Script file:')&&persisted:
     serialized.includes('Monitor started')&&serialized.includes('task '))
-  return {tool:toolName,ok,exit,signal,calls:requests.length,toolResponse:serialized.slice(0,2000),
-   stdout:output.slice(-350),stderr:error.slice(-350)}
+  return {tool:toolName,ok,exit,signal,calls:requests.length,
+   ...(toolName==='Workflow'?{savedRuns:saved}:{}),
+   toolResponse:serialized.slice(0,2000),stdout:output.slice(-350),stderr:error.slice(-350)}
  }finally{
   await new Promise(done=>server.close(done))
   rmSync(home,{recursive:true,force:true})
