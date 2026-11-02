@@ -1,21 +1,37 @@
 /** Team mailbox recipients are distinct from static agent templates. */
-export function listReachableTeammates(teamFile, selfName, liveTeammates = {}) {
+export function listReachableTeammates(teamFile, selfName, liveTeammates = {}, tasks = {}) {
   const seen = new Set([selfName.toLowerCase()])
   const agents = []
-  const include = member => {
+  // Official 2.1.310 reads in-process teammate status from running tasks,
+  // not from the persisted roster, which may lag or contain stale status.
+  const taskStatuses = new Map()
+  for (const task of Object.values(tasks)) {
+    if (task?.type !== 'in_process_teammate' || !task.identity?.agentId) continue
+    taskStatuses.set(task.identity.agentId, task.isIdle ? 'idle' : task.status)
+  }
+  const include = (member, agentId) => {
     const name = member?.name
     if (typeof name !== 'string' || !name.trim() || name.includes('@')) return
     const key = name.toLowerCase()
     if (seen.has(key)) return
     seen.add(key)
+    const status = agentId && taskStatuses.has(agentId)
+      ? taskStatuses.get(agentId) : member.status
     agents.push({ name, to: name, channel: 'team',
       ...(member.agentType ? { type: member.agentType } : {}),
-      ...(member.status ? { status: member.status } : {}) })
+      ...(status ? { status } : {}) })
   }
-  // Active in-process teammates may not yet be present in the persisted roster.
-  for (const member of Object.values(liveTeammates ?? {})) include(member)
-  for (const member of Array.isArray(teamFile?.members) ? teamFile.members : []) include(member)
+  // Current in-process registry has precedence over the saved roster.
+  for (const [agentId, member] of Object.entries(liveTeammates ?? {})) include(member, agentId)
+  for (const member of Array.isArray(teamFile?.members) ? teamFile.members : []) include(member, member.agentId)
   return agents
+}
+/** A teammate still has a local_agent task, but must not claim the same
+ * human-readable name in both sections of the official ListAgents listing. */
+export function hideTeammateNamesInSubagents(subagents, liveTeammates = {}) {
+  const teammateNames = new Set(Object.values(liveTeammates ?? {}).map(t => t.name))
+  return subagents.map(agent => teammateNames.has(agent.name)
+    ? { ...agent, name: undefined } : agent)
 }
 /** Text and structured output are produced from the same filtered records. */
 export function buildAgentListing({ self, subagents = [], teammates = [], sessions = [], query, localUnreadable = false, accountNotes = [], canSend = true }) {
