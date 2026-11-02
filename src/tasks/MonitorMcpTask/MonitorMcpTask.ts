@@ -43,7 +43,8 @@ export async function startWebSocketMonitor(input: {
   persistent:boolean
 },context:{setAppState:SetAppState,toolUseId?:string}):Promise<string> {
   const url=validateMonitorWsUrl(input.url)
-  const addresses=await lookup(url.hostname,{all:true})
+  const host = url.hostname.replace(/^\[|\]$/g, '')
+  const addresses=await lookup(host,{all:true})
   if(!addresses.length || addresses.some(a=>!isPublicIp(a.address))) throw new Error('Monitor WebSocket host resolves to a private, link-local, or metadata address')
   const pinned=addresses.find(a=>a.family===4)??addresses[0]!
   const id=generateTaskId('monitor_mcp')
