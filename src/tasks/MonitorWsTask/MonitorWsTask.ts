@@ -64,7 +64,7 @@ export async function startWebSocketMonitor(input: {
     handshakeTimeout:30000,maxPayload:1048576,
     lookup:(_hostname,_options,cb)=>cb(null,pinned.address,pinned.family),
   })
-  const unregisterCleanup=registerCleanup(async()=>{terminate(id,context.setAppState,'killed',input.description)})
+  const unregisterCleanup=registerCleanup(async()=>{terminate(id,context.setAppState,'killed')})
   const h:SocketHandle={socket,unregisterCleanup,agentId:context.agentId}
   sockets.set(id,h)
   registerTask(task,context.setAppState)

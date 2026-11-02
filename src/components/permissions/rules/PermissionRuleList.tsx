@@ -799,7 +799,7 @@ export function PermissionRuleList(t0) {
   if ($[30] !== changes || $[31] !== onExit || $[32] !== onRetryDenials) {
     t18 = () => {
       const s_1 = denialStateRef.current;
-      const denialsFor = set => Array.from(set).map(idx => s_1.denials[idx]).filter(_temp2);
+      const denialsFor = (set: Set<number>) => Array.from(set).map(idx => s_1.denials[idx]).filter(_temp2);
       const retryDenials = denialsFor(s_1.retry);
       if (retryDenials.length > 0) {
         const commands = retryDenials.map(_temp3);
