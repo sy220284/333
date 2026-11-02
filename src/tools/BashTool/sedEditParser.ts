@@ -194,7 +194,7 @@ export function parseSedEditCommand(command: string): SedEditInfo | null {
   }
 
   // Must have found all three parts (pattern, replacement delimiter, and optional flags)
-  if (state !== 'flags') {
+  if (state !== 'flags' || pattern === '') {
     return null
   }
 
@@ -242,11 +242,6 @@ export function applySedSubstitution(
   // Handle case-insensitive flag (i or I in sed)
   if (sedInfo.flags.includes('i') || sedInfo.flags.includes('I')) {
     regexFlags += 'i'
-  }
-
-  // Handle multiline flag (m or M in sed)
-  if (sedInfo.flags.includes('m') || sedInfo.flags.includes('M')) {
-    regexFlags += 'm'
   }
 
   // Convert sed pattern to JavaScript regex pattern
