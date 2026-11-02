@@ -74,8 +74,9 @@ const reference=await probe(opt['--reference'])
 const candidate=opt['--candidate']?await probe(opt['--candidate']):null
 const referencePass=reference.exitCode===0&&reference.calls===2&&reference.result==='DISCOVERY_COMPLETE'&&foundOnTarget.every(n=>reference.discovered.includes(n))&&absentOnTarget.every(n=>!reference.discovered.includes(n))
 const candidateMatches=candidate?candidate.exitCode===reference.exitCode&&candidate.calls===reference.calls&&candidate.result===reference.result&&JSON.stringify(candidate.discovered)===JSON.stringify(reference.discovered):null
-const report={officialSha,names,reference,candidate,referencePass,candidateMatches,scope:'ordinary CLI --print ToolSearch with isolated model API'}
+const candidateBaseDiscoveryPass = candidate ? candidate.exitCode === 0 && candidate.calls === 2 && candidate.result === 'DISCOVERY_COMPLETE' && candidate.initialTools.includes('ToolSearch') && ['Bash', 'Read'].every(name => candidate.discovered.includes(name)) : null
+const report={officialSha,names,reference,candidate,referencePass,candidateMatches,candidateBaseDiscoveryPass,scope:'ordinary CLI --print ToolSearch with isolated model API'}
 mkdirSync(dirname(resolve(opt['--report'])),{recursive:true})
 writeFileSync(resolve(opt['--report']),JSON.stringify(report,null,2)+'\n')
-console.log(JSON.stringify({referencePass,candidateMatches,referenceDiscovered:reference.discovered,candidateDiscovered:candidate?.discovered??null}))
-if(!referencePass||(candidate&&!candidateMatches&&opt['--allow-candidate-diff']!=='true'))process.exitCode=1
+console.log(JSON.stringify({referencePass,candidateMatches,candidateBaseDiscoveryPass,referenceDiscovered:reference.discovered,candidateDiscovered:candidate?.discovered??null}))
+if(!referencePass || (candidate && !candidateBaseDiscoveryPass) || (candidate && !candidateMatches && opt['--allow-candidate-diff']!=='true'))process.exitCode=1
