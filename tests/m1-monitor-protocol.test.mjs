@@ -33,9 +33,23 @@ test('public Monitor aligns timeout cap and does not discard stdout produced bef
   assert.equal(inputOnly.includes('persistent:z.boolean()'),false)
   assert.equal(code.includes('Math.min(input.timeout_ms,600000)'), true)
   assert.equal(code.includes('pendingLines.push(line)'), true)
-  assert.equal(code.includes('for(const line of pendingLines)emitLine(line)'), true)
+  assert.equal(code.includes('const drainMonitorEvents=()=>'), true)
+  assert.equal(code.includes('drainMonitorEvents},'), true)
+  const lifecycle=await readFile(new URL('../src/tasks/LocalShellTask/LocalShellTask.tsx',import.meta.url),'utf8')
+  assert.equal(lifecycle.includes('input.drainMonitorEvents?.()'),true)
+  assert.equal(lifecycle.includes("if (kind === 'monitor')"),true)
+  assert.equal(lifecycle.includes('events.map(line =>'),true)
   const ws=await readFile(new URL('../src/tasks/MonitorWsTask/MonitorWsTask.ts',import.meta.url),'utf8')
   assert.equal(ws.includes("url.hostname.replace("),true)
+})
+
+test('Monitor WebSocket permission delegates authorized bypass to the central engine', async()=>{
+ const code=await readFile(new URL('../src/tools/MonitorTool/MonitorTool.ts',import.meta.url),'utf8')
+ assert.match(code,/decisionReason:\{type:'other' as const,reason:'WebSocket outbound connection requires permission'/)
+ assert.match(code,/await verifyWsHost\(input.ws.url\)/)
+ const engine=await readFile(new URL('../src/utils/permissions/permissions.ts',import.meta.url),'utf8')
+ assert.match(engine,/appState.toolPermissionContext.mode === 'bypassPermissions'/)
+ assert.match(engine,/toolPermissionResult.decisionReason?.type === 'safetyCheck'/)
 })
 
 test('Monitor accepts fractional millisecond values within official numeric schema range',()=>{
