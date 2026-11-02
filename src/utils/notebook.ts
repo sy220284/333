@@ -19,6 +19,8 @@ import { jsonParse } from './slowOperations.js'
 
 const LARGE_OUTPUT_THRESHOLD = 10000
 
+export const MAX_NOTEBOOK_BYTES = 100 * 1024 * 1024
+
 /** Exact 2.1.310 minimum Notebook cell-shape requirement, shared by Read/Edit. */
 export function isValidNotebookContent(value: unknown): value is NotebookContent {
   if (value === null || typeof value !== 'object') return false
@@ -178,7 +180,18 @@ export async function readNotebook(
   cellId?: string,
 ): Promise<NotebookCellSource[]> {
   const fullPath = expandPath(notebookPath)
-  const buffer = await getFsImplementation().readFileBytes(fullPath)
+  const fs = getFsImplementation()
+  const fileStats = await fs.stat(fullPath)
+  if (!fileStats.isFile()) {
+    throw new Error('Notebook path is not a regular file.')
+  }
+  if (fileStats.size > MAX_NOTEBOOK_BYTES) {
+    throw new Error('Notebook file exceeds the maximum readable size (100 MiB).')
+  }
+  const buffer = await fs.readFileBytes(fullPath)
+  if (buffer.byteLength > MAX_NOTEBOOK_BYTES) {
+    throw new Error('Notebook file exceeds the maximum readable size (100 MiB).')
+  }
   const content = buffer.toString('utf-8')
   const notebook: unknown = jsonParse(content)
   if (!isValidNotebookContent(notebook)) {
