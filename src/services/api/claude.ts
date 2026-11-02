@@ -21,6 +21,7 @@ import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { Stream } from '@anthropic-ai/sdk/streaming.mjs'
 import { createHash, randomUUID } from 'crypto'
 import { resolvePromptSnapshot, promptSnapshotMode } from '../cli/systemPromptSnapshot.mjs'
+import { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from '../../constants/systemPromptBoundary.js'
 import {
   getAPIProvider,
   isFirstPartyAnthropicBaseUrl,
@@ -1324,6 +1325,26 @@ async function* queryModel(
   // Must run BEFORE injecting synthetic messages (e.g. deferred tool names)
   // so the fingerprint reflects the actual user input.
   const fingerprint = computeFingerprintFromMessages(messagesForAPI)
+
+  // Only default system prompts contain the registry boundary. When enabled,
+  // move machine-specific sections into a stable first user message, keeping
+  // the full model-visible instructions intact while sharing the system cache.
+  if (isEnvTruthy(process.env.CLAUDE_CODE_EXCLUDE_DYNAMIC_SYSTEM_PROMPT_SECTIONS)) {
+    const boundary = systemPrompt.indexOf(SYSTEM_PROMPT_DYNAMIC_BOUNDARY)
+    if (boundary >= 0) {
+      const dynamic = systemPrompt.slice(boundary + 1).filter(Boolean)
+      systemPrompt = asSystemPrompt(systemPrompt.slice(0, boundary))
+      if (dynamic.length > 0) {
+        messagesForAPI = [
+          createUserMessage({
+            content: `<dynamic_system_context>\n${dynamic.join('\n\n')}\n</dynamic_system_context>`,
+            isMeta: true,
+          }),
+          ...messagesForAPI,
+        ]
+      }
+    }
+  }
 
   // When the delta attachment is enabled, deferred tools are announced
   // via persisted deferred_tools_delta attachments instead of this
