@@ -208,18 +208,8 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Fast-path for template job commands.
-  if (feature('TEMPLATES') && (args[0] === 'new' || args[0] === 'list' || args[0] === 'reply')) {
-    profileCheckpoint('cli_templates_path');
-    const {
-      templatesMain
-    } = await import('../cli/handlers/templateJobs.js');
-    await templatesMain(args);
-    // process.exit (not return) — mountFleetView's Ink TUI can leave event
-    // loop handles that prevent natural exit.
-    // eslint-disable-next-line custom-rules/no-process-exit
-    process.exit(0);
-  }
+  // The public 2.1.310 CLI uses its current commands; the experimental
+  // legacy TEMPLATES new/list/reply dispatch has no release entrypoint.
 
   // Fast-path for `claude environment-runner`: headless BYOC runner.
   // feature() must stay inline for build-time dead code elimination.
