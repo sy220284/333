@@ -134,7 +134,7 @@
       "source_line": 2751,
       "source_blob": "eab938de43f5584aa4417b95b601b63822bc2417",
       "evidence_level": "TARGET_SOURCE_CONFIRMED",
-      "review_status": "M1_CLASSIFIED",
+      "review_status": "TARGET_SOURCE_IDENTIFIED_PENDING_RUNTIME_TEST",
       "final_2_1_310_behavior": "2.1.310 selects tips only after advertisedCommand passes the live available-command check. Failed checks are recorded, preventing the same broken tip from repeatedly being suggested.",
       "applicability": "IN_SCOPE_M5",
       "later_override": "Target 2.1.310 final source confirms the behavior still exists, subject to explicit session/provider constraints.",
@@ -155,7 +155,7 @@
       "tests": [],
       "release_negative": "A command that is unavailable or fails an availability check must not be suggested.",
       "release_positive": "Other relevant and available tips retain cooldown and lifetime filtering.",
-      "audit_status": "Source behavior classified by M1; M5 implementation and M10 end-to-end tests not yet accepted.",
+      "audit_status": "目标版反编译源码位置已确认；尚未取得真实x64提示显示行为及333重建版差分测试，不能签收。",
       "acceptance_workflow_runs": []
     },
     {
@@ -163,7 +163,7 @@
       "source_line": 6012,
       "source_blob": "eab938de43f5584aa4417b95b601b63822bc2417",
       "evidence_level": "TARGET_SOURCE_CONFIRMED",
-      "review_status": "M1_CLASSIFIED",
+      "review_status": "TARGET_SOURCE_IDENTIFIED_PENDING_RUNTIME_TEST",
       "final_2_1_310_behavior": "2.1.310 filters candidate spinner tips by providerAgnostic on non-first-party backends; first-party backends retain eligible tips. Forced-tip special cases and organization tips have distinct paths and must be validated separately.",
       "applicability": "IN_SCOPE_M5",
       "later_override": "Target 2.1.310 final source confirms the behavior still exists, subject to explicit session/provider constraints.",
@@ -183,7 +183,7 @@
       "tests": [],
       "release_negative": "Non-first-party backends do not receive tips that promote first-party-only services.",
       "release_positive": "Provider-neutral tips may appear when relevant, within cooldown and lifetime limits.",
-      "audit_status": "Source behavior classified by M1; M5 implementation and M10 end-to-end tests not yet accepted.",
+      "audit_status": "目标版反编译源码位置已确认；尚未取得真实x64提示显示行为及333重建版差分测试，不能签收。",
       "acceptance_workflow_runs": []
     }
   ]
