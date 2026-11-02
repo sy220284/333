@@ -16,7 +16,7 @@ import type { LocalShellTaskState } from 'src/tasks/LocalShellTask/guards.js';
 import { LocalShellTask } from 'src/tasks/LocalShellTask/LocalShellTask.js';
 // Type import is erased at build time — safe even though module is ant-gated.
 import type { LocalWorkflowTaskState } from 'src/tasks/LocalWorkflowTask/LocalWorkflowTask.js';
-import type { MonitorMcpTaskState } from 'src/tasks/MonitorMcpTask/MonitorMcpTask.js';
+import type { MonitorWsTaskState } from 'src/tasks/MonitorWsTask/MonitorWsTask.js';
 import { RemoteAgentTask, type RemoteAgentTaskState } from 'src/tasks/RemoteAgentTask/RemoteAgentTask.js';
 import { type BackgroundTaskState, isBackgroundTask, type TaskState } from 'src/tasks/types.js';
 import type { DeepImmutable } from 'src/types/utils.js';
@@ -85,10 +85,10 @@ type ListItem = {
   task: DeepImmutable<LocalWorkflowTaskState>;
 } | {
   id: string;
-  type: 'monitor_mcp';
+  type: 'monitor_ws';
   label: string;
   status: string;
-  task: DeepImmutable<MonitorMcpTaskState>;
+  task: DeepImmutable<MonitorWsTaskState>;
 } | {
   id: string;
   type: 'dream';
@@ -104,9 +104,9 @@ type ListItem = {
 
 // Monitor and Workflow are first-class tools in the 2.1.310 runtime.
 import { WorkflowDetailDialog } from './WorkflowDetailDialog.js'
-import { MonitorMcpDetailDialog } from './MonitorMcpDetailDialog.js'
+import { MonitorWsDetailDialog } from './MonitorWsDetailDialog.js'
 import { killWorkflowTask, skipWorkflowAgent, retryWorkflowAgent } from '../../tasks/LocalWorkflowTask/LocalWorkflowTask.js'
-import { killMonitorMcp } from '../../tasks/MonitorMcpTask/MonitorMcpTask.js'
+import { killMonitorWs } from '../../tasks/MonitorWsTask/MonitorWsTask.js'
 
 
 // Helper to get filtered background tasks (excludes foregrounded local_agent)
@@ -164,7 +164,7 @@ export function BackgroundTasksDialog({
     agentTasks,
     teammateTasks,
     workflowTasks,
-    mcpMonitors,
+    wsMonitors,
     dreamTasks: dreamTasks_0,
     allSelectableItems
   } = useMemo(() => {
@@ -185,7 +185,7 @@ export function BackgroundTasksDialog({
     // Exclude foregrounded task - it's being viewed in the main UI, not a background task
     const agent = sorted.filter(item_1 => item_1.type === 'local_agent' && item_1.id !== foregroundedTaskId);
     const workflows = sorted.filter(item_2 => item_2.type === 'local_workflow');
-    const monitorMcp = sorted.filter(item_3 => item_3.type === 'monitor_mcp');
+    const monitorWs = sorted.filter(item_3 => item_3.type === 'monitor_ws');
     const dreamTasks = sorted.filter(item_4 => item_4.type === 'dream');
     // In spinner-tree mode, exclude teammates from the dialog (they appear in the tree)
     const teammates = showSpinnerTree ? [] : sorted.filter(item_5 => item_5.type === 'in_process_teammate');
@@ -201,13 +201,13 @@ export function BackgroundTasksDialog({
       remoteSessions: remote,
       agentTasks: agent,
       workflowTasks: workflows,
-      mcpMonitors: monitorMcp,
+      wsMonitors: monitorWs,
       dreamTasks,
       teammateTasks: [...leaderItem, ...teammates],
-      // Order MUST match JSX render order (teammates \u2192 bash \u2192 monitorMcp \u2192
+      // Order MUST match JSX render order (teammates \u2192 bash \u2192 monitorWs \u2192
       // remote \u2192 agent \u2192 workflows \u2192 dream) so \u2193/\u2191 navigation moves the cursor
       // visually downward.
-      allSelectableItems: [...leaderItem, ...teammates, ...bash, ...monitorMcp, ...remote, ...agent, ...workflows, ...dreamTasks]
+      allSelectableItems: [...leaderItem, ...teammates, ...bash, ...monitorWs, ...remote, ...agent, ...workflows, ...dreamTasks]
     };
   }, [typedTasks, foregroundedTaskId, showSpinnerTree]);
   const currentSelection = allSelectableItems[selectedIndex] ?? null;
@@ -265,8 +265,8 @@ export function BackgroundTasksDialog({
         void killTeammateTask(currentSelection_0.id);
       } else if (currentSelection_0.type === 'local_workflow' && currentSelection_0.status === 'running' && killWorkflowTask) {
         killWorkflowTask(currentSelection_0.id, setAppState);
-      } else if (currentSelection_0.type === 'monitor_mcp' && currentSelection_0.status === 'running' && killMonitorMcp) {
-        killMonitorMcp(currentSelection_0.id, setAppState);
+      } else if (currentSelection_0.type === 'monitor_ws' && currentSelection_0.status === 'running' && killMonitorWs) {
+        killMonitorWs(currentSelection_0.id, setAppState);
       } else if (currentSelection_0.type === 'dream' && currentSelection_0.status === 'running') {
         void killDreamTask(currentSelection_0.id);
       } else if (currentSelection_0.type === 'remote_agent' && currentSelection_0.status === 'running') {
@@ -379,9 +379,9 @@ export function BackgroundTasksDialog({
       case 'local_workflow':
         if (!WorkflowDetailDialog) return null;
         return <WorkflowDetailDialog workflow={task_0} onDone={onDone} onKill={task_0.status === 'running' && killWorkflowTask ? () => killWorkflowTask(task_0.id, setAppState) : undefined} onSkipAgent={task_0.status === 'running' && skipWorkflowAgent ? agentId => skipWorkflowAgent(task_0.id, agentId, setAppState) : undefined} onRetryAgent={task_0.status === 'running' && retryWorkflowAgent ? agentId_0 => retryWorkflowAgent(task_0.id, agentId_0, setAppState) : undefined} onBack={goBackToList} key={`workflow-${task_0.id}`} />;
-      case 'monitor_mcp':
-        if (!MonitorMcpDetailDialog) return null;
-        return <MonitorMcpDetailDialog task={task_0} onKill={task_0.status === 'running' && killMonitorMcp ? () => killMonitorMcp(task_0.id, setAppState) : undefined} onBack={goBackToList} key={`monitor-mcp-${task_0.id}`} />;
+      case 'monitor_ws':
+        if (!MonitorWsDetailDialog) return null;
+        return <MonitorWsDetailDialog task={task_0} onKill={task_0.status === 'running' && killMonitorWs ? () => killMonitorWs(task_0.id, setAppState) : undefined} onBack={goBackToList} key={`monitor-ws-${task_0.id}`} />;
       case 'dream':
         return <DreamDetailDialog task={task_0} onDone={() => onDone('Background tasks dialog dismissed', {
           display: 'system'
@@ -401,7 +401,7 @@ export function BackgroundTasksDialog({
               {runningAgentCount}{' '}
               {runningAgentCount !== 1 ? 'active agents' : 'active agent'}
             </Text>] : [])], index => <Text key={`separator-${index}`}> · </Text>);
-  const actions = [<KeyboardShortcutHint key="upDown" shortcut="↑/↓" action="select" />, <KeyboardShortcutHint key="enter" shortcut="Enter" action="view" />, ...(currentSelection?.type === 'in_process_teammate' && currentSelection.status === 'running' ? [<KeyboardShortcutHint key="foreground" shortcut="f" action="foreground" />] : []), ...((currentSelection?.type === 'local_bash' || currentSelection?.type === 'local_agent' || currentSelection?.type === 'in_process_teammate' || currentSelection?.type === 'local_workflow' || currentSelection?.type === 'monitor_mcp' || currentSelection?.type === 'dream' || currentSelection?.type === 'remote_agent') && currentSelection.status === 'running' ? [<KeyboardShortcutHint key="kill" shortcut="x" action="stop" />] : []), ...(agentTasks.some(t => t.status === 'running') ? [<KeyboardShortcutHint key="kill-all" shortcut={killAgentsShortcut} action="stop all agents" />] : []), <KeyboardShortcutHint key="esc" shortcut="←/Esc" action="close" />];
+  const actions = [<KeyboardShortcutHint key="upDown" shortcut="↑/↓" action="select" />, <KeyboardShortcutHint key="enter" shortcut="Enter" action="view" />, ...(currentSelection?.type === 'in_process_teammate' && currentSelection.status === 'running' ? [<KeyboardShortcutHint key="foreground" shortcut="f" action="foreground" />] : []), ...((currentSelection?.type === 'local_bash' || currentSelection?.type === 'local_agent' || currentSelection?.type === 'in_process_teammate' || currentSelection?.type === 'local_workflow' || currentSelection?.type === 'monitor_ws' || currentSelection?.type === 'dream' || currentSelection?.type === 'remote_agent') && currentSelection.status === 'running' ? [<KeyboardShortcutHint key="kill" shortcut="x" action="stop" />] : []), ...(agentTasks.some(t => t.status === 'running') ? [<KeyboardShortcutHint key="kill-all" shortcut={killAgentsShortcut} action="stop all agents" />] : []), <KeyboardShortcutHint key="esc" shortcut="←/Esc" action="close" />];
   const handleCancel = () => onDone('Background tasks dialog dismissed', {
     display: 'system'
   });
@@ -433,16 +433,16 @@ export function BackgroundTasksDialog({
                 </Box>
               </Box>}
 
-            {mcpMonitors.length > 0 && <Box flexDirection="column" marginTop={teammateTasks.length > 0 || bashTasks.length > 0 ? 1 : 0}>
+            {wsMonitors.length > 0 && <Box flexDirection="column" marginTop={teammateTasks.length > 0 || bashTasks.length > 0 ? 1 : 0}>
                 <Text dimColor>
-                  <Text bold>{'  '}Monitors</Text> ({mcpMonitors.length})
+                  <Text bold>{'  '}Monitors</Text> ({wsMonitors.length})
                 </Text>
                 <Box flexDirection="column">
-                  {mcpMonitors.map(item_7 => <Item key={item_7.id} item={item_7} isSelected={item_7.id === currentSelection?.id} />)}
+                  {wsMonitors.map(item_7 => <Item key={item_7.id} item={item_7} isSelected={item_7.id === currentSelection?.id} />)}
                 </Box>
               </Box>}
 
-            {remoteSessions.length > 0 && <Box flexDirection="column" marginTop={teammateTasks.length > 0 || bashTasks.length > 0 || mcpMonitors.length > 0 ? 1 : 0}>
+            {remoteSessions.length > 0 && <Box flexDirection="column" marginTop={teammateTasks.length > 0 || bashTasks.length > 0 || wsMonitors.length > 0 ? 1 : 0}>
                 <Text dimColor>
                   <Text bold>{'  '}Remote agents</Text> ({remoteSessions.length}
                   )
@@ -452,7 +452,7 @@ export function BackgroundTasksDialog({
                 </Box>
               </Box>}
 
-            {agentTasks.length > 0 && <Box flexDirection="column" marginTop={teammateTasks.length > 0 || bashTasks.length > 0 || mcpMonitors.length > 0 || remoteSessions.length > 0 ? 1 : 0}>
+            {agentTasks.length > 0 && <Box flexDirection="column" marginTop={teammateTasks.length > 0 || bashTasks.length > 0 || wsMonitors.length > 0 || remoteSessions.length > 0 ? 1 : 0}>
                 <Text dimColor>
                   <Text bold>{'  '}Local agents</Text> ({agentTasks.length})
                 </Text>
@@ -461,7 +461,7 @@ export function BackgroundTasksDialog({
                 </Box>
               </Box>}
 
-            {workflowTasks.length > 0 && <Box flexDirection="column" marginTop={teammateTasks.length > 0 || bashTasks.length > 0 || mcpMonitors.length > 0 || remoteSessions.length > 0 || agentTasks.length > 0 ? 1 : 0}>
+            {workflowTasks.length > 0 && <Box flexDirection="column" marginTop={teammateTasks.length > 0 || bashTasks.length > 0 || wsMonitors.length > 0 || remoteSessions.length > 0 || agentTasks.length > 0 ? 1 : 0}>
                 <Text dimColor>
                   <Text bold>{'  '}Workflows</Text> ({workflowTasks.length})
                 </Text>
@@ -470,7 +470,7 @@ export function BackgroundTasksDialog({
                 </Box>
               </Box>}
 
-            {dreamTasks_0.length > 0 && <Box flexDirection="column" marginTop={teammateTasks.length > 0 || bashTasks.length > 0 || mcpMonitors.length > 0 || remoteSessions.length > 0 || agentTasks.length > 0 || workflowTasks.length > 0 ? 1 : 0}>
+            {dreamTasks_0.length > 0 && <Box flexDirection="column" marginTop={teammateTasks.length > 0 || bashTasks.length > 0 || wsMonitors.length > 0 || remoteSessions.length > 0 || agentTasks.length > 0 || workflowTasks.length > 0 ? 1 : 0}>
                 <Box flexDirection="column">
                   {dreamTasks_0.map(item_11 => <Item key={item_11.id} item={item_11} isSelected={item_11.id === currentSelection?.id} />)}
                 </Box>
@@ -521,10 +521,10 @@ function toListItem(task: BackgroundTaskState): ListItem {
         status: task.status,
         task
       };
-    case 'monitor_mcp':
+    case 'monitor_ws':
       return {
         id: task.id,
-        type: 'monitor_mcp',
+        type: 'monitor_ws',
         label: task.description,
         status: task.status,
         task
