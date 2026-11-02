@@ -4,6 +4,7 @@ import { lookup } from 'node:dns/promises'
 import { createTaskStateBase, generateTaskId, type Task, type TaskStateBase, type SetAppState } from '../../Task.js'
 import { registerCleanup } from '../../utils/cleanupRegistry.js'
 import { enqueuePendingNotification } from '../../utils/messageQueueManager.js'
+import { escapeXml } from '../../utils/xml.js'
 import { registerTask, updateTaskState } from '../../utils/task/framework.js'
 import { isPublicIp, validateMonitorWsUrl } from '../../utils/monitorProtocol.mjs'
 
@@ -15,9 +16,11 @@ export type MonitorWsTaskState = TaskStateBase & {
 }
 type SocketHandle = { socket: WebSocket, timer?: NodeJS.Timeout, unregisterCleanup: () => void, agentId?: AgentId }
 const sockets = new Map<string, SocketHandle>()
-function notify(taskId: string, description: string, content: string) {
-  enqueuePendingNotification({mode:'task-notification',priority:'next',
-    value:`Monitor "${description}" [task ${taskId}]: ${content}`})
+function notify(taskId: string, description: string, content: string, agentId?: AgentId) {
+  // Official 2.1.310 WebSocket events carry a typed task identifier and
+  // event payload. A free-form string would be mistaken for user text.
+  enqueuePendingNotification({mode:'task-notification',priority:'next',agentId,
+    value:`<task-notification>\n<task-id>${escapeXml(taskId)}</task-id>\n<summary>Monitor event: "${escapeXml(description)}"</summary>\n<event>${escapeXml(content)}</event>\n</task-notification>`})
 }
 function terminate(taskId: string, setAppState: SetAppState, status: 'completed' | 'failed' | 'killed', description: string) {
   const handle = sockets.get(taskId)
@@ -27,13 +30,15 @@ function terminate(taskId: string, setAppState: SetAppState, status: 'completed'
   handle.unregisterCleanup()
   if (handle.socket.readyState === WebSocket.CONNECTING || handle.socket.readyState === WebSocket.OPEN) handle.socket.terminate()
   updateTaskState<MonitorWsTaskState>(taskId,setAppState,t=>({...t,status,endTime:Date.now(),notified:true}))
-  notify(taskId,description,`stream ${status}`)
+  // The caller emits the precise event once; avoid an extra generic
+  // completion notice when a WebSocket close already supplied the reason.
 }
 export const MonitorWsTask: Task = {
   name:'MonitorWsTask',type:'monitor_ws',
   async kill(id,setAppState) {
     const h=sockets.get(id)
     if (!h) throw new Error(`Monitor ${id} is no longer running`)
+    notify(id,'WebSocket','[WebSocket stopped]',h.agentId)
     terminate(id,setAppState,'killed','WebSocket')
   },
 }
@@ -64,15 +69,27 @@ export async function startWebSocketMonitor(input: {
   sockets.set(id,h)
   registerTask(task,context.setAppState)
   if(!input.persistent) {
-    h.timer=setTimeout(()=>terminate(id,context.setAppState,'completed',input.description),input.timeoutMs)
+    h.timer=setTimeout(()=>{
+      if (!sockets.has(id)) return
+      notify(id,input.description,'[WebSocket monitor deadline reached]',context.agentId)
+      terminate(id,context.setAppState,'completed',input.description)
+    },input.timeoutMs)
     h.timer.unref?.()
   }
   socket.on('message',(data,isBinary)=>{
     updateTaskState<MonitorWsTaskState>(id,context.setAppState,t=>({...t,eventCount:t.eventCount+1}))
-    notify(id,input.description,isBinary?`[binary frame, ${data.length} bytes]`:data.toString('utf8').slice(0,1048576))
+    notify(id,input.description,isBinary?`[binary frame, ${data.length} bytes]`:data.toString('utf8').slice(0,1048576),context.agentId)
   })
-  socket.on('error',error=>{notify(id,input.description,`socket error: ${error.message}`);terminate(id,context.setAppState,'failed',input.description)})
-  socket.on('close',()=>terminate(id,context.setAppState,'completed',input.description))
+  socket.on('error',error=>{
+    if(!sockets.has(id)) return
+    notify(id,input.description,`[WebSocket error: ${error.message}]`,context.agentId)
+    terminate(id,context.setAppState,'failed',input.description)
+  })
+  socket.on('close',(code)=>{
+    if(!sockets.has(id)) return
+    notify(id,input.description,`[WebSocket closed: ${code}]`,context.agentId)
+    terminate(id,context.setAppState,'completed',input.description)
+  })
   return id
 }
 
@@ -88,6 +105,7 @@ export function killMonitorWsTasksForAgent(
 ):void{
   for(const [id,handle] of sockets){
     if(handle.agentId!==agentId)continue
+    notify(id,'agent session ended','[WebSocket stopped]',agentId)
     terminate(id,setAppState,'killed','agent session ended')
   }
 }
