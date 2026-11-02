@@ -57,20 +57,20 @@ test('Notebook insert at start and legacy 4.4 outputs no physical cell ID', () =
   expect(nb.cells[1]?.source).toEqual(['print(1)\n'])
 })
 
-test('Notebook code to markdown conversion drops stale outputs and execution count', () => {
+test('Official 2.1.310 code to markdown keeps execution fields but clears their values', () => {
   const nb = notebook()
   const r = applyNotebookEdit(nb, { cell_id: 'first', cell_type: 'markdown', new_source: '## New' })
   expect(r.cell_type).toBe('markdown')
-  expect(nb.cells[0]).not.toHaveProperty('outputs')
-  expect(nb.cells[0]).not.toHaveProperty('execution_count')
+  expect(nb.cells[0]?.outputs).toEqual([])
+  expect(nb.cells[0]?.execution_count).toBeNull()
   expect(nb.cells[0]?.metadata).toEqual({ tags: ['keep'] })
 })
 
-test('Notebook markdown to code initializes executable fields', () => {
+test('Official 2.1.310 markdown to code switches type without injecting output fields', () => {
   const nb = notebook()
   applyNotebookEdit(nb, { cell_id: 'second', cell_type: 'code', new_source: 'value=1' })
-  expect(nb.cells[1]?.execution_count).toBeNull()
-  expect(nb.cells[1]?.outputs).toEqual([])
+  expect(nb.cells[1]).not.toHaveProperty('execution_count')
+  expect(nb.cells[1]).not.toHaveProperty('outputs')
   expect(nb.cells[1]?.cell_type).toBe('code')
 })
 
@@ -87,7 +87,7 @@ test('Notebook raw cells remain valid when editing without converting', () => {
   if (!rawCell) throw new Error('Missing test cell')
   rawCell.cell_type = 'raw'
   const r = applyNotebookEdit(nb, { cell_id: 'second', new_source: 'raw data' })
-  expect(r.cell_type).toBe('raw')
+  expect(r.cell_type).toBe('code')
   expect(nb.cells[1]?.source).toBe('raw data')
   expect(nb.cells[1]).not.toHaveProperty('outputs')
 })
@@ -166,4 +166,25 @@ test('Notebook file lock is released even when a write fails', async () => {
 
   const result = await withNotebookFileLock('failed-book', async () => 'recovered')
   expect(result).toBe('recovered')
+})
+
+test('2.1.310 source schema returns code when editing markdown without cell_type', () => {
+  const nb = notebook()
+  const result = applyNotebookEdit(nb, { cell_id: 'second', new_source: '# Fixed' })
+  expect(result.cell_type).toBe('code')
+  expect(nb.cells[1]?.cell_type).toBe('markdown')
+  expect(nb.cells[1]?.source).toBe('# Fixed')
+})
+
+test('2.1.310 source schema clears an existing code cell before switching to markdown', () => {
+  const nb = notebook()
+  const result = applyNotebookEdit(nb, {
+    cell_id: 'first',
+    new_source: '# converted',
+    cell_type: 'markdown',
+  })
+  expect(result.cell_type).toBe('markdown')
+  expect(nb.cells[0]?.cell_type).toBe('markdown')
+  expect(nb.cells[0]?.execution_count).toBeNull()
+  expect(nb.cells[0]?.outputs).toEqual([])
 })
