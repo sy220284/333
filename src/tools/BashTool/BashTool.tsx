@@ -1,7 +1,6 @@
 import { feature } from 'bun:bundle';
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
 import { copyFile, stat as fsStat, truncate as fsTruncate, link } from 'node:fs/promises';
-import * as React from 'react';
 import type { CanUseToolFn } from 'src/hooks/useCanUseTool.js';
 import type { AppState } from 'src/state/AppState.js';
 import { z } from 'zod/v4';
@@ -702,7 +701,7 @@ export const BashTool = buildTool({
       interpretationResult = interpretCommandResult(input.command, result.code, result.stdout || '', '');
 
       // Check for git index.lock error (stderr is in stdout now)
-      if (result.stdout && result.stdout.includes(".git/index.lock': File exists")) {
+      if (result.stdout?.includes(".git/index.lock': File exists")) {
         logEvent('tengu_git_index_lock_error', {});
       }
       if (interpretationResult.isError && !isInterrupt) {
@@ -874,7 +873,7 @@ async function* runShellCommand({
   let lastProgressOutput = '';
   let lastTotalLines = 0;
   let lastTotalBytes = 0;
-  let backgroundShellId: string | undefined = undefined;
+  let backgroundShellId: string | undefined;
   let assistantAutoBackgrounded = false;
 
   // Progress signal: resolved by onProgress callback from the shared poller,
@@ -1014,7 +1013,7 @@ async function* runShellCommand({
 
   // Wait for the initial threshold before showing progress
   const startTime = Date.now();
-  let foregroundTaskId: string | undefined = undefined;
+  let foregroundTaskId: string | undefined;
   {
     const initialResult = await Promise.race([resultPromise, new Promise<null>(resolve => {
       const t = setTimeout((r: (v: null) => void) => r(null), PROGRESS_THRESHOLD_MS, resolve);
