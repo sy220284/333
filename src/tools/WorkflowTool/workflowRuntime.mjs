@@ -7,10 +7,10 @@ export function workflowMeta(script){
  if(!m)throw Error('Workflow requires export const meta = { name, description }')
  const open=m.index+m[0].length
  if(script[open]!=='{')throw Error('Workflow meta must be an object literal')
- let depth=0,quote='',escape=false,end=-1
+ let depth=0,quote='',escaped=false,end=-1
  for(let i=open;i<script.length;i++){
   const c=script[i]
-  if(quote){if(escape)escape=false;else if(c==='\\')escape=true;else if(c===quote)quote='';continue}
+  if(quote){if(escaped)escaped=false;else if(c==='\\')escaped=true;else if(c===quote)quote='';continue}
   if(c==="'"||c==='"'||c==='`'){quote=c;continue}
   if(c==='{')depth++
   if(c==='}'&&--depth===0){end=i+1;break}
@@ -26,11 +26,11 @@ export function workflowMeta(script){
 }
 export function validateWorkflowScript(script){
  if(typeof script!=='string'||!script.trim()||script.length>524288)throw Error('Workflow script must have 1-524288 characters')
- if(/[\x00-\x08\x0b-\x1f\x7f]/.test(script))throw Error('Workflow script has hidden control characters')
+ if([...script].some(char=>{const code=char.codePointAt(0);return code<9||code>=11&&code<=31||code===127}))throw Error('Workflow script has hidden control characters')
  if(/\b(?:Date\s*\.\s*now\s*\(|Math\s*\.\s*random\s*\(|new\s+Date\s*\()/.test(script))throw Error('Workflow must be deterministic')
  if(/\b(?:require\s*\(|eval\s*\(|Function\s*\(|import\s*\()/.test(script))throw Error('Workflow cannot import or evaluate code')
  const meta=workflowMeta(script),runnable=script.replace(metaPattern,'const meta = ')
- new vm.Script('(async()=>{\n'+runnable+'\n})()')
+ new vm.Script(`(async()=>{\n${runnable}\n})()`)
  return {meta,runnable,hash:createHash('sha256').update(script).digest('hex')}
 }
 /** @param {{script:string,args?:unknown,agent:(prompt:string,options?:Record<string,unknown>)=>Promise<unknown>,onPhase?:(phase:string)=>void,onLog?:(message:string)=>void,signal?:AbortSignal}} config */
@@ -116,7 +116,7 @@ export async function executeWorkflowScript({script,args={},agent,onPhase=()=>{}
   delete context.__wfArgs
   Object.assign(context,api)
   check()
-  const result=new vm.Script('(async()=>{\n'+runnable+'\n})()').runInContext(context,{timeout:500})
+  const result=new vm.Script(`(async()=>{\n${runnable}\n})()`).runInContext(context,{timeout:500})
   const value=await result
   check()
   // The completion result is a plain JSON value, never a live VM object.
