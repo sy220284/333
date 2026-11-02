@@ -51,6 +51,10 @@ export interface UserMessage extends MessageHeader {
   }
   imagePasteIds?: number[]
   sourceToolAssistantUUID?: UUID
+  /** Tool-result messages may be linked directly to their originating tool use. */
+  sourceToolUseID?: string
+  /** Plan-mode exit carries the plan to the next session when clearing context. */
+  planContent?: string
   permissionMode?: PermissionMode
   origin?: MessageOrigin
 }
