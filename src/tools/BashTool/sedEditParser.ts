@@ -19,6 +19,21 @@ const PIPE_PLACEHOLDER_RE = new RegExp(PIPE_PLACEHOLDER, 'g')
 const LPAREN_PLACEHOLDER_RE = new RegExp(LPAREN_PLACEHOLDER, 'g')
 const RPAREN_PLACEHOLDER_RE = new RegExp(RPAREN_PLACEHOLDER, 'g')
 
+/** Keep the confirmed preview consistent with the content actually written.
+ * The permission UI normalizes CRLF before calculating its diff.
+ */
+export function assertSedPreviewUnchanged(
+  filePath: string,
+  currentContent: string,
+  previewContent: string,
+): void {
+  if (currentContent.replaceAll('\r\n', '\n') !== previewContent) {
+    throw new Error(
+      `The file changed after the sed edit preview: ${filePath}. Review the updated file and retry.`,
+    )
+  }
+}
+
 export type SedEditInfo = {
   /** The file path being edited */
   filePath: string
