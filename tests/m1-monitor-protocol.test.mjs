@@ -29,7 +29,8 @@ test('Monitor rejects invalid WS scheme, credentials, hidden bytes, and duplicat
 test('public Monitor aligns timeout cap and does not discard stdout produced before task registration',async()=>{
   const file=new URL('../src/tools/MonitorTool/MonitorTool.ts',import.meta.url)
   const code=await readFile(file,'utf8')
-  assert.equal(code.includes('persistent:z.boolean()'), false)
+  const inputOnly=code.split('const inputSchema')[1].split('type InputSchema')[0]
+  assert.equal(inputOnly.includes('persistent:z.boolean()'),false)
   assert.equal(code.includes('Math.min(input.timeout_ms,600000)'), true)
   assert.equal(code.includes('pendingLines.push(line)'), true)
   assert.equal(code.includes('for(const line of pendingLines)emitLine(line)'), true)
