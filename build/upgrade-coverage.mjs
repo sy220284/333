@@ -23,6 +23,10 @@ export function buildCoverage() {
   const capabilityDoc = doc('2.1.310-功能能力台账.md');
   const scenarioDoc = doc('2.1.310-验收与迁移矩阵.md');
   const blueprintDoc = doc('2.1.310-全面升级方案.md');
+  assert.match(blueprintDoc, /实施方案（v4）/, '功能责任必须与正式v4方案同步');
+  const assignment = JSON.parse(doc('v4-功能任务责任表.json'));
+  assert.equal(assignment.schema, 1);
+  assert.equal(assignment.source_plan, '2.1.310-v4');
   const listedFeatures = [...capabilityDoc.matchAll(/^\|\s*(F\d{3})\s*\|([^\n]+)$/gm)]
     .map(match => ({ id: match[1], title: match[2].split('|')[0].trim() }));
   const scenarios = [...scenarioDoc.matchAll(/^\|\s*((?:E|L)\d{2})\s*\|([^\n]+)$/gm)]
@@ -31,8 +35,9 @@ export function buildCoverage() {
       title: match[2].split('|')[0].trim(),
       features: [...match[2].matchAll(/\bF\d{3}\b/g)].map(item => item[0]),
     }));
-  const tasks = [...blueprintDoc.matchAll(/^\|\s*(M\d+)\s*\|\s*([^\n]+)$/gm)]
-    .map(match => ({ id: match[1], features: expandFeatures(match[2]) }));
+  // v4 describes M1–M10 in prose: read the stable machine responsibility map.
+  const tasks = assignment.tasks.map(({id,feature_scope}) =>
+    ({id,features:expandFeatures(feature_scope)}));
   const features = listedFeatures.map(feature => ({
     ...feature,
     tasks: tasks.filter(task => task.features.includes(feature.id)).map(task => task.id),
