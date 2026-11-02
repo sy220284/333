@@ -44,6 +44,10 @@ export function buildAgentListing({ self, subagents = [], teammates = [], sessio
   if (!canSend && sections.length) paragraphs.unshift('None of the agents below can be messaged with SendMessage from here.')
   const own = self ? `This session is ${self} — the name other sessions use to message it (it is not listed below; a message to it would be a message to yourself).` : ''
   if (notes.length) paragraphs.push(...notes.map(note => note.text))
-  if (!paragraphs.length) paragraphs.push(own ? 'No reachable agents — no other Claude session is running on this machine right now (peer messaging itself is available; a session appears here once it is started).' : 'No reachable agents.')
+  if (!paragraphs.length) paragraphs.push(own
+    ? canSend
+      ? 'No reachable agents — no other Claude session is running on this machine right now (peer messaging itself is available; a session appears here once it is started).'
+      : 'No reachable agents — no other Claude session is running on this machine right now.'
+    : 'No reachable agents.')
   return { listing: [own, ...paragraphs].filter(Boolean).join('\n\n'), sections, notes }
 }
