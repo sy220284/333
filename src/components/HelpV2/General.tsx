@@ -6,14 +6,14 @@ export function General() {
   const $ = _c(2);
   let t0;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
-    t0 = <Box><Text>Claude understands your codebase, makes edits with your permission, and executes commands — right from your terminal.</Text></Box>;
+    t0 = <Box><Text>Claude 可以理解代码库、经你授权修改文件并执行命令，直接在终端中协助开发。</Text></Box>;
     $[0] = t0;
   } else {
     t0 = $[0];
   }
   let t1;
   if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
-    t1 = <Box flexDirection="column" paddingY={1} gap={1}>{t0}<Box flexDirection="column"><Box><Text bold={true}>Shortcuts</Text></Box><PromptInputHelpMenu gap={2} fixedWidth={true} /></Box></Box>;
+    t1 = <Box flexDirection="column" paddingY={1} gap={1}>{t0}<Box flexDirection="column"><Box><Text bold={true}>快捷键</Text></Box><PromptInputHelpMenu gap={2} fixedWidth={true} /></Box></Box>;
     $[1] = t1;
   } else {
     t1 = $[1];

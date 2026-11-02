@@ -6,10 +6,8 @@
  *   - within 6 days: "Sunday, 4:15 PM" (locale-dependent)
  *   - older:         "Sunday, Feb 20, 4:30 PM" (locale-dependent)
  *
- * Respects POSIX locale env vars (LC_ALL > LC_TIME > LANG) for time format
- * (12h/24h), weekday names, month names, and overall structure.
- * Bun/V8's `toLocaleString(undefined)` ignores these on macOS, so we
- * convert them to BCP 47 tags ourselves.
+ * Uses the fixed zh-CN locale for weekday/month names and time display,
+ * regardless of the operating system or terminal locale.
  *
  * `now` is injectable for tests.
  */

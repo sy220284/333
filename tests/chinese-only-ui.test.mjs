@@ -17,3 +17,11 @@ test('日期与时间强制简体中文', () => {
   assert.match(read('src/utils/formatBriefTimestamp.ts'), /const locale = 'zh-CN'/)
   assert.match(read('src/utils/intl.ts'), /RelativeTimeFormat\('zh-CN'/)
 })
+
+test('帮助页标题固定为中文，内部导航标识保持不变', () => {
+  const ui = read('src/components/HelpV2/HelpV2.tsx')
+  for (const [id, title] of [['general', '概览'], ['commands', '命令'], ['custom-commands', '自定义命令']]) {
+    assert.ok(ui.includes(`id="${id}" title="${title}"`))
+  }
+  assert.match(read('src/components/PromptInput/PromptInputHelpMenu.tsx'), /双击 Esc 清空输入/)
+})

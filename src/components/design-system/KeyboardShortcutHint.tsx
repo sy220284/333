@@ -54,6 +54,12 @@ export function KeyboardShortcutHint(t0) {
     previous: '上一项', back: '返回', continue: '继续', skip: '跳过',
     exit: '退出', submit: '提交', edit: '编辑', copy: '复制',
     'disable external includes': '禁用外部引用',
+    cycle: '切换模式', 'return to team lead': '返回主代理',
+    'native select': '原生选择', 'view tasks': '查看任务',
+    manage: '管理', interrupt: '中断', 'stop agents': '停止代理',
+    toggle: '切换', 'toggle tasks': '切换任务',
+    'toggle agent list': '切换代理列表',
+    'show shortcuts': '显示快捷键',
   }
   const translatedAction = actionLabels[action.toLowerCase()] ?? action
   let t3;
