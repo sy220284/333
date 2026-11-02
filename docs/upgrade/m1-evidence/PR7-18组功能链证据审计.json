@@ -55,14 +55,27 @@
       ],
       "code": [
         "src/tools/BashTool/BashTool.tsx",
-        "src/tools/BashTool/sedEditParser.ts"
+        "src/tools/BashTool/sedEditParser.ts",
+        "src/components/permissions/SedEditPermissionRequest/SedEditPermissionRequest.tsx"
       ],
       "tests": [
         "tests/sed-edit-write-integration.test.ts"
       ],
       "stage": "SPECIAL_CI",
       "acceptance": "UNVERIFIED",
-      "remaining": "跨权限全局撤销"
+      "remaining": "跨权限全局撤销",
+      "closed_gap_evidence": {
+        "scope": "Bash sed -i 已批准预览的实际文件目标绑定与写回前复核",
+        "commits": [
+          "8d56b847",
+          "dd118c58",
+          "a3ccb3d3",
+          "563feee3"
+        ],
+        "focused_ci": "https://github.com/sy220284/333/actions/runs/41458494379",
+        "ci_result": "SUCCESS_LINUX_MACOS_WINDOWS",
+        "boundary": "真实文件目标与内容的防替换校验已在专项测试通过；全部 Bash 撤销、跨工具锁与官方全功能对照继续等待 M10"
+      }
     },
     {
       "id": "G04",
@@ -71,14 +84,30 @@
         "F034"
       ],
       "code": [
-        "src/tools/NotebookEditTool/notebookMutation.ts"
+        "src/tools/NotebookEditTool/notebookMutation.ts",
+        "src/utils/notebookFileLock.ts"
       ],
       "tests": [
-        "tests/m1-notebook-e41-cli.mjs"
+        "tests/m1-notebook-e41-cli.mjs",
+        "tests/notebook-edit-parity.test.ts"
       ],
       "stage": "OFFICIAL_CANDIDATE_REAL_CALL",
       "acceptance": "UNVERIFIED",
-      "remaining": "异常文件、回退"
+      "remaining": "异常文件、回退",
+      "closed_gap_evidence": {
+        "scope": "UNC 网络路径在校验/实际执行前拒绝；符号链接别名同文件锁串行",
+        "commits": [
+          "fe3d603e",
+          "cad45410",
+          "84a8d415",
+          "7e847a47",
+          "e58978ff",
+          "803353d6"
+        ],
+        "focused_ci": "https://github.com/sy220284/333/actions/runs/41458494379",
+        "ci_result": "SUCCESS_LINUX_MACOS_WINDOWS",
+        "boundary": "Notebook 实际文件测试、Read-Edit-Read 与转换测试通过；全工具异常恢复与 M10 完整功能仍未签收"
+      }
     },
     {
       "id": "G05",
@@ -189,14 +218,26 @@
       ],
       "code": [
         "src/ink/ink.tsx",
-        "src/utils/accessibility/screenReaderMode.mjs"
+        "src/utils/accessibility/screenReaderMode.mjs",
+        "src/utils/accessibility/screenReaderRuntime.ts"
       ],
       "tests": [
-        "tests/m1-screen-reader-terminal-parity.py"
+        "tests/m1-screen-reader-terminal-parity.py",
+        "tests/m1-screen-reader-mode.test.mjs"
       ],
       "stage": "OFFICIAL_PTY_STARTUP",
       "acceptance": "UNVERIFIED",
-      "remaining": "候选PTY，完整交互界面"
+      "remaining": "候选PTY，完整交互界面",
+      "closed_gap_evidence": {
+        "scope": "Ink 屏幕阅读器退出分支缺失运行时导入",
+        "commits": [
+          "82aa9eb0",
+          "aedd0ebd"
+        ],
+        "focused_ci": "https://github.com/sy220284/333/actions/runs/41458494461",
+        "ci_result": "SUCCESS_OFFICIAL_X64_VS_CANDIDATE_4_PTY_MODES",
+        "boundary": "四模式真实终端启动对照通过；完整多轮交互与退出路径真实运行仍待 M10"
+      }
     },
     {
       "id": "G12",
@@ -311,5 +352,8 @@
       "acceptance": "UNVERIFIED",
       "remaining": "并行Agent实际执行"
     }
-  ]
+  ],
+  "latest_gap_closure_source_commit": "563feee3cddbce06a3212ffab1d0cbe89a3d76d8",
+  "latest_focused_build_ci": "https://github.com/sy220284/333/actions/runs/41458494267",
+  "full_M10_acceptance": "UNVERIFIED"
 }
