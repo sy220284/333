@@ -1,5 +1,5 @@
-import { createFallbackModelChain } from './services/api/fallbackModels.mjs'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
+import { createFallbackModelChain } from './services/api/fallbackModels.mjs'
 import type {
   ToolResultBlockParam,
   ToolUseBlock,
@@ -401,9 +401,9 @@ async function* queryLoop(
     // what snip removed; tokenCountWithEstimation alone can't see it (reads usage
     // from the protected-tail assistant, which survives snip unchanged).
     let snipTokensFreed = 0
-    if (feature('HISTORY_SNIP')) {
+    if (feature('HISTORY_SNIP') && snipModule) {
       queryCheckpoint('query_snip_start')
-      const snipResult = snipModule!.snipCompactIfNeeded(messagesForQuery)
+      const snipResult = snipModule.snipCompactIfNeeded(messagesForQuery)
       messagesForQuery = snipResult.messages
       snipTokensFreed = snipResult.tokensFreed
       if (snipResult.boundaryMessage) {
@@ -1687,12 +1687,12 @@ async function* queryLoop(
     // long-running agent still refreshes what it's working on. Gated
     // only on !agentId so every top-level conversation (REPL, SDK, HFI,
     // remote) generates summaries; subagents/forks don't.
-    if (feature('BG_SESSIONS')) {
+    if (feature('BG_SESSIONS') && taskSummaryModule) {
       if (
         !toolUseContext.agentId &&
-        taskSummaryModule!.shouldGenerateTaskSummary()
+        taskSummaryModule.shouldGenerateTaskSummary()
       ) {
-        taskSummaryModule!.maybeGenerateTaskSummary({
+        taskSummaryModule.maybeGenerateTaskSummary({
           systemPrompt,
           userContext,
           systemContext,
