@@ -246,6 +246,8 @@ jobs:
         run: bun test tests/m1-color-diff-contract.test.ts
       - name: 验证着色模块CJS与ESM语法表动态加载的实际能力
         run: bun test tests/m1-highlight-runtime.test.ts
+      - name: 对照新版Computer Use系统级敏感应用权限识别
+        run: bun test tests/m1-computer-use-sentinel.test.ts
       - name: 从当前M1源码独立构建候选程序
         run: bun build/rebuild.mjs
       - name: 准备官方x64对照程序与真实候选启动器
