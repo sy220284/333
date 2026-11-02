@@ -62,7 +62,7 @@ export const ListAgentsTool = buildTool({
     const teammates = listReachableTeammates(teamFile, selfName, state.teamContext?.teammates, state.tasks)
     const { peers: localSessions, unreadable } = await listLiveLocalPeers(join(getClaudeConfigHomeDir(), 'sessions'))
     const account = await discoverAuthenticatedPeers(localSessions)
-    rememberAccountRecipients(account.peers)
+    rememberAccountRecipients(account.peers, Date.now(), account.identityKey)
     const sessions = [...localSessions, ...account.peers]
     // Use the socket actually bound by this process, not a stale inherited env value.
     const ownSocket = getMessagingSocketPath()
