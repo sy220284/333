@@ -36,3 +36,19 @@ test('official Workflow summary is atomically written and contains final JSON da
   assert.deepEqual((await readdir(join(dir,session,'workflows'))).sort(),[run+'.json'])
  }finally{await rm(dir,{recursive:true,force:true})}
 })
+
+test('resuming with an edited script persists the exact next script atomically',async()=>{
+ const {mkdtemp,rm,mkdir,writeFile,readFile,readdir}=await import('node:fs/promises')
+ const {join}=await import('node:path')
+ const {tmpdir}=await import('node:os')
+ const {syncWorkflowScript}=await import('../src/tasks/LocalWorkflowTask/workflowSummaryStore.mjs')
+ const dir=await mkdtemp(join(tmpdir(),'m1-workflow-edit-'))
+ try{
+  const file=join(dir,'edited.js')
+  await writeFile(file,'return 1',{mode:0o600})
+  assert.equal(await syncWorkflowScript(file,'return 2'),true)
+  assert.equal(await readFile(file,'utf8'),'return 2')
+  assert.equal(await syncWorkflowScript(file,'return 2'),false)
+  assert.deepEqual(await readdir(dir),['edited.js'])
+ }finally{await rm(dir,{recursive:true,force:true})}
+})

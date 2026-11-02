@@ -9,7 +9,7 @@ import { executeWorkflowScript, validateWorkflowScript } from '../../tools/Workf
 import { registerCleanup } from '../../utils/cleanupRegistry.js'
 import { getProjectDir } from '../../utils/sessionStorage.js'
 import { workflowSessionScripts, workflowPaths } from './workflowStoragePaths.mjs'
-import { readWorkflowSummary, createWorkflowSummaryRecorder } from './workflowSummaryStore.mjs'
+import { readWorkflowSummary, createWorkflowSummaryRecorder, syncWorkflowScript } from './workflowSummaryStore.mjs'
 import { enqueuePendingNotification } from '../../utils/messageQueueManager.js'
 import { registerTask, updateTaskState } from '../../utils/task/framework.js'
 import { createWorkflowCallCounter } from './workflowCacheKeys.mjs'
@@ -101,6 +101,7 @@ export async function launchWorkflow(
       const record=JSON.parse(line) as {type:string,key?:string,result?:unknown}
       if(record.type==='agent_result'&&record.key)cached.set(record.key,record.result)
     }
+    await syncWorkflowScript(scriptPath,input.script)
   }else {
     await mkdir(dirname(scriptPath),{recursive:true,mode:0o700})
     await writeFile(scriptPath,input.script,{flag:'wx',mode:0o600})

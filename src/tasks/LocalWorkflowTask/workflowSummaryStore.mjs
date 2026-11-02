@@ -47,3 +47,23 @@ export function createWorkflowSummaryRecorder(path,initial,{write=writeWorkflowS
   flush:()=>pending,
  }
 }
+
+/** Keep the session's persistent script aligned with an approved resumed run.
+ * Atomic replacement prevents later resumes from accidentally re-running
+ * the earlier script when the caller supplied edited inline code.
+ */
+export async function syncWorkflowScript(path,script){
+ if(typeof path!=='string'||!path.endsWith('.js')||typeof script!=='string')
+  throw new Error('Invalid saved Workflow script')
+ const before=await readFile(path,'utf8')
+ if(before===script)return false
+ const temporary=path+'.tmp-'+randomUUID()
+ try{
+  await writeFile(temporary,script,{flag:'wx',mode:0o600})
+  await rename(temporary,path)
+ }catch(error){
+  await rm(temporary,{force:true})
+  throw error
+ }
+ return true
+}
