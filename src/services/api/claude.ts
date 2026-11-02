@@ -19,7 +19,9 @@ import type {
 } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { Stream } from '@anthropic-ai/sdk/streaming.mjs'
-import { randomUUID } from 'crypto'
+import { createHash, randomUUID } from 'node:crypto'
+import { resolvePromptSnapshot, promptSnapshotMode } from '../cli/systemPromptSnapshot.mjs'
+import { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from '../../constants/systemPromptBoundary.js'
 import {
   getAPIProvider,
   isFirstPartyAnthropicBaseUrl,
@@ -68,7 +70,7 @@ import {
   getSonnet1mExpTreatmentEnabled,
 } from '../../utils/context.js'
 import { resolveAppliedEffort } from '../../utils/effort.js'
-import { isEnvTruthy } from '../../utils/envUtils.js'
+import { getClaudeConfigHomeDir, isEnvTruthy } from '../../utils/envUtils.js'
 import { errorMessage } from '../../utils/errors.js'
 import { computeFingerprintFromMessages } from '../../utils/fingerprint.js'
 import { captureAPIRequest, logError } from '../../utils/log.js'
@@ -1324,6 +1326,26 @@ async function* queryModel(
   // so the fingerprint reflects the actual user input.
   const fingerprint = computeFingerprintFromMessages(messagesForAPI)
 
+  // Only default system prompts contain the registry boundary. When enabled,
+  // move machine-specific sections into a stable first user message, keeping
+  // the full model-visible instructions intact while sharing the system cache.
+  if (isEnvTruthy(process.env.CLAUDE_CODE_EXCLUDE_DYNAMIC_SYSTEM_PROMPT_SECTIONS)) {
+    const boundary = systemPrompt.indexOf(SYSTEM_PROMPT_DYNAMIC_BOUNDARY)
+    if (boundary >= 0) {
+      const dynamic = systemPrompt.slice(boundary + 1).filter(Boolean)
+      systemPrompt = asSystemPrompt(systemPrompt.slice(0, boundary))
+      if (dynamic.length > 0) {
+        messagesForAPI = [
+          createUserMessage({
+            content: `<dynamic_system_context>\n${dynamic.join('\n\n')}\n</dynamic_system_context>`,
+            isMeta: true,
+          }),
+          ...messagesForAPI,
+        ]
+      }
+    }
+  }
+
   // When the delta attachment is enabled, deferred tools are announced
   // via persisted deferred_tools_delta attachments instead of this
   // ephemeral prepend (which busts cache whenever the pool changes).
@@ -1367,6 +1389,39 @@ async function* queryModel(
       ...(injectChromeHere ? [CHROME_TOOL_SEARCH_INSTRUCTIONS] : []),
     ].filter(Boolean),
   )
+
+  // Persist the exact rendered request prompt once per session. Exclude
+  // subagents: each can have a different prompt but shares the session UUID.
+  // A compact summary is the durable epoch boundary and remains stable on
+  // resume. This is intentionally AFTER attribution and dynamic fragments
+  // so the stored record exactly matches what was sent to the provider.
+  if (!options.agentId) {
+    const mode = promptSnapshotMode(
+      process.env.CLAUDE_CODE_SYSTEM_PROMPT_SNAPSHOT,
+      isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE),
+      isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) || isEnvTruthy(process.env.CLAUDE_CODE_BACKGROUND),
+    )
+    if (mode === 'on') {
+      const sessionId = getSessionId()
+      if (sessionId) {
+        const compact = [...messages].reverse().find(
+          (message): message is Extract<Message, { type: 'user' }> =>
+            message.type === 'user' && Boolean(message.isCompactSummary),
+        )
+        const revision = compact
+          ? createHash('sha256').update(JSON.stringify(compact.message)).digest('hex')
+          : 'initial'
+        systemPrompt = asSystemPrompt(resolvePromptSnapshot({
+          prompt: [...systemPrompt],
+          sessionId,
+          compactRevision: revision,
+          cwd: process.cwd(),
+          home: getClaudeConfigHomeDir(),
+          mode,
+        }))
+      }
+    }
+  }
 
   // Prepend system prompt block for easy API identification
   logAPIPrefix(systemPrompt)

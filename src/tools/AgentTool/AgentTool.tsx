@@ -1102,25 +1102,22 @@ export const AgentTool = buildTool({
             }
             const normalizedNew = normalizeMessages([message]);
             for (const m of normalizedNew) {
-              for (const content of m.message.content) {
-                if (content.type !== 'tool_use' && content.type !== 'tool_result') {
-                  continue;
-                }
-
-                // Forward progress updates
-                if (onProgress) {
-                  onProgress({
-                    toolUseID: `agent_${assistantMessage.message.id}`,
-                    data: {
-                      message: m,
-                      type: 'agent_progress',
-                      // prompt only needed on first progress message (UI.tsx:624
-                      // reads progressMessages[0]). Omit here to avoid duplication.
-                      prompt: '',
-                      agentId: syncAgentId
-                    }
-                  });
-                }
+              const hasToolProgress = m.message.content.some(content =>
+                content.type === 'tool_use' || content.type === 'tool_result');
+              const hasReadableContent = m.message.content.some(content =>
+                content.type === 'text' || content.type === 'thinking' || content.type === 'redacted_thinking');
+              if (onProgress && (hasToolProgress ||
+                  (toolUseContext.options.forwardSubagentText && hasReadableContent))) {
+                // Exactly one event per normalized assistant message.
+                onProgress({
+                  toolUseID: `agent_${assistantMessage.message.id}`,
+                  data: {
+                    message: m,
+                    type: 'agent_progress',
+                    prompt: '',
+                    agentId: syncAgentId
+                  }
+                });
               }
             }
           }

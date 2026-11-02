@@ -111,8 +111,8 @@ export const CLAUDE_CODE_DOCS_MAP_URL =
  * - src/utils/api.ts (splitSysPromptPrefix)
  * - src/services/api/claude.ts (buildSystemPromptBlocks)
  */
-export const SYSTEM_PROMPT_DYNAMIC_BOUNDARY =
-  '__SYSTEM_PROMPT_DYNAMIC_BOUNDARY__'
+export { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from './systemPromptBoundary.js'
+import { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from './systemPromptBoundary.js'
 
 // @[MODEL LAUNCH]: Update the latest frontier model.
 const FRONTIER_MODEL_NAME = 'Claude Opus 4.6'
@@ -570,7 +570,7 @@ ${CYBER_RISK_INSTRUCTION}`,
     getSimpleToneAndStyleSection(),
     getOutputEfficiencySection(),
     // === BOUNDARY MARKER - DO NOT MOVE OR REMOVE ===
-    ...(shouldUseGlobalCacheScope() ? [SYSTEM_PROMPT_DYNAMIC_BOUNDARY] : []),
+    ...(shouldUseGlobalCacheScope() || isEnvTruthy(process.env.CLAUDE_CODE_EXCLUDE_DYNAMIC_SYSTEM_PROMPT_SECTIONS) ? [SYSTEM_PROMPT_DYNAMIC_BOUNDARY] : []),
     // --- Dynamic content (registry-managed) ---
     ...resolvedDynamicSections,
   ].filter(s => s !== null)
