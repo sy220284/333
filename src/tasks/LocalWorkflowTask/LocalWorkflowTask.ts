@@ -1,13 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import { getSessionId } from '../../bootstrap/state.js'
+import { join, dirname, sep } from 'node:path'
+import { getSessionId, getOriginalCwd, getSessionProjectDir } from '../../bootstrap/state.js'
 import { createTaskStateBase, generateTaskId, type Task, type TaskStateBase, type SetAppState } from '../../Task.js'
 import type { ToolUseContext } from '../../Tool.js'
 import { AgentTool } from '../../tools/AgentTool/AgentTool.js'
 import { executeWorkflowScript, validateWorkflowScript } from '../../tools/WorkflowTool/workflowRuntime.mjs'
 import { registerCleanup } from '../../utils/cleanupRegistry.js'
-import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
+import { getProjectDir } from '../../utils/sessionStorage.js'
+import { workflowRunDirectory, workflowSessionScripts, workflowPaths } from './workflowStoragePaths.mjs'
 import { enqueuePendingNotification } from '../../utils/messageQueueManager.js'
 import { registerTask, updateTaskState } from '../../utils/task/framework.js'
 import { createWorkflowCallCounter } from './workflowCacheKeys.mjs'
@@ -25,9 +26,11 @@ export type LocalWorkflowTaskState = TaskStateBase & {
 type AgentControl={abort:AbortController,action:null|'skip'|'retry'}
 type Job={abort:AbortController,unregister:()=>void,runId:string,agents:Map<string,AgentControl>}
 const active=new Map<string,Job>()
-function folder(runId:string) {
-  if(!/^wf_[a-z0-9-]{6,}$/.test(runId))throw new Error('Invalid workflow run ID')
-  return join(getClaudeConfigHomeDir(),'workflow-runs',runId)
+function workflowProjectDir():string {
+  return getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
+}
+function folder(runId:string):string {
+  return workflowRunDirectory(workflowProjectDir(),getSessionId(),runId)
 }
 function tell(id:string,message:string) {
   enqueuePendingNotification({mode:'task-notification',priority:'next',value:`Workflow task ${id}: ${message}`})
@@ -75,17 +78,22 @@ export async function launchWorkflow(
   parentMessage:Parameters<typeof AgentTool.call>[3],
 ):Promise<{taskId:string,runId:string,transcriptDir:string,workflowName:string,scriptPath:string}> {
   const parsed=validateWorkflowScript(input.script)
-  const runId=input.resumeFromRunId??`wf_${randomUUID().replaceAll('-','').slice(0,12)}`
-  const dir=folder(runId)
+  const runId=input.resumeFromRunId??`wf_${randomUUID().slice(0,12)}`
+  const paths=workflowPaths(workflowProjectDir(),getSessionId(),runId,parsed.meta.name)
+  const dir=paths.transcriptDir
   await mkdir(dir,{recursive:true,mode:0o700})
-  const scriptPath=join(dir,'script.mjs')
-  const journal=join(dir,'journal.jsonl')
+  let scriptPath=paths.scriptPath
+  const journal=paths.journal
   const setAppState=context.setAppStateForTasks??context.setAppState
   const cached=new Map<string,unknown>()
   if(input.resumeFromRunId){
-    const existing=JSON.parse(await readFile(join(dir,'metadata.json'),'utf8')) as {runId:string}
+    const existing=JSON.parse(await readFile(paths.metadata,'utf8')) as {runId:string,sessionId:string,scriptPath:string}
     if(existing.runId!==runId || existing.sessionId!==getSessionId()) throw new Error('Workflow resume belongs to another session')
     if([...active.values()].some(job=>job.runId===runId)) throw new Error('Stop the prior workflow before resuming the run')
+    const scripts=workflowSessionScripts(workflowProjectDir(),getSessionId())+sep
+    if(!existing.scriptPath?.startsWith(scripts)||!existing.scriptPath.endsWith(`-${runId}.js`))
+      throw new Error('Stored workflow script path is invalid')
+    scriptPath=existing.scriptPath
     const text=await readFile(journal,'utf8')
     for(const line of text.split('\n')){
       if(!line.trim())continue
@@ -93,8 +101,9 @@ export async function launchWorkflow(
       if(record.type==='agent_result'&&record.key)cached.set(record.key,record.result)
     }
   }else {
+    await mkdir(dirname(scriptPath),{recursive:true,mode:0o700})
     await writeFile(scriptPath,input.script,{flag:'wx',mode:0o600})
-    await writeFile(join(dir,'metadata.json'),JSON.stringify({runId,sessionId:getSessionId(),meta:parsed.meta,hash:parsed.hash}),{flag:'wx',mode:0o600})
+    await writeFile(paths.metadata,JSON.stringify({runId,sessionId:getSessionId(),scriptPath,meta:parsed.meta,hash:parsed.hash}),{flag:'wx',mode:0o600})
   }
   const id=generateTaskId('local_workflow')
   const task:LocalWorkflowTaskState={
