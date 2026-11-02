@@ -1,131 +1,118 @@
-# Source Extraction Notice
+# 333｜Claude Code 源码重建与 2.1.310 功能升级
 
-This directory contains the source code of `@anthropic-ai/claude-code@2.1.88`, extracted from the published npm package's source map (`cli.js.map`).
+> **工程性质：** 基于 Claude Code 2.1.88 发行包源码映射建立的非官方 TypeScript/Bun 源码重建与升级项目。  
+> **升级目标：** 在已有可独立构建的工程上，逐项对齐 Claude Code **2.1.310** 的适用功能、组件资源和实际运行行为。  
+> **状态基准：** 2026-11-02；以仓库最新提交、Pull Request 与 Actions 实际结果为准。
 
-## How the source was obtained
+## 项目现状
 
-```sh
-npm pack @anthropic-ai/claude-code@2.1.88
-tar xzf anthropic-ai-claude-code-2.1.88.tgz
-# Extract sources from cli.js.map into src/ and native/
-node -e '
-const fs = require("fs"), path = require("path");
-const map = JSON.parse(fs.readFileSync("cli.js.map", "utf8"));
-for (let i = 0; i < map.sources.length; i++) {
-  if (map.sourcesContent[i] == null || map.sources[i].includes("node_modules")) continue;
-  const rel = map.sources[i].replace(/^\.\.\//g, "");
-  const out = rel.startsWith("vendor/")
-    ? path.join("native", rel.slice("vendor/".length))
-    : rel;
-  fs.mkdirSync(path.dirname(out), { recursive: true });
-  fs.writeFileSync(out, map.sourcesContent[i]);
-}'
-```
+| 范围 | 已核实状态 |
+| --- | --- |
+| 2.1.88 源码恢复 | 已从 `cli.js.map` 恢复 1,902 份应用源码和 4 份原生适配源码；保留原始程序与源码映射用于取证和差分 |
+| 独立构建与发行 | `src/entrypoints/cli.tsx` → Bun 构建 → `dist/` 发行目录；校验文件完整性，运行不依赖原始 `cli.js` |
+| 基础功能回归 | 主线已完成 Linux、macOS、Windows 的构建、独立启动和模拟模型文件工具调用回归 |
+| 内置资源 | 已恢复 2.1.88 原版 Claude API 技能资源，并建立资源原文校验与入包检查 |
+| 开发与质量工具 | 已具备冻结依赖、离线工具链、调试、类型检查、代码规范、安全审计及 CI；历史诊断与依赖风险仍须逐项治理 |
+| 2.1.310 功能升级 | **进行中**：升级代码及差分测试主要见 PR #7；尚未完成所有新版能力的端到端验收 |
 
-## Usage
+**版本说明：** `package.json`、原始 `cli.js` 及当前主线的重建基线仍为 **2.1.88**。`2.1.310` 是目标对齐版本，不能仅根据升级计划、源码迁移提交或 CI 构建成功就认定已达到该版本的完整行为。原版 2.1.310 x64 程序和反编译源码用作对照依据，正式交付目标仍是可独立构建的 333 源码工程。
 
-The bundled `cli.js` is self-contained and runs directly with Node.js >= 18:
+主线构建验证记录：[源码独立重建验证（2026-11-02）](https://github.com/sy220284/333/actions/runs/41405780294)。这里通过的是该次主线工作流的检查，后续升级的验收要看对应分支与功能用例。
 
-```sh
-node cli.js --version          # 2.1.88 (Claude Code)
-node cli.js --help             # show all options
-node cli.js -p "hello world"   # non-interactive one-shot
-node cli.js                    # interactive REPL
-```
+## 快速开始
 
-Or install globally / symlink:
+建议使用 **Node.js 24、Bun 1.4.4、npm 和 Git**。源码构建会按锁定版本恢复公开依赖；首次构建可能需要联网下载。Linux、macOS、Windows 均有相应 CI 构建验证。
 
-```sh
-npm install -g @anthropic-ai/claude-code@2.1.88
-# or
-ln -s "$(pwd)/cli.js" /usr/local/bin/claude
-```
-
-## 独立源码重建（333 工程）
-
-**777 式离线工具链：** 版本锁定、GitHub Actions 分片组件、按需安装、离线依赖恢复和安装后校验，见 [333 开发工具链说明](docs/DEVELOPMENT_TOOLCHAIN.md)。
-
-
-本仓库已经建立直接从 `src/entrypoints/cli.tsx` 构建 CLI 的流程。
-原始 `cli.js` 仅用于原版行为差分。正常重建直接校验已入库资源，从 `src/` 构建新程序，不会调用旧版 `cli.js` 作为构建或运行入口。`cli.js.map` 当前仍作为冻结的第三方依赖源码数据。
-
-**环境：** Node.js 18+、Bun 1.4.4+、Git 和 npm。构建时需要网络下载公开依赖；后续由 `build/public-dependencies.lock.json` 固定版本及完整性校验。
-
-```sh
+```bash
 git clone https://github.com/sy220284/333.git
 cd 333
+
+# 校验资源、恢复依赖、从 TypeScript 重建并运行基础回归
 npm run verify
+
+# 运行 333 重新构建的 CLI
 bun dist/cli.js --version
 node dist/launcher.cjs --help
 ```
 
-执行 `npm run rebuild` 会校验原版技能资源、从 `cli.js.map` 还原冻结依赖快照、按锁文件安装完整 npm 依赖、编译 `src/` 并生成包含平台二进制资源的 `dist/` 发行目录。
-`npm run verify` 会先执行完整源码重建，再运行 CLI 命令差分、脱离仓库运行、文件读写、Glob/Grep 搜索和发行完整性测试。仅需构建时可执行 `npm run rebuild`，仅需回归测试时可执行 `npm run test:all`。
-`dist/integrity.json` 保存发行文件的 SHA-256 校验清单。CI 验证原版与重建版公开命令和参数是否一致。
+更多常用命令：
 
-**当前边界：** 已在 Linux、macOS、Windows 验证源码编译、发行包独立启动、公开 CLI 参数差分，以及使用本地模拟模型进行 Read、Edit、Write、Glob、Grep 工具往返与文件结果检查。真实账户登录、在线模型请求、全量 MCP/插件、所有原生模块及全部功能一致性仍需专项验收。原代码中存在只有特定编译功能开关才能启用的内部功能；构建时严格拒绝无法实现的禁用模块残留。
+| 命令 | 作用 |
+| --- | --- |
+| `npm run rebuild` | 资源校验、冻结依赖恢复、Bun 编译、发行打包 |
+| `npm run test:all` | 运行已配置的基础回归测试（需先生成构建产物） |
+| `npm run verify` | 完整重建并执行基础回归 |
+| `npm run dev:bootstrap` | 安装独立开发检查工具 |
+| `npm run dev:doctor` | 检查开发环境与工具版本 |
+| `npm run dev:verify` | 执行开发工具的规范、类型、覆盖率和原生能力检查 |
+| `npm run dev:typecheck:all` | 全仓严格 TypeScript 诊断；历史未清零时会报告失败 |
+| `npm run dev:security` | 检查依赖安全公告；需要联网 |
 
-## Directory layout
+首次使用开发检查命令可先运行 `npm run dev:bootstrap`。完整配置、跨平台差异和工具作用见 [开发与质量验收](docs/DEVELOPMENT.md)。
 
+### 发行版与原始基准的区别
+
+- **333 重建版**：入口为 `dist/cli.js` 或 `dist/launcher.cjs`；由仓库源码编译生成。
+- **2.1.88 原始基准**：`node cli.js --version`、`node cli.js --help`；供对照原始发行行为，不是 333 的新版本运行入口。
+- **正式 Anthropic Claude Code**：使用其[官方安装与文档](https://code.claude.com/docs/en/overview)。本仓库的构建命令与官方发行渠道相互独立。
+
+需要在线模型交互、账户授权或外部服务时，还需具备对应可用的认证和运行环境；基础模拟模型测试无法覆盖这些真实场景。
+
+## 2.1.310 升级路线与实际进展
+
+升级以保留现有工程、直接修改旧源码为前提：**旧版入口与调用链 → 新版实现和资源 → 代码升级与依赖接通 → 同条件运行差分 → 回归验收**。确认新版已拆分、替换或移除的能力后，按目标版最终语义处理。
+
+当前以 [2.1.310 全面升级方案（v4）](docs/upgrade/2.1.310-全面升级方案.md) 为执行依据：
+
+| 任务 | 主要内容 |
+| --- | --- |
+| M1 | 旧新版源码、开关、缺失定义、版本变化及真实运行差分取证，发现差异即推动修改 |
+| M2–M4 | 模型与流式协议、工具和权限、上下文压缩及会话恢复 |
+| M5–M6 | CLI/TUI/SDK/远程入口、插件、技能、MCP、Hook、浏览器与资源 |
+| M7–M9 | 多代理、Workflow、代码审查及扩展能力 |
+| M10 | 用户可见功能、跨平台、权限与异常路径的完整对照验收 |
+
+现有台账以 **F001–F102（102 项功能）**、**E01–E68 与 L01–L16（84 个场景）** 为覆盖起点；另跟踪 **90 种旧编译开关、61 项待确认目标能力调用链、6,313 条跨版本变更**。这些数字是核查范围，实际完成量须以实现、运行和验收证据为准。
+
+**近期在途工作：**
+
+- [PR #7：M1 源码核查与升级](https://github.com/sy220284/333/pull/7)：包含模型回退、自动压缩/CLI 行为、隐私与遥测、插件和类型/事件协议等已定位差异的代码迁移与测试；仍需对新版完整功能链、缺失模块及 x64 同场景行为持续签收。
+- [PR #9：TypeScript 与依赖安全治理](https://github.com/sy220284/333/pull/9)：追踪全量诊断、依赖风险与运行兼容性，要求真实代码修复及回归验收。
+
+两项工作在其 PR 中持续变化；**未合并内容不作为 `main` 已交付功能**。具体完成证据、未解决缺口及 CI 结果以各 PR、[Actions](https://github.com/sy220284/333/actions) 和对应的验收文档为准。
+
+333 还规划模型适配、本地多 Agent、动态 Workflow、本地高级代码审查等扩展目标；这些与 **2.1.310 原版行为对齐** 分别实施、分别验收。
+
+## 文档与复核入口
+
+- [完整升级方案](docs/upgrade/2.1.310-全面升级方案.md)：总体范围、M1–M10 责任和实施路线。
+- [功能能力台账](docs/upgrade/2.1.310-功能能力台账.md)：功能编号、证据和当前处理状态。
+- [升级缺口与逐项核查清单](docs/upgrade/2.1.310-升级缺口与逐项核查清单.md)：尚需补齐或复核的能力。
+- [验收与迁移矩阵](docs/upgrade/2.1.310-验收与迁移矩阵.md)：E/L 场景、目标行为及验收路径。
+- [旧版到新版逐版本变更索引](docs/upgrade/2.1.88-2.1.310-逐版本变更索引.md)：追溯新增、调整、替换与退场。
+- [源码恢复研究库](research/claude-code-2.1.88/README.md)：原始源码映射、依赖和研究数据校验。
+- [开发工具链](docs/DEVELOPMENT_TOOLCHAIN.md)：按需组件、锁定版本、离线 Artifact 回装。
+- [开发与质量验收](docs/DEVELOPMENT.md)：调试、格式/类型检查、原生能力与依赖安全。
+- [AGENTS.md](AGENTS.md)：工程协作与代码升级验收规则。
+
+## 目录概览
+
+```text
+src/                  原版 TypeScript/TSX 源码及升级中的功能实现
+native/               原生模块适配
+vendor/               原发行附带的平台辅助程序
+build/                依赖/资源恢复、编译、校验与打包脚本
+tests/                CLI 差分、工具调用、发行与新增功能回归
+tools/dev/            开发工具、环境检测与离线安装
+docs/upgrade/         2.1.310 升级任务、缺口和验收台账
+research/             2.1.88 源码映射与研究资料
+.github/workflows/    三平台构建、开发质量及升级验收工作流
+dist/                 本地生成的重建发行产物（不入库）
+cli.js / cli.js.map   原始 2.1.88 发行程序及源码映射
 ```
-src/               # 1,902 个提取的 TypeScript / TSX 应用源码文件
-native/            # 4 个原生模块 TypeScript 适配文件
-vendor/            # macOS / Linux / Windows 预编译辅助程序
-build/             # 依赖恢复、独立编译、发行打包与版本锁
-tests/             # CLI 原版差分和独立发行完整性验收
-.github/workflows/ # GitHub Actions 自动编译与验收
-dist/              # 新版独立发行产物，按需生成（不入库）
-cli.js             # 2.1.88 原发行可执行文件，仅供行为基线
-cli.js.map         # 2.1.88 原始源码映射与冻结依赖数据
-sdk-tools.d.ts     # 发布版 SDK 类型声明
-package.json       # 构建命令及原版包元数据
-bun.lock           # 原始发布文件的 Bun 锁
-README.md          # 本文档
-LICENSE.md         # Anthropic 原始法律与许可告知
-```
 
----
+## 来源、许可与项目边界
 
-# Claude Code
+本仓库源自 `@anthropic-ai/claude-code@2.1.88` 发行包的 `cli.js.map` 源码映射。原始程序、源映射及恢复的素材仍受其对应权利、许可与使用条款约束，详见 [LICENSE.md](LICENSE.md) 和 [Anthropic 官方条款](https://www.anthropic.com/legal/commercial-terms)。
 
-![](https://img.shields.io/badge/Node.js-18%2B-brightgreen?style=flat-square) [![npm]](https://www.npmjs.com/package/@anthropic-ai/claude-code)
-
-[npm]: https://img.shields.io/npm/v/@anthropic-ai/claude-code.svg?style=flat-square
-
-Claude Code is an agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster by executing routine tasks, explaining complex code, and handling git workflows -- all through natural language commands. Use it in your terminal, IDE, or tag @claude on Github.
-
-**Learn more at [Claude Code Homepage](https://claude.com/product/claude-code)** | [Documentation](https://code.claude.com/docs/en/overview)
-
-<img src="https://github.com/anthropics/claude-code/blob/main/demo.gif?raw=1" />
-
-## Get started
-
-1. Install Claude Code:
-
-```sh
-npm install -g @anthropic-ai/claude-code
-```
-
-2. Navigate to your project directory and run `claude`.
-
-## Reporting Bugs
-
-We welcome your feedback. Use the `/bug` command to report issues directly within Claude Code, or file a [GitHub issue](https://github.com/anthropics/claude-code/issues).
-
-## Connect on Discord
-
-Join the [Claude Developers Discord](https://anthropic.com/discord) to connect with other developers using Claude Code. Get help, share feedback, and discuss your projects with the community.
-
-## Data collection, usage, and retention
-
-When you use Claude Code, we collect feedback, which includes usage data (such as code acceptance or rejections), associated conversation data, and user feedback submitted via the `/bug` command.
-
-### How we use your data
-
-See our [data usage policies](https://code.claude.com/docs/en/data-usage).
-
-### Privacy safeguards
-
-We have implemented several safeguards to protect your data, including limited retention periods for sensitive information and restricted access to user session data.
-
-For full details, please review our [Commercial Terms of Service](https://www.anthropic.com/legal/commercial-terms) and [Privacy Policy](https://www.anthropic.com/legal/privacy).
+本仓库为独立研究与重建工程，**与 Anthropic 官方发行版、官方 npm 安装命令及官方问题反馈渠道分开**。上游产品的文档与更新见 [Claude Code 官方文档](https://code.claude.com/docs/en/overview) 和 [官方代码仓库](https://github.com/anthropics/claude-code)。
