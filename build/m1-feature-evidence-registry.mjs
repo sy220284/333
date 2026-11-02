@@ -22,7 +22,9 @@ function checkProof(record, kind, exists) {
   assert.match(record.review?.signed_at ?? '', SIGNATURE, kind + ': unsigned timestamp')
   assert.ok(typeof record.review?.reviewer === 'string' && record.review.reviewer.trim(),
     kind + ': missing signed reviewer')
-  for (const file of [record.official.report, record.rebuilt.report, record.parity.report]) {
+  const reports = [record.official.report, record.rebuilt.report, record.parity.report]
+  assert.equal(new Set(reports).size, 3, kind + ': target, candidate and difference reports must be independent')
+  for (const file of reports) {
     assert.ok(typeof file === 'string' && file.startsWith('docs/upgrade/m1-evidence/'),
       kind + ': report must be an audited repository evidence path')
     assert.ok(exists(file), kind + ': missing evidence file ' + file)
@@ -39,7 +41,7 @@ export function buildRegistry(
   assert.equal(coverage.scenarios.length, 84)
   assert.equal(coverage.counts.features, 102)
   assert.equal(coverage.counts.scenarios, 84)
-  assert.equal(audit.groups.length, 18)
+  assert.ok(audit.groups.length >= 18, 'The existing 18 groups are the historical minimum, not a feature ceiling')
   assert.equal(audit.target_version, coverage.target_version)
   assert.equal(signoffs.schema, 1)
   assert.equal(signoffs.target_version, coverage.target_version)
