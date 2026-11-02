@@ -54,7 +54,7 @@ jobs:
             .rebuild/public
           key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
       - name: 验收SDK控制消息与快捷键配置的真实解析协议
-        run: bun test tests/sdk-control-protocol.test.ts tests/keybinding-schema-contract.test.ts tests/bridge-capability-contract.test.ts tests/context-hint-microcompact.test.ts
+        run: bun test tests/sdk-control-protocol.test.ts tests/keybinding-schema-contract.test.ts tests/bridge-capability-contract.test.ts tests/context-hint-microcompact.test.ts tests/context-hint-controller.test.ts
       - name: 仅从 src 源码构建
         run: bun build/rebuild.mjs
       - name: 新构建版本和基础交互验收
