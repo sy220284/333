@@ -129,9 +129,10 @@ export async function discoverAccountPeers({request,baseUrl,accessToken,orgUUID,
   if(cloud.failed) notes.push({kind:'cloud_list_failed',text:'(cloud session list could not be fetched just now — a later listing retries)'})
   if(bridge.failed) notes.push({kind:'account_list_failed',text:'(Remote Control session list could not be fetched just now — a later listing retries)'})
   if(cloud.truncated||bridge.truncated) notes.push({kind:'list_truncated',text:'(session list exceeded the page limit; some sessions are missing)'})
-  // Partial account enumeration cannot prove that a name is unique. Keep
-  // the rows visible, but never advertise an address from incomplete pages.
-  const verifiedAccountList = !cloud.failed && !bridge.failed &&
-    !cloud.truncated && !bridge.truncated
+  // The official 2.1.310 treats cloud and Remote Control as independent
+  // inventories: a failed cloud listing does not invalidate a fully fetched
+  // Remote Control list. Only bridge enumeration controls bridge routing.
+  // A partial bridge list cannot establish unique recipient names.
+  const verifiedAccountList = !bridge.failed && !bridge.truncated
   return { peers:mergeSessionPeers({local,cloud:cloud.rows,bridge:bridge.rows,selfId,verifiedAccountList}),notes,available:true }
 }
