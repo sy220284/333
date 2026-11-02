@@ -4,23 +4,45 @@ const validId = /^(?:cse|session)_[A-Za-z0-9_-]+$/
 export const canonicalId = id => validId.test(id ?? '') ? id.replace(/^(?:cse|session)_/, '') : ''
 const active = row => row.acceptsPeerMessages !== false && !row.unreachableFromHere &&
   !['archived','offline','disconnected'].includes(row.status)
+/** Cloud list entries have no proven delivery route; only an active Remote
+ * Control endpoint establishes a bridge address (2.1.310 chunk-xje85fg4).
+ * Merge identity first so one session cannot appear twice or shadow its route.
+ */
 export function mergeSessionPeers({ local = [], cloud = [], bridge = [], selfId } = {}) {
-  const existing = new Set(local.map(p => canonicalId(p.bridgeSessionId)).filter(Boolean))
-  if (canonicalId(selfId)) existing.add(canonicalId(selfId))
-  const peers = []
-  for (const [source, entries] of [['cloud',cloud],['remote_control',bridge]]) {
-    for (const row of entries) {
-      const key = canonicalId(row?.id)
-      if (!key || existing.has(key)) continue
-      existing.add(key)
-      const status = row.offline ? 'offline' : row.workerStatus ?? row.status ?? 'unknown'
-      const peer = { name: String(row.title || '(untitled)'), id: row.id, ref: createHash('sha256').update(key).digest('hex').slice(0,6),
-        kind: row.remoteControl ? 'remote_control' : source, status,
-        acceptsPeerMessages: row.acceptsPeerMessages !== false,
-        unreachableFromHere: !!row.unreachableFromHere || row.offline === true }
-      peers.push({ ...peer, address: active(peer) ? `bridge:${row.id}` : undefined })
-    }
+  const seen = new Set(local.map(p => canonicalId(p.bridgeSessionId)).filter(Boolean))
+  if (canonicalId(selfId)) seen.add(canonicalId(selfId))
+  const bridgeById = new Map()
+  const bridgeReachable = row => !!row && active({
+    status: row.offline ? 'offline' : row.status,
+    acceptsPeerMessages: row.acceptsPeerMessages,
+    unreachableFromHere: row.unreachableFromHere,
+  })
+  for (const row of bridge) {
+    const key = canonicalId(row?.id)
+    if (!key || seen.has(key)) continue
+    if (!bridgeById.has(key) || (!bridgeReachable(bridgeById.get(key)) && bridgeReachable(row)))
+      bridgeById.set(key, row)
   }
+  const peers = []
+  const include = (row, kind, transport) => {
+    const key = canonicalId(row?.id)
+    if (!key || seen.has(key)) return
+    seen.add(key)
+    const status = row.offline ? 'offline' : row.workerStatus ?? row.status ?? 'unknown'
+    const peer = {
+      name: String(row.title || '(untitled)'), id: row.id,
+      ref: createHash('sha256').update(key).digest('hex').slice(0, 6),
+      kind: row.remoteControl ? 'remote_control' : kind, status,
+      acceptsPeerMessages: row.acceptsPeerMessages !== false &&
+        (transport ? transport.acceptsPeerMessages !== false : true),
+      unreachableFromHere: !!row.unreachableFromHere || row.offline === true ||
+        !bridgeReachable(transport),
+    }
+    peers.push({ ...peer, address: active(peer) && bridgeReachable(transport)
+      ? `bridge:${transport.id}` : undefined })
+  }
+  for (const row of cloud) include(row, 'cloud', bridgeById.get(canonicalId(row?.id)))
+  for (const row of bridge) include(row, 'remote_control', row)
   return peers
 }
 export function resolveRemoteRecipient(peers, token) {
