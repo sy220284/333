@@ -45,6 +45,7 @@ import {
   applyPermissionUpdates,
   persistPermissionUpdates,
 } from '../utils/permissions/PermissionUpdate.js'
+import { permissionUpdateSchema } from '../utils/permissions/PermissionUpdateSchema.js'
 import {
   notifySessionStateChanged,
   type RequiresActionDetails,
@@ -448,9 +449,14 @@ export class StructuredIO {
       if (message.type === 'assistant' || message.type === 'system') {
         return message
       }
-      if (message.message.role !== 'user') {
+      // The SDK wire envelope types message as unknown. Validate the inner
+      // role before treating it as a user turn, instead of assuming structure.
+      const payload = message.message
+      const actualRole = payload && typeof payload === 'object' && 'role' in payload
+        ? payload.role : undefined
+      if (actualRole !== 'user') {
         exitWithMessage(
-          `Error: Expected message role 'user', got '${message.message.role}'`,
+          `Error: Expected message role 'user', got '${String(actualRole ?? 'missing')}'`,
         )
       }
       return message
@@ -816,7 +822,10 @@ async function executePermissionRequestHooksForSDK(
         const finalInput = decision.updatedInput || input
 
         // Apply permission updates if provided by hook ("always allow")
-        const permissionUpdates = decision.updatedPermissions ?? []
+        // Hook outputs are a wire protocol. Parse all requested permission
+        // changes with the shared schema before persisting or applying them.
+        const permissionUpdates = (decision.updatedPermissions ?? [])
+          .map(update => permissionUpdateSchema().parse(update))
         if (permissionUpdates.length > 0) {
           persistPermissionUpdates(permissionUpdates)
           const currentAppState = toolUseContext.getAppState()
