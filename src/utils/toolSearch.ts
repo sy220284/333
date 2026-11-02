@@ -34,10 +34,6 @@ import { getMergedBetas } from './betas.js'
 import { getContextWindowForModel } from './context.js'
 import { logForDebugging } from './debug.js'
 import { isEnvDefinedFalsy, isEnvTruthy } from './envUtils.js'
-import {
-  getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
-} from './model/providers.js'
 import { jsonStringify } from './slowOperations.js'
 import { zodToJsonSchema } from './zodToJsonSchema.js'
 
@@ -279,37 +275,15 @@ export function isToolSearchEnabledOptimistic(): boolean {
     return false
   }
 
-  // tool_reference is a beta content type that third-party API gateways
-  // (ANTHROPIC_BASE_URL proxies) typically don't support. When the provider
-  // is 'firstParty' but the base URL points elsewhere, the proxy will reject
-  // tool_reference blocks with a 400. Vertex/Bedrock/Foundry are unaffected —
-  // they have their own endpoints and beta headers.
-  // https://github.com/anthropics/claude-code/issues/30912
+  // Target 2.1.310 retains ToolSearch when ANTHROPIC_BASE_URL points at
+  // a proxy, including local test gateways. The previous automatic proxy
+  // exclusion dropped the tool entirely and broke deferred tool discovery.
+  // Explicit ENABLE_TOOL_SEARCH=false and
+  // CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS still select standard mode above.
   //
-  // HOWEVER: some proxies DO support tool_reference (LiteLLM passthrough,
-  // Cloudflare AI Gateway, corp gateways that forward beta headers). The
-  // blanket disable breaks defer_loading for those users — all MCP tools
-  // loaded into main context instead of on-demand (gh-31936 / CC-457,
-  // likely the real cause of CC-330 "v2.1.70 defer_loading regression").
-  // This gate only applies when ENABLE_TOOL_SEARCH is unset/empty (default
-  // behavior). Setting any non-empty value — 'true', 'auto', 'auto:N' —
-  // means the user is explicitly configuring tool search and asserts their
-  // setup supports it. The falsy check (rather than === undefined) aligns
-  // with getToolSearchMode(), which also treats "" as unset.
-  if (
-    !process.env.ENABLE_TOOL_SEARCH &&
-    getAPIProvider() === 'firstParty' &&
-    !isFirstPartyAnthropicBaseUrl()
-  ) {
-    if (!loggedOptimistic) {
-      loggedOptimistic = true
-      logForDebugging(
-        `[ToolSearch:optimistic] disabled: ANTHROPIC_BASE_URL=${process.env.ANTHROPIC_BASE_URL} is not a first-party Anthropic host. Set ENABLE_TOOL_SEARCH=true (or auto / auto:N) if your proxy forwards tool_reference blocks.`,
-      )
-    }
-    return false
-  }
-
+  // API-protocol compatibility is the caller's responsibility; the actual
+  // request-time isToolSearchEnabled() checks model support and availability.
+  //
   if (!loggedOptimistic) {
     loggedOptimistic = true
     logForDebugging(
