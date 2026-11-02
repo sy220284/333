@@ -32,3 +32,11 @@ test('all combines actual yielded values from concurrent streams', async () => {
   expect(items.length).toBe(4)
   expect(items.sort()).toEqual(['a1','a2','b1','b2'])
 })
+
+test('all rejects an invalid concurrency cap before silently dropping generators', async () => {
+  async function* values() { yield 'kept' }
+  for (const cap of [0, -1, 0.5, Number.NaN]) {
+    await expect(toArray(all([values()], cap))).rejects.toThrow(/positive integer/)
+  }
+  expect(await toArray(all([values()], Infinity))).toEqual(['kept'])
+})
