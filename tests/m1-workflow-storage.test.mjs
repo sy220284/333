@@ -38,7 +38,7 @@ test('official Workflow summary is atomically written and contains final JSON da
 })
 
 test('resuming with an edited script persists the exact next script atomically',async()=>{
- const {mkdtemp,rm,mkdir,writeFile,readFile,readdir}=await import('node:fs/promises')
+ const {mkdtemp,rm,writeFile,readFile,readdir}=await import('node:fs/promises')
  const {join}=await import('node:path')
  const {tmpdir}=await import('node:os')
  const {syncWorkflowScript}=await import('../src/tasks/LocalWorkflowTask/workflowSummaryStore.mjs')

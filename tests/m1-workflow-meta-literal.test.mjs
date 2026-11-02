@@ -33,6 +33,6 @@ test('workflow metadata is inert: expressions, getters and prototype keys cannot
  }
 })
 test('workflow metadata does not accept oversized or malformed structures',()=>{
- assert.throws(()=>parseWorkflowMetaLiteral('{name:'+ 'x'.repeat(65536)+'}'),/too large/)
+ assert.throws(()=>parseWorkflowMetaLiteral(`{name:${'x'.repeat(65536)}}`),/too large/)
  assert.throws(()=>parseWorkflowMetaLiteral('{name:[1,2]'),/static literal/)
 })

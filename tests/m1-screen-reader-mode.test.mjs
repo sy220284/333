@@ -49,7 +49,7 @@ test('virtual-text container splits semantic sibling labels but preserves inline
 })
 
 test('CLI, settings and actual Ink rendering are connected',async()=>{
- const source=path=>readFile(new URL('../'+path,import.meta.url),'utf8')
+ const source=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8')
  const [cli,settings,ink,gate]=await Promise.all([
   source('src/main.tsx'),source('src/utils/settings/types.ts'),source('src/ink/ink.tsx'),source('src/utils/accessibility/screenReaderRuntime.ts')])
  assert.match(cli,/--ax-screen-reader/)
@@ -61,7 +61,7 @@ test('CLI, settings and actual Ink rendering are connected',async()=>{
  assert.match(ink,/if\s*\(isScreenReaderEnabled\(\)\)\s*\{/)
  assert.match(ink,/clearTimeout\(this\.accessibleFlushTimer\)/)
  assert.match(ink,/this\.accessibleAnnouncements\.drain\(\)/)
- assert.ok(ink.includes('Screen Reader Mode: on via ${getScreenReaderActivationSource()}'))
+ assert.ok(/Screen Reader Mode: on via \$\{getScreenReaderActivationSource\(\)\}/.test(ink))
  assert.match(gate,/startupActivationSource/)
  assert.match(gate,/startupActivationSource = mode\.source/)
  assert.match(gate,/getSettingsForSource\(/)

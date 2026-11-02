@@ -33,6 +33,6 @@ const counts=new Map()
 for(const r of rows)counts.set(r.path,(counts.get(r.path)||0)+1)
 const top=[...counts].sort((a,b)=>b[1]-a[1])
 const report={scannedFiles:files.length,flaggedStrings:rows.length,filesWithFindings:counts.size,topFiles:top,findings:rows}
-writeFileSync('.localization-audit.json',JSON.stringify(report,null,2)+'\n')
+writeFileSync('.localization-audit.json',`${JSON.stringify(report,null,2)}\n`)
 console.log(JSON.stringify({scannedFiles:report.scannedFiles,flaggedStrings:report.flaggedStrings,filesWithFindings:report.filesWithFindings,topFiles:top.slice(0,40)},null,2))
-for(const r of rows)console.log(r.path+':'+r.line+' ['+r.kind+'] '+r.text)
+for(const r of rows)console.log(`${r.path}:${r.line} [${r.kind}] ${r.text}`)
