@@ -104,3 +104,12 @@ test('Workflow pipeline returns the final result without losing concurrent agent
  const completion=await executeWorkflowScript({script,agent:async prompt=>prompt.toUpperCase()})
  assert.equal(completion.result,'A,B')
 })
+
+test('Workflow permission policy preserves real x64 bypass mode while normal and auto require review',async()=>{
+ const {readFile}=await import('node:fs/promises')
+ const source=await readFile(new URL('../src/tools/WorkflowTool/WorkflowTool.ts',import.meta.url),'utf8')
+ assert.match(source,/permissions\.mode==='bypassPermissions'/)
+ assert.match(source,/behavior:'allow' as const,updatedInput:frozen/)
+ assert.match(source,/behavior:'ask' as const/)
+ assert.match(source,/classifierApprovable:false/)
+})

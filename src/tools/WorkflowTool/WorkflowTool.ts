@@ -89,14 +89,23 @@ export const WorkflowTool=buildTool({
       return {result:true as const}
     }catch(error){return {result:false as const,message:error instanceof Error?error.message:String(error),errorCode:9}}
   },
-  async checkPermissions(input){
+  async checkPermissions(input,context){
     const script=await resolveScript(input)
     const parsed=validateWorkflowScript(script)
+    // Native 2.1.310 launches Workflow in explicitly selected
+    // --dangerously-skip-permissions mode. Preserve script validation and
+    // freeze the approved input; normal/auto modes still require review.
+    const frozen={script,args:input.args,resumeFromRunId:input.resumeFromRunId}
+    const permissions=context.getAppState().toolPermissionContext
+    if(permissions.mode==='bypassPermissions' ||
+       permissions.mode==='plan' && permissions.isBypassPermissionsModeAvailable){
+      return {behavior:'allow' as const,updatedInput:frozen}
+    }
     return {behavior:'ask' as const,
       message:`Review dynamic workflow before running: ${parsed.meta.name} — ${parsed.meta.description}\n\n${script}`,
       // Freeze the actual approved script in the post-permission tool input.
       // A file may change between displaying the approval prompt and call().
-      updatedInput:{script,args:input.args,resumeFromRunId:input.resumeFromRunId},
+      updatedInput:frozen,
       decisionReason:{type:'safetyCheck' as const,reason:'Workflow can launch agents and run user-approved code',classifierApprovable:false}}
   },
   async call(input,context,canUseTool,parentMessage){
