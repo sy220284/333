@@ -20,7 +20,7 @@ import { handle重新连接Error, handle重新连接Result } from './utils/recon
 type Props = {
   server: StdioServerInfo;
   serverToolsCount: number;
-  onView工具：() => void;
+  onViewTools: () => void;
   onCancel: () => void;
   onComplete: (result?: string, options?: {
     display?: CommandResultDisplay;
