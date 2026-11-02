@@ -79,6 +79,8 @@ test('2.1.310 restricted mode enforces default deny and explicit tool override',
         assert.equal(result.exit,0,`${name} ${scenario} failed ${result.stderr.slice(-900)}`)
         assert.equal(recorded.length,before+1,`${name} ${scenario} did not make one API request`)
         const exposed=recorded.at(-1)
+        assert.ok(!exposed.includes('TaskOutput'),
+          `${name} ${scenario}: removed TaskOutput must not be offered to the model`)
         if(scenario==='restricted-default'){
           assert.ok(!exposed.includes('Bash'),`${name}: default restricted leaked Bash`)
           assert.ok(exposed.includes('Read'),`${name}: project settings should be ignored`)

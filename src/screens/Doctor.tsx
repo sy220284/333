@@ -51,10 +51,6 @@ import {
   BASH_MAX_OUTPUT_DEFAULT,
   BASH_MAX_OUTPUT_UPPER_LIMIT,
 } from '../utils/shell/outputLimits.js'
-import {
-  TASK_MAX_OUTPUT_DEFAULT,
-  TASK_MAX_OUTPUT_UPPER_LIMIT,
-} from '../utils/task/outputFormatting.js'
 import { getXDGStateHome } from '../utils/xdg.js'
 import { getIgnoredProjectTelemetryEnvKeys } from '../utils/telemetry/projectTelemetryPolicy.mjs'
 
@@ -143,11 +139,6 @@ export function Doctor({ onDone }: Props): React.ReactNode {
         name: 'BASH_MAX_OUTPUT_LENGTH',
         default: BASH_MAX_OUTPUT_DEFAULT,
         upperLimit: BASH_MAX_OUTPUT_UPPER_LIMIT,
-      },
-      {
-        name: 'TASK_MAX_OUTPUT_LENGTH',
-        default: TASK_MAX_OUTPUT_DEFAULT,
-        upperLimit: TASK_MAX_OUTPUT_UPPER_LIMIT,
       },
       {
         name: 'CLAUDE_CODE_MAX_OUTPUT_TOKENS',
