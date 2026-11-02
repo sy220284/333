@@ -20,27 +20,35 @@ export async function returnValue<A>(
   }
 }
 
-type QueuedGenerator<A> = {
-  done: boolean | void
-  value: A | void
-  generator: AsyncGenerator<A, void>
-  promise: Promise<QueuedGenerator<A>>
-}
+type QueuedGenerator<A> =
+  | {
+      done: false
+      value: A
+      generator: AsyncGenerator<A, void>
+      promise: Promise<QueuedGenerator<A>>
+    }
+  | {
+      done: true
+      value: void
+      generator: AsyncGenerator<A, void>
+      promise: Promise<QueuedGenerator<A>>
+    }
 
 // Run all generators concurrently up to a concurrency cap, yielding values as they come in
 export async function* all<A>(
   generators: AsyncGenerator<A, void>[],
   concurrencyCap = Infinity,
 ): AsyncGenerator<A, void> {
+  if (concurrencyCap !== Infinity &&
+      (!Number.isInteger(concurrencyCap) || concurrencyCap < 1)) {
+    throw new RangeError('Generator concurrency cap must be a positive integer')
+  }
   const next = (generator: AsyncGenerator<A, void>) => {
     const promise: Promise<QueuedGenerator<A>> = generator
       .next()
-      .then(({ done, value }) => ({
-        done,
-        value,
-        generator,
-        promise,
-      }))
+      .then(result => result.done
+        ? { done: true as const, value: result.value, generator, promise }
+        : { done: false as const, value: result.value, generator, promise })
     return promise
   }
   const waiting = [...generators]
