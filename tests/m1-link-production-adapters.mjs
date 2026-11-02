@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const root = resolve(dirname(new URL(import.meta.url).pathname), '..')
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const adapters = {
   'color-diff-napi': 'src/native-ts/color-diff/index.ts',
   'audio-capture-napi': 'native/audio-capture-src/index.ts',
@@ -15,12 +16,12 @@ const adapters = {
 // local package entries for this isolated CI test; no mock modules are used.
 for (const [name, localPath] of Object.entries(adapters)) {
   const target = join(root, localPath)
-  if (!existsSync(target)) throw new Error('Missing production adapter: ' + target)
+  if (!existsSync(target)) throw new Error(`Missing production adapter: ${target}`)
   const packageDir = join(root, 'node_modules', name)
-  if (existsSync(packageDir)) throw new Error('Unexpected pre-existing package: ' + name)
+  if (existsSync(packageDir)) throw new Error(`Unexpected pre-existing package: ${name}`)
   mkdirSync(packageDir, { recursive: true })
   const importPath = relative(packageDir, target).replaceAll('\\', '/')
   writeFileSync(join(packageDir, 'package.json'),
     JSON.stringify({ name, private: true, type: 'module', exports: './index.ts' }))
-  writeFileSync(join(packageDir, 'index.ts'), "export * from '" + importPath + "'\n")
+  writeFileSync(join(packageDir, 'index.ts'), `export * from '${importPath}'\n`)
 }
