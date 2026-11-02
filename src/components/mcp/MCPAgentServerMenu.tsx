@@ -107,7 +107,7 @@ export function MCPAgentServerMenu({
   // Only show authenticate option for HTTP/SSE servers
   if (agentServer.needsAuth) {
     menuOptions.push({
-      label: agentServer.isAuthenticated ? 'Re-authenticate' : 'Authenticate',
+      label: 'Authenticate',
       value: 'auth'
     });
   }
@@ -126,12 +126,12 @@ export function MCPAgentServerMenu({
           <Text dimColor>{agentServer.transport}</Text>
         </Box>
 
-        {agentServer.url && <Box>
+        {'url' in agentServer && agentServer.url && <Box>
             <Text bold>URL: </Text>
             <Text dimColor>{agentServer.url}</Text>
           </Box>}
 
-        {agentServer.command && <Box>
+        {'command' in agentServer && agentServer.command && <Box>
             <Text bold>Command: </Text>
             <Text dimColor>{agentServer.command}</Text>
           </Box>}
@@ -151,10 +151,7 @@ export function MCPAgentServerMenu({
 
         {agentServer.needsAuth && <Box>
             <Text bold>Auth: </Text>
-            {agentServer.isAuthenticated ? <Text>{color('success', theme)(figures.tick)} authenticated</Text> : <Text>
-                {color('warning', theme)(figures.triangleUpOutline)} may need
-                authentication
-              </Text>}
+            <Text>{color('warning', theme)(figures.triangleUpOutline)} may need authentication</Text>
           </Box>}
       </Box>
 
