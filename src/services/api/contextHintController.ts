@@ -16,6 +16,13 @@ export type HintError = {
   error?: { error?: { type?: string } }
 }
 
+export class ContextHintRecoveryError extends Error {
+  constructor(readonly recovery: HintRecovery) {
+    super('The server rejected context_hint; retry without it')
+    this.name = 'ContextHintRecoveryError'
+  }
+}
+
 export type HintRecovery = {
   messages: Message[]
   clearedIds: Set<string>
