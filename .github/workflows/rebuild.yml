@@ -80,7 +80,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .rebuild/oracle
-          curl --fail --location --silent --show-error --retry 3 \
+          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
             'https://downloads.claude.ai/claude-code-releases/2.1.310/linux-x64/claude' \
             --output .rebuild/oracle/claude
           echo "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  .rebuild/oracle/claude" | sha256sum --check
