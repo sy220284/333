@@ -1,5 +1,5 @@
 import { c as _c } from "react/compiler-runtime";
-import { getSentinelCategory } from '@ant/computer-use-mcp/sentinelApps';
+import { getSentinelCategory } from '../../../utils/computerUse/sentinelApps.js';
 import type { CuPermissionRequest, CuPermissionResponse } from '@ant/computer-use-mcp/types';
 import { DEFAULT_GRANT_FLAGS } from '@ant/computer-use-mcp/types';
 import figures from 'figures';
