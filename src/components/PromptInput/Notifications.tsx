@@ -153,7 +153,7 @@ export function Notifications(t0) {
         logEvent("tengu_external_editor_hint_shown", {});
         addNotification({
           key: "external-editor-hint",
-          jsx: <Text dimColor={true}><ConfigurableShortcutHint action="chat:externalEditor" context="Chat" fallback="ctrl+g" description={`edit in ${toIDEDisplayName(editor)}`} /></Text>,
+          jsx: <Text dimColor={true}><ConfigurableShortcutHint action="chat:externalEditor" context="Chat" fallback="ctrl+g" description={`在 ${toIDEDisplayName(editor)} 中编辑`} /></Text>,
           priority: "immediate",
           timeoutMs: 5000
         });
@@ -292,12 +292,12 @@ function NotificationContent({
           </Text>)}
       {isInOverageMode && !isTeamOrEnterprise && <Box>
           <Text dimColor wrap="truncate">
-            Now using extra usage
+            正在使用额外用量
           </Text>
         </Box>}
       {apiKeyHelperSlow && <Box>
           <Text color="warning" wrap="truncate">
-            apiKeyHelper is taking a while{' '}
+            apiKeyHelper 处理时间较长{' '}
           </Text>
           <Text dimColor wrap="truncate">
             ({apiKeyHelperSlow})
@@ -305,17 +305,17 @@ function NotificationContent({
         </Box>}
       {(apiKeyStatus === 'invalid' || apiKeyStatus === 'missing') && <Box>
           <Text color="error" wrap="truncate">
-            {isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) ? 'Authentication error · Try again' : 'Not logged in · Run /login'}
+            {isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) ? '身份验证失败 · 请重试' : '尚未登录 · 请运行 /login'}
           </Text>
         </Box>}
       {debug && <Box>
           <Text color="warning" wrap="truncate">
-            Debug mode
+            调试模式
           </Text>
         </Box>}
       {apiKeyStatus !== 'invalid' && apiKeyStatus !== 'missing' && verbose && <Box>
           <Text dimColor wrap="truncate">
-            {tokenUsage} tokens
+            {tokenUsage} 个 Token
           </Text>
         </Box>}
       {!isBriefOnly && <TokenWarning tokenUsage={tokenUsage} model={mainLoopModel} />}

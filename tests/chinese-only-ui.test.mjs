@@ -38,3 +38,10 @@ test('信任对话框没有遗留英文句段', () => {
   assert.match(dialog, /Claude Code 将能够读取、修改并执行此目录中的文件/)
   assert.doesNotMatch(dialog, /Quick safety check|Yes, I trust this folder|No, exit/)
 })
+
+test('聊天输入、语音、通知状态保持中文文案', () => {
+  assert.match(read('src/components/PromptInput/Notifications.tsx'), /尚未登录 · 请运行 \/login/)
+  assert.match(read('src/components/PromptInput/VoiceIndicator.tsx'), /正在聆听/)
+  assert.match(read('src/components/TokenWarning.tsx'), /上下文空间不足/)
+  assert.match(read('src/components/PromptInput/PromptInputStashNotice.tsx'), /已暂存/)
+})

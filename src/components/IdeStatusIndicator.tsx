@@ -26,7 +26,7 @@ export function IdeStatusIndicator(t0) {
     const t1 = ideSelection.lineCount === 1 ? "line" : "lines";
     let t2;
     if ($[0] !== ideSelection.lineCount || $[1] !== t1) {
-      t2 = <Text color="ide" key="selection-indicator" wrap="truncate">⧉ {ideSelection.lineCount}{" "}{t1} selected</Text>;
+      t2 = <Text color="ide" key="selection-indicator" wrap="truncate">⧉ {ideSelection.lineCount}{" "}{t1} 已选中</Text>;
       $[0] = ideSelection.lineCount;
       $[1] = t1;
       $[2] = t2;
@@ -46,7 +46,7 @@ export function IdeStatusIndicator(t0) {
     }
     let t2;
     if ($[5] !== t1) {
-      t2 = <Text color="ide" key="selection-indicator" wrap="truncate">⧉ In {t1}</Text>;
+      t2 = <Text color="ide" key="selection-indicator" wrap="truncate">⧉ 位于 {t1}</Text>;
       $[5] = t1;
       $[6] = t2;
     } else {
