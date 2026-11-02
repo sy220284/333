@@ -489,6 +489,7 @@ export async function runHeadless(
     agent: string | undefined
     workload: string | undefined
     promptSuggestions?: boolean | undefined
+    forwardSubagentText?: boolean | undefined
     setupTrigger?: 'init' | 'maintenance' | undefined
     sessionStartHooksPromise?: ReturnType<typeof processSessionStartHooks>
     setSDKStatus?: (status: SDKStatus) => void
@@ -1012,6 +1013,7 @@ function runHeadlessStreaming(
     agent?: string | undefined
     setSDKStatus?: (status: SDKStatus) => void
     promptSuggestions?: boolean | undefined
+    forwardSubagentText?: boolean | undefined
     workload?: string | undefined
   },
   turnInterruptionState?: TurnInterruptionState,
@@ -2195,6 +2197,7 @@ function runHeadlessStreaming(
               abortController,
               replayUserMessages: options.replayUserMessages,
               includePartialMessages: options.includePartialMessages,
+              forwardSubagentText: options.forwardSubagentText,
               handleElicitation: (serverName, params, elicitSignal) =>
                 structuredIO.handleElicitation(
                   serverName,
