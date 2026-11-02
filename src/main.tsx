@@ -1311,6 +1311,13 @@ async function run(): Promise<CommanderCommand> {
     // trust is established and GrowthBook has auth headers.
     let remoteControl = false;
     const remoteControlName = typeof remoteControlOption === 'string' && remoteControlOption.length > 0 ? remoteControlOption : undefined;
+    const remoteControlPrefix = (options as { remoteControlSessionNamePrefix?: string }).remoteControlSessionNamePrefix;
+    if (remoteControlPrefix !== undefined) {
+      if (!remoteControlPrefix.trim() || /[\\r\\n\\0]/.test(remoteControlPrefix) || remoteControlPrefix.length > 100) {
+        throw new InvalidArgumentError('--remote-control-session-name-prefix expects a non-empty name up to 100 characters');
+      }
+      process.env.CLAUDE_CODE_REMOTE_CONTROL_NAME_PREFIX = remoteControlPrefix.trim();
+    }
 
     // Validate session ID if provided
     if (sessionId) {
@@ -3920,7 +3927,8 @@ async function run(): Promise<CommanderCommand> {
   program.addOption(new Option('--teleport [session]', 'Resume a teleport session, optionally specify session ID'));
   program.addOption(new Option('--remote [description]', 'Create a remote session with the given description').hideHelp());
   if (feature('BRIDGE_MODE')) {
-    program.addOption(new Option('--remote-control [name]', 'Start an interactive session with Remote Control enabled (optionally named)').argParser(value => value || true).hideHelp());
+    program.addOption(new Option('--remote-control [name]', 'Start an interactive session with Remote Control enabled (optionally named)').argParser(value => value || true));
+    program.addOption(new Option('--remote-control-session-name-prefix <prefix>', 'Prefix for auto-generated Remote Control session names'));
     program.addOption(new Option('--rc [name]', 'Alias for --remote-control').argParser(value => value || true).hideHelp());
   }
   if (feature('HARD_FAIL')) {
