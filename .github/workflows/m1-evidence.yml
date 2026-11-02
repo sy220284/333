@@ -311,6 +311,18 @@ jobs:
           chmod 700 "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
           printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-current-cli"
           chmod 700 "${RUNNER_TEMP}/m1-current-cli"
+      - name: 对照真实 SDK 流事件顺序、响应标识与首字时间
+        run: |
+          node build/m1-sdk-stream-wire-parity.mjs \
+            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --candidate "${RUNNER_TEMP}/m1-current-cli" \
+            --report "${RUNNER_TEMP}/m1-sdk-stream-wire.json"
+      - name: 对照显式思考展示配置及关闭思考时的流事件
+        run: |
+          node build/m1-sdk-thinking-display-parity.mjs \
+            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --candidate "${RUNNER_TEMP}/m1-current-cli" \
+            --report "${RUNNER_TEMP}/m1-sdk-thinking-display.json"
       - name: 执行同条件CLI差分采集（未对齐项仍保留在JSON，严格等价另验）
         run: |
           node build/m1-x64-reference-probe.mjs \
@@ -331,18 +343,6 @@ jobs:
           python3 tests/m1-x64-spinner-tips.py \
             --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli"
-      - name: 对照真实 SDK 流事件顺序、响应标识与首字时间
-        run: |
-          node build/m1-sdk-stream-wire-parity.mjs \
-            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
-            --candidate "${RUNNER_TEMP}/m1-current-cli" \
-            --report "${RUNNER_TEMP}/m1-sdk-stream-wire.json"
-      - name: 对照显式思考展示配置及关闭思考时的流事件
-        run: |
-          node build/m1-sdk-thinking-display-parity.mjs \
-            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
-            --candidate "${RUNNER_TEMP}/m1-current-cli" \
-            --report "${RUNNER_TEMP}/m1-sdk-thinking-display.json"
       - name: 以真实ToolSearch调用核查新版延迟注册及当前候选差异
         run: |
           node build/m1-toolsearch-release-parity.mjs \
