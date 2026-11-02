@@ -40,6 +40,14 @@ function unescapeFromDiff(s: string): string {
   return s.replaceAll(AMPERSAND_TOKEN, '&').replaceAll(DOLLAR_TOKEN, '$')
 }
 
+/** Fail loudly if an upstream diff adapter supplies a malformed line. */
+function patchLine(line: unknown): string {
+  if (typeof line !== 'string') {
+    throw new TypeError('Invalid diff patch: hunk lines must be strings')
+  }
+  return line
+}
+
 /**
  * Count lines added and removed in a patch and update the total
  * For new files, pass the content string as the second parameter
@@ -58,11 +66,11 @@ export function countLinesChanged(
     numAdditions = newFileContent.split(/\r?\n/).length
   } else {
     numAdditions = patch.reduce(
-      (acc, hunk) => acc + count(hunk.lines, line => typeof line === 'string' && line.startsWith('+')),
+      (acc, hunk) => acc + count(hunk.lines, line => patchLine(line).startsWith('+')),
       0,
     )
     numRemovals = patch.reduce(
-      (acc, hunk) => acc + count(hunk.lines, line => typeof line === 'string' && line.startsWith('-')),
+      (acc, hunk) => acc + count(hunk.lines, line => patchLine(line).startsWith('-')),
       0,
     )
   }
