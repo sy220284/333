@@ -61,3 +61,26 @@ test('same name on UDS and Remote Control is never silently routed to one transp
   assert.equal(resolveUnifiedPeerRecipient(local,'collide [123abc]',1100).address,'uds:/tmp/one')
   assert.equal(resolveUnifiedPeerRecipient(local,`collide [${remote[0].ref}]`,1100).address,remote[0].address)
 })
+
+test('cloud-only session must not advertise a guessed bridge delivery address', () => {
+ const peers=mergeSessionPeers({cloud:[{id:'cse_alone',title:'Cloud only',status:'active'}]})
+ assert.equal(peers.length,1)
+ assert.equal(peers[0].address,undefined)
+ assert.equal(peers[0].unreachableFromHere,true)
+ assert.equal(resolveRemoteRecipient(peers,'Cloud only'),undefined)
+ rememberAccountRecipients(peers,1000)
+ assert.equal(resolveAdvertisedRemoteRecipient('Cloud only',1100),undefined)
+})
+test('cloud + Remote Control share one listing entry with the real connected route', () => {
+ const args={
+   cloud:[{id:'cse_shared',title:'Cloud job',status:'active'}],
+   bridge:[{id:'session_shared',title:'Remote duplicate',status:'active'}],
+ }
+ const peers=mergeSessionPeers(args)
+ assert.equal(peers.length,1)
+ assert.equal(peers[0].name,'Cloud job')
+ assert.equal(peers[0].address,'bridge:session_shared')
+ assert.equal(resolveRemoteRecipient(peers,'Cloud job'),peers[0].address)
+ const offline=mergeSessionPeers({cloud:args.cloud,bridge:[{...args.bridge[0],offline:true}]})
+ assert.equal(offline[0].address,undefined)
+})
