@@ -14,7 +14,7 @@ export interface NotebookMutationInput {
 }
 
 export interface NotebookMutationResult {
-  cell_id: string
+  cell_id?: string
   cell_type: NotebookCell['cell_type']
   edit_mode: NotebookEditMode
   cell_index: number
@@ -92,7 +92,7 @@ export function applyNotebookEdit(
     }
     notebook.cells.splice(index, 0, cell)
     return {
-      cell_id: id ?? `cell-${index}`,
+      cell_id: id,
       cell_type,
       edit_mode: mode,
       cell_index: index,
@@ -101,14 +101,17 @@ export function applyNotebookEdit(
 
   const cell = notebook.cells[index]
   if (!cell) throw new Error('Target cell no longer exists in notebook.')
-  const originalId = cell.id ?? `cell-${index}`
+  // The 2.1.310 tool echoes the requested ID for nbformat 4.5+ cells,
+  // even when cell-N was used to address a cell with a different real ID.
+  // Older notebook formats do not return an ID in this output.
+  const returnedId = hasIds ? input.cell_id : undefined
   const originalType = cell.cell_type
   const old_source = Array.isArray(cell.source) ? cell.source.join('') : cell.source
 
   if (mode === 'delete') {
     notebook.cells.splice(index, 1)
     return {
-      cell_id: originalId,
+      cell_id: returnedId,
       cell_type: originalType,
       edit_mode: mode,
       cell_index: index,
@@ -127,7 +130,7 @@ export function applyNotebookEdit(
     delete cell.outputs
   }
   return {
-    cell_id: originalId,
+    cell_id: returnedId,
     cell_type,
     edit_mode: mode,
     cell_index: index,
