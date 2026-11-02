@@ -59,7 +59,7 @@ export const ListAgentsTool = buildTool({
     const teamName = getTeamName(state.teamContext)
     const selfName = isAgentSwarmsEnabled() && teamName ? getAgentName() || TEAM_LEAD_NAME : ''
     const teamFile = teamName ? await readTeamFileAsync(teamName) : null
-    const teammates = listReachableTeammates(teamFile, selfName)
+    const teammates = listReachableTeammates(teamFile, selfName, state.teamContext?.teammates)
     const { peers: localSessions, unreadable } = await listLiveLocalPeers(join(getClaudeConfigHomeDir(), 'sessions'))
     const account = await discoverAuthenticatedPeers(localSessions)
     rememberAccountRecipients(account.peers)
