@@ -40,7 +40,7 @@ async function probe(exe, toolSearchOverride) {
     if(req.method!=='POST'||!req.url?.startsWith('/v1/messages')){res.writeHead(404);res.end();return}
     let raw='';for await(const part of req)raw+=part
     const body=JSON.parse(raw), answer=sse(body.model,requests.length===0)
-    requests.push({tools:(body.tools??[]).map(t=>t.name),messages:body.messages??[]})
+    requests.push({tools:(body.tools??[]).map(t=>t.name),toolSpecs:(body.tools??[]).map(t=>({name:t.name,input_schema:t.input_schema,description:t.description})),messages:body.messages??[]})
     res.writeHead(200,{'content-type':'text/event-stream','content-length':String(Buffer.byteLength(answer))});res.end(answer)
   })
   try{
@@ -65,7 +65,7 @@ async function probe(exe, toolSearchOverride) {
     }
     let parsed
     try{parsed=JSON.parse(stdout)}catch{parsed={result:stdout.slice(-400)}}
-    const deferredSchemas = Object.fromEntries((requests[1]?.tools ?? []).filter(tool => refs.has(tool.name)).map(tool => [tool.name, { input_schema: tool.input_schema, description: tool.description }]))
+    const deferredSchemas = Object.fromEntries((requests[1]?.toolSpecs ?? []).filter(tool => refs.has(tool.name)).map(tool => [tool.name, { input_schema: tool.input_schema, description: tool.description }]))
     return {exitCode,signal,calls:requests.length,initialTools:requests[0]?.tools??[],discovered:[...refs].sort(),deferredSchemas,result:parsed.result,isError:parsed.is_error,stderr:stderr.slice(-300)}
   }finally{
     await new Promise(done=>server.close(done))
@@ -81,9 +81,13 @@ const disabledMatchesTarget = !disabledReference.initialTools.includes('ToolSear
 const referencePass=reference.exitCode===0&&reference.calls===2&&reference.result==='DISCOVERY_COMPLETE'&&foundOnTarget.every(n=>reference.discovered.includes(n))&&absentOnTarget.every(n=>!reference.discovered.includes(n))
 const candidateMatches=candidate?candidate.exitCode===reference.exitCode&&candidate.calls===reference.calls&&candidate.result===reference.result&&JSON.stringify(candidate.discovered)===JSON.stringify(reference.discovered):null
 const candidateBaseDiscoveryPass = candidate ? candidate.exitCode === 0 && candidate.calls === 2 && candidate.result === 'DISCOVERY_COMPLETE' && candidate.initialTools.includes('ToolSearch') && ['Bash', 'Read'].every(name => candidate.discovered.includes(name)) : null
-const overlappingSchemaMatches = candidate ? Object.fromEntries(candidate.discovered.filter(name => reference.discovered.includes(name)).map(name => [name, JSON.stringify(reference.deferredSchemas[name]?.input_schema) === JSON.stringify(candidate.deferredSchemas[name]?.input_schema)])) : null
+const stable = value => JSON.stringify(value,(key,v)=>
+  v&&typeof v==='object'&&!Array.isArray(v)?
+    Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b))):v)
+const overlappingSchemaMatches = candidate ? Object.fromEntries(candidate.discovered.filter(name => reference.discovered.includes(name)).map(name => [name, reference.deferredSchemas[name]?.input_schema !== undefined && candidate.deferredSchemas[name]?.input_schema !== undefined && stable(reference.deferredSchemas[name].input_schema) === stable(candidate.deferredSchemas[name].input_schema)])) : null
 const report={officialSha,names,reference,candidate,overlappingSchemaMatches,disabledReference,disabledCandidate,disabledMatchesTarget,referencePass,candidateMatches,candidateBaseDiscoveryPass,scope:'ordinary CLI --print ToolSearch with isolated model API'}
 mkdirSync(dirname(resolve(opt['--report'])),{recursive:true})
 writeFileSync(resolve(opt['--report']),JSON.stringify(report,null,2)+'\n')
 console.log(JSON.stringify({referencePass,candidateMatches,candidateBaseDiscoveryPass,disabledMatchesTarget,referenceDiscovered:reference.discovered,candidateDiscovered:candidate?.discovered??null}))
+if(candidate && Object.values(overlappingSchemaMatches).some(v=>v===false) && opt['--strict-schemas']==='true')process.exitCode=1
 if(!referencePass || !disabledMatchesTarget || (candidate && !candidateBaseDiscoveryPass) || (candidate && !candidateMatches && opt['--allow-candidate-diff']!=='true'))process.exitCode=1
