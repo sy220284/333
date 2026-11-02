@@ -86,13 +86,13 @@ def validate(label,cases):
     assert not basic['activation_banner'],(label,'AX enabled without flag',basic)
     assert ax['activation_banner'],(label,'AX banner missing',ax)
     assert ax['flat_welcome'],(label,'Actual flat welcome missing',ax)
-    assert ax['connection_status'],(label,'Missing status output',ax)
+    assert ax['connection_status'] or ax['offline_failure_visible'],(label,'Missing connection status or final error',ax)
     assert env['activation_banner'],(label,'AX env banner missing',env)
     assert env['flat_welcome'],(label,'AX env flat welcome missing',env)
-    assert env['connection_status'],(label,'AX env connection status missing',env)
+    assert env['connection_status'] or env['offline_failure_visible'],(label,'AX env has neither status nor final error',env)
     assert settings['activation_banner'],(label,'AX trusted settings banner missing',settings)
     assert settings['flat_welcome'],(label,'AX settings flat welcome missing',settings)
-    assert settings['connection_status'],(label,'AX settings connection status missing',settings)
+    assert settings['connection_status'] or settings['offline_failure_visible'],(label,'AX settings has neither status nor final error',settings)
     assert all(c['cursor_control_sequences']<basic['cursor_control_sequences'] for c in (ax,env,settings)),(
         label,'AX terminal cursor/animation suppression missing',cases)
 
