@@ -62,7 +62,7 @@ export const MonitorTool=buildTool({
         decisionReason:{type:'other' as const,reason:'Monitor WebSocket network safety policy'}}}
       return {behavior:'ask' as const,
         message:`Monitor will open a WebSocket to ${input.ws.url}`,
-        decisionReason:{type:'other' as const,reason:'WebSocket outbound connection requires permission'}}}
+        decisionReason:{type:'other' as const,reason:'WebSocket outbound connection requires permission'}}
     }
     if (typeof input.command !== 'string') throw new Error('Monitor command missing after validation')
     return BashTool.checkPermissions({command:input.command,description:input.description,run_in_background:true},context)
