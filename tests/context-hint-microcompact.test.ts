@@ -141,7 +141,7 @@ describe('2.1.310 context_hint keep-recent microcompact', () => {
     })
     expect(result).not.toBeNull()
     expect(resultBlock(required(result).messages, 1).content).toBe(
-      EXTERNAL_ARTIFACT_PROVENANCE + '<persisted-output>output-call-0',
+      `${EXTERNAL_ARTIFACT_PROVENANCE}<persisted-output>output-call-0`,
     )
     expect(resultBlock(messages, 1).content).toBe(originalText)
     expect(getKeepRecentCandidates(required(result).messages, options).tokensSaved).toBe(0)

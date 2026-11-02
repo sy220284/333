@@ -30,7 +30,8 @@ describe('2.1.310 结构化Diff的TypeScript实现链路', () => {
       expect(lines?.length).toBeGreaterThan(0)
       // The renderer places ANSI colors between word-diff spans; inspect
       // the visible terminal text rather than ANSI-encoded byte adjacency.
-      const visibleDiff = Bun.stripANSI(lines!.join(''))
+      if (!lines) throw new Error('Expected ColorDiff to return rendered lines')
+      const visibleDiff = Bun.stripANSI(lines.join(''))
       expect(visibleDiff).toContain('old value')
       expect(visibleDiff).toContain('new value')
 

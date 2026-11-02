@@ -81,7 +81,7 @@ const disabledMatchesTarget = !disabledReference.initialTools.includes('ToolSear
 const referencePass=reference.exitCode===0&&reference.calls===2&&reference.result==='DISCOVERY_COMPLETE'&&foundOnTarget.every(n=>reference.discovered.includes(n))&&absentOnTarget.every(n=>!reference.discovered.includes(n))
 const candidateMatches=candidate?candidate.exitCode===reference.exitCode&&candidate.calls===reference.calls&&candidate.result===reference.result&&JSON.stringify(candidate.discovered)===JSON.stringify(reference.discovered):null
 const candidateBaseDiscoveryPass = candidate ? candidate.exitCode === 0 && candidate.calls === 2 && candidate.result === 'DISCOVERY_COMPLETE' && candidate.initialTools.includes('ToolSearch') && ['Bash', 'Read'].every(name => candidate.discovered.includes(name)) : null
-const stable = value => JSON.stringify(value,(key,v)=>
+const stable = value => JSON.stringify(value,(_key,v)=>
   v&&typeof v==='object'&&!Array.isArray(v)?
     Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b))):v)
 const overlappingSchemaMatches = candidate ? Object.fromEntries(candidate.discovered.filter(name => reference.discovered.includes(name)).map(name => [name, reference.deferredSchemas[name]?.input_schema !== undefined && candidate.deferredSchemas[name]?.input_schema !== undefined && stable(reference.deferredSchemas[name].input_schema) === stable(candidate.deferredSchemas[name].input_schema)])) : null

@@ -99,7 +99,7 @@ test('separate official, rebuilt and parity reports are required for M10 proof',
 })
 test('new upgrade groups extend the evidence list without a fixed 18-group cap', () => {
   const {coverage, audit, signoffs} = baseline()
-  const nextGroupId = 'G' + String(audit.groups.length + 1).padStart(2, '0')
+  const nextGroupId = `G${String(audit.groups.length + 1).padStart(2, '0')}`
   audit.groups.push({
     id: nextGroupId, name: '新增源码升级组',
     features: ['F001'], code: ['src/main.tsx'], tests: [],

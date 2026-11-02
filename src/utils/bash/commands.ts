@@ -1,4 +1,4 @@
-import { randomBytes } from 'crypto'
+import { randomBytes } from 'node:crypto'
 import type { ParseEntry } from 'shell-quote'
 import {
   type CommandPrefixResult,
