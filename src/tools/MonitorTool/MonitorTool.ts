@@ -16,8 +16,7 @@ const inputSchema = lazySchema(() => z.strictObject({
   command:z.string().optional().describe('Shell command or script. Each stdout line is an event; exit ends the watch.'),
   ws:z.object({url:z.string(),protocols:z.array(z.string()).optional()}).optional()
     .describe('WebSocket text frames are events; socket close ends the watch.'),
-  timeout_ms:z.number().int().min(1000).max(3600000).optional().default(300000),
-  persistent:z.boolean().optional().default(false),
+  timeout_ms:z.number().int().min(1000).max(3600000).default(300000),
 }).refine(v=>(v.command!==undefined)!==(v.ws!==undefined),'exactly one of command or ws'))
 type InputSchema=ReturnType<typeof inputSchema>
 const outputSchema=lazySchema(()=>z.object({
@@ -37,7 +36,7 @@ export const MonitorTool=buildTool({
   maxResultSizeChars:10000,shouldDefer:true,enablesCodeExecution:true,
   userFacingName(){return 'Monitor'},
   async description(){return 'Watch a command or WebSocket in the background with notifications; use TaskStop to stop it.'},
-  async prompt(){return 'Specify command or ws, not both. Each stdout line or WebSocket frame generates a notification. Default timeout 300000ms; persistent runs until TaskStop or session end.'},
+  async prompt(){return 'Specify command or ws, not both. Each stdout line or WebSocket frame generates a notification. Default timeout 300000ms; deadlines above 600000ms are capped to 600000ms.'},
   get inputSchema():InputSchema{return inputSchema()},
   get outputSchema():OutputSchema{return outputSchema()},
   isEnabled(){return true},
@@ -62,19 +61,28 @@ export const MonitorTool=buildTool({
     return BashTool.checkPermissions({command:input.command!,description:input.description,run_in_background:true},context)
   },
   async call(input,context){
-    const timeoutMs=input.persistent?0:input.timeout_ms
+    // The 2.1.310 public schema accepts up to 3,600,000ms but caps
+    // actual monitor deadlines at 600,000ms.
+    const timeoutMs=Math.min(input.timeout_ms,600000)
     if(input.ws){
       const id=await startWebSocketMonitor({url:input.ws.url,protocols:input.ws.protocols,
-        description:input.description,timeoutMs:input.timeout_ms,persistent:input.persistent},
+        description:input.description,timeoutMs,persistent:false},
         {setAppState:context.setAppStateForTasks??context.setAppState,toolUseId:context.toolUseId})
-      return {data:{taskId:id,timeoutMs,persistent:input.persistent}}
+      return {data:{taskId:id,timeoutMs,persistent:false}}
     }
     const {abortController,getAppState}=context
     const setAppState=context.setAppStateForTasks??context.setAppState
     let taskId:string|undefined
     let lastOutput='',buffered=''
+    const pendingLines:string[]=[]
+    const emitLine=(line:string)=>{
+      if(!line.trim())return
+      if(!taskId){pendingLines.push(line);return}
+      enqueuePendingNotification({mode:'task-notification',priority:'next',
+        value:`Monitor "${input.description}" [task ${taskId}]: ${line}`})
+    }
     const shell=await exec(input.command!,abortController.signal,'bash',{
-      timeout:input.persistent?2147483647:input.timeout_ms,
+      timeout:timeoutMs,
       shouldUseSandbox:shouldUseSandbox({command:input.command!,description:input.description}),
       onProgress(_last,all){
         const full=typeof all==='string'?all:''
@@ -83,9 +91,7 @@ export const MonitorTool=buildTool({
         let next
         while((next=buffered.indexOf('\n'))>=0){
           const line=buffered.slice(0,next);buffered=buffered.slice(next+1)
-          if(!line.trim()||!taskId)continue
-          enqueuePendingNotification({mode:'task-notification',priority:'next',
-            value:`Monitor "${input.description}" [task ${taskId}]: ${line}`})
+          emitLine(line)
         }
       },
     })
@@ -93,17 +99,23 @@ export const MonitorTool=buildTool({
       shellCommand:shell,toolUseId:context.toolUseId,agentId:context.agentId,kind:'monitor'},
       {abortController,getAppState,setAppState})
     taskId=handle.taskId
-    if(!input.persistent){
+    // Very short commands can finish before spawnShellTask returns its task ID.
+    // Publish their buffered lines after registration instead of dropping them.
+    for(const line of pendingLines)emitLine(line)
+    pendingLines.length=0
+    void shell.result.then(()=>{if(buffered){emitLine(buffered);buffered=''}},
+      ()=>{if(buffered){emitLine(buffered);buffered=''}})
+    {
       const timer=setTimeout(()=>{
         if(getAppState().tasks[handle.taskId]?.status!=='running')return
         void stopTask(handle.taskId,{getAppState,setAppState}).catch(e=>
           enqueuePendingNotification({mode:'task-notification',priority:'next',
             value:`Monitor "${input.description}" could not stop at deadline: ${String(e)}`}))
-      },input.timeout_ms)
+      },timeoutMs)
       timer.unref?.()
-      void shell.result.finally(()=>clearTimeout(timer))
+      void shell.result.then(()=>clearTimeout(timer),()=>clearTimeout(timer))
     }
-    return {data:{taskId:handle.taskId,timeoutMs,persistent:input.persistent}}
+    return {data:{taskId:handle.taskId,timeoutMs,persistent:false}}
   },
   mapToolResultToToolResultBlockParam(data:Output,toolUseID:string){
     const duration=data.persistent?'persistent — runs until TaskStop or session end':
