@@ -2878,6 +2878,7 @@ async function run(): Promise<CommanderCommand> {
         outputFormat: outputFormat,
         jsonSchema,
         permissionPromptToolName: options.permissionPromptTool,
+        permissionPrompts: (options as { permissionPrompts?: 'host' | 'none' }).permissionPrompts ?? 'host',
         allowedTools,
         thinkingConfig,
         maxTurns: options.maxTurns,
@@ -3857,6 +3858,8 @@ async function run(): Promise<CommanderCommand> {
   // 2.1.310 options with functional consumers in this source tree.
   program.option('--restricted', 'Restrict command execution, WebFetch and untrusted settings unless explicitly authorized');
   program.option('--safe-mode', 'Ignore non-managed customizations and run with built-in features');
+  program.addOption(new Option('--permission-prompts <target>', 'Who answers permission prompts: host or none')
+    .choices(['host', 'none']).default('host'));
   program.addOption(new Option('--prompt-suggestions [value]', 'Enable prompt suggestions (stream-json print mode)')
     .argParser(value => parsePromptSuggestions(value)).preset(true));
 
