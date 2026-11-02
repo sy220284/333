@@ -8,6 +8,7 @@ on:
       - 'build/upgrade-coverage.mjs'
       - 'docs/upgrade/m1-evidence/**'
       - 'docs/upgrade/upgrade-coverage.json'
+      - 'docs/upgrade/v4-功能任务责任表.json'
       - 'docs/upgrade/2.1.310-*.md'
       - 'tests/m1-verify.test.mjs'
       - 'tests/m1-privacy-settings.test.mjs'
