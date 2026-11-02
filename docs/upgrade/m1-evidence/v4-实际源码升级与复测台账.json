@@ -198,6 +198,65 @@
       "evidence_run": 41386250482,
       "validation": "SOURCE_IMPLEMENTED",
       "scope": "SDK option and event producer wired; spawn behavior needs explicit approval and full multi-agent tests before signoff"
+    },
+    {
+      "name": "Spinner提示卡片命令可用性、后端适配、优先级与展示次数",
+      "features": [
+        "F009"
+      ],
+      "task": "M5",
+      "source": [
+        "src/services/tips/tipEligibility.mjs",
+        "src/services/tips/tipEligibility.d.mts",
+        "src/services/tips/tipRegistry.ts",
+        "src/services/tips/tipScheduler.ts",
+        "src/services/tips/tipHistory.ts",
+        "src/utils/config.ts"
+      ],
+      "commits": [
+        "c64a9d09",
+        "d0ccf6af",
+        "81f7f2e8",
+        "3e386d75",
+        "994d7686",
+        "95d34bd1",
+        "465a8df3"
+      ],
+      "tests": [
+        "tests/m1-spinner-tips.test.mjs"
+      ],
+      "target_anchors": [
+        "chunk-akrpc6v9.js:155-175"
+      ],
+      "validation": "WAITING_CI",
+      "scope": "新版source确认候选过滤与失败标记；实际Spinner出现及组织/强制覆盖需要原版UI运行对照，未签收。"
+    },
+    {
+      "name": "2.1.277后TaskOutput退场并由Read获取后台文件",
+      "features": [
+        "F062"
+      ],
+      "task": "M3/M4",
+      "source": [
+        "src/tools.ts",
+        "src/components/agents/ToolSelector.tsx",
+        "src/screens/Doctor.tsx"
+      ],
+      "commits": [
+        "b1e11e9a",
+        "ef918094",
+        "d53d9f3d"
+      ],
+      "tests": [
+        "tests/m1-taskoutput-retirement.test.mjs",
+        "tests/upgrade-mode-integration.test.mjs"
+      ],
+      "target_anchors": [
+        "2.1.277#069",
+        "chunk-pp7zwndm.js:2215"
+      ],
+      "validation": "WAITING_CI",
+      "scope": "主工具注册、UI选择器及过时环境变量诊断已更新；旧类保留用于历史协议兼容，当前重建版的实际模型请求及官方并排运行须由新构建验证。"
     }
   ],
   "remaining_confirmed_cli_cases": [
@@ -215,5 +274,7 @@
   ],
   "source_commit_with_successful_3_os_build": "b650a1a060c96adb6ad4abcf0c3ebd497602646a",
   "original_cli_parity_run": 41384836175,
-  "upcoming_head_requires_ci": true
+  "upcoming_head_requires_ci": true,
+  "latest_upgrade_commit": "d53d9f3d",
+  "notes_latest": "按照正式v4先落实已证实版本差异。已写入提示筛选和TaskOutput退场，但新提交 CI 尚未完成，严格区分代码实现/实际对照。"
 }
