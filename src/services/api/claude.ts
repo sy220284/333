@@ -1404,7 +1404,10 @@ async function* queryModel(
     if (mode === 'on') {
       const sessionId = getSessionId()
       if (sessionId) {
-        const compact = [...messages].reverse().find(message => message.type === 'user' && message.isCompactSummary)
+        const compact = [...messages].reverse().find(
+          (message): message is Extract<Message, { type: 'user' }> =>
+            message.type === 'user' && Boolean(message.isCompactSummary),
+        )
         const revision = compact
           ? createHash('sha256').update(JSON.stringify(compact.message)).digest('hex')
           : 'initial'
