@@ -33,7 +33,7 @@ import type { CanUseToolFn } from './hooks/useCanUseTool.js'
 import { loadMemoryPrompt } from './memdir/memdir.js'
 import { hasAutoMemPathOverride } from './memdir/paths.js'
 import { query } from './query.js'
-import { categorizeRetryableAPIError } from './services/api/errors.js'
+import { categorizeRetryableAPIError, isPromptTooLongMessage } from './services/api/errors.js'
 import type { MCPServerConnection } from './services/mcp/types.js'
 import type { AppState } from './state/AppState.js'
 import { type Tools, type ToolUseContext, toolMatchesName } from './Tool.js'
@@ -1125,6 +1125,8 @@ export class QueryEngine {
     // Extract the text result based on message type
     let textResult = ''
     let isApiError = false
+    let promptTooLong = false
+    let apiErrorStatus: number | undefined
 
     if (result.type === 'assistant') {
       const lastContent = last(result.message.content)
@@ -1135,13 +1137,21 @@ export class QueryEngine {
         textResult = lastContent.text
       }
       isApiError = Boolean(result.isApiErrorMessage)
+      promptTooLong = isApiError && isPromptTooLongMessage(result)
+      if (promptTooLong) {
+        // The SDK carries the original HTTP status in errorDetails. Keep 400
+        // and 413 distinct for callers diagnosing context-window failures.
+        const status = result.errorDetails?.match(/(?:^|\D)(400|413)(?:\D|$)/)?.[1]
+        apiErrorStatus = status ? Number(status) : undefined
+      }
     }
 
     yield {
       type: 'result',
       subtype: 'success',
       is_error: isApiError,
-      terminal_reason: isApiError ? 'api_error' : 'completed',
+      terminal_reason: promptTooLong ? 'prompt_too_long' : isApiError ? 'api_error' : 'completed',
+      ...(apiErrorStatus !== undefined && { api_error_status: apiErrorStatus }),
       duration_ms: Date.now() - startTime,
       duration_api_ms: getTotalAPIDuration(),
       num_turns: turnCount,
