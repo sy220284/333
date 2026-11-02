@@ -359,14 +359,29 @@ export const NotebookEditTool = buildTool({
       ? notebook_path
       : resolve(getCwd(), notebook_path)
 
+    // Deny remote UNC paths before resolving the lock key or touching the FS.
+    // A direct tool call must be safe even if validation was bypassed.
+    if (isUncNotebookPath(notebook_path)) {
+      return {
+        data: {
+          new_source,
+          cell_type: cell_type ?? 'code',
+          language: 'python',
+          edit_mode: originalEditMode ?? 'replace',
+          error: 'UNC notebook paths are not supported.',
+          cell_id,
+          notebook_path: fullPath,
+          original_file: '',
+          updated_file: '',
+        },
+      }
+    }
+
     // Capture the caller's view before waiting on the per-file transaction.
     // A second queued edit must not borrow the first edit's refreshed Read state.
     const observedReadState = readFileState.get(fullPath)
     return withNotebookFileLock(fullPath, async () => {
     try {
-      if (isUncNotebookPath(notebook_path)) {
-        throw new Error('UNC notebook paths are not supported.')
-      }
       if (readFileState.get(fullPath) !== observedReadState) {
         throw new Error(
           'Notebook changed during a concurrent edit. Read it again before editing.',
