@@ -146,7 +146,7 @@ jobs:
           echo "待核实文件数: ${#changed[@]}"
           if (( ${#changed[@]} )); then
             set +e
-            tools/dev/node_modules/.bin/biome lint --write --no-errors-on-unmatched "${changed[@]}"
+            tools/dev/node_modules/.bin/biome lint --write --unsafe --only=lint/style/useTemplate --no-errors-on-unmatched "${changed[@]}"
             rc=$?
             set -e
             echo "Biome 自动修复后的退出码: $rc"
