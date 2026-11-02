@@ -135,5 +135,6 @@ writeFileSync(resolve(args['--report']), JSON.stringify(result, null, 2) + '\n')
 console.log(JSON.stringify({
   reference_passed: result.reference_passed, candidate_passed: result.candidate_passed,
   official_request_counts: reference.map(s => s.calls.length), candidate_request_counts: candidate?.map(s => s.calls.length) ?? null,
+  candidate_cases: candidate?.map(s => ({kind:s.kind,pass:s.pass,calls:s.calls,first:s.first,second:s.second})) ?? null,
 }))
 if (!result.reference_passed || (candidate && !result.candidate_passed && args['--allow-candidate-diff'] !== 'true')) process.exitCode = 1
