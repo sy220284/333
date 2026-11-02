@@ -24,6 +24,19 @@ test('DOM text is flattened and decorative ANSI omitted',()=>{
  assert.equal(accessibleOutputDelta('a\nb','a\nb\nc'),'\nc\n')
  assert.equal(accessibleOutputDelta('a\nb','a\nnew'),'new\n')
 })
+test('logo model, billing and working directory remain separate spoken lines',()=>{
+ const box={nodeName:'ink-box',childNodes:[
+  {nodeName:'ink-text',childNodes:[
+   {nodeName:'#text',nodeValue:'Claude Code '},
+   {nodeName:'ink-text',childNodes:[{nodeName:'#text',nodeValue:'v2.1.310'}]},
+  ]},
+  {nodeName:'ink-text',childNodes:[{nodeName:'#text',nodeValue:'Sonnet 4.6 · API Usage Billing'}]},
+  {nodeName:'ink-text',childNodes:[{nodeName:'#text',nodeValue:'~/project'}]},
+ ]}
+ assert.equal(flattenAccessibleTree({nodeName:'ink-root',childNodes:[box]}),
+  'Claude Code v2.1.310\nSonnet 4.6 · API Usage Billing\n~/project')
+})
+
 test('CLI, settings and actual Ink rendering are connected',async()=>{
  const source=path=>readFile(new URL('../'+path,import.meta.url),'utf8')
  const [cli,settings,ink,gate]=await Promise.all([
