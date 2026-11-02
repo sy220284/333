@@ -278,9 +278,7 @@ function StopHookSummaryMessage(t0) {
   }
   const totalDurationMs = t1;
   if (hookErrors.length === 0 && !preventedContinuation && !message.hookLabel) {
-    if (true) {
-      return null;
-    }
+    return null;
   }
   let t2;
   if ($[3] !== totalDurationMs) {
