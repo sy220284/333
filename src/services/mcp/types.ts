@@ -160,6 +160,21 @@ export type McpClaudeAIProxyServerConfig = z.infer<
 >
 export type McpServerConfig = z.infer<ReturnType<typeof McpServerConfigSchema>>
 
+/**
+ * Narrow an MCP server config to the stdio transport, including the legacy
+ * omitted-type form. Check the actual executable contract (command string)
+ * before downstream callers read stdio-only fields.
+ */
+export function isMcpStdioServerConfig(
+  config: McpServerConfig,
+): config is McpStdioServerConfig {
+  return (
+    (config.type === undefined || config.type === 'stdio') &&
+    'command' in config &&
+    typeof config.command === 'string'
+  )
+}
+
 export type ScopedMcpServerConfig = McpServerConfig & {
   scope: ConfigScope
   // For plugin-provided servers: the providing plugin's LoadedPlugin.source
