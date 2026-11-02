@@ -169,3 +169,10 @@ test('远程会话、差异查看和代理向导的中文提示', () => {
   assert.match(read('src/components/agents/new-agent-creation/wizard-steps/PromptStep.tsx'), /系统提示词/)
   assert.match(read('src/components/agents/new-agent-creation/wizard-steps/MemoryStep.tsx'), /不保存长期记忆/)
 })
+
+test('MCP 服务器、钩子和监控权限提示为中文', () => {
+  assert.match(read('src/components/mcp/MCPListPanel.tsx'), /管理 MCP 服务器/)
+  assert.match(read('src/components/mcp/MCPToolDetailView.tsx'), /工具名称/)
+  assert.match(read('src/components/hooks/ViewHookMode.tsx'), /钩子详情/)
+  assert.match(read('src/components/permissions/MonitorPermissionRequest/MonitorPermissionRequest.tsx'), /后台监控与通知/)
+})

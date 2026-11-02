@@ -14,12 +14,12 @@ export function MonitorPermissionRequest({toolUseConfirm,onDone,onReject}:Permis
    onDone()
  }
  useInput((value,key)=>{if(value==='y'&&target)approve();else if(value==='n'||key.escape)reject()})
- return <Dialog title="Approve Monitor" subtitle="Background monitoring and notifications" onCancel={reject} color="permission">
+ return <Dialog title="批准监控" subtitle="后台监控与通知" onCancel={reject} color="permission">
    <Box flexDirection="column" gap={1}>
-     <Text bold>{command?'Shell command':'WebSocket destination'}:</Text>
-     {target?<Text wrap="wrap">{target}</Text>:<Text color="error">No monitor source specified.</Text>}
-     <Text>Maximum runtime: {String(input.timeout_ms??300000)}ms (600000ms effective cap)</Text>
-     <Text dimColor>y · Approve once     n/Esc · Reject</Text>
+     <Text bold>{command?'Shell 命令':'WebSocket 地址'}:</Text>
+     {target?<Text wrap="wrap">{target}</Text>:<Text color="error">未指定监控来源。</Text>}
+     <Text>最长运行时间：{String(input.timeout_ms??300000)}ms (600000ms effective cap)</Text>
+     <Text dimColor>y · 本次允许     n/Esc · 拒绝</Text>
    </Box>
  </Dialog>
 }
