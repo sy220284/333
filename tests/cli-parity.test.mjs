@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { test } from 'node:test';
 
 const root = resolve(import.meta.dirname, '..');
+const targetVersion=JSON.parse(readFileSync(resolve(root,'package.json'),'utf8')).version;
 const original = resolve(root, 'cli.js');
 const compiled = resolve(root, 'dist/cli.js');
 
@@ -47,9 +49,9 @@ function sections(output) {
   }
   return {flags:[...new Set(flags)].sort(),commands:[...new Set(commands)].sort()};
 }
-test('identical product version from original and rebuilt source', () => {
-  assert.equal(compiledHelp(['--version']), originalHelp(['--version']));
-  assert.match(compiledHelp(['--version']), /2\.1\.88 \(Claude Code\)/);
+test('rebuilt CLI uses target version while original source is retained as old baseline', () => {
+  assert.equal(compiledHelp(['--version']).trim(), `${targetVersion} (Claude Code)`);
+  assert.equal(originalHelp(['--version']).trim(), '2.1.88 (Claude Code)');
 });
 for (const args of [
   ['--help'], ['auth','--help'], ['auth','login','--help'], ['mcp','--help'],
