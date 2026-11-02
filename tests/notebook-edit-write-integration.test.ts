@@ -18,11 +18,17 @@ const makeNotebook = () => ({
 // keep imports after disabling checkpointing to preserve production behavior.
 test('actual NotebookEditTool validates, edits, inserts and deletes cells on disk', async () => {
   const previous = process.env.CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING
+  const originalRemovalFlag = process.env.CLAUDE_CODE_AUTO_MODE_EDIT_REMOVAL
   process.env.CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING = '1'
+  process.env.CLAUDE_CODE_AUTO_MODE_EDIT_REMOVAL = '0'
   const dir = mkdtempSync(join(tmpdir(), 'm1-notebook-'))
   const notebook_path = join(dir, 'real.ipynb')
   try {
     const { NotebookEditTool } = await import('../src/tools/NotebookEditTool/NotebookEditTool.ts')
+    expect(NotebookEditTool.toAutoClassifierInput({
+      notebook_path, cell_id: 'cell-0', new_source: 'print(2)',
+    })).toBe(`${notebook_path} replace: print(2)`)
+    process.env.CLAUDE_CODE_AUTO_MODE_EDIT_REMOVAL = '1'
     expect(NotebookEditTool.toAutoClassifierInput({
       notebook_path, cell_id: 'cell-0', new_source: 'print(2)',
     })).toEqual({
@@ -96,5 +102,7 @@ test('actual NotebookEditTool validates, edits, inserts and deletes cells on dis
     rmSync(dir, { recursive: true, force: true })
     if (previous === undefined) delete process.env.CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING
     else process.env.CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING = previous
+    if (originalRemovalFlag === undefined) delete process.env.CLAUDE_CODE_AUTO_MODE_EDIT_REMOVAL
+    else process.env.CLAUDE_CODE_AUTO_MODE_EDIT_REMOVAL = originalRemovalFlag
   }
 }, 30_000)
