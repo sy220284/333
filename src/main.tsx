@@ -20,6 +20,7 @@ import { ensureKeychainPrefetchCompleted, startKeychainPrefetch } from './utils/
 startKeychainPrefetch();
 import { feature } from 'bun:bundle';
 import { parseFallbackModels } from './services/api/fallbackModels.mjs';
+import { isScreenReaderEnabled, getScreenReaderSubprocessEnvironment } from './utils/accessibility/screenReaderRuntime.js';
 import { parsePromptSuggestions, restrictedToolDenyList } from './services/cli/upgradeMode.mjs';
 import { resolveCloudTarget, validateCloudEnvironment } from './services/cli/cloudTarget.mjs';
 import { parseAutoCompactWindowOption } from './services/api/autoCompactWindow.mjs';
@@ -2306,6 +2307,11 @@ async function run(): Promise<CommanderCommand> {
     let getFpsMetrics!: () => FpsMetrics | undefined;
     let stats!: StatsStore;
 
+    // A CLI flag or trusted user setting must follow child CLI sessions too.
+    // Project/local settings cannot enable this mode (screenReaderRuntime).
+    if (isScreenReaderEnabled()) {
+      Object.assign(process.env, getScreenReaderSubprocessEnvironment());
+    }
     // Show setup screens after commands are loaded
     if (!isNonInteractiveSession) {
       const ctx = getRenderContext(false);
