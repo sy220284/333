@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import assert from 'node:assert/strict'
-import { buildAgentListing, listReachableTeammates } from '../src/tools/ListAgentsTool/peerListing.mjs'
+import { buildAgentListing, hideTeammateNamesInSubagents, listReachableTeammates } from '../src/tools/ListAgentsTool/peerListing.mjs'
 import { peerRef, listLiveLocalPeers, resolveLocalPeerAddress } from '../src/utils/livePeerSessions.mjs'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const source = path => readFile(resolve(root, path), 'utf8')
@@ -104,4 +104,20 @@ test('ListPeers legacy loader is removed while ListAgents remains registered',as
  const tools=await source('src/tools.ts')
  assert.match(tools,/ListAgentsTool,/)
  assert.doesNotMatch(tools,/const ListPeersTool = feature\('UDS_INBOX'\)/)
+})
+
+test('in-process teammate task status wins over stale team-roster status', () => {
+ const live={agent001:{name:'editor',agentType:'worker',status:'running'}}
+ const tasks={task42:{type:'in_process_teammate',identity:{agentId:'agent001'},isIdle:true,status:'running'}}
+ const agents=listReachableTeammates({members:[{name:'editor',status:'completed'}]},'lead',live,tasks)
+ assert.deepEqual(agents,[{name:'editor',to:'editor',channel:'team',type:'worker',status:'idle'}])
+})
+test('a teammate does not repeat as a named local subagent', async () => {
+ const subagents=[{id:'task_one',name:'editor',status:'running'},{id:'task_two',name:'solo',status:'running'}]
+ const cleaned=hideTeammateNamesInSubagents(subagents,{agent001:{name:'editor'}})
+ assert.deepEqual(cleaned,[{id:'task_one',name:undefined,status:'running'},subagents[1]])
+ assert.match(buildAgentListing({subagents:cleaned,teammates:[{name:'editor'}]}).listing,/task_one/)
+ const sourceCode=await source('src/tools/ListAgentsTool/ListAgentsTool.ts')
+ assert.match(sourceCode,/hideTeammateNamesInSubagents\(subagents, state\.teamContext\?\.teammates\)/)
+ assert.match(sourceCode,/listReachableTeammates\(teamFile, selfName, state\.teamContext\?\.teammates, state\.tasks\)/)
 })
