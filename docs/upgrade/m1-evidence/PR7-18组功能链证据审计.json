@@ -134,11 +134,14 @@
         "F098"
       ],
       "code": [
-        "src/entrypoints/sdk/streamEventMapper.ts"
+        "src/entrypoints/sdk/streamEventMapper.ts",
+        "src/services/mcp/validateSdkTransportMessage.ts",
+        "src/cli/print.ts"
       ],
       "tests": [
         "build/m1-sdk-stream-wire-parity.mjs",
-        "tests/m1-sdk-stream-mapping.test.mjs"
+        "tests/m1-sdk-stream-mapping.test.mjs",
+        "tests/m1-sdk-mcp-message-validation.test.ts"
       ],
       "stage": "SPECIAL_CI",
       "acceptance": "UNVERIFIED",
@@ -151,6 +154,19 @@
         "result": "SDK stream event source comparison CI passed, UUID argument contract aligned",
         "workflow": "https://github.com/sy220284/333/actions/runs/41463433408",
         "acceptance": "UNVERIFIED"
+      },
+      "sdk_mcp_transport_evidence": {
+        "reference": "2.1.310",
+        "commits": [
+          "ee52d670",
+          "94f30db",
+          "56df941a",
+          "ef892179",
+          "2d1c728"
+        ],
+        "ci_run": "https://github.com/sy220284/333/actions/runs/41465584519",
+        "ci_result": "PASS_FULL_SDK_STREAM_X64_PARITY_AND_MCP_JSONRPC_CONTRACT_UNIT_TEST",
+        "remaining": "SDK→MCP独立官方协议实际交互的所有连接、取消、重连场景仍需M10签收"
       }
     },
     {
@@ -371,14 +387,16 @@
       ],
       "code": [
         "src/entrypoints/mcp.ts",
-        "src/entrypoints/mcpInputValidation.ts"
+        "src/entrypoints/mcpInputValidation.ts",
+        "src/services/mcp/validateSdkTransportMessage.ts"
       ],
       "tests": [
-        "tests/m1-mcp-argument-validation.test.ts"
+        "tests/m1-mcp-argument-validation.test.ts",
+        "tests/m1-sdk-mcp-message-validation.test.ts"
       ],
       "stage": "SPECIAL_CI",
       "acceptance": "UNVERIFIED",
-      "remaining": "同官方2.1.310原版进行真实MCP客户端list/call权限、错误回复及各工具Schema矩阵对照",
+      "remaining": "完整真实MCP客户端连接、插件服务的参数与权限矩阵、异常、取消、重连和原版对照仍未完成",
       "closed_gap_evidence": {
         "scope": "MCP server calls validate strict real tool input schemas before tool permission or execution",
         "commits": [
@@ -390,7 +408,9 @@
         ],
         "focused_ci": "https://github.com/sy220284/333/actions/runs/41463433508",
         "ci_result": "PASS_MCP_ARGUMENT_VALIDATION_STEP",
-        "boundary": "Unit tests of invalid and valid schema inputs pass; end-to-end official candidate MCP parity awaits M10"
+        "boundary": "Unit tests of invalid and valid schema inputs pass; end-to-end official candidate MCP parity awaits M10",
+        "mcp_transport_ci": "https://github.com/sy220284/333/actions/runs/41465584519",
+        "mcp_transport_ci_result": "PASS_JSONRPC_MESSAGE_VALIDATION_AND_SDK_X64_STREAM_PARITY"
       }
     }
   ],
