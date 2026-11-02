@@ -1,7 +1,7 @@
 import { readdir,readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { workflowMeta } from './workflowRuntime.mjs'
-export async function listWorkflowFiles(cwd){
+export async function listWorkflowFiles(cwd,{onError}={}){
  const dir=join(cwd,'.claude','workflows')
  let entries
  try{entries=await readdir(dir,{withFileTypes:true})}
@@ -10,9 +10,14 @@ export async function listWorkflowFiles(cwd){
  for(const entry of entries){
   if(!entry.isFile()||!(/\.(mjs|js)$/.test(entry.name)))continue
   const file=join(dir,entry.name)
-  const script=await readFile(file,'utf8')
-  const meta=workflowMeta(script)
-  commands.push({name:meta.name,description:meta.description,file})
+  try{
+    const script=await readFile(file,'utf8')
+    const meta=workflowMeta(script)
+    commands.push({name:meta.name,description:meta.description,file})
+  }catch(error){
+    if(!onError)throw error
+    onError({file,error})
+  }
  }
  return commands.sort((a,b)=>a.name.localeCompare(b.name))
 }
