@@ -5,28 +5,13 @@ import {
 } from '../analytics/index.js'
 import { getSessionsSinceLastShown, recordTipShown } from './tipHistory.js'
 import { getRelevantTips } from './tipRegistry.js'
+import { selectLongestUnshown } from './tipEligibility.mjs'
 import type { Tip, TipContext } from './types.js'
 
 export function selectTipWithLongestTimeSinceShown(
   availableTips: Tip[],
 ): Tip | undefined {
-  if (availableTips.length === 0) {
-    return undefined
-  }
-
-  if (availableTips.length === 1) {
-    return availableTips[0]
-  }
-
-  // Sort tips by sessions since last shown (descending) and take the first one
-  // This is the tip that hasn't been shown for the longest time
-  const tipsWithSessions = availableTips.map(tip => ({
-    tip,
-    sessions: getSessionsSinceLastShown(tip.id),
-  }))
-
-  tipsWithSessions.sort((a, b) => b.sessions - a.sessions)
-  return tipsWithSessions[0]?.tip
+  return selectLongestUnshown(availableTips, getSessionsSinceLastShown)
 }
 
 export async function getTipToShowOnSpinner(

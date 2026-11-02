@@ -716,7 +716,7 @@ export async function getRelevantTips(context?: TipContext): Promise<Tip[]> {
     offeredCommands ??= import('../../commands.js')
       .then(module => module.getCommands(getOriginalCwd()))
       .then(commands => new Set(commands.flatMap(cmd => [cmd.name, ...(cmd.aliases ?? [])])))
-    return (await offeredCommands).has(name.replace(/^\\//, ''))
+    return (await offeredCommands).has(name.startsWith('/') ? name.slice(1) : name)
   }
   const isFirstPartyBackend = getAPIProvider() === 'firstParty' &&
     isFirstPartyAnthropicBaseUrl()
