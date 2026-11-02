@@ -86,7 +86,8 @@ export function parseSedEditCommand(command: string): SedEditInfo | null {
 
   let i = 0
   while (i < args.length) {
-    const arg = args[i]!
+    const arg = args[i]
+    if (arg === undefined) return null
 
     // Handle -i flag (with or without backup suffix)
     if (arg === '-i' || arg === '--in-place') {
@@ -111,10 +112,11 @@ export function parseSedEditCommand(command: string): SedEditInfo | null {
 
     // Handle -e flag with expression
     if (arg === '-e' || arg === '--expression') {
-      if (i + 1 < args.length && typeof args[i + 1] === 'string') {
+      const nextArg = args[i + 1]
+      if (typeof nextArg === 'string') {
         // Only support single expression
         if (expression !== null) return null
-        expression = args[i + 1]!
+        expression = nextArg
         i += 2
         continue
       }
@@ -170,7 +172,7 @@ export function parseSedEditCommand(command: string): SedEditInfo | null {
   let j = 0
 
   while (j < rest.length) {
-    const char = rest[j]!
+    const char = rest.charAt(j)
 
     if (char === '\\' && j + 1 < rest.length) {
       // Escaped character
@@ -301,9 +303,9 @@ export function applySedSubstitution(
     let result = ''
     const template = sedInfo.replacement
     for (let i = 0; i < template.length; i++) {
-      const ch = template[i]!
+      const ch = template.charAt(i)
       if (ch === '\\' && i + 1 < template.length) {
-        const escaped = template[++i]!
+        const escaped = template.charAt(++i)
         result += escaped === 'n' ? '\n' : escaped
       } else {
         result += ch === '&' ? match : ch
