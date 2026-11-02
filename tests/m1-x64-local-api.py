@@ -142,7 +142,11 @@ def run_mode(binary, mode, scratch):
     assert all(request["model"] == MODEL for request in requests)
     assert all(request["stream"] is True for request in requests)
     if mode == "stream":
-        assert frames[0]["type"] == "system" and frames[0]["subtype"] == "init"
+        flow = [(frame.get("type"), frame.get("subtype")) for frame in frames]
+        init_at = flow.index(("system", "init"))
+        invalidated_at = flow.index(("system", "ui_invalidate"))
+        result_at = next(index for index, item in enumerate(flow) if item[0] == "result")
+        assert invalidated_at < init_at < result_at, flow
     if mode == "read":
         assert "Read" in requests[0]["tools"]
         result = requests[1]["results"]
