@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises'
-import { join, dirname, sep } from 'node:path'
+import { dirname, sep } from 'node:path'
 import { getSessionId, getOriginalCwd, getSessionProjectDir } from '../../bootstrap/state.js'
 import { createTaskStateBase, generateTaskId, type Task, type TaskStateBase, type SetAppState } from '../../Task.js'
 import type { ToolUseContext } from '../../Tool.js'
@@ -8,7 +8,7 @@ import { AgentTool } from '../../tools/AgentTool/AgentTool.js'
 import { executeWorkflowScript, validateWorkflowScript } from '../../tools/WorkflowTool/workflowRuntime.mjs'
 import { registerCleanup } from '../../utils/cleanupRegistry.js'
 import { getProjectDir } from '../../utils/sessionStorage.js'
-import { workflowRunDirectory, workflowSessionScripts, workflowPaths } from './workflowStoragePaths.mjs'
+import { workflowSessionScripts, workflowPaths } from './workflowStoragePaths.mjs'
 import { readWorkflowSummary, writeWorkflowSummary } from './workflowSummaryStore.mjs'
 import { enqueuePendingNotification } from '../../utils/messageQueueManager.js'
 import { registerTask, updateTaskState } from '../../utils/task/framework.js'
@@ -31,9 +31,6 @@ type Job={abort:AbortController,unregister:()=>void,runId:string,agents:Map<stri
 const active=new Map<string,Job>()
 function workflowProjectDir():string {
   return getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
-}
-function folder(runId:string):string {
-  return workflowRunDirectory(workflowProjectDir(),getSessionId(),runId)
 }
 function tell(id:string,message:string) {
   enqueuePendingNotification({mode:'task-notification',priority:'next',value:`Workflow task ${id}: ${message}`})
