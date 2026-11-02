@@ -14,22 +14,24 @@ const notebook = (minor = 5): NotebookContent => ({
 
 test('Notebook real cell ID takes precedence over a synthetic cell-N position', () => {
   const nb = notebook()
-  nb.cells[1]!.id = 'cell-0'
+  const aliasCell = nb.cells[1]
+  if (!aliasCell) throw new Error('Missing test cell')
+  aliasCell.id = 'cell-0'
   const result = applyNotebookEdit(nb, { cell_id: 'cell-0', new_source: '# New' })
   expect(result.cell_index).toBe(1)
   expect(result.cell_id).toBe('cell-0')
-  expect(nb.cells[0]!.source).toEqual(['print(1)\n'])
-  expect(nb.cells[1]!.source).toBe('# New')
+  expect(nb.cells[0]?.source).toEqual(['print(1)\n'])
+  expect(nb.cells[1]?.source).toBe('# New')
 })
 
 test('Notebook positional replacement preserves the actual stable cell ID', () => {
   const nb = notebook()
   const result = applyNotebookEdit(nb, { cell_id: 'cell-0', new_source: 'print(2)' })
   expect(result.cell_id).toBe('first')
-  expect(nb.cells[0]!.id).toBe('first')
-  expect(nb.cells[0]!.execution_count).toBeNull()
-  expect(nb.cells[0]!.outputs).toEqual([])
-  expect(nb.cells[0]!.metadata.tags).toEqual(['keep'])
+  expect(nb.cells[0]?.id).toBe('first')
+  expect(nb.cells[0]?.execution_count).toBeNull()
+  expect(nb.cells[0]?.outputs).toEqual([])
+  expect(nb.cells[0]?.metadata.tags).toEqual(['keep'])
 })
 
 test('Notebook insert after anchor yields unique nbformat 4.5 ID, keeping neighbor IDs', () => {
@@ -39,17 +41,17 @@ test('Notebook insert after anchor yields unique nbformat 4.5 ID, keeping neighb
   expect(nb.cells.map(c => c.id)).toEqual(['first', a.cell_id, b.cell_id, 'second'])
   expect(a.cell_id).toMatch(/^[\w-]{1,64}$/)
   expect(b.cell_id).not.toBe(a.cell_id)
-  expect(nb.cells[1]!.outputs).toEqual([])
-  expect(nb.cells[2]!.outputs).toBeUndefined()
+  expect(nb.cells[1]?.outputs).toEqual([])
+  expect(nb.cells[2]?.outputs).toBeUndefined()
 })
 
 test('Notebook insert at start and legacy 4.4 positional IDs', () => {
   const nb = notebook(4)
   const result = applyNotebookEdit(nb, { cell_type: 'markdown', new_source: 'start', edit_mode: 'insert' })
   expect(result.cell_id).toBe('cell-0')
-  expect(nb.cells[0]!.id).toBeUndefined()
-  expect(nb.cells[0]!.source).toBe('start')
-  expect(nb.cells[1]!.source).toEqual(['print(1)\n'])
+  expect(nb.cells[0]?.id).toBeUndefined()
+  expect(nb.cells[0]?.source).toBe('start')
+  expect(nb.cells[1]?.source).toEqual(['print(1)\n'])
 })
 
 test('Notebook code to markdown conversion drops stale outputs and execution count', () => {
@@ -58,15 +60,15 @@ test('Notebook code to markdown conversion drops stale outputs and execution cou
   expect(r.cell_type).toBe('markdown')
   expect(nb.cells[0]).not.toHaveProperty('outputs')
   expect(nb.cells[0]).not.toHaveProperty('execution_count')
-  expect(nb.cells[0]!.metadata).toEqual({ tags: ['keep'] })
+  expect(nb.cells[0]?.metadata).toEqual({ tags: ['keep'] })
 })
 
 test('Notebook markdown to code initializes executable fields', () => {
   const nb = notebook()
   applyNotebookEdit(nb, { cell_id: 'second', cell_type: 'code', new_source: 'value=1' })
-  expect(nb.cells[1]!.execution_count).toBeNull()
-  expect(nb.cells[1]!.outputs).toEqual([])
-  expect(nb.cells[1]!.cell_type).toBe('code')
+  expect(nb.cells[1]?.execution_count).toBeNull()
+  expect(nb.cells[1]?.outputs).toEqual([])
+  expect(nb.cells[1]?.cell_type).toBe('code')
 })
 
 test('Notebook delete reports the deleted cell and leaves the other intact', () => {
@@ -78,10 +80,12 @@ test('Notebook delete reports the deleted cell and leaves the other intact', () 
 
 test('Notebook raw cells remain valid when editing without converting', () => {
   const nb = notebook()
-  nb.cells[1]!.cell_type = 'raw'
+  const rawCell = nb.cells[1]
+  if (!rawCell) throw new Error('Missing test cell')
+  rawCell.cell_type = 'raw'
   const r = applyNotebookEdit(nb, { cell_id: 'second', new_source: 'raw data' })
   expect(r.cell_type).toBe('raw')
-  expect(nb.cells[1]!.source).toBe('raw data')
+  expect(nb.cells[1]?.source).toBe('raw data')
   expect(nb.cells[1]).not.toHaveProperty('outputs')
 })
 
