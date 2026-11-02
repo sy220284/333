@@ -177,6 +177,18 @@ export async function readNotebook(
     }
     return [processCell(cell, notebook.cells.indexOf(cell), language, true)]
   }
+  return processNotebookCellsForRead(notebook)
+}
+
+/**
+ * The Read tool stores this exact projection in readFileState. Reuse it from
+ * NotebookEdit instead of comparing against raw JSON (which is not what the
+ * model actually saw and may contain additional metadata).
+ */
+export function processNotebookCellsForRead(
+  notebook: NotebookContent,
+): NotebookCellSource[] {
+  const language = notebook.metadata?.language_info?.name ?? 'python'
   return notebook.cells.map((cell, index) =>
     processCell(cell, index, language, false),
   )
