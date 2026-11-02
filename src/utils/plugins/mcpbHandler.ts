@@ -1,7 +1,7 @@
-import type {
-  McpbManifest,
-  McpbUserConfigurationOption,
-} from '@anthropic-ai/mcpb'
+import type { McpbManifestAny } from '@anthropic-ai/mcpb'
+
+type McpbManifest = McpbManifestAny
+type McpbUserConfigurationOption = NonNullable<McpbManifest['user_config']>[string]
 import axios from 'axios'
 import { createHash } from 'crypto'
 import { chmod, writeFile } from 'fs/promises'
