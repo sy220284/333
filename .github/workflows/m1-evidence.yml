@@ -225,12 +225,12 @@ jobs:
             --allow-candidate-diff true \
             --require-candidate-cases "mcp_help,plugin_help,mcp_list_empty,plugin_list_empty,invalid_output,invalid_permission,json_without_login,stream_without_login" \
             --report "${RUNNER_TEMP}/m1-x64-current-differential.json"
-      - name: 用隔离本机API验证单轮413终止及两轮会话自动恢复
+      - name: 用隔离本机API严格验证单轮413终止及两轮会话自动恢复
         run: |
           node build/m1-413-recovery-probe.mjs \
             --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
-            --allow-candidate-diff true \
+            --allow-candidate-diff false \
             --report "${RUNNER_TEMP}/m1-413-recovery-differential.json"
       - name: 按v4把原版x64差异转换为源码修改责任和验收任务
         run: |
