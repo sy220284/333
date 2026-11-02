@@ -31,7 +31,24 @@ for(const reviewed of releaseReviews) {
             reviewed.related_F_confirmed.length>0);
   assert.ok(Array.isArray(reviewed.target_code_anchors) &&
             reviewed.target_code_anchors.length>0);
-  assert.ok(Array.isArray(reviewed.tests) && reviewed.tests.length>0);
+  // Source-only evidence is valid research but never counts as M1 acceptance.
+  const classified = reviewed.review_status === 'M1_CLASSIFIED';
+  assert.ok(classified ||
+    reviewed.review_status === 'TARGET_SOURCE_IDENTIFIED_PENDING_RUNTIME_TEST',
+    'Unknown source review status: '+reviewed.id);
+  assert.ok(Array.isArray(reviewed.tests), 'Tests must be an explicit array: '+reviewed.id);
+  assert.ok(Array.isArray(reviewed.implemented_source), 'Implementations must be an explicit array: '+reviewed.id);
+  if(classified) {
+    assert.ok(reviewed.tests.length>0,
+      'Classified release needs actual tests: '+reviewed.id);
+    assert.ok(reviewed.implemented_source.length>0,
+      'Classified release needs implementing source: '+reviewed.id);
+  } else {
+    assert.equal(reviewed.tests.length, 0,
+      'Pending source-only evidence must not claim completed tests: '+reviewed.id);
+    assert.equal(reviewed.implemented_source.length, 0,
+      'Pending source-only evidence must not claim product implementation: '+reviewed.id);
+  }
   for(const path of [...reviewed.implemented_source,...reviewed.tests]) {
     assert.ok(existsSync(join(root,path)), 'Missing implementation or test: '+path);
   }
