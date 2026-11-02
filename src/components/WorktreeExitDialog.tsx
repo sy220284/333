@@ -169,13 +169,13 @@ export function WorktreeExitDialog({
   if (status === 'keeping') {
     return <Box flexDirection="row" marginY={1}>
         <Spinner />
-        <Text>Keeping worktree…</Text>
+        <Text>正在保留工作树…</Text>
       </Box>;
   }
   if (status === 'removing') {
     return <Box flexDirection="row" marginY={1}>
         <Spinner />
-        <Text>Removing worktree…</Text>
+        <Text>正在移除工作树…</Text>
       </Box>;
   }
   const branchName = worktreeSession.worktreeBranch;
@@ -203,28 +203,28 @@ export function WorktreeExitDialog({
   const removeDescription = hasUncommitted || hasCommits ? 'All changes and commits will be lost.' : 'Clean up the worktree directory.';
   const hasTmuxSession = Boolean(worktreeSession.tmuxSessionName);
   const options = hasTmuxSession ? [{
-    label: 'Keep worktree and tmux session',
+    label: '保留工作树和 tmux 会话',
     value: 'keep-with-tmux',
-    description: `Stays at ${worktreeSession.worktreePath}. Reattach with: tmux attach -t ${worktreeSession.tmuxSessionName}`
+    description: `保留在 ${worktreeSession.worktreePath}。重新连接：tmux attach -t ${worktreeSession.tmuxSessionName}`
   }, {
-    label: 'Keep worktree, kill tmux session',
+    label: '保留工作树并终止 tmux 会话',
     value: 'keep-kill-tmux',
-    description: `Keeps worktree at ${worktreeSession.worktreePath}, terminates tmux session.`
+    description: `工作树保留在 ${worktreeSession.worktreePath}，并结束 tmux 会话。`
   }, {
-    label: 'Remove worktree and tmux session',
+    label: '移除工作树和 tmux 会话',
     value: 'remove-with-tmux',
     description: removeDescription
   }] : [{
-    label: 'Keep worktree',
+    label: '保留工作树',
     value: 'keep',
-    description: `Stays at ${worktreeSession.worktreePath}`
+    description: `保留在 ${worktreeSession.worktreePath}`
   }, {
-    label: 'Remove worktree',
+    label: '移除工作树',
     value: 'remove',
     description: removeDescription
   }];
   const defaultValue = hasTmuxSession ? 'keep-with-tmux' : 'keep';
-  return <Dialog title="Exiting worktree session" subtitle={subtitle} onCancel={handleCancel}>
+  return <Dialog title="正在退出工作树会话" subtitle={subtitle} onCancel={handleCancel}>
       <Select defaultFocusValue={defaultValue} options={options} onChange={handleSelect} />
     </Dialog>;
 }

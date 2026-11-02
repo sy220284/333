@@ -81,3 +81,9 @@ test('上下文用量页面各类项目均为中文', () => {
   assert.match(ui, /各类别用量估算/)
   assert.match(ui, /自定义代理/)
 })
+
+test('历史会话选择、代码回退和工作树退出中文化', () => {
+  assert.match(read('src/components/MessageSelector.tsx'), /恢复代码与对话/)
+  assert.match(read('src/components/LogSelector.tsx'), /恢复会话/)
+  assert.match(read('src/components/WorktreeExitDialog.tsx'), /正在退出工作树会话/)
+})
