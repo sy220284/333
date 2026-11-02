@@ -21,6 +21,7 @@ startKeychainPrefetch();
 import { feature } from 'bun:bundle';
 import { parseFallbackModels } from './services/api/fallbackModels.mjs';
 import { parsePromptSuggestions, restrictedToolDenyList } from './services/cli/upgradeMode.mjs';
+import { resolveCloudTarget, validateCloudEnvironment } from './services/cli/cloudTarget.mjs';
 import { parseAutoCompactWindowOption } from './services/api/autoCompactWindow.mjs';
 import { setCliAutoCompactWindow } from './services/compact/autoCompact.js';
 import { Command as CommanderCommand, InvalidArgumentError, Option } from '@commander-js/extra-typings';
@@ -1296,14 +1297,30 @@ async function run(): Promise<CommanderCommand> {
     }
 
     // Extract teleport option
-    const teleport = (options as {
+    let teleport = (options as {
       teleport?: string | true;
     }).teleport ?? null;
-
-    // Extract remote option (can be true if no description provided, or a string)
-    const remoteOption = (options as {
-      remote?: string | true;
-    }).remote;
+    const cloudFlag = (options as { cloud?: string | true }).cloud;
+    const cloudEnvironment = validateCloudEnvironment((options as { environment?: string }).environment);
+    if (cloudFlag !== undefined && restricted) {
+      throw new InvalidArgumentError('Cloud sessions cannot be created from a --restricted session');
+    }
+    if (cloudEnvironment && restricted) {
+      throw new InvalidArgumentError('--environment cannot be used from a --restricted session');
+    }
+    if (cloudFlag !== undefined && (options as { remote?: string | true }).remote !== undefined) {
+      throw new InvalidArgumentError('Use either --cloud or --remote for a session, not both');
+    }
+    const cloudTarget = cloudFlag !== undefined || cloudEnvironment !== undefined
+      ? resolveCloudTarget(cloudFlag, prompt)
+      : null;
+    const remoteOption = cloudTarget?.kind === 'create'
+      ? cloudTarget.description
+      : (options as { remote?: string | true }).remote;
+    if (cloudTarget?.kind === 'attach') {
+      if (cloudEnvironment) throw new InvalidArgumentError('--environment creates a new session; it cannot attach to an existing one');
+      teleport = cloudTarget.sessionId;
+    }
     const remote = remoteOption === true ? '' : remoteOption ?? null;
 
     // Extract --remote-control / --rc flag (enable bridge in interactive session)
@@ -3481,7 +3498,7 @@ async function run(): Promise<CommanderCommand> {
 
         // Pass current branch so CCR clones the repo at the right revision
         const currentBranch = await getBranch();
-        const createdSession = await teleportToRemoteWithErrorHandling(root, hasInitialPrompt ? remote : null, new AbortController().signal, currentBranch || undefined);
+        const createdSession = await teleportToRemoteWithErrorHandling(root, hasInitialPrompt ? remote : null, new AbortController().signal, currentBranch || undefined, cloudEnvironment);
         if (!createdSession) {
           logEvent('tengu_remote_create_session_error', {
             error: 'unable_to_create_session' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
@@ -3869,6 +3886,8 @@ async function run(): Promise<CommanderCommand> {
 
   // 2.1.310 options with functional consumers in this source tree.
   program.option('--restricted', 'Restrict command execution, WebFetch and untrusted settings unless explicitly authorized');
+  program.option('--cloud [description]', 'Create a cloud session or attach by session ID or claude.ai/code URL');
+  program.option('--environment <environment_id>', 'Create a session on the given self-hosted ccpool environment');
   program.option('--safe-mode', 'Ignore non-managed customizations and run with built-in features');
   program.addOption(new Option('--permission-prompts <target>', 'Who answers permission prompts: host or none')
     .choices(['host', 'none']).default('host'));
