@@ -4,7 +4,7 @@ import { FileEditToolDiff } from 'src/components/FileEditToolDiff.js'
 import { getCwd } from 'src/utils/cwd.js'
 import { isENOENT } from 'src/utils/errors.js'
 import { detectEncodingForResolvedPath } from 'src/utils/fileRead.js'
-import { getFsImplementation } from 'src/utils/fsOperations.js'
+import { getFsImplementation, safeResolvePath } from 'src/utils/fsOperations.js'
 import { Text } from '../../../ink.js'
 import { BashTool } from '../../../tools/BashTool/BashTool.js'
 import {
@@ -18,7 +18,7 @@ type SedEditPermissionRequestProps = PermissionRequestProps & {
   sedInfo: SedEditInfo
 }
 
-type FileReadResult = { oldContent: string; fileExists: boolean }
+type FileReadResult = { oldContent: string; fileExists: boolean; targetPath?: string }
 
 export function SedEditPermissionRequest({
   sedInfo,
@@ -35,11 +35,21 @@ export function SedEditPermissionRequest({
         // Detect encoding first (sync 4KB read — negligible) so UTF-16LE BOMs
         // render correctly. This matches what readFileSync did before the
         // async conversion.
-        const encoding = detectEncodingForResolvedPath(filePath)
-        const raw = await getFsImplementation().readFile(filePath, { encoding })
+        const fs = getFsImplementation()
+        const before = safeResolvePath(fs, filePath)
+        if (!before.isCanonical) {
+          throw new Error('Cannot safely resolve the sed preview file target.')
+        }
+        const encoding = detectEncodingForResolvedPath(before.resolvedPath)
+        const raw = await fs.readFile(filePath, { encoding })
+        const after = safeResolvePath(fs, filePath)
+        if (!after.isCanonical || before.resolvedPath !== after.resolvedPath) {
+          throw new Error('File target changed while generating the sed preview.')
+        }
         return {
           oldContent: raw.replaceAll('\r\n', '\n'),
           fileExists: true,
+          targetPath: before.resolvedPath,
         }
       })().catch((e: unknown): FileReadResult => {
         if (!isENOENT(e)) throw e
@@ -67,7 +77,7 @@ function SedEditPermissionRequestInner({
   contentPromise: Promise<FileReadResult>
 }): React.ReactNode {
   const { filePath } = sedInfo
-  const { oldContent, fileExists } = use(contentPromise)
+  const { oldContent, fileExists, targetPath } = use(contentPromise)
 
   // Compute the new content by applying the sed substitution
   const newContent = useMemo(() => {
@@ -106,6 +116,7 @@ function SedEditPermissionRequestInner({
         filePath,
         oldContent,
         newContent,
+        targetPath,
       },
     }
   }
