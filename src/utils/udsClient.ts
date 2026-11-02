@@ -27,3 +27,63 @@ export async function sendToUdsSocket(socketPath: string, message: string): Prom
     })
   })
 }
+
+/** Registry enumeration shared with --continue: excludes dead processes, not
+ * sessions lacking UDS (background workers can be registered without sockets).
+ */
+export async function listAllLiveSessions(): Promise<Array<{
+  pid: number
+  sessionId?: string
+  kind?: string
+  name?: string
+  messagingSocketPath?: string
+}>> {
+  const { readdir, readFile } = await import('node:fs/promises')
+  const { join } = await import('node:path')
+  const { getClaudeConfigHomeDir } = await import('./envUtils.js')
+  const directory = join(getClaudeConfigHomeDir(), 'sessions')
+  let names: string[]
+  try {
+    names = await readdir(directory)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
+    throw error
+  }
+  const sessions: Array<{
+    pid: number
+    sessionId?: string
+    kind?: string
+    name?: string
+    messagingSocketPath?: string
+  }> = []
+  for (const name of names) {
+    if (!/^\d+\.json$/.test(name)) continue
+    const pid = Number(name.slice(0, -5))
+    if (!Number.isSafeInteger(pid) || pid <= 1) continue
+    try {
+      process.kill(pid, 0)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EPERM') continue
+    }
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(await readFile(join(directory, name), 'utf8'))
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue
+      throw error
+    }
+    if (!parsed || typeof parsed !== 'object') continue
+    const row = parsed as Record<string, unknown>
+    if (row.pid !== pid) continue
+    sessions.push({
+      pid,
+      ...(typeof row.sessionId === 'string' ? { sessionId: row.sessionId } : {}),
+      ...(typeof row.kind === 'string' ? { kind: row.kind } : {}),
+      ...(typeof row.name === 'string' ? { name: row.name } : {}),
+      ...(typeof row.messagingSocketPath === 'string'
+        ? { messagingSocketPath: row.messagingSocketPath }
+        : {}),
+    })
+  }
+  return sessions
+}
