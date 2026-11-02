@@ -3,6 +3,7 @@ import type { CoordinateMode, CuSubGates } from '@ant/computer-use-mcp/types'
 import { getDynamicConfig_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { getSubscriptionType } from '../auth.js'
 import { isEnvTruthy } from '../envUtils.js'
+import { supportsComputerUsePlatform } from './platformSupport.js'
 
 type ChicagoConfig = CuSubGates & {
   enabled: boolean
@@ -43,6 +44,7 @@ function hasRequiredSubscription(): boolean {
 }
 
 export function getChicagoEnabled(): boolean {
+  if (!supportsComputerUsePlatform(process.platform)) return false
   // Disable for ants whose shell inherited monorepo dev config.
   // MONOREPO_ROOT_DIR is exported by config/local/zsh/zshrc, which
   // laptop-setup.sh wires into ~/.zshrc — its presence is the cheap
