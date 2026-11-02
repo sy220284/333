@@ -511,15 +511,20 @@ function eagerLoadSettings(): void {
   const safeMode = process.argv.includes('--safe-mode');
   const restricted = process.argv.includes('--restricted');
   if (safeMode) {
-    // Keep OAuth and managed policies active; disable only custom CLAUDE.md
-    // discovery. SIMPLE/--bare would also disable authentication and is wrong.
+    // A safe session still honors security denials in project/user settings.
+    // The settings merger retains only deny rules from these untrusted sources.
+    process.env.CLAUDE_CODE_SAFE_MODE = '1';
     process.env.CLAUDE_CODE_DISABLE_CLAUDE_MDS = '1';
   }
   const settingsFile = eagerParseCliFlag('--settings');
   if (settingsFile && !safeMode) {
     loadSettingsFromFlag(settingsFile);
   }
-  if (safeMode || restricted) {
+  if (safeMode) {
+    // Keep sources readable solely for their permissions.deny rules; all other
+    // untrusted values are discarded in settings.ts.
+    resetSettingsCache();
+  } else if (restricted) {
     setAllowedSettingSources([]);
     resetSettingsCache();
   } else {
