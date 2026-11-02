@@ -23,6 +23,7 @@ on:
       - 'build/m1-source-gap-ast.mjs'
       - 'build/m1-inline-source-map-audit.py'
       - 'build/m1-x64-reference-probe.mjs'
+      - 'tests/m1-x64-local-api.py'
       - 'tests/m1-inline-map-audit.test.mjs'
       - 'src/components/wizard/types.ts'
       - 'src/services/tips/types.ts'
@@ -102,6 +103,19 @@ jobs:
           node build/m1-x64-reference-probe.mjs \
             --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
             --report "${RUNNER_TEMP}/m1-reference-linux-x64.json"
+      - name: 运行本机模拟API流式/Read工具权限闭环
+        run: |
+          python3 tests/m1-x64-local-api.py \
+            --binary "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --report "${RUNNER_TEMP}/m1-x64-local-api.json"
+      - name: 保存本机API工具调用真实测试证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-x64-loopback-tool-roundtrip
+          path: ${{ runner.temp }}/m1-x64-local-api.json
+          retention-days: 30
+          if-no-files-found: warn
       - name: 保存实测退出码与契约判定
         if: always()
         uses: actions/upload-artifact@v4
