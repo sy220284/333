@@ -906,6 +906,13 @@ export const connectToServer = memoize(
         (serverRef.type === 'stdio' || !serverRef.type) &&
         isClaudeInChromeMCPServer(name)
       ) {
+        // The extension must see the native host manifest before its first
+        // handshake. setupClaudeInChrome starts this during startup; awaiting
+        // the shared promise closes the registration/connect race.
+        const { ensureChromeNativeHostReady } = await import(
+          '../../utils/claudeInChrome/setup.js'
+        )
+        await ensureChromeNativeHostReady()
         // Run the Chrome MCP server in-process to avoid spawning a ~325 MB subprocess
         const { createChromeContext } = await import(
           '../../utils/claudeInChrome/mcpServer.js'
