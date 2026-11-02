@@ -510,6 +510,11 @@ function eagerLoadSettings(): void {
   // --settings overlay while suppressing user/project/local settings files.
   const safeMode = process.argv.includes('--safe-mode');
   const restricted = process.argv.includes('--restricted');
+  if (safeMode) {
+    // Keep OAuth and managed policies active; disable only custom CLAUDE.md
+    // discovery. SIMPLE/--bare would also disable authentication and is wrong.
+    process.env.CLAUDE_CODE_DISABLE_CLAUDE_MDS = '1';
+  }
   const settingsFile = eagerParseCliFlag('--settings');
   if (settingsFile && !safeMode) {
     loadSettingsFromFlag(settingsFile);
