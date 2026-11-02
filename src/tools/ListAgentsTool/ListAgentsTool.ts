@@ -43,11 +43,11 @@ export const ListAgentsTool = buildTool({
   isEnabled() { return true },
   isReadOnly() { return true },
   isConcurrencySafe() { return true },
-  validateInput(input) {
+  async validateInput(input) {
     if (input.channel !== undefined || input.q !== undefined) {
-      return { result: false, message: 'channel and q are unavailable in this build; leave both unset', errorCode: 9 }
+      return { result: false as const, message: 'channel and q are unavailable in this build; leave both unset', errorCode: 9 }
     }
-    return { result: true }
+    return { result: true as const }
   },
   renderToolUseMessage() { return null },
   async call(_input, { getAppState }) {
@@ -58,7 +58,9 @@ export const ListAgentsTool = buildTool({
     return {
       data: {
         self: { name: selfName, sessionId: getSessionId() },
-        agents: listReachableTeammates(teamFile, selfName),
+        agents: listReachableTeammates(teamFile, selfName).map(({ name, to }) => ({
+          name, to, channel: 'team' as const,
+        })),
       },
     }
   },
