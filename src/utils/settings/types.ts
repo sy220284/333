@@ -661,6 +661,10 @@ export const SettingsSchema = lazySchema(() =>
         .describe(
           'Probability (0–1) that the session quality survey appears when eligible. 0.05 is a reasonable starting point.',
         ),
+      axScreenReader: z
+        .boolean()
+        .optional()
+        .describe('Use flat text accessible to screen readers; only user or managed settings can enable this mode'),
       spinnerTipsEnabled: z
         .boolean()
         .optional()
