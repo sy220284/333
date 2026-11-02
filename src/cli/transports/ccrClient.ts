@@ -832,8 +832,6 @@ export class CCRClient {
       this.streamEventTimer = null
     }
     this.streamEventBuffer = []
-    this.streamTextAccumulator.byMessage.clear()
-    this.streamTextAccumulator.scopeToMessage.clear()
     this.workerState.close()
     this.eventUploader.close()
     this.internalEventUploader.close()

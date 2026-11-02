@@ -33,6 +33,7 @@ on:
       - 'tests/m1-sdk-stream-coalescing.test.mjs'
       - 'tests/m1-sdk-stream-mapping.test.mjs'
       - 'tests/sdk-stream-accumulator.test.ts'
+      - 'tests/m1-ccr-close.test.ts'
       - 'tests/sdk-stream-events.test.ts'
       - 'src/cli/transports/streamAccumulator.ts'
       - 'src/cli/transports/ccrClient.ts'
@@ -298,7 +299,7 @@ jobs:
       - name: 对照新版Computer Use系统级敏感应用权限识别
         run: bun test tests/m1-computer-use-sentinel.test.ts
       - name: 验证 SDK 流事件模式与远程合并的 Bun 运行链路
-        run: bun test tests/sdk-stream-events.test.ts tests/sdk-stream-accumulator.test.ts
+        run: bun test tests/sdk-stream-events.test.ts tests/sdk-stream-accumulator.test.ts tests/m1-ccr-close.test.ts
       - name: 从当前M1源码独立构建候选程序
         run: bun build/rebuild.mjs
       - name: 准备官方x64对照程序与真实候选启动器
