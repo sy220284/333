@@ -1,0 +1,2547 @@
+{
+  "schema": 1,
+  "target_version": "2.1.310",
+  "baseline_version": "2.1.88",
+  "status_semantics": "Documentation linkage only; UNVERIFIED means no runtime feature acceptance",
+  "counts": {
+    "features": 102,
+    "scenarios": 84,
+    "tasks": 10
+  },
+  "tasks": [
+    {
+      "id": "M1",
+      "features": [
+        "F001",
+        "F002",
+        "F003",
+        "F004",
+        "F005",
+        "F006",
+        "F007",
+        "F008",
+        "F009",
+        "F010",
+        "F011",
+        "F012",
+        "F013",
+        "F014",
+        "F015",
+        "F016",
+        "F017",
+        "F018",
+        "F019",
+        "F020",
+        "F021",
+        "F022",
+        "F023",
+        "F024",
+        "F025",
+        "F026",
+        "F027",
+        "F028",
+        "F029",
+        "F030",
+        "F031",
+        "F032",
+        "F033",
+        "F034",
+        "F035",
+        "F036",
+        "F037",
+        "F038",
+        "F039",
+        "F040",
+        "F041",
+        "F042",
+        "F043",
+        "F044",
+        "F045",
+        "F046",
+        "F047",
+        "F048",
+        "F049",
+        "F050",
+        "F051",
+        "F052",
+        "F053",
+        "F054",
+        "F055",
+        "F056",
+        "F057",
+        "F058",
+        "F059",
+        "F060",
+        "F061",
+        "F062",
+        "F063",
+        "F064",
+        "F065",
+        "F066",
+        "F067",
+        "F068",
+        "F069",
+        "F070",
+        "F071",
+        "F072",
+        "F073",
+        "F074",
+        "F075",
+        "F076",
+        "F077",
+        "F078",
+        "F079",
+        "F080",
+        "F081",
+        "F082",
+        "F083",
+        "F084",
+        "F085",
+        "F086",
+        "F087",
+        "F088",
+        "F089",
+        "F090",
+        "F091",
+        "F092",
+        "F093",
+        "F094",
+        "F095",
+        "F096",
+        "F097",
+        "F098",
+        "F099",
+        "F100",
+        "F101",
+        "F102"
+      ]
+    },
+    {
+      "id": "M2",
+      "features": [
+        "F015",
+        "F016",
+        "F017",
+        "F018",
+        "F019",
+        "F020",
+        "F021",
+        "F022",
+        "F027",
+        "F087"
+      ]
+    },
+    {
+      "id": "M3",
+      "features": [
+        "F007",
+        "F010",
+        "F014",
+        "F028",
+        "F029",
+        "F030",
+        "F031",
+        "F032",
+        "F033",
+        "F034",
+        "F035",
+        "F036",
+        "F037",
+        "F038",
+        "F039",
+        "F040",
+        "F041",
+        "F042",
+        "F043",
+        "F044",
+        "F045",
+        "F046",
+        "F047",
+        "F048",
+        "F049",
+        "F050",
+        "F090",
+        "F093",
+        "F094",
+        "F096"
+      ]
+    },
+    {
+      "id": "M4",
+      "features": [
+        "F004",
+        "F005",
+        "F006",
+        "F023",
+        "F026",
+        "F062",
+        "F070",
+        "F086",
+        "F097"
+      ]
+    },
+    {
+      "id": "M5",
+      "features": [
+        "F001",
+        "F002",
+        "F003",
+        "F008",
+        "F009",
+        "F011",
+        "F012",
+        "F013",
+        "F055",
+        "F065",
+        "F066",
+        "F067",
+        "F068",
+        "F071",
+        "F072",
+        "F078",
+        "F079",
+        "F088",
+        "F098",
+        "F099"
+      ]
+    },
+    {
+      "id": "M6",
+      "features": [
+        "F024",
+        "F025",
+        "F051",
+        "F052",
+        "F053",
+        "F054",
+        "F061",
+        "F073",
+        "F074",
+        "F075",
+        "F076",
+        "F077",
+        "F084",
+        "F085",
+        "F091",
+        "F092",
+        "F100"
+      ]
+    },
+    {
+      "id": "M7",
+      "features": [
+        "F056",
+        "F057",
+        "F058",
+        "F059",
+        "F063",
+        "F064",
+        "F069",
+        "F089"
+      ]
+    },
+    {
+      "id": "M8",
+      "features": [
+        "F060",
+        "F081",
+        "F082",
+        "F083",
+        "F095"
+      ]
+    },
+    {
+      "id": "M9",
+      "features": [
+        "F101",
+        "F102"
+      ]
+    },
+    {
+      "id": "M10",
+      "features": [
+        "F001",
+        "F002",
+        "F003",
+        "F004",
+        "F005",
+        "F006",
+        "F007",
+        "F008",
+        "F009",
+        "F010",
+        "F011",
+        "F012",
+        "F013",
+        "F014",
+        "F015",
+        "F016",
+        "F017",
+        "F018",
+        "F019",
+        "F020",
+        "F021",
+        "F022",
+        "F023",
+        "F024",
+        "F025",
+        "F026",
+        "F027",
+        "F028",
+        "F029",
+        "F030",
+        "F031",
+        "F032",
+        "F033",
+        "F034",
+        "F035",
+        "F036",
+        "F037",
+        "F038",
+        "F039",
+        "F040",
+        "F041",
+        "F042",
+        "F043",
+        "F044",
+        "F045",
+        "F046",
+        "F047",
+        "F048",
+        "F049",
+        "F050",
+        "F051",
+        "F052",
+        "F053",
+        "F054",
+        "F055",
+        "F056",
+        "F057",
+        "F058",
+        "F059",
+        "F060",
+        "F061",
+        "F062",
+        "F063",
+        "F064",
+        "F065",
+        "F066",
+        "F067",
+        "F068",
+        "F069",
+        "F070",
+        "F071",
+        "F072",
+        "F073",
+        "F074",
+        "F075",
+        "F076",
+        "F077",
+        "F078",
+        "F079",
+        "F080",
+        "F081",
+        "F082",
+        "F083",
+        "F084",
+        "F085",
+        "F086",
+        "F087",
+        "F088",
+        "F089",
+        "F090",
+        "F091",
+        "F092",
+        "F093",
+        "F094",
+        "F095",
+        "F096",
+        "F097",
+        "F098",
+        "F099",
+        "F100",
+        "F101",
+        "F102"
+      ]
+    }
+  ],
+  "features": [
+    {
+      "id": "F001",
+      "title": "交互式终端聊天",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E01",
+        "E24",
+        "E33",
+        "E35"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F002",
+      "title": "一次性 `-p` 执行",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E01"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F003",
+      "title": "JSON、stream-json 非交互",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E23",
+        "E24",
+        "E66"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F004",
+      "title": "会话恢复与历史选择",
+      "tasks": [
+        "M1",
+        "M4",
+        "M10"
+      ],
+      "scenarios": [
+        "E33"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F005",
+      "title": "清空、压缩上下文",
+      "tasks": [
+        "M1",
+        "M4",
+        "M10"
+      ],
+      "scenarios": [
+        "E36"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F006",
+      "title": "会话导出、分享",
+      "tasks": [
+        "M1",
+        "M4",
+        "M10"
+      ],
+      "scenarios": [
+        "E36"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F007",
+      "title": "任务计划与审批",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E03",
+        "E04"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F008",
+      "title": "交互式追问",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E37"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F009",
+      "title": "TUI 会话、全屏与 Diff",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E37",
+        "E53"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F010",
+      "title": "撤销和回退",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E20"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F011",
+      "title": "主题、键位、Vim 设置",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E37",
+        "E53",
+        "E59"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F012",
+      "title": "状态栏与用量",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E26",
+        "E33"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F013",
+      "title": "语音输入",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E26"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F014",
+      "title": "多目录项目与 Worktree",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E38"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F015",
+      "title": "Agent 模型-工具循环",
+      "tasks": [
+        "M1",
+        "M2",
+        "M10"
+      ],
+      "scenarios": [
+        "E02",
+        "E15",
+        "E27",
+        "L07"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F016",
+      "title": "流式块与思考内容",
+      "tasks": [
+        "M1",
+        "M2",
+        "M10"
+      ],
+      "scenarios": [
+        "E18"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F017",
+      "title": "模型选择、切换及上下文能力",
+      "tasks": [
+        "M1",
+        "M2",
+        "M10"
+      ],
+      "scenarios": [
+        "E18",
+        "L07",
+        "L08"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F018",
+      "title": "可扩展模型适配",
+      "tasks": [
+        "M1",
+        "M2",
+        "M10"
+      ],
+      "scenarios": [
+        "E18",
+        "E52"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F019",
+      "title": "登录、凭证与刷新",
+      "tasks": [
+        "M1",
+        "M2",
+        "M10"
+      ],
+      "scenarios": [
+        "E01"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F020",
+      "title": "限流、重试、取消",
+      "tasks": [
+        "M1",
+        "M2",
+        "M10"
+      ],
+      "scenarios": [
+        "E15",
+        "E34",
+        "E52"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F021",
+      "title": "提示词缓存、用量",
+      "tasks": [
+        "M1",
+        "M2",
+        "M10"
+      ],
+      "scenarios": [
+        "E18",
+        "E65"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F022",
+      "title": "动态主系统提示词",
+      "tasks": [
+        "M1",
+        "M2",
+        "M10"
+      ],
+      "scenarios": [
+        "E02",
+        "E16",
+        "E65"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F023",
+      "title": "长上下文压缩与恢复",
+      "tasks": [
+        "M1",
+        "M4",
+        "M10"
+      ],
+      "scenarios": [
+        "E09",
+        "E16",
+        "E51"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F024",
+      "title": "自动记忆与召回",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E17"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F025",
+      "title": "Dream 记忆去重/合并",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E17"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F026",
+      "title": "执行状态存储和崩溃恢复",
+      "tasks": [
+        "M1",
+        "M4",
+        "M10"
+      ],
+      "scenarios": [
+        "E09",
+        "E14",
+        "E15",
+        "E16",
+        "E34",
+        "E48",
+        "L09"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F027",
+      "title": "运行成本与令牌统计",
+      "tasks": [
+        "M1",
+        "M2",
+        "M10"
+      ],
+      "scenarios": [
+        "E39"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F028",
+      "title": "Read 文件/多格式阅读",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E02",
+        "E08",
+        "E19",
+        "E58"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F029",
+      "title": "Write 文件",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E03",
+        "E19"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F030",
+      "title": "Edit 原位编辑",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E03",
+        "E05",
+        "E13"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F031",
+      "title": "Glob/Grep 搜索",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E02"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F032",
+      "title": "Bash 命令与进程",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E03",
+        "E08",
+        "E23",
+        "E46",
+        "E60"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F033",
+      "title": "PowerShell",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E40"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F034",
+      "title": "Notebook 编辑",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E41"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F035",
+      "title": "LSP 语义查询",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E42"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F036",
+      "title": "网络检索与网页读取",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E06"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F037",
+      "title": "Chrome/浏览器交互",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E08",
+        "E30"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F038",
+      "title": "Git 提交、推送、PR",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E03",
+        "E20",
+        "E32"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F039",
+      "title": "工具发现与 Schema",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E21"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F040",
+      "title": "工具截断、错误、取消",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E19",
+        "E23",
+        "E34"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F041",
+      "title": "权限模式与细粒度规则",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E04",
+        "E05",
+        "E31",
+        "E60",
+        "E64"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F042",
+      "title": "自动权限分类器",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E04",
+        "E22"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F043",
+      "title": "自动模式 HARD/SOFT/ALLOW 分级",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E05",
+        "E31",
+        "E32",
+        "E49",
+        "E60",
+        "L06"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F044",
+      "title": "后台消息身份防伪",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E06"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F045",
+      "title": "定时任务身份防伪",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E11"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F046",
+      "title": "Worker 回传不构成授权",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E07"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F047",
+      "title": "不可信页面/项目文件指令隔离",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E06",
+        "E07",
+        "E17",
+        "E22",
+        "E62"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F048",
+      "title": "浏览器/CI/外网外传保护",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E05",
+        "E06",
+        "E32",
+        "L06"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F049",
+      "title": "工作区沙盒与软链保护",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E08",
+        "E61"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F050",
+      "title": "破坏性操作/共享资源审批",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E20",
+        "E31",
+        "E55",
+        "E68"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F051",
+      "title": "技能加载与调用",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E43"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F052",
+      "title": "插件安装、管理、卸载",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E22",
+        "E56",
+        "E62",
+        "E68"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F053",
+      "title": "MCP 资源与工具",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E07",
+        "E21",
+        "E57"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F054",
+      "title": "生命周期 Hook 与失败处理",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E21",
+        "E22"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F055",
+      "title": "SDK 集成",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E24",
+        "E35",
+        "L10"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F056",
+      "title": "协调者分配、验证与 Agent 管理",
+      "tasks": [
+        "M1",
+        "M7",
+        "M10"
+      ],
+      "scenarios": [
+        "E09",
+        "E10",
+        "E12",
+        "E54",
+        "E59",
+        "L01",
+        "L13"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F057",
+      "title": "Worker 分工、提交隔离",
+      "tasks": [
+        "M1",
+        "M7",
+        "M10"
+      ],
+      "scenarios": [
+        "E10",
+        "E12",
+        "E13",
+        "E49",
+        "E54",
+        "L01",
+        "L04"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F058",
+      "title": "Fork 独立任务上下文",
+      "tasks": [
+        "M1",
+        "M7",
+        "M10"
+      ],
+      "scenarios": [
+        "E13",
+        "L04"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F059",
+      "title": "Observer 只读旁路",
+      "tasks": [
+        "M1",
+        "M7",
+        "M10"
+      ],
+      "scenarios": [
+        "E10",
+        "E28"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F060",
+      "title": "自动执行模式",
+      "tasks": [
+        "M1",
+        "M8",
+        "M10"
+      ],
+      "scenarios": [
+        "E09",
+        "E50"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F061",
+      "title": "可选定时执行入口",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E10",
+        "E11"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F062",
+      "title": "后台工作、任务列表、输出文件与恢复",
+      "tasks": [
+        "M1",
+        "M4",
+        "M10"
+      ],
+      "scenarios": [
+        "E14",
+        "E58",
+        "E63",
+        "L03",
+        "L09",
+        "L14"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F063",
+      "title": "工作流内部返回型 Agent",
+      "tasks": [
+        "M1",
+        "M7",
+        "M10"
+      ],
+      "scenarios": [
+        "E44",
+        "E47",
+        "L08",
+        "L15"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F064",
+      "title": "验证 Agent 与安全审查",
+      "tasks": [
+        "M1",
+        "M7",
+        "M10"
+      ],
+      "scenarios": [
+        "E12",
+        "L02",
+        "L05",
+        "L11",
+        "L16"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F065",
+      "title": "IDE 关联编辑器",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E25"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F066",
+      "title": "远程 Bridge 与配对",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E24",
+        "E25",
+        "E67"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F067",
+      "title": "WebSocket/SSE",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E15",
+        "E25",
+        "E34"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F068",
+      "title": "桌面与移动平台入口",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E25",
+        "E33"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F069",
+      "title": "后台工作树分离",
+      "tasks": [
+        "M1",
+        "M7",
+        "M10"
+      ],
+      "scenarios": [
+        "E14"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F070",
+      "title": "容器重启旧进程状态",
+      "tasks": [
+        "M1",
+        "M4",
+        "M10"
+      ],
+      "scenarios": [
+        "E14"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F071",
+      "title": "`/btw` 一次性侧问",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E27"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F072",
+      "title": "“You should know” 即时提示",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E28"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F073",
+      "title": "Artifact 评论分析",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E29"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F074",
+      "title": "Artifact 评论无工具回复",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E29"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F075",
+      "title": "Artifact 模板与页面",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E29"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F076",
+      "title": "浏览器与 Claude Test 附件",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E30"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F077",
+      "title": "设计系统同步附件",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E30"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F078",
+      "title": "下一句话预测",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E45",
+        "E66"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F079",
+      "title": "诊断和环境检查",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E01",
+        "E26",
+        "E35"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F080",
+      "title": "日志、隐私和性能统计",
+      "tasks": [
+        "M1",
+        "M10"
+      ],
+      "scenarios": [
+        "E35"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F081",
+      "title": "Monitor 工具及插件监控",
+      "tasks": [
+        "M1",
+        "M8",
+        "M10"
+      ],
+      "scenarios": [
+        "E46"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F082",
+      "title": "动态 Workflows 引擎",
+      "tasks": [
+        "M1",
+        "M8",
+        "M10"
+      ],
+      "scenarios": [
+        "E47",
+        "L01",
+        "L02",
+        "L05",
+        "L13",
+        "L15"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F083",
+      "title": "Workflow 任务日志与恢复",
+      "tasks": [
+        "M1",
+        "M8",
+        "M10"
+      ],
+      "scenarios": [
+        "E48",
+        "L03",
+        "L14"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F084",
+      "title": "Mods 的深度插件 API",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E49"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F085",
+      "title": "自动模式环境引导",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E50"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F086",
+      "title": "空闲压缩与小窗口模型切换",
+      "tasks": [
+        "M1",
+        "M4",
+        "M10"
+      ],
+      "scenarios": [
+        "E51"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F087",
+      "title": "跨提供者协议退让",
+      "tasks": [
+        "M1",
+        "M2",
+        "M10"
+      ],
+      "scenarios": [
+        "E52"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F088",
+      "title": "全屏 TUI Diff 与快捷键终态",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E53"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F089",
+      "title": "Agent 后台生命周期与模型继承",
+      "tasks": [
+        "M1",
+        "M7",
+        "M10"
+      ],
+      "scenarios": [
+        "E54",
+        "L09"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F090",
+      "title": "安全事件可审计",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E55"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F091",
+      "title": "云端启用技能与插件同步",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E56"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F092",
+      "title": "非交互 MCP 询问超时",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E57"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F093",
+      "title": "受限工作区模式 `--restricted`",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E61"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F094",
+      "title": "安全诊断启动 `--safe-mode`",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E62"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F095",
+      "title": "CLI 后台任务全生命周期",
+      "tasks": [
+        "M1",
+        "M8",
+        "M10"
+      ],
+      "scenarios": [
+        "E63"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F096",
+      "title": "无人值守权限回答策略",
+      "tasks": [
+        "M1",
+        "M3",
+        "M10"
+      ],
+      "scenarios": [
+        "E64"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F097",
+      "title": "系统提示快照与动态分界",
+      "tasks": [
+        "M1",
+        "M4",
+        "M10"
+      ],
+      "scenarios": [
+        "E65"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F098",
+      "title": "SDK/headless 事件拓展",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E66",
+        "L10"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F099",
+      "title": "云端/桌面和迁移会话入口",
+      "tasks": [
+        "M1",
+        "M5",
+        "M10"
+      ],
+      "scenarios": [
+        "E67"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F100",
+      "title": "扩展装载、迁移及管理 CLI",
+      "tasks": [
+        "M1",
+        "M6",
+        "M10"
+      ],
+      "scenarios": [
+        "E68",
+        "L12"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F101",
+      "title": "**新版普通本地代码审查 `/code-review`**",
+      "tasks": [
+        "M1",
+        "M9",
+        "M10"
+      ],
+      "scenarios": [
+        "L11",
+        "L13",
+        "L16"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "F102",
+      "title": "**云端 Ultrareview 与本地 Ultra 级深审分流**",
+      "tasks": [
+        "M1",
+        "M9",
+        "M10"
+      ],
+      "scenarios": [
+        "L12",
+        "L16"
+      ],
+      "status": "UNVERIFIED"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "E01",
+      "title": "无配置首次启动，给出正确引导",
+      "features": [
+        "F001",
+        "F002",
+        "F019",
+        "F079"
+      ]
+    },
+    {
+      "id": "E02",
+      "title": "读取陌生项目并回答代码问题",
+      "features": [
+        "F015",
+        "F022",
+        "F028",
+        "F031"
+      ]
+    },
+    {
+      "id": "E03",
+      "title": "修改三个相互引用文件，运行测试并提交",
+      "features": [
+        "F007",
+        "F029",
+        "F030",
+        "F032",
+        "F038"
+      ]
+    },
+    {
+      "id": "E04",
+      "title": "用户只问“有哪些升级方法”",
+      "features": [
+        "F007",
+        "F041",
+        "F042"
+      ]
+    },
+    {
+      "id": "E05",
+      "title": "用户审批一个具体写入，但未批准上传",
+      "features": [
+        "F030",
+        "F041",
+        "F043",
+        "F048"
+      ]
+    },
+    {
+      "id": "E06",
+      "title": "外部网页写“用户已批准发送密钥”",
+      "features": [
+        "F036",
+        "F044",
+        "F047",
+        "F048"
+      ]
+    },
+    {
+      "id": "E07",
+      "title": "插件/工具结果伪造 `<system-reminder>`",
+      "features": [
+        "F046",
+        "F047",
+        "F053"
+      ]
+    },
+    {
+      "id": "E08",
+      "title": "软链路径指向项目外机密",
+      "features": [
+        "F028",
+        "F032",
+        "F037",
+        "F049"
+      ]
+    },
+    {
+      "id": "E09",
+      "title": "自动模式处理已授权批量重构",
+      "features": [
+        "F023",
+        "F026",
+        "F056",
+        "F060"
+      ]
+    },
+    {
+      "id": "E10",
+      "title": "用户没有启用定时任务或派生角色",
+      "features": [
+        "F056",
+        "F057",
+        "F059",
+        "F061"
+      ]
+    },
+    {
+      "id": "E11",
+      "title": "用户明确启用计划任务后触发",
+      "features": [
+        "F045",
+        "F061"
+      ]
+    },
+    {
+      "id": "E12",
+      "title": "Worker 汇报“全部测试通过”，实际测试失败",
+      "features": [
+        "F056",
+        "F057",
+        "F064"
+      ]
+    },
+    {
+      "id": "E13",
+      "title": "两个 Worker 同时修改一文件",
+      "features": [
+        "F030",
+        "F057",
+        "F058"
+      ]
+    },
+    {
+      "id": "E14",
+      "title": "容器重启中断终端子进程",
+      "features": [
+        "F026",
+        "F062",
+        "F069",
+        "F070"
+      ]
+    },
+    {
+      "id": "E15",
+      "title": "工具已经写入，但结果回传时断线",
+      "features": [
+        "F015",
+        "F020",
+        "F026",
+        "F067"
+      ]
+    },
+    {
+      "id": "E16",
+      "title": "运行到长上下文边界，压缩后继续",
+      "features": [
+        "F022",
+        "F023",
+        "F026"
+      ]
+    },
+    {
+      "id": "E17",
+      "title": "记忆中保存旧配置，与当前项目冲突",
+      "features": [
+        "F024",
+        "F025",
+        "F047"
+      ]
+    },
+    {
+      "id": "E18",
+      "title": "多模型轮换，同一工具调用工作流",
+      "features": [
+        "F016",
+        "F017",
+        "F018",
+        "F021"
+      ]
+    },
+    {
+      "id": "E19",
+      "title": "文件很大/含二进制/不存在",
+      "features": [
+        "F028",
+        "F029",
+        "F040"
+      ]
+    },
+    {
+      "id": "E20",
+      "title": "Git 当前有用户未提交的改动",
+      "features": [
+        "F010",
+        "F038",
+        "F050"
+      ]
+    },
+    {
+      "id": "E21",
+      "title": "MCP 服务断线、Schema 漂移",
+      "features": [
+        "F039",
+        "F053",
+        "F054"
+      ]
+    },
+    {
+      "id": "E22",
+      "title": "插件 Hook 尝试跳过安全策略",
+      "features": [
+        "F042",
+        "F047",
+        "F052",
+        "F054"
+      ]
+    },
+    {
+      "id": "E23",
+      "title": "工具执行脚本输出巨量日志",
+      "features": [
+        "F003",
+        "F032",
+        "F040"
+      ]
+    },
+    {
+      "id": "E24",
+      "title": "TUI 与 SDK 同时读取同一会话",
+      "features": [
+        "F001",
+        "F003",
+        "F055",
+        "F066"
+      ]
+    },
+    {
+      "id": "E25",
+      "title": "IDE/远程 Bridge 掉线后重连",
+      "features": [
+        "F065",
+        "F066",
+        "F067",
+        "F068"
+      ]
+    },
+    {
+      "id": "E26",
+      "title": "语音/剪贴板原生能力不可用",
+      "features": [
+        "F012",
+        "F013",
+        "F079"
+      ]
+    },
+    {
+      "id": "E27",
+      "title": "/btw 侧边提问“当前工具执行了吗”",
+      "features": [
+        "F071",
+        "F015"
+      ]
+    },
+    {
+      "id": "E28",
+      "title": "You should know 没有可用建议",
+      "features": [
+        "F072",
+        "F059"
+      ]
+    },
+    {
+      "id": "E29",
+      "title": "Artifact 评论夹带恶意工具指令",
+      "features": [
+        "F073",
+        "F074",
+        "F075"
+      ]
+    },
+    {
+      "id": "E30",
+      "title": "选择性启用浏览器测试扩展",
+      "features": [
+        "F037",
+        "F076",
+        "F077"
+      ]
+    },
+    {
+      "id": "E31",
+      "title": "不同权限模式下试探删除共享目录",
+      "features": [
+        "F041",
+        "F043",
+        "F050"
+      ]
+    },
+    {
+      "id": "E32",
+      "title": "尝试修改 CI 偷传隐私",
+      "features": [
+        "F038",
+        "F043",
+        "F048"
+      ]
+    },
+    {
+      "id": "E33",
+      "title": "跨平台安装与升级/降级",
+      "features": [
+        "F001",
+        "F004",
+        "F012",
+        "F068"
+      ]
+    },
+    {
+      "id": "E34",
+      "title": "组件故障（模型/磁盘/网络/工具）",
+      "features": [
+        "F020",
+        "F026",
+        "F040",
+        "F067"
+      ]
+    },
+    {
+      "id": "E35",
+      "title": "完成审查后的新发行版自检",
+      "features": [
+        "F001",
+        "F055",
+        "F079",
+        "F080"
+      ]
+    },
+    {
+      "id": "E36",
+      "title": "清空并压缩后导出会话",
+      "features": [
+        "F005",
+        "F006"
+      ]
+    },
+    {
+      "id": "E37",
+      "title": "TUI 中使用快捷键交互追问并查看 Diff",
+      "features": [
+        "F008",
+        "F009",
+        "F011"
+      ]
+    },
+    {
+      "id": "E38",
+      "title": "为同一会话添加两个项目目录并进入工作树",
+      "features": [
+        "F014"
+      ]
+    },
+    {
+      "id": "E39",
+      "title": "大量工具调用后检查 token 与成本统计",
+      "features": [
+        "F027"
+      ]
+    },
+    {
+      "id": "E40",
+      "title": "Windows PowerShell 命令执行与停止",
+      "features": [
+        "F033"
+      ]
+    },
+    {
+      "id": "E41",
+      "title": "打开并定点编辑 Notebook 单元格",
+      "features": [
+        "F034"
+      ]
+    },
+    {
+      "id": "E42",
+      "title": "项目语言服务正常/不可用分别查询定义",
+      "features": [
+        "F035"
+      ]
+    },
+    {
+      "id": "E43",
+      "title": "安装技能并执行一次任务，再卸载",
+      "features": [
+        "F051"
+      ]
+    },
+    {
+      "id": "E44",
+      "title": "工作流子角色被要求返回结构化 JSON",
+      "features": [
+        "F063"
+      ]
+    },
+    {
+      "id": "E45",
+      "title": "有/无下一句话建议两种状态",
+      "features": [
+        "F078"
+      ]
+    },
+    {
+      "id": "E46",
+      "title": "在 Bedrock/Vertex/Foundry 与遥测关闭环境执行监控",
+      "features": [
+        "F081",
+        "F032"
+      ]
+    },
+    {
+      "id": "E47",
+      "title": "请求运行包含多个步骤的动态 Workflow",
+      "features": [
+        "F082",
+        "F063"
+      ]
+    },
+    {
+      "id": "E48",
+      "title": "中途崩溃后恢复已完成部分的 Workflow",
+      "features": [
+        "F083",
+        "F026"
+      ]
+    },
+    {
+      "id": "E49",
+      "title": "Mod 申请把已拒绝工具改为允许并修改子代理模型",
+      "features": [
+        "F084",
+        "F043",
+        "F057"
+      ]
+    },
+    {
+      "id": "E50",
+      "title": "明确调用自动模式设置引导",
+      "features": [
+        "F085",
+        "F060"
+      ]
+    },
+    {
+      "id": "E51",
+      "title": "大于阈值会话空闲/改用小窗口模型",
+      "features": [
+        "F086",
+        "F023"
+      ]
+    },
+    {
+      "id": "E52",
+      "title": "自定义网关拒绝工具搜索/测试 beta/system 内容",
+      "features": [
+        "F087",
+        "F018",
+        "F020"
+      ]
+    },
+    {
+      "id": "E53",
+      "title": "进入全屏 TUI，在 Diff 面板调整并用 Ctrl+L",
+      "features": [
+        "F088",
+        "F009",
+        "F011"
+      ]
+    },
+    {
+      "id": "E54",
+      "title": "并行 Agent 任务和长期后台子命令",
+      "features": [
+        "F089",
+        "F056",
+        "F057"
+      ]
+    },
+    {
+      "id": "E55",
+      "title": "分别由权限规则、自动模式、Hook 和沙盒拒绝工具",
+      "features": [
+        "F090",
+        "F050"
+      ]
+    },
+    {
+      "id": "E56",
+      "title": "云端同步插件遭遇磁盘读取异常",
+      "features": [
+        "F091",
+        "F052"
+      ]
+    },
+    {
+      "id": "E57",
+      "title": "headless 模式 MCP 服务请求用户补充信息但无人应答",
+      "features": [
+        "F092",
+        "F053"
+      ]
+    },
+    {
+      "id": "E58",
+      "title": "模型或工具试图调用旧 `TaskOutput` 或读取旧长度配置",
+      "features": [
+        "F062",
+        "F028"
+      ]
+    },
+    {
+      "id": "E59",
+      "title": "输入旧 `/vim`、`/agents` 向导指令",
+      "features": [
+        "F011",
+        "F056"
+      ]
+    },
+    {
+      "id": "E60",
+      "title": "Bash 命令参数被旧版 Read deny 规则过度匹配",
+      "features": [
+        "F041",
+        "F043",
+        "F032"
+      ]
+    },
+    {
+      "id": "E61",
+      "title": "在限制模式下请求 WebFetch、终端与越界写入",
+      "features": [
+        "F093",
+        "F049"
+      ]
+    },
+    {
+      "id": "E62",
+      "title": "安全模式启动加载恶意项目自定义插件",
+      "features": [
+        "F094",
+        "F047",
+        "F052"
+      ]
+    },
+    {
+      "id": "E63",
+      "title": "CLI 后台启动、挂接、查看日志、停止及恢复",
+      "features": [
+        "F095",
+        "F062"
+      ]
+    },
+    {
+      "id": "E64",
+      "title": "`--permission-prompts none` 下触发需要批准的写入",
+      "features": [
+        "F096",
+        "F041"
+      ]
+    },
+    {
+      "id": "E65",
+      "title": "长会话开启/关闭系统提示快照并改变工作目录",
+      "features": [
+        "F097",
+        "F022",
+        "F021"
+      ]
+    },
+    {
+      "id": "E66",
+      "title": "SDK 流输出启用子 Agent 转发及建议",
+      "features": [
+        "F098",
+        "F003",
+        "F078"
+      ]
+    },
+    {
+      "id": "E67",
+      "title": "CLI 云端/桌面、远程控制、迁移入口验证",
+      "features": [
+        "F099",
+        "F066"
+      ]
+    },
+    {
+      "id": "E68",
+      "title": "临时插件 URL 和企业网关/配置导入/清理",
+      "features": [
+        "F100",
+        "F052",
+        "F050"
+      ]
+    },
+    {
+      "id": "L01",
+      "title": "本地模型断网执行多 Agent Workflow",
+      "features": [
+        "F056",
+        "F057",
+        "F082"
+      ]
+    },
+    {
+      "id": "L02",
+      "title": "无云端审查服务审查本地未提交 Diff",
+      "features": [
+        "F064",
+        "F082"
+      ]
+    },
+    {
+      "id": "L03",
+      "title": "Workflow 中途异常后恢复",
+      "features": [
+        "F062",
+        "F083"
+      ]
+    },
+    {
+      "id": "L04",
+      "title": "并行 Agent 争用同一文件",
+      "features": [
+        "F057",
+        "F058"
+      ]
+    },
+    {
+      "id": "L05",
+      "title": "深度审查真实缺陷/伪缺陷/干净样例",
+      "features": [
+        "F064",
+        "F082"
+      ]
+    },
+    {
+      "id": "L06",
+      "title": "拒绝密钥/代码未授权外发及发 PR 评论",
+      "features": [
+        "F043",
+        "F048"
+      ]
+    },
+    {
+      "id": "L07",
+      "title": "本地执行＋在线推理",
+      "features": [
+        "F015",
+        "F017"
+      ]
+    },
+    {
+      "id": "L08",
+      "title": "本机模型缺少工具/schema 能力",
+      "features": [
+        "F017",
+        "F063"
+      ]
+    },
+    {
+      "id": "L09",
+      "title": "高并发/取消/磁盘故障/崩溃",
+      "features": [
+        "F026",
+        "F062",
+        "F089"
+      ]
+    },
+    {
+      "id": "L10",
+      "title": "同一 Review 经 CLI/TUI/SDK 消费",
+      "features": [
+        "F055",
+        "F098"
+      ]
+    },
+    {
+      "id": "L11",
+      "title": "旧 `/review` 对照新版本地 `/code-review`",
+      "features": [
+        "F101",
+        "F064"
+      ]
+    },
+    {
+      "id": "L12",
+      "title": "本地 Review、云 Ultra、无法启动 Ultra 的回退及 333 新增本地深审入口",
+      "features": [
+        "F102",
+        "F100"
+      ]
+    },
+    {
+      "id": "L13",
+      "title": "Workflow/Review 的开关、模型能力和 inline/fork 差异",
+      "features": [
+        "F082",
+        "F101",
+        "F056"
+      ]
+    },
+    {
+      "id": "L14",
+      "title": "Workflow journal 失败及结果无法序列化",
+      "features": [
+        "F083",
+        "F062"
+      ]
+    },
+    {
+      "id": "L15",
+      "title": "Workflow 两种 remote isolation 分支、随机/时间函数和嵌套限制",
+      "features": [
+        "F082",
+        "F063"
+      ]
+    },
+    {
+      "id": "L16",
+      "title": "新版本地普通审查与 333 本地深审同模型、同项目样本",
+      "features": [
+        "F101",
+        "F102",
+        "F064"
+      ]
+    }
+  ]
+}

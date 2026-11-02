@@ -3,21 +3,21 @@ import { type GroveDecision, GroveDialog, PrivacySettingsDialog } from '../../co
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../services/analytics/index.js';
 import { getGroveNoticeConfig, getGroveSettings, isQualifiedForGrove } from '../../services/api/grove.js';
 import type { LocalJSXCommandOnDone } from '../../types/command.js';
+import { fetchPrivacySettingsFresh } from './fetchPrivacySettings.mjs';
 const FALLBACK_MESSAGE = 'Review and manage your privacy settings at https://claude.ai/settings/data-privacy-controls';
+const FETCH_ERROR_MESSAGE = 'Unable to fetch your privacy settings at this time. Check https://claude.ai/settings/data-privacy-controls';
 export async function call(onDone: LocalJSXCommandOnDone): Promise<React.ReactNode | null> {
   const qualified = await isQualifiedForGrove();
   if (!qualified) {
     onDone(FALLBACK_MESSAGE);
     return null;
   }
-  const [settingsResult, configResult] = await Promise.all([getGroveSettings(), getGroveNoticeConfig()]);
-  // Hide dialog on API failure (after retry)
-  if (!settingsResult.success) {
-    onDone(FALLBACK_MESSAGE);
+  const current = await fetchPrivacySettingsFresh(getGroveSettings, getGroveNoticeConfig);
+  if (!current.success) {
+    onDone(FETCH_ERROR_MESSAGE);
     return null;
   }
-  const settings = settingsResult.data;
-  const config = configResult.success ? configResult.data : null;
+  const { settings, config } = current;
   async function onDoneWithDecision(decision: GroveDecision) {
     if (decision === 'escape' || decision === 'defer') {
       onDone('Privacy settings dialog dismissed', {
@@ -30,14 +30,14 @@ export async function call(onDone: LocalJSXCommandOnDone): Promise<React.ReactNo
   async function onDoneWithSettingsCheck() {
     const updatedSettingsResult = await getGroveSettings();
     if (!updatedSettingsResult.success) {
-      onDone('Unable to retrieve updated privacy settings', {
+      onDone(FETCH_ERROR_MESSAGE, {
         display: 'system'
       });
       return;
     }
     const updatedSettings = updatedSettingsResult.data;
     const groveStatus = updatedSettings.grove_enabled ? 'true' : 'false';
-    onDone(`"Help improve Claude" set to ${groveStatus}.`);
+    onDone(`"Help improve our AI models" set to ${groveStatus}.`);
     if (settings.grove_enabled !== null && settings.grove_enabled !== updatedSettings.grove_enabled) {
       logEvent('tengu_grove_policy_toggled', {
         state: updatedSettings.grove_enabled as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -49,7 +49,7 @@ export async function call(onDone: LocalJSXCommandOnDone): Promise<React.ReactNo
   // Show privacy settings directly if the user has already accepted the
   // terms.
   if (settings.grove_enabled !== null) {
-    return <PrivacySettingsDialog settings={settings} domainExcluded={config?.domain_excluded} onDone={onDoneWithSettingsCheck}></PrivacySettingsDialog>;
+    return <PrivacySettingsDialog settings={settings} domainExcluded={config.domain_excluded} onDone={onDoneWithSettingsCheck}></PrivacySettingsDialog>;
   }
 
   // Show the GroveDialog for users who haven't accepted terms yet

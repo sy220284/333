@@ -1,0 +1,307 @@
+{
+  "schema": 1,
+  "official_source_blob": "eab938de43f5584aa4417b95b601b63822bc2417",
+  "records": [
+    {
+      "id": "2.1.304#063",
+      "source_line": 274,
+      "source_text": "Removed the notes from `claude plugin validate` that predicted where a mod's hooks would run",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.304#064",
+      "source_line": 275,
+      "source_text": "Removed the \"(research preview)\" label from the `/fast` dialog title on Opus 5.5",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.300#066",
+      "source_line": 480,
+      "source_text": "Removed the `--sandbox` and `--no-sandbox` flags from `claude remote-control`, which had no effect; passing either now exits with an error. Set `sandbox.enabled` in settings to sandbox sessions",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "NO_EFFECT_FLAGS_REMOVED",
+      "last_code_consumer": null,
+      "F_ids": [
+        "F049",
+        "F066"
+      ],
+      "target_code": "2.1.310 --remote-control help",
+      "actual_scope": "--sandbox and --no-sandbox in remote-control are now errors, use sandbox.enabled"
+    },
+    {
+      "id": "2.1.286#065",
+      "source_line": 1579,
+      "source_text": "Removed the browser link from `/ultrareview` and `claude ultrareview` output",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.281#151",
+      "source_line": 2184,
+      "source_text": "Removed the leftover \"(removed)\" `/agents` entry from the command menu and `/help`; typing `/agents` still explains where the wizard went",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.277#068",
+      "source_line": 2403,
+      "source_text": "Removed the background Haiku auto-title request from `claude -p` runs launched outside an SDK or IDE",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.277#069",
+      "source_line": 2404,
+      "source_text": "Removed the deprecated TaskOutput tool; Claude reads a background task's output file with Read instead, and the `taskOutputMaxChars` setting and `TASK_MAX_OUTPUT_LENGTH` no longer have any effect",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "REMOVED_TARGET_REPLACED_WITH_READ_FILE",
+      "last_code_consumer": null,
+      "F_ids": [
+        "F062"
+      ],
+      "target_code": "chunk-pp7zwndm.js:2215 ReadTool plus target background output files",
+      "actual_scope": "TaskOutput explicitly discontinued and background task files read by Read"
+    },
+    {
+      "id": "2.1.275#053",
+      "source_line": 2482,
+      "source_text": "Removed the startup notice that told you a one-off scheduled routine had run since your last session",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.260#059",
+      "source_line": 3258,
+      "source_text": "Removed the one-hour time limit on background commands started by subagents; they now run until they exit or are stopped, matching the main session",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.257#094",
+      "source_line": 3407,
+      "source_text": "Removed the Ctrl+E command explanation on Bash and PowerShell permission prompts",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.251#069",
+      "source_line": 3496,
+      "source_text": "Removed syntax highlighting for six rarely used languages (1c, gml, isbl, mathematica, maxima, sqf); the binary is 2.5 MB smaller",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.234#046",
+      "source_line": 3945,
+      "source_text": "Removed the redundant \"Allowed by auto mode classifier\" line that auto mode showed under every Agent tool call",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.234#047",
+      "source_line": 3946,
+      "source_text": "Removed the \"Default teammate model\" setting from `/config`; agent-team teammates now use the leader's model unless the spawn names one",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.232#049",
+      "source_line": 4025,
+      "source_text": "Removed the startup tip suggesting you create custom subagents, and the matching nudge in the `/powerup` tour",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.228#018",
+      "source_line": 4085,
+      "source_text": "Removed the outdated note about auto mode sessions costing slightly more from the first-use notice for Pro, Max, and Team plans",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.224#023",
+      "source_line": 4140,
+      "source_text": "Removed the 200-subagent-per-session spawn cap; long-running sessions no longer refuse new agents (concurrency and depth limits still apply)",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.222#021",
+      "source_line": 4194,
+      "source_text": "Removed ultraplan feature",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "STILL_HAS_CONDITIONALLY_REGISTERED_CODE_NOT_DEFAULT",
+      "last_code_consumer": null,
+      "F_ids": [
+        "F007",
+        "F099"
+      ],
+      "target_code": "chunk-j0tbz6ra.js:40525,40659,40852",
+      "actual_scope": "Ultraplan source still registered with tengu_ultraplan_config.enabled===true guard despite earlier removal"
+    },
+    {
+      "id": "2.1.221#039",
+      "source_line": 4236,
+      "source_text": "Removed the repeated \"Permission mode changed while the auto-mode classifier call was queued\" notice from approval prompts",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.219#022",
+      "source_line": 4265,
+      "source_text": "Removed Opus 4.7 from fast mode; `/fast` now applies to Opus 5 and Opus 4.8",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.203#035",
+      "source_line": 4731,
+      "source_text": "Removed the startup \"claude command missing or broken\" warnings — they now appear in `/doctor` and `/status` instead",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.203#036",
+      "source_line": 4732,
+      "source_text": "Removed a redundant navigation hint from the `claude agents` footer",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.198#033",
+      "source_line": 4841,
+      "source_text": "Removed the `/agents` wizard; ask Claude to create or manage subagents, or edit `.claude/agents/` directly",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "COMMAND_REMOVED_AGENT_MANAGEMENT_RETAINED",
+      "last_code_consumer": null,
+      "F_ids": [
+        "F056",
+        "F095"
+      ],
+      "target_code": "chunk-j0tbz6ra.js:40852 and CLI agents subcommands",
+      "actual_scope": "Old /agents wizard removed; CLI agents and file based agent management remain"
+    },
+    {
+      "id": "2.1.183#006",
+      "source_line": 5008,
+      "source_text": "Removed the startup \"setup issues\" line under the logo — run `/doctor` to see configuration issues or use `--debug`",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.162#028",
+      "source_line": 5313,
+      "source_text": "Removed the \"Claude in Chrome enabled\" and \"marketplace installed\" startup messages; model auto-updates and the team-onboarding tip now show as quiet notices under the logo",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.160#025",
+      "source_line": 5366,
+      "source_text": "Removed `CLAUDE_CODE_OPUS_4_6_FAST_MODE_OVERRIDE`; the environment variable is now a no-op",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "DEPRECATED_OVERRIDE_REMOVED",
+      "last_code_consumer": null,
+      "F_ids": [
+        "F017"
+      ],
+      "target_code": "release note 2.1.160 source line 5366",
+      "actual_scope": "CLAUDE_CODE_OPUS_4_6_FAST_MODE_OVERRIDE no longer applies"
+    },
+    {
+      "id": "2.1.160#026",
+      "source_line": 5367,
+      "source_text": "Removed the JetBrains plugin install suggestion from startup",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.157#028",
+      "source_line": 5407,
+      "source_text": "Removed the \"bash commands will be sandboxed\" startup banner — sandbox status still shows in `/status` and when a command is blocked",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.157#029",
+      "source_line": 5408,
+      "source_text": "Removed the \"/ide for …\" startup hint toast",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.154#039",
+      "source_line": 5458,
+      "source_text": "Removed the stale \"& for background\" hint from the shortcuts help panel",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.142#024",
+      "source_line": 5750,
+      "source_text": "Removed stale `/model claude-sonnet-4-20250514` suggestion from Usage Policy refusal messages",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.92#019",
+      "source_line": 6759,
+      "source_text": "Removed `/tag` command",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    },
+    {
+      "id": "2.1.92#020",
+      "source_line": 6760,
+      "source_text": "Removed `/vim` command (toggle vim mode via `/config` → Editor mode)",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "SLASH_COMMAND_REMOVED_CONFIG_REPLACEMENT",
+      "last_code_consumer": null,
+      "F_ids": [
+        "F011"
+      ],
+      "target_code": "2.1.310 terminal /config Editor mode",
+      "actual_scope": "The /vim slash command removed; vim key mode survives config entry"
+    },
+    {
+      "id": "2.1.90#019",
+      "source_line": 6799,
+      "source_text": "Removed `Get-DnsClientCache` and `ipconfig /displaydns` from auto-allow (DNS cache privacy)",
+      "release_change": "REMOVAL",
+      "target_2_1_310_state": "TO_BE_CONFIRMED",
+      "last_code_consumer": null
+    }
+  ],
+  "counts": {
+    "explicit_removals": 33,
+    "source_target_crosscheck": 6
+  }
+}

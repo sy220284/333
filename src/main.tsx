@@ -2257,18 +2257,12 @@ async function run(): Promise<CommanderCommand> {
       // Check for pending agent memory snapshot updates (only for --agent mode, ant-only)
       if (feature('AGENT_MEMORY_SNAPSHOT') && mainThreadAgentDefinition && isCustomAgent(mainThreadAgentDefinition) && mainThreadAgentDefinition.memory && mainThreadAgentDefinition.pendingSnapshotUpdate) {
         const agentDef = mainThreadAgentDefinition;
-        const choice = await launchSnapshotUpdateDialog(root, {
+        await launchSnapshotUpdateDialog(root, {
           agentType: agentDef.agentType,
           scope: agentDef.memory!,
           snapshotTimestamp: agentDef.pendingSnapshotUpdate!.snapshotTimestamp
         });
-        if (choice === 'merge') {
-          const {
-            buildMergePrompt
-          } = await import('./components/agents/SnapshotUpdateDialog.js');
-          const mergePrompt = buildMergePrompt(agentDef.agentType, agentDef.memory!);
-          inputPrompt = inputPrompt ? `${mergePrompt}\n\n${inputPrompt}` : mergePrompt;
-        }
+        // 目标版固定 keep；清除一次性 pending 标记后继续会话。
         agentDef.pendingSnapshotUpdate = undefined;
       }
 
