@@ -331,6 +331,8 @@ jobs:
         run: bun test tests/m1-generators.test.ts
       - name: 验证 MCP 服务输入参数合法性与内部字段拒绝
         run: bun test tests/m1-mcp-argument-validation.test.ts
+      - name: 验证 SDK 到 MCP 的 JSON-RPC 消息类型及拒绝非法消息
+        run: bun test tests/m1-sdk-mcp-message-validation.test.ts
       - name: 验证 SDK 助手、用户及 UUID 核心消息结构
         run: bun test tests/m1-sdk-message-contract.test.ts
       - name: 验证 SDK 流事件模式与远程合并的 Bun 运行链路
