@@ -84,7 +84,7 @@ export const MonitorTool=buildTool({
     }
     const shell=await exec(input.command!,abortController.signal,'bash',{
       timeout:timeoutMs,
-      shouldUseSandbox:shouldUseSandbox({command:input.command!,description:input.description}),
+      shouldUseSandbox:shouldUseSandbox({command:input.command!}),
       onProgress(_last,all){
         const full=typeof all==='string'?all:''
         const delta=full.startsWith(lastOutput)?full.slice(lastOutput.length):full

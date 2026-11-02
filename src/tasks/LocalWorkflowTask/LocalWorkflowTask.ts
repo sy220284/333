@@ -14,6 +14,7 @@ export type LocalWorkflowTaskState = TaskStateBase & {
   type: 'local_workflow'
   workflowRunId: string
   workflowName: string
+  summary: string
   phase?: string
   scriptPath?: string
   transcriptDir: string
@@ -48,6 +49,7 @@ export async function launchWorkflow(
   input:{script:string,args?:Record<string,unknown>,resumeFromRunId?:string,scriptPath?:string},
   context:ToolUseContext,
   canUseTool:Parameters<typeof AgentTool.call>[2],
+  parentMessage:Parameters<typeof AgentTool.call>[3],
 ):Promise<{taskId:string,runId:string,transcriptDir:string,workflowName:string,scriptPath:string}> {
   const parsed=validateWorkflowScript(input.script)
   const runId=input.resumeFromRunId??`wf_${randomUUID().replaceAll('-','').slice(0,12)}`
@@ -74,7 +76,7 @@ export async function launchWorkflow(
   const task:LocalWorkflowTaskState={
     ...createTaskStateBase(id,'local_workflow',parsed.meta.description,context.toolUseId),
     type:'local_workflow',status:'running',workflowRunId:runId,
-    workflowName:parsed.meta.name,scriptPath,transcriptDir:dir,
+    workflowName:parsed.meta.name,summary:parsed.meta.description,scriptPath,transcriptDir:dir,
   }
   const abort=new AbortController()
   const unregister=registerCleanup(async()=>{abort.abort();finish(id,setAppState,'killed','session ended')})
@@ -105,7 +107,7 @@ export async function launchWorkflow(
             prompt,description:typeof options.description==='string'?options.description.slice(0,100):`Workflow ${parsed.meta.name} agent ${index+1}`,
             subagent_type:typeof options.subagent_type==='string'?options.subagent_type:'general-purpose',
             run_in_background:false,
-          },context,canUseTool)
+          },context,canUseTool,parentMessage)
           const data=response.data
           if(data.status!=='completed')throw new Error(`Workflow agent ${index+1} did not complete synchronously`)
           const value=data.content?.map(item=>item.type==='text'?item.text:'').join('\n')??''

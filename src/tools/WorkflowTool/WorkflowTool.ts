@@ -70,10 +70,10 @@ export const WorkflowTool=buildTool({
       updatedInput:input,
       decisionReason:{type:'safetyCheck' as const,reason:'Workflow can launch agents and run user-approved code',classifierApprovable:false}}
   },
-  async call(input,context,canUseTool){
+  async call(input,context,canUseTool,parentMessage){
     const script=await resolveScript(input)
     const parsed=validateWorkflowScript(script)
-    const result=await launchWorkflow({script,args:input.args,resumeFromRunId:input.resumeFromRunId,scriptPath:input.scriptPath},context,canUseTool)
+    const result=await launchWorkflow({script,args:input.args,resumeFromRunId:input.resumeFromRunId,scriptPath:input.scriptPath},context,canUseTool,parentMessage)
     return {data:{status:'async_launched' as const,taskId:result.taskId,taskType:'local_workflow' as const,
       workflowName:result.workflowName,runId:result.runId,summary:parsed.meta.description,
       transcriptDir:result.transcriptDir,scriptPath:result.scriptPath}}

@@ -441,6 +441,8 @@ export type Tool<
    * When true, this tool is deferred (sent with defer_loading: true) and requires
    * ToolSearch to be used before it can be called.
    */
+  /** Tool runs code or shell commands; permission and classifier paths must retain this metadata. */
+  readonly enablesCodeExecution?: boolean
   readonly shouldDefer?: boolean
   /**
    * When true, this tool is never deferred — its full schema appears in the

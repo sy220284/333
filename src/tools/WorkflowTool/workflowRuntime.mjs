@@ -32,6 +32,7 @@ export function validateWorkflowScript(script){
  new vm.Script('(async()=>{\n'+runnable+'\n})()')
  return {meta,runnable,hash:createHash('sha256').update(script).digest('hex')}
 }
+/** @param {{script:string,args?:Record<string,unknown>,agent:(prompt:string,options?:Record<string,unknown>)=>Promise<unknown>,onPhase?:(phase:string)=>void,onLog?:(message:string)=>void,signal?:AbortSignal}} config */
 export async function executeWorkflowScript({script,args={},agent,onPhase=()=>{},onLog=()=>{},signal}){
  const {meta,runnable}=validateWorkflowScript(script)
  const check=()=>{if(signal?.aborted)throw Error('Workflow cancelled')}
