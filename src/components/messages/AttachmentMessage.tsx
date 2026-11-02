@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { Ansi, Box, Text } from '../../ink.js';
 import type { Attachment } from 'src/utils/attachments.js';
 import type { NullRenderingAttachmentType } from './nullRenderingAttachments.js';
-import { useAppState } from '../../state/AppState.js';
+import { useAppState, type AppState } from '../../state/AppState.js';
 import { getDisplayPath } from 'src/utils/file.js';
 import { formatFileSize } from 'src/utils/format.js';
 import { MessageResponse } from '../MessageResponse.js';
@@ -435,7 +435,7 @@ function TeammateTaskStatus(t0) {
     attachment
   } = t0;
   const bg = useSelectedMessageBg();
-  let t1;
+  let t1: (state: AppState) => AppState['tasks'][string];
   if ($[0] !== attachment.taskId) {
     t1 = s => s.tasks[attachment.taskId];
     $[0] = attachment.taskId;
