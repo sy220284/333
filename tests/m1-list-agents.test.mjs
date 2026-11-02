@@ -118,7 +118,7 @@ test('a teammate does not repeat as a named local subagent', async () => {
  assert.deepEqual(cleaned,[{id:'task_one',name:undefined,status:'running'},subagents[1]])
  assert.match(buildAgentListing({subagents:cleaned,teammates:[{name:'editor'}]}).listing,/task_one/)
  const sourceCode=await source('src/tools/ListAgentsTool/ListAgentsTool.ts')
- assert.match(sourceCode,/hideTeammateNamesInSubagents\(subagents, state\.teamContext\?\.teammates\)/)
+ assert.match(sourceCode,/hideTeammateNamesInSubagents\(subagents, teammates\)/)
  assert.match(sourceCode,/listReachableTeammates\(teamFile, selfName, state\.teamContext\?\.teammates, state\.tasks\)/)
 })
 
@@ -134,4 +134,17 @@ test('requires_action is announced as waiting on a human while structured status
  const result=buildAgentListing({sessions:[{id:'session_human',name:'Human',status:'requires_action'}]})
  assert.match(result.listing,/waiting on a human/)
  assert.equal(result.sections[0].rows[0].status,'requires_action')
+})
+
+
+test('persisted roster names also shadow duplicate local agent display names',()=>{
+ const roster={members:[{agentId:'teammate002',name:'bookkeeper',status:'running'}]}
+ const listed=listReachableTeammates(roster,'lead',{})
+ const subagents=[{id:'agent-9',name:'bookkeeper',type:'general-purpose',status:'running'}]
+ const dedup=hideTeammateNamesInSubagents(subagents,listed)
+ assert.equal(dedup[0].name,undefined)
+ const shown=buildAgentListing({teammates:listed,subagents:dedup})
+ assert.equal(shown.sections.find(x=>x.kind==='teammates').rows[0].name,'bookkeeper')
+ assert.equal(shown.sections.find(x=>x.kind==='subagents').rows[0].id,'agent-9')
+ assert.equal(shown.listing.match(/bookkeeper/g)?.length,1)
 })
