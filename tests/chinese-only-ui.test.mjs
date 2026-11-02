@@ -120,3 +120,10 @@ test('统计面板中文标签与内部标签 ID 保持一致', () => {
   assert.match(s, /defaultTab="Overview"/)
   assert.match(read('src/components/LogoV2/ChannelsNotice.tsx'), /频道功能当前不可用/)
 })
+
+test('代理创建、权限与工具选择界面使用中文', () => {
+  assert.match(read('src/components/agents/AgentsList.tsx'), /创建新代理/)
+  assert.match(read('src/components/agents/AgentsMenu.tsx'), /删除代理/)
+  assert.match(read('src/components/agents/ToolSelector.tsx'), /所有工具/)
+  assert.match(read('src/components/agents/new-agent-creation/CreateAgentWizard.tsx'), /创建新代理/)
+})
