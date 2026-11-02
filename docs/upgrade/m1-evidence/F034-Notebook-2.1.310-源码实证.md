@@ -22,8 +22,8 @@
 - 正式工具入口仍为 `src/tools/NotebookEditTool/NotebookEditTool.ts`，通过 `notebookMutation.ts` 共享校验与实际修改逻辑。
 - 恢复 `old_source`，统一真实单元格 ID 与索引解析，使用八位 ID；校验源格式，覆盖代码/Markdown 类型转换后的冗余字段清理。
 - 引入 100 MiB 文件大小限制，先检查源文件大小、再解码 Notebook；输出内容按编码及 CRLF 换行后字节数限制。
-- 文件历史写入前后检测旧快照，并共享 `Read` 对 Notebook 的实际可见投影，核对正文内容防止相同文件时间戳的外部修改覆盖；失败回传明确错误。
-- `tests/notebook-edit-parity.test.ts`：真实格式、字段、顺序、旧内容、目标 ID、错误路径。
+- 文件历史写入前后检测旧快照，并共享 `Read` 对 Notebook 的实际可见投影，核对正文内容防止相同文件时间戳的外部修改覆盖；通过 `src/utils/notebookFileLock.ts` 将同路径编辑的读取、校验、写入串行处理，失败也释放锁；失败回传明确错误。
+- `tests/notebook-edit-parity.test.ts`：真实格式、字段、顺序、旧内容、目标 ID、错误路径、同一文件串行以及不同文件并行、失败后锁释放（15 项）。
 - `tests/notebook-edit-write-integration.test.ts`：真正运行 `NotebookEditTool.call` 改写磁盘文件和恢复。
 - `tests/notebook-read-edit-integration.test.ts`：真正通过 `FileReadTool.call` → `NotebookEditTool.validateInput/call` → `FileReadTool.call`，验证旧缓存不得掩盖新内容。
 - `.github/workflows/m1-sed-preview-parity.yml`：Linux/macOS/Windows 执行专用测试与逐文件 Biome，Linux/macOS 额外运行 GNU/BSD sed 真实文件差分。
@@ -33,6 +33,6 @@
 
 ## 准确状态
 
-`F034` 已找到目标实现及实际消费者，部分合同有 333 修改和跨平台测试，可登记为 **CONTRACT_CONFIRMED + IMPLEMENTED + INTEGRATED + TESTED（所列子合同）**。最后的 M10 **ACCEPTED** 必须等目标版正式可执行程序同条件回归与锁/权限/软链/异常路径差分完成后签署；所有分支覆盖不能只依据此项新增测试认定完结。
+`F034` 已找到目标实现及实际消费者，部分合同有 333 修改和跨平台测试，可登记为 **CONTRACT_CONFIRMED + IMPLEMENTED + INTEGRATED + TESTED（所列子合同）**。最后的 M10 **ACCEPTED** 必须等目标版正式可执行程序同条件回归与跨工具文件锁/权限/软链/异常路径差分完成后签署；所有分支覆盖不能只依据此项新增测试认定完结。
 
 此文记录可复跑的目标源码锚点和验收范围；状态统计以每次实际 GitHub Actions 通过结果为准。
