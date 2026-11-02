@@ -65,6 +65,13 @@ function isExcludedByReleaseBuild(node, source) {
       if (condition === false && n === parent.whenTrue) return true;
       if (condition === true && n === parent.whenFalse) return true;
     }
+    // feature('X') && require('./optional.js') also compiles away when X
+    // is disabled. The right-hand side is never evaluated in that case.
+    if (ts.isBinaryExpression(parent) && n === parent.right) {
+      const condition = compileCondition(parent.left, source);
+      if (parent.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken && condition === false) return true;
+      if (parent.operatorToken.kind === ts.SyntaxKind.BarBarToken && condition === true) return true;
+    }
   }
   return false;
 }
@@ -143,7 +150,7 @@ for(const file of walk(resolve(root,'src'))) {
 const out=[...records.values()].map(item=>{
   const syms=[...item.importedSymbols.values()].sort((a,b)=>b.imports-a.imports);
   const names=syms.map(x=>x.name);
-  item.classification=names.length===0?'not-found-in-current-src':item.reachableAtRuntime?'runtime-required':'type-only';
+  item.classification=names.length===0?'not-found-in-current-src':item.reachableAtRuntime?'runtime-required':item.runtimeSites>0?'build-excluded':'type-only';
   return {
     target:item.target,kind:item.classification,originalMissingReferences:item.originalMissingReferences,importSites:item.referencedIn,
     uniqueConsumers:new Set(item.locations.map(x=>x.file)).size,symbols:syms,locations:item.locations,
@@ -153,6 +160,7 @@ const out=[...records.values()].map(item=>{
 const summary={
   total:out.length,
   typeOnly:out.filter(x=>x.kind==='type-only').length,
+  buildExcluded:out.filter(x=>x.kind==='build-excluded').length,
   runtimeRequired:out.filter(x=>x.kind==='runtime-required').length,
   unreferenced:out.filter(x=>x.kind==='not-found-in-current-src').length,
   releaseGatedOnly:out.filter(x=>x.runtimeSites>0&&x.runtimeSites===x.provenExcludedSites).length,
