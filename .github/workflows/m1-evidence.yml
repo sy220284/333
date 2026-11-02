@@ -97,7 +97,7 @@ jobs:
           node-version: '22'
       - name: 下载固定目标版官方 x64 程序
         run: |
-          curl --fail --location --silent --show-error --retry 3 \
+          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
             "https://downloads.claude.ai/claude-code-releases/2.1.310/linux-x64/claude" \
             --output "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
           echo "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  ${RUNNER_TEMP}/claude-2.1.310-linux-x64" | sha256sum --check
@@ -192,7 +192,7 @@ jobs:
         run: bun build/rebuild.mjs
       - name: 准备官方x64对照程序与真实候选启动器
         run: |
-          curl --fail --location --silent --show-error --retry 3 \
+          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
             "https://downloads.claude.ai/claude-code-releases/2.1.310/linux-x64/claude" \
             --output "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
           echo "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  ${RUNNER_TEMP}/claude-2.1.310-linux-x64" | sha256sum --check
