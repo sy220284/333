@@ -3,9 +3,8 @@ import React, { createContext, type ReactNode, useCallback, useEffect, useMemo, 
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js';
 import type { WizardContextValue, WizardProviderProps } from './types.js';
 
-// Use any here for the context since it will be cast properly when used
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const WizardContext = createContext<WizardContextValue<any> | null>(null);
+// The hook validates and narrows this generic context at its consumption boundary.
+export const WizardContext = createContext<unknown>(null);
 export function WizardProvider<T extends Record<string, unknown>>(t0: WizardProviderProps<T>) {
   const $ = _c(38);
   const {
