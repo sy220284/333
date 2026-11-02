@@ -28,17 +28,22 @@ export function mergeSessionPeers({ local = [], cloud = [], bridge = [], selfId 
     const key = canonicalId(row?.id)
     if (!key || seen.has(key)) return
     seen.add(key)
-    const status = row.offline ? 'offline' : row.workerStatus ?? row.status ?? 'unknown'
+    // A cloud snapshot may lag after a Remote Control session reconnects.
+    // Only the verified live endpoint establishes actual reachability.
+    const connected = bridgeReachable(transport)
+    const status = connected
+      ? (transport.workerStatus ?? transport.status ?? 'active')
+      : (row.offline ? 'offline' : row.workerStatus ?? row.status ?? 'unknown')
+    const acceptsPeerMessages = row.acceptsPeerMessages !== false &&
+      (transport ? transport.acceptsPeerMessages !== false : true)
     const peer = {
-      name: String(row.title || '(untitled)'), id: row.id,
+      name: String(row.title || transport?.title || '(untitled)'), id: row.id,
       ref: createHash('sha256').update(key).digest('hex').slice(0, 6),
       kind: row.remoteControl ? 'remote_control' : kind, status,
-      acceptsPeerMessages: row.acceptsPeerMessages !== false &&
-        (transport ? transport.acceptsPeerMessages !== false : true),
-      unreachableFromHere: !!row.unreachableFromHere || row.offline === true ||
-        !bridgeReachable(transport),
+      acceptsPeerMessages,
+      unreachableFromHere: !connected || !acceptsPeerMessages,
     }
-    peers.push({ ...peer, address: active(peer) && bridgeReachable(transport)
+    peers.push({ ...peer, address: active(peer) && connected
       ? `bridge:${transport.id}` : undefined })
   }
   for (const row of cloud) include(row, 'cloud', bridgeById.get(canonicalId(row?.id)))
