@@ -1847,6 +1847,7 @@ async function* queryModel(
   let ttftMs = 0
   let apiMessageId: string | undefined
   let requestThinkingDisplay: string | undefined
+  const thinkingBlockStartTimes = new WeakMap<object, number>()
   let partialMessage: BetaMessage | undefined = undefined
   const contentBlocks: (BetaContentBlock | ConnectorTextBlock)[] = []
   let usage: NonNullableUsage = EMPTY_USAGE
@@ -2133,15 +2134,18 @@ async function* queryModel(
                   text: '',
                 }
                 break
-              case 'thinking':
-                contentBlocks[part.index] = {
+              case 'thinking': {
+                const thinkingBlock = {
                   ...part.content_block,
                   // also awkward
                   thinking: '',
                   // initialize signature to ensure field exists even if signature_delta never arrives
                   signature: '',
                 }
+                contentBlocks[part.index] = thinkingBlock
+                thinkingBlockStartTimes.set(thinkingBlock, performance.now())
                 break
+              }
               default:
                 // even more awkwardly, the sdk mutates the contents of text blocks
                 // as it works. we want the blocks to be immutable, so that we can
@@ -2295,6 +2299,15 @@ async function* queryModel(
               })
               throw new Error('Message not found')
             }
+            const thinkingStartedAt = contentBlock.type === 'thinking'
+              ? thinkingBlockStartTimes.get(contentBlock)
+              : undefined
+            const thinkingDurationMs = thinkingStartedAt !== undefined
+              ? Math.max(1, Math.round(performance.now() - thinkingStartedAt))
+              : undefined
+            const thinkingDisplay = contentBlock.type === 'thinking'
+              ? requestThinkingDisplay
+              : undefined
             const m: AssistantMessage = {
               message: {
                 ...partialMessage,
@@ -2308,6 +2321,8 @@ async function* queryModel(
               type: 'assistant',
               uuid: randomUUID(),
               timestamp: new Date().toISOString(),
+              ...(thinkingDurationMs !== undefined && { thinkingDurationMs }),
+              ...(thinkingDisplay !== undefined && { thinkingDisplay }),
               ...(process.env.USER_TYPE === 'ant' &&
                 research !== undefined && { research }),
               ...(advisorModel && { advisorModel }),

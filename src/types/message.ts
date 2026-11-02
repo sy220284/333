@@ -71,6 +71,8 @@ export interface AssistantMessage extends MessageHeader {
   errorDetails?: string
   isApiErrorMessage?: boolean
   advisorModel?: string
+  thinkingDurationMs?: number
+  thinkingDisplay?: string
   parent_tool_use_id?: string | null
 }
 export interface AttachmentMessage<T extends Attachment = Attachment> extends MessageHeader {

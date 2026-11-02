@@ -1431,6 +1431,8 @@ export const SDKAssistantMessageSchema = lazySchema(() =>
     message: APIAssistantMessagePlaceholder(),
     parent_tool_use_id: z.string().nullable(),
     error: SDKAssistantMessageErrorSchema().optional(),
+    thinking_duration_ms: z.number().int().positive().optional().catch(undefined),
+    thinking_display: z.string().optional().catch(undefined),
     uuid: UUIDPlaceholder(),
     session_id: z.string(),
   }),

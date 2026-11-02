@@ -8,6 +8,7 @@ on:
       - 'src/cli/transports/streamAccumulator.ts'
       - 'src/entrypoints/sdk/coreSchemas.ts'
       - 'src/entrypoints/sdk/streamEventMapper.ts'
+      - 'src/entrypoints/sdk/thinkingMessageMetadata.ts'
       - 'src/entrypoints/mcp.ts'
       - 'src/entrypoints/mcpInputValidation.ts'
       - 'src/services/mcp/validateSdkTransportMessage.ts'
@@ -15,12 +16,15 @@ on:
       - 'src/services/api/thinkingDisplay.ts'
       - 'src/remote/sdkMessageAdapter.ts'
       - 'src/types/message.ts'
+      - 'src/utils/queryHelpers.ts'
       - 'src/QueryEngine.ts'
       - 'tests/m1-ccr-close.test.ts'
       - 'tests/m1-mcp-argument-validation.test.ts'
       - 'tests/m1-sdk-mcp-message-validation.test.ts'
       - 'tests/m1-sdk-stream-*.test.mjs'
       - 'tests/m1-thinking-display.test.mjs'
+      - 'tests/m1-sdk-thinking-metadata.test.mjs'
+      - 'tests/m1-sdk-thinking-schema.test.ts'
       - 'tests/sdk-stream-*.test.ts'
       - 'build/m1-sdk-*.mjs'
   workflow_dispatch:
@@ -46,7 +50,7 @@ jobs:
         id: relevant
         shell: bash
         run: |
-          if [[ '${{ github.event_name }}' == 'workflow_dispatch' ]] || git diff-tree --root --no-commit-id --name-only -r HEAD | grep -Eq '^((src/cli/transports/(ccrClient|streamAccumulator)\.ts|src/entrypoints/sdk/(coreSchemas|streamEventMapper)\.ts|src/entrypoints/(mcp|mcpInputValidation)\.ts|src/services/mcp/validateSdkTransportMessage\.ts|src/services/api/(claude|thinkingDisplay)\.ts|src/remote/sdkMessageAdapter\.ts|src/types/message\.ts|src/QueryEngine\.ts|tests/(m1-mcp-argument-validation\.test\.ts|m1-sdk-mcp-message-validation\.test\.ts|m1-ccr-close\.test\.ts|m1-sdk-stream-.*\.test\.mjs|m1-thinking-display\.test\.mjs|sdk-stream-.*\.test\.ts)|build/m1-sdk-.*\.mjs|\.github/workflows/sdk-stream-parity\.yml))$'; then
+          if [[ '${{ github.event_name }}' == 'workflow_dispatch' ]] || git diff-tree --root --no-commit-id --name-only -r HEAD | grep -Eq '^((src/cli/transports/(ccrClient|streamAccumulator)\.ts|src/entrypoints/sdk/(coreSchemas|streamEventMapper|thinkingMessageMetadata)\.ts|src/entrypoints/(mcp|mcpInputValidation)\.ts|src/services/mcp/validateSdkTransportMessage\.ts|src/services/api/(claude|thinkingDisplay)\.ts|src/remote/sdkMessageAdapter\.ts|src/types/message\.ts|src/utils/queryHelpers\.ts|src/QueryEngine\.ts|tests/(m1-mcp-argument-validation\.test\.ts|m1-sdk-mcp-message-validation\.test\.ts|m1-ccr-close\.test\.ts|m1-sdk-stream-.*\.test\.mjs|m1-sdk-thinking-metadata\.test\.mjs|m1-sdk-thinking-schema\.test\.ts|m1-thinking-display\.test\.mjs|sdk-stream-.*\.test\.ts)|build/m1-sdk-.*\.mjs|\.github/workflows/sdk-stream-parity\.yml))$'; then
             echo 'run=true' >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/setup-node@v4
@@ -67,8 +71,8 @@ jobs:
       - name: 验证事件合并、字段映射与远程 HTTP 上传
         if: steps.relevant.outputs.run == 'true'
         run: |
-          node --test tests/m1-sdk-stream-coalescing.test.mjs tests/m1-sdk-stream-mapping.test.mjs tests/m1-thinking-display.test.mjs
-          bun test tests/sdk-stream-events.test.ts tests/sdk-stream-accumulator.test.ts tests/m1-ccr-close.test.ts
+          node --test tests/m1-sdk-stream-coalescing.test.mjs tests/m1-sdk-stream-mapping.test.mjs tests/m1-thinking-display.test.mjs tests/m1-sdk-thinking-metadata.test.mjs
+          bun test tests/sdk-stream-events.test.ts tests/sdk-stream-accumulator.test.ts tests/m1-ccr-close.test.ts tests/m1-sdk-thinking-schema.test.ts
           bun test tests/m1-sdk-mcp-message-validation.test.ts tests/m1-mcp-argument-validation.test.ts
       - name: 源码重建并准备固定哈希的官方 x64
         if: steps.relevant.outputs.run == 'true'

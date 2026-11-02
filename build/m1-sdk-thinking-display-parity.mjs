@@ -77,10 +77,17 @@ async function probe(executable, mode) {
       ? requestThinking?.type === 'adaptive' && requestThinking?.display === 'summarized'
       : requestThinking === undefined
     const result = messages.findLast(message => message.type === 'result')
+    const assistantFrames = messages.filter(message => message.type === 'assistant')
+    const thinkingFrame = assistantFrames.find(message => message.message?.content?.length === 1 && message.message.content[0]?.type === 'thinking')
+    const textFrame = assistantFrames.find(message => message.message?.content?.length === 1 && message.message.content[0]?.type === 'text')
+    const assistantDisplay = thinkingFrame?.thinking_display ?? null
+    const assistantDurationValid = Number.isSafeInteger(thinkingFrame?.thinking_duration_ms) && thinkingFrame.thinking_duration_ms >= 1
+    const textMetadataAbsent = textFrame && textFrame.thinking_display === undefined && textFrame.thinking_duration_ms === undefined
     const passed = code === 0 && requests > 0 && sentExpected &&
       JSON.stringify(types) === JSON.stringify(expectedTypes) && JSON.stringify(displays) === JSON.stringify(expectedDisplays) &&
+      assistantDisplay === mode.display && assistantDurationValid && textMetadataAbsent &&
       result?.result === 'done' && result?.is_error === false
-    return { mode: mode.name, passed, code, signal, requests, requestThinking: requestThinking ?? null, types, displays, stderr: stderr.slice(-300) }
+    return { mode: mode.name, passed, code, signal, requests, requestThinking: requestThinking ?? null, types, displays, assistantDisplay, assistantDurationValid, textMetadataAbsent: !!textMetadataAbsent, stderr: stderr.slice(-300) }
   } finally {
     await new Promise(done => server.close(done))
     rmSync(home, { recursive: true, force: true })
