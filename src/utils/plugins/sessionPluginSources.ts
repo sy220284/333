@@ -100,7 +100,10 @@ async function pluginRoots(directory: string): Promise<string[]> {
     if (await stat(join(dir,'.claude-plugin','plugin.json')).then(x=>x.isFile(),()=>false)) found.push(dir)
   }
   if(found.length>0)return found
-  if(possible.length===1)return [join(directory,possible[0]!.name)]
+  if (possible.length === 1) {
+    const only = possible[0]
+    if (only) return [join(directory, only.name)]
+  }
   throw new Error('Plugin ZIP has no discoverable plugin manifest or directory')
 }
 
