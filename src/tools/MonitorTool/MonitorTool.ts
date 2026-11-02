@@ -12,11 +12,14 @@ import { isPublicIp, validateMonitorArguments, validateMonitorWsUrl } from '../.
 import { lazySchema } from '../../utils/lazySchema.js'
 
 const inputSchema = lazySchema(() => z.strictObject({
-  description:z.string().min(1),
+  description:z.string().describe('Short human-readable description of what you are monitoring (shown in notifications).'),
+  timeout_ms:z.number().min(1000).max(3600000).default(300000)
+    .describe('Kill the monitor after this deadline. Default 300000ms. Deadlines above 600000ms are capped to 600000ms. You are notified at expiry and can re-arm.'),
   command:z.string().optional().describe('Shell command or script. Each stdout line is an event; exit ends the watch.'),
-  ws:z.object({url:z.string(),protocols:z.array(z.string()).optional()}).optional()
-    .describe('WebSocket text frames are events; socket close ends the watch.'),
-  timeout_ms:z.number().int().min(1000).max(3600000).default(300000),
+  ws:z.object({
+    url:z.string(),
+    protocols:z.array(z.string().regex(/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/)).optional(),
+  }).optional().describe('WebSocket to open. Each text frame is an event; binary frames are reported as a placeholder line. Socket close ends the watch. Cannot be combined with command.'),
 }).refine(v=>(v.command!==undefined)!==(v.ws!==undefined),'exactly one of command or ws'))
 type InputSchema=ReturnType<typeof inputSchema>
 const outputSchema=lazySchema(()=>z.object({

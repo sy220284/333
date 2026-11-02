@@ -9,11 +9,13 @@ import { validateWorkflowScript } from './workflowRuntime.mjs'
 import { launchWorkflow } from '../../tasks/LocalWorkflowTask/LocalWorkflowTask.js'
 
 const inputSchema=lazySchema(()=>z.strictObject({
-  script:z.string().optional().describe('Deterministic workflow script with export const meta'),
-  name:z.string().optional().describe('Workflow file name in .claude/workflows'),
-  args:z.record(z.string(),z.unknown()).optional(),
-  scriptPath:z.string().optional().describe('Workflow file under the current workspace'),
-  resumeFromRunId:z.string().optional(),
+  script:z.string().max(524288).optional().describe('Self-contained workflow script. Must begin with `export const meta = { name, description, phases }` (pure literal, no computed values) followed by the script body using agent()/parallel()/pipeline()/phase().'),
+  name:z.string().optional().describe('Name of a predefined workflow (built-in or from .claude/workflows/). Resolves to a self-contained script.'),
+  description:z.string().optional().describe('Ignored — set the workflow description in the script\'s `meta` block.'),
+  title:z.string().optional().describe('Ignored — set the workflow title in the script\'s `meta` block.'),
+  args:z.unknown().optional().describe('Optional input value exposed to the script as the global `args`, verbatim. Pass arrays/objects as actual JSON values, NOT as a JSON-encoded string — a stringified list breaks `args.filter`/`args.map` in the script. Use for parameterized named workflows (e.g. a research question).'),
+  scriptPath:z.string().optional().describe('Path to a workflow script file on disk. Every Workflow invocation persists its script under the session directory and returns the path in the tool result. To iterate, edit that file with Write/Edit and re-invoke Workflow with the same `scriptPath` instead of re-sending the full script. Takes precedence over `script` and `name`.'),
+  resumeFromRunId:z.string().regex(/^wf_[a-z0-9-]{6,}$/).optional().describe('Run ID of a prior Workflow invocation to resume from. Completed agent() calls with unchanged (prompt, opts) return their cached results instantly; only edited or new calls re-run. Same-session only. Stop the prior run first (TaskStop) before resuming.'),
 }))
 type InputSchema=ReturnType<typeof inputSchema>
 const outputSchema=lazySchema(()=>z.object({
