@@ -11,8 +11,8 @@ describe('2.1.310 terminal OSC11 and theme push', () => {
   test('CSI ? 997;1n and 997;2n are terminal responses rather than keys', () => {
     for (const [digit, dark] of [['1', true], ['2', false]] as const) {
       const [items] = parseMultipleKeypresses(
-        '\x1b[?997;' + digit + 'n',
         INITIAL_STATE,
+        '\x1b[?997;' + digit + 'n',
       )
       const event = items.find(item => item.kind === 'response')
       expect(event?.kind).toBe('response')
