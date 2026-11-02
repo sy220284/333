@@ -16,11 +16,11 @@ load_manifest() {
 require_repo() {
   [ -f "$REPO_ROOT/package.json" ] && [ -f "$REPO_ROOT/build/public-dependencies.lock.json" ] || die "找不到 333 仓库根目录；请设置 DEV333_REPO_ROOT"
 }
+# ShellCheck checks this sourced library independently; ARCH_KIND is used by install.sh.
+# shellcheck disable=SC2034
 detect_arch() {
   [ "$(uname -s)" = Linux ] || die "离线组件支持 Linux/WSL x64；macOS/Windows 使用 rebuild.yml"
   case "$(uname -m)" in
-    # ShellCheck checks this sourced library without its callers.
-    # shellcheck disable=SC2034
     x86_64|amd64) ARCH_KIND=x64 ;;
     *) die "当前发布组件仅支持 Linux x64：$(uname -m)" ;;
   esac
