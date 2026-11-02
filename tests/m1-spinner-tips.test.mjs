@@ -91,7 +91,8 @@ test('target selection is connected to the actual registry, scheduler and durabl
   assert.match(registry,/getTipLifetimeShows/)
   assert.match(scheduler,/selectLongestUnshown\(availableTips, getSessionsSinceLastShown\)/)
   assert.match(history,/tipLifetimeShows/)
-  assert.match(history,/history\[tipId\] === numStartups/)
+  assert.doesNotMatch(history,/history\\[tipId\\] === numStartups/)
+  assert.match(history,/\\(c.tipLifetimeShows\\?\\.\\[tipId\\] \\?\\? 0\\) \\+ 1/)
 })
 
 test('content exceptions are recorded once and produce no rendered spinner text', async () => {
