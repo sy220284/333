@@ -32,6 +32,11 @@ import {
   renderToolUseRejectedMessage,
 } from './UI.js'
 
+/** A UNC path can access remote shares during stat/read before permission checks. */
+function isUncNotebookPath(path: string): boolean {
+  return path.startsWith('\\\\\\\\') || path.startsWith('//')
+}
+
 export const inputSchema = lazySchema(() =>
   z.strictObject({
     notebook_path: z
@@ -210,9 +215,13 @@ export const NotebookEditTool = buildTool({
       ? notebook_path
       : resolve(getCwd(), notebook_path)
 
-    // SECURITY: Skip filesystem operations for UNC paths to prevent NTLM credential leaks.
-    if (fullPath.startsWith('\\\\') || fullPath.startsWith('//')) {
-      return { result: true }
+    // Reject UNC paths before any stat/read or permission-side filesystem access.
+    if (isUncNotebookPath(notebook_path)) {
+      return {
+        result: false,
+        message: 'UNC notebook paths are not supported.',
+        errorCode: 12,
+      }
     }
 
     if (extname(fullPath) !== '.ipynb') {
@@ -355,6 +364,9 @@ export const NotebookEditTool = buildTool({
     const observedReadState = readFileState.get(fullPath)
     return withNotebookFileLock(fullPath, async () => {
     try {
+      if (isUncNotebookPath(notebook_path)) {
+        throw new Error('UNC notebook paths are not supported.')
+      }
       if (readFileState.get(fullPath) !== observedReadState) {
         throw new Error(
           'Notebook changed during a concurrent edit. Read it again before editing.',
