@@ -38,6 +38,8 @@ writeFileSync(notebook_path, JSON.stringify({
   }],
 }))
 
+const convertToMarkdown = process.env.M1_NOTEBOOK_E41_MODE === 'convert'
+const expectedSource = convertToMarkdown ? '# Hello' : 'print(2)'
 const events = []
 let requestCount = 0
 const sse = (name, payload) => `event: ${name}\ndata: ${JSON.stringify(payload)}\n\n`
@@ -46,7 +48,8 @@ const steps = [
   {
     name: 'NotebookEdit',
     id: 'toolu_e41_edit',
-    input: { notebook_path, cell_id: 'stable-cell', new_source: 'print(2)', edit_mode: 'replace' },
+    input: { notebook_path, cell_id: 'stable-cell', new_source: expectedSource,
+      ...(convertToMarkdown ? { cell_type: 'markdown' } : {}), edit_mode: 'replace' },
   },
   { name: 'Read', id: 'toolu_e41_read_after', input: { file_path: notebook_path } },
 ]
@@ -74,11 +77,11 @@ const server = createServer((req, res) => {
         assert.match(lastMessage, /print\(1\)/)
       }
       if (requestCount === 3) {
-        assert.match(lastMessage, /Updated cell stable-cell with print\(2\)/)
+        assert.ok(lastMessage.includes(`Updated cell stable-cell with ${expectedSource}`))
         assert.doesNotMatch(lastMessage, /tool_use_error/)
       }
       if (requestCount === 4) {
-        assert.match(lastMessage, /print\(2\)/)
+        assert.ok(lastMessage.includes(expectedSource))
         assert.doesNotMatch(lastMessage, /Wasted call/)
       }
       events.push({
@@ -175,9 +178,17 @@ try {
   assert.equal(output.result, 'E41_NOTEBOOK_ROUNDTRIP_OK')
   assert.equal(output.is_error, false)
   assert.equal(disk.cells[0].id, 'stable-cell')
-  assert.equal(disk.cells[0].source, 'print(2)')
+  assert.equal(disk.cells[0].source, expectedSource)
+  assert.equal(disk.cells[0].cell_type, convertToMarkdown ? 'markdown' : 'code')
+  // Official 2.1.310 preserves code execution fields on a code→markdown
+  // conversion, resetting their values before changing the cell type.
+  if (convertToMarkdown) {
+    assert.equal(disk.cells[0].execution_count, null)
+    assert.deepEqual(disk.cells[0].outputs, [])
+  }
   console.log(JSON.stringify({
-    scenario: 'E41', passed: true, modelRequests: requestCount,
+    scenario: 'E41', mode: convertToMarkdown ? 'convert' : 'replace',
+    passed: true, modelRequests: requestCount,
     observedTools: events[0]?.availableTools,
     sourceBefore: 'print(1)', sourceAfter: disk.cells[0].source,
   }, null, 2))
