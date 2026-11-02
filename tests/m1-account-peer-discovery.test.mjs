@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { canonicalId, discoverAccountPeers, mergeSessionPeers, resolveRemoteRecipient,
+import { canonicalId, peerIdentityKey, discoverAccountPeers, mergeSessionPeers, resolveRemoteRecipient,
   rememberAccountRecipients, resolveAdvertisedRemoteRecipient, resolveUnifiedPeerRecipient } from '../src/utils/accountPeerDirectory.mjs'
 test('cse and session aliases deduplicate, local endpoint wins',()=>{
   assert.equal(canonicalId('session_ab'),canonicalId('cse_ab'))
@@ -130,4 +130,28 @@ test('nonterminating or truncated pagination never yields an addressable peer',a
  assert.equal(result.peers[0].address,undefined)
  assert.equal(result.notes.some(note=>note.kind==='account_list_failed'),true)
  assert.equal(result.notes.some(note=>note.kind==='list_truncated'),true)
+})
+
+
+test('credential-scoped session advertisement rejects previous login and organization',()=>{
+ const original=peerIdentityKey('token-old','org-a')
+ const renewed=peerIdentityKey('token-new','org-a')
+ const switchedOrg=peerIdentityKey('token-old','org-b')
+ assert.ok(original && renewed && switchedOrg)
+ assert.notEqual(original,renewed)
+ assert.notEqual(original,switchedOrg)
+ assert.equal(peerIdentityKey(undefined,'org-a'),null)
+ assert.equal(peerIdentityKey('token-old',undefined),null)
+ const remote=mergeSessionPeers({bridge:[{id:'session_sensitive',title:'worker',status:'active'}]})
+ rememberAccountRecipients(remote,5000,original)
+ assert.equal(resolveAdvertisedRemoteRecipient('worker',5100,original),remote[0].address)
+ assert.equal(resolveAdvertisedRemoteRecipient('worker',5100,renewed),undefined)
+ assert.equal(resolveAdvertisedRemoteRecipient('worker',5100,switchedOrg),undefined)
+ assert.equal(resolveAdvertisedRemoteRecipient('worker',5100,null),undefined)
+ assert.deepEqual(resolveUnifiedPeerRecipient([],'worker',5100,renewed),{address:undefined,ambiguous:false})
+ // Local-only routing stays available after account switch; never reuses remote.
+ const local=[{name:'local',address:'uds:/tmp/only',ref:'123456'}]
+ assert.equal(resolveUnifiedPeerRecipient(local,'local',5100,switchedOrg).address,'uds:/tmp/only')
+ assert.equal(resolveUnifiedPeerRecipient(local,'worker',5100,original).address,remote[0].address)
+ assert.equal(resolveAdvertisedRemoteRecipient('worker',35001,original),undefined)
 })
