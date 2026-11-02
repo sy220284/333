@@ -39,7 +39,7 @@
 - **代码 → Markdown**：`print(1)` 改成 `# Hello`，实际文件 `cell_type=markdown`，`execution_count=null`，`outputs=[]`；旧执行字段依然存在。
 - **Markdown → 代码**：`# Heading` 改成 `value=1`，实际文件 `cell_type=code`，未生成新的 `execution_count` / `outputs` 字段。
 
-代码规则据此从按转换后的类型处理，改为按转换前的类型先清理旧执行结果，再切换类型。重建版新增两项单元测试，并通过 `M1_NOTEBOOK_E41_MODE=convert` 在独立 CLI 测试中对照第一种转换；**扩展版本的测试状态等待其对应 Actions 结果，不能援引更早提交的通过记录**。
+代码规则据此从按转换后的类型处理，改为按转换前的类型先清理旧执行结果，再切换类型。重建版新增两项单元测试，并通过 `M1_NOTEBOOK_E41_MODE=convert` 在独立 CLI 测试中对照第一种转换；**已完成验收**：Linux 源码专项 [#41436920335](https://github.com/sy220284/333/actions/runs/41436920335) 同时通过替换和转换两次真实 E41 CLI；[最终专项 #41437290049](https://github.com/sy220284/333/actions/runs/41437290049) 在 Linux/macOS/Windows 全部成功，Linux/macOS 各 16 sed + 17 Notebook + 3 实际工具集成（Linux 再加两次 CLI E41），Windows 17 Notebook + 2 实际工具集成；本分支独立重建 [#41436920400](https://github.com/sy220284/333/actions/runs/41436920400)、CodeQL [#41436920360](https://github.com/sy220284/333/actions/runs/41436920360) 均通过。
 
 ## 333 的实际代码修复与测试
 

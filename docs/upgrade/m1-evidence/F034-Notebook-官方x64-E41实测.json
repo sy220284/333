@@ -79,16 +79,18 @@
     "evidence": "GitHub Actions Ubuntu local-edit-parity job output: scenario E41 passed true, modelRequests 4; both Read calls and NotebookEdit were executed by the actual rebuilt process."
   },
   "cross_platform_subchain": {
-    "actions_run": 41435775007,
+    "actions_run": 41437290049,
     "ubuntu": "success",
     "macos": "success",
     "windows": "success",
     "test_counts": {
-      "linux_and_macos": "16 sed + 15 Notebook pure + 3 real tool integration + Linux CLI E41",
-      "windows": "15 Notebook pure + 2 real tool integration"
+      "linux_and_macos": "16 sed + 17 Notebook semantic + 3 real tool integration; Linux 2 CLI E41",
+      "windows": "17 Notebook semantic + 2 real integration"
     },
-    "build_run": 41435774957,
-    "build_status": "success"
+    "build_run": 41436920400,
+    "build_status": "success",
+    "codeql_run": 41436920360,
+    "codeql_status": "success"
   },
   "known_difference": {
     "official_default_tools": "ToolSearch + DeferredToolPlaceholder; NotebookEdit exposed on demand",
@@ -126,8 +128,10 @@
   ],
   "candidate_type_conversion": {
     "commit": "7889f157ef488d87583ed741cd1851a7f307754c",
-    "tests": "17 Notebook pure + 2 real integration on Windows; 17 Notebook pure + 3 real integration and 2 E41 CLI modes on Linux",
-    "actions_run": 41436920335,
-    "status": "PENDING_ACTIONS"
+    "actions_run": 41437290049,
+    "actions_url": "https://github.com/sy220284/333/actions/runs/41437290049",
+    "code_verify_run": 41436920335,
+    "tests": "Linux/macOS 17 Notebook semantic + 3 real tool integration, Linux 2 real CLI E41; Windows 17 Notebook semantic + 2 real integration; three platforms success",
+    "status": "PASSED"
   }
 }
