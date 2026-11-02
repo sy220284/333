@@ -1633,7 +1633,7 @@ export function Config({
                           <Box key={isSelected ? 'selected' : 'unselected'}>
                             {setting_2.type === 'boolean' ? <>
                                 <Text color={isSelected ? 'suggestion' : undefined}>
-                                  {setting_2.value.toString()}
+                                  {setting_2.value ? '开启' : '关闭'}
                                 </Text>
                                 {showThinkingWarning && setting_2.id === 'thinkingEnabled' && <Text color="warning">
                                       {' '}
@@ -1646,10 +1646,10 @@ export function Config({
                               </Text> : setting_2.id === 'notifChannel' ? <Text color={isSelected ? 'suggestion' : undefined}>
                                 <NotifChannelLabel value={setting_2.value.toString()} />
                               </Text> : setting_2.id === 'defaultPermissionMode' ? <Text color={isSelected ? 'suggestion' : undefined}>
-                                {permissionModeTitle(setting_2.value as PermissionMode)}
+                                {getChinesePermissionMode(setting_2.value as PermissionMode)}
                               </Text> : setting_2.id === 'autoUpdatesChannel' && autoUpdaterDisabledReason ? <Box flexDirection="column">
                                 <Text color={isSelected ? 'suggestion' : undefined}>
-                                  disabled
+                                  已禁用
                                 </Text>
                                 <Text dimColor>
                                   (
@@ -1657,7 +1657,7 @@ export function Config({
                                   )
                                 </Text>
                               </Box> : <Text color={isSelected ? 'suggestion' : undefined}>
-                                {setting_2.value.toString()}
+                                {getChineseSettingValue(setting_2.id, setting_2.value.toString())}
                               </Text>}
                           </Box>
                         </Box>
@@ -1694,11 +1694,30 @@ export function Config({
         </Box>}
     </Box>;
 }
+function getChinesePermissionMode(mode: PermissionMode): string {
+  const translations: Partial<Record<PermissionMode, string>> = {
+    default: '默认模式', plan: '规划模式', acceptEdits: '自动接受编辑',
+    bypassPermissions: '跳过权限确认', dontAsk: '不再询问', auto: '自动模式'
+  };
+  return translations[mode] ?? permissionModeTitle(mode);
+}
+function getChineseSettingValue(id: string, value: string): string {
+  if (value === 'true') return '开启';
+  if (value === 'false') return '关闭';
+  const translations: Record<string, Record<string, string>> = {
+    autoUpdatesChannel: { latest: '最新版本', stable: '稳定版本', disabled: '已禁用' },
+    defaultView: { transcript: '完整记录', chat: '聊天视图', default: '默认' },
+    editorMode: { normal: '普通编辑', vim: 'Vim 编辑' },
+    diffTool: { terminal: '终端', auto: '自动' },
+    remoteControlAtStartup: { default: '默认' }
+  };
+  return translations[id]?.[value] ?? value;
+}
 function teammateModelDisplayString(value: string | null | undefined): string {
   if (value === undefined) {
     return modelDisplayString(getHardcodedTeammateModelFallback());
   }
-  if (value === null) return "Default (leader's model)";
+  if (value === null) return '默认（主代理模型）';
   return modelDisplayString(value);
 }
 const THEME_LABELS: Record<string, string> = {

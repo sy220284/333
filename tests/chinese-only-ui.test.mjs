@@ -45,3 +45,15 @@ test('聊天输入、语音、通知状态保持中文文案', () => {
   assert.match(read('src/components/TokenWarning.tsx'), /上下文空间不足/)
   assert.match(read('src/components/PromptInput/PromptInputStashNotice.tsx'), /已暂存/)
 })
+
+test('设置项仅以中文显示状态，内部数据类型不变', () => {
+  const settings = read('src/components/Settings/Config.tsx')
+  assert.match(settings, /setting_2.value \? '开启' : '关闭'/)
+  assert.match(settings, /getChineseSettingValue\(setting_2.id, setting_2.value.toString\(\)\)/)
+  assert.match(settings, /getChinesePermissionMode\(setting_2.value as PermissionMode\)/)
+})
+test('授权与认证弹窗显示中文', () => {
+  assert.match(read('src/components/ApproveApiKey.tsx'), /检测到环境中配置了自定义 API 密钥/)
+  assert.match(read('src/components/AwsAuthStatusBox.tsx'), /云服务身份验证/)
+  assert.match(read('src/components/AutoModeOptInDialog.tsx'), /启用自动模式？/)
+})
