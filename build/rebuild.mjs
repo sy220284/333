@@ -1,9 +1,11 @@
-import { existsSync, mkdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, statSync, readFileSync } from 'node:fs';
 import { builtinModules } from 'node:module';
 import { join, resolve, dirname } from 'node:path';
 
 if (typeof Bun === 'undefined' || !Bun.build) throw Error('Bun bundler required');
 const root = resolve(import.meta.dir, '..');
+const releaseVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
+if (!/^\d+\.\d+\.\d+$/.test(releaseVersion)) throw Error('Invalid release version in package.json');
 const snapshot = join(root, '.rebuild/deps/node_modules');
 if (!existsSync(snapshot)) throw Error('Run node build/restore-dependencies.mjs first');
 const builtins = new Set(builtinModules.map(x => x.replace(/^node:/, '')));
@@ -121,7 +123,7 @@ const result = await Bun.build({
   define: {
     'process.env.USER_TYPE': '"external"',
     'process.env.NODE_ENV': '"production"',
-    'MACRO.VERSION': '"2.1.88"',
+    'MACRO.VERSION': JSON.stringify(releaseVersion),
     'MACRO.BUILD_TIME': JSON.stringify(new Date().toISOString()),
     'MACRO.FEEDBACK_CHANNEL': '"#claude-code"',
     'MACRO.ISSUES_EXPLAINER': '"report the issue using /bug"',
