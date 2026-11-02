@@ -4,6 +4,21 @@ import type { NotebookCell, NotebookContent } from '../../types/notebook.js'
 export type NotebookEditMode = 'replace' | 'insert' | 'delete'
 export type EditableCellType = 'code' | 'markdown'
 
+/** Claude Code 2.1.310 notebook read and write ceiling, chunk-j0tbz6ra.js:58095. */
+export const MAX_NOTEBOOK_BYTES = 100 * 1024 * 1024
+
+export function isValidNotebookContent(value: unknown): value is NotebookContent {
+  if (value === null || typeof value !== 'object') return false
+  const cells = (value as { cells?: unknown }).cells
+  return Array.isArray(cells) && cells.every(cell =>
+    cell !== null &&
+    typeof cell === 'object' &&
+    (typeof cell.source === 'string' ||
+      (Array.isArray(cell.source) && cell.source.every((line: unknown) => typeof line === 'string'))),
+  )
+}
+
+
 export interface NotebookMutationInput {
   cell_id?: string
   cell_type?: EditableCellType
@@ -16,6 +31,7 @@ export interface NotebookMutationResult {
   cell_type: NotebookCell['cell_type']
   edit_mode: NotebookEditMode
   cell_index: number
+  old_source?: string
 }
 
 /**
@@ -26,15 +42,8 @@ export function locateNotebookEdit(
   notebook: NotebookContent,
   input: NotebookMutationInput,
 ): { mode: NotebookEditMode; index: number } {
-  if (
-    !notebook ||
-    !Array.isArray(notebook.cells) ||
-    !notebook.metadata ||
-    typeof notebook.metadata !== 'object' ||
-    !Number.isInteger(notebook.nbformat) ||
-    !Number.isInteger(notebook.nbformat_minor)
-  ) {
-    throw new Error('Notebook is missing required nbformat, metadata, or cells fields.')
+  if (!isValidNotebookContent(notebook)) {
+    throw new Error('Notebook is missing valid cells and cell source fields.')
   }
 
   const mode = input.edit_mode ?? 'replace'
@@ -79,7 +88,14 @@ export function applyNotebookEdit(
   if (mode === 'insert') {
     const cell_type = input.cell_type
     if (!cell_type) throw new Error('Cell type is required when using edit_mode=insert.')
-    const id = hasIds ? randomUUID() : undefined
+    // 2.1.310 uses the first eight characters of a UUID. Keep generated
+    // IDs unique within the edited notebook even in the unlikely collision.
+    let id: string | undefined
+    if (hasIds) {
+      do {
+        id = randomUUID().slice(0, 8)
+      } while (notebook.cells.some(existing => existing.id === id))
+    }
     const cell: NotebookCell = {
       cell_type,
       ...(id ? { id } : {}),
@@ -100,6 +116,7 @@ export function applyNotebookEdit(
   if (!cell) throw new Error('Target cell no longer exists in notebook.')
   const originalId = cell.id ?? `cell-${index}`
   const originalType = cell.cell_type
+  const old_source = Array.isArray(cell.source) ? cell.source.join('') : cell.source
 
   if (mode === 'delete') {
     notebook.cells.splice(index, 1)
@@ -108,6 +125,7 @@ export function applyNotebookEdit(
       cell_type: originalType,
       edit_mode: mode,
       cell_index: index,
+      old_source,
     }
   }
 
@@ -126,5 +144,6 @@ export function applyNotebookEdit(
     cell_type,
     edit_mode: mode,
     cell_index: index,
+    old_source,
   }
 }
