@@ -8,7 +8,7 @@ import { test } from 'node:test';
 const root = resolve(import.meta.dirname, '..');
 const model = 'claude-sonnet-4-6';
 const reply = 'M3_TOOLS_PRESET_OK';
-const SSE = (event, data) => 'event: ' + event + '\ndata: ' + JSON.stringify(data) + '\n\n';
+const SSE = (event, data) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 
 function answer() {
   return [
@@ -36,7 +36,7 @@ async function launch(exe, path, cwd, env, toolArg) {
     child.once('error',err=>{clearTimeout(guard);fail(err)});
     child.once('close',(code,signal)=>{
       clearTimeout(guard);
-      if (code !== 0) return fail(Error('Tool-preset CLI failed '+JSON.stringify({code,signal,stderr:stderr.slice(-1000)})));
+      if (code !== 0) return fail(Error(`Tool-preset CLI failed ${JSON.stringify({code,signal,stderr:stderr.slice(-1000)})}`));
       try { ok(JSON.parse(stdout.trim())); } catch(err) { fail(err); }
     });
   });
@@ -66,7 +66,7 @@ test('M3 --tools default, explicit Read, and empty set match the old binary on r
   try {
     await new Promise(ok=>server.listen(0,'127.0.0.1',ok));
     const env={...process.env,
-      ANTHROPIC_BASE_URL:'http://127.0.0.1:'+server.address().port,
+      ANTHROPIC_BASE_URL:`http://127.0.0.1:${server.address().port}`,
       ANTHROPIC_API_KEY:'sk-333-m3-fixture',
       DISABLE_TELEMETRY:'1',CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1',CI:'true',NO_COLOR:'1'};
     const baselines = new Map();
@@ -82,7 +82,7 @@ test('M3 --tools default, explicit Read, and empty set match the old binary on r
         assert.equal(captured.length,before+1,'Expected exactly one model request');
         const names=captured.at(-1);
         if(variant==='original') baselines.set(toolArg,names);
-        else assert.deepEqual(names,baselines.get(toolArg),'Tool preset differs for '+JSON.stringify(toolArg));
+        else assert.deepEqual(names,baselines.get(toolArg),`Tool preset differs for ${JSON.stringify(toolArg)}`);
       }
     }
     const defaultTools=baselines.get('default');
