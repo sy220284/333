@@ -148,11 +148,9 @@ function calculateToolResultTokens(block: ToolResultBlockParam): number {
   return block.content.reduce((sum, item) => {
     if (item.type === 'text') {
       return sum + roughTokenCountEstimation(item.text)
-    } else if (item.type === 'image' || item.type === 'document') {
-      // Images/documents are approximately 2000 tokens regardless of format
-      return sum + IMAGE_MAX_TOKEN_SIZE
     }
-    return sum
+    // SDK-typed image blocks and newer document blocks share the media estimate.
+    return sum + IMAGE_MAX_TOKEN_SIZE
   }, 0)
 }
 

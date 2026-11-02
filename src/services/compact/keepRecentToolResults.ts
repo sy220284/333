@@ -133,7 +133,7 @@ export async function keepRecentToolResults(
       if (block.type !== 'tool_result' || !clearedIds.has(block.tool_use_id)) return block
       const hasMedia =
         Array.isArray(block.content) &&
-        block.content.some(part => part.type === 'image' || part.type === 'document')
+        block.content.some(part => part.type === 'image' || Reflect.get(part, 'type') === 'document')
       const replacement = hasMedia
         ? CLEARED_TOOL_RESULT
         : (clearedContent.get(block.tool_use_id) ?? CLEARED_TOOL_RESULT)

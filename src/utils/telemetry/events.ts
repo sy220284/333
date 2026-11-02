@@ -70,6 +70,9 @@ export async function logOTelEvent(
   // Emit log record as an event
   eventLogger.emit({
     body: `claude_code.${eventName}`,
-    attributes,
+    // OpenTelemetry Attributes may contain readonly arrays; log records expect mutable arrays.
+    attributes: Object.fromEntries(
+      Object.entries(attributes).map(([key, value]) => [key, Array.isArray(value) ? [...value] : value]),
+    ),
   })
 }

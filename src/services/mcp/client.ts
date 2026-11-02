@@ -965,7 +965,7 @@ export const connectToServer = memoize(
           stderr: 'pipe', // prevents error output from the MCP server from printing to the UI
         })
       } else {
-        throw new Error(`Unsupported server type: ${serverRef.type}`)
+        throw new Error(`Unsupported server configuration: ${JSON.stringify(serverRef)}`)
       }
 
       // Set up stderr logging for stdio transport before connecting in case there are any stderr

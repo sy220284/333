@@ -7,6 +7,7 @@ export type QuerySource =
   | 'agent_summary'
   | 'auto_dream'
   | 'auto_mode'
+  | 'bash_classifier'
   | 'auto_mode_critique'
   | 'away_summary'
   | 'bash_extract_prefix'
