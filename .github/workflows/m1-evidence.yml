@@ -81,6 +81,8 @@ on:
       - 'src/tasks/LocalWorkflowTask/workflowCacheKeys.mjs'
       - 'tests/m1-workflow-runtime.test.mjs'
       - 'tests/m1-workflow-storage.test.mjs'
+      - 'tests/m1-generators.test.ts'
+      - 'src/utils/generators.ts'
       - 'tests/m1-workflow-history.test.mjs'
       - 'tests/m1-workflow-finalization.test.mjs'
       - 'tests/m1-workflow-meta-literal.test.mjs'
@@ -325,6 +327,8 @@ jobs:
         run: bun test tests/m1-uds-roundtrip.test.ts
       - name: 对照新版Computer Use系统级敏感应用权限识别
         run: bun test tests/m1-computer-use-sentinel.test.ts
+      - name: 验证流式生成器的结束返回值和并发输出
+        run: bun test tests/m1-generators.test.ts
       - name: 验证 SDK 助手、用户及 UUID 核心消息结构
         run: bun test tests/m1-sdk-message-contract.test.ts
       - name: 验证 SDK 流事件模式与远程合并的 Bun 运行链路
