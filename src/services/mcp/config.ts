@@ -49,6 +49,7 @@ import {
   McpJsonConfigSchema,
   type McpServerConfig,
   McpServerConfigSchema,
+  isMcpStdioServerConfig,
   type McpSSEServerConfig,
   type McpStdioServerConfig,
   type McpWebSocketServerConfig,
@@ -1350,7 +1351,7 @@ export function parseMcpConfig(params: {
     // Check for Windows-specific npx usage without cmd wrapper
     if (
       getPlatform() === 'windows' &&
-      (!configToCheck.type || configToCheck.type === 'stdio') &&
+      isMcpStdioServerConfig(configToCheck) &&
       (configToCheck.command === 'npx' ||
         configToCheck.command.endsWith('\\npx') ||
         configToCheck.command.endsWith('/npx'))
