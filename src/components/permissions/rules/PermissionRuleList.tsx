@@ -951,7 +951,7 @@ export function PermissionRuleList(t0) {
     let t22;
     if ($[56] !== setAppState || $[57] !== toolPermissionContext) {
       t22 = (path_0, remember) => {
-        const destination = remember ? "localSettings" : "session";
+        const destination: PermissionUpdateDestination = remember ? 'localSettings' : 'session';
         const permissionUpdate = {
           type: "addDirectories" as const,
           directories: [path_0],
