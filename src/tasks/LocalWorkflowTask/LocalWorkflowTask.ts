@@ -15,11 +15,13 @@ export type LocalWorkflowTaskState = TaskStateBase & {
   workflowRunId: string
   workflowName: string
   summary: string
+  runningAgents?:Array<{agentId:string,description:string}>
   phase?: string
   scriptPath?: string
   transcriptDir: string
 }
-type Job={abort:AbortController,unregister:()=>void}
+type AgentControl={abort:AbortController,action:null|'skip'|'retry'}
+type Job={abort:AbortController,unregister:()=>void,agents:Map<string,AgentControl>}
 const active=new Map<string,Job>()
 function folder(runId:string) {
   if(!/^wf_[a-f0-9]{12}$/.test(runId))throw new Error('Invalid workflow run ID')
@@ -42,8 +44,27 @@ export const LocalWorkflowTask:Task={
     const job=active.get(id)
     if(!job)throw new Error(`Workflow task ${id} is no longer active`)
     job.abort.abort()
+    for(const item of job.agents.values()) item.abort.abort()
     finish(id,setAppState,'killed','cancelled by TaskStop')
   },
+}
+/** User-facing task panel actions operate on real in-flight agents. */
+export async function killWorkflowTask(taskId:string,setAppState:SetAppState):Promise<void>{
+  await LocalWorkflowTask.kill(taskId,setAppState)
+}
+function changeAgent(taskId:string,agentId:string,action:'skip'|'retry'):void{
+  const job=active.get(taskId)
+  if(!job)throw new Error(`Workflow ${taskId} is no longer active`)
+  const agent=job.agents.get(agentId)
+  if(!agent)throw new Error(`Workflow agent ${agentId} is not running`)
+  agent.action=action
+  agent.abort.abort()
+}
+export function skipWorkflowAgent(taskId:string,agentId:string,_setAppState:SetAppState):void{
+  changeAgent(taskId,agentId,'skip')
+}
+export function retryWorkflowAgent(taskId:string,agentId:string,_setAppState:SetAppState):void{
+  changeAgent(taskId,agentId,'retry')
 }
 export async function launchWorkflow(
   input:{script:string,args?:Record<string,unknown>,resumeFromRunId?:string,scriptPath?:string},
@@ -80,7 +101,8 @@ export async function launchWorkflow(
   }
   const abort=new AbortController()
   const unregister=registerCleanup(async()=>{abort.abort();finish(id,setAppState,'killed','session ended')})
-  active.set(id,{abort,unregister})
+  const job:Job={abort,unregister,agents:new Map()}
+  active.set(id,job)
   registerTask(task,setAppState)
   let writes=Promise.resolve()
   function journalEvent(event:Record<string,unknown>) {
@@ -103,16 +125,48 @@ export async function launchWorkflow(
           const index=count++
           const key=createHash('sha256').update(JSON.stringify({index,prompt,options})).digest('hex')
           if(cached.has(key))return cached.get(key)
+          const agentId=`a${index+1}`
+          let result:unknown
+          for(;;){
+          const control:AgentControl={abort:new AbortController(),action:null}
+          job.agents.set(agentId,control)
+          updateTaskState<LocalWorkflowTaskState>(id,setAppState,t=>({...t,
+            runningAgents:[...(t.runningAgents??[]).filter(x=>x.agentId!==agentId),{agentId,description:prompt.slice(0,120)}]}))
+          try{
           const response=await AgentTool.call({
             prompt,description:typeof options.description==='string'?options.description.slice(0,100):`Workflow ${parsed.meta.name} agent ${index+1}`,
             subagent_type:typeof options.subagent_type==='string'?options.subagent_type:'general-purpose',
             run_in_background:false,
-          },context,canUseTool,parentMessage)
+          },{...context,abortController:control.abort},canUseTool,parentMessage)
+          if(control.action==='skip'){
+            await journalEvent({type:'agent_skipped',agentId,key})
+            return ''
+          }
+          if(control.action==='retry'){
+            await journalEvent({type:'agent_retry',agentId,key})
+            continue
+          }
           const data=response.data
           if(data.status!=='completed')throw new Error(`Workflow agent ${index+1} did not complete synchronously`)
           const value=data.content?.map(item=>item.type==='text'?item.text:'').join('\n')??''
           await journalEvent({type:'agent_result',key,result:value})
           return value
+          }catch(error){
+            if(control.action==='skip'){
+              await journalEvent({type:'agent_skipped',agentId,key})
+              return ''
+            }
+            if(control.action==='retry'){
+              await journalEvent({type:'agent_retry',agentId,key})
+              continue
+            }
+            throw error
+          }finally{
+            job.agents.delete(agentId)
+            updateTaskState<LocalWorkflowTaskState>(id,setAppState,t=>({...t,
+              runningAgents:(t.runningAgents??[]).filter(x=>x.agentId!==agentId)}))
+          }
+          }
         },
       })
       await writes
