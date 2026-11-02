@@ -84,7 +84,10 @@ test('2.1.310 restricted mode enforces default deny and explicit tool override',
           assert.ok(exposed.includes('Read'),`${name}: project settings should be ignored`)
         }
         if(scenario==='restricted-explicit')assert.ok(exposed.includes('Bash'),`${name}: explicitly listed Bash missing`)
-        if(scenario==='safe-mode')assert.ok(exposed.includes('Read'),`${name}: safe-mode read untrusted settings`)
+        if(scenario==='safe-mode'){
+          assert.ok(!exposed.includes('Read'),`${name}: safe-mode discarded an existing explicit deny rule`)
+          assert.ok(exposed.includes('Bash'),`${name}: safe-mode removed a built-in tool`)
+        }
         if(!seen.has(scenario))seen.set(scenario,exposed)
         else assert.deepEqual(exposed,seen.get(scenario),`2.1.310 parity in ${scenario}`)
       }
