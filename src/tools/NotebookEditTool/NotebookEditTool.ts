@@ -12,6 +12,7 @@ import { processNotebookCellsForRead } from '../../utils/notebook.js'
 import { getFileModificationTime, writeTextContent } from '../../utils/file.js'
 import { readFileSyncWithMetadata } from '../../utils/fileRead.js'
 import { getFsImplementation } from '../../utils/fsOperations.js'
+import { withNotebookFileLock } from '../../utils/notebookFileLock.js'
 import { safeParseJSON } from '../../utils/json.js'
 import { lazySchema } from '../../utils/lazySchema.js'
 import { expandPath } from '../../utils/path.js'
@@ -339,6 +340,7 @@ export const NotebookEditTool = buildTool({
       ? notebook_path
       : resolve(getCwd(), notebook_path)
 
+    return withNotebookFileLock(fullPath, async () => {
     try {
       if (getFsImplementation().statSync(fullPath).size > MAX_NOTEBOOK_BYTES) {
         throw new Error('Notebook is too large to edit (maximum 100 MiB).')
@@ -482,5 +484,6 @@ export const NotebookEditTool = buildTool({
         data,
       }
     }
+    })
   },
 } satisfies ToolDef<InputSchema, Output>)
