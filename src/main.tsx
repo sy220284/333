@@ -1303,6 +1303,8 @@ async function run(): Promise<CommanderCommand> {
     }).teleport ?? null;
     const cloudFlag = (options as { cloud?: string | true }).cloud;
     const cloudEnvironment = validateCloudEnvironment((options as { environment?: string }).environment);
+    const snapshotFlag = (options as { systemPromptSnapshot?: string }).systemPromptSnapshot;
+    if (snapshotFlag !== undefined) process.env.CLAUDE_CODE_SYSTEM_PROMPT_SNAPSHOT = snapshotFlag;
     if (cloudFlag !== undefined && restricted) {
       throw new InvalidArgumentError('Cloud sessions cannot be created from a --restricted session');
     }
@@ -3889,6 +3891,8 @@ async function run(): Promise<CommanderCommand> {
   program.option('--restricted', 'Restrict command execution, WebFetch and untrusted settings unless explicitly authorized');
   program.option('--cloud [description]', 'Create a cloud session or attach by session ID or claude.ai/code URL');
   program.option('--environment <environment_id>', 'Create a session on the given self-hosted ccpool environment');
+  program.addOption(new Option('--system-prompt-snapshot <mode>', 'Persist the complete initial system prompt until compaction')
+    .choices(['on','off']));
   program.option('--safe-mode', 'Ignore non-managed customizations and run with built-in features');
   program.addOption(new Option('--permission-prompts <target>', 'Who answers permission prompts: host or none')
     .choices(['host', 'none']).default('host'));
