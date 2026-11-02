@@ -11,7 +11,7 @@
  */
 
 import { context as otelContext, type Span, trace } from '@opentelemetry/api'
-import { AsyncLocalStorage } from 'async_hooks'
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { isEnvTruthy } from '../envUtils.js'
 import { getTelemetryAttributes } from '../telemetryAttributes.js'
 import { isEnhancedTracingOptedIn } from './projectTelemetryPolicy.mjs'
