@@ -7,21 +7,16 @@ export function parseFallbackModels(value, primaryModel) {
   if (typeof value !== 'string') {
     throw new TypeError('Fallback models must be a comma-separated string');
   }
-  const models = value.split(',').map(model => model.trim());
-  const visited = new Set();
-  for (const model of models) {
-    if (!model || /\s|\0/.test(model) || model.startsWith('-') || /^[A-Za-z][A-Za-z0-9+.-]*:\/\//.test(model)) {
-      throw new Error(`Invalid fallback model: ${JSON.stringify(model)}`);
-    }
-    if (model === primaryModel) {
-      throw new Error(`Fallback model cannot be the same as the primary model: ${model}`);
-    }
-    if (visited.has(model)) {
-      throw new Error(`Duplicate fallback model: ${model}`);
-    }
-    visited.add(model);
-  }
-  return models;
+  // Verified against the official 2.1.310 Linux x64 CLI with a 529 mock API:
+  // empty comma segments and repeated model IDs are skipped, retaining order.
+  // The primary may appear in the input, but is not retried as its own fallback.
+  const models = value.split(',').map(model => model.trim()).filter(Boolean);
+  const seen = new Set();
+  return models.filter(model => {
+    if (model === primaryModel || seen.has(model)) return false;
+    seen.add(model);
+    return true;
+  });
 }
 
 /** One chain per query; failed models can never be revisited in a fallback loop. */
