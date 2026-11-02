@@ -176,3 +176,10 @@ test('MCP 服务器、钩子和监控权限提示为中文', () => {
   assert.match(read('src/components/hooks/ViewHookMode.tsx'), /钩子详情/)
   assert.match(read('src/components/permissions/MonitorPermissionRequest/MonitorPermissionRequest.tsx'), /后台监控与通知/)
 })
+
+test('网络访问、工作区权限和规划批准使用中文提示', () => {
+  assert.match(read('src/components/permissions/WebFetchPermissionRequest/WebFetchPermissionRequest.tsx'), /允许 Claude 获取此内容/)
+  assert.match(read('src/components/permissions/SandboxPermissionRequest.tsx'), /沙箱外网络连接请求/)
+  assert.match(read('src/components/permissions/rules/RemoveWorkspaceDirectory.tsx'), /从工作区移除此目录/)
+  assert.match(read('src/components/messages/PlanApprovalMessage.tsx'), /规划模式的限制已解除/)
+})
