@@ -1,3 +1,4 @@
+import type { Notification } from '../../context/notifications.js';
 import { isInBundledMode } from 'src/utils/bundledMode.js';
 import { getCurrentInstallationType } from 'src/utils/doctorDiagnostic.js';
 import { isEnvTruthy } from 'src/utils/envUtils.js';
@@ -6,7 +7,7 @@ const NPM_DEPRECATION_MESSAGE = 'Claude Code has switched from npm to native ins
 export function useNpmDeprecationNotification() {
   useStartupNotification(_temp);
 }
-async function _temp() {
+async function _temp(): Promise<Notification | null> {
   if (isInBundledMode() || isEnvTruthy(process.env.DISABLE_INSTALLATION_CHECKS)) {
     return null;
   }
