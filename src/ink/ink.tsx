@@ -38,6 +38,8 @@ import { SYNC_OUTPUT_SUPPORTED, supportsExtendedKeys, type Terminal, writeDiffTo
 import { CURSOR_HOME, cursorMove, cursorPosition, DISABLE_KITTY_KEYBOARD, DISABLE_MODIFY_OTHER_KEYS, ENABLE_KITTY_KEYBOARD, ENABLE_MODIFY_OTHER_KEYS, ERASE_SCREEN } from './termio/csi.js';
 import { DBP, DFE, DISABLE_MOUSE_TRACKING, ENABLE_MOUSE_TRACKING, ENTER_ALT_SCREEN, EXIT_ALT_SCREEN, SHOW_CURSOR } from './termio/dec.js';
 import { CLEAR_ITERM2_PROGRESS, CLEAR_TAB_STATUS, setClipboard, supportsTabStatus, wrapForMultiplexer } from './termio/osc.js';
+import { isScreenReaderEnabled } from '../utils/accessibility/screenReaderRuntime.js';
+import { accessibleOutputDelta, flattenAccessibleTree } from '../utils/accessibility/screenReaderMode.mjs';
 import { TerminalWriteProvider } from './useTerminalNotification.js';
 
 // Alt-screen: renderer.ts sets cursor.visible = !isTTY || screen.height===0,
@@ -83,6 +85,7 @@ export default class Ink {
   // Ignore last render after unmounting a tree to prevent empty output before exit
   private isUnmounted = false;
   private isPaused = false;
+  private previousAccessibleText = '';
   private readonly container: FiberRoot;
   private rootNode: dom.DOMElement;
   readonly focusManager: FocusManager;
@@ -429,6 +432,17 @@ export default class Ink {
       this.drainTimer = null;
     }
 
+    if (isScreenReaderEnabled()) {
+      // Screen readers consume persistent semantic text, not an animated
+      // screen-buffer diff. Skip all cursor control/erase sequences and emit
+      // only the changed accessible text from the mounted React/Ink tree.
+      flushInteractionTime();
+      const current = flattenAccessibleTree(this.rootNode);
+      const output = accessibleOutputDelta(this.previousAccessibleText, current);
+      this.previousAccessibleText = current;
+      if (output) this.options.stdout.write(output);
+      return;
+    }
     // Flush deferred interaction-time update before rendering so we call
     // Date.now() at most once per frame instead of once per keypress.
     // Done before the render to avoid dirtying state that would trigger
