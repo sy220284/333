@@ -14,7 +14,7 @@ describe('2.1.310 事件循环双时钟卡顿协议', () => {
   })
   test('休眠唤醒区分挂钟跳变与单调时钟停顿', () => {
     const x = calculateEventLoopDelay({ prevWallMs:1000,prevMonotonicMs:300,nowWallMs:12000,nowMonotonicMs:500,intervalMs:200 })
-    expect(x.clockJumpMs).toBe(11000)
+    expect(x.clockJumpMs).toBe(10800)
     expect(x.monotonicStallMs).toBe(0)
     expect(x.likelySleep).toBe(true)
   })
