@@ -28,7 +28,7 @@ export function StatusNotices(t0: Props = {}) {
   } else {
     t2 = $[0];
   }
-  const context = {
+  const context: StatusNoticeContext = {
     config: t1,
     agentDefinitions,
     memoryFiles: use<Awaited<ReturnType<typeof getMemoryFiles>>>(t2)
