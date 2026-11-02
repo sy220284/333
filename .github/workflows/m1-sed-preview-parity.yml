@@ -1,0 +1,28 @@
+name: M1 Bash sed 编辑预览与原生行为差分
+
+on:
+  pull_request:
+    paths:
+      - 'src/tools/BashTool/sedEditParser.ts'
+      - 'tests/sed-edit-parity.test.ts'
+      - '.github/workflows/m1-sed-preview-parity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sed-preview-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 恢复原版依赖环境
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 使用 GNU sed 实测编辑预览与实际写入一致
+        run: bun test tests/sed-edit-parity.test.ts
