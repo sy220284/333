@@ -22,3 +22,28 @@ export async function readWorkflowSummary(path){
   throw new Error('Invalid workflow summary on disk')
  return value
 }
+
+/** Serialize every run snapshot, and make the first terminal transition final.
+ * Late phase callbacks, cancellation races and duplicate completions cannot
+ * rewrite a finished run or resurrect its task state.
+ */
+export function createWorkflowSummaryRecorder(path,initial,{write=writeWorkflowSummary}={}){
+ let current={...initial}
+ let closed=false
+ let pending=Promise.resolve()
+ const apply=(patch,terminal)=>{
+  if(closed)return pending
+  if(terminal)closed=true
+  current={...current,...patch}
+  const snapshot={...current}
+  pending=pending.then(()=>write(path,snapshot))
+  return pending
+ }
+ return {
+  get snapshot(){return {...current}},
+  get finished(){return closed},
+  update:patch=>apply(patch,false),
+  finish:patch=>apply(patch,true),
+  flush:()=>pending,
+ }
+}
