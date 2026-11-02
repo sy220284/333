@@ -11,7 +11,7 @@
 
 1. Read 在会话中读取过 Notebook 才允许编辑，编辑后的再次 Read 必须显示更新内容。
 2. 当单元格有真实 `id` 时优先使用真实 ID，否则允许按 `cell-N` 索引；insert 插入在指定单元格后，无 ID 时插入首位。
-3. 目标版输出 `old_source`：替换/删除时回传原单元格源代码；插入后为空。代码单元格修改后清除旧输出和执行次数。
+3. 目标版输出 `old_source`：替换/删除时回传原单元格源代码；插入后为空。代码单元格修改后清除旧输出和执行次数；`83821–83822` 的自动权限分类入口向分类器发送操作类型、单元格 ID、`adds` 或 `ignored_source`，不能返回空值跳过审查。
 4. nbformat 4.5+ 插入单元格使用 `randomUUID().slice(0, 8)` 形式的八位 ID；早期版本允许无真实 ID。
 5. 目标版限制 Notebook 读入和修改后输出均为 104857600 字节；对无效 cell source 内容拒绝修改。
 6. 目标版写入由按路径串行机制与可重复检查的文件读写操作包裹；必须在后续关单中复验并发编辑、符号链接、非普通文件、文件历史及失败恢复。
@@ -22,11 +22,14 @@
 - 正式工具入口仍为 `src/tools/NotebookEditTool/NotebookEditTool.ts`，通过 `notebookMutation.ts` 共享校验与实际修改逻辑。
 - 恢复 `old_source`，统一真实单元格 ID 与索引解析，使用八位 ID；校验源格式，覆盖代码/Markdown 类型转换后的冗余字段清理。
 - 引入 100 MiB 文件大小限制，先检查源文件大小、再解码 Notebook；输出内容按编码及 CRLF 换行后字节数限制。
-- 文件历史写入前后均检测旧快照是否过期，失败回传错误，避免正常情况下覆盖较新文件。
+- 文件历史写入前后检测旧快照，并共享 `Read` 对 Notebook 的实际可见投影，核对正文内容防止相同文件时间戳的外部修改覆盖；失败回传明确错误。
 - `tests/notebook-edit-parity.test.ts`：真实格式、字段、顺序、旧内容、目标 ID、错误路径。
 - `tests/notebook-edit-write-integration.test.ts`：真正运行 `NotebookEditTool.call` 改写磁盘文件和恢复。
 - `tests/notebook-read-edit-integration.test.ts`：真正通过 `FileReadTool.call` → `NotebookEditTool.validateInput/call` → `FileReadTool.call`，验证旧缓存不得掩盖新内容。
 - `.github/workflows/m1-sed-preview-parity.yml`：Linux/macOS/Windows 执行专用测试与逐文件 Biome，Linux/macOS 额外运行 GNU/BSD sed 真实文件差分。
+
+- `tests/notebook-edit-write-integration.test.ts` 还验证自动分类器必须传出新增源内容和删除操作，避免旧版条件关闭时传空字符串。
+- `src/utils/notebookCells.ts` 作为独立、无重型工具依赖的源数据契约，供 Read、NotebookEdit 共同复用。
 
 ## 准确状态
 
