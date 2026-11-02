@@ -1803,13 +1803,11 @@ function runHeadlessStreaming(
     const supportedConfigs: Record<string, McpServerConfigForProcessTransport> =
       {}
     for (const [name, config] of Object.entries(newConfigs)) {
-      const type = config.type
       if (
-        type === undefined ||
-        type === 'stdio' ||
-        type === 'sse' ||
-        type === 'http' ||
-        type === 'sdk'
+        isMcpStdioServerConfig(config) ||
+        config.type === 'sse' ||
+        config.type === 'http' ||
+        config.type === 'sdk'
       ) {
         supportedConfigs[name] = config
       }
