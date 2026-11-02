@@ -36,6 +36,7 @@ import { getCurrentTurnTokenBudget, getTurnOutputTokens } from '../bootstrap/sta
 import { TeammateSpinnerTree } from './Spinner/TeammateSpinnerTree.js';
 import { useAnimationFrame } from '../ink.js';
 import { getGlobalConfig } from '../utils/config.js';
+import { isDefaultSpinnerTipSuppressed } from '../services/tips/customTipSettings.js';
 export type { SpinnerMode } from './Spinner/index.js';
 const DEFAULT_CHARACTERS = getDefaultCharacters();
 const SPINNER_FRAMES = [...DEFAULT_CHARACTERS, ...[...DEFAULT_CHARACTERS].reverse()];
@@ -95,6 +96,7 @@ function SpinnerWithVerbInner({
   leaderIsIdle = false
 }: Props): React.ReactNode {
   const settings = useSettings();
+  const spinnerTipLabel = useAppState(s => s.spinnerTipLabel);
   const reducedMotion = settings.prefersReducedMotion ?? false;
 
   // NOTE: useAnimationFrame(50) lives in SpinnerAnimationRow, not here.
@@ -246,7 +248,7 @@ function SpinnerWithVerbInner({
   const tipsEnabled = settings.spinnerTipsEnabled !== false;
   const showClearTip = tipsEnabled && elapsedSnapshot > 1_800_000;
   const showBtwTip = tipsEnabled && elapsedSnapshot > 30_000 && !getGlobalConfig().btwUseCount;
-  const effectiveTip = contextTipsActive ? undefined : showClearTip && !nextTask ? 'Use /clear to start fresh when switching topics and free up context' : showBtwTip && !nextTask ? "Use /btw to ask a quick side question without interrupting Claude's current work" : spinnerTip;
+  const effectiveTip = contextTipsActive ? undefined : isDefaultSpinnerTipSuppressed() ? spinnerTip : showClearTip && !nextTask ? 'Use /clear to start fresh when switching topics and free up context' : showBtwTip && !nextTask ? "Use /btw to ask a quick side question without interrupting Claude's current work" : spinnerTip;
 
   // Budget text (ant-only) — shown above the tip line
   let budgetText: string | null = null;
@@ -283,7 +285,7 @@ function SpinnerWithVerbInner({
             </MessageResponse>}
           {(nextTask || effectiveTip) && <MessageResponse>
               <Text dimColor>
-                {nextTask ? `Next: ${nextTask.subject}` : `Tip: ${effectiveTip}`}
+                {nextTask ? `Next: ${nextTask.subject}` : `${effectiveTip === spinnerTip && spinnerTipLabel ? spinnerTipLabel : 'Tip'}: ${effectiveTip}`}
               </Text>
             </MessageResponse>}
         </Box> : null}

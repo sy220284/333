@@ -108,6 +108,7 @@ export type AppState = DeepImmutable<{
   footerSelection: FooterItem | null
   toolPermissionContext: ToolPermissionContext
   spinnerTip?: string
+  spinnerTipLabel?: string
   // Agent name from --agent CLI flag or settings (for logo display)
   agent: string | undefined
   // Assistant mode fully enabled (settings + GrowthBook gate + trust).

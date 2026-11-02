@@ -1540,24 +1540,27 @@ export function REPL({
         if (content !== '') {
           setAppState(prev => ({
             ...prev,
-            spinnerTip: content
+            spinnerTip: content,
+            spinnerTipLabel: tip.label
           }));
           recordShownTip(tip);
           return;
         }
       }
       setAppState(prev => {
-        if (prev.spinnerTip === undefined) return prev;
+        if (prev.spinnerTip === undefined && prev.spinnerTipLabel === undefined) return prev;
         return {
           ...prev,
-          spinnerTip: undefined
+          spinnerTip: undefined,
+          spinnerTipLabel: undefined
         };
       });
     }).catch(error => {
       // Picking tips must not interrupt a user query or corrupt the spinner.
       logForDebugging(`spinner tip failed: ${error}`, { level: 'warn' });
       setAppState(prev =>
-        prev.spinnerTip === undefined ? prev : { ...prev, spinnerTip: undefined }
+        prev.spinnerTip === undefined && prev.spinnerTipLabel === undefined
+          ? prev : { ...prev, spinnerTip: undefined, spinnerTipLabel: undefined }
       );
     });
   }, [setAppState, theme]);

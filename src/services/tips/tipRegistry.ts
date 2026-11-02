@@ -54,6 +54,7 @@ import {
   getCachedReferrerReward,
 } from '../api/referral.js'
 import { getSessionsSinceLastShown, getTipLifetimeShows } from './tipHistory.js'
+import { getCustomSpinnerTips, isDefaultSpinnerTipSuppressed } from './customTipSettings.js'
 import { selectEligibleTips, resolveTipContent } from './tipEligibility.mjs'
 import { getAPIProvider, isFirstPartyAnthropicBaseUrl } from '../../utils/model/providers.js'
 import { getOriginalCwd } from '../../bootstrap/state.js'
@@ -655,19 +656,6 @@ const internalOnlyTips: Tip[] =
       ]
     : []
 
-function getCustomTips(): Tip[] {
-  const settings = getInitialSettings()
-  const override = settings.spinnerTipsOverride
-  if (!override?.tips?.length) return []
-
-  return override.tips.map((content, i) => ({
-    id: `custom-tip-${i}`,
-    content: async () => content,
-    cooldownSessions: 0,
-    isRelevant: async () => true,
-  }))
-}
-
 // Neutral tips remain available on Bedrock, Vertex, Foundry, and custom gateways.
 // Provider-specific upsells are deliberately not in this set.
 const providerAgnosticTipIds = new Set([
@@ -710,10 +698,8 @@ export async function contentSafe(
 
 
 export async function getRelevantTips(context?: TipContext): Promise<Tip[]> {
-  const settings = getInitialSettings()
-  const override = settings.spinnerTipsOverride
-  const customTips = getCustomTips().map(tip => ({ ...tip, providerAgnostic: true }))
-  const builtInTips = override?.excludeDefault && customTips.length > 0
+  const { tips: customTips, trustedCount } = await getCustomSpinnerTips()
+  const builtInTips = trustedCount > 0 && isDefaultSpinnerTipSuppressed()
     ? []
     : [...externalTips, ...internalOnlyTips].map(tip => ({
       ...tip,

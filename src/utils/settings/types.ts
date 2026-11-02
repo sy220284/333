@@ -676,12 +676,21 @@ export const SettingsSchema = lazySchema(() =>
         ),
       spinnerTipsOverride: z
         .object({
-          excludeDefault: z.boolean().optional(),
-          tips: z.array(z.string()),
+          excludeDefault: z.boolean().optional().catch(undefined),
+          tips: z.preprocess(
+            value => Array.isArray(value)
+              ? value.filter(entry => typeof entry === 'string' || !!entry && typeof entry === 'object' && !Array.isArray(entry))
+              : [],
+            z.array(z.union([z.string(), z.object({}).passthrough()])),
+          ).optional(),
+          tipsFile: z.string().optional().catch(undefined),
+          label: z.string().optional().catch(undefined),
         })
+        .passthrough()
         .optional()
+        .catch(undefined)
         .describe(
-          'Override spinner tips. tips: array of tip strings. excludeDefault: if true, only show custom tips (default: false).',
+          'Add custom spinner tips as strings or objects with id, text, cooldownSessions and priority. Trusted settings may specify a local tipsFile, label and excludeDefault.',
         ),
       syntaxHighlightingDisabled: z
         .boolean()
