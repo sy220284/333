@@ -26,7 +26,7 @@ export type MessageOrigin =
   | { kind: 'task-notification' }
   | { kind: 'channel'; server: string }
 
-export type PartialCompactDirection = 'from' | 'to'
+export type PartialCompactDirection = 'from' | 'to' | 'up_to'
 export type SystemMessageLevel = 'info' | 'warning' | 'error' | 'suggestion' | 'success'
 export interface StopHookInfo {
   command: string
@@ -67,9 +67,9 @@ export interface AssistantMessage extends MessageHeader {
   advisorModel?: string
   parent_tool_use_id?: string | null
 }
-export interface AttachmentMessage extends MessageHeader {
+export interface AttachmentMessage<T extends Attachment = Attachment> extends MessageHeader {
   type: 'attachment'
-  attachment: Attachment
+  attachment: T
 }
 export interface ProgressMessage<P extends Progress = Progress> extends MessageHeader {
   type: 'progress'
