@@ -24,7 +24,7 @@
         },
         {
           "path": "src/main.tsx",
-          "symbol": "program.version"
+          "symbol": ".version("
         }
       ],
       "target_behavior": "无参数依赖的 --version 应显示目标版本2.1.310；升级版本号须来自真实新版源码与发布配置，而非独立拼接帮助字符串。",
