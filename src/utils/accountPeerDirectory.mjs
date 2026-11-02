@@ -31,6 +31,20 @@ let advertised = { time:0, peers:[] }
 export function rememberAccountRecipients(peers, time = Date.now()) {
   advertised = { time, peers:peers.filter(active) }
 }
+/** Resolve from the *union* of local and account candidates so a colliding
+ * name cannot silently select a different transport.
+ */
+export function resolveUnifiedPeerRecipient(local, token, time = Date.now()) {
+  const remote = time >= advertised.time && time - advertised.time <= 30000 ?
+    advertised.peers : []
+  const m = /^(.+?) \[([A-Za-z0-9_-]{6})\]$/.exec(token)
+  const candidates = [...local, ...remote]
+  const hits = candidates.filter(p => m ? p.name === m[1] && p.ref === m[2] :
+    p.name === token)
+  const addresses = [...new Set(hits.map(p => p.address).filter(Boolean))]
+  return {address: hits.length === 1 && addresses.length === 1 ? addresses[0] : undefined,
+    ambiguous: hits.length > 1}
+}
 export function resolveAdvertisedRemoteRecipient(token, time = Date.now()) {
   return time >= advertised.time && time - advertised.time <= 30000 ?
     resolveRemoteRecipient(advertised.peers, token) : undefined

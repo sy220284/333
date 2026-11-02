@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { canonicalId, discoverAccountPeers, mergeSessionPeers, resolveRemoteRecipient,
-  rememberAccountRecipients, resolveAdvertisedRemoteRecipient } from '../src/utils/accountPeerDirectory.mjs'
+  rememberAccountRecipients, resolveAdvertisedRemoteRecipient, resolveUnifiedPeerRecipient } from '../src/utils/accountPeerDirectory.mjs'
 test('cse and session aliases deduplicate, local endpoint wins',()=>{
   assert.equal(canonicalId('session_ab'),canonicalId('cse_ab'))
   const peers=mergeSessionPeers({local:[{bridgeSessionId:'session_local'}],
@@ -51,4 +51,13 @@ test('no login does not access remote APIs',async()=>{
  let calls=0
  const found=await discoverAccountPeers({baseUrl:'https://example.test',request:async()=>{calls++}})
  assert.equal(calls,0);assert.equal(found.available,false)
+})
+
+test('same name on UDS and Remote Control is never silently routed to one transport',()=>{
+  const local=[{name:'collide',ref:'123abc',address:'uds:/tmp/one'}]
+  const remote=mergeSessionPeers({bridge:[{id:'session_something',title:'collide',status:'active'}]})
+  rememberAccountRecipients(remote,1000)
+  assert.deepEqual(resolveUnifiedPeerRecipient(local,'collide',1100),{address:undefined,ambiguous:true})
+  assert.equal(resolveUnifiedPeerRecipient(local,'collide [123abc]',1100).address,'uds:/tmp/one')
+  assert.equal(resolveUnifiedPeerRecipient(local,`collide [${remote[0].ref}]`,1100).address,remote[0].address)
 })
