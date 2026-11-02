@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "release": "2.1.310",
+  "date": "2026-11-02",
+  "platform": "Linux x64",
+  "executable_sha256": "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56",
+  "provenance": "资料库/claude-code-2.1.310-linux-x64.tar.gz",
+  "replay_script": "tests/m1-notebook-e41-cli.mjs",
+  "comparison_mode": "real official executable / fake localhost SSE model / isolated HOME and CWD / fake API key / telemetry disabled",
+  "environment": {
+    "CLAUDE_CODE_SIMPLE": "unset",
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:<random port>",
+    "ANHTROPIC_API_KEY": "fake local only"
+  },
+  "options": [
+    "-p",
+    "Read and edit the notebook, then read it again",
+    "--tools",
+    "default",
+    "--permission-mode",
+    "acceptEdits",
+    "--model",
+    "claude-sonnet-4-6",
+    "--output-format",
+    "json",
+    "--max-turns",
+    "4"
+  ],
+  "official_observations": {
+    "real_model_requests": 4,
+    "initial_model_visible_tools": [
+      "Agent",
+      "Bash",
+      "Edit",
+      "ListAgents",
+      "Read",
+      "ReportFindings",
+      "ScheduleWakeup",
+      "Skill",
+      "ToolSearch",
+      "Workflow",
+      "DeferredToolPlaceholder",
+      "Write"
+    ],
+    "deferred_tool_notice": "NotebookEdit available through ToolSearch in normal mode; model-visible tool schema initially deferred",
+    "initial_read": "<cell id=\"stable-cell\">print(1)</cell id=\"stable-cell\">",
+    "edit_result": "Updated cell stable-cell with print(2)",
+    "next_read": "<cell id=\"stable-cell\">print(2)</cell id=\"stable-cell\">",
+    "disk_before": "print(1)",
+    "disk_after": "print(2)",
+    "exit_code": 0,
+    "final_result": "OFFICIAL_NOTEBOOK_E41_OK",
+    "is_error": false
+  },
+  "negative_control": {
+    "switch": "CLAUDE_CODE_SIMPLE=1",
+    "outcome": "NotebookEdit absent from tools and direct tool request rejected as unavailable; first Read still succeeds",
+    "impact": "Simplified mode must not be mistaken for the default 2.1.310 tool registration policy"
+  },
+  "source_anchors": [
+    "chunk-j0tbz6ra.js:58095–58192",
+    "chunk-j0tbz6ra.js:83810–83965",
+    "chunk-p8z8s65a.js:4192–4194",
+    "chunk-gmxe4kpt.js:663"
+  ],
+  "status": "OFFICIAL_E41_REAL_PROCESS_CONFIRMED; CANDIDATE_FULL_CLI_RUN_PENDING",
+  "note": "Target x64 normal-mode tool path has been actually exercised against fake local SSE; prior SIMPLE-mode negative observation was an isolation mistake and has been corrected. No live cloud model requested."
+}
