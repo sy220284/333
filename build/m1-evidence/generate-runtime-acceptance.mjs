@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { resolve, dirname } from "node:path"
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..")
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..")
 const coverage = JSON.parse(readFileSync(resolve(root, "docs/upgrade/upgrade-coverage.json"), "utf8"))
 const evidence = JSON.parse(readFileSync(resolve(root, "docs/upgrade/m1-evidence/verified-runtime-evidence.json"), "utf8"))
 if (coverage.features.length !== coverage.counts.features || coverage.scenarios.length !== coverage.counts.scenarios) {
