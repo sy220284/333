@@ -897,7 +897,8 @@ async function* queryLoop(
           if (innerError instanceof FallbackTriggeredError && fallbackChain.next(currentModel)) {
             // The retry layer reported overload; advance exactly one hop.
             // Never revisit an exhausted model, even on another tool turn.
-            const nextFallbackModel = fallbackChain.advance(currentModel)!
+            const nextFallbackModel = fallbackChain.advance(currentModel)
+            if (!nextFallbackModel) throw innerError
             currentModel = nextFallbackModel
             attemptWithFallback = true
 

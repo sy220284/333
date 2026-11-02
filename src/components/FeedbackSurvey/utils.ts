@@ -13,4 +13,7 @@ export type FeedbackSurveyResponse =
   | 'fine'
   | 'good'
 
-export type FeedbackSurveyType = 'session' | 'memory' | 'post_compact'
+export type FeedbackSurveyType = 'session' | 'memory' | 'post_compact' | 'long_context' | 'plugin'
+
+/** The 2.1.310 plugin survey alone also accepts the Unsure response. */
+export type PluginFeedbackSurveyResponse = FeedbackSurveyResponse | 'not_sure'

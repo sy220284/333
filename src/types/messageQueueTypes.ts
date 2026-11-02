@@ -17,4 +17,7 @@ export type QueueOperationMessage = {
   timestamp: string
   sessionId: string
   content?: string
+  reason?: string
+  commandUuid?: string
+  deliveryId?: string
 }

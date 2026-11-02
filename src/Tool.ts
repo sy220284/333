@@ -168,6 +168,7 @@ export type ToolUseContext = {
     isNonInteractiveSession: boolean
     agentDefinitions: AgentDefinitionsResult
     maxBudgetUsd?: number
+    /** Forward subagent text/thinking as SDK assistant/user messages with parent ID. */
     forwardSubagentText?: boolean
     /** Custom system prompt that replaces the default system prompt */
     customSystemPrompt?: string

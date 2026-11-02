@@ -44,7 +44,7 @@ const versions = {
   "@opentelemetry/exporter-metrics-otlp-grpc": "^0.214.0",
   "@opentelemetry/exporter-metrics-otlp-http": "^0.214.0",
   "@opentelemetry/exporter-metrics-otlp-proto": "^0.214.0",
-  "@opentelemetry/exporter-prometheus": "^0.214.0",
+  "@opentelemetry/exporter-prometheus": "0.300.0",
   "@opentelemetry/exporter-trace-otlp-grpc": "^0.214.0",
   "@opentelemetry/exporter-trace-otlp-http": "^0.214.0",
   "@opentelemetry/exporter-trace-otlp-proto": "^0.214.0",
@@ -101,7 +101,7 @@ const versions = {
   "react-reconciler": "^0.33.0",
   "retry": "*",
   "semver": "^7.7.0",
-  "sharp": "^0.34.5",
+  "sharp": "0.35.5",
   "shell-quote": "^1.8.0",
   "signal-exit": "^4.1.0",
   "stack-utils": "^2.0.0",
@@ -117,9 +117,10 @@ const versions = {
   "ws": "^8.18.0",
   "xss": "^1.0.0",
   "yaml": "^2.8.3",
-  "zod": "^3.25.0"
+  "zod": "4.6.6"
 };
-writeFileSync(join(npmroot,'package.json'), JSON.stringify({private:true,name:'release-rebuild-dependencies',version:'2.1.88',dependencies:versions},null,2)+'\n');
+const overrides = {tmp: '0.2.7', zod: '$zod'};
+writeFileSync(join(npmroot,'package.json'), JSON.stringify({private:true,name:'release-rebuild-dependencies',version:'2.1.88',dependencies:versions,overrides},null,2)+'\n');
 const lock = join(root,'build/public-dependencies.lock.json');
 const activeLock = join(npmroot,'package-lock.json');
 if (existsSync(lock)) {

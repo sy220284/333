@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve, join, dirname } from 'node:path';
 import { parseTypeScriptErrors, normalizePath } from './quality-core.mjs';
@@ -10,7 +10,7 @@ const primary = resolve(home, 'dev-tools/node_modules/.bin');
 const secondary = resolve(root, 'tools/dev/node_modules/.bin');
 const tools = existsSync(primary) ? primary : secondary;
 const ext = process.platform === 'win32' ? '.cmd' : '';
-const bin = name => join(tools, `${name}${ext}`);
+const bin = name => join(tools, name + ext);
 const cliScript = name => resolve(tools, `../${name === 'tsc' ? 'typescript/bin/tsc' : '@biomejs/biome/bin/biome'}`);
 const npmCli = resolve(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js');
 function run(command, args, options = {}) {
@@ -60,8 +60,23 @@ function typescript(checkChanged) {
   if (!existsSync(bin('tsc'))) throw new Error('缺失 TypeScript，先运行 npm install --prefix tools/dev');
   const config = resolve(root, '.rebuild/tsconfig.dev.json');
   mkdirSync(resolve(root, '.rebuild'), { recursive: true });
-  const typeRoots = [resolve(tools, '../@types'), resolve(root, 'node_modules/@types')];
-  writeFileSync(config, `${JSON.stringify({ extends: '../tsconfig.json', compilerOptions: { typeRoots, types: ['node', 'react'] } }, null, 2)}\n`);
+  const typesDirectory = resolve(tools, '../@types');
+  const typeRoots = [typesDirectory, resolve(root, 'node_modules/@types')];
+  const reactTypes = resolve(typesDirectory, 'react');
+  if (!existsSync(resolve(reactTypes, 'index.d.ts'))) throw new Error('未安装完整 React 类型定义');
+  // TypeScript resolves ESM imports from src/ through the dependency graph.
+  // An external offline dev-tool installation is not an ancestor of src/,
+  // so typeRoots alone does not resolve "import { PureComponent } from 'react'".
+  // Preserve the product's native import aliases and explicitly map React's
+  // package entrypoints to the real @types/react declaration tree.
+  const projectConfig = JSON.parse(readFileSync(resolve(root, 'tsconfig.json'), 'utf8'));
+  const paths = {
+    ...projectConfig.compilerOptions.paths,
+    react: [resolve(reactTypes, 'index.d.ts')],
+    'react/jsx-runtime': [resolve(reactTypes, 'jsx-runtime.d.ts')],
+    'react/jsx-dev-runtime': [resolve(reactTypes, 'jsx-dev-runtime.d.ts')],
+  };
+  writeFileSync(config, `${JSON.stringify({ extends: '../tsconfig.json', compilerOptions: { typeRoots, paths, types: ['node', 'react', 'bun'] } }, null, 2)}\n`);
   const result = toolOutput('tsc', ['--noEmit', '--pretty', 'false', '-p', config]);
   const errors = parseTypeScriptErrors(`${result.stdout}\n${result.stderr}`);
   if (!checkChanged) {
@@ -72,19 +87,52 @@ function typescript(checkChanged) {
     return;
   }
   if (result.status !== 0 && errors.length === 0) throw new Error(`TypeScript 未产生可解析的诊断: ${result.stdout.slice(0, 2000)}`);
+  const changedHunks = new Map();
+  const base = process.env.DEV333_DIFF_BASE ?? process.env.GITHUB_BASE_REF;
+  const comparison = process.env.DEV333_DIFF_STAGED === '1'
+    ? [['diff','--cached','--no-color','--unified=0','--diff-filter=ACMR']]
+    : [
+        ['diff','--no-color','--unified=0','--diff-filter=ACMR',base ? `${base.startsWith('origin/') ? base : `origin/${base}`}...HEAD` : 'HEAD~1'],
+        ['diff','--no-color','--unified=0','--diff-filter=ACMR','HEAD'],
+      ];
+  for (const args of comparison) {
+    const diff = output('git',args);
+    if (diff.status !== 0) throw new Error(`无法读取修改行位置: ${diff.stderr}`);
+    let current = null;
+    for (const row of diff.stdout.split(/\r?\n/)) {
+      if (row.startsWith('+++ b/')) current = normalizePath(row.slice(6));
+      else if (row.startsWith('+++ /dev/null')) current = null;
+      else if (current && row.startsWith('@@')) {
+        const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(row);
+        if (!hunk) throw new Error(`无法解析 Git 修改行: ${row}`);
+        const start=Number(hunk[1]),length=hunk[2]===undefined?1:Number(hunk[2]);
+        if (length > 0) {
+          const ranges=changedHunks.get(current)??[];
+          ranges.push([start,start+length-1]);
+          changedHunks.set(current,ranges);
+        }
+      }
+    }
+  }
+  const introduced = errors.filter(err => (changedHunks.get(err.path)??[]).some(([from,to])=>err.line>=from&&err.line<=to));
   const selected = new Set(checkedFiles());
-  const introduced = errors.filter(err => selected.has(err.path));
-  console.log(`[333-dev] TypeScript 全库诊断 ${errors.length} 项，变更文件 ${selected.size} 个，其中错误 ${introduced.length} 项`);
+  const report={ total:errors.length,checkedFiles:selected.size,modifiedLines:[...changedHunks.values()].flat().length,introduced };
+  mkdirSync(resolve(root,'.rebuild/governance'),{recursive:true});
+  writeFileSync(resolve(root,'.rebuild/governance/type-delta.json'), `${JSON.stringify(report,null,2)}\n`);
+  console.log(`[333-dev] 全仓 TypeScript 诊断 ${errors.length} 项，变更文件 ${selected.size} 个，修改行对应错误 ${introduced.length} 项`);
   for (const item of introduced.slice(0, 100)) console.error(`${item.path}:${item.line} ${item.code} ${item.message}`);
-  if (introduced.length) throw new Error('变更代码存在 TypeScript 类型错误');
-  if (errors.length) console.log('[333-dev] 既有源文件的类型问题仍需修复；可运行 npm run typecheck:all 查看完整诊断');
+  if (introduced.length) throw new Error('本次修改行仍存在 TypeScript 诊断');
+  if (errors.length) console.log('[333-dev] 全量类型检查仍未通过；独立治理 CI 严格阻断非零结果');
 }
 function lint(all) {
-  if (!existsSync(bin('biome'))) throw new Error('缺失 Biome，先运行 npm install --prefix tools/dev');
-  const files = all ? ['src', 'native', 'build', 'tests', 'tools/dev'] : [...new Set([...checkedFiles(), 'tools/dev/quality-core.mjs', 'tools/dev/dev.mjs', 'tools/dev/watch.mjs', 'tools/dev/native-smoke.mjs', 'tools/dev/portable.mjs', 'tools/dev/audit-report.mjs'])];
-  if (!files.length) { console.log('[333-dev] 没有需要检查的文件'); return; }
-  toolRun('biome', ['lint', '--no-errors-on-unmatched', '--max-diagnostics=200', ...files]);
+  if (!existsSync(bin('biome'))) throw new Error('缺失 Biome，请先安装已冻结的开发工具');
+  if (!all) {
+    run(process.execPath, ['tools/governance/lint-delta.mjs']);
+    return;
+  }
+  run(bin('biome'), ['lint', '--no-errors-on-unmatched', 'src', 'native', 'build', 'tests', 'tools/dev', 'tools/governance']);
 }
+
 function boot() { npmRun(['ci', '--prefix', 'tools/dev', '--ignore-scripts', '--no-audit', '--no-fund']); }
 const command = process.argv[2] ?? 'help';
 switch (command) {

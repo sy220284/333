@@ -96,7 +96,7 @@ const fullInputSchema = lazySchema(() => {
     mode: permissionModeSchema().optional().describe('Permission mode for spawned teammate (e.g., "plan" to require plan approval).')
   });
   return baseInputSchema().merge(multiAgentInputSchema).extend({
-    isolation: ("external" === 'ant' ? z.enum(['worktree', 'remote']) : z.enum(['worktree'])).optional().describe("external" === 'ant' ? 'Isolation mode. "worktree" creates a temporary git worktree so the agent works on an isolated copy of the repo. "remote" launches the agent in a remote CCR environment (always runs in background).' : 'Isolation mode. "worktree" creates a temporary git worktree so the agent works on an isolated copy of the repo.'),
+    isolation: (process.env.USER_TYPE === 'ant' ? z.enum(['worktree', 'remote']) : z.enum(['worktree'])).optional().describe(process.env.USER_TYPE === 'ant' ? 'Isolation mode. "worktree" creates a temporary git worktree so the agent works on an isolated copy of the repo. "remote" launches the agent in a remote CCR environment (always runs in background).' : 'Isolation mode. "worktree" creates a temporary git worktree so the agent works on an isolated copy of the repo.'),
     cwd: z.string().optional().describe('Absolute path to run the agent in. Overrides the working directory for all filesystem and shell operations within this agent. Mutually exclusive with isolation: "worktree".')
   });
 });
@@ -432,7 +432,7 @@ export const AgentTool = buildTool({
 
     // Remote isolation: delegate to CCR. Gated ant-only — the guard enables
     // dead code elimination of the entire block for external builds.
-    if ("external" === 'ant' && effectiveIsolation === 'remote') {
+    if (process.env.USER_TYPE === 'ant' && effectiveIsolation === 'remote') {
       const eligibility = await checkRemoteAgentEligibility();
       if (!eligibility.eligible) {
         const reasons = eligibility.errors.map(formatPreconditionError).join('\n');
@@ -522,7 +522,7 @@ export const AgentTool = buildTool({
         // Log agent memory loaded event for subagents
         if (selectedAgent.memory) {
           logEvent('tengu_agent_memory_loaded', {
-            ...("external" === 'ant' && {
+            ...(process.env.USER_TYPE === 'ant' && {
               agent_type: selectedAgent.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
             }),
             scope: selectedAgent.memory as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -1102,13 +1102,15 @@ export const AgentTool = buildTool({
             }
             const normalizedNew = normalizeMessages([message]);
             for (const m of normalizedNew) {
-              const hasToolProgress = m.message.content.some(content =>
+              const toolContent = m.message.content.some(content =>
                 content.type === 'tool_use' || content.type === 'tool_result');
-              const hasReadableContent = m.message.content.some(content =>
+              const readableContent = m.message.content.some(content =>
                 content.type === 'text' || content.type === 'thinking' || content.type === 'redacted_thinking');
-              if (onProgress && (hasToolProgress ||
-                  (toolUseContext.options.forwardSubagentText && hasReadableContent))) {
-                // Exactly one event per normalized assistant message.
+              // SDK hosts explicitly opt in to observing subagent prose and
+              // reasoning. One progress message per normalized subagent
+              // message prevents duplicate text when tools coexist with prose.
+              if (onProgress && (toolContent ||
+                  (toolUseContext.options.forwardSubagentText && readableContent))) {
                 onProgress({
                   toolUseID: `agent_${assistantMessage.message.id}`,
                   data: {
@@ -1280,8 +1282,8 @@ export const AgentTool = buildTool({
 
     // Only route through auto mode classifier when in auto mode
     // In all other modes, auto-approve sub-agent generation
-    // Note: "external" === 'ant' guard enables dead code elimination for external builds
-    if ("external" === 'ant' && appState.toolPermissionContext.mode === 'auto') {
+    // Note: process.env.USER_TYPE === 'ant' guard enables dead code elimination for external builds
+    if (process.env.USER_TYPE === 'ant' && appState.toolPermissionContext.mode === 'auto') {
       return {
         behavior: 'passthrough',
         message: 'Agent tool requires permission to spawn sub-agents.'
