@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8').split('//# sourceMappingURL=')[0]
+const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8').split('//# sourceMappingURL=')[0]
 test('简体中文是唯一有效语言', () => {
   assert.match(read('src/utils/settings/settings.ts'), /language: '简体中文'/)
   assert.match(read('src/constants/prompts.ts'), /Always respond in Simplified Chinese/)

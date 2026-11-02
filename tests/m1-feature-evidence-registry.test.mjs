@@ -3,7 +3,7 @@ import {test} from 'node:test'
 import {readFileSync} from 'node:fs'
 import {buildRegistry, loadRegistry} from '../build/m1-feature-evidence-registry.mjs'
 
-const read = path => JSON.parse(readFileSync(new URL('../' + path, import.meta.url), 'utf8'))
+const read = path => JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'))
 const baseline = () => ({
   coverage: read('docs/upgrade/upgrade-coverage.json'),
   audit: read('docs/upgrade/m1-evidence/PR7-18组功能链证据审计.json'),

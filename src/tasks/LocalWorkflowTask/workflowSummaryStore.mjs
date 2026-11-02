@@ -57,7 +57,7 @@ export async function syncWorkflowScript(path,script){
   throw new Error('Invalid saved Workflow script')
  const before=await readFile(path,'utf8')
  if(before===script)return false
- const temporary=path+'.tmp-'+randomUUID()
+ const temporary=`${path}.tmp-${randomUUID()}`
  try{
   await writeFile(temporary,script,{flag:'wx',mode:0o600})
   await rename(temporary,path)

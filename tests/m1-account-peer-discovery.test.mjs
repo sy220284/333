@@ -159,7 +159,7 @@ test('credential-scoped session advertisement rejects previous login and organiz
 
 
 test('account identity verification is wired through list, permission, validation and dispatch',async()=>{
- const source=path=>readFile(new URL('../'+path,import.meta.url),'utf8')
+ const source=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8')
  const [listing,sending,discovery]=await Promise.all([
    source('src/tools/ListAgentsTool/ListAgentsTool.ts'),
    source('src/tools/SendMessageTool/SendMessageTool.ts'),
