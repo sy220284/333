@@ -57,6 +57,7 @@ function collectWorkflowRuns(home){
 async function run(exe,toolName){
  const home=mkdtempSync(join(tmpdir(),'333-roundtrip-'))
  const requests=[]
+ const sockets=new Set()
  const server=createServer(async(req,res)=>{
   if(req.method==='HEAD'){res.writeHead(200);res.end();return}
   if(req.method!=='POST'||!req.url?.startsWith('/v1/messages')){res.writeHead(404);res.end();return}
@@ -64,9 +65,19 @@ async function run(exe,toolName){
   const body=JSON.parse(raw),n=requests.length
   requests.push({tools:(body.tools??[]).map(t=>t.name),messages:body.messages??[]})
   const packet=n===0?response(body.model,'ToolSearch',{query:'select:Monitor,Workflow'},n):
-    n===1?response(body.model,toolName,bodyFor[toolName],n):response(body.model,null,null,n)
+    n===1?response(body.model,toolName==='MonitorWS'?'Monitor':toolName,
+      toolName==='MonitorWS'?{description:'Probe WebSocket',ws:{url:`ws://127.0.0.1:${server.address().port}/events`},timeout_ms:1200}:bodyFor[toolName],n):
+    response(body.model,null,null,n)
   res.writeHead(200,{'content-type':'text/event-stream','content-length':String(Buffer.byteLength(packet))})
   res.end(packet)
+ })
+ server.on('upgrade',(req,socket)=>{
+  sockets.add(socket)
+  socket.once('close',()=>sockets.delete(socket))
+  const accept=createHash('sha1').update(req.headers['sec-websocket-key']+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64')
+  socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+accept+'\r\n\r\n')
+  setTimeout(()=>{if(!socket.destroyed){const payload=Buffer.from('WS_FRAME_333');socket.write(Buffer.concat([Buffer.from([0x81,payload.length]),payload]))}},100)
+  setTimeout(()=>{if(!socket.destroyed)socket.end(Buffer.from([0x88,0]))},350)
  })
  try{
   server.listen(0,'127.0.0.1');await once(server,'listening')
@@ -105,24 +116,29 @@ async function run(exe,toolName){
   const paths=eventNotices.flatMap(notice=>[...notice.matchAll(/<output-file>([\s\S]*?)<\/output-file>/g)].map(m=>m[1]))
   const readableFiles=paths.filter(path=>existsSync(path)).map(path=>({path,content:readFileSync(path,'utf8')}))
   const monitorOutputPersisted=readableFiles.some(x=>x.content.includes('OUT_333')&&x.content.includes('ERR_333'))
-  const monitorEventsMatch=events.length===1&&events[0]==='OUT_333'&&terminalStatuses.includes('completed')
+  const monitorEventsMatch=toolName==='MonitorWS'?
+    eventNotices.some(x=>x.includes('<summary>Monitor event: "Probe WebSocket"</summary>')&&x.includes('<event>WS_FRAME_333</event>'))&&
+    eventNotices.some(x=>x.includes('<event>[WebSocket closed: 1005]</event>')):
+    events.length===1&&events[0]==='OUT_333'&&terminalStatuses.includes('completed')
   const saved=toolName==='Workflow'?collectWorkflowRuns(home):[]
   const persisted=saved.some(item=>item.status==='completed'&&item.answer===42&&item.workflowName==='probe-return')
   const ok=exit===0&&requests.length>=3&&
    (toolName==='Workflow'?serialized.includes('Workflow launched in background')&&
       serialized.includes('Run ID: wf_')&&serialized.includes('Script file:')&&persisted:
-    serialized.includes('Monitor started')&&serialized.includes('task ')&&monitorEventsMatch&&monitorOutputPersisted)
+    serialized.includes('Monitor started')&&serialized.includes('task ')&&monitorEventsMatch&&
+      (toolName==='MonitorWS'||monitorOutputPersisted))
   return {tool:toolName,ok,exit,signal,calls:requests.length,
-   ...(toolName==='Monitor'?{monitorEvents:events,monitorStatuses:terminalStatuses,monitorOutputPersisted,monitorEventsMatch,monitorNotifications:eventNotices.map(x=>x.slice(0,650))}:{}),
+   ...(toolName.startsWith('Monitor')?{monitorEvents:events,monitorStatuses:terminalStatuses,monitorOutputPersisted,monitorEventsMatch,monitorNotifications:eventNotices.map(x=>x.slice(0,650))}:{}),
    ...(toolName==='Workflow'?{savedRuns:saved}:{}),
    toolResponse:serialized.slice(0,2000),stdout:output.slice(-350),stderr:error.slice(-350)}
  }finally{
+  for(const socket of sockets)socket.destroy()
   await new Promise(done=>server.close(done))
   rmSync(home,{recursive:true,force:true})
  }
 }
 const report={}
-for(const name of ['Monitor','Workflow']){
+for(const name of ['Monitor','Workflow','MonitorWS']){
  report[name]={official:await run(opt['--reference'],name),candidate:await run(opt['--candidate'],name)}
 }
 mkdirSync(dirname(resolve(opt['--report'])),{recursive:true})
