@@ -36,7 +36,7 @@ function successSse(model, answer) {
     ['message_delta', { type: 'message_delta', delta: { stop_reason: 'end_turn', stop_sequence: null }, usage: { output_tokens: 3 } }],
     ['message_stop', { type: 'message_stop' }],
   ]
-  return frames.map(([name, body]) => 'event: ' + name + '\ndata: ' + JSON.stringify(body) + '\n\n').join('')
+  return frames.map(([name, body]) => `event: ${name}\ndata: ${JSON.stringify(body)}\n\n`).join('')
 }
 
 function isolatedEnv(home, port) {
@@ -47,7 +47,7 @@ function isolatedEnv(home, port) {
   }
   return {
     ...env, HOME: home, USERPROFILE: home, XDG_CONFIG_HOME: home, XDG_CACHE_HOME: home,
-    ANTHROPIC_API_KEY: 'local-only-test-key', ANTHROPIC_BASE_URL: 'http://127.0.0.1:' + port,
+    ANTHROPIC_API_KEY: 'local-only-test-key', ANTHROPIC_BASE_URL: `http://127.0.0.1:${port}`,
     DISABLE_TELEMETRY: '1', DISABLE_ERROR_REPORTING: '1', CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
     NO_PROXY: '127.0.0.1,localhost', HTTP_PROXY: '', HTTPS_PROXY: '',
   }
@@ -131,7 +131,7 @@ const result = {
   limitations: ['隔离本机模拟 API', '无云端真实凭据与付费调用', '不能推断旧 contextCollapse 所有持久化行为已经等价'],
 }
 mkdirSync(dirname(resolve(args['--report'])), { recursive: true })
-writeFileSync(resolve(args['--report']), JSON.stringify(result, null, 2) + '\n')
+writeFileSync(resolve(args['--report']), `${JSON.stringify(result, null, 2)}\n`)
 console.log(JSON.stringify({
   reference_passed: result.reference_passed, candidate_passed: result.candidate_passed,
   official_request_counts: reference.map(s => s.calls.length), candidate_request_counts: candidate?.map(s => s.calls.length) ?? null,
