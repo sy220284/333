@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve, join, dirname } from 'node:path';
 import { parseTypeScriptErrors, normalizePath } from './quality-core.mjs';
@@ -60,8 +60,23 @@ function typescript(checkChanged) {
   if (!existsSync(bin('tsc'))) throw new Error('缺失 TypeScript，先运行 npm install --prefix tools/dev');
   const config = resolve(root, '.rebuild/tsconfig.dev.json');
   mkdirSync(resolve(root, '.rebuild'), { recursive: true });
-  const typeRoots = [resolve(tools, '../@types'), resolve(root, 'node_modules/@types')];
-  writeFileSync(config, `${JSON.stringify({ extends: '../tsconfig.json', compilerOptions: { typeRoots, types: ['node', 'react', 'bun'] } }, null, 2)}\n`);
+  const typesDirectory = resolve(tools, '../@types');
+  const typeRoots = [typesDirectory, resolve(root, 'node_modules/@types')];
+  const reactTypes = resolve(typesDirectory, 'react');
+  if (!existsSync(resolve(reactTypes, 'index.d.ts'))) throw new Error('未安装完整 React 类型定义');
+  // TypeScript resolves ESM imports from src/ through the dependency graph.
+  // An external offline dev-tool installation is not an ancestor of src/,
+  // so typeRoots alone does not resolve "import { PureComponent } from 'react'".
+  // Preserve the product's native import aliases and explicitly map React's
+  // package entrypoints to the real @types/react declaration tree.
+  const projectConfig = JSON.parse(readFileSync(resolve(root, 'tsconfig.json'), 'utf8'));
+  const paths = {
+    ...projectConfig.compilerOptions.paths,
+    react: [resolve(reactTypes, 'index.d.ts')],
+    'react/jsx-runtime': [resolve(reactTypes, 'jsx-runtime.d.ts')],
+    'react/jsx-dev-runtime': [resolve(reactTypes, 'jsx-dev-runtime.d.ts')],
+  };
+  writeFileSync(config, `${JSON.stringify({ extends: '../tsconfig.json', compilerOptions: { typeRoots, paths, types: ['node', 'react', 'bun'] } }, null, 2)}\n`);
   const result = toolOutput('tsc', ['--noEmit', '--pretty', 'false', '-p', config]);
   const errors = parseTypeScriptErrors(`${result.stdout}\n${result.stderr}`);
   if (!checkChanged) {
