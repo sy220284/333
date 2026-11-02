@@ -93,6 +93,8 @@ jobs:
           CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/fallback-529-integration.test.mjs
       - name: 2.1.310 模式规则单元测试
         run: node --test tests/upgrade-mode-options.test.mjs
+      - name: 云会话目标及自托管环境参数回归
+        run: node --test tests/cloud-target.test.mjs
       - name: 受限与安全模式实际权限及模型工具清单差分验收
         run: |
           set -euo pipefail
