@@ -4,6 +4,10 @@ on:
   pull_request:
     paths:
       - 'src/ink/ink.tsx'
+      - 'src/components/LogoV2/LogoV2.tsx'
+      - 'src/components/LogoV2/CondensedLogo.tsx'
+      - 'src/main.tsx'
+      - 'src/utils/settings/types.ts'
       - 'src/utils/accessibility/screenReaderMode.mjs'
       - 'src/utils/accessibility/screenReaderRuntime.ts'
       - 'tests/m1-screen-reader-mode.test.mjs'
