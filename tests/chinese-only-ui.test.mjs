@@ -149,3 +149,8 @@ test('macOS 权限设置深链保持系统原始标识', () => {
   assert.match(src, /Privacy_Accessibility/)
   assert.doesNotMatch(src, /Privacy_辅助功能/)
 })
+
+test('MCP 远程连接和远程会话详情使用中文', () => {
+  assert.match(read('src/components/mcp/MCPRemoteServerMenu.tsx'), /正在验证/)
+  assert.match(read('src/components/tasks/RemoteSessionDetailDialog.tsx'), /远程会话详情/)
+})
