@@ -6,7 +6,7 @@ if (!socket) throw new Error('No socket')
 await startUdsMessaging(socket)
 process.stdout.write('READY\n')
 const timer = setInterval(async () => {
-  if (getCommandQueue().some(c => c.mode === 'prompt' && c.value === 'cross-process-hello')) {
+  if (getCommandQueue().some(c => c.mode === 'prompt' && c.value === '<cross-session-message from="unknown">\n' + 'cross-process-hello\n</cross-session-message>')) {
     clearInterval(timer)
     process.stdout.write('DELIVERED\n')
     await runCleanupFunctions()

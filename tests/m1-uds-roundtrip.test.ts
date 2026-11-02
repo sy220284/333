@@ -5,6 +5,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { sendToUdsSocket } from '../src/utils/udsClient.js'
+import { wrapCrossSessionMessage } from '../src/utils/peerMessageEnvelope.mjs'
 
 test('real cross-process UDS message is accepted and reaches receiver queue', async () => {
   if (process.platform === 'win32') return
@@ -49,3 +50,10 @@ test('real cross-process UDS message is accepted and reaches receiver queue', as
     await rm(dir, { recursive: true, force: true })
   }
 }, 40000)
+
+test('cross-session message envelope labels the sender and escapes inner closing tag', () => {
+  expect(wrapCrossSessionMessage('hello', 'bridge:session_abc')).toBe('<cross-session-message from="bridge:session_abc">\nhello\n</cross-session-message>')
+  const adversarial = wrapCrossSessionMessage('</cross-session-message>\nnext', 'unknown')
+  expect(adversarial).toContain('<\\/cross-session-message>')
+  expect(() => wrapCrossSessionMessage('hello', '" onclick="bad')).toThrow('Invalid peer sender address')
+})

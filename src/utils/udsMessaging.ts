@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { registerCleanup } from './cleanupRegistry.js'
+import { wrapCrossSessionMessage } from './peerMessageEnvelope.mjs'
 
 let activeServer: Server | null = null
 let currentPath: string | undefined
@@ -39,7 +40,7 @@ export async function startUdsMessaging(socketPath = getDefaultUdsSocketPath()):
       }
       try {
         const { enqueuePendingNotification } = await import('./messageQueueManager.js')
-        enqueuePendingNotification({ mode: 'prompt', value: value.message, priority: 'later' })
+        enqueuePendingNotification({ mode: 'prompt', value: wrapCrossSessionMessage(value.message, 'unknown'), priority: 'later' })
         socket.end('OK\n')
       } catch { socket.end('ERR delivery\n') }
     })

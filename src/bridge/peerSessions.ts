@@ -2,6 +2,8 @@ import axios from 'axios'
 import { randomUUID } from 'node:crypto'
 import { getOauthConfig } from '../constants/oauth.js'
 import { errorMessage } from '../utils/errors.js'
+import { wrapCrossSessionMessage } from '../utils/peerMessageEnvelope.mjs'
+import { getSelfBridgeCompatId } from './replBridgeHandle.js'
 import {
   CCR_BYOC_BETA,
   getOAuthHeaders,
@@ -35,7 +37,7 @@ export async function postInterClaudeMessage(
     msgV: 1,
     msg_id: msgId,
     type: 'user',
-    message: { role: 'user', content: text },
+    message: { role: 'user', content: wrapCrossSessionMessage(text, getSelfBridgeCompatId() ? `bridge:${getSelfBridgeCompatId()}` : 'unknown') },
     parent_tool_use_id: null,
     session_id: sessionId,
     uuid: randomUUID(),
