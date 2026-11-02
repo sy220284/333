@@ -173,3 +173,21 @@ test('account identity verification is wired through list, permission, validatio
  assert.match(sending,/async call\(/)
  assert.match(discovery,/peerIdentityKey\(credentials\.accessToken, credentials\.orgUUID\)/)
 })
+
+
+test('remote transport connectivity and remote worker action status remain distinct',()=>{
+ const disconnected=mergeSessionPeers({
+   cloud:[{id:'cse_status',title:'Waiting',status:'active',workerStatus:'active'}],
+   bridge:[{id:'session_status',title:'Connection',status:'active',offline:true}],
+ })
+ assert.equal(disconnected[0].status,'offline')
+ assert.equal(disconnected[0].unreachableFromHere,true)
+ assert.equal(disconnected[0].address,undefined)
+ const waiting=mergeSessionPeers({
+   cloud:[{id:'cse_status',title:'Waiting',status:'active',workerStatus:'requires_action'}],
+   bridge:[{id:'session_status',title:'Connection',status:'active'}],
+ })
+ assert.equal(waiting[0].status,'requires_action')
+ assert.equal(waiting[0].unreachableFromHere,false)
+ assert.equal(waiting[0].address,'bridge:session_status')
+})
