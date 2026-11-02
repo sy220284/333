@@ -1,4 +1,4 @@
-/** Parse the public meta declaration as literal data. Never execute metadata. */
+/** Parse workflow metadata as literal data without executing it. */
 export function parseWorkflowMetaLiteral(source) {
   if (typeof source !== 'string' || source.length > 65536) throw new Error('Workflow meta literal too large')
   let i = 0
@@ -19,28 +19,7 @@ export function parseWorkflowMetaLiteral(source) {
         else if (escaped === 'u' || escaped === 'x') {
           const len = escaped === 'u' ? 4 : 2
           const hex = source.slice(i,i+len)
-          if (!new RegExp(`^[0-9a-fA-F]{${len}}/** Parse the public meta declaration as literal data. Never execute metadata. */
-export function parseWorkflowMetaLiteral(source) {
-  if (typeof source !== 'string' || source.length > 65536) throw new Error('Workflow meta literal too large')
-  let i = 0
-  const fail = () => { throw new Error(`Workflow meta must be a static literal (offset ${i})`) }
-  const space = () => { while (i < source.length && /\s/.test(source[i])) i++ }
-  function str() {
-    const quote = source[i++]
-    let result = ''
-    while (i < source.length) {
-      const c = source[i++]
-      if (c === quote) return result
-      if (c === '\\') {
-        const escaped = source[i++]
-        if (escaped === undefined) fail()
-        const names = { n:'\n', r:'\r', t:'\t', b:'\b', f:'\f', v:'\v', '0':'\0' }
-        if (escaped in names) result += names[escaped]
-        else if (escaped === quote || escaped === '\\' || escaped === '"' || escaped === "'") result += escaped
-        else if (escaped === 'u' || escaped === 'x') {
-          const len = escaped === 'u' ? 4 : 2
-          const hex = source.slice(i,i+len)
-          if (!new RegExp().test(hex)) fail()
+          if (hex.length !== len || !/^[0-9a-fA-F]+$/.test(hex)) fail()
           result += String.fromCharCode(parseInt(hex,16))
           i += len
         } else fail()
