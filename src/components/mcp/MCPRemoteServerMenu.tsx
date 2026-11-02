@@ -541,7 +541,7 @@ export function MCPRemoteServerMenu({
         <Box flexDirection="column" gap={0}>
           <Box>
             <Text bold>状态：</Text>
-            {server.client.type === 'disabled' ? <Text>{color('inactive', theme)(figures.radioOff)} disabled</Text> : server.client.type === 'connected' ? <Text>{color('success', theme)(figures.tick)} connected</Text> : server.client.type === 'pending' ? <>
+            {server.client.type === 'disabled' ? <Text>{color('inactive', theme)(figures.radioOff)} 已禁用</Text> : server.client.type === 'connected' ? <Text>{color('success', theme)(figures.tick)} 已连接</Text> : server.client.type === 'pending' ? <>
                 <Text dimColor>{figures.radioOff}</Text>
                 <Text> 正在连接…</Text>
               </> : server.client.type === 'needs-auth' ? <Text>

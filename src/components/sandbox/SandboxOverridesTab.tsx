@@ -161,14 +161,14 @@ function OverridesSelect(t0) {
   }
   let t11;
   if ($[20] === Symbol.for("react.memo_cache_sentinel")) {
-    t11 = <Text dimColor={true}><Text bold={true} dimColor={true}>允许退出沙箱后重试:</Text>{" "}命令受沙箱限制而失败时，Claude 可以使用 dangerouslyDisableSandbox 在沙箱外重试，并遵守默认权限规则。</Text>;
+    t11 = <Text dimColor={true}><Text bold={true} dimColor={true}>允许退出沙箱后重试：</Text>{" "}命令受沙箱限制而失败时，Claude 可以使用 dangerouslyDisableSandbox 在沙箱外重试，并遵守默认权限规则。</Text>;
     $[20] = t11;
   } else {
     t11 = $[20];
   }
   let t12;
   if ($[21] === Symbol.for("react.memo_cache_sentinel")) {
-    t12 = <Text dimColor={true}><Text bold={true} dimColor={true}>严格沙箱模式:</Text>{" "}除非在 excludedCommands 中明确排除，否则模型执行的所有 Bash 命令都必须在沙箱中运行。</Text>;
+    t12 = <Text dimColor={true}><Text bold={true} dimColor={true}>严格沙箱模式：</Text>{" "}除非在 excludedCommands 中明确排除，否则模型执行的所有 Bash 命令都必须在沙箱中运行。</Text>;
     $[21] = t12;
   } else {
     t12 = $[21];

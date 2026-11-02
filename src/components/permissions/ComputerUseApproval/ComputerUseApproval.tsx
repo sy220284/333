@@ -161,7 +161,7 @@ function ComputerUseTccPanel(t0) {
   }
   let t7;
   if ($[15] === Symbol.for("react.memo_cache_sentinel")) {
-    t7 = <Text dimColor={true}>请在系统设置中授予缺少的权限，然后选择 "重试". 授予权限后，macOS 可能要求你重启 Claude Code 才能使用 屏幕录制.</Text>;
+    t7 = <Text dimColor={true}>请在系统设置中授予缺少的权限，然后选择 “重试”。授予权限后，macOS 可能要求你重启 Claude Code 才能使用 屏幕录制。</Text>;
     $[15] = t7;
   } else {
     t7 = $[15];
@@ -372,7 +372,7 @@ function ComputerUseAppListPanel(t0) {
   }
   let t16;
   if ($[30] !== request.willHide) {
-    t16 = request.willHide && request.willHide.length > 0 ? <Text dimColor={true}>{request.willHide.length} other{" "}{plural(request.willHide.length, "app")} 将在 Claude 执行时被隐藏。</Text> : null;
+    t16 = request.willHide && request.willHide.length > 0 ? <Text dimColor={true}>{request.willHide.length} 个其他应用将在 Claude 执行时被隐藏。</Text> : null;
     $[30] = request.willHide;
     $[31] = t16;
   } else {

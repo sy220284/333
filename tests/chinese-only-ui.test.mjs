@@ -154,3 +154,10 @@ test('MCP 远程连接和远程会话详情使用中文', () => {
   assert.match(read('src/components/mcp/MCPRemoteServerMenu.tsx'), /正在验证/)
   assert.match(read('src/components/tasks/RemoteSessionDetailDialog.tsx'), /远程会话详情/)
 })
+
+test('沙箱依赖与代理位置设置使用中文显示', () => {
+  const dependencies=read('src/components/sandbox/SandboxDependenciesTab.tsx')
+  assert.match(dependencies, /未安装/)
+  assert.match(dependencies, /已找到/)
+  assert.match(read('src/components/agents/new-agent-creation/wizard-steps/LocationStep.tsx'), /项目级/)
+})
