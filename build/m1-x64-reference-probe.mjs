@@ -109,10 +109,23 @@ const result={schema:1,release:'2.1.310',platform:'linux-x64',reference_sha256:h
   scope:'OFFLINE_UNAUTHENTICATED_CLI_CONTRACTS_ONLY',
   reference:{passed:referenceCases.filter(x=>x.pass).length,total:referenceCases.length,cases:referenceCases},
   candidate:candidateCases && {passed:candidateCases.filter(x=>x.pass).length,total:candidateCases.length,cases:candidateCases},
+  evidence_mode: args['--allow-candidate-diff'] === 'true' ? 'M1_SOURCE_DELTA_CAPTURE_NOT_PRODUCT_ACCEPTANCE' : 'STRICT_TARGET_PARITY',
   limitations:['No authenticated model calls','No interactive TUI rendering','No MCP server handshake',
     'No agent/workflow/tool execution','No implicit assertion of feature equivalence'] }
 mkdirSync(dirname(resolve(report)),{recursive:true})
 writeFileSync(report,`${JSON.stringify(result,null,2)}\n`)
 console.log(JSON.stringify({reference_passed:result.reference.passed,total:result.reference.total,
   candidate_passed:result.candidate?.passed??null,report:resolve(report)}))
-if (referenceCases.some(x=>!x.pass) || candidateCases?.some(x=>!x.pass)) process.exitCode=1
+const evidenceOnly = args['--allow-candidate-diff'] === 'true'
+if (evidenceOnly && !candidate) throw new Error('仅在实际传入 --candidate 时允许仅收集差分证据')
+const failedReference = referenceCases.filter(x => !x.pass)
+const candidateMismatches = candidateCases?.filter(x => !x.pass) ?? []
+if (candidateCases) {
+  console.log(JSON.stringify({
+    evidence_only: evidenceOnly,
+    candidate_matches_target: candidateMismatches.length === 0,
+    mismatch_count: candidateMismatches.length,
+    mismatch_ids: candidateMismatches.map(x => x.id),
+  }))
+}
+if (failedReference.length || (candidateMismatches.length && !evidenceOnly)) process.exitCode = 1
