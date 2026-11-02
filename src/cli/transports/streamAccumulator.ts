@@ -22,7 +22,7 @@ export function createStreamAccumulator(): StreamAccumulatorState {
   return { byMessage: new Map(), scopeToMessage: new Map() }
 }
 
-function scopeKey(m: { session_id: string; parent_tool_use_id: string | null }): string {
+function scopeKey(m: { session_id?: string; parent_tool_use_id?: string | null }): string {
   return `${m.session_id}:${m.parent_tool_use_id ?? ''}`
 }
 
