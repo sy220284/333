@@ -12,6 +12,7 @@ on:
       - 'src/tools/NotebookEditTool/notebookMutation.ts'
       - 'tests/notebook-edit-parity.test.ts'
       - 'tests/notebook-edit-write-integration.test.ts'
+      - 'tests/notebook-read-edit-integration.test.ts'
       - 'tests/m1-link-production-adapters.mjs'
       - '.github/workflows/m1-sed-preview-parity.yml'
   workflow_dispatch:
@@ -39,7 +40,7 @@ jobs:
       - name: 仅检查本 PR 修改的 TypeScript 文件（独立于历史质量基线）
         run: |
           npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
-          node tools/dev/node_modules/@biomejs/biome/bin/biome lint --no-errors-on-unmatched src/components/permissions/SedEditPermissionRequest/SedEditPermissionRequest.tsx src/tools/BashTool/BashTool.tsx src/tools/BashTool/sedEditParser.ts src/tools/NotebookEditTool/NotebookEditTool.ts src/tools/NotebookEditTool/notebookMutation.ts tests/notebook-edit-parity.test.ts tests/notebook-edit-write-integration.test.ts tests/sed-edit-parity.test.ts tests/sed-edit-write-integration.test.ts tests/m1-link-production-adapters.mjs
+          node tools/dev/node_modules/@biomejs/biome/bin/biome lint --no-errors-on-unmatched src/components/permissions/SedEditPermissionRequest/SedEditPermissionRequest.tsx src/tools/BashTool/BashTool.tsx src/tools/BashTool/sedEditParser.ts src/tools/NotebookEditTool/NotebookEditTool.ts src/tools/NotebookEditTool/notebookMutation.ts tests/notebook-edit-parity.test.ts tests/notebook-edit-write-integration.test.ts tests/notebook-read-edit-integration.test.ts tests/sed-edit-parity.test.ts tests/sed-edit-write-integration.test.ts tests/m1-link-production-adapters.mjs
       - name: 对照本机 GNU/BSD sed 验证预览与真实文件写入
         run: bun test tests/sed-edit-parity.test.ts
       - name: Notebook 单元格身份、类型变更与格式一致性
@@ -47,7 +48,7 @@ jobs:
       - name: 验证实际 BashTool 与 NotebookEditTool 写入及并发编辑保护
         run: |
           node tests/m1-link-production-adapters.mjs
-          bun test tests/sed-edit-write-integration.test.ts tests/notebook-edit-write-integration.test.ts
+          bun test tests/sed-edit-write-integration.test.ts tests/notebook-edit-write-integration.test.ts tests/notebook-read-edit-integration.test.ts
 
   notebook-windows:
     name: Notebook 原位编辑（Windows）
@@ -71,10 +72,10 @@ jobs:
       - name: 校验 Notebook 本次修改源码和用例
         run: |
           npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
-          node tools/dev/node_modules/@biomejs/biome/bin/biome lint --no-errors-on-unmatched src/tools/NotebookEditTool/NotebookEditTool.ts src/tools/NotebookEditTool/notebookMutation.ts tests/notebook-edit-parity.test.ts tests/notebook-edit-write-integration.test.ts
+          node tools/dev/node_modules/@biomejs/biome/bin/biome lint --no-errors-on-unmatched src/tools/NotebookEditTool/NotebookEditTool.ts src/tools/NotebookEditTool/notebookMutation.ts tests/notebook-edit-parity.test.ts tests/notebook-edit-write-integration.test.ts tests/notebook-read-edit-integration.test.ts
       - name: Notebook 目标定位与格式回归
         run: bun test tests/notebook-edit-parity.test.ts
       - name: Notebook 实际磁盘写入及外部修改保护
         run: |
           node tests/m1-link-production-adapters.mjs
-          bun test tests/notebook-edit-write-integration.test.ts
+          bun test tests/notebook-edit-write-integration.test.ts tests/notebook-read-edit-integration.test.ts
