@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { selectEligibleTips, selectLongestUnshown } from '../src/services/tips/tipEligibility.mjs'
+import { selectEligibleTips, selectLongestUnshown, resolveTipContent } from '../src/services/tips/tipEligibility.mjs'
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)))
 const code=path=>readFileSync(resolve(root,path),'utf8')
@@ -92,4 +92,34 @@ test('target selection is connected to the actual registry, scheduler and durabl
   assert.match(scheduler,/selectLongestUnshown\(availableTips, getSessionsSinceLastShown\)/)
   assert.match(history,/tipLifetimeShows/)
   assert.match(history,/history\[tipId\] === numStartups/)
+})
+
+test('content exceptions are recorded once and produce no rendered spinner text', async () => {
+  const failed=[]
+  const logged=[]
+  const item={id:'crash',content:async()=>{throw Error('broken content')}}
+  const output=await resolveTipContent(item,'dark',{
+    markFailed:id=>failed.push(id),
+    report:(error,kind)=>logged.push({kind,message:String(error)}),
+  })
+  assert.equal(output,'')
+  assert.deepEqual(failed,['crash'])
+  assert.equal(logged[0].kind,'tip content threw')
+  assert.ok(logged[0].message.includes('broken content'))
+})
+test('content success preserves exact rendered string and does not mark failure', async () => {
+  const state={failures:0}
+  const result=await resolveTipContent({id:'ok',content:async()=> 'Displayed tip'},'dark',{
+    markFailed:()=>{state.failures++},
+    report:()=>{state.failures++},
+  })
+  assert.equal(result,'Displayed tip')
+  assert.equal(state.failures,0)
+})
+test('actual REPL records a tip only when content rendered, errors clear spinner',()=>{
+  const source=code('src/screens/REPL.tsx')
+  assert.match(source,/await getSafeTipContent\(tip, theme\)/)
+  assert.match(source,/if \(content !== ''\)/)
+  assert.match(source,/recordShownTip\(tip\)/)
+  assert.match(source,/spinner tip failed/)
 })

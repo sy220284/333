@@ -46,3 +46,14 @@ export function selectLongestUnshown(availableTips, sessionsSinceShown) {
       : b.sessions - a.sessions
   )[0]?.tip
 }
+
+/** A broken tip must not blank the REPL or increment its impression count. */
+export async function resolveTipContent(tip, theme, { markFailed, report }) {
+  try {
+    return await tip.content({ theme })
+  } catch (error) {
+    markFailed(tip.id)
+    report(error, 'tip content threw')
+    return ''
+  }
+}

@@ -54,7 +54,7 @@ import {
   getCachedReferrerReward,
 } from '../api/referral.js'
 import { getSessionsSinceLastShown, getTipLifetimeShows } from './tipHistory.js'
-import { selectEligibleTips } from './tipEligibility.mjs'
+import { selectEligibleTips, resolveTipContent } from './tipEligibility.mjs'
 import { getAPIProvider, isFirstPartyAnthropicBaseUrl } from '../../utils/model/providers.js'
 import { getOriginalCwd } from '../../bootstrap/state.js'
 import type { Tip, TipContext } from './types.js'
@@ -701,13 +701,11 @@ export async function contentSafe(
   tip: Tip,
   theme: import('../../utils/theme.js').ThemeName,
 ): Promise<string> {
-  try {
-    return await tip.content({ theme })
-  } catch (error) {
-    failedTipIds.add(tip.id)
-    logForDebugging(`tip content threw: ${error}`, { level: 'warn' })
-    return ''
-  }
+  return resolveTipContent(tip, theme, {
+    markFailed: id => { failedTipIds.add(id) },
+    report: (error, kind) =>
+      logForDebugging(`${kind}: ${error}`, { level: 'warn' }),
+  })
 }
 
 

@@ -28,3 +28,12 @@ export declare function selectLongestUnshown<T extends SpinnerTipCandidate>(
   availableTips: T[],
   sessionsSinceShown: (id: string) => number,
 ): T | undefined
+
+export declare function resolveTipContent(
+  tip: { id: string; content: (context: { theme: import('../../utils/theme.js').ThemeName }) => Promise<string> },
+  theme: import('../../utils/theme.js').ThemeName,
+  handlers: {
+    markFailed: (id: string) => void
+    report: (error: unknown, kind: string) => void
+  },
+): Promise<string>
