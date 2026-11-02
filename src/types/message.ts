@@ -31,6 +31,8 @@ export type SystemMessageLevel = 'info' | 'warning' | 'error' | 'suggestion' | '
 export interface StopHookInfo {
   command: string
   promptText?: string
+  /** Real wall-clock duration of this hook, in milliseconds. */
+  durationMs?: number
 }
 export interface UserMessage extends MessageHeader {
   type: 'user'
