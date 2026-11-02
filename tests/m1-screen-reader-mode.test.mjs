@@ -33,6 +33,8 @@ test('CLI, settings and actual Ink rendering are connected',async()=>{
  assert.match(ink,/flattenAccessibleTree\(this\.rootNode\)/)
  assert.match(ink,/accessibleOutputDelta\(/)
  assert.match(ink,/this\.accessibleAnnouncements\.endStartupQuiet\(\)/)
+ assert.match(ink,/import\s*\{[^}]*\bisScreenReaderEnabled\b[^}]*\}\s*from\s*['"]\.\.\/utils\/accessibility\/screenReaderRuntime\.js['"]\s*;/)
+ assert.match(ink,/if\s*\(isScreenReaderEnabled\(\)\)\s*\{/)
  assert.match(ink,/clearTimeout\(this\.accessibleFlushTimer\)/)
  assert.match(ink,/this\.accessibleAnnouncements\.drain\(\)/)
  assert.ok(ink.includes('Screen Reader Mode: on via ${getScreenReaderActivationSource()}'))
