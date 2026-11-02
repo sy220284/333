@@ -29,6 +29,16 @@ import { trySessionMemoryCompaction } from './sessionMemoryCompact.js'
 // Based on p99.99 of compact summary output being 17,387 tokens.
 const MAX_OUTPUT_TOKENS_FOR_SUMMARY = 20_000
 
+// CLI-scoped override is shared by TUI, SDK/headless, and the main query loop.
+let cliAutoCompactWindow: number | 'auto' | undefined
+
+export function setCliAutoCompactWindow(value: number | 'auto' | undefined): void {
+  if (typeof value === 'number' && (!Number.isFinite(value) || value < 100_000 || value > 1_000_000)) {
+    throw new RangeError('Auto-compact window must contain 100k to 1M tokens')
+  }
+  cliAutoCompactWindow = value
+}
+
 // Returns the context window size minus the max output tokens for the model
 export function getEffectiveContextWindowSize(model: string): number {
   const reservedTokensForSummary = Math.min(
@@ -37,11 +47,19 @@ export function getEffectiveContextWindowSize(model: string): number {
   )
   let contextWindow = getContextWindowForModel(model, getSdkBetas())
 
-  const autoCompactWindow = process.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW
-  if (autoCompactWindow) {
-    const parsed = parseInt(autoCompactWindow, 10)
-    if (!isNaN(parsed) && parsed > 0) {
-      contextWindow = Math.min(contextWindow, parsed)
+  // An explicit CLI override takes precedence over environment settings.
+  // "auto" restores the model's normal window without forcing a fixed size.
+  if (cliAutoCompactWindow !== undefined) {
+    if (cliAutoCompactWindow !== 'auto') {
+      contextWindow = Math.min(contextWindow, cliAutoCompactWindow)
+    }
+  } else {
+    const autoCompactWindow = process.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW
+    if (autoCompactWindow) {
+      const parsed = parseInt(autoCompactWindow, 10)
+      if (!isNaN(parsed) && parsed > 0) {
+        contextWindow = Math.min(contextWindow, parsed)
+      }
     }
   }
 

@@ -19,6 +19,11 @@ import { ensureKeychainPrefetchCompleted, startKeychainPrefetch } from './utils/
 // eslint-disable-next-line custom-rules/no-top-level-side-effects
 startKeychainPrefetch();
 import { feature } from 'bun:bundle';
+import { parseFallbackModels } from './services/api/fallbackModels.mjs';
+import { parsePromptSuggestions, restrictedToolDenyList } from './services/cli/upgradeMode.mjs';
+import { resolveCloudTarget, validateCloudEnvironment } from './services/cli/cloudTarget.mjs';
+import { parseAutoCompactWindowOption } from './services/api/autoCompactWindow.mjs';
+import { setCliAutoCompactWindow } from './services/compact/autoCompact.js';
 import { Command as CommanderCommand, InvalidArgumentError, Option } from '@commander-js/extra-typings';
 import chalk from 'chalk';
 import { readFileSync } from 'fs';
@@ -263,7 +268,7 @@ function isBeingDebugged() {
 }
 
 // Exit if we detect node debugging or inspection
-if ("external" !== 'ant' && isBeingDebugged()) {
+if (process.env.USER_TYPE !== 'ant' && isBeingDebugged()) {
   // Use process.exit directly here since we're in the top-level code before imports
   // and gracefulShutdown is not yet available
   // eslint-disable-next-line custom-rules/no-top-level-side-effects
@@ -337,7 +342,7 @@ function runMigrations(): void {
     if (feature('TRANSCRIPT_CLASSIFIER')) {
       resetAutoModeOptInForDefaultOffer();
     }
-    if ("external" === 'ant') {
+    if (process.env.USER_TYPE === 'ant') {
       migrateFennecToOpus();
     }
     saveGlobalConfig(prev => prev.migrationVersion === CURRENT_MIGRATION_VERSION ? prev : {
@@ -425,7 +430,7 @@ export function startDeferredPrefetches(): void {
   }
 
   // Event loop stall detector — logs when the main thread is blocked >500ms
-  if ("external" === 'ant') {
+  if (process.env.USER_TYPE === 'ant') {
     void import('./utils/eventLoopStallDetector.js').then(m => m.startEventLoopStallDetector());
   }
 }
@@ -501,16 +506,34 @@ function loadSettingSourcesFromFlag(settingSourcesArg: string): void {
  */
 function eagerLoadSettings(): void {
   profileCheckpoint('eagerLoadSettings_start');
-  // Parse --settings flag early to ensure settings are loaded before init()
+  // Managed policy still loads, but --safe-mode discards every user-controlled
+  // settings source, including --settings. Restricted mode retains the explicit
+  // --settings overlay while suppressing user/project/local settings files.
+  const safeMode = process.argv.includes('--safe-mode');
+  const restricted = process.argv.includes('--restricted');
+  if (restricted) process.env.CLAUDE_CODE_RESTRICTED = '1';
+  if (safeMode) {
+    // A safe session still honors security denials in project/user settings.
+    // The settings merger retains only deny rules from these untrusted sources.
+    process.env.CLAUDE_CODE_SAFE_MODE = '1';
+    process.env.CLAUDE_CODE_DISABLE_CLAUDE_MDS = '1';
+  }
   const settingsFile = eagerParseCliFlag('--settings');
-  if (settingsFile) {
+  if (settingsFile && !safeMode) {
     loadSettingsFromFlag(settingsFile);
   }
-
-  // Parse --setting-sources flag early to control which sources are loaded
-  const settingSourcesArg = eagerParseCliFlag('--setting-sources');
-  if (settingSourcesArg !== undefined) {
-    loadSettingSourcesFromFlag(settingSourcesArg);
+  if (safeMode) {
+    // Keep sources readable solely for their permissions.deny rules; all other
+    // untrusted values are discarded in settings.ts.
+    resetSettingsCache();
+  } else if (restricted) {
+    setAllowedSettingSources([]);
+    resetSettingsCache();
+  } else {
+    const settingSourcesArg = eagerParseCliFlag('--setting-sources');
+    if (settingSourcesArg !== undefined) {
+      loadSettingSourcesFromFlag(settingSourcesArg);
+    }
   }
   profileCheckpoint('eagerLoadSettings_end');
 }
@@ -943,9 +966,16 @@ async function run(): Promise<CommanderCommand> {
     // builds the type as options are added. Narrow with a runtime guard;
     // the collect accumulator + [] default guarantee string[] in practice.
     const pluginDir = thisCommand.getOptionValue('pluginDir');
-    if (Array.isArray(pluginDir) && pluginDir.length > 0 && pluginDir.every(p => typeof p === 'string')) {
-      setInlinePlugins(pluginDir);
-      clearPluginCache('preAction: --plugin-dir inline plugins');
+    const pluginUrl = thisCommand.getOptionValue('pluginUrl');
+    if (!process.argv.includes('--safe-mode')) {
+      const dirs = Array.isArray(pluginDir) && pluginDir.every(p => typeof p === 'string') ? pluginDir as string[] : [];
+      const urls = Array.isArray(pluginUrl) && pluginUrl.every(p => typeof p === 'string') ? pluginUrl as string[] : [];
+      if (dirs.length || urls.length) {
+        const { prepareSessionPluginPaths } = await import('./utils/plugins/sessionPluginSources.js');
+        const sources = await prepareSessionPluginPaths(dirs, urls);
+        setInlinePlugins(sources);
+        clearPluginCache('preAction: --plugin-dir or --plugin-url inline plugins');
+      }
     }
     runMigrations();
     profileCheckpoint('preAction_after_migrations');
@@ -985,7 +1015,7 @@ async function run(): Promise<CommanderCommand> {
       throw new Error('--task-budget must be a positive integer');
     }
     return tokens;
-  }).hideHelp()).option('--replay-user-messages', 'Re-emit user messages from stdin back on stdout for acknowledgment (only works with --input-format=stream-json and --output-format=stream-json)', () => true).addOption(new Option('--enable-auth-status', 'Enable auth status messages in SDK mode').default(false).hideHelp()).option('--allowedTools, --allowed-tools <tools...>', 'Comma or space-separated list of tool names to allow (e.g. "Bash(git:*) Edit")').option('--tools <tools...>', 'Specify the list of available tools from the built-in set. Use "" to disable all tools, "default" to use all tools, or specify tool names (e.g. "Bash,Edit,Read").').option('--disallowedTools, --disallowed-tools <tools...>', 'Comma or space-separated list of tool names to deny (e.g. "Bash(git:*) Edit")').option('--mcp-config <configs...>', 'Load MCP servers from JSON files or strings (space-separated)').addOption(new Option('--permission-prompt-tool <tool>', 'MCP tool to use for permission prompts (only works with --print)').argParser(String).hideHelp()).addOption(new Option('--system-prompt <prompt>', 'System prompt to use for the session').argParser(String)).addOption(new Option('--system-prompt-file <file>', 'Read system prompt from a file').argParser(String).hideHelp()).addOption(new Option('--append-system-prompt <prompt>', 'Append a system prompt to the default system prompt').argParser(String)).addOption(new Option('--append-system-prompt-file <file>', 'Read system prompt from a file and append to the default system prompt').argParser(String).hideHelp()).addOption(new Option('--permission-mode <mode>', 'Permission mode to use for the session').argParser(String).choices(PERMISSION_MODES)).option('-c, --continue', 'Continue the most recent conversation in the current directory', () => true).option('-r, --resume [value]', 'Resume a conversation by session ID, or open interactive picker with optional search term', value => value || true).option('--fork-session', 'When resuming, create a new session ID instead of reusing the original (use with --resume or --continue)', () => true).addOption(new Option('--prefill <text>', 'Pre-fill the prompt input with text without submitting it').hideHelp()).addOption(new Option('--deep-link-origin', 'Signal that this session was launched from a deep link').hideHelp()).addOption(new Option('--deep-link-repo <slug>', 'Repo slug the deep link ?repo= parameter resolved to the current cwd').hideHelp()).addOption(new Option('--deep-link-last-fetch <ms>', 'FETCH_HEAD mtime in epoch ms, precomputed by the deep link trampoline').argParser(v => {
+  }).hideHelp()).option('--replay-user-messages', 'Re-emit user messages from stdin back on stdout for acknowledgment (only works with --input-format=stream-json and --output-format=stream-json)', () => true).addOption(new Option('--enable-auth-status', 'Enable auth status messages in SDK mode').default(false).hideHelp()).option('--allowedTools, --allowed-tools <tools...>', 'Comma or space-separated list of tool names to allow (e.g. "Bash(git:*) Edit")').option('--tools <tools...>', 'Specify the list of available tools from the built-in set. Use "" to disable all tools, "default" to use all tools, or specify tool names (e.g. "Bash,Edit,Read").').option('--disallowedTools, --disallowed-tools <tools...>', 'Comma or space-separated list of tool names to deny (e.g. "Bash(git:*) Edit")').option('--mcp-config <configs...>', 'Load MCP servers from JSON files or strings (space-separated)').addOption(new Option('--permission-prompt-tool <tool>', 'MCP tool to use for permission prompts (only works with --print)').argParser(String)).addOption(new Option('--system-prompt <prompt>', 'System prompt to use for the session').argParser(String)).addOption(new Option('--system-prompt-file <file>', 'Read system prompt from a file').argParser(String).hideHelp()).addOption(new Option('--append-system-prompt <prompt>', 'Append a system prompt to the default system prompt').argParser(String)).addOption(new Option('--append-system-prompt-file <file>', 'Read system prompt from a file and append to the default system prompt').argParser(String).hideHelp()).addOption(new Option('--permission-mode <mode>', 'Permission mode to use for the session').argParser(String).choices(PERMISSION_MODES)).option('-c, --continue', 'Continue the most recent conversation in the current directory', () => true).option('-r, --resume [value]', 'Resume a conversation by session ID, or open interactive picker with optional search term', value => value || true).option('--fork-session', 'When resuming, create a new session ID instead of reusing the original (use with --resume or --continue)', () => true).addOption(new Option('--prefill <text>', 'Pre-fill the prompt input with text without submitting it').hideHelp()).addOption(new Option('--deep-link-origin', 'Signal that this session was launched from a deep link').hideHelp()).addOption(new Option('--deep-link-repo <slug>', 'Repo slug the deep link ?repo= parameter resolved to the current cwd').hideHelp()).addOption(new Option('--deep-link-last-fetch <ms>', 'FETCH_HEAD mtime in epoch ms, precomputed by the deep link trampoline').argParser(v => {
     const n = Number(v);
     return Number.isFinite(n) ? n : undefined;
   }).hideHelp()).option('--from-pr [value]', 'Resume a session linked to a PR by PR number/URL, or open interactive picker with optional search term', value => value || true).option('--no-session-persistence', 'Disable session persistence - sessions will not be saved to disk and cannot be resumed (only works with --print)').addOption(new Option('--resume-session-at <message id>', 'When resuming, only messages up to and including the assistant message with <message.id> (use with --resume in print mode)').argParser(String).hideHelp()).addOption(new Option('--rewind-files <user-message-id>', 'Restore files to state at the specified user message and exit (requires --resume)').hideHelp())
@@ -997,13 +1027,17 @@ async function run(): Promise<CommanderCommand> {
       throw new InvalidArgumentError(`It must be one of: ${allowed.join(', ')}`);
     }
     return value;
-  })).option('--agent <agent>', `Agent for the current session. Overrides the 'agent' setting.`).option('--betas <betas...>', 'Beta headers to include in API requests (API key users only)').option('--fallback-model <model>', 'Enable automatic fallback to specified model when default model is overloaded (only works with --print)').addOption(new Option('--workload <tag>', 'Workload tag for billing-header attribution (cc_workload). Process-scoped; set by SDK daemon callers that spawn subprocesses for cron work. (only works with --print)').hideHelp()).option('--settings <file-or-json>', 'Path to a settings JSON file or a JSON string to load additional settings from').option('--add-dir <directories...>', 'Additional directories to allow tool access to').option('--ide', 'Automatically connect to IDE on startup if exactly one valid IDE is available', () => true).option('--strict-mcp-config', 'Only use MCP servers from --mcp-config, ignoring all other MCP configurations', () => true).option('--session-id <uuid>', 'Use a specific session ID for the conversation (must be a valid UUID)').option('-n, --name <name>', 'Set a display name for this session (shown in /resume and terminal title)').option('--agents <json>', 'JSON object defining custom agents (e.g. \'{"reviewer": {"description": "Reviews code", "prompt": "You are a code reviewer"}}\')').option('--setting-sources <sources>', 'Comma-separated list of setting sources to load (user, project, local).')
+  })).option('--agent <agent>', `Agent for the current session. Overrides the 'agent' setting.`).option('--betas <betas...>', 'Beta headers to include in API requests (API key users only)').option('--fallback-model <model>', 'Comma-separated fallback model(s) tried in order when the active model is overloaded or unavailable; primary is retried at each new user turn').addOption(new Option('--autocompact <auto|tokens>', 'Auto-compact context window (auto, or 100k–1M tokens)').argParser(value => {
+    const parsed = parseAutoCompactWindowOption(value);
+    if (parsed === undefined) throw new InvalidArgumentError("It must be 'auto', or between 100k and 1M (e.g. 500k, 200000, or 200 as shorthand)");
+    return parsed;
+  })).addOption(new Option('--workload <tag>', 'Workload tag for billing-header attribution (cc_workload). Process-scoped; set by SDK daemon callers that spawn subprocesses for cron work. (only works with --print)').hideHelp()).option('--settings <file-or-json>', 'Path to a settings JSON file or a JSON string to load additional settings from').option('--add-dir <directories...>', 'Additional directories to allow tool access to').option('--ide', 'Automatically connect to IDE on startup if exactly one valid IDE is available', () => true).option('--strict-mcp-config', 'Only use MCP servers from --mcp-config, ignoring all other MCP configurations', () => true).option('--session-id <uuid>', 'Use a specific session ID for the conversation (must be a valid UUID)').option('-n, --name <name>', 'Set a display name for this session (shown in /resume and terminal title)').option('--agents <json>', 'JSON object defining custom agents (e.g. \'{"reviewer": {"description": "Reviews code", "prompt": "You are a code reviewer"}}\')').option('--setting-sources <sources>', 'Comma-separated list of setting sources to load (user, project, local).')
   // gh-33508: <paths...> (variadic) consumed everything until the next
   // --flag. `claude --plugin-dir /path mcp add --transport http` swallowed
   // `mcp` and `add` as paths, then choked on --transport as an unknown
   // top-level option. Single-value + collect accumulator means each
   // --plugin-dir takes exactly one arg; repeat the flag for multiple dirs.
-  .option('--plugin-dir <path>', 'Load plugins from a directory for this session only (repeatable: --plugin-dir A --plugin-dir B)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Claude in Chrome integration').option('--no-chrome', 'Disable Claude in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)').action(async (prompt, options) => {
+  .option('--plugin-dir <path>', 'Load plugins from a directory or .zip for this session only (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--plugin-url <url>', 'Fetch a plugin .zip from HTTPS for this session only (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Claude in Chrome integration').option('--no-chrome', 'Disable Claude in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)').action(async (prompt, options) => {
     profileCheckpoint('action_handler_start');
 
     // --bare = one-switch minimal mode. Sets SIMPLE so all the existing
@@ -1087,6 +1121,26 @@ async function run(): Promise<CommanderCommand> {
         }
       }
     }
+    const safeMode = Boolean((options as { safeMode?: boolean }).safeMode);
+    const restricted = Boolean((options as { restricted?: boolean }).restricted);
+    if (restricted && (options.dangerouslySkipPermissions || options.permissionMode === 'bypassPermissions')) {
+      throw new InvalidArgumentError('--restricted refuses bypassPermissions');
+    }
+    if ((options as { excludeDynamicSystemPromptSections?: boolean }).excludeDynamicSystemPromptSections
+      && !options.systemPrompt && !options.systemPromptFile) {
+      process.env.CLAUDE_CODE_EXCLUDE_DYNAMIC_SYSTEM_PROMPT_SECTIONS = '1';
+    }
+    const forwardSubagentText = Boolean((options as { forwardSubagentText?: boolean }).forwardSubagentText);
+    if (forwardSubagentText && (!options.print || options.outputFormat !== 'stream-json')) {
+      throw new InvalidArgumentError('--forward-subagent-text requires --print --output-format stream-json');
+    }
+    const suggestionOverride = parsePromptSuggestions((options as { promptSuggestions?: string | boolean }).promptSuggestions);
+    if (suggestionOverride !== undefined) {
+      process.env.CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION = String(suggestionOverride);
+    }
+    if (suggestionOverride && (options.outputFormat !== 'stream-json' || !options.print)) {
+      throw new InvalidArgumentError('--prompt-suggestions requires --print and --output-format=stream-json');
+    }
     const {
       debug = false,
       debugToStderr = false,
@@ -1095,7 +1149,7 @@ async function run(): Promise<CommanderCommand> {
       tools: baseTools = [],
       allowedTools = [],
       disallowedTools = [],
-      mcpConfig = [],
+      mcpConfig: requestedMcpConfig = [],
       permissionMode: permissionModeCli,
       addDir = [],
       fallbackModel,
@@ -1105,13 +1159,17 @@ async function run(): Promise<CommanderCommand> {
       includeHookEvents,
       includePartialMessages
     } = options;
+    const mcpConfig = safeMode ? [] : requestedMcpConfig;
+    const effectiveDisallowedTools = restricted
+      ? restrictedToolDenyList(baseTools, disallowedTools)
+      : disallowedTools;
     if (options.prefill) {
       seedEarlyInput(options.prefill);
     }
 
     // Promise for file downloads - started early, awaited before REPL renders
     let fileDownloadPromise: Promise<DownloadResult[]> | undefined;
-    const agentsJson = options.agents;
+    const agentsJson = safeMode ? undefined : options.agents;
     const agentCli = options.agent;
     if (feature('BG_SESSIONS') && agentCli) {
       process.env.CLAUDE_CODE_AGENT = agentCli;
@@ -1125,20 +1183,23 @@ async function run(): Promise<CommanderCommand> {
     let outputFormat = options.outputFormat;
     let inputFormat = options.inputFormat;
     let verbose = options.verbose ?? getGlobalConfig().verbose;
+    // The print streaming transport writes SDK messages only in verbose mode.
+    // Explicit prompt suggestions must not be silently discarded on stdout.
+    if (suggestionOverride === true) verbose = true;
     let print = options.print;
     const init = options.init ?? false;
     const initOnly = options.initOnly ?? false;
     const maintenance = options.maintenance ?? false;
 
     // Extract disable slash commands flag
-    const disableSlashCommands = options.disableSlashCommands || false;
+    const disableSlashCommands = options.disableSlashCommands || safeMode;
 
     // Extract tasks mode options (ant-only)
-    const tasksOption = "external" === 'ant' && (options as {
+    const tasksOption = process.env.USER_TYPE === 'ant' && (options as {
       tasks?: boolean | string;
     }).tasks;
     const taskListId = tasksOption ? typeof tasksOption === 'string' ? tasksOption : DEFAULT_TASKS_MODE_TASK_LIST_ID : undefined;
-    if ("external" === 'ant' && taskListId) {
+    if (process.env.USER_TYPE === 'ant' && taskListId) {
       process.env.CLAUDE_CODE_TASK_LIST_ID = taskListId;
     }
 
@@ -1252,14 +1313,32 @@ async function run(): Promise<CommanderCommand> {
     }
 
     // Extract teleport option
-    const teleport = (options as {
+    let teleport = (options as {
       teleport?: string | true;
     }).teleport ?? null;
-
-    // Extract remote option (can be true if no description provided, or a string)
-    const remoteOption = (options as {
-      remote?: string | true;
-    }).remote;
+    const cloudFlag = (options as { cloud?: string | true }).cloud;
+    const cloudEnvironment = validateCloudEnvironment((options as { environment?: string }).environment);
+    const snapshotFlag = (options as { systemPromptSnapshot?: string }).systemPromptSnapshot;
+    if (snapshotFlag !== undefined) process.env.CLAUDE_CODE_SYSTEM_PROMPT_SNAPSHOT = snapshotFlag;
+    if (cloudFlag !== undefined && restricted) {
+      throw new InvalidArgumentError('Cloud sessions cannot be created from a --restricted session');
+    }
+    if (cloudEnvironment && restricted) {
+      throw new InvalidArgumentError('--environment cannot be used from a --restricted session');
+    }
+    if (cloudFlag !== undefined && (options as { remote?: string | true }).remote !== undefined) {
+      throw new InvalidArgumentError('Use either --cloud or --remote for a session, not both');
+    }
+    const cloudTarget = cloudFlag !== undefined || cloudEnvironment !== undefined
+      ? resolveCloudTarget(cloudFlag, prompt)
+      : null;
+    const remoteOption = cloudTarget?.kind === 'create'
+      ? cloudTarget.description
+      : (options as { remote?: string | true }).remote;
+    if (cloudTarget?.kind === 'attach') {
+      if (cloudEnvironment) throw new InvalidArgumentError('--environment creates a new session; it cannot attach to an existing one');
+      teleport = cloudTarget.sessionId;
+    }
     const remote = remoteOption === true ? '' : remoteOption ?? null;
 
     // Extract --remote-control / --rc flag (enable bridge in interactive session)
@@ -1272,6 +1351,13 @@ async function run(): Promise<CommanderCommand> {
     // trust is established and GrowthBook has auth headers.
     let remoteControl = false;
     const remoteControlName = typeof remoteControlOption === 'string' && remoteControlOption.length > 0 ? remoteControlOption : undefined;
+    const remoteControlPrefix = (options as { remoteControlSessionNamePrefix?: string }).remoteControlSessionNamePrefix;
+    if (remoteControlPrefix !== undefined) {
+      if (!remoteControlPrefix.trim() || /[\\r\\n\\0]/.test(remoteControlPrefix) || remoteControlPrefix.length > 100) {
+        throw new InvalidArgumentError('--remote-control-session-name-prefix expects a non-empty name up to 100 characters');
+      }
+      process.env.CLAUDE_CODE_REMOTE_CONTROL_NAME_PREFIX = remoteControlPrefix.trim();
+    }
 
     // Validate session ID if provided
     if (sessionId) {
@@ -1333,10 +1419,16 @@ async function run(): Promise<CommanderCommand> {
     // Get isNonInteractiveSession from state (was set before init())
     const isNonInteractiveSession = getIsNonInteractiveSession();
 
-    // Validate that fallback model is different from main model
-    if (fallbackModel && options.model && fallbackModel === options.model) {
-      process.stderr.write(chalk.red('Error: Fallback model cannot be the same as the main model. Please specify a different model for --fallback-model.\n'));
+    // Parse and validate the ordered fallback chain before any model request.
+    let parsedFallbackModels: string[];
+    try {
+      parsedFallbackModels = parseFallbackModels(fallbackModel, options.model);
+    } catch (error) {
+      process.stderr.write(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}\n`));
       process.exit(1);
+    }
+    if (options.autocompact !== undefined) {
+      setCliAutoCompactWindow(options.autocompact);
     }
 
     // Handle system prompt options
@@ -1528,7 +1620,7 @@ async function run(): Promise<CommanderCommand> {
     };
     // Store the explicit CLI flag so teammates can inherit it
     setChromeFlagOverride(chromeOpts.chrome);
-    const enableClaudeInChrome = shouldEnableClaudeInChrome(chromeOpts.chrome) && ("external" === 'ant' || isClaudeAISubscriber());
+    const enableClaudeInChrome = shouldEnableClaudeInChrome(chromeOpts.chrome) && (process.env.USER_TYPE === 'ant' || isClaudeAISubscriber());
     const autoEnableClaudeInChrome = !enableClaudeInChrome && shouldAutoEnableClaudeInChrome();
     if (enableClaudeInChrome) {
       const platform = getPlatform();
@@ -1673,7 +1765,7 @@ async function run(): Promise<CommanderCommand> {
           }
         }
         if (bad.length > 0) {
-          process.stderr.write(chalk.red(`${flag} entries must be tagged: ${bad.join(', ')}\n  plugin:<name>@<marketplace>  — plugin-provided channel (allowlist enforced)\n  server:<name>                — manually configured MCP server\n`));
+          process.stderr.write(chalk.red(`${flag} entries must be tagged: ${bad.join(', ')}\n` + `  plugin:<name>@<marketplace>  — plugin-provided channel (allowlist enforced)\n` + `  server:<name>                — manually configured MCP server\n`));
           process.exit(1);
         }
         return entries;
@@ -1746,7 +1838,7 @@ async function run(): Promise<CommanderCommand> {
     // loop during the fs I/O instead of blocking it. See #19661.
     const initResult = await initializeToolPermissionContext({
       allowedToolsCli: allowedTools,
-      disallowedToolsCli: disallowedTools,
+      disallowedToolsCli: effectiveDisallowedTools,
       baseToolsCli: baseTools,
       permissionMode,
       allowDangerouslySkipPermissions,
@@ -1760,7 +1852,7 @@ async function run(): Promise<CommanderCommand> {
     } = initResult;
 
     // Handle overly broad shell allow rules for ant users (Bash(*), PowerShell(*))
-    if ("external" === 'ant' && overlyBroadBashPermissions.length > 0) {
+    if (process.env.USER_TYPE === 'ant' && overlyBroadBashPermissions.length > 0) {
       for (const permission of overlyBroadBashPermissions) {
         logForDebugging(`Ignoring overly broad shell permission ${permission.ruleDisplay} from ${permission.sourceDisplay}`);
       }
@@ -2010,14 +2102,14 @@ async function run(): Promise<CommanderCommand> {
     //  - no env override (which short-circuits _CACHED_MAY_BE_STALE before disk)
     //  - flag absent from disk (== null also catches pre-#22279 poisoned null)
     const explicitModel = options.model || process.env.ANTHROPIC_MODEL;
-    if ("external" === 'ant' && explicitModel && explicitModel !== 'default' && !hasGrowthBookEnvOverride('tengu_ant_model_override') && getGlobalConfig().cachedGrowthBookFeatures?.['tengu_ant_model_override'] == null) {
+    if (process.env.USER_TYPE === 'ant' && explicitModel && explicitModel !== 'default' && !hasGrowthBookEnvOverride('tengu_ant_model_override') && getGlobalConfig().cachedGrowthBookFeatures?.['tengu_ant_model_override'] == null) {
       await initializeGrowthBook();
     }
 
     // Special case the default model with the null keyword
     // NOTE: Model resolution happens after setup() to ensure trust is established before AWS auth
     const userSpecifiedModel = options.model === 'default' ? getDefaultMainLoopModel() : options.model;
-    const userSpecifiedFallbackModel = fallbackModel === 'default' ? getDefaultMainLoopModel() : fallbackModel;
+    const userSpecifiedFallbackModel = parsedFallbackModels.map(model => model === 'default' ? getDefaultMainLoopModel() : model).join(',') || undefined;
 
     // Reuse preSetupCwd unless setup() chdir'd (worktreeEnabled). Saves a
     // getCwd() syscall in the common path.
@@ -2057,7 +2149,7 @@ async function run(): Promise<CommanderCommand> {
     if (agentSetting) {
       mainThreadAgentDefinition = agentDefinitions.activeAgents.find(agent => agent.agentType === agentSetting);
       if (!mainThreadAgentDefinition) {
-        logForDebugging(`Warning: agent "${agentSetting}" not found. Available agents: ${agentDefinitions.activeAgents.map(a => a.agentType).join(', ')}. Using default behavior.`);
+        logForDebugging(`Warning: agent "${agentSetting}" not found. ` + `Available agents: ${agentDefinitions.activeAgents.map(a => a.agentType).join(', ')}. ` + `Using default behavior.`);
       }
     }
 
@@ -2156,7 +2248,7 @@ async function run(): Promise<CommanderCommand> {
         // Log agent memory loaded event for tmux teammates
         if (customAgent.memory) {
           logEvent('tengu_agent_memory_loaded', {
-            ...("external" === 'ant' && {
+            ...(process.env.USER_TYPE === 'ant' && {
               agent_type: customAgent.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
             }),
             scope: customAgent.memory as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -2220,7 +2312,7 @@ async function run(): Promise<CommanderCommand> {
       getFpsMetrics = ctx.getFpsMetrics;
       stats = ctx.stats;
       // Install asciicast recorder before Ink mounts (ant-only, opt-in via CLAUDE_CODE_TERMINAL_RECORDING=1)
-      if ("external" === 'ant') {
+      if (process.env.USER_TYPE === 'ant') {
         installAsciicastRecorder();
       }
       const {
@@ -2262,7 +2354,7 @@ async function run(): Promise<CommanderCommand> {
           scope: agentDef.memory!,
           snapshotTimestamp: agentDef.pendingSnapshotUpdate!.snapshotTimestamp
         });
-        // 目标版固定 keep；清除一次性 pending 标记后继续会话。
+        // 2.1.310 snapshot update handler returns keep; clear one-time marker.
         agentDef.pendingSnapshotUpdate = undefined;
       }
 
@@ -2810,7 +2902,7 @@ async function run(): Promise<CommanderCommand> {
       if (!isBareMode()) {
         startDeferredPrefetches();
         void import('./utils/backgroundHousekeeping.js').then(m => m.startBackgroundHousekeeping());
-        if ("external" === 'ant') {
+        if (process.env.USER_TYPE === 'ant') {
           void import('./utils/sdkHeapDumpMonitor.js').then(m => m.startSdkMemoryMonitor());
         }
       }
@@ -2827,6 +2919,7 @@ async function run(): Promise<CommanderCommand> {
         outputFormat: outputFormat,
         jsonSchema,
         permissionPromptToolName: options.permissionPromptTool,
+        permissionPrompts: (options as { permissionPrompts?: 'host' | 'none' }).permissionPrompts ?? 'host',
         allowedTools,
         thinkingConfig,
         maxTurns: options.maxTurns,
@@ -2847,6 +2940,8 @@ async function run(): Promise<CommanderCommand> {
         rewindFiles: options.rewindFiles,
         enableAuthStatus: options.enableAuthStatus,
         agent: agentCli,
+        promptSuggestions: suggestionOverride === true,
+        forwardSubagentText,
         workload: options.workload,
         setupTrigger: setupTrigger ?? undefined,
         sessionStartHooksPromise
@@ -3055,7 +3150,7 @@ async function run(): Promise<CommanderCommand> {
     //   - Runtime: uploader checks github.com/anthropics/* remote + gcloud auth.
     //   - Safety: CLAUDE_CODE_DISABLE_SESSION_DATA_UPLOAD=1 bypasses (tests set this).
     // Import is dynamic + async to avoid adding startup latency.
-    const sessionUploaderPromise = "external" === 'ant' ? import('./utils/sessionDataUploader.js') : null;
+    const sessionUploaderPromise = process.env.USER_TYPE === 'ant' ? import('./utils/sessionDataUploader.js') : null;
 
     // Defer session uploader resolution to the onTurnComplete callback to avoid
     // adding a new top-level await in main.tsx (performance-critical path).
@@ -3074,6 +3169,7 @@ async function run(): Promise<CommanderCommand> {
       strictMcpConfig,
       systemPrompt,
       appendSystemPrompt,
+      fallbackModel: userSpecifiedFallbackModel,
       taskListId,
       thinkingConfig,
       ...(uploaderReady && {
@@ -3415,7 +3511,7 @@ async function run(): Promise<CommanderCommand> {
 
         // Pass current branch so CCR clones the repo at the right revision
         const currentBranch = await getBranch();
-        const createdSession = await teleportToRemoteWithErrorHandling(root, hasInitialPrompt ? remote : null, new AbortController().signal, currentBranch || undefined);
+        const createdSession = await teleportToRemoteWithErrorHandling(root, hasInitialPrompt ? remote : null, new AbortController().signal, currentBranch || undefined, cloudEnvironment);
         if (!createdSession) {
           logEvent('tengu_remote_create_session_error', {
             error: 'unable_to_create_session' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
@@ -3572,7 +3668,7 @@ async function run(): Promise<CommanderCommand> {
           }
         }
       }
-      if ("external" === 'ant') {
+      if (process.env.USER_TYPE === 'ant') {
         if (options.resume && typeof options.resume === 'string' && !maybeSessionId) {
           // Check for ccshare URL (e.g. https://go/ccshare/boris-20260311-211036)
           const {
@@ -3801,13 +3897,27 @@ async function run(): Promise<CommanderCommand> {
     }
   }).version(`${MACRO.VERSION} (Claude Code)`, '-v, --version', 'Output the version number');
 
+  // 2.1.310 options with functional consumers in this source tree.
+  program.option('--restricted', 'Restrict command execution, WebFetch and untrusted settings unless explicitly authorized');
+  program.option('--exclude-dynamic-system-prompt-sections', 'Move per-machine system sections into the first user message for shared prompt caching');
+  program.option('--forward-subagent-text', 'Forward subagent text and thinking as SDK messages with parent tool ID');
+  program.option('--cloud [description]', 'Create a cloud session or attach by session ID or claude.ai/code URL');
+  program.option('--environment <environment_id>', 'Create a session on the given self-hosted ccpool environment');
+  program.addOption(new Option('--system-prompt-snapshot <mode>', 'Persist the complete initial system prompt until compaction')
+    .choices(['on','off']));
+  program.option('--safe-mode', 'Ignore non-managed customizations and run with built-in features');
+  program.addOption(new Option('--permission-prompts <target>', 'Who answers permission prompts: host or none')
+    .choices(['host', 'none']).default('host'));
+  program.addOption(new Option('--prompt-suggestions [value]', 'Enable prompt suggestions (stream-json print mode)')
+    .argParser(value => parsePromptSuggestions(value)).preset(true));
+
   // Worktree flags
   program.option('-w, --worktree [name]', 'Create a new git worktree for this session (optionally specify a name)');
   program.option('--tmux', 'Create a tmux session for the worktree (requires --worktree). Uses iTerm2 native panes when available; use --tmux=classic for traditional tmux.');
   if (canUserConfigureAdvisor()) {
     program.addOption(new Option('--advisor <model>', 'Enable the server-side advisor tool with the specified model (alias or full ID).').hideHelp());
   }
-  if ("external" === 'ant') {
+  if (process.env.USER_TYPE === 'ant') {
     program.addOption(new Option('--delegate-permissions', '[ANT-ONLY] Alias for --permission-mode auto.').implies({
       permissionMode: 'auto'
     }));
@@ -3855,10 +3965,11 @@ async function run(): Promise<CommanderCommand> {
   program.addOption(new Option('--sdk-url <url>', 'Use remote WebSocket endpoint for SDK I/O streaming (only with -p and stream-json format)').hideHelp());
 
   // Enable teleport/remote flags for all builds but keep them undocumented until GA
-  program.addOption(new Option('--teleport [session]', 'Resume a teleport session, optionally specify session ID').hideHelp());
+  program.addOption(new Option('--teleport [session]', 'Resume a teleport session, optionally specify session ID'));
   program.addOption(new Option('--remote [description]', 'Create a remote session with the given description').hideHelp());
   if (feature('BRIDGE_MODE')) {
-    program.addOption(new Option('--remote-control [name]', 'Start an interactive session with Remote Control enabled (optionally named)').argParser(value => value || true).hideHelp());
+    program.addOption(new Option('--remote-control [name]', 'Start an interactive session with Remote Control enabled (optionally named)').argParser(value => value || true));
+    program.addOption(new Option('--remote-control-session-name-prefix <prefix>', 'Prefix for auto-generated Remote Control session names'));
     program.addOption(new Option('--rc [name]', 'Alias for --remote-control').argParser(value => value || true).hideHelp());
   }
   if (feature('HARD_FAIL')) {
@@ -4361,7 +4472,7 @@ async function run(): Promise<CommanderCommand> {
   });
 
   // claude up — run the project's CLAUDE.md "# claude up" setup instructions.
-  if ("external" === 'ant') {
+  if (process.env.USER_TYPE === 'ant') {
     program.command('up').description('[ANT-ONLY] Initialize or upgrade the local dev environment using the "# claude up" section of the nearest CLAUDE.md').action(async () => {
       const {
         up
@@ -4372,7 +4483,7 @@ async function run(): Promise<CommanderCommand> {
 
   // claude rollback (ant-only)
   // Rolls back to previous releases
-  if ("external" === 'ant') {
+  if (process.env.USER_TYPE === 'ant') {
     program.command('rollback [target]').description('[ANT-ONLY] Roll back to a previous release\n\nExamples:\n  claude rollback                                    Go 1 version back from current\n  claude rollback 3                                  Go 3 versions back from current\n  claude rollback 2.0.73-dev.20251217.t190658        Roll back to a specific version').option('-l, --list', 'List recent published versions with ages').option('--dry-run', 'Show what would be installed without installing').option('--safe', 'Roll back to the server-pinned safe version (set by oncall during incidents)').action(async (target?: string, options?: {
       list?: boolean;
       dryRun?: boolean;
@@ -4396,7 +4507,7 @@ async function run(): Promise<CommanderCommand> {
   });
 
   // ant-only commands
-  if ("external" === 'ant') {
+  if (process.env.USER_TYPE === 'ant') {
     const validateLogId = (value: string) => {
       const maybeSessionId = validateUuid(value);
       if (maybeSessionId) return maybeSessionId;
@@ -4430,7 +4541,7 @@ Examples:
       } = await import('./cli/handlers/ant.js');
       await exportHandler(source, outputFile);
     });
-    if ("external" === 'ant') {
+    if (process.env.USER_TYPE === 'ant') {
       const taskCmd = program.command('task').description('[ANT-ONLY] Manage task list tasks');
       taskCmd.command('create <subject>').description('Create a new task').option('-d, --description <text>', 'Task description').option('-l, --list <id>', 'Task list ID (defaults to "tasklist")').action(async (subject: string, opts: {
         description?: string;
@@ -4589,7 +4700,7 @@ async function logTenguInit({
         assistantActivationPath: assistantActivationPath as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
       }),
       autoUpdatesChannel: (getInitialSettings().autoUpdatesChannel ?? 'latest') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      ...("external" === 'ant' ? (() => {
+      ...(process.env.USER_TYPE === 'ant' ? (() => {
         const cwd = getCwd();
         const gitRoot = findGitRoot(cwd);
         const rp = gitRoot ? relative(gitRoot, cwd) || '.' : undefined;
