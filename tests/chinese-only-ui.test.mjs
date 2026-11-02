@@ -112,3 +112,11 @@ test('搜索、IDE 接入及远程控制界面文案为中文', () => {
   assert.match(read('src/components/RemoteCallout.tsx'), /远程控制/)
   assert.match(read('src/components/HistorySearchDialog.tsx'), /搜索历史输入/)
 })
+
+test('统计面板中文标签与内部标签 ID 保持一致', () => {
+  const s=read('src/components/Stats.tsx')
+  assert.match(s, /<Tab id="Overview" title="概览">/)
+  assert.match(s, /<Tab id="Models" title="模型">/)
+  assert.match(s, /defaultTab="Overview"/)
+  assert.match(read('src/components/LogoV2/ChannelsNotice.tsx'), /频道功能当前不可用/)
+})
