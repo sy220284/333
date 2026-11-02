@@ -3924,6 +3924,7 @@ async function run(): Promise<CommanderCommand> {
   }
   if (feature('KAIROS') || feature('KAIROS_BRIEF')) {
     program.addOption(new Option('--brief', 'Enable SendUserMessage tool for agent-to-user communication'));
+    program.addOption(new Option('--ax-screen-reader', 'Render screen-reader friendly output (flat text, no decorative borders or animations).'));
   }
   if (feature('KAIROS')) {
     program.addOption(new Option('--assistant', 'Force assistant mode (Agent SDK daemon use)').hideHelp());
