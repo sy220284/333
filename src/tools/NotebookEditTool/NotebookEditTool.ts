@@ -340,8 +340,16 @@ export const NotebookEditTool = buildTool({
       ? notebook_path
       : resolve(getCwd(), notebook_path)
 
+    // Capture the caller's view before waiting on the per-file transaction.
+    // A second queued edit must not borrow the first edit's refreshed Read state.
+    const observedReadState = readFileState.get(fullPath)
     return withNotebookFileLock(fullPath, async () => {
     try {
+      if (readFileState.get(fullPath) !== observedReadState) {
+        throw new Error(
+          'Notebook changed during a concurrent edit. Read it again before editing.',
+        )
+      }
       if (getFsImplementation().statSync(fullPath).size > MAX_NOTEBOOK_BYTES) {
         throw new Error('Notebook is too large to edit (maximum 100 MiB).')
       }
