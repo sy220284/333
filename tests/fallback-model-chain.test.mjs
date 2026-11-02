@@ -8,12 +8,15 @@ test('2.1.310 comma-separated model options preserve order and custom IDs', () =
   assert.deepEqual(parseFallbackModels(' model-a, vendor/model-b ,default'), ['model-a','vendor/model-b','default']);
 });
 
-test('invalid or cyclical model chains are rejected explicitly', () => {
-  for (const option of ['', ' ,model-a', 'model-a,', 'model-a,,model-b',
-    'model-a, model-a', 'model a', '--version', 'https://bad.example']) {
-    assert.throws(() => parseFallbackModels(option), /Invalid|Duplicate/);
-  }
-  assert.throws(() => parseFallbackModels('main,other', 'main'), /primary model/);
+test('2.1.310 official x64 skips empty and repeated fallback hops', () => {
+  assert.deepEqual(parseFallbackModels(''), []);
+  assert.deepEqual(parseFallbackModels(' ,model-a'), ['model-a']);
+  assert.deepEqual(parseFallbackModels('model-a,'), ['model-a']);
+  assert.deepEqual(parseFallbackModels('model-a,,model-b'), ['model-a','model-b']);
+  assert.deepEqual(parseFallbackModels('model-a, model-a, model-b'), ['model-a','model-b']);
+  assert.deepEqual(parseFallbackModels('main,other,main', 'main'), ['other']);
+  // Unknown provider IDs are sent to the provider for validation.
+  assert.deepEqual(parseFallbackModels('vendor/model-a'), ['vendor/model-a']);
   assert.throws(() => parseFallbackModels(123), TypeError);
 });
 
