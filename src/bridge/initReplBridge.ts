@@ -255,7 +255,8 @@ export async function initReplBridge(
   // The slug fallback (e.g. "remote-control-graceful-unicorn") makes
   // auto-started sessions distinguishable in the claude.ai list before the
   // first prompt.
-  let title = `remote-control-${generateShortWordSlug()}`
+  const prefix = process.env.CLAUDE_CODE_REMOTE_CONTROL_NAME_PREFIX?.trim() || hostname()
+  let title = `${prefix}-${generateShortWordSlug()}`
   let hasTitle = false
   let hasExplicitTitle = false
   if (initialName) {
