@@ -65,7 +65,7 @@ for (const args of [
       const approvedAdded = new Set([
         '--autocompact', '--permission-prompts', '--prompt-suggestions',
         '--restricted', '--safe-mode', '--teleport', '--cloud', '--environment',
-        '--remote-control', '--remote-control-session-name-prefix',
+        '--remote-control', '--remote-control-session-name-prefix', '--system-prompt-snapshot',
       ]);
       const added = rebuilt.flags.filter(flag => !baseline.flags.includes(flag));
       assert.deepEqual(added.filter(flag => !approvedAdded.has(flag)), [],
