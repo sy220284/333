@@ -68,7 +68,7 @@ export const MonitorTool=buildTool({
     if(input.ws){
       const id=await startWebSocketMonitor({url:input.ws.url,protocols:input.ws.protocols,
         description:input.description,timeoutMs,persistent:false},
-        {setAppState:context.setAppStateForTasks??context.setAppState,toolUseId:context.toolUseId})
+        {setAppState:context.setAppStateForTasks??context.setAppState,toolUseId:context.toolUseId,agentId:context.agentId})
       return {data:{taskId:id,timeoutMs,persistent:false}}
     }
     const {abortController,getAppState}=context
