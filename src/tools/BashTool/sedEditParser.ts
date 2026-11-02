@@ -3,7 +3,6 @@
  * Extracts file paths and substitution patterns to enable file-edit-style rendering
  */
 
-import { randomBytes } from 'crypto'
 import { tryParseShellCommand } from '../../utils/bash/shellQuote.js'
 
 // BRE→ERE conversion placeholders (null-byte sentinels, never appear in user input)
@@ -19,6 +18,21 @@ const QUESTION_PLACEHOLDER_RE = new RegExp(QUESTION_PLACEHOLDER, 'g')
 const PIPE_PLACEHOLDER_RE = new RegExp(PIPE_PLACEHOLDER, 'g')
 const LPAREN_PLACEHOLDER_RE = new RegExp(LPAREN_PLACEHOLDER, 'g')
 const RPAREN_PLACEHOLDER_RE = new RegExp(RPAREN_PLACEHOLDER, 'g')
+
+/** Keep the confirmed preview consistent with the content actually written.
+ * The permission UI normalizes CRLF before calculating its diff.
+ */
+export function assertSedPreviewUnchanged(
+  filePath: string,
+  currentContent: string,
+  previewContent: string,
+): void {
+  if (currentContent.replaceAll('\r\n', '\n') !== previewContent) {
+    throw new Error(
+      `The file changed after the sed edit preview: ${filePath}. Review the updated file and retry.`,
+    )
+  }
+}
 
 export type SedEditInfo = {
   /** The file path being edited */
@@ -58,21 +72,11 @@ export function parseSedEditCommand(command: string): SedEditInfo | null {
   if (!parseResult.success) return null
   const tokens = parseResult.tokens
 
-  // Extract string tokens only
-  const args: string[] = []
-  for (const token of tokens) {
-    if (typeof token === 'string') {
-      args.push(token)
-    } else if (
-      typeof token === 'object' &&
-      token !== null &&
-      'op' in token &&
-      token.op === 'glob'
-    ) {
-      // Glob patterns are too complex for this simple parser
-      return null
-    }
-  }
+  // This preview replaces the shell command with an in-process edit.
+  // Shell operators, redirections and globs must remain on the Bash path.
+  if (tokens.some(token => typeof token !== 'string')) return null
+  const args = tokens as string[]
+  if (/[\x60]/.test(trimmed) || trimmed.includes('$(')) return null
 
   // Parse flags and arguments
   let hasInPlaceFlag = false
@@ -82,33 +86,23 @@ export function parseSedEditCommand(command: string): SedEditInfo | null {
 
   let i = 0
   while (i < args.length) {
-    const arg = args[i]!
+    const arg = args[i]
+    if (arg === undefined) return null
 
     // Handle -i flag (with or without backup suffix)
     if (arg === '-i' || arg === '--in-place') {
+      // macOS BSD sed requires an explicit separate empty backup suffix,
+      // whereas GNU sed interprets that argument as an edit script.
+      if (arg === '--in-place' && process.platform === 'darwin') return null
+      const hasEmptySuffix = args[i + 1] === ''
+      if ((process.platform === 'darwin') !== hasEmptySuffix) return null
       hasInPlaceFlag = true
-      i++
-      // On macOS, -i requires a suffix argument (even if empty string)
-      // Check if next arg looks like a backup suffix (empty, or starts with dot)
-      // Don't consume flags (-E, -r) or sed expressions (starting with s, y, d)
-      if (i < args.length) {
-        const nextArg = args[i]
-        // If next arg is empty string or starts with dot, it's a backup suffix
-        if (
-          typeof nextArg === 'string' &&
-          !nextArg.startsWith('-') &&
-          (nextArg === '' || nextArg.startsWith('.'))
-        ) {
-          i++ // Skip the backup suffix
-        }
-      }
+      i += hasEmptySuffix ? 2 : 1
       continue
     }
     if (arg.startsWith('-i')) {
-      // -i.bak or similar (inline suffix)
-      hasInPlaceFlag = true
-      i++
-      continue
+      // GNU/BSD backup suffixes have side effects beyond the preview.
+      return null
     }
 
     // Handle extended regex flags
@@ -120,10 +114,11 @@ export function parseSedEditCommand(command: string): SedEditInfo | null {
 
     // Handle -e flag with expression
     if (arg === '-e' || arg === '--expression') {
-      if (i + 1 < args.length && typeof args[i + 1] === 'string') {
+      const nextArg = args[i + 1]
+      if (typeof nextArg === 'string') {
         // Only support single expression
         if (expression !== null) return null
-        expression = args[i + 1]!
+        expression = nextArg
         i += 2
         continue
       }
@@ -179,7 +174,7 @@ export function parseSedEditCommand(command: string): SedEditInfo | null {
   let j = 0
 
   while (j < rest.length) {
-    const char = rest[j]!
+    const char = rest.charAt(j)
 
     if (char === '\\' && j + 1 < rest.length) {
       // Escaped character
@@ -218,23 +213,36 @@ export function parseSedEditCommand(command: string): SedEditInfo | null {
   }
 
   // Must have found all three parts (pattern, replacement delimiter, and optional flags)
-  if (state !== 'flags') {
+  if (state !== 'flags' || pattern === '') {
     return null
   }
 
   // Validate flags - only allow safe substitution flags
-  const validFlags = /^[gpimIM1-9]*$/
+  // Restrict preview to the substitution flags we can reproduce exactly:
+  // p prints output, numeric flags select occurrences, m/M change regex
+  // anchors. Those and other sed extensions use the ordinary Bash path.
+  const validFlags = /^[giI]*$/
   if (!validFlags.test(flags)) {
     return null
   }
 
-  return {
-    filePath,
-    pattern,
-    replacement,
-    flags,
-    extendedRegex,
+  // Unsupported GNU/BSD sed extensions must not be shown as a successful
+  // file edit. Preserve the normal Bash permission/execute path instead.
+  if (/\\[{}1-9bBwW<>]/.test(pattern)) return null
+  // BSD sed does not interpret GNU BRE \+ / \? / \| extensions in
+  // the same way. Do not show an edit preview with different semantics.
+  if (process.platform === 'darwin' && !extendedRegex && /\\[+?|]/.test(pattern)) return null
+  if (/\\[^\\/&n]/.test(replacement)) return null
+  if (/[\r\n]/.test(pattern) || /[\r\n]/.test(replacement)) return null
+
+  const info = { filePath, pattern, replacement, flags, extendedRegex }
+  try {
+    // Validate the converted regular expression before presenting an edit.
+    applySedSubstitution('', info)
+  } catch {
+    return null
   }
+  return info
 }
 
 /**
@@ -256,11 +264,6 @@ export function applySedSubstitution(
   // Handle case-insensitive flag (i or I in sed)
   if (sedInfo.flags.includes('i') || sedInfo.flags.includes('I')) {
     regexFlags += 'i'
-  }
-
-  // Handle multiline flag (m or M in sed)
-  if (sedInfo.flags.includes('m') || sedInfo.flags.includes('M')) {
-    regexFlags += 'm'
   }
 
   // Convert sed pattern to JavaScript regex pattern
@@ -297,26 +300,31 @@ export function applySedSubstitution(
       .replace(RPAREN_PLACEHOLDER_RE, ')')
   }
 
-  // Unescape sed-specific escapes in replacement
-  // Convert \n to newline, & to $& (match), etc.
-  // Use a unique placeholder with random salt to prevent injection attacks
-  const salt = randomBytes(8).toString('hex')
-  const ESCAPED_AMP_PLACEHOLDER = `___ESCAPED_AMPERSAND_${salt}___`
-  const jsReplacement = sedInfo.replacement
-    // Unescape \/ to /
-    .replace(/\\\//g, '/')
-    // First escape \& to a placeholder
-    .replace(/\\&/g, ESCAPED_AMP_PLACEHOLDER)
-    // Convert & to $& (full match) - use $$& to get literal $& in output
-    .replace(/&/g, '$$&')
-    // Convert placeholder back to literal &
-    .replace(new RegExp(ESCAPED_AMP_PLACEHOLDER, 'g'), '&')
-
-  try {
-    const regex = new RegExp(jsPattern, regexFlags)
-    return content.replace(regex, jsReplacement)
-  } catch {
-    // If regex is invalid, return original content
-    return content
+  // Sed executes substitutions independently for every input line. Using a
+  // single String.replace on the full file only changes the first line.
+  // A callback also preserves literal '$' characters in sed replacements.
+  const regex = new RegExp(jsPattern, regexFlags)
+  const renderReplacement = (match: string): string => {
+    let result = ''
+    const template = sedInfo.replacement
+    for (let i = 0; i < template.length; i++) {
+      const ch = template.charAt(i)
+      if (ch === '\\' && i + 1 < template.length) {
+        const escaped = template.charAt(++i)
+        result += escaped === 'n' ? '\n' : escaped
+      } else {
+        result += ch === '&' ? match : ch
+      }
+    }
+    return result
   }
+
+  if (content === '') return content
+  const lines = content.split('\n')
+  return lines.map((line, index) => {
+    // A final newline terminates the preceding line. It does not create a
+    // further empty input line for sed to process.
+    if (index === lines.length - 1 && line === '') return ''
+    return line.replace(regex, renderReplacement)
+  }).join('\n')
 }
