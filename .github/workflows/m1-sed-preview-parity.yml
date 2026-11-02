@@ -1,4 +1,4 @@
-name: M1 Bash sed 编辑预览与原生行为差分
+name: M1 Bash 文件编辑与 Notebook 单元格真实链路验收
 
 on:
   pull_request:
@@ -8,6 +8,10 @@ on:
       - 'src/components/permissions/SedEditPermissionRequest/SedEditPermissionRequest.tsx'
       - 'tests/sed-edit-parity.test.ts'
       - 'tests/sed-edit-write-integration.test.ts'
+      - 'src/tools/NotebookEditTool/NotebookEditTool.ts'
+      - 'src/tools/NotebookEditTool/notebookMutation.ts'
+      - 'tests/notebook-edit-parity.test.ts'
+      - 'tests/notebook-edit-write-integration.test.ts'
       - 'tests/m1-link-production-adapters.mjs'
       - '.github/workflows/m1-sed-preview-parity.yml'
   workflow_dispatch:
@@ -16,7 +20,7 @@ permissions:
   contents: read
 
 jobs:
-  sed-preview-parity:
+  local-edit-parity:
     strategy:
       fail-fast: false
       matrix:
@@ -34,7 +38,9 @@ jobs:
           node build/install-public-deps.mjs
       - name: 对照本机 GNU/BSD sed 验证预览与真实文件写入
         run: bun test tests/sed-edit-parity.test.ts
-      - name: 验证实际 BashTool 写入及并发编辑保护
+      - name: Notebook 单元格身份、类型变更与格式一致性
+        run: bun test tests/notebook-edit-parity.test.ts
+      - name: 验证实际 BashTool 与 NotebookEditTool 写入及并发编辑保护
         run: |
           node tests/m1-link-production-adapters.mjs
-          bun test tests/sed-edit-write-integration.test.ts
+          bun test tests/sed-edit-write-integration.test.ts tests/notebook-edit-write-integration.test.ts
