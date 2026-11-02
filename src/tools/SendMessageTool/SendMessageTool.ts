@@ -587,7 +587,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
     },
 
     async checkPermissions(input, _context) {
-      if (isCrossSessionMessagingEnabled() && parseAddress(input.to).scheme === 'bridge') {
+      if (isCrossSessionMessagingEnabled() && (parseAddress(input.to).scheme === 'bridge' || resolveAdvertisedRemoteRecipient(input.to) !== undefined)) {
         return {
           behavior: 'ask' as const,
           message: `Send a message to Remote Control session ${input.to}? It arrives as a user prompt on the receiving Claude (possibly another machine) via Anthropic's servers.`,
@@ -632,7 +632,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
           errorCode: 9,
         }
       }
-      if (isCrossSessionMessagingEnabled() && parseAddress(input.to).scheme === 'bridge') {
+      if (isCrossSessionMessagingEnabled() && (parseAddress(input.to).scheme === 'bridge' || resolveAdvertisedRemoteRecipient(input.to) !== undefined)) {
         // Structured-message rejection first — it's the permanent constraint.
         // Showing "not connected" first would make the user reconnect only to
         // hit this error on retry.
