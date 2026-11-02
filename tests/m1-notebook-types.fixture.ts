@@ -19,7 +19,7 @@ const notebook: NotebookContent = {
     { cell_type: 'markdown', source: ['# Title'], metadata: {} },
   ],
 }
-const cell: NotebookCell = notebook.cells[0]!
+const cell: NotebookCell = notebook.cells[0]
 cell.cell_type = 'raw'
 cell.execution_count = null
 cell.outputs = []
