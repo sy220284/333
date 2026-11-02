@@ -265,6 +265,8 @@ export type GlobalConfig = {
   tipsHistory: {
     [tipId: string]: number // Key is tipId, value is the numStartups when tip was last shown
   }
+  /** Lifetime impression limits (2.1.310), incremented once per shown session. */
+  tipLifetimeShows?: Record<string, number>
 
   // /buddy companion soul — bones regenerated from userId on read. See src/buddy/.
   companion?: import('../buddy/types.js').StoredCompanion
