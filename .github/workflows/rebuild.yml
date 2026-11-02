@@ -91,6 +91,8 @@ jobs:
           chmod 755 .rebuild/oracle/claude
           .rebuild/oracle/claude --version | grep -F '2.1.310'
           CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/fallback-529-integration.test.mjs
+      - name: 新版会话插件 ZIP 装载与安全边界
+        run: bun test tests/session-plugin-sources.test.mjs
       - name: 2.1.310 模式规则单元测试
         run: node --test tests/upgrade-mode-options.test.mjs
       - name: 云会话目标及自托管环境参数回归
