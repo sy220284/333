@@ -127,3 +127,11 @@ test('代理创建、权限与工具选择界面使用中文', () => {
   assert.match(read('src/components/agents/ToolSelector.tsx'), /所有工具/)
   assert.match(read('src/components/agents/new-agent-creation/CreateAgentWizard.tsx'), /创建新代理/)
 })
+
+test('沙箱标签和代理创建向导中文化且 Tab 内部标识稳定', () => {
+  const s=read('src/components/sandbox/SandboxSettings.tsx')
+  assert.match(s, /id="Mode" title="模式"/)
+  assert.match(s, /id="Config" title="配置"/)
+  assert.match(s, /defaultTab="Mode"/)
+  assert.match(read('src/components/agents/new-agent-creation/wizard-steps/ConfirmStep.tsx'), /系统提示词/)
+})
