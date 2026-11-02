@@ -752,7 +752,8 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
     async call(input, context, canUseTool, assistantMessage) {
       if (isCrossSessionMessagingEnabled() && typeof input.message === 'string') {
         const { peers } = await listLiveLocalPeers(join(getClaudeConfigHomeDir(), 'sessions'))
-        const peerMatch = resolveUnifiedPeerRecipient(peers, input.to, Date.now(), await getCurrentPeerIdentityKey())
+        const currentIdentityKey = await getCurrentPeerIdentityKey()
+        const peerMatch = resolveUnifiedPeerRecipient(peers, input.to, Date.now(), currentIdentityKey)
         if (peerMatch.ambiguous) throw new Error('Peer name is ambiguous; use name [ref] from ListAgents')
         const peerAddress = peerMatch.address
         const addr = parseAddress(peerAddress ?? input.to)
@@ -776,6 +777,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
           const result = await postInterClaudeMessage(
             addr.target,
             input.message,
+            currentIdentityKey,
           )
           const preview = input.summary || truncate(input.message, 50)
           return {
