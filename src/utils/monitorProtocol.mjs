@@ -30,11 +30,11 @@ export function isPublicIp(ip) {
   return true
 }
 export function validateMonitorWsUrl(value) {
-  if (typeof value !== 'string' || /[^\x20-\x7e]/.test(value)) throw new Error('WebSocket URL must be printable ASCII')
+  if (typeof value !== 'string' || [...value].some(char => char.codePointAt(0) < 32 || char.codePointAt(0) > 126)) throw new Error('WebSocket URL must be printable ASCII')
   let u
   try { u = new URL(value) } catch { throw new Error('Invalid WebSocket URL') }
   if (!['ws:','wss:'].includes(u.protocol) || !u.hostname || u.username || u.password ||
-      u.hash || !/^[\x00-\x7f]*$/.test(u.hostname)) {
+      u.hash || [...u.hostname].some(char => char.codePointAt(0) > 127)) {
     throw new Error('WebSocket requires ws:// or wss:// URL without credentials or fragments')
   }
   return u
@@ -42,7 +42,7 @@ export function validateMonitorWsUrl(value) {
 export function validateMonitorArguments(value) {
   if (!value || !!value.command === !!value.ws) throw new Error('Exactly one of command or ws is required')
   if (!value.description?.trim()) throw new Error('Monitor description is required')
-  if (value.command && /[\x00-\x08\x0b-\x1f\x7f]/.test(value.command)) throw new Error('Command contains hidden control characters')
+  if (value.command && [...value.command].some(char => { const code=char.codePointAt(0); return code < 32 && code !== 9 && code !== 10 && code !== 13 || code === 127 })) throw new Error('Command contains hidden control characters')
   if (value.ws) {
     validateMonitorWsUrl(value.ws.url)
     if (value.ws.protocols && (!Array.isArray(value.ws.protocols) ||
