@@ -208,10 +208,10 @@ function getPluginNameFromError(error: PluginError): string | undefined {
   if (error.source.includes('@')) return error.source.split('@')[0];
   return undefined;
 }
-function buildErrorRows(failed插件市场： Array<{
+function buildErrorRows(failedMarketplaces: Array<{
   name: string;
   error?: string;
-}>, extraMarketplaceErrors: PluginError[], pluginLoadingErrors: PluginError[], otherErrors: PluginError[], brokenInstalled插件市场： Array<{
+}>, extraMarketplaceErrors: PluginError[], pluginLoadingErrors: PluginError[], otherErrors: PluginError[], brokenInstalledMarketplaces: Array<{
   name: string;
   error: string;
 }>, transientErrors: PluginError[], pluginScopes: Map<string, string>): ErrorRow[] {
