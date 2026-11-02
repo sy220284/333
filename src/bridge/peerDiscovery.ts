@@ -14,7 +14,7 @@ export async function discoverAuthenticatedPeers(local: Array<Record<string, unk
   if (!getClaudeAIOAuthTokens()?.accessToken) {
     return { peers: [], notes: [], available: false }
   }
-  let credentials
+  let credentials: Awaited<ReturnType<typeof prepareApiRequest>>
   try { credentials = await prepareApiRequest() }
   catch (error) {
     logForDebugging(`[ListAgents] account identity unavailable: ${errorMessage(error)}`)
