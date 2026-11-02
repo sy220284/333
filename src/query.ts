@@ -9,6 +9,7 @@ import { FallbackTriggeredError } from './services/api/withRetry.js'
 import {
   calculateTokenWarningState,
   isAutoCompactEnabled,
+  tryRecoverFrom413WithCompact,
   type AutoCompactTrackingState,
 } from './services/compact/autoCompact.js'
 import { buildPostCompactMessages } from './services/compact/compact.js'
@@ -814,6 +815,17 @@ async function* queryLoop(
             if (reactiveCompact?.isWithheldPromptTooLong(message)) {
               withheld = true
             }
+            // Public 2.1.310 also recovers multi-turn 413s through the
+            // normal compact pipeline. Hold the error until that decision.
+            if (
+              !reactiveCompact &&
+              message.type === 'assistant' &&
+              isPromptTooLongMessage(message) &&
+              isAutoCompactEnabled() &&
+              querySource !== 'compact'
+            ) {
+              withheld = true
+            }
             if (
               mediaRecoveryEnabled &&
               reactiveCompact?.isWithheldMediaSizeError(message)
@@ -1179,6 +1191,47 @@ async function* queryLoop(
         yield lastMessage
         void executeStopFailureHooks(lastMessage, toolUseContext)
         return { reason: isWithheldMedia ? 'image_error' : 'prompt_too_long' }
+      } else if (
+        isWithheld413 &&
+        !reactiveCompact &&
+        isAutoCompactEnabled() &&
+        querySource !== 'compact'
+      ) {
+        const recovered = await tryRecoverFrom413WithCompact(
+          messagesForQuery,
+          toolUseContext,
+          {
+            systemPrompt,
+            userContext,
+            systemContext,
+            toolUseContext,
+            forkContextMessages: messagesForQuery,
+          },
+          querySource,
+          hasAttemptedReactiveCompact,
+        )
+        if (recovered) {
+          const postCompactMessages = buildPostCompactMessages(recovered)
+          for (const msg of postCompactMessages) yield msg
+          state = {
+            messages: postCompactMessages,
+            toolUseContext,
+            autoCompactTracking: undefined,
+            maxOutputTokensRecoveryCount,
+            hasAttemptedReactiveCompact: true,
+            maxOutputTokensOverride: undefined,
+            pendingToolUseSummary: undefined,
+            stopHookActive: undefined,
+            turnCount,
+            transition: { reason: 'reactive_compact_retry' },
+          }
+          continue
+        }
+        // No usable earlier turns or recovery failed. Emit the withheld 413
+        // once, preserving the original public API error semantics.
+        yield lastMessage
+        void executeStopFailureHooks(lastMessage, toolUseContext)
+        return { reason: 'prompt_too_long' }
       } else if (feature('CONTEXT_COLLAPSE') && isWithheld413) {
         // reactiveCompact compiled out but contextCollapse withheld and
         // couldn't recover (staged queue empty/stale). Surface. Same
