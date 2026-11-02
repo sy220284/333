@@ -14,9 +14,9 @@ export function listReachableTeammates(teamFile, selfName) {
   return agents
 }
 /** Text and structured output are produced from the same filtered records. */
-export function buildAgentListing({ self, subagents = [], teammates = [], sessions = [], query, localUnreadable = false, canSend = true }) {
+export function buildAgentListing({ self, subagents = [], teammates = [], sessions = [], query, localUnreadable = false, accountNotes = [], canSend = true }) {
   const q = query?.trim().toLowerCase()
-  const matches = item => !q || [item.name, item.id, item.type, item.status].some(value => String(value ?? '').toLowerCase().includes(q))
+  const matches = item => !q || [item.name, item.id, item.type, item.kind, item.status].some(value => String(value ?? '').toLowerCase().includes(q))
   const groups = [
     { kind: 'subagents', title: 'Subagents', values: subagents.filter(matches) },
     { kind: 'teammates', title: 'Teammates', values: teammates.filter(matches) },
@@ -27,7 +27,9 @@ export function buildAgentListing({ self, subagents = [], teammates = [], sessio
     if (!group.values.length) continue
     const rows = group.values.slice(0, 100).map(item => {
       const title = item.ref ? `${item.name} [${item.ref}]` : item.name ?? item.id
-      const meta = [item.type ?? item.kind, item.status].filter(Boolean)
+      const meta = [item.type ?? item.kind, item.status,
+        item.unreachableFromHere ? 'not reachable from here' : undefined,
+        item.acceptsPeerMessages === false ? 'does not accept peer messages' : undefined].filter(Boolean)
       return { text: `  ${title}${meta.length ? `  ·  ${meta.join('  ·  ')}` : ''}`,
         value: { name: item.name, ref: item.ref, id: item.id, type: item.type ?? item.kind, status: item.status } }
     })
@@ -38,8 +40,10 @@ export function buildAgentListing({ self, subagents = [], teammates = [], sessio
     kind: 'local_list_failed',
     text: '(the session list on this machine could not be read just now — other local sessions may be missing from this listing; a later listing retries)',
   }] : []
+  notes.push(...accountNotes)
   if (!canSend && sections.length) paragraphs.unshift('None of the agents below can be messaged with SendMessage from here.')
   const own = self ? `This session is ${self} — the name other sessions use to message it (it is not listed below; a message to it would be a message to yourself).` : ''
+  if (notes.length) paragraphs.push(...notes.map(note => note.text))
   if (!paragraphs.length) paragraphs.push(own ? 'No reachable agents — no other Claude session is running on this machine right now (peer messaging itself is available; a session appears here once it is started).' : 'No reachable agents.')
   return { listing: [own, ...paragraphs].filter(Boolean).join('\n\n'), sections, notes }
 }

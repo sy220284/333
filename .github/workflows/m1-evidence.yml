@@ -41,6 +41,9 @@ on:
       - 'src/services/tips/tipScheduler.ts'
       - 'tests/m1-spinner-tips.test.mjs'
       - 'tests/m1-list-agents.test.mjs'
+      - 'tests/m1-account-peer-discovery.test.mjs'
+      - 'src/utils/accountPeerDirectory.mjs'
+      - 'src/bridge/peerDiscovery.ts'
       - 'tests/m1-uds-roundtrip.test.ts'
       - 'tests/fixtures/m1-uds-receiver.ts'
       - 'src/tools/ListAgentsTool/**'
@@ -92,7 +95,7 @@ jobs:
         with:
           node-version: '22'
       - name: 验证任务卡、功能、场景及旧开关/新锚点/版本记录
-        run: node --test tests/upgrade-coverage.test.mjs tests/m1-verify.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs tests/m1-privacy-settings.test.mjs tests/m1-snapshot-terminal-behavior.test.mjs tests/m1-source-gap-audit.test.mjs tests/m1-inline-map-audit.test.mjs tests/m1-v4-handoff.test.mjs tests/m1-doctor-source-restoration.test.mjs tests/m1-spinner-tips.test.mjs tests/m1-list-agents.test.mjs tests/m1-taskoutput-retirement.test.mjs
+        run: node --test tests/m1-account-peer-discovery.test.mjs tests/upgrade-coverage.test.mjs tests/m1-verify.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs tests/m1-privacy-settings.test.mjs tests/m1-snapshot-terminal-behavior.test.mjs tests/m1-source-gap-audit.test.mjs tests/m1-inline-map-audit.test.mjs tests/m1-v4-handoff.test.mjs tests/m1-doctor-source-restoration.test.mjs tests/m1-spinner-tips.test.mjs tests/m1-list-agents.test.mjs tests/m1-taskoutput-retirement.test.mjs
       - name: 生成PR7前研究库90项功能开关的三版本源码差分
         run: node build/m1-research-cross-audit.mjs "${RUNNER_TEMP}/m1-pre-pr7-research-90-flags.json"
       - name: 保存90项历史研究缺口和新版迁移责任的可复验证据

@@ -1,0 +1,34 @@
+import axios from 'axios'
+import { getBridgeBaseUrl } from './bridgeConfig.js'
+import { getSelfBridgeCompatId } from './replBridgeHandle.js'
+import { getClaudeAIOAuthTokens } from '../utils/auth.js'
+import { prepareApiRequest } from '../utils/teleport/api.js'
+import { discoverAccountPeers } from '../utils/accountPeerDirectory.mjs'
+import { logForDebugging } from '../utils/debug.js'
+import { errorMessage } from '../utils/errors.js'
+
+/** Account-backed peers are discovered with existing authenticated OAuth config.
+ * A caller without account credentials still sees all active local peers.
+ */
+export async function discoverAuthenticatedPeers(local: Array<Record<string, unknown>>) {
+  if (!getClaudeAIOAuthTokens()?.accessToken) {
+    return { peers: [], notes: [], available: false }
+  }
+  let credentials
+  try { credentials = await prepareApiRequest() }
+  catch (error) {
+    logForDebugging(`[ListAgents] account identity unavailable: ${errorMessage(error)}`)
+    return {peers:[], notes:[{kind:'account_list_failed',
+      text:'(account session identity unavailable; a later listing retries)'}],available:false}
+  }
+  return discoverAccountPeers({
+    local, selfId:getSelfBridgeCompatId(),
+    baseUrl:getBridgeBaseUrl(),
+    accessToken:credentials.accessToken,
+    orgUUID:credentials.orgUUID,
+    request:async (url: string, headers: Record<string,string>) => {
+      const response=await axios.get(url,{headers,timeout:15000,validateStatus:status=>status<500})
+      return {status:response.status,data:response.data}
+    },
+  })
+}

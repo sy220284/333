@@ -10,6 +10,8 @@ import { listLiveLocalPeers, peerRef } from '../../utils/livePeerSessions.mjs'
 import { TEAM_LEAD_NAME } from '../../utils/swarm/constants.js'
 import { readTeamFileAsync } from '../../utils/swarm/teamHelpers.js'
 import { getAgentName, getTeamName } from '../../utils/teammate.js'
+import { discoverAuthenticatedPeers } from '../../bridge/peerDiscovery.js'
+import { rememberAccountRecipients } from '../../utils/accountPeerDirectory.mjs'
 import { buildAgentListing, listReachableTeammates } from './peerListing.mjs'
 
 const inputSchema = lazySchema(() => z.strictObject({
@@ -50,7 +52,10 @@ export const ListAgentsTool = buildTool({
     const selfName = isAgentSwarmsEnabled() && teamName ? getAgentName() || TEAM_LEAD_NAME : ''
     const teamFile = teamName ? await readTeamFileAsync(teamName) : null
     const teammates = listReachableTeammates(teamFile, selfName)
-    const { peers: sessions, unreadable } = await listLiveLocalPeers(join(getClaudeConfigHomeDir(), 'sessions'))
+    const { peers: localSessions, unreadable } = await listLiveLocalPeers(join(getClaudeConfigHomeDir(), 'sessions'))
+    const account = await discoverAuthenticatedPeers(localSessions)
+    rememberAccountRecipients(account.peers)
+    const sessions = [...localSessions, ...account.peers]
     const ownSocket = process.env.CLAUDE_CODE_MESSAGING_SOCKET
     const ownName = process.env.CLAUDE_CODE_SESSION_NAME || basename(getOriginalCwd()) || 'Claude session'
     const self = ownSocket ? `${ownName} [${peerRef(ownSocket)}]` : `${ownName} [${getSessionId().slice(0, 6)}]`
@@ -61,7 +66,8 @@ export const ListAgentsTool = buildTool({
         type: task.agentType, status: task.status }]
     })
     return { data: buildAgentListing({
-      self, subagents, teammates, sessions, query: input.q, localUnreadable: unreadable, canSend: true,
+      self, subagents, teammates, sessions, query: input.q, localUnreadable: unreadable,
+      accountNotes: account.notes, canSend: true,
     }) }
   },
   mapToolResultToToolResultBlockParam(content: Output, toolUseID: string) {

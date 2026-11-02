@@ -21,6 +21,7 @@ import { parseAddress } from '../../utils/peerAddress.js'
 import { isCrossSessionMessagingEnabled } from '../../utils/crossSessionMessaging.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { listLiveLocalPeers, resolveLocalPeerAddress } from '../../utils/livePeerSessions.mjs'
+import { resolveAdvertisedRemoteRecipient } from '../../utils/accountPeerDirectory.mjs'
 import { join } from 'node:path'
 import { semanticBoolean } from '../../utils/semanticBoolean.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
@@ -670,7 +671,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
       if (typeof input.message === 'string') {
         if (isCrossSessionMessagingEnabled()) {
           const { peers } = await listLiveLocalPeers(join(getClaudeConfigHomeDir(), 'sessions'))
-          if (resolveLocalPeerAddress(peers, input.to)) return { result: true as const }
+          if (resolveLocalPeerAddress(peers, input.to) || resolveAdvertisedRemoteRecipient(input.to)) return { result: true as const }
         }
         if (!input.summary || input.summary.trim().length === 0) {
           return {
@@ -748,7 +749,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
     async call(input, context, canUseTool, assistantMessage) {
       if (isCrossSessionMessagingEnabled() && typeof input.message === 'string') {
         const { peers } = await listLiveLocalPeers(join(getClaudeConfigHomeDir(), 'sessions'))
-        const peerAddress = resolveLocalPeerAddress(peers, input.to)
+        const peerAddress = resolveLocalPeerAddress(peers, input.to) ?? resolveAdvertisedRemoteRecipient(input.to)
         const addr = parseAddress(peerAddress ?? input.to)
         if (addr.scheme === 'bridge') {
           // Re-check handle — checkPermissions blocks on user approval (can be

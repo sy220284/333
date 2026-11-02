@@ -36,6 +36,7 @@ export async function listLiveLocalPeers(sessionsDir, ownPid = process.pid) {
       ref: peerRef(row.messagingSocketPath), address: `uds:${row.messagingSocketPath}`,
       kind: row.kind ?? 'interactive', status: row.status ?? 'busy',
       startedAt: row.startedAt, socketPath: row.messagingSocketPath,
+      ...(typeof row.bridgeSessionId === 'string' ? { bridgeSessionId: row.bridgeSessionId } : {}),
     })
   }
   return { peers: peers.sort((a,b) => a.name.localeCompare(b.name) || a.address.localeCompare(b.address)), unreadable }
