@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto';
 import { join, relative, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
+const releaseVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
+if (!/^\d+\.\d+\.\d+$/.test(releaseVersion)) throw Error('Invalid release version in package.json');
 const dist = join(root, 'dist');
 if (!existsSync(join(dist, 'cli.js'))) throw Error('First build the CLI from src/ with bun build/rebuild.mjs');
 if (!existsSync(join(root, 'build/public-dependencies.lock.json'))) throw Error('Missing the verified public dependency lockfile');
@@ -10,10 +12,10 @@ mkdirSync(dist,{recursive:true});
 cpSync(join(root,'vendor'),join(dist,'vendor'),{recursive:true,force:true});
 copyFileSync(join(root,'LICENSE.md'),join(dist,'LICENSE.md'));
 const pkg = {
-  name: 'claude-code-2.1.88-source-rebuild',
-  version: '2.1.88-rebuild.1',
+  name: `claude-code-${releaseVersion}-source-rebuild`,
+  version: `${releaseVersion}-rebuild.1`,
   private: true,
-  description: 'Independent reconstruction from Claude Code 2.1.88 extracted sources',
+  description: `Independent reconstruction targeting Claude Code ${releaseVersion} from extracted sources`,
   type: 'module',
   bin: { claude: './launcher.cjs' },
   engines: { node: '>=18', bun: '>=1.4.4' }
@@ -30,7 +32,7 @@ else { process.exitCode = result.status ?? 1; }
 `;
 writeFileSync(join(dist,'launcher.cjs'),launcher);
 if(process.platform!=='win32')chmodSync(join(dist,'launcher.cjs'),0o755);
-writeFileSync(join(dist,'README.md'), `# Claude Code 2.1.88 — Independently Rebuilt CLI
+writeFileSync(join(dist,'README.md'), `# Claude Code ${releaseVersion} — Independently Rebuilt CLI
 
 This directory contains a CLI compiled from the extracted \`src/\` code using Bun.
 The original \`cli.js\` in the repository root is NOT packaged or used as a fallback.
@@ -59,5 +61,5 @@ function walk(dir) {
 }
 walk(dist);
 files.sort((a,b)=>a.path.localeCompare(b.path));
-writeFileSync(join(dist,'integrity.json'),JSON.stringify({version:'2.1.88',source:'src/entrypoints/cli.tsx',files},null,2)+'\n');
+writeFileSync(join(dist,'integrity.json'),JSON.stringify({version:releaseVersion,source:'src/entrypoints/cli.tsx',files},null,2)+'\n');
 console.log('Packaged independent CLI with '+files.length+' verified assets');
