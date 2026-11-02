@@ -23,6 +23,12 @@ on:
 permissions:
   contents: read
 
+# Keep only the newest verification for this PR when multiple files are
+# committed separately through the GitHub contents API.
+concurrency:
+  group: m1-local-edit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   local-edit-parity:
     strategy:
