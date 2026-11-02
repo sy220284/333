@@ -28,7 +28,10 @@ function inspect(path) {
     violations.push(`${path}:${line+1}:${character+1} syntax ${ts.flattenDiagnosticMessageText(problem.messageText, ' ')}`)
   }
   function visit(node) {
-    if (ts.isIdentifier(node) && HAN.test(node.text)) {
+    // Language-alias dictionaries may legitimately use native words as keys
+    // (e.g. { 日本語: 'ja' }). Check references/declarations, not these keys.
+    const dictionaryKey = ts.isPropertyAssignment(node.parent) && node.parent.name === node
+    if (ts.isIdentifier(node) && HAN.test(node.text) && !dictionaryKey) {
       const {line, character} = source.getLineAndCharacterOfPosition(node.getStart(source))
       violations.push(`${path}:${line+1}:${character+1} translated identifier ${node.text}`)
     }
