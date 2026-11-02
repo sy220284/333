@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 
 // Fully local, repeatable E41 acceptance: a fake model asks the real CLI to
 // Read a notebook, NotebookEdit it, and Read it again. No network LLM needed.
@@ -13,6 +13,13 @@ import { join } from 'node:path'
 //   node tests/m1-notebook-e41-cli.mjs /path/to/claude-2.1.310-linux-x64
 const [executable, ...prefix] = process.argv.slice(2)
 assert.ok(executable, 'Supply a real executable (and any script argument)')
+// The CLI must run inside an isolated notebook directory. Resolve the
+// script path against the repo before switching the child process cwd.
+// A relative dist/cli.js would otherwise be loaded from the temporary cwd.
+const launchPrefix =
+  prefix.length > 0 && /\.(?:cjs|mjs|js|ts|tsx)$/.test(prefix[0])
+    ? [resolve(process.cwd(), prefix[0]), ...prefix.slice(1)]
+    : prefix
 const model = 'claude-sonnet-4-6'
 const temporary = mkdtempSync(join(tmpdir(), 'm1-e41-notebook-'))
 const home = mkdtempSync(join(tmpdir(), 'm1-e41-home-'))
@@ -138,7 +145,7 @@ try {
   // SIMPLE mode omits ToolSearch and deferred NotebookEdit in 2.1.310.
   // Test the actual normal-mode contract, not that intentionally smaller set.
   delete env.CLAUDE_CODE_SIMPLE
-  const args = [...prefix, '-p', 'Read and edit the notebook, then read it again',
+  const args = [...launchPrefix, '-p', 'Read and edit the notebook, then read it again',
     '--permission-mode', 'acceptEdits',
     '--model', model, '--output-format', 'json', '--max-turns', '4']
   const child = spawn(executable, args, { cwd: temporary, env, stdio: ['ignore', 'pipe', 'pipe'] })
