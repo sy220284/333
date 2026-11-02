@@ -12,11 +12,14 @@ export type NavigableType = (typeof NAVIGABLE_TYPES)[number];
 export type NavigableOf<T extends NavigableType> = Extract<RenderableMessage, {
   type: T;
 }>;
-export type NavigableMessage = RenderableMessage;
+export type NavigableMessage = Exclude<RenderableMessage, { type: 'progress' }>;
 
 // Tier-2 blocklist (tier-1 is height > 0) — things that render but aren't actionable.
-export function isNavigableMessage(msg: NavigableMessage): boolean {
+// Progress updates never become selectable conversation cursor targets.
+export function isNavigableMessage(msg: RenderableMessage): msg is NavigableMessage {
   switch (msg.type) {
+    case 'progress':
+      return false;
     case 'assistant':
       {
         const b = msg.message.content[0];
@@ -44,7 +47,6 @@ export function isNavigableMessage(msg: NavigableMessage): boolean {
         case 'memory_saved':
         case 'agents_killed':
         case 'away_summary':
-        case 'thinking':
           return false;
       }
       return true;
