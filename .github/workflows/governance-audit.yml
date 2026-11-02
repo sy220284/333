@@ -65,6 +65,8 @@ jobs:
         run: node tools/governance/missing-sources.mjs .rebuild/governance/type-report.json .rebuild/governance/missing-sources.json
       - name: 提取所有缺失模块的导出与消费者调用契约
         run: node tools/governance/contract-trace.mjs .rebuild/governance/missing-sources.json .rebuild/governance/missing-contracts.json
+      - name: 测试正式发行的缺失模块可达性分类与误判防护
+        run: node --test tests/governance-contract-trace.test.mjs -- .rebuild/governance/missing-contracts.json
       - name: 审计全部冻结依赖及漏洞链路
         run: |
           set +e
