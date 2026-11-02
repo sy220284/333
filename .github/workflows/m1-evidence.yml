@@ -23,6 +23,8 @@ on:
       - 'build/m1-source-gap-ast.mjs'
       - 'build/m1-inline-source-map-audit.py'
       - 'build/m1-x64-reference-probe.mjs'
+      - 'build/m1-v4-handoff.mjs'
+      - 'tests/m1-v4-handoff.test.mjs'
       - 'tests/m1-x64-local-api.py'
       - 'tests/m1-inline-map-audit.test.mjs'
       - 'src/components/wizard/types.ts'
@@ -49,7 +51,7 @@ jobs:
         with:
           node-version: '22'
       - name: 验证任务卡、功能、场景及旧开关/新锚点/版本记录
-        run: node --test tests/upgrade-coverage.test.mjs tests/m1-verify.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs tests/m1-privacy-settings.test.mjs tests/m1-snapshot-terminal-behavior.test.mjs tests/m1-source-gap-audit.test.mjs tests/m1-inline-map-audit.test.mjs
+        run: node --test tests/upgrade-coverage.test.mjs tests/m1-verify.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs tests/m1-privacy-settings.test.mjs tests/m1-snapshot-terminal-behavior.test.mjs tests/m1-source-gap-audit.test.mjs tests/m1-inline-map-audit.test.mjs tests/m1-v4-handoff.test.mjs
       - name: 安装固定TypeScript校验器
         run: npm install --prefix "${RUNNER_TEMP}/m1-typescript" --no-save --package-lock=false --ignore-scripts --no-audit --no-fund typescript@5.9.3
       - name: 编译已恢复类型的正反向契约
@@ -202,11 +204,18 @@ jobs:
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
             --allow-candidate-diff true \
             --report "${RUNNER_TEMP}/m1-x64-current-differential.json"
+      - name: 按v4把原版x64差异转换为源码修改责任和验收任务
+        run: |
+          node build/m1-v4-handoff.mjs \
+            --input "${RUNNER_TEMP}/m1-x64-current-differential.json" \
+            --out "${RUNNER_TEMP}/m1-v4-development-handoff.json"
       - name: 不论是否发现差异都保存可复核证据
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: m1-x64-source-differential
-          path: ${{ runner.temp }}/m1-x64-current-differential.json
+          path: |
+            ${{ runner.temp }}/m1-x64-current-differential.json
+            ${{ runner.temp }}/m1-v4-development-handoff.json
           retention-days: 30
           if-no-files-found: warn
