@@ -1,10 +1,10 @@
 import { z } from 'zod/v4'
-import { join, resolve, sep } from 'node:path'
+import { resolve, sep } from 'node:path'
 import { readFile, realpath } from 'node:fs/promises'
 import { getCwd } from '../../utils/cwd.js'
 import { getSessionProjectDir, getOriginalCwd } from '../../bootstrap/state.js'
 import { getProjectDir } from '../../utils/sessionStorage.js'
-import { workflowRunDirectory, workflowSessionScripts, workflowSummaryPath } from '../../tasks/LocalWorkflowTask/workflowStoragePaths.mjs'
+import { workflowSessionScripts, workflowSummaryPath } from '../../tasks/LocalWorkflowTask/workflowStoragePaths.mjs'
 import { readWorkflowSummary } from '../../tasks/LocalWorkflowTask/workflowSummaryStore.mjs'
 import { getSessionId } from '../../bootstrap/state.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
@@ -52,7 +52,6 @@ async function resolveScript(input:z.infer<InputSchema>) {
   if(input.resumeFromRunId && !input.name){
     if(!/^wf_[a-z0-9-]{6,}$/.test(input.resumeFromRunId))throw new Error('Invalid resumeFromRunId')
     const projectDir=getSessionProjectDir()??getProjectDir(getOriginalCwd())
-    const dir=workflowRunDirectory(projectDir,getSessionId(),input.resumeFromRunId)
     const metadata=await readWorkflowSummary(workflowSummaryPath(projectDir,getSessionId(),input.resumeFromRunId))
     const scripts=workflowSessionScripts(projectDir,getSessionId())+sep
     if(metadata.sessionId!==getSessionId()||!metadata.scriptPath?.startsWith(scripts)||

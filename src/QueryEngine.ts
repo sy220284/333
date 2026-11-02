@@ -1,6 +1,6 @@
 import { feature } from 'bun:bundle'
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 import { toSDKStreamEvent } from './entrypoints/sdk/streamEventMapper.js'
 import last from 'lodash-es/last.js'
 import {
