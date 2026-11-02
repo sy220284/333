@@ -19,6 +19,8 @@ const releaseFeatures = new Set(
 );
 const externalRelease = /['"]process\.env\.USER_TYPE['"]\s*:\s*['"]"external"['"]/.test(rebuildSource);
 if (!externalRelease) throw new Error('无法确认正式构建为外部用户，拒绝排除内部命令');
+const productionRelease = /['"]process\.env\.NODE_ENV['"]\s*:\s*['"]"production"['"]/.test(rebuildSource);
+if (!productionRelease) throw new Error('无法确认正式构建NODE_ENV=production，拒绝排除开发模式导入');
 
 // true/false means statically provable; null means runtime-dependent.
 function compileCondition(n, source) {
@@ -43,11 +45,23 @@ function compileCondition(n, source) {
       const right = compileCondition(n.right, source);
       return left === true || right === true ? true : left === false && right === false ? false : null;
     }
-    if (externalRelease && (op === ts.SyntaxKind.EqualsEqualsEqualsToken || op === ts.SyntaxKind.EqualsEqualsToken)) {
+    if (
+      op === ts.SyntaxKind.EqualsEqualsEqualsToken || op === ts.SyntaxKind.EqualsEqualsToken ||
+      op === ts.SyntaxKind.ExclamationEqualsEqualsToken || op === ts.SyntaxKind.ExclamationEqualsToken
+    ) {
       const left = n.left.getText(source).replaceAll(' ', '');
       const right = n.right.getText(source).replaceAll(' ', '');
-      if (left === 'process.env.USER_TYPE' && /^['"](?:ant|external)['"]$/.test(right)) return right.includes('external');
-      if (right === 'process.env.USER_TYPE' && /^['"](?:ant|external)['"]$/.test(left)) return left.includes('external');
+      const env = {
+        'process.env.USER_TYPE': externalRelease ? 'external' : undefined,
+        'process.env.NODE_ENV': productionRelease ? 'production' : undefined,
+      };
+      const value = env[left] !== undefined && /^['"][^'"]+['"]$/.test(right)
+        ? right.slice(1, -1) === env[left]
+        : env[right] !== undefined && /^['"][^'"]+['"]$/.test(left)
+          ? left.slice(1, -1) === env[right]
+          : null;
+      return value === null ? null :
+        op === ts.SyntaxKind.ExclamationEqualsEqualsToken || op === ts.SyntaxKind.ExclamationEqualsToken ? !value : value;
     }
   }
   return null;
