@@ -55,11 +55,12 @@ export function locateNotebookEdit(
     if (Number.isSafeInteger(parsed) && parsed >= 0) index = parsed
   }
 
+  const target = notebook.cells[index]
   if (
     index < 0 ||
     index >= notebook.cells.length ||
-    !notebook.cells[index] ||
-    !['code', 'markdown', 'raw'].includes(notebook.cells[index]!.cell_type)
+    !target ||
+    !['code', 'markdown', 'raw'].includes(target.cell_type)
   ) {
     throw new Error(`Cell with ID "${input.cell_id}" not found in notebook.`)
   }
@@ -76,7 +77,8 @@ export function applyNotebookEdit(
     (notebook.nbformat === 4 && notebook.nbformat_minor >= 5)
 
   if (mode === 'insert') {
-    const cell_type = input.cell_type!
+    const cell_type = input.cell_type
+    if (!cell_type) throw new Error('Cell type is required when using edit_mode=insert.')
     const id = hasIds ? randomUUID() : undefined
     const cell: NotebookCell = {
       cell_type,
@@ -94,7 +96,8 @@ export function applyNotebookEdit(
     }
   }
 
-  const cell = notebook.cells[index]!
+  const cell = notebook.cells[index]
+  if (!cell) throw new Error('Target cell no longer exists in notebook.')
   const originalId = cell.id ?? `cell-${index}`
   const originalType = cell.cell_type
 
