@@ -132,7 +132,7 @@ export function MCPServerDesktopImportDialog(t0) {
   const t10 = `Found ${t8} MCP ${t9} in Claude Desktop.`;
   let t11;
   if ($[16] !== collisions.length) {
-    t11 = collisions.length > 0 && <Text color="warning">Note: Some servers already exist with the same name. If selected, they will be imported with a numbered suffix.</Text>;
+    t11 = collisions.length > 0 && <Text color="warning">注意：部分服务器名称已存在，导入时会自动加上序号后缀。</Text>;
     $[16] = collisions.length;
     $[17] = t11;
   } else {
@@ -140,7 +140,7 @@ export function MCPServerDesktopImportDialog(t0) {
   }
   let t12;
   if ($[18] === Symbol.for("react.memo_cache_sentinel")) {
-    t12 = <Text>Please select the servers you want to import:</Text>;
+    t12 = <Text>请选择要导入的服务器：</Text>;
     $[18] = t12;
   } else {
     t12 = $[18];
@@ -149,7 +149,7 @@ export function MCPServerDesktopImportDialog(t0) {
   let t14;
   if ($[19] !== collisions || $[20] !== serverNames) {
     t13 = serverNames.map(server => ({
-      label: `${server}${collisions.includes(server) ? " (already exists)" : ""}`,
+      label: `${server}${collisions.includes(server) ? "（已存在）" : ""}`,
       value: server
     }));
     t14 = serverNames.filter(name_0 => !collisions.includes(name_0));
@@ -174,7 +174,7 @@ export function MCPServerDesktopImportDialog(t0) {
   }
   let t16;
   if ($[28] !== handleEscCancel || $[29] !== t10 || $[30] !== t11 || $[31] !== t15) {
-    t16 = <Dialog title="Import MCP Servers from Claude Desktop" subtitle={t10} color="success" onCancel={handleEscCancel} hideInputGuide={true}>{t11}{t12}{t15}</Dialog>;
+    t16 = <Dialog title="从 Claude 桌面版导入 MCP 服务器" subtitle={t10} color="success" onCancel={handleEscCancel} hideInputGuide={true}>{t11}{t12}{t15}</Dialog>;
     $[28] = handleEscCancel;
     $[29] = t10;
     $[30] = t11;

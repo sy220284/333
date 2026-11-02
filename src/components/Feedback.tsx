@@ -307,7 +307,7 @@ export function Feedback({
       void submitReport();
     }
   });
-  return <Dialog title="Submit Feedback / Bug Report" onCancel={handleCancel} isCancelActive={step !== 'userInput'} inputGuide={exitState => exitState.pending ? <Text>Press {exitState.keyName} again to exit</Text> : step === 'userInput' ? <Byline>
+  return <Dialog title="提交反馈或问题报告" onCancel={handleCancel} isCancelActive={step !== 'userInput'} inputGuide={exitState => exitState.pending ? <Text>再次按 {exitState.keyName} 退出</Text> : step === 'userInput' ? <Byline>
             <KeyboardShortcutHint shortcut="Enter" action="continue" />
             <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
           </Byline> : step === 'consent' ? <Byline>
@@ -315,7 +315,7 @@ export function Feedback({
             <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
           </Byline> : null}>
       {step === 'userInput' && <Box flexDirection="column" gap={1}>
-          <Text>Describe the issue below:</Text>
+          <Text>请描述遇到的问题：</Text>
           <TextInput value={description} onChange={value => {
         setDescription(value);
         // Clear error when user starts editing to allow retry
@@ -334,10 +334,10 @@ export function Feedback({
         </Box>}
 
       {step === 'consent' && <Box flexDirection="column">
-          <Text>This report will include:</Text>
+          <Text>本次报告将包含：</Text>
           <Box marginLeft={2} flexDirection="column">
             <Text>
-              - Your feedback / bug description:{' '}
+              - 你的反馈及问题描述：{' '}
               <Text dimColor>{description}</Text>
             </Text>
             <Text>
@@ -356,7 +356,7 @@ export function Feedback({
                   {!envInfo.gitState.isClean && ', has local changes'}
                 </Text>
               </Text>}
-            <Text>- Current session transcript</Text>
+            <Text>- 当前会话记录</Text>
           </Box>
           <Box marginTop={1}>
             <Text wrap="wrap" dimColor>
@@ -367,18 +367,18 @@ export function Feedback({
           </Box>
           <Box marginTop={1}>
             <Text>
-              Press <Text bold>Enter</Text> to confirm and submit.
+              按 <Text bold>Enter</Text> 确认并提交。
             </Text>
           </Box>
         </Box>}
 
       {step === 'submitting' && <Box flexDirection="row" gap={1}>
-          <Text>Submitting report…</Text>
+          <Text>正在提交报告…</Text>
         </Box>}
 
       {step === 'done' && <Box flexDirection="column">
-          {error ? <Text color="error">{error}</Text> : <Text color="success">Thank you for your report!</Text>}
-          {feedbackId && <Text dimColor>Feedback ID: {feedbackId}</Text>}
+          {error ? <Text color="error">{error}</Text> : <Text color="success">感谢提交报告！</Text>}
+          {feedbackId && <Text dimColor>反馈编号： {feedbackId}</Text>}
           <Box marginTop={1}>
             <Text>Press </Text>
             <Text bold>Enter </Text>
@@ -396,7 +396,7 @@ export function createGitHubIssueUrl(feedbackId: string, title: string, descript
 }>): string {
   const sanitizedTitle = redactSensitiveInfo(title);
   const sanitizedDescription = redactSensitiveInfo(description);
-  const bodyPrefix = `**Bug Description**\n${sanitizedDescription}\n\n` + `**Environment Info**\n` + `- Platform: ${env.platform}\n` + `- Terminal: ${env.terminal}\n` + `- Version: ${MACRO.VERSION || 'unknown'}\n` + `- Feedback ID: ${feedbackId}\n` + `\n**Errors**\n\`\`\`json\n`;
+  const bodyPrefix = `**Bug Description**\n${sanitizedDescription}\n\n` + `**Environment Info**\n` + `- Platform: ${env.platform}\n` + `- Terminal: ${env.terminal}\n` + `- Version: ${MACRO.VERSION || 'unknown'}\n` + `- 反馈编号： ${feedbackId}\n` + `\n**Errors**\n\`\`\`json\n`;
   const errorSuffix = `\n\`\`\`\n`;
   const errorsJson = jsonStringify(errors);
   const baseUrl = `${GITHUB_ISSUES_REPO_URL}/new?title=${encodeURIComponent(sanitizedTitle)}&labels=user-reported,bug&body=`;

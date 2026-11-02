@@ -46,7 +46,7 @@ export function IdleReturnDialog(t0) {
   }
   let t5;
   if ($[6] === Symbol.for("react.memo_cache_sentinel")) {
-    t5 = <Box flexDirection="column"><Text>If this is a new task, clearing context will save usage and be faster.</Text></Box>;
+    t5 = <Box flexDirection="column"><Text>如果要开始新任务，清空上下文可以节省用量并提高速度。</Text></Box>;
     $[6] = t5;
   } else {
     t5 = $[6];
@@ -55,7 +55,7 @@ export function IdleReturnDialog(t0) {
   if ($[7] === Symbol.for("react.memo_cache_sentinel")) {
     t6 = {
       value: "continue" as const,
-      label: "Continue this conversation"
+      label: "继续当前对话"
     };
     $[7] = t6;
   } else {
@@ -65,7 +65,7 @@ export function IdleReturnDialog(t0) {
   if ($[8] === Symbol.for("react.memo_cache_sentinel")) {
     t7 = {
       value: "clear" as const,
-      label: "Send message as a new conversation"
+      label: "在新对话中发送消息"
     };
     $[8] = t7;
   } else {
@@ -75,7 +75,7 @@ export function IdleReturnDialog(t0) {
   if ($[9] === Symbol.for("react.memo_cache_sentinel")) {
     t8 = [t6, t7, {
       value: "never" as const,
-      label: "Don't ask me again"
+      label: "不再询问"
     }];
     $[9] = t8;
   } else {

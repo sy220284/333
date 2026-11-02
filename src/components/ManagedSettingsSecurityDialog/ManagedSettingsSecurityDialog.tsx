@@ -58,7 +58,7 @@ export function ManagedSettingsSecurityDialog(t0) {
   const t8 = 1;
   let t9;
   if ($[4] === Symbol.for("react.memo_cache_sentinel")) {
-    t9 = <Text>Your organization has configured managed settings that could allow execution of arbitrary code or interception of your prompts and responses.</Text>;
+    t9 = <Text>你的组织配置了托管设置，其中部分选项可能允许执行任意代码或读取你发送和接收的内容。</Text>;
     $[4] = t9;
   } else {
     t9 = $[4];
@@ -67,7 +67,7 @@ export function ManagedSettingsSecurityDialog(t0) {
   const t10 = "column";
   let t11;
   if ($[5] === Symbol.for("react.memo_cache_sentinel")) {
-    t11 = <Text dimColor={true}>Settings requiring approval:</Text>;
+    t11 = <Text dimColor={true}>需要确认的设置：</Text>;
     $[5] = t11;
   } else {
     t11 = $[5];
@@ -85,7 +85,7 @@ export function ManagedSettingsSecurityDialog(t0) {
   }
   let t14;
   if ($[10] === Symbol.for("react.memo_cache_sentinel")) {
-    t14 = <Text>Only accept if you trust your organization's IT administration and expect these settings to be configured.</Text>;
+    t14 = <Text>只有在你信任组织的 IT 管理员，并确认这些设置符合预期时才应接受。</Text>;
     $[10] = t14;
   } else {
     t14 = $[10];
@@ -93,10 +93,10 @@ export function ManagedSettingsSecurityDialog(t0) {
   let t15;
   if ($[11] === Symbol.for("react.memo_cache_sentinel")) {
     t15 = [{
-      label: "Yes, I trust these settings",
+      label: "是，我信任这些设置",
       value: "accept"
     }, {
-      label: "No, exit Claude Code",
+      label: "否，退出 Claude Code",
       value: "exit"
     }];
     $[11] = t15;
@@ -113,7 +113,7 @@ export function ManagedSettingsSecurityDialog(t0) {
   }
   let t17;
   if ($[14] !== exitState.keyName || $[15] !== exitState.pending) {
-    t17 = <Text dimColor={true}>{exitState.pending ? <>Press {exitState.keyName} again to exit</> : <>Enter to confirm · Esc to exit</>}</Text>;
+    t17 = <Text dimColor={true}>{exitState.pending ? <>再次按 {exitState.keyName} 退出</> : <>Enter 确认 · Esc 退出</>}</Text>;
     $[14] = exitState.keyName;
     $[15] = exitState.pending;
     $[16] = t17;
