@@ -34,10 +34,20 @@ def probe(executable,mode,timeout):
         (root/'.config').mkdir()
         project=root/'project'
         project.mkdir()
+        # The official and rebuilt CLIs need the same trusted first-launch state.
+        # Without this, GitHub runners enter theme/onboarding instead of a
+        # connectivity session, so status assertions would inspect wrong UI.
+        (root/'.claude.json').write_text(json.dumps({
+            'hasCompletedOnboarding':True,
+            'lastOnboardingVersion':'2.1.310',
+            'theme':'dark',
+            'customApiKeyResponses':{'approved':['local-only'],'rejected':[]},
+            'projects':{str(project):{'hasTrustDialogAccepted':True}},
+        }),encoding='utf8')
         env={k:v for k,v in os.environ.items() if not any(s in k.upper() for s in SECRETS)}
         env.update({'HOME':str(root),'XDG_CONFIG_HOME':str(root/'.config'),
                     'XDG_CACHE_HOME':str(root/'.cache'),'TERM':'xterm-256color',
-                    'NO_COLOR':'1','ANTHROPIC_API_KEY':'sk-offline-fixture-only',
+                    'NO_COLOR':'1','ANTHROPIC_API_KEY':'local-only',
                     'ANTHROPIC_BASE_URL':'http://127.0.0.1:9',
                     'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC':'1',
                     'DISABLE_TELEMETRY':'1','DISABLE_ERROR_REPORTING':'1',
