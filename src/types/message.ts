@@ -140,6 +140,23 @@ export interface SystemAwaySummaryMessage extends BaseSystemMessage {
 export interface SystemMemorySavedMessage extends BaseSystemMessage {
   subtype: 'memory_saved'
   writtenPaths: string[]
+  /** Optional team-memory count for the dedicated memory-saved UI. */
+  teamCount?: number
+  /** Automated dream memory edits use a distinct user-facing action. */
+  verb?: string
+}
+
+export type CompactMetadata =
+  SystemCompactBoundaryMessage['compactMetadata']
+
+/** A remote session preserves a real plan snapshot in its transcript. */
+export interface SystemFileSnapshotMessage
+  extends Omit<BaseSystemMessage, 'isMeta'> {
+  subtype: 'file_snapshot'
+  content: string
+  level: 'info'
+  isMeta: true
+  snapshotFiles: Array<{ key: string; path: string; content: string }>
 }
 export interface SystemAgentsKilledMessage extends BaseSystemMessage {
   subtype: 'agents_killed'
@@ -213,6 +230,7 @@ export type SystemMessage =
   | SystemTurnDurationMessage
   | SystemAwaySummaryMessage
   | SystemMemorySavedMessage
+  | SystemFileSnapshotMessage
   | SystemAgentsKilledMessage
   | SystemApiMetricsMessage
   | SystemLocalCommandMessage
