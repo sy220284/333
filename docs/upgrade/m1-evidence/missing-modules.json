@@ -164,14 +164,14 @@
       "developer_task": "M4",
       "feature_ref": "F023",
       "target_semantic_candidate": "chunk-ajtyjx88.js:10493",
-      "handoff_missing_equivalence": "M4 must implement target keep-recent tool output eviction, persistence and request/stream fallback behavior against actual target 2.1.310 inputs, not reintroduce legacy cache_edits protocol without evidence; verify 20k token threshold, 12 recent calls, image/document placeholders, repeated clears and reversible overflow retries.",
+      "handoff_missing_equivalence": "M4 必须按两条独立的2.1.310微压缩链迁移：context_hint 的422/424及指定流异常回退使用 keepRecent=5、预计清理至少20,000 tokens、持久化原工具输出；另有空闲时间提示策略使用 keepToolUses=12/minIdleSeconds=3900，这些参数不能混用。对比真实x64的成功、持久化、重复清理、422/424、400/409/529及流式失败分支后才可签收。",
       "M1_evidence_grade": "STATIC_TARGET_CANDIDATE",
       "old_contract": "CACHED_MICROCOMPACT 下需创建 CachedMCState，按工具顺序与已发送结果生成 cache_edits；旧 src/services/compact/microCompact.ts:56-134,305-380 依赖状态和注册/标记/回滚函数。",
       "old_consumers": [
         "src/services/compact/microCompact.ts:56-135",
         "src/services/compact/microCompact.ts:305-375"
       ],
-      "target_evidence": "新版 chunk-wany0nxw.js:1610+ 的 time-based microcompact 清理本地消息，与旧 API cache_edits 协议并非同一语义；未检出 cache_edits。",
+      "target_evidence": "已复查资料库完整2.1.310反编译代码：chunk-wany0nxw.js:1572-1626定义可清理工具结果筛选、持久化及至少20,000 tokens阈值；chunk-wf28mfqa.js:420-453将它用于context_hint回退，真实keepRecent=5。旧API cache_edits 与此分支不等价；另外的空闲提示保留12次策略需独立检查。",
       "rebuild_requirement": "M4 先验证目标模型 API 是否支持 cache_edits 以及缓存命中/失效语义；若目标已退场则清理被禁功能导入，否则基于旧状态机重建并实测。",
       "original_2_1_88_source_map_content_found": false,
       "original_2_1_88_source_zip_implementation_found": false,
@@ -179,10 +179,11 @@
       "target_actual_source_contract": {
         "selection": "chunk-wany0nxw.js:1589-1614 PWo: qualified tool_use IDs, retain most recent Math.max(1,keepRecent), only uncleared user/tool_result candidates, count text+image+document tokens",
         "threshold": "chunk-wany0nxw.js:1575,1620-1626: 20000 estimated saved tokens minimum, optional content persist, replace content while preserving structured messages, return messages/tokensSaved/clearedIds/clearedContent",
-        "parameters": "chunk-wany0nxw.js:1629 Ln: minIdleSeconds=3900, keepToolUses=12, clearAtLeastTokens=20000, triggerToolUsesBelowCount=3, minTriggerToolUses=27; not necessarily applied to every invocation",
-        "recovery": "chunk-j0tbz6ra.js:51216-51218 applies onRequestError results; 51722-51724 onStreamFallback; both set microcompact marks and carry clearedIds/clearedContent",
+        "parameters": "chunk-wany0nxw.js:1629-1631 的 Ln(3900秒/keepToolUses=12/clearAtLeastTokens=20000) 属于另一条空闲策略，与 chunk-wf28mfqa.js:432-435 的 context_hint keepRecent=5 为独立调用条件。",
+        "recovery": "chunk-wf28mfqa.js:437-453: 控制器 onRequestError 针对422/424执行本地keep-recent清理；400、409、529分别阻断对应回退；特定无HTTP状态的流式 invalid_request_error 触发 onStreamFallback。chunk-j0tbz6ra.js:51216-51218,51722-51724 是更上层请求/流处理消费者。",
         "persistence": "chunk-wany0nxw.js:1621-1626 uses await persist(content,tool_use_id) and keeps per-ID map; all applicable side effects must be preserved in reconstruction",
-        "old_difference": "2.1.88 src/services/compact/microCompact.ts:52-78,300-348 references CachedMCState, CacheEditsBlock and pendingCacheEdits; local message content is not modified in old cached path; target version clears/replaces local tool_result content and stores it optionally."
+        "old_difference": "2.1.88 src/services/compact/microCompact.ts:52-78,300-348 references CachedMCState, CacheEditsBlock and pendingCacheEdits; local message content is not modified in old cached path; target version clears/replaces local tool_result content and stores it optionally.",
+        "context_hint_controller": "chunk-wf28mfqa.js:420-453: createContextHintController 仅在第一方 beta、repl_main_thread 及 tengu_hazel_osprey 条件下参与；keepRecent=5；请求422/424时本地清理并重试，400/409/529进入各自失败分支，流式特定 invalid_request_error 触发 onStreamFallback；persist 委托 h8 持久化工具输出。"
       },
       "target_source_level": "TARGET_EXECUTION_BRANCH_IDENTIFIED_NOT_EQUIVALENT",
       "old_source_recovery_status": "NO_DIRECT_SOURCE_FOR_OLD_CACHEDMC"
