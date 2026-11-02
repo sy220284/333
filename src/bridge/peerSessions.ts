@@ -20,7 +20,7 @@ import { toCompatSessionId } from './sessionIdCompat.js'
 export async function postInterClaudeMessage(
   targetSessionId: string,
   text: string,
-  expectedIdentityKey?: string | null,
+  expectedIdentityKey: string | null,
 ): Promise<{ ok: boolean; error?: string; msgId?: string }> {
   const sessionId = toCompatSessionId(targetSessionId)
   if (!/^session_[A-Za-z0-9_-]+$/.test(sessionId)) {
@@ -34,8 +34,7 @@ export async function postInterClaudeMessage(
   } catch (error) {
     return { ok: false, error: `auth: ${errorMessage(error)}` }
   }
-  if (expectedIdentityKey !== undefined &&
-      peerIdentityKey(accessToken, orgUUID) !== expectedIdentityKey) {
+  if (peerIdentityKey(accessToken, orgUUID) !== expectedIdentityKey) {
     return { ok: false, error: 'authenticated account changed before remote delivery' }
   }
   const msgId = randomUUID()
