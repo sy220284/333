@@ -51,6 +51,10 @@ export function accessibleOutputDelta(previous='',current='') {
   const oldLines=previous.split('\n'),lines=current.split('\n')
   let common=0
   while(common<oldLines.length && common<lines.length && oldLines[common]===lines[common]) common++
+  if (common===oldLines.length-1 && lines.length===oldLines.length &&
+      lines[common].startsWith(oldLines[common])) {
+    return lines[common].slice(oldLines[common].length)+'\n'
+  }
   // On edits, announce only the changed tail; never erase the terminal
   // transcript with escape sequences (screen readers need persistent text).
   const changed=lines.slice(common).join('\n').trim()
