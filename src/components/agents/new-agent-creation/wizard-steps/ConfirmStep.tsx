@@ -36,7 +36,7 @@ export function ConfirmStep(t0) {
   const {
     goBack,
     wizardData
-  } = useWizard();
+  } = useWizard<AgentWizardData>();
   let t1;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = {
@@ -68,6 +68,9 @@ export function ConfirmStep(t0) {
   }
   const handleKeyDown = t2;
   const agent = wizardData.finalAgent;
+  if (!agent || !wizardData.location) {
+    throw new Error('Agent confirmation requires a completed agent and a destination');
+  }
   let T0;
   let T1;
   let t10;
