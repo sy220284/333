@@ -25,10 +25,10 @@ test('Notebook real cell ID takes precedence over a synthetic cell-N position', 
   expect(nb.cells[1]?.source).toBe('# New')
 })
 
-test('Notebook positional replacement preserves the actual stable cell ID', () => {
+test('Notebook positional replacement echoes cell-N while preserving actual file cell ID', () => {
   const nb = notebook()
   const result = applyNotebookEdit(nb, { cell_id: 'cell-0', new_source: 'print(2)' })
-  expect(result.cell_id).toBe('first')
+  expect(result.cell_id).toBe('cell-0')
   expect(result.old_source).toBe('print(1)\n')
   expect(nb.cells[0]?.id).toBe('first')
   expect(nb.cells[0]?.execution_count).toBeNull()
@@ -48,10 +48,10 @@ test('Notebook insert after anchor yields unique nbformat 4.5 ID, keeping neighb
   expect(nb.cells[2]?.outputs).toBeUndefined()
 })
 
-test('Notebook insert at start and legacy 4.4 positional IDs', () => {
+test('Notebook insert at start and legacy 4.4 outputs no physical cell ID', () => {
   const nb = notebook(4)
   const result = applyNotebookEdit(nb, { cell_type: 'markdown', new_source: 'start', edit_mode: 'insert' })
-  expect(result.cell_id).toBe('cell-0')
+  expect(result.cell_id).toBeUndefined()
   expect(nb.cells[0]?.id).toBeUndefined()
   expect(nb.cells[0]?.source).toBe('start')
   expect(nb.cells[1]?.source).toEqual(['print(1)\n'])
@@ -77,7 +77,7 @@ test('Notebook markdown to code initializes executable fields', () => {
 test('Notebook delete reports the deleted cell and leaves the other intact', () => {
   const nb = notebook()
   const r = applyNotebookEdit(nb, { cell_id: 'cell-0', new_source: '', edit_mode: 'delete' })
-  expect(r).toEqual({ cell_id: 'first', cell_type: 'code', edit_mode: 'delete', cell_index: 0, old_source: 'print(1)\n' })
+  expect(r).toEqual({ cell_id: 'cell-0', cell_type: 'code', edit_mode: 'delete', cell_index: 0, old_source: 'print(1)\n' })
   expect(nb.cells.map(c => c.id)).toEqual(['second'])
 })
 
