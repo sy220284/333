@@ -2559,7 +2559,7 @@ function smooshIntoToolResult(
   // results) and matches the legacy smoosh output shape.
   if (allText && (existing === undefined || typeof existing === 'string')) {
     const joined = [
-      (existing ?? '').trim(),
+      (typeof existing === 'string' ? existing : '').trim(),
       ...blocks.map(b => (b as TextBlockParam).text.trim()),
     ]
       .filter(Boolean)
@@ -3036,11 +3036,6 @@ export function handleMessageFromStream(
         case 'mcp_tool_use':
         case 'mcp_tool_result':
         case 'container_upload':
-        case 'web_fetch_tool_result':
-        case 'bash_code_execution_tool_result':
-        case 'text_editor_code_execution_tool_result':
-        case 'tool_search_tool_result':
-        case 'compaction':
           onSetStreamMode('tool-input')
           return
       }
