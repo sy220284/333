@@ -15,23 +15,10 @@ import type {
 } from '../types/notebook.js'
 import { getFsImplementation } from './fsOperations.js'
 import { expandPath } from './path.js'
+import { isValidNotebookContent, MAX_NOTEBOOK_BYTES } from './notebookCells.js'
 import { jsonParse } from './slowOperations.js'
 
 const LARGE_OUTPUT_THRESHOLD = 10000
-
-export const MAX_NOTEBOOK_BYTES = 100 * 1024 * 1024
-
-/** Exact 2.1.310 minimum Notebook cell-shape requirement, shared by Read/Edit. */
-export function isValidNotebookContent(value: unknown): value is NotebookContent {
-  if (value === null || typeof value !== 'object') return false
-  const cells = (value as { cells?: unknown }).cells
-  return Array.isArray(cells) && cells.every(cell =>
-    cell !== null &&
-    typeof cell === 'object' &&
-    (typeof cell.source === 'string' ||
-      (Array.isArray(cell.source) && cell.source.every((line: unknown) => typeof line === 'string'))),
-  )
-}
 
 function isLargeOutputs(
   outputs: (NotebookCellSourceOutput | undefined)[],
