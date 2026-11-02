@@ -1,3 +1,4 @@
+import type { UUID } from 'node:crypto'
 import type { StreamEvent } from '../../types/message.js'
 import type { SDKPartialAssistantMessage } from './coreTypes.generated.js'
 
@@ -5,7 +6,7 @@ import type { SDKPartialAssistantMessage } from './coreTypes.generated.js'
 export function toSDKStreamEvent(
   message: StreamEvent,
   sessionId: string,
-  uuid: string,
+  uuid: UUID,
 ): SDKPartialAssistantMessage {
   return {
     type: 'stream_event',
