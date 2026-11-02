@@ -1281,13 +1281,13 @@ export function ManagePlugins({
   });
 
   // Handle dismiss action in flagged-detail view
-  const handleFlagged关闭 = React.useCallback(() => {
+  const handleFlaggedDismiss = React.useCallback(() => {
     if (typeof viewState !== 'object' || viewState.type !== 'flagged-detail') return;
     void removeFlaggedPlugin(viewState.plugin.id);
     setViewState('plugin-list');
   }, [viewState]);
   useKeybindings({
-    'select:accept': handleFlagged关闭
+    'select:accept': handleFlaggedDismiss
   }, {
     context: 'Select',
     isActive: typeof viewState === 'object' && viewState.type === 'flagged-detail'
