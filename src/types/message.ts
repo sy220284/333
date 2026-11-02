@@ -236,6 +236,10 @@ export interface StreamEvent {
   event: BetaRawMessageStreamEvent
   requestId?: string
   ttftMs?: number
+  apiMessageId?: string
+  thinkingDisplay?: string
+  abandonedBlocks?: { apiMessageId: string; fromBlockIndex: number }
+  textRunsJoined?: boolean
 }
 export interface TombstoneMessage {
   type: 'tombstone'

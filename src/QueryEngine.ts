@@ -1,6 +1,7 @@
 import { feature } from 'bun:bundle'
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import { randomUUID } from 'crypto'
+import { toSDKStreamEvent } from './entrypoints/sdk/streamEventMapper.js'
 import last from 'lodash-es/last.js'
 import {
   getSessionId,
@@ -821,13 +822,7 @@ export class QueryEngine {
           }
 
           if (includePartialMessages) {
-            yield {
-              type: 'stream_event' as const,
-              event: message.event,
-              session_id: getSessionId(),
-              parent_tool_use_id: null,
-              uuid: randomUUID(),
-            }
+            yield toSDKStreamEvent(message, getSessionId(), randomUUID())
           }
 
           break

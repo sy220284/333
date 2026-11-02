@@ -1844,6 +1844,7 @@ async function* queryModel(
 
   const newMessages: AssistantMessage[] = []
   let ttftMs = 0
+  let apiMessageId: string | undefined
   let partialMessage: BetaMessage | undefined = undefined
   const contentBlocks: (BetaContentBlock | ConnectorTextBlock)[] = []
   let usage: NonNullableUsage = EMPTY_USAGE
@@ -1953,6 +1954,7 @@ async function* queryModel(
     // reset state
     newMessages.length = 0
     ttftMs = 0
+    apiMessageId = undefined
     partialMessage = undefined
     contentBlocks.length = 0
     usage = EMPTY_USAGE
@@ -2073,6 +2075,9 @@ async function* queryModel(
         switch (part.type) {
           case 'message_start': {
             partialMessage = part.message
+            apiMessageId = typeof part.message?.id === 'string' && part.message.id !== ''
+              ? part.message.id
+              : undefined
             ttftMs = Date.now() - start
             usage = updateUsage(usage, part.message?.usage)
             // Capture research from message_start if available (internal only).
@@ -2394,7 +2399,9 @@ async function* queryModel(
           type: 'stream_event',
           event: part,
           ...(part.type === 'message_start' ? { ttftMs } : undefined),
+          ...(apiMessageId !== undefined ? { apiMessageId } : undefined),
         }
+        if (part.type === 'message_stop') apiMessageId = undefined
       }
       // Clear the idle timeout watchdog now that the stream loop has exited
       clearStreamIdleTimers()

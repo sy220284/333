@@ -46,3 +46,22 @@ for (const event of invalid) {
     expect(SDKPartialAssistantMessageSchema().safeParse(envelope(event)).success).toBe(false)
   })
 }
+
+test('stream metadata survives validation without losing response identity', () => {
+  const input = {
+    ...envelope({ type: 'message_stop' }),
+    ttft_ms: 12,
+    api_message_id: 'msg-api-id',
+    thinking_display: 'updates',
+    abandoned_blocks: { api_message_id: 'msg-api-id', from_block_index: 2 },
+    text_runs_joined: true,
+  }
+  const parsed = SDKPartialAssistantMessageSchema().safeParse(input)
+  expect(parsed.success).toBe(true)
+  if (!parsed.success) throw parsed.error
+  expect(parsed.data).toEqual(input)
+  const malformed = SDKPartialAssistantMessageSchema().safeParse({
+    ...input, abandoned_blocks: { api_message_id: 'msg-api-id', from_block_index: -1 },
+  })
+  expect(malformed.success).toBe(false)
+})

@@ -1,108 +1,119 @@
 import type { SDKPartialAssistantMessage } from '../../entrypoints/sdk/coreTypes.generated.js'
 
-type StreamPayload = SDKPartialAssistantMessage & { uuid: string }
-type CoalescedStreamEvent = {
-  type: 'stream_event'
+type StreamPayload = SDKPartialAssistantMessage & {
   uuid: string
-  session_id: string
-  parent_tool_use_id: string | null
-  event: {
-    type: 'content_block_delta'
-    index: number
-    delta: { type: 'text_delta'; text: string }
+  api_message_id?: string
+  thinking_display?: unknown
+}
+type DeltaEvent = Extract<StreamPayload['event'], { type: 'content_block_delta' }>
+type DeltaKind = 'text_delta' | 'input_json_delta' | 'thinking_delta'
+type Group = {
+  first: StreamPayload
+  firstEvent: DeltaEvent
+  kind: DeltaKind
+  accumulated: string
+  bytes: number
+  count: number
+  estimatedTokens?: number
+}
+
+// 2.1.310 chunk-bc0w6gb3.js:50-92 and :1388-1396.
+const MAX_EVENT_BYTES = 61_440
+const MAX_MERGED_DELTA_BYTES = MAX_EVENT_BYTES - 4_096
+
+function deltaChunk(event: StreamPayload['event']): {
+  event: DeltaEvent
+  kind: DeltaKind
+  text: string
+  estimatedTokens?: number
+} | null {
+  if (event.type !== 'content_block_delta') return null
+  const delta = event.delta
+  switch (delta.type) {
+    case 'text_delta':
+      return { event, kind: delta.type, text: delta.text }
+    case 'input_json_delta':
+      return { event, kind: delta.type, text: delta.partial_json }
+    case 'thinking_delta':
+      return {
+        event,
+        kind: delta.type,
+        text: delta.thinking,
+        estimatedTokens: 'estimated_tokens' in delta && typeof delta.estimated_tokens === 'number'
+          ? delta.estimated_tokens
+          : undefined,
+      }
+    default:
+      return null
   }
 }
 
-export type StreamAccumulatorState = {
-  byMessage: Map<string, string[][]>
-  scopeToMessage: Map<string, string>
+function finish(group: Group): StreamPayload {
+  if (group.count === 1) return group.first
+  const delta = group.kind === 'text_delta'
+    ? { type: group.kind, text: group.accumulated }
+    : group.kind === 'input_json_delta'
+      ? { type: group.kind, partial_json: group.accumulated }
+      : { type: group.kind, thinking: group.accumulated, estimated_tokens: group.estimatedTokens ?? null }
+  return {
+    ...group.first,
+    event: { ...group.firstEvent, delta: { ...group.firstEvent.delta, ...delta } },
+  } as StreamPayload
 }
 
-export function createStreamAccumulator(): StreamAccumulatorState {
-  return { byMessage: new Map(), scopeToMessage: new Map() }
-}
-
-function scopeKey(m: { session_id?: string; parent_tool_use_id?: string | null }): string {
-  return `${m.session_id}:${m.parent_tool_use_id ?? ''}`
-}
-
-/**
- * Creates full-so-far text snapshots on each flush, while keeping original
- * non-text stream events unchanged. The state spans flushes, not just arrays.
- * This is used by the actual CCR uploader; do not replace its source of truth.
- */
-export function accumulateStreamEvents(
-  buffer: StreamPayload[],
-  state: StreamAccumulatorState,
-): Array<StreamPayload | CoalescedStreamEvent> {
-  const out: Array<StreamPayload | CoalescedStreamEvent> = []
-  const touched = new Map<string[], CoalescedStreamEvent>()
-  for (const message of buffer) {
-    switch (message.event.type) {
-      case 'message_start': {
-        const id = message.event.message.id
-        const scope = scopeKey(message)
-        const existing = state.scopeToMessage.get(scope)
-        if (existing && existing !== id) state.byMessage.delete(existing)
-        // On an idempotent message_start replay, keep the already accumulated
-        // text; the uploader's dedupe key belongs to the first delta frame.
-        if (!state.byMessage.has(id)) state.byMessage.set(id, [])
-        state.scopeToMessage.set(scope, id)
-        out.push(message)
-        break
+/** Merge only adjacent compatible deltas in this upload batch. */
+export function coalesceStreamEvents(events: StreamPayload[]): StreamPayload[] {
+  if (events.length <= 1) return events
+  const output: StreamPayload[] = []
+  let group: Group | null = null
+  for (const message of events) {
+    const part = deltaChunk(message.event)
+    if (!part) {
+      if (group) output.push(finish(group))
+      group = null
+      output.push(message)
+      continue
+    }
+    const bytes = Buffer.byteLength(JSON.stringify(part.text)) - 2
+    if (group &&
+        group.firstEvent.index === part.event.index &&
+        group.kind === part.kind &&
+        group.first.parent_tool_use_id === message.parent_tool_use_id &&
+        group.first.thinking_display === message.thinking_display &&
+        group.first.api_message_id === message.api_message_id &&
+        group.bytes + bytes <= MAX_MERGED_DELTA_BYTES) {
+      group.accumulated += part.text
+      group.bytes += bytes
+      group.count++
+      if (typeof part.estimatedTokens === 'number') {
+        group.estimatedTokens = (group.estimatedTokens ?? 0) + part.estimatedTokens
       }
-      case 'content_block_delta': {
-        if (message.event.delta.type !== 'text_delta') {
-          out.push(message)
-          break
-        }
-        const id = state.scopeToMessage.get(scopeKey(message))
-        const blocks = id ? state.byMessage.get(id) : undefined
-        if (!blocks) {
-          out.push(message)
-          break
-        }
-        const chunks = (blocks[message.event.index] ??= [])
-        chunks.push(message.event.delta.text)
-        const previous = touched.get(chunks)
-        if (previous) {
-          previous.event.delta.text = chunks.join('')
-          break
-        }
-        const snapshot: CoalescedStreamEvent = {
-          type: 'stream_event',
-          uuid: message.uuid,
-          session_id: message.session_id,
-          parent_tool_use_id: message.parent_tool_use_id,
-          event: {
-            type: 'content_block_delta',
-            index: message.event.index,
-            delta: { type: 'text_delta', text: chunks.join('') },
-          },
-        }
-        touched.set(chunks, snapshot)
-        out.push(snapshot)
-        break
-      }
-      default:
-        out.push(message)
+      continue
+    }
+    if (group) output.push(finish(group))
+    group = {
+      first: message,
+      firstEvent: part.event,
+      kind: part.kind,
+      accumulated: part.text,
+      bytes,
+      count: 1,
+      estimatedTokens: part.estimatedTokens,
     }
   }
-  return out
+  if (group) output.push(finish(group))
+  return output
 }
 
-/** Called on the final assistant message, including abort/error completions. */
-export function clearStreamAccumulatorForMessage(
-  state: StreamAccumulatorState,
-  assistant: {
-    session_id: string
-    parent_tool_use_id: string | null
-    message: { id: string }
-  },
-): void {
-  state.byMessage.delete(assistant.message.id)
-  const scope = scopeKey(assistant)
-  if (state.scopeToMessage.get(scope) === assistant.message.id) {
-    state.scopeToMessage.delete(scope)
-  }
+/** The target skips an oversized ephemeral event, while keeping the durable response. */
+export function prepareStreamEventsForUpload(
+  events: StreamPayload[],
+  reportOversize: (event: StreamPayload, bytes: number) => void,
+): StreamPayload[] {
+  return coalesceStreamEvents(events).filter(event => {
+    const bytes = Buffer.byteLength(JSON.stringify(event))
+    if (bytes <= MAX_EVENT_BYTES) return true
+    reportOversize(event, bytes)
+    return false
+  })
 }

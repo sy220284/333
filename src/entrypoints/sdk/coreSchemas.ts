@@ -1547,6 +1547,14 @@ export const SDKPartialAssistantMessageSchema = lazySchema(() =>
     parent_tool_use_id: z.string().nullable(),
     uuid: UUIDPlaceholder(),
     session_id: z.string(),
+    ttft_ms: z.number().int().optional(),
+    thinking_display: z.string().optional(),
+    api_message_id: z.string().optional(),
+    abandoned_blocks: z.object({
+      api_message_id: z.string(),
+      from_block_index: z.number().int().nonnegative(),
+    }).optional(),
+    text_runs_joined: z.literal(true).optional(),
   }),
 )
 

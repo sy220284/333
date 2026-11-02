@@ -8,6 +8,7 @@ import type {
   SDKSystemMessage,
   SDKToolProgressMessage,
 } from '../entrypoints/agentSdkTypes.js'
+import { fromSDKStreamEvent } from '../entrypoints/sdk/streamEventMapper.js'
 import type {
   AssistantMessage,
   Message,
@@ -43,10 +44,7 @@ function convertAssistantMessage(msg: SDKAssistantMessage): AssistantMessage {
  * Convert an SDKPartialAssistantMessage (streaming) to a StreamEvent
  */
 function convertStreamEvent(msg: SDKPartialAssistantMessage): StreamEvent {
-  return {
-    type: 'stream_event',
-    event: msg.event,
-  }
+  return fromSDKStreamEvent(msg)
 }
 
 /**

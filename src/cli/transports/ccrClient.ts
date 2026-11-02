@@ -26,28 +26,16 @@ import {
 } from './SerialBatchEventUploader.js'
 import type { SSETransport, StreamClientEvent } from './SSETransport.js'
 import { WorkerStateUploader } from './WorkerStateUploader.js'
-import {
-  accumulateStreamEvents,
-  clearStreamAccumulatorForMessage,
-  createStreamAccumulator,
-} from './streamAccumulator.js'
-import type { StreamAccumulatorState } from './streamAccumulator.js'
-export {
-  accumulateStreamEvents,
-  clearStreamAccumulatorForMessage,
-  createStreamAccumulator,
-} from './streamAccumulator.js'
-export type { StreamAccumulatorState } from './streamAccumulator.js'
+import { prepareStreamEventsForUpload } from './streamAccumulator.js'
+export { coalesceStreamEvents, prepareStreamEventsForUpload } from './streamAccumulator.js'
 
 /** Default interval between heartbeat events (20s; server TTL is 60s). */
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 20_000
 
 /**
  * stream_event messages accumulate in a delay buffer for up to this many ms
- * before enqueue. Mirrors HybridTransport's batching window. text_delta
- * events for the same content block accumulate into a single full-so-far
- * snapshot per flush — each emitted event is self-contained so a client
- * connecting mid-stream sees complete text, not a fragment.
+ * before enqueue. Adjacent compatible deltas are combined within that batch;
+ * later batches retain only the new content so viewers do not repeat text.
  */
 const STREAM_EVENT_FLUSH_INTERVAL_MS = 100
 
@@ -143,12 +131,6 @@ export class CCRClient {
   // and enables text_delta coalescing). Mirrors HybridTransport's pattern.
   private streamEventBuffer: SDKPartialAssistantMessage[] = []
   private streamEventTimer: ReturnType<typeof setTimeout> | null = null
-  // Full-so-far text accumulator. Persists across flushes so each emitted
-  // text_delta event carries the complete text from the start of the block —
-  // mid-stream reconnects see a self-contained snapshot. Keyed by API message
-  // ID; cleared in writeEvent when the complete assistant message arrives.
-  private streamTextAccumulator = createStreamAccumulator()
-
   private readonly workerState: WorkerStateUploader
   private readonly eventUploader: SerialBatchEventUploader<ClientEvent>
   private readonly internalEventUploader: SerialBatchEventUploader<WorkerEvent>
@@ -593,10 +575,9 @@ export class CCRClient {
    * These events are visible to frontend clients via the SSE stream.
    * Injects a UUID if missing to ensure server-side idempotency on retry.
    *
-   * stream_event messages are held in a 100ms delay buffer and accumulated
-   * (text_deltas for the same content block emit a full-so-far snapshot per
-   * flush). A non-stream_event write flushes the buffer first so downstream
-   * ordering is preserved.
+   * stream_event messages are held in a 100ms delay buffer and adjacent
+   * compatible deltas are combined. A non-stream_event write flushes the
+   * buffer first so downstream ordering is preserved.
    */
   async writeEvent(message: StdoutMessage): Promise<void> {
     if (message.type === 'stream_event') {
@@ -610,9 +591,6 @@ export class CCRClient {
       return
     }
     await this.flushStreamEventBuffer()
-    if (message.type === 'assistant') {
-      clearStreamAccumulatorForMessage(this.streamTextAccumulator, message)
-    }
     await this.eventUploader.enqueue(this.toClientEvent(message))
   }
 
@@ -628,8 +606,8 @@ export class CCRClient {
   }
 
   /**
-   * Drain the stream_event delay buffer: accumulate text_deltas into
-   * full-so-far snapshots, clear the timer, enqueue the resulting events.
+   * Drain the stream_event delay buffer, coalesce adjacent deltas and enqueue
+   * the resulting events.
    * Called from the timer, from writeEvent on a non-stream message, and from
    * flush(). close() drops the buffer — call flush() first if you need
    * delivery.
@@ -642,10 +620,10 @@ export class CCRClient {
     if (this.streamEventBuffer.length === 0) return
     const buffered = this.streamEventBuffer
     this.streamEventBuffer = []
-    const payloads = accumulateStreamEvents(
-      buffered,
-      this.streamTextAccumulator,
+    const payloads = prepareStreamEventsForUpload(buffered, (event, bytes) =>
+      logForDebugging(`CCRClient: dropping oversize ephemeral ${event.event.type} event (${bytes} bytes)`, { level: 'warn' }),
     )
+    if (payloads.length === 0) return
     await this.eventUploader.enqueue(
       payloads.map(payload => ({ payload, ephemeral: true })),
     )
