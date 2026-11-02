@@ -63,6 +63,37 @@
     "chunk-p8z8s65a.js:4192–4194",
     "chunk-gmxe4kpt.js:663"
   ],
-  "status": "OFFICIAL_E41_REAL_PROCESS_CONFIRMED; CANDIDATE_FULL_CLI_RUN_PENDING",
-  "note": "Target x64 normal-mode tool path has been actually exercised against fake local SSE; prior SIMPLE-mode negative observation was an isolation mistake and has been corrected. No live cloud model requested."
+  "status": "OFFICIAL_AND_REBUILT_E41_REAL_PROCESS_CONFIRMED; DEFERRED_TOOL_REGISTRATION_DIFFERENCE_PENDING_PR7",
+  "note": "Target x64 normal-mode tool path has been actually exercised against fake local SSE; prior SIMPLE-mode negative observation was an isolation mistake and has been corrected. No live cloud model requested.",
+  "candidate_observations": {
+    "candidate_commit": "a39393b702409a63a027151c3889725c95575e24",
+    "actions_run": 41435775007,
+    "actions_url": "https://github.com/sy220284/333/actions/runs/41435775007",
+    "platform": "Linux x64 Bun 1.4.4, rebuilt dist/cli.js",
+    "model_requests": 4,
+    "actual_file_before": "print(1)",
+    "actual_file_after": "print(2)",
+    "output": "E41_NOTEBOOK_ROUNDTRIP_OK",
+    "exit_code": 0,
+    "status": "success",
+    "evidence": "GitHub Actions Ubuntu local-edit-parity job output: scenario E41 passed true, modelRequests 4; both Read calls and NotebookEdit were executed by the actual rebuilt process."
+  },
+  "cross_platform_subchain": {
+    "actions_run": 41435775007,
+    "ubuntu": "success",
+    "macos": "success",
+    "windows": "success",
+    "test_counts": {
+      "linux_and_macos": "16 sed + 15 Notebook pure + 3 real tool integration + Linux CLI E41",
+      "windows": "15 Notebook pure + 2 real tool integration"
+    },
+    "build_run": 41435774957,
+    "build_status": "success"
+  },
+  "known_difference": {
+    "official_default_tools": "ToolSearch + DeferredToolPlaceholder; NotebookEdit exposed on demand",
+    "candidate_default_tools": "NotebookEdit directly in initial model-visible tools; ToolSearch alignment is owned by concurrent PR #7",
+    "impact": "E41 file behavior matches for the verified route, but full default tool-discovery behavior is not yet equivalent."
+  },
+  "next_full_gate": "PR #7 tool registry/ToolSearch integration, M10 permission/symlink/abnormal-path checks, and PR #9 baseline TypeScript/security governance."
 }
