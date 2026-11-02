@@ -9,6 +9,7 @@ import { buildTool, type ToolDef, type ToolUseContext } from '../../Tool.js'
 import type { NotebookContent } from '../../types/notebook.js'
 import { getCwd } from '../../utils/cwd.js'
 import { isENOENT } from '../../utils/errors.js'
+import { processNotebookCellsForRead } from '../../utils/notebook.js'
 import { getFileModificationTime, writeTextContent } from '../../utils/file.js'
 import { readFileSyncWithMetadata } from '../../utils/fileRead.js'
 import { getFsImplementation } from '../../utils/fsOperations.js'
@@ -290,6 +291,18 @@ export const NotebookEditTool = buildTool({
         errorCode: 6,
       }
     }
+    // Read stores a cell projection, while Edit stores raw JSON. Compare
+    // both representations so a same-millisecond external edit is detected.
+    if (
+      readTimestamp.content !== content &&
+      readTimestamp.content !== jsonStringify(processNotebookCellsForRead(notebook))
+    ) {
+      return {
+        result: false,
+        message: 'Notebook content changed since it was read. Read it again before editing.',
+        errorCode: 10,
+      }
+    }
     try {
       // Validation must use the same lookup semantics as the actual edit.
       // Do not mutate safeParseJSON's memoized object here.
@@ -362,6 +375,14 @@ export const NotebookEditTool = buildTool({
       }
       if (getFileModificationTime(fullPath) > snapshot.timestamp) {
         throw new Error('Notebook changed since it was read. Read it again before editing.')
+      }
+      if (
+        snapshot.content !== content &&
+        snapshot.content !== jsonStringify(processNotebookCellsForRead(notebook))
+      ) {
+        throw new Error(
+          'Notebook content changed since it was read. Read it again before editing.',
+        )
       }
 
       const mutation = applyNotebookEdit(notebook, {
