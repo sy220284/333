@@ -44,7 +44,7 @@ import { bashToolHasPermission, commandHasAnyCd, matchWildcardPattern, permissio
 import { interpretCommandResult } from './commandSemantics.js';
 import { getDefaultTimeoutMs, getMaxTimeoutMs, getSimplePrompt } from './prompt.js';
 import { checkReadOnlyConstraints } from './readOnlyValidation.js';
-import { parseSedEditCommand } from './sedEditParser.js';
+import { assertSedPreviewUnchanged, parseSedEditCommand } from './sedEditParser.js';
 import { shouldUseSandbox } from './shouldUseSandbox.js';
 import { BASH_TOOL_NAME } from './toolName.js';
 import { BackgroundHint, renderToolResultMessage, renderToolUseErrorMessage, renderToolUseMessage, renderToolUseProgressMessage, renderToolUseQueuedMessage } from './UI.js';
@@ -242,6 +242,7 @@ For commands that are harder to parse at a glance (piped commands, obscure flags
   dangerouslyDisableSandbox: semanticBoolean(z.boolean().optional()).describe('Set this to true to dangerously override sandbox mode and run commands without sandboxing.'),
   _simulatedSedEdit: z.object({
     filePath: z.string(),
+    oldContent: z.string(),
     newContent: z.string()
   }).optional().describe('Internal: pre-computed sed edit result from preview')
 }));
@@ -359,10 +360,12 @@ type SimulatedSedEditContext = Pick<ToolUseContext, 'readFileState' | 'updateFil
  */
 async function applySedEdit(simulatedEdit: {
   filePath: string;
+  oldContent: string;
   newContent: string;
 }, toolUseContext: SimulatedSedEditContext, parentMessage?: AssistantMessage): Promise<SimulatedSedEditResult> {
   const {
     filePath,
+    oldContent,
     newContent
   } = simulatedEdit;
   const absoluteFilePath = expandPath(filePath);
@@ -388,17 +391,26 @@ async function applySedEdit(simulatedEdit: {
     throw e;
   }
 
+  // A preview is bound to the file content the user approved. A file may
+  // change while the permission dialog is open; never overwrite newer edits.
+  assertSedPreviewUnchanged(filePath, originalContent, oldContent);
+
   // Track file history before making changes (for undo support)
   if (fileHistoryEnabled() && parentMessage) {
     await fileHistoryTrackEdit(toolUseContext.updateFileHistoryState, absoluteFilePath, parentMessage.uuid);
   }
+
+  // Recheck after async backup work, immediately before the synchronous
+  // write, so an intervening external edit cannot silently be lost.
+  const beforeWrite = await fs.readFile(absoluteFilePath, { encoding });
+  assertSedPreviewUnchanged(filePath, beforeWrite, oldContent);
 
   // Detect line endings and write new content
   const endings = detectLineEndings(absoluteFilePath);
   writeTextContent(absoluteFilePath, newContent, encoding, endings);
 
   // Notify VS Code about the file change
-  notifyVscodeFileUpdated(absoluteFilePath, originalContent, newContent);
+  notifyVscodeFileUpdated(absoluteFilePath, beforeWrite, newContent);
 
   // Update read timestamp to invalidate stale writes
   toolUseContext.readFileState.set(absoluteFilePath, {
