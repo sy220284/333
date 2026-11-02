@@ -165,3 +165,47 @@ jobs:
             ${{ runner.temp }}/m1-biome-no-safe-fixes.txt
           retention-days: 7
           if-no-files-found: warn
+
+  m1-target-vs-current-source:
+    name: M1 官方x64与当前源码重建版同条件差分
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 校验旧源码快照并恢复构建依赖
+        run: |
+          node build/verify-bundled-assets.mjs
+          node build/restore-claude-api.mjs --verify
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 从当前M1源码独立构建候选程序
+        run: bun build/rebuild.mjs
+      - name: 准备官方x64对照程序与真实候选启动器
+        run: |
+          curl --fail --location --silent --show-error --retry 3 \
+            "https://downloads.claude.ai/claude-code-releases/2.1.310/linux-x64/claude" \
+            --output "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
+          echo "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  ${RUNNER_TEMP}/claude-2.1.310-linux-x64" | sha256sum --check
+          chmod 700 "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
+          printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-current-cli"
+          chmod 700 "${RUNNER_TEMP}/m1-current-cli"
+      - name: 执行同条件CLI黑盒差分（真实差异保持失败）
+        run: |
+          node build/m1-x64-reference-probe.mjs \
+            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --candidate "${RUNNER_TEMP}/m1-current-cli" \
+            --report "${RUNNER_TEMP}/m1-x64-current-differential.json"
+      - name: 不论是否发现差异都保存可复核证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-x64-source-differential
+          path: ${{ runner.temp }}/m1-x64-current-differential.json
+          retention-days: 30
+          if-no-files-found: warn
