@@ -129,7 +129,7 @@ export function classifyChangelogRow(text,scope,coverage){
 }
 export function scan(){
   const coverage=read('docs/upgrade/upgrade-coverage.json').features
-  const all=[1,2,3].flatMap(i=>read('docs/upgrade/m1-evidence/changelog-'+i+'.json').records)
+  const all=[1,2,3].flatMap(i=>read(`docs/upgrade/m1-evidence/changelog-${i}.json`).records)
   const rows=all.map(r=>({id:r.id,source_line:r.source_line,...classifyChangelogRow(r.source_text,r.release_surface,coverage)}))
   const byF={},byM={}
   for(const row of rows){for(const f of row.candidate_F)byF[f]=(byF[f]||0)+1;for(const m of row.candidate_M)byM[m]=(byM[m]||0)+1}
@@ -138,5 +138,5 @@ export function scan(){
 }
 if(process.argv[1]===import.meta.filename){
   const data=scan()
-  process.stdout.write(JSON.stringify(data.totals,null,2)+'\n')
+  process.stdout.write(`${JSON.stringify(data.totals,null,2)}\n`)
 }

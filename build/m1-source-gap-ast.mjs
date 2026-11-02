@@ -26,7 +26,7 @@ function lookup(from, name) {
   const suffix = extname(target)
   const base = suffix && ['.js', '.mjs', '.cjs'].includes(suffix) ? target.slice(0, -suffix.length) : target
   const variants = suffix && !['.js', '.mjs', '.cjs'].includes(suffix) ? [target] :
-    [target, ...extensions.map(x => base + x), ...(!suffix ? extensions.map(x => posix.join(target, 'index' + x)) : [])]
+    [target, ...extensions.map(x => base + x), ...(!suffix ? extensions.map(x => posix.join(target, `index${x}`)) : [])]
   return { target, present: variants.some(x => names.has(x)) }
 }
 const missing = new Map()
@@ -82,7 +82,7 @@ const report = {
   evidenceGrade: 'AST_IMPORT_ONLY_NOT_FUNCTION_VERIFIED', records,
 }
 mkdirSync(dirname(resolve(dest)), { recursive: true })
-writeFileSync(dest, JSON.stringify(report, null, 2) + '\n')
+writeFileSync(dest, `${JSON.stringify(report, null, 2)}\n`)
 console.log(JSON.stringify({ sourceFiles: report.sourceFiles, uniqueMissingPaths: report.uniqueMissingPaths,
   references: report.references, typeOnlyReferences: report.typeOnlyReferences,
   runtimeReferences: report.runtimeReferences }))

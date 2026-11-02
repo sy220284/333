@@ -29,7 +29,7 @@ async function hashFile(filename) {
   return digest.digest('hex')
 }
 const hash = await hashFile(reference)
-if (hash !== PINNED_SHA256) throw new Error('官方 x64 二进制 SHA-256 不匹配：' + hash)
+if (hash !== PINNED_SHA256) throw new Error(`官方 x64 二进制 SHA-256 不匹配：${hash}`)
 const cases = [
   {id:'version', argv:['--version']},
   {id:'help', argv:['--help']},
@@ -82,7 +82,7 @@ function validate(test, execution) {
       }catch {return {ok:false,reason:'invalid_jsonl'}}
     }
   }
-  throw new Error('unknown test id: '+test.id)
+  throw new Error(`unknown test id: ${test.id}`)
 }
 function runCase(bin,test,homeRoot) {
   const home=join(homeRoot,test.id)
@@ -112,7 +112,7 @@ const result={schema:1,release:'2.1.310',platform:'linux-x64',reference_sha256:h
   limitations:['No authenticated model calls','No interactive TUI rendering','No MCP server handshake',
     'No agent/workflow/tool execution','No implicit assertion of feature equivalence'] }
 mkdirSync(dirname(resolve(report)),{recursive:true})
-writeFileSync(report,JSON.stringify(result,null,2)+'\n')
+writeFileSync(report,`${JSON.stringify(result,null,2)}\n`)
 console.log(JSON.stringify({reference_passed:result.reference.passed,total:result.reference.total,
   candidate_passed:result.candidate?.passed??null,report:resolve(report)}))
 if (referenceCases.some(x=>!x.pass) || candidateCases?.some(x=>!x.pass)) process.exitCode=1

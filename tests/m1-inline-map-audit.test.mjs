@@ -19,7 +19,7 @@ test('旧源码内嵌 Source Map 可原样解码并禁止覆盖产品', () => {
       version: 3, sources: ['WizardProvider.tsx'], sourcesContent: [old], mappings: '',
     })).toString('base64')
     writeFileSync(join(source, 'WizardProvider.tsx'),
-      'function a(){return true}\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,' + raw)
+      `function a(){return true}\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,${raw}`)
     execFileSync('python3', [script, '--source-dir', source, '--output', output,
       '--recover-dir', recovered], { encoding: 'utf8', timeout: 10000 })
     const report = JSON.parse(readFileSync(output, 'utf8'))

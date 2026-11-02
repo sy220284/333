@@ -11,7 +11,7 @@ const source = readJson(join(evidenceDir, 'source-provenance.json'));
 const flagSet = readJson(join(evidenceDir, 'old-flags.json')).records;
 const anchorSet = readJson(join(evidenceDir, 'new-code-anchors.json')).records;
 const changes = [1, 2, 3].flatMap(i => {
-  const part = readJson(join(evidenceDir, 'changelog-' + i + '.json'));
+  const part = readJson(join(evidenceDir, `changelog-${i}.json`));
   assert.equal(part.source_blob ?? source.official_changelog_blob, source.official_changelog_blob);
   return part.records;
 });
@@ -23,7 +23,7 @@ assert.equal(changeById.size, 6313, 'Original source rows must stay unique');
 assert.equal(new Set(releaseReviews.map(row => row.id)).size, releaseReviews.length);
 for(const reviewed of releaseReviews) {
   const row = changeById.get(reviewed.id);
-  assert.ok(row, 'Unknown reviewed changelog item: ' + reviewed.id);
+  assert.ok(row, `Unknown reviewed changelog item: ${reviewed.id}`);
   assert.equal(reviewed.source_line, row.source_line);
   assert.equal(reviewed.source_blob, source.official_changelog_blob);
   assert.equal(reviewed.evidence_level, 'TARGET_SOURCE_CONFIRMED');
@@ -35,27 +35,27 @@ for(const reviewed of releaseReviews) {
   const classified = reviewed.review_status === 'M1_CLASSIFIED';
   assert.ok(classified ||
     reviewed.review_status === 'TARGET_SOURCE_IDENTIFIED_PENDING_RUNTIME_TEST',
-    'Unknown source review status: '+reviewed.id);
-  assert.ok(Array.isArray(reviewed.tests), 'Tests must be an explicit array: '+reviewed.id);
-  assert.ok(Array.isArray(reviewed.implemented_source), 'Implementations must be an explicit array: '+reviewed.id);
+    `Unknown source review status: ${reviewed.id}`);
+  assert.ok(Array.isArray(reviewed.tests), `Tests must be an explicit array: ${reviewed.id}`);
+  assert.ok(Array.isArray(reviewed.implemented_source), `Implementations must be an explicit array: ${reviewed.id}`);
   if(classified) {
     assert.ok(reviewed.tests.length>0,
-      'Classified release needs actual tests: '+reviewed.id);
+      `Classified release needs actual tests: ${reviewed.id}`);
     assert.ok(reviewed.implemented_source.length>0,
-      'Classified release needs implementing source: '+reviewed.id);
+      `Classified release needs implementing source: ${reviewed.id}`);
   } else {
     assert.equal(reviewed.tests.length, 0,
-      'Pending source-only evidence must not claim completed tests: '+reviewed.id);
+      `Pending source-only evidence must not claim completed tests: ${reviewed.id}`);
     assert.equal(reviewed.implemented_source.length, 0,
-      'Pending source-only evidence must not claim product implementation: '+reviewed.id);
+      `Pending source-only evidence must not claim product implementation: ${reviewed.id}`);
   }
   for(const path of [...reviewed.implemented_source,...reviewed.tests]) {
-    assert.ok(existsSync(join(root,path)), 'Missing implementation or test: '+path);
+    assert.ok(existsSync(join(root,path)), `Missing implementation or test: ${path}`);
   }
   // Preserve original release description and source position; overlays may
   // only set reviewed semantics and implementation proof fields.
   for(const key of ['source_text','version','ordinal','verb_candidate','related_M_candidate']) {
-    assert.equal(reviewed[key], undefined, 'Reviewed overlay must not rewrite immutable source field '+key);
+    assert.equal(reviewed[key], undefined, `Reviewed overlay must not rewrite immutable source field ${key}`);
   }
   Object.assign(row, {
     review_status:reviewed.review_status,
@@ -152,15 +152,15 @@ function checkAll() {
   assert.equal(new Set(flagSet.map(f => f.flag)).size, 90);
   for (const f of flagSet) {
     assert.match(f.flag, /^[A-Z][A-Z0-9_]+$/);
-    assert.ok(validTasks.has(f.owner_M), 'Missing task responsibility: ' + f.flag);
+    assert.ok(validTasks.has(f.owner_M), `Missing task responsibility: ${f.flag}`);
     const original = originalByName.get(f.flag);
-    assert.ok(original, 'Legacy flag missing from original research: '+f.flag);
+    assert.ok(original, `Legacy flag missing from original research: ${f.flag}`);
     assert.equal(f.legacy_count, original.references);
     assert.deepEqual(f.old_sources, original.affected_sources);
     assert.equal(f.old_compilation_state, original.compilation_state_333);
     assert.equal(f.owner_M, gapByName.get(f.flag));
     const calls=calledByFlag.get(f.flag);
-    assert.ok(calls, 'Missing exact legacy caller '+f.flag);
+    assert.ok(calls, `Missing exact legacy caller ${f.flag}`);
     assert.equal(calls.source_references.length, f.legacy_count);
     assert.ok(calls.source_references.every(site =>
       typeof site.source === 'string' && site.source.startsWith('src/') &&
@@ -176,7 +176,7 @@ function checkAll() {
   assert.equal(anchorSet.length, 61, 'M1 requires exactly 61 target code anchors');
   assert.equal(new Set(anchorSet.map(x => x.F_id)).size, 61);
   for (const item of anchorSet) {
-    assert.ok(validFeatures.has(item.F_id), 'Unmapped feature: ' + item.F_id);
+    assert.ok(validFeatures.has(item.F_id), `Unmapped feature: ${item.F_id}`);
     assert.match(item.first_code_anchor, /^chunk-[a-z0-9]+\.js:\d+$/);
     assert.ok(hasText(item.static_keyword));
     assert.ok(Array.isArray(item.candidate_evidence) && item.candidate_evidence.length>0);
@@ -205,8 +205,8 @@ function checkAll() {
   for (const record of changes) {
     const num = (expected.get(record.version) ?? 0) + 1;
     expected.set(record.version, num);
-    assert.equal(record.ordinal, num, 'Missing or repeated changelog ordinal: '+record.id);
-    assert.equal(record.id, record.version + '#' + String(num).padStart(3,'0'));
+    assert.equal(record.ordinal, num, `Missing or repeated changelog ordinal: ${record.id}`);
+    assert.equal(record.id, `${record.version}#${String(num).padStart(3,'0')}`);
     assert.equal(record.source_blob ?? source.official_changelog_blob, source.official_changelog_blob);
     assert.ok(record.source_line > previousLine, 'Source line offsets are not ordered');
     previousLine = record.source_line;
@@ -223,14 +223,14 @@ function checkAll() {
   assert.equal(chainById.size, 61);
   for (const entry of flagSet) {
     const mapped = flagByName.get(entry.flag);
-    assert.ok(mapped, 'M1 old flag missing classification: '+entry.flag);
+    assert.ok(mapped, `M1 old flag missing classification: ${entry.flag}`);
     assert.equal(mapped.old_references, entry.legacy_count);
     assert.ok(hasText(mapped.target_behavior_source),
-      'Legacy flag lacks a reviewed target branch or recorded mismatch: ' + mapped.flag);
+      `Legacy flag lacks a reviewed target branch or recorded mismatch: ${mapped.flag}`);
     assert.ok(hasText(mapped.old_vs_new_delta),
-      'Legacy flag lacks an old/new functional comparison: ' + mapped.flag);
+      `Legacy flag lacks an old/new functional comparison: ${mapped.flag}`);
     assert.ok(hasText(mapped.verified_next_implementation_task) || mapped.M1_required,
-      'Legacy flag lacks precise M2-M9 implementation handoff: ' + mapped.flag);
+      `Legacy flag lacks precise M2-M9 implementation handoff: ${mapped.flag}`);
     if (mapped.status === 'TARGET_BEHAVIOR_NOT_VERIFIED') {
       assert.notEqual(mapped.assignment_verified, 'CODE_REVIEWED',
         'A source candidate must not claim final branch verification');
@@ -239,16 +239,16 @@ function checkAll() {
     const actualTasks = [...new Set(mapped.related_F_candidate.flatMap(id => plannedByF.get(id) ?? []))].sort();
     assert.deepEqual(mapped.developer_cards.map(x => x.M).sort(), actualTasks);
     assert.equal(mapped.M1_required, actualTasks.length === 0 || mapped.related_F_candidate.includes('F080'),
-      'M1 responsibility missing: '+mapped.flag);
+      `M1 responsibility missing: ${mapped.flag}`);
     assert.equal(mapped.M1_required || mapped.developer_cards.length>0,true);
   }
   for (const entry of anchorSet) {
     const mapped = chainById.get(entry.F_id);
-    assert.ok(mapped,'M1 new-chain missing classification: '+entry.F_id);
+    assert.ok(mapped,`M1 new-chain missing classification: ${entry.F_id}`);
     assert.equal(mapped.target_first_anchor,entry.first_code_anchor);
     assert.deepEqual(mapped.downstream_tasks, plannedByF.get(entry.F_id));
     assert.equal(mapped.M1_required,mapped.downstream_tasks.length === 0,
-      'M1 must implement any uncovered newly discovered feature: '+entry.F_id);
+      `M1 must implement any uncovered newly discovered feature: ${entry.F_id}`);
     assert.ok(mapped.M1_required || mapped.downstream_tasks.length > 0);
   }
   assert.deepEqual(routing.chain_features.filter(x => x.M1_required).map(x=>x.id),['F080']);
@@ -287,7 +287,7 @@ function checkAll() {
 function verifyOfficialChangelog(path) {
   const raw = readFileSync(path);
   const gitBlob = createHash('sha1')
-    .update('blob ' + raw.length + '\0').update(raw).digest('hex');
+    .update(`blob ${raw.length}\0`).update(raw).digest('hex');
   assert.equal(gitBlob, source.official_changelog_blob, 'Official changelog blob changed');
   const lines = raw.toString('utf8').split(/\r?\n/);
   let version = null, ordinal = 0, cursor = 0;
@@ -301,13 +301,13 @@ function verifyOfficialChangelog(path) {
     if(!version || !lines[i].startsWith('- '))continue;
     ordinal++;
     const row=changes[cursor++];
-    assert.ok(row, 'Unexpected changelog addition at line '+(i+1));
+    assert.ok(row, `Unexpected changelog addition at line ${i+1}`);
     assert.equal(row.version,version);
     assert.equal(row.ordinal,ordinal);
     assert.equal(row.source_line,i+1);
     assert.equal(row.source_length,lines[i].slice(2).trim().length);
     assert.equal(row.source_text,lines[i].slice(2).trim(),
-      'Official changelog source text differs at '+row.id);
+      `Official changelog source text differs at ${row.id}`);
   }
   assert.equal(cursor,6313,'Official changelog row count differs');
 }
@@ -317,11 +317,11 @@ function verifyDecompiledAnchors(dir) {
   for (const item of anchorSet) {
     const [filename,n] = item.first_code_anchor.split(':');
     const path=join(base,filename);
-    assert.ok(existsSync(path),'Source missing: '+path);
+    assert.ok(existsSync(path),`Source missing: ${path}`);
     const content=readFileSync(path,'utf8').split(/\r?\n/);
     const line=content[Number(n)-1];
     assert.ok(line?.toLowerCase().includes(item.static_keyword.toLowerCase()),
-      'Code anchor mismatch for '+item.F_id+' at '+item.first_code_anchor);
+      `Code anchor mismatch for ${item.F_id} at ${item.first_code_anchor}`);
     count++;
   }
   return count;

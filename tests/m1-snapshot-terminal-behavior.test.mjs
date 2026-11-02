@@ -12,7 +12,7 @@ test('2.1.310 快照入口保持 keep 终态且不执行已退场组件', async 
   assert.ok(match, '必须保留与调用方一致的签名');
   assert.doesNotMatch(match[1], /(?:await\s+import|showSetupDialog|SnapshotUpdateDialog|\bthrow\b)/);
   // Extract the actual function body and execute it without importing the TSX UI runtime.
-  const execute = new Function('return async function recovered(_root, _props) {' + match[1] + '\n}')();
+  const execute = new Function(`return async function recovered(_root, _props) {${match[1]}\n}`)();
   for (const choice of [undefined, null, {}, { agentType: 'sample', scope: 'user', snapshotTimestamp: '2026-11-01' }]) {
     assert.equal(await execute(null, choice), 'keep');
   }

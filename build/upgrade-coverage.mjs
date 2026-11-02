@@ -13,7 +13,7 @@ function expandFeatures(scope) {
     const start = Number(match[1]);
     const end = Number(match[2]);
     assert.ok(end >= start && end <= 102, 'Invalid task feature range');
-    for (let n = start; n <= end; n++) ids.add('F' + String(n).padStart(3, '0'));
+    for (let n = start; n <= end; n++) ids.add(`F${String(n).padStart(3, '0')}`);
   }
   for (const match of scope.matchAll(/F\d{3}/g)) ids.add(match[0]);
   return [...ids].sort();
@@ -45,15 +45,15 @@ export function buildCoverage() {
   assert.equal(scenarios.filter(s => s.id.startsWith('E')).length, 68);
   assert.equal(scenarios.filter(s => s.id.startsWith('L')).length, 16);
   assert.equal(new Set(scenarios.map(s => s.id)).size, 84, 'Duplicate scenario');
-  assert.deepEqual(tasks.map(task => task.id), Array.from({length:10},(_,i)=>'M'+(i+1)));
+  assert.deepEqual(tasks.map(task => task.id), Array.from({length:10},(_,i)=>`M${i+1}`));
   for (const feature of features) {
-    assert.ok(feature.scenarios.length > 0, feature.id + ' has no scenario');
-    assert.ok(feature.tasks.length >= 2, feature.id + ' has no M1/M10 responsibility');
+    assert.ok(feature.scenarios.length > 0, `${feature.id} has no scenario`);
+    assert.ok(feature.tasks.length >= 2, `${feature.id} has no M1/M10 responsibility`);
   }
   for (const scenario of scenarios) {
-    assert.ok(scenario.features.length > 0, scenario.id + ' has no feature');
+    assert.ok(scenario.features.length > 0, `${scenario.id} has no feature`);
     for (const id of scenario.features) {
-      assert.ok(features.some(feature => feature.id === id), scenario.id + ' has unknown feature ' + id);
+      assert.ok(features.some(feature => feature.id === id), `${scenario.id} has unknown feature ${id}`);
     }
   }
   return {
@@ -76,9 +76,9 @@ export function verifyCoverageSnapshot() {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (process.argv.includes('--write')) {
     const coverage = buildCoverage();
-    writeFileSync(snapshot, JSON.stringify(coverage, null, 2) + '\n');
-    console.log('Updated upgrade coverage: ' + JSON.stringify(coverage.counts));
+    writeFileSync(snapshot, `${JSON.stringify(coverage, null, 2)}\n`);
+    console.log(`Updated upgrade coverage: ${JSON.stringify(coverage.counts)}`);
   } else {
-    console.log('Verified upgrade coverage: ' + JSON.stringify(verifyCoverageSnapshot()));
+    console.log(`Verified upgrade coverage: ${JSON.stringify(verifyCoverageSnapshot())}`);
   }
 }
