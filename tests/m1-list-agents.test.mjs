@@ -25,6 +25,20 @@ test('list output uses the official structured fields and filters sections', () 
   assert.match(r.listing,/This session is current/)
   assert.equal(buildAgentListing({sessions:[{name:'alpha'},{name:'beta'}],query:'beta'}).sections[0].total,1)
 })
+test('missing SendMessage cannot be advertised as available, including an empty listing',()=>{
+  const busy=buildAgentListing({self:'current [abc123]',sessions:[{name:'worker',ref:'ff0123'}],canSend:false})
+  assert.match(busy.listing,/None of the agents below can be messaged with SendMessage/)
+  const empty=buildAgentListing({self:'current [abc123]',canSend:false})
+  assert.match(empty.listing,/No reachable agents/)
+  assert.doesNotMatch(empty.listing,/peer messaging itself is available/)
+})
+test('ListAgents uses live bound socket and passed tools rather than fake self identity',async()=>{
+  const mod=await source('src/tools/ListAgentsTool/ListAgentsTool.ts')
+  assert.match(mod,/getMessagingSocketPath\(\)/)
+  assert.doesNotMatch(mod,/getSessionId\(\)\.slice/)
+  assert.match(mod,/canSendMessage\(options\.refreshTools\?\.\(\) \?\? options\.tools\)/)
+  assert.doesNotMatch(mod,/canSend:\s*true/)
+})
 test('duplicate names must use an unambiguous ref',()=>{
   const a={name:'worker',ref:peerRef('/tmp/a.sock'),address:'uds:/tmp/a.sock'}
   const b={name:'worker',ref:peerRef('/tmp/b.sock'),address:'uds:/tmp/b.sock'}
