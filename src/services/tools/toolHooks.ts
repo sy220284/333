@@ -10,6 +10,7 @@ import type { HookProgress } from '../../types/hooks.js'
 import type {
   AssistantMessage,
   AttachmentMessage,
+  HookResultMessage,
   ProgressMessage,
 } from '../../types/message.js'
 import type { PermissionDecision } from '../../types/permissions.js'
@@ -33,7 +34,7 @@ import { isMcpTool } from '../mcp/utils.js'
 import type { McpServerType, MessageUpdateLazy } from './toolExecution.js'
 
 export type PostToolUseHooksResult<Output> =
-  | MessageUpdateLazy<AttachmentMessage | ProgressMessage<HookProgress>>
+  | MessageUpdateLazy<HookResultMessage>
   | { updatedMCPToolOutput: Output }
 
 export async function* runPostToolUseHooks<Input extends AnyObject, Output>(
@@ -202,7 +203,7 @@ export async function* runPostToolUseFailureHooks<Input extends AnyObject>(
   mcpServerType: McpServerType,
   mcpServerBaseUrl: string | undefined,
 ): AsyncGenerator<
-  MessageUpdateLazy<AttachmentMessage | ProgressMessage<HookProgress>>
+  MessageUpdateLazy<HookResultMessage>
 > {
   const postToolStartTime = Date.now()
   try {
@@ -444,9 +445,7 @@ export async function* runPreToolUseHooks(
 ): AsyncGenerator<
   | {
       type: 'message'
-      message: MessageUpdateLazy<
-        AttachmentMessage | ProgressMessage<HookProgress>
-      >
+      message: MessageUpdateLazy<HookResultMessage>
     }
   | { type: 'hookPermissionResult'; hookPermissionResult: PermissionResult }
   | { type: 'hookUpdatedInput'; updatedInput: Record<string, unknown> }

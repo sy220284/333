@@ -2410,7 +2410,7 @@ async function* executeHooks({
           return
         }
 
-        if (httpJson) {
+        if (httpJson && isSyncHookJSONOutput(httpJson)) {
           const processed = processHookJSONOutput({
             json: httpJson,
             command: hook.url,

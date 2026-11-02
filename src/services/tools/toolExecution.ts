@@ -813,7 +813,9 @@ async function checkPermissionsAndCallTool(
           onToolProgress(result.message.message)
         } else {
           resultingMessages.push(result.message)
-          const att = result.message.message.attachment
+          const att = result.message.message.type === 'attachment'
+            ? result.message.message.attachment
+            : undefined
           if (
             att &&
             'command' in att &&
@@ -1694,9 +1696,7 @@ async function checkPermissionsAndCallTool(
     const isInterrupt = error instanceof AbortError
 
     // Run PostToolUseFailure hooks
-    const hookMessages: MessageUpdateLazy<
-      AttachmentMessage | ProgressMessage<HookProgress>
-    >[] = []
+    const hookMessages: MessageUpdateLazy[] = []
     for await (const hookResult of runPostToolUseFailureHooks(
       toolUseContext,
       tool,
