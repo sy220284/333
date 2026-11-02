@@ -4,12 +4,12 @@
  * services/tips/tipScheduler.ts (selection and display),
  * screens/REPL.tsx (theme, read-file cache and shell tool signals).
  */
-import type { Theme } from '../../utils/theme.js'
+import type { ThemeName } from '../../utils/theme.js'
 import type { FileStateCache } from '../../utils/fileStateCache.js'
 
 /** The scheduler may evaluate relevance before contextual signals are available. */
 export type TipContext = {
-  theme?: Theme
+  theme?: ThemeName
   readFileState?: FileStateCache
   bashTools?: ReadonlySet<string>
 }
@@ -25,6 +25,6 @@ export type Tip = {
   advertisedCommand?: string
   providerAgnostic?: boolean
   label?: string
-  content: (context: { theme: Theme }) => Promise<string>
+  content: (context: { theme: ThemeName }) => Promise<string>
   isRelevant: (context?: TipContext) => Promise<boolean>
 }
