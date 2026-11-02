@@ -1,4 +1,3 @@
-import { feature } from 'bun:bundle'
 import { z } from 'zod/v4'
 import { getReplBridgeHandle, isReplBridgeActive } from '../../bridge/replBridgeHandle.js'
 import { getCurrentPeerIdentityKey } from '../../bridge/peerDiscovery.js'
