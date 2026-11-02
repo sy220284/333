@@ -490,7 +490,7 @@ export function Select(t0) {
         };
       });
       if (hasDescriptions) {
-        let t19;
+        let t19: (data: (typeof optionData)[number]) => number;
         if ($[61] !== hideIndexes || $[62] !== maxIndexWidth_1) {
           t19 = data => {
             if (data.option.type === "input") {
