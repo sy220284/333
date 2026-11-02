@@ -35,6 +35,10 @@ export function flattenAccessibleTree(root) {
     }
     if(node.nodeName==='ink-raw-ansi') return
     const block=node.nodeName==='ink-box' || node.nodeName==='ink-root'
+    // Ink also uses virtual text containers for grouped UI elements. Their
+    // sibling Text nodes carry independent labels and must be spoken on
+    // separate lines; nested Text inside a Text stays inline.
+    const separatesTextSiblings=block || node.nodeName==='ink-virtual-text'
     if(block) flush()
     // Adjacent Ink <Text> children form separate semantic lines even when
     // layout renders them within the same Box. Nested inline Text keeps its
@@ -42,7 +46,7 @@ export function flattenAccessibleTree(root) {
     let previousText=false
     for(const child of node.childNodes??[]) {
       const nextText=child?.nodeName==='ink-text'
-      if(block && previousText && nextText) flush()
+      if(separatesTextSiblings && previousText && nextText) flush()
       walk(child)
       previousText=nextText
     }
