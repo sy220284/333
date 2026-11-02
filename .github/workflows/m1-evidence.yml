@@ -195,11 +195,12 @@ jobs:
           chmod 700 "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
           printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-current-cli"
           chmod 700 "${RUNNER_TEMP}/m1-current-cli"
-      - name: 执行同条件CLI黑盒差分（真实差异保持失败）
+      - name: 执行同条件CLI差分采集（未对齐项仍保留在JSON，严格等价另验）
         run: |
           node build/m1-x64-reference-probe.mjs \
             --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
+            --allow-candidate-diff true \
             --report "${RUNNER_TEMP}/m1-x64-current-differential.json"
       - name: 不论是否发现差异都保存可复核证据
         if: always()
