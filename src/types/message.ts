@@ -166,6 +166,14 @@ export interface SystemCompactBoundaryMessage extends BaseSystemMessage {
     preTokens: number
     userContext?: string
     messagesSummarized?: number
+    /** Preserved session tail remains linked after compact boundary. */
+    preservedSegment?: {
+      headUuid: UUID
+      anchorUuid: UUID
+      tailUuid: UUID
+    }
+    /** Deferred tools available before compacting the turn. */
+    preCompactDiscoveredTools?: string[]
   }
   logicalParentUuid?: UUID
 }
