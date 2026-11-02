@@ -15,8 +15,9 @@ export function listReachableTeammates(teamFile, selfName, liveTeammates = {}, t
     const key = name.toLowerCase()
     if (seen.has(key)) return
     seen.add(key)
-    const status = agentId && taskStatuses.has(agentId)
-      ? taskStatuses.get(agentId) : member.status
+    // The saved roster can retain "running" after a worker exits. The
+    // in-process task registry is the only authoritative status source.
+    const status = agentId ? taskStatuses.get(agentId) : undefined
     agents.push({ name, to: name, channel: 'team',
       ...(member.agentType ? { type: member.agentType } : {}),
       ...(status ? { status } : {}) })
@@ -47,7 +48,8 @@ export function buildAgentListing({ self, subagents = [], teammates = [], sessio
     if (!group.values.length) continue
     const rows = group.values.slice(0, 100).map(item => {
       const title = item.ref ? `${item.name} [${item.ref}]` : item.name ?? item.id
-      const meta = [item.type ?? item.kind, item.status,
+      const displayStatus = item.status === 'requires_action' ? 'waiting on a human' : item.status
+      const meta = [item.type ?? item.kind, displayStatus,
         item.unreachableFromHere ? 'not reachable from here' : undefined,
         item.acceptsPeerMessages === false ? 'does not accept peer messages' : undefined].filter(Boolean)
       return { text: `  ${title}${meta.length ? `  ·  ${meta.join('  ·  ')}` : ''}`,

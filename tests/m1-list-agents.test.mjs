@@ -96,7 +96,7 @@ test('cross-session gate and acknowledgements are explicit',async()=>{
 test('active in-process teammates remain discoverable without a team file',()=>{
  const active={member:{name:'runner',agentType:'general-purpose',status:'running'}}
  assert.deepEqual(listReachableTeammates(null,'lead',active),[
-   {name:'runner',to:'runner',channel:'team',type:'general-purpose',status:'running'}])
+   {name:'runner',to:'runner',channel:'team',type:'general-purpose'}])
  const peers=listReachableTeammates({members:[{name:'RUNNER'},{name:'second'}]},'lead',active)
  assert.deepEqual(peers.map(p=>p.name),['runner','second'])
 })
@@ -120,4 +120,18 @@ test('a teammate does not repeat as a named local subagent', async () => {
  const sourceCode=await source('src/tools/ListAgentsTool/ListAgentsTool.ts')
  assert.match(sourceCode,/hideTeammateNamesInSubagents\(subagents, state\.teamContext\?\.teammates\)/)
  assert.match(sourceCode,/listReachableTeammates\(teamFile, selfName, state\.teamContext\?\.teammates, state\.tasks\)/)
+})
+
+test('stale roster status does not claim that a teammate is still running',()=>{
+ const roster={members:[{name:'worker',agentId:'agent001',status:'running'}]}
+ assert.deepEqual(listReachableTeammates(roster,'lead'),[
+  {name:'worker',to:'worker',channel:'team'}])
+ const live={agent001:{name:'worker',agentType:'worker',status:'completed'}}
+ const tasks={task1:{type:'in_process_teammate',identity:{agentId:'agent001'},status:'running',isIdle:true}}
+ assert.equal(listReachableTeammates(roster,'lead',live,tasks)[0].status,'idle')
+})
+test('requires_action is announced as waiting on a human while structured status remains exact',()=>{
+ const result=buildAgentListing({sessions:[{id:'session_human',name:'Human',status:'requires_action'}]})
+ assert.match(result.listing,/waiting on a human/)
+ assert.equal(result.sections[0].rows[0].status,'requires_action')
 })

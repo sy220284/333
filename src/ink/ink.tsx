@@ -445,7 +445,7 @@ export default class Ink {
       this.previousAccessibleText = current;
       if (!this.accessibilityModeAnnounced) {
         this.accessibilityModeAnnounced = true;
-        this.options.stdout.write('[Screen Reader Mode: on]\\n'.replace('\\n','\n'));
+        this.options.stdout.write('[Screen Reader Mode: on]\n');
       }
       if (output) this.accessibleAnnouncements.queue(output);
       const remaining = this.accessibleAnnouncements.remaining();
