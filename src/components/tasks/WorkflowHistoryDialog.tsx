@@ -26,7 +26,7 @@ export function WorkflowHistoryDialog({onDone,toolUseContext}:{
   void readWorkflowHistory(project,getSessionId()).then(data=>{
    setRecords(data.runs)
    setErrors(data.errors.map(e=>e.file+': '+e.message))
-   setSelected(index=>Math.min(index,Math.max(0,data.runs.length-1)))
+   setSelected(index=>Math.max(0,Math.min(index,data.runs.length-1)))
    setLoading(false)
   }).catch(error=>{
    setErrors([String(error)])
@@ -45,12 +45,12 @@ export function WorkflowHistoryDialog({onDone,toolUseContext}:{
   if(input==='r'){refresh();return}
   if(expanded)return
   if(key.upArrow)setSelected(i=>Math.max(0,i-1))
-  if(key.downArrow)setSelected(i=>Math.min(records.length-1,i+1))
+  if(key.downArrow)setSelected(i=>Math.max(0,Math.min(records.length-1,i+1)))
   if(key.return&&records.length)setExpanded(true)
  })
  if(showActive)return <BackgroundTasksDialog onlyWorkflows toolUseContext={toolUseContext} onDone={()=>setShowActive(false)}/>
  const record=records[selected]
- return <Dialog title="Workflow runs" subtitle="Saved results for this session" color="background" onCancel={onDone}>
+ return <Dialog title="Workflow runs" subtitle="Saved results for this session" color="background" onCancel={()=>expanded?setExpanded(false):onDone()}>
   <Box flexDirection="column" gap={1}>
    {loading&&<Text>Loading workflow history…</Text>}
    {!loading&&records.length===0&&<Text>No saved workflows in this session</Text>}
