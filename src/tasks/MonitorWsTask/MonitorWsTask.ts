@@ -48,7 +48,10 @@ export async function startWebSocketMonitor(input: {
   const host = url.hostname.replace(/^\[|\]$/g, '')
   const addresses=await lookup(host,{all:true})
   if(!addresses.length || addresses.some(a=>!isPublicIp(a.address))) throw new Error('Monitor WebSocket host resolves to a private, link-local, or metadata address')
-  const pinned=addresses.find(a=>a.family===4)??addresses[0]!
+  // Establish the DNS proof before configuring the socket lookup callback.
+  const first=addresses[0]
+  if (!first) throw new Error('Monitor WebSocket DNS lookup returned no addresses')
+  const pinned=addresses.find(a=>a.family===4)??first
   const id=generateTaskId('monitor_ws')
   const task:MonitorWsTaskState={...createTaskStateBase(id,'monitor_ws',input.description,context.toolUseId),
     type:'monitor_ws',status:'running',url:input.url,eventCount:0,agentId:context.agentId}
