@@ -17,7 +17,7 @@ if (!releaseFeatureMatch) throw new Error('无法从正式构建中读取 featur
 const releaseFeatures = new Set(
   [...releaseFeatureMatch[1].matchAll(/['"]([A-Z][A-Z_0-9]+)['"]/g)].map(x => x[1]),
 );
-const externalRelease = /['"]process\.env\.USER_TYPE['"]\s*:\s*['"](?:\\")?external/.test(rebuildSource);
+const externalRelease = /['"]process\.env\.USER_TYPE['"]\s*:\s*['"]"external"['"]/.test(rebuildSource);
 if (!externalRelease) throw new Error('无法确认正式构建为外部用户，拒绝排除内部命令');
 
 // true/false means statically provable; null means runtime-dependent.
