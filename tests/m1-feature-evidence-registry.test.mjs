@@ -10,11 +10,13 @@ const baseline = () => ({
   signoffs: read('docs/upgrade/m1-evidence/PR7-M10-功能及场景签收.json'),
 })
 
-test('18 source groups, 102 features, 84 scenarios remain unsigned until proof', () => {
+test('source groups can grow; 102 features and 84 scenarios remain unsigned until proof', () => {
   const registry = loadRegistry()
+  const { audit } = baseline()
+  assert.ok(registry.counts.source_groups >= 18)
   assert.deepEqual(
     [registry.counts.source_groups, registry.counts.features, registry.counts.scenarios],
-    [18, 102, 84],
+    [audit.groups.length, 102, 84],
   )
   assert.equal(registry.counts.signed_features, 0)
   assert.equal(registry.counts.signed_scenarios, 0)
@@ -97,13 +99,14 @@ test('separate official, rebuilt and parity reports are required for M10 proof',
 })
 test('new upgrade groups extend the evidence list without a fixed 18-group cap', () => {
   const {coverage, audit, signoffs} = baseline()
+  const nextGroupId = 'G' + String(audit.groups.length + 1).padStart(2, '0')
   audit.groups.push({
-    id: 'G19', name: '新增源码升级组',
+    id: nextGroupId, name: '新增源码升级组',
     features: ['F001'], code: ['src/main.tsx'], tests: [],
     stage: 'SOURCE_CONNECTED', acceptance: 'UNVERIFIED',
     remaining: '仍需目标版和重建版真实运行对照',
   })
   const next = buildRegistry(coverage, audit, undefined, signoffs)
-  assert.equal(next.counts.source_groups, 19)
-  assert.ok(next.features.find(f => f.id === 'F001').code_upgrade_groups.includes('G19'))
+  assert.equal(next.counts.source_groups, audit.groups.length)
+  assert.ok(next.features.find(f => f.id === 'F001').code_upgrade_groups.includes(nextGroupId))
 })
