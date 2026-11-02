@@ -90,6 +90,8 @@ def probe(executable,mode,timeout):
                 'bytes':len(buffer),'cursor_control_sequences':len(CSI.findall(raw)),
                 'activation_banner': (f'[Screen Reader Mode: on via {mode}]' in text if mode!='off' else '[Screen Reader Mode: on' in text),
                 'flat_welcome':('Welcome to Claude Code' in text or bool(re.search(r'Claude Code v2\.1\.310\b',text))),
+                'model_and_billing_visible':bool(re.search(r'\b(?:Opus|Sonnet|Haiku)\b[^\n]*Billing',text)),
+                'workspace_visible':'~/project' in text,
                 'connection_status':'Checking connectivity' in text,
                 'offline_failure_visible':'Unable to connect to Anthropic services' in text,
                 'prompt_ready': ('❯' in text or text.rstrip().endswith('$')),
@@ -105,16 +107,19 @@ def validate(label,cases):
     assert not basic['activation_banner'],(label,'AX enabled without flag',basic)
     assert ax['activation_banner'],(label,'AX banner missing',ax)
     assert ax['flat_welcome'],(label,'Actual flat welcome missing',ax)
+    assert ax['model_and_billing_visible'] and ax['workspace_visible'],(label,'Live model, billing or workspace absent from accessibility output',ax)
     if ax['stage']=='session':
         assert ax['prompt_ready'] or ax['offline_failure_visible'],(label,'Missing actual input prompt or terminal error',ax)
     assert not ax['has_decorative_art'],(label,'AX still contains decorative ASCII art',ax)
     assert env['activation_banner'],(label,'AX env banner missing',env)
     assert env['flat_welcome'],(label,'AX env flat welcome missing',env)
+    assert env['model_and_billing_visible'] and env['workspace_visible'],(label,'AX env lost session context',env)
     if env['stage']=='session':
         assert env['prompt_ready'] or env['offline_failure_visible'],(label,'AX env has neither input prompt nor final error',env)
     assert not env['has_decorative_art'],(label,'AX env still contains decorative ASCII art',env)
     assert settings['activation_banner'],(label,'AX trusted settings banner missing',settings)
     assert settings['flat_welcome'],(label,'AX settings flat welcome missing',settings)
+    assert settings['model_and_billing_visible'] and settings['workspace_visible'],(label,'AX settings lost session context',settings)
     if settings['stage']=='session':
         assert settings['prompt_ready'] or settings['offline_failure_visible'],(label,'AX settings has neither status nor final error',settings)
     assert not settings['has_decorative_art'],(label,'AX settings still contains decorative ASCII art',settings)
