@@ -239,25 +239,26 @@ export async function processUserInput({
       )
     }
 
-    // TODO: Clean this up
+    // UserPromptSubmit hooks can return user, system or attachment messages.
+    // Only a hook_success attachment needs content truncation; the other
+    // message variants must reach the conversation without mutation.
     if (hookResult.message) {
-      switch (hookResult.message.attachment.type) {
-        case 'hook_success':
-          if (!hookResult.message.attachment.content) {
-            // Skip if there is no content
-            break
-          }
+      const hookMessage = hookResult.message
+      if (
+        hookMessage.type === 'attachment' &&
+        hookMessage.attachment.type === 'hook_success'
+      ) {
+        if (hookMessage.attachment.content) {
           result.messages.push({
-            ...hookResult.message,
+            ...hookMessage,
             attachment: {
-              ...hookResult.message.attachment,
-              content: applyTruncation(hookResult.message.attachment.content),
+              ...hookMessage.attachment,
+              content: applyTruncation(hookMessage.attachment.content),
             },
           })
-          break
-        default:
-          result.messages.push(hookResult.message)
-          break
+        }
+      } else {
+        result.messages.push(hookMessage)
       }
     }
   }
