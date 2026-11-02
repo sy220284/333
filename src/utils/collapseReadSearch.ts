@@ -406,7 +406,7 @@ function shouldSkipMessage(msg: RenderableMessage): boolean {
 function isCollapsibleToolUse(
   msg: RenderableMessage,
   tools: Tools,
-): msg is CollapsibleMessage {
+): msg is Extract<RenderableMessage, { type: 'assistant' | 'grouped_tool_use' }> {
   if (msg.type === 'assistant') {
     const content = msg.message.content[0]
     return (
@@ -431,7 +431,7 @@ function isCollapsibleToolUse(
 function isCollapsibleToolResult(
   msg: RenderableMessage,
   collapsibleToolUseIds: Set<string>,
-): msg is CollapsibleMessage {
+): msg is Extract<RenderableMessage, { type: 'user' }> {
   if (msg.type === 'user') {
     const toolResults = msg.message.content.filter(
       (c): c is { type: 'tool_result'; tool_use_id: string } =>
