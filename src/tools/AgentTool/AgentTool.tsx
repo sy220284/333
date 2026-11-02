@@ -1061,7 +1061,12 @@ export const AgentTool = buildTool({
               result
             } = raceResult;
             if (result.done) break;
+            // Async iterators may finish with a void return value. The
+            // progress and transcript paths below require a real Message.
             const message = result.value;
+            if (message === undefined) {
+              throw new Error('Subagent stream yielded an undefined message before completion');
+            }
             agentMessages.push(message);
 
             // Emit task_progress for the VS Code subagent panel
