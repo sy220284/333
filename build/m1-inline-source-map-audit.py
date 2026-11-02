@@ -10,10 +10,9 @@ import json
 import re
 from pathlib import Path
 
-SOURCE_MAP = re.compile(
-    r"sourceMappingURL=data:application/json(?:;charset=utf-8)?;base64,([^\\s]+)"
-)
-SOURCE_MAP_PREFIX = "sourceMappingURL=data:application/json"
+# Match only actual source-map annotation comments, not sample source strings or documentation.
+DIRECTIVE = re.compile(r"(?m)^[ \\t]*(?://[#@]|/\\*[#@])\\s*sourceMappingURL=([^\\r\\n]+)$")
+SOURCE_MAP = re.compile(r"^data:application/json(?:;charset=utf-8)?;base64,([A-Za-z0-9+/=]+)$")
 EXTENSIONS = {".ts", ".tsx", ".js", ".mjs", ".mts", ".cts"}
 
 
@@ -30,15 +29,25 @@ def audit(root: Path, recover_to: Path | None = None) -> dict:
             continue
         relative = file.relative_to(root).as_posix()
         text = file.read_text("utf-8")
-        match = SOURCE_MAP.search(text)
-        if not match:
-            if SOURCE_MAP_PREFIX in text:
+        directives = DIRECTIVE.findall(text)
+        inline = []
+        for directive in directives:
+            directive = directive.strip()
+            if directive.endswith("*/"):
+                directive = directive[:-2].strip()
+            if not directive.startswith("data:application/json"):
+                # External sourceMappingURL is a separate source form; this tool only decodes inline maps.
+                continue
+            match = SOURCE_MAP.fullmatch(directive)
+            if match is None:
                 raise ValueError(f"检测到损坏或不受支持的内嵌 Source Map: {relative}")
-            continue
-        if len(SOURCE_MAP.findall(text)) != 1:
+            inline.append(match.group(1))
+        if len(inline) > 1:
             raise ValueError(f"同一文件出现多个内嵌 Source Map，必须人工核实: {relative}")
+        if not inline:
+            continue
         count += 1
-        raw = base64.b64decode(match.group(1), validate=True)
+        raw = base64.b64decode(inline[0], validate=True)
         source_map = json.loads(raw)
         sources = source_map.get("sources")
         contents = source_map.get("sourcesContent")
