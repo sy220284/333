@@ -24,8 +24,10 @@ export function extractInboundMessageFields(
   | { content: string | Array<ContentBlockParam>; uuid: UUID | undefined }
   | undefined {
   if (msg.type !== 'user') return undefined
-  const content = msg.message?.content
-  if (!content) return undefined
+  const message = msg.message
+  const content = message && typeof message === 'object' && 'content' in message
+    ? message.content : undefined
+  if (typeof content !== 'string' && !Array.isArray(content)) return undefined
   if (Array.isArray(content) && content.length === 0) return undefined
 
   const uuid =
@@ -34,7 +36,7 @@ export function extractInboundMessageFields(
       : undefined
 
   return {
-    content: Array.isArray(content) ? normalizeImageBlocks(content) : content,
+    content: Array.isArray(content) ? normalizeImageBlocks(content as Array<ContentBlockParam>) : content,
     uuid,
   }
 }
