@@ -113,12 +113,10 @@ def run_mode(binary, mode, scratch):
         "DISABLE_TELEMETRY": "1", "DO_NOT_TRACK": "1",
     })
     args = [binary, "--bare", "--print", "--output-format",
-            "stream-json" if mode == "stream" else "json",
-            "--verbose" if mode == "stream" else "--model",
-            MODEL] if mode == "stream" else [binary, "--bare", "--print",
-            "--output-format", "json", "--model", MODEL, "--max-turns", "2"]
+            "stream-json" if mode == "stream" else "json"]
     if mode == "stream":
-        args.extend(["--model", MODEL, "--max-turns", "1"])
+        args.append("--verbose")
+    args.extend(["--model", MODEL, "--max-turns", "1" if mode == "stream" else "2"])
     if mode == "read":
         args.append("--allowedTools=Read")
     elif mode == "denied":
