@@ -1,13 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import type { NotebookCell, NotebookContent } from '../../types/notebook.js'
 import { isValidNotebookContent } from '../../utils/notebook.js'
-export { isValidNotebookContent } from '../../utils/notebook.js'
+export { isValidNotebookContent, MAX_NOTEBOOK_BYTES } from '../../utils/notebook.js'
 
 export type NotebookEditMode = 'replace' | 'insert' | 'delete'
 export type EditableCellType = 'code' | 'markdown'
-
-/** Claude Code 2.1.310 notebook read and write ceiling, chunk-j0tbz6ra.js:58095. */
-export const MAX_NOTEBOOK_BYTES = 100 * 1024 * 1024
 
 export interface NotebookMutationInput {
   cell_id?: string
