@@ -33,7 +33,7 @@ writeFileSync(notebook_path, JSON.stringify({
 
 const events = []
 let requestCount = 0
-const sse = (name, payload) => 'event: ' + name + '\ndata: ' + JSON.stringify(payload) + '\n\n'
+const sse = (name, payload) => `event: ${name}\ndata: ${JSON.stringify(payload)}\n\n`
 const steps = [
   { name: 'Read', id: 'toolu_e41_read_before', input: { file_path: notebook_path } },
   {
@@ -99,11 +99,11 @@ const server = createServer((req, res) => {
           sse('content_block_stop', { type: 'content_block_stop', index: 0 }),
         ]
       } else {
-        throw new Error('Unexpected extra model turn ' + requestCount)
+        throw new Error(`Unexpected extra model turn ${requestCount}`)
       }
       const response = [
         sse('message_start', { type: 'message_start', message: {
-          id: 'msg_e41_' + requestCount,
+          id: `msg_e41_${requestCount}`,
           type: 'message', role: 'assistant', model, content: [], stop_reason: null,
           stop_sequence: null, usage: { input_tokens: 8, output_tokens: 0,
             cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
@@ -128,7 +128,7 @@ try {
   const env = {
     ...process.env,
     HOME: home,
-    ANTHROPIC_BASE_URL: 'http://127.0.0.1:' + server.address().port,
+    ANTHROPIC_BASE_URL: `http://127.0.0.1:${server.address().port}`,
     ANTHROPIC_API_KEY: 'sk-333-local-fixture',
     DISABLE_TELEMETRY: '1',
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
