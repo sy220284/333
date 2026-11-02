@@ -66,3 +66,11 @@ test('权限告警、插件推荐和开发渠道界面显示中文且行为标�
   assert.match(read('src/components/ChannelDowngradeDialog.tsx'), /切换至稳定渠道/)
   assert.match(read('src/components/CostThresholdDialog.tsx'), /本次会话已使用 5 美元/)
 })
+
+test('登录、导出、思考设置和语音提示使用中文', () => {
+  assert.match(read('src/components/ConsoleOAuthFlow.tsx'), /请选择登录方式/)
+  assert.match(read('src/components/ExportDialog.tsx'), /导出对话/)
+  assert.match(read('src/components/ThinkingToggle.tsx'), /切换思考模式/)
+  assert.match(read('src/components/InvalidConfigDialog.tsx'), /配置错误/)
+  assert.match(read('src/commands/voice/voice.ts'), /语音识别服务目前不支持/)
+})
