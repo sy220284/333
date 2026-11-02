@@ -23,7 +23,6 @@ export async function returnValue<A>(
 type QueuedGenerator<A> = {
   result: IteratorResult<A, void>
   generator: AsyncGenerator<A, void>
-  promise: Promise<QueuedGenerator<A>>
 }
 
 // Run all generators concurrently up to a concurrency cap, yielding values as they come in
@@ -35,34 +34,32 @@ export async function* all<A>(
       (!Number.isInteger(concurrencyCap) || concurrencyCap < 1)) {
     throw new RangeError('Generator concurrency cap must be a positive integer')
   }
-  const next = (generator: AsyncGenerator<A, void>) => {
-    const promise: Promise<QueuedGenerator<A>> = generator
-      .next()
-      .then(result => ({ result, generator, promise }))
-    return promise
-  }
+  const next = async (generator: AsyncGenerator<A, void>): Promise<QueuedGenerator<A>> => ({
+    generator,
+    result: await generator.next(),
+  })
   const waiting = [...generators]
-  const promises = new Set<Promise<QueuedGenerator<A>>>()
+  // The generator itself identifies the outstanding operation. Each active
+  // generator has exactly one next() request, so no promise self-reference is needed.
+  const active = new Map<AsyncGenerator<A, void>, Promise<QueuedGenerator<A>>>()
 
-  // Start initial batch up to concurrency cap
-  while (promises.size < concurrencyCap && waiting.length > 0) {
-    const gen = waiting.shift()!
-    promises.add(next(gen))
+  while (active.size < concurrencyCap && waiting.length > 0) {
+    const generator = waiting.shift()
+    if (generator) active.set(generator, next(generator))
   }
 
-  while (promises.size > 0) {
-    const { result, generator, promise } = await Promise.race(promises)
-    promises.delete(promise)
+  while (active.size > 0) {
+    const { result, generator } = await Promise.race(active.values())
+    active.delete(generator)
 
-    if (result.done !== true) {
-      promises.add(next(generator))
+    if (result.done === false) {
+      active.set(generator, next(generator))
       if (result.value !== undefined) {
         yield result.value
       }
-    } else if (waiting.length > 0) {
-      // Start a new generator when one finishes
-      const nextGen = waiting.shift()!
-      promises.add(next(nextGen))
+    } else {
+      const nextGenerator = waiting.shift()
+      if (nextGenerator) active.set(nextGenerator, next(nextGenerator))
     }
   }
 }
