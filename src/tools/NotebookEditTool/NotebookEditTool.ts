@@ -6,18 +6,18 @@ import {
 } from 'src/utils/fileHistory.js'
 import { z } from 'zod/v4'
 import { buildTool, type ToolDef, type ToolUseContext } from '../../Tool.js'
-import type { NotebookCell, NotebookContent } from '../../types/notebook.js'
+import type { NotebookContent } from '../../types/notebook.js'
 import { getCwd } from '../../utils/cwd.js'
 import { isENOENT } from '../../utils/errors.js'
 import { getFileModificationTime, writeTextContent } from '../../utils/file.js'
 import { readFileSyncWithMetadata } from '../../utils/fileRead.js'
 import { safeParseJSON } from '../../utils/json.js'
 import { lazySchema } from '../../utils/lazySchema.js'
-import { parseCellId } from '../../utils/notebook.js'
 import { checkWritePermissionForTool } from '../../utils/permissions/filesystem.js'
 import type { PermissionDecision } from '../../utils/permissions/PermissionResult.js'
 import { jsonParse, jsonStringify } from '../../utils/slowOperations.js'
 import { NOTEBOOK_EDIT_TOOL_NAME } from './constants.js'
+import { applyNotebookEdit, locateNotebookEdit } from './notebookMutation.js'
 import { DESCRIPTION, PROMPT } from './prompt.js'
 import {
   getToolUseSummary,
@@ -66,7 +66,7 @@ export const outputSchema = lazySchema(() =>
       .string()
       .optional()
       .describe('The ID of the cell that was edited'),
-    cell_type: z.enum(['code', 'markdown']).describe('The type of the cell'),
+    cell_type: z.enum(['code', 'markdown', 'raw']).describe('The type of the cell'),
     language: z.string().describe('The programming language of the notebook'),
     edit_mode: z.string().describe('The edit mode that was used'),
     error: z
@@ -257,36 +257,15 @@ export const NotebookEditTool = buildTool({
         errorCode: 6,
       }
     }
-    if (!cell_id) {
-      if (edit_mode !== 'insert') {
-        return {
-          result: false,
-          message: 'Cell ID must be specified when not inserting a new cell.',
-          errorCode: 7,
-        }
-      }
-    } else {
-      // First try to find the cell by its actual ID
-      const cellIndex = notebook.cells.findIndex(cell => cell.id === cell_id)
-
-      if (cellIndex === -1) {
-        // If not found, try to parse as a numeric index (cell-N format)
-        const parsedCellIndex = parseCellId(cell_id)
-        if (parsedCellIndex !== undefined) {
-          if (!notebook.cells[parsedCellIndex]) {
-            return {
-              result: false,
-              message: `Cell with index ${parsedCellIndex} does not exist in notebook.`,
-              errorCode: 7,
-            }
-          }
-        } else {
-          return {
-            result: false,
-            message: `Cell with ID "${cell_id}" not found in notebook.`,
-            errorCode: 8,
-          }
-        }
+    try {
+      // Validation must use the same lookup semantics as the actual edit.
+      // Do not mutate safeParseJSON's memoized object here.
+      locateNotebookEdit(notebook, { cell_id, cell_type, new_source: '', edit_mode })
+    } catch (error) {
+      return {
+        result: false,
+        message: error instanceof Error ? error.message : 'Invalid notebook edit.',
+        errorCode: 7,
       }
     }
 
@@ -307,14 +286,6 @@ export const NotebookEditTool = buildTool({
     const fullPath = isAbsolute(notebook_path)
       ? notebook_path
       : resolve(getCwd(), notebook_path)
-
-    if (fileHistoryEnabled()) {
-      await fileHistoryTrackEdit(
-        updateFileHistoryState,
-        fullPath,
-        parentMessage.uuid,
-      )
-    }
 
     try {
       // readFileSyncWithMetadata gives content + encoding + line endings in
@@ -337,7 +308,7 @@ export const NotebookEditTool = buildTool({
             new_source,
             cell_type: cell_type ?? 'code',
             language: 'python',
-            edit_mode: 'replace',
+            edit_mode: originalEditMode ?? 'replace',
             error: 'Notebook is not valid JSON.',
             cell_id,
             notebook_path: fullPath,
@@ -347,88 +318,40 @@ export const NotebookEditTool = buildTool({
         }
       }
 
-      let cellIndex
-      if (!cell_id) {
-        cellIndex = 0 // Default to inserting at the beginning if no cell_id is provided
-      } else {
-        // First try to find the cell by its actual ID
-        cellIndex = notebook.cells.findIndex(cell => cell.id === cell_id)
-
-        // If not found, try to parse as a numeric index (cell-N format)
-        if (cellIndex === -1) {
-          const parsedCellIndex = parseCellId(cell_id)
-          if (parsedCellIndex !== undefined) {
-            cellIndex = parsedCellIndex
-          }
-        }
-
-        if (originalEditMode === 'insert') {
-          cellIndex += 1 // Insert after the cell with this ID
-        }
+      // Recheck the read snapshot after permission approval, just before the
+      // write. An external edit must never be overwritten by a stale cell ID.
+      const snapshot = readFileState.get(fullPath)
+      if (!snapshot) {
+        throw new Error('File has not been read yet. Read it first before writing to it.')
+      }
+      if (getFileModificationTime(fullPath) > snapshot.timestamp) {
+        throw new Error('Notebook changed since it was read. Read it again before editing.')
       }
 
-      // Convert replace to insert if trying to replace one past the end
-      let edit_mode = originalEditMode
-      if (edit_mode === 'replace' && cellIndex === notebook.cells.length) {
-        edit_mode = 'insert'
-        if (!cell_type) {
-          cell_type = 'code' // Default to code if no cell_type specified
-        }
-      }
-
+      const mutation = applyNotebookEdit(notebook, {
+        cell_id,
+        cell_type,
+        new_source,
+        edit_mode: originalEditMode,
+      })
       const language = notebook.metadata.language_info?.name ?? 'python'
-      let new_cell_id = undefined
-      if (
-        notebook.nbformat > 4 ||
-        (notebook.nbformat === 4 && notebook.nbformat_minor >= 5)
-      ) {
-        if (edit_mode === 'insert') {
-          new_cell_id = Math.random().toString(36).substring(2, 15)
-        } else if (cell_id !== null) {
-          new_cell_id = cell_id
-        }
-      }
-
-      if (edit_mode === 'delete') {
-        // Delete the specified cell
-        notebook.cells.splice(cellIndex, 1)
-      } else if (edit_mode === 'insert') {
-        let new_cell: NotebookCell
-        if (cell_type === 'markdown') {
-          new_cell = {
-            cell_type: 'markdown',
-            id: new_cell_id,
-            source: new_source,
-            metadata: {},
-          }
-        } else {
-          new_cell = {
-            cell_type: 'code',
-            id: new_cell_id,
-            source: new_source,
-            metadata: {},
-            execution_count: null,
-            outputs: [],
-          }
-        }
-        // Insert the new cell
-        notebook.cells.splice(cellIndex, 0, new_cell)
-      } else {
-        // Find the specified cell
-        const targetCell = notebook.cells[cellIndex]! // validateInput ensures cell_number is in bounds
-        targetCell.source = new_source
-        if (targetCell.cell_type === 'code') {
-          // Reset execution count and clear outputs since cell was modified
-          targetCell.execution_count = null
-          targetCell.outputs = []
-        }
-        if (cell_type && cell_type !== targetCell.cell_type) {
-          targetCell.cell_type = cell_type
-        }
-      }
       // Write back to file
       const IPYNB_INDENT = 1
       const updatedContent = jsonStringify(notebook, null, IPYNB_INDENT)
+      if (getFileModificationTime(fullPath) > snapshot.timestamp) {
+        throw new Error('Notebook changed during edit preparation. Read it again before editing.')
+      }
+      if (fileHistoryEnabled()) {
+        await fileHistoryTrackEdit(
+          updateFileHistoryState,
+          fullPath,
+          parentMessage.uuid,
+        )
+      }
+      // A checkpoint may take time; guard the write immediately afterwards.
+      if (getFileModificationTime(fullPath) > snapshot.timestamp) {
+        throw new Error('Notebook changed during checkpointing. Read it again before editing.')
+      }
       writeTextContent(fullPath, updatedContent, encoding, lineEndings)
       // Update readFileState with post-write mtime (matches FileEditTool/
       // FileWriteTool). offset:undefined breaks FileReadTool's dedup match —
@@ -442,10 +365,10 @@ export const NotebookEditTool = buildTool({
       })
       const data = {
         new_source,
-        cell_type: cell_type ?? 'code',
+        cell_type: mutation.cell_type,
         language,
-        edit_mode: edit_mode ?? 'replace',
-        cell_id: new_cell_id || undefined,
+        edit_mode: mutation.edit_mode,
+        cell_id: mutation.cell_id,
         error: '',
         notebook_path: fullPath,
         original_file: content,
@@ -460,7 +383,7 @@ export const NotebookEditTool = buildTool({
           new_source,
           cell_type: cell_type ?? 'code',
           language: 'python',
-          edit_mode: 'replace',
+          edit_mode: originalEditMode ?? 'replace',
           error: error.message,
           cell_id,
           notebook_path: fullPath,
