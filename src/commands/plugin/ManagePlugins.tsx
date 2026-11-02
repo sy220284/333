@@ -549,7 +549,7 @@ export function ManagePlugins({
       item: UnifiedInstalledItem & {
         type: 'plugin';
       };
-      original作用范围：'user' | 'project' | 'local' | 'managed' | 'builtin';
+      originalScope: 'user' | 'project' | 'local' | 'managed' | 'builtin';
       childMcps: Array<{
         displayName: string;
         client: MCPServerConnection;
@@ -662,7 +662,7 @@ export function ManagePlugins({
     // Add plugins with their child MCPs
     for (const {
       item: item_1,
-      original作用范围：originalScope_0,
+      originalScope: originalScope_0,
       childMcps
     } of pluginsWithChildren) {
       const scope_0 = item_1.scope;
@@ -740,7 +740,7 @@ export function ManagePlugins({
       // Separate items into plugin groups (with their child MCPs) and standalone MCPs
       // This preserves parent-child relationships that would be broken by naive sorting
       const pluginGroups: UnifiedInstalledItem[][] = [];
-      const standaloneMcpsIn作用范围：UnifiedInstalledItem[] = [];
+      const standaloneMcpsInScope: UnifiedInstalledItem[] = [];
       let i = 0;
       while (i < items.length) {
         const item_2 = items[i]!;
