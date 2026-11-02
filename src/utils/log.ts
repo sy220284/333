@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+import type { Dirent } from 'node:fs'
 import type { BetaMessageStreamParams } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import { readdir, readFile, stat } from 'fs/promises'
 import memoize from 'lodash-es/memoize.js'
@@ -229,7 +230,7 @@ export async function getErrorLogByIndex(
  * @private
  */
 async function loadLogList(path: string): Promise<LogOption[]> {
-  let files: Awaited<ReturnType<typeof readdir>>
+  let files: Dirent<string>[]
   try {
     files = await readdir(path, { withFileTypes: true })
   } catch {
