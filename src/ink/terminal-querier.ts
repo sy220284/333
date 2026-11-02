@@ -132,8 +132,24 @@ export class TerminalQuerier {
    * before it — concurrent batches from independent callers stay isolated.
    */
   private queue: Pending[] = []
+  private readonly themeChangeSubscribers = new Set<(dark: boolean) => void>()
 
   constructor(private stdout: NodeJS.WriteStream) {}
+
+  /** Subscribe to the real CSI ? 997;1/2n push events in Claude Code 2.1.310. */
+  subscribeThemeChange(callback: (dark: boolean) => void): () => void {
+    this.themeChangeSubscribers.add(callback)
+    return () => this.themeChangeSubscribers.delete(callback)
+  }
+
+  /** Cancel a pending OSC query without retaining its promise in the queue. */
+  cancel<T extends TerminalResponse>(query: TerminalQuery<T>): void {
+    const index = this.queue.findIndex(p => p.kind === 'query' && p.match === query.match)
+    if (index === -1) return
+    const [pending] = this.queue.splice(index, 1)
+    if (pending?.kind === 'query') pending.resolve(undefined)
+  }
+
 
   /**
    * Send a query and wait for its response.
@@ -193,6 +209,10 @@ export class TerminalQuerier {
    * - Unsolicited responses (no match, no sentinel) are silently dropped.
    */
   onResponse(r: TerminalResponse): void {
+    if (r.type === 'themeNotify') {
+      for (const notify of this.themeChangeSubscribers) notify(r.dark)
+      return
+    }
     const idx = this.queue.findIndex(p => p.kind === 'query' && p.match(r))
     if (idx !== -1) {
       const [q] = this.queue.splice(idx, 1)
