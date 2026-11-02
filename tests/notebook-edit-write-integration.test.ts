@@ -27,7 +27,7 @@ test('actual NotebookEditTool validates, edits, inserts and deletes cells on dis
     writeFileSync(notebook_path, JSON.stringify(makeNotebook()))
     const readFileState = new Map()
     const context = { readFileState, updateFileHistoryState: () => {} } as unknown as ToolUseContext
-    const markRead = () => readFileState.set(notebook_path, { timestamp: getFileModificationTime(notebook_path), content: '', offset: undefined, limit: undefined })
+    const markRead = () => readFileState.set(notebook_path, { timestamp: getFileModificationTime(notebook_path), content: readFileSync(notebook_path, 'utf8'), offset: undefined, limit: undefined })
     const perform = async (input: { notebook_path: string; cell_id?: string; cell_type?: 'code' | 'markdown'; new_source: string; edit_mode?: 'insert' | 'replace' | 'delete' }) =>
       NotebookEditTool.call(input, context, undefined, { uuid: 'notebook-test' } as never)
     markRead()
