@@ -67,12 +67,19 @@ export async function logOTelEvent(
     }
   }
 
-  // Emit log record as an event
+  // Normalize the metrics attribute domain to the log API's actual value types.
+  const logAttributes: Record<string, string | number | boolean | (string | number | boolean)[]> = {}
+  for (const [key, value] of Object.entries(attributes)) {
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      logAttributes[key] = value
+    } else if (Array.isArray(value)) {
+      logAttributes[key] = value.filter((item): item is string | number | boolean =>
+        typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean',
+      )
+    }
+  }
   eventLogger.emit({
     body: `claude_code.${eventName}`,
-    // OpenTelemetry Attributes may contain readonly arrays; log records expect mutable arrays.
-    attributes: Object.fromEntries(
-      Object.entries(attributes).map(([key, value]) => [key, Array.isArray(value) ? [...value] : value]),
-    ),
+    attributes: logAttributes,
   })
 }
