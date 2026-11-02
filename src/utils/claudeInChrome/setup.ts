@@ -244,7 +244,7 @@ export async function installChromeNativeHostManifest(
   // Windows requires registry entries pointing to the manifest for each browser
   if (getPlatform() === 'windows') {
     const manifestPath = join(manifestDirs[0]!, NATIVE_HOST_MANIFEST_NAME)
-    registerWindowsNativeHosts(manifestPath)
+    await registerWindowsNativeHosts(manifestPath)
   }
 
   // Restart the native host if we have rewritten any manifest
@@ -267,33 +267,30 @@ export async function installChromeNativeHostManifest(
 /**
  * Register the native host in Windows registry for all supported browsers
  */
-function registerWindowsNativeHosts(manifestPath: string): void {
+async function registerWindowsNativeHosts(manifestPath: string): Promise<void> {
   const registryKeys = getAllWindowsRegistryKeys()
-
-  for (const { browser, key } of registryKeys) {
+  let succeeded = 0
+  const failures: string[] = []
+  await Promise.all(registryKeys.map(async ({ browser, key }) => {
     const fullKey = `${key}\\${NATIVE_HOST_IDENTIFIER}`
-    // Use reg.exe to add the registry entry
-    // https://developer.chrome.com/docs/extensions/develop/concepts/native-messaging
-    void execFileNoThrowWithCwd('reg', [
-      'add',
-      fullKey,
-      '/ve', // Set the default (unnamed) value
-      '/t',
-      'REG_SZ',
-      '/d',
-      manifestPath,
-      '/f', // Force overwrite without prompt
-    ]).then(result => {
-      if (result.code === 0) {
-        logForDebugging(
-          `[Claude in Chrome] Registered native host for ${browser} in Windows registry: ${fullKey}`,
-        )
-      } else {
-        logForDebugging(
-          `[Claude in Chrome] Failed to register native host for ${browser} in Windows registry: ${result.stderr}`,
-        )
-      }
-    })
+    const result = await execFileNoThrowWithCwd('reg', [
+      'add', fullKey, '/ve', '/t', 'REG_SZ', '/d', manifestPath, '/f',
+    ])
+    if (result.code === 0) {
+      succeeded++
+      logForDebugging(
+        `[Claude in Chrome] Registered native host for ${browser}: ${fullKey}`,
+      )
+    } else {
+      failures.push(`${browser}:${result.code}`)
+      logForDebugging(
+        `[Claude in Chrome] Failed native host registration for ${browser}: ${result.stderr}`,
+        { level: 'error' },
+      )
+    }
+  }))
+  if (succeeded === 0) {
+    throw new Error(`Chrome native host registry registration failed: ${failures.join(', ')}`)
   }
 }
 
