@@ -7,8 +7,10 @@ import { tmpdir } from 'node:os';
 import { test } from 'node:test';
 
 const root=resolve(import.meta.dirname,'..'),dist=join(root,'dist');
+const expectedVersion=JSON.parse(readFileSync(join(root,'package.json'),'utf8')).version;
 const metadata=JSON.parse(readFileSync(join(dist,'integrity.json'),'utf8'));
 test('release package contains all 13 platform vendor files', () => {
+  assert.equal(metadata.version, expectedVersion);
   assert.equal(metadata.files.filter(f=>f.path.startsWith('vendor/')).length,13);
   assert.ok(existsSync(join(dist,'cli.js')));
   assert.ok(existsSync(join(dist,'launcher.cjs')));
@@ -28,7 +30,7 @@ test('new distributable CLI is distinct from original binary', () => {
 test('installed launcher invokes newly built CLI', () => {
   const p=spawnSync(process.execPath,[join(dist,'launcher.cjs'),'--version'],{encoding:'utf8',timeout:15000});
   assert.equal(p.status,0,p.stderr);
-  assert.match(p.stdout,/2\.1\.88 \(Claude Code\)/);
+  assert.equal(p.stdout.trim(), `${expectedVersion} (Claude Code)`);
 });
 
 test('release is runnable from an isolated folder without repository node_modules', () => {
@@ -46,14 +48,14 @@ test('release is runnable from an isolated folder without repository node_module
       });
       assert.equal(p.error, undefined, p.error?.message);
       assert.equal(p.status, 0, JSON.stringify({ args, stdout: p.stdout?.slice(-1200), stderr: p.stderr?.slice(-1200) }));
-      if (args[0] === '--version') assert.match(p.stdout, /2\.1\.88 \(Claude Code\)/);
+      if (args[0] === '--version') assert.equal(p.stdout.trim(), `${expectedVersion} (Claude Code)`);
       else assert.match(p.stdout, /Usage:/);
     }
     const p = spawnSync(process.execPath, [join(installed, 'launcher.cjs'), '--version'], {
       cwd: sandbox, encoding: 'utf8', timeout: 25000,
     });
     assert.equal(p.status, 0, p.stderr);
-    assert.match(p.stdout, /2\.1\.88 \(Claude Code\)/);
+    assert.equal(p.stdout.trim(), `${expectedVersion} (Claude Code)`);
   } finally {
     rmSync(sandbox, {recursive: true, force: true});
   }
