@@ -372,7 +372,7 @@ export class CCRClient {
           { worker_epoch: this.workerEpoch, events: batch },
           'client events',
         )
-        if (!result.ok) {
+        if (result.ok === false) {
           throw new RetryableError(
             'client event POST failed',
             result.retryAfterMs,
@@ -395,7 +395,7 @@ export class CCRClient {
           { worker_epoch: this.workerEpoch, events: batch },
           'internal events',
         )
-        if (!result.ok) {
+        if (result.ok === false) {
           throw new RetryableError(
             'internal event POST failed',
             result.retryAfterMs,
@@ -426,7 +426,7 @@ export class CCRClient {
           },
           'delivery batch',
         )
-        if (!result.ok) {
+        if (result.ok === false) {
           throw new RetryableError('delivery POST failed', result.retryAfterMs)
         }
       },
@@ -488,7 +488,7 @@ export class CCRClient {
       },
       'PUT worker (init)',
     )
-    if (!result.ok) {
+    if (result.ok === false) {
       // 409 → onEpochMismatch may throw, but request() catches it and returns
       // false. Without this check we'd continue to startHeartbeat(), leaking a
       // 20s timer against a dead epoch. Throw so connect()'s rejection handler
