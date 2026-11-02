@@ -28,7 +28,7 @@ test('CLI, settings and actual Ink rendering are connected',async()=>{
  const [cli,settings,ink,gate]=await Promise.all([
   source('src/main.tsx'),source('src/utils/settings/types.ts'),source('src/ink/ink.tsx'),source('src/utils/accessibility/screenReaderRuntime.ts')])
  assert.match(cli,/--ax-screen-reader/)
- assert.match(settings,/axScreenReader:\s*z\.boolean\(\)/)
+ assert.match(settings,/axScreenReader:\s*z\s*\.boolean\(\)/)
  assert.match(ink,/flattenAccessibleTree\(this\.rootNode\)/)
  assert.match(ink,/accessibleOutputDelta\(/)
  assert.match(gate,/getSettingsForSource\(/)
