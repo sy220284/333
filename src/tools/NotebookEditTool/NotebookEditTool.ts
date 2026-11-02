@@ -4,10 +4,12 @@ import {
   fileHistoryTrackEdit,
 } from 'src/utils/fileHistory.js'
 import { z } from 'zod/v4'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { buildTool, type ToolDef, type ToolUseContext } from '../../Tool.js'
 import type { NotebookContent } from '../../types/notebook.js'
 import { getCwd } from '../../utils/cwd.js'
 import { isENOENT } from '../../utils/errors.js'
+import { isEnvTruthy } from '../../utils/envUtils.js'
 import { processNotebookCellsForRead } from '../../utils/notebook.js'
 import { getFileModificationTime, writeTextContent } from '../../utils/file.js'
 import { readFileSyncWithMetadata } from '../../utils/fileRead.js'
@@ -120,9 +122,17 @@ export const NotebookEditTool = buildTool({
     return outputSchema()
   },
   toAutoClassifierInput(input) {
-    // 2.1.310 sends structured source additions/deletions to the auto-mode
-    // classifier. Returning '' suppresses the safety review entirely.
     const mode = input.edit_mode ?? 'replace'
+    // 2.1.310 defaults to the readable text classifier transcript. When
+    // editRemovalVisibility is enabled, it switches to structured additions
+    // and removals. Both branches must carry the edit through permissions.
+    const envToggle = process.env.CLAUDE_CODE_AUTO_MODE_EDIT_REMOVAL
+    const showRemovals = envToggle === undefined
+      ? getFeatureValue_CACHED_MAY_BE_STALE('editRemovalVisibility', false)
+      : isEnvTruthy(envToggle)
+    if (!showRemovals) {
+      return `${input.notebook_path} ${mode}: ${input.new_source}`
+    }
     return {
       notebook_path: input.notebook_path,
       mode,
