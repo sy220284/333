@@ -34,9 +34,14 @@ export function mergeSessionPeers({ local = [], cloud = [], bridge = [], selfId,
     // A cloud snapshot may lag after a Remote Control session reconnects.
     // Only the verified live endpoint establishes actual reachability.
     const connected = bridgeReachable(transport)
+    // Worker action state and delivery connectivity are independent signals.
+    // A connected bridge keeps a cloud requires_action status meaningful;
+    // a disconnected transport overrides a stale cloud active snapshot.
+    const workerStatus = row.workerStatus ?? row.status
     const status = connected
-      ? (transport.workerStatus ?? transport.status ?? 'active')
-      : (row.offline ? 'offline' : row.workerStatus ?? row.status ?? 'unknown')
+      ? (!row.offline && workerStatus === 'requires_action'
+        ? 'requires_action' : transport.workerStatus ?? transport.status ?? workerStatus ?? 'active')
+      : (transport?.offline || row.offline ? 'offline' : workerStatus ?? 'unknown')
     const acceptsPeerMessages = row.acceptsPeerMessages !== false &&
       (transport ? transport.acceptsPeerMessages !== false : true)
     const peer = {
