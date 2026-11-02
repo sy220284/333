@@ -102,6 +102,7 @@ import {
   extractQuotaStatusFromHeaders,
 } from '../claudeAiLimits.js'
 import { getAPIContextManagement } from '../compact/apiMicrocompact.js'
+import { getRequestThinkingDisplay, getStreamThinkingDisplay } from './thinkingDisplay.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const autoModeStateModule = feature('TRANSCRIPT_CLASSIFIER')
@@ -1845,6 +1846,7 @@ async function* queryModel(
   const newMessages: AssistantMessage[] = []
   let ttftMs = 0
   let apiMessageId: string | undefined
+  let requestThinkingDisplay: string | undefined
   let partialMessage: BetaMessage | undefined = undefined
   const contentBlocks: (BetaContentBlock | ConnectorTextBlock)[] = []
   let usage: NonNullableUsage = EMPTY_USAGE
@@ -1880,6 +1882,7 @@ async function* queryModel(
         queryCheckpoint('query_client_creation_end')
 
         const params = paramsFromContext(context)
+        requestThinkingDisplay = getRequestThinkingDisplay(params.thinking)
         captureAPIRequest(params, options.querySource) // Capture for bug reports
 
         maxOutputTokens = params.max_tokens
@@ -2395,11 +2398,13 @@ async function* queryModel(
             break
         }
 
+        const thinkingDisplay = getStreamThinkingDisplay(part, requestThinkingDisplay)
         yield {
           type: 'stream_event',
           event: part,
           ...(part.type === 'message_start' ? { ttftMs } : undefined),
           ...(apiMessageId !== undefined ? { apiMessageId } : undefined),
+          ...(thinkingDisplay !== undefined ? { thinkingDisplay } : undefined),
         }
         if (part.type === 'message_stop') apiMessageId = undefined
       }
