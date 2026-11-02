@@ -1,4 +1,4 @@
-import { randomUUID, createHash } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { getSessionId } from '../../bootstrap/state.js'
@@ -10,6 +10,7 @@ import { registerCleanup } from '../../utils/cleanupRegistry.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { enqueuePendingNotification } from '../../utils/messageQueueManager.js'
 import { registerTask, updateTaskState } from '../../utils/task/framework.js'
+import { createWorkflowCallCounter } from './workflowCacheKeys.mjs'
 
 export type LocalWorkflowTaskState = TaskStateBase & {
   type: 'local_workflow'
@@ -113,6 +114,7 @@ export async function launchWorkflow(
   }
   void (async()=>{
     let count=0
+    const nextCacheKey=createWorkflowCallCounter()
     try{
       await journalEvent({type:'start',taskId:id,runId,scriptHash:parsed.hash})
       await executeWorkflowScript({
@@ -125,7 +127,7 @@ export async function launchWorkflow(
         agent:async(prompt:string,options:Record<string,unknown>)=>{
           if(abort.signal.aborted)throw new Error('Workflow cancelled')
           const index=count++
-          const key=createHash('sha256').update(JSON.stringify({prompt,options})).digest('hex')
+          const key=nextCacheKey(prompt,options)
           if(cached.has(key))return cached.get(key)
           const agentId=`a${index+1}`
           let result:unknown
