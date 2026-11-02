@@ -497,11 +497,15 @@ export function PermissionRuleList(t0) {
   const toolPermissionContext = useAppState(_temp);
   const setAppState = useSetAppState();
   const isTerminalFocused = useTerminalFocus();
-  let t3;
+  let t3: {
+    approved: Set<number>;
+    retry: Set<number>;
+    denials: AutoModeDenial[];
+  };
   if ($[2] === Symbol.for("react.memo_cache_sentinel")) {
     t3 = {
-      approved: new Set(),
-      retry: new Set(),
+      approved: new Set<number>(),
+      retry: new Set<number>(),
       denials: []
     };
     $[2] = t3;
@@ -519,7 +523,7 @@ export function PermissionRuleList(t0) {
     t4 = $[3];
   }
   const handleDenialStateChange = t4;
-  const [selectedRule, setSelectedRule] = useState();
+  const [selectedRule, setSelectedRule] = useState<PermissionRule | undefined>(undefined);
   const [lastFocusedRuleKey, setLastFocusedRuleKey] = useState();
   const [addingRuleToTab, setAddingRuleToTab] = useState(null);
   const [validatedRule, setValidatedRule] = useState(null);
