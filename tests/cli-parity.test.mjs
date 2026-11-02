@@ -64,7 +64,7 @@ for (const args of [
     if (args.length === 1 && args[0] === '--help') {
       const approvedAdded = new Set([
         '--autocompact', '--permission-prompts', '--prompt-suggestions',
-        '--restricted', '--safe-mode', '--teleport',
+        '--restricted', '--safe-mode', '--teleport', '--cloud', '--environment',
         '--remote-control', '--remote-control-session-name-prefix',
       ]);
       const added = rebuilt.flags.filter(flag => !baseline.flags.includes(flag));
