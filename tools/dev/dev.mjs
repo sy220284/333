@@ -16,7 +16,7 @@ const npmCli = resolve(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, { cwd: root, stdio: 'inherit', ...options });
   if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error('命令失败（' + result.status + '）: ' + command + ' ' + args.join(' '));
+  if (result.status !== 0) throw new Error(`命令失败（${result.status}）: ${command} ${args.join(' ')}`);
 }
 function toolRun(name, args) {
   if (process.platform === 'win32') run(process.execPath, [cliScript(name), ...args]);
