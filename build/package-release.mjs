@@ -20,7 +20,7 @@ const pkg = {
   bin: { claude: './launcher.cjs' },
   engines: { node: '>=18', bun: '>=1.4.4' }
 };
-writeFileSync(join(dist,'package.json'), JSON.stringify(pkg,null,2)+'\n');
+writeFileSync(join(dist,'package.json'), `${JSON.stringify(pkg,null,2)}\n`);
 const launcher = `#!/usr/bin/env node
 'use strict';
 const {spawnSync} = require('node:child_process');
@@ -61,5 +61,5 @@ function walk(dir) {
 }
 walk(dist);
 files.sort((a,b)=>a.path.localeCompare(b.path));
-writeFileSync(join(dist,'integrity.json'),JSON.stringify({version:releaseVersion,source:'src/entrypoints/cli.tsx',files},null,2)+'\n');
-console.log('Packaged independent CLI with '+files.length+' verified assets');
+writeFileSync(join(dist,'integrity.json'),`${JSON.stringify({version:releaseVersion,source:'src/entrypoints/cli.tsx',files},null,2)}\n`);
+console.log(`Packaged independent CLI with ${files.length} verified assets`);

@@ -25,7 +25,7 @@ export function WorkflowHistoryDialog({onDone,toolUseContext}:{
   setLoading(true)
   void readWorkflowHistory(project,getSessionId()).then(data=>{
    setRecords(data.runs)
-   setErrors(data.errors.map(e=>e.file+': '+e.message))
+   setErrors(data.errors.map(e=>`${e.file}: ${e.message}`))
    setSelected(index=>Math.max(0,Math.min(index,data.runs.length-1)))
    setLoading(false)
   }).catch(error=>{

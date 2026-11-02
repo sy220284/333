@@ -86,7 +86,7 @@ const plugin = {
     build.onResolve({ filter: /\.js$/ }, args => {
       const normalized = args.importer ? resolve(dirname(args.importer), args.path).replaceAll('\\', '/') : args.path;
       if ([...excluded].some(p => normalized.endsWith(p))) {
-        return { path: marker + '/' + normalized.replaceAll('.', '_').replaceAll('/', '_'), external: true };
+        return { path: `${marker}/${normalized.replaceAll('.', '_').replaceAll('/', '_')}`, external: true };
       }
     });
     build.onResolve({ filter: /^[^./]/ }, args => {
@@ -135,7 +135,7 @@ const result = await Bun.build({
 });
 if (!result.success) {
   for (const error of result.logs) console.error(error);
-  console.error('Unresolved public dependency modules: ' + [...unresolved].sort().join(', '));
+  console.error(`Unresolved public dependency modules: ${[...unresolved].sort().join(', ')}`);
   process.exitCode = 1;
 } else {
   const leaked = [];
@@ -144,10 +144,10 @@ if (!result.success) {
     const emitted = await output.text();
     if (emitted.includes(marker)) {
       const references = [...emitted.matchAll(/__unavailable_release_feature__\/[a-zA-Z0-9_]+/g)].map(x => x[0]);
-      console.error('Unexpected disabled feature import in ' + output.path + ': ' + [...new Set(references)].join(', '));
+      console.error(`Unexpected disabled feature import in ${output.path}: ${[...new Set(references)].join(', ')}`);
       leaked.push(output.path);
     }
   }
-  if (leaked.length) throw Error('Disabled-source reference leaked into release build: ' + leaked.join(', '));
-  console.log('Compiled ' + result.outputs.length + ' artifacts from extracted source');
+  if (leaked.length) throw Error(`Disabled-source reference leaked into release build: ${leaked.join(', ')}`);
+  console.log(`Compiled ${result.outputs.length} artifacts from extracted source`);
 }

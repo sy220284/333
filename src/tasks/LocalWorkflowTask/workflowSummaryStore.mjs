@@ -5,8 +5,8 @@ import { randomUUID } from 'node:crypto'
 export async function writeWorkflowSummary(path,record){
  if(typeof path!=='string'||!path.endsWith('.json')||!record||typeof record!=='object')
    throw new Error('Invalid workflow summary write')
- const data=JSON.stringify(record)+'\n'
- const temporary=path+'.tmp-'+randomUUID()
+ const data=`${JSON.stringify(record)}\n`
+ const temporary=`${path}.tmp-${randomUUID()}`
  await mkdir(dirname(path),{recursive:true,mode:0o700})
  try{
   await writeFile(temporary,data,{flag:'wx',mode:0o600})

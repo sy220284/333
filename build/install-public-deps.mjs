@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 function npm(args) {
   if (process.platform === 'win32') {
     const entry = join(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js');
-    if (!existsSync(entry)) throw Error('npm CLI missing from the installed Node runtime: ' + entry);
+    if (!existsSync(entry)) throw Error(`npm CLI missing from the installed Node runtime: ${entry}`);
     execFileSync(process.execPath, [entry, ...args], {stdio:'inherit'});
     return;
   }
@@ -120,7 +120,7 @@ const versions = {
   "zod": "4.6.6"
 };
 const overrides = {tmp: '0.2.7', zod: '$zod'};
-writeFileSync(join(npmroot,'package.json'), JSON.stringify({private:true,name:'release-rebuild-dependencies',version:'2.1.88',dependencies:versions,overrides},null,2)+'\n');
+writeFileSync(join(npmroot,'package.json'), `${JSON.stringify({private:true,name:'release-rebuild-dependencies',version:'2.1.88',dependencies:versions,overrides},null,2)}\n`);
 const lock = join(root,'build/public-dependencies.lock.json');
 const activeLock = join(npmroot,'package-lock.json');
 if (existsSync(lock)) {

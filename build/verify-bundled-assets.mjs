@@ -15,6 +15,6 @@ const records = [
 
 for(const record of records) {
   const actual = createHash('sha256').update(readFileSync(join(root,record.path))).digest('hex');
-  if(actual!==record.hash) throw Error('Bundled resource checksum mismatch (2.1.310 migration): '+record.path);
+  if(actual!==record.hash) throw Error(`Bundled resource checksum mismatch (2.1.310 migration): ${record.path}`);
 }
-console.log('Verified '+records.length+' committed resource hashes, including 2.1.310 upgraded assets');
+console.log(`Verified ${records.length} committed resource hashes, including 2.1.310 upgraded assets`);

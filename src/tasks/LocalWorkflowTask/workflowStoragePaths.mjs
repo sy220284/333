@@ -22,5 +22,5 @@ export function workflowPaths(projectDir,sessionId,runId,name){
 export function workflowSummaryPath(projectDir,sessionId,runId){
  if(typeof projectDir!=='string'||!projectDir||typeof sessionId!=='string'||!sessionId||!RUN_ID.test(runId))
    throw new Error('Invalid workflow run storage identity')
- return join(projectDir,sessionId,'workflows',runId+'.json')
+ return join(projectDir,sessionId,'workflows',`${runId}.json`)
 }

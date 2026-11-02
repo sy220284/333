@@ -16,7 +16,7 @@ test('both account APIs paginate and carry authentication without listing secret
   urls.push({url,headers})
   const parsed=new URL(url)
   if(parsed.pathname==='/v1/code/sessions'){
-    return {status:200,data:{data:[{id:'cse_'+(parsed.searchParams.has('cursor')?'two':'one'),title:'cloud',status:'active'}],
+    return {status:200,data:{data:[{id:`cse_${parsed.searchParams.has('cursor')?'two':'one'}`,title:'cloud',status:'active'}],
       next_cursor:parsed.searchParams.has('cursor')?null:'next'}}
   }
   return {status:200,data:{data:[{id:'session_three',title:'bridge',session_status:'active'}],has_more:false}}
