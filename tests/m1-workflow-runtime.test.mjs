@@ -105,11 +105,13 @@ test('Workflow pipeline returns the final result without losing concurrent agent
  assert.equal(completion.result,'A,B')
 })
 
-test('Workflow permission policy preserves real x64 bypass mode while normal and auto require review',async()=>{
+test('Workflow delegates normal user approval and authorized bypass to the central permission engine',async()=>{
  const {readFile}=await import('node:fs/promises')
  const source=await readFile(new URL('../src/tools/WorkflowTool/WorkflowTool.ts',import.meta.url),'utf8')
- assert.match(source,/permissions\.mode==='bypassPermissions'/)
- assert.match(source,/behavior:'allow' as const,updatedInput:frozen/)
+ const central=await readFile(new URL('../src/utils/permissions/permissions.ts',import.meta.url),'utf8')
  assert.match(source,/behavior:'ask' as const/)
- assert.match(source,/classifierApprovable:false/)
+ assert.match(source,/updatedInput:frozen/)
+ assert.doesNotMatch(source,/classifierApprovable:false|decisionReason:\{type:'safetyCheck'/)
+ assert.match(central,/appState\.toolPermissionContext\.mode === 'bypassPermissions'/)
+ assert.match(central,/if \(shouldBypassPermissions\)/)
 })
