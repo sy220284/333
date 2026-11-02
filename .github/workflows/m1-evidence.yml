@@ -25,6 +25,7 @@ on:
       - 'build/m1-inline-source-map-audit.py'
       - 'build/m1-x64-reference-probe.mjs'
       - 'build/m1-v4-handoff.mjs'
+      - 'build/m1-cli-diagnose.mjs'
       - 'tests/m1-v4-handoff.test.mjs'
       - 'tests/m1-doctor-source-restoration.test.mjs'
       - 'tests/m1-x64-local-api.py'
@@ -225,6 +226,11 @@ jobs:
           node build/m1-v4-handoff.mjs \
             --input "${RUNNER_TEMP}/m1-x64-current-differential.json" \
             --out "${RUNNER_TEMP}/m1-v4-development-handoff.json"
+      - name: 空命令和流式无输出的隔离调试（不参与等价判定）
+        run: |
+          node build/m1-cli-diagnose.mjs \
+            --candidate "${RUNNER_TEMP}/m1-current-cli" \
+            --out "${RUNNER_TEMP}/m1-cli-startup-diagnostics.json"
       - name: 不论是否发现差异都保存可复核证据
         if: always()
         uses: actions/upload-artifact@v4
@@ -233,5 +239,6 @@ jobs:
           path: |
             ${{ runner.temp }}/m1-x64-current-differential.json
             ${{ runner.temp }}/m1-v4-development-handoff.json
+            ${{ runner.temp }}/m1-cli-startup-diagnostics.json
           retention-days: 30
           if-no-files-found: warn
