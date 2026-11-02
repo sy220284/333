@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {parseWorkflowMetaLiteral} from '../src/tools/WorkflowTool/workflowMetaParser.mjs'
 
 test('workflow metadata accepts a plain nested literal and strict hex/unicode escapes',()=>{
- const literal=String.raw`{name:"Review\\u0041",description:'Safe',phases:[{title:"A\\x42",detail:'Step'}],enabled:true,count:3}`
+ const literal=String.raw`{name:"Review\u0041",description:'Safe',phases:[{title:"A\x42",detail:'Step'}],enabled:true,count:3}`
  const meta=parseWorkflowMetaLiteral(literal)
  assert.equal(meta.name,'ReviewA')
  assert.equal(meta.phases[0].title,'AB')
@@ -12,10 +12,10 @@ test('workflow metadata accepts a plain nested literal and strict hex/unicode es
 })
 test('workflow metadata fails on broken hex and unicode escape sequences',()=>{
  for(const input of [
-  String.raw`{name:"x\\u00GG"}`,
-  String.raw`{name:"x\\x0Q"}`,
-  String.raw`{name:"x\\u123"}`,
-  String.raw`{name:"x\\x1"}`,
+  String.raw`{name:"x\u00GG"}`,
+  String.raw`{name:"x\x0Q"}`,
+  String.raw`{name:"x\u123"}`,
+  String.raw`{name:"x\x1"}`,
  ]){
   assert.throws(()=>parseWorkflowMetaLiteral(input),/static literal/)
  }
