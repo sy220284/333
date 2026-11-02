@@ -14,7 +14,7 @@ import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEve
 import { clearMcpClientConfig, clearServerTokensFromLocalStorage, getMcpClientConfig, readClientSecret, saveMcpClientSecret } from '../../services/mcp/auth.js';
 import { connectToServer, getMcpServerConnectionBatchSize } from '../../services/mcp/client.js';
 import { addMcpConfig, getAllMcpConfigs, getMcpConfigByName, getMcpConfigsByScope, removeMcpConfig } from '../../services/mcp/config.js';
-import type { ConfigScope, ScopedMcpServerConfig } from '../../services/mcp/types.js';
+import { isMcpStdioServerConfig, type ConfigScope, type ScopedMcpServerConfig } from '../../services/mcp/types.js';
 import { describeMcpConfigFilePath, ensureConfigScope, getScopeLabel } from '../../services/mcp/utils.js';
 import { AppStateProvider } from '../../state/AppState.js';
 import { getCurrentProjectConfig, getGlobalConfig, saveCurrentProjectConfig } from '../../utils/config.js';
@@ -177,7 +177,7 @@ export async function mcpListHandler(): Promise<void> {
       } else if (server.type === 'claudeai-proxy') {
         // biome-ignore lint/suspicious/noConsole:: intentional console output
         console.log(`${name}: ${server.url} - ${status}`);
-      } else if (!server.type || server.type === 'stdio') {
+      } else if (isMcpStdioServerConfig(server)) {
         const args = Array.isArray(server.args) ? server.args : [];
         // biome-ignore lint/suspicious/noConsole:: intentional console output
         console.log(`${name}: ${server.command} ${args.join(' ')} - ${status}`);
@@ -258,7 +258,7 @@ export async function mcpGetHandler(name: string): Promise<void> {
       // biome-ignore lint/suspicious/noConsole:: intentional console output
       console.log(`  OAuth: ${parts.join(', ')}`);
     }
-  } else if (server.type === 'stdio') {
+  } else if (isMcpStdioServerConfig(server)) {
     // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log(`  Type: stdio`);
     // biome-ignore lint/suspicious/noConsole:: intentional console output
