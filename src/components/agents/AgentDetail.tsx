@@ -4,17 +4,17 @@ import * as React from 'react';
 import type { KeyboardEvent } from '../../ink/events/keyboard-event.js';
 import { Box, Text } from '../../ink.js';
 import { useKeybinding } from '../../keybindings/useKeybinding.js';
-import type { 工具 } from '../../Tool.js';
-import { getAgent颜色 } from '../../tools/AgentTool/agent颜色Manager.js';
-import { get记忆ScopeDisplay } from '../../tools/AgentTool/agent记忆.js';
-import { resolveAgent工具 } from '../../tools/AgentTool/agentToolUtils.js';
+import type { Tools } from '../../Tool.js';
+import { getAgentColor } from '../../tools/AgentTool/agentColorManager.js';
+import { getMemoryScopeDisplay } from '../../tools/AgentTool/agentMemory.js';
+import { resolveAgentTools } from '../../tools/AgentTool/agentToolUtils.js';
 import { type AgentDefinition, isBuiltInAgent } from '../../tools/AgentTool/loadAgentsDir.js';
-import { getAgent模型Display } from '../../utils/model/agent.js';
+import { getAgentModelDisplay } from '../../utils/model/agent.js';
 import { Markdown } from '../Markdown.js';
 import { getActualRelativeAgentFilePath } from './agentFileUtils.js';
 type Props = {
   agent: AgentDefinition;
-  tools: 工具;
+  tools: Tools;
   allAgents?: AgentDefinition[];
   onBack: () => void;
 };
@@ -25,7 +25,7 @@ export function AgentDetail(t0) {
     tools,
     onBack
   } = t0;
-  const resolved工具 = resolveAgent工具(agent, tools, false);
+  const resolvedTools = resolveAgentTools(agent, tools, false);
   let t1;
   if ($[0] !== agent) {
     t1 = getActualRelativeAgentFilePath(agent);
@@ -37,13 +37,13 @@ export function AgentDetail(t0) {
   const filePath = t1;
   let t2;
   if ($[2] !== agent.agentType) {
-    t2 = getAgent颜色(agent.agentType);
+    t2 = getAgentColor(agent.agentType);
     $[2] = agent.agentType;
     $[3] = t2;
   } else {
     t2 = $[3];
   }
-  const background颜色 = t2;
+  const backgroundColor = t2;
   let t3;
   if ($[4] === Symbol.for("react.memo_cache_sentinel")) {
     t3 = {
@@ -68,14 +68,14 @@ export function AgentDetail(t0) {
     t4 = $[6];
   }
   const handleKeyDown = t4;
-  const render工具List = function render工具List() {
-    if (resolved工具.hasWildcard) {
+  const renderToolsList = function renderToolsList() {
+    if (resolvedTools.hasWildcard) {
       return <Text>所有工具</Text>;
     }
     if (!agent.tools || agent.tools.length === 0) {
       return <Text>无</Text>;
     }
-    return <>{resolved工具.valid工具.length > 0 && <Text>{resolved工具.valid工具.join(", ")}</Text>}{resolved工具.invalid工具.length > 0 && <Text color="warning">{figures.warning} 未识别：{" "}{resolved工具.invalid工具.join(", ")}</Text>}</>;
+    return <>{resolvedTools.validTools.length > 0 && <Text>{resolvedTools.validTools.join(", ")}</Text>}{resolvedTools.invalidTools.length > 0 && <Text color="warning">{figures.warning} 未识别：{" "}{resolvedTools.invalidTools.join(", ")}</Text>}</>;
   };
   const T0 = Box;
   const t5 = "column";
@@ -84,7 +84,7 @@ export function AgentDetail(t0) {
   const t8 = true;
   let t9;
   if ($[7] !== filePath) {
-    t9 = <Text dim颜色={true}>{filePath}</Text>;
+    t9 = <Text dimColor={true}>{filePath}</Text>;
     $[7] = filePath;
     $[8] = t9;
   } else {
@@ -113,7 +113,7 @@ export function AgentDetail(t0) {
   } else {
     t12 = $[12];
   }
-  const t13 = render工具List();
+  const t13 = renderToolsList();
   let t14;
   if ($[13] !== T1 || $[14] !== t12 || $[15] !== t13) {
     t14 = <T1>{t12}{t13}</T1>;
@@ -133,7 +133,7 @@ export function AgentDetail(t0) {
   }
   let t16;
   if ($[18] !== agent.model) {
-    t16 = getAgent模型Display(agent.model);
+    t16 = getAgentModelDisplay(agent.model);
     $[18] = agent.model;
     $[19] = t16;
   } else {
@@ -157,7 +157,7 @@ export function AgentDetail(t0) {
   }
   let t19;
   if ($[24] !== agent.memory) {
-    t19 = agent.memory && <Text><Text bold={true}>记忆</Text>: {get记忆ScopeDisplay(agent.memory)}</Text>;
+    t19 = agent.memory && <Text><Text bold={true}>记忆</Text>: {getMemoryScopeDisplay(agent.memory)}</Text>;
     $[24] = agent.memory;
     $[25] = t19;
   } else {
@@ -180,10 +180,10 @@ export function AgentDetail(t0) {
     t21 = $[29];
   }
   let t22;
-  if ($[30] !== agent.agentType || $[31] !== background颜色) {
-    t22 = background颜色 && <Box><Text><Text bold={true}>颜色</Text>:{" "}<Text background颜色={background颜色} color="inverseText">{" "}{agent.agentType}{" "}</Text></Text></Box>;
+  if ($[30] !== agent.agentType || $[31] !== backgroundColor) {
+    t22 = backgroundColor && <Box><Text><Text bold={true}>颜色</Text>:{" "}<Text backgroundColor={backgroundColor} color="inverseText">{" "}{agent.agentType}{" "}</Text></Text></Box>;
     $[30] = agent.agentType;
-    $[31] = background颜色;
+    $[31] = backgroundColor;
     $[32] = t22;
   } else {
     t22 = $[32];
