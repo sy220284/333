@@ -161,3 +161,11 @@ test('沙箱依赖与代理位置设置使用中文显示', () => {
   assert.match(dependencies, /已找到/)
   assert.match(read('src/components/agents/new-agent-creation/wizard-steps/LocationStep.tsx'), /项目级/)
 })
+
+test('远程会话、差异查看和代理向导的中文提示', () => {
+  assert.match(read('src/components/TeleportProgress.tsx'), /正在验证会话/)
+  assert.match(read('src/components/TeleportStash.tsx'), /工作目录存在更改/)
+  assert.match(read('src/components/diff/DiffDetailView.tsx'), /二进制文件，无法显示差异/)
+  assert.match(read('src/components/agents/new-agent-creation/wizard-steps/PromptStep.tsx'), /系统提示词/)
+  assert.match(read('src/components/agents/new-agent-creation/wizard-steps/MemoryStep.tsx'), /不保存长期记忆/)
+})
