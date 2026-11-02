@@ -35,13 +35,15 @@ describe('Bash sed preview matches real GNU sed -i', () => {
       try {
         writeFileSync(file, fixture.input)
         const extended = 'extended' in fixture && fixture.extended
-        const command = "sed " + (extended ? "-E " : "") +
-          "-i '" + fixture.expr + "' " + file
+        const inPlaceArgs = process.platform === 'darwin' ? ['-i', ''] : ['-i']
+        const command = 'sed ' + (extended ? '-E ' : '') +
+          '-i ' + (process.platform === 'darwin' ? "'' " : '') +
+          "'" + fixture.expr + "' " + file
         const parsed = parseSedEditCommand(command)
         expect(parsed).not.toBeNull()
         if (!parsed) throw new Error(`sed preview rejected expected expression: ${command}`)
         const candidate = applySedSubstitution(fixture.input, parsed)
-        const args = [...(extended ? ['-E'] : []), '-i', fixture.expr, file]
+        const args = [...(extended ? ['-E'] : []), ...inPlaceArgs, fixture.expr, file]
         const actual = spawnSync('sed', args, { encoding: 'utf8' })
         expect(actual.status).toBe(0)
         expect(candidate).toBe(readFileSync(file, 'utf8'))
