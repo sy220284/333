@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import { canonicalId, peerIdentityKey, discoverAccountPeers, mergeSessionPeers, resolveRemoteRecipient,
   rememberAccountRecipients, resolveAdvertisedRemoteRecipient, resolveUnifiedPeerRecipient } from '../src/utils/accountPeerDirectory.mjs'
 test('cse and session aliases deduplicate, local endpoint wins',()=>{
@@ -154,4 +155,21 @@ test('credential-scoped session advertisement rejects previous login and organiz
  assert.equal(resolveUnifiedPeerRecipient(local,'local',5100,switchedOrg).address,'uds:/tmp/only')
  assert.equal(resolveUnifiedPeerRecipient(local,'worker',5100,original).address,remote[0].address)
  assert.equal(resolveAdvertisedRemoteRecipient('worker',35001,original),undefined)
+})
+
+
+test('account identity verification is wired through list, permission, validation and dispatch',async()=>{
+ const source=path=>readFile(new URL('../'+path,import.meta.url),'utf8')
+ const [listing,sending,discovery]=await Promise.all([
+   source('src/tools/ListAgentsTool/ListAgentsTool.ts'),
+   source('src/tools/SendMessageTool/SendMessageTool.ts'),
+   source('src/bridge/peerDiscovery.ts'),
+ ])
+ assert.match(listing,/discoveredAccount\.identityKey === currentIdentity/)
+ assert.match(listing,/rememberAccountRecipients\(account\.peers, Date\.now\(\), account\.identityKey\)/)
+ assert.equal((sending.match(/await getCurrentPeerIdentityKey\(\)/g)||[]).length,4)
+ assert.match(sending,/async checkPermissions/)
+ assert.match(sending,/async validateInput/)
+ assert.match(sending,/async call\(/)
+ assert.match(discovery,/peerIdentityKey\(credentials\.accessToken, credentials\.orgUUID\)/)
 })
