@@ -1,0 +1,29 @@
+name: 简体中文界面专项验收
+on:
+  push:
+    paths:
+      - 'src/components/**'
+      - 'src/constants/prompts.ts'
+      - 'src/utils/settings/settings.ts'
+      - 'src/utils/intl.ts'
+      - 'src/utils/formatBriefTimestamp.ts'
+      - 'tests/chinese-only-ui.test.mjs'
+  pull_request:
+    paths:
+      - 'src/components/**'
+      - 'src/constants/prompts.ts'
+      - 'src/utils/settings/settings.ts'
+      - 'src/utils/intl.ts'
+      - 'src/utils/formatBriefTimestamp.ts'
+      - 'tests/chinese-only-ui.test.mjs'
+jobs:
+  check:
+    name: 中文界面回归测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 校验语言入口与中文显示约定
+        run: node --test tests/chinese-only-ui.test.mjs

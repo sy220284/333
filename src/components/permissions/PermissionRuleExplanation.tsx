@@ -25,29 +25,29 @@ function stringsForDecisionReason(reason: PermissionDecisionReason | undefined, 
   if ((feature('BASH_CLASSIFIER') || feature('TRANSCRIPT_CLASSIFIER')) && reason.type === 'classifier') {
     if (reason.classifier === 'auto-mode') {
       return {
-        reasonString: `Auto mode classifier requires confirmation for this ${toolType}.\n${reason.reason}`,
+        reasonString: `自动模式需要你确认本次 ${toolType} 操作。\n${reason.reason}`,
         configString: undefined,
         themeColor: 'error'
       };
     }
     return {
-      reasonString: `Classifier ${chalk.bold(reason.classifier)} requires confirmation for this ${toolType}.\n${reason.reason}`,
+      reasonString: `分类器 ${chalk.bold(reason.classifier)} 要求确认本次 ${toolType} 操作。\n${reason.reason}`,
       configString: undefined
     };
   }
   switch (reason.type) {
     case 'rule':
       return {
-        reasonString: `Permission rule ${chalk.bold(permissionRuleValueToString(reason.rule.ruleValue))} requires confirmation for this ${toolType}.`,
-        configString: reason.rule.source === 'policySettings' ? undefined : '/permissions to update rules'
+        reasonString: `权限规则 ${chalk.bold(permissionRuleValueToString(reason.rule.ruleValue))} 要求确认本次 ${toolType} 操作。`,
+        configString: reason.rule.source === 'policySettings' ? undefined : '/permissions：修改权限规则'
       };
     case 'hook':
       {
         const hookReasonString = reason.reason ? `:\n${reason.reason}` : '.';
         const sourceLabel = reason.hookSource ? ` ${chalk.dim(`[${reason.hookSource}]`)}` : '';
         return {
-          reasonString: `Hook ${chalk.bold(reason.hookName)} requires confirmation for this ${toolType}${hookReasonString}${sourceLabel}`,
-          configString: '/hooks to update'
+          reasonString: `钩子 ${chalk.bold(reason.hookName)} 要求确认本次 ${toolType} 操作${hookReasonString}${sourceLabel}`,
+          configString: '/hooks：修改钩子'
         };
       }
     case 'safetyCheck':
@@ -59,7 +59,7 @@ function stringsForDecisionReason(reason: PermissionDecisionReason | undefined, 
     case 'workingDir':
       return {
         reasonString: reason.reason,
-        configString: '/permissions to update rules'
+        configString: '/permissions：修改权限规则'
       };
     default:
       return null;

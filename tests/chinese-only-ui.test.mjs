@@ -25,3 +25,10 @@ test('帮助页标题固定为中文，内部导航标识保持不变', () => {
   }
   assert.match(read('src/components/PromptInput/PromptInputHelpMenu.tsx'), /双击 Esc 清空输入/)
 })
+
+test('权限确认和模型选择的可见文案使用中文', () => {
+  assert.match(read('src/components/TrustDialog/TrustDialog.tsx'), /我信任此目录/)
+  assert.match(read('src/components/permissions/FallbackPermissionRequest.tsx'), /label: "允许"/)
+  assert.match(read('src/components/ModelPicker.tsx'), /选择模型/)
+  assert.match(read('src/components/OutputStylePicker.tsx'), /回答风格/)
+})
