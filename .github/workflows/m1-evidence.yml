@@ -45,6 +45,9 @@ on:
       - 'src/remote/sdkMessageAdapter.ts'
       - 'src/types/message.ts'
       - 'src/QueryEngine.ts'
+      - 'build/m1-feature-evidence-registry.mjs'
+      - 'tests/m1-feature-evidence-registry.test.mjs'
+      - 'tests/m1-screen-reader-terminal-parity.py'
       - 'build/m1-v4-handoff.mjs'
       - 'build/m1-cli-diagnose.mjs'
       - 'tests/m1-v4-handoff.test.mjs'
@@ -169,6 +172,10 @@ jobs:
           printf 'declare const Bun: { stripANSI(input: string): string }\n' > "${RUNNER_TEMP}/m1-bun-ambient.d.ts"
           node "${RUNNER_TEMP}/m1-typescript/node_modules/typescript/lib/tsc.js" --strict --skipLibCheck --target ES2023 --module CommonJS --moduleResolution Node --rootDir src/ink --outDir "${RUNNER_TEMP}/m1-ink-events" src/ink/events/paste-event.ts "${RUNNER_TEMP}/m1-bun-ambient.d.ts"
           M1_INK_EVENTS_DIR="${RUNNER_TEMP}/m1-ink-events" node --test tests/m1-ink-paste-event.test.mjs
+      - name: 验证18组功能升级、102能力及84场景证据签收分层
+        run: |
+          node --test tests/m1-feature-evidence-registry.test.mjs
+          node build/m1-feature-evidence-registry.mjs --report "${RUNNER_TEMP}/m1-feature-evidence-registry.json"
       - name: 扫描当前分支的实际缺失类型与运行模块
         run: node build/m1-source-gap-ast.mjs --old-src src --typescript-module "${RUNNER_TEMP}/m1-typescript/node_modules/typescript/lib/typescript.js" --out "${RUNNER_TEMP}/m1-current-source-gaps.json"
       - name: 保存逐路径导入与符号契约证据
@@ -327,6 +334,12 @@ jobs:
           chmod 700 "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
           printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-current-cli"
           chmod 700 "${RUNNER_TEMP}/m1-current-cli"
+      - name: 对照官方2.1.310与重建版的真实伪终端屏幕阅读器输出
+        run: |
+          python3 tests/m1-screen-reader-terminal-parity.py \
+            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --candidate "${RUNNER_TEMP}/m1-current-cli" \
+            --report "${RUNNER_TEMP}/m1-screen-reader-terminal.json"
       - name: 对照真实 SDK 流事件顺序、响应标识与首字时间
         run: |
           node build/m1-sdk-stream-wire-parity.mjs \
@@ -396,5 +409,6 @@ jobs:
             ${{ runner.temp }}/m1-monitor-workflow-roundtrip.json
             ${{ runner.temp }}/m1-sdk-stream-wire.json
             ${{ runner.temp }}/m1-sdk-thinking-display.json
+            ${{ runner.temp }}/m1-screen-reader-terminal.json
           retention-days: 30
           if-no-files-found: warn

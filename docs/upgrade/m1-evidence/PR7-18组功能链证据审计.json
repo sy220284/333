@@ -1,0 +1,315 @@
+{
+  "schema": 1,
+  "as_of": "2026-11-02",
+  "baseline_sha": "62f17780ca5265325aa2e8d32f8607a53c1a484b",
+  "target_version": "2.1.310",
+  "reference_sha256": "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56",
+  "decompiled_source": "资料库/反编译/Claude-Code-2.1.310-Linux-x64-完整反编译包.tar.zst",
+  "source_anchors": [
+    "chunk-mh7sh27p.js:721 AX CLI argument",
+    "chunk-dzh36vh3.js:1265 AX env and settings",
+    "chunk-j0tbz6ra.js:58095-58192,83810-83965 Notebook"
+  ],
+  "semantic_contract": "A code change or passing focused CI is not a fully signed M10 capability or E/L scenario.",
+  "groups": [
+    {
+      "id": "G01",
+      "name": "模型回退与529故障切换",
+      "features": [
+        "F017",
+        "F018"
+      ],
+      "code": [
+        "src/services/api/fallbackModels.mjs",
+        "src/services/api/withRetry.ts"
+      ],
+      "tests": [
+        "tests/fallback-529-integration.test.mjs"
+      ],
+      "stage": "SPECIAL_CI",
+      "acceptance": "UNVERIFIED",
+      "remaining": "全模型与多网关失败复测"
+    },
+    {
+      "id": "G02",
+      "name": "CLI受限、安全与工具模式",
+      "features": [
+        "F002",
+        "F041",
+        "F093"
+      ],
+      "code": [
+        "src/main.tsx",
+        "src/cli/print.ts"
+      ],
+      "tests": [],
+      "stage": "SOURCE_CONNECTED",
+      "acceptance": "UNVERIFIED",
+      "remaining": "官方同条件受限执行矩阵"
+    },
+    {
+      "id": "G03",
+      "name": "Bash sed-i编辑",
+      "features": [
+        "F032"
+      ],
+      "code": [
+        "src/tools/BashTool/BashTool.tsx",
+        "src/tools/BashTool/sedEditParser.ts"
+      ],
+      "tests": [
+        "tests/sed-edit-write-integration.test.ts"
+      ],
+      "stage": "SPECIAL_CI",
+      "acceptance": "UNVERIFIED",
+      "remaining": "跨权限全局撤销"
+    },
+    {
+      "id": "G04",
+      "name": "Notebook编辑",
+      "features": [
+        "F034"
+      ],
+      "code": [
+        "src/tools/NotebookEditTool/notebookMutation.ts"
+      ],
+      "tests": [
+        "tests/m1-notebook-e41-cli.mjs"
+      ],
+      "stage": "OFFICIAL_CANDIDATE_REAL_CALL",
+      "acceptance": "UNVERIFIED",
+      "remaining": "异常文件、回退"
+    },
+    {
+      "id": "G05",
+      "name": "ToolSearch工具搜索",
+      "features": [
+        "F039"
+      ],
+      "code": [
+        "src/tools/ToolSearchTool/ToolSearchTool.ts",
+        "src/tools.ts"
+      ],
+      "tests": [
+        "build/m1-toolsearch-release-parity.mjs"
+      ],
+      "stage": "SPECIAL_CI",
+      "acceptance": "UNVERIFIED",
+      "remaining": "完整动态注册权限矩阵"
+    },
+    {
+      "id": "G06",
+      "name": "SDK流式事件",
+      "features": [
+        "F003",
+        "F098"
+      ],
+      "code": [
+        "src/entrypoints/sdk/streamEventMapper.ts"
+      ],
+      "tests": [
+        "build/m1-sdk-stream-wire-parity.mjs"
+      ],
+      "stage": "SPECIAL_CI",
+      "acceptance": "UNVERIFIED",
+      "remaining": "多Agent事件取消与重连"
+    },
+    {
+      "id": "G07",
+      "name": "413上下文超限恢复",
+      "features": [
+        "F026"
+      ],
+      "code": [
+        "src/services/api/withRetry.ts"
+      ],
+      "tests": [
+        "build/m1-413-recovery-probe.mjs"
+      ],
+      "stage": "SPECIAL_CI",
+      "acceptance": "UNVERIFIED",
+      "remaining": "长会话全状态恢复"
+    },
+    {
+      "id": "G08",
+      "name": "ListAgents跨会话发现",
+      "features": [
+        "F056",
+        "F057"
+      ],
+      "code": [
+        "src/tools/ListAgentsTool/ListAgentsTool.ts",
+        "src/utils/accountPeerDirectory.mjs"
+      ],
+      "tests": [
+        "tests/m1-account-peer-discovery.test.mjs"
+      ],
+      "stage": "PARTIAL_RUNTIME",
+      "acceptance": "UNVERIFIED",
+      "remaining": "授权、断连重连、传输切换"
+    },
+    {
+      "id": "G09",
+      "name": "Monitor监控执行",
+      "features": [
+        "F081"
+      ],
+      "code": [
+        "src/tools/MonitorTool/MonitorTool.ts"
+      ],
+      "tests": [
+        "build/m1-monitor-workflow-roundtrip.mjs"
+      ],
+      "stage": "PARTIAL_RUNTIME",
+      "acceptance": "UNVERIFIED",
+      "remaining": "取消、异常任务与事件状态"
+    },
+    {
+      "id": "G10",
+      "name": "Workflow后台执行",
+      "features": [
+        "F082",
+        "F083"
+      ],
+      "code": [
+        "src/tools/WorkflowTool/WorkflowTool.ts"
+      ],
+      "tests": [
+        "build/m1-monitor-workflow-roundtrip.mjs"
+      ],
+      "stage": "PARTIAL_RUNTIME",
+      "acceptance": "UNVERIFIED",
+      "remaining": "完整恢复、日志、状态一致"
+    },
+    {
+      "id": "G11",
+      "name": "屏幕阅读器终端",
+      "features": [
+        "F001"
+      ],
+      "code": [
+        "src/ink/ink.tsx",
+        "src/utils/accessibility/screenReaderMode.mjs"
+      ],
+      "tests": [
+        "tests/m1-screen-reader-terminal-parity.py"
+      ],
+      "stage": "OFFICIAL_PTY_STARTUP",
+      "acceptance": "UNVERIFIED",
+      "remaining": "候选PTY，完整交互界面"
+    },
+    {
+      "id": "G12",
+      "name": "插件ZIP加载",
+      "features": [
+        "F052"
+      ],
+      "code": [
+        "src/cli/handlers/plugins.ts"
+      ],
+      "tests": [],
+      "stage": "PARTIAL_RUNTIME",
+      "acceptance": "UNVERIFIED",
+      "remaining": "来源校验、异常与恢复"
+    },
+    {
+      "id": "G13",
+      "name": "自动压缩",
+      "features": [
+        "F005",
+        "F086"
+      ],
+      "code": [
+        "src/services/compact/autoCompact.ts"
+      ],
+      "tests": [
+        "tests/auto-compact-window.test.mjs"
+      ],
+      "stage": "SOURCE_CONNECTED",
+      "acceptance": "UNVERIFIED",
+      "remaining": "完整长会话复测"
+    },
+    {
+      "id": "G14",
+      "name": "遥测与隐私",
+      "features": [
+        "F080"
+      ],
+      "code": [
+        "src/commands/privacy-settings/fetchPrivacySettings.mjs"
+      ],
+      "tests": [
+        "tests/m1-privacy-settings.test.mjs"
+      ],
+      "stage": "SPECIAL_CI",
+      "acceptance": "UNVERIFIED",
+      "remaining": "服务端动态授权与失败"
+    },
+    {
+      "id": "G15",
+      "name": "Spinner提示系统",
+      "features": [
+        "F001"
+      ],
+      "code": [
+        "src/components/Spinner.tsx"
+      ],
+      "tests": [
+        "tests/m1-x64-spinner-tips.py"
+      ],
+      "stage": "SPECIAL_CI",
+      "acceptance": "UNVERIFIED",
+      "remaining": "优先级与动效完整交互"
+    },
+    {
+      "id": "G16",
+      "name": "TaskOutput入口退场",
+      "features": [
+        "F062"
+      ],
+      "code": [
+        "src/tools/TaskOutputTool/TaskOutputTool.tsx"
+      ],
+      "tests": [
+        "tests/m1-taskoutput-retirement.test.mjs"
+      ],
+      "stage": "SOURCE_CONNECTED",
+      "acceptance": "UNVERIFIED",
+      "remaining": "任务真实输出与恢复"
+    },
+    {
+      "id": "G17",
+      "name": "系统提示词快照",
+      "features": [
+        "F022",
+        "F097"
+      ],
+      "code": [
+        "src/services/cli/systemPromptSnapshot.mjs"
+      ],
+      "tests": [
+        "tests/system-prompt-snapshot.test.mjs"
+      ],
+      "stage": "PARTIAL_RUNTIME",
+      "acceptance": "UNVERIFIED",
+      "remaining": "多目录长会话缓存无误"
+    },
+    {
+      "id": "G18",
+      "name": "子Agent进度传递",
+      "features": [
+        "F057",
+        "F098"
+      ],
+      "code": [
+        "src/entrypoints/sdk/streamEventMapper.ts"
+      ],
+      "tests": [
+        "tests/sdk-stream-events.test.ts"
+      ],
+      "stage": "PARTIAL_RUNTIME",
+      "acceptance": "UNVERIFIED",
+      "remaining": "并行Agent实际执行"
+    }
+  ]
+}
