@@ -75,7 +75,7 @@ export const outputSchema = lazySchema(() =>
       .string()
       .optional()
       .describe('The ID of the cell that was edited'),
-    cell_type: z.enum(['code', 'markdown', 'raw']).describe('The type of the cell'),
+    cell_type: z.enum(['code', 'markdown']).describe('The type of the cell'),
     language: z.string().describe('The programming language of the notebook'),
     edit_mode: z.string().describe('The edit mode that was used'),
     error: z
