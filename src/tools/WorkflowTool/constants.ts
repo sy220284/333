@@ -1,2 +1,2 @@
-/** Stable tool identifier used by the WORKFLOW_SCRIPTS feature gate. */
-export const WORKFLOW_TOOL_NAME = 'workflow'
+/** The 2.1.310 public tool name, used for registration and permissions. */
+export const WORKFLOW_TOOL_NAME = 'Workflow'
