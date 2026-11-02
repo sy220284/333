@@ -1,13 +1,13 @@
 import { TerminalEvent } from './terminal-event.js'
 
 // C1 and ANSI control-string contracts follow the published 2.1.310 binary.
-const C1 = /[\u0090\u0098\u009b\u009d-\u009f]/
-const ESCAPED_C1 = /\u001b[\u0090\u0098\u009b\u009d-\u009f]/g
-const BARE_C1 = /[\u0090\u0098\u009b\u009d-\u009f]/g
-const COMPLETE_C1 = /([\u0090\u0098\u009d-\u009f][^\u0007\u001b\u0090\u0098\u009d-\u009f\r\n]*)\u0007/g
-const BEL_TERMINATED_STRING = /(\u001b[PX^_][^\u0007\u001b]*)\u0007/g
-const LINE_SEPARATOR = /(\r\n|\r|\n)/
-const UNPAIRED_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g
+const C1 = new RegExp(String.raw`[\u0090\u0098\u009b\u009d-\u009f]`)
+const ESCAPED_C1 = new RegExp(String.raw`\u001b[\u0090\u0098\u009b\u009d-\u009f]`, 'g')
+const BARE_C1 = new RegExp(String.raw`[\u0090\u0098\u009b\u009d-\u009f]`, 'g')
+const COMPLETE_C1 = new RegExp(String.raw`([\u0090\u0098\u009d-\u009f][^\u0007\u001b\u0090\u0098\u009d-\u009f\r\n]*)\u0007`, 'g')
+const BEL_TERMINATED_STRING = new RegExp(String.raw`(\u001b[PX^_][^\u0007\u001b]*)\u0007`, 'g')
+const LINE_SEPARATOR = new RegExp(String.raw`(\r\n|\r|\n)`)
+const UNPAIRED_SURROGATE = new RegExp(String.raw`[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]`, 'g')
 
 /**
  * DOM-style paste event delivered to the currently focused Ink element.
