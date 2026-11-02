@@ -150,6 +150,54 @@
       "evidence_run": 41385011342,
       "validation": "AST_IMPORT_RESOLVED",
       "scope": "Initial post-14-file scan paths 173 to 160 and refs 619 to 345; final 3 added types pending HEAD scan"
+    },
+    {
+      "name": "实际模型请求中的系统提示词快照与动态缓存",
+      "features": [
+        "F027",
+        "F087"
+      ],
+      "task": "M2/M4",
+      "source": [
+        "src/services/api/claude.ts",
+        "src/constants/prompts.ts",
+        "src/constants/systemPromptBoundary.ts",
+        "src/services/cli/systemPromptSnapshot.mjs"
+      ],
+      "commits": [
+        "ff15a66a"
+      ],
+      "tests": [
+        "tests/system-prompt-snapshot.test.mjs",
+        "tests/system-prompt-api-roundtrip.test.mjs",
+        "tests/model-loop-local.test.mjs"
+      ],
+      "evidence_run": 41386250482,
+      "validation": "SOURCE_IMPLEMENTED",
+      "scope": "Multi-platform independent rebuild and existing model-loop passed; new real request/persisted snapshot check pending latest CI"
+    },
+    {
+      "name": "子Agent进度按SDK显式选项转发并避免文本与工具重复消息",
+      "features": [
+        "F056",
+        "F089"
+      ],
+      "task": "M7",
+      "source": [
+        "src/QueryEngine.ts",
+        "src/Tool.ts",
+        "src/tools/AgentTool/AgentTool.tsx",
+        "src/cli/print.ts"
+      ],
+      "commits": [
+        "ff15a66a"
+      ],
+      "tests": [
+        "tests/model-loop-local.test.mjs"
+      ],
+      "evidence_run": 41386250482,
+      "validation": "SOURCE_IMPLEMENTED",
+      "scope": "SDK option and event producer wired; spawn behavior needs explicit approval and full multi-agent tests before signoff"
     }
   ],
   "remaining_confirmed_cli_cases": [
