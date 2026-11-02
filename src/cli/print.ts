@@ -60,6 +60,7 @@ import {
 } from 'src/utils/sessionState.js'
 import { externalMetadataToAppState } from 'src/state/onChangeAppState.js'
 import { getInMemoryErrors, logError, logMCPDebug } from 'src/utils/log.js'
+import { denyUnansweredPrompt } from '../services/cli/upgradeMode.mjs'
 import {
   writeToStdout,
   registerProcessOutputErrorHandlers,
@@ -468,6 +469,7 @@ export async function runHeadless(
     outputFormat: string | undefined
     jsonSchema: Record<string, unknown> | undefined
     permissionPromptToolName: string | undefined
+    permissionPrompts?: 'host' | 'none'
     allowedTools: string[] | undefined
     thinkingConfig: ThinkingConfig | undefined
     maxTurns: number | undefined
@@ -819,12 +821,17 @@ export async function runHeadless(
     notifySessionStateChanged('requires_action', details)
   }
 
-  const canUseTool = getCanUseToolFn(
-    effectivePermissionPromptToolName,
+  const baseCanUseTool = getCanUseToolFn(
+    options.permissionPrompts === 'none' ? undefined : effectivePermissionPromptToolName,
     structuredIO,
     () => getAppState().mcp.tools,
     onPermissionPrompt,
   )
+  // Deny only decisions that still require a human response. Rules that
+  // already allowed or rejected the operation remain authoritative.
+  const canUseTool: CanUseToolFn = options.permissionPrompts === 'none'
+    ? async (...args) => denyUnansweredPrompt(await baseCanUseTool(...args))
+    : baseCanUseTool
   if (options.permissionPromptToolName) {
     // Remove the permission prompt tool from the list of available tools.
     filteredTools = filteredTools.filter(
@@ -989,6 +996,7 @@ function runHeadlessStreaming(
     verbose: boolean | undefined
     jsonSchema: Record<string, unknown> | undefined
     permissionPromptToolName: string | undefined
+    permissionPrompts?: 'host' | 'none'
     allowedTools: string[] | undefined
     thinkingConfig: ThinkingConfig | undefined
     maxTurns: number | undefined
