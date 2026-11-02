@@ -20,7 +20,7 @@ const canSendMessage = (tools: readonly { name: string }[]): boolean =>
 
 const inputSchema = lazySchema(() => z.strictObject({
   channel: z.string().max(256).optional().describe('Not available in this build; leave unset.'),
-  q: z.string().max(256).optional().describe('Not available in this build; leave unset.'),
+  q: z.string().max(256).optional().describe('Filter results by agent name, ID, type or status.'),
 }))
 type InputSchema = ReturnType<typeof inputSchema>
 const rowSchema = z.object({
@@ -80,7 +80,7 @@ export const ListAgentsTool = buildTool({
         type: task.agentType, status: task.status }]
     })
     return { data: buildAgentListing({
-      self, subagents: hideTeammateNamesInSubagents(subagents, state.teamContext?.teammates),
+      self, subagents: hideTeammateNamesInSubagents(subagents, teammates),
       teammates, sessions, query: input.q, localUnreadable: unreadable,
       accountNotes: account.notes,
       canSend: canSendMessage(options.refreshTools?.() ?? options.tools),
