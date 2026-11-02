@@ -28,7 +28,9 @@
 
 **注册条件复查**：常规模式下模型首轮可见 `ToolSearch` 与 `DeferredToolPlaceholder`，系统提示明确列出延迟可用的 `NotebookEdit`；简化模式 `CLAUDE_CODE_SIMPLE=1` 会省略该发现机制，直接请求 NotebookEdit 返回不可用。早期将简化模式的失败误当成正式发行包默认禁用，已经通过清除该变量的正例重新验证并纠正。虽然 `chunk-gmxe4kpt.js:663` 有硬编码关闭的 `RU()`，它只影响 `chunk-p8z8s65a.js:4192–4194` 的一条扩展工具装载路径，**不能据此推断正常模式的延迟工具不存在**。
 
-实测摘要见 [`F034-Notebook-官方x64-E41实测.json`](./F034-Notebook-官方x64-E41实测.json)。相同本地假模型/临时文件测试协议已沉淀为 [`tests/m1-notebook-e41-cli.mjs`](../../../tests/m1-notebook-e41-cli.mjs)，可对官方二进制与 333 重建后的 CLI 复跑。此项证据验证了**官方原版** E41，333 候选版的完整 CLI 运行仍以其 GitHub Actions 检查为准。
+实测摘要见 [`F034-Notebook-官方x64-E41实测.json`](./F034-Notebook-官方x64-E41实测.json)。相同本地假模型/临时文件测试协议已沉淀为 [`tests/m1-notebook-e41-cli.mjs`](../../../tests/m1-notebook-e41-cli.mjs)，可对官方二进制与 333 重建后的 CLI 复跑。**重建版真实验收已通过**：在 [M1 专项 Actions #41435775007](https://github.com/sy220284/333/actions/runs/41435775007) 的 Linux job 中，对独立构建的 `dist/cli.js` 执行相同的 E41 脚本，记录 `passed: true`、`modelRequests: 4`、`sourceBefore: print(1)`、`sourceAfter: print(2)`，且 CLI 退出码为 0。该运行的 macOS/Windows 专项测试也都成功；三平台独立重建见 [#41435774957](https://github.com/sy220284/333/actions/runs/41435774957)，均为 success。
+
+**仍存在注册差异**：官方发行版第一轮模型工具列表包含 `ToolSearch` / `DeferredToolPlaceholder`，NotebookEdit 由延迟发现进入调用；333 当前第一轮直接公开 `NotebookEdit`。本次证据确认了可观察 Notebook 读改读功能链一致，但工具发现的默认顺序和入口差异由在途 PR #7 负责补齐；M10 仍需验证完整权限、回退、符号链接和异常路径。
 
 ## 333 的实际代码修复与测试
 
@@ -46,6 +48,6 @@
 
 ## 准确状态
 
-`F034` 已找到目标实现及实际消费者，部分合同有 333 修改和跨平台测试，可登记为 **CONTRACT_CONFIRMED + IMPLEMENTED + INTEGRATED + TESTED（所列子合同）**。最后的 M10 **ACCEPTED** 必须等 333 重建版 CLI 在同一个 E41 测试中通过，并对跨工具文件锁/权限/软链/异常路径完成差分验收后签署；所有分支覆盖不能只依据此项新增测试认定完结。
+`F034` 已找到目标实现及实际消费者，部分合同有 333 修改和跨平台测试，可登记为 **CONTRACT_CONFIRMED + IMPLEMENTED + INTEGRATED + TESTED（所列子合同）**。333 重建版 CLI 的 E41 同场景端到端验收已通过；最后的 M10 **ACCEPTED** 仍需对 ToolSearch 延迟注册、跨工具文件锁/权限/软链/异常路径完成差分验收后签署；所有分支覆盖不能只依据此项新增测试认定完结。
 
 此文记录可复跑的目标源码锚点和验收范围；状态统计以每次实际 GitHub Actions 通过结果为准。
