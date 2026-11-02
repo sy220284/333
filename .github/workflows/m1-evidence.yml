@@ -80,6 +80,7 @@ on:
       - 'src/commands/workflows/**'
       - 'src/tools/WorkflowTool/workflowCommandIndex.mjs'
       - 'src/tasks/LocalWorkflowTask/workflowStoragePaths.mjs'
+      - 'src/tasks/LocalWorkflowTask/workflowSummaryStore.mjs'
       - 'src/tools/WorkflowTool/**'
       - 'src/tasks/LocalWorkflowTask/**'
       - 'tests/m1-monitor-protocol.test.mjs'

@@ -9,6 +9,7 @@ import { executeWorkflowScript, validateWorkflowScript } from '../../tools/Workf
 import { registerCleanup } from '../../utils/cleanupRegistry.js'
 import { getProjectDir } from '../../utils/sessionStorage.js'
 import { workflowRunDirectory, workflowSessionScripts, workflowPaths } from './workflowStoragePaths.mjs'
+import { readWorkflowSummary, writeWorkflowSummary } from './workflowSummaryStore.mjs'
 import { enqueuePendingNotification } from '../../utils/messageQueueManager.js'
 import { registerTask, updateTaskState } from '../../utils/task/framework.js'
 import { createWorkflowCallCounter } from './workflowCacheKeys.mjs'
@@ -25,7 +26,8 @@ export type LocalWorkflowTaskState = TaskStateBase & {
   result?: unknown
 }
 type AgentControl={abort:AbortController,action:null|'skip'|'retry'}
-type Job={abort:AbortController,unregister:()=>void,runId:string,agents:Map<string,AgentControl>}
+type Job={abort:AbortController,unregister:()=>void,runId:string,agents:Map<string,AgentControl>,
+  persistFinal:(status:'completed'|'failed'|'killed',value?:unknown,error?:string)=>Promise<void>}
 const active=new Map<string,Job>()
 function workflowProjectDir():string {
   return getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
@@ -51,6 +53,7 @@ export const LocalWorkflowTask:Task={
     if(!job)throw new Error(`Workflow task ${id} is no longer active`)
     job.abort.abort()
     for(const item of job.agents.values()) item.abort.abort()
+    await job.persistFinal('killed',undefined,'cancelled by TaskStop')
     finish(id,setAppState,'killed','cancelled by TaskStop')
   },
 }
@@ -88,7 +91,7 @@ export async function launchWorkflow(
   const setAppState=context.setAppStateForTasks??context.setAppState
   const cached=new Map<string,unknown>()
   if(input.resumeFromRunId){
-    const existing=JSON.parse(await readFile(paths.metadata,'utf8')) as {runId:string,sessionId:string,scriptPath:string}
+    const existing=await readWorkflowSummary(paths.summaryPath) as {runId:string,sessionId:string,scriptPath:string}
     if(existing.runId!==runId || existing.sessionId!==getSessionId()) throw new Error('Workflow resume belongs to another session')
     if([...active.values()].some(job=>job.runId===runId)) throw new Error('Stop the prior workflow before resuming the run')
     const scripts=workflowSessionScripts(workflowProjectDir(),getSessionId())+sep
@@ -104,17 +107,46 @@ export async function launchWorkflow(
   }else {
     await mkdir(dirname(scriptPath),{recursive:true,mode:0o700})
     await writeFile(scriptPath,input.script,{flag:'wx',mode:0o600})
-    await writeFile(paths.metadata,JSON.stringify({runId,sessionId:getSessionId(),scriptPath,meta:parsed.meta,hash:parsed.hash}),{flag:'wx',mode:0o600})
+    // Official 2.1.310 writes the authoritative run snapshot under
+    // session/workflows/<runId>.json once the real task ID is assigned.
   }
   const id=generateTaskId('local_workflow')
+  const startedAt=Date.now()
+  let callCount=0
+  let summaryRecord:Record<string,unknown>={
+    runId,sessionId:getSessionId(),timestamp:new Date(startedAt).toISOString(),
+    taskId:id,script:input.script,scriptPath,result:null,agentCount:0,logs:[],
+    durationMs:0,summary:parsed.meta.description,workflowName:parsed.meta.name,
+    status:'running',startTime:startedAt,phases:parsed.meta.phases,
+    workflowProgress:[],totalTokens:0,totalToolCalls:0,
+  }
+  let recordWrites=Promise.resolve()
+  function updateSummary(patch:Record<string,unknown>):Promise<void>{
+    summaryRecord={...summaryRecord,...patch}
+    const snapshot={...summaryRecord}
+    recordWrites=recordWrites.then(()=>writeWorkflowSummary(paths.summaryPath,snapshot))
+    return recordWrites
+  }
+  function persistFinal(status:'completed'|'failed'|'killed',value?:unknown,error?:string):Promise<void>{
+    if(summaryRecord.status==='completed'||summaryRecord.status==='failed'||summaryRecord.status==='killed')
+      return recordWrites
+    return updateSummary({status,result:value??null,
+      ...(error?{error}:{}),durationMs:Date.now()-startedAt,agentCount:callCount})
+  }
+  // The run must have a durable identity before it is visible as an active task.
+  await updateSummary({})
   const task:LocalWorkflowTaskState={
     ...createTaskStateBase(id,'local_workflow',parsed.meta.description,context.toolUseId),
     type:'local_workflow',status:'running',workflowRunId:runId,
     workflowName:parsed.meta.name,summary:parsed.meta.description,scriptPath,transcriptDir:dir,
   }
   const abort=new AbortController()
-  const unregister=registerCleanup(async()=>{abort.abort();finish(id,setAppState,'killed','session ended')})
-  const job:Job={abort,unregister,runId,agents:new Map()}
+  const unregister=registerCleanup(async()=>{
+    abort.abort()
+    await persistFinal('killed',undefined,'session ended')
+    finish(id,setAppState,'killed','session ended')
+  })
+  const job:Job={abort,unregister,runId,agents:new Map(),persistFinal}
   active.set(id,job)
   registerTask(task,setAppState)
   let writes=Promise.resolve()
@@ -123,7 +155,6 @@ export async function launchWorkflow(
     return writes
   }
   void (async()=>{
-    let count=0
     const nextCacheKey=createWorkflowCallCounter()
     try{
       await journalEvent({type:'start',taskId:id,runId,scriptHash:parsed.hash})
@@ -131,12 +162,18 @@ export async function launchWorkflow(
         script:input.script,args:input.args??{},signal:abort.signal,
         onPhase:phase=>{
           updateTaskState<LocalWorkflowTaskState>(id,setAppState,t=>({...t,phase}))
+          const stages=(summaryRecord.workflowProgress as Array<{type:string,index:number,title:string}>)
+          void updateSummary({workflowProgress:[...stages,{type:'workflow_phase',index:stages.length+1,title:phase}]})
           void journalEvent({type:'phase',phase})
         },
-        onLog:message=>{void journalEvent({type:'log',message})},
+        onLog:message=>{
+          const logs=summaryRecord.logs as string[]
+          void updateSummary({logs:[...logs,message]})
+          void journalEvent({type:'log',message})
+        },
         agent:async(prompt:string,options:Record<string,unknown>)=>{
           if(abort.signal.aborted)throw new Error('Workflow cancelled')
-          const index=count++
+          const index=callCount++
           const key=nextCacheKey(prompt,options)
           if(cached.has(key))return cached.get(key)
           const agentId=`a${index+1}`
@@ -185,10 +222,12 @@ export async function launchWorkflow(
       })
       await writes
       await journalEvent({type:'complete',result:completion.result})
+      await persistFinal('completed',completion.result)
       updateTaskState<LocalWorkflowTaskState>(id,setAppState,t=>({...t,result:completion.result}))
       finish(id,setAppState,'completed',`completed ${parsed.meta.name}`)
     }catch(error){
       await journalEvent({type:abort.signal.aborted?'cancelled':'failed',error:String(error)})
+      await persistFinal(abort.signal.aborted?'killed':'failed',undefined,String(error))
       finish(id,setAppState,abort.signal.aborted?'killed':'failed',`failed ${parsed.meta.name}: ${String(error)}`)
     }
   })()

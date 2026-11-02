@@ -4,7 +4,8 @@ import { readFile, realpath } from 'node:fs/promises'
 import { getCwd } from '../../utils/cwd.js'
 import { getSessionProjectDir, getOriginalCwd } from '../../bootstrap/state.js'
 import { getProjectDir } from '../../utils/sessionStorage.js'
-import { workflowRunDirectory, workflowSessionScripts } from '../../tasks/LocalWorkflowTask/workflowStoragePaths.mjs'
+import { workflowRunDirectory, workflowSessionScripts, workflowSummaryPath } from '../../tasks/LocalWorkflowTask/workflowStoragePaths.mjs'
+import { readWorkflowSummary } from '../../tasks/LocalWorkflowTask/workflowSummaryStore.mjs'
 import { getSessionId } from '../../bootstrap/state.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { lazySchema } from '../../utils/lazySchema.js'
@@ -40,7 +41,7 @@ async function resolveScript(input:z.infer<InputSchema>) {
     const isStoredWorkflow=path.startsWith(scriptDir+sep)&&!!runId
     if(!isWorkspaceFile&&!isStoredWorkflow)throw new Error('Workflow script path is outside the workspace or session workflow directory')
     if(isStoredWorkflow){
-      const metadata=JSON.parse(await readFile(join(workflowRunDirectory(projectDir,getSessionId(),runId),'metadata.json'),'utf8'))
+      const metadata=await readWorkflowSummary(workflowSummaryPath(projectDir,getSessionId(),runId))
       if(metadata.sessionId!==getSessionId()||metadata.scriptPath!==path)
         throw new Error('Workflow script belongs to another session')
     }
@@ -51,7 +52,7 @@ async function resolveScript(input:z.infer<InputSchema>) {
     if(!/^wf_[a-z0-9-]{6,}$/.test(input.resumeFromRunId))throw new Error('Invalid resumeFromRunId')
     const projectDir=getSessionProjectDir()??getProjectDir(getOriginalCwd())
     const dir=workflowRunDirectory(projectDir,getSessionId(),input.resumeFromRunId)
-    const metadata=JSON.parse(await readFile(join(dir,'metadata.json'),'utf8'))
+    const metadata=await readWorkflowSummary(workflowSummaryPath(projectDir,getSessionId(),input.resumeFromRunId))
     const scripts=workflowSessionScripts(projectDir,getSessionId())+sep
     if(metadata.sessionId!==getSessionId()||!metadata.scriptPath?.startsWith(scripts)||
       !metadata.scriptPath.endsWith(`-${input.resumeFromRunId}.js`))
