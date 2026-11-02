@@ -3,6 +3,7 @@ import { createServer } from 'node:http'
 import { once } from 'node:events'
 import { CCRClient } from '../src/cli/transports/ccrClient.js'
 import type { SSETransport } from '../src/cli/transports/SSETransport.js'
+import { getClaudeCodeUserAgent } from '../src/utils/userAgent.js'
 
 test('closing a remote session cancels pending ephemeral events without throwing', async () => {
   const previousNoProxy = process.env.no_proxy
@@ -39,6 +40,12 @@ test('closing a remote session cancels pending ephemeral events without throwing
 test('remote uploads preserve event boundaries and never repeat previous batches', async () => {
   const previousNoProxy = process.env.no_proxy
   process.env.no_proxy = `${previousNoProxy ?? ''},127.0.0.1`
+  // The production bundle replaces MACRO.VERSION at build time; this source
+  // level test supplies the same value so requests can construct a User-Agent.
+  const globals = globalThis as unknown as { MACRO?: { VERSION: string } }
+  const previousMacro = globals.MACRO
+  globals.MACRO = { VERSION: 'test' }
+  expect(getClaudeCodeUserAgent()).toBe('claude-code/test')
   const received: Array<{ payload: { uuid: string; event: { type: string; delta?: { text?: string } } }; ephemeral?: boolean }> = []
   const server = createServer(async (req, res) => {
     let raw = ''
@@ -85,6 +92,8 @@ test('remote uploads preserve event boundaries and never repeat previous batches
     client.close()
     if (previousNoProxy === undefined) delete process.env.no_proxy
     else process.env.no_proxy = previousNoProxy
+    if (previousMacro === undefined) delete globals.MACRO
+    else globals.MACRO = previousMacro
     server.closeAllConnections()
     await new Promise<void>(resolve => server.close(() => resolve()))
   }
