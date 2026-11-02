@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test'
 import { applyNotebookEdit, isValidNotebookContent, locateNotebookEdit, MAX_NOTEBOOK_BYTES } from '../src/tools/NotebookEditTool/notebookMutation.js'
+import { withNotebookFileLock } from '../src/utils/notebookFileLock.js'
 import type { NotebookContent } from '../src/types/notebook.js'
 
 const notebook = (minor = 5): NotebookContent => ({
@@ -132,4 +133,37 @@ test('2.1.310 notebook cell-source contract accepts missing optional metadata an
   expect(isValidNotebookContent({ cells: [null] })).toBe(false)
   expect(isValidNotebookContent({ cells: 'invalid' })).toBe(false)
   expect(MAX_NOTEBOOK_BYTES).toBe(104857600)
+})
+
+test('Notebook writes on the same file are serialized while independent files progress', async () => {
+  const events: string[] = []
+  let unlockFirst: () => void = () => {}
+  const held = new Promise<void>(resolve => { unlockFirst = resolve })
+
+  const first = withNotebookFileLock('book-a', async () => {
+    events.push('first-start')
+    await held
+    events.push('first-end')
+  })
+  const second = withNotebookFileLock('book-a', async () => {
+    events.push('second-start')
+  })
+  const other = withNotebookFileLock('book-b', async () => {
+    events.push('other-file')
+  })
+
+  await other
+  expect(events).toEqual(['first-start', 'other-file'])
+  unlockFirst()
+  await Promise.all([first, second])
+  expect(events).toEqual(['first-start', 'other-file', 'first-end', 'second-start'])
+})
+
+test('Notebook file lock is released even when a write fails', async () => {
+  await expect(withNotebookFileLock('failed-book', async () => {
+    throw new Error('disk write failed')
+  })).rejects.toThrow('disk write failed')
+
+  const result = await withNotebookFileLock('failed-book', async () => 'recovered')
+  expect(result).toBe('recovered')
 })
