@@ -39,7 +39,7 @@ import { CURSOR_HOME, cursorMove, cursorPosition, DISABLE_KITTY_KEYBOARD, DISABL
 import { DBP, DFE, DISABLE_MOUSE_TRACKING, ENABLE_MOUSE_TRACKING, ENTER_ALT_SCREEN, EXIT_ALT_SCREEN, SHOW_CURSOR } from './termio/dec.js';
 import { CLEAR_ITERM2_PROGRESS, CLEAR_TAB_STATUS, setClipboard, supportsTabStatus, wrapForMultiplexer } from './termio/osc.js';
 import { isScreenReaderEnabled } from '../utils/accessibility/screenReaderRuntime.js';
-import { accessibleOutputDelta, flattenAccessibleTree } from '../utils/accessibility/screenReaderMode.mjs';
+import { accessibleOutputDelta, createScreenReaderAnnouncementQueue, flattenAccessibleTree } from '../utils/accessibility/screenReaderMode.mjs';
 import { TerminalWriteProvider } from './useTerminalNotification.js';
 
 // Alt-screen: renderer.ts sets cursor.visible = !isTTY || screen.height===0,
@@ -86,6 +86,9 @@ export default class Ink {
   private isUnmounted = false;
   private isPaused = false;
   private previousAccessibleText = '';
+  private readonly accessibleAnnouncements = createScreenReaderAnnouncementQueue();
+  private accessibleFlushTimer: ReturnType<typeof setTimeout> | null = null;
+  private accessibilityModeAnnounced = false;
   private readonly container: FiberRoot;
   private rootNode: dom.DOMElement;
   readonly focusManager: FocusManager;
@@ -440,7 +443,26 @@ export default class Ink {
       const current = flattenAccessibleTree(this.rootNode);
       const output = accessibleOutputDelta(this.previousAccessibleText, current);
       this.previousAccessibleText = current;
-      if (output) this.options.stdout.write(output);
+      if (!this.accessibilityModeAnnounced) {
+        this.accessibilityModeAnnounced = true;
+        this.options.stdout.write('[Screen Reader Mode: on]\\n'.replace('\\n','\n'));
+      }
+      if (output) this.accessibleAnnouncements.queue(output);
+      const remaining = this.accessibleAnnouncements.remaining();
+      if (this.accessibleFlushTimer !== null) {
+        clearTimeout(this.accessibleFlushTimer);
+        this.accessibleFlushTimer = null;
+      }
+      if (remaining > 0) {
+        this.accessibleFlushTimer = setTimeout(() => {
+          this.accessibleFlushTimer = null;
+          this.onRender();
+        }, remaining);
+      } else {
+        for (const announcement of this.accessibleAnnouncements.drain()) {
+          this.options.stdout.write(announcement);
+        }
+      }
       return;
     }
     // Flush deferred interaction-time update before rendering so we call

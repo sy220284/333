@@ -6,7 +6,7 @@ export function resolveScreenReaderMode({argv=[],env={},trustedSettings=[]}={}) 
   if (argv.includes('--ax-screen-reader')) return {enabled:true,source:'flag'}
   if (Object.hasOwn(env,'CLAUDE_AX_SCREEN_READER')) {
     const value=env.CLAUDE_AX_SCREEN_READER
-    return {enabled:value===true || /^(?:1|true|yes|on)$/i.test(String(value)),source:'env'}
+    return {enabled:Boolean(value),source:'env'}
   }
   for(const source of trustedSettings) {
     if(source?.settings?.axScreenReader === true) return {enabled:true,source:'settings'}
@@ -59,4 +59,39 @@ export function accessibleOutputDelta(previous='',current='') {
   // transcript with escape sequences (screen readers need persistent text).
   const changed=lines.slice(common).join('\n').trim()
   return changed ? changed+'\n' : ''
+}
+
+/** Bounded announcement queue aligned with the official 2.1.310 startup
+ * quiet (3s), hold (1s) and maximum of 16 announcements. A monotonic
+ * caller-supplied clock lets tests exercise timing without sleeping.
+ */
+export function createScreenReaderAnnouncementQueue({quietMs=3000,holdMs=1000,max=16}={}) {
+  let openedAt=null
+  let quietEnded=false
+  let heldUntil=0
+  let queued=[]
+  const remaining=(now=Date.now())=>{
+    if(!queued.length)return 0
+    const quietRemaining=quietEnded||openedAt===null?0:
+      Math.max(0,openedAt+Math.min(Math.max(0,quietMs),600000)-now)
+    return Math.max(quietRemaining,Math.max(0,heldUntil-now))
+  }
+  return {
+    queue(value,{hold=false,now=Date.now()}={}){
+      if(typeof value!=='string'||!value.trim())return
+      if(openedAt===null)openedAt=now
+      queued.push(value)
+      if(queued.length>max)queued.splice(0,queued.length-max)
+      if(hold)heldUntil=Math.max(heldUntil,now+Math.min(Math.max(0,holdMs),10000))
+    },
+    remaining,
+    endStartupQuiet(){quietEnded=true},
+    drain(now=Date.now()){
+      if(remaining(now)>0)return []
+      const result=queued
+      queued=[]
+      return result
+    },
+    pending(){return queued.length},
+  }
 }

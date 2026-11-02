@@ -9,13 +9,6 @@
 import type { z } from 'zod/v4'
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 
-type RuntimeTool = {
-  readonly inputSchema: z.ZodType
-  mapToolResultToToolResultBlockParam(
-    content: never,
-    toolUseID: string,
-  ): ToolResultBlockParam
-}
 type InputOf<T extends { readonly inputSchema: z.ZodType }> =
   z.input<T['inputSchema']>
 type OutputOf<T> =

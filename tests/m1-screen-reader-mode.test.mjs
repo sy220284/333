@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
 import {readFile} from 'node:fs/promises'
-import {resolveScreenReaderMode,screenReaderChildEnvironment,flattenAccessibleTree,accessibleOutputDelta} from '../src/utils/accessibility/screenReaderMode.mjs'
+import {resolveScreenReaderMode,screenReaderChildEnvironment,flattenAccessibleTree,accessibleOutputDelta,createScreenReaderAnnouncementQueue} from '../src/utils/accessibility/screenReaderMode.mjs'
 
 const settings=[{settings:{axScreenReader:true}}]
 test('explicit flag, env and trusted setting activation follow official precedence',()=>{
  assert.deepEqual(resolveScreenReaderMode({argv:['--ax-screen-reader'],env:{CLAUDE_AX_SCREEN_READER:'0'}}),{enabled:true,source:'flag'})
- assert.deepEqual(resolveScreenReaderMode({env:{CLAUDE_AX_SCREEN_READER:'false'},trustedSettings:settings}),{enabled:false,source:'env'})
+ assert.deepEqual(resolveScreenReaderMode({env:{CLAUDE_AX_SCREEN_READER:''},trustedSettings:settings}),{enabled:false,source:'env'})
+ assert.deepEqual(resolveScreenReaderMode({env:{CLAUDE_AX_SCREEN_READER:'0'},trustedSettings:settings}),{enabled:true,source:'env'})
  assert.deepEqual(resolveScreenReaderMode({env:{CLAUDE_AX_SCREEN_READER:'1'}}),{enabled:true,source:'env'})
  assert.deepEqual(resolveScreenReaderMode({trustedSettings:settings}),{enabled:true,source:'settings'})
  assert.deepEqual(resolveScreenReaderMode({}),{enabled:false})
@@ -32,4 +33,20 @@ test('CLI, settings and actual Ink rendering are connected',async()=>{
  assert.match(ink,/flattenAccessibleTree\(this\.rootNode\)/)
  assert.match(ink,/accessibleOutputDelta\(/)
  assert.match(gate,/getSettingsForSource\(/)
+})
+
+test('announcements are held at startup, bounded, and delivered exactly once',()=>{
+ const pending=createScreenReaderAnnouncementQueue({quietMs:3000,holdMs:1000,max:2})
+ pending.queue('first',{now:100})
+ pending.queue('second',{now:100,hold:true})
+ assert.equal(pending.pending(),2)
+ assert.equal(pending.remaining(1100),2000)
+ assert.deepEqual(pending.drain(2000),[])
+ pending.queue('third',{now:2000})
+ assert.deepEqual(pending.drain(3101),['second','third'])
+ assert.deepEqual(pending.drain(3101),[])
+ const early=createScreenReaderAnnouncementQueue()
+ early.queue('ready',{now:20})
+ early.endStartupQuiet()
+ assert.deepEqual(early.drain(20),['ready'])
 })
