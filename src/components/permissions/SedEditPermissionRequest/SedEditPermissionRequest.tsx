@@ -77,7 +77,7 @@ function _temp(e) {
   };
 }
 function SedEditPermissionRequestInner(t0) {
-  const $ = _c(35);
+  const $ = _c(36);
   let contentPromise;
   let props;
   let sedInfo;
@@ -152,13 +152,14 @@ function SedEditPermissionRequestInner(t0) {
   }
   const noChangesMessage = t3;
   let t4;
-  if ($[11] !== filePath || $[12] !== newContent) {
+  if ($[11] !== filePath || $[12] !== newContent || $[35] !== oldContent) {
     t4 = input => {
       const parsed = BashTool.inputSchema.parse(input);
       return {
         ...parsed,
         _simulatedSedEdit: {
           filePath,
+          oldContent,
           newContent
         }
       };
@@ -166,6 +167,7 @@ function SedEditPermissionRequestInner(t0) {
     $[11] = filePath;
     $[12] = newContent;
     $[13] = t4;
+    $[35] = oldContent;
   } else {
     t4 = $[13];
   }
