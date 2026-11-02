@@ -1,6 +1,7 @@
 import { feature } from 'bun:bundle'
 import { z } from 'zod/v4'
 import { getReplBridgeHandle, isReplBridgeActive } from '../../bridge/replBridgeHandle.js'
+import { getCurrentPeerIdentityKey } from '../../bridge/peerDiscovery.js'
 import type { Tool, ToolUseContext } from '../../Tool.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { findTeammateTaskByAgentId } from '../../tasks/InProcessTeammateTask/InProcessTeammateTask.js'
@@ -587,7 +588,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
     },
 
     async checkPermissions(input, _context) {
-      if (isCrossSessionMessagingEnabled() && (parseAddress(input.to).scheme === 'bridge' || resolveAdvertisedRemoteRecipient(input.to) !== undefined)) {
+      if (isCrossSessionMessagingEnabled() && (parseAddress(input.to).scheme === 'bridge' || resolveAdvertisedRemoteRecipient(input.to, Date.now(), await getCurrentPeerIdentityKey()) !== undefined)) {
         return {
           behavior: 'ask' as const,
           message: `Send a message to Remote Control session ${input.to}? It arrives as a user prompt on the receiving Claude (possibly another machine) via Anthropic's servers.`,
@@ -632,7 +633,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
           errorCode: 9,
         }
       }
-      if (isCrossSessionMessagingEnabled() && (parseAddress(input.to).scheme === 'bridge' || resolveAdvertisedRemoteRecipient(input.to) !== undefined)) {
+      if (isCrossSessionMessagingEnabled() && (parseAddress(input.to).scheme === 'bridge' || resolveAdvertisedRemoteRecipient(input.to, Date.now(), await getCurrentPeerIdentityKey()) !== undefined)) {
         // Structured-message rejection first — it's the permanent constraint.
         // Showing "not connected" first would make the user reconnect only to
         // hit this error on retry.
@@ -671,7 +672,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
       if (typeof input.message === 'string') {
         if (isCrossSessionMessagingEnabled()) {
           const { peers } = await listLiveLocalPeers(join(getClaudeConfigHomeDir(), 'sessions'))
-          const resolved = resolveUnifiedPeerRecipient(peers, input.to)
+          const resolved = resolveUnifiedPeerRecipient(peers, input.to, Date.now(), await getCurrentPeerIdentityKey())
           if (resolved.ambiguous) return { result: false as const, message: 'Multiple reachable peers share this name; use the exact name [ref] from ListAgents', errorCode: 9 }
           if (resolved.address) return { result: true as const }
         }
@@ -751,7 +752,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
     async call(input, context, canUseTool, assistantMessage) {
       if (isCrossSessionMessagingEnabled() && typeof input.message === 'string') {
         const { peers } = await listLiveLocalPeers(join(getClaudeConfigHomeDir(), 'sessions'))
-        const peerMatch = resolveUnifiedPeerRecipient(peers, input.to)
+        const peerMatch = resolveUnifiedPeerRecipient(peers, input.to, Date.now(), await getCurrentPeerIdentityKey())
         if (peerMatch.ambiguous) throw new Error('Peer name is ambiguous; use name [ref] from ListAgents')
         const peerAddress = peerMatch.address
         const addr = parseAddress(peerAddress ?? input.to)
