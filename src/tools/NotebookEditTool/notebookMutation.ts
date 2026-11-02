@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { NotebookCell, NotebookContent } from '../../types/notebook.js'
-import { isValidNotebookContent } from '../../utils/notebook.js'
-export { isValidNotebookContent, MAX_NOTEBOOK_BYTES } from '../../utils/notebook.js'
+import { isValidNotebookContent } from '../../utils/notebookCells.js'
+export { isValidNotebookContent, MAX_NOTEBOOK_BYTES } from '../../utils/notebookCells.js'
 
 export type NotebookEditMode = 'replace' | 'insert' | 'delete'
 export type EditableCellType = 'code' | 'markdown'
