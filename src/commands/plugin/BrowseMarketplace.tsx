@@ -163,7 +163,7 @@ export function BrowseMarketplace({
         const errorResult = formatMarketplaceLoadingErrors(failures, successCount);
         if (errorResult) {
           if (errorResult.type === 'warning') {
-            setWarning(errorResult.message + '. Showing available marketplaces.');
+            setWarning(`${errorResult.message}. Showing available marketplaces.`);
           } else {
             throw new Error(errorResult.message);
           }
@@ -345,14 +345,14 @@ export function BrowseMarketplace({
     // Handle installation results
     if (failureCount === 0) {
       // All succeeded
-      const message = `✓ Installed ${successCount_0} ${plural(successCount_0, 'plugin')}. ` + `Run /reload-plugins to activate.`;
+      const message = `✓ Installed ${successCount_0} ${plural(successCount_0, 'plugin')}. Run /reload-plugins to activate.`;
       setResult(message);
     } else if (successCount_0 === 0) {
       // All failed - show error with reasons
       setError(`Failed to install: ${formatFailureDetails(newFailedPlugins, true)}`);
     } else {
       // Mixed results - show partial success
-      const message_0 = `✓ Installed ${successCount_0} of ${successCount_0 + failureCount} plugins. ` + `Failed: ${formatFailureDetails(newFailedPlugins, false)}. ` + `Run /reload-plugins to activate successfully installed plugins.`;
+      const message_0 = `✓ Installed ${successCount_0} of ${successCount_0 + failureCount} plugins. Failed: ${formatFailureDetails(newFailedPlugins, false)}. Run /reload-plugins to activate successfully installed plugins.`;
       setResult(message_0);
     }
 
