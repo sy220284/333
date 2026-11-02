@@ -38,7 +38,7 @@ import { SYNC_OUTPUT_SUPPORTED, supportsExtendedKeys, type Terminal, writeDiffTo
 import { CURSOR_HOME, cursorMove, cursorPosition, DISABLE_KITTY_KEYBOARD, DISABLE_MODIFY_OTHER_KEYS, ENABLE_KITTY_KEYBOARD, ENABLE_MODIFY_OTHER_KEYS, ERASE_SCREEN } from './termio/csi.js';
 import { DBP, DFE, DISABLE_MOUSE_TRACKING, ENABLE_MOUSE_TRACKING, ENTER_ALT_SCREEN, EXIT_ALT_SCREEN, SHOW_CURSOR } from './termio/dec.js';
 import { CLEAR_ITERM2_PROGRESS, CLEAR_TAB_STATUS, setClipboard, supportsTabStatus, wrapForMultiplexer } from './termio/osc.js';
-import { isScreenReaderEnabled } from '../utils/accessibility/screenReaderRuntime.js';
+import { getScreenReaderMode } from '../utils/accessibility/screenReaderRuntime.js';
 import { accessibleOutputDelta, createScreenReaderAnnouncementQueue, flattenAccessibleTree } from '../utils/accessibility/screenReaderMode.mjs';
 import { TerminalWriteProvider } from './useTerminalNotification.js';
 
@@ -435,7 +435,8 @@ export default class Ink {
       this.drainTimer = null;
     }
 
-    if (isScreenReaderEnabled()) {
+    const screenReader = getScreenReaderMode();
+    if (screenReader.enabled) {
       // Screen readers consume persistent semantic text, not an animated
       // screen-buffer diff. Skip all cursor control/erase sequences and emit
       // only the changed accessible text from the mounted React/Ink tree.
@@ -445,7 +446,7 @@ export default class Ink {
       this.previousAccessibleText = current;
       if (!this.accessibilityModeAnnounced) {
         this.accessibilityModeAnnounced = true;
-        this.options.stdout.write('[Screen Reader Mode: on]\n');
+        this.options.stdout.write(`[Screen Reader Mode: on via ${screenReader.source}]\n`);
       }
       if (output) this.accessibleAnnouncements.queue(output);
       const remaining = this.accessibleAnnouncements.remaining();

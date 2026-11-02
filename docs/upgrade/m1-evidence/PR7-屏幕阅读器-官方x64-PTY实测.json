@@ -7,22 +7,30 @@
     "chunk-mh7sh27p.js:721 AX CLI argument",
     "chunk-dzh36vh3.js:1265 AX env and settings"
   ],
-  "method": "offline real Linux x64 in a PTY, isolated HOME and CWD, fake key, --ax-screen-reader off/on",
+  "method": "2026-11-02 official 2.1.310 x64 real Linux PTY isolated HOME/CWD, 8-second no-flag/flag/env comparison",
   "observed": {
     "without_flag": {
-      "bytes": 1660,
-      "csi_cursor_controls": 128,
+      "bytes": 1214,
+      "csi_cursor_controls": 92,
       "ax_banner": false
     },
     "with_flag": {
-      "bytes": 449,
-      "csi_cursor_controls": 12,
+      "bytes": 545,
+      "csi_cursor_controls": 25,
       "ax_banner": "[Screen Reader Mode: on via flag]",
+      "flat_welcome": true,
+      "connectivity_status": true
+    },
+    "with_env": {
+      "bytes": 544,
+      "csi_cursor_controls": 25,
+      "ax_banner": "[Screen Reader Mode: on via env]",
       "flat_welcome": true,
       "connectivity_status": true
     }
   },
-  "candidate": "CI_PENDING",
+  "candidate": "PENDING_PR7_CI",
   "scope": "startup and connectivity status only",
-  "M10_acceptance": "UNVERIFIED"
+  "M10_acceptance": "UNVERIFIED",
+  "note": "CSI counts are capture-time observations and may vary; automated tests assert relative differences. Full interactive E2E still unverified."
 }

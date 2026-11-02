@@ -28,7 +28,7 @@ def sha256(path):
             h.update(part)
     return h.hexdigest()
 
-def probe(executable,ax,timeout):
+def probe(executable,mode,timeout):
     with tempfile.TemporaryDirectory(prefix='m1-ax-pty-') as scratch:
         root=Path(scratch)
         (root/'.config').mkdir()
@@ -43,7 +43,8 @@ def probe(executable,ax,timeout):
                     'DISABLE_TELEMETRY':'1','DISABLE_ERROR_REPORTING':'1',
                     'NO_PROXY':'localhost,127.0.0.1'})
         cmd=[str(Path(executable).resolve())]
-        if ax: cmd.append('--ax-screen-reader')
+        if mode=='flag': cmd.append('--ax-screen-reader')
+        if mode=='env': env['CLAUDE_AX_SCREEN_READER']='1'
         master,slave=pty.openpty()
         fcntl.ioctl(slave,termios.TIOCSWINSZ,struct.pack('HHHH',40,120,0,0))
         proc=subprocess.Popen(cmd,cwd=project,env=env,stdin=slave,stdout=slave,
@@ -68,22 +69,25 @@ def probe(executable,ax,timeout):
             os.close(master)
         raw=buffer.decode('utf8','replace')
         text=OSC.sub('',CSI.sub('',raw)).replace('\r','').strip()
-        return {'ax':ax,'exit':proc.returncode if exited else 'terminated_after_capture',
+        return {'mode':mode,'exit':proc.returncode if exited else 'terminated_after_capture',
                 'bytes':len(buffer),'cursor_control_sequences':len(CSI.findall(raw)),
-                'activation_banner':'[Screen Reader Mode: on via flag]' in text,
+                'activation_banner': (f'[Screen Reader Mode: on via {mode}]' in text if mode!='off' else '[Screen Reader Mode: on' in text),
                 'flat_welcome':'Welcome to Claude Code' in text,
                 'connection_status':'Checking connectivity' in text,
                 'offline_failure_visible':'Unable to connect to Anthropic services' in text,
                 'text_excerpt':text[:450]}
 
 def validate(label,cases):
-    basic,ax=cases
-    assert basic['bytes'] and ax['bytes'],(label,cases)
+    basic,ax,env=cases
+    assert all(c['bytes'] for c in cases),(label,cases)
     assert not basic['activation_banner'],(label,'AX enabled without flag',basic)
     assert ax['activation_banner'],(label,'AX banner missing',ax)
     assert ax['flat_welcome'],(label,'Actual flat welcome missing',ax)
     assert ax['connection_status'],(label,'Missing status output',ax)
-    assert ax['cursor_control_sequences']<basic['cursor_control_sequences'],(
+    assert env['activation_banner'],(label,'AX env banner missing',env)
+    assert env['flat_welcome'],(label,'AX env flat welcome missing',env)
+    assert env['connection_status'],(label,'AX env connection status missing',env)
+    assert all(c['cursor_control_sequences']<basic['cursor_control_sequences'] for c in (ax,env)),(
         label,'AX terminal cursor/animation suppression missing',cases)
 
 def main():
@@ -102,7 +106,7 @@ def main():
     binaries=[('official',a.reference)]
     if a.candidate: binaries.append(('candidate',a.candidate))
     for label,executable in binaries:
-        cases=[probe(executable,flag,a.timeout) for flag in (False,True)]
+        cases=[probe(executable,mode,a.timeout) for mode in ('off','flag','env')]
         report['results'][label]=cases
         try: validate(label,cases)
         except AssertionError as e: failures.append(str(e))
