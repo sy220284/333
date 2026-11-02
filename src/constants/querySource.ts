@@ -31,6 +31,7 @@ export type QuerySource =
   | 'session_memory'
   | 'session_search'
   | 'side_question'
+  | 'skill_improvement'
   | 'skill_improvement_apply'
   | 'speculation'
   | 'teleport_generate_title'
