@@ -5,7 +5,7 @@
  * A failure releases the lock; different notebook paths remain independent.
  */
 import { normalize } from 'node:path'
-import { getFsImplementation } from './fsOperations.js'
+import { getFsImplementation, safeResolvePath } from './fsOperations.js'
 
 const pendingWrites = new Map<string, Promise<void>>()
 
@@ -15,14 +15,9 @@ const pendingWrites = new Map<string, Promise<void>>()
  * Missing files retain their normalized path; validation reports ENOENT.
  */
 function getNotebookLockKey(path: string): string {
-  try {
-    return getFsImplementation().realpathSync(path)
-  } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-      return normalize(path)
-    }
-    throw error
-  }
+  // The shared filesystem resolver avoids network UNC probes and blocking
+  // special files, while canonicalizing symlink aliases where possible.
+  return normalize(safeResolvePath(getFsImplementation(), path).resolvedPath)
 }
 
 export async function withNotebookFileLock<T>(
