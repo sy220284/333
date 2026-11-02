@@ -172,6 +172,9 @@ test('account identity verification is wired through list, permission, validatio
  assert.match(sending,/async validateInput/)
  assert.match(sending,/async call\(/)
  assert.match(discovery,/peerIdentityKey\(credentials\.accessToken, credentials\.orgUUID\)/)
+ const bridge=await source('src/bridge/peerSessions.ts')
+ assert.match(bridge,/peerIdentityKey\(accessToken, orgUUID\) !== expectedIdentityKey/)
+ assert.match(sending,/postInterClaudeMessage\([\s\S]*?currentIdentityKey,\s*\)/)
 })
 
 
