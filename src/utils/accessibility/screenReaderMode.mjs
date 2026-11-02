@@ -36,7 +36,16 @@ export function flattenAccessibleTree(root) {
     if(node.nodeName==='ink-raw-ansi') return
     const block=node.nodeName==='ink-box' || node.nodeName==='ink-root'
     if(block) flush()
-    for(const child of node.childNodes??[]) walk(child)
+    // Adjacent Ink <Text> children form separate semantic lines even when
+    // layout renders them within the same Box. Nested inline Text keeps its
+    // text contiguous (Claude Code v2.1.310, model and workspace are distinct).
+    let previousText=false
+    for(const child of node.childNodes??[]) {
+      const nextText=child?.nodeName==='ink-text'
+      if(block && previousText && nextText) flush()
+      walk(child)
+      previousText=nextText
+    }
     if(block) flush()
   }
   walk(root)
