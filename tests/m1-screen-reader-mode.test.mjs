@@ -37,6 +37,17 @@ test('logo model, billing and working directory remain separate spoken lines',()
   'Claude Code v2.1.310\nSonnet 4.6 · API Usage Billing\n~/project')
 })
 
+test('virtual-text container splits semantic sibling labels but preserves inline styled spans',()=>{
+ const label=text=>({nodeName:'ink-text',childNodes:[{nodeName:'#text',nodeValue:text}]})
+ const tree={nodeName:'ink-root',childNodes:[{nodeName:'ink-virtual-text',childNodes:[
+  {nodeName:'ink-text',childNodes:[label('Claude Code'),{nodeName:'#text',nodeValue:' v2.1.310'}]},
+  label('Sonnet 4.6 · API Usage Billing'),
+  label('~/project'),
+ ]}]}
+ assert.equal(flattenAccessibleTree(tree),
+   'Claude Code v2.1.310\\nSonnet 4.6 · API Usage Billing\\n~/project')
+})
+
 test('CLI, settings and actual Ink rendering are connected',async()=>{
  const source=path=>readFile(new URL('../'+path,import.meta.url),'utf8')
  const [cli,settings,ink,gate]=await Promise.all([
