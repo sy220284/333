@@ -152,9 +152,18 @@ try {
     child.on('close', (code, signal) => resolve({ code, signal }))
   })
   clearTimeout(timer)
+  // Report the actual CLI failure before attempting to parse JSON output.
+  // An empty stdout otherwise obscures the exit status and root exception.
+  assert.equal(result.code, 0, JSON.stringify({
+    exit: result, modelRequests: requestCount, stderr: stderr.slice(-12000),
+    stdout: stdout.slice(-4000),
+  }))
+  assert.ok(stdout.trim(), JSON.stringify({
+    reason: 'CLI produced no JSON output', modelRequests: requestCount,
+    stderr: stderr.slice(-12000),
+  }))
   const disk = JSON.parse(readFileSync(notebook_path, 'utf8'))
   const output = JSON.parse(stdout.trim())
-  assert.equal(result.code, 0, stderr)
   assert.equal(requestCount, 4)
   assert.equal(output.result, 'E41_NOTEBOOK_ROUNDTRIP_OK')
   assert.equal(output.is_error, false)
