@@ -457,7 +457,7 @@ export async function getSystemPrompt(
     computeSimpleEnvInfo(model, additionalWorkingDirectories),
   ])
 
-  const settings = getInitialSettings()
+  getInitialSettings()
   const enabledTools = new Set(tools.map(_ => _.name))
 
   if (

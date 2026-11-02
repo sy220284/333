@@ -29,7 +29,7 @@ export function Settings(t0) {
   const [selectedTab, setSelectedTab] = useState(defaultTab);
   const [tabsHidden, setTabsHidden] = useState(false);
   const [configOwnsEsc, setConfigOwnsEsc] = useState(false);
-  const [gatesOwnsEsc, setGatesOwnsEsc] = useState(false);
+  const [gatesOwnsEsc] = useState(false);
   const insideModal = useIsInsideModal();
   const {
     rows
