@@ -229,6 +229,9 @@ export function parseSedEditCommand(command: string): SedEditInfo | null {
   // Unsupported GNU/BSD sed extensions must not be shown as a successful
   // file edit. Preserve the normal Bash permission/execute path instead.
   if (/\\[{}1-9bBwW<>]/.test(pattern)) return null
+  // BSD sed does not interpret GNU BRE \+ / \? / \| extensions in
+  // the same way. Do not show an edit preview with different semantics.
+  if (process.platform === 'darwin' && !extendedRegex && /\\[+?|]/.test(pattern)) return null
   if (/\\[^\\/&n]/.test(replacement)) return null
   if (/[\r\n]/.test(pattern) || /[\r\n]/.test(replacement)) return null
 
