@@ -13,6 +13,9 @@ const makeNotebook = () => ({
   ],
 })
 
+// Windows cold-loads the production NotebookEditTool module and its native adapters
+// inside this test. Give that real initialization and disk I/O a bounded budget;
+// keep imports after disabling checkpointing to preserve production behavior.
 test('actual NotebookEditTool validates, edits, inserts and deletes cells on disk', async () => {
   const previous = process.env.CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING
   process.env.CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING = '1'
@@ -71,4 +74,4 @@ test('actual NotebookEditTool validates, edits, inserts and deletes cells on dis
     if (previous === undefined) delete process.env.CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING
     else process.env.CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING = previous
   }
-})
+}, 30_000)
