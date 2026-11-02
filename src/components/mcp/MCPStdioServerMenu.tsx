@@ -4,7 +4,7 @@ import type { CommandResultDisplay } from '../../commands.js';
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js';
 import { Box, color, Text, useTheme } from '../../ink.js';
 import { getMcpConfigByName } from '../../services/mcp/config.js';
-import { useMcpReconnect, useMcpToggleEnabled } from '../../services/mcp/MCPConnectionManager.js';
+import { useMcp重新连接, useMcpToggleEnabled } from '../../services/mcp/MCPConnectionManager.js';
 import { describeMcpConfigFilePath, filterMcpPromptsByServer } from '../../services/mcp/utils.js';
 import { useAppState } from '../../state/AppState.js';
 import { errorMessage } from '../../utils/errors.js';
@@ -16,11 +16,11 @@ import { KeyboardShortcutHint } from '../design-system/KeyboardShortcutHint.js';
 import { Spinner } from '../Spinner.js';
 import { CapabilitiesSection } from './CapabilitiesSection.js';
 import type { StdioServerInfo } from './types.js';
-import { handleReconnectError, handleReconnectResult } from './utils/reconnectHelpers.js';
+import { handle重新连接Error, handle重新连接Result } from './utils/reconnectHelpers.js';
 type Props = {
   server: StdioServerInfo;
   serverToolsCount: number;
-  onViewTools: () => void;
+  onView工具：() => void;
   onCancel: () => void;
   onComplete: (result?: string, options?: {
     display?: CommandResultDisplay;
@@ -38,9 +38,9 @@ export function MCPStdioServerMenu({
   const [theme] = useTheme();
   const exitState = useExitOnCtrlCDWithKeybindings();
   const mcp = useAppState(s => s.mcp);
-  const reconnectMcpServer = useMcpReconnect();
+  const reconnectMcpServer = useMcp重新连接();
   const toggleMcpServer = useMcpToggleEnabled();
-  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [is重新连接ing, setIs重新连接ing] = useState(false);
   const handleToggleEnabled = React.useCallback(async () => {
     const wasEnabled = server.client.type !== 'disabled';
     try {
@@ -58,72 +58,72 @@ export function MCPStdioServerMenu({
   const serverCommandsCount = filterMcpPromptsByServer(mcp.commands, server.name).length;
   const menuOptions = [];
 
-  // Only show "View tools" if server is not disabled and has tools
+  // Only show "查看工具" if server is not 已禁用 and has tools
   if (server.client.type !== 'disabled' && serverToolsCount > 0) {
     menuOptions.push({
-      label: 'View tools',
+      label: '查看工具',
       value: 'tools'
     });
   }
 
-  // Only show reconnect option if the server is not disabled
+  // Only show reconnect option if the server is not 已禁用
   if (server.client.type !== 'disabled') {
     menuOptions.push({
-      label: 'Reconnect',
+      label: '重新连接',
       value: 'reconnectMcpServer'
     });
   }
   menuOptions.push({
-    label: server.client.type !== 'disabled' ? 'Disable' : 'Enable',
+    label: server.client.type !== 'disabled' ? '禁用' : '启用',
     value: 'toggle-enabled'
   });
 
   // If there are no other options, add a back option so Select handles escape
   if (menuOptions.length === 0) {
     menuOptions.push({
-      label: 'Back',
+      label: '返回',
       value: 'back'
     });
   }
-  if (isReconnecting) {
+  if (is重新连接ing) {
     return <Box flexDirection="column" gap={1} padding={1}>
         <Text color="text">
-          Reconnecting to <Text bold>{server.name}</Text>
+          重新连接ing to <Text bold>{server.name}</Text>
         </Text>
         <Box>
           <Spinner />
-          <Text> Restarting MCP server process</Text>
+          <Text> 正在重新启动 MCP 服务器进程</Text>
         </Box>
-        <Text dimColor>This may take a few moments.</Text>
+        <Text dimColor>此过程可能需要一些时间。</Text>
       </Box>;
   }
   return <Box flexDirection="column">
       <Box flexDirection="column" paddingX={1} borderStyle={borderless ? undefined : 'round'}>
         <Box marginBottom={1}>
-          <Text bold>{capitalizedServerName} MCP Server</Text>
+          <Text bold>{capitalizedServerName} MCP 服务器</Text>
         </Box>
 
         <Box flexDirection="column" gap={0}>
           <Box>
-            <Text bold>Status: </Text>
-            {server.client.type === 'disabled' ? <Text>{color('inactive', theme)(figures.radioOff)} disabled</Text> : server.client.type === 'connected' ? <Text>{color('success', theme)(figures.tick)} connected</Text> : server.client.type === 'pending' ? <>
+            <Text bold>状态：</Text>
+            {server.client.type === 'disabled' ? <Text>{color('inactive', theme)(figures.radioOff)} 已禁用</Text> : server.client.type === 'connected' ? <Text>{color('success', theme)(figures.tick)} 已连接</Text> : server.client.type === 'pending' ? <>
                 <Text dimColor>{figures.radioOff}</Text>
-                <Text> connecting…</Text>
-              </> : <Text>{color('error', theme)(figures.cross)} failed</Text>}
+                <Text> 正在连接…</Text>
+              </> : <Text>{color('error', theme)(figures.cross)} 失败</Text>}
           </Box>
 
           <Box>
-            <Text bold>Command: </Text>
+            <Text bold>命令：</Text>
             <Text dimColor>{server.config.command}</Text>
           </Box>
 
           {server.config.args && server.config.args.length > 0 && <Box>
-              <Text bold>Args: </Text>
+              <Text bold>参数：</Text>
               <Text dimColor>{server.config.args.join(' ')}</Text>
             </Box>}
 
           <Box>
-            <Text bold>Config location: </Text>
+            <Text bold>配置位置：</Text>
             <Text dimColor>
               {describeMcpConfigFilePath(getMcpConfigByName(server.name)?.scope ?? 'dynamic')}
             </Text>
@@ -132,8 +132,8 @@ export function MCPStdioServerMenu({
           {server.client.type === 'connected' && <CapabilitiesSection serverToolsCount={serverToolsCount} serverPromptsCount={serverCommandsCount} serverResourcesCount={mcp.resources[server.name]?.length || 0} />}
 
           {server.client.type === 'connected' && serverToolsCount > 0 && <Box>
-              <Text bold>Tools: </Text>
-              <Text dimColor>{serverToolsCount} tools</Text>
+              <Text bold>工具：</Text>
+              <Text dimColor>{serverToolsCount} 个工具</Text>
             </Box>}
         </Box>
 
@@ -142,17 +142,17 @@ export function MCPStdioServerMenu({
           if (value === 'tools') {
             onViewTools();
           } else if (value === 'reconnectMcpServer') {
-            setIsReconnecting(true);
+            setIs重新连接ing(true);
             try {
               const result = await reconnectMcpServer(server.name);
               const {
                 message
-              } = handleReconnectResult(result, server.name);
+              } = handle重新连接Result(result, server.name);
               onComplete?.(message);
             } catch (err_0) {
-              onComplete?.(handleReconnectError(err_0, server.name));
+              onComplete?.(handle重新连接Error(err_0, server.name));
             } finally {
-              setIsReconnecting(false);
+              setIs重新连接ing(false);
             }
           } else if (value === 'toggle-enabled') {
             await handleToggleEnabled();

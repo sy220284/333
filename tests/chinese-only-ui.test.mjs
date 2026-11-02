@@ -95,3 +95,12 @@ test('重要交互：反馈、托管设置、MCP 审批、插件推荐中文化'
   assert.match(read('src/components/InvalidSettingsDialog.tsx'), /设置错误/)
   assert.match(read('src/components/LspRecommendation/LspRecommendationMenu.tsx'), /LSP 插件推荐/)
 })
+
+test('插件管理页面保留内部标签标识并使用中文', () => {
+  const ui=read('src/commands/plugin/PluginSettings.tsx')
+  assert.match(ui, /id="discover" title="发现插件"/)
+  assert.match(ui, /id="installed" title="已安装"/)
+  assert.match(ui, /id="marketplaces" title="插件市场"/)
+  assert.match(read('src/commands/plugin/DiscoverPlugins.tsx'), /发现插件/)
+  assert.match(read('src/components/mcp/MCPStdioServerMenu.tsx'), /查看工具/)
+})

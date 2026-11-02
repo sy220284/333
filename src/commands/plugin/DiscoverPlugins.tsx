@@ -492,7 +492,7 @@ export function DiscoverPlugins({
 
   // Loading state
   if (loading) {
-    return <Text>Loading…</Text>;
+    return <Text>正在加载…</Text>;
   }
 
   // Error state
@@ -507,13 +507,13 @@ export function DiscoverPlugins({
     const menuOptions = buildPluginDetailsMenuOptions(hasHomepage_1, githubRepo_1);
     return <Box flexDirection="column">
         <Box marginBottom={1}>
-          <Text bold>Plugin details</Text>
+          <Text bold>插件详情</Text>
         </Box>
 
         <Box flexDirection="column" marginBottom={1}>
           <Text bold>{selectedPlugin.entry.name}</Text>
-          <Text dimColor>from {selectedPlugin.marketplaceName}</Text>
-          {selectedPlugin.entry.version && <Text dimColor>Version: {selectedPlugin.entry.version}</Text>}
+          <Text dimColor>来源：{selectedPlugin.marketplaceName}</Text>
+          {selectedPlugin.entry.version && <Text dimColor>版本：{selectedPlugin.entry.version}</Text>}
           {selectedPlugin.entry.description && <Box marginTop={1}>
               <Text>{selectedPlugin.entry.description}</Text>
             </Box>}
@@ -528,7 +528,7 @@ export function DiscoverPlugins({
         <PluginTrustWarning />
 
         {installError && <Box marginBottom={1}>
-            <Text color="error">Error: {installError}</Text>
+            <Text color="error">错误：{installError}</Text>
           </Box>}
 
         <Box flexDirection="column">
@@ -556,7 +556,7 @@ export function DiscoverPlugins({
   if (availablePlugins.length === 0) {
     return <Box flexDirection="column">
         <Box marginBottom={1}>
-          <Text bold>Discover plugins</Text>
+          <Text bold>发现插件</Text>
         </Box>
         <EmptyStateMessage reason={emptyReason} />
         <Box marginTop={1}>
@@ -571,7 +571,7 @@ export function DiscoverPlugins({
   const visiblePlugins = pagination.getVisibleItems(filteredPlugins);
   return <Box flexDirection="column">
       <Box>
-        <Text bold>Discover plugins</Text>
+        <Text bold>发现插件</Text>
         {pagination.needsPagination && <Text dimColor>
             {' '}
             ({pagination.scrollPosition.current}/
@@ -593,12 +593,12 @@ export function DiscoverPlugins({
 
       {/* No search results */}
       {filteredPlugins.length === 0 && searchQuery && <Box marginBottom={1}>
-          <Text dimColor>No plugins match &quot;{searchQuery}&quot;</Text>
+          <Text dimColor>没有匹配的插件： &quot;{searchQuery}&quot;</Text>
         </Box>}
 
       {/* Scroll up indicator */}
       {pagination.scrollPosition.canScrollUp && <Box>
-          <Text dimColor> {figures.arrowUp} more above</Text>
+          <Text dimColor> {figures.arrowUp} 项在上方</Text>
         </Box>}
 
       {/* Plugin list - use startIndex in key to force re-render on scroll */}
@@ -617,7 +617,7 @@ export function DiscoverPlugins({
                 {isInstallingThis ? figures.ellipsis : isSelectedForInstall ? figures.radioOn : figures.radioOff}{' '}
                 {plugin_5.entry.name}
                 <Text dimColor> · {plugin_5.marketplaceName}</Text>
-                {plugin_5.entry.tags?.includes('community-managed') && <Text dimColor> [Community Managed]</Text>}
+                {plugin_5.entry.tags?.includes('community-managed') && <Text dimColor> [社区维护]</Text>}
                 {installCounts && plugin_5.marketplaceName === OFFICIAL_MARKETPLACE_NAME && <Text dimColor>
                       {' · '}
                       {formatInstallCount(installCounts.get(plugin_5.pluginId) ?? 0)}{' '}
@@ -635,7 +635,7 @@ export function DiscoverPlugins({
 
       {/* Scroll down indicator */}
       {pagination.scrollPosition.canScrollDown && <Box>
-          <Text dimColor> {figures.arrowDown} more below</Text>
+          <Text dimColor> {figures.arrowDown} 项在下方</Text>
         </Box>}
 
       {/* Error messages */}
@@ -664,7 +664,7 @@ function DiscoverPluginsKeyHint(t0) {
   }
   let t2;
   if ($[2] === Symbol.for("react.memo_cache_sentinel")) {
-    t2 = <Text>type to search</Text>;
+    t2 = <Text>输入以搜索</Text>;
     $[2] = t2;
   } else {
     t2 = $[2];
@@ -713,7 +713,7 @@ function EmptyStateMessage(t0) {
       {
         let t1;
         if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
-          t1 = <><Text dimColor={true}>Git is required to install marketplaces.</Text><Text dimColor={true}>Please install git and restart Claude Code.</Text></>;
+          t1 = <><Text dimColor={true}>安装插件市场需要 Git。</Text><Text dimColor={true}>请安装 Git 并重新启动 Claude Code。</Text></>;
           $[0] = t1;
         } else {
           t1 = $[0];
@@ -724,7 +724,7 @@ function EmptyStateMessage(t0) {
       {
         let t1;
         if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
-          t1 = <><Text dimColor={true}>Your organization policy does not allow any external marketplaces.</Text><Text dimColor={true}>Contact your administrator.</Text></>;
+          t1 = <><Text dimColor={true}>组织策略不允许使用外部插件市场。</Text><Text dimColor={true}>请联系管理员。</Text></>;
           $[1] = t1;
         } else {
           t1 = $[1];
@@ -735,7 +735,7 @@ function EmptyStateMessage(t0) {
       {
         let t1;
         if ($[2] === Symbol.for("react.memo_cache_sentinel")) {
-          t1 = <><Text dimColor={true}>Your organization restricts which marketplaces can be added.</Text><Text dimColor={true}>Switch to the Marketplaces tab to view allowed sources.</Text></>;
+          t1 = <><Text dimColor={true}>组织限制了允许添加的插件市场。</Text><Text dimColor={true}>切换到插件市场标签页查看允许的来源。</Text></>;
           $[2] = t1;
         } else {
           t1 = $[2];
@@ -746,7 +746,7 @@ function EmptyStateMessage(t0) {
       {
         let t1;
         if ($[3] === Symbol.for("react.memo_cache_sentinel")) {
-          t1 = <><Text dimColor={true}>Failed to load marketplace data.</Text><Text dimColor={true}>Check your network connection.</Text></>;
+          t1 = <><Text dimColor={true}>加载插件市场数据失败。</Text><Text dimColor={true}>请检查网络连接。</Text></>;
           $[3] = t1;
         } else {
           t1 = $[3];
@@ -757,7 +757,7 @@ function EmptyStateMessage(t0) {
       {
         let t1;
         if ($[4] === Symbol.for("react.memo_cache_sentinel")) {
-          t1 = <><Text dimColor={true}>All available plugins are already installed.</Text><Text dimColor={true}>Check for new plugins later or add more marketplaces.</Text></>;
+          t1 = <><Text dimColor={true}>所有可用插件都已安装。</Text><Text dimColor={true}>可稍后查看新插件，或添加其他插件市场。</Text></>;
           $[4] = t1;
         } else {
           t1 = $[4];
@@ -769,7 +769,7 @@ function EmptyStateMessage(t0) {
       {
         let t1;
         if ($[5] === Symbol.for("react.memo_cache_sentinel")) {
-          t1 = <><Text dimColor={true}>No plugins available.</Text><Text dimColor={true}>Add a marketplace first using the Marketplaces tab.</Text></>;
+          t1 = <><Text dimColor={true}>目前没有可用插件。</Text><Text dimColor={true}>请先在插件市场标签页添加一个插件市场。</Text></>;
           $[5] = t1;
         } else {
           t1 = $[5];
