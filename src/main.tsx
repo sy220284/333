@@ -511,6 +511,7 @@ function eagerLoadSettings(): void {
   // --settings overlay while suppressing user/project/local settings files.
   const safeMode = process.argv.includes('--safe-mode');
   const restricted = process.argv.includes('--restricted');
+  if (restricted) process.env.CLAUDE_CODE_RESTRICTED = '1';
   if (safeMode) {
     // A safe session still honors security denials in project/user settings.
     // The settings merger retains only deny rules from these untrusted sources.
