@@ -83,7 +83,7 @@ function lint(all) {
   if (!existsSync(bin('biome'))) throw new Error('缺失 Biome，先运行 npm install --prefix tools/dev');
   const files = all ? ['src', 'native', 'build', 'tests', 'tools/dev'] : [...new Set([...checkedFiles(), 'tools/dev/quality-core.mjs', 'tools/dev/dev.mjs', 'tools/dev/watch.mjs', 'tools/dev/native-smoke.mjs', 'tools/dev/portable.mjs', 'tools/dev/audit-report.mjs'])];
   if (!files.length) { console.log('[333-dev] 没有需要检查的文件'); return; }
-  toolRun('biome', ['lint', '--no-errors-on-unmatched', ...files]);
+  toolRun('biome', ['lint', '--no-errors-on-unmatched', '--max-diagnostics=200', ...files]);
 }
 function boot() { npmRun(['ci', '--prefix', 'tools/dev', '--ignore-scripts', '--no-audit', '--no-fund']); }
 const command = process.argv[2] ?? 'help';
