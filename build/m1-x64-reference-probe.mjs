@@ -95,8 +95,31 @@ function runCase(bin,test,homeRoot) {
     timed_out:call.error?.code==='ETIMEDOUT',stdout:call.stdout??'',
     stderr:call.stderr??''}
   const verdict=validate(test,actual)
+  // The runner has a fresh HOME and no inherited account/API credentials.
+  // Keep only bounded diagnostic text for local empty-list command contracts.
+  const sampleAllowed = new Set(['version','mcp_list_empty','plugin_list_empty'])
+  const preview = value => value.replaceAll(home,'[isolated-home]').slice(0,500)
+  const sample = sampleAllowed.has(test.id) ? {
+    stdout_preview:preview(actual.stdout),stderr_preview:preview(actual.stderr),
+  } : {}
+  const digest = value => createHash('sha256').update(value).digest('hex')
+  const streams = ['json_without_login','stream_without_login']
+  let resultShape
+  if(streams.includes(test.id)) {
+    try {
+      const frames=actual.stdout.trim().split('\n').filter(Boolean).map(x=>JSON.parse(x))
+      resultShape={
+        frames:frames.map(x=>({type:x.type,subtype:x.subtype??null,is_error:x.is_error??null,
+          terminal_reason:x.terminal_reason??null})).slice(-20),
+        parsed:true,
+      }
+    } catch {resultShape={parsed:false}}
+  }
   return {id:test.id,argv:test.argv,exit_code:actual.exit_code,
-    timed_out:actual.timed_out,pass:verdict.ok,contract:verdict.reason}
+    timed_out:actual.timed_out,pass:verdict.ok,contract:verdict.reason,
+    stdout_bytes:Buffer.byteLength(actual.stdout),stderr_bytes:Buffer.byteLength(actual.stderr),
+    stdout_sha256:digest(actual.stdout),stderr_sha256:digest(actual.stderr),
+    ...sample,...(resultShape?{structured_shape:resultShape}:{})}
 }
 function runSuite(binary) {
   const tmp=mkdtempSync(join(tmpdir(),'m1-claude-x64-'))
