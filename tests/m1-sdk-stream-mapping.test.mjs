@@ -25,9 +25,9 @@ test('maps source response metadata into the public stream envelope and back', (
     abandonedBlocks: { apiMessageId: 'msg-real-id', fromBlockIndex: 3 },
     textRunsJoined: true,
   }
-  const sdk = toSDKStreamEvent(source, 'session-a', 'uuid-a')
+  const sdk = toSDKStreamEvent(source, 'session-a', '00000000-0000-4000-8000-000000000001')
   assert.deepEqual(sdk, {
-    type: 'stream_event', event: source.event, session_id: 'session-a', parent_tool_use_id: null, uuid: 'uuid-a',
+    type: 'stream_event', event: source.event, session_id: 'session-a', parent_tool_use_id: null, uuid: '00000000-0000-4000-8000-000000000001',
     ttft_ms: 42, api_message_id: 'msg-real-id', thinking_display: 'updates',
     abandoned_blocks: { api_message_id: 'msg-real-id', from_block_index: 3 },
     text_runs_joined: true,
@@ -38,7 +38,7 @@ test('maps source response metadata into the public stream envelope and back', (
 test('missing metadata stays absent and a false joined flag is not emitted', () => {
   const { toSDKStreamEvent, fromSDKStreamEvent } = functions()
   const source = { type: 'stream_event', event: { type: 'message_stop' }, textRunsJoined: false }
-  const sdk = toSDKStreamEvent(source, 's', 'u')
-  assert.deepEqual(sdk, { type: 'stream_event', event: source.event, session_id: 's', parent_tool_use_id: null, uuid: 'u' })
+  const sdk = toSDKStreamEvent(source, 's', '00000000-0000-4000-8000-000000000002')
+  assert.deepEqual(sdk, { type: 'stream_event', event: source.event, session_id: 's', parent_tool_use_id: null, uuid: '00000000-0000-4000-8000-000000000002' })
   assert.deepEqual(fromSDKStreamEvent(sdk), { type: 'stream_event', event: source.event })
 })
