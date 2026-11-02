@@ -541,13 +541,14 @@ async function handleTeleportPrerequisites(root: Root, errorsToIgnore?: Set<Tele
  * @param branchName Optional branch name for the remote session to use
  * @returns Promise<TeleportToRemoteResponse | null> The created session or null if creation fails
  */
-export async function teleportToRemoteWithErrorHandling(root: Root, description: string | null, signal: AbortSignal, branchName?: string): Promise<TeleportToRemoteResponse | null> {
+export async function teleportToRemoteWithErrorHandling(root: Root, description: string | null, signal: AbortSignal, branchName?: string, environmentId?: string): Promise<TeleportToRemoteResponse | null> {
   const errorsToIgnore = new Set<TeleportLocalErrorType>(['needsGitStash']);
   await handleTeleportPrerequisites(root, errorsToIgnore);
   return teleportToRemote({
     initialMessage: description,
     signal,
     branchName,
+    ...(environmentId ? { environmentId } : {}),
     onBundleFail: msg => process.stderr.write(`\n${msg}\n`)
   });
 }
