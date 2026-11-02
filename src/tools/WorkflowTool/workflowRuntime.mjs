@@ -19,7 +19,7 @@ export function workflowMeta(script){
  const value=parseWorkflowMetaLiteral(script.slice(open,end))
  if(!value||typeof value.name!=='string'||!/^[\w-]{1,80}$/.test(value.name)||
    typeof value.description!=='string'||!value.description.trim()||
-   value.phases!==undefined&&(!Array.isArray(value.phases)||value.phases.some(p=>typeof p.title!=='string'||typeof p.detail!=='string')))
+   value.phases!==undefined&&(!Array.isArray(value.phases)||value.phases.some(p=>!p||typeof p!=='object'||typeof p.title!=='string'||!p.title.trim()||p.detail!==undefined&&typeof p.detail!=='string')))
   throw Error('Invalid workflow meta name, description or phases')
  return {name:value.name,description:value.description,
    phases:(value.phases??[]).map(p=>({title:p.title,detail:p.detail}))}
@@ -58,17 +58,19 @@ export async function executeWorkflowScript({script,args={},agent,onPhase=()=>{}
   const context=vm.createContext({
     __wfBridge:bridge,
     __wfArgs:JSON.stringify(args===undefined?{}:args),
+    __wfPhaseTitles:JSON.stringify(meta.phases.map(p=>p.title)),
   },{codeGeneration:{strings:false,wasm:false}})
   // This bootstrap is trusted source. The host bridge is captured in a
   // private closure and removed from globalThis before user script execution.
   const bootstrap=[
-    '((bridge)=>{',
+    '((bridge,declaredPhases)=>{',
     '  const agent=async(prompt,options={})=>{',
     '    try { return JSON.parse(await bridge.agent(JSON.stringify([prompt,options]))) }',
     '    catch(error) { throw new Error(String(error)) }',
     '  };',
     '  const phase=(value)=>{',
     '    if(typeof value!=="string"||!value.trim())throw new Error("phase() needs a title");',
+    '    if(declaredPhases.length&&!declaredPhases.includes(value))throw new Error("Undeclared workflow phase: "+value);',
     '    try { bridge.phase(value) } catch(error) { throw new Error(String(error)) }',
     '  };',
     '  const log=(...items)=>{',
@@ -87,11 +89,12 @@ export async function executeWorkflowScript({script,args={},agent,onPhase=()=>{}
     '    return values;',
     '  };',
     '  return {agent,phase,log,parallel,pipeline};',
-    '})(globalThis.__wfBridge)',
+    '})(globalThis.__wfBridge,JSON.parse(globalThis.__wfPhaseTitles))',
   ].join('\n')
   const api=vm.runInContext(bootstrap,context,{timeout:500})
   context.args=vm.runInContext('JSON.parse(globalThis.__wfArgs)',context,{timeout:500})
   delete context.__wfBridge
+  delete context.__wfPhaseTitles
   delete context.__wfArgs
   Object.assign(context,api)
   check()

@@ -58,3 +58,16 @@ const host2=received.constructor.constructor('return process')()
 log(host2.version)`
   await assert.rejects(()=>executeWorkflowScript({script:source,args:{x:1},agent:async()=>({safe:true})}),/Code generation from strings disallowed|not allowed/i)
 })
+
+test('Workflow supports optional phase detail exactly like 2.1.310',async()=>{
+ const script=`export const meta={name:'phase-optional',description:'Stage control',phases:[{title:'Review'},{title:'Verify',detail:'Confirm'}]}
+ phase('Review'); phase('Verify')`
+ const phases=[]
+ await executeWorkflowScript({script,agent:async()=>'',onPhase:phase=>phases.push(phase)})
+ assert.deepEqual(phases,['Review','Verify'])
+})
+test('Workflow enforces declared phase titles and prevents forged progress',async()=>{
+ const script=`export const meta={name:'phase-strict',description:'Stage control',phases:[{title:'Review'}]}
+ phase('Complete')`
+ await assert.rejects(()=>executeWorkflowScript({script,agent:async()=>''}),/Undeclared workflow phase/)
+})
