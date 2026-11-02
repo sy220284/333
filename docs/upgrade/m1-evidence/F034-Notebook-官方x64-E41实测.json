@@ -95,5 +95,39 @@
     "candidate_default_tools": "NotebookEdit directly in initial model-visible tools; ToolSearch alignment is owned by concurrent PR #7",
     "impact": "E41 file behavior matches for the verified route, but full default tool-discovery behavior is not yet equivalent."
   },
-  "next_full_gate": "PR #7 tool registry/ToolSearch integration, M10 permission/symlink/abnormal-path checks, and PR #9 baseline TypeScript/security governance."
+  "next_full_gate": "PR #7 tool registry/ToolSearch integration, M10 permission/symlink/abnormal-path checks, and PR #9 baseline TypeScript/security governance.",
+  "official_type_conversion_real_run": [
+    {
+      "scenario": "code_to_markdown",
+      "real_exit_code": 0,
+      "model_requests": 4,
+      "file": {
+        "cell_type": "markdown",
+        "source": "# Hello",
+        "execution_count": null,
+        "outputs": []
+      },
+      "script": "/mnt/data/official2310/official-notebook-convert-test.mjs",
+      "verified_on": "2026-11-02"
+    },
+    {
+      "scenario": "markdown_to_code",
+      "real_exit_code": 0,
+      "model_requests": 4,
+      "file": {
+        "cell_type": "code",
+        "source": "value=1",
+        "execution_count_present": false,
+        "outputs_present": false
+      },
+      "script": "/mnt/data/official2310/official-notebook-markdown-to-code-test.mjs",
+      "verified_on": "2026-11-02"
+    }
+  ],
+  "candidate_type_conversion": {
+    "commit": "7889f157ef488d87583ed741cd1851a7f307754c",
+    "tests": "17 Notebook pure + 2 real integration on Windows; 17 Notebook pure + 3 real integration and 2 E41 CLI modes on Linux",
+    "actions_run": 41436920335,
+    "status": "PENDING_ACTIONS"
+  }
 }

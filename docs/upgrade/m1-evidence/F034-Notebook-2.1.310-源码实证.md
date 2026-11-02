@@ -32,10 +32,19 @@
 
 **仍存在注册差异**：官方发行版第一轮模型工具列表包含 `ToolSearch` / `DeferredToolPlaceholder`，NotebookEdit 由延迟发现进入调用；333 当前第一轮直接公开 `NotebookEdit`。本次证据确认了可观察 Notebook 读改读功能链一致，但工具发现的默认顺序和入口差异由在途 PR #7 负责补齐；M10 仍需验证完整权限、回退、符号链接和异常路径。
 
+## 类型切换的官方真实行为补证
+
+在正式 2.1.310 Linux x64 上，仍使用本地模拟模型按 `Read → NotebookEdit → Read` 四次模型往返，新增两个独立正例（真实进程退出码均为 0）：
+
+- **代码 → Markdown**：`print(1)` 改成 `# Hello`，实际文件 `cell_type=markdown`，`execution_count=null`，`outputs=[]`；旧执行字段依然存在。
+- **Markdown → 代码**：`# Heading` 改成 `value=1`，实际文件 `cell_type=code`，未生成新的 `execution_count` / `outputs` 字段。
+
+代码规则据此从按转换后的类型处理，改为按转换前的类型先清理旧执行结果，再切换类型。重建版新增两项单元测试，并通过 `M1_NOTEBOOK_E41_MODE=convert` 在独立 CLI 测试中对照第一种转换；**扩展版本的测试状态等待其对应 Actions 结果，不能援引更早提交的通过记录**。
+
 ## 333 的实际代码修复与测试
 
 - 正式工具入口仍为 `src/tools/NotebookEditTool/NotebookEditTool.ts`，通过 `notebookMutation.ts` 共享校验与实际修改逻辑。
-- 恢复 `old_source`，统一真实单元格 ID 与索引解析，使用八位 ID；校验源格式，覆盖代码/Markdown 类型转换后的冗余字段清理。
+- 恢复 `old_source`，统一真实单元格 ID 与索引解析，使用八位 ID；校验源格式，对齐官方代码/Markdown 类型转换的执行字段行为：先按原类型处理执行字段，再更换类型；代码转 Markdown 保留并清空旧字段，Markdown 转代码不自动补这些字段。
 - 引入 100 MiB 文件大小限制，先检查源文件大小、再解码 Notebook；输出内容按编码及 CRLF 换行后字节数限制。
 - 文件历史写入前后检测旧快照，并共享 `Read` 对 Notebook 的实际可见投影，核对正文内容防止相同文件时间戳的外部修改覆盖；通过 `src/utils/notebookFileLock.ts` 将同路径编辑的读取、校验、写入串行处理，失败也释放锁；失败回传明确错误。
 - `tests/notebook-edit-parity.test.ts`：真实格式、字段、顺序、旧内容、目标 ID、错误路径、同一文件串行以及不同文件并行、失败后锁释放（15 项）。
