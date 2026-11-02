@@ -92,6 +92,69 @@ def probe(executable,mode,timeout):
                 'flat_welcome':'Welcome to Claude Code' in text,
                 'connection_status':'Checking connectivity' in text,
                 'offline_failure_visible':'Unable to connect to Anthropic services' in text,
+                'prompt_ready':bool(re.search(r'(?m)(?:^|\n)\s*\$\s*
+                'stage': ('theme-onboarding' if 'Choose the text style' in text
+                           else 'workspace-trust' if 'trust' in text.lower() and 'folder' in text.lower()
+                           else 'session'),
+                 'has_decorative_art': ('████' in text or '░░░' in text or '…………………………………………' in text),
+                 'text_excerpt':text[:450]}
+
+def validate(label,cases):
+    basic,ax,env,settings=cases
+    assert all(c['bytes'] for c in cases),(label,cases)
+    assert not basic['activation_banner'],(label,'AX enabled without flag',basic)
+    assert ax['activation_banner'],(label,'AX banner missing',ax)
+    assert ax['flat_welcome'],(label,'Actual flat welcome missing',ax)
+    if ax['stage']=='session':
+        assert ax['prompt_ready'] or ax['offline_failure_visible'],(label,'Missing actual input prompt or terminal error',ax)
+    assert not ax['has_decorative_art'],(label,'AX still contains decorative ASCII art',ax)
+    assert env['activation_banner'],(label,'AX env banner missing',env)
+    assert env['flat_welcome'],(label,'AX env flat welcome missing',env)
+    if env['stage']=='session':
+        assert env['prompt_ready'] or env['offline_failure_visible'],(label,'AX env has neither input prompt nor final error',env)
+    assert not env['has_decorative_art'],(label,'AX env still contains decorative ASCII art',env)
+    assert settings['activation_banner'],(label,'AX trusted settings banner missing',settings)
+    assert settings['flat_welcome'],(label,'AX settings flat welcome missing',settings)
+    if settings['stage']=='session':
+        assert settings['prompt_ready'] or settings['offline_failure_visible'],(label,'AX settings has neither status nor final error',settings)
+    assert not settings['has_decorative_art'],(label,'AX settings still contains decorative ASCII art',settings)
+    assert all(c['cursor_control_sequences']<basic['cursor_control_sequences'] for c in (ax,env,settings)),(
+        label,'AX terminal cursor/animation suppression missing',cases)
+
+def main():
+    ap=argparse.ArgumentParser()
+    ap.add_argument('--reference',required=True)
+    ap.add_argument('--candidate')
+    ap.add_argument('--report',required=True)
+    ap.add_argument('--timeout',type=float,default=12)
+    a=ap.parse_args()
+    assert 3<=a.timeout<=60
+    assert sha256(a.reference)==PIN,'Official x64 checksum mismatch'
+    report={'schema':1,'feature':'F001','target':'2.1.310',
+            'reference_sha256':PIN,'scope':'isolated real PTY startup only',
+            'full_interactive_acceptance':'UNVERIFIED','results':{}}
+    failures=[]
+    binaries=[('official',a.reference)]
+    if a.candidate: binaries.append(('candidate',a.candidate))
+    for label,executable in binaries:
+        cases=[probe(executable,mode,a.timeout) for mode in ('off','flag','env','settings')]
+        report['results'][label]=cases
+        try: validate(label,cases)
+        except AssertionError as e: failures.append(str(e))
+    if 'candidate' in report['results']:
+        for original,rebuild in zip(report['results']['official'],report['results']['candidate']):
+            if original['stage'] != rebuild['stage']:
+                failures.append(
+                    f"Startup screens differ: {original['mode']} official={original['stage']} candidate={rebuild['stage']}")
+    dest=Path(a.report)
+    dest.parent.mkdir(parents=True,exist_ok=True)
+    dest.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
+    print(json.dumps({'report':str(dest),'results':report['results'],'failures':failures},
+                     ensure_ascii=False,indent=2))
+    if failures: raise SystemExit(1)
+
+if __name__=='__main__': main()
+, text)) or '❯' in text,
                 'stage': ('theme-onboarding' if 'Choose the text style' in text
                            else 'workspace-trust' if 'trust' in text.lower() and 'folder' in text.lower()
                            else 'session'),
