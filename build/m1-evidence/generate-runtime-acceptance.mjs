@@ -42,6 +42,6 @@ if (process.argv.includes("--check")) {
   if (JSON.stringify(actual) !== JSON.stringify(report)) throw Error("运行证据矩阵与源文件不同步；请重新生成")
   console.log(`证据矩阵有效：${rows.length} 项，${covered} 项已有专项证据，${formallyAccepted} 项正式签收`)
 } else {
-  writeFileSync(out, JSON.stringify(report,null,2)+"\n")
+  writeFileSync(out, `${JSON.stringify(report,null,2)}\n`)
   console.log(`已更新 ${out}，${covered}/${rows.length} 项含专项证据`)
 }

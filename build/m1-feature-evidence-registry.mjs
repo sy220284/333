@@ -11,23 +11,23 @@ const SIGNATURE = /^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z$/
 const ALLOWED_CI_URL = /^https:\/\/github\.com\/sy220284\/333\/actions\/runs\/\d+$/
 
 function checkProof(record, kind, exists) {
-  assert.equal(record.status, 'VERIFIED', kind + ': only explicit verification is accepted')
-  assert.equal(record.official?.executable_sha256, PINNED_OFFICIAL, kind + ': official executable mismatch')
-  assert.match(record.official?.source_anchor ?? '', /chunk-[a-z0-9]+\.js:\d+/, kind + ': missing source anchor')
-  assert.match(record.rebuilt?.commit_sha ?? '', COMMIT_PATTERN, kind + ': missing candidate commit')
-  assert.match(record.rebuilt?.ci_run ?? '', ALLOWED_CI_URL, kind + ': missing actual CI run')
-  assert.equal(record.official?.result, 'PASS', kind + ': official reference not passed')
-  assert.equal(record.rebuilt?.result, 'PASS', kind + ': candidate not passed')
-  assert.equal(record.parity?.result, 'PASS', kind + ': actual differential not passed')
-  assert.match(record.review?.signed_at ?? '', SIGNATURE, kind + ': unsigned timestamp')
+  assert.equal(record.status, 'VERIFIED', `${kind}: only explicit verification is accepted`)
+  assert.equal(record.official?.executable_sha256, PINNED_OFFICIAL, `${kind}: official executable mismatch`)
+  assert.match(record.official?.source_anchor ?? '', /chunk-[a-z0-9]+\.js:\d+/, `${kind}: missing source anchor`)
+  assert.match(record.rebuilt?.commit_sha ?? '', COMMIT_PATTERN, `${kind}: missing candidate commit`)
+  assert.match(record.rebuilt?.ci_run ?? '', ALLOWED_CI_URL, `${kind}: missing actual CI run`)
+  assert.equal(record.official?.result, 'PASS', `${kind}: official reference not passed`)
+  assert.equal(record.rebuilt?.result, 'PASS', `${kind}: candidate not passed`)
+  assert.equal(record.parity?.result, 'PASS', `${kind}: actual differential not passed`)
+  assert.match(record.review?.signed_at ?? '', SIGNATURE, `${kind}: unsigned timestamp`)
   assert.ok(typeof record.review?.reviewer === 'string' && record.review.reviewer.trim(),
-    kind + ': missing signed reviewer')
+    `${kind}: missing signed reviewer`)
   const reports = [record.official.report, record.rebuilt.report, record.parity.report]
-  assert.equal(new Set(reports).size, 3, kind + ': target, candidate and difference reports must be independent')
+  assert.equal(new Set(reports).size, 3, `${kind}: target, candidate and difference reports must be independent`)
   for (const file of reports) {
     assert.ok(typeof file === 'string' && file.startsWith('docs/upgrade/m1-evidence/'),
-      kind + ': report must be an audited repository evidence path')
-    assert.ok(exists(file), kind + ': missing evidence file ' + file)
+      `${kind}: report must be an audited repository evidence path`)
+    assert.ok(exists(file), `${kind}: missing evidence file ${file}`)
   }
 }
 
@@ -55,33 +55,33 @@ export function buildRegistry(
     assert.equal(group.acceptance, 'UNVERIFIED', 'Code progress cannot automatically sign off M10')
     assert.ok(group.features.length && group.code.length && group.remaining)
     for (const feature of group.features) {
-      assert.ok(featureMap.has(feature), 'Unknown capability ' + feature)
+      assert.ok(featureMap.has(feature), `Unknown capability ${feature}`)
       featureMap.get(feature).push(group.id)
     }
     for (const path of [...group.code, ...group.tests]) {
-      assert.ok(exists(path), 'Evidence file missing: ' + path)
+      assert.ok(exists(path), `Evidence file missing: ${path}`)
     }
   }
 
   const signedFeatures = new Map()
   for (const signoff of signoffs.features) {
-    assert.ok(featureMap.has(signoff.id), 'Unknown signed feature ' + signoff.id)
-    assert.ok(!signedFeatures.has(signoff.id), 'Duplicate feature signature ' + signoff.id)
+    assert.ok(featureMap.has(signoff.id), `Unknown signed feature ${signoff.id}`)
+    assert.ok(!signedFeatures.has(signoff.id), `Duplicate feature signature ${signoff.id}`)
     assert.ok(featureMap.get(signoff.id).length > 0,
-      'A feature cannot be signed without an identified source upgrade chain: ' + signoff.id)
-    checkProof(signoff, 'feature ' + signoff.id, exists)
+      `A feature cannot be signed without an identified source upgrade chain: ${signoff.id}`)
+    checkProof(signoff, `feature ${signoff.id}`, exists)
     signedFeatures.set(signoff.id, signoff)
   }
 
   const signedScenarios = new Map()
   for (const signoff of signoffs.scenarios) {
-    assert.ok(scenarioMap.has(signoff.id), 'Unknown signed scenario ' + signoff.id)
-    assert.ok(!signedScenarios.has(signoff.id), 'Duplicate scenario signature ' + signoff.id)
-    checkProof(signoff, 'scenario ' + signoff.id, exists)
+    assert.ok(scenarioMap.has(signoff.id), `Unknown signed scenario ${signoff.id}`)
+    assert.ok(!signedScenarios.has(signoff.id), `Duplicate scenario signature ${signoff.id}`)
+    checkProof(signoff, `scenario ${signoff.id}`, exists)
     const scenario = scenarioMap.get(signoff.id)
     for (const feature of scenario.features) {
       assert.ok(signedFeatures.has(feature),
-        'Scenario cannot pass while a dependent feature is unsigned: ' + signoff.id + '/' + feature)
+        `Scenario cannot pass while a dependent feature is unsigned: ${signoff.id}/${feature}`)
     }
     signedScenarios.set(signoff.id, signoff)
   }
@@ -89,7 +89,7 @@ export function buildRegistry(
     const entry = coverage.features.find(f => f.id === feature)
     for (const scenario of entry.scenarios) {
       assert.ok(signedScenarios.has(scenario),
-        'Feature cannot be fully accepted before all linked E/L scenes: ' + feature + '/' + scenario)
+        `Feature cannot be fully accepted before all linked E/L scenes: ${feature}/${scenario}`)
     }
   }
 
@@ -108,7 +108,7 @@ export function buildRegistry(
     evidence: signedScenarios.get(scenario.id) ?? null,
   }))
   for (const scenario of scenarios) {
-    for (const id of scenario.features) assert.ok(featureMap.has(id), 'Unknown scenario capability ' + id)
+    for (const id of scenario.features) assert.ok(featureMap.has(id), `Unknown scenario capability ${id}`)
   }
   return {
     schema: 2,
@@ -142,7 +142,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     assert.ok(process.argv[index + 1])
     const destination = resolve(process.argv[index + 1])
     mkdirSync(dirname(destination), {recursive: true})
-    writeFileSync(destination, JSON.stringify(result, null, 2) + '\n')
+    writeFileSync(destination, `${JSON.stringify(result, null, 2)}\n`)
   }
   console.log(JSON.stringify(result.counts))
 }

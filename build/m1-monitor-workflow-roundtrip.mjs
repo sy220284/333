@@ -74,8 +74,8 @@ async function run(exe,toolName){
  server.on('upgrade',(req,socket)=>{
   sockets.add(socket)
   socket.once('close',()=>sockets.delete(socket))
-  const accept=createHash('sha1').update(req.headers['sec-websocket-key']+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64')
-  socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+accept+'\r\n\r\n')
+  const accept=createHash('sha1').update(`${req.headers['sec-websocket-key']}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`).digest('base64')
+  socket.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`)
   setTimeout(()=>{if(!socket.destroyed){const payload=Buffer.from('WS_FRAME_333');socket.write(Buffer.concat([Buffer.from([0x81,payload.length]),payload]))}},100)
   setTimeout(()=>{if(!socket.destroyed)socket.end(Buffer.from([0x88,0]))},350)
  })
