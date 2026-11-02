@@ -7,6 +7,7 @@
  * @see scripts/generate-sdk-types.ts for type generation
  */
 
+import type { BetaRawMessageStreamEvent } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import { z } from 'zod/v4'
 import { lazySchema } from '../../utils/lazySchema.js'
 
@@ -1241,7 +1242,49 @@ export const APIUserMessagePlaceholder = lazySchema(() => z.unknown())
 export const APIAssistantMessagePlaceholder = lazySchema(() => z.unknown())
 
 /** Placeholder for RawMessageStreamEvent from @anthropic-ai/sdk */
-export const RawMessageStreamEventPlaceholder = lazySchema(() => z.unknown())
+/**
+ * Official beta.messages SSE event wire shape. Using unknown previously made
+ * SDKPartialAssistantMessage.event unusable to typed subscribers and accepted
+ * malformed events as if they had been received from the model.
+ *
+ * We validate the event envelope without dropping newer provider-specific
+ * fields: the streaming parser still owns detailed block/delta parsing.
+ */
+function isRawMessageStreamEvent(value: unknown): value is BetaRawMessageStreamEvent {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+  const e = value as Record<string, unknown>
+  if (typeof e.type !== 'string') return false
+  switch (e.type) {
+    case 'message_start': {
+      if (typeof e.message !== 'object' || e.message === null) return false
+      const message = e.message as Record<string, unknown>
+      return message.type === 'message' && typeof message.id === 'string'
+    }
+    case 'message_delta':
+      return typeof e.delta === 'object' && e.delta !== null
+    case 'message_stop':
+    case 'ping':
+      return true
+    case 'content_block_start': {
+      if (typeof e.index !== 'number' || !Number.isInteger(e.index) || e.index < 0) return false
+      if (typeof e.content_block !== 'object' || e.content_block === null) return false
+      return typeof (e.content_block as Record<string, unknown>).type === 'string'
+    }
+    case 'content_block_delta': {
+      if (typeof e.index !== 'number' || !Number.isInteger(e.index) || e.index < 0) return false
+      if (typeof e.delta !== 'object' || e.delta === null) return false
+      return typeof (e.delta as Record<string, unknown>).type === 'string'
+    }
+    case 'content_block_stop':
+      return typeof e.index === 'number' && Number.isInteger(e.index) && e.index >= 0
+    default:
+      return false
+  }
+}
+
+export const RawMessageStreamEventPlaceholder = lazySchema(() =>
+  z.custom<BetaRawMessageStreamEvent>(isRawMessageStreamEvent),
+)
 
 /** Placeholder for UUID from crypto */
 export const UUIDPlaceholder = lazySchema(() => z.string())
