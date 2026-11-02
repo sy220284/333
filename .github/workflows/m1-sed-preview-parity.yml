@@ -64,6 +64,7 @@ jobs:
         run: |
           bun build/rebuild.mjs
           node tests/m1-notebook-e41-cli.mjs bun dist/cli.js
+          M1_NOTEBOOK_E41_MODE=convert node tests/m1-notebook-e41-cli.mjs bun dist/cli.js
 
   notebook-windows:
     name: Notebook 原位编辑（Windows）
