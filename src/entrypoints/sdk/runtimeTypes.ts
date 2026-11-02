@@ -73,11 +73,13 @@ export type HookCallbacks = Partial<
   Record<HookEvent, SDKHookCallbackMatcher[]>
 >
 
+export type EffortLevel = 'low' | 'medium' | 'high' | 'max'
+
 export type Options = {
   abortController?: AbortController
   model?: string
   fallbackModel?: string
-  effort?: 'low' | 'medium' | 'high' | 'max'
+  effort?: EffortLevel
   cwd?: string
   pathToClaudeCodeExecutable?: string
   executable?: 'node' | 'bun'
