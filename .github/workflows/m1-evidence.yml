@@ -56,6 +56,8 @@ on:
       - 'tests/m1-system-theme-watcher.test.ts'
       - 'tests/m1-event-loop-stall.test.ts'
       - 'tests/m1-color-diff-contract.test.ts'
+      - 'tests/m1-highlight-runtime.test.ts'
+      - 'src/utils/cliHighlight.ts'
       - 'src/components/StructuredDiff/colorDiff.ts'
       - 'src/native-ts/color-diff/index.ts'
       - 'src/utils/eventLoopStallDetector.ts'
@@ -242,6 +244,8 @@ jobs:
         run: bun test tests/m1-event-loop-stall.test.ts
       - name: 验证结构化差异着色已接通TS移植实现及关闭逻辑
         run: bun test tests/m1-color-diff-contract.test.ts
+      - name: 验证着色模块CJS与ESM语法表动态加载的实际能力
+        run: bun test tests/m1-highlight-runtime.test.ts
       - name: 从当前M1源码独立构建候选程序
         run: bun build/rebuild.mjs
       - name: 准备官方x64对照程序与真实候选启动器
