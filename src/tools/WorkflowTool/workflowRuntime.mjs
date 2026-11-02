@@ -43,17 +43,32 @@ export async function executeWorkflowScript({script,args={},agent,onPhase=()=>{}
   // Host functions, host promises and host objects must never be placed in the
   // untrusted realm. Their Function constructors otherwise escape vm's
   // codeGeneration:false setting (agent.constructor.constructor(...)).
+  // Every bridge operation returns a JSON string, including failure. Never
+  // reject a host Promise or throw a host Error into the script realm: a
+  // monkeypatched sandbox String/Error can otherwise access host constructors.
+  const bridgeError=error=>error instanceof Error ? error.message :
+    typeof error==='string' ? error : 'Workflow host callback failed'
   const bridge={
     async agent(payload){
-      check()
-      const [prompt,options]=JSON.parse(payload)
-      if(typeof prompt!=='string'||!prompt.trim())throw new Error('agent() needs prompt')
-      const output=await agent(prompt,options)
-      check()
-      return JSON.stringify(output===undefined?null:output)
+      try{
+        check()
+        const [prompt,options]=JSON.parse(payload)
+        if(typeof prompt!=='string'||!prompt.trim())throw new Error('agent() needs prompt')
+        const output=await agent(prompt,options)
+        check()
+        return JSON.stringify({ok:true,value:output===undefined?null:output})
+      }catch(error){
+        return JSON.stringify({ok:false,error:bridgeError(error)})
+      }
     },
-    phase(title){check();onPhase(title)},
-    log(value){check();onLog(value)},
+    phase(title){
+      try{check();onPhase(title);return JSON.stringify({ok:true})}
+      catch(error){return JSON.stringify({ok:false,error:bridgeError(error)})}
+    },
+    log(value){
+      try{check();onLog(value);return JSON.stringify({ok:true})}
+      catch(error){return JSON.stringify({ok:false,error:bridgeError(error)})}
+    },
   }
   const context=vm.createContext({
     __wfBridge:bridge,
@@ -65,16 +80,19 @@ export async function executeWorkflowScript({script,args={},agent,onPhase=()=>{}
   const bootstrap=[
     '((bridge,declaredPhases)=>{',
     '  const agent=async(prompt,options={})=>{',
-    '    try { return JSON.parse(await bridge.agent(JSON.stringify([prompt,options]))) }',
-    '    catch(error) { throw new Error(String(error)) }',
+    '    const response=JSON.parse(await bridge.agent(JSON.stringify([prompt,options])));',
+    '    if(!response.ok)throw new Error(response.error);',
+    '    return response.value;',
     '  };',
     '  const phase=(value)=>{',
     '    if(typeof value!=="string"||!value.trim())throw new Error("phase() needs a title");',
     '    if(declaredPhases.length&&!declaredPhases.includes(value))throw new Error("Undeclared workflow phase: "+value);',
-    '    try { bridge.phase(value) } catch(error) { throw new Error(String(error)) }',
+    '    const response=JSON.parse(bridge.phase(value));',
+    '    if(!response.ok)throw new Error(response.error);',
     '  };',
     '  const log=(...items)=>{',
-    '    try { bridge.log(items.map(String).join(" ")) } catch(error) { throw new Error(String(error)) }',
+    '    const response=JSON.parse(bridge.log(items.map(String).join(" ")));',
+    '    if(!response.ok)throw new Error(response.error);',
     '  };',
     '  const parallel=async(fs)=>{',
     '    if(!Array.isArray(fs)||fs.length>20||fs.some(f=>typeof f!=="function"))',

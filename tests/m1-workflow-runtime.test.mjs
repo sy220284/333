@@ -71,3 +71,21 @@ test('Workflow enforces declared phase titles and prevents forged progress',asyn
  phase('Complete')`
  await assert.rejects(()=>executeWorkflowScript({script,agent:async()=>''}),/Undeclared workflow phase/)
 })
+
+test('Workflow does not expose host errors through overridden sandbox String',async()=>{
+  const source=`export const meta={name:'error-boundary',description:'Isolate agent error'}
+globalThis.String=(error)=>{const p=error.constructor.constructor('return process')();return p.version}
+await agent('fail')`
+  await assert.rejects(()=>executeWorkflowScript({script:source,agent:async()=>{throw new Error('host-agent-rejected')}}),/host-agent-rejected/)
+})
+test('Workflow phase and log callback errors stay on the host side of the JSON bridge',async()=>{
+  for(const mode of ['phase','log']){
+    const body=mode==='phase'?"phase('Audit')":"log('Audit')"
+    const source=`export const meta={name:'event-boundary',description:'Isolate event error'}
+globalThis.String=(error)=>{const p=error.constructor.constructor('return process')();return p.version}
+${body}`
+    const options={script:source,agent:async()=>'',onPhase:()=>{throw new Error('host-phase-rejected')},
+      onLog:()=>{throw new Error('host-log-rejected')}}
+    await assert.rejects(()=>executeWorkflowScript(options),new RegExp('host-'+mode+'-rejected'))
+  }
+})
