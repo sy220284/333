@@ -2,6 +2,9 @@ import { createHash } from 'node:crypto'
 // Claude Code 2.1.310 account session population: cloud and Remote Control.
 const validId = /^(?:cse|session)_[A-Za-z0-9_-]+$/
 export const canonicalId = id => validId.test(id ?? '') ? id.replace(/^(?:cse|session)_/, '') : ''
+/** Bind names and bridge addresses to the authenticated account and organization. */
+export const peerIdentityKey = (accessToken, orgUUID) =>
+  accessToken && orgUUID ? createHash('sha256').update(`${orgUUID}\0${accessToken}`).digest('hex') : null
 const active = row => row.acceptsPeerMessages !== false && !row.unreachableFromHere &&
   !['archived','offline','disconnected'].includes(row.status)
 /** Cloud list entries have no proven delivery route; only an active Remote
@@ -55,16 +58,18 @@ export function resolveRemoteRecipient(peers, token) {
   const found = peers.filter(p => m ? p.name === m[1] && p.ref === m[2] : p.name === token)
   return found.length === 1 && active(found[0]) ? found[0].address : undefined
 }
-let advertised = { time:0, peers:[] }
-export function rememberAccountRecipients(peers, time = Date.now()) {
-  advertised = { time, peers:peers.filter(active) }
+let advertised = { time:0, peers:[], identityKey:null }
+export function rememberAccountRecipients(peers, time = Date.now(), identityKey = null) {
+  advertised = { time, identityKey, peers:peers.filter(active) }
 }
+const currentRecipients = (time, identityKey) =>
+  identityKey === advertised.identityKey && time >= advertised.time && time - advertised.time <= 30000
+    ? advertised.peers : []
 /** Resolve from the *union* of local and account candidates so a colliding
  * name cannot silently select a different transport.
  */
-export function resolveUnifiedPeerRecipient(local, token, time = Date.now()) {
-  const remote = time >= advertised.time && time - advertised.time <= 30000 ?
-    advertised.peers : []
+export function resolveUnifiedPeerRecipient(local, token, time = Date.now(), identityKey = null) {
+  const remote = currentRecipients(time, identityKey)
   const m = /^(.+?) \[([A-Za-z0-9_-]{6})\]$/.exec(token)
   const candidates = [...local, ...remote]
   const hits = candidates.filter(p => m ? p.name === m[1] && p.ref === m[2] :
@@ -73,9 +78,8 @@ export function resolveUnifiedPeerRecipient(local, token, time = Date.now()) {
   return {address: hits.length === 1 && addresses.length === 1 ? addresses[0] : undefined,
     ambiguous: hits.length > 1}
 }
-export function resolveAdvertisedRemoteRecipient(token, time = Date.now()) {
-  return time >= advertised.time && time - advertised.time <= 30000 ?
-    resolveRemoteRecipient(advertised.peers, token) : undefined
+export function resolveAdvertisedRemoteRecipient(token, time = Date.now(), identityKey = null) {
+  return resolveRemoteRecipient(currentRecipients(time, identityKey), token)
 }
 async function walk(request, endpoint, headers, maxPages, cursorKey, normalize) {
   const rows=[], ids=new Set()
