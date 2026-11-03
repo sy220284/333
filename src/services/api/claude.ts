@@ -1658,6 +1658,7 @@ async function* queryModel(
         thinking = {
           budget_tokens: thinkingBudget,
           type: 'enabled',
+          display: 'updates',
         } satisfies BetaMessageStreamParams['thinking']
       }
     }
