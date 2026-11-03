@@ -210,16 +210,7 @@ export function stripImagesFromMessages(messages: Message[]): Message[] {
  * don't exist on external builds).
  */
 export function stripReinjectedAttachments(messages: Message[]): Message[] {
-  if (feature('EXPERIMENTAL_SKILL_SEARCH')) {
-    return messages.filter(
-      m =>
-        !(
-          m.type === 'attachment' &&
-          (m.attachment.type === 'skill_discovery' ||
-            m.attachment.type === 'skill_listing')
-        ),
-    )
-  }
+  // Preserve the standard skill listing during canonical compaction.
   return messages
 }
 
