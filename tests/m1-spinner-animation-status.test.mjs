@@ -99,7 +99,9 @@ describe('官方 2.1.310 对话状态与动画逻辑', () => {
     assert.equal(getRetryCountdownMs(12_300, 10_000), 3000)
     assert.equal(getRetryCountdownMs(12_300, 12_301), 0)
     assert.equal(describeRetryStatus(retry, 10_000, duration),
-      'Rate limited · Retrying in 3s · attempt 2/4')
+      'API error · Retrying in 3s · attempt 2/4')
+    assert.equal(describeRetryStatus({ ...retry, attempt: 3 }, 10_000, duration),
+      'Rate limited · Retrying in 3s · attempt 3/4')
     assert.equal(describeRetryStatus({ ...retry, kind: 'stalled' }, 10_000, duration),
       'Waiting for API response · will retry in 3s · check your network')
     assert.match(describeRetryStatus({ ...retry, kind: 'low_priority_waiting' }, 10_000, duration),
