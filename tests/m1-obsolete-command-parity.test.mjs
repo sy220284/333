@@ -82,6 +82,15 @@ test('obsolete startup toasts and permission footer hints are gone, operational 
   assert.doesNotMatch(powershell, /ctrl\\+e to/)
 })
 
+test('2.1.310 removes sandbox startup banners without losing status and sandbox controls', () => {
+  const welcome = source('src/components/LogoV2/LogoV2.tsx').split('//# sourceMappingURL=')[0]
+  const status = source('src/utils/status.tsx')
+  const sandbox = source('src/components/sandbox/SandboxSettings.tsx')
+  assert.doesNotMatch(welcome, /showSandboxStatus|SandboxManager|Bash 命令将在沙箱中运行/)
+  assert.match(status, /SandboxManager/)
+  assert.match(sandbox, /SandboxManager/)
+})
+
 test('new target removes stale refusal model and DNS cache auto-approval', () => {
   const errors = source('src/services/api/errors.ts')
   const api = source('src/services/api/claude.ts')
