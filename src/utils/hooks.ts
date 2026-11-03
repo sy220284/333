@@ -123,8 +123,6 @@ import { logForDebugging } from './debug.js'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { firstLineOf } from './stringUtils.js'
 import {
-  normalizeLegacyToolName,
-  getLegacyToolNames,
   permissionRuleValueFromString,
 } from './permissions/permissionRuleParser.js'
 import { logError } from './log.js'
@@ -1353,11 +1351,11 @@ function matchesPattern(matchQuery: string, matcher: string): boolean {
     if (matcher.includes('|')) {
       const patterns = matcher
         .split('|')
-        .map(p => normalizeLegacyToolName(p.trim()))
+        .map(p => p.trim())
       return patterns.includes(matchQuery)
     }
     // Simple exact match
-    return matchQuery === normalizeLegacyToolName(matcher)
+    return matchQuery === matcher
   }
 
   // Otherwise treat as regex
@@ -1365,12 +1363,6 @@ function matchesPattern(matchQuery: string, matcher: string): boolean {
     const regex = new RegExp(matcher)
     if (regex.test(matchQuery)) {
       return true
-    }
-    // Also test against legacy names so patterns like "^Task$" still match
-    for (const legacyName of getLegacyToolNames(matchQuery)) {
-      if (regex.test(legacyName)) {
-        return true
-      }
     }
     return false
   } catch {
@@ -1400,7 +1392,7 @@ async function prepareIfConditionMatcher(
     return undefined
   }
 
-  const toolName = normalizeLegacyToolName(hookInput.tool_name)
+  const toolName = hookInput.tool_name
   const tool = tools && findToolByName(tools, hookInput.tool_name)
   const input = tool?.inputSchema.safeParse(hookInput.tool_input)
   const patternMatcher =
@@ -1410,7 +1402,7 @@ async function prepareIfConditionMatcher(
 
   return ifCondition => {
     const parsed = permissionRuleValueFromString(ifCondition)
-    if (normalizeLegacyToolName(parsed.toolName) !== toolName) {
+    if (parsed.toolName !== toolName) {
       return false
     }
     if (!parsed.ruleContent) {

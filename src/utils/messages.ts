@@ -152,7 +152,6 @@ import { formatFileSize } from './format.js'
 import { validateImagesForAPI } from './imageValidation.js'
 import { safeParseJSON } from './json.js'
 import { logError, logMCPDebug } from './log.js'
-import { normalizeLegacyToolName } from './permissions/permissionRuleParser.js'
 import {
   getPlanModeV2AgentCount,
   getPlanModeV2ExploreAgentCount,
@@ -1551,7 +1550,7 @@ function stripUnavailableToolReferencesFromUserMessage(
         if (!isToolReferenceBlock(c)) return false
         const toolName = (c as { tool_name?: string }).tool_name
         return (
-          toolName && !availableToolNames.has(normalizeLegacyToolName(toolName))
+          toolName && !availableToolNames.has(toolName)
         )
       }),
   )
@@ -1574,7 +1573,7 @@ function stripUnavailableToolReferencesFromUserMessage(
           if (!isToolReferenceBlock(c)) return true
           const rawToolName = (c as { tool_name?: string }).tool_name
           if (!rawToolName) return true
-          const toolName = normalizeLegacyToolName(rawToolName)
+          const toolName = rawToolName
           const isAvailable = availableToolNames.has(toolName)
           if (!isAvailable) {
             logForDebugging(
@@ -4110,21 +4109,6 @@ You have exited auto mode. The user may now want to interact more directly. You 
     case 'structured_output':
     case 'hook_permission_decision':
       return []
-  }
-
-  // Handle legacy attachments that were removed
-  // IMPORTANT: if you remove an attachment type from normalizeAttachmentForAPI, make sure
-  // to add it here to avoid errors from old --resume'd sessions that might still have
-  // these attachment types.
-  const LEGACY_ATTACHMENT_TYPES = [
-    'autocheckpointing',
-    'background_task_status',
-    'todo',
-    'task_progress', // removed in PR #19337
-    'ultramemory', // removed in PR #23596
-  ]
-  if (LEGACY_ATTACHMENT_TYPES.includes((attachment as { type: string }).type)) {
-    return []
   }
 
   logAntError(
