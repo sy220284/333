@@ -3092,6 +3092,14 @@ async function executeHooksOutsideREPL({
             )
           : undefined
       try {
+        if (releaseHookPermit && signal?.aborted) {
+          return {
+            command: getHookDisplayText(hook),
+            succeeded: false,
+            output: 'Hook cancelled before execution',
+            blocked: false,
+          }
+        }
       // Handle callback hooks
       if (hook.type === 'callback') {
         const callbackTimeoutMs = hook.timeout ? hook.timeout * 1000 : timeoutMs
