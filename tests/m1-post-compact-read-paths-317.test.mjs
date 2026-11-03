@@ -41,7 +41,7 @@ test('2.1.317 compact: only Read results count; empty files and multimodal resul
 test('2.1.317 compact: cleared and persisted pointers are not full Read results', () => {
   const cleared = '[Old tool result content cleared]'
   const persisted = '<persisted-output>run-42'
-  const provenance = '<artifact-content-authored-by-others/>\\n'
+  const provenance = '<artifact-content-authored-by-others/>\n'
   const fullResult = block => {
     if (typeof block.content !== 'string') return true
     const content = block.content.startsWith(provenance)
