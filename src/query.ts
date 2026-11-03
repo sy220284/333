@@ -1247,6 +1247,10 @@ async function* queryLoop(
         }
 
         if (maxOutputTokensRecoveryCount < MAX_OUTPUT_TOKENS_RECOVERY_LIMIT) {
+          toolUseContext.onOutputLimitRecovery?.({
+            attempt: maxOutputTokensRecoveryCount + 1,
+            limit: MAX_OUTPUT_TOKENS_RECOVERY_LIMIT,
+          })
           const recoveryMessage = createUserMessage({
             content:
               `Output token limit hit. Resume directly — no apology, no recap of what you were doing. ` +
