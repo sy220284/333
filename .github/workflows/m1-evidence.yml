@@ -163,6 +163,8 @@ jobs:
         run: node --test tests/m1-workflow-cache.test.mjs tests/m1-workflow-commands.test.mjs tests/m1-workflow-meta-literal.test.mjs tests/m1-workflow-finalization.test.mjs tests/m1-workflow-history.test.mjs tests/m1-workflow-storage.test.mjs tests/m1-workflow-runtime.test.mjs tests/m1-monitor-protocol.test.mjs tests/m1-monitor-task-identity.test.mjs tests/m1-account-peer-discovery.test.mjs tests/upgrade-coverage.test.mjs tests/m1-verify.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs tests/m1-privacy-settings.test.mjs tests/m1-snapshot-terminal-behavior.test.mjs tests/m1-source-gap-audit.test.mjs tests/m1-inline-map-audit.test.mjs tests/m1-v4-handoff.test.mjs tests/m1-doctor-source-restoration.test.mjs tests/m1-spinner-tips.test.mjs tests/m1-custom-spinner-tips.test.mjs tests/m1-list-agents.test.mjs tests/m1-tool-pool-single-source.test.mjs tests/m1-screen-reader-mode.test.mjs tests/m1-taskoutput-retirement.test.mjs
       - name: 验证禁用及企业策略限制 MCP 重新连接
         run: node --experimental-strip-types --test tests/m1-mcp-reconnect-policy.test.mjs
+      - name: 验证读取符号链接时的真实文件目标与越界提示
+        run: node --experimental-strip-types --test tests/m1-symlink-read-permission.test.mjs
       - name: 验证102项能力运行证据矩阵
         run: node build/m1-evidence/generate-runtime-acceptance.mjs --check
       - name: 验证远程流事件合并及 SDK 字段映射
