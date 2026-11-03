@@ -4329,9 +4329,16 @@
       "domain_candidate": "云端与企业",
       "official_text": "Fixed `/remote-control` answering \"Unknown command\" instead of saying that Remote Control is turned off by the `disableRemoteControl` setting",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.317",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "源码已修改，待构建与 CLI／TUI 双入口实测",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/utils/settings/types.ts",
+        "src/bridge/bridgeEnabled.ts",
+        "src/commands/bridge/index.ts",
+        "src/entrypoints/cli.tsx",
+        "src/bridge/remoteControlPolicy.mjs",
+        "tests/m1-remote-control-policy-317.test.mjs"
+      ]
     },
     {
       "id": "2.1.317#050",
