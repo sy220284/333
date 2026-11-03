@@ -135,6 +135,7 @@ jobs:
         run: |
           set -euo pipefail
           node build/m1-cli-surface-audit.mjs \
+            --target 2.1.310 \
             --reference "${CLAUDE_REFERENCE_BIN}" \
             --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
             --report "${RUNNER_TEMP}/claude-installed-cli-surface-gaps.json"
