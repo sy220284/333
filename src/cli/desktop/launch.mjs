@@ -129,6 +129,11 @@ export async function launchDesktopFromCli({
   if (platform !== 'darwin' && !(platform === 'win32' && arch === 'x64')) {
     return reportError("--desktop isn't available on this platform. It works on macOS and Windows (x64).")
   }
+  // The full interactive CLI enables configuration reads in preAction.
+  // This one-shot Desktop entry bypasses preAction, so initialize settings
+  // explicitly before determining the current OAuth subscription.
+  const { enableConfigs } = await import('../../utils/config.js')
+  enableConfigs()
   const { isClaudeAISubscriber } = await import('../../utils/auth.js')
   if (!isClaudeAISubscriber()) {
     return reportError("--desktop requires signing in with a Claude account. Run `claude auth login` to sign in.")
