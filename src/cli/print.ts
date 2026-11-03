@@ -4459,7 +4459,7 @@ async function handleInitializeRequest(
     for (const [event, matchers] of Object.entries(request.hooks)) {
       hooks[event as HookEvent] = matchers.map(matcher => {
         const callbacks = matcher.hookCallbackIds.map(callbackId => {
-          return structuredIO.createHookCallback(callbackId, matcher.timeout)
+          return structuredIO.createHookCallback(callbackId, matcher.timeout, matcher.onFailure)
         })
         return {
           matcher: matcher.matcher,
