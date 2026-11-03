@@ -61,7 +61,7 @@ describe('官方 2.1.310 对话状态与动画逻辑', () => {
   it('每轮完成耗时同时显示结束时间', () => {
     const renderer = readFileSync(new URL('../src/components/messages/SystemTextMessage.tsx', import.meta.url), 'utf8')
     assert.match(renderer, /new Date\(message\.timestamp\)\.toLocaleTimeString/)
-    assert.ok(renderer.includes('· 完成 ${finishedAt}'))
+    assert.match(renderer, /· 完成 \$\{finishedAt\}/)
   })
 
   it('渐进思考文案按 10/20/30/45 秒的真实阈值变化', () => {
