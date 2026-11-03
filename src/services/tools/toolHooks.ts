@@ -6,12 +6,10 @@ import { sanitizeToolNameForAnalytics } from 'src/services/analytics/metadata.js
 import type z from 'zod/v4'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
 import type { AnyObject, Tool, ToolUseContext } from '../../Tool.js'
-import type { HookProgress } from '../../types/hooks.js'
 import type {
   AssistantMessage,
   AttachmentMessage,
   HookResultMessage,
-  ProgressMessage,
 } from '../../types/message.js'
 import type { PermissionDecision } from '../../types/permissions.js'
 import { createAttachmentMessage } from '../../utils/attachments.js'

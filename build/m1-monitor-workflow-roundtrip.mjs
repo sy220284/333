@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto'
 import {createReadStream,mkdtempSync,rmSync,mkdirSync,writeFileSync,readdirSync,readFileSync,existsSync} from 'node:fs'
 import {createServer} from 'node:http'
 import {tmpdir} from 'node:os'
-import {join,resolve,dirname} from 'node:path'
+import {join,resolve,dirname,basename} from 'node:path'
 import {spawn} from 'node:child_process'
 import {once} from 'node:events'
 const argv=process.argv.slice(2)
@@ -45,7 +45,7 @@ function collectWorkflowRuns(home){
    const path=join(directory,entry.name)
    if(entry.isDirectory()){visit(path,depth+1);continue}
    if(!entry.isFile()||!/^wf_[0-9a-f]{8}-[0-9a-f]{3}\.json$/.test(entry.name))continue
-   if(directory.split(/[\/\\]/).at(-1)!=='workflows')continue
+   if(basename(directory)!=='workflows')continue
    const data=JSON.parse(readFileSync(path,'utf8'))
    items.push({runId:data.runId,status:data.status,answer:data.result?.answer,
     workflowName:data.workflowName,scriptPath:data.scriptPath})

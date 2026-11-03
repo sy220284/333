@@ -52,7 +52,6 @@ import { getAllBaseTools } from '../../tools.js'
 import type { HookProgress } from '../../types/hooks.js'
 import type {
   AssistantMessage,
-  AttachmentMessage,
   Message,
   ProgressMessage,
   StopHookInfo,

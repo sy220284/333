@@ -1,6 +1,5 @@
 import type {
   BetaContentBlock,
-  BetaContentBlockParam,
   BetaImageBlockParam,
   BetaJSONOutputFormat,
   BetaMessage,

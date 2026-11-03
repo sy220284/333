@@ -11,9 +11,9 @@ function visit(dir) {
 }
 for(const dir of ['src/components','src/commands','src/hooks']) visit(dir)
 const patterns=[
-  ['JSX可见文字',/>\s*([A-Z][A-Za-z ,:.!?()\-]{6,})(?=<)/g],
-  ['界面属性',/\b(?:label|title|placeholder|headerText|helpText|emptyMessage|description|subtitle)\s*[:=]\s*(['"])([A-Z][A-Za-z ,:.!?()\-]{5,})\1/g],
-  ['静态提示',/\b(?:value|message)\s*:\s*(['"])([A-Z][A-Za-z ,:.!?()\-]{9,})\1/g]
+  ['JSX可见文字',/>\s*([A-Z][A-Za-z ,:.!?()-]{6,})(?=<)/g],
+  ['界面属性',/\b(?:label|title|placeholder|headerText|helpText|emptyMessage|description|subtitle)\s*[:=]\s*(['"])([A-Z][A-Za-z ,:.!?()-]{5,})\1/g],
+  ['静态提示',/\b(?:value|message)\s*:\s*(['"])([A-Z][A-Za-z ,:.!?()-]{9,})\1/g]
 ]
 const rows=[]
 for(const path of files) {
