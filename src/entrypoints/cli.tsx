@@ -57,7 +57,7 @@ async function main(): Promise<void> {
     try {
       if (await interceptBackgroundCli(args)) return;
     } catch (error) {
-      process.stderr.write((error instanceof Error ? error.message : String(error)) + '\n');
+      process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
       process.exitCode = 1;
       return;
     }
