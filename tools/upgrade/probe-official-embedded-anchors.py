@@ -101,6 +101,10 @@ def search(binary: Path) -> dict:
                     found.append({
                         "resource_kind": resource_kind,
                         "offset": pos,
+                        "binary_preceding_180": "".join(
+                            chr(b) if 32 <= b <= 126 else "."
+                            for b in buf[max(0, pos - 180):pos]
+                        ),
                         "sha256": hashlib.sha256(data).hexdigest(),
                         "bytes": len(data),
                         "hits": hits,
