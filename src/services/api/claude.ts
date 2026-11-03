@@ -84,6 +84,7 @@ import {
   stripToolReferenceBlocksFromUserMessage,
 } from '../../utils/messages.js'
 import {
+  getCanonicalName,
   getDefaultOpusModel,
   getDefaultSonnetModel,
   getSmallFastModel,
@@ -102,6 +103,7 @@ import {
 } from '../claudeAiLimits.js'
 import { getAPIContextManagement } from '../compact/apiMicrocompact.js'
 import { getRequestThinkingDisplay, getStreamThinkingDisplay } from './thinkingDisplay.js'
+import { matchesDefaultModelVariant } from './modelCacheMatch.mjs'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const autoModeStateModule = feature('TRANSCRIPT_CLASSIFIER')
@@ -342,13 +344,13 @@ export function getPromptCachingEnabled(model: string): boolean {
   // Check if we should disable for default Sonnet
   if (isEnvTruthy(process.env.DISABLE_PROMPT_CACHING_SONNET)) {
     const defaultSonnet = getDefaultSonnetModel()
-    if (model === defaultSonnet) return false
+    if (matchesDefaultModelVariant(model, defaultSonnet, getCanonicalName)) return false
   }
 
   // Check if we should disable for default Opus
   if (isEnvTruthy(process.env.DISABLE_PROMPT_CACHING_OPUS)) {
     const defaultOpus = getDefaultOpusModel()
-    if (model === defaultOpus) return false
+    if (matchesDefaultModelVariant(model, defaultOpus, getCanonicalName)) return false
   }
 
   return true
