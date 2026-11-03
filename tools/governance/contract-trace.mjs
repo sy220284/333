@@ -181,6 +181,7 @@ const summary={
   releaseGatedReferences:out.reduce((n,x)=>n+x.provenExcludedSites,0),
   potentiallyReachableReferences:out.reduce((n,x)=>n+x.runtimeSites-x.provenExcludedSites,0),
   enabledBuildFeatures:[...releaseFeatures].sort(),
+  critical:out.filter(x=>x.kind==='runtime-required'||x.kind==='type-only').map(x=>({target:x.target,kind:x.kind,references:x.originalMissingReferences,consumers:x.locations.map(z=>`${z.file}:${z.line}:${z.name}`)})),
   top:out.slice(0,25).map(x=>({target:x.target,kind:x.kind,references:x.originalMissingReferences,symbols:x.symbols.map(z=>z.name)}))
 };
 mkdirSync(dirname(resolve(outputPath)),{recursive:true});
