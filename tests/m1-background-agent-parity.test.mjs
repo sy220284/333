@@ -7,7 +7,7 @@ import { test } from 'node:test'
 import { activeBackgroundFlags, validateBackgroundCliArgs } from '../src/cli/background/index.mjs'
 import {
   SHORT_ID_PATTERN, MAX_LOG_BYTES, fleetHome, fleetSocket, createSessionRecord,
-  saveSession, reserveNewSession, editSession, readSession, listSessions, matchSession, assertNoUnmanagedLiveWorker, readTail,
+  saveSession, reserveNewSession, editSession, deleteSession, readSession, listSessions, matchSession, assertNoUnmanagedLiveWorker, readTail,
   stripUnsafeTerminal, worktreeDigest, removeWorktreeSafely
 } from '../src/cli/background/sessionStore.mjs'
 
@@ -90,6 +90,37 @@ test('new background session creation never overwrites a colliding short id', as
     const preserved = await readSession('cafebabe', env)
     assert.equal(preserved.name, 'original')
     assert.equal(preserved.sessionId, first.sessionId)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('session create/edit/delete are serialized on the same session id', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'bg-state-race-'))
+  const env = sandboxEnv(dir)
+  const record = createSessionRecord({
+    id: 'beadbead', sessionId: 'beadbead-1111-4111-8111-111111111111',
+    argv: ['test'], cwd: dir, name: 'race test', env,
+  })
+  try {
+    await reserveNewSession(record, env)
+    const [edited, deleted] = await Promise.all([
+      editSession(record.id, { state: 'stopped', detail: 'finished' }, env),
+      deleteSession(record.id, env),
+    ])
+    assert.equal(edited.state, 'stopped')
+    assert.equal(deleted, true)
+    assert.equal(await readSession(record.id, env), null,
+      'a later delete must not leave an older edit committed')
+    await reserveNewSession(record, env)
+    const [deletedFirst, editedAfterDelete] = await Promise.all([
+      deleteSession(record.id, env),
+      editSession(record.id, { state: 'stopped' }, env),
+    ])
+    assert.equal(deletedFirst, true)
+    assert.equal(editedAfterDelete, null)
+    assert.equal(await readSession(record.id, env), null,
+      'an edit after deletion must not recreate the previous session')
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
