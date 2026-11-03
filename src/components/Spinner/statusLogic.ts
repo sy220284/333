@@ -156,7 +156,12 @@ export function describeRetryStatus(
       return `${status.reason ?? 'Waiting for available capacity'} · next try in ${remaining} · attempt ${status.attempt} · esc to interrupt`
     case 'auto_mode_unavailable':
       return `Auto mode check unavailable · next try in ${remaining} · attempt ${status.attempt}/${status.maxRetries} · esc to interrupt`
-    case 'retrying':
-      return `${status.reason ?? 'Request failed'} · Retrying in ${remaining} · attempt ${status.attempt}/${status.maxRetries}`
+    case 'retrying': {
+      // Official 2.1.310 masks raw SDK error text on the first two retries.
+      // It shows details later, when the failure is persistent or diagnostic.
+      const reason = status.attempt >= Math.min(3, status.maxRetries)
+        ? (status.reason?.trim() || 'API error') : 'API error'
+      return `${reason} · Retrying in ${remaining} · attempt ${status.attempt}/${status.maxRetries}`
+    }
   }
 }
