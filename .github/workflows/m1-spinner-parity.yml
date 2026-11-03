@@ -7,6 +7,9 @@ on:
       - 'src/services/tips/**'
       - 'src/components/Spinner.tsx'
       - 'src/components/Spinner/**'
+      - 'src/components/Message.tsx'
+      - 'src/components/messages/thinkingDurationLabel.ts'
+      - 'tests/m1-thinking-duration-label.test.mjs'
       - 'tests/m1-spinner-animation-status.test.mjs'
       - 'src/screens/REPL.tsx'
       - 'src/state/AppStateStore.ts'
@@ -65,6 +68,7 @@ jobs:
         run: |
           node --test tests/m1-spinner-tips.test.mjs tests/m1-custom-spinner-tips.test.mjs
           node --experimental-strip-types --test tests/m1-spinner-animation-status.test.mjs
+          node --experimental-strip-types --test tests/m1-thinking-duration-label.test.mjs
           python3 tests/m1-spinner-pty-harness.test.py
       - name: 源码重建并准备固定哈希的官方 x64
         if: steps.relevant.outputs.run == 'true'
