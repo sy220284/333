@@ -64,6 +64,9 @@ jobs:
           node build/restore-claude-api.mjs --verify
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
+      - name: 安装固定版本终端画面解码器
+        if: steps.relevant.outputs.run == 'true'
+        run: python3 -m pip install --disable-pip-version-check pyte==0.8.2
       - name: 验证提示来源和两轮请求识别
         if: steps.relevant.outputs.run == 'true'
         run: |
@@ -90,9 +93,6 @@ jobs:
             --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
             | tee "${RUNNER_TEMP}/m1-spinner-parity.json"
-      - name: 安装固定版本终端画面解码器
-        if: steps.relevant.outputs.run == 'true'
-        run: python3 -m pip install --disable-pip-version-check pyte==0.8.2
       - name: 验证后台标题调用不会误充真实对话
         if: steps.relevant.outputs.run == 'true'
         run: python3 tests/m1-x64-conversation-ui-request-routing.test.py

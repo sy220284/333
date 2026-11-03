@@ -413,6 +413,7 @@ jobs:
             --report "${RUNNER_TEMP}/m1-413-recovery-differential.json"
       - name: 用真实终端对照自定义提示及文件配置
         run: |
+          python3 -m pip install --disable-pip-version-check pyte==0.8.2
           python3 tests/m1-x64-spinner-tips.py \
             --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli"

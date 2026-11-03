@@ -13,6 +13,15 @@ spec.loader.exec_module(probe)
 
 
 class SpinnerConversationTests(unittest.TestCase):
+    def test_terminal_redraw_reconstructs_visible_tip(self):
+        screen = probe.pyte.Screen(130, 40)
+        stream = probe.pyte.ByteStream(screen)
+        stream.feed(b'Team QA: PROBE_OGANIZATION_TIP')
+        stream.feed(b'\r\x1b[2KTeam QA: PROBE_ORGANIZATION_TIP')
+        visible = ''.join(''.join(screen.display).split())
+        self.assertIn(probe.EXPECTED, visible)
+        self.assertNotIn('PROBE_OGANIZATION_TIP', visible)
+
     def test_first_user_message_with_system_reminder_is_first_turn(self):
         body = {'messages': [{'role': 'user', 'content': [
             {'type': 'text', 'text': '<system-reminder>context</system-reminder>'},

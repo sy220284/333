@@ -6,6 +6,7 @@ import http.server
 import json
 import os
 import pty
+import pyte
 import re
 import select
 import shutil
@@ -144,6 +145,10 @@ def probe(executable, mode):
                                stdin=slave, stdout=slave, stderr=slave, start_new_session=True)
     os.close(slave)
     output = bytearray()
+    screen = pyte.Screen(130, 40)
+    terminal = pyte.ByteStream(screen)
+    tip_seen = False
+    second_sent_at = None
     first_sent = second_sent = False
     second_output_start = None
     normalized_second = ''
@@ -155,7 +160,9 @@ def probe(executable, mode):
             ready, _, _ = select.select([master], [], [], 0.2)
             if ready:
                 try:
-                    output.extend(os.read(master, 65536))
+                    chunk = os.read(master, 65536)
+                    output.extend(chunk)
+                    terminal.feed(chunk)
                 except OSError:
                     break
             elapsed = time.monotonic() - start
@@ -167,12 +174,13 @@ def probe(executable, mode):
                 second_output_start = len(output)
                 os.write(master, (SECOND_PROMPT + '\r').encode())
                 second_sent = True
-            second_output = output[second_output_start:] if second_sent else b''
-            normalized_second = re.sub(r'\s+', '', ANSI.sub('', second_output.decode('utf-8', errors='replace')))
+                second_sent_at = time.monotonic()
+            visible_screen = '\n'.join(line.rstrip() for line in screen.display).strip()
+            normalized_second = re.sub(r'\s+', '', visible_screen) if second_sent else ''
+            tip_seen = tip_seen or (second_turn_requested.is_set() and EXPECTED in normalized_second)
             if second_sent and second_output_start is not None and time.monotonic() - last_capture >= 0.25:
                 last_capture = time.monotonic()
-                raw_frame = output[second_output_start:][-4096:].decode('utf-8', errors='replace')
-                frame_text = ANSI.sub('', raw_frame).replace('\r', '')
+                frame_text = visible_screen
                 visible = ''.join(c for c in frame_text[-240:] if c.isprintable() or c in '\n\t')
                 glyphs = re.findall(r'[·✢✳✶✻✽]', visible)
                 frame_snapshots.append({
@@ -181,7 +189,7 @@ def probe(executable, mode):
                     'last_glyph': glyphs[-1] if glyphs else None,
                     'raw_size_bytes': len(output),
                 })
-            if second_turn_requested.is_set() and EXPECTED in normalized_second:
+            if tip_seen and second_sent_at is not None and time.monotonic() - second_sent_at >= 12:
                 return {'mode': mode, 'passed': True, 'requests': len(calls),
                         'first_response_completed': True, 'second_turn_requested': True,
                         'tip_seen_after_second_prompt': True,
@@ -191,7 +199,7 @@ def probe(executable, mode):
         return {'mode': mode, 'passed': False, 'requests': len(calls),
                 'first_response_completed': first_response_finished.is_set(),
                 'second_prompt_sent': second_sent, 'second_turn_requested': second_turn_requested.is_set(),
-                'tip_seen_after_second_prompt': EXPECTED in normalized_second,
+                'tip_seen_after_second_prompt': tip_seen,
                 'output_tail': normalized[-1000:],
                 'ui_frame_snapshots': frame_snapshots,
                 'ui_frames_captured': len(frame_snapshots)}
