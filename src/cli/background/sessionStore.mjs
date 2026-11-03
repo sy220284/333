@@ -75,6 +75,26 @@ async function serialized(id, work) {
   try { return await next }
   finally { if (queue.get(id) === next) queue.delete(id) }
 }
+// Reserve a new short ID atomically. A daemon restart or two concurrent
+// dispatches must never overwrite an existing conversation with the same
+// eight-hex-digit prefix. Existing records are updated via saveSession.
+export async function reserveNewSession(record, env = process.env) {
+  assertRecord(record)
+  await prepareFleet(env)
+  const path = sessionPath(record.id, env)
+  const handle = await open(path, 'wx', 0o600)
+  try {
+    await handle.writeFile(`${JSON.stringify(record, null, 2)}\n`)
+    await handle.sync()
+  } catch (error) {
+    await handle.close()
+    await unlink(path)
+    throw error
+  }
+  await handle.close()
+  return record
+}
+
 export async function saveSession(record, env = process.env) {
   assertRecord(record)
   await prepareFleet(env)
