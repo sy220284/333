@@ -131,7 +131,8 @@ async function main(): Promise<void> {
     enableConfigs();
     const {
       getBridgeDisabledReason,
-      checkBridgeMinVersion
+      checkBridgeMinVersion,
+      isRemoteControlDisabledBySettings
     } = await import('../bridge/bridgeEnabled.js');
     const {
       BRIDGE_LOGIN_ERROR
@@ -150,6 +151,9 @@ async function main(): Promise<void> {
     const {
       getClaudeAIOAuthTokens
     } = await import('../utils/auth.js');
+    if (isRemoteControlDisabledBySettings()) {
+      exitWithError('Error: Remote Control is disabled by the disableRemoteControl setting.');
+    }
     if (!getClaudeAIOAuthTokens()?.accessToken) {
       exitWithError(BRIDGE_LOGIN_ERROR);
     }

@@ -805,6 +805,10 @@ export const SettingsSchema = lazySchema(() =>
         .describe(
           'Per-plugin configuration including MCP server user configs, keyed by plugin ID (plugin@marketplace format)',
         ),
+      disableRemoteControl: z
+        .boolean()
+        .optional()
+        .describe('Turn off Remote Control for this device, including CLI, interactive and auto-connect entrypoints'),
       remote: z
         .object({
           defaultEnvironmentId: z
