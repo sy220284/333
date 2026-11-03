@@ -4190,9 +4190,13 @@
       "domain_candidate": "模型与上下文",
       "official_text": "Fixed `DISABLE_PROMPT_CACHING_OPUS` and `DISABLE_PROMPT_CACHING_SONNET` having no effect on `[1m]`, other-region and undated spellings of the default model",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.317",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "源码已修改，待构建与实测",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/services/api/claude.ts",
+        "src/services/api/modelCacheMatch.mjs",
+        "tests/m1-model-cache-317.test.mjs"
+      ]
     },
     {
       "id": "2.1.317#042",
@@ -4482,7 +4486,8 @@
       "verification_status": "未通过完整目标验收",
       "changed_files": [
         "src/tools/AgentTool/runAgent.ts",
-        "src/tools/AgentTool/subagentEffortPolicy.mjs"
+        "src/tools/AgentTool/subagentEffortPolicy.mjs",
+        "tests/m1-subagent-effort-317.test.mjs"
       ]
     },
     {
@@ -4521,7 +4526,9 @@
       "verification_status": "未通过完整目标验收",
       "changed_files": [
         "src/tools/FileReadTool/FileReadTool.ts",
-        "src/tools/FileReadTool/prompt.ts"
+        "src/tools/FileReadTool/UI.tsx",
+        "src/tools/FileReadTool/prompt.ts",
+        "tests/m1-read-repeat-317.test.mjs"
       ]
     },
     {
