@@ -59,3 +59,17 @@ test('all Hook execution paths use the shared limiter', () => {
   assert.match(text,/await acquireHookPermit\(/)
   assert.match(text,/releaseHookPermit\?\.\(\)/)
 })
+
+test('cancelled queued generator never starts its underlying hook', async () => {
+  const id = 'hook-test-queued-cancel'
+  const active = await Promise.all(Array.from({length:24},()=>acquireHookPermit(id,30000)))
+  const ctl = new AbortController()
+  let executions=0
+  async function* original() { executions++; yield 'unexpected' }
+  const pending = limitHookGenerator(original(), id, 30000, ctl.signal).next()
+  await Promise.resolve()
+  ctl.abort()
+  assert.equal((await pending).done, true)
+  assert.equal(executions, 0)
+  active.forEach(release => release())
+})
