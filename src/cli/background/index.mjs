@@ -147,6 +147,7 @@ async function startDaemon() {
   const out = await open(join(fleetHome(), 'daemon.log'), 'a', 0o600)
   try {
     const cmd = [...selfCommand(), '--internal-bg-supervisor']
+    process.stderr.write('Starting background service…\n')
     const child = spawn(cmd[0], cmd.slice(1), {
       detached: true, stdio: ['ignore', out.fd, out.fd], cwd: process.cwd(),
       env: { ...process.env, CLAUDE_CODE_SESSION_KIND: 'daemon' },
@@ -163,19 +164,31 @@ async function startDaemon() {
   throw new Error('Background service failed to start. Inspect ' + join(fleetHome(), 'daemon.log'))
 }
 function toPublic(j) {
+  // Native 2.1.310 public JSON contract: no internal state, paths or env.
   return {
-    id: j.id, sessionId: j.sessionId, name: j.name, cwd: j.cwd,
-    state: j.state, status: j.state, pid: j.pid || null,
-    startedAt: j.startedAt, updatedAt: j.updatedAt,
-    agent: j.agent, model: j.model, worktreePath: j.worktreePath,
+    ...(j.respawnCount > 0 && j.pid ? { pid: j.pid } : {}),
+    id: j.id, cwd: j.cwd, kind: 'background', startedAt: j.startedAt,
+    sessionId: j.sessionId, name: j.name || j.id, state: j.state,
   }
+}
+function inferredName(args) {
+  let positional = []
+  let waiting = false
+  for (const arg of args) {
+    if (waiting) { waiting = false; continue }
+    if (VALUE_FLAGS.has(arg)) { waiting = true; continue }
+    if (arg === '--') { continue }
+    if (arg.startsWith('-')) continue
+    positional.push(arg)
+  }
+  return positional.join(' ').trim().slice(0, 200) || undefined
 }
 async function list(args) {
   const all = args.includes('--all')
   const cwd = rootArg(args, '--cwd')
   const sessions = await listSessions({ all, cwd })
   if (args.includes('--json')) {
-    process.stdout.write(JSON.stringify(sessions.map(toPublic)) + '\n')
+    process.stdout.write(JSON.stringify(sessions.map(toPublic), null, 2) + '\n')
     return
   }
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
@@ -260,7 +273,7 @@ async function daemon(args) {
   }
   if (action === 'stop') {
     const status = await ask({ op: 'shutdown', keepWorkers: args.includes('--keep-workers') })
-    process.stdout.write('stopped background service\n')
+    process.stdout.write('stopped\nnote: the next `claude agents` or `claude --bg` will start a new one\n')
     return
   }
   if (action === 'uninstall') {
@@ -327,10 +340,16 @@ export async function interceptBackgroundCli(args) {
     await authForBackground(args)
     const response = await ask({
       op: 'dispatch', cwd: process.cwd(), args, cols: process.stdout.columns || 100,
-      rows: process.stdout.rows || 30, name: argValue(args, '--name'),
+      rows: process.stdout.rows || 30, name: argValue(args, '--name') || inferredName(args),
       agent: argValue(args, '--agent'), model: argValue(args, '--model'),
     }, { start: true })
-    process.stdout.write(response.id + '\n')
+    process.stdout.write([
+      'backgrounded · ' + response.id,
+      '  claude agents             list sessions',
+      '  claude attach ' + response.id + '    open in this terminal',
+      '  claude logs ' + response.id + '      show recent output',
+      '  claude stop ' + response.id + '      stop this session',
+    ].join('\n') + '\n')
     return true
   }
   const normalized = verb === 'kill' ? 'stop' : verb
