@@ -78,6 +78,7 @@ export function acquireHookPermit(sessionId, timeoutMs, signal) {
 export async function* limitHookGenerator(generator, sessionId, timeoutMs, signal) {
   const release = await acquireHookPermit(sessionId, timeoutMs, signal)
   try {
+    if (signal?.aborted) return
     yield* generator
   } finally {
     release()
