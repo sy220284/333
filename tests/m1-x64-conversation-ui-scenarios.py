@@ -83,15 +83,31 @@ def terminal_anchors(screen, answer_marker, scenario):
         'user': lambda row: PROMPT in row and '❯' in row,
         'assistant': lambda row: answer_marker in row and '●' in row,
         'tool': lambda row: 'Read 1 file' in row,
-        'completed': lambda row: bool(re.search(r'\bfor\s+\d+(?:\.\d+)?s\b', row)),
+        # Only a completed spinner line is a turn completion: an earlier
+        # "Thought for 2s" is a different semantic row.
+        'completed': lambda row: bool(re.search(
+            r'^\s*[✻✳✢✶✽*·]\s+.*\bfor\s+\d+(?:\.\d+)?s\b', row)),
+        'thinking_summary': lambda row: bool(re.search(
+            r'(?:Thought for\s+\d+s|思考了\s*\d+\s*秒)', row)),
     }
     result = {}
     for name, predicate in definitions.items():
-        if name == 'tool' and scenario != 'tool':
+        if (name == 'tool' and scenario != 'tool') or (
+            name == 'thinking_summary' and scenario != 'thinking'
+        ):
             continue
         for y, row in enumerate(rows):
             if predicate(row):
-                token = PROMPT if name == 'user' else answer_marker if name == 'assistant' else 'Read 1 file' if name == 'tool' else 'for '
+                if name == 'user':
+                    token = PROMPT
+                elif name == 'assistant':
+                    token = answer_marker
+                elif name == 'tool':
+                    token = 'Read 1 file'
+                elif name == 'thinking_summary':
+                    token = 'Thought for' if 'Thought for' in row else '思考了'
+                else:
+                    token = 'for '
                 x = row.index(token)
                 cell = screen.buffer[y][x]
                 result[name] = {'row': y, 'column': x,
@@ -108,7 +124,9 @@ def compare_core_layout(official, rebuilt, scenario):
     onboarding banners and user-selected themes may legitimately differ.
     """
     a, b = official['terminal_anchors'], rebuilt['terminal_anchors']
-    required = ['user', 'assistant', 'completed'] + (['tool'] if scenario == 'tool' else [])
+    required = (['user', 'assistant', 'completed']
+                + (['tool'] if scenario == 'tool' else [])
+                + (['thinking_summary'] if scenario == 'thinking' else []))
     missing = [name for name in required if name not in a or name not in b]
     if missing:
         return {'passed': False, 'missing': missing, 'mismatches': []}
@@ -120,7 +138,8 @@ def compare_core_layout(official, rebuilt, scenario):
             mismatches.append({'anchor': name, 'kind': 'relative_row',
                                'official': ref['row'] - a['user']['row'],
                                'rebuilt': cand['row'] - b['user']['row']})
-        if name != 'completed' and ref['column'] != cand['column']:
+        # Localized status labels have different text widths and offsets.
+        if name not in ('completed', 'thinking_summary') and ref['column'] != cand['column']:
             mismatches.append({'anchor': name, 'kind': 'column',
                                'official': ref['column'], 'rebuilt': cand['column']})
     return {'passed': not mismatches, 'missing': [], 'mismatches': mismatches}
