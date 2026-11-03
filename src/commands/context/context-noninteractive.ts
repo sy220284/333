@@ -99,12 +99,6 @@ function formatContextAsMarkdownTable(data: ContextData): string {
   output += `**Tokens:** ${formatTokens(totalTokens)} / ${formatTokens(rawMaxTokens)} (${percentage}%)\n`
 
   output += '\n'
-      } else if (h.emptySpawnWarningEmitted) {
-        output += `**Collapse idle:** ${h.totalEmptySpawns} consecutive empty runs\n`
-      }
-    }
-  }
-  output += '\n'
 
   // Main categories table
   const visibleCategories = categories.filter(
