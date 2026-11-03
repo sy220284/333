@@ -87,6 +87,14 @@ jobs:
             --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
             --allow-candidate-diff false \
             --report "${RUNNER_TEMP}/claude-installed-candidate-strict-parity.json"
+      - name: 对照官方 x64 校验旧 assistant 命令退场
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/m1-assistant-release-parity.mjs \
+            --reference "${CLAUDE_REFERENCE_BIN}" \
+            --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
+            --report "${RUNNER_TEMP}/claude-installed-assistant-retirement-parity.json"
       - name: 安装版执行本机模拟 API 与工具权限实测
         shell: bash
         run: |
@@ -106,5 +114,6 @@ jobs:
             ${{ runner.temp }}/claude-installed-cli-parity.json
             ${{ runner.temp }}/claude-installed-candidate-strict-parity.json
             ${{ runner.temp }}/claude-installed-loopback-api.json
+            ${{ runner.temp }}/claude-installed-assistant-retirement-parity.json
           retention-days: 30
           if-no-files-found: warn
