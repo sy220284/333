@@ -63,3 +63,8 @@ test('no old model remapping or one-shot migration fields remain', () => {
   ]) assert.equal(config.includes(field), false, field)
   assert.equal(existsSync(new URL('hooks/notifs/useModelMigrationNotifications.tsx', root)), false)
 })
+
+test('REPL does not import or invoke removed model migration notifications', () => {
+  const repl = code('screens/REPL.tsx')
+  assert.doesNotMatch(repl, /useModelMigrationNotifications/)
+})
