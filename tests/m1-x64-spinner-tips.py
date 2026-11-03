@@ -20,6 +20,41 @@ from pathlib import Path
 
 ANSI = re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\\\)')
 EXPECTED = 'TeamQA:PROBE_ORGANIZATION_TIP'
+FIRST_PROMPT = 'SPINNER_FIRST_MARKER'
+SECOND_PROMPT = 'SPINNER_SECOND_MARKER'
+ANSWER = 'PROBE_DONE'
+
+
+def message_has_text(message, role, expected):
+    if message.get('role') != role:
+        return False
+    content = message.get('content')
+    if isinstance(content, str):
+        return content.strip() == expected
+    if isinstance(content, list):
+        return any(isinstance(block, dict) and block.get('type') == 'text'
+                   and isinstance(block.get('text'), str)
+                   and block['text'].strip() == expected for block in content)
+    return False
+
+
+def is_first_turn_request(body):
+    messages = body.get('messages', [])
+    return (any(message_has_text(m, 'user', FIRST_PROMPT) for m in messages)
+            and not any(message_has_text(m, 'assistant', ANSWER) for m in messages)
+            and not any(message_has_text(m, 'user', SECOND_PROMPT) for m in messages))
+
+
+def is_second_turn_request(body):
+    stages = [('user', FIRST_PROMPT), ('assistant', ANSWER), ('user', SECOND_PROMPT)]
+    stage = 0
+    for message in body.get('messages', []):
+        role, value = stages[stage]
+        if message_has_text(message, role, value):
+            stage += 1
+            if stage == len(stages):
+                return True
+    return False
 
 
 def sse_frame(event, data):
@@ -50,6 +85,9 @@ def probe(executable, mode):
         'projects': {str(project): {'hasTrustDialogAccepted': True}},
     }), encoding='utf-8')
     calls = []
+    first_response_finished = threading.Event()
+    second_turn_requested = threading.Event()
+    first_finished_at = [None]
 
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_HEAD(self):
@@ -59,6 +97,8 @@ def probe(executable, mode):
         def do_POST(self):
             body = json.loads(self.rfile.read(int(self.headers.get('content-length', 0))))
             calls.append(body)
+            if is_second_turn_request(body):
+                second_turn_requested.set()
             if len(calls) > 1:
                 time.sleep(8)
             model = body.get('model', 'claude-sonnet-4-6')
@@ -76,6 +116,10 @@ def probe(executable, mode):
                 self.send_header('content-length', str(len(frames)))
                 self.end_headers()
                 self.wfile.write(frames)
+                self.wfile.flush()
+                if is_first_turn_request(body):
+                    first_finished_at[0] = time.monotonic()
+                    first_response_finished.set()
             except BrokenPipeError:
                 pass
 
@@ -101,6 +145,8 @@ def probe(executable, mode):
     os.close(slave)
     output = bytearray()
     first_sent = second_sent = False
+    second_output_start = None
+    normalized_second = ''
     start = time.monotonic()
     try:
         while time.monotonic() - start < 35 and process.poll() is None:
@@ -112,16 +158,25 @@ def probe(executable, mode):
                     break
             elapsed = time.monotonic() - start
             if not first_sent and elapsed > 5:
-                os.write(master, b'hello\r')
+                os.write(master, (FIRST_PROMPT + '\r').encode())
                 first_sent = True
-            if first_sent and not second_sent and b'PROBE_DONE' in output and elapsed > 7:
-                os.write(master, b'another question\r')
+            if (first_sent and not second_sent and first_response_finished.is_set()
+                    and time.monotonic() - first_finished_at[0] > 1.5):
+                second_output_start = len(output)
+                os.write(master, (SECOND_PROMPT + '\r').encode())
                 second_sent = True
-            normalized = re.sub(r'\s+', '', ANSI.sub('', output.decode('utf-8', errors='replace')))
-            if second_sent and len(calls) >= 2 and EXPECTED in normalized:
-                return {'mode': mode, 'passed': True, 'requests': len(calls)}
+            second_output = output[second_output_start:] if second_sent else b''
+            normalized_second = re.sub(r'\s+', '', ANSI.sub('', second_output.decode('utf-8', errors='replace')))
+            if second_turn_requested.is_set() and EXPECTED in normalized_second:
+                return {'mode': mode, 'passed': True, 'requests': len(calls),
+                        'first_response_completed': True, 'second_turn_requested': True,
+                        'tip_seen_after_second_prompt': True}
         normalized = re.sub(r'\s+', '', ANSI.sub('', output.decode('utf-8', errors='replace')))
-        return {'mode': mode, 'passed': False, 'requests': len(calls), 'output_tail': normalized[-1000:]}
+        return {'mode': mode, 'passed': False, 'requests': len(calls),
+                'first_response_completed': first_response_finished.is_set(),
+                'second_prompt_sent': second_sent, 'second_turn_requested': second_turn_requested.is_set(),
+                'tip_seen_after_second_prompt': EXPECTED in normalized_second,
+                'output_tail': normalized[-1000:]}
     finally:
         if process.poll() is None:
             os.killpg(process.pid, signal.SIGTERM)
