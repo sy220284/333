@@ -107,9 +107,15 @@ def probe(binary, scenario):
         def do_POST(self):
             body = json.loads(self.rfile.read(int(self.headers.get('Content-Length', '0'))))
             content = body.get('messages', [])
-            is_real = any(
-                msg.get('role') == 'user' and PROMPT in str(msg.get('content', ''))
-                for msg in content
+            # Background title generation includes the visible user prompt
+            # inside a <session> quote, but does not expose file tools.  Only
+            # a tool-capable main conversation can advance the tool fixture.
+            is_real = (
+                any(t.get('name') == 'Read' for t in body.get('tools', []))
+                and any(
+                    msg.get('role') == 'user' and PROMPT in str(msg.get('content', ''))
+                    for msg in content
+                )
             )
             if not is_real:
                 # Background model calls (title generation) must not advance fixture state.
