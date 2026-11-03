@@ -70,6 +70,24 @@ export function isProviderManagedEnvVar(key: string): boolean {
 }
 
 /**
+ * Official 2.1.310 only allows settings-sourced CA bundles under host-managed
+ * inference for desktop-owned entrypoints. A host-supplied process env value
+ * remains authoritative and is never removed by this policy.
+ */
+const HOST_CA_SETTINGS_ENTRYPOINTS = new Set([
+  'claude-desktop',
+  'claude-desktop-3p',
+  'local-agent',
+])
+
+export function isSettingsCACertBlockedByManagedHost(
+  managedByHost: boolean,
+  entrypoint: string | undefined,
+): boolean {
+  return managedByHost && !HOST_CA_SETTINGS_ENTRYPOINTS.has(entrypoint ?? '')
+}
+
+/**
  * Dangerous shell settings that can execute arbitrary shell code
  */
 export const DANGEROUS_SHELL_SETTINGS = [
