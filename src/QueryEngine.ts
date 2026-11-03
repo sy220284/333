@@ -409,6 +409,7 @@ export class QueryEngine {
       allowedTools,
       model: modelFromUserInput,
       resultText,
+      localCommand,
     } = await processUserInput({
       input: prompt,
       mode: 'prompt',
@@ -619,8 +620,9 @@ export class QueryEngine {
         terminal_reason: 'completed',
         duration_ms: Date.now() - startTime,
         duration_api_ms: getTotalAPIDuration(),
-        num_turns: messages.length - 1,
+        num_turns: localCommand ? 0 : messages.length - 1,
         result: resultText ?? '',
+        ...(localCommand ? { local_command: localCommand } : {}),
         stop_reason: null,
         session_id: getSessionId(),
         total_cost_usd: getTotalCost(),
