@@ -33,8 +33,6 @@ import { SkillPermissionRequest } from './SkillPermissionRequest/SkillPermission
 import { WebFetchPermissionRequest } from './WebFetchPermissionRequest/WebFetchPermissionRequest.js';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-const ReviewArtifactTool = feature('REVIEW_ARTIFACT') ? (require('../../tools/ReviewArtifactTool/ReviewArtifactTool.js') as typeof import('../../tools/ReviewArtifactTool/ReviewArtifactTool.js')).ReviewArtifactTool : null;
-const ReviewArtifactPermissionRequest = feature('REVIEW_ARTIFACT') ? (require('./ReviewArtifactPermissionRequest/ReviewArtifactPermissionRequest.js') as typeof import('./ReviewArtifactPermissionRequest/ReviewArtifactPermissionRequest.js')).ReviewArtifactPermissionRequest : null;
 import { WorkflowTool } from '../../tools/WorkflowTool/WorkflowTool.js';
 import { WorkflowPermissionRequest } from '../../tools/WorkflowTool/WorkflowPermissionRequest.js';
 import { MonitorTool } from '../../tools/MonitorTool/MonitorTool.js';
@@ -54,8 +52,6 @@ function permissionComponentForTool(tool: Tool): React.ComponentType<PermissionR
       return BashPermissionRequest;
     case PowerShellTool:
       return PowerShellPermissionRequest;
-    case ReviewArtifactTool:
-      return ReviewArtifactPermissionRequest ?? FallbackPermissionRequest;
     case WebFetchTool:
       return WebFetchPermissionRequest;
     case NotebookEditTool:
@@ -132,9 +128,6 @@ function getNotificationMessage(toolUseConfirm: ToolUseConfirm): string {
   }
   if (toolUseConfirm.tool === EnterPlanModeTool) {
     return 'Claude Code 希望进入规划模式';
-  }
-  if (feature('REVIEW_ARTIFACT') && toolUseConfirm.tool === ReviewArtifactTool) {
-    return 'Claude 需要你批准审查结果';
   }
   if (!toolName || toolName.trim() === '') {
     return 'Claude Code 需要你的关注';
