@@ -20,6 +20,7 @@ import { stripDisplayTags, stripDisplayTagsAllowEmpty } from './displayTags.js'
 import { isEnvTruthy } from './envUtils.js'
 import { toError } from './errors.js'
 import { isEssentialTrafficOnly } from './privacyLevel.js'
+import { redactSensitiveInfo } from './redactSensitiveInfo.js'
 import { jsonParse } from './slowOperations.js'
 
 /**
@@ -158,9 +159,12 @@ const isHardFailMode = memoize((): boolean => {
 
 export function logError(error: unknown): void {
   const err = toError(error)
+  // Scrub all error destinations, including queued and hard-fail messages.
+  const safeError = new Error(redactSensitiveInfo(err.message))
+  safeError.name = err.name
+  if (err.stack) safeError.stack = redactSensitiveInfo(err.stack)
   if (feature('HARD_FAIL') && isHardFailMode()) {
-    // biome-ignore lint/suspicious/noConsole:: intentional crash output
-    console.error('[HARD FAIL] logError called with:', err.stack || err.message)
+    console.error('[HARD FAIL] logError called with:', safeError.stack || safeError.message)
     // eslint-disable-next-line custom-rules/no-process-exit
     process.exit(1)
   }
@@ -177,7 +181,7 @@ export function logError(error: unknown): void {
       return
     }
 
-    const errorStr = err.stack || err.message
+    const errorStr = safeError.stack || safeError.message
 
     const errorInfo = {
       error: errorStr,
@@ -189,11 +193,11 @@ export function logError(error: unknown): void {
 
     // If sink not attached, queue the event
     if (errorLogSink === null) {
-      errorQueue.push({ type: 'error', error: err })
+      errorQueue.push({ type: 'error', error: safeError })
       return
     }
 
-    errorLogSink.logError(err)
+    errorLogSink.logError(safeError)
   } catch {
     // pass
   }
