@@ -70,7 +70,7 @@ import { getCwd } from './cwd.js'
 import { logForDebugging } from './debug.js'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
-import { isFsInaccessible } from './errors.js'
+import { getErrnoCode, isFsInaccessible } from './errors.js'
 import type { FileHistorySnapshot } from './fileHistory.js'
 import { formatFileSize } from './format.js'
 import { getFsImplementation } from './fsOperations.js'
@@ -564,6 +564,8 @@ class Project {
   >()
   private flushTimer: ReturnType<typeof setTimeout> | null = null
   private activeDrain: Promise<void> | null = null
+  /** Sticky until the session ends: an earlier lost write can never be retroactively restored. */
+  private persistenceFailure: Error | null = null
   private FLUSH_INTERVAL_MS = 100
   private readonly MAX_CHUNK_BYTES = 100 * 1024 * 1024
 
@@ -577,6 +579,20 @@ class Project {
     this.flushTimer = null
     this.activeDrain = null
     this.writeQueues = new Map()
+    this.persistenceFailure = null
+  }
+
+  private recordPersistenceFailure(error: unknown): void {
+    if (this.persistenceFailure) return
+    this.persistenceFailure = new Error(
+      'Session transcript could not be saved to disk. The filesystem may be full or the disk quota exceeded.',
+      { cause: error },
+    )
+    logError(this.persistenceFailure)
+  }
+
+  private throwIfPersistenceFailed(): void {
+    if (this.persistenceFailure) throw this.persistenceFailure
   }
 
   private incrementPendingWrites(): void {
@@ -634,9 +650,10 @@ class Project {
   private async appendToFile(filePath: string, data: string): Promise<void> {
     try {
       await fsAppendFile(filePath, data, { mode: 0o600 })
-    } catch {
-      // Directory may not exist — some NFS-like filesystems return
-      // unexpected error codes, so don't discriminate on code.
+    } catch (error) {
+      // ENOSPC/EDQUOT and permission failures must surface to the caller.
+      // Only a genuinely missing directory warrants a mkdir + retry.
+      if (getErrnoCode(error) !== 'ENOENT') throw error
       await mkdir(dirname(filePath), { recursive: true, mode: 0o700 })
       await fsAppendFile(filePath, data, { mode: 0o600 })
     }
@@ -652,28 +669,33 @@ class Project {
       let content = ''
       const resolvers: Array<() => void> = []
 
-      for (const { entry, resolve } of batch) {
-        const line = jsonStringify(entry) + '\n'
+      try {
+        for (const { entry, resolve } of batch) {
+          const line = jsonStringify(entry) + '\n'
 
-        if (content.length + line.length >= this.MAX_CHUNK_BYTES) {
-          // Flush chunk and resolve its entries before starting a new one
-          await this.appendToFile(filePath, content)
-          for (const r of resolvers) {
-            r()
+          if (content.length + line.length >= this.MAX_CHUNK_BYTES) {
+            if (content.length > 0) {
+              await this.appendToFile(filePath, content)
+            }
+            for (const r of resolvers) r()
+            resolvers.length = 0
+            content = ''
           }
-          resolvers.length = 0
-          content = ''
+
+          content += line
+          resolvers.push(resolve)
         }
 
-        content += line
-        resolvers.push(resolve)
-      }
-
-      if (content.length > 0) {
-        await this.appendToFile(filePath, content)
-        for (const r of resolvers) {
-          r()
+        if (content.length > 0) {
+          await this.appendToFile(filePath, content)
+          for (const r of resolvers) r()
         }
+      } catch (error) {
+        // Record the first lost write, and settle queued promises so flush()
+        // can report it. Most enqueueWrite callers are intentionally fire-
+        // and-forget; rejecting their promises would create unhandled errors.
+        this.recordPersistenceFailure(error)
+        for (const { resolve } of batch) resolve()
       }
     }
 
@@ -853,11 +875,13 @@ class Project {
 
     // Wait for non-queue tracked operations (e.g. removeMessageByUuid)
     if (this.pendingWriteCount === 0) {
+      this.throwIfPersistenceFailed()
       return
     }
-    return new Promise<void>(resolve => {
+    await new Promise<void>(resolve => {
       this.flushResolvers.push(resolve)
     })
+    this.throwIfPersistenceFailed()
   }
 
   /**
