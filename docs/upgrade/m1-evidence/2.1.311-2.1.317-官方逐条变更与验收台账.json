@@ -287,9 +287,15 @@
       "domain_candidate": "Agent与会话",
       "official_text": "Fixed WebFetch and WebSearch hanging on a stalled response in Cowork cloud sessions; an unfinished request now fails after 300 seconds",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.311",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "已实现完整 300 秒终止与中断信号传递；待云端真实阻塞故障注入",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/tools/WebFetchTool/WebFetchTool.ts",
+        "src/tools/WebSearchTool/WebSearchTool.ts",
+        "src/utils/webToolDeadline.mjs",
+        "src/utils/webToolDeadline.d.mts",
+        "tests/m1-web-tools-deadline-311.test.mjs"
+      ]
     },
     {
       "id": "2.1.311#022",
