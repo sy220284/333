@@ -1,4 +1,3 @@
-import { relative } from 'path';
 import React, { useMemo } from 'react';
 import { useDiffInIDE } from '../../../hooks/useDiffInIDE.js';
 import { Box, Text } from '../../../ink.js';
@@ -17,6 +16,7 @@ import type { WorkerBadgeProps } from '../WorkerBadge.js';
 import type { IDEDiffSupport } from './ideDiffConfig.js';
 import type { FileOperationType, PermissionOption } from './permissionOptions.js';
 import { type ToolInput, useFilePermissionDialog } from './useFilePermissionDialog.js';
+import { formatSymlinkPermissionWarning } from './symlinkPermissionWarning.js';
 export type FilePermissionDialogProps<T extends ToolInput = ToolInput> = {
   // Required props from PermissionRequestProps
   toolUseConfirm: ToolUseConfirm;
@@ -73,7 +73,7 @@ export function FilePermissionDialog<T extends ToolInput = ToolInput>({
   }), [completionType, languageName]);
   usePermissionRequestLogging(toolUseConfirm, unaryEvent);
   const symlinkTarget = useMemo(() => {
-    if (!path || operationType === 'read') {
+    if (!path) {
       return null;
     }
     const expandedPath = expandPath(path);
@@ -159,10 +159,9 @@ export function FilePermissionDialog<T extends ToolInput = ToolInput>({
   if (showingDiffInIDE && ideDiffConfig && path) {
     return <ShowInIDEPrompt onChange={(option_1: PermissionOption, _input, feedback_0?: string) => onChange(option_1, feedback_0)} options={options} filePath={path} input={parsedInput} ideName={ideName} symlinkTarget={symlinkTarget} rejectFeedback={rejectFeedback} acceptFeedback={acceptFeedback} setFocusedOption={setFocusedOption} onInputModeToggle={handleInputModeToggle} focusedOption={focusedOption} yesInputMode={yesInputMode} noInputMode={noInputMode} />;
   }
-  const isSymlinkOutsideCwd = symlinkTarget != null && relative(getCwd(), symlinkTarget).startsWith('..');
   const symlinkWarning = symlinkTarget ? <Box paddingX={1} marginBottom={1}>
       <Text color="warning">
-        {isSymlinkOutsideCwd ? `This will modify ${symlinkTarget} (outside working directory) via a symlink` : `Symlink target: ${symlinkTarget}`}
+        {formatSymlinkPermissionWarning(symlinkTarget, operationType, getCwd())}
       </Text>
     </Box> : null;
   return <>
