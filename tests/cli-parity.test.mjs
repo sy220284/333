@@ -89,12 +89,12 @@ for (const args of [
       // Official 2.1.310 ships a background-session fleet: these commands
       // did not exist in the 2.1.88 baseline, and must be checked against
       // the new binary, not rejected as unexplained additions.
-      const targetCommands = new Set(['attach', 'logs', 'stop', 'respawn', 'rm', 'daemon']);
+      const targetCommands = new Set(['attach', 'logs', 'stop', 'respawn', 'rm', 'daemon', 'import']);
       const addedCommands = rebuilt.commands.filter(command => !baseline.commands.includes(command));
       assert.deepEqual(addedCommands.filter(command => !targetCommands.has(command)), [],
         'Unknown new CLI subcommand outside official 2.1.310');
       for (const required of targetCommands) {
-        assert.ok(rebuilt.commands.includes(required), `Missing 2.1.310 background command: ${required}`);
+        assert.ok(rebuilt.commands.includes(required), `Missing reviewed 2.1.310 public command: ${required}`);
       }
       assert.deepEqual(baseline.commands.filter(command => !rebuilt.commands.includes(command)), [],
         'Older public CLI command was lost unexpectedly');
