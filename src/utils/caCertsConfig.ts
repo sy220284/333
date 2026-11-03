@@ -13,6 +13,9 @@
  */
 
 import { logForDebugging } from './debug.js'
+import { isEnvTruthy } from './envUtils.js'
+import { isSettingsCACertBlockedByManagedHost } from './managedEnvConstants.js'
+import { isSettingSourceEnabled } from './settings/constants.js'
 import { getSettingsForSource } from './settings/settings.js'
 
 /**
@@ -48,9 +51,24 @@ export function applyExtraCACertsFromConfig(): void {
  */
 function getExtraCertsPathFromUserSettings(): string | undefined {
   try {
-    // Only read from user-controlled settings (~/.claude/settings.json),
-    // not project-level settings, to prevent malicious projects from
-    // injecting CA certs before the trust dialog.
+    // SDK settingSources: [] isolates user settings, including their CA bundle.
+    if (!isSettingSourceEnabled('userSettings')) {
+      logForDebugging('CA certs: skipping disabled user settings source')
+      return undefined
+    }
+
+    // Match the normal managed-env filter and the 2.1.310 host-managed gate.
+    if (
+      isSettingsCACertBlockedByManagedHost(
+        isEnvTruthy(process.env.CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST),
+        process.env.CLAUDE_CODE_ENTRYPOINT,
+      )
+    ) {
+      logForDebugging('CA certs: skipping settings-sourced CA under host-managed provider')
+      return undefined
+    }
+
+    // Read only trusted user settings, never unapproved project settings.
     const settings = getSettingsForSource('userSettings')
     const settingsEnv = settings?.env
 
