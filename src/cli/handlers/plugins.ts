@@ -166,10 +166,13 @@ export async function pluginListHandler(options: {
   logEvent('tengu_plugin_list_command', {})
 
   const installedData = loadInstalledPluginsV2()
-  const { getPluginEditableScopes } = await import(
+  // Resolve actual enabled state from merged settings. Editable scopes only
+  // identify where to write changes, and can disagree with policy or local
+  // overrides; the CLI list reports effective runtime state.
+  const { checkEnabledPlugins } = await import(
     '../../utils/plugins/pluginStartupCheck.js'
   )
-  const enabledPlugins = getPluginEditableScopes()
+  const enabledPlugins = new Set(await checkEnabledPlugins())
 
   const pluginIds = Object.keys(installedData.plugins)
   if (options.json && typeof options.dataSize === 'string' &&
