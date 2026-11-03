@@ -26,6 +26,21 @@
       ],
       "url-handler-napi": [
         "native/url-handler-src/index.ts"
+      ],
+      "@ant/claude-for-chrome-mcp": [
+        ".rebuild/deps/node_modules/@ant/claude-for-chrome-mcp/src/index.ts"
+      ],
+      "@ant/computer-use-mcp": [
+        "src/types/upstreamComputerUse/index.d.ts"
+      ],
+      "@ant/computer-use-mcp/types": [
+        "src/types/upstreamComputerUse/types.ts"
+      ],
+      "@ant/computer-use-input": [
+        "src/types/upstreamComputerUse/nativeInput.d.ts"
+      ],
+      "@ant/computer-use-swift": [
+        "src/types/upstreamComputerUse/nativeSwift.d.ts"
       ]
     },
     "lib": [
