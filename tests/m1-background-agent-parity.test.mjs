@@ -31,13 +31,15 @@ test('2.1.310 background IDs, bounded tail and terminal sanitization match the d
   assert.equal(SHORT_ID_PATTERN.test('abcdef09'), true)
   assert.equal(SHORT_ID_PATTERN.test('abcdef09a'), false)
   assert.equal(MAX_LOG_BYTES, 1024 * 1024)
-  assert.equal(stripUnsafeTerminal('hi\u001b]0;unsafe\u0007 there\u001b[31m red'), 'hi there red')
+  assert.equal(stripUnsafeTerminal('hi\u001b]0;unsafe\u0007 there\u001b[31m red'), 'hi there\u001b[31m red')
   const tmp = await mkdtemp(join(tmpdir(), 'bg-state-'))
   const env = sandboxEnv(tmp)
   try {
-    const a = createSessionRecord({ id: '12345678', sessionId: '11111111-1111-4111-8111-111111111111', argv: ['hello'], cwd: tmp, name: 'First agent', env })
-    const b = createSessionRecord({ id: '12345670', sessionId: '22222222-2222-4222-8222-222222222222', argv: [], cwd: tmp, name: 'Second agent', env })
+    const a = createSessionRecord({ id: '12345678', sessionId: '12345678-1111-4111-8111-111111111111', argv: ['hello'], cwd: tmp, name: 'First agent', env })
+    const b = createSessionRecord({ id: '12345670', sessionId: '12345670-2222-4222-8222-222222222222', argv: [], cwd: tmp, name: 'Second agent', env })
     assert.equal(a.id, '12345678')
+    assert.equal(a.kind, 'background')
+    assert.equal(typeof a.startedAt, 'number')
     await saveSession(a, env)
     await saveSession(b, env)
     const rec = await readSession('12345678', env)
@@ -58,7 +60,7 @@ test('2.1.310 background IDs, bounded tail and terminal sanitization match the d
     if (process.platform !== 'win32') {
       assert.equal((await stat(join(fleetHome(env), 'jobs'))).mode & 0o077, 0)
     }
-    assert.ok(fleetSocket(env).includes('background') || fleetSocket(env).includes('claude-bg'))
+    assert.ok(fleetSocket(env).endsWith('control.sock') || fleetSocket(env).includes('claude-bg'))
   } finally { await rm(tmp, { recursive: true, force: true }) }
 })
 test('2.1.310 background worktree removal requires actual git safety evidence', async () => {
