@@ -12,6 +12,7 @@ if (!options['--reference'] || !options['--report']) throw Error('Missing --refe
 
 const modes = [
   { name: 'explicit', env: { CLAUDE_CODE_EXTRA_BODY: JSON.stringify({ thinking: { type: 'adaptive', display: 'summarized' } }) }, display: 'summarized' },
+  { name: 'budget', env: { CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING: '1' }, display: 'updates' },
   { name: 'disabled', env: { CLAUDE_CODE_DISABLE_THINKING: '1' }, display: null },
 ]
 
@@ -75,7 +76,11 @@ async function probe(executable, mode) {
     const expectedDisplays = [mode.display, mode.display, mode.display, null, null, null, null, null, null, null]
     const sentExpected = mode.name === 'explicit'
       ? requestThinking?.type === 'adaptive' && requestThinking?.display === 'summarized'
-      : requestThinking === undefined
+      : mode.name === 'budget'
+        ? requestThinking?.type === 'enabled' &&
+          Number.isInteger(requestThinking.budget_tokens) && requestThinking.budget_tokens > 0 &&
+          requestThinking.display === 'updates'
+        : requestThinking === undefined
     const result = messages.findLast(message => message.type === 'result')
     const assistantFrames = messages.filter(message => message.type === 'assistant')
     const thinkingFrame = assistantFrames.find(message => message.message?.content?.length === 1 && message.message.content[0]?.type === 'thinking')
