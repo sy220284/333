@@ -2,7 +2,7 @@
 /** Compare official and rebuilt 2.1.310 --agents inputs under the same isolated settings. */
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { linkSync, mkdtempSync, mkdirSync, rmSync, truncateSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 const option = name => {
@@ -39,14 +39,25 @@ try {
   const file = join(dir, 'agents.json')
   const wrong = join(dir, 'agents-array.json')
   const absent = join(dir, 'missing.json')
+  const invalidNested = join(dir, 'agents-invalid-fields.json')
+  const hardlinkOriginal = join(dir, 'agents-hardlink-original.json')
+  const hardlink = join(dir, 'agents-hardlink.json')
+  const oversized = join(dir, 'agents-oversized.json')
   writeFileSync(file, '{"test":{"description":"Test agent","prompt":"Act as test"}}\n')
   writeFileSync(wrong, '["test"]\n')
+  writeFileSync(invalidNested, '{"test":{"description":42}}\n')
+  writeFileSync(hardlinkOriginal, '{"test":{"description":"Test agent","prompt":"Act as test"}}\n')
+  linkSync(hardlinkOriginal, hardlink)
+  truncateSync(oversized, 268435457)
   const cases = [
     {id: 'inline', value:'{"test":{"description":"Test agent","prompt":"Act as test"}}', match:/Not logged in/},
     {id: 'file', value:file, match:/Not logged in/},
     {id: 'missing-file', value:absent, match:/Error: --agents file not found:/},
     {id: 'invalid-inline-array', value:'[]', match:/Invalid --agents configuration:.*expected record/s},
     {id: 'invalid-file-array', value:wrong, match:/Invalid --agents configuration:.*expected record/s},
+    {id: 'invalid-agent-fields', value:invalidNested, match:/Invalid --agents configuration:.*test.description: .*expected string.*test.prompt: .*expected string/s},
+    {id: 'multiple-hard-links', value:hardlink, match:/Error: --agents file has more than one hard link:/},
+    {id: 'oversized-agent-file', value:oversized, match:/Error: --agents file is larger than 268435456 bytes:/},
   ]
   const rows = cases.map(({id,value,match}) => {
     const reference = run(official, value)
