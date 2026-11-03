@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 /**
- * Discover every public 2.1.310 CLI help/option divergence against the
- * installed, SHA-pinned Linux x64 release. Inventory is a source-of-truth
+ * Compare the current target release's CLI help and public options against
+ * an official, independently checked Linux x64 executable. Inventory is a source-of-truth
  * report, not a formal feature sign-off.
  *
  * --strict enables enforcement once the CLI migration is completed.
  */
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const required = flag => {
   const i = process.argv.indexOf(flag)
@@ -19,6 +20,11 @@ const required = flag => {
 const reference = required('--reference')
 const candidate = required('--candidate')
 const report = required('--report')
+const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
+const targetConfig = JSON.parse(readFileSync(join(root, 'docs/upgrade/m1-evidence/target-release.json'), 'utf8'))
+const targetOption = process.argv.indexOf('--target')
+const target = targetOption < 0 ? targetConfig.target_version : required('--target')
+if (!/^\d+\.\d+\.\d+$/.test(target)) throw new Error(`Invalid expected target version: ${target}`)
 const strict = process.argv.includes('--strict')
 const commands = [
   '', 'agents', 'attach', 'auth', 'auth login', 'auth logout', 'auth status',
@@ -55,6 +61,13 @@ function run(executable, command) {
 }
 const rows = []
 try {
+  const release = spawnSync(reference, ['--version'], {
+    cwd: home, env, encoding: 'utf8', timeout: 12000,
+  })
+  if (release.error || release.status !== 0 || !release.stdout.trim().startsWith(`${target} `)) {
+    throw new Error(`Official reference does not match target ${target}: ${(release.stdout ?? release.stderr ?? release.error?.message ?? '').trim()}`)
+  }
+  const referenceVersion = release.stdout.trim()
   for (const command of commands) {
     const upstream = run(reference, command)
     const rebuilt = run(candidate, command)
@@ -76,7 +89,7 @@ try {
     [...new Set(rows.map(row => row.status))].map(s => [s, rows.filter(row => row.status === s).length]),
   )
   const differences = rows.filter(row => row.status !== 'MATCH')
-  const result = { target: '2.1.310', baseline: 'pinned official Linux x64',
+  const result = { target, reference_version: referenceVersion, baseline: 'SHA-verified official Linux x64',
     evidence_scope: 'CLI help and public options, not functional behavior',
     commands_checked: rows.length, differences: differences.length,
     counts, rows,
@@ -84,7 +97,7 @@ try {
   writeFileSync(report, `${JSON.stringify(result, null, 2)}\n`)
   console.log(JSON.stringify({ commands_checked: rows.length, differences: differences.length, counts,
     notable: differences.filter(r => r.status === 'WRONG_COMMAND_HELP' || r.missing_options.length > 0).map(r => ({ command:r.command, status:r.status, missing:r.missing_options })) }))
-  if (differences.length) console.log('::warning::官方2.1.310 CLI全量差异仍有待升级项目；见取证JSON，尚未正式签收。')
+  if (differences.length) console.log(`::warning::官方${target} CLI全量差异仍有待升级项目；见取证JSON，尚未正式签收。`)
   if (strict && differences.length) process.exitCode = 1
 } finally {
   rmSync(home, { recursive: true, force: true })
