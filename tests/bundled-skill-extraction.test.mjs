@@ -30,3 +30,34 @@ test('skill resources cannot escape their extraction directory', async () => {
     rmSync(parent, { recursive: true, force: true })
   }
 })
+
+test('bundled skill files remain available after a second process or a newer release', async () => {
+  const parent = mkdtempSync(join(tmpdir(), '333-skill-restart-'))
+  const dir = join(parent, 'skill')
+  try {
+    await extractBundleAtomically(dir, { 'SKILL.md': 'version one', 'docs/a.md': 'reference one' })
+    await extractBundleAtomically(dir, { 'SKILL.md': 'version one', 'docs/a.md': 'reference one' })
+    assert.equal(readFileSync(join(dir, 'SKILL.md'), 'utf8'), 'version one')
+    await extractBundleAtomically(dir, { 'SKILL.md': 'version two', 'docs/b.md': 'reference two' })
+    assert.equal(readFileSync(join(dir, 'SKILL.md'), 'utf8'), 'version two')
+    assert.equal(readFileSync(join(dir, 'docs/b.md'), 'utf8'), 'reference two')
+    assert.equal(existsSync(join(dir, 'docs/a.md')), false)
+  } finally {
+    rmSync(parent, { recursive: true, force: true })
+  }
+})
+
+test('a failed upgrade preserves the full previously installed skill bundle', async () => {
+  const parent = mkdtempSync(join(tmpdir(), '333-skill-rollback-'))
+  const dir = join(parent, 'skill')
+  try {
+    await extractBundleAtomically(dir, { 'SKILL.md': 'safe original', 'docs/a.md': 'original reference' })
+    await assert.rejects(extractBundleAtomically(dir, {
+      'SKILL.md': 'bad upgrade', conflict: 'file', 'conflict/child.md': 'invalid',
+    }))
+    assert.equal(readFileSync(join(dir, 'SKILL.md'), 'utf8'), 'safe original')
+    assert.equal(readFileSync(join(dir, 'docs/a.md'), 'utf8'), 'original reference')
+  } finally {
+    rmSync(parent, { recursive: true, force: true })
+  }
+})
