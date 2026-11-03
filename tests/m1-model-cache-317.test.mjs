@@ -28,6 +28,10 @@ test('different model generations and families remain eligible for caching', () 
   assert.equal(matchesDefaultModelVariant('claude-sonnet-4-5', 'claude-sonnet-4-6', canonical), false)
   assert.equal(matchesDefaultModelVariant('claude-sonnet-4-6', 'claude-opus-4-6', canonical), false)
   assert.equal(matchesDefaultModelVariant('claude-opus-4-60', 'claude-opus-4-6', canonical), false)
+  // The production canonicalizer uses substring family checks; the boundary
+  // gate must still reject the adjacent-but-different version.
+  assert.equal(matchesDefaultModelVariant('claude-opus-4-60', 'claude-opus-4-6',
+    () => 'claude-opus-4-6'), false)
 })
 
 test('custom deployments retain exact-match behavior', () => {
