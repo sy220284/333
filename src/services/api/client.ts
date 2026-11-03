@@ -171,28 +171,31 @@ export async function getAnthropicClient({
       awsRegion,
       ...(isDebugToStdErr() && { logger: createStderrLogger() }),
     }
-    const bedrockArgs: ConstructorParameters<typeof AnthropicBedrock>[0] =
-      bearerToken
-        ? {
-            ...sharedArgs,
-            skipAuth: true,
-            defaultHeaders: {
-              ...defaultHeaders,
-              Authorization: `Bearer ${bearerToken}`,
-            },
-          }
-        : skipBedrockAuth
-          ? { ...sharedArgs, skipAuth: true }
-          : credentials
-            ? {
-                ...sharedArgs,
-                awsAccessKey: credentials.accessKeyId,
-                awsSecretKey: credentials.secretAccessKey,
-                awsSessionToken: credentials.sessionToken,
-              }
-            : sharedArgs
-    // The provider's streaming and batching API differs from the direct SDK.
-    return new AnthropicBedrock(bedrockArgs) as unknown as Anthropic
+    // Construct each credential variant independently so TypeScript resolves the
+    // SDK's paired-credentials overload instead of collapsing into a union.
+    if (bearerToken) {
+      return new AnthropicBedrock({
+        ...sharedArgs,
+        skipAuth: true,
+        defaultHeaders: {
+          ...defaultHeaders,
+          Authorization: `Bearer ${bearerToken}`,
+        },
+      }) as unknown as Anthropic
+    }
+    if (skipBedrockAuth) {
+      return new AnthropicBedrock({ ...sharedArgs, skipAuth: true }) as unknown as Anthropic
+    }
+    if (credentials) {
+      return new AnthropicBedrock({
+        ...sharedArgs,
+        awsAccessKey: credentials.accessKeyId,
+        awsSecretKey: credentials.secretAccessKey,
+        awsSessionToken: credentials.sessionToken,
+      }) as unknown as Anthropic
+    }
+    // With no static credentials the SDK uses the AWS provider chain.
+    return new AnthropicBedrock(sharedArgs) as unknown as Anthropic
   }
   if (isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)) {
     const { AnthropicFoundry } = await import('@anthropic-ai/foundry-sdk')
@@ -303,12 +306,24 @@ export async function getAnthropicClient({
     return new AnthropicVertex(vertexArgs) as unknown as Anthropic
   }
 
-  // Determine authentication method based on available tokens
+  // Resolve auth before building the SDK client. A clean, unauthenticated
+  // launch should produce the CLI's documented login error, rather than the
+  // internal SDK constructor's credential-selection diagnostic.
+  const resolvedApiKey = isClaudeAISubscriber() ? null : apiKey || getAnthropicApiKey()
+  const resolvedAuthToken = isClaudeAISubscriber()
+    ? getClaudeAIOAuthTokens()?.accessToken
+    : undefined
+  if (
+    !resolvedApiKey && !resolvedAuthToken &&
+    !defaultHeaders.Authorization && !defaultHeaders.authorization &&
+    !process.env.ANTHROPIC_UNIX_SOCKET
+  ) {
+    throw new Error('Not logged in · Please run /login')
+  }
+
   const clientConfig: ConstructorParameters<typeof Anthropic>[0] = {
-    apiKey: isClaudeAISubscriber() ? null : apiKey || getAnthropicApiKey(),
-    authToken: isClaudeAISubscriber()
-      ? getClaudeAIOAuthTokens()?.accessToken
-      : undefined,
+    apiKey: resolvedApiKey,
+    authToken: resolvedAuthToken,
     // Set baseURL from OAuth config when using staging OAuth
     ...(process.env.USER_TYPE === 'ant' &&
     isEnvTruthy(process.env.USE_STAGING_OAUTH)
