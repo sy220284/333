@@ -516,6 +516,17 @@ export function parseAgentFromJson(
 }
 
 /**
+ * Fail visibly on an invalid CLI agent definition. This uses exactly the same
+ * schema as runtime parsing so the CLI cannot silently discard the input.
+ */
+export function validateCliAgentsConfiguration(value: unknown, sourceFile?: string): void {
+  const result = AgentsJsonSchema().safeParse(value)
+  if (result.success) return
+  const details = result.error.issues.map(issue => issue.message).join('\n')
+  throw new Error(`Error: Invalid --agents configuration:\n${details}${sourceFile ? `\n(read from ${sourceFile})` : ''}`)
+}
+
+/**
  * Parses multiple agents from a JSON object
  */
 export function parseAgentsFromJson(

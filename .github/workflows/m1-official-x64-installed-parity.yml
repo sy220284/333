@@ -95,6 +95,14 @@ jobs:
             --reference "${CLAUDE_REFERENCE_BIN}" \
             --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
             --report "${RUNNER_TEMP}/claude-installed-assistant-retirement-parity.json"
+      - name: 使用官方x64校验代理配置文件与错误分支
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/m1-agents-config-parity.mjs \
+            --reference "${CLAUDE_REFERENCE_BIN}" \
+            --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
+            --report "${RUNNER_TEMP}/claude-installed-agents-config-parity.json"
       - name: 安装版执行本机模拟 API 与工具权限实测
         shell: bash
         run: |
@@ -115,5 +123,6 @@ jobs:
             ${{ runner.temp }}/claude-installed-candidate-strict-parity.json
             ${{ runner.temp }}/claude-installed-loopback-api.json
             ${{ runner.temp }}/claude-installed-assistant-retirement-parity.json
+            ${{ runner.temp }}/claude-installed-agents-config-parity.json
           retention-days: 30
           if-no-files-found: warn

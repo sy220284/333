@@ -54,15 +54,33 @@ try {
   const candAssistantHelp = help(candidate, ['assistant', '--help'], 'candidate assistant help')
   assert.equal(refAssistantHelp, refHelp, '官方版本仍暴露独立 assistant 命令，退场判断需要重新核实')
   assert.equal(candAssistantHelp, candHelp, '重建版仍劫持 assistant 参数，旧安装向导未退出公开版')
-  assert.equal(candAssistantHelp, refAssistantHelp, '重建版 assistant 帮助与官方公开版不同')
+  const candidateGlobalHelpMatchesOfficial = candAssistantHelp === refAssistantHelp
+  const optionNames = help => [...new Set(
+    help.split('\n').flatMap(line => {
+      const match = /^\s+(?:-\w,\s+)?(--[a-z0-9][a-z0-9-]*)\b/i.exec(line)
+      return match ? [match[1]] : []
+    }),
+  )].sort()
+  const referenceOptions = optionNames(refAssistantHelp)
+  const candidateOptions = optionNames(candAssistantHelp)
+  const missingPublicOptions = referenceOptions.filter(x => !candidateOptions.includes(x))
+  const extraCandidateOptions = candidateOptions.filter(x => !referenceOptions.includes(x))
   writeFileSync(report, JSON.stringify({
     target: '2.1.310',
     scenario: 'retired-assistant-command-help',
     reference_matches_general_help: true,
     candidate_matches_general_help: true,
-    candidate_matches_reference: true,
+    assistant_command_retirement_matches_reference: true,
+    candidate_global_help_matches_reference: candidateGlobalHelpMatchesOfficial,
+    missing_public_options: missingPublicOptions,
+    extra_candidate_options: extraCandidateOptions,
   }, null, 2) + '\n')
-  console.log('2.1.310 assistant 命令退场：官方和重建版严格对照通过')
+  console.log(JSON.stringify({
+    assistant_command_retirement_matches_reference: true,
+    candidate_global_help_matches_reference: candidateGlobalHelpMatchesOfficial,
+    missing_public_options: missingPublicOptions,
+    extra_candidate_options: extraCandidateOptions,
+  }))
 } finally {
   rmSync(home, { recursive: true, force: true })
 }

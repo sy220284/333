@@ -103,7 +103,7 @@ import { getMcpToolsCommandsAndResources, prefetchAllMcpResources } from './serv
 import { VALID_INSTALLABLE_SCOPES, VALID_UPDATE_SCOPES } from './services/plugins/pluginCliCommands.js';
 import { initBundledSkills } from './skills/bundled/index.js';
 import type { AgentColorName } from './tools/AgentTool/agentColorManager.js';
-import { getActiveAgentsFromList, getAgentDefinitionsWithOverrides, isBuiltInAgent, isCustomAgent, parseAgentsFromJson } from './tools/AgentTool/loadAgentsDir.js';
+import { getActiveAgentsFromList, getAgentDefinitionsWithOverrides, isBuiltInAgent, isCustomAgent, parseAgentsFromJson, validateCliAgentsConfiguration } from './tools/AgentTool/loadAgentsDir.js';
 import type { LogOption } from './types/logs.js';
 import type { Message as MessageType } from './types/message.js';
 import { assertMinVersion } from './utils/autoUpdater.js';
@@ -119,6 +119,7 @@ import { getWorktreePaths } from './utils/getWorktreePaths.js';
 import { findGitRoot, getBranch, getIsGit, getWorktreeCount } from './utils/git.js';
 import { getGhAuthStatus } from './utils/github/ghAuthStatus.js';
 import { safeParseJSON } from './utils/json.js';
+import { loadCliAgentsConfiguration } from './utils/cliAgents.js';
 import { logError } from './utils/log.js';
 import { getModelDeprecationWarning } from './utils/model/deprecation.js';
 import { getDefaultMainLoopModel, getUserSpecifiedModelSetting, normalizeModelStringForAPI, parseUserSpecifiedModel } from './utils/model/model.js';
@@ -999,7 +1000,7 @@ async function run(): Promise<CommanderCommand> {
     const parsed = parseAutoCompactWindowOption(value);
     if (parsed === undefined) throw new InvalidArgumentError("It must be 'auto', or between 100k and 1M (e.g. 500k, 200000, or 200 as shorthand)");
     return parsed;
-  })).addOption(new Option('--workload <tag>', 'Workload tag for billing-header attribution (cc_workload). Process-scoped; set by SDK daemon callers that spawn subprocesses for cron work. (only works with --print)').hideHelp()).option('--settings <file-or-json>', 'Path to a settings JSON file or a JSON string to load additional settings from').option('--add-dir <directories...>', 'Additional directories to allow tool access to').option('--ide', 'Automatically connect to IDE on startup if exactly one valid IDE is available', () => true).option('--strict-mcp-config', 'Only use MCP servers from --mcp-config, ignoring all other MCP configurations', () => true).option('--session-id <uuid>', 'Use a specific session ID for the conversation (must be a valid UUID)').option('-n, --name <name>', 'Set a display name for this session (shown in /resume and terminal title)').option('--agents <json>', 'JSON object defining custom agents (e.g. \'{"reviewer": {"description": "Reviews code", "prompt": "You are a code reviewer"}}\')').option('--setting-sources <sources>', 'Comma-separated list of setting sources to load (user, project, local).')
+  })).addOption(new Option('--workload <tag>', 'Workload tag for billing-header attribution (cc_workload). Process-scoped; set by SDK daemon callers that spawn subprocesses for cron work. (only works with --print)').hideHelp()).option('--settings <file-or-json>', 'Path to a settings JSON file or a JSON string to load additional settings from').option('--add-dir <directories...>', 'Additional directories to allow tool access to').option('--ide', 'Automatically connect to IDE on startup if exactly one valid IDE is available', () => true).option('--strict-mcp-config', 'Only use MCP servers from --mcp-config, ignoring all other MCP configurations', () => true).option('--session-id <uuid>', 'Use a specific session ID for the conversation (must be a valid UUID)').option('-n, --name <name>', 'Set a display name for this session (shown in /resume and terminal title)') .option('--agents <json-or-file>', 'JSON object defining custom agents or a file path with --print (e.g. \'{"reviewer": {"description": "Reviews code", "prompt": "You are a code reviewer"}}\')').option('--setting-sources <sources>', 'Comma-separated list of setting sources to load (user, project, local).')
   // gh-33508: <paths...> (variadic) consumed everything until the next
   // --flag. `claude --plugin-dir /path mcp add --transport http` swallowed
   // `mcp` and `add` as paths, then choked on --transport as an unknown
@@ -1138,6 +1139,17 @@ async function run(): Promise<CommanderCommand> {
     // Promise for file downloads - started early, awaited before REPL renders
     let fileDownloadPromise: Promise<DownloadResult[]> | undefined;
     const agentsJson = safeMode ? undefined : options.agents;
+    let parsedCliAgents: unknown;
+    if (agentsJson) {
+      try {
+        const resolvedAgents = await loadCliAgentsConfiguration(agentsJson);
+        validateCliAgentsConfiguration(resolvedAgents.configuration, resolvedAgents.filePath);
+        parsedCliAgents = resolvedAgents.configuration;
+      } catch (error) {
+        process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+        process.exit(1);
+      }
+    }
     const agentCli = options.agent;
     if (feature('BG_SESSIONS') && agentCli) {
       process.env.CLAUDE_CODE_AGENT = agentCli;
@@ -2092,15 +2104,8 @@ async function run(): Promise<CommanderCommand> {
 
     // Parse CLI agents if provided via --agents flag
     let cliAgents: typeof agentDefinitionsResult.activeAgents = [];
-    if (agentsJson) {
-      try {
-        const parsedAgents = safeParseJSON(agentsJson);
-        if (parsedAgents) {
-          cliAgents = parseAgentsFromJson(parsedAgents, 'flagSettings');
-        }
-      } catch (error) {
-        logError(error);
-      }
+    if (parsedCliAgents !== undefined) {
+      cliAgents = parseAgentsFromJson(parsedCliAgents, 'flagSettings');
     }
 
     // Merge CLI agents with existing ones
