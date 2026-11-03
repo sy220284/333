@@ -65,10 +65,16 @@ def probe(binary, arguments, stdin_tty):
                     output.extend(os.read(master, 65536))
                 except OSError:
                     break
+        # A process can finish between the last poll and timeout handling.
+        # Reap it before classifying a timeout; otherwise an official x64
+        # process exiting with code 1 at the boundary is falsely failed.
         if process.poll() is None:
-            timed_out = True
-            os.killpg(process.pid, signal.SIGKILL)
-        process.wait(timeout=3)
+            try:
+                process.wait(timeout=0.8)
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait(timeout=3)
         text = ANSI.sub('', output.decode('utf-8', errors='replace'))
         return {'exit': process.returncode, 'timeout': timed_out,
                 'output': ' '.join(text.split())[-1800:]}
