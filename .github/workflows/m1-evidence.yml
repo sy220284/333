@@ -32,6 +32,10 @@ on:
       - 'tests/m1-feedback-types.fixture.ts'
       - 'src/components/FeedbackSurvey/utils.ts'
       - 'build/m1-source-gap-ast.mjs'
+      - 'src/utils/caCertsConfig.ts'
+      - 'src/utils/managedEnv.ts'
+      - 'src/utils/managedEnvConstants.ts'
+      - 'tests/m1-ca-cert-source-policy.test.mjs'
       - 'build/m1-inline-source-map-audit.py'
       - 'build/m1-x64-reference-probe.mjs'
       - 'build/m1-413-recovery-probe.mjs'
@@ -179,6 +183,8 @@ jobs:
         run: node --experimental-strip-types --test tests/m1-ink-devtools.test.mjs
       - name: 验证任务卡、功能、场景及旧开关/新锚点/版本记录
         run: node --test tests/m1-workflow-cache.test.mjs tests/m1-workflow-commands.test.mjs tests/m1-workflow-meta-literal.test.mjs tests/m1-workflow-finalization.test.mjs tests/m1-workflow-history.test.mjs tests/m1-workflow-storage.test.mjs tests/m1-workflow-runtime.test.mjs tests/m1-monitor-protocol.test.mjs tests/m1-monitor-task-identity.test.mjs tests/m1-account-peer-discovery.test.mjs tests/upgrade-coverage.test.mjs tests/m1-verify.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs tests/m1-privacy-settings.test.mjs tests/m1-snapshot-terminal-behavior.test.mjs tests/m1-source-gap-audit.test.mjs tests/m1-inline-map-audit.test.mjs tests/m1-v4-handoff.test.mjs tests/m1-doctor-source-restoration.test.mjs tests/m1-spinner-tips.test.mjs tests/m1-custom-spinner-tips.test.mjs tests/m1-list-agents.test.mjs tests/m1-tool-pool-single-source.test.mjs tests/m1-screen-reader-mode.test.mjs tests/m1-taskoutput-retirement.test.mjs
+      - name: 验证 CA 证书来源隔离与宿主管理边界
+        run: node --experimental-strip-types --test tests/m1-ca-cert-source-policy.test.mjs
       - name: 验证禁用及企业策略限制 MCP 重新连接
         run: node --experimental-strip-types --test tests/m1-mcp-reconnect-policy.test.mjs
       - name: 验证无界面MCP授权未答复时禁止重复执行
