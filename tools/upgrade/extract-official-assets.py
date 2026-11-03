@@ -20,6 +20,33 @@ RESOURCES = {
         "src/skills/bundled/verify/SKILL.md",
     "377ce3cba7577de2666e79f315e91c2f726e390970ace1ea37925abb8242377a":
         "src/utils/permissions/yolo-classifier-prompts/permissions_external.txt",
+    # Additional original 2.1.310 resources: extracted by SHA-256 from zstd
+    # frames in the official x64 executable. Keep entitlement-gated skills
+    # staged as resources; registration remains controlled by runtime flags.
+    "8e4917f5394af51deb3552fdb962051074b9b5df2de2a77a8773009a9d86a62f":
+        "src/skills/bundled/artifact-design/SKILL.md",
+    "3c60dfa728ba73b9fd800b4ccca63c59e6324f02b779ec38b61993d5a5e30502":
+        "src/skills/bundled/prototype/SKILL.md",
+    "c6e0680ba50cd02193edaa373bac768346a465302dbbcdd68938bc2972d26c33":
+        "src/skills/bundled/design-sync/SKILL.md",
+    "0809696a81a4c063a02f12df590a79a41d9595618e9825309c5a6cebb1320486":
+        "src/skills/bundled/run-skill-generator/SKILL.md",
+    "b9cb992e1762d757c089e87c463871d7b3754c3da01279e9f5cfc5d0ebb60fa8":
+        "src/skills/bundled/workshop/SKILL.md",
+    "23416ed0054f0d323fb6adfd67b3ffd990128888755e359762af797cb98ace63":
+        "src/skills/bundled/cowork-plugin-authoring/SKILL.md",
+    "751bdb5c89654884fb22de190031f0902c6d89f84e7b522b9d6d53524961056d":
+        "src/skills/bundled/claude-test-spec/SKILL.md",
+    "79cf35f01c12c9a8c64c3897079c18bcc63f7c5d346692d39b0ed779cb3b7fab":
+        "src/skills/bundled/claude-test-runner/SKILL.md",
+    "e205c5bb84639a8312953d44da4489964f3d2ee45c32b236b8ea2e17b1c08ae7":
+        "src/skills/bundled/claude-test-conversation/SKILL.md",
+    "25714b54d589b5d8bc5a1ad2460f361f4f5f14d21eeeeace6a98f19e0d2267e7":
+        "src/skills/bundled/design-sync-storybook/SKILL.md",
+    "78fa6e4ce2153422b8598b6702f9363dc6f8c789569463f94b6a36fd5d24eb53":
+        "src/skills/bundled/design-sync-package/SKILL.md",
+    "05f4c4017a8cbc12329ff8fbbfd49023015d7e937a9cc5912f5270af1e7138ed":
+        "src/skills/bundled/plugin-authoring/SKILL.md",
 }
 MAGIC = b"\x28\xb5\x2f\xfd"
 MAX_RESOURCE_BYTES = 2_000_000
