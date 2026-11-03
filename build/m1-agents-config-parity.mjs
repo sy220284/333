@@ -48,6 +48,7 @@ try {
   writeFileSync(invalidNested, '{"test":{"description":42}}\n')
   writeFileSync(hardlinkOriginal, '{"test":{"description":"Test agent","prompt":"Act as test"}}\n')
   linkSync(hardlinkOriginal, hardlink)
+  writeFileSync(oversized, '')
   truncateSync(oversized, 268435457)
   const cases = [
     {id: 'inline', value:'{"test":{"description":"Test agent","prompt":"Act as test"}}', match:/Not logged in/},
