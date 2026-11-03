@@ -2981,11 +2981,11 @@ export function REPL({
           snapshotOutputTokensForTurn(null);
         }
 
-        // Add turn duration message for turns longer than 30s or with a budget
-        // Skip if user aborted or if in loop mode (too noisy between ticks)
+        // Show the completed turn's elapsed time even for short responses, as in 2.1.310.
+        // Skip aborted turns and loop mode to avoid misleading per-tick summaries.
         // Defer if swarm teammates are still running (show when they finish)
         const turnDurationMs = Date.now() - loadingStartTimeRef.current - totalPausedMsRef.current;
-        if ((turnDurationMs > 30000 || budgetInfo !== undefined) && !abortController.signal.aborted && !proactiveActive) {
+        if (!abortController.signal.aborted && !proactiveActive) {
           const hasRunningSwarmAgents = getAllInProcessTeammateTasks(store.getState().tasks).some(t => t.status === 'running');
           if (hasRunningSwarmAgents) {
             // Only record start time on the first deferred turn
