@@ -60,11 +60,6 @@ import {
   getAttachmentMessages,
   startRelevantMemoryPrefetch,
 } from './utils/attachments.js'
-/* eslint-disable @typescript-eslint/no-require-imports */
-const jobClassifier = feature('TEMPLATES')
-  ? (require('./jobs/classifier.js') as typeof import('./jobs/classifier.js'))
-  : null
-/* eslint-enable @typescript-eslint/no-require-imports */
 import {
   remove as removeFromQueue,
   getCommandsByMaxPriority,
@@ -107,9 +102,6 @@ import { createBudgetTracker, checkTokenBudget } from './query/tokenBudget.js'
 import { count } from './utils/array.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-const snipModule = feature('HISTORY_SNIP')
-  ? (require('./services/compact/snipCompact.js') as typeof import('./services/compact/snipCompact.js'))
-  : null
 const taskSummaryModule = feature('BG_SESSIONS')
   ? (require('./utils/taskSummary.js') as typeof import('./utils/taskSummary.js'))
   : null
@@ -376,22 +368,6 @@ async function* queryLoop(
       ),
     )
 
-    // Apply snip before microcompact (both may run — they are not mutually exclusive).
-    // snipTokensFreed is plumbed to autocompact so its threshold check reflects
-    // what snip removed; tokenCountWithEstimation alone can't see it (reads usage
-    // from the protected-tail assistant, which survives snip unchanged).
-    let snipTokensFreed = 0
-    if (feature('HISTORY_SNIP') && snipModule) {
-      queryCheckpoint('query_snip_start')
-      const snipResult = snipModule.snipCompactIfNeeded(messagesForQuery)
-      messagesForQuery = snipResult.messages
-      snipTokensFreed = snipResult.tokensFreed
-      if (snipResult.boundaryMessage) {
-        yield snipResult.boundaryMessage
-      }
-      queryCheckpoint('query_snip_end')
-    }
-
     // Apply microcompact before autocompact
     queryCheckpoint('query_microcompact_start')
     const microcompactResult = await deps.microcompact(
@@ -400,7 +376,6 @@ async function* queryLoop(
       querySource,
     )
     messagesForQuery = microcompactResult.messages
-    // For cached microcompact (cache editing), defer boundary message until after
     queryCheckpoint('query_microcompact_end')
 
     const fullSystemPrompt = asSystemPrompt(
@@ -420,7 +395,6 @@ async function* queryLoop(
       },
       querySource,
       tracking,
-      snipTokensFreed,
     )
     queryCheckpoint('query_autocompact_end')
 
@@ -551,10 +525,6 @@ async function* queryLoop(
     // Skip this check if compaction just happened - the compaction result is already
     // validated to be under the threshold, and tokenCountWithEstimation would use
     // stale input_tokens from kept messages that reflect pre-compaction context size.
-    // Same staleness applies to snip: subtract snipTokensFreed (otherwise we'd
-    // falsely block in the window where snip brought us under autocompact threshold
-    // but the stale usage is still above blocking limit — before this PR that
-    // window never existed because autocompact always fired on the stale count).
     // Also skip for compact/session_memory queries — these are forked agents that
     // inherit the full conversation and would deadlock if blocked here (the compact
     // agent needs to run to REDUCE the token count).
@@ -579,7 +549,7 @@ async function* queryLoop(
       )
     ) {
       const { isAtBlockingLimit } = calculateTokenWarningState(
-        tokenCountWithEstimation(messagesForQuery) - snipTokensFreed,
+        tokenCountWithEstimation(messagesForQuery),
         toolUseContext.options.mainLoopModel,
       )
       if (isAtBlockingLimit) {
