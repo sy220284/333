@@ -368,11 +368,19 @@ export function roughTokenCountEstimationForMessage(message: {
   return 0
 }
 
+type NestedBetaToolResultBlock = Exclude<
+  NonNullable<Anthropic.Beta.Messages.BetaToolResultBlockParam['content']>,
+  string
+>[number]
+
+type TokenCountBlock =
+  | Anthropic.ContentBlock
+  | Anthropic.ContentBlockParam
+  | Anthropic.Beta.Messages.BetaContentBlockParam
+  | NestedBetaToolResultBlock
+
 function roughTokenCountEstimationForContent(
-  content:
-    | string
-    | Array<Anthropic.ContentBlock | Anthropic.ContentBlockParam | Anthropic.Beta.Messages.BetaContentBlockParam>
-    | undefined,
+  content: string | TokenCountBlock[] | undefined,
 ): number {
   if (!content) {
     return 0
@@ -388,7 +396,7 @@ function roughTokenCountEstimationForContent(
 }
 
 function roughTokenCountEstimationForBlock(
-  block: string | Anthropic.ContentBlock | Anthropic.ContentBlockParam | Anthropic.Beta.Messages.BetaContentBlockParam,
+  block: string | TokenCountBlock,
 ): number {
   if (typeof block === 'string') {
     return roughTokenCountEstimation(block)
