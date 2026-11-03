@@ -13,6 +13,9 @@ on:
       - 'tests/m1-plugin-data-size-parity.test.mjs'
       - 'tools/upgrade/audit-final-release-skills.py'
       - 'tests/test_final_release_skills_audit.py'
+      - 'tests/m1-x64-conversation-ui-scenarios.py'
+      - 'src/components/Spinner/**'
+      - 'src/components/LogoV2/**'
       - 'src/skills/bundled/**'
       - 'build/install-public-deps.mjs'
       - 'src/main.tsx'
@@ -32,7 +35,7 @@ jobs:
   official-x64-reference:
     name: 获取官方校验和、验证原生程序并保存证据
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
@@ -108,6 +111,17 @@ jobs:
         run: |
           set -euo pipefail
           CLAUDE_TARGET_X64="${RUNNER_TEMP}/m1-317-reference/claude" node --test tests/m1-plugin-data-size-parity.test.mjs
+      - name: 最终版六种真实终端情境及动画帧对照
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check pyte==0.8.2
+          python3 tests/m1-x64-conversation-ui-scenarios.py \
+            --reference "${RUNNER_TEMP}/m1-317-reference/claude" \
+            --candidate "${RUNNER_TEMP}/m1-317-candidate" \
+            --target 2.1.317 \
+            --strict-animations \
+            --report "${RUNNER_TEMP}/m1-317-reference/terminal-animation-parity.json"
       - name: 最终版 CLI 参数与原始技能字节严格验收门禁
         shell: bash
         run: |
@@ -136,5 +150,6 @@ jobs:
             ${{ runner.temp }}/m1-317-reference/official-help.txt
             ${{ runner.temp }}/m1-317-reference/cli-surface-parity.json
             ${{ runner.temp }}/m1-317-reference/skill-resource-parity.json
+            ${{ runner.temp }}/m1-317-reference/terminal-animation-parity.json
           if-no-files-found: warn
           retention-days: 90
