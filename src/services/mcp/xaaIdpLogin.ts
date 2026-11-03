@@ -18,7 +18,6 @@ import {
 import { randomBytes } from 'crypto'
 import { createServer, type Server } from 'http'
 import { parse } from 'url'
-import xss from 'xss'
 import { openBrowser } from '../../utils/browser.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
 import { toError } from '../../utils/errors.js'
@@ -28,6 +27,7 @@ import { getSecureStorage } from '../../utils/secureStorage/index.js'
 import { getInitialSettings } from '../../utils/settings/settings.js'
 import { jsonParse } from '../../utils/slowOperations.js'
 import { buildRedirectUri, findAvailablePort } from './oauthPort.js'
+import { renderAuthResultPage } from './authResultPage.js'
 
 export function isXaaEnabled(): boolean {
   return isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_XAA)
@@ -330,34 +330,28 @@ function waitForCallback(
 
       if (err) {
         const desc = parsed.query.error_description as string | undefined
-        const safeErr = xss(err)
-        const safeDesc = desc ? xss(desc) : ''
-        res.writeHead(400, { 'Content-Type': 'text/html' })
-        res.end(
-          `<html><body><h3>IdP login failed</h3><p>${safeErr}</p><p>${safeDesc}</p></body></html>`,
-        )
+        res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' })
+        res.end(renderAuthResultPage({ ok: false, heading: '身份提供方登录失败', message: '请关闭此窗口并重新尝试。', detail: `${err}${desc ? `: ${desc}` : ''}` }))
         rejectOnce(new Error(`XAA IdP: ${err}${desc ? ` — ${desc}` : ''}`))
         return
       }
 
       if (state !== expectedState) {
-        res.writeHead(400, { 'Content-Type': 'text/html' })
-        res.end('<html><body><h3>State mismatch</h3></body></html>')
+        res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' })
+        res.end(renderAuthResultPage({ ok: false, heading: '身份验证失败', message: '验证状态不一致，请重新尝试。' }))
         rejectOnce(new Error('XAA IdP: state mismatch (possible CSRF)'))
         return
       }
 
       if (!code) {
-        res.writeHead(400, { 'Content-Type': 'text/html' })
-        res.end('<html><body><h3>Missing code</h3></body></html>')
+        res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' })
+        res.end(renderAuthResultPage({ ok: false, heading: '身份验证失败', message: '未收到授权代码，请重新尝试。' }))
         rejectOnce(new Error('XAA IdP: callback missing code'))
         return
       }
 
-      res.writeHead(200, { 'Content-Type': 'text/html' })
-      res.end(
-        '<html><body><h3>IdP login complete — you can close this window.</h3></body></html>',
-      )
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+      res.end(renderAuthResultPage({ ok: true, heading: '身份提供方登录成功', message: '请返回 Claude Code。此窗口即将关闭。' }))
       resolveOnce(code)
     })
 

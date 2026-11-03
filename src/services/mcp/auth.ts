@@ -30,7 +30,6 @@ import { mkdir } from 'fs/promises'
 import { createServer, type Server } from 'http'
 import { join } from 'path'
 import { parse } from 'url'
-import xss from 'xss'
 import { MCP_CLIENT_METADATA_URL } from '../../constants/oauth.js'
 import { openBrowser } from '../../utils/browser.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
@@ -46,6 +45,7 @@ import { jsonParse, jsonStringify } from '../../utils/slowOperations.js'
 import { logEvent } from '../analytics/index.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../analytics/metadata.js'
 import { buildRedirectUri, findAvailablePort } from './oauthPort.js'
+import { renderAuthResultPage } from './authResultPage.js'
 import type { McpHTTPServerConfig, McpSSEServerConfig } from './types.js'
 import { getLoggingSafeMcpBaseUrl } from './utils.js'
 import { performCrossAppAccess, XaaTokenExchangeError } from './xaa.js'
@@ -1108,25 +1108,16 @@ export async function performMCPOAuthFlow(
 
           // Validate OAuth state to prevent CSRF attacks
           if (!error && state !== oauthState) {
-            res.writeHead(400, { 'Content-Type': 'text/html' })
-            res.end(
-              `<h1>Authentication Error</h1><p>Invalid state parameter. Please try again.</p><p>You can close this window.</p>`,
-            )
+            res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' })
+            res.end(renderAuthResultPage({ ok: false, heading: '身份验证失败', message: '验证状态不一致，请重新尝试。' }))
             cleanup()
             rejectOnce(new Error('OAuth state mismatch - possible CSRF attack'))
             return
           }
 
           if (error) {
-            res.writeHead(200, { 'Content-Type': 'text/html' })
-            // Sanitize error messages to prevent XSS
-            const sanitizedError = xss(String(error))
-            const sanitizedErrorDescription = errorDescription
-              ? xss(String(errorDescription))
-              : ''
-            res.end(
-              `<h1>Authentication Error</h1><p>${sanitizedError}: ${sanitizedErrorDescription}</p><p>You can close this window.</p>`,
-            )
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+            res.end(renderAuthResultPage({ ok: false, heading: '身份验证失败', message: '请关闭此窗口并重新尝试。', detail: `${String(error)}${errorDescription ? `: ${String(errorDescription)}` : ''}` }))
             cleanup()
             let errorMessage = `OAuth error: ${error}`
             if (errorDescription) {
@@ -1140,10 +1131,8 @@ export async function performMCPOAuthFlow(
           }
 
           if (code) {
-            res.writeHead(200, { 'Content-Type': 'text/html' })
-            res.end(
-              `<h1>Authentication Successful</h1><p>You can close this window. Return to Claude Code.</p>`,
-            )
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+            res.end(renderAuthResultPage({ ok: true, heading: '身份验证成功', message: '请返回 Claude Code。此窗口即将关闭。' }))
             cleanup()
             resolveOnce(code)
           }
