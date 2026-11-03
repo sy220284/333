@@ -28,6 +28,7 @@ function frames(model) {
 async function probe(executable) {
   const home = mkdtempSync(resolve(tmpdir(), '333-sdk-wire-'))
   let requests = 0
+  let requestThinking
   const server = createServer(async (req, res) => {
     if (req.method === 'HEAD') { res.writeHead(200); res.end(); return }
     if (req.method !== 'POST' || !req.url?.startsWith('/v1/messages')) { res.writeHead(404); res.end(); return }
@@ -35,6 +36,7 @@ async function probe(executable) {
     for await (const part of req) raw += part
     const body = JSON.parse(raw)
     requests++
+    requestThinking = body.thinking ?? null
     const answer = frames(body.model)
     res.writeHead(200, { 'content-type': 'text/event-stream', 'content-length': String(Buffer.byteLength(answer)) })
     res.end(answer)
@@ -66,10 +68,13 @@ async function probe(executable) {
     const hasId = events.every(message => message.api_message_id === messageId)
     const hasTtft = Number.isInteger(events[0]?.ttft_ms) && events[0].ttft_ms >= 0
     const result = messages.findLast(message => message.type === 'result')
+    const thinkingDisplay = events[0]?.thinking_display ?? null
+    const textEventsHaveNoThinkingDisplay = events.slice(1).every(message => message.thinking_display === undefined)
     const passed = code === 0 && requests > 0 && JSON.stringify(types) === JSON.stringify(expectedTypes) &&
       JSON.stringify(text) === JSON.stringify(['first', ' second']) && hasId && hasTtft &&
-      result?.result === 'first second' && result?.is_error === false
-    return { passed, code, signal, requests, types, text, hasId, hasTtft, thinkingDisplay: events[0]?.thinking_display ?? null, stderr: stderr.slice(-300) }
+      result?.result === 'first second' && result?.is_error === false &&
+      thinkingDisplay === 'updates' && textEventsHaveNoThinkingDisplay
+    return { passed, code, signal, requests, requestThinking: requestThinking ?? null, types, text, hasId, hasTtft, thinkingDisplay, textEventsHaveNoThinkingDisplay, stderr: stderr.slice(-300) }
   } finally {
     await new Promise(done => server.close(done))
     rmSync(home, { recursive: true, force: true })
