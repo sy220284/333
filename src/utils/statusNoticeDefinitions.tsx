@@ -153,7 +153,7 @@ const largeAgentDescriptionsNotice: StatusNoticeDefinition = {
           Large cumulative agent descriptions will impact performance (~
           {formatNumber(totalTokens)} tokens &gt;{' '}
           {formatNumber(AGENT_DESCRIPTIONS_THRESHOLD)})
-          <Text dimColor> · /agents to manage</Text>
+          <Text dimColor> · 请编辑 .claude/agents/ 中的代理定义以精简描述</Text>
         </Text>
       </Box>;
   }
