@@ -7,7 +7,7 @@ import { test } from 'node:test'
 import { activeBackgroundFlags, validateBackgroundCliArgs } from '../src/cli/background/index.mjs'
 import {
   SHORT_ID_PATTERN, MAX_LOG_BYTES, fleetHome, fleetSocket, createSessionRecord,
-  saveSession, reserveNewSession, editSession, readSession, listSessions, matchSession, readTail,
+  saveSession, reserveNewSession, editSession, readSession, listSessions, matchSession, assertNoUnmanagedLiveWorker, readTail,
   stripUnsafeTerminal, worktreeDigest, removeWorktreeSafely
 } from '../src/cli/background/sessionStore.mjs'
 
@@ -84,6 +84,24 @@ test('new background session creation never overwrites a colliding short id', as
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
+})
+
+test('a restarted supervisor protects live orphan worker sessions from duplicate resume and deletion', () => {
+  const record = {
+    id: 'faceabcd',
+    pid: process.pid,
+    state: 'working',
+  }
+  assert.throws(
+    () => assertNoUnmanagedLiveWorker(record),
+    /still has a live worker.*owned by another supervisor/,
+  )
+  assert.doesNotThrow(
+    () => assertNoUnmanagedLiveWorker(record, new Set(['faceabcd'])),
+  )
+  assert.doesNotThrow(
+    () => assertNoUnmanagedLiveWorker({ ...record, pid: null }),
+  )
 })
 
 test('2.1.310 background worktree removal requires actual git safety evidence', async () => {
