@@ -57,6 +57,7 @@ import {
   validatePluginContents,
 } from '../../utils/plugins/validatePlugin.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
+import { getSettingsForSource } from '../../utils/settings/settings.js'
 import { plural } from '../../utils/stringUtils.js'
 import { cliError, cliOk } from '../exit.js'
 
@@ -207,6 +208,7 @@ export async function pluginListHandler(options: {
       version: string
       scope: string
       enabled: boolean
+      projectEnabled: boolean
       installPath: string
       installedAt?: string
       lastUpdated?: string
@@ -260,6 +262,7 @@ export async function pluginListHandler(options: {
           version: installation.version || 'unknown',
           scope: installation.scope,
           enabled: enabledPlugins.has(pluginId),
+          projectEnabled: getSettingsForSource('projectSettings')?.enabledPlugins?.[pluginId] === true,
           installPath: installation.installPath,
           installedAt: installation.installedAt,
           lastUpdated: installation.lastUpdated,
@@ -292,6 +295,7 @@ export async function pluginListHandler(options: {
         version: p.manifest.version ?? 'unknown',
         scope: 'session',
         enabled: p.enabled !== false,
+        projectEnabled: getSettingsForSource('projectSettings')?.enabledPlugins?.[p.source] === true,
         installPath: p.path,
         mcpServers:
           servers && Object.keys(servers).length > 0 ? servers : undefined,
@@ -309,6 +313,7 @@ export async function pluginListHandler(options: {
         version: 'unknown',
         scope: 'session',
         enabled: false,
+        projectEnabled: false,
         installPath: 'path' in e ? e.path : '',
         errors: [getPluginErrorMessage(e)],
       })
