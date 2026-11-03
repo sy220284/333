@@ -1,6 +1,5 @@
 import { createServer } from 'node:net'
-import { spawnSync } from 'node:child_process'
-import { chmod, appendFile, lstat, unlink, readFile } from 'node:fs/promises'
+import { chmod, appendFile, lstat, unlink } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import {
   prepareFleet, fleetSocket, listSessions, createSessionRecord, saveSession,
@@ -44,17 +43,38 @@ function sanitizedArgs(args) {
   }
   return out
 }
+const PERSISTED_FLAGS_WITH_VALUES = new Set(['--model', '--agent', '--effort', '--permission-mode', '--settings', '--setting-sources', '--plugin-dir', '--mcp-config', '--name', '--add-dir', '--system-prompt', '--append-system-prompt'])
+function resumeFlags(argv) {
+  const flags = []
+  for (let i = 0; i < argv.length; i++) {
+    const flag = argv[i]
+    if (flag === '--') break
+    if (flag === '--resume' || flag === '-r' || flag === '--session-id') { i++; continue }
+    if (flag === '--continue' || flag === '-c') continue
+    if (PERSISTED_FLAGS_WITH_VALUES.has(flag)) {
+      if (argv[i + 1] !== undefined) flags.push(flag, argv[++i])
+      continue
+    }
+    if (flag.startsWith('--') && flag.includes('=')) {
+      if (PERSISTED_FLAGS_WITH_VALUES.has(flag.slice(0, flag.indexOf('=')))) flags.push(flag)
+      continue
+    }
+    if (flag.startsWith('-')) flags.push(flag)
+  }
+  return flags
+}
 async function launch(record, { resume = false } = {}) {
   if (!globalThis.Bun?.spawn) throw new Error('Background interactive sessions require Bun 1.4.4 with PTY support')
   if (active.has(record.id)) throw new Error('Session is already running: ' + record.id)
   const [binary, ...prefix] = childExecutable()
   const args = resume
-    ? sanitizedArgs(record.argv).filter(a => a !== '--continue' && a !== '-c').concat(['--resume', record.sessionId])
-    : sanitizedArgs(record.argv)
-  const spawnArgs = [binary, ...prefix, ...args, '--session-id', record.sessionId]
+    ? [...resumeFlags(record.argv), '--resume', record.sessionId]
+    : [...sanitizedArgs(record.argv), '--session-id', record.sessionId]
+  const spawnArgs = [binary, ...prefix, ...args]
   const cols = Number.isInteger(record.cols) && record.cols >= 20 ? record.cols : 100
   const rows = Number.isInteger(record.rows) && record.rows >= 5 ? record.rows : 30
   const subscribers = new Set()
+  const earlyOutput = []
   const proc = Bun.spawn(spawnArgs, {
     cwd: record.cwd,
     env: {
@@ -65,13 +85,21 @@ async function launch(record, { resume = false } = {}) {
     },
     terminal: {
       cols, rows,
-      data(_terminal, data) { recordOutput(record.id, data) },
+      data(_terminal, data) {
+        if (active.has(record.id)) recordOutput(record.id, data)
+        else earlyOutput.push(Buffer.from(data))
+      },
     },
     onExit(_proc, exitCode, signalCode) {
       void (async () => {
         await outputQueue.get(record.id)
-        const state = exitCode === 0 ? 'completed' : 'failed'
-        await editSession(record.id, { state, exitCode, signalCode, pid: null, detail: 'process exited' })
+        const snapshot = await readSession(record.id)
+        const stoppedByUser = snapshot?.state === 'stopping' || snapshot?.state === 'stopped'
+        const state = stoppedByUser ? 'stopped' : exitCode === 0 ? 'completed' : 'failed'
+        await editSession(record.id, {
+          state, exitCode, signalCode, pid: null,
+          detail: stoppedByUser ? 'stopped' : 'process exited',
+        })
         const current = active.get(record.id)
         if (current) {
           for (const peer of current.subscribers) send(peer, { event: 'exit', exitCode, signalCode })
@@ -82,11 +110,16 @@ async function launch(record, { resume = false } = {}) {
     },
   })
   const next = {
-    ...record, pid: proc.pid, state: 'working', detail: '',
+    ...record,
+    name: resume && record.nameSource === 'prompt' ? record.id : record.name,
+    pid: proc.pid, state: 'working', detail: '',
+    respawnCount: (record.respawnCount || 0) + (resume ? 1 : 0),
+    startedAt: resume ? Date.now() : record.startedAt,
     updatedAt: new Date().toISOString(),
   }
   active.set(record.id, { proc, record: next, subscribers })
   await saveSession(next)
+  for (const chunk of earlyOutput) recordOutput(record.id, chunk)
   return next
 }
 async function stop(id) {
@@ -97,6 +130,7 @@ async function stop(id) {
     if (record) await editSession(id, { state: 'stopped', detail: 'stopped', pid: null })
     return
   }
+  await editSession(id, { state: 'stopping', detail: 'stop requested' })
   try { job.proc.kill('SIGINT') }
   catch (error) { throw new Error('Could not interrupt session ' + id + ': ' + error.message) }
   const settled = await Promise.race([job.proc.exited.then(() => true), new Promise(r => setTimeout(() => r(false), 4500))])
@@ -116,6 +150,7 @@ async function dispatch(request) {
   })
   record.cols = request.cols
   record.rows = request.rows
+  record.nameSource = request.nameSource || 'prompt'
   const saved = await saveSession(record)
   try { return await launch(saved) }
   catch (error) {
