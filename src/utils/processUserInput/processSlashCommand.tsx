@@ -517,6 +517,9 @@ export async function processSlashCommand(inputString: string, precedingInputBlo
     model,
     effort,
     resultText,
+    ...(returnedCommand.type === 'local' && resultText !== undefined
+      ? { localCommand: returnedCommand.name }
+      : {}),
     nextInput,
     submitNextInput
   };
