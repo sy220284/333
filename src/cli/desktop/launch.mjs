@@ -26,7 +26,7 @@ export function validateDesktopInvocation({
     return "--desktop opens the Claude Desktop app and can't run non-interactively (`--print`, `--sdk-url`, `--init-only`, or redirected output)."
   }
   const incompatible = argv.filter(arg => arg.startsWith('-') &&
-    !ALLOWED.has(arg.split('=')[0])).map(arg => '`' + arg.split('=')[0] + '`')
+    !ALLOWED.has(arg.split('=')[0])).map(arg => `\`${arg.split('=')[0]}\``)
   if (incompatible.length) {
     return `--desktop only opens the Claude Desktop app; it can't be combined with ${incompatible.join(', ')}.`
   }
@@ -111,7 +111,7 @@ export async function launchDesktopFromCli({
       return reportError('`--desktop --resume` takes a session ID, not a name or path. Run `claude --resume` to pick a session, then /desktop inside it.')
     }
     if (!(await existsInProjects(sessionId))) {
-      return reportError(`No session found with ID ${sessionId}. Run ` + '`claude --resume` to pick a session, then /desktop inside it.')
+      return reportError(`No session found with ID ${sessionId}. Run \`claude --resume\` to pick a session, then /desktop inside it.`)
     }
     target = { kind: 'resume', sessionId }
   } else {
