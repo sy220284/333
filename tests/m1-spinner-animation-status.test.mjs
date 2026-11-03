@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 import {
   advanceSpinnerStatusTracker, createSpinnerStatusTracker, deriveSpinnerStatus,
@@ -13,6 +14,13 @@ const input = (now, rest = {}) => ({
 const duration = ms => `${Math.floor(ms / 1000)}s`
 
 describe('官方 2.1.310 对话状态与动画逻辑', () => {
+  it('独立加载指示器与主对话行采用同一两秒动画曲线', () => {
+    const source = readFileSync(new URL('../src/components/Spinner.tsx', import.meta.url), 'utf8')
+    assert.match(source, /getSpinnerFrame\(time, DEFAULT_CHARACTERS\.length\)/)
+    assert.match(source, /useAnimationFrame\(reducedMotion \? null : 50\)/)
+    assert.doesNotMatch(source, /Math\.floor\(time \/ 120\)/)
+  })
+
   it('2 秒余弦曲线往返完整六帧，时间点严格对应', () => {
     assert.equal(SPINNER_CYCLE_MS, 2000)
     assert.equal(getSpinnerFrame(0, 6), 0)
