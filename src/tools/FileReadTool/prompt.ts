@@ -4,16 +4,6 @@ import { BASH_TOOL_NAME } from '../BashTool/toolName.js'
 // Use a string constant for tool names to avoid circular dependencies
 export const FILE_READ_TOOL_NAME = 'Read'
 
-// Official 2.1.310 Read dedup reply (chunk-wany0nxw.js:1375-1377).
-// Retained for compacting and query result filtering even when a particular
-// invocation cannot safely reuse earlier file content.
-export const FILE_UNCHANGED_STUB =
-  'Wasted call — file unchanged since your last Read. Refer to that earlier tool_result instead.'
-
-export function seededFileUnchangedMessage(filePath: string): string {
-  return `<system-reminder>This file is already in your context (see "Contents of ${filePath}" above) and has not changed on disk. Use that content instead of re-reading.</system-reminder>`
-}
-
 export const MAX_LINES_TO_READ = 2000
 
 export const DESCRIPTION = 'Read a file from the local filesystem.'
