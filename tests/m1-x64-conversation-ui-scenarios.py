@@ -21,6 +21,7 @@ import tempfile
 import termios
 import threading
 import time
+import pyte
 from pathlib import Path
 
 ANSI = re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\\\)')
@@ -114,9 +115,13 @@ def probe(binary, scenario):
                 # Background model calls (title generation) must not advance fixture state.
                 answer = stream(body.get('model', 'claude-sonnet-4-6'), text='UI_TITLE')
             else:
+                tool_results = [block for msg in content if msg.get('role') == 'user'
+                    for block in (msg.get('content', []) if isinstance(msg.get('content'), list) else [])
+                    if isinstance(block, dict) and block.get('type') == 'tool_result']
                 calls.append({'model': body.get('model'),
                               'messages': len(content),
-                              'tools': [t.get('name') for t in body.get('tools', [])]})
+                              'tools': [t.get('name') for t in body.get('tools', [])],
+                              'read_result_verified': any(FIXTURE in str(b) for b in tool_results)})
                 request_seen.set()
                 model = body.get('model', 'claude-sonnet-4-6')
                 if scenario == 'retry' and len(calls) == 1:
@@ -136,6 +141,8 @@ def probe(binary, scenario):
                     answer = stream(model, text=text)
             if is_real and scenario == 'stream':
                 time.sleep(2.5)  # exercise the requesting spinner before first byte
+            if is_real and scenario in ('tool', 'retry') and len(calls) == 2:
+                time.sleep(3.5)  # keep the post-tool/retry display visible for screen captures
             self.send_response(200)
             self.send_header('Content-Type','text/event-stream')
             self.send_header('Content-Length',str(len(answer)))
@@ -167,6 +174,8 @@ def probe(binary, scenario):
                             stdin=slave,stdout=slave,stderr=slave,start_new_session=True)
     os.close(slave)
     output = bytearray()
+    screen = pyte.Screen(140, 40)
+    terminal = pyte.Stream(screen)
     frames = []
     started = time.monotonic()
     sent = False
@@ -176,7 +185,10 @@ def probe(binary, scenario):
         while time.monotonic()-started < 42 and proc.poll() is None:
             ready,_,_ = select.select([master],[],[],0.12)
             if ready:
-                try: output.extend(os.read(master,65536))
+                try:
+                    part = os.read(master,65536)
+                    output.extend(part)
+                    terminal.feed(part.decode('utf-8',errors='replace'))
                 except OSError: break
             now = time.monotonic()
             if not sent and now-started > 4:
@@ -184,14 +196,16 @@ def probe(binary, scenario):
                 sent=True
             if sent and now-last_capture>=0.25:
                 last_capture=now
-                raw=output[-6144:].decode('utf-8',errors='replace')
-                visible=ANSI.sub('',raw)
-                printable=''.join(c for c in visible[-450:] if c.isprintable())
-                glyphs=re.findall(r'[·✢✳✶✻✽]',printable)
+                rows=[line.rstrip() for line in screen.display if line.strip()]
+                visible=' '.join(rows[-7:])
+                glyphs=re.findall(r'[·✢✳✶✻✽]',visible)
                 frames.append({
                     'ms':round((now-started)*1000),
-                    'visible_tail':printable[-180:],
+                    'screen_rows':rows[-10:],
                     'glyph':glyphs[-1] if glyphs else None,
+                    'retry_status_visible':bool(re.search(
+                        r'Retrying in|retrying|重试|waiting for API response',
+                        visible,re.I)),
                 })
             text=ANSI.sub('',output.decode('utf-8',errors='replace'))
             if sent and expected in text and request_seen.is_set():
@@ -204,12 +218,17 @@ def probe(binary, scenario):
         text=ANSI.sub('',output.decode('utf-8',errors='replace'))
         passed=(sent and expected in text and len(calls)>=
                 (2 if scenario in ('tool','retry') else 1))
+        if scenario == 'tool':
+            passed = passed and any(c['read_result_verified'] for c in calls)
         return {
             'scenario':scenario,'passed':passed,'request_count':len(calls),
             'elapsed_seconds':round(time.monotonic()-started,2),
             'marker_present':expected in text,
             'retry_visible':bool(re.search(r'Retrying|retry|重试|rate limit',text,re.I)),
             'tool_fixture_seen':FIXTURE in text,
+            'tool_read_verified':any(c['read_result_verified'] for c in calls),
+            'retry_status_screen_seen':any(f['retry_status_visible'] for f in frames),
+            'final_screen_rows':[line.rstrip() for line in screen.display if line.strip()][-12:],
             'frames':frames,
             'frame_count':len(frames),
             'frame_glyphs':sorted({f['glyph'] for f in frames if f['glyph']}),
@@ -249,6 +268,8 @@ def main():
             'official_frame_count':a['frame_count'],
             'rebuilt_frame_count':b['frame_count'],
             'glyph_sets_equal':a['frame_glyphs']==b['frame_glyphs'],
+            'official_retry_status_seen':a['retry_status_screen_seen'],
+            'rebuilt_retry_status_seen':b['retry_status_screen_seen'],
             'frame_by_frame_pixel_equivalence':'NOT_VERIFIED',
         }
     Path(args.report).write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',
