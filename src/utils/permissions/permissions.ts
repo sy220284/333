@@ -232,7 +232,7 @@ export function getAskRules(context: ToolPermissionContext): PermissionRule[] {
 
 /**
  * Check if the entire tool matches a rule
- * For example, this matches "Bash" but not "Bash(prefix:*)" for BashTool
+ * For example, this matches "Bash" but not "Bash(prefix *)" for BashTool
  * This also matches MCP tools with a server name, e.g. the rule "mcp__server1"
  */
 function toolMatchesRule(
@@ -270,7 +270,7 @@ function toolMatchesRule(
 
 /**
  * Check if the entire tool is listed in the always allow rules
- * For example, this finds "Bash" but not "Bash(prefix:*)" for BashTool
+ * For example, this finds "Bash" but not "Bash(prefix *)" for BashTool
  */
 export function toolAlwaysAllowedRule(
   context: ToolPermissionContext,
@@ -344,7 +344,7 @@ export function filterDeniedAgents<T extends { agentType: string }>(
 
 /**
  * Map of rule contents to the associated rule for a given tool.
- * e.g. the string key is "prefix:*" from "Bash(prefix:*)" for BashTool
+ * e.g. the string key is "prefix *" from "Bash(prefix *)" for BashTool
  */
 export function getRuleByContentsForTool(
   context: ToolPermissionContext,
@@ -1132,7 +1132,7 @@ export async function checkRuleBasedPermissions(
   }
 
   // 1f. Content-specific ask rules from tool.checkPermissions
-  // (e.g. Bash(npm publish:*) → {ask, type:'rule', ruleBehavior:'ask'})
+  // (e.g. Bash(npm publish *) → {ask, type:'rule', ruleBehavior:'ask'})
   if (
     toolPermissionResult?.behavior === 'ask' &&
     toolPermissionResult.decisionReason?.type === 'rule' &&
@@ -1237,7 +1237,7 @@ async function hasPermissionsToUseToolInner(
 
   // 1f. Content-specific ask rules from tool.checkPermissions take precedence
   // over bypassPermissions mode. When a user explicitly configures a
-  // content-specific ask rule (e.g. Bash(npm publish:*)), the tool's
+  // content-specific ask rule (e.g. Bash(npm publish *)), the tool's
   // checkPermissions returns {behavior:'ask', decisionReason:{type:'rule',
   // rule:{ruleBehavior:'ask'}}}. This must be respected even in bypass mode,
   // just as deny rules are respected at step 1d.

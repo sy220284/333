@@ -156,27 +156,13 @@ export function validatePermissionRule(rule: string): {
   if (isBashPrefixTool(parsed.toolName) && parsed.ruleContent !== undefined) {
     const content = parsed.ruleContent
 
-    // Check for common :* mistakes - :* must be at the end (legacy prefix syntax)
-    if (content.includes(':*') && !content.endsWith(':*')) {
+    // Current Bash permission rules use * wildcards.
+    if (content.includes(':*')) {
       return {
         valid: false,
-        error: 'The :* pattern must be at the end',
-        suggestion:
-          'Move :* to the end for prefix matching, or use * for wildcard matching',
-        examples: [
-          'Bash(npm run:*) - prefix matching (legacy)',
-          'Bash(npm run *) - wildcard matching',
-        ],
-      }
-    }
-
-    // Check for :* without a prefix
-    if (content === ':*') {
-      return {
-        valid: false,
-        error: 'Prefix cannot be empty before :*',
-        suggestion: 'Specify a command prefix before :*',
-        examples: ['Bash(npm:*)', 'Bash(git:*)'],
+        error: 'Old :* prefix syntax has been retired',
+        suggestion: 'Use a space and * wildcard, such as Bash(npm run *)',
+        examples: ['Bash(npm *)', 'Bash(git *)'],
       }
     }
 
@@ -192,8 +178,6 @@ export function validatePermissionRule(rule: string): {
     // - "git * main" matches "git checkout main", "git push main", etc.
     // - "npm * --save" matches "npm install foo --save", etc.
     //
-    // Legacy :* syntax continues to work for backwards compatibility:
-    // - "npm:*" matches "npm" or "npm <anything>" (prefix matching with word boundary)
   }
 
   // File tool validation
