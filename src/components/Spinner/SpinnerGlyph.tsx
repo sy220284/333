@@ -26,12 +26,12 @@ export function SpinnerGlyph(t0) {
     frame,
     messageColor,
     stalledIntensity: t1,
-    thinkingIntensity: t4,
+    thinkingIntensity: tThinking,
     reducedMotion: t2,
     time: t3
   } = t0;
   const stalledIntensity = t1 === undefined ? 0 : t1;
-  const thinkingIntensity = t4 === undefined ? 0 : t4;
+  const thinkingIntensity = tThinking === undefined ? 0 : tThinking;
   const reducedMotion = t2 === undefined ? false : t2;
   const time = t3 === undefined ? 0 : t3;
   const [themeName] = useTheme();
