@@ -46,6 +46,7 @@ export const SDKHookCallbackMatcherSchema = lazySchema(() =>
       matcher: z.string().optional(),
       hookCallbackIds: z.array(z.string()),
       timeout: z.number().optional(),
+      onFailure: z.literal('block').optional(),
     })
     .describe('Configuration for matching and routing hook callbacks.'),
 )
