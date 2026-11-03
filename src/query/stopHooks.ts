@@ -17,7 +17,6 @@ import type {
   ToolUseSummaryMessage,
 } from '../types/message.js'
 import { createAttachmentMessage } from '../utils/attachments.js'
-import { logForDebugging } from '../utils/debug.js'
 import { errorMessage } from '../utils/errors.js'
 import type { REPLHookContext } from '../utils/hooks/postSamplingHooks.js'
 import {
