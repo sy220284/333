@@ -26,6 +26,18 @@ test('/agents retains the hidden instructions instead of loading the retired wiz
   assert.match(index, /\.claude\/agents\//)
 })
 
+test('local command metadata flows through slash parser, QueryEngine and SDK result schema', () => {
+  const processInput = source('src/utils/processUserInput/processUserInput.ts')
+  const slash = source('src/utils/processUserInput/processSlashCommand.tsx')
+  const query = source('src/QueryEngine.ts')
+  const sdk = source('src/entrypoints/sdk/coreSchemas.ts')
+  assert.match(processInput, /localCommand\?: string/)
+  assert.match(slash, /localCommand: returnedCommand\.name/)
+  assert.match(query, /num_turns: localCommand \? 0 : messages\.length - 1/)
+  assert.match(query, /local_command: localCommand/)
+  assert.match(sdk, /local_command: z\.string\(\)\.optional\(\)/)
+})
+
 test('retired teammate default-model setting is removed; new teammates inherit the leader model', () => {
   const config = source('src/components/Settings/Config.tsx')
   const settings = source('src/utils/config.ts')
