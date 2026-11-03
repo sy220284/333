@@ -91,6 +91,20 @@ export function getSpinnerFrame(timeMs: number, phaseCount: number): number {
   return Math.round((1 - Math.cos(2 * Math.PI * timeMs / SPINNER_CYCLE_MS)) / 2 * (phaseCount - 1))
 }
 
+/** Target 2.1.310 Ke(): advance the visible response counter once per 50ms tick. */
+export function advanceAnimatedTokenCount(current: number, target: number, ticks: number): number {
+  if (Math.abs(target - current) > 2000) return target
+  let displayed = current
+  for (let i = 0; i < ticks; i++) {
+    const gap = target - displayed
+    if (gap === 0) break
+    const magnitude = Math.abs(gap)
+    const step = magnitude < 70 ? 3 : magnitude < 200 ? Math.max(8, Math.ceil(magnitude * 0.15)) : 50
+    displayed = gap > 0 ? Math.min(displayed + step, target) : Math.max(displayed - step, target)
+  }
+  return displayed
+}
+
 export function getProgressiveThinkingLabel(ms: number): string {
   if (ms >= 45000) return 'deep in thought'
   if (ms >= 30000) return 'thinking some more'
