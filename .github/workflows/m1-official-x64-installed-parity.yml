@@ -9,6 +9,7 @@ on:
       - 'build/m1-import-release-parity.mjs'
       - 'build/m1-cli-surface-audit.mjs'
       - 'build/m1-plugin-enable-json-parity.mjs'
+      - 'tests/m1-plugin-data-size-parity.test.mjs'
       - 'tests/m1-x64-local-api.py'
       - 'tests/m1_x64_stream_events_test.py'
       - 'src/**'
@@ -145,6 +146,13 @@ jobs:
             --reference "${CLAUDE_REFERENCE_BIN}" \
             --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
             --report "${RUNNER_TEMP}/claude-installed-plugin-enable-json-parity.json"
+      - name: 官方原版与候选版双跑插件数据大小及配置覆盖规则
+        shell: bash
+        env:
+          CLAUDE_2310_X64: ${{ env.CLAUDE_REFERENCE_BIN }}
+        run: |
+          set -euo pipefail
+          node --test tests/m1-plugin-data-size-parity.test.mjs
       - name: 安装版执行本机模拟 API 与工具权限实测
         shell: bash
         run: |
