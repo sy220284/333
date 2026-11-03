@@ -7,6 +7,7 @@ on:
       - .github/workflows/m1-source-export.yml
       - tests/m1-obsolete-command-parity.test.mjs
       - tests/m1-background-agent-parity.test.mjs
+      - tests/m1-background-lifecycle.test.mjs
       - 'src/cli/background/**'
   workflow_dispatch:
 permissions:
