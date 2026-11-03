@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
@@ -20,10 +20,13 @@ function execute(bin, prefix, args, env, cwd, timeout = 17000) {
 test('2.1.310 background real lifecycle: dispatch, list, logs, stop, respawn, remove', { timeout: 170000 }, () => {
   for (const [name, bin, prefix] of binaries) {
     const home = mkdtempSync(join(tmpdir(), 'bg-lifecycle-'))
-    const cwd = join(home, 'project')
+    const cwdDir = join(home, 'project')
     const config = join(home, 'config')
-    mkdirSync(cwd, { recursive: true })
+    mkdirSync(cwdDir, { recursive: true })
     mkdirSync(config, { recursive: true })
+    // macOS resolves /var/... to /private/var/... during process.chdir().
+    // Trust records must be keyed by the same canonical path the CLI observes.
+    const cwd = realpathSync(cwdDir)
     writeFileSync(join(config, '.claude.json'), JSON.stringify({
       projects: { [cwd]: { hasTrustDialogAccepted: true } },
     }))
