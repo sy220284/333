@@ -206,11 +206,11 @@ async function list(args) {
     return
   }
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
-    process.stdout.write(sessions.map(x => x.id + ' ' + (x.name || '') + ' ' + x.state + ' ' + x.cwd).join('\n') + (sessions.length ? '\n' : ''))
+    process.stdout.write(`${sessions.map(x => `${x.id} ${x.name || ''} ${x.state} ${x.cwd}`).join('\n')}${sessions.length ? '\n' : ''}`)
     return
   }
-  const lines = sessions.map((j, index) => String(index + 1).padStart(2) + '. ' + j.id + '  ' + (j.name || j.cwd) + ' [' + j.state + ']')
-  process.stdout.write('Background agents\n' + (lines.length ? lines.join('\n') : 'No sessions') + '\n')
+  const lines = sessions.map((j, index) => `${String(index + 1).padStart(2)}. ${j.id}  ${j.name || j.cwd} [${j.state}]`)
+  process.stdout.write(`Background agents\n${lines.length ? lines.join('\n') : 'No sessions'}\n`)
   const ui = createInterface({ input: process.stdin, output: process.stdout })
   try {
     const response = (await ui.question('Select number to attach (blank to exit): ')).trim()
@@ -378,7 +378,7 @@ export async function interceptBackgroundCli(args) {
       `  claude attach ${response.id}    open in this terminal`,
       `  claude logs ${response.id}      show recent output`,
       `  claude stop ${response.id}      stop this session`,
-    ].join('\n') + '\n')
+    ].concat('').join('\n'))
     return true
   }
   const normalized = verb === 'kill' ? 'stop' : verb
