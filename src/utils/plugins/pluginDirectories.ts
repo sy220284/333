@@ -129,6 +129,7 @@ export function getPluginDataDir(pluginId: string): string {
  */
 export async function getPluginDataDirSize(
   pluginId: string,
+  { throwIfUnreadable = false }: { throwIfUnreadable?: boolean } = {},
 ): Promise<{ bytes: number; human: string } | null> {
   const dir = pluginDataDirPath(pluginId)
   let bytes = 0
@@ -152,7 +153,10 @@ export async function getPluginDataDirSize(
   try {
     await walk(dir)
   } catch (e) {
-    if (isFsInaccessible(e)) return null
+    // The uninstall prompt tolerates an inaccessible directory; the JSON
+    // inventory needs to tell callers that its size could not be measured.
+    if ((e as NodeJS.ErrnoException)?.code === 'ENOENT') return null
+    if (isFsInaccessible(e) && !throwIfUnreadable) return null
     throw e
   }
   if (bytes === 0) return null
