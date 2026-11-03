@@ -761,6 +761,10 @@ export function normalizeMessages(messages: Message[]): NormalizedMessage[] {
             error: message.error,
             isApiErrorMessage: message.isApiErrorMessage,
             advisorModel: message.advisorModel,
+            // The stream records these on the original assistant block.
+            // Preserve UI-only thinking metadata across normalization.
+            thinkingDurationMs: message.thinkingDurationMs,
+            thinkingDisplay: message.thinkingDisplay,
           } as NormalizedAssistantMessage
         })
       }
