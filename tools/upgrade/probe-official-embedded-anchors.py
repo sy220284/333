@@ -19,8 +19,10 @@ OFFICIAL_SHA256 = "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47d
 MAGIC = b"\x28\xb5\x2f\xfd"
 MAX_FRAME_BYTES = 16_000_000
 KEYWORDS = {
-    "F075_artifact": ("ReviewArtifactTool", "artifact_comment", "publish_artifact", "artifactId", "artifact_id"),
-    "F076_claude_test": ("claude_test", "claude-test", "test_results", "test_result"),
+    # artifactId in Maven's <artifactId> is a Java dependency coordinate.
+    # It previously produced two false positives in documentation resources.
+    "F075_artifact": ("ReviewArtifactTool", "artifact_comment", "publish_artifact", "artifact_page"),
+    "F076_claude_test": ("claude_test", "claude-test"),
     "F077_design_sync": ("design-consent", "design-revoke", "design-login", "/design-sync"),
 }
 NEEDLES = [(group, word, word.encode("utf-8")) for group, terms in KEYWORDS.items() for word in terms]
@@ -89,7 +91,15 @@ def search(binary: Path) -> dict:
                         "context": preview,
                     })
                 if hits:
+                    # Resource frames can contain Markdown/embedded skill docs.
+                    # A matched term is navigation evidence, not a call chain.
+                    resource_kind = (
+                        "skill_documentation"
+                        if data.lstrip().startswith(b"---") or b"# Sync a design system to claude.ai/design" in data
+                        else "embedded_resource_unclassified"
+                    )
                     found.append({
+                        "resource_kind": resource_kind,
                         "offset": pos,
                         "sha256": hashlib.sha256(data).hexdigest(),
                         "bytes": len(data),
@@ -104,6 +114,8 @@ def search(binary: Path) -> dict:
             "scanned_zstd_frames": frames,
             "decoded_frames": decoded,
             "matches": len(found),
+            "scope_limit": "zstd-decodable embedded resources only; native executable's other code is not examined",
+            "feature_equivalence_verified": False,
             "groups": summaries,
             "records": sorted(found, key=lambda e: (-len(e["hits"]), -e["bytes"], e["offset"]))[:40],
             "unlisted_match_count": max(0, len(found) - 40),
