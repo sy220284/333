@@ -5,7 +5,7 @@ import type { ImageBlockParam, TextBlockParam, ThinkingBlockParam, ToolResultBlo
 import * as React from 'react';
 import type { Command } from '../commands.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
-import { Box } from '../ink.js';
+import { Box, Text } from '../ink.js';
 import type { Tools } from '../Tool.js';
 import { type ConnectorTextBlock, isConnectorTextBlock } from '../types/connectorText.js';
 import type { AssistantMessage, AttachmentMessage as AttachmentMessageType, CollapsedReadSearchGroup as CollapsedReadSearchGroupType, GroupedToolUseMessage as GroupedToolUseMessageType, NormalizedUserMessage, ProgressMessage, SystemMessage } from '../types/message.js';
@@ -18,6 +18,7 @@ import { AdvisorMessage } from './messages/AdvisorMessage.js';
 import { AssistantRedactedThinkingMessage } from './messages/AssistantRedactedThinkingMessage.js';
 import { AssistantTextMessage } from './messages/AssistantTextMessage.js';
 import { AssistantThinkingMessage } from './messages/AssistantThinkingMessage.js';
+import { thinkingDurationLabel } from './messages/thinkingDurationLabel.js';
 import { AssistantToolUseMessage } from './messages/AssistantToolUseMessage.js';
 import { AttachmentMessage } from './messages/AttachmentMessage.js';
 import { CollapsedReadSearchContent } from './messages/CollapsedReadSearchContent.js';
@@ -151,6 +152,19 @@ function MessageImpl(t0) {
           $[40] = t4;
         } else {
           t4 = $[40];
+        }
+        // Preserve the completed thinking phase in the visible transcript,
+        // even though the private thinking content stays folded in prompt mode.
+        // Message metadata is UI-only and never passed into the model input.
+        if (!verbose && !isTranscriptMode &&
+            typeof message.thinkingDurationMs === 'number' &&
+            message.message.content.some(block => block.type === 'thinking')) {
+          return <Box flexDirection="column" width={t2}>
+            <Box marginTop={1}>
+              <Text dimColor>{thinkingDurationLabel(message.thinkingDurationMs)}</Text>
+            </Box>
+            {t3}
+          </Box>;
         }
         return t4;
       }
