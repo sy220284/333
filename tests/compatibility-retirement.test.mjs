@@ -42,9 +42,9 @@ test('only V2 plugin registry exists, with explicit validation', () => {
 
 test('retired shell and output tools are absent from current invocation paths', () => {
   const taskStop = code('tools/TaskStopTool/TaskStopTool.ts')
-  assert.match(taskStop, /task_id: z\\.string\\(\\)\\.min\\(1\\)/)
+  assert.ok(taskStop.includes('task_id: z.string().min(1)'))
   assert.doesNotMatch(taskStop, /KillShell|shell_id|aliases:/)
   assert.doesNotMatch(code('tools/BriefTool/BriefTool.ts'), /LEGACY_BRIEF_TOOL_NAME|aliases:/)
   assert.doesNotMatch(code('services/tools/toolExecution.ts'), /getAllBaseTools|fallbackTool|deprecated tool being called by alias/)
-  assert.doesNotMatch(code('utils/env.ts'), /\\.config\\.json/)
+  assert.equal(code('utils/env.ts').includes('.config.json'), false)
 })
