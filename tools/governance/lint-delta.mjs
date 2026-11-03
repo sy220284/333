@@ -2,6 +2,7 @@
 import { existsSync, readFileSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
+import { diagnosticSourceLineToken } from './lint-location.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 // Use the same selected toolchain installation as tools/dev/dev.mjs.
@@ -42,7 +43,7 @@ function problems(file, source, temporary = false) {
   return parsed.diagnostics.map(d=>{
     const category=d.code?.value ?? d.code ?? '';
     const line=d.location?.range?.start?.line;
-    const token=Number.isInteger(line) ? (lines[line]??'').trim().replace(/\s+/g,' ') : '';
+    const token=diagnosticSourceLineToken(lines, line);
     const description=typeof d.message === 'string' ? d.message : JSON.stringify(d.message);
     return {key:JSON.stringify([category,description,token]),category,description,token};
   });

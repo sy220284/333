@@ -127,6 +127,7 @@ function typescript(checkChanged) {
 function lint(all) {
   if (!existsSync(bin('biome'))) throw new Error('缺失 Biome，请先安装已冻结的开发工具');
   if (!all) {
+    run(process.execPath, ['--test', 'tests/governance-lint-location.test.mjs']);
     run(process.execPath, ['tools/governance/lint-delta.mjs']);
     return;
   }
