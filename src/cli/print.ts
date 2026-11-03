@@ -246,6 +246,7 @@ import {
   ElicitationCompleteNotificationSchema,
 } from '@modelcontextprotocol/sdk/types.js'
 import { getMcpPrefix } from 'src/services/mcp/mcpStringUtils.js'
+import { beginHeadlessMcpElicitation } from 'src/services/mcp/headlessElicitationState.js'
 import {
   commandBelongsToServer,
   filterToolsByServer,
@@ -1293,77 +1294,82 @@ function runHeadlessStreaming(
         connection.client.setRequestHandler(
           ElicitRequestSchema,
           async (request, extra) => {
-            logMCPDebug(
-              serverName,
-              `Elicitation request received in print mode: ${jsonStringify(request)}`,
-            )
-
-            const mode = request.params.mode === 'url' ? 'url' : 'form'
-
-            logEvent('tengu_mcp_elicitation_shown', {
-              mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-            })
-
-            // Run elicitation hooks first — they can provide a response programmatically
-            const hookResponse = await runElicitationHooks(
-              serverName,
-              request.params,
-              extra.signal,
-            )
-            if (hookResponse) {
+            const finishElicitation = beginHeadlessMcpElicitation(connection.client)
+            try {
               logMCPDebug(
                 serverName,
-                `Elicitation resolved by hook: ${jsonStringify(hookResponse)}`,
+                `Elicitation request received in print mode: ${jsonStringify(request)}`,
               )
+
+              const mode = request.params.mode === 'url' ? 'url' : 'form'
+
+              logEvent('tengu_mcp_elicitation_shown', {
+                mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              })
+
+              // Run elicitation hooks first — they can provide a response programmatically
+              const hookResponse = await runElicitationHooks(
+                serverName,
+                request.params,
+                extra.signal,
+              )
+              if (hookResponse) {
+                logMCPDebug(
+                  serverName,
+                  `Elicitation resolved by hook: ${jsonStringify(hookResponse)}`,
+                )
+                logEvent('tengu_mcp_elicitation_response', {
+                  mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  action:
+                    hookResponse.action as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                })
+                return hookResponse
+              }
+
+              // Delegate to SDK consumer via control protocol
+              const url =
+                'url' in request.params
+                  ? (request.params.url as string)
+                  : undefined
+              const requestedSchema =
+                'requestedSchema' in request.params
+                  ? (request.params.requestedSchema as
+                      | Record<string, unknown>
+                      | undefined)
+                  : undefined
+
+              const elicitationId =
+                'elicitationId' in request.params
+                  ? (request.params.elicitationId as string | undefined)
+                  : undefined
+
+              const rawResult = await structuredIO.handleElicitation(
+                serverName,
+                request.params.message,
+                requestedSchema,
+                extra.signal,
+                mode,
+                url,
+                elicitationId,
+              )
+
+              const result = await runElicitationResultHooks(
+                serverName,
+                rawResult,
+                extra.signal,
+                mode,
+                elicitationId,
+              )
+
               logEvent('tengu_mcp_elicitation_response', {
                 mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
                 action:
-                  hookResponse.action as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  result.action as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
               })
-              return hookResponse
+              return result
+            } finally {
+              finishElicitation()
             }
-
-            // Delegate to SDK consumer via control protocol
-            const url =
-              'url' in request.params
-                ? (request.params.url as string)
-                : undefined
-            const requestedSchema =
-              'requestedSchema' in request.params
-                ? (request.params.requestedSchema as
-                    | Record<string, unknown>
-                    | undefined)
-                : undefined
-
-            const elicitationId =
-              'elicitationId' in request.params
-                ? (request.params.elicitationId as string | undefined)
-                : undefined
-
-            const rawResult = await structuredIO.handleElicitation(
-              serverName,
-              request.params.message,
-              requestedSchema,
-              extra.signal,
-              mode,
-              url,
-              elicitationId,
-            )
-
-            const result = await runElicitationResultHooks(
-              serverName,
-              rawResult,
-              extra.signal,
-              mode,
-              elicitationId,
-            )
-
-            logEvent('tengu_mcp_elicitation_response', {
-              mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-              action:
-                result.action as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-            })
-            return result
           },
         )
 
