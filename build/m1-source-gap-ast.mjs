@@ -34,7 +34,7 @@ function lookup(from, name) {
   const sourceLike = ['.js', '.jsx', '.mjs', '.cjs'].includes(suffix)
   const variants = suffix && !sourceLike ? [target] :
     [target, ...extensions.map(x => base + x),
-      ...(!suffix ? extensions.map(x => posix.join(target, 'index' + x)) : [])]
+      ...(!suffix ? extensions.map(x => posix.join(target, `index${x}`)) : [])]
   return { target, present: variants.some(x => names.has(x)) }
 }
 const missing = new Map()
