@@ -224,18 +224,6 @@ function filterRulesByContentsMatchingInput(
         switch (rule.type) {
           case 'exact':
             return strEquals(rule.command, cmd)
-          case 'prefix':
-            switch (matchMode) {
-              case 'exact':
-                return strEquals(rule.prefix, cmd)
-              case 'prefix': {
-                if (strEquals(cmd, rule.prefix)) {
-                  return true
-                }
-                return strStartsWith(cmd, rule.prefix + ' ')
-              }
-            }
-            break
           case 'wildcard':
             if (matchMode === 'exact') {
               return false
@@ -281,29 +269,6 @@ function filterRulesByContentsMatchingInput(
             return true
           }
         }
-      } else if (rule.type === 'prefix') {
-        const rawRuleCmdName = rule.prefix.split(/\s+/)[0] ?? ''
-        const ruleCanonical = resolveToCanonical(
-          stripModulePrefixForRule(rawRuleCmdName),
-        )
-        if (ruleCanonical === inputCanonical) {
-          const ruleRest = rule.prefix
-            .slice(rawRuleCmdName.length)
-            .replace(/^\s+/, ' ')
-          const canonicalPrefix = inputCanonical + ruleRest
-          if (matchMode === 'exact') {
-            if (strEquals(canonicalPrefix, canonicalCommand)) {
-              return true
-            }
-          } else {
-            if (
-              strEquals(canonicalCommand, canonicalPrefix) ||
-              strStartsWith(canonicalCommand, canonicalPrefix + ' ')
-            ) {
-              return true
-            }
-          }
-        }
       } else if (rule.type === 'wildcard') {
         // Resolve the wildcard pattern's command name to canonical and re-match
         // This ensures 'deny rm *' also blocks 'Remove-Item secret.txt'
@@ -313,7 +278,7 @@ function filterRulesByContentsMatchingInput(
         )
         if (ruleCanonical === inputCanonical && matchMode !== 'exact') {
           // Rebuild the pattern with the canonical cmdlet name
-          // Normalize separator same as exact and prefix branches.
+          // Normalize separator same as exact branch.
           // Without this, a wildcard rule `rm\t*` produces canonicalPattern
           // with a literal tab that never matches the space-normalized
           // canonicalCommand.

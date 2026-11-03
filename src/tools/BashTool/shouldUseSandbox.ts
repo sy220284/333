@@ -104,11 +104,6 @@ function containsExcludedCommand(command: string): boolean {
       const rule = bashPermissionRule(pattern)
       for (const cand of candidates) {
         switch (rule.type) {
-          case 'prefix':
-            if (cand === rule.prefix || cand.startsWith(rule.prefix + ' ')) {
-              return true
-            }
-            break
           case 'exact':
             if (cand === rule.command) {
               return true

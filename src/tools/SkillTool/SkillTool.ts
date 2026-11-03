@@ -400,10 +400,9 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
       if (normalizedRule === commandName) {
         return true
       }
-      // Check prefix match (e.g., "review:*" matches "review-pr 123")
-      if (normalizedRule.endsWith(':*')) {
-        const prefix = normalizedRule.slice(0, -2) // Remove ':*'
-        return commandName.startsWith(prefix)
+      // A trailing wildcard can match every skill in the selected namespace.
+      if (normalizedRule.endsWith('*')) {
+        return commandName.startsWith(normalizedRule.slice(0, -1))
       }
       return false
     }

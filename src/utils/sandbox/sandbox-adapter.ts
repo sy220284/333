@@ -75,11 +75,6 @@ function permissionRuleValueFromString(
   return { toolName, ruleContent }
 }
 
-function permissionRuleExtractPrefix(permissionRule: string): string | null {
-  const match = permissionRule.match(/^(.+):\*$/)
-  return match?.[1] ?? null
-}
-
 /**
  * Resolve Claude Code-specific path patterns for sandbox-runtime.
  *
@@ -853,9 +848,7 @@ export function addToExcludedCommands(
         rule => rule.toolName === BASH_TOOL_NAME,
       )
       if (firstBashRule?.ruleContent) {
-        // Extract pattern from Bash(command) or Bash(command:*) format
-        const prefix = permissionRuleExtractPrefix(firstBashRule.ruleContent)
-        commandPattern = prefix || firstBashRule.ruleContent
+        commandPattern = firstBashRule.ruleContent
       }
     }
   }
