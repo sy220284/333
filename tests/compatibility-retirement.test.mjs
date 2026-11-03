@@ -72,3 +72,24 @@ test('REPL does not import or invoke removed model migration notifications', () 
   const repl = code('screens/REPL.tsx')
   assert.doesNotMatch(repl, /useModelMigrationNotifications/)
 })
+
+test('retired interface identifiers cannot re-enter the current source tree', () => {
+  const retiredIdentifiers = [
+    'LEGACY_AGENT_TOOL_NAME',
+    'LEGACY_BRIEF_TOOL_NAME',
+    'getSelfBridgeCompatId',
+    'sessionIdCompat.js',
+    'commands_DEPRECATED',
+    'normalizeLegacyToolName',
+    'migrateToSinglePluginFile',
+    'migrateFromEnabledPlugins',
+    'getSettings_DEPRECATED',
+    'CLAUDE_CODE_DISABLE_LEGACY_MODEL_REMAP',
+  ]
+  for (const path of sources(rootPath)) {
+    const source = readFileSync(path, 'utf8').split('//# sourceMappingURL=')[0]
+    for (const name of retiredIdentifiers) {
+      assert.equal(source.includes(name), false, `${path}: obsolete ${name}`)
+    }
+  }
+})
