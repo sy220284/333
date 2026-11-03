@@ -17,7 +17,8 @@ test('M1 and M10 use 2.1.317 as the only current acceptance target', () => {
   assert.equal(runtime.summary.formally_accepted, 0)
   assert.equal(coverage.features.length, 102)
   assert.equal(coverage.scenarios.length, 84)
-  assert.equal(target.verified_x64_sha256, null)
+  assert.ok(target.verified_x64_sha256 === null ||
+    /^[a-f0-9]{64}$/.test(target.verified_x64_sha256))
 })
 test('392 official release-note rows remain individually traceable and unaccepted', () => {
   const target = read('docs/upgrade/m1-evidence/target-release.json')

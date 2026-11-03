@@ -48,7 +48,15 @@ export function buildRegistry(
   assert.ok(audit.groups.length >= 18, 'The existing 18 groups are the historical minimum, not a feature ceiling')
   assert.equal(coverage.target_version, TARGET_META.target_version)
   // 2.1.310 source anchors remain historical evidence until 2.1.317 is verified.
-  assert.equal(audit.target_version, TARGET_META.previous_target)
+  // Preserve previously verified source evidence, but allow a fully verified
+  // 2.1.317 source reference after its official SHA has been pinned.
+  if (audit.target_version === TARGET_META.target_version) {
+    assert.match(VERIFIED_TARGET_REFERENCE ?? '', /^[a-f0-9]{64}$/,
+      'Current target source audit requires an official verified x64 reference')
+    assert.equal(audit.reference_sha256, VERIFIED_TARGET_REFERENCE)
+  } else {
+    assert.equal(audit.target_version, TARGET_META.previous_target)
+  }
   assert.equal(signoffs.schema, 1)
   assert.equal(signoffs.target_version, coverage.target_version)
   assert.ok(Array.isArray(signoffs.features) && Array.isArray(signoffs.scenarios))
@@ -119,7 +127,7 @@ export function buildRegistry(
   return {
     schema: 2,
     target_version: coverage.target_version,
-    historical_reference_version: audit.target_version,
+    source_reference_version: audit.target_version,
     counts: {
       features: features.length,
       scenarios: scenarios.length,

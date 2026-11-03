@@ -9,6 +9,11 @@ on:
       - tests/m1-background-agent-parity.test.mjs
       - tests/m1-background-lifecycle.test.mjs
       - 'src/cli/background/**'
+      - 'src/tools/**'
+      - 'src/utils/telemetry/**'
+      - 'tests/m1-*.test.mjs'
+      - 'build/m1-*.mjs'
+      - 'docs/upgrade/m1-evidence/target-release.json'
   workflow_dispatch:
 permissions:
   contents: read
