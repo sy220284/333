@@ -1,0 +1,19 @@
+{
+  "target_version": "2.1.317",
+  "previous_target": "2.1.310",
+  "status": "目标已调整，功能等价尚未验收",
+  "updated_on": "2026-11-03",
+  "pr": 7,
+  "branch": "upgrade/2.1.310-m1-evidence",
+  "source_repo": "https://github.com/anthropics/claude-code",
+  "target_release_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.317",
+  "new_release_entries": 392,
+  "prior_release_entries_to_verify": 26,
+  "total_entries_from_2_1_310_to_2_1_317": 418,
+  "base_legacy_change_count": 6313,
+  "feature_acceptance_target": 102,
+  "scenario_acceptance_target": 84,
+  "binary_source_status": "已发现官方发行文件；当前环境无法取得和执行2.1.317 x64包",
+  "product_package_version_policy": "package.json仍为2.1.310，待产品功能与运行差分验收后再声明版本为2.1.317",
+  "ci_writeback": "本轮不处理"
+}
