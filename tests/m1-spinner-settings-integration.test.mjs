@@ -22,9 +22,11 @@ test('2.1.310 user settings reach the real spinner tip registry', () => {
       }),
     )
     const source = [
+      "import { enableConfigs } from './src/utils/config.ts'",
       "import { getSettingsForSource } from './src/utils/settings/settings.ts'",
       "import { getCustomSpinnerTips, isDefaultSpinnerTipSuppressed } from './src/services/tips/customTipSettings.ts'",
       "import { getRelevantTips } from './src/services/tips/tipRegistry.ts'",
+      "enableConfigs()",
       "const settings = getSettingsForSource('userSettings')?.spinnerTipsOverride",
       "const collected = await getCustomSpinnerTips()",
       "const eligible = await getRelevantTips()",
