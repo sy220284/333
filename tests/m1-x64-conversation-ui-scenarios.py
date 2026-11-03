@@ -31,6 +31,17 @@ TOOL_RESULT = 'UI_TOOL_COMPLETE_OK'
 RETRY_RESULT = 'UI_RETRY_COMPLETE_OK'
 FIXTURE = 'UI_TOOL_FILE_READ_OK'
 
+def is_main_conversation_request(body):
+    """A title request quotes the user prompt but has no Read tool schema."""
+    return (
+        any(t.get('name') == 'Read' for t in body.get('tools', [])
+            if isinstance(t, dict))
+        and any(
+            msg.get('role') == 'user' and PROMPT in str(msg.get('content', ''))
+            for msg in body.get('messages', []) if isinstance(msg, dict)
+        )
+    )
+
 def sse(kind, payload):
     return ('event: ' + kind + '\ndata: ' + json.dumps(payload) + '\n\n').encode()
 
@@ -107,16 +118,7 @@ def probe(binary, scenario):
         def do_POST(self):
             body = json.loads(self.rfile.read(int(self.headers.get('Content-Length', '0'))))
             content = body.get('messages', [])
-            # Background title generation includes the visible user prompt
-            # inside a <session> quote, but does not expose file tools.  Only
-            # a tool-capable main conversation can advance the tool fixture.
-            is_real = (
-                any(t.get('name') == 'Read' for t in body.get('tools', []))
-                and any(
-                    msg.get('role') == 'user' and PROMPT in str(msg.get('content', ''))
-                    for msg in content
-                )
-            )
+            is_real = is_main_conversation_request(body)
             if not is_real:
                 # Background model calls (title generation) must not advance fixture state.
                 answer = stream(body.get('model', 'claude-sonnet-4-6'), text='UI_TITLE')
