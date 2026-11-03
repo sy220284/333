@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, existsSync, statSync, cpSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, existsSync, cpSync, mkdtempSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -18,9 +18,11 @@ test('release package contains all 13 platform vendor files', () => {
 test('every packaged file matches signed-style SHA-256 content manifest', () => {
   for(const f of metadata.files) {
     const full=resolve(dist,f.path);
-    assert.ok(full.startsWith(dist+'/') || full.startsWith(dist+'\\'), f.path);
-    assert.equal(statSync(full).size,f.bytes);
-    assert.equal(createHash('sha256').update(readFileSync(full)).digest('hex'),f.sha256,f.path);
+    assert.ok(full.startsWith(`${dist}/`) || full.startsWith(`${dist}\\`), f.path);
+    // Hash and size-check the same bytes to prevent stat/read races.
+    const content = readFileSync(full);
+    assert.equal(content.length, f.bytes);
+    assert.equal(createHash('sha256').update(content).digest('hex'),f.sha256,f.path);
   }
 });
 test('new distributable CLI is distinct from original binary', () => {
