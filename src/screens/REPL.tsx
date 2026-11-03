@@ -839,6 +839,8 @@ export function REPL({
   // harmless — but ref mirrors sync on every render anyway so it's fresh.
   const streamModeRef = useRef(streamMode);
   streamModeRef.current = streamMode;
+  const thinkingPhaseStartedAtRef = useRef<number | null>(null);
+  const pendingThinkingDurationMsRef = useRef<number | null>(null);
   const [streamingToolUses, setStreamingToolUses] = useState<StreamingToolUse[]>([]);
   const [streamingThinking, setStreamingThinking] = useState<StreamingThinking | null>(null);
 
@@ -2587,7 +2589,19 @@ export function REPL({
     onBackgroundQuery: handleBackgroundQuery
   });
   const onQueryEvent = useCallback((event: Parameters<typeof handleMessageFromStream>[0]) => {
+    if (event.type === 'stream_request_start') {
+      thinkingPhaseStartedAtRef.current = null;
+      pendingThinkingDurationMsRef.current = null;
+    }
     handleMessageFromStream(event, newMessage => {
+      // Capture the completed thinking phase as message-level display data.
+      // This leaves API message content and transcript history unmodified.
+      if (newMessage.type === 'assistant' &&
+          pendingThinkingDurationMsRef.current !== null &&
+          newMessage.message.content.some(block => block.type === 'thinking')) {
+        newMessage.thinkingDurationMs ??= pendingThinkingDurationMsRef.current;
+        pendingThinkingDurationMsRef.current = null;
+      }
       // Real retry signals are emitted by withRetry's system API-error messages.
       // Their deadline drives the same spinner countdown as the target release.
       if (newMessage.type === 'system' && newMessage.subtype === 'api_error') {
@@ -2662,7 +2676,15 @@ export function REPL({
       // spinner animation) and apiMetricsRef (endResponseLength/lastTokenTime
       // for OTPS). No separate metrics update needed here.
       setResponseLength(length => length + newContent.length);
-    }, setStreamMode, setStreamingToolUses, tombstonedMessage => {
+    }, mode => {
+      if (mode === 'thinking') {
+        thinkingPhaseStartedAtRef.current ??= Date.now();
+      } else if (thinkingPhaseStartedAtRef.current !== null) {
+        pendingThinkingDurationMsRef.current = Date.now() - thinkingPhaseStartedAtRef.current;
+        thinkingPhaseStartedAtRef.current = null;
+      }
+      setStreamMode(mode);
+    }, setStreamingToolUses, tombstonedMessage => {
       setMessages(oldMessages => oldMessages.filter(m => m !== tombstonedMessage));
       void removeTranscriptMessage(tombstonedMessage.uuid);
     }, setStreamingThinking, metrics => {
