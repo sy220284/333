@@ -327,10 +327,10 @@ export function AttachmentMessage({
       // a case) or render nothing (add to the array). Messages.tsx pre-filters
       // these so this branch is defense-in-depth for other render paths.
       //
-      // teammate_mailbox is handled BEFORE the switch in
-      // runtime-gated blocks (feature() / isAgentSwarmsEnabled()) that TS can't
-      // narrow through — excluded here via type union (compile-time only, no emit).
-      attachment.type satisfies NullRenderingAttachmentType | 'teammate_mailbox';
+      // skill_discovery and teammate_mailbox are rendered before the switch,
+      // guarded by their respective runtime feature checks.  TypeScript
+      // cannot narrow through those checks, so keep both in this contract.
+      attachment.type satisfies NullRenderingAttachmentType | 'skill_discovery' | 'teammate_mailbox';
       return null;
   }
 }
