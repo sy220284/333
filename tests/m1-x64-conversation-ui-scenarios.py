@@ -70,7 +70,7 @@ def screen_rows(screen):
 def active_spinner_glyph(rows):
     """Read the animated glyph from its own row, not the footer separator '·'."""
     for row in rows:
-        match = re.match(r'^\\s*([·✢✳✶✻✽*])\\s+(.+)', row)
+        match = re.match(r'^\s*([·✢✳✶✻✽*])\s+(.+)', row)
         if match and '…' in match.group(2):
             return match.group(1)
     return None
