@@ -72,6 +72,8 @@ jobs:
         run: node --test tests/release-integrity.test.mjs
       - name: 验证发行包在仓库外独立运行
         run: node --test tests/distribution-isolation.test.mjs
+      - name: 过时命令清理与代理管理新版行为回归
+        run: node --test tests/m1-obsolete-command-parity.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
         run: node --test tests/cli-parity.test.mjs
       - name: 复核多级模型回退与自动压缩真实参数语义
@@ -94,6 +96,9 @@ jobs:
             --output .rebuild/oracle/claude
           echo "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  .rebuild/oracle/claude" | sha256sum --check
           chmod 755 .rebuild/oracle/claude
+      - name: 官方x64与重建版旧代理向导退场真实行为对照
+        if: runner.os == 'Linux'
+        run: CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/m1-obsolete-command-parity.test.mjs
       - name: 对原版和当前构建版实际注入529并验证模型回退顺序
         if: runner.os == 'Linux'
         run: CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/fallback-529-integration.test.mjs
