@@ -57,6 +57,7 @@ import { getPluginCachePath, getVersionedCachePath } from './pluginLoader.js'
 
 // Migration state to prevent running migration multiple times per session
 let migrationCompleted = false
+let initializationPromise: Promise<void> | null = null
 
 /**
  * Memoized cache of installed plugins data (V2 format)
@@ -176,8 +177,8 @@ export function migrateToSinglePluginFile(): void {
       level: 'error',
     })
     logError(toError(error))
-    // Mark as completed to avoid retrying failed migration
-    migrationCompleted = true
+    // Failed migrations must remain retryable and must not publish stale state.
+    throw error
   }
 }
 
@@ -712,25 +713,21 @@ export function resetInMemoryState(): void {
  * @returns Promise that resolves when initialization is complete
  */
 export async function initializeVersionedPlugins(): Promise<void> {
-  // Step 1: Migrate to single file format (consolidates V1/V2 files, cleans up legacy cache)
-  migrateToSinglePluginFile()
-
-  // Step 2: Sync enabledPlugins from settings.json to installed_plugins.json
-  // This must complete before CLI exits (especially in headless mode)
-  try {
-    await migrateFromEnabledPlugins()
-  } catch (error) {
-    logError(error)
+  if (initializationPromise === null) {
+    initializationPromise = (async () => {
+      migrateToSinglePluginFile()
+      await migrateFromEnabledPlugins()
+      clearInstalledPluginsCache()
+      const data = getInMemoryInstalledPlugins()
+      logForDebugging(
+        `Initialized versioned plugins system with ${Object.keys(data.plugins).length} plugins`,
+      )
+    })().catch(error => {
+      initializationPromise = null
+      throw error
+    })
   }
-
-  // Step 3: Initialize in-memory session state
-  // Calling getInMemoryInstalledPlugins triggers:
-  // 1. Loading from disk
-  // 2. Caching in inMemoryInstalledPlugins for session state
-  const data = getInMemoryInstalledPlugins()
-  logForDebugging(
-    `Initialized versioned plugins system with ${Object.keys(data.plugins).length} plugins`,
-  )
+  await initializationPromise
 }
 
 /**
