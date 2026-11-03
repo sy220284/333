@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { readFile, stat } from 'fs/promises';
 import * as React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { getLastAPIRequest } from 'src/bootstrap/state.js';
@@ -22,6 +21,7 @@ import { getAuthHeaders, getUserAgent } from '../utils/http.js';
 import { getInMemoryErrors, logError } from '../utils/log.js';
 import { redactSensitiveInfo } from '../utils/redactSensitiveInfo.js';
 import { isEssentialTrafficOnly } from '../utils/privacyLevel.js';
+import { readUtf8FileBounded } from '../utils/readBoundedFile.js';
 import { extractTeammateTranscriptsFromTasks, getTranscriptPath, loadAllSubagentTranscriptsFromDisk, MAX_TRANSCRIPT_READ_BYTES } from '../utils/sessionStorage.js';
 import { jsonStringify } from '../utils/slowOperations.js';
 import { asSystemPrompt } from '../utils/systemPromptType.js';
@@ -94,17 +94,11 @@ function getSanitizedErrorLogs(): Array<{
 }
 async function loadRawTranscriptJsonl(): Promise<string | null> {
   try {
-    const transcriptPath = getTranscriptPath();
-    const {
-      size
-    } = await stat(transcriptPath);
-    if (size > MAX_TRANSCRIPT_READ_BYTES) {
-      logForDebugging(`Skipping raw transcript read: file too large (${size} bytes)`, {
-        level: 'warn'
-      });
-      return null;
+    const transcript = await readUtf8FileBounded(getTranscriptPath(), MAX_TRANSCRIPT_READ_BYTES);
+    if (transcript === null) {
+      logForDebugging('Skipping raw transcript read: file exceeds size limit', { level: 'warn' });
     }
-    return await readFile(transcriptPath, 'utf-8');
+    return transcript;
   } catch {
     return null;
   }
