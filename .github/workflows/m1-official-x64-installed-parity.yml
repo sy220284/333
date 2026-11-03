@@ -94,6 +94,14 @@ jobs:
             --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
             --allow-candidate-diff false \
             --report "${RUNNER_TEMP}/claude-installed-candidate-strict-parity.json"
+      - name: 真实终端核对 Desktop 新版公开入口及错误优先级
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/m1-x64-desktop-cli-parity.py \
+            --reference "${CLAUDE_REFERENCE_BIN}" \
+            --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
+            --report "${RUNNER_TEMP}/claude-installed-desktop-cli-parity.json"
       - name: 对照官方 x64 校验旧 assistant 命令退场
         shell: bash
         run: |
@@ -130,6 +138,7 @@ jobs:
             ${{ runner.temp }}/claude-installed-candidate-strict-parity.json
             ${{ runner.temp }}/claude-installed-loopback-api.json
             ${{ runner.temp }}/claude-installed-assistant-retirement-parity.json
+            ${{ runner.temp }}/claude-installed-desktop-cli-parity.json
             ${{ runner.temp }}/claude-installed-agents-config-parity.json
           retention-days: 30
           if-no-files-found: warn
