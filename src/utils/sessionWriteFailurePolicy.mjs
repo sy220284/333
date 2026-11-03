@@ -1,0 +1,8 @@
+/**
+ * Retrying a file append after mkdir is appropriate only when the parent
+ * directory is absent. ENOSPC, EDQUOT, access errors and I/O failures must
+ * be reported rather than masked by a second filesystem write.
+ */
+export function shouldRetrySessionAppendAfterMkdir(code) {
+  return code === 'ENOENT'
+}
