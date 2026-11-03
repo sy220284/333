@@ -5,9 +5,9 @@
  * Conversion is always applied at these API boundaries.
  */
 export function toSessionApiId(id: string): string {
-  return id.startsWith('cse_') ? 'session_' + id.slice(4) : id
+  return id.startsWith('cse_') ? `session_${id.slice(4)}` : id
 }
 
 export function toWorkerApiId(id: string): string {
-  return id.startsWith('session_') ? 'cse_' + id.slice(8) : id
+  return id.startsWith('session_') ? `cse_${id.slice(8)}` : id
 }

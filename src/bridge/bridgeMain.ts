@@ -33,7 +33,7 @@ import { createCapacityWake } from './capacityWake.js'
 import { describeAxiosError } from './debugUtils.js'
 import { createTokenRefreshScheduler } from './jwtUtils.js'
 import { getPollIntervalConfig } from './pollConfig.js'
-import { toCompatSessionId, toInfraSessionId } from './sessionIdCompat.js'
+import { toSessionApiId, toWorkerApiId } from './sessionIdProtocol.js'
 import { createSessionSpawner, safeFilenameId } from './sessionRunner.js'
 import { getTrustedDeviceToken } from './trustedDevice.js'
 import {
@@ -187,7 +187,7 @@ export async function runBridgeLoop(
   const timedOutSessions = new Set<string>()
   // Sessions that already have a title (server-set or bridge-derived) so
   // onFirstUserMessage doesn't clobber a user-assigned --name / web rename.
-  // Keyed by compatSessionId to match logger.setSessionTitle's key.
+  // Keyed by sessionApiId to match logger.setSessionTitle's key.
   const titledSessions = new Set<string>()
   // Signal to wake the at-capacity sleep early when a session completes,
   // so the bridge can immediately accept new work.
@@ -1018,10 +1018,10 @@ export async function runBridgeLoop(
             `[bridge:session] Spawning sessionId=${sessionId} sdkUrl=${sdkUrl}`,
           )
 
-          // compat-surface session_* form for logger/Sessions-API calls.
-          // Work poll returns cse_* under v2 compat; convert before spawn so
+          // Session-management API expects session_*; work polling uses cse_*.
+          // Convert before spawn so
           // the onFirstUserMessage callback can close over it.
-          const compatSessionId = toCompatSessionId(sessionId)
+          const sessionApiId = toSessionApiId(sessionId)
 
           const spawnResult = safeSpawn(
             spawner,
@@ -1036,22 +1036,22 @@ export async function runBridgeLoop(
                 // runs concurrently; if it already populated titledSessions,
                 // skip. If it hasn't resolved yet, the derived title sticks —
                 // acceptable since the server had no title at spawn time.
-                if (titledSessions.has(compatSessionId)) return
-                titledSessions.add(compatSessionId)
+                if (titledSessions.has(sessionApiId)) return
+                titledSessions.add(sessionApiId)
                 const title = deriveSessionTitle(text)
-                logger.setSessionTitle(compatSessionId, title)
+                logger.setSessionTitle(sessionApiId, title)
                 logForDebugging(
-                  `[bridge:title] derived title for ${compatSessionId}: ${title}`,
+                  `[bridge:title] derived title for ${sessionApiId}: ${title}`,
                 )
                 void import('./createSession.js')
                   .then(({ updateBridgeSessionTitle }) =>
-                    updateBridgeSessionTitle(compatSessionId, title, {
+                    updateBridgeSessionTitle(sessionApiId, title, {
                       baseUrl: config.apiBaseUrl,
                     }),
                   )
                   .catch(err =>
                     logForDebugging(
-                      `[bridge:title] failed to update title for ${compatSessionId}: ${err}`,
+                      `[bridge:title] failed to update title for ${sessionApiId}: ${err}`,
                       { level: 'error' },
                     ),
                   )
@@ -1114,7 +1114,7 @@ export async function runBridgeLoop(
           activeSessions.set(sessionId, handle)
           sessionWorkIds.set(sessionId, work.id)
           sessionIngressTokens.set(sessionId, secret.session_ingress_token)
-          sessionCompatIds.set(sessionId, compatSessionId)
+          sessionCompatIds.set(sessionId, sessionApiId)
 
           const startTime = Date.now()
           sessionStartTimes.set(sessionId, startTime)
@@ -1147,31 +1147,31 @@ export async function runBridgeLoop(
           // Register in the sessions Map before starting status updates so the
           // first render tick shows the correct count and bullet list in sync.
           logger.addSession(
-            compatSessionId,
-            getRemoteSessionUrl(compatSessionId, config.sessionIngressUrl),
+            sessionApiId,
+            getRemoteSessionUrl(sessionApiId, config.sessionIngressUrl),
           )
 
           // Start live status updates and transition to "Attached" state.
           startStatusUpdates()
-          logger.setAttached(compatSessionId)
+          logger.setAttached(sessionApiId)
 
           // One-shot title fetch. If the session already has a title (set via
           // --name, web rename, or /remote-control), display it and mark as
           // titled so the first-user-message fallback doesn't overwrite it.
           // Otherwise onFirstUserMessage derives one from the first prompt.
-          void fetchSessionTitle(compatSessionId, config.apiBaseUrl)
+          void fetchSessionTitle(sessionApiId, config.apiBaseUrl)
             .then(title => {
               if (title && activeSessions.has(sessionId)) {
-                titledSessions.add(compatSessionId)
-                logger.setSessionTitle(compatSessionId, title)
+                titledSessions.add(sessionApiId)
+                logger.setSessionTitle(sessionApiId, title)
                 logForDebugging(
-                  `[bridge:title] server title for ${compatSessionId}: ${title}`,
+                  `[bridge:title] server title for ${sessionApiId}: ${title}`,
                 )
               }
             })
             .catch(err =>
               logForDebugging(
-                `[bridge:title] failed to fetch title for ${compatSessionId}: ${err}`,
+                `[bridge:title] failed to fetch title for ${sessionApiId}: ${err}`,
                 { level: 'error' },
               ),
             )
@@ -1428,7 +1428,7 @@ export async function runBridgeLoop(
     sessionsToArchive.add(initialSessionId)
   }
   // Snapshot before killing — onSessionDone clears sessionCompatIds.
-  const compatIdSnapshot = new Map(sessionCompatIds)
+  const sessionApiIdSnapshot = new Map(sessionCompatIds)
 
   if (activeSessions.size > 0) {
     logForDebugging(
@@ -1547,7 +1547,7 @@ export async function runBridgeLoop(
       [...sessionsToArchive].map(sessionId =>
         api
           .archiveSession(
-            compatIdSnapshot.get(sessionId) ?? toCompatSessionId(sessionId),
+            sessionApiIdSnapshot.get(sessionId) ?? toSessionApiId(sessionId),
           )
           .catch(err =>
             logger.logVerbose(
@@ -1969,11 +1969,11 @@ function deriveSessionTitle(text: string): string {
  * first user message.
  */
 async function fetchSessionTitle(
-  compatSessionId: string,
+  sessionApiId: string,
   baseUrl: string,
 ): Promise<string | undefined> {
   const { getBridgeSession } = await import('./createSession.js')
-  const session = await getBridgeSession(compatSessionId, { baseUrl })
+  const session = await getBridgeSession(sessionApiId, { baseUrl })
   return session?.title || undefined
 }
 
@@ -2492,14 +2492,8 @@ export async function bridgeMain(args: string[]): Promise<void> {
       // it so our poll loop picks it up. Must happen after registration so
       // the backend knows a live worker exists for the environment.
       //
-      // The pointer stores a session_* ID but /bridge/reconnect looks
-      // sessions up by their infra tag (cse_*) when ccr_v2_compat_enabled
-      // is on. Try both; the conversion is a no-op if already cse_*.
-      const infraResumeId = toInfraSessionId(resumeSessionId)
-      const reconnectCandidates =
-        infraResumeId === resumeSessionId
-          ? [resumeSessionId]
-          : [resumeSessionId, infraResumeId]
+      // Reconnect always uses the current worker-side cse_* session ID.
+      const reconnectCandidates = [toWorkerApiId(resumeSessionId)]
       let reconnected = false
       let lastReconnectErr: unknown
       for (const candidateId of reconnectCandidates) {

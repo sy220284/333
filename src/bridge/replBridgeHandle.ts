@@ -1,6 +1,6 @@
 import { updateSessionBridgeId } from '../utils/concurrentSessions.js'
 import type { ReplBridgeHandle } from './replBridge.js'
-import { toCompatSessionId } from './sessionIdCompat.js'
+import { toSessionApiId } from './sessionIdProtocol.js'
 
 /**
  * Global pointer to the active REPL bridge handle, so callers outside
@@ -31,7 +31,7 @@ export function setReplBridgeHandle(
   outboundOnly = isOutboundOnly
   // Publish (or clear) our bridge session ID in the session record so other
   // local peers can dedup us out of their bridge list — local is preferred.
-  void updateSessionBridgeId(getSelfBridgeCompatId() ?? null).catch(() => {})
+  void updateSessionBridgeId(getSelfBridgeSessionId() ?? null).catch(() => {})
 }
 
 export function getReplBridgeHandle(): ReplBridgeHandle | null {
@@ -42,7 +42,7 @@ export function getReplBridgeHandle(): ReplBridgeHandle | null {
  * Our own bridge session ID in the session_* compat format the API returns
  * in /v1/sessions responses — or undefined if bridge isn't connected.
  */
-export function getSelfBridgeCompatId(): string | undefined {
+export function getSelfBridgeSessionId(): string | undefined {
   const h = getReplBridgeHandle()
-  return h ? toCompatSessionId(h.bridgeSessionId) : undefined
+  return h ? toSessionApiId(h.bridgeSessionId) : undefined
 }
