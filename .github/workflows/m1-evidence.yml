@@ -18,6 +18,10 @@ on:
       - 'build/m1-source-gap-audit.py'
       - 'src/commands/context/**'
       - 'tests/m1-context-view-release-parity.test.mjs'
+      - 'tests/m1-context-ui-release-parity.test.mjs'
+      - 'src/components/ContextVisualization.tsx'
+      - 'src/components/TokenWarning.tsx'
+      - 'src/screens/ResumeConversation.tsx'
       - 'src/ink/devtools.ts'
       - 'tests/m1-ink-devtools.test.mjs'
       - 'src/types/messageQueueTypes.ts'
@@ -169,7 +173,7 @@ jobs:
       - name: 验证2.1.310上下文提示和工具结果安全清理的真实逻辑
         run: bun test tests/context-hint-controller.test.ts tests/context-hint-microcompact.test.ts
       - name: 验证交互式及SDK上下文查看使用实际模型消息边界
-        run: node --test tests/m1-context-view-release-parity.test.mjs
+        run: node --test tests/m1-context-view-release-parity.test.mjs tests/m1-context-ui-release-parity.test.mjs
       - name: 验证Ink开发者工具本地连接及清理生命周期
         run: node --experimental-strip-types --test tests/m1-ink-devtools.test.mjs
       - name: 验证任务卡、功能、场景及旧开关/新锚点/版本记录
