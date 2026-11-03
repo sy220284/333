@@ -1,7 +1,7 @@
 import { randomUUID, createHash } from 'node:crypto'
-import { open, readFile, rename, readdir, mkdir, unlink, stat, realpath } from 'node:fs/promises'
+import { open, readFile, rename, readdir, mkdir, unlink, stat } from 'node:fs/promises'
 import { join, resolve, dirname } from 'node:path'
-import { homedir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { spawnSync } from 'node:child_process'
 
 export const SHORT_ID_PATTERN = /^[a-f0-9]{1,8}$/
@@ -18,7 +18,8 @@ export function fleetSocket(env = process.env) {
   const root = resolve(env.CLAUDE_CONFIG_DIR || join(env.HOME || homedir(), '.claude'))
   const digest = createHash('sha256').update(root).digest('hex').slice(0, 12)
   if (process.platform === 'win32') return '\\\\.\\pipe\\claude-bg-' + digest
-  return join(fleetHome(env), 'control.sock')
+  const uid = typeof process.getuid === 'function' ? process.getuid() : 'user'
+  return join(tmpdir(), 'cc-daemon-' + uid, digest, 'control.sock')
 }
 export function sessionPath(id, env = process.env) {
   if (!/^[a-f0-9]{8}$/.test(id)) throw new Error('Invalid background session id')
@@ -43,20 +44,21 @@ function assertRecord(record) {
       typeof record.cwd !== 'string' || typeof record.logPath !== 'string') throw new Error('Invalid background session record')
   return record
 }
-export function createSessionRecord({ id = randomUUID().slice(0, 8), sessionId = randomUUID(), argv, cwd, name, agent, model, env = process.env }) {
+export function createSessionRecord({ sessionId = randomUUID(), id = sessionId.slice(0, 8), argv, cwd, name, agent, model, env = process.env }) {
   const now = new Date().toISOString()
   return assertRecord({
     id, sessionId, argv: [...argv], cwd: resolve(cwd), name: name || null,
     agent: agent || null, model: model || null,
     logPath: join(fleetHome(env), 'logs', id + '.log'),
-    state: 'starting', detail: '', createdAt: now, updatedAt: now, pid: null,
-    exitCode: null, worktreePath: null, startedAt: now,
+    kind: 'background', state: 'starting', detail: '', createdAt: now, updatedAt: now, pid: null,
+    exitCode: null, worktreePath: null, startedAt: Date.now(),
   })
 }
 export async function prepareFleet(env = process.env) {
   const root = fleetHome(env)
   await mkdir(join(root, 'jobs'), { recursive: true, mode: 0o700 })
   await mkdir(join(root, 'logs'), { recursive: true, mode: 0o700 })
+  if (process.platform !== 'win32') await mkdir(dirname(fleetSocket(env)), { recursive: true, mode: 0o700 })
   return root
 }
 export async function readSession(id, env = process.env) {
@@ -150,7 +152,8 @@ export async function readTail(file, maxBytes = MAX_LOG_BYTES) {
 export function stripUnsafeTerminal(text) {
   return text.replace(/\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g, '')
     .replace(/\u001bP[\s\S]*?\u001b\\/g, '')
-    .replace(/\u001b\[[0-?]*[ -/]*[a-zA-Z]/g, '')
+    // Preserve CSI cursor movement and SGR colour: the native logs subcommand
+    // replays terminal output rather than flattening it to ordinary text.
     .replace(/[\u0000-\u0008\u000b-\u001a\u001c-\u001f\u007f]/g, '')
 }
 export function worktreeSafety(worktreePath) {
