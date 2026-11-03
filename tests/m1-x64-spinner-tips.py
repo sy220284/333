@@ -147,6 +147,8 @@ def probe(executable, mode):
     first_sent = second_sent = False
     second_output_start = None
     normalized_second = ''
+    frame_snapshots = []
+    last_capture = 0.0
     start = time.monotonic()
     try:
         while time.monotonic() - start < 35 and process.poll() is None:
@@ -167,16 +169,32 @@ def probe(executable, mode):
                 second_sent = True
             second_output = output[second_output_start:] if second_sent else b''
             normalized_second = re.sub(r'\s+', '', ANSI.sub('', second_output.decode('utf-8', errors='replace')))
+            if second_sent and second_output_start is not None and time.monotonic() - last_capture >= 0.25:
+                last_capture = time.monotonic()
+                raw_frame = output[second_output_start:][-4096:].decode('utf-8', errors='replace')
+                frame_text = ANSI.sub('', raw_frame).replace('\r', '')
+                visible = ''.join(c for c in frame_text[-240:] if c.isprintable() or c in '\n\t')
+                glyphs = re.findall(r'[·✢✳✶✻✽]', visible)
+                frame_snapshots.append({
+                    'elapsed_ms': round((last_capture - start) * 1000),
+                    'visible_tail': visible[-160:],
+                    'last_glyph': glyphs[-1] if glyphs else None,
+                    'raw_size_bytes': len(output),
+                })
             if second_turn_requested.is_set() and EXPECTED in normalized_second:
                 return {'mode': mode, 'passed': True, 'requests': len(calls),
                         'first_response_completed': True, 'second_turn_requested': True,
-                        'tip_seen_after_second_prompt': True}
+                        'tip_seen_after_second_prompt': True,
+                        'ui_frame_snapshots': frame_snapshots,
+                        'ui_frames_captured': len(frame_snapshots)}
         normalized = re.sub(r'\s+', '', ANSI.sub('', output.decode('utf-8', errors='replace')))
         return {'mode': mode, 'passed': False, 'requests': len(calls),
                 'first_response_completed': first_response_finished.is_set(),
                 'second_prompt_sent': second_sent, 'second_turn_requested': second_turn_requested.is_set(),
                 'tip_seen_after_second_prompt': EXPECTED in normalized_second,
-                'output_tail': normalized[-1000:]}
+                'output_tail': normalized[-1000:],
+                'ui_frame_snapshots': frame_snapshots,
+                'ui_frames_captured': len(frame_snapshots)}
     finally:
         if process.poll() is None:
             os.killpg(process.pid, signal.SIGTERM)
@@ -199,8 +217,27 @@ def main():
     for name, executable in [('reference', args.reference), ('candidate', args.candidate)]:
         if executable:
             report[name] = [probe(executable, mode) for mode in ('inline', 'file')]
+    # Preserve time-stamped terminal frames from both real x64 CLIs for
+    # follow-on pixel/TTY inspection. A passed tip probe alone does not prove
+    # equal animation timing, so report the comparison separately.
+    if 'reference' in report and 'candidate' in report:
+        report['frame_comparison'] = {}
+        for index, mode in enumerate(('inline', 'file')):
+            official = report['reference'][index]
+            rebuilt = report['candidate'][index]
+            official_glyphs = sorted({f['last_glyph'] for f in official['ui_frame_snapshots'] if f['last_glyph']})
+            candidate_glyphs = sorted({f['last_glyph'] for f in rebuilt['ui_frame_snapshots'] if f['last_glyph']})
+            report['frame_comparison'][mode] = {
+                'reference_frame_count': official['ui_frames_captured'],
+                'candidate_frame_count': rebuilt['ui_frames_captured'],
+                'reference_glyphs': official_glyphs,
+                'candidate_glyphs': candidate_glyphs,
+                'glyph_set_equal': official_glyphs == candidate_glyphs,
+                'per_frame_visual_equivalence': 'NOT_VERIFIED',
+            }
     print(json.dumps(report))
-    if not all(case['passed'] for cases in report.values() for case in cases):
+    cases = [case for name, value in report.items() if name in ('reference', 'candidate') for case in value]
+    if not all(case['passed'] for case in cases):
         raise SystemExit(1)
 
 
