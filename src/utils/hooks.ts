@@ -4889,6 +4889,15 @@ async function executeHookCallback({
           command: 'callback',
           blockingError: `SDK hook callback failed and blocked ${hookEvent}: ${detail}`,
         },
+        // Also publish the error in the hook stream. A blocked SDK action
+        // must visibly tell the host/user which callback failed.
+        message: createAttachmentMessage({
+          type: 'hook_error_during_execution',
+          hookName: `${hookEvent}:Callback`,
+          toolUseID,
+          hookEvent,
+          content: detail,
+        }),
       }
     }
     // Preserve the existing opt-in behavior: without onFailure: block,
