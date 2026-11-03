@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path'
 import { test } from 'node:test'
 import {
   SHORT_ID_PATTERN, MAX_LOG_BYTES, fleetHome, fleetSocket, createSessionRecord,
-  saveSession, editSession, readSession, listSessions, matchSession, readTail,
+  saveSession, reserveNewSession, editSession, readSession, listSessions, matchSession, readTail,
   stripUnsafeTerminal, worktreeDigest, removeWorktreeSafely
 } from '../src/cli/background/sessionStore.mjs'
 
@@ -63,6 +63,28 @@ test('2.1.310 background IDs, bounded tail and terminal sanitization match the d
     assert.ok(fleetSocket(env).endsWith('control.sock') || fleetSocket(env).includes('claude-bg'))
   } finally { await rm(tmp, { recursive: true, force: true }) }
 })
+test('new background session creation never overwrites a colliding short id', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'bg-collision-'))
+  const env = sandboxEnv(dir)
+  try {
+    const first = createSessionRecord({
+      id: 'cafebabe', sessionId: 'cafebabe-1111-4111-8111-111111111111',
+      argv: ['one'], cwd: dir, name: 'original', env,
+    })
+    const collision = createSessionRecord({
+      id: 'cafebabe', sessionId: 'cafebabe-2222-4222-8222-222222222222',
+      argv: ['two'], cwd: dir, name: 'collision', env,
+    })
+    await reserveNewSession(first, env)
+    await assert.rejects(reserveNewSession(collision, env), { code: 'EEXIST' })
+    const preserved = await readSession('cafebabe', env)
+    assert.equal(preserved.name, 'original')
+    assert.equal(preserved.sessionId, first.sessionId)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
 test('2.1.310 background worktree removal requires actual git safety evidence', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'bg-worktree-'))
   try {
