@@ -13,6 +13,7 @@ import { findExecutable } from './findExecutable.js'
 import { logError } from './log.js'
 import { getPlatform } from './platform.js'
 import { countCharInString } from './stringUtils.js'
+import { classifyRipgrepFailure } from './ripgrepResultPolicy.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 // we use node:path.join instead of node:url.resolve because the former doesn't encode spaces
@@ -102,6 +103,17 @@ export class RipgrepTimeoutError extends Error {
   ) {
     super(message)
     this.name = 'RipgrepTimeoutError'
+  }
+}
+
+/** A non-timeout ripgrep failure with incomplete or unusable results. */
+export class RipgrepIncompleteError extends Error {
+  constructor(
+    message: string,
+    public readonly partialResults: string[],
+  ) {
+    super(message)
+    this.name = 'RipgrepIncompleteError'
   }
 }
 
@@ -441,19 +453,23 @@ export async function ripGrep(
         logError(error)
       }
 
-      // If we timed out with no results, throw an error so Claude knows the search
-      // didn't complete rather than thinking there were no matches
-      if (isTimeout && lines.length === 0) {
-        reject(
-          new RipgrepTimeoutError(
-            `Ripgrep search timed out after ${getPlatform() === 'wsl' ? 60 : 20} seconds. The search may have matched files but did not complete in time. Try searching a more specific path or pattern.`,
-            lines,
-          ),
-        )
-        return
+      // 2.1.317: An incomplete rg scan is NEVER a successful search.
+      // Previously, timeouts with some stdout returned lines as if they were
+      // exhaustive; both Grep and Glob then silently missed remaining files.
+      const failure = classifyRipgrepFailure({
+        isTimeout,
+        isBufferOverflow,
+        wasAborted: abortSignal.aborted,
+        partialResults: lines,
+      })
+      if (failure.kind === 'cancelled') {
+        reject(error)
+      } else if (failure.kind === 'timeout') {
+        reject(new RipgrepTimeoutError(failure.message, lines))
+      } else {
+        reject(new RipgrepIncompleteError(failure.message, lines))
       }
-
-      resolve(lines)
+      return
     }
 
     ripGrepRaw(args, target, abortSignal, (error, stdout, stderr) => {
