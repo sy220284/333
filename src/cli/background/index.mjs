@@ -159,7 +159,7 @@ async function startDaemon() {
     const cmd = [...selfCommand(), '--internal-bg-supervisor']
     process.stderr.write('Starting background service…\n')
     const child = spawn(cmd[0], cmd.slice(1), {
-      detached: true, stdio: ['ignore', out.fd, out.fd], cwd: process.cwd(),
+      detached: true, stdio: ['ignore', out.fd, out.fd], cwd: fleetHome(),
       env: { ...process.env, CLAUDE_CODE_SESSION_KIND: 'daemon' },
       windowsHide: true,
     })
