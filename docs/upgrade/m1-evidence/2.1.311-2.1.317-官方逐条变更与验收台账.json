@@ -71,9 +71,14 @@
       "domain_candidate": "基础运行时与其他",
       "official_text": "Fixed long freezes at startup and after reading or editing files when a CLAUDE.md file holds a very long list item",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.311",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "已跳过无 HTML 注释及 @include 的长列表不必要 AST 解析，保留原始正文；待复杂引用和大文件真实性能对照",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/utils/claudemd.ts",
+        "src/utils/memoryLexGate.mjs",
+        "src/utils/memoryLexGate.d.mts",
+        "tests/m1-claudemd-long-list-311.test.mjs"
+      ]
     },
     {
       "id": "2.1.311#004",
