@@ -1,0 +1,25 @@
+name: PR7 源码快照诊断
+on:
+  push:
+    branches:
+      - upgrade/2.1.310-m1-evidence
+    paths:
+      - .github/workflows/pr7-source-snapshot.yml
+  workflow_dispatch:
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: 归档可复现源码
+        run: |
+          git archive --format=tar.gz --output=/tmp/pr7-source.tar.gz HEAD
+          sha256sum /tmp/pr7-source.tar.gz
+      - name: 上传源码快照
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr7-source-snapshot
+          path: /tmp/pr7-source.tar.gz
+          retention-days: 1
