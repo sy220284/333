@@ -149,6 +149,7 @@ import type { Message, AssistantMessage } from '../types/message.js'
 import { execAgentHook } from './hooks/execAgentHook.js'
 import { execHttpHook } from './hooks/execHttpHook.js'
 import { classifySdkCallbackFailure } from './hooks/callbackFailurePolicy.mjs'
+import { resolveHookTimeoutMs } from './hooks/hookTimeout.mjs'
 import type { ShellCommand } from './ShellCommand.js'
 import {
   getSessionHooks,
@@ -874,9 +875,7 @@ async function execCommandHook(
       ? formatShellPrefixCommand(process.env.CLAUDE_CODE_SHELL_PREFIX, command)
       : command
 
-  const hookTimeoutMs = hook.timeout
-    ? hook.timeout * 1000
-    : TOOL_HOOK_EXECUTION_TIMEOUT_MS
+  const hookTimeoutMs = resolveHookTimeoutMs(hook.timeout, TOOL_HOOK_EXECUTION_TIMEOUT_MS)
 
   // Build env vars — all paths go through toHookPath for Windows POSIX conversion
   const envVars: NodeJS.ProcessEnv = {
@@ -2139,7 +2138,7 @@ async function* executeHooks({
     hookIndex,
   ): AsyncGenerator<HookResult> {
     if (hook.type === 'callback') {
-      const callbackTimeoutMs = hook.timeout ? hook.timeout * 1000 : timeoutMs
+      const callbackTimeoutMs = resolveHookTimeoutMs(hook.timeout, timeoutMs)
       const { signal: abortSignal, cleanup } = createCombinedAbortSignal(
         signal,
         { timeoutMs: callbackTimeoutMs },
@@ -2186,7 +2185,7 @@ async function* executeHooks({
     }
 
     // Command and prompt hooks need jsonInput
-    const commandTimeoutMs = hook.timeout ? hook.timeout * 1000 : timeoutMs
+    const commandTimeoutMs = resolveHookTimeoutMs(hook.timeout, timeoutMs)
     const { signal: abortSignal, cleanup } = createCombinedAbortSignal(signal, {
       timeoutMs: commandTimeoutMs,
     })
@@ -2738,7 +2737,7 @@ async function* executeHooks({
   const limitedHooks = hookPromises.map((generator, i) => {
     const hook = matchingHooks[i]?.hook
     if (hook?.type !== 'prompt' && hook?.type !== 'agent') return generator
-    const waitMs = hook.timeout ? hook.timeout * 1000 : timeoutMs
+    const waitMs = resolveHookTimeoutMs(hook.timeout, timeoutMs)
     return limitHookGenerator(generator, getSessionId(), waitMs, signal)
   })
   for await (const result of all(limitedHooks)) {
@@ -3087,7 +3086,7 @@ async function executeHooksOutsideREPL({
         hook.type === 'prompt' || hook.type === 'agent'
           ? await acquireHookPermit(
               sessionId,
-              hook.timeout ? hook.timeout * 1000 : timeoutMs,
+              resolveHookTimeoutMs(hook.timeout, timeoutMs),
               signal,
             )
           : undefined
@@ -3102,7 +3101,7 @@ async function executeHooksOutsideREPL({
         }
       // Handle callback hooks
       if (hook.type === 'callback') {
-        const callbackTimeoutMs = hook.timeout ? hook.timeout * 1000 : timeoutMs
+        const callbackTimeoutMs = resolveHookTimeoutMs(hook.timeout, timeoutMs)
         const { signal: abortSignal, cleanup } = createCombinedAbortSignal(
           signal,
           { timeoutMs: callbackTimeoutMs },
@@ -3294,7 +3293,7 @@ async function executeHooksOutsideREPL({
       }
 
       // Handle command hooks
-      const commandTimeoutMs = hook.timeout ? hook.timeout * 1000 : timeoutMs
+      const commandTimeoutMs = resolveHookTimeoutMs(hook.timeout, timeoutMs)
       const { signal: abortSignal, cleanup } = createCombinedAbortSignal(
         signal,
         { timeoutMs: commandTimeoutMs },

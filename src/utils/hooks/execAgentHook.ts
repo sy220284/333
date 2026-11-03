@@ -10,6 +10,7 @@ import { ALL_AGENT_DISALLOWED_TOOLS } from '../../tools.js'
 import { asAgentId } from '../../types/ids.js'
 import type { Message } from '../../types/message.js'
 import { createAbortController } from '../abortController.js'
+import { resolveHookTimeoutMs } from './hookTimeout.mjs'
 import { createAttachmentMessage } from '../attachments.js'
 import { createCombinedAbortSignal } from '../combinedAbortSignal.js'
 import { logForDebugging } from '../debug.js'
@@ -72,7 +73,7 @@ export async function execAgentHook(
     )
 
     // Setup timeout and combine with parent signal
-    const hookTimeoutMs = hook.timeout ? hook.timeout * 1000 : 60000
+    const hookTimeoutMs = resolveHookTimeoutMs(hook.timeout, 60000)
     const hookAbortController = createAbortController()
 
     // Combine parent signal with timeout, and have it abort our controller

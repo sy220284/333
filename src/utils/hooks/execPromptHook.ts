@@ -5,6 +5,7 @@ import type { ToolUseContext } from '../../Tool.js'
 import type { Message } from '../../types/message.js'
 import { createAttachmentMessage } from '../attachments.js'
 import { createCombinedAbortSignal } from '../combinedAbortSignal.js'
+import { resolveHookTimeoutMs } from './hookTimeout.mjs'
 import { logForDebugging } from '../debug.js'
 import { errorMessage } from '../errors.js'
 import type { HookResult } from '../hooks.js'
@@ -52,7 +53,7 @@ export async function execPromptHook(
     )
 
     // Query the model with Haiku
-    const hookTimeoutMs = hook.timeout ? hook.timeout * 1000 : 30000
+    const hookTimeoutMs = resolveHookTimeoutMs(hook.timeout, 30000)
 
     // Combined signal: aborts if either the hook signal or timeout triggers
     const { signal: combinedSignal, cleanup: cleanupSignal } =
