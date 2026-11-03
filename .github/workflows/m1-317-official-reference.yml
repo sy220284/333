@@ -47,7 +47,7 @@ jobs:
             const manifest=JSON.parse(readFileSync("manifest.json","utf8"));
             const checksum=manifest.platforms?.["linux-x64"]?.checksum;
             if (!/^[0-9a-f]{64}$/i.test(checksum??"")) throw new Error("Official Linux x64 manifest checksum unavailable");
-            writeFileSync("expected-sha256.txt",checksum.toLowerCase()+"  claude\\n");
+            writeFileSync("expected-sha256.txt",checksum.toLowerCase()+"  claude\n");
             console.log("Official reference sha256="+checksum);
           '
           curl --fail --location --show-error --silent --retry-all-errors --retry 4 --retry-delay 3 "${base}/linux-x64/claude" -o claude
@@ -58,7 +58,7 @@ jobs:
           [[ "${version}" == 2.1.317* ]]
           HOME="${RUNNER_TEMP}/m1-317-isolated-home" DISABLE_AUTOUPDATER=1 ./claude --help > official-help.txt
           test -s official-help.txt
-          printf '%s\\n' "${version}" > actual-version.txt
+          printf '%s\n' "${version}" > actual-version.txt
       - name: 保存官方原始清单与可复现的二进制校验结果
         if: always()
         uses: actions/upload-artifact@v4
