@@ -3,10 +3,16 @@
 import { readFileSync, writeFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { resolve, dirname } from "node:path"
+import { loadRegistry } from "../m1-feature-evidence-registry.mjs"
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..")
 const coverage = JSON.parse(readFileSync(resolve(root, "docs/upgrade/upgrade-coverage.json"), "utf8"))
 const evidence = JSON.parse(readFileSync(resolve(root, "docs/upgrade/m1-evidence/verified-runtime-evidence.json"), "utf8"))
+// Signed acceptance comes only from the independently validated M10 registry.
+// The coverage catalog deliberately remains UNVERIFIED to prevent code changes
+// or focused tests from silently signing off end-to-end behavior.
+const registry = loadRegistry()
+const signedFeatures = new Set(registry.features.filter(f => f.acceptance === "VERIFIED").map(f => f.id))
 if (coverage.features.length !== coverage.counts.features || coverage.scenarios.length !== coverage.counts.scenarios) {
   throw Error("能力或场景总数与总台账不一致")
 }
@@ -24,12 +30,12 @@ for (const [id, entry] of Object.entries(evidence.features)) {
   }
 }
 const rows = coverage.features.map(f => ({
-  id: f.id, title: f.title, status: f.status,
+  id: f.id, title: f.title, status: signedFeatures.has(f.id) ? "VERIFIED" : "UNVERIFIED",
   scenario_count: f.scenarios.length,
   evidence: evidence.features[f.id]?.tests ?? [],
   next_checks: evidence.features[f.id]?.remaining ?? ["待建立新版原版执行对照与产品入口回归证据"],
 }))
-const formallyAccepted = rows.filter(r => r.status !== "UNVERIFIED").length
+const formallyAccepted = registry.counts.signed_features
 const covered = rows.filter(r => r.evidence.length).length
 const report = {schema:1, target_version:coverage.target_version,
   source:"docs/upgrade/upgrade-coverage.json", evidence_source:"docs/upgrade/m1-evidence/verified-runtime-evidence.json",
