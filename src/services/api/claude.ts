@@ -1642,6 +1642,7 @@ async function* queryModel(
         // thinking without a budget.
         thinking = {
           type: 'adaptive',
+          display: 'updates',
         } satisfies BetaMessageStreamParams['thinking']
       } else {
         // For models that do not support adaptive thinking, use the default
