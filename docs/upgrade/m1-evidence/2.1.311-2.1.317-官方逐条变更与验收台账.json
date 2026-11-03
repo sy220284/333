@@ -4226,9 +4226,13 @@
       "domain_candidate": "基础运行时与其他",
       "official_text": "Fixed Claude treating partial Grep and Glob results as complete when a search hit its time limit",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.317",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "源码已修改，待构建与实测",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/utils/ripgrep.ts",
+        "src/utils/ripgrepResultPolicy.mjs",
+        "tests/m1-ripgrep-incomplete-317.test.mjs"
+      ]
     },
     {
       "id": "2.1.317#044",
