@@ -6,5 +6,5 @@ export function thinkingDurationLabel(milliseconds: number): string {
   if (!Number.isFinite(milliseconds) || milliseconds < 0) {
     throw new RangeError('Thinking duration must be a nonnegative finite number')
   }
-  return `Thought for ${Math.max(1, Math.floor(milliseconds / 1000))}s`
+  return `思考了 ${Math.max(1, Math.floor(milliseconds / 1000))} 秒`
 }
