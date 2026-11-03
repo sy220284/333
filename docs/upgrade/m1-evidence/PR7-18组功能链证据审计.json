@@ -335,14 +335,17 @@
         "F062"
       ],
       "code": [
-        "src/tools/TaskOutputTool/TaskOutputTool.tsx"
+        "src/tools.ts",
+        "src/tools/FileReadTool/FileReadTool.ts",
+        "src/utils/task/TaskOutput.ts"
       ],
       "tests": [
-        "tests/m1-taskoutput-retirement.test.mjs"
+        "tests/m1-taskoutput-retirement.test.mjs",
+        "tests/m1-obsolete-command-parity.test.mjs"
       ],
       "stage": "SOURCE_CONNECTED",
       "acceptance": "UNVERIFIED",
-      "remaining": "任务真实输出与恢复"
+      "remaining": "新版 Read 输出文件路径及后台任务结束、失败和会话恢复的完整双版本行为验收"
     },
     {
       "id": "G17",
