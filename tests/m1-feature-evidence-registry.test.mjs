@@ -8,10 +8,12 @@ const PINNED_HISTORICAL_SHA_FOR_UNIT_TEST = 'b73676430af12f97316a798b8371f81d640
 const baseline = () => ({
   coverage: read('docs/upgrade/upgrade-coverage.json'),
   audit: read('docs/upgrade/m1-evidence/PR7-18组功能链证据审计.json'),
-  signoffs: read('docs/upgrade/m1-evidence/PR7-M10-功能及场景签收.json'),
+  // Mutating tests always start from an unsigned fixture; real sign-offs must
+  // be counted separately so progressing M10 cannot break isolation tests.
+  signoffs: {...read('docs/upgrade/m1-evidence/PR7-M10-功能及场景签收.json'), features:[], scenarios:[]},
 })
 
-test('source groups can grow; 102 features and 84 scenarios remain unsigned until proof', () => {
+test('source groups can grow and signed counts follow the actual M10 ledger', () => {
   const registry = loadRegistry()
   const { audit } = baseline()
   assert.ok(registry.counts.source_groups >= 18)
@@ -19,8 +21,9 @@ test('source groups can grow; 102 features and 84 scenarios remain unsigned unti
     [registry.counts.source_groups, registry.counts.features, registry.counts.scenarios],
     [audit.groups.length, 102, 84],
   )
-  assert.equal(registry.counts.signed_features, 0)
-  assert.equal(registry.counts.signed_scenarios, 0)
+  const live = read('docs/upgrade/m1-evidence/PR7-M10-功能及场景签收.json')
+  assert.equal(registry.counts.signed_features, live.features.length)
+  assert.equal(registry.counts.signed_scenarios, live.scenarios.length)
   assert.ok(registry.features.find(f => f.id === 'F034').code_upgrade_groups.includes('G04'))
 })
 test('source upgrade cannot silently sign M10', () => {
