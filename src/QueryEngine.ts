@@ -118,15 +118,7 @@ const getCoordinatorUserContext: (
   : () => ({})
 /* eslint-enable @typescript-eslint/no-require-imports */
 
-// Dead code elimination: conditional import for snip compaction
-/* eslint-disable @typescript-eslint/no-require-imports */
-const snipModule = feature('HISTORY_SNIP')
-  ? (require('./services/compact/snipCompact.js') as typeof import('./services/compact/snipCompact.js'))
-  : null
-const snipProjection = feature('HISTORY_SNIP')
-  ? (require('./services/compact/snipProjection.js') as typeof import('./services/compact/snipProjection.js'))
-  : null
-/* eslint-enable @typescript-eslint/no-require-imports */
+// 2.1.310 no longer ships the experimental HISTORY_SNIP runtime.
 
 export type QueryEngineConfig = {
   cwd: string
@@ -1287,15 +1279,6 @@ export async function* ask({
     setSDKStatus,
     abortController,
     orphanedPermission,
-    ...(feature('HISTORY_SNIP')
-      ? {
-          snipReplay: (yielded: Message, store: Message[]) => {
-            if (!snipProjection!.isSnipBoundaryMessage(yielded))
-              return undefined
-            return snipModule!.snipCompactIfNeeded(store, { force: true })
-          },
-        }
-      : {}),
   })
 
   try {
