@@ -3380,26 +3380,6 @@ Read the team config to discover your teammates' names. Check the task list peri
   }
 
 
-  // skill_discovery handled here (not in the switch) so the 'skill_discovery'
-  // string literal lives inside a feature()-guarded block. A case label can't
-  // be gated, but this pattern can — same approach as teammate_mailbox above.
-  if (feature('EXPERIMENTAL_SKILL_SEARCH')) {
-    if (attachment.type === 'skill_discovery') {
-      if (attachment.skills.length === 0) return []
-      const lines = attachment.skills.map(s => `- ${s.name}: ${s.description}`)
-      return wrapMessagesInSystemReminder([
-        createUserMessage({
-          content:
-            `Skills relevant to your task:\n\n${lines.join('\n')}\n\n` +
-            `These skills encode project-specific conventions. ` +
-            `Invoke via Skill("<name>") for complete instructions.`,
-          isMeta: true,
-        }),
-      ])
-    }
-  }
-
-  // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check -- teammate_mailbox/team_context/skill_discovery handled above
   switch (attachment.type) {
     case 'directory': {
       return wrapMessagesInSystemReminder([
