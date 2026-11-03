@@ -37,7 +37,7 @@ describe('官方 2.1.310 对话状态与动画逻辑', () => {
     let tracker = createSpinnerStatusTracker()
     tracker = advanceSpinnerStatusTracker(tracker, input(100, { hasActiveTools: true }))
     assert.equal(deriveSpinnerStatus(tracker, input(2099, { hasActiveTools: true })).kind, 'none')
-    let active = deriveSpinnerStatus(tracker, input(2100, { hasActiveTools: true }))
+    const active = deriveSpinnerStatus(tracker, input(2100, { hasActiveTools: true }))
     assert.deepEqual(active, { kind: 'tool-running', toolMs: 2000 })
     assert.equal(describeSpinnerStatus(active, '', duration), 'running tool for 2s')
     tracker = advanceSpinnerStatusTracker(tracker, input(3500))

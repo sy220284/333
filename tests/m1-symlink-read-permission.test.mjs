@@ -29,7 +29,7 @@ test('编辑和创建仍保留可见的真实目标警示', () => {
 })
 
 test('相邻前缀目录不会被误判为工作目录内部', () => {
-  const target = resolve(cwd + '-backup', 'file.txt')
+  const target = resolve(`${cwd}-backup`, 'file.txt')
   const message = formatSymlinkPermissionWarning(target, 'read', cwd)
   assert.match(message, /工作目录之外/)
 })
