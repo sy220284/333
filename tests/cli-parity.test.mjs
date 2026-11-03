@@ -75,8 +75,17 @@ for (const args of [
       for(const required of ['--autocompact','--restricted','--safe-mode','--permission-prompts','--prompt-suggestions','--teleport','--ax-screen-reader']){
         assert.ok(added.includes(required), `Expected reviewed 2.1.310 option missing: ${required}`);
       }
-      assert.deepEqual(baseline.flags.filter(flag => !rebuilt.flags.includes(flag)), [],
-        'Old CLI options were removed unexpectedly');
+      // The target 2.1.310 x64 no longer exposes the old --mcp-debug
+      // help switch. Preserve the other 2.1.88 options, with this precise
+      // retirement supported by official --help evidence.
+      const officiallyRetiredFlags = new Set(['--mcp-debug']);
+      assert.deepEqual(
+        baseline.flags.filter(flag => !rebuilt.flags.includes(flag) && !officiallyRetiredFlags.has(flag)),
+        [],
+        'Unreviewed old CLI options were removed unexpectedly',
+      );
+      assert.equal(rebuilt.flags.includes('--mcp-debug'), false,
+        'Retired --mcp-debug unexpectedly returned to the public CLI help');
       assert.deepEqual(rebuilt.commands, baseline.commands,
         'Existing CLI commands changed unexpectedly');
       const help = compiledHelp(args);
