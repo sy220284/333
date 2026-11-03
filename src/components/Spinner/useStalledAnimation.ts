@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { SPINNER_STALL_AFTER_MS, SPINNER_STALL_FADE_MS } from './statusLogic.js'
 
 // Hook to handle the transition to red when tokens stop flowing.
 // Driven by the parent's animation clock time instead of independent intervals,
@@ -38,10 +39,10 @@ export function useStalledAnimation(
   }
 
   // Calculate stalled intensity based on time since last token
-  // Start showing red after 3 seconds of no new tokens (only when no tools are active)
-  const isStalled = timeSinceLastToken > 3000 && !hasActiveTools
+  // Target 2.1.310: start warning after 10s without tokens; fade over the next 10s.
+  const isStalled = timeSinceLastToken > SPINNER_STALL_AFTER_MS && !hasActiveTools
   const intensity = isStalled
-    ? Math.min((timeSinceLastToken - 3000) / 2000, 1) // Fade over 2 seconds
+    ? Math.min((timeSinceLastToken - SPINNER_STALL_AFTER_MS) / SPINNER_STALL_FADE_MS, 1) // Fade over 2 seconds
     : 0
 
   // Smooth intensity transition driven by animation frame ticks
