@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
+import { intermediateVersions, validateReleaseTarget } from '../build/verify-target-release.mjs'
 const read = name => JSON.parse(readFileSync(new URL('../' + name, import.meta.url), 'utf8'))
 test('M1 and M10 use 2.1.317 as the only current acceptance target', () => {
   const target = read('docs/upgrade/m1-evidence/target-release.json')
@@ -28,8 +29,22 @@ test('392 official release-note rows remain individually traceable and unaccepte
   assert.equal(ledger.entries.length, target.new_release_entries)
   assert.equal(new Set(ledger.entries.map(x => x.id)).size, ledger.count)
   assert.equal(ledger.releases.reduce((n, r) => n + r.entry_count, 0), ledger.count)
+  assert.equal(validateReleaseTarget(target, ledger).indexed, ledger.count)
+  assert.deepEqual(intermediateVersions(target.previous_target, target.target_version),
+    ['2.1.311','2.1.312','2.1.313','2.1.314','2.1.315','2.1.316','2.1.317'])
   for (const row of ledger.entries) {
     assert.ok(row.version && row.source_url && row.official_text)
     assert.notEqual(row.verification_status, 'VERIFIED', row.id)
   }
+})
+
+test('中间发行版缺口或官方快照被篡改时拒绝验收', () => {
+  const target = read('docs/upgrade/m1-evidence/target-release.json')
+  const ledger = read(target.release_ledger)
+  const incomplete = structuredClone(target)
+  incomplete.intermediate_versions_without_indexed_release_notes = []
+  assert.throws(() => validateReleaseTarget(incomplete, ledger), /missing intermediate release|patch version is missing|Duplicate or missing intermediate/)
+  const corrupted = structuredClone(ledger)
+  corrupted.releases[0].entry_count += 1
+  assert.throws(() => validateReleaseTarget(target, corrupted), /Pinned official release snapshot/)
 })
