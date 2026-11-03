@@ -20,7 +20,7 @@ const versions = {
   "@anthropic-ai/foundry-sdk": "^0.2.3",
   "@anthropic-ai/mcpb": "^2.1.2",
   "@anthropic-ai/sandbox-runtime": "^0.0.44",
-  "@anthropic-ai/sdk": "^0.52.0",
+  "@anthropic-ai/sdk": "1.3.0",
   "@anthropic-ai/vertex-sdk": "^0.14.4",
   "@aws-crypto/crc32": "*",
   "@aws-sdk/client-bedrock": "^3.1020.0",
