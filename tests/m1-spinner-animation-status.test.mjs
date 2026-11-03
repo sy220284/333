@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   advanceSpinnerStatusTracker, createSpinnerStatusTracker, deriveSpinnerStatus,
-  describeSpinnerStatus, getProgressiveThinkingLabel, getSpinnerFrame,
+  describeSpinnerStatus, getProgressiveThinkingLabel, getSpinnerFrame, getRetryCountdownMs, describeRetryStatus,
   SPINNER_CYCLE_MS, SPINNER_METRICS_AFTER_MS, SPINNER_STALL_AFTER_MS,
 } from '../src/components/Spinner/statusLogic.ts'
 
@@ -64,6 +64,20 @@ describe('官方 2.1.310 对话状态与动画逻辑', () => {
     tracker = advanceSpinnerStatusTracker(tracker, input(16000, { thinkingStatus: 11000 }))
     assert.equal(deriveSpinnerStatus(tracker, input(16000, { thinkingStatus: 11000 })).kind, 'thought-for')
     assert.equal(describeSpinnerStatus({ kind: 'thought-for', thoughtMs: 200 }, '', duration), 'thought for 1s')
+  })
+
+  it('API重试倒计时按整秒取整，并覆盖网络与等待状态', () => {
+    const retry = { kind: 'retrying', deadline: 12_300, attempt: 2, maxRetries: 4, reason: 'Rate limited' }
+    assert.equal(getRetryCountdownMs(12_300, 10_000), 3000)
+    assert.equal(getRetryCountdownMs(12_300, 12_301), 0)
+    assert.equal(describeRetryStatus(retry, 10_000, duration),
+      'Rate limited · Retrying in 3s · attempt 2/4')
+    assert.equal(describeRetryStatus({ ...retry, kind: 'stalled' }, 10_000, duration),
+      'Waiting for API response · will retry in 3s · check your network')
+    assert.match(describeRetryStatus({ ...retry, kind: 'low_priority_waiting' }, 10_000, duration),
+      /next try in 3s · attempt 2/)
+    assert.match(describeRetryStatus({ ...retry, kind: 'auto_mode_unavailable' }, 10_000, duration),
+      /attempt 2\/4/)
   })
 
   it('工具状态开关关闭时保持静默，低于两秒的工具不留下错误完成提示', () => {
