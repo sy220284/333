@@ -73,3 +73,22 @@ test('cancelled queued generator never starts its underlying hook', async () => 
   assert.equal(executions, 0)
   active.forEach(release => release())
 })
+
+test('a shorter overdue hook is not blocked by an earlier long-timeout waiter', async () => {
+  const id = 'hook-test-mixed-timeouts'
+  const active = await Promise.all(Array.from({length:24},()=>acquireHookPermit(id,30000)))
+  const longWaiter = acquireHookPermit(id,30000)
+  let shortStarted = false
+  const shortWaiter = acquireHookPermit(id,1).then(release => {
+    shortStarted = true
+    return release
+  })
+  await new Promise(resolve => setTimeout(resolve,1100))
+  assert.equal(shortStarted,true)
+  const releaseShort = await shortWaiter
+  releaseShort()
+  active[0]()
+  const releaseLong = await longWaiter
+  releaseLong()
+  active.slice(1).forEach(release => release())
+})
