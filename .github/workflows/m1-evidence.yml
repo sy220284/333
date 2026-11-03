@@ -165,6 +165,8 @@ jobs:
         run: node --experimental-strip-types --test tests/m1-mcp-reconnect-policy.test.mjs
       - name: 验证无界面MCP授权未答复时禁止重复执行
         run: node --experimental-strip-types --test tests/m1-mcp-headless-elicitation-result.test.mjs
+      - name: 验证无界面MCP工具超时与并发授权状态隔离
+        run: node --experimental-strip-types --test tests/m1-mcp-headless-pending.test.mjs
       - name: 验证读取符号链接时的真实文件目标与越界提示
         run: node --experimental-strip-types --test tests/m1-symlink-read-permission.test.mjs
       - name: 验证102项能力运行证据矩阵
