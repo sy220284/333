@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { resolveMcpReconnectBlockReason } from '../src/services/mcp/reconnectGate.ts'
+import { canRetryMcpToolAfterSessionLoss, resolveMcpReconnectBlockReason } from '../src/services/mcp/reconnectGate.ts'
 
 const src = name => readFileSync(new URL(`../src/services/mcp/${name}`, import.meta.url), 'utf8')
 
@@ -27,4 +27,18 @@ test('CLI and interactive reconnection consult the same gate before reconnecting
   assert.match(guardedReconnect, /blocked by enterprise managed policy/)
   assert.match(ui, /const closeBlock = getMcpReconnectBlockReason/)
   assert.match(ui, /const retryBlock = getMcpReconnectBlockReason/)
+})
+
+test('ambiguous transport loss does not rerun non-idempotent MCP tools', () => {
+  assert.equal(canRetryMcpToolAfterSessionLoss(true, false, false), false)
+  assert.equal(canRetryMcpToolAfterSessionLoss(true, false, true), true)
+  assert.equal(canRetryMcpToolAfterSessionLoss(true, true, false), true)
+  assert.equal(canRetryMcpToolAfterSessionLoss(false, false, false), true)
+})
+
+test('the tool retry logic distinguishes known session invalidation from ambiguous loss', () => {
+  const client = src('client.ts')
+  assert.match(client, /new McpSessionExpiredError\(name, !isSessionExpired\)/)
+  assert.match(client, /canRetryMcpToolAfterSessionLoss\(/)
+  assert.match(client, /tool\.annotations\?\.idempotentHint === true/)
 })

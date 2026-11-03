@@ -133,6 +133,7 @@ import {
 } from './auth.js'
 import { markClaudeAiMcpConnected } from './claudeai.js'
 import { getAllMcpConfigs, getMcpReconnectBlockReason, isMcpServerDisabled } from './config.js'
+import { canRetryMcpToolAfterSessionLoss } from './reconnectGate.js'
 import { getMcpServerHeaders } from './headersHelper.js'
 import { SdkControlClientTransport } from './SdkControlTransport.js'
 import { isMcpStdioServerConfig } from './types.js'
@@ -164,7 +165,7 @@ export class McpAuthError extends Error {
  * The caller should get a fresh client via ensureConnectedClient and retry.
  */
 class McpSessionExpiredError extends Error {
-  constructor(serverName: string) {
+  constructor(serverName: string, readonly mayHaveRun: boolean) {
     super(`MCP server "${serverName}" session expired`)
     this.name = 'McpSessionExpiredError'
   }
@@ -1920,7 +1921,12 @@ export const fetchToolsForClient = memoizeWithLRU(
                   // cleared, so retry with a fresh client.
                   if (
                     error instanceof McpSessionExpiredError &&
-                    attempt < MAX_SESSION_RETRIES
+                    attempt < MAX_SESSION_RETRIES &&
+                    canRetryMcpToolAfterSessionLoss(
+                      error.mayHaveRun,
+                      tool.annotations?.readOnlyHint === true,
+                      tool.annotations?.idempotentHint === true,
+                    )
                   ) {
                     logMCPDebug(
                       client.name,
@@ -3254,7 +3260,9 @@ async function callMCPTool({
         )
         logEvent('tengu_mcp_session_expired', {})
         await clearServerCache(name, config)
-        throw new McpSessionExpiredError(name)
+        // A definitive 404/-32001 did not run. An opaque HTTP connection
+        // close may have happened after execution; do not blindly retry.
+        throw new McpSessionExpiredError(name, !isSessionExpired)
       }
     }
 

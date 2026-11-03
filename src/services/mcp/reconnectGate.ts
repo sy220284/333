@@ -10,3 +10,15 @@ export function resolveMcpReconnectBlockReason(
   if (!allowedByPolicy) return 'managed-policy'
   return null
 }
+
+/**
+ * An uncertain transport failure may arrive after a remote tool executed.
+ * Repeating a non-idempotent write could duplicate its side effects.
+ */
+export function canRetryMcpToolAfterSessionLoss(
+  mayHaveRun: boolean,
+  concurrencySafe: boolean,
+  idempotent: boolean,
+): boolean {
+  return !mayHaveRun || concurrencySafe || idempotent
+}
