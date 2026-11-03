@@ -78,6 +78,8 @@ import { getDefaultFileReadingLimits } from './limits.js'
 import {
   DESCRIPTION,
   FILE_READ_TOOL_NAME,
+  FILE_UNCHANGED_STUB,
+  seededFileUnchangedMessage,
   LINE_FORMAT_INSTRUCTION,
   OFFSET_INSTRUCTION_DEFAULT,
   OFFSET_INSTRUCTION_TARGETED,
@@ -309,6 +311,13 @@ const outputSchema = lazySchema(() => {
         base64: z.string().describe('Base64-encoded PDF data'),
         originalSize: z.number().describe('Original file size in bytes'),
       }),
+    }),
+    z.object({
+      type: z.literal('file_unchanged'),
+      file: z.object({
+        filePath: z.string().describe('The path to the unchanged file'),
+      }),
+      source: z.literal('seeded').optional(),
     }),
     z.object({
       type: z.literal('parts'),
@@ -623,6 +632,14 @@ export const FileReadTool = buildTool({
           tool_use_id: toolUseID,
           type: 'tool_result',
           content: `PDF pages extracted: ${data.file.count} page(s) from ${data.file.filePath} (${formatFileSize(data.file.originalSize)})`,
+        }
+      case 'file_unchanged':
+        return {
+          tool_use_id: toolUseID,
+          type: 'tool_result',
+          content: data.source === 'seeded'
+            ? seededFileUnchangedMessage(data.file.filePath)
+            : FILE_UNCHANGED_STUB,
         }
       case 'text': {
         let content: string
