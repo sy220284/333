@@ -109,11 +109,6 @@ export function AttachmentMessage({
             {attachment.content.file.cells.length} cells)
           </Line>;
       }
-      if (attachment.content.type === 'file_unchanged') {
-        return <Line>
-            Read <Text bold>{attachment.displayPath}</Text> (unchanged)
-          </Line>;
-      }
       return <Line>
           Read <Text bold>{attachment.displayPath}</Text> (
           {attachment.content.type === 'text' ? `${attachment.content.file.numLines}${attachment.truncated ? '+' : ''} lines` : formatFileSize(attachment.content.file.originalSize)}

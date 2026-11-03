@@ -22,6 +22,6 @@ test('command registry drops invalid external names before calling enablement an
   const guard = commands.indexOf('isValidCustomCommandName(cmd.name)')
   const enablement = commands.indexOf('meetsAvailabilityRequirement(cmd)')
   assert.ok(guard >= 0 && enablement > guard)
-  assert.match(commands, /if \(cmd.source === 'builtin'\)/)
+  assert.match(commands, /cmd.type === 'prompt' \? cmd.source : 'builtin'/)
   assert.match(commands, /isValidCustomCommandName\(s.name\)/)
 })

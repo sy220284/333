@@ -431,10 +431,11 @@ export async function getCommands(cwd: string): Promise<Command[]> {
     if (!isValidCustomCommandName(cmd.name)) {
       // Built-in failures indicate a broken release; surface them instead of
       // silently dropping a product command.
-      if (cmd.source === 'builtin') {
+      const source = cmd.type === 'prompt' ? cmd.source : 'builtin'
+      if (source === 'builtin') {
         throw new Error('Invalid built-in command name')
       }
-      logForDebugging(`[commands] Skipping invalid ${cmd.source} command name`, {
+      logForDebugging(`[commands] Skipping invalid ${source} command name`, {
         level: 'warn',
       })
       return false
