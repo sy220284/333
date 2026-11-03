@@ -81,18 +81,20 @@ async function serialized(id, work) {
 export async function reserveNewSession(record, env = process.env) {
   assertRecord(record)
   await prepareFleet(env)
-  const path = sessionPath(record.id, env)
-  const handle = await open(path, 'wx', 0o600)
-  try {
-    await handle.writeFile(`${JSON.stringify(record, null, 2)}\n`)
-    await handle.sync()
-  } catch (error) {
+  return serialized(record.id, async () => {
+    const path = sessionPath(record.id, env)
+    const handle = await open(path, 'wx', 0o600)
+    try {
+      await handle.writeFile(`${JSON.stringify(record, null, 2)}\n`)
+      await handle.sync()
+    } catch (error) {
+      await handle.close()
+      await unlink(path)
+      throw error
+    }
     await handle.close()
-    await unlink(path)
-    throw error
-  }
-  await handle.close()
-  return record
+    return record
+  })
 }
 
 export async function saveSession(record, env = process.env) {
@@ -127,9 +129,13 @@ export async function editSession(id, patch, env = process.env) {
   })
 }
 export async function deleteSession(id, env = process.env) {
-  const file = sessionPath(id, env)
-  try { await unlink(file); return true }
-  catch (error) { if (error.code === 'ENOENT') return false; throw error }
+  // The same session must not be deleted while an edit or reservation is
+  // writing its record. The supervisor remains the cross-process owner.
+  return serialized(id, async () => {
+    const file = sessionPath(id, env)
+    try { await unlink(file); return true }
+    catch (error) { if (error.code === 'ENOENT') return false; throw error }
+  })
 }
 export async function listSessions({ all = false, cwd, env = process.env } = {}) {
   const root = join(fleetHome(env), 'jobs')
