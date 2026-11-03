@@ -32,10 +32,7 @@ import {
 } from 'src/utils/plugins/pluginIdentifier.js'
 import { buildPluginCommandTelemetryFields } from 'src/utils/telemetry/pluginTelemetry.js'
 import { z } from 'zod/v4'
-import {
-  addInvokedSkill,
-  clearInvokedSkillsForAgent,
-} from '../../bootstrap/state.js'
+import { clearInvokedSkillsForAgent } from '../../bootstrap/state.js'
 import { COMMAND_MESSAGE_TAG } from '../../constants/xml.js'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
 import {
