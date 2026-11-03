@@ -3400,9 +3400,14 @@
       "domain_candidate": "基础运行时与其他",
       "official_text": "Fixed Grep and Glob never returning when the search process is killed at the timeout but does not exit, seen on Windows",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.316",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "已补强超时后进程始终不退出的强制错误返回，并保持不完整搜索识别；待 Windows 实际无退出进程测试",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/utils/ripgrep.ts",
+        "src/utils/ripgrepResultPolicy.mjs",
+        "tests/m1-ripgrep-incomplete-317.test.mjs",
+        "tests/m1-ripgrep-no-close-316.test.mjs"
+      ]
     },
     {
       "id": "2.1.316#029",

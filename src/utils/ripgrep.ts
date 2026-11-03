@@ -196,8 +196,23 @@ function ripGrepRaw(
         child.kill()
       } else {
         child.kill('SIGTERM')
-        killTimeoutId = setTimeout(c => c.kill('SIGKILL'), 5_000, child)
       }
+      // A killed child may never emit close (observed on Windows). After
+      // five seconds force the promise to settle as an incomplete search.
+      // Escalate on POSIX but do not depend on process termination to report.
+      killTimeoutId = setTimeout(() => {
+        if (settled) return
+        child.kill(process.platform === 'win32' ? undefined : 'SIGKILL')
+        settled = true
+        clearTimeout(timeoutId)
+        const error: ExecFileException = new Error(
+          'ripgrep did not close after its search deadline',
+        )
+        error.signal = 'SIGTERM'
+        child.stdout?.destroy()
+        child.stderr?.destroy()
+        callback(error, stdout, stderr)
+      }, 5_000)
     }, timeout)
 
     // Windows can fire both close and error; only the first settles.
