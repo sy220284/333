@@ -1,7 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { classifyRipgrepFailure } from '../src/utils/ripgrepResultPolicy.mjs'
+import {
+  classifyRipgrepFailure,
+  classifyRipgrepProcessExit,
+} from '../src/utils/ripgrepResultPolicy.mjs'
 
 test('2.1.317: timeout with partially found files is incomplete', () => {
   assert.deepEqual(classifyRipgrepFailure({
@@ -52,4 +55,34 @@ test('shared ripgrep implementation propagates incomplete results as errors to G
   assert.match(rg, /reject\(new RipgrepIncompleteError\(failure\.message, lines\)\)/)
   assert.match(grep, /await ripGrep\(/)
   assert.match(glob, /await ripGrep\(/)
+})
+
+test('a deadline-killed embedded rg cannot turn partial matches into success even with exit code 0/1', () => {
+  for (const code of [0, 1]) {
+    assert.equal(classifyRipgrepProcessExit({
+      code, signal: null, timedOut: true, stdoutTruncated: false,
+      stderrTruncated: false, wasAborted: false,
+    }), 'timeout')
+  }
+})
+
+test('bounded stdout/stderr and abort cannot be mistaken for full searches', () => {
+  const base = {
+    code: 0, signal: null, timedOut: false, stdoutTruncated: false,
+    stderrTruncated: false, wasAborted: false,
+  }
+  assert.equal(classifyRipgrepProcessExit({...base, stdoutTruncated: true}), 'overflow')
+  assert.equal(classifyRipgrepProcessExit({...base, stderrTruncated: true}), 'overflow')
+  assert.equal(classifyRipgrepProcessExit({...base, wasAborted: true}), 'cancelled')
+  assert.equal(classifyRipgrepProcessExit({...base, signal: 'SIGTERM'}), 'failed')
+  assert.equal(classifyRipgrepProcessExit({...base, code: 0}), 'complete')
+  assert.equal(classifyRipgrepProcessExit({...base, code: 1}), 'complete')
+})
+
+test('embedded child exit path checks deadline and bounded streams before callback success', () => {
+  const source = readFileSync(new URL('../src/utils/ripgrep.ts', import.meta.url), 'utf8')
+  assert.match(source, /timedOut = true/)
+  assert.match(source, /classifyRipgrepProcessExit\\(\\{/)
+  assert.match(source, /outcome === 'complete'/)
+  assert.match(source, /error.code = 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER'/)
 })

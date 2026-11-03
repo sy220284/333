@@ -13,7 +13,10 @@ import { findExecutable } from './findExecutable.js'
 import { logError } from './log.js'
 import { getPlatform } from './platform.js'
 import { countCharInString } from './stringUtils.js'
-import { classifyRipgrepFailure } from './ripgrepResultPolicy.mjs'
+import {
+  classifyRipgrepFailure,
+  classifyRipgrepProcessExit,
+} from './ripgrepResultPolicy.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 // we use node:path.join instead of node:url.resolve because the former doesn't encode spaces
@@ -184,7 +187,11 @@ function ripGrepRaw(
     // escalate to SIGKILL which cannot be caught or ignored.
     // On Windows, child.kill('SIGTERM') throws; use default signal.
     let killTimeoutId: ReturnType<typeof setTimeout> | undefined
+    let settled = false
+    let timedOut = false
     const timeoutId = setTimeout(() => {
+      if (settled) return
+      timedOut = true
       if (process.platform === 'win32') {
         child.kill()
       } else {
@@ -193,25 +200,38 @@ function ripGrepRaw(
       }
     }, timeout)
 
-    // On Windows, both 'close' and 'error' can fire for the same process
-    // (e.g. when AbortSignal kills the child). Guard against double-callback.
-    let settled = false
+    // Windows can fire both close and error; only the first settles.
+    // A child terminated by the deadline can still exit 0/1. Never treat
+    // that partial scan (or an output buffer overrun) as a full result set.
     child.on('close', (code, signal) => {
       if (settled) return
       settled = true
       clearTimeout(timeoutId)
       clearTimeout(killTimeoutId)
-      if (code === 0 || code === 1) {
-        // 0 = matches found, 1 = no matches (both are success)
+      const outcome = classifyRipgrepProcessExit({
+        code,
+        signal,
+        timedOut,
+        stdoutTruncated,
+        stderrTruncated,
+        wasAborted: abortSignal.aborted,
+      })
+      if (outcome === 'complete') {
         callback(null, stdout, stderr)
-      } else {
-        const error: ExecFileException = new Error(
-          `ripgrep exited with code ${code}`,
-        )
+        return
+      }
+      const error: ExecFileException = new Error(
+        `ripgrep exited with ${outcome} (code ${code})`,
+      )
+      if (outcome === 'timeout') error.signal = 'SIGTERM'
+      else if (outcome === 'overflow') {
+        error.code = 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER'
+      } else if (outcome === 'cancelled') error.code = 'ABORT_ERR'
+      else {
         error.code = code ?? undefined
         error.signal = signal ?? undefined
-        callback(error, stdout, stderr)
       }
+      callback(error, stdout, stderr)
     })
 
     child.on('error', (err: NodeJS.ErrnoException) => {

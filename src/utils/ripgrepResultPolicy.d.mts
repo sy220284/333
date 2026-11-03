@@ -4,3 +4,12 @@ export function classifyRipgrepFailure(options: {
   wasAborted: boolean
   partialResults: string[]
 }): { kind: 'cancelled' | 'timeout' | 'incomplete'; message: string }
+
+export function classifyRipgrepProcessExit(options: {
+  code: number | null
+  signal: NodeJS.Signals | null
+  timedOut: boolean
+  stdoutTruncated: boolean
+  stderrTruncated: boolean
+  wasAborted: boolean
+}): 'complete' | 'timeout' | 'overflow' | 'cancelled' | 'failed'

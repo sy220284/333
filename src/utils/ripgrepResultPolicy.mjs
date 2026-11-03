@@ -27,3 +27,20 @@ export function classifyRipgrepFailure({
     message: `Ripgrep search failed${isBufferOverflow ? ' because its output exceeded the buffer limit' : ''} after finding ${count} partial result(s). The result set is incomplete. Narrow the path or pattern and retry.`,
   }
 }
+
+/** Determine whether an embedded ripgrep process really finished searching.
+ * A clean exit code alone is insufficient after a timeout or bounded output.
+ */
+export function classifyRipgrepProcessExit({
+  code,
+  signal,
+  timedOut,
+  stdoutTruncated,
+  stderrTruncated,
+  wasAborted,
+}) {
+  if (wasAborted) return 'cancelled'
+  if (timedOut) return 'timeout'
+  if (stdoutTruncated || stderrTruncated) return 'overflow'
+  return signal == null && (code === 0 || code === 1) ? 'complete' : 'failed'
+}
