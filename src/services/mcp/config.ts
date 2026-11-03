@@ -55,6 +55,7 @@ import {
   type McpWebSocketServerConfig,
   type ScopedMcpServerConfig,
 } from './types.js'
+import { resolveMcpReconnectBlockReason } from './reconnectGate.js'
 import { getProjectMcpServerStatus } from './utils.js'
 
 /**
@@ -549,6 +550,20 @@ export function filterMcpServersByPolicy<T>(configs: Record<string, T>): {
     }
   }
   return { allowed, blocked }
+}
+
+/**
+ * Check current user disablement and enterprise policy for every reconnect.
+ * An existing cached connection is not permission to bypass updated policy.
+ */
+export function getMcpReconnectBlockReason(
+  name: string,
+  config: ScopedMcpServerConfig,
+): 'disabled' | 'managed-policy' | null {
+  return resolveMcpReconnectBlockReason(
+    isMcpServerDisabled(name),
+    filterMcpServersByPolicy({ [name]: config }).blocked.length === 0,
+  )
 }
 
 /**

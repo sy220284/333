@@ -46,6 +46,7 @@ import {
   doesEnterpriseMcpConfigExist,
   filterMcpServersByPolicy,
   getClaudeCodeMcpConfigs,
+  getMcpReconnectBlockReason,
   isMcpServerDisabled,
   setMcpServerEnabled,
 } from 'src/services/mcp/config.js'
@@ -343,11 +344,9 @@ export function useManageMCPConnections(
             // as to whether it was disconnected due to a disable, but appstate is stale at this
             // point. Getting a live reference to appstate feels a little hacky, so we'll just
             // check the disk state. We may want to refactor some of this.
-            if (isMcpServerDisabled(client.name)) {
-              logMCPDebug(
-                client.name,
-                `Server is disabled, skipping automatic reconnection`,
-              )
+            const closeBlock = getMcpReconnectBlockReason(client.name, client.config)
+            if (closeBlock) {
+              logMCPDebug(client.name, `Reconnection blocked: ${closeBlock}`)
               return
             }
 
@@ -375,12 +374,18 @@ export function useManageMCPConnections(
                   attempt++
                 ) {
                   // Check if server was disabled while we were waiting
-                  if (isMcpServerDisabled(client.name)) {
-                    logMCPDebug(
-                      client.name,
-                      `Server disabled during reconnection, stopping retry`,
-                    )
+                  const retryBlock = getMcpReconnectBlockReason(client.name, client.config)
+                  if (retryBlock) {
+                    logMCPDebug(client.name, `Reconnection retry blocked: ${retryBlock}`)
                     reconnectTimersRef.current.delete(client.name)
+                    if (retryBlock === 'managed-policy') {
+                      updateServer({
+                        name: client.name,
+                        type: 'failed',
+                        config: client.config,
+                        error: 'MCP server is blocked by enterprise managed policy',
+                      })
+                    }
                     return
                   }
 
@@ -398,6 +403,17 @@ export function useManageMCPConnections(
                       client.config,
                     )
                     const elapsed = Date.now() - reconnectStartTime
+
+                    if (result.client.type === 'disabled') {
+                      reconnectTimersRef.current.delete(client.name)
+                      onConnectionAttempt(result)
+                      return
+                    }
+                    if (result.client.type === 'failed' && result.client.error?.includes('managed policy')) {
+                      reconnectTimersRef.current.delete(client.name)
+                      onConnectionAttempt(result)
+                      return
+                    }
 
                     if (result.client.type === 'connected') {
                       logMCPDebug(

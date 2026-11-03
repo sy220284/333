@@ -132,7 +132,7 @@ import {
   wrapFetchWithStepUpDetection,
 } from './auth.js'
 import { markClaudeAiMcpConnected } from './claudeai.js'
-import { getAllMcpConfigs, isMcpServerDisabled } from './config.js'
+import { getAllMcpConfigs, getMcpReconnectBlockReason, isMcpServerDisabled } from './config.js'
 import { getMcpServerHeaders } from './headersHelper.js'
 import { SdkControlClientTransport } from './SdkControlTransport.js'
 import { isMcpStdioServerConfig } from './types.js'
@@ -2151,6 +2151,25 @@ export async function reconnectMcpServerImpl(
   commands: Command[]
   resources?: ServerResource[]
 }> {
+  // The server may have been disabled or denied since the initial connection.
+  // Check before touching credentials, opening sockets or spawning a process.
+  const blockReason = getMcpReconnectBlockReason(name, config)
+  if (blockReason === 'disabled') {
+    return { client: { name, type: 'disabled', config }, tools: [], commands: [] }
+  }
+  if (blockReason === 'managed-policy') {
+    return {
+      client: {
+        name,
+        type: 'failed',
+        config,
+        error: `MCP server ${name} is blocked by enterprise managed policy`,
+      },
+      tools: [],
+      commands: [],
+    }
+  }
+
   try {
     // Invalidate the keychain cache so we read fresh credentials from disk.
     // This is necessary when another process (e.g. the VS Code extension host)
