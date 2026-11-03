@@ -1,0 +1,189 @@
+import { randomUUID, createHash } from 'node:crypto'
+import { open, readFile, rename, readdir, mkdir, unlink, stat, realpath } from 'node:fs/promises'
+import { join, resolve, dirname } from 'node:path'
+import { homedir } from 'node:os'
+import { spawnSync } from 'node:child_process'
+
+export const SHORT_ID_PATTERN = /^[a-f0-9]{1,8}$/
+export const MAX_LOG_BYTES = 1024 * 1024
+export const TERMINAL_STATES = new Set(['stopped', 'completed', 'failed', 'removed'])
+const TERMINAL_FIELDS = ['sessionId', 'id', 'cwd', 'createdAt', 'updatedAt', 'state', 'argv', 'logPath']
+const queue = new Map()
+
+export function fleetHome(env = process.env) {
+  const root = env.CLAUDE_CONFIG_DIR || join(env.HOME || homedir(), '.claude')
+  return join(resolve(root), 'background')
+}
+export function fleetSocket(env = process.env) {
+  const root = resolve(env.CLAUDE_CONFIG_DIR || join(env.HOME || homedir(), '.claude'))
+  const digest = createHash('sha256').update(root).digest('hex').slice(0, 12)
+  if (process.platform === 'win32') return '\\\\.\\pipe\\claude-bg-' + digest
+  return join(fleetHome(env), 'control.sock')
+}
+export function sessionPath(id, env = process.env) {
+  if (!/^[a-f0-9]{8}$/.test(id)) throw new Error('Invalid background session id')
+  return join(fleetHome(env), 'jobs', id + '.json')
+}
+export function isAlive(pid) {
+  if (!Number.isSafeInteger(pid) || pid < 1) return false
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    if (error.code === 'ESRCH') return false
+    if (error.code === 'EPERM') return true
+    throw error
+  }
+}
+function assertRecord(record) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) throw new Error('Invalid session record')
+  for (const field of TERMINAL_FIELDS) if (record[field] === undefined) throw new Error('Missing session field: ' + field)
+  if (!/^[a-f0-9]{8}$/.test(record.id) || typeof record.sessionId !== 'string' ||
+      !Array.isArray(record.argv) || !record.argv.every(a => typeof a === 'string') ||
+      typeof record.cwd !== 'string' || typeof record.logPath !== 'string') throw new Error('Invalid background session record')
+  return record
+}
+export function createSessionRecord({ id = randomUUID().slice(0, 8), sessionId = randomUUID(), argv, cwd, name, agent, model, env = process.env }) {
+  const now = new Date().toISOString()
+  return assertRecord({
+    id, sessionId, argv: [...argv], cwd: resolve(cwd), name: name || null,
+    agent: agent || null, model: model || null,
+    logPath: join(fleetHome(env), 'logs', id + '.log'),
+    state: 'starting', detail: '', createdAt: now, updatedAt: now, pid: null,
+    exitCode: null, worktreePath: null, startedAt: now,
+  })
+}
+export async function prepareFleet(env = process.env) {
+  const root = fleetHome(env)
+  await mkdir(join(root, 'jobs'), { recursive: true, mode: 0o700 })
+  await mkdir(join(root, 'logs'), { recursive: true, mode: 0o700 })
+  return root
+}
+export async function readSession(id, env = process.env) {
+  try { return assertRecord(JSON.parse(await readFile(sessionPath(id, env), 'utf8'))) }
+  catch (error) {
+    if (error.code === 'ENOENT') return null
+    throw error
+  }
+}
+async function serialized(id, work) {
+  const previous = queue.get(id) || Promise.resolve()
+  const next = previous.catch(() => {}).then(work)
+  queue.set(id, next)
+  try { return await next }
+  finally { if (queue.get(id) === next) queue.delete(id) }
+}
+export async function saveSession(record, env = process.env) {
+  assertRecord(record)
+  await prepareFleet(env)
+  return serialized(record.id, async () => {
+    const dest = sessionPath(record.id, env)
+    const temp = dest + '.' + process.pid + '.' + randomUUID() + '.tmp'
+    const handle = await open(temp, 'wx', 0o600)
+    try {
+      await handle.writeFile(JSON.stringify(record, null, 2) + '\n')
+      await handle.sync()
+    } finally { await handle.close() }
+    try { await rename(temp, dest) }
+    catch (error) { await unlink(temp); throw error }
+    return record
+  })
+}
+export async function editSession(id, patch, env = process.env) {
+  return serialized(id, async () => {
+    const current = await readSession(id, env)
+    if (!current) return null
+    const updated = assertRecord({ ...current, ...patch, id, updatedAt: new Date().toISOString() })
+    const dest = sessionPath(id, env)
+    const tmp = dest + '.' + randomUUID() + '.tmp'
+    const handle = await open(tmp, 'wx', 0o600)
+    try { await handle.writeFile(JSON.stringify(updated, null, 2) + '\n'); await handle.sync() }
+    finally { await handle.close() }
+    try { await rename(tmp, dest) }
+    catch (error) { await unlink(tmp); throw error }
+    return updated
+  })
+}
+export async function deleteSession(id, env = process.env) {
+  const file = sessionPath(id, env)
+  try { await unlink(file); return true }
+  catch (error) { if (error.code === 'ENOENT') return false; throw error }
+}
+export async function listSessions({ all = false, cwd, env = process.env } = {}) {
+  const root = join(fleetHome(env), 'jobs')
+  let names
+  try { names = await readdir(root) }
+  catch (error) { if (error.code === 'ENOENT') return []; throw error }
+  const jobs = []
+  for (const name of names.sort()) {
+    if (!/^[a-f0-9]{8}\.json$/.test(name)) continue
+    const job = await readSession(name.slice(0, 8), env)
+    if (!job) continue
+    const running = !TERMINAL_STATES.has(job.state) && isAlive(job.pid)
+    const state = !running && !TERMINAL_STATES.has(job.state) ? 'stopped' : job.state
+    if (!all && TERMINAL_STATES.has(state)) continue
+    if (cwd && resolve(job.cwd) !== resolve(cwd)) continue
+    jobs.push({ ...job, state, running })
+  }
+  return jobs.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+export function matchSession(jobs, query, { usage = 'id', name = true } = {}) {
+  if (!query || typeof query !== 'string') throw new Error('Usage: claude ' + usage)
+  const idMatches = jobs.filter(j => j.id.startsWith(query.toLowerCase()) || j.sessionId === query)
+  if (idMatches.length === 1) return idMatches[0]
+  if (idMatches.length > 1) throw new Error("Ambiguous prefix '" + query + "', matches: " + idMatches.map(x => x.id).join(', '))
+  const named = name ? jobs.filter(j => j.name && j.name.toLowerCase().includes(query.toLowerCase())) : []
+  if (named.length === 1) return named[0]
+  if (named.length > 1) throw new Error("Ambiguous prefix '" + query + "', matches: " + named.map(x => x.id).join(', '))
+  throw new Error("No job matching '" + query + "'. Run 'claude agents' to list running sessions.")
+}
+export async function readTail(file, maxBytes = MAX_LOG_BYTES) {
+  const fileSize = (await stat(file)).size
+  const fh = await open(file, 'r')
+  try {
+    const count = Math.min(maxBytes, fileSize)
+    const buf = Buffer.alloc(count)
+    await fh.read(buf, 0, count, fileSize - count)
+    return buf.toString('utf8')
+  } finally { await fh.close() }
+}
+export function stripUnsafeTerminal(text) {
+  return text.replace(/\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g, '')
+    .replace(/\u001bP[\s\S]*?\u001b\\/g, '')
+    .replace(/\u001b\[[0-?]*[ -/]*[a-zA-Z]/g, '')
+    .replace(/[\u0000-\u0008\u000b-\u001a\u001c-\u001f\u007f]/g, '')
+}
+export function worktreeSafety(worktreePath) {
+  if (!worktreePath) return { ok: true, path: null }
+  const worktree = resolve(worktreePath)
+  const status = spawnSync('git', ['-C', worktree, 'status', '--porcelain', '--untracked-files=all'], { encoding: 'utf8', timeout: 8000 })
+  if (status.error || status.status !== 0) throw new Error('Cannot inspect worktree: ' + (status.stderr || status.error?.message))
+  if (status.stdout.trim()) return { ok: false, reason: 'worktree contains uncommitted changes', path: worktree }
+  const upstream = spawnSync('git', ['-C', worktree, 'rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{upstream}'], { encoding: 'utf8', timeout: 8000 })
+  if (upstream.status !== 0) return { ok: false, reason: 'worktree has no tracking upstream; unpushed work cannot be ruled out', path: worktree }
+  const commits = spawnSync('git', ['-C', worktree, 'rev-list', '--count', '@{upstream}..HEAD'], { encoding: 'utf8', timeout: 8000 })
+  if (commits.status !== 0 || Number(commits.stdout.trim()) > 0) return { ok: false, reason: 'worktree has unpushed commits', path: worktree }
+  return { ok: true, path: worktree }
+}
+export function worktreeDigest(worktreePath) {
+  return createHash('sha256').update(resolve(worktreePath)).digest('hex').slice(0, 12)
+}
+export async function removeWorktreeSafely(worktreePath, { discardUnpushed, forceRemoveWorktree } = {}) {
+  if (!worktreePath) return
+  const safety = worktreeSafety(worktreePath)
+  const digest = worktreeDigest(worktreePath)
+  if (!safety.ok) {
+    if (!discardUnpushed || discardUnpushed.worktreeDigest !== digest)
+      throw new Error(safety.reason + '; no deletion performed. Worktree id: ' + digest)
+    const head = spawnSync('git', ['-C', worktreePath, 'rev-parse', 'HEAD'], { encoding: 'utf8', timeout: 8000 })
+    if (head.status !== 0 || head.stdout.trim().toLowerCase() !== discardUnpushed.headSha.toLowerCase())
+      throw new Error('Worktree HEAD changed since approval; no deletion performed')
+  }
+  const args = ['-C', dirname(worktreePath), 'worktree', 'remove', worktreePath]
+  if (!safety.ok || forceRemoveWorktree) {
+    if (forceRemoveWorktree !== digest && !discardUnpushed) throw new Error('Invalid worktree confirmation digest')
+    args.push('--force')
+  }
+  const removal = spawnSync('git', args, { encoding: 'utf8', timeout: 20000 })
+  if (removal.status !== 0) throw new Error('Could not remove worktree: ' + removal.stderr)
+}
