@@ -71,7 +71,9 @@ const VALUE_FLAGS = new Set([
   '--plugin-dir', '--permission-mode', '--effort', '--session-id', '--resume',
   '--system-prompt', '--append-system-prompt', '--output-format', '--name',
   '--add-dir', '--allowedTools', '--allowed-tools', '--disallowedTools',
-  '--disallowed-tools', '--tools',
+  '--disallowed-tools', '--tools', '--agents', '--plugin-url', '--debug-file',
+  '--file', '--project-config-root', '--system-prompt-file',
+  '--append-system-prompt-file', '--resume-session-at',
 ])
 function verbAt(argv) {
   let skipValue = false
@@ -346,6 +348,40 @@ function argValue(args, flag) {
   const index = args.findIndex(a => a === flag || a.startsWith(`${flag}=`))
   return index === -1 ? undefined : args[index].includes('=') ? args[index].slice(flag.length + 1) : args[index + 1]
 }
+export function activeBackgroundFlags(args) {
+  const found = new Set()
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index]
+    if (arg === '--') break
+    if (VALUE_FLAGS.has(arg)) { index++; continue }
+    if (arg.startsWith('--') && arg.includes('=') &&
+        VALUE_FLAGS.has(arg.slice(0, arg.indexOf('=')))) continue
+    if (arg.startsWith('-')) found.add(arg)
+  }
+  return found
+}
+
+export function validateBackgroundCliArgs(args) {
+  const flags = activeBackgroundFlags(args)
+  if (flags.has('--print') || flags.has('-p') ||
+      [...flags].some(flag => flag.startsWith('--print=') || /^-[^-]*p/.test(flag))) {
+    return "--bg and --print conflict: --print never starts the interactive session that `claude agents` attaches to, so the job would be unattachable. The prompt is the positional — drop --print: `claude --bg '<task>'`."
+  }
+  if ([...flags].some(flag => flag === '--project-config-root' || flag.startsWith('--project-config-root='))) {
+    return 'Background sessions are unavailable with --project-config-root. Run the task in a foreground session instead.'
+  }
+  const agents = argValue(args, '--agents')
+  if (agents !== undefined) {
+    let parsed
+    try { parsed = JSON.parse(agents) }
+    catch { return "--bg can't read --agents from a file: a background session is interactive, and the file form works only with --print. Pass the agents as inline JSON." }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return '--bg requires --agents to be an inline JSON object.'
+    }
+  }
+  return null
+}
+
 export async function interceptBackgroundCli(args) {
   if (args[0] === '--internal-bg-supervisor') {
     await runBackgroundSupervisor()
@@ -353,7 +389,8 @@ export async function interceptBackgroundCli(args) {
   }
   const at = verbAt(args)
   const verb = at === -1 ? null : args[at]
-  const bg = args.some(a => a === '--bg' || a === '--background')
+  const flags = activeBackgroundFlags(args)
+  const bg = flags.has('--bg') || flags.has('--background')
   if (!verb && !bg) return false
   if (verb === 'daemon') { await daemon(args.slice(at + 1)); return true }
   if (verb === 'agents') {
@@ -363,7 +400,9 @@ export async function interceptBackgroundCli(args) {
     return true
   }
   if (bg) {
-    if (args.includes('--desktop')) throw new Error("--desktop cannot be combined with --bg")
+    if (flags.has('--desktop')) throw new Error('--desktop cannot be combined with --bg')
+    const invalid = validateBackgroundCliArgs(args)
+    if (invalid) throw new Error(invalid)
     await authForBackground(args)
     const explicitName = argValue(args, '--name')
     const response = await ask({
