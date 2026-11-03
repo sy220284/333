@@ -4,7 +4,6 @@ import { SubAgentProvider } from 'src/components/CtrlOToExpand.js';
 import { FallbackToolUseErrorMessage } from 'src/components/FallbackToolUseErrorMessage.js';
 import { FallbackToolUseRejectedMessage } from 'src/components/FallbackToolUseRejectedMessage.js';
 import type { z } from 'zod/v4';
-import type { Command } from '../../commands.js';
 import { Byline } from '../../components/design-system/Byline.js';
 import { Message as MessageComponent } from '../../components/Message.js';
 import { MessageResponse } from '../../components/MessageResponse.js';
@@ -46,11 +45,7 @@ export function renderToolResultMessage(output: Output): React.ReactNode {
 }
 export function renderToolUseMessage({
   skill
-}: Partial<Input>, {
-  commands
-}: {
-  commands?: Command[];
-}): React.ReactNode {
+}: Partial<Input>): React.ReactNode {
   if (!skill) {
     return null;
   }
