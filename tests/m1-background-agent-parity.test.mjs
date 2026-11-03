@@ -58,6 +58,15 @@ test('2.1.310 background IDs, bounded tail and terminal sanitization match the d
     await writeFile(logPath, 'x'.repeat(MAX_LOG_BYTES + 100))
     const tail = await readTail(logPath)
     assert.equal(Buffer.byteLength(tail), MAX_LOG_BYTES)
+    // A log tail must stay bounded and use the same opened file descriptor
+    // for metadata and all reads, including while the pathname can rotate.
+    assert.equal(await readTail(logPath, 3), 'xxx')
+    assert.equal(await readTail(logPath, 0), '')
+    await assert.rejects(readTail(logPath, MAX_LOG_BYTES + 1), RangeError)
+    await assert.rejects(readTail(logPath, -1), RangeError)
+    if (process.platform !== 'win32') {
+      await assert.rejects(readTail(tmp), /regular file/)
+    }
     if (process.platform !== 'win32') {
       assert.equal((await stat(join(fleetHome(env), 'jobs'))).mode & 0o077, 0)
     }
