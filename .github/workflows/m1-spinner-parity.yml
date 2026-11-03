@@ -83,6 +83,9 @@ jobs:
             --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
             | tee "${RUNNER_TEMP}/m1-spinner-parity.json"
+      - name: 安装固定版本终端画面解码器
+        if: steps.relevant.outputs.run == 'true'
+        run: python3 -m pip install --disable-pip-version-check pyte==0.8.2
       - name: 官方与重建版同场景流式、工具、重试终端帧对照
         if: steps.relevant.outputs.run == 'true'
         run: |
