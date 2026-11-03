@@ -72,7 +72,7 @@ def terminal_anchors(screen, answer_marker, scenario):
         'user': lambda row: PROMPT in row and '❯' in row,
         'assistant': lambda row: answer_marker in row and '●' in row,
         'tool': lambda row: 'Read 1 file' in row,
-        'completed': lambda row: bool(re.search(r'\\bfor\\s+\\d+(?:\\.\\d+)?s\\b', row)),
+        'completed': lambda row: bool(re.search(r'\bfor\s+\d+(?:\.\d+)?s\b', row)),
     }
     result = {}
     for name, predicate in definitions.items():
@@ -119,7 +119,7 @@ def normalize_retry_status_frame(sample):
     for frame in sample['frames']:
         for line in frame['screen_rows']:
             if 'Retrying in' in line:
-                return re.sub(r'Retrying in \\d+s', 'Retrying in <seconds>', line.strip())
+                return re.sub(r'Retrying in \d+s', 'Retrying in <seconds>', line.strip())
     return None
 
 
