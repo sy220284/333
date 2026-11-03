@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { isAbsolute, resolve, sep } from 'node:path'
+import { resolve } from 'node:path'
 import { test } from 'node:test'
 import { formatSymlinkPermissionWarning } from '../src/components/permissions/FilePermissionDialog/symlinkPermissionWarning.ts'
 
