@@ -170,14 +170,31 @@ export function matchSession(jobs, query, { usage = 'id', name = true } = {}) {
   throw new Error(`No job matching '${query}'. Run 'claude agents' to list running sessions.`)
 }
 export async function readTail(file, maxBytes = MAX_LOG_BYTES) {
-  const fileSize = (await stat(file)).size
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 0 || maxBytes > MAX_LOG_BYTES) {
+    throw new RangeError(`Log tail must be between 0 and ${MAX_LOG_BYTES} bytes`)
+  }
+  // Open first, then inspect and read through the SAME descriptor: a rotated
+  // or replaced log pathname cannot change the file we actually read.
   const fh = await open(file, 'r')
   try {
-    const count = Math.min(maxBytes, fileSize)
-    const buf = Buffer.alloc(count)
-    await fh.read(buf, 0, count, fileSize - count)
-    return buf.toString('utf8')
-  } finally { await fh.close() }
+    const info = await fh.stat()
+    if (!info.isFile()) throw new Error('Background session log is not a regular file')
+    const count = Math.min(maxBytes, info.size)
+    if (count === 0) return ''
+    const buffer = Buffer.alloc(count)
+    const offset = info.size - count
+    let read = 0
+    // FileHandle.read may return fewer bytes than requested, especially while
+    // another process truncates or appends to the log.
+    while (read < count) {
+      const { bytesRead } = await fh.read(buffer, read, count - read, offset + read)
+      if (bytesRead === 0) break
+      read += bytesRead
+    }
+    return buffer.subarray(0, read).toString('utf8')
+  } finally {
+    await fh.close()
+  }
 }
 export function stripUnsafeTerminal(text) {
   // Keep terminal cursor/SGR sequences while removing OSC/DCS payloads.
