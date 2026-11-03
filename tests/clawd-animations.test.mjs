@@ -23,8 +23,8 @@ function assertFrames(frames) {
     assertValidPose(frame.pose)
     assert.ok(Number.isSafeInteger(frame.offset), 'animation offsets may be signed, but must remain integral')
     if (frame.x !== undefined) assert.ok(Number.isSafeInteger(frame.x), 'invalid x shift')
-    if (frame.poof !== undefined) assert.equal(typeof frame.poof, 'string')
-    if (frame.shadow !== undefined) assert.equal(typeof frame.shadow, 'string')
+    if (frame.poof !== undefined) assert.ok(['dot', 'wave'].includes(frame.poof), 'invalid poof style')
+    if (frame.shadow !== undefined) assert.ok(['wide', 'narrow'].includes(frame.shadow), 'invalid shadow style')
   }
 }
 
@@ -36,8 +36,9 @@ test('最终版动画资源结构完整，所有帧与展示元素存在实际�
       assert.equal(typeof arms[part], 'string', `missing arm glyph ${part}`)
     }
   }
-  for (const eyes of Object.values(clawdAppearance.eyes)) {
+  for (const [name, eyes] of Object.entries(clawdAppearance.eyes)) {
     assert.ok(eyes.length > 0 && eyes.every(x => typeof x.glyphs === 'string'))
+    assert.equal(typeof clawdAppearance.appleEyes[name], 'string', `Apple Terminal missing eyes: ${name}`)
   }
   for (const poses of Object.values(clawdAppearance.facing)) {
     assert.ok(poses.length > 0)
