@@ -1,5 +1,5 @@
 import { randomUUID, createHash } from 'node:crypto'
-import { open, readFile, rename, readdir, mkdir, unlink, stat } from 'node:fs/promises'
+import { open, readFile, rename, readdir, mkdir, unlink } from 'node:fs/promises'
 import { join, resolve, dirname } from 'node:path'
 import { homedir, tmpdir } from 'node:os'
 import { spawnSync } from 'node:child_process'
