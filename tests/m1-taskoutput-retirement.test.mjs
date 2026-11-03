@@ -25,3 +25,10 @@ test('live mock model API test asserts TaskOutput is absent on both native and r
   assert.match(testSource,/exposed\.includes\('TaskOutput'\)/)
   assert.match(testSource,/CLAUDE_2310_X64/)
 })
+
+test('background notifications never direct the model to the retired output tool',()=>{
+  const messages=source('src/utils/messages.ts')
+  assert.doesNotMatch(messages,/TASK_OUTPUT_TOOL_NAME/)
+  assert.match(messages,/Send it a message with \$\{SEND_MESSAGE_TOOL_NAME\} to retrieve its result/)
+  assert.match(messages,/Read the output file to retrieve the result/)
+})

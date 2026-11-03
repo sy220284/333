@@ -214,7 +214,6 @@ export async function enablePlugin(
         message: result.message,
       })}\n`)
     } else {
-      // biome-ignore lint/suspicious/noConsole:: CLI human-readable output
       console.log(`${figures.tick} ${result.message}`)
     }
 

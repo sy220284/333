@@ -116,7 +116,7 @@ test('api-version opens the bundled 2.1.310 migration guide through the actual R
     // removing the fixture; do not swallow failures or disable the test.
     if (process.platform === 'win32' && finishedCliProcessIds.length) {
       const script = [
-        '$ids = @(' + finishedCliProcessIds.join(',') + ');',
+        `$ids = @(${finishedCliProcessIds.join(',')});`,
         'Get-CimInstance Win32_Process |',
         'Where-Object { $ids -contains $_.ParentProcessId } |',
         'Select-Object ProcessId, ParentProcessId, Name | ConvertTo-Json -Compress',
