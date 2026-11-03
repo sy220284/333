@@ -2,7 +2,6 @@ import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import { join } from 'node:path'
 import type { ToolUseContext } from '../Tool.js'
 import type { Command } from '../types/command.js'
-import { logForDebugging } from '../utils/debug.js'
 import { getBundledSkillsRoot } from '../utils/permissions/filesystem.js'
 import type { HooksSettings } from '../utils/settings/types.js'
 import { extractBundleAtomically } from './bundledFiles.mjs'
@@ -61,25 +60,21 @@ export function registerBundledSkill(definition: BundledSkillDefinition): void {
     // Closure-local memoization: extract once per process.
     // Memoize the promise (not the result) so concurrent callers await
     // the same extraction instead of racing into separate writes.
-    let extractionPromise: Promise<string | null> | undefined
+    let extractionPromise: Promise<string> | undefined
     const inner = definition.getPromptForCommand
     getPromptForCommand = async (args, ctx) => {
       extractionPromise ??= (async () => {
         const resolvedFiles = typeof files === 'function' ? await files() : files
         return extractBundledSkillFiles(definition.name, resolvedFiles)
       })()
-      let extractedDir: string | null
+      let extractedDir: string
       try {
         extractedDir = await extractionPromise
       } catch (error) {
         extractionPromise = undefined
         throw error
       }
-      // A transient write failure must not prevent a later invocation from
-      // trying again. Concurrent callers still share the same in-flight work.
-      if (extractedDir === null) extractionPromise = undefined
-      const blocks = await inner(args, ctx, extractedDir ?? undefined)
-      if (extractedDir === null) return blocks
+      const blocks = await inner(args, ctx, extractedDir)
       return prependBaseDir(blocks, extractedDir)
     }
   }
@@ -137,23 +132,16 @@ export function getBundledSkillExtractDir(skillName: string): string {
  * Extract a bundled skill's reference files to disk so the model can
  * Read/Grep them on demand. Called lazily on first skill invocation.
  *
- * Returns the directory written to, or null if write failed (skill
- * continues to work, just without the base-directory prefix).
+ * Returns the complete published directory. A failed extraction is an error:
+ * the prompt must never silently run without the files it references.
  */
 async function extractBundledSkillFiles(
   skillName: string,
   files: Record<string, string>,
-): Promise<string | null> {
+): Promise<string> {
   const dir = getBundledSkillExtractDir(skillName)
-  try {
-    await extractBundleAtomically(dir, files)
-    return dir
-  } catch (e) {
-    logForDebugging(
-      `Failed to extract bundled skill '${skillName}' to ${dir}: ${e instanceof Error ? e.message : String(e)}`,
-    )
-    return null
-  }
+  await extractBundleAtomically(dir, files)
+  return dir
 }
 
 function prependBaseDir(
