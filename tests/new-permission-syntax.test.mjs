@@ -24,6 +24,23 @@ test('current wildcard permissions parse and suggest correctly', () => {
   assert.equal(hasWildcards('npm *'), true)
   assert.equal(hasWildcards('npm \\*'), false)
 })
+test('new wildcard matching enforces command boundaries', () => {
+  const start = shell.indexOf('export function matchWildcardPattern(')
+  const end = shell.indexOf('\n}', start) + 2
+  assert.ok(start >= 0 && end > start)
+  const sharedConstants = shell.slice(
+    shell.indexOf('const ESCAPED_STAR_PLACEHOLDER'),
+    shell.indexOf('/**\n * Parsed permission rule')
+  )
+  const wildcard = new Function(
+    `${sharedConstants}\n${shell.slice(start, end).replace('export ', '')}\nreturn matchWildcardPattern`
+  )()
+  assert.equal(wildcard('npm *', 'npm install'), true)
+  assert.equal(wildcard('npm *', 'npm'), true)
+  assert.equal(wildcard('npm *', 'npm-evil install'), false)
+  assert.equal(wildcard('npm *', 'rm -rf /'), false)
+})
+
 test('retired colon-prefix permissions fail explicitly', () => {
   assert.throws(() => parsePermissionRule('npm:*'), error => error.message.includes('Old :* prefix permissions'))
   const validation = readFileSync(new URL('utils/settings/permissionValidation.ts', root), 'utf8')

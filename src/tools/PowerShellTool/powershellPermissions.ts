@@ -178,13 +178,10 @@ function filterRulesByContentsMatchingInput(
   function strEquals(a: string, b: string): boolean {
     return a.toLowerCase() === b.toLowerCase()
   }
-  function strStartsWith(str: string, prefix: string): boolean {
-    return str.toLowerCase().startsWith(prefix.toLowerCase())
-  }
   // SECURITY: stripModulePrefix on RULE names widens the
   // secondary-canonical match — a deny rule `Module\Remove-Item *` blocking
   // `rm` is the intent (fail-safe over-match), but an allow rule
-  // `ModuleA\Get-Thing:*` also matching `ModuleB\Get-Thing` is fail-OPEN.
+  // `ModuleA\Get-Thing *` also matching `ModuleB\Get-Thing` is fail-OPEN.
   // Deny/ask over-match is fine; allow must never over-match.
   function stripModulePrefixForRule(name: string): string {
     if (behavior === 'allow') {

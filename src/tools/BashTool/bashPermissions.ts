@@ -164,7 +164,7 @@ export function getSimpleCommandPrefix(command: string): string | null {
   // Skip env var assignments (VAR=value) at the start, but only if they are
   // in SAFE_ENV_VARS (or ANT_ONLY_SAFE_ENV_VARS for ant users). If a non-safe
   // env var is encountered, return null to fall back to exact match. This
-  // prevents generating prefix rules like Bash(npm run:*) that can never match
+  // prevents generating prefix rules like Bash(npm run *) that can never match
   // at allow-rule check time, because stripSafeWrappers only strips safe vars.
   let i = 0
   while (i < tokens.length && ENV_VAR_ASSIGN_RE.test(tokens[i]!)) {
@@ -208,7 +208,7 @@ const BARE_SHELL_PREFIXES = new Set([
   'env',
   'xargs',
   // SECURITY: checkSemantics (ast.ts) strips these wrappers to check the
-  // wrapped command. Suggesting `Bash(nice:*)` would be ≈ `Bash(*)` — users
+  // wrapped command. Suggesting `Bash(nice *)` would be ≈ `Bash(*)` — users
   // would add it after a prompt, then `nice rm -rf /` passes semantics while
   // deny/cd+git gates see 'nice' (SAFE_WRAPPER_PATTERNS below didn't strip
   // bare `nice` until this fix). Block these from ever being suggested.
@@ -232,11 +232,11 @@ const BARE_SHELL_PREFIXES = new Set([
  * editable field verbatim.
  *
  * Deliberately not used by suggestionForExactCommand: a backend-suggested
- * `Bash(rm:*)` is too broad to auto-generate, but as an editable starting
+ * `Bash(rm *)` is too broad to auto-generate, but as an editable starting
  * point it's what users expect (Slack C07VBSHV7EV/p1772670433193449).
  *
  * Reuses the same SAFE_ENV_VARS gate as getSimpleCommandPrefix — a rule like
- * `Bash(python3:*)` can never match `RUN=/path python3 ...` at check time
+ * `Bash(python3 *)` can never match `RUN=/path python3 ...` at check time
  * because stripSafeWrappers won't strip RUN.
  */
 export function getFirstWordPrefix(command: string): string | null {
@@ -340,7 +340,7 @@ function suggestionForPrefix(prefix: string): PermissionUpdate[] {
 }
 
 /**
- * Extract prefix from legacy :* syntax (e.g., "npm:*" -> "npm")
+ * Shell permission rules use exact or wildcard command patterns.
  * Delegates to shared implementation.
  */
 /**
@@ -431,7 +431,7 @@ const SAFE_ENV_VARS = new Set([
  * These are only enabled when USER_TYPE === 'ant'.
  *
  * SECURITY: These env vars are stripped before permission-rule matching, which
- * means `DOCKER_HOST=tcp://evil.com docker ps` matches a `Bash(docker ps:*)`
+ * means `DOCKER_HOST=tcp://evil.com docker ps` matches a `Bash(docker ps *)`
  * rule after stripping. This is INTENTIONALLY ANT-ONLY (gated at line ~380)
  * and MUST NEVER ship to external users. DOCKER_HOST redirects the Docker
  * daemon endpoint — stripping it defeats prefix-based permission restrictions
@@ -534,7 +534,7 @@ export function stripSafeWrappers(command: string): string {
     // SECURITY: flag VALUES use allowlist [A-Za-z0-9_.+-] (signals are
     // TERM/KILL/9, durations are 5/5s/10.5). Previously [^ \t]+ matched
     // $ ( ) ` | ; & — `timeout -k$(id) 10 ls` stripped to `ls`, matched
-    // Bash(ls:*), while bash expanded $(id) during word splitting BEFORE
+    // Bash(ls *), while bash expanded $(id) during word splitting BEFORE
     // timeout ran. Contrast ENV_VAR_PATTERN below which already allowlists.
     /^timeout[ \t]+(?:(?:--(?:foreground|preserve-status|verbose)|--(?:kill-after|signal)=[A-Za-z0-9_.+-]+|--(?:kill-after|signal)[ \t]+[A-Za-z0-9_.+-]+|-v|-[ks][ \t]+[A-Za-z0-9_.+-]+|-[ks][A-Za-z0-9_.+-]+)[ \t]+)*(?:--[ \t]+)?\d+(?:\.\d+)?[smhd]?[ \t]+/,
     /^time[ \t]+(?:--[ \t]+)?/,
@@ -543,7 +543,7 @@ export function stripSafeWrappers(command: string): string {
     // Previously this pattern REQUIRED `-n N`; checkSemantics already handled
     // bare `nice` and legacy `-N`. Asymmetry meant checkSemantics exposed the
     // wrapped command to semantic checks but deny-rule matching and the cd+git
-    // gate saw the wrapper name. `nice rm -rf /` with Bash(rm:*) deny became
+    // gate saw the wrapper name. `nice rm -rf /` with Bash(rm *) deny became
     // ask instead of deny; `cd evil && nice git status` skipped the bare-repo
     // RCE gate. PR #21503 fixed stripWrappersFromArgv; this was missed.
     // Now matches: `nice cmd`, `nice -n N cmd`, `nice -N cmd` (all forms
@@ -567,7 +567,7 @@ export function stripSafeWrappers(command: string): string {
   // SECURITY: Trailing whitespace MUST be [ \t]+ (horizontal only), NOT \s+.
   // \s matches \n/\r. If reconstructCommand emits an unquoted newline between
   // `TZ=UTC` and `echo`, \s+ would match across it and strip `TZ=UTC<NL>`,
-  // leaving `echo curl evil.com` to match Bash(echo:*). But bash treats the
+  // leaving `echo curl evil.com` to match Bash(echo *). But bash treats the
   // newline as a command separator. Defense-in-depth with needsQuoting fix.
   const ENV_VAR_PATTERN = /^([A-Za-z_][A-Za-z0-9_]*)=([A-Za-z0-9_./:-]+)[ \t]+/
 
@@ -712,7 +712,7 @@ export const BINARY_HIJACK_VARS = /^(LD_|DYLD_|PATH$)/
  * command should stay blocked even if prefixed with arbitrary env vars like
  * `FOO=bar claude`. The safe-list restriction in stripSafeWrappers is correct
  * for allow rules (prevents `DOCKER_HOST=evil docker ps` from auto-matching
- * `Bash(docker ps:*)`), but deny rules must be harder to circumvent.
+ * `Bash(docker ps *)`), but deny rules must be harder to circumvent.
  *
  * Also used for sandbox.excludedCommands matching (not a security boundary —
  * permission prompts are), with BINARY_HIJACK_VARS as a blocklist.
@@ -784,7 +784,7 @@ function filterRulesByContentsMatchingInput(
   const command = input.command.trim()
 
   // Strip output redirections for permission matching
-  // This allows rules like Bash(python:*) to match "python script.py > output.txt"
+  // This allows rules like Bash(python *) to match "python script.py > output.txt"
   // Security validation of redirection targets happens separately in checkPathConstraints
   const commandWithoutRedirections =
     extractOutputRedirections(command).commandWithoutRedirections
@@ -798,7 +798,7 @@ function filterRulesByContentsMatchingInput(
       : [commandWithoutRedirections]
 
   // Strip safe wrapper commands (timeout, time, nice, nohup) and env vars for matching
-  // This allows rules like Bash(npm install:*) to match "timeout 10 npm install foo"
+  // This allows rules like Bash(npm install *) to match "timeout 10 npm install foo"
   // or "GOOS=linux go build"
   const commandsToTry = commandsForMatching.flatMap(cmd => {
     const strippedCommand = stripSafeWrappers(cmd)
@@ -1265,12 +1265,12 @@ function checkSandboxAutoAllow(
   }
 
   // SECURITY: For compound commands, check each subcommand against deny/ask
-  // rules. Prefix rules like Bash(rm:*) won't match the full compound command
+  // rules. Prefix rules like Bash(rm *) won't match the full compound command
   // (e.g., "echo hello && rm -rf /" doesn't start with "rm"), so we must
   // check each subcommand individually.
   // IMPORTANT: Subcommand deny checks must run BEFORE full-command ask returns.
   // Otherwise a wildcard ask rule matching the full command (e.g., Bash(*echo*))
-  // would return 'ask' before a prefix deny rule on a subcommand (e.g., Bash(rm:*))
+  // would return 'ask' before a prefix deny rule on a subcommand (e.g., Bash(rm *))
   // gets checked, downgrading a deny to an ask.
   const subcommands = splitCommand(command)
   if (subcommands.length > 1) {
@@ -1392,7 +1392,7 @@ function checkEarlyExitDeny(
  * span against prefix deny rules. The per-subcommand check is needed because
  * filterRulesByContentsMatchingInput has a compound-command guard
  * (splitCommand().length > 1 → prefix rules return false) that defeats
- * `Bash(eval:*)` matching against a full pipeline like `echo foo | eval rm`.
+ * `Bash(eval *)` matching against a full pipeline like `echo foo | eval rm`.
  * Each SimpleCommand span is a single command, so the guard doesn't fire.
  *
  * Separate helper (not folded into checkEarlyExitDeny or inlined at the call
@@ -1746,7 +1746,7 @@ export async function bashToolHasPermission(
     const sem = checkSemantics(astResult.commands)
     if (sem.ok === false) {
       // Same deny-rule enforcement as the too-complex path: a user with
-      // `Bash(eval:*)` deny expects `eval "rm"` blocked, not downgraded.
+      // `Bash(eval *)` deny expects `eval "rm"` blocked, not downgraded.
       const earlyExit = checkSemanticsDeny(
         input,
         appState.toolPermissionContext,
@@ -2199,7 +2199,7 @@ export async function bashToolHasPermission(
   appState = context.getAppState() // re-compute the latest in case the user hit shift+tab
 
   // SECURITY FIX: Check Bash deny/ask rules BEFORE path constraints
-  // This ensures that explicit deny rules like Bash(ls:*) take precedence over
+  // This ensures that explicit deny rules like Bash(ls *) take precedence over
   // path constraint checks that return 'ask' for paths outside the project.
   // Without this ordering, absolute paths outside the project (e.g., ls /home)
   // would bypass deny rules because checkPathConstraints would return 'ask' first.
