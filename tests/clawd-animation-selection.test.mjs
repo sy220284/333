@@ -1,13 +1,27 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { getClickAnimationNames } from '../src/components/LogoV2/clawdAnimationSelection.ts'
+import { clickAnimationNames, clawdAnimations, clawdAppearance } from '../src/components/LogoV2/clawdAnimationData.mjs'
 
-test('普通终端和 Apple Terminal 遵循新版点击动作选择规则', () => {
-  assert.equal(getClickAnimationNames(false).length, 11)
+test('最终版点击动作按真实帧和终端绘制能力筛选', () => {
+  const terminal = getClickAnimationNames(false)
   const apple = getClickAnimationNames(true)
-  assert.equal(apple.length, 8)
-  assert.equal(apple.includes('turn'), false)
-  assert.equal(apple.includes('tap'), false)
-  assert.equal(apple.includes('skip'), false)
-  assert.equal(apple.includes('look'), true)
+  assert.ok(terminal.length > 0, 'ordinary terminals must have an animation')
+  assert.ok(apple.length > 0, 'Apple Terminal must have an animation')
+  assert.equal(new Set(terminal).size, terminal.length)
+  assert.equal(new Set(apple).size, apple.length)
+  assert.deepEqual(terminal,
+    clickAnimationNames.filter(name => (clawdAnimations[name][0]?.x ?? 0) === 0))
+  for (const name of apple) {
+    assert.ok(terminal.includes(name), `Apple-only animation missing from normal terminal: ${name}`)
+    const frames = clawdAnimations[name]
+    assert.ok(frames.length > 0)
+    assert.ok(!frames.some(frame =>
+      typeof frame.pose === 'object' && 'facing' in frame.pose),
+    `Apple Terminal cannot draw facing animation: ${name}`)
+    const pose = typeof frames[0].pose === 'string'
+      ? clawdAppearance.poses[frames[0].pose]
+      : frames[0].pose
+    assert.ok(pose.eyes !== 'open' || frames[0].offset !== 0 || (frames[0].x ?? 0) !== 0)
+  }
 })
