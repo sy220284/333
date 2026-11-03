@@ -1,5 +1,6 @@
 import { feature } from 'bun:bundle'
 import mergeWith from 'lodash-es/mergeWith.js'
+import { createHash } from 'node:crypto'
 import { dirname, join, resolve } from 'path'
 import { z } from 'zod/v4'
 import {
@@ -41,6 +42,7 @@ import {
   getSessionSettingsCache,
   resetSettingsCache,
   setCachedParsedFile,
+  setCachedSettingsFileDigest,
   setCachedSettingsForSource,
   setSessionSettingsCache,
 } from './settingsCache.js'
@@ -205,6 +207,10 @@ function parseSettingsFileUncached(path: string): {
   try {
     const { resolvedPath } = safeResolvePath(getFsImplementation(), path)
     const content = readFileSync(resolvedPath)
+    setCachedSettingsFileDigest(
+      path,
+      createHash('sha256').update(content).digest('hex'),
+    )
 
     if (content.trim() === '') {
       return { settings: {}, errors: [] }

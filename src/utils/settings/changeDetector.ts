@@ -1,10 +1,11 @@
 import chokidar, { type FSWatcher } from 'chokidar'
-import { stat } from 'fs/promises'
+import { readFile, readdir, stat } from 'fs/promises'
+import { createHash } from 'node:crypto'
 import * as platformPath from 'path'
 import { getIsRemoteMode } from '../../bootstrap/state.js'
 import { registerCleanup } from '../cleanupRegistry.js'
 import { logForDebugging } from '../debug.js'
-import { errorMessage } from '../errors.js'
+import { errorMessage, getErrnoCode } from '../errors.js'
 import {
   type ConfigChangeSource,
   executeConfigChangeHooks,
@@ -22,7 +23,8 @@ import {
   setMdmSettingsCache,
 } from './mdm/settings.js'
 import { getSettingsFilePathForSource } from './settings.js'
-import { resetSettingsCache } from './settingsCache.js'
+import { getCachedSettingsFileDigest, resetSettingsCache } from './settingsCache.js'
+import { findUnobservedStartupChanges } from './startupReconcile.mjs'
 
 /**
  * Time in milliseconds to wait for file writes to stabilize before processing.
@@ -62,6 +64,37 @@ const MDM_POLL_INTERVAL_MS = 30 * 60 * 1000 // 30 minutes
 const DELETION_GRACE_MS =
   FILE_STABILITY_THRESHOLD_MS + FILE_STABILITY_POLL_INTERVAL_MS + 200
 
+// Snapshot actual file content, not mtime: some filesystems round
+// timestamps to one second and settings may be rewritten with the same size.
+async function digestSettingsFile(path: string): Promise<string | null> {
+  try {
+    return createHash('sha256').update(await readFile(path)).digest('hex')
+  } catch (error) {
+    if (getErrnoCode(error) === 'ENOENT') return null
+    throw error
+  }
+}
+
+async function snapshotSettingsFiles(
+  settingsFiles: Set<string>,
+  dropInDir: string | null,
+  useStartupCache = false,
+): Promise<Map<string, string | null>> {
+  const paths = new Set(settingsFiles)
+  if (dropInDir) {
+    const entries = await readdir(dropInDir)
+    for (const entry of entries) {
+      if (entry.endsWith('.json')) paths.add(platformPath.join(dropInDir, entry))
+    }
+  }
+  const snapshot = new Map<string, string | null>()
+  for (const path of paths) {
+    const cached = useStartupCache ? getCachedSettingsFileDigest(path) : undefined
+    snapshot.set(path, cached ?? await digestSettingsFile(path))
+  }
+  return snapshot
+}
+
 let watcher: FSWatcher | null = null
 let mdmPollTimer: ReturnType<typeof setInterval> | null = null
 let lastMdmSnapshot: string | null = null
@@ -95,6 +128,8 @@ export async function initialize(): Promise<void> {
   const { dirs, settingsFiles, dropInDir } = await getWatchTargets()
   if (disposed) return // dispose() ran during the await
   if (dirs.length === 0) return
+  const startupSnapshot = await snapshotSettingsFiles(settingsFiles, dropInDir, true)
+  if (disposed) return
 
   logForDebugging(
     `Watching for changes in setting files ${[...settingsFiles].join(', ')}...${dropInDir ? ` and drop-in directory ${dropInDir}` : ''}`,
@@ -140,9 +175,47 @@ export async function initialize(): Promise<void> {
     atomic: true, // Handle atomic writes better
   })
 
-  watcher.on('change', handleChange)
-  watcher.on('unlink', handleDelete)
-  watcher.on('add', handleAdd)
+  // Chokidar skips initial events. Capture any writes it sees while readying,
+  // then reconcile the original parsed content against the disk at 'ready'
+  // so a user edit in the first second cannot silently disappear.
+  const observedDuringStartup = new Set<string>()
+  let initialReconciliationDone = false
+  const dispatch = (kind: 'change' | 'unlink' | 'add', path: string) => {
+    if (!initialReconciliationDone) {
+      observedDuringStartup.add(platformPath.normalize(path))
+    }
+    if (kind === 'unlink') handleDelete(path)
+    else if (kind === 'add') handleAdd(path)
+    else handleChange(path)
+  }
+  const activeWatcher = watcher
+  activeWatcher.on('change', path => dispatch('change', path))
+  activeWatcher.on('unlink', path => dispatch('unlink', path))
+  activeWatcher.on('add', path => dispatch('add', path))
+  activeWatcher.on('ready', () => {
+    void (async () => {
+      const readySnapshot = await snapshotSettingsFiles(settingsFiles, dropInDir)
+      if (disposed || watcher !== activeWatcher) return
+      const normalizedEvents = new Set(
+        [...observedDuringStartup].map(platformPath.normalize),
+      )
+      for (const change of findUnobservedStartupChanges(
+        startupSnapshot,
+        readySnapshot,
+        normalizedEvents,
+      )) {
+        if (change.kind === 'delete') handleDelete(change.path)
+        else handleChange(change.path)
+      }
+    })()
+      .catch(error => {
+        logForDebugging(`Settings startup reconciliation failed: ${errorMessage(error)}`, { level: 'error' })
+      })
+      .finally(() => {
+        initialReconciliationDone = true
+        observedDuringStartup.clear()
+      })
+  })
 }
 
 /**
