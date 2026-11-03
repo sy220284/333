@@ -28,8 +28,9 @@ function isDevMode(): boolean {
 
 /**
  * Builds a deep link URL for Claude Desktop to resume a CLI session.
- * Format: claude://resume?session={sessionId}&cwd={cwd}
- * In dev mode: claude-dev://resume?session={sessionId}&cwd={cwd}
+ * Format (2.1.310): claude://resume?session={sessionId}
+ * In dev mode: claude-dev://resume?session={sessionId}. The app resolves
+ * session identity from its stored transcript; cwd is no longer embedded.
  */
 export function buildDesktopDeepLink(sessionId: string): string {
   const protocol = isDevMode() ? 'claude-dev' : 'claude'
