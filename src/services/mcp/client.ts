@@ -133,6 +133,7 @@ import {
 import { markClaudeAiMcpConnected } from './claudeai.js'
 import { getAllMcpConfigs, getMcpReconnectBlockReason, isMcpServerDisabled } from './config.js'
 import { canRetryMcpToolAfterSessionLoss } from './reconnectGate.js'
+import { describeMcpUrlElicitationRejection } from './elicitationOutcome.js'
 import { getMcpServerHeaders } from './headersHelper.js'
 import { SdkControlClientTransport } from './SdkControlTransport.js'
 import { isMcpStdioServerConfig } from './types.js'
@@ -3043,7 +3044,11 @@ export async function callMCPToolWithUrlElicitationRetry({
             `User ${finalResult.action === 'decline' ? 'declined' : finalResult.action + 'ed'} URL elicitation ${elicitationId}`,
           )
           return {
-            content: `URL elicitation was ${finalResult.action === 'decline' ? 'declined' : finalResult.action + 'ed'} by the user. The tool "${tool}" could not complete because it requires the user to open a URL.`,
+            content: describeMcpUrlElicitationRejection(
+              tool,
+              finalResult.action,
+              handleElicitation !== undefined,
+            ),
           }
         }
 
