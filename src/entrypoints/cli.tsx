@@ -47,6 +47,22 @@ async function main(): Promise<void> {
   } = await import('../utils/startupProfiler.js');
   profileCheckpoint('cli_entry');
 
+  // Official 2.1.310 background agent fleet uses a dedicated fast path.
+  // Keep supervisor and PTY workers outside regular interactive REPL initialization.
+  const backgroundRequest = args.includes('--bg') || args.includes('--background') ||
+    args[0] === '--internal-bg-supervisor' ||
+    args.some(arg => ['agents', 'attach', 'logs', 'stop', 'kill', 'respawn', 'rm', 'daemon'].includes(arg));
+  if (backgroundRequest) {
+    const { interceptBackgroundCli } = await import('../cli/background/index.mjs');
+    try {
+      if (await interceptBackgroundCli(args)) return;
+    } catch (error) {
+      process.stderr.write((error instanceof Error ? error.message : String(error)) + '\n');
+      process.exitCode = 1;
+      return;
+    }
+  }
+
   // Fast-path for --dump-system-prompt: output the rendered system prompt and exit.
   // Used by prompt sensitivity evals to extract the system prompt at a specific commit.
   // Ant-only: eliminated from external builds via feature flag.
