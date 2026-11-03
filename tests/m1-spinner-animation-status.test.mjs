@@ -44,6 +44,13 @@ describe('官方 2.1.310 对话状态与动画逻辑', () => {
     assert.equal(advanceAnimatedTokenCount(120, 0, 0), 120)
   })
 
+  it('短对话也会生成完成耗时记录，与官方终态一致', () => {
+    const repl = readFileSync(new URL('../src/screens/REPL.tsx', import.meta.url), 'utf8')
+    assert.match(repl, /if \(!abortController\.signal\.aborted && !proactiveActive\) \{/)
+    assert.doesNotMatch(repl, /turnDurationMs > 30000/)
+    assert.match(repl, /createTurnDurationMessage\(turnDurationMs, budgetInfo/)
+  })
+
   it('渐进思考文案按 10/20/30/45 秒的真实阈值变化', () => {
     assert.equal(getProgressiveThinkingLabel(9999), 'thinking')
     assert.equal(getProgressiveThinkingLabel(10000), 'still thinking')
