@@ -190,7 +190,10 @@ class ShellCommandImpl implements ShellCommand {
     // may resolve earlier, while tree-kill is still terminating children).
     if (process.platform !== 'win32') {
       this.#unregisterShutdownCleanup = registerCleanup(async () => {
-        if (this.#status !== 'running' && this.#status !== 'backgrounded') return
+        // The state can already be 'killed' while an OS child process is
+        // still alive. Only skip when the child itself has actually exited.
+        if (this.#childProcess.exitCode !== null ||
+            this.#childProcess.signalCode !== null) return
         this.#status = 'killed'
         try {
           const pid = this.#childProcess.pid
