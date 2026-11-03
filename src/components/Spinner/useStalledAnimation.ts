@@ -19,14 +19,16 @@ export function useStalledAnimation(
   const stalledIntensityRef = useRef(0)
   const lastSmoothTime = useRef(time)
 
-  // Any length change (including a fresh turn resetting to zero) starts a
-  // new no-token window. The target resets on !=, not only on increase.
-  if (currentResponseLength !== lastResponseLength.current) {
+  // 2.1.310's watchdog resets on actual new output; reducing the counter
+  // must not impersonate a freshly received token.
+  if (currentResponseLength > lastResponseLength.current) {
     lastTokenTime.current = time
     lastResponseLength.current = currentResponseLength
     mountTime.current = time
     stalledIntensityRef.current = 0
     lastSmoothTime.current = time
+  } else if (currentResponseLength < lastResponseLength.current) {
+    lastResponseLength.current = currentResponseLength
   }
 
   // Derive time since last token from animation clock
@@ -44,7 +46,7 @@ export function useStalledAnimation(
   // Target 2.1.310: start warning after 10s without tokens; fade over the next 10s.
   const isStalled = timeSinceLastToken > SPINNER_STALL_AFTER_MS && !hasActiveTools
   const intensity = isStalled
-    ? Math.min((timeSinceLastToken - SPINNER_STALL_AFTER_MS) / SPINNER_STALL_FADE_MS, 1) // Fade over 2 seconds
+    ? Math.min((timeSinceLastToken - SPINNER_STALL_AFTER_MS) / SPINNER_STALL_FADE_MS, 1) // Fade over the next 10 seconds
     : 0
 
   // Smooth intensity transition driven by animation frame ticks
