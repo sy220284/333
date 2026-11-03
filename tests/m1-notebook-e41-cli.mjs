@@ -126,9 +126,9 @@ const server = createServer((req, res) => {
       ].join('')
       res.writeHead(200, { 'content-type': 'text/event-stream' })
       res.end(response)
-    } catch (error) {
+    } catch {
       res.writeHead(400)
-      res.end(String(error))
+      res.end('Invalid local notebook fixture request')
     }
   })
 })
