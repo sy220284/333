@@ -112,7 +112,7 @@ export const ThinkingConfigSchema = lazySchema(() =>
 
 export const McpStdioServerConfigSchema = lazySchema(() =>
   z.object({
-    type: z.literal('stdio').optional(), // Optional for backwards compatibility
+    type: z.literal('stdio'),
     command: z.string(),
     args: z.array(z.string()).optional(),
     env: z.record(z.string(), z.string()).optional(),

@@ -27,7 +27,7 @@ export type Transport = z.infer<ReturnType<typeof TransportSchema>>
 
 export const McpStdioServerConfigSchema = lazySchema(() =>
   z.object({
-    type: z.literal('stdio').optional(), // Optional for backwards compatibility
+    type: z.literal('stdio'),
     command: z.string().min(1, 'Command cannot be empty'),
     args: z.array(z.string()).default([]),
     env: z.record(z.string(), z.string()).optional(),
@@ -161,15 +161,15 @@ export type McpClaudeAIProxyServerConfig = z.infer<
 export type McpServerConfig = z.infer<ReturnType<typeof McpServerConfigSchema>>
 
 /**
- * Narrow an MCP server config to the stdio transport, including the legacy
- * omitted-type form. Check the actual executable contract (command string)
+ * Narrow an MCP server config to the current explicit stdio transport.
+ * Check the executable contract (command string)
  * before downstream callers read stdio-only fields.
  */
 export function isMcpStdioServerConfig(
   config: McpServerConfig,
 ): config is McpStdioServerConfig {
   return (
-    (config.type === undefined || config.type === 'stdio') &&
+    config.type === 'stdio' &&
     'command' in config &&
     typeof config.command === 'string'
   )

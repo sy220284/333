@@ -137,7 +137,12 @@ export async function readClaudeDesktopMcpServers(): Promise<
         continue
       }
 
-      const result = McpStdioServerConfigSchema().safeParse(serverConfig)
+      // Claude Desktop's external file format omits the transport discriminator.
+      // Convert it at the import boundary; the internal registry is strict.
+      const result = McpStdioServerConfigSchema().safeParse({
+        type: 'stdio',
+        ...serverConfig,
+      })
 
       if (result.success) {
         servers[name] = result.data
