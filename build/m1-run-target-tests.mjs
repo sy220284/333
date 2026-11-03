@@ -8,7 +8,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const RELEASE_LEDGER = 'docs/upgrade/m1-evidence/2.1.311-2.1.317-官方逐条变更与验收台账.json'
+const TARGET_FILE = 'docs/upgrade/m1-evidence/target-release.json'
 const TEST_FILE = /^tests\/[A-Za-z0-9_.\/-]+\.test\.(?:mjs|ts)$/
 
 export function collectImplementedReleaseTests(ledger, exists = path => existsSync(resolve(ROOT, path))) {
@@ -40,7 +40,8 @@ export function collectImplementedReleaseTests(ledger, exists = path => existsSy
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const ledger = JSON.parse(readFileSync(resolve(ROOT, RELEASE_LEDGER), 'utf8'))
+  const target = JSON.parse(readFileSync(resolve(ROOT, TARGET_FILE), 'utf8'))
+  const ledger = JSON.parse(readFileSync(resolve(ROOT, target.release_ledger), 'utf8'))
   const tests = collectImplementedReleaseTests(ledger)
   console.log(JSON.stringify({target: ledger.target_version, suites: tests}, null, 2))
   if (!process.argv.includes('--check')) {
