@@ -115,6 +115,14 @@ def compare_core_layout(official, rebuilt, scenario):
     return {'passed': not mismatches, 'missing': [], 'mismatches': mismatches}
 
 
+def normalize_retry_status_frame(sample):
+    for frame in sample['frames']:
+        for line in frame['screen_rows']:
+            if 'Retrying in' in line:
+                return re.sub(r'Retrying in \\d+s', 'Retrying in <seconds>', line.strip())
+    return None
+
+
 def compare_terminal_frames(official, rebuilt):
     """Time-align recorded terminal snapshots; never label unequal frames as equal."""
     a, b = official['frames'], rebuilt['frames']
@@ -243,9 +251,9 @@ def probe(binary, scenario):
                 else:
                     text = {'stream':STREAM_RESULT,'tool':TOOL_RESULT,'retry':RETRY_RESULT}[scene]
                     answer = stream(model, text=text)
-            if is_real and scenario == 'stream':
+            if is_real and scene == 'stream':
                 time.sleep(2.5)  # exercise the requesting spinner before first byte
-            if is_real and scenario in ('tool', 'retry') and len(calls) == 2:
+            if is_real and scene in ('tool', 'retry') and len(calls) == 2:
                 time.sleep(3.5)  # keep the post-tool/retry display visible for screen captures
             self.send_response(200)
             self.send_header('Content-Type','text/event-stream')
@@ -284,7 +292,8 @@ def probe(binary, scenario):
     started = time.monotonic()
     sent = False
     last_capture = 0.0
-    expected = {'stream':STREAM_RESULT,'tool':TOOL_RESULT,'retry':RETRY_RESULT}[scenario]
+    expected = {'stream':STREAM_RESULT,'tool':TOOL_RESULT,'retry':RETRY_RESULT}[scene]
+    answer_seen_at = None
     try:
         while time.monotonic()-started < 42 and proc.poll() is None:
             ready,_,_ = select.select([master],[],[],0.12)
@@ -314,15 +323,20 @@ def probe(binary, scenario):
             text=ANSI.sub('',output.decode('utf-8',errors='replace'))
             if sent and expected in text and request_seen.is_set():
                 # Ensure tool-use actually completed the extra request.
-                if scenario == 'tool' and len(calls) < 2:
+                if scene == 'tool' and len(calls) < 2:
                     continue
-                if scenario == 'retry' and len(calls) < 2:
+                if scene == 'retry' and len(calls) < 2:
+                    continue
+                if answer_seen_at is None:
+                    answer_seen_at = time.monotonic()
+                if ('completed' not in terminal_anchors(screen, expected, scene)
+                        and time.monotonic() - answer_seen_at < 2):
                     continue
                 break
         text=ANSI.sub('',output.decode('utf-8',errors='replace'))
         passed=(sent and expected in text and len(calls)>=
                 (2 if scene in ('tool','retry') else 1))
-        if scenario == 'tool':
+        if scene == 'tool':
             passed = passed and any(c['read_result_verified'] for c in calls)
         return {
             'scenario':scenario,'passed':passed,'request_count':len(calls),
@@ -374,10 +388,19 @@ def main():
         report['rebuilt'][scenario]=b
         visual = compare_terminal_frames(a, b)
         layout = compare_core_layout(a, b, scenario.split('-')[0])
+        retry_labels = {'official': normalize_retry_status_frame(a),
+                        'rebuilt': normalize_retry_status_frame(b)} if scenario == 'retry' else None
+        retry_label_match = retry_labels is None or (
+            retry_labels['official'] is not None and
+            retry_labels['official'] == retry_labels['rebuilt'])
+        visual_rows_differ = sum(x != y for x, y in zip(a['full_screen_rows'], b['full_screen_rows']))
         report['comparison'][scenario]={
             'both_reached_expected_end_state':a['passed'] and b['passed'],
             'core_layout':layout,
             'frame_alignment':visual,
+            'full_screen_different_rows':visual_rows_differ,
+            'retry_labels':retry_labels,
+            'retry_label_match':retry_label_match,
             'official_frame_count':a['frame_count'],
             'rebuilt_frame_count':b['frame_count'],
             'glyph_sets_equal':a['frame_glyphs']==b['frame_glyphs'],
@@ -390,7 +413,8 @@ def main():
     print(json.dumps(report['comparison'], ensure_ascii=False))
     failed = [s for s in report['comparison']
               if not (report['comparison'][s]['both_reached_expected_end_state']
-                      and report['comparison'][s]['core_layout']['passed'])]
+                      and report['comparison'][s]['core_layout']['passed']
+                      and report['comparison'][s]['retry_label_match'])]
     for scenario in failed:
         for side in ('official', 'rebuilt'):
             sample = report[side][scenario]
@@ -406,6 +430,7 @@ def main():
                 'model_request_trace': sample['model_request_trace'],
                 'last_screen_rows': sample['final_screen_rows'],
                 'terminal_tail': sample['terminal_tail'],
+                'retry_labels': report['comparison'][scenario]['retry_labels'],
                 'terminal_anchors': sample['terminal_anchors'],
                 'core_layout': report['comparison'][scenario]['core_layout'],
             }, ensure_ascii=False))
