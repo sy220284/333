@@ -37,3 +37,13 @@ export function collectPreservedReadFilePaths(messages, readToolName, normalizeP
   }
   return paths
 }
+
+/** A compaction marker or failed Read cannot replace actual file bytes. */
+export function hasFullReadResultContent(result, clearedMarker, persistedPrefix, provenancePrefix) {
+  if (result.is_error === true) return false
+  if (typeof result.content !== 'string') return true
+  const content = result.content.startsWith(provenancePrefix)
+    ? result.content.slice(provenancePrefix.length)
+    : result.content
+  return content !== clearedMarker && !content.startsWith(persistedPrefix)
+}

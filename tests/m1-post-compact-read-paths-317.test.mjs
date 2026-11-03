@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { collectPreservedReadFilePaths } from '../src/services/compact/preservedReadPaths.mjs'
+import { collectPreservedReadFilePaths, hasFullReadResultContent } from '../src/services/compact/preservedReadPaths.mjs'
 
 const normalize = path => path.startsWith('/') ? path : '/repo/' + path
 const read = (id, file_path) => ({
@@ -59,8 +59,22 @@ test('2.1.317 compact: cleared and persisted pointers are not full Read results'
   assert.equal(check(provenance + cleared).size, 0)
   assert.equal(check(persisted).size, 0)
   assert.equal(check(provenance + persisted).size, 0)
+  assert.equal(hasFullReadResultContent(
+    result('r', provenance + cleared).message.content[0],
+    cleared, '<persisted-output>', provenance,
+  ), false)
+  assert.equal(hasFullReadResultContent(
+    result('r', 'full file text').message.content[0],
+    cleared, '<persisted-output>', provenance,
+  ), true)
   assert.equal(check('full file text').size, 1)
   assert.equal(check('').size, 1)
+})
+
+test('2.1.317 compact: transcript reconstruction shares the Read result guard', () => {
+  const source = readFileSync(new URL('../src/utils/queryHelpers.ts', import.meta.url), 'utf8')
+  assert.doesNotMatch(source, /FILE_UNCHANGED_STUB/)
+  assert.match(source, /hasFullReadResultContent\(/)
 })
 
 test('2.1.317 compact: no legacy stub references remain', () => {

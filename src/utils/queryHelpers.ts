@@ -12,10 +12,13 @@ import { findToolByName, type Tool, type Tools } from '../Tool.js'
 import { BASH_TOOL_NAME } from '../tools/BashTool/toolName.js'
 import { FILE_EDIT_TOOL_NAME } from '../tools/FileEditTool/constants.js'
 import type { Input as FileReadInput } from '../tools/FileReadTool/FileReadTool.js'
+import { FILE_READ_TOOL_NAME } from '../tools/FileReadTool/prompt.js'
 import {
-  FILE_READ_TOOL_NAME,
-  FILE_UNCHANGED_STUB,
-} from '../tools/FileReadTool/prompt.js'
+  CLEARED_TOOL_RESULT,
+  EXTERNAL_ARTIFACT_PROVENANCE,
+  PERSISTED_TOOL_RESULT_PREFIX,
+} from '../services/compact/keepRecentToolResults.js'
+import { hasFullReadResultContent } from '../services/compact/preservedReadPaths.mjs'
 import { FILE_WRITE_TOOL_NAME } from '../tools/FileWriteTool/prompt.js'
 import type { Message } from '../types/message.js'
 import type { OrphanedPermission } from '../types/textInputTypes.js'
@@ -427,10 +430,14 @@ export function extractReadFilesFromMessages(
           if (
             readFilePath &&
             typeof content.content === 'string' &&
-            // Dedup stubs contain no file content — the earlier real Read
-            // already cached it. Chronological last-wins would otherwise
-            // overwrite the real entry with stub text.
-            !content.content.startsWith(FILE_UNCHANGED_STUB)
+            // A cleared or persisted result only points to prior content.
+            // Do not overwrite a real file snapshot with a placeholder.
+            hasFullReadResultContent(
+              content,
+              CLEARED_TOOL_RESULT,
+              PERSISTED_TOOL_RESULT_PREFIX,
+              EXTERNAL_ARTIFACT_PROVENANCE,
+            )
           ) {
             // Remove system-reminder blocks from the content
             const processedContent = content.content.replace(

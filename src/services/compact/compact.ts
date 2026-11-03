@@ -16,7 +16,10 @@ import {
   EXTERNAL_ARTIFACT_PROVENANCE,
   PERSISTED_TOOL_RESULT_PREFIX,
 } from './keepRecentToolResults.js'
-import { collectPreservedReadFilePaths } from './preservedReadPaths.mjs'
+import {
+  collectPreservedReadFilePaths,
+  hasFullReadResultContent,
+} from './preservedReadPaths.mjs'
 import { ToolSearchTool } from '../../tools/ToolSearchTool/ToolSearchTool.js'
 import type { AgentId } from '../../types/ids.js'
 import type {
@@ -1411,14 +1414,12 @@ export async function createPostCompactFileAttachments(
     preservedMessages,
     FILE_READ_TOOL_NAME,
     expandPath,
-    result => {
-      if (typeof result.content !== 'string') return true
-      const content = result.content.startsWith(EXTERNAL_ARTIFACT_PROVENANCE)
-        ? result.content.slice(EXTERNAL_ARTIFACT_PROVENANCE.length)
-        : result.content
-      return content !== CLEARED_TOOL_RESULT &&
-        !content.startsWith(PERSISTED_TOOL_RESULT_PREFIX)
-    },
+    result => hasFullReadResultContent(
+      result,
+      CLEARED_TOOL_RESULT,
+      PERSISTED_TOOL_RESULT_PREFIX,
+      EXTERNAL_ARTIFACT_PROVENANCE,
+    ),
   )
   const recentFiles = Object.entries(readFileState)
     .map(([filename, state]) => ({ filename, ...state }))
