@@ -83,8 +83,10 @@ async function probe(executable) {
 
 const reference = await probe(options['--reference'])
 const candidate = options['--candidate'] ? await probe(options['--candidate']) : null
-const report = { reference, candidate, scope: 'isolated print-mode SSE and public stream event metadata' }
+const sameRequestThinking = candidate === null ||
+  JSON.stringify(reference.requestThinking) === JSON.stringify(candidate.requestThinking)
+const report = { reference, candidate, sameRequestThinking, scope: 'isolated print-mode SSE and public stream event metadata' }
 mkdirSync(dirname(resolve(options['--report'])), { recursive: true })
 writeFileSync(resolve(options['--report']), `${JSON.stringify(report, null, 2)}\n`)
 console.log(JSON.stringify(report))
-if (!reference.passed || candidate && !candidate.passed) process.exitCode = 1
+if (!reference.passed || candidate && (!candidate.passed || !sameRequestThinking)) process.exitCode = 1
