@@ -237,7 +237,7 @@ export function SpinnerAnimationRow({
   if (retryStatus !== null) {
     const retryText = describeRetryStatus(retryStatus, now, formatDuration);
     return <Box ref={viewportRef} flexDirection="row" flexWrap="wrap" marginTop={1} width="100%">
-      <Text color="error">✳ </Text>
+      <Text color="error">✻ </Text>
       <Text color="error">{retryText}</Text>
     </Box>;
   }
