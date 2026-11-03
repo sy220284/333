@@ -1,0 +1,38 @@
+name: M1 固定Bun运行环境导出
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - '.github/workflows/m1-local-bun-runtime.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bun-runtime:
+    name: 导出Bun 1.4.4 Linux x64本地验证运行器
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 验证版本并准备单文件运行器
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(bun --version)" = '1.4.4'
+          mkdir -p .rebuild/local-runner
+          cp "$(command -v bun)" .rebuild/local-runner/bun
+          chmod 755 .rebuild/local-runner/bun
+          sha256sum .rebuild/local-runner/bun > .rebuild/local-runner/bun.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: m1-bun-1.4.4-linux-x64
+          path: |
+            .rebuild/local-runner/bun
+            .rebuild/local-runner/bun.sha256
+          retention-days: 7
+          if-no-files-found: error
