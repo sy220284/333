@@ -354,7 +354,7 @@ export function getSimplePrompt(): string {
   return [
     'Executes a given bash command and returns its output.',
     '',
-    "The working directory persists between commands, but shell state does not. The shell environment is initialized from the user's profile (bash or zsh).",
+    "Each command starts a fresh shell. Shell variables, functions, and other process state are not shared across tool calls. Use explicit absolute paths when a command depends on a directory.",
     '',
     `IMPORTANT: Avoid using this tool to run ${avoidCommands} commands, unless explicitly instructed or after you have verified that a dedicated tool cannot accomplish your task. Instead, use the appropriate dedicated tool as this will provide a much better experience for the user:`,
     '',

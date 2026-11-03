@@ -203,9 +203,13 @@
       "domain_candidate": "工具权限与安全",
       "official_text": "Fixed the Bash tool description claiming the working directory always persists between calls",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.311",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "已更新 BashTool 提示为单次独立 Shell 及显式路径语义，待官方目标文本对照",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/tools/BashTool/prompt.ts",
+        "src/utils/Shell.ts",
+        "tests/m1-bash-prompt-311.test.mjs"
+      ]
     },
     {
       "id": "2.1.311#015",
