@@ -115,3 +115,34 @@ export function describeSpinnerStatus(
     case 'none': return null
   }
 }
+
+/** Rendering contract for the real API retry, stall and policy wait stages. */
+export type SpinnerRetryStatus = {
+  kind: 'retrying' | 'stalled' | 'low_priority_waiting' | 'auto_mode_unavailable'
+  deadline: number
+  attempt: number
+  maxRetries: number
+  reason?: string
+}
+
+export function getRetryCountdownMs(deadline: number, now: number): number {
+  return Math.max(0, Math.ceil((deadline - now) / 1000)) * 1000
+}
+
+export function describeRetryStatus(
+  status: SpinnerRetryStatus,
+  now: number,
+  formatDuration: (milliseconds: number) => string,
+): string {
+  const remaining = formatDuration(getRetryCountdownMs(status.deadline, now))
+  switch (status.kind) {
+    case 'stalled':
+      return `Waiting for API response · will retry in ${remaining} · check your network`
+    case 'low_priority_waiting':
+      return `${status.reason ?? 'Waiting for available capacity'} · next try in ${remaining} · attempt ${status.attempt} · esc to interrupt`
+    case 'auto_mode_unavailable':
+      return `Auto mode check unavailable · next try in ${remaining} · attempt ${status.attempt}/${status.maxRetries} · esc to interrupt`
+    case 'retrying':
+      return `${status.reason ?? 'Request failed'} · Retrying in ${remaining} · attempt ${status.attempt}/${status.maxRetries}`
+  }
+}
