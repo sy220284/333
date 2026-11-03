@@ -78,6 +78,31 @@ class TerminalParityAssertions(unittest.TestCase):
         shifted['completed']['row'] += 1
         self.assertFalse(probe.compare_core_layout(matching, {'terminal_anchors': shifted}, 'tool')['passed'])
 
+    def test_thinking_summary_is_separate_from_turn_completion_in_both_locales(self):
+        official = pyte.Screen(80, 12)
+        rebuilt = pyte.Screen(80, 12)
+        pyte.Stream(official).feed(
+            '❯ UI_REAL_PTY_PROMPT\r\n\r\n'
+            '  Thought for 2s\r\n\r\n'
+            '● UI_THINKING_COMPLETE_OK\r\n\r\n'
+            '✻ Cooked for 2s'
+        )
+        pyte.Stream(rebuilt).feed(
+            '❯ UI_REAL_PTY_PROMPT\r\n\r\n'
+            '  思考了 2 秒\r\n\r\n'
+            '● UI_THINKING_COMPLETE_OK\r\n\r\n'
+            '✻ Cooked for 2s'
+        )
+        a = {'terminal_anchors': probe.terminal_anchors(official, probe.THINKING_RESULT, 'thinking')}
+        b = {'terminal_anchors': probe.terminal_anchors(rebuilt, probe.THINKING_RESULT, 'thinking')}
+        self.assertEqual(set(a['terminal_anchors']), {'user', 'thinking_summary', 'assistant', 'completed'})
+        self.assertTrue(probe.compare_core_layout(a, b, 'thinking')['passed'])
+        shifted = {'terminal_anchors': {
+            k: dict(v) for k, v in b['terminal_anchors'].items()
+        }}
+        shifted['terminal_anchors']['thinking_summary']['row'] += 1
+        self.assertFalse(probe.compare_core_layout(a, shifted, 'thinking')['passed'])
+
     def test_retry_screen_comparison_keeps_error_label_and_ignores_live_seconds(self):
         first = {'frames': [{'screen_rows': ['✻ API error · Retrying in 2s · attempt 1/10']}]}
         later = {'frames': [{'screen_rows': ['✻ API error · Retrying in 1s · attempt 1/10']}]}
