@@ -3402,6 +3402,7 @@ async function run(): Promise<CommanderCommand> {
   }).version(`${MACRO.VERSION} (Claude Code)`, '-v, --version', 'Output the version number');
 
   // 2.1.310 options with functional consumers in this source tree.
+  program.option('--bg, --background', 'Start the session in the background and return an id for attach/logs/stop/rm');
   program.option('--restricted', 'Restrict command execution, WebFetch and untrusted settings unless explicitly authorized');
   program.option('--exclude-dynamic-system-prompt-sections', 'Move per-machine system sections into the first user message for shared prompt caching');
   program.option('--forward-subagent-text', 'Forward subagent text and thinking as SDK messages with parent tool ID');
@@ -3746,14 +3747,29 @@ async function run(): Promise<CommanderCommand> {
     await setupTokenHandler(root);
   });
 
-  // Agents command - list configured agents
-  program.command('agents').description('List configured agents').option('--setting-sources <sources>', 'Comma-separated list of setting sources to load (user, project, local).').action(async () => {
-    const {
-      agentsHandler
-    } = await import('./cli/handlers/agents.js');
-    await agentsHandler();
-    process.exit(0);
-  });
+  // Official 2.1.310 background agent CLI. The entrypoint fast path handles
+  // commands without starting the interactive model. Register here as well so
+  // top-level --help and Commander discovery match the official surface.
+  const backgroundCommand = async () => {
+    const { interceptBackgroundCli } = await import('./cli/background/index.mjs');
+    await interceptBackgroundCli(process.argv.slice(2));
+  };
+  program.command('agents').description('Manage background agents')
+    .option('--json', 'Print active sessions as JSON')
+    .option('--all', 'Include completed background sessions with --json')
+    .option('--cwd <path>', 'Show only background sessions started under the specified path')
+    .option('--setting-sources <sources>', 'Setting sources to load')
+    .action(backgroundCommand);
+  program.command('attach <id|name>').description('Attach to a background session by id or name').action(backgroundCommand);
+  program.command('logs <id|name>').description('Print background session terminal output').action(backgroundCommand);
+  program.command('stop <id>').alias('kill').description('Stop a background session and keep its conversation').action(backgroundCommand);
+  program.command('respawn [id]').option('--all', 'Restart all stopped background sessions')
+    .description('Restart a background session using the current Claude binary').action(backgroundCommand);
+  program.command('rm <id>').description('Delete a background session and its worktree')
+    .option('--discard-unpushed <commit-and-worktree-id>', 'Confirm exact HEAD and worktree identity')
+    .option('--force-remove-worktree <worktree-id>', 'Confirm worktree removal identity')
+    .action(backgroundCommand);
+  program.command('daemon [subcommand]').description('Manage background supervisor lifecycle').allowExcessArguments(true).action(backgroundCommand);
   if (feature('TRANSCRIPT_CLASSIFIER')) {
     // Skip when tengu_auto_mode_config.enabled === 'disabled' (circuit breaker).
     // Reads from disk cache — GrowthBook isn't initialized at registration time.
