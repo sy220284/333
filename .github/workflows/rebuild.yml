@@ -74,6 +74,8 @@ jobs:
         run: node --test tests/distribution-isolation.test.mjs
       - name: 过时命令清理与代理管理新版行为回归
         run: node --test tests/m1-obsolete-command-parity.test.mjs
+      - name: 新版退场模块和正式替代入口复查
+        run: node --test tests/m1-retired-module-routing.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
         run: node --test tests/cli-parity.test.mjs
       - name: 复核多级模型回退与自动压缩真实参数语义
