@@ -149,6 +149,16 @@ export async function listSessions({ all = false, cwd, env = process.env } = {})
   }
   return jobs.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
+// A restarted supervisor must not accidentally resume or delete a PTY
+// owned by a still-running worker from its predecessor. The native target
+// restores such workers via a persistent rendezvous protocol; until a worker
+// can be contacted, preserve its session record and transcript unchanged.
+export function assertNoUnmanagedLiveWorker(record, managedIds = new Set()) {
+  if (!managedIds.has(record.id) && isAlive(record.pid)) {
+    throw new Error(`Background session ${record.id} still has a live worker (pid ${record.pid}) owned by another supervisor. Keep its session data and reconnect to its owning service before modifying it.`)
+  }
+}
+
 export function matchSession(jobs, query, { usage = 'id', name = true } = {}) {
   if (!query || typeof query !== 'string') throw new Error(`Usage: claude ${usage}`)
   const idMatches = jobs.filter(j => j.id.startsWith(query.toLowerCase()) || j.sessionId === query)
