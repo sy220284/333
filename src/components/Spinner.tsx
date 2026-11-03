@@ -23,7 +23,7 @@ import { useTerminalSize } from '../hooks/useTerminalSize.js';
 import { stringWidth } from '../ink/stringWidth.js';
 import { getDefaultCharacters, type SpinnerMode } from './Spinner/index.js';
 import { SpinnerAnimationRow } from './Spinner/SpinnerAnimationRow.js';
-import type { OutputLimitRecovery } from './Spinner/statusLogic.js';
+import type { OutputLimitRecovery, SpinnerRetryStatus } from './Spinner/statusLogic.js';
 import { useSettings } from '../hooks/useSettings.js';
 import { isInProcessTeammateTask } from '../tasks/InProcessTeammateTask/types.js';
 import { isBackgroundTask } from '../tasks/types.js';
@@ -58,6 +58,7 @@ type Props = {
   leaderIsIdle?: boolean;
   showToolCallTimer?: boolean;
   outputLimitRecovery?: OutputLimitRecovery | null;
+  retryStatus?: SpinnerRetryStatus | null;
 };
 
 // Thin wrapper: branches on isBriefOnly so the two variants have independent
@@ -98,7 +99,8 @@ function SpinnerWithVerbInner({
   hasActiveTools = false,
   leaderIsIdle = false,
   showToolCallTimer,
-  outputLimitRecovery = null
+  outputLimitRecovery = null,
+  retryStatus = null
 }: Props): React.ReactNode {
   const settings = useSettings();
   const spinnerTipLabel = useAppState(s => s.spinnerTipLabel);
@@ -278,7 +280,7 @@ function SpinnerWithVerbInner({
     }
   }
   return <Box flexDirection="column" width="100%" alignItems="flex-start">
-      <SpinnerAnimationRow mode={mode} reducedMotion={reducedMotion} hasActiveTools={hasActiveTools} responseLengthRef={responseLengthRef} message={message} messageColor={messageColor} shimmerColor={shimmerColor} overrideColor={overrideColor} loadingStartTimeRef={loadingStartTimeRef} totalPausedMsRef={totalPausedMsRef} pauseStartTimeRef={pauseStartTimeRef} spinnerSuffix={spinnerSuffix} verbose={verbose} columns={columns} hasRunningTeammates={hasRunningTeammates} teammateTokens={teammateTokens} foregroundedTeammate={foregroundedTeammate} leaderIsIdle={leaderIsIdle} thinkingStatus={thinkingStatus} effortSuffix={effortSuffix} showToolCallTimer={showToolCallTimer ?? getFeatureValue_CACHED_MAY_BE_STALE('tengu_shining_fractals', false)} outputLimitRecovery={outputLimitRecovery} />
+      <SpinnerAnimationRow mode={mode} reducedMotion={reducedMotion} hasActiveTools={hasActiveTools} responseLengthRef={responseLengthRef} message={message} messageColor={messageColor} shimmerColor={shimmerColor} overrideColor={overrideColor} loadingStartTimeRef={loadingStartTimeRef} totalPausedMsRef={totalPausedMsRef} pauseStartTimeRef={pauseStartTimeRef} spinnerSuffix={spinnerSuffix} verbose={verbose} columns={columns} hasRunningTeammates={hasRunningTeammates} teammateTokens={teammateTokens} foregroundedTeammate={foregroundedTeammate} leaderIsIdle={leaderIsIdle} thinkingStatus={thinkingStatus} effortSuffix={effortSuffix} showToolCallTimer={showToolCallTimer ?? getFeatureValue_CACHED_MAY_BE_STALE('tengu_shining_fractals', false)} outputLimitRecovery={outputLimitRecovery} retryStatus={retryStatus} />
       {showSpinnerTree && hasRunningTeammates ? <TeammateSpinnerTree selectedIndex={selectedIPAgentIndex} isInSelectionMode={viewSelectionMode === 'selecting-agent'} allIdle={allIdle} leaderVerb={leaderIsIdle ? undefined : leaderVerb} leaderIdleText={leaderIsIdle ? 'Idle' : undefined} leaderTokenCount={leaderTokenCount} /> : showExpandedTodos && tasksV2 && tasksV2.length > 0 ? <Box width="100%" flexDirection="column">
           <MessageResponse>
             <TaskListV2 tasks={tasksV2} />
