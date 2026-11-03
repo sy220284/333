@@ -11,6 +11,8 @@ on:
       - 'tests/m1-subagent-effort-317.test.mjs'
       - 'build/m1-cli-surface-audit.mjs'
       - 'tests/m1-plugin-data-size-parity.test.mjs'
+      - 'tools/upgrade/audit-final-release-skills.py'
+      - 'src/skills/bundled/**'
       - 'build/install-public-deps.mjs'
       - 'src/main.tsx'
       - 'src/cli/handlers/**'
@@ -67,6 +69,17 @@ jobs:
           HOME="${RUNNER_TEMP}/m1-317-isolated-home" DISABLE_AUTOUPDATER=1 ./claude --help > official-help.txt
           test -s official-help.txt
           printf '%s\n' "${version}" > actual-version.txt
+      - name: 按 2.1.317 原生压缩资源逐字节核对内置技能
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(cut -d' ' -f1 "${RUNNER_TEMP}/m1-317-reference/expected-sha256.txt")"
+          python3 tools/upgrade/audit-final-release-skills.py \
+            --binary "${RUNNER_TEMP}/m1-317-reference/claude" \
+            --root "$GITHUB_WORKSPACE" \
+            --target 2.1.317 \
+            --expected-sha256 "$expected" \
+            --report "${RUNNER_TEMP}/m1-317-reference/skill-resource-parity.json"
       - name: 基于当前 PR 的源码独立构建候选 CLI
         shell: bash
         run: |
@@ -86,13 +99,28 @@ jobs:
             --reference "${RUNNER_TEMP}/m1-317-reference/claude" \
             --candidate "${RUNNER_TEMP}/m1-317-candidate" \
             --target 2.1.317 \
-            --report "${RUNNER_TEMP}/m1-317-reference/cli-surface-parity.json" \
-            --strict
+            --report "${RUNNER_TEMP}/m1-317-reference/cli-surface-parity.json"
       - name: 使用 2.1.317 官方原版和独立重建版验证插件数据大小语义
         shell: bash
         run: |
           set -euo pipefail
           CLAUDE_TARGET_X64="${RUNNER_TEMP}/m1-317-reference/claude" node --test tests/m1-plugin-data-size-parity.test.mjs
+      - name: 最终版 CLI 参数与原始技能字节严格验收门禁
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']) / 'm1-317-reference'
+          cli = json.loads((root / 'cli-surface-parity.json').read_text())
+          assets = json.loads((root / 'skill-resource-parity.json').read_text())
+          print('2.1.317 target CLI gaps:', cli['differences'])
+          print('2.1.317 target skill asset results:', assets['counts'])
+          if cli['target'] != '2.1.317' or assets['target_version'] != '2.1.317':
+              raise SystemExit('A historical reference was used instead of the final target')
+          if cli['differences'] or any(v for k, v in assets['counts'].items() if k != 'MATCH'):
+              raise SystemExit('The 2.1.317 command or embedded skill assets have not reached parity')
+          PY
       - name: 保存官方原始清单与可复现的二进制校验结果
         if: always()
         uses: actions/upload-artifact@v4
@@ -104,5 +132,6 @@ jobs:
             ${{ runner.temp }}/m1-317-reference/actual-version.txt
             ${{ runner.temp }}/m1-317-reference/official-help.txt
             ${{ runner.temp }}/m1-317-reference/cli-surface-parity.json
+            ${{ runner.temp }}/m1-317-reference/skill-resource-parity.json
           if-no-files-found: warn
           retention-days: 90
