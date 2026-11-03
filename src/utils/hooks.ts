@@ -147,6 +147,7 @@ import { execPromptHook } from './hooks/execPromptHook.js'
 import type { Message, AssistantMessage } from '../types/message.js'
 import { execAgentHook } from './hooks/execAgentHook.js'
 import { execHttpHook } from './hooks/execHttpHook.js'
+import { classifySdkCallbackFailure } from './hooks/callbackFailurePolicy.mjs'
 import type { ShellCommand } from './ShellCommand.js'
 import {
   getSessionHooks,
@@ -3136,7 +3137,7 @@ async function executeHooksOutsideREPL({
             command: 'callback',
             succeeded: false,
             output: errorMessage,
-            blocked: false,
+            blocked: hook.onFailure === 'block',
           }
         }
       }
@@ -4853,37 +4854,59 @@ async function executeHookCallback({
         updateAttributionState: toolUseContext.updateAttributionState,
       }
     : undefined
-  const json = await hook.callback(
-    hookInput,
-    toolUseID,
-    signal,
-    hookIndex,
-    context,
-  )
-  if (isAsyncHookJSONOutput(json)) {
-    return {
-      outcome: 'success',
-      hook,
+  try {
+    const json = await hook.callback(
+      hookInput,
+      toolUseID,
+      signal,
+      hookIndex,
+      context,
+    )
+    if (isAsyncHookJSONOutput(json)) {
+      return { outcome: 'success', hook }
     }
-  }
 
-  const processed = processHookJSONOutput({
-    json,
-    command: 'callback',
-    // TODO: If the hook came from a plugin, use the full path to the plugin for easier debugging
-    hookName: `${hookEvent}:Callback`,
-    toolUseID,
-    hookEvent,
-    expectedHookEvent: hookEvent,
-    // Callbacks don't have stdout/stderr/exitCode
-    stdout: undefined,
-    stderr: undefined,
-    exitCode: undefined,
-  })
-  return {
-    ...processed,
-    outcome: 'success',
-    hook,
+    const processed = processHookJSONOutput({
+      json,
+      command: 'callback',
+      hookName: `${hookEvent}:Callback`,
+      toolUseID,
+      hookEvent,
+      expectedHookEvent: hookEvent,
+      stdout: undefined,
+      stderr: undefined,
+      exitCode: undefined,
+    })
+    return { ...processed, outcome: 'success', hook }
+  } catch (error) {
+    const { blocked, detail } = classifySdkCallbackFailure(hook.onFailure, error)
+    logError(Error(`SDK hook callback failed (${hookEvent})`, { cause: error }))
+    if (blocked) {
+      return {
+        outcome: 'blocking',
+        hook,
+        blockingError: {
+          command: 'callback',
+          blockingError: `SDK hook callback failed and blocked ${hookEvent}: ${detail}`,
+        },
+      }
+    }
+    // Preserve the existing opt-in behavior: without onFailure: block,
+    // an SDK hook error is reported but does not approve or deny the action.
+    return {
+      outcome: 'non_blocking_error',
+      hook,
+      message: createAttachmentMessage({
+        type: 'hook_non_blocking_error',
+        hookName: `${hookEvent}:Callback`,
+        toolUseID,
+        hookEvent,
+        stderr: detail,
+        stdout: '',
+        exitCode: 1,
+        command: 'callback',
+      }),
+    }
   }
 }
 
