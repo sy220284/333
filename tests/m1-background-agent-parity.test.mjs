@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtemp, mkdir, readFile, rm, stat, writeFile, open } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
@@ -81,22 +81,22 @@ test('installed official x64 and rebuilt CLI expose 2.1.310 background command b
   try {
     for (const [name, command, prefix] of targets) {
       const agents = snapshotCmd(command, prefix, ['agents', '--json'], env)
-      assert.equal(agents.code, 0, name + ': ' + agents.err)
-      assert.deepEqual(JSON.parse(agents.out), [], name + ': expected no sessions')
+      assert.equal(agents.code, 0, `${name}: ${agents.err}`)
+      assert.deepEqual(JSON.parse(agents.out), [], `${name}: expected no sessions`)
       const finished = snapshotCmd(command, prefix, ['agents', '--json', '--all'], env)
-      assert.equal(finished.code, 0, name + ': ' + finished.err)
+      assert.equal(finished.code, 0, `${name}: ${finished.err}`)
       assert.deepEqual(JSON.parse(finished.out), [])
       for (const [verb, synopsis] of [['agents', 'Manage background agents'], ['attach', 'attach'], ['logs', 'logs'], ['stop', 'stop'], ['respawn', 'respawn'], ['rm', 'rm']]) {
         const help = snapshotCmd(command, prefix, [verb, '--help'], env)
-        assert.equal(help.code, 0, name + ' ' + verb + ': ' + help.err)
-        assert.ok(help.out.includes(synopsis), name + ' ' + verb + ': bad help')
+        assert.equal(help.code, 0, `${name} ${verb}: ${help.err}`)
+        assert.ok(help.out.includes(synopsis), `${name} ${verb}: bad help`)
       }
       const status = snapshotCmd(command, prefix, ['daemon', 'status'], env)
-      assert.equal(status.code, 1, name + ': daemon status should fail when absent')
+      assert.equal(status.code, 1, `${name}: daemon status should fail when absent`)
       assert.match(status.out + status.err, /not running/)
       for (const verb of ['stop', 'logs', 'attach']) {
         const missing = snapshotCmd(command, prefix, [verb, 'abcdef98'], env)
-        assert.equal(missing.code, 1, name + ': missing ' + verb)
+        assert.equal(missing.code, 1, `${name}: missing ${verb}`)
         assert.match(missing.out + missing.err, /No job matching/)
       }
     }
