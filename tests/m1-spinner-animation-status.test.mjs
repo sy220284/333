@@ -51,6 +51,19 @@ describe('官方 2.1.310 对话状态与动画逻辑', () => {
     assert.match(repl, /createTurnDurationMessage\(turnDurationMs, budgetInfo/)
   })
 
+  it('新版默认使用完整终端对话布局，同时保留主动关闭选项', () => {
+    const fullscreen = readFileSync(new URL('../src/utils/fullscreen.ts', import.meta.url), 'utf8')
+    assert.match(fullscreen, /isEnvDefinedFalsy\(process\.env\.CLAUDE_CODE_NO_FLICKER\)/)
+    assert.match(fullscreen, /isTmuxControlMode\(\)/)
+    assert.match(fullscreen, /export function isFullscreenEnvEnabled[\s\S]*?return true/)
+  })
+
+  it('每轮完成耗时同时显示结束时间', () => {
+    const renderer = readFileSync(new URL('../src/components/messages/SystemTextMessage.tsx', import.meta.url), 'utf8')
+    assert.match(renderer, /new Date\(message\.timestamp\)\.toLocaleTimeString/)
+    assert.match(renderer, /完成 \\$/)
+  })
+
   it('渐进思考文案按 10/20/30/45 秒的真实阈值变化', () => {
     assert.equal(getProgressiveThinkingLabel(9999), 'thinking')
     assert.equal(getProgressiveThinkingLabel(10000), 'still thinking')
