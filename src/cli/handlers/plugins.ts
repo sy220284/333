@@ -364,8 +364,10 @@ export async function pluginListHandler(options: {
             }
           }
         }
-      } catch {
-        // Silently ignore marketplace loading errors
+      } catch (error) {
+        // --available must not report a complete but empty marketplace list
+        // when loading the underlying source failed.
+        cliError(`Unable to enumerate available marketplace plugins: ${errorMessage(error)}`)
       }
 
       cliOk(jsonStringify({ installed: plugins, available }, null, 2))
