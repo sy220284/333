@@ -19,10 +19,12 @@ export function useStalledAnimation(
   const stalledIntensityRef = useRef(0)
   const lastSmoothTime = useRef(time)
 
-  // Reset timer when new tokens arrive (check actual length change)
-  if (currentResponseLength > lastResponseLength.current) {
+  // Any length change (including a fresh turn resetting to zero) starts a
+  // new no-token window. The target resets on !=, not only on increase.
+  if (currentResponseLength !== lastResponseLength.current) {
     lastTokenTime.current = time
     lastResponseLength.current = currentResponseLength
+    mountTime.current = time
     stalledIntensityRef.current = 0
     lastSmoothTime.current = time
   }
