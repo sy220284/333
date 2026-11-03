@@ -48,3 +48,18 @@ test('retired shell and output tools are absent from current invocation paths', 
   assert.doesNotMatch(code('services/tools/toolExecution.ts'), /getAllBaseTools|fallbackTool|deprecated tool being called by alias/)
   assert.equal(code('utils/env.ts').includes('.config.json'), false)
 })
+
+test('no old model remapping or one-shot migration fields remain', () => {
+  const models = code('utils/model/model.ts')
+  const config = code('utils/config.ts')
+  for (const name of [
+    'LEGACY_OPUS_FIRSTPARTY', 'isLegacyModelRemapEnabled',
+    'CLAUDE_CODE_DISABLE_LEGACY_MODEL_REMAP',
+  ]) assert.equal(models.includes(name), false, name)
+  for (const field of [
+    'cachedChangelog', 'iterm2KeyBindingInstalled',
+    'bypassPermissionsModeAccepted', 'legacyOpusMigrationTimestamp',
+    'sonnet45To46MigrationTimestamp', 'opusProMigrationTimestamp',
+  ]) assert.equal(config.includes(field), false, field)
+  assert.equal(existsSync(new URL('hooks/notifs/useModelMigrationNotifications.tsx', root)), false)
+})

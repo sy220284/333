@@ -18,7 +18,6 @@ import {
   is1mContextDisabled,
   modelSupports1M,
 } from '../context.js'
-import { isEnvTruthy } from '../envUtils.js'
 import { getModelStrings, resolveOverriddenModel } from './modelStrings.js'
 import { formatModelPricing, getOpus46CostTier } from '../modelCost.js'
 import { getInitialSettings } from '../settings/settings.js'
@@ -470,19 +469,6 @@ export function parseUserSpecifiedModel(
     }
   }
 
-  // Opus 4/4.1 are no longer available on the first-party API (same as
-  // Claude.ai) — silently remap to the current Opus default. The 'opus'
-  // alias already resolves to 4.6, so the only users on these explicit
-  // strings pinned them in settings/env/--model/SDK before 4.5 launched.
-  // 3P providers may not yet have 4.6 capacity, so pass through unchanged.
-  if (
-    getAPIProvider() === 'firstParty' &&
-    isLegacyOpusFirstParty(modelString) &&
-    isLegacyModelRemapEnabled()
-  ) {
-    return getDefaultOpusModel() + (has1mTag ? '[1m]' : '')
-  }
-
   if (process.env.USER_TYPE === 'ant') {
     const has1mAntTag = has1mContext(normalizedModel)
     const baseAntModel = normalizedModel.replace(/\[1m]$/i, '').trim()
@@ -534,24 +520,6 @@ export function resolveSkillModelOverride(
     return skillModel + '[1m]'
   }
   return skillModel
-}
-
-const LEGACY_OPUS_FIRSTPARTY = [
-  'claude-opus-4-20250514',
-  'claude-opus-4-1-20250805',
-  'claude-opus-4-0',
-  'claude-opus-4-1',
-]
-
-function isLegacyOpusFirstParty(model: string): boolean {
-  return LEGACY_OPUS_FIRSTPARTY.includes(model)
-}
-
-/**
- * Opt-out for the legacy Opus 4.0/4.1 → current Opus remap.
- */
-export function isLegacyModelRemapEnabled(): boolean {
-  return !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_LEGACY_MODEL_REMAP)
 }
 
 export function modelDisplayString(model: ModelSetting): string {

@@ -196,8 +196,6 @@ export type GlobalConfig = {
   lastReleaseNotesSeen?: string
   // Timestamp when changelog was last fetched (content stored in ~/.claude/cache/changelog.md)
   changelogLastFetched?: number
-  // @deprecated - Migrated to ~/.claude/cache/changelog.md. Keep for migration support.
-  cachedChangelog?: string
   mcpServers?: Record<string, McpServerConfig>
   // claude.ai MCP connectors that have successfully connected at least once.
   // Used to gate "connector unavailable" / "needs auth" startup notifications:
@@ -206,10 +204,6 @@ export type GlobalConfig = {
   // something the user has demonstrably ignored and shouldn't nag about.
   claudeAiMcpEverConnected?: string[]
   preferredNotifChannel: NotificationChannel
-  /**
-   * @deprecated. Use the Notification hook instead (docs/hooks.md).
-   */
-  customNotifyCommand?: string
   verbose: boolean
   customApiKeyResponses?: {
     approved?: string[]
@@ -219,11 +213,8 @@ export type GlobalConfig = {
   hasAcknowledgedCostThreshold?: boolean
   hasSeenUndercoverAutoNotice?: boolean // ant-only: whether the one-time auto-undercover explainer has been shown
   hasSeenUltraplanTerms?: boolean // ant-only: whether the one-time CCR terms notice has been shown in the ultraplan launch dialog
-  hasResetAutoModeOptInForDefaultOffer?: boolean // ant-only: one-shot migration guard, re-prompts churned auto-mode users
   oauthAccount?: AccountInfo
-  iterm2KeyBindingInstalled?: boolean // Legacy - keeping for backward compatibility
   editorMode?: EditorMode
-  bypassPermissionsModeAccepted?: boolean
   hasUsedBackslashReturn?: boolean
   autoCompactEnabled: boolean // Controls whether auto-compact is enabled
   showTurnDuration: boolean // Controls whether to show turn duration message (e.g., "Cooked for 1m 6s")
@@ -418,19 +409,6 @@ export type GlobalConfig = {
 
   // Idle-return dialog tracking
   idleReturnDismissed?: boolean // "Don't ask again" picked
-
-  // Opus 4.5 Pro migration tracking
-  opusProMigrationComplete?: boolean
-  opusProMigrationTimestamp?: number
-
-  // Sonnet 4.5 1m migration tracking
-  sonnet1m45MigrationComplete?: boolean
-
-  // Opus 4.0/4.1 → current Opus migration (shows one-time notif)
-  legacyOpusMigrationTimestamp?: number
-
-  // Sonnet 4.5 → 4.6 migration (pro/max/team premium)
-  sonnet45To46MigrationTimestamp?: number
 
   // Cached statsig gate values
   cachedStatsigGates: {
