@@ -15,6 +15,7 @@ on:
       - 'tests/m1-custom-spinner-tips.test.mjs'
       - 'tests/m1-spinner-pty-harness.test.py'
       - 'tests/m1-x64-spinner-tips.py'
+      - 'tests/m1-x64-conversation-ui-scenarios.py'
       - 'build/rebuild.mjs'
       - 'build/restore-*.mjs'
   workflow_dispatch:
@@ -40,7 +41,7 @@ jobs:
         id: relevant
         shell: bash
         run: |
-          if [[ '${{ github.event_name }}' == 'workflow_dispatch' ]] || git diff-tree --root --no-commit-id --name-only -r HEAD | grep -Eq '^(src/services/tips/|src/components/Spinner\.tsx$|src/components/Spinner/|src/screens/REPL\.tsx$|src/state/AppStateStore\.ts$|src/utils/settings/|tests/m1-spinner-animation-status\.test\.mjs$|tests/m1-(spinner-tips\.test\.mjs|custom-spinner-tips\.test\.mjs|spinner-pty-harness\.test\.py|x64-spinner-tips\.py)$|build/(rebuild|restore-.*)\.mjs$|\.github/workflows/m1-spinner-parity\.yml$)'; then
+          if [[ '${{ github.event_name }}' == 'workflow_dispatch' ]] || git diff-tree --root --no-commit-id --name-only -r HEAD | grep -Eq '^(src/services/tips/|src/components/Spinner\.tsx$|src/components/Spinner/|src/screens/REPL\.tsx$|src/state/AppStateStore\.ts$|src/utils/settings/|tests/m1-spinner-animation-status\.test\.mjs$|tests/m1-(spinner-tips\.test\.mjs|custom-spinner-tips\.test\.mjs|spinner-pty-harness\.test\.py|x64-spinner-tips\.py|x64-conversation-ui-scenarios\.py)$|build/(rebuild|restore-.*)\.mjs$|\.github/workflows/m1-spinner-parity\.yml$)'; then
             echo 'run=true' >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/setup-node@v4
@@ -82,11 +83,20 @@ jobs:
             --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
             | tee "${RUNNER_TEMP}/m1-spinner-parity.json"
+      - name: 官方与重建版同场景流式、工具、重试终端帧对照
+        if: steps.relevant.outputs.run == 'true'
+        run: |
+          python3 tests/m1-x64-conversation-ui-scenarios.py \
+            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --candidate "${RUNNER_TEMP}/m1-current-cli" \
+            --report "${RUNNER_TEMP}/m1-dialogue-ui-parity.json"
       - name: 保存真实终端对照结果
         if: always() && steps.relevant.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: m1-spinner-parity-${{ github.event.pull_request.head.sha || github.sha }}
-          path: ${{ runner.temp }}/m1-spinner-parity.json
+          path: |
+            ${{ runner.temp }}/m1-spinner-parity.json
+            ${{ runner.temp }}/m1-dialogue-ui-parity.json
           if-no-files-found: warn
           retention-days: 30
