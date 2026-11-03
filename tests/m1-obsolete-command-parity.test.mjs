@@ -82,6 +82,18 @@ test('obsolete startup toasts and permission footer hints are gone, operational 
   assert.doesNotMatch(powershell, /ctrl\\+e to/)
 })
 
+test('new target removes stale refusal model and DNS cache auto-approval', () => {
+  const errors = source('src/services/api/errors.ts')
+  const api = source('src/services/api/claude.ts')
+  const powershell = source('src/tools/PowerShellTool/readOnlyValidation.ts')
+  assert.doesNotMatch(errors, /try running \/model claude-sonnet-4-20250514/)
+  assert.match(errors, /content: baseMessage,/)
+  assert.match(api, /getErrorMessageIfRefusal\(\s*part\.delta\.stop_reason,\s*\)/)
+  assert.doesNotMatch(powershell, /['"]get-dnsclientcache['"]\s*:/)
+  assert.doesNotMatch(powershell, /['"]\/displaydns['"]/)
+  assert.match(powershell, /safeFlags: \['\/all', '\/allcompartments'\]/)
+})
+
 test('official 2.1.310 and rebuilt CLI both resolve /agents locally without a model turn', { timeout: 90000 }, () => {
   const folder = mkdtempSync(join(tmpdir(), 'pr7-agents-retirement-'))
   const env = {
