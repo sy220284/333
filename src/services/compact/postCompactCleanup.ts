@@ -1,4 +1,3 @@
-import { feature } from 'bun:bundle'
 import type { QuerySource } from '../../constants/querySource.js'
 import { clearSystemPromptSections } from '../../constants/systemPromptSections.js'
 import { getUserContext } from '../../context.js'
@@ -37,15 +36,6 @@ export function runPostCompactCleanup(querySource?: QuerySource): void {
     querySource.startsWith('repl_main_thread') ||
     querySource === 'sdk'
 
-  if (feature('CONTEXT_COLLAPSE')) {
-    if (isMainThreadCompact) {
-      /* eslint-disable @typescript-eslint/no-require-imports */
-      ;(
-        require('../contextCollapse/index.js') as typeof import('../contextCollapse/index.js')
-      ).resetContextCollapse()
-      /* eslint-enable @typescript-eslint/no-require-imports */
-    }
-  }
   if (isMainThreadCompact) {
     // getUserContext is a memoized outer layer wrapping getClaudeMds() →
     // getMemoryFiles(). If only the inner getMemoryFiles cache is cleared,
@@ -66,10 +56,5 @@ export function runPostCompactCleanup(querySource?: QuerySource): void {
   // skills, and dynamic additions are handled by skillChangeDetector /
   // cacheUtils resets. See compactConversation() for full rationale.
   clearBetaTracingState()
-  if (feature('COMMIT_ATTRIBUTION')) {
-    void import('../../utils/attributionHooks.js').then(m =>
-      m.sweepFileContentCache(),
-    )
-  }
   clearSessionMessagesCache()
 }
