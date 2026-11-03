@@ -88,6 +88,7 @@ jobs:
             --root "$GITHUB_WORKSPACE" \
             --target 2.1.317 \
             --expected-sha256 "$expected" \
+            --extract-dir "${RUNNER_TEMP}/m1-317-reference/official-skills" \
             --report "${RUNNER_TEMP}/m1-317-reference/skill-resource-parity.json"
       - name: 基于当前 PR 的源码独立构建候选 CLI
         shell: bash
@@ -154,6 +155,7 @@ jobs:
             ${{ runner.temp }}/m1-317-reference/official-help.txt
             ${{ runner.temp }}/m1-317-reference/cli-surface-parity.json
             ${{ runner.temp }}/m1-317-reference/skill-resource-parity.json
+            ${{ runner.temp }}/m1-317-reference/official-skills/**
             ${{ runner.temp }}/m1-317-reference/terminal-animation-parity.json
           if-no-files-found: warn
           retention-days: 90
