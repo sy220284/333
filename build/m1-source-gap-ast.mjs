@@ -12,21 +12,29 @@ const ts = require(resolve(compiler))
 const root = resolve(source)
 const extensions = ['.ts', '.tsx', '.mts', '.cts', '.d.ts', '.js', '.jsx', '.mjs', '.cjs']
 const files = []
+const allFiles = []
 function walk(dir) {
-  for (const d of readdirSync(dir, { withFileTypes: true })) {
+  for (const d of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     const absolute = join(dir, d.name)
     if (d.isDirectory()) walk(absolute)
-    else if (d.isFile() && /\.(ts|tsx|mts|cts|js|mjs|cjs)$/.test(d.name)) files.push(absolute)
+    else if (d.isFile()) {
+      // Record all resources, while parsing source code only.
+      allFiles.push(absolute)
+      if (/\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/.test(d.name)) files.push(absolute)
+    }
   }
 }
 walk(root)
-const names = new Set(files.map(f => relative(root, f).replaceAll('\\', '/')))
+const names = new Set(allFiles.map(f => relative(root, f).replaceAll('\\', '/')))
 function lookup(from, name) {
   const target = posix.normalize(posix.join(posix.dirname(from), name))
   const suffix = extname(target)
-  const base = suffix && ['.js', '.mjs', '.cjs'].includes(suffix) ? target.slice(0, -suffix.length) : target
-  const variants = suffix && !['.js', '.mjs', '.cjs'].includes(suffix) ? [target] :
-    [target, ...extensions.map(x => base + x), ...(!suffix ? extensions.map(x => posix.join(target, `index${x}`)) : [])]
+  const base = suffix ? target.slice(0, -suffix.length) : target
+  // JS/JSX specifiers may resolve to TypeScript files; data assets use exact paths.
+  const sourceLike = ['.js', '.jsx', '.mjs', '.cjs'].includes(suffix)
+  const variants = suffix && !sourceLike ? [target] :
+    [target, ...extensions.map(x => base + x),
+      ...(!suffix ? extensions.map(x => posix.join(target, 'index' + x)) : [])]
   return { target, present: variants.some(x => names.has(x)) }
 }
 const missing = new Map()
