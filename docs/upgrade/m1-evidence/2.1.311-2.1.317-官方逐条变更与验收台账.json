@@ -1424,9 +1424,14 @@
       "domain_candidate": "工具权限与安全",
       "official_text": "Changed prompt and agent hooks to run at most 24 at a time per session, sub-agents included, plus at most 12 that have waited longer than their event's timeout; a `timeout` under 1 second now counts as 1 second",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.312",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "已统一交互与非交互 Hook 会话级 24 并发及超时后额外 12 并发，最短等待 1 秒；待子代理与真实阻塞 Hook 运行验收",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/utils/hooks.ts",
+        "src/utils/hooks/hookConcurrency.mjs",
+        "src/utils/hooks/hookConcurrency.d.mts",
+        "tests/m1-hook-concurrency-312.test.mjs"
+      ]
     },
     {
       "id": "2.1.312#023",

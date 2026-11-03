@@ -142,6 +142,7 @@ import {
 } from './hooks/hookEvents.js'
 import { createAttachmentMessage } from './attachments.js'
 import { all } from './generators.js'
+import { acquireHookPermit, limitHookGenerator } from './hooks/hookConcurrency.mjs'
 import { findToolByName, type Tools, type ToolUseContext } from '../Tool.js'
 import { execPromptHook } from './hooks/execPromptHook.js'
 import type { Message, AssistantMessage } from '../types/message.js'
@@ -2734,7 +2735,13 @@ async function* executeHooks({
   let permissionBehavior: PermissionResult['behavior'] | undefined
 
   // Run all hooks in parallel and wait for all to complete
-  for await (const result of all(hookPromises)) {
+  const limitedHooks = hookPromises.map((generator, i) => {
+    const hook = matchingHooks[i]?.hook
+    if (hook?.type !== 'prompt' && hook?.type !== 'agent') return generator
+    const waitMs = hook.timeout ? hook.timeout * 1000 : timeoutMs
+    return limitHookGenerator(generator, getSessionId(), waitMs, signal)
+  })
+  for await (const result of all(limitedHooks)) {
     outcomes[result.outcome]++
 
     // Check for preventContinuation early
@@ -3076,6 +3083,15 @@ async function executeHooksOutsideREPL({
   // Run all hooks in parallel with individual timeouts
   const hookPromises = matchingHooks.map(
     async ({ hook, pluginRoot, pluginId }, hookIndex) => {
+      const releaseHookPermit =
+        hook.type === 'prompt' || hook.type === 'agent'
+          ? await acquireHookPermit(
+              sessionId,
+              hook.timeout ? hook.timeout * 1000 : timeoutMs,
+              signal,
+            )
+          : undefined
+      try {
       // Handle callback hooks
       if (hook.type === 'callback') {
         const callbackTimeoutMs = hook.timeout ? hook.timeout * 1000 : timeoutMs
@@ -3365,6 +3381,9 @@ async function executeHooksOutsideREPL({
           output: errorMessage,
           blocked: false,
         }
+      }
+      } finally {
+        releaseHookPermit?.()
       }
     },
   )
