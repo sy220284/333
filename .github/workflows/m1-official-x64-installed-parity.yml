@@ -79,6 +79,7 @@ jobs:
           node build/verify-bundled-assets.mjs
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
+          bun test tests/m1-desktop-deeplink.test.ts
           bun build/rebuild.mjs
           test -s dist/cli.js
           printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-installed-parity-candidate"
