@@ -1554,16 +1554,13 @@ async function run(): Promise<CommanderCommand> {
     // external builds.
     if ((feature('KAIROS') || feature('KAIROS_BRIEF')) && baseTools.length > 0) {
       /* eslint-disable @typescript-eslint/no-require-imports */
-      const {
-        BRIEF_TOOL_NAME,
-        LEGACY_BRIEF_TOOL_NAME
-      } = require('./tools/BriefTool/prompt.js') as typeof import('./tools/BriefTool/prompt.js');
+      const { BRIEF_TOOL_NAME } = require('./tools/BriefTool/prompt.js') as typeof import('./tools/BriefTool/prompt.js');
       const {
         isBriefEntitled
       } = require('./tools/BriefTool/BriefTool.js') as typeof import('./tools/BriefTool/BriefTool.js');
       /* eslint-enable @typescript-eslint/no-require-imports */
       const parsed = parseToolListFromCLI(baseTools);
-      if ((parsed.includes(BRIEF_TOOL_NAME) || parsed.includes(LEGACY_BRIEF_TOOL_NAME)) && isBriefEntitled()) {
+      if (parsed.includes(BRIEF_TOOL_NAME) && isBriefEntitled()) {
         setUserMsgOptIn(true);
       }
     }
