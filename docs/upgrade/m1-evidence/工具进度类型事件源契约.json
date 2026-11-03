@@ -152,9 +152,7 @@
     {
       "type": "TaskOutputProgress",
       "tag": "waiting_for_task",
-      "producers": [
-        "src/tools/TaskOutputTool/TaskOutputTool.tsx:242-252"
-      ],
+      "producers": [],
       "required": [
         "type",
         "taskDescription",
@@ -163,7 +161,9 @@
       "consumers": [
         "src/Tool.ts:49-58"
       ],
-      "status": "PRODUCER_IDENTIFIED"
+      "status": "RETIRED_TARGET_PROTOCOL_REPLAY_ONLY",
+      "target_2_1_310_replacement": "Read 工具读取后台任务输出文件；后台通知保持 taskId 和输出文件定位",
+      "note": "旧 TaskOutputTool 执行入口已移除，本记录仅供历史进度事件协议和消费者兼容审查"
     },
     {
       "type": "ShellProgress",
