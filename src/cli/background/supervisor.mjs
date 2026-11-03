@@ -14,7 +14,7 @@ let server
 let idleTimer
 
 function send(socket, payload) {
-  if (!socket.destroyed) socket.write(JSON.stringify(payload) + '\n')
+  if (!socket.destroyed) socket.write(`${JSON.stringify(payload)}\n`)
 }
 function recordOutput(id, bytes) {
   const job = active.get(id)
@@ -24,7 +24,7 @@ function recordOutput(id, bytes) {
   const next = previous.then(() => appendFile(job.record.logPath, chunk))
   outputQueue.set(id, next)
   next.catch(error => {
-    for (const peer of job.subscribers) send(peer, { event: 'error', message: 'Failed to persist terminal output: ' + error.message })
+    for (const peer of job.subscribers) send(peer, { event: 'error', message: `Failed to persist terminal output: ${error.message}` })
   })
   for (const peer of job.subscribers) send(peer, { event: 'output', data: chunk.toString('base64') })
 }
@@ -65,7 +65,7 @@ function resumeFlags(argv) {
 }
 async function launch(record, { resume = false } = {}) {
   if (!globalThis.Bun?.spawn) throw new Error('Background interactive sessions require Bun 1.4.4 with PTY support')
-  if (active.has(record.id)) throw new Error('Session is already running: ' + record.id)
+  if (active.has(record.id)) throw new Error(`Session is already running: ${record.id}`)
   const [binary, ...prefix] = childExecutable()
   const args = resume
     ? [...resumeFlags(record.argv), '--resume', record.sessionId]
@@ -106,7 +106,7 @@ async function launch(record, { resume = false } = {}) {
           current.proc.terminal?.close()
         }
         active.delete(record.id)
-      })().catch(error => process.stderr.write('Session exit recording failed: ' + error.message + '\n'))
+      })().catch(error => process.stderr.write(`Session exit recording failed: ${error.message}\n`))
     },
   })
   const next = {
@@ -132,13 +132,13 @@ async function stop(id) {
   }
   await editSession(id, { state: 'stopping', detail: 'stop requested' })
   try { job.proc.kill('SIGINT') }
-  catch (error) { throw new Error('Could not interrupt session ' + id + ': ' + error.message) }
+  catch (error) { throw new Error(`Could not interrupt session ${id}: ${error.message}`) }
   const settled = await Promise.race([job.proc.exited.then(() => true), new Promise(r => setTimeout(() => r(false), 4500))])
   if (!settled && active.has(id)) {
     job.proc.kill('SIGTERM')
     await Promise.race([job.proc.exited, new Promise(r => setTimeout(r, 750))])
   }
-  if (active.has(id) && isAlive(job.proc.pid)) throw new Error('Could not confirm session termination: ' + id)
+  if (active.has(id) && isAlive(job.proc.pid)) throw new Error(`Could not confirm session termination: ${id}`)
   await editSession(id, { state: 'stopped', detail: 'stopped', pid: null })
 }
 async function dispatch(request) {
@@ -182,7 +182,7 @@ async function command(request, socket) {
     }
     case 'respawn': {
       const target = matchSession(await listSessions({ all: true }), request.id, { usage: 'respawn <id>', name: false })
-      if (active.has(target.id)) throw new Error('Session already running: ' + target.id)
+      if (active.has(target.id)) throw new Error(`Session already running: ${target.id}`)
       const child = await launch({ ...target, state: 'starting', pid: null }, { resume: true })
       return { id: child.id, pid: child.pid }
     }
@@ -213,13 +213,13 @@ async function command(request, socket) {
     }
     case 'input': {
       const job = active.get(socket.backgroundSessionId)
-      if (!job || !job.subscribers.has(socket)) throw new Error('Session is no longer attached')
+      if (!job?.subscribers.has(socket)) throw new Error('Session is no longer attached')
       job.proc.terminal?.write(Buffer.from(request.data, 'base64'))
       return { written: true }
     }
     case 'resize': {
       const job = active.get(socket.backgroundSessionId)
-      if (!job || !job.subscribers.has(socket)) throw new Error('Session is no longer attached')
+      if (!job?.subscribers.has(socket)) throw new Error('Session is no longer attached')
       if (Number.isInteger(request.cols) && Number.isInteger(request.rows)) {
         job.proc.terminal?.resize(Math.max(20, request.cols), Math.max(5, request.rows))
       }
@@ -241,7 +241,7 @@ async function command(request, socket) {
       return { stopped: true }
     }
     default:
-      throw new Error('Unknown background daemon operation: ' + String(request.op))
+      throw new Error(`Unknown background daemon operation: ${String(request.op)}`)
   }
 }
 function attachSocket(socket) {
@@ -254,12 +254,14 @@ function attachSocket(socket) {
       return
     }
     let index
-    while ((index = buffer.indexOf('\n')) !== -1) {
+    index = buffer.indexOf('\n')
+    while (index !== -1) {
       const line = buffer.slice(0, index)
       buffer = buffer.slice(index + 1)
+      index = buffer.indexOf('\n')
       let request
       try { request = JSON.parse(line) }
-      catch (error) { send(socket, { ok: false, error: 'Invalid command JSON: ' + error.message }); continue }
+      catch (error) { send(socket, { ok: false, error: `Invalid command JSON: ${error.message}` }); continue }
       void command(request, socket).then(
         data => send(socket, { ok: true, id: request.requestId, data }),
         error => send(socket, { ok: false, id: request.requestId, error: error.message })
@@ -271,7 +273,7 @@ function attachSocket(socket) {
     const session = active.get(socket.backgroundSessionId)
     session?.subscribers.delete(socket)
   })
-  socket.on('error', error => process.stderr.write('Background IPC client error: ' + error.message + '\n'))
+  socket.on('error', error => process.stderr.write(`Background IPC client error: ${error.message}\n`))
 }
 export async function runBackgroundSupervisor() {
   await prepareFleet()
@@ -279,14 +281,14 @@ export async function runBackgroundSupervisor() {
   if (process.platform !== 'win32') {
     try {
       const current = await lstat(path)
-      if (!current.isSocket()) throw new Error('Refusing to replace non-socket path ' + path)
+      if (!current.isSocket()) throw new Error(`Refusing to replace non-socket path ${path}`)
       const { connect } = await import('node:net')
       const owner = await new Promise(resolve => {
         const s = connect(path)
         s.once('connect', () => { s.destroy(); resolve(true) })
         s.once('error', error => { s.destroy(); resolve(!['ECONNREFUSED', 'ENOENT'].includes(error.code)) })
       })
-      if (owner) throw new Error('Another background supervisor already owns ' + path)
+      if (owner) throw new Error(`Another background supervisor already owns ${path}`)
       await unlink(path)
     } catch (error) { if (error.code !== 'ENOENT') throw error }
   }
@@ -304,7 +306,7 @@ export async function runBackgroundSupervisor() {
   process.once('SIGTERM', () => void shutdown())
   server.on('close', () => {
     if (process.platform !== 'win32') void unlink(path).catch(error => {
-      if (error.code !== 'ENOENT') process.stderr.write('Cannot remove background socket: ' + error.message + '\n')
+      if (error.code !== 'ENOENT') process.stderr.write(`Cannot remove background socket: ${error.message}\n`)
     })
   })
   // Supervisor is kept alive while any sessions run, and shuts down when idle.
