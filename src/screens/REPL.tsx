@@ -3707,22 +3707,6 @@ export function REPL({
     setMessages(prev.slice(0, messageIndex));
     // Careful, this has to happen after setMessages
     setConversationId(randomUUID());
-    // Reset cached microcompact state so stale pinned cache edits
-    // don't reference tool_use_ids from truncated messages
-
-    if (feature('CONTEXT_COLLAPSE')) {
-      // Rewind truncates the REPL array. Commits whose archived span
-      // was past the rewind point can't be projected anymore
-      // (projectView silently skips them) but the staged queue and ID
-      // maps reference stale uuids. Simplest safe reset: drop
-      // everything. The ctx-agent will re-stage on the next
-      // threshold crossing.
-      /* eslint-disable @typescript-eslint/no-require-imports */
-      ;
-      (require('../services/contextCollapse/index.js') as typeof import('../services/contextCollapse/index.js')).resetContextCollapse();
-      /* eslint-enable @typescript-eslint/no-require-imports */
-    }
-
     // Restore state from the message we're rewinding to
     setAppState(prev => ({
       ...prev,
