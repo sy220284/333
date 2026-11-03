@@ -54,10 +54,7 @@ export function renderToolUseMessage({
   if (!skill) {
     return null;
   }
-  // Look up the command to check if it came from the legacy /commands folder
-  const command = commands?.find(c => c.name === skill);
-  const displayName = command?.loadedFrom === 'commands_DEPRECATED' ? `/${skill}` : skill;
-  return displayName;
+  return skill;
 }
 export function renderToolUseProgressMessage(progressMessages: ProgressMessage<Progress>[], {
   tools,

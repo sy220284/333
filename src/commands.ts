@@ -521,7 +521,7 @@ export function getMcpSkillCommands(
 }
 
 // SkillTool shows ALL prompt-based commands that the model can invoke
-// This includes both skills (from /skills/) and commands (from /commands/)
+// Uses the current skills registry (from /skills/ and plugins)
 export const getSkillToolCommands = memoize(
   async (cwd: string): Promise<Command[]> => {
     const allCommands = await getCommands(cwd)
@@ -530,12 +530,10 @@ export const getSkillToolCommands = memoize(
         cmd.type === 'prompt' &&
         !cmd.disableModelInvocation &&
         cmd.source !== 'builtin' &&
-        // Always include skills from /skills/ dirs, bundled skills, and legacy /commands/ entries
-        // (they all get an auto-derived description from the first line if frontmatter is missing).
+        // Skills from /skills/ and bundled skills receive derived descriptions.
         // Plugin/MCP commands still require an explicit description to appear in the listing.
         (cmd.loadedFrom === 'bundled' ||
           cmd.loadedFrom === 'skills' ||
-          cmd.loadedFrom === 'commands_DEPRECATED' ||
           cmd.hasUserSpecifiedDescription ||
           cmd.whenToUse),
     )

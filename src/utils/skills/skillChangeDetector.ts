@@ -173,7 +173,7 @@ async function getWatchablePaths(): Promise<string[]> {
   const paths: string[] = []
 
   // User skills directory (~/.claude/skills)
-  const userSkillsPath = getSkillsPath('userSettings', 'skills')
+  const userSkillsPath = getSkillsPath('userSettings')
   if (userSkillsPath) {
     try {
       await fs.stat(userSkillsPath)
@@ -183,36 +183,12 @@ async function getWatchablePaths(): Promise<string[]> {
     }
   }
 
-  // User commands directory (~/.claude/commands)
-  const userCommandsPath = getSkillsPath('userSettings', 'commands')
-  if (userCommandsPath) {
-    try {
-      await fs.stat(userCommandsPath)
-      paths.push(userCommandsPath)
-    } catch {
-      // Path doesn't exist, skip it
-    }
-  }
-
   // Project skills directory (.claude/skills)
-  const projectSkillsPath = getSkillsPath('projectSettings', 'skills')
+  const projectSkillsPath = getSkillsPath('projectSettings')
   if (projectSkillsPath) {
     try {
       // For project settings, resolve to absolute path
       const absolutePath = platformPath.resolve(projectSkillsPath)
-      await fs.stat(absolutePath)
-      paths.push(absolutePath)
-    } catch {
-      // Path doesn't exist, skip it
-    }
-  }
-
-  // Project commands directory (.claude/commands)
-  const projectCommandsPath = getSkillsPath('projectSettings', 'commands')
-  if (projectCommandsPath) {
-    try {
-      // For project settings, resolve to absolute path
-      const absolutePath = platformPath.resolve(projectCommandsPath)
       await fs.stat(absolutePath)
       paths.push(absolutePath)
     } catch {
