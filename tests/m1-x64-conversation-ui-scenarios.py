@@ -275,8 +275,24 @@ def main():
     Path(args.report).write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',
                                   encoding='utf-8')
     print(json.dumps({s:report['comparison'][s] for s in ('stream','tool','retry')}))
-    if not all(report['comparison'][s]['both_reached_expected_end_state']
-               for s in ('stream','tool','retry')):
+    failed = [s for s in ('stream','tool','retry')
+              if not report['comparison'][s]['both_reached_expected_end_state']]
+    for scenario in failed:
+        for side in ('official', 'rebuilt'):
+            sample = report[side][scenario]
+            print(json.dumps({
+                'diagnosis': 'real_pty_end_state_failure',
+                'scenario': scenario,
+                'implementation': side,
+                'passed': sample['passed'],
+                'request_count': sample['request_count'],
+                'marker_present': sample['marker_present'],
+                'tool_fixture_seen': sample['tool_fixture_seen'],
+                'tool_read_verified': sample['tool_read_verified'],
+                'last_screen_rows': sample['final_screen_rows'],
+                'terminal_tail': sample['terminal_tail'],
+            }, ensure_ascii=False))
+    if failed:
         raise SystemExit(1)
 
 if __name__=='__main__':
