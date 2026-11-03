@@ -159,33 +159,39 @@ export async function getAnthropicClient({
         ? process.env.ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION
         : getAWSRegion()
 
-    const bedrockArgs: ConstructorParameters<typeof AnthropicBedrock>[0] = {
+    const bearerToken = process.env.AWS_BEARER_TOKEN_BEDROCK
+    const skipBedrockAuth = isEnvTruthy(process.env.CLAUDE_CODE_SKIP_BEDROCK_AUTH)
+    // Discriminated constructor credentials must be assembled atomically:
+    // Bedrock's SDK treats a partial access-key pair as invalid.
+    const credentials = !bearerToken && !skipBedrockAuth
+      ? await refreshAndGetAwsCredentials()
+      : null
+    const sharedArgs = {
       ...ARGS,
       awsRegion,
-      ...(isEnvTruthy(process.env.CLAUDE_CODE_SKIP_BEDROCK_AUTH) && {
-        skipAuth: true,
-      }),
       ...(isDebugToStdErr() && { logger: createStderrLogger() }),
     }
-
-    // Add API key authentication if available
-    if (process.env.AWS_BEARER_TOKEN_BEDROCK) {
-      bedrockArgs.skipAuth = true
-      // Add the Bearer token for Bedrock API key authentication
-      bedrockArgs.defaultHeaders = {
-        ...bedrockArgs.defaultHeaders,
-        Authorization: `Bearer ${process.env.AWS_BEARER_TOKEN_BEDROCK}`,
-      }
-    } else if (!isEnvTruthy(process.env.CLAUDE_CODE_SKIP_BEDROCK_AUTH)) {
-      // Refresh auth and get credentials with cache clearing
-      const cachedCredentials = await refreshAndGetAwsCredentials()
-      if (cachedCredentials) {
-        bedrockArgs.awsAccessKey = cachedCredentials.accessKeyId
-        bedrockArgs.awsSecretKey = cachedCredentials.secretAccessKey
-        bedrockArgs.awsSessionToken = cachedCredentials.sessionToken
-      }
-    }
-    // we have always been lying about the return type - this doesn't support batching or models
+    const bedrockArgs: ConstructorParameters<typeof AnthropicBedrock>[0] =
+      bearerToken
+        ? {
+            ...sharedArgs,
+            skipAuth: true,
+            defaultHeaders: {
+              ...defaultHeaders,
+              Authorization: `Bearer ${bearerToken}`,
+            },
+          }
+        : skipBedrockAuth
+          ? { ...sharedArgs, skipAuth: true }
+          : credentials
+            ? {
+                ...sharedArgs,
+                awsAccessKey: credentials.accessKeyId,
+                awsSecretKey: credentials.secretAccessKey,
+                awsSessionToken: credentials.sessionToken,
+              }
+            : sharedArgs
+    // The provider's streaming and batching API differs from the direct SDK.
     return new AnthropicBedrock(bedrockArgs) as unknown as Anthropic
   }
   if (isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)) {

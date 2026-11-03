@@ -142,6 +142,12 @@ const MAX_COMPACT_STREAMING_RETRIES = 2
  * tool_result content from tools). Assistant messages contain text, tool_use,
  * and thinking blocks but not images.
  */
+/** Newer API versions can contain document blocks not yet modeled in the pinned SDK. */
+function hasDocumentType(value: unknown): value is { type: 'document' } {
+  return typeof value === 'object' && value !== null &&
+    'type' in value && value.type === 'document'
+}
+
 export function stripImagesFromMessages(messages: Message[]): Message[] {
   return messages.map(message => {
     if (message.type !== 'user') {
@@ -159,7 +165,7 @@ export function stripImagesFromMessages(messages: Message[]): Message[] {
         hasMediaBlock = true
         return [{ type: 'text' as const, text: '[image]' }]
       }
-      if (Reflect.get(block, 'type') === 'document') {
+      if (hasDocumentType(block)) {
         hasMediaBlock = true
         return [{ type: 'text' as const, text: '[document]' }]
       }
@@ -171,7 +177,7 @@ export function stripImagesFromMessages(messages: Message[]): Message[] {
             toolHasMedia = true
             return { type: 'text' as const, text: '[image]' }
           }
-          if (Reflect.get(item, 'type') === 'document') {
+          if (hasDocumentType(item)) {
             toolHasMedia = true
             return { type: 'text' as const, text: '[document]' }
           }

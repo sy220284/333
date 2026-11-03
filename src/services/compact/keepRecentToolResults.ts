@@ -37,6 +37,11 @@ export type KeepRecentOptions = {
   estimateTextTokens?: (text: string) => number
 }
 
+function hasDocumentType(value: unknown): value is { type: 'document' } {
+  return typeof value === 'object' && value !== null &&
+    'type' in value && value.type === 'document'
+}
+
 function hasExternalArtifactProvenance(content: ToolResultBlockParam['content']): boolean {
   if (typeof content === 'string') return content.includes(EXTERNAL_ARTIFACT_TAG)
   return Array.isArray(content) && content.some(
@@ -133,7 +138,7 @@ export async function keepRecentToolResults(
       if (block.type !== 'tool_result' || !clearedIds.has(block.tool_use_id)) return block
       const hasMedia =
         Array.isArray(block.content) &&
-        block.content.some(part => part.type === 'image' || Reflect.get(part, 'type') === 'document')
+        block.content.some(part => part.type === 'image' || hasDocumentType(part))
       const replacement = hasMedia
         ? CLEARED_TOOL_RESULT
         : (clearedContent.get(block.tool_use_id) ?? CLEARED_TOOL_RESULT)
