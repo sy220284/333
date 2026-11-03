@@ -5,8 +5,12 @@ import {
 } from "./clawdAnimationData.mjs";
 
 export function getClickAnimationNames(appleTerminal: boolean): string[] {
-	if (!appleTerminal) return [...clickAnimationNames];
-	return clickAnimationNames.filter((name) => {
+	const clickCandidates = clickAnimationNames.filter(
+		(name) =>
+			(clawdAnimations[name as keyof typeof clawdAnimations][0]?.x ?? 0) === 0,
+	);
+	if (!appleTerminal) return clickCandidates;
+	return clickCandidates.filter((name) => {
 		const sequence = clawdAnimations[name as keyof typeof clawdAnimations];
 		const first = sequence[0];
 		if (
