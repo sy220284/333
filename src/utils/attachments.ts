@@ -85,6 +85,7 @@ import uniqBy from 'lodash-es/uniqBy.js'
 import { getProjectRoot } from '../bootstrap/state.js'
 import { formatCommandsWithinBudget } from '../tools/SkillTool/prompt.js'
 import { getContextWindowForModel } from './context.js'
+import type { DiscoverySignal } from '../services/skillSearch/signals.js'
 const autoModeStateModule = feature('TRANSCRIPT_CLASSIFIER')
   ? (require('./permissions/autoModeState.js') as typeof import('./permissions/autoModeState.js'))
   : null
@@ -518,6 +519,12 @@ export type Attachment =
       content: string
       skillCount: number
       isInitial: boolean
+    }
+  | {
+      type: 'skill_discovery'
+      skills: { name: string; description: string; shortId?: string }[]
+      signal: DiscoverySignal
+      source: 'native' | 'aki' | 'both'
     }
   | {
       type: 'queued_command'
