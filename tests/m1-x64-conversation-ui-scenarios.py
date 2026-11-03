@@ -121,7 +121,11 @@ def probe(binary, scenario):
                 calls.append({'model': body.get('model'),
                               'messages': len(content),
                               'tools': [t.get('name') for t in body.get('tools', [])],
-                              'read_result_verified': any(FIXTURE in str(b) for b in tool_results)})
+                              'read_result_verified': any(FIXTURE in str(b) for b in tool_results),
+                              'tool_result_count': len(tool_results),
+                              'tool_result_types': [b.get('type') for b in tool_results],
+                              'tool_result_samples': [str(b)[:600] for b in tool_results[:2]],
+                              'last_user_sample': str(next((m.get('content') for m in reversed(content) if m.get('role') == 'user'), ''))[:300]})
                 request_seen.set()
                 model = body.get('model', 'claude-sonnet-4-6')
                 if scenario == 'retry' and len(calls) == 1:
@@ -227,6 +231,7 @@ def probe(binary, scenario):
             'retry_visible':bool(re.search(r'Retrying|retry|重试|rate limit',text,re.I)),
             'tool_fixture_seen':FIXTURE in text,
             'tool_read_verified':any(c['read_result_verified'] for c in calls),
+            'model_request_trace': calls,
             'retry_status_screen_seen':any(f['retry_status_visible'] for f in frames),
             'final_screen_rows':[line.rstrip() for line in screen.display if line.strip()][-12:],
             'frames':frames,
@@ -289,6 +294,7 @@ def main():
                 'marker_present': sample['marker_present'],
                 'tool_fixture_seen': sample['tool_fixture_seen'],
                 'tool_read_verified': sample['tool_read_verified'],
+                'model_request_trace': sample['model_request_trace'],
                 'last_screen_rows': sample['final_screen_rows'],
                 'terminal_tail': sample['terminal_tail'],
             }, ensure_ascii=False))
