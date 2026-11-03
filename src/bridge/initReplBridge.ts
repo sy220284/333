@@ -55,7 +55,6 @@ import {
 import {
   checkBridgeMinVersion,
   isBridgeEnabledBlocking,
-  isCseShimEnabled,
   isEnvLessBridgeEnabled,
 } from './bridgeEnabled.js'
 import {
@@ -68,7 +67,6 @@ import { checkEnvLessBridgeMinVersion } from './envLessBridgeConfig.js'
 import { getPollIntervalConfig } from './pollConfig.js'
 import type { BridgeState, ReplBridgeHandle } from './replBridge.js'
 import { initBridgeCore } from './replBridge.js'
-import { setCseShimGate } from './sessionIdCompat.js'
 import type { BridgeWorkerType } from './types.js'
 
 export type InitBridgeOptions = {
@@ -125,10 +123,6 @@ export async function initReplBridge(
     outboundOnly,
     tags,
   } = options ?? {}
-
-  // Wire the cse_ shim kill switch so toCompatSessionId respects the
-  // GrowthBook gate. Daemon/SDK paths skip this — shim defaults to active.
-  setCseShimGate(isCseShimEnabled)
 
   // 1. Runtime gate
   if (!(await isBridgeEnabledBlocking())) {

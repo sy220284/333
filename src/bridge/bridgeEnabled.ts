@@ -130,24 +130,6 @@ export function isEnvLessBridgeEnabled(): boolean {
 }
 
 /**
- * Kill-switch for the `cse_*` → `session_*` client-side retag shim.
- *
- * The shim exists because compat/convert.go:27 validates TagSession and the
- * claude.ai frontend routes on `session_*`, while v2 worker endpoints hand out
- * `cse_*`. Once the server tags by environment_kind and the frontend accepts
- * `cse_*` directly, flip this to false to make toCompatSessionId a no-op.
- * Defaults to true — the shim stays active until explicitly disabled.
- */
-export function isCseShimEnabled(): boolean {
-  return feature('BRIDGE_MODE')
-    ? getFeatureValue_CACHED_MAY_BE_STALE(
-        'tengu_bridge_repl_v2_cse_shim_enabled',
-        true,
-      )
-    : true
-}
-
-/**
  * Returns an error message if the current CLI version is below the
  * minimum required for the v1 (env-based) Remote Control path, or null if the
  * version is fine. The v2 (env-less) path uses checkEnvLessBridgeMinVersion()
