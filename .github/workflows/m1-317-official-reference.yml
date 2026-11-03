@@ -10,6 +10,7 @@ on:
       - 'tests/m1-read-repeat-317.test.mjs'
       - 'tests/m1-subagent-effort-317.test.mjs'
       - 'build/m1-cli-surface-audit.mjs'
+      - 'tests/m1-plugin-data-size-parity.test.mjs'
       - 'build/install-public-deps.mjs'
       - 'src/main.tsx'
       - 'src/cli/handlers/**'
@@ -87,6 +88,11 @@ jobs:
             --target 2.1.317 \
             --report "${RUNNER_TEMP}/m1-317-reference/cli-surface-parity.json" \
             --strict
+      - name: 使用 2.1.317 官方原版和独立重建版验证插件数据大小语义
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLAUDE_TARGET_X64="${RUNNER_TEMP}/m1-317-reference/claude" node --test tests/m1-plugin-data-size-parity.test.mjs
       - name: 保存官方原始清单与可复现的二进制校验结果
         if: always()
         uses: actions/upload-artifact@v4
