@@ -3734,9 +3734,17 @@
       "domain_candidate": "工具权限与安全",
       "official_text": "Added `onFailure: \"block\"` for Agent SDK hook callbacks, so a callback that fails blocks the action instead of letting it run",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.317",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "SDK Hook 源码已修改，待完整构建与双端实测",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/entrypoints/sdk/controlSchemas.ts",
+        "src/types/hooks.ts",
+        "src/cli/print.ts",
+        "src/cli/structuredIO.ts",
+        "src/utils/hooks.ts",
+        "src/utils/hooks/callbackFailurePolicy.mjs",
+        "tests/m1-sdk-hook-failure-317.test.mjs"
+      ]
     },
     {
       "id": "2.1.317#004",
