@@ -10,10 +10,7 @@ import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
 import type { Tool, ToolUseContext } from '../../Tool.js'
 import type { LocalAgentTaskState } from '../../tasks/LocalAgentTask/LocalAgentTask.js'
 import { FileReadTool } from '../../tools/FileReadTool/FileReadTool.js'
-import {
-  FILE_READ_TOOL_NAME,
-  FILE_UNCHANGED_STUB,
-} from '../../tools/FileReadTool/prompt.js'
+import { FILE_READ_TOOL_NAME } from '../../tools/FileReadTool/prompt.js'
 import { ToolSearchTool } from '../../tools/ToolSearchTool/ToolSearchTool.js'
 import type { AgentId } from '../../types/ids.js'
 import type {
@@ -1585,27 +1582,20 @@ export async function createAsyncAgentAttachmentsIfNeeded(
 }
 
 /**
- * Scan messages for Read tool_use blocks and collect their file_path inputs
- * (normalized via expandPath). Used to dedup post-compact file restoration
- * against what's already visible in the preserved tail.
- *
- * Skips Reads whose tool_result is a dedup stub — the stub points at an
- * earlier full Read that may have been compacted away, so we want
- * createPostCompactFileAttachments to re-inject the real content.
+ * Return paths whose full Read results remain visible after compaction.
+ * A tool_use alone does not establish that the model has file content: the
+ * result may be missing after interruption or may be an error. Read now
+ * returns real content on repeated calls, so no unchanged-file stub exists.
  */
 function collectReadToolFilePaths(messages: Message[]): Set<string> {
-  const stubIds = new Set<string>()
+  const successfulReadResultIds = new Set<string>()
   for (const message of messages) {
     if (message.type !== 'user' || !Array.isArray(message.message.content)) {
       continue
     }
     for (const block of message.message.content) {
-      if (
-        block.type === 'tool_result' &&
-        typeof block.content === 'string' &&
-        block.content.startsWith(FILE_UNCHANGED_STUB)
-      ) {
-        stubIds.add(block.tool_use_id)
+      if (block.type === 'tool_result' && block.is_error !== true) {
+        successfulReadResultIds.add(block.tool_use_id)
       }
     }
   }
@@ -1622,7 +1612,7 @@ function collectReadToolFilePaths(messages: Message[]): Set<string> {
       if (
         block.type !== 'tool_use' ||
         block.name !== FILE_READ_TOOL_NAME ||
-        stubIds.has(block.id)
+        !successfulReadResultIds.has(block.id)
       ) {
         continue
       }
