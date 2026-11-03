@@ -351,7 +351,14 @@ export async function interceptBackgroundCli(args) {
   }
   const id = options[0]
   if (!id) throw new Error('Usage: claude ' + normalized + ' <id>')
-  if (normalized === 'attach') { await attach(id); return true }
+  // Resolve against persisted records before starting a daemon; the official
+  // x64 reports a missing id without booting a service or masking ENOJOB.
+  const matches = await listSessions({ all: true })
+  const selected = matchSession(matches, id, {
+    usage: normalized + ' <id>',
+    name: normalized === 'attach' || normalized === 'logs',
+  })
+  if (normalized === 'attach') { await attach(selected.id); return true }
   if (normalized === 'logs') {
     const job = matchSession(await listSessions({ all: true }), id, { usage: 'logs <id|name>' })
     try { process.stdout.write(stripUnsafeTerminal(await readTail(job.logPath))) }
@@ -359,18 +366,18 @@ export async function interceptBackgroundCli(args) {
     return true
   }
   if (normalized === 'stop') {
-    const result = await ask({ op: 'stop', id })
+    const result = await ask({ op: 'stop', id: selected.id }, { start: true })
     process.stdout.write('stopped ' + result.id + '\n')
     if (result.worktreePath) process.stdout.write('  worktree retained at ' + result.worktreePath + '\n')
     return true
   }
   if (normalized === 'respawn') {
-    const result = await ask({ op: 'respawn', id }, { start: true })
+    const result = await ask({ op: 'respawn', id: selected.id }, { start: true })
     process.stdout.write('respawned ' + result.id + '\n')
     return true
   }
   if (normalized === 'rm') {
-    const result = await ask({ op: 'rm', id, ...rmOptions(options) }, { start: true })
+    const result = await ask({ op: 'rm', id: selected.id, ...rmOptions(options) }, { start: true })
     process.stdout.write('removed ' + result.id + '\n')
     return true
   }
