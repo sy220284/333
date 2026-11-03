@@ -11,6 +11,7 @@ import type { Tool, ToolUseContext } from '../../Tool.js'
 import type { LocalAgentTaskState } from '../../tasks/LocalAgentTask/LocalAgentTask.js'
 import { FileReadTool } from '../../tools/FileReadTool/FileReadTool.js'
 import { FILE_READ_TOOL_NAME } from '../../tools/FileReadTool/prompt.js'
+import { collectPreservedReadFilePaths } from './preservedReadPaths.mjs'
 import { ToolSearchTool } from '../../tools/ToolSearchTool/ToolSearchTool.js'
 import type { AgentId } from '../../types/ids.js'
 import type {
@@ -1401,7 +1402,11 @@ export async function createPostCompactFileAttachments(
   maxFiles: number,
   preservedMessages: Message[] = [],
 ): Promise<AttachmentMessage[]> {
-  const preservedReadPaths = collectReadToolFilePaths(preservedMessages)
+  const preservedReadPaths = collectPreservedReadFilePaths(
+    preservedMessages,
+    FILE_READ_TOOL_NAME,
+    expandPath,
+  )
   const recentFiles = Object.entries(readFileState)
     .map(([filename, state]) => ({ filename, ...state }))
     .filter(
@@ -1579,55 +1584,6 @@ export async function createAsyncAgentAttachmentsIfNeeded(
       }),
     ]
   })
-}
-
-/**
- * Return paths whose full Read results remain visible after compaction.
- * A tool_use alone does not establish that the model has file content: the
- * result may be missing after interruption or may be an error. Read now
- * returns real content on repeated calls, so no unchanged-file stub exists.
- */
-function collectReadToolFilePaths(messages: Message[]): Set<string> {
-  const successfulReadResultIds = new Set<string>()
-  for (const message of messages) {
-    if (message.type !== 'user' || !Array.isArray(message.message.content)) {
-      continue
-    }
-    for (const block of message.message.content) {
-      if (block.type === 'tool_result' && block.is_error !== true) {
-        successfulReadResultIds.add(block.tool_use_id)
-      }
-    }
-  }
-
-  const paths = new Set<string>()
-  for (const message of messages) {
-    if (
-      message.type !== 'assistant' ||
-      !Array.isArray(message.message.content)
-    ) {
-      continue
-    }
-    for (const block of message.message.content) {
-      if (
-        block.type !== 'tool_use' ||
-        block.name !== FILE_READ_TOOL_NAME ||
-        !successfulReadResultIds.has(block.id)
-      ) {
-        continue
-      }
-      const input = block.input
-      if (
-        input &&
-        typeof input === 'object' &&
-        'file_path' in input &&
-        typeof input.file_path === 'string'
-      ) {
-        paths.add(expandPath(input.file_path))
-      }
-    }
-  }
-  return paths
 }
 
 const SKILL_TRUNCATION_MARKER =
