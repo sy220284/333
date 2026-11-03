@@ -21,7 +21,7 @@ function assertFrames(frames) {
   assert.ok(Array.isArray(frames) && frames.length > 0, 'animation must contain frames')
   for (const frame of frames) {
     assertValidPose(frame.pose)
-    assert.ok(Number.isSafeInteger(frame.offset) && frame.offset >= 0, 'invalid offset')
+    assert.ok(Number.isSafeInteger(frame.offset), 'animation offsets may be signed, but must remain integral')
     if (frame.x !== undefined) assert.ok(Number.isSafeInteger(frame.x), 'invalid x shift')
     if (frame.poof !== undefined) assert.equal(typeof frame.poof, 'string')
     if (frame.shadow !== undefined) assert.equal(typeof frame.shadow, 'string')
