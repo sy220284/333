@@ -84,6 +84,15 @@ class TerminalParityAssertions(unittest.TestCase):
         self.assertEqual(probe.normalize_retry_status_frame(first), probe.normalize_retry_status_frame(later))
         self.assertNotEqual(probe.normalize_retry_status_frame(first), probe.normalize_retry_status_frame(wrong))
 
+    def test_spinner_glyph_comes_from_animation_row_not_footer(self):
+        lines = [
+            '✶ 正在处理… (1s · ↓ 20 tokens)',
+            '  ⏵⏵ 自动模式开启 · esc 中断',
+        ]
+        self.assertEqual(probe.active_spinner_glyph(lines), '✶')
+        self.assertIsNone(probe.active_spinner_glyph(['◐ medium · /effort']))
+        self.assertIsNone(probe.active_spinner_glyph(['✻ API error · Retrying in 2s']))
+
     def test_timed_frame_comparison_reports_differences(self):
         official = {'frames': [{'ms': 100, 'screen_rows': ['expected']}]}
         rebuilt = {'frames': [{'ms': 105, 'screen_rows': ['different']}]}
