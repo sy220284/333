@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Keep background title generation from consuming real-tool test steps."""
 import importlib.util
+import json
 import unittest
 from types import SimpleNamespace
 from pathlib import Path
@@ -90,7 +91,19 @@ class TerminalParityAssertions(unittest.TestCase):
         self.assertIn(b'signature_delta', response)
         self.assertIn(b'text_delta', response)
         self.assertLess(response.index(b'thinking_delta'), response.index(b'text_delta'))
-        self.assertIn(probe.THINKING_RESULT.encode(), response)
+        # SSE intentionally splits text_delta into multiple frames. Reassemble
+        # the model's text, then verify content and order without relying on
+        # the fixture marker being contiguous in the raw wire bytes.
+        frames = [
+            json.loads(line[6:]) for line in response.decode().splitlines()
+            if line.startswith('data: ')
+        ]
+        chunks = [
+            frame['delta']['text'] for frame in frames
+            if frame.get('type') == 'content_block_delta'
+            and frame.get('delta', {}).get('type') == 'text_delta'
+        ]
+        self.assertEqual(''.join(chunks), probe.THINKING_RESULT)
 
     def test_spinner_glyph_comes_from_animation_row_not_footer(self):
         lines = [
