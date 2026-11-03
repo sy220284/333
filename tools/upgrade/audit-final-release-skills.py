@@ -59,7 +59,7 @@ def classify_skill(payload: bytes) -> str | None:
     return None
 
 
-def embedded_skills(binary: Path):
+def embedded_skills(binary: Path, payloads: dict[str, bytes] | None = None):
     lib = zstd_library()
     discovered: dict[str, dict] = {}
     frames = 0
@@ -96,17 +96,31 @@ def embedded_skills(binary: Path):
                 "name": name, "sha256": digest, "bytes": len(payload),
                 "frame_offset": position,
             }
+            if payloads is not None:
+                payloads[name] = payload
     if frames == 0:
         raise RuntimeError("No independently decoded embedded zstd frames: binary format needs review")
     return discovered, frames
 
 
-def audit(binary: Path, root: Path, expected_sha256: str, version: str):
+def audit(binary: Path, root: Path, expected_sha256: str, version: str,
+          extraction_dir: Path | None = None):
     with binary.open("rb") as handle:
         binary_hash = hashlib.file_digest(handle, "sha256").hexdigest()
     if binary_hash != expected_sha256:
         raise RuntimeError(f"Wrong {version} native binary: expected {expected_sha256}, got {binary_hash}")
-    found, frame_count = embedded_skills(binary)
+    recovered_bytes: dict[str, bytes] | None = {} if extraction_dir is not None else None
+    found, frame_count = embedded_skills(binary, recovered_bytes)
+    if extraction_dir is not None:
+        if not found:
+            raise RuntimeError('No final-release skill resources were located for extraction')
+        extraction_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+        for skill_name, payload in (recovered_bytes or {}).items():
+            destination = extraction_dir / skill_name / 'SKILL.md'
+            destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            destination.write_bytes(payload)
+            if hashlib.sha256(destination.read_bytes()).hexdigest() != found[skill_name]['sha256']:
+                raise RuntimeError(f'Final-release skill extraction checksum mismatch: {skill_name}')
     source_root = root / "src/skills/bundled"
     if not source_root.is_dir():
         raise RuntimeError(f"Bundled skill directory is missing: {source_root}")
@@ -146,12 +160,13 @@ def main():
     parser.add_argument("--target", required=True)
     parser.add_argument("--expected-sha256", required=True)
     parser.add_argument("--report", type=Path, required=True)
+    parser.add_argument("--extract-dir", type=Path, help="Write exact native skill bytes as reviewable artifacts, without modifying PR sources")
     parser.add_argument("--strict", action="store_true")
     args = parser.parse_args()
     expected = args.expected_sha256.lower()
     if not SHA256.fullmatch(expected):
         raise ValueError("Official manifest SHA-256 must be a 64-character hexadecimal string")
-    report = audit(args.binary, args.root, expected, args.target)
+    report = audit(args.binary, args.root, expected, args.target, args.extract_dir)
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(json.dumps({"version": args.target, "found": report["located_skills"], "counts": report["counts"]}))
