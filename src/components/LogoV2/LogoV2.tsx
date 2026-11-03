@@ -35,7 +35,6 @@ import { feature } from 'bun:bundle';
 /* eslint-disable @typescript-eslint/no-require-imports */
 const ChannelsNoticeModule = feature('KAIROS') || feature('KAIROS_CHANNELS') ? require('./ChannelsNotice.js') as typeof import('./ChannelsNotice.js') : null;
 /* eslint-enable @typescript-eslint/no-require-imports */
-import { SandboxManager } from 'src/utils/sandbox/sandbox-adapter.js';
 import { useShowGuestPassesUpsell, incrementGuestPassesSeenCount } from './GuestPassesUpsell.js';
 import { useShowOverageCreditUpsell, incrementOverageCreditUpsellSeenCount, createOverageCreditFeed } from './OverageCreditUpsell.js';
 import { plural } from '../../utils/stringUtils.js';
@@ -60,14 +59,6 @@ export function LogoV2() {
     t0 = $[0];
   }
   const showOnboarding = t0;
-  let t1;
-  if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
-    t1 = SandboxManager.isSandboxingEnabled();
-    $[1] = t1;
-  } else {
-    t1 = $[1];
-  }
-  const showSandboxStatus = t1;
   const showGuestPassesUpsell = useShowGuestPassesUpsell();
   const showOverageCreditUpsell = useShowOverageCreditUpsell();
   const agent = useAppState(_temp);
@@ -185,7 +176,6 @@ export function LogoV2() {
       <Text>{fullModelDisplayName}{effortSuffix} · {billingType}</Text>
       <Text>{agentName ? `@${agentName} · ${cwd}` : cwd}</Text>
       {announcement && <Text>{announcement}</Text>}
-      {showSandboxStatus && <Text>Bash 命令将在沙箱中运行，可使用 /sandbox 关闭。</Text>}
     </Box>;
   }
   if (!hasReleaseNotes && !showOnboarding && !isEnvTruthy(process.env.CLAUDE_CODE_FORCE_FULL_LOGO)) {
@@ -319,14 +309,6 @@ export function LogoV2() {
       t15 = $[38];
       t16 = $[39];
     }
-    let t17;
-    if ($[40] !== showSandboxStatus) {
-      t17 = showSandboxStatus && <Box marginTop={1} flexDirection="column"><Text color="warning">Bash 命令将在沙箱中运行，可使用 /sandbox 关闭。</Text></Box>;
-      $[40] = showSandboxStatus;
-      $[41] = t17;
-    } else {
-      t17 = $[41];
-    }
     let t18;
     let t19;
     if ($[42] === Symbol.for("react.memo_cache_sentinel")) {
@@ -338,7 +320,7 @@ export function LogoV2() {
       t18 = $[42];
       t19 = $[43];
     }
-    return <><OffscreenFreeze><Box flexDirection="column" borderStyle="round" borderColor="claude" borderText={t11} paddingX={1} paddingY={1} alignItems="center" width={columns}><Text bold={true}>{welcomeMessage}</Text>{t12}{t13}<Text dimColor={true}>{billingType}</Text><Text dimColor={true}>{agentName ? `@${agentName} · ${truncatedCwd}` : truncatedCwd}</Text></Box></OffscreenFreeze>{t14}{t15}{t16}{t17}{t18}{t19}</>;
+    return <><OffscreenFreeze><Box flexDirection="column" borderStyle="round" borderColor="claude" borderText={t11} paddingX={1} paddingY={1} alignItems="center" width={columns}><Text bold={true}>{welcomeMessage}</Text>{t12}{t13}<Text dimColor={true}>{billingType}</Text><Text dimColor={true}>{agentName ? `@${agentName} · ${truncatedCwd}` : truncatedCwd}</Text></Box></OffscreenFreeze>{t14}{t15}{t16}{t18}{t19}</>;
   }
   const welcomeMessage_0 = formatWelcomeMessage(username);
   const modelLine = !process.env.IS_DEMO && config.oauthAccount?.organizationName ? `${modelDisplayName} · ${billingType} · ${config.oauthAccount.organizationName}` : `${modelDisplayName} · ${billingType}`;
@@ -498,14 +480,6 @@ export function LogoV2() {
   } else {
     t35 = $[83];
   }
-  let t36;
-  if ($[84] !== showSandboxStatus) {
-    t36 = showSandboxStatus && <Box paddingLeft={2} flexDirection="column"><Text color="warning">Bash 命令将在沙箱中运行，可使用 /sandbox 关闭。</Text></Box>;
-    $[84] = showSandboxStatus;
-    $[85] = t36;
-  } else {
-    t36 = $[85];
-  }
   let t37;
   let t38;
   let t39;
@@ -526,11 +500,10 @@ export function LogoV2() {
     t40 = $[89];
   }
   let t41;
-  if ($[90] !== t28 || $[91] !== t35 || $[92] !== t36) {
-    t41 = <>{t28}{t29}{t30}{t31}{t32}{t33}{t34}{t35}{t36}{t37}{t38}{t39}{t40}</>;
+  if ($[90] !== t28 || $[91] !== t35) {
+    t41 = <>{t28}{t29}{t30}{t31}{t32}{t33}{t34}{t35}{t37}{t38}{t39}{t40}</>;
     $[90] = t28;
     $[91] = t35;
-    $[92] = t36;
     $[93] = t41;
   } else {
     t41 = $[93];
