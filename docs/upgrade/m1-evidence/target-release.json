@@ -53,5 +53,7 @@
     "2.1.313",
     "2.1.315"
   ],
-  "intermediate_version_policy": "Treat versions without indexed release notes as explicit research gaps, not proof of no code or behavior changes. Require release-note reconciliation on every target change."
+  "intermediate_version_policy": "Treat versions without indexed release notes as explicit research gaps, not proof of no code or behavior changes. Require release-note reconciliation on every target change.",
+  "release_ledger": "docs/upgrade/m1-evidence/2.1.311-2.1.317-官方逐条变更与验收台账.json",
+  "cumulative_release_entries": 418
 }
