@@ -2,7 +2,7 @@ import { createServer } from 'node:net'
 import { chmod, appendFile, lstat, unlink } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import {
-  prepareFleet, fleetSocket, listSessions, createSessionRecord, saveSession,
+  prepareFleet, fleetSocket, listSessions, createSessionRecord, reserveNewSession, saveSession,
   editSession, deleteSession, matchSession, readSession, readTail,
   removeWorktreeSafely, isAlive
 } from './sessionStore.mjs'
@@ -144,14 +144,23 @@ async function stop(id) {
 async function dispatch(request) {
   if (!Array.isArray(request.args) || !request.args.every(a => typeof a === 'string')) throw new Error('Invalid dispatch arguments')
   if (!request.cwd || typeof request.cwd !== 'string') throw new Error('Invalid background working directory')
-  const record = createSessionRecord({
-    argv: sanitizedArgs(request.args), cwd: resolve(request.cwd),
-    name: request.name, agent: request.agent, model: request.model,
-  })
-  record.cols = request.cols
-  record.rows = request.rows
-  record.nameSource = request.nameSource || 'prompt'
-  const saved = await saveSession(record)
+  let saved
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const record = createSessionRecord({
+      argv: sanitizedArgs(request.args), cwd: resolve(request.cwd),
+      name: request.name, agent: request.agent, model: request.model,
+    })
+    record.cols = request.cols
+    record.rows = request.rows
+    record.nameSource = request.nameSource || 'prompt'
+    try {
+      saved = await reserveNewSession(record)
+      break
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error
+    }
+  }
+  if (!saved) throw new Error('Failed to allocate a unique background session ID after 8 attempts')
   try { return await launch(saved) }
   catch (error) {
     await editSession(saved.id, { state: 'failed', detail: error.message, pid: null })
