@@ -10,7 +10,7 @@ import {
   getOAuthHeaders,
   prepareApiRequest,
 } from '../utils/teleport/api.js'
-import { toCompatSessionId } from './sessionIdCompat.js'
+import { toSessionApiId } from './sessionIdProtocol.js'
 
 /**
  * OAuth-authenticated cross-session user event transport.
@@ -22,7 +22,7 @@ export async function postInterClaudeMessage(
   text: string,
   expectedIdentityKey: string | null,
 ): Promise<{ ok: boolean; error?: string; msgId?: string }> {
-  const sessionId = toCompatSessionId(targetSessionId)
+  const sessionId = toSessionApiId(targetSessionId)
   if (!/^session_[A-Za-z0-9_-]+$/.test(sessionId)) {
     return { ok: false, error: `invalid session ID format: ${targetSessionId}` }
   }

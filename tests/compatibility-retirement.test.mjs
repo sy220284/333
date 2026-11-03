@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
 
 const root = new URL('../src/', import.meta.url)
+const rootPath = fileURLToPath(root)
 function sources(folder) {
   return readdirSync(folder, { withFileTypes: true }).flatMap(entry => {
-    const path = join(folder.pathname ?? folder, entry.name)
+    const path = join(folder, entry.name)
     return entry.isDirectory() ? sources(path) : /\.tsx?$/.test(path) ? [path] : []
   })
 }
@@ -15,7 +17,7 @@ function code(path) {
 }
 
 test('all settings consumers use current reader', () => {
-  for (const path of sources(root)) {
+  for (const path of sources(rootPath)) {
     assert.doesNotMatch(readFileSync(path, 'utf8').split('//# sourceMappingURL=')[0], /\bgetSettings_DEPRECATED\b/, path)
   }
 })

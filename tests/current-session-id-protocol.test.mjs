@@ -20,7 +20,7 @@ test('remote session callers use the protocol helper, not the old shim', () => {
   const callers = [
     'bridge/replBridge.ts', 'bridge/bridgeMain.ts',
     'bridge/createSession.ts', 'bridge/replBridgeHandle.ts',
-    'bridge/remoteBridgeCore.ts', 'constants/product.ts',
+    'bridge/remoteBridgeCore.ts', 'bridge/peerSessions.ts', 'constants/product.ts',
   ]
   for (const path of callers) {
     const code = readFileSync(new URL(path, root), 'utf8').split('//# sourceMappingURL=')[0]
