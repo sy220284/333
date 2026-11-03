@@ -41,7 +41,7 @@ import { isOutputLineTruncated } from '../../utils/terminal.js';
 import { buildLargeToolResultMessage, ensureToolResultsDir, generatePreview, getToolResultPath, PREVIEW_SIZE_BYTES } from '../../utils/toolResultStorage.js';
 import { userFacingName as fileEditUserFacingName } from '../FileEditTool/UI.js';
 import { trackGitOperations } from '../shared/gitOperationTracking.js';
-import { bashToolHasPermission, commandHasAnyCd, matchWildcardPattern, permissionRuleExtractPrefix } from './bashPermissions.js';
+import { bashToolHasPermission, commandHasAnyCd, matchWildcardPattern } from './bashPermissions.js';
 import { interpretCommandResult } from './commandSemantics.js';
 import { getDefaultTimeoutMs, getMaxTimeoutMs, getSimplePrompt } from './prompt.js';
 import { checkReadOnlyConstraints } from './readOnlyValidation.js';
@@ -481,13 +481,7 @@ export const BashTool = buildTool({
     // matches `Bash(git *)`.
     const subcommands = parsed.commands.map(c => c.argv.join(' '));
     return pattern => {
-      const prefix = permissionRuleExtractPrefix(pattern);
-      return subcommands.some(cmd => {
-        if (prefix !== null) {
-          return cmd === prefix || cmd.startsWith(`${prefix} `);
-        }
-        return matchWildcardPattern(pattern, cmd);
-      });
+      return subcommands.some(cmd => matchWildcardPattern(pattern, cmd));
     };
   },
   isSearchOrReadCommand(input) {

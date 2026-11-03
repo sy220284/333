@@ -28,34 +28,15 @@ export type ShellPermissionRule =
       command: string
     }
   | {
-      type: 'prefix'
-      prefix: string
-    }
-  | {
       type: 'wildcard'
       pattern: string
     }
 
 /**
- * Extract prefix from legacy :* syntax (e.g., "npm:*" -> "npm")
- * This is maintained for backwards compatibility.
- */
-export function permissionRuleExtractPrefix(
-  permissionRule: string,
-): string | null {
-  const match = permissionRule.match(/^(.+):\*$/)
-  return match?.[1] ?? null
-}
-
-/**
- * Check if a pattern contains unescaped wildcards (not legacy :* syntax).
- * Returns true if the pattern contains * that are not escaped with \ or part of :* at the end.
+ * Check if a pattern contains unescaped wildcards.
+ * Returns true if the pattern contains * that are not escaped.
  */
 export function hasWildcards(pattern: string): boolean {
-  // If it ends with :*, it's legacy prefix syntax, not wildcard
-  if (pattern.endsWith(':*')) {
-    return false
-  }
   // Check for unescaped * anywhere in the pattern
   // An asterisk is unescaped if it's not preceded by a backslash,
   // or if it's preceded by an even number of backslashes (escaped backslashes)
@@ -159,16 +140,11 @@ export function matchWildcardPattern(
 export function parsePermissionRule(
   permissionRule: string,
 ): ShellPermissionRule {
-  // Check for legacy :* prefix syntax first (backwards compatibility)
-  const prefix = permissionRuleExtractPrefix(permissionRule)
-  if (prefix !== null) {
-    return {
-      type: 'prefix',
-      prefix,
-    }
+  if (permissionRule.includes(':*')) {
+    throw new Error('Old :* prefix permissions are unsupported; use a space and * wildcard')
   }
 
-  // Check for new wildcard syntax (contains * but not :* at end)
+  // Check for wildcard syntax
   if (hasWildcards(permissionRule)) {
     return {
       type: 'wildcard',
@@ -218,7 +194,7 @@ export function suggestionForPrefix(
       rules: [
         {
           toolName,
-          ruleContent: `${prefix}:*`,
+          ruleContent: `${prefix} *`,
         },
       ],
       behavior: 'allow',

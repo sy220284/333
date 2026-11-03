@@ -59,7 +59,6 @@ import {
   parsePermissionRule,
   type ShellPermissionRule,
   matchWildcardPattern as sharedMatchWildcardPattern,
-  permissionRuleExtractPrefix as sharedPermissionRuleExtractPrefix,
   suggestionForExactCommand as sharedSuggestionForExactCommand,
   suggestionForPrefix as sharedSuggestionForPrefix,
 } from '../../utils/permissions/shellRuleMatching.js'
@@ -344,8 +343,6 @@ function suggestionForPrefix(prefix: string): PermissionUpdate[] {
  * Extract prefix from legacy :* syntax (e.g., "npm:*" -> "npm")
  * Delegates to shared implementation.
  */
-export const permissionRuleExtractPrefix = sharedPermissionRuleExtractPrefix
-
 /**
  * Match a command against a wildcard pattern (case-sensitive for Bash).
  * Delegates to shared implementation.
@@ -855,7 +852,7 @@ function filterRulesByContentsMatchingInput(
   // Precompute compound-command status for each candidate to avoid re-parsing
   // inside the rule filter loop (which would scale splitCommand calls with
   // rules.length × commandsToTry.length). The compound check only applies to
-  // prefix/wildcard matching in 'prefix' mode, and only for allow rules.
+  // wildcard matching in 'prefix' mode, and only for allow rules.
   // SECURITY: deny/ask rules must match compound commands so they can't be
   // bypassed by wrapping a denied command in a compound expression.
   const isCompoundCommand = new Map<string, boolean>()
@@ -875,43 +872,6 @@ function filterRulesByContentsMatchingInput(
         switch (bashRule.type) {
           case 'exact':
             return bashRule.command === cmdToMatch
-          case 'prefix':
-            switch (matchMode) {
-              // In 'exact' mode, only return true if the command exactly matches the prefix rule
-              case 'exact':
-                return bashRule.prefix === cmdToMatch
-              case 'prefix': {
-                // SECURITY: Don't allow prefix rules to match compound commands.
-                // e.g., Bash(cd:*) must NOT match "cd /path && python3 evil.py".
-                // In the normal flow commands are split before reaching here, but
-                // shell escaping can defeat the first splitCommand pass — e.g.,
-                //   cd src\&\& python3 hello.py  →  splitCommand  →  ["cd src&& python3 hello.py"]
-                // which then looks like a single command that starts with "cd ".
-                // Re-splitting the candidate here catches those cases.
-                if (isCompoundCommand.get(cmdToMatch)) {
-                  return false
-                }
-                // Ensure word boundary: prefix must be followed by space or end of string
-                // This prevents "ls:*" from matching "lsof" or "lsattr"
-                if (cmdToMatch === bashRule.prefix) {
-                  return true
-                }
-                if (cmdToMatch.startsWith(bashRule.prefix + ' ')) {
-                  return true
-                }
-                // Also match "xargs <prefix>" for bare xargs with no flags.
-                // This allows Bash(grep:*) to match "xargs grep pattern",
-                // and deny rules like Bash(rm:*) to block "xargs rm file".
-                // Natural word-boundary: "xargs -n1 grep" does NOT start with
-                // "xargs grep " so flagged xargs invocations are not matched.
-                const xargsPrefix = 'xargs ' + bashRule.prefix
-                if (cmdToMatch === xargsPrefix) {
-                  return true
-                }
-                return cmdToMatch.startsWith(xargsPrefix + ' ')
-              }
-            }
-            break
           case 'wildcard':
             // SECURITY FIX: In exact match mode, wildcards must NOT match because we're
             // checking the full unparsed command. Wildcard matching on unparsed commands
@@ -920,14 +880,25 @@ function filterRulesByContentsMatchingInput(
             if (matchMode === 'exact') {
               return false
             }
-            // SECURITY: Same as for prefix rules, don't allow wildcard rules to match
+            // SECURITY: Don't allow wildcard rules to match
             // compound commands in prefix mode. e.g., Bash(cd *) must not match
             // "cd /path && python3 evil.py" even though "cd *" pattern would match it.
             if (isCompoundCommand.get(cmdToMatch)) {
               return false
             }
-            // In prefix mode (after splitting), wildcards can safely match subcommands
-            return matchWildcardPattern(bashRule.pattern, cmdToMatch)
+            // Current wildcard rules match only after splitting subcommands.
+            if (matchWildcardPattern(bashRule.pattern, cmdToMatch)) return true
+            // A single trailing wildcard retains the xargs command boundary check.
+            const commandPrefix =
+              bashRule.pattern.endsWith(' *') &&
+              (bashRule.pattern.match(/\*/g) ?? []).length === 1
+                ? bashRule.pattern.slice(0, -2)
+                : null
+            if (commandPrefix !== null) {
+              const xargsPrefix = `xargs ${commandPrefix}`
+              return cmdToMatch === xargsPrefix || cmdToMatch.startsWith(`${xargsPrefix} `)
+            }
+            return false
         }
       })
     })
