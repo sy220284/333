@@ -5,8 +5,8 @@ import { getRequestThinkingDisplay, getStreamThinkingDisplay } from '../src/serv
 test('uses the actual request display only when it is a string', () => {
   assert.equal(getRequestThinkingDisplay({ type: 'adaptive', display: 'summarized' }), 'summarized')
   assert.equal(getRequestThinkingDisplay({ type: 'enabled', display: 'updates' }), 'updates')
-  assert.equal(getRequestThinkingDisplay({ type: 'adaptive' }), 'updates')
-  assert.equal(getRequestThinkingDisplay({ type: 'enabled', budget_tokens: 5000 }), 'updates')
+  assert.equal(getRequestThinkingDisplay({ type: 'adaptive' }), undefined)
+  assert.equal(getRequestThinkingDisplay({ type: 'enabled', budget_tokens: 5000 }), undefined)
   assert.equal(getRequestThinkingDisplay({ type: 'adaptive', display: 12 }), undefined)
   assert.equal(getRequestThinkingDisplay({ type: 'disabled' }), undefined)
   assert.equal(getRequestThinkingDisplay({ display: 7 }), undefined)
