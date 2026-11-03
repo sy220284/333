@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { validateDesktopInvocation } from '../src/cli/desktop/launch.mjs'
+import { parseDesktopCliOptions, validateDesktopInvocation } from '../src/cli/desktop/launch.mjs'
 
 const valid = {
   argv: ['--desktop'], stdoutIsTTY: true, stdinIsTTY: true, env: {},
@@ -34,4 +34,16 @@ test('desktop precedence follows official startup checks for invalid combination
     prompt: 'hello', stdinIsTTY: false,
   })
   assert.match(result, /can't run non-interactively/)
+})
+
+test('desktop bootstrap argument extraction matches new and resumed session entry paths', () => {
+  assert.deepEqual(parseDesktopCliOptions(['--desktop']), { options: {}, prompt: undefined })
+  assert.deepEqual(parseDesktopCliOptions(['--desktop', '--continue']), { options: { continue: true }, prompt: undefined })
+  assert.deepEqual(parseDesktopCliOptions(['--desktop', '--resume', '123e4567-e89b-42d3-a456-426614174000']), {
+    options: { resume: '123e4567-e89b-42d3-a456-426614174000' }, prompt: undefined,
+  })
+  assert.deepEqual(parseDesktopCliOptions(['--desktop', '--resume']), { options: { resume: true }, prompt: undefined })
+  assert.deepEqual(parseDesktopCliOptions(['--desktop', '--debug-file', '/tmp/trace']), { options: {}, prompt: undefined })
+  assert.deepEqual(parseDesktopCliOptions(['--desktop', 'write', 'test']), { options: {}, prompt: 'write test' })
+  assert.deepEqual(parseDesktopCliOptions(['--desktop', '--model', 'opus']), { options: {}, prompt: undefined })
 })
