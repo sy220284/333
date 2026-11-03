@@ -26,6 +26,19 @@ test('/agents retains the hidden instructions instead of loading the retired wiz
   assert.match(index, /\.claude\/agents\//)
 })
 
+test('retired teammate default-model setting is removed; new teammates inherit the leader model', () => {
+  const config = source('src/components/Settings/Config.tsx')
+  const settings = source('src/utils/config.ts')
+  const spawn = source('src/tools/shared/spawnMultiAgent.ts')
+  assert.doesNotMatch(config, /teammateDefaultModel|TeammateModel|getHardcodedTeammateModelFallback/)
+  assert.doesNotMatch(settings, /teammateDefaultModel/)
+  assert.doesNotMatch(spawn, /teammateDefaultModel|getHardcodedTeammateModelFallback/)
+  assert.match(spawn, /return leaderModel \?\? getMainLoopModel\(\)/)
+  assert.match(spawn, /process\.env\.CLAUDE_CODE_SUBAGENT_MODEL/)
+  assert.match(spawn, /CLAUDE_CODE_SUBAGENT_MODEL_FORCE/)
+  assert.match(config, /id: 'teammateMode'/)
+})
+
 test('official 2.1.310 and rebuilt CLI both resolve /agents locally without a model turn', { timeout: 90000 }, () => {
   const folder = mkdtempSync(join(tmpdir(), 'pr7-agents-retirement-'))
   const env = {
