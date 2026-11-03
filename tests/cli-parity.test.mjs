@@ -65,14 +65,14 @@ for (const args of [
     // baseline as an exact guard for every unchanged command/option.
     if (args.length === 1 && args[0] === '--help') {
       const approvedAdded = new Set([
-        '--bg', '--autocompact', '--permission-prompts', '--prompt-suggestions',
+        '--bg', '--desktop', '--autocompact', '--permission-prompts', '--prompt-suggestions',
         '--restricted', '--safe-mode', '--ax-screen-reader', '--teleport', '--cloud', '--environment',
         '--remote-control', '--remote-control-session-name-prefix', '--system-prompt-snapshot', '--plugin-url', '--exclude-dynamic-system-prompt-sections', '--forward-subagent-text', '--permission-prompt-tool',
       ]);
       const added = rebuilt.flags.filter(flag => !baseline.flags.includes(flag));
       assert.deepEqual(added.filter(flag => !approvedAdded.has(flag)), [],
         'Unexpected extra CLI option beyond reviewed 2.1.310 migration');
-      for(const required of ['--autocompact','--restricted','--safe-mode','--permission-prompts','--prompt-suggestions','--teleport','--ax-screen-reader']){
+      for(const required of ['--desktop','--bg','--autocompact','--restricted','--safe-mode','--permission-prompts','--prompt-suggestions','--teleport','--ax-screen-reader']){
         assert.ok(added.includes(required), `Expected reviewed 2.1.310 option missing: ${required}`);
       }
       // The target 2.1.310 x64 no longer exposes the old --mcp-debug
