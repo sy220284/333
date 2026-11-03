@@ -36,7 +36,8 @@ test('remote session callers use the protocol helper, not the old shim', () => {
   assert.match(peerDiscovery, /getSelfBridgeSessionId/)
   assert.doesNotMatch(peerDiscovery, /getSelfBridgeCompatId|sessionIdCompat/)
   const handle = readFileSync(new URL('bridge/replBridgeHandle.ts', root), 'utf8')
-  assert.match(handle, /getSelfBridgeSessionId[\\s\\S]*toSessionApiId/)
+  const bridgeIdentity = handle.slice(handle.indexOf('export function getSelfBridgeSessionId()'))
+  assert.ok(bridgeIdentity.includes('toSessionApiId(h.bridgeSessionId)'))
 })
 test('remote reconnect attempts only the current worker ID', () => {
   const main = readFileSync(new URL('bridge/bridgeMain.ts', root), 'utf8')
