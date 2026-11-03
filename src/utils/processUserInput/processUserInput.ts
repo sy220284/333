@@ -76,6 +76,8 @@ export type ProcessUserInputBaseResult = {
   // Output text for non-interactive mode (e.g., forked commands)
   // When set, this is used as the result in -p mode instead of empty string
   resultText?: string
+  // Exact name of an executed local slash command, forwarded to SDK JSON output.
+  localCommand?: string
   // When set, prefills or submits the next input after command completes
   // Used by /discover to chain into the selected feature's command
   nextInput?: string
