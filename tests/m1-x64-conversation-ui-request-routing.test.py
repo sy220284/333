@@ -65,5 +65,31 @@ class TerminalScreenUnicodeTests(unittest.TestCase):
         self.assertEqual(probe.screen_rows(screen)[0].rstrip(), 'SUCCESS')
 
 
+class TerminalParityAssertions(unittest.TestCase):
+    def test_core_transcript_anchors_preserve_relative_layout(self):
+        screen = pyte.Screen(80, 12)
+        pyte.Stream(screen).feed('❯ UI_REAL_PTY_PROMPT\\r\\n  Read 1 file\\r\\n● UI_TOOL_COMPLETE_OK\\r\\n✻ Worked for 3s')
+        actual = probe.terminal_anchors(screen, probe.TOOL_RESULT, 'tool')
+        self.assertEqual(set(actual), {'user', 'tool', 'assistant', 'completed'})
+        matching = {'terminal_anchors': actual}
+        self.assertTrue(probe.compare_core_layout(matching, matching, 'tool')['passed'])
+        shifted = {k: dict(v) for k, v in actual.items()}
+        shifted['completed']['row'] += 1
+        self.assertFalse(probe.compare_core_layout(matching, {'terminal_anchors': shifted}, 'tool')['passed'])
+
+    def test_retry_screen_comparison_keeps_error_label_and_ignores_live_seconds(self):
+        first = {'frames': [{'screen_rows': ['✻ API error · Retrying in 2s · attempt 1/10']}]}
+        later = {'frames': [{'screen_rows': ['✻ API error · Retrying in 1s · attempt 1/10']}]}
+        wrong = {'frames': [{'screen_rows': ['✻ 429 error · Retrying in 1s · attempt 1/10']}]}
+        self.assertEqual(probe.normalize_retry_status_frame(first), probe.normalize_retry_status_frame(later))
+        self.assertNotEqual(probe.normalize_retry_status_frame(first), probe.normalize_retry_status_frame(wrong))
+
+    def test_timed_frame_comparison_reports_differences(self):
+        official = {'frames': [{'ms': 100, 'screen_rows': ['expected']}]}
+        rebuilt = {'frames': [{'ms': 105, 'screen_rows': ['different']}]}
+        self.assertFalse(probe.compare_terminal_frames(official, rebuilt)['exact'])
+        self.assertEqual(probe.compare_terminal_frames(official, rebuilt)['equal_fraction'], 0.0)
+
+
 if __name__ == '__main__':
     unittest.main()
