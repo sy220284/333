@@ -204,6 +204,43 @@ async function openDeepLink(deepLinkUrl: string): Promise<boolean> {
 }
 
 /**
+ * Launch a new or existing Desktop session using the 2.1.310 URI contract.
+ * The version and installed handler are checked before opening either path.
+ */
+export async function openDesktopTarget(
+  target: { kind: 'resume'; sessionId: string } | { kind: 'new-session'; folder: string },
+): Promise<{ success: boolean; reason?: string; error?: string; deepLinkUrl?: string }> {
+  const installed = await getDesktopInstallStatus()
+  if (installed.status === 'not-installed') {
+    return {
+      success: false,
+      reason: 'not_installed',
+      error: 'Claude Desktop is not installed. Install it from https://claude.ai/download',
+    }
+  }
+  if (installed.status === 'version-too-old') {
+    return {
+      success: false,
+      reason: 'outdated',
+      error: `Claude Desktop ${installed.version} is too old. Update to ${MIN_DESKTOP_VERSION} or later.`,
+    }
+  }
+  const deepLinkUrl = target.kind === 'resume'
+    ? buildDesktopDeepLink(target.sessionId)
+    : buildDesktopNewSessionLink(target.folder)
+  const opened = await openDeepLink(deepLinkUrl)
+  if (!opened) {
+    return {
+      success: false,
+      reason: 'open_failed',
+      error: "Couldn't open Claude Desktop. Open Claude Desktop and try again.",
+      deepLinkUrl,
+    }
+  }
+  return { success: true, deepLinkUrl }
+}
+
+/**
  * Build and open a deep link to resume the current session in Claude Desktop.
  * Returns an object with success status and any error message.
  */
