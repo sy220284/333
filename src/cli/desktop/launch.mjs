@@ -17,6 +17,46 @@ function truthy(value) {
   return value !== undefined && value !== '' && value !== '0' && value !== 'false'
 }
 
+/**
+ * Parse only the public Desktop fast-path's argument shape, before the REPL
+ * initializer can register background timers or terminal input listeners.
+ * The raw argv is still validated independently before any side effects.
+ */
+export function parseDesktopCliOptions(argv) {
+  const options = {}
+  let prompt
+  const valueFlags = new Set([
+    '--resume', '-r', '--debug-file', '--model', '--agent', '--sdk-url',
+    '--settings', '--project-config-root', '--permission-mode',
+  ])
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]
+    if (arg === '--') {
+      prompt = argv.slice(i + 1).join(' ')
+      break
+    }
+    if (arg === '--continue' || arg === '-c') {
+      options.continue = true
+      continue
+    }
+    if (arg === '--resume' || arg === '-r') {
+      const candidate = argv[i + 1]
+      options.resume = candidate && !candidate.startsWith('-') ? argv[++i] : true
+      continue
+    }
+    if (arg.startsWith('--resume=')) {
+      options.resume = arg.slice('--resume='.length) || true
+      continue
+    }
+    if (arg.startsWith('-')) {
+      if (valueFlags.has(arg) && argv[i + 1] && !argv[i + 1].startsWith('-')) i++
+      continue
+    }
+    prompt = prompt === undefined ? arg : `${prompt} ${arg}`
+  }
+  return { options, prompt }
+}
+
 /** Return a user-visible validation error, or null when Desktop launch is eligible. */
 export function validateDesktopInvocation({
   argv = [], prompt, stdinIsTTY = false, stdoutIsTTY = false, env = {},
