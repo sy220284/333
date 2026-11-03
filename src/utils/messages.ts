@@ -4487,7 +4487,7 @@ export function findLastCompactBoundaryIndex<
  */
 export function getMessagesAfterCompactBoundary<
   T extends Message | NormalizedMessage,
->(messages: T[], options?: { includeSnipped?: boolean }): T[] {
+>(messages: T[], _options?: { includeSnipped?: boolean }): T[] {
   const boundaryIndex = findLastCompactBoundaryIndex(messages)
   const sliced = boundaryIndex === -1 ? messages : messages.slice(boundaryIndex)
   return sliced
