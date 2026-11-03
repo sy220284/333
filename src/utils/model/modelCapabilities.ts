@@ -90,7 +90,8 @@ export async function refreshModelCapabilities(): Promise<void> {
     const anthropic = await getAnthropicClient({ maxRetries: 1 })
     const betas = isClaudeAISubscriber() ? [OAUTH_BETA_HEADER] : undefined
     const parsed: ModelCapability[] = []
-    for await (const entry of anthropic.models.list({ betas })) {
+    const requestOptions = betas ? { headers: { 'anthropic-beta': betas.join(',') } } : undefined
+    for await (const entry of anthropic.models.list({}, requestOptions)) {
       const result = ModelCapabilitySchema().safeParse(entry)
       if (result.success) parsed.push(result.data)
     }

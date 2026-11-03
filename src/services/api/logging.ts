@@ -188,8 +188,8 @@ export function logAPIQuery({
   permissionMode?: PermissionMode
   querySource: string
   queryTracking?: QueryChainTracking
-  thinkingType?: 'adaptive' | 'enabled' | 'disabled'
-  effortValue?: EffortLevel | null
+  thinkingType?: 'adaptive' | 'enabled' | 'disabled' | 'between_tools'
+  effortValue?: EffortLevel | 'xhigh' | null
   fastMode?: boolean
   previousRequestId?: string | null
 }): void {

@@ -16,7 +16,9 @@ type UsageIteration = {
  * verified in services/api/emptyUsage.ts and updateUsage()/accumulateUsage().
  * Keep cache_deleted_input_tokens outside the release-visible contract.
  */
-export type NonNullableUsage = Omit<NormalizedSDKUsage, 'server_tool_use'> & {
+export type NonNullableUsage = Omit<NormalizedSDKUsage, 'server_tool_use' | 'fallback_credit' | 'output_tokens_details'> & {
+  fallback_credit: BetaUsage['fallback_credit']
+  output_tokens_details: BetaUsage['output_tokens_details']
   server_tool_use: NormalizedSDKUsage['server_tool_use'] & {
     web_fetch_requests: number
   }

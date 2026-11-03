@@ -373,6 +373,8 @@ function baseCreateAssistantMessage({
     inference_geo: null,
     iterations: null,
     speed: null,
+    fallback_credit: null,
+    output_tokens_details: null,
   },
 }: {
   content: BetaContentBlock[]
@@ -398,6 +400,8 @@ function baseCreateAssistantMessage({
       usage,
       content,
       context_management: null,
+      diagnostics: null,
+      stop_details: null,
     },
     requestId: undefined,
     apiError,

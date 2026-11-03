@@ -580,17 +580,17 @@ export async function initializeTelemetry() {
     )
 
     if (logExporters.length > 0) {
-      const loggerProvider = new LoggerProvider({ resource })
-      for (const exporter of logExporters) {
-        loggerProvider.addLogRecordProcessor(
+      const loggerProvider = new LoggerProvider({
+        resource,
+        processors: logExporters.map(exporter =>
           new BatchLogRecordProcessor(exporter, {
             scheduledDelayMillis: parseInt(
               process.env.OTEL_LOGS_EXPORT_INTERVAL ||
                 DEFAULT_LOGS_EXPORT_INTERVAL_MS.toString(),
             ),
           }),
-        )
-      }
+        ),
+      })
 
       // Register the logger provider globally
       logs.setGlobalLoggerProvider(loggerProvider)

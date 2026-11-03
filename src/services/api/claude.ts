@@ -565,7 +565,6 @@ export async function verifyApiKey(
             model,
             max_tokens: 1,
             messages,
-            temperature: 1,
             ...(betas.length > 0 && { betas }),
             metadata: getAPIMetadata(),
             ...getExtraBodyParams(),
@@ -947,15 +946,17 @@ function getPreviousRequestIdFromMessages(
 }
 
 function isMedia(
-  block: BetaContentBlockParam,
+  block: unknown,
 ): block is BetaImageBlockParam | BetaRequestDocumentBlock {
-  return block.type === 'image' || block.type === 'document'
+  return typeof block === 'object' && block !== null && 'type' in block &&
+    (block.type === 'image' || block.type === 'document')
 }
 
 function isToolResult(
-  block: BetaContentBlockParam,
+  block: unknown,
 ): block is BetaToolResultBlockParam {
-  return block.type === 'tool_result'
+  return typeof block === 'object' && block !== null &&
+    'type' in block && block.type === 'tool_result'
 }
 
 /**
@@ -3131,6 +3132,8 @@ export function updateUsage(
                   .cache_deleted_input_tokens ?? 0),
         }
       : {}),
+    fallback_credit: usage.fallback_credit,
+    output_tokens_details: usage.output_tokens_details,
     inference_geo: usage.inference_geo,
     iterations: partUsage.iterations ?? usage.iterations,
     speed: (partUsage as BetaUsage).speed ?? usage.speed,
@@ -3182,6 +3185,8 @@ export function accumulateUsage(
             ).cache_deleted_input_tokens ?? 0),
         }
       : {}),
+    fallback_credit: messageUsage.fallback_credit,
+    output_tokens_details: messageUsage.output_tokens_details,
     inference_geo: messageUsage.inference_geo, // Use the most recent
     iterations: messageUsage.iterations, // Use the most recent
     speed: messageUsage.speed, // Use the most recent
