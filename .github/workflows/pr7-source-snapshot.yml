@@ -17,6 +17,16 @@ jobs:
         run: |
           git archive --format=tar.gz --output=/tmp/pr7-source.tar.gz HEAD
           sha256sum /tmp/pr7-source.tar.gz
+      - name: 准备完整离线类型工具
+        run: |
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          tar -czf /tmp/pr7-dev-types.tar.gz -C tools/dev node_modules
+      - name: 上传完整 TypeScript 类型工具
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr7-dev-types
+          path: /tmp/pr7-dev-types.tar.gz
+          retention-days: 1
       - name: 上传源码快照
         uses: actions/upload-artifact@v4
         with:
