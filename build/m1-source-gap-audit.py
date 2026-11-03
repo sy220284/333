@@ -8,12 +8,12 @@ from collections import defaultdict
 from pathlib import Path
 
 IMPORT = re.compile(r'''(?:from\s*|import\s*\(|require\s*\(|\bimport\s+)(?:\s*)['"](\.{1,2}/[^'"\n]+)['"]''')
-EXTS = ('.ts', '.tsx', '.mts', '.cts', '.js', '.mjs', '.d.ts', '.d.mts', '.d.cts')
+EXTS = ('.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs', '.d.ts', '.d.mts', '.d.cts')
 
 
 def candidates(path):
     found = [path]
-    if path.endswith(('.js', '.mjs', '.cjs')):
+    if path.endswith(('.js', '.jsx', '.mjs', '.cjs')):
         found.extend(path.rsplit('.', 1)[0] + ext for ext in EXTS)
     elif not posixpath.splitext(path)[1]:
         found.extend(path + ext for ext in EXTS)
@@ -25,7 +25,7 @@ def audit(old_src, current_src=None, source_map=None):
     files = {
         f.relative_to(old_src).as_posix(): f
         for f in old_src.rglob('*')
-        if f.is_file() and f.suffix in ('.ts', '.tsx', '.js', '.mjs', '.mts', '.cts')
+        if f.is_file() and f.suffix in ('.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts')
     }
     old_all = {f.relative_to(old_src).as_posix() for f in old_src.rglob('*') if f.is_file()}
     mapped = {}
