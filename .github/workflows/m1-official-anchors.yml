@@ -50,6 +50,8 @@ jobs:
                   if not hits:
                       continue
                   print('sha256:', record['sha256'], 'uncompressed_bytes:', record['bytes'], 'kind:', record['resource_kind'])
+                  if group == 'F076_claude_test' and n < 5:
+                      print('frame-before:', record['binary_preceding_180'])
                   for hit in hits[:4]:
                       print('anchor:', hit['needle'], 'count:', hit['instances'], 'nearby:', hit['context'])
                   n += 1
