@@ -51,7 +51,61 @@ const KITTY_FLAGS_RE = /^\x1b\[\?(\d+)u$/
 const CURSOR_POSITION_RE = /^\x1b\[\?(\d+);(\d+)R$/
 // 2.1.310: CSI ? 997 ; 1/2 n — unsolicited dark/light theme notification.
 // eslint-disable-next-line no-control-regex
-const THEME_NOTIFICATION_RE = /^\x1b\[\?997;([12])n$/
+const THEME_NOTIFICATION_PATTERN = String.raw`^\x1b\[\?997;([12])n/**
+ * Keyboard input parser - converts terminal input to key events
+ *
+ * Uses the termio tokenizer for escape sequence boundary detection,
+ * then interprets sequences as keypresses.
+ */
+import { Buffer } from 'buffer'
+import { PASTE_END, PASTE_START } from './termio/csi.js'
+import { createTokenizer, type Tokenizer } from './termio/tokenize.js'
+
+// eslint-disable-next-line no-control-regex
+const META_KEY_CODE_RE = /^(?:\x1b)([a-zA-Z0-9])$/
+
+// eslint-disable-next-line no-control-regex
+const FN_KEY_RE =
+  // eslint-disable-next-line no-control-regex
+  /^(?:\x1b+)(O|N|\[|\[\[)(?:(\d+)(?:;(\d+))?([~^$])|(?:1;)?(\d+)?([a-zA-Z]))/
+
+// CSI u (kitty keyboard protocol): ESC [ codepoint [; modifier] u
+// Example: ESC[13;2u = Shift+Enter, ESC[27u = Escape (no modifiers)
+// Modifier is optional - when absent, defaults to 1 (no modifiers)
+// eslint-disable-next-line no-control-regex
+const CSI_U_RE = /^\x1b\[(\d+)(?:;(\d+))?u/
+
+// xterm modifyOtherKeys: ESC [ 27 ; modifier ; keycode ~
+// Example: ESC[27;2;13~ = Shift+Enter. Emitted by Ghostty/tmux/xterm when
+// modifyOtherKeys=2 is active or via user keybinds, typically over SSH where
+// TERM sniffing misses Ghostty and we never push Kitty keyboard mode.
+// Note param order is reversed vs CSI u (modifier first, keycode second).
+// eslint-disable-next-line no-control-regex
+const MODIFY_OTHER_KEYS_RE = /^\x1b\[27;(\d+);(\d+)~/
+
+// -- Terminal response patterns (inbound sequences from the terminal itself) --
+// DECRPM: CSI ? Ps ; Pm $ y  — response to DECRQM (request mode)
+// eslint-disable-next-line no-control-regex
+const DECRPM_RE = /^\x1b\[\?(\d+);(\d+)\$y$/
+// DA1: CSI ? Ps ; ... c  — primary device attributes response
+// eslint-disable-next-line no-control-regex
+const DA1_RE = /^\x1b\[\?([\d;]*)c$/
+// DA2: CSI > Ps ; ... c  — secondary device attributes response
+// eslint-disable-next-line no-control-regex
+const DA2_RE = /^\x1b\[>([\d;]*)c$/
+// Kitty keyboard flags: CSI ? flags u  — response to CSI ? u query
+// (private ? marker distinguishes from CSI u key events)
+// eslint-disable-next-line no-control-regex
+const KITTY_FLAGS_RE = /^\x1b\[\?(\d+)u$/
+// DECXCPR cursor position: CSI ? row ; col R
+// The ? marker disambiguates from modified F3 keys (Shift+F3 = CSI 1;2 R,
+// Ctrl+F3 = CSI 1;5 R, etc.) — plain CSI row;col R is genuinely ambiguous.
+// eslint-disable-next-line no-control-regex
+const CURSOR_POSITION_RE = /^\x1b\[\?(\d+);(\d+)R$/
+// 2.1.310: CSI ? 997 ; 1/2 n — unsolicited dark/light theme notification.
+// eslint-disable-next-line no-control-regex
+
+const THEME_NOTIFICATION_RE = new RegExp(THEME_NOTIFICATION_PATTERN)
 // OSC response: OSC code ; data (BEL|ST)
 // eslint-disable-next-line no-control-regex
 const OSC_RESPONSE_RE = /^\x1b\](\d+);(.*?)(?:\x07|\x1b\\)$/s
@@ -148,8 +202,9 @@ function parseTerminalResponse(s: string): TerminalResponse | null {
       return { type: 'kittyKeyboard', flags: parseInt(m[1]!, 10) }
     }
 
-    if ((m = THEME_NOTIFICATION_RE.exec(s))) {
-      return { type: 'themeNotify', dark: m[1] === '1' }
+    const themeMatch = THEME_NOTIFICATION_RE.exec(s)
+    if (themeMatch) {
+      return { type: 'themeNotify', dark: themeMatch[1] === '1' }
     }
 
     if ((m = CURSOR_POSITION_RE.exec(s))) {
