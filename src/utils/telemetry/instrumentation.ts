@@ -61,6 +61,7 @@ import { isBetaTracingEnabled } from './betaSessionTracing.js'
 import { BigQueryMetricsExporter } from './bigqueryExporter.js'
 import { ClaudeCodeDiagLogger } from './logger.js'
 import { initializePerfettoTracing } from './perfettoTracing.js'
+import { resolveOTLPTimeoutMs } from './otlpTimeout.mjs'
 import {
   endInteractionSpan,
   isEnhancedTelemetryEnabled,
@@ -169,7 +170,7 @@ async function getOtlpReaders() {
           const { OTLPMetricExporter } = await import(
             '@opentelemetry/exporter-metrics-otlp-grpc'
           )
-          exporters.push(new OTLPMetricExporter())
+          exporters.push(new OTLPMetricExporter({ timeoutMillis: resolveOTLPTimeoutMs(process.env.OTEL_EXPORTER_OTLP_TIMEOUT) }))
           break
         }
         case 'http/json': {
@@ -238,7 +239,7 @@ async function getOtlpLogExporters() {
           const { OTLPLogExporter } = await import(
             '@opentelemetry/exporter-logs-otlp-grpc'
           )
-          exporters.push(new OTLPLogExporter())
+          exporters.push(new OTLPLogExporter({ timeoutMillis: resolveOTLPTimeoutMs(process.env.OTEL_EXPORTER_OTLP_TIMEOUT) }))
           break
         }
         case 'http/json': {
@@ -289,7 +290,7 @@ async function getOtlpTraceExporters() {
           const { OTLPTraceExporter } = await import(
             '@opentelemetry/exporter-trace-otlp-grpc'
           )
-          exporters.push(new OTLPTraceExporter())
+          exporters.push(new OTLPTraceExporter({ timeoutMillis: resolveOTLPTimeoutMs(process.env.OTEL_EXPORTER_OTLP_TIMEOUT) }))
           break
         }
         case 'http/json': {
@@ -769,7 +770,9 @@ function getOTLPExporterConfig() {
   const settings = getInitialSettings()
 
   // Build base config
-  const config: Record<string, unknown> = {}
+  const config: Record<string, unknown> = {
+    timeoutMillis: resolveOTLPTimeoutMs(process.env.OTEL_EXPORTER_OTLP_TIMEOUT),
+  }
 
   // Parse static headers from env var once (doesn't change at runtime)
   const staticHeaders = parseOtelHeadersEnvVar()
