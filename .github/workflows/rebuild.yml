@@ -78,6 +78,8 @@ jobs:
         run: node --test tests/m1-retired-module-routing.test.mjs
       - name: 2.1.310 后台会话状态与原版 CLI 行为验收
         run: node --test tests/m1-background-agent-parity.test.mjs
+      - name: 2.1.310 后台会话真实全生命周期验收
+        run: node --test tests/m1-background-lifecycle.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
         run: node --test tests/cli-parity.test.mjs
       - name: 复核多级模型回退与自动压缩真实参数语义
@@ -106,6 +108,9 @@ jobs:
       - name: 后台会话原版 x64 与构建版行为严格对照
         if: runner.os == 'Linux'
         run: CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/m1-background-agent-parity.test.mjs
+      - name: 官方 x64 与移植版后台会话双端生命周期验收
+        if: runner.os == 'Linux'
+        run: CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/m1-background-lifecycle.test.mjs
       - name: 对原版和当前构建版实际注入529并验证模型回退顺序
         if: runner.os == 'Linux'
         run: CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/fallback-529-integration.test.mjs
