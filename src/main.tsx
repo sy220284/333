@@ -2902,15 +2902,11 @@ async function run(): Promise<CommanderCommand> {
 
       // In headless mode, start deferred prefetches immediately (no user typing delay)
       // --bare / SIMPLE: startDeferredPrefetches early-returns internally.
-      // backgroundHousekeeping (initExtractMemories, pruneShellSnapshots,
-      // cleanupOldMessageFiles) and sdkHeapDumpMonitor are all bookkeeping
-      // that scripted calls don't need — the next interactive session reconciles.
+      // --bare / SIMPLE bypasses deferred housekeeping in headless mode.
+      // The normal session keeps its existing deferred prefetch pipeline.
       if (!isBareMode()) {
         startDeferredPrefetches();
         void import('./utils/backgroundHousekeeping.js').then(m => m.startBackgroundHousekeeping());
-        if (process.env.USER_TYPE === 'ant') {
-          void import('./utils/sdkHeapDumpMonitor.js').then(m => m.startSdkMemoryMonitor());
-        }
       }
       logSessionTelemetry();
       profileCheckpoint('before_print_import');
