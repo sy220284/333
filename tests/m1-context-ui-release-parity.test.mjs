@@ -34,3 +34,20 @@ test('会话恢复保留历史、工作树和文件指针，删除缺失的旧�
   assert.match(text, /setResumeData\(/)
   assert.doesNotMatch(text, /contextCollapse\/persist|restoreFromEntries/)
 })
+
+test('查询主循环继续执行新版真实的微压缩、自动压缩与413恢复', () => {
+  const text = source('../src/query.ts')
+  assert.match(text, /deps\.microcompact\(/)
+  assert.match(text, /deps\.autocompact\(/)
+  assert.match(text, /tryRecoverFrom413WithCompact/)
+  assert.match(text, /isWithheld413/)
+  assert.match(text, /reactiveCompact\?\.isWithheldPromptTooLong/)
+  assert.doesNotMatch(text, /CONTEXT_COLLAPSE|contextCollapse|HISTORY_SNIP|snipCompact|snipTokensFreed|jobClassifier/)
+})
+
+test('StopHook保留真实收尾和自动记忆入口，清理废弃模板分类', () => {
+  const text = source('../src/query/stopHooks.ts')
+  assert.match(text, /executeStopHooks/)
+  assert.match(text, /executeAutoDream/)
+  assert.doesNotMatch(text, /jobClassifierModule|classifyAndWriteState|CLAUDE_JOB_DIR/)
+})
