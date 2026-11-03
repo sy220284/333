@@ -19,12 +19,12 @@ import type { InProcessTeammateTaskState } from '../../tasks/InProcessTeammateTa
 import { formatAgentId } from '../../utils/agentId.js'
 import { quote } from '../../utils/bash/shellQuote.js'
 import { isInBundledMode } from '../../utils/bundledMode.js'
-import { getGlobalConfig } from '../../utils/config.js'
 import { getCwd } from '../../utils/cwd.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { errorMessage } from '../../utils/errors.js'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
-import { parseUserSpecifiedModel } from '../../utils/model/model.js'
+import { getMainLoopModel, parseUserSpecifiedModel } from '../../utils/model/model.js'
+import { isEnvTruthy } from '../../utils/envUtils.js'
 import type { PermissionMode } from '../../utils/permissions/PermissionMode.js'
 import { isTmuxAvailable } from '../../utils/swarm/backends/detection.js'
 import {
@@ -63,22 +63,19 @@ import {
   isInsideTmux,
   sendCommandToPane,
 } from '../../utils/swarm/teammateLayoutManager.js'
-import { getHardcodedTeammateModelFallback } from '../../utils/swarm/teammateModel.js'
 import { registerTask } from '../../utils/task/framework.js'
 import { writeToMailbox } from '../../utils/teammateMailbox.js'
 import type { CustomAgentDefinition } from '../AgentTool/loadAgentsDir.js'
 import { isCustomAgent } from '../AgentTool/loadAgentsDir.js'
 
 function getDefaultTeammateModel(leaderModel: string | null): string {
-  const configured = getGlobalConfig().teammateDefaultModel
-  if (configured === null) {
-    // User picked "Default" in the /config picker — follow the leader.
-    return leaderModel ?? getHardcodedTeammateModelFallback()
+  // 2.1.310: an unspecified teammate model inherits the leader's model.
+  // The environment override is independent from the removed /config setting.
+  const override = process.env.CLAUDE_CODE_SUBAGENT_MODEL?.trim()
+  if (override && override !== 'inherit') {
+    return parseUserSpecifiedModel(override)
   }
-  if (configured !== undefined) {
-    return parseUserSpecifiedModel(configured)
-  }
-  return getHardcodedTeammateModelFallback()
+  return leaderModel ?? getMainLoopModel()
 }
 
 /**
@@ -94,8 +91,11 @@ export function resolveTeammateModel(
   inputModel: string | undefined,
   leaderModel: string | null,
 ): string {
+  if (isEnvTruthy(process.env.CLAUDE_CODE_SUBAGENT_MODEL_FORCE)) {
+    return getDefaultTeammateModel(leaderModel)
+  }
   if (inputModel === 'inherit') {
-    return leaderModel ?? getDefaultTeammateModel(leaderModel)
+    return leaderModel ?? getMainLoopModel()
   }
   return inputModel ?? getDefaultTeammateModel(leaderModel)
 }
@@ -309,7 +309,7 @@ async function handleSpawnSplitPane(
   const { setAppState, getAppState } = context
   const { name, prompt, agent_type, cwd, plan_mode_required } = input
 
-  // Resolve model: 'inherit' → leader's model; undefined → default Opus
+  // Resolve model: 'inherit' or no model → leader's current model
   const model = resolveTeammateModel(input.model, getAppState().mainLoopModel)
 
   if (!name || !prompt) {
@@ -549,7 +549,7 @@ async function handleSpawnSeparateWindow(
   const { setAppState, getAppState } = context
   const { name, prompt, agent_type, cwd, plan_mode_required } = input
 
-  // Resolve model: 'inherit' → leader's model; undefined → default Opus
+  // Resolve model: 'inherit' or no model → leader's current model
   const model = resolveTeammateModel(input.model, getAppState().mainLoopModel)
 
   if (!name || !prompt) {
@@ -844,7 +844,7 @@ async function handleSpawnInProcess(
   const { setAppState, getAppState } = context
   const { name, prompt, agent_type, plan_mode_required } = input
 
-  // Resolve model: 'inherit' → leader's model; undefined → default Opus
+  // Resolve model: 'inherit' or no model → leader's current model
   const model = resolveTeammateModel(input.model, getAppState().mainLoopModel)
 
   if (!name || !prompt) {
