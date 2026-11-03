@@ -159,7 +159,7 @@ export function stripImagesFromMessages(messages: Message[]): Message[] {
         hasMediaBlock = true
         return [{ type: 'text' as const, text: '[image]' }]
       }
-      if (block.type === 'document') {
+      if (Reflect.get(block, 'type') === 'document') {
         hasMediaBlock = true
         return [{ type: 'text' as const, text: '[document]' }]
       }

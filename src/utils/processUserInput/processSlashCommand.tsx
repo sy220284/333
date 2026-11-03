@@ -5,7 +5,7 @@ import { setPromptId } from 'src/bootstrap/state.js';
 import { builtInCommandNames, type Command, type CommandBase, findCommand, getCommand, getCommandName, hasCommand, type PromptCommand } from 'src/commands.js';
 import { NO_CONTENT_MESSAGE } from 'src/constants/messages.js';
 import type { SetToolJSXFn, ToolUseContext } from 'src/Tool.js';
-import type { AssistantMessage, AttachmentMessage, Message, NormalizedUserMessage, ProgressMessage, UserMessage } from 'src/types/message.js';
+import type { AssistantMessage, AttachmentMessage, Message, NormalizedAssistantMessage, NormalizedUserMessage, ProgressMessage, UserMessage } from 'src/types/message.js';
 import { addInvokedSkill, getSessionId } from '../../bootstrap/state.js';
 import { COMMAND_MESSAGE_TAG, COMMAND_NAME_TAG } from '../../constants/xml.js';
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js';
@@ -191,7 +191,7 @@ async function executeForkedSlashCommand(command: CommandBase & PromptCommand, a
   let toolUseCounter = 0;
 
   // Helper to create a progress message from an agent message
-  const createProgressMessage = (message: AssistantMessage | NormalizedUserMessage): ProgressMessage<AgentProgress> => {
+  const createProgressMessage = (message: NormalizedAssistantMessage | NormalizedUserMessage): ProgressMessage<AgentProgress> => {
     toolUseCounter++;
     return {
       type: 'progress',
@@ -251,7 +251,7 @@ async function executeForkedSlashCommand(command: CommandBase & PromptCommand, a
         }
         const normalizedMsg = normalizedNew[0];
         if (normalizedMsg && normalizedMsg.type === 'assistant') {
-          progressMessages.push(createProgressMessage(message));
+          progressMessages.push(createProgressMessage(normalizedMsg));
           updateProgress();
         }
       }

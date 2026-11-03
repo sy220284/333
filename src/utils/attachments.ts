@@ -1004,7 +1004,7 @@ export async function getAttachments(
   ].filter(a => a !== undefined && a !== null)
 }
 
-async function maybe<A>(label: string, f: () => Promise<A[]>): Promise<A[]> {
+async function maybe<A extends Attachment>(label: string, f: () => Promise<A[]>): Promise<A[]> {
   const startTime = Date.now()
   try {
     const result = await f()
