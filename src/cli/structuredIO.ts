@@ -39,7 +39,6 @@ import { writeToStdout } from 'src/utils/process.js'
 import { jsonStringify } from 'src/utils/slowOperations.js'
 import { z } from 'zod/v4'
 import { notifyCommandLifecycle } from '../utils/commandLifecycle.js'
-import { normalizeControlMessageKeys } from '../utils/controlMessageCompat.js'
 import { executePermissionRequestHooks } from '../utils/hooks.js'
 import {
   applyPermissionUpdates,
@@ -339,7 +338,7 @@ export class StructuredIO {
       return undefined
     }
     try {
-      const message = normalizeControlMessageKeys(jsonParse(line)) as
+      const message = jsonParse(line) as
         | StdinMessage
         | SDKMessage
       if (message.type === 'keep_alive') {

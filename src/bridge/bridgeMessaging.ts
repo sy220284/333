@@ -20,7 +20,6 @@ import type { SDKResultSuccess } from '../entrypoints/sdk/coreTypes.js'
 import { logEvent } from '../services/analytics/index.js'
 import { EMPTY_USAGE } from '../services/api/emptyUsage.js'
 import type { Message } from '../types/message.js'
-import { normalizeControlMessageKeys } from '../utils/controlMessageCompat.js'
 import { logForDebugging } from '../utils/debug.js'
 import { stripDisplayTagsAllowEmpty } from '../utils/displayTags.js'
 import { errorMessage } from '../utils/errors.js'
@@ -138,7 +137,7 @@ export function handleIngressMessage(
   onControlRequest?: ((request: SDKControlRequest) => void) | undefined,
 ): void {
   try {
-    const parsed: unknown = normalizeControlMessageKeys(jsonParse(data))
+    const parsed: unknown = jsonParse(data)
 
     // control_response is not an SDKMessage — check before the type guard
     if (isSDKControlResponse(parsed)) {
