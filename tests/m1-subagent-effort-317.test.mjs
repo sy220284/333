@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { resolveSubagentEffortValue } from '../src/tools/AgentTool/subagentEffortPolicy.mjs'
 
@@ -30,4 +31,12 @@ test('explicit agent effort wins over environment, stored, model and parent defa
 test('same-model agents inherit parent effort only without a more specific setting', () => {
   assert.equal(resolveSubagentEffortValue({ ...base, agentModel: base.parentModel }), 'max')
   assert.equal(resolveSubagentEffortValue({ ...base, agentModel: base.parentModel, environmentEffort: 'low' }), 'low')
+})
+
+test('SDK isolated settingSources never injects persisted user effort into cross-model agent', () => {
+  const source = readFileSync(new URL('../src/tools/AgentTool/runAgent.ts', import.meta.url), 'utf8')
+  assert.match(source, /usesDifferentModel && isSettingSourceEnabled\('userSettings'\)/)
+  assert.equal(resolveSubagentEffortValue({
+    ...base, savedEffort: undefined, modelDefaultEffort: 'low',
+  }), 'low')
 })

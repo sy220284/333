@@ -59,6 +59,7 @@ import { executeSubagentStartHooks } from '../../utils/hooks.js'
 import { createUserMessage } from '../../utils/messages.js'
 import { getAgentModel } from '../../utils/model/agent.js'
 import { getDefaultEffortForModel, parseEffortValue } from '../../utils/effort.js'
+import { isSettingSourceEnabled } from '../../utils/settings/constants.js'
 import { getSettingsForSource } from '../../utils/settings/settings.js'
 import type { ModelAlias } from '../../utils/model/aliases.js'
 import {
@@ -495,9 +496,10 @@ export async function* runAgent({
       parentEffort: state.effortValue,
       agentModel: resolvedAgentModel,
       parentModel: toolUseContext.options.mainLoopModel,
-      savedEffort: usesDifferentModel
-        ? getSettingsForSource('userSettings')?.effortLevel
-        : undefined,
+      savedEffort:
+        usesDifferentModel && isSettingSourceEnabled('userSettings')
+          ? getSettingsForSource('userSettings')?.effortLevel
+          : undefined,
       modelDefaultEffort: usesDifferentModel
         ? getDefaultEffortForModel(resolvedAgentModel)
         : undefined,
