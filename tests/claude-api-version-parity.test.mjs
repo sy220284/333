@@ -74,7 +74,12 @@ test('api-version opens the bundled 2.1.310 migration guide through the actual R
       const home = join(tmp, name)
       mkdirSync(home)
       const env = { PATH: process.env.PATH, HOME: home, USERPROFILE: home, XDG_CONFIG_HOME: home, XDG_CACHE_HOME: home, CI: '1', TERM: 'dumb', NO_COLOR: '1', ANTHROPIC_API_KEY: 'local-fixture', ANTHROPIC_BASE_URL: `http://127.0.0.1:${server.address().port}`, NO_PROXY: '127.0.0.1,localhost', DISABLE_TELEMETRY: '1', CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' }
-      const child = spawn(executable, [...prefix, '-p', '/claude-api api-version', '--model', model, '--tools', 'Read', '--allowedTools', 'Read', '--output-format', 'json', '--max-turns', '2'], { cwd: home, env, stdio: ['ignore', 'pipe', 'pipe'] })
+      // The isolated HOME owns config and resource extraction; the process cwd must
+      // outlive the test. On Windows a tool subprocess may still hold its cwd
+      // when its CLI parent closes, which locks HOME and breaks deterministic cleanup.
+      // Restrict to the isolated user setting source so the repository's
+      // project settings never affect this skill-loading parity test.
+      const child = spawn(executable, [...prefix, '-p', '/claude-api api-version', '--model', model, '--tools', 'Read', '--allowedTools', 'Read', '--setting-sources', 'user', '--output-format', 'json', '--max-turns', '2'], { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'] })
       let stdout = '', stderr = ''
       child.stdout.on('data', x => stdout += x)
       child.stderr.on('data', x => stderr += x)
