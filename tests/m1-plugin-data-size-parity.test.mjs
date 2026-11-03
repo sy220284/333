@@ -81,6 +81,31 @@ test('2.1.310 plugin list --data-size reads actual persistent plugin data and ho
       assert.equal(localResult.status, 0, `${variant}: ${localResult.stderr}`)
       assert.equal(JSON.parse(localResult.stdout).find(row => row.id === 'mock@test')?.projectEnabled, false)
 
+      // The editable configuration source is different from the effective
+      // runtime decision: local/project overrides must win over user values.
+      rmSync(join(projectConfig, 'settings.local.json'))
+      writeFileSync(join(config, 'settings.json'), JSON.stringify({
+        enabledPlugins: { 'mock@test': true },
+      }))
+      writeFileSync(join(projectConfig, 'settings.json'), JSON.stringify({
+        enabledPlugins: { 'mock@test': false },
+      }))
+      const projectDeny = run(binary, prefix, ['plugin', 'list', '--json'], env, project)
+      assert.equal(projectDeny.status, 0, `${variant}: ${projectDeny.stderr}`)
+      const deny = JSON.parse(projectDeny.stdout).find(row => row.id === 'mock@test')
+      assert.deepEqual([deny?.enabled, deny?.projectEnabled], [false, false])
+
+      writeFileSync(join(projectConfig, 'settings.json'), JSON.stringify({
+        enabledPlugins: { 'mock@test': true },
+      }))
+      writeFileSync(join(projectConfig, 'settings.local.json'), JSON.stringify({
+        enabledPlugins: { 'mock@test': false },
+      }))
+      const localDeny = run(binary, prefix, ['plugin', 'list', '--json'], env, project)
+      assert.equal(localDeny.status, 0, `${variant}: ${localDeny.stderr}`)
+      const denied = JSON.parse(localDeny.stdout).find(row => row.id === 'mock@test')
+      assert.deepEqual([denied?.enabled, denied?.projectEnabled], [false, true])
+
       const unknown = run(binary, prefix, ['plugin', 'list', '--json', '--data-size', 'other'], env, project)
       assert.notEqual(unknown.status, 0, `${variant}: unknown plugin should be rejected`)
       assert.match(unknown.stderr, /not installed/)
