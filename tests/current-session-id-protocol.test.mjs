@@ -17,17 +17,26 @@ test('remote session IDs convert only at the current API boundary', () => {
 })
 test('remote session callers use the protocol helper, not the old shim', () => {
   assert.equal(existsSync(new URL('bridge/sessionIdCompat.ts', root)), false)
-  const callers = [
+  const directCallers = [
     'bridge/replBridge.ts', 'bridge/bridgeMain.ts',
     'bridge/createSession.ts', 'bridge/replBridgeHandle.ts',
     'bridge/remoteBridgeCore.ts', 'bridge/peerSessions.ts',
-    'bridge/peerDiscovery.ts', 'constants/product.ts',
+    'constants/product.ts',
   ]
-  for (const path of callers) {
+  for (const path of directCallers) {
     const code = readFileSync(new URL(path, root), 'utf8').split('//# sourceMappingURL=')[0]
     assert.equal(/toCompatSessionId|toInfraSessionId|sessionIdCompat/.test(code), false, path)
-    assert.match(code, /toSessionApiId|toWorkerApiId/)
+    if (path === 'bridge/peerSessions.ts') {
+      assert.match(code, /toSessionApiId/)
+    } else {
+      assert.match(code, /toSessionApiId|toWorkerApiId/)
+    }
   }
+  const peerDiscovery = readFileSync(new URL('bridge/peerDiscovery.ts', root), 'utf8')
+  assert.match(peerDiscovery, /getSelfBridgeSessionId/)
+  assert.doesNotMatch(peerDiscovery, /getSelfBridgeCompatId|sessionIdCompat/)
+  const handle = readFileSync(new URL('bridge/replBridgeHandle.ts', root), 'utf8')
+  assert.match(handle, /getSelfBridgeSessionId[\\s\\S]*toSessionApiId/)
 })
 test('remote reconnect attempts only the current worker ID', () => {
   const main = readFileSync(new URL('bridge/bridgeMain.ts', root), 'utf8')
