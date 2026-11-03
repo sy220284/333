@@ -23,7 +23,7 @@ import { useTerminalSize } from '../hooks/useTerminalSize.js';
 import { stringWidth } from '../ink/stringWidth.js';
 import { getDefaultCharacters, type SpinnerMode } from './Spinner/index.js';
 import { SpinnerAnimationRow } from './Spinner/SpinnerAnimationRow.js';
-import type { OutputLimitRecovery, SpinnerRetryStatus } from './Spinner/statusLogic.js';
+import { getSpinnerFrame, type OutputLimitRecovery, type SpinnerRetryStatus } from './Spinner/statusLogic.js';
 import { useSettings } from '../hooks/useSettings.js';
 import { isInProcessTeammateTask } from '../tasks/InProcessTeammateTask/types.js';
 import { isBackgroundTask } from '../tasks/types.js';
@@ -40,7 +40,6 @@ import { getGlobalConfig } from '../utils/config.js';
 import { isDefaultSpinnerTipSuppressed } from '../services/tips/customTipSettings.js';
 export type { SpinnerMode } from './Spinner/index.js';
 const DEFAULT_CHARACTERS = getDefaultCharacters();
-const SPINNER_FRAMES = [...DEFAULT_CHARACTERS, ...[...DEFAULT_CHARACTERS].reverse()];
 type Props = {
   mode: SpinnerMode;
   loadingStartTimeRef: React.RefObject<number>;
@@ -510,7 +509,7 @@ export function Spinner() {
   const $ = _c(8);
   const settings = useSettings();
   const reducedMotion = settings.prefersReducedMotion ?? false;
-  const [ref, time] = useAnimationFrame(reducedMotion ? null : 120);
+  const [ref, time] = useAnimationFrame(reducedMotion ? null : 50);
   if (reducedMotion) {
     let t0;
     if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
@@ -529,8 +528,8 @@ export function Spinner() {
     }
     return t1;
   }
-  const frame = Math.floor(time / 120) % SPINNER_FRAMES.length;
-  const t0 = SPINNER_FRAMES[frame];
+  const frame = getSpinnerFrame(time, DEFAULT_CHARACTERS.length);
+  const t0 = DEFAULT_CHARACTERS[frame];
   let t1;
   if ($[3] !== t0) {
     t1 = <Text color="text">{t0}</Text>;
