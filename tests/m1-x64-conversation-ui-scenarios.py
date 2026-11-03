@@ -283,10 +283,10 @@ def probe(binary, scenario):
             self.end_headers()
             try:
                 if is_real and scene == 'thinking':
-                    for event in answer.split(b'\\n\\n'):
+                    for event in answer.split(b'\n\n'):
                         if not event:
                             continue
-                        self.wfile.write(event + b'\\n\\n')
+                        self.wfile.write(event + b'\n\n')
                         self.wfile.flush()
                         if b'thinking_delta' in event:
                             time.sleep(2.5)  # verify both renderers' live thinking states
