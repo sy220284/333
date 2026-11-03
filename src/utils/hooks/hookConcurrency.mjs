@@ -20,8 +20,13 @@ function drain(key, state) {
     const waiter = state.queue.shift()
     grant(key, state, waiter, 'active')
   }
-  while (state.queue.length && state.overdue < MAX_OVERDUE && state.queue[0].expired) {
-    const waiter = state.queue.shift()
+  // Overdue eligibility belongs to each hook, not the oldest queued event.
+  // A long-timeout waiter at the front must not block a later hook whose
+  // shorter timeout has already elapsed.
+  while (state.queue.length && state.overdue < MAX_OVERDUE) {
+    const index = state.queue.findIndex(waiter => waiter.expired)
+    if (index < 0) break
+    const [waiter] = state.queue.splice(index, 1)
     grant(key, state, waiter, 'overdue')
   }
   if (!state.queue.length && state.active === 0 && state.overdue === 0) states.delete(key)
