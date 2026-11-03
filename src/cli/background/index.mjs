@@ -1,11 +1,11 @@
 import { connect } from 'node:net'
 import { spawn } from 'node:child_process'
-import { open, mkdir, stat } from 'node:fs/promises'
+import { open, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createInterface } from 'node:readline/promises'
 import {
   fleetHome, fleetSocket, listSessions, matchSession,
-  readTail, stripUnsafeTerminal, MAX_LOG_BYTES, worktreeDigest
+  readTail, stripUnsafeTerminal, MAX_LOG_BYTES
 } from './sessionStore.mjs'
 import { runBackgroundSupervisor } from './supervisor.mjs'
 
@@ -51,13 +51,13 @@ const HELP = {
     '  --settings <file-or-json>      Apply settings to dispatched sessions',
     '  --strict-mcp-config           Only use the supplied MCP server configuration',
     '  -h, --help                     Display help for command'].join('\n'),
-  attach: 'Usage: claude attach <id|name>\n\n  ' + DESCRIPTION.attach,
-  logs: 'Usage: claude logs <id|name>\n\n  ' + DESCRIPTION.logs + ' Part of the session name works in place of the id.',
-  stop: 'Usage: claude stop <id>\n\n  ' + DESCRIPTION.stop,
-  respawn: 'Usage: claude respawn <id>|--all\n\n  ' + DESCRIPTION.respawn,
+  attach: `Usage: claude attach <id|name>\n\n  ${DESCRIPTION.attach}`, 
+  logs: `Usage: claude logs <id|name>\n\n  ${DESCRIPTION.logs} Part of the session name works in place of the id.`, 
+  stop: `Usage: claude stop <id>\n\n  ${DESCRIPTION.stop}`, 
+  respawn: `Usage: claude respawn <id>|--all\n\n  ${DESCRIPTION.respawn}`, 
   rm: [
     'Usage: claude rm <id> [--discard-unpushed <commit>@<worktree-id>] [--force-remove-worktree <worktree-id>]', '',
-    '  ' + DESCRIPTION.rm,
+    `  ${DESCRIPTION.rm}`, 
     '  --discard-unpushed <commit>@<worktree-id>  also discard worktree unpushed commits and uncommitted changes,',
     '    only when the previously reported HEAD and worktree digest still match',
     '  --force-remove-worktree <worktree-id>  remove a worktree that was not removed cleanly,',
@@ -65,7 +65,6 @@ const HELP = {
   ].join('\n'),
 }
 const COMMANDS = new Set(['agents', 'attach', 'logs', 'stop', 'kill', 'respawn', 'rm', 'daemon'])
-const MULTI_FLAGS = new Set(['--add-dir', '--allowedTools', '--allowed-tools', '--disallowedTools', '--disallowed-tools', '--tools'])
 const VALUE_FLAGS = new Set([
   '--agent', '--model', '--cwd', '--settings', '--setting-sources', '--mcp-config',
   '--plugin-dir', '--permission-mode', '--effort', '--session-id', '--resume',
@@ -103,7 +102,7 @@ function socketConnect(timeout = 3500) {
     socket.once('error', error => { clearTimeout(timer); reject(error) })
   })
 }
-function protocol(socket, initialRequest, listener) {
+function protocol(socket, listener) {
   let buffer = ''
   let sequence = 0
   const waiting = new Map()
@@ -114,12 +113,14 @@ function protocol(socket, initialRequest, listener) {
       return
     }
     let end
-    while ((end = buffer.indexOf('\n')) >= 0) {
+    end = buffer.indexOf('\n')
+    while (end >= 0) {
       const line = buffer.slice(0, end)
       buffer = buffer.slice(end + 1)
+      end = buffer.indexOf('\n')
       let event
       try { event = JSON.parse(line) }
-      catch (error) { socket.destroy(new Error('Invalid background service response: ' + error.message)); return }
+      catch (error) { socket.destroy(new Error(`Invalid background service response: ${error.message}`)); return }
       if (event.event) { listener?.(event); continue }
       const entry = waiting.get(event.id)
       if (!entry) continue
@@ -135,7 +136,7 @@ function protocol(socket, initialRequest, listener) {
   const ask = payload => new Promise((resolve, reject) => {
     const id = ++sequence
     waiting.set(id, { resolve, reject })
-    socket.write(JSON.stringify({ ...payload, requestId: id }) + '\n', error => {
+    socket.write(`${JSON.stringify({ ...payload, requestId: id })}\n`, error => {
       if (error) { waiting.delete(id); reject(error) }
     })
   })
@@ -163,7 +164,7 @@ async function startDaemon() {
       env: { ...process.env, CLAUDE_CODE_SESSION_KIND: 'daemon' },
       windowsHide: true,
     })
-    child.once('error', error => process.stderr.write('Cannot start background daemon: ' + error.message + '\n'))
+    child.once('error', error => process.stderr.write(`Cannot start background daemon: ${error.message}\n`))
     child.unref()
   } finally { await out.close() }
   for (let i = 0; i < 30; i++) {
@@ -171,7 +172,7 @@ async function startDaemon() {
     try { const s = await socketConnect(150); s.destroy(); return }
     catch (error) { if (!['ENOENT', 'ECONNREFUSED', 'ETIMEDOUT'].includes(error.code)) throw error }
   }
-  throw new Error('Background service failed to start. Inspect ' + join(fleetHome(), 'daemon.log'))
+  throw new Error(`Background service failed to start. Inspect ${join(fleetHome(), 'daemon.log')}`)
 }
 function toPublic(j) {
   // Native 2.1.310 public JSON contract: no internal state, paths or env.
@@ -182,7 +183,7 @@ function toPublic(j) {
   }
 }
 function inferredName(args) {
-  let positional = []
+  const positional = []
   let waiting = false
   for (const arg of args) {
     if (waiting) { waiting = false; continue }
@@ -198,7 +199,7 @@ async function list(args) {
   const cwd = rootArg(args, '--cwd')
   const sessions = await listSessions({ all, cwd })
   if (args.includes('--json')) {
-    process.stdout.write(JSON.stringify(sessions.map(toPublic), null, 2) + '\n')
+    process.stdout.write(`${JSON.stringify(sessions.map(toPublic), null, 2)}\n`)
     return
   }
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
@@ -226,26 +227,24 @@ async function attach(id) {
     socket = await socketConnect()
   }
   const previousRaw = process.stdin.isRaw
-  let attached = true
   const send = payload => {
-    if (!socket.destroyed) socket.write(JSON.stringify(payload) + '\n')
+    if (!socket.destroyed) socket.write(`${JSON.stringify(payload)}\n`)
   }
   try {
-    const channel = protocol(socket, null, event => {
+    const channel = protocol(socket, event => {
       if (event.event === 'output') process.stdout.write(Buffer.from(event.data, 'base64'))
       if (event.event === 'exit') {
-        attached = false
         socket.end()
       }
-      if (event.event === 'error') process.stderr.write(event.message + '\n')
+      if (event.event === 'error') process.stderr.write(`${event.message}\n`)
     })
     await channel.ask({ op: 'attach', id })
     process.stdin.setRawMode(true)
     process.stdin.resume()
     const onData = data => {
       const bytes = Buffer.from(data)
-      if (bytes.includes(0x1a)) { attached = false; void channel.ask({ op: 'detach' }).finally(() => socket.end()); return }
-      void channel.ask({ op: 'input', data: bytes.toString('base64') }).catch(error => { process.stderr.write(error.message + '\n'); socket.end() })
+      if (bytes.includes(0x1a)) { void channel.ask({ op: 'detach' }).finally(() => socket.end()); return }
+      void channel.ask({ op: 'input', data: bytes.toString('base64') }).catch(error => { process.stderr.write(`${error.message}\n`); socket.end() })
     }
     const onResize = () => send({ op: 'resize', cols: process.stdout.columns, rows: process.stdout.rows, requestId: 0 })
     process.stdin.on('data', onData)
@@ -265,7 +264,7 @@ async function attach(id) {
 }
 async function daemon(args) {
   if (!args.length || args.includes('--help') || args.includes('-h')) {
-    process.stdout.write(DAEMON_HELP + '\n')
+    process.stdout.write(`${DAEMON_HELP}\n`)
     return
   }
   const action = args[0]
@@ -273,16 +272,16 @@ async function daemon(args) {
   if (action === 'status') {
     try {
       const status = await ask({ op: 'ping' })
-      process.stdout.write('running (pid ' + status.pid + ')\n  bg workers: ' + status.running + '\n')
+      process.stdout.write(`running (pid ${status.pid})\n  bg workers: ${status.running}\n`)
     } catch (error) {
       if (!['ENOENT', 'ECONNREFUSED', 'ETIMEDOUT'].includes(error.code)) throw error
-      process.stdout.write('not running\n\nbg sessions:\n  control.sock: unreachable (' + fleetSocket() + ')\n')
+      process.stdout.write(`not running\n\nbg sessions:\n  control.sock: unreachable (${fleetSocket()})\n`)
       process.exitCode = 1
     }
     return
   }
   if (action === 'stop') {
-    const status = await ask({ op: 'shutdown', keepWorkers: args.includes('--keep-workers') })
+    await ask({ op: 'shutdown', keepWorkers: args.includes('--keep-workers') })
     process.stdout.write('stopped\nnote: the next `claude agents` or `claude --bg` will start a new one\n')
     return
   }
@@ -299,7 +298,7 @@ async function daemon(args) {
     process.stdout.write(tail)
     return
   }
-  throw new Error('Unknown daemon subcommand: ' + action)
+  throw new Error(`Unknown daemon subcommand: ${action}`)
 }
 function rmOptions(args) {
   const out = {}
@@ -314,7 +313,7 @@ function rmOptions(args) {
       const value = inline || args[++i]
       if (!/^[a-f0-9]{12}$/i.test(value || '')) throw new Error("option '--force-remove-worktree' requires <worktree-id>")
       out.forceRemoveWorktree = value
-    } else throw new Error('Unknown rm option: ' + flag)
+    } else throw new Error(`Unknown rm option: ${flag}`)
   }
   return out
 }
@@ -326,7 +325,7 @@ async function authForBackground(args) {
     throw new Error('--bg with bypassPermissions requires accepting the disclaimer first. Run claude --dangerously-skip-permissions once interactively.')
 }
 function argValue(args, flag) {
-  const index = args.findIndex(a => a === flag || a.startsWith(flag + '='))
+  const index = args.findIndex(a => a === flag || a.startsWith(`${flag}=`))
   return index === -1 ? undefined : args[index].includes('=') ? args[index].slice(flag.length + 1) : args[index + 1]
 }
 export async function interceptBackgroundCli(args) {
@@ -341,7 +340,7 @@ export async function interceptBackgroundCli(args) {
   if (verb === 'daemon') { await daemon(args.slice(at + 1)); return true }
   if (verb === 'agents') {
     const options = args.slice(at + 1)
-    if (options.includes('--help') || options.includes('-h')) process.stdout.write(HELP.agents + '\n')
+    if (options.includes('--help') || options.includes('-h')) process.stdout.write(`${HELP.agents}\n`)
     else await list(options)
     return true
   }
@@ -356,18 +355,18 @@ export async function interceptBackgroundCli(args) {
       agent: argValue(args, '--agent'), model: argValue(args, '--model'),
     }, { start: true })
     process.stdout.write([
-      'backgrounded · ' + response.id,
+      `backgrounded · ${response.id}`,
       '  claude agents             list sessions',
-      '  claude attach ' + response.id + '    open in this terminal',
-      '  claude logs ' + response.id + '      show recent output',
-      '  claude stop ' + response.id + '      stop this session',
+      `  claude attach ${response.id}    open in this terminal`,
+      `  claude logs ${response.id}      show recent output`,
+      `  claude stop ${response.id}      stop this session`,
     ].join('\n') + '\n')
     return true
   }
   const normalized = verb === 'kill' ? 'stop' : verb
   const options = args.slice(at + 1)
   if (options.includes('--help') || options.includes('-h')) {
-    process.stdout.write(HELP[normalized] + '\n')
+    process.stdout.write(`${HELP[normalized]}\n`)
     return true
   }
   if (normalized === 'respawn' && options[0] === '--all') {
@@ -375,18 +374,18 @@ export async function interceptBackgroundCli(args) {
     for (const session of sessions) {
       if (['completed', 'failed', 'stopped'].includes(session.state)) {
         await ask({ op: 'respawn', id: session.id }, { start: true })
-        process.stdout.write('respawned ' + session.id + '\n')
+        process.stdout.write(`respawned ${session.id}\n`)
       }
     }
     return true
   }
   const id = options[0]
-  if (!id) throw new Error('Usage: claude ' + normalized + ' <id>')
+  if (!id) throw new Error(`Usage: claude ${normalized} <id>`)
   // Resolve against persisted records before starting a daemon; the official
   // x64 reports a missing id without booting a service or masking ENOJOB.
   const matches = await listSessions({ all: true })
   const selected = matchSession(matches, id, {
-    usage: normalized + ' <id>',
+    usage: `${normalized} <id>`,
     name: normalized === 'attach' || normalized === 'logs',
   })
   if (normalized === 'attach') { await attach(selected.id); return true }
@@ -398,18 +397,18 @@ export async function interceptBackgroundCli(args) {
   }
   if (normalized === 'stop') {
     const result = await ask({ op: 'stop', id: selected.id }, { start: true })
-    process.stdout.write('stopped ' + result.id + '\n')
-    if (result.worktreePath) process.stdout.write('  worktree retained at ' + result.worktreePath + '\n')
+    process.stdout.write(`stopped ${result.id}\n`)
+    if (result.worktreePath) process.stdout.write(`  worktree retained at ${result.worktreePath}\n`)
     return true
   }
   if (normalized === 'respawn') {
     const result = await ask({ op: 'respawn', id: selected.id }, { start: true })
-    process.stdout.write('respawned ' + result.id + '\n')
+    process.stdout.write(`respawned ${result.id}\n`)
     return true
   }
   if (normalized === 'rm') {
     const result = await ask({ op: 'rm', id: selected.id, ...rmOptions(options) }, { start: true })
-    process.stdout.write('removed ' + result.id + '\n')
+    process.stdout.write(`removed ${result.id}\n`)
     return true
   }
   return false
