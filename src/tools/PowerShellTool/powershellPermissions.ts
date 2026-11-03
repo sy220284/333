@@ -182,7 +182,7 @@ function filterRulesByContentsMatchingInput(
     return str.toLowerCase().startsWith(prefix.toLowerCase())
   }
   // SECURITY: stripModulePrefix on RULE names widens the
-  // secondary-canonical match — a deny rule `Module\Remove-Item:*` blocking
+  // secondary-canonical match — a deny rule `Module\Remove-Item *` blocking
   // `rm` is the intent (fail-safe over-match), but an allow rule
   // `ModuleA\Get-Thing:*` also matching `ModuleB\Get-Thing` is fail-OPEN.
   // Deny/ask over-match is fine; allow must never over-match.
@@ -208,7 +208,7 @@ function filterRulesByContentsMatchingInput(
   // single space. PowerShell accepts any whitespace (tab, etc.) as separator,
   // but prefix rule matching uses `prefix + ' '` (literal space). Without this,
   // `rm\t./x` canonicalizes to `remove-item\t./x` and misses the deny rule
-  // `Remove-Item:*`, while acceptEdits auto-allow (using AST cmd.name) still
+  // `Remove-Item *`, while acceptEdits auto-allow (using AST cmd.name) still
   // matches — a deny-rule bypass. Build unconditionally (not just when the
   // canonical differs) so non-space-separated raw commands are also normalized.
   const rest = command.slice(rawCmdName.length).replace(/^\s+/, ' ')
@@ -247,7 +247,7 @@ function filterRulesByContentsMatchingInput(
       // This ensures 'deny rm' also blocks 'Remove-Item'
       // SECURITY: stripModulePrefix applied to DENY/ASK rule command
       // names too, not just input. Otherwise a deny rule written as
-      // `Microsoft.PowerShell.Management\Remove-Item:*` is bypassed by `rm`,
+      // `Microsoft.PowerShell.Management\Remove-Item *` is bypassed by `rm`,
       // `del`, or plain `Remove-Item` — resolveToCanonical won't match the
       // module-qualified form against COMMON_ALIASES.
       if (rule.type === 'exact') {

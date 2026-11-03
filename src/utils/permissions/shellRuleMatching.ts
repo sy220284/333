@@ -117,7 +117,7 @@ export function matchWildcardPattern(
   // When a pattern ends with ' *' (space + unescaped wildcard) AND the trailing
   // wildcard is the ONLY unescaped wildcard, make the trailing space-and-args
   // optional so 'git *' matches both 'git add' and bare 'git'.
-  // This aligns wildcard matching with prefix rule semantics (git:*).
+  // This aligns wildcard matching with command-family wildcard semantics (git *).
   // Multi-wildcard patterns like '* run *' are excluded — making the last
   // wildcard optional would incorrectly match 'npm run' (no trailing arg).
   const unescapedStarCount = (processed.match(/\*/g) || []).length

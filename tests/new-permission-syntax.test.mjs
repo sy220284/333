@@ -25,7 +25,7 @@ test('current wildcard permissions parse and suggest correctly', () => {
   assert.equal(hasWildcards('npm \\*'), false)
 })
 test('retired colon-prefix permissions fail explicitly', () => {
-  assert.throws(() => parsePermissionRule('npm:*'), /Old :\\* prefix permissions/)
+  assert.throws(() => parsePermissionRule('npm:*'), error => error.message.includes('Old :* prefix permissions'))
   const validation = readFileSync(new URL('utils/settings/permissionValidation.ts', root), 'utf8')
   assert.ok(validation.includes("content.includes(':*')"))
   for (const path of [
