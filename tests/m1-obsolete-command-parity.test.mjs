@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
@@ -33,7 +33,6 @@ test('2.1.310 suppresses redundant Agent classifier approval text but preserves 
 })
 
 test('retired TaskOutput executable is absent; background outputs are still available through Read', () => {
-  const { existsSync } = require('node:fs')
   assert.equal(existsSync(join(root, 'src/tools/TaskOutputTool/TaskOutputTool.tsx')), false)
   assert.equal(existsSync(join(root, 'src/utils/task/outputFormatting.ts')), false)
   const registry = source('src/tools.ts')
