@@ -353,9 +353,12 @@ export function activeBackgroundFlags(args) {
   for (let index = 0; index < args.length; index++) {
     const arg = args[index]
     if (arg === '--') break
-    if (VALUE_FLAGS.has(arg)) { index++; continue }
+    if (VALUE_FLAGS.has(arg)) { found.add(arg); index++; continue }
     if (arg.startsWith('--') && arg.includes('=') &&
-        VALUE_FLAGS.has(arg.slice(0, arg.indexOf('=')))) continue
+        VALUE_FLAGS.has(arg.slice(0, arg.indexOf('=')))) {
+      found.add(arg.slice(0, arg.indexOf('=')))
+      continue
+    }
     if (arg.startsWith('-')) found.add(arg)
   }
   return found
