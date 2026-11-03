@@ -13,10 +13,10 @@
   "base_legacy_change_count": 6313,
   "feature_acceptance_target": 102,
   "scenario_acceptance_target": 84,
-  "binary_source_status": "已发现官方发行文件；当前环境无法取得和执行2.1.317 x64包",
+  "binary_source_status": "官方 2.1.317 Linux x64 已在 GitHub Actions 41672565537 下载并完成 manifest SHA-256 校验，--version 实测通过；候选版构建失败阻断后续严格差分，Windows x64 仍待实测",
   "product_package_version_policy": "package.json仍为2.1.310，待产品功能与运行差分验收后再声明版本为2.1.317",
   "ci_writeback": "本轮不处理",
-  "verified_x64_sha256": null,
+  "verified_x64_sha256": "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0",
   "release_snapshots": [
     {
       "version": "2.1.311",
@@ -55,5 +55,7 @@
   ],
   "intermediate_version_policy": "Treat versions without indexed release notes as explicit research gaps, not proof of no code or behavior changes. Require release-note reconciliation on every target change.",
   "release_ledger": "docs/upgrade/m1-evidence/2.1.311-2.1.317-官方逐条变更与验收台账.json",
-  "cumulative_release_entries": 418
+  "cumulative_release_entries": 418,
+  "verified_x64_platform": "linux-x64",
+  "binary_evidence_run": "https://github.com/sy220284/333/actions/runs/41672565537"
 }

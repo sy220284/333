@@ -4648,13 +4648,16 @@
       "domain_candidate": "工具权限与安全",
       "official_text": "Removed the Read tool's \"file unchanged since your last Read\" stub: reading an unchanged file again returns its content",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.317",
-      "implementation_status": "源码已修改，待构建与实测",
+      "implementation_status": "Read/Compact 已清除旧 stub，成功完整读取后才跳过压缩恢复；已运行 2,014 个命令名样本和 13 组 Read/恢复逻辑检查，仍待官方原版运行差分及全量构建",
       "verification_status": "未通过完整目标验收",
       "changed_files": [
         "src/tools/FileReadTool/FileReadTool.ts",
         "src/tools/FileReadTool/UI.tsx",
         "src/tools/FileReadTool/prompt.ts",
-        "tests/m1-read-repeat-317.test.mjs"
+        "tests/m1-read-repeat-317.test.mjs",
+        "src/services/compact/compact.ts",
+        "src/services/compact/preservedReadPaths.mjs",
+        "tests/m1-post-compact-read-paths-317.test.mjs"
       ]
     },
     {
