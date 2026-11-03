@@ -58,6 +58,8 @@ import { clearSessionHooks } from '../../utils/hooks/sessionHooks.js'
 import { executeSubagentStartHooks } from '../../utils/hooks.js'
 import { createUserMessage } from '../../utils/messages.js'
 import { getAgentModel } from '../../utils/model/agent.js'
+import { getDefaultEffortForModel, parseEffortValue } from '../../utils/effort.js'
+import { getSettingsForSource } from '../../utils/settings/settings.js'
 import type { ModelAlias } from '../../utils/model/aliases.js'
 import {
   clearAgentTranscriptSubdir,
@@ -81,6 +83,7 @@ import {
 import type { ContentReplacementState } from '../../utils/toolResultStorage.js'
 import { createAgentId } from '../../utils/uuid.js'
 import { resolveAgentTools } from './agentToolUtils.js'
+import { resolveSubagentEffortValue } from './subagentEffortPolicy.mjs'
 import { type AgentDefinition, isBuiltInAgent } from './loadAgentsDir.js'
 
 /**
@@ -479,11 +482,26 @@ export async function* runAgent({
       }
     }
 
-    // Override effort level if agent defines one
-    const effortValue =
-      agentDefinition.effort !== undefined
-        ? agentDefinition.effort
-        : state.effortValue
+    // 2.1.316/317: explicit agent effort wins, then the subagent-only
+    // environment override. Agents on a different model use the saved
+    // effort setting or that model's default, not the main session's effort.
+    const usesDifferentModel =
+      resolvedAgentModel !== toolUseContext.options.mainLoopModel
+    const effortValue = resolveSubagentEffortValue({
+      configuredEffort: agentDefinition.effort,
+      environmentEffort: parseEffortValue(
+        process.env.CLAUDE_CODE_SUBAGENT_EFFORT,
+      ),
+      parentEffort: state.effortValue,
+      agentModel: resolvedAgentModel,
+      parentModel: toolUseContext.options.mainLoopModel,
+      savedEffort: usesDifferentModel
+        ? getSettingsForSource('userSettings')?.effortLevel
+        : undefined,
+      modelDefaultEffort: usesDifferentModel
+        ? getDefaultEffortForModel(resolvedAgentModel)
+        : undefined,
+    })
 
     if (
       toolPermissionContext === state.toolPermissionContext &&
