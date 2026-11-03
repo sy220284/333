@@ -65,6 +65,9 @@ try {
   const candidateOptions = optionNames(candAssistantHelp)
   const missingPublicOptions = referenceOptions.filter(x => !candidateOptions.includes(x))
   const extraCandidateOptions = candidateOptions.filter(x => !referenceOptions.includes(x))
+  assert.ok(referenceOptions.includes('--debug') && candidateOptions.includes('--debug'), '新版 debug 调试入口必须正常保留')
+  assert.ok(!referenceOptions.includes('--mcp-debug') && !candidateOptions.includes('--mcp-debug'), '旧 MCP 调试入口已退场')
+  assert.deepEqual(extraCandidateOptions, [], '候选版不能额外公开已退场的旧版参数')
   writeFileSync(report, `${JSON.stringify({
     target: '2.1.310',
     scenario: 'retired-assistant-command-help',
