@@ -17,6 +17,9 @@ on:
       - 'src/components/Spinner/**'
       - 'src/components/LogoV2/**'
       - 'src/skills/bundled/**'
+      - 'src/skills/bundledFiles.mjs'
+      - 'src/skills/bundledSkills.ts'
+      - 'tests/bundled-skill-extraction.test.mjs'
       - 'build/install-public-deps.mjs'
       - 'src/main.tsx'
       - 'src/cli/handlers/**'
@@ -93,6 +96,7 @@ jobs:
           node build/verify-bundled-assets.mjs
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
+          node --test tests/bundled-skill-extraction.test.mjs
           bun build/rebuild.mjs
           test -s dist/cli.js
           printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-317-candidate"
