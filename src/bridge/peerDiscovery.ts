@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { getBridgeBaseUrl } from './bridgeConfig.js'
-import { getSelfBridgeCompatId } from './replBridgeHandle.js'
+import { getSelfBridgeSessionId } from './replBridgeHandle.js'
 import { getClaudeAIOAuthTokens } from '../utils/auth.js'
 import { prepareApiRequest } from '../utils/teleport/api.js'
 import { discoverAccountPeers, peerIdentityKey } from '../utils/accountPeerDirectory.mjs'
@@ -22,7 +22,7 @@ export async function discoverAuthenticatedPeers(local: Array<Record<string, unk
       text:'(account session identity unavailable; a later listing retries)'}],available:false,identityKey:null}
   }
   const result = await discoverAccountPeers({
-    local, selfId:getSelfBridgeCompatId(),
+    local, selfId:getSelfBridgeSessionId(),
     baseUrl:getBridgeBaseUrl(),
     accessToken:credentials.accessToken,
     orgUUID:credentials.orgUUID,

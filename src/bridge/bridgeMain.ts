@@ -166,7 +166,7 @@ export async function runBridgeLoop(
   // Compat-surface ID (session_*) computed once at spawn and cached so
   // cleanup and status-update ticks use the same key regardless of whether
   // the tengu_bridge_repl_v2_cse_shim_enabled gate flips mid-session.
-  const sessionCompatIds = new Map<string, string>()
+  const sessionApiIds = new Map<string, string>()
   // Session ingress JWTs for heartbeat auth, keyed by sessionId.
   // Stored separately from handle.accessToken because the token refresh
   // scheduler overwrites that field with the OAuth token (~3h55m in).
@@ -382,7 +382,7 @@ export async function runBridgeLoop(
     for (const [sid, handle] of activeSessions) {
       const act = handle.currentActivity
       if (act) {
-        logger.updateSessionActivity(sessionCompatIds.get(sid) ?? sid, act)
+        logger.updateSessionActivity(sessionApiIds.get(sid) ?? sid, act)
       }
     }
 
@@ -450,8 +450,8 @@ export async function runBridgeLoop(
       sessionStartTimes.delete(sessionId)
       sessionWorkIds.delete(sessionId)
       sessionIngressTokens.delete(sessionId)
-      const compatId = sessionCompatIds.get(sessionId) ?? sessionId
-      sessionCompatIds.delete(sessionId)
+      const compatId = sessionApiIds.get(sessionId) ?? sessionId
+      sessionApiIds.delete(sessionId)
       logger.removeSession(compatId)
       titledSessions.delete(compatId)
       v2Sessions.delete(sessionId)
@@ -1114,7 +1114,7 @@ export async function runBridgeLoop(
           activeSessions.set(sessionId, handle)
           sessionWorkIds.set(sessionId, work.id)
           sessionIngressTokens.set(sessionId, secret.session_ingress_token)
-          sessionCompatIds.set(sessionId, sessionApiId)
+          sessionApiIds.set(sessionId, sessionApiId)
 
           const startTime = Date.now()
           sessionStartTimes.set(sessionId, startTime)
@@ -1427,8 +1427,8 @@ export async function runBridgeLoop(
   if (initialSessionId) {
     sessionsToArchive.add(initialSessionId)
   }
-  // Snapshot before killing — onSessionDone clears sessionCompatIds.
-  const sessionApiIdSnapshot = new Map(sessionCompatIds)
+  // Snapshot before killing — onSessionDone clears sessionApiIds.
+  const sessionApiIdSnapshot = new Map(sessionApiIds)
 
   if (activeSessions.size > 0) {
     logForDebugging(

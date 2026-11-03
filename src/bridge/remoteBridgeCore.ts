@@ -973,7 +973,7 @@ async function archiveSession(
   // anthropic-beta + x-organization-uuid are required — without them the
   // compat gateway 404s before reaching the handler.
   //
-  // Unlike bridgeMain.ts (which caches sessionApiId in sessionCompatIds to keep
+  // Unlike bridgeMain.ts (which caches sessionApiId in sessionApiIds to keep
   // in-memory titledSessions/logger keys consistent across a mid-session
   // gate flip), this sessionApiId is only a server URL path segment — no
   // in-memory state. Fresh compute matches whatever the server currently

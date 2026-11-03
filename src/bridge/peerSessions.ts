@@ -4,7 +4,7 @@ import { getOauthConfig } from '../constants/oauth.js'
 import { errorMessage } from '../utils/errors.js'
 import { wrapCrossSessionMessage } from '../utils/peerMessageEnvelope.mjs'
 import { peerIdentityKey } from '../utils/accountPeerDirectory.mjs'
-import { getSelfBridgeCompatId } from './replBridgeHandle.js'
+import { getSelfBridgeSessionId } from './replBridgeHandle.js'
 import {
   CCR_BYOC_BETA,
   getOAuthHeaders,
@@ -42,7 +42,7 @@ export async function postInterClaudeMessage(
     msgV: 1,
     msg_id: msgId,
     type: 'user',
-    message: { role: 'user', content: wrapCrossSessionMessage(text, getSelfBridgeCompatId() ? `bridge:${getSelfBridgeCompatId()}` : 'unknown') },
+    message: { role: 'user', content: wrapCrossSessionMessage(text, getSelfBridgeSessionId() ? `bridge:${getSelfBridgeSessionId()}` : 'unknown') },
     parent_tool_use_id: null,
     session_id: sessionId,
     uuid: randomUUID(),
