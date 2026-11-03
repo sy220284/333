@@ -28,7 +28,7 @@ test('2.1.310 background real lifecycle: dispatch, list, logs, stop, respawn, re
     // Trust records must be keyed by the same canonical path the CLI observes.
     const cwd = realpathSync(cwdDir)
     writeFileSync(join(config, '.claude.json'), JSON.stringify({
-      projects: { [cwd]: { hasTrustDialogAccepted: true } },
+      projects: { [cwd.replace(/\\/g, '/')]: { hasTrustDialogAccepted: true } },
     }))
     const env = {
       ...process.env, HOME: home, USERPROFILE: home, CLAUDE_CONFIG_DIR: config,
