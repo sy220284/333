@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs'
 import { stripTypeScriptTypes } from 'node:module'
 import { test } from 'node:test'
 
-// Execute the production functions with isolated storage and migration services.
 function productionFunction(file, name, dependencies, prefix = '') {
   const source = stripTypeScriptTypes(readFileSync(new URL(`../src/utils/plugins/${file}`, import.meta.url), 'utf8'))
   const start = source.indexOf(`export ${name === 'initializeVersionedPlugins' ? 'async ' : ''}function ${name}(`)
@@ -12,40 +11,39 @@ function productionFunction(file, name, dependencies, prefix = '') {
   return new Function(...Object.keys(dependencies), `${prefix}\n${source.slice(start, end).replace('export ', '')}\nreturn ${name}`)(...Object.values(dependencies))
 }
 
-test('plugin initialization shares migration, waits for persistence, then refreshes snapshot', async () => {
-  const events = []
-  let release
-  const persisted = new Promise(resolve => { release = resolve })
+test('current plugin initialization publishes one session snapshot', async () => {
+  let snapshots = 0
   const initialize = productionFunction('installedPluginsManager.ts', 'initializeVersionedPlugins', {
-    migrateToSinglePluginFile: () => events.push('format'),
-    migrateFromEnabledPlugins: async () => { events.push('sync'); await persisted },
-    clearInstalledPluginsCache: () => events.push('clear'),
-    getInMemoryInstalledPlugins: () => { events.push('snapshot'); return { plugins: { migrated: [] } } },
+    clearInstalledPluginsCache: () => {},
+    getInMemoryInstalledPlugins: () => { snapshots++; return { version: 2, plugins: {} } },
     logForDebugging: () => {},
   }, 'let initializationPromise = null')
-  const first = initialize(), second = initialize()
-  assert.deepEqual(events, ['format', 'sync'])
-  release()
-  await Promise.all([first, second])
-  assert.deepEqual(events, ['format', 'sync', 'clear', 'snapshot'])
+  await Promise.all([initialize(), initialize()])
   await initialize()
-  assert.equal(events.length, 4)
+  assert.equal(snapshots, 1)
 })
 
-test('failed plugin migration retries without publishing a session snapshot', async () => {
-  let attempts = 0, snapshots = 0
-  const initialize = productionFunction('installedPluginsManager.ts', 'initializeVersionedPlugins', {
-    migrateToSinglePluginFile: () => {},
-    migrateFromEnabledPlugins: async () => { if (++attempts === 1) throw new Error('disk unavailable') },
-    clearInstalledPluginsCache: () => {},
-    getInMemoryInstalledPlugins: () => { snapshots++; return { plugins: {} } },
-    logForDebugging: () => {},
-  }, 'let initializationPromise = null')
-  await assert.rejects(initialize, /disk unavailable/)
-  assert.equal(snapshots, 0)
-  await initialize()
-  assert.equal(attempts, 2)
-  assert.equal(snapshots, 1)
+test('V1 registry, malformed JSON and read errors are rejected without implicit migration', () => {
+  const source = stripTypeScriptTypes(readFileSync(new URL('../src/utils/plugins/installedPluginsManager.ts', import.meta.url), 'utf8'))
+  const start = source.indexOf('function readInstalledPluginsFileRaw(')
+  const end = source.indexOf('\n}', start) + 2
+  assert.ok(start >= 0 && end > start)
+  let content = JSON.stringify({ version: 2, plugins: {} })
+  const create = new Function('getFsImplementation','getInstalledPluginsFilePath','isENOENT','InstalledPluginsFileSchemaV2','jsonParse', `${source.slice(start,end)}\nreturn readInstalledPluginsFileRaw`)
+  const read = create(
+    () => ({ readFileSync: () => { if (content === null) { const error = new Error('missing'); error.code = 'ENOENT'; throw error } return content } }),
+    () => 'installed_plugins.json',
+    error => error.code === 'ENOENT',
+    () => ({ parse: value => { if (value.version !== 2) throw new Error('Only V2 registry is supported'); return value } }),
+    JSON.parse,
+  )
+  assert.equal(read().version, 2)
+  content = JSON.stringify({ version: 1, plugins: {} })
+  assert.throws(read, /Only V2 registry/)
+  content = '{ invalid-json'
+  assert.throws(read, /JSON|position|Unexpected/)
+  content = null
+  assert.equal(read(), null)
 })
 
 for (const kind of ['options', 'mcp']) {
