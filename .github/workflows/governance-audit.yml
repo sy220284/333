@@ -50,8 +50,8 @@ jobs:
           npm run dev:bootstrap
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
-      - name: 验证 MCP 技能资源发现、读取与重新连接后的缓存失效
-        run: bun test tests/m1-mcp-skill-resources.test.ts
+      - name: 验证 MCP 资源技能和主动会话模式的真实状态转换
+        run: bun test tests/m1-mcp-skill-resources.test.ts tests/m1-proactive-state.test.ts
       - name: 验证记忆召回统计的准确性与隐私隔离
         run: bun test tests/m1-memory-shape-telemetry.test.ts
       - name: 确保 SDK 类型由真实 Zod 模式正确生成
