@@ -30,8 +30,7 @@ export function validateReleaseTarget(target, ledger, pathExists = existsSync) {
     seen.add(row.id)
     count[row.version] += 1
     assert.ok(row.implementation_status && row.verification_status)
-    if (row.implementation_status.startsWith('源码已修改') ||
-        row.implementation_status.startsWith('子代理源码已修改')) {
+    if (row.implementation_status.includes('源码已修改')) {
       assert.ok(row.changed_files.length > 0, `missing code evidence: ${row.id}`)
       for (const path of row.changed_files) {
         assert.ok(pathExists(join(root, path)), `missing referenced source: ${row.id} ${path}`)
