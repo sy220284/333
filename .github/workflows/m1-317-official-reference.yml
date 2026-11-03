@@ -1,0 +1,73 @@
+name: M1 官方 2.1.317 x64 二进制来源与运行基准
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m1-317-official-reference.yml'
+      - 'docs/upgrade/m1-evidence/target-release.json'
+      - 'tests/m1-target-release-317.test.mjs'
+      - 'tests/m1-read-repeat-317.test.mjs'
+      - 'tests/m1-subagent-effort-317.test.mjs'
+      - 'src/tools/FileReadTool/**'
+      - 'src/tools/AgentTool/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m1-317-reference-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  official-x64-reference:
+    name: 获取官方校验和、验证原生程序并保存证据
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 校验仓库对当前与历史基线的独立定义
+        run: node --test tests/m1-target-release-317.test.mjs tests/m1-read-repeat-317.test.mjs tests/m1-subagent-effort-317.test.mjs
+      - name: 获取官方 2.1.317 原生发行清单与 Linux x64
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/m1-317-reference"
+          cd "${RUNNER_TEMP}/m1-317-reference"
+          base='https://downloads.claude.ai/claude-code-releases/2.1.317'
+          curl --fail --location --show-error --silent --retry-all-errors --retry 4 --retry-delay 3 "${base}/manifest.json" -o manifest.json
+          node --input-type=module -e '
+            import {readFileSync,writeFileSync} from "node:fs";
+            const manifest=JSON.parse(readFileSync("manifest.json","utf8"));
+            const checksum=manifest.platforms?.["linux-x64"]?.checksum;
+            if (!/^[0-9a-f]{64}$/i.test(checksum??"")) throw new Error("Official Linux x64 manifest checksum unavailable");
+            writeFileSync("expected-sha256.txt",checksum.toLowerCase()+"  claude\\n");
+            console.log("Official reference sha256="+checksum);
+          '
+          curl --fail --location --show-error --silent --retry-all-errors --retry 4 --retry-delay 3 "${base}/linux-x64/claude" -o claude
+          sha256sum --check expected-sha256.txt
+          chmod 755 claude
+          version="$(HOME="${RUNNER_TEMP}/m1-317-isolated-home" DISABLE_AUTOUPDATER=1 ./claude --version)"
+          echo "Installed reference version: ${version}"
+          [[ "${version}" == 2.1.317* ]]
+          HOME="${RUNNER_TEMP}/m1-317-isolated-home" DISABLE_AUTOUPDATER=1 ./claude --help > official-help.txt
+          test -s official-help.txt
+          printf '%s\\n' "${version}" > actual-version.txt
+      - name: 保存官方原始清单与可复现的二进制校验结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-official-2.1.317-linux-x64-reference
+          path: |
+            ${{ runner.temp }}/m1-317-reference/manifest.json
+            ${{ runner.temp }}/m1-317-reference/expected-sha256.txt
+            ${{ runner.temp }}/m1-317-reference/actual-version.txt
+            ${{ runner.temp }}/m1-317-reference/official-help.txt
+          if-no-files-found: warn
+          retention-days: 90
