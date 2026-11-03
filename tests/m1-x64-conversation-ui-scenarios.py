@@ -65,6 +65,71 @@ def screen_rows(screen):
     return rows
 
 
+def terminal_anchors(screen, answer_marker, scenario):
+    """Capture absolute terminal-cell positions and styling for core transcript rows."""
+    rows = screen_rows(screen)
+    definitions = {
+        'user': lambda row: PROMPT in row and '❯' in row,
+        'assistant': lambda row: answer_marker in row and '●' in row,
+        'tool': lambda row: 'Read 1 file' in row,
+        'completed': lambda row: bool(re.search(r'\\bfor\\s+\\d+(?:\\.\\d+)?s\\b', row)),
+    }
+    result = {}
+    for name, predicate in definitions.items():
+        if name == 'tool' and scenario != 'tool':
+            continue
+        for y, row in enumerate(rows):
+            if predicate(row):
+                token = PROMPT if name == 'user' else answer_marker if name == 'assistant' else 'Read 1 file' if name == 'tool' else 'for '
+                x = row.index(token)
+                cell = screen.buffer[y][x]
+                result[name] = {'row': y, 'column': x,
+                                'fg': cell.fg, 'bg': cell.bg, 'bold': cell.bold,
+                                'text': row.strip()[:180]}
+                break
+    return result
+
+
+def compare_core_layout(official, rebuilt, scenario):
+    """Structural acceptance: same transcript anchors, relative rows and columns.
+
+    Whole-screen pixel fidelity is separately reported because localization,
+    onboarding banners and user-selected themes may legitimately differ.
+    """
+    a, b = official['terminal_anchors'], rebuilt['terminal_anchors']
+    required = ['user', 'assistant', 'completed'] + (['tool'] if scenario == 'tool' else [])
+    missing = [name for name in required if name not in a or name not in b]
+    if missing:
+        return {'passed': False, 'missing': missing, 'mismatches': []}
+    mismatches = []
+    for name in required:
+        ref = a[name]
+        cand = b[name]
+        if ref['row'] - a['user']['row'] != cand['row'] - b['user']['row']:
+            mismatches.append({'anchor': name, 'kind': 'relative_row',
+                               'official': ref['row'] - a['user']['row'],
+                               'rebuilt': cand['row'] - b['user']['row']})
+        if name != 'completed' and ref['column'] != cand['column']:
+            mismatches.append({'anchor': name, 'kind': 'column',
+                               'official': ref['column'], 'rebuilt': cand['column']})
+    return {'passed': not mismatches, 'missing': [], 'mismatches': mismatches}
+
+
+def compare_terminal_frames(official, rebuilt):
+    """Time-align recorded terminal snapshots; never label unequal frames as equal."""
+    a, b = official['frames'], rebuilt['frames']
+    if not a or not b:
+        return {'matched': 0, 'equal': 0, 'equal_fraction': 0.0, 'exact': False}
+    equal = 0
+    for frame in a:
+        match = min(b, key=lambda candidate: abs(candidate['ms'] - frame['ms']))
+        if frame['screen_rows'] == match['screen_rows']:
+            equal += 1
+    return {'matched': len(a), 'equal': equal,
+            'equal_fraction': round(equal / len(a), 4),
+            'exact': len(a) == len(b) and equal == len(a)}
+
+
 def sse(kind, payload):
     return ('event: ' + kind + '\ndata: ' + json.dumps(payload) + '\n\n').encode()
 
@@ -114,12 +179,16 @@ def stream(model, text=None, tool=None, chunk_pause=0.0):
     return b''.join(prefix)
 
 def probe(binary, scenario):
+    scene = scenario.split('-')[0]
+    columns = 80 if scenario.endswith('-narrow') else 140
+    reduced_motion = scenario.endswith('-reduced')
     home = Path(tempfile.mkdtemp(prefix='m1-ui-tty-'))
     project = home / 'project'
     project.mkdir()
     (home / '.claude').mkdir()
     (home / '.claude' / 'settings.json').write_text(json.dumps({
         'permissions': {'allow': ['Read']},
+        'prefersReducedMotion': reduced_motion,
     }))
     (home / '.claude.json').write_text(json.dumps({
         'hasCompletedOnboarding': True,
@@ -159,7 +228,7 @@ def probe(binary, scenario):
                               'last_user_sample': str(next((m.get('content') for m in reversed(content) if m.get('role') == 'user'), ''))[:300]})
                 request_seen.set()
                 model = body.get('model', 'claude-sonnet-4-6')
-                if scenario == 'retry' and len(calls) == 1:
+                if scene == 'retry' and len(calls) == 1:
                     response = json.dumps({'type':'error','error':{
                         'type':'rate_limit_error','message':'UI_RATE_LIMIT_TEST'}}).encode()
                     self.send_response(429)
@@ -169,10 +238,10 @@ def probe(binary, scenario):
                     self.end_headers()
                     self.wfile.write(response)
                     return
-                if scenario == 'tool' and len(calls) == 1:
+                if scene == 'tool' and len(calls) == 1:
                     answer = stream(model, tool=str(fixture))
                 else:
-                    text = {'stream':STREAM_RESULT,'tool':TOOL_RESULT,'retry':RETRY_RESULT}[scenario]
+                    text = {'stream':STREAM_RESULT,'tool':TOOL_RESULT,'retry':RETRY_RESULT}[scene]
                     answer = stream(model, text=text)
             if is_real and scenario == 'stream':
                 time.sleep(2.5)  # exercise the requesting spinner before first byte
@@ -204,12 +273,12 @@ def probe(binary, scenario):
         'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC':'1',
     })
     master, slave = pty.openpty()
-    fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH',40,140,0,0))
+    fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH',40,columns,0,0))
     proc = subprocess.Popen([str(Path(binary).resolve())], cwd=project,env=env,
                             stdin=slave,stdout=slave,stderr=slave,start_new_session=True)
     os.close(slave)
     output = bytearray()
-    screen = pyte.Screen(140, 40)
+    screen = pyte.Screen(columns, 40)
     terminal = pyte.Stream(screen)
     frames = []
     started = time.monotonic()
@@ -252,7 +321,7 @@ def probe(binary, scenario):
                 break
         text=ANSI.sub('',output.decode('utf-8',errors='replace'))
         passed=(sent and expected in text and len(calls)>=
-                (2 if scenario in ('tool','retry') else 1))
+                (2 if scene in ('tool','retry') else 1))
         if scenario == 'tool':
             passed = passed and any(c['read_result_verified'] for c in calls)
         return {
@@ -265,6 +334,10 @@ def probe(binary, scenario):
             'model_request_trace': calls,
             'retry_status_screen_seen':any(f['retry_status_visible'] for f in frames),
             'final_screen_rows':[line.rstrip() for line in screen_rows(screen) if line.strip()][-12:],
+            'terminal_anchors':terminal_anchors(screen, expected, scene),
+            'terminal_width':columns,
+            'reduced_motion':reduced_motion,
+            'full_screen_rows':[line.rstrip() for line in screen_rows(screen)],
             'frames':frames,
             'frame_count':len(frames),
             'frame_glyphs':sorted({f['glyph'] for f in frames if f['glyph']}),
@@ -294,25 +367,30 @@ def main():
         'rebuilt':{},
         'comparison':{},
     }
-    for scenario in ('stream','tool','retry'):
+    for scenario in ('stream','tool','retry','stream-narrow','stream-reduced'):
         a=probe(args.reference,scenario)
         b=probe(args.candidate,scenario)
         report['official'][scenario]=a
         report['rebuilt'][scenario]=b
+        visual = compare_terminal_frames(a, b)
+        layout = compare_core_layout(a, b, scenario.split('-')[0])
         report['comparison'][scenario]={
             'both_reached_expected_end_state':a['passed'] and b['passed'],
+            'core_layout':layout,
+            'frame_alignment':visual,
             'official_frame_count':a['frame_count'],
             'rebuilt_frame_count':b['frame_count'],
             'glyph_sets_equal':a['frame_glyphs']==b['frame_glyphs'],
             'official_retry_status_seen':a['retry_status_screen_seen'],
             'rebuilt_retry_status_seen':b['retry_status_screen_seen'],
-            'frame_by_frame_pixel_equivalence':'NOT_VERIFIED',
+            'frame_by_frame_pixel_equivalence':'EQUAL' if visual['exact'] else 'DIFFERENT',
         }
     Path(args.report).write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',
                                   encoding='utf-8')
-    print(json.dumps({s:report['comparison'][s] for s in ('stream','tool','retry')}))
-    failed = [s for s in ('stream','tool','retry')
-              if not report['comparison'][s]['both_reached_expected_end_state']]
+    print(json.dumps(report['comparison'], ensure_ascii=False))
+    failed = [s for s in report['comparison']
+              if not (report['comparison'][s]['both_reached_expected_end_state']
+                      and report['comparison'][s]['core_layout']['passed'])]
     for scenario in failed:
         for side in ('official', 'rebuilt'):
             sample = report[side][scenario]
@@ -328,6 +406,8 @@ def main():
                 'model_request_trace': sample['model_request_trace'],
                 'last_screen_rows': sample['final_screen_rows'],
                 'terminal_tail': sample['terminal_tail'],
+                'terminal_anchors': sample['terminal_anchors'],
+                'core_layout': report['comparison'][scenario]['core_layout'],
             }, ensure_ascii=False))
     if failed:
         raise SystemExit(1)
