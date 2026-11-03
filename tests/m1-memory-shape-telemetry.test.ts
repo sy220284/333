@@ -10,7 +10,7 @@ const DAY = 86_400_000
 const now = 1_700_000_000_000
 const memory = (filename: string, ageDays: number): MemoryHeader => ({
   filename,
-  filePath: '/private/memories/' + filename,
+  filePath: `/private/memories/${filename}`,
   mtimeMs: now - ageDays * DAY,
   description: 'private context must not be sent',
   type: undefined,
@@ -19,7 +19,7 @@ const memory = (filename: string, ageDays: number): MemoryHeader => ({
 describe('记忆召回聚合统计及隐私边界', () => {
   test('候选和选中数量、年龄跨度和近七天数量准确', () => {
     const candidates = [memory('a.md', 1), memory('b.md', 3), memory('c.md', 28)]
-    expect(summarizeMemoryRecallShape(candidates, [candidates[0]!, candidates[2]!], now)).toEqual({
+    expect(summarizeMemoryRecallShape(candidates, candidates.filter((_, i) => i === 0 || i === 2), now)).toEqual({
       candidateCount: 3,
       selectedCount: 2,
       selectionRate: 2 / 3,
@@ -53,8 +53,8 @@ describe('记忆召回聚合统计及隐私边界', () => {
     const candidate = memory('passwords.md', 0)
     logMemoryRecallShape([candidate], [candidate])
     expect(events.length).toBe(1)
-    expect(events[0]!.name).toBe('tengu_memory_recall_shape')
-    expect(Object.values(events[0]!.metadata).every(v => typeof v === 'number')).toBe(true)
+    expect(events.map(e => e.name)).toEqual(['tengu_memory_recall_shape'])
+    expect(events.every(e => Object.values(e.metadata).every(v => typeof v === 'number'))).toBe(true)
     expect(JSON.stringify(events)).not.toContain('passwords')
     expect(JSON.stringify(events)).not.toContain('/private')
     expect(JSON.stringify(events)).not.toContain('private context')
