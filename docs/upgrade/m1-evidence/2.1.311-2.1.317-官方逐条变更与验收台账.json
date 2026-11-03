@@ -1709,9 +1709,14 @@
       "domain_candidate": "基础运行时与其他",
       "official_text": "Fixed `claude -p` exiting with code 0 and no output when startup failed; it now prints the error and exits 1",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.314",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "CLI 顶层启动拒绝已写 stderr 并设置非零退出码；待官方 2.1.317 --print 错误注入及完整构建",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/entrypoints/cli.tsx",
+        "src/utils/cliStartupFailure.mjs",
+        "src/utils/cliStartupFailure.d.mts",
+        "tests/m1-headless-startup-error-314.test.mjs"
+      ]
     },
     {
       "id": "2.1.314#007",
