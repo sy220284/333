@@ -31,6 +31,8 @@ export type ExecResult = {
 
 export type ShellCommand = {
   background: (backgroundTaskId: string) => boolean
+  /** Resolves when the running command is moved to background without being killed. */
+  backgrounded?: Promise<void>
   result: Promise<ExecResult>
   kill: () => void
   status: 'running' | 'backgrounded' | 'completed' | 'killed'
@@ -128,6 +130,8 @@ class ShellCommandImpl implements ShellCommand {
   #timeout: number
   #shouldAutoBackground: boolean
   #resultResolver: ((result: ExecResult) => void) | null = null
+  #resolveBackgrounded: (() => void) | null = null
+  readonly backgrounded: Promise<void>
   #exitCodeResolver: ((code: number) => void) | null = null
   #boundAbortHandler: (() => void) | null = null
   readonly taskOutput: TaskOutput
@@ -153,6 +157,7 @@ class ShellCommandImpl implements ShellCommand {
     shouldAutoBackground = false,
     maxOutputBytes = MAX_TASK_OUTPUT_BYTES,
   ) {
+    this.backgrounded = new Promise<void>(resolve => { this.#resolveBackgrounded = resolve })
     this.#childProcess = childProcess
     this.#abortSignal = abortSignal
     this.#timeout = timeout
@@ -364,6 +369,10 @@ class ShellCommandImpl implements ShellCommand {
         // Pipe mode: spill the in-memory buffer so readers can find it on disk.
         this.taskOutput.spillToDisk()
       }
+      // Wake any active tool iterator immediately, even if the child process
+      // is producing no output and the progress poller is quiet.
+      this.#resolveBackgrounded?.()
+      this.#resolveBackgrounded = null
       return true
     }
     return false

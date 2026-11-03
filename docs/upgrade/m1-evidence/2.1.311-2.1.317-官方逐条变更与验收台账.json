@@ -4527,9 +4527,17 @@
       "domain_candidate": "基础运行时与其他",
       "official_text": "Changed SendMessage so a message to a running background agent arrives earlier: its running command moves to the background, without being stopped",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.317",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "后台代理的 Shell 保活转后台与消息即时唤醒已接入，待实际进程及双端实测",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/tasks/LocalShellTask/LocalShellTask.tsx",
+        "src/tools/BashTool/BashTool.tsx",
+        "src/tools/SendMessageTool/SendMessageTool.ts",
+        "src/tasks/LocalShellTask/foregroundAgentShellPolicy.mjs",
+        "src/tasks/LocalShellTask/foregroundAgentShellPolicy.d.mts",
+        "tests/m1-sendmessage-background-agent-317.test.mjs",
+        "src/utils/ShellCommand.ts"
+      ]
     },
     {
       "id": "2.1.317#065",

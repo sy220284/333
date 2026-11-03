@@ -4,6 +4,7 @@ import { getCurrentPeerIdentityKey } from '../../bridge/peerDiscovery.js'
 import type { Tool, ToolUseContext } from '../../Tool.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { findTeammateTaskByAgentId } from '../../tasks/InProcessTeammateTask/InProcessTeammateTask.js'
+import { backgroundForegroundShellTasksForAgent } from '../../tasks/LocalShellTask/LocalShellTask.js'
 import {
   isLocalAgentTask,
   queuePendingMessage,
@@ -823,15 +824,19 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
           const task = appState.tasks[agentId]
           if (isLocalAgentTask(task) && !isMainSessionTask(task)) {
             if (task.status === 'running') {
-              queuePendingMessage(
-                agentId,
-                input.message,
-                context.setAppStateForTasks ?? context.setAppState,
+              const setTaskState = context.setAppStateForTasks ?? context.setAppState
+              queuePendingMessage(agentId, input.message, setTaskState)
+              // Backgrounding preserves the child process/output and lets the
+              // agent accept the queued message at its next tool round.
+              const detached = backgroundForegroundShellTasksForAgent(
+                agentId, context.getAppState, setTaskState,
               )
               return {
                 data: {
                   success: true,
-                  message: `Message queued for delivery to ${input.to} at its next tool round.`,
+                  message: detached > 0
+                    ? `Message queued for ${input.to}; ${detached} running command(s) moved to background without interruption.`
+                    : `Message queued for delivery to ${input.to} at its next tool round.`,
                 },
               }
             }

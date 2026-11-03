@@ -15,6 +15,7 @@ import { evictTaskOutput, getTaskOutputPath } from '../../utils/task/diskOutput.
 import { registerTask, updateTaskState } from '../../utils/task/framework.js';
 import { escapeXml } from '../../utils/xml.js';
 import { backgroundAgentTask, isLocalAgentTask } from '../LocalAgentTask/LocalAgentTask.js';
+import { findForegroundAgentShellTaskIds } from './foregroundAgentShellPolicy.mjs';
 import { isMainSessionTask } from '../LocalMainSessionTask.js';
 import { type BashTaskKind, isLocalShellTask, type LocalShellTaskState } from './guards.js';
 import { killTask } from './killShellTasks.js';
@@ -413,6 +414,16 @@ function backgroundTask(taskId: string, getAppState: () => AppState, setAppState
     void evictTaskOutput(taskId);
   });
   return true;
+}
+
+/** Move only one running agent's foreground shell commands to the background. */
+export function backgroundForegroundShellTasksForAgent(agentId: string, getAppState: () => AppState, setAppState: SetAppState): number {
+  const ids = findForegroundAgentShellTaskIds(getAppState().tasks, agentId);
+  let count = 0;
+  for (const taskId of ids) {
+    if (backgroundTask(taskId, getAppState, setAppState)) count++;
+  }
+  return count;
 }
 
 /**

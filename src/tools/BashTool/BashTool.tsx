@@ -1047,13 +1047,14 @@ async function* runShellCommand({
   // Start polling the output file for progress. The poller's #tick calls
   // onProgress every second, which resolves progressSignal below.
   TaskOutput.startPolling(shellCommand.taskOutput.taskId);
+  const backgroundSignal = shellCommand.backgrounded?.then(() => null);
 
   // Progress loop: wake is driven by the shared poller calling onProgress,
   // which resolves the progressSignal.
   try {
     while (true) {
       const progressSignal = createProgressSignal();
-      const result = await Promise.race([resultPromise, progressSignal]);
+      const result = await Promise.race([resultPromise, progressSignal, ...(backgroundSignal ? [backgroundSignal] : [])]);
       if (result !== null) {
         // Race: backgrounding fired (15s timer / onTimeout / Ctrl+B) but the
         // command completed before the next poll tick. #handleExit sets
@@ -1127,7 +1128,7 @@ async function* runShellCommand({
 
       // Show minimal backgrounding UI if available
       // Skip if background tasks are disabled
-      if (!isBackgroundTasksDisabled && backgroundShellId === undefined && elapsedSeconds >= PROGRESS_THRESHOLD_MS / 1000 && setToolJSX) {
+      if (!isBackgroundTasksDisabled && backgroundShellId === undefined && elapsedSeconds >= PROGRESS_THRESHOLD_MS / 1000 && (setToolJSX || agentId)) {
         // Register this command as a foreground task so it can be backgrounded via Ctrl+B
         if (!foregroundTaskId) {
           foregroundTaskId = registerForeground({
@@ -1137,12 +1138,14 @@ async function* runShellCommand({
             agentId
           }, setAppState, toolUseId);
         }
-        setToolJSX({
-          jsx: <BackgroundHint />,
-          shouldHidePromptInput: false,
-          shouldContinueAnimation: true,
-          showSpinner: true
-        });
+        if (setToolJSX) {
+          setToolJSX({
+            jsx: <BackgroundHint />,
+            shouldHidePromptInput: false,
+            shouldContinueAnimation: true,
+            showSpinner: true
+          });
+        }
       }
       yield {
         type: 'progress',
