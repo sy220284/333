@@ -49,11 +49,11 @@ jobs:
                   hits = [hit for hit in record['hits'] if hit['feature'] == group]
                   if not hits:
                       continue
-                  print('sha256:', record['sha256'], 'uncompressed_bytes:', record['bytes'])
+                  print('sha256:', record['sha256'], 'uncompressed_bytes:', record['bytes'], 'kind:', record['resource_kind'])
                   for hit in hits[:4]:
                       print('anchor:', hit['needle'], 'count:', hit['instances'], 'nearby:', hit['context'])
                   n += 1
-                  if n >= 4:
+                  if n >= (20 if group == 'F076_claude_test' else 4):
                       break
           PY
       - name: 留存目标指纹、模块哈希与精确匹配位置
