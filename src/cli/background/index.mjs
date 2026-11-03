@@ -338,9 +338,11 @@ export async function interceptBackgroundCli(args) {
   if (bg) {
     if (args.includes('--desktop')) throw new Error("--desktop cannot be combined with --bg")
     await authForBackground(args)
+    const explicitName = argValue(args, '--name')
     const response = await ask({
       op: 'dispatch', cwd: process.cwd(), args, cols: process.stdout.columns || 100,
-      rows: process.stdout.rows || 30, name: argValue(args, '--name') || inferredName(args),
+      rows: process.stdout.rows || 30, name: explicitName || inferredName(args),
+      nameSource: explicitName ? 'flag' : 'prompt',
       agent: argValue(args, '--agent'), model: argValue(args, '--model'),
     }, { start: true })
     process.stdout.write([
