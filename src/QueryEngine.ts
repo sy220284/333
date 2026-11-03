@@ -5,6 +5,7 @@ import { toSDKStreamEvent } from './entrypoints/sdk/streamEventMapper.js'
 import last from 'lodash-es/last.js'
 import {
   getSessionId,
+  getIsNonInteractiveSession,
   isSessionPersistenceDisabled,
 } from 'src/bootstrap/state.js'
 import type {
@@ -451,7 +452,8 @@ export class QueryEngine {
         await transcriptPromise
         if (
           isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-          isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+          isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK) ||
+          getIsNonInteractiveSession()
         ) {
           await flushSessionStorage()
         }
@@ -606,7 +608,8 @@ export class QueryEngine {
         await recordTranscript(messages)
         if (
           isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-          isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+          isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK) ||
+          getIsNonInteractiveSession()
         ) {
           await flushSessionStorage()
         }
@@ -836,7 +839,8 @@ export class QueryEngine {
             if (persistSession) {
               if (
                 isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-                isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+                isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK) ||
+          getIsNonInteractiveSession()
               ) {
                 await flushSessionStorage()
               }
@@ -966,7 +970,8 @@ export class QueryEngine {
         if (persistSession) {
           if (
             isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-            isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+            isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK) ||
+          getIsNonInteractiveSession()
           ) {
             await flushSessionStorage()
           }
@@ -1009,7 +1014,8 @@ export class QueryEngine {
           if (persistSession) {
             if (
               isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-              isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+              isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK) ||
+          getIsNonInteractiveSession()
             ) {
               await flushSessionStorage()
             }
@@ -1066,7 +1072,8 @@ export class QueryEngine {
     if (persistSession) {
       if (
         isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-        isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+        isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK) ||
+          getIsNonInteractiveSession()
       ) {
         await flushSessionStorage()
       }
