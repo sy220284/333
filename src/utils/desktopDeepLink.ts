@@ -8,7 +8,7 @@ import { execFileNoThrow } from './execFileNoThrow.js'
 import { pathExists } from './file.js'
 import { gte as semverGte } from './semver.js'
 
-const MIN_DESKTOP_VERSION = '1.1.2396'
+export const MIN_DESKTOP_VERSION = '1.1.9669'
 
 function isDevMode(): boolean {
   if ((process.env.NODE_ENV as string) === 'development') {
@@ -32,12 +32,16 @@ function isDevMode(): boolean {
  * Format: claude://resume?session={sessionId}&cwd={cwd}
  * In dev mode: claude-dev://resume?session={sessionId}&cwd={cwd}
  */
-function buildDesktopDeepLink(sessionId: string): string {
+export function buildDesktopDeepLink(sessionId: string): string {
   const protocol = isDevMode() ? 'claude-dev' : 'claude'
   const url = new URL(`${protocol}://resume`)
   url.searchParams.set('session', sessionId)
-  url.searchParams.set('cwd', getCwd())
   return url.toString()
+}
+
+export function buildDesktopNewSessionLink(folder: string): string {
+  const protocol = isDevMode() ? 'claude-dev' : 'claude'
+  return `${protocol}://code/new?folder=${encodeURIComponent(folder)}`
 }
 
 /**
