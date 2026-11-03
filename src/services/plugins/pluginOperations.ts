@@ -515,7 +515,7 @@ export async function uninstallPluginOp(
 
   clearAllCaches()
 
-  // Remove from installed_plugins_v2.json for this scope
+  // Remove this scope's entry from the current installed_plugins.json V2 registry
   removePluginInstallation(pluginId, scope, projectPath)
 
   const updatedData = loadInstalledPluginsV2()
