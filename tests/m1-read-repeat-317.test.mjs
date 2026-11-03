@@ -1,4 +1,5 @@
 import test from 'node:test'
+import './m1-post-compact-read-paths-317.test.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
