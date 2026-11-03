@@ -22,6 +22,7 @@ import termios
 import threading
 import time
 import pyte
+from wcwidth import wcswidth
 from pathlib import Path
 
 ANSI = re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\\\)')
@@ -41,6 +42,28 @@ def is_main_conversation_request(body):
             for msg in body.get('messages', []) if isinstance(msg, dict)
         )
     )
+
+def screen_rows(screen):
+    """Render pyte's terminal buffer with Unicode cluster widths.
+
+    pyte 0.8.2's Screen.display indexes char[0] and crashes when a terminal
+    writes an empty continuation cell.  The upstream render algorithm uses
+    wcswidth on the whole cluster; preserve that behavior for both binaries.
+    """
+    rows = []
+    for y in range(screen.lines):
+        chars = []
+        skip_wide_stub = False
+        for x in range(screen.columns):
+            if skip_wide_stub:
+                skip_wide_stub = False
+                continue
+            data = screen.buffer[y][x].data
+            skip_wide_stub = wcswidth(data) == 2
+            chars.append(data)
+        rows.append(''.join(chars))
+    return rows
+
 
 def sse(kind, payload):
     return ('event: ' + kind + '\ndata: ' + json.dumps(payload) + '\n\n').encode()
@@ -208,7 +231,7 @@ def probe(binary, scenario):
                 sent=True
             if sent and now-last_capture>=0.25:
                 last_capture=now
-                rows=[line.rstrip() for line in screen.display if line.strip()]
+                rows=[line.rstrip() for line in screen_rows(screen) if line.strip()]
                 visible=' '.join(rows[-7:])
                 glyphs=re.findall(r'[·✢✳✶✻✽]',visible)
                 frames.append({
@@ -241,7 +264,7 @@ def probe(binary, scenario):
             'tool_read_verified':any(c['read_result_verified'] for c in calls),
             'model_request_trace': calls,
             'retry_status_screen_seen':any(f['retry_status_visible'] for f in frames),
-            'final_screen_rows':[line.rstrip() for line in screen.display if line.strip()][-12:],
+            'final_screen_rows':[line.rstrip() for line in screen_rows(screen) if line.strip()][-12:],
             'frames':frames,
             'frame_count':len(frames),
             'frame_glyphs':sorted({f['glyph'] for f in frames if f['glyph']}),
