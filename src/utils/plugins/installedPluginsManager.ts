@@ -714,23 +714,3 @@ async function getGitCommitSha(dirPath: string): Promise<string | undefined> {
   const sha = await getHeadForDir(dirPath)
   return sha ?? undefined
 }
-
-/**
- * Try to read version from plugin manifest
- */
-function getPluginVersionFromManifest(
-  pluginCachePath: string,
-  pluginId: string,
-): string {
-  const fs = getFsImplementation()
-  const manifestPath = join(pluginCachePath, '.claude-plugin', 'plugin.json')
-
-  try {
-    const manifestContent = fs.readFileSync(manifestPath, { encoding: 'utf-8' })
-    const manifest = jsonParse(manifestContent)
-    return manifest.version || 'unknown'
-  } catch {
-    logForDebugging(`Could not read version from manifest for ${pluginId}`)
-    return 'unknown'
-  }
-}
