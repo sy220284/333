@@ -472,7 +472,7 @@ function BashPermissionRequestInner({
             <Text dimColor>
               Esc to cancel
               {(focusedOption === 'yes' && !yesInputMode || focusedOption === 'no' && !noInputMode) && ' · Tab to amend'}
-              {explainerState.enabled && ` · ctrl+e to ${explainerState.visible ? 'hide' : 'explain'}`}
+              
             </Text>
             {toolUseContext.options.debug && <Text dimColor>Ctrl+d to show debug info</Text>}
           </Box>
