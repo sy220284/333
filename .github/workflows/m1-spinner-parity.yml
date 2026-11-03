@@ -15,6 +15,7 @@ on:
       - 'src/state/AppStateStore.ts'
       - 'src/utils/settings/**'
       - 'tests/m1-spinner-tips.test.mjs'
+      - 'tests/m1-spinner-settings-integration.test.mjs'
       - 'tests/m1-custom-spinner-tips.test.mjs'
       - 'tests/m1-spinner-pty-harness.test.py'
       - 'tests/m1-x64-spinner-tips.py'
@@ -67,6 +68,7 @@ jobs:
         if: steps.relevant.outputs.run == 'true'
         run: |
           node --test tests/m1-spinner-tips.test.mjs tests/m1-custom-spinner-tips.test.mjs
+          node --test tests/m1-spinner-settings-integration.test.mjs
           node --experimental-strip-types --test tests/m1-spinner-animation-status.test.mjs
           node --experimental-strip-types --test tests/m1-thinking-duration-label.test.mjs
           python3 tests/m1-spinner-pty-harness.test.py
