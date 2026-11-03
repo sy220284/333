@@ -522,7 +522,7 @@ export function parseAgentFromJson(
 export function validateCliAgentsConfiguration(value: unknown, sourceFile?: string): void {
   const result = AgentsJsonSchema().safeParse(value)
   if (result.success) return
-  const details = result.error.issues.map(issue => issue.message).join('\n')
+  const details = result.error.issues.map(issue => issue.path.length ? `${issue.path.join('.')}: ${issue.message}` : issue.message).join('\n')
   throw new Error(`Error: Invalid --agents configuration:\n${details}${sourceFile ? `\n(read from ${sourceFile})` : ''}`)
 }
 
