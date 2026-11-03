@@ -284,10 +284,17 @@ async function daemon(args) {
     return
   }
   if (action === 'stop') {
-    const owner = await ask({ op: 'ping' })
+    let owner
+    try {
+      owner = await ask({ op: 'ping' })
+    } catch (error) {
+      // Match the native 2.1.310 idempotent stop on an absent daemon.
+      if (!['ENOENT', 'ECONNREFUSED', 'ETIMEDOUT'].includes(error.code)) throw error
+      process.stdout.write('no daemon running\n')
+      return
+    }
     await ask({ op: 'shutdown', keepWorkers: args.includes('--keep-workers') })
-    // Closing the control socket is earlier than the supervisor process exit.
-    // Await the actual exit before returning to tools that clean up workspaces.
+    // The control reply acknowledges shutdown before the OS process exits.
     const deadline = Date.now() + 5000
     while (isAlive(owner.pid) && Date.now() < deadline) {
       await new Promise(resolve => setTimeout(resolve, 50))
