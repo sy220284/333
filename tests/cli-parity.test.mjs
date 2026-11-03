@@ -94,7 +94,7 @@ for (const args of [
       assert.deepEqual(addedCommands.filter(command => !targetCommands.has(command)), [],
         'Unknown new CLI subcommand outside official 2.1.310');
       for (const required of targetCommands) {
-        assert.ok(rebuilt.commands.includes(required), 'Missing 2.1.310 background command: ' + required);
+        assert.ok(rebuilt.commands.includes(required), `Missing 2.1.310 background command: ${required}`);
       }
       assert.deepEqual(baseline.commands.filter(command => !rebuilt.commands.includes(command)), [],
         'Older public CLI command was lost unexpectedly');
