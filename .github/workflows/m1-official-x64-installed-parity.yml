@@ -29,6 +29,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
       - name: 使用 Anthropic 官方原生安装器安装 Linux x64 2.1.310
         shell: bash
         run: |
@@ -64,6 +67,26 @@ jobs:
           HOME="${CLAUDE_INSTALLED_HOME}" node build/m1-x64-reference-probe.mjs \
             --reference "${CLAUDE_REFERENCE_BIN}" \
             --report "${RUNNER_TEMP}/claude-installed-cli-parity.json"
+      - name: 从当前 PR 源码独立构建候选程序
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/verify-bundled-assets.mjs
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+          bun build/rebuild.mjs
+          test -s dist/cli.js
+          printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-installed-parity-candidate"
+          chmod +x "${RUNNER_TEMP}/m1-installed-parity-candidate"
+      - name: 同一隔离环境严格对照官方安装版与 PR 候选版全部 CLI 基准
+        shell: bash
+        run: |
+          set -euo pipefail
+          HOME="${CLAUDE_INSTALLED_HOME}" node build/m1-x64-reference-probe.mjs \
+            --reference "${CLAUDE_REFERENCE_BIN}" \
+            --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
+            --allow-candidate-diff false \
+            --report "${RUNNER_TEMP}/claude-installed-candidate-strict-parity.json"
       - name: 安装版执行本机模拟 API 与工具权限实测
         shell: bash
         run: |
@@ -81,6 +104,7 @@ jobs:
             ${{ runner.temp }}/claude-official-install-evidence.txt
             ${{ runner.temp }}/claude-installed-help.txt
             ${{ runner.temp }}/claude-installed-cli-parity.json
+            ${{ runner.temp }}/claude-installed-candidate-strict-parity.json
             ${{ runner.temp }}/claude-installed-loopback-api.json
           retention-days: 30
           if-no-files-found: warn
