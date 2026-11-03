@@ -1,6 +1,5 @@
 import { isRemoteManagedSettingsEligible } from '../services/remoteManagedSettings/syncCache.js'
 import { clearCACertsCache } from './caCerts.js'
-import { getGlobalConfig } from './config.js'
 import { isEnvTruthy } from './envUtils.js'
 import {
   isProviderManagedEnvVar,
@@ -115,7 +114,7 @@ const TRUSTED_SETTING_SOURCES = [
  * allowed to expand data collection or choose an exporter destination.
  */
 function getTrustedTelemetryEnv(): Record<string, string> {
-  const trusted = { ...filterSettingsEnv(getGlobalConfig().env) }
+  const trusted: Record<string, string> = {}
   for (const source of TRUSTED_SETTING_SOURCES) {
     if (!isSettingSourceEnabled(source)) continue
     Object.assign(trusted, filterSettingsEnv(getSettingsForSource(source)?.env))
@@ -144,11 +143,6 @@ export function applySafeConfigEnvironmentVariables(): void {
         ? new Set(Object.keys(process.env))
         : null
   }
-
-  // Global config (~/.claude.json) is user-controlled. In CCD mode,
-  // filterSettingsEnv strips keys that were in the spawn env snapshot so
-  // the desktop host's operational vars (OTEL, etc.) are not overridden.
-  Object.assign(process.env, filterSettingsEnv(getGlobalConfig().env))
 
   // Apply ALL env vars from trusted setting sources, policySettings last.
   // Gate on isSettingSourceEnabled so SDK settingSources: [] (isolation mode)
@@ -203,8 +197,6 @@ export function applySafeConfigEnvironmentVariables(): void {
  * dangerous environment variables such as LD_PRELOAD, PATH, etc.
  */
 export function applyConfigEnvironmentVariables(): void {
-  Object.assign(process.env, filterSettingsEnv(getGlobalConfig().env))
-
   Object.assign(
     process.env,
     resolveProjectTelemetryEnv(

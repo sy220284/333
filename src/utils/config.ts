@@ -218,10 +218,6 @@ export type GlobalConfig = {
   hasUsedBackslashReturn?: boolean
   autoCompactEnabled: boolean // Controls whether auto-compact is enabled
   showTurnDuration: boolean // Controls whether to show turn duration message (e.g., "Cooked for 1m 6s")
-  /**
-   * @deprecated Use settings.env instead.
-   */
-  env: { [key: string]: string } // Environment variables to set for the CLI
   hasSeenTasksHint?: boolean // Whether the user has seen the tasks hint
   hasUsedStash?: boolean // Whether the user has used the stash feature (Ctrl+S)
   hasUsedBackgroundTask?: boolean // Whether the user has backgrounded a task (Ctrl+B)
@@ -567,7 +563,6 @@ function createDefaultGlobalConfig(): GlobalConfig {
       approved: [],
       rejected: [],
     },
-    env: {},
     tipsHistory: {},
     memoryUsageCount: 0,
     promptQueueUseCount: 0,
@@ -603,7 +598,6 @@ export const GLOBAL_CONFIG_KEYS = [
   'autoCompactEnabled',
   'showTurnDuration',
   'diffTool',
-  'env',
   'tipsHistory',
   'todoFeatureEnabled',
   'showExpandedTodos',

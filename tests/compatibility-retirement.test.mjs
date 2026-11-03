@@ -62,6 +62,8 @@ test('no old model remapping or one-shot migration fields remain', () => {
     'sonnet45To46MigrationTimestamp', 'opusProMigrationTimestamp',
   ]) assert.equal(config.includes(field), false, field)
   assert.equal(existsSync(new URL('hooks/notifs/useModelMigrationNotifications.tsx', root)), false)
+  assert.equal(code('utils/managedEnv.ts').includes('getGlobalConfig'), false)
+  assert.equal(/^[ ]*env: \{ \[key: string\]: string \}/m.test(config), false)
 })
 
 test('REPL does not import or invoke removed model migration notifications', () => {
