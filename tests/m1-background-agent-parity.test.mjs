@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
+import { activeBackgroundFlags, validateBackgroundCliArgs } from '../src/cli/background/index.mjs'
 import {
   SHORT_ID_PATTERN, MAX_LOG_BYTES, fleetHome, fleetSocket, createSessionRecord,
   saveSession, reserveNewSession, editSession, readSession, listSessions, matchSession, readTail,
@@ -138,4 +139,21 @@ test('retired ps/bg private dispatch cannot override the new daemon and agent fl
   assert.match(main, /program\.option\('--bg, --background'/)
   assert.match(main, /program\.command\('agents'\)\.description\('Manage background agents'\)/)
   assert.match(main, /program\.command\('daemon \[subcommand\]'\)/)
+})
+
+test('2.1.310 background flags only apply to actual options, never other flag values', () => {
+  const flags = activeBackgroundFlags(['--system-prompt', '--bg', '--model', 'sonnet', 'hello'])
+  assert.equal(flags.has('--bg'), false)
+  assert.equal(flags.has('--model'), true)
+  assert.equal(activeBackgroundFlags(['--', '--bg']).has('--bg'), false)
+  assert.equal(activeBackgroundFlags(['--bg', 'hello']).has('--bg'), true)
+})
+
+test('2.1.310 background validates interactive session prerequisites before daemon startup', () => {
+  assert.match(validateBackgroundCliArgs(['--bg', '--print', 'hello']), /--bg and --print conflict/)
+  assert.match(validateBackgroundCliArgs(['--bg', '-p', 'hello']), /--bg and --print conflict/)
+  assert.match(validateBackgroundCliArgs(['--bg', '--project-config-root', '/tmp/project']), /unavailable with --project-config-root/)
+  assert.match(validateBackgroundCliArgs(['--bg', '--agents', 'agents.json']), /inline JSON/)
+  assert.equal(validateBackgroundCliArgs(['--bg', '--agents', '{"reviewer":{"description":"Review","prompt":"Review"}}']), null)
+  assert.equal(validateBackgroundCliArgs(['--bg', 'hello']), null)
 })
