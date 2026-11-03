@@ -30,6 +30,8 @@ PROMPT = 'UI_REAL_PTY_PROMPT'
 STREAM_RESULT = 'UI_STREAM_COMPLETE_OK'
 TOOL_RESULT = 'UI_TOOL_COMPLETE_OK'
 RETRY_RESULT = 'UI_RETRY_COMPLETE_OK'
+THINKING_RESULT = 'UI_THINKING_COMPLETE_OK'
+THINKING_CONTENT = 'UI_THINKING_PHASE_VISIBLE'
 FIXTURE = 'UI_TOOL_FILE_READ_OK'
 
 def is_main_conversation_request(body):
@@ -150,7 +152,7 @@ def compare_terminal_frames(official, rebuilt):
 def sse(kind, payload):
     return ('event: ' + kind + '\ndata: ' + json.dumps(payload) + '\n\n').encode()
 
-def stream(model, text=None, tool=None, chunk_pause=0.0):
+def stream(model, text=None, tool=None, chunk_pause=0.0, thinking=False):
     mid = 'msg_ui_' + ('tool' if tool else 'text')
     prefix = [
         sse('message_start', {
@@ -161,31 +163,42 @@ def stream(model, text=None, tool=None, chunk_pause=0.0):
             },
         }),
     ]
+    if thinking:
+        prefix += [
+            sse('content_block_start', {'type':'content_block_start','index':0,
+                'content_block':{'type':'thinking','thinking':'','signature':''}}),
+            sse('content_block_delta', {'type':'content_block_delta','index':0,
+                'delta':{'type':'thinking_delta','thinking':THINKING_CONTENT}}),
+            sse('content_block_delta', {'type':'content_block_delta','index':0,
+                'delta':{'type':'signature_delta','signature':'fixture-signature'}}),
+            sse('content_block_stop', {'type':'content_block_stop','index':0}),
+        ]
+    content_idx = 1 if thinking else 0
     if tool:
         prefix += [
             sse('content_block_start', {
-                'type': 'content_block_start', 'index': 0,
+                'type': 'content_block_start', 'index': content_idx,
                 'content_block': {'type': 'tool_use', 'name': 'Read',
                                   'id': 'toolu_ui_read_001', 'input': {}},
             }),
             sse('content_block_delta', {
-                'type': 'content_block_delta', 'index': 0,
+                'type': 'content_block_delta', 'index': content_idx,
                 'delta': {'type': 'input_json_delta',
                           'partial_json': json.dumps({'file_path': tool})},
             }),
         ]
     else:
         prefix.append(sse('content_block_start', {
-            'type': 'content_block_start', 'index': 0,
+            'type': 'content_block_start', 'index': content_idx,
             'content_block': {'type': 'text', 'text': ''},
         }))
         for part in (text[:len(text)//2], text[len(text)//2:]):
             prefix.append(sse('content_block_delta', {
-                'type': 'content_block_delta', 'index': 0,
+                'type': 'content_block_delta', 'index': content_idx,
                 'delta': {'type': 'text_delta', 'text': part},
             }))
     prefix += [
-        sse('content_block_stop', {'type':'content_block_stop','index':0}),
+        sse('content_block_stop', {'type':'content_block_stop','index':content_idx}),
         sse('message_delta', {
             'type':'message_delta',
             'delta':{'stop_reason':'tool_use' if tool else 'end_turn', 'stop_sequence':None},
@@ -258,8 +271,8 @@ def probe(binary, scenario):
                 if scene == 'tool' and len(calls) == 1:
                     answer = stream(model, tool=str(fixture))
                 else:
-                    text = {'stream':STREAM_RESULT,'tool':TOOL_RESULT,'retry':RETRY_RESULT}[scene]
-                    answer = stream(model, text=text)
+                    text = {'stream':STREAM_RESULT,'tool':TOOL_RESULT,'retry':RETRY_RESULT,'thinking':THINKING_RESULT}[scene]
+                    answer = stream(model, text=text, thinking=(scene == 'thinking'))
             if is_real and scene == 'stream':
                 time.sleep(2.5)  # exercise the requesting spinner before first byte
             if is_real and scene in ('tool', 'retry') and len(calls) == 2:
@@ -269,8 +282,17 @@ def probe(binary, scenario):
             self.send_header('Content-Length',str(len(answer)))
             self.end_headers()
             try:
-                self.wfile.write(answer)
-                self.wfile.flush()
+                if is_real and scene == 'thinking':
+                    for event in answer.split(b'\\n\\n'):
+                        if not event:
+                            continue
+                        self.wfile.write(event + b'\\n\\n')
+                        self.wfile.flush()
+                        if b'thinking_delta' in event:
+                            time.sleep(2.5)  # verify both renderers' live thinking states
+                else:
+                    self.wfile.write(answer)
+                    self.wfile.flush()
             except BrokenPipeError:
                 pass
 
@@ -301,7 +323,7 @@ def probe(binary, scenario):
     started = time.monotonic()
     sent = False
     last_capture = 0.0
-    expected = {'stream':STREAM_RESULT,'tool':TOOL_RESULT,'retry':RETRY_RESULT}[scene]
+    expected = {'stream':STREAM_RESULT,'tool':TOOL_RESULT,'retry':RETRY_RESULT,'thinking':THINKING_RESULT}[scene]
     answer_seen_at = None
     try:
         while time.monotonic()-started < 42 and proc.poll() is None:
@@ -363,6 +385,7 @@ def probe(binary, scenario):
             'full_screen_rows':[line.rstrip() for line in screen_rows(screen)],
             'frames':frames,
             'frame_count':len(frames),
+            'thinking_status_seen':any('thinking' in ' '.join(f['screen_rows']).lower() for f in frames),
             'frame_glyphs':sorted({f['glyph'] for f in frames if f['glyph']}),
             'terminal_tail':text[-800:] if not passed else '',
         }
@@ -390,7 +413,7 @@ def main():
         'rebuilt':{},
         'comparison':{},
     }
-    for scenario in ('stream','tool','retry','stream-narrow','stream-reduced'):
+    for scenario in ('stream','tool','retry','thinking','stream-narrow','stream-reduced'):
         a=probe(args.reference,scenario)
         b=probe(args.candidate,scenario)
         report['official'][scenario]=a
@@ -417,6 +440,8 @@ def main():
             'rebuilt_glyph_sequence':[f['glyph'] for f in b['frames'] if f['glyph']],
             'official_retry_status_seen':a['retry_status_screen_seen'],
             'rebuilt_retry_status_seen':b['retry_status_screen_seen'],
+            'official_thinking_status_seen':a['thinking_status_seen'],
+            'rebuilt_thinking_status_seen':b['thinking_status_seen'],
             'frame_by_frame_pixel_equivalence':'EQUAL' if visual['exact'] else 'DIFFERENT',
         }
     Path(args.report).write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',
