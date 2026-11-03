@@ -2,10 +2,11 @@ import { connect } from 'node:net'
 import { spawn } from 'node:child_process'
 import { open, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 import { createInterface } from 'node:readline/promises'
 import {
   fleetHome, fleetSocket, listSessions, matchSession,
-  readTail, stripUnsafeTerminal, MAX_LOG_BYTES
+  readTail, stripUnsafeTerminal, MAX_LOG_BYTES, isAlive
 } from './sessionStore.mjs'
 import { runBackgroundSupervisor } from './supervisor.mjs'
 
@@ -160,7 +161,9 @@ async function startDaemon() {
     const cmd = [...selfCommand(), '--internal-bg-supervisor']
     process.stderr.write('Starting background service…\n')
     const child = spawn(cmd[0], cmd.slice(1), {
-      detached: true, stdio: ['ignore', out.fd, out.fd], cwd: fleetHome(),
+      // Never hold the user's workspace/config folder as the supervisor CWD.
+      // Windows prevents its deletion while the detached process is alive.
+      detached: true, stdio: ['ignore', out.fd, out.fd], cwd: tmpdir(),
       env: { ...process.env, CLAUDE_CODE_SESSION_KIND: 'daemon' },
       windowsHide: true,
     })
@@ -281,7 +284,15 @@ async function daemon(args) {
     return
   }
   if (action === 'stop') {
+    const owner = await ask({ op: 'ping' })
     await ask({ op: 'shutdown', keepWorkers: args.includes('--keep-workers') })
+    // Closing the control socket is earlier than the supervisor process exit.
+    // Await the actual exit before returning to tools that clean up workspaces.
+    const deadline = Date.now() + 5000
+    while (isAlive(owner.pid) && Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 50))
+    }
+    if (isAlive(owner.pid)) throw new Error(`Background service pid ${owner.pid} is still running after shutdown`)
     process.stdout.write('stopped\nnote: the next `claude agents` or `claude --bg` will start a new one\n')
     return
   }
