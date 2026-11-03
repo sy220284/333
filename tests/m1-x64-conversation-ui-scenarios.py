@@ -424,9 +424,15 @@ def main():
     parser.add_argument('--reference',required=True)
     parser.add_argument('--candidate',required=True)
     parser.add_argument('--report',required=True)
+    parser.add_argument('--target',default='2.1.310',help='Actual reference release; historical tests default to 2.1.310')
+    parser.add_argument('--strict-animations',action='store_true',help='Fail when animated glyph sets differ')
     args=parser.parse_args()
+    reference_version=subprocess.run([args.reference,'--version'],capture_output=True,text=True,timeout=12)
+    if reference_version.returncode != 0 or not reference_version.stdout.strip().startswith(args.target+' '):
+        raise RuntimeError(f'Official native executable does not match {args.target}: {reference_version.stdout.strip()}')
     report={
-        'version':'2.1.310',
+        'version':args.target,
+        'official_version':reference_version.stdout.strip(),
         'scope':'REAL_PTY_LOCAL_SSE_STREAM_TOOL_RETRY',
         'official':{},
         'rebuilt':{},
@@ -489,6 +495,12 @@ def main():
                 'terminal_anchors': sample['terminal_anchors'],
                 'core_layout': report['comparison'][scenario]['core_layout'],
             }, ensure_ascii=False))
+    if args.strict_animations:
+        animation_diffs=[scenario for scenario,item in report['comparison'].items()
+                         if not item['glyph_sets_equal']]
+        if animation_diffs:
+            print(json.dumps({'diagnosis':'animation_glyph_mismatch','scenarios':animation_diffs},ensure_ascii=False))
+            failed.extend(animation_diffs)
     if failed:
         raise SystemExit(1)
 
