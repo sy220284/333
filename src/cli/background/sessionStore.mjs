@@ -183,10 +183,10 @@ export function stripUnsafeTerminal(text) {
   // Keep terminal cursor/SGR sequences while removing OSC/DCS payloads.
   // Construct control bytes explicitly so the same policy works with Unicode
   // output and does not introduce literal C0 characters in source patterns.
-  const escape = String.fromCharCode(27)
+  const escapeCode = String.fromCharCode(27)
   const bell = String.fromCharCode(7)
-  const osc = new RegExp(`${escape}\\][^${bell}${escape}]*(?:${bell}|${escape}\\\\)`, 'g')
-  const dcs = new RegExp(`${escape}P[\\s\\S]*?${escape}\\\\`, 'g')
+  const osc = new RegExp(`${escapeCode}\\][^${bell}${escapeCode}]*(?:${bell}|${escapeCode}\\\\)`, 'g')
+  const dcs = new RegExp(`${escapeCode}P[\\s\\S]*?${escapeCode}\\\\`, 'g')
   return text.replace(osc, '').replace(dcs, '').split('').filter(char => {
     const code = char.charCodeAt(0)
     return (code >= 32 && code !== 127) || code === 9 || code === 10 || code === 27
