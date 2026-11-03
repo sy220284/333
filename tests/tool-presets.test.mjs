@@ -60,7 +60,7 @@ test('M3 --tools default, explicit Read, and empty set match the old binary on r
         captured.push((body.tools??[]).map(tool=>tool.name).sort());
         res.writeHead(200,{'content-type':'text/event-stream'});
         res.end(answer());
-      } catch(error){ res.writeHead(400);res.end(String(error)); }
+      } catch { res.writeHead(400);res.end('Invalid local test request'); }
     });
   });
   try {
