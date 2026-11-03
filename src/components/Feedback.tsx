@@ -259,7 +259,7 @@ export function Feedback({
       void submitReport();
     }
   });
-  return <Dialog title="提交反馈或问题报告" onCancel={handleCancel} isCancelActive={step !== 'userInput'} inputGuide={exitState => exitState.pending ? <Text>再次按 {exitState.keyName} 退出</Text> : step === 'userInput' ? <Byline>
+  return <Dialog title="提交反馈或问题报告" onCancel={handleCancel} isCancelActive={step !== 'userInput'} hideInputGuide={step === 'submitting'} inputGuide={exitState => exitState.pending ? <Text>再次按 {exitState.keyName} 退出</Text> : step === 'userInput' ? <Byline>
             <KeyboardShortcutHint shortcut="Enter" action="continue" />
             <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
           </Byline> : step === 'consent' ? <Byline>
