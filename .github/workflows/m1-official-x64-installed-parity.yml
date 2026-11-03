@@ -16,8 +16,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # Every source revision must finish its own reference parity run. Concurrent
+  # PR pushes previously cancelled fully-built CLI tests before acceptance.
+  group: official-x64-installed-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
 
 jobs:
   installed-reference:
@@ -26,6 +28,9 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 2
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
