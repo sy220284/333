@@ -49,7 +49,7 @@ test('running CLI sends separated prompt and persists the actual model prompt', 
         payload=JSON.parse(input)
         res.writeHead(200,{'content-type':'text/event-stream'})
         res.end(mockResponse())
-      }catch(e){res.writeHead(500);res.end(String(e))}
+      }catch{res.writeHead(500);res.end('Local fixture processing failed')}
     })
   })
   try {
