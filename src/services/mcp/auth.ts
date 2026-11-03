@@ -237,24 +237,11 @@ function createAuthFetch(): FetchLike {
 }
 
 /**
- * Fetches authorization server metadata, using a configured metadata URL if available,
- * otherwise performing RFC 9728 → RFC 8414 discovery via the SDK.
- *
- * Discovery order when no configured URL:
- * 1. RFC 9728: probe /.well-known/oauth-protected-resource on the MCP server,
- *    read authorization_servers[0], then RFC 8414 against that URL.
- * 2. Fallback: RFC 8414 directly against the MCP server URL (path-aware). Covers
- *    legacy servers that co-host auth metadata at /.well-known/oauth-authorization-server/{path}
- *    without implementing RFC 9728. The SDK's own fallback strips the path, so this
- *    preserves the pre-existing path-aware probe for backward compatibility.
- *
- * Note: configuredMetadataUrl is user-controlled via .mcp.json. Project-scoped MCP
- * servers require user approval before connecting (same trust level as the MCP server
- * URL itself). The HTTPS requirement here is defense-in-depth beyond schema validation
- * — RFC 8414 mandates OAuth metadata retrieval over TLS.
+ * Resolve OAuth metadata through a configured HTTPS URL or RFC 9728/RFC 8414 discovery.
+ * Old path-specific discovery fallbacks are not used.
  */
 async function fetchAuthServerMetadata(
-  serverName: string,
+  _serverName: string,
   serverUrl: string,
   configuredMetadataUrl: string | undefined,
   fetchFn?: FetchLike,
@@ -278,36 +265,15 @@ async function fetchAuthServerMetadata(
     )
   }
 
-  try {
-    const { authorizationServerMetadata } = await discoverOAuthServerInfo(
-      serverUrl,
-      {
-        ...(fetchFn && { fetchFn }),
-        ...(resourceMetadataUrl && { resourceMetadataUrl }),
-      },
-    )
-    if (authorizationServerMetadata) {
-      return authorizationServerMetadata
-    }
-  } catch (err) {
-    // Any error from the RFC 9728 → RFC 8414 chain (5xx from the root or
-    // resolved-AS probe, schema parse failure, network error) — fall through
-    // to the legacy path-aware retry.
-    logMCPDebug(
-      serverName,
-      `RFC 9728 discovery failed, falling back: ${errorMessage(err)}`,
-    )
-  }
+  const { authorizationServerMetadata } = await discoverOAuthServerInfo(
+    serverUrl,
+    {
+      ...(fetchFn && { fetchFn }),
+      ...(resourceMetadataUrl && { resourceMetadataUrl }),
+    },
+  )
+  return authorizationServerMetadata
 
-  // Fallback only when the URL has a path component; for root URLs the SDK's
-  // own fallback already probed the same endpoints.
-  const url = new URL(serverUrl)
-  if (url.pathname === '/') {
-    return undefined
-  }
-  return discoverAuthorizationServerMetadata(url, {
-    ...(fetchFn && { fetchFn }),
-  })
 }
 
 export class AuthenticationCancelledError extends Error {
