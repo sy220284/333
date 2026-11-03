@@ -24,13 +24,13 @@ test('remote session callers use the protocol helper, not the old shim', () => {
   ]
   for (const path of callers) {
     const code = readFileSync(new URL(path, root), 'utf8').split('//# sourceMappingURL=')[0]
-    assert.doesNotMatch(code, /toCompatSessionId|toInfraSessionId|sessionIdCompat\\.js|reconnectCandidates =\\s*infraResumeId/)
+    assert.equal(/toCompatSessionId|toInfraSessionId|sessionIdCompat/.test(code), false, path)
     assert.match(code, /toSessionApiId|toWorkerApiId/)
   }
 })
 test('remote reconnect attempts only the current worker ID', () => {
   const main = readFileSync(new URL('bridge/bridgeMain.ts', root), 'utf8')
   const repl = readFileSync(new URL('bridge/replBridge.ts', root), 'utf8')
-  assert.match(main, /const reconnectCandidates = \\[toWorkerApiId\\(resumeSessionId\\)\\]/)
-  assert.match(repl, /const candidates = \\[toWorkerApiId\\(sessionId\\)\\]/)
+  assert.ok(main.includes('const reconnectCandidates = [toWorkerApiId(resumeSessionId)]'))
+  assert.ok(repl.includes('const candidates = [toWorkerApiId(sessionId)]'))
 })
