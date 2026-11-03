@@ -2,7 +2,9 @@
 """Keep background title generation from consuming real-tool test steps."""
 import importlib.util
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
+import pyte
 
 script = Path(__file__).with_name('m1-x64-conversation-ui-scenarios.py')
 spec = importlib.util.spec_from_file_location('conversation_ui', script)
@@ -44,6 +46,23 @@ class ConversationRequestRoutingTests(unittest.TestCase):
             'tools': [{'name': 'Read'}],
         }
         self.assertFalse(probe.is_main_conversation_request(request))
+
+
+class TerminalScreenUnicodeTests(unittest.TestCase):
+    def test_empty_character_cell_and_chinese_wide_character(self):
+        screen = pyte.Screen(6, 2)
+        screen.buffer[0][0] = SimpleNamespace(data='')
+        screen.buffer[0][1] = SimpleNamespace(data='你')
+        screen.buffer[0][2] = SimpleNamespace(data='')
+        screen.buffer[0][3] = SimpleNamespace(data='好')
+        screen.buffer[0][4] = SimpleNamespace(data='')
+        self.assertEqual(probe.screen_rows(screen)[0].strip(), '你好')
+
+    def test_ordinary_screen_preserves_existing_text(self):
+        screen = pyte.Screen(12, 2)
+        stream = pyte.Stream(screen)
+        stream.feed('SUCCESS')
+        self.assertEqual(probe.screen_rows(screen)[0].rstrip(), 'SUCCESS')
 
 
 if __name__ == '__main__':
