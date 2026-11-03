@@ -3872,8 +3872,7 @@ async function logTenguInit({
   allowDangerouslySkipPermissionsPassed,
   systemPromptFlag,
   appendSystemPromptFlag,
-  thinkingConfig,
-  assistantActivationPath
+  thinkingConfig
 }: {
   hasInitialPrompt: boolean;
   hasStdin: boolean;
@@ -3896,7 +3895,6 @@ async function logTenguInit({
   systemPromptFlag: 'file' | 'flag' | undefined;
   appendSystemPromptFlag: 'file' | 'flag' | undefined;
   thinkingConfig: ThinkingConfig;
-  assistantActivationPath: string | undefined;
 }): Promise<void> {
   try {
     logEvent('tengu_init', {
@@ -3931,9 +3929,6 @@ async function logTenguInit({
       }),
       is_simple: isBareMode() || undefined,
       is_coordinator: feature('COORDINATOR_MODE') && coordinatorModeModule?.isCoordinatorMode() ? true : undefined,
-      ...(assistantActivationPath && {
-        assistantActivationPath: assistantActivationPath as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-      }),
       autoUpdatesChannel: (getInitialSettings().autoUpdatesChannel ?? 'latest') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       ...(process.env.USER_TYPE === 'ant' ? (() => {
         const cwd = getCwd();
