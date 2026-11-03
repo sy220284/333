@@ -16,5 +16,42 @@
   "binary_source_status": "已发现官方发行文件；当前环境无法取得和执行2.1.317 x64包",
   "product_package_version_policy": "package.json仍为2.1.310，待产品功能与运行差分验收后再声明版本为2.1.317",
   "ci_writeback": "本轮不处理",
-  "verified_x64_sha256": null
+  "verified_x64_sha256": null,
+  "release_snapshots": [
+    {
+      "version": "2.1.311",
+      "official_release_id": 424682562,
+      "entry_count": 92,
+      "published_at": "2026-10-26T21:51:23Z"
+    },
+    {
+      "version": "2.1.312",
+      "official_release_id": 425846009,
+      "entry_count": 39,
+      "published_at": "2026-10-27T20:24:20Z"
+    },
+    {
+      "version": "2.1.314",
+      "official_release_id": 428518421,
+      "entry_count": 119,
+      "published_at": "2026-10-30T01:06:26Z"
+    },
+    {
+      "version": "2.1.316",
+      "official_release_id": 429617179,
+      "entry_count": 55,
+      "published_at": "2026-10-31T01:01:35Z"
+    },
+    {
+      "version": "2.1.317",
+      "official_release_id": 432094076,
+      "entry_count": 87,
+      "published_at": "2026-11-03T01:25:46Z"
+    }
+  ],
+  "intermediate_versions_without_indexed_release_notes": [
+    "2.1.313",
+    "2.1.315"
+  ],
+  "intermediate_version_policy": "Treat versions without indexed release notes as explicit research gaps, not proof of no code or behavior changes. Require release-note reconciliation on every target change."
 }
