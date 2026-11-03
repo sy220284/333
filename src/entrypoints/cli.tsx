@@ -47,6 +47,17 @@ async function main(): Promise<void> {
   } = await import('../utils/startupProfiler.js');
   profileCheckpoint('cli_entry');
 
+  // Desktop is a one-shot native handoff, not an interactive REPL. Handle it
+  // before main.tsx initializes terminal listeners and startup background tasks:
+  // those tasks otherwise keep error paths alive after their message is printed.
+  if (args.includes('--desktop') && !args.includes('--help') && !args.includes('-h')) {
+    const { parseDesktopCliOptions, launchDesktopFromCli } =
+      await import('../cli/desktop/launch.mjs');
+    const { prompt, options } = parseDesktopCliOptions(args);
+    process.exitCode = await launchDesktopFromCli({ prompt, options, argv: args });
+    return;
+  }
+
   // Official 2.1.310 background agent fleet uses a dedicated fast path.
   // Keep supervisor and PTY workers outside regular interactive REPL initialization.
   const backgroundRequest = args.includes('--bg') || args.includes('--background') ||
