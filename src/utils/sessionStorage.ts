@@ -71,6 +71,7 @@ import { logForDebugging } from './debug.js'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
 import { getErrnoCode, isFsInaccessible } from './errors.js'
+import { shouldRetrySessionAppendAfterMkdir } from './sessionWriteFailurePolicy.mjs'
 import type { FileHistorySnapshot } from './fileHistory.js'
 import { formatFileSize } from './format.js'
 import { getFsImplementation } from './fsOperations.js'
@@ -653,7 +654,7 @@ class Project {
     } catch (error) {
       // ENOSPC/EDQUOT and permission failures must surface to the caller.
       // Only a genuinely missing directory warrants a mkdir + retry.
-      if (getErrnoCode(error) !== 'ENOENT') throw error
+      if (!shouldRetrySessionAppendAfterMkdir(getErrnoCode(error))) throw error
       await mkdir(dirname(filePath), { recursive: true, mode: 0o700 })
       await fsAppendFile(filePath, data, { mode: 0o600 })
     }
