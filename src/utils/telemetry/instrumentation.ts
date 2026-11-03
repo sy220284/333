@@ -387,12 +387,14 @@ async function initializeBetaTracing(
 
   // Initialize log exporter
   const logExporter = new OTLPLogExporter(logHttpConfig)
-  const loggerProvider = new LoggerProvider({ resource })
-  loggerProvider.addLogRecordProcessor(
-    new BatchLogRecordProcessor(logExporter, {
-      scheduledDelayMillis: DEFAULT_LOGS_EXPORT_INTERVAL_MS,
-    }),
-  )
+  const loggerProvider = new LoggerProvider({
+    resource,
+    processors: [
+      new BatchLogRecordProcessor(logExporter, {
+        scheduledDelayMillis: DEFAULT_LOGS_EXPORT_INTERVAL_MS,
+      }),
+    ],
+  })
 
   logs.setGlobalLoggerProvider(loggerProvider)
   setLoggerProvider(loggerProvider)
