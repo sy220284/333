@@ -26,6 +26,22 @@ test('/agents retains the hidden instructions instead of loading the retired wiz
   assert.match(index, /\.claude\/agents\//)
 })
 
+test('2.1.310 suppresses redundant Agent classifier approval text but preserves other tool messages', () => {
+  const view = source('src/components/messages/UserToolResultMessage/UserToolSuccessMessage.tsx').split('//# sourceMappingURL=')[0]
+  assert.match(view, /yoloReason && tool\.name !== 'Agent' && <MessageResponse/)
+  assert.match(view, /Allowed by auto mode classifier/)
+})
+
+test('retired TaskOutput executable is absent; background outputs are still available through Read', () => {
+  const { existsSync } = require('node:fs')
+  assert.equal(existsSync(join(root, 'src/tools/TaskOutputTool/TaskOutputTool.tsx')), false)
+  assert.equal(existsSync(join(root, 'src/utils/task/outputFormatting.ts')), false)
+  const registry = source('src/tools.ts')
+  assert.doesNotMatch(registry, /TaskOutputTool/)
+  assert.match(registry, /FileReadTool/)
+  assert.match(source('src/utils/task/TaskOutput.ts'), /getTaskOutputPath/)
+})
+
 test('local command metadata flows through slash parser, QueryEngine and SDK result schema', () => {
   const processInput = source('src/utils/processUserInput/processUserInput.ts')
   const slash = source('src/utils/processUserInput/processSlashCommand.tsx')
