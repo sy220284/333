@@ -840,7 +840,7 @@ export class QueryEngine {
               if (
                 isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
                 isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK) ||
-          getIsNonInteractiveSession()
+                getIsNonInteractiveSession()
               ) {
                 await flushSessionStorage()
               }
@@ -971,7 +971,7 @@ export class QueryEngine {
           if (
             isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
             isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK) ||
-          getIsNonInteractiveSession()
+            getIsNonInteractiveSession()
           ) {
             await flushSessionStorage()
           }
@@ -1015,7 +1015,7 @@ export class QueryEngine {
             if (
               isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
               isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK) ||
-          getIsNonInteractiveSession()
+              getIsNonInteractiveSession()
             ) {
               await flushSessionStorage()
             }
@@ -1073,7 +1073,7 @@ export class QueryEngine {
       if (
         isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
         isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK) ||
-          getIsNonInteractiveSession()
+        getIsNonInteractiveSession()
       ) {
         await flushSessionStorage()
       }
