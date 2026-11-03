@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import { spawn } from 'node:child_process'
+import { readdirSync } from 'node:fs'
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -57,6 +59,31 @@ test('a failed upgrade preserves the full previously installed skill bundle', as
     }))
     assert.equal(readFileSync(join(dir, 'SKILL.md'), 'utf8'), 'safe original')
     assert.equal(readFileSync(join(dir, 'docs/a.md'), 'utf8'), 'original reference')
+  } finally {
+    rmSync(parent, { recursive: true, force: true })
+  }
+})
+
+test('cross-process skill extraction publishes exactly one complete valid bundle', { timeout: 60_000 }, async () => {
+  const parent = mkdtempSync(join(tmpdir(), '333-skill-multiprocess-'))
+  const dir = join(parent, 'skill')
+  const script = `import { extractBundleAtomically } from ${JSON.stringify(new URL('../src/skills/bundledFiles.mjs', import.meta.url).href)}
+await extractBundleAtomically(process.env.SKILL_TEST_DIR, { 'SKILL.md': 'ready', 'docs/reference.md': 'complete' })`
+  const run = () => new Promise((resolve, reject) => {
+    const processHandle = spawn(process.execPath, ['--input-type=module', '--eval', script], {
+      env: { ...process.env, SKILL_TEST_DIR: dir },
+    })
+    let stderr = ''
+    processHandle.stderr.on('data', chunk => { stderr += String(chunk) })
+    processHandle.on('error', reject)
+    processHandle.on('close', code => code === 0 ? resolve() :
+      reject(new Error(`skill child exit ${code}: ${stderr}`)))
+  })
+  try {
+    await Promise.all([run(), run(), run(), run()])
+    assert.equal(readFileSync(join(dir, 'SKILL.md'), 'utf8'), 'ready')
+    assert.equal(readFileSync(join(dir, 'docs/reference.md'), 'utf8'), 'complete')
+    assert.equal(readdirSync(parent).some(name => name.startsWith('.previous-') || name.startsWith('.extract-')), false)
   } finally {
     rmSync(parent, { recursive: true, force: true })
   }
