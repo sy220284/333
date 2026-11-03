@@ -82,7 +82,7 @@ test('bounded stdout/stderr and abort cannot be mistaken for full searches', () 
 test('embedded child exit path checks deadline and bounded streams before callback success', () => {
   const source = readFileSync(new URL('../src/utils/ripgrep.ts', import.meta.url), 'utf8')
   assert.match(source, /timedOut = true/)
-  assert.match(source, /classifyRipgrepProcessExit\\(\\{/)
+  assert.match(source, /classifyRipgrepProcessExit\(\{/)
   assert.match(source, /outcome === 'complete'/)
   assert.match(source, /error.code = 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER'/)
 })
