@@ -75,7 +75,10 @@ test('2.1.310 background real lifecycle: dispatch, list, logs, stop, respawn, re
       assert.ok(removed.stdout.includes('removed ' + id))
       assert.deepEqual(JSON.parse(execute(bin, prefix, ['agents', '--json', '--all'], env, cwd).stdout), [])
     } finally {
-      execute(bin, prefix, ['daemon', 'stop', '--any'], env, cwd, 10000)
+      const shutdown = execute(bin, prefix, ['daemon', 'stop', '--any'], env, cwd, 10000)
+      assert.equal(shutdown.status, 0, `${name} daemon shutdown did not finish: ${shutdown.stderr}`)
+      // Windows keeps cwd directories locked until every detached process
+      // and its PTY worker have really exited; this must succeed immediately.
       rmSync(home, { recursive: true, force: true })
     }
   }
