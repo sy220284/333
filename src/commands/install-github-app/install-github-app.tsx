@@ -3,6 +3,7 @@ import React, { useCallback, useState } from 'react';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index.js';
 import { WorkflowMultiselectDialog } from '../../components/WorkflowMultiselectDialog.js';
 import { GITHUB_ACTION_SETUP_DOCS_URL } from '../../constants/github-app.js';
+import { parseGithubRepository } from './githubRepository.js';
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js';
 import type { KeyboardEvent } from '../../ink/events/keyboard-event.js';
 import { Box } from '../../ink.js';
@@ -281,25 +282,17 @@ function InstallGitHubApp(props: {
         return;
       }
       const repoWarnings: Warning[] = [];
-      if (repoName_1.includes('github.com')) {
-        const match = repoName_1.match(/github\.com[:/]([^/]+\/[^/]+)(\.git)?$/);
-        if (!match) {
-          repoWarnings.push({
-            title: 'GitHub 地址格式无效',
-            message: '仓库地址格式无效。',
-            instructions: ['Use format: owner/repo or https://github.com/owner/repo', 'Example: anthropics/claude-cli']
-          });
-        } else {
-          repoName_1 = match[1]?.replace(/\.git$/, '') || '';
-        }
-      }
-      if (!repoName_1.includes('/')) {
+      const validatedRepo = parseGithubRepository(repoName_1);
+      if (!validatedRepo) {
         repoWarnings.push({
-          title: '仓库地址格式提醒',
-          message: '仓库地址应采用“owner/repo”格式',
-          instructions: ['Use format: owner/repo', 'Example: anthropics/claude-cli']
+          title: 'GitHub 地址格式无效',
+          message: '请填写有效的 GitHub 仓库地址（owner/repo）。',
+          instructions: ['Use format: owner/repo or https://github.com/owner/repo', 'Example: anthropics/claude-cli']
         });
+        setState(prev => ({ ...prev, warnings: [...state.warnings, ...repoWarnings], step: 'warnings' }));
+        return;
       }
+      repoName_1 = validatedRepo;
       const permissionCheck = await checkRepositoryPermissions(repoName_1);
       if (permissionCheck.error === 'repository_not_found') {
         repoWarnings.push({

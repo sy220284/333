@@ -16,7 +16,7 @@ import { useSearchHighlight } from '../ink/hooks/use-search-highlight.js';
 import type { JumpHandle } from '../components/VirtualMessageList.js';
 import { renderMessagesToPlainText } from '../utils/exportRenderer.js';
 import { openFileInExternalEditor } from '../utils/editor.js';
-import { writeFile } from 'fs/promises';
+import { mkdtemp, writeFile } from 'fs/promises';
 import { Box, Text, useStdin, useTheme, useTerminalFocus, useTerminalTitle, useTabStatus } from '../ink.js';
 import type { TabStatusKind } from '../ink/hooks/use-tab-status.js';
 import { CostThresholdDialog } from '../components/CostThresholdDialog.js';
@@ -4309,8 +4309,10 @@ export function REPL({
           const w = Math.max(80, (process.stdout.columns ?? 80) - 6);
           const raw = await renderMessagesToPlainText(deferredMessages, tools, w);
           const text = raw.replace(/[ \t]+$/gm, '');
-          const path = join(tmpdir(), `cc-transcript-${Date.now()}.txt`);
-          await writeFile(path, text);
+          // A private, unpredictable temp directory blocks symlink substitution.
+          const directory = await mkdtemp(join(tmpdir(), 'cc-transcript-'));
+          const path = join(directory, 'transcript.txt');
+          await writeFile(path, text, { mode: 0o600, flag: 'wx' });
           const opened = openFileInExternalEditor(path);
           setStatus(opened ? `opening ${path}` : `wrote ${path} · no $VISUAL/$EDITOR set`);
         } catch (e) {
