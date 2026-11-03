@@ -953,7 +953,13 @@ export async function runHeadless(
           )
           break
         case 'error_during_execution':
-          writeToStdout(`Execution error`)
+          // Surface failed transcript/config writes, including ENOSPC/EDQUOT,
+          // instead of hiding the cause behind an unhelpful generic message.
+          writeToStdout(
+            lastMessage.errors.length > 0
+              ? `Execution error: ${lastMessage.errors.join('; ')}\n`
+              : 'Execution error\n',
+          )
           break
         case 'error_max_turns':
           writeToStdout(`Error: Reached max turns (${options.maxTurns})`)
