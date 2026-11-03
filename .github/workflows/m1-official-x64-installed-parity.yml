@@ -148,11 +148,9 @@ jobs:
             --report "${RUNNER_TEMP}/claude-installed-plugin-enable-json-parity.json"
       - name: 官方原版与候选版双跑插件数据大小及配置覆盖规则
         shell: bash
-        env:
-          CLAUDE_2310_X64: ${{ env.CLAUDE_REFERENCE_BIN }}
         run: |
           set -euo pipefail
-          node --test tests/m1-plugin-data-size-parity.test.mjs
+          CLAUDE_2310_X64="${CLAUDE_REFERENCE_BIN}" node --test tests/m1-plugin-data-size-parity.test.mjs
       - name: 安装版执行本机模拟 API 与工具权限实测
         shell: bash
         run: |
