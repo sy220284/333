@@ -42,7 +42,6 @@ import type { LocalJSXCommandContext, CommandResultDisplay } from '../../command
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js';
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js';
 import { getCliTeammateModeOverride, clearCliTeammateModeOverride } from '../../utils/swarm/backends/teammateModeSnapshot.js';
-import { getHardcodedTeammateModelFallback } from '../../utils/swarm/teammateModel.js';
 import { useSearchInput } from '../../hooks/useSearchInput.js';
 import { useTerminalSize } from '../../hooks/useTerminalSize.js';
 import { clearFastModeCooldown, FAST_MODE_MODEL_DISPLAY, isFastModeAvailable, isFastModeEnabled, getFastModeModel, isFastModeSupportedByModel } from '../../utils/fastMode.js';
@@ -80,7 +79,7 @@ type Setting = (SettingBase & {
   onChange(value: string): void;
   type: 'managedEnum';
 });
-type SubMenu = 'Theme' | 'Model' | 'TeammateModel' | 'ExternalIncludes' | 'OutputStyle' | 'ChannelDowngrade' | 'EnableAutoUpdates';
+type SubMenu = 'Theme' | 'Model' | 'ExternalIncludes' | 'OutputStyle' | 'ChannelDowngrade' | 'EnableAutoUpdates';
 export function Config({
   onClose,
   context,
@@ -909,12 +908,6 @@ export function Config({
           mode: mode_0 as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
         });
       }
-    }, {
-      id: 'teammateDefaultModel',
-      label: '协作代理默认模型',
-      value: teammateModelDisplayString(globalConfig.teammateDefaultModel),
-      type: 'managedEnum' as const,
-      onChange() {}
     }];
   })() : []),
   // Remote at startup toggle — gated on build flag + GrowthBook + policy
@@ -1284,7 +1277,7 @@ export function Config({
       }
       return;
     }
-    if (setting_0.id === 'theme' || setting_0.id === 'model' || setting_0.id === 'teammateDefaultModel' || setting_0.id === 'showExternalIncludesDialog' || setting_0.id === 'outputStyle') {
+    if (setting_0.id === 'theme' || setting_0.id === 'model' || setting_0.id === 'showExternalIncludesDialog' || setting_0.id === 'outputStyle') {
       // managedEnum items open a submenu — isDirty is set by the submenu's
       // completion callback, not here (submenu may be cancelled).
       switch (setting_0.id) {
@@ -1294,10 +1287,6 @@ export function Config({
           return;
         case 'model':
           setShowSubmenu('Model');
-          setTabsHidden(true);
-          return;
-        case 'teammateDefaultModel':
-          setShowSubmenu('TeammateModel');
           setTabsHidden(true);
           return;
         case 'showExternalIncludesDialog':
@@ -1459,42 +1448,6 @@ export function Config({
         setShowSubmenu(null);
         setTabsHidden(false);
       }} showFastModeNotice={isFastModeEnabled() ? isFastMode && isFastModeSupportedByModel(mainLoopModel) && isFastModeAvailable() : false} />
-          <Text dimColor>
-            <Byline>
-              <KeyboardShortcutHint shortcut="Enter" action="confirm" />
-              <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
-            </Byline>
-          </Text>
-        </> : showSubmenu === 'TeammateModel' ? <>
-          <ModelPicker initial={globalConfig.teammateDefaultModel ?? null} skipSettingsWrite headerText="新启动的协作代理使用此默认模型。主代理可在工具调用中指定其他模型。" onSelect={(model_1, _effort_0) => {
-        setShowSubmenu(null);
-        setTabsHidden(false);
-        // First-open-then-Enter from unset: picker highlights "Default"
-        // (initial=null) and confirming would write null, silently
-        // switching Opus-fallback → follow-leader. Treat as no-op.
-        if (globalConfig.teammateDefaultModel === undefined && model_1 === null) {
-          return;
-        }
-        isDirty.current = true;
-        saveGlobalConfig(current_23 => current_23.teammateDefaultModel === model_1 ? current_23 : {
-          ...current_23,
-          teammateDefaultModel: model_1
-        });
-        setGlobalConfig({
-          ...getGlobalConfig(),
-          teammateDefaultModel: model_1
-        });
-        setChanges(prev_25 => ({
-          ...prev_25,
-          teammateDefaultModel: teammateModelDisplayString(model_1)
-        }));
-        logEvent('tengu_teammate_default_model_changed', {
-          model: model_1 as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-        });
-      }} onCancel={() => {
-        setShowSubmenu(null);
-        setTabsHidden(false);
-      }} />
           <Text dimColor>
             <Byline>
               <KeyboardShortcutHint shortcut="Enter" action="confirm" />
@@ -1712,13 +1665,6 @@ function getChineseSettingValue(id: string, value: string): string {
     remoteControlAtStartup: { default: '默认' }
   };
   return translations[id]?.[value] ?? value;
-}
-function teammateModelDisplayString(value: string | null | undefined): string {
-  if (value === undefined) {
-    return modelDisplayString(getHardcodedTeammateModelFallback());
-  }
-  if (value === null) return '默认（主代理模型）';
-  return modelDisplayString(value);
 }
 const THEME_LABELS: Record<string, string> = {
   auto: '自动匹配终端',
