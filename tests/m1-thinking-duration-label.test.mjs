@@ -25,3 +25,9 @@ test('普通对话在正文前渲染思考用时，思考全文仍保持折叠',
   assert.match(component, /message\.message\.content\.some\(block => block\.type === 'thinking'\)/)
   assert.match(component, /\{t3\}/)
 })
+
+test('消息归一化保留思考完成元数据，避免UI前丢失', () => {
+  const code = readFileSync(new URL('../src/utils/messages.ts', import.meta.url), 'utf8')
+  assert.match(code, /thinkingDurationMs: message\.thinkingDurationMs/)
+  assert.match(code, /thinkingDisplay: message\.thinkingDisplay/)
+})
