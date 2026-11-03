@@ -39,3 +39,12 @@ test('only V2 plugin registry exists, with explicit validation', () => {
   assert.doesNotMatch(manager, /migrateV1ToV2|migrateToSinglePluginFile|migrateFromEnabledPlugins|installed_plugins_v2\.json|InstalledPluginsFileSchemaV1/)
   assert.doesNotMatch(code('utils/plugins/schemas.ts'), /InstalledPluginsFileSchemaV1|InstalledPluginsFileV1/)
 })
+
+test('retired shell and output tools are absent from current invocation paths', () => {
+  const taskStop = code('tools/TaskStopTool/TaskStopTool.ts')
+  assert.match(taskStop, /task_id: z\\.string\\(\\)\\.min\\(1\\)/)
+  assert.doesNotMatch(taskStop, /KillShell|shell_id|aliases:/)
+  assert.doesNotMatch(code('tools/BriefTool/BriefTool.ts'), /LEGACY_BRIEF_TOOL_NAME|aliases:/)
+  assert.doesNotMatch(code('services/tools/toolExecution.ts'), /getAllBaseTools|fallbackTool|deprecated tool being called by alias/)
+  assert.doesNotMatch(code('utils/env.ts'), /\\.config\\.json/)
+})
