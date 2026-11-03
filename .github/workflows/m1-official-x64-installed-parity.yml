@@ -80,6 +80,7 @@ jobs:
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
           bun test tests/m1-desktop-deeplink.test.ts
+          node --test tests/m1-desktop-cli-guards.test.mjs
           bun build/rebuild.mjs
           test -s dist/cli.js
           printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-installed-parity-candidate"
