@@ -94,6 +94,12 @@ test('installed official x64 and rebuilt CLI expose 2.1.310 background command b
       const status = snapshotCmd(command, prefix, ['daemon', 'status'], env)
       assert.equal(status.code, 1, `${name}: daemon status should fail when absent`)
       assert.match(status.out + status.err, /not running/)
+      // Native 2.1.310 stop is idempotent when no daemon was started.
+      for (const args of [['daemon', 'stop'], ['daemon', 'stop', '--any']]) {
+        const stopped = snapshotCmd(command, prefix, args, env)
+        assert.equal(stopped.code, 0, `${name}: ${args.join(' ')} returned ${stopped.err}`)
+        assert.match(stopped.out, /no daemon running/)
+      }
       for (const verb of ['stop', 'logs', 'attach']) {
         const missing = snapshotCmd(command, prefix, [verb, 'abcdef98'], env)
         assert.equal(missing.code, 1, `${name}: missing ${verb}`)
