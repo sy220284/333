@@ -1,7 +1,11 @@
 /** Read the display mode from the request that actually produced this stream. */
 export function getRequestThinkingDisplay(thinking: unknown): string | undefined {
   try {
-    if (typeof thinking !== 'object' || thinking === null || !('display' in thinking)) return undefined
+    if (typeof thinking !== 'object' || thinking === null || !('type' in thinking)) return undefined
+    if (thinking.type !== 'adaptive' && thinking.type !== 'enabled') return undefined
+    // Claude Code 2.1.310 emits "updates" for the default enabled-thinking
+    // request even when thinking.display is omitted from the API body.
+    if (!('display' in thinking)) return 'updates'
     return typeof thinking.display === 'string' ? thinking.display : undefined
   } catch {
     return undefined
