@@ -26,6 +26,7 @@ import { errorMessage } from '../../utils/errors.js'
 import { logError } from '../../utils/log.js'
 import { clearAllCaches } from '../../utils/plugins/cacheUtils.js'
 import { getInstallCounts } from '../../utils/plugins/installCounts.js'
+import { getPluginDataDirSize } from '../../utils/plugins/pluginDirectories.js'
 import {
   isPluginInstalled,
   loadInstalledPluginsV2,
@@ -158,6 +159,7 @@ export async function pluginListHandler(options: {
   json?: boolean
   available?: boolean
   cowork?: boolean
+  dataSize?: boolean | string
 }): Promise<void> {
   if (options.cowork) setUseCoworkPlugins(true)
   logEvent('tengu_plugin_list_command', {})
@@ -169,6 +171,10 @@ export async function pluginListHandler(options: {
   const enabledPlugins = getPluginEditableScopes()
 
   const pluginIds = Object.keys(installedData.plugins)
+  if (options.json && typeof options.dataSize === 'string' &&
+      !(installedData.plugins[options.dataSize]?.length > 0)) {
+    cliError('--data-size names a plugin that is not installed')
+  }
 
   // Load all plugins once. The JSON and human paths both need:
   //  - loadErrors (to show load failures per plugin)
@@ -207,6 +213,8 @@ export async function pluginListHandler(options: {
       projectPath?: string
       mcpServers?: Record<string, unknown>
       errors?: string[]
+      dataDirSize?: { bytes: number; human: string }
+      dataDirUnreadable?: boolean
     }> = []
 
     for (const pluginId of pluginIds.sort()) {
@@ -221,6 +229,16 @@ export async function pluginListHandler(options: {
             e.source === pluginId || ('plugin' in e && e.plugin === pluginName),
         )
         .map(getPluginErrorMessage)
+
+      let dataDirSize: { bytes: number; human: string } | undefined
+      let dataDirUnreadable = false
+      if (options.dataSize === true || options.dataSize === pluginId) {
+        try {
+          dataDirSize = await getPluginDataDirSize(pluginId, { throwIfUnreadable: true }) ?? undefined
+        } catch {
+          dataDirUnreadable = true
+        }
+      }
 
       for (const installation of installations) {
         // Try to find the loaded plugin to get MCP servers
@@ -248,6 +266,8 @@ export async function pluginListHandler(options: {
           projectPath: installation.projectPath,
           mcpServers,
           errors: pluginErrors.length > 0 ? pluginErrors : undefined,
+          dataDirSize,
+          dataDirUnreadable: dataDirUnreadable || undefined,
         })
       }
     }
