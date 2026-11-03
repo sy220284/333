@@ -65,7 +65,7 @@ try {
   const candidateOptions = optionNames(candAssistantHelp)
   const missingPublicOptions = referenceOptions.filter(x => !candidateOptions.includes(x))
   const extraCandidateOptions = candidateOptions.filter(x => !referenceOptions.includes(x))
-  writeFileSync(report, JSON.stringify({
+  writeFileSync(report, `${JSON.stringify({
     target: '2.1.310',
     scenario: 'retired-assistant-command-help',
     reference_matches_general_help: true,
@@ -74,7 +74,7 @@ try {
     candidate_global_help_matches_reference: candidateGlobalHelpMatchesOfficial,
     missing_public_options: missingPublicOptions,
     extra_candidate_options: extraCandidateOptions,
-  }, null, 2) + '\n')
+  }, null, 2)}\n`)
   console.log(JSON.stringify({
     assistant_command_retirement_matches_reference: true,
     candidate_global_help_matches_reference: candidateGlobalHelpMatchesOfficial,
