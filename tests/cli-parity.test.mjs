@@ -65,7 +65,7 @@ for (const args of [
     // baseline as an exact guard for every unchanged command/option.
     if (args.length === 1 && args[0] === '--help') {
       const approvedAdded = new Set([
-        '--autocompact', '--permission-prompts', '--prompt-suggestions',
+        '--bg', '--autocompact', '--permission-prompts', '--prompt-suggestions',
         '--restricted', '--safe-mode', '--ax-screen-reader', '--teleport', '--cloud', '--environment',
         '--remote-control', '--remote-control-session-name-prefix', '--system-prompt-snapshot', '--plugin-url', '--exclude-dynamic-system-prompt-sections', '--forward-subagent-text', '--permission-prompt-tool',
       ]);
@@ -86,13 +86,28 @@ for (const args of [
       );
       assert.equal(rebuilt.flags.includes('--mcp-debug'), false,
         'Retired --mcp-debug unexpectedly returned to the public CLI help');
-      assert.deepEqual(rebuilt.commands, baseline.commands,
-        'Existing CLI commands changed unexpectedly');
+      // Official 2.1.310 ships a background-session fleet: these commands
+      // did not exist in the 2.1.88 baseline, and must be checked against
+      // the new binary, not rejected as unexplained additions.
+      const targetCommands = new Set(['attach', 'logs', 'stop', 'respawn', 'rm', 'daemon']);
+      const addedCommands = rebuilt.commands.filter(command => !baseline.commands.includes(command));
+      assert.deepEqual(addedCommands.filter(command => !targetCommands.has(command)), [],
+        'Unknown new CLI subcommand outside official 2.1.310');
+      for (const required of targetCommands) {
+        assert.ok(rebuilt.commands.includes(required), 'Missing 2.1.310 background command: ' + required);
+      }
+      assert.deepEqual(baseline.commands.filter(command => !rebuilt.commands.includes(command)), [],
+        'Older public CLI command was lost unexpectedly');
       const help = compiledHelp(args);
       assert.match(help, /--fallback-model <model>/,
         'Ordered fallback model interface missing');
       assert.match(help, /--autocompact <auto\|tokens>/,
         'Auto-compact window interface missing');
+    } else if (args[0] === 'agents') {
+      assert.ok(rebuilt.flags.includes('--json'), 'Official background agents JSON mode is missing');
+      assert.ok(rebuilt.flags.includes('--all'), 'Official background agents completion filter is missing');
+      assert.ok(rebuilt.flags.includes('--cwd'), 'Official background agents cwd filter is missing');
+      assert.ok(rebuilt.flags.includes('--setting-sources'), 'Existing settings source selector was lost');
     } else {
       assert.deepEqual(rebuilt, baseline, 'Unchanged CLI options or subcommands differ from 2.1.88 original');
     }
