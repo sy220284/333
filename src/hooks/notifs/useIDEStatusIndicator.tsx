@@ -1,4 +1,5 @@
 import { c as _c } from "react/compiler-runtime";
+import { useEffect } from 'react';
 import { useNotifications } from 'src/context/notifications.js';
 import type { MCPServerConnection } from 'src/services/mcp/types.js';
 import { type IDEExtensionInstallationStatus, isJetBrainsIde } from 'src/utils/ide.js';
