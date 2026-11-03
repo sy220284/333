@@ -152,22 +152,8 @@ export function useReplBridge(messages: Message[], setMessages: (action: React.S
             shouldShowAppUpgradeMessage
           } = await import('../bridge/envLessBridgeConfig.js');
 
-          // Assistant mode: perpetual bridge session — claude.ai shows one
-          // continuous conversation across CLI restarts instead of a new
-          // session per invocation. initBridgeCore reads bridge-pointer.json
-          // (the same crash-recovery file #20735 added) and reuses its
-          // {environmentId, sessionId} via reuseEnvironmentId +
-          // api.reconnectSession(). Teardown skips archive/deregister/
-          // pointer-clear so the session survives clean exits, not just
-          // crashes. Non-assistant bridges clear the pointer on teardown
-          // (crash-recovery only).
-          let perpetual = false;
-          if (feature('KAIROS')) {
-            const {
-              isAssistantMode
-            } = await import('../assistant/index.js');
-            perpetual = isAssistantMode();
-          }
+          // Public remote-control sessions follow the supported lifecycle.
+          const perpetual = false;
 
           // When a user message arrives from claude.ai, inject it into the REPL.
           // Preserves the original UUID so that when the message is forwarded
@@ -189,16 +175,7 @@ export function useReplBridge(messages: Message[], setMessages: (action: React.S
               const {
                 resolveAndPrepend
               } = await import('../bridge/inboundAttachments.js');
-              let sanitized = fields.content;
-              if (feature('KAIROS_GITHUB_WEBHOOKS')) {
-                /* eslint-disable @typescript-eslint/no-require-imports */
-                const {
-                  sanitizeInboundWebhookContent
-                } = require('../bridge/webhookSanitizer.js') as typeof import('../bridge/webhookSanitizer.js');
-                /* eslint-enable @typescript-eslint/no-require-imports */
-                sanitized = sanitizeInboundWebhookContent(fields.content);
-              }
-              const content = await resolveAndPrepend(msg, sanitized);
+              const content = await resolveAndPrepend(msg, fields.content);
               const preview = typeof content === 'string' ? content.slice(0, 80) : `[${content.length} content blocks]`;
               logForDebugging(`[bridge:repl] Injecting inbound user message: ${preview}${uuid ? ` uuid=${uuid}` : ''}`);
               enqueue({
