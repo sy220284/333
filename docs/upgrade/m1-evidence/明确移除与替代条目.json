@@ -267,8 +267,12 @@
       "source_line": 5407,
       "source_text": "Removed the \"bash commands will be sandboxed\" startup banner — sandbox status still shows in `/status` and when a command is blocked",
       "release_change": "REMOVAL",
-      "target_2_1_310_state": "TO_BE_CONFIRMED",
-      "last_code_consumer": null
+      "target_2_1_310_state": "OBSOLETE_SANDBOX_STARTUP_BANNER_REMOVED",
+      "last_code_consumer": null,
+      "target_code": "2.1.310 移除记录 + 官方反编译欢迎页检查",
+      "candidate_code": "src/components/LogoV2/LogoV2.tsx; src/utils/status.tsx; src/components/sandbox/SandboxSettings.tsx",
+      "actual_scope": "从正常/简洁/屏幕阅读器三类欢迎页删除旧沙箱启动横幅，保留 /status 沙箱信息及 /sandbox 设置入口",
+      "candidate_verification": "SOURCE_REVIEWED_CI_RUNNING"
     },
     {
       "id": "2.1.157#029",
@@ -342,7 +346,7 @@
   ],
   "counts": {
     "explicit_removals": 33,
-    "source_target_crosscheck": 15,
-    "pending_source_target_crosscheck": 18
+    "source_target_crosscheck": 16,
+    "pending_source_target_crosscheck": 17
   }
 }
