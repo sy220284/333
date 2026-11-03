@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { shouldRejectOutOfScopeWrite } from '../src/utils/permissions/writeScopePolicy.mjs'
 
-const source = p => readFileSync(new URL('../' + p, import.meta.url), 'utf8')
+const source = p => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
 
 test('2.1.314 confinement is opt-in and enterprise restriction cannot be disabled by a lower setting', () => {
   for (const managed of [false, true]) {

@@ -4,7 +4,12 @@
  * must never poison the complete startup command registry.
  */
 export function isValidCustomCommandName(name) {
-  return typeof name === 'string' &&
-    name.length > 0 && name.length <= 256 &&
-    /^[^\s\u0000-\u001f\u007f]+(?: \(MCP\))?$/.test(name)
+  if (typeof name !== 'string' || name.length === 0 || name.length > 256) return false
+  const suffix = ' (MCP)'
+  const command = name.endsWith(suffix) ? name.slice(0, -suffix.length) : name
+  if (command.length === 0) return false
+  return [...command].every(char => {
+    const code = char.codePointAt(0)
+    return !/\s/.test(char) && code > 0x1f && code !== 0x7f
+  })
 }

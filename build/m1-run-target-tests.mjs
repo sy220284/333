@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const TARGET_FILE = 'docs/upgrade/m1-evidence/target-release.json'
-const TEST_FILE = /^tests\/[A-Za-z0-9_.\/-]+\.test\.(?:mjs|ts)$/
+const TEST_FILE = /^tests\/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\.test\.(?:mjs|ts)$/
 
 export function collectImplementedReleaseTests(ledger, exists = path => existsSync(resolve(ROOT, path))) {
   assert.ok(Array.isArray(ledger.entries), 'Target release ledger must contain individual entries')

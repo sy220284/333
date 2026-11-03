@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { shouldLexMemoryContent } from '../src/utils/memoryLexGate.mjs'
 
 test('very long CLAUDE.md list without include or HTML comment skips expensive lexer', () => {
-  const longList = '- ' + 'x'.repeat(1024*1024)
+  const longList = `- ${'x'.repeat(1024*1024)}`
   assert.equal(shouldLexMemoryContent(longList,true),false)
   assert.equal(shouldLexMemoryContent('Account: user@example.test',true),false)
 })

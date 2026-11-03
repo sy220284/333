@@ -19,7 +19,7 @@ test('command, prompt, agent, callback and HTTP hooks all use the shared unit co
     'src/utils/hooks/execPromptHook.ts',
     'src/utils/hooks/execHttpHook.ts',
   ]) {
-    const src=readFileSync(new URL('../'+file,import.meta.url),'utf8')
+    const src=readFileSync(new URL(`../${file}`,import.meta.url),'utf8')
     assert.match(src,/resolveHookTimeoutMs\(hook\.timeout,/,file)
     assert.doesNotMatch(src,/hook\.timeout\s*\?\s*hook\.timeout\s*\*\s*1000/,file)
   }

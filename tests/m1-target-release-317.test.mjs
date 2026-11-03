@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { intermediateVersions, validateReleaseTarget } from '../build/verify-target-release.mjs'
-const read = name => JSON.parse(readFileSync(new URL('../' + name, import.meta.url), 'utf8'))
+const read = name => JSON.parse(readFileSync(new URL(`../${name}`, import.meta.url), 'utf8'))
 test('M1 and M10 use 2.1.317 as the only current acceptance target', () => {
   const target = read('docs/upgrade/m1-evidence/target-release.json')
   const coverage = read('docs/upgrade/upgrade-coverage.json')

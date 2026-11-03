@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
-const read = name => readFileSync(new URL('../' + name, import.meta.url), 'utf8')
+const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
 
 test('auto-injected instructions record an incomplete view', () => {
   assert.match(read('src/utils/attachments.ts'), /isPartialView: memoryFile\.contentDiffersFromDisk/)

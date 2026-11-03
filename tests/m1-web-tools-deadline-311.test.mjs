@@ -32,7 +32,7 @@ test('explicit user cancellation propagates immediately', async () => {
 })
 
 test('WebFetch and WebSearch both use the bounded controller for all phases', () => {
-  const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
+  const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
   const fetch = read('src/tools/WebFetchTool/WebFetchTool.ts')
   const search = read('src/tools/WebSearchTool/WebSearchTool.ts')
   assert.match(fetch, /withWebToolDeadline\(abortController, async requestController/)

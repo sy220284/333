@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
-const read = name => readFileSync(new URL('../' + name, import.meta.url), 'utf8')
+const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
 
 test('2.1.316 shutdown registers live Shell children on macOS and Linux', () => {
   const shell=read('src/utils/ShellCommand.ts')

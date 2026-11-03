@@ -50,7 +50,7 @@ test('最终版动画资源结构完整，所有帧与展示元素存在实际�
   }
   assert.ok(Array.isArray(clickAnimationNames) && clickAnimationNames.length > 0)
   assert.equal(new Set(clickAnimationNames).size, clickAnimationNames.length)
-  for (const [name, frames] of Object.entries(clawdAnimations)) assertFrames(frames)
+  for (const frames of Object.values(clawdAnimations)) assertFrames(frames)
   for (const name of clickAnimationNames) assert.ok(clawdAnimations[name], `unknown click animation: ${name}`)
   assertFrames(clawdIdleSequence)
   // The target's actual animation glyphs, order and timing are checked by

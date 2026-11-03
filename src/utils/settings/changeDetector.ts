@@ -1,5 +1,5 @@
 import chokidar, { type FSWatcher } from 'chokidar'
-import { readFile, readdir, stat } from 'fs/promises'
+import { readFile, readdir, stat } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import * as platformPath from 'path'
 import { getIsRemoteMode } from '../../bootstrap/state.js'

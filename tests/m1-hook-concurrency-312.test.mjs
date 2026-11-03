@@ -71,7 +71,7 @@ test('cancelled queued generator never starts its underlying hook', async () => 
   ctl.abort()
   assert.equal((await pending).done, true)
   assert.equal(executions, 0)
-  active.forEach(release => release())
+  for (const release of active) release()
 })
 
 test('a shorter overdue hook is not blocked by an earlier long-timeout waiter', async () => {
@@ -90,5 +90,5 @@ test('a shorter overdue hook is not blocked by an earlier long-timeout waiter', 
   active[0]()
   const releaseLong = await longWaiter
   releaseLong()
-  active.slice(1).forEach(release => release())
+  for (const release of active.slice(1)) release()
 })
