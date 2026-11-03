@@ -1,0 +1,86 @@
+name: M1 官方 2.1.310 Linux x64 安装后真实行为对照
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m1-official-x64-installed-parity.yml'
+      - 'build/m1-x64-reference-probe.mjs'
+      - 'tests/m1-x64-local-api.py'
+      - 'tests/m1_x64_stream_events_test.py'
+      - 'src/**'
+      - 'build/rebuild.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  installed-reference:
+    name: 固定版本安装、校验与真实 CLI/工具链试验
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 使用 Anthropic 官方原生安装器安装 Linux x64 2.1.310
+        shell: bash
+        run: |
+          set -euo pipefail
+          export HOME="${RUNNER_TEMP}/claude-2.1.310-install-home"
+          export XDG_CONFIG_HOME="${HOME}/.config"
+          export DISABLE_AUTOUPDATER=1
+          mkdir -p "${HOME}" "${XDG_CONFIG_HOME}"
+          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
+            'https://claude.ai/install.sh' -o "${RUNNER_TEMP}/claude-official-install.sh"
+          bash "${RUNNER_TEMP}/claude-official-install.sh" 2.1.310
+          binary="${HOME}/.local/bin/claude"
+          test -x "${binary}"
+          version="$("${binary}" --version)"
+          echo "安装后版本：${version}"
+          [[ "${version}" == 2.1.310* ]]
+          resolved="$(readlink -f "${binary}")"
+          test -f "${resolved}"
+          echo 'b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  '"${resolved}" | sha256sum --check
+          "${binary}" --help > "${RUNNER_TEMP}/claude-installed-help.txt"
+          test -s "${RUNNER_TEMP}/claude-installed-help.txt"
+          printf 'CLAUDE_REFERENCE_BIN=%s\n' "${binary}" >> "${GITHUB_ENV}"
+          printf 'CLAUDE_INSTALLED_HOME=%s\n' "${HOME}" >> "${GITHUB_ENV}"
+          printf 'DISABLE_AUTOUPDATER=1\n' >> "${GITHUB_ENV}"
+          printf 'version=%s\nresolved=%s\nsha256=%s\n' \
+            "${version}" "${resolved}" \
+            'b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56' \
+            > "${RUNNER_TEMP}/claude-official-install-evidence.txt"
+      - name: 安装版执行官方 CLI 基准并保存实际结果
+        shell: bash
+        run: |
+          set -euo pipefail
+          HOME="${CLAUDE_INSTALLED_HOME}" node build/m1-x64-reference-probe.mjs \
+            --reference "${CLAUDE_REFERENCE_BIN}" \
+            --report "${RUNNER_TEMP}/claude-installed-cli-parity.json"
+      - name: 安装版执行本机模拟 API 与工具权限实测
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p 'm1_x64_stream_events_test.py'
+          HOME="${CLAUDE_INSTALLED_HOME}" python3 tests/m1-x64-local-api.py \
+            --binary "${CLAUDE_REFERENCE_BIN}" \
+            --report "${RUNNER_TEMP}/claude-installed-loopback-api.json"
+      - name: 归档安装及运行结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: official-2.1.310-installed-x64-real-parity
+          path: |
+            ${{ runner.temp }}/claude-official-install-evidence.txt
+            ${{ runner.temp }}/claude-installed-help.txt
+            ${{ runner.temp }}/claude-installed-cli-parity.json
+            ${{ runner.temp }}/claude-installed-loopback-api.json
+          retention-days: 30
+          if-no-files-found: warn
