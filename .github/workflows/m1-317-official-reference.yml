@@ -9,6 +9,10 @@ on:
       - 'tests/m1-target-release-317.test.mjs'
       - 'tests/m1-read-repeat-317.test.mjs'
       - 'tests/m1-subagent-effort-317.test.mjs'
+      - 'build/m1-cli-surface-audit.mjs'
+      - 'build/install-public-deps.mjs'
+      - 'src/main.tsx'
+      - 'src/cli/handlers/**'
       - 'src/tools/FileReadTool/**'
       - 'src/tools/AgentTool/**'
   workflow_dispatch:
@@ -32,6 +36,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
       - name: 校验仓库对当前与历史基线的独立定义
         run: node --test tests/m1-target-release-317.test.mjs tests/m1-read-repeat-317.test.mjs tests/m1-subagent-effort-317.test.mjs
       - name: 获取官方 2.1.317 原生发行清单与 Linux x64
@@ -59,6 +66,27 @@ jobs:
           HOME="${RUNNER_TEMP}/m1-317-isolated-home" DISABLE_AUTOUPDATER=1 ./claude --help > official-help.txt
           test -s official-help.txt
           printf '%s\n' "${version}" > actual-version.txt
+      - name: 基于当前 PR 的源码独立构建候选 CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/verify-bundled-assets.mjs
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+          bun build/rebuild.mjs
+          test -s dist/cli.js
+          printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-317-candidate"
+          chmod +x "${RUNNER_TEMP}/m1-317-candidate"
+      - name: 官方 2.1.317 与独立重建版 32 项 CLI 参数对照
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/m1-cli-surface-audit.mjs \
+            --reference "${RUNNER_TEMP}/m1-317-reference/claude" \
+            --candidate "${RUNNER_TEMP}/m1-317-candidate" \
+            --target 2.1.317 \
+            --report "${RUNNER_TEMP}/m1-317-reference/cli-surface-parity.json" \
+            --strict
       - name: 保存官方原始清单与可复现的二进制校验结果
         if: always()
         uses: actions/upload-artifact@v4
@@ -69,5 +97,6 @@ jobs:
             ${{ runner.temp }}/m1-317-reference/expected-sha256.txt
             ${{ runner.temp }}/m1-317-reference/actual-version.txt
             ${{ runner.temp }}/m1-317-reference/official-help.txt
+            ${{ runner.temp }}/m1-317-reference/cli-surface-parity.json
           if-no-files-found: warn
           retention-days: 90
