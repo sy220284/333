@@ -13,15 +13,24 @@ test('M1 and M10 use 2.1.317 as the only current acceptance target', () => {
   assert.equal(target.previous_target, '2.1.310')
   for (const ledger of [coverage, signoffs, runtime]) assert.equal(ledger.target_version, target.target_version)
   assert.equal(historical.target_version, target.previous_target)
-  assert.equal(signoffs.features.length, 0)
-  assert.equal(signoffs.scenarios.length, 0)
-  assert.equal(runtime.summary.formally_accepted, 0)
+  const acceptedIds = signoffs.features.map(x => x.id)
+  const signedScenarioIds = signoffs.scenarios.map(x => x.id)
+  assert.equal(new Set(acceptedIds).size, acceptedIds.length, 'duplicate signed features')
+  assert.equal(new Set(signedScenarioIds).size, signedScenarioIds.length, 'duplicate signed scenarios')
+  const knownFeatureIds = new Set(coverage.features.map(x => x.id))
+  const knownScenarioIds = new Set(coverage.scenarios.map(x => x.id))
+  for (const id of acceptedIds) assert.ok(knownFeatureIds.has(id), `unknown signed feature ${id}`)
+  for (const id of signedScenarioIds) assert.ok(knownScenarioIds.has(id), `unknown signed scenario ${id}`)
+  assert.equal(runtime.summary.formally_accepted, acceptedIds.length,
+    'runtime matrix must reflect the independently signed M10 ledger')
+  assert.deepEqual(runtime.features.filter(x => x.status === 'VERIFIED').map(x => x.id).sort(),
+    [...acceptedIds].sort(), 'runtime matrix must not infer acceptance from source progress')
   assert.equal(coverage.features.length, 102)
   assert.equal(coverage.scenarios.length, 84)
   assert.ok(target.verified_x64_sha256 === null ||
     /^[a-f0-9]{64}$/.test(target.verified_x64_sha256))
 })
-test('392 official release-note rows remain individually traceable and unaccepted', () => {
+test('392 historical release-note rows remain traceable without constraining target sign-off', () => {
   const target = read('docs/upgrade/m1-evidence/target-release.json')
   const ledger = read('docs/upgrade/m1-evidence/2.1.311-2.1.317-官方逐条变更与验收台账.json')
   assert.equal(ledger.target_version, target.target_version)
@@ -34,7 +43,10 @@ test('392 official release-note rows remain individually traceable and unaccepte
     ['2.1.311','2.1.312','2.1.313','2.1.314','2.1.315','2.1.316','2.1.317'])
   for (const row of ledger.entries) {
     assert.ok(row.version && row.source_url && row.official_text)
-    assert.notEqual(row.verification_status, 'VERIFIED', row.id)
+    if (row.verification_status === '通过完整目标验收') {
+      assert.ok(row.runtime_evidence && row.build_evidence,
+        `${row.id}: final acceptance requires original and candidate runtime evidence`)
+    }
   }
 })
 
