@@ -1,4 +1,4 @@
-name: PR7 源码快照诊断
+name: PR7 源码快照诊断（可复用）
 on:
   push:
     branches:

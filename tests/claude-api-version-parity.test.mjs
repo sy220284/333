@@ -104,6 +104,6 @@ test('api-version opens the bundled 2.1.310 migration guide through the actual R
   } finally {
     server.closeAllConnections()
     await new Promise(ok => server.close(ok))
-    rmSync(tmp, { recursive: true, force: true })
+    rmSync(tmp, { recursive: true, force: true, maxRetries: 25, retryDelay: 200 })
   }
 })

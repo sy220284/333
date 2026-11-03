@@ -14,7 +14,7 @@ export function formatSymlinkPermissionWarning(
 ): string {
   const rel = relative(workingDirectory, target)
   const outsideWorkspace =
-    rel === '..' || rel.startsWith('..' + sep) || isAbsolute(rel)
+    rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)
   const action = operation === 'read' ? '读取' : '修改'
   return outsideWorkspace
     ? `此操作将通过符号链接${action}工作目录之外的文件：${target}`
