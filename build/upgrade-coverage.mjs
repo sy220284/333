@@ -24,6 +24,8 @@ export function buildCoverage() {
   const scenarioDoc = doc('2.1.310-验收与迁移矩阵.md');
   const blueprintDoc = doc('2.1.310-全面升级方案.md');
   assert.match(blueprintDoc, /实施方案（v4）/, '功能责任必须与正式v4方案同步');
+  const target = JSON.parse(doc('m1-evidence/target-release.json'));
+  assert.match(target.target_version, /^2\.1\.\d+$/, 'Invalid upgrade target version');
   const assignment = JSON.parse(doc('v4-功能任务责任表.json'));
   assert.equal(assignment.schema, 1);
   assert.equal(assignment.source_plan, '2.1.310-v4');
@@ -63,7 +65,7 @@ export function buildCoverage() {
   }
   return {
     schema: 1,
-    target_version: '2.1.310',
+    target_version: target.target_version,
     baseline_version: '2.1.88',
     status_semantics: 'Documentation linkage only; UNVERIFIED means no runtime feature acceptance',
     counts: { features: features.length, scenarios: scenarios.length, tasks: tasks.length },
