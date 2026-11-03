@@ -235,6 +235,8 @@ export type ToolUseContext = {
   pushApiMetricsEntry?: (ttftMs: number) => void
   setStreamMode?: (mode: SpinnerMode) => void
   onCompactProgress?: (event: CompactProgressEvent) => void
+  /** Interactive spinner receives the true max-output recovery transition. */
+  onOutputLimitRecovery?: (status: { attempt: number; limit: number } | null) => void
   setSDKStatus?: (status: SDKStatus) => void
   openMessageSelector?: () => void
   updateFileHistoryState: (
