@@ -975,7 +975,6 @@ export async function cachePlugin(
       )
     }
   } else {
-    manifest = options?.manifest || {  } else {
     manifest = options?.manifest || {
       name: tempName,
       description: `Plugin cached from ${typeof source === 'string' ? source : source.source}`,
