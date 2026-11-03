@@ -18,7 +18,10 @@ import { withNotebookFileLock } from '../../utils/notebookFileLock.js'
 import { safeParseJSON } from '../../utils/json.js'
 import { lazySchema } from '../../utils/lazySchema.js'
 import { expandPath } from '../../utils/path.js'
-import { checkWritePermissionForTool } from '../../utils/permissions/filesystem.js'
+import {
+  checkWritePermissionForTool,
+  isWriteOutsideWorkingDirectoriesForbidden,
+} from '../../utils/permissions/filesystem.js'
 import type { PermissionDecision } from '../../utils/permissions/PermissionResult.js'
 import { jsonParse, jsonStringify } from '../../utils/slowOperations.js'
 import { NOTEBOOK_EDIT_TOOL_NAME } from './constants.js'
@@ -221,6 +224,17 @@ export const NotebookEditTool = buildTool({
         result: false,
         message: 'UNC notebook paths are not supported.',
         errorCode: 12,
+      }
+    }
+
+
+    if (isWriteOutsideWorkingDirectoriesForbidden(
+      fullPath, toolUseContext.getAppState().toolPermissionContext,
+    )) {
+      return {
+        result: false,
+        message: 'Writing outside working directories is blocked by permissions.blockWritesOutsideWorkingDirectories.',
+        errorCode: 13,
       }
     }
 

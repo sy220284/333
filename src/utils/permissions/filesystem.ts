@@ -32,6 +32,7 @@ import { getPlanSlug, getPlansDirectory } from '../plans.js'
 import { getPlatform } from '../platform.js'
 import { getProjectDir } from '../sessionStorage.js'
 import { SETTING_SOURCES } from '../settings/constants.js'
+import { getInitialSettings, getSettingsForSource } from '../settings/settings.js'
 import {
   getSettingsFilePathForSource,
   getSettingsRootPathForSource,
@@ -43,6 +44,7 @@ import type {
   PermissionDecision,
   PermissionResult,
 } from './PermissionResult.js'
+import { shouldRejectOutOfScopeWrite } from './writeScopePolicy.mjs'
 import type { PermissionRule, PermissionRuleSource } from './PermissionRule.js'
 import { createReadRuleSuggestion } from './PermissionUpdate.js'
 import type { PermissionUpdate } from './PermissionUpdateSchema.js'
@@ -1214,6 +1216,24 @@ export function checkReadPermissionForTool(
  *   re-derived internally for error messages and internal-path checks, so a
  *   stale value would silently check deny rules for the wrong path.
  */
+/** Enforce the configured write boundary before all allow rules or bypass modes. */
+export function isWriteOutsideWorkingDirectoriesForbidden(
+  path: string,
+  context: ToolPermissionContext,
+  precomputedPathsToCheck?: readonly string[],
+): boolean {
+  const managedEnabled =
+    getSettingsForSource('policySettings')?.permissions?.blockWritesOutsideWorkingDirectories
+  const effectiveEnabled =
+    getInitialSettings().permissions?.blockWritesOutsideWorkingDirectories
+  if (!managedEnabled && !effectiveEnabled) return false
+  return shouldRejectOutOfScopeWrite(
+    managedEnabled,
+    effectiveEnabled,
+    pathInAllowedWorkingPath(path, context, precomputedPathsToCheck),
+  )
+}
+
 export function checkWritePermissionForTool<Input extends AnyObject>(
   tool: Tool<Input>,
   input: z.infer<Input>,
@@ -1231,6 +1251,13 @@ export function checkWritePermissionForTool<Input extends AnyObject>(
   // 1. Check for deny rules - check both the original path and resolved symlink path
   const pathsToCheck =
     precomputedPathsToCheck ?? getPathsForPermissionCheck(path)
+  if (isWriteOutsideWorkingDirectoriesForbidden(path, toolPermissionContext, pathsToCheck)) {
+    return {
+      behavior: 'deny',
+      message: `Write confined to working directories by permissions.blockWritesOutsideWorkingDirectories: ${path}`,
+      decisionReason: { type: 'workingDir', reason: 'Configured write confinement' },
+    }
+  }
   if (process.env.CLAUDE_CODE_RESTRICTED === '1' &&
       !pathInAllowedWorkingPath(path, toolPermissionContext, pathsToCheck)) {
     return {

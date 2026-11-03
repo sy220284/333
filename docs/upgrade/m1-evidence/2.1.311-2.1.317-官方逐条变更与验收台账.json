@@ -1619,9 +1619,18 @@
       "domain_candidate": "工具权限与安全",
       "official_text": "Added `permissions.blockWritesOutsideWorkingDirectories`: Write, Edit and NotebookEdit refuse paths outside the working directories in every permission mode",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.314",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "已实现配置验证、统一权限拒绝及三个写工具校验；待目标版构建、真实目录及符号链接验证",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/utils/settings/types.ts",
+        "src/utils/permissions/filesystem.ts",
+        "src/tools/FileWriteTool/FileWriteTool.ts",
+        "src/tools/FileEditTool/FileEditTool.ts",
+        "src/tools/NotebookEditTool/NotebookEditTool.ts",
+        "src/utils/permissions/writeScopePolicy.mjs",
+        "src/utils/permissions/writeScopePolicy.d.mts",
+        "tests/m1-write-scope-314.test.mjs"
+      ]
     },
     {
       "id": "2.1.314#002",

@@ -44,6 +44,7 @@ import { logError } from '../../utils/log.js'
 import { expandPath } from '../../utils/path.js'
 import {
   checkWritePermissionForTool,
+  isWriteOutsideWorkingDirectoriesForbidden,
   matchingRuleForInput,
 } from '../../utils/permissions/filesystem.js'
 import type { PermissionDecision } from '../../utils/permissions/PermissionResult.js'
@@ -139,6 +140,16 @@ export const FileEditTool = buildTool({
     // Use expandPath for consistent path normalization (especially on Windows
     // where "/" vs "\" can cause readFileState lookup mismatches)
     const fullFilePath = expandPath(file_path)
+
+    if (isWriteOutsideWorkingDirectoriesForbidden(
+      fullFilePath, toolUseContext.getAppState().toolPermissionContext,
+    )) {
+      return {
+        result: false,
+        message: 'Writing outside working directories is blocked by permissions.blockWritesOutsideWorkingDirectories.',
+        errorCode: 13,
+      }
+    }
 
     // Reject edits to team memory files that introduce secrets
     const secretError = checkTeamMemSecrets(fullFilePath, new_string)

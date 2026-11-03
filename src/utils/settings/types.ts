@@ -80,6 +80,10 @@ export const PermissionsSchema = lazySchema(() =>
         .array(z.string())
         .optional()
         .describe('Additional directories to include in the permission scope'),
+      blockWritesOutsideWorkingDirectories: z
+        .boolean()
+        .optional()
+        .describe('Refuse Write, Edit and NotebookEdit outside permitted working directories in every permission mode'),
     })
     .passthrough(),
 )
