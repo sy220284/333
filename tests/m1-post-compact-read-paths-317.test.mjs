@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import test from 'node:test'
+import { collectPreservedReadFilePaths } from '../src/services/compact/preservedReadPaths.mjs'
+
+const normalize = path => path.startsWith('/') ? path : '/repo/' + path
+const read = (id, file_path) => ({
+  type: 'assistant',
+  message: { content: [{ type: 'tool_use', id, name: 'Read', input: { file_path } }] },
+})
+const result = (id, content = 'file content', is_error = false) => ({
+  type: 'user',
+  message: { content: [{ type: 'tool_result', tool_use_id: id, content, is_error }] },
+})
+const preserved = messages => collectPreservedReadFilePaths(messages, 'Read', normalize)
+
+test('2.1.317 compact: successful preserved Read prevents duplicate restoration', () => {
+  assert.deepEqual([...preserved([read('r1', 'src/file.ts'), result('r1')])], ['/repo/src/file.ts'])
+  assert.deepEqual([...preserved([
+    read('r1', 'src/file.ts'), result('r1'),
+    read('r2', './other.ts'), result('r2'),
+  ])], ['/repo/src/file.ts', '/repo/./other.ts'])
+})
+
+test('2.1.317 compact: interrupted or failed Read must be restored', () => {
+  assert.equal(preserved([read('r1', 'src/file.ts')]).size, 0)
+  assert.equal(preserved([read('r1', 'src/file.ts'), result('r1', 'permission denied', true)]).size, 0)
+  assert.equal(preserved([read('r1', 'src/file.ts'), result('unrelated')]).size, 0)
+})
+
+test('2.1.317 compact: only Read results count; empty files and multimodal results count', () => {
+  const messages = [
+    { type: 'assistant', message: { content: [{ type: 'tool_use', id: 'b1', name: 'Bash', input: { file_path: '/bash' } }] } },
+    result('b1'),
+    read('empty', '/empty.txt'), result('empty', ''),
+    read('image', '/image.png'), result('image', [{ type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAA' } }]),
+  ]
+  assert.deepEqual([...preserved(messages)], ['/empty.txt', '/image.png'])
+})
+
+test('2.1.317 compact: no legacy stub references remain', () => {
+  const compact = readFileSync(new URL('../src/services/compact/compact.ts', import.meta.url), 'utf8')
+  const prompt = readFileSync(new URL('../src/tools/FileReadTool/prompt.ts', import.meta.url), 'utf8')
+  assert.doesNotMatch(compact, /FILE_UNCHANGED_STUB|stubIds|collectReadToolFilePaths/)
+  assert.doesNotMatch(prompt, /FILE_UNCHANGED_STUB/)
+  assert.ok(compact.includes('collectPreservedReadFilePaths('))
+})
