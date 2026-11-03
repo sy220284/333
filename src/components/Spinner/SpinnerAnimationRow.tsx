@@ -14,7 +14,7 @@ import { SpinnerGlyph } from './SpinnerGlyph.js';
 import type { SpinnerMode } from './types.js';
 import { useStalledAnimation } from './useStalledAnimation.js';
 import { getDefaultCharacters, interpolateColor, toRGBColor } from './utils.js';
-import { advanceSpinnerStatusTracker, createSpinnerStatusTracker, deriveSpinnerStatus, describeSpinnerStatus, getSpinnerFrame, getProgressiveThinkingLabel, describeRetryStatus, SPINNER_METRICS_AFTER_MS, type OutputLimitRecovery, type SpinnerRetryStatus } from './statusLogic.js';
+import { advanceSpinnerStatusTracker, createSpinnerStatusTracker, deriveSpinnerStatus, describeSpinnerStatus, getSpinnerFrame, getProgressiveThinkingLabel, describeRetryStatus, advanceAnimatedTokenCount, SPINNER_METRICS_AFTER_MS, type OutputLimitRecovery, type SpinnerRetryStatus } from './statusLogic.js';
 const SEP_WIDTH = stringWidth(' · ');
 const THINKING_BARE_WIDTH = stringWidth('thinking');
 const SHOW_TOKENS_AFTER_MS = SPINNER_METRICS_AFTER_MS;
@@ -107,7 +107,7 @@ export function SpinnerAnimationRow({
   outputLimitRecovery = null,
   retryStatus = null
 }: SpinnerAnimationRowProps): React.ReactNode {
-  const [viewportRef, time] = useAnimationFrame(reducedMotion ? null : 50);
+  const [viewportRef, time] = useAnimationFrame(reducedMotion ? null : mode === 'requesting' ? 50 : 100);
 
   // === Elapsed time (wall-clock, derived from refs each frame) ===
   const now = Date.now();
@@ -153,22 +153,18 @@ export function SpinnerAnimationRow({
   const glimmerIndex = reducedMotion ? -100 : isStalled ? -100 : mode === 'requesting' ? cyclePosition % cycleLength - 10 : glimmerMessageWidth + 10 - cyclePosition % cycleLength;
   const flashOpacity = reducedMotion ? 0 : mode === 'tool-use' ? (Math.sin(time / 1000 * Math.PI) + 1) / 2 : 0;
 
-  // === Token counter animation (smooth increment, driven by 50ms clock) ===
+  // 2.1.310 samples the animated counter in 50ms logical steps even when
+  // rendering at 100ms in non-requesting modes. It also decays on reset.
   const tokenCounterRef = useRef(currentResponseLength);
-  if (reducedMotion) {
+  const tokenCounterTickRef = useRef(time);
+  if (reducedMotion || Math.abs(currentResponseLength - tokenCounterRef.current) > 2000) {
     tokenCounterRef.current = currentResponseLength;
+    tokenCounterTickRef.current = time;
   } else {
-    const gap = currentResponseLength - tokenCounterRef.current;
-    if (gap > 0) {
-      let increment;
-      if (gap < 70) {
-        increment = 3;
-      } else if (gap < 200) {
-        increment = Math.max(8, Math.ceil(gap * 0.15));
-      } else {
-        increment = 50;
-      }
-      tokenCounterRef.current = Math.min(tokenCounterRef.current + increment, currentResponseLength);
+    const ticks = Math.max(0, Math.floor((time - tokenCounterTickRef.current) / 50));
+    if (ticks > 0) {
+      tokenCounterRef.current = advanceAnimatedTokenCount(tokenCounterRef.current, currentResponseLength, ticks);
+      tokenCounterTickRef.current += ticks * 50;
     }
   }
   const displayedResponseLength = tokenCounterRef.current;
