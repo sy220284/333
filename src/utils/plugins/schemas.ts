@@ -1462,36 +1462,6 @@ export const InstalledPluginSchema = lazySchema(() =>
 )
 
 /**
- * Schema for the installed_plugins.json file (V1 format)
- *
- * Contains a version number and maps plugin IDs to their installation metadata.
- * Maintained automatically by Claude Code, not edited by users.
- *
- * The version field tracks schema changes. When the version doesn't match
- * the current schema version, Claude Code will update the file on next startup.
- *
- * Example file:
- * {
- *   "version": 1,
- *   "plugins": {
- *     "code-formatter@anthropic-tools": { ... },
- *     "db-assistant@company-internal": { ... }
- *   }
- * }
- */
-export const InstalledPluginsFileSchemaV1 = lazySchema(() =>
-  z.object({
-    version: z.literal(1).describe('Schema version 1'),
-    plugins: z
-      .record(
-        PluginIdSchema(), // Validated plugin ID key (e.g., "formatter@tools")
-        InstalledPluginSchema(),
-      )
-      .describe('Map of plugin IDs to their installation metadata'),
-  }),
-)
-
-/**
  * Scope types for plugin installation (V2)
  *
  * Plugins can be installed at different scopes:
@@ -1566,14 +1536,6 @@ export const InstalledPluginsFileSchemaV2 = lazySchema(() =>
       .record(PluginIdSchema(), z.array(PluginInstallationEntrySchema()))
       .describe('Map of plugin IDs to arrays of installation entries'),
   }),
-)
-
-/**
- * Combined schema that accepts both V1 and V2 formats
- * Used for reading existing files before migration
- */
-export const InstalledPluginsFileSchema = lazySchema(() =>
-  z.union([InstalledPluginsFileSchemaV1(), InstalledPluginsFileSchemaV2()]),
 )
 
 /**
@@ -1663,9 +1625,6 @@ export type PluginMarketplaceEntry = z.infer<
 >
 export type PluginId = z.infer<ReturnType<typeof PluginIdSchema>> // string in "plugin@marketplace" format
 export type InstalledPlugin = z.infer<ReturnType<typeof InstalledPluginSchema>>
-export type InstalledPluginsFileV1 = z.infer<
-  ReturnType<typeof InstalledPluginsFileSchemaV1>
->
 export type InstalledPluginsFileV2 = z.infer<
   ReturnType<typeof InstalledPluginsFileSchemaV2>
 >
