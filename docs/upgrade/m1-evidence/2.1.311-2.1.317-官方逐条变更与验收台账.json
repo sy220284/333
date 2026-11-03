@@ -4006,9 +4006,15 @@
       "domain_candidate": "Agent与会话",
       "official_text": "Fixed `claude -p` exiting 0 when a full disk or quota lost its transcript or ~/.claude.json writes; it now prints an error and, in text and json output, exits 1. Full NFS exports may be missed",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.317",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "源码已修改，待构建与真实故障注入验收",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/utils/sessionStorage.ts",
+        "src/QueryEngine.ts",
+        "src/cli/print.ts",
+        "src/utils/sessionWriteFailurePolicy.mjs",
+        "tests/m1-session-write-loss-317.test.mjs"
+      ]
     },
     {
       "id": "2.1.317#026",
@@ -4150,9 +4156,13 @@
       "domain_candidate": "技能插件与MCP",
       "official_text": "Fixed stdio MCP servers receiving an empty `AWS_BEARER_TOKEN_BEDROCK` when their env config sets it to empty; the variable is now unset, so the server can use the machine's own AWS credentials",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.317",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "源码已修改，待构建与真实故障注入验收",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/services/mcp/client.ts",
+        "src/services/mcp/stdioEnvironment.mjs",
+        "tests/m1-mcp-stdio-env-317.test.mjs"
+      ]
     },
     {
       "id": "2.1.317#038",
