@@ -38,6 +38,31 @@ test('2.1.317 compact: only Read results count; empty files and multimodal resul
   assert.deepEqual([...preserved(messages)], ['/empty.txt', '/image.png'])
 })
 
+test('2.1.317 compact: cleared and persisted pointers are not full Read results', () => {
+  const cleared = '[Old tool result content cleared]'
+  const persisted = '<persisted-output>run-42'
+  const provenance = '<artifact-content-authored-by-others/>\\n'
+  const fullResult = block => {
+    if (typeof block.content !== 'string') return true
+    const content = block.content.startsWith(provenance)
+      ? block.content.slice(provenance.length)
+      : block.content
+    return content !== cleared && !content.startsWith('<persisted-output>')
+  }
+  const check = content => collectPreservedReadFilePaths(
+    [read('r', '/doc.md'), result('r', content)],
+    'Read',
+    normalize,
+    fullResult,
+  )
+  assert.equal(check(cleared).size, 0)
+  assert.equal(check(provenance + cleared).size, 0)
+  assert.equal(check(persisted).size, 0)
+  assert.equal(check(provenance + persisted).size, 0)
+  assert.equal(check('full file text').size, 1)
+  assert.equal(check('').size, 1)
+})
+
 test('2.1.317 compact: no legacy stub references remain', () => {
   const compact = readFileSync(new URL('../src/services/compact/compact.ts', import.meta.url), 'utf8')
   const prompt = readFileSync(new URL('../src/tools/FileReadTool/prompt.ts', import.meta.url), 'utf8')

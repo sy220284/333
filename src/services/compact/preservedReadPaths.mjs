@@ -3,14 +3,14 @@
  * preserved conversation includes both its Read call and a successful result.
  * Repeated Reads always return their content in 2.1.317.
  */
-export function collectPreservedReadFilePaths(messages, readToolName, normalizePath) {
+export function collectPreservedReadFilePaths(messages, readToolName, normalizePath, isFullResult = () => true) {
   const successfulResultIds = new Set()
   for (const message of messages) {
     if (message.type !== 'user' || !Array.isArray(message.message?.content)) {
       continue
     }
     for (const block of message.message.content) {
-      if (block.type === 'tool_result' && block.is_error !== true) {
+      if (block.type === 'tool_result' && block.is_error !== true && isFullResult(block)) {
         successfulResultIds.add(block.tool_use_id)
       }
     }
