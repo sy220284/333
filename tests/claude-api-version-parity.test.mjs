@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { createServer } from 'node:http'
 import { createHash } from 'node:crypto'
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
@@ -22,6 +22,7 @@ function response(content, stopReason) {
 
 test('api-version opens the bundled 2.1.310 migration guide through the actual Read tool', { timeout: 90000 }, async () => {
   const tmp = mkdtempSync(join(tmpdir(), '333-claude-api-'))
+  const finishedCliProcessIds = []
   let requests = []
   let targetName = ''
   const extracted = new Map()
@@ -86,6 +87,7 @@ test('api-version opens the bundled 2.1.310 migration guide through the actual R
       const timer = setTimeout(() => child.kill('SIGKILL'), 30000)
       const exit = await new Promise((ok, fail) => { child.once('error', fail); child.once('close', ok) })
       clearTimeout(timer)
+      if (process.platform === 'win32' && child.pid) finishedCliProcessIds.push(child.pid)
       assert.equal(exit, 0, `${name}: ${stderr.slice(-500)}`)
       assert.equal(JSON.parse(stdout).result, 'SKILL_READ_OK')
       const initial = requests.find(r => JSON.stringify(r.messages).includes('<command-name>/claude-api</command-name>'))
@@ -109,6 +111,25 @@ test('api-version opens the bundled 2.1.310 migration guide through the actual R
   } finally {
     server.closeAllConnections()
     await new Promise(ok => server.close(ok))
+    // Windows can report EBUSY when a CLI child left a descendant process
+    // with an inherited working directory. Identify any such process before
+    // removing the fixture; do not swallow failures or disable the test.
+    if (process.platform === 'win32' && finishedCliProcessIds.length) {
+      const script = [
+        '$ids = @(' + finishedCliProcessIds.join(',') + ')',
+        'Get-CimInstance Win32_Process |',
+        'Where-Object { $ids -contains $_.ParentProcessId } |',
+        'Select-Object ProcessId, ParentProcessId, Name | ConvertTo-Json -Compress',
+      ].join(' ')
+      const active = spawnSync('powershell.exe', ['-NoProfile', '-Command', script], {
+        encoding: 'utf8', timeout: 12000,
+      })
+      if (active.error || active.status !== 0) {
+        process.stderr.write(`Windows descendant inspection failed: ${active.error?.message ?? active.stderr}\n`)
+      } else if (active.stdout.trim()) {
+        process.stderr.write(`Windows child descendants still active after CLI close: ${active.stdout.trim()}\n`)
+      }
+    }
     rmSync(tmp, { recursive: true, force: true, maxRetries: 25, retryDelay: 200 })
   }
 })
