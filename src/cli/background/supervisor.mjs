@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 import {
   prepareFleet, fleetSocket, listSessions, createSessionRecord, reserveNewSession, saveSession,
   editSession, deleteSession, matchSession, readSession, readTail,
-  removeWorktreeSafely, isAlive
+  removeWorktreeSafely, isAlive, assertNoUnmanagedLiveWorker
 } from './sessionStore.mjs'
 
 const active = new Map()
@@ -192,12 +192,14 @@ async function command(request, socket) {
     case 'respawn': {
       const target = matchSession(await listSessions({ all: true }), request.id, { usage: 'respawn <id>', name: false })
       if (active.has(target.id)) throw new Error(`Session already running: ${target.id}`)
+      assertNoUnmanagedLiveWorker(target, new Set(active.keys()))
       const child = await launch({ ...target, state: 'starting', pid: null }, { resume: true })
       return { id: child.id, pid: child.pid }
     }
     case 'rm': {
       const found = matchSession(await listSessions({ all: true }), request.id, { usage: 'rm <id>', name: false })
       if (active.has(found.id)) await stop(found.id)
+      else assertNoUnmanagedLiveWorker(found, new Set(active.keys()))
       await removeWorktreeSafely(found.worktreePath, request)
       await deleteSession(found.id)
       try { await unlink(found.logPath) }
@@ -208,6 +210,7 @@ async function command(request, socket) {
       const found = matchSession(await listSessions({ all: true }), request.id, { usage: 'attach <id|name>' })
       let job = active.get(found.id)
       if (!job) {
+        assertNoUnmanagedLiveWorker(found, new Set(active.keys()))
         await launch(found, { resume: true })
         job = active.get(found.id)
       }
