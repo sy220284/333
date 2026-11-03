@@ -13,6 +13,8 @@ import { POWERSHELL_TOOL_NAME } from '../../tools/PowerShellTool/toolName.js'
 import { REPL_TOOL_NAME } from '../../tools/REPLTool/constants.js'
 import type { AssistantMessage } from '../../types/message.js'
 import { extractOutputRedirections } from '../bash/commands.js'
+import { getAccountInformation } from '../auth.js'
+import { shouldConfirmAccountEmailDisclosure } from '../accountEmailDisclosure.mjs'
 import { logForDebugging } from '../debug.js'
 import { AbortError, toError } from '../errors.js'
 import { logError } from '../log.js'
@@ -1068,6 +1070,23 @@ function handleDenialLimitExceeded(
  *
  * Caller must pre-check tool.requiresUserInteraction() — step 1e is not replicated.
  */
+function getAccountEmailDisclosureDecision(
+  tool: Tool,
+  input: { [key: string]: unknown },
+): PermissionAskDecision | null {
+  const email = getAccountInformation()?.email
+  if (!shouldConfirmAccountEmailDisclosure(tool.name, input, email)) return null
+  return {
+    behavior: 'ask',
+    message: 'This tool call contains your account email address and may send it over the network. Allow?',
+    decisionReason: {
+      type: 'safetyCheck',
+      reason: 'Potential outbound disclosure of the active account email',
+      classifierApprovable: false,
+    },
+  }
+}
+
 export async function checkRuleBasedPermissions(
   tool: Tool,
   input: { [key: string]: unknown },
@@ -1087,6 +1106,11 @@ export async function checkRuleBasedPermissions(
       message: `Permission to use ${tool.name} has been denied.`,
     }
   }
+
+  // 2.1.317: Account email outbound disclosure requires human confirmation
+  // even if the tool is normally preapproved or the user bypasses permissions.
+  const emailDisclosure = getAccountEmailDisclosureDecision(tool, input)
+  if (emailDisclosure) return emailDisclosure
 
   // 1b. Entire tool has an ask rule
   const askRule = getAskRuleForTool(appState.toolPermissionContext, tool)
@@ -1179,6 +1203,11 @@ async function hasPermissionsToUseToolInner(
       message: `Permission to use ${tool.name} has been denied.`,
     }
   }
+
+  // 2.1.317: Run this safety check before bypassPermissions, sandbox and
+  // preapproved-tool fast paths so the user is always asked before disclosure.
+  const emailDisclosure = getAccountEmailDisclosureDecision(tool, input)
+  if (emailDisclosure) return emailDisclosure
 
   // 1b. Check if the entire tool should always ask for permission
   const askRule = getAskRuleForTool(appState.toolPermissionContext, tool)

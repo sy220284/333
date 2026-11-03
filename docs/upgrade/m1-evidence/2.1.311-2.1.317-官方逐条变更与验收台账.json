@@ -3722,9 +3722,14 @@
       "domain_candidate": "工具权限与安全",
       "official_text": "Added a check that asks before a web or shell tool call sends your account email address to the network",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.317",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "统一权限入口已实现账户邮箱外发确认，待构建、SDK及实际网络对照",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/utils/permissions/permissions.ts",
+        "src/utils/accountEmailDisclosure.mjs",
+        "src/utils/accountEmailDisclosure.d.mts",
+        "tests/m1-account-email-disclosure-317.test.mjs"
+      ]
     },
     {
       "id": "2.1.317#003",
