@@ -136,16 +136,20 @@
       "code": [
         "src/entrypoints/sdk/streamEventMapper.ts",
         "src/services/mcp/validateSdkTransportMessage.ts",
-        "src/cli/print.ts"
+        "src/cli/print.ts",
+        "src/services/api/thinkingDisplay.ts",
+        "src/services/api/claude.ts"
       ],
       "tests": [
         "build/m1-sdk-stream-wire-parity.mjs",
         "tests/m1-sdk-stream-mapping.test.mjs",
-        "tests/m1-sdk-mcp-message-validation.test.ts"
+        "tests/m1-sdk-mcp-message-validation.test.ts",
+        "build/m1-sdk-thinking-display-parity.mjs",
+        "tests/m1-thinking-display.test.mjs"
       ],
       "stage": "SPECIAL_CI",
       "acceptance": "UNVERIFIED",
-      "remaining": "多Agent事件取消与重连",
+      "remaining": "多Agent事件取消与重连、异常恢复、远程消息交付以及M10全场景签收",
       "sdk_uuid_gap_evidence": {
         "commits": [
           "a281d5c0",
@@ -167,6 +171,30 @@
         "ci_run": "https://github.com/sy220284/333/actions/runs/41465584519",
         "ci_result": "PASS_FULL_SDK_STREAM_X64_PARITY_AND_MCP_JSONRPC_CONTRACT_UNIT_TEST",
         "remaining": "SDK→MCP独立官方协议实际交互的所有连接、取消、重连场景仍需M10签收"
+      },
+      "default_thinking_parity": {
+        "target": "Claude Code 2.1.310 installed Linux x64",
+        "proven_cases": [
+          "自适应默认更新展示与API请求一致",
+          "显式summarized",
+          "旧禁用自适应环境变量无效",
+          "非自适应模型固定预算更新展示",
+          "关闭思考"
+        ],
+        "source_commits": [
+          "94fdbf20",
+          "78746757",
+          "d8ef61d0",
+          "da9453ed",
+          "32eed25d",
+          "1ce8377d",
+          "0cea62f7"
+        ],
+        "strict_request_and_stream_ci": "https://github.com/sy220284/333/actions/runs/41606914901",
+        "four_modes_reference_ci": "https://github.com/sy220284/333/actions/runs/41608322069",
+        "results": "PASS_REFERENCE_AND_CANDIDATE_4_MODES",
+        "acceptance": "SPECIAL_CI_ONLY",
+        "remaining": "多轮重试、代理并行、远程客户端断连及完整M10仍需逐场景验收"
       }
     },
     {
