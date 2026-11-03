@@ -3,6 +3,7 @@ import { clearCACertsCache } from './caCerts.js'
 import { isEnvTruthy } from './envUtils.js'
 import {
   isProviderManagedEnvVar,
+  isSettingsCACertBlockedByManagedHost,
   SAFE_ENV_VARS,
 } from './managedEnvConstants.js'
 import { clearMTLSCache } from './mtls.js'
@@ -49,9 +50,16 @@ function withoutHostManagedProviderVars(
   if (!isEnvTruthy(process.env.CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST)) {
     return env
   }
+  const blockSettingsCA = isSettingsCACertBlockedByManagedHost(
+    true,
+    process.env.CLAUDE_CODE_ENTRYPOINT,
+  )
   const out: Record<string, string> = {}
   for (const [key, value] of Object.entries(env)) {
-    if (!isProviderManagedEnvVar(key)) {
+    if (
+      !isProviderManagedEnvVar(key) &&
+      !(blockSettingsCA && key.toUpperCase() === 'NODE_EXTRA_CA_CERTS')
+    ) {
       out[key] = value
     }
   }
