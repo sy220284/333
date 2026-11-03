@@ -225,7 +225,7 @@ export function PowerShellPermissionRequest(props: PermissionRequestProps): Reac
             <Text dimColor>
               Esc to cancel
               {(focusedOption === 'yes' && !yesInputMode || focusedOption === 'no' && !noInputMode) && ' · Tab to amend'}
-              {explainerState.enabled && ` · ctrl+e to ${explainerState.visible ? 'hide' : 'explain'}`}
+              
             </Text>
             {toolUseContext.options.debug && <Text dimColor>Ctrl+D 显示调试信息</Text>}
           </Box>
