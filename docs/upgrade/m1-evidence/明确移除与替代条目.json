@@ -45,8 +45,12 @@
       "source_line": 2184,
       "source_text": "Removed the leftover \"(removed)\" `/agents` entry from the command menu and `/help`; typing `/agents` still explains where the wizard went",
       "release_change": "REMOVAL",
-      "target_2_1_310_state": "TO_BE_CONFIRMED",
-      "last_code_consumer": null
+      "target_2_1_310_state": "AGENTS_MENU_ENTRY_HIDDEN_TOMBSTONE_KEPT",
+      "last_code_consumer": null,
+      "target_code": "chunk-j0tbz6ra.js:40676-40689",
+      "candidate_code": "src/commands/agents/index.ts;src/commands.ts",
+      "actual_scope": "/agents 继续作为隐藏的本地引导命令，不再挂载图形向导或在候选列表显示",
+      "candidate_verification": "SOURCE_REVIEWED_CI_RUNNING"
     },
     {
       "id": "2.1.277#068",
@@ -66,8 +70,10 @@
       "F_ids": [
         "F062"
       ],
-      "target_code": "chunk-pp7zwndm.js:2215 ReadTool plus target background output files",
-      "actual_scope": "TaskOutput explicitly discontinued and background task files read by Read"
+      "target_code": "chunk-pp7zwndm.js:2215 ReadTool; target 2.1.310 initial tool table excludes TaskOutput",
+      "actual_scope": "旧 TaskOutputTool.tsx 和旧 TASK_MAX_OUTPUT_LENGTH 专用格式器均已删除；保留 Read 和后台文件存储，仍待运行中断、恢复等完全对照",
+      "candidate_code": "src/tools.ts;src/tools/FileReadTool/FileReadTool.ts;src/utils/task/TaskOutput.ts",
+      "candidate_verification": "SOURCE_REVIEWED_CI_RUNNING"
     },
     {
       "id": "2.1.275#053",
@@ -90,8 +96,12 @@
       "source_line": 3407,
       "source_text": "Removed the Ctrl+E command explanation on Bash and PowerShell permission prompts",
       "release_change": "REMOVAL",
-      "target_2_1_310_state": "TO_BE_CONFIRMED",
-      "last_code_consumer": null
+      "target_2_1_310_state": "PERMISSION_FOOTER_EXPLANATION_REMOVED",
+      "last_code_consumer": null,
+      "target_code": "chunk-92hm4yb6.js 历史 UI 与官方移除记录",
+      "candidate_code": "src/components/permissions/BashPermissionRequest/BashPermissionRequest.tsx;src/components/permissions/PowerShellPermissionRequest/PowerShellPermissionRequest.tsx",
+      "actual_scope": "已删除 Ctrl+E 多余文字，键位和按键处理继续保留",
+      "candidate_verification": "SOURCE_REVIEWED_CI_RUNNING"
     },
     {
       "id": "2.1.251#069",
@@ -106,16 +116,24 @@
       "source_line": 3945,
       "source_text": "Removed the redundant \"Allowed by auto mode classifier\" line that auto mode showed under every Agent tool call",
       "release_change": "REMOVAL",
-      "target_2_1_310_state": "TO_BE_CONFIRMED",
-      "last_code_consumer": null
+      "target_2_1_310_state": "AGENT_REDUNDANT_CLASSIFIER_NOTICE_REMOVED",
+      "last_code_consumer": null,
+      "target_code": "chunk-92hm4yb6.js:5588-5590;chunk-gdcb8skc.js:11 (ht = Agent)",
+      "candidate_code": "src/components/messages/UserToolResultMessage/UserToolSuccessMessage.tsx",
+      "actual_scope": "仅 Agent 不显示重复审批行，其余工具有审批原因时仍显示",
+      "candidate_verification": "SOURCE_REVIEWED_CI_RUNNING"
     },
     {
       "id": "2.1.234#047",
       "source_line": 3946,
       "source_text": "Removed the \"Default teammate model\" setting from `/config`; agent-team teammates now use the leader's model unless the spawn names one",
       "release_change": "REMOVAL",
-      "target_2_1_310_state": "TO_BE_CONFIRMED",
-      "last_code_consumer": null
+      "target_2_1_310_state": "TEAMMATE_DEFAULT_SETTING_REMOVED_LEADER_INHERITED",
+      "last_code_consumer": null,
+      "target_code": "chunk-6j4kahqd.js:534-568",
+      "candidate_code": "src/tools/shared/spawnMultiAgent.ts;src/components/Settings/Config.tsx;src/utils/config.ts",
+      "actual_scope": "清理旧协作代理默认模型 UI、数据字段和固定 Opus 回退路径；默认沿用主代理模型，显式指定和环境覆盖继续按优先级处理",
+      "candidate_verification": "SOURCE_REVIEWED_CI_RUNNING"
     },
     {
       "id": "2.1.232#049",
@@ -198,8 +216,10 @@
         "F056",
         "F095"
       ],
-      "target_code": "chunk-j0tbz6ra.js:40852 and CLI agents subcommands",
-      "actual_scope": "Old /agents wizard removed; CLI agents and file based agent management remain"
+      "target_code": "chunk-j0tbz6ra.js:40676-40689; official x64 --print --bare /agents",
+      "actual_scope": "旧 AgentsMenu 引用和实现已移除，隐藏命令说明 .claude/agents/ 和 ~/.claude/agents/，SDK JSON 增加 local_command 和零模型轮次",
+      "candidate_code": "src/commands/agents/index.ts;src/QueryEngine.ts;src/entrypoints/sdk/coreSchemas.ts",
+      "candidate_verification": "SOURCE_REVIEWED_CI_RUNNING"
     },
     {
       "id": "2.1.183#006",
@@ -214,8 +234,12 @@
       "source_line": 5313,
       "source_text": "Removed the \"Claude in Chrome enabled\" and \"marketplace installed\" startup messages; model auto-updates and the team-onboarding tip now show as quiet notices under the logo",
       "release_change": "REMOVAL",
-      "target_2_1_310_state": "TO_BE_CONFIRMED",
-      "last_code_consumer": null
+      "target_2_1_310_state": "STARTUP_SUCCESS_TOASTS_REMOVED",
+      "last_code_consumer": null,
+      "target_code": "2.1.310 发布记录与启动通知消费者",
+      "candidate_code": "src/hooks/useChromeExtensionNotification.tsx;src/hooks/useOfficialMarketplaceNotification.tsx",
+      "actual_scope": "删除 Chrome 已启用和插件市场安装成功的启动通知，保留安装、登录和连接失败的重要错误提示",
+      "candidate_verification": "SOURCE_REVIEWED_CI_RUNNING"
     },
     {
       "id": "2.1.160#025",
@@ -251,8 +275,12 @@
       "source_line": 5408,
       "source_text": "Removed the \"/ide for …\" startup hint toast",
       "release_change": "REMOVAL",
-      "target_2_1_310_state": "TO_BE_CONFIRMED",
-      "last_code_consumer": null
+      "target_2_1_310_state": "OBSOLETE_IDE_STARTUP_HINT_REMOVED",
+      "last_code_consumer": null,
+      "target_code": "2.1.310 版本移除记录，当前旧 useIDEStatusIndicator UI",
+      "candidate_code": "src/hooks/notifs/useIDEStatusIndicator.tsx;src/utils/config.ts",
+      "actual_scope": "删除低优先级 /ide for 提示与展示次数计数；保留 IDE 断连和安装错误通知",
+      "candidate_verification": "SOURCE_REVIEWED_CI_RUNNING"
     },
     {
       "id": "2.1.154#039",
@@ -267,16 +295,24 @@
       "source_line": 5750,
       "source_text": "Removed stale `/model claude-sonnet-4-20250514` suggestion from Usage Policy refusal messages",
       "release_change": "REMOVAL",
-      "target_2_1_310_state": "TO_BE_CONFIRMED",
-      "last_code_consumer": null
+      "target_2_1_310_state": "STALE_SONNET_REFUSAL_SUGGESTION_REMOVED",
+      "last_code_consumer": null,
+      "target_code": "2.1.310 版本移除记录",
+      "candidate_code": "src/services/api/errors.ts;src/services/api/claude.ts",
+      "actual_scope": "删除拒绝消息中切换到 claude-sonnet-4-20250514 的过时建议，保留 Usage Policy 错误说明",
+      "candidate_verification": "SOURCE_REVIEWED_CI_RUNNING"
     },
     {
       "id": "2.1.92#019",
       "source_line": 6759,
       "source_text": "Removed `/tag` command",
       "release_change": "REMOVAL",
-      "target_2_1_310_state": "TO_BE_CONFIRMED",
-      "last_code_consumer": null
+      "target_2_1_310_state": "OBSOLETE_TAG_COMMAND_REMOVED",
+      "last_code_consumer": null,
+      "target_code": "2.1.310 /tag 已移除",
+      "candidate_code": "src/commands.ts",
+      "actual_scope": "已删除 /tag 注册与旧独立命令执行文件",
+      "candidate_verification": "SOURCE_REVIEWED_CI_RUNNING"
     },
     {
       "id": "2.1.92#020",
@@ -296,12 +332,17 @@
       "source_line": 6799,
       "source_text": "Removed `Get-DnsClientCache` and `ipconfig /displaydns` from auto-allow (DNS cache privacy)",
       "release_change": "REMOVAL",
-      "target_2_1_310_state": "TO_BE_CONFIRMED",
-      "last_code_consumer": null
+      "target_2_1_310_state": "DNS_CACHE_AUTO_ALLOW_REVOKED",
+      "last_code_consumer": null,
+      "target_code": "2.1.310 移除记录与 PowerShell 旧白名单",
+      "candidate_code": "src/tools/PowerShellTool/readOnlyValidation.ts",
+      "actual_scope": "移除 Get-DnsClientCache 和 ipconfig /displaydns 免审批白名单，保留 /all 网络信息只读操作",
+      "candidate_verification": "SOURCE_REVIEWED_CI_RUNNING"
     }
   ],
   "counts": {
     "explicit_removals": 33,
-    "source_target_crosscheck": 6
+    "source_target_crosscheck": 15,
+    "pending_source_target_crosscheck": 18
   }
 }
