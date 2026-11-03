@@ -114,10 +114,6 @@ export type ProjectConfig = {
   projectOnboardingSeenCount: number
   hasClaudeMdExternalIncludesApproved?: boolean
   hasClaudeMdExternalIncludesWarningShown?: boolean
-  // MCP server approval fields - migrated to settings but kept for backward compatibility
-  enabledMcpjsonServers?: string[]
-  disabledMcpjsonServers?: string[]
-  enableAllProjectMcpServers?: boolean
   // List of disabled MCP servers (all scopes) - used for enable/disable toggle
   disabledMcpServers?: string[]
   // Opt-in list for built-in MCP servers that default to disabled
@@ -139,8 +135,6 @@ const DEFAULT_PROJECT_CONFIG: ProjectConfig = {
   allowedTools: [],
   mcpContextUris: [],
   mcpServers: {},
-  enabledMcpjsonServers: [],
-  disabledMcpjsonServers: [],
   hasTrustDialogAccepted: false,
   projectOnboardingSeenCount: 0,
   hasClaudeMdExternalIncludesApproved: false,
