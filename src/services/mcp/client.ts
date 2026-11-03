@@ -134,6 +134,7 @@ import { markClaudeAiMcpConnected } from './claudeai.js'
 import { getAllMcpConfigs, getMcpReconnectBlockReason, isMcpServerDisabled } from './config.js'
 import { canRetryMcpToolAfterSessionLoss } from './reconnectGate.js'
 import { describeMcpUrlElicitationRejection } from './elicitationOutcome.js'
+import { isHeadlessMcpElicitationPending } from './headlessElicitationState.js'
 import { getMcpServerHeaders } from './headersHelper.js'
 import { SdkControlClientTransport } from './SdkControlTransport.js'
 import { isMcpStdioServerConfig } from './types.js'
@@ -3112,7 +3113,9 @@ async function callMCPTool({
         (reject, name, tool, timeoutMs) => {
           reject(
             new TelemetrySafeError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS(
-              `MCP server "${name}" tool "${tool}" timed out after ${Math.floor(timeoutMs / 1000)}s`,
+              isHeadlessMcpElicitationPending(client)
+                ? `MCP server "${name}" tool "${tool}" timed out while the server's elicitation request was unanswered. No approval was received. Do not automatically repeat this tool call; wait for a new user instruction.`
+                : `MCP server "${name}" tool "${tool}" timed out after ${Math.floor(timeoutMs / 1000)}s`,
               'MCP tool timeout',
             ),
           )
