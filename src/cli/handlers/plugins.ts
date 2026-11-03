@@ -739,7 +739,7 @@ export async function pluginUninstallHandler(
 // plugin enable (lines 5783–5818)
 export async function pluginEnableHandler(
   plugin: string,
-  options: { scope?: string; cowork?: boolean },
+  options: { scope?: string; cowork?: boolean; json?: boolean },
 ): Promise<void> {
   if (options.cowork) setUseCoworkPlugins(true)
   let scope: (typeof VALID_INSTALLABLE_SCOPES)[number] | undefined
@@ -775,7 +775,7 @@ export async function pluginEnableHandler(
       'auto') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
 
-  await enablePlugin(plugin, scope)
+  await enablePlugin(plugin, scope, options.json === true)
 }
 
 // plugin disable (lines 5833–5902)

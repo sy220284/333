@@ -195,6 +195,7 @@ export async function uninstallPlugin(
 export async function enablePlugin(
   plugin: string,
   scope?: InstallableScope,
+  json = false,
 ): Promise<void> {
   try {
     const result = await enablePluginOp(plugin, scope)
@@ -203,8 +204,19 @@ export async function enablePlugin(
       throw new Error(result.message)
     }
 
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
-    console.log(`${figures.tick} ${result.message}`)
+    if (json) {
+      writeToStdout(`${JSON.stringify({
+        command: 'enable',
+        outcome: 'ok',
+        plugin,
+        pluginId: result.pluginId ?? plugin,
+        scope: result.scope ?? scope ?? 'user',
+        message: result.message,
+      })}\n`)
+    } else {
+      // biome-ignore lint/suspicious/noConsole:: CLI human-readable output
+      console.log(`${figures.tick} ${result.message}`)
+    }
 
     const { name, marketplace } = parsePluginIdentifier(
       result.pluginId || plugin,
@@ -224,6 +236,18 @@ export async function enablePlugin(
     // eslint-disable-next-line custom-rules/no-process-exit
     process.exit(0)
   } catch (error) {
+    if (json) {
+      const message = errorMessage(error)
+      writeToStdout(`${JSON.stringify({
+        command: 'enable',
+        outcome: 'failed',
+        plugin,
+        message,
+        failureCode: message.includes('Use plugin@marketplace format.')
+          ? 'ambiguous_marketplace'
+          : classifyPluginCommandError(error).replaceAll('-', '_'),
+      })}\n`)
+    }
     handlePluginCommandError(error, 'enable', plugin)
   }
 }
