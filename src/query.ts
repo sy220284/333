@@ -13,11 +13,6 @@ import {
   type AutoCompactTrackingState,
 } from './services/compact/autoCompact.js'
 import { buildPostCompactMessages } from './services/compact/compact.js'
-/* eslint-disable @typescript-eslint/no-require-imports */
-const reactiveCompact = feature('REACTIVE_COMPACT')
-  ? (require('./services/compact/reactiveCompact.js') as typeof import('./services/compact/reactiveCompact.js'))
-  : null
-/* eslint-enable @typescript-eslint/no-require-imports */
 import {
   logEvent,
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -157,7 +152,7 @@ const MAX_OUTPUT_TOKENS_RECOVERY_LIMIT = 3
  * cowork/desktop) that terminate the session on any `error` field — the
  * recovery loop keeps running but nobody is listening.
  *
- * Mirrors reactiveCompact.isWithheldPromptTooLong.
+ * Withholds max-output errors until retry or recovery has been evaluated.
  */
 function isWithheldMaxOutputTokens(
   msg: Message | StreamEvent | undefined,
@@ -528,25 +523,10 @@ async function* queryLoop(
     // Also skip for compact/session_memory queries — these are forked agents that
     // inherit the full conversation and would deadlock if blocked here (the compact
     // agent needs to run to REDUCE the token count).
-    // Also skip when reactive compact is enabled and automatic compaction is
-    // allowed — the preempt's synthetic error returns before the API call,
-    // so reactive compact would never see a prompt-too-long to react to.
-    // Widened to walrus so RC can act as fallback when proactive fails.
-    //
-    // Hoist media-recovery gate once per turn. Withholding (inside the
-    // stream loop) and recovery (after) must agree; CACHED_MAY_BE_STALE can
-    // flip during the 5-30s stream, and withhold-without-recover would eat
-    // the message. PTL doesn't hoist because its withholding is ungated —
-    // it predates the experiment and is already the control-arm baseline.
-    const mediaRecoveryEnabled =
-      reactiveCompact?.isReactiveCompactEnabled() ?? false
     if (
       !compactionResult &&
       querySource !== 'compact' &&
-      querySource !== 'session_memory' &&
-      !(
-        reactiveCompact?.isReactiveCompactEnabled() && isAutoCompactEnabled()
-      )
+      querySource !== 'session_memory'
     ) {
       const { isAtBlockingLimit } = calculateTokenWarningState(
         tokenCountWithEstimation(messagesForQuery),
@@ -699,29 +679,13 @@ async function* queryLoop(
                 }
               }
             }
-            // Withhold recoverable errors until the 2.1.310 compact and
-            // retry pipeline has exhausted its real recovery options.
-            let withheld = false
-            if (reactiveCompact?.isWithheldPromptTooLong(message)) {
-              withheld = true
-            }
-            // Public 2.1.310 also recovers multi-turn 413s through the
-            // normal compact pipeline. Hold the error until that decision.
-            if (
-              !reactiveCompact &&
+            // Withhold the real 413 only while the canonical compact recovery
+            // pipeline is allowed to retry it.
+            let withheld =
               message.type === 'assistant' &&
               isPromptTooLongMessage(message) &&
               isAutoCompactEnabled() &&
               querySource !== 'compact'
-            ) {
-              withheld = true
-            }
-            if (
-              mediaRecoveryEnabled &&
-              reactiveCompact?.isWithheldMediaSizeError(message)
-            ) {
-              withheld = true
-            }
             if (isWithheldMaxOutputTokens(message)) {
               withheld = true
             }
@@ -943,86 +907,14 @@ async function* queryLoop(
     if (!needsFollowUp) {
       const lastMessage = assistantMessages.at(-1)
 
-      // Prompt-too-long recovery: the streaming loop withheld the error
-      // (see withheldByCollapse / withheldByReactive above). Try collapse
-      // drain first (cheap, keeps granular context), then reactive compact
-      // (full summary). Single-shot on each — if a retry still 413's,
-      // the next stage handles it or the error surfaces.
+      // The shipped 2.1.310 builds use their canonical compaction
+      // recovery path for 413s, including multi-turn overflow.
       const isWithheld413 =
         lastMessage?.type === 'assistant' &&
         lastMessage.isApiErrorMessage &&
         isPromptTooLongMessage(lastMessage)
-      // Media-size rejections (image/PDF/many-image) are recoverable via
-      // reactive compact's strip-retry. Unlike PTL, media errors skip the
-      // collapse drain — collapse doesn't strip images. mediaRecoveryEnabled
-      // is the hoisted gate from before the stream loop (same value as the
-      // withholding check — these two must agree or a withheld message is
-      // lost). If the oversized media is in the preserved tail, the
-      // post-compact turn will media-error again; hasAttemptedReactiveCompact
-      // prevents a spiral and the error surfaces.
-      const isWithheldMedia =
-        mediaRecoveryEnabled &&
-        reactiveCompact?.isWithheldMediaSizeError(lastMessage)
-      if ((isWithheld413 || isWithheldMedia) && reactiveCompact) {
-        const compacted = await reactiveCompact.tryReactiveCompact({
-          hasAttempted: hasAttemptedReactiveCompact,
-          querySource,
-          aborted: toolUseContext.abortController.signal.aborted,
-          messages: messagesForQuery,
-          cacheSafeParams: {
-            systemPrompt,
-            userContext,
-            systemContext,
-            toolUseContext,
-            forkContextMessages: messagesForQuery,
-          },
-        })
-
-        if (compacted) {
-          // task_budget: same carryover as the proactive path above.
-          // messagesForQuery still holds the pre-compact array here (the
-          // 413-failed attempt's input).
-          if (params.taskBudget) {
-            const preCompactContext =
-              finalContextTokensFromLastResponse(messagesForQuery)
-            taskBudgetRemaining = Math.max(
-              0,
-              (taskBudgetRemaining ?? params.taskBudget.total) -
-                preCompactContext,
-            )
-          }
-
-          const postCompactMessages = buildPostCompactMessages(compacted)
-          for (const msg of postCompactMessages) {
-            yield msg
-          }
-          const next: State = {
-            messages: postCompactMessages,
-            toolUseContext,
-            autoCompactTracking: undefined,
-            maxOutputTokensRecoveryCount,
-            hasAttemptedReactiveCompact: true,
-            maxOutputTokensOverride: undefined,
-            pendingToolUseSummary: undefined,
-            stopHookActive: undefined,
-            turnCount,
-            transition: { reason: 'reactive_compact_retry' },
-          }
-          state = next
-          continue
-        }
-
-        // No recovery — surface the withheld error and exit. Do NOT fall
-        // through to stop hooks: the model never produced a valid response,
-        // so hooks have nothing meaningful to evaluate. Running stop hooks
-        // on prompt-too-long creates a death spiral: error → hook blocking
-        // → retry → error → … (the hook injects more tokens each cycle).
-        yield lastMessage
-        void executeStopFailureHooks(lastMessage, toolUseContext)
-        return { reason: isWithheldMedia ? 'image_error' : 'prompt_too_long' }
-      } else if (
+      if (
         isWithheld413 &&
-        !reactiveCompact &&
         isAutoCompactEnabled() &&
         querySource !== 'compact'
       ) {
