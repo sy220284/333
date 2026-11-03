@@ -3579,9 +3579,10 @@ async function run(): Promise<CommanderCommand> {
   });
 
   // Plugin list command
-  pluginCmd.command('list').description('List installed plugins').option('--json', 'Output as JSON').option('--available', 'Include available plugins from marketplaces (requires --json)').addOption(coworkOption()).action(async (options: {
+  pluginCmd.command('list').description('List installed plugins').option('--json', 'Output as JSON').option('--available', 'Include available plugins from marketplaces (requires --json)').option('--data-size [plugin]', "Measure each installed plugin's saved data directory, or only the named plugin's (requires --json)").addOption(coworkOption()).action(async (options: {
     json?: boolean;
     available?: boolean;
+    dataSize?: boolean | string;
     cowork?: boolean;
   }) => {
     const {
