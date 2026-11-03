@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 import {
   advanceSpinnerStatusTracker, createSpinnerStatusTracker, deriveSpinnerStatus,
-  describeSpinnerStatus, getProgressiveThinkingLabel, getSpinnerFrame, getRetryCountdownMs, describeRetryStatus,
+  describeSpinnerStatus, getProgressiveThinkingLabel, getSpinnerFrame, getRetryCountdownMs, describeRetryStatus, advanceAnimatedTokenCount,
   SPINNER_CYCLE_MS, SPINNER_METRICS_AFTER_MS, SPINNER_STALL_AFTER_MS,
 } from '../src/components/Spinner/statusLogic.ts'
 
@@ -19,6 +19,9 @@ describe('官方 2.1.310 对话状态与动画逻辑', () => {
     assert.match(source, /getSpinnerFrame\(time, DEFAULT_CHARACTERS\.length\)/)
     assert.match(source, /useAnimationFrame\(reducedMotion \? null : 50\)/)
     assert.doesNotMatch(source, /Math\.floor\(time \/ 120\)/)
+    const animation = readFileSync(new URL('../src/components/Spinner/SpinnerAnimationRow.tsx', import.meta.url), 'utf8')
+    assert.match(animation, /mode === 'requesting' \? 50 : 100/)
+    assert.match(animation, /advanceAnimatedTokenCount\(/)
   })
 
   it('2 秒余弦曲线往返完整六帧，时间点严格对应', () => {
@@ -29,6 +32,16 @@ describe('官方 2.1.310 对话状态与动画逻辑', () => {
     assert.equal(getSpinnerFrame(3000, 6), 5)
     for (const t of [0, 100, 500, 1000, 1250, 1700, 2000])
       assert.equal(getSpinnerFrame(t, 6), getSpinnerFrame(t + 2000, 6))
+  })
+
+  it('令牌计数每逻辑50ms平滑追随，缩短与大量跳变正确处理', () => {
+    assert.equal(advanceAnimatedTokenCount(0, 100, 1), 15)
+    assert.equal(advanceAnimatedTokenCount(100, 0, 1), 85)
+    assert.equal(advanceAnimatedTokenCount(10, 0, 10), 0)
+    assert.equal(advanceAnimatedTokenCount(0, 300, 2), 100)
+    assert.equal(advanceAnimatedTokenCount(0, 2500, 1), 2500)
+    assert.equal(advanceAnimatedTokenCount(120, 120, 5), 120)
+    assert.equal(advanceAnimatedTokenCount(120, 0, 0), 120)
   })
 
   it('渐进思考文案按 10/20/30/45 秒的真实阈值变化', () => {
