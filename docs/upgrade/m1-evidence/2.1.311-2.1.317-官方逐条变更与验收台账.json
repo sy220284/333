@@ -1235,9 +1235,14 @@
       "domain_candidate": "基础运行时与其他",
       "official_text": "Fixed a command with an invalid name stopping all commands from loading, which could leave `claude -p` with no output",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.312",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "统一注册入口已过滤非法自定义命令名，内置错误保持抛出；待 headless -p 混合目录真实测试",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/commands.ts",
+        "src/utils/commandNameValidation.mjs",
+        "src/utils/commandNameValidation.d.mts",
+        "tests/m1-invalid-command-name-312.test.mjs"
+      ]
     },
     {
       "id": "2.1.312#008",

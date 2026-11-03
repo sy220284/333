@@ -128,6 +128,7 @@ import advisor from './commands/advisor.js'
 import { logError } from './utils/log.js'
 import { toError } from './utils/errors.js'
 import { logForDebugging } from './utils/debug.js'
+import { isValidCustomCommandName } from './utils/commandNameValidation.mjs'
 import {
   getSkillDirCommands,
   clearSkillCaches,
@@ -426,9 +427,20 @@ export async function getCommands(cwd: string): Promise<Command[]> {
   const dynamicSkills = getDynamicSkills()
 
   // Build base commands without dynamic skills
-  const baseCommands = allCommands.filter(
-    _ => meetsAvailabilityRequirement(_) && isCommandEnabled(_),
-  )
+  const baseCommands = allCommands.filter(cmd => {
+    if (!isValidCustomCommandName(cmd.name)) {
+      // Built-in failures indicate a broken release; surface them instead of
+      // silently dropping a product command.
+      if (cmd.source === 'builtin') {
+        throw new Error('Invalid built-in command name')
+      }
+      logForDebugging(`[commands] Skipping invalid ${cmd.source} command name`, {
+        level: 'warn',
+      })
+      return false
+    }
+    return meetsAvailabilityRequirement(cmd) && isCommandEnabled(cmd)
+  })
 
   if (dynamicSkills.length === 0) {
     return baseCommands
@@ -439,6 +451,7 @@ export async function getCommands(cwd: string): Promise<Command[]> {
   const uniqueDynamicSkills = dynamicSkills.filter(
     s =>
       !baseCommandNames.has(s.name) &&
+      isValidCustomCommandName(s.name) &&
       meetsAvailabilityRequirement(s) &&
       isCommandEnabled(s),
   )
