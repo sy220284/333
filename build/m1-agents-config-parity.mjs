@@ -32,7 +32,7 @@ function run(binary, value) {
     env, cwd: dir, input: '', encoding: 'utf8', timeout: 20000, maxBuffer: 1024*1024,
   })
   if (result.error) throw result.error
-  return { exitCode: result.status, text: (result.stdout + '\n' + result.stderr).trim() }
+  return { exitCode: result.status, text: `${result.stdout}\n${result.stderr}`.trim() }
 }
 try {
   mkdirSync(env.HOME, { recursive: true })
@@ -61,13 +61,13 @@ try {
     }
   })
   const failed = rows.filter(row => !row.reference_passed || !row.candidate_passed)
-  writeFileSync(report, JSON.stringify({
+  writeFileSync(report, `${JSON.stringify({
     version: '2.1.310', scope: 'CLI agents inline/file/error parity',
     reference_sha256: 'b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56',
     cases: rows,
     passed: rows.length - failed.length,
     total: rows.length,
-  }, null, 2) + '\n')
+  }, null, 2)}\n`)
   console.log(JSON.stringify({passed: rows.length-failed.length,total:rows.length,failed:failed.map(x=>x.id)}))
   assert.deepEqual(failed.map(x=>x.id), [], '2.1.310 --agents file/inline parity failed')
 } finally {
