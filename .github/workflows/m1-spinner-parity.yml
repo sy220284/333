@@ -16,6 +16,7 @@ on:
       - 'tests/m1-spinner-pty-harness.test.py'
       - 'tests/m1-x64-spinner-tips.py'
       - 'tests/m1-x64-conversation-ui-scenarios.py'
+      - 'tests/m1-x64-conversation-ui-request-routing.test.py'
       - 'build/rebuild.mjs'
       - 'build/restore-*.mjs'
   workflow_dispatch:
@@ -86,6 +87,9 @@ jobs:
       - name: 安装固定版本终端画面解码器
         if: steps.relevant.outputs.run == 'true'
         run: python3 -m pip install --disable-pip-version-check pyte==0.8.2
+      - name: 验证后台标题调用不会误充真实对话
+        if: steps.relevant.outputs.run == 'true'
+        run: python3 tests/m1-x64-conversation-ui-request-routing.test.py
       - name: 官方与重建版同场景流式、工具、重试终端帧对照
         if: steps.relevant.outputs.run == 'true'
         run: |
