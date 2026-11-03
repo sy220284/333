@@ -3,6 +3,7 @@ import { stat } from 'fs/promises'
 import type { Readable } from 'stream'
 import treeKill from 'tree-kill'
 import { generateTaskId } from '../Task.js'
+import { registerCleanup } from './cleanupRegistry.js'
 import { formatDuration } from './format.js'
 import {
   MAX_TASK_OUTPUT_BYTES,
@@ -134,6 +135,7 @@ class ShellCommandImpl implements ShellCommand {
   readonly backgrounded: Promise<void>
   #exitCodeResolver: ((code: number) => void) | null = null
   #boundAbortHandler: (() => void) | null = null
+  #unregisterShutdownCleanup: (() => void) | undefined
   readonly taskOutput: TaskOutput
 
   static #handleTimeout(self: ShellCommandImpl): void {
@@ -182,6 +184,35 @@ class ShellCommandImpl implements ShellCommand {
     }
 
     this.result = this.#createResultPromise()
+    // A foreground or background child must not outlive the owner CLI on
+    // macOS/Linux, including early auth failure or archive shutdown.
+    // Keep registration until the OS process actually exits (a result promise
+    // may resolve earlier, while tree-kill is still terminating children).
+    if (process.platform !== 'win32') {
+      this.#unregisterShutdownCleanup = registerCleanup(async () => {
+        if (this.#status !== 'running' && this.#status !== 'backgrounded') return
+        this.#status = 'killed'
+        try {
+          const pid = this.#childProcess.pid
+          if (pid) {
+            await new Promise<void>((resolve, reject) => {
+              treeKill(pid, 'SIGKILL', error => {
+                if (error) reject(error)
+                else resolve()
+              })
+            })
+          }
+        } finally {
+          this.#resolveExitCode(SIGKILL)
+        }
+      })
+      const unregister = () => {
+        this.#unregisterShutdownCleanup?.()
+        this.#unregisterShutdownCleanup = undefined
+      }
+      childProcess.once('exit', unregister)
+      childProcess.once('error', unregister)
+    }
   }
 
   get status(): 'running' | 'backgrounded' | 'completed' | 'killed' {

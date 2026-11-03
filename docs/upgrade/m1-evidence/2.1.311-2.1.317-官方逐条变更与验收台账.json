@@ -3155,9 +3155,14 @@
       "domain_candidate": "Agent与会话",
       "official_text": "Fixed shell commands being left running on macOS and Linux when Claude Code exits by itself, for example when credentials are refused or a cloud session is archived",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.316",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "已接入 macOS/Linux Shell 子进程退出清理与实际进程退出注销；待进程树和早期退出构建测试",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/utils/ShellCommand.ts",
+        "src/utils/cleanupRegistry.ts",
+        "src/utils/gracefulShutdown.ts",
+        "tests/m1-shell-shutdown-cleanup-316.test.mjs"
+      ]
     },
     {
       "id": "2.1.316#009",
