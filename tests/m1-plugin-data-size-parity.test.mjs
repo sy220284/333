@@ -24,6 +24,8 @@ test('2.1.310 plugin list --data-size reads actual persistent plugin data and ho
     const home = mkdtempSync(join(tmpdir(), '333-plugin-datasize-'))
     try {
       const config = join(home, '.claude')
+      const project = join(home, 'project')
+      mkdirSync(project)
       const plugins = join(config, 'plugins')
       const data = join(plugins, 'data', 'mock-test')
       mkdirSync(data, { recursive: true })
@@ -54,18 +56,35 @@ test('2.1.310 plugin list --data-size reads actual persistent plugin data and ho
       delete env.CLAUDE_CODE_USE_COWORK_PLUGINS
 
       for (const flags of [['--data-size'], ['--data-size', 'mock@test']]) {
-        const response = run(binary, prefix, ['plugin', 'list', '--json', ...flags], env, home)
+        const response = run(binary, prefix, ['plugin', 'list', '--json', ...flags], env, project)
         assert.equal(response.status, 0, `${variant} plugin list ${flags.join(' ')}: ${response.stderr}`)
         const rows = JSON.parse(response.stdout)
         const entry = rows.find(row => row.id === 'mock@test')
         assert.ok(entry, `${variant}: installed plugin absent from JSON result`)
         assert.deepEqual(entry.dataDirSize, { bytes: 15, human: '15 bytes' })
+        assert.equal(entry.projectEnabled, false, `${variant}: projectEnabled must be present even without project settings`)
       }
 
-      const unknown = run(binary, prefix, ['plugin', 'list', '--json', '--data-size', 'other'], env, home)
+      const projectConfig = join(project, '.claude')
+      mkdirSync(projectConfig)
+      writeFileSync(join(projectConfig, 'settings.json'), JSON.stringify({
+        enabledPlugins: { 'mock@test': true },
+      }))
+      const projectResult = run(binary, prefix, ['plugin', 'list', '--json'], env, project)
+      assert.equal(projectResult.status, 0, `${variant}: ${projectResult.stderr}`)
+      assert.equal(JSON.parse(projectResult.stdout).find(row => row.id === 'mock@test')?.projectEnabled, true)
+      rmSync(join(projectConfig, 'settings.json'))
+      writeFileSync(join(projectConfig, 'settings.local.json'), JSON.stringify({
+        enabledPlugins: { 'mock@test': true },
+      }))
+      const localResult = run(binary, prefix, ['plugin', 'list', '--json'], env, project)
+      assert.equal(localResult.status, 0, `${variant}: ${localResult.stderr}`)
+      assert.equal(JSON.parse(localResult.stdout).find(row => row.id === 'mock@test')?.projectEnabled, false)
+
+      const unknown = run(binary, prefix, ['plugin', 'list', '--json', '--data-size', 'other'], env, project)
       assert.notEqual(unknown.status, 0, `${variant}: unknown plugin should be rejected`)
       assert.match(unknown.stderr, /not installed/)
-      const unrequested = run(binary, prefix, ['plugin', 'list', '--json'], env, home)
+      const unrequested = run(binary, prefix, ['plugin', 'list', '--json'], env, project)
       assert.equal(unrequested.status, 0, `${variant}: ${unrequested.stderr}`)
       const plain = JSON.parse(unrequested.stdout).find(row => row.id === 'mock@test')
       assert.ok(plain)
