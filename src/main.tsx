@@ -3859,6 +3859,25 @@ async function run(): Promise<CommanderCommand> {
     await installHandler(target, options);
   });
 
+  // 2.1.310 includes the public import command surface, but the feature is
+  // gated off in the distributed x64 binary (tengu_import=false by default).
+  // Keep the explicit exit and options from the real release. Treating import
+  // as a chat prompt incorrectly starts a model query and loses --dry-run.
+  program.command('import [source]')
+    .description('Import config from another AI coding agent into Claude Code')
+    .option('--dry-run', 'Show what would be imported without writing anything')
+    .option('--yes', 'Skip the interactive picker. On headless surfaces, pass --yes=<digest> from the `/import` preview.')
+    .action(async () => {
+      const { getFeatureValue_CACHED_MAY_BE_STALE } = await import('./services/analytics/growthbook.js');
+      if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_import', false)) {
+        process.stderr.write('`claude import` is not yet available in this build. Run `claude` and use /mcp or edit ~/.claude/settings.json directly.\n');
+        process.exitCode = 1;
+        return;
+      }
+      process.stderr.write('Usage: claude import [codex|gemini|cursor] [--dry-run] [--yes[=<digest>]]\n\nStarts an interactive session and runs /import.\n');
+      process.exitCode = 1;
+    });
+
   // The 2.1.310 public x64 release does not register ant-only commands.
   // Task management remains available through the public task/agent tools.
   profileCheckpoint('run_before_parse');

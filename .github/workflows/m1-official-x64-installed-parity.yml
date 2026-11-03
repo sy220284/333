@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/m1-official-x64-installed-parity.yml'
       - 'build/m1-x64-reference-probe.mjs'
+      - 'build/m1-import-release-parity.mjs'
       - 'tests/m1-x64-local-api.py'
       - 'tests/m1_x64_stream_events_test.py'
       - 'src/**'
@@ -118,6 +119,14 @@ jobs:
             --reference "${CLAUDE_REFERENCE_BIN}" \
             --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
             --report "${RUNNER_TEMP}/claude-installed-agents-config-parity.json"
+      - name: 对照原版未开放import命令及选项完整性
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/m1-import-release-parity.mjs \
+            --reference "${CLAUDE_REFERENCE_BIN}" \
+            --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
+            --report "${RUNNER_TEMP}/claude-installed-import-parity.json"
       - name: 安装版执行本机模拟 API 与工具权限实测
         shell: bash
         run: |
@@ -140,5 +149,6 @@ jobs:
             ${{ runner.temp }}/claude-installed-assistant-retirement-parity.json
             ${{ runner.temp }}/claude-installed-desktop-cli-parity.json
             ${{ runner.temp }}/claude-installed-agents-config-parity.json
+            ${{ runner.temp }}/claude-installed-import-parity.json
           retention-days: 30
           if-no-files-found: warn
