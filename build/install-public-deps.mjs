@@ -12,6 +12,7 @@ function npm(args) {
   execFileSync('npm', args, {stdio:'inherit'});
 }
 const root = resolve(import.meta.dirname,'..');
+const buildVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
 const npmroot = join(root,'.rebuild/public');
 mkdirSync(npmroot,{recursive:true});
 const versions = {
@@ -35,7 +36,7 @@ const versions = {
   "@growthbook/growthbook": "^1.3.0",
   "@js-sdsl/ordered-map": "*",
   "@modelcontextprotocol/sdk": "^1.12.0",
-  "@opentelemetry/api": "^1.9.0",
+  "@opentelemetry/api": "1.9.0",
   "@opentelemetry/api-logs": "^0.214.0",
   "@opentelemetry/core": "^2.6.1",
   "@opentelemetry/exporter-logs-otlp-grpc": "^0.214.0",
@@ -44,7 +45,7 @@ const versions = {
   "@opentelemetry/exporter-metrics-otlp-grpc": "^0.214.0",
   "@opentelemetry/exporter-metrics-otlp-http": "^0.214.0",
   "@opentelemetry/exporter-metrics-otlp-proto": "^0.214.0",
-  "@opentelemetry/exporter-prometheus": "0.300.0",
+  "@opentelemetry/exporter-prometheus": "0.214.0",
   "@opentelemetry/exporter-trace-otlp-grpc": "^0.214.0",
   "@opentelemetry/exporter-trace-otlp-http": "^0.214.0",
   "@opentelemetry/exporter-trace-otlp-proto": "^0.214.0",
@@ -122,7 +123,7 @@ const versions = {
   "zod": "4.6.6"
 };
 const overrides = {tmp: '0.2.7', zod: '$zod'};
-writeFileSync(join(npmroot,'package.json'), `${JSON.stringify({private:true,name:'release-rebuild-dependencies',version:'2.1.88',dependencies:versions,overrides},null,2)}\n`);
+writeFileSync(join(npmroot,'package.json'), `${JSON.stringify({private:true,name:'release-rebuild-dependencies',version:buildVersion,dependencies:versions,overrides},null,2)}\n`);
 const lock = join(root,'build/public-dependencies.lock.json');
 const activeLock = join(npmroot,'package-lock.json');
 if (existsSync(lock)) {
