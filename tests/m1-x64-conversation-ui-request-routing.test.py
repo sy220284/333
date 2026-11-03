@@ -84,6 +84,14 @@ class TerminalParityAssertions(unittest.TestCase):
         self.assertEqual(probe.normalize_retry_status_frame(first), probe.normalize_retry_status_frame(later))
         self.assertNotEqual(probe.normalize_retry_status_frame(first), probe.normalize_retry_status_frame(wrong))
 
+    def test_thinking_sse_emits_real_phase_then_text(self):
+        response = probe.stream('claude-sonnet-4-6', text=probe.THINKING_RESULT, thinking=True)
+        self.assertIn(b'thinking_delta', response)
+        self.assertIn(b'signature_delta', response)
+        self.assertIn(b'text_delta', response)
+        self.assertLess(response.index(b'thinking_delta'), response.index(b'text_delta'))
+        self.assertIn(probe.THINKING_RESULT.encode(), response)
+
     def test_spinner_glyph_comes_from_animation_row_not_footer(self):
         lines = [
             '✶ 正在处理… (1s · ↓ 20 tokens)',
