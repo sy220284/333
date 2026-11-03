@@ -6,3 +6,9 @@
 export function shouldRetrySessionAppendAfterMkdir(code) {
   return code === 'ENOENT'
 }
+
+/** Filesystem failures for which an unlocked config-write retry is unsafe. */
+export function isUnrecoverableConfigWriteError(code) {
+  return code === 'ENOSPC' || code === 'EDQUOT' || code === 'EROFS' ||
+    code === 'EIO' || code === 'EACCES' || code === 'EPERM'
+}

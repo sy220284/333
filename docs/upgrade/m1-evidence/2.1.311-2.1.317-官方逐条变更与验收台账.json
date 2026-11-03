@@ -4013,7 +4013,9 @@
         "src/QueryEngine.ts",
         "src/cli/print.ts",
         "src/utils/sessionWriteFailurePolicy.mjs",
-        "tests/m1-session-write-loss-317.test.mjs"
+        "tests/m1-session-write-loss-317.test.mjs",
+        "src/utils/config.ts",
+        "tests/m1-global-config-write-failure-317.test.mjs"
       ]
     },
     {

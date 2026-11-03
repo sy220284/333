@@ -19,6 +19,7 @@ import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { getGlobalClaudeFile } from './env.js'
 import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
 import { ConfigParseError, getErrnoCode } from './errors.js'
+import { isUnrecoverableConfigWriteError } from './sessionWriteFailurePolicy.mjs'
 import { writeFileSyncAndFlush_DEPRECATED } from './file.js'
 import { getFsImplementation } from './fsOperations.js'
 import { findCanonicalGitRoot } from './git.js'
@@ -788,6 +789,10 @@ export function saveGlobalConfig(
       writeThroughGlobalConfigCache(written)
     }
   } catch (error) {
+    // A full disk/quota or inaccessible config file cannot be repaired by
+    // retrying without the lock. Preserve the original failure so -p can
+    // report it and return a nonzero exit status.
+    if (isUnrecoverableConfigWriteError(getErrnoCode(error))) throw error
     logForDebugging(`Failed to save config with lock: ${error}`, {
       level: 'error',
     })
@@ -1529,6 +1534,9 @@ export function saveCurrentProjectConfig(
       writeThroughGlobalConfigCache(written)
     }
   } catch (error) {
+    // Config write failures must reach the headless CLI, not be masked by
+    // a second write or by an auth-loss fallback.
+    if (isUnrecoverableConfigWriteError(getErrnoCode(error))) throw error
     logForDebugging(`Failed to save config with lock: ${error}`, {
       level: 'error',
     })
