@@ -532,7 +532,7 @@ function RestoreCodeConfirmation(t0) {
   }
   let t2;
   if ($[11] !== fileLabel || $[12] !== t1) {
-    t2 = <><Text dimColor={true}>将恢复代码{" "}{t1}，涉及 {fileLabel}。</Text></>;
+    t2 = <Text dimColor={true}>将恢复代码{" "}{t1}，涉及 {fileLabel}。</Text>;
     $[11] = fileLabel;
     $[12] = t1;
     $[13] = t2;

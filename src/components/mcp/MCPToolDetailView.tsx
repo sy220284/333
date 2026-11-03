@@ -171,7 +171,7 @@ export function MCPToolDetailView(t0) {
   }
   let t16;
   if ($[32] !== tool.inputJSONSchema) {
-    t16 = tool.inputJSONSchema && tool.inputJSONSchema.properties && Object.keys(tool.inputJSONSchema.properties).length > 0 && <Box flexDirection="column" marginTop={1}><Text bold={true}>参数：</Text><Box marginLeft={2} flexDirection="column">{Object.entries(tool.inputJSONSchema.properties).map(t17 => {
+    t16 = tool.inputJSONSchema?.properties && Object.keys(tool.inputJSONSchema.properties).length > 0 && <Box flexDirection="column" marginTop={1}><Text bold={true}>参数：</Text><Box marginLeft={2} flexDirection="column">{Object.entries(tool.inputJSONSchema.properties).map(t17 => {
           const [key, value] = t17;
           const required = tool.inputJSONSchema?.required as string[] | undefined;
           const isRequired = required?.includes(key);

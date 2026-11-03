@@ -199,7 +199,7 @@ function applyTriggerSuggestion(suggestion: SuggestionItem, input: string, curso
   if (!m || m.index === undefined) return;
   const prefixStart = m.index + (m[1]?.length ?? 0);
   const before = input.slice(0, prefixStart);
-  const newInput = before + `${suggestion.displayText} ` + input.slice(cursorOffset);
+  const newInput = `${before}${suggestion.displayText} ${input.slice(cursorOffset)}`;
   onInputChange(newInput);
   setCursorOffset(before.length + suggestion.displayText.length + 1);
 }
