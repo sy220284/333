@@ -79,7 +79,7 @@ function reportError(message) {
 
 /** 2.1.310 Desktop CLI entry: new / continue / explicit session resume. */
 export async function launchDesktopFromCli({
-  prompt, options = {}, argv = process.argv.slice(2),
+  prompt = '', options = {}, argv = process.argv.slice(2),
   stdinIsTTY = process.stdin.isTTY === true,
   stdoutIsTTY = process.stdout.isTTY === true,
   env = process.env, platform = process.platform, arch = process.arch,
