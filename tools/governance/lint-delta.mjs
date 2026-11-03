@@ -45,7 +45,7 @@ function problems(file, source, temporary = false) {
     const line=d.location?.range?.start?.line;
     const token=diagnosticSourceLineToken(lines, line);
     const description=typeof d.message === 'string' ? d.message : JSON.stringify(d.message);
-    return {key:JSON.stringify([category,description,token]),category,description,token};
+    return {key:JSON.stringify([category,description,token]),category,description,token,line};
   });
 }
 function frequencies(items) {
@@ -78,9 +78,9 @@ for (const file of files) {
     const used = existingCounts.get(d.key) || 0;
     if (used < (oldCounts.get(d.key) || 0)) {
       existingCounts.set(d.key, used+1);
-      report.existing.push({file,category:d.category,description:d.description,token:d.token});
+      report.existing.push({file,category:d.category,description:d.description,token:d.token,line:d.line});
     } else {
-      report.introduced.push({file,category:d.category,description:d.description,token:d.token});
+      report.introduced.push({file,category:d.category,description:d.description,token:d.token,line:d.line});
     }
   }
 }
@@ -90,5 +90,5 @@ const destination = resolve(root, '.rebuild/governance/lint-delta.json');
 mkdirSync(dirname(destination), {recursive:true});
 writeFileSync(destination, `${JSON.stringify(report,null,2)}\n`);
 console.log(`[333-lint] 扫描文件 ${report.checkedFiles}，原版诊断 ${report.baseline}，当前诊断 ${report.current}，新增 ${report.introduced.length}`);
-for (const d of report.introduced.slice(0,100)) console.error(`${d.file} ${d.category}：${d.description}`);
+for (const d of report.introduced.slice(0,100)) console.error(`${d.file}:${d.line ?? '?'} ${d.category}：${d.description}\n  ${d.token.slice(0,240)}`);
 if (report.introduced.length) process.exitCode = 1;
