@@ -41,7 +41,9 @@ test('查询主循环继续执行新版真实的微压缩、自动压缩与413�
   assert.match(text, /deps\.autocompact\(/)
   assert.match(text, /tryRecoverFrom413WithCompact/)
   assert.match(text, /isWithheld413/)
-  assert.match(text, /reactiveCompact\?\.isWithheldPromptTooLong/)
+  assert.match(text, /tryRecoverFrom413WithCompact\(/)
+  assert.match(text, /isWithheld413/)
+  assert.doesNotMatch(text, /reactiveCompact|REACTIVE_COMPACT/)
   assert.doesNotMatch(text, /CONTEXT_COLLAPSE|contextCollapse|HISTORY_SNIP|snipCompact|snipTokensFreed|jobClassifier/)
 })
 
