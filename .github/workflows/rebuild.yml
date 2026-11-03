@@ -6,8 +6,10 @@ on:
     branches: [main]
   workflow_dispatch:
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # Keep acceptance evidence tied to an immutable source revision. Rapid PR
+  # pushes must not cancel Windows/macOS tests midway through the long suite.
+  group: rebuild-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
 
 jobs:
   rebuild:
