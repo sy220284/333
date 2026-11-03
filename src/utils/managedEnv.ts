@@ -11,7 +11,7 @@ import { clearProxyCache, configureGlobalAgents } from './proxy.js'
 import { resolveProjectTelemetryEnv } from './telemetry/projectTelemetryPolicy.mjs'
 import { isSettingSourceEnabled } from './settings/constants.js'
 import {
-  getSettings_DEPRECATED,
+  getInitialSettings,
   getSettingsForSource,
 } from './settings/settings.js'
 
@@ -185,7 +185,7 @@ export function applySafeConfigEnvironmentVariables(): void {
   // provider-routing vars, which filterSettingsEnv strips from every source
   // when CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST is set.
   const settingsEnv = resolveProjectTelemetryEnv(
-    filterSettingsEnv(getSettings_DEPRECATED()?.env),
+    filterSettingsEnv(getInitialSettings()?.env),
     getTrustedTelemetryEnv(),
   )
   for (const [key, value] of Object.entries(settingsEnv)) {
@@ -208,7 +208,7 @@ export function applyConfigEnvironmentVariables(): void {
   Object.assign(
     process.env,
     resolveProjectTelemetryEnv(
-      filterSettingsEnv(getSettings_DEPRECATED()?.env),
+      filterSettingsEnv(getInitialSettings()?.env),
       getTrustedTelemetryEnv(),
     ),
   )

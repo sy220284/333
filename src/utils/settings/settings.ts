@@ -831,10 +831,6 @@ export function getInitialSettings(): SettingsJson {
   return { ...(settings || {}), language: '简体中文' }
 }
 
-/**
- * @deprecated Use getInitialSettings() instead. This alias exists for backwards compatibility.
- */
-export const getSettings_DEPRECATED = getInitialSettings
 
 export type SettingsWithSources = {
   effective: SettingsJson
