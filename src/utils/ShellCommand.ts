@@ -335,6 +335,10 @@ class ShellCommandImpl implements ShellCommand {
   }
 
   #doKill(code?: number): void {
+    // Timeout, abort and output watchdog can race. Only the first caller
+    // may signal the process tree; repeated signals can interrupt cleanup
+    // in child processes. Never kill a command that already completed.
+    if (this.#status === 'killed' || this.#status === 'completed') return
     this.#status = 'killed'
     if (this.#childProcess.pid) {
       treeKill(this.#childProcess.pid, 'SIGKILL')
