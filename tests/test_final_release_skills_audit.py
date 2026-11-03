@@ -52,5 +52,31 @@ class TargetSkillAuditTests(unittest.TestCase):
                 audit_module.audit(binary, root, "0" * 64, "2.1.317")
 
 
+    def test_official_skill_bytes_are_written_only_to_separate_review_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src/skills/bundled").mkdir(parents=True)
+            binary = root / "claude"
+            binary.write_bytes(b"official binary fixture")
+            expected = hashlib.sha256(binary.read_bytes()).hexdigest()
+            original = b"---\\nname: final-skill\\ndescription: from native\\n---\\nReal instructions\\n"
+            record = {"final-skill": {
+                "name": "final-skill", "sha256": hashlib.sha256(original).hexdigest(),
+                "bytes": len(original), "frame_offset": 20,
+            }}
+            def native_probe(path, extracted):
+                self.assertEqual(path, binary)
+                self.assertIsNotNone(extracted)
+                extracted["final-skill"] = original
+                return record, 1
+            output = root / "review" / "official-skills"
+            with patch.object(audit_module, "embedded_skills", side_effect=native_probe):
+                result = audit_module.audit(binary, root, expected, "2.1.317", output)
+            self.assertEqual(result["counts"]["MISSING"], 1)
+            self.assertEqual(
+                (output / "final-skill/SKILL.md").read_bytes(), original)
+            self.assertFalse((root / "src/skills/bundled/final-skill/SKILL.md").exists())
+
+
 if __name__ == "__main__":
     unittest.main()
