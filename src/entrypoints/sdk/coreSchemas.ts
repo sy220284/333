@@ -1498,6 +1498,8 @@ export const SDKResultSuccessSchema = lazySchema(() =>
     api_error_status: z.number().int().optional(),
     num_turns: z.number(),
     result: z.string(),
+    // 2.1.310 marks commands handled entirely locally, with no model turn.
+    local_command: z.string().optional(),
     stop_reason: z.string().nullable(),
     total_cost_usd: z.number(),
     usage: NonNullableUsagePlaceholder(),
