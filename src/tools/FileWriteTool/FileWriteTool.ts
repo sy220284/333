@@ -290,6 +290,11 @@ export const FileWriteTool = buildTool({
     if (meta !== null) {
       const lastWriteTime = getFileModificationTime(fullFilePath)
       const lastRead = readFileState.get(fullFilePath)
+      // An auto-injected file may contain only a prefix and its cache timestamp
+      // can be newer than disk; never overwrite content the model has not read.
+      if (lastRead?.isPartialView) {
+        throw new Error(FILE_UNEXPECTEDLY_MODIFIED_ERROR)
+      }
       if (!lastRead || lastWriteTime > lastRead.timestamp) {
         // Timestamp indicates modification, but on Windows timestamps can change
         // without content changes (cloud sync, antivirus, etc.). For full reads,

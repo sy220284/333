@@ -1187,9 +1187,15 @@
       "domain_candidate": "基础运行时与其他",
       "official_text": "Fixed Claude overwriting a very large CLAUDE.md, rules file or @-included file in a subdirectory after seeing only its start; Write now asks Claude to read it all or edit in place",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.312",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "已修复部分视图绕过执行入口覆盖大文件的风险，校验及调用阶段均要求完整读取；待端到端验证",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/tools/FileWriteTool/FileWriteTool.ts",
+        "src/tools/FileEditTool/FileEditTool.ts",
+        "src/utils/attachments.ts",
+        "src/utils/fileStateCache.ts",
+        "tests/m1-312-full-file-before-write.test.mjs"
+      ]
     },
     {
       "id": "2.1.312#005",
