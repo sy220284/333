@@ -6,6 +6,8 @@ on:
       - 'tests/m1-feature-evidence-registry.test.mjs'
       - 'docs/upgrade/m1-evidence/PR7-18组功能链证据审计.json'
       - 'docs/upgrade/m1-evidence/PR7-M10-功能及场景签收.json'
+      - 'docs/upgrade/m1-evidence/target-release.json'
+      - 'tests/m1-target-release-317.test.mjs'
       - 'docs/upgrade/upgrade-coverage.json'
       - '.github/workflows/m1-feature-evidence-registry.yml'
   workflow_dispatch:

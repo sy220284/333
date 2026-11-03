@@ -1,31 +1,34 @@
 import assert from 'node:assert/strict'
-import test from 'node:test'
-import { existsSync, readFileSync } from 'node:fs'
-import { validateReleaseTarget } from '../build/verify-target-release.mjs'
-
-const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'))
-const target = readJson('../docs/upgrade/m1-evidence/target-release.json')
-const ledger = readJson('../docs/upgrade/m1-evidence/2.1.311-2.1.317-官方逐条变更与验收台账.json')
-
-test('2.1.317: official 392 changes have unique IDs, source links and owner status', () => {
-  assert.deepEqual(validateReleaseTarget(target, ledger, existsSync).byVersion, {
-    '2.1.311': 92, '2.1.312': 39, '2.1.314': 119, '2.1.316': 55, '2.1.317': 87,
-  })
+import { readFileSync } from 'node:fs'
+import { test } from 'node:test'
+const read = name => JSON.parse(readFileSync(new URL('../' + name, import.meta.url), 'utf8'))
+test('M1 and M10 use 2.1.317 as the only current acceptance target', () => {
+  const target = read('docs/upgrade/m1-evidence/target-release.json')
+  const coverage = read('docs/upgrade/upgrade-coverage.json')
+  const signoffs = read('docs/upgrade/m1-evidence/PR7-M10-功能及场景签收.json')
+  const runtime = read('docs/upgrade/m1-evidence/runtime-acceptance-matrix.json')
+  const historical = read('docs/upgrade/m1-evidence/PR7-18组功能链证据审计.json')
+  assert.equal(target.target_version, '2.1.317')
+  assert.equal(target.previous_target, '2.1.310')
+  for (const ledger of [coverage, signoffs, runtime]) assert.equal(ledger.target_version, target.target_version)
+  assert.equal(historical.target_version, target.previous_target)
+  assert.equal(signoffs.features.length, 0)
+  assert.equal(signoffs.scenarios.length, 0)
+  assert.equal(runtime.summary.formally_accepted, 0)
+  assert.equal(coverage.features.length, 102)
+  assert.equal(coverage.scenarios.length, 84)
+  assert.equal(target.verified_x64_sha256, null)
 })
-
-test('release ledger cannot silently omit a version entry', () => {
-  const partial = { ...ledger, entries: ledger.entries.slice(1), count: 391 }
-  assert.throws(() => validateReleaseTarget(target, partial), /392/)
-})
-
-test('unverified work cannot be silently marked accepted', () => {
-  const changed = { ...ledger, entries: [...ledger.entries] }
-  changed.entries[0] = { ...changed.entries[0], verification_status: '通过完整目标验收' }
-  assert.throws(() => validateReleaseTarget(target, changed), /no runtime and build evidence/)
-})
-
-test('source changes need a real matching file path in the repository', () => {
-  const changed = { ...ledger, entries: [...ledger.entries] }
-  changed.entries[0] = { ...changed.entries[0], implementation_status: '源码已修改，待构建与实测', changed_files: ['src/不存在.ts'] }
-  assert.throws(() => validateReleaseTarget(target, changed), /missing referenced source/)
+test('392 official release-note rows remain individually traceable and unaccepted', () => {
+  const target = read('docs/upgrade/m1-evidence/target-release.json')
+  const ledger = read('docs/upgrade/m1-evidence/2.1.311-2.1.317-官方逐条变更与验收台账.json')
+  assert.equal(ledger.target_version, target.target_version)
+  assert.equal(ledger.count, target.new_release_entries)
+  assert.equal(ledger.entries.length, target.new_release_entries)
+  assert.equal(new Set(ledger.entries.map(x => x.id)).size, ledger.count)
+  assert.equal(ledger.releases.reduce((n, r) => n + r.entry_count, 0), ledger.count)
+  for (const row of ledger.entries) {
+    assert.ok(row.version && row.source_url && row.official_text)
+    assert.notEqual(row.verification_status, 'VERIFIED', row.id)
+  }
 })

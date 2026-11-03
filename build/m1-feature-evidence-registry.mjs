@@ -5,14 +5,17 @@ import {fileURLToPath} from 'node:url'
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const read = path => JSON.parse(readFileSync(resolve(ROOT, path), 'utf8'))
-const PINNED_OFFICIAL = 'b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56'
+const TARGET_META = read('docs/upgrade/m1-evidence/target-release.json')
+const VERIFIED_TARGET_REFERENCE = TARGET_META.verified_x64_sha256 ?? null
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/
 const SIGNATURE = /^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z$/
 const ALLOWED_CI_URL = /^https:\/\/github\.com\/sy220284\/333\/actions\/runs\/\d+$/
 
-function checkProof(record, kind, exists) {
+function checkProof(record, kind, exists, expectedReferenceSha) {
+  assert.match(expectedReferenceSha ?? '', /^[a-f0-9]{64}$/,
+    `${kind}: ${TARGET_META.target_version} official x64 reference hash is not verified`)
   assert.equal(record.status, 'VERIFIED', `${kind}: only explicit verification is accepted`)
-  assert.equal(record.official?.executable_sha256, PINNED_OFFICIAL, `${kind}: official executable mismatch`)
+  assert.equal(record.official?.executable_sha256, expectedReferenceSha, `${kind}: official executable mismatch`)
   assert.match(record.official?.source_anchor ?? '', /chunk-[a-z0-9]+\.js:\d+/, `${kind}: missing source anchor`)
   assert.match(record.rebuilt?.commit_sha ?? '', COMMIT_PATTERN, `${kind}: missing candidate commit`)
   assert.match(record.rebuilt?.ci_run ?? '', ALLOWED_CI_URL, `${kind}: missing actual CI run`)
@@ -35,14 +38,17 @@ export function buildRegistry(
   coverage,
   audit,
   exists = path => existsSync(resolve(ROOT, path)),
-  signoffs = {schema: 1, target_version: '2.1.310', features: [], scenarios: []},
+  signoffs = {schema: 1, target_version: TARGET_META.target_version, features: [], scenarios: []},
+  expectedReferenceSha = VERIFIED_TARGET_REFERENCE,
 ) {
   assert.equal(coverage.features.length, 102)
   assert.equal(coverage.scenarios.length, 84)
   assert.equal(coverage.counts.features, 102)
   assert.equal(coverage.counts.scenarios, 84)
   assert.ok(audit.groups.length >= 18, 'The existing 18 groups are the historical minimum, not a feature ceiling')
-  assert.equal(audit.target_version, coverage.target_version)
+  assert.equal(coverage.target_version, TARGET_META.target_version)
+  // 2.1.310 source anchors remain historical evidence until 2.1.317 is verified.
+  assert.equal(audit.target_version, TARGET_META.previous_target)
   assert.equal(signoffs.schema, 1)
   assert.equal(signoffs.target_version, coverage.target_version)
   assert.ok(Array.isArray(signoffs.features) && Array.isArray(signoffs.scenarios))
@@ -69,7 +75,7 @@ export function buildRegistry(
     assert.ok(!signedFeatures.has(signoff.id), `Duplicate feature signature ${signoff.id}`)
     assert.ok(featureMap.get(signoff.id).length > 0,
       `A feature cannot be signed without an identified source upgrade chain: ${signoff.id}`)
-    checkProof(signoff, `feature ${signoff.id}`, exists)
+    checkProof(signoff, `feature ${signoff.id}`, exists, expectedReferenceSha)
     signedFeatures.set(signoff.id, signoff)
   }
 
@@ -77,7 +83,7 @@ export function buildRegistry(
   for (const signoff of signoffs.scenarios) {
     assert.ok(scenarioMap.has(signoff.id), `Unknown signed scenario ${signoff.id}`)
     assert.ok(!signedScenarios.has(signoff.id), `Duplicate scenario signature ${signoff.id}`)
-    checkProof(signoff, `scenario ${signoff.id}`, exists)
+    checkProof(signoff, `scenario ${signoff.id}`, exists, expectedReferenceSha)
     const scenario = scenarioMap.get(signoff.id)
     for (const feature of scenario.features) {
       assert.ok(signedFeatures.has(feature),
@@ -113,6 +119,7 @@ export function buildRegistry(
   return {
     schema: 2,
     target_version: coverage.target_version,
+    historical_reference_version: audit.target_version,
     counts: {
       features: features.length,
       scenarios: scenarios.length,

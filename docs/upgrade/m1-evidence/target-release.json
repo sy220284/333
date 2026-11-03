@@ -15,5 +15,6 @@
   "scenario_acceptance_target": 84,
   "binary_source_status": "已发现官方发行文件；当前环境无法取得和执行2.1.317 x64包",
   "product_package_version_policy": "package.json仍为2.1.310，待产品功能与运行差分验收后再声明版本为2.1.317",
-  "ci_writeback": "本轮不处理"
+  "ci_writeback": "本轮不处理",
+  "verified_x64_sha256": null
 }

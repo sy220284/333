@@ -11,6 +11,14 @@ on:
       - 'docs/upgrade/upgrade-coverage.json'
       - 'docs/upgrade/v4-功能任务责任表.json'
       - 'docs/upgrade/2.1.310-*.md'
+      - 'docs/upgrade/2.1.317-*.md'
+      - 'docs/upgrade/m1-evidence/target-release.json'
+      - 'docs/upgrade/m1-evidence/PR7-M10-功能及场景签收.json'
+      - 'tests/m1-target-release-317.test.mjs'
+      - 'tests/m1-read-repeat-317.test.mjs'
+      - 'tests/m1-subagent-effort-317.test.mjs'
+      - 'src/tools/AgentTool/subagentEffortPolicy.mjs'
+      - 'src/tools/FileReadTool/**'
       - 'tests/m1-verify.test.mjs'
       - 'tests/m1-privacy-settings.test.mjs'
       - 'tests/m1-snapshot-terminal-behavior.test.mjs'
@@ -175,6 +183,8 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
+      - name: 验证2.1.317统一验收目标及Read和子代理策略
+        run: node --test tests/m1-target-release-317.test.mjs tests/m1-read-repeat-317.test.mjs tests/m1-subagent-effort-317.test.mjs
       - name: 验证2.1.310上下文提示和工具结果安全清理的真实逻辑
         run: bun test tests/context-hint-controller.test.ts tests/context-hint-microcompact.test.ts
       - name: 验证交互式及SDK上下文查看使用实际模型消息边界
