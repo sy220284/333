@@ -60,6 +60,10 @@ jobs:
           result=$?
           set -e
           printf 'TypeScript full check status: %s\n' "$result"
+          if [ "$result" -ne 0 ]; then
+            echo '===== 原始 TypeScript 逐条错误（供定位修复；完整日志同时上传） ====='
+            grep -E '^([^[:space:]]+\([0-9]+,[0-9]+\): error TS|error TS[0-9]+:)' .rebuild/governance/typescript.log || cat .rebuild/governance/typescript.log
+          fi
           node tools/governance/summarize.mjs types .rebuild/governance/typescript.log .rebuild/governance/type-report.json
       - name: 根据原始源码映射逐项核查缺失文件
         run: node tools/governance/missing-sources.mjs .rebuild/governance/type-report.json .rebuild/governance/missing-sources.json
