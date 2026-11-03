@@ -18,9 +18,16 @@ test('旧版缺失模块必须区分映射原文、现存实现与真正缺失',
       "import type { A } from './missing.js'",
       "import { ready } from './present.js'",
       "import { ghost } from './ghost.js'",
+      "import './widget.jsx'",
+      "import './assets/SKILL.md'",
+      "import './assets/prompt.txt'",
       '',
     ].join('\n'));
     writeFileSync(join(oldSrc, 'present.ts'), 'export const ready = true;\n');
+    mkdirSync(join(oldSrc, 'assets'), { recursive: true });
+    writeFileSync(join(oldSrc, 'widget.tsx'), 'export const ready = true;\n');
+    writeFileSync(join(oldSrc, 'assets', 'SKILL.md'), '# Resource\n');
+    writeFileSync(join(oldSrc, 'assets', 'prompt.txt'), 'Prompt\n');
     writeFileSync(join(currentSrc, 'missing.ts'), 'export type A = string;\n');
     const map = join(root, 'cli.js.map');
     const out = join(root, 'result.json');
@@ -32,7 +39,7 @@ test('旧版缺失模块必须区分映射原文、现存实现与真正缺失',
       '--source-map', map, '--out', out,
     ], { encoding: 'utf8', timeout: 10000 });
     const result = JSON.parse(readFileSync(out, 'utf8'));
-    assert.equal(result.resolved_references, 1);
+    assert.equal(result.resolved_references, 4);
     assert.equal(result.missing_paths, 2);
     assert.equal(result.missing_references, 2);
     assert.equal(result.current_exists, 1);
