@@ -82,7 +82,14 @@ async function snapshotSettingsFiles(
 ): Promise<Map<string, string | null>> {
   const paths = new Set(settingsFiles)
   if (dropInDir) {
-    const entries = await readdir(dropInDir)
+    // The managed drop-in directory may be removed after getWatchTargets().
+    // Treat that specific race as an empty directory; report other I/O errors.
+    let entries: string[] = []
+    try {
+      entries = await readdir(dropInDir)
+    } catch (error) {
+      if (getErrnoCode(error) !== 'ENOENT') throw error
+    }
     for (const entry of entries) {
       if (entry.endsWith('.json')) paths.add(platformPath.join(dropInDir, entry))
     }
