@@ -68,7 +68,7 @@ class TerminalScreenUnicodeTests(unittest.TestCase):
 class TerminalParityAssertions(unittest.TestCase):
     def test_core_transcript_anchors_preserve_relative_layout(self):
         screen = pyte.Screen(80, 12)
-        pyte.Stream(screen).feed('❯ UI_REAL_PTY_PROMPT\\r\\n  Read 1 file\\r\\n● UI_TOOL_COMPLETE_OK\\r\\n✻ Worked for 3s')
+        pyte.Stream(screen).feed('❯ UI_REAL_PTY_PROMPT\r\n  Read 1 file\r\n● UI_TOOL_COMPLETE_OK\r\n✻ Worked for 3s')
         actual = probe.terminal_anchors(screen, probe.TOOL_RESULT, 'tool')
         self.assertEqual(set(actual), {'user', 'tool', 'assistant', 'completed'})
         matching = {'terminal_anchors': actual}
