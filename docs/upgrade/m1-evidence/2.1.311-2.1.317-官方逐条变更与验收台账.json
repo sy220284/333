@@ -4385,9 +4385,12 @@
       "domain_candidate": "基础运行时与其他",
       "official_text": "Fixed child processes of a stopped shell command sometimes being sent SIGTERM twice, which could make some programs skip their cleanup",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.317",
-      "implementation_status": "待源码及运行对照",
+      "implementation_status": "源码已修改，待构建及原版真实进程测试",
       "verification_status": "未通过完整目标验收",
-      "changed_files": []
+      "changed_files": [
+        "src/utils/ShellCommand.ts",
+        "tests/m1-shell-signal-once-317.test.mjs"
+      ]
     },
     {
       "id": "2.1.317#055",
