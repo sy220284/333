@@ -663,32 +663,32 @@ export class StructuredIO {
     }
   }
 
-  createHookCallback(callbackId: string, timeout?: number): HookCallback {
+  createHookCallback(
+    callbackId: string,
+    timeout?: number,
+    onFailure?: 'block',
+  ): HookCallback {
     return {
       type: 'callback',
       timeout,
+      onFailure,
       callback: async (
         input: HookInput,
         toolUseID: string | null,
         abort: AbortSignal | undefined,
       ): Promise<HookJSONOutput> => {
-        try {
-          const result = await this.sendRequest<HookJSONOutput>(
-            {
-              subtype: 'hook_callback',
-              callback_id: callbackId,
-              input,
-              tool_use_id: toolUseID || undefined,
-            },
-            hookJSONOutputSchema(),
-            abort,
-          )
-          return result
-        } catch (error) {
-          // biome-ignore lint/suspicious/noConsole:: intentional console output
-          console.error(`Error in hook callback ${callbackId}:`, error)
-          return {}
-        }
+        // Propagate failures and invalid SDK output to the hook execution
+        // boundary. Returning {} would silently approve a blocked tool call.
+        return this.sendRequest<HookJSONOutput>(
+          {
+            subtype: 'hook_callback',
+            callback_id: callbackId,
+            input,
+            tool_use_id: toolUseID || undefined,
+          },
+          hookJSONOutputSchema(),
+          abort,
+        )
       },
     }
   }
