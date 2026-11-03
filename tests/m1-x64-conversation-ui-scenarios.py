@@ -65,6 +65,15 @@ def screen_rows(screen):
     return rows
 
 
+def active_spinner_glyph(rows):
+    """Read the animated glyph from its own row, not the footer separator '·'."""
+    for row in rows:
+        match = re.match(r'^\\s*([·✢✳✶✻✽*])\\s+(.+)', row)
+        if match and '…' in match.group(2):
+            return match.group(1)
+    return None
+
+
 def terminal_anchors(screen, answer_marker, scenario):
     """Capture absolute terminal-cell positions and styling for core transcript rows."""
     rows = screen_rows(screen)
@@ -311,11 +320,11 @@ def probe(binary, scenario):
                 last_capture=now
                 rows=[line.rstrip() for line in screen_rows(screen) if line.strip()]
                 visible=' '.join(rows[-7:])
-                glyphs=re.findall(r'[·✢✳✶✻✽]',visible)
+                glyph = active_spinner_glyph(rows)
                 frames.append({
                     'ms':round((now-started)*1000),
                     'screen_rows':rows[-10:],
-                    'glyph':glyphs[-1] if glyphs else None,
+                    'glyph':glyph,
                     'retry_status_visible':bool(re.search(
                         r'Retrying in|retrying|重试|waiting for API response',
                         visible,re.I)),
@@ -404,6 +413,8 @@ def main():
             'official_frame_count':a['frame_count'],
             'rebuilt_frame_count':b['frame_count'],
             'glyph_sets_equal':a['frame_glyphs']==b['frame_glyphs'],
+            'official_glyph_sequence':[f['glyph'] for f in a['frames'] if f['glyph']],
+            'rebuilt_glyph_sequence':[f['glyph'] for f in b['frames'] if f['glyph']],
             'official_retry_status_seen':a['retry_status_screen_seen'],
             'rebuilt_retry_status_seen':b['retry_status_screen_seen'],
             'frame_by_frame_pixel_equivalence':'EQUAL' if visual['exact'] else 'DIFFERENT',
