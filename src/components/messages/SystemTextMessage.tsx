@@ -562,7 +562,10 @@ function TurnDurationMessage(t0) {
   } else {
     t6 = $[8];
   }
-  const t7 = showTurnDuration && `${verb} for ${duration}`;
+  // 2.1.310 displays the turn's actual completion clock next to the duration.
+  // Render once from the message timestamp to keep it stable on re-renders.
+  const finishedAt = new Date(message.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const t7 = showTurnDuration && `${verb} for ${duration} · 完成 ${finishedAt}`;
   const t8 = backgroundTaskSummary && ` \u00B7 ${backgroundTaskSummary} still running`;
   let t9;
   if ($[9] !== budgetSuffix || $[10] !== t7 || $[11] !== t8) {
