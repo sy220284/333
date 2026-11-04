@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * M1 official 2.1.310 Linux x64 black-box regression, with optional candidate.
+ * M1 official 2.1.317 Linux x64 black-box regression, with optional candidate.
  * Offline/unauthenticated scope; NEVER reads user OAuth/API credentials.
  *
  * node build/m1-x64-reference-probe.mjs \
- *   --reference /path/to/claude-2.1.310-linux-x64 \
+ *   --reference /path/to/claude-2.1.317-linux-x64 \
  *   --report /tmp/m1-x64.json [--candidate /path/to/rebuilt/claude]
  *
  * Full authenticated/interactive flows require a separate approved fixture.
@@ -16,7 +16,9 @@ import { dirname, resolve, join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import process from 'node:process'
 
-const PINNED_SHA256 = 'b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56'
+const TARGET_RELEASE = '2.1.317'
+const TARGET_COMMIT = '3d3e7cb16b5577dccaee9520c8dc1189d02d61b7'
+const PINNED_SHA256 = 'eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0'
 const argv = process.argv.slice(2)
 if (argv.length % 2 !== 0) throw new Error('参数必须以 --key value 成对出现')
 const args = Object.fromEntries(Array.from({ length: argv.length/2 }, (_,i)=>[argv[2*i],argv[2*i+1]]))
@@ -32,6 +34,7 @@ const hash = await hashFile(reference)
 if (hash !== PINNED_SHA256) throw new Error(`官方 x64 二进制 SHA-256 不匹配：${hash}`)
 const cases = [
   {id:'version', argv:['--version']},
+  {id:'version_verbose', argv:['--version','--verbose']},
   {id:'help', argv:['--help']},
   {id:'mcp_help', argv:['mcp','--help']},
   {id:'plugin_help', argv:['plugin','--help']},
@@ -57,7 +60,8 @@ function validate(test, execution) {
   const out = execution.stdout, err=execution.stderr
   if(execution.timed_out || execution.signal) return {ok:false,reason:'timed_out_or_terminated'}
   switch(test.id) {
-    case 'version': return {ok:execution.exit_code===0 && /^2\.1\.310 \(Claude Code\)/m.test(out),reason:'version'}
+    case 'version': return {ok:execution.exit_code===0 && out.trim()===TARGET_RELEASE+' (Claude Code)',reason:'version'}
+    case 'version_verbose': return {ok:execution.exit_code===0 && out.trim()===TARGET_RELEASE+' (Claude Code)\nCommit: '+TARGET_COMMIT,reason:'version_and_commit'}
     case 'help': return {ok:execution.exit_code===0 && /--autocompact/.test(out) && /--ax-screen-reader/.test(out) && /--output-format/.test(out),reason:'core_flags'}
     case 'mcp_help': return {ok:execution.exit_code===0 && /\bmcp\b/.test(out) && /add-json/.test(out) && /list/.test(out),reason:'mcp_help'}
     case 'plugin_help': return {ok:execution.exit_code===0 && /plugin/.test(out) && /marketplace/.test(out) && /list/.test(out),reason:'plugin_help'}
@@ -97,7 +101,7 @@ function runCase(bin,test,homeRoot) {
   const verdict=validate(test,actual)
   // The runner has a fresh HOME and no inherited account/API credentials.
   // Keep only bounded diagnostic text for local empty-list command contracts.
-  const sampleAllowed = new Set(['version','mcp_list_empty','plugin_list_empty'])
+  const sampleAllowed = new Set(['version','version_verbose','mcp_list_empty','plugin_list_empty'])
   const preview = value => value.replaceAll(home,'[isolated-home]').slice(0,500)
   const sample = sampleAllowed.has(test.id) ? {
     stdout_preview:preview(actual.stdout),stderr_preview:preview(actual.stderr),
@@ -128,7 +132,7 @@ function runSuite(binary) {
 }
 const referenceCases=runSuite(resolve(reference))
 const candidateCases=candidate ? runSuite(resolve(candidate)) : null
-const result={schema:1,release:'2.1.310',platform:'linux-x64',reference_sha256:hash,
+const result={schema:1,release:TARGET_RELEASE,platform:'linux-x64',reference_sha256:hash,
   scope:'OFFLINE_UNAUTHENTICATED_CLI_CONTRACTS_ONLY',
   reference:{passed:referenceCases.filter(x=>x.pass).length,total:referenceCases.length,cases:referenceCases},
   candidate:candidateCases && {passed:candidateCases.filter(x=>x.pass).length,total:candidateCases.length,cases:candidateCases},
