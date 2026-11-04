@@ -209,10 +209,11 @@ const sessionTranscriptPaths = new SessionTranscriptPathsV5()
 // Explicit worktree resumes change both session ID and its owning directory.
 // Honor that committed move; an unrelated async writer keeps the old owner.
 onSessionSwitch(sessionId => {
-  const projectDir = getSessionProjectDir()
-  if (projectDir !== null) {
-    sessionTranscriptPaths.remember(sessionId, join(projectDir, `${sessionId}.jsonl`))
-  }
+  // switchSession(id, null) explicitly selects the current project again.
+  // Rebind both forms of the session switch so an earlier worktree location
+  // never shadows a newly selected owner.
+  const projectDir = getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
+  sessionTranscriptPaths.remember(sessionId, join(projectDir, `${sessionId}.jsonl`))
 })
 
 export function getTranscriptPath(): string {
