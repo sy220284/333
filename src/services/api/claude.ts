@@ -187,9 +187,12 @@ import {
 } from 'src/utils/thinking.js'
 import {
   extractDiscoveredToolNames,
+  getToolSearchMode,
   isDeferredToolsDeltaEnabled,
   isToolSearchEnabled,
+  modelSupportsToolReference,
 } from 'src/utils/toolSearch.js'
+import { addDeferredToolPlaceholder317 } from './deferredToolPlaceholder317.js'
 import { API_MAX_MEDIA_PER_REQUEST } from '../../constants/apiLimits.js'
 import { ADVISOR_BETA_HEADER } from '../../constants/betas.js'
 import {
@@ -1442,6 +1445,14 @@ async function* queryModel(
     } as unknown as BetaToolUnion)
   }
   const allTools = [...toolSchemas, ...extraToolSchemas]
+  // Official 2.1.317 retains a reserved deferred schema even when the CLI
+  // user explicitly selects only static tools. This keeps the tool-loader
+  // contract on the API wire without adding a runnable local Tool object.
+  addDeferredToolPlaceholder317(
+    allTools,
+    getToolSearchMode() !== 'standard' &&
+      modelSupportsToolReference(options.model),
+  )
 
   const isFastMode =
     isFastModeEnabled() &&
