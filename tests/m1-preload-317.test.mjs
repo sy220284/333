@@ -62,7 +62,7 @@ test('M1 C19-T02 official and rebuilt preload accept a claim, run --version, rel
   skip: process.platform === 'win32', timeout: 90_000,
 }, async () => {
   const bins = [['rebuilt', 'bun', [cli]]]
-  if (process.env.CLAUDE_TARGET_X64) bins.unshift(['official', process.env.CLAUDE_TARGET_X64, []])
+  if (process.env.CLAUDE_TARGET_X64 || process.env.CLAUDE_REFERENCE_BIN) bins.unshift(['official', process.env.CLAUDE_TARGET_X64 || process.env.CLAUDE_REFERENCE_BIN, []])
   for (const [name, bin, prefix] of bins) {
     const home = mkdtempSync(join(tmpdir(), '333-preload-e2e-'))
     const sock = join(home, 'claim.sock')
@@ -134,7 +134,7 @@ test('M1 C19-T02 preloaded process uses claimed API host and auth for a real SSE
   })
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
   const binaries = [['rebuilt', 'bun', [cli]]]
-  if (process.env.CLAUDE_TARGET_X64) binaries.unshift(['official', process.env.CLAUDE_TARGET_X64, []])
+  if (process.env.CLAUDE_TARGET_X64 || process.env.CLAUDE_REFERENCE_BIN) binaries.unshift(['official', process.env.CLAUDE_TARGET_X64 || process.env.CLAUDE_REFERENCE_BIN, []])
   try {
     for (const [name, executable, prefix] of binaries) {
       const home = mkdtempSync(join(tmpdir(), '333-preload-model-'))
