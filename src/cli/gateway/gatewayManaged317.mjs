@@ -90,7 +90,8 @@ function matches(rule, identity) {
   }
   const domain = rule?.email_domain
   if (domain !== undefined) {
-    if (typeof domain !== 'string' || !domain.trim() || /[@,\\s]/.test(domain.replace(/^@/,''))) {
+    if (typeof domain !== 'string' || !/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/i.test(domain) ||
+      domain.split('.').some(label => !label || label.length > 63 || label.startsWith('-') || label.endsWith('-'))) {
       throw new Error('managed.policy.match.email_domain must be one bare domain')
     }
     const email = typeof identity.email === 'string' ? identity.email.toLowerCase() : ''
