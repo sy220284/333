@@ -12,14 +12,9 @@ import { fileURLToPath } from 'node:url'
 const require = createRequire(import.meta.url)
 const ts = require('typescript')
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
-const strictModules = new Set([
-  'src/entrypoints/startupRouting317.ts',
-  'src/utils/cliArgv317.ts',
-  'src/utils/telemetry/projectTelemetryPolicy.ts',
-  'src/cli/background/sessionStore.ts',
-  'src/tasks/LocalWorkflowTask/workflowStoragePaths.ts',
-  'src/tasks/LocalWorkflowTask/workflowHistory.ts',
-])
+const strictModules = new Set(JSON.parse(readFileSync(
+  resolve(ROOT, 'tools/dev/type-migration-targets.json'), 'utf8',
+)).strict)
 const excluded = [
   'src/skills/bundled/',
   'src/plugins/bundled/',
