@@ -3586,6 +3586,20 @@ async function run(): Promise<CommanderCommand> {
   };
   registerPurge(program);
   registerPurge(program.command('project', { hidden: true }));
+  program.command('gateway')
+    .description('Run the enterprise auth/telemetry gateway')
+    .option('--config <path>', 'Path to gateway YAML config')
+    .action(async (options: { config?: string }) => {
+      try {
+        const { runEnterpriseGateway317 } = await import('./cli/gateway/gatewayServer317.mjs');
+        await runEnterpriseGateway317(options.config);
+      } catch (error) {
+        process.stderr.write(
+          `claude gateway: ${error instanceof Error ? error.message : String(error)}\n`,
+        );
+        process.exitCode = 1;
+      }
+    });
   const pluginCmd = program.command('plugin').alias('plugins').description('Manage Claude Code plugins').configureHelp(createSortedHelpConfig());
   pluginCmd.command('eval [command] [target]')
     .description('Run eval cases against a plugin and report scored results')
