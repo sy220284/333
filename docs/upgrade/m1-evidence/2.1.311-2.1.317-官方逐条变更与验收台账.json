@@ -4648,7 +4648,7 @@
       "domain_candidate": "工具权限与安全",
       "official_text": "Removed the Read tool's \"file unchanged since your last Read\" stub: reading an unchanged file again returns its content",
       "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.317",
-      "implementation_status": "已将 Read/Compact/会话文件缓存统一为完整结果语义并移除旧 stub；逻辑用例通过，待 2.1.317 原版差分和三平台构建验收",
+      "implementation_status": "已更新 Read/Compact/会话文件缓存、SDK 对外类型、MagicDocs 与 SessionMemory，清除旧去重占位分支；已加回归并进入三平台源码及原版验证",
       "verification_status": "未通过完整目标验收",
       "changed_files": [
         "src/tools/FileReadTool/FileReadTool.ts",
@@ -4658,7 +4658,10 @@
         "src/services/compact/compact.ts",
         "src/services/compact/preservedReadPaths.mjs",
         "tests/m1-post-compact-read-paths-317.test.mjs",
-        "src/utils/queryHelpers.ts"
+        "src/utils/queryHelpers.ts",
+        "sdk-tools.d.ts",
+        "src/services/MagicDocs/magicDocs.ts",
+        "src/services/SessionMemory/sessionMemory.ts"
       ]
     },
     {
