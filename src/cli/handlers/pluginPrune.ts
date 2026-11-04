@@ -24,13 +24,26 @@ export async function pluginPruneHandler(options: {
   const scope = requestedScope as Scope
   const projectPath = getProjectPathForScope(scope)
   const state = loadInstalledPluginsV2()
-  const plugins = await loadAllPlugins()
-  const scan = computeAutoDependencyOrphans(
+  // The installed registry is sufficient to prove that an empty auto-installed
+  // set has no prune candidates. Avoid loading every plugin (including remote
+  // and MCP sources) when there is nothing to remove.
+  const preliminary = computeAutoDependencyOrphans(
     state.plugins,
-    [...plugins.enabled, ...plugins.disabled],
+    [],
     scope,
     projectPath,
   )
+  const scan = preliminary.autoCount === 0
+    ? preliminary
+    : await (async () => {
+        const plugins = await loadAllPlugins()
+        return computeAutoDependencyOrphans(
+          state.plugins,
+          [...plugins.enabled, ...plugins.disabled],
+          scope,
+          projectPath,
+        )
+      })()
   if (scan.unloadable.length) {
     process.stdout.write(`Skipped — cannot determine orphans: ${scan.unloadable.join(', ')} failed to load. Fix or uninstall, then retry.\n`)
     return
