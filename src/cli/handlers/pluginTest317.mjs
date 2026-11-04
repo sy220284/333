@@ -65,12 +65,15 @@ async function runOne(root, file) {
     stdio: ['ignore', 'pipe', 'inherit'],
     timeout: PER_FILE_TIMEOUT_MS,
   })
-  const output = []
-  for await (const chunk of child.stdout) output.push(chunk)
-  const exit = await new Promise((resolveExit, reject) => {
+  // Register process completion before consuming stdout; the close event
+  // may otherwise fire while the async iterator is draining.
+  const exitPromise = new Promise((resolveExit, reject) => {
     child.once('error', reject)
     child.once('close', (code, signal) => resolveExit({ code, signal }))
   })
+  const output = []
+  for await (const chunk of child.stdout) output.push(chunk)
+  const exit = await exitPromise
   const text = Buffer.concat(output).toString('utf8')
   const record = text.split('\n').findLast(line => line.startsWith(REPORT_PREFIX))
   if (!record) {
