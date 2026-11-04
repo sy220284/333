@@ -16,6 +16,8 @@ import type { HookCallbackMatcher } from 'src/types/hooks.js'
 // (rule only checks ./ and / prefixes); explicit disable documents intent.
 // eslint-disable-next-line custom-rules/bootstrap-isolation
 import { randomUUID } from 'src/utils/crypto.js'
+// eslint-disable-next-line custom-rules/bootstrap-isolation
+import { resolveInitialSessionId } from 'src/utils/remoteSessionIdentity.mjs'
 import type { ModelSetting } from 'src/utils/model/model.js'
 import type { ModelStrings } from 'src/utils/model/modelStrings.js'
 import type { SettingSource } from 'src/utils/settings/constants.js'
@@ -328,7 +330,7 @@ function getInitialState(): State {
     codeEditToolDecisionCounter: null,
     activeTimeCounter: null,
     statsStore: null,
-    sessionId: randomUUID() as SessionId,
+    sessionId: resolveInitialSessionId() as SessionId,
     parentSessionId: undefined,
     // Logger state
     loggerProvider: null,
