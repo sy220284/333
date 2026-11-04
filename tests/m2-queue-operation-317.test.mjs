@@ -2,16 +2,17 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createDiscardedQueueRecords, createQueueOperationRecord, partitionQueueForClear } from '../src/utils/queueOperation317.mjs'
 
-test('2.1.317 queue: journal links enqueue, dequeue and removal by UUID', () => {
+test('2.1.317 queue: enqueue and popAll carry text, dequeue only event, remove carries identity', () => {
   const sessionId = 'session-317'
-  const command = { uuid: 'command-317', mode: 'prompt', value: 'read the file' }
+  const command = { uuid: 'command-317', deliveryId: 'receipt-317', mode: 'prompt', value: 'read the file' }
   const at = new Date('2026-11-04T00:00:00.000Z')
   const records = ['enqueue', 'dequeue', 'remove', 'popAll']
     .map(operation => createQueueOperationRecord(operation, command, sessionId, at))
-  assert.deepEqual(records.map(r => r.commandUuid), Array(4).fill('command-317'))
-  assert.deepEqual(records.map(r => r.content), Array(4).fill('read the file'))
-  assert.deepEqual(records.map(r => r.timestamp), Array(4).fill(at.toISOString()))
-  assert.ok(records.every(r => r.type === 'queue-operation' && r.sessionId === sessionId))
+  assert.deepEqual(records.map(r => r.commandUuid), [undefined, undefined, 'command-317', undefined])
+  assert.deepEqual(records.map(r => r.deliveryId), [undefined, undefined, 'receipt-317', undefined])
+  assert.deepEqual(records.map(r => r.content), ['read the file', undefined, 'read the file', 'read the file'])
+  assert.ok(records.every(r => r.timestamp === at.toISOString() && r.sessionId === sessionId))
+  assert.ok(records.every(r => r.type === 'queue-operation'))
 })
 
 test('2.1.317 queue: image/multipart commands are logged without serializing private payloads', () => {
@@ -20,7 +21,7 @@ test('2.1.317 queue: image/multipart commands are logged without serializing pri
     { uuid: 'images-1', value: [{ type: 'image', source: { type: 'base64', data: 'SECRETS' } }] },
     'session-317',
   )
-  assert.equal(record.commandUuid, 'images-1')
+  assert.equal('commandUuid' in record, false)
   assert.equal('content' in record, false)
   assert.equal(JSON.stringify(record).includes('SECRETS'), false)
 })
@@ -129,4 +130,24 @@ test('317 轮次吸收: 消费消息与用户取消的落盘原因不同', () =>
   assert.equal(cancelled.reason, 'cleared_on_cancel')
   assert.equal(consumed.commandUuid, cancelled.commandUuid)
   assert.notDeepEqual(consumed, cancelled)
+})
+
+test('317官方安全记录: plugin queue-record负责的原始文本不重复写盘', () => {
+  const original = createQueueOperationRecord('enqueue', {
+    uuid: 'private-317', mode: 'prompt', value: 'sensitive text',
+    pluginQueueRecordHookActive: true,
+  }, 'session-317')
+  assert.equal('content' in original, false)
+  const approved = createQueueOperationRecord('enqueue', {
+    uuid: 'private-317', mode: 'prompt', value: 'original',
+    promptSubmitted: { text: 'approved text' }, pluginQueueRecordHookActive: true,
+  }, 'session-317')
+  assert.equal(approved.content, 'approved text')
+})
+
+test('317官方队列出队记录没有文本、拒绝原因和消息标识', () => {
+  const record = createQueueOperationRecord('dequeue', {
+    uuid: 'uuid-317', value: 'secret', deliveryId: 'receipt',
+  }, 'session-317', new Date('2026-11-04T00:00:00.000Z'), { reason: 'ignored' })
+  assert.deepEqual(Object.keys(record), ['type', 'operation', 'timestamp', 'sessionId'])
 })
