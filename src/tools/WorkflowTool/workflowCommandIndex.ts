@@ -1,6 +1,6 @@
 import { readdir,readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { workflowMeta } from './workflowRuntime.mjs'
+import { workflowMeta } from './workflowRuntime.ts'
 export async function listWorkflowFiles(cwd,{onError}={}){
  const dir=join(cwd,'.claude','workflows')
  let entries
