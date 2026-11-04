@@ -63,7 +63,7 @@ const errorJson = (code: string, status = 400, message?: string) => makeJson({
 }, status)
 const escape = (data: string): string => String(data).replace(/[&<>"']/g, char => ({
   '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;',
-} as Record<string, string>)[char]))
+} as Record<string, string>)[char])
 const randomCode = () => Array.from(randomBytes(8), b => base20[b % base20.length])
   .join('').replace(/^(.{4})/, '$1-')
 const form = async (request: Request): Promise<URLSearchParams> => {
