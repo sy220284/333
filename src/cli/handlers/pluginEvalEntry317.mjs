@@ -130,8 +130,8 @@ export async function pluginEvalHandler317(target, options = {}, adapters = {}) 
       c.runs.filter(run => run.error).map(run =>
         `${c.name} [${run.arm} run ${run.repeat}]: ${run.error}`))
     if (failed.length) {
-      process.stderr.write('plugin eval model execution failed:\\n' +
-        failed.join('\\n') + '\\n')
+      process.stderr.write('plugin eval model execution failed:\n' +
+        failed.join('\n') + '\n')
     }
     return data.cases.some(c => c.score === null || c.score < threshold) ? 1 : 0
   } finally {
