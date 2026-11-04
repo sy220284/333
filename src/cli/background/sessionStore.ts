@@ -9,6 +9,10 @@ export const MAX_LOG_BYTES = 1024 * 1024
 export const TERMINAL_STATES = new Set(['stopped', 'completed', 'failed', 'removed'])
 const TERMINAL_FIELDS = ['sessionId', 'id', 'cwd', 'createdAt', 'updatedAt', 'state', 'argv', 'logPath']
 const queue = new Map<string, Promise<unknown>>()
+function hasErrnoCode317(error: unknown, code: string): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === code
+}
+
 
 /** The on-disk session identity and lifecycle contract shared by the CLI and supervisor. */
 export interface BackgroundRecord317 {
@@ -61,8 +65,8 @@ export function isAlive(pid: number | null | undefined): boolean {
     process.kill(pid, 0)
     return true
   } catch (error) {
-    if (error.code === 'ESRCH') return false
-    if (error.code === 'EPERM') return true
+    if (hasErrnoCode317(error, 'ESRCH')) return false
+    if (hasErrnoCode317(error, 'EPERM')) return true
     throw error
   }
 }
@@ -111,7 +115,7 @@ export async function prepareFleet(env: NodeJS.ProcessEnv = process.env): Promis
 export async function readSession(id: string, env: NodeJS.ProcessEnv = process.env): Promise<BackgroundRecord317 | null> {
   try { return assertRecord(JSON.parse(await readFile(sessionPath(id, env), 'utf8'))) }
   catch (error) {
-    if (error.code === 'ENOENT') return null
+    if (hasErrnoCode317(error, 'ENOENT')) return null
     throw error
   }
 }
@@ -181,7 +185,7 @@ export async function deleteSession(id: string, env: NodeJS.ProcessEnv = process
   return serialized(id, async () => {
     const file = sessionPath(id, env)
     try { await unlink(file); return true }
-    catch (error) { if (error.code === 'ENOENT') return false; throw error }
+    catch (error) { if (hasErrnoCode317(error, 'ENOENT')) return false; throw error }
   })
 }
 export async function listSessions({ all = false, cwd, env = process.env }: {
@@ -190,7 +194,7 @@ export async function listSessions({ all = false, cwd, env = process.env }: {
   const root = join(fleetHome(env), 'jobs')
   let names
   try { names = await readdir(root) }
-  catch (error) { if (error.code === 'ENOENT') return []; throw error }
+  catch (error) { if (hasErrnoCode317(error, 'ENOENT')) return []; throw error }
   const jobs: BackgroundView317[] = []
   for (const name of names.sort()) {
     if (!/^[a-f0-9]{8}\.json$/.test(name)) continue
