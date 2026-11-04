@@ -1,7 +1,8 @@
 import { createServer, type Server } from 'node:net'
 import { createHash, timingSafeEqual } from 'node:crypto'
-import { chmodSync, existsSync, lstatSync, readFileSync, unlinkSync } from 'node:fs'
+import { chmodSync, readFileSync, unlinkSync } from 'node:fs'
 import { runClaimedSession317 } from './preload317.ts'
+import { assertSocketVacant317 } from './socketOwnership317.ts'
 
 const MAX_CLAIM_BYTES = 8 * 1024 * 1024
 function removeSocket(path: string): void {
@@ -53,7 +54,12 @@ export async function runBgSpare317(args: string[],
     }
   }
   const startingParent = process.ppid
-  const cleanup = () => removeSocket(socketPath)
+  let ownsSocket = false
+  const cleanup = () => {
+    if (!ownsSocket) return
+    ownsSocket = false
+    removeSocket(socketPath)
+  }
   const interrupted = () => { cleanup(); process.exit(0) }
   const onUnhandled = (error: unknown) => {
     cleanup()
@@ -76,11 +82,7 @@ export async function runBgSpare317(args: string[],
   for (const name of signals) process.on(name, interrupted)
   process.on('uncaughtException', onUnhandled)
   try {
-    if (existsSync(socketPath)) {
-      if (!lstatSync(socketPath).isSocket())
-        throw Error('Background spare path exists and is not a socket: ' + socketPath)
-      cleanup()
-    }
+    await assertSocketVacant317(socketPath, 'Background spare')
     server = createServer(peer => {
       let buffer = ''
       peer.setEncoding('utf8')
@@ -117,6 +119,7 @@ export async function runBgSpare317(args: string[],
       server!.once('error', reject)
       server!.listen(socketPath)
     })
+    ownsSocket = true
     if (process.platform !== 'win32') chmodSync(socketPath, 0o600)
     const claim = await claimPromise
     cleanup()
