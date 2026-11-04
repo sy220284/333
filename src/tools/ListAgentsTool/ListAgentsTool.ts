@@ -6,14 +6,14 @@ import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js'
 import { isCrossSessionMessagingEnabled } from '../../utils/crossSessionMessaging.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { lazySchema } from '../../utils/lazySchema.js'
-import { listLiveLocalPeers, peerRef } from '../../utils/livePeerSessions.mjs'
+import { listLiveLocalPeers, peerRef } from '../../utils/livePeerSessions.ts'
 import { TEAM_LEAD_NAME } from '../../utils/swarm/constants.js'
 import { readTeamFileAsync } from '../../utils/swarm/teamHelpers.js'
 import { getAgentName, getTeamName } from '../../utils/teammate.js'
 import { discoverAuthenticatedPeers, getCurrentPeerIdentityKey } from '../../bridge/peerDiscovery.js'
-import { rememberAccountRecipients } from '../../utils/accountPeerDirectory.mjs'
+import { rememberAccountRecipients } from '../../utils/accountPeerDirectory.ts'
 import { getMessagingSocketPath } from '../../utils/udsMessaging.js'
-import { buildAgentListing, hideTeammateNamesInSubagents, listReachableTeammates } from './peerListing.mjs'
+import { buildAgentListing, hideTeammateNamesInSubagents, listReachableTeammates } from './peerListing.ts'
 
 const canSendMessage = (tools: readonly { name: string }[]): boolean =>
   tools.some(tool => tool.name === 'SendMessage')
