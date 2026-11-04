@@ -253,7 +253,7 @@ async function main(): Promise<void> {
       if (admission !== 'skip') {
         const refusal = checkRequiredFastPathVersion317(MACRO.VERSION, policy);
         if (refusal) {
-          process.stderr.write(refusal + '\\n');
+          process.stderr.write(refusal + '\n');
           if (admission === 'reject') {
             process.exitCode = 1;
             return;
