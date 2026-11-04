@@ -1033,7 +1033,7 @@ export async function pluginDisableHandler(
 // plugin update (lines 5918–5948)
 export async function pluginUpdateHandler(
   plugin: string,
-  options: { scope?: string; cowork?: boolean },
+  options: { scope?: string; cowork?: boolean; json?: boolean; yes?: boolean; acceptCommand?: string },
 ): Promise<void> {
   if (options.cowork) setUseCoworkPlugins(true)
   const { name, marketplace } = parsePluginIdentifier(plugin)
@@ -1062,5 +1062,5 @@ export async function pluginUpdateHandler(
     cliError('--cowork can only be used with user scope')
   }
 
-  await updatePluginCli(plugin, scope)
+  await updatePluginCli(plugin, scope, options)
 }
