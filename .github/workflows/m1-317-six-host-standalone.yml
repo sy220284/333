@@ -9,6 +9,10 @@ on:
       - 'build/compile-standalone.mjs'
       - 'build/package-release.mjs'
       - 'src/entrypoints/cli.tsx'
+      - 'src/main.tsx'
+      - 'src/cli/print.ts'
+      - 'tests/cli-parity.test.mjs'
+      - 'tests/fixtures/claude-2.1.317-official-cli-help.json'
       - 'src/bootstrap/**'
       - 'src/entrypoints/runnerDeclaration317.ts'
       - 'src/entrypoints/startupRouting317.ts'
@@ -121,6 +125,8 @@ jobs:
           # supervisor dispatch/restore chain, not just a warm-spare handshake.
           node --test --test-concurrency=1 tests/m1-pty-host-317.test.mjs tests/m1-pty-recording-317.test.mjs tests/m1-background-lifecycle.test.mjs
           node --test tests/m1-fast-path-settings-317.test.mjs tests/m1-startup-argv-317.test.mjs
+      - name: 317官方CLI参数与隐藏权限回调行为差分
+        run: node --test tests/cli-parity.test.mjs
       - name: 发行元数据记录至构建证据
         run: |
           node --input-type=module <<'NODE'
