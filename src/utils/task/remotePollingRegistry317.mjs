@@ -7,7 +7,10 @@ export function createRemotePollingRegistry() {
   return {
     register(taskId, stopPolling) {
       pollers.get(taskId)?.()
+      let released = false
       const release = () => {
+        if (released) return
+        released = true
         if (pollers.get(taskId) === release) pollers.delete(taskId)
         stopPolling()
       }
