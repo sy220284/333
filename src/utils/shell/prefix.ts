@@ -89,7 +89,7 @@ export type PrefixExtractorConfig = {
  * @param config - Configuration for the extractor
  * @returns A memoized async function that extracts command prefixes
  */
-export function createCommandPrefixExtractor(config: PrefixExtractorConfig) {
+export function createCommandPrefixExtractor(config: PrefixExtractorConfig): LRUMemoizedFunction<[string, AbortSignal, boolean], Promise<CommandPrefixResult | null>> {
   const { toolName, policySpec, eventName, querySource, preCheck } = config
 
   const memoized = memoizeWithLRU(
