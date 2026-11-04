@@ -10,6 +10,19 @@ import { discoverEvalCases317 } from './pluginEvalCatalog317.ts'
 import { executePluginEvalSuite317 } from './pluginEvalEngine317.ts'
 import { savePluginEvalReport317 } from './pluginEvalReport317.ts'
 
+type PluginEvalOptions317 = {
+  trustPlugin?: boolean
+  mocks?: 'record' | 'off'
+  allowRealServers?: boolean
+  evalDir?: string
+  case?: string | string[]
+  tag?: string | string[]
+  outputDir?: string
+  json?: boolean
+  threshold?: number | string
+  keepTemp?: boolean
+}
+
 function within(root, path) {
   const p = relative(root, path)
   return p === '' || (p !== '..' && !p.startsWith('../') && !p.startsWith('..\\') && !isAbsolute(p))
@@ -87,7 +100,7 @@ async function prepareEvalPlugin317(root, settings) {
   }
 }
 
-export async function pluginEvalHandler317(target, options = {}, adapters = {}) {
+export async function pluginEvalHandler317(target: string, options: PluginEvalOptions317 = {}, adapters = {}) {
   const pluginRoot = await findPluginRoot317(target)
   await requireEvalTrust317(pluginRoot, options.trustPlugin)
   const mocks = options.mocks ?? 'record'
@@ -102,12 +115,15 @@ export async function pluginEvalHandler317(target, options = {}, adapters = {}) 
   if (!cases.length) throw new Error('plugin eval found no cases in ' + evalDir)
   const temp = await prepareEvalPlugin317(pluginRoot, { ...options, mocks })
   try {
-    const data = await executePluginEvalSuite317(cases, {
+    const result = await executePluginEvalSuite317(cases, {
       ...options, pluginRoot: temp.plugin, sourcePluginRoot: pluginRoot,
     }, adapters)
-    data.suite = { root: pluginRoot, evalDir }
-    data.startedAt = new Date().toISOString()
-    data.finishedAt = new Date().toISOString()
+    const data = {
+      ...result,
+      suite: { root: pluginRoot, evalDir },
+      startedAt: new Date().toISOString(),
+      finishedAt: new Date().toISOString(),
+    }
     const outputDir = options.outputDir
       ? resolve(options.outputDir)
       : join(evalDir, 'results', data.finishedAt.replace(/[:.]/g, '-'))

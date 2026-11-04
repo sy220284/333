@@ -8,6 +8,14 @@ import { spawn } from 'node:child_process'
 import { join, resolve, isAbsolute, relative } from 'node:path'
 
 const VALID_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
+type EvalInitOptions317 = {
+  cwd?: string
+  evalDir?: string
+  prompt?: string
+  criteria?: string
+  bare?: boolean
+  interactive?: boolean
+}
 async function present(path) {
   try { await stat(path); return true }
   catch (error) { if (error?.code === 'ENOENT') return false; throw error }
@@ -17,7 +25,7 @@ function safeWithin(root,path) {
   return r === '' || (r !== '..' && !r.startsWith('../') && !r.startsWith('..\\') && !isAbsolute(r))
 }
 
-export async function createEvalCase317(name, options = {}) {
+export async function createEvalCase317(name: string, options: EvalInitOptions317 = {}) {
   const cwd = resolve(options.cwd ?? process.cwd())
   const override = options.evalDir
   const isPlugin = await present(join(cwd,'.claude-plugin','plugin.json')) ||
@@ -67,7 +75,7 @@ export async function createEvalCase317(name, options = {}) {
   return folder
 }
 
-export async function pluginEvalInit317(name, options = {}) {
+export async function pluginEvalInit317(name: string | undefined, options: EvalInitOptions317 = {}) {
   const interactive = !options.bare && (options.interactive ||
     (process.stdin.isTTY && process.stdout.isTTY))
   if (interactive && !(process.stdin.isTTY && process.stdout.isTTY)) {

@@ -9,7 +9,7 @@ import { signGatewaySession317, createGatewayOidcLogin317 } from './gatewayAuth3
 const base20 = 'BCDFGHJKLMNPQRSTVWXZ'
 const noStore = { 'cache-control': 'no-store', pragma: 'no-cache' }
 const makeJson = (payload, status = 200) => Response.json(payload, { status, headers: noStore })
-const errorJson = (code, status = 400, message) => makeJson({
+const errorJson = (code: string, status = 400, message?: string) => makeJson({
   error: code, ...(message && { error_description: message }),
 }, status)
 const escape = data => String(data).replace(/[&<>"']/g, char => ({
