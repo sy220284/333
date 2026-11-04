@@ -17,12 +17,20 @@ export function workflowMeta(script: string){
  }
  if(end<0)throw Error('Unclosed workflow meta object')
  const value=parseWorkflowMetaLiteral(script.slice(open,end))
- if(!value||typeof value.name!=='string'||!/^[\w-]{1,80}$/.test(value.name)||
-   typeof value.description!=='string'||!value.description.trim()||
-   value.phases!==undefined&&(!Array.isArray(value.phases)||value.phases.some(p=>!p||typeof p!=='object'||typeof p.title!=='string'||!p.title.trim()||p.detail!==undefined&&typeof p.detail!=='string')))
-  throw Error('Invalid workflow meta name, description or phases')
- return {name:value.name,description:value.description,
-   phases:(value.phases??[]).map(p=>({title:p.title,detail:p.detail}))}
+ if(typeof value.name!=='string'||!/^[\w-]{1,80}$/.test(value.name)||
+   typeof value.description!=='string'||!value.description.trim())
+   throw Error('Invalid workflow meta name, description or phases')
+ const literalPhases=value.phases
+ if(literalPhases!==undefined&&!Array.isArray(literalPhases))
+   throw Error('Invalid workflow meta name, description or phases')
+ const phases=(literalPhases??[]).map(phase=>{
+   if(!phase||typeof phase!=='object'||Array.isArray(phase)||
+     typeof phase.title!=='string'||!phase.title.trim()||
+     phase.detail!==undefined&&typeof phase.detail!=='string')
+     throw Error('Invalid workflow meta name, description or phases')
+   return {title:phase.title,detail:phase.detail}
+ })
+ return {name:value.name,description:value.description,phases}
 }
 export function validateWorkflowScript(script: string){
  if(typeof script!=='string'||!script.trim()||script.length>524288)throw Error('Workflow script must have 1-524288 characters')
