@@ -162,27 +162,34 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
     }
   }
 
-  const stopSessions = async (): Promise<void> => {
-    if (active.size===0) return
-    const pending = [...active.values()]
-    const hold = Math.max(0,options.drainWaitMs ?? 0)
-    if (hold>0) {
-      const finishes = Promise.allSettled(pending.map(a=>a.completion))
-      await Promise.race([finishes, new Promise<void>(r=>setTimeout(r,hold))])
-    }
-    for (const item of active.values()) item.handle.kill()
-    const done = Promise.allSettled([...active.values()].map(a=>a.completion))
-    const timeoutMs = 15_000
-    let timeout: ReturnType<typeof setTimeout> | undefined
+  // Bound every drain phase. An unresponsive child must never keep the
+  // runner registered forever, and a finished child must not leave a live timer.
+  const settleOrTimeout = async (sessions: readonly ActiveAssignment[], ms: number): Promise<boolean> => {
+    const settled = Promise.allSettled(sessions.map(item => item.completion))
+    if (sessions.length === 0) return true
+    if (ms <= 0) return false
+    let timer: ReturnType<typeof setTimeout> | undefined
     try {
-      await Promise.race([done,new Promise<void>(resolve=>{
-        timeout=setTimeout(resolve,timeoutMs)
-      })])
+      return await Promise.race([
+        settled.then(() => true),
+        new Promise<boolean>(resolve => { timer = setTimeout(() => resolve(false), ms) }),
+      ])
     } finally {
-      if(timeout) clearTimeout(timeout)
-      for(const item of active.values()) item.handle.forceKill()
+      if (timer) clearTimeout(timer)
     }
-    await Promise.allSettled([...active.values()].map(a=>a.completion))
+  }
+  const stopSessions = async (): Promise<void> => {
+    const pending = [...active.values()]
+    if (pending.length === 0) return
+    if (await settleOrTimeout(pending, Math.max(0,options.drainWaitMs ?? 0))) return
+    for (const item of active.values()) item.handle.kill()
+    if (await settleOrTimeout(pending, 15_000)) return
+    for (const item of active.values()) item.handle.forceKill()
+    // Release the host lease after force-kill without hanging on a broken
+    // ChildProcess close callback. Report any still-active sessions.
+    if (!await settleOrTimeout(pending, 5_000)) {
+      status('[runner] force-killed child did not exit before deadline')
+    }
   }
 
   try {
