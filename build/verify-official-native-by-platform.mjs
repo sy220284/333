@@ -17,12 +17,18 @@ const platform = process.platform + '-' + process.arch
 assert.ok(['darwin-arm64', 'darwin-x64', 'win32-x64', 'win32-arm64'].includes(platform),
   'Native extraction only supports official macOS or Windows host architecture')
 const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'))
+const pinned = JSON.parse(readFileSync(join(resolve(import.meta.dirname, '..'),
+  'build/official-native-platforms-317.json'), 'utf8'))
+assert.equal(pinned.version, '2.1.317')
+assert.ok(pinned.platforms?.[platform], 'No independently verified 2.1.317 platform record: ' + platform)
 const expected = manifest.platforms?.[platform]?.checksum
 assert.match(expected ?? '', /^[0-9a-f]{64}$/i,
   'Official 2.1.317 manifest missing checksum for ' + platform)
 const original = readFileSync(native)
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
 assert.equal(hash(original), expected.toLowerCase(), 'Official binary checksum mismatch')
+assert.equal(expected.toLowerCase(), pinned.platforms[platform].binary_sha256,
+  'Official manifest is inconsistent with independently verified platform SHA-256')
 const audio = join(vendor, 'audio-capture',
   process.arch + '-' + process.platform, 'audio-capture.node')
 
@@ -94,6 +100,9 @@ while (pos >= 0) {
 assert.equal(matches.length, 1, 'Expected exactly one 2.1.317 audio-capture native addon, found ' + matches.length)
 const { at: nativeOffset, bytes: officialAudio } = matches[0]
 const expectedAddonSha256 = hash(officialAudio)
+assert.equal(nativeOffset, pinned.platforms[platform].audio_offset, 'Original NAPI offset differs')
+assert.equal(officialAudio.length, pinned.platforms[platform].audio_size, 'Original NAPI size differs')
+assert.equal(expectedAddonSha256, pinned.platforms[platform].audio_sha256, 'Original NAPI hash differs')
 const existing = existsSync(audio) ? readFileSync(audio) : null
 const previousSha256 = existing ? hash(existing) : null
 if (sync && previousSha256 !== expectedAddonSha256) {
