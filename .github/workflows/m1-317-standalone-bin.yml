@@ -79,6 +79,7 @@ jobs:
           executable=claude
           if [ "$RUNNER_OS" = "Windows" ]; then executable=claude.exe; fi
           curl --fail --location --silent --show-error --retry-all-errors --retry 5             "$base/$platform/$executable" -o "$RUNNER_TEMP/m1-platform-reference/$executable"
+          node build/verify-official-native-by-platform.mjs             --binary "$RUNNER_TEMP/m1-platform-reference/$executable"             --manifest "$RUNNER_TEMP/m1-platform-reference/manifest.json"             --vendor-root vendor --sync
           node build/verify-official-native-by-platform.mjs             --binary "$RUNNER_TEMP/m1-platform-reference/$executable"             --manifest "$RUNNER_TEMP/m1-platform-reference/manifest.json"             --vendor-root vendor
           node -e "const arch=process.arch+'-'+process.platform; const api=require('./vendor/audio-capture/'+arch+'/audio-capture.node'); if (!Object.keys(api).length) throw Error('Native audio exposes no functions')"
       - name: 生成自包含本机执行程序并打包完整发行资源
