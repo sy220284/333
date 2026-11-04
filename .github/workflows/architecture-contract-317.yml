@@ -6,6 +6,10 @@ on:
       - upgrade/2.1.310-m1-evidence
     paths:
       - 'src/utils/cliArgv317.*'
+      - 'src/utils/sessionQueuePartitions317.*'
+      - 'src/utils/messageQueueManager.ts'
+      - 'src/types/textInputTypes.ts'
+      - 'src/bootstrap/state.ts'
       - 'src/query/sessionIdentity317.*'
       - 'src/services/tools/toolExecutionLifecycle317.*'
       - 'src/services/tools/StreamingToolExecutor.ts'
@@ -19,6 +23,7 @@ on:
       - 'src/tools/AgentTool/runAgent.ts'
       - 'tests/m1-print-routing-317.test.mjs'
       - 'tests/m2-session-identity-317.test.mjs'
+      - 'tests/m2-session-queue-partitions-317.test.mjs'
       - 'tests/m3-tool-lifecycle-317.test.mjs'
       - '.github/workflows/architecture-contract-317.yml'
   workflow_dispatch:
@@ -39,4 +44,4 @@ jobs:
       - name: 验证317独立运行架构契约
         run: |
           node --version
-          node --test tests/m1-print-routing-317.test.mjs tests/m2-session-identity-317.test.mjs tests/m3-tool-lifecycle-317.test.mjs
+          node --test tests/m1-print-routing-317.test.mjs tests/m2-session-identity-317.test.mjs tests/m2-session-queue-partitions-317.test.mjs tests/m3-tool-lifecycle-317.test.mjs
