@@ -504,6 +504,22 @@ export function resetProjectForTesting(): void {
   project = null
 }
 
+/**
+ * A warm --preload/--bg-spare process can claim a session whose config root
+ * differs even when its cwd and session ID are unchanged. Invalidate both
+ * layers of path ownership after the old writer has drained. A new Project
+ * instance must not retain the warm process's pending transcript state.
+ */
+export async function rebindSessionStorageForClaim317(): Promise<void> {
+  if (project) await project.flush()
+  project = null
+  getProjectDir.cache.clear()
+  sessionTranscriptPaths.clear()
+  const sessionId = getSessionId()
+  const projectDir = getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
+  sessionTranscriptPaths.remember(sessionId, join(projectDir, `${sessionId}.jsonl`))
+}
+
 export function setSessionFileForTesting(path: string): void {
   getProject().sessionFile = path
   sessionTranscriptPaths.remember(getSessionId(), path)

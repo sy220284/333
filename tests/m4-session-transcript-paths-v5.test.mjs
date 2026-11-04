@@ -10,6 +10,16 @@ test('Storage V5 routes async writes back to the original resumed worktree', () 
   assert.equal(paths.resolve('session-b', () => '/wrong/session-b.jsonl'), '/worktree-b/claude/session-b.jsonl')
 })
 
+test('Storage V5 clears previous identity after a warmed process changes owner', () => {
+  const paths = new SessionTranscriptPathsV5()
+  paths.remember('session-a', '/old-config/session-a.jsonl')
+  paths.clear()
+  assert.equal(paths.resolve('session-a', () => '/new-config/session-a.jsonl'),
+    '/new-config/session-a.jsonl')
+  paths.remember('session-a', '/new-config/session-a.jsonl')
+  assert.equal(paths.resolve('session-a', () => '/wrong/path'), '/new-config/session-a.jsonl')
+})
+
 test('Storage V5 remembers explicit relocation, while unknown sessions use their default path', () => {
   const paths = new SessionTranscriptPathsV5()
   assert.equal(paths.resolve('legacy', () => '/default/legacy.jsonl'), '/default/legacy.jsonl')

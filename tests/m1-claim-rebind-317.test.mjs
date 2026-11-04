@@ -9,6 +9,8 @@ import { getClaudeConfigHomeDir } from '../src/utils/envUtils.ts'
 import { enableConfigs, getGlobalConfig, getProjectPathForConfig } from '../src/utils/config.ts'
 import { getSettingsForSource } from '../src/utils/settings/settings.ts'
 import { getOriginalCwd, setOriginalCwd } from '../src/bootstrap/state.ts'
+import { getTranscriptPath, getProjectDir } from '../src/utils/sessionStorage.ts'
+import { getSessionId } from '../src/bootstrap/state.ts'
 import { ensureFastPathSettingsLoaded317 } from '../src/bootstrap/fastPathSettings317.ts'
 
 test('317 claimed session rebinds global config, project and settings ownership', async () => {
@@ -34,6 +36,13 @@ test('317 claimed session rebinds global config, project and settings ownership'
     const warmPolicy = ensureFastPathSettingsLoaded317()
     await warmPolicy
     const oldPath = getProjectPathForConfig()
+    // Warmed Storage V5 can cache both a project path and current transcript
+    // before the new claim replaces CLAUDE_CONFIG_DIR.
+    const warmProjectDir = getProjectDir(a)
+    const warmTranscriptPath = getTranscriptPath()
+    assert.ok(warmProjectDir.startsWith(join(a, 'projects')))
+    assert.ok(warmTranscriptPath.startsWith(join(a, 'projects')))
+
 
     // This mimics the accepted claim boundary: the new owner differs from
     // the context in which MDM, settings and config were first initialized.
@@ -43,6 +52,14 @@ test('317 claimed session rebinds global config, project and settings ownership'
 
     assert.equal(getGlobalClaudeFile(), join(b, configName))
     assert.equal(getClaudeConfigHomeDir(), b)
+    assert.ok(getProjectDir(a).startsWith(join(b, 'projects')),
+      'same cwd must resolve through newly claimed config root')
+    assert.notEqual(getProjectDir(a), warmProjectDir)
+    assert.equal(getTranscriptPath(),
+      join(getProjectDir(b), getSessionId() + '.jsonl'),
+      'current transcript must not retain the warmed config owner')
+    assert.notEqual(getTranscriptPath(), warmTranscriptPath)
+
     // Config reads must be gated again after a warm process switches owners.
     assert.throws(() => getGlobalConfig(), /Config accessed before allowed/)
     enableConfigs()

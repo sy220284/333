@@ -46,6 +46,11 @@ export async function rebindClaimedSessionDependencies317(): Promise<void> {
 
   env.getGlobalClaudeFile.cache.clear()
   envUtils.getClaudeConfigHomeDir.cache.clear()
+  // Once the env-derived config root is invalidated, reset Storage V5's
+  // memoized project path and transcript owner before the claimed main starts.
+  // Flush the outgoing warm writer first; propagate any write failure.
+  const { rebindSessionStorageForClaim317 } = await import('../utils/sessionStorage.js')
+  await rebindSessionStorageForClaim317()
   config.rebindGlobalConfigForClaim317()
   settingsCache.resetSettingsCache()
   settingsCache.clearPluginSettingsBase()

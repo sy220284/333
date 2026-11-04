@@ -12,6 +12,11 @@ export class SessionTranscriptPathsV5 {
     return path
   }
 
+  /** Invalidate ownership after a warm process is claimed by a new session. */
+  clear(): void {
+    this.paths.clear()
+  }
+
   resolve(sessionId: string, fallback: () => string): string {
     return this.paths.get(sessionId) ?? fallback()
   }
