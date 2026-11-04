@@ -89,3 +89,24 @@ test('317 bootstrap recognizes session verbs after safe root options, matching o
   assert.equal(classifyStartupArgs(['--settings={}', 'logs', 'missing']).backgroundRequest, false)
   assert.equal(classifyStartupArgs(['--system-prompt', '--bg']).backgroundRequest, false)
 })
+
+
+test('317 launch routing recognizes only real flags, never values or prompt text', () => {
+  for (const [flag, field] of [
+    ['--desktop', 'desktopRequest'], ['--bg', 'backgroundFlagRequest'],
+    ['--background', 'backgroundFlagRequest'], ['--bare', 'bareRequest'],
+    ['--help', 'helpRequest'], ['-h', 'helpRequest'],
+  ]) {
+    assert.equal(classifyStartupArgs([flag])[field], true, flag)
+    for (const prefix of ['--system-prompt', '--append-system-prompt', '--model']) {
+      const route = classifyStartupArgs([prefix, flag])
+      assert.equal(route[field], false, `${prefix} value ${flag}`)
+      assert.equal(route.backgroundRequest, false, `${prefix} value ${flag}`)
+    }
+    assert.equal(classifyStartupArgs(['--', flag])[field], false, `prompt text ${flag}`)
+  }
+  assert.equal(classifyStartupArgs(['--system-prompt', '--desktop', '--bg']).desktopRequest, false)
+  assert.equal(classifyStartupArgs(['--system-prompt', '--desktop', '--bg']).backgroundFlagRequest, true)
+  assert.equal(classifyStartupArgs(['--desktop', '--system-prompt', '--bg']).desktopRequest, true)
+  assert.equal(classifyStartupArgs(['--desktop', '--system-prompt', '--bg']).backgroundFlagRequest, false)
+})

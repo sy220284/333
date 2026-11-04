@@ -73,6 +73,13 @@ test('real model requests preserve --desktop prompt text and the final settings 
     const prompt = await launch(['--bare', '-p', '--model', model, '--output-format=json', '--', '--desktop'], env)
     assert.equal(prompt.status, 0, JSON.stringify(prompt)); assert.equal(JSON.parse(prompt.stdout).result, 'STARTUP_OK')
     assert.match(JSON.stringify(requests.at(-1).messages), /--desktop/)
+    // Desktop/background/bare-looking option values must remain data, and the
+    // model loop must execute instead of entering an unrelated startup route.
+    for (const value of ['--desktop', '--bg', '--bare']) {
+      const reserved = await launch(['-p', 'hello', '--system-prompt', value, '--model', model, '--output-format=json'], env)
+      assert.equal(reserved.status, 0, `${value}: ${JSON.stringify(reserved)}`)
+      assert.equal(JSON.parse(reserved.stdout).result, 'STARTUP_OK')
+    }
     const settings = await launch(['--bare', '-p', 'hello', '--settings={"model":"wrong-first-model"}', `--settings={"model":"${model}"}`, '--output-format=json'], env)
     assert.equal(settings.status, 0, JSON.stringify(settings)); assert.equal(JSON.parse(settings.stdout).result, 'STARTUP_OK')
     assert.equal(requests.at(-1).model, model)

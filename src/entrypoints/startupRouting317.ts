@@ -25,6 +25,11 @@ export function classifyStartupArgs(args) {
     flagWords,
     command,
     sessionVerbIndex,
+    // Use the same value-aware scanner for all launch-mode decisions.
+    desktopRequest: has('--desktop'),
+    backgroundFlagRequest: has('--bg') || has('--background'),
+    helpRequest: has('--help') || has('-h'),
+    bareRequest: has('--bare'),
     backgroundRequest: has('--bg') || has('--background') || sessionVerbIndex !== -1 ||
       command === '--internal-bg-supervisor' || BACKGROUND_COMMANDS.has(command),
     tmuxWorktreeRequest: tmux && worktree,

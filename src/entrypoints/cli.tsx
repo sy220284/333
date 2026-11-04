@@ -66,7 +66,7 @@ async function main(): Promise<void> {
   // starts remote GC profiling when explicitly enabled, before --version.
   noteProcessStartTuning();
   startGarbageCollectionCount();
-  const { flagWords, backgroundRequest, sessionVerbIndex, tmuxWorktreeRequest } = classifyStartupArgs(args);
+  const { desktopRequest, backgroundFlagRequest, helpRequest, bareRequest, backgroundRequest, sessionVerbIndex, tmuxWorktreeRequest } = classifyStartupArgs(args);
 
   // Fast-path for --version/-v: avoid evaluating the full CLI.
   // The 2.1.317 native executable accepts --version --verbose before full
@@ -181,8 +181,7 @@ async function main(): Promise<void> {
 
   // Official 317 rejects desktop/background combinations before opening Desktop.
   // Check root-option-prefixed session verbs too (e.g. --settings={} logs deadbeef).
-  if (flagWords.includes('--desktop') &&
-      (sessionVerbIndex !== -1 || flagWords.includes('--bg') || flagWords.includes('--background'))) {
+  if (desktopRequest && (sessionVerbIndex !== -1 || backgroundFlagRequest)) {
     const verb = sessionVerbIndex !== -1 ? args[sessionVerbIndex] : undefined;
     process.stderr.write(verb
       ? `--desktop can't be combined with \`claude ${verb}\`.\n`
@@ -194,7 +193,7 @@ async function main(): Promise<void> {
   // Desktop is a one-shot native handoff, not an interactive REPL. Handle it
   // before main.tsx initializes terminal listeners and startup background tasks:
   // those tasks otherwise keep error paths alive after their message is printed.
-  if (flagWords.includes('--desktop') && !flagWords.includes('--help') && !flagWords.includes('-h')) {
+  if (desktopRequest && !helpRequest) {
     const { parseDesktopCliOptions, launchDesktopFromCli } =
       await import('../cli/desktop/launch.ts');
     const { prompt, options } = parseDesktopCliOptions(args);
@@ -358,7 +357,7 @@ async function main(): Promise<void> {
 
   // --bare: set SIMPLE early so gates fire during module eval / commander
   // option building (not just inside the action handler).
-  if (flagWords.includes('--bare')) {
+  if (bareRequest) {
     process.env.CLAUDE_CODE_SIMPLE = '1';
   }
 
