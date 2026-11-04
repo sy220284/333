@@ -27,7 +27,7 @@ import { logError } from '../../utils/log.js'
 import { clearAllCaches } from '../../utils/plugins/cacheUtils.js'
 import { getInstallCounts } from '../../utils/plugins/installCounts.js'
 import { getPluginDataDirSize } from '../../utils/plugins/pluginDirectories.js'
-import { getUnconfiguredOptions, getPluginStorageId, loadPluginOptions, savePluginOptions } from '../../utils/plugins/pluginOptionsStorage.js'
+import { getPluginStorageId, loadPluginOptions, savePluginOptions } from '../../utils/plugins/pluginOptionsStorage.js'
 import { PluginCliConfigError, readPluginConfigStdin, validatePluginCliValues } from '../../utils/plugins/pluginCliConfig.js'
 import {
   isPluginInstalled,
@@ -778,6 +778,11 @@ export async function pluginConfigureHandler(
   const schema = plugin.manifest.userConfig ?? {}
   const displayName = plugin.name
   const stored = loadPluginOptions(id)
+  // CLI configuration reports every unset option, including optional fields.
+  // The interactive plugin enable flow uses getUnconfiguredOptions for a
+  // different purpose: prompting only for missing *required* values.
+  const getUnsetOptionNames = (values: Record<string, unknown>): string[] =>
+    Object.keys(schema).filter(name => values[name] === undefined || values[name] === null || values[name] === '')
   if (options.valuesStdin) {
     if (process.stdin.isTTY) {
       cliError('No option values were piped in. Example: claude plugin configure <plugin> --values-stdin < values.json')
@@ -797,13 +802,13 @@ export async function pluginConfigureHandler(
       throw error
     }
     const saved = Object.keys(normalized)
-    const unconfigured = Object.keys(getUnconfiguredOptions(plugin))
+    const unconfigured = getUnsetOptionNames({ ...stored, ...normalized })
     if (options.json) {
       cliOk(jsonStringify({ pluginId: id, displayName, saved, unconfigured }))
     }
     cliOk(saved.length ? 'Configuration saved. Restart Claude Code to apply it.' : 'No configuration changes.')
   }
-  const unconfigured = Object.keys(getUnconfiguredOptions(plugin))
+  const unconfigured = getUnsetOptionNames(stored)
   const configured: string[] = []
   const inputs: Record<string, string> = {}
   for (const [name, field] of Object.entries(schema)) {
