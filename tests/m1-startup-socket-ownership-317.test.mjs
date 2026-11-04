@@ -9,7 +9,15 @@ import { assertSocketVacant317 } from '../src/bootstrap/socketOwnership317.mjs'
 
 const cli = resolve(import.meta.dirname, '../dist/cli.js')
 async function openOwner(path) {
-  const server = createServer(peer => peer.end('ORIGINAL_OWNER'))
+  // Probing clients connect and close without sending data. Reply only to
+  // the explicit test handshake; writing to a closed probe raises EPIPE.
+  const server = createServer(peer => {
+    peer.once('data', bytes => {
+      if (bytes.toString() === 'OWNER_CHECK') peer.end('ORIGINAL_OWNER')
+      else peer.end()
+    })
+    peer.once('end', () => peer.end())
+  })
   await new Promise((resolve, reject) => {
     server.once('error', reject)
     server.listen(path, resolve)
@@ -19,6 +27,7 @@ async function openOwner(path) {
 async function checkOwner(path) {
   return new Promise((resolve, reject) => {
     const peer = connect(path)
+    peer.once('connect', () => peer.write('OWNER_CHECK'))
     let data = ''
     peer.on('data', chunk => { data += chunk.toString() })
     peer.once('end', () => resolve(data))
