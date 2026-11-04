@@ -103,7 +103,7 @@ export async function executePluginEvalSuite317(cases, settings, adapters = {}) 
         costUsd = addUsd(costUsd, addUsd(result.costUsd ?? 0, judgeCostUsd))
         if (costUsd >= maxCostUsd) budgetExceeded = true
       } finally {
-        if (!settings.keepTemp) await rm(workspace, { recursive: true, force: true })
+        if (!settings.keepTemp) await rm(workspace, { recursive: true, force: true, maxRetries: 12, retryDelay: 200 })
       }
     }
   }
