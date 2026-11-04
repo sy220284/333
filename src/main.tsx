@@ -3641,6 +3641,17 @@ async function run(): Promise<CommanderCommand> {
     await pluginInstallHandler(plugin, options);
   });
 
+  // Official 2.1.317 plugin configuration: exposes saved values without
+  // leaking secrets and validates stdin JSON before writing any settings.
+  pluginCmd.command('configure <plugin>').description("Show a plugin's options or save values from stdin").option('--json', 'Output as JSON').option('--values-stdin', 'Read option values from stdin as a JSON object of single-line strings').addOption(coworkOption()).action(async (plugin: string, options: {
+    json?: boolean;
+    valuesStdin?: boolean;
+    cowork?: boolean;
+  }) => {
+    const { pluginConfigureHandler } = await import('./cli/handlers/plugins.js');
+    await pluginConfigureHandler(plugin, options);
+  });
+
   // Plugin uninstall command
   pluginCmd.command('uninstall <plugin>').alias('remove').alias('rm').description('Uninstall an installed plugin').option('-s, --scope <scope>', 'Uninstall from scope: user, project, or local', 'user').option('--keep-data', "Preserve the plugin's persistent data directory (~/.claude/plugins/data/{id}/)").addOption(coworkOption()).action(async (plugin: string, options: {
     scope?: string;
