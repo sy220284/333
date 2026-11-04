@@ -483,7 +483,7 @@
     },
     {
       "path": "shared/evals/report/build-report-lite.mjs",
-      "stored_path": "shared/evals/report/build-report-lite.mjs.txt",
+      "stored_path": "shared/evals/report/build-report-lite.mjs",
       "sha256": "af79ca5fa5f06747dbcaa1d40017c8c8e81e0aa11cb8e32b848043893cdb03c7",
       "git_sha": "ba1c1ba05eadd9b121a1a1cc07cf59443e70754a",
       "source": "elf:328770756:27329",
@@ -492,7 +492,7 @@
     },
     {
       "path": "shared/evals/report/runner-scaffold.mjs",
-      "stored_path": "shared/evals/report/runner-scaffold.mjs.txt",
+      "stored_path": "shared/evals/report/runner-scaffold.mjs",
       "sha256": "c3a87ba4b94b3018b83c075d5148ba7760580aa447699d513d45ab55b82a531a",
       "git_sha": "2f0220b41b4b30eb12606aa7ff95a9fee2f6e924",
       "source": "elf:328737613:33142",
@@ -852,7 +852,7 @@
     },
     {
       "path": "shared/preserved-thinking-migration/drop_block_probe.py",
-      "stored_path": "shared/preserved-thinking-migration/drop_block_probe.py.txt",
+      "stored_path": "shared/preserved-thinking-migration/drop_block_probe.py",
       "sha256": "35e24416c6c4a00424db1443f48e5d6383c62b4c3ccbf0ae90736e17a22c144b",
       "git_sha": "4950057a2f6f9781e32504bac6c86d96bc98a1a1",
       "source": "02_解压文本与资源/drop_block_probe-4e056aa7.py",
@@ -861,7 +861,7 @@
     },
     {
       "path": "shared/preserved-thinking-migration/prefix_diff.py",
-      "stored_path": "shared/preserved-thinking-migration/prefix_diff.py.txt",
+      "stored_path": "shared/preserved-thinking-migration/prefix_diff.py",
       "sha256": "734934b81b5f26e9ed2f8f51f44fed6554233de4f37b22a8845ae4ffcb622ac0",
       "git_sha": "cfa88044b45b4acb8b82044f51872f4f7e306c2f",
       "source": "02_解压文本与资源/prefix_diff-69deb9d3.py",
