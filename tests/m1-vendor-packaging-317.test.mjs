@@ -123,7 +123,7 @@ test('M1 C19-T03: staging activation failure rolls back to the complete previous
       "const { syncBuiltinESMExports } = require('node:module')",
       "const originalRename = fs.renameSync",
       "fs.renameSync = (from, to) => {",
-      "  if (String(from).includes('.vendor-stage-') && String(to).endsWith('dist/vendor')) {",
+      "  if (String(from).includes('.vendor-stage-') && String(to).replaceAll('\\\\', '/').endsWith('dist/vendor')) {",
       "    const error = new Error('simulated activation failure')",
       "    error.code = 'EACCES'",
       "    throw error",
