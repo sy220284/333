@@ -7,17 +7,17 @@
 import { readFile } from 'node:fs/promises'
 import { BlockList, isIP } from 'node:net'
 import { randomUUID } from 'node:crypto'
-import { readGatewayConfig317 } from './gatewayConfig317.mjs'
-import { createOidcProvider317, verifyGatewaySession317 } from './gatewayAuth317.mjs'
-import { createGatewayDeviceFlow317 } from './gatewayDevice317.mjs'
-import { openGatewayStore317 } from './gatewayStore317.mjs'
-import { handleGatewayAdmin317, isGatewayAdminPath317 } from './gatewayAdmin317.mjs'
-import { precheckGatewaySpend317, gatewayUsageResponse317 } from './gatewaySpendMeter317.mjs'
-import { createCriAdmission317, isCriJwt317 } from './gatewayCri317.mjs'
-import { createGatewayManagedSettings317, responseForManagedSettings317 } from './gatewayManaged317.mjs'
+import { readGatewayConfig317 } from './gatewayConfig317.ts'
+import { createOidcProvider317, verifyGatewaySession317 } from './gatewayAuth317.ts'
+import { createGatewayDeviceFlow317 } from './gatewayDevice317.ts'
+import { openGatewayStore317 } from './gatewayStore317.ts'
+import { handleGatewayAdmin317, isGatewayAdminPath317 } from './gatewayAdmin317.ts'
+import { precheckGatewaySpend317, gatewayUsageResponse317 } from './gatewaySpendMeter317.ts'
+import { createCriAdmission317, isCriJwt317 } from './gatewayCri317.ts'
+import { createGatewayManagedSettings317, responseForManagedSettings317 } from './gatewayManaged317.ts'
 import {
   forwardGatewayInference317, forwardGatewayTelemetry317, listGatewayModels317,
-} from './gatewayForward317.mjs'
+} from './gatewayForward317.ts'
 
 const secureHeaders = Object.freeze({
   'x-content-type-options': 'nosniff',
