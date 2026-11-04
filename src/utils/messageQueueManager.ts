@@ -18,6 +18,7 @@ import { extractTextContent } from './messages.js'
 import { objectGroupBy } from './objectGroupBy.js'
 import { recordQueueOperation } from './sessionStorage.js'
 import { createSignal } from './signal.js'
+import { QUEUE_PRIORITY_ORDER as PRIORITY_ORDER, sortQueuedCommandsByPriority } from './queuePriority317.mjs'
 
 export type SetAppState = (f: (prev: AppState) => AppState) => void
 
@@ -148,11 +149,6 @@ export function enqueuePendingNotification(command: QueuedCommand): void {
   )
 }
 
-const PRIORITY_ORDER: Record<QueuePriority, number> = {
-  now: 0,
-  next: 1,
-  later: 2,
-}
 
 /**
  * Remove and return the highest-priority command, or undefined if empty.
@@ -262,7 +258,7 @@ export function dequeueAllMatching(
   for (const _cmd of matched) {
     logOperation('dequeue')
   }
-  return matched
+  return sortQueuedCommandsByPriority(matched)
 }
 
 /**
@@ -275,19 +271,19 @@ export function remove(commandsToRemove: QueuedCommand[]): void {
     return
   }
 
-  const before = commandQueue.length
+  let removedCount = 0
   for (let i = commandQueue.length - 1; i >= 0; i--) {
     if (commandsToRemove.includes(commandQueue[i]!)) {
       commandQueue.splice(i, 1)
+      removedCount++
     }
   }
 
-  if (commandQueue.length !== before) {
+  if (removedCount > 0) {
     notifySubscribers()
-  }
-
-  for (const _cmd of commandsToRemove) {
-    logOperation('remove')
+    // Only journal real removals. Another consumer may have drained a command
+    // between snapshot selection and this operation.
+    for (let i = 0; i < removedCount; i++) logOperation('remove')
   }
 }
 
@@ -526,9 +522,9 @@ export function getCommandsByMaxPriority(
   maxPriority: QueuePriority,
 ): QueuedCommand[] {
   const threshold = PRIORITY_ORDER[maxPriority]
-  return commandQueue.filter(
+  return sortQueuedCommandsByPriority(commandQueue.filter(
     cmd => PRIORITY_ORDER[cmd.priority ?? 'next'] <= threshold,
-  )
+  ))
 }
 
 /**
