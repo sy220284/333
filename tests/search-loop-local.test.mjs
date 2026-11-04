@@ -6,6 +6,8 @@ import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 
 const root = resolve(import.meta.dirname, '..');
+const nativeBinary = join(root,'dist',process.platform === 'win32' ? 'claude.exe' : 'claude');
+const nativeMode = process.env.M1_NATIVE_BINARY_RUN === '1';
 const model = 'claude-sonnet-4-6';
 const reply = 'MOCK_AGENT_SEARCH_OK_333';
 const fixtureContent = 'FIXTURE_333_READ_RESULT';
@@ -27,7 +29,7 @@ function responseBlocks(content, stopReason, index) {
 
 async function launch(executable, file, args, cwd, env) {
   return await new Promise((resolveRun, reject) => {
-    const child = spawn(executable, [file, ...args], {cwd,env,stdio:['ignore','pipe','pipe']});
+    const child = spawn(executable, file ? [file, ...args] : args, {cwd,env,stdio:['ignore','pipe','pipe']});
     let stdout='',stderr='';
     const timeout = setTimeout(() => child.kill('SIGKILL'), 60000);
     child.stdout.on('data',x => stdout+=x.toString());
@@ -94,7 +96,8 @@ test('original and rebuilt versions both execute Glob and Grep through model-too
     const baseArgs=['-p','Search the example.txt file','--model',model,'--output-format','json','--max-turns','2'];
     for(const tool of ['Glob','Grep']) for(const [name,executable,file] of [
       ['original',process.execPath,join(root,'cli.js')],
-      ['rebuilt','bun',join(root,'dist/cli.js')]
+      ['rebuilt','bun',join(root,'dist/cli.js')],
+      ...(nativeMode ? [['native',nativeBinary,null]] : [])
     ]) {
       active=tool+'-'+name;
       sessions.set(active,{count:0,sawToolResult:false,tool});
