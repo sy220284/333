@@ -51,8 +51,8 @@ jobs:
           bun-version: 1.4.4
       - name: 网关授权与推理链真实运行回归
         run: bun test tests/m6-gateway-device-317.test.mjs tests/m6-gateway-runtime-317.test.mjs
-      - name: 网关Postgres身份字段安全校验
-        run: node --test tests/m6-gateway-jsonb-317.test.mjs
+      - name: 网关授权、IP限流、费用及管理员限额真实行为回归
+        run: node --test tests/m6-gateway-jsonb-317.test.mjs tests/m6-gateway-device-rate-317.test.mjs tests/m6-gateway-admin-317.test.mjs tests/m6-gateway-spend-integration-317.test.mjs
       - name: 上传内容级审计证据
         if: always()
         uses: actions/upload-artifact@v4
