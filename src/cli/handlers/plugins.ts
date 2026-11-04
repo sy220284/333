@@ -228,6 +228,7 @@ export async function pluginListHandler(options: {
       errors?: string[]
       dataDirSize?: { bytes: number; human: string }
       dataDirUnreadable?: boolean
+      errorDetails?: Array<{ type: string; path: string }>
     }> = []
 
     for (const pluginId of pluginIds.sort()) {
@@ -324,6 +325,23 @@ export async function pluginListHandler(options: {
         installPath: p.path,
       })
     }
+    // A malformed skills-directory manifest has no LoadedPlugin, but still
+    // appears as a failed user-scoped plugin in the official JSON listing.
+    for (const error of skillsDirLoadErrors.filter(error =>
+      !skillsDirPlugins.some(plugin => error.source === plugin.source))) {
+      const errorPath = 'manifestPath' in error ? error.manifestPath :
+        'path' in error ? error.path : ''
+      plugins.push({
+        id: error.source,
+        version: 'unknown',
+        scope: 'user',
+        enabled: false,
+        installPath: '',
+        errors: [getPluginErrorMessage(error)],
+        errorDetails: [{ type: error.type, path: errorPath }],
+      })
+    }
+
     // Path-level inline failures (--plugin-dir /nonexistent): no LoadedPlugin
     // exists so the loop above can't surface them. Mirror the human-path
     // handling so JSON consumers see the failure instead of silent omission.
@@ -399,7 +417,7 @@ export async function pluginListHandler(options: {
     // inlineLoadErrors can exist with zero inline plugins (e.g. --plugin-dir
     // points at a nonexistent path). Don't early-exit over them — fall
     // through to the session section so the failure is visible.
-    if (inlineLoadErrors.length === 0) {
+    if (inlineLoadErrors.length === 0 && skillsDirLoadErrors.length === 0) {
       cliOk(
         'No plugins installed. Use `claude plugin install` to install a plugin.',
       )
