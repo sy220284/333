@@ -62,8 +62,7 @@ test('317 plugin details: native and rebuilt commands match installed inventory,
       outputs[kind] = {
         invalidJson: malformedJson.out.replaceAll(configDir, '<config>'),
         invalidHuman: malformedHuman.out.replaceAll(configDir, '<config>'),
-        basic, missing, fullInventory: full.out.split('Projected token cost')[0],
-        fullHasCost: full.out.includes('Per-component (rounded)'),
+        basic, missing, fullOutput: full.out,
         list: listJson.out.replaceAll(configDir, '<config>'),
         humanList: listHuman.out.replaceAll(configDir, '<config>'),
       }
