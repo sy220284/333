@@ -33,3 +33,30 @@ jobs:
           name: pr7-source-snapshot
           path: /tmp/pr7-source.tar.gz
           retention-days: 1
+
+      - name: 归档TypeScript源码供本地批量迁移
+        run: |
+          python3 - <<'PY'
+          import os, subprocess, zipfile
+          names = subprocess.check_output(['git','ls-files','-z']).split(b'\0')
+          extensions = ('.ts','.tsx','.mjs','.json')
+          pick=[]
+          for raw in names:
+              if not raw: continue
+              path=os.fsdecode(raw)
+              if path in ('package.json','tsconfig.json','biome.json'):
+                  pick.append(path)
+              elif path.startswith(('src/','native/','tools/dev/','tests/')) and path.endswith(extensions):
+                  if '/assets/' in path or '/examples/' in path: continue
+                  if path.startswith('src/skills/bundled/') and not path.endswith(('.ts','.tsx')): continue
+                  pick.append(path)
+          with zipfile.ZipFile('/tmp/pr7-ts-audit-sources.zip','w',compression=zipfile.ZIP_DEFLATED,compresslevel=6) as z:
+              for item in pick: z.write(item)
+          print('Sources exported:',len(pick),'size:',os.stat('/tmp/pr7-ts-audit-sources.zip').st_size)
+          PY
+      - name: 上传可单独分析的TypeScript源码
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr7-ts-audit-sources
+          path: /tmp/pr7-ts-audit-sources.zip
+          retention-days: 7
