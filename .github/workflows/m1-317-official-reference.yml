@@ -22,6 +22,14 @@ on:
       - 'src/components/Spinner/**'
       - 'src/components/LogoV2/**'
       - 'src/skills/bundled/**'
+      - 'src/utils/permissions/yolo-classifier-prompts/**'
+      - 'src/utils/ultraplan/prompt.txt'
+      - 'build/standalone-bundled-assets-*.json'
+      - 'build/verify-bundled-assets.mjs'
+      - 'build/restore-claude-api.mjs'
+      - 'tests/m1-standalone-assets-317.test.mjs'
+      - 'tests/claude-api-version-parity.test.mjs'
+      - 'tests/claude-api-skill.test.mjs'
       - 'src/skills/bundledFiles.mjs'
       - 'src/skills/bundledSkills.ts'
       - 'tests/bundled-skill-extraction.test.mjs'
@@ -59,6 +67,8 @@ jobs:
           bun-version: 1.4.4
       - name: 校验仓库对当前与历史基线的独立定义
         run: node --test tests/m1-target-release-317.test.mjs tests/m1-read-repeat-317.test.mjs tests/m1-subagent-effort-317.test.mjs tests/m1-317-chain-matrix.test.mjs tests/m1-account-email-disclosure-317.test.mjs tests/m1-official-bundled-skills-317.test.mjs
+      - name: 校验317独立内置资源的篡改和版本切换保护
+        run: node --test tests/m1-standalone-assets-317.test.mjs
       - name: 校验最终版嵌入技能扫描器的哈希、归属与差异识别
         run: python3 -m unittest discover -s tests -p test_final_release_skills_audit.py
       - name: 获取官方 2.1.317 原生发行清单与 Linux x64
@@ -110,6 +120,11 @@ jobs:
           test -s dist/cli.js
           printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-317-candidate"
           chmod +x "${RUNNER_TEMP}/m1-317-candidate"
+      - name: 官方317与重建版 Claude API 技能读取和106项释放文件真实对照
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLAUDE_TARGET_X64="${RUNNER_TEMP}/m1-317-reference/claude" node --test tests/claude-api-version-parity.test.mjs
       - name: 官方 2.1.317 与独立重建版 32 项 CLI 参数对照
         shell: bash
         run: |
