@@ -93,6 +93,13 @@ test('api-version opens the bundled 2.1.317 migration guide through the actual R
       assert.equal(JSON.parse(stdout).result, 'SKILL_READ_OK')
       const initial = requests.find(r => JSON.stringify(r.messages).includes('<command-name>/claude-api</command-name>'))
       assert.ok(initial, `${name}: expected a skill request`)
+      const promptBlocks = Array.isArray(initial.system) ? initial.system : []
+      const systemText = promptBlocks.map(block => block.text ?? '').join('\n')
+      assert.match(systemText,
+        /You are an agent working with the user toward their goals, using your own judgment along the way\./,
+        `${name}: native 317 headless Agent SDK system introduction drifted`)
+      assert.equal(initial.thinking?.display, 'omitted',
+        `${name}: native 317 headless thinking display must be omitted`)
       const prompt = JSON.stringify(initial.messages)
       assert.ok(prompt.includes('api-version-migration.md'), `${name}: missing migration guide instruction`)
       assert.ok(prompt.includes('Base directory for this skill:'), `${name}: missing extracted skill directory`)
