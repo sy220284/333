@@ -111,4 +111,4 @@ test('317 eval: real-MCP opt-in retains plugin MCP discovery and subagent run ca
   assert.equal(calls[0].strictMcpConfig, false)
   assert.equal(calls[0].maxTurns, 4)
   assert.equal(calls[0].pluginDir, dir)
-})
+}))
