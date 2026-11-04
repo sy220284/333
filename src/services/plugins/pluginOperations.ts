@@ -22,7 +22,7 @@ import {
   clearAllCaches,
   markPluginVersionOrphaned,
 } from '../../utils/plugins/cacheUtils.js'
-import { commandSourceDisclosure, isAuthorizedSourceCommand } from '../../utils/plugins/commandSourceConsent.mjs'
+import { commandSourceDisclosure, installedSourceCommandKey, isAuthorizedSourceCommand } from '../../utils/plugins/commandSourceConsent.mjs'
 import { getCommandSourceCatalogRevision } from '../../utils/plugins/commandSourceCatalog.js'
 import {
   findReverseDependents,
@@ -980,7 +980,10 @@ export async function updatePluginOp(
     }, commandConsent?.acceptCommand)
     const isNestedSession = process.env.CLAUDECODE === '1' ||
       process.env.CLAUDE_CODE_CHILD_SESSION === '1'
-    if (!isAuthorizedSourceCommand(shownCommand, {
+    const samePreviouslyApprovedCommand = !isNestedSession &&
+      entry.source.mode === 'copy' &&
+      installation.sourceCommand === installedSourceCommandKey(entry.source)
+    if (!samePreviouslyApprovedCommand && !isAuthorizedSourceCommand(shownCommand, {
       yes: commandConsent?.yes,
       acceptCommand: commandConsent?.acceptCommand,
       isNestedSession,
@@ -1026,7 +1029,7 @@ async function performPluginUpdate({
   pluginName: string
   entry: PluginMarketplaceEntry
   marketplaceInstallLocation: string
-  installation: { version?: string; installPath: string }
+  installation: { version?: string; installPath: string; sourceCommand?: string }
   scope: PluginScope
   projectPath: string | undefined
   authorizedCommandSource?: boolean
@@ -1172,6 +1175,8 @@ async function performPluginUpdate({
       versionedPath,
       newVersion,
       gitCommitSha,
+      typeof entry.source !== 'string' && entry.source.source === 'command'
+        ? installedSourceCommandKey(entry.source) : null,
     )
 
     if (oldVersionPath && oldVersionPath !== versionedPath) {
