@@ -32,6 +32,7 @@ import {
 import {
   addInstalledPlugin,
   getGitCommitSha,
+  loadInstalledPluginsV2,
 } from './installedPluginsManager.js'
 import { getManagedPluginNames } from './managedPlugins.js'
 import { getMarketplaceCacheOnly, getPluginById } from './marketplaceManager.js'
