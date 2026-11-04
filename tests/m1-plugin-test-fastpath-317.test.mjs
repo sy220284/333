@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, statSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
@@ -81,8 +81,15 @@ test('317 plugin worker emits the official report marker and parseable result', 
       row.startsWith('claude-plugin-test-report '))
     assert.ok(line, r.stdout + r.stderr)
     const payload = JSON.parse(line.slice('claude-plugin-test-report '.length))
-    // macOS aliases /var to /private/var; compare the actual same file.
-    assert.equal(realpathSync(payload.file), realpathSync(file))
+    // The worker may canonicalize /var into /private/var on macOS and
+    // Windows may preserve a DOS 8.3 short name in the fixture path.
+    // Compare filesystem identity rather than platform-dependent spelling.
+    const actual = statSync(payload.file, { bigint: true })
+    const expected = statSync(file, { bigint: true })
+    assert.equal(actual.dev, expected.dev)
+    assert.equal(actual.ino, expected.ino)
+    assert.equal(actual.size, expected.size)
+    assert.equal(readFileSync(payload.file, 'utf8'), readFileSync(file, 'utf8'))
     assert.ok(Array.isArray(payload.results))
     assert.ok(payload.results.some(item => item.title.includes('wire result') &&
       item.failure == null), JSON.stringify(payload))
