@@ -34,13 +34,16 @@ function stdoutText(events) {
 export async function runEvalModel317({
   prompt, workspace, pluginDir, model, timeoutSeconds = 300,
   allowedTools = [], disallowedTools = [], appendSystemPrompt,
-  maxBudgetUsd, env = {},
+  maxBudgetUsd, maxTurns, env = {},
 }) {
   if (typeof prompt !== 'string' || !prompt.trim()) {
     throw new Error('eval model execution requires a nonempty prompt')
   }
   if (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 1 || timeoutSeconds > 3600) {
     throw new Error('eval timeout_seconds must be between 1 and 3600')
+  }
+  if (maxTurns !== undefined && (!Number.isInteger(maxTurns) || maxTurns < 1)) {
+    throw new Error('eval max_turns must be a positive integer')
   }
   const args = [
     '-p', prompt, '--output-format', 'stream-json', '--verbose',
@@ -50,6 +53,7 @@ export async function runEvalModel317({
   if (model) args.push('--model', model)
   if (appendSystemPrompt) args.push('--append-system-prompt', appendSystemPrompt)
   if (maxBudgetUsd !== undefined) args.push('--max-budget-usd', String(maxBudgetUsd))
+  if (maxTurns !== undefined) args.push('--max-turns', String(maxTurns))
   if (allowedTools.length) args.push('--allowedTools', ...allowedTools)
   if (disallowedTools.length) args.push('--disallowedTools', ...disallowedTools)
   const [command, ...prefix] = cliInvocation()
