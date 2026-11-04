@@ -4,7 +4,8 @@ import { resolve, join } from 'node:path'
 import { test } from 'node:test'
 
 const root = resolve(import.meta.dirname, '..')
-const fresh = async name => import('../src/bootstrap/processStart317.mjs?' + name)
+// Query-suffixed imports must target the TypeScript implementation so each test receives isolated module state.
+const fresh = async name => import('../src/bootstrap/processStart317.ts?' + name)
 
 test('M1 317: official allocator flags preserve bitmask, decimal bounds, and disable booleans', async () => {
   const module = await fresh('allocator')
