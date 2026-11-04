@@ -29,6 +29,7 @@ function fixture(run) {
       'build/package-release.mjs',
       'build/release-launcher.cjs',
       'build/verify-official-embedded-assets.mjs',
+      'build/package-official-317-assets.mjs',
       manifestFile,
       ...manifest.resources.map(item => item.path),
     ])
