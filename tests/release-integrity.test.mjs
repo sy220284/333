@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, existsSync, cpSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, existsSync, cpSync, mkdtempSync, rmSync, readdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import './m1-vendor-packaging-317.test.mjs';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -9,11 +11,40 @@ import { test } from 'node:test';
 const root=resolve(import.meta.dirname,'..'),dist=join(root,'dist');
 const expectedVersion=JSON.parse(readFileSync(join(root,'package.json'),'utf8')).version;
 const metadata=JSON.parse(readFileSync(join(dist,'integrity.json'),'utf8'));
-test('release package contains all 13 platform vendor files', () => {
+function vendorFiles(dir, prefix='vendor') {
+  return readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+    const currentPath = join(dir, entry.name);
+    const rel = prefix + '/' + entry.name;
+    if (entry.isDirectory()) return vendorFiles(currentPath, rel);
+    assert.equal(entry.isFile(), true, `Non-file native resource: ${rel}`);
+    return [rel];
+  }).sort();
+}
+test('release vendor inventory matches exactly the current source tree', () => {
   assert.equal(metadata.version, expectedVersion);
-  assert.equal(metadata.files.filter(f=>f.path.startsWith('vendor/')).length,13);
+  const sourceFiles = vendorFiles(join(root, 'vendor'));
+  const packagedFiles = vendorFiles(join(dist, 'vendor'));
+  const indexedFiles = metadata.files.filter(f=>f.path.startsWith('vendor/')).map(f=>f.path).sort();
+  assert.deepEqual(packagedFiles, sourceFiles);
+  assert.deepEqual(indexedFiles, sourceFiles);
   assert.ok(existsSync(join(dist,'cli.js')));
   assert.ok(existsSync(join(dist,'launcher.cjs')));
+});
+test('official 2.1.317 Linux x64 native resources survive packaging and load in Node', {
+  skip: !(process.platform === 'linux' && process.arch === 'x64'),
+}, () => {
+  const pinned = JSON.parse(readFileSync(join(root, 'build/official-native-317.json'), 'utf8'));
+  assert.equal(pinned.version, expectedVersion);
+  assert.equal(pinned.platform, 'x64-linux');
+  const load = createRequire(import.meta.url);
+  for (const mod of pinned.modules) {
+    const full = join(dist, 'vendor', mod.name.slice(0, -5), pinned.platform, mod.name);
+    assert.ok(existsSync(full), `Missing official native module: ${mod.name}`);
+    const bytes = readFileSync(full);
+    assert.equal(bytes.length, mod.size, mod.name);
+    assert.equal(createHash('sha256').update(bytes).digest('hex'), mod.sha256, mod.name);
+    assert.ok(Object.keys(load(full)).length > 0, `Empty native addon: ${mod.name}`);
+  }
 });
 test('every packaged file matches signed-style SHA-256 content manifest', () => {
   for(const f of metadata.files) {
