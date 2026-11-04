@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { spawn } from 'node:child_process'
 import { createServer } from 'node:http'
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -100,10 +100,17 @@ graders:
       '--output-dir',output,'--json',join(root,'eval.json'),
       '--threshold','1',
     ],env,root)
+    const reportPath = join(root, 'eval.json')
+    // A nonzero exit can be a real grader failure, startup timeout, or
+    // child execution error. Preserve the actual eval report in CI output.
+    const partialReport = existsSync(reportPath)
+      ? readFileSync(reportPath, 'utf8') : '(report not created)'
     assert.equal(run.code,0,
-      'CLI status '+run.code+'\nSTDOUT: '+run.stdout.slice(-1000)+
-      '\nSTDERR: '+run.stderr.slice(-1600))
-    const report=JSON.parse(readFileSync(join(root,'eval.json'),'utf8'))
+      'CLI status '+run.code+'; signal='+run.signal+'; mock requests='+requests+
+      '\nSTDOUT: '+run.stdout.slice(-1800)+
+      '\nSTDERR: '+run.stderr.slice(-2400)+
+      '\nEVAL REPORT: '+partialReport.slice(-8000))
+    const report=JSON.parse(readFileSync(reportPath,'utf8'))
     assert.equal(report.version,'2.1.317')
     assert.equal(report.cases.length,1)
     assert.equal(report.cases[0].runs.length,2)
