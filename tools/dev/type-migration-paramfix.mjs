@@ -72,7 +72,7 @@ for (const item of report.ranked) {
       continue
     }
     if (annotations.some(edit => /\b(?:any|unknown)\b/.test(edit.newText) ||
-        /:\s*(?:\{\}|object)\b/.test(edit.newText) || edit.newText.length>450)) {
+        /:\s*(?:\{\}|object|undefined|null|never)\b/.test(edit.newText) || edit.newText.length>450)) {
       stats.skipped++
       reasons.push({parameter:param.name.getText(sf),reason:'inferred type too broad'})
       continue
