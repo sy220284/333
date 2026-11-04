@@ -19,7 +19,10 @@ test('M1 317: official allocator flags preserve bitmask, decimal bounds, and dis
   assert.equal(module.processStartCollectionTimerOff(), false)
   const invalid = await fresh('invalid')
   invalid.noteProcessStartTuning({MIMALLOC_PURGE_DELAY:'12345678',BUN_GC_TIMER_DISABLE:'yes'})
-  assert.equal(invalid.processStartTuning(), 0)
+  // Official chunk-c3eav5v2.js sets the "configured" bit for every
+  // truthy value before parsing its numeric validity. Invalid delay keeps
+  // bit 3 while the parsed delay remains undefined.
+  assert.equal(invalid.processStartTuning(), 1 << 3)
   assert.equal(invalid.processStartPurgeDelayMs(), undefined)
   assert.equal(invalid.processStartCollectionTimerOff(), true)
 })
