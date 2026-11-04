@@ -58,6 +58,14 @@ test('every packaged file matches signed-style SHA-256 content manifest', () => 
     assert.equal(createHash('sha256').update(content).digest('hex'),f.sha256,f.path);
   }
 });
+test('repository package uses rebuilt launcher's canonical entrypoint', () => {
+  const rootPackage = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  const releasePackage = JSON.parse(readFileSync(join(dist, 'package.json'), 'utf8'));
+  assert.equal(rootPackage.bin.claude, 'dist/launcher.cjs');
+  assert.equal(releasePackage.bin.claude, './launcher.cjs');
+  assert.ok(existsSync(join(root, rootPackage.bin.claude)));
+});
+
 test('new distributable CLI is distinct from original binary', () => {
   const hash=p=>createHash('sha256').update(readFileSync(p)).digest('hex');
   assert.notEqual(hash(join(root,'cli.js')),hash(join(dist,'cli.js')));
