@@ -7,17 +7,29 @@
  */
 import { beforeDoubleDash, hasCliFlag, findCliArgument, backgroundSessionVerbIndex317 } from '../utils/cliArgv317.ts'
 
+export type StartupRouting317 = {
+  flagWords: string[]
+  command: string | undefined
+  sessionVerbIndex: number
+  desktopRequest: boolean
+  backgroundFlagRequest: boolean
+  helpRequest: boolean
+  bareRequest: boolean
+  backgroundRequest: boolean
+  tmuxWorktreeRequest: boolean
+}
+
 const BACKGROUND_COMMANDS = new Set([
   'agents', 'attach', 'logs', 'stop', 'kill', 'respawn', 'rm', 'daemon',
 ])
 
-export function classifyStartupArgs(args) {
+export function classifyStartupArgs(args: string[]): StartupRouting317 {
   const flagWords = beforeDoubleDash(args)
   const command = flagWords[0]
   const sessionVerbIndex = backgroundSessionVerbIndex317(args)
   // Use the official argv scanner: option values (e.g. --prefill "--bg")
   // must not be mistaken for standalone mode switches.
-  const has = flag => hasCliFlag(flag, flagWords)
+  const has = (flag: string): boolean => hasCliFlag(flag, flagWords)
   const tmux = has('--tmux') || has('--tmux=classic')
   const worktree = has('-w') || has('--worktree') ||
     findCliArgument(arg => arg.startsWith('--worktree='), flagWords) !== -1
