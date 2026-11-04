@@ -7,8 +7,7 @@
  */
 import { randomUUID } from 'node:crypto'
 import { constants } from 'node:fs'
-import { resolve } from 'node:path'
-import { withTranscriptDestinationLocks } from './transcriptDestinationLocks317.mjs'
+import { transcriptDestinationKey, withTranscriptDestinationLocks } from './transcriptDestinationLocks317.mjs'
 import {
   copyFile as copyFileNative,
   rename as renameNative,
@@ -29,7 +28,7 @@ function validateEntries(entries) {
     if (typeof entry.path !== 'string' || !entry.path || typeof entry.content !== 'string') {
       throw new TypeError('Transcript replacement requires a file path and JSONL content')
     }
-    const destination = resolve(entry.path)
+    const destination = transcriptDestinationKey(entry.path)
     if (names.has(destination)) {
       throw new Error('Duplicate transcript restoration destination: ' + entry.path)
     }
