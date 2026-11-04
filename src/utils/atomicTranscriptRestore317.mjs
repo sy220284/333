@@ -53,3 +53,15 @@ export async function replaceTranscriptBatchAtomically(entries) {
     }
   }
 }
+
+/**
+ * CCR agents may use human-readable teammate IDs with @. Enforce a strict
+ * filename component: remote event identifiers cannot introduce separators,
+ * drive specifiers, NULs or filesystem traversal into local transcript paths.
+ */
+export function assertSafeAgentTranscriptId(id) {
+  if (typeof id !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_@.-]{0,191}$/.test(id)) {
+    throw new Error('Invalid remote agent transcript identifier')
+  }
+  return id
+}
