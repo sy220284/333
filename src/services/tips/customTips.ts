@@ -7,7 +7,7 @@ import { stripVTControlCharacters } from 'node:util'
 // 2.1.310 chunk-veg1r3k2.js: trusted settings precede project/local tips.
 const TRUSTED = ['policySettings', 'flagSettings', 'userSettings']
 const UNTRUSTED = ['projectSettings', 'localSettings']
-const MAX_TIPS = 200
+const MAX_TIPS: 200 = 200
 const MAX_TIP_LENGTH = 500
 const MAX_FILE_BYTES = 262144
 const VALID_ID = /^[A-Za-z0-9._-]{1,64}$/

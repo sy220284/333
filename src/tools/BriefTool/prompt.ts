@@ -1,4 +1,4 @@
-export const BRIEF_TOOL_NAME = 'SendUserMessage'
+export const BRIEF_TOOL_NAME: "SendUserMessage" = 'SendUserMessage'
 
 export const DESCRIPTION = 'Send a message to the user'
 

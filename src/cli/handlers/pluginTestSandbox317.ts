@@ -9,7 +9,7 @@ import * as vm from 'node:vm'
 import { createPluginTestKit317 } from './pluginTestKit317.ts'
 import { createPluginTestTimers317 } from './pluginTestTimers317.ts'
 
-const EXTENSIONS = ['', '.js', '.mjs', '.ts', '.tsx', '/index.js', '/index.ts']
+const EXTENSIONS: string[] = ['', '.js', '.mjs', '.ts', '.tsx', '/index.js', '/index.ts']
 const isInside = (root, target) => {
   const rel = relative(root, target)
   return rel === '' || (rel !== '..' && !rel.startsWith('..' + (process.platform === 'win32' ? '\\' : '/')) && !isAbsolute(rel))

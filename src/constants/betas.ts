@@ -36,7 +36,7 @@ export const ADVISOR_BETA_HEADER = 'advisor-tool-2026-03-01'
  * extraBodyParams. This set maintains the beta strings that should be in
  * Bedrock extraBodyParams *and not* in Bedrock headers.
  */
-export const BEDROCK_EXTRA_PARAMS_HEADERS = new Set([
+export const BEDROCK_EXTRA_PARAMS_HEADERS: Set<string> = new Set([
   INTERLEAVED_THINKING_BETA_HEADER,
   CONTEXT_1M_BETA_HEADER,
   TOOL_SEARCH_BETA_HEADER_3P,

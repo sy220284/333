@@ -3,7 +3,7 @@
  * Snapshot iteration and bulk drains must agree with dequeue(): urgent
  * commands run first, with FIFO preserved within each priority.
  */
-export const QUEUE_PRIORITY_ORDER = Object.freeze({ now: 0, next: 1, later: 2 })
+export const QUEUE_PRIORITY_ORDER: Readonly<{ now: 0; next: 1; later: 2; }> = Object.freeze({ now: 0, next: 1, later: 2 })
 
 export function sortQueuedCommandsByPriority(commands) {
   // JavaScript stable sorting preserves FIFO for commands of equal priority.

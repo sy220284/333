@@ -74,7 +74,7 @@ export const PDF_MAX_EXTRACT_SIZE = 100 * 1024 * 1024 // 100 MB
 /**
  * Max pages the Read tool will extract in a single call with the pages parameter.
  */
-export const PDF_MAX_PAGES_PER_READ = 20
+export const PDF_MAX_PAGES_PER_READ: 20 = 20
 
 /**
  * PDFs with more pages than this get the reference treatment on @ mention

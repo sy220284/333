@@ -32,7 +32,7 @@ import {
   CRON_LIST_TOOL_NAME,
 } from '../tools/ScheduleCronTool/prompt.js'
 
-export const ALL_AGENT_DISALLOWED_TOOLS = new Set([
+export const ALL_AGENT_DISALLOWED_TOOLS: Set<string> = new Set([
   EXIT_PLAN_MODE_V2_TOOL_NAME,
   ENTER_PLAN_MODE_TOOL_NAME,
   // Allow Agent tool for agents when user is ant (enables nested agents)

@@ -34,7 +34,7 @@ import {
 // ============================================================================
 
 // JSONRPCMessage from @modelcontextprotocol/sdk - treat as unknown
-export const JSONRPCMessagePlaceholder = lazySchema(() => z.unknown())
+export const JSONRPCMessagePlaceholder: () => z.ZodUnknown = lazySchema(() => z.unknown())
 
 // ============================================================================
 // Hook Callback Types
