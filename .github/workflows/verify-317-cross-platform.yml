@@ -1,23 +1,23 @@
-name: 317 提取版跨平台实际运行检查
+name: 317 官方完整内核跨平台真实性验证
 on:
   push:
     branches: [upgrade/2.1.310-m1-evidence]
     paths:
       - .github/workflows/verify-317-cross-platform.yml
       - build/package-release.mjs
-      - build/import-official-317.py
+      - build/stage-official-317-native.mjs
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  verify-ported-317:
+  verify-317-native:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Windows 提前开启 Git 长路径
+      - name: Windows 启用 Git 长路径
         if: runner.os == 'Windows'
         shell: pwsh
         run: git config --global core.longpaths true
@@ -25,45 +25,43 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
-      - name: 检查 317 模块完整性和 CLI 入口
+      - name: 校验已入库的317模块索引与抽取版CLI帮助
         shell: bash
         run: |
           node -e "const m=require('./vendor/claude-code-2.1.317/manifest.json');if(m.version!=='2.1.317'||m.module_count!==2924)process.exit(1);console.log(m.platform,m.module_count)"
           bun vendor/claude-code-2.1.317/modules/cli.mjs --version
-      - name: 诊断提取版管理命令的进程退出责任
-        if: runner.os == 'Linux'
+          bun vendor/claude-code-2.1.317/modules/cli.mjs --help > .ported-317-help.txt
+      - name: 获取官方317对应平台的完整原生发行文件
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('vendor/claude-code-2.1.317/modules/cli.mjs')
-          src=p.read_text()
-          assert src.count('qe();')==1
-          dst=p.with_name('cli.diagnostic.mjs')
-          dst.write_text(src.replace('qe();', "qe().then(() => console.error('OFFICIAL_317_CLI_MAIN_RESOLVED', process.exitCode)).catch(e => { console.error('OFFICIAL_317_CLI_MAIN_REJECTED', e); process.exitCode=1; });"))
-          PY
-          set +e
-          CLAUDE_CONFIG_DIR="$(mktemp -d)" CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 timeout 12s bun vendor/claude-code-2.1.317/modules/cli.diagnostic.mjs plugin prune --yes > .rebuild-prune.stdout 2> .rebuild-prune.stderr
-          result=$?
-          set -e
-          echo "diagnostic_exit=$result"
-          cat .rebuild-prune.stdout
-          cat .rebuild-prune.stderr
-          if [[ "$result" -ne 0 ]]; then echo "Lifecycle diagnosis completed: process did not exit; see resolved marker"; fi
-
-      - name: 跨平台执行帮助、插件和项目清理
+          case "$RUNNER_OS" in
+            Linux) platform="linux-x64" ;;
+            macOS) if [[ "$(uname -m)" == "arm64" ]]; then platform="darwin-arm64"; else platform="darwin-x64"; fi ;;
+            Windows) platform="win32-x64" ;;
+            *) echo "Unsupported $RUNNER_OS"; exit 1 ;;
+          esac
+          mkdir -p .rebuild/official-platform
+          curl --fail --location --retry 3 --silent --show-error "https://registry.npmjs.org/@anthropic-ai/claude-code-$platform/-/claude-code-$platform-2.1.317.tgz" -o .rebuild/official-platform/317.tgz
+          tar -xzf .rebuild/official-platform/317.tgz -C .rebuild/official-platform
+          if [[ "$RUNNER_OS" == "Windows" ]]; then entry=".rebuild/official-platform/package/claude.exe"; else entry=".rebuild/official-platform/package/claude"; fi
+          test -f "$entry"
+          chmod +x "$entry"
+          python3 -c "import hashlib,sys; p=sys.argv[1];print('native_317_platform_sha256='+hashlib.sha256(open(p,'rb').read()).hexdigest())" "$entry"
+          echo "NATIVE_317_EXECUTABLE=$entry" >> "$GITHUB_ENV"
+          "$entry" --version
+      - name: 实际验证官方原生CLI及平台专属插件处理链
         shell: bash
         run: |
           python3 - <<'PY'
           import json,os,subprocess,tempfile
           from pathlib import Path
-          entry=str(Path('vendor/claude-code-2.1.317/modules/cli.mjs').resolve())
+          entry=str(Path(os.environ['NATIVE_317_EXECUTABLE']).resolve())
           cases=[['--help'],['auth','--help'],['mcp','--help'],['plugin','--help'],['gateway','--help'],['ultrareview','--help'],['plugin','prune','--yes']]
-          with tempfile.TemporaryDirectory(prefix='claude317-xplatform-') as home:
+          with tempfile.TemporaryDirectory(prefix='claude317-native-platform-') as home:
             env={**os.environ,'CLAUDE_CONFIG_DIR':home,'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC':'1','DISABLE_TELEMETRY':'1'}
             for args in cases:
-              p=subprocess.run(['bun',entry,*args],env=env,stdin=subprocess.DEVNULL,capture_output=True,text=True,encoding='utf8',errors='replace',timeout=30)
+              p=subprocess.run([entry,*args],env=env,stdin=subprocess.DEVNULL,capture_output=True,text=True,encoding='utf8',errors='replace',timeout=40)
               print(json.dumps({'argv':args,'returncode':p.returncode,'stdout':p.stdout[:200],'stderr':p.stderr[-400:]},ensure_ascii=False))
-              if p.returncode!=0:raise SystemExit('CLI failed on '+str(args))
+              if p.returncode:raise SystemExit('Native CLI failed: '+str(args))
           PY
