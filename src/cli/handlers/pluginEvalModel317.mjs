@@ -45,25 +45,38 @@ export async function runEvalModel317({
   if (maxTurns !== undefined && (!Number.isInteger(maxTurns) || maxTurns < 1)) {
     throw new Error('eval max_turns must be a positive integer')
   }
+  // 2.1.317 evaluates through the headless stdin protocol: the prompt is
+  // streamed through the child's stdin, with no implicit project settings.
+  // This also prevents user prompt text from being interpreted as CLI flags.
   const args = [
-    '-p', prompt, '--output-format', 'stream-json', '--verbose',
+    '-p', '--output-format', 'stream-json', '--verbose',
+    '--max-turns', String(maxTurns ?? 10),
+    '--permission-mode', 'dontAsk',
+    '--setting-sources', 'user',
     '--no-session-persistence',
   ]
   if (pluginDir) args.push('--plugin-dir', pluginDir)
   if (model) args.push('--model', model)
   if (appendSystemPrompt) args.push('--append-system-prompt', appendSystemPrompt)
   if (maxBudgetUsd !== undefined) args.push('--max-budget-usd', String(maxBudgetUsd))
-  if (maxTurns !== undefined) args.push('--max-turns', String(maxTurns))
   if (allowedTools.length) args.push('--allowedTools', ...allowedTools)
   if (disallowedTools.length) args.push('--disallowedTools', ...disallowedTools)
   const [command, ...prefix] = cliInvocation()
   const child = spawn(command, [...prefix, ...args], {
     cwd: workspace,
     env: { ...process.env, ...env },
-    stdio: ['ignore','pipe','pipe'],
+    // Native eval sends prompt on stdin; close it before awaiting any output.
+    stdio: ['pipe','pipe','pipe'],
     windowsHide: true,
     timeout: timeoutSeconds * 1000,
   })
+  // The original eval harness writes the prompt and closes stdin immediately.
+  // Swallow EPIPE on stdin only: the exitPromise still propagates any child
+  // process error, and stderr stays attached for diagnostics.
+  child.stdin.on('error', error => {
+    if (error?.code !== 'EPIPE') child.kill()
+  })
+  child.stdin.end(prompt)
   const exitPromise = new Promise((done, fail) => {
     child.once('close', (code, signal) => done({ code, signal }))
     child.once('error', fail)
