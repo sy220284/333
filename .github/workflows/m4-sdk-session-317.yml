@@ -13,8 +13,8 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: m4-sdk-session-317-${{ github.sha }}
-  cancel-in-progress: false
+  group: m4-sdk-session-317-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   session-sdk:
     name: SDK会话生产操作与原子存储
