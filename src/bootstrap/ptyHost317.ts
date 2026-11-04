@@ -185,11 +185,16 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
             }
             if (!stopped && !forceClosed) terminal?.write(frame.payload)
           } else if (frame.kind === PTY_CTRL_KIND_317) {
-            if (frame.ctrl.t === 'auth' && tokenMatches(frame.ctrl.token, ptyAuth)) authorized.add(peer)
-            else if (frame.ctrl.t === 'pong') {
+            // Upstream's frame decoder admits all valid JSON. Only object
+            // controls carry actions; primitive JSON has no control fields.
+            const ctrl = frame.ctrl
+            if (!ctrl || typeof ctrl !== 'object' || Array.isArray(ctrl)) return
+            const packet = ctrl as Record<string, unknown>
+            if (packet.t === 'auth' && tokenMatches(packet.token, ptyAuth)) authorized.add(peer)
+            else if (packet.t === 'pong') {
               const state = heartbeat.get(peer)
               if (state) { state.armed = true; state.missed = 0 }
-            } else control(frame.ctrl)
+            } else control(packet)
           }
         }, () => peer.destroy())
         peer.on('data', receive)
