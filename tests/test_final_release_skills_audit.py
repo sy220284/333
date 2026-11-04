@@ -20,12 +20,12 @@ class TargetSkillAuditTests(unittest.TestCase):
 
     def test_2_1_317_embedded_unnamed_skill_forms_are_classified(self):
         exact_headers = {
-            "claude-api": "# Building LLM-Powered Applications with Claude\\n",
-            "design-sync-storybook": "# Storybook source shape\\n",
-            "design-sync-package": "# Package source shape\\n",
-            "claude-test-runner": "---\\ndescription: Internal to Claude Test — runs the specs in a background browser.\\nuser-invocable: false\\n---\\n",
-            "claude-test-spec": "---\\ndescription: Internal to Claude Test — drafts spec files in the background for a first run.\\nuser-invocable: false\\n---\\n",
-            "claude-test-conversation": '---\\ndescription: "Local, on this machine: tests your app here in a browser on this computer"\\n---\\n',
+            "claude-api": "# Building LLM-Powered Applications with Claude\n",
+            "design-sync-storybook": "# Storybook source shape\n",
+            "design-sync-package": "# Package source shape\n",
+            "claude-test-runner": "---\ndescription: Internal to Claude Test — runs the specs in a background browser.\nuser-invocable: false\n---\n",
+            "claude-test-spec": "---\ndescription: Internal to Claude Test — drafts spec files in the background for a first run.\nuser-invocable: false\n---\n",
+            "claude-test-conversation": '---\ndescription: "Local, on this machine: tests your app here in a browser on this computer"\n---\n',
         }
         for expected, text in exact_headers.items():
             with self.subTest(name=expected):
