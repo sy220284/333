@@ -31,3 +31,14 @@ export function createDiscardedQueueRecords(commands, sessionId, reason = 'clear
     .filter(command => !command.unlogged && command.screeningPending !== true)
     .map(command => createQueueOperationRecord('remove', command, sessionId, now, { reason }))
 }
+
+/** Select dropped commands before mutating queue state; keep() may throw safely. */
+export function partitionQueueForClear(commands, keep) {
+  const retained = []
+  const discarded = []
+  for (const command of commands) {
+    if (keep?.(command)) retained.push(command)
+    else discarded.push(command)
+  }
+  return { retained, discarded }
+}
