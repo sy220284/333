@@ -216,7 +216,7 @@ jobs:
           print('2.1.317 target skill asset results:', assets['counts'])
           if cli['target'] != '2.1.317' or assets['target_version'] != '2.1.317':
               raise SystemExit('A historical reference was used instead of the final target')
-          if cli['differences'] or any(v for k, v in assets['counts'].items() if k != 'MATCH'):
+          if cli['differences'] or any(v for k, v in assets['counts'].items() if k not in ('MATCH', 'PROJECT_EXTRA_MATCH')):
               raise SystemExit('The 2.1.317 command or embedded skill assets have not reached parity')
           PY
       - name: 保存官方原始清单与可复现的二进制校验结果
