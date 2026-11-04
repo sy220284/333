@@ -6,7 +6,7 @@ import { UltrareviewOverageDialog } from './UltrareviewOverageDialog.js';
 import { UltrareviewAllFilesDialog } from './UltrareviewAllFilesDialog.js';
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js';
 import { getDefaultBranch, gitExe } from '../../utils/git.js';
-import { resolveUltrareviewGitBase } from '../../utils/review/ultrareviewGitBase.mjs';
+import { resolveUltrareviewGitBase } from '../../utils/review/ultrareviewGitBase.ts';
 function contentBlocksToString(blocks: ContentBlockParam[]): string {
   return blocks.map(b => b.type === 'text' ? b.text : '').filter(Boolean).join('\n');
 }
