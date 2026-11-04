@@ -1,7 +1,7 @@
 import { feature } from 'bun:bundle'
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import type { Permutations } from 'src/types/utils.js'
-import { getSessionId } from '../bootstrap/state.js'
+import { getSessionId, onSessionSwitch } from '../bootstrap/state.js'
 import type { AppState } from '../state/AppState.js'
 import type {
   QueueOperation,
@@ -18,6 +18,7 @@ import { extractTextContent } from './messages.js'
 import { objectGroupBy } from './objectGroupBy.js'
 import { recordQueueOperation } from './sessionStorage.js'
 import { createSignal } from './signal.js'
+import { SessionQueuePartitions317 } from './sessionQueuePartitions317.mjs'
 import { QUEUE_PRIORITY_ORDER as PRIORITY_ORDER, sortQueuedCommandsByPriority } from './queuePriority317.ts'
 import { createDiscardedQueueRecords, createQueueOperationRecord, partitionQueueForClear } from './queueOperation317.ts'
 
@@ -34,7 +35,7 @@ function logOperation(
   // journaled after screening accepts it; never persist a pending raw input.
   if (command?.unlogged || command?.screeningPending === true) return
   const queueOp: QueueOperationMessage =
-    createQueueOperationRecord(operation, command, getSessionId(), new Date(), { reason })
+    createQueueOperationRecord(operation, command, command?.sessionId ?? getSessionId(), new Date(), { reason })
   void recordQueueOperation(queueOp)
 }
 
@@ -51,15 +52,20 @@ function logOperation(
 // Within the same priority, commands are processed FIFO.
 // ============================================================================
 
-const commandQueue: QueuedCommand[] = []
-/** Frozen snapshot — recreated on every mutation for useSyncExternalStore. */
-let snapshot: readonly QueuedCommand[] = Object.freeze([])
+const sessionQueues = new SessionQueuePartitions317<QueuedCommand>()
 const queueChanged = createSignal()
 
-function notifySubscribers(): void {
-  snapshot = Object.freeze([...commandQueue])
+function queueForActiveSession(): QueuedCommand[] {
+  return sessionQueues.get(getSessionId())
+}
+
+function notifySubscribers(sessionId = getSessionId()): void {
+  sessionQueues.changed(sessionId)
   queueChanged.emit()
 }
+
+// /resume and session switching change the current queue even when it is empty.
+onSessionSwitch(() => queueChanged.emit())
 
 // ============================================================================
 // useSyncExternalStore interface
@@ -77,7 +83,7 @@ export const subscribeToCommandQueue = queueChanged.subscribe
  * Returns a frozen array that only changes reference on mutation.
  */
 export function getCommandQueueSnapshot(): readonly QueuedCommand[] {
-  return snapshot
+  return sessionQueues.snapshot(getSessionId())
 }
 
 // ============================================================================
@@ -89,6 +95,7 @@ export function getCommandQueueSnapshot(): readonly QueuedCommand[] {
  * Use for one-off reads where you need the actual commands.
  */
 export function getCommandQueue(): QueuedCommand[] {
+  const commandQueue = queueForActiveSession()
   return [...commandQueue]
 }
 
@@ -96,6 +103,7 @@ export function getCommandQueue(): QueuedCommand[] {
  * Get the current queue length without copying.
  */
 export function getCommandQueueLength(): number {
+  const commandQueue = queueForActiveSession()
   return commandQueue.length
 }
 
@@ -103,6 +111,7 @@ export function getCommandQueueLength(): number {
  * Check if there are commands in the queue.
  */
 export function hasCommandsInQueue(): boolean {
+  const commandQueue = queueForActiveSession()
   return commandQueue.length > 0
 }
 
@@ -112,6 +121,7 @@ export function hasCommandsInQueue(): boolean {
  * are picked up by useSyncExternalStore consumers.
  */
 export function recheckCommandQueue(): void {
+  const commandQueue = queueForActiveSession()
   if (commandQueue.length > 0) {
     notifySubscribers()
   }
@@ -127,9 +137,11 @@ export function recheckCommandQueue(): void {
  * Defaults priority to 'next' (processed before task notifications).
  */
 export function enqueue(command: QueuedCommand): void {
-  commandQueue.push({ ...command, priority: command.priority ?? 'next' })
-  notifySubscribers()
-  logOperation('enqueue', command)
+  const sessionId = command.sessionId ?? getSessionId()
+  const queued = { ...command, sessionId, priority: command.priority ?? 'next' }
+  sessionQueues.get(sessionId).push(queued)
+  notifySubscribers(sessionId)
+  logOperation('enqueue', queued)
 }
 
 /**
@@ -138,9 +150,11 @@ export function enqueue(command: QueuedCommand): void {
  * is never starved by system messages.
  */
 export function enqueuePendingNotification(command: QueuedCommand): void {
-  commandQueue.push({ ...command, priority: command.priority ?? 'later' })
-  notifySubscribers()
-  logOperation('enqueue', command)
+  const sessionId = command.sessionId ?? getSessionId()
+  const queued = { ...command, sessionId, priority: command.priority ?? 'later' }
+  sessionQueues.get(sessionId).push(queued)
+  notifySubscribers(sessionId)
+  logOperation('enqueue', queued)
 }
 
 
@@ -157,6 +171,7 @@ export function enqueuePendingNotification(command: QueuedCommand): void {
 export function dequeue(
   filter?: (cmd: QueuedCommand) => boolean,
 ): QueuedCommand | undefined {
+  const commandQueue = queueForActiveSession()
   if (commandQueue.length === 0) {
     return undefined
   }
@@ -187,6 +202,7 @@ export function dequeue(
  * Logs a dequeue operation for each command.
  */
 export function dequeueAll(): QueuedCommand[] {
+  const commandQueue = queueForActiveSession()
   if (commandQueue.length === 0) {
     return []
   }
@@ -209,6 +225,7 @@ export function dequeueAll(): QueuedCommand[] {
 export function peek(
   filter?: (cmd: QueuedCommand) => boolean,
 ): QueuedCommand | undefined {
+  const commandQueue = queueForActiveSession()
   if (commandQueue.length === 0) {
     return undefined
   }
@@ -234,6 +251,7 @@ export function peek(
 export function dequeueAllMatching(
   predicate: (cmd: QueuedCommand) => boolean,
 ): QueuedCommand[] {
+  const commandQueue = queueForActiveSession()
   const matched: QueuedCommand[] = []
   const remaining: QueuedCommand[] = []
   for (const cmd of commandQueue) {
@@ -264,22 +282,19 @@ export function dequeueAllMatching(
 export function remove(
   commandsToRemove: QueuedCommand[], options: { reason?: string } = {},
 ): void {
-  if (commandsToRemove.length === 0) {
-    return
-  }
-
-  const removed: QueuedCommand[] = []
+  if (commandsToRemove.length === 0) return
   const selected = new Set(commandsToRemove)
-  for (let i = commandQueue.length - 1; i >= 0; i--) {
-    if (selected.has(commandQueue[i]!)) {
-      removed.push(...commandQueue.splice(i, 1))
+  // An async consumer can finish after the active conversation switches.
+  // Its command must still be removed from its original session.
+  for (const [sessionId, queue] of sessionQueues.entries()) {
+    const removed: QueuedCommand[] = []
+    for (let i = queue.length - 1; i >= 0; i--) {
+      if (selected.has(queue[i]!)) removed.unshift(queue.splice(i, 1)[0]!)
     }
-  }
-
-  if (removed.length > 0) {
-    notifySubscribers()
-    // Journal only real removals with the UUID of each consumed command.
-    for (const cmd of removed.reverse()) logOperation('remove', cmd, options.reason)
+    if (removed.length > 0) {
+      notifySubscribers(sessionId)
+      for (const cmd of removed) logOperation('remove', cmd, options.reason)
+    }
   }
 }
 
@@ -291,6 +306,7 @@ export function removeByFilter(
   predicate: (cmd: QueuedCommand) => boolean,
   options: { reason?: string } = {},
 ): QueuedCommand[] {
+  const commandQueue = queueForActiveSession()
   const removed: QueuedCommand[] = []
   for (let i = commandQueue.length - 1; i >= 0; i--) {
     if (predicate(commandQueue[i]!)) {
@@ -315,6 +331,7 @@ export function removeByFilter(
 export function clearCommandQueue(
   options: { keep?: (command: QueuedCommand) => boolean; reason?: string } = {},
 ): void {
+  const commandQueue = queueForActiveSession()
   if (commandQueue.length === 0) {
     return
   }
@@ -338,8 +355,8 @@ export function clearCommandQueue(
  * Used for test cleanup.
  */
 export function resetCommandQueue(): void {
-  commandQueue.length = 0
-  snapshot = Object.freeze([])
+  sessionQueues.reset(getSessionId())
+  queueChanged.emit()
 }
 
 // ============================================================================
@@ -435,6 +452,7 @@ export function popAllEditable(
   currentInput: string,
   currentCursorOffset: number,
 ): PopAllEditableResult | undefined {
+  const commandQueue = queueForActiveSession()
   if (commandQueue.length === 0) {
     return undefined
   }
@@ -495,7 +513,7 @@ export const subscribeToPendingNotifications = subscribeToCommandQueue
 
 /** @deprecated Use getCommandQueueSnapshot */
 export function getPendingNotificationsSnapshot(): readonly QueuedCommand[] {
-  return snapshot
+  return getCommandQueueSnapshot()
 }
 
 /** @deprecated Use hasCommandsInQueue */
@@ -528,6 +546,7 @@ export const clearPendingNotifications = clearCommandQueue
 export function getCommandsByMaxPriority(
   maxPriority: QueuePriority,
 ): QueuedCommand[] {
+  const commandQueue = queueForActiveSession()
   const threshold = PRIORITY_ORDER[maxPriority]
   return sortQueuedCommandsByPriority(commandQueue.filter(
     cmd => PRIORITY_ORDER[cmd.priority ?? 'next'] <= threshold,
