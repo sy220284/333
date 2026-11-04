@@ -5,6 +5,7 @@
  * system to reduce code duplication and improve maintainability.
  */
 
+import { installedSourceCommandKey } from './commandSourceConsent.mjs'
 import { randomBytes } from 'crypto'
 import { rename, rm } from 'fs/promises'
 import { dirname, join, resolve, sep } from 'path'
@@ -232,6 +233,10 @@ export async function cacheAndRegisterPlugin(
       installPath: finalPath,
       gitCommitSha,
       auto,
+      ...(authorizedCommandSource && typeof entry.source !== 'string' &&
+        entry.source.source === 'command' && {
+        sourceCommand: installedSourceCommandKey(entry.source),
+      }),
     },
     scope,
     projectPath,
