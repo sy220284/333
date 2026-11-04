@@ -93,3 +93,13 @@ test('legacy -d2e alias is accepted by reconstructed Commander configuration', (
   assert.match(compiledHelp(['-d2e','--help']), /Usage: claude/);
   assert.match(compiledHelp(['--debug-to-stderr','--help']), /Usage: claude/);
 });
+
+test('bootstrap route classification ignores literal prompt words after --', async () => {
+  const { classifyStartupArgs } = await import('../src/entrypoints/startupRouting317.mjs');
+  assert.equal(classifyStartupArgs(['-p', '--', 'agents', '--bg']).backgroundRequest, false);
+  assert.equal(classifyStartupArgs(['--', '--tmux', '--worktree=demo']).tmuxWorktreeRequest, false);
+  assert.equal(classifyStartupArgs(['agents', '--help']).backgroundRequest, true);
+  assert.equal(classifyStartupArgs(['--bg', '-p', 'hello']).backgroundRequest, true);
+  assert.equal(classifyStartupArgs(['--worktree=demo', '--tmux']).tmuxWorktreeRequest, true);
+  assert.equal(classifyStartupArgs(['--tmux=classic', '-w']).tmuxWorktreeRequest, true);
+});
