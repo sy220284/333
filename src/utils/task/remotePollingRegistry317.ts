@@ -2,8 +2,13 @@
  * Task-scoped remote poll registrations. A task replacement cancels the
  * previous timer; killing a task releases its timer and registry entry.
  */
-export function createRemotePollingRegistry() {
-  const pollers = new Map()
+export type RemotePollingRegistry317 = {
+  register(taskId: string, stopPolling: () => void): () => void
+  stop(taskId: string): void
+  has(taskId: string): boolean
+}
+export function createRemotePollingRegistry(): RemotePollingRegistry317 {
+  const pollers = new Map<string, () => void>()
   return {
     register(taskId, stopPolling) {
       pollers.get(taskId)?.()
