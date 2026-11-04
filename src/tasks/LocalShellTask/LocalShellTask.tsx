@@ -15,7 +15,7 @@ import { evictTaskOutput, getTaskOutputPath } from '../../utils/task/diskOutput.
 import { registerTask, updateTaskState } from '../../utils/task/framework.js';
 import { escapeXml } from '../../utils/xml.js';
 import { backgroundAgentTask, isLocalAgentTask } from '../LocalAgentTask/LocalAgentTask.js';
-import { findForegroundAgentShellTaskIds } from './foregroundAgentShellPolicy.mjs';
+import { findForegroundAgentShellTaskIds } from './foregroundAgentShellPolicy.ts';
 import { isMainSessionTask } from '../LocalMainSessionTask.js';
 import { type BashTaskKind, isLocalShellTask, type LocalShellTaskState } from './guards.js';
 import { killTask } from './killShellTasks.js';
