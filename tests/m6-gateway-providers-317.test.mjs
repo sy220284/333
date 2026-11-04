@@ -16,7 +16,7 @@ const candidates=[
 ]
 function settings(upstreams){
   return {
-    listen:{host:'127.0.0.1',port:0},
+    listen:{host:'127.0.0.1',port:49175},
     store:{postgres_url:'postgres://127.0.0.1/gw'},
     session:{jwt_secret:'abcDEF123456'.repeat(5)},
     oidc:{issuer:'https://idp.example.org',client_id:'test'},
