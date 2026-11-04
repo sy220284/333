@@ -29,6 +29,7 @@ import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
 import { getDefaultBranch, gitExe } from '../../utils/git.js'
 import { teleportToRemote } from '../../utils/teleport.js'
 import { getUltrareviewRuntimeEnvironment } from '../../utils/review/ultrareviewRuntime.js'
+import { resolveUltrareviewGitBase } from '../../utils/review/ultrareviewGitBase.mjs'
 
 // One-time session flag: once the user confirms overage billing via the
 // dialog, all subsequent /ultrareview invocations in this session proceed
@@ -129,7 +130,12 @@ export async function launchRemoteReview(
   args: string,
   context: ToolUseContext,
   billingNote?: string,
+  options: { allowAllFiles?: boolean; signal?: AbortSignal } = {},
 ): Promise<ContentBlockParam[] | null> {
+  const signal = options.signal
+    ? AbortSignal.any([context.abortController.signal, options.signal])
+    : context.abortController.signal
+  if (signal.aborted) return null
   const eligibility = await checkRemoteAgentEligibility()
   // Synthetic DEFAULT_CODE_REVIEW_ENVIRONMENT_ID works without per-org CCR
   // setup, so no_remote_environment isn't a blocker. Server-side quota
@@ -183,7 +189,7 @@ export async function launchRemoteReview(
     session = await teleportToRemote({
       initialMessage: null,
       description: `ultrareview: ${repo.owner}/${repo.name}#${prNumber}`,
-      signal: context.abortController.signal,
+      signal,
       branchName: `refs/pull/${prNumber}/head`,
       environmentId: CODE_REVIEW_ENV_ID,
       environmentVariables: {
@@ -202,22 +208,24 @@ export async function launchRemoteReview(
     // deletes refs/remotes/origin/* — the base branch name won't resolve
     // in the container. Pass the merge-base SHA instead: it's reachable
     // from HEAD's history so `git diff <sha>` works without a named ref.
-    const { stdout: mbOut, code: mbCode } = await execFileNoThrow(
-      gitExe(),
-      ['merge-base', baseBranch, 'HEAD'],
-      { preserveOutputOnError: false },
+    const base = await resolveUltrareviewGitBase(
+      baseBranch, (args, input) => execFileNoThrow(gitExe(), args, {
+        preserveOutputOnError: false,
+        ...(input !== undefined && { input }),
+      }),
     )
-    const mergeBaseSha = mbOut.trim()
-    if (mbCode !== 0 || !mergeBaseSha) {
-      logEvent('tengu_review_remote_precondition_failed', {})
-      return [
-        {
-          type: 'text',
-          text: `Could not find merge-base with ${baseBranch}. Make sure you're in a git repo with a ${baseBranch} branch.`,
-        },
-      ]
+    if (base.kind === 'no-commits') {
+      return [{ type: 'text', text: 'The repository has no commits to review.' }]
     }
-
+    if (base.kind === 'invalid-empty-tree') {
+      return [{ type: 'text', text: 'Could not construct an empty-tree comparison for the review.' }]
+    }
+    if (base.kind === 'all-files' && options.allowAllFiles !== true) {
+      // Do not expand a cloud upload to every tracked file without the
+      // separate, explicit confirmation owned by the interactive dialog.
+      return [{ type: 'text', text: 'No common Git history. Uploading all tracked files requires confirmation.' }]
+    }
+    const mergeBaseSha = base.base
     // Bail early on empty diffs instead of launching a container that
     // will just echo "no changes".
     const { stdout: diffStat, code: diffCode } = await execFileNoThrow(
@@ -225,7 +233,10 @@ export async function launchRemoteReview(
       ['diff', '--shortstat', mergeBaseSha],
       { preserveOutputOnError: false },
     )
-    if (diffCode === 0 && !diffStat.trim()) {
+    if (diffCode !== 0) {
+      return [{ type: 'text', text: 'Could not compare the current worktree with the review base.' }]
+    }
+    if (!diffStat.trim()) {
       logEvent('tengu_review_remote_precondition_failed', {})
       return [
         {
@@ -238,9 +249,10 @@ export async function launchRemoteReview(
     session = await teleportToRemote({
       initialMessage: null,
       description: `ultrareview: ${baseBranch}`,
-      signal: context.abortController.signal,
+      signal,
       useBundle: true,
       environmentId: CODE_REVIEW_ENV_ID,
+      ...(base.forceAllFiles && { bundleForceScope: 'squashed' as const }),
       environmentVariables: {
         BUGHUNTER_BASE_BRANCH: mergeBaseSha,
         ...commonEnvVars,
