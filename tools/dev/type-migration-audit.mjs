@@ -5,7 +5,7 @@
  * Native TypeScript syntax is measured separately from the filename extension.
  */
 import { readdirSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
@@ -30,7 +30,7 @@ function walk(folder) {
     const child = join(folder, item.name).replaceAll('\\', '/')
     if (excluded.some(prefix => child === prefix.slice(0, -1) || child.startsWith(prefix))) continue
     if (item.isDirectory()) walk(child)
-    else if (item.isFile() && /\\.tsx?$/.test(child) && !/\\.d\\.ts$/.test(child)) sourceFiles.push(child)
+    else if (item.isFile() && /\.tsx?$/.test(child) && !/\.d\.ts$/.test(child)) sourceFiles.push(child)
   }
 }
 walk('src')
@@ -45,7 +45,7 @@ function inspect(path) {
     path.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
   if (ast.parseDiagnostics.length) {
     throw new Error(path + ': TypeScript parse error: ' +
-      ts.flattenDiagnosticMessageText(ast.parseDiagnostics[0].messageText, '\\n'))
+      ts.flattenDiagnosticMessageText(ast.parseDiagnostics[0].messageText, '\n'))
   }
   const missing = []
   let exportedFunctions = 0
@@ -111,7 +111,7 @@ const report = {
 }
 const output = resolve(ROOT, '.rebuild/governance/type-migration-report.json')
 mkdirSync(dirname(output), { recursive: true })
-writeFileSync(output, JSON.stringify(report, null, 2) + '\\n')
+writeFileSync(output, JSON.stringify(report, null, 2) + '\n')
 console.log('[TypeScript 迁移审计]', JSON.stringify({
   inspected: report.inspected,
   jsLikeFiles: report.jsLikeFiles,
