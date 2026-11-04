@@ -6,7 +6,7 @@ export default createMovedToPluginCommand({
   progressMessage: 'fetching PR comments',
   pluginName: 'pr-comments',
   pluginCommand: 'pr-comments',
-  async getPromptWhileMarketplaceIsPrivate(args) {
+  async getPromptWhileMarketplaceIsPrivate(args: string) {
     return [
       {
         type: 'text',
