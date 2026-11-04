@@ -5,7 +5,7 @@
  * before "--": prompt text must never launch background processes or worktrees.
  * The actual feature, trust and policy gates remain in the route handlers.
  */
-import { beforeDoubleDash, hasCliFlag, findCliArgument, backgroundSessionVerbIndex317 } from '../utils/cliArgv317.mjs'
+import { beforeDoubleDash, hasCliFlag, findCliArgument, backgroundSessionVerbIndex317 } from '../utils/cliArgv317.ts'
 
 const BACKGROUND_COMMANDS = new Set([
   'agents', 'attach', 'logs', 'stop', 'kill', 'respawn', 'rm', 'daemon',
