@@ -3,6 +3,7 @@ import { rejectDeepLinkArgumentInjection } from '../utils/cliArgv317.mjs';
 import { classifyStartupArgs } from './startupRouting317.mjs';
 import { adoptRunnerDeclaration } from './runnerDeclaration317.mjs';
 import { noteProcessStartTuning, startGarbageCollectionCount } from '../bootstrap/processStart317.mjs';
+import { scheduleJitPolicy317 } from '../bootstrap/jitPolicy317.mjs';
 import { randomUUID } from 'node:crypto';
 import { getStartupCwdError, writeStartupFailureResult, reportCliStartupFailure } from '../utils/cliStartupFailure.mjs';
 
@@ -93,6 +94,8 @@ async function main(): Promise<void> {
     profileCheckpoint
   } = await import('../utils/startupProfiler.js');
   profileCheckpoint('cli_entry');
+  // Upstream 317 tunes JIT after startup; the timer must not keep CLI alive.
+  scheduleJitPolicy317({ args });
 
   // Desktop is a one-shot native handoff, not an interactive REPL. Handle it
   // before main.tsx initializes terminal listeners and startup background tasks:
