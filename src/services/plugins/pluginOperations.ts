@@ -1029,7 +1029,7 @@ async function performPluginUpdate({
   pluginName: string
   entry: PluginMarketplaceEntry
   marketplaceInstallLocation: string
-  installation: { version?: string; installPath: string; sourceCommand?: string }
+  installation: { version?: string; installPath: string; sourceCommand?: string; sourceProducerPath?: string }
   scope: PluginScope
   projectPath: string | undefined
   authorizedCommandSource?: boolean
@@ -1041,6 +1041,7 @@ async function performPluginUpdate({
   let newVersion: string
   let shouldCleanupSource = false
   let gitCommitSha: string | undefined
+  let sourceProducerPath: string | undefined
 
   // Handle remote vs local plugins
   if (typeof entry.source !== 'string') {
@@ -1052,6 +1053,7 @@ async function performPluginUpdate({
     sourcePath = cacheResult.path
     shouldCleanupSource = true
     gitCommitSha = cacheResult.gitCommitSha
+    sourceProducerPath = cacheResult.sourceProducerPath
 
     // Calculate version from downloaded plugin. For git-subdir sources,
     // cachePlugin captured the commit SHA before discarding the ephemeral
@@ -1144,6 +1146,16 @@ async function performPluginUpdate({
       installation.installPath === versionedPath ||
       installation.installPath === zipPath
     if (isUpToDate) {
+      if (typeof entry.source !== 'string' && entry.source.source === 'command' &&
+          sourceProducerPath && installation.sourceProducerPath !== sourceProducerPath) {
+        // A command may now resolve to a different producer directory while
+        // returning byte-identical plugin content. Persist its current path
+        // for background re-resolution and sandbox write protection.
+        updateInstallationPathOnDisk(
+          pluginId, scope, projectPath, installation.installPath, newVersion,
+          gitCommitSha, installedSourceCommandKey(entry.source), sourceProducerPath,
+        )
+      }
       return {
         success: true,
         message: `${pluginName} is already at the latest version (${newVersion}).`,
@@ -1177,6 +1189,7 @@ async function performPluginUpdate({
       gitCommitSha,
       typeof entry.source !== 'string' && entry.source.source === 'command'
         ? installedSourceCommandKey(entry.source) : null,
+      sourceProducerPath ?? null,
     )
 
     if (oldVersionPath && oldVersionPath !== versionedPath) {
