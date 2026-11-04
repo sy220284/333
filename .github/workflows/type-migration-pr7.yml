@@ -28,7 +28,19 @@ jobs:
   strict:
     name: 完整类型检查与迁移模块严格编译
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: gateway-test-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -53,6 +65,10 @@ jobs:
         run: bun test tests/m6-gateway-device-317.test.mjs tests/m6-gateway-runtime-317.test.mjs
       - name: 网关授权、IP限流、费用及管理员限额真实行为回归
         run: node --test tests/m6-gateway-jsonb-317.test.mjs tests/m6-gateway-device-rate-317.test.mjs tests/m6-gateway-admin-317.test.mjs tests/m6-gateway-spend-integration-317.test.mjs
+      - name: PostgreSQL 实例下的真实设备授权与令牌事务验证
+        env:
+          GATEWAY_TEST_POSTGRES_URL: postgres://postgres:gateway-test-only@127.0.0.1:5432/postgres
+        run: bun test tests/m6-gateway-postgres-317.test.mjs
       - name: 上传内容级审计证据
         if: always()
         uses: actions/upload-artifact@v4
