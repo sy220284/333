@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto'
 import { meterGatewayResponse317 } from './gatewaySpendMeter317.mjs'
 import { classifyCriCapability317 } from './gatewayCri317.mjs'
+import { forwardGatewaySdk317 } from './gatewayProviders317.ts'
 
 const FORWARD = new Set([
   'anthropic-version','anthropic-beta','content-type','accept',
@@ -110,8 +111,10 @@ export async function forwardGatewayInference317(request, context) {
     data = new TextEncoder().encode(JSON.stringify(payload))
   }
   const upstream = chosen.upstream
-  const endpoint = new URL(path, upstream.base_url.endsWith('/')
-    ? upstream.base_url : upstream.base_url + '/')
+  const endpoint = upstream.provider === 'anthropic'
+    ? new URL(path, upstream.base_url.endsWith('/')
+      ? upstream.base_url : upstream.base_url + '/')
+    : undefined
   let response
   const start = performance.now()
   // The TTFB deadline expires once response headers arrive; SSE may run longer.
@@ -121,13 +124,25 @@ export async function forwardGatewayInference317(request, context) {
     config.timeouts?.upstream_ttfb_ms ?? 120000,
   )
   try {
-    response = await fetch(endpoint, {
+    if (upstream.provider !== 'anthropic') {
+      const meta = Object.fromEntries([...request.headers]
+        .filter(([key])=>key.toLowerCase().startsWith('x-stainless-')))
+      response = await forwardGatewaySdk317(upstream, payload, path, {
+        requestId, requestedModel: chosen.model === payload.model ? undefined : payload.model,
+        signal: upstreamAbort.signal,
+        timeoutMs: config.timeouts?.upstream_ttfb_ms ?? 120000,
+        extraHeaders: meta,
+        providerFactory: context.providerFactory,
+      })
+    } else {
+      response = await fetch(endpoint, {
       method:'POST',
       headers: pickHeaders(request, upstream, requestId),
       body: data,
       redirect: 'manual',
       signal: upstreamAbort.signal,
-    })
+      })
+    }
   } catch (error) {
     await audit('inference.failure', identity.sub, requestId, {
       model: payload.model, upstream: upstream.name, elapsed_ms: Math.round(performance.now()-start),
