@@ -67,6 +67,7 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
   const authAsked = new WeakSet<Socket>()
   const heartbeat = new WeakMap<Socket, { armed: boolean; missed: number }>()
   const replay = new PtyReplay317()
+  let resolveLateSubscriber: ((peer: Socket) => void) | undefined
   // Exact upstream CLAUDE_PTY_RECORD format: dimensions then timed raw chunks.
   const recording = createPtyRecording317(process.env.CLAUDE_PTY_RECORD, cols, rows)
   let ptyAuth = process.env.CLAUDE_BG_PTY_AUTH
@@ -177,6 +178,7 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
           if (stopped) {
             send(peer, encodePtyControl317({ t: 'exit', code: lastExitCode, signal: lastSignal }))
             peer.end()
+            resolveLateSubscriber?.(peer)
           }
         }
         if (immediateHello) admit()
@@ -282,24 +284,10 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
     stopped = true
     closeTerminalOnce()
     broadcast(encodePtyControl317({ t: 'exit', code: lastExitCode, ...(lastSignal ? { signal: lastSignal } : {}) }))
-    // Original host keeps a 5s grace window for a late PTY subscriber after
-    // the worker exits. Exec-mode also persists the undelivered raw tail.
+    // The official host writes the undelivered output at the START of the
+    // grace period. A raw socket connection does not count: only a peer that
+    // completed its hello/replay/exit admission ends the waiting period early.
     if (peers.size === 0) {
-      await new Promise<void>(resolve => {
-        const onLateConnection = (latePeer: Socket) => {
-          clearTimeout(timeout)
-          // The server already sends hello/replay/live/exit on admission.
-          // Allow the exit frame to flush before closing its socket.
-          latePeer.once('close', () => resolve())
-          const safety = setTimeout(resolve, 2000)
-          safety.unref()
-        }
-        const timeout = setTimeout(() => {
-          server?.off('connection', onLateConnection)
-          resolve()
-        }, 5000)
-        server?.once('connection', onLateConnection)
-      })
       if (execMode) {
         try {
           const raw = Buffer.concat(replay.frames().map(frame => frame.subarray(5)))
@@ -309,6 +297,16 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
           recordFailure(socket, 'late PTY output write failed: ' + String(error))
         }
       }
+      await new Promise<void>(resolve => {
+        const timeout = setTimeout(() => { resolveLateSubscriber = undefined; resolve() }, 5000)
+        resolveLateSubscriber = (peer: Socket) => {
+          clearTimeout(timeout)
+          const finish = () => { clearTimeout(flush); resolveLateSubscriber = undefined; resolve() }
+          const flush = setTimeout(finish, 2000)
+          if (peer.destroyed) finish()
+          else peer.once('close', finish)
+        }
+      })
     }
     // Flush the exit frame to attached clients before socket teardown.
     const closingPeers = [...peers]

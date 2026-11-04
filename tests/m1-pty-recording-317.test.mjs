@@ -128,6 +128,14 @@ test('317 exec-mode PTY writes real exit metadata and late replay for unclaimed 
         })
         let stderr = ''
         child.stderr.on('data', bytes => { stderr += bytes })
+        // Upstream writes the undelivered raw tail before its 5s grace
+        // window closes, so external consumers can read it immediately.
+        const earlyLate = join(dir, 'exec.sock.late')
+        const deadline = Date.now() + 3500
+        while (!existsSync(earlyLate) && child.exitCode === null && Date.now() < deadline)
+          await new Promise(resolve => setTimeout(resolve, 30))
+        assert.ok(existsSync(earlyLate), name + ' late tail was not published during grace')
+        assert.equal(child.exitCode, null, name + ' closed before subscriber grace')
         const exit = await Promise.race([
           new Promise((resolve, reject) => {
             child.once('error', reject)
