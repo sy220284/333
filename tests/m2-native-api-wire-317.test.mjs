@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-  native317MessagesRequest, NATIVE_317_API_VERSION,
+  native317MessagesRequest, native317RequestHeaders, NATIVE_317_API_VERSION,
 } from '../src/services/api/native317Wire.mjs'
 
 test('317 SDK compatibility: beta messages uses official resource URI and API-key headers', () => {
@@ -67,4 +67,34 @@ test('317 SDK compatibility: Request inputs preserve POST body and existing quer
   assert.equal(await result.input.text(), '{"model":"claude-sonnet-4-6"}')
   assert.equal(new URL(result.input.url).searchParams.get('trace'), 'keep')
   assert.equal(new URL(result.input.url).searchParams.get('beta'), 'true')
+})
+
+test('317 SDK fetch boundary: Request headers survive without init overrides', () => {
+  const request = new Request('https://api.example.invalid/v1/messages', {
+    method: 'POST',
+    headers: {
+      'anthropic-beta': 'claude-code-20250219',
+      authorization: 'Bearer user-token',
+      'x-trace': 'preserved',
+    },
+    body: '{}',
+  })
+  const headers = native317RequestHeaders(request)
+  assert.equal(headers.get('anthropic-beta'), 'claude-code-20250219')
+  assert.equal(headers.get('authorization'), 'Bearer user-token')
+  assert.equal(headers.get('x-trace'), 'preserved')
+  const transformed = native317MessagesRequest(request, { headers })
+  assert.equal(new URL(transformed.input.url).searchParams.get('beta'), 'true')
+  assert.equal(transformed.init.headers.get('authorization'), 'Bearer user-token')
+})
+
+test('317 SDK fetch boundary: explicit init headers replace Request headers', () => {
+  const request = new Request('https://api.example.invalid/v1/messages', {
+    headers: { 'anthropic-beta': 'old', 'x-trace': 'request' },
+  })
+  const headers = native317RequestHeaders(request, {
+    headers: { 'anthropic-beta': 'new', 'x-trace': 'init' },
+  })
+  assert.equal(headers.get('anthropic-beta'), 'new')
+  assert.equal(headers.get('x-trace'), 'init')
 })
