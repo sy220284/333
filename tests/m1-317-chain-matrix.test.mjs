@@ -82,3 +82,11 @@ test('更新数量、阶段依赖和逐条人工归属保持一致', () => {
   assert.equal(total, 366)
   assert.deepEqual(matrix.manual_review.needs_route_review, [], '仍有更新未完成路由归类')
 })
+
+test('366条增量工作线独立于完整新版六层实施计划，使用20条链路责任编号', () => {
+  assert.equal(matrix.tracking_policy.independent_of, 'docs/upgrade/2.1.317-六层完整功能链路.json')
+  assert.equal(matrix.items.length, 366)
+  assert.equal(new Set(matrix.routes.map(route => route.owner)).size, 20)
+  for (const route of matrix.routes) assert.equal(route.owner, route.id, route.id)
+  for (const item of matrix.items) assert.equal(item.owner, item.chain, item.id)
+})
