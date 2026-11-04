@@ -2692,8 +2692,11 @@ function appendEntryToFile(
   const line = jsonStringify(entry) + '\n'
   try {
     fs.appendFileSync(fullPath, line, { mode: 0o600 })
-  } catch {
-    fs.mkdirSync(dirname(fullPath), { mode: 0o700 })
+  } catch (error) {
+    // A missing parent is recoverable. Disk-full, permissions and I/O errors
+    // retain their original failure instead of performing another write.
+    if (!shouldRetrySessionAppendAfterMkdir(getErrnoCode(error))) throw error
+    fs.mkdirSync(dirname(fullPath), { mode: 0o700, recursive: true })
     fs.appendFileSync(fullPath, line, { mode: 0o600 })
   }
 }
