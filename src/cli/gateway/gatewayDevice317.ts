@@ -107,11 +107,12 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }: G
     gateway_protocol_version: 1,
   })
   const createTokens = async (claims: GatewayDeviceClaims317): Promise<Response> => {
-    const permitted = {
-      sub: claims.sub,
-      ...(claims.email && { email: claims.email }),
-      ...(claims.name && { name: claims.name }),
-      ...(claims.groups && { groups: claims.groups }),
+    const permitted: GatewayDeviceClaims317 = { sub: claims.sub }
+    if (typeof claims.email === 'string') permitted.email = claims.email
+    if (typeof claims.name === 'string') permitted.name = claims.name
+    if (Array.isArray(claims.groups) &&
+        claims.groups.every((group: unknown) => typeof group === 'string')) {
+      permitted.groups = claims.groups
     }
     const access = signGatewaySession317(
       permitted, config.session.jwt_secret, publicUrl, config.session.ttl_hours,
