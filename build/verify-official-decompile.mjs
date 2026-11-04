@@ -67,6 +67,8 @@ try {
       const count = readSync(fd, nativeBytes, consumed, size - consumed, offset + consumed)
       if (!count) throw new Error(`Unexpected EOF while verifying: ${file}`)
       consumed += count
+    }
+    if (!actual.equals(nativeBytes)) throw new Error(`Source/native byte mismatch: ${file}`)
     byteCount += size
     byLoader[record.loader] = (byLoader[record.loader] ?? 0) + 1
   }
