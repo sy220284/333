@@ -176,10 +176,43 @@ export async function unstable_v2_prompt(
  * @returns Array of messages, or empty array if session not found
  */
 export async function getSessionMessages(
-  _sessionId: string,
-  _options?: GetSessionMessagesOptions,
+  sessionId: string,
+  options?: GetSessionMessagesOptions,
 ): Promise<SessionMessage[]> {
-  throw new Error('getSessionMessages is not implemented in the SDK')
+  const { validateUuid, resolveSessionFilePath } = await import('../utils/sessionStoragePortable.js')
+  const valid = validateUuid(sessionId)
+  if (!valid) return []
+  const file = await resolveSessionFilePath(valid, options?.dir)
+  if (!file) return []
+  const offset = options?.offset ?? 0
+  const limit = options?.limit
+  if (!Number.isSafeInteger(offset) || offset < 0 ||
+      (limit !== undefined && (!Number.isSafeInteger(limit) || limit < 0))) {
+    throw new RangeError('Session message pagination requires non-negative integer limit and offset')
+  }
+  // Reuse the canonical transcript loader: parentUuid ordering, sibling
+  // assistant blocks, parallel tool_results and compact boundaries all pass
+  // through the same read path as --resume.
+  const { loadTranscriptFromFile } = await import('../utils/sessionStorage.js')
+  const log = await loadTranscriptFromFile(file.filePath)
+  if (log.isSidechain) return []
+  const messages: SessionMessage[] = []
+  for (const entry of log.messages) {
+    const uuid = entry.uuid
+    if (!uuid) continue
+    if (entry.type === 'user') {
+      messages.push({ type: 'user', uuid, session_id: valid,
+        message: entry.message } as SessionMessage)
+    } else if (entry.type === 'assistant') {
+      messages.push({ type: 'assistant', uuid, session_id: valid,
+        message: entry.message, parent_tool_use_id: entry.parent_tool_use_id ?? null,
+        ...(entry.error && {error: entry.error}),
+      } as SessionMessage)
+    } else if (entry.type === 'system' && options?.includeSystemMessages) {
+      messages.push({...entry, uuid, session_id: valid} as unknown as SessionMessage)
+    }
+  }
+  return messages.slice(offset, limit === undefined ? undefined : offset + limit)
 }
 
 /**
