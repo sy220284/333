@@ -46,6 +46,36 @@ jobs:
                   output=Path('src')/src.relative_to(base/'src')
                   copy2(src,output)
           PY
+      - name: 逐文件隔离编译错误并保留所有异常记录
+        run: |
+          python3 - <<'PY'
+          import json,re,subprocess
+          from pathlib import Path
+          root=Path('.rebuild/migration-proposals')
+          candidates={str(p.relative_to(root)) for p in (root/'src').rglob('*') if p.is_file()}
+          blocked=[]
+          for attempt in range(20):
+              result=subprocess.run(['node','tools/dev/dev.mjs','typecheck:all'],
+                  text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+              if result.returncode==0:
+                  print('Compilation passed after',attempt,'isolation attempts')
+                  break
+              match=re.findall(r'(src/[^():\\s]+\\.tsx?)\\(\\d+,\\d+\\): error TS\\d+',result.stdout)
+              offending=set(match)&candidates
+              if not offending:
+                  print(result.stdout[-10000:])
+                  raise SystemExit('TypeScript failure outside generated migration files')
+              for name in sorted(offending):
+                  related=[line for line in result.stdout.splitlines() if name+'(' in line and 'error TS' in line]
+                  blocked.append({'path':name,'diagnostics':related})
+                  print('Deferred invalid inferred type:',name,*related,sep='\\n')
+                  subprocess.run(['git','restore','--source=HEAD','--',name],check=True)
+                  candidates.remove(name)
+          else:
+              raise SystemExit('TypeScript inference isolation exceeded 20 attempts')
+          (root/'blocked-errors.json').write_text(json.dumps(blocked,indent=2,ensure_ascii=False)+'\\n')
+          print('Validated candidate files:',len(candidates),'deferred:',len(blocked))
+          PY
       - name: 校验候选类型与代码内容、禁止任意类型
         run: |
           node tools/dev/dev.mjs typecheck:all
@@ -68,6 +98,7 @@ jobs:
           name: pr7-type-migration-batch-${{ github.sha }}
           path: |
             .rebuild/migration-proposals/proposal-report.json
+            .rebuild/migration-proposals/blocked-errors.json
             .rebuild/governance/type-migration-report.json
           retention-days: 14
           if-no-files-found: warn
