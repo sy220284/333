@@ -3694,8 +3694,9 @@ async function run(): Promise<CommanderCommand> {
 
   // Marketplace subcommands
   const marketplaceCmd = pluginCmd.command('marketplace').description('Manage Claude Code marketplaces').configureHelp(createSortedHelpConfig());
-  marketplaceCmd.command('add <source>').description('Add a marketplace from a URL, path, or GitHub repo').addOption(coworkOption()).option('--sparse <paths...>', 'Limit checkout to specific directories via git sparse-checkout (for monorepos). Example: --sparse .claude-plugin plugins').option('--scope <scope>', 'Where to declare the marketplace: user (default), project, or local').option('--json', 'Print one machine-readable result line as the last line on stdout (same exit codes)').action(async (source: string, options: {
+  marketplaceCmd.command('add <source>').description('Add a marketplace from a URL, path, or GitHub repo').addOption(coworkOption()).option('--claudeai', 'Add the marketplace of this name that claude.ai hosts for you, by its listed name or its local name (see: claude plugin marketplace list)').option('--sparse <paths...>', 'Limit checkout to specific directories via git sparse-checkout (for monorepos). Example: --sparse .claude-plugin plugins').option('--scope <scope>', 'Where to declare the marketplace: user (default), project, or local').option('--json', 'Print one machine-readable result line as the last line on stdout (same exit codes)').action(async (source: string, options: {
     cowork?: boolean;
+    claudeai?: boolean;
     sparse?: string[];
     scope?: string;
     json?: boolean;
