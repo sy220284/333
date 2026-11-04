@@ -5,6 +5,7 @@
 import { readFile } from 'node:fs/promises'
 import { validateGatewayAdmin317 } from './gatewayAdmin317.ts'
 import { validateCriConfig317 } from './gatewayCri317.ts'
+import type { GatewayOidcConfig317 } from './gatewayAuth317.ts'
 
 type GatewayProvider317 = 'anthropic' | 'bedrock' | 'mantle' | 'anthropicAws' |
   'anthropicGoogleCloud' | 'vertex' | 'foundry'
@@ -150,10 +151,21 @@ export function validateGatewayConfig317(value: unknown) {
   if (!value.oidc && !cri?.enabled) {
     throw new Error('oidc is required unless cri.enabled is true')
   }
-  const oidc = value.oidc ? requireRecord(value.oidc, 'oidc') : undefined
-  if (oidc) {
-    nonempty(oidc.client_id, 'oidc.client_id')
-    safeHttps(oidc.issuer, 'oidc.issuer')
+  let oidc: GatewayOidcConfig317 | undefined
+  if (value.oidc) {
+    const rawOidc = requireRecord(value.oidc, 'oidc')
+    const client_id = nonempty(rawOidc.client_id, 'oidc.client_id')
+    const issuer = nonempty(rawOidc.issuer, 'oidc.issuer')
+    safeHttps(issuer, 'oidc.issuer')
+    const client_secret = rawOidc.client_secret
+    if (client_secret !== undefined && typeof client_secret !== 'string')
+      throw new Error('oidc.client_secret must be a string')
+    const scopes = rawOidc.scopes
+    if (scopes !== undefined && (!Array.isArray(scopes) ||
+      scopes.some((scope: unknown) => typeof scope !== 'string')))
+      throw new Error('oidc.scopes must contain strings')
+    oidc = { ...rawOidc, issuer, client_id,
+      client_secret, scopes: scopes as string[] | undefined }
   }
   if (!Array.isArray(value.upstreams) || !value.upstreams.length) {
     throw new Error('gateway needs at least one upstream')
