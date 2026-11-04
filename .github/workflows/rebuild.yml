@@ -34,6 +34,8 @@ jobs:
         run: node tools/dev/dev.mjs typecheck:all
       - name: 全仓TypeScript内容级审计与已重写模块验收
         run: node tools/dev/type-migration-audit.mjs
+      - name: 已重写模块的TypeScript严格类型编译
+        run: node tools/dev/type-migration-strict.mjs
       - name: 保存全仓类型迁移缺口清单
         if: always()
         uses: actions/upload-artifact@v4
