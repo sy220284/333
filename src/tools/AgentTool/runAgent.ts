@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { releaseAgentResources } from './agentCleanup317.mjs'
+import { releaseAgentResources } from './agentCleanup317.ts'
 import { killMonitorWsTasksForAgent } from '../../tasks/MonitorWsTask/MonitorWsTask.js'
 import type { UUID } from 'crypto'
 import { randomUUID } from 'crypto'
@@ -85,7 +85,7 @@ import {
 import type { ContentReplacementState } from '../../utils/toolResultStorage.js'
 import { createAgentId } from '../../utils/uuid.js'
 import { resolveAgentTools } from './agentToolUtils.js'
-import { resolveSubagentEffortValue } from './subagentEffortPolicy.mjs'
+import { resolveSubagentEffortValue } from './subagentEffortPolicy.ts'
 import { type AgentDefinition, isBuiltInAgent } from './loadAgentsDir.js'
 
 /**
