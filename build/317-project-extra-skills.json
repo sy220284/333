@@ -1,0 +1,9 @@
+{
+  "target_version": "2.1.317",
+  "description": "经官方317 x64二进制内嵌帧扫描与完整反编译文件核验：这些独立追加的技能在333中保留，单独检验SHA，禁止将其冒充原版内嵌技能。",
+  "skills": {
+    "artifact-diagramming": "18090854d77cc043802d3bc90fba1fb22d67361162473a73decf38f2c800e017",
+    "claude-config": "aa74b270052ffad17c65df36895a32480080c71ab56b8dbba7c4d02ede810e0c",
+    "data-visualization": "3971a411fd0673a4f97ca277c6d8e13e0f786e1f0c1179d365974b6721b2c623"
+  }
+}
