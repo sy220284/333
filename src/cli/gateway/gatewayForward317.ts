@@ -4,8 +4,8 @@
  * are chosen from validated server config, and only allowlisted metadata is sent.
  */
 import { randomUUID } from 'node:crypto'
-import { meterGatewayResponse317 } from './gatewaySpendMeter317.mjs'
-import { classifyCriCapability317 } from './gatewayCri317.mjs'
+import { meterGatewayResponse317 } from './gatewaySpendMeter317.ts'
+import { classifyCriCapability317 } from './gatewayCri317.ts'
 import { forwardGatewaySdk317 } from './gatewayProviders317.ts'
 
 const FORWARD = new Set([
