@@ -98,17 +98,21 @@ graders:
     // Exercise the exact isolated evaluation worker protocol: plugin loads
     // normally, stdin contains the prompt, and automatic external MCP sources
     // are excluded while plugin skills and hooks remain eligible.
+    const startupLog = join(root, 'eval-isolated-startup.log')
     const direct = await invoke([
       '-p', '--output-format', 'stream-json', '--verbose',
+      '--debug-file', startupLog,
       '--no-session-persistence', '--permission-mode', 'dontAsk',
       '--setting-sources', 'user', '--strict-mcp-config',
       '--plugin-dir', plugin, '--model', model, '--max-turns', '1',
     ], env, root, 20000, 'Say the verification text')
+    const startupTrace = existsSync(startupLog) ? readFileSync(startupLog, 'utf8') : '(no debug trace)'
     assert.equal(direct.code, 0,
       'Isolated eval worker failed: signal=' + direct.signal +
       '; mock requests=' + requests +
       '\\nSTDOUT=' + direct.stdout.slice(-2500) +
-      '\\nSTDERR=' + direct.stderr.slice(-2500))
+      '\\nSTDERR=' + direct.stderr.slice(-2500) +
+      '\\nSTARTUP=' + startupTrace.slice(-9000))
     assert.equal(requests, 1, 'The isolated worker must call the mock model once')
     requests=0
     const run=await invoke([
