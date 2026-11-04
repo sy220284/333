@@ -891,7 +891,7 @@ export async function pluginConfigureHandler(
 // plugin uninstall (lines 5738–5769)
 export async function pluginUninstallHandler(
   plugin: string,
-  options: { scope?: string; cowork?: boolean; keepData?: boolean },
+  options: { scope?: string; cowork?: boolean; keepData?: boolean; json?: boolean },
 ): Promise<void> {
   if (options.cowork) setUseCoworkPlugins(true)
   const scope = options.scope || 'user'
@@ -921,6 +921,7 @@ export async function pluginUninstallHandler(
     plugin,
     scope as 'user' | 'project' | 'local',
     options.keepData,
+    options.json,
   )
 }
 
