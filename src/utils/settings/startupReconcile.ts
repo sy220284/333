@@ -3,7 +3,7 @@
  * The set of observed paths prevents replaying events already delivered by
  * the watcher during initialization. Null represents a deleted/missing file.
  */
-export function findUnobservedStartupChanges(before, after, observed) {
+export function findUnobservedStartupChanges(before: Map<string,string|null>, after: Map<string,string|null>, observed: Set<string>) {
   const paths = new Set([...before.keys(), ...after.keys()])
   const changes = []
   for (const path of paths) {

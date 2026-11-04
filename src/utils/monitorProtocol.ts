@@ -9,7 +9,7 @@ function mappedV4(ip) {
   const low = Number.parseInt(match[2], 16)
   return `${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`
 }
-export function isPublicIp(ip) : boolean {
+export function isPublicIp(ip: string) : boolean {
   const mapped = mappedV4(ip)
   if (mapped !== null) return isPublicIp(mapped)
   if (isIP(ip) === 4) {
@@ -29,7 +29,7 @@ export function isPublicIp(ip) : boolean {
       n.startsWith('feb') || n.startsWith('ff') || n.startsWith('2001:db8:')) return false
   return true
 }
-export function validateMonitorWsUrl(value) {
+export function validateMonitorWsUrl(value: string|URL) {
   if (typeof value !== 'string' || [...value].some(char => char.codePointAt(0) < 32 || char.codePointAt(0) > 126)) throw new Error('WebSocket URL must be printable ASCII')
   let u
   try { u = new URL(value) } catch { throw new Error('Invalid WebSocket URL') }
@@ -39,7 +39,7 @@ export function validateMonitorWsUrl(value) {
   }
   return u
 }
-export function validateMonitorArguments(value) : void {
+export function validateMonitorArguments(value: { description: string; timeout_ms: number; command?: string|undefined; ws?: { url: string; protocols?: string[]|undefined }|undefined }) : void {
   if (!value || !!value.command === !!value.ws) throw new Error('Exactly one of command or ws is required')
   if (!value.description?.trim()) throw new Error('Monitor description is required')
   if (value.command && [...value.command].some(char => { const code=char.codePointAt(0); return code < 32 && code !== 9 && code !== 10 && code !== 13 || code === 127 })) throw new Error('Command contains hidden control characters')

@@ -1,5 +1,5 @@
 /** Capture Bash/Zsh functions and aliases without changing their bytes. */
-export function getUserSnapshotContent(configFile) : string {
+export function getUserSnapshotContent(configFile: string) : string {
   const isZsh = configFile.endsWith('.zshrc')
   let content = ''
   if (isZsh) {

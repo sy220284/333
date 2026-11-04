@@ -3,7 +3,7 @@
  * matching 'block' stops a tool action when the callback throws or responds
  * with invalid data. All other configurations report a non-blocking error.
  */
-export function classifySdkCallbackFailure(onFailure, error) : { blocked: boolean; detail: string; } {
+export function classifySdkCallbackFailure(onFailure: string|undefined, error) : { blocked: boolean; detail: string; } {
   return {
     blocked: onFailure === 'block',
     detail: error instanceof Error ? error.message : String(error),

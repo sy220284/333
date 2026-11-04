@@ -9,7 +9,7 @@ import { join, resolve } from 'node:path'
 
 export const MAX_PLUGIN_TEST_FILES_317 = 1000
 
-export async function discoverPluginTests317(root, { maxFiles = MAX_PLUGIN_TEST_FILES_317 } = {}) {
+export async function discoverPluginTests317(root: string, { maxFiles = MAX_PLUGIN_TEST_FILES_317 } = {}) {
   const files = []
   const pending = [resolve(root)]
   while (pending.length > 0) {

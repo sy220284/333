@@ -52,7 +52,7 @@ function matchAdminKey(token, keys) {
   }
   return id
 }
-export function identifyGatewayAdmin317(request, config, publicUrl) {
+export function identifyGatewayAdmin317(request: { headers: { get: (arg0: string) => string } }, config, publicUrl) {
   const presented = request.headers.get('x-api-key')
   if (presented) {
     const writeId = matchAdminKey(presented,config.admin.write_keys)
@@ -71,7 +71,7 @@ export function identifyGatewayAdmin317(request, config, publicUrl) {
   }
   return null
 }
-export function isGatewayAdminPath317(path) {
+export function isGatewayAdminPath317(path: string) {
   return path === GATEWAY_COST_PATH_317 || path === GATEWAY_SPEND_BASE_317 ||
     path.startsWith(GATEWAY_SPEND_BASE_317+'/')
 }

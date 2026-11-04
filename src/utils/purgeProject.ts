@@ -75,7 +75,7 @@ async function directoryOwnership(path, paths) {
   return null
 }
 
-export async function planPurge(home, project, { all = false, projectKeys = [], configAliases = [] } = {}) : Promise<{ items: PurgeItem[]; warnings: string[]; }> {
+export async function planPurge(home: string, project: string|undefined, { all = false, projectKeys = [], configAliases = [] } = {}) : Promise<{ items: PurgeItem[]; warnings: string[]; }> {
   home = resolve(home)
   const items: PurgeItem[] = [], warnings: string[] = []
   if (all) {

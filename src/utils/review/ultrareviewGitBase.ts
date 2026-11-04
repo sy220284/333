@@ -3,7 +3,7 @@
  * The native 2.1.317 fallback needs explicit consent before submitting an
  * unrelated-history, full-tree snapshot to a cloud session.
  */
-export async function resolveUltrareviewGitBase(branch, runGit) {
+export async function resolveUltrareviewGitBase(branch: string, runGit) {
   const merged = await runGit(['merge-base', branch, 'HEAD'])
   const commonBase = merged.stdout.trim()
   if (merged.code === 0 && commonBase) {

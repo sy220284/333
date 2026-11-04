@@ -6,7 +6,7 @@
  */
 export const MAX_PRECOMPACT_HOOK_OUTPUT = 10000
 
-export function capPreCompactHookOutput(rawOutput, command) {
+export function capPreCompactHookOutput(rawOutput: string, command: string) {
   const output = rawOutput.trim()
   if (output.length <= MAX_PRECOMPACT_HOOK_OUTPUT) {
     return {output, truncated:false, originalLength:output.length}

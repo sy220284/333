@@ -115,7 +115,7 @@ export function validatePreloadClaim317(claim) {
   return { cwd: realpathSync(claim.cwd), argv: claim.argv, env: Object.entries(kept), dropped }
 }
 
-export function applyPreloadClaim317(claim, {
+export function applyPreloadClaim317(claim: PreloadClaim317, {
   env = process.env, argv = process.argv, chdir = process.chdir.bind(process),
 } = {}) {
   const normalized = validatePreloadClaim317(claim)

@@ -74,7 +74,7 @@ export function isLocalLinuxClipboardDisplay(env = process.env) : boolean {
 }
 
 /** The native extension returns false if the compositor cannot accept a write. */
-export function writeLinuxClipboardNative(text) : boolean {
+export function writeLinuxClipboardNative(text: string) : boolean {
   if (process.platform !== 'linux' || process.env.SSH_CONNECTION || !isLocalLinuxClipboardDisplay()) return false
   const addon = nativeClipboardAddon()
   if (!addon) return false
@@ -102,7 +102,7 @@ export async function readLinuxClipboardNative(primary = false, timeoutMs = 2000
  * Original 2.1.317 Windows/WSL path: clipboard content arrives on stdin in
  * UTF-8. clip.exe interprets it through a locale-dependent code page.
  */
-export function windowsClipboardWriteInvocation(platform) : { command: string; args: string[]; } {
+export function windowsClipboardWriteInvocation(platform: string) : { command: string; args: string[]; } {
   if (platform !== 'windows' && platform !== 'wsl')
     throw new Error('Windows clipboard command requires Windows or WSL')
   return {

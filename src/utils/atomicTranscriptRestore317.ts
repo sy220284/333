@@ -136,7 +136,7 @@ export async function replaceTranscriptAtomically(path: string, content: string,
   await replaceTranscriptBatchAtomically([{ path, content }], io)
 }
 
-export function assertSafeAgentTranscriptId(id) : string {
+export function assertSafeAgentTranscriptId(id: string) : string {
   if (typeof id !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_@.-]{0,191}$/.test(id)) {
     throw new Error('Invalid remote agent transcript identifier')
   }

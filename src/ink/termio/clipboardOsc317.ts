@@ -40,7 +40,7 @@ export function encodeClipboardOsc52(base64, mux = null, terminator = BEL) : str
  * known to print unknown OSC sequences or if a native copy has already
  * succeeded on a VTE-based Linux/WSL terminal.
  */
-export function isVteTerminal(terminal, environment = process.env) : boolean {
+export function isVteTerminal(terminal: string, environment = process.env) : boolean {
   const has = name => (environment[name] ?? '').trim() !== ''
   return has('VTE_VERSION') &&
     (terminal === 'vte-based' || terminal === 'gnome-terminal') &&

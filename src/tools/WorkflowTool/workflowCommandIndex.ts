@@ -1,7 +1,7 @@
 import { readdir,readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { workflowMeta } from './workflowRuntime.ts'
-export async function listWorkflowFiles(cwd,{onError}: {onError?: (failure: {file: string; error: unknown}) => void} = {}){
+export async function listWorkflowFiles(cwd: string,{onError}: {onError?: (failure: {file: string; error: unknown}) => void} = {}){
  const dir=join(cwd,'.claude','workflows')
  let entries
  try{entries=await readdir(dir,{withFileTypes:true})}
@@ -26,7 +26,7 @@ export async function listWorkflowFiles(cwd,{onError}: {onError?: (failure: {fil
  * A named workflow is identified by the name in meta, not its disk basename.
  * Never silently select one of multiple definitions with the same name.
  */
-export async function resolveNamedWorkflowFile(cwd,name){
+export async function resolveNamedWorkflowFile(cwd: string,name: string){
  if(typeof name!=='string'||!/^[\w-]{1,80}$/.test(name))
   throw new Error('Invalid workflow name')
  const errors=[]

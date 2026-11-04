@@ -69,7 +69,7 @@ export function usePromptOverlayDialog() : React.ReactNode {
  * Register suggestion data for the floating overlay. Clears on unmount.
  * No-op outside the provider (non-fullscreen renders inline instead).
  */
-export function useSetPromptOverlay(data) : void {
+export function useSetPromptOverlay(data: PromptOverlayData|null) : void {
   const $ = _c(4);
   const set = useContext(SetContext);
   let t0;

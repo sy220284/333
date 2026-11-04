@@ -124,7 +124,7 @@ export function createCriAdmission317(config,adapters: {now?: () => number; fetc
   }
 }
 /** Ordered capability tokens preserve the native client's self-healing retries. */
-export function classifyCriCapability317(status,message,betaHeader=''): string {
+export function classifyCriCapability317(status: number,message: string,betaHeader=''): string {
   if(status!==400&&status!==413)return null
   const text=String(message??'')
   if(/(?:system\s+(?:role|message)|role\s*[:=]\s*["']?system|mid.conversation.*system)/i.test(text)&&

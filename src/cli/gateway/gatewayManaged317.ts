@@ -154,7 +154,7 @@ export async function createGatewayManagedSettings317(managed) {
   }
   return null
 }
-export function responseForManagedSettings317(request, identity, policySet) : Response {
+export function responseForManagedSettings317(request: { headers: { get: (arg0: string) => string } }, identity, policySet) : Response {
   const headers = {
     'cache-control':'no-store',
     'x-cc-gateway-version':'2.1.317',

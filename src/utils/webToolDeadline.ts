@@ -2,7 +2,7 @@
  * A single deadline for the complete web tool operation: initial HTTP calls,
  * redirects, parsing and secondary model work are all included.
  */
-export async function withWebToolDeadline(parent, operation, timeoutMs = 300_000) {
+export async function withWebToolDeadline(parent: AbortController, operation, timeoutMs = 300_000) {
   if (parent.signal.aborted) {
     throw parent.signal.reason ?? new Error('Web tool cancelled')
   }

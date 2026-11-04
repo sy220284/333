@@ -15,20 +15,20 @@ const HISTORICAL_TOOL_NAMES = Object.freeze({
   ReadMcpResourceDir: 'ReadMcpResourceDirTool',
 })
 
-export function normalizeHistoricalToolName(name) {
+export function normalizeHistoricalToolName(name: PropertyKey) {
   return Object.hasOwn(HISTORICAL_TOOL_NAMES, name)
     ? HISTORICAL_TOOL_NAMES[name]
     : name
 }
 
 /** Compare identities only: never change tool registrations or authorize new paths. */
-export function permissionToolNamesMatch(ruleToolName, runtimeToolName) : boolean {
+export function permissionToolNamesMatch(ruleToolName: string, runtimeToolName: string) : boolean {
   return normalizeHistoricalToolName(ruleToolName) ===
     normalizeHistoricalToolName(runtimeToolName)
 }
 
 /** Read-only historical-name lookup for old permission and session records. */
-export function getHistoricalToolNamesFor(currentName) : string[] {
+export function getHistoricalToolNamesFor(currentName: string) : string[] {
   return Object.entries(HISTORICAL_TOOL_NAMES)
     .filter(([, newName]) => newName === currentName)
     .map(([legacyName]) => legacyName)

@@ -9,7 +9,7 @@ import { join, relative, sep } from 'node:path'
  * Links: sha256.update("l " + relative + NUL + targetByteCount + NUL + target)
  * Empty directories add no bytes. This hash is part of the cached version.
  */
-export async function commandSourceTreeFingerprint(directory) : Promise<string> {
+export async function commandSourceTreeFingerprint(directory: string) : Promise<string> {
   const files = []
   const symlinks = []
   const visit = async path => {

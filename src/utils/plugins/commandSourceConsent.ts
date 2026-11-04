@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto'
  * The digest is bound to the command text, plugin, source mode and the
  * current marketplace revision; it must be recalculated after every refresh.
  */
-export function installedSourceCommandKey(source) {
+export function installedSourceCommandKey(source: { source: "command"; command: string; mode: "copy"|"link" }) {
   if (!source || source.source !== 'command') return undefined
   return source.mode === 'link' ? source.command + '\n[mode: link]' : source.command
 }
@@ -17,7 +17,7 @@ export function commandSourceDigest(disclosure) : string {
   return createHash('sha256').update(JSON.stringify(tuple), 'utf8').digest('hex')
 }
 
-export function commandSourceDisclosure({ pluginId, command, mode, catalogRevision }, suppliedDigest) {
+export function commandSourceDisclosure({ pluginId, command, mode, catalogRevision }: { pluginId: string; command: string; mode: "copy"|"link"; catalogRevision: string }, suppliedDigest: string|undefined) {
   if (typeof pluginId !== 'string' || !pluginId.includes('@')) throw new TypeError('Plugin identifier is required')
   if (typeof command !== 'string' || command.trim() === '') throw new TypeError('Source command must be non-empty')
   if (mode !== 'copy' && mode !== 'link') throw new TypeError('Source mode must be copy or link')
@@ -44,7 +44,7 @@ export function canonicalCatalogTree(value) {
   return value
 }
 
-export function localCatalogRevision(marketplaceJson, packageJson = null) : string {
+export function localCatalogRevision(marketplaceJson: string, packageJson = null) : string {
   const catalog = canonicalCatalogTree(
     typeof marketplaceJson === 'string' ? JSON.parse(marketplaceJson) : marketplaceJson,
   )

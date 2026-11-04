@@ -139,7 +139,7 @@ function writeRegistryAtomically(path, value) {
 }
 
 /** One boundary for V1/V2 registry migration. Unknown or conflicting records never get overwritten. */
-export function migrateInstalledPluginsRecords(pluginsDirectory, resolveCachePath) : boolean {
+export function migrateInstalledPluginsRecords(pluginsDirectory: string, resolveCachePath: (pluginId: string,version: string) => string) : boolean {
   const canonicalPath = join(pluginsDirectory, 'installed_plugins.json')
   const priorV2Path = join(pluginsDirectory, 'installed_plugins_v2.json')
   const canonical = readRegistry(canonicalPath)

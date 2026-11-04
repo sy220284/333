@@ -3,12 +3,12 @@
  * directory is absent. ENOSPC, EDQUOT, access errors and I/O failures must
  * be reported rather than masked by a second filesystem write.
  */
-export function shouldRetrySessionAppendAfterMkdir(code) : boolean {
+export function shouldRetrySessionAppendAfterMkdir(code: string|undefined) : boolean {
   return code === 'ENOENT'
 }
 
 /** Filesystem failures for which an unlocked config-write retry is unsafe. */
-export function isUnrecoverableConfigWriteError(code) : boolean {
+export function isUnrecoverableConfigWriteError(code: string|undefined) : boolean {
   return code === 'ENOSPC' || code === 'EDQUOT' || code === 'EROFS' ||
     code === 'EIO' || code === 'EACCES' || code === 'EPERM'
 }

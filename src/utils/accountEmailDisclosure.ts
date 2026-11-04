@@ -13,7 +13,7 @@ const WEB_TOOLS = new Set(['WebBrowser', 'WebFetch', 'WebSearch'])
 const SHELL_TOOLS = new Set(['Bash', 'Monitor', 'PowerShell', 'Tmux'])
 const NETWORK_COMMAND = /\b(curl|wget|https?|httpie|xh|nc|ncat|socat|telnet|ssh|scp|sftp|rsync|ftp|lftp|rclone|iwr|irm|invoke-webrequest|invoke-restmethod)\b/
 
-export function shouldConfirmAccountEmailDisclosure(toolName, input, email) : boolean {
+export function shouldConfirmAccountEmailDisclosure(toolName: string, input, email) : boolean {
   if (!WEB_TOOLS.has(toolName) && !SHELL_TOOLS.has(toolName)) return false
   const target = typeof email === 'string' ? email.toLowerCase() : ''
   if (!target || !target.includes('@')) return false

@@ -234,7 +234,7 @@ export function listGatewayModels317(config, identity) : Response {
 }
 
 const METRIC_PATHS = new Set(['/v1/logs','/v1/metrics','/v1/traces'])
-export async function forwardGatewayTelemetry317(request, context) : Promise<Response> {
+export async function forwardGatewayTelemetry317(request: { url: string|URL; headers: { get: (arg0: string) => string } }, context) : Promise<Response> {
   const path = new URL(request.url).pathname
   if (!METRIC_PATHS.has(path)) return new Response('not found', { status:404 })
   const destinations = (context.config.telemetry.forward_to ?? []).filter(

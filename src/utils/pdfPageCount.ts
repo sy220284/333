@@ -6,7 +6,7 @@
  * count. For an ambiguous larger value this intentionally errs on the
  * restrictive side rather than letting oversized PDFs through.
  */
-export function parsePdfInfoPageCount(stdout) : number {
+export function parsePdfInfoPageCount(stdout: string) : number {
   const matches = [...stdout.matchAll(/^Pages:[ \t]+([0-9]+)[ \t]*$/gm)]
   if (matches.length === 0) return null
   let max = 0

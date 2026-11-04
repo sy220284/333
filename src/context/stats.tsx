@@ -161,7 +161,7 @@ export function useStats() : StatsStore {
   }
   return store;
 }
-export function useCounter(name) {
+export function useCounter(name: string) {
   const $ = _c(3);
   const store = useStats();
   let t0;
@@ -175,7 +175,7 @@ export function useCounter(name) {
   }
   return t0;
 }
-export function useGauge(name) {
+export function useGauge(name: string) {
   const $ = _c(3);
   const store = useStats();
   let t0;
@@ -189,7 +189,7 @@ export function useGauge(name) {
   }
   return t0;
 }
-export function useTimer(name) {
+export function useTimer(name: string) {
   const $ = _c(3);
   const store = useStats();
   let t0;
@@ -203,7 +203,7 @@ export function useTimer(name) {
   }
   return t0;
 }
-export function useSet(name) {
+export function useSet(name: string) {
   const $ = _c(3);
   const store = useStats();
   let t0;
