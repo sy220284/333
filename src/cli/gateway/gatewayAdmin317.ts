@@ -4,8 +4,8 @@
  * PostgreSQL store and audited in the same SQL transaction.
  */
 import { randomUUID, timingSafeEqual } from 'node:crypto'
-import { verifyGatewaySession317 } from './gatewayAuth317.mjs'
-import { spendPeriodStart317 } from './gatewaySpendStore317.mjs'
+import { verifyGatewaySession317 } from './gatewayAuth317.ts'
+import { spendPeriodStart317 } from './gatewaySpendStore317.ts'
 
 export const GATEWAY_SPEND_BASE_317 = '/v1/organizations/spend_limits'
 export const GATEWAY_COST_PATH_317 = '/v1/organizations/analytics/cost'
