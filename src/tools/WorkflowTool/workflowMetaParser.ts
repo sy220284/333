@@ -1,5 +1,6 @@
 /** Parse workflow metadata as literal data without executing it. */
-export function parseWorkflowMetaLiteral(source) {
+export type WorkflowMetaLiteral317 = string | number | boolean | null | WorkflowMetaLiteral317[] | { [key: string]: WorkflowMetaLiteral317 }
+export function parseWorkflowMetaLiteral(source: string): Record<string, WorkflowMetaLiteral317> {
   if (typeof source !== 'string' || source.length > 65536) throw new Error('Workflow meta literal too large')
   let i = 0
   const fail = () => { throw new Error(`Workflow meta must be a static literal (offset ${i})`) }
@@ -85,5 +86,5 @@ export function parseWorkflowMetaLiteral(source) {
   const result = value(0)
   space()
   if (i !== source.length || !result || Array.isArray(result) || typeof result !== 'object') fail()
-  return result
+  return result as Record<string, WorkflowMetaLiteral317>
 }
