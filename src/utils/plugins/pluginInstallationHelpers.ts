@@ -236,6 +236,7 @@ export async function cacheAndRegisterPlugin(
       ...(authorizedCommandSource && typeof entry.source !== 'string' &&
         entry.source.source === 'command' && {
         sourceCommand: installedSourceCommandKey(entry.source),
+        ...(cacheResult.sourceProducerPath && { sourceProducerPath: cacheResult.sourceProducerPath }),
       }),
     },
     scope,
