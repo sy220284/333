@@ -35,7 +35,11 @@ test('project purge plans session state and exact config keys without deleting s
   assert.ok((await stat(project)).isDirectory())
   const history = await readFile(join(home, 'history.jsonl'), 'utf8')
   assert.ok(history.includes('keep')); assert.ok(history.includes('{torn-json')); assert.ok(!history.includes('remove'))
-  assert.equal((await stat(join(home, 'history.jsonl'))).mode & 0o777, 0o640)
+  // Windows exposes ACL-backed permissions, not reliable POSIX chmod bits.
+  // Verify mode preservation on POSIX and data preservation on every host.
+  if (process.platform !== 'win32') {
+    assert.equal((await stat(join(home, 'history.jsonl'))).mode & 0o777, 0o640)
+  }
 }))
 
 test('path-prefix collisions require transcript cwd ownership before planning deletion', async () => fixture(async ({ home, project, other }) => {
@@ -55,7 +59,8 @@ test('history symlinks are refused and the linked file stays intact', async () =
   await writeFile(target, JSON.stringify({ project }) + '\n')
   await rm(join(home, 'history.jsonl')); await symlink(target, join(home, 'history.jsonl'))
   await assert.rejects(executePurgeItem({ kind: 'history-lines', path: join(home, 'history.jsonl'), matchPaths: [project] }), /regular file|symlink/)
-  assert.ok((await readFile(target, 'utf8')).includes(project))
+  // JSON escapes Windows separators, so compare the parsed path exactly.
+  assert.equal(JSON.parse((await readFile(target, 'utf8')).trim()).project, project)
 }))
 
 test('all-project purge includes history but preserves settings and credentials', async () => fixture(async ({ home, project }) => {
