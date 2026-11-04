@@ -15,16 +15,17 @@ export async function assertSocketVacant317(path: string, label = 'Worker'): Pro
   await new Promise<void>((resolve, reject) => {
     const peer = connect(path)
     let done = false
-    const settle = (error?: Error) => {
+    const settle = (error?: Error, graceful = false) => {
       if (done) return
       done = true
       clearTimeout(timer)
-      peer.destroy()
+      if (graceful) { peer.resume(); peer.end(); peer.unref() }
+      else peer.destroy()
       if (error) reject(error)
       else resolve()
     }
     const timer = setTimeout(() => settle(new Error(label + ' socket ownership probe timed out: ' + path)), 1500)
-    peer.once('connect', () => settle(new Error('Another ' + label + ' already owns ' + path)))
+    peer.once('connect', () => settle(new Error('Another ' + label + ' already owns ' + path), true))
     peer.once('error', error => {
       const code = (error as NodeJS.ErrnoException).code
       if (code === 'ECONNREFUSED' || code === 'ENOENT') settle()
