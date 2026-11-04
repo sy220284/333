@@ -22,7 +22,13 @@ function nativeClipboardAddon() {
   // Production --compile executables are installed via aliases/symlinks.
   // Locate the verified addon beside the physical executable first, matching
   // native audio and ripgrep resource resolution.
-  const installedRoot = dirname(realpathSync(process.execPath))
+  const physicalExecutable = realpathSync(process.execPath)
+  const installedRoot = dirname(physicalExecutable)
+  // A compiled Bun executable must never load an addon from the checkout
+  // where it was compiled. Such a fallback silently masks an incomplete
+  // installation and can load a stale or ABI-incompatible native module.
+  const compiled = typeof Bun !== 'undefined' &&
+    !/(?:^|[\\/])bun(?:\\.exe)?$/i.test(physicalExecutable)
   for (const suffix of [platform, platform + '-musl']) {
     const packagedAddon = join(installedRoot, 'vendor', 'clipboard-napi',
       suffix, 'clipboard-napi.node')
@@ -35,6 +41,7 @@ function nativeClipboardAddon() {
       cached = addon
       return cached
     }
+    if (compiled) continue
     for (const path of [
       './vendor/clipboard-napi/' + suffix + '/clipboard-napi.node',
       '../clipboard-napi/' + suffix + '/clipboard-napi.node',
