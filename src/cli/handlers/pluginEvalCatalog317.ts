@@ -118,6 +118,7 @@ export async function readEvalCase317(dir) {
     ...base, ...top,
     schema_version: top.schema_version ?? base.schema_version ?? '1.1',
     name: top.name ?? base.name ?? basename(root),
+    context: { ...(base.context ?? {}), add_dirs: base.context?.add_dirs ?? [] },
     execution,
     graders: [...(base.graders ?? []), ...markdownGraders],
   }
@@ -125,6 +126,21 @@ export async function readEvalCase317(dir) {
       !/^\d+\.\d+$/.test(data.schema_version) ||
       Number(data.schema_version.split('.')[0]) > 1) {
     throw new Error(`eval ${data.name}: unsupported schema_version`)
+  }
+  if (!data.context || typeof data.context !== 'object' || Array.isArray(data.context)) {
+    throw new Error(`eval ${data.name}: context must be a mapping`)
+  }
+  for (const field of ['scaffold_script', 'history_file']) {
+    const value = data.context[field]
+    if (value !== undefined && (typeof value !== 'string' || !value.trim() ||
+      isAbsolute(value) || value.split(/[\\/]/).includes('..'))) {
+      throw new Error(`eval ${data.name}: context.${field} must be a relative file inside the case`)
+    }
+  }
+  if (!Array.isArray(data.context.add_dirs) ||
+      data.context.add_dirs.some(value => typeof value !== 'string' || !value.trim() ||
+        isAbsolute(value) || value.split(/[\\/]/).includes('..'))) {
+    throw new Error(`eval ${data.name}: context.add_dirs must contain only relative paths`)
   }
   if (!data.execution || typeof data.execution.prompt !== 'string' || !data.execution.prompt.trim()) {
     throw new Error(`eval ${data.name}: execution.prompt is required`)
