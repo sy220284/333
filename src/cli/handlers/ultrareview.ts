@@ -4,6 +4,7 @@
  * interactive /ultrareview; no separate local review implementation.
  */
 import axios from 'axios'
+import { setTimeout as sleepTimer } from 'node:timers/promises'
 import { createInterface } from 'node:readline/promises'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
 import { getDefaultBranch, gitExe } from '../../utils/git.js'
@@ -28,6 +29,21 @@ export type UltrareviewCliOptions = {
 const ENV_ID = 'env_011111111111111111111113'
 const MAX_FAILED_POLLS = 5
 const POLL_INTERVAL_MS = 3000
+/** Keep CLI errors on stderr and let Commander unwind normally. */
+function fail(message: string): void {
+  process.stderr.write(message + '\n')
+  process.exitCode = 1
+}
+function outputError(message: string): void {
+  fail(message)
+}
+function isPrNumber(target: string): boolean {
+  return /^[1-9]\d*$/.test(target)
+}
+/** Abort-aware delay: cancellation must interrupt remote polling promptly. */
+async function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  await sleepTimer(ms, undefined, { signal })
+}
 function startupFailure(messages: unknown[]): string | undefined {
   for (let i = messages.length - 1; i >= 0; i--) {
     const e = messages[i] as Record<string, unknown> | undefined
