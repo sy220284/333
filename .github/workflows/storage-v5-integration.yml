@@ -1,0 +1,46 @@
+name: Storage V5 会话恢复与归属集成验收
+
+on:
+  push:
+    branches:
+      - upgrade/2.1.310-m1-evidence
+    paths:
+      - 'src/utils/sessionStorage.ts'
+      - 'src/utils/sessionTranscriptPathsV5.*'
+      - 'src/utils/resumePreparationV5.*'
+      - 'src/utils/conversationRecovery.ts'
+      - 'src/utils/sessionQueuePartitions317.*'
+      - 'src/utils/messageQueueManager.ts'
+      - 'tests/m4-session-storage-v5-integration.test.ts'
+      - 'tests/m4-resume-preparation-v5.test.mjs'
+      - '.github/workflows/storage-v5-integration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  storage-v5:
+    name: 会话日志持久化与跨会话恢复端到端
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .rebuild/public
+          key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
+      - name: 恢复完整依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 验证会话分区和恢复准备
+        run: |
+          node --test tests/m2-session-queue-partitions-317.test.mjs tests/m4-resume-preparation-v5.test.mjs tests/m4-session-transcript-paths-v5.test.mjs
+      - name: 真实持久化与跨会话恢复测试
+        run: bun test tests/m4-session-storage-v5-integration.test.ts
