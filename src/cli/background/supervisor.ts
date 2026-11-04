@@ -295,17 +295,17 @@ export async function runBackgroundSupervisor() {
       const current = await lstat(path)
       if (!current.isSocket()) throw new Error(`Refusing to replace non-socket path ${path}`)
       const { connect } = await import('node:net')
-      const owner = await new Promise(resolve => {
+      const owner = await new Promise<boolean>(resolve => {
         const s = connect(path)
         s.once('connect', () => { s.destroy(); resolve(true) })
-        s.once('error', error => { s.destroy(); resolve(!['ECONNREFUSED', 'ENOENT'].includes(error.code)) })
+        s.once('error', error => { s.destroy(); resolve(!['ECONNREFUSED', 'ENOENT'].includes((error as NodeJS.ErrnoException).code ?? '')) })
       })
       if (owner) throw new Error(`Another background supervisor already owns ${path}`)
       await unlink(path)
     } catch (error) { if (error.code !== 'ENOENT') throw error }
   }
   server = createServer(attachSocket)
-  await new Promise((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     server.once('error', reject)
     server.listen(path, () => { server.off('error', reject); resolve() })
   })
