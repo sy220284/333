@@ -8,6 +8,7 @@ on:
       - build/import-official-317.py
       - .github/workflows/import-official-317.yml
       - tests/official-317-port-roundtrip.py
+      - tests/official-317-tool-matrix.py
   workflow_dispatch:
 
 permissions:
@@ -87,6 +88,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 tests/official-317-port-roundtrip.py --official .rebuild/official317/package/claude --ported vendor/claude-code-2.1.317/modules/cli.mjs
+
+      - name: 官方317与整包移植版Read Write Edit Bash完整工具链对照
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/official-317-tool-matrix.py --official .rebuild/official317/package/claude --ported vendor/claude-code-2.1.317/modules/cli.mjs
 
       - name: 提交已通过真实 CLI 测试的 317 整包源码
         shell: bash
