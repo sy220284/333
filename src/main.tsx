@@ -3576,6 +3576,14 @@ async function run(): Promise<CommanderCommand> {
   const coworkOption = () => new Option('--cowork', 'Use cowork_plugins directory').hideHelp();
 
   // Plugin validate command
+  const registerPurge = (parent: CommanderCommand, hidden = false) => {
+    parent.command('purge [path]', { hidden }).description('Remove local Claude Code state for a project').option('--dry-run', 'List what would be deleted without deleting anything').option('-y, --yes', 'Skip confirmation prompt').option('-i, --interactive', 'Prompt for each item before deleting').option('--all', 'Purge state for every project (mutually exclusive with [path])').action(async (path: string | undefined, options: { dryRun?: boolean; yes?: boolean; interactive?: boolean; all?: boolean }) => {
+      const { purgeProjectHandler } = await import('./cli/handlers/purge.js');
+      await purgeProjectHandler(path, options);
+    });
+  };
+  registerPurge(program);
+  registerPurge(program.command('project', { hidden: true }));
   const pluginCmd = program.command('plugin').alias('plugins').description('Manage Claude Code plugins').configureHelp(createSortedHelpConfig());
   pluginCmd.command('validate <path>').description('Validate a plugin or marketplace manifest').addOption(coworkOption()).action(async (manifestPath: string, options: {
     cowork?: boolean;

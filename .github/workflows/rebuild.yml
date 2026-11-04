@@ -1,7 +1,7 @@
 name: 源码独立重建验证
 on:
   push:
-    branches: [main, rebuild/bun-from-src]
+    branches: [main, rebuild/bun-from-src, upgrade/2.1.310-m1-evidence]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -94,6 +94,8 @@ jobs:
         run: node --test tests/m1-background-agent-parity.test.mjs
       - name: 2.1.317 后台会话真实全生命周期验收
         run: node --test tests/m1-background-lifecycle.test.mjs
+      - name: 317项目清理的范围、安全改写与真实命令
+        run: node --test tests/m3-purge-317.test.mjs tests/m3-purge-cli-317.test.mjs tests/m3-purge-pty-317.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
         run: node --test tests/cli-parity.test.mjs
       - name: 复核多级模型回退与自动压缩真实参数语义
