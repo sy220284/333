@@ -57,6 +57,8 @@ type SessionSpawnerDeps = {
   sandbox: boolean
   debugFile?: string
   permissionMode?: string
+  /** Original 317 self-hosted runner child contract; bridge sessions remain unchanged. */
+  runnerRuntime?: { apiBaseUrl: string; configDir: string }
   onDebug: (msg: string) => void
   onActivity?: (sessionId: string, activity: SessionActivity) => void
   onPermissionRequest?: (
@@ -289,13 +291,15 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
         '--print',
         '--sdk-url',
         opts.sdkUrl,
-        '--session-id',
-        opts.sessionId,
+        ...(deps.runnerRuntime
+          ? []
+          : ['--session-id', opts.sessionId]),
         '--input-format',
         'stream-json',
         '--output-format',
         'stream-json',
         '--replay-user-messages',
+        ...(deps.runnerRuntime ? ['--resume=' + opts.sdkUrl] : []),
         ...(deps.verbose ? ['--verbose'] : []),
         ...(debugFile ? ['--debug-file', debugFile] : []),
         ...(deps.permissionMode
@@ -308,7 +312,17 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
         // Strip the bridge's OAuth token so the child CC process uses
         // the session access token for inference instead.
         CLAUDE_CODE_OAUTH_TOKEN: undefined,
-        CLAUDE_CODE_ENVIRONMENT_KIND: 'bridge',
+        CLAUDE_CODE_ENVIRONMENT_KIND: deps.runnerRuntime ? 'byoc' : 'bridge',
+        ...(deps.runnerRuntime && {
+          CLAUDE_CONFIG_DIR: deps.runnerRuntime.configDir,
+          CLAUDE_CODE_REMOTE: 'true',
+          CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE: 'self_hosted',
+          ANTHROPIC_BASE_URL: deps.runnerRuntime.apiBaseUrl,
+          SESSION_INGRESS_URL: deps.runnerRuntime.apiBaseUrl,
+          DISABLE_AUTOUPDATER: '1',
+          CLAUDE_CODE_RETRY_WATCHDOG: '1',
+          CLAUDE_CODE_TEE_SDK_STDOUT: '1',
+        }),
         ...(deps.sandbox && { CLAUDE_CODE_FORCE_SANDBOX: '1' }),
         CLAUDE_CODE_SESSION_ACCESS_TOKEN: opts.accessToken,
         // v1: HybridTransport (WS reads + POST writes) to Session-Ingress.
