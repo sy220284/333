@@ -73,9 +73,11 @@ export function validateGatewayConfig317(value) {
   if (!store || typeof store !== 'object') throw new Error('gateway store is required')
   const postgres_url = safeStore(store.postgres_url)
   const session = value.session
-  if (!session || typeof session !== 'object' || typeof session.jwt_secret !== 'string' ||
-    Buffer.byteLength(session.jwt_secret) < 32) {
-    throw new Error('session.jwt_secret must be at least 32 bytes')
+  const secrets = Array.isArray(session?.jwt_secret)
+    ? session.jwt_secret : [session?.jwt_secret]
+  if (!secrets.length || secrets.some(x =>
+    typeof x !== 'string' || Buffer.byteLength(x) < 32)) {
+    throw new Error('session.jwt_secret requires one or more secrets of at least 32 bytes')
   }
   if (!value.oidc && value.cri?.enabled !== true) {
     throw new Error('oidc is required unless cri.enabled is true')
@@ -102,8 +104,9 @@ export function validateGatewayConfig317(value) {
   return {
     ...value,
     listen: { ...listen, host, port, public_url },
-    store: { ...store, postgres_url },
-    session: { ...session, ttl_hours: session.ttl_hours ?? 12 },
+    store: { max_connections: 5, connect_timeout_seconds: 5, readiness_grace_seconds: 0,
+      ...store, postgres_url },
+    session: { ...session, jwt_secret: secrets, ttl_hours: session.ttl_hours ?? 1 },
     upstreams,
     models: value.models ?? [],
     telemetry,
