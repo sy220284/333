@@ -64,8 +64,8 @@ test('CCR remote subagent IDs are filename-safe including named teammates', () =
 test('CCR v2 publication failure rolls back previously published files', () => withDir(async root => {
   const main = join(root, 'main.jsonl')
   const agent = join(root, 'agent.jsonl')
-  writeFileSync(main, 'original-main\\n')
-  writeFileSync(agent, 'original-agent\\n')
+  writeFileSync(main, 'original-main\n')
+  writeFileSync(agent, 'original-agent\n')
   const fs = await import('node:fs/promises')
   const io = {
     writeFile: fs.writeFile,
@@ -78,20 +78,20 @@ test('CCR v2 publication failure rolls back previously published files', () => w
   }
   await assert.rejects(
     replaceTranscriptBatchAtomically([
-      { path: main, content: 'new-main\\n' },
-      { path: agent, content: 'new-agent\\n' },
+      { path: main, content: 'new-main\n' },
+      { path: agent, content: 'new-agent\n' },
     ], io),
     /agent activation interrupted/,
   )
-  assert.equal(readFileSync(main, 'utf8'), 'original-main\\n')
-  assert.equal(readFileSync(agent, 'utf8'), 'original-agent\\n')
+  assert.equal(readFileSync(main, 'utf8'), 'original-main\n')
+  assert.equal(readFileSync(agent, 'utf8'), 'original-agent\n')
   assert.deepEqual(readdirSync(root).sort(), ['agent.jsonl', 'main.jsonl'])
 }))
 
 test('CCR v2 publication failure removes newly created transcript from earlier transaction step', () => withDir(async root => {
   const newAgent = join(root, 'new-agent.jsonl')
   const main = join(root, 'main.jsonl')
-  writeFileSync(main, 'original-main\\n')
+  writeFileSync(main, 'original-main\n')
   const fs = await import('node:fs/promises')
   const io = {
     writeFile: fs.writeFile,
@@ -104,12 +104,12 @@ test('CCR v2 publication failure removes newly created transcript from earlier t
   }
   await assert.rejects(
     replaceTranscriptBatchAtomically([
-      { path: newAgent, content: 'new-agent\\n' },
-      { path: main, content: 'new-main\\n' },
+      { path: newAgent, content: 'new-agent\n' },
+      { path: main, content: 'new-main\n' },
     ], io),
     /main activation interrupted/,
   )
-  assert.equal(readFileSync(main, 'utf8'), 'original-main\\n')
+  assert.equal(readFileSync(main, 'utf8'), 'original-main\n')
   assert.equal(readdirSync(root).includes('new-agent.jsonl'), false)
   assert.deepEqual(readdirSync(root), ['main.jsonl'])
 }))
