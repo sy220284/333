@@ -1016,13 +1016,14 @@ class Project {
 
   private async flushPendingEntriesForCurrentSession(): Promise<void> {
     if (this.sessionFile === null) return
-    const sessionId = getSessionId()
+    await this.flushPendingEntriesForSession(getSessionId(), this.sessionFile)
+  }
+
+  private async flushPendingEntriesForSession(sessionId: string, destination: string): Promise<void> {
     const pending = this.pendingEntriesBySession.get(sessionId)
     if (!pending?.length) return
     this.pendingEntriesBySession.delete(sessionId)
-    // Capture the session destination before yielding; async callers can
-    // switch the active conversation while these writes are being scheduled.
-    const destination = this.sessionFile
+    // Both identity and path are fixed before awaiting the disk write.
     for (const entry of pending) {
       await this.enqueueWrite(destination, entry)
     }
@@ -1049,22 +1050,34 @@ class Project {
     agentId?: string,
     startingParentUuid?: UUID | null,
     teamInfo?: { teamName?: string; agentName?: string },
+    ownerSessionId: UUID = getSessionId() as UUID,
   ) {
+    // Capture both before trackWrite or any branch lookup yields control.
+    // A concurrent /resume must not retarget an in-flight message chain.
+    const ownerFilePath = getTranscriptPathForSession(ownerSessionId)
     return this.trackWrite(async () => {
       let parentUuid: UUID | null = startingParentUuid ?? null
 
       // First user/assistant message materializes the session file.
       // Hook progress/attachment messages alone stay buffered.
+      const hasUserOrAssistant = messages.some(
+        m => m.type === 'user' || m.type === 'assistant',
+      )
       if (
+        ownerSessionId === getSessionId() &&
         this.sessionFile === null &&
-        messages.some(m => m.type === 'user' || m.type === 'assistant')
+        hasUserOrAssistant
       ) {
         await this.materializeSessionFile()
       }
 
-      // A resumed session can have accepted queue operations parked before
-      // its new assistant response. Persist those first to preserve history.
-      await this.flushPendingEntriesForCurrentSession()
+      // Flush only the owning session's parked operations. A different
+      // conversation may have become active during recordTranscript's awaits.
+      if (hasUserOrAssistant) {
+        await this.flushPendingEntriesForSession(ownerSessionId, ownerFilePath)
+      } else if (ownerSessionId === getSessionId()) {
+        await this.flushPendingEntriesForCurrentSession()
+      }
 
       // Get current git branch once for this message chain
       let gitBranch: string | undefined
@@ -1076,7 +1089,7 @@ class Project {
       }
 
       // Get slug if one exists for this session (used for plan files, etc.)
-      const sessionId = getSessionId()
+      const sessionId = ownerSessionId
       const slug = getPlanSlugCache().get(sessionId)
 
       for (const message of messages) {
@@ -1119,7 +1132,11 @@ class Project {
           gitBranch,
           slug,
         }
-        await this.appendEntry(transcriptMessage)
+        await this.appendEntry(
+          transcriptMessage,
+          sessionId,
+          hasUserOrAssistant ? ownerFilePath : undefined,
+        )
         if (isChainParticipant(message)) {
           parentUuid = message.uuid
         }
@@ -1128,7 +1145,7 @@ class Project {
       // Cache this turn's user prompt for reAppendSessionMetadata —
       // the --resume picker shows what the user was last doing.
       // Overwritten every turn by design.
-      if (!isSidechain) {
+      if (!isSidechain && ownerSessionId === getSessionId()) {
         const text = getFirstMeaningfulUserMessageTextContent(messages)
         if (text) {
           const flat = text.replace(/\n/g, ' ').trim()
@@ -1184,7 +1201,11 @@ class Project {
     })
   }
 
-  async appendEntry(entry: Entry, sessionId: UUID = getSessionId() as UUID) {
+  async appendEntry(
+    entry: Entry,
+    sessionId: UUID = getSessionId() as UUID,
+    ownerFilePath?: string,
+  ) {
     if (this.shouldSkipPersistence()) {
       return
     }
@@ -1193,7 +1214,10 @@ class Project {
     const isCurrentSession = sessionId === currentSessionId
 
     let sessionFile: string
-    if (isCurrentSession) {
+    if (ownerFilePath) {
+      // A message chain already captured its owner before async work began.
+      sessionFile = ownerFilePath
+    } else if (isCurrentSession) {
       // Buffer until materializeSessionFile runs (first user/assistant message).
       if (this.sessionFile === null) {
         this.queuePendingEntry(sessionId, entry)
@@ -1501,6 +1525,7 @@ export async function recordTranscript(
       undefined,
       startingParentUuid,
       teamInfo,
+      sessionId,
     )
   }
   // Return the last ACTUALLY recorded chain-participant's UUID, OR the
