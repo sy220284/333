@@ -22,6 +22,8 @@ export type RunnerHostOptions317 = {
   env: NodeJS.ProcessEnv
   pollIntervalMs?: number
   drainWaitMs?: number
+  clientLabel?: string
+  lockToAccountId?: string
   signal?: AbortSignal
   onStatus?: (message: string) => void
   createChild?: (sessionId: string, sdkUrl: string, accessToken: string,
@@ -193,7 +195,10 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
   }
 
   try {
-    const registered = await options.api.registerRunner({clientLabel:hostname()})
+    const registered = await options.api.registerRunner({
+      clientLabel: options.clientLabel ?? hostname(),
+      ...(options.lockToAccountId && {lockToAccountId:options.lockToAccountId}),
+    })
     runnerId=registered.runner_id
     runnerToken=registered.runner_token
     status('[runner] registered '+runnerId)
@@ -255,31 +260,50 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
 }
 
 type CliOptions = { apiUrl: string; secretFile?: string; capacity: number; baseDir: string;
-  execPath: string; pollMs: number; drainMs: number }
+  execPath: string; pollMs: number; drainMs: number; clientLabel?: string;
+  lockToAccountId?: string; agentProxyUrl?: string }
 function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions | 'help' {
   if (argv.includes('--help') || argv.includes('-h')) return 'help'
   const parsed: CliOptions = {
     apiUrl: env.SELF_HOSTED_RUNNER_API_URL ?? 'https://api.anthropic.com',
     capacity:Number(env.SELF_HOSTED_RUNNER_CAPACITY ?? 1),
-    baseDir:env.SELF_HOSTED_RUNNER_BASE_DIR ?? join(process.cwd(),'.claude-runner'),
-    execPath:process.execPath,pollMs:2000,drainMs:0,
+    baseDir:env.SELF_HOSTED_RUNNER_BASE_DIR ?? (process.platform === 'win32' ? '' : '/workspace'),
+    execPath:env.SELF_HOSTED_RUNNER_EXEC_PATH ?? process.execPath,pollMs:2000,
+    drainMs:Number(env.SELF_HOSTED_RUNNER_DRAIN_WAIT_MS ?? 0),
+    clientLabel:env.SELF_HOSTED_RUNNER_CLIENT_LABEL,
+    lockToAccountId:env.SELF_HOSTED_RUNNER_LOCK_TO_ACCOUNT,
+    agentProxyUrl:env.SELF_HOSTED_RUNNER_AGENT_PROXY_URL,
   }
   for(let i=0;i<argv.length;i++){
     const flag=argv[i]
-    if(!['--api-url','--environment-secret-file','--capacity','--base-dir','--exec-path',
-      '--poll-interval-ms','--drain-wait-sec'].includes(flag)){
+    if(!['--api-url','--environment-secret-file','--pool-secret-file',
+      '--capacity','--base-dir','--exec-path','--client-label','--lock-to-account',
+      '--agent-proxy-url','--poll-interval-ms','--drain-wait-sec',
+      '--drain-wait-bg-tasks-sec'].includes(flag)){
       throw new Error('Unknown self-hosted-runner argument: '+flag)
     }
     const value=argv[++i]
     if(!value || value.startsWith('--')) throw new Error(flag+' requires a value')
     switch(flag){
       case '--api-url': parsed.apiUrl=value;break
-      case '--environment-secret-file': parsed.secretFile=value;break
+      case '--environment-secret-file':
+      case '--pool-secret-file': parsed.secretFile=value;break
       case '--capacity': parsed.capacity=Number(value);break
       case '--base-dir': parsed.baseDir=value;break
       case '--exec-path': parsed.execPath=value;break
+      case '--client-label': parsed.clientLabel=value;break
+      case '--lock-to-account': parsed.lockToAccountId=value;break
+      case '--agent-proxy-url': parsed.agentProxyUrl=value;break
       case '--poll-interval-ms': parsed.pollMs=Number(value);break
-      case '--drain-wait-sec': parsed.drainMs=Number(value)*1000;break
+      case '--drain-wait-sec':
+      case '--drain-wait-bg-tasks-sec': parsed.drainMs=Number(value)*1000;break
+    }
+  }
+  if(!parsed.baseDir) throw new Error('Runner base directory must be specified on Windows')
+  if(parsed.agentProxyUrl){
+    const url=new URL(parsed.agentProxyUrl)
+    if(url.protocol!=='https:' || url.username || url.password) {
+      throw new Error('Agent proxy must be an HTTPS URL without embedded credentials')
     }
   }
   if(!Number.isSafeInteger(parsed.pollMs)||parsed.pollMs<250) throw new Error('Invalid runner polling interval')
@@ -301,9 +325,11 @@ export async function selfHostedRunnerMain317(argv: readonly string[]): Promise<
   }
   const secret=config.secretFile
     ? (await readFile(config.secretFile,'utf8')).trim()
-    : process.env.SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET?.trim()
+    : (process.env.SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET ??
+      process.env.SELF_HOSTED_RUNNER_POOL_SECRET)?.trim()
   if(!secret) throw new Error('Self-hosted runner requires an environment secret')
-  const api=new SelfHostedRunnerApi317({baseUrl:config.apiUrl,poolSecret:secret})
+  const api=new SelfHostedRunnerApi317({baseUrl:config.apiUrl,poolSecret:secret,
+    agentProxyUrl:config.agentProxyUrl})
   const controller=new AbortController()
   const onTerm=()=>controller.abort()
   process.on('SIGINT',onTerm)
@@ -315,6 +341,7 @@ export async function selfHostedRunnerMain317(argv: readonly string[]): Promise<
     await startSelfHostedRunnerHost317({api,capacity:config.capacity,baseDir:config.baseDir,
       execPath:executable,scriptArgs:args,env:process.env,
       pollIntervalMs:config.pollMs,drainWaitMs:config.drainMs,
+      clientLabel:config.clientLabel,lockToAccountId:config.lockToAccountId,
       signal:controller.signal,onStatus:line=>process.stderr.write(line+'\n')})
   }finally{
     process.off('SIGINT',onTerm)
