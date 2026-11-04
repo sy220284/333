@@ -34,7 +34,7 @@ function stdoutText(events) {
 export async function runEvalModel317({
   prompt, workspace, pluginDir, model, timeoutSeconds = 300,
   allowedTools = [], disallowedTools = [], appendSystemPrompt,
-  maxBudgetUsd, maxTurns, env = {},
+  maxBudgetUsd, maxTurns, strictMcpConfig = false, env = {},
 }) {
   if (typeof prompt !== 'string' || !prompt.trim()) {
     throw new Error('eval model execution requires a nonempty prompt')
@@ -56,6 +56,7 @@ export async function runEvalModel317({
     '--no-session-persistence',
   ]
   if (pluginDir) args.push('--plugin-dir', pluginDir)
+  if (strictMcpConfig) args.push('--strict-mcp-config')
   if (model) args.push('--model', model)
   if (appendSystemPrompt) args.push('--append-system-prompt', appendSystemPrompt)
   if (maxBudgetUsd !== undefined) args.push('--max-budget-usd', String(maxBudgetUsd))
