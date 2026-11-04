@@ -27,6 +27,8 @@ import { logError } from '../../utils/log.js'
 import { clearAllCaches } from '../../utils/plugins/cacheUtils.js'
 import { getInstallCounts } from '../../utils/plugins/installCounts.js'
 import { getPluginDataDirSize } from '../../utils/plugins/pluginDirectories.js'
+import { getUnconfiguredOptions, getPluginStorageId, loadPluginOptions, savePluginOptions } from '../../utils/plugins/pluginOptionsStorage.js'
+import { PluginCliConfigError, readPluginConfigStdin, validatePluginCliValues } from '../../utils/plugins/pluginCliConfig.js'
 import {
   isPluginInstalled,
   loadInstalledPluginsV2,
@@ -731,6 +733,62 @@ export async function pluginInstallHandler(
   })
 
   await installPlugin(plugin, scope as 'user' | 'project' | 'local')
+}
+
+/** Official 2.1.317 plugin configure: inspect top-level schema or save JSON stdin. */
+export async function pluginConfigureHandler(
+  pluginId: string,
+  options: { cowork?: boolean; json?: boolean; valuesStdin?: boolean },
+): Promise<void> {
+  if (options.cowork) setUseCoworkPlugins(true)
+  const loaded = await loadAllPlugins()
+  const plugin = [...loaded.enabled, ...loaded.disabled].find(p => p.source === pluginId)
+  if (!plugin) {
+    cliError(`No installed plugin has the id "${pluginId}". Use its full id (name@marketplace), as \`claude plugin list\` shows it.`)
+  }
+  const id = getPluginStorageId(plugin)
+  const schema = plugin.manifest.userConfig ?? {}
+  const displayName = plugin.name
+  const stored = loadPluginOptions(id)
+  if (options.valuesStdin) {
+    if (process.stdin.isTTY) {
+      cliError('No option values were piped in. Example: claude plugin configure <plugin> --values-stdin < values.json')
+    }
+    let normalized
+    try {
+      const supplied = await readPluginConfigStdin(process.stdin)
+      normalized = validatePluginCliValues(supplied, schema, stored)
+      if (Object.keys(normalized).length) savePluginOptions(id, normalized, schema)
+    } catch (error) {
+      if (error instanceof PluginCliConfigError) {
+        if (options.json) process.stdout.write(jsonStringify({
+          pluginId: id, displayName, refused: { option: error.option, message: error.message },
+        }) + '\n')
+        cliError(`Failed to save configuration: ${error.message}`)
+      }
+      throw error
+    }
+    const saved = Object.keys(normalized)
+    const unconfigured = Object.keys(getUnconfiguredOptions(plugin))
+    if (options.json) {
+      cliOk(jsonStringify({ pluginId: id, displayName, saved, unconfigured }))
+    }
+    cliOk(saved.length ? 'Configuration saved. Restart Claude Code to apply it.' : 'No configuration changes.')
+  }
+  const unconfigured = Object.keys(getUnconfiguredOptions(plugin))
+  const configured: string[] = []
+  const inputs: Record<string, string> = {}
+  for (const [name, field] of Object.entries(schema)) {
+    const value = stored[name]
+    if (value !== undefined && value !== '') configured.push(name)
+    inputs[name] = field.sensitive ? '' : value === undefined ? '' : String(value)
+  }
+  if (options.json) {
+    cliOk(jsonStringify({ pluginId: id, displayName, schema, inputs, choices: {}, configured, unconfigured }, null, 2))
+  }
+  const lines = Object.entries(schema).map(([name, field]) =>
+    `${field.title || name}: ${configured.includes(name) ? 'configured' : 'not configured'}`)
+  cliOk(lines.length ? lines.join('\n') : 'This plugin has no configurable options.')
 }
 
 // plugin uninstall (lines 5738–5769)
