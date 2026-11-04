@@ -107,7 +107,7 @@ async function existsInProjects(sessionId) {
 }
 
 async function isRunningBackgroundSession(sessionId) {
-  const { listSessions } = await import('../background/sessionStore.mjs')
+  const { listSessions } = await import('../background/sessionStore.ts')
   const sessions = await listSessions({ all: true })
   return sessions.some(session => session.sessionId === sessionId && session.running)
 }
