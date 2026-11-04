@@ -25,6 +25,7 @@ function fixture(run) {
       else if (file === 'build/release-launcher.cjs') copyFileSync(join(root, file), dest)
       else writeFileSync(dest, file === 'package.json' ? '{"version":"2.1.317"}\n' : file)
     }
+    writeFileSync(join(dir, 'dist', process.platform === 'win32' ? 'claude.exe' : 'claude'), 'isolated release executable fixture')
     run(dir)
   } finally {
     rmSync(dir, { recursive: true, force: true })
