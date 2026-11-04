@@ -19,6 +19,7 @@ import { objectGroupBy } from './objectGroupBy.js'
 import { recordQueueOperation } from './sessionStorage.js'
 import { createSignal } from './signal.js'
 import { QUEUE_PRIORITY_ORDER as PRIORITY_ORDER, sortQueuedCommandsByPriority } from './queuePriority317.mjs'
+import { createQueueOperationRecord } from './queueOperation317.mjs'
 
 export type SetAppState = (f: (prev: AppState) => AppState) => void
 
@@ -26,15 +27,9 @@ export type SetAppState = (f: (prev: AppState) => AppState) => void
 // Logging helper
 // ============================================================================
 
-function logOperation(operation: QueueOperation, content?: string): void {
-  const sessionId = getSessionId()
-  const queueOp: QueueOperationMessage = {
-    type: 'queue-operation',
-    operation,
-    timestamp: new Date().toISOString(),
-    sessionId,
-    ...(content !== undefined && { content }),
-  }
+function logOperation(operation: QueueOperation, command?: QueuedCommand): void {
+  const queueOp: QueueOperationMessage =
+    createQueueOperationRecord(operation, command, getSessionId())
   void recordQueueOperation(queueOp)
 }
 
@@ -129,10 +124,7 @@ export function recheckCommandQueue(): void {
 export function enqueue(command: QueuedCommand): void {
   commandQueue.push({ ...command, priority: command.priority ?? 'next' })
   notifySubscribers()
-  logOperation(
-    'enqueue',
-    typeof command.value === 'string' ? command.value : undefined,
-  )
+  logOperation('enqueue', command)
 }
 
 /**
@@ -143,10 +135,7 @@ export function enqueue(command: QueuedCommand): void {
 export function enqueuePendingNotification(command: QueuedCommand): void {
   commandQueue.push({ ...command, priority: command.priority ?? 'later' })
   notifySubscribers()
-  logOperation(
-    'enqueue',
-    typeof command.value === 'string' ? command.value : undefined,
-  )
+  logOperation('enqueue', command)
 }
 
 
@@ -184,7 +173,7 @@ export function dequeue(
 
   const [dequeued] = commandQueue.splice(bestIdx, 1)
   notifySubscribers()
-  logOperation('dequeue')
+  logOperation('dequeue', dequeued)
   return dequeued
 }
 
@@ -201,8 +190,8 @@ export function dequeueAll(): QueuedCommand[] {
   commandQueue.length = 0
   notifySubscribers()
 
-  for (const _cmd of commands) {
-    logOperation('dequeue')
+  for (const cmd of commands) {
+    logOperation('dequeue', cmd)
   }
 
   return commands
@@ -255,10 +244,11 @@ export function dequeueAllMatching(
   commandQueue.length = 0
   commandQueue.push(...remaining)
   notifySubscribers()
-  for (const _cmd of matched) {
-    logOperation('dequeue')
+  const ordered = sortQueuedCommandsByPriority(matched)
+  for (const cmd of ordered) {
+    logOperation('dequeue', cmd)
   }
-  return sortQueuedCommandsByPriority(matched)
+  return ordered
 }
 
 /**
@@ -271,19 +261,18 @@ export function remove(commandsToRemove: QueuedCommand[]): void {
     return
   }
 
-  let removedCount = 0
+  const removed: QueuedCommand[] = []
+  const selected = new Set(commandsToRemove)
   for (let i = commandQueue.length - 1; i >= 0; i--) {
-    if (commandsToRemove.includes(commandQueue[i]!)) {
-      commandQueue.splice(i, 1)
-      removedCount++
+    if (selected.has(commandQueue[i]!)) {
+      removed.push(...commandQueue.splice(i, 1))
     }
   }
 
-  if (removedCount > 0) {
+  if (removed.length > 0) {
     notifySubscribers()
-    // Only journal real removals. Another consumer may have drained a command
-    // between snapshot selection and this operation.
-    for (let i = 0; i < removedCount; i++) logOperation('remove')
+    // Journal only real removals with the UUID of each consumed command.
+    for (const cmd of removed.reverse()) logOperation('remove', cmd)
   }
 }
 
@@ -303,8 +292,8 @@ export function removeByFilter(
 
   if (removed.length > 0) {
     notifySubscribers()
-    for (const _cmd of removed) {
-      logOperation('remove')
+    for (const cmd of removed) {
+      logOperation('remove', cmd)
     }
   }
 
@@ -465,10 +454,7 @@ export function popAllEditable(
   }
 
   for (const command of editable) {
-    logOperation(
-      'popAll',
-      typeof command.value === 'string' ? command.value : undefined,
-    )
+    logOperation('popAll', command)
   }
 
   // Replace queue contents with only the non-editable commands
