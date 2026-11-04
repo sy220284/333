@@ -53,6 +53,10 @@ test('317技能注册入口的107条静态导入与完整清单逐一吻合', ()
   assert.equal(references.length, manifest.files.length, 'bundled imports are incomplete')
   const manifestPaths = manifest.files.map(entry => entry.stored_path ?? entry.path)
   assert.deepEqual(references.sort(), manifestPaths.sort(), 'stale bundled import (e.g. old .txt aliases)')
+  for (const path of references.filter(path => /\.(mjs|py)$/.test(path))) {
+    assert.ok(code.includes(`from './claude-api/${path}' with { type: 'text' }`),
+      path + ': executable source must be embedded as data, not imported as code')
+  }
   for (const file of manifest.files) {
     if (file.path === 'SKILL.md') continue
     assert.ok(code.includes(JSON.stringify(file.path)+': file'), file.path+': missing registry key')
