@@ -9,6 +9,10 @@ on:
       - 'src/skills/bundled/**'
       - 'src/main.tsx'
       - 'tests/m1-claude-api-manifest-317.test.mjs'
+      - 'tests/m1-nested-session-id-317.test.mjs'
+      - 'tests/m1-nested-session-id-e2e-317.test.mjs'
+      - 'src/utils/remoteSessionIdentity.mjs'
+      - 'src/bootstrap/state.ts'
       - 'tests/m1-official-bundled-skills-317.test.mjs'
       - 'tests/m1-317-chain-matrix.test.mjs'
       - 'tests/m1-target-release-317.test.mjs'
@@ -86,7 +90,7 @@ jobs:
         with:
           bun-version: 1.4.4
       - name: 校验仓库对当前与历史基线的独立定义
-        run: node --test tests/m1-target-release-317.test.mjs tests/m1-read-repeat-317.test.mjs tests/m1-subagent-effort-317.test.mjs tests/m1-317-chain-matrix.test.mjs tests/m1-account-email-disclosure-317.test.mjs tests/m1-official-bundled-skills-317.test.mjs tests/m1-claude-api-manifest-317.test.mjs
+        run: node --test tests/m1-target-release-317.test.mjs tests/m1-read-repeat-317.test.mjs tests/m1-subagent-effort-317.test.mjs tests/m1-317-chain-matrix.test.mjs tests/m1-account-email-disclosure-317.test.mjs tests/m1-official-bundled-skills-317.test.mjs tests/m1-claude-api-manifest-317.test.mjs tests/m1-nested-session-id-317.test.mjs
       - name: 校验317独立内置资源的篡改和版本切换保护
         run: node --test tests/m1-standalone-assets-317.test.mjs
       - name: 校验最终版嵌入技能扫描器的哈希、归属与差异识别
@@ -145,6 +149,11 @@ jobs:
         run: |
           set -euo pipefail
           CLAUDE_TARGET_X64="${RUNNER_TEMP}/m1-317-reference/claude" node --test tests/claude-api-version-parity.test.mjs tests/m1-plugin-install-migration-317.test.mjs
+      - name: 官方317与重建版嵌套会话ID及消息隔离真实进程测试
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLAUDE_TARGET_X64="${RUNNER_TEMP}/m1-317-reference/claude" node --test tests/m1-nested-session-id-e2e-317.test.mjs
       - name: 官方 2.1.317 与独立重建版 32 项 CLI 参数对照
         shell: bash
         run: |
