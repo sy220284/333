@@ -72,6 +72,7 @@ import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
 import { getErrnoCode, isFsInaccessible } from './errors.js'
 import { shouldRetrySessionAppendAfterMkdir } from './sessionWriteFailurePolicy.mjs'
+import { replaceTranscriptAtomically, replaceTranscriptBatchAtomically, assertSafeAgentTranscriptId } from './atomicTranscriptRestore317.mjs'
 import type { FileHistorySnapshot } from './fileHistory.js'
 import { formatFileSize } from './format.js'
 import { getFsImplementation } from './fsOperations.js'
@@ -1630,7 +1631,7 @@ export async function hydrateRemoteSession(
     // Replace local logs with remote logs. writeFile truncates, so no
     // unlink is needed; an empty remoteLogs array produces an empty file.
     const content = remoteLogs.map(e => jsonStringify(e) + '\n').join('')
-    await writeFile(sessionFile, content, { encoding: 'utf8', mode: 0o600 })
+    await replaceTranscriptAtomically(sessionFile, content)
 
     logForDebugging(`Hydrated ${remoteLogs.length} entries from remote`)
     return remoteLogs.length > 0
@@ -1676,56 +1677,45 @@ export async function hydrateFromCCRv2InternalEvents(
       return false
     }
 
+    // Read BOTH foreground and subagent streams before touching any local
+    // transcript. A remote failure must not truncate a previously resumable
+    // session; all JSONL is fully serialized before the staging phase.
+    const subagentReader = project.getInternalSubagentEventReader()
+    const subagentEvents = subagentReader ? await subagentReader() : []
+    if (!subagentEvents) {
+      throw new Error('CCR v2 subagent transcript read failed')
+    }
+    const byAgent = new Map<string, Record<string, unknown>[]>()
+    for (const event of subagentEvents) {
+      const agentId = event.agent_id
+      if (!agentId) continue
+      assertSafeAgentTranscriptId(agentId)
+      const group = byAgent.get(agentId)
+      if (group) group.push(event.payload)
+      else byAgent.set(agentId, [event.payload])
+    }
     const projectDir = getProjectDir(getOriginalCwd())
     await mkdir(projectDir, { recursive: true, mode: 0o700 })
-
-    // Write foreground transcript
     const sessionFile = getTranscriptPathForSession(sessionId)
-    const fgContent = events.map(e => jsonStringify(e.payload) + '\n').join('')
-    await writeFile(sessionFile, fgContent, { encoding: 'utf8', mode: 0o600 })
-
-    logForDebugging(
-      `Hydrated ${events.length} foreground entries from CCR v2 internal events`,
-    )
-
-    // Fetch and write subagent events
-    let subagentEventCount = 0
-    const subagentReader = project.getInternalSubagentEventReader()
-    if (subagentReader) {
-      const subagentEvents = await subagentReader()
-      if (subagentEvents && subagentEvents.length > 0) {
-        subagentEventCount = subagentEvents.length
-        // Group by agent_id
-        const byAgent = new Map<string, Record<string, unknown>[]>()
-        for (const e of subagentEvents) {
-          const agentId = e.agent_id || ''
-          if (!agentId) continue
-          let list = byAgent.get(agentId)
-          if (!list) {
-            list = []
-            byAgent.set(agentId, list)
-          }
-          list.push(e.payload)
-        }
-
-        // Write each agent's transcript to its own file
-        for (const [agentId, entries] of byAgent) {
-          const agentFile = getAgentTranscriptPath(asAgentId(agentId))
-          await mkdir(dirname(agentFile), { recursive: true, mode: 0o700 })
-          const agentContent = entries
-            .map(p => jsonStringify(p) + '\n')
-            .join('')
-          await writeFile(agentFile, agentContent, {
-            encoding: 'utf8',
-            mode: 0o600,
-          })
-        }
-
-        logForDebugging(
-          `Hydrated ${subagentEvents.length} subagent entries across ${byAgent.size} agents`,
-        )
-      }
+    const entries = [{
+      path: sessionFile,
+      content: events.map(e => jsonStringify(e.payload) + '\n').join(''),
+    }]
+    for (const [agentId, payloads] of byAgent) {
+      const agentFile = getAgentTranscriptPath(asAgentId(agentId))
+      await mkdir(dirname(agentFile), { recursive: true, mode: 0o700 })
+      entries.push({
+        path: agentFile,
+        content: payloads.map(p => jsonStringify(p) + '\n').join(''),
+      })
     }
+    // Stage all files first; commit each file with a same-filesystem rename.
+    // A failed staging write cannot damage either main or agent JSONL.
+    await replaceTranscriptBatchAtomically(entries)
+    const subagentEventCount = subagentEvents.length
+    logForDebugging(
+      `Hydrated ${events.length} foreground entries and ${subagentEventCount} subagent entries across ${byAgent.size} agents from CCR v2`,
+    )
 
     logForDiagnosticsNoPII('info', 'hydrate_ccr_v2_completed', {
       duration_ms: Date.now() - startMs,
