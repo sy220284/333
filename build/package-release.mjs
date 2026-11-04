@@ -7,6 +7,10 @@ const releaseVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8
 if (!/^\d+\.\d+\.\d+$/.test(releaseVersion)) throw Error('Invalid release version in package.json');
 const dist = join(root, 'dist');
 if (!existsSync(join(dist, 'cli.js'))) throw Error('First build the CLI from src/ with bun build/rebuild.mjs');
+const nativeName = process.platform === 'win32' ? 'claude.exe' : 'claude';
+const executable = join(dist, nativeName);
+if (!existsSync(executable) || !statSync(executable).isFile() || !statSync(executable).size)
+  throw Error('Missing native executable: run node build/compile-standalone.mjs before packaging');
 if (!existsSync(join(root, 'build/public-dependencies.lock.json'))) throw Error('Missing the verified public dependency lockfile');
 mkdirSync(dist,{recursive:true});
 // Package native resources as one verified transaction. Never expose a half-
@@ -71,7 +75,7 @@ const pkg = {
   description: `Independent reconstruction targeting Claude Code ${releaseVersion} from extracted sources`,
   type: 'module',
   bin: { claude: './launcher.cjs' },
-  engines: { node: '>=18', bun: '>=1.4.4' }
+  engines: { node: '>=18' }
 };
 writeFileSync(join(dist,'package.json'), `${JSON.stringify(pkg,null,2)}\n`);
 // The launcher is maintained as executable source so lifecycle tests exercise
@@ -83,14 +87,17 @@ writeFileSync(join(dist,'README.md'), `# Claude Code ${releaseVersion} — Indep
 This directory contains a CLI compiled from the extracted \`src/\` code using Bun.
 The original \`cli.js\` in the repository root is NOT packaged or used as a fallback.
 
-Requires Bun >= 1.4.4. Run:
+The packaged native executable embeds its own runtime. No global Bun installation
+is required. On Linux/macOS use:
 \`\`\`sh
-bun cli.js --version
-node launcher.cjs --help
+./claude --version
+./claude --help
 \`\`\`
+On Windows run \`claude.exe --version\`. With Node, the portable
+\`launcher.cjs\` forwards signals to the local compiled executable.
 
-The \`vendor/\` directory contains platform-specific precompiled files. Install
-any platform-specific optional native libraries separately where needed.
+The \`vendor/\` directory contains the platform-specific native resources and
+is included in the integrity manifest.
 This package preserves the original project's proprietary license notice.
 `);
 const files=[];
