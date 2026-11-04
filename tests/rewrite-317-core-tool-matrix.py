@@ -139,6 +139,7 @@ def run(case, command, label, root):
     return {'case': case, 'label': label, 'calls': len(calls),
             'registered_tools': sorted(t['name'] for t in calls[0].get('tools', [])),
             'system_parts': len(calls[0].get('system', [])) if isinstance(calls[0].get('system'), list) else None,
+            'system_sections': [{'chars':len(block.get('text','')),'start':block.get('text','')[:110],'cache':block.get('cache_control')} for block in calls[0].get('system', [])] if isinstance(calls[0].get('system'),list) else [],
             'results_ok': len(expected_tools), 'files': contents}
 
 
