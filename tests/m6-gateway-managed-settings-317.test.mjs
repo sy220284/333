@@ -108,3 +108,31 @@ test('317 gateway: layered exclusion, unsafe setting and prototype keys are reje
     ]}),/must not mix/,
   )
 })
+
+
+test('317 gateway: ordinary email domains are accepted and malformed selectors rejected', async () => {
+  for (const domain of ['example.test', 'EXAMPLE.TEST', 'sales.company.example']) {
+    const policies = await createGatewayManagedSettings317({
+      policies:[{ match:{ email_domain:domain }, cli:{ env:{ SOURCE:'matched' } } }],
+    })
+    const reply = responseForManagedSettings317(
+      request(), { email:'alice@' + domain.toLowerCase(), groups:[] }, policies,
+    )
+    assert.equal(reply.status, 200, domain)
+    assert.equal((await reply.json()).settings.env.SOURCE, 'matched')
+  }
+  for (const domain of ['@example.test', 'example.test,evil.invalid',
+    'example test', 'example\\\\test', 'example..test', '-example.test',
+    'example-.test', 'example.test.']) {
+    const policies = await createGatewayManagedSettings317({
+      policies:[{ match:{ email_domain:domain }, cli:{ env:{ SOURCE:'matched' } } }],
+    })
+    assert.throws(
+      () => responseForManagedSettings317(
+        request(), { email:'alice@example.test', groups:[] }, policies,
+      ),
+      /email_domain/,
+      domain,
+    )
+  }
+})
