@@ -11,6 +11,9 @@ import { errorMessage } from '../../utils/errors.js'
 import { gracefulShutdown } from '../../utils/gracefulShutdown.js'
 import { logError } from '../../utils/log.js'
 import { getManagedPluginNames } from '../../utils/plugins/managedPlugins.js'
+import { validatePluginCliValues } from '../../utils/plugins/pluginCliConfig.js'
+import { loadAllPlugins } from '../../utils/plugins/pluginLoader.js'
+import { getPluginStorageId, loadPluginOptions, savePluginOptions } from '../../utils/plugins/pluginOptionsStorage.js'
 import { parsePluginIdentifier } from '../../utils/plugins/pluginIdentifier.js'
 import type { PluginScope } from '../../utils/plugins/schemas.js'
 import { writeToStdout } from '../../utils/process.js'
@@ -100,10 +103,48 @@ function handlePluginCommandError(
  * @param plugin Plugin identifier (name or plugin@marketplace)
  * @param scope Installation scope: user, project, or local (defaults to 'user')
  */
+/**
+ * Save --config after installation, using the same validators and secure
+ * storage as the interactive plugin configuration flow. Invalid input is
+ * reported without removing an installed plugin or changing stored values.
+ */
+async function applyInstallConfig(
+  pluginId: string,
+  assignments: string[],
+): Promise<{ applied: boolean; warning?: string }> {
+  const values: Record<string, string> = {}
+  for (const assignment of assignments) {
+    const equals = assignment.indexOf('=')
+    if (equals <= 0) {
+      return { applied: false, warning: '--config requires <key=value>' }
+    }
+    values[assignment.slice(0, equals)] = assignment.slice(equals + 1)
+  }
+  try {
+    const loaded = await loadAllPlugins()
+    const installed = [...loaded.enabled, ...loaded.disabled].find(
+      entry => entry.source === pluginId,
+    )
+    if (!installed) {
+      return { applied: false, warning: 'Installed plugin not found for configuration' }
+    }
+    const storageId = getPluginStorageId(installed)
+    const schema = installed.manifest.userConfig ?? {}
+    const normalized = validatePluginCliValues(values, schema, loadPluginOptions(storageId))
+    if (Object.keys(normalized).length > 0) {
+      savePluginOptions(storageId, normalized, schema)
+    }
+    return { applied: true }
+  } catch (error) {
+    return { applied: false, warning: errorMessage(error) }
+  }
+}
+
 export async function installPlugin(
   plugin: string,
   scope: InstallableScope = 'user',
   json = false,
+  configEntries: string[] = [],
 ): Promise<void> {
   try {
     // biome-ignore lint/suspicious/noConsole:: intentional console output
@@ -115,6 +156,13 @@ export async function installPlugin(
       throw new Error(result.message)
     }
 
+    const configStatus = configEntries.length > 0
+      ? await applyInstallConfig(result.pluginId ?? plugin, configEntries)
+      : undefined
+    const configMessage = configStatus?.warning
+      ? `${result.message}\n⚠ Installed, but --config not applied: ${configStatus.warning}`
+      : result.message
+
     // biome-ignore lint/suspicious/noConsole:: intentional console output
     if (json) {
       writeToStdout(`${JSON.stringify({
@@ -123,12 +171,13 @@ export async function installPlugin(
         plugin,
         pluginId: result.pluginId ?? plugin,
         scope: result.scope ?? scope,
-        message: result.message,
+        message: configMessage,
+        ...(configStatus && { configApplied: configStatus.applied }),
         ...(result.installedVersion && { installedVersion: result.installedVersion }),
         ...(result.availableVersion && { availableVersion: result.availableVersion }),
       })}\n`)
     } else {
-      console.log(`${figures.tick} ${result.message}`)
+      console.log(`${figures.tick} ${configMessage}`)
     }
 
     // _PROTO_* routes to PII-tagged plugin_name/marketplace_name BQ columns.
