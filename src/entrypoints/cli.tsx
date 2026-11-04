@@ -105,6 +105,13 @@ async function main(): Promise<void> {
   // Original 317 postpones JIT for ordinary launches, never for warmed spares.
   if (args[0] !== '--preload' && args[0] !== '--bg-spare') scheduleJitPolicy317({ args });
 
+  // Native PTY host bypasses interactive REPL and exchanges binary frames.
+  if (args[0] === '--bg-pty-host') {
+    const { runPtyHost317 } = await import('../bootstrap/ptyHost317.ts');
+    process.exitCode = await runPtyHost317(args.slice(1));
+    return;
+  }
+
   // 317 daemon worker reads JSON from stdin and runs without REPL/PTY imports.
   if (args[0] === '--daemon-worker') {
     const { runDaemonWorker317 } = await import('../bootstrap/daemonWorker317.ts');
