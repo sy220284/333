@@ -3,8 +3,8 @@
  * Clear the previous warm session's provider, proxy and CA routing before
  * applying the accepted session's environment. Ordinary claims keep it.
  */
-import { isEnvTruthy } from '../utils/envUtils.js'
-import { isProviderManagedEnvVar } from '../utils/managedEnvConstants.js'
+import { isEnvTruthy } from '../utils/envUtils.ts'
+import { isProviderManagedEnvVar } from '../utils/managedEnvConstants.ts'
 
 const HOST_CLAIM_KEYS_317 = new Set([
   'CLAUDE_CODE_USE_ANTHROPIC_AWS','CLAUDE_CODE_USE_ANTHROPIC_GOOGLE_CLOUD',
