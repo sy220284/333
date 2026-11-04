@@ -120,6 +120,7 @@ import type {
 } from './settings/types.js'
 import { getHookDisplayText } from './hooks/hooksSettings.js'
 import { logForDebugging } from './debug.js'
+import { capPreCompactHookOutput } from './hooks/preCompactOutput.mjs'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { firstLineOf } from './stringUtils.js'
 import {
@@ -4006,32 +4007,34 @@ export async function executePreCompactHooks(
     return {}
   }
 
-  // Extract custom instructions from successful hooks with non-empty output
-  const successfulOutputs = results
-    .filter(result => result.succeeded && result.output.trim().length > 0)
-    .map(result => result.output.trim())
-
-  // Build user display messages with command info
+  // Official 2.1.317 caps each successful hook separately, so a large
+  // command cannot blow up the next compaction prompt or hide other hooks.
+  const successfulOutputs: string[] = []
   const displayMessages: string[] = []
   for (const result of results) {
-    if (result.succeeded) {
-      if (result.output.trim()) {
+    if (result.succeeded && !result.blocked) {
+      const capped = capPreCompactHookOutput(result.output, result.command)
+      if (capped.truncated) {
+        logForDebugging(
+          `PreCompact [${result.command}] output cut from ${capped.originalLength} to 10000 characters`,
+        )
+      }
+      if (capped.output) {
+        successfulOutputs.push(capped.output)
         displayMessages.push(
-          `PreCompact [${result.command}] completed successfully: ${result.output.trim()}`,
+          `PreCompact [${result.command}] completed successfully: ${capped.output}`,
         )
       } else {
         displayMessages.push(
           `PreCompact [${result.command}] completed successfully`,
         )
       }
+    } else if (result.output.trim()) {
+      displayMessages.push(
+        `PreCompact [${result.command}] failed: ${result.output.trim()}`,
+      )
     } else {
-      if (result.output.trim()) {
-        displayMessages.push(
-          `PreCompact [${result.command}] failed: ${result.output.trim()}`,
-        )
-      } else {
-        displayMessages.push(`PreCompact [${result.command}] failed`)
-      }
+      displayMessages.push(`PreCompact [${result.command}] failed`)
     }
   }
 
