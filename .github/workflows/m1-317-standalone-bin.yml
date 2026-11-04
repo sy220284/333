@@ -36,6 +36,9 @@ on:
       - 'tests/model-loop-local.test.mjs'
       - 'tests/search-loop-local.test.mjs'
       - 'tests/claude-api-version-parity.test.mjs'
+      - 'src/utils/betas.ts'
+      - 'src/utils/auth.ts'
+      - 'src/commands/logout/logout.tsx'
   workflow_dispatch:
 
 permissions:
