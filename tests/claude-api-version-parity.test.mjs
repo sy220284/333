@@ -68,6 +68,7 @@ test('api-version opens the bundled 2.1.317 migration guide through the actual R
   try {
     await new Promise(ok => server.listen(0, '127.0.0.1', ok))
     const targets = [['333', 'bun', [join(root, 'dist/cli.js')]]]
+    if (process.env.M1_NATIVE_BINARY_RUN === '1') targets.push(['native', join(root, 'dist', process.platform === 'win32' ? 'claude.exe' : 'claude'), []])
     if (process.env.CLAUDE_TARGET_X64) targets.push(['2.1.317', process.env.CLAUDE_TARGET_X64, []])
     for (const [name, executable, prefix] of targets) {
       requests = []
@@ -103,6 +104,10 @@ test('api-version opens the bundled 2.1.317 migration guide through the actual R
     }
     const candidateFiles = extracted.get('333')
     assert.equal(candidateFiles?.size, 106, 'all available 317 resources should be extracted')
+    if (process.env.M1_NATIVE_BINARY_RUN === '1') {
+      assert.deepEqual(extracted.get('native'), candidateFiles,
+        'Native compiled release extracted different bundled 317 skill resources')
+    }
     if (process.env.CLAUDE_TARGET_X64) {
       const officialFiles = extracted.get('2.1.317')
       assert.deepEqual(candidateFiles, officialFiles, 'extracted resource contents differ from 2.1.317')
