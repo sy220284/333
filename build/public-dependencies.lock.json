@@ -1,12 +1,12 @@
 {
   "name": "release-rebuild-dependencies",
-  "version": "2.1.88",
+  "version": "2.1.317",
   "lockfileVersion": 3,
   "requires": true,
   "packages": {
     "": {
       "name": "release-rebuild-dependencies",
-      "version": "2.1.88",
+      "version": "2.1.317",
       "dependencies": {
         "@alcalzone/ansi-tokenize": "^0.1.0",
         "@anthropic-ai/bedrock-sdk": "^0.26.4",
