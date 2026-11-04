@@ -192,6 +192,10 @@ async function main(): Promise<void> {
       process.exitCode = 78;
       return;
     }
+    // sessionFactsRestored installs the proxy/mTLS dispatchers before a
+    // daemon worker can access a remote endpoint.
+    const { configureGlobalAgents } = await import('../utils/proxy.js');
+    configureGlobalAgents();
     const { runDaemonWorker317 } = await import('../bootstrap/daemonWorker317.ts');
     process.exitCode = await runDaemonWorker317(args[1]);
     return;
@@ -241,6 +245,21 @@ async function main(): Promise<void> {
   if (backgroundRequest) {
     const { interceptBackgroundCli } = await import('../cli/background/index.ts');
     try {
+      const { ensureFastPathSettingsLoaded317, checkRequiredFastPathVersion317,
+        backgroundVersionDisposition317 } = await import('../bootstrap/fastPathSettings317.ts');
+      const route = sessionVerbIndex !== -1 ? args[sessionVerbIndex]! : args[0] ?? '';
+      const admission = backgroundVersionDisposition317(route);
+      const policy = await ensureFastPathSettingsLoaded317();
+      if (admission !== 'skip') {
+        const refusal = checkRequiredFastPathVersion317(MACRO.VERSION, policy);
+        if (refusal) {
+          process.stderr.write(refusal + '\\n');
+          if (admission === 'reject') {
+            process.exitCode = 1;
+            return;
+          }
+        }
+      }
       if (await interceptBackgroundCli(args)) return;
     } catch (error) {
       process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
