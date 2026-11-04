@@ -4,7 +4,7 @@
  * cross-origin redirects for token endpoints.
  */
 import { randomBytes } from 'node:crypto'
-import { signGatewaySession317, createGatewayOidcLogin317 } from './gatewayAuth317.mjs'
+import { signGatewaySession317, createGatewayOidcLogin317 } from './gatewayAuth317.ts'
 
 const base20 = 'BCDFGHJKLMNPQRSTVWXZ'
 const noStore = { 'cache-control': 'no-store', pragma: 'no-cache' }
