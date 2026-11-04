@@ -130,16 +130,19 @@ async function main(): Promise<void> {
 
   // Official 317 calls ensureFastPathSettingsLoaded before dedicated workers.
   // These routes bypass Commander's ordinary preAction settings initialization.
-  const ensureWorkerStartupPolicy = async (ptySupervisor = false): Promise<boolean> => {
+  const ensureWorkerStartupPolicy = async (route: string, ptySupervisor = false): Promise<boolean> => {
     try {
-      const { ensureFastPathSettingsLoaded317, checkRequiredFastPathVersion317 } =
+      const { ensureFastPathSettingsLoaded317, checkRequiredFastPathVersion317,
+        enforcesRequiredVersionForWorker317 } =
         await import('../bootstrap/fastPathSettings317.ts');
       const policy = await ensureFastPathSettingsLoaded317();
-      const refusal = checkRequiredFastPathVersion317(MACRO.VERSION, policy);
-      if (refusal) {
-        process.stderr.write(refusal + '\n');
-        process.exitCode = 1;
-        return false;
+      if (enforcesRequiredVersionForWorker317(route)) {
+        const refusal = checkRequiredFastPathVersion317(MACRO.VERSION, policy);
+        if (refusal) {
+          process.stderr.write(refusal + '\n');
+          process.exitCode = 1;
+          return false;
+        }
       }
       return true;
     } catch (error) {
@@ -156,7 +159,7 @@ async function main(): Promise<void> {
 
   // Native PTY host bypasses interactive REPL and exchanges binary frames.
   if (args[0] === '--bg-pty-host') {
-    if (!await ensureWorkerStartupPolicy(true)) return;
+    if (!await ensureWorkerStartupPolicy('--bg-pty-host', true)) return;
     const { runPtyHost317 } = await import('../bootstrap/ptyHost317.ts');
     process.exitCode = await runPtyHost317(args.slice(1));
     return;
@@ -164,7 +167,7 @@ async function main(): Promise<void> {
 
   // 317 daemon worker reads JSON from stdin and runs without REPL/PTY imports.
   if (args[0] === '--daemon-worker') {
-    if (!await ensureWorkerStartupPolicy()) return;
+    if (!await ensureWorkerStartupPolicy('--daemon-worker')) return;
     const { runDaemonWorker317 } = await import('../bootstrap/daemonWorker317.ts');
     process.exitCode = await runDaemonWorker317(args[1]);
     return;
@@ -172,7 +175,7 @@ async function main(): Promise<void> {
 
   // 317 warm background spare accepts one authenticated socket claim, then runs the CLI.
   if (args[0] === '--bg-spare') {
-    if (!await ensureWorkerStartupPolicy()) return;
+    if (!await ensureWorkerStartupPolicy('--bg-spare')) return;
     const { runBgSpare317 } = await import('../bootstrap/bgSpare317.ts');
     process.exitCode = await runBgSpare317(args.slice(1));
     return;
@@ -181,7 +184,7 @@ async function main(): Promise<void> {
   // 317 remote preloader is a one-shot socket claim that must run before
   // importing the interactive CLI or starting background session services.
   if (args[0] === '--preload') {
-    if (!await ensureWorkerStartupPolicy()) return;
+    if (!await ensureWorkerStartupPolicy('--preload')) return;
     const { runPreload317 } = await import('../bootstrap/preload317.ts');
     await runPreload317(args.slice(1));
     return;

@@ -43,6 +43,15 @@ export function checkRequiredFastPathVersion317(
   return null
 }
 
+/**
+ * Native cli.js invokes loadFastPathPolicy for daemon-worker, which enforces
+ * the required-version policy; the three warm/PTY worker routes invoke only
+ * ensureFastPathSettingsLoaded and must keep their already-admitted host alive.
+ */
+export function enforcesRequiredVersionForWorker317(route: string): boolean {
+  return route === '--daemon-worker'
+}
+
 let startupSettingsPromise: Promise<RequiredVersionPolicy317 | null> | undefined
 
 /** A claimed warm session must not inherit the previous policy result. */
