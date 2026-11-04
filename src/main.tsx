@@ -3587,6 +3587,49 @@ async function run(): Promise<CommanderCommand> {
   registerPurge(program);
   registerPurge(program.command('project', { hidden: true }));
   const pluginCmd = program.command('plugin').alias('plugins').description('Manage Claude Code plugins').configureHelp(createSortedHelpConfig());
+  pluginCmd.command('eval [command] [target]')
+    .description('Run eval cases against a plugin and report scored results')
+    .option('--eval-dir <dir>', 'Directory within plugin that holds evaluation cases')
+    .option('--case <glob>', 'Filter cases by name glob')
+    .option('--tag <tags...>', 'Filter cases by tag')
+    .option('--runs <n>', 'Number of reruns for each case')
+    .option('-j, --concurrency <n>', 'Run up to 1–8 case arms at once')
+    .option('--ablation <mode>', 'Compare against a no-plugin baseline: none | with-without')
+    .option('--model <model>', 'Override model for cases')
+    .option('--judge-model <model>', 'Override LLM grader model')
+    .option('--max-cost-usd <usd>', 'Hard evaluation cost ceiling')
+    .option('--threshold <score>', 'Minimum score to pass, 0..1')
+    .option('--json [path]', 'Print JSON or write to file')
+    .option('--report <path>', 'Write an HTML evaluation report')
+    .option('--output-dir <dir>', 'Output directory for JSON and HTML')
+    .option('--mocks <mode>', 'MCP server mocks: record | off', 'record')
+    .option('--allow-real-servers', 'Allow real plugin MCP server processes')
+    .option('--allow-tools <tools...>', 'Operator grants for model tools')
+    .option('--disallow-tools <tools...>', 'Tools unavailable to case models')
+    .option('--scaffold', 'Run case scaffold scripts')
+    .option('--no-scaffold', 'Skip case scaffold scripts')
+    .option('--keep-temp', 'Preserve temporary evaluation workspaces')
+    .option('--no-publish', 'Keep HTML reports local')
+    .option('--publish-report', 'Publish report to account when supported')
+    .option('--trust-plugin', 'Explicitly trust plugin evaluation source')
+    .option('--verbose', 'Detailed trace logging')
+    .action(async (command: string | undefined, target: string | undefined, options: Record<string, unknown>) => {
+      try {
+        const { pluginEvalHandler317 } = await import('./cli/handlers/pluginEvalEntry317.mjs');
+        if (command === 'init') {
+          throw new Error('Eval suite init requires the original interactive authoring workflow');
+        }
+        if (options.publishReport) {
+          throw new Error('Remote report publishing requires the authenticated report API');
+        }
+        const resolvedTarget = target ?? command ?? '.';
+        const exitCode = await pluginEvalHandler317(resolvedTarget, options);
+        if (exitCode !== 0) process.exitCode = exitCode;
+      } catch (error) {
+        process.stderr.write(`claude plugin eval: ${error instanceof Error ? error.message : String(error)}\n`);
+        process.exitCode = 1;
+      }
+    });
   pluginCmd.command('test [dir]').description("Run a mod's tests")
     .addOption(new Option('--file <path>').hideHelp())
     .action(async (dir: string | undefined, options: { file?: string }) => {
