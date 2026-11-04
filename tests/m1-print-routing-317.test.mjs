@@ -19,7 +19,9 @@ test('2.1.317 CLI route only recognizes actual print-mode flags', () => {
 })
 
 test('2.1.317 stream-json mode shares the same print-mode scanner', () => {
-  assert.equal(isStreamJsonLaunch(['--settings', '-p', '--output-format', 'stream-json']), false)
+  // The official CLI also treats a non-TTY stdout as implicit headless mode.
+  // A flag value named -p must not *add* print-mode semantics.
+  assert.equal(isStreamJsonLaunch(['--settings', '-p', '--output-format', 'stream-json']), !process.stdout.isTTY)
   assert.equal(isStreamJsonLaunch(['--print', '--output-format', 'stream-json']), true)
   assert.equal(isStreamJsonLaunch(['--', '--print', '--output-format', 'stream-json']), false)
 })
