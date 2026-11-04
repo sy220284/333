@@ -9,8 +9,14 @@ import { resolve } from 'node:path'
 
 const pending = new Map()
 
+/** A shared identity for duplicate detection and locking on each platform. */
+export function transcriptDestinationKey(path) {
+  const absolute = resolve(path)
+  return process.platform === 'win32' ? absolute.toLowerCase() : absolute
+}
+
 export async function withTranscriptDestinationLocks(paths, operation) {
-  const keys = [...new Set(paths.map(path => resolve(path)))].sort()
+  const keys = [...new Set(paths.map(transcriptDestinationKey))].sort()
   const acquired = []
   try {
     for (const key of keys) {
