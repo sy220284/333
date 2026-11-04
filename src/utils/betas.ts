@@ -13,6 +13,7 @@ import {
   CONTEXT_MANAGEMENT_BETA_HEADER,
   INTERLEAVED_THINKING_BETA_HEADER,
   PROMPT_CACHING_SCOPE_BETA_HEADER,
+  THINKING_TOKEN_COUNT_BETA_HEADER,
   REDACT_THINKING_BETA_HEADER,
   STRUCTURED_OUTPUTS_BETA_HEADER,
   SUMMARIZE_CONNECTOR_TEXT_BETA_HEADER,
@@ -351,8 +352,12 @@ export const getAllModelBetas = memoize((model: string): string[] => {
     betaHeaders.push(WEB_SEARCH_BETA_HEADER)
   }
 
-  // Always send the beta header for 1P. The header is a no-op without a scope field.
-  if (includeFirstPartyOnlyBetas) {
+  // The official 2.1.317 headless Messages request uses the thinking
+  // token-count contract. The prompt-caching-scope beta belongs to the
+  // interactive path and must not leak into a headless prompt request.
+  if (includeFirstPartyOnlyBetas && getIsNonInteractiveSession() && modelSupportsISP(model)) {
+    betaHeaders.push(THINKING_TOKEN_COUNT_BETA_HEADER)
+  } else if (includeFirstPartyOnlyBetas && !getIsNonInteractiveSession()) {
     betaHeaders.push(PROMPT_CACHING_SCOPE_BETA_HEADER)
   }
 
