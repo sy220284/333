@@ -16,8 +16,8 @@ import { deleteRemoteAgentMetadata, listRemoteAgentMetadata, type RemoteAgentMet
 import { jsonStringify } from '../../utils/slowOperations.js';
 import { appendTaskOutput, evictTaskOutput, getTaskOutputPath, initTaskOutput } from '../../utils/task/diskOutput.js';
 import { registerTask, updateTaskState } from '../../utils/task/framework.js';
-import { createPollingLifecycle } from '../../utils/task/pollingLifecycle317.mjs';
-import { createRemotePollingRegistry } from '../../utils/task/remotePollingRegistry317.mjs';
+import { createPollingLifecycle } from '../../utils/task/pollingLifecycle317.ts';
+import { createRemotePollingRegistry } from '../../utils/task/remotePollingRegistry317.ts';
 import { fetchSession } from '../../utils/teleport/api.js';
 import { archiveRemoteSession, pollRemoteSessionEvents } from '../../utils/teleport.js';
 import type { TodoList } from '../../utils/todo/types.js';
