@@ -54,8 +54,26 @@ def classify_skill(payload: bytes) -> str | None:
             match = FRONTMATTER_NAME.search(metadata)
             if match and "description:" in metadata:
                 return match.group(1)
-    if text.startswith("# Cowork Plugin Authoring\n"):
-        return "cowork-plugin-authoring"
+    # Several shipped references are real SKILL resources without a name:
+    # field (sub-agent specs, Claude API, Design Sync reference forms). Name
+    # these by their exact, distinctive native resource header, so that the
+    # binary inventory is complete instead of silently dropping 6 resources.
+    implicit_skills = (
+        ("# Cowork Plugin Authoring\\n", "cowork-plugin-authoring"),
+        ("# Building LLM-Powered Applications with Claude\\n", "claude-api"),
+        ("# Storybook source shape\\n", "design-sync-storybook"),
+        ("# Package source shape\\n", "design-sync-package"),
+    )
+    for prefix, name in implicit_skills:
+        if text.startswith(prefix):
+            return name
+    if text.startswith("---\\n"):
+        if "description: Internal to Claude Test — runs the specs in a background browser." in text[:700]:
+            return "claude-test-runner"
+        if "description: Internal to Claude Test — drafts spec files in the background" in text[:700]:
+            return "claude-test-spec"
+        if 'description: "Local, on this machine: tests your app here in a browser' in text[:700]:
+            return "claude-test-conversation"
     return None
 
 
