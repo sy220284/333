@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { test } from 'node:test'
 import {
   migrateInstalledPluginsRecords,
   normalizeInstalledPluginsRecords,
 } from '../src/utils/plugins/installedPluginsMigration.mjs'
+
+const root = resolve(import.meta.dirname, '..')
 
 const v1 = (version = '1.2.3') => ({ version: 1, plugins: { 'alpha@market': { version, installedAt: '2026-01-01', installPath: '/legacy/path', gitCommitSha: '123abc' } } })
 const v2 = (id = 'beta@market') => ({ version: 2, plugins: { [id]: [{ scope: 'project', projectPath: '/project', installPath: '/active/plugin', version: '2.0.0' }] } })
@@ -90,4 +93,38 @@ test('317: read-only V1 normalization does not modify the source file', () => in
   assert.equal(viewed.plugins['alpha@market'][0].scope, 'user')
   assert.deepEqual(readFileSync(join(dir, 'installed_plugins.json')), before)
   assert.equal(readdirSync(dir).length, 1)
+}))
+
+test('317: real CLI plugin list reads historical V1 without modifying installed records', { timeout: 40000 }, () => inSandbox((dir) => {
+  const home = resolve(dir, '..')
+  const project = join(home, 'project')
+  mkdirSync(project)
+  put(dir, 'installed_plugins.json', v1())
+  const original = readFileSync(join(dir, 'installed_plugins.json'))
+  const env = {
+    ...process.env,
+    HOME: home,
+    USERPROFILE: home,
+    CLAUDE_CONFIG_DIR: join(home, '.claude'),
+    CLAUDE_CODE_PLUGIN_CACHE_DIR: dir,
+    XDG_CONFIG_HOME: join(home, '.config'),
+    NO_COLOR: '1',
+    CI: 'true',
+    DISABLE_AUTOUPDATER: '1',
+    DISABLE_TELEMETRY: '1',
+    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
+  }
+  delete env.ANTHROPIC_API_KEY
+  delete env.ANTHROPIC_AUTH_TOKEN
+  const commands = [['rebuilt', 'bun', [join(root, 'dist/cli.js')]]]
+  if (env.CLAUDE_TARGET_X64) commands.push(['official-317', env.CLAUDE_TARGET_X64, []])
+  for (const [label, command, prefix] of commands) {
+    const result = spawnSync(command, [...prefix, 'plugin', 'list', '--json'], {
+      cwd: project, env, encoding: 'utf8', timeout: 25000,
+    })
+    assert.equal(result.error, undefined, `${label}: ${result.error?.message}`)
+    assert.equal(result.status, 0, `${label}: ${result.stderr}`)
+    assert.deepEqual(readFileSync(join(dir, 'installed_plugins.json')), original,
+      `${label}: read-only plugin list modified the historical V1 file`)
+  }
 }))
