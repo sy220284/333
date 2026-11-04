@@ -56,7 +56,7 @@ export function registerClaudeApiSkill(): void {
         return [{ type: 'text', text: 'The `managed-agents-secure` command is unavailable in this session: Claude Code’s check on its `ant` commands does not run here. Say so in one sentence and stop: do not run `ant` commands or check the deployment by hand.' }]
       }
       const [content, language] = await Promise.all([import('./claudeApiContent.js'), detectLanguage()])
-      return [{ type: 'text', text: buildClaudeApiPrompt(language, args, content, typeof extractedDir === 'string', false) }]
+      return [{ type: 'text', text: buildClaudeApiPrompt(language, args, content, typeof extractedDir === 'string', false, null) }]
     },
   })
 }
