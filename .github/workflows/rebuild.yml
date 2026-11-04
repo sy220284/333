@@ -95,6 +95,8 @@ jobs:
           docker exec gateway-postgres-317 pg_isready -U postgres -d postgres
           GATEWAY_TEST_POSTGRES_URL='postgres://postgres:gateway-test-only@127.0.0.1:55432/postgres' \
             bun test tests/m6-gateway-postgres-317.test.mjs
+      - name: 317插件评测Windows工作区清理与结果保存
+        run: node --test tests/m3-plugin-eval-cleanup-317.test.mjs
       - name: 317插件评测CLI真实模型SSE及双臂报告闭环
         run: node --test tests/m3-plugin-eval-cli-roundtrip-317.test.mjs
       - name: 新构建版本和基础交互验收
