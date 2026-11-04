@@ -60,5 +60,6 @@
   "binary_evidence_run": "https://github.com/sy220284/333/actions/runs/41672565537",
   "original_regression_features": 102,
   "original_regression_scenarios": 84,
-  "implementation_plan": "M1–M6六层20条功能链"
+  "implementation_plan": "M1–M6六层20条功能链",
+  "verified_x64_commit_sha": "3d3e7cb16b5577dccaee9520c8dc1189d02d61b7"
 }
