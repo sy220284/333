@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { spawn } from 'node:child_process'
-import { connect } from 'node:net'
-import { mkdtempSync, existsSync, rmSync } from 'node:fs'
+import { connect, createServer } from 'node:net'
+import { mkdtempSync, existsSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createPtyFrameDecoder317, encodePtyControl317, encodePtyData317 } from '../src/bootstrap/ptyWire317.mjs'
-import { parsePtyHostArgs317 } from '../src/bootstrap/ptyHost317.mjs'
+import { parsePtyHostArgs317, assertPtySocketVacant317 } from '../src/bootstrap/ptyHost317.mjs'
 
 const cli = resolve(import.meta.dirname, '../dist/cli.js')
 const original = process.env.CLAUDE_REFERENCE_BIN || process.env.CLAUDE_TARGET_X64
@@ -40,6 +40,39 @@ test('317 PTY five-byte frame codec: fragmented data, control and oversize', () 
   assert.deepEqual(parsePtyHostArgs317(['/tmp/x.sock', '90', '30', '--', 'node', '-v']),
     { socket: '/tmp/x.sock', cols: 90, rows: 30, command: ['node', '-v'], spawnSpare: false })
   assert.throws(() => parsePtyHostArgs317(['/tmp/x.sock', '90']), /bad argv/)
+})
+
+test('317 PTY socket isolation: existing active PTY socket and regular files survive', {
+  skip: process.platform === 'win32', timeout: 15000,
+}, async () => {
+  const dir = mkdtempSync(join(tmpdir(), '333-pty-owner-'))
+  const sock = join(dir, 'owned.sock')
+  const server = createServer(peer => peer.end('owner-alive'))
+  try {
+    await new Promise((resolve, reject) => {
+      server.once('error', reject)
+      server.listen(sock, resolve)
+    })
+    await assert.rejects(assertPtySocketVacant317(sock), /Another PTY host already owns/)
+    assert.equal(existsSync(sock), true, 'active owner socket was unlinked')
+    const output = await new Promise((resolve, reject) => {
+      const peer = connect(sock)
+      let body = ''
+      peer.on('data', chunk => { body += chunk })
+      peer.once('end', () => resolve(body))
+      peer.once('error', reject)
+    })
+    assert.equal(output, 'owner-alive', 'original PTY owner must remain reachable')
+  } finally {
+    await new Promise(resolve => server.close(resolve))
+  }
+  try {
+    writeFileSync(sock, 'ordinary-file-keep')
+    await assert.rejects(assertPtySocketVacant317(sock), /not a socket/)
+    assert.equal(readFileSync(sock, 'utf8'), 'ordinary-file-keep')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('317 PTY official and rebuilt: real child, live socket, replay and exit',
