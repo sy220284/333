@@ -107,6 +107,8 @@ jobs:
           command -v Xvfb
           command -v xvfb-run
           xvfb-run -a node --test tests/m1-native-clipboard-xvfb-317.test.mjs
+      - name: 从当前源码编译本机自包含执行程序并验证版本及帮助
+        run: node build/compile-standalone.mjs
       - name: 打包独立发行程序和平台资源
         run: node build/package-release.mjs
       - name: 校验发行文件完整性与启动器
