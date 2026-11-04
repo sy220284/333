@@ -140,25 +140,27 @@ export function applyPreloadClaim317(claim, {
   return normalized
 }
 
+/** Shared 317 post-claim state restoration for --preload and authenticated --bg-spare. */
+export async function runClaimedSession317(claim: {
+  cwd: string; argv: string[]; env: Record<string,unknown>; sessionId?: unknown
+}, source = 'spare_claim'): Promise<void> {
+  applyPreloadClaim317(claim)
+  const state = await import('./state.js')
+  const claimedCwd = process.cwd()
+  state.setOriginalCwd(claimedCwd)
+  state.setProjectRoot(claimedCwd)
+  state.setCwdState(claimedCwd)
+  if (typeof claim.sessionId === 'string' && claim.sessionId) {
+    const { asSessionId } = await import('../types/ids.js')
+    state.switchSession(asSessionId(claim.sessionId))
+    state.setSessionSource(source)
+  }
+  const { main } = await import('../main.js')
+  await main()
+}
+
 export async function runPreload317(args = process.argv.slice(2), {
-  onClaim = async claim => {
-    applyPreloadClaim317(claim)
-    const sessionState = await import('./state.js')
-    const claimedCwd = process.cwd()
-    sessionState.setOriginalCwd(claimedCwd)
-    sessionState.setProjectRoot(claimedCwd)
-    sessionState.setCwdState(claimedCwd)
-    // Official chunk-d1js6kn4.js restores a caller-supplied identity through
-    // the production session store before main() emits any SDK/model messages.
-    // The upstream accepts opaque nonempty session IDs, including non-UUID IDs.
-    if (typeof claim.sessionId === 'string' && claim.sessionId) {
-      const { asSessionId } = await import('../types/ids.js')
-      sessionState.switchSession(asSessionId(claim.sessionId))
-      sessionState.setSessionSource('spare_claim')
-    }
-    const { main } = await import('../main.js')
-    await main()
-  },
+  onClaim = runClaimedSession317,
 } = {}) {
   // Original preload clears the previous session's transient environment
   // before any warming imports or socket activity can observe it.
