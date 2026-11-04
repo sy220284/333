@@ -23,7 +23,7 @@ const skillFiles: Record<string, string> = {
 
 /**
  * Source: Claude Code 2.1.317 chunk-qvm187ej.js:181-190.
- * Initialization is gated by RUN_SKILL_GENERATOR in bundled/index.ts.
+ * Registered for normal CLI sessions alongside /run in bundled/index.ts.
  * The source markdown and the seven attached references match the official
  * Linux x64 embedded assets byte for byte.
  */
