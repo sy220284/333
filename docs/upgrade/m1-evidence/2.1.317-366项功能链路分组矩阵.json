@@ -3374,9 +3374,32 @@
         "Linux x64原版+候选版"
       ],
       "classification_basis": "规则命中",
-      "implementation_evidence": "未在原台账附源文件，待核当前实现",
-      "verification": "PENDING_SOURCE_BINARY_E2E",
-      "owner": "C06"
+      "implementation_evidence": "src/utils/hooks/preCompactOutput.mjs → src/utils/hooks.ts/executePreCompactHooks：每条成功输出最长10000字符，保留原始长度、Unicode代理对、提示及阻断隔离",
+      "verification": "SOURCE_UNIT_TEST_PASS_PENDING_E2E",
+      "owner": "C06",
+      "evidence": {
+        "official_elf_sha256": "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0",
+        "original_source": "04_逐模块可阅读JavaScript/chunk-thp9mgjc.js:61234-61264 + chunk-y0nbzmyt.js:5 (XMe=10000)",
+        "candidate_commit": "4729a0a66af42c0d7fadf4bb72e589d592bf0244",
+        "ci_run": "https://github.com/sy220284/333/actions/runs/41771154669",
+        "ci_step": "校验仓库对当前与历史基线的独立定义; 基于当前 PR 的源码独立构建候选 CLI",
+        "tests": [
+          "tests/m1-precompact-output-limit-317.test.mjs"
+        ],
+        "matched": [
+          "10000-char maximum per successful hook",
+          "warning includes original size and command",
+          "UTF-16 surrogate pair boundary preserved",
+          "blocked result excluded from compaction instructions",
+          "rebuilt CLI succeeds with new output helper"
+        ],
+        "outstanding": [
+          "run official and candidate real /compact with 10001+ Hook output and compare next model request",
+          "SDK/remote hook failure semantics and cancellation behavior",
+          "whole compaction chain 317 behavioral signoff"
+        ],
+        "full_chain_signed_off": false
+      }
     },
     {
       "id": "2.1.314#023",
@@ -7337,7 +7360,8 @@
   },
   "verification_summary": {
     "scenario_e2e_pass_pending_chain": 2,
-    "pending_source_binary_e2e": 364,
+    "source_unit_pass_pending_e2e": 1,
+    "pending_source_binary_e2e": 363,
     "formally_closed": 0
   }
 }
