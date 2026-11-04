@@ -1,3 +1,4 @@
+import { filterAutoModeRulesByLabel } from './autoModeCliPolicy.mjs'
 /**
  * Auto mode subcommand handlers — dump default/merged classifier rules and
  * critique user-written rules. Dynamically imported when `claude auto-mode ...` runs.
@@ -22,8 +23,9 @@ function writeRules(rules: AutoModeRules): void {
   process.stdout.write(jsonStringify(rules, null, 2) + '\n')
 }
 
-export function autoModeDefaultsHandler(): void {
-  writeRules(getDefaultExternalAutoModeRules())
+export function autoModeDefaultsHandler(label?: string): void {
+  const defaults = getDefaultExternalAutoModeRules()
+  writeRules(label ? filterAutoModeRulesByLabel(defaults, label) : defaults)
 }
 
 /**
@@ -49,10 +51,11 @@ const CRITIQUE_SYSTEM_PROMPT =
   '\n' +
   'Claude Code has an "auto mode" that uses an AI classifier to decide whether ' +
   'tool calls should be auto-approved or require user confirmation. Users can ' +
-  'write custom rules in three categories:\n' +
+  'write custom rules in four categories:\n' +
   '\n' +
   '- **allow**: Actions the classifier should auto-approve\n' +
   '- **soft_deny**: Actions the classifier should block (require user confirmation)\n' +
+  '- **hard_deny**: Actions the classifier always blocks\n' +
   "- **environment**: Context about the user's setup that helps the classifier make decisions\n" +
   '\n' +
   "Your job is to critique the user's custom rules for clarity, completeness, " +
@@ -81,7 +84,7 @@ export async function autoModeCritiqueHandler(options: {
   if (!hasCustomRules) {
     process.stdout.write(
       'No custom auto mode rules found.\n\n' +
-        'Add rules to your settings file under autoMode.{allow, soft_deny, environment}.\n' +
+        'Add rules to your settings file under autoMode.{allow, soft_deny, hard_deny, environment}.\n' +
         'Run `claude auto-mode defaults` to see the default rules for reference.\n',
     )
     return

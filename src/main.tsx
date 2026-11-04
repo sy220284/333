@@ -3761,11 +3761,11 @@ async function run(): Promise<CommanderCommand> {
     // Reads from disk cache — GrowthBook isn't initialized at registration time.
     if (getAutoModeEnabledStateIfCached() !== 'disabled') {
       const autoModeCmd = program.command('auto-mode').description('Inspect auto mode classifier configuration');
-      autoModeCmd.command('defaults').description('Print the default auto mode environment, allow, and deny rules as JSON').action(async () => {
+      autoModeCmd.command('defaults').description('Print the default auto mode environment, allow, soft_deny, and hard_deny rules as JSON').option('--label <prefix>', 'Show only rules whose label starts with this prefix (case-insensitive)').action(async ({ label }: { label?: string }) => {
         const {
           autoModeDefaultsHandler
         } = await import('./cli/handlers/autoMode.js');
-        autoModeDefaultsHandler();
+        autoModeDefaultsHandler(label);
         process.exit(0);
       });
       autoModeCmd.command('config').description('Print the effective auto mode config as JSON: your settings where set, defaults otherwise').action(async () => {
