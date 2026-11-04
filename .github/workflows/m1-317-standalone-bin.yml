@@ -36,6 +36,14 @@ on:
       - 'src/bootstrap/bgSpare317.ts'
       - 'src/bootstrap/bgSpare317.mjs'
       - 'src/bootstrap/preload317.ts'
+      - 'src/bootstrap/claimRebind317.ts'
+      - 'src/bootstrap/fastPathSettings317.ts'
+      - 'src/utils/config.ts'
+      - 'src/utils/settings/mdm/rawRead.ts'
+      - 'src/utils/secureStorage/keychainPrefetch.ts'
+      - 'src/utils/settings/settingsCache.ts'
+      - 'tests/m1-claim-rebind-317.test.mjs'
+      - 'build/check-architecture-links317.mjs'
       - 'src/bootstrap/preload317.mjs'
       - 'src/bootstrap/evalMockServer317.ts'
       - 'tests/m1-eval-mock-server-317.test.mjs'
@@ -110,6 +118,10 @@ jobs:
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
           bun build/rebuild.mjs
+      - name: 验证六层架构关键调用关系与专用启动优先级
+        run: node build/check-architecture-links317.mjs
+      - name: 317预热会话接管：配置、MDM、OAuth与凭据缓存隔离
+        run: bun test tests/m1-claim-rebind-317.test.mjs
       - name: Linux对照已验签317官方x64同步原生剪贴板与音频资源
         if: runner.os == 'Linux'
         run: |
