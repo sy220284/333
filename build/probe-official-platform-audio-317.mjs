@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 
 const argv = process.argv.slice(2)
 function get(name) {
@@ -98,15 +98,47 @@ while (at >= 0) {
   const data = parse(at)
   if (data && ['napi_register_module_v1', 'startRecording', 'stopRecording',
     'microphoneAuthorizationStatus'].every(name => data.includes(Buffer.from(name)))) {
-    matches.push({ offset: at, size: data.length, sha256: hash(data) })
+    matches.push({ offset: at, size: data.length, sha256: hash(data), bytes: data })
   }
   at = original.indexOf(magic, at + 1)
 }
-assert.equal(matches.length, 1, 'Ambiguous official audio NAPI: ' + JSON.stringify(matches))
-assert.deepEqual(matches[0], {
+assert.equal(matches.length, 1, 'Ambiguous official audio NAPI: ' + matches.length)
+const nativeAddon = matches[0]
+const record = {
+  offset: nativeAddon.offset,
+  size: nativeAddon.size,
+  sha256: nativeAddon.sha256,
+}
+
+assert.deepEqual(record, {
   offset: verified.audio_offset,
   size: verified.audio_size,
   sha256: verified.audio_sha256,
 }, 'Official embedded audio source differs from pinned 317 native addon')
+const extractAt = argv.indexOf('--extract-dir')
+if (extractAt !== -1) {
+  if (extractAt + 1 >= argv.length || argv[extractAt + 1].startsWith('--'))
+    throw Error('Missing --extract-dir destination')
+  const directory = resolve(argv[extractAt + 1])
+  const addonPath = join(directory, arch + '-' + os, 'audio-capture.node')
+  if (existsSync(addonPath)) {
+    assert.equal(hash(readFileSync(addonPath)), verified.audio_sha256,
+      'Existing extracted native addon differs from pinned original: ' + addonPath)
+  } else {
+    mkdirSync(dirname(addonPath), { recursive: true })
+    const stage = addonPath + '.tmp-' + process.pid
+    try {
+      writeFileSync(stage, nativeAddon.bytes, { flag: 'wx', mode: 0o644 })
+      assert.equal(hash(readFileSync(stage)), verified.audio_sha256,
+        'Staged native addon hash differs from original')
+      renameSync(stage, addonPath)
+    } finally {
+      if (existsSync(stage)) rmSync(stage)
+    }
+  }
+  assert.deepEqual(readFileSync(addonPath), nativeAddon.bytes,
+    'Extracted native addon bytes differ from original executable')
+  console.log('verified_audio_module=' + addonPath)
+}
 console.log(JSON.stringify({ target, binary_sha256: expected.toLowerCase(),
-  binary_bytes: original.length, audio: matches[0] }))
+  binary_bytes: original.length, audio: record }))
