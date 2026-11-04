@@ -196,7 +196,7 @@ test('retired ps/bg private dispatch cannot override the new daemon and agent fl
   assert.doesNotMatch(src, /daemon\/main\.js|cli\/bg\.js|BG_SESSIONS/)
   assert.match(main, /program\.option\('--bg, --background'/)
   assert.match(main, /program\.command\('agents'\)\.description\('Manage background agents'\)/)
-  assert.match(main, /program\.command\('daemon \[subcommand\]'\)/)
+  assert.match(main, /program\.command\('daemon \[subcommand\]', \{ hidden: true \}\)/)
 })
 
 test('2.1.317 background flags only apply to actual options, never other flag values', () => {
