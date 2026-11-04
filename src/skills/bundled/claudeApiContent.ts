@@ -1,4 +1,5 @@
 // Native Claude Code 2.1.317 exact embedded resource map (chunk-3v68bj2z.js).
+import { rubyToolUseDecoded } from './claudeApiRubyDecoded.js'
 import file000 from './claude-api/SKILL.md'
 import file001 from './claude-api/csharp/claude-api/README.md'
 import file002 from './claude-api/csharp/claude-api/batches.md'
@@ -169,7 +170,7 @@ export const SKILL_FILES: Record<string, string> = {
   "ruby/claude-api/README.md": file036,
   "ruby/claude-api/opentelemetry.md": file037,
   "ruby/claude-api/streaming.md": file038,
-  "ruby/claude-api/tool-use.md": file039,
+  "ruby/claude-api/tool-use.md": rubyToolUseDecoded,
   "ruby/managed-agents/README.md": file040,
   "shared/admin-api.md": file041,
   "shared/agent-design.md": file042,
