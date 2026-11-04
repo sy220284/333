@@ -4,6 +4,7 @@ import {
   isLocalLinuxClipboardDisplay,
   readLinuxClipboardNative,
   writeLinuxClipboardNative,
+  windowsClipboardWriteInvocation,
 } from '../src/ink/termio/clipboardNative317.mjs'
 
 test('M1 C19-T04: native clipboard only trusts local X11 and Wayland displays', () => {
@@ -31,4 +32,16 @@ test('M1 C19-T04: network forwarded displays cannot invoke native clipboard exte
     if (wayland === undefined) delete process.env.WAYLAND_DISPLAY
     else process.env.WAYLAND_DISPLAY = wayland
   }
+})
+
+test('M1 C19-T04: Windows and WSL write Unicode through explicit UTF-8 PowerShell stdin', () => {
+  const windows = windowsClipboardWriteInvocation('windows')
+  const wsl = windowsClipboardWriteInvocation('wsl')
+  assert.equal(windows.command, 'powershell')
+  assert.equal(wsl.command, 'powershell.exe')
+  assert.deepEqual(windows.args, wsl.args)
+  assert.deepEqual(windows.args.slice(0, 3), ['-NoProfile', '-NonInteractive', '-Command'])
+  assert.match(windows.args[3], /InputEncoding = \[Text\.Encoding\]::UTF8/)
+  assert.match(windows.args[3], /Set-Clipboard -Value/)
+  assert.throws(() => windowsClipboardWriteInvocation('linux'), /requires Windows or WSL/)
 })
