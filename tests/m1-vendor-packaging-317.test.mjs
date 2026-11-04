@@ -19,13 +19,25 @@ const sha256 = data => createHash('sha256').update(data).digest('hex')
 function fixture(run) {
   const dir = mkdtempSync(join(tmpdir(), '333-vendor-release-317-'))
   try {
-    for (const file of ['build/package-release.mjs', 'build/release-launcher.cjs', 'build/public-dependencies.lock.json',
-      'LICENSE.md', 'package.json', 'dist/cli.js',
-      nativeAudio, nativeRg, 'vendor/ripgrep/COPYING']) {
+    // Release packaging now verifies all 101 pinned original embedded resources
+    // before any vendor or manifest mutation. Build a faithful isolated fixture
+    // with the real verifier, manifest and exact bytes, rather than disabling
+    // the production integrity gate in tests.
+    const manifestFile = 'build/official-embedded-assets-2.1.317.json'
+    const manifest = JSON.parse(readFileSync(join(root, manifestFile), 'utf8'))
+    const officialFiles = new Set([
+      'build/package-release.mjs',
+      'build/release-launcher.cjs',
+      'build/verify-official-embedded-assets.mjs',
+      manifestFile,
+      ...manifest.resources.map(item => item.path),
+    ])
+    const fakeFiles = ['build/public-dependencies.lock.json', 'LICENSE.md',
+      'package.json', 'dist/cli.js', nativeAudio, nativeRg, 'vendor/ripgrep/COPYING']
+    for (const file of [...officialFiles, ...fakeFiles]) {
       const dest = join(dir, file)
       mkdirSync(dirname(dest), { recursive: true })
-      if (file === 'build/package-release.mjs') copyFileSync(packageScript, dest)
-      else if (file === 'build/release-launcher.cjs') copyFileSync(join(root, file), dest)
+      if (officialFiles.has(file)) copyFileSync(join(root, file), dest)
       else writeFileSync(dest, file === 'package.json' ? '{"version":"2.1.317"}\n' : file)
     }
     writeFileSync(join(dir, 'dist', process.platform === 'win32' ? 'claude.exe' : 'claude'), 'isolated release executable fixture')
@@ -58,6 +70,21 @@ function walk(dir, base=dir) {
     return [relative(base, full).replaceAll('\\', '/')]
   }).sort()
 }
+
+test('M1 C19-T01/T03: tampered official embedded resource blocks isolated release', () => {
+  fixture(dir => {
+    const manifest = JSON.parse(readFileSync(join(dir,'build/official-embedded-assets-2.1.317.json'),'utf8'))
+    assert.equal(manifest.resources.length, 101)
+    const file = join(dir,manifest.resources[0].path)
+    writeFileSync(file,'tampered original resource')
+    const result = build(dir)
+    assert.notEqual(result.status,0)
+    assert.match(result.stderr,/resource bytes differ from the pinned original/)
+    assert.equal(existsSync(join(dir,'dist/vendor')),false,
+      'Integrity validation must run before altering the release directory')
+    assertNoPackagingTemps(dir)
+  })
+})
 
 test('M1 C19-T03: repeated packaging removes obsolete vendor binaries and preserves exact source bytes', () => {
   fixture(dir => {
