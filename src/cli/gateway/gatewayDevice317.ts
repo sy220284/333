@@ -44,6 +44,17 @@ export type GatewayDeviceDeps317 = {
   store: GatewayDeviceStore317
 }
 
+export type GatewayDeviceFlow317 = {
+  publicDiscovery(): Response
+  deviceAuthorization(request: Request, clientIp: string | null): Promise<Response>
+  verificationPage(request: Request): Response
+  verifyDevice(request: Request, clientIp: string | null): Promise<Response>
+  denyDevice(request: Request, clientIp: string | null): Promise<Response>
+  callback(request: Request): Promise<Response>
+  token(request: Request): Promise<Response>
+  revoke(request: Request): Promise<Response>
+}
+
 const base20 = 'BCDFGHJKLMNPQRSTVWXZ'
 const noStore = { 'cache-control': 'no-store', pragma: 'no-cache' }
 const makeJson = (payload: Record<string, unknown>, status: number = 200): Response => Response.json(payload, { status, headers: noStore })
@@ -61,7 +72,7 @@ const form = async (request: Request): Promise<URLSearchParams> => {
   return new URLSearchParams(text)
 }
 
-export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }: GatewayDeviceDeps317) {
+export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }: GatewayDeviceDeps317): GatewayDeviceFlow317 {
   const idp = oidc
     ? createGatewayOidcLogin317(oidc, { publicUrl })
     : null
