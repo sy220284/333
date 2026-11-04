@@ -67,11 +67,13 @@ function validateGrader(grader, dir) {
     throw new Error(`grader ${grader.name}: weight must be positive`)
   }
   if (grader.type === 'regex') {
-    if (typeof grader.pattern !== 'string') throw new Error(`grader ${grader.name}: regex pattern required`)
-    const flags = grader.flags
-    if (flags !== undefined && typeof flags !== 'string') throw new Error(`grader ${grader.name}: invalid regex flags`)
-    if (!/^[dgimsuvy]*$/.test(flags ?? '')) throw new Error(`grader ${grader.name}: invalid regex flags`)
-    new RegExp(grader.pattern, flags ?? '')
+    const pattern = grader.pattern
+    if (typeof pattern !== 'string') throw new Error(`grader ${grader.name}: regex pattern required`)
+    const flagInput = grader.flags
+    if (flagInput !== undefined && typeof flagInput !== 'string') throw new Error(`grader ${grader.name}: invalid regex flags`)
+    const flags = typeof flagInput === 'string' ? flagInput : ''
+    if (!/^[dgimsuvy]*$/.test(flags)) throw new Error(`grader ${grader.name}: invalid regex flags`)
+    new RegExp(pattern, flags)
   }
   if (grader.type === 'file_exists' && typeof grader.path !== 'string') {
     throw new Error(`grader ${grader.name}: path required`)
