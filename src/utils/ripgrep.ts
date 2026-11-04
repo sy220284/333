@@ -1,5 +1,6 @@
 import type { ChildProcess, ExecFileException } from 'child_process'
 import { execFile, spawn } from 'child_process'
+import { existsSync } from 'node:fs'
 import memoize from 'lodash-es/memoize.js'
 import { homedir } from 'os'
 import * as path from 'path'
@@ -59,7 +60,17 @@ const getRipgrepConfig = memoize((): RipgrepConfig => {
     }
   }
 
-  const rgRoot = path.resolve(__dirname, 'vendor', 'ripgrep')
+  // In a Bun --compile binary import.meta.url is virtual (/$bunfs/root/...),
+  // while native spawn/execFile require a real filesystem path. The release
+  // includes the platform rg beside the compiled executable in vendor/.
+  // In source/Bun-script mode, retain the existing source-relative path.
+  const platformFolder = `${process.arch}-${process.platform}`
+  const filename = process.platform === 'win32' ? 'rg.exe' : 'rg'
+  const nativeVendor = path.resolve(path.dirname(process.execPath), 'vendor', 'ripgrep')
+  const sourceVendor = path.resolve(__dirname, 'vendor', 'ripgrep')
+  const rgRoot = existsSync(path.join(nativeVendor, platformFolder, filename))
+    ? nativeVendor
+    : sourceVendor
   const command =
     process.platform === 'win32'
       ? path.resolve(rgRoot, `${process.arch}-win32`, 'rg.exe')
