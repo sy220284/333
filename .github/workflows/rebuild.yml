@@ -119,6 +119,8 @@ jobs:
         run: node --test tests/m2-queue-priority-317.test.mjs
       - name: 317工具生命周期异常与取消清理
         run: node --test tests/m3-tool-lifecycle-317.test.mjs
+      - name: 317代理退出异常释放所有资源
+        run: node --test tests/m4-agent-cleanup-317.test.mjs
       - name: 317模型目录、读取边界和嵌套会话
         id: acceptance_008
         continue-on-error: true
