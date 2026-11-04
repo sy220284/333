@@ -3,23 +3,32 @@
  * All token material is stored only as SHA-256 hashes.
  */
 import { createHash } from 'node:crypto'
+import type { GatewayDeviceClaims317, GatewayDeviceStatus317 } from './gatewayDevice317.ts'
 
-const hash = input => createHash('sha256').update(input).digest('hex')
+export type GatewayStoreConfig317 = {
+  postgres_url: string
+  max_connections?: number
+  connect_timeout_seconds?: number
+  username?: string
+  password?: string
+}
+
+const hash = (input: string): string => createHash('sha256').update(input).digest('hex')
 
 /**
  * Bun.SQL can expose PostgreSQL jsonb as its raw JSON text. Normalize the
  * database boundary once, before a token subject is used or re-issued.
  */
-export function decodeGatewayClaims317(value) {
-  const claims = typeof value === 'string' ? JSON.parse(value) : value
+export function decodeGatewayClaims317(value: unknown): GatewayDeviceClaims317 {
+  const claims: unknown = typeof value === 'string' ? JSON.parse(value) : value
   if (!claims || typeof claims !== 'object' || Array.isArray(claims) ||
-      typeof claims.sub !== 'string' || claims.sub.length === 0) {
+      !('sub' in claims) || typeof claims.sub !== 'string' || claims.sub.length === 0) {
     throw new Error('Gateway database returned invalid authorization claims')
   }
-  return claims
+  return claims as GatewayDeviceClaims317
 }
 
-export async function openGatewayStore317(config) {
+export async function openGatewayStore317(config: GatewayStoreConfig317) {
   if (typeof Bun === 'undefined' || typeof Bun.SQL !== 'function') {
     throw new Error('Enterprise gateway requires native Bun with Bun.SQL')
   }
@@ -82,7 +91,7 @@ export async function openGatewayStore317(config) {
         return createGatewaySpendStore317(database)
       },
       // Persist admissions across replicas with one atomic PostgreSQL upsert.
-      async incrementRateLimit(kind, clientIp, windowSeconds) {
+      async incrementRateLimit(kind: string, clientIp: string | null, windowSeconds: number): Promise<number> {
         const key = 'rl:' + kind + ':' + (clientIp ?? 'unknown')
         const rows = await database`
           INSERT INTO claude_gateway_rate_limits (key, value, expires_at)
@@ -96,7 +105,7 @@ export async function openGatewayStore317(config) {
           RETURNING value`
         return Number(rows[0].value)
       },
-      async denyCode(userCode) {
+      async denyCode(userCode: string): Promise<boolean> {
         const rows = await database`
           UPDATE claude_gateway_device_authorizations
           SET denied = TRUE
@@ -105,13 +114,13 @@ export async function openGatewayStore317(config) {
           RETURNING device_hash`
         return rows.length === 1
       },
-      async newDevice(deviceCode, userCode, expiresSeconds) {
+      async newDevice(deviceCode: string, userCode: string, expiresSeconds: number): Promise<void> {
         await database`
           INSERT INTO claude_gateway_device_authorizations
             (device_hash, user_hash, expires_at)
           VALUES (${hash(deviceCode)}, ${hash(userCode)}, NOW() + (${expiresSeconds} * INTERVAL '1 second'))`
       },
-      async approveCode(userCode, claims) {
+      async approveCode(userCode: string, claims: GatewayDeviceClaims317): Promise<boolean> {
         const rows = await database`
           UPDATE claude_gateway_device_authorizations
           SET approved = ${JSON.stringify(claims)}::jsonb
@@ -120,7 +129,7 @@ export async function openGatewayStore317(config) {
           RETURNING device_hash`
         return rows.length === 1
       },
-      async consumeDevice(deviceCode, minPollSeconds = 5) {
+      async consumeDevice(deviceCode: string, minPollSeconds: number = 5): Promise<GatewayDeviceStatus317> {
         const key = hash(deviceCode)
         const rows = await database`
           SELECT device_hash, approved, consumed, denied, expires_at, last_poll_at
@@ -143,21 +152,21 @@ export async function openGatewayStore317(config) {
           RETURNING approved`
         return done.length ? { status: 'approved', claims: decodeGatewayClaims317(done[0].approved) } : { status: 'expired' }
       },
-      async createRefresh(token, claims, expiresSeconds) {
+      async createRefresh(token: string, claims: GatewayDeviceClaims317, expiresSeconds: number): Promise<void> {
         await database`
           INSERT INTO claude_gateway_refresh_tokens
             (token_hash, subject, claims, expires_at)
           VALUES (${hash(token)}, ${claims.sub},
             ${JSON.stringify(claims)}::jsonb, NOW() + (${expiresSeconds} * INTERVAL '1 second'))`
       },
-      async rotateRefresh(token) {
+      async rotateRefresh(token: string): Promise<GatewayDeviceClaims317 | null> {
         const rows = await database`
           UPDATE claude_gateway_refresh_tokens SET revoked = TRUE
           WHERE token_hash = ${hash(token)} AND revoked = FALSE AND expires_at > NOW()
           RETURNING claims`
         return rows.length ? decodeGatewayClaims317(rows[0].claims) : null
       },
-      async revoke(token, seconds = 86400) {
+      async revoke(token: string, seconds: number = 86400): Promise<void> {
         await database`
           INSERT INTO claude_gateway_revocations (token_hash, expires_at)
           VALUES (${hash(token)}, NOW() + (${seconds} * INTERVAL '1 second'))
@@ -166,20 +175,21 @@ export async function openGatewayStore317(config) {
           UPDATE claude_gateway_refresh_tokens SET revoked = TRUE
           WHERE token_hash = ${hash(token)}`
       },
-      async isRevoked(token) {
+      async isRevoked(token: string): Promise<boolean> {
         const rows = await database`
           SELECT 1 FROM claude_gateway_revocations
           WHERE token_hash = ${hash(token)} AND expires_at > NOW() LIMIT 1`
         return rows.length > 0
       },
-      async audit(event_type, subject, request_id, metadata = {}) {
+      async audit(event_type: string, subject: string | null, request_id: string | null,
+        metadata: Record<string, unknown> = {}): Promise<void> {
         await database`
           INSERT INTO claude_gateway_audit
             (event_type, subject, request_id, metadata)
           VALUES (${event_type}, ${subject ?? null},
             ${request_id ?? null}, ${JSON.stringify(metadata)}::jsonb)`
       },
-      async close() { await database.close() },
+      async close(): Promise<void> { await database.close() },
     }
   } catch (error) {
     await database.close()
