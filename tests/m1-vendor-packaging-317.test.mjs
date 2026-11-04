@@ -90,6 +90,27 @@ test('M1 C19-T03: repeated packaging removes obsolete vendor binaries and preser
   })
 })
 
+test('M1 C19-T03: platform-specific package excludes obsolete binaries for other architectures', () => {
+  fixture(dir => {
+    const foreign = platformDir === 'arm64-linux' ? 'x64-darwin' : 'arm64-linux'
+    const staleAudio = join(dir, 'vendor/audio-capture', foreign, 'audio-capture.node')
+    const staleRg = join(dir, 'vendor/ripgrep', foreign, 'rg')
+    mkdirSync(dirname(staleAudio), { recursive: true })
+    mkdirSync(dirname(staleRg), { recursive: true })
+    writeFileSync(staleAudio, 'old unrelated audio binary')
+    writeFileSync(staleRg, 'old unrelated ripgrep binary')
+    const result = build(dir)
+    assert.equal(result.status, 0, result.stderr)
+    assert.equal(existsSync(join(dir, 'dist/vendor/audio-capture', foreign)), false)
+    assert.equal(existsSync(join(dir, 'dist/vendor/ripgrep', foreign)), false)
+    const manifest = JSON.parse(readFileSync(join(dir, 'dist/integrity.json'), 'utf8'))
+    assert.equal(manifest.files.some(file => file.path.includes(foreign)), false)
+    assert.ok(manifest.files.some(file => file.path === nativeAudio))
+    assert.ok(manifest.files.some(file => file.path === nativeRg))
+    assertNoPackagingTemps(dir)
+  })
+})
+
 test('M1 C19-T03: invalid vendor symlink fails before existing distribution is replaced', () => {
   fixture(dir => {
     assert.equal(build(dir).status, 0)
