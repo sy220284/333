@@ -1,4 +1,4 @@
-import { backgroundSessionVerbIndex317, hasCliFlag } from '../../utils/cliArgv317.mjs'
+import { backgroundSessionVerbIndex317, hasCliFlag } from '../../utils/cliArgv317.ts'
 import { connect } from 'node:net'
 import { spawn } from 'node:child_process'
 import { open, mkdir } from 'node:fs/promises'
@@ -8,8 +8,8 @@ import { createInterface } from 'node:readline/promises'
 import {
   fleetHome, fleetSocket, listSessions, matchSession,
   readTail, stripUnsafeTerminal, MAX_LOG_BYTES, isAlive
-} from './sessionStore.mjs'
-import { runBackgroundSupervisor } from './supervisor.mjs'
+} from './sessionStore.ts'
+import { runBackgroundSupervisor } from './supervisor.ts'
 
 const DAEMON_HELP = [
   'Usage: claude daemon [subcommand] [options]', '',
