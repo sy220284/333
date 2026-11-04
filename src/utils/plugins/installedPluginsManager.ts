@@ -448,7 +448,9 @@ export function resetInMemoryState(): void {
 export async function initializeVersionedPlugins(): Promise<void> {
   if (initializationPromise === null) {
     initializationPromise = (async () => {
-      ensureInstalledPluginsMigrated()
+      // Session startup is read-only: the official 317 plugin list can inspect
+      // historical V1 records without modifying the user's registry.
+      // Installation and update operations perform the verified V2 migration.
       clearInstalledPluginsCache()
       const data = getInMemoryInstalledPlugins()
       logForDebugging(
