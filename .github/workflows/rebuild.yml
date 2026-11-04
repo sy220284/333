@@ -84,6 +84,15 @@ jobs:
             --output .rebuild/oracle/claude
           echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  .rebuild/oracle/claude" | sha256sum --check
           chmod 755 .rebuild/oracle/claude
+      - name: 采集原版317缺失子命令的真实参数与帮助
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          for args in "gateway --help" "plugin eval --help" "plugin test --help"; do
+            echo "::group::原版 claude $args"
+            ./.rebuild/oracle/claude $args
+            echo "::endgroup::"
+          done
       - name: 按官方317原版x64同步并实测Linux原生模块
         if: runner.os == 'Linux'
         run: |
