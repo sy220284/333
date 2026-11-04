@@ -32,7 +32,7 @@ import { getPlanSlug, getPlansDirectory } from '../plans.js'
 import { getPlatform } from '../platform.js'
 import { getProjectDir } from '../sessionStorage.js'
 import { SETTING_SOURCES, getEnabledSettingSources } from '../settings/constants.js'
-import { fileFenceContext, isFileFenceEnabled, normalizeReadExemptPaths } from './readFencePolicy.mjs'
+import { fileFenceContext, isFileFenceEnabled, normalizeReadExemptPaths } from './readFencePolicy.ts'
 import { getInitialSettings, getSettingsForSource } from '../settings/settings.js'
 import {
   getSettingsFilePathForSource,
@@ -45,7 +45,7 @@ import type {
   PermissionDecision,
   PermissionResult,
 } from './PermissionResult.js'
-import { shouldRejectOutOfScopeWrite } from './writeScopePolicy.mjs'
+import { shouldRejectOutOfScopeWrite } from './writeScopePolicy.ts'
 import type { PermissionRule, PermissionRuleSource } from './PermissionRule.js'
 import { createReadRuleSuggestion } from './PermissionUpdate.js'
 import type { PermissionUpdate } from './PermissionUpdateSchema.js'
