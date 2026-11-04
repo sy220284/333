@@ -138,7 +138,7 @@ export function createCommandPrefixExtractor(config: PrefixExtractorConfig): LRU
 export function createSubcommandPrefixExtractor(
   getPrefix: ReturnType<typeof createCommandPrefixExtractor>,
   splitCommand: (command: string) => string[] | Promise<string[]>,
-) {
+): LRUMemoizedFunction<[string, AbortSignal, boolean], Promise<CommandSubcommandPrefixResult | null>> {
   const memoized = memoizeWithLRU(
     (
       command: string,
