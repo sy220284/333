@@ -1,5 +1,7 @@
 import { existsSync, mkdirSync, cpSync, copyFileSync, chmodSync, readdirSync, readFileSync, statSync, lstatSync, writeFileSync, rmSync, renameSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { verifyOfficialEmbeddedAssets317 } from './verify-official-embedded-assets.mjs';
+verifyOfficialEmbeddedAssets317();
 import { join, relative, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
