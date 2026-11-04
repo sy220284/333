@@ -48,10 +48,18 @@ async function main(): Promise<void> {
   const { flagWords, backgroundRequest, tmuxWorktreeRequest } = classifyStartupArgs(args);
 
   // Fast-path for --version/-v: avoid evaluating the full CLI.
-  if (args.length === 1 && (args[0] === '--version' || args[0] === '-v' || args[0] === '-V')) {
-    // MACRO.VERSION is inlined at build time
+  // The 2.1.317 native executable accepts --version --verbose before full
+  // configuration/bootstrap and identifies its pinned upstream source commit.
+  const verboseVersion = args.length === 2 && args[1] === '--verbose';
+  if ((args.length === 1 || verboseVersion) &&
+      (args[0] === '--version' || args[0] === '-v' || args[0] === '-V')) {
+    // MACRO.VERSION is inlined at build time.
     // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log(`${MACRO.VERSION} (Claude Code)`);
+    if (verboseVersion) {
+      // Independently verified against the official 2.1.317 Linux x64 binary.
+      console.log('Commit: 3d3e7cb16b5577dccaee9520c8dc1189d02d61b7');
+    }
     return;
   }
 
