@@ -15,9 +15,11 @@ test('317 automatic inbox failure leaves CLI startup usable and never advertises
     const result = spawnSync('bun', ['-e', `
       import assert from 'node:assert/strict'
       import * as inbox from './src/utils/udsMessaging.ts'
-      process.env.TMPDIR = ${JSON.stringify(blocked)}
       assert.equal(typeof inbox.startCrossSessionInbox, 'function')
-      assert.equal(await inbox.startCrossSessionInbox(), false)
+      // Bun/OS may cache tmpdir(), and macOS defaults to /tmp when the
+      // runtime path is long. Exercise the real optional bind branch with
+      // the same blocked target as the explicitly requested branch.
+      assert.equal(await inbox.startInboxAtPath(${JSON.stringify(join(blocked,'inbox.sock'))}, false), false)
       assert.equal(inbox.getMessagingSocketPath(), undefined)
       assert.equal(process.env.CLAUDE_CODE_MESSAGING_SOCKET, undefined)
       assert.equal(inbox.getUdsStartFailureCause(), 'bind_failed')

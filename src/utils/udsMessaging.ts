@@ -18,18 +18,39 @@ export function getUdsStartFailureCause(): 'bind_failed' | undefined {
 // 317 chunk-00bcssqf: automatic inbox binding is optional during startup;
 // an explicitly requested endpoint must report its failure to the caller.
 export async function startCrossSessionInbox(socketPath?: string): Promise<boolean> {
+  return startInboxAtPath(
+    socketPath ?? getDefaultUdsSocketPath(),
+    socketPath !== undefined,
+  )
+}
+
+/**
+ * Shared startup behavior for automatically selected and explicitly requested
+ * endpoints. A caller-requested path must fail visibly; optional discovery
+ * must leave the CLI usable when binding is unavailable.
+ */
+export async function startInboxAtPath(path: string, required: boolean): Promise<boolean> {
   lastStartFailureCause = 'bind_failed'
-  const path = socketPath ?? getDefaultUdsSocketPath()
+  if (process.platform === 'win32') {
+    // Windows has no Unix-domain-socket inbox in this transport.
+    if (required) {
+      throw new Error('--messaging-socket-path: Unix-domain sockets are unavailable on Windows')
+    }
+    return false
+  }
   try {
     await startUdsMessaging(path)
   } catch (error) {
-    if (socketPath !== undefined) {
+    if (required) {
       throw new Error(`--messaging-socket-path: cannot bind at ${path}: ${String(error)}`, { cause: error })
     }
     logForDebugging(`[uds-messaging] Failed to start: ${String(error)}`, { level: 'error' })
     return false
   }
-  if (currentPath === undefined) return false
+  if (currentPath === undefined) {
+    if (required) throw new Error(`--messaging-socket-path: no socket was created at ${path}`)
+    return false
+  }
   lastStartFailureCause = undefined
   return true
 }
