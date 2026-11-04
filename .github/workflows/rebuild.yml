@@ -230,7 +230,7 @@ jobs:
       - name: 317插件来源命令授权：SHA256及市场修订版本
         id: acceptance_048
         continue-on-error: true
-        run: node --test tests/m3-plugin-source-command-consent-317.test.mjs
+        run: node --test tests/m3-plugin-source-command-consent-317.test.mjs tests/m3-plugin-source-fingerprint-317.test.mjs
       - name: 317插件来源命令：官方x64与重建版双端安装及授权
         id: acceptance_049
         continue-on-error: true
