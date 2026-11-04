@@ -154,7 +154,8 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
     const rawGroups = identity[groupsClaim]
     const groups = Array.isArray(rawGroups) ? rawGroups.filter(x => typeof x === 'string')
       : typeof rawGroups === 'string' ? [rawGroups] : []
-    const email = identity[config.oidc?.email_claim ?? 'email']
+    const rawEmail = identity[config.oidc?.email_claim ?? 'email']
+    const email = typeof rawEmail === 'string' ? rawEmail : undefined
     const permittedDomains = config.oidc?.allowed_email_domains
     if (permittedDomains?.length && (!email || !permittedDomains.some(domain =>
       typeof domain === 'string' && email.toLowerCase().endsWith('@' + domain.toLowerCase())))) {
