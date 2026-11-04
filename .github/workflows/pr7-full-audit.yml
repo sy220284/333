@@ -1,0 +1,78 @@
+name: PR7 固定提交全量复审（构建、回归、类型）
+
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths: ['.github/workflows/pr7-full-audit.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Lock each audit to its triggering commit; later PR pushes must not cancel it.
+concurrency:
+  group: pr7-audit-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  full-verification:
+    name: 全量构建和回归（${{ matrix.os }}）
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Windows 启用 Git 长路径
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 锁定复审提交并校验 Node 测试语法
+        run: |
+          echo "审计提交：$(git rev-parse HEAD)"
+          node build/check-test-syntax.mjs
+          node --test tests/language-file-contract.test.mjs tests/test-inventory.test.mjs
+      - name: 完整重建、资源字节校验、现有回归与遗漏测试自动补跑
+        run: npm run verify
+      - name: 导出全仓测试发现清单
+        if: always()
+        run: node build/run-unregistered-tests.mjs --list
+
+  typecheck:
+    name: 全仓类型和代码质量（Linux）
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 恢复原始依赖和公开依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 安装冻结开发工具
+        run: npm run dev:bootstrap
+      - name: 全仓严格类型诊断（失败即保留待修复状态）
+        run: npm run dev:typecheck:all
