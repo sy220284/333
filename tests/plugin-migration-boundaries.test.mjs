@@ -12,7 +12,7 @@ function productionFunction(file, name, dependencies, prefix = '') {
   return new Function(...Object.keys(dependencies), `${prefix}\n${source.slice(start, end).replace('export ', '')}\nreturn ${name}`)(...Object.values(dependencies))
 }
 
-test('current plugin initialization publishes one session snapshot', async () => {
+test('current plugin initialization publishes one snapshot without migrating historical records', async () => {
   let snapshots = 0
   let migrationChecks = 0
   const initialize = productionFunction('installedPluginsManager.ts', 'initializeVersionedPlugins', {
@@ -24,7 +24,7 @@ test('current plugin initialization publishes one session snapshot', async () =>
   await Promise.all([initialize(), initialize()])
   await initialize()
   assert.equal(snapshots, 1)
-  assert.equal(migrationChecks, 1)
+  assert.equal(migrationChecks, 0)
 })
 
 test('V1 registry is normalized read-only; malformed JSON, invalid V1 and read errors are rejected', () => {

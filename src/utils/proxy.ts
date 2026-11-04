@@ -181,7 +181,9 @@ export function createAxiosInstance(
   instance.interceptors.request.use(config => {
     if (config.url && shouldBypassProxy(config.url)) {
       config.httpsAgent = mtlsAgent
-      config.httpAgent = mtlsAgent
+      // TLS certificates apply only to HTTPS. An https.Agent rejects an
+      // HTTP URL before any request is sent (including local bridge hosts).
+      config.httpAgent = undefined
     } else {
       config.httpsAgent = proxyAgent
       config.httpAgent = proxyAgent
@@ -353,7 +355,7 @@ export function configureGlobalAgents(): void {
         // Bypass proxy - use mTLS agent if configured, otherwise undefined
         if (mtlsAgent) {
           config.httpsAgent = mtlsAgent
-          config.httpAgent = mtlsAgent
+          config.httpAgent = undefined
         } else {
           // Remove any proxy agents to use direct connection
           delete config.httpsAgent

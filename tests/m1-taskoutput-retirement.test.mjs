@@ -23,7 +23,7 @@ test('removed TASK_MAX_OUTPUT_LENGTH no longer advertised as active /doctor sett
 test('live mock model API test asserts TaskOutput is absent on both native and rebuilt CLI',()=>{
   const testSource=source('tests/upgrade-mode-integration.test.mjs')
   assert.match(testSource,/exposed\.includes\('TaskOutput'\)/)
-  assert.match(testSource,/CLAUDE_2310_X64/)
+  assert.match(testSource,/CLAUDE_TARGET_X64/)
 })
 
 test('background notifications never direct the model to the retired output tool',()=>{

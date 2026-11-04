@@ -84,6 +84,8 @@ export const PermissionsSchema = lazySchema(() =>
         .boolean()
         .optional()
         .describe('Refuse Write, Edit and NotebookEdit outside permitted working directories in every permission mode'),
+      blockReadsOutsideWorkingDirectories: z.boolean().optional(),
+      blockReadsExemptPaths: z.array(z.string()).optional(),
     })
     .passthrough(),
 )
@@ -717,12 +719,13 @@ export const SettingsSchema = lazySchema(() =>
           'When false, thinking is disabled. When absent or true, thinking is ' +
             'enabled automatically for supported models.',
         ),
+      maxEffortLevel: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).optional(),
+      modelSettings: z.record(z.string(), z.object({
+        effortLevel: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).optional(),
+        maxEffortLevel: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).optional(),
+      })).optional(),
       effortLevel: z
-        .enum(
-          process.env.USER_TYPE === 'ant'
-            ? ['low', 'medium', 'high', 'max']
-            : ['low', 'medium', 'high'],
-        )
+        .enum(['low', 'medium', 'high', 'xhigh'])
         .optional()
         .catch(undefined)
         .describe('Persisted effort level for supported models.'),

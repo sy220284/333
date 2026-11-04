@@ -33,9 +33,9 @@ test('permissions, hooks and tool references use current names exactly', () => {
   assert.match(code('utils/permissions/permissionRuleParser.ts'), /return \{ toolName: ruleString \}/)
   assert.doesNotMatch(code('utils/api.ts'), /TASK_OUTPUT_TOOL_NAME|case ['"]TaskOutput['"]/)
 })
-test('only V2 plugin registry exists, with explicit validation', () => {
+test('plugin registries normalize historical records before explicit V2 validation', () => {
   const manager = code('utils/plugins/installedPluginsManager.ts')
-  assert.match(manager, /InstalledPluginsFileSchemaV2\(\)\.parse\(jsonParse\(fileContent\)\)/)
+  assert.match(manager, /InstalledPluginsFileSchemaV2\(\)\.parse\(\s*normalizeInstalledPluginsRecords\(jsonParse\(fileContent\), getVersionedCachePath\)/)
   assert.doesNotMatch(manager, /migrateV1ToV2|migrateToSinglePluginFile|migrateFromEnabledPlugins|installed_plugins_v2\.json|InstalledPluginsFileSchemaV1/)
   assert.doesNotMatch(code('utils/plugins/schemas.ts'), /InstalledPluginsFileSchemaV1|InstalledPluginsFileV1/)
 })

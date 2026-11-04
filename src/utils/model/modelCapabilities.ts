@@ -22,6 +22,8 @@ const ModelCapabilitySchema = lazySchema(() =>
       id: z.string(),
       max_input_tokens: z.number().optional(),
       max_tokens: z.number().optional(),
+      effort_levels: z.array(z.string()).optional(),
+      default_effort: z.string().optional(),
     })
     .strip(),
 )

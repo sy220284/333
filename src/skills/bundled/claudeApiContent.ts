@@ -53,8 +53,8 @@ import file049 from './claude-api/shared/evals/cost-hillclimb.md'
 import file050 from './claude-api/shared/evals/eval-audit.md'
 import file051 from './claude-api/shared/evals/eval-hillclimb.md'
 import file052 from './claude-api/shared/evals/report/SCHEMA.md'
-import file053 from './claude-api/shared/evals/report/build-report-lite.mjs' with { type: 'text' }
-import file054 from './claude-api/shared/evals/report/runner-scaffold.mjs' with { type: 'text' }
+import * as file053 from './claude-api/shared/evals/report/build-report-lite.mjs' with { type: 'text' }
+import * as file054 from './claude-api/shared/evals/report/runner-scaffold.mjs' with { type: 'text' }
 import file055 from './claude-api/shared/google-cloud-anthropic-managed.md'
 import file056 from './claude-api/shared/live-sources.md'
 import file057 from './claude-api/shared/managed-agents-api-reference.md'
@@ -184,8 +184,8 @@ export const SKILL_FILES: Record<string, string> = {
   "shared/evals/eval-audit.md": file050,
   "shared/evals/eval-hillclimb.md": file051,
   "shared/evals/report/SCHEMA.md": file052,
-  "shared/evals/report/build-report-lite.mjs": file053,
-  "shared/evals/report/runner-scaffold.mjs": file054,
+  "shared/evals/report/build-report-lite.mjs": (file053 as unknown as { default: string }).default,
+  "shared/evals/report/runner-scaffold.mjs": (file054 as unknown as { default: string }).default,
   "shared/google-cloud-anthropic-managed.md": file055,
   "shared/live-sources.md": file056,
   "shared/managed-agents-api-reference.md": file057,

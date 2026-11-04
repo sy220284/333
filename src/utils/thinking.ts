@@ -1,3 +1,4 @@
+import { getCatalogModel, getModelCapabilityEnvOverride } from './model/modelCatalog.js'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import type { Theme } from './theme.js'
 import { feature } from 'bun:bundle'
@@ -100,6 +101,10 @@ export function modelSupportsThinking(model: string): boolean {
   }
   // IMPORTANT: Do not change thinking support without notifying the model
   // launch DRI and research. This can greatly affect model quality and bashing.
+  const configured = getModelCapabilityEnvOverride(model, 'thinking')
+  if (configured !== undefined) return configured
+  const entry = getCatalogModel(model)
+  if (entry?.capabilities.includes('adaptive_thinking')) return true
   const canonical = getCanonicalName(model)
   const provider = getAPIProvider()
   // 1P and Foundry: all Claude 4+ models (including Haiku 4.5)
@@ -116,6 +121,10 @@ export function modelSupportsAdaptiveThinking(model: string): boolean {
   if (supported3P !== undefined) {
     return supported3P
   }
+  const configured = getModelCapabilityEnvOverride(model, 'adaptive_thinking')
+  if (configured !== undefined) return configured
+  const entry = getCatalogModel(model)
+  if (entry) return entry.capabilities.includes('adaptive_thinking')
   const canonical = getCanonicalName(model)
   // Supported by a subset of Claude 4 models
   if (canonical.includes('opus-4-6') || canonical.includes('sonnet-4-6')) {

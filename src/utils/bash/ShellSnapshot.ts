@@ -464,6 +464,7 @@ export const createAndSaveSnapshot = async (
             SHELL: binShell,
             GIT_EDITOR: 'true',
             CLAUDECODE: '1',
+            CLAUDE_CODE_CHILD_SESSION: '1',
           },
           timeout: SNAPSHOT_CREATION_TIMEOUT,
           maxBuffer: 1024 * 1024, // 1MB buffer

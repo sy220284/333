@@ -12,3 +12,9 @@ declare module '*.txt' {
   const text: string
   export default text
 }
+
+/** Python reference scripts are embedded as text with Bun's text import attribute. */
+declare module '*.py' {
+  const text: string
+  export default text
+}

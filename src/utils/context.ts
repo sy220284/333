@@ -5,6 +5,7 @@ import { isEnvTruthy } from './envUtils.js'
 import { getCanonicalName } from './model/model.js'
 import { resolveAntModel } from './model/antModels.js'
 import { getModelCapability } from './model/modelCapabilities.js'
+import { getCatalogModel } from './model/modelCatalog.js'
 
 // Model context window size (200k tokens for all models right now)
 export const MODEL_CONTEXT_WINDOW_DEFAULT = 200_000
@@ -45,6 +46,8 @@ export function modelSupports1M(model: string): boolean {
   if (is1mContextDisabled()) {
     return false
   }
+  const catalog = getCatalogModel(model)
+  if (catalog) return catalog.context?.supports_1m_beta === true
   const canonical = getCanonicalName(model)
   return canonical.includes('claude-sonnet-4') || canonical.includes('opus-4-6')
 }
@@ -82,6 +85,10 @@ export function getContextWindowForModel(
     }
     return cap.max_input_tokens
   }
+
+  const catalogWindow = getCatalogModel(model)?.context?.window
+  if (catalogWindow && betas?.includes(CONTEXT_1M_BETA_HEADER) && modelSupports1M(model)) return 1_000_000
+  if (catalogWindow) return is1mContextDisabled() ? Math.min(catalogWindow, MODEL_CONTEXT_WINDOW_DEFAULT) : catalogWindow
 
   if (betas?.includes(CONTEXT_1M_BETA_HEADER) && modelSupports1M(model)) {
     return 1_000_000
@@ -165,7 +172,11 @@ export function getModelMaxOutputTokens(model: string): {
 
   const m = getCanonicalName(model)
 
-  if (m.includes('opus-4-6')) {
+  const catalog = getCatalogModel(model)
+  if (catalog) {
+    defaultTokens = catalog.max_output_tokens.default
+    upperLimit = catalog.max_output_tokens.upper
+  } else if (m.includes('opus-4-6')) {
     defaultTokens = 64_000
     upperLimit = 128_000
   } else if (m.includes('sonnet-4-6')) {

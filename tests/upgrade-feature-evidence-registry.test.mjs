@@ -19,7 +19,7 @@ test('source groups can grow and signed counts follow the actual 六层 ledger',
   assert.ok(registry.counts.source_groups >= 18)
   assert.deepEqual(
     [registry.counts.source_groups, registry.counts.features, registry.counts.scenarios],
-    [audit.groups.length, 102, 84],
+    [audit.groups.length, baseline().coverage.features.length, baseline().coverage.scenarios.length],
   )
   const live = read('docs/upgrade/2.1.317-功能与场景签收.json')
   assert.equal(registry.counts.signed_features, live.features.length)

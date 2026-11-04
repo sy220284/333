@@ -322,6 +322,7 @@ export async function exec(
         SHELL: shellType === 'bash' ? binShell : undefined,
         GIT_EDITOR: 'true',
         CLAUDECODE: '1',
+        CLAUDE_CODE_CHILD_SESSION: '1',
         ...envOverrides,
         ...(process.env.USER_TYPE === 'ant'
           ? {
