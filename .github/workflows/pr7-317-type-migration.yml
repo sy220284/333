@@ -1,4 +1,5 @@
 name: PR7 317 源码真实 TypeScript 类型重建
+# first wave TS type fixes 2026-11-04
 on:
   push:
     branches: [upgrade/2.1.310-m1-evidence]
