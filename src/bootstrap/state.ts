@@ -50,6 +50,9 @@ type State = {
   // never updated by mid-session EnterWorktreeTool.
   // Use for project identity (history, skills, sessions) not file operations.
   projectRoot: string
+  // 317 self-hosted Runner declarations, latched before the main CLI import.
+  runnerDeclaredNestedRepositoryDiff: boolean
+  runnerDeclaredNoRepositoryCheckedOut: boolean
   totalCostUSD: number
   totalAPIDuration: number
   totalAPIDurationWithoutRetries: number
@@ -279,6 +282,8 @@ function getInitialState(): State {
   const state: State = {
     originalCwd: resolvedCwd,
     projectRoot: resolvedCwd,
+    runnerDeclaredNestedRepositoryDiff: false,
+    runnerDeclaredNoRepositoryCheckedOut: false,
     totalCostUSD: 0,
     totalAPIDuration: 0,
     totalAPIDurationWithoutRetries: 0,
@@ -510,6 +515,24 @@ export function getOriginalCwd(): string {
  * It IS set at startup by --worktree, since that worktree is the session's project.
  * Use for project identity (history, skills, sessions) not file operations.
  */
+export function getRunnerDeclaredNestedRepositoryDiff(): boolean {
+  return STATE.runnerDeclaredNestedRepositoryDiff
+}
+
+export function getRunnerDeclaredNoRepositoryCheckedOut(): boolean {
+  return STATE.runnerDeclaredNoRepositoryCheckedOut
+}
+
+export function setRunnerDeclaredNestedRepositoryDiff(enabled: boolean): void {
+  if (!enabled) throw new Error('Runner nested repository declaration is one-way')
+  STATE.runnerDeclaredNestedRepositoryDiff = true
+}
+
+export function setRunnerDeclaredNoRepositoryCheckedOut(enabled: boolean): void {
+  if (!enabled) throw new Error('Runner checkout declaration is one-way')
+  STATE.runnerDeclaredNoRepositoryCheckedOut = true
+}
+
 export function getProjectRoot(): string {
   return STATE.projectRoot
 }
