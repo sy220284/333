@@ -67,7 +67,7 @@ async function runOne(root, file) {
   })
   // Register process completion before consuming stdout; the close event
   // may otherwise fire while the async iterator is draining.
-  const exitPromise = new Promise((resolveExit, reject) => {
+  const exitPromise = new Promise<{code: number | null; signal: NodeJS.Signals | null}>((resolveExit, reject) => {
     child.once('error', reject)
     child.once('close', (code, signal) => resolveExit({ code, signal }))
   })
@@ -104,7 +104,9 @@ function displayResult(root, data) {
     failed: data.results.filter(x => x.failure !== null).length + Number(Boolean(data.error)) }
 }
 
-export async function pluginTestHandler317(directory = '.', options = {}) {
+export async function pluginTestHandler317(
+  directory: string = '.', options: {file?: string} = {},
+): Promise<number> {
   const root = await realpath(resolve(directory))
   if (options.file) {
     const file = await realpath(resolve(options.file))

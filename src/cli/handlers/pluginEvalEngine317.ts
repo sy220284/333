@@ -10,9 +10,17 @@ import { gradeEvalResult317, aggregateEvalScore317 } from './pluginEvalGraders31
 import { runEvalModel317, judgeEvalOutput317 } from './pluginEvalModel317.ts'
 import { resolveEvalContext317, runEvalScaffold317 } from './pluginEvalWorkspace317.ts'
 
-const addUsd = (a, b) => Number((Number(a) + Number(b)).toFixed(12))
+const addUsd = (a: number, b: number): number => Number((Number(a) + Number(b)).toFixed(12))
 
-export async function executePluginEvalSuite317(cases, settings, adapters = {}) {
+export async function executePluginEvalSuite317(
+  cases,
+  settings,
+  adapters: {
+    runModel?: typeof runEvalModel317;
+    cleanupWorkspace?: typeof rm;
+    judge?: typeof judgeEvalOutput317;
+  } = {},
+) {
   const runModel = adapters.runModel ?? runEvalModel317
   const cleanupWorkspace = adapters.cleanupWorkspace ?? rm
   const judge = adapters.judge ?? judgeEvalOutput317
@@ -46,7 +54,7 @@ export async function executePluginEvalSuite317(cases, settings, adapters = {}) 
         let result
         try {
           const context = await resolveEvalContext317(job.caseInfo,
-            settings.sourcePluginRoot ?? settings.pluginRoot)
+            settings.sourcePluginRoot ?? settings.pluginRoot, settings.pluginRoot)
           if (context.scaffoldScript && !settings.scaffold) {
             settings.onNotice?.(`case "${job.caseInfo.name}": scaffold_script skipped; pass --scaffold to run trusted user-authored bash`)
           }
@@ -81,7 +89,10 @@ export async function executePluginEvalSuite317(cases, settings, adapters = {}) 
           result = { lastMessage: '', trace: [], costUsd: 0,
             error: `run could not start: ${error instanceof Error ? error.message : String(error)}` }
         }
-        const actual = {
+        const actual: {
+          workspace: string; lastMessage: string; trace: unknown[];
+          mockCalls: unknown[]; baseline?: string
+        } = {
           workspace,
           lastMessage: result.lastMessage ?? '',
           trace: result.trace ?? [],

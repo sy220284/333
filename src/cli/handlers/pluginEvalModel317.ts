@@ -6,6 +6,17 @@
 import { spawn } from 'node:child_process'
 import { resolve } from 'node:path'
 
+export type PluginEvalModelRequest317 = {
+  prompt: string; workspace: string; pluginDir?: string; model?: string;
+  timeoutSeconds?: number; allowedTools?: string[]; disallowedTools?: string[];
+  appendSystemPrompt?: string; maxBudgetUsd?: number; maxTurns?: number;
+  strictMcpConfig?: boolean; env?: NodeJS.ProcessEnv;
+  addDirs?: string[]; historyFile?: string
+}
+export type PluginEvalModelResult317 = {
+  lastMessage: string; trace: unknown[]; costUsd: number;
+  exitCode?: number | null; error?: string; mockCalls?: unknown[]
+}
 const MAX_STDOUT_BYTES = 32 * 1024 * 1024
 
 function cliInvocation() {
@@ -36,7 +47,7 @@ export async function runEvalModel317({
   allowedTools = [], disallowedTools = [], appendSystemPrompt,
   maxBudgetUsd, maxTurns, strictMcpConfig = false, env = {},
   addDirs = [], historyFile,
-}) {
+}: PluginEvalModelRequest317): Promise<PluginEvalModelResult317> {
   if (typeof prompt !== 'string' || !prompt.trim()) {
     throw new Error('eval model execution requires a nonempty prompt')
   }
@@ -78,10 +89,10 @@ export async function runEvalModel317({
   // Swallow EPIPE on stdin only: the exitPromise still propagates any child
   // process error, and stderr stays attached for diagnostics.
   child.stdin.on('error', error => {
-    if (error?.code !== 'EPIPE') child.kill()
+    if (!('code' in error) || error.code !== 'EPIPE') child.kill()
   })
   child.stdin.end(prompt)
-  const exitPromise = new Promise((done, fail) => {
+  const exitPromise = new Promise<{code: number | null; signal: NodeJS.Signals | null}>((done, fail) => {
     child.once('close', (code, signal) => done({ code, signal }))
     child.once('error', fail)
   })
@@ -129,7 +140,14 @@ export async function runEvalModel317({
   }
 }
 
-export async function judgeEvalOutput317({ grader, output, context }, options = {}) {
+export type PluginEvalJudgeRequest317 = {
+  grader: {type: string; criteria?: string}; output: string;
+  context: {workspace: string; baseline?: string}
+}
+export async function judgeEvalOutput317(
+  { grader, output, context }: PluginEvalJudgeRequest317,
+  options: { workspace?: string; judgeModel?: string; timeoutSeconds?: number } = {},
+) {
   const reference = grader.type === 'baseline'
     ? `Reference answer: ${String(context.baseline ?? '')}\n`
     : ''
