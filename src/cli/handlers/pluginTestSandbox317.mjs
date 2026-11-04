@@ -119,7 +119,7 @@ export async function runPluginTestFile317(rootPath, filePath, { defaultTimeoutM
   const results = []
   for (const item of kit.cases) {
     const start = performance.now()
-    const ms = item.options.timeout ?? defaultTimeoutMs
+    const ms = item.options.timeoutMs ?? defaultTimeoutMs
     let timer
     try {
       await Promise.race([
