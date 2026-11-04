@@ -1,5 +1,8 @@
 /** Configured hook.timeout is in seconds. Clamp to at least one second. */
-export function resolveHookTimeoutMs(configuredSeconds, fallbackMs) {
+export function resolveHookTimeoutMs(
+  configuredSeconds: number | null | undefined,
+  fallbackMs: number,
+): number {
   if (configuredSeconds === undefined || configuredSeconds === null) {
     return Math.max(1000, fallbackMs)
   }

@@ -1,5 +1,7 @@
 /** 2.1.317 explicit FORCE_HYPERLINK setting takes priority over terminal detection. */
-export function getForcedHyperlinkSetting(env) {
+export function getForcedHyperlinkSetting(
+  env: Record<string, string | undefined> | undefined,
+): boolean | null {
   const value = env?.FORCE_HYPERLINK
   if (typeof value !== 'string') return null
   switch (value.trim().toLowerCase()) {

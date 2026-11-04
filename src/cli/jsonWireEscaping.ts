@@ -5,7 +5,7 @@
  */
 const WIRE_UNSAFE = /[\u007f-\u009f\u2028\u2029\p{Cf}]/gu
 
-export function escapeUnsafeJsonWireCharacters(json) {
+export function escapeUnsafeJsonWireCharacters(json: string): string {
   return json.replace(WIRE_UNSAFE, character => {
     let escaped = ''
     // A supplementary format character (such as U+E0001) occupies two

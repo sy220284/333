@@ -3,7 +3,11 @@
  * default model while keeping distinct generations separate.
  * The canonicalizer is supplied by the existing provider/model resolver.
  */
-export function matchesDefaultModelVariant(model, defaultModel, canonicalize) {
+export function matchesDefaultModelVariant(
+  model: string,
+  defaultModel: string,
+  canonicalize: (model: string) => string,
+): boolean {
   if (model === defaultModel) return true
   const expected = canonicalize(defaultModel)
   if (!/^claude-(?:opus|sonnet)-[0-9]+(?:-[0-9]+)+$/.test(expected)) return false

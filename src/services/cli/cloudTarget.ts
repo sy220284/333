@@ -2,7 +2,9 @@
  * Normalize the native 2.1.310 --cloud target without treating an arbitrary
  * URL as an authorized session. Descriptions are opaque user prompts.
  */
-export function resolveCloudTarget(value, positionalPrompt) {
+export type CloudTarget = { kind: 'attach'; sessionId: string } | { kind: 'create'; description: string }
+
+export function resolveCloudTarget(value: unknown, positionalPrompt: unknown): CloudTarget {
   const target = value === true || value == null ? '' : String(value).trim()
   const fallback = typeof positionalPrompt === 'string' ? positionalPrompt.trim() : ''
   if (/^(?:session_|cse_)[a-zA-Z0-9_-]+$/.test(target)) {
@@ -21,7 +23,7 @@ export function resolveCloudTarget(value, positionalPrompt) {
   if (fallback) return { kind: 'create', description: fallback }
   return { kind: 'create', description: '' }
 }
-export function validateCloudEnvironment(value) {
+export function validateCloudEnvironment(value: unknown): string | undefined {
   if (value === undefined) return undefined
   if (typeof value !== 'string' || !/^ccpool_[A-Za-z0-9_-]+$/.test(value)) {
     throw new Error('--environment expects a ccpool_... environment identifier')

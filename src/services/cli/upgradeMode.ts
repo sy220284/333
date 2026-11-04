@@ -2,7 +2,10 @@
 const blockedExecutionTools = Object.freeze(['Bash', 'PowerShell', 'WebFetch'])
 
 /** --restricted blocks execution tools unless the user explicitly names them. */
-export function restrictedToolDenyList(baseTools = [], disallowedTools = []) {
+export function restrictedToolDenyList(
+  baseTools: readonly string[] = [],
+  disallowedTools: readonly string[] = [],
+): string[] {
   const requested = new Set(
     baseTools.flatMap(value => String(value).split(/[\s,]+/)).filter(Boolean),
   )
@@ -14,7 +17,7 @@ export function restrictedToolDenyList(baseTools = [], disallowedTools = []) {
 }
 
 /** Explicit --prompt-suggestions values follow the native CLI's boolean vocabulary. */
-export function parsePromptSuggestions(value) {
+export function parsePromptSuggestions(value: unknown): boolean | undefined {
   if (value === undefined) return undefined
   if (value === true) return true
   if (value === false) return false
@@ -25,7 +28,17 @@ export function parsePromptSuggestions(value) {
 }
 
 /** A host cannot be asked when --permission-prompts none is selected. */
-export function denyUnansweredPrompt(decision) {
+export type NoPromptPermissionDecision = {
+  behavior: string
+  message?: string
+  decisionReason?: { type: string; [key: string]: unknown }
+}
+
+export function denyUnansweredPrompt<T extends NoPromptPermissionDecision>(decision: T): T | {
+  behavior: 'deny'
+  message: string
+  decisionReason: { type: string; [key: string]: unknown }
+} {
   if (decision.behavior !== 'ask') return decision
   return {
     behavior: 'deny',

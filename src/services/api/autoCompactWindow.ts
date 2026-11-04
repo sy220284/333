@@ -1,5 +1,5 @@
 /** Parse the 2.1.310 --autocompact auto|tokens syntax. */
-export function parseAutoCompactWindowOption(raw) {
+export function parseAutoCompactWindowOption(raw: unknown): 'auto' | number | undefined {
   if (typeof raw !== 'string') return undefined;
   const value = raw.trim().toLowerCase();
   if (value === 'auto') return 'auto';
