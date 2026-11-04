@@ -1,5 +1,5 @@
 import { backgroundSessionVerbIndex317, hasCliFlag } from '../../utils/cliArgv317.ts'
-import { connect } from 'node:net'
+import { connect, type Socket } from 'node:net'
 import { spawn } from 'node:child_process'
 import { open, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -7,7 +7,8 @@ import { tmpdir } from 'node:os'
 import { createInterface } from 'node:readline/promises'
 import {
   fleetHome, fleetSocket, listSessions, matchSession,
-  readTail, stripUnsafeTerminal, MAX_LOG_BYTES, isAlive
+  readTail, stripUnsafeTerminal, MAX_LOG_BYTES, isAlive,
+  type BackgroundRmOptions317
 } from './sessionStore.ts'
 import { runBackgroundSupervisor } from './supervisor.ts'
 
@@ -85,18 +86,26 @@ function selfCommand() {
     ? [process.execPath, process.argv[1]]
     : [process.execPath]
 }
-function socketConnect(timeout = 3500) {
-  return new Promise((resolve, reject) => {
+function socketConnect(timeout = 3500): Promise<Socket> {
+  return new Promise<Socket>((resolve, reject) => {
     const socket = connect(fleetSocket())
     const timer = setTimeout(() => socket.destroy(new Error('Background daemon connection timed out')), timeout)
     socket.once('connect', () => { clearTimeout(timer); resolve(socket) })
     socket.once('error', error => { clearTimeout(timer); reject(error) })
   })
 }
-function protocol(socket, listener) {
+type BackgroundResponse317 = {
+  id?: string; pid?: number; running?: number; worktreePath?: string | null
+  [field: string]: unknown
+}
+type BackgroundMessage317 = { event: string; data?: string; message?: string }
+function protocol(socket: Socket, listener?: (message: BackgroundMessage317) => void) {
   let buffer = ''
   let sequence = 0
-  const waiting = new Map()
+  const waiting = new Map<number, {
+    resolve: (value: BackgroundResponse317) => void
+    reject: (error: Error) => void
+  }>()
   socket.on('data', chunk => {
     buffer += chunk.toString('utf8')
     if (buffer.length > 8 * 1024 * 1024) {
@@ -124,7 +133,7 @@ function protocol(socket, listener) {
     for (const w of waiting.values()) w.reject(new Error('Background service disconnected'))
     waiting.clear()
   })
-  const ask = payload => new Promise((resolve, reject) => {
+  const ask = (payload: Record<string, unknown>) => new Promise<BackgroundResponse317>((resolve, reject) => {
     const id = ++sequence
     waiting.set(id, { resolve, reject })
     socket.write(`${JSON.stringify({ ...payload, requestId: id })}\n`, error => {
@@ -133,7 +142,7 @@ function protocol(socket, listener) {
   })
   return { ask }
 }
-async function ask(request, { start = false } = {}) {
+async function ask(request: Record<string, unknown>, { start = false } = {}): Promise<BackgroundResponse317> {
   let socket
   try { socket = await socketConnect() }
   catch (error) {
@@ -308,8 +317,8 @@ async function daemon(args) {
   }
   throw new Error(`Unknown daemon subcommand: ${action}`)
 }
-function rmOptions(args) {
-  const out = {}
+function rmOptions(args: string[]): BackgroundRmOptions317 {
+  const out: BackgroundRmOptions317 = {}
   for (let i = 1; i < args.length; i++) {
     const [flag, inline] = args[i].split('=', 2)
     if (flag === '--discard-unpushed') {
@@ -326,10 +335,11 @@ function rmOptions(args) {
   return out
 }
 async function authForBackground(args) {
-  const { enableConfigs, checkHasTrustDialogAccepted, getGlobalConfig } = await import('../../utils/config.js')
+  const { enableConfigs, checkHasTrustDialogAccepted } = await import('../../utils/config.js')
+  const { hasSkipDangerousModePermissionPrompt } = await import('../../utils/settings/settings.js')
   enableConfigs()
   if (!checkHasTrustDialogAccepted()) throw new Error('Workspace not trusted. Run claude here and accept the trust prompt before using --bg.')
-  if ((args.includes('--dangerously-skip-permissions') || rootArg(args, '--permission-mode') === 'bypassPermissions') && !getGlobalConfig().bypassPermissionsModeAccepted)
+  if ((args.includes('--dangerously-skip-permissions') || rootArg(args, '--permission-mode') === 'bypassPermissions') && !hasSkipDangerousModePermissionPrompt())
     throw new Error('--bg with bypassPermissions requires accepting the disclaimer first. Run claude --dangerously-skip-permissions once interactively.')
 }
 function argValue(args, flag) {
@@ -337,7 +347,7 @@ function argValue(args, flag) {
   return index === -1 ? undefined : args[index].includes('=') ? args[index].slice(flag.length + 1) : args[index + 1]
 }
 export function activeBackgroundFlags(args) {
-  const found = new Set()
+  const found = new Set<string>()
   for (let index = 0; index < args.length; index++) {
     const arg = args[index]
     if (arg === '--') break
