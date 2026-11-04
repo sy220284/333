@@ -23,6 +23,9 @@ jobs:
     steps:
       - name: 拉取 PR7 当前提交
         uses: actions/checkout@v4
+      - name: 即时运行M1构建资源与终端协议单元验收
+        run: |
+          node --test tests/m1-vendor-packaging-317.test.mjs tests/m1-native-clipboard-317.test.mjs tests/m1-clipboard-osc-protocol-317.test.mjs
       - name: 打包源码与验收脚本
         shell: bash
         run: |
