@@ -1,5 +1,4 @@
 import { feature } from 'bun:bundle'
-import memoize from 'lodash-es/memoize.js'
 import {
   checkStatsigFeatureGate_CACHED_MAY_BE_STALE,
   getFeatureValue_CACHED_MAY_BE_STALE,
@@ -233,7 +232,14 @@ export function shouldUseGlobalCacheScope(): boolean {
   )
 }
 
-export const getAllModelBetas = memoize((model: string): string[] => {
+/**
+ * Beta selection depends on the live session mode, auth provider, user
+ * credentials, settings, environment, and feature gates. Caching only on
+ * model name can reuse interactive-only beta headers in a later headless
+ * request (or keep previous-account headers after login/logout). Recompute
+ * on every API request, including CLI, SDK, and background worker paths.
+ */
+export function getAllModelBetas(model: string): string[] {
   const betaHeaders = []
   const isHaiku = getCanonicalName(model).includes('haiku')
   const provider = getAPIProvider()
@@ -372,22 +378,20 @@ export const getAllModelBetas = memoize((model: string): string[] => {
     )
   }
   return betaHeaders
-})
+}
 
-export const getModelBetas = memoize((model: string): string[] => {
+export function getModelBetas(model: string): string[] {
   const modelBetas = getAllModelBetas(model)
   if (getAPIProvider() === 'bedrock') {
     return modelBetas.filter(b => !BEDROCK_EXTRA_PARAMS_HEADERS.has(b))
   }
   return modelBetas
-})
+}
 
-export const getBedrockExtraBodyParamsBetas = memoize(
-  (model: string): string[] => {
+export function getBedrockExtraBodyParamsBetas(model: string): string[] {
     const modelBetas = getAllModelBetas(model)
-    return modelBetas.filter(b => BEDROCK_EXTRA_PARAMS_HEADERS.has(b))
-  },
-)
+  return modelBetas.filter(b => BEDROCK_EXTRA_PARAMS_HEADERS.has(b))
+}
 
 /**
  * Merge SDK-provided betas with auto-detected model betas.
@@ -433,8 +437,4 @@ export function getMergedBetas(
   return [...baseBetas, ...sdkBetas.filter(b => !baseBetas.includes(b))]
 }
 
-export function clearBetasCaches(): void {
-  getAllModelBetas.cache?.clear?.()
-  getModelBetas.cache?.clear?.()
-  getBedrockExtraBodyParamsBetas.cache?.clear?.()
-}
+
