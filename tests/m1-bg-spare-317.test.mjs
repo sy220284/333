@@ -45,7 +45,7 @@ async function claim(socket, frame) {
 }
 test('317 spare missing socket argument returns upstream exit status 2', () => {
   for (const [name, binary, prefix] of bins) {
-    const r = spawnSync(binary, [...prefix, '--bg-spare'], { encoding: 'utf8', timeout: 6000 })
+    const r = spawnSync(binary, [...prefix, '--bg-spare'], { encoding: 'utf8', timeout: 20_000 })
     assert.ifError(r.error)
     assert.equal(r.status, 2, name + ' ' + JSON.stringify(r))
     assert.match(r.stderr, /\[bg-spare\] missing claim sock path/)

@@ -11,23 +11,30 @@ const original = process.env.CLAUDE_REFERENCE_BIN || process.env.CLAUDE_TARGET_X
 const bins = [['rebuilt', 'bun', [cli]]]
 if (original) bins.unshift(['official', original, []])
 
-function launch(binary, args, data, signalAfterMs = 0) {
+function launch(binary, args, data, stopOnHeartbeat = false) {
   return new Promise((done, fail) => {
     const child = spawn(binary, args, { stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, DISABLE_TELEMETRY: '1', CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' },
     })
-    let stdout = '', stderr = '', finished = false
-    child.stdout.on('data', c => { stdout += c })
+    let stdout = '', stderr = '', finished = false, stopSent = false
+    // The worker can take several seconds to cold-start on macOS Intel.
+    // Signal only after the protocol has emitted a real heartbeat.
+    child.stdout.on('data', c => {
+      stdout += c
+      if (stopOnHeartbeat && !stopSent && stdout.split(/\r?\n/).includes('heartbeat')) {
+        stopSent = true
+        child.kill('SIGTERM')
+      }
+    })
     child.stderr.on('data', c => { stderr += c })
     const limit = setTimeout(() => {
       if (!finished) { finished = true; child.kill('SIGKILL'); fail(Error('daemon hung: ' + args.join(' '))) }
-    }, 8000)
+    }, 30_000)
     child.once('error', e => { if (!finished) { finished = true; clearTimeout(limit); fail(e) } })
     child.once('close', (code, signal) => {
       if (!finished) { finished = true; clearTimeout(limit); done({ code, signal, stdout, stderr }) }
     })
     child.stdin.end(data)
-    if (signalAfterMs) setTimeout(() => { if (!finished) child.kill('SIGTERM') }, signalAfterMs)
   })
 }
 
@@ -70,11 +77,11 @@ test('317 official and rebuilt validate daemon stdin and exit status', async () 
   }
 })
 
-test('317 daemon heartbeat emits periodic events and stops on SIGTERM', { timeout: 25000 }, async () => {
+test('317 daemon heartbeat emits periodic events and stops on SIGTERM', { timeout: 75000 }, async () => {
   let officialExit
   for (const [name, binary, prefix] of bins) {
     const res = await launch(binary, [...prefix, '--daemon-worker', 'heartbeat'],
-      '{"config":{"intervalSeconds":0.1}}', 1200)
+      '{"config":{"intervalSeconds":0.1}}', true)
     if (name === 'official') officialExit = { code: res.code, signal: res.signal }
     if (officialExit && name !== 'official')
       assert.deepEqual({ code: res.code, signal: res.signal }, officialExit,
