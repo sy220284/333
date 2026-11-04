@@ -6,12 +6,11 @@ on:
     branches: [main]
   workflow_dispatch:
 concurrency:
-  # A complete cross-platform run must finish. When many commits land while
-  # it runs, GitHub retains only the latest pending commit on that branch;
-  # otherwise dozens of obsolete revisions monopolize the runner queue.
-  # A started run is never canceled, preserving evidence for its exact SHA.
+  # The PR is updated frequently: stop testing obsolete revisions and
+  # validate the latest complete state on all three platforms. Each failure
+  # is still preserved on its exact workflow run for later diagnosis.
   group: rebuild-${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   rebuild:
