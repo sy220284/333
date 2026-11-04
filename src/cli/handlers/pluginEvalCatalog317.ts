@@ -145,12 +145,19 @@ export async function readEvalCase317(dir) {
   if (!data.execution || typeof data.execution.prompt !== 'string' || !data.execution.prompt.trim()) {
     throw new Error(`eval ${data.name}: execution.prompt is required`)
   }
+  if (data.execution.prompt.includes('TODO: describe what the agent should do')) {
+    throw new Error('The eval prompt is still the blank init template; replace its TODO description before running')
+  }
   if (!Array.isArray(data.graders) || !data.graders.length) {
     throw new Error(`eval ${data.name}: at least one grader required`)
   }
   const names = new Set()
   data.graders = data.graders.map(g => {
     const grader = validateGrader(g, dir)
+    if (typeof grader.criteria === 'string' &&
+        grader.criteria.includes('TODO: describe what a successful response looks like')) {
+      throw new Error('The eval grader is still the blank init template; replace its TODO success criteria')
+    }
     if (names.has(grader.name)) throw new Error(`duplicate grader name "${grader.name}"`)
     names.add(grader.name)
     return grader
