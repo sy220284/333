@@ -42,6 +42,8 @@ jobs:
             ~/.npm
             .rebuild/public
           key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
+      - name: 校验六架构官方317原生音频和Linux剪贴板原始字节
+        run: node --test tests/m1-official-native-sources-317.test.mjs
       - name: 校验已入库的原始发行资源
         run: node build/verify-bundled-assets.mjs
       - name: 校验 Claude API 2.1.317 技能资源
