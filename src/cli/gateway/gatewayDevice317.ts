@@ -7,9 +7,12 @@ import { randomBytes } from 'node:crypto'
 import { signGatewaySession317, createGatewayOidcLogin317 } from './gatewayAuth317.ts'
 import type { GatewayOidcProvider317 } from './gatewayAuth317.ts'
 
-type GatewayDeviceClaims317 = Record<string, unknown> & { sub: string }
-type GatewayDeviceStatus317 =
-  | { status: 'pending' | 'slow_down' | 'expired' | 'denied' }
+export type GatewayDeviceClaims317 = Record<string, unknown> & { sub: string }
+export type GatewayDeviceStatus317 =
+  | { status: 'pending' }
+  | { status: 'slow_down' }
+  | { status: 'expired' }
+  | { status: 'denied' }
   | { status: 'approved'; claims: GatewayDeviceClaims317 }
 type GatewayRateLimit317 = { max: number; window_seconds: number }
 type GatewayDeviceConfig317 = {
