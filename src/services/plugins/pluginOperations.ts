@@ -22,6 +22,8 @@ import {
   clearAllCaches,
   markPluginVersionOrphaned,
 } from '../../utils/plugins/cacheUtils.js'
+import { commandSourceDisclosure, isAuthorizedSourceCommand } from '../../utils/plugins/commandSourceConsent.mjs'
+import { getCommandSourceCatalogRevision } from '../../utils/plugins/commandSourceCatalog.js'
 import {
   findReverseDependents,
   formatReverseDependentsSuffix,
@@ -141,6 +143,8 @@ export function isPluginEnabledAtProjectScope(pluginId: string): boolean {
 export type PluginOperationResult = {
   success: boolean
   message: string
+  failureCode?: string
+  shownCommand?: ReturnType<typeof commandSourceDisclosure>
   pluginId?: string
   pluginName?: string
   scope?: PluginScope
@@ -324,6 +328,7 @@ export async function installPluginOp(
   plugin: string,
   scope: InstallableScope = 'user',
   npmRegistry?: string,
+  commandConsent?: { yes?: boolean; acceptCommand?: string },
 ): Promise<PluginOperationResult> {
   assertInstallableScope(scope)
 
@@ -420,11 +425,45 @@ export async function installPluginOp(
     }
   }
 
+  // Marketplace commands are executable code, so an install must be tied
+  // to the exact current catalog revision, command text and plugin ID. The
+  // cache layer independently rejects any command without this grant.
+  let authorizedSourceCommands: string[] | undefined
+  if (typeof entry.source !== 'string' && entry.source.source === 'command') {
+    if (!marketplaceInstallLocation) {
+      return { success: false, message: 'Cannot authorize command source without a marketplace location' }
+    }
+    const revision = await getCommandSourceCatalogRevision(marketplaceInstallLocation)
+    const shownCommand = commandSourceDisclosure({
+      pluginId,
+      command: entry.source.command,
+      mode: entry.source.mode,
+      catalogRevision: revision,
+    }, commandConsent?.acceptCommand)
+    const isNestedSession = process.env.CLAUDECODE === '1' ||
+      process.env.CLAUDE_CODE_CHILD_SESSION === '1'
+    const approved = isAuthorizedSourceCommand(shownCommand, {
+      yes: commandConsent?.yes,
+      acceptCommand: commandConsent?.acceptCommand,
+      isNestedSession,
+    })
+    if (!approved) {
+      return {
+        success: false,
+        failureCode: 'command_source_refused',
+        shownCommand,
+        message: `${pluginId} is installed by running a command on this machine (${JSON.stringify(entry.source.command)}) that has not been approved, so it was not run.`,
+      }
+    }
+    authorizedSourceCommands = [pluginId]
+  }
+
   const result = await installResolvedPlugin({
     pluginId,
     entry,
     scope,
     marketplaceInstallLocation,
+    authorizedSourceCommands,
   })
 
   if (result.ok === false) {
