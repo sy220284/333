@@ -1,0 +1,6 @@
+// @bun @bytecode
+// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
+
+// Version: 2.1.317
+import{nt,Zd,In}from"/$bunfs/root/chunk-wxyh2ndv.js";import{ys}from"/$bunfs/root/chunk-74x0zd10.js";import{vt,sn,ir,dC,Ut}from"/$bunfs/root/chunk-yx0yvz1d.js";import{sx,WT}from"/$bunfs/root/chunk-thp9mgjc.js";import{randomUUID as o}from"crypto";function t(e,r){switch(e){case"pro":return"pro";case"max":switch(r){case"default_claude_max_5x":return"max_5x";case"default_claude_max_20x":return"max_20x";default:return"max_other"}default:return"other"}}var i="You can continue now. Continue the task you were working on when the usage limit was reached; do not repeat work that is already complete.";function Zue(){return vt()&&sn()?.billingType!=="usage_based"&&ys()&&Zd()&&!In()&&!Ut()}function eet(e){return Zue()&&sx(e)&&e.rateLimitType==="five_hour"}var n=["five_hour","seven_day","seven_day_overage_included","seven_day_opus","seven_day_sonnet"];function Ddn(e){return Zue()&&sx(e)&&e.rateLimitType!==void 0&&n.includes(e.rateLimitType)}function tCe(){return t(ir(),dC())}function hbt(){WT({agentId:nt(),mode:"prompt",priority:"later",value:i,uuid:o(),origin:{kind:"auto-continuation"},isMeta:!0,skipSlashCommands:!0})}
+export{Zue,eet,Ddn,tCe,hbt};

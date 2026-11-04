@@ -1,0 +1,6 @@
+// @bun @bytecode
+// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
+
+// Version: 2.1.317
+import{w}from"./chunk-fdshth00.js";import{s,n,np}from"./chunk-26xg87f0.js";import{z9}from"./chunk-72k1dth8.js";import{e,r}from"./chunk-map0z771.js";import{Yt,Se,j}from"./chunk-3j5jca5v.js";import{S}from"./chunk-dbgyrqyp.js";j();j();function Ke(p){let c=w(8),{children:t,height:i}=p;if(Se(o)){return t}let u;if(c[0]===S)u=e(np,{fromLeftEdge:!0,flexShrink:0,children:r(n,{"aria-hidden":!0,dimColor:!0,children:["  ","\u23BF \xA0"]})}),c[0]=u;else u=c[0];let h;if(c[1]!==t)h=e(s,{flexShrink:1,flexGrow:1,children:t}),c[1]=t,c[2]=h;else h=c[2];let g;if(c[3]!==i||c[4]!==h)g=e(f,{children:r(s,{flexDirection:"row",height:i,overflowY:"hidden",children:[u,h]})}),c[3]=i,c[4]=h,c[5]=g;else g=c[5];let d=g;if(i!==void 0){return d}let x;if(c[6]!==d)x=e(z9,{lock:"offscreen",children:d}),c[6]=d,c[7]=x;else x=c[7];return x}var o=Yt(!1);function lyt(){return Se(o)}function f(p){let i=w(2),{children:t}=p,m;if(i[0]!==t)m=e(o.Provider,{value:!0,children:t}),i[0]=t,i[1]=m;else m=i[1];return m}
+export{Ke,lyt};

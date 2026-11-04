@@ -1,0 +1,6 @@
+// @bun @bytecode
+// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
+
+// Version: 2.1.317
+import{HJe,STe}from"/$bunfs/root/chunk-wxyh2ndv.js";import{dce,Umo,Bmo}from"/$bunfs/root/chunk-45703j7f.js";function s(){return Umo({envVar:"CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR",wellKnownPath:dce,readPath:process.env.CLAUDE_SESSION_INGRESS_TOKEN_FILE??dce,label:"token",fileLabel:"session ingress token",getCached:HJe,setCached:STe,skipInReviewOrigin:!0})}async function RUi(e){if(process.env.CLAUDE_CODE_SESSION_ACCESS_TOKEN)return;await Bmo({envVar:"CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR",wellKnownPath:dce,readPath:process.env.CLAUDE_SESSION_INGRESS_TOKEN_FILE??dce,label:"token",fileLabel:"session ingress token",getCached:HJe,setCached:STe,credentials:e,skipInReviewOrigin:!0})}function Gd(){let e=process.env.CLAUDE_CODE_SESSION_ACCESS_TOKEN;if(e)return e;return s()}function xWe(){return Gd()!==null}function Xj(){let e=Gd();if(!e)return{};if(e.startsWith("sk-ant-sid")){let n={Cookie:`sessionKey=${e}`},r=process.env.CLAUDE_CODE_ORGANIZATION_UUID;if(r)n["X-Organization-Uuid"]=r;return n}return TDe(e)}function TDe(e){return e?{Authorization:`Bearer ${e}`}:{}}function PTr(e){process.env.CLAUDE_CODE_SESSION_ACCESS_TOKEN=e}
+export{RUi,Gd,xWe,Xj,TDe,PTr};

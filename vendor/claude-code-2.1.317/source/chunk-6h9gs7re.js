@@ -1,0 +1,6 @@
+// @bun @bytecode
+// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
+
+// Version: 2.1.317
+import{Fi}from"/$bunfs/root/chunk-nj8ddyrh.js";import{s0i}from"/$bunfs/root/chunk-fnzgktb2.js";import{cI}from"/$bunfs/root/chunk-20d6prey.js";import{pwr}from"/$bunfs/root/chunk-aqhsn9c5.js";import{Rr}from"/$bunfs/root/chunk-aegs6w8s.js";var t="(value set by your organization)";function bZe(r,e){if(e!=="managed")return r;return{...r,url:s0i(r.url)??t,...r.headers&&{headers:Rr(r.headers,()=>t)}}}function b_t(r){return r==="cached"?"pending":r}function D2n(r){return r.map((e)=>{let o;if(e.config.type==="sse"||e.config.type==="http")o=bZe({type:e.config.type,url:e.config.url,headers:e.config.headers},e.config.scope);else if(e.config.type==="claudeai-proxy")o={type:"claudeai-proxy",url:e.config.url,id:e.config.id};else if(e.config.type==="stdio"||e.config.type===void 0)o={type:"stdio",command:e.config.command,args:e.config.args};return{name:e.name,status:b_t(e.type),config:o,scope:e.config.scope,source:cI(e.name,e.config),serverInfo:Fi(e)?e.serverInfo:void 0,error:e.type==="failed"?e.error:void 0,error_code:pwr(e)}})}
+export{bZe,b_t,D2n};

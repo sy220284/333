@@ -1,0 +1,5 @@
+// @bun @bytecode
+// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
+
+// Version: 2.1.317
+import{ljt}from"/$bunfs/root/chunk-5c8dhny2.js";import{pD}from"/$bunfs/root/chunk-thp9mgjc.js";import{W4e,Gi}from"/$bunfs/root/chunk-ttn3wae7.js";import{FZ,t6,M0o,D0o,rjt}from"/$bunfs/root/chunk-qj1r3zvj.js";function sUt(){return ljt()||W4e("auto_mode_off")||rjt()||W4e("unattended_serving_off")}function iUt(n){try{if(ljt())return pD()==="settings"?"settings":"breaker";if(W4e("auto_mode_off"))return"settings";let e=W4e("unattended_serving_off");if(!rjt(n)&&!e)return"none";if(t6()||e)return"consent_forced_off";let t=FZ();if(t==="declined")return"consent_declined";if(t==="accepted"||M0o())return"consent_unknown";return D0o()?"sandbox_off":"consent_unset"}catch{return"consent_unknown"}}function yAo(n){let e=iUt();if(e==="none")return;return{key:`served-auto-off-${e==="consent_unset"||e==="consent_declined"?"consent":e}`,text:Gi.auto_off_notice(n,Gi[`auto_off.reason.${e}`])}}export{sUt,iUt,yAo};

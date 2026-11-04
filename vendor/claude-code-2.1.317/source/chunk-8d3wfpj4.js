@@ -1,0 +1,10 @@
+// @bun @bytecode
+// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
+
+// Version: 2.1.317
+import{Ot}from"/$bunfs/root/chunk-sctdt2my.js";import{w}from"/$bunfs/root/chunk-fdshth00.js";import{s,n}from"/$bunfs/root/chunk-26xg87f0.js";import{qy}from"/$bunfs/root/chunk-kv4b0q0d.js";import{Ke}from"/$bunfs/root/chunk-b6pbvb3h.js";import{e,r}from"/$bunfs/root/chunk-map0z771.js";import{hi,MSn}from"/$bunfs/root/chunk-747fdpe6.js";import{NPt,lOe}from"/$bunfs/root/chunk-54967b2h.js";import{nl}from"/$bunfs/root/chunk-df4s59en.js";function Fht(p){return p.replace(/<sandbox_violations>[\s\S]*?<\/sandbox_violations>/g,"")}function L(p){let o=p.flatMap((t)=>{if(!lOe(t))return[];let u=nl(t.text);return[MSn(u)??u]}).join(`
+`);return o.trim()===""?void 0:o}function yh(p){let l=w(28),{result:o,verbose:t,verbatim:u}=p,V=u===void 0?!1:u,b,v,g,y,T,h,k;if(l[0]!==o||l[1]!==V||l[2]!==t){let a;let I=Array.isArray(o);let m;if(l[10]!==I||l[11]!==o)m=typeof o==="string"?o:I?L(o):void 0,l[10]=I,l[11]=o,l[12]=m;else m=l[12];let P=m;let S=V||I;if(P===void 0)a="Tool execution failed";else{let d=(S?nl(P):Fht(nl(hi(P,"tool_use_error")??P)).replace(/<\/?error>/g,"")).trim();if(!t&&!S&&d.startsWith("InputValidationError: "))a="Invalid tool parameters";else if(d.startsWith("Error: ")||d.startsWith("Cancelled: "))a=d;else a=`Error: ${d}`}y=Ot(a,`
+`)+1-NPt;g=Ke;v=s;k="column";b=n;T="error";h=t?a:a.split(`
+`).slice(0,NPt).join(`
+`);l[0]=o,l[1]=V,l[2]=t,l[3]=b,l[4]=v,l[5]=g,l[6]=y,l[7]=T,l[8]=h,l[9]=k}else b=l[3],v=l[4],g=l[5],y=l[6],T=l[7],h=l[8],k=l[9];let m;if(l[13]!==b||l[14]!==T||l[15]!==h)m=e(b,{color:T,children:h}),l[13]=b,l[14]=T,l[15]=h,l[16]=m;else m=l[16];let B;if(l[17]!==y||l[18]!==t)B=!t&&e(qy,{count:y,expandable:!0}),l[17]=y,l[18]=t,l[19]=B;else B=l[19];let W;if(l[20]!==v||l[21]!==k||l[22]!==m||l[23]!==B)W=r(v,{flexDirection:k,children:[m,B]}),l[20]=v,l[21]=k,l[22]=m,l[23]=B,l[24]=W;else W=l[24];let U;if(l[25]!==g||l[26]!==W)U=e(g,{children:W}),l[25]=g,l[26]=W,l[27]=U;else U=l[27];return U}
+export{Fht,yh};

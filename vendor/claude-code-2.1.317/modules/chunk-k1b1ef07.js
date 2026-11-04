@@ -1,0 +1,6 @@
+// @bun @bytecode
+// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
+
+// Version: 2.1.317
+import{ve}from"./chunk-wxyh2ndv.js";import{p}from"./chunk-c3q80g49.js";import{R5,sq}from"./chunk-9hj2rg6j.js";import{oq}from"./chunk-9d7j1pvj.js";import{NGe}from"./chunk-n348hs7d.js";import{O,u,He,T}from"./chunk-e56bj9s5.js";var i="anthropic/renderUnderSessionRules";function v5i(){return{experimental:{[i]:{v:1}}}}var z=p(()=>u({experimental:u({[i]:u({v:T(1)})})}));var a=p(()=>He({v:T(1),permissionContext:R5(),offersHandOff:O(),classifiesEveryCall:O(),grantsApply:O()}));function obo(r,n,t){let e=sq(r)?void 0:a().safeParse(r).data;if(e===void 0||n===void 0)return;let{mode:s,...o}=e.permissionContext;if(!(s==="default"||s==="dontAsk"||s==="acceptEdits"||s==="auto"&&e.offersHandOff)||Object.values(o.alwaysAllowRules).some((l)=>l.length>0)||o.strippedDangerousRules!==void 0||o.additionalWorkingDirectories.$map.length>0||o.trustedNetworkDirectories!==void 0)return;return{offersHandOff:e.offersHandOff,classifiesEveryCall:e.classifiesEveryCall,toolPermissionContext:{...NGe(oq(e.permissionContext,n,ve(),t)),...!e.grantsApply&&{pollEventDeliveryGuard:!0}}}}
+export{v5i,obo};

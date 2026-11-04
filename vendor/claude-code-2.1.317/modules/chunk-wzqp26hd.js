@@ -1,0 +1,6 @@
+// @bun @bytecode
+// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
+
+// Version: 2.1.317
+import{f}from"./chunk-hd335g9m.js";import{a}from"./chunk-sqwfq8wd.js";import{_r}from"./chunk-d01ffsyh.js";import{Ne,Rt}from"./chunk-tm88cq46.js";import{xto,Pto}from"./chunk-3vjqe06z.js";var p=["userSettings","projectSettings","localSettings","flagSettings","cliArg","session"];function s(l){if(l===Ne)return Ne;if(l===Rt)return Rt;return null}function m(l,e){let o=s(l);if(o===null)return null;if(e===void 0||e===""||/^[\s*]+$/.test(e))return"bare";return(o===Ne?xto(o,e):Pto(o,e))?"dangerous_prefix":"scoped"}function y(l){let e={},o=0;for(let r of p)for(let t of l[r]??[]){let{toolName:c,ruleContent:S}=_r(t),n=s(c);if(n===null)continue;let i=m(n,S);if(i===null)continue;let u=`${r}_${n}_${i}`;e[u]=(e[u]??0)+1,o++}return e.total_shell_allow_rules=o,e}function YWs(l){a("tengu_shell_allow_rules_at_init",y(l))}function eNr(l){for(let e of l){if(e.type!=="addRules"||e.behavior!=="allow")continue;for(let o of e.rules){let r=s(o.toolName);if(r===null)continue;let t=m(o.toolName,o.ruleContent);if(t===null)continue;a("tengu_shell_allow_rule_added",{toolName:f(r),category:f(t),destination:f(e.destination)})}}}
+export{YWs,eNr};
