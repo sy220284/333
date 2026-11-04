@@ -168,6 +168,15 @@ async function main(): Promise<void> {
   // 317 daemon worker reads JSON from stdin and runs without REPL/PTY imports.
   if (args[0] === '--daemon-worker') {
     if (!await ensureWorkerStartupPolicy('--daemon-worker')) return;
+    // The original daemon restores network/session facts before worker-kind
+    // validation. A malformed active proxy must exit 78, even for unknown kinds.
+    const { checkDaemonStartupProxy317 } = await import('../bootstrap/daemonProxy317.ts');
+    const proxyRefusal = checkDaemonStartupProxy317();
+    if (proxyRefusal) {
+      process.stderr.write(proxyRefusal + '\n');
+      process.exitCode = 78;
+      return;
+    }
     const { runDaemonWorker317 } = await import('../bootstrap/daemonWorker317.ts');
     process.exitCode = await runDaemonWorker317(args[1]);
     return;
