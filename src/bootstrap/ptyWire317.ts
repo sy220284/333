@@ -58,16 +58,26 @@ export class PtyReplay317 {
   push(value: Buffer): void {
     this.fragments.push(Buffer.from(value))
     this.size += value.length
+    // The upstream chunk-y196mk9y.js keeps a sole oversized PTY chunk
+    // intact. It trims only when a later chunk permits dropping the oldest.
     while (this.size > PTY_REPLAY_BYTES_317 && this.fragments.length > 1) {
-      const first = this.fragments.shift()!
-      this.size -= first.length
-    }
-    if (this.size > PTY_REPLAY_BYTES_317 && this.fragments.length === 1) {
-      const source = this.fragments[0]!
-      let offset = source.length - PTY_REPLAY_BYTES_317
-      while (offset < source.length && (source[offset]! & 0xc0) === 0x80) offset++
-      this.fragments[0] = source.subarray(offset)
-      this.size = this.fragments[0]!.length
+      this.size -= this.fragments.shift()!.length
+      // A discarded frame may have ended in the middle of a UTF-8 codepoint.
+      // Skip up to three continuation bytes on the newly retained boundary.
+      let skipped = 0
+      while (skipped < 3 && this.fragments.length > 0) {
+        const next = this.fragments[0]!
+        let n = 0
+        while (skipped + n < 3 && n < next.length &&
+               (next[n]! & 0xc0) === 0x80) n++
+        if (n) {
+          this.fragments[0] = next.subarray(n)
+          this.size -= n
+          skipped += n
+        }
+        if (this.fragments[0]!.length || this.fragments.length === 1) break
+        this.fragments.shift()
+      }
     }
   }
   frames(): Buffer[] { return this.fragments.map(encodePtyData317) }
