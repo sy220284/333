@@ -14,7 +14,7 @@ import { checkOverageGate } from '../../commands/review/reviewRemote.js'
 import { detectCurrentRepositoryWithHost } from '../../utils/detectRepository.js'
 import { getClaudeAIOAuthTokens } from '../../utils/auth.js'
 import { pollRemoteSessionEvents, teleportToRemote } from '../../utils/teleport.js'
-import { prepareApiRequest, getOAuthHeaders } from '../../utils/teleport/api.js'
+import { prepareApiRequest, getOAuthHeaders, isTransientNetworkError } from '../../utils/teleport/api.js'
 import { REMOTE_REVIEW_TAG, REMOTE_REVIEW_PROGRESS_TAG } from '../../constants/xml.js'
 
 export type UltrareviewCliOptions = {
@@ -125,9 +125,7 @@ async function pollReview(sessionId: string, deadline: number, signal: AbortSign
       if (signal.aborted) throw error
       // A closed session must surface immediately; only transport failure
       // is retried and never more than five times.
-      if (error instanceof Error && (
-        error.message.includes('archived before producing output') ||
-        error.message.includes('Cloud review returned an error'))) throw error
+      if (!isTransientNetworkError(error)) throw error
       if (++consecutiveFailures >= MAX_FAILED_POLLS) {
         throw new Error('lost connection to the cloud session after repeated retries', { cause: error })
       }
@@ -261,7 +259,12 @@ export async function ultrareviewCliHandler(target: string | undefined, options:
         process.stderr.write('Findings were generated, but --post only applies to a pull-request target.\n')
       } else {
         process.stderr.write('Posting the findings to the pull request as a comment from your GitHub account…\n')
-        await postReview(session.id)
+        try {
+          await postReview(session.id)
+        } catch (error) {
+          process.stderr.write('Findings were produced, but posting did not finish: ' +
+            (error instanceof Error ? error.message : String(error)) + '\n')
+        }
       }
     }
     process.exit(0)
