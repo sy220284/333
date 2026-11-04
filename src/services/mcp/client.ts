@@ -96,7 +96,7 @@ import {
 import { recursivelySanitizeUnicode } from '../../utils/sanitization.js'
 import { getSessionIngressAuthToken } from '../../utils/sessionIngressAuth.js'
 import { subprocessEnv } from '../../utils/subprocessEnv.js'
-import { buildStdioMcpEnvironment } from './stdioEnvironment.mjs'
+import { buildStdioMcpEnvironment } from './stdioEnvironment.ts'
 import {
   isPersistError,
   persistToolResult,
