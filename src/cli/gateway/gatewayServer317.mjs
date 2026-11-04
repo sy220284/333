@@ -122,6 +122,7 @@ export async function createGatewayService317(config, deps = {}) {
         'GET /healthz': () => Response.json({ status:'ok', uptime_seconds: Math.floor((Date.now()-start)/1000) }),
         'GET /device': () => device.verificationPage(request),
         'POST /device': () => device.verifyDevice(request, clientIp),
+        'POST /device/deny': () => device.denyDevice(request, clientIp),
         'GET /oauth/callback': () => device.callback(request),
         'POST /oauth/device_authorization': () => device.deviceAuthorization(request, clientIp),
         'POST /oauth/token': () => device.token(request),
@@ -129,7 +130,7 @@ export async function createGatewayService317(config, deps = {}) {
       }
       const route = request.method + ' ' + url.pathname
       try {
-        if (!oidc && ['/device','/oauth/callback','/oauth/device_authorization',
+        if (!oidc && ['/device','/device/deny','/oauth/callback','/oauth/device_authorization',
           '/oauth/token','/oauth/revoke'].includes(url.pathname)) {
           return error(404, 'not_found_error', 'OIDC login is not configured', requestId)
         }

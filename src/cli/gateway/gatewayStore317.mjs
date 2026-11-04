@@ -57,6 +57,12 @@ export async function openGatewayStore317(config) {
         expires_at TIMESTAMPTZ NOT NULL
       )`
     await database`
+      CREATE TABLE IF NOT EXISTS claude_gateway_rate_limits (
+        key TEXT PRIMARY KEY,
+        value BIGINT NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL
+      )`
+    await database`
       CREATE TABLE IF NOT EXISTS claude_gateway_audit (
         id BIGSERIAL PRIMARY KEY,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -70,6 +76,30 @@ export async function openGatewayStore317(config) {
       async createSpend() {
         const { createGatewaySpendStore317 } = await import('./gatewaySpendStore317.mjs')
         return createGatewaySpendStore317(database)
+      },
+      // Persist admissions across replicas with one atomic PostgreSQL upsert.
+      async incrementRateLimit(kind, clientIp, windowSeconds) {
+        const key = 'rl:' + kind + ':' + (clientIp ?? 'unknown')
+        const rows = await database`
+          INSERT INTO claude_gateway_rate_limits (key, value, expires_at)
+          VALUES (${key}, 1, NOW() + (${windowSeconds} * INTERVAL '1 second'))
+          ON CONFLICT (key) DO UPDATE SET
+            value = CASE WHEN claude_gateway_rate_limits.expires_at <= NOW()
+              THEN 1 ELSE claude_gateway_rate_limits.value + 1 END,
+            expires_at = CASE WHEN claude_gateway_rate_limits.expires_at <= NOW()
+              THEN NOW() + (${windowSeconds} * INTERVAL '1 second')
+              ELSE claude_gateway_rate_limits.expires_at END
+          RETURNING value`
+        return Number(rows[0].value)
+      },
+      async denyCode(userCode) {
+        const rows = await database`
+          UPDATE claude_gateway_device_authorizations
+          SET consumed = TRUE
+          WHERE user_hash = ${hash(userCode)} AND expires_at > NOW()
+            AND consumed = FALSE AND approved IS NULL
+          RETURNING device_hash`
+        return rows.length === 1
       },
       async newDevice(deviceCode, userCode, expiresSeconds) {
         await database`

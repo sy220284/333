@@ -104,8 +104,23 @@ export function validateGatewayConfig317(value) {
     throw new Error('telemetry.forward_to must be a list')
   }
   for (const dest of telemetry.forward_to ?? []) safeHttps(dest.url, 'telemetry.forward_to.url')
+  const rate_limits = {}
+  for (const [name, defaults] of Object.entries({
+    device_authorization:{max:30,window_seconds:600},
+    device_verify:{max:10,window_seconds:600},
+  })) {
+    const settings = value.rate_limits?.[name] ?? {}
+    for (const [field, fallback] of Object.entries(defaults)) {
+      const selected = settings[field] ?? fallback
+      if (!Number.isSafeInteger(selected) || selected < 1)
+        throw new Error('rate_limits.' + name + '.' + field + ' must be positive integer')
+      rate_limits[name] ??= {}
+      rate_limits[name][field] = selected
+    }
+  }
   return {
     ...value,
+    rate_limits,
     listen: { ...listen, host, port, public_url },
     store: { max_connections: 5, connect_timeout_seconds: 5, readiness_grace_seconds: 0,
       ...store, postgres_url },

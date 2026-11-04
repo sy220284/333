@@ -8,6 +8,18 @@ function fakeStore() {
   const devices = new Map(), refreshTokens = new Map(), revoked = new Set()
   return {
     devices, refreshTokens, revoked, audits: [],
+    counters:new Map(),
+    async incrementRateLimit(kind,clientIp,seconds) {
+      const key=kind+':'+clientIp, now=Date.now(),entry=this.counters.get(key)
+      const count=!entry||entry.end<=now?1:entry.count+1
+      this.counters.set(key,{count,end:entry?.end>now?entry.end:now+seconds*1000})
+      return count
+    },
+    async denyCode(code) {
+      const entry=[...devices.values()].find(x=>x.userCode===code)
+      if (!entry||entry.consumed)return false
+      entry.consumed=true;return true
+    },
     async newDevice(deviceCode, userCode, expires) {
       devices.set(deviceCode, { userCode, expires, approved: null, consumed:false })
     },
@@ -92,7 +104,7 @@ test('gateway 317 device authorization: discover, browser approval, token, refre
     expect(page.status).toBe(200)
     expect(await page.text()).toContain('Approve a device')
     const redirect = await fetch(origin + '/device',{
-      method:'POST',body:new URLSearchParams({user_code:authorization.user_code}),
+      method:'POST',headers:{'sec-fetch-site':'same-origin'},body:new URLSearchParams({user_code:authorization.user_code}),
       redirect:'manual',
     })
     expect(redirect.status).toBe(303)

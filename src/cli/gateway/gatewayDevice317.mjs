@@ -28,16 +28,15 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
     ? createGatewayOidcLogin317(oidc, { publicUrl })
     : null
   const pending = new Map()
-  const rate = new Map()
-  const limit = (key, max = 30, windowMs = 600000) => {
-    const now = Date.now()
-    const value = rate.get(key)
-    if (!value || now > value.end) {
-      rate.set(key, { count: 1, end: now + windowMs })
-      return true
-    }
-    value.count++
-    return value.count <= max
+  const limit = async (kind, clientIp, configured) => {
+    const count = await store.incrementRateLimit(kind, clientIp, configured.window_seconds)
+    return count <= configured.max
+  }
+  // Same-origin browser form enforcement before an authorization state is created.
+  const sameOrigin = request => {
+    const fetchSite = request.headers.get('sec-fetch-site')
+    if (fetchSite !== null) return fetchSite === 'same-origin' || fetchSite === 'none'
+    return request.headers.get('origin') === publicUrl
   }
   const deviceBase = publicUrl + '/device'
   const publicDiscovery = () => makeJson({
@@ -74,7 +73,10 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
   }
   async function deviceAuthorization(request, clientIp) {
     if (!idp) return errorJson('unsupported_grant_type')
-    if (!limit('request:' + clientIp)) return errorJson('slow_down', 429)
+    if (!await limit('devauth', clientIp, config.rate_limits.device_authorization)) {
+      await store.audit('device.authorize', null, null, {result:'rate_limited',client_ip:clientIp})
+      return errorJson('slow_down', 429)
+    }
     const input = await form(request)
     const deviceCode = randomBytes(48).toString('base64url')
     const userCode = randomCode()
@@ -100,7 +102,7 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
     <form action="/device" method="POST">
     <label>Device code <input name="user_code" required maxlength="16"
       value="${escape(code)}" autocomplete="off"></label>
-    <button type="submit">Continue to company sign-in</button></form></html>`
+    <button type="submit">Continue to company sign-in</button><button type="submit" formaction="/device/deny">Deny sign-in</button></form></html>`
     return new Response(html, { headers: {
       'content-type':'text/html; charset=utf-8', 'cache-control':'no-store',
       'content-security-policy':"default-src 'none'; form-action 'self'; style-src 'unsafe-inline'",
@@ -108,7 +110,14 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
     } })
   }
   async function verifyDevice(request, clientIp) {
-    if (!limit('verify:' + clientIp, 10)) return errorJson('slow_down', 429)
+    if (!sameOrigin(request)) {
+      await store.audit('device.verify', null, null, {result:'csrf_rejected',client_ip:clientIp})
+      return new Response('Device approval requires a same-origin browser form', {status:403})
+    }
+    if (!await limit('device', clientIp, config.rate_limits.device_verify)) {
+      await store.audit('device.verify', null, null, {result:'rate_limited',client_ip:clientIp})
+      return errorJson('slow_down',429)
+    }
     const body = await form(request)
     const userCode = (body.get('user_code') ?? '').replace(/[^A-Za-z]/g, '').toUpperCase()
     if (userCode.length !== 8 || [...userCode].some(x => !base20.includes(x))) {
@@ -118,6 +127,18 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
     const state = new URL(url).searchParams.get('state')
     pending.set(state, { userCode, expires: Date.now() + 600000 })
     return Response.redirect(url, 303)
+  }
+  async function denyDevice(request,clientIp) {
+    if (!sameOrigin(request)) return new Response('Invalid device approval origin',{status:403})
+    if (!await limit('device',clientIp,config.rate_limits.device_verify)) return errorJson('slow_down',429)
+    const body = await form(request)
+    const code = (body.get('user_code') ?? '').replace(/[^A-Za-z]/g,'').toUpperCase()
+    if (code.length !== 8) return errorJson('invalid_request',400,'Invalid device code')
+    const denied = await store.denyCode(code)
+    await store.audit('device.denied', null, null, {client_ip:clientIp, denied})
+    return new Response(denied ? 'Device sign-in denied' : 'Device code expired or already used', {
+      status:denied?200:400,headers:{'cache-control':'no-store'},
+    })
   }
   async function callback(request) {
     const url = new URL(request.url)
@@ -182,5 +203,5 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
     return new Response(null, { status: 200, headers: noStore })
   }
   return { publicDiscovery, deviceAuthorization, verificationPage,
-    verifyDevice, callback, token, revoke }
+    verifyDevice, denyDevice, callback, token, revoke }
 }
