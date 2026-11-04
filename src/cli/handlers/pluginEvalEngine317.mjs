@@ -13,6 +13,7 @@ const addUsd = (a, b) => Number((Number(a) + Number(b)).toFixed(12))
 
 export async function executePluginEvalSuite317(cases, settings, adapters = {}) {
   const runModel = adapters.runModel ?? runEvalModel317
+  const cleanupWorkspace = adapters.cleanupWorkspace ?? rm
   const judge = adapters.judge ?? judgeEvalOutput317
   const ablation = settings.ablation ?? 'with-without'
   if (ablation !== 'none' && ablation !== 'with-without') throw new Error('Invalid eval ablation mode')
@@ -109,7 +110,7 @@ export async function executePluginEvalSuite317(cases, settings, adapters = {}) 
       } finally {
         if (!settings.keepTemp) {
           try {
-            await rm(workspace, { recursive: true, force: true, maxRetries: 12, retryDelay: 200 })
+            await cleanupWorkspace(workspace, { recursive: true, force: true, maxRetries: 12, retryDelay: 200 })
           } catch (error) {
             // The shipped 2.1.317 harness reports a prominent security notice
             // instead of discarding finished case results when Windows keeps a
