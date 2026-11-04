@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { test } from 'node:test'
 import {
@@ -121,4 +122,13 @@ test('M1 C19-T02: Bun Linux kernel actually marks remote MCP token process non-d
   const output = JSON.parse(res.stdout.trim())
   assert.equal(output.applied, true)
   assert.equal(output.final, 0)
+})
+
+test('M1 C19-T02: original relay guard executes before argv scanning and all CLI bootstrap side effects', () => {
+  const entry = readFileSync(resolve(import.meta.dirname, '../src/entrypoints/cli.tsx'), 'utf8')
+  const guard = entry.indexOf('await guardRelayTokenDescriptor317()')
+  const runner = entry.indexOf('const runnerArg = ')
+  const profiler = entry.indexOf("profileCheckpoint('cli_entry')")
+  const cli = entry.indexOf("await import('../main.js')")
+  assert.ok(guard > 0 && guard < runner && runner < profiler && profiler < cli)
 })
