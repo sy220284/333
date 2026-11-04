@@ -202,9 +202,10 @@ export async function getSessionMessages(
  * ```
  */
 export async function listSessions(
-  _options?: ListSessionsOptions,
+  options?: ListSessionsOptions,
 ): Promise<SDKSessionInfo[]> {
-  throw new Error('listSessions is not implemented in the SDK')
+  const { listSessionsImpl } = await import('../utils/listSessionsImpl.js')
+  return listSessionsImpl(options)
 }
 
 /**
@@ -217,10 +218,19 @@ export async function listSessions(
  * @param options - `{ dir?: string }` project path; omit to search all project directories
  */
 export async function getSessionInfo(
-  _sessionId: string,
-  _options?: GetSessionInfoOptions,
+  sessionId: string,
+  options?: GetSessionInfoOptions,
 ): Promise<SDKSessionInfo | undefined> {
-  throw new Error('getSessionInfo is not implemented in the SDK')
+  const { validateUuid, resolveSessionFilePath, readSessionLite } =
+    await import('../utils/sessionStoragePortable.js')
+  const valid = validateUuid(sessionId)
+  if (!valid) return undefined
+  const file = await resolveSessionFilePath(valid, options?.dir)
+  if (!file) return undefined
+  const lite = await readSessionLite(file.filePath)
+  if (!lite) return undefined
+  const { parseSessionInfoFromLite } = await import('../utils/listSessionsImpl.js')
+  return parseSessionInfoFromLite(valid, lite, file.projectPath) ?? undefined
 }
 
 /**
@@ -230,11 +240,18 @@ export async function getSessionInfo(
  * @param options - `{ dir?: string }` project path; omit to search all projects
  */
 export async function renameSession(
-  _sessionId: string,
-  _title: string,
-  _options?: SessionMutationOptions,
+  sessionId: string,
+  title: string,
+  options?: SessionMutationOptions,
 ): Promise<void> {
-  throw new Error('renameSession is not implemented in the SDK')
+  const { validateUuid, resolveSessionFilePath } = await import('../utils/sessionStoragePortable.js')
+  const valid = validateUuid(sessionId)
+  if (!valid) throw new TypeError('Invalid session ID')
+  if (typeof title !== 'string' || title.length === 0) throw new TypeError('Title must be non-empty')
+  const file = await resolveSessionFilePath(valid, options?.dir)
+  if (!file) throw new Error('Session not found: ' + sessionId)
+  const { saveCustomTitle } = await import('../utils/sessionStorage.js')
+  await saveCustomTitle(valid, title, file.filePath)
 }
 
 /**
@@ -244,11 +261,19 @@ export async function renameSession(
  * @param options - `{ dir?: string }` project path; omit to search all projects
  */
 export async function tagSession(
-  _sessionId: string,
-  _tag: string | null,
-  _options?: SessionMutationOptions,
+  sessionId: string,
+  tag: string | null,
+  options?: SessionMutationOptions,
 ): Promise<void> {
-  throw new Error('tagSession is not implemented in the SDK')
+  const { validateUuid, resolveSessionFilePath } = await import('../utils/sessionStoragePortable.js')
+  const valid = validateUuid(sessionId)
+  if (!valid) throw new TypeError('Invalid session ID')
+  if (tag !== null && typeof tag !== 'string') throw new TypeError('Tag must be a string or null')
+  const file = await resolveSessionFilePath(valid, options?.dir)
+  if (!file) throw new Error('Session not found: ' + sessionId)
+  const { saveTag } = await import('../utils/sessionStorage.js')
+  // The last tag entry wins. An empty string is the canonical cleared value.
+  await saveTag(valid, tag ?? '', file.filePath)
 }
 
 /**
