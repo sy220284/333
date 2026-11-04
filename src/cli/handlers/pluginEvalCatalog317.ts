@@ -133,13 +133,13 @@ export async function readEvalCase317(dir) {
   for (const field of ['scaffold_script', 'history_file']) {
     const value = data.context[field]
     if (value !== undefined && (typeof value !== 'string' || !value.trim() ||
-      isAbsolute(value) || value.split(/[\\/]/).includes('..'))) {
-      throw new Error(`eval ${data.name}: context.${field} must be a relative file inside the case`)
+      isAbsolute(value))) {
+      throw new Error(`eval ${data.name}: context.${field} must be a relative file inside the case or trusted plugin`)
     }
   }
   if (!Array.isArray(data.context.add_dirs) ||
       data.context.add_dirs.some(value => typeof value !== 'string' || !value.trim() ||
-        isAbsolute(value) || value.split(/[\\/]/).includes('..'))) {
+        isAbsolute(value))) {
     throw new Error(`eval ${data.name}: context.add_dirs must contain only relative paths`)
   }
   if (!data.execution || typeof data.execution.prompt !== 'string' || !data.execution.prompt.trim()) {
