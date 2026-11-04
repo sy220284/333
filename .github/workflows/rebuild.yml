@@ -104,6 +104,8 @@ jobs:
         run: |
           node --test tests/m2-disable-compact-settings-317.test.mjs tests/m2-auto-mode-rule-slots-317.test.mjs tests/m3-bash-shellopts-317.test.mjs tests/m3-shell-snapshot-317.test.mjs tests/m2-terminal-hyperlink-forced-off-317.test.mjs tests/m4-auth-status-parity-317.test.mjs
           bun test tests/m2-disable-ultrathink-317.test.mjs tests/m2-ultrathink-keyword-scope-317.test.mjs
+      - name: 317插件安装配置解析及歧义规则
+        run: node --test tests/m3-plugin-install-config-317.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
         run: node --test tests/cli-parity.test.mjs
       - name: 复核多级模型回退与自动压缩真实参数语义
@@ -126,6 +128,9 @@ jobs:
             --output .rebuild/oracle/claude
           echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  .rebuild/oracle/claude" | sha256sum --check
           chmod 755 .rebuild/oracle/claude
+      - name: 317插件安装配置的源码和真实x64差分
+        if: runner.os == 'Linux'
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-config-native-parity-317.test.mjs
       - name: 官方x64与重建版旧代理向导退场真实行为对照
         if: runner.os == 'Linux'
         run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m1-obsolete-command-parity.test.mjs
