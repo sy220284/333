@@ -89,6 +89,17 @@ for (const [commandLine, expected] of Object.entries(official317.commands)) {
   });
 }
 
+test('317 permission prompt tool option reaches existing permission consumer', () => {
+  const help = compiledHelp(['--help']);
+  assert.match(help, /--permission-prompt-tool\s+<tool-name>/);
+  assert.match(help, /--permission-prompts\s+<target>/);
+  const main = readFileSync(resolve(root, 'src/main.tsx'), 'utf8');
+  const print = readFileSync(resolve(root, 'src/cli/print.ts'), 'utf8');
+  assert.match(main, /permissionPromptToolName:\s*options\.permissionPromptTool/);
+  assert.match(print, /getCanUseToolFn\(/);
+  assert.match(print, /toolMatchesName\(t, permissionPromptToolName\)/);
+});
+
 test('legacy -d2e alias is accepted by reconstructed Commander configuration', () => {
   assert.match(compiledHelp(['-d2e','--help']), /Usage: claude/);
   assert.match(compiledHelp(['--debug-to-stderr','--help']), /Usage: claude/);

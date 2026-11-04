@@ -3368,6 +3368,10 @@ async function run(): Promise<CommanderCommand> {
   // The official 2.1.317 CLI accepts this SDK/MCP callback option but keeps
   // it out of --help. The existing print() path consumes options.permissionPromptTool.
   program.addOption(new Option('--permission-prompt-tool <tool>').hideHelp());
+  // Official 2.1.317 CLI → runHeadless → getCanUseToolFn: delegate
+  // permission requests to a named MCP tool or the SDK stdio channel.
+  // The consumer already passes options.permissionPromptTool downstream.
+  program.option('--permission-prompt-tool <tool-name>', 'MCP tool to use for permission prompts in print mode');
   program.addOption(new Option('--permission-prompts <target>', 'Who answers permission prompts: host or none')
     .choices(['host', 'none']).default('host'));
   program.addOption(new Option('--prompt-suggestions [value]', 'Enable prompt suggestions (stream-json print mode)')
