@@ -1,7 +1,7 @@
 import { feature } from 'bun:bundle';
 import { rejectDeepLinkArgumentInjection } from '../utils/cliArgv317.mjs';
 import { classifyStartupArgs } from './startupRouting317.mjs';
-import { parseRunnerDeclaration } from './runnerDeclaration317.mjs';
+import { adoptRunnerDeclaration } from './runnerDeclaration317.mjs';
 import { randomUUID } from 'node:crypto';
 import { getStartupCwdError, writeStartupFailureResult, reportCliStartupFailure } from '../utils/cliStartupFailure.mjs';
 
@@ -78,16 +78,9 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (runnerArg) {
-    const declared = parseRunnerDeclaration(runnerArg);
-    if (declared?.nestedRepository) {
-      const {
-        setRunnerDeclaredNestedRepositoryDiff,
-        setRunnerDeclaredNoRepositoryCheckedOut,
-      } = await import('../bootstrap/state.js');
-      setRunnerDeclaredNestedRepositoryDiff(true);
-      if (declared.noRepositoryCheckedOut) setRunnerDeclaredNoRepositoryCheckedOut(true);
-    }
+  if (runnerArg?.includes('diff-finds-nested-repository')) {
+    const state = await import('../bootstrap/state.js');
+    adoptRunnerDeclaration(runnerArg, state);
   }
 
   // For all other paths, load the startup profiler
