@@ -324,10 +324,69 @@ export async function tagSession(
  * @returns `{ sessionId }` — UUID of the new forked session
  */
 export async function forkSession(
-  _sessionId: string,
-  _options?: ForkSessionOptions,
+  sessionId: string,
+  options?: ForkSessionOptions,
 ): Promise<ForkSessionResult> {
-  throw new Error('forkSession is not implemented in the SDK')
+  const { validateUuid, resolveSessionFilePath } = await import('../utils/sessionStoragePortable.js')
+  const valid = validateUuid(sessionId)
+  if (!valid) throw new TypeError('Invalid session ID')
+  const file = await resolveSessionFilePath(valid, options?.dir)
+  if (!file) throw new Error('Session not found: ' + sessionId)
+  const { loadTranscriptFromFile } = await import('../utils/sessionStorage.js')
+  const log = await loadTranscriptFromFile(file.filePath)
+  if (log.isSidechain || log.messages.length === 0) {
+    throw new Error('A sidechain or empty session cannot be forked')
+  }
+  // loadTranscriptFromFile uses the same parent-link and compact-boundary
+  // reconstruction as --resume, including parallel tool-result siblings.
+  const until = options?.upToMessageId
+    ? log.messages.findIndex(item => item.uuid === options.upToMessageId)
+    : log.messages.length - 1
+  if (until < 0) throw new Error('Cannot fork: upToMessageId is not in this session')
+  if (options?.title !== undefined && (typeof options.title !== 'string' ||
+      options.title.length === 0)) throw new TypeError('Fork title must be non-empty')
+  const {randomUUID} = await import('node:crypto')
+  const {writeFile, unlink} = await import('node:fs/promises')
+  const {dirname, join} = await import('node:path')
+  const newId = randomUUID()
+  const ids = new Map<string,string>()
+  let last: string | null = null
+  const entries = log.messages.slice(0, until + 1).map(entry => {
+    const previousId = entry.uuid
+    const uuid = randomUUID()
+    if (previousId) ids.set(previousId,uuid)
+    const next = {...entry, uuid, parentUuid:last, sessionId:newId}
+    last = uuid
+    return next
+  })
+  // Rebind tool-result origin IDs to the fork's own assistant messages.
+  for (const entry of entries) {
+    if ('sourceToolAssistantUUID' in entry &&
+        typeof entry.sourceToolAssistantUUID === 'string') {
+      entry.sourceToolAssistantUUID = ids.get(entry.sourceToolAssistantUUID)
+    }
+  }
+  const output = entries.map(e=>JSON.stringify(e))
+  if (options?.title) output.push(JSON.stringify({
+    type:'custom-title',customTitle:options.title,sessionId:newId,
+  }))
+  const destination = join(dirname(file.filePath), newId + '.jsonl')
+  // Exclusive create makes a concurrent fork or random UUID collision fail
+  // rather than damaging an existing session. File-history snapshots are
+  // intentionally not copied, so rewind cannot cross the fork boundary.
+  try {
+    await writeFile(destination, output.join('\n')+'\n', {flag:'wx',mode:0o600})
+  } catch (error) {
+    const e = error as NodeJS.ErrnoException
+    if (e.code !== 'EEXIST') {
+      try { await unlink(destination) }
+      catch (cleanupError) {
+        if ((cleanupError as NodeJS.ErrnoException).code !== 'ENOENT') throw cleanupError
+      }
+    }
+    throw error
+  }
+  return {sessionId:newId}
 }
 
 // ============================================================================
