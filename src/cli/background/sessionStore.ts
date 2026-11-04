@@ -26,7 +26,7 @@ export interface BackgroundRecord317 {
   model?: string | null
   pid?: number | null
   exitCode?: number | null
-  signalCode?: number | null
+  signalCode?: number | NodeJS.Signals | null
   worktreePath?: string | null
   detail?: string
   startedAt?: number
