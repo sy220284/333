@@ -2,7 +2,7 @@ import { feature } from 'bun:bundle'
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import { randomUUID } from 'node:crypto'
 import { toSDKStreamEvent } from './entrypoints/sdk/streamEventMapper.js'
-import { bindSessionId } from './query/sessionIdentity317.mjs'
+import { bindSessionId } from './query/sessionIdentity317.ts'
 import last from 'lodash-es/last.js'
 import {
   getSessionId,
