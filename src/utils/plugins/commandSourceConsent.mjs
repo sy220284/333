@@ -5,6 +5,11 @@ import { createHash } from 'node:crypto'
  * The digest is bound to the command text, plugin, source mode and the
  * current marketplace revision; it must be recalculated after every refresh.
  */
+export function installedSourceCommandKey(source) {
+  if (!source || source.source !== 'command') return undefined
+  return source.mode === 'link' ? source.command + '\n[mode: link]' : source.command
+}
+
 export function commandSourceDigest(disclosure) {
   const tuple = disclosure.kind === 'command_source'
     ? [disclosure.kind, disclosure.pluginId, disclosure.command, disclosure.mode, disclosure.catalogRevision]
