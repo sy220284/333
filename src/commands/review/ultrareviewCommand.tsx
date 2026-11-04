@@ -15,7 +15,7 @@ function contentBlocksToString(blocks: ContentBlockParam[]): string {
  * and billing. PR-number review has an explicit target and needs no expansion.
  */
 async function getAllFilesApprovalBranch(args: string): Promise<string | null> {
-  if (/^[1-9]\\d*$/.test(args.trim())) return null;
+  if (/^[1-9]\d*$/.test(args.trim())) return null;
   const branch = (await getDefaultBranch()) || 'main';
   const base = await resolveUltrareviewGitBase(
     branch, (gitArgs, input) => execFileNoThrow(gitExe(), gitArgs, {
