@@ -99,11 +99,6 @@ function handlePluginCommandError(
 }
 
 /**
- * CLI command: Install a plugin non-interactively
- * @param plugin Plugin identifier (name or plugin@marketplace)
- * @param scope Installation scope: user, project, or local (defaults to 'user')
- */
-/**
  * Save --config after installation, using the same validators and secure
  * storage as the interactive plugin configuration flow. Invalid input is
  * reported without removing an installed plugin or changing stored values.
@@ -140,6 +135,11 @@ async function applyInstallConfig(
   }
 }
 
+/**
+ * CLI command: Install a plugin non-interactively
+ * @param plugin Plugin identifier (name or plugin@marketplace)
+ * @param scope Installation scope: user, project, or local (defaults to 'user')
+ */
 export async function installPlugin(
   plugin: string,
   scope: InstallableScope = 'user',
