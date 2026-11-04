@@ -14,10 +14,15 @@ assert.match(target, /^(?:linux|darwin|win32)-(?:x64|arm64)$/)
 const [os, arch] = target.split('-')
 const original = readFileSync(resolve(get('--binary')))
 const manifest = JSON.parse(readFileSync(resolve(get('--manifest')), 'utf8'))
+const pinned = JSON.parse(readFileSync(new URL('./official-native-audio-317.json', import.meta.url), 'utf8'))
+assert.equal(pinned.version, '2.1.317')
+const verified = pinned.modules[target]
+assert.ok(verified, 'Target architecture missing from independent 317 source-of-truth: ' + target)
 const expected = manifest.platforms?.[target]?.checksum
 assert.match(expected ?? '', /^[a-f0-9]{64}$/i, 'Missing official target checksum')
 const hash = b => createHash('sha256').update(b).digest('hex')
 assert.equal(hash(original), expected.toLowerCase(), 'Official original binary SHA-256 mismatch')
+assert.equal(expected.toLowerCase(), verified.binary_sha256, 'Official release changed from pinned 317 checksum')
 function goodSize(at, end) {
   return end >= 100_000 && end <= 10_000_000 && at + end <= original.length
 }
@@ -98,5 +103,10 @@ while (at >= 0) {
   at = original.indexOf(magic, at + 1)
 }
 assert.equal(matches.length, 1, 'Ambiguous official audio NAPI: ' + JSON.stringify(matches))
+assert.deepEqual(matches[0], {
+  offset: verified.audio_offset,
+  size: verified.audio_size,
+  sha256: verified.audio_sha256,
+}, 'Official embedded audio source differs from pinned 317 native addon')
 console.log(JSON.stringify({ target, binary_sha256: expected.toLowerCase(),
   binary_bytes: original.length, audio: matches[0] }))
