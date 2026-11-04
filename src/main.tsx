@@ -3697,6 +3697,11 @@ async function run(): Promise<CommanderCommand> {
     .action(async (options: { dryRun?: boolean; scope: string; yes?: boolean }) => {
       const { pluginPruneHandler } = await import('./cli/handlers/pluginPrune.js');
       await pluginPruneHandler(options);
+      // Plugin management is a one-shot CLI action. preAction initialized
+      // telemetry, settings watchers and background services; closing only
+      // the plugin graph leaves those resources alive after printing output.
+      // Use the same explicit command shutdown as other plugin subcommands.
+      await gracefulShutdown(process.exitCode ?? 0);
     });
 
   // Plugin uninstall command
