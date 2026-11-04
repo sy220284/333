@@ -265,7 +265,11 @@ export async function runEvalMockServer317(specPath: string | undefined,
       }
       await recordLine(spec.callLogPath, {
         nonce: spec.nonce, seq: seq++, server: spec.server, tool: name,
-        responder: responder?.kind ?? 'fixed', input: shorten(JSON.stringify(input)),
+        responder: responder?.kind ?? 'fixed',
+        // Upstream writes the real JSON object unless its serialized size
+        // exceeds 16 KiB; large arguments become a bounded string.
+        input: JSON.stringify(input).length > MAX_OUTPUT_CHARS
+          ? shorten(JSON.stringify(input)) : input,
         verdict: verdict.verdict, output: shorten(verdict.text),
         ms: Date.now() - started,
         ...(verdict.replay ? { replay: verdict.replay } : {}),
