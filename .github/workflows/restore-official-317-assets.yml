@@ -45,6 +45,12 @@ jobs:
           python3 tools/upgrade/restore-official-317-assets.py \
             --binary "$RUNNER_TEMP/claude-2.1.317" \
             --root "$GITHUB_WORKSPACE" --write
+      - name: 离线校验101项原版字节及破坏性用例
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/verify-official-embedded-assets.mjs
+          node --test tests/m1-official-embedded-assets-317.test.mjs
       - name: 检查技能脚本和参考文件真实相对路径
         shell: bash
         run: |
