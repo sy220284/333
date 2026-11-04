@@ -1,0 +1,45 @@
+name: M1 317 启动生命周期和令牌保护验收
+
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - '.github/workflows/m1-317-bootstrap-security.yml'
+      - 'src/bootstrap/relayTokenGuard317.mjs'
+      - 'src/bootstrap/jitPolicy317.mjs'
+      - 'src/entrypoints/cli.tsx'
+      - 'src/entrypoints/startupRouting317.mjs'
+      - 'tests/m1-relay-token-guard-317.test.mjs'
+      - 'tests/m1-jit-startup-317.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m1-317-bootstrap-security-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  startup-security:
+    name: 审核317启动安全和JIT策略 (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 9
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Windows检出完整源码前启用Git长路径
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 启动早期JIT策略、远程令牌描述符、Linux内核转储权限验收
+        run: node --test tests/m1-jit-startup-317.test.mjs tests/m1-relay-token-guard-317.test.mjs
