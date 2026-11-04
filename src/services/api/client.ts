@@ -1,4 +1,5 @@
 import Anthropic, { type ClientOptions } from '@anthropic-ai/sdk'
+import { native317MessagesRequest } from './native317Wire.mjs'
 import { randomUUID } from 'crypto'
 import type { GoogleAuth } from 'google-auth-library'
 import {
@@ -136,7 +137,8 @@ export async function getAnthropicClient({
     await configureApiKeyHeaders(defaultHeaders, getIsNonInteractiveSession())
   }
 
-  const resolvedFetch = buildFetch(fetchOverride, source)
+  const native317Auth = { apiKey: undefined as string | undefined }
+  const resolvedFetch = buildFetch(fetchOverride, source, native317Auth)
 
   const ARGS = {
     defaultHeaders,
@@ -310,6 +312,7 @@ export async function getAnthropicClient({
   // launch should produce the CLI's documented login error, rather than the
   // internal SDK constructor's credential-selection diagnostic.
   const resolvedApiKey = isClaudeAISubscriber() ? null : apiKey || getAnthropicApiKey()
+  native317Auth.apiKey = resolvedApiKey ?? undefined
   const resolvedAuthToken = isClaudeAISubscriber()
     ? getClaudeAIOAuthTokens()?.accessToken
     : undefined
@@ -379,6 +382,7 @@ export const CLIENT_REQUEST_ID_HEADER = 'x-client-request-id'
 function buildFetch(
   fetchOverride: ClientOptions['fetch'],
   source: string | undefined,
+  native317Auth: { apiKey?: string },
 ): ClientOptions['fetch'] {
   // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
   const inner = fetchOverride ?? globalThis.fetch
@@ -395,9 +399,12 @@ function buildFetch(
     if (injectClientRequestId && !headers.has(CLIENT_REQUEST_ID_HEADER)) {
       headers.set(CLIENT_REQUEST_ID_HEADER, randomUUID())
     }
+    const request = getAPIProvider() === 'firstParty'
+      ? native317MessagesRequest(input, { ...init, headers }, native317Auth)
+      : { input, init: { ...init, headers } }
     try {
       // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
-      const url = input instanceof Request ? input.url : String(input)
+      const url = request.input instanceof Request ? request.input.url : String(request.input)
       const id = headers.get(CLIENT_REQUEST_ID_HEADER)
       logForDebugging(
         `[API REQUEST] ${new URL(url).pathname}${id ? ` ${CLIENT_REQUEST_ID_HEADER}=${id}` : ''} source=${source ?? 'unknown'}`,
@@ -405,6 +412,6 @@ function buildFetch(
     } catch {
       // never let logging crash the fetch
     }
-    return inner(input, { ...init, headers })
+    return inner(request.input, request.init)
   }
 }
