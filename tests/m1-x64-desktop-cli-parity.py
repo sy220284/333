@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare actual 2.1.310 Desktop CLI guard behavior with a real PTY."""
+"""Compare actual 2.1.317 Desktop CLI guard behavior with a real PTY."""
 import argparse
 import fcntl
 import json
@@ -33,7 +33,7 @@ def probe(binary, arguments, stdin_tty):
     (home / '.claude').mkdir()
     (home / '.claude.json').write_text(json.dumps({
         'hasCompletedOnboarding': True,
-        'lastOnboardingVersion': '2.1.310',
+        'lastOnboardingVersion': '2.1.317',
         'theme': 'dark',
         'projects': {str(project): {'hasTrustDialogAccepted': True}},
     }), encoding='utf-8')

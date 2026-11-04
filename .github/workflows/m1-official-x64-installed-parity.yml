@@ -1,4 +1,4 @@
-name: M1 官方 2.1.310 Linux x64 安装后真实行为对照
+name: M1 官方 2.1.317 Linux x64 安装后真实行为对照
 
 on:
   pull_request:
@@ -41,25 +41,25 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
-      - name: 使用 Anthropic 官方原生安装器安装 Linux x64 2.1.310
+      - name: 使用 Anthropic 官方原生安装器安装 Linux x64 2.1.317
         shell: bash
         run: |
           set -euo pipefail
-          export HOME="${RUNNER_TEMP}/claude-2.1.310-install-home"
+          export HOME="${RUNNER_TEMP}/claude-2.1.317-install-home"
           export XDG_CONFIG_HOME="${HOME}/.config"
           export DISABLE_AUTOUPDATER=1
           mkdir -p "${HOME}" "${XDG_CONFIG_HOME}"
           curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
             'https://claude.ai/install.sh' -o "${RUNNER_TEMP}/claude-official-install.sh"
-          bash "${RUNNER_TEMP}/claude-official-install.sh" 2.1.310
+          bash "${RUNNER_TEMP}/claude-official-install.sh" 2.1.317
           binary="${HOME}/.local/bin/claude"
           test -x "${binary}"
           version="$("${binary}" --version)"
           echo "安装后版本：${version}"
-          [[ "${version}" == 2.1.310* ]]
+          [[ "${version}" == 2.1.317* ]]
           resolved="$(readlink -f "${binary}")"
           test -f "${resolved}"
-          echo 'b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  '"${resolved}" | sha256sum --check
+          echo 'eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  '"${resolved}" | sha256sum --check
           "${binary}" --help > "${RUNNER_TEMP}/claude-installed-help.txt"
           test -s "${RUNNER_TEMP}/claude-installed-help.txt"
           printf 'CLAUDE_REFERENCE_BIN=%s\n' "${binary}" >> "${GITHUB_ENV}"
@@ -67,7 +67,7 @@ jobs:
           printf 'DISABLE_AUTOUPDATER=1\n' >> "${GITHUB_ENV}"
           printf 'version=%s\nresolved=%s\nsha256=%s\n' \
             "${version}" "${resolved}" \
-            'b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56' \
+            'eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0' \
             > "${RUNNER_TEMP}/claude-official-install-evidence.txt"
       - name: 安装版执行官方 CLI 基准并保存实际结果
         shell: bash
@@ -135,7 +135,7 @@ jobs:
         run: |
           set -euo pipefail
           node build/m1-cli-surface-audit.mjs \
-            --target 2.1.310 \
+            --target 2.1.317 \
             --reference "${CLAUDE_REFERENCE_BIN}" \
             --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
             --report "${RUNNER_TEMP}/claude-installed-cli-surface-gaps.json"
@@ -151,7 +151,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          CLAUDE_2310_X64="${CLAUDE_REFERENCE_BIN}" node --test tests/m1-plugin-data-size-parity.test.mjs
+          CLAUDE_TARGET_X64="${CLAUDE_REFERENCE_BIN}" node --test tests/m1-plugin-data-size-parity.test.mjs
       - name: 安装版执行本机模拟 API 与工具权限实测
         shell: bash
         run: |
@@ -164,7 +164,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: official-2.1.310-installed-x64-real-parity
+          name: official-2.1.317-installed-x64-real-parity
           path: |
             ${{ runner.temp }}/claude-official-install-evidence.txt
             ${{ runner.temp }}/claude-installed-help.txt

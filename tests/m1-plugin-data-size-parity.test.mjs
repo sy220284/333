@@ -20,7 +20,7 @@ function run(binary, prefix, args, env, cwd) {
   return result
 }
 
-test('2.1.310 plugin list --data-size reads actual persistent plugin data and honors an exact plugin selector', { timeout: 120_000 }, () => {
+test('2.1.317 plugin list --data-size reads actual persistent plugin data and honors an exact plugin selector', { timeout: 120_000 }, () => {
   for (const [variant, binary, prefix] of executables) {
     const home = mkdtempSync(join(tmpdir(), '333-plugin-datasize-'))
     try {

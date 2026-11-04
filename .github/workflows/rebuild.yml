@@ -42,7 +42,7 @@ jobs:
           key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
       - name: 校验已入库的原始发行资源
         run: node build/verify-bundled-assets.mjs
-      - name: 校验 Claude API 2.1.310 技能资源
+      - name: 校验 Claude API 2.1.317 技能资源
         run: node build/restore-claude-api.mjs --verify
       - name: 从源码映射恢复精确依赖快照
         run: node build/restore-dependencies.mjs
@@ -78,9 +78,9 @@ jobs:
         run: node --test tests/m1-obsolete-command-parity.test.mjs
       - name: 新版退场模块和正式替代入口复查
         run: node --test tests/m1-retired-module-routing.test.mjs
-      - name: 2.1.310 后台会话状态与原版 CLI 行为验收
+      - name: 2.1.317 后台会话状态与原版 CLI 行为验收
         run: node --test tests/m1-background-agent-parity.test.mjs
-      - name: 2.1.310 后台会话真实全生命周期验收
+      - name: 2.1.317 后台会话真实全生命周期验收
         run: node --test tests/m1-background-lifecycle.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
         run: node --test tests/cli-parity.test.mjs
@@ -94,31 +94,31 @@ jobs:
         run: node --test tests/upgrade-mode-integration.test.mjs
       - name: 复测会话 ZIP 插件实际装载与目录权限
         run: bun test tests/session-plugin-sources.test.mjs
-      - name: 取得已锁定SHA的原版2.1.310 Linux x64执行参考
+      - name: 取得已锁定SHA的原版2.1.317 Linux x64执行参考
         if: runner.os == 'Linux'
         run: |
           set -euo pipefail
           mkdir -p .rebuild/oracle
           curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
-            'https://downloads.claude.ai/claude-code-releases/2.1.310/linux-x64/claude' \
+            'https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude' \
             --output .rebuild/oracle/claude
-          echo "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  .rebuild/oracle/claude" | sha256sum --check
+          echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  .rebuild/oracle/claude" | sha256sum --check
           chmod 755 .rebuild/oracle/claude
       - name: 官方x64与重建版旧代理向导退场真实行为对照
         if: runner.os == 'Linux'
-        run: CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/m1-obsolete-command-parity.test.mjs
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m1-obsolete-command-parity.test.mjs
       - name: 后台会话原版 x64 与构建版行为严格对照
         if: runner.os == 'Linux'
-        run: CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/m1-background-agent-parity.test.mjs
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m1-background-agent-parity.test.mjs
       - name: 官方 x64 与移植版后台会话双端生命周期验收
         if: runner.os == 'Linux'
-        run: CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/m1-background-lifecycle.test.mjs
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m1-background-lifecycle.test.mjs
       - name: 对原版和当前构建版实际注入529并验证模型回退顺序
         if: runner.os == 'Linux'
-        run: CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/fallback-529-integration.test.mjs
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/fallback-529-integration.test.mjs
       - name: 对原版和当前构建版实际验证安全模式与工具权限
         if: runner.os == 'Linux'
-        run: CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/upgrade-mode-integration.test.mjs
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/upgrade-mode-integration.test.mjs
       - name: 验证系统提示词在实际模型请求中的分层及磁盘快照
         if: runner.os == 'Linux'
         run: node --test tests/system-prompt-api-roundtrip.test.mjs
@@ -133,11 +133,11 @@ jobs:
         run: node --test tests/claude-api-version-parity.test.mjs
       - name: 对照官方 x64 验证 Claude API 版本迁移命令和资源
         if: runner.os == 'Linux'
-        run: CLAUDE_2310_X64="$PWD/.rebuild/oracle/claude" node --test tests/claude-api-version-parity.test.mjs
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/claude-api-version-parity.test.mjs
       - name: 保存独立重建版发行产物
         uses: actions/upload-artifact@v4
         with:
-          name: rebuilt-claude-2.1.310-${{ matrix.os }}
+          name: rebuilt-claude-2.1.317-${{ matrix.os }}
           path: dist/
           retention-days: 14
           if-no-files-found: error

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Official 2.1.310 vs candidate: actual PTY AX startup test (not full TUI)."""
+"""Official 2.1.317 vs candidate: actual PTY AX startup test (not full TUI)."""
 import argparse
 import fcntl
 import hashlib
@@ -16,7 +16,7 @@ import termios
 import time
 from pathlib import Path
 
-PIN='b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56'
+PIN='eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0'
 CSI=re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]')
 OSC=re.compile(r'\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)')
 SECRETS=('ANTHROPIC','CLAUDE','TOKEN','SECRET','PASSWORD','API_KEY','AWS_','GOOGLE_','OPENAI_','GITHUB_')
@@ -39,7 +39,7 @@ def probe(executable,mode,timeout):
         # connectivity session, so status assertions would inspect wrong UI.
         global_config={
             'hasCompletedOnboarding':True,
-            'lastOnboardingVersion':'2.1.310',
+            'lastOnboardingVersion':'2.1.317',
             'theme':'dark',
             'customApiKeyResponses':{'approved':['local-only'],'rejected':[]},
             'projects':{str(project):{'hasTrustDialogAccepted':True}},
@@ -135,7 +135,7 @@ def main():
     a=ap.parse_args()
     assert 3<=a.timeout<=60
     assert sha256(a.reference)==PIN,'Official x64 checksum mismatch'
-    report={'schema':1,'feature':'F001','target':'2.1.310',
+    report={'schema':1,'feature':'F001','target':'2.1.317',
             'reference_sha256':PIN,'scope':'isolated real PTY startup only',
             'full_interactive_acceptance':'UNVERIFIED','results':{}}
     failures=[]

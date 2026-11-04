@@ -26,7 +26,7 @@ concurrency:
 
 jobs:
   official-vs-candidate-pty:
-    name: 官方2.1.310与重建版四模式终端行为
+    name: 官方2.1.317与重建版四模式终端行为
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -49,19 +49,19 @@ jobs:
           node build/install-public-deps.mjs
       - name: 独立构建PR7候选CLI
         run: bun build/rebuild.mjs
-      - name: 固定校验2.1.310官方x64并创建候选启动器
+      - name: 固定校验2.1.317官方x64并创建候选启动器
         run: |
           curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
-            "https://downloads.claude.ai/claude-code-releases/2.1.310/linux-x64/claude" \
-            --output "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
-          echo "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  ${RUNNER_TEMP}/claude-2.1.310-linux-x64" | sha256sum --check
-          chmod 700 "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
+            "https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude" \
+            --output "${RUNNER_TEMP}/claude-2.1.317-linux-x64"
+          echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  ${RUNNER_TEMP}/claude-2.1.317-linux-x64" | sha256sum --check
+          chmod 700 "${RUNNER_TEMP}/claude-2.1.317-linux-x64"
           printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-candidate-cli"
           chmod 700 "${RUNNER_TEMP}/m1-candidate-cli"
       - name: 用真实PTY检测关闭、flag、env、settings四种来源与启动输出
         run: |
           python3 tests/m1-screen-reader-terminal-parity.py \
-            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --reference "${RUNNER_TEMP}/claude-2.1.317-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-candidate-cli" \
             --report "${RUNNER_TEMP}/m1-screen-reader-real-pty.json"
       - name: 保存实测终端差分和每种启用来源
