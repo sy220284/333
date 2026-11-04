@@ -68,7 +68,7 @@ function quickstartSection(choices, selected, content, onDisk) {
     : `## Bundled Quickstarts\n\nThe request names the bundled quickstart \`${item.name}\`, included below. The guide that says how to build it (\`${ONBOARDING_GUIDE}\`) cannot be Read this session: show the user the template, write nothing, and ask them to run the command again.\n\n${document}`
 }
 
-export function buildClaudeApiPrompt(language, args, content, onDisk, secureAvailable, extraSection) {
+export function buildClaudeApiPrompt(language, args, content, onDisk, secureAvailable, extraSection: string | null = null) {
   const command = claudeApiSubcommand(args)
   const parts = [processClaudeApiContent(content.SKILL_PROMPT, content).trimEnd()]
   if (!onDisk) {
