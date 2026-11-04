@@ -7,8 +7,8 @@ import { env } from '../../utils/env.js'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
 import { getPlatform } from '../../utils/platform.js'
 import { BEL, ESC, ESC_TYPE, SEP } from './ansi.js'
-import { windowsClipboardWriteInvocation, writeLinuxClipboardNative, isLinuxClipboardAddonLoadable } from './clipboardNative317.mjs'
-import { clipboardMultiplexer, encodeClipboardOsc52, suppressClipboardOsc52 } from './clipboardOsc317.mjs'
+import { windowsClipboardWriteInvocation, writeLinuxClipboardNative, isLinuxClipboardAddonLoadable } from './clipboardNative317.ts'
+import { clipboardMultiplexer, encodeClipboardOsc52, suppressClipboardOsc52 } from './clipboardOsc317.ts'
 import type { Action, Color, TabStatusAction } from './types.js'
 
 export const OSC_PREFIX = ESC + String.fromCharCode(ESC_TYPE.OSC)

@@ -2,7 +2,7 @@ import { readdir } from 'node:fs/promises'
 import { getCwd } from '../../utils/cwd.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
 import { registerBundledSkill } from '../bundledSkills.js'
-import { buildClaudeApiPrompt, claudeApiSubcommand, processClaudeApiContent } from './claudeApiPrompt.mjs'
+import { buildClaudeApiPrompt, claudeApiSubcommand, processClaudeApiContent } from './claudeApiPrompt.ts'
 
 type DetectedLanguage = 'python' | 'typescript' | 'java' | 'go' | 'ruby' | 'csharp' | 'php' | 'curl'
 

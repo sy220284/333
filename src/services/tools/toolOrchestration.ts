@@ -4,7 +4,7 @@ import { findToolByName, type ToolUseContext } from '../../Tool.js'
 import type { AssistantMessage, Message } from '../../types/message.js'
 import { all } from '../../utils/generators.js'
 import { type MessageUpdateLazy, runToolUse } from './toolExecution.js'
-import { withToolInProgress } from './toolExecutionLifecycle317.mjs'
+import { withToolInProgress } from './toolExecutionLifecycle317.ts'
 
 function getMaxToolUseConcurrency(): number {
   return (
