@@ -95,9 +95,6 @@ export async function pluginEvalHandler317(target, options = {}, adapters = {}) 
   if (mocks === 'off' && !options.allowRealServers) {
     throw new Error('Running real plugin MCP servers requires --allow-real-servers')
   }
-  if (options.scaffold) {
-    throw new Error('scaffold_script execution has not been installed in the evaluation sandbox')
-  }
   const evalDir = await chooseEvalDirectory317(pluginRoot, options.evalDir)
   const cases = await discoverEvalCases317(evalDir, {
     case: options.case, tags: options.tag,
@@ -106,7 +103,7 @@ export async function pluginEvalHandler317(target, options = {}, adapters = {}) 
   const temp = await prepareEvalPlugin317(pluginRoot, { ...options, mocks })
   try {
     const data = await executePluginEvalSuite317(cases, {
-      ...options, pluginRoot: temp.plugin,
+      ...options, pluginRoot: temp.plugin, sourcePluginRoot: pluginRoot,
     }, adapters)
     data.suite = { root: pluginRoot, evalDir }
     data.startedAt = new Date().toISOString()
