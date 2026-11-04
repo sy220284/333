@@ -3689,6 +3689,21 @@ async function run(): Promise<CommanderCommand> {
     await pluginConfigureHandler(plugin, options);
   });
 
+  pluginCmd.command('tag [path]')
+    .description('Create a {name}--v{version} git tag for a plugin release, validating that plugin.json and any enclosing marketplace entry agree')
+    .option('--dry-run', 'Print what would be tagged without creating it')
+    .option('-f, --force', 'Skip the dirty-working-tree and tag-already-exists checks')
+    .option('-m, --message <msg>', 'Tag annotation message (use %s for the version)')
+    .option('--push', 'Push the tag to --remote after creating it')
+    .option('--remote <name>', 'Remote to push to with --push (default: "origin")')
+    .action(async (path: string | undefined, options: {
+      dryRun?: boolean; force?: boolean; message?: string;
+      push?: boolean; remote?: string
+    }) => {
+      const { pluginTagHandler } = await import('./cli/handlers/pluginTag.js')
+      await pluginTagHandler(path, options)
+    })
+
   pluginCmd.command('prune').alias('autoremove')
     .description('Remove auto-installed dependencies that are no longer needed')
     .option('--dry-run', 'List what would be removed without removing')
