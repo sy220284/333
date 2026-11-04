@@ -58,7 +58,7 @@ test('317 SDK and MCP serve sessions keep their server-assigned identity', () =>
 
 test('317 identity policy is wired into the session bootstrap, not only helper tests', () => {
   const source = readFileSync(new URL('../src/bootstrap/state.ts',import.meta.url),'utf8')
-  assert.match(source, /import \{ resolveInitialSessionId \} from 'src\/utils\/remoteSessionIdentity\.mjs'/)
+  assert.match(source, /import \{ resolveInitialSessionId \} from 'src\/utils\/remoteSessionIdentity\.ts'/)
   assert.match(source, /sessionId: resolveInitialSessionId\(\) as SessionId/)
   assert.match(source, /STATE\.sessionId = randomUUID\(\) as SessionId/)
 })
