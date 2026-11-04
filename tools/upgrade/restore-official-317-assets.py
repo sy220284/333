@@ -19,6 +19,41 @@ from pathlib import Path
 import zlib
 
 SOURCE_SHA = "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0"
+
+# Exact 317 ELF bytes remain the authority; normalize only the verified
+# script locations and import edges required by their documented CLI paths.
+RELOCATIONS = {
+    "src/skills/bundled/design-sync/lib/capture.mjs": "src/skills/bundled/design-sync/package-capture.mjs",
+    "src/skills/bundled/design-sync/lib/http-serve.mjs": "src/skills/bundled/design-sync/storybook/http-serve.mjs",
+    "src/skills/bundled/claude-test-conversation/scripts/lib/ct-auth.mjs": "src/skills/bundled/claude-test-conversation/scripts/ct-auth.mjs",
+}
+IMPORT_REWRITES = {
+    "src/skills/bundled/design-sync/storybook/preview-gen-storybook.mjs": (
+        ("from './common.mjs'", "from '../lib/common.mjs'"),
+    ),
+    "src/skills/bundled/design-sync/storybook/source-storybook.mjs": (
+        ("from './common.mjs'", "from '../lib/common.mjs'"),
+        ("from './detect.mjs'", "from '../lib/detect.mjs'"),
+        ("from './story-imports.mjs'", "from '../lib/story-imports.mjs'"),
+    ),
+}
+
+def runtime_resource(original_name, original_bytes):
+    name = RELOCATIONS.get(original_name, original_name)
+    content = original_bytes
+    metadata = {}
+    if name != original_name:
+        metadata["upstream_path"] = original_name
+    if original_name in IMPORT_REWRITES:
+        metadata["upstream_sha256"] = hashlib.sha256(original_bytes).hexdigest()
+        archive = "research/official-317-unaltered/" + original_name.removeprefix("src/skills/bundled/")
+        metadata["upstream_backup"] = archive
+        for old, new in IMPORT_REWRITES[original_name]:
+            needle = old.encode("utf-8")
+            if content.count(needle) != 1:
+                raise ValueError("Unexpected upstream import shape: " + original_name + " " + old)
+            content = content.replace(needle, new.encode("utf-8"))
+    return name, content, metadata
 # [ELF offset, raw bytes, destination, original zstd?, UTF16LE -> UTF8?]
 INDEX = (
 "eNqtmVtz4sgZhv/LXEu4z4fLJJWqbGUr2aqZu6mtrbZoQIukVtTCh/z6vI3BRgJsIXIx4xnAj75++zvz8yfnhBihrMqo4FRl32JXPMRtWVXx4XHXLCu/fCgqt1v6vAjNqlw/fP/nL7/+uqiX3zKS0d+zn5xZpQljLBNE6osA1/XlyhV9vizdunN1XTZDDkkcTiwzVJjMEE4ucsJqVRalq3L/0ncuPri23XP/iMvt4s/4LaNHEuVMGptZzc000tHCtnLNYtPX1TuMGSaE1hBIEikOhvWvrY/vFE71h0hLv1gu+lNjCBfUsEwaMe1YB1Tv1iN5uKLa4qKoZpNA27LP67DcVT4O5SGCEMYzRS2fBKrKJ5/HsOsKkAY2AWOYyYQ9mgQvib1r+qE6VQjtX3Z9aEIddvG3zrv6sfJjlDGEZpIbcjvqN9/FMva+6YdQKhhuMNNGGmqnO6eL0eO5te9qVy4XeG0v4IetQjGqM2YkuRwzbbVbl03udv0mdInY+ZXvfAMBj+/5J1ftjT06mtbEaqszoYy5B5r/Z1cWW7x3SofNWmgmMmv1NDfsfAE582LjmvX7tdNDSHDDceNwa/XZXcWybiv/xz6o+pf+XUCmOKdCpJShphkDeO/zqnzsXPd6ehfMamWpEpnW5vIFL13v8qcy7lxV/tf1ZWgeYtGVLWyFWCXehoWu8n3vT6MEYJClyJS19G5w+zpIKIRamzGl+WfqvaEvqKcFcjYxGSXWkC+c2sdy3Rz9GY/YdKEti++uicgBi2c8jy32757ikRdMSjRaqnl435WrT/hIiEJlShA2WdnDI+CNXb/Y1WcxCao1VEEUFCOrbzF7U/0Z/7r/yGLtG9/h3s7xKHKCQW0hyGV4EZ5Dt80/i9Ei1G1oUlDFYuNrFwfhjyeYFPlIAWruE/yLSxF3+MwgV4NvlFIyEyiOc/l10ebRd0/ItiO2JdpCfMXsXHb0ris2eezTBaxLP3oC51JImuHHZ01K72OfOpVk4Zvj/OvfP375299PQNIgUyB3XUs9V0mHzyXXycvmvIHZ26gNyoJQgt3IPiQOZLgHV1XhOe9DQHkYJCRpTEpIQl7paqZafnwYnLDYvj3jvZfjigi0XyhG3M4/wluvODIf9Z0iMpH71R3kfu89Y7SFKCLjqPJyHrvoR0hUTC4R71qpucTHLjwjWsZgyIASjCg0fL4OyzIW4ekMjsoi4CJWiDvYvnnqfBu6sSSCEoMg51bfAV+laM/bLry8nuGFQVMhDCHz8eud65ZnYJtKrdJazwdvQuzjMVg+4p2iDeR8ph5lKvtVtY/1MVswlfIdZZreofa+c2/d2o8DRtPkIlRpeSM9NI8BEiN5D6uX4GjDZBre7sgbofXNibkfOVtQ9PFZ0sLMo6OLen3uyvUGI1HRnqlBFCYrrW7UYnF4562sHXpwtA2hOb1ItN0kld1rY9skZdpY5aktOtA/ZDfoxFPXI+6hd7vm1Ak/Kg6RJhVduPld8DOu"
@@ -104,14 +139,34 @@ def main():
                 raise ValueError("Original resource exceeds executable bounds: " + name)
             binary.seek(offset)
             contents = restored(lib, binary.read(size), compressed, utf16)
-            destination = args.root / name
+            runtime_name, runtime_bytes, metadata = runtime_resource(name, contents)
+            destination = args.root / runtime_name
             if destination.is_symlink() or (destination.exists() and not destination.is_file()):
-                raise ValueError("Official resource destination is not a regular file: " + name)
-            if not args.write and destination.exists() and destination.read_bytes() != contents:
-                raise ValueError("Existing Git source bytes differ from verified official binary: " + name)
-            prepared.append((destination, contents, name))
+                raise ValueError("Official resource destination is not a regular file: " + runtime_name)
+            if not args.write and destination.exists() and destination.read_bytes() != runtime_bytes:
+                raise ValueError("Existing Git source bytes differ from normalized official binary: " + runtime_name)
+            archive = args.root / metadata["upstream_backup"] if "upstream_backup" in metadata else None
+            if archive is not None:
+                if archive.is_symlink() or (archive.exists() and not archive.is_file()):
+                    raise ValueError("Original official resource archive must be a regular file: " + str(archive))
+                if not args.write and archive.exists() and archive.read_bytes() != contents:
+                    raise ValueError("Official resource archive differs from verified binary: " + str(archive))
+            item = {
+                "path": runtime_name, "bytes": len(runtime_bytes),
+                "sha256": hashlib.sha256(runtime_bytes).hexdigest(), **metadata,
+            }
+            prepared.append((destination, runtime_bytes, runtime_name, archive, contents, item))
     missing, repaired = [], []
-    for target, contents, name in prepared:
+    for target, contents, name, archive, original, item in prepared:
+        if archive is not None:
+            if args.write:
+                archive.parent.mkdir(parents=True, exist_ok=True)
+                if not archive.exists() or archive.read_bytes() != original:
+                    replace_from_verified_binary(archive, original)
+                if archive.read_bytes() != original:
+                    raise ValueError("Official resource provenance write failed: " + str(archive))
+            elif not archive.is_file():
+                missing.append(str(archive))
         if args.write:
             target.parent.mkdir(parents=True, exist_ok=True)
             if not target.exists() or target.read_bytes() != contents:
@@ -123,14 +178,10 @@ def main():
             missing.append(name)
     if missing:
         raise ValueError("Unrestored official resources: " + ", ".join(missing))
-    # The manifest is derived from exact official ELF bytes for offline builds.
     manifest = {
         "version": "2.1.317",
         "source_binary_sha256": SOURCE_SHA,
-        "resources": sorted((
-            {"path": name, "bytes": len(contents), "sha256": hashlib.sha256(contents).hexdigest()}
-            for _, contents, name in prepared
-        ), key=lambda item: item["path"]),
+        "resources": sorted((item for _, _, _, _, _, item in prepared), key=lambda item: item["path"]),
     }
     manifest_path = args.root / "build/official-embedded-assets-2.1.317.json"
     if manifest_path.is_symlink() or (manifest_path.exists() and not manifest_path.is_file()):
@@ -142,7 +193,7 @@ def main():
             replace_from_verified_binary(manifest_path, manifest_bytes)
     elif not manifest_path.is_file() or manifest_path.read_bytes() != manifest_bytes:
         raise ValueError("Official offline resource manifest missing or checksum mismatch")
-    print(json.dumps({"target":"2.1.317","result":"PASS","verified":len(prepared),"repaired":len(repaired),"repaired_paths":repaired,"bytes":sum(len(b) for _,b,_ in prepared)}))
+    print(json.dumps({"target":"2.1.317","result":"PASS","verified":len(prepared),"repaired":len(repaired),"repaired_paths":repaired,"bytes":sum(len(b) for _,b,_,_,_,_ in prepared)}))
 
 if __name__ == "__main__":
     main()
