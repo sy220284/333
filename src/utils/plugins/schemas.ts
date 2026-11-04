@@ -1466,6 +1466,8 @@ export const InstalledPluginSchema = lazySchema(() =>
       .optional()
       .describe('Git commit SHA for git-based plugins (for version tracking)'),
     sourceCommand: z.string().optional().describe('Previously accepted marketplace install command and its source mode'),
+    sourceProducerPath: z.string().max(4096).optional().describe('Last absolute producer directory returned by an authorized plugin command'),
+    previousProducerPaths: z.array(z.string().max(4096)).max(32).optional().describe('Prior producer directories retained for sandbox protection'),
     auto: z.boolean().optional(),
   }),
 )
@@ -1518,6 +1520,8 @@ export const PluginInstallationEntrySchema = lazySchema(() =>
       .optional()
       .describe('Git commit SHA for git-based plugins'),
     sourceCommand: z.string().optional().describe('Accepted marketplace-declared install command and source mode'),
+    sourceProducerPath: z.string().max(4096).optional().describe('Last absolute producer directory returned by an authorized plugin command'),
+    previousProducerPaths: z.array(z.string().max(4096)).max(32).optional().describe('Prior producer directories retained for sandbox protection'),
     auto: z.boolean().optional().describe('Installed automatically as a dependency'),
   }),
 )
