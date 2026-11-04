@@ -4,6 +4,8 @@ on:
     branches: [upgrade/2.1.310-m1-evidence]
     paths:
       - '.github/workflows/type-migration-batch.yml'
+      - 'tools/dev/type-migration-paramfix.mjs'
+      - 'tools/dev/type-migration-returnfix.mjs'
   workflow_dispatch:
 permissions:
   contents: write
