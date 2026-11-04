@@ -1,3 +1,4 @@
+import { findKeywordTriggerPositions } from './ultraplan/keyword.js'
 import { getCatalogModel, getModelCapabilityEnvOverride } from './model/modelCatalog.js'
 import { isEnvTruthy } from './envUtils.js'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
@@ -35,34 +36,19 @@ export function isUltrathinkEnabled(): boolean {
  * Check if text contains the "ultrathink" keyword.
  */
 export function hasUltrathinkKeyword(text: string): boolean {
-  return /\bultrathink\b/i.test(text)
+  return findThinkingTriggerPositions(text).length > 0
 }
 
 /**
- * Find positions of "ultrathink" keyword in text (for UI highlighting/notification)
+ * The same lexical trigger rules as ultraplan/ultrareview. Do not raise effort
+ * for quoted words, path components or slash-command arguments.
  */
 export function findThinkingTriggerPositions(text: string): Array<{
   word: string
   start: number
   end: number
 }> {
-  const positions: Array<{ word: string; start: number; end: number }> = []
-  // Fresh /g literal each call — String.prototype.matchAll copies lastIndex
-  // from the source regex, so a shared instance would leak state from
-  // hasUltrathinkKeyword's .test() into this call on the next render.
-  const matches = text.matchAll(/\bultrathink\b/gi)
-
-  for (const match of matches) {
-    if (match.index !== undefined) {
-      positions.push({
-        word: match[0],
-        start: match.index,
-        end: match.index + match[0].length,
-      })
-    }
-  }
-
-  return positions
+  return findKeywordTriggerPositions(text, 'ultrathink')
 }
 
 const RAINBOW_COLORS: Array<keyof Theme> = [

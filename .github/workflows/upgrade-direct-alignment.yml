@@ -41,6 +41,7 @@ jobs:
         run: |
           node --test tests/m2-disable-compact-settings-317.test.mjs tests/m2-auto-mode-rule-slots-317.test.mjs tests/m3-bash-shellopts-317.test.mjs
           node --test tests/m2-disable-ultrathink-317.test.mjs
+          node --experimental-strip-types --test tests/m2-ultrathink-keyword-scope-317.test.mjs
       - name: 检查功能覆盖关系
         run: node build/upgrade-coverage.mjs
       - name: 扫描PR7源码与官方CLI差异
