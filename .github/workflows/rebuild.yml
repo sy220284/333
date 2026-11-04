@@ -197,6 +197,7 @@ jobs:
         continue-on-error: true
         run: |
           node --test tests/m1-startup-argv-317.test.mjs tests/m1-startup-cli-317.test.mjs tests/m1-print-routing-317.test.mjs tests/m1-headless-startup-error-314.test.mjs
+          node --test tests/m1-fast-path-settings-317.test.mjs
           bun test tests/m1-startup-sdk-317.test.ts
       - name: 317 PTY宿主子进程、二进制流及重连回收验收
         run: node --test tests/m1-pty-host-317.test.mjs
