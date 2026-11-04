@@ -1,8 +1,9 @@
-import { createServer, connect, type Socket } from 'node:net'
-import { appendFileSync, chmodSync, existsSync, lstatSync, readFileSync, unlinkSync } from 'node:fs'
+import { createServer, type Socket } from 'node:net'
+import { appendFileSync, chmodSync, existsSync, readFileSync, unlinkSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { mkdirSync } from 'node:fs'
 import { timingSafeEqual } from 'node:crypto'
+import { assertSocketVacant317 } from './socketOwnership317.ts'
 import {
   createPtyFrameDecoder317, encodePtyControl317, encodePtyData317, PtyReplay317,
   PTY_CTRL_KIND_317, PTY_DATA_KIND_317, PTY_MAX_DIMENSION_317,
@@ -22,25 +23,8 @@ function removeSocket(path: string): void {
   try { unlinkSync(path) }
   catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
 }
-/** Preserve another running PTY host's socket. Reclaim only a proven stale one. */
-export async function assertPtySocketVacant317(path:string):Promise<void> {
-  if(!existsSync(path))return
-  if(!lstatSync(path).isSocket())throw Error('PTY path exists and is not a socket')
-  const live=await new Promise<boolean>((resolve,reject)=>{
-    const peer=connect(path)
-    const timer=setTimeout(()=>{peer.destroy();reject(Error('PTY socket ownership probe timed out: '+path))},1000)
-    timer.unref()
-    const done=()=>{clearTimeout(timer);peer.destroy()}
-    peer.once('connect',()=>{done();resolve(true)})
-    peer.once('error',error=>{
-      done()
-      const code=(error as NodeJS.ErrnoException).code
-      if(code==='ECONNREFUSED'||code==='ENOENT')resolve(false)
-      else reject(error)
-    })
-  })
-  if(live)throw Error('Another PTY host already owns '+path)
-  removeSocket(path)
+export function assertPtySocketVacant317(path: string): Promise<void> {
+  return assertSocketVacant317(path, 'PTY host')
 }
 function recordFailure(path: string | undefined, error: string): void {
   if (!path) return
