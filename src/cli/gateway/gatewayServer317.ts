@@ -163,8 +163,9 @@ export async function createGatewayService317(config, deps: GatewayServiceDeps31
               {status:503,headers:{'retry-after':'30','x-request-id':requestId}})
             : error(401,'authentication_error','invalid token',requestId)
         }
-        const identity = criAttempt ? admission.claims : token && verifyGatewaySession317(
-          token, config.session.jwt_secret, publicUrl)
+        const identity = criAttempt
+          ? (admission?.ok ? admission.claims : null)
+          : token && verifyGatewaySession317(token, config.session.jwt_secret, publicUrl)
         if (!identity || (!criAttempt && await store.isRevoked(token))) {
           return error(401, 'authentication_error', 'invalid token', requestId)
         }

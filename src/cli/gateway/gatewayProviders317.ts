@@ -18,9 +18,9 @@ function badProvider(status, message, requestId) {
 function cloudAuthOptions(up) {
   const auth=up.auth??{}
   if(auth.access_token){
-    return {authClient:{projectId:up.project_id,getRequestHeaders:async()=>({
-      Authorization:'Bearer '+auth.access_token,
-    })}}
+    // Vertex ClientOptions supports accessToken directly; constructing a partial
+    // authClient lacks the Google AuthClient credential transport contract.
+    return {accessToken:auth.access_token}
   }
   return null
 }

@@ -117,7 +117,7 @@ export async function pluginEvalInit317(name: string | undefined, options: EvalI
       cwd:root, env:{...process.env, CLAUDE_CODE_EVAL_INTERVIEW_SESSION:'1'},
       stdio:'inherit', windowsHide:false,
     })
-    const code = await new Promise((done, fail) => {
+    const code = await new Promise<number>((done, fail) => {
       child.once('error', fail)
       child.once('close', (status, signal) => {
         if (signal) done(128 + (signal === 'SIGINT' ? 2 : 1))
