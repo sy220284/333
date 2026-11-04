@@ -97,9 +97,10 @@ export async function runEvalModel317({
   const result = [...events].reverse().find(event => event.type === 'result')
   const costUsd = Number(result?.total_cost_usd ?? result?.cost_usd ?? 0)
   const message = stdoutText(events)
+  const stderrText = Buffer.concat(errors).toString('utf8')
   const error = exit.code === 0 ? undefined :
-    String(result?.error ?? Buffer.concat(errors).toString('utf8') ||
-      'model execution exited with ' + (exit.code ?? exit.signal))
+    String(result?.error ?? (stderrText ||
+      'model execution exited with ' + (exit.code ?? exit.signal)))
   return {
     lastMessage: message, trace: events,
     costUsd: Number.isFinite(costUsd) ? costUsd : 0,
