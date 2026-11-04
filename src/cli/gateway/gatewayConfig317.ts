@@ -140,7 +140,7 @@ export function validateGatewayConfig317(value: unknown) {
   const session = requireRecord(value.session, 'session')
   const secrets = Array.isArray(session?.jwt_secret)
     ? session.jwt_secret : [session?.jwt_secret]
-  if (!secrets.length || secrets.some(x =>
+  if (!secrets.length || secrets.some((x: unknown) =>
     typeof x !== 'string' || Buffer.byteLength(x) < 32)) {
     throw new Error('session.jwt_secret requires one or more secrets of at least 32 bytes')
   }
@@ -148,9 +148,10 @@ export function validateGatewayConfig317(value: unknown) {
   if (!value.oidc && !cri?.enabled) {
     throw new Error('oidc is required unless cri.enabled is true')
   }
-  if (value.oidc) {
-    nonempty(value.oidc.client_id, 'oidc.client_id')
-    safeHttps(value.oidc.issuer, 'oidc.issuer')
+  const oidc = value.oidc ? requireRecord(value.oidc, 'oidc') : undefined
+  if (oidc) {
+    nonempty(oidc.client_id, 'oidc.client_id')
+    safeHttps(oidc.issuer, 'oidc.issuer')
   }
   if (!Array.isArray(value.upstreams) || !value.upstreams.length) {
     throw new Error('gateway needs at least one upstream')
@@ -196,6 +197,7 @@ export function validateGatewayConfig317(value: unknown) {
       ...store, postgres_url },
     session: { ...session, jwt_secret: secrets, ttl_hours: session.ttl_hours ?? 1 },
     upstreams,
+    ...(oidc && {oidc}),
     ...(value.admin && {admin:validateGatewayAdmin317(value.admin)}),
     ...(cri && {cri}),
     models,
