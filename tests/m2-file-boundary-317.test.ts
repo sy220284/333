@@ -10,7 +10,11 @@ const reference = process.env.CLAUDE_CODE_317_REFERENCE
 const event = (type: string, value: unknown) => `event: ${type}\ndata: ${JSON.stringify(value)}\n\n`
 
 test('317 file boundaries govern actual Read and file creation, exemptions, project settings and symlinks', { timeout: 180000 }, async () => {
-  const dir = mkdtempSync(join(tmpdir(), '333-m2-fence-'))
+  // Windows CI may report os.tmpdir() using an 8.3 alias (RUNNER~1).
+  // The official file safety gate must keep rejecting 8.3 paths; place the
+  // fixture under the checkout's long-form path to test the requested fence.
+  const fixtureRoot = process.platform === 'win32' ? process.cwd() : tmpdir()
+  const dir = mkdtempSync(join(fixtureRoot, '333-m2-fence-'))
   const cwd = join(dir, 'project'), outside = join(dir, 'private'), file = join(outside, 'secret.txt')
   mkdirSync(join(cwd, '.claude'), { recursive: true }); mkdirSync(outside)
   writeFileSync(file, 'PRIVATE_317_BYTES')
