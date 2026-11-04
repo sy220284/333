@@ -1,21 +1,8 @@
 import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import { readWorkflowSummary } from './workflowSummaryStore.ts'
+import { readWorkflowSummary, type WorkflowSummary317 } from './workflowSummaryStore.ts'
+export type { WorkflowSummary317 } from './workflowSummaryStore.ts'
 import { workflowSummaryPath } from './workflowStoragePaths.ts'
-export type WorkflowSummary317 = {
-  runId: string
-  scriptPath: string
-  sessionId?: string
-  startTime?: number
-  workflowName?: string
-  summary?: string
-  status?: string
-  result?: unknown
-  workflowProgress?: Array<{title: string}>
-  agentCount?: number
-  durationMs?: number
-  error?: string
-}
 export type WorkflowHistoryError317 = { file: string; message: string }
 export type WorkflowHistoryResult317 = { runs: WorkflowSummary317[]; errors: WorkflowHistoryError317[] }
 const RUN_FILE=/^wf_[0-9a-f]{8}-[0-9a-f]{3}\.json$/
