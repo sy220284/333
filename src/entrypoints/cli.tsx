@@ -1,12 +1,12 @@
 import { feature } from 'bun:bundle';
-import { rejectDeepLinkArgumentInjection } from '../utils/cliArgv317.mjs';
-import { classifyStartupArgs } from './startupRouting317.mjs';
-import { adoptRunnerDeclaration } from './runnerDeclaration317.mjs';
-import { noteProcessStartTuning, startGarbageCollectionCount } from '../bootstrap/processStart317.mjs';
-import { scheduleJitPolicy317 } from '../bootstrap/jitPolicy317.mjs';
-import { guardRelayTokenDescriptor317, guardRunnerReviewTokens317 } from '../bootstrap/relayTokenGuard317.mjs';
+import { rejectDeepLinkArgumentInjection } from '../utils/cliArgv317.ts';
+import { classifyStartupArgs } from './startupRouting317.ts';
+import { adoptRunnerDeclaration } from './runnerDeclaration317.ts';
+import { noteProcessStartTuning, startGarbageCollectionCount } from '../bootstrap/processStart317.ts';
+import { scheduleJitPolicy317 } from '../bootstrap/jitPolicy317.ts';
+import { guardRelayTokenDescriptor317, guardRunnerReviewTokens317 } from '../bootstrap/relayTokenGuard317.ts';
 import { randomUUID } from 'node:crypto';
-import { getStartupCwdError, writeStartupFailureResult, reportCliStartupFailure } from '../utils/cliStartupFailure.mjs';
+import { getStartupCwdError, writeStartupFailureResult, reportCliStartupFailure } from '../utils/cliStartupFailure.ts';
 
 // Apply Windows executable-search protection before fast-path process launches.
 // eslint-disable-next-line custom-rules/no-top-level-side-effects
@@ -108,7 +108,7 @@ async function main(): Promise<void> {
   // 317 remote preloader is a one-shot socket claim that must run before
   // importing the interactive CLI or starting background session services.
   if (args[0] === '--preload') {
-    const { runPreload317 } = await import('../bootstrap/preload317.mjs');
+    const { runPreload317 } = await import('../bootstrap/preload317.ts');
     await runPreload317(args.slice(1));
     return;
   }
@@ -130,7 +130,7 @@ async function main(): Promise<void> {
   // those tasks otherwise keep error paths alive after their message is printed.
   if (flagWords.includes('--desktop') && !flagWords.includes('--help') && !flagWords.includes('-h')) {
     const { parseDesktopCliOptions, launchDesktopFromCli } =
-      await import('../cli/desktop/launch.mjs');
+      await import('../cli/desktop/launch.ts');
     const { prompt, options } = parseDesktopCliOptions(args);
     process.exitCode = await launchDesktopFromCli({ prompt, options, argv: args });
     return;
@@ -139,7 +139,7 @@ async function main(): Promise<void> {
   // Official 2.1.310 background agent fleet uses a dedicated fast path.
   // Keep supervisor and PTY workers outside regular interactive REPL initialization.
   if (backgroundRequest) {
-    const { interceptBackgroundCli } = await import('../cli/background/index.mjs');
+    const { interceptBackgroundCli } = await import('../cli/background/index.ts');
     try {
       if (await interceptBackgroundCli(args)) return;
     } catch (error) {

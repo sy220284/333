@@ -52,7 +52,7 @@ import {
   BASH_MAX_OUTPUT_UPPER_LIMIT,
 } from '../utils/shell/outputLimits.js'
 import { getXDGStateHome } from '../utils/xdg.js'
-import { getIgnoredProjectTelemetryEnvKeys } from '../utils/telemetry/projectTelemetryPolicy.mjs'
+import { getIgnoredProjectTelemetryEnvKeys } from '../utils/telemetry/projectTelemetryPolicy.ts'
 
 type Props = {
   onDone: (

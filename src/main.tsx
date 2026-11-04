@@ -1,4 +1,4 @@
-import { hasCliFlag, findCliArgument, firstCliPositionalIndex, isPrintModeLaunch } from './utils/cliArgv317.mjs';
+import { hasCliFlag, findCliArgument, firstCliPositionalIndex, isPrintModeLaunch } from './utils/cliArgv317.ts';
 // These side-effects must run before all other imports:
 // 1. profileCheckpoint marks entry before heavy module evaluation begins
 // 2. startMdmRawRead fires MDM subprocesses (plutil/reg query) so they run in
@@ -20,11 +20,11 @@ import { ensureKeychainPrefetchCompleted, startKeychainPrefetch } from './utils/
 // eslint-disable-next-line custom-rules/no-top-level-side-effects
 startKeychainPrefetch();
 import { feature } from 'bun:bundle';
-import { parseFallbackModels } from './services/api/fallbackModels.mjs';
+import { parseFallbackModels } from './services/api/fallbackModels.ts';
 import { isScreenReaderEnabled, getScreenReaderSubprocessEnvironment } from './utils/accessibility/screenReaderRuntime.js';
-import { parsePromptSuggestions, restrictedToolDenyList } from './services/cli/upgradeMode.mjs';
-import { resolveCloudTarget, validateCloudEnvironment } from './services/cli/cloudTarget.mjs';
-import { parseAutoCompactWindowOption } from './services/api/autoCompactWindow.mjs';
+import { parsePromptSuggestions, restrictedToolDenyList } from './services/cli/upgradeMode.ts';
+import { resolveCloudTarget, validateCloudEnvironment } from './services/cli/cloudTarget.ts';
+import { parseAutoCompactWindowOption } from './services/api/autoCompactWindow.ts';
 import { setCliAutoCompactWindow } from './services/compact/autoCompact.js';
 import { Command as CommanderCommand, InvalidArgumentError, Option } from '@commander-js/extra-typings';
 import chalk from 'chalk';
@@ -802,7 +802,7 @@ async function run(): Promise<CommanderCommand> {
     profileCheckpoint('action_handler_start');
 
     if ((options as { desktop?: boolean }).desktop) {
-      const { launchDesktopFromCli } = await import('./cli/desktop/launch.mjs');
+      const { launchDesktopFromCli } = await import('./cli/desktop/launch.ts');
       process.exitCode = await launchDesktopFromCli({ prompt, options });
       return;
     }
@@ -3593,7 +3593,7 @@ async function run(): Promise<CommanderCommand> {
     .option('--config <path>', 'Path to gateway YAML config')
     .action(async (options: { config?: string }) => {
       try {
-        const { runEnterpriseGateway317 } = await import('./cli/gateway/gatewayServer317.mjs');
+        const { runEnterpriseGateway317 } = await import('./cli/gateway/gatewayServer317.ts');
         await runEnterpriseGateway317(options.config);
       } catch (error) {
         process.stderr.write(
@@ -3631,7 +3631,7 @@ async function run(): Promise<CommanderCommand> {
     .option('--verbose', 'Detailed trace logging')
     .action(async (command: string | undefined, target: string | undefined, options: Record<string, unknown>) => {
       try {
-        const { pluginEvalHandler317 } = await import('./cli/handlers/pluginEvalEntry317.mjs');
+        const { pluginEvalHandler317 } = await import('./cli/handlers/pluginEvalEntry317.ts');
         if (command === 'init') {
           throw new Error('Eval suite init requires the original interactive authoring workflow');
         }
@@ -3650,7 +3650,7 @@ async function run(): Promise<CommanderCommand> {
     .addOption(new Option('--file <path>').hideHelp())
     .action(async (dir: string | undefined, options: { file?: string }) => {
       try {
-        const { pluginTestHandler317 } = await import('./cli/handlers/pluginTest317.mjs');
+        const { pluginTestHandler317 } = await import('./cli/handlers/pluginTest317.ts');
         const status = await pluginTestHandler317(dir ?? '.', options);
         if (status !== 0) process.exitCode = status;
       } catch (error) {
@@ -3882,7 +3882,7 @@ async function run(): Promise<CommanderCommand> {
   // commands without starting the interactive model. Register here as well so
   // top-level --help and Commander discovery match the official surface.
   const backgroundCommand = async () => {
-    const { interceptBackgroundCli } = await import('./cli/background/index.mjs');
+    const { interceptBackgroundCli } = await import('./cli/background/index.ts');
     await interceptBackgroundCli(process.argv.slice(2));
   };
   program.command('agents').description('Manage background agents')

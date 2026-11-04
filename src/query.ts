@@ -1,5 +1,5 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
-import { createFallbackModelChain } from './services/api/fallbackModels.mjs'
+import { createFallbackModelChain } from './services/api/fallbackModels.ts'
 import type {
   ToolResultBlockParam,
   ToolUseBlock,

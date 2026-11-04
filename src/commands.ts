@@ -128,7 +128,7 @@ import advisor from './commands/advisor.js'
 import { logError } from './utils/log.js'
 import { toError } from './utils/errors.js'
 import { logForDebugging } from './utils/debug.js'
-import { isValidCustomCommandName } from './utils/commandNameValidation.mjs'
+import { isValidCustomCommandName } from './utils/commandNameValidation.ts'
 import {
   getSkillDirCommands,
   clearSkillCaches,

@@ -1,4 +1,4 @@
-import { filterSettingsCompactionEnv } from './managedCompactionEnv.mjs'
+import { filterSettingsCompactionEnv } from './managedCompactionEnv.ts'
 import { isRemoteManagedSettingsEligible } from '../services/remoteManagedSettings/syncCache.js'
 import { clearCACertsCache } from './caCerts.js'
 import { isEnvTruthy } from './envUtils.js'
@@ -9,7 +9,7 @@ import {
 } from './managedEnvConstants.js'
 import { clearMTLSCache } from './mtls.js'
 import { clearProxyCache, configureGlobalAgents } from './proxy.js'
-import { resolveProjectTelemetryEnv } from './telemetry/projectTelemetryPolicy.mjs'
+import { resolveProjectTelemetryEnv } from './telemetry/projectTelemetryPolicy.ts'
 import { isSettingSourceEnabled } from './settings/constants.js'
 import {
   getInitialSettings,

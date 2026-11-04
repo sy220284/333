@@ -8,7 +8,7 @@ import {
 import { errorMessage } from './errors.js'
 import { execFileNoThrow } from './execFileNoThrow.js'
 import { formatFileSize } from './format.js'
-import { parsePdfInfoPageCount } from './pdfPageCount.mjs'
+import { parsePdfInfoPageCount } from './pdfPageCount.ts'
 import { getFsImplementation } from './fsOperations.js'
 import { getToolResultsDir } from './toolResultStorage.js'
 

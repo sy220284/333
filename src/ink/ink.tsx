@@ -39,7 +39,7 @@ import { CURSOR_HOME, cursorMove, cursorPosition, DISABLE_KITTY_KEYBOARD, DISABL
 import { DBP, DFE, DISABLE_MOUSE_TRACKING, ENABLE_MOUSE_TRACKING, ENTER_ALT_SCREEN, EXIT_ALT_SCREEN, SHOW_CURSOR } from './termio/dec.js';
 import { CLEAR_ITERM2_PROGRESS, CLEAR_TAB_STATUS, setClipboard, supportsTabStatus, wrapForMultiplexer } from './termio/osc.js';
 import { getScreenReaderActivationSource, getScreenReaderMode, isScreenReaderEnabled } from '../utils/accessibility/screenReaderRuntime.js';
-import { accessibleOutputDelta, createScreenReaderAnnouncementQueue, flattenAccessibleTree } from '../utils/accessibility/screenReaderMode.mjs';
+import { accessibleOutputDelta, createScreenReaderAnnouncementQueue, flattenAccessibleTree } from '../utils/accessibility/screenReaderMode.ts';
 import { TerminalWriteProvider } from './useTerminalNotification.js';
 
 // Alt-screen: renderer.ts sets cursor.visible = !isTTY || screen.height===0,
