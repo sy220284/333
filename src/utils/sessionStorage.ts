@@ -492,6 +492,7 @@ export function resetProjectForTesting(): void {
 
 export function setSessionFileForTesting(path: string): void {
   getProject().sessionFile = path
+  sessionTranscriptPaths.remember(getSessionId(), path)
 }
 
 type InternalEventWriter = (
@@ -1060,6 +1061,10 @@ class Project {
       ) {
         await this.materializeSessionFile()
       }
+
+      // A resumed session can have accepted queue operations parked before
+      // its new assistant response. Persist those first to preserve history.
+      await this.flushPendingEntriesForCurrentSession()
 
       // Get current git branch once for this message chain
       let gitBranch: string | undefined
