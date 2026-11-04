@@ -5,7 +5,7 @@ import {
 } from '../analytics/index.js'
 import { getSessionsSinceLastShown, recordTipShown } from './tipHistory.js'
 import { getRelevantTips } from './tipRegistry.js'
-import { selectLongestUnshown } from './tipEligibility.mjs'
+import { selectLongestUnshown } from './tipEligibility.ts'
 import type { Tip, TipContext } from './types.js'
 
 export function selectTipWithLongestTimeSinceShown(
