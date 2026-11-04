@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import './m1-vendor-packaging-317.test.mjs';
 import './m1-native-clipboard-317.test.mjs';
 import './m1-native-clipboard-bundle-317.test.mjs';
+import './m1-clipboard-osc-protocol-317.test.mjs';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
