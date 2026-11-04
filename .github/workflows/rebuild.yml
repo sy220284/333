@@ -181,7 +181,7 @@ jobs:
         id: acceptance_006
         continue-on-error: true
         run: |
-          node --test tests/m1-startup-argv-317.test.mjs tests/m1-startup-cli-317.test.mjs tests/m1-headless-startup-error-314.test.mjs
+          node --test tests/m1-startup-argv-317.test.mjs tests/m1-startup-cli-317.test.mjs tests/m1-print-routing-317.test.mjs tests/m1-headless-startup-error-314.test.mjs
           bun test tests/m1-startup-sdk-317.test.ts
       - name: 317 MCP登录、退出和授权码交换
         id: acceptance_007
@@ -190,7 +190,7 @@ jobs:
           bun test tests/m3-mcp-auth-317.test.ts
           node --test tests/m3-mcp-auth-cli-317.test.mjs
       - name: 317会话命令队列优先级和FIFO真实回归
-        run: node --test tests/m2-queue-priority-317.test.mjs
+        run: node --test tests/m2-queue-priority-317.test.mjs tests/m2-session-identity-317.test.mjs
       - name: 317工具生命周期异常与取消清理
         run: node --test tests/m3-tool-lifecycle-317.test.mjs
       - name: 317代理退出异常释放所有资源
