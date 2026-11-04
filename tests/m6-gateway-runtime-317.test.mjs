@@ -120,3 +120,42 @@ test('gateway 317: unauthenticated traffic denied; signed model streaming uses s
     await upstream.stop(true)
   }
 })
+
+test('gateway 317: managed settings served to authenticated clients with correct ETags', async () => {
+  const config = configuration('https://api.anthropic.com')
+  config.listen.port = 0
+  config.managed = {
+    policies: [
+      { match: { groups:['engineering'] },
+        cli: { permissions:{ deny:['Read(.env)'] },env:{ORG:'corp'} } },
+    ],
+  }
+  const app = await createGatewayService317(config, { store, oidc: fakeOidc })
+  try {
+    const base = 'http://127.0.0.1:' + app.server.port
+    const who = signGatewaySession317({
+      sub:'alice', groups:['engineering'], email:'alice@example.test',
+    }, secret,'http://127.0.0.1:0',1)
+    const missing = await fetch(base + '/managed/settings')
+    expect(missing.status).toBe(401)
+    const current = await fetch(base + '/managed/settings',{
+      headers:{authorization:'Bearer ' + who},
+    })
+    expect(current.status).toBe(200)
+    expect(current.headers.get('cache-control')).toBe('no-store')
+    const data = await current.json()
+    expect(data.settings.env.ORG).toBe('corp')
+    expect(data.settings.permissions.deny).toEqual(['Read(.env)'])
+    const cached = await fetch(base + '/managed/settings',{
+      headers:{authorization:'Bearer ' + who,
+        'if-none-match':current.headers.get('etag')},
+    })
+    expect(cached.status).toBe(304)
+    const outsider = signGatewaySession317({sub:'outsider',groups:[]},
+      secret,'http://127.0.0.1:0',1)
+    const denied = await fetch(base + '/managed/settings',{
+      headers:{authorization:'Bearer ' + outsider},
+    })
+    expect(denied.status).toBe(404)
+  } finally { await app.close() }
+})
