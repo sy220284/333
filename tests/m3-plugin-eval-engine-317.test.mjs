@@ -31,6 +31,7 @@ test('317 eval: actual model adapter runs plugin and no-plugin arms, keeps score
     [sample(dir)], { pluginRoot: dir, concurrency: 1 }, { runModel })
   assert.deepEqual(calls.map(c => Boolean(c.pluginDir)), [true, false])
   assert.deepEqual(calls.map(c => c.maxTurns), [4, 4])
+  assert.deepEqual(calls.map(c => c.strictMcpConfig), [true, true], 'mock mode isolates MCP without disabling plugin hooks')
   assert.equal(result.cases[0].runs.length, 2)
   assert.deepEqual(result.cases[0].runs.map(x => x.score), [1, 0])
   assert.equal(result.costUsd, 0.24)
@@ -94,4 +95,20 @@ test('317 eval: rendered report HTML safely escapes arbitrary model output', () 
   assert.doesNotMatch(content, /<img src=x/)
   assert.match(content, /&lt;script&gt;/)
   assert.match(content, /&lt;img/)
+})
+
+test('317 eval: real-MCP opt-in retains plugin MCP discovery and subagent run cap', () => sandbox(async dir => {
+  const calls = []
+  await executePluginEvalSuite317(
+    [sample(dir)],
+    { pluginRoot: dir, mocks: 'off', ablation: 'none' },
+    { runModel: async config => {
+      calls.push(config)
+      return { lastMessage: 'hello', trace: [], costUsd: 0 }
+    } },
+  )
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].strictMcpConfig, false)
+  assert.equal(calls[0].maxTurns, 4)
+  assert.equal(calls[0].pluginDir, dir)
 })
