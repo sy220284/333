@@ -185,6 +185,7 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
       if (status.status === 'pending') return errorJson('authorization_pending')
       if (status.status === 'slow_down') return errorJson('slow_down', 429)
       if (status.status === 'expired') return errorJson('expired_token')
+      if (status.status === 'denied') return errorJson('access_denied')
       return createTokens(status.claims)
     }
     if (grant === 'refresh_token') {

@@ -39,9 +39,13 @@ export async function openGatewayStore317(config) {
         expires_at TIMESTAMPTZ NOT NULL,
         approved JSONB,
         consumed BOOLEAN NOT NULL DEFAULT FALSE,
+        denied BOOLEAN NOT NULL DEFAULT FALSE,
         last_poll_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )`
+    await database`
+      ALTER TABLE claude_gateway_device_authorizations
+      ADD COLUMN IF NOT EXISTS denied BOOLEAN NOT NULL DEFAULT FALSE`
     await database`
       CREATE TABLE IF NOT EXISTS claude_gateway_refresh_tokens (
         token_hash TEXT PRIMARY KEY,
@@ -95,9 +99,9 @@ export async function openGatewayStore317(config) {
       async denyCode(userCode) {
         const rows = await database`
           UPDATE claude_gateway_device_authorizations
-          SET consumed = TRUE
+          SET denied = TRUE
           WHERE user_hash = ${hash(userCode)} AND expires_at > NOW()
-            AND consumed = FALSE AND approved IS NULL
+            AND consumed = FALSE AND denied = FALSE AND approved IS NULL
           RETURNING device_hash`
         return rows.length === 1
       },
@@ -112,17 +116,18 @@ export async function openGatewayStore317(config) {
           UPDATE claude_gateway_device_authorizations
           SET approved = ${JSON.stringify(claims)}::jsonb
           WHERE user_hash = ${hash(userCode)} AND expires_at > NOW()
-            AND consumed = FALSE
+            AND consumed = FALSE AND denied = FALSE
           RETURNING device_hash`
         return rows.length === 1
       },
       async consumeDevice(deviceCode, minPollSeconds = 5) {
         const key = hash(deviceCode)
         const rows = await database`
-          SELECT device_hash, approved, consumed, expires_at, last_poll_at
+          SELECT device_hash, approved, consumed, denied, expires_at, last_poll_at
           FROM claude_gateway_device_authorizations WHERE device_hash = ${key}`
         const current = rows[0]
         if (!current || new Date(current.expires_at).getTime() <= Date.now()) return { status: 'expired' }
+        if (current.denied) return { status: 'denied' }
         if (current.consumed) return { status: 'expired' }
         if (current.last_poll_at &&
           Date.now() - new Date(current.last_poll_at).getTime() < minPollSeconds * 1000) {

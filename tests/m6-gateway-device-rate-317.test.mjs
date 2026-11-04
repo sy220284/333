@@ -65,3 +65,20 @@ test('317 gateway: invalid device rate policy fails config validation',()=>{
     ...config(),rate_limits:{device_verify:{max:0,window_seconds:60}},
   }),/rate_limits.device_verify.max/)
 })
+
+test('317 gateway: explicit denial returns access_denied to the CLI device poller',async()=>{
+  const store=makeStore()
+  store.consumeDevice=async()=>({status:'denied'})
+  const flow=createGatewayDeviceFlow317({publicUrl,config:config(),oidc:idp,store})
+  const {device_code,user_code}=await (await flow.deviceAuthorization(startRequest(),'10.0.0.1')).json()
+  const denied=await flow.denyDevice(new Request(publicUrl+'/device/deny',{
+    method:'POST',headers:{origin:publicUrl},body:new URLSearchParams({user_code}),
+  }),'10.0.0.1')
+  assert.equal(denied.status,200)
+  const poll=await flow.token(new Request(publicUrl+'/oauth/token',{
+    method:'POST',body:new URLSearchParams({
+      grant_type:'urn:ietf:params:oauth:grant-type:device_code',device_code,
+    }),
+  }))
+  assert.equal((await poll.json()).error,'access_denied')
+})
