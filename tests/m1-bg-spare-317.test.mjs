@@ -92,3 +92,57 @@ test('317 spare SIGTERM releases unclaimed socket and exits cleanly',
       rmSync(dir, { recursive: true, force: true })
     }
   })
+
+test('317 PTY host plus authenticated bg-spare forms one complete claim-to-output chain',
+  { skip: process.platform === 'win32', timeout: 75000 }, async () => {
+    const { createPtyFrameDecoder317, encodePtyControl317 } =
+      await import('../src/bootstrap/ptyWire317.mjs')
+    for (const [name, binary, prefix] of bins) {
+      const dir = mkdtempSync(join(tmpdir(), '333-bg-spare-pty-'))
+      const ptySocket = join(dir, 'worker.pty.sock')
+      const claimSocket = join(dir, 'worker.claim.sock')
+      const command = [binary, ...prefix, '--bg-spare', claimSocket]
+      const host = spawn(binary, [...prefix, '--bg-pty-host', ptySocket,
+        '80', '25', '--', ...command], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: { ...process.env, CLAUDE_CONFIG_DIR: dir,
+          CLAUDE_BG_CLAIM_AUTH: 'spare-secret',
+          DISABLE_TELEMETRY: '1', CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' },
+      })
+      let stderr = '', done = false, resultCode
+      host.stderr.on('data', data => { stderr += data })
+      const exit = new Promise(resolve => host.once('close', code => {
+        resultCode = code; done = true; resolve()
+      }))
+      let client
+      try {
+        await until(() => (existsSync(claimSocket) && existsSync(ptySocket)) || done, 18000)
+        assert.equal(done, false, name + ' host failed: ' + stderr)
+        client = connect(ptySocket)
+        let output = '', exited = false
+        const controls = []
+        const decode = createPtyFrameDecoder317(frame => {
+          if (frame.kind === 0) output += frame.payload.toString('utf8')
+          else {
+            controls.push(frame.ctrl.t)
+            if (frame.ctrl.t === 'ping') client.write(encodePtyControl317({ t: 'pong' }))
+            if (frame.ctrl.t === 'exit') exited = true
+          }
+        }, reason => { throw Error(name + ' bad frame: ' + reason) })
+        client.on('data', decode)
+        await claim(claimSocket, { cwd: dir, env: {}, argv: ['--version'], auth: 'spare-secret' })
+        await until(() => exited || done, 15000)
+        await Promise.race([exit,
+          new Promise((_, reject) => setTimeout(() => reject(Error(name + ' integrated host hung')), 12000))])
+        assert.equal(resultCode, 0, name + ' ' + stderr)
+        assert.ok(output.includes('2.1.317 (Claude Code)'), name + ' ' + output)
+        for (const event of ['hello', 'live', 'ping', 'exit'])
+          assert.ok(controls.includes(event), name + ' missing ' + event + ' ' + JSON.stringify(controls))
+        await until(() => !existsSync(claimSocket) && !existsSync(ptySocket))
+      } finally {
+        client?.destroy()
+        if (!done) host.kill('SIGKILL')
+        rmSync(dir, { recursive: true, force: true })
+      }
+    }
+  })
