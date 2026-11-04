@@ -102,13 +102,20 @@ async function main(): Promise<void> {
     profileCheckpoint
   } = await import('../utils/startupProfiler.js');
   profileCheckpoint('cli_entry');
-  // Upstream 317 tunes JIT after startup; the timer must not keep CLI alive.
-  scheduleJitPolicy317({ args });
+  // Original 317 postpones JIT for ordinary launches, never for warmed spares.
+  if (args[0] !== '--preload' && args[0] !== '--bg-spare') scheduleJitPolicy317({ args });
 
   // 317 daemon worker reads JSON from stdin and runs without REPL/PTY imports.
   if (args[0] === '--daemon-worker') {
     const { runDaemonWorker317 } = await import('../bootstrap/daemonWorker317.ts');
     process.exitCode = await runDaemonWorker317(args[1]);
+    return;
+  }
+
+  // 317 warm background spare accepts one authenticated socket claim, then runs the CLI.
+  if (args[0] === '--bg-spare') {
+    const { runBgSpare317 } = await import('../bootstrap/bgSpare317.ts');
+    process.exitCode = await runBgSpare317(args.slice(1));
     return;
   }
 
