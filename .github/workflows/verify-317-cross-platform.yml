@@ -1,0 +1,43 @@
+name: 317 提取版跨平台实际运行检查
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - .github/workflows/verify-317-cross-platform.yml
+      - build/package-release.mjs
+      - build/import-official-317.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-ported-317:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 检查 317 模块完整性和 CLI 入口
+        shell: bash
+        run: |
+          node -e "const m=require('./vendor/claude-code-2.1.317/manifest.json');if(m.version!=='2.1.317'||m.module_count!==2924)process.exit(1);console.log(m.platform,m.module_count)"
+          bun vendor/claude-code-2.1.317/modules/cli.mjs --version
+      - name: 跨平台执行帮助、插件和项目清理
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json,os,subprocess,tempfile
+          from pathlib import Path
+          entry=str(Path('vendor/claude-code-2.1.317/modules/cli.mjs').resolve())
+          cases=[['--help'],['auth','--help'],['mcp','--help'],['plugin','--help'],['gateway','--help'],['ultrareview','--help'],['plugin','prune','--yes']]
+          with tempfile.TemporaryDirectory(prefix='claude317-xplatform-') as home:
+            env={**os.environ,'CLAUDE_CONFIG_DIR':home,'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC':'1','DISABLE_TELEMETRY':'1'}
+            for args in cases:
+              p=subprocess.run(['bun',entry,*args],env=env,stdin=subprocess.DEVNULL,capture_output=True,text=True,timeout=30)
+              print(json.dumps({'argv':args,'returncode':p.returncode,'stdout':p.stdout[:200],'stderr':p.stderr[-400:]},ensure_ascii=False))
+              if p.returncode!=0:raise SystemExit('CLI failed on '+str(args))
+          PY
