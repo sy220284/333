@@ -3663,13 +3663,18 @@ async function run(): Promise<CommanderCommand> {
       await ultrareviewCliHandler(target, options)
     })
 
-  pluginCmd.command('install <plugin>').alias('i').description('Install a plugin from available marketplaces (use plugin@marketplace for specific marketplace)').option('-s, --scope <scope>', 'Installation scope: user, project, or local', 'user').option('--json', 'Print one machine-readable result line on stdout').option('--marketplace <source>', 'Install from a marketplace URL, repository, or path, adding it first if needed').option('--config <key=value>', 'Set a userConfig field; repeatable', (value: string, values: string[]) => [...values, value], []).option('--registry <url>', 'Use an alternate npm registry for npm-sourced plugins').addOption(coworkOption()).action(async (plugin: string, options: {
+  pluginCmd.command('install <plugin>').alias('i').description('Install a plugin from available marketplaces (use plugin@marketplace for specific marketplace)').option('-s, --scope <scope>', 'Installation scope: user, project, or local', 'user').option('--json', 'Print one machine-readable result line on stdout').option('--marketplace <source>', 'Install from a marketplace URL, repository, or path, adding it first if needed').option('--config <key=value>', 'Set a userConfig field; repeatable', (value: string, values: string[]) => [...values, value], []).option('--registry <url>', 'Use an alternate npm registry for npm-sourced plugins')
+    .option('-y, --yes', 'Explicitly authorize the current marketplace-declared install command')
+    .addOption(new Option('--accept-command <sha256>', 'Authorize exactly the displayed command hash for the current marketplace revision').conflicts('yes'))
+    .addOption(coworkOption()).action(async (plugin: string, options: {
     scope?: string;
     cowork?: boolean;
     json?: boolean;
     marketplace?: string;
     config?: string[];
     registry?: string;
+    yes?: boolean;
+    acceptCommand?: string;
   }) => {
     const {
       pluginInstallHandler
