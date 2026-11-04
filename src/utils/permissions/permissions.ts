@@ -51,6 +51,7 @@ import {
   permissionRuleValueFromString,
   permissionRuleValueToString,
 } from './permissionRuleParser.js'
+import { permissionToolNamesMatch } from './legacyToolAliases.mjs'
 import {
   deletePermissionRuleFromSettings,
   type PermissionRuleFromEditableSettings,
@@ -253,7 +254,7 @@ function toolMatchesRule(
   const nameForRuleMatch = getToolNameForPermissionCheck(tool)
 
   // Direct tool name match
-  if (rule.ruleValue.toolName === nameForRuleMatch) {
+  if (permissionToolNamesMatch(rule.ruleValue.toolName, nameForRuleMatch)) {
     return true
   }
 
@@ -315,7 +316,7 @@ export function getDenyRuleForAgent(
   return (
     getDenyRules(context).find(
       rule =>
-        rule.ruleValue.toolName === agentToolName &&
+        permissionToolNamesMatch(rule.ruleValue.toolName, agentToolName) &&
         rule.ruleValue.ruleContent === agentType,
     ) || null
   )
@@ -335,7 +336,7 @@ export function filterDeniedAgents<T extends { agentType: string }>(
   const deniedAgentTypes = new Set<string>()
   for (const rule of getDenyRules(context)) {
     if (
-      rule.ruleValue.toolName === agentToolName &&
+      permissionToolNamesMatch(rule.ruleValue.toolName, agentToolName) &&
       rule.ruleValue.ruleContent !== undefined
     ) {
       deniedAgentTypes.add(rule.ruleValue.ruleContent)
@@ -381,7 +382,7 @@ export function getRuleByContentsForToolName(
   }
   for (const rule of rules) {
     if (
-      rule.ruleValue.toolName === toolName &&
+      permissionToolNamesMatch(rule.ruleValue.toolName, toolName) &&
       rule.ruleValue.ruleContent !== undefined &&
       rule.ruleBehavior === behavior
     ) {
