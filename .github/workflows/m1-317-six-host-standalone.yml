@@ -90,6 +90,10 @@ jobs:
           set -euo pipefail
           node --test --test-concurrency=1 tests/m1-bg-spare-317.test.mjs tests/m1-daemon-worker-317.test.mjs tests/m1-preload-317.test.mjs tests/m1-runner-declares-317.test.mjs tests/m1-startup-socket-ownership-317.test.mjs
           bun test tests/m4-session-storage-v5-integration.test.ts
+          # Verify the actual PTY transport, exec recording and background
+          # supervisor dispatch/restore chain, not just a warm-spare handshake.
+          node --test --test-concurrency=1 tests/m1-pty-host-317.test.mjs tests/m1-pty-recording-317.test.mjs tests/m1-background-lifecycle.test.mjs
+          node --test tests/m1-fast-path-settings-317.test.mjs tests/m1-startup-argv-317.test.mjs
       - name: 发行元数据记录至构建证据
         run: |
           node --input-type=module <<'NODE'
