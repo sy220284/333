@@ -44,7 +44,7 @@ function hasMemoryFileRead(messages: Message[]): boolean {
   }
   return false;
 }
-export function useMemorySurvey(messages: Message[], isLoading: boolean, hasActivePrompt = false, {
+export function useMemorySurvey(messages: Message[], isLoading: boolean, hasActivePrompt: boolean = false, {
   enabled = true
 }: {
   enabled?: boolean;

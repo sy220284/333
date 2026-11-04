@@ -532,7 +532,7 @@ function getRetryAfter(error: unknown): string | null {
 export function getRetryDelay(
   attempt: number,
   retryAfterHeader?: string | null,
-  maxDelayMs = 32000,
+  maxDelayMs: number = 32000,
 ): number {
   if (retryAfterHeader) {
     const seconds = parseInt(retryAfterHeader, 10)

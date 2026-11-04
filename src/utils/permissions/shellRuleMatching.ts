@@ -71,7 +71,7 @@ export function hasWildcards(pattern: string): boolean {
 export function matchWildcardPattern(
   pattern: string,
   command: string,
-  caseInsensitive = false,
+  caseInsensitive: boolean = false,
 ): boolean {
   // Trim leading/trailing whitespace from pattern
   const trimmedPattern = pattern.trim()

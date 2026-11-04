@@ -191,7 +191,7 @@ async function applyInstallConfig(
 export async function installPlugin(
   plugin: string,
   scope: InstallableScope = 'user',
-  json = false,
+  json: boolean = false,
   configEntries: string[] = [],
   npmRegistry?: string,
   commandConsent?: { yes?: boolean; acceptCommand?: string },
@@ -292,8 +292,8 @@ export async function installPlugin(
 export async function uninstallPlugin(
   plugin: string,
   scope: InstallableScope = 'user',
-  keepData = false,
-  json = false,
+  keepData: boolean = false,
+  json: boolean = false,
 ): Promise<void> {
   try {
     const result = await uninstallPluginOp(plugin, scope, !keepData)
@@ -349,7 +349,7 @@ export async function uninstallPlugin(
 export async function enablePlugin(
   plugin: string,
   scope?: InstallableScope,
-  json = false,
+  json: boolean = false,
 ): Promise<void> {
   try {
     const result = await enablePluginOp(plugin, scope)

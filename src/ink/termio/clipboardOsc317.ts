@@ -15,7 +15,7 @@ const BEL = '\x07'
 const ST = ESC + '\\'
 const SCREEN_CHUNK_LENGTH = 76
 
-export function encodeClipboardOsc52(base64, mux = null, terminator = BEL) : string {
+export function encodeClipboardOsc52(base64: string, mux: "tmux" | "screen" | "zellij" = null, terminator: string = BEL) : string {
   if (!/^[a-zA-Z0-9+/]*={0,2}$/.test(base64)) {
     throw new Error('OSC 52 payload must be base64')
   }
@@ -40,7 +40,7 @@ export function encodeClipboardOsc52(base64, mux = null, terminator = BEL) : str
  * known to print unknown OSC sequences or if a native copy has already
  * succeeded on a VTE-based Linux/WSL terminal.
  */
-export function isVteTerminal(terminal: string, environment = process.env) : boolean {
+export function isVteTerminal(terminal: string, environment: NodeJS.ProcessEnv = process.env) : boolean {
   const has = name => (environment[name] ?? '').trim() !== ''
   return has('VTE_VERSION') &&
     (terminal === 'vte-based' || terminal === 'gnome-terminal') &&

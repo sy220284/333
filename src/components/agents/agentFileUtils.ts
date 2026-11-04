@@ -169,7 +169,7 @@ export async function saveAgentToFile(
   whenToUse: string,
   tools: string[] | undefined,
   systemPrompt: string,
-  checkExists = true,
+  checkExists: boolean = true,
   color?: string,
   model?: string,
   memory?: AgentMemoryScope,

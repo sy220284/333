@@ -258,7 +258,7 @@ export function applyDirectorySuggestion(input: string, suggestionId: string, to
  * @param includeAtSymbol Whether to consider @ symbol as part of the token
  * @returns The completable token and its start position, or null if not found
  */
-export function extractCompletionToken(text: string, cursorPos: number, includeAtSymbol = false): {
+export function extractCompletionToken(text: string, cursorPos: number, includeAtSymbol: boolean = false): {
   token: string;
   startPos: number;
   isQuoted?: boolean;

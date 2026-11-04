@@ -426,7 +426,7 @@ export type XaaConfig = {
 export async function performCrossAppAccess(
   serverUrl: string,
   config: XaaConfig,
-  serverName = 'xaa',
+  serverName: string = 'xaa',
   abortSignal?: AbortSignal,
 ): Promise<XaaResult> {
   const fetchFn = makeXaaFetch(abortSignal)

@@ -47,7 +47,7 @@ function readRegistry(path) {
  * remain usable without mutating user files (e.g. `plugin list --json`).
  * A separate explicit migration performs backed-up writes at startup or mutation.
  */
-export function normalizeInstalledPluginsRecords(data, resolveCachePath) {
+export function normalizeInstalledPluginsRecords(data, resolveCachePath: (pluginId: string, version: string) => string) {
   if (!isObject(data) || !isObject(data.plugins)) {
     throw new Error('Invalid installed-plugin registry')
   }

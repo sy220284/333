@@ -2,7 +2,7 @@ import vm from 'node:vm'
 import { parseWorkflowMetaLiteral } from './workflowMetaParser.ts'
 import {createHash} from 'node:crypto'
 const metaPattern=/\bexport\s+const\s+meta\s*=\s*/
-export function workflowMeta(script){
+export function workflowMeta(script: string){
  const m=metaPattern.exec(script)
  if(!m)throw Error('Workflow requires export const meta = { name, description }')
  const open=m.index+m[0].length
@@ -24,7 +24,7 @@ export function workflowMeta(script){
  return {name:value.name,description:value.description,
    phases:(value.phases??[]).map(p=>({title:p.title,detail:p.detail}))}
 }
-export function validateWorkflowScript(script){
+export function validateWorkflowScript(script: string){
  if(typeof script!=='string'||!script.trim()||script.length>524288)throw Error('Workflow script must have 1-524288 characters')
  if([...script].some(char=>{const code=char.codePointAt(0);return code<9||code>=11&&code<=31||code===127}))throw Error('Workflow script has hidden control characters')
  if(/\b(?:Date\s*\.\s*now\s*\(|Math\s*\.\s*random\s*\(|new\s+Date\s*\()/.test(script))throw Error('Workflow must be deterministic')

@@ -4,7 +4,7 @@ import { lstat, unlink } from 'node:fs/promises'
 /** A stale Unix socket may be reclaimed; a live owner or non-socket is protected.
  * Used by all 317 warm-worker listeners before bind(). A caller must only
  * clean up its socket after its own listen() has succeeded. */
-export async function assertSocketVacant317(path: string, label = 'Worker'): Promise<void> {
+export async function assertSocketVacant317(path: string, label: string = 'Worker'): Promise<void> {
   let initial
   try { initial = await lstat(path) }
   catch (error) {

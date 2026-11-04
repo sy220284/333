@@ -101,7 +101,7 @@ async function readOptional(file) {
   try { return await readLimited(file) }
   catch (error) { if (error?.code === 'ENOENT') return null; throw error }
 }
-export async function readEvalCase317(dir) : Promise<EvalCase317> {
+export async function readEvalCase317(dir: string) : Promise<EvalCase317> {
   const root = await realpath(dir)
   const rawYaml = await readOptional(join(root, 'case.yaml'))
   const base = rawYaml === null ? {} : parseYaml(rawYaml)

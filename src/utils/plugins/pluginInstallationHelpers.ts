@@ -133,9 +133,9 @@ export async function cacheAndRegisterPlugin(
   scope: PluginScope = 'user',
   projectPath?: string,
   localSourcePath?: string,
-  asDependency = false,
+  asDependency: boolean = false,
   deferRegistration?: (registration: () => void) => void,
-  authorizedCommandSource = false,
+  authorizedCommandSource: boolean = false,
 ): Promise<string> {
   // For local plugins, we need the resolved absolute path
   // Cast to PluginSource since cachePlugin handles any string path at runtime

@@ -114,7 +114,7 @@ export async function setupGitHubActions(
   apiKeyOrOAuthToken: string | null,
   secretName: string,
   updateProgress: () => void,
-  skipWorkflow = false,
+  skipWorkflow: boolean = false,
   selectedWorkflows: Workflow[],
   authType: 'api_key' | 'oauth_token',
   context?: {

@@ -126,22 +126,22 @@ export const CURSOR_STYLES: Array<{ style: CursorStyle; blinking: boolean }> = [
 // Cursor movement generators
 
 /** Move cursor up n lines (CSI n A) */
-export function cursorUp(n = 1): string {
+export function cursorUp(n: number = 1): string {
   return n === 0 ? '' : csi(n, 'A')
 }
 
 /** Move cursor down n lines (CSI n B) */
-export function cursorDown(n = 1): string {
+export function cursorDown(n: number = 1): string {
   return n === 0 ? '' : csi(n, 'B')
 }
 
 /** Move cursor forward n columns (CSI n C) */
-export function cursorForward(n = 1): string {
+export function cursorForward(n: number = 1): string {
   return n === 0 ? '' : csi(n, 'C')
 }
 
 /** Move cursor back n columns (CSI n D) */
-export function cursorBack(n = 1): string {
+export function cursorBack(n: number = 1): string {
   return n === 0 ? '' : csi(n, 'D')
 }
 
@@ -252,12 +252,12 @@ export function eraseLines(n: number): string {
 // Scroll
 
 /** Scroll up n lines (CSI n S) */
-export function scrollUp(n = 1): string {
+export function scrollUp(n: number = 1): string {
   return n === 0 ? '' : csi(n, 'S')
 }
 
 /** Scroll down n lines (CSI n T) */
-export function scrollDown(n = 1): string {
+export function scrollDown(n: number = 1): string {
   return n === 0 ? '' : csi(n, 'T')
 }
 

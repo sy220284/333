@@ -586,7 +586,7 @@ export async function verifyApiKey(
 
 export function userMessageToMessageParam(
   message: UserMessage,
-  addCache = false,
+  addCache: boolean = false,
   enablePromptCaching: boolean,
   querySource?: QuerySource,
 ): MessageParam {
@@ -631,7 +631,7 @@ export function userMessageToMessageParam(
 
 export function assistantMessageToMessageParam(
   message: AssistantMessage,
-  addCache = false,
+  addCache: boolean = false,
   enablePromptCaching: boolean,
   querySource?: QuerySource,
 ): MessageParam {
@@ -3105,7 +3105,7 @@ export function addCacheBreakpoints(
   messages: (UserMessage | AssistantMessage)[],
   enablePromptCaching: boolean,
   querySource?: QuerySource,
-  skipCacheWrite = false,
+  skipCacheWrite: boolean = false,
 ): MessageParam[] {
   logEvent('tengu_api_cache_breakpoints', {
     totalMessageCount: messages.length,

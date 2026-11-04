@@ -62,7 +62,7 @@ export function getDefaultUdsSocketPath(): string {
 export function getMessagingSocketPath(): string | undefined { return currentPath }
 
 /** Binding must finish before registerSession() advertises the socket path. */
-export async function startUdsMessaging(socketPath = getDefaultUdsSocketPath()): Promise<void> {
+export async function startUdsMessaging(socketPath: string = getDefaultUdsSocketPath()): Promise<void> {
   if (process.platform === 'win32' || activeServer) return
   if (!socketPath.startsWith('/') || Buffer.byteLength(socketPath) > 95) throw new Error('UDS socket must be a short absolute path')
   await mkdir(dirname(socketPath), { recursive: true })

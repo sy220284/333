@@ -87,7 +87,7 @@ export type MemoryDiagnostics = {
  */
 export async function captureMemoryDiagnostics(
   trigger: 'manual' | 'auto-1.5GB',
-  dumpNumber = 0,
+  dumpNumber: number = 0,
 ): Promise<MemoryDiagnostics> {
   const usage = process.memoryUsage()
   const heapStats = getHeapStatistics()

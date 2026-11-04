@@ -2698,7 +2698,7 @@ export type TransformedMCPResult = {
  * Generates a compact, jq-friendly type signature for a value.
  * e.g. "{title: string, items: [{id: number, name: string}]}"
  */
-export function inferCompactSchema(value: unknown, depth = 2): string {
+export function inferCompactSchema(value: unknown, depth: number = 2): string {
   if (value === null) return 'null'
   if (Array.isArray(value)) {
     if (value.length === 0) return '[]'

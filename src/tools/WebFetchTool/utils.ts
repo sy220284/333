@@ -263,7 +263,7 @@ export async function getWithPermittedRedirects(
   url: string,
   signal: AbortSignal,
   redirectChecker: (originalUrl: string, redirectUrl: string) => boolean,
-  depth = 0,
+  depth: number = 0,
 ): Promise<AxiosResponse<ArrayBuffer> | RedirectInfo> {
   if (depth > MAX_REDIRECTS) {
     throw new Error(`Too many redirects (exceeded ${MAX_REDIRECTS})`)

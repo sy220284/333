@@ -2,14 +2,14 @@ import { readdir, readFile, lstat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 
-export function peerRef(socketPath) : string {
+export function peerRef(socketPath: string) : string {
   return createHash('sha256').update(socketPath).digest('hex').slice(0, 6)
 }
 function running(pid) {
   try { process.kill(pid, 0); return true } catch (error) { return error?.code === 'EPERM' }
 }
 /** Never advertise an address without a live owner and an actual socket. */
-export async function listLiveLocalPeers(sessionsDir, ownPid = process.pid) {
+export async function listLiveLocalPeers(sessionsDir: string, ownPid = process.pid) {
   let files
   try { files = await readdir(sessionsDir) }
   catch (error) {

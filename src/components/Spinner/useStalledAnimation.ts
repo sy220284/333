@@ -7,8 +7,8 @@ import { SPINNER_STALL_AFTER_MS, SPINNER_STALL_FADE_MS } from './statusLogic.js'
 export function useStalledAnimation(
   time: number,
   currentResponseLength: number,
-  hasActiveTools = false,
-  reducedMotion = false,
+  hasActiveTools: boolean = false,
+  reducedMotion: boolean = false,
 ): {
   isStalled: boolean
   stalledIntensity: number

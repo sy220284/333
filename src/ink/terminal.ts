@@ -190,7 +190,7 @@ export type Terminal = {
 export function writeDiffToTerminal(
   terminal: Terminal,
   diff: Diff,
-  skipSyncMarkers = false,
+  skipSyncMarkers: boolean = false,
 ): void {
   // No output if there are no patches
   if (diff.length === 0) {

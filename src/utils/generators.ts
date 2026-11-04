@@ -28,7 +28,7 @@ type QueuedGenerator<A> = {
 // Run all generators concurrently up to a concurrency cap, yielding values as they come in
 export async function* all<A>(
   generators: AsyncGenerator<A, void>[],
-  concurrencyCap = Infinity,
+  concurrencyCap: number = Infinity,
 ): AsyncGenerator<A, void> {
   if (concurrencyCap !== Infinity &&
       (!Number.isInteger(concurrencyCap) || concurrencyCap < 1)) {

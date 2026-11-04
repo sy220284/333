@@ -36,7 +36,7 @@ export function resolvePromptSnapshot({
   return prompt
 }
 
-export function promptSnapshotMode(raw: string|undefined, bare: boolean, cloudOrBackground = false) {
+export function promptSnapshotMode(raw: string|undefined, bare: boolean, cloudOrBackground: boolean = false) {
   if (raw !== undefined && raw !== 'on' && raw !== 'off') throw new Error('Allowed choices are on, off')
   if (raw) return raw
   return bare && !cloudOrBackground ? 'off' : 'on'

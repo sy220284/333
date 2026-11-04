@@ -45,7 +45,7 @@ async function isExactBundle(dir, expectedFiles) {
  * A repeat invocation is idempotent; a changed bundle is replaced via a
  * rollback-capable directory rename rather than silently missing its files.
  */
-export async function extractBundleAtomically(dir, files) : Promise<void> {
+export async function extractBundleAtomically(dir: string, files: Record<string, string>) : Promise<void> {
   const parent = dirname(dir)
   await mkdir(parent, { recursive: true, mode: 0o700 })
   const temporary = await mkdtemp(join(parent, '.extract-'))

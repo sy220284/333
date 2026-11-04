@@ -1529,7 +1529,7 @@ export function checkPathConstraints(
   input: { command: string },
   parsed: ParsedPowerShellCommand,
   toolPermissionContext: ToolPermissionContext,
-  compoundCommandHasCd = false,
+  compoundCommandHasCd: boolean = false,
 ): PermissionResult {
   if (!parsed.valid) {
     return {

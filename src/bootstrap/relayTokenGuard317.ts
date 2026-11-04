@@ -14,7 +14,7 @@ function envTrue(value) {
   return ['1', 'true', 'yes', 'on'].includes(String(value ?? '').trim().toLowerCase())
 }
 
-export function shouldProtectRelayToken317(argv = process.argv, env = process.env) {
+export function shouldProtectRelayToken317(argv: string[] = process.argv, env: NodeJS.ProcessEnv = process.env) {
   if (env.CCR_AGENT_PROXY_TOKEN_FILE_DESCRIPTOR === undefined &&
       !argv.includes('--session-tunnel')) return false
   if (!envTrue(env.CLAUDE_CODE_REMOTE) ||
@@ -31,7 +31,7 @@ export function shouldProtectRelayToken317(argv = process.argv, env = process.en
  * A self-hosted code-review runner carries credentials before its normal
  * session initialization. This is the separate 2.1.317 cli.js review guard.
  */
-export function shouldProtectRunnerReviewTokens317(env = process.env) : boolean {
+export function shouldProtectRunnerReviewTokens317(env: NodeJS.ProcessEnv = process.env) : boolean {
   return env.CLAUDE_CODE_REMOTE_SESSION_ORIGIN === 'review' &&
     env.CLAUDE_CODE_ENVIRONMENT_KIND === 'byoc' &&
     env.CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE === 'self_hosted'

@@ -8,7 +8,7 @@ import type { QueuedCommand } from '../types/textInputTypes.js'
 type QueueJournalCommand317 = Partial<QueuedCommand> & { pluginQueueRecordHookActive?: boolean }
 export function createQueueOperationRecord(
   operation: QueueOperation, command: QueueJournalCommand317 | undefined,
-  sessionId: string, now = new Date(), metadata: {reason?: string} = {},
+  sessionId: string, now: Date = new Date(), metadata: {reason?: string} = {},
 ): QueueOperationMessage {
   // Official $pe: submitted text has priority; unapproved prompt text and
   // queue-record plugin owned content are kept out of the transcript journal.
@@ -42,7 +42,7 @@ export function createQueueOperationRecord(
  * Restore traceability of messages discarded on Escape/cancellation. As in
  * the official queue, unlogged and still-screening commands have no journal.
  */
-export function createDiscardedQueueRecords(commands, sessionId: string, reason = 'cleared_on_cancel', now = new Date()) {
+export function createDiscardedQueueRecords(commands, sessionId: string, reason: string = 'cleared_on_cancel', now = new Date()) {
   return commands
     .filter(command => !command.unlogged && command.screeningPending !== true)
     .map(command => createQueueOperationRecord('remove', command, sessionId, now, { reason }))

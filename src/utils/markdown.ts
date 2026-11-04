@@ -49,7 +49,7 @@ export function applyMarkdown(
 export function formatToken(
   token: Token,
   theme: ThemeName,
-  listDepth = 0,
+  listDepth: number = 0,
   orderedListNumber: number | null = null,
   parent: Token | null = null,
   highlight: CliHighlight | null = null,

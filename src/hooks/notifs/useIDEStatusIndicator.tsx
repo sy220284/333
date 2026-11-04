@@ -11,7 +11,7 @@ type Props = {
   ideSelection: IDESelection | undefined;
   mcpClients: MCPServerConnection[];
 };
-export function useIDEStatusIndicator(t0) : void {
+export function useIDEStatusIndicator(t0: { ideSelection: IDESelection; mcpClients: MCPServerConnection[]; ideInstallationStatus: IDEExtensionInstallationStatus; }) : void {
   const $ = _c(26);
   const {
     ideSelection,

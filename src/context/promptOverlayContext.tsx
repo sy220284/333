@@ -98,7 +98,7 @@ export function useSetPromptOverlay(data: PromptOverlayData|null) : void {
  * Register a dialog node to float above the prompt. Clears on unmount.
  * No-op outside the provider (non-fullscreen renders inline instead).
  */
-export function useSetPromptOverlayDialog(node) : void {
+export function useSetPromptOverlayDialog(node: React.JSX.Element) : void {
   const $ = _c(4);
   const set = useContext(SetDialogContext);
   let t0;

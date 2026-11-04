@@ -311,7 +311,7 @@ export function readScrollSpeedBase(): number {
 
 /** Initial wheel accel state. xtermJs=true selects the decay curve.
  *  base is the native-path baseline rows/event (default 1). */
-export function initWheelAccel(xtermJs = false, base = 1): WheelAccelState {
+export function initWheelAccel(xtermJs: boolean = false, base: number = 1): WheelAccelState {
   return {
     time: 0,
     mult: base,

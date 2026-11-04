@@ -100,7 +100,7 @@ export async function enablePaneBorderStatus(
 export async function sendCommandToPane(
   paneId: string,
   command: string,
-  useSwarmSocket = false,
+  useSwarmSocket: boolean = false,
 ): Promise<void> {
   const backend = await getBackend()
   return backend.sendCommandToPane(paneId, command, useSwarmSocket)

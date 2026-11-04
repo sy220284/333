@@ -714,7 +714,7 @@ async function getTopLevelPaths(): Promise<string[]> {
  */
 export async function generateFileSuggestions(
   partialPath: string,
-  showOnEmpty = false,
+  showOnEmpty: boolean = false,
 ): Promise<SuggestionItem[]> {
   // If input is empty and we don't want to show suggestions on empty, return nothing
   if (!partialPath && !showOnEmpty) {

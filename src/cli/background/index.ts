@@ -383,7 +383,7 @@ export function validateBackgroundCliArgs(args) {
   return null
 }
 
-export async function interceptBackgroundCli(args) : Promise<boolean> {
+export async function interceptBackgroundCli(args: string[]) : Promise<boolean> {
   if (args[0] === '--internal-bg-supervisor') {
     await runBackgroundSupervisor()
     return true

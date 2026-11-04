@@ -1306,7 +1306,7 @@ export async function createPluginFromPath(
   source: string,
   enabled: boolean,
   fallbackName: string,
-  strict = true,
+  strict: boolean = true,
 ): Promise<{ plugin: LoadedPlugin; errors: PluginError[] }> {
   const errors: PluginError[] = []
 

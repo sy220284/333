@@ -239,7 +239,7 @@ export async function createGatewayService317(config, deps: GatewayServiceDeps31
   }
 }
 
-export async function runEnterpriseGateway317(configPath) {
+export async function runEnterpriseGateway317(configPath: string) {
   if (!configPath) throw new Error('gateway requires --config <path>')
   const config = await configFromFile(configPath)
   const app = await createGatewayService317(config)

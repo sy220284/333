@@ -330,7 +330,7 @@ export function createRemoteSessionConfig(
   sessionId: string,
   getAccessToken: () => string,
   orgUuid: string,
-  hasInitialPrompt = false,
+  hasInitialPrompt: boolean = false,
   viewerOnly = false,
 ): RemoteSessionConfig {
   return {

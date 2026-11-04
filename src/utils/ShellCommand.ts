@@ -436,7 +436,7 @@ export function wrapSpawn(
   abortSignal: AbortSignal,
   timeout: number,
   taskOutput: TaskOutput,
-  shouldAutoBackground = false,
+  shouldAutoBackground: boolean = false,
   maxOutputBytes = MAX_TASK_OUTPUT_BYTES,
 ): ShellCommand {
   return new ShellCommandImpl(

@@ -182,7 +182,7 @@ export async function shouldAutoCompact(
   // Snip removes messages but the surviving assistant's usage still reflects
   // pre-snip context, so tokenCountWithEstimation can't see the savings.
   // Subtract the rough-delta that snip already computed.
-  snipTokensFreed = 0,
+  snipTokensFreed: number = 0,
 ): Promise<boolean> {
   // Recursion guards. session_memory and compact are forked agents that
   // would deadlock.

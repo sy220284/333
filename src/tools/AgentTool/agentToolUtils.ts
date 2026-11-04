@@ -125,8 +125,8 @@ export function resolveAgentTools(
     'tools' | 'disallowedTools' | 'source' | 'permissionMode'
   >,
   availableTools: Tools,
-  isAsync = false,
-  isMainThread = false,
+  isAsync: boolean = false,
+  isMainThread: boolean = false,
 ): ResolvedAgentTools {
   const {
     tools: agentTools,

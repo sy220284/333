@@ -1419,8 +1419,8 @@ export async function getClaudeAIOAuthTokensAsync(): Promise<OAuthTokens | null>
 let pendingRefreshCheck: Promise<boolean> | null = null
 
 export function checkAndRefreshOAuthTokenIfNeeded(
-  retryCount = 0,
-  force = false,
+  retryCount: number = 0,
+  force: boolean = false,
 ): Promise<boolean> {
   // Deduplicate concurrent non-retry, non-force calls
   if (retryCount === 0 && !force) {

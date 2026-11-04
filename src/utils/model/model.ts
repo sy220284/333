@@ -233,7 +233,7 @@ export function getCanonicalName(fullModelName: ModelName): ModelShortName {
 }
 
 // @[MODEL LAUNCH]: Update the default model description strings shown to users.
-export function getClaudeAiUserDefaultModelDescription(fastMode = false): string {
+export function getClaudeAiUserDefaultModelDescription(fastMode: boolean = false): string {
   const model = isMaxSubscriber() || isTeamPremiumSubscriber() ? getDefaultOpusModel() : getDefaultSonnetModel()
   return `${renderModelName(model)} · ${isMaxSubscriber() || isTeamPremiumSubscriber() ? 'Best for everyday, complex tasks' : 'Efficient for routine tasks'}`
 }

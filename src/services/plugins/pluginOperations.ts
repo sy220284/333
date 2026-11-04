@@ -517,7 +517,7 @@ export async function installPluginOp(
 export async function uninstallPluginOp(
   plugin: string,
   scope: InstallableScope = 'user',
-  deleteDataDir = true,
+  deleteDataDir: boolean = true,
 ): Promise<PluginOperationResult> {
   // Validate scope at runtime for early error detection
   assertInstallableScope(scope)

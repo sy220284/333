@@ -33,7 +33,7 @@ export function FastIcon(t0) {
   }
   return t1;
 }
-export function getFastIconString(applyColor = true, cooldown = false): string {
+export function getFastIconString(applyColor: boolean = true, cooldown: boolean = false): string {
   if (!applyColor) {
     return LIGHTNING_BOLT;
   }

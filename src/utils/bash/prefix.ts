@@ -27,8 +27,8 @@ function isKnownSubcommand(
 
 export async function getCommandPrefixStatic(
   command: string,
-  recursionDepth = 0,
-  wrapperCount = 0,
+  recursionDepth: number = 0,
+  wrapperCount: number = 0,
 ): Promise<{ commandPrefix: string | null } | null> {
   if (wrapperCount > 2 || recursionDepth > 10) return null
 

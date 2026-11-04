@@ -2783,7 +2783,7 @@ export function textForResubmit(
  */
 export function extractTextContent(
   blocks: readonly { readonly type: string }[],
-  separator = '',
+  separator: string = '',
 ): string {
   return blocks
     .filter((b): b is { type: 'text'; text: string } => b.type === 'text')

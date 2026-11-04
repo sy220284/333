@@ -22,7 +22,7 @@ function truthy(value) {
  * initializer can register background timers or terminal input listeners.
  * The raw argv is still validated independently before any side effects.
  */
-export function parseDesktopCliOptions(argv) {
+export function parseDesktopCliOptions(argv: string[]) {
   const options: { continue?: boolean; resume?: boolean | string } = {}
   let prompt
   const valueFlags = new Set([

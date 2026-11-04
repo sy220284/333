@@ -37,7 +37,7 @@ export function formatTimelineLine(
   memory: NodeJS.MemoryUsage | undefined,
   totalPad: number,
   deltaPad: number,
-  extra = '',
+  extra: string = '',
 ): string {
   const memInfo = memory
     ? ` | RSS: ${formatFileSize(memory.rss)}, Heap: ${formatFileSize(memory.heapUsed)}`

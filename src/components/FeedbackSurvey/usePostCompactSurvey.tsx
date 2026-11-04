@@ -29,7 +29,7 @@ function hasMessageAfterBoundary(messages: Message[], boundaryUuid: string): boo
   }
   return false;
 }
-export function usePostCompactSurvey(messages, isLoading: boolean, t0: boolean|undefined, t1: { enabled: boolean; }|undefined) {
+export function usePostCompactSurvey(messages: Message[], isLoading: boolean, t0: boolean|undefined, t1: { enabled: boolean; }|undefined) {
   const $ = _c(23);
   const hasActivePrompt = t0 === undefined ? false : t0;
   let t2;

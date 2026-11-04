@@ -35,7 +35,7 @@ export function isProcessRunning(pid: number): boolean {
  */
 export async function getAncestorPidsAsync(
   pid: string | number,
-  maxDepth = 10,
+  maxDepth: number = 10,
 ): Promise<number[]> {
   if (process.platform === 'win32') {
     // For Windows, use a PowerShell script that walks the process tree
@@ -114,7 +114,7 @@ export function getProcessCommand(pid: string | number): string | null {
  */
 export async function getAncestorCommandsAsync(
   pid: string | number,
-  maxDepth = 10,
+  maxDepth: number = 10,
 ): Promise<string[]> {
   if (process.platform === 'win32') {
     // For Windows, use a PowerShell script that walks the process tree and collects commands
