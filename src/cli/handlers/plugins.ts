@@ -536,9 +536,19 @@ export async function pluginListHandler(options: {
 // marketplace add (lines 5433–5487)
 export async function marketplaceAddHandler(
   source: string,
-  options: { cowork?: boolean; sparse?: string[]; scope?: string; json?: boolean },
+  options: { cowork?: boolean; claudeai?: boolean; sparse?: string[]; scope?: string; json?: boolean },
 ): Promise<void> {
   if (options.cowork) setUseCoworkPlugins(true)
+  // A claude.ai-hosted marketplace is attached to an account and must never
+  // be written to local/project settings as an arbitrary Git/URL source.
+  // The 317 public CLI refuses this route when the host catalog is absent.
+  if (options.claudeai) {
+    if (options.sparse !== undefined || options.scope !== undefined) {
+      cliError(`${figures.cross} --claudeai takes only the marketplace name (no --sparse or --scope: a claude.ai marketplace is hosted for your account, not declared in settings)`)
+    }
+    console.log('Adding marketplace…')
+    cliError(`${figures.cross} Failed to add marketplace: claude.ai marketplaces are not available here — sign in to claude.ai (claude /login) with plugin sync on, then run: claude plugin marketplace list`)
+  }
   try {
     const parsed = await parseMarketplaceInput(source)
 
