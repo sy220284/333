@@ -37,6 +37,8 @@ on:
       - 'src/bootstrap/bgSpare317.mjs'
       - 'src/bootstrap/preload317.ts'
       - 'src/bootstrap/preload317.mjs'
+      - 'src/bootstrap/evalMockServer317.ts'
+      - 'tests/m1-eval-mock-server-317.test.mjs'
       - 'src/bootstrap/daemonWorker317.ts'
       - 'src/bootstrap/daemonWorker317.mjs'
       - 'tests/m1-daemon-worker-317.test.mjs'
@@ -154,6 +156,8 @@ jobs:
         run: M1_NATIVE_BINARY_RUN=1 node --test tests/m1-startup-cli-317.test.mjs
       - name: 原版与重建版317 PTY宿主真实子进程与二进制流对照
         run: node --test tests/m1-pty-host-317.test.mjs
+      - name: 317评测MCP模拟服务原版双跑及真实工具日志
+        run: node --test tests/m1-eval-mock-server-317.test.mjs
       - name: 317 daemon worker心跳和错误协议原版双跑
         run: node --test tests/m1-daemon-worker-317.test.mjs
       - name: 317官方与重建预加载会话接管及真实模型请求双跑
