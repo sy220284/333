@@ -3,7 +3,7 @@ import { type GroveDecision, GroveDialog, PrivacySettingsDialog } from '../../co
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../services/analytics/index.js';
 import { getGroveNoticeConfig, getGroveSettings, isQualifiedForGrove } from '../../services/api/grove.js';
 import type { LocalJSXCommandOnDone } from '../../types/command.js';
-import { fetchPrivacySettingsFresh } from './fetchPrivacySettings.mjs';
+import { fetchPrivacySettingsFresh } from './fetchPrivacySettings.ts';
 const FALLBACK_MESSAGE = 'Review and manage your privacy settings at https://claude.ai/settings/data-privacy-controls';
 const FETCH_ERROR_MESSAGE = 'Unable to fetch your privacy settings at this time. Check https://claude.ai/settings/data-privacy-controls';
 export async function call(onDone: LocalJSXCommandOnDone): Promise<React.ReactNode | null> {
