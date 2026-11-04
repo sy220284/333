@@ -5,6 +5,7 @@
  */
 import { randomUUID } from 'node:crypto'
 import { meterGatewayResponse317 } from './gatewaySpendMeter317.mjs'
+import { classifyCriCapability317 } from './gatewayCri317.mjs'
 
 const FORWARD = new Set([
   'anthropic-version','anthropic-beta','content-type','accept',
@@ -130,9 +131,15 @@ export async function forwardGatewayInference317(request, context) {
   }
   const responseHeaders = new Headers()
   for (const [name,value] of response.headers) {
-    if (RESPONSE.has(name.toLowerCase())) responseHeaders.set(name,value)
+    if (RESPONSE.has(name.toLowerCase()) && !(identity.cri &&
+      (name.toLowerCase()==='request-id'||
+       name.toLowerCase()==='anthropic-organization-id'||
+       name.toLowerCase().startsWith('anthropic-ratelimit-')))) {
+      responseHeaders.set(name,value)
+    }
   }
-  responseHeaders.set('x-request-id', response.headers.get('request-id') ?? requestId)
+  responseHeaders.set('x-request-id', identity.cri ? requestId :
+    response.headers.get('request-id') ?? requestId)
   await audit('inference', identity.sub, requestId, {
     model: payload.model, upstream: upstream.name, status:response.status,
     elapsed_ms: Math.round(performance.now()-start),
@@ -140,6 +147,39 @@ export async function forwardGatewayInference317(request, context) {
   if (response.status >= 300 && response.status < 400) {
     response.body?.cancel()
     return proxyError(502, 'api_error', 'upstream redirect refused', requestId)
+  }
+  if (identity.cri && response.status >= 400) {
+    // Keep error status and capability-fallback token while removing all
+    // upstream identity details and raw proxy error pages.
+    let diagnostic=''
+    if (response.body) {
+      const reader=response.body.getReader()
+      let bytes=0
+      try {
+        while (bytes<65536) {
+          const {done,value}=await reader.read()
+          if (done) break
+          const take=Math.min(value.byteLength,65536-bytes)
+          diagnostic+=new TextDecoder().decode(value.subarray(0,take))
+          bytes+=take
+        }
+      } finally {
+        await reader.cancel().catch(()=>{})
+        reader.releaseLock()
+      }
+    }
+    try { diagnostic=JSON.parse(diagnostic)?.error?.message??diagnostic }
+    catch { /* Non-JSON bodies are used only for conservative classification. */ }
+    const capability=classifyCriCapability317(response.status,diagnostic,
+      request.headers.get('anthropic-beta')??'')
+    const type = response.status === 401 ? 'authentication_error' :
+      response.status === 403 ? 'permission_error' :
+      response.status === 429 ? 'rate_limit_error' :
+      response.status >= 500 ? 'api_error' : 'invalid_request_error'
+    return Response.json({type:'error',request_id:requestId,error:{
+      type,message:capability??'upstream inference request failed',
+    }},{status:response.status,headers:{'x-request-id':requestId,
+      'cache-control':'no-store'}})
   }
   const proxied = new Response(response.body, {
     status: response.status, headers: responseHeaders,

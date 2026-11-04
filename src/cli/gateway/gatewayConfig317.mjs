@@ -4,6 +4,7 @@
  */
 import { readFile } from 'node:fs/promises'
 import { validateGatewayAdmin317 } from './gatewayAdmin317.mjs'
+import { validateCriConfig317 } from './gatewayCri317.mjs'
 
 const LOOPBACK = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
 const nonempty = (value, name) => {
@@ -80,7 +81,8 @@ export function validateGatewayConfig317(value) {
     typeof x !== 'string' || Buffer.byteLength(x) < 32)) {
     throw new Error('session.jwt_secret requires one or more secrets of at least 32 bytes')
   }
-  if (!value.oidc && value.cri?.enabled !== true) {
+  const cri = value.cri ? validateCriConfig317(value.cri) : undefined
+  if (!value.oidc && !cri?.enabled) {
     throw new Error('oidc is required unless cri.enabled is true')
   }
   if (value.oidc) {
@@ -110,6 +112,7 @@ export function validateGatewayConfig317(value) {
     session: { ...session, jwt_secret: secrets, ttl_hours: session.ttl_hours ?? 1 },
     upstreams,
     ...(value.admin && {admin:validateGatewayAdmin317(value.admin)}),
+    ...(cri && {cri}),
     models: value.models ?? [],
     telemetry,
     limits: { max_request_bytes: 33554432, ...(value.limits ?? {}) },

@@ -13,6 +13,7 @@ import { createGatewayDeviceFlow317 } from './gatewayDevice317.mjs'
 import { openGatewayStore317 } from './gatewayStore317.mjs'
 import { handleGatewayAdmin317, isGatewayAdminPath317 } from './gatewayAdmin317.mjs'
 import { precheckGatewaySpend317, gatewayUsageResponse317 } from './gatewaySpendMeter317.mjs'
+import { createCriAdmission317, isCriJwt317 } from './gatewayCri317.mjs'
 import { createGatewayManagedSettings317, responseForManagedSettings317 } from './gatewayManaged317.mjs'
 import {
   forwardGatewayInference317, forwardGatewayTelemetry317, listGatewayModels317,
@@ -80,9 +81,6 @@ export async function createGatewayService317(config, deps = {}) {
   if (typeof Bun === 'undefined' || typeof Bun.serve !== 'function') {
     throw new Error('claude gateway requires the native Bun runtime')
   }
-  if (config.cri?.enabled && !config.oidc) {
-    throw new Error('CRI JWT admission requires pinned Anthropic issuer verification')
-  }
   // Validate and load managed policy before binding the listening socket.
   const managed = await createGatewayManagedSettings317(config.managed)
   const store = deps.store ?? await openGatewayStore317(config.store)
@@ -91,6 +89,9 @@ export async function createGatewayService317(config, deps = {}) {
     const oidc = deps.oidc ?? (config.oidc ? await createOidcProvider317(config.oidc) : null)
     // Initialize the spend authority before opening the listening socket.
     const spend = config.admin ? (deps.spend ?? await store.createSpend()) : null
+    const cri = config.cri?.enabled ? (deps.cri ?? createCriAdmission317(config.cri)) : null
+    // JWKS failures leave regular sessions active; CRI returns 503 until keys recover.
+    if (cri) await cri.prime?.()
     const publicUrl = config.listen.public_url ??
       'http://' + config.listen.host + ':' + config.listen.port
     const device = createGatewayDeviceFlow317({
@@ -128,6 +129,10 @@ export async function createGatewayService317(config, deps = {}) {
       }
       const route = request.method + ' ' + url.pathname
       try {
+        if (!oidc && ['/device','/oauth/callback','/oauth/device_authorization',
+          '/oauth/token','/oauth/revoke'].includes(url.pathname)) {
+          return error(404, 'not_found_error', 'OIDC login is not configured', requestId)
+        }
         if (authFree[route]) return await authFree[route]()
         if (isGatewayAdminPath317(url.pathname)) {
           if (!spend) return error(404, 'not_found_error', 'not found', requestId)
@@ -136,9 +141,23 @@ export async function createGatewayService317(config, deps = {}) {
           })
         }
         const token = bearer(request)
-        const identity = token && verifyGatewaySession317(
+        const criAttempt = Boolean(cri && token && isCriJwt317(token) &&
+          request.method === 'POST' &&
+          ['/v1/messages','/v1/messages/count_tokens'].includes(url.pathname))
+        const admission = criAttempt ? await cri.authenticate(token) : null
+        if (admission && !admission.ok) {
+          await store.audit('cri.denied', null, requestId, {
+            reason: admission.reason, path: url.pathname,
+          })
+          return admission.status === 503
+            ? Response.json({type:'error',error:{type:'api_error',
+                message:'customer-routed inference is temporarily unavailable: the gateway cannot obtain current verification keys'}},
+              {status:503,headers:{'retry-after':'30','x-request-id':requestId}})
+            : error(401,'authentication_error','invalid token',requestId)
+        }
+        const identity = criAttempt ? admission.claims : token && verifyGatewaySession317(
           token, config.session.jwt_secret, publicUrl)
-        if (!identity || await store.isRevoked(token)) {
+        if (!identity || (!criAttempt && await store.isRevoked(token))) {
           return error(401, 'authentication_error', 'invalid token', requestId)
         }
         const context = {
