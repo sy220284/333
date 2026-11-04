@@ -86,7 +86,7 @@ export async function createGatewayService317(config, deps = {}) {
   const store = deps.store ?? await openGatewayStore317(config.store)
   let server
   try {
-    const oidc = config.oidc ? await createOidcProvider317(config.oidc) : null
+    const oidc = deps.oidc ?? (config.oidc ? await createOidcProvider317(config.oidc) : null)
     const publicUrl = config.listen.public_url ??
       'http://' + config.listen.host + ':' + config.listen.port
     const device = createGatewayDeviceFlow317({
