@@ -3603,7 +3603,7 @@ async function run(): Promise<CommanderCommand> {
       }
     });
   const pluginCmd = program.command('plugin').alias('plugins').description('Manage Claude Code plugins').configureHelp(createSortedHelpConfig());
-  pluginCmd.command('eval [command] [target]')
+  const pluginEvalCmd = pluginCmd.command('eval [target]')
     .description('Run eval cases against a plugin and report scored results')
     .option('--eval-dir <dir>', 'Directory within plugin that holds evaluation cases')
     .option('--case <glob>', 'Filter cases by name glob')
@@ -3629,20 +3629,32 @@ async function run(): Promise<CommanderCommand> {
     .option('--publish-report', 'Publish report to account when supported')
     .option('--trust-plugin', 'Explicitly trust plugin evaluation source')
     .option('--verbose', 'Detailed trace logging')
-    .action(async (command: string | undefined, target: string | undefined, options: Record<string, unknown>) => {
+    .action(async (target: string | undefined, options: Record<string, unknown>) => {
       try {
         const { pluginEvalHandler317 } = await import('./cli/handlers/pluginEvalEntry317.ts');
-        if (command === 'init') {
-          throw new Error('Eval suite init requires the original interactive authoring workflow');
-        }
         if (options.publishReport) {
           throw new Error('Remote report publishing requires the authenticated report API');
         }
-        const resolvedTarget = target ?? command ?? '.';
+        const resolvedTarget = target ?? '.';
         const exitCode = await pluginEvalHandler317(resolvedTarget, options);
         if (exitCode !== 0) process.exitCode = exitCode;
       } catch (error) {
         process.stderr.write(`claude plugin eval: ${error instanceof Error ? error.message : String(error)}\n`);
+        process.exitCode = 1;
+      }
+    });
+  pluginEvalCmd.command('init [name]')
+    .description('Create an eval case, interactively on a terminal or as a blank template')
+    .option('--bare', 'Write a blank eval template without an interview')
+    .option('--interactive', 'Require a terminal-based authoring interview')
+    .option('--eval-dir <dir>', 'Directory for new eval cases under the plugin root')
+    .action(async (name: string | undefined, options: Record<string, unknown>) => {
+      try {
+        const { pluginEvalInit317 } = await import('./cli/handlers/pluginEvalInit317.ts');
+        const status = await pluginEvalInit317(name, options);
+        if (status !== 0) process.exitCode = status;
+      } catch (error) {
+        process.stderr.write(`claude plugin eval init: ${error instanceof Error ? error.message : String(error)}\n`);
         process.exitCode = 1;
       }
     });
