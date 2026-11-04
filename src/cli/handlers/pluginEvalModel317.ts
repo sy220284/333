@@ -35,6 +35,7 @@ export async function runEvalModel317({
   prompt, workspace, pluginDir, model, timeoutSeconds = 300,
   allowedTools = [], disallowedTools = [], appendSystemPrompt,
   maxBudgetUsd, maxTurns, strictMcpConfig = false, env = {},
+  addDirs = [], historyFile,
 }) {
   if (typeof prompt !== 'string' || !prompt.trim()) {
     throw new Error('eval model execution requires a nonempty prompt')
@@ -57,6 +58,8 @@ export async function runEvalModel317({
   ]
   if (pluginDir) args.push('--plugin-dir', pluginDir)
   if (strictMcpConfig) args.push('--strict-mcp-config')
+  for (const dir of addDirs) args.push('--add-dir', dir)
+  if (historyFile) args.push('--resume', historyFile)
   if (model) args.push('--model', model)
   if (appendSystemPrompt) args.push('--append-system-prompt', appendSystemPrompt)
   if (maxBudgetUsd !== undefined) args.push('--max-budget-usd', String(maxBudgetUsd))
