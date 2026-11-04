@@ -241,7 +241,7 @@ export async function discoverEvalCases317(
     if (++inspected > MAX_FILE_COUNT) throw new Error('eval directory scan exceeded its limit')
     const caseInfo = await readEvalCase317(dir)
     if (caseInfo) {
-      if (casePatterns.length && !casePatterns.some(pattern => new RegExp('^' + pattern.split('*').map(x => x.replace(/[|\\{}()[\]^$+?.]/g, '\\if (options.case && !new RegExp('^' + options.case.split('*').map(x => x.replace(/[|\\{}()[\]^$+?.]/g, '\\$&')).join('.*') + '$').test(caseInfo.name)) continue')).join('.*') + '
+      if (casePatterns.length && !casePatterns.some(pattern => new RegExp('^' + pattern.split('*').map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$').test(caseInfo.name))) continue
       if (requestedTags.length && !requestedTags.some(tag => caseInfo.tags?.includes(tag))) continue
       cases.push(caseInfo)
       if (cases.length > MAX_CASES) throw new Error(`eval suite exceeded ${MAX_CASES} cases`)
