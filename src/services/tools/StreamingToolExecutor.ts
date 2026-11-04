@@ -11,6 +11,7 @@ import type { AssistantMessage, Message } from '../../types/message.js'
 import { createChildAbortController } from '../../utils/abortController.js'
 import { logError } from '../../utils/log.js'
 import { runToolUse } from './toolExecution.js'
+import { observeToolExecutionPromise } from './toolExecutionLifecycle317.mjs'
 
 type MessageUpdate = {
   message?: Message
@@ -405,25 +406,24 @@ export class StreamingToolExecutor {
       }
     }
 
-    const promise = collectResults()
-      .catch(error => {
+    const promise = observeToolExecutionPromise(
+      collectResults().catch(error => {
         tool.executionError = error
         tool.status = 'failed'
-        // A failed stream may have already started sibling subprocesses.
         this.siblingAbortController.abort('sibling_error')
         throw error
-      })
-      .finally(() => {
-        // Unlike result delivery, execution lifetime ends on settlement.
-        // This also cleans up on discard and when the async generator throws.
+      }),
+      () => {
+        // Execution lifetime ends at settlement, also on discarded streams.
         markToolUseAsComplete(this.toolUseContext, tool.id)
         this.updateInterruptibleState()
-      })
+        this.progressAvailableResolve?.()
+        this.progressAvailableResolve = undefined
+      },
+      () => this.processQueue(),
+      logError,
+    )
     tool.promise = promise
-
-    // Continue queued work only after a successful tool. The original error
-    // remains on tool.promise and is surfaced by getRemainingResults().
-    void promise.then(() => this.processQueue()).catch(logError)
   }
 
   /**
