@@ -145,12 +145,13 @@ export async function installPlugin(
   scope: InstallableScope = 'user',
   json = false,
   configEntries: string[] = [],
+  npmRegistry?: string,
 ): Promise<void> {
   try {
     // biome-ignore lint/suspicious/noConsole:: intentional console output
     if (!json) console.log(`Installing plugin "${plugin}"...`)
 
-    const result = await installPluginOp(plugin, scope)
+    const result = await installPluginOp(plugin, scope, npmRegistry)
 
     if (!result.success) {
       throw new Error(result.message)
