@@ -11,6 +11,7 @@ import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { parseCliHelp } from './m1-cli-help-options.mjs'
 
 const required = flag => {
   const i = process.argv.indexOf(flag)
@@ -50,9 +51,7 @@ function run(executable, command) {
     cwd: home, env, encoding: 'utf8', timeout: 12000, maxBuffer: 2 * 1024 * 1024,
   })
   const output = (result.stdout ?? '').replaceAll('\r\n', '\n')
-  const flags = [...new Set([...output.matchAll(/^\s+(?:-[a-z0-9],\s*)?(--[a-z][a-z0-9-]*)/gim)]
-    .map(match => match[1]))].sort()
-  const usage = output.split('\n').find(line => line.startsWith('Usage:'))?.trim() ?? ''
+  const { flags, usage } = parseCliHelp(output)
   return {
     status: result.error ? result.error.message : result.status,
     flags, usage,
