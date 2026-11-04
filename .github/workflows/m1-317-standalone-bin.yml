@@ -49,11 +49,11 @@ jobs:
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
           bun build/rebuild.mjs
-          node build/package-release.mjs
-      - name: 生成无需全局Bun的本机可执行程序
+      - name: 生成自包含本机执行程序并打包完整发行资源
         run: |
           set -euo pipefail
-          bun build dist/cli.js --compile --outfile dist/claude
+          node build/compile-standalone.mjs
+          node build/package-release.mjs
           if [ -f dist/claude.exe ]; then binary=dist/claude.exe; else binary=dist/claude; fi
           test -s "$binary"
           chmod +x "$binary" || true
