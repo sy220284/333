@@ -1,7 +1,7 @@
 import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import { readWorkflowSummary } from './workflowSummaryStore.mjs'
-import { workflowSummaryPath } from './workflowStoragePaths.mjs'
+import { readWorkflowSummary } from './workflowSummaryStore.ts'
+import { workflowSummaryPath } from './workflowStoragePaths.ts'
 const RUN_FILE=/^wf_[0-9a-f]{8}-[0-9a-f]{3}\.json$/
 /** List durable completed and active runs from this exact project/session. */
 export async function readWorkflowHistory(projectDir,sessionId){
