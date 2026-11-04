@@ -225,8 +225,8 @@ export async function runPreload317(args = process.argv.slice(2), {
     // Import only environment-independent helpers before the claim. In
     // particular, auth/config modules must observe the claimed environment.
     await Promise.all([
-      import('../utils/cliArgv317.mjs'),
-      import('../utils/cliStartupFailure.mjs'),
+      import('../utils/cliArgv317.ts'),
+      import('../utils/cliStartupFailure.ts'),
     ])
     const claim = await claimPromise
     for (const signal of ['SIGTERM', 'SIGHUP', 'SIGINT']) process.off(signal, interrupted)
