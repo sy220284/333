@@ -2396,6 +2396,8 @@ export function REPL({
       return resolveAgentTools(mainThreadAgentDefinition, merged, false, true).resolvedTools;
     };
     return {
+      // Keep the session identity stable across query, permission and Agent calls.
+      sessionId: getSessionId(),
       abortController,
       options: {
         commands,
