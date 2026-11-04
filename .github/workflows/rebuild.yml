@@ -177,6 +177,10 @@ jobs:
         run: node --test tests/m4-ccr-concurrent-restore-317.test.mjs
       - name: 317插件测试目录发现与安全边界
         run: node --test tests/m3-plugin-test-discovery-317.test.mjs
+      - name: 317插件评测原版案例与六类评分器验收
+        run: |
+          bun test tests/m3-plugin-eval-catalog-317.test.mjs
+          node --test tests/m3-plugin-eval-graders-317.test.mjs
       - name: 317模型目录、读取边界和嵌套会话
         id: acceptance_008
         continue-on-error: true
