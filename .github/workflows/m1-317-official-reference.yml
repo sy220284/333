@@ -58,7 +58,7 @@ jobs:
         with:
           bun-version: 1.4.4
       - name: 校验仓库对当前与历史基线的独立定义
-        run: node --test tests/m1-target-release-317.test.mjs tests/m1-read-repeat-317.test.mjs tests/m1-subagent-effort-317.test.mjs
+        run: node --test tests/m1-target-release-317.test.mjs tests/m1-read-repeat-317.test.mjs tests/m1-subagent-effort-317.test.mjs tests/m1-317-chain-matrix.test.mjs tests/m1-account-email-disclosure-317.test.mjs
       - name: 校验最终版嵌入技能扫描器的哈希、归属与差异识别
         run: python3 -m unittest discover -s tests -p test_final_release_skills_audit.py
       - name: 获取官方 2.1.317 原生发行清单与 Linux x64
