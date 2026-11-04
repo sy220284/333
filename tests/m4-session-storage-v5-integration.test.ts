@@ -81,3 +81,72 @@ test('Storage V5 persists queue operations to owning session across resume and p
     else process.env.TEST_ENABLE_SESSION_PERSISTENCE = oldPersistence
   }
 })
+
+test('late transcript writes keep their original session and path after /resume', { timeout: 45_000 }, async () => {
+  const root = mkdtempSync(join(tmpdir(), '333-storage-v5-transcript-'))
+  const oldConfig = process.env.CLAUDE_CONFIG_DIR
+  const oldPersistence = process.env.TEST_ENABLE_SESSION_PERSISTENCE
+  process.env.CLAUDE_CONFIG_DIR = join(root, 'config')
+  process.env.TEST_ENABLE_SESSION_PERSISTENCE = '1'
+  const { switchSession, getSessionId } = await import('../src/bootstrap/state.js')
+  const { asSessionId } = await import('../src/types/ids.js')
+  const { createUserMessage } = await import('../src/utils/messages.js')
+  const {
+    recordTranscript, resetSessionFilePointer, setSessionFileForTesting,
+    flushSessionStorage, resetProjectForTesting,
+  } = await import('../src/utils/sessionStorage.js')
+  const original = getSessionId()
+  const first = asSessionId('dddddddd-dddd-4ddd-8ddd-dddddddddddd')
+  const second = asSessionId('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee')
+  const firstFile = join(root, 'first.jsonl')
+  const secondFile = join(root, 'second.jsonl')
+  try {
+    switchSession(first)
+    await resetSessionFilePointer()
+    setSessionFileForTesting(firstFile)
+
+    // recordTranscript yields while deduplicating UUIDs. The session switch
+    // must not change its destination or the sessionId stamped in the JSONL.
+    const pending = recordTranscript([
+      createUserMessage({ content: 'FIRST_SESSION_ASYNC_TRANSCRIPT_V5' }),
+    ])
+    switchSession(second)
+    await resetSessionFilePointer()
+    setSessionFileForTesting(secondFile)
+    await pending
+    await flushSessionStorage()
+    expect(existsSync(firstFile)).toBe(true)
+    const firstText = readFileSync(firstFile, 'utf8')
+    expect(firstText).toContain('FIRST_SESSION_ASYNC_TRANSCRIPT_V5')
+    expect(firstText).toContain(first)
+    expect(existsSync(secondFile)).toBe(false)
+
+    // The original transcript now exists; an additional delayed write must
+    // append to its old path without contaminating the active session.
+    switchSession(first)
+    await resetSessionFilePointer()
+    setSessionFileForTesting(firstFile)
+    const nextPending = recordTranscript([
+      createUserMessage({ content: 'SECOND_LATE_WRITE_FOR_FIRST_V5' }),
+    ])
+    switchSession(second)
+    await resetSessionFilePointer()
+    setSessionFileForTesting(secondFile)
+    await nextPending
+    await flushSessionStorage()
+    const resumedText = readFileSync(firstFile, 'utf8')
+    expect(resumedText).toContain('SECOND_LATE_WRITE_FOR_FIRST_V5')
+    expect(resumedText).toContain(first)
+    expect(existsSync(secondFile)).toBe(false)
+  } finally {
+    await flushSessionStorage()
+    switchSession(original)
+    await resetSessionFilePointer()
+    resetProjectForTesting()
+    rmSync(root, { recursive: true, force: true })
+    if (oldConfig === undefined) delete process.env.CLAUDE_CONFIG_DIR
+    else process.env.CLAUDE_CONFIG_DIR = oldConfig
+    if (oldPersistence === undefined) delete process.env.TEST_ENABLE_SESSION_PERSISTENCE
+    else process.env.TEST_ENABLE_SESSION_PERSISTENCE = oldPersistence
+  }
+})
