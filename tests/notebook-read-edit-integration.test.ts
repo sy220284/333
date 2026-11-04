@@ -27,6 +27,7 @@ test('real Read → NotebookEdit → Read shares the same file snapshot and retu
       readFileState,
       abortController: new AbortController(),
       updateFileHistoryState: () => {},
+      getAppState: () => ({ toolPermissionContext: { additionalWorkingDirectories: [] } }),
     } as unknown as ToolUseContext
 
     const firstRead = await FileReadTool.call({ file_path: notebook_path }, context)
