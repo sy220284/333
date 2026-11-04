@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict'
 import { spawn, spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { connect } from 'node:net'
 import { createServer } from 'node:http'
 import { mkdtempSync, existsSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
-import { applyPreloadClaim317, validatePreloadClaim317 } from '../src/bootstrap/preload317.mjs'
+import { applyPreloadClaim317, validatePreloadClaim317, PRELOAD_RESET_KEYS_317 } from '../src/bootstrap/preload317.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 const cli = join(root, 'dist/cli.js')
@@ -39,6 +40,29 @@ function sendClaim(socket, claim) {
     stream.once('error', reject)
   })
 }
+test('M1 C19-T02 317 preload reset list matches verified original bytecode', () => {
+  assert.equal(PRELOAD_RESET_KEYS_317.length, 116)
+  assert.equal(new Set(PRELOAD_RESET_KEYS_317).size, 116)
+  assert.equal(createHash('sha256')
+    .update([...PRELOAD_RESET_KEYS_317].sort().join('\n'))
+    .digest('hex'), '65213e19540550ca380ba8fc2be0f1a068e3bab142a8dbef3c551f44a35b6525')
+  const env = Object.fromEntries(PRELOAD_RESET_KEYS_317.map(name => [name, 'STALE']))
+  env.KEEP_THIS = 'ok'
+  const home = mkdtempSync(join(tmpdir(), '333-preload-reset-'))
+  try {
+    applyPreloadClaim317({cwd:home,argv:['--version'],
+      env:{CLAUDE_CODE_SESSION_ID:'fresh',KEEP_NEW:'yes'}}, {
+      env,argv:['bun','cli','--preload'],chdir:()=>{},
+    })
+    assert.equal(env.CLAUDE_CODE_SESSION_ID, 'fresh')
+    for (const name of PRELOAD_RESET_KEYS_317)
+      if(name !== 'CLAUDE_CODE_SESSION_ID')
+        assert.equal(env[name], undefined, 'stale env: ' + name)
+    assert.equal(env.KEEP_THIS, 'ok')
+    assert.equal(env.KEEP_NEW, 'yes')
+  } finally {rmSync(home,{recursive:true,force:true})}
+})
+
 test('M1 C19-T02 preload claim validates every field before changing process state', () => {
   const home = mkdtempSync(join(tmpdir(), '333-preload-validate-'))
   try {
