@@ -25,7 +25,7 @@ function safeWithin(root,path) {
   return r === '' || (r !== '..' && !r.startsWith('../') && !r.startsWith('..\\') && !isAbsolute(r))
 }
 
-export async function createEvalCase317(name: string, options: EvalInitOptions317 = {}) {
+export async function createEvalCase317(name: string, options: EvalInitOptions317 = {}) : Promise<string> {
   const cwd = resolve(options.cwd ?? process.cwd())
   const override = options.evalDir
   const isPlugin = await present(join(cwd,'.claude-plugin','plugin.json')) ||

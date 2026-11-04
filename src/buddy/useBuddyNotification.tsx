@@ -40,7 +40,7 @@ function RainbowText(t0) {
 function _temp(ch, i) {
   return <Text key={i} color={getRainbowColor(i)}>{ch}</Text>;
 }
-export function useBuddyNotification() {
+export function useBuddyNotification() : void {
   const $ = _c(4);
   const {
     addNotification,

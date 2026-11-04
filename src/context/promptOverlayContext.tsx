@@ -58,10 +58,10 @@ export function PromptOverlayProvider(t0) {
   }
   return t2;
 }
-export function usePromptOverlay() {
+export function usePromptOverlay() : PromptOverlayData {
   return useContext(DataContext);
 }
-export function usePromptOverlayDialog() {
+export function usePromptOverlayDialog() : React.ReactNode {
   return useContext(DialogContext);
 }
 
@@ -69,7 +69,7 @@ export function usePromptOverlayDialog() {
  * Register suggestion data for the floating overlay. Clears on unmount.
  * No-op outside the provider (non-fullscreen renders inline instead).
  */
-export function useSetPromptOverlay(data) {
+export function useSetPromptOverlay(data) : void {
   const $ = _c(4);
   const set = useContext(SetContext);
   let t0;
@@ -98,7 +98,7 @@ export function useSetPromptOverlay(data) {
  * Register a dialog node to float above the prompt. Clears on unmount.
  * No-op outside the provider (non-fullscreen renders inline instead).
  */
-export function useSetPromptOverlayDialog(node) {
+export function useSetPromptOverlayDialog(node) : void {
   const $ = _c(4);
   const set = useContext(SetDialogContext);
   let t0;

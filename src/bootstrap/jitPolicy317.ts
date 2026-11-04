@@ -6,7 +6,7 @@
 export const JIT_POLICY_DELAY_MS = 10_000
 
 /** Only 1..100 are accepted by the 2.1.317 env integer descriptor. */
-export function jitPolicyFromEnv317(value) {
+export function jitPolicyFromEnv317(value) : number {
   if (typeof value !== 'string' || !/^[0-9]+$/.test(value)) return 1
   const parsed = Number(value)
   return Number.isSafeInteger(parsed) && parsed >= 1 && parsed <= 100 ? parsed : 1
@@ -17,7 +17,7 @@ export function scheduleJitPolicy317({
   env = process.env,
   bun = typeof Bun === 'undefined' ? undefined : Bun,
   schedule = setTimeout,
-} = {}) {
+} = {}) : boolean {
   // These specialist worker starts intentionally skip the ordinary process
   // lifecycle scheduling, matching the official 317 entrypoint.
   if (args[0] === '--preload' || args[0] === '--bg-spare') return false

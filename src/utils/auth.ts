@@ -149,7 +149,7 @@ export function isAnthropicAuthEnabled(): boolean {
 
 /** Where the auth token is being sourced from, if any. */
 // this code is closely related to isAnthropicAuthEnabled
-export function getAuthTokenSource() {
+export function getAuthTokenSource() : { source: "apiKeyHelper"; hasToken: boolean; } | { source: "none"; hasToken: boolean; } | { source: "ANTHROPIC_AUTH_TOKEN"; hasToken: boolean; } | { source: "CLAUDE_CODE_OAUTH_TOKEN"; hasToken: boolean; } | { source: "CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR"; hasToken: boolean; } | { source: "CCR_OAUTH_TOKEN_FILE"; hasToken: boolean; } | { source: "claude.ai"; hasToken: boolean; } {
   // --bare: API-key-only. apiKeyHelper (from --settings) is the only
   // bearer-token-shaped source allowed. OAuth env vars, FD tokens, and
   // keychain are ignored.
@@ -1854,7 +1854,7 @@ export type UserAccountInfo = {
   email?: string
 }
 
-export function getAccountInformation() {
+export function getAccountInformation() : UserAccountInfo {
   const apiProvider = getAPIProvider()
   // Only provide account info for first-party Anthropic API
   if (apiProvider !== 'firstParty') {

@@ -16,7 +16,7 @@ import {
  * @param messages The current conversation messages
  * @param ignore When true, messages will not be recorded to the transcript
  */
-export function useLogMessages(messages: Message[], ignore: boolean = false) {
+export function useLogMessages(messages: Message[], ignore: boolean = false) : void {
   const teamContext = useAppState(s => s.teamContext)
 
   // messages is append-only between compactions, so track where we left off

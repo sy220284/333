@@ -29,7 +29,7 @@ export function AnimatedClawd({
 	sequence?: AnimationName;
 	autoplay?: boolean;
 	onComplete?: () => void;
-} = {}) {
+} = {}) : React.JSX.Element {
 	const [reducedMotion] = useState(
 		() => getInitialSettings().prefersReducedMotion ?? false,
 	);

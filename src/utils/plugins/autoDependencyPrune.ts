@@ -9,7 +9,7 @@ type PruneLoadedPlugin317 = {source: string; manifest?: {dependencies?: string[]
 export function computeAutoDependencyOrphans(
   installations: Record<string, PruneInstallation317[]>,
   loaded: PruneLoadedPlugin317[], scope: string, projectPath?: string,
-) {
+) : { orphans: Set<string>; unloadable: string[]; autoCount: number; } {
   const manual = new Set<string>()
   const automatic = new Set<string>()
   for (const [id, entries] of Object.entries(installations ?? {})) {

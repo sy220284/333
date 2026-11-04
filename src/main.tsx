@@ -521,7 +521,7 @@ function initializeEntrypoint(isNonInteractive: boolean): void {
 }
 
 // Set by early argv processing when `claude open <url>` is detected (interactive mode only)
-export async function main() {
+export async function main() : Promise<void> {
   profileCheckpoint('main_function_start');
 
   // SECURITY: Prevent Windows from executing commands from current directory

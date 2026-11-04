@@ -33,7 +33,7 @@ function modelPrices(model,config: GatewayPricingConfig317,upstream) {
   if (/claude-opus/i.test(model)) return OPUS_HIGH
   return FALLBACK
 }
-export function centsForGatewayUsage317(usage,model,config: GatewayPricingConfig317 = {},upstream) {
+export function centsForGatewayUsage317(usage,model,config: GatewayPricingConfig317 = {},upstream) : number {
   const rate=modelPrices(model,config,upstream)
   const read=Number(usage?.cache_read_input_tokens??0)
   const write=Number(usage?.cache_creation_input_tokens??0)
@@ -87,7 +87,7 @@ function priorityBinding(rows) {
   return rows.sort((a,b)=>Number(b.exceeded)-Number(a.exceeded)||
     b.utilization-a.utilization||b.reset.getTime()-a.reset.getTime())[0]
 }
-export function unifiedSpendHeaders317(binding,now=new Date()) {
+export function unifiedSpendHeaders317(binding,now=new Date()) : {} {
   if(!binding) return {}
   const blocked=binding.exceeded
   const utilization=blocked?binding.utilization:Math.min(.99,Math.round(binding.utilization*100)/100)
@@ -219,7 +219,7 @@ export function createGatewaySseUsage317() {
   }
 }
 /** Preserve raw SSE while recording tokens as the client consumes them. */
-export function meterGatewayResponse317(response,context) {
+export function meterGatewayResponse317(response,context) : Response {
   const {store,identity,config,model,upstream,payingGroup,headers={},audit}=context
   const h=new Headers(response.headers)
   for(const [key,value] of Object.entries(headers))h.set(key,String(value))
@@ -263,7 +263,7 @@ export function meterGatewayResponse317(response,context) {
   })
   return new Response(body,{status:response.status,headers:h})
 }
-export async function gatewayUsageResponse317(store,identity,config,now=new Date()) {
+export async function gatewayUsageResponse317(store,identity,config,now=new Date()) : Promise<Response> {
   try{
     const caps=await currentPeriodRows(store,identity,config.admin?.group_limit_mode??'min',now)
     const binding=priorityBinding(caps)

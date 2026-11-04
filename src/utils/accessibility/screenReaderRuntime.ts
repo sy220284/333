@@ -7,7 +7,7 @@ const TRUSTED_SOURCES = ['policySettings', 'flagSettings', 'userSettings'] as co
 /** Enablement reads the original settings source, not a merged settings
  * object: a project/local settings file cannot switch on terminal a11y.
  */
-export function getScreenReaderMode() {
+export function getScreenReaderMode() : { enabled: boolean; source: string; } | { enabled: boolean; source?: undefined; } {
   return resolveScreenReaderMode({
     argv: process.argv,
     env: process.env,

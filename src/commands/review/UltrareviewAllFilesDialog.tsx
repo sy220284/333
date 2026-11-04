@@ -17,7 +17,7 @@ type Props = {
  */
 export function UltrareviewAllFilesDialog({
   baseBranch, billsExtraUsage, onProceed, onCancel, onError,
-}: Props) {
+}: Props) : React.JSX.Element {
   const [isLaunching, setIsLaunching] = useState(false)
   const controller = useRef(new AbortController())
 

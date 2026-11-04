@@ -38,7 +38,7 @@ export function useManagePlugins({
   enabled = true,
 }: {
   enabled?: boolean
-} = {}) {
+} = {}) : void {
   const setAppState = useSetAppState()
   const needsRefresh = useAppState(s => s.plugins.needsRefresh)
   const { addNotification } = useNotifications()

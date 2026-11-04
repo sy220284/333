@@ -8,7 +8,7 @@ export function classifyRipgrepFailure({
   isBufferOverflow,
   wasAborted,
   partialResults,
-}) {
+}) : { kind: string; message: string; } {
   if (wasAborted) {
     return {
       kind: 'cancelled',
@@ -38,7 +38,7 @@ export function classifyRipgrepProcessExit({
   stdoutTruncated,
   stderrTruncated,
   wasAborted,
-}) {
+}) : "cancelled" | "timeout" | "overflow" | "complete" | "failed" {
   if (wasAborted) return 'cancelled'
   if (timedOut) return 'timeout'
   if (stdoutTruncated || stderrTruncated) return 'overflow'

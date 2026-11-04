@@ -5,7 +5,7 @@ const html = value => String(value ?? '').replace(/[&<>"']/g, char => ({
   '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;',
 }[char]))
 
-export function renderPluginEvalReport317(result) {
+export function renderPluginEvalReport317(result) : string {
   const cases = result.cases.map(item => `
     <section><h2>${html(item.name)}</h2>
     <p>Score: ${item.score === null ? 'n/a' : item.score.toFixed(3)}</p>
@@ -26,7 +26,7 @@ export function renderPluginEvalReport317(result) {
   ${cases}</html>`
 }
 
-export async function savePluginEvalReport317(result, options) {
+export async function savePluginEvalReport317(result, options) : Promise<{ dataFile: string; reportFile: string; }> {
   const outputDir = resolve(options.outputDir)
   await mkdir(outputDir, { recursive: true })
   const dataFile = join(outputDir, 'aggregate-result.json')

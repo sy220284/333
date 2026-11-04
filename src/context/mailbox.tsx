@@ -28,7 +28,7 @@ export function MailboxProvider(t0) {
   }
   return t2;
 }
-export function useMailbox() {
+export function useMailbox() : Mailbox {
   const mailbox = useContext(MailboxContext);
   if (!mailbox) {
     throw new Error("useMailbox must be used within a MailboxProvider");

@@ -967,7 +967,7 @@ export function setModelStrings(modelStrings: ModelStrings): void {
 
 // Test utility function to reset model strings for re-initialization.
 // Separate from setModelStrings because we only want to accept 'null' in tests.
-export function resetModelStringsForTestingOnly() {
+export function resetModelStringsForTestingOnly() : void {
   STATE.modelStrings = null
 }
 

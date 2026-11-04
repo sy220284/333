@@ -1074,7 +1074,7 @@ export function hasUnresolvedHooks(
   messages: NormalizedMessage[],
   toolUseID: string,
   hookEvent: HookEvent,
-) {
+) : boolean {
   const inProgressHookCount = getInProgressHookCount(
     messages,
     toolUseID,

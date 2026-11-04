@@ -19,7 +19,7 @@ const LSP_POLL_INTERVAL_MS = 5000;
  *
  * Only active when ENABLE_LSP_TOOL is set.
  */
-export function useLspInitializationNotification() {
+export function useLspInitializationNotification() : void {
   const $ = _c(10);
   const {
     addNotification

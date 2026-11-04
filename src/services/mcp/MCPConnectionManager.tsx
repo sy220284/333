@@ -14,14 +14,14 @@ interface MCPConnectionContextValue {
   toggleMcpServer: (serverName: string) => Promise<void>;
 }
 const MCPConnectionContext = createContext<MCPConnectionContextValue | null>(null);
-export function useMcpReconnect() {
+export function useMcpReconnect() : (serverName: string) => Promise<{ client: MCPServerConnection; tools: Tool[]; commands: Command[]; resources?: ServerResource[]; }> {
   const context = useContext(MCPConnectionContext);
   if (!context) {
     throw new Error("useMcpReconnect must be used within MCPConnectionManager");
   }
   return context.reconnectMcpServer;
 }
-export function useMcpToggleEnabled() {
+export function useMcpToggleEnabled() : (serverName: string) => Promise<void> {
   const context = useContext(MCPConnectionContext);
   if (!context) {
     throw new Error("useMcpToggleEnabled must be used within MCPConnectionManager");

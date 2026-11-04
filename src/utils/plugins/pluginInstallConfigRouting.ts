@@ -3,7 +3,7 @@
  * a bundled MCP server's user_config. Resolve and validate all targets
  * before touching persistent settings or keychain storage.
  */
-export function routeInstallConfigAssignments(assignments, pluginSchema, serverSchemas) {
+export function routeInstallConfigAssignments(assignments, pluginSchema, serverSchemas) : { topLevel: {}; servers: {}; } {
   const topLevel = {};
   const servers = {};
   for (const assignment of assignments) {

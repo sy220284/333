@@ -22,13 +22,13 @@ export function normalizeHistoricalToolName(name) {
 }
 
 /** Compare identities only: never change tool registrations or authorize new paths. */
-export function permissionToolNamesMatch(ruleToolName, runtimeToolName) {
+export function permissionToolNamesMatch(ruleToolName, runtimeToolName) : boolean {
   return normalizeHistoricalToolName(ruleToolName) ===
     normalizeHistoricalToolName(runtimeToolName)
 }
 
 /** Read-only historical-name lookup for old permission and session records. */
-export function getHistoricalToolNamesFor(currentName) {
+export function getHistoricalToolNamesFor(currentName) : string[] {
   return Object.entries(HISTORICAL_TOOL_NAMES)
     .filter(([, newName]) => newName === currentName)
     .map(([legacyName]) => legacyName)

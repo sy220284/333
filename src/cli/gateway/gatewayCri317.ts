@@ -51,7 +51,7 @@ function parseJwsParts(token) {
     return {pieces,header,claims}
   }catch{return null}
 }
-export function isCriJwt317(token){return parseJwsParts(token)?.header.typ===TYPE}
+export function isCriJwt317(token): boolean {return parseJwsParts(token)?.header.typ===TYPE}
 export function createCriAdmission317(config,adapters: {now?: () => number; fetch?: typeof fetch} = {}) {
   if(!config.enabled)throw new Error('Cannot create CRI admission when disabled')
   const now=adapters.now??Date.now,fetchJwks=adapters.fetch??fetch
@@ -124,7 +124,7 @@ export function createCriAdmission317(config,adapters: {now?: () => number; fetc
   }
 }
 /** Ordered capability tokens preserve the native client's self-healing retries. */
-export function classifyCriCapability317(status,message,betaHeader=''){
+export function classifyCriCapability317(status,message,betaHeader=''): string {
   if(status!==400&&status!==413)return null
   const text=String(message??'')
   if(/(?:system\s+(?:role|message)|role\s*[:=]\s*["']?system|mid.conversation.*system)/i.test(text)&&

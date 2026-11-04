@@ -27,7 +27,7 @@ type Props = {
 };
 export default function ErrorOverview({
   error
-}: Props) {
+}: Props) : React.JSX.Element {
   const stack = error.stack ? error.stack.split('\n').slice(1) : undefined;
   const origin = stack ? getStackUtils().parseLine(stack[0]!) : undefined;
   const filePath = cleanupPath(origin?.file);

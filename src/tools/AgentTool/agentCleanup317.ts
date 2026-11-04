@@ -2,7 +2,7 @@
  * Release all resources owned by an agent, including when one disposer fails.
  * Preserve every failure for diagnosis and ensure later disposers still run.
  */
-export async function releaseAgentResources(steps, primaryFailure) {
+export async function releaseAgentResources(steps, primaryFailure) : Promise<void> {
   const failures = []
   for (const [name, dispose] of steps) {
     try {

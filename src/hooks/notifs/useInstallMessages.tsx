@@ -1,7 +1,7 @@
 import type { Notification } from '../../context/notifications.js';
 import { checkInstall } from 'src/utils/nativeInstaller/index.js';
 import { useStartupNotification } from './useStartupNotification.js';
-export function useInstallMessages() {
+export function useInstallMessages() : void {
   useStartupNotification(_temp2);
 }
 async function _temp2(): Promise<Notification[]> {

@@ -42,7 +42,7 @@ export function createContextHintController(options: KeepRecentOptions & {
   querySource: string
   targetTokensSaved?: number
   is529Error?: (error: HintError) => boolean
-}) {
+}) : { active: boolean; buildRequestParams(messages: Message[]): { beta: string; body: { context_hint: { target_tokens_saved?: number; enabled: boolean; }; }; }; onRequestError(error: HintError, messages: Message[]): Promise<HintRecovery | null>; classifyStreamError(error: HintError): boolean; onStreamFallback(messages: Message[]): Promise<HintRecovery | null>; strip(): void; } {
   if (!options.firstParty || !options.querySource.startsWith('repl_main_thread')) {
     return null
   }

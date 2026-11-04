@@ -10,7 +10,7 @@ export function installedSourceCommandKey(source) {
   return source.mode === 'link' ? source.command + '\n[mode: link]' : source.command
 }
 
-export function commandSourceDigest(disclosure) {
+export function commandSourceDigest(disclosure) : string {
   const tuple = disclosure.kind === 'command_source'
     ? [disclosure.kind, disclosure.pluginId, disclosure.command, disclosure.mode, disclosure.catalogRevision]
     : [disclosure.kind, disclosure.pluginId, disclosure.command, disclosure.archiveUrl, disclosure.catalogRevision]
@@ -44,7 +44,7 @@ export function canonicalCatalogTree(value) {
   return value
 }
 
-export function localCatalogRevision(marketplaceJson, packageJson = null) {
+export function localCatalogRevision(marketplaceJson, packageJson = null) : string {
   const catalog = canonicalCatalogTree(
     typeof marketplaceJson === 'string' ? JSON.parse(marketplaceJson) : marketplaceJson,
   )
@@ -56,7 +56,7 @@ export function localCatalogRevision(marketplaceJson, packageJson = null) {
 }
 
 /** A mismatch must not authorize anything. Never auto-accept a stale digest. */
-export function isAuthorizedSourceCommand(shown, { yes = false, acceptCommand, isNestedSession = false }: {yes?: boolean; acceptCommand?: string; isNestedSession?: boolean} = {}) {
+export function isAuthorizedSourceCommand(shown, { yes = false, acceptCommand, isNestedSession = false }: {yes?: boolean; acceptCommand?: string; isNestedSession?: boolean} = {}) : boolean {
   if (isNestedSession) return false
   if (yes) return true
   return typeof acceptCommand === 'string' &&

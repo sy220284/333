@@ -160,7 +160,7 @@ export async function runClaimedSession317(claim: PreloadClaim317,
 
 export async function runPreload317(args = process.argv.slice(2), {
   onClaim = runClaimedSession317,
-} = {}) {
+} = {}) : Promise<void> {
   // Original preload clears the previous session's transient environment
   // before any warming imports or socket activity can observe it.
   for (const name of PRELOAD_RESET_KEYS_317) delete process.env[name]

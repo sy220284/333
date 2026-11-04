@@ -60,7 +60,7 @@ export function parseDesktopCliOptions(argv) {
 /** Return a user-visible validation error, or null when Desktop launch is eligible. */
 export function validateDesktopInvocation({
   argv = [], prompt, stdinIsTTY = false, stdoutIsTTY = false, env = {},
-}: {argv?: string[]; prompt?: string; stdinIsTTY?: boolean; stdoutIsTTY?: boolean; env?: NodeJS.ProcessEnv} = {}) {
+}: {argv?: string[]; prompt?: string; stdinIsTTY?: boolean; stdoutIsTTY?: boolean; env?: NodeJS.ProcessEnv} = {}) : string {
   if (!stdoutIsTTY || argv.some(arg => ['--print', '-p', '--init-only'].includes(arg) ||
       arg === '--sdk-url' || arg.startsWith('--sdk-url='))) {
     return "--desktop opens the Claude Desktop app and can't run non-interactively (`--print`, `--sdk-url`, `--init-only`, or redirected output)."
@@ -125,7 +125,7 @@ export async function launchDesktopFromCli({
   env = process.env, platform = process.platform, arch = process.arch,
 }: {prompt?: string; options?: {continue?: boolean; resume?: boolean | string}; argv?: string[];
     stdinIsTTY?: boolean; stdoutIsTTY?: boolean; env?: NodeJS.ProcessEnv;
-    platform?: NodeJS.Platform; arch?: string} = {}) {
+    platform?: NodeJS.Platform; arch?: string} = {}) : Promise<number> {
   const invalid = validateDesktopInvocation({ argv, prompt, stdinIsTTY, stdoutIsTTY, env })
   if (invalid) return reportError(invalid)
   if (platform !== 'darwin' && !(platform === 'win32' && arch === 'x64')) {

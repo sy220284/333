@@ -2,7 +2,7 @@ import { readdir, readFile, lstat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 
-export function peerRef(socketPath) {
+export function peerRef(socketPath) : string {
   return createHash('sha256').update(socketPath).digest('hex').slice(0, 6)
 }
 function running(pid) {

@@ -9,7 +9,7 @@ function mappedV4(ip) {
   const low = Number.parseInt(match[2], 16)
   return `${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`
 }
-export function isPublicIp(ip) {
+export function isPublicIp(ip) : boolean {
   const mapped = mappedV4(ip)
   if (mapped !== null) return isPublicIp(mapped)
   if (isIP(ip) === 4) {
@@ -39,7 +39,7 @@ export function validateMonitorWsUrl(value) {
   }
   return u
 }
-export function validateMonitorArguments(value) {
+export function validateMonitorArguments(value) : void {
   if (!value || !!value.command === !!value.ws) throw new Error('Exactly one of command or ws is required')
   if (!value.description?.trim()) throw new Error('Monitor description is required')
   if (value.command && [...value.command].some(char => { const code=char.codePointAt(0); return code < 32 && code !== 9 && code !== 10 && code !== 13 || code === 127 })) throw new Error('Command contains hidden control characters')

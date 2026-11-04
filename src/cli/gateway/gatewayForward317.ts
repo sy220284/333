@@ -22,7 +22,7 @@ const RESPONSE = new Set([
   'anthropic-ratelimit-tokens-reset','retry-after','request-id',
   'x-request-id','anthropic-organization-id','anthropic-version',
 ])
-export async function readBoundedGatewayBody317(request, limit) {
+export async function readBoundedGatewayBody317(request, limit) : Promise<Uint8Array<ArrayBuffer>> {
   if (!request.body) return new Uint8Array()
   const data = [], reader = request.body.getReader()
   let bytes = 0
@@ -80,7 +80,7 @@ function pickHeaders(request, up, requestId) {
   return headers
 }
 
-export async function forwardGatewayInference317(request, context) {
+export async function forwardGatewayInference317(request, context) : Promise<Response> {
   const { config, identity, audit } = context
   const requestId = randomUUID()
   const path = new URL(request.url).pathname
@@ -218,7 +218,7 @@ export async function forwardGatewayInference317(request, context) {
   return proxied
 }
 
-export function listGatewayModels317(config, identity) {
+export function listGatewayModels317(config, identity) : Response {
   const groups = identity.groups ?? []
   const permitted = config.upstreams.filter(up => !up.groups?.length ||
     up.groups.some(group => groups.includes(group)))
@@ -234,7 +234,7 @@ export function listGatewayModels317(config, identity) {
 }
 
 const METRIC_PATHS = new Set(['/v1/logs','/v1/metrics','/v1/traces'])
-export async function forwardGatewayTelemetry317(request, context) {
+export async function forwardGatewayTelemetry317(request, context) : Promise<Response> {
   const path = new URL(request.url).pathname
   if (!METRIC_PATHS.has(path)) return new Response('not found', { status:404 })
   const destinations = (context.config.telemetry.forward_to ?? []).filter(

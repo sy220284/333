@@ -154,7 +154,7 @@ export function StatsProvider(t0) {
   }
   return t4;
 }
-export function useStats() {
+export function useStats() : StatsStore {
   const store = useContext(StatsContext);
   if (!store) {
     throw new Error("useStats must be used within a StatsProvider");

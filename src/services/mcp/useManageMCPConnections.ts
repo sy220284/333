@@ -139,7 +139,7 @@ function addErrorsToAppState(
 export function useManageMCPConnections(
   dynamicMcpConfig: Record<string, ScopedMcpServerConfig> | undefined,
   isStrictMcpConfig = false,
-) {
+) : { reconnectMcpServer: (serverName: string) => Promise<{ client: MCPServerConnection; tools: Tool[]; commands: Command[]; resources?: ServerResource[]; }>; toggleMcpServer: (serverName: string) => Promise<void>; } {
   const store = useAppStateStore()
   const _authVersion = useAppState(s => s.authVersion)
   // Incremented by /reload-plugins (refreshActivePlugins) to pick up newly

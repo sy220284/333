@@ -6,7 +6,7 @@ const ANSI_CONTROL_SEQUENCE = new RegExp(`${String.fromCharCode(27)}\\[[0-?]*[ -
 export function resolveScreenReaderMode({
   argv=[],env={},trustedSettings=[],
 }: {argv?: string[]; env?: Record<string, string | undefined>;
-  trustedSettings?: Array<{settings?: {axScreenReader?: boolean}}> } = {}) {
+  trustedSettings?: Array<{settings?: {axScreenReader?: boolean}}> } = {}) : { enabled: boolean; source: string; } | { enabled: boolean; source?: undefined; } {
   if (argv.includes('--ax-screen-reader')) return {enabled:true,source:'flag'}
   if (Object.hasOwn(env,'CLAUDE_AX_SCREEN_READER')) {
     const value=env.CLAUDE_AX_SCREEN_READER
@@ -18,13 +18,13 @@ export function resolveScreenReaderMode({
   }
   return {enabled:false}
 }
-export function screenReaderChildEnvironment(mode) {
+export function screenReaderChildEnvironment(mode) : { CLAUDE_AX_SCREEN_READER: string; } | { CLAUDE_AX_SCREEN_READER?: undefined; } {
   return mode.enabled ? {CLAUDE_AX_SCREEN_READER:'1'} : {}
 }
 /** Plain accessibility text is rendered without the terminal diff/animation
  * engine. This traversal preserves user text but excludes decorative frames.
  */
-export function flattenAccessibleTree(root) {
+export function flattenAccessibleTree(root) : string {
   const blocks=[]
   let segment=''
   const flush=()=>{
@@ -60,7 +60,7 @@ export function flattenAccessibleTree(root) {
   return blocks.join('\n').replace(ANSI_CONTROL_SEQUENCE,'')
     .replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim()
 }
-export function accessibleOutputDelta(previous='',current='') {
+export function accessibleOutputDelta(previous='',current='') : string {
   if(current===previous) return ''
   if(!current) return ''
   if(!previous) return `${current}\n`

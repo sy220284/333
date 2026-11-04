@@ -1572,7 +1572,7 @@ export async function recordSidechainTranscript(
   messages: Message[],
   agentId?: string,
   startingParentUuid?: UUID | null,
-) {
+) : Promise<void> {
   await getProject().insertMessageChain(
     cleanMessagesForLogging(messages),
     true,
@@ -1581,7 +1581,7 @@ export async function recordSidechainTranscript(
   )
 }
 
-export async function recordQueueOperation(queueOp: QueueOperationMessage) {
+export async function recordQueueOperation(queueOp: QueueOperationMessage) : Promise<void> {
   await getProject().insertQueueOperation(queueOp)
 }
 
@@ -1597,7 +1597,7 @@ export async function recordFileHistorySnapshot(
   messageId: UUID,
   snapshot: FileHistorySnapshot,
   isSnapshotUpdate: boolean,
-) {
+) : Promise<void> {
   await getProject().insertFileHistorySnapshot(
     messageId,
     snapshot,
@@ -1607,14 +1607,14 @@ export async function recordFileHistorySnapshot(
 
 export async function recordAttributionSnapshot(
   snapshot: AttributionSnapshotMessage,
-) {
+) : Promise<void> {
   await getProject().insertAttributionSnapshot(snapshot)
 }
 
 export async function recordContentReplacement(
   replacements: ContentReplacementRecord[],
   agentId?: AgentId,
-) {
+) : Promise<void> {
   await getProject().insertContentReplacement(replacements, agentId)
 }
 
@@ -1622,7 +1622,7 @@ export async function recordContentReplacement(
  * Reset the session file pointer after switchSession/regenerateSessionId.
  * The new file is created lazily on the first user/assistant message.
  */
-export async function resetSessionFilePointer() {
+export async function resetSessionFilePointer() : Promise<void> {
   getProject().resetSessionFile()
 }
 
@@ -2734,7 +2734,7 @@ export async function saveCustomTitle(
   customTitle: string,
   fullPath?: string,
   source: 'user' | 'auto' = 'user',
-) {
+) : Promise<void> {
   // Fall back to computed path if fullPath is not provided
   const resolvedPath = fullPath ?? getTranscriptPathForSession(sessionId)
   appendEntryToFile(resolvedPath, {
@@ -2802,7 +2802,7 @@ export function saveTaskSummary(sessionId: UUID, summary: string): void {
   })
 }
 
-export async function saveTag(sessionId: UUID, tag: string, fullPath?: string) {
+export async function saveTag(sessionId: UUID, tag: string, fullPath?: string) : Promise<void> {
   // Fall back to computed path if fullPath is not provided
   const resolvedPath = fullPath ?? getTranscriptPathForSession(sessionId)
   appendEntryToFile(resolvedPath, { type: 'tag', tag, sessionId })
@@ -2936,7 +2936,7 @@ export async function saveAgentName(
   agentName: string,
   fullPath?: string,
   source: 'user' | 'auto' = 'user',
-) {
+) : Promise<void> {
   const resolvedPath = fullPath ?? getTranscriptPathForSession(sessionId)
   appendEntryToFile(resolvedPath, { type: 'agent-name', agentName, sessionId })
   // Cache for current session only (for immediate visibility)
@@ -2954,7 +2954,7 @@ export async function saveAgentColor(
   sessionId: UUID,
   agentColor: string,
   fullPath?: string,
-) {
+) : Promise<void> {
   const resolvedPath = fullPath ?? getTranscriptPathForSession(sessionId)
   appendEntryToFile(resolvedPath, {
     type: 'agent-color',

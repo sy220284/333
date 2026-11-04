@@ -45,7 +45,7 @@ export function maybeRefreshOverageCreditCache(): void {
   if (getCachedOverageCreditGrant() !== null) return;
   void refreshOverageCreditGrantCache();
 }
-export function useShowOverageCreditUpsell() {
+export function useShowOverageCreditUpsell() : boolean {
   const [show] = useState(_temp);
   return show;
 }

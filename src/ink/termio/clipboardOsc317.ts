@@ -3,7 +3,7 @@
  * (official Linux x64: chunk-3cs9b1gj.js, zA / IH).
  * Pure functions keep the terminal protocol testable without a live TTY.
  */
-export function clipboardMultiplexer(environment = process.env) {
+export function clipboardMultiplexer(environment = process.env) : "tmux" | "screen" | "zellij" {
   if (environment.TMUX) return 'tmux'
   if (environment.STY) return 'screen'
   if (environment.ZELLIJ) return 'zellij'
@@ -15,7 +15,7 @@ const BEL = '\x07'
 const ST = ESC + '\\'
 const SCREEN_CHUNK_LENGTH = 76
 
-export function encodeClipboardOsc52(base64, mux = null, terminator = BEL) {
+export function encodeClipboardOsc52(base64, mux = null, terminator = BEL) : string {
   if (!/^[a-zA-Z0-9+/]*={0,2}$/.test(base64)) {
     throw new Error('OSC 52 payload must be base64')
   }
@@ -40,7 +40,7 @@ export function encodeClipboardOsc52(base64, mux = null, terminator = BEL) {
  * known to print unknown OSC sequences or if a native copy has already
  * succeeded on a VTE-based Linux/WSL terminal.
  */
-export function isVteTerminal(terminal, environment = process.env) {
+export function isVteTerminal(terminal, environment = process.env) : boolean {
   const has = name => (environment[name] ?? '').trim() !== ''
   return has('VTE_VERSION') &&
     (terminal === 'vte-based' || terminal === 'gnome-terminal') &&
@@ -55,7 +55,7 @@ export function isVteTerminal(terminal, environment = process.env) {
 export function suppressClipboardOsc52({
   platform, terminal, nativeWriteSucceeded = false,
   environment = process.env, printsUnknownSequences = false,
-}) {
+}) : boolean {
   if (printsUnknownSequences) return true
   if (!isVteTerminal(terminal, environment)) return false
   const version = Number.parseInt(environment.VTE_VERSION ?? '', 10)

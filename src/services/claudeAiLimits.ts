@@ -181,7 +181,7 @@ function extractRawUtilization(headers: globalThis.Headers): RawUtilization {
 type StatusChangeListener = (limits: ClaudeAILimits) => void
 export const statusListeners: Set<StatusChangeListener> = new Set()
 
-export function emitStatusChange(limits: ClaudeAILimits) {
+export function emitStatusChange(limits: ClaudeAILimits) : void {
   currentLimits = limits
   statusListeners.forEach(listener => listener(limits))
   const hoursTillReset = Math.round(

@@ -10,7 +10,7 @@ import { resolve } from 'node:path'
 const pending = new Map()
 
 /** A shared identity for duplicate detection and locking on each platform. */
-export function transcriptDestinationKey(path) {
+export function transcriptDestinationKey(path) : string {
   const absolute = resolve(path)
   return process.platform === 'win32' ? absolute.toLowerCase() : absolute
 }

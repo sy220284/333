@@ -49,7 +49,7 @@ function AppleTerminalClawd({ eyes, color }: { eyes: Eyes; color: string }) {
 	);
 }
 
-export function Clawd({ pose = "default", color = "clawd_body" }: Props) {
+export function Clawd({ pose = "default", color = "clawd_body" }: Props) : React.JSX.Element {
 	if (isScreenReaderEnabled()) return null;
 	if (typeof pose !== "string" && "facing" in pose) {
 		return env.terminal === "Apple_Terminal" ? (

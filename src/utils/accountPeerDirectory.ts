@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 const validId = /^(?:cse|session)_[A-Za-z0-9_-]+$/
 export const canonicalId = id => validId.test(id ?? '') ? id.replace(/^(?:cse|session)_/, '') : ''
 /** Bind names and bridge addresses to the authenticated account and organization. */
-export const peerIdentityKey = (accessToken, orgUUID) =>
+export const peerIdentityKey = (accessToken, orgUUID) : string =>
   accessToken && orgUUID ? createHash('sha256').update(`${orgUUID}\0${accessToken}`).digest('hex') : null
 const active = row => row.acceptsPeerMessages !== false && !row.unreachableFromHere &&
   !['archived','offline','disconnected'].includes(row.status)
@@ -71,7 +71,7 @@ export function resolveRemoteRecipient(peers, token) {
   return found.length === 1 && active(found[0]) ? found[0].address : undefined
 }
 let advertised = { time:0, peers:[], identityKey:null }
-export function rememberAccountRecipients(peers, time = Date.now(), identityKey = null) {
+export function rememberAccountRecipients(peers, time = Date.now(), identityKey = null) : void {
   advertised = { time, identityKey, peers:peers.filter(active) }
 }
 const currentRecipients = (time, identityKey) =>

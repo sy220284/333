@@ -346,7 +346,7 @@ function argValue(args, flag) {
   const index = args.findIndex(a => a === flag || a.startsWith(`${flag}=`))
   return index === -1 ? undefined : args[index].includes('=') ? args[index].slice(flag.length + 1) : args[index + 1]
 }
-export function activeBackgroundFlags(args) {
+export function activeBackgroundFlags(args) : Set<string> {
   const found = new Set<string>()
   for (let index = 0; index < args.length; index++) {
     const arg = args[index]
@@ -383,7 +383,7 @@ export function validateBackgroundCliArgs(args) {
   return null
 }
 
-export async function interceptBackgroundCli(args) {
+export async function interceptBackgroundCli(args) : Promise<boolean> {
   if (args[0] === '--internal-bg-supervisor') {
     await runBackgroundSupervisor()
     return true

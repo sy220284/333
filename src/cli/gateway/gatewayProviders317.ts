@@ -194,7 +194,7 @@ export type GatewayForwardSdkOptions317 = {
   timeoutMs?: number; extraHeaders?: Record<string, string>;
   providerFactory?: (upstream: unknown) => Promise<unknown>
 }
-export async function forwardGatewaySdk317(up, payload, path, options: GatewayForwardSdkOptions317 = {}) {
+export async function forwardGatewaySdk317(up, payload, path, options: GatewayForwardSdkOptions317 = {}) : Promise<Response> {
   const {requestId='-', requestedModel, signal, timeoutMs, extraHeaders={},
     providerFactory}=options
   const name=up.provider

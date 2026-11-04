@@ -47,7 +47,7 @@ function grant(key, state, waiter, lane) {
   })
 }
 
-export function acquireHookPermit(sessionId, timeoutMs, signal) {
+export function acquireHookPermit(sessionId, timeoutMs, signal) : Promise<() => void> {
   if (signal?.aborted) return Promise.resolve(() => {})
   const key = sessionId || 'local-session'
   const state = getState(key)

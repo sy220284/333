@@ -167,14 +167,14 @@ export function useAppState<T>(selector: (state: AppState) => T): T {
  * Returns a stable reference that never changes -- components using only
  * this hook will never re-render from state changes.
  */
-export function useSetAppState() {
+export function useSetAppState() : (updater: (prev: AppState) => AppState) => void {
   return useAppStore().setState;
 }
 
 /**
  * Get the store directly (for passing getState/setState to non-React code).
  */
-export function useAppStateStore() {
+export function useAppStateStore() : AppStateStore {
   return useAppStore();
 }
 const NOOP_SUBSCRIBE = () => () => {};

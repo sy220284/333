@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 /** Stable across insertions of unrelated agent calls; distinct for repeated
  * identical prompts/options within one deterministic workflow traversal.
  */
-export function makeWorkflowCacheKey(prompt, options, ordinal) {
+export function makeWorkflowCacheKey(prompt, options, ordinal) : string {
   if (typeof prompt !== 'string' || typeof ordinal !== 'number' ||
       !Number.isSafeInteger(ordinal) || ordinal < 0) {
     throw new Error('Invalid workflow cache invocation')

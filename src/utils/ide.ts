@@ -826,7 +826,7 @@ export async function detectIDEs(
   return detectedIDEs
 }
 
-export async function maybeNotifyIDEConnected(client: Client) {
+export async function maybeNotifyIDEConnected(client: Client) : Promise<void> {
   await client.notification({
     method: 'ide_connected',
     params: {

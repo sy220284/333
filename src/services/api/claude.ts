@@ -501,7 +501,7 @@ export function configureTaskBudgetParams(
   }
 }
 
-export function getAPIMetadata() {
+export function getAPIMetadata() : { user_id: string; } {
   // https://docs.google.com/document/d/1dURO9ycXXQCBS0V4Vhl4poDBRgkelFc5t2BNPoEgH5Q/edit?tab=t.0#heading=h.5g7nec5b09w5
   let extra: JsonObject = {}
   const extraStr = process.env.CLAUDE_CODE_EXTRA_METADATA

@@ -33,7 +33,7 @@ function shouldShowGuestPassesUpsell(): boolean {
   if (config.hasVisitedPasses) return false;
   return true;
 }
-export function useShowGuestPassesUpsell() {
+export function useShowGuestPassesUpsell() : boolean {
   const [show] = useState(_temp);
   return show;
 }

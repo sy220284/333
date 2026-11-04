@@ -95,7 +95,7 @@ export const useSelectInput = <T>({
   inputValues,
   imagesSelected = false,
   onEnterImageSelection,
-}: UseSelectProps<T>) => {
+}: UseSelectProps<T>) : void => {
   // Automatically register as an overlay when onCancel is provided.
   // This ensures CancelRequestHandler won't intercept Escape when the select is active.
   useRegisterOverlay('select', !!state.onCancel)

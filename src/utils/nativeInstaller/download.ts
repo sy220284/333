@@ -151,7 +151,7 @@ export async function getLatestVersion(
 export async function downloadVersionFromArtifactory(
   version: string,
   stagingPath: string,
-) {
+) : Promise<void> {
   const fs = getFsImplementation()
 
   // If we get here, we own the lock and can delete a partial download
@@ -387,7 +387,7 @@ export async function downloadVersionFromBinaryRepo(
     auth?: { username: string; password: string }
     headers?: Record<string, string>
   },
-) {
+) : Promise<void> {
   const fs = getFsImplementation()
 
   // If we get here, we own the lock and can delete a partial download

@@ -637,7 +637,7 @@ export const getSkillDirCommands = memoize(
   },
 )
 
-export function clearSkillCaches() {
+export function clearSkillCaches() : void {
   getSkillDirCommands.cache?.clear?.()
   conditionalSkills.clear()
   activatedConditionalSkillNames.clear()

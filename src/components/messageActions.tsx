@@ -211,7 +211,7 @@ export const MessageActionsSelectedContext = React.createContext(false);
 export const InVirtualListContext = React.createContext(false);
 
 // bg must go on the Box that HAS marginTop (margin stays outside paint) — that's inside each consumer.
-export function useSelectedMessageBg() {
+export function useSelectedMessageBg() : string {
   return React.useContext(MessageActionsSelectedContext) ? "messageActionsBackground" : undefined;
 }
 

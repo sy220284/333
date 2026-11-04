@@ -20,7 +20,7 @@ export function parseFallbackModels(value: unknown, primaryModel?: string): stri
 }
 
 /** One chain per query; failed models can never be revisited in a fallback loop. */
-export function createFallbackModelChain(value: unknown) {
+export function createFallbackModelChain(value: unknown) : { next(currentModel: string): string | undefined; advance(currentModel: string): string | undefined; } {
   const models = parseFallbackModels(value);
   const tried = new Set<string>();
   return {

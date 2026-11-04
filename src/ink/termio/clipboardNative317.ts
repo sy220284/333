@@ -63,18 +63,18 @@ function nativeClipboardAddon() {
 }
 
 /** Check the actual N-API export surface of the installed Linux addon. */
-export function isLinuxClipboardAddonLoadable() {
+export function isLinuxClipboardAddonLoadable() : boolean {
   return nativeClipboardAddon() !== null
 }
 
 /** X11 :0/unix:0 or a Wayland compositor local to the running process. */
-export function isLocalLinuxClipboardDisplay(env = process.env) {
+export function isLocalLinuxClipboardDisplay(env = process.env) : boolean {
   if (env.DISPLAY) return /^(unix)?:/.test(env.DISPLAY)
   return Boolean(env.WAYLAND_DISPLAY)
 }
 
 /** The native extension returns false if the compositor cannot accept a write. */
-export function writeLinuxClipboardNative(text) {
+export function writeLinuxClipboardNative(text) : boolean {
   if (process.platform !== 'linux' || process.env.SSH_CONNECTION || !isLocalLinuxClipboardDisplay()) return false
   const addon = nativeClipboardAddon()
   if (!addon) return false
@@ -86,7 +86,7 @@ export function writeLinuxClipboardNative(text) {
 }
 
 /** Used only after wl-paste / xclip / xsel have failed. */
-export async function readLinuxClipboardNative(primary = false, timeoutMs = 2000) {
+export async function readLinuxClipboardNative(primary = false, timeoutMs = 2000) : Promise<string> {
   if (process.platform !== 'linux' || process.env.SSH_CONNECTION || !isLocalLinuxClipboardDisplay()) return null
   const addon = nativeClipboardAddon()
   if (!addon) return null
@@ -102,7 +102,7 @@ export async function readLinuxClipboardNative(primary = false, timeoutMs = 2000
  * Original 2.1.317 Windows/WSL path: clipboard content arrives on stdin in
  * UTF-8. clip.exe interprets it through a locale-dependent code page.
  */
-export function windowsClipboardWriteInvocation(platform) {
+export function windowsClipboardWriteInvocation(platform) : { command: string; args: string[]; } {
   if (platform !== 'windows' && platform !== 'wsl')
     throw new Error('Windows clipboard command requires Windows or WSL')
   return {

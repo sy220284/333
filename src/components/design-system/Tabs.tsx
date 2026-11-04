@@ -63,7 +63,7 @@ const TabsContext = createContext<TabsContextValue>({
   blurHeader: () => {},
   registerOptIn: () => () => {}
 });
-export function Tabs(t0) {
+export function Tabs(t0) : React.JSX.Element {
   const $ = _c(25);
   const {
     title,
@@ -286,7 +286,7 @@ export function Tab(t0) {
   }
   return t2;
 }
-export function useTabsWidth() {
+export function useTabsWidth() : number {
   const {
     width
   } = useContext(TabsContext);

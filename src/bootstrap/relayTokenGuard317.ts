@@ -31,7 +31,7 @@ export function shouldProtectRelayToken317(argv = process.argv, env = process.en
  * A self-hosted code-review runner carries credentials before its normal
  * session initialization. This is the separate 2.1.317 cli.js review guard.
  */
-export function shouldProtectRunnerReviewTokens317(env = process.env) {
+export function shouldProtectRunnerReviewTokens317(env = process.env) : boolean {
   return env.CLAUDE_CODE_REMOTE_SESSION_ORIGIN === 'review' &&
     env.CLAUDE_CODE_ENVIRONMENT_KIND === 'byoc' &&
     env.CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE === 'self_hosted'
@@ -73,7 +73,7 @@ async function setProcessNonDumpable317({
 /** Protect the original remote MCP HTTP relay-token entrypoint. */
 export async function guardRelayTokenDescriptor317({
   argv = process.argv, env = process.env, ...runtime
-} = {}) {
+} = {}) : Promise<boolean> {
   if (!shouldProtectRelayToken317(argv, env)) return false
   return setProcessNonDumpable317(runtime)
 }
@@ -81,7 +81,7 @@ export async function guardRelayTokenDescriptor317({
 /** Protect the separate BYOC self-hosted code-review runner entrypoint. */
 export async function guardRunnerReviewTokens317({
   env = process.env, ...runtime
-} = {}) {
+} = {}) : Promise<boolean> {
   if (!shouldProtectRunnerReviewTokens317(env)) return false
   return setProcessNonDumpable317(runtime)
 }

@@ -287,7 +287,7 @@ function attachSocket(socket) {
   })
   socket.on('error', error => process.stderr.write(`Background IPC client error: ${error.message}\n`))
 }
-export async function runBackgroundSupervisor() {
+export async function runBackgroundSupervisor() : Promise<void> {
   await prepareFleet()
   const path = fleetSocket()
   if (process.platform !== 'win32') {
