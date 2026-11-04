@@ -16,6 +16,11 @@ export class SessionQueuePartitions317<T> {
     return partition.commands
   }
 
+  /** Read without allocating a partition during idle-session polling. */
+  getExisting(sessionId: string): T[] | undefined {
+    return this.partitions.get(sessionId)?.commands
+  }
+
   snapshot(sessionId: string): readonly T[] {
     return this.partitions.get(sessionId)?.snapshot ?? this.empty
   }
