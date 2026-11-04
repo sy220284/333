@@ -81,7 +81,7 @@ import type {
   PromptRequest,
   PromptResponse,
 } from './types/hooks.js'
-import type { AgentId } from './types/ids.js'
+import type { AgentId, SessionId } from './types/ids.js'
 import type { DeepImmutable } from './types/utils.js'
 import type { AttributionState } from './utils/commitAttribution.js'
 import type { FileHistoryState } from './utils/fileHistory.js'
@@ -156,6 +156,8 @@ export type CompactProgressEvent =
   | { type: 'compact_end' }
 
 export type ToolUseContext = {
+  /** Stable identity of the owning conversation, shared with subagents. */
+  sessionId?: SessionId
   options: {
     commands: Command[]
     debug: boolean
