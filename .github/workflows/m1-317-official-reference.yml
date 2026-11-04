@@ -12,6 +12,8 @@ on:
       - 'build/m1-cli-surface-audit.mjs'
       - 'tests/m1-plugin-data-size-parity.test.mjs'
       - 'tests/m1-marketplace-add-json-317.test.mjs'
+      - 'tests/m1-plugin-configure-317.test.mjs'
+      - 'src/utils/plugins/pluginCliConfig.ts'
       - 'build/m1-cli-help-options.mjs'
       - 'tests/m1-cli-help-options.test.mjs'
       - 'tools/upgrade/audit-final-release-skills.py'
@@ -121,7 +123,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          CLAUDE_TARGET_X64="${RUNNER_TEMP}/m1-317-reference/claude" node --test tests/m1-plugin-data-size-parity.test.mjs tests/m1-marketplace-add-json-317.test.mjs
+          CLAUDE_TARGET_X64="${RUNNER_TEMP}/m1-317-reference/claude" node --test tests/m1-plugin-data-size-parity.test.mjs tests/m1-marketplace-add-json-317.test.mjs tests/m1-plugin-configure-317.test.mjs
       - name: 最终版六种真实终端情境及动画帧对照
         shell: bash
         run: |
