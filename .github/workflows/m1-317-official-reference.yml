@@ -28,6 +28,9 @@ on:
       - 'build/verify-bundled-assets.mjs'
       - 'build/restore-claude-api.mjs'
       - 'tests/m1-standalone-assets-317.test.mjs'
+      - 'tests/m1-plugin-install-migration-317.test.mjs'
+      - 'src/utils/plugins/installedPluginsManager.ts'
+      - 'src/utils/plugins/installedPluginsMigration.mjs'
       - 'tests/claude-api-version-parity.test.mjs'
       - 'tests/claude-api-skill.test.mjs'
       - 'src/skills/bundledFiles.mjs'
@@ -124,7 +127,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          CLAUDE_TARGET_X64="${RUNNER_TEMP}/m1-317-reference/claude" node --test tests/claude-api-version-parity.test.mjs
+          CLAUDE_TARGET_X64="${RUNNER_TEMP}/m1-317-reference/claude" node --test tests/claude-api-version-parity.test.mjs tests/m1-plugin-install-migration-317.test.mjs
       - name: 官方 2.1.317 与独立重建版 32 项 CLI 参数对照
         shell: bash
         run: |
