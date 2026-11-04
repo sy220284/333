@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { collectPreservedReadFilePaths, hasFullReadResultContent } from '../src/services/compact/preservedReadPaths.mjs'
 
-const normalize = path => path.startsWith('/') ? path : '/repo/' + path
+const normalize = path => path.startsWith('/') ? path : `/repo/${path}`
 const read = (id, file_path) => ({
   type: 'assistant',
   message: { content: [{ type: 'tool_use', id, name: 'Read', input: { file_path } }] },
