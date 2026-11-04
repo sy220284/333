@@ -55,7 +55,7 @@ import {
 } from '../api/referral.js'
 import { getSessionsSinceLastShown, getTipLifetimeShows } from './tipHistory.js'
 import { getCustomSpinnerTips, isDefaultSpinnerTipSuppressed } from './customTipSettings.js'
-import { selectEligibleTips, resolveTipContent } from './tipEligibility.mjs'
+import { selectEligibleTips, resolveTipContent } from './tipEligibility.ts'
 import { getAPIProvider, isFirstPartyAnthropicBaseUrl } from '../../utils/model/providers.js'
 import { getOriginalCwd } from '../../bootstrap/state.js'
 import type { Tip, TipContext } from './types.js'
