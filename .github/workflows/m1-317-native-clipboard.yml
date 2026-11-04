@@ -1,4 +1,4 @@
-name: M1 官方317原生剪贴板真实读写验收
+name: M1 官方317 Linux原生资源运行验收
 on:
   push:
     branches: [upgrade/2.1.310-m1-evidence]
@@ -11,6 +11,7 @@ on:
       - 'src/ink/termio/clipboardOsc317.mjs'
       - 'tests/m1-native-clipboard*.test.mjs'
       - 'tests/m1-clipboard-osc-protocol-317.test.mjs'
+      - 'tests/m1-native-audio-317.test.mjs'
   workflow_dispatch:
 concurrency:
   group: m1-317-native-clipboard-${{ github.event.pull_request.head.ref || github.ref_name }}
@@ -39,6 +40,8 @@ jobs:
         run: |
           node --test tests/m1-native-clipboard-317.test.mjs \
             tests/m1-clipboard-osc-protocol-317.test.mjs
+      - name: 验证官方317音频原生模块空闲状态和幂等释放
+        run: node --test tests/m1-native-audio-317.test.mjs
       - name: 使用Xvfb确认Unicode原生剪贴板实际可读写
         shell: bash
         run: |
