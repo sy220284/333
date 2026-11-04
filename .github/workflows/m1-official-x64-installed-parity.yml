@@ -10,6 +10,7 @@ on:
       - 'build/m1-cli-surface-audit.mjs'
       - 'build/m1-plugin-enable-json-parity.mjs'
       - 'tests/m1-plugin-data-size-parity.test.mjs'
+      - 'tests/m1-317-oracle-identity.test.mjs'
       - 'tests/m1-x64-local-api.py'
       - 'tests/m1_x64_stream_events_test.py'
       - 'src/**'
@@ -38,6 +39,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: 固定版身份和全项目目标一致性检查
+        run: node --test tests/m1-317-oracle-identity.test.mjs
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
