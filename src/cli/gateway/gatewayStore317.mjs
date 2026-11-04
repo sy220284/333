@@ -6,6 +6,19 @@ import { createHash } from 'node:crypto'
 
 const hash = input => createHash('sha256').update(input).digest('hex')
 
+/**
+ * Bun.SQL can expose PostgreSQL jsonb as its raw JSON text. Normalize the
+ * database boundary once, before a token subject is used or re-issued.
+ */
+export function decodeGatewayClaims317(value) {
+  const claims = typeof value === 'string' ? JSON.parse(value) : value
+  if (!claims || typeof claims !== 'object' || Array.isArray(claims) ||
+      typeof claims.sub !== 'string' || claims.sub.length === 0) {
+    throw new Error('Gateway database returned invalid authorization claims')
+  }
+  return claims
+}
+
 export async function openGatewayStore317(config) {
   if (typeof Bun === 'undefined' || typeof Bun.SQL !== 'function') {
     throw new Error('Enterprise gateway requires native Bun with Bun.SQL')
@@ -88,7 +101,7 @@ export async function openGatewayStore317(config) {
           UPDATE claude_gateway_device_authorizations SET consumed = TRUE
           WHERE device_hash = ${key} AND consumed = FALSE
           RETURNING approved`
-        return done.length ? { status: 'approved', claims: done[0].approved } : { status: 'expired' }
+        return done.length ? { status: 'approved', claims: decodeGatewayClaims317(done[0].approved) } : { status: 'expired' }
       },
       async createRefresh(token, claims, expiresSeconds) {
         await database`
@@ -102,7 +115,7 @@ export async function openGatewayStore317(config) {
           UPDATE claude_gateway_refresh_tokens SET revoked = TRUE
           WHERE token_hash = ${hash(token)} AND revoked = FALSE AND expires_at > NOW()
           RETURNING claims`
-        return rows[0]?.claims ?? null
+        return rows.length ? decodeGatewayClaims317(rows[0].claims) : null
       },
       async revoke(token, seconds = 86400) {
         await database`
