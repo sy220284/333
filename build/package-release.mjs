@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, cpSync, copyFileSync, chmodSync, readdirSync, readFileSync, statSync, lstatSync, writeFileSync, rmSync, renameSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { verifyOfficialEmbeddedAssets317 } from './verify-official-embedded-assets.mjs';
+import { packageOfficialEmbeddedAssets317 } from './package-official-317-assets.mjs';
 verifyOfficialEmbeddedAssets317();
 import { join, relative, resolve } from 'node:path';
 
@@ -19,7 +20,7 @@ mkdirSync(dist,{recursive:true});
 // unrelated build outputs before changing the previous package.
 const expectedRoot = new Set([
   'cli.js', 'cli.js.map', nativeName, 'vendor', 'LICENSE.md',
-  'package.json', 'launcher.cjs', 'README.md', 'integrity.json',
+  'package.json', 'launcher.cjs', 'README.md', 'integrity.json', 'official-317',
 ]);
 for (const entry of readdirSync(dist, { withFileTypes: true })) {
   if (!expectedRoot.has(entry.name))
@@ -108,6 +109,7 @@ try {
   if (movedPrevious && !existsSync(vendorOutput) && existsSync(vendorBackup))
     renameSync(vendorBackup, vendorOutput);
 }
+packageOfficialEmbeddedAssets317(root, dist);
 copyFileSync(join(root,'LICENSE.md'),join(dist,'LICENSE.md'));
 const pkg = {
   name: `claude-code-${releaseVersion}-source-rebuild`,
@@ -137,7 +139,7 @@ is required. On Linux/macOS use:
 On Windows run \`claude.exe --version\`. With Node, the portable
 \`launcher.cjs\` forwards signals to the local compiled executable.
 
-The \`vendor/\` directory contains the platform-specific native resources and
+The \`official-317/\` directory contains 101 SHA-verified original embedded resources,\nwith their relative skill-script paths preserved and a pinned manifest.\nThe \`vendor/\` directory contains the platform-specific native resources and
 is included in the integrity manifest.
 This package preserves the original project's proprietary license notice.
 `);
