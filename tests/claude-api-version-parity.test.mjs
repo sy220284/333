@@ -129,6 +129,10 @@ test('api-version opens the bundled 2.1.317 migration guide through the actual R
       }
       assert.ok(systemText.includes('Fast mode for Claude Code uses Claude Opus with faster output'),
         `${name}: native 317 fast-mode prompt guidance diverged`)
+      assert.ok(systemText.includes('# Text output (does not apply to tool calls)'),
+        `${name}: native 317 output-behavior contract is missing`)
+      assert.ok(systemText.includes('Before your first tool call, state in one sentence'),
+        `${name}: native 317 pre-tool communication contract drifted`)
       const prompt = JSON.stringify(initial.messages)
       assert.ok(prompt.includes('api-version-migration.md'), `${name}: missing migration guide instruction`)
       assert.ok(prompt.includes('Base directory for this skill:'), `${name}: missing extracted skill directory`)
