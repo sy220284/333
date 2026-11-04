@@ -67,6 +67,8 @@ jobs:
         run: bun test tests/m1-runtime-boundaries.test.ts tests/m1-generators.test.ts
       - name: 仅从 src 源码构建
         run: bun build/rebuild.mjs
+      - name: 317插件测试执行器：真实子进程、Hooks沙箱和退出码
+        run: node --test tests/m3-plugin-test-runner-317.test.mjs
       - name: 新构建版本和基础交互验收
         run: |
           set -euo pipefail
