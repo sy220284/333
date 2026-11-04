@@ -20,7 +20,7 @@ function response(content, stopReason) {
   ].join('')
 }
 
-test('api-version opens the bundled 2.1.310 migration guide through the actual Read tool', { timeout: 90000 }, async () => {
+test('api-version opens the bundled 2.1.317 migration guide through the actual Read tool', { timeout: 90000 }, async () => {
   const tmp = mkdtempSync(join(tmpdir(), '333-claude-api-'))
   const finishedCliProcessIds = []
   let requests = []
@@ -68,7 +68,7 @@ test('api-version opens the bundled 2.1.310 migration guide through the actual R
   try {
     await new Promise(ok => server.listen(0, '127.0.0.1', ok))
     const targets = [['333', 'bun', [join(root, 'dist/cli.js')]]]
-    if (process.env.CLAUDE_2310_X64) targets.push(['2.1.310', process.env.CLAUDE_2310_X64, []])
+    if (process.env.CLAUDE_TARGET_X64) targets.push(['2.1.317', process.env.CLAUDE_TARGET_X64, []])
     for (const [name, executable, prefix] of targets) {
       requests = []
       targetName = name
@@ -102,11 +102,10 @@ test('api-version opens the bundled 2.1.310 migration guide through the actual R
       assert.match(JSON.stringify(toolResult), /2026-10-21/)
     }
     const candidateFiles = extracted.get('333')
-    assert.equal(candidateFiles?.size, 104, 'all available target resources should be extracted')
-    if (process.env.CLAUDE_2310_X64) {
-      const officialFiles = extracted.get('2.1.310')
-      officialFiles.delete('shared/managed-agents-secure.md')
-      assert.deepEqual(candidateFiles, officialFiles, 'extracted resource contents differ from 2.1.310')
+    assert.equal(candidateFiles?.size, 106, 'all available 317 resources should be extracted')
+    if (process.env.CLAUDE_TARGET_X64) {
+      const officialFiles = extracted.get('2.1.317')
+      assert.deepEqual(candidateFiles, officialFiles, 'extracted resource contents differ from 2.1.317')
     }
   } finally {
     server.closeAllConnections()
