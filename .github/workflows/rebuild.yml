@@ -212,6 +212,8 @@ jobs:
         run: node --test tests/m3-plugin-eval-engine-317.test.mjs
       - name: 官方317 plugin test参数与执行时限
         run: node --test tests/m3-plugin-test-options-317.test.mjs
+      - name: 317插件测试VM计时器与异步错误追踪
+        run: node --test tests/m3-plugin-test-timers-317.test.mjs
       - name: 317模型目录、读取边界和嵌套会话
         id: acceptance_008
         continue-on-error: true
