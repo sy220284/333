@@ -31,6 +31,8 @@ jobs:
         run: bun test tests/rewrite-317-cell-segmentation.test.ts
       - name: 验证317延迟工具占位的请求协议
         run: bun test tests/rewrite-317-deferred-placeholder.test.ts
+      - name: 验证317提示词按333上下文、权限与记忆系统重组
+        run: bun test tests/rewrite-317-agent-prompt.test.ts
       - name: 从333 TypeScript源码重建独立CLI
         run: bun build/rebuild.mjs
       - name: 检查插件清理命令启动阶段的实际输出和存活进程
