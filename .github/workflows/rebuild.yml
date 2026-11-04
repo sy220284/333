@@ -90,11 +90,22 @@ jobs:
             -e POSTGRES_PASSWORD=gateway-test-only \
             -p 127.0.0.1:55432:5432 postgres:16
           trap 'docker rm -f gateway-postgres-317 >/dev/null 2>&1 || true' EXIT
+          # postgres:16 uses a temporary UNIX-socket-only server during initdb.
+          # Wait for the final TCP listener and a real authenticated SQL query.
+          ready=0
           for i in $(seq 1 40); do
-            if docker exec gateway-postgres-317 pg_isready -U postgres -d postgres >/dev/null 2>&1; then break; fi
+            if docker exec gateway-postgres-317 pg_isready -h 127.0.0.1 -p 5432 -U postgres -d postgres >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
             sleep 1
           done
-          docker exec gateway-postgres-317 pg_isready -U postgres -d postgres
+          if [ "$ready" -ne 1 ]; then
+            docker logs gateway-postgres-317
+            echo 'PostgreSQL TCP service did not become ready' >&2
+            exit 1
+          fi
+          docker exec -e PGPASSWORD=gateway-test-only gateway-postgres-317 psql -h 127.0.0.1 -U postgres -d postgres -Atqc 'SELECT 1' | grep -qx '1'
           GATEWAY_TEST_POSTGRES_URL='postgres://postgres:gateway-test-only@127.0.0.1:55432/postgres' \
             bun test tests/m6-gateway-postgres-317.test.mjs
       - name: 317插件评测Windows工作区清理与结果保存
