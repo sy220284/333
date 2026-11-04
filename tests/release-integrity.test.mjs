@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, existsSync, cpSync, mkdtempSync, rmSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, cpSync, mkdtempSync, rmSync, readdirSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import './m1-vendor-packaging-317.test.mjs';
 import './m1-native-clipboard-317.test.mjs';
@@ -71,6 +71,34 @@ test("repository package uses rebuilt launcher canonical entrypoint", () => {
 test('new distributable CLI is distinct from original binary', () => {
   const hash=p=>createHash('sha256').update(readFileSync(p)).digest('hex');
   assert.notEqual(hash(join(root,'cli.js')),hash(join(dist,'cli.js')));
+});
+test('compiled platform executable is packaged, signed and runs without system Bun', () => {
+  const name = process.platform === 'win32' ? 'claude.exe' : 'claude';
+  const binary = join(dist, name);
+  assert.ok(existsSync(binary), name + ' missing from release');
+  const bytes = readFileSync(binary);
+  assert.ok(statSync(binary).isFile() && bytes.length > 10_000_000, 'Incomplete embedded Bun executable');
+  const record = metadata.files.find(f => f.path === name);
+  assert.ok(record, 'Native executable missing from SHA-256 release manifest');
+  assert.equal(record.bytes, bytes.length);
+  assert.equal(record.sha256, createHash('sha256').update(bytes).digest('hex'));
+  const sandbox = mkdtempSync(join(tmpdir(), '333-native-launch-'));
+  try {
+    const env = { ...process.env, PATH: '', Path: '' };
+    for (const [entrypoint, args] of [
+      [binary, ['--version']],
+      [process.execPath, [join(dist, 'launcher.cjs'), '--version']],
+    ]) {
+      const actual = spawnSync(entrypoint, args, {
+        cwd: sandbox, env, encoding: 'utf8', timeout: 30_000, windowsHide: true,
+      });
+      assert.equal(actual.error, undefined, String(actual.error));
+      assert.equal(actual.status, 0, actual.stderr);
+      assert.equal(actual.stdout.trim(), expectedVersion + ' (Claude Code)');
+    }
+  } finally {
+    rmSync(sandbox, { recursive: true, force: true });
+  }
 });
 test('installed launcher invokes newly built CLI', () => {
   const p=spawnSync(process.execPath,[join(dist,'launcher.cjs'),'--version'],{encoding:'utf8',timeout:15000});
