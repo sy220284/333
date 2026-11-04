@@ -24,7 +24,7 @@ export async function commandSourceTreeFingerprint(directory) {
     }
   }
   await visit(directory)
-  files.sort((a, b) => a.file.localeCompare(b.file, 'en'))
+  files.sort((a, b) => a.file < b.file ? -1 : a.file > b.file ? 1 : 0)
   symlinks.sort()
   const hash = createHash('sha256')
   let total = 0
