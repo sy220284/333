@@ -99,3 +99,44 @@ test('317 real PTY recording: rebuilt binary and official x64 write the same fra
       }
     }
   })
+
+test('317 exec-mode PTY writes real exit metadata and late replay for unclaimed session',
+  { skip: process.platform === 'win32', timeout: 35000 }, async () => {
+    for (const [name, exe, args] of bins) {
+      const dir = mkdtempSync(join(tmpdir(), '333-pty-exec-e2e-'))
+      const socket = join(dir, 'exec.sock')
+      const command = [exe, ...args, '--bg-pty-host', socket, '91', '27',
+        '--', '/bin/sh', '-c', 'printf "EXEC_317_RESULT"']
+      let child
+      try {
+        child = spawn(command[0], command.slice(1), {
+          stdio: ['ignore','pipe','pipe'],
+          env: { ...process.env, CLAUDE_CONFIG_DIR: dir,
+            CLAUDE_PTY_HOST_EXEC: '1', DISABLE_TELEMETRY: '1',
+            CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' },
+        })
+        let stderr = ''
+        child.stderr.on('data', bytes => { stderr += bytes })
+        const exit = await Promise.race([
+          new Promise((resolve, reject) => {
+            child.once('error', reject)
+            child.once('close', (code, signal) => resolve({code,signal}))
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(Error(name + ' exec PTY timeout')), 16000)),
+        ])
+        assert.equal(exit.code, 0, name + ' stderr=' + stderr)
+        const metadata = join(dir, 'exec.sock.exec-exit')
+        const late = join(dir, 'exec.sock.late')
+        assert.ok(existsSync(metadata), name + ' missing exec metadata')
+        assert.ok(existsSync(late), name + ' missing undelivered PTY output')
+        const result = JSON.parse(readFileSync(metadata, 'utf8'))
+        assert.equal(result.code, 0, name)
+        assert.ok(result.tail.includes('EXEC_317_RESULT'), name + JSON.stringify(result))
+        assert.ok(readFileSync(late).includes(Buffer.from('EXEC_317_RESULT')), name)
+        assert.equal(existsSync(socket), false, name + ' PTY socket leaked')
+      } finally {
+        child?.kill('SIGKILL')
+        rmSync(dir, { recursive: true, force: true })
+      }
+    }
+  })

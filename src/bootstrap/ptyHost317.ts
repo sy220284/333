@@ -1,5 +1,5 @@
 import { createServer, type Socket } from 'node:net'
-import { appendFileSync, chmodSync, existsSync, readFileSync, unlinkSync } from 'node:fs'
+import { appendFileSync, chmodSync, existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { mkdirSync } from 'node:fs'
 import { timingSafeEqual } from 'node:crypto'
@@ -256,9 +256,54 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
       else if (++quietTicks >= 2) break
     }
     lastSignal = child.signalCode == null ? undefined : String(child.signalCode)
+    if (execMode) {
+      // Original chunk-2bqkbqq9.js persists exec-mode exit metadata before
+      // broadcasting the final frame. Drop any UTF-8 continuation bytes that
+      // fall at the 4096-byte tail boundary.
+      const rawTail = replay.tail(4096)
+      let boundary = 0
+      while (boundary < 3 && boundary < rawTail.length &&
+             (rawTail[boundary]! & 0xc0) === 0x80) boundary++
+      const tail = rawTail.subarray(boundary).toString('utf8')
+      try {
+        writeFileSync(socket + '.exec-exit',
+          JSON.stringify({ code: lastExitCode,
+            ...(lastSignal === undefined ? {} : { signal: lastSignal }), tail }),
+          { mode: 0o600 })
+      } catch (error) {
+        recordFailure(socket, 'exec-exit write failed: ' + String(error))
+      }
+    }
     stopped = true
     closeTerminalOnce()
     broadcast(encodePtyControl317({ t: 'exit', code: lastExitCode, ...(lastSignal ? { signal: lastSignal } : {}) }))
+    // Original host keeps a 5s grace window for a late PTY subscriber after
+    // the worker exits. Exec-mode also persists the undelivered raw tail.
+    if (peers.size === 0) {
+      await new Promise<void>(resolve => {
+        const onLateConnection = (latePeer: Socket) => {
+          clearTimeout(timeout)
+          // The server already sends hello/replay/live/exit on admission.
+          // Allow the exit frame to flush before closing its socket.
+          latePeer.once('close', () => resolve())
+          const safety = setTimeout(resolve, 2000)
+          safety.unref()
+        }
+        const timeout = setTimeout(() => {
+          server?.off('connection', onLateConnection)
+          resolve()
+        }, 5000)
+        server?.once('connection', onLateConnection)
+      })
+      if (execMode) {
+        try {
+          const raw = Buffer.concat(replay.frames().map(frame => frame.subarray(5)))
+          writeFileSync(socket + '.late', raw, { mode: 0o600 })
+        } catch (error) {
+          recordFailure(socket, 'late PTY output write failed: ' + String(error))
+        }
+      }
+    }
     // Flush the exit frame to attached clients before socket teardown.
     const closingPeers = [...peers]
     for (const peer of closingPeers) peer.end()
