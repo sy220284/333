@@ -6,9 +6,9 @@ import { test } from 'node:test'
 
 const root = resolve(import.meta.dirname, '..')
 
-test('committed Claude API resources match the 2.1.310 source manifest', () => {
+test('committed Claude API resources match the 2.1.317 official source manifest', () => {
   const result = execFileSync(process.execPath, [join(root, 'build/restore-claude-api.mjs'), '--verify'], { encoding: 'utf8' })
-  assert.match(result, /Verified 106 committed Claude API 2\.1\.310 resources/)
+  assert.match(result, /Verified 107 committed Claude API 2\.1\.317 resources/)
 })
 
 test('the rebuilt CLI contains the target skill and version-migration guide', () => {
