@@ -1,4 +1,4 @@
-import { hasCliFlag, findCliArgument, firstCliPositionalIndex } from './utils/cliArgv317.mjs';
+import { hasCliFlag, findCliArgument, firstCliPositionalIndex, isPrintModeLaunch } from './utils/cliArgv317.mjs';
 // These side-effects must run before all other imports:
 // 1. profileCheckpoint marks entry before heavy module evaluation begins
 // 2. startMdmRawRead fires MDM subprocesses (plutil/reg query) so they run in
@@ -3445,7 +3445,7 @@ async function run(): Promise<CommanderCommand> {
   // + 40ms sync keychain subprocess), both hidden by the try/catch that
   // always returns false before enableConfigs(). cc:// URLs are rewritten to
   // `open` at main() line ~851 BEFORE this runs, so argv check is safe here.
-  const isPrintMode = process.argv.includes('-p') || process.argv.includes('--print');
+  const isPrintMode = isPrintModeLaunch(process.argv.slice(2));
   const isCcUrl = process.argv.some(a => a.startsWith('cc://') || a.startsWith('cc+unix://'));
   if (isPrintMode && !isCcUrl) {
     profileCheckpoint('run_before_parse');
