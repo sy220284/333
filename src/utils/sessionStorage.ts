@@ -72,6 +72,7 @@ import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
 import { getErrnoCode, isFsInaccessible } from './errors.js'
 import { shouldRetrySessionAppendAfterMkdir } from './sessionWriteFailurePolicy.mjs'
+import { commitRestoredSession } from './sessionHydrationCommit317.mjs'
 import { replaceTranscriptAtomically, replaceTranscriptBatchAtomically, assertSafeAgentTranscriptId } from './atomicTranscriptRestore317.mjs'
 import type { FileHistorySnapshot } from './fileHistory.js'
 import { formatFileSize } from './format.js'
@@ -1614,8 +1615,6 @@ export async function hydrateRemoteSession(
   sessionId: string,
   ingressUrl: string,
 ): Promise<boolean> {
-  switchSession(asSessionId(sessionId))
-
   const project = getProject()
 
   try {
@@ -1626,12 +1625,17 @@ export async function hydrateRemoteSession(
     const projectDir = getProjectDir(getOriginalCwd())
     await mkdir(projectDir, { recursive: true, mode: 0o700 })
 
-    const sessionFile = getTranscriptPathForSession(sessionId)
-
-    // Replace local logs with remote logs. writeFile truncates, so no
-    // unlink is needed; an empty remoteLogs array produces an empty file.
+    // Compute the target without switching the active session. The outgoing
+    // session must survive an ingress or disk failure intact.
+    const sessionFile = join(projectDir, `${sessionId}.jsonl`)
     const content = remoteLogs.map(e => jsonStringify(e) + '\n').join('')
-    await replaceTranscriptAtomically(sessionFile, content)
+    await commitRestoredSession(
+      () => replaceTranscriptAtomically(sessionFile, content),
+      () => {
+        switchSession(asSessionId(sessionId))
+        project.setRemoteIngressUrl(ingressUrl)
+      },
+    )
 
     logForDebugging(`Hydrated ${remoteLogs.length} entries from remote`)
     return remoteLogs.length > 0
@@ -1639,11 +1643,6 @@ export async function hydrateRemoteSession(
     logForDebugging(`Error hydrating session from remote: ${error}`)
     logForDiagnosticsNoPII('error', 'hydrate_remote_session_fail')
     return false
-  } finally {
-    // Set remote ingress URL after hydrating the remote session
-    // to ensure we've always synced with the remote session
-    // prior to enabling persistence
-    project.setRemoteIngressUrl(ingressUrl)
   }
 }
 
@@ -1659,8 +1658,6 @@ export async function hydrateFromCCRv2InternalEvents(
   sessionId: string,
 ): Promise<boolean> {
   const startMs = Date.now()
-  switchSession(asSessionId(sessionId))
-
   const project = getProject()
   const reader = project.getInternalEventReader()
   if (!reader) {
@@ -1696,13 +1693,18 @@ export async function hydrateFromCCRv2InternalEvents(
     }
     const projectDir = getProjectDir(getOriginalCwd())
     await mkdir(projectDir, { recursive: true, mode: 0o700 })
-    const sessionFile = getTranscriptPathForSession(sessionId)
+    const sessionFile = join(projectDir, `${sessionId}.jsonl`)
     const entries = [{
       path: sessionFile,
       content: events.map(e => jsonStringify(e.payload) + '\n').join(''),
     }]
     for (const [agentId, payloads] of byAgent) {
-      const agentFile = getAgentTranscriptPath(asAgentId(agentId))
+      // The target session may differ from the current active session.
+      // Preserve any known subagent grouping without using getSessionId().
+      const subdir = agentTranscriptSubdirs.get(agentId)
+      const agentFile = subdir
+        ? join(projectDir, sessionId, 'subagents', subdir, `agent-${agentId}.jsonl`)
+        : join(projectDir, sessionId, 'subagents', `agent-${agentId}.jsonl`)
       await mkdir(dirname(agentFile), { recursive: true, mode: 0o700 })
       entries.push({
         path: agentFile,
@@ -1711,7 +1713,10 @@ export async function hydrateFromCCRv2InternalEvents(
     }
     // Stage all files first; commit each file with a same-filesystem rename.
     // A failed staging write cannot damage either main or agent JSONL.
-    await replaceTranscriptBatchAtomically(entries)
+    await commitRestoredSession(
+      () => replaceTranscriptBatchAtomically(entries),
+      () => switchSession(asSessionId(sessionId)),
+    )
     const subagentEventCount = subagentEvents.length
     logForDebugging(
       `Hydrated ${events.length} foreground entries and ${subagentEventCount} subagent entries across ${byAgent.size} agents from CCR v2`,
