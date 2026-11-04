@@ -101,3 +101,17 @@ test('317 条件清理: 保留条件报错时原队列内容保持不变', () =>
   )
   assert.deepEqual(queue.map(command => command.uuid), ['first', 'second'])
 })
+
+test('317 队列预审: 原始文本在安全检查完成前不写入日志', () => {
+  for (const gate of ['screeningPending', 'screeningOwed']) {
+    const record = createQueueOperationRecord('enqueue', {
+      value: 'sensitive unapproved text', uuid: 'queued-317', [gate]: true,
+    }, 'session-317')
+    assert.equal('content' in record, false, gate)
+  }
+  const submitted = createQueueOperationRecord('enqueue', {
+    value: 'unapproved original', screeningPending: true,
+    promptSubmitted: { text: 'approved replacement' },
+  }, 'session-317')
+  assert.equal(submitted.content, 'approved replacement')
+})
