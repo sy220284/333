@@ -7,11 +7,13 @@ import { join, resolve } from 'node:path'
 import { test } from 'node:test'
 
 const cli = resolve(import.meta.dirname, '../dist/cli.js')
+const standalone = resolve(import.meta.dirname, '../dist', process.platform === 'win32' ? 'claude.exe' : 'claude')
+const nativeRuntimeMode = process.env.M1_NATIVE_BINARY_RUN === '1'
 const id = '11111111-1111-4111-8111-111111111111'
 const model = 'claude-sonnet-4-6'
 function launch(args, env) {
   return new Promise((done, fail) => {
-    const child = spawn('bun', [cli, ...args], { env, stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = spawn(nativeRuntimeMode ? standalone : 'bun', nativeRuntimeMode ? args : [cli, ...args], { env, stdio: ['ignore', 'pipe', 'pipe'] })
     let stdout = '', stderr = ''
     const timeout = setTimeout(() => child.kill('SIGKILL'), 25_000)
     child.stdout.on('data', data => { stdout += data }); child.stderr.on('data', data => { stderr += data })
