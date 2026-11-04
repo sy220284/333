@@ -32,6 +32,8 @@
  * - Error collection and reporting
  */
 
+import { exec as shellExec } from 'node:child_process'
+import { promisify } from 'node:util'
 import {
   copyFile,
   readdir,
@@ -822,6 +824,40 @@ async function installFromLocal(
   await rm(gitPath, { recursive: true, force: true })
 }
 
+const execSourceCommand = promisify(shellExec)
+
+/**
+ * Only the CLI/plugin caller can authorize a marketplace-declared command.
+ * A source must never execute during a cache refresh or a background preload.
+ */
+async function installFromCommandSource(
+  source: { command: string; mode: 'copy' | 'link' },
+  targetPath: string,
+): Promise<void> {
+  if (source.mode === 'link' && process.platform === 'win32') {
+    throw new Error('Linked command sources are not supported on Windows')
+  }
+  const { stdout } = await execSourceCommand(source.command, {
+    timeout: 60_000,
+    maxBuffer: 1024 * 1024,
+    windowsHide: true,
+  })
+  const returned = stdout.trim()
+  if (!returned || returned.includes('\\n') || returned.includes('\\r')) {
+    throw new Error('Plugin source command must print exactly one directory path')
+  }
+  const sourcePath = resolve(returned)
+  const metadata = await stat(sourcePath)
+  if (!metadata.isDirectory()) {
+    throw new Error('Plugin source command output is not a directory')
+  }
+  if (source.mode === 'link') {
+    await symlink(sourcePath, targetPath, 'dir')
+  } else {
+    await installFromLocal(sourcePath, targetPath)
+  }
+}
+
 /**
  * Generate a temporary cache name for a plugin
  */
@@ -852,6 +888,9 @@ export function generateTemporaryCacheNameForPlugin(
       case 'git-subdir':
         prefix = 'subdir'
         break
+      case 'command':
+        prefix = 'command'
+        break
       default:
         prefix = 'unknown'
     }
@@ -867,6 +906,7 @@ export async function cachePlugin(
   source: PluginSource,
   options?: {
     manifest?: PluginManifest
+    authorizedCommandSource?: boolean
   },
 ): Promise<{ path: string; manifest: PluginManifest; gitCommitSha?: string }> {
   const cachePath = getPluginCachePath()
@@ -910,6 +950,12 @@ export async function cachePlugin(
             source.ref,
             source.sha,
           )
+          break
+        case 'command':
+          if (options?.authorizedCommandSource !== true) {
+            throw new Error('Marketplace command source requires explicit per-command user authorization')
+          }
+          await installFromCommandSource(source, tempPath)
           break
         case 'pip':
           throw new Error('Python package plugins are not yet supported')
