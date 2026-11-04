@@ -30,6 +30,28 @@ jobs:
         run: |
           node -e "const m=require('./vendor/claude-code-2.1.317/manifest.json');if(m.version!=='2.1.317'||m.module_count!==2924)process.exit(1);console.log(m.platform,m.module_count)"
           bun vendor/claude-code-2.1.317/modules/cli.mjs --version
+      - name: 诊断提取版管理命令的进程退出责任
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('vendor/claude-code-2.1.317/modules/cli.mjs')
+          src=p.read_text()
+          assert src.count('qe();')==1
+          dst=p.with_name('cli.diagnostic.mjs')
+          dst.write_text(src.replace('qe();', "qe().then(() => console.error('OFFICIAL_317_CLI_MAIN_RESOLVED', process.exitCode)).catch(e => { console.error('OFFICIAL_317_CLI_MAIN_REJECTED', e); process.exitCode=1; });"))
+          PY
+          set +e
+          CLAUDE_CONFIG_DIR="$(mktemp -d)" CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 timeout 12s bun vendor/claude-code-2.1.317/modules/cli.diagnostic.mjs plugin prune --yes > .rebuild-prune.stdout 2> .rebuild-prune.stderr
+          result=$?
+          set -e
+          echo "diagnostic_exit=$result"
+          cat .rebuild-prune.stdout
+          cat .rebuild-prune.stderr
+          if [[ "$result" -ne 0 ]]; then echo "Lifecycle diagnosis completed: process did not exit; see resolved marker"; fi
+
       - name: 跨平台执行帮助、插件和项目清理
         shell: bash
         run: |
