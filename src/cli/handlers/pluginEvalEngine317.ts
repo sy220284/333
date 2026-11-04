@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve, relative, isAbsolute } from 'node:path'
 import { gradeEvalResult317, aggregateEvalScore317 } from './pluginEvalGraders317.mjs'
 import { runEvalModel317, judgeEvalOutput317 } from './pluginEvalModel317.mjs'
+import { resolveEvalContext317, runEvalScaffold317 } from './pluginEvalWorkspace317.ts'
 
 const addUsd = (a, b) => Number((Number(a) + Number(b)).toFixed(12))
 
@@ -29,7 +30,7 @@ export async function executePluginEvalSuite317(cases, settings, adapters = {}) 
     if (!Number.isInteger(runs) || runs < 1 || runs > 50) throw new Error('Eval runs must be 1–50')
     for (let repeat = 1; repeat <= runs; repeat++) {
       jobs.push({ caseInfo: one, repeat, arm: 'with' })
-      if (ablation === 'with-without') jobs.push({ caseInfo: one, repeat, arm: 'without' })
+      if (ablation === 'with-without' && !one.context?.history_file) jobs.push({ caseInfo: one, repeat, arm: 'without' })
     }
   }
   const completed = new Array(jobs.length)
@@ -42,7 +43,21 @@ export async function executePluginEvalSuite317(cases, settings, adapters = {}) 
       const job = jobs[next]
       const workspace = await mkdtemp(join(tmpdir(), 'claude-plugin-eval-317-'))
       try {
-        const result = await runModel({
+        let result
+        try {
+          const context = await resolveEvalContext317(job.caseInfo,
+            settings.sourcePluginRoot ?? settings.pluginRoot)
+          if (context.scaffoldScript && !settings.scaffold) {
+            settings.onNotice?.(`case "${job.caseInfo.name}": scaffold_script skipped; pass --scaffold to run trusted user-authored bash`)
+          }
+          if (context.scaffoldScript && settings.scaffold) {
+            const scaffold = await runEvalScaffold317(context.scaffoldScript, workspace,
+              job.caseInfo.execution.timeout_seconds, job.caseInfo.execution.env ?? {})
+            if (scaffold.code !== 0) {
+              throw new Error(`scaffold failed (exit ${scaffold.code}): ${scaffold.stderr.slice(0, 500)}`)
+            }
+          }
+          result = await runModel({
           prompt: job.caseInfo.execution.prompt,
           workspace,
           pluginDir: job.arm === 'with' ? settings.pluginRoot : undefined,
@@ -58,7 +73,14 @@ export async function executePluginEvalSuite317(cases, settings, adapters = {}) 
           maxBudgetUsd: Number.isFinite(maxCostUsd) ? Math.max(0, maxCostUsd - costUsd) : undefined,
           maxTurns: job.caseInfo.execution.max_turns,
           env: job.caseInfo.execution.env ?? {},
+          addDirs: context.addDirs,
+          historyFile: context.historyFile,
+          appendSystemPrompt: job.caseInfo.execution.append_system_prompt,
         })
+        } catch (error) {
+          result = { lastMessage: '', trace: [], costUsd: 0,
+            error: `run could not start: ${error instanceof Error ? error.message : String(error)}` }
+        }
         const actual = {
           workspace,
           lastMessage: result.lastMessage ?? '',
