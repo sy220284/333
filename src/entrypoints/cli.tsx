@@ -4,7 +4,7 @@ import { classifyStartupArgs } from './startupRouting317.mjs';
 import { adoptRunnerDeclaration } from './runnerDeclaration317.mjs';
 import { noteProcessStartTuning, startGarbageCollectionCount } from '../bootstrap/processStart317.mjs';
 import { scheduleJitPolicy317 } from '../bootstrap/jitPolicy317.mjs';
-import { guardRelayTokenDescriptor317 } from '../bootstrap/relayTokenGuard317.mjs';
+import { guardRelayTokenDescriptor317, guardRunnerReviewTokens317 } from '../bootstrap/relayTokenGuard317.mjs';
 import { randomUUID } from 'node:crypto';
 import { getStartupCwdError, writeStartupFailureResult, reportCliStartupFailure } from '../utils/cliStartupFailure.mjs';
 
@@ -58,6 +58,10 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
+  // Self-hosted code-review workers have a separate credential-bearing
+  // startup route. The original 317 checks it after URI validation but
+  // before process policy, profiling and CLI module initialization.
+  await guardRunnerReviewTokens317();
   // Original 2.1.317 startup records one-shot allocator flags and only
   // starts remote GC profiling when explicitly enabled, before --version.
   noteProcessStartTuning();
