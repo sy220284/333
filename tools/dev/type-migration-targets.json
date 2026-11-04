@@ -10,6 +10,7 @@
     "src/tasks/LocalWorkflowTask/workflowStoragePaths.ts",
     "src/utils/cliArgv317.ts",
     "src/utils/cliStartupFailure.ts",
+    "src/utils/remoteSessionIdentity.ts",
     "src/utils/telemetry/projectTelemetryPolicy.ts"
   ]
 }
