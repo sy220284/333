@@ -17,6 +17,7 @@ import { jsonStringify } from '../../utils/slowOperations.js';
 import { appendTaskOutput, evictTaskOutput, getTaskOutputPath, initTaskOutput } from '../../utils/task/diskOutput.js';
 import { registerTask, updateTaskState } from '../../utils/task/framework.js';
 import { createPollingLifecycle } from '../../utils/task/pollingLifecycle317.mjs';
+import { createRemotePollingRegistry } from '../../utils/task/remotePollingRegistry317.mjs';
 import { fetchSession } from '../../utils/teleport/api.js';
 import { archiveRemoteSession, pollRemoteSessionEvents } from '../../utils/teleport.js';
 import type { TodoList } from '../../utils/todo/types.js';
@@ -539,8 +540,11 @@ async function restoreRemoteAgentTasksImpl(context: TaskContext): Promise<void> 
  * Start polling for remote session updates.
  * Returns a cleanup function to stop polling.
  */
+const activeRemotePollers = createRemotePollingRegistry();
+
 function startRemoteSessionPolling(taskId: string, context: TaskContext): () => void {
   const polling = createPollingLifecycle();
+  const stopPolling = activeRemotePollers.register(taskId, () => polling.stop());
   const POLL_INTERVAL_MS = 1000;
   const reviewTimeout = getUltrareviewClientTimeout();
   const REMOTE_REVIEW_TIMEOUT_MS = reviewTimeout.milliseconds;
@@ -564,6 +568,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
         // Session left alive so the claude.ai URL stays valid — the run_hunt.sh
         // post_stage() calls land as assistant events there, and the user may
         // want to revisit them after closing the terminal. TTL reaps it.
+        stopPolling();
         return;
       }
       const response = await pollRemoteSessionEvents(task.sessionId, lastEventId);
@@ -592,6 +597,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
         enqueueRemoteNotification(taskId, task.title, 'completed', context.setAppState, task.toolUseId);
         void evictTaskOutput(taskId);
         void removeRemoteAgentMetadata(taskId);
+        stopPolling();
         return;
       }
       const checker = completionCheckers.get(task.remoteTaskType);
@@ -606,6 +612,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
           enqueueRemoteNotification(taskId, completionResult, 'completed', context.setAppState, task.toolUseId);
           void evictTaskOutput(taskId);
           void removeRemoteAgentMetadata(taskId);
+          stopPolling();
           return;
         }
       }
@@ -724,7 +731,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
           endTime: result || sessionDone || reviewTimedOut ? Date.now() : undefined
         };
       });
-      if (raceTerminated) return;
+      if (raceTerminated) { stopPolling(); return; }
 
       // Send notification if task completed or timed out
       if (result || sessionDone || reviewTimedOut) {
@@ -745,7 +752,8 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
             enqueueRemoteReviewNotification(taskId, reviewContent, context.setAppState);
             void evictTaskOutput(taskId);
             void removeRemoteAgentMetadata(taskId);
-            return; // Stop polling
+            stopPolling();
+            return;
           }
 
           // No output or remote error — mark failed with a review-specific message.
@@ -757,12 +765,14 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
           enqueueRemoteReviewFailureNotification(taskId, reason, context.setAppState);
           void evictTaskOutput(taskId);
           void removeRemoteAgentMetadata(taskId);
-          return; // Stop polling
+          stopPolling();
+          return;
         }
         enqueueRemoteNotification(taskId, task.title, finalStatus, context.setAppState, task.toolUseId);
         void evictTaskOutput(taskId);
         void removeRemoteAgentMetadata(taskId);
-        return; // Stop polling
+        stopPolling();
+        return;
       }
     } catch (error) {
       logError(error);
@@ -783,7 +793,8 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
           enqueueRemoteReviewFailureNotification(taskId, `remote session exceeded ${reviewTimeout.minutes} minutes`, context.setAppState);
           void evictTaskOutput(taskId);
           void removeRemoteAgentMetadata(taskId);
-          return; // Stop polling
+          stopPolling();
+          return;
         }
       } catch {
         // Best effort — if getAppState fails, continue polling
@@ -798,7 +809,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
   void poll();
 
   // Return cleanup function
-  return () => polling.stop();
+  return stopPolling;
 }
 
 /**
@@ -812,6 +823,8 @@ export const RemoteAgentTask: Task = {
   name: 'RemoteAgentTask',
   type: 'remote_agent',
   async kill(taskId, setAppState) {
+    // Cancel any outstanding timer or in-flight poll callback immediately.
+    activeRemotePollers.stop(taskId);
     let toolUseId: string | undefined;
     let description: string | undefined;
     let sessionId: string | undefined;
