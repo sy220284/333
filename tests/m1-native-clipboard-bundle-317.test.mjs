@@ -62,7 +62,7 @@ test('M1 C19-T04: self-contained 317 clipboard finds original addon through inst
     writeFileSync(entry,
       'import { isLinuxClipboardAddonLoadable } from ' +
       JSON.stringify(relative(temp, source).replaceAll('\\\\', '/')) +
-      "; console.log(isLinuxClipboardAddonLoadable() ? 'ADDON_OK' : 'ADDON_MISSING');\\n")
+      "; console.log(isLinuxClipboardAddonLoadable() ? 'ADDON_OK' : 'ADDON_MISSING');")
     const built = spawnSync('bun', ['build', entry, '--compile', '--outfile', binary], {
       cwd: temp, encoding: 'utf8', timeout: 60_000,
     })
