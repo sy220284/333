@@ -19,11 +19,15 @@ function walk(path) {
 
 test('核心 TypeScript 实现不得经由同名 MJS 测试转接入口导入', () => {
   const failures = []
-  for (const source of walk('src').filter(p => /\.tsx?$/.test(p) && !p.startsWith(bundled))) {
+  // Include bundled skill implementations; their TypeScript is production
+  // code too. Path aliases (src/...) must obey the same canonical rule.
+  for (const source of walk('src').filter(p => /\\.tsx?$/.test(p))) {
     const text = readFileSync(file(source), 'utf8')
-    const imports = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s*|\brequire\s*\(\s*)['"`](\.{1,2}\/[^'"`]+\.mjs)['"`]/g
+    const imports = /(?:\\bfrom\\s*|\\bimport\\s*\\(\\s*|\\bimport\\s*|\\brequire\\s*\\(\\s*)['"`]((?:\\.{1,2}\\/|src\\/)[^'"`]+\\.mjs)['"`]/g
     for (const match of text.matchAll(imports)) {
-      const original = resolve(dirname(file(source)), match[1])
+      const original = match[1].startsWith('src/')
+        ? file(match[1])
+        : resolve(dirname(file(source)), match[1])
       const canonical = original.slice(0, -4) + '.ts'
       if (existsSync(canonical)) {
         failures.push(relative(root, file(source)) + ': ' + match[1] + ' -> ' +
