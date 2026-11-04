@@ -49,7 +49,7 @@ jobs:
           set -euo pipefail
           python3 build/import-official-317.py --binary .rebuild/official317/package/claude --out .rebuild/official317/staged
           if test -d vendor/claude-code-2.1.317; then
-            diff -qr .rebuild/official317/staged vendor/claude-code-2.1.317
+            cp -a .rebuild/official317/staged/. vendor/claude-code-2.1.317/
           else
             mv .rebuild/official317/staged vendor/claude-code-2.1.317
           fi
