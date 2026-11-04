@@ -32,6 +32,16 @@ jobs:
           node build/install-public-deps.mjs
       - name: 完整TypeScript类型检查（失败阻断验收）
         run: node tools/dev/dev.mjs typecheck:all
+      - name: 全仓TypeScript内容级审计与已重写模块验收
+        run: node tools/dev/type-migration-audit.mjs
+      - name: 保存全仓类型迁移缺口清单
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-typescript-migration-audit
+          path: .rebuild/governance/type-migration-report.json
+          retention-days: 30
+          if-no-files-found: warn
   rebuild:
     strategy:
       fail-fast: false
