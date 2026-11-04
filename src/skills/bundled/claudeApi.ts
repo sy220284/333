@@ -45,8 +45,10 @@ export function registerClaudeApiSkill(): void {
     isEnabled: () => !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_CLAUDE_API_SKILL),
     files: async () => {
       const content = await import('./claudeApiContent.js')
+      // The 2.1.317 reference package extracts all 106 file resources,
+      // including the Managed Agents security guide. Command execution
+      // protection is enforced separately at the command/PreToolUse boundary.
       return Object.fromEntries(Object.entries(content.SKILL_FILES)
-        .filter(([path]) => path !== 'shared/managed-agents-secure.md')
         .map(([path, value]) => [path, path.endsWith('.md') ? processClaudeApiContent(value, content) : value]))
     },
     async getPromptForCommand(args, _context, extractedDir) {
