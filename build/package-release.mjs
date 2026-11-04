@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, cpSync, copyFileSync, chmodSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, cpSync, copyFileSync, chmodSync, readdirSync, readFileSync, statSync, writeFileSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, relative, resolve } from 'node:path';
 
@@ -9,7 +9,21 @@ const dist = join(root, 'dist');
 if (!existsSync(join(dist, 'cli.js'))) throw Error('First build the CLI from src/ with bun build/rebuild.mjs');
 if (!existsSync(join(root, 'build/public-dependencies.lock.json'))) throw Error('Missing the verified public dependency lockfile');
 mkdirSync(dist,{recursive:true});
-cpSync(join(root,'vendor'),join(dist,'vendor'),{recursive:true,force:true});
+// Never merge vendor files into an existing distribution: removed native addons
+// must not survive a second build. Validate the source before clearing dist.
+const vendorSource = join(root, 'vendor');
+if (!existsSync(vendorSource)) throw Error('Missing vendor platform resources');
+function checkVendorTree(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) checkVendorTree(path);
+    else if (!entry.isFile()) throw Error(`Vendor resource must be a regular file: ${path}`);
+  }
+}
+checkVendorTree(vendorSource);
+const vendorOutput = join(dist, 'vendor');
+rmSync(vendorOutput, { recursive: true, force: true });
+cpSync(vendorSource, vendorOutput, { recursive: true, force: true });
 copyFileSync(join(root,'LICENSE.md'),join(dist,'LICENSE.md'));
 const pkg = {
   name: `claude-code-${releaseVersion}-source-rebuild`,
