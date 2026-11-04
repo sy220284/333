@@ -55,11 +55,42 @@ test('2.1.317 no-merge-base review: one snapshot commit contains the full tree w
 test('317 snapshot mode stays connected to CLI, transport and bundle creator', () => {
   const read = name => readFileSync(new URL('../' + name, import.meta.url), 'utf8')
   const cli = read('src/cli/handlers/ultrareview.ts')
+  const interactive = read('src/commands/review/reviewRemote.ts')
+  const interactiveEntry = read('src/commands/review/ultrareviewCommand.tsx')
+  const consentDialog = read('src/commands/review/UltrareviewAllFilesDialog.tsx')
   const remote = read('src/utils/teleport.tsx')
   const bundle = read('src/utils/teleport/gitBundle.ts')
   assert.match(cli, /bundleForceScope: 'squashed'/)
+  assert.match(cli, /resolveUltrareviewGitBase/)
+  assert.match(interactive, /resolveUltrareviewGitBase/)
+  assert.match(interactive, /options.allowAllFiles !== true/)
+  assert.match(interactive, /bundleForceScope: 'squashed'/)
+  assert.match(interactiveEntry, /UltrareviewAllFilesDialog/)
+  assert.match(interactiveEntry, /allowAllFiles = false/)
+  assert.match(consentDialog, /确认上传全部已跟踪文件并开始审查/)
   assert.match(cli, /Review and upload all tracked files/)
   assert.match(remote, /forceScope: options\.bundleForceScope/)
   assert.match(bundle, /forceScope !== 'squashed'/)
   assert.match(bundle, /\['commit-tree', treeRef, '-m', 'seed'\]/)
+})
+
+test('317 shared Git base: common, no-commit and unrelated paths are classified consistently', async () => {
+  const { resolveUltrareviewGitBase } = await import('../src/utils/review/ultrareviewGitBase.mjs')
+  const calls = []
+  const common = await resolveUltrareviewGitBase('main', async args => {
+    calls.push(args.join(' '))
+    return { code: 0, stdout: 'abc123\\n' }
+  })
+  assert.deepEqual(common, { kind: 'common', base: 'abc123', forceAllFiles: false })
+  assert.deepEqual(calls, ['merge-base main HEAD'])
+  const noCommits = await resolveUltrareviewGitBase('main', async () => ({ code: 1, stdout: '' }))
+  assert.deepEqual(noCommits, { kind: 'no-commits' })
+  const unrelated = await resolveUltrareviewGitBase('main', async args => {
+    if (args[0] === 'merge-base') return { code: 1, stdout: '' }
+    if (args[0] === 'rev-parse') return { code: 0, stdout: 'head-sha' }
+    return { code: 0, stdout: '4b825dc642cb6eb9a060e54bf8d69288fbee4904' }
+  })
+  assert.deepEqual(unrelated, {
+    kind: 'all-files', base: '4b825dc642cb6eb9a060e54bf8d69288fbee4904', forceAllFiles: true,
+  })
 })
