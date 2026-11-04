@@ -45,11 +45,30 @@ jobs:
           node build/probe-official-platform-audio-317.mjs \
             --binary "$RUNNER_TEMP/$executable" \
             --manifest "$RUNNER_TEMP/manifest.json" --target "$target" \
+            --extract-dir "$RUNNER_TEMP/native-verified" \
             | tee "$RUNNER_TEMP/official-audio-$target.json"
+          node build/probe-official-platform-audio-317.mjs \
+            --binary "$RUNNER_TEMP/$executable" \
+            --manifest "$RUNNER_TEMP/manifest.json" --target "$target" \
+            --extract-dir "$RUNNER_TEMP/native-verified"
+          node --input-type=module -e '
+            import {readFileSync} from "node:fs"
+            import {createHash} from "node:crypto"
+            const records=JSON.parse(readFileSync("build/official-native-audio-317.json","utf8"))
+            const os=process.argv[1].split("-")[0], arch=process.argv[1].split("-")[1]
+            const name=arch+"-"+os
+            const path=process.argv[2]+"/"+name+"/audio-capture.node"
+            const actual=createHash("sha256").update(readFileSync(path)).digest("hex")
+            if(actual!==records.modules[process.argv[1]].audio_sha256)
+              throw Error("Extracted original audio failed frozen release verification")
+            console.log("Original audio module verified: "+path)
+          ' "$target" "$RUNNER_TEMP/native-verified"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: m1-317-native-audio-${{ matrix.target }}
-          path: ${{ runner.temp }}/official-audio-*.json
+          path: |
+            ${{ runner.temp }}/official-audio-*.json
+            ${{ runner.temp }}/native-verified/**/audio-capture.node
           retention-days: 60
           if-no-files-found: warn
