@@ -325,6 +325,7 @@ import {
 } from 'src/utils/queryProfiler.js'
 import { asSessionId } from 'src/types/ids.js'
 import { jsonStringify } from '../utils/slowOperations.js'
+import { ndjsonSafeStringify } from './ndjsonSafeStringify.js'
 import { skillChangeDetector } from '../utils/skills/skillChangeDetector.js'
 import { getCommands, clearCommandsCache } from '../commands.js'
 import {
@@ -932,10 +933,10 @@ export async function runHeadless(
         throw new Error('No messages returned')
       }
       if (options.verbose) {
-        writeToStdout(jsonStringify(messages) + '\n')
+        writeToStdout(ndjsonSafeStringify(messages) + '\n')
         break
       }
-      writeToStdout(jsonStringify(lastMessage) + '\n')
+      writeToStdout(ndjsonSafeStringify(lastMessage) + '\n')
       break
     case 'stream-json':
       // already logged above
@@ -4887,7 +4888,7 @@ function emitLoadError(
       uuid: randomUUID(),
       errors: [message],
     }
-    process.stdout.write(jsonStringify(errorResult) + '\n')
+    process.stdout.write(ndjsonSafeStringify(errorResult) + '\n')
   } else {
     process.stderr.write(message + '\n')
   }
