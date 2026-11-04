@@ -17,6 +17,10 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Windows 提前开启 Git 长路径
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
