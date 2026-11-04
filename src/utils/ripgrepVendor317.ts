@@ -9,9 +9,18 @@ import { dirname, isAbsolute, resolve } from 'node:path'
  * Only accept physical executable/module paths: never search cwd or PATH
  * for an implicit fallback (a checked-out repository can contain a rogue rg).
  */
+export type PackagedRipgrepLookup317 = {
+  execPath?: string | null
+  argv0?: string | null
+  scriptPath?: string | null
+  modulePath?: string | null
+  arch: string
+  platform: string
+}
+export type PackagedRipgrepResult317 = { path: string | null; candidates: string[] }
 export function resolvePackagedRipgrep({
   execPath, argv0, scriptPath, modulePath, arch, platform,
-}) {
+}: PackagedRipgrepLookup317): PackagedRipgrepResult317 {
   const executable = platform === 'win32' ? 'rg.exe' : 'rg'
   const platformDir = arch + '-' + platform
   const locations = [execPath, argv0, scriptPath, modulePath]
