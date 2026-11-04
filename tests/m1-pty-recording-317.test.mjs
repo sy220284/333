@@ -112,7 +112,7 @@ test('317 real PTY recording: rebuilt binary and official x64 write the same fra
   })
 
 test('317 exec-mode PTY writes real exit metadata and late replay for unclaimed session',
-  { skip: process.platform === 'win32', timeout: 35000 }, async () => {
+  { skip: process.platform === 'win32', timeout: 90000 }, async () => {
     for (const [name, exe, args] of bins) {
       const dir = mkdtempSync(join(tmpdir(), '333-pty-exec-e2e-'))
       const socket = join(dir, 'exec.sock')
@@ -128,20 +128,28 @@ test('317 exec-mode PTY writes real exit metadata and late replay for unclaimed 
         })
         let stderr = ''
         child.stderr.on('data', bytes => { stderr += bytes })
-        // Upstream writes the undelivered raw tail before its 5s grace
-        // window closes, so external consumers can read it immediately.
+        // Register exit listeners before probing startup so an unexpectedly
+        // early exit cannot disappear between the checks and the await.
+        const closed = new Promise((resolve, reject) => {
+          child.once('error', reject)
+          child.once('close', (code, signal) => resolve({code, signal}))
+        })
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+        const readyDeadline = Date.now() + 20_000
+        while (!existsSync(socket) && child.exitCode === null && Date.now() < readyDeadline)
+          await sleep(30)
+        assert.ok(existsSync(socket), name + ' exec PTY listener never became ready; ' + stderr)
+        // Start the output-grace clock when the PTY is listening, rather
+        // than when a slow Intel/macOS executable was first spawned.
         const earlyLate = join(dir, 'exec.sock.late')
-        const deadline = Date.now() + 3500
+        const deadline = Date.now() + 5_000
         while (!existsSync(earlyLate) && child.exitCode === null && Date.now() < deadline)
-          await new Promise(resolve => setTimeout(resolve, 30))
+          await sleep(30)
         assert.ok(existsSync(earlyLate), name + ' late tail was not published during grace')
         assert.equal(child.exitCode, null, name + ' closed before subscriber grace')
         const exit = await Promise.race([
-          new Promise((resolve, reject) => {
-            child.once('error', reject)
-            child.once('close', (code, signal) => resolve({code,signal}))
-          }),
-          new Promise((_, reject) => setTimeout(() => reject(Error(name + ' exec PTY timeout')), 16000)),
+          closed,
+          new Promise((_, reject) => setTimeout(() => reject(Error(name + ' exec PTY timeout')), 20_000)),
         ])
         assert.equal(exit.code, 0, name + ' stderr=' + stderr)
         const metadata = join(dir, 'exec.sock.exec-exit')
