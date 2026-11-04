@@ -4,6 +4,8 @@ on:
     branches: [upgrade/2.1.310-m1-evidence, main]
     paths:
       - 'src/cli/gateway/**'
+      - 'src/skills/bundled/claudeApi.ts'
+      - 'src/skills/bundled/claudeApiPrompt.ts'
       - 'tools/dev/type-migration-*.mjs'
       - 'tools/dev/type-migration-targets.json'
       - '.github/workflows/type-migration-pr7.yml'
@@ -11,6 +13,8 @@ on:
     branches: [main]
     paths:
       - 'src/cli/gateway/**'
+      - 'src/skills/bundled/claudeApi.ts'
+      - 'src/skills/bundled/claudeApiPrompt.ts'
       - 'tools/dev/type-migration-*.mjs'
       - 'tools/dev/type-migration-targets.json'
       - '.github/workflows/type-migration-pr7.yml'
