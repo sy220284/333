@@ -15,6 +15,14 @@ import {
   writeFile as writeFileNative,
 } from 'node:fs/promises'
 
+export type TranscriptRestoreIO317 = {
+  copyFile: (source: string, destination: string, mode?: number) => Promise<void>
+  rename: (source: string, destination: string) => Promise<void>
+  unlink: (path: string) => Promise<void>
+  writeFile: (path: string, content: string, options: { encoding: 'utf8'; mode: number; flag: 'wx' }) => Promise<void>
+}
+export type TranscriptRestoreEntry317 = { path: string; content: string }
+
 const nativeIO = {
   copyFile: copyFileNative,
   rename: renameNative,
@@ -22,7 +30,7 @@ const nativeIO = {
   writeFile: writeFileNative,
 }
 
-function validateEntries(entries) {
+function validateEntries(entries: ReadonlyArray<TranscriptRestoreEntry317>): void {
   const names = new Set()
   for (const entry of entries) {
     if (typeof entry.path !== 'string' || !entry.path || typeof entry.content !== 'string') {
@@ -36,7 +44,7 @@ function validateEntries(entries) {
   }
 }
 
-async function removeTemp(io, path, failures) {
+async function removeTemp(io: TranscriptRestoreIO317, path: string, failures: unknown[]): Promise<void> {
   try {
     await io.unlink(path)
   } catch (error) {
@@ -44,7 +52,7 @@ async function removeTemp(io, path, failures) {
   }
 }
 
-export async function replaceTranscriptBatchAtomically(entries, io = nativeIO) {
+export async function replaceTranscriptBatchAtomically(entries: ReadonlyArray<TranscriptRestoreEntry317>, io: TranscriptRestoreIO317 = nativeIO): Promise<void> {
   validateEntries(entries)
   if (entries.length === 0) return
   return withTranscriptDestinationLocks(
@@ -53,7 +61,7 @@ export async function replaceTranscriptBatchAtomically(entries, io = nativeIO) {
   )
 }
 
-async function publishTranscriptBatchAtomically(entries, io) {
+async function publishTranscriptBatchAtomically(entries: ReadonlyArray<TranscriptRestoreEntry317>, io: TranscriptRestoreIO317): Promise<void> {
   const token = randomUUID()
   const records = entries.map(({ path, content }, i) => ({
     path,
@@ -109,7 +117,7 @@ async function publishTranscriptBatchAtomically(entries, io) {
       )
       : error
   }
-  const cleanupErrors = []
+  const cleanupErrors: unknown[] = []
   for (const record of records) {
     await removeTemp(io, record.staged, cleanupErrors)
     // Preserve recovery copies if the rollback itself was unsuccessful.
@@ -124,7 +132,7 @@ async function publishTranscriptBatchAtomically(entries, io) {
   if (failure) throw failure
 }
 
-export async function replaceTranscriptAtomically(path, content, io = nativeIO) {
+export async function replaceTranscriptAtomically(path: string, content: string, io: TranscriptRestoreIO317 = nativeIO): Promise<void> {
   await replaceTranscriptBatchAtomically([{ path, content }], io)
 }
 
