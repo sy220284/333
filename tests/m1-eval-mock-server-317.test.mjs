@@ -106,8 +106,7 @@ test('317 eval mock fixed responders, error responders, missing tools and call i
       assert.deepEqual(lines[0],{ready:'nonce-123',server:'fixture'},name)
       assert.deepEqual(lines.slice(1).map(x=>[x.seq,x.tool,x.verdict]),
         [[0,'echo','ok'],[1,'fail','tool_error'],[2,'missing','tool_error']],name)
-      assert.equal(lines[1].input.text,undefined)
-      assert.equal(lines[1].input, '{"text":"YES"}', name)
+      assert.deepEqual(lines[1].input, { text: 'YES' }, name)
       await worker.stop()
     } finally {
       if (worker && worker.child.exitCode == null) worker.child.kill('SIGKILL')
