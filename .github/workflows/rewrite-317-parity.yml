@@ -29,6 +29,20 @@ jobs:
         run: bun test tests/rewrite-317-sdk-mcp.test.ts
       - name: 从333 TypeScript源码重建独立CLI
         run: bun build/rebuild.mjs
+      - name: 检查插件清理命令启动阶段的实际输出和存活进程
+        run: |
+          node --input-type=module <<'NODE'
+          import { spawnSync } from 'node:child_process'
+          import { mkdtempSync, rmSync } from 'node:fs'
+          import { tmpdir } from 'node:os'
+          import { join } from 'node:path'
+          const dir=mkdtempSync(join(tmpdir(),'333-prune-diag-'))
+          try {
+            const env={...process.env,CLAUDE_CONFIG_DIR:dir,CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1',DISABLE_TELEMETRY:'1'}
+            const r=spawnSync('bun',['dist/cli.js','plugin','prune','--yes'],{env,encoding:'utf8',timeout:5000,maxBuffer:1024*1024})
+            console.log(JSON.stringify({status:r.status,signal:r.signal,error:r.error?.message,stdout:r.stdout,stderr:r.stderr}))
+          } finally { rmSync(dir,{force:true,recursive:true}) }
+          NODE
       - name: 验证插件依赖图和原生重建CLI退出
         run: node --test tests/m4-plugin-prune-317.test.mjs
       - name: 获取哈希锁定的317原版x64对照程序
