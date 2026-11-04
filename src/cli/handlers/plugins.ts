@@ -476,7 +476,7 @@ export async function pluginListHandler(options: {
 // marketplace add (lines 5433–5487)
 export async function marketplaceAddHandler(
   source: string,
-  options: { cowork?: boolean; sparse?: string[]; scope?: string },
+  options: { cowork?: boolean; sparse?: string[]; scope?: string; json?: boolean },
 ): Promise<void> {
   if (options.cowork) setUseCoworkPlugins(true)
   try {
@@ -520,12 +520,12 @@ export async function marketplaceAddHandler(
     }
 
     // biome-ignore lint/suspicious/noConsole:: intentional console output
-    console.log('Adding marketplace...')
+    if (!options.json) console.log('Adding marketplace...')
 
     const { name, alreadyMaterialized, resolvedSource } =
       await addMarketplaceSource(marketplaceSource, message => {
         // biome-ignore lint/suspicious/noConsole:: intentional console output
-        console.log(message)
+        if (!options.json) console.log(message)
       })
 
     // Write intent to settings at the requested scope
@@ -543,11 +543,14 @@ export async function marketplaceAddHandler(
         sourceType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
 
-    cliOk(
-      alreadyMaterialized
-        ? `${figures.tick} Marketplace '${name}' already on disk — declared in ${scope} settings`
-        : `${figures.tick} Successfully added marketplace: ${name} (declared in ${scope} settings)`,
-    )
+    const message = alreadyMaterialized
+      ? `Marketplace '${name}' already on disk — declared in ${scope} settings`
+      : `Successfully added marketplace: ${name} (declared in ${scope} settings)`
+    if (options.json) {
+      cliOk(jsonStringify({ command: 'marketplace-add', outcome: 'ok', marketplace: name, message }))
+    } else {
+      cliOk(`${figures.tick} ${message}`)
+    }
   } catch (error) {
     handleMarketplaceError(error, 'add marketplace')
   }
