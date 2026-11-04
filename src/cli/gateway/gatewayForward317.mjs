@@ -114,13 +114,19 @@ export async function forwardGatewayInference317(request, context) {
     ? upstream.base_url : upstream.base_url + '/')
   let response
   const start = performance.now()
+  // The TTFB deadline expires once response headers arrive; SSE may run longer.
+  const upstreamAbort = new AbortController()
+  const ttfbTimer = setTimeout(
+    () => upstreamAbort.abort(new Error('upstream time to first byte exceeded')),
+    config.timeouts?.upstream_ttfb_ms ?? 120000,
+  )
   try {
     response = await fetch(endpoint, {
       method:'POST',
       headers: pickHeaders(request, upstream, requestId),
       body: data,
       redirect: 'manual',
-      signal: AbortSignal.timeout(config.timeouts?.upstream_ttfb_ms ?? 120000),
+      signal: upstreamAbort.signal,
     })
   } catch (error) {
     await audit('inference.failure', identity.sub, requestId, {
@@ -128,6 +134,8 @@ export async function forwardGatewayInference317(request, context) {
       message: String(error),
     })
     return proxyError(502, 'api_error', 'upstream connection failed', requestId)
+  } finally {
+    clearTimeout(ttfbTimer)
   }
   const responseHeaders = new Headers()
   for (const [name,value] of response.headers) {
