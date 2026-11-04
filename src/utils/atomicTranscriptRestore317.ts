@@ -7,7 +7,7 @@
  */
 import { randomUUID } from 'node:crypto'
 import { constants } from 'node:fs'
-import { transcriptDestinationKey, withTranscriptDestinationLocks } from './transcriptDestinationLocks317.mjs'
+import { transcriptDestinationKey, withTranscriptDestinationLocks } from './transcriptDestinationLocks317.ts'
 import {
   copyFile as copyFileNative,
   rename as renameNative,
