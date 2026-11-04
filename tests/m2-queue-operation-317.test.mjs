@@ -115,3 +115,18 @@ test('317 队列预审: 原始文本在安全检查完成前不写入日志', ()
   }, 'session-317')
   assert.equal(submitted.content, 'approved replacement')
 })
+
+test('317 轮次吸收: 消费消息与用户取消的落盘原因不同', () => {
+  const message = { uuid: 'queued-317', value: 'use this in current model turn' }
+  const at = new Date('2026-11-04T00:00:00.000Z')
+  const consumed = createQueueOperationRecord(
+    'remove', message, 'session-317', at, { reason: 'absorbed_mid_turn' },
+  )
+  const cancelled = createQueueOperationRecord(
+    'remove', message, 'session-317', at, { reason: 'cleared_on_cancel' },
+  )
+  assert.equal(consumed.reason, 'absorbed_mid_turn')
+  assert.equal(cancelled.reason, 'cleared_on_cancel')
+  assert.equal(consumed.commandUuid, cancelled.commandUuid)
+  assert.notDeepEqual(consumed, cancelled)
+})
