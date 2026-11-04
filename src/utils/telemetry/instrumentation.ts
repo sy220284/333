@@ -419,7 +419,7 @@ async function initializeBetaTracing(
   })
 }
 
-export async function initializeTelemetry() {
+export async function initializeTelemetry(): Promise<import('@opentelemetry/api').Meter> {
   profileCheckpoint('telemetry_init_start')
   bootstrapTelemetry()
 
