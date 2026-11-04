@@ -13,6 +13,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  typecheck-contract:
+    name: 全仓TypeScript真实接口检查
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 安装冻结的TypeScript检查工具
+        run: npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+      - name: 恢复当前源码的完整声明与依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 完整TypeScript类型检查（失败阻断验收）
+        run: node tools/dev/dev.mjs typecheck:all
   rebuild:
     strategy:
       fail-fast: false
