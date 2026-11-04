@@ -34,7 +34,7 @@ import {
 } from './messages.js'
 import { copyPlanForResume } from './plans.js'
 import { processSessionStartHooks } from './sessionStart.js'
-import { precomputeResumeCommitV5 } from './resumePreparationV5.mjs'
+import { precomputeResumeCommitV5 } from './resumePreparationV5.ts'
 import {
   buildConversationChain,
   checkResumeConsistency,
