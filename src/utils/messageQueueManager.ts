@@ -56,7 +56,8 @@ const sessionQueues = new SessionQueuePartitions317<QueuedCommand>()
 const queueChanged = createSignal()
 
 function queueForActiveSession(): QueuedCommand[] {
-  return sessionQueues.get(getSessionId())
+  // Read paths cannot allocate a retained session partition. enqueue() owns creation.
+  return sessionQueues.getExisting(getSessionId()) ?? []
 }
 
 function notifySubscribers(sessionId = getSessionId()): void {
