@@ -2,8 +2,8 @@ import axios from 'axios'
 import { randomUUID } from 'node:crypto'
 import { getOauthConfig } from '../constants/oauth.js'
 import { errorMessage } from '../utils/errors.js'
-import { wrapCrossSessionMessage } from '../utils/peerMessageEnvelope.mjs'
-import { peerIdentityKey } from '../utils/accountPeerDirectory.mjs'
+import { wrapCrossSessionMessage } from '../utils/peerMessageEnvelope.ts'
+import { peerIdentityKey } from '../utils/accountPeerDirectory.ts'
 import { getSelfBridgeSessionId } from './replBridgeHandle.js'
 import {
   CCR_BYOC_BETA,
