@@ -42,6 +42,29 @@ function readRegistry(path) {
   return { path, bytes, data, version }
 }
 
+/**
+ * Read-only V1 conversion follows 2.1.317's Cpt/NLe path: old installations
+ * remain usable without mutating user files (e.g. `plugin list --json`).
+ * A separate explicit migration performs backed-up writes at startup or mutation.
+ */
+export function normalizeInstalledPluginsRecords(data, resolveCachePath) {
+  if (!isObject(data) || !isObject(data.plugins)) {
+    throw new Error('Invalid installed-plugin registry')
+  }
+  if (data.version === 2) return data
+  if (data.version !== undefined && data.version !== 1) {
+    throw new Error('Unsupported installed-plugin registry version')
+  }
+  for (const [id, record] of Object.entries(data.plugins)) {
+    if (!PLUGIN_ID.test(id) || !isObject(record) ||
+        typeof record.version !== 'string' || !record.version ||
+        typeof record.installedAt !== 'string' || typeof record.installPath !== 'string') {
+      throw new Error('Invalid V1 plugin installation record: ' + id)
+    }
+  }
+  return convertV1(data, resolveCachePath)
+}
+
 function convertV1(registry, resolveCachePath) {
   const plugins = Object.create(null)
   for (const [id, record] of Object.entries(registry.plugins)) {
