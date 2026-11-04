@@ -42,12 +42,18 @@ jobs:
             echo 'Unknown option was accepted' >&2
             exit 1
           fi
-          grep -F 'Unknown self-hosted-runner argument' invalid.log
+          grep -F 'error: unknown flag --unknown' invalid.log
+          grep -F "Run 'claude self-hosted-runner --help' for usage." invalid.log
           if env -u SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET bun dist/cli.js self-hosted-runner --api-url https://localhost.invalid 2>missing.log; then
             echo 'Missing environment secret was accepted' >&2
             exit 1
           fi
-          grep -F 'requires an environment secret' missing.log
+          grep -F 'No environment secret provided.' missing.log
+          if env -u SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET bun dist/cli.js self-hosted-runner --capacity 0 2>capacity.log; then
+            echo 'Invalid capacity was accepted' >&2
+            exit 1
+          fi
+          grep -F 'error: --capacity must be a positive integer, got: 0' capacity.log
       - name: 全仓TypeScript类型检查
         run: |
           npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
