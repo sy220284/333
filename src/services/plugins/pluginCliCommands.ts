@@ -12,6 +12,14 @@ import { gracefulShutdown } from '../../utils/gracefulShutdown.js'
 import { logError } from '../../utils/log.js'
 import { getManagedPluginNames } from '../../utils/plugins/managedPlugins.js'
 import { validatePluginCliValues } from '../../utils/plugins/pluginCliConfig.js'
+import {
+  isMcpbSource,
+  loadMcpbFile,
+  loadMcpServerUserConfig,
+  saveMcpServerUserConfig,
+  type UserConfigSchema,
+} from '../../utils/plugins/mcpbHandler.js'
+import { routeInstallConfigAssignments } from '../../utils/plugins/pluginInstallConfigRouting.mjs'
 import { loadAllPlugins } from '../../utils/plugins/pluginLoader.js'
 import { getPluginStorageId, loadPluginOptions, savePluginOptions } from '../../utils/plugins/pluginOptionsStorage.js'
 import { parsePluginIdentifier } from '../../utils/plugins/pluginIdentifier.js'
@@ -106,32 +114,57 @@ function handlePluginCommandError(
 async function applyInstallConfig(
   pluginId: string,
   assignments: string[],
-): Promise<{ applied: boolean; warning?: string }> {
-  const values: Record<string, string> = {}
-  for (const assignment of assignments) {
-    const equals = assignment.indexOf('=')
-    if (equals <= 0) {
-      return { applied: false, warning: '--config requires <key=value>' }
-    }
-    values[assignment.slice(0, equals)] = assignment.slice(equals + 1)
+): Promise<void> {
+  const loaded = await loadAllPlugins()
+  const installed = [...loaded.enabled, ...loaded.disabled].find(
+    entry => entry.source === pluginId || entry.repository === pluginId,
+  )
+  if (!installed) {
+    throw new Error(`--config was given but plugin "${pluginId}" failed to load after install`)
   }
-  try {
-    const loaded = await loadAllPlugins()
-    const installed = [...loaded.enabled, ...loaded.disabled].find(
-      entry => entry.source === pluginId,
-    )
-    if (!installed) {
-      return { applied: false, warning: 'Installed plugin not found for configuration' }
+  const storageId = getPluginStorageId(installed)
+  const topSchema = installed.manifest.userConfig ?? {}
+  const serverSchemas: Record<string, UserConfigSchema> = {}
+
+  // Channel manifests and .mcpb bundles both provide per-server schemas.
+  for (const channel of installed.manifest.channels ?? []) {
+    if (channel.userConfig && Object.keys(channel.userConfig).length > 0) {
+      serverSchemas[channel.server] = channel.userConfig
     }
-    const storageId = getPluginStorageId(installed)
-    const schema = installed.manifest.userConfig ?? {}
-    const normalized = validatePluginCliValues(values, schema, loadPluginOptions(storageId))
-    if (Object.keys(normalized).length > 0) {
-      savePluginOptions(storageId, normalized, schema)
+  }
+  const specs = installed.manifest.mcpServers
+  const sources = typeof specs === 'string'
+    ? [specs]
+    : Array.isArray(specs)
+      ? specs.filter((source): source is string => typeof source === 'string')
+      : []
+  for (const source of sources) {
+    if (!isMcpbSource(source)) continue
+    const bundle = await loadMcpbFile(source, installed.path, storageId, undefined, undefined, true)
+    if (bundle.manifest.user_config && Object.keys(bundle.manifest.user_config).length > 0) {
+      if (serverSchemas[bundle.manifest.name]) {
+        throw new Error(`Duplicate bundled MCP server configuration name: ${bundle.manifest.name}`)
+      }
+      serverSchemas[bundle.manifest.name] = bundle.manifest.user_config
     }
-    return { applied: true }
-  } catch (error) {
-    return { applied: false, warning: errorMessage(error) }
+  }
+  const routed = routeInstallConfigAssignments(assignments, topSchema, serverSchemas)
+  // Validate ALL inputs before performing any persistent write.
+  const topValidated = validatePluginCliValues(
+    routed.topLevel, topSchema, loadPluginOptions(storageId),
+  )
+  const validatedServers = Object.entries(routed.servers).map(([server, values]) => ({
+    server,
+    schema: serverSchemas[server]!,
+    values: validatePluginCliValues(
+      values, serverSchemas[server]!, loadMcpServerUserConfig(storageId, server) ?? {},
+    ),
+  }))
+  if (Object.keys(topValidated).length > 0) {
+    savePluginOptions(storageId, topValidated, topSchema)
+  }
+  for (const server of validatedServers) {
+    saveMcpServerUserConfig(storageId, server.server, server.values, server.schema)
   }
 }
 
@@ -157,12 +190,10 @@ export async function installPlugin(
       throw new Error(result.message)
     }
 
-    const configStatus = configEntries.length > 0
-      ? await applyInstallConfig(result.pluginId ?? plugin, configEntries)
-      : undefined
-    const configMessage = configStatus?.warning
-      ? `${result.message}\n⚠ Installed, but --config not applied: ${configStatus.warning}`
-      : result.message
+    if (configEntries.length > 0) {
+      await applyInstallConfig(result.pluginId ?? plugin, configEntries)
+    }
+    const configMessage = result.message
 
     // biome-ignore lint/suspicious/noConsole:: intentional console output
     if (json) {
@@ -173,7 +204,7 @@ export async function installPlugin(
         pluginId: result.pluginId ?? plugin,
         scope: result.scope ?? scope,
         message: configMessage,
-        ...(configStatus && { configApplied: configStatus.applied }),
+        ...(configEntries.length > 0 && { configApplied: true }),
         ...(result.installedVersion && { installedVersion: result.installedVersion }),
         ...(result.availableVersion && { availableVersion: result.availableVersion }),
       })}\n`)
