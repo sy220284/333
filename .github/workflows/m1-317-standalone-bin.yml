@@ -9,6 +9,8 @@ on:
       - 'build/package-release.mjs'
       - 'build/public-dependencies.lock.json'
       - 'src/utils/ripgrep.ts'
+      - 'src/entrypoints/cli.tsx'
+      - 'tests/m1-version-verbose-317.test.mjs'
       - 'tests/model-loop-local.test.mjs'
       - 'tests/search-loop-local.test.mjs'
       - 'tests/claude-api-version-parity.test.mjs'
@@ -82,6 +84,8 @@ jobs:
           node --test tests/distribution-isolation.test.mjs
       - name: 自包含原生执行程序走真实模型请求、配置优先级及JSON响应
         run: M1_NATIVE_BINARY_RUN=1 node --test tests/m1-startup-cli-317.test.mjs
+      - name: 对齐原版317版本与详细上游提交信息
+        run: node --test tests/m1-version-verbose-317.test.mjs
       - name: 验证原生程序Read Edit Write Glob Grep真实模型往返
         run: M1_NATIVE_BINARY_RUN=1 node --test tests/model-loop-local.test.mjs tests/search-loop-local.test.mjs
       - name: 验证317技能106项资源和实际Read执行
