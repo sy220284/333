@@ -14,7 +14,7 @@ import { REPL_TOOL_NAME } from '../../tools/REPLTool/constants.js'
 import type { AssistantMessage } from '../../types/message.js'
 import { extractOutputRedirections } from '../bash/commands.js'
 import { getAccountInformation } from '../auth.js'
-import { ACCOUNT_EMAIL_DISCLOSURE_REASON, shouldConfirmAccountEmailDisclosure } from '../accountEmailDisclosure.mjs'
+import { ACCOUNT_EMAIL_DISCLOSURE_REASON, shouldConfirmAccountEmailDisclosure } from '../accountEmailDisclosure.ts'
 import { logForDebugging } from '../debug.js'
 import { AbortError, toError } from '../errors.js'
 import { logError } from '../log.js'
@@ -51,7 +51,7 @@ import {
   permissionRuleValueFromString,
   permissionRuleValueToString,
 } from './permissionRuleParser.js'
-import { permissionToolNamesMatch } from './legacyToolAliases.mjs'
+import { permissionToolNamesMatch } from './legacyToolAliases.ts'
 import {
   deletePermissionRuleFromSettings,
   type PermissionRuleFromEditableSettings,
