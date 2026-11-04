@@ -1,0 +1,50 @@
+import {test, expect} from 'bun:test'
+import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
+
+test('SDK 317 session metadata: list, detail, rename, tag and clear persist in real JSONL',async()=>{
+  const root=mkdtempSync(join(tmpdir(),'sdk-session-files-317-'))
+  const old=process.env.CLAUDE_CONFIG_DIR
+  process.env.CLAUDE_CONFIG_DIR=join(root,'.claude')
+  const project=join(root,'workspace')
+  const session='c0a1c0a1-1234-4234-8234-123456789abc'
+  try{
+    mkdirSync(project,{recursive:true})
+    const portable=await import('../src/utils/sessionStoragePortable.ts')
+    const sdk=await import('../src/entrypoints/agentSdkTypes.ts')
+    const path=join(portable.getProjectDir(project),session+'.jsonl')
+    mkdirSync(portable.getProjectDir(project),{recursive:true})
+    const timestamp='2026-11-01T00:00:00.000Z'
+    writeFileSync(path,[
+      JSON.stringify({type:'user',uuid:'a0a1c0a1-1234-4234-8234-123456789abc',
+        parentUuid:null,sessionId:session,timestamp,cwd:project,message:{role:'user',content:'hello'}}),
+      JSON.stringify({type:'custom-title',customTitle:'Original SDK session',sessionId:session}),
+    ].join('\n')+'\n')
+    const listed=await sdk.listSessions({dir:project})
+    expect(listed).toHaveLength(1)
+    expect(listed[0].sessionId).toBe(session)
+    expect((await sdk.getSessionInfo(session,{dir:project}))?.customTitle).toBe('Original SDK session')
+    await sdk.renameSession(session,'Renamed through SDK',{dir:project})
+    expect((await sdk.getSessionInfo(session,{dir:project}))?.customTitle).toBe('Renamed through SDK')
+    await sdk.tagSession(session,'production',{dir:project})
+    expect((await sdk.getSessionInfo(session,{dir:project}))?.tag).toBe('production')
+    await sdk.tagSession(session,null,{dir:project})
+    expect((await sdk.getSessionInfo(session,{dir:project}))?.tag).toBeUndefined()
+    const after=await sdk.listSessions({dir:project})
+    expect(after[0].summary).toBe('Renamed through SDK')
+    expect(after[0].tag).toBeUndefined()
+  }finally{
+    if(old===undefined) delete process.env.CLAUDE_CONFIG_DIR
+    else process.env.CLAUDE_CONFIG_DIR=old
+    rmSync(root,{recursive:true,force:true})
+  }
+})
+
+test('SDK 317 validates malformed and absent session mutations before touching disk',async()=>{
+  const sdk=await import('../src/entrypoints/agentSdkTypes.ts')
+  expect(await sdk.getSessionInfo('../../outside')).toBeUndefined()
+  await expect(sdk.renameSession('../../outside','unsafe')).rejects.toThrow('Invalid session ID')
+  await expect(sdk.tagSession('../outside','unsafe')).rejects.toThrow('Invalid session ID')
+  await expect(sdk.renameSession('12345678-1234-4234-8234-123456789abc','')).rejects.toThrow('Title')
+})
