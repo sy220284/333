@@ -215,6 +215,15 @@ jobs:
         continue-on-error: true
         id: acceptance_042
         run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m6-ultrareview-cli-native-parity-317.test.mjs
+      - name: 317插件来源命令授权：SHA256及市场修订版本
+        id: acceptance_048
+        continue-on-error: true
+        run: node --test tests/m3-plugin-source-command-consent-317.test.mjs
+      - name: 317插件来源命令：官方x64与重建版双端安装及授权
+        id: acceptance_049
+        continue-on-error: true
+        if: runner.os == 'Linux'
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-command-source-native-317.test.mjs
       - name: 317账户隐私保护：七工具检查与原版提示文案
         id: acceptance_046
         continue-on-error: true
@@ -501,6 +510,14 @@ jobs:
           fi
           if [ "${{ steps.acceptance_047.outcome }}" = failure ]; then
             echo "::error::验收失败：317无共同历史审查未正确创建完整Git快照"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_048.outcome }}" = failure ]; then
+            echo "::error::验收失败：317插件来源命令授权摘要或市场版本校验不一致"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_049.outcome }}" = failure ]; then
+            echo "::error::验收失败：317插件命令来源拒绝和安装与原版x64不一致"
             failures=$((failures+1))
           fi
           echo "完整验收发现 $failures 项失败"
