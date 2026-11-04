@@ -578,7 +578,10 @@ export async function revokeServerTokens(
         },
       },
     }
-    storage.update(updatedData)
+    const result = storage.update(updatedData)
+    if (!result.success) {
+      throw new Error(result.warning || `Failed to preserve OAuth state for "${serverName}"`)
+    }
     logMCPDebug(serverName, 'Preserved step-up auth state across revocation')
   }
 }
@@ -594,7 +597,10 @@ export function clearServerTokensFromLocalStorage(
   const serverKey = getServerKey(serverName, serverConfig)
   if (existingData.mcpOAuth[serverKey]) {
     delete existingData.mcpOAuth[serverKey]
-    storage.update(existingData)
+    const result = storage.update(existingData)
+    if (!result.success) {
+      throw new Error(result.warning || `Failed to clear stored OAuth credentials for "${serverName}"`)
+    }
     logMCPDebug(serverName, 'Cleared stored tokens')
   }
 }
@@ -817,7 +823,7 @@ export async function performMCPOAuthFlow(
   abortSignal?: AbortSignal,
   options?: {
     skipBrowserOpen?: boolean
-    onWaitingForCallback?: (submit: (callbackUrl: string) => void) => void
+    onWaitingForCallback?: (submit: (callbackUrl: string) => boolean) => void
   },
 ): Promise<void> {
   // XAA (SEP-990): if configured, bypass the per-server consent dance.
@@ -1026,41 +1032,29 @@ export async function performMCPOAuthFlow(
             const code = parsed.searchParams.get('code')
             const state = parsed.searchParams.get('state')
             const error = parsed.searchParams.get('error')
-
+            // A pasted address must belong to this sign-in. Invalid/stale
+            // callbacks leave the listener alive so the user can try again.
+            if (parsed.protocol !== 'http:' ||
+                !['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname) ||
+                parsed.pathname !== '/callback' || state !== oauthState ||
+                (!code && !error)) return false
             if (error) {
-              const errorDescription =
-                parsed.searchParams.get('error_description') || ''
               cleanup()
-              rejectOnce(
-                new Error(`OAuth error: ${error} - ${errorDescription}`),
-              )
-              return
+              rejectOnce(new Error(`OAuth error: ${error} - ${parsed.searchParams.get('error_description') || ''}`))
+              return true
             }
-
-            if (!code) {
-              // Not a valid callback URL, ignore so the user can try again
-              return
-            }
-
-            if (state !== oauthState) {
-              cleanup()
-              rejectOnce(
-                new Error('OAuth state mismatch - possible CSRF attack'),
-              )
-              return
-            }
-
-            logMCPDebug(
-              serverName,
-              `Received auth code via manual callback URL`,
-            )
+            logMCPDebug(serverName, 'Received auth code via manual callback URL')
             cleanup()
-            resolveOnce(code)
+            resolveOnce(code!)
+            return true
           } catch {
-            // Invalid URL, ignore so the user can try again
+            return false
           }
         })
       }
+
+      // The terminal callback can synchronously cancel a headless login.
+      if (abortSignal?.aborted) return
 
       server = createServer((req, res) => {
         const parsedUrl = parse(req.url || '', true)
@@ -1489,7 +1483,10 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       },
     }
 
-    storage.update(updatedData)
+    const result = storage.update(updatedData)
+    if (!result.success) {
+      throw new Error(result.warning || `Failed to save OAuth credentials for "${this.serverName}"`)
+    }
   }
 
   async tokens(): Promise<OAuthTokens | undefined> {
@@ -1682,7 +1679,10 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       },
     }
 
-    storage.update(updatedData)
+    const result = storage.update(updatedData)
+    if (!result.success) {
+      throw new Error(result.warning || `Failed to save OAuth credentials for "${this.serverName}"`)
+    }
   }
 
   /**

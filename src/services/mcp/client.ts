@@ -66,6 +66,7 @@ import { logForDebugging } from '../../utils/debug.js'
 import { isEnvDefinedFalsy, isEnvTruthy } from '../../utils/envUtils.js'
 import {
   errorMessage,
+  getErrnoCode,
   TelemetrySafeError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 } from '../../utils/errors.js'
 import { getMCPUserAgent } from '../../utils/http.js'
@@ -310,6 +311,27 @@ function setMcpAuthCacheEntry(serverId: string): void {
     .catch(() => {
       // Best-effort cache write
     })
+}
+
+/** Remove only this server's negative authentication cache, after pending writes. */
+export function removeMcpAuthCacheEntry(serverId: string): Promise<void> {
+  const operation = writeChain.then(async () => {
+    let cache: McpAuthCacheData
+    try {
+      cache = jsonParse(await readFile(getMcpAuthCachePath(), 'utf-8')) as McpAuthCacheData
+    } catch (error) {
+      if (getErrnoCode(error) === 'ENOENT') return
+      throw error
+    }
+    if (!(serverId in cache)) return
+    const updated = { ...cache }
+    delete updated[serverId]
+    await writeFile(getMcpAuthCachePath(), jsonStringify(updated))
+    authCachePromise = null
+  })
+  // Keep the serialization queue usable after an error; the caller still receives it.
+  writeChain = operation.catch(() => { authCachePromise = null })
+  return operation
 }
 
 export function clearMcpAuthCache(): void {

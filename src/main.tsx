@@ -3488,6 +3488,14 @@ async function run(): Promise<CommanderCommand> {
     } = await import('./cli/handlers/mcp.js');
     await mcpListHandler();
   });
+  mcp.command('login <name>').description('Authenticate with an MCP server (HTTP, SSE, or a claude.ai connector)').option('--no-browser', 'Print the authorization URL instead of opening a browser; paste the redirect URL to complete sign-in (for SSH/headless sessions)').action(async (name: string, options: { browser: boolean }) => {
+    const { mcpLoginHandler } = await import('./cli/handlers/mcpAuth.js');
+    await mcpLoginHandler(name, options);
+  });
+  mcp.command('logout <name>').description('Clear stored OAuth credentials for an MCP server').action(async (name: string) => {
+    const { mcpLogoutHandler } = await import('./cli/handlers/mcpAuth.js');
+    await mcpLogoutHandler(name);
+  });
   mcp.command('get <name>').description('Get details about an MCP server. Note: The workspace trust dialog is skipped and stdio servers from .mcp.json are spawned for health checks. Only use this command in directories you trust.').action(async (name: string) => {
     const {
       mcpGetHandler
