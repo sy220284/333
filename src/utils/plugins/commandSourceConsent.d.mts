@@ -20,3 +20,4 @@ export function isAuthorizedSourceCommand(
   disclosure: CommandSourceDisclosure,
   options?: { yes?: boolean; acceptCommand?: string; isNestedSession?: boolean },
 ): boolean
+export function installedSourceCommandKey(source: { source: string; command: string; mode: string } | null | undefined): string | undefined
