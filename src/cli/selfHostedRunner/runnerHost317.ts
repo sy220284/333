@@ -122,7 +122,9 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       remoteBase = remote.api_base_url ?? ''
       if (!remoteBase) throw new Error('Assignment lacks api_base_url')
       const cwd = sessionDirectory(root,id)
+      const sessionConfigDir = sessionDirectory(join(root,'_sessions'),id)
       await mkdir(cwd,{recursive:true,mode:0o700})
+      await mkdir(sessionConfigDir,{recursive:true,mode:0o700})
       const env = secureChildEnvironment(options.env,remote.environment_variables)
       workerEpoch = await options.api.registerWorker(remoteBase,id,remoteToken,ownedAbort.signal)
       const sdkUrl = new URL('/v1/code/sessions/'+encodeURIComponent(id),remoteBase).toString()
@@ -130,7 +132,9 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
         ? options.createChild(id,sdkUrl,remoteToken,workerEpoch,cwd,env)
         : createSessionSpawner({
             execPath:options.execPath,scriptArgs:options.scriptArgs,
-            env,verbose:false,sandbox:true,onDebug:status,
+            env,verbose:false,sandbox:false,onDebug:status,
+            debugFile:join(sessionConfigDir,'claude-code-debug.txt'),
+            runnerRuntime:{apiBaseUrl:remoteBase,configDir:sessionConfigDir},
           }).spawn({
             sessionId:id,sdkUrl,accessToken:remoteToken,useCcrV2:true,
             workerEpoch,
