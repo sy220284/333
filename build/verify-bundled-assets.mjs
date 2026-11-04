@@ -1,20 +1,36 @@
-import { readFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto'
+import { readFileSync, lstatSync } from 'node:fs'
+import { dirname, isAbsolute, join, resolve, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const records = [
-  { path: 'src/skills/bundled/verify/examples/cli.md', anchor: '# Verifying a CLI change\n', hash: '92c3784a19bf09094ffe311f62c84d960fec6c4273c22d2cb5e5a8023f281031' },
-  { path: 'src/skills/bundled/verify/examples/server.md', anchor: '# Verifying a server/API change\n', hash: 'cae669e4a86d3d1352e976f457d7330aed96afd5337d61e0d062f38cccf31c1a' },
-  { path: 'src/skills/bundled/verify/SKILL.md', anchor: '---\nname: verify\n', hash: '1555c291f4eaf9a496176f3d07c0e86449a6650f91179fa5d3ac1712b63837ac' },
-  { path: 'src/utils/permissions/yolo-classifier-prompts/auto_mode_system_prompt.txt', anchor: 'You are a security monitor for autonomous AI coding agents.', hash: '8e5ddd3085a2cd49566c7eea32afe0df3a373a203ed7c2dd562de02338d3801c' },
-  { path: 'src/utils/permissions/yolo-classifier-prompts/permissions_external.txt', anchor: '## Environment\n\n<user_environment_to_replace>', hash: '377ce3cba7577de2666e79f315e91c2f726e390970ace1ea37925abb8242377a' },
-  { path: 'src/utils/ultraplan/prompt.txt', anchor: '<system-reminder>\nProduce an exceptionally thorough implementation plan', hash: 'a82214b551bb8ca47aeb61b633720b2bca2e3adc598e0cdd1345fcefb909e5b7' },
-];
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const release = JSON.parse(readFileSync(join(root, 'docs/upgrade/m1-evidence/target-release.json'), 'utf8'))
+const target = release.target_version
+if (!/^\d+\.\d+\.\d+$/.test(target)) throw Error('Invalid pinned target version')
+const manifestPath = join(root, 'build', `standalone-bundled-assets-${target}.json`)
+const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+if (manifest.version !== target || !Array.isArray(manifest.resources) || manifest.resources.length !== 6)
+  throw Error(`Invalid standalone asset manifest for ${target}`)
 
-for(const record of records) {
-  const actual = createHash('sha256').update(readFileSync(join(root,record.path))).digest('hex');
-  if(actual!==record.hash) throw Error(`Bundled resource checksum mismatch (2.1.310 migration): ${record.path}`);
+const seen = new Set()
+for (const record of manifest.resources) {
+  const path = record.path
+  if (typeof path !== 'string' || !path.startsWith('src/') ||
+      isAbsolute(path) || path.split('/').some(part => part === '..' || part === '' || part === '.') ||
+      path.includes('\\') || seen.has(path)) {
+    throw Error(`Unsafe or duplicate bundled asset path: ${path}`)
+  }
+  if (typeof record.anchor !== 'string' || record.anchor.length < 10 ||
+      typeof record.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(record.sha256))
+    throw Error(`Invalid bundled asset manifest entry: ${path}`)
+  seen.add(path)
+  const absolute = join(root, ...path.split('/'))
+  if (!lstatSync(absolute).isFile()) throw Error(`Bundled asset must be a regular file: ${path}`)
+  const bytes = readFileSync(absolute)
+  if (!bytes.toString('utf8').startsWith(record.anchor))
+    throw Error(`Bundled asset anchor mismatch (${target}): ${path}`)
+  const actual = createHash('sha256').update(bytes).digest('hex')
+  if (actual !== record.sha256)
+    throw Error(`Bundled asset checksum mismatch (${target}): ${path} expected=${record.sha256} actual=${actual}`)
 }
-console.log(`Verified ${records.length} committed resource hashes, including 2.1.310 upgraded assets`);
+console.log(`Verified ${seen.size} standalone bundled asset hashes against ${target}`)
