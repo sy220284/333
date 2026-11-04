@@ -35,3 +35,23 @@ test('partition references survive unrelated session mutations and reset release
   assert.deepEqual(store.snapshot('one'), [])
   assert.equal(store.get('two')[0].uuid, 'second')
 })
+
+test('cold session reads never allocate partitions across repeated resume cycles', () => {
+  const store = new SessionQueuePartitions317()
+  const empty = store.snapshot('unopened')
+  for (let i = 0; i < 4096; i++) {
+    const id = 'resumed-' + i
+    assert.equal(store.getExisting(id), undefined)
+    assert.strictEqual(store.snapshot(id), empty)
+  }
+  assert.deepEqual([...store.entries()], [], '4096 idle reads must not retain partitions')
+  const entries = store.get('live')
+  entries.push({ uuid: 'active' })
+  store.changed('live')
+  assert.strictEqual(store.getExisting('live'), entries)
+  assert.equal([...store.entries()].length, 1)
+  entries.pop()
+  store.changed('live')
+  assert.equal(store.getExisting('live'), undefined)
+  assert.deepEqual([...store.entries()], [], 'drained sessions release their partition')
+})
