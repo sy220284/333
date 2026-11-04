@@ -78,7 +78,7 @@ export async function openGatewayStore317(config) {
     return {
       // Spend limits reuse the gateway's durable PostgreSQL connection.
       async createSpend() {
-        const { createGatewaySpendStore317 } = await import('./gatewaySpendStore317.mjs')
+        const { createGatewaySpendStore317 } = await import('./gatewaySpendStore317.ts')
         return createGatewaySpendStore317(database)
       },
       // Persist admissions across replicas with one atomic PostgreSQL upsert.
