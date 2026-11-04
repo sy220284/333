@@ -30,6 +30,9 @@ export type SetAppState = (f: (prev: AppState) => AppState) => void
 function logOperation(
   operation: QueueOperation, command?: QueuedCommand, reason?: string,
 ): void {
+  // 2.1.317 E5o skips unlogged and pending-screening entries. The entry is
+  // journaled after screening accepts it; never persist a pending raw input.
+  if (command?.unlogged || command?.screeningPending === true) return
   const queueOp: QueueOperationMessage =
     createQueueOperationRecord(operation, command, getSessionId(), new Date(), { reason })
   void recordQueueOperation(queueOp)
