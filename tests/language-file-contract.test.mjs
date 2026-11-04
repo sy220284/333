@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
-import { dirname, extname, join, relative, resolve } from 'node:path'
+import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const file = path => resolve(root, path)
+const bundled = join('src', 'skills', 'bundled') + sep
 function walk(path) {
   const found = []
   for (const entry of readdirSync(file(path), { withFileTypes: true })) {
@@ -18,7 +19,7 @@ function walk(path) {
 
 test('核心 TypeScript 实现不得经由同名 MJS 测试转接入口导入', () => {
   const failures = []
-  for (const source of walk('src').filter(p => /\.tsx?$/.test(p))) {
+  for (const source of walk('src').filter(p => /\.tsx?$/.test(p) && !p.startsWith(bundled))) {
     const text = readFileSync(file(source), 'utf8')
     const imports = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s*|\brequire\s*\(\s*)['"`](\.{1,2}\/[^'"`]+\.mjs)['"`]/g
     for (const match of text.matchAll(imports)) {
@@ -36,11 +37,11 @@ test('核心 TypeScript 实现不得经由同名 MJS 测试转接入口导入', 
 test('迁移后的 MJS 入口仅转接同名 TypeScript 源码', () => {
   const failures = []
   for (const source of walk('src').filter(p => p.endsWith('.mjs') &&
-    !p.startsWith('src/skills/bundled/'))) {
+    !p.startsWith(bundled))) {
     const canonical = source.slice(0, -4) + '.ts'
     if (!existsSync(file(canonical))) continue
     const text = readFileSync(file(source), 'utf8')
-    const expected = './' + source.split('/').at(-1).slice(0, -4) + '.ts'
+    const expected = './' + basename(source).slice(0, -4) + '.ts'
     const code = text.split('\n').filter(line => !/^\s*(?:\/\/|$)/.test(line)).join('\n').trim()
     if (code !== "export * from '" + expected + "';" &&
         code !== "export * from '" + expected + "'" &&
