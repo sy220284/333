@@ -6,9 +6,9 @@
 import { mkdtemp, cp, readFile, realpath, stat, rm, writeFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, isAbsolute, resolve, relative } from 'node:path'
-import { discoverEvalCases317 } from './pluginEvalCatalog317.mjs'
-import { executePluginEvalSuite317 } from './pluginEvalEngine317.mjs'
-import { savePluginEvalReport317 } from './pluginEvalReport317.mjs'
+import { discoverEvalCases317 } from './pluginEvalCatalog317.ts'
+import { executePluginEvalSuite317 } from './pluginEvalEngine317.ts'
+import { savePluginEvalReport317 } from './pluginEvalReport317.ts'
 
 function within(root, path) {
   const p = relative(root, path)
