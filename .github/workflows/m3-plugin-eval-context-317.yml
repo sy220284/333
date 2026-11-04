@@ -9,6 +9,9 @@ on:
       - 'src/cli/handlers/pluginEvalEntry317.ts'
       - 'src/cli/handlers/pluginEvalModel317.ts'
       - 'src/cli/handlers/pluginEvalWorkspace317.ts'
+      - 'src/cli/handlers/pluginEvalInit317.ts'
+      - 'src/main.tsx'
+      - 'tests/m3-plugin-eval-init-317.test.mjs'
       - 'tests/m3-plugin-eval-context-317.test.mjs'
       - '.github/workflows/m3-plugin-eval-context-317.yml'
   workflow_dispatch:
@@ -24,4 +27,4 @@ jobs:
         with:
           node-version: '22'
       - name: 校验新版上下文、真实脚本及模型参数传递
-        run: node --experimental-strip-types --test tests/m3-plugin-eval-context-317.test.mjs tests/m3-plugin-eval-engine-317.test.mjs
+        run: node --experimental-strip-types --test tests/m3-plugin-eval-context-317.test.mjs tests/m3-plugin-eval-init-317.test.mjs tests/m3-plugin-eval-engine-317.test.mjs
