@@ -36,6 +36,26 @@ test('317 PTY replay retains a single oversized chunk and trims to UTF-8 boundar
     'discarded UTF-8 lead byte must not leave a continuation byte')
 })
 
+test('317 PTY codec accepts primitive JSON controls and enforces size only on decode', () => {
+  const decoded = [], errors = []
+  const read = createPtyFrameDecoder317(packet => decoded.push(packet),
+    reason => errors.push(reason))
+  for (const raw of ['null', '0', 'true', '[]', '{}']) {
+    const bytes = Buffer.from(raw)
+    const frame = Buffer.alloc(5 + bytes.length)
+    frame.writeUInt32BE(bytes.length, 0)
+    frame[4] = 1
+    bytes.copy(frame, 5)
+    read(frame)
+  }
+  assert.deepEqual(decoded.map(x => x.ctrl), [null, 0, true, [], {}])
+  assert.deepEqual(errors, [])
+  const encoded = encodePtyData317(Buffer.alloc(1_048_577, 65))
+  assert.equal(encoded.readUInt32BE(0), 1_048_577)
+  read(encoded)
+  assert.match(errors[0], /frame too large/)
+})
+
 test('317 PTY five-byte frame codec: fragmented data, control and oversize', () => {
   const output = [], failures = []
   const decode = createPtyFrameDecoder317(frame => output.push(frame),
