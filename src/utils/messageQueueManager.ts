@@ -186,7 +186,7 @@ export function dequeueAll(): QueuedCommand[] {
     return []
   }
 
-  const commands = [...commandQueue]
+  const commands = sortQueuedCommandsByPriority(commandQueue)
   commandQueue.length = 0
   notifySubscribers()
 
