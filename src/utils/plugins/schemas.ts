@@ -1465,6 +1465,7 @@ export const InstalledPluginSchema = lazySchema(() =>
       .string()
       .optional()
       .describe('Git commit SHA for git-based plugins (for version tracking)'),
+    sourceCommand: z.string().optional().describe('Previously accepted marketplace install command and its source mode'),
     auto: z.boolean().optional(),
   }),
 )
@@ -1516,6 +1517,7 @@ export const PluginInstallationEntrySchema = lazySchema(() =>
       .string()
       .optional()
       .describe('Git commit SHA for git-based plugins'),
+    sourceCommand: z.string().optional().describe('Accepted marketplace-declared install command and source mode'),
     auto: z.boolean().optional().describe('Installed automatically as a dependency'),
   }),
 )
