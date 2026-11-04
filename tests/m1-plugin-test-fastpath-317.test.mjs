@@ -63,3 +63,30 @@ test('317 plugin test folder runs the test handler and reports its real failure'
     rmSync(parent, { recursive: true, force: true })
   }
 })
+
+test('317 plugin worker emits the official report marker and parseable result', () => {
+  const parent = mkdtempSync(join(tmpdir(), '333-plugin-wire-'))
+  try {
+    const plugin = join(parent, 'plugin')
+    mkdirSync(join(plugin, '.claude-plugin'), { recursive: true })
+    mkdirSync(join(plugin, 'hooks'), { recursive: true })
+    writeFileSync(join(plugin, '.claude-plugin', 'plugin.json'), '{"name":"wire-test"}\n')
+    writeFileSync(join(plugin, 'hooks', 'hooks.json'), '{"modules":["./register.js"]}\n')
+    writeFileSync(join(plugin, 'hooks', 'register.js'), 'export function register(on) {}\n')
+    const file = join(plugin, 'wire.test.ts')
+    writeFileSync(file, "import { test, expect } from 'claude-code/testing'\ntest('wire result', () => { expect(1).toBe(1) })\n")
+    const r = execute(['--file', file, plugin], parent)
+    assert.equal(r.status, 0, r.stdout + r.stderr)
+    const line = r.stdout.trim().split('\n').findLast(row =>
+      row.startsWith('claude-plugin-test-report '))
+    assert.ok(line, r.stdout + r.stderr)
+    const payload = JSON.parse(line.slice('claude-plugin-test-report '.length))
+    assert.equal(payload.file, file)
+    assert.ok(Array.isArray(payload.results))
+    assert.ok(payload.results.some(item => item.title.includes('wire result') &&
+      item.failure == null), JSON.stringify(payload))
+    assert.doesNotMatch(r.stdout, /@@CLAUDE_PLUGIN_TEST_RESULT_317@@/)
+  } finally {
+    rmSync(parent, { recursive: true, force: true })
+  }
+})

@@ -10,7 +10,8 @@ import { resolve, join, relative, isAbsolute } from 'node:path'
 import { discoverPluginTests317 } from '../../utils/plugins/pluginTestDiscovery317.ts'
 import { runPluginTestFile317 } from './pluginTestSandbox317.ts'
 
-const REPORT_PREFIX = '@@CLAUDE_PLUGIN_TEST_RESULT_317@@'
+// Original 2.1.317 chunk-dh4tgvjk.js REPORT_MARK, consumed by the parent CLI.
+const REPORT_PREFIX = 'claude-plugin-test-report '
 const PER_FILE_TIMEOUT_MS = 600000
 const ENV_KEYS = [
   'PATH','HOME','USERPROFILE','SystemRoot','TMPDIR','TEMP','TMP',
