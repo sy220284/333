@@ -200,6 +200,8 @@ jobs:
         run: node --test tests/m1-daemon-worker-317.test.mjs
       - name: 317预加载会话接管、认证切换和退出清理
         run: node --test tests/m1-preload-317.test.mjs
+      - name: 317后台预热备用会话令牌验证与真实模型请求
+        run: node --test tests/m1-bg-spare-317.test.mjs
       - name: 317 MCP登录、退出和授权码交换
         id: acceptance_007
         continue-on-error: true
