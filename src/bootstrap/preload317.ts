@@ -1,6 +1,7 @@
 import { createServer } from 'node:net'
-import { mkdirSync, lstatSync, unlinkSync, writeFileSync, chmodSync, realpathSync } from 'node:fs'
+import { mkdirSync, unlinkSync, writeFileSync, chmodSync, realpathSync } from 'node:fs'
 import { dirname } from 'node:path'
+import { assertSocketVacant317 } from './socketOwnership317.ts'
 
 /**
  * 2.1.317 Linux-x64 cli.js --preload and chunk-dzajqkwk.js:
@@ -81,21 +82,6 @@ function unlinkIfPresent(path) {
   catch (error) { if (error.code !== 'ENOENT') throw error }
 }
 
-function verifySocketPath(socketPath) {
-  const existing = (() => {
-    try { return lstatSync(socketPath) }
-    catch (error) {
-      if (error.code === 'ENOENT') return undefined
-      throw error
-    }
-  })()
-  if (existing) {
-    if (!existing.isSocket())
-      throw new Error('Preload socket path exists and is not a Unix socket: ' + socketPath)
-    unlinkIfPresent(socketPath)
-  }
-}
-
 /** Original 317 rhr() drops individual invalid env keys and accepts other valid keys. */
 export function filterPreloadEnvironment317(environment) {
   // Null prototype preserves an own '__proto__' key from JSON safely.
@@ -167,9 +153,11 @@ export async function runPreload317(args = process.argv.slice(2), {
   for (const name of PRELOAD_RESET_KEYS_317) delete process.env[name]
   const socketPath = args[0] || DEFAULT_PRELOAD_SOCKET_317
   mkdirSync(dirname(socketPath), { recursive: true, mode: 0o700 })
-  verifySocketPath(socketPath)
+  await assertSocketVacant317(socketPath, 'Preload')
   const pidPath = socketPath + '.pid'
   let server
+  let ownsSocket = false
+  let ownsPid = false
   let finished = false
   let resolveClaim
   let rejectClaim
@@ -177,7 +165,8 @@ export async function runPreload317(args = process.argv.slice(2), {
     resolveClaim = resolve; rejectClaim = reject
   })
   const cleanup = () => {
-    for (const path of [socketPath, pidPath]) unlinkIfPresent(path)
+    if (ownsPid) { ownsPid = false; unlinkIfPresent(pidPath) }
+    if (ownsSocket) { ownsSocket = false; unlinkIfPresent(socketPath) }
   }
   const interrupted = () => {
     cleanup()
@@ -229,8 +218,10 @@ export async function runPreload317(args = process.argv.slice(2), {
       server.once('error', reject)
       server.listen(socketPath)
     })
+    ownsSocket = true
     chmodSync(socketPath, 0o600)
     writeFileSync(pidPath, String(process.pid), { mode: 0o600, flag: 'w' })
+    ownsPid = true
     // Import only environment-independent helpers before the claim. In
     // particular, auth/config modules must observe the claimed environment.
     await Promise.all([
