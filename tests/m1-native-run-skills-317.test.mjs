@@ -7,6 +7,11 @@ import { test } from 'node:test'
 // x64 embedded assets. These guard native content and all six /run examples.
 const nativeSha256 = {
   "claude-api/SKILL.md": "35c1458f04fcfddc6d3f46faa6c66e9b44ba71709daf343a8e63a05a63eb976d",
+  "artifact-design/SKILL.md": "8e4917f5394af51deb3552fdb962051074b9b5df2de2a77a8773009a9d86a62f",
+  "cowork-plugin-authoring/SKILL.md": "23416ed0054f0d323fb6adfd67b3ffd990128888755e359762af797cb98ace63",
+  "design-sync/SKILL.md": "1411614218146f0e37ccad94ce33e7a258555c4cdc2ac6ed4d9f31e33edde5d7",
+  "plugin-authoring/SKILL.md": "05f4c4017a8cbc12329ff8fbbfd49023015d7e937a9cc5912f5270af1e7138ed",
+  "verify/SKILL.md": "1555c291f4eaf9a496176f3d07c0e86449a6650f91179fa5d3ac1712b63837ac",
   "run-skill-generator/SKILL.md": "0809696a81a4c063a02f12df590a79a41d9595618e9825309c5a6cebb1320486",
   "run-skill-generator/run-unit-SKILL.md": "bf8228e1e384ae86797434e6d7e4110f61e36029277b7f3e325efc6d3db0631b",
   "run-skill-generator/template.md": "1d20337942195ad5f19aa8231589bfa73bf50aa62ab8789eb5cab13e5ab8d913",
