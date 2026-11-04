@@ -1,0 +1,207 @@
+{
+  "version": "2.1.317",
+  "binary_sha256": "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0",
+  "commands": {
+    "--help": {
+      "flags": [
+        "--add-dir",
+        "--agent",
+        "--agents",
+        "--allow-dangerously-skip-permissions",
+        "--allowedTools",
+        "--append-system-prompt",
+        "--autocompact",
+        "--ax-screen-reader",
+        "--bare",
+        "--betas",
+        "--bg",
+        "--brief",
+        "--chrome",
+        "--cloud",
+        "--continue",
+        "--dangerously-skip-permissions",
+        "--debug",
+        "--debug-file",
+        "--desktop",
+        "--disable-slash-commands",
+        "--disallowedTools",
+        "--effort",
+        "--environment",
+        "--exclude-dynamic-system-prompt-sections",
+        "--fallback-model",
+        "--file",
+        "--fork-session",
+        "--forward-subagent-text",
+        "--from-pr",
+        "--help",
+        "--ide",
+        "--include-hook-events",
+        "--include-partial-messages",
+        "--input-format",
+        "--json-schema",
+        "--max-budget-usd",
+        "--mcp-config",
+        "--model",
+        "--name",
+        "--no-chrome",
+        "--no-session-persistence",
+        "--output-format",
+        "--permission-mode",
+        "--permission-prompt-tool",
+        "--permission-prompts",
+        "--plugin-dir",
+        "--plugin-url",
+        "--print",
+        "--prompt-suggestions",
+        "--remote-control",
+        "--remote-control-session-name-prefix",
+        "--replay-user-messages",
+        "--restricted",
+        "--resume",
+        "--safe-mode",
+        "--session-id",
+        "--setting-sources",
+        "--settings",
+        "--strict-mcp-config",
+        "--system-prompt",
+        "--system-prompt-snapshot",
+        "--teleport",
+        "--tmux",
+        "--tools",
+        "--verbose",
+        "--version",
+        "--worktree"
+      ],
+      "commands": [
+        "agents",
+        "attach",
+        "auth",
+        "auto-mode",
+        "doctor",
+        "gateway",
+        "import",
+        "install",
+        "logs",
+        "mcp",
+        "plugin",
+        "purge",
+        "respawn",
+        "rm",
+        "setup-token",
+        "stop",
+        "ultrareview",
+        "update"
+      ]
+    },
+    "auth --help": {
+      "flags": [
+        "--help"
+      ],
+      "commands": [
+        "help",
+        "login",
+        "logout",
+        "status"
+      ]
+    },
+    "auth login --help": {
+      "flags": [
+        "--claudeai",
+        "--console",
+        "--email",
+        "--help",
+        "--sso"
+      ],
+      "commands": []
+    },
+    "mcp --help": {
+      "flags": [
+        "--help"
+      ],
+      "commands": [
+        "add",
+        "add-from-claude-desktop",
+        "add-json",
+        "get",
+        "help",
+        "list",
+        "login",
+        "logout",
+        "remove",
+        "reset-project-choices",
+        "serve"
+      ]
+    },
+    "mcp add --help": {
+      "flags": [
+        "--callback-port",
+        "--client-id",
+        "--client-secret",
+        "--env",
+        "--header",
+        "--help",
+        "--scope",
+        "--transport"
+      ],
+      "commands": []
+    },
+    "plugin --help": {
+      "flags": [
+        "--help"
+      ],
+      "commands": [
+        "configure",
+        "details",
+        "disable",
+        "enable",
+        "eval",
+        "help",
+        "init",
+        "install",
+        "list",
+        "marketplace",
+        "prune",
+        "tag",
+        "test",
+        "uninstall",
+        "update",
+        "validate"
+      ]
+    },
+    "agents --help": {
+      "flags": [
+        "--add-dir",
+        "--agent",
+        "--all",
+        "--allow-dangerously-skip-permissions",
+        "--cwd",
+        "--dangerously-skip-permissions",
+        "--effort",
+        "--help",
+        "--json",
+        "--mcp-config",
+        "--model",
+        "--permission-mode",
+        "--plugin-dir",
+        "--restricted",
+        "--setting-sources",
+        "--settings",
+        "--strict-mcp-config"
+      ],
+      "commands": []
+    },
+    "plugin install --help": {
+      "flags": [
+        "--accept-command",
+        "--config",
+        "--help",
+        "--json",
+        "--marketplace",
+        "--registry",
+        "--scope",
+        "--yes"
+      ],
+      "commands": []
+    }
+  }
+}
