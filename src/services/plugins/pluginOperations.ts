@@ -323,6 +323,7 @@ export function getPluginInstallationFromV2(pluginId: string): {
 export async function installPluginOp(
   plugin: string,
   scope: InstallableScope = 'user',
+  npmRegistry?: string,
 ): Promise<PluginOperationResult> {
   assertInstallableScope(scope)
 
@@ -370,7 +371,20 @@ export async function installPluginOp(
     }
   }
 
-  const entry = foundPlugin
+  // Official --registry applies to npm package sources for this install,
+  // without modifying the marketplace's persistent source declaration.
+  let entry = foundPlugin
+  if (npmRegistry && typeof foundPlugin.source !== 'string' && foundPlugin.source.source === 'npm') {
+    try {
+      const url = new URL(npmRegistry)
+      if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+        throw new Error('Unsupported registry protocol')
+      }
+    } catch {
+      return { success: false, message: '--registry must be an HTTP(S) URL for npm sources' }
+    }
+    entry = { ...foundPlugin, source: { ...foundPlugin.source, registry: npmRegistry } }
+  }
   const pluginId = `${entry.name}@${foundMarketplace}`
 
   // The managed deny policy applies on every installation attempt, including
