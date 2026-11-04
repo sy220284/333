@@ -183,6 +183,8 @@ jobs:
         run: |
           bun test tests/m3-plugin-eval-catalog-317.test.mjs
           node --test tests/m3-plugin-eval-graders-317.test.mjs
+      - name: 317插件评测双臂执行、成本及报告验收
+        run: node --test tests/m3-plugin-eval-engine-317.test.mjs
       - name: 317模型目录、读取边界和嵌套会话
         id: acceptance_008
         continue-on-error: true
