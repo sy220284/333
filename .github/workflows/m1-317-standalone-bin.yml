@@ -1,0 +1,75 @@
+name: M1 317 三平台无外部Bun依赖的自包含程序验证
+
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - '.github/workflows/m1-317-standalone-bin.yml'
+      - 'build/rebuild.mjs'
+      - 'build/package-release.mjs'
+      - 'build/public-dependencies.lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m1-317-standalone-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  native-bundle:
+    name: 验证源码编译的独立可执行文件 (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Windows开启Git长路径
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 从真实源码独立重建317候选
+        run: |
+          set -euo pipefail
+          node build/verify-bundled-assets.mjs
+          node build/restore-claude-api.mjs --verify
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+          bun build/rebuild.mjs
+          node build/package-release.mjs
+      - name: 生成无需全局Bun的本机可执行程序
+        run: |
+          set -euo pipefail
+          bun build dist/cli.js --compile --outfile dist/claude
+          if [ -f dist/claude.exe ]; then binary=dist/claude.exe; else binary=dist/claude; fi
+          test -s "$binary"
+          chmod +x "$binary" || true
+          "$binary" --version
+          "$binary" --help > /tmp/m1-317-binary-help.txt
+          grep -q 'Usage:' /tmp/m1-317-binary-help.txt
+          expected="$(node -p 'require("./package.json").version') (Claude Code)"
+          test "$("$binary" --version)" = "$expected"
+      - name: 仓库外独立运行且无需调用Bun
+        run: |
+          set -euo pipefail
+          isolated="$(mktemp -d)"
+          cp -R dist "$isolated/release"
+          cd "$isolated"
+          if [ -f release/claude.exe ]; then binary=release/claude.exe; else binary=release/claude; fi
+          "$binary" --version
+          "$binary" auth --help | grep -q 'Usage:'
+          "$binary" mcp --help | grep -q 'Usage:'
+          echo "自包含二进制在源码仓库外验证通过"
