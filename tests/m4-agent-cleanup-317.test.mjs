@@ -47,3 +47,25 @@ test('2.1.317 agent cleanup: concurrent disposer failures are all reported', asy
     },
   )
 })
+
+test('2.1.317 agent preserves original model failure when cleanup also rejects', async () => {
+  const original = new Error('original model stream error')
+  const cleanup = new Error('MCP cleanup rejected')
+  const released = []
+  await assert.rejects(
+    releaseAgentResources([
+      ['MCP', () => { throw cleanup }],
+      ['todos', () => { released.push('todos') }],
+      ['background shells', () => { released.push('background shells') }],
+    ], original),
+    error => {
+      assert.ok(error instanceof AggregateError)
+      assert.equal(error.errors.length, 2)
+      assert.equal(error.errors[0], original)
+      assert.equal(error.errors[1].cause, cleanup)
+      assert.equal(error.cause, original)
+      return true
+    },
+  )
+  assert.deepEqual(released, ['todos', 'background shells'])
+})
