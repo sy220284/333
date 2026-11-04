@@ -3,7 +3,7 @@
  * The blank route is available in headless sessions; on a TTY the interviewer
  * gathers an actual prompt and grader before creating case files.
  */
-import { mkdir, readFile, writeFile, stat, rm, realpath } from 'node:fs/promises'
+import { mkdir, writeFile, stat, rm, realpath } from 'node:fs/promises'
 import { createInterface } from 'node:readline/promises'
 import { join, resolve, isAbsolute, relative } from 'node:path'
 
@@ -34,8 +34,13 @@ export async function createEvalCase317(name, options = {}) {
   const base=await realpath(cwd)
   const suite=resolve(base,rawDir)
   if (!safeWithin(base,suite)) throw new Error('eval directory escaped plugin root')
-  if (await present(suite) && !safeWithin(base,await realpath(suite))) {
-    throw new Error('eval directory symlink escaped plugin root')
+  let cursor=base
+  for (const segment of relative(base,suite).split(/[\\/]/).filter(Boolean)) {
+    cursor=join(cursor,segment)
+    if (!(await present(cursor))) await mkdir(cursor)
+    if (!safeWithin(base,await realpath(cursor))) {
+      throw new Error('eval directory symlink escaped plugin root')
+    }
   }
   if (typeof name !== 'string' || !VALID_NAME.test(name) || name === '.' ||
       name === '..' || name.startsWith('.')) {
