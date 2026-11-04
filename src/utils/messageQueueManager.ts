@@ -18,7 +18,7 @@ import { extractTextContent } from './messages.js'
 import { objectGroupBy } from './objectGroupBy.js'
 import { recordQueueOperation } from './sessionStorage.js'
 import { createSignal } from './signal.js'
-import { SessionQueuePartitions317 } from './sessionQueuePartitions317.mjs'
+import { SessionQueuePartitions317 } from './sessionQueuePartitions317.ts'
 import { QUEUE_PRIORITY_ORDER as PRIORITY_ORDER, sortQueuedCommandsByPriority } from './queuePriority317.ts'
 import { createDiscardedQueueRecords, createQueueOperationRecord, partitionQueueForClear } from './queueOperation317.ts'
 
