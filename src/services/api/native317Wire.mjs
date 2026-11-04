@@ -12,6 +12,13 @@
  */
 export const NATIVE_317_API_VERSION = '2023-06-01'
 
+/** Fetch(Request, init) replaces the Request headers only when init.headers
+ * exists. A fetch wrapper must preserve those original headers, otherwise the
+ * beta-route and OAuth decisions silently lose their identifying headers. */
+export function native317RequestHeaders(input, init) {
+  return new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined))
+}
+
 export function native317MessagesRequest(input, init, { apiKey } = {}) {
   const uri = input instanceof Request ? input.url : String(input)
   const parsed = new URL(uri)
@@ -20,7 +27,7 @@ export function native317MessagesRequest(input, init, { apiKey } = {}) {
     return { input, init }
   }
 
-  const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined))
+  const headers = native317RequestHeaders(input, init)
   if (!headers.has('anthropic-beta')) return { input, init }
 
   parsed.searchParams.set('beta', 'true')
