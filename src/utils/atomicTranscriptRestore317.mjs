@@ -7,6 +7,8 @@
  */
 import { randomUUID } from 'node:crypto'
 import { constants } from 'node:fs'
+import { resolve } from 'node:path'
+import { withTranscriptDestinationLocks } from './transcriptDestinationLocks317.mjs'
 import {
   copyFile as copyFileNative,
   rename as renameNative,
@@ -27,10 +29,11 @@ function validateEntries(entries) {
     if (typeof entry.path !== 'string' || !entry.path || typeof entry.content !== 'string') {
       throw new TypeError('Transcript replacement requires a file path and JSONL content')
     }
-    if (names.has(entry.path)) {
+    const destination = resolve(entry.path)
+    if (names.has(destination)) {
       throw new Error('Duplicate transcript restoration destination: ' + entry.path)
     }
-    names.add(entry.path)
+    names.add(destination)
   }
 }
 
@@ -45,6 +48,13 @@ async function removeTemp(io, path, failures) {
 export async function replaceTranscriptBatchAtomically(entries, io = nativeIO) {
   validateEntries(entries)
   if (entries.length === 0) return
+  return withTranscriptDestinationLocks(
+    entries.map(entry => entry.path),
+    () => publishTranscriptBatchAtomically(entries, io),
+  )
+}
+
+async function publishTranscriptBatchAtomically(entries, io) {
   const token = randomUUID()
   const records = entries.map(({ path, content }, i) => ({
     path,
