@@ -11,8 +11,8 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: m6-runner-317-${{ github.sha }}
-  cancel-in-progress: false
+  group: m6-runner-317-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   runner-core:
     runs-on: ubuntu-24.04
