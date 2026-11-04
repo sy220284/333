@@ -33,6 +33,9 @@ export function UltrareviewAllFilesDialog({
     if (isLaunching) return
     setIsLaunching(true)
     void onProceed(controller.current.signal).catch(error => {
+      // Cancellation has already resolved the dialog; do not report a
+      // delayed transport failure after the user explicitly cancelled.
+      if (controller.current.signal.aborted) return
       setIsLaunching(false)
       onError(error)
     })
