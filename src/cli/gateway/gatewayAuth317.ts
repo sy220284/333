@@ -145,7 +145,7 @@ export async function createOidcProvider317(config: GatewayOidcConfig317): Promi
     }
     const jwk = cachedKeys?.find(x => x.kid === header.kid && (!x.alg || x.alg === header.alg))
     if (!jwk) throw new Error('OIDC token signing key not present in provider JWKS')
-    const key = createPublicKey({ key: jwk as JsonWebKey, format: 'jwk' })
+    const key = createPublicKey({ key: jwk as import('node:crypto').JsonWebKeyInput['key'], format: 'jwk' })
     const opts = header.alg === 'ES256'
       ? { key, dsaEncoding: 'ieee-p1363' as const }
       : header.alg === 'PS256'
