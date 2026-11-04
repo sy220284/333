@@ -11,6 +11,9 @@ import { test } from 'node:test'
 
 const root = resolve(import.meta.dirname, '..')
 const packageScript = join(root, 'build/package-release.mjs')
+const platformDir = process.arch + '-' + process.platform
+const nativeAudio = `vendor/audio-capture/${platformDir}/audio-capture.node`
+const nativeRg = `vendor/ripgrep/${platformDir}/${process.platform === 'win32' ? 'rg.exe' : 'rg'}`
 const sha256 = data => createHash('sha256').update(data).digest('hex')
 
 function fixture(run) {
@@ -18,7 +21,7 @@ function fixture(run) {
   try {
     for (const file of ['build/package-release.mjs', 'build/release-launcher.cjs', 'build/public-dependencies.lock.json',
       'LICENSE.md', 'package.json', 'dist/cli.js',
-      'vendor/audio-capture/x64-linux/audio-capture.node', 'vendor/ripgrep/COPYING']) {
+      nativeAudio, nativeRg, 'vendor/ripgrep/COPYING']) {
       const dest = join(dir, file)
       mkdirSync(dirname(dest), { recursive: true })
       if (file === 'build/package-release.mjs') copyFileSync(packageScript, dest)
@@ -63,7 +66,7 @@ test('M1 C19-T03: repeated packaging removes obsolete vendor binaries and preser
     const obsolete = join(dir, 'dist/vendor/obsolete/old.node')
     mkdirSync(dirname(obsolete), { recursive: true })
     writeFileSync(obsolete, 'stale')
-    const sourceFile = join(dir, 'vendor/audio-capture/x64-linux/audio-capture.node')
+    const sourceFile = join(dir, nativeAudio)
     writeFileSync(sourceFile, 'official-updated-audio-native-module')
     const second = build(dir)
     assert.equal(second.status, 0, second.stderr)
@@ -92,7 +95,7 @@ test('M1 C19-T03: invalid vendor symlink fails before existing distribution is r
     assert.equal(build(dir).status, 0)
     const manifestPath = join(dir, 'dist/integrity.json')
     const originalManifest = readFileSync(manifestPath)
-    const outputVendor = join(dir, 'dist/vendor/audio-capture/x64-linux/audio-capture.node')
+    const outputVendor = join(dir, join('dist', nativeAudio))
     const originalBytes = readFileSync(outputVendor)
     const outside = join(dir, 'outside-vendor')
     mkdirSync(outside)
@@ -112,11 +115,11 @@ test('M1 C19-T03: staging activation failure rolls back to the complete previous
   fixture(dir => {
     const first = build(dir)
     assert.equal(first.status, 0, first.stderr)
-    const outputFile = join(dir, 'dist/vendor/audio-capture/x64-linux/audio-capture.node')
+    const outputFile = join(dir, join('dist', nativeAudio))
     const manifestPath = join(dir, 'dist/integrity.json')
     const originalFile = readFileSync(outputFile)
     const originalManifest = readFileSync(manifestPath)
-    writeFileSync(join(dir, 'vendor/audio-capture/x64-linux/audio-capture.node'),
+    writeFileSync(join(dir, nativeAudio),
       'new-official-native-resource')
     const injection = join(dir, 'inject-vendor-failure.cjs')
     writeFileSync(injection, [
@@ -152,7 +155,7 @@ test('M1 C19-T03: staging activation failure rolls back to the complete previous
 test('M1 C19-T03: partial source copy fails before switching the previous release', () => {
   fixture(dir => {
     assert.equal(build(dir).status, 0)
-    const outputFile = join(dir, 'dist/vendor/audio-capture/x64-linux/audio-capture.node')
+    const outputFile = join(dir, join('dist', nativeAudio))
     const originalFile = readFileSync(outputFile)
     const manifestPath = join(dir, 'dist/integrity.json')
     const originalManifest = readFileSync(manifestPath)
