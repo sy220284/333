@@ -144,6 +144,8 @@ export type PluginOperationResult = {
   pluginId?: string
   pluginName?: string
   scope?: PluginScope
+  installedVersion?: string
+  availableVersion?: string
   /** Plugins that declare this plugin as a dependency (warning on uninstall/disable) */
   reverseDependents?: string[]
 }
@@ -370,6 +372,30 @@ export async function installPluginOp(
 
   const entry = foundPlugin
   const pluginId = `${entry.name}@${foundMarketplace}`
+
+  // Official 2.1.317 is idempotent for an already-installed, enabled plugin.
+  // Check both the V2 registry and the actual install path: a stale record
+  // must be repaired by installation rather than reported as successful.
+  const existing = loadInstalledPluginsV2().plugins[pluginId]?.find(installation =>
+    installation.scope === scope &&
+    (scope === 'user' || installation.projectPath === getOriginalCwd()),
+  )
+  const currentSetting = getSettingsForSource(scopeToSettingSource(scope))
+  if (
+    existing &&
+    getFsImplementation().existsSync(existing.installPath) &&
+    currentSetting?.enabledPlugins?.[pluginId] === true
+  ) {
+    return {
+      success: true,
+      message: `Plugin "${pluginId}" is already installed (scope: ${scope})`,
+      pluginId,
+      pluginName: entry.name,
+      scope,
+      installedVersion: existing.version,
+      availableVersion: entry.version ?? existing.version,
+    }
+  }
 
   const result = await installResolvedPlugin({
     pluginId,
