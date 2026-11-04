@@ -27,6 +27,8 @@ on:
       - 'build/standalone-bundled-assets-*.json'
       - 'build/verify-bundled-assets.mjs'
       - 'build/restore-claude-api.mjs'
+      - 'build/claude-api-2.1.317-manifest.json'
+      - 'tests/m1-claude-api-manifest-317.test.mjs'
       - 'tests/m1-standalone-assets-317.test.mjs'
       - 'tests/m1-plugin-install-migration-317.test.mjs'
       - 'src/utils/plugins/installedPluginsManager.ts'
@@ -69,7 +71,7 @@ jobs:
         with:
           bun-version: 1.4.4
       - name: 校验仓库对当前与历史基线的独立定义
-        run: node --test tests/m1-target-release-317.test.mjs tests/m1-read-repeat-317.test.mjs tests/m1-subagent-effort-317.test.mjs tests/m1-317-chain-matrix.test.mjs tests/m1-account-email-disclosure-317.test.mjs tests/m1-official-bundled-skills-317.test.mjs
+        run: node --test tests/m1-target-release-317.test.mjs tests/m1-read-repeat-317.test.mjs tests/m1-subagent-effort-317.test.mjs tests/m1-317-chain-matrix.test.mjs tests/m1-account-email-disclosure-317.test.mjs tests/m1-official-bundled-skills-317.test.mjs tests/m1-claude-api-manifest-317.test.mjs
       - name: 校验317独立内置资源的篡改和版本切换保护
         run: node --test tests/m1-standalone-assets-317.test.mjs
       - name: 校验最终版嵌入技能扫描器的哈希、归属与差异识别
