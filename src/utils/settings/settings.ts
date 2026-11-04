@@ -27,6 +27,7 @@ import { profileCheckpoint } from '../startupProfiler.js'
 import {
   type EditableSettingSource,
   getEnabledSettingSources,
+  isSettingSourceEnabled,
   type SettingSource,
 } from './constants.js'
 import { markInternalWrite } from './internalWrites.js'
@@ -975,6 +976,7 @@ export function getAutoModeConfig():
       'flagSettings',
       'policySettings',
     ] as const) {
+      if (!isSettingSourceEnabled(source)) continue
       const settings = getSettingsForSource(source)
       if (!settings) continue
       const result = schema.safeParse(
