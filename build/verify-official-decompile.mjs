@@ -52,6 +52,7 @@ try {
     if (typeof file !== 'string' || !file || file === '.' || file === '..' ||
         isAbsolute(file) || file.includes('\\') || file.split('/').some(part => !part || part === '.' || part === '..') || seen.has(file)) {
       throw new Error(`Invalid/duplicate embedded path: ${file}`)
+    }
     seen.add(file)
     if (!Number.isSafeInteger(size) || size < 0 || !Number.isSafeInteger(offset) ||
         offset < 0 || offset + size > binarySize || !/^[a-f0-9]{64}$/.test(sha256)) {
