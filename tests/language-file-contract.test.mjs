@@ -92,3 +92,22 @@ test('Node 测试入口只直接运行 MJS，TypeScript 测试交给 Bun', () =>
     }
   }
 })
+
+test('主测试套件的 MJS 与 TypeScript 测试分别使用对应运行器', () => {
+  const pkg = JSON.parse(readFileSync(file('package.json'), 'utf8'))
+  for (const name of ['test:all', 'test:m2']) {
+    const parts = pkg.scripts[name].split(/\s*&&\s*/)
+    assert.equal(parts.length, 2, name + ': expected one Node and one Bun test command')
+    assert.match(parts[0], /^node --test /, name)
+    assert.match(parts[1], /^bun test /, name)
+    const nodeFiles = parts[0].replace(/^node --test /, '').trim().split(/\s+/)
+    const bunFiles = parts[1].replace(/^bun test /, '').trim().split(/\s+/)
+    assert.ok(nodeFiles.every(path => path.endsWith('.test.mjs')),
+      name + ': Node should execute only MJS tests')
+    assert.ok(bunFiles.every(path => path.endsWith('.test.ts')),
+      name + ': Bun should execute TypeScript tests in these suites')
+    const combined = [...nodeFiles, ...bunFiles]
+    assert.equal(new Set(combined).size, combined.length, name + ': duplicate test files')
+    for (const path of combined) assert.ok(existsSync(file(path)), name + ': missing ' + path)
+  }
+})
