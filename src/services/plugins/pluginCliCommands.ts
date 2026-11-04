@@ -124,6 +124,8 @@ export async function installPlugin(
         pluginId: result.pluginId ?? plugin,
         scope: result.scope ?? scope,
         message: result.message,
+        ...(result.installedVersion && { installedVersion: result.installedVersion }),
+        ...(result.availableVersion && { availableVersion: result.availableVersion }),
       })}\n`)
     } else {
       console.log(`${figures.tick} ${result.message}`)
