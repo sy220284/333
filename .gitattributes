@@ -32,3 +32,4 @@ src/skills/bundled/claude-api/** -text -eol whitespace=-blank-at-eol,-blank-at-e
 src/skills/bundled/artifact-diagramming/assets/mermaid.min.js -text -eol
 src/skills/bundled/data-visualization/assets/chart.umd.min.js -text -eol
 src/skills/bundled/artifact-design/assets/hljsBundle.generated.min.js -text -eol
+research/official-317-unaltered/** -text

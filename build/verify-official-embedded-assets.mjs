@@ -48,6 +48,22 @@ export function verifyOfficialEmbeddedAssets317(projectRoot = ROOT) {
     if (bytes.length !== item.bytes || actual !== item.sha256) {
       throw Error('Official 2.1.317 resource bytes differ from the pinned original: ' + path)
     }
+    // Runtime import-path corrections retain a verifiable unmodified copy
+    // of every official script whose content changed during normalization.
+    if (item.upstream_sha256 !== undefined || item.upstream_backup !== undefined) {
+      const backup = item.upstream_backup
+      if (typeof backup !== 'string' || !backup.startsWith('research/official-317-unaltered/') ||
+          isAbsolute(backup) || backup.includes('\\') ||
+          backup.split('/').some(part => !part || part === '.' || part === '..') ||
+          typeof item.upstream_sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(item.upstream_sha256)) {
+        throw Error('Invalid upstream source provenance: ' + path)
+      }
+      const archived = join(root, backup)
+      if (!lstatSync(archived).isFile() ||
+          createHash('sha256').update(readFileSync(archived)).digest('hex') !== item.upstream_sha256) {
+        throw Error('Original official resource provenance differs: ' + backup)
+      }
+    }
     totalBytes += bytes.length
   }
   return { release: RELEASE, resourceCount: COUNT, bytes: totalBytes, verified: true }

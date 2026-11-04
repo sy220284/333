@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createHash } from 'node:crypto'
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -31,6 +31,14 @@ test('317 original embedded resources: 101 verified source files',()=>{
  const result=verifyOfficialEmbeddedAssets317(ROOT)
  assert.equal(result.resourceCount,101)
  assert.ok(result.bytes>0)
+})
+test('317 normalized scripts retain exact upstream source provenance',()=>{
+ const manifest=JSON.parse(readFileSync(join(ROOT,catalog),'utf8'))
+ const normalized=manifest.resources.filter(x=>x.upstream_backup)
+ assert.equal(normalized.length,2)
+ for (const record of normalized) {
+  assert.equal(createHash('sha256').update(readFileSync(join(ROOT,record.upstream_backup))).digest('hex'),record.upstream_sha256)
+ }
 })
 test('317 original embedded resources: valid manifest passes',()=>{
  fixture(root=>assert.equal(verifyOfficialEmbeddedAssets317(root).verified,true))

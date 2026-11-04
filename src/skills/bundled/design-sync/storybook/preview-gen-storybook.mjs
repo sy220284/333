@@ -18,7 +18,7 @@
 // lib/story-imports.mjs.
 
 import { relative } from 'node:path';
-import { exportName } from './common.mjs';
+import { exportName } from '../lib/common.mjs';
 
 // The composeStories-equivalent embedded in every wrapper. Storybook
 // semantics, minimally: merged args (meta <- story), render precedence

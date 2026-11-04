@@ -47,6 +47,11 @@ test('official 317 distribution: corrupted source is rejected before modifying p
       const to = join(root, asset.path)
       mkdirSync(dirname(to), { recursive: true })
       copyFileSync(join(ROOT, asset.path), to)
+      if (asset.upstream_backup) {
+        const original = join(root, asset.upstream_backup)
+        mkdirSync(dirname(original), { recursive: true })
+        copyFileSync(join(ROOT, asset.upstream_backup), original)
+      }
     }
     packageOfficialEmbeddedAssets317(root, dist)
     const old = join(dist, 'official-317', MANIFEST.resources[0].path.slice(4))

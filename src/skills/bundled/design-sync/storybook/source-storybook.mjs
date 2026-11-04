@@ -8,9 +8,9 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { IIFE_IMPORT_META_DEFINE, titleParts } from './common.mjs';
-import { findStorybookDirs } from './detect.mjs';
-import { storybookStubPlugin } from './story-imports.mjs';
+import { IIFE_IMPORT_META_DEFINE, titleParts } from '../lib/common.mjs';
+import { findStorybookDirs } from '../lib/detect.mjs';
+import { storybookStubPlugin } from '../lib/story-imports.mjs';
 
 function pickStorybookDir({ INPUTS, PKG, SB_CONFIG_DIR }) {
   if (SB_CONFIG_DIR) return SB_CONFIG_DIR;

@@ -133,6 +133,12 @@
       "sha256": "86d7a7da624b84f8f72f8f0b6f62a58118daedf83f65d08ef51bcbc8d1b3a895"
     },
     {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/ct-auth.mjs",
+      "bytes": 20148,
+      "sha256": "84f2920c2eddf2f872f5885f46b35a9bbdea8f46c8a1b6b378663bad0d0d2be2",
+      "upstream_path": "src/skills/bundled/claude-test-conversation/scripts/lib/ct-auth.mjs"
+    },
+    {
       "path": "src/skills/bundled/claude-test-conversation/scripts/ct.mjs",
       "bytes": 139817,
       "sha256": "e0637aa3a5a531d60e87149005c8ac650ec9cdd6a3338fc23f54ab5c6c506e28"
@@ -156,11 +162,6 @@
       "path": "src/skills/bundled/claude-test-conversation/scripts/lib/config.mjs",
       "bytes": 99134,
       "sha256": "eb9cbcbd226b7b4a095ade4349b28943e8d6f4d7666c383bc0e5f6aeb53b4374"
-    },
-    {
-      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/ct-auth.mjs",
-      "bytes": 20148,
-      "sha256": "84f2920c2eddf2f872f5885f46b35a9bbdea8f46c8a1b6b378663bad0d0d2be2"
     },
     {
       "path": "src/skills/bundled/claude-test-conversation/scripts/lib/discover.mjs",
@@ -348,11 +349,6 @@
       "sha256": "2680b62649b8fb24650cee9c16ea37f0ebb1872def756962aa8c6de2def2721d"
     },
     {
-      "path": "src/skills/bundled/design-sync/lib/capture.mjs",
-      "bytes": 15723,
-      "sha256": "b51d7aff26487cd2fed0ec432a47e2d138c39303437792342f79539f261648b9"
-    },
-    {
       "path": "src/skills/bundled/design-sync/lib/common.mjs",
       "bytes": 12029,
       "sha256": "92890bbce8d3d76d9473c6c7a09f83622730f8806811ac4bfbb63f157901f0ec"
@@ -386,11 +382,6 @@
       "path": "src/skills/bundled/design-sync/lib/emit.mjs",
       "bytes": 37817,
       "sha256": "368f67e69c06c472ee5411f9d00f6ec1fa971438d7c0b1e0390844f8cff5743d"
-    },
-    {
-      "path": "src/skills/bundled/design-sync/lib/http-serve.mjs",
-      "bytes": 2054,
-      "sha256": "9936afc8af74258343770ad1497b7f7a7e993a8adeeb92f123e3b1f3896897cd"
     },
     {
       "path": "src/skills/bundled/design-sync/lib/preview-rebuild.mjs",
@@ -428,6 +419,12 @@
       "sha256": "3e6584fdad080a45aee401860decd7fa1992c9088182f2cd3e1b6d2d67681d7a"
     },
     {
+      "path": "src/skills/bundled/design-sync/package-capture.mjs",
+      "bytes": 15723,
+      "sha256": "b51d7aff26487cd2fed0ec432a47e2d138c39303437792342f79539f261648b9",
+      "upstream_path": "src/skills/bundled/design-sync/lib/capture.mjs"
+    },
+    {
       "path": "src/skills/bundled/design-sync/package-validate.mjs",
       "bytes": 51938,
       "sha256": "0b84d3ea1c7c62093e6eb64f2028bb25adf5c97e0e2751195ae45105b19a88f7"
@@ -443,9 +440,17 @@
       "sha256": "8a83bb7e69179e1a54153eea16874fc22f3c4c0490c4f062f5eaaabd05ce7368"
     },
     {
+      "path": "src/skills/bundled/design-sync/storybook/http-serve.mjs",
+      "bytes": 2054,
+      "sha256": "9936afc8af74258343770ad1497b7f7a7e993a8adeeb92f123e3b1f3896897cd",
+      "upstream_path": "src/skills/bundled/design-sync/lib/http-serve.mjs"
+    },
+    {
       "path": "src/skills/bundled/design-sync/storybook/preview-gen-storybook.mjs",
-      "bytes": 6916,
-      "sha256": "9cb720a9fbdc5d1b19fd4578a55778f621c51e21c3504ad73a6c9e3283ea6717"
+      "bytes": 6921,
+      "sha256": "6a4999e4f0cbb494753194b54a2ad53c757cb5af1671533e8527d9ece9d9c23f",
+      "upstream_sha256": "9cb720a9fbdc5d1b19fd4578a55778f621c51e21c3504ad73a6c9e3283ea6717",
+      "upstream_backup": "research/official-317-unaltered/design-sync/storybook/preview-gen-storybook.mjs"
     },
     {
       "path": "src/skills/bundled/design-sync/storybook/probe.mjs",
@@ -454,8 +459,10 @@
     },
     {
       "path": "src/skills/bundled/design-sync/storybook/source-storybook.mjs",
-      "bytes": 18663,
-      "sha256": "cd243f62f2243df912ff9b515ccd84659f5a9eb5eff37ca0f6345bcb64bed41d"
+      "bytes": 18678,
+      "sha256": "f613e92f8803a0e532dda6a87ae23401d5b63f98cdfe92c83a90ae9f719abdd5",
+      "upstream_sha256": "cd243f62f2243df912ff9b515ccd84659f5a9eb5eff37ca0f6345bcb64bed41d",
+      "upstream_backup": "research/official-317-unaltered/design-sync/storybook/source-storybook.mjs"
     },
     {
       "path": "src/skills/bundled/official-extras/appifact_sdk.js",
