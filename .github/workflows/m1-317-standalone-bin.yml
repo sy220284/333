@@ -31,6 +31,9 @@ on:
       - 'tests/m1-preload-317.test.mjs'
       - 'src/bootstrap/preload317.ts'
       - 'src/bootstrap/preload317.mjs'
+      - 'src/bootstrap/daemonWorker317.ts'
+      - 'src/bootstrap/daemonWorker317.mjs'
+      - 'tests/m1-daemon-worker-317.test.mjs'
       - 'tests/m1-version-verbose-317.test.mjs'
       - 'build/verify-official-native-by-platform.mjs'
       - 'native/audio-capture-src/index.ts'
@@ -138,6 +141,8 @@ jobs:
           node --test tests/distribution-isolation.test.mjs
       - name: 自包含原生执行程序走真实模型请求、配置优先级及JSON响应
         run: M1_NATIVE_BINARY_RUN=1 node --test tests/m1-startup-cli-317.test.mjs
+      - name: 317 daemon worker心跳和错误协议原版双跑
+        run: node --test tests/m1-daemon-worker-317.test.mjs
       - name: 317官方与重建预加载会话接管及真实模型请求双跑
         run: node --test tests/m1-preload-317.test.mjs
       - name: 对比官方317和重建程序的三平台真实冷启动及帮助性能

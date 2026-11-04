@@ -105,6 +105,13 @@ async function main(): Promise<void> {
   // Upstream 317 tunes JIT after startup; the timer must not keep CLI alive.
   scheduleJitPolicy317({ args });
 
+  // 317 daemon worker reads JSON from stdin and runs without REPL/PTY imports.
+  if (args[0] === '--daemon-worker') {
+    const { runDaemonWorker317 } = await import('../bootstrap/daemonWorker317.ts');
+    process.exitCode = await runDaemonWorker317(args[1]);
+    return;
+  }
+
   // 317 remote preloader is a one-shot socket claim that must run before
   // importing the interactive CLI or starting background session services.
   if (args[0] === '--preload') {
