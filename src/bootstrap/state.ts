@@ -453,6 +453,7 @@ export function regenerateSessionId(
   // null so getTranscriptPath() derives from originalCwd.
   STATE.sessionId = randomUUID() as SessionId
   STATE.sessionProjectDir = null
+  sessionSwitched.emit(STATE.sessionId)
   return STATE.sessionId
 }
 
