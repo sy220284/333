@@ -6,3 +6,11 @@ export async function commitRestoredSession(persist, activate) {
   await persist()
   activate()
 }
+
+/** Null from session-ingress means that authentication or fetch failed. */
+export function requireFetchedSessionEntries(entries) {
+  if (!Array.isArray(entries)) {
+    throw new Error('Remote session transcript fetch failed; existing session was preserved')
+  }
+  return entries
+}

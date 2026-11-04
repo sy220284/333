@@ -72,7 +72,7 @@ import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
 import { getErrnoCode, isFsInaccessible } from './errors.js'
 import { shouldRetrySessionAppendAfterMkdir } from './sessionWriteFailurePolicy.mjs'
-import { commitRestoredSession } from './sessionHydrationCommit317.mjs'
+import { commitRestoredSession, requireFetchedSessionEntries } from './sessionHydrationCommit317.mjs'
 import { replaceTranscriptAtomically, replaceTranscriptBatchAtomically, assertSafeAgentTranscriptId } from './atomicTranscriptRestore317.mjs'
 import type { FileHistorySnapshot } from './fileHistory.js'
 import { formatFileSize } from './format.js'
@@ -1619,7 +1619,7 @@ export async function hydrateRemoteSession(
 
   try {
     const remoteLogs =
-      (await sessionIngress.getSessionLogs(sessionId, ingressUrl)) || []
+      requireFetchedSessionEntries(await sessionIngress.getSessionLogs(sessionId, ingressUrl))
 
     // Ensure the project directory and session file exist
     const projectDir = getProjectDir(getOriginalCwd())

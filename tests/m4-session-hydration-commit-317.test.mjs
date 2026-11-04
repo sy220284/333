@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { commitRestoredSession } from '../src/utils/sessionHydrationCommit317.mjs'
+import { commitRestoredSession, requireFetchedSessionEntries } from '../src/utils/sessionHydrationCommit317.mjs'
 
 test('CCR restore: active session changes only after the transcript is safely published', async () => {
   const history = []
@@ -29,4 +29,11 @@ test('CCR restore: failed disk write leaves the current session unchanged', asyn
     () => { sessionId = 'resumed-session' },
   ), error => error === failure)
   assert.equal(sessionId, 'original-session')
+})
+
+test('remote session fetch failure preserves existing session while an empty successful fetch remains valid', () => {
+  assert.deepEqual(requireFetchedSessionEntries([]), [])
+  for (const invalid of [null, undefined, {}, '']) {
+    assert.throws(() => requireFetchedSessionEntries(invalid), /fetch failed; existing session was preserved/)
+  }
 })
