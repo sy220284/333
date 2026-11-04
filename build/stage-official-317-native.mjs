@@ -20,8 +20,8 @@ const plat = `${process.platform}-${process.arch}`;
 const defaultOutput = (platform) => join(root,'dist','vendor','claude-code-2.1.317','native',platform,OFFICIAL_317_BUILDS[platform].file);
 
 function sha256(path) { return createHash('sha256').update(readFileSync(path)).digest('hex'); }
-function run(command,args,{timeout=180000}={}) {
-  const p = spawnSync(command,args,{encoding:'utf8',timeout});
+function run(command,args,{timeout=180000,cwd}={}) {
+  const p = spawnSync(command,args,{encoding:'utf8',timeout,cwd});
   if (p.error || p.status!==0) throw Error(`${command} failed: ${p.error?.message??p.stderr??p.status}`);
 }
 
@@ -51,7 +51,7 @@ export function stageOfficialNative317({ platform=plat, output, source=process.e
       mkdirSync(pkg,{recursive:true});
       const url=`https://registry.npmjs.org/@anthropic-ai/${packageName}/-/${packageName}-2.1.317.tgz`;
       run('curl',['--fail','--location','--silent','--show-error','--retry','3','--connect-timeout','20','--max-time','180',url,'--output',tgz],{timeout:200000});
-      run('tar',['-xzf',tgz,'-C',workspace,`package/${build.file}`]);
+      run('tar',['-xzf','official.tgz','-C','.',`package/${build.file}`],{cwd:workspace});
       copyFileSync(join(pkg,build.file),temp);
     }
     const actual=sha256(temp);
