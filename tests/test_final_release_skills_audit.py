@@ -1,4 +1,5 @@
 import hashlib
+import json
 import importlib.util
 import tempfile
 import unittest
@@ -60,10 +61,36 @@ class TargetSkillAuditTests(unittest.TestCase):
                 result = audit_module.audit(binary, root, expected, "2.1.317")
             self.assertEqual(result["target_version"], "2.1.317")
             self.assertEqual(result["counts"], {
-                "MATCH": 1, "DIFFERS": 1, "MISSING": 1, "NOT_LOCATED_IN_BINARY": 1})
+                "MATCH": 1, "DIFFERS": 1, "MISSING": 1, "NOT_LOCATED_IN_BINARY": 1,
+                "PROJECT_EXTRA_MATCH": 0, "PROJECT_EXTRA_DIFFERS": 0, "PROJECT_EXTRA_MISSING": 0})
             with self.assertRaisesRegex(RuntimeError, "Wrong 2.1.317 native binary"):
                 audit_module.audit(binary, root, "0" * 64, "2.1.317")
 
+
+    def test_repository_extra_skills_are_hash_checked_and_never_counted_as_official(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            extra_dir = root / "src/skills/bundled/project-extra"
+            extra_dir.mkdir(parents=True)
+            (extra_dir / "SKILL.md").write_bytes(b"original extra")
+            manifest = root / "build/317-project-extra-skills.json"
+            manifest.parent.mkdir()
+            manifest.write_text(json.dumps({
+                "target_version": "2.1.317",
+                "skills": {"project-extra": hashlib.sha256(b"original extra").hexdigest()},
+            }), encoding="utf8")
+            binary = root / "claude"
+            binary.write_bytes(b"original fixture")
+            digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+            with patch.object(audit_module, "embedded_skills", return_value=({}, 0)):
+                result = audit_module.audit(binary, root, digest, "2.1.317")
+                self.assertEqual(result["counts"]["PROJECT_EXTRA_MATCH"], 1)
+                (extra_dir / "SKILL.md").write_bytes(b"tampered")
+                changed = audit_module.audit(binary, root, digest, "2.1.317")
+                self.assertEqual(changed["counts"]["PROJECT_EXTRA_DIFFERS"], 1)
+                (extra_dir / "SKILL.md").unlink()
+                removed = audit_module.audit(binary, root, digest, "2.1.317")
+                self.assertEqual(removed["counts"]["PROJECT_EXTRA_MISSING"], 1)
 
     def test_official_skill_bytes_are_written_only_to_separate_review_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:
