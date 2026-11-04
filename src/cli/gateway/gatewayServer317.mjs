@@ -45,11 +45,12 @@ function blockList(cidrs) {
   }
   return blocked
 }
-function allowedAddress(remote, allow, deny) {
-  if (!remote) return false
-  const type = isIP(remote) === 4 ? 'ipv4' : 'ipv6'
+function allowedAddress(remote, allow, deny, allowConfigured) {
+  const version = remote ? isIP(remote) : 0
+  if (!version) return false
+  const type = version === 4 ? 'ipv4' : 'ipv6'
   if (deny.check(remote, type)) return false
-  return allow.rules.length === 0 || allow.check(remote, type)
+  return !allowConfigured || allow.check(remote, type)
 }
 function bearer(request) {
   const value = request.headers.get('authorization') ?? ''
@@ -101,11 +102,11 @@ export async function createGatewayService317(config, deps = {}) {
       const remote = service.requestIP?.(request)?.address ?? null
       let clientIp = remote
       const type = isIP(remote) === 4 ? 'ipv4' : 'ipv6'
-      if (remote && trusted.check(remote, type)) {
+      if (remote && isIP(remote) && trusted.check(remote, type)) {
         const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
         if (forwarded && isIP(forwarded)) clientIp = forwarded
       }
-      if (!allowedAddress(clientIp, allow, deny)) {
+      if (!allowedAddress(clientIp, allow, deny, (config.access_control?.allow_cidrs?.length ?? 0) > 0)) {
         return error(403, 'permission_error', 'access forbidden by IP policy', requestId)
       }
       if (url.pathname.length > (config.limits.max_url_length ?? 8192)) {
