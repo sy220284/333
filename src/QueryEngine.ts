@@ -2,6 +2,7 @@ import { feature } from 'bun:bundle'
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import { randomUUID } from 'node:crypto'
 import { toSDKStreamEvent } from './entrypoints/sdk/streamEventMapper.js'
+import { bindSessionId } from './query/sessionIdentity317.mjs'
 import last from 'lodash-es/last.js'
 import {
   getSessionId,
@@ -122,6 +123,8 @@ const getCoordinatorUserContext: (
 
 export type QueryEngineConfig = {
   cwd: string
+  /** Identity is owned by this engine, not by the current global CLI session. */
+  sessionId?: ReturnType<typeof getSessionId>
   tools: Tools
   commands: Command[]
   mcpClients: MCPServerConnection[]
@@ -176,6 +179,7 @@ export type QueryEngineConfig = {
  * persists across turns.
  */
 export class QueryEngine {
+  private readonly sessionId: ReturnType<typeof getSessionId>
   private config: QueryEngineConfig
   private mutableMessages: Message[]
   private abortController: AbortController
@@ -192,6 +196,7 @@ export class QueryEngine {
   private loadedNestedMemoryPaths = new Set<string>()
 
   constructor(config: QueryEngineConfig) {
+    this.sessionId = bindSessionId(config.sessionId, getSessionId)
     this.config = config
     this.mutableMessages = config.initialMessages ?? []
     this.abortController = config.abortController ?? createAbortController()
@@ -324,10 +329,11 @@ export class QueryEngine {
       toolMatchesName(t, SYNTHETIC_OUTPUT_TOOL_NAME),
     )
     if (jsonSchema && hasStructuredOutputTool) {
-      registerStructuredOutputEnforcement(setAppState, getSessionId())
+      registerStructuredOutputEnforcement(setAppState, this.sessionId)
     }
 
     let processUserInputContext: ProcessUserInputContext = {
+      sessionId: this.sessionId,
       messages: this.mutableMessages,
       // Slash commands that mutate the message array (e.g. /force-snip)
       // call setMessages(fn).  In interactive mode this writes back to
@@ -488,6 +494,7 @@ export class QueryEngine {
     // Recreate after processing the prompt to pick up updated messages and
     // model (from slash commands).
     processUserInputContext = {
+      sessionId: this.sessionId,
       messages,
       setMessages: () => {},
       onChangeAPIKey: () => {},
@@ -570,7 +577,7 @@ export class QueryEngine {
               ...msg.message,
               content: stripAnsi(msg.message.content),
             },
-            session_id: getSessionId(),
+            session_id: this.sessionId,
             parent_tool_use_id: null,
             uuid: msg.uuid,
             timestamp: msg.timestamp,
@@ -597,7 +604,7 @@ export class QueryEngine {
           yield {
             type: 'system',
             subtype: 'compact_boundary' as const,
-            session_id: getSessionId(),
+            session_id: this.sessionId,
             uuid: msg.uuid,
             compact_metadata: toSDKCompactMetadata(msg.compactMetadata),
           } as SDKCompactBoundaryMessage
@@ -626,7 +633,7 @@ export class QueryEngine {
         result: resultText ?? '',
         ...(localCommand ? { local_command: localCommand } : {}),
         stop_reason: null,
-        session_id: getSessionId(),
+        session_id: this.sessionId,
         total_cost_usd: getTotalCost(),
         usage: this.totalUsage,
         modelUsage: getModelUsage(),
@@ -741,7 +748,7 @@ export class QueryEngine {
               yield {
                 type: 'user',
                 message: msgToAck.message,
-                session_id: getSessionId(),
+                session_id: this.sessionId,
                 parent_tool_use_id: null,
                 uuid: msgToAck.uuid,
                 timestamp: msgToAck.timestamp,
@@ -818,7 +825,7 @@ export class QueryEngine {
           }
 
           if (includePartialMessages) {
-            yield toSDKStreamEvent(message, getSessionId(), randomUUID())
+            yield toSDKStreamEvent(message, this.sessionId, randomUUID())
           }
 
           break
@@ -853,7 +860,7 @@ export class QueryEngine {
               is_error: true,
               num_turns: message.attachment.turnCount,
               stop_reason: lastStopReason,
-              session_id: getSessionId(),
+              session_id: this.sessionId,
               total_cost_usd: getTotalCost(),
               usage: this.totalUsage,
               modelUsage: getModelUsage(),
@@ -880,7 +887,7 @@ export class QueryEngine {
                 role: 'user' as const,
                 content: message.attachment.prompt,
               },
-              session_id: getSessionId(),
+              session_id: this.sessionId,
               parent_tool_use_id: null,
               uuid: message.attachment.source_uuid || message.uuid,
               timestamp: message.timestamp,
@@ -932,7 +939,7 @@ export class QueryEngine {
             yield {
               type: 'system',
               subtype: 'compact_boundary' as const,
-              session_id: getSessionId(),
+              session_id: this.sessionId,
               uuid: message.uuid,
               compact_metadata: toSDKCompactMetadata(message.compactMetadata),
             }
@@ -946,7 +953,7 @@ export class QueryEngine {
               retry_delay_ms: message.retryInMs,
               error_status: message.error.status ?? null,
               error: categorizeRetryableAPIError(message.error),
-              session_id: getSessionId(),
+              session_id: this.sessionId,
               uuid: message.uuid,
             }
           }
@@ -959,7 +966,7 @@ export class QueryEngine {
             type: 'tool_use_summary' as const,
             summary: message.summary,
             preceding_tool_use_ids: message.precedingToolUseIds,
-            session_id: getSessionId(),
+            session_id: this.sessionId,
             uuid: message.uuid,
           }
           break
@@ -984,7 +991,7 @@ export class QueryEngine {
           is_error: true,
           num_turns: turnCount,
           stop_reason: lastStopReason,
-          session_id: getSessionId(),
+          session_id: this.sessionId,
           total_cost_usd: getTotalCost(),
           usage: this.totalUsage,
           modelUsage: getModelUsage(),
@@ -1028,7 +1035,7 @@ export class QueryEngine {
             is_error: true,
             num_turns: turnCount,
             stop_reason: lastStopReason,
-            session_id: getSessionId(),
+            session_id: this.sessionId,
             total_cost_usd: getTotalCost(),
             usage: this.totalUsage,
             modelUsage: getModelUsage(),
@@ -1088,7 +1095,7 @@ export class QueryEngine {
         is_error: true,
         num_turns: turnCount,
         stop_reason: lastStopReason,
-        session_id: getSessionId(),
+        session_id: this.sessionId,
         total_cost_usd: getTotalCost(),
         usage: this.totalUsage,
         modelUsage: getModelUsage(),
@@ -1152,7 +1159,7 @@ export class QueryEngine {
       num_turns: turnCount,
       result: textResult,
       stop_reason: lastStopReason,
-      session_id: getSessionId(),
+      session_id: this.sessionId,
       total_cost_usd: getTotalCost(),
       usage: this.totalUsage,
       modelUsage: getModelUsage(),
@@ -1179,7 +1186,7 @@ export class QueryEngine {
   }
 
   getSessionId(): string {
-    return getSessionId()
+    return this.sessionId
   }
 
   setModel(model: string): void {
