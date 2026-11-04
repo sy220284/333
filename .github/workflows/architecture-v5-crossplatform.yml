@@ -1,0 +1,66 @@
+name: 会话级新架构三平台完整链路验收
+
+on:
+  push:
+    branches:
+      - upgrade/2.1.310-m1-evidence
+    paths:
+      - 'src/utils/messageQueueManager.ts'
+      - 'src/utils/sessionQueuePartitions317.*'
+      - 'src/utils/sessionStorage.ts'
+      - 'src/utils/sessionTranscriptPathsV5.*'
+      - 'src/utils/resumePreparationV5.*'
+      - 'src/utils/conversationRecovery.ts'
+      - 'src/bootstrap/state.ts'
+      - 'src/QueryEngine.ts'
+      - 'src/query.ts'
+      - 'tests/m4-session-storage-v5-integration.test.ts'
+      - 'tests/m4-resume-preparation-v5.test.mjs'
+      - '.github/workflows/architecture-v5-crossplatform.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  architecture-v5:
+    name: 构建、恢复与模型工具闭环 (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Windows Git 长路径支持
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .rebuild/public
+          key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
+      - name: 完整依赖与资源恢复
+        run: |
+          node build/verify-bundled-assets.mjs
+          node build/restore-claude-api.mjs --verify
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 从最新 TypeScript 源码完整构建
+        run: bun build/rebuild.mjs
+      - name: 新架构队列、存储、恢复单元验收
+        run: |
+          node --test tests/m2-session-queue-partitions-317.test.mjs tests/m4-session-transcript-paths-v5.test.mjs tests/m4-resume-preparation-v5.test.mjs tests/m4-ccr-concurrent-restore-317.test.mjs
+      - name: Storage V5 真实持久化与恢复
+        run: bun test tests/m4-session-storage-v5-integration.test.ts
+      - name: 模型与本地工具真实往返
+        run: node --test tests/model-loop-local.test.mjs tests/search-loop-local.test.mjs
