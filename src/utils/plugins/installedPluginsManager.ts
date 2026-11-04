@@ -39,7 +39,10 @@ import { getOriginalCwd } from '../../bootstrap/state.js'
 import { getHeadForDir } from '../git/gitFilesystem.js'
 import { getInitialSettings } from '../settings/settings.js'
 import { getPluginCachePath, getVersionedCachePath } from './pluginLoader.js'
-import { migrateInstalledPluginsRecords } from './installedPluginsMigration.mjs'
+import {
+  migrateInstalledPluginsRecords,
+  normalizeInstalledPluginsRecords,
+} from './installedPluginsMigration.mjs'
 
 let initializationPromise: Promise<void> | null = null
 let installedPluginsMigrationChecked = false
@@ -85,11 +88,13 @@ export function clearInstalledPluginsCache(): void {
  * Read and validate the current installed_plugins.json schema.
  * Invalid data is an error; only a missing file starts an empty registry.
  */
+function ensureInstalledPluginsMigrated(): void {
+  if (installedPluginsMigrationChecked) return
+  migrateInstalledPluginsRecords(getPluginsDirectory(), getVersionedCachePath)
+  installedPluginsMigrationChecked = true
+}
+
 function readInstalledPluginsFileRaw(): InstalledPluginsFileV2 | null {
-  if (!installedPluginsMigrationChecked) {
-    migrateInstalledPluginsRecords(getPluginsDirectory(), getVersionedCachePath)
-    installedPluginsMigrationChecked = true
-  }
   const fs = getFsImplementation()
   let fileContent: string
   try {
@@ -98,7 +103,9 @@ function readInstalledPluginsFileRaw(): InstalledPluginsFileV2 | null {
     if (isENOENT(error)) return null
     throw error
   }
-  return InstalledPluginsFileSchemaV2().parse(jsonParse(fileContent))
+  return InstalledPluginsFileSchemaV2().parse(
+    normalizeInstalledPluginsRecords(jsonParse(fileContent), getVersionedCachePath),
+  )
 }
 
 /**
@@ -158,6 +165,7 @@ export function addPluginInstallation(
   metadata: Partial<PluginInstallationEntry>,
   projectPath?: string,
 ): void {
+  ensureInstalledPluginsMigrated()
   const data = loadInstalledPluginsFromDisk()
 
   // Get or create array for this plugin
@@ -202,6 +210,7 @@ export function removePluginInstallation(
   scope: PersistableScope,
   projectPath?: string,
 ): void {
+  ensureInstalledPluginsMigrated()
   const data = loadInstalledPluginsFromDisk()
   const installations = data.plugins[pluginId]
 
@@ -266,6 +275,7 @@ export function updateInstallationPathOnDisk(
   newVersion: string,
   gitCommitSha?: string,
 ): void {
+  ensureInstalledPluginsMigrated()
   const diskData = loadInstalledPluginsFromDisk()
   const installations = diskData.plugins[pluginId]
 
@@ -438,6 +448,7 @@ export function resetInMemoryState(): void {
 export async function initializeVersionedPlugins(): Promise<void> {
   if (initializationPromise === null) {
     initializationPromise = (async () => {
+      ensureInstalledPluginsMigrated()
       clearInstalledPluginsCache()
       const data = getInMemoryInstalledPlugins()
       logForDebugging(
@@ -469,6 +480,7 @@ export function removeAllPluginsForMarketplace(marketplaceName: string): {
     return { orphanedPaths: [], removedPluginIds: [] }
   }
 
+  ensureInstalledPluginsMigrated()
   const data = loadInstalledPluginsFromDisk()
   const suffix = `@${marketplaceName}`
   const orphanedPaths = new Set<string>()
@@ -595,6 +607,7 @@ export function addInstalledPlugin(
   scope: PersistableScope = 'user',
   projectPath?: string,
 ): void {
+  ensureInstalledPluginsMigrated()
   const v2Data = loadInstalledPluginsFromDisk()
   const v2Entry: PluginInstallationEntry = {
     scope,
@@ -642,6 +655,7 @@ export function addInstalledPlugin(
 export function removeInstalledPlugin(
   pluginId: string,
 ): InstalledPlugin | undefined {
+  ensureInstalledPluginsMigrated()
   const v2Data = loadInstalledPluginsFromDisk()
   const installations = v2Data.plugins[pluginId]
 
