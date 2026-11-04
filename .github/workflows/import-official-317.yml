@@ -7,6 +7,7 @@ on:
     paths:
       - build/import-official-317.py
       - .github/workflows/import-official-317.yml
+      - tests/official-317-port-roundtrip.py
   workflow_dispatch:
 
 permissions:
@@ -46,8 +47,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 build/import-official-317.py             --binary .rebuild/official317/package/claude             --out vendor/claude-code-2.1.317
-          python3 build/import-official-317.py             --out vendor/claude-code-2.1.317 --verify-only
+          python3 build/import-official-317.py --binary .rebuild/official317/package/claude --out .rebuild/official317/staged
+          if test -d vendor/claude-code-2.1.317; then
+            diff -qr .rebuild/official317/staged vendor/claude-code-2.1.317
+          else
+            mv .rebuild/official317/staged vendor/claude-code-2.1.317
+          fi
+          python3 build/import-official-317.py --out vendor/claude-code-2.1.317 --verify-only
 
       - name: 检查完整模块索引与资源数据
         shell: bash
@@ -75,6 +81,12 @@ jobs:
           timeout 45s bun vendor/claude-code-2.1.317/modules/cli.mjs --help > .rebuild/official317/ported-help.txt
           timeout 45s .rebuild/official317/package/claude --help > .rebuild/official317/native-help.txt
           diff -u .rebuild/official317/native-help.txt .rebuild/official317/ported-help.txt
+
+      - name: 与官方317模拟Read工具调用真实往返对照
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/official-317-port-roundtrip.py --official .rebuild/official317/package/claude --ported vendor/claude-code-2.1.317/modules/cli.mjs
 
       - name: 提交已通过真实 CLI 测试的 317 整包源码
         shell: bash
