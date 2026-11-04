@@ -124,6 +124,8 @@ jobs:
           bun test tests/m2-disable-ultrathink-317.test.mjs tests/m2-ultrathink-keyword-scope-317.test.mjs
       - name: 验证317自动模式默认规则筛选与用户设置安全重置
         run: node --test tests/m4-auto-mode-defaults-label-317.test.mjs tests/m4-auto-mode-reset-317.test.mjs
+      - name: 317插件依赖安装标记及prune真实卸载图扫描
+        run: node --test tests/m4-plugin-prune-317.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
         run: node --test tests/cli-parity.test.mjs
       - name: 复核多级模型回退与自动压缩真实参数语义

@@ -3689,6 +3689,16 @@ async function run(): Promise<CommanderCommand> {
     await pluginConfigureHandler(plugin, options);
   });
 
+  pluginCmd.command('prune').alias('autoremove')
+    .description('Remove auto-installed dependencies that are no longer needed')
+    .option('--dry-run', 'List what would be removed without removing')
+    .option('-s, --scope <scope>', 'Prune at scope: user, project, or local (default: "user")', 'user')
+    .option('-y, --yes', 'Skip the confirmation prompt (required when stdin or stdout is not a TTY)')
+    .action(async (options: { dryRun?: boolean; scope: string; yes?: boolean }) => {
+      const { pluginPruneHandler } = await import('./cli/handlers/pluginPrune.js');
+      await pluginPruneHandler(options);
+    });
+
   // Plugin uninstall command
   pluginCmd.command('uninstall <plugin>').alias('remove').alias('rm').description('Uninstall an installed plugin').option('-s, --scope <scope>', 'Uninstall from scope: user, project, or local', 'user').option('--keep-data', "Preserve the plugin's persistent data directory (~/.claude/plugins/data/{id}/)").addOption(coworkOption()).action(async (plugin: string, options: {
     scope?: string;
