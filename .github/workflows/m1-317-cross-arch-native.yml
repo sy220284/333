@@ -1,0 +1,54 @@
+name: M1 317 官方跨架构原生模块全量清点
+
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - '.github/workflows/m1-317-cross-arch-native.yml'
+      - 'build/probe-official-platform-audio-317.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m1-cross-arch-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  official-source:
+    name: 逐字节核验317 ${{ matrix.target }} 原生音频模块
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [linux-arm64, darwin-x64, win32-arm64]
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 下载官方317对应架构程序并执行完整SHA校验与模块清点
+        shell: bash
+        run: |
+          set -euo pipefail
+          target='${{ matrix.target }}'
+          base='https://downloads.claude.ai/claude-code-releases/2.1.317'
+          curl --fail --location --silent --show-error --retry-all-errors --retry 5 \
+            "$base/manifest.json" -o "$RUNNER_TEMP/manifest.json"
+          executable=claude
+          if [[ "$target" == win32-* ]]; then executable=claude.exe; fi
+          curl --fail --location --silent --show-error --retry-all-errors --retry 5 \
+            "$base/$target/$executable" -o "$RUNNER_TEMP/$executable"
+          node build/probe-official-platform-audio-317.mjs \
+            --binary "$RUNNER_TEMP/$executable" \
+            --manifest "$RUNNER_TEMP/manifest.json" --target "$target" \
+            | tee "$RUNNER_TEMP/official-audio-$target.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m1-317-native-audio-${{ matrix.target }}
+          path: ${{ runner.temp }}/official-audio-*.json
+          retention-days: 60
+          if-no-files-found: warn
