@@ -766,6 +766,7 @@ export async function* runAgent({
   // Track the last recorded message UUID for parent chain continuity
   let lastRecordedUuid: UUID | null = initialMessages.at(-1)?.uuid ?? null
 
+  let primaryFailure: unknown
   try {
     for await (const message of query({
       messages: initialMessages,
@@ -835,6 +836,9 @@ export async function* runAgent({
     if (isBuiltInAgent(agentDefinition) && agentDefinition.callback) {
       agentDefinition.callback()
     }
+  } catch (agentError) {
+    primaryFailure = agentError
+    throw agentError
   } finally {
     // Every resource is released even when an earlier disposer rejects.
     // Errors propagate as an AggregateError with the failing step names.
@@ -861,7 +865,7 @@ export async function* runAgent({
         killShellTasksForAgent(agentId, toolUseContext.getAppState, rootSetAppState)],
       ['background monitors', () =>
         killMonitorWsTasksForAgent(agentId, toolUseContext.getAppState, rootSetAppState)],
-    ])
+    ], primaryFailure)
   }
 }
 
