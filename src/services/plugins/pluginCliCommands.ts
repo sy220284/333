@@ -488,9 +488,9 @@ export async function updatePluginCli(
         command: 'update', outcome: 'ok', plugin,
         pluginId: result.pluginId ?? plugin,
         scope, message: result.message,
+        updateOutcome: result.alreadyUpToDate ? 'up_to_date' : 'updated',
         oldVersion: result.oldVersion,
         newVersion: result.newVersion,
-        alreadyUpToDate: result.alreadyUpToDate,
       })}\n`)
     } else {
       writeToStdout(`${figures.tick} ${result.message}\n`)
