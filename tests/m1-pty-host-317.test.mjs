@@ -5,7 +5,7 @@ import { connect, createServer } from 'node:net'
 import { mkdtempSync, existsSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { createPtyFrameDecoder317, encodePtyControl317, encodePtyData317 } from '../src/bootstrap/ptyWire317.mjs'
+import { createPtyFrameDecoder317, encodePtyControl317, encodePtyData317, PtyReplay317 } from '../src/bootstrap/ptyWire317.mjs'
 import { parsePtyHostArgs317, assertPtySocketVacant317 } from '../src/bootstrap/ptyHost317.mjs'
 
 const cli = resolve(import.meta.dirname, '../dist/cli.js')
@@ -20,6 +20,21 @@ async function until(check, timeout = 12000) {
     await new Promise(resolve => setTimeout(resolve, 35))
   }
 }
+
+test('317 PTY replay retains a single oversized chunk and trims to UTF-8 boundaries after rollover', () => {
+  const replay = new PtyReplay317()
+  const oversized = Buffer.from('a'.repeat(262144) + '€')
+  replay.push(oversized)
+  assert.equal(replay.tail(300000).length, oversized.length,
+    'upstream permits a single oversized replay chunk until another arrives')
+  replay.push(Buffer.from('tail'))
+  assert.deepEqual(replay.frames().map(frame => frame.subarray(5).toString()), ['tail'])
+  const second = new PtyReplay317()
+  second.push(Buffer.alloc(262144, 65))
+  second.push(Buffer.from([0xac, 0x5a]))
+  assert.equal(second.frames()[0].subarray(5).toString(), 'Z',
+    'discarded UTF-8 lead byte must not leave a continuation byte')
+})
 
 test('317 PTY five-byte frame codec: fragmented data, control and oversize', () => {
   const output = [], failures = []
