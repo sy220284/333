@@ -3,7 +3,7 @@
  * monthly pooled groups, model token accounting and streaming SSE usage.
  */
 import { randomUUID } from 'node:crypto'
-import { spendPeriodStart317, spendPeriodReset317 } from './gatewaySpendStore317.mjs'
+import { spendPeriodStart317, spendPeriodReset317 } from './gatewaySpendStore317.ts'
 
 const FALLBACK = Object.freeze({
   input:5,output:25,cache_read:.5,cache_write:6.25,cache_write_1h:10,
