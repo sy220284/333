@@ -190,10 +190,12 @@ export function createGatewaySseUsage317() {
   return {
     push(bytes) {
       buffer+=decoder.decode(bytes,{stream:true})
-      let index
-      while((index=buffer.indexOf('\n\n'))!==-1){
-        consume(buffer.slice(0,index))
-        buffer=buffer.slice(index+2)
+      // Upstreams may use LF or CRLF, and a frame boundary can split
+      // across TCP chunks; preserve incomplete frames for the next pull.
+      let delimiter
+      while((delimiter=/\r?\n\r?\n/.exec(buffer))!==null) {
+        consume(buffer.slice(0,delimiter.index))
+        buffer=buffer.slice(delimiter.index+delimiter[0].length)
       }
     },
     finish() {
@@ -231,7 +233,7 @@ export function meterGatewayResponse317(response,context) {
     if(!metered)return
     const cents=centsForGatewayUsage317(metered,model,config,upstream)
     if(cents>0) {
-      await store.addSpend(identity,cents)
+      await store.addSpend(identity,cents,new Date(),payingGroup)
       await audit?.('spend.metered',identity.sub,null,{cents,model,upstream,payingGroup})
     }
   }
