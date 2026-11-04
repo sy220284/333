@@ -1066,6 +1066,13 @@ export const PluginSourceSchema = lazySchema(() =>
     ),
     z
       .object({
+        source: z.literal('command'),
+        command: z.string().min(1).describe('A marketplace-declared local install command; run only after explicit consent'),
+        mode: z.enum(['copy', 'link']).default('copy').describe('Copy the returned plugin directory or link it into the cache'),
+      })
+      .describe('Marketplace command source, requiring a revision-bound command confirmation'),
+    z
+      .object({
         source: z.literal('npm'),
         package: NpmPackageNameSchema()
           .or(z.string()) // Allow URLs and local paths as well
