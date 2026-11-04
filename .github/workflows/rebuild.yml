@@ -91,6 +91,7 @@ jobs:
           node build/sync-official-native-from-binary.mjs --binary .rebuild/oracle/claude --vendor-root vendor --sync
           node build/sync-official-native-from-binary.mjs --binary .rebuild/oracle/claude --vendor-root vendor
           node -e "for (const name of ['clipboard-napi','audio-capture']) { const mod = require('./vendor/'+name+'/x64-linux/'+name+'.node'); if (!Object.keys(mod).length) throw Error(name+' exported nothing'); }"
+          node --test tests/m1-native-audio-317.test.mjs
       - name: 在真实虚拟X11显示环境中验证317原生剪贴板中文读写
         if: runner.os == 'Linux'
         run: |
