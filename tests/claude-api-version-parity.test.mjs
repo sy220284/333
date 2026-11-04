@@ -24,6 +24,7 @@ test('api-version opens the bundled 2.1.317 migration guide through the actual R
   const tmp = mkdtempSync(join(tmpdir(), '333-claude-api-'))
   const finishedCliProcessIds = []
   let requests = []
+  let wireRequests = []
   let targetName = ''
   const extracted = new Map()
   function resourceHashes(base, dir = base) {
@@ -41,6 +42,7 @@ test('api-version opens the bundled 2.1.317 migration guide through the actual R
     for await (const part of req) raw += part
     const body = JSON.parse(raw)
     requests.push(body)
+    wireRequests.push({ path: req.url, headers: req.headers, body })
     let content, stop
     const blocks = body.messages.flatMap(m => Array.isArray(m.content) ? m.content : [])
     const text = blocks.filter(c => c.type === 'text').map(c => c.text).join('\n')
@@ -72,6 +74,7 @@ test('api-version opens the bundled 2.1.317 migration guide through the actual R
     if (process.env.CLAUDE_TARGET_X64) targets.push(['2.1.317', process.env.CLAUDE_TARGET_X64, []])
     for (const [name, executable, prefix] of targets) {
       requests = []
+      wireRequests = []
       targetName = name
       const home = join(tmp, name)
       mkdirSync(home)
@@ -93,6 +96,18 @@ test('api-version opens the bundled 2.1.317 migration guide through the actual R
       assert.equal(JSON.parse(stdout).result, 'SKILL_READ_OK')
       const initial = requests.find(r => JSON.stringify(r.messages).includes('<command-name>/claude-api</command-name>'))
       assert.ok(initial, `${name}: expected a skill request`)
+      const requestWire = wireRequests.find(r => r.body === initial)
+      assert.ok(requestWire, `${name}: missing actual on-wire Messages request`)
+      assert.match(requestWire.path, /^\/v1\/messages\?beta=true(?:&|$)/,
+        `${name}: 317 Messages beta resource URI differs from official x64`)
+      assert.equal(requestWire.headers['anthropic-version'], '2023-06-01',
+        `${name}: Anthropic SDK API date differs from 317`)
+      assert.equal(requestWire.headers['x-api-key'], 'local-fixture',
+        `${name}: 317 API-key header must be x-api-key`)
+      assert.ok((requestWire.headers['anthropic-beta'] ?? '').includes('thinking-token-count-2026-05-13'),
+        `${name}: headless 317 thinking token beta missing`)
+      assert.ok(!(requestWire.headers['anthropic-beta'] ?? '').includes('prompt-caching-scope-2026-01-05'),
+        `${name}: interactive cache beta leaked into headless request`)
       const promptBlocks = Array.isArray(initial.system) ? initial.system : []
       const systemText = promptBlocks.map(block => block.text ?? '').join('\n')
       assert.match(systemText,
