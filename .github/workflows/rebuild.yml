@@ -73,6 +73,8 @@ jobs:
         run: node --test tests/m3-plugin-test-runner-317.test.mjs
       - name: 317企业网关真实鉴权、Bun服务和SSE上游验证
         run: bun test tests/m6-gateway-runtime-317.test.mjs
+      - name: 317网关OAuth设备授权、OIDC批准、Token刷新撤销实测
+        run: bun test tests/m6-gateway-device-317.test.mjs
       - name: 新构建版本和基础交互验收
         run: |
           set -euo pipefail
