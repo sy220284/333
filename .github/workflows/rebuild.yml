@@ -204,6 +204,8 @@ jobs:
           bun test tests/m1-startup-sdk-317.test.ts
       - name: 317 PTY宿主子进程、二进制流及重连回收验收
         run: node --test tests/m1-pty-host-317.test.mjs
+      - name: 317评测MCP独立服务、模拟回应与调用日志原版对照
+        run: node --test tests/m1-eval-mock-server-317.test.mjs
       - name: 317 daemon worker心跳、配置校验及退出生命周期
         run: node --test tests/m1-daemon-worker-317.test.mjs
       - name: 317预加载会话接管、认证切换和退出清理
