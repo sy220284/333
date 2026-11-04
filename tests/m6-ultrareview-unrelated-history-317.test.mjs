@@ -79,7 +79,7 @@ test('317 shared Git base: common, no-commit and unrelated paths are classified 
   const calls = []
   const common = await resolveUltrareviewGitBase('main', async args => {
     calls.push(args.join(' '))
-    return { code: 0, stdout: 'abc123\\n' }
+    return { code: 0, stdout: 'abc123' }
   })
   assert.deepEqual(common, { kind: 'common', base: 'abc123', forceAllFiles: false })
   assert.deepEqual(calls, ['merge-base main HEAD'])
