@@ -760,7 +760,7 @@ export async function marketplaceUpdateHandler(
 // plugin install (lines 5690–5721)
 export async function pluginInstallHandler(
   plugin: string,
-  options: { scope?: string; cowork?: boolean; json?: boolean; marketplace?: string; config?: string[]; registry?: string },
+  options: { scope?: string; cowork?: boolean; json?: boolean; marketplace?: string; config?: string[]; registry?: string; yes?: boolean; acceptCommand?: string },
 ): Promise<void> {
   if (options.cowork) setUseCoworkPlugins(true)
   const scope = options.scope || 'user'
@@ -821,7 +821,10 @@ export async function pluginInstallHandler(
       cliError(`Failed to add marketplace: ${errorMessage(error)}`)
     }
   }
-  await installPlugin(installId, scope as 'user' | 'project' | 'local', options.json, options.config, options.registry)
+  await installPlugin(installId, scope as 'user' | 'project' | 'local', options.json, options.config, options.registry, {
+    yes: options.yes,
+    acceptCommand: options.acceptCommand,
+  })
 }
 
 /** Official 2.1.317 plugin configure: inspect top-level schema or save JSON stdin. */
