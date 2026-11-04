@@ -130,4 +130,6 @@ test('2.1.317 hidden permission callback flag is accepted and reaches the SDK ro
   const main = readFileSync(resolve(root, 'src/main.tsx'), 'utf8')
   assert.match(main, /permissionPromptToolName: options\.permissionPromptTool/,
     'accepted option was not forwarded to real permission execution')
+  assert.equal((main.match(/new Option\('--permission-prompt-tool <tool>'/g) || []).length, 1,
+    'SDK callback option must be registered exactly once')
 })
