@@ -59,7 +59,7 @@ import type {
   PluginManifest,
 } from '../../types/plugin.js'
 import { logForDebugging } from '../debug.js'
-import { isEnvTruthy } from '../envUtils.js'
+import { getClaudeConfigHomeDir, isEnvTruthy } from '../envUtils.js'
 import {
   errorMessage,
   getErrnoPath,
@@ -3059,6 +3059,52 @@ export const loadAllPluginsCacheOnly = memoize(
  * session plugins, builtins, merge, verifyAndDemote, and cachePluginSettings
  * are identical (invariants 1-3).
  */
+/**
+ * Official 2.1.317 discovers manifests created by plugin init in the user's
+ * skills directory as name@skills-dir plugins. Ordinary SKILL.md folders stay
+ * under the skill loader; only directories with plugin.json enter the plugin
+ * loader. This shares enabled/disabled and policy handling with all plugin CLI
+ * commands, rather than special-casing details/list/configure.
+ */
+async function loadSkillsDirPlugins317(): Promise<{
+  plugins: LoadedPlugin[]
+  errors: PluginError[]
+}> {
+  const root = join(getClaudeConfigHomeDir(), 'skills')
+  let dirs
+  try {
+    dirs = await readdir(root, { withFileTypes: true })
+  } catch (error) {
+    if (isENOENT(error)) return { plugins: [], errors: [] }
+    throw error
+  }
+  const result: LoadedPlugin[] = []
+  const errors: PluginError[] = []
+  const configured = getInitialSettings().enabledPlugins ?? {}
+  for (const entry of dirs) {
+    if (!entry.isDirectory()) continue
+    const folder = join(root, entry.name)
+    if (!(await pathExists(join(folder, '.claude-plugin', 'plugin.json')))) continue
+    const source = entry.name + '@skills-dir'
+    try {
+      const loaded = await createPluginFromPath(
+        folder, source, configured[source] !== false, entry.name,
+      )
+      result.push(loaded.plugin)
+      errors.push(...loaded.errors)
+    } catch (error) {
+      errors.push({
+        type: 'generic-error',
+        source,
+        plugin: entry.name,
+        error: errorMessage(error),
+      })
+      logError(toError(error))
+    }
+  }
+  return { plugins: result, errors }
+}
+
 async function assemblePluginLoadResult(
   marketplaceLoader: () => Promise<{
     plugins: LoadedPlugin[]
@@ -3069,11 +3115,12 @@ async function assemblePluginLoadResult(
   // getInlinePlugins() is a synchronous state read with no dependency on
   // marketplace loading, so these two sources can be fetched concurrently.
   const inlinePlugins = getInlinePlugins()
-  const [marketplaceResult, sessionResult] = await Promise.all([
+  const [marketplaceResult, sessionResult, skillDirectoryResult] = await Promise.all([
     marketplaceLoader(),
     inlinePlugins.length > 0
       ? loadSessionOnlyPlugins(inlinePlugins)
       : Promise.resolve({ plugins: [], errors: [] }),
+    loadSkillsDirPlugins317(),
   ])
   // 3. Load built-in plugins that ship with the CLI
   const builtinResult = getBuiltinPlugins()
@@ -3082,7 +3129,12 @@ async function assemblePluginLoadResult(
   // UNLESS the installed plugin is locked by managed settings
   // (policySettings). See mergePluginSources() for details.
   const { plugins: allPlugins, errors: mergeErrors } = mergePluginSources({
-    session: sessionResult.plugins,
+    session: [
+      ...sessionResult.plugins,
+      ...skillDirectoryResult.plugins.filter(
+        plugin => !sessionResult.plugins.some(explicit => explicit.name === plugin.name),
+      ),
+    ],
     marketplace: marketplaceResult.plugins,
     builtin: [...builtinResult.enabled, ...builtinResult.disabled],
     managedNames: getManagedPluginNames(),
@@ -3090,6 +3142,7 @@ async function assemblePluginLoadResult(
   const allErrors = [
     ...marketplaceResult.errors,
     ...sessionResult.errors,
+    ...skillDirectoryResult.errors,
     ...mergeErrors,
   ]
 

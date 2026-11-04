@@ -3689,6 +3689,28 @@ async function run(): Promise<CommanderCommand> {
     await pluginConfigureHandler(plugin, options);
   });
 
+  pluginCmd.command('details <name>')
+    .description("Show a plugin's component inventory and projected token cost")
+    .action(async (name: string) => {
+      const { pluginDetailsHandler } = await import('./cli/handlers/pluginDetails.js')
+      await pluginDetailsHandler(name)
+    })
+
+  pluginCmd.command('tag [path]')
+    .description('Create a {name}--v{version} git tag for a plugin release, validating that plugin.json and any enclosing marketplace entry agree')
+    .option('--dry-run', 'Print what would be tagged without creating it')
+    .option('-f, --force', 'Skip the dirty-working-tree and tag-already-exists checks')
+    .option('-m, --message <msg>', 'Tag annotation message (use %s for the version)')
+    .option('--push', 'Push the tag to --remote after creating it')
+    .option('--remote <name>', 'Remote to push to with --push (default: "origin")')
+    .action(async (path: string | undefined, options: {
+      dryRun?: boolean; force?: boolean; message?: string;
+      push?: boolean; remote?: string
+    }) => {
+      const { pluginTagHandler } = await import('./cli/handlers/pluginTag.js')
+      await pluginTagHandler(path, options)
+    })
+
   pluginCmd.command('prune').alias('autoremove')
     .description('Remove auto-installed dependencies that are no longer needed')
     .option('--dry-run', 'List what would be removed without removing')
@@ -3697,11 +3719,6 @@ async function run(): Promise<CommanderCommand> {
     .action(async (options: { dryRun?: boolean; scope: string; yes?: boolean }) => {
       const { pluginPruneHandler } = await import('./cli/handlers/pluginPrune.js');
       await pluginPruneHandler(options);
-      // Plugin management is a one-shot CLI action. preAction initialized
-      // telemetry, settings watchers and background services; closing only
-      // the plugin graph leaves those resources alive after printing output.
-      // Use the same explicit command shutdown as other plugin subcommands.
-      await gracefulShutdown(process.exitCode ?? 0);
     });
 
   // Plugin uninstall command

@@ -196,6 +196,12 @@ export async function pluginListHandler(options: {
   const inlinePlugins = allLoadedPlugins.filter(p =>
     p.source.endsWith('@inline'),
   )
+  const skillsDirPlugins = allLoadedPlugins.filter(p =>
+    p.source.endsWith('@skills-dir'),
+  )
+  const skillsDirLoadErrors = loadErrors.filter(e =>
+    e.source.endsWith('@skills-dir'),
+  )
   // Path-level inline failures (dir doesn't exist, parse error before
   // manifest is read) use source='inline[N]'. Plugin-level errors after
   // manifest read use source='name@inline'. Collect both for the session
@@ -213,7 +219,7 @@ export async function pluginListHandler(options: {
       version: string
       scope: string
       enabled: boolean
-      projectEnabled: boolean
+      projectEnabled?: boolean
       installPath: string
       installedAt?: string
       lastUpdated?: string
@@ -307,6 +313,17 @@ export async function pluginListHandler(options: {
         errors: pErrors.length > 0 ? pErrors : undefined,
       })
     }
+    // Standalone manifests under ~/.claude/skills are user-scoped native
+    // plugins. They do not appear in installed_plugins.json's V2 registry.
+    for (const p of skillsDirPlugins) {
+      plugins.push({
+        id: p.source,
+        version: p.manifest.version ?? 'unknown',
+        scope: 'user',
+        enabled: p.enabled !== false,
+        installPath: p.path,
+      })
+    }
     // Path-level inline failures (--plugin-dir /nonexistent): no LoadedPlugin
     // exists so the loop above can't surface them. Mirror the human-path
     // handling so JSON consumers see the failure instead of silent omission.
@@ -378,7 +395,7 @@ export async function pluginListHandler(options: {
     }
   }
 
-  if (pluginIds.length === 0 && inlinePlugins.length === 0) {
+  if (pluginIds.length === 0 && inlinePlugins.length === 0 && skillsDirPlugins.length === 0) {
     // inlineLoadErrors can exist with zero inline plugins (e.g. --plugin-dir
     // points at a nonexistent path). Don't early-exit over them — fall
     // through to the session section so the failure is visible.
@@ -429,6 +446,29 @@ export async function pluginListHandler(options: {
       }
       // biome-ignore lint/suspicious/noConsole:: intentional console output
       console.log('')
+    }
+  }
+
+  if (skillsDirPlugins.length > 0 || skillsDirLoadErrors.length > 0) {
+    console.log('Skills-directory plugins (.claude/skills/*):\n')
+    for (const p of skillsDirPlugins) {
+      const errors = skillsDirLoadErrors.filter(e =>
+        e.source === p.source || ('plugin' in e && e.plugin === p.name))
+      const status = errors.length > 0
+        ? figures.cross + ' loaded with errors'
+        : p.enabled !== false ? figures.tick + ' loaded' : figures.cross + ' disabled'
+      console.log('  ' + figures.pointer + ' ' + p.source)
+      console.log('    Version: ' + (p.manifest.version ?? 'unknown'))
+      console.log('    Scope: user')
+      console.log('    Path: ' + p.path)
+      console.log('    Status: ' + status)
+      for (const error of errors) console.log('    Error: ' + getPluginErrorMessage(error))
+      console.log('')
+    }
+    for (const error of skillsDirLoadErrors.filter(e =>
+      !skillsDirPlugins.some(p => e.source === p.source))) {
+      console.log('  ' + figures.pointer + ' ' + error.source + ': ' +
+        figures.cross + ' ' + getPluginErrorMessage(error) + '\n')
     }
   }
 
