@@ -2,7 +2,7 @@
   "name": "@anthropic-ai/claude-code",
   "version": "2.1.317",
   "bin": {
-    "claude": "cli.js"
+    "claude": "dist/launcher.cjs"
   },
   "engines": {
     "node": ">=18.0.0"
