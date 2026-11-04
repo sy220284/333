@@ -14,6 +14,7 @@ import {
   getDefaultExternalAutoModeRules,
 } from '../../utils/permissions/yoloClassifier.js'
 import { getAutoModeConfig } from '../../utils/settings/settings.js'
+import { expandAutoModeRules } from '../../utils/permissions/autoModeRules.mjs'
 import { sideQuery } from '../../utils/sideQuery.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 
@@ -36,13 +37,10 @@ export function autoModeConfigHandler(): void {
   const config = getAutoModeConfig()
   const defaults = getDefaultExternalAutoModeRules()
   writeRules({
-    allow: config?.allow?.length ? config.allow : defaults.allow,
-    soft_deny: config?.soft_deny?.length
-      ? config.soft_deny
-      : defaults.soft_deny,
-    environment: config?.environment?.length
-      ? config.environment
-      : defaults.environment,
+    allow: expandAutoModeRules(config?.allow, defaults.allow),
+    soft_deny: expandAutoModeRules(config?.soft_deny, defaults.soft_deny),
+    hard_deny: expandAutoModeRules(config?.hard_deny, defaults.hard_deny),
+    environment: expandAutoModeRules(config?.environment, defaults.environment),
   })
 }
 
@@ -77,6 +75,7 @@ export async function autoModeCritiqueHandler(options: {
   const hasCustomRules =
     (config?.allow?.length ?? 0) > 0 ||
     (config?.soft_deny?.length ?? 0) > 0 ||
+    (config?.hard_deny?.length ?? 0) > 0 ||
     (config?.environment?.length ?? 0) > 0
 
   if (!hasCustomRules) {
@@ -101,6 +100,11 @@ export async function autoModeCritiqueHandler(options: {
       'soft_deny',
       config?.soft_deny ?? [],
       defaults.soft_deny,
+    ) +
+    formatRulesForCritique(
+      'hard_deny',
+      config?.hard_deny ?? [],
+      defaults.hard_deny,
     ) +
     formatRulesForCritique(
       'environment',
