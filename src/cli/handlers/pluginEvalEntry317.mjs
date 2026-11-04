@@ -126,6 +126,13 @@ export async function pluginEvalHandler317(target, options = {}, adapters = {}) 
       throw new Error('--threshold must be in [0,1]')
     }
     if (data.budgetExceeded) return 2
+    const failed = data.cases.flatMap(c =>
+      c.runs.filter(run => run.error).map(run =>
+        `${c.name} [${run.arm} run ${run.repeat}]: ${run.error}`))
+    if (failed.length) {
+      process.stderr.write('plugin eval model execution failed:\\n' +
+        failed.join('\\n') + '\\n')
+    }
     return data.cases.some(c => c.score === null || c.score < threshold) ? 1 : 0
   } finally {
     if (!options.keepTemp) await rm(temp.workspace, { recursive: true, force: true })
