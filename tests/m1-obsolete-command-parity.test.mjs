@@ -8,7 +8,7 @@ import { test } from 'node:test'
 const root = resolve(import.meta.dirname, '..')
 const source = path => readFileSync(join(root, path), 'utf8')
 
-test('2.1.310 removes obsolete slash commands without removing Vim editor mode', () => {
+test('2.1.317 removes obsolete slash commands without removing Vim editor mode', () => {
   const registry = source('src/commands.ts')
   assert.doesNotMatch(registry, /commands\/vim\/index\.js|commands\/tag\/index\.js/)
   assert.doesNotMatch(registry, /^\s*(vim|tag),/m)
@@ -26,7 +26,7 @@ test('/agents retains the hidden instructions instead of loading the retired wiz
   assert.match(index, /\.claude\/agents\//)
 })
 
-test('2.1.310 suppresses redundant Agent classifier approval text but preserves other tool messages', () => {
+test('2.1.317 suppresses redundant Agent classifier approval text but preserves other tool messages', () => {
   const view = source('src/components/messages/UserToolResultMessage/UserToolSuccessMessage.tsx').split('//# sourceMappingURL=')[0]
   assert.match(view, /yoloReason && tool\.name !== 'Agent' && <MessageResponse/)
   assert.match(view, /Allowed by auto mode classifier/)
@@ -82,7 +82,7 @@ test('obsolete startup toasts and permission footer hints are gone, operational 
   assert.doesNotMatch(powershell, /ctrl\\+e to/)
 })
 
-test('2.1.310 removes sandbox startup banners without losing status and sandbox controls', () => {
+test('2.1.317 removes sandbox startup banners without losing status and sandbox controls', () => {
   const welcome = source('src/components/LogoV2/LogoV2.tsx').split('//# sourceMappingURL=')[0]
   const status = source('src/utils/status.tsx')
   const sandbox = source('src/components/sandbox/SandboxSettings.tsx')
@@ -103,7 +103,7 @@ test('new target removes stale refusal model and DNS cache auto-approval', () =>
   assert.match(powershell, /safeFlags: \['\/all', '\/allcompartments'\]/)
 })
 
-test('official 2.1.310 and rebuilt CLI both resolve /agents locally without a model turn', { timeout: 90000 }, () => {
+test('official 2.1.317 and rebuilt CLI both resolve /agents locally without a model turn', { timeout: 90000 }, () => {
   const folder = mkdtempSync(join(tmpdir(), 'pr7-agents-retirement-'))
   const env = {
     ...process.env,
@@ -120,7 +120,7 @@ test('official 2.1.310 and rebuilt CLI both resolve /agents locally without a mo
   delete env.ANTHROPIC_AUTH_TOKEN
   delete env.ANTHROPIC_BASE_URL
   const targets = [['rebuilt', 'bun', [join(root, 'dist', 'cli.js')]]]
-  if (process.env.CLAUDE_2310_X64) targets.push(['official-x64', process.env.CLAUDE_2310_X64, []])
+  if (process.env.CLAUDE_TARGET_X64) targets.push(['official-x64', process.env.CLAUDE_TARGET_X64, []])
   try {
     for (const [label, command, prefix] of targets) {
       const args = [...prefix, '--print', '--bare', '--output-format', 'json', '/agents']

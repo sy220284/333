@@ -7,7 +7,7 @@ import { test } from 'node:test'
 
 const root = resolve(import.meta.dirname, '..')
 const executables = [['rebuilt', 'bun', [join(root, 'dist/cli.js')]]]
-const officialBinary = process.env.CLAUDE_TARGET_X64 || process.env.CLAUDE_2310_X64
+const officialBinary = process.env.CLAUDE_TARGET_X64 || process.env.CLAUDE_TARGET_X64
 if (officialBinary) {
   executables.push(['official-x64', officialBinary, []])
 }

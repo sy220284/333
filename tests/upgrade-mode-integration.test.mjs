@@ -42,7 +42,7 @@ async function spawnCli(command, args, cwd, env, flags) {
   } finally {clearTimeout(timer)}
 }
 
-test('2.1.310 restricted mode enforces default deny and explicit tool override', {timeout:90000}, async()=>{
+test('2.1.317 restricted mode enforces default deny and explicit tool override', {timeout:90000}, async()=>{
   const cwd=mkdtempSync(join(root,'.rebuild','333-restricted-'))
   const recorded=[]
   const server=createServer(async(req,res)=>{
@@ -66,7 +66,7 @@ test('2.1.310 restricted mode enforces default deny and explicit tool override',
       HOME:cwd,USERPROFILE:cwd,XDG_CONFIG_HOME:cwd,XDG_CACHE_HOME:cwd,
     }
     const targets=[['rebuilt','bun',[join(root,'dist/cli.js')]]]
-    if(process.env.CLAUDE_2310_X64)targets.push(['native',process.env.CLAUDE_2310_X64,[]])
+    if(process.env.CLAUDE_TARGET_X64)targets.push(['native',process.env.CLAUDE_TARGET_X64,[]])
     const seen=new Map()
     for(const [name,cmd,execArgs] of targets){
       for(const [scenario,tools,extra] of [
@@ -91,7 +91,7 @@ test('2.1.310 restricted mode enforces default deny and explicit tool override',
           assert.ok(exposed.includes('Bash'),`${name}: safe-mode removed a built-in tool`)
         }
         if(!seen.has(scenario))seen.set(scenario,exposed)
-        else assert.deepEqual(exposed,seen.get(scenario),`2.1.310 parity in ${scenario}`)
+        else assert.deepEqual(exposed,seen.get(scenario),`2.1.317 parity in ${scenario}`)
       }
       const blocked=await spawnCli(cmd,execArgs,cwd,env,{tools:['default'],args:['--restricted','--permission-mode','bypassPermissions']})
       assert.notEqual(blocked.exit,0,`${name}: restricted must reject bypassPermissions`)

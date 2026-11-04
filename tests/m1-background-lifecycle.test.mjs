@@ -7,7 +7,7 @@ import { test } from 'node:test'
 
 const root = resolve(import.meta.dirname, '..')
 const binaries = [['rebuilt', 'bun', [join(root, 'dist/cli.js')]]]
-if (process.env.CLAUDE_2310_X64) binaries.push(['official-x64', process.env.CLAUDE_2310_X64, []])
+if (process.env.CLAUDE_TARGET_X64) binaries.push(['official-x64', process.env.CLAUDE_TARGET_X64, []])
 
 function execute(bin, prefix, args, env, cwd, timeout = 17000) {
   const result = spawnSync(bin, [...prefix, ...args], {
@@ -17,7 +17,7 @@ function execute(bin, prefix, args, env, cwd, timeout = 17000) {
   return { status: result.status, stdout: result.stdout, stderr: result.stderr }
 }
 
-test('2.1.310 background real lifecycle: dispatch, list, logs, stop, respawn, remove', { timeout: 170000 }, () => {
+test('2.1.317 background real lifecycle: dispatch, list, logs, stop, respawn, remove', { timeout: 170000 }, () => {
   for (const [name, bin, prefix] of binaries) {
     const home = mkdtempSync(join(tmpdir(), 'bg-lifecycle-'))
     const cwdDir = join(home, 'project')

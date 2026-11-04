@@ -125,10 +125,10 @@ async function verify(label, command, args) {
   }
 }
 
-test('2.1.310 多级回退：三次 529 后逐级切换，不依赖旧隐藏开关', { timeout: 65000 }, async () => {
+test('2.1.317 多级回退：三次 529 后逐级切换，不依赖旧隐藏开关', { timeout: 65000 }, async () => {
   assert.ok(existsSync(compiled), 'Run bun build/rebuild.mjs first')
   await verify('rebuilt', 'bun', [compiled])
-  if (process.env.CLAUDE_2310_X64) {
-    await verify('official-x64', process.env.CLAUDE_2310_X64, [])
+  if (process.env.CLAUDE_TARGET_X64) {
+    await verify('official-x64', process.env.CLAUDE_TARGET_X64, [])
   }
 })

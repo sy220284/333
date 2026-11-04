@@ -28,7 +28,7 @@ function sandboxEnv(dir) {
   delete env.ANTHROPIC_BASE_URL
   return env
 }
-test('2.1.310 background IDs, bounded tail and terminal sanitization match the documented protocol', async () => {
+test('2.1.317 background IDs, bounded tail and terminal sanitization match the documented protocol', async () => {
   assert.equal(SHORT_ID_PATTERN.test('abcdef09'), true)
   assert.equal(SHORT_ID_PATTERN.test('abcdef09a'), false)
   assert.equal(MAX_LOG_BYTES, 1024 * 1024)
@@ -144,7 +144,7 @@ test('a restarted supervisor protects live orphan worker sessions from duplicate
   )
 })
 
-test('2.1.310 background worktree removal requires actual git safety evidence', async () => {
+test('2.1.317 background worktree removal requires actual git safety evidence', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'bg-worktree-'))
   try {
     const folder = join(dir, 'worktree')
@@ -153,12 +153,12 @@ test('2.1.310 background worktree removal requires actual git safety evidence', 
     await assert.rejects(removeWorktreeSafely(folder), /Cannot inspect worktree/)
   } finally { await rm(dir, { recursive: true, force: true }) }
 })
-test('installed official x64 and rebuilt CLI expose 2.1.310 background command behaviors', async () => {
+test('installed official x64 and rebuilt CLI expose 2.1.317 background command behaviors', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'bg-cli-oracle-'))
   const env = sandboxEnv(dir)
   await mkdir(env.CLAUDE_CONFIG_DIR, { recursive: true })
   const targets = [['rebuilt', 'bun', [join(root, 'dist/cli.js')]]]
-  if (process.env.CLAUDE_2310_X64) targets.push(['official x64', process.env.CLAUDE_2310_X64, []])
+  if (process.env.CLAUDE_TARGET_X64) targets.push(['official x64', process.env.CLAUDE_TARGET_X64, []])
   try {
     for (const [name, command, prefix] of targets) {
       const agents = snapshotCmd(command, prefix, ['agents', '--json'], env)
@@ -175,7 +175,7 @@ test('installed official x64 and rebuilt CLI expose 2.1.310 background command b
       const status = snapshotCmd(command, prefix, ['daemon', 'status'], env)
       assert.equal(status.code, 1, `${name}: daemon status should fail when absent`)
       assert.match(status.out + status.err, /not running/)
-      // Native 2.1.310 stop is idempotent when no daemon was started.
+      // Native 2.1.317 stop is idempotent when no daemon was started.
       for (const args of [['daemon', 'stop'], ['daemon', 'stop', '--any']]) {
         const stopped = snapshotCmd(command, prefix, args, env)
         assert.equal(stopped.code, 0, `${name}: ${args.join(' ')} returned ${stopped.err}`)
@@ -199,7 +199,7 @@ test('retired ps/bg private dispatch cannot override the new daemon and agent fl
   assert.match(main, /program\.command\('daemon \[subcommand\]'\)/)
 })
 
-test('2.1.310 background flags only apply to actual options, never other flag values', () => {
+test('2.1.317 background flags only apply to actual options, never other flag values', () => {
   const flags = activeBackgroundFlags(['--system-prompt', '--bg', '--model', 'sonnet', 'hello'])
   assert.equal(flags.has('--bg'), false)
   assert.equal(flags.has('--model'), true)
@@ -207,7 +207,7 @@ test('2.1.310 background flags only apply to actual options, never other flag va
   assert.equal(activeBackgroundFlags(['--bg', 'hello']).has('--bg'), true)
 })
 
-test('2.1.310 background validates interactive session prerequisites before daemon startup', () => {
+test('2.1.317 background validates interactive session prerequisites before daemon startup', () => {
   assert.match(validateBackgroundCliArgs(['--bg', '--print', 'hello']), /--bg and --print conflict/)
   assert.match(validateBackgroundCliArgs(['--bg', '-p', 'hello']), /--bg and --print conflict/)
   assert.match(validateBackgroundCliArgs(['--bg', '--project-config-root', '/tmp/project']), /unavailable with --project-config-root/)
