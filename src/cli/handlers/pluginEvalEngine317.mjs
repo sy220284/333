@@ -107,7 +107,22 @@ export async function executePluginEvalSuite317(cases, settings, adapters = {}) 
         costUsd = addUsd(costUsd, addUsd(result.costUsd ?? 0, judgeCostUsd))
         if (costUsd >= maxCostUsd) budgetExceeded = true
       } finally {
-        if (!settings.keepTemp) await rm(workspace, { recursive: true, force: true, maxRetries: 12, retryDelay: 200 })
+        if (!settings.keepTemp) {
+          try {
+            await rm(workspace, { recursive: true, force: true, maxRetries: 12, retryDelay: 200 })
+          } catch (error) {
+            // The shipped 2.1.317 harness reports a prominent security notice
+            // instead of discarding finished case results when Windows keeps a
+            // sandbox directory open after the model process closes.
+            const warning =
+              `⚠ could not remove ${workspace} (${String(error)}); ` +
+              'it holds what the plugin under test wrote — do not run git or ' +
+              'any command that loads configuration from inside this directory; ' +
+              'remove it when no process holds it open.'
+            settings.onNotice?.(warning)
+            if (!settings.onNotice) process.stderr.write(warning + '\\n')
+          }
+        }
       }
     }
   }
