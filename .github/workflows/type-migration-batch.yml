@@ -1,0 +1,87 @@
+name: PR7 TypeScript 类型迁移批次执行
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - '.github/workflows/type-migration-batch.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  migrate:
+    name: 生成、验证并提交返回类型迁移批次
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 恢复冻结的类型检查环境
+        run: |
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 运行基准类型检查与全仓内容级审计
+        run: |
+          node tools/dev/dev.mjs typecheck:all
+          node tools/dev/type-migration-audit.mjs
+          cp .rebuild/governance/type-migration-report.json /tmp/pr7-before-type-migration.json
+      - name: 根据编译器推断生成类型补强候选
+        run: node tools/dev/type-migration-returnfix.mjs
+      - name: 将候选类型补强应用到独立验证工作区
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from shutil import copy2
+          from json import load
+          base=Path('.rebuild/migration-proposals')
+          stats=load(open(base/'proposal-report.json'))['stats']
+          print('Proposals:',stats)
+          for src in (base/'src').rglob('*'):
+              if src.is_file():
+                  output=Path('src')/src.relative_to(base/'src')
+                  copy2(src,output)
+          PY
+      - name: 校验候选类型与代码内容、禁止任意类型
+        run: |
+          node tools/dev/dev.mjs typecheck:all
+          node tools/dev/type-migration-audit.mjs
+          node tools/dev/type-migration-strict.mjs
+          git diff --check
+          python3 - <<'PY'
+          import json
+          before=json.load(open('/tmp/pr7-before-type-migration.json'))
+          after=json.load(open('.rebuild/governance/type-migration-report.json'))
+          assert after['untypedSignatures']<before['untypedSignatures'],(before['untypedSignatures'],after['untypedSignatures'])
+          assert after['jsLikeFiles']<=before['jsLikeFiles']
+          assert not after['violations']
+          print('Type migration delta:',before['untypedSignatures'],'->',after['untypedSignatures'])
+          PY
+      - name: 保存批次证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr7-type-migration-batch-${{ github.sha }}
+          path: |
+            .rebuild/migration-proposals/proposal-report.json
+            .rebuild/governance/type-migration-report.json
+          retention-days: 14
+          if-no-files-found: warn
+      - name: 校验通过后提交已迁移源码
+        run: |
+          set -euo pipefail
+          git add -u -- src native
+          if git diff --cached --quiet; then
+            echo 'No compiler-proven type migration candidates'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m '批量修复已审计的TypeScript返回类型缺口（编译验证通过）'
+          git fetch origin upgrade/2.1.310-m1-evidence
+          git rebase origin/upgrade/2.1.310-m1-evidence
+          git push origin HEAD:upgrade/2.1.310-m1-evidence
