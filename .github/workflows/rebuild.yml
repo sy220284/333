@@ -75,6 +75,8 @@ jobs:
         run: bun test tests/m6-gateway-runtime-317.test.mjs
       - name: 317网关OAuth设备授权、OIDC批准、Token刷新撤销实测
         run: bun test tests/m6-gateway-device-317.test.mjs
+      - name: 317网关JSONB身份字段读取及Token安全校验
+        run: node --test tests/m6-gateway-jsonb-317.test.mjs
       - name: 317模型请求Beta路径、版本、API Key/OAuth原生协议
         run: node --test tests/m2-native-api-wire-317.test.mjs
       - name: 317企业网关真实Postgres事务及OAuth存储验证
