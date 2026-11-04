@@ -6,7 +6,7 @@ import type { Key } from '../ink.js'
 import type { PastedContent } from '../utils/config.js'
 import type { ImageDimensions } from '../utils/imageResizer.js'
 import type { TextHighlight } from '../utils/textHighlighting.js'
-import type { AgentId } from './ids.js'
+import type { AgentId, SessionId } from './ids.js'
 import type { AssistantMessage, MessageOrigin } from './message.js'
 
 /**
@@ -297,6 +297,8 @@ export type QueuePriority = 'now' | 'next' | 'later'
  * Queued command type
  */
 export type QueuedCommand = {
+  /** Owning conversation; captured at enqueue, never retargeted by /resume. */
+  sessionId?: SessionId
   value: string | Array<ContentBlockParam>
   mode: PromptInputMode
   /** Defaults to the priority implied by `mode` when enqueued. */
