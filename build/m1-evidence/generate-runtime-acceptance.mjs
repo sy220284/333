@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-// 用真实的功能契约和独立证据生成复核矩阵，不自动把专项测试当作 M10 签收。
+// 用真实的功能契约和独立证据生成复核矩阵，不自动把专项测试当作 新版功能链 签收。
 import { readFileSync, writeFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { resolve, dirname } from "node:path"
-import { loadRegistry } from "../m1-feature-evidence-registry.mjs"
+import { loadRegistry } from "../upgrade-feature-evidence-registry.mjs"
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..")
 const coverage = JSON.parse(readFileSync(resolve(root, "docs/upgrade/upgrade-coverage.json"), "utf8"))
 const evidence = JSON.parse(readFileSync(resolve(root, "docs/upgrade/m1-evidence/verified-runtime-evidence.json"), "utf8"))
-// Signed acceptance comes only from the independently validated M10 registry.
+// Signed acceptance comes only from the independently validated 新版功能链 registry.
 // The coverage catalog deliberately remains UNVERIFIED to prevent code changes
 // or focused tests from silently signing off end-to-end behavior.
 const registry = loadRegistry()
@@ -40,7 +40,7 @@ const covered = rows.filter(r => r.evidence.length).length
 const report = {schema:1, target_version:coverage.target_version,
   source:"docs/upgrade/upgrade-coverage.json", evidence_source:"docs/upgrade/m1-evidence/verified-runtime-evidence.json",
   summary:{features:rows.length, scenarios:coverage.scenarios.length, evidence_linked:covered, formally_accepted:formallyAccepted},
-  note:"evidence_linked 仅表示已有指向具体功能的测试证据，正式完成须以功能全链路、官方 x64 对照及 M10 签收为准",
+  note:"evidence_linked 仅表示已有指向具体功能的测试证据，正式完成须以功能全链路、官方 x64 对照及 新版功能链 签收为准",
   features:rows}
 const out = resolve(root, "docs/upgrade/m1-evidence/runtime-acceptance-matrix.json")
 if (process.argv.includes("--check")) {

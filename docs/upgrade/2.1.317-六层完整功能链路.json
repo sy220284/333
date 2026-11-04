@@ -1,0 +1,951 @@
+{
+  "schema": 1,
+  "target_version": "2.1.317",
+  "purpose": "333 完整新版功能实现与行为/语义对齐；按六层分工覆盖全部20条功能链及持续发现的新能力",
+  "independent_update_tracking": {
+    "scope": "SEPARATE",
+    "rule": "不按366条更新划分完成度，不读取或修改独立更新台账/阶段数量。此清单只管理源码和实际行为全链实现。"
+  },
+  "acceptance_baseline": {
+    "historical_features": 102,
+    "historical_scenarios": 84,
+    "policy": "102/84只作为既有回归下限。所有2.1.317新增、隐藏、跨端或云端链路须追加覆盖和真实证据；不能用回归清单的现有上限限制实施范围。"
+  },
+  "layers": [
+    {
+      "id": "M1",
+      "index": 0,
+      "title": "构建基础",
+      "scope": "官方资源、依赖、原生扩展、启动、独立构建和三平台发行",
+      "chain_ids": [
+        "C19"
+      ],
+      "requires": []
+    },
+    {
+      "id": "M2",
+      "index": 1,
+      "title": "核心决策",
+      "scope": "模型及API参数、提示词和上下文/压缩/记忆、权限沙箱和安全规则",
+      "chain_ids": [
+        "C01",
+        "C02",
+        "C04"
+      ],
+      "requires": [
+        "M1"
+      ]
+    },
+    {
+      "id": "M3",
+      "index": 2,
+      "title": "执行能力",
+      "scope": "文件与命令工具、Hooks/SDK与控制事件、CLI协议、认证/网络/TLS/遥测",
+      "chain_ids": [
+        "C03",
+        "C06",
+        "C11",
+        "C16"
+      ],
+      "requires": [
+        "M1",
+        "M2"
+      ]
+    },
+    {
+      "id": "M4",
+      "index": 3,
+      "title": "任务运行",
+      "scope": "Agent/团队/后台任务与消息、会话保存/恢复/身份隔离",
+      "chain_ids": [
+        "C05",
+        "C07"
+      ],
+      "requires": [
+        "M2",
+        "M3"
+      ]
+    },
+    {
+      "id": "M5",
+      "index": 4,
+      "title": "扩展能力",
+      "scope": "技能及官方资源、插件和市场、MCP/认证、Monitor/Workflow/调度、附件/PDF/Artifact",
+      "chain_ids": [
+        "C08",
+        "C09",
+        "C10",
+        "C17",
+        "C18"
+      ],
+      "requires": [
+        "M2",
+        "M3",
+        "M4"
+      ]
+    },
+    {
+      "id": "M6",
+      "index": 5,
+      "title": "用户和云端",
+      "scope": "终端UI/无障碍/动效、IDE、Remote Control、企业云及自建Runner、Slack/Code Review外部服务",
+      "chain_ids": [
+        "C12",
+        "C13",
+        "C14",
+        "C15",
+        "C20"
+      ],
+      "requires": [
+        "M2",
+        "M3",
+        "M4",
+        "M5"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "id": "C01",
+      "name": "模型目录/推理强度/API参数",
+      "layer": "M2",
+      "layer_index": 1,
+      "flow": [
+        "选择模型",
+        "识别能力",
+        "计算effort/限制",
+        "请求/回退",
+        "成本/UI"
+      ],
+      "source_candidates": [
+        "src/utils/model/model.ts",
+        "src/utils/effort.ts",
+        "src/services/api/claude.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "模型ID/网关/effort/上下文预算/回退差分",
+      "baseline_feature_ids": [
+        "F017",
+        "F018",
+        "F027",
+        "F087",
+        "F016"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C02",
+      "name": "提示词/上下文/压缩/记忆",
+      "layer": "M2",
+      "layer_index": 1,
+      "flow": [
+        "载入指令",
+        "拼装上下文",
+        "微压缩/压缩",
+        "保存摘要",
+        "恢复下轮"
+      ],
+      "source_candidates": [
+        "src/constants/prompts.ts",
+        "src/services/compact/compact.ts",
+        "src/services/SessionMemory/sessionMemory.ts",
+        "src/utils/claudemd.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "超长文本、修改CLAUDE.md、压缩后Read及恢复",
+      "baseline_feature_ids": [
+        "F005",
+        "F021",
+        "F022",
+        "F023",
+        "F024",
+        "F025",
+        "F086",
+        "F097"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C03",
+      "name": "基础工具/文件编辑/命令执行",
+      "layer": "M3",
+      "layer_index": 2,
+      "flow": [
+        "解析工具参数",
+        "权限检查",
+        "读写/启动进程",
+        "结果回传/清理"
+      ],
+      "source_candidates": [
+        "src/tools/BashTool/BashTool.tsx",
+        "src/tools/FileReadTool/FileReadTool.ts",
+        "src/tools/FileEditTool/FileEditTool.ts",
+        "src/utils/ShellCommand.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "读写副作用、超时取消、Windows和Bash回归",
+      "baseline_feature_ids": [
+        "F010",
+        "F028",
+        "F029",
+        "F030",
+        "F031",
+        "F032",
+        "F033",
+        "F034",
+        "F035",
+        "F036",
+        "F037",
+        "F038",
+        "F039",
+        "F040"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C04",
+      "name": "权限/沙箱/安全审核",
+      "layer": "M2",
+      "layer_index": 1,
+      "flow": [
+        "载入受管策略",
+        "路径/网络/敏感数据预检",
+        "拒绝/询问",
+        "执行",
+        "审计"
+      ],
+      "source_candidates": [
+        "src/utils/permissions/permissions.ts",
+        "src/utils/permissions/filesystem.ts",
+        "src/hooks/useCanUseTool.tsx",
+        "src/utils/settings/types.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "受管权限、符号链接、自动模式/绕过模式、双端审批",
+      "baseline_feature_ids": [
+        "F007",
+        "F041",
+        "F042",
+        "F043",
+        "F044",
+        "F045",
+        "F046",
+        "F047",
+        "F048",
+        "F049",
+        "F050",
+        "F060",
+        "F085",
+        "F090",
+        "F093",
+        "F094",
+        "F096"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C05",
+      "name": "Agent/团队/后台消息",
+      "layer": "M4",
+      "layer_index": 3,
+      "flow": [
+        "载入Agent",
+        "继承模型/权限",
+        "启动team和后台任务",
+        "消息调度",
+        "清理"
+      ],
+      "source_candidates": [
+        "src/tools/AgentTool/runAgent.ts",
+        "src/tasks/LocalAgentTask/LocalAgentTask.tsx",
+        "src/tools/SendMessageTool/SendMessageTool.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "团队/子代理/背景进程/消息到达/工作树恢复",
+      "baseline_feature_ids": [
+        "F015",
+        "F056",
+        "F057",
+        "F058",
+        "F059",
+        "F063",
+        "F064",
+        "F069",
+        "F089",
+        "F095"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C06",
+      "name": "Hooks/SDK/控制事件",
+      "layer": "M3",
+      "layer_index": 2,
+      "flow": [
+        "发现Hook",
+        "匹配/并发/超时",
+        "回调阻止/放行",
+        "SDK事件/提示回执"
+      ],
+      "source_candidates": [
+        "src/utils/hooks.ts",
+        "src/entrypoints/sdk/controlSchemas.ts",
+        "src/cli/structuredIO.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "24+12并发、onFailure阻断、超时、中断、流事件顺序",
+      "baseline_feature_ids": [
+        "F054",
+        "F055",
+        "F098"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C07",
+      "name": "会话存储/恢复/身份隔离",
+      "layer": "M4",
+      "layer_index": 3,
+      "flow": [
+        "会话ID/路径分配",
+        "保存转录/配置/标题",
+        "断点恢复",
+        "隔离输出"
+      ],
+      "source_candidates": [
+        "src/utils/sessionStorage.ts",
+        "src/utils/sessionRestore.ts",
+        "src/cli/print.ts",
+        "src/commands/resume/resume.tsx"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "嵌套-p、断电/磁盘满、跨进程、恢复不丢轮次",
+      "baseline_feature_ids": [
+        "F004",
+        "F006",
+        "F014",
+        "F026",
+        "F062",
+        "F070"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C08",
+      "name": "技能/资源发现/同步",
+      "layer": "M5",
+      "layer_index": 4,
+      "flow": [
+        "技能目录发现",
+        "路径条件匹配",
+        "缓存/云同步",
+        "原子安装",
+        "调用"
+      ],
+      "source_candidates": [
+        "src/skills/loadSkillsDir.ts",
+        "src/skills/bundledFiles.mjs",
+        "src/skills/bundled/index.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "技能资源官方哈希、失效重试、增删更新多进程测试",
+      "baseline_feature_ids": [
+        "F051",
+        "F091"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C09",
+      "name": "插件/市场/安装升级",
+      "layer": "M5",
+      "layer_index": 4,
+      "flow": [
+        "manifest解析",
+        "插件目录隔离",
+        "安装启停",
+        "加载命令/Hook",
+        "卸载回收"
+      ],
+      "source_candidates": [
+        "src/utils/plugins/pluginLoader.ts",
+        "src/utils/plugins/installedPluginsManager.ts",
+        "src/services/plugins/pluginOperations.ts",
+        "src/cli/handlers/plugins.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "多插件、空.mcp.json、损坏目录、启动性能、迁移",
+      "baseline_feature_ids": [
+        "F052",
+        "F084",
+        "F100"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C10",
+      "name": "MCP/连接器/认证",
+      "layer": "M5",
+      "layer_index": 4,
+      "flow": [
+        "配置和组织策略",
+        "MCP连接与OAuth",
+        "工具发现",
+        "重连",
+        "会话执行"
+      ],
+      "source_candidates": [
+        "src/services/mcp/client.ts",
+        "src/services/mcp/MCPConnectionManager.tsx",
+        "src/services/mcp/config.ts",
+        "src/commands/mcp/mcp.tsx"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "延迟连接、禁用与凭证撤销、headersHelper、复连",
+      "baseline_feature_ids": [
+        "F053",
+        "F092"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C11",
+      "name": "CLI/非交互/输出协议",
+      "layer": "M3",
+      "layer_index": 2,
+      "flow": [
+        "参数和环境解析",
+        "CLI初始化",
+        "工具/消息循环",
+        "JSON或text输出",
+        "退出码"
+      ],
+      "source_candidates": [
+        "src/entrypoints/cli.tsx",
+        "src/main.tsx",
+        "src/cli/print.ts",
+        "src/commands.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "官方x64十场景、--print/stream-json、退出码与stderr",
+      "baseline_feature_ids": [
+        "F002",
+        "F003",
+        "F071"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C12",
+      "name": "TUI/无障碍/动画交互",
+      "layer": "M6",
+      "layer_index": 5,
+      "flow": [
+        "键鼠/输入焦点",
+        "终端组件渲染",
+        "审批/任务/动画",
+        "TTY与读屏反馈"
+      ],
+      "source_candidates": [
+        "src/components/PromptInput/PromptInput.tsx",
+        "src/components/AgentProgressLine.tsx",
+        "src/components/MessageModel.tsx"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "终端PTY帧与快捷键、屏幕阅读器、宽窄布局",
+      "baseline_feature_ids": [
+        "F001",
+        "F008",
+        "F009",
+        "F011",
+        "F012",
+        "F013",
+        "F072",
+        "F078",
+        "F088"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C13",
+      "name": "IDE/编辑器扩展",
+      "layer": "M6",
+      "layer_index": 5,
+      "flow": [
+        "VSCode/JetBrains事件",
+        "选区/当前文件",
+        "IDE面板和命令",
+        "回传"
+      ],
+      "source_candidates": [
+        "src/bridge/bridgeUI.ts",
+        "src/bridge/bridgePermissionCallbacks.ts",
+        "src/cli/remoteIO.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "真实IDE扩展与外部发行物双侧差分",
+      "baseline_feature_ids": [
+        "F065"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C14",
+      "name": "远程控制/桌面/移动桥接",
+      "layer": "M6",
+      "layer_index": 5,
+      "flow": [
+        "Remote Control握手",
+        "桥接权限/消息",
+        "sessionRunner",
+        "重连/状态同步"
+      ],
+      "source_candidates": [
+        "src/bridge/remoteBridgeCore.ts",
+        "src/bridge/sessionRunner.ts",
+        "src/bridge/bridgePermissionCallbacks.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "双设备、并发批准、断连重连与重启后消息",
+      "baseline_feature_ids": [
+        "F066",
+        "F068",
+        "F099"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C15",
+      "name": "企业网关/云会话/自建Runner",
+      "layer": "M6",
+      "layer_index": 5,
+      "flow": [
+        "组织策略身份",
+        "云runner调度",
+        "RPC/心跳/重试",
+        "环境/合规反馈"
+      ],
+      "source_candidates": [
+        "src/cli/background/sessionStore.mjs",
+        "src/bridge/sessionRunner.ts",
+        "src/cli/remoteIO.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "企业Gateway/Runner实际服务端故障注入及外部组件",
+      "baseline_feature_ids": [],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C16",
+      "name": "认证/网络/TLS/遥测",
+      "layer": "M3",
+      "layer_index": 2,
+      "flow": [
+        "令牌/证书/代理加载",
+        "联网/重试/超时",
+        "遥测输出",
+        "错误映射"
+      ],
+      "source_candidates": [
+        "src/utils/auth.ts",
+        "src/services/api/withRetry.ts",
+        "src/utils/telemetry/instrumentation.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "403/429/529/TLS/OTLP断流代理/超时",
+      "baseline_feature_ids": [
+        "F019",
+        "F020",
+        "F067",
+        "F080"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C17",
+      "name": "Monitor/loop/调度",
+      "layer": "M5",
+      "layer_index": 4,
+      "flow": [
+        "监测/周期请求",
+        "权限与调度",
+        "后台状态",
+        "唤醒/停止和结果"
+      ],
+      "source_candidates": [
+        "src/tools/MonitorTool/MonitorTool.ts",
+        "src/skills/bundled/loop.ts",
+        "src/tasks/MonitorWsTask/MonitorWsTask.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "同条件云schedule/本地loop/monitor失败注入",
+      "baseline_feature_ids": [
+        "F061",
+        "F081",
+        "F082",
+        "F083"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C18",
+      "name": "附件/PDF/Artifact",
+      "layer": "M5",
+      "layer_index": 4,
+      "flow": [
+        "附件载入",
+        "PDF/文档页数或文本解析",
+        "工具上传/共享",
+        "列表和授权结果"
+      ],
+      "source_candidates": [
+        "src/tools/FileReadTool/FileReadTool.ts",
+        "src/utils/pdf.ts",
+        "src/components/PromptInput/PromptInput.tsx"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "PDF Read与@双入口、Artifact跨账号权限",
+      "baseline_feature_ids": [
+        "F073",
+        "F074",
+        "F075",
+        "F076",
+        "F077"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C19",
+      "name": "构建/资源/启动性能",
+      "layer": "M1",
+      "layer_index": 0,
+      "flow": [
+        "官方来源哈希",
+        "冻结依赖与技能恢复",
+        "独立构建",
+        "三平台/CI运行"
+      ],
+      "source_candidates": [
+        "build/rebuild.mjs",
+        "build/restore-claude-api.mjs",
+        "build/verify-bundled-assets.mjs",
+        "src/main.tsx"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "317资料SHA/技能清单/真实构建与资源字节差分",
+      "baseline_feature_ids": [
+        "F079"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C20",
+      "name": "Slack Claude Tag/Code Review外部服务",
+      "layer": "M6",
+      "layer_index": 5,
+      "flow": [
+        "外部事件/身份",
+        "Slack/PR消息处理",
+        "异步执行",
+        "结果/去重/权限"
+      ],
+      "source_candidates": [
+        "src/commands/review/reviewRemote.ts",
+        "src/bridge/remoteBridgeCore.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "Slack/Code Review真实服务端对照及重复事件",
+      "baseline_feature_ids": [
+        "F101",
+        "F102"
+      ],
+      "implementation_strategy": [
+        "优先从官方2.1.317可读源码移植真实实现及必要依赖",
+        "对被压缩或难以直接移植的模块先追踪官方调用关系和输入输出契约",
+        "源码缺失时用官方Linux x64真实执行、事件/持久化/异常差分确认逻辑，再以目标行为语义重写",
+        "与原功能消费者逐段接通，移除旧入口重复实现并保留必要的数据迁移",
+        "同场景正反例、端到端、跨平台和需要的外部服务验证通过后签收"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    }
+  ],
+  "verification_policy": {
+    "official_reference": "2.1.317 官方可执行安装包及逐模块可读源码，记录可重现哈希、函数锚点和版本；外部云能力补可核验的服务端或宿主证据",
+    "source_preference": "官方可读源码直接移植 > 有明确依赖关系的模块适配 > 官方 x64 黑盒验证后按函数语义重写",
+    "signoff": "必须给出目标函数/原型、333当前消费者、实现差分、真实正反例测试、原版x64与候选版运行报告、跨平台/宿主检查以及受影响调用链的回归证据；最后才能标记VERIFIED",
+    "blocked": "证据不足标PENDING，保留可执行调查动作；不得以模拟通过顶替x64与外部服务实测"
+  }
+}

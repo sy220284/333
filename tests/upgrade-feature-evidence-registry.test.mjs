@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
 import {readFileSync} from 'node:fs'
-import {buildRegistry, loadRegistry} from '../build/m1-feature-evidence-registry.mjs'
+import {buildRegistry, loadRegistry} from '../build/upgrade-feature-evidence-registry.mjs'
 
 const read = path => JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'))
 const PINNED_HISTORICAL_SHA_FOR_UNIT_TEST = 'b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56'
@@ -9,11 +9,11 @@ const baseline = () => ({
   coverage: read('docs/upgrade/upgrade-coverage.json'),
   audit: read('docs/upgrade/m1-evidence/PR7-18组功能链证据审计.json'),
   // Mutating tests always start from an unsigned fixture; real sign-offs must
-  // be counted separately so progressing M10 cannot break isolation tests.
-  signoffs: {...read('docs/upgrade/m1-evidence/PR7-M10-功能及场景签收.json'), features:[], scenarios:[]},
+  // be counted separately so progressing 六层 cannot break isolation tests.
+  signoffs: {...read('docs/upgrade/2.1.317-功能与场景签收.json'), features:[], scenarios:[]},
 })
 
-test('source groups can grow and signed counts follow the actual M10 ledger', () => {
+test('source groups can grow and signed counts follow the actual 六层 ledger', () => {
   const registry = loadRegistry()
   const { audit } = baseline()
   assert.ok(registry.counts.source_groups >= 18)
@@ -21,12 +21,12 @@ test('source groups can grow and signed counts follow the actual M10 ledger', ()
     [registry.counts.source_groups, registry.counts.features, registry.counts.scenarios],
     [audit.groups.length, 102, 84],
   )
-  const live = read('docs/upgrade/m1-evidence/PR7-M10-功能及场景签收.json')
+  const live = read('docs/upgrade/2.1.317-功能与场景签收.json')
   assert.equal(registry.counts.signed_features, live.features.length)
   assert.equal(registry.counts.signed_scenarios, live.scenarios.length)
   assert.ok(registry.features.find(f => f.id === 'F034').code_upgrade_groups.includes('G04'))
 })
-test('source upgrade cannot silently sign M10', () => {
+test('source upgrade cannot silently sign 六层', () => {
   const {coverage, audit, signoffs} = baseline()
   audit.groups[0].acceptance = 'VERIFIED'
   assert.throws(() => buildRegistry(coverage, audit, undefined, signoffs, PINNED_HISTORICAL_SHA_FOR_UNIT_TEST),
@@ -57,10 +57,10 @@ test('signoff cannot count a passed feature when its E/L scenario is missing', (
       report: 'docs/upgrade/m1-evidence/F034-Notebook-官方x64-E41实测.json'},
     rebuilt: {commit_sha: 'a'.repeat(40),
       ci_run: 'https://github.com/sy220284/333/actions/runs/41439617990', result: 'PASS',
-      report: 'docs/upgrade/m1-evidence/M10-test-candidate.json'},
+      report: 'docs/upgrade/m1-evidence/six-layer-test-candidate.json'},
     parity: {result: 'PASS',
-      report: 'docs/upgrade/m1-evidence/M10-test-parity.json'},
-    review: {signed_at: '2026-11-02T13:00:00Z', reviewer: 'M10-test-fixture'},
+      report: 'docs/upgrade/m1-evidence/six-layer-test-parity.json'},
+    review: {signed_at: '2026-11-02T13:00:00Z', reviewer: 'six-layer-test-fixture'},
   })
   signoffs.features = [proof('F034')]
   assert.throws(() => buildRegistry(coverage, audit, () => true, signoffs, PINNED_HISTORICAL_SHA_FOR_UNIT_TEST),
@@ -77,7 +77,7 @@ test('a signed scenario cannot omit another required feature', () => {
     /official executable mismatch/)
 })
 
-test('separate official, rebuilt and parity reports are required for M10 proof', () => {
+test('separate official, rebuilt and parity reports are required for 六层 proof', () => {
   const {coverage, audit, signoffs} = baseline()
   signoffs.features = [{
     id: 'F034',
@@ -96,7 +96,7 @@ test('separate official, rebuilt and parity reports are required for M10 proof',
       result: 'PASS',
       report: 'docs/upgrade/m1-evidence/F034-Notebook-官方x64-E41实测.json',
     },
-    review: {signed_at: '2026-11-02T13:00:00Z', reviewer: 'M10-test-fixture'},
+    review: {signed_at: '2026-11-02T13:00:00Z', reviewer: 'six-layer-test-fixture'},
   }]
   assert.throws(() => buildRegistry(coverage, audit, () => true, signoffs, PINNED_HISTORICAL_SHA_FOR_UNIT_TEST),
     /target, candidate and difference reports must be independent/)

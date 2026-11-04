@@ -1,15 +1,20 @@
-name: M1 102项功能与84场景证据签收契约验收
+name: 2.1.317 六层功能链与历史回归签收
 on:
   pull_request:
     paths:
-      - 'build/m1-feature-evidence-registry.mjs'
-      - 'tests/m1-feature-evidence-registry.test.mjs'
+      - 'build/upgrade-feature-evidence-registry.mjs'
+      - 'tests/upgrade-feature-evidence-registry.test.mjs'
       - 'docs/upgrade/m1-evidence/PR7-18组功能链证据审计.json'
-      - 'docs/upgrade/m1-evidence/PR7-M10-功能及场景签收.json'
+      - 'docs/upgrade/2.1.317-功能与场景签收.json'
+      - 'docs/upgrade/2.1.317-功能链路签收.json'
+      - 'docs/upgrade/2.1.317-六层完整功能链路.json'
+      - 'docs/upgrade/implementation/**'
+      - 'build/upgrade-chain-audit.mjs'
+      - 'tests/upgrade-chain-audit.test.mjs'
       - 'docs/upgrade/m1-evidence/target-release.json'
       - 'tests/m1-target-release-317.test.mjs'
       - 'docs/upgrade/upgrade-coverage.json'
-      - '.github/workflows/m1-feature-evidence-registry.yml'
+      - '.github/workflows/upgrade-feature-evidence-registry.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -18,7 +23,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   evidence-registry:
-    name: 102能力84场景正反向契约独立验证
+    name: 20链和102能力84场景正反向契约独立验证
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -28,13 +33,16 @@ jobs:
           node-version: '22'
       - name: 检查注册器和测试语法
         run: |
-          node --check build/m1-feature-evidence-registry.mjs
-          node --check tests/m1-feature-evidence-registry.test.mjs
+          node --check build/upgrade-feature-evidence-registry.mjs
+          node --check tests/upgrade-feature-evidence-registry.test.mjs
+          node --check build/upgrade-chain-audit.mjs
+          node --check tests/upgrade-chain-audit.test.mjs
       - name: 验证代码升级与正式签收相互独立
-        run: node --test tests/m1-feature-evidence-registry.test.mjs
+        run: node --test tests/upgrade-feature-evidence-registry.test.mjs tests/upgrade-chain-audit.test.mjs tests/upgrade-coverage.test.mjs
       - name: 保存本提交的验收统计快照
         run: |
-          node build/m1-feature-evidence-registry.mjs --report "${RUNNER_TEMP}/m1-feature-signoff-registry.json"
+          node build/upgrade-chain-audit.mjs --report "${RUNNER_TEMP}/upgrade-chain-audit.json"
+          node build/upgrade-feature-evidence-registry.mjs --report "${RUNNER_TEMP}/m1-feature-signoff-registry.json"
           node --input-type=module -e '
             import { readFileSync } from "node:fs";
             const r = JSON.parse(readFileSync(process.env.RUNNER_TEMP + "/m1-feature-signoff-registry.json","utf8"));
@@ -46,6 +54,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: m1-feature-signoff-${{ github.sha }}
-          path: ${{ runner.temp }}/m1-feature-signoff-registry.json
+          path: |
+            ${{ runner.temp }}/m1-feature-signoff-registry.json
+            ${{ runner.temp }}/upgrade-chain-audit.json
           if-no-files-found: warn
           retention-days: 30

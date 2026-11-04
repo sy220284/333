@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "rule": "实测限定于证据覆盖的操作；完成状态由 docs/upgrade/upgrade-coverage.json 和 M10 统一确认，不自动修改",
+  "rule": "实测限定于证据覆盖的操作；完成状态由 docs/upgrade/upgrade-coverage.json 和 完整功能链和场景验收 统一确认，不自动修改",
   "features": {
     "F032": {
       "scenarios": [],
@@ -42,7 +42,7 @@
       "remaining": [
         "Notebook 异常中断/历史恢复",
         "文件软链接/权限和并发全局边界",
-        "M10 正式签收"
+        "新版功能链和场景签收"
       ]
     }
   }

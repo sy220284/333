@@ -9,7 +9,7 @@
     "evidence_linked": 2,
     "formally_accepted": 0
   },
-  "note": "evidence_linked 仅表示已有指向具体功能的测试证据，正式完成须以功能全链路、官方 x64 对照及 M10 签收为准",
+  "note": "evidence_linked 仅表示已有指向具体功能的测试证据，正式完成须以功能全链路、官方 x64 对照及 新版功能链 签收为准",
   "features": [
     {
       "id": "F001",
@@ -375,7 +375,7 @@
       "next_checks": [
         "Notebook 异常中断/历史恢复",
         "文件软链接/权限和并发全局边界",
-        "M10 正式签收"
+        "新版功能链和场景签收"
       ]
     },
     {

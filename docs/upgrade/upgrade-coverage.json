@@ -1,142 +1,92 @@
 {
-  "schema": 1,
+  "schema": 2,
   "target_version": "2.1.317",
   "baseline_version": "2.1.88",
-  "status_semantics": "Documentation linkage only; UNVERIFIED means no runtime feature acceptance",
+  "status_semantics": "20条新版完整功能链分六层实施，102/84仅为历史回归下限；UNVERIFIED不代表真实执行通过",
   "counts": {
     "features": 102,
     "scenarios": 84,
-    "tasks": 10
+    "tasks": 6,
+    "chains": 20
   },
   "tasks": [
     {
       "id": "M1",
+      "name": "构建基础",
+      "layer_index": 0,
+      "requires": [],
+      "routes": [
+        "C19"
+      ],
       "features": [
-        "F001",
-        "F002",
-        "F003",
-        "F004",
-        "F005",
-        "F006",
-        "F007",
-        "F008",
-        "F009",
-        "F010",
-        "F011",
-        "F012",
-        "F013",
-        "F014",
-        "F015",
-        "F016",
-        "F017",
-        "F018",
-        "F019",
-        "F020",
-        "F021",
-        "F022",
-        "F023",
-        "F024",
-        "F025",
-        "F026",
-        "F027",
-        "F028",
-        "F029",
-        "F030",
-        "F031",
-        "F032",
-        "F033",
-        "F034",
-        "F035",
-        "F036",
-        "F037",
-        "F038",
-        "F039",
-        "F040",
-        "F041",
-        "F042",
-        "F043",
-        "F044",
-        "F045",
-        "F046",
-        "F047",
-        "F048",
-        "F049",
-        "F050",
-        "F051",
-        "F052",
-        "F053",
-        "F054",
-        "F055",
-        "F056",
-        "F057",
-        "F058",
-        "F059",
-        "F060",
-        "F061",
-        "F062",
-        "F063",
-        "F064",
-        "F065",
-        "F066",
-        "F067",
-        "F068",
-        "F069",
-        "F070",
-        "F071",
-        "F072",
-        "F073",
-        "F074",
-        "F075",
-        "F076",
-        "F077",
-        "F078",
-        "F079",
-        "F080",
-        "F081",
-        "F082",
-        "F083",
-        "F084",
-        "F085",
-        "F086",
-        "F087",
-        "F088",
-        "F089",
-        "F090",
-        "F091",
-        "F092",
-        "F093",
-        "F094",
-        "F095",
-        "F096",
-        "F097",
-        "F098",
-        "F099",
-        "F100",
-        "F101",
-        "F102"
+        "F079"
       ]
     },
     {
       "id": "M2",
+      "name": "核心决策",
+      "layer_index": 1,
+      "requires": [
+        "M1"
+      ],
+      "routes": [
+        "C01",
+        "C02",
+        "C04"
+      ],
       "features": [
-        "F015",
+        "F005",
+        "F007",
         "F016",
         "F017",
         "F018",
-        "F019",
-        "F020",
         "F021",
         "F022",
+        "F023",
+        "F024",
+        "F025",
         "F027",
-        "F087"
+        "F041",
+        "F042",
+        "F043",
+        "F044",
+        "F045",
+        "F046",
+        "F047",
+        "F048",
+        "F049",
+        "F050",
+        "F060",
+        "F085",
+        "F086",
+        "F087",
+        "F090",
+        "F093",
+        "F094",
+        "F096",
+        "F097"
       ]
     },
     {
       "id": "M3",
+      "name": "执行能力",
+      "layer_index": 2,
+      "requires": [
+        "M1",
+        "M2"
+      ],
+      "routes": [
+        "C03",
+        "C06",
+        "C11",
+        "C16"
+      ],
       "features": [
-        "F007",
+        "F002",
+        "F003",
         "F010",
-        "F014",
+        "F019",
+        "F020",
         "F028",
         "F029",
         "F030",
@@ -150,143 +100,152 @@
         "F038",
         "F039",
         "F040",
-        "F041",
-        "F042",
-        "F043",
-        "F044",
-        "F045",
-        "F046",
-        "F047",
-        "F048",
-        "F049",
-        "F050",
-        "F090",
-        "F093",
-        "F094",
-        "F096"
+        "F054",
+        "F055",
+        "F067",
+        "F071",
+        "F080",
+        "F098"
       ]
     },
     {
       "id": "M4",
+      "name": "任务运行",
+      "layer_index": 3,
+      "requires": [
+        "M2",
+        "M3"
+      ],
+      "routes": [
+        "C05",
+        "C07"
+      ],
       "features": [
         "F004",
-        "F005",
         "F006",
-        "F023",
+        "F014",
+        "F015",
         "F026",
+        "F056",
+        "F057",
+        "F058",
+        "F059",
         "F062",
+        "F063",
+        "F064",
+        "F069",
         "F070",
-        "F086",
-        "F097"
+        "F089",
+        "F095"
       ]
     },
     {
       "id": "M5",
+      "name": "扩展能力",
+      "layer_index": 4,
+      "requires": [
+        "M2",
+        "M3",
+        "M4"
+      ],
+      "routes": [
+        "C08",
+        "C09",
+        "C10",
+        "C17",
+        "C18"
+      ],
       "features": [
-        "F001",
-        "F002",
-        "F003",
-        "F008",
-        "F009",
-        "F011",
-        "F012",
-        "F013",
-        "F055",
-        "F065",
-        "F066",
-        "F067",
-        "F068",
-        "F071",
-        "F072",
-        "F078",
-        "F079",
-        "F088",
-        "F098",
-        "F099"
-      ]
-    },
-    {
-      "id": "M6",
-      "features": [
-        "F024",
-        "F025",
         "F051",
         "F052",
         "F053",
-        "F054",
         "F061",
         "F073",
         "F074",
         "F075",
         "F076",
         "F077",
+        "F081",
+        "F082",
+        "F083",
         "F084",
-        "F085",
         "F091",
         "F092",
         "F100"
       ]
     },
     {
-      "id": "M7",
-      "features": [
-        "F056",
-        "F057",
-        "F058",
-        "F059",
-        "F063",
-        "F064",
-        "F069",
-        "F089"
-      ]
-    },
-    {
-      "id": "M8",
-      "features": [
-        "F060",
-        "F081",
-        "F082",
-        "F083",
-        "F095"
-      ]
-    },
-    {
-      "id": "M9",
-      "features": [
-        "F101",
-        "F102"
-      ]
-    },
-    {
-      "id": "M10",
+      "id": "M6",
+      "name": "用户和云端",
+      "layer_index": 5,
+      "requires": [
+        "M2",
+        "M3",
+        "M4",
+        "M5"
+      ],
+      "routes": [
+        "C12",
+        "C13",
+        "C14",
+        "C15",
+        "C20"
+      ],
       "features": [
         "F001",
-        "F002",
-        "F003",
-        "F004",
-        "F005",
-        "F006",
-        "F007",
         "F008",
         "F009",
-        "F010",
         "F011",
         "F012",
         "F013",
-        "F014",
-        "F015",
-        "F016",
+        "F065",
+        "F066",
+        "F068",
+        "F072",
+        "F078",
+        "F088",
+        "F099",
+        "F101",
+        "F102"
+      ]
+    }
+  ],
+  "chains": [
+    {
+      "id": "C01",
+      "name": "模型目录/推理强度/API参数",
+      "layer": "M2",
+      "features": [
         "F017",
         "F018",
-        "F019",
-        "F020",
+        "F027",
+        "F087",
+        "F016"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C02",
+      "name": "提示词/上下文/压缩/记忆",
+      "layer": "M2",
+      "features": [
+        "F005",
         "F021",
         "F022",
         "F023",
         "F024",
         "F025",
-        "F026",
-        "F027",
+        "F086",
+        "F097"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C03",
+      "name": "基础工具/文件编辑/命令执行",
+      "layer": "M3",
+      "features": [
+        "F010",
         "F028",
         "F029",
         "F030",
@@ -299,7 +258,16 @@
         "F037",
         "F038",
         "F039",
-        "F040",
+        "F040"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C04",
+      "name": "权限/沙箱/安全审核",
+      "layer": "M2",
+      "features": [
+        "F007",
         "F041",
         "F042",
         "F043",
@@ -310,69 +278,208 @@
         "F048",
         "F049",
         "F050",
-        "F051",
-        "F052",
-        "F053",
-        "F054",
-        "F055",
+        "F060",
+        "F085",
+        "F090",
+        "F093",
+        "F094",
+        "F096"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C05",
+      "name": "Agent/团队/后台消息",
+      "layer": "M4",
+      "features": [
+        "F015",
         "F056",
         "F057",
         "F058",
         "F059",
-        "F060",
-        "F061",
-        "F062",
         "F063",
         "F064",
-        "F065",
-        "F066",
-        "F067",
-        "F068",
         "F069",
-        "F070",
-        "F071",
+        "F089",
+        "F095"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C06",
+      "name": "Hooks/SDK/控制事件",
+      "layer": "M3",
+      "features": [
+        "F054",
+        "F055",
+        "F098"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C07",
+      "name": "会话存储/恢复/身份隔离",
+      "layer": "M4",
+      "features": [
+        "F004",
+        "F006",
+        "F014",
+        "F026",
+        "F062",
+        "F070"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C08",
+      "name": "技能/资源发现/同步",
+      "layer": "M5",
+      "features": [
+        "F051",
+        "F091"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C09",
+      "name": "插件/市场/安装升级",
+      "layer": "M5",
+      "features": [
+        "F052",
+        "F084",
+        "F100"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C10",
+      "name": "MCP/连接器/认证",
+      "layer": "M5",
+      "features": [
+        "F053",
+        "F092"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C11",
+      "name": "CLI/非交互/输出协议",
+      "layer": "M3",
+      "features": [
+        "F002",
+        "F003",
+        "F071"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C12",
+      "name": "TUI/无障碍/动画交互",
+      "layer": "M6",
+      "features": [
+        "F001",
+        "F008",
+        "F009",
+        "F011",
+        "F012",
+        "F013",
         "F072",
+        "F078",
+        "F088"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C13",
+      "name": "IDE/编辑器扩展",
+      "layer": "M6",
+      "features": [
+        "F065"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C14",
+      "name": "远程控制/桌面/移动桥接",
+      "layer": "M6",
+      "features": [
+        "F066",
+        "F068",
+        "F099"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C15",
+      "name": "企业网关/云会话/自建Runner",
+      "layer": "M6",
+      "features": [],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C16",
+      "name": "认证/网络/TLS/遥测",
+      "layer": "M3",
+      "features": [
+        "F019",
+        "F020",
+        "F067",
+        "F080"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C17",
+      "name": "Monitor/loop/调度",
+      "layer": "M5",
+      "features": [
+        "F061",
+        "F081",
+        "F082",
+        "F083"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C18",
+      "name": "附件/PDF/Artifact",
+      "layer": "M5",
+      "features": [
         "F073",
         "F074",
         "F075",
         "F076",
-        "F077",
-        "F078",
-        "F079",
-        "F080",
-        "F081",
-        "F082",
-        "F083",
-        "F084",
-        "F085",
-        "F086",
-        "F087",
-        "F088",
-        "F089",
-        "F090",
-        "F091",
-        "F092",
-        "F093",
-        "F094",
-        "F095",
-        "F096",
-        "F097",
-        "F098",
-        "F099",
-        "F100",
+        "F077"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C19",
+      "name": "构建/资源/启动性能",
+      "layer": "M1",
+      "features": [
+        "F079"
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+    },
+    {
+      "id": "C20",
+      "name": "Slack Claude Tag/Code Review外部服务",
+      "layer": "M6",
+      "features": [
         "F101",
         "F102"
-      ]
+      ],
+      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
     }
   ],
   "features": [
     {
       "id": "F001",
       "title": "交互式终端聊天",
+      "chain": "C12",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M6"
       ],
       "scenarios": [
         "E01",
@@ -385,10 +492,9 @@
     {
       "id": "F002",
       "title": "一次性 `-p` 执行",
+      "chain": "C11",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E01"
@@ -398,10 +504,9 @@
     {
       "id": "F003",
       "title": "JSON、stream-json 非交互",
+      "chain": "C11",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E23",
@@ -413,10 +518,9 @@
     {
       "id": "F004",
       "title": "会话恢复与历史选择",
+      "chain": "C07",
       "tasks": [
-        "M1",
-        "M4",
-        "M10"
+        "M4"
       ],
       "scenarios": [
         "E33"
@@ -426,10 +530,9 @@
     {
       "id": "F005",
       "title": "清空、压缩上下文",
+      "chain": "C02",
       "tasks": [
-        "M1",
-        "M4",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E36"
@@ -439,10 +542,9 @@
     {
       "id": "F006",
       "title": "会话导出、分享",
+      "chain": "C07",
       "tasks": [
-        "M1",
-        "M4",
-        "M10"
+        "M4"
       ],
       "scenarios": [
         "E36"
@@ -452,10 +554,9 @@
     {
       "id": "F007",
       "title": "任务计划与审批",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E03",
@@ -466,10 +567,9 @@
     {
       "id": "F008",
       "title": "交互式追问",
+      "chain": "C12",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M6"
       ],
       "scenarios": [
         "E37"
@@ -479,10 +579,9 @@
     {
       "id": "F009",
       "title": "TUI 会话、全屏与 Diff",
+      "chain": "C12",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M6"
       ],
       "scenarios": [
         "E37",
@@ -493,10 +592,9 @@
     {
       "id": "F010",
       "title": "撤销和回退",
+      "chain": "C03",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E20"
@@ -506,10 +604,9 @@
     {
       "id": "F011",
       "title": "主题、键位、Vim 设置",
+      "chain": "C12",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M6"
       ],
       "scenarios": [
         "E37",
@@ -521,10 +618,9 @@
     {
       "id": "F012",
       "title": "状态栏与用量",
+      "chain": "C12",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M6"
       ],
       "scenarios": [
         "E26",
@@ -535,10 +631,9 @@
     {
       "id": "F013",
       "title": "语音输入",
+      "chain": "C12",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M6"
       ],
       "scenarios": [
         "E26"
@@ -548,10 +643,9 @@
     {
       "id": "F014",
       "title": "多目录项目与 Worktree",
+      "chain": "C07",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M4"
       ],
       "scenarios": [
         "E38"
@@ -561,10 +655,9 @@
     {
       "id": "F015",
       "title": "Agent 模型-工具循环",
+      "chain": "C05",
       "tasks": [
-        "M1",
-        "M2",
-        "M10"
+        "M4"
       ],
       "scenarios": [
         "E02",
@@ -577,10 +670,9 @@
     {
       "id": "F016",
       "title": "流式块与思考内容",
+      "chain": "C01",
       "tasks": [
-        "M1",
-        "M2",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E18"
@@ -590,10 +682,9 @@
     {
       "id": "F017",
       "title": "模型选择、切换及上下文能力",
+      "chain": "C01",
       "tasks": [
-        "M1",
-        "M2",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E18",
@@ -605,10 +696,9 @@
     {
       "id": "F018",
       "title": "可扩展模型适配",
+      "chain": "C01",
       "tasks": [
-        "M1",
-        "M2",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E18",
@@ -619,10 +709,9 @@
     {
       "id": "F019",
       "title": "登录、凭证与刷新",
+      "chain": "C16",
       "tasks": [
-        "M1",
-        "M2",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E01"
@@ -632,10 +721,9 @@
     {
       "id": "F020",
       "title": "限流、重试、取消",
+      "chain": "C16",
       "tasks": [
-        "M1",
-        "M2",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E15",
@@ -647,10 +735,9 @@
     {
       "id": "F021",
       "title": "提示词缓存、用量",
+      "chain": "C02",
       "tasks": [
-        "M1",
-        "M2",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E18",
@@ -661,10 +748,9 @@
     {
       "id": "F022",
       "title": "动态主系统提示词",
+      "chain": "C02",
       "tasks": [
-        "M1",
-        "M2",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E02",
@@ -676,10 +762,9 @@
     {
       "id": "F023",
       "title": "长上下文压缩与恢复",
+      "chain": "C02",
       "tasks": [
-        "M1",
-        "M4",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E09",
@@ -691,10 +776,9 @@
     {
       "id": "F024",
       "title": "自动记忆与召回",
+      "chain": "C02",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E17"
@@ -704,10 +788,9 @@
     {
       "id": "F025",
       "title": "Dream 记忆去重/合并",
+      "chain": "C02",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E17"
@@ -717,10 +800,9 @@
     {
       "id": "F026",
       "title": "执行状态存储和崩溃恢复",
+      "chain": "C07",
       "tasks": [
-        "M1",
-        "M4",
-        "M10"
+        "M4"
       ],
       "scenarios": [
         "E09",
@@ -736,10 +818,9 @@
     {
       "id": "F027",
       "title": "运行成本与令牌统计",
+      "chain": "C01",
       "tasks": [
-        "M1",
-        "M2",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E39"
@@ -749,10 +830,9 @@
     {
       "id": "F028",
       "title": "Read 文件/多格式阅读",
+      "chain": "C03",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E02",
@@ -765,10 +845,9 @@
     {
       "id": "F029",
       "title": "Write 文件",
+      "chain": "C03",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E03",
@@ -779,10 +858,9 @@
     {
       "id": "F030",
       "title": "Edit 原位编辑",
+      "chain": "C03",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E03",
@@ -794,10 +872,9 @@
     {
       "id": "F031",
       "title": "Glob/Grep 搜索",
+      "chain": "C03",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E02"
@@ -807,10 +884,9 @@
     {
       "id": "F032",
       "title": "Bash 命令与进程",
+      "chain": "C03",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E03",
@@ -824,10 +900,9 @@
     {
       "id": "F033",
       "title": "PowerShell",
+      "chain": "C03",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E40"
@@ -837,10 +912,9 @@
     {
       "id": "F034",
       "title": "Notebook 编辑",
+      "chain": "C03",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E41"
@@ -850,10 +924,9 @@
     {
       "id": "F035",
       "title": "LSP 语义查询",
+      "chain": "C03",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E42"
@@ -863,10 +936,9 @@
     {
       "id": "F036",
       "title": "网络检索与网页读取",
+      "chain": "C03",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E06"
@@ -876,10 +948,9 @@
     {
       "id": "F037",
       "title": "Chrome/浏览器交互",
+      "chain": "C03",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E08",
@@ -890,10 +961,9 @@
     {
       "id": "F038",
       "title": "Git 提交、推送、PR",
+      "chain": "C03",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E03",
@@ -905,10 +975,9 @@
     {
       "id": "F039",
       "title": "工具发现与 Schema",
+      "chain": "C03",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E21"
@@ -918,10 +987,9 @@
     {
       "id": "F040",
       "title": "工具截断、错误、取消",
+      "chain": "C03",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E19",
@@ -933,10 +1001,9 @@
     {
       "id": "F041",
       "title": "权限模式与细粒度规则",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E04",
@@ -950,10 +1017,9 @@
     {
       "id": "F042",
       "title": "自动权限分类器",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E04",
@@ -964,10 +1030,9 @@
     {
       "id": "F043",
       "title": "自动模式 HARD/SOFT/ALLOW 分级",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E05",
@@ -982,10 +1047,9 @@
     {
       "id": "F044",
       "title": "后台消息身份防伪",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E06"
@@ -995,10 +1059,9 @@
     {
       "id": "F045",
       "title": "定时任务身份防伪",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E11"
@@ -1008,10 +1071,9 @@
     {
       "id": "F046",
       "title": "Worker 回传不构成授权",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E07"
@@ -1021,10 +1083,9 @@
     {
       "id": "F047",
       "title": "不可信页面/项目文件指令隔离",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E06",
@@ -1038,10 +1099,9 @@
     {
       "id": "F048",
       "title": "浏览器/CI/外网外传保护",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E05",
@@ -1054,10 +1114,9 @@
     {
       "id": "F049",
       "title": "工作区沙盒与软链保护",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E08",
@@ -1068,10 +1127,9 @@
     {
       "id": "F050",
       "title": "破坏性操作/共享资源审批",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E20",
@@ -1084,10 +1142,9 @@
     {
       "id": "F051",
       "title": "技能加载与调用",
+      "chain": "C08",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M5"
       ],
       "scenarios": [
         "E43"
@@ -1097,10 +1154,9 @@
     {
       "id": "F052",
       "title": "插件安装、管理、卸载",
+      "chain": "C09",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M5"
       ],
       "scenarios": [
         "E22",
@@ -1113,10 +1169,9 @@
     {
       "id": "F053",
       "title": "MCP 资源与工具",
+      "chain": "C10",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M5"
       ],
       "scenarios": [
         "E07",
@@ -1128,10 +1183,9 @@
     {
       "id": "F054",
       "title": "生命周期 Hook 与失败处理",
+      "chain": "C06",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E21",
@@ -1142,10 +1196,9 @@
     {
       "id": "F055",
       "title": "SDK 集成",
+      "chain": "C06",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E24",
@@ -1157,10 +1210,9 @@
     {
       "id": "F056",
       "title": "协调者分配、验证与 Agent 管理",
+      "chain": "C05",
       "tasks": [
-        "M1",
-        "M7",
-        "M10"
+        "M4"
       ],
       "scenarios": [
         "E09",
@@ -1176,10 +1228,9 @@
     {
       "id": "F057",
       "title": "Worker 分工、提交隔离",
+      "chain": "C05",
       "tasks": [
-        "M1",
-        "M7",
-        "M10"
+        "M4"
       ],
       "scenarios": [
         "E10",
@@ -1195,10 +1246,9 @@
     {
       "id": "F058",
       "title": "Fork 独立任务上下文",
+      "chain": "C05",
       "tasks": [
-        "M1",
-        "M7",
-        "M10"
+        "M4"
       ],
       "scenarios": [
         "E13",
@@ -1209,10 +1259,9 @@
     {
       "id": "F059",
       "title": "Observer 只读旁路",
+      "chain": "C05",
       "tasks": [
-        "M1",
-        "M7",
-        "M10"
+        "M4"
       ],
       "scenarios": [
         "E10",
@@ -1223,10 +1272,9 @@
     {
       "id": "F060",
       "title": "自动执行模式",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M8",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E09",
@@ -1237,10 +1285,9 @@
     {
       "id": "F061",
       "title": "可选定时执行入口",
+      "chain": "C17",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M5"
       ],
       "scenarios": [
         "E10",
@@ -1251,10 +1298,9 @@
     {
       "id": "F062",
       "title": "后台工作、任务列表、输出文件与恢复",
+      "chain": "C07",
       "tasks": [
-        "M1",
-        "M4",
-        "M10"
+        "M4"
       ],
       "scenarios": [
         "E14",
@@ -1269,10 +1315,9 @@
     {
       "id": "F063",
       "title": "工作流内部返回型 Agent",
+      "chain": "C05",
       "tasks": [
-        "M1",
-        "M7",
-        "M10"
+        "M4"
       ],
       "scenarios": [
         "E44",
@@ -1285,10 +1330,9 @@
     {
       "id": "F064",
       "title": "验证 Agent 与安全审查",
+      "chain": "C05",
       "tasks": [
-        "M1",
-        "M7",
-        "M10"
+        "M4"
       ],
       "scenarios": [
         "E12",
@@ -1302,10 +1346,9 @@
     {
       "id": "F065",
       "title": "IDE 关联编辑器",
+      "chain": "C13",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M6"
       ],
       "scenarios": [
         "E25"
@@ -1315,10 +1358,9 @@
     {
       "id": "F066",
       "title": "远程 Bridge 与配对",
+      "chain": "C14",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M6"
       ],
       "scenarios": [
         "E24",
@@ -1330,10 +1372,9 @@
     {
       "id": "F067",
       "title": "WebSocket/SSE",
+      "chain": "C16",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E15",
@@ -1345,10 +1386,9 @@
     {
       "id": "F068",
       "title": "桌面与移动平台入口",
+      "chain": "C14",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M6"
       ],
       "scenarios": [
         "E25",
@@ -1359,10 +1399,9 @@
     {
       "id": "F069",
       "title": "后台工作树分离",
+      "chain": "C05",
       "tasks": [
-        "M1",
-        "M7",
-        "M10"
+        "M4"
       ],
       "scenarios": [
         "E14"
@@ -1372,10 +1411,9 @@
     {
       "id": "F070",
       "title": "容器重启旧进程状态",
+      "chain": "C07",
       "tasks": [
-        "M1",
-        "M4",
-        "M10"
+        "M4"
       ],
       "scenarios": [
         "E14"
@@ -1385,10 +1423,9 @@
     {
       "id": "F071",
       "title": "`/btw` 一次性侧问",
+      "chain": "C11",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E27"
@@ -1398,10 +1435,9 @@
     {
       "id": "F072",
       "title": "“You should know” 即时提示",
+      "chain": "C12",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M6"
       ],
       "scenarios": [
         "E28"
@@ -1411,10 +1447,9 @@
     {
       "id": "F073",
       "title": "Artifact 评论分析",
+      "chain": "C18",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M5"
       ],
       "scenarios": [
         "E29"
@@ -1424,10 +1459,9 @@
     {
       "id": "F074",
       "title": "Artifact 评论无工具回复",
+      "chain": "C18",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M5"
       ],
       "scenarios": [
         "E29"
@@ -1437,10 +1471,9 @@
     {
       "id": "F075",
       "title": "Artifact 模板与页面",
+      "chain": "C18",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M5"
       ],
       "scenarios": [
         "E29"
@@ -1450,10 +1483,9 @@
     {
       "id": "F076",
       "title": "浏览器与 Claude Test 附件",
+      "chain": "C18",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M5"
       ],
       "scenarios": [
         "E30"
@@ -1463,10 +1495,9 @@
     {
       "id": "F077",
       "title": "设计系统同步附件",
+      "chain": "C18",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M5"
       ],
       "scenarios": [
         "E30"
@@ -1476,10 +1507,9 @@
     {
       "id": "F078",
       "title": "下一句话预测",
+      "chain": "C12",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M6"
       ],
       "scenarios": [
         "E45",
@@ -1490,10 +1520,9 @@
     {
       "id": "F079",
       "title": "诊断和环境检查",
+      "chain": "C19",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M1"
       ],
       "scenarios": [
         "E01",
@@ -1505,9 +1534,9 @@
     {
       "id": "F080",
       "title": "日志、隐私和性能统计",
+      "chain": "C16",
       "tasks": [
-        "M1",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E35"
@@ -1517,10 +1546,9 @@
     {
       "id": "F081",
       "title": "Monitor 工具及插件监控",
+      "chain": "C17",
       "tasks": [
-        "M1",
-        "M8",
-        "M10"
+        "M5"
       ],
       "scenarios": [
         "E46"
@@ -1530,10 +1558,9 @@
     {
       "id": "F082",
       "title": "动态 Workflows 引擎",
+      "chain": "C17",
       "tasks": [
-        "M1",
-        "M8",
-        "M10"
+        "M5"
       ],
       "scenarios": [
         "E47",
@@ -1548,10 +1575,9 @@
     {
       "id": "F083",
       "title": "Workflow 任务日志与恢复",
+      "chain": "C17",
       "tasks": [
-        "M1",
-        "M8",
-        "M10"
+        "M5"
       ],
       "scenarios": [
         "E48",
@@ -1563,10 +1589,9 @@
     {
       "id": "F084",
       "title": "Mods 的深度插件 API",
+      "chain": "C09",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M5"
       ],
       "scenarios": [
         "E49"
@@ -1576,10 +1601,9 @@
     {
       "id": "F085",
       "title": "自动模式环境引导",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E50"
@@ -1589,10 +1613,9 @@
     {
       "id": "F086",
       "title": "空闲压缩与小窗口模型切换",
+      "chain": "C02",
       "tasks": [
-        "M1",
-        "M4",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E51"
@@ -1602,10 +1625,9 @@
     {
       "id": "F087",
       "title": "跨提供者协议退让",
+      "chain": "C01",
       "tasks": [
-        "M1",
-        "M2",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E52"
@@ -1615,10 +1637,9 @@
     {
       "id": "F088",
       "title": "全屏 TUI Diff 与快捷键终态",
+      "chain": "C12",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M6"
       ],
       "scenarios": [
         "E53"
@@ -1628,10 +1649,9 @@
     {
       "id": "F089",
       "title": "Agent 后台生命周期与模型继承",
+      "chain": "C05",
       "tasks": [
-        "M1",
-        "M7",
-        "M10"
+        "M4"
       ],
       "scenarios": [
         "E54",
@@ -1642,10 +1662,9 @@
     {
       "id": "F090",
       "title": "安全事件可审计",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E55"
@@ -1655,10 +1674,9 @@
     {
       "id": "F091",
       "title": "云端启用技能与插件同步",
+      "chain": "C08",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M5"
       ],
       "scenarios": [
         "E56"
@@ -1668,10 +1686,9 @@
     {
       "id": "F092",
       "title": "非交互 MCP 询问超时",
+      "chain": "C10",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M5"
       ],
       "scenarios": [
         "E57"
@@ -1681,10 +1698,9 @@
     {
       "id": "F093",
       "title": "受限工作区模式 `--restricted`",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E61"
@@ -1694,10 +1710,9 @@
     {
       "id": "F094",
       "title": "安全诊断启动 `--safe-mode`",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E62"
@@ -1707,10 +1722,9 @@
     {
       "id": "F095",
       "title": "CLI 后台任务全生命周期",
+      "chain": "C05",
       "tasks": [
-        "M1",
-        "M8",
-        "M10"
+        "M4"
       ],
       "scenarios": [
         "E63"
@@ -1720,10 +1734,9 @@
     {
       "id": "F096",
       "title": "无人值守权限回答策略",
+      "chain": "C04",
       "tasks": [
-        "M1",
-        "M3",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E64"
@@ -1733,10 +1746,9 @@
     {
       "id": "F097",
       "title": "系统提示快照与动态分界",
+      "chain": "C02",
       "tasks": [
-        "M1",
-        "M4",
-        "M10"
+        "M2"
       ],
       "scenarios": [
         "E65"
@@ -1746,10 +1758,9 @@
     {
       "id": "F098",
       "title": "SDK/headless 事件拓展",
+      "chain": "C06",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M3"
       ],
       "scenarios": [
         "E66",
@@ -1760,10 +1771,9 @@
     {
       "id": "F099",
       "title": "云端/桌面和迁移会话入口",
+      "chain": "C14",
       "tasks": [
-        "M1",
-        "M5",
-        "M10"
+        "M6"
       ],
       "scenarios": [
         "E67"
@@ -1773,10 +1783,9 @@
     {
       "id": "F100",
       "title": "扩展装载、迁移及管理 CLI",
+      "chain": "C09",
       "tasks": [
-        "M1",
-        "M6",
-        "M10"
+        "M5"
       ],
       "scenarios": [
         "E68",
@@ -1787,10 +1796,9 @@
     {
       "id": "F101",
       "title": "**新版普通本地代码审查 `/code-review`**",
+      "chain": "C20",
       "tasks": [
-        "M1",
-        "M9",
-        "M10"
+        "M6"
       ],
       "scenarios": [
         "L11",
@@ -1802,10 +1810,9 @@
     {
       "id": "F102",
       "title": "**云端 Ultrareview 与本地 Ultra 级深审分流**",
+      "chain": "C20",
       "tasks": [
-        "M1",
-        "M9",
-        "M10"
+        "M6"
       ],
       "scenarios": [
         "L12",

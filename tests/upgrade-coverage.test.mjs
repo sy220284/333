@@ -1,32 +1,33 @@
-import { readFileSync, existsSync } from 'node:fs';
-import assert from 'node:assert/strict';
-import { test } from 'node:test';
-import { buildCoverage, verifyCoverageSnapshot } from '../build/upgrade-coverage.mjs';
+import assert from 'node:assert/strict'
+import {readFileSync,existsSync} from 'node:fs'
+import {test} from 'node:test'
+import {buildCoverage,verifyCoverageSnapshot} from '../build/upgrade-coverage.mjs'
 
-const docs = new URL('../docs/upgrade/', import.meta.url);
-const read = name => JSON.parse(readFileSync(new URL(name, docs), 'utf8'));
+const docs=new URL('../docs/upgrade/',import.meta.url)
+const read=name=>JSON.parse(readFileSync(new URL(name,docs),'utf8'))
 
-test('2.1.317 机器源数据与覆盖快照逐条一致', () => {
-  assert.deepEqual(verifyCoverageSnapshot(), { features: 102, scenarios: 84, tasks: 10 });
-  const target = read('m1-evidence/target-release.json');
-  const baseline = read('2.1.317-功能与场景源数据.json');
-  const responsibility = read('2.1.317-任务责任表.json');
-  const coverage = buildCoverage();
-  assert.equal(target.target_version, '2.1.317');
-  assert.equal(coverage.target_version, target.target_version);
-  assert.equal(baseline.target_version, target.target_version);
-  assert.equal(responsibility.source_plan, target.target_version);
-  assert.deepEqual(baseline.features.map(x => [x.id, x.title]), coverage.features.map(x => [x.id, x.title]));
-  assert.deepEqual(baseline.scenarios, coverage.scenarios);
-});
+test('六层任务和20条完整功能链逐一覆盖，覆盖快照与源数据一致',()=>{
+  assert.deepEqual(verifyCoverageSnapshot(),{features:102,scenarios:84,tasks:6,chains:20})
+  const manifest=read('2.1.317-六层完整功能链路.json')
+  const coverage=buildCoverage()
+  assert.deepEqual(coverage.tasks.map(t=>t.id),['M1','M2','M3','M4','M5','M6'])
+  assert.deepEqual(coverage.tasks.map(t=>t.routes.length),[1,3,4,2,5,5])
+  assert.deepEqual(coverage.chains.map(x=>x.id).sort(),Array.from({length:20},(_,i)=>'C'+String(i+1).padStart(2,'0')))
+  assert.ok(coverage.chains.every(c=>c.layer==='M'+(manifest.routes.find(x=>x.id===c.id).layer_index+1)))
+  assert.equal(new Set(coverage.features.map(f=>f.id)).size,102)
+  assert.ok(coverage.features.every(f=>f.tasks.length===1 && f.scenarios.length && f.status==='UNVERIFIED'))
+  assert.ok(coverage.scenarios.every(s=>s.features.length))
+  assert.equal(manifest.independent_update_tracking.scope,'SEPARATE')
+})
 
-test('M1/M10 和完整场景责任不能在移除旧版方案后丢失', () => {
-  const coverage = buildCoverage();
-  assert.ok(coverage.features.every(f => f.tasks.includes('M1') && f.tasks.includes('M10')));
-  assert.ok(coverage.features.every(f => f.scenarios.length && f.status === 'UNVERIFIED'));
-  assert.ok(coverage.scenarios.every(s => s.features.length > 0));
-  for (const path of ['2.1.310-全面升级方案.md', '2.1.310-功能能力台账.md',
-    '2.1.310-验收与迁移矩阵.md', '2.1.310-升级缺口与逐项核查清单.md']) {
-    assert.equal(existsSync(new URL(path, docs)), false, '旧目标方案意外回流：' + path);
+test('六层方案具有独立功能源和验收门禁，不再消费十张卡内容',()=>{
+  for(const p of ['2.1.317-任务责任表.json','milestone-feature-map.json','M1-执行与关单状态.md']){
+    assert.equal(existsSync(new URL(p,docs)),false,'obsolete task file: '+p)
   }
-});
+  const source=readFileSync(new URL('../build/upgrade-coverage.mjs',import.meta.url),'utf8')
+  assert.doesNotMatch(source,/366项功能链路分组矩阵|v4-功能任务责任表|M10/)
+  const manifest=read('2.1.317-六层完整功能链路.json')
+  assert.ok(manifest.routes.every(r=>r.implementation_strategy.length>=4&&r.required_semantics.length>=6))
+  const coverage=buildCoverage()
+  assert.ok(coverage.tasks.every(t=>t.routes.length>0))
+})

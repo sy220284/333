@@ -41,12 +41,14 @@ export function buildRegistry(
   signoffs = {schema: 1, target_version: TARGET_META.target_version, features: [], scenarios: []},
   expectedReferenceSha = VERIFIED_TARGET_REFERENCE,
 ) {
-  assert.equal(coverage.features.length, 102)
-  assert.equal(coverage.scenarios.length, 84)
-  assert.equal(coverage.counts.features, 102)
-  assert.equal(coverage.counts.scenarios, 84)
+  assert.ok(coverage.features.length >= 102)
+  assert.ok(coverage.scenarios.length >= 84)
+  assert.equal(coverage.counts.features, coverage.features.length)
+  assert.equal(coverage.counts.scenarios, coverage.scenarios.length)
   assert.ok(audit.groups.length >= 18, 'The existing 18 groups are the historical minimum, not a feature ceiling')
   assert.equal(coverage.target_version, TARGET_META.target_version)
+  assert.equal(coverage.counts.tasks, 6)
+  assert.equal(coverage.counts.chains, 20)
   // 2.1.310 source anchors remain historical evidence until 2.1.317 is verified.
   // Preserve previously verified source evidence, but allow a fully verified
   // 2.1.317 source reference after its official SHA has been pinned.
@@ -62,11 +64,11 @@ export function buildRegistry(
   assert.ok(Array.isArray(signoffs.features) && Array.isArray(signoffs.scenarios))
   const featureMap = new Map(coverage.features.map(f => [f.id, []]))
   const scenarioMap = new Map(coverage.scenarios.map(s => [s.id, s]))
-  assert.equal(featureMap.size, 102)
-  assert.equal(scenarioMap.size, 84)
+  assert.equal(featureMap.size, coverage.features.length)
+  assert.equal(scenarioMap.size, coverage.scenarios.length)
   assert.equal(new Set(audit.groups.map(g => g.id)).size, audit.groups.length, 'Duplicate upgrade group IDs')
   for (const group of audit.groups) {
-    assert.equal(group.acceptance, 'UNVERIFIED', 'Code progress cannot automatically sign off M10')
+    assert.equal(group.acceptance, 'UNVERIFIED', 'Code progress cannot automatically sign off 完整功能链')
     assert.ok(group.features.length && group.code.length && group.remaining)
     for (const feature of group.features) {
       assert.ok(featureMap.has(feature), `Unknown capability ${feature}`)
@@ -139,7 +141,7 @@ export function buildRegistry(
     groups: audit.groups,
     features,
     scenarios,
-    note: 'A focused test is only source progress; M10 signatures require source, official, rebuilt, differential and E/L evidence.',
+    note: 'A focused test is only source progress; 完整功能链 signatures require source, official, rebuilt, differential and E/L evidence.',
   }
 }
 
@@ -147,7 +149,7 @@ export const loadRegistry = () => buildRegistry(
   read('docs/upgrade/upgrade-coverage.json'),
   read('docs/upgrade/m1-evidence/PR7-18组功能链证据审计.json'),
   path => existsSync(resolve(ROOT, path)),
-  read('docs/upgrade/m1-evidence/PR7-M10-功能及场景签收.json'),
+  read('docs/upgrade/2.1.317-功能与场景签收.json'),
 )
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
