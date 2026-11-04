@@ -43,6 +43,9 @@ test('317 claimed session rebinds global config, project and settings ownership'
 
     assert.equal(getGlobalClaudeFile(), join(b, configName))
     assert.equal(getClaudeConfigHomeDir(), b)
+    // Config reads must be gated again after a warm process switches owners.
+    assert.throws(() => getGlobalConfig(), /Config accessed before allowed/)
+    enableConfigs()
     assert.equal(getGlobalConfig().numStartups, 29)
     assert.equal(getSettingsForSource('userSettings')?.env?.CLAIM_ID, 'accepted')
     const claimPolicy = ensureFastPathSettingsLoaded317()
