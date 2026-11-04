@@ -1,0 +1,36 @@
+name: M1 官方317资源跨平台原始字节验收
+
+on:
+  push:
+    branches:
+      - upgrade/2.1.310-m1-evidence
+    paths:
+      - '.gitattributes'
+      - 'build/official-embedded-assets-2.1.317.json'
+      - 'build/verify-official-embedded-assets.mjs'
+      - 'src/skills/bundled/**'
+      - 'src/constants/official317/**'
+      - 'src/types/official317/**'
+      - 'tests/m1-official-resource-checkout-317.test.mjs'
+      - '.github/workflows/m1-317-official-resource-portability.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-bytes:
+    name: 官方原始资源完整性 (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 6
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 校验全部101项317嵌入资源Git属性与SHA
+        run: node --test tests/m1-official-resource-checkout-317.test.mjs
