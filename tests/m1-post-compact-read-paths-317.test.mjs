@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { collectPreservedReadFilePaths, hasFullReadResultContent } from '../src/services/compact/preservedReadPaths.mjs'
+import { collectPreservedReadFilePaths, hasFullReadResultContent, isPartialReadResult } from '../src/services/compact/preservedReadPaths.mjs'
 
 const normalize = path => path.startsWith('/') ? path : `/repo/${path}`
 const read = (id, file_path) => ({
@@ -69,6 +69,37 @@ test('2.1.317 compact: cleared and persisted pointers are not full Read results'
   ), true)
   assert.equal(check('full file text').size, 1)
   assert.equal(check('').size, 1)
+})
+
+test('2.1.317 native history: earlier Read hints are never reconstructed as file content', () => {
+  for (const content of [
+    'File unchanged since last read. The content from the earlier Read tool_result in this conversation is still current — refer to that instead of re-reading.',
+    'Wasted call — file unchanged since your last Read. Refer to that earlier tool_result instead.',
+    '<system-reminder>This file is already in your context — do not reread',
+  ]) {
+    assert.equal(hasFullReadResultContent(
+      result('r', content).message.content[0],
+      '[Old tool result content cleared]',
+      '<persisted-output>',
+      '<artifact-content-authored-by-others/>\\n',
+    ), false)
+  }
+})
+
+test('2.1.317 native transcript: truncation metadata and partial-view reminders require fresh Read', () => {
+  const block = result('r', 'line content').message.content[0]
+  assert.equal(isPartialReadResult({}, block), false)
+  assert.equal(isPartialReadResult(
+    { toolUseResult: { file: { truncatedByTokenCap: true } } },
+    block,
+  ), true)
+  assert.equal(isPartialReadResult(
+    {},
+    result('r', '<system-reminder>[Truncated: PARTIAL view — 2k lines]</system-reminder>').message.content[0],
+  ), true)
+  const source = readFileSync(new URL('../src/utils/queryHelpers.ts', import.meta.url), 'utf8')
+  assert.match(source, /isPartialView: isPartialReadResult\(message, content\)/)
+  assert.match(source, /toolReadData\?\.file\?\.content/)
 })
 
 test('2.1.317 compact: transcript reconstruction shares the Read result guard', () => {
