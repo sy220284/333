@@ -41,7 +41,7 @@ test('M1 C19-T02/T05: launcher preserves child exit status and arguments', {
     mkdirSync(bin)
     const stub = join(dir, 'claude')
     writeFileSync(stub, '#!/usr/bin/env node\n' +
-      'process.stdout.write(JSON.stringify(process.argv.slice(3)) + "\\n"); process.exit(37)\n')
+      'process.stdout.write(JSON.stringify(process.argv.slice(2)) + "\\n"); process.exit(37)\n')
     chmodSync(stub, 0o755)
     const result = spawnSync(process.execPath, [join(dir, 'launcher.cjs'), '--print', '汉字 with spaces'], {
       cwd: dir, encoding: 'utf8', timeout: 10_000,
