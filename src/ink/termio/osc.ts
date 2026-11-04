@@ -6,6 +6,7 @@ import { Buffer } from 'buffer'
 import { env } from '../../utils/env.js'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
 import { BEL, ESC, ESC_TYPE, SEP } from './ansi.js'
+import { writeLinuxClipboardNative } from './clipboardNative317.mjs'
 import type { Action, Color, TabStatusAction } from './types.js'
 
 export const OSC_PREFIX = ESC + String.fromCharCode(ESC_TYPE.OSC)
@@ -62,8 +63,11 @@ export function wrapForMultiplexer(sequence: string): string {
 export type ClipboardPath = 'native' | 'tmux-buffer' | 'osc52'
 
 export function getClipboardPath(): ClipboardPath {
-  const nativeAvailable =
-    process.platform === 'darwin' && !process.env['SSH_CONNECTION']
+  const nativeAvailable = !process.env['SSH_CONNECTION'] && (
+    process.platform === 'darwin' ||
+    process.platform === 'win32' ||
+    (process.platform === 'linux' && typeof linuxCopy === 'string')
+  )
   if (nativeAvailable) return 'native'
   if (process.env['TMUX']) return 'tmux-buffer'
   return 'osc52'
@@ -160,7 +164,7 @@ export async function setClipboard(text: string): Promise<string> {
 // Linux clipboard tool: undefined = not yet probed, null = none available.
 // Probe order: wl-copy (Wayland) → xclip (X11) → xsel (X11 fallback).
 // Cached after first attempt so repeated mouse-ups skip the probe chain.
-let linuxCopy: 'wl-copy' | 'xclip' | 'xsel' | null | undefined
+let linuxCopy: 'wl-copy' | 'xclip' | 'xsel' | 'addon' | null | undefined
 
 /**
  * Shell out to a native clipboard utility as a safety net for OSC 52.
@@ -188,6 +192,10 @@ function copyNative(text: string): void {
         void execFileNoThrow('xsel', ['--clipboard', '--input'], opts)
         return
       }
+      if (linuxCopy === 'addon') {
+        if (!writeLinuxClipboardNative(text)) linuxCopy = null
+        return
+      }
       // First call: probe wl-copy (Wayland) then xclip/xsel (X11), cache winner.
       void execFileNoThrow('wl-copy', [], opts).then(r => {
         if (r.code === 0) {
@@ -202,7 +210,8 @@ function copyNative(text: string): void {
             }
             void execFileNoThrow('xsel', ['--clipboard', '--input'], opts).then(
               r3 => {
-                linuxCopy = r3.code === 0 ? 'xsel' : null
+                if (r3.code === 0) linuxCopy = 'xsel'
+                else linuxCopy = writeLinuxClipboardNative(text) ? 'addon' : null
               },
             )
           },
