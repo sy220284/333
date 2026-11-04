@@ -73,7 +73,7 @@ function makeResponseSecure(response, tls) {
 async function configFromFile(path) {
   // Reuse the repo's existing YAML parser, preserving its anchors,
   // structured errors, booleans and nested maps.
-  const { parseYaml } = await import('../../utils/yaml.js')
+  const { parseYaml } = await import('../../utils/yaml.ts')
   return readGatewayConfig317(path, parseYaml)
 }
 
