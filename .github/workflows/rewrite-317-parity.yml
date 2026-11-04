@@ -1,0 +1,43 @@
+name: 317 按333架构重写与原版差分验收
+on:
+  push:
+    branches: [rewrite/317-source-integration]
+  pull_request:
+    branches: [upgrade/2.1.310-m1-evidence]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-rebuild:
+    name: 333 独立源码重建与317原版对照
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 检查原始资源并恢复原工程依赖
+        run: |
+          node build/verify-bundled-assets.mjs
+          node build/restore-claude-api.mjs --verify
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 测试333原生SDK工具与MCP实际调用
+        run: bun test tests/rewrite-317-sdk-mcp.test.ts
+      - name: 从333 TypeScript源码重建独立CLI
+        run: bun build/rebuild.mjs
+      - name: 验证插件依赖图和原生重建CLI退出
+        run: node --test tests/m4-plugin-prune-317.test.mjs
+      - name: 获取哈希锁定的317原版x64对照程序
+        run: |
+          mkdir -p .rebuild/oracle
+          curl --fail --location --silent --show-error --retry 5 --retry-all-errors \
+            'https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude' \
+            --output .rebuild/oracle/claude
+          echo 'eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  .rebuild/oracle/claude' | sha256sum --check
+          chmod 755 .rebuild/oracle/claude
+      - name: 逐字对照原版CLI版本及详细版本
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/rewrite-317-cli-native-parity.test.mjs
