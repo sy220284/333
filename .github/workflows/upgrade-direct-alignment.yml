@@ -14,6 +14,10 @@ on:
       - 'docs/upgrade/m1-evidence/2.1.317-366项功能链路分组矩阵.json'
       - 'tests/m1-317-chain-matrix.test.mjs'
       - 'tests/m1-nested-session-id-317.test.mjs'
+      - 'tests/m1-317-json-wire.test.mjs'
+      - 'tests/m1-precompact-output-limit-317.test.mjs'
+      - 'src/utils/hooks/preCompactOutput.mjs'
+      - 'src/utils/hooks.ts'
       - '.github/workflows/upgrade-direct-alignment.yml'
   workflow_dispatch:
 permissions:
@@ -33,4 +37,4 @@ jobs:
       - name: 扫描PR7源码与官方CLI差异
         run: node build/compare-317.mjs
       - name: 运行新版本对齐检查
-        run: node --test tests/upgrade-coverage.test.mjs tests/compare-317.test.mjs tests/m1-target-release-317.test.mjs tests/m1-317-chain-matrix.test.mjs tests/m1-nested-session-id-317.test.mjs
+        run: node --test tests/upgrade-coverage.test.mjs tests/compare-317.test.mjs tests/m1-target-release-317.test.mjs tests/m1-317-chain-matrix.test.mjs tests/m1-nested-session-id-317.test.mjs tests/m1-317-json-wire.test.mjs tests/m1-precompact-output-limit-317.test.mjs
