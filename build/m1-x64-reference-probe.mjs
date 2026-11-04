@@ -9,16 +9,28 @@
  *
  * Full authenticated/interactive flows require a separate approved fixture.
  */
-import { createReadStream, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { createReadStream, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { dirname, resolve, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import process from 'node:process'
 
-const TARGET_RELEASE = '2.1.317'
-const TARGET_COMMIT = '3d3e7cb16b5577dccaee9520c8dc1189d02d61b7'
-const PINNED_SHA256 = 'eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0'
+// One verified oracle identity shared by decompile checks, native assets and
+// installed-x64 behavioral parity. Reject future release drift before testing.
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const release = JSON.parse(readFileSync(join(root, 'docs/upgrade/m1-evidence/target-release.json'), 'utf8'))
+const packageVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
+const nativeOracle = JSON.parse(readFileSync(join(root, 'build/official-native-317.json'), 'utf8'))
+const TARGET_RELEASE = release.target_version
+const TARGET_COMMIT = release.verified_x64_commit_sha
+const PINNED_SHA256 = release.verified_x64_sha256
+if (TARGET_RELEASE !== packageVersion || TARGET_RELEASE !== nativeOracle.version ||
+    nativeOracle.binary_sha256 !== PINNED_SHA256 || nativeOracle.platform !== 'x64-linux' ||
+    !/^[a-f0-9]{64}$/.test(PINNED_SHA256) || !/^[a-f0-9]{40}$/.test(TARGET_COMMIT)) {
+  throw new Error('Inconsistent official Linux x64 target identity across release manifest, native oracle and package')
+}
 const argv = process.argv.slice(2)
 if (argv.length % 2 !== 0) throw new Error('参数必须以 --key value 成对出现')
 const args = Object.fromEntries(Array.from({ length: argv.length/2 }, (_,i)=>[argv[2*i],argv[2*i+1]]))
