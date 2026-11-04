@@ -11,7 +11,7 @@ import type { AssistantMessage, Message } from '../../types/message.js'
 import { createChildAbortController } from '../../utils/abortController.js'
 import { logError } from '../../utils/log.js'
 import { runToolUse } from './toolExecution.js'
-import { observeToolExecutionPromise } from './toolExecutionLifecycle317.mjs'
+import { observeToolExecutionPromise } from './toolExecutionLifecycle317.ts'
 
 type MessageUpdate = {
   message?: Message
