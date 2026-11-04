@@ -94,6 +94,7 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
   let server: ReturnType<typeof createServer> | undefined
   let ownsSocket = false
   let stopped = false, forceClosed = false, lastExitCode = 0, lastSignal: string | undefined
+  let ptyReceivedData = false
   let terminalClosed = false
   const closeTerminalOnce = () => {
     if (!terminal || terminalClosed) return
@@ -141,6 +142,7 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
     // Keep host auth credentials out of the newly launched terminal session.
     terminal = new Bun.Terminal({ cols, rows, data(_terminal, data) {
       const chunk = Buffer.from(data)
+      ptyReceivedData = true
       replay.push(chunk)
       broadcast(encodePtyData317(chunk))
     } })
@@ -234,6 +236,16 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
       closeHandlers.push([sig, handler])
     }
     lastExitCode = await child.exited
+    // Official PTY drains terminal events until two consecutive 5ms quiet
+    // periods after process exit (up to 20 attempts). Closing the terminal
+    // immediately can discard the tail of a fast subprocess's output.
+    let quietTicks = 0
+    for (let attempt = 0; attempt < 20; attempt++) {
+      ptyReceivedData = false
+      await new Promise(resolve => setTimeout(resolve, 5))
+      if (ptyReceivedData) quietTicks = 0
+      else if (++quietTicks >= 2) break
+    }
     lastSignal = child.signalCode ?? undefined
     stopped = true
     closeTerminalOnce()
