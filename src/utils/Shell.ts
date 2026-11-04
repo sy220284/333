@@ -1,3 +1,4 @@
+import { cleanBashSpawnEnvironment } from './bash/childEnv.mjs'
 import { execFileSync, spawn } from 'child_process'
 import { constants as fsConstants, readFileSync, unlinkSync } from 'fs'
 import { type FileHandle, mkdir, open, realpath } from 'fs/promises'
@@ -317,7 +318,7 @@ export async function exec(
 
   try {
     const childProcess = spawn(spawnBinary, shellArgs, {
-      env: {
+      env: cleanBashSpawnEnvironment({
         ...subprocessEnv(),
         SHELL: shellType === 'bash' ? binShell : undefined,
         GIT_EDITOR: 'true',
@@ -329,7 +330,7 @@ export async function exec(
               CLAUDE_CODE_SESSION_ID: getSessionId(),
             }
           : {}),
-      },
+      }, shellType),
       cwd,
       stdio: usePipeMode
         ? ['pipe', 'pipe', 'pipe']

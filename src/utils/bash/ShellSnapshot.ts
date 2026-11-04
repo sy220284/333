@@ -1,3 +1,4 @@
+import { cleanBashSpawnEnvironment } from './childEnv.mjs'
 import { execFile } from 'child_process'
 import { execa } from 'execa'
 import { mkdir, stat } from 'fs/promises'
@@ -457,7 +458,7 @@ export const createAndSaveSnapshot = async (
         binShell,
         ['-c', '-l', snapshotScript],
         {
-          env: {
+          env: cleanBashSpawnEnvironment({
             ...((process.env.CLAUDE_CODE_DONT_INHERIT_ENV
               ? {}
               : subprocessEnv()) as typeof process.env),
@@ -465,7 +466,7 @@ export const createAndSaveSnapshot = async (
             GIT_EDITOR: 'true',
             CLAUDECODE: '1',
             CLAUDE_CODE_CHILD_SESSION: '1',
-          },
+          }, shellType),
           timeout: SNAPSHOT_CREATION_TIMEOUT,
           maxBuffer: 1024 * 1024, // 1MB buffer
           encoding: 'utf8',
