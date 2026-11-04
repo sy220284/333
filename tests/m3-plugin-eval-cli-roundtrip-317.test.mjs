@@ -26,11 +26,12 @@ function responseSse() {
     usage:{output_tokens:7},
   }) + frame('message_stop',{type:'message_stop'})
 }
-function invoke(args,env,cwd,timeoutMs=120000) {
+function invoke(args,env,cwd,timeoutMs=120000,input) {
   return new Promise((resolveRun,reject) => {
     const child = spawn('bun',[resolve('dist/cli.js'), ...args], {
-      cwd,env,stdio:['ignore','pipe','pipe'],
+      cwd,env,stdio:[input === undefined ? 'ignore' : 'pipe','pipe','pipe'],
     })
+    if (input !== undefined) child.stdin.end(input)
     let stdout='',stderr=''
     const timeout=setTimeout(()=>child.kill('SIGKILL'),timeoutMs)
     child.stdout.on('data',b=>{stdout+=b.toString()})
@@ -94,30 +95,21 @@ graders:
       CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1',DISABLE_TELEMETRY:'1',
       CI:'1',TERM:'dumb',NO_COLOR:'1',
     })
-    // Determine whether the rebuilt non-interactive model loop reaches the
-    // mock API before attributing a failure to the eval child launcher.
-    const debugFile = join(root, 'headless-startup-debug.log')
+    // Exercise the exact isolated evaluation worker protocol: plugin loads
+    // normally, stdin contains the prompt, and automatic external MCP sources
+    // are excluded while plugin skills and hooks remain eligible.
     const direct = await invoke([
-      '-p','Say the verification text','--output-format','stream-json',
-      '--verbose','--debug-file',debugFile,
-      '--permission-mode','dontAsk','--setting-sources','user',
-      '--model',model,'--max-turns','1','--no-session-persistence',
-    ],env,root,12000)
-    // Distinguish a normal headless prefetch/setup hang from a more basic
-    // SDK transport failure without altering the real eval acceptance test.
-    const bare = direct.code === 0 ? null : await invoke([
-      '-p','Say the verification text','--output-format','stream-json',
-      '--verbose','--bare','--permission-mode','dontAsk',
-      '--setting-sources','user','--model',model,'--max-turns','1',
-    ],env,root,12000)
-    const debug = existsSync(debugFile) ? readFileSync(debugFile,'utf8') : '(debug file not created)'
-    assert.equal(direct.code,0,
-      'Direct rebuilt -p child failed before plugin eval: signal='+direct.signal+
-      '; requests='+requests+'\\nSTDOUT='+direct.stdout.slice(-1800)+
-      '\\nSTDERR='+direct.stderr.slice(-1800)+
-      '\\nDEBUG='+debug.slice(-8000)+
-      '\\nBARE='+JSON.stringify(bare)?.slice(0,3500))
-    assert.equal(requests,1,'Direct rebuilt print mode must invoke the model API')
+      '-p', '--output-format', 'stream-json', '--verbose',
+      '--no-session-persistence', '--permission-mode', 'dontAsk',
+      '--setting-sources', 'user', '--strict-mcp-config',
+      '--plugin-dir', plugin, '--model', model, '--max-turns', '1',
+    ], env, root, 20000, 'Say the verification text')
+    assert.equal(direct.code, 0,
+      'Isolated eval worker failed: signal=' + direct.signal +
+      '; mock requests=' + requests +
+      '\\nSTDOUT=' + direct.stdout.slice(-2500) +
+      '\\nSTDERR=' + direct.stderr.slice(-2500))
+    assert.equal(requests, 1, 'The isolated worker must call the mock model once')
     requests=0
     const run=await invoke([
       'plugin','eval',plugin,'--trust-plugin','--runs','1',
