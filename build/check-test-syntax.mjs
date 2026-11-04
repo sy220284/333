@@ -5,6 +5,7 @@
 import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
 async function collect(root, found) {
   for (const item of await readdir(root, { withFileTypes:true })) {
@@ -17,7 +18,7 @@ async function collect(root, found) {
   }
 }
 const files=[]
-await collect(new URL('../tests/', import.meta.url).pathname,files)
+await collect(fileURLToPath(new URL('../tests/', import.meta.url)),files)
 const bad=[]
 for (const file of files.sort()) {
   const result=spawnSync(process.execPath,['--check',file],{
