@@ -50,6 +50,28 @@ test('installed launcher invokes newly built CLI', () => {
   assert.equal(p.stdout.trim(), `${expectedVersion} (Claude Code)`);
 });
 
+test('Linux x64 release defaults to the full official 317 transplanted module graph', () => {
+  if (process.platform !== 'linux' || process.arch !== 'x64') return;
+  const manifest = JSON.parse(readFileSync(join(dist, 'vendor/claude-code-2.1.317/manifest.json'), 'utf8'));
+  assert.equal(manifest.version, expectedVersion);
+  assert.equal(manifest.module_count, 2924);
+  const p = spawnSync(process.execPath,[join(dist,'launcher.cjs'),'--help'], {
+    encoding: 'utf8',timeout:45000,maxBuffer:3*1024*1024,
+    env:{...process.env, CLAUDE_CODE_333_RUNTIME:'official-317',
+      DISABLE_TELEMETRY:'1',CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1'}
+  });
+  assert.equal(p.status,0,p.stderr?.slice(-2000));
+  assert.match(p.stdout,/gateway/);
+  assert.match(p.stdout,/ultrareview/);
+  const auto = spawnSync(process.execPath,[join(dist,'launcher.cjs'),'--help'], {
+    encoding: 'utf8',timeout:45000,maxBuffer:3*1024*1024,
+    env:{...process.env,CLAUDE_CODE_333_RUNTIME:'auto',
+      DISABLE_TELEMETRY:'1',CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1'}
+  });
+  assert.equal(auto.status,0,auto.stderr?.slice(-2000));
+  assert.equal(auto.stdout,p.stdout,'Default launcher must use the transplanted official 317 entrypoint');
+});
+
 test('release is runnable from an isolated folder without repository node_modules', () => {
   const sandbox = mkdtempSync(join(tmpdir(), '333-distributable-'));
   try {
