@@ -68,3 +68,21 @@ export async function readLinuxClipboardNative(primary = false, timeoutMs = 2000
     return null
   }
 }
+
+/**
+ * Original 2.1.317 Windows/WSL path: clipboard content arrives on stdin in
+ * UTF-8. clip.exe interprets it through a locale-dependent code page.
+ */
+export function windowsClipboardWriteInvocation(platform) {
+  if (platform !== 'windows' && platform !== 'wsl')
+    throw new Error('Windows clipboard command requires Windows or WSL')
+  return {
+    command: platform === 'wsl' ? 'powershell.exe' : 'powershell',
+    args: [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      '[Console]::InputEncoding = [Text.Encoding]::UTF8; Set-Clipboard -Value ([Console]::In.ReadToEnd())',
+    ],
+  }
+}
