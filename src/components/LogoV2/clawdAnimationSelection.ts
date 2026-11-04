@@ -7,7 +7,7 @@ import {
 export function getClickAnimationNames(appleTerminal: boolean): string[] {
 	const clickCandidates = clickAnimationNames.filter(
 		(name) =>
-			(clawdAnimations[name as keyof typeof clawdAnimations][0]?.x ?? 0) === 0,
+			(('x' in (clawdAnimations[name as keyof typeof clawdAnimations][0] ?? {}) && clawdAnimations[name as keyof typeof clawdAnimations][0]?.x) ?? 0) === 0,
 	);
 	if (!appleTerminal) return clickCandidates;
 	return clickCandidates.filter((name) => {
@@ -27,7 +27,7 @@ export function getClickAnimationNames(appleTerminal: boolean): string[] {
 					]
 				: first.pose;
 		return (
-			initialPose.eyes !== "open" || first.offset !== 0 || (first.x ?? 0) !== 0
+			('eyes' in initialPose ? initialPose.eyes : undefined) !== "open" || first.offset !== 0 || ('x' in first ? first.x : 0) !== 0
 		);
 	});
 }

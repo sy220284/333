@@ -39,7 +39,10 @@ export function listReachableTeammates(teamFile, selfName, liveTeammates = {}, t
 }
 /** A teammate still has a local_agent task, but must not claim the same
  * human-readable name in both sections of the official ListAgents listing. */
-export function hideTeammateNamesInSubagents(subagents, liveTeammates: Record<string, {name?: string}> = {}) {
+export function hideTeammateNamesInSubagents(
+  subagents: Array<{name?: string; [key: string]: unknown}>,
+  liveTeammates: ReadonlyArray<{name?: string}> | Record<string, {name?: string}> = {},
+) {
   const teammateNames = new Set(Object.values(liveTeammates ?? {}).map(t => t.name))
   return subagents.map(agent => teammateNames.has(agent.name)
     ? { ...agent, name: undefined } : agent)

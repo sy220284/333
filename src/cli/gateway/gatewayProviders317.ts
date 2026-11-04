@@ -46,7 +46,7 @@ async function awsSigv4Fetch(up) {
   const signer=new SignatureV4({
     service:'aws-external-anthropic', region:up.region,credentials,sha256:Sha256,
   })
-  return async (input,init={})=>{
+  return async (input: RequestInfo | URL, init: RequestInit = {})=>{
     const request=new Request(input,init)
     const url=new URL(request.url)
     const body=init.body??(request.body?await request.clone().arrayBuffer():undefined)
@@ -75,7 +75,7 @@ async function tokenizedGoogleFetch(up){
     if(!token)throw new Error('Google Cloud credentials did not yield an access token')
     return token
   }
-  return async (input,init={})=>{
+  return async (input: RequestInfo | URL, init: RequestInit = {})=>{
     const headers=new Headers(init.headers)
     headers.delete('x-api-key')
     headers.delete('authorization')
@@ -91,7 +91,7 @@ export async function createGatewayProviderClient317(up, testFactory) {
     case 'mantle': {
       const classes=await import('@anthropic-ai/bedrock-sdk')
       const Client=up.provider==='mantle'?
-        classes.AnthropicBedrockMantle:classes.AnthropicBedrock
+        (classes as typeof classes & { AnthropicBedrockMantle?: typeof classes.AnthropicBedrock }).AnthropicBedrockMantle : classes.AnthropicBedrock
       if(typeof Client!=='function')
         throw new Error('The rebuilt SDK is missing '+up.provider+' client')
       const awsCredentials={
@@ -189,7 +189,12 @@ function encodeEvents(events, requestedModel) {
     async cancel(reason){await iterator.return?.(reason)},
   })
 }
-export async function forwardGatewaySdk317(up, payload, path, options={}) {
+export type GatewayForwardSdkOptions317 = {
+  requestId?: string; requestedModel?: string; signal?: AbortSignal;
+  timeoutMs?: number; extraHeaders?: Record<string, string>;
+  providerFactory?: (upstream: unknown) => Promise<unknown>
+}
+export async function forwardGatewaySdk317(up, payload, path, options: GatewayForwardSdkOptions317 = {}) {
   const {requestId='-', requestedModel, signal, timeoutMs, extraHeaders={},
     providerFactory}=options
   const name=up.provider

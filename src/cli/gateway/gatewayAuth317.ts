@@ -94,7 +94,7 @@ export async function createOidcProvider317(config) {
     if (!jwk) throw new Error('OIDC token signing key not present in provider JWKS')
     const key = createPublicKey({ key: jwk, format: 'jwk' })
     const opts = header.alg === 'ES256'
-      ? { key, dsaEncoding: 'ieee-p1363' }
+      ? { key, dsaEncoding: 'ieee-p1363' as const }
       : header.alg === 'PS256'
         ? { key, padding: 6, saltLength: 32 }
         : key
@@ -135,7 +135,7 @@ export async function createOidcProvider317(config) {
         grant_type: 'authorization_code', code, code_verifier: verifier,
         redirect_uri: redirectUri, client_id: config.client_id,
       })
-      const headers = { 'content-type': 'application/x-www-form-urlencoded' }
+      const headers: Record<string, string> = { 'content-type': 'application/x-www-form-urlencoded' }
       if (config.client_secret) {
         headers.authorization = 'Basic ' + Buffer.from(config.client_id + ':' + config.client_secret).toString('base64')
       }

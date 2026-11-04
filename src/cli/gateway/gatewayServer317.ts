@@ -145,7 +145,7 @@ export async function createGatewayService317(config, deps: GatewayServiceDeps31
         if (isGatewayAdminPath317(url.pathname)) {
           if (!spend) return error(404, 'not_found_error', 'not found', requestId)
           return await handleGatewayAdmin317(request, {
-            config, publicUrl, spend, audit: (...args) => store.audit(...args),
+            config, publicUrl, spend, audit: (name, sub, id, meta) => store.audit(name, sub, id, meta),
           })
         }
         const token = bearer(request)
