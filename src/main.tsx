@@ -3689,6 +3689,13 @@ async function run(): Promise<CommanderCommand> {
     await pluginConfigureHandler(plugin, options);
   });
 
+  pluginCmd.command('details <name>')
+    .description("Show a plugin's component inventory and projected token cost")
+    .action(async (name: string) => {
+      const { pluginDetailsHandler } = await import('./cli/handlers/pluginDetails.js')
+      await pluginDetailsHandler(name)
+    })
+
   pluginCmd.command('tag [path]')
     .description('Create a {name}--v{version} git tag for a plugin release, validating that plugin.json and any enclosing marketplace entry agree')
     .option('--dry-run', 'Print what would be tagged without creating it')
