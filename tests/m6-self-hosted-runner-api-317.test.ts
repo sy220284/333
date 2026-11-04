@@ -125,4 +125,41 @@ describe('2.1.317 self-hosted runner API', () => {
       tools_host:{tool_server_hosting:0,api_base_url:'https://remote.example.test'}}))
     await expect(client.issueSessionToken('runner-token','session_1')).rejects.toThrow('tools_host')
   })
+
+  test('spawn hints and NACK preserve work-order lease and error boundaries',async()=>{
+    const {client,calls}=mockClient(async path=>{
+      if(path.endsWith('/spawn-hints/poll')) return Response.json({
+        hints:[{session_uuid:'assignment_123',attempt:2,work_order_jwt:'work-jwt',sources:[]}],
+        warm_hints:[{session_uuid:'standby_456',attempt:1,work_order_jwt:'standby-jwt',sources:[]}],
+        pending_count:1,backing_off_count:0,circuit_broken_count:0,
+        pool_pending_session_count:2,pool_active_session_count:1,slots:3,
+      })
+      if(path.endsWith('/spawn-hints/nack')) return Response.json({})
+      throw new Error('Unexpected endpoint '+path)
+    })
+    const hints=await client.pollSpawnHints({available_capacity:2,expected_spawn_seconds:120})
+    expect(hints.hints[0].session_uuid).toBe('assignment_123')
+    expect(hints.warm_hints[0].work_order_jwt).toBe('standby-jwt')
+    expect(hints.pool_active_session_count).toBe(1)
+    expect(hints.slots).toBe(3)
+    await client.nackSpawnHint({session_uuid:'assignment_123',attempt:2,
+      error:'hook failed',retryable:true,failure_kind:'spawn_hook'})
+    expect(calls.map(c=>c.path)).toEqual([
+      '/v1/code/runners/self-hosted/spawn-hints/poll',
+      '/v1/code/runners/self-hosted/spawn-hints/nack',
+    ])
+    expect(calls.every(c=>c.token==='Bearer environment-secret')).toBe(true)
+    expect(calls[1].body).toEqual({
+      session_uuid:'assignment_123',attempt:2,error:'hook failed',
+      retryable:true,failure_kind:'spawn_hook',
+    })
+  })
+
+  test('spawn hint validation rejects non-array server responses and unsafe identifiers',async()=>{
+    const {client}=mockClient(async()=>Response.json({hints:[],warm_hints:'not-an-array'}))
+    await expect(client.pollSpawnHints({available_capacity:1})).rejects.toThrow('hint list')
+    await expect(client.nackSpawnHint({session_uuid:'../escape',attempt:1,
+      error:'invalid',retryable:false})).rejects.toThrow('Invalid')
+  })
+
 })
