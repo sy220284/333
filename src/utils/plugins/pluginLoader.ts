@@ -3093,12 +3093,34 @@ async function loadSkillsDirPlugins317(): Promise<{
       result.push(loaded.plugin)
       errors.push(...loaded.errors)
     } catch (error) {
-      errors.push({
-        type: 'generic-error',
-        source,
-        plugin: entry.name,
-        error: errorMessage(error),
-      })
+      const reason = errorMessage(error)
+      const manifestPath = join(folder, '.claude-plugin', 'plugin.json')
+      const jsonError = /JSON parse error:\s*([\s\S]*)$/i.exec(reason)?.[1]?.trim()
+      const validationError = /Validation errors:\s*([\s\S]*)$/i.exec(reason)?.[1]?.trim()
+      if (jsonError) {
+        errors.push({
+          type: 'manifest-parse-error',
+          source,
+          plugin: entry.name,
+          manifestPath,
+          parseError: jsonError + ' (in ' + manifestPath + ')',
+        })
+      } else if (validationError) {
+        errors.push({
+          type: 'manifest-validation-error',
+          source,
+          plugin: entry.name,
+          manifestPath,
+          validationErrors: [validationError],
+        })
+      } else {
+        errors.push({
+          type: 'generic-error',
+          source,
+          plugin: entry.name,
+          error: reason,
+        })
+      }
       logError(toError(error))
     }
   }
