@@ -6,6 +6,26 @@ import { lstat, readFile, readdir, realpath } from 'node:fs/promises'
 import { basename, join, relative, resolve, isAbsolute } from 'node:path'
 import { parseYaml } from '../../utils/yaml.js'
 
+export type EvalGrader317 = Record<string, unknown> & {
+  name: string; type: string; weight: number;
+  arm?: 'with-only' | 'both'; baseline_file?: string; criteria?: string; tool?: string
+}
+export type EvalCase317 = {
+  name: string; schema_version: string; dir: string; runs: number;
+  tags?: string[];
+  context: { add_dirs: string[]; scaffold_script?: string; history_file?: string; [key: string]: unknown };
+  execution: {
+    prompt: string; max_turns: number; timeout_seconds: number;
+    model?: string; allowed_tools?: string[]; disallowed_tools?: string[];
+    append_system_prompt?: string; env?: NodeJS.ProcessEnv;
+    [key: string]: unknown
+  };
+  graders: EvalGrader317[];
+  [key: string]: unknown
+}
+const isMapping = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
+
 const MAX_CASES = 16
 const MAX_CASE_FILE_BYTES = 1048576
 const MAX_FILE_COUNT = 100000
@@ -32,15 +52,14 @@ function markdownFrontmatter(content, filename) {
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(content)
   if (!match) throw new Error(`unterminated YAML frontmatter: ${filename}`)
   const metadata = parseYaml(match[1]) ?? {}
-  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+  if (!isMapping(metadata)) {
     throw new Error(`frontmatter must be a YAML mapping: ${filename}`)
   }
   return { metadata, body: content.slice(match[0].length), hasFrontmatter: true }
 }
 function validateGrader(grader, dir) {
-  if (!grader || typeof grader !== 'object' || Array.isArray(grader) ||
-    typeof grader.name !== 'string' || !grader.name ||
-    !PERMITTED_TYPES.has(grader.type)) {
+  if (!isMapping(grader) || typeof grader.name !== 'string' || !grader.name ||
+    typeof grader.type !== 'string' || !PERMITTED_TYPES.has(grader.type)) {
     throw new Error(`invalid eval grader in ${dir}`)
   }
   if (grader.weight !== undefined &&
@@ -71,7 +90,7 @@ function validateGrader(grader, dir) {
   if (grader.arm !== undefined && !['with-only', 'both'].includes(grader.arm)) {
     throw new Error(`grader ${grader.name}: arm must be with-only or both`)
   }
-  return { weight: 1, ...grader }
+  return { weight: 1, ...grader, name: grader.name, type: grader.type } as EvalGrader317
 }
 
 async function readOptional(file) {
@@ -82,14 +101,15 @@ export async function readEvalCase317(dir) {
   const root = await realpath(dir)
   const rawYaml = await readOptional(join(root, 'case.yaml'))
   const base = rawYaml === null ? {} : parseYaml(rawYaml)
-  if (!base || typeof base !== 'object' || Array.isArray(base)) {
+  if (!isMapping(base)) {
     throw new Error(`case.yaml must be a YAML object: ${dir}`)
   }
   const markdown = await readOptional(join(root, 'prompt.md'))
   const parsed = markdown === null
     ? { metadata: {}, body: '', hasFrontmatter: false }
     : markdownFrontmatter(markdown, join(root, 'prompt.md'))
-  const top = {}, execution = { ...(base.execution ?? {}) }
+  const top: Record<string, unknown> = {}
+  const execution: Record<string, unknown> = isMapping(base.execution) ? { ...base.execution } : {}
   for (const [key, value] of Object.entries(parsed.metadata)) {
     if (TOP_FIELDS.has(key)) top[key] = value
     else if (EXEC_FIELDS.has(key)) execution[key] = value
@@ -106,8 +126,8 @@ export async function readEvalCase317(dir) {
     if (!item.isFile()) throw new Error(`grader must be a regular file: ${item.name}`)
     const doc = markdownFrontmatter(await readLimited(join(graderDir, item.name)), item.name)
     if (!doc.hasFrontmatter) continue
-    const grader = { name: item.name.slice(0,-3), ...doc.metadata }
-    if (['regex','llm','baseline'].includes(grader.type)) {
+    const grader: Record<string, unknown> = { name: item.name.slice(0,-3), ...doc.metadata }
+    if (typeof grader.type === 'string' && ['regex','llm','baseline'].includes(grader.type)) {
       const field = grader.type === 'regex' ? 'pattern' : 'criteria'
       if (grader[field] === undefined) grader[field] = doc.body.trim()
     }
@@ -118,9 +138,9 @@ export async function readEvalCase317(dir) {
     ...base, ...top,
     schema_version: top.schema_version ?? base.schema_version ?? '1.1',
     name: top.name ?? base.name ?? basename(root),
-    context: { ...(base.context ?? {}), add_dirs: base.context?.add_dirs ?? [] },
+    context: { ...(isMapping(base.context) ? base.context : {}), add_dirs: isMapping(base.context) ? base.context.add_dirs ?? [] : [] },
     execution,
-    graders: [...(base.graders ?? []), ...markdownGraders],
+    graders: [...(Array.isArray(base.graders) ? base.graders : []), ...markdownGraders],
   }
   if (typeof data.schema_version !== 'string' ||
       !/^\d+\.\d+$/.test(data.schema_version) ||
@@ -170,11 +190,36 @@ export async function readEvalCase317(dir) {
     ['execution.timeout_seconds', data.execution.timeout_seconds, 3600],
     ['runs', data.runs, 50],
   ]) {
-    if (!Number.isInteger(value) || value < 1 || value > cap) {
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > cap) {
       throw new Error(`eval ${data.name}: ${name} must be an integer in 1..${cap}`)
     }
   }
-  return { ...data, dir: root }
+  if (typeof data.name !== 'string' || !data.name.trim()) {
+    throw new Error('eval name must be a non-empty string')
+  }
+  if (data.tags !== undefined &&
+      (!Array.isArray(data.tags) || !data.tags.every(tag => typeof tag === 'string'))) {
+    throw new Error('eval tags must be strings')
+  }
+  for (const field of ['allowed_tools', 'disallowed_tools'] as const) {
+    const value = data.execution[field]
+    if (value !== undefined && (!Array.isArray(value) ||
+      !value.every(tool => typeof tool === 'string'))) {
+      throw new Error('eval execution.' + field + ' must list tool names')
+    }
+  }
+  for (const field of ['model', 'append_system_prompt'] as const) {
+    const value = data.execution[field]
+    if (value !== undefined && typeof value !== 'string') {
+      throw new Error('eval execution.' + field + ' must be a string')
+    }
+  }
+  if (data.execution.env !== undefined &&
+      (!isMapping(data.execution.env) ||
+        Object.values(data.execution.env).some(value => typeof value !== 'string'))) {
+    throw new Error('eval execution.env must contain string values')
+  }
+  return { ...data, dir: root } as EvalCase317
 }
 
 export async function discoverEvalCases317(evalRoot, options = {}) {
