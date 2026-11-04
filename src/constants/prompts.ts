@@ -414,7 +414,6 @@ export async function getSystemPrompt(
   // 2.1.88 text split. Interactive and feature-gated sessions keep their own
   // dedicated prompts until separately verified against the official PTY.
   if (getIsNonInteractiveSession() &&
-      typeof MACRO !== 'undefined' &&
       MACRO.VERSION === '2.1.317') {
     const outputStyleConfig = await getOutputStyleConfig()
     const memoryPath = isAutoMemoryEnabled() ? getAutoMemPath() : undefined
