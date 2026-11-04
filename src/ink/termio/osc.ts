@@ -5,8 +5,9 @@
 import { Buffer } from 'buffer'
 import { env } from '../../utils/env.js'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
+import { getPlatform } from '../../utils/platform.js'
 import { BEL, ESC, ESC_TYPE, SEP } from './ansi.js'
-import { writeLinuxClipboardNative } from './clipboardNative317.mjs'
+import { windowsClipboardWriteInvocation, writeLinuxClipboardNative } from './clipboardNative317.mjs'
 import type { Action, Color, TabStatusAction } from './types.js'
 
 export const OSC_PREFIX = ESC + String.fromCharCode(ESC_TYPE.OSC)
@@ -63,10 +64,12 @@ export function wrapForMultiplexer(sequence: string): string {
 export type ClipboardPath = 'native' | 'tmux-buffer' | 'osc52'
 
 export function getClipboardPath(): ClipboardPath {
+  const platform = getPlatform()
   const nativeAvailable = !process.env['SSH_CONNECTION'] && (
-    process.platform === 'darwin' ||
-    process.platform === 'win32' ||
-    (process.platform === 'linux' && typeof linuxCopy === 'string')
+    platform === 'macos' ||
+    platform === 'windows' ||
+    platform === 'wsl' ||
+    (platform === 'linux' && typeof linuxCopy === 'string')
   )
   if (nativeAvailable) return 'native'
   if (process.env['TMUX']) return 'tmux-buffer'
@@ -174,8 +177,8 @@ let linuxCopy: 'wl-copy' | 'xclip' | 'xsel' | 'addon' | null | undefined
  */
 function copyNative(text: string): void {
   const opts = { input: text, useCwd: false, timeout: 2000 }
-  switch (process.platform) {
-    case 'darwin':
+  switch (getPlatform()) {
+    case 'macos':
       void execFileNoThrow('pbcopy', [], opts)
       return
     case 'linux': {
@@ -219,11 +222,12 @@ function copyNative(text: string): void {
       })
       return
     }
-    case 'win32':
-      // clip.exe is always available on Windows. Unicode handling is
-      // imperfect (system locale encoding) but good enough for a fallback.
-      void execFileNoThrow('clip', [], opts)
+    case 'windows':
+    case 'wsl': {
+      const { command, args } = windowsClipboardWriteInvocation(getPlatform())
+      void execFileNoThrow(command, args, opts)
       return
+    }
   }
 }
 
