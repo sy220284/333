@@ -4,8 +4,12 @@ on:
     branches:
       - upgrade/2.1.310-m1-evidence
     paths:
-      - tools/upgrade/restore-official-317-assets.py
-      - .github/workflows/restore-official-317-assets.yml
+      - '.gitattributes'
+      - 'src/skills/bundled/**'
+      - 'src/types/official317/**'
+      - 'src/constants/official317/**'
+      - 'tools/upgrade/restore-official-317-assets.py'
+      - '.github/workflows/restore-official-317-assets.yml'
   workflow_dispatch:
 
 permissions:
@@ -33,7 +37,7 @@ jobs:
             https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude \
             -o "$RUNNER_TEMP/claude-2.1.317"
           echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  $RUNNER_TEMP/claude-2.1.317" | sha256sum --check
-      - name: 恢复所有101项官方嵌入资源，拒绝文件内容冲突
+      - name: 从已验明来源的原版ELF恢复及修复101项资源
         shell: bash
         run: |
           set -euo pipefail
@@ -66,6 +70,26 @@ jobs:
           python3 -m py_compile tools/upgrade/restore-official-317-assets.py
           find src/skills/bundled/claude-test-conversation/scripts -name '*.mjs' -type f \
             -print0 | xargs -0 -n1 node --check
+      - name: 验证101项资源加入Git索引后仍保持原始二进制字节
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add src/skills/bundled src/types/official317 src/constants/official317
+          python3 - <<'PY'
+          import importlib.util
+          import subprocess
+          from pathlib import Path
+          script=Path('tools/upgrade/restore-official-317-assets.py')
+          spec=importlib.util.spec_from_file_location('restore317',script)
+          module=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          for _,_,resource,_,_ in module.module_index():
+            staged=subprocess.check_output(['git','rev-parse',':'+resource],text=True).strip()
+            direct=subprocess.check_output(['git','hash-object','--no-filters',resource],text=True).strip()
+            if staged!=direct:
+              raise SystemExit('Git filters altered official resource bytes: '+resource)
+          print('All 101 staged Git blobs match verified original files')
+          PY
       - name: 将已逐字节验证的官方资源提交至PR7分支
         shell: bash
         run: |

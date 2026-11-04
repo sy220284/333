@@ -19,3 +19,9 @@ research/claude-code-2.1.88/dependencies/node_modules/** -text
 # These 107 official resource files are SHA-pinned byte-for-byte.
 # Preserve their source line endings on Windows as well as Linux/macOS.
 src/skills/bundled/claude-api/** -text -eol whitespace=-blank-at-eol,-blank-at-eof
+
+# Upstream 2.1.317 stores compressed binary payloads with .js extensions.
+# Preserve original bytes; Git newline filters corrupt these zstd frames.
+src/skills/bundled/artifact-diagramming/assets/mermaid.min.js -text -eol
+src/skills/bundled/data-visualization/assets/chart.umd.min.js -text -eol
+src/skills/bundled/artifact-design/assets/hljsBundle.generated.min.js -text -eol

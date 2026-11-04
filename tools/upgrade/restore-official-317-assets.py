@@ -12,6 +12,9 @@ import ctypes
 import ctypes.util
 import hashlib
 import json
+import os
+import stat
+import tempfile
 from pathlib import Path
 import zlib
 
@@ -66,6 +69,23 @@ def restored(lib, raw, compressed, utf16):
         raw = raw.decode("utf-16le").encode("utf-8")
     return raw
 
+def replace_from_verified_binary(target, contents):
+    # The official ELF SHA-256 has already been verified before this path.
+    # An atomic replacement prevents interrupted CI runs from truncating a resource.
+    fd, temp_path = tempfile.mkstemp(prefix='.official-317-', dir=target.parent)
+    try:
+        with os.fdopen(fd, 'wb') as stream:
+            stream.write(contents)
+            stream.flush()
+            os.fsync(stream.fileno())
+        existing_mode = stat.S_IMODE(target.stat().st_mode) if target.exists() else 0o644
+        os.chmod(temp_path, existing_mode)
+        os.replace(temp_path, target)
+    finally:
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--binary", type=Path, required=True)
@@ -85,20 +105,25 @@ def main():
             binary.seek(offset)
             contents = restored(lib, binary.read(size), compressed, utf16)
             destination = args.root / name
-            if destination.exists() and destination.read_bytes() != contents:
-                raise ValueError("An existing source differs from the original: " + name)
+            if destination.is_symlink() or (destination.exists() and not destination.is_file()):
+                raise ValueError("Official resource destination is not a regular file: " + name)
+            if not args.write and destination.exists() and destination.read_bytes() != contents:
+                raise ValueError("Existing Git source bytes differ from verified official binary: " + name)
             prepared.append((destination, contents, name))
-    missing = []
+    missing, repaired = [], []
     for target, contents, name in prepared:
         if args.write:
             target.parent.mkdir(parents=True, exist_ok=True)
-            if not target.exists():
-                target.write_bytes(contents)
+            if not target.exists() or target.read_bytes() != contents:
+                replace_from_verified_binary(target, contents)
+                repaired.append(name)
+            if target.read_bytes() != contents:
+                raise ValueError("Official resource failed post-write byte verification: " + name)
         elif not target.is_file():
             missing.append(name)
     if missing:
         raise ValueError("Unrestored official resources: " + ", ".join(missing))
-    print(json.dumps({"target":"2.1.317","result":"PASS","verified":len(prepared),"bytes":sum(len(b) for _,b,_ in prepared)}))
+    print(json.dumps({"target":"2.1.317","result":"PASS","verified":len(prepared),"repaired":len(repaired),"repaired_paths":repaired,"bytes":sum(len(b) for _,b,_ in prepared)}))
 
 if __name__ == "__main__":
     main()
