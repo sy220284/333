@@ -4,6 +4,7 @@
  */
 import { createHash } from 'node:crypto'
 import type { GatewayDeviceClaims317, GatewayDeviceStatus317 } from './gatewayDevice317.ts'
+import type { createGatewaySpendStore317 } from './gatewaySpendStore317.ts'
 
 export type GatewayStoreConfig317 = {
   postgres_url: string
@@ -11,6 +12,22 @@ export type GatewayStoreConfig317 = {
   connect_timeout_seconds?: number
   username?: string
   password?: string
+}
+
+export type GatewayStore317 = {
+  createSpend(): ReturnType<typeof createGatewaySpendStore317>
+  incrementRateLimit(kind: string, clientIp: string | null, windowSeconds: number): Promise<number>
+  denyCode(userCode: string): Promise<boolean>
+  newDevice(deviceCode: string, userCode: string, expiresSeconds: number): Promise<void>
+  approveCode(userCode: string, claims: GatewayDeviceClaims317): Promise<boolean>
+  consumeDevice(deviceCode: string, minPollSeconds?: number): Promise<GatewayDeviceStatus317>
+  createRefresh(token: string, claims: GatewayDeviceClaims317, expiresSeconds: number): Promise<void>
+  rotateRefresh(token: string): Promise<GatewayDeviceClaims317 | null>
+  revoke(token: string, seconds?: number): Promise<void>
+  isRevoked(token: string): Promise<boolean>
+  audit(event: string, subject: string | null, requestId: string | null,
+    metadata?: Record<string, unknown>): Promise<void>
+  close(): Promise<void>
 }
 
 const hash = (input: string): string => createHash('sha256').update(input).digest('hex')
@@ -28,7 +45,7 @@ export function decodeGatewayClaims317(value: unknown): GatewayDeviceClaims317 {
   return claims as GatewayDeviceClaims317
 }
 
-export async function openGatewayStore317(config: GatewayStoreConfig317) {
+export async function openGatewayStore317(config: GatewayStoreConfig317): Promise<GatewayStore317> {
   if (typeof Bun === 'undefined' || typeof Bun.SQL !== 'function') {
     throw new Error('Enterprise gateway requires native Bun with Bun.SQL')
   }
