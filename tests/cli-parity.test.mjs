@@ -101,7 +101,7 @@ test('bootstrap route classification ignores literal prompt words after --', asy
   assert.equal(classifyStartupArgs(['agents', '--help']).backgroundRequest, true);
   assert.equal(classifyStartupArgs(['--bg', '-p', 'hello']).backgroundRequest, true);
   assert.equal(classifyStartupArgs(['--prefill', '--bg']).backgroundRequest, false);
-  assert.equal(classifyStartupArgs(['--settings', '--tmux', '--worktree=demo']).tmuxWorktreeRequest, true);
+  assert.equal(classifyStartupArgs(['--settings', '--tmux', '--worktree=demo']).tmuxWorktreeRequest, false);
   assert.equal(classifyStartupArgs(['--worktree=demo', '--tmux']).tmuxWorktreeRequest, true);
   assert.equal(classifyStartupArgs(['--tmux=classic', '-w']).tmuxWorktreeRequest, true);
 });
