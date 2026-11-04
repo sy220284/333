@@ -15,12 +15,15 @@ async function fixture(fn, plugin=true) {
     await fn(root)
   } finally { await rm(root,{recursive:true,force:true}) }
 }
-test('317 init: blank case creates readable original 1.1 schema and grader',()=>fixture(async dir=>{
+test('317 init: bare case bytes match the official prompt.md and graders/criteria.md',()=>fixture(async dir=>{
   const out=await createEvalCase317('baseline',{cwd:dir})
   assert.equal(out,join(dir,'evals','baseline'))
-  assert.match(await readFile(join(out,'case.yaml'),'utf8'),/schema_version: "1\.1"/)
-  assert.match(await readFile(join(out,'prompt.md'),'utf8'),/Describe the test task/)
-  assert.match(await readFile(join(out,'graders','outcome.md'),'utf8'),/type: llm/)
+  const expectedPrompt = '---\nmax_turns: 10\nallowed_tools: [Read, Glob, Grep, Skill]\n---\n\nTODO: describe what the agent should do\n'
+  const expectedCriteria = '---\ntype: llm\nweight: 1\n---\n\nTODO: describe what a successful response looks like\n'
+  assert.equal(await readFile(join(out,'prompt.md'),'utf8'), expectedPrompt)
+  assert.equal(await readFile(join(out,'graders','criteria.md'),'utf8'), expectedCriteria)
+  const entries = await import('node:fs/promises').then(fs=>fs.readdir(out))
+  assert.deepEqual(entries.sort(), ['graders','prompt.md'])
   await assert.rejects(createEvalCase317('baseline',{cwd:dir}),/already exists/)
 }))
 test('317 init: nested eval-dir is created safely and names are validated',()=>fixture(async dir=>{
