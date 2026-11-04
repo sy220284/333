@@ -50,26 +50,35 @@ test('installed launcher invokes newly built CLI', () => {
   assert.equal(p.stdout.trim(), `${expectedVersion} (Claude Code)`);
 });
 
-test('Linux x64 release defaults to the full official 317 transplanted module graph', () => {
+test('Linux x64 release defaults to the SHA-pinned complete official 317 native runtime', () => {
   if (process.platform !== 'linux' || process.arch !== 'x64') return;
   const manifest = JSON.parse(readFileSync(join(dist, 'vendor/claude-code-2.1.317/manifest.json'), 'utf8'));
   assert.equal(manifest.version, expectedVersion);
   assert.equal(manifest.module_count, 2924);
-  const p = spawnSync(process.execPath,[join(dist,'launcher.cjs'),'--help'], {
-    encoding: 'utf8',timeout:45000,maxBuffer:3*1024*1024,
-    env:{...process.env, CLAUDE_CODE_333_RUNTIME:'official-317',
-      DISABLE_TELEMETRY:'1',CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1'}
-  });
-  assert.equal(p.status,0,p.stderr?.slice(-2000));
-  assert.match(p.stdout,/gateway/);
-  assert.match(p.stdout,/ultrareview/);
-  const auto = spawnSync(process.execPath,[join(dist,'launcher.cjs'),'--help'], {
-    encoding: 'utf8',timeout:45000,maxBuffer:3*1024*1024,
-    env:{...process.env,CLAUDE_CODE_333_RUNTIME:'auto',
-      DISABLE_TELEMETRY:'1',CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1'}
-  });
-  assert.equal(auto.status,0,auto.stderr?.slice(-2000));
-  assert.equal(auto.stdout,p.stdout,'Default launcher must use the transplanted official 317 entrypoint');
+  const native = join(dist, 'vendor/claude-code-2.1.317/native/linux-x64/claude');
+  assert.ok(existsSync(native), 'The original runtime must be staged at release packaging time');
+  const sha = createHash('sha256').update(readFileSync(native)).digest('hex');
+  assert.equal(sha, manifest.binary_sha256, 'The shipped runtime must match its exact decompiled ELF');
+  const env = {...process.env, DISABLE_TELEMETRY:'1', CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1'};
+  const version = spawnSync(process.execPath,[join(dist,'launcher.cjs'),'--version'],{encoding:'utf8',timeout:15000,env});
+  assert.equal(version.status,0,version.stderr);
+  assert.equal(version.stdout.trim(), `${expectedVersion} (Claude Code)`);
+  const official = spawnSync(native,['--help'],{encoding:'utf8',timeout:45000,maxBuffer:3*1024*1024,env});
+  assert.equal(official.status,0,official.stderr?.slice(-1500));
+  const auto = spawnSync(process.execPath,[join(dist,'launcher.cjs'),'--help'],
+    {encoding:'utf8',timeout:45000,maxBuffer:3*1024*1024,env});
+  assert.equal(auto.status,0,auto.stderr?.slice(-1500));
+  assert.equal(auto.stdout,official.stdout,'The user-facing CLI must run the official native 317 engine');
+  assert.match(auto.stdout,/gateway/);
+  assert.match(auto.stdout,/ultrareview/);
+  const dir=mkdtempSync(join(tmpdir(),'333-official-native-prune-'));
+  try {
+    const task=spawnSync(process.execPath,[join(dist,'launcher.cjs'),'plugin','prune','--yes'],{
+      encoding:'utf8',timeout:20000,env:{...env,CLAUDE_CONFIG_DIR:dir}
+    });
+    assert.equal(task.status,0,task.stderr?.slice(-1500));
+    assert.match(task.stdout,/Nothing to prune/);
+  } finally { rmSync(dir,{recursive:true,force:true}); }
 });
 
 test('release is runnable from an isolated folder without repository node_modules', () => {
