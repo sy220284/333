@@ -123,6 +123,8 @@ jobs:
         run: node --test tests/m4-agent-cleanup-317.test.mjs
       - name: 317远程任务轮询停止和异步竞态
         run: node --test tests/m4-remote-poll-lifecycle-317.test.mjs
+      - name: 317会话队列UUID日志与多模态保护
+        run: node --test tests/m2-queue-operation-317.test.mjs
       - name: 317模型目录、读取边界和嵌套会话
         id: acceptance_008
         continue-on-error: true
