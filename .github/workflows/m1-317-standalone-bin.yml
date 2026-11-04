@@ -8,6 +8,10 @@ on:
       - 'build/rebuild.mjs'
       - 'build/package-release.mjs'
       - 'build/public-dependencies.lock.json'
+      - 'src/utils/ripgrep.ts'
+      - 'tests/model-loop-local.test.mjs'
+      - 'tests/search-loop-local.test.mjs'
+      - 'tests/claude-api-version-parity.test.mjs'
   workflow_dispatch:
 
 permissions:
