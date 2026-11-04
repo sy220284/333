@@ -31,8 +31,19 @@ test('2.1.317 功能链路覆盖全部366条无代码关联的官方记录，不
     const original = references.get(item.id)
     assert.equal(item.official_text, original.official_text, item.id)
     assert.equal(item.version, original.version, item.id)
-    assert.equal(item.verification, 'PENDING_SOURCE_BINARY_E2E', item.id)
-    assert.match(item.implementation_evidence, /待核当前实现/, item.id)
+    if (item.verification === 'SCENARIO_E2E_PASS_PENDING_FULL_CHAIN') {
+      assert.match(item.implementation_evidence, /src\//, item.id)
+      assert.match(item.evidence?.official_elf_sha256 ?? '', /^[a-f0-9]{64}$/, item.id)
+      assert.match(item.evidence?.candidate_commit ?? '', /^[a-f0-9]{40}$/, item.id)
+      assert.match(item.evidence?.ci_run ?? '', /^https:\/\/github\.com\/sy220284\/333\/actions\/runs\/\d+$/, item.id)
+      assert.ok(item.evidence.tests?.length > 0 && item.evidence.matched?.length > 0, item.id)
+      for (const path of item.evidence.tests) assert.ok(statSync(resolve(root, path)).isFile(), path)
+      assert.equal(item.evidence.full_chain_signed_off, false, item.id)
+      assert.ok(item.evidence.outstanding?.length > 0, item.id)
+    } else {
+      assert.equal(item.verification, 'PENDING_SOURCE_BINARY_E2E', item.id)
+      assert.match(item.implementation_evidence, /待核当前实现/, item.id)
+    }
     assert.ok(['P0', 'P1', 'P2'].includes(item.priority), item.id)
     assert.ok(item.platforms.length, item.id)
   }
@@ -80,6 +91,13 @@ test('更新数量、阶段依赖和逐条人工归属保持一致', () => {
     total += entries.length
   }
   assert.equal(total, 366)
+  assert.equal(matrix.verification_summary.scenario_e2e_pass_pending_chain +
+    matrix.verification_summary.pending_source_binary_e2e +
+    matrix.verification_summary.formally_closed, 366)
+  assert.equal(matrix.verification_summary.scenario_e2e_pass_pending_chain,
+    matrix.items.filter(item => item.verification === 'SCENARIO_E2E_PASS_PENDING_FULL_CHAIN').length)
+  assert.equal(matrix.verification_summary.pending_source_binary_e2e,
+    matrix.items.filter(item => item.verification === 'PENDING_SOURCE_BINARY_E2E').length)
   assert.deepEqual(matrix.manual_review.needs_route_review, [], '仍有更新未完成路由归类')
 })
 
