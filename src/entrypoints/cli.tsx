@@ -118,11 +118,21 @@ async function main(): Promise<void> {
   if (args[0] === 'self-hosted-runner') {
     profileCheckpoint('cli_self_hosted_runner_path');
     try {
-      const { selfHostedRunnerMain317 } = await import('../cli/selfHostedRunner/runnerHost317.ts');
-      await selfHostedRunnerMain317(args.slice(1));
+      if (args[1] === 'decode-token') {
+        const { selfHostedRunnerDecodeTokenMain317 } =
+          await import('../cli/selfHostedRunner/decodeToken317.ts');
+        await selfHostedRunnerDecodeTokenMain317(args.slice(2));
+      } else {
+        const { selfHostedRunnerMain317 } = await import('../cli/selfHostedRunner/runnerHost317.ts');
+        await selfHostedRunnerMain317(args.slice(1));
+      }
     } catch (error) {
       const usage = error instanceof Error && error.name === 'RunnerUsageError317';
-      if (usage) {
+      const jwtError = args[1] === 'decode-token' && error instanceof Error;
+      if (jwtError) {
+        process.stderr.write(error.message + '\n');
+        process.exitCode = 1;
+      } else if (usage) {
         process.stderr.write('error: ' + error.message +
           "\nRun 'claude self-hosted-runner --help' for usage.\n");
         process.exitCode = 2;
