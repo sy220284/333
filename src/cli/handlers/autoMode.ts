@@ -4,8 +4,8 @@ import { writeFileSyncAndFlush_DEPRECATED } from '../../utils/file.js'
 import { markInternalWrite } from '../../utils/settings/internalWrites.js'
 import { resetSettingsCache } from '../../utils/settings/settingsCache.js'
 import { getSettingsFilePathForSource } from '../../utils/settings/settings.js'
-import { removeAutoModeSection } from './autoModeCliPolicy.mjs'
-import { filterAutoModeRulesByLabel } from './autoModeCliPolicy.mjs'
+import { removeAutoModeSection } from './autoModeCliPolicy.ts'
+import { filterAutoModeRulesByLabel } from './autoModeCliPolicy.ts'
 /**
  * Auto mode subcommand handlers — dump default/merged classifier rules and
  * critique user-written rules. Dynamically imported when `claude auto-mode ...` runs.
@@ -22,7 +22,7 @@ import {
   getDefaultExternalAutoModeRules,
 } from '../../utils/permissions/yoloClassifier.js'
 import { getAutoModeConfig } from '../../utils/settings/settings.js'
-import { expandAutoModeRules } from '../../utils/permissions/autoModeRules.mjs'
+import { expandAutoModeRules } from '../../utils/permissions/autoModeRules.ts'
 import { sideQuery } from '../../utils/sideQuery.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 
