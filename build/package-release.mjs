@@ -50,13 +50,39 @@ function vendorInventory(dir, prefix = '') {
   }
   return files.sort((a, b) => a.path.localeCompare(b.path));
 }
+// Each compiled executable is platform-specific. Carry only its own native
+// addons and ripgrep executable; packaging every architecture previously
+// shipped stale audio binaries that were never checked against the official
+// release on the compiling host.
+const hostDir = process.arch + '-' + process.platform;
+const architectureDirs = new Set([
+  'x64-linux', 'arm64-linux', 'x64-darwin', 'arm64-darwin',
+  'x64-win32', 'arm64-win32',
+]);
+function nativeResourceForHost(relativeName) {
+  const pieces = relativeName.replaceAll('\\', '/').split('/');
+  return pieces.length < 2 || !architectureDirs.has(pieces[1]) || pieces[1] === hostDir;
+}
 const sourceInventory = vendorInventory(vendorSource);
+const selectedInventory = sourceInventory.filter(file => nativeResourceForHost(file.path));
+const requiredResources = [
+  'audio-capture/' + hostDir + '/audio-capture.node',
+  'ripgrep/' + hostDir + '/' + (process.platform === 'win32' ? 'rg.exe' : 'rg'),
+];
+for (const required of requiredResources) {
+  if (!selectedInventory.some(file => file.path === required))
+    throw Error('Missing platform vendor resource: ' + required);
+}
+
 let movedPrevious = false;
 try {
-  cpSync(vendorSource, vendorStage, { recursive: true, force: false, errorOnExist: true });
+  cpSync(vendorSource, vendorStage, {
+    recursive: true, force: false, errorOnExist: true,
+    filter: file => nativeResourceForHost(relative(vendorSource, file)),
+  });
   const stagedInventory = vendorInventory(vendorStage);
-  if (JSON.stringify(stagedInventory) !== JSON.stringify(sourceInventory))
-    throw Error('Staged vendor files do not match their source SHA-256 inventory');
+  if (JSON.stringify(stagedInventory) !== JSON.stringify(selectedInventory))
+    throw Error('Staged platform-specific vendor files do not match source SHA-256 inventory');
   if (existsSync(vendorOutput)) {
     renameSync(vendorOutput, vendorBackup);
     movedPrevious = true;
