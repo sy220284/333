@@ -33,7 +33,7 @@ export function parsePluginTestFastArgs317(
 const PLUGIN_TEST_HELP_317 = [
   'Usage: claude plugin test [dir]',
   '',
-  "Run a plugin's tests",
+  "Run a mod's tests",
   '',
   'Arguments:',
   "  dir         The mod's folder (default: the current folder)",
