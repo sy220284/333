@@ -72,6 +72,7 @@ import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
 import { getErrnoCode, isFsInaccessible } from './errors.js'
 import { shouldRetrySessionAppendAfterMkdir } from './sessionWriteFailurePolicy.ts'
+import { SessionTranscriptPathsV5 } from './sessionTranscriptPathsV5.mjs'
 import { commitRestoredSession, requireFetchedSessionEntries } from './sessionHydrationCommit317.ts'
 import { replaceTranscriptAtomically, replaceTranscriptBatchAtomically, assertSafeAgentTranscriptId } from './atomicTranscriptRestore317.ts'
 import type { FileHistorySnapshot } from './fileHistory.js'
@@ -202,9 +203,12 @@ export function getProjectsDir(): string {
   return join(getClaudeConfigHomeDir(), 'projects')
 }
 
+const sessionTranscriptPaths = new SessionTranscriptPathsV5()
+
 export function getTranscriptPath(): string {
   const projectDir = getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
-  return join(projectDir, `${getSessionId()}.jsonl`)
+  const sessionId = getSessionId()
+  return sessionTranscriptPaths.remember(sessionId, join(projectDir, `${sessionId}.jsonl`))
 }
 
 export function getTranscriptPathForSession(sessionId: string): string {
@@ -220,11 +224,11 @@ export function getTranscriptPathForSession(sessionId: string): string {
   // track a sessionId→projectDir map. Callers wanting a specific other
   // session's path should pass fullPath explicitly (most save* functions
   // already accept this).
-  if (sessionId === getSessionId()) {
-    return getTranscriptPath()
-  }
-  const projectDir = getProjectDir(getOriginalCwd())
-  return join(projectDir, `${sessionId}.jsonl`)
+  if (sessionId === getSessionId()) return getTranscriptPath()
+  return sessionTranscriptPaths.resolve(sessionId, () => {
+    const projectDir = getProjectDir(getOriginalCwd())
+    return join(projectDir, `${sessionId}.jsonl`)
+  })
 }
 
 // 50 MB — session JSONL can grow to multiple GB (inc-3930). Callers that
@@ -552,7 +556,15 @@ class Project {
   sessionFile: string | null = null
   // Entries buffered while sessionFile is null. Flushed by materializeSessionFile
   // on the first user/assistant message — prevents metadata-only session files.
-  private pendingEntries: Entry[] = []
+  // V5: journals are buffered under their owning session, including when
+  // the user switches sessions before the first transcript is materialized.
+  private pendingEntriesBySession = new Map<string, Entry[]>()
+
+  private queuePendingEntry(sessionId: string, entry: Entry): void {
+    const pending = this.pendingEntriesBySession.get(sessionId) ?? []
+    pending.push(entry)
+    this.pendingEntriesBySession.set(sessionId, pending)
+  }
   private remoteIngressUrl: string | null = null
   private internalEventWriter: InternalEventWriter | null = null
   private internalEventReader: InternalEventReader | null = null
@@ -711,8 +723,9 @@ class Project {
   }
 
   resetSessionFile(): void {
+    // Preserve unmaterialized entries by their original session ID.
+    // /resume may return to that session and should not silently lose them.
     this.sessionFile = null
-    this.pendingEntries = []
   }
 
   /**
@@ -996,6 +1009,24 @@ class Project {
     )
   }
 
+  async flushPendingEntriesForActiveSession(): Promise<void> {
+    await this.flushPendingEntriesForCurrentSession()
+  }
+
+  private async flushPendingEntriesForCurrentSession(): Promise<void> {
+    if (this.sessionFile === null) return
+    const sessionId = getSessionId()
+    const pending = this.pendingEntriesBySession.get(sessionId)
+    if (!pending?.length) return
+    this.pendingEntriesBySession.delete(sessionId)
+    // Capture the session destination before yielding; async callers can
+    // switch the active conversation while these writes are being scheduled.
+    const destination = this.sessionFile
+    for (const entry of pending) {
+      await this.enqueueWrite(destination, entry)
+    }
+  }
+
   /**
    * Create the session file, write cached startup metadata, and flush
    * buffered entries. Called on the first user/assistant message.
@@ -1008,13 +1039,7 @@ class Project {
     this.ensureCurrentSessionFile()
     // mode/agentSetting are cache-only pre-materialization; write them now.
     this.reAppendSessionMetadata()
-    if (this.pendingEntries.length > 0) {
-      const buffered = this.pendingEntries
-      this.pendingEntries = []
-      for (const entry of buffered) {
-        await this.appendEntry(entry)
-      }
-    }
+    await this.flushPendingEntriesForCurrentSession()
   }
 
   async insertMessageChain(
@@ -1127,7 +1152,9 @@ class Project {
 
   async insertQueueOperation(queueOp: QueueOperationMessage) {
     return this.trackWrite(async () => {
-      await this.appendEntry(queueOp)
+      // The command's session ID was fixed when it entered the queue.
+      // Do not silently retarget its journal after switchSession().
+      await this.appendEntry(queueOp, queueOp.sessionId as UUID)
     })
   }
 
@@ -1164,13 +1191,19 @@ class Project {
     if (isCurrentSession) {
       // Buffer until materializeSessionFile runs (first user/assistant message).
       if (this.sessionFile === null) {
-        this.pendingEntries.push(entry)
+        this.queuePendingEntry(sessionId, entry)
         return
       }
       sessionFile = this.sessionFile
     } else {
       const existing = await this.getExistingSessionFile(sessionId)
       if (!existing) {
+        // A queue operation can arrive while its original session is parked
+        // before first user/assistant output. Hold it for that session.
+        if (entry.type === 'queue-operation') {
+          this.queuePendingEntry(sessionId, entry)
+          return
+        }
         logError(
           new Error(
             `appendEntry: session file not found for other session ${sessionId}`,
@@ -1608,7 +1641,9 @@ export async function recordContextCollapseSnapshot(snapshot: {
 }
 
 export async function flushSessionStorage(): Promise<void> {
-  await getProject().flush()
+  const project = getProject()
+  await project.flushPendingEntriesForActiveSession()
+  await project.flush()
 }
 
 export async function hydrateRemoteSession(
