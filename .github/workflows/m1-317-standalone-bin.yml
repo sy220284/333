@@ -20,6 +20,8 @@ on:
       - 'src/entrypoints/cli.tsx'
       - 'src/bootstrap/jitPolicy317.mjs'
       - 'tests/m1-jit-startup-317.test.mjs'
+      - 'src/bootstrap/relayTokenGuard317.mjs'
+      - 'tests/m1-relay-token-guard-317.test.mjs'
       - 'src/entrypoints/runnerDeclaration317.mjs'
       - 'src/bootstrap/state.ts'
       - 'tests/m1-runner-declares-317.test.mjs'
@@ -71,6 +73,8 @@ jobs:
         run: node --test tests/m1-official-native-sources-317.test.mjs
       - name: 317启动延迟JIT调优的原版语义与进程退出安全性
         run: node --test tests/m1-jit-startup-317.test.mjs
+      - name: 官方317远程MCP令牌进程防转储及Linux prctl实际内核验收
+        run: node --test tests/m1-relay-token-guard-317.test.mjs
       - name: 从真实源码独立重建317候选
         run: |
           set -euo pipefail
