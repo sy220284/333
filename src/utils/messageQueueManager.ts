@@ -27,9 +27,11 @@ export type SetAppState = (f: (prev: AppState) => AppState) => void
 // Logging helper
 // ============================================================================
 
-function logOperation(operation: QueueOperation, command?: QueuedCommand): void {
+function logOperation(
+  operation: QueueOperation, command?: QueuedCommand, reason?: string,
+): void {
   const queueOp: QueueOperationMessage =
-    createQueueOperationRecord(operation, command, getSessionId())
+    createQueueOperationRecord(operation, command, getSessionId(), new Date(), { reason })
   void recordQueueOperation(queueOp)
 }
 
@@ -256,7 +258,9 @@ export function dequeueAllMatching(
  * Callers must pass the same object references that are in the queue
  * (e.g. from getCommandsByMaxPriority). Logs a 'remove' operation for each.
  */
-export function remove(commandsToRemove: QueuedCommand[]): void {
+export function remove(
+  commandsToRemove: QueuedCommand[], options: { reason?: string } = {},
+): void {
   if (commandsToRemove.length === 0) {
     return
   }
@@ -272,7 +276,7 @@ export function remove(commandsToRemove: QueuedCommand[]): void {
   if (removed.length > 0) {
     notifySubscribers()
     // Journal only real removals with the UUID of each consumed command.
-    for (const cmd of removed.reverse()) logOperation('remove', cmd)
+    for (const cmd of removed.reverse()) logOperation('remove', cmd, options.reason)
   }
 }
 
@@ -282,6 +286,7 @@ export function remove(commandsToRemove: QueuedCommand[]): void {
  */
 export function removeByFilter(
   predicate: (cmd: QueuedCommand) => boolean,
+  options: { reason?: string } = {},
 ): QueuedCommand[] {
   const removed: QueuedCommand[] = []
   for (let i = commandQueue.length - 1; i >= 0; i--) {
@@ -293,7 +298,7 @@ export function removeByFilter(
   if (removed.length > 0) {
     notifySubscribers()
     for (const cmd of removed) {
-      logOperation('remove', cmd)
+      logOperation('remove', cmd, options.reason)
     }
   }
 
