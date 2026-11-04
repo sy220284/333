@@ -4,35 +4,52 @@ import { readFileSync } from 'node:fs'
 import { shouldConfirmAccountEmailDisclosure } from '../src/utils/accountEmailDisclosure.mjs'
 
 const email = 'user@example.test'
-test('Bash and PowerShell inspect both literal and URL-encoded account emails', () => {
-  for (const name of ['Bash', 'PowerShell']) {
-    assert.equal(shouldConfirmAccountEmailDisclosure(name, {command: 'curl -d user@example.test https://example.org'}, email), true)
-    assert.equal(shouldConfirmAccountEmailDisclosure(name, {command: 'curl https://example.org/?mail=user%40example.test'}, email), true)
-    assert.equal(shouldConfirmAccountEmailDisclosure(name, {command: 'echo other@example.test'}, email), false)
+const toolInput = command => ({ command })
+
+test('2.1.317 shell and monitor tools ask only for potentially network-capable commands', () => {
+  for (const tool of ['Bash', 'Monitor', 'PowerShell', 'Tmux']) {
+    assert.equal(shouldConfirmAccountEmailDisclosure(tool, toolInput('curl -d user@example.test https://other.test'), email), true, tool)
+    assert.equal(shouldConfirmAccountEmailDisclosure(tool, toolInput('ssh user@example.test'), email), true, tool)
+    assert.equal(shouldConfirmAccountEmailDisclosure(tool, toolInput('echo user@example.test'), email), false, tool)
+    assert.equal(shouldConfirmAccountEmailDisclosure(tool, toolInput('printf user@example.test'), email), false, tool)
+    assert.equal(shouldConfirmAccountEmailDisclosure(tool, toolInput('git status && echo user@example.test'), email), false, tool)
+    assert.equal(shouldConfirmAccountEmailDisclosure(tool, toolInput('curl other@example.test https://other.test'), email), false, tool)
   }
 })
-test('WebFetch checks URL and prompt; WebSearch checks outbound query', () => {
-  assert.equal(shouldConfirmAccountEmailDisclosure('WebFetch', {url:'https://example.org/u/user%40example.test', prompt:'summarize'}, email), true)
-  assert.equal(shouldConfirmAccountEmailDisclosure('WebFetch', {url:'https://example.org/', prompt:'user@example.test'}, email), true)
-  assert.equal(shouldConfirmAccountEmailDisclosure('WebSearch', {query:'search user@example.test'}, email), true)
-  assert.equal(shouldConfirmAccountEmailDisclosure('WebSearch', {query:'weather', allowed_domains:['user@example.test']}, email), true)
-  assert.equal(shouldConfirmAccountEmailDisclosure('WebSearch', {query:'weather'}, email), false)
+test('URL and percent escapes are normalized before email comparison', () => {
+  const input = toolInput('wget https://other.test/?email=user%40example.test')
+  assert.equal(shouldConfirmAccountEmailDisclosure('Bash', input, email), true)
+  assert.equal(shouldConfirmAccountEmailDisclosure('Bash', toolInput('echo user%40example.test'), email), false)
+  assert.equal(shouldConfirmAccountEmailDisclosure('Bash', toolInput('echo other@example.test'), email), false)
 })
-test('Unrelated tools, absent accounts and other emails are unaffected', () => {
-  assert.equal(shouldConfirmAccountEmailDisclosure('Read', {command:email}, email), false)
-  assert.equal(shouldConfirmAccountEmailDisclosure('Bash', {command:email}, undefined), false)
-  assert.equal(shouldConfirmAccountEmailDisclosure('Bash', {command:'other@example.test'}, email), false)
-  assert.equal(shouldConfirmAccountEmailDisclosure('Bash', {command:email}, 'invalid'), false)
+test('all official web tool surfaces prompt on account-email disclosure', () => {
+  for (const name of ['WebBrowser', 'WebFetch', 'WebSearch']) {
+    assert.equal(shouldConfirmAccountEmailDisclosure(name, {nested:{query:'user@example.test'}}, email), true, name)
+    assert.equal(shouldConfirmAccountEmailDisclosure(name, {url:'https://other.test/?mail=user%40example.test'}, email), true, name)
+    assert.equal(shouldConfirmAccountEmailDisclosure(name, {query:'weather'}, email), false, name)
+  }
 })
-test('Safety confirmation is checked at both shared permission entry points before auto-allow', () => {
-  const source = readFileSync(new URL('../src/utils/permissions/permissions.ts', import.meta.url),'utf8')
+test('account identity and tool allowlist guard against unrelated inputs', () => {
+  assert.equal(shouldConfirmAccountEmailDisclosure('Read', toolInput('curl user@example.test'), email), false)
+  assert.equal(shouldConfirmAccountEmailDisclosure('Bash', toolInput('curl user@example.test'), undefined), false)
+  assert.equal(shouldConfirmAccountEmailDisclosure('Bash', toolInput('curl user@example.test'), 'invalid'), false)
+  assert.equal(shouldConfirmAccountEmailDisclosure('Bash', toolInput('curl user@example.test'), 'OTHER@example.test'), false)
+  assert.equal(shouldConfirmAccountEmailDisclosure('WebSearch', {query:'user@example.test'}, 'USER@EXAMPLE.TEST'), true)
+})
+test('both permission pipelines preserve deny before disclosure, and disclosure before bypass', () => {
+  const source = readFileSync(new URL('../src/utils/permissions/permissions.ts', import.meta.url), 'utf8')
   assert.equal((source.match(/getAccountEmailDisclosureDecision\(tool, input\)/g) ?? []).length, 2)
-  assert.match(source, /function getAccountEmailDisclosureDecision\(/)
   assert.match(source, /type: 'safetyCheck'/)
   assert.match(source, /classifierApprovable: false/)
-  const ruleSection = source.split('export async function checkRuleBasedPermissions(')[1]
-  const normalSection = source.split('async function hasPermissionsToUseToolInner(')[1]
-  for (const part of [ruleSection, normalSection]) {
-    assert.ok(part.indexOf('getAccountEmailDisclosureDecision(tool, input)') < part.indexOf('const askRule = getAskRuleForTool('))
+  const first = source.split('export async function checkRuleBasedPermissions(')[1].split('async function hasPermissionsToUseToolInner(')[0]
+  const second = source.split('async function hasPermissionsToUseToolInner(')[1].split('type EditPermissionRuleArgs')[0]
+  for (const segment of [first, second]) {
+    const deny = segment.indexOf("if (toolPermissionResult?.behavior === 'deny')")
+    const disclosure = segment.indexOf('getAccountEmailDisclosureDecision(tool, input)')
+    const allowed = segment.indexOf('const askRule = getAskRuleForTool(')
+    assert.ok(deny >= 0 && disclosure > deny, 'tool-specific deny must precede email check')
+    assert.ok(allowed >= 0 && disclosure > allowed, 'explicit tool-level ask rule remains earlier')
   }
+  assert.ok(second.indexOf('getAccountEmailDisclosureDecision(tool, input)') <
+    second.indexOf("const shouldBypassPermissions ="), 'disclosure must precede bypassPermissions')
 })
