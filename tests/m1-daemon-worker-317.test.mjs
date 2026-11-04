@@ -17,9 +17,15 @@ if (original) bins.unshift(['official', original, []])
 
 function launch(binary, args, data, stopOnHeartbeat = false, extraEnv = {}) {
   return new Promise((done, fail) => {
-    const child = spawn(binary, args, { stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, DISABLE_TELEMETRY: '1', CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', ...extraEnv },
+    // Remove inherited proxy keys before creating a deterministic test
+    // environment: Windows folds case variants into the same process key.
+    const env = { ...process.env }
+    for (const key of Object.keys(env))
+      if (/^(?:https?|all)_proxy$/i.test(key)) delete env[key]
+    Object.assign(env, extraEnv, {
+      DISABLE_TELEMETRY: '1', CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
     })
+    const child = spawn(binary, args, { stdio: ['pipe', 'pipe', 'pipe'], env })
     let stdout = '', stderr = '', finished = false, stopSent = false
     // The worker can take several seconds to cold-start on macOS Intel.
     // Signal only after the protocol has emitted a real heartbeat.
@@ -144,9 +150,7 @@ test('317 daemon refuses invalid proxy before parsing worker kind or stdin', {
   const dir = mkdtempSync(join(tmpdir(), '333-daemon-proxy-'))
   const env = {
     CLAUDE_CONFIG_DIR: dir,
-    https_proxy: undefined, HTTPS_PROXY: undefined,
-    http_proxy: 'bad url', HTTP_PROXY: undefined,
-    ALL_PROXY: undefined, all_proxy: undefined,
+    http_proxy: 'bad url',
     CLAUDE_CODE_HOST_CREDS_FILE: undefined,
   }
   try {
