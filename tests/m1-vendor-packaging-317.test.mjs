@@ -40,6 +40,21 @@ function fixture(run) {
       if (officialFiles.has(file)) copyFileSync(join(root, file), dest)
       else writeFileSync(dest, file === 'package.json' ? '{"version":"2.1.317"}\n' : file)
     }
+    // package-release now verifies the 2.1.317 embedded-resource manifest.
+    // Copy the *actual* pinned 101 resources into every isolated fixture, so
+    // transaction/rollback tests exercise real packaging rather than failing
+    // during module resolution or bypassing the integrity verifier.
+    const manifestFile = 'build/official-embedded-assets-2.1.317.json'
+    const officialEmbeddedAssets = JSON.parse(readFileSync(join(root, manifestFile), 'utf8'))
+    for (const file of [
+      'build/verify-official-embedded-assets.mjs',
+      manifestFile,
+      ...officialEmbeddedAssets.resources.map(entry => entry.path),
+    ]) {
+      const dest = join(dir, file)
+      mkdirSync(dirname(dest), { recursive: true })
+      copyFileSync(join(root, file), dest)
+    }
     writeFileSync(join(dir, 'dist', process.platform === 'win32' ? 'claude.exe' : 'claude'), 'isolated release executable fixture')
     run(dir)
   } finally {
