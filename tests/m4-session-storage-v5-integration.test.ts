@@ -93,6 +93,7 @@ test('late transcript writes keep their original session and path after /resume'
   const { createUserMessage } = await import('../src/utils/messages.js')
   const {
     recordTranscript, resetSessionFilePointer, setSessionFileForTesting,
+    getTranscriptPath, getTranscriptPathForSession,
     flushSessionStorage, resetProjectForTesting,
   } = await import('../src/utils/sessionStorage.js')
   const original = getSessionId()
@@ -104,6 +105,8 @@ test('late transcript writes keep their original session and path after /resume'
     switchSession(first)
     await resetSessionFilePointer()
     setSessionFileForTesting(firstFile)
+    expect(getTranscriptPath()).toBe(firstFile)
+    expect(getTranscriptPathForSession(first)).toBe(firstFile)
 
     // recordTranscript yields while deduplicating UUIDs. The session switch
     // must not change its destination or the sessionId stamped in the JSONL.
@@ -113,6 +116,8 @@ test('late transcript writes keep their original session and path after /resume'
     switchSession(second)
     await resetSessionFilePointer()
     setSessionFileForTesting(secondFile)
+    expect(getTranscriptPathForSession(first)).toBe(firstFile)
+    expect(getTranscriptPathForSession(second)).toBe(secondFile)
     await pending
     await flushSessionStorage()
     expect(existsSync(firstFile)).toBe(true)
@@ -148,5 +153,25 @@ test('late transcript writes keep their original session and path after /resume'
     else process.env.CLAUDE_CONFIG_DIR = oldConfig
     if (oldPersistence === undefined) delete process.env.TEST_ENABLE_SESSION_PERSISTENCE
     else process.env.TEST_ENABLE_SESSION_PERSISTENCE = oldPersistence
+  }
+})
+
+test('explicit resumed worktree path overrides the prior location for the same session', () => {
+  const { switchSession, getSessionId } = require('../src/bootstrap/state.js')
+  const { asSessionId } = require('../src/types/ids.js')
+  const { getTranscriptPath, getTranscriptPathForSession } =
+    require('../src/utils/sessionStorage.js')
+  const original = getSessionId()
+  const session = asSessionId('ffffffff-ffff-4fff-8fff-ffffffffffff')
+  const firstDir = join(tmpdir(), 'cc-v5-worktree-one')
+  const secondDir = join(tmpdir(), 'cc-v5-worktree-two')
+  try {
+    switchSession(session, firstDir)
+    expect(getTranscriptPathForSession(session)).toBe(join(firstDir, session + '.jsonl'))
+    switchSession(session, secondDir)
+    expect(getTranscriptPath()).toBe(join(secondDir, session + '.jsonl'))
+    expect(getTranscriptPathForSession(session)).toBe(join(secondDir, session + '.jsonl'))
+  } finally {
+    switchSession(original)
   }
 })
