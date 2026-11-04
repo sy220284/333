@@ -157,10 +157,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node build/m1-x64-reference-probe.mjs \\
-            --reference "${RUNNER_TEMP}/m1-317-reference/claude" \\
-            --candidate "${RUNNER_TEMP}/m1-317-candidate" \\
-            --allow-candidate-diff false \\
+          node build/m1-x64-reference-probe.mjs \
+            --reference "${RUNNER_TEMP}/m1-317-reference/claude" \
+            --candidate "${RUNNER_TEMP}/m1-317-candidate" \
+            --allow-candidate-diff false \
             --report "${RUNNER_TEMP}/m1-317-reference/official-candidate-11-cli-parity.json"
       - name: 官方317与重建版 Claude API 技能读取和106项释放文件真实对照
         shell: bash
