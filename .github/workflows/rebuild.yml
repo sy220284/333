@@ -169,6 +169,8 @@ jobs:
         run: node --test tests/m4-ccr-transcript-restore-317.test.mjs
       - name: 远程Agent kill与轮询释放一致性
         run: node --test tests/m4-remote-poll-registry-317.test.mjs
+      - name: CCR会话写入完成后才切换身份
+        run: node --test tests/m4-session-hydration-commit-317.test.mjs
       - name: 317模型目录、读取边界和嵌套会话
         id: acceptance_008
         continue-on-error: true
