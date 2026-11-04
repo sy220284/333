@@ -106,18 +106,6 @@ jobs:
           bun test tests/m2-disable-ultrathink-317.test.mjs tests/m2-ultrathink-keyword-scope-317.test.mjs
       - name: 317插件安装配置解析及歧义规则
         run: node --test tests/m3-plugin-install-config-317.test.mjs
-      - name: 与原版 CLI 参数和命令差分验收
-        run: node --test tests/cli-parity.test.mjs
-      - name: 复核多级模型回退与自动压缩真实参数语义
-        run: node --test tests/upgrade-coverage.test.mjs tests/fallback-model-chain.test.mjs tests/auto-compact-window.test.mjs
-      - name: 复核529故障后的模型回退与工具集合权限
-        run: node --test tests/fallback-529-integration.test.mjs tests/tool-presets.test.mjs
-      - name: 复核新版CLI参数、云目标与系统提示快照
-        run: node --test tests/upgrade-mode-options.test.mjs tests/cloud-target.test.mjs tests/system-prompt-snapshot.test.mjs
-      - name: 复核新版受限模式的入口到模型执行
-        run: node --test tests/upgrade-mode-integration.test.mjs
-      - name: 复测会话 ZIP 插件实际装载与目录权限
-        run: bun test tests/session-plugin-sources.test.mjs
       - name: 取得已锁定SHA的原版2.1.317 Linux x64执行参考
         if: runner.os == 'Linux'
         run: |
@@ -131,6 +119,18 @@ jobs:
       - name: 317插件安装配置的源码和真实x64差分
         if: runner.os == 'Linux'
         run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-config-native-parity-317.test.mjs
+      - name: 与原版 CLI 参数和命令差分验收
+        run: node --test tests/cli-parity.test.mjs
+      - name: 复核多级模型回退与自动压缩真实参数语义
+        run: node --test tests/upgrade-coverage.test.mjs tests/fallback-model-chain.test.mjs tests/auto-compact-window.test.mjs
+      - name: 复核529故障后的模型回退与工具集合权限
+        run: node --test tests/fallback-529-integration.test.mjs tests/tool-presets.test.mjs
+      - name: 复核新版CLI参数、云目标与系统提示快照
+        run: node --test tests/upgrade-mode-options.test.mjs tests/cloud-target.test.mjs tests/system-prompt-snapshot.test.mjs
+      - name: 复核新版受限模式的入口到模型执行
+        run: node --test tests/upgrade-mode-integration.test.mjs
+      - name: 复测会话 ZIP 插件实际装载与目录权限
+        run: bun test tests/session-plugin-sources.test.mjs
       - name: 官方x64与重建版旧代理向导退场真实行为对照
         if: runner.os == 'Linux'
         run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m1-obsolete-command-parity.test.mjs
