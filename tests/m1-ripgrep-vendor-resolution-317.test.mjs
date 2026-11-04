@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { resolvePackagedRipgrep } from '../src/utils/ripgrepVendor317.mjs'
@@ -27,7 +27,7 @@ test('compiled Bun virtual module is never a native spawn target', () => withRel
     modulePath: '/$bunfs/root/src/utils/ripgrep.js',
     arch: 'x64', platform: 'linux',
   })
-  assert.equal(x.path, rg)
+  assert.equal(x.path, realpathSync(rg))
   assert.ok(x.candidates.every(path => !path.includes('$bunfs')))
 }))
 
@@ -37,7 +37,7 @@ test('release executable symlink resolves platform rg from real distribution', {
   const x = resolvePackagedRipgrep({
     execPath: symlink, argv0: undefined, arch: 'x64', platform: 'linux',
   })
-  assert.equal(x.path, rg)
+  assert.equal(x.path, realpathSync(rg))
 }))
 
 test('source Bun script uses its own distribution directory', () => withRelease(({ binary, rg }) => {
@@ -45,7 +45,7 @@ test('source Bun script uses its own distribution directory', () => withRelease(
     execPath: process.execPath, argv0: process.execPath,
     scriptPath: binary, arch: 'x64', platform: 'linux',
   })
-  assert.equal(x.path, rg)
+  assert.equal(x.path, realpathSync(rg))
 }))
 
 test('missing platform resource is a failure, not a virtual fallback or PATH search', () => withRelease(({ binary }) => {
@@ -54,5 +54,5 @@ test('missing platform resource is a failure, not a virtual fallback or PATH sea
     arch: 'arm64', platform: 'darwin',
   })
   assert.equal(x.path, null)
-  assert.ok(x.candidates.every(p => p.includes('vendor/ripgrep/arm64-darwin/rg')))
+  assert.ok(x.candidates.every(p => p.endsWith(join('vendor', 'ripgrep', 'arm64-darwin', 'rg'))))
 }))
