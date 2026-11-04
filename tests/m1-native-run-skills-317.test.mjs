@@ -33,7 +33,9 @@ test('2.1.317: both native run skills register in full CLI sessions', () => {
   assert.ok(registry.includes("process.env.CLAUDE_CODE_ENTRYPOINT !== 'local-agent'"))
   assert.ok(registry.includes('registerRunSkill()'))
   assert.ok(registry.includes('registerRunSkillGeneratorSkill()'))
+  assert.ok(registry.includes('registerClaudeApiSkill()'))
   assert.doesNotMatch(registry, /feature\('RUN_SKILL_GENERATOR'\)/)
+  assert.doesNotMatch(registry, /feature\('BUILDING_CLAUDE_APPS'\)/)
 
   const run = source('src/skills/bundled/runSkill.ts')
   assert.ok(run.includes("name: 'run'"))
@@ -45,4 +47,6 @@ test('2.1.317: both native run skills register in full CLI sessions', () => {
   assert.ok(generator.includes("name: 'run-skill-generator'"))
   assert.ok(generator.includes('disableModelInvocation: true'))
   assert.ok(generator.includes("'template.md': template"))
+  const claudeApi = source('src/skills/bundled/claudeApi.ts')
+  assert.ok(claudeApi.includes('isEnabled: () => !isEnvTruthy('))
 })

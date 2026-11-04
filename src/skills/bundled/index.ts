@@ -61,12 +61,6 @@ export function initBundledSkills(): void {
     /* eslint-enable @typescript-eslint/no-require-imports */
     registerScheduleRemoteAgentsSkill()
   }
-  if (feature('BUILDING_CLAUDE_APPS')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    const { registerClaudeApiSkill } = require('./claudeApi.js')
-    /* eslint-enable @typescript-eslint/no-require-imports */
-    registerClaudeApiSkill()
-  }
   if (shouldAutoEnableClaudeInChrome()) {
     registerClaudeInChromeSkill()
   }
@@ -74,9 +68,11 @@ export function initBundledSkills(): void {
   // sessions. Local agents use the smaller built-in skill registry.
   if (process.env.CLAUDE_CODE_ENTRYPOINT !== 'local-agent') {
     /* eslint-disable @typescript-eslint/no-require-imports */
+    const { registerClaudeApiSkill } = require('./claudeApi.js')
     const { registerRunSkill } = require('./runSkill.js')
     const { registerRunSkillGeneratorSkill } = require('./runSkillGenerator.js')
     /* eslint-enable @typescript-eslint/no-require-imports */
+    registerClaudeApiSkill()
     registerRunSkill()
     registerRunSkillGeneratorSkill()
   }

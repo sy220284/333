@@ -1,5 +1,6 @@
 import { readdir } from 'node:fs/promises'
 import { getCwd } from '../../utils/cwd.js'
+import { isEnvTruthy } from '../../utils/envUtils.js'
 import { registerBundledSkill } from '../bundledSkills.js'
 import { buildClaudeApiPrompt, claudeApiSubcommand, processClaudeApiContent } from './claudeApiPrompt.mjs'
 
@@ -41,6 +42,7 @@ export function registerClaudeApiSkill(): void {
     ].join('\n'),
     allowedTools: ['WebFetch(domain:platform.claude.com)'],
     userInvocable: true,
+    isEnabled: () => !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_CLAUDE_API_SKILL),
     files: async () => {
       const content = await import('./claudeApiContent.js')
       return Object.fromEntries(Object.entries(content.SKILL_FILES)
