@@ -1,16 +1,2 @@
-/**
- * Activate a restored session only after all transcript writes have committed.
- * Both ingress v1 and CCR v2 use this ordering; errors propagate unchanged.
- */
-export async function commitRestoredSession(persist, activate) {
-  await persist()
-  activate()
-}
-
-/** Null from session-ingress means that authentication or fetch failed. */
-export function requireFetchedSessionEntries(entries) {
-  if (!Array.isArray(entries)) {
-    throw new Error('Remote session transcript fetch failed; existing session was preserved')
-  }
-  return entries
-}
+// Node source-mode compatibility entry; TypeScript is the canonical implementation.
+export * from './sessionHydrationCommit317.ts';

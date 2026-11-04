@@ -1,11 +1,2 @@
-/** Capture the session identity once at the conversation boundary.
- * A later global bootstrap/session switch must not relabel in-flight SDK
- * events or subagent calls from an already running conversation.
- */
-export function bindSessionId(explicitId, currentSessionId) {
-  const id = explicitId ?? currentSessionId()
-  if (typeof id !== 'string' || id.length === 0) {
-    throw new TypeError('Query session identity must be a non-empty string')
-  }
-  return id
-}
+// Node source-mode compatibility entry; TypeScript is the canonical implementation.
+export * from './sessionIdentity317.ts';

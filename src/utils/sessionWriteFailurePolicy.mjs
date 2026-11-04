@@ -1,14 +1,2 @@
-/**
- * Retrying a file append after mkdir is appropriate only when the parent
- * directory is absent. ENOSPC, EDQUOT, access errors and I/O failures must
- * be reported rather than masked by a second filesystem write.
- */
-export function shouldRetrySessionAppendAfterMkdir(code) {
-  return code === 'ENOENT'
-}
-
-/** Filesystem failures for which an unlocked config-write retry is unsafe. */
-export function isUnrecoverableConfigWriteError(code) {
-  return code === 'ENOSPC' || code === 'EDQUOT' || code === 'EROFS' ||
-    code === 'EIO' || code === 'EACCES' || code === 'EPERM'
-}
+// Node source-mode compatibility entry; TypeScript is the canonical implementation.
+export * from './sessionWriteFailurePolicy.ts';
