@@ -1,0 +1,88 @@
+name: M1 317 六平台原生资源统一验签与更新
+
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - '.github/workflows/m1-317-sync-official-native-sources.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: m1-317-native-sources-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  restore-native-source:
+    name: 验签官方六平台原始二进制并更新仓库原生模块
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: upgrade/2.1.310-m1-evidence
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 下载并验签官方317六架构完整原始可执行文件
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/official-317"
+          base='https://downloads.claude.ai/claude-code-releases/2.1.317'
+          curl --fail --location --silent --show-error --retry-all-errors --retry 5 \
+            "$base/manifest.json" -o "$RUNNER_TEMP/official-317/manifest.json"
+          for target in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64 win32-arm64; do
+            file=claude
+            if [[ "$target" == win32-* ]]; then file=claude.exe; fi
+            mkdir -p "$RUNNER_TEMP/official-317/$target"
+            curl --fail --location --silent --show-error --retry-all-errors --retry 5 \
+              "$base/$target/$file" -o "$RUNNER_TEMP/official-317/$target/$file"
+          done
+          node build/sync-all-official-native-317.mjs \
+            --official-root "$RUNNER_TEMP/official-317" --vendor-root vendor --sync \
+            | tee "$RUNNER_TEMP/m1-317-synced.json"
+          node build/sync-all-official-native-317.mjs \
+            --official-root "$RUNNER_TEMP/official-317" --vendor-root vendor \
+            | tee "$RUNNER_TEMP/m1-317-verified.json"
+      - name: 把完整验签的七项原生模块同步入PR7分支
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "PR7 官方317原生资源核验"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -- vendor/audio-capture/arm64-darwin/audio-capture.node \
+            vendor/audio-capture/arm64-linux/audio-capture.node \
+            vendor/audio-capture/arm64-win32/audio-capture.node \
+            vendor/audio-capture/x64-darwin/audio-capture.node \
+            vendor/audio-capture/x64-linux/audio-capture.node \
+            vendor/audio-capture/x64-win32/audio-capture.node
+          git add -f -- vendor/clipboard-napi/x64-linux/clipboard-napi.node
+          if git diff --cached --quiet; then
+            echo '官方317六平台原生资源已全部同步，无需新提交'
+            exit 0
+          fi
+          git commit -m "M1：将六平台官方317音频和Linux剪贴板原始模块更新进仓库"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:upgrade/2.1.310-m1-evidence; then
+              echo '官方317原生模块已写入PR7分支'
+              exit 0
+            fi
+            git fetch origin upgrade/2.1.310-m1-evidence
+            git rebase FETCH_HEAD
+          done
+          echo '分支已多次变化，原生模块提交没有同步成功' >&2
+          exit 1
+      - name: 保留完整原始模块验签证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-317-all-six-platforms-source-sync
+          path: |
+            ${{ runner.temp }}/m1-317-synced.json
+            ${{ runner.temp }}/m1-317-verified.json
+          retention-days: 60
+          if-no-files-found: warn
