@@ -59,7 +59,7 @@ test('317 official and rebuilt validate daemon stdin and exit status', async () 
     ['garbage', 2, /invalid config JSON on stdin:/],
     ['{}', 2, /config validation failed:/],
     ['{"config":{"intervalSeconds":0}}', 2, /Too small: expected number to be >0/],
-    ['{"config":{"intervalSeconds":1,"other":1}}', 2, /Unrecognized key: "other"/],
+    ['{"config":{"intervalSeconds":1,"other":1}}', 2, /"code": "unrecognized_keys"/],
   ]
   for (const [data, code, expected] of cases) {
     for (const [name, binary, prefix] of bins) {
@@ -71,10 +71,17 @@ test('317 official and rebuilt validate daemon stdin and exit status', async () 
 })
 
 test('317 daemon heartbeat emits periodic events and stops on SIGTERM', { timeout: 25000 }, async () => {
+  let officialExit
   for (const [name, binary, prefix] of bins) {
     const res = await launch(binary, [...prefix, '--daemon-worker', 'heartbeat'],
       '{"config":{"intervalSeconds":0.1}}', 1200)
-    assert.equal(res.code, 0, name + JSON.stringify(res))
+    if (name === 'official') officialExit = { code: res.code, signal: res.signal }
+    if (officialExit && name !== 'official')
+      assert.deepEqual({ code: res.code, signal: res.signal }, officialExit,
+        name + ' differs from official termination: ' + JSON.stringify(res))
+    else if (process.platform === 'win32')
+      assert.equal(res.signal, 'SIGTERM', name + JSON.stringify(res))
+    else assert.equal(res.code, 0, name + JSON.stringify(res))
     const lines = res.stdout.trim().split('\n')
     assert.equal(lines[0], 'heartbeat worker started (interval=0.1s)', name)
     assert.ok(lines.slice(1).includes('heartbeat'), name + JSON.stringify(res))
