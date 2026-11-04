@@ -105,6 +105,14 @@ async function main(): Promise<void> {
   // Original 317 postpones JIT for ordinary launches, never for warmed spares.
   if (args[0] !== '--preload' && args[0] !== '--bg-spare') scheduleJitPolicy317({ args });
 
+  // Upstream 2.1.317 routes plugin test before Commander/REPL initialization.
+  // Keep test workers out of session, plugin marketplace and UI startup paths.
+  if (args[0] === 'plugin' && args[1] === 'test') {
+    profileCheckpoint('cli_plugin_test_path');
+    const { runPluginTestFastPath317 } = await import('./pluginTestFastPath317.ts');
+    if (await runPluginTestFastPath317(args.slice(2))) return;
+  }
+
   // Official 2.1.317 runs the eval MCP stand-in independently of the REPL,
   // before chrome, daemon and background-session routing.
   if (args[0] === '--eval-mock-server') {
