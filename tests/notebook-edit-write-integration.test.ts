@@ -42,7 +42,11 @@ test('actual NotebookEditTool validates, edits, inserts and deletes cells on dis
     const { getFileModificationTime } = await import('../src/utils/file.js')
     writeFileSync(notebook_path, JSON.stringify(makeNotebook()))
     const readFileState = new Map()
-    const context = { readFileState, updateFileHistoryState: () => {} } as unknown as ToolUseContext
+    const context = {
+      readFileState,
+      updateFileHistoryState: () => {},
+      getAppState: () => ({ toolPermissionContext: { additionalWorkingDirectories: [] } }),
+    } as unknown as ToolUseContext
 
     // UNC paths must be rejected before filesystem access. A successful
     // validateInput must never route a remote share into NotebookEdit.call.
