@@ -49,7 +49,7 @@ test('317 资源内容、原始校验、Git 对象及路径集合全部一致', 
 
 test('317技能注册入口的107条静态导入与完整清单逐一吻合', () => {
   const code = readFileSync(resolve(root, 'src/skills/bundled/claudeApiContent.ts'), 'utf8')
-  const references = [...code.matchAll(/^import file\d+ from '\.\/claude-api\/([^']+)'$/gm)].map(match => match[1])
+  const references = [...code.matchAll(/^import file\d+ from '\.\/claude-api\/([^']+)'(?: with \{ type: 'text' \})?$/gm)].map(match => match[1])
   assert.equal(references.length, manifest.files.length, 'bundled imports are incomplete')
   const manifestPaths = manifest.files.map(entry => entry.stored_path ?? entry.path)
   assert.deepEqual(references.sort(), manifestPaths.sort(), 'stale bundled import (e.g. old .txt aliases)')
