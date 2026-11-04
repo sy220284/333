@@ -986,6 +986,9 @@ export function rebindGlobalConfigForClaim317(): void {
   }
   globalConfigCache = { config: null, mtime: 0 }
   lastReadFileStats = null
+  // The accepted session must validate its own global config. The warm
+  // process already set this latch when reading the previous owner's file.
+  configReadingAllowed = false
   getProjectPathForConfig.cache.clear()
 }
 
