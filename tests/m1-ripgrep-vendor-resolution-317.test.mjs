@@ -31,7 +31,7 @@ test('compiled Bun virtual module is never a native spawn target', () => withRel
   assert.ok(x.candidates.every(path => !path.includes('$bunfs')))
 }))
 
-test('release executable symlink resolves platform rg from real distribution', () => withRelease(({ root, binary, rg }) => {
+test('release executable symlink resolves platform rg from real distribution', { skip: process.platform === 'win32' }, () => withRelease(({ root, binary, rg }) => {
   const symlink = join(root, 'claude-symlink')
   symlinkSync(binary, symlink, 'file')
   const x = resolvePackagedRipgrep({
