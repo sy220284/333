@@ -62,10 +62,11 @@ function inspect(path) {
   const visit = node => {
     if (node.type && (ts.isParameter(node) || ts.isVariableDeclaration(node) ||
       ts.isFunctionDeclaration(node) || ts.isArrowFunction(node) ||
-      ts.isMethodDeclaration(node) || ts.isPropertyDeclaration(node))) typedSyntax++
+      ts.isFunctionExpression(node) || ts.isMethodDeclaration(node) || ts.isPropertyDeclaration(node))) typedSyntax++
     if (ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node) ||
       ts.isTypeAssertionExpression(node) || ts.isAsExpression(node) ||
-      (ts.isImportDeclaration(node) && node.importClause?.isTypeOnly)) typedSyntax++
+      (ts.isImportDeclaration(node) && node.importClause?.isTypeOnly) ||
+      (ts.isExportDeclaration(node) && node.isTypeOnly)) typedSyntax++
     if (ts.isFunctionDeclaration(node) && node.body && exported(node))
       addSignature(node, node.name?.text ?? '<default>')
     if (ts.isVariableStatement(node) && exported(node)) {
@@ -84,9 +85,15 @@ function inspect(path) {
     ts.forEachChild(node, visit)
   }
   visit(ast)
+  // A pure barrel is a valid TypeScript module with no implementation to rewrite.
+  // Track it separately so the migration count measures executable JS-style code.
+  const barrelOnly = ast.statements.length > 0 &&
+    ast.statements.some(node => ts.isExportDeclaration(node)) &&
+    ast.statements.every(node => ts.isExportDeclaration(node) ||
+      ts.isImportDeclaration(node) || ts.isEmptyStatement(node))
   return { path, lines: ast.getLineAndCharacterOfPosition(ast.end).line + 1,
-    exportedFunctions, missing, typedSyntax,
-    jsLike: typedSyntax === 0 && path.endsWith('.ts') }
+    exportedFunctions, missing, typedSyntax, barrelOnly,
+    jsLike: typedSyntax === 0 && !barrelOnly && path.endsWith('.ts') }
 }
 const details = sourceFiles.sort().map(inspect)
 const violations = details.filter(item => strictModules.has(item.path) && item.missing.length)
@@ -97,6 +104,7 @@ const report = {
   revision: process.env.GITHUB_SHA ?? null,
   inspected: details.length,
   jsLikeFiles: details.filter(item => item.jsLike).length,
+  barrelOnlyFiles: details.filter(item => item.barrelOnly).length,
   exportedFunctions: details.reduce((n, item) => n + item.exportedFunctions, 0),
   untypedSignatures: details.reduce((n, item) => n + item.missing.length, 0),
   strictModules: [...strictModules].sort(),
@@ -111,6 +119,7 @@ writeFileSync(output, JSON.stringify(report, null, 2) + '\n')
 console.log('[TypeScript 迁移审计]', JSON.stringify({
   inspected: report.inspected,
   jsLikeFiles: report.jsLikeFiles,
+  barrelOnlyFiles: report.barrelOnlyFiles,
   exportedFunctions: report.exportedFunctions,
   untypedSignatures: report.untypedSignatures,
   strictModules: strictModules.size,
