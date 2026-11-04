@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import './m1-plugin-install-json-317.test.mjs'
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
