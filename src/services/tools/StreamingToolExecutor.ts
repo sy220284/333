@@ -9,6 +9,7 @@ import { findToolByName, type Tools, type ToolUseContext } from '../../Tool.js'
 import { BASH_TOOL_NAME } from '../../tools/BashTool/toolName.js'
 import type { AssistantMessage, Message } from '../../types/message.js'
 import { createChildAbortController } from '../../utils/abortController.js'
+import { logError } from '../../utils/log.js'
 import { runToolUse } from './toolExecution.js'
 
 type MessageUpdate = {
@@ -16,7 +17,7 @@ type MessageUpdate = {
   newContext?: ToolUseContext
 }
 
-type ToolStatus = 'queued' | 'executing' | 'completed' | 'yielded'
+type ToolStatus = 'queued' | 'executing' | 'completed' | 'yielded' | 'failed'
 
 type TrackedTool = {
   id: string
@@ -25,6 +26,7 @@ type TrackedTool = {
   status: ToolStatus
   isConcurrencySafe: boolean
   promise?: Promise<void>
+  executionError?: unknown
   results?: Message[]
   // Progress messages are stored separately and yielded immediately
   pendingProgress: Message[]
@@ -67,7 +69,13 @@ export class StreamingToolExecutor {
    * Queued tools won't start, and in-progress tools will receive synthetic errors.
    */
   discard(): void {
+    if (this.discarded) return
     this.discarded = true
+    // Cancel currently executing child tools. Queued tools are never started.
+    // Discard is a control-plane fallback; it must not abort the parent turn.
+    this.siblingAbortController.abort('streaming_fallback')
+    this.progressAvailableResolve?.()
+    this.progressAvailableResolve = undefined
   }
 
   /**
@@ -138,7 +146,9 @@ export class StreamingToolExecutor {
    * Process the queue, starting tools when concurrency conditions allow
    */
   private async processQueue(): Promise<void> {
+    if (this.discarded || this.tools.some(t => t.status === 'failed')) return
     for (const tool of this.tools) {
+      if (this.discarded) return
       if (tool.status !== 'queued') continue
 
       if (this.canExecuteTool(tool.isConcurrencySafe)) {
@@ -396,12 +406,24 @@ export class StreamingToolExecutor {
     }
 
     const promise = collectResults()
+      .catch(error => {
+        tool.executionError = error
+        tool.status = 'failed'
+        // A failed stream may have already started sibling subprocesses.
+        this.siblingAbortController.abort('sibling_error')
+        throw error
+      })
+      .finally(() => {
+        // Unlike result delivery, execution lifetime ends on settlement.
+        // This also cleans up on discard and when the async generator throws.
+        markToolUseAsComplete(this.toolUseContext, tool.id)
+        this.updateInterruptibleState()
+      })
     tool.promise = promise
 
-    // Process more queue when done
-    void promise.finally(() => {
-      void this.processQueue()
-    })
+    // Continue queued work only after a successful tool. The original error
+    // remains on tool.promise and is surfaced by getRemainingResults().
+    void promise.then(() => this.processQueue()).catch(logError)
   }
 
   /**
@@ -424,6 +446,9 @@ export class StreamingToolExecutor {
       if (tool.status === 'yielded') {
         continue
       }
+      if (tool.status === 'failed') {
+        throw tool.executionError
+      }
 
       if (tool.status === 'completed' && tool.results) {
         tool.status = 'yielded'
@@ -432,7 +457,6 @@ export class StreamingToolExecutor {
           yield { message, newContext: this.toolUseContext }
         }
 
-        markToolUseAsComplete(this.toolUseContext, tool.id)
       } else if (tool.status === 'executing' && !tool.isConcurrencySafe) {
         break
       }
