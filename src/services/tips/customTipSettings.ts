@@ -13,5 +13,5 @@ const provider = createCustomTipProvider({
   warn: message => logForDebugging(message, { level: 'warn' }),
 })
 
-export const getCustomSpinnerTips = provider.collect
-export const isDefaultSpinnerTipSuppressed = provider.suppressDefault
+export const getCustomSpinnerTips: typeof provider.collect = provider.collect
+export const isDefaultSpinnerTipSuppressed: typeof provider.suppressDefault = provider.suppressDefault
