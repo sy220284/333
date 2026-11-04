@@ -114,7 +114,8 @@ function handlePluginCommandError(
 async function applyInstallConfig(
   pluginId: string,
   assignments: string[],
-): Promise<void> {
+): Promise<{ applied: boolean; warning?: string }> {
+  try {
   const loaded = await loadAllPlugins()
   const installed = [...loaded.enabled, ...loaded.disabled].find(
     entry => entry.source === pluginId || entry.repository === pluginId,
@@ -166,6 +167,10 @@ async function applyInstallConfig(
   for (const server of validatedServers) {
     saveMcpServerUserConfig(storageId, server.server, server.values, server.schema)
   }
+  return { applied: true }
+  } catch (error) {
+    return { applied: false, warning: errorMessage(error) }
+  }
 }
 
 /**
@@ -190,10 +195,12 @@ export async function installPlugin(
       throw new Error(result.message)
     }
 
-    if (configEntries.length > 0) {
-      await applyInstallConfig(result.pluginId ?? plugin, configEntries)
-    }
-    const configMessage = result.message
+    const configStatus = configEntries.length > 0
+      ? await applyInstallConfig(result.pluginId ?? plugin, configEntries)
+      : undefined
+    const configMessage = configStatus?.warning
+      ? `${result.message}\n⚠ Installed, but --config not applied: ${configStatus.warning}`
+      : result.message
 
     // biome-ignore lint/suspicious/noConsole:: intentional console output
     if (json) {
@@ -204,7 +211,7 @@ export async function installPlugin(
         pluginId: result.pluginId ?? plugin,
         scope: result.scope ?? scope,
         message: configMessage,
-        ...(configEntries.length > 0 && { configApplied: true }),
+        ...(configStatus && { configApplied: configStatus.applied }),
         ...(result.installedVersion && { installedVersion: result.installedVersion }),
         ...(result.availableVersion && { availableVersion: result.availableVersion }),
       })}\n`)
