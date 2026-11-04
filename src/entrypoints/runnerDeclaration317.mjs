@@ -21,3 +21,11 @@ export function parseRunnerDeclaration(arg) {
       entries.includes(DECLARES_NO_REPOSITORY_CHECKED_OUT),
   }
 }
+
+export function adoptRunnerDeclaration(arg, state) {
+  const flags = parseRunnerDeclaration(arg)
+  if (!flags?.nestedRepository) return
+  state.setRunnerDeclaredNestedRepositoryDiff(true)
+  if (flags.noRepositoryCheckedOut)
+    state.setRunnerDeclaredNoRepositoryCheckedOut(true)
+}
