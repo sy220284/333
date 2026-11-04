@@ -131,6 +131,7 @@ export async function cacheAndRegisterPlugin(
   scope: PluginScope = 'user',
   projectPath?: string,
   localSourcePath?: string,
+  asDependency = false,
 ): Promise<string> {
   // For local plugins, we need the resolved absolute path
   // Cast to PluginSource since cachePlugin handles any string path at runtime
@@ -208,6 +209,13 @@ export async function cacheAndRegisterPlugin(
     finalPath = zipPath
   }
 
+  // An existing manual installation must never become an auto-removable
+  // dependency during reinstall. A directly requested root clears auto status.
+  const existing = loadInstalledPluginsV2().plugins[pluginId]?.find(item =>
+    item.scope === scope && item.projectPath === projectPath,
+  )
+  const auto = asDependency && (!existing || existing.auto === true)
+
   // Add to both V1 and V2 installed_plugins files with correct scope
   addInstalledPlugin(
     pluginId,
@@ -217,6 +225,7 @@ export async function cacheAndRegisterPlugin(
       lastUpdated: now,
       installPath: finalPath,
       gitCommitSha,
+      auto,
     },
     scope,
     projectPath,
@@ -469,6 +478,7 @@ export async function installResolvedPlugin({
       scope,
       projectPath,
       localSourcePath,
+      id !== pluginId,
     )
   }
 

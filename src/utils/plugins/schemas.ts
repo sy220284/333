@@ -1458,6 +1458,7 @@ export const InstalledPluginSchema = lazySchema(() =>
       .string()
       .optional()
       .describe('Git commit SHA for git-based plugins (for version tracking)'),
+    auto: z.boolean().optional(),
   }),
 )
 
@@ -1508,6 +1509,7 @@ export const PluginInstallationEntrySchema = lazySchema(() =>
       .string()
       .optional()
       .describe('Git commit SHA for git-based plugins'),
+    auto: z.boolean().optional().describe('Installed automatically as a dependency'),
   }),
 )
 

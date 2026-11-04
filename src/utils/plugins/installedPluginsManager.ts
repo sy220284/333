@@ -183,6 +183,7 @@ export function addPluginInstallation(
     installedAt: metadata.installedAt || new Date().toISOString(),
     lastUpdated: new Date().toISOString(),
     gitCommitSha: metadata.gitCommitSha,
+    ...(metadata.auto !== undefined && { auto: metadata.auto }),
     ...(projectPath && { projectPath }),
   }
 
