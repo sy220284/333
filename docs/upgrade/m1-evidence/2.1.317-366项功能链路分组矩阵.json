@@ -6113,9 +6113,33 @@
         "外部宿主"
       ],
       "classification_basis": "人工覆盖",
-      "implementation_evidence": "未在原台账附源文件，待核当前实现",
-      "verification": "PENDING_SOURCE_BINARY_E2E",
-      "owner": "C07"
+      "implementation_evidence": "src/utils/remoteSessionIdentity.mjs + src/bootstrap/state.ts: 2.1.317 远程 UUIDv5、嵌套 -p 独立会话与显式兼容开关已接入",
+      "verification": "SCENARIO_E2E_PASS_PENDING_FULL_CHAIN",
+      "owner": "C07",
+      "evidence": {
+        "official_elf_sha256": "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0",
+        "original_source": "04_逐模块可阅读JavaScript/chunk-wxyh2ndv.js:15-20",
+        "candidate_commit": "f0b203c77913b4398b18c5bb92c79e711e5a4689",
+        "ci_run": "https://github.com/sy220284/333/actions/runs/41769391287",
+        "ci_step": "官方317与重建版嵌套会话ID及消息隔离真实进程测试",
+        "tests": [
+          "tests/m1-nested-session-id-317.test.mjs",
+          "tests/m1-nested-session-id-e2e-317.test.mjs"
+        ],
+        "matched": [
+          "UUIDv5 stable for remote session",
+          "nested -p new session ID",
+          "disable nested session ID compatibility flag",
+          "per-process stream-json single session ID",
+          "successive nested processes isolated"
+        ],
+        "outstanding": [
+          "self-hosted runner full transcript persistence/resume",
+          "cross-host concurrent collision and remote bridge acceptance",
+          "M4 whole-chain formal signoff"
+        ],
+        "full_chain_signed_off": false
+      }
     },
     {
       "id": "2.1.317#010",
@@ -7286,5 +7310,10 @@
     "purpose": "追踪官方392条中的366条未关联源代码的变更，按真实功能链逐条取证、实现和验收",
     "responsibility": "C01–C20按链责任；不使用历史M1–M10，也不占用独立完整升级计划M1–M6责任编号",
     "acceptance": "逐条必须有官方源码/二进制对照、入口、异常及跨端验证；各链状态独立跟踪"
+  },
+  "verification_summary": {
+    "scenario_e2e_pass_pending_chain": 1,
+    "pending_source_binary_e2e": 365,
+    "formally_closed": 0
   }
 }
