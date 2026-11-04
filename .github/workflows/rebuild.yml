@@ -194,6 +194,8 @@ jobs:
         run: |
           node --test tests/m1-startup-argv-317.test.mjs tests/m1-startup-cli-317.test.mjs tests/m1-print-routing-317.test.mjs tests/m1-headless-startup-error-314.test.mjs
           bun test tests/m1-startup-sdk-317.test.ts
+      - name: 317预加载会话接管、认证切换和退出清理
+        run: node --test tests/m1-preload-317.test.mjs
       - name: 317 MCP登录、退出和授权码交换
         id: acceptance_007
         continue-on-error: true
