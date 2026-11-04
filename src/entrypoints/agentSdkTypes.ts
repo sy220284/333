@@ -349,7 +349,7 @@ export async function forkSession(
   const {writeFile, unlink} = await import('node:fs/promises')
   const {dirname, join} = await import('node:path')
   const newId = randomUUID()
-  const ids = new Map<string,string>()
+  const ids = new Map<string,ReturnType<typeof randomUUID>>()
   let last: string | null = null
   const entries = log.messages.slice(0, until + 1).map(entry => {
     const previousId = entry.uuid
