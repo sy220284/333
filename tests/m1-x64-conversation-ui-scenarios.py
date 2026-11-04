@@ -153,6 +153,20 @@ def normalize_retry_status_frame(sample):
     return None
 
 
+def retry_phase_glyphs(sample):
+    """Compare frames only while the actual retry banner is on screen.
+
+    A frame immediately before the failure may still show the previous
+    requesting spinner. Comparing that earlier phase against an already
+    switched retry banner produces a false difference due to scheduling,
+    even when both retry animations are identical. Preserve those frames
+    in the report; retain strict comparisons within the matching phase.
+    """
+    return sorted(set(frame['glyph'] for frame in sample['frames']
+                      if frame.get('glyph') and
+                      any('Retrying in' in row for row in frame['screen_rows'])))
+
+
 def compare_terminal_frames(official, rebuilt):
     """Time-align recorded terminal snapshots; never label unequal frames as equal."""
     a, b = official['frames'], rebuilt['frames']
@@ -460,7 +474,13 @@ def main():
             'retry_label_match':retry_label_match,
             'official_frame_count':a['frame_count'],
             'rebuilt_frame_count':b['frame_count'],
-            'glyph_sets_equal':a['frame_glyphs']==b['frame_glyphs'],
+            'glyph_sets_equal':(retry_phase_glyphs(a)==retry_phase_glyphs(b)
+                                if scenario == 'retry' else a['frame_glyphs']==b['frame_glyphs']),
+            'full_glyph_sets_equal':a['frame_glyphs']==b['frame_glyphs'],
+            'retry_phase_glyphs':({
+                'official': retry_phase_glyphs(a),
+                'rebuilt': retry_phase_glyphs(b),
+            } if scenario == 'retry' else None),
             'official_glyph_sequence':[f['glyph'] for f in a['frames'] if f['glyph']],
             'rebuilt_glyph_sequence':[f['glyph'] for f in b['frames'] if f['glyph']],
             'official_retry_status_seen':a['retry_status_screen_seen'],
