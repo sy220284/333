@@ -373,6 +373,15 @@ export async function installPluginOp(
   const entry = foundPlugin
   const pluginId = `${entry.name}@${foundMarketplace}`
 
+  // The managed deny policy applies on every installation attempt, including
+  // an already-cached plugin. The idempotent path must never bypass it.
+  if (isPluginBlockedByPolicy(pluginId)) {
+    return {
+      success: false,
+      message: `Plugin "${entry.name}" is blocked by your organization's policy and cannot be installed`,
+    }
+  }
+
   // Official 2.1.317 is idempotent for an already-installed, enabled plugin.
   // Check both the V2 registry and the actual install path: a stale record
   // must be repaired by installation rather than reported as successful.
