@@ -96,6 +96,6 @@ for(const [full,targets] of candidates){
   stats.changed++;stats.addedParameters+=edits.length
 }
 mkdirSync(out,{recursive:true})
-writeFileSync(join(out,'proposal-report.json'),JSON.stringify(stats,null,2))
+writeFileSync(join(out,'proposal-report.json'),JSON.stringify({stats},null,2))
 console.log('[TypeScript callsite-derived parameters]',JSON.stringify(stats))
 if(stats.syntaxFailures)console.error('Rejected '+stats.syntaxFailures+' syntactically invalid proposals')
