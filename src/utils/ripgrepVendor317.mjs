@@ -1,5 +1,5 @@
 import { existsSync, realpathSync, statSync } from 'node:fs'
-import { dirname, isAbsolute, join, resolve } from 'node:path'
+import { dirname, isAbsolute, resolve } from 'node:path'
 
 /**
  * Locate the packaged ripgrep relative to a physical CLI executable or
@@ -17,16 +17,19 @@ export function resolvePackagedRipgrep({
   const locations = [execPath, argv0, scriptPath, modulePath]
   const inspected = []
   for (const candidate of locations) {
-    if (!candidate || !isAbsolute(candidate) ||
+    if (typeof candidate !== 'string' || !candidate ||
         candidate.startsWith('/$bunfs/') ||
         candidate.startsWith('B:~BUN') ||
         candidate.includes('\\~BUN\\')) continue
+    // Process arguments can contain a relative CLI filename. Only treat
+    // relative names with path separators as paths; bare command names must
+    // never be resolved against a repository's working directory.
+    if (!isAbsolute(candidate) && !/[\\/]/.test(candidate)) continue
     let physical
     try {
-      // Verify each source locator is a physical file, not an unresolved
-      // module or a directory supplied by an untrusted working tree.
-      if (!statSync(candidate).isFile()) continue
-      physical = realpathSync(candidate)
+      const absolute = isAbsolute(candidate) ? candidate : resolve(candidate)
+      if (!statSync(absolute).isFile()) continue
+      physical = realpathSync(absolute)
     } catch {
       continue
     }
