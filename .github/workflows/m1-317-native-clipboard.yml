@@ -36,6 +36,11 @@ jobs:
             --binary "$RUNNER_TEMP/claude-2.1.317-linux-x64" --vendor-root vendor --sync
           node build/sync-official-native-from-binary.mjs \
             --binary "$RUNNER_TEMP/claude-2.1.317-linux-x64" --vendor-root vendor
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 校验Bun独立打包后的原生模块可装载与缺失处理
+        run: node --test tests/m1-native-clipboard-bundle-317.test.mjs
       - name: 立即验证本地和远程终端的剪贴板协议
         run: |
           node --test tests/m1-native-clipboard-317.test.mjs \
