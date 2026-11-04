@@ -109,6 +109,13 @@ test('api-version opens the bundled 2.1.317 migration guide through the actual R
       assert.ok(!(requestWire.headers['anthropic-beta'] ?? '').includes('prompt-caching-scope-2026-01-05'),
         `${name}: interactive cache beta leaked into headless request`)
       const promptBlocks = Array.isArray(initial.system) ? initial.system : []
+      assert.equal(promptBlocks.length, 3,
+        `${name}: 317 headless Messages API must contain attribution, SDK prefix and joined instructions`)
+      assert.ok(!promptBlocks.some(block => block.cache_control?.scope === 'global'),
+        `${name}: headless 317 uses ordinary ephemeral caching, not interactive global scope`)
+      assert.deepEqual(promptBlocks.map(block => block.cache_control?.type),
+        [undefined, 'ephemeral', 'ephemeral'],
+        `${name}: 317 headless prompt caching contract differs from official x64`)
       const systemText = promptBlocks.map(block => block.text ?? '').join('\n')
       assert.match(systemText,
         /You are an agent working with the user toward their goals, using your own judgment along the way\./,
