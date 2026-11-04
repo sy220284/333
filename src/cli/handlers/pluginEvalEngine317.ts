@@ -6,8 +6,8 @@
 import { mkdtemp, rm, readFile, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve, relative, isAbsolute } from 'node:path'
-import { gradeEvalResult317, aggregateEvalScore317 } from './pluginEvalGraders317.mjs'
-import { runEvalModel317, judgeEvalOutput317 } from './pluginEvalModel317.mjs'
+import { gradeEvalResult317, aggregateEvalScore317 } from './pluginEvalGraders317.ts'
+import { runEvalModel317, judgeEvalOutput317 } from './pluginEvalModel317.ts'
 import { resolveEvalContext317, runEvalScaffold317 } from './pluginEvalWorkspace317.ts'
 
 const addUsd = (a, b) => Number((Number(a) + Number(b)).toFixed(12))
