@@ -19,7 +19,7 @@ import { objectGroupBy } from './objectGroupBy.js'
 import { recordQueueOperation } from './sessionStorage.js'
 import { createSignal } from './signal.js'
 import { QUEUE_PRIORITY_ORDER as PRIORITY_ORDER, sortQueuedCommandsByPriority } from './queuePriority317.mjs'
-import { createDiscardedQueueRecords, createQueueOperationRecord } from './queueOperation317.mjs'
+import { createDiscardedQueueRecords, createQueueOperationRecord, partitionQueueForClear } from './queueOperation317.mjs'
 
 export type SetAppState = (f: (prev: AppState) => AppState) => void
 
@@ -304,16 +304,23 @@ export function removeByFilter(
  * Clear all commands from the queue.
  * Used by ESC cancellation to discard queued notifications.
  */
-export function clearCommandQueue(): void {
+export function clearCommandQueue(
+  options: { keep?: (command: QueuedCommand) => boolean; reason?: string } = {},
+): void {
   if (commandQueue.length === 0) {
     return
   }
-  const discarded = createDiscardedQueueRecords(commandQueue, getSessionId())
+  // Official 2.1.317 clear({ keep, reason }) only drops entries outside the
+  // keep predicate. Compute the partition before mutating queue state.
+  const { retained, discarded } = partitionQueueForClear(commandQueue, options.keep)
+  if (discarded.length === 0) return
+  const records = createDiscardedQueueRecords(
+    discarded, getSessionId(), options.reason ?? 'cleared_on_cancel',
+  )
   commandQueue.length = 0
+  commandQueue.push(...retained)
   notifySubscribers()
-  // Mirror the official 2.1.317 queue's remove(reason=cleared_on_cancel)
-  // journal so recovery can distinguish cancellation from delivery.
-  for (const record of discarded) {
+  for (const record of records) {
     void recordQueueOperation(record)
   }
 }
