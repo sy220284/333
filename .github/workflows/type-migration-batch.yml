@@ -4,14 +4,14 @@ on:
     branches: [upgrade/2.1.310-m1-evidence]
     paths:
       - '.github/workflows/type-migration-batch.yml'
-      - 'tools/dev/type-migration-paramfix.mjs'
+      - 'tools/dev/type-migration-constfix.mjs'
       - 'tools/dev/type-migration-returnfix.mjs'
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
   migrate:
-    name: 生成、验证并提交参数类型迁移批次
+    name: 生成、验证并提交常量类型迁移批次
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -33,14 +33,14 @@ jobs:
           node tools/dev/type-migration-audit.mjs
           cp .rebuild/governance/type-migration-report.json /tmp/pr7-before-type-migration.json
       - name: 根据编译器推断生成类型补强候选
-        run: node tools/dev/type-migration-paramfix.mjs
+        run: node tools/dev/type-migration-constfix.mjs
       - name: 将候选类型补强应用到独立验证工作区
         run: |
           python3 - <<'PY'
           from pathlib import Path
           from shutil import copy2
           from json import load
-          base=Path('.rebuild/parameter-proposals')
+          base=Path('.rebuild/constant-proposals')
           stats=load(open(base/'proposal-report.json'))['stats']
           print('Proposals:',stats)
           for src in (base/'src').rglob('*'):
@@ -53,7 +53,7 @@ jobs:
           python3 - <<'PY'
           import json,re,subprocess
           from pathlib import Path
-          root=Path('.rebuild/parameter-proposals')
+          root=Path('.rebuild/constant-proposals')
           candidates={str(p.relative_to(root)) for p in (root/'src').rglob('*') if p.is_file()}
           blocked=[]
           for attempt in range(20):
@@ -88,7 +88,7 @@ jobs:
           import json
           before=json.load(open('/tmp/pr7-before-type-migration.json'))
           after=json.load(open('.rebuild/governance/type-migration-report.json'))
-          assert after['untypedSignatures']<before['untypedSignatures'],(before['untypedSignatures'],after['untypedSignatures'])
+          assert after['jsLikeFiles']<before['jsLikeFiles'], (before['jsLikeFiles'], after['jsLikeFiles'])
           assert after['jsLikeFiles']<=before['jsLikeFiles']
           assert not after['violations']
           print('Type migration delta:',before['untypedSignatures'],'->',after['untypedSignatures'])
@@ -99,8 +99,8 @@ jobs:
         with:
           name: pr7-type-migration-batch-${{ github.sha }}
           path: |
-            .rebuild/parameter-proposals/proposal-report.json
-            .rebuild/parameter-proposals/blocked-errors.json
+            .rebuild/constant-proposals/proposal-report.json
+            .rebuild/constant-proposals/blocked-errors.json
             .rebuild/governance/type-migration-report.json
           retention-days: 14
           if-no-files-found: warn
@@ -114,7 +114,7 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m '批量修复已审计的TypeScript参数类型缺口（编译验证通过）'
+          git commit -m '批量修复只改后缀的TypeScript常量声明（编译验证通过）'
           for attempt in $(seq 1 15); do
             git fetch origin upgrade/2.1.310-m1-evidence
             git rebase origin/upgrade/2.1.310-m1-evidence
