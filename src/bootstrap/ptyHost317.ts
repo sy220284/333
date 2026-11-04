@@ -5,6 +5,7 @@ import { mkdirSync } from 'node:fs'
 import { timingSafeEqual } from 'node:crypto'
 import { assertSocketVacant317 } from './socketOwnership317.ts'
 import { createPtyRecording317 } from './ptyRecording317.ts'
+import { ptyExecFiles317 } from './ptyExecFiles317.ts'
 import {
   createPtyFrameDecoder317, encodePtyControl317, encodePtyData317, PtyReplay317,
   PTY_CTRL_KIND_317, PTY_DATA_KIND_317, PTY_MAX_DIMENSION_317,
@@ -81,6 +82,9 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
     }
   }
   const execMode = process.env.CLAUDE_PTY_HOST_EXEC === '1'
+  const execFiles = execMode
+    ? ptyExecFiles317(socket, (await import('../utils/envUtils.js')).getClaudeConfigHomeDir())
+    : undefined
   delete process.env.CLAUDE_PTY_HOST_EXEC
   // 317 exec-mode consumes the credentials file and drops its path from the child.
   if (execMode && tokensPath) {
@@ -266,7 +270,8 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
              (rawTail[boundary]! & 0xc0) === 0x80) boundary++
       const tail = rawTail.subarray(boundary).toString('utf8')
       try {
-        writeFileSync(socket + '.exec-exit',
+        mkdirSync(dirname(execFiles!.exit), { recursive: true, mode: 0o700 })
+        writeFileSync(execFiles!.exit,
           JSON.stringify({ code: lastExitCode,
             ...(lastSignal === undefined ? {} : { signal: lastSignal }), tail }),
           { mode: 0o600 })
@@ -298,7 +303,8 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
       if (execMode) {
         try {
           const raw = Buffer.concat(replay.frames().map(frame => frame.subarray(5)))
-          writeFileSync(socket + '.late', raw, { mode: 0o600 })
+          mkdirSync(dirname(execFiles!.late), { recursive: true, mode: 0o700 })
+          writeFileSync(execFiles!.late, raw, { mode: 0o600 })
         } catch (error) {
           recordFailure(socket, 'late PTY output write failed: ' + String(error))
         }

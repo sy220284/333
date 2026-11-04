@@ -48,6 +48,8 @@ on:
       - 'src/bootstrap/ptyWire317.mjs'
       - 'src/bootstrap/ptyRecording317.ts'
       - 'src/bootstrap/ptyRecording317.mjs'
+      - 'src/bootstrap/ptyExecFiles317.ts'
+      - 'src/bootstrap/ptyExecFiles317.mjs'
       - 'tests/m1-pty-recording-317.test.mjs'
       - 'tests/m1-pty-host-317.test.mjs'
       - 'tests/m1-version-verbose-317.test.mjs'

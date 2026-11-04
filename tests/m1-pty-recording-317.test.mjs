@@ -5,6 +5,7 @@ import { readFileSync, mkdtempSync, rmSync, existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { createPtyRecording317 } from '../src/bootstrap/ptyRecording317.mjs'
+import { ptyExecFiles317 } from '../src/bootstrap/ptyExecFiles317.mjs'
 
 const cli = resolve(import.meta.dirname, '../dist/cli.js')
 const bins = [['rebuilt', 'bun', [cli]]]
@@ -26,6 +27,16 @@ function events(bytes) {
   }
   return { cols, rows, out }
 }
+
+test('317 exec output paths match official Unix socket and Windows daemon pipe folders', () => {
+  assert.deepEqual(ptyExecFiles317('/tmp/spare/agent.sock', '/tmp/cfg', 'linux'),
+    { exit:'/tmp/spare/agent.sock.exec-exit',late:'/tmp/spare/agent.sock.late' })
+  const config = join('/work', 'my-config')
+  const name = 'cc-daemon-0123456789abcdef-pty-abcdef'
+  const windows = ptyExecFiles317('\\\\.\\pipe\\' + name, config, 'win32')
+  assert.equal(windows.exit, join(config, 'daemon','pty-pids',name+'.exec-exit'))
+  assert.equal(windows.late, join(config, 'daemon','pty-pids',name+'.late'))
+})
 
 test('317 recorder binary framing matches reference header, microseconds, and idempotent close', async () => {
   const dir = mkdtempSync(join(tmpdir(), '333-pty-record-unit-'))
