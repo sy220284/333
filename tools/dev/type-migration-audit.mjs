@@ -16,6 +16,7 @@ const strictModules = new Set([
   'src/entrypoints/startupRouting317.ts',
   'src/utils/cliArgv317.ts',
   'src/utils/telemetry/projectTelemetryPolicy.ts',
+  'src/cli/background/sessionStore.ts',
   'src/tasks/LocalWorkflowTask/workflowStoragePaths.ts',
   'src/tasks/LocalWorkflowTask/workflowHistory.ts',
 ])
