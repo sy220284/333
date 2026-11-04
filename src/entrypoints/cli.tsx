@@ -1,5 +1,6 @@
 import { feature } from 'bun:bundle';
-import { beforeDoubleDash, rejectDeepLinkArgumentInjection } from '../utils/cliArgv317.mjs';
+import { rejectDeepLinkArgumentInjection } from '../utils/cliArgv317.mjs';
+import { classifyStartupArgs } from './startupRouting317.mjs';
 import { randomUUID } from 'node:crypto';
 import { getStartupCwdError, writeStartupFailureResult, reportCliStartupFailure } from '../utils/cliStartupFailure.mjs';
 
@@ -44,7 +45,7 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  const flagWords = beforeDoubleDash(args);
+  const { flagWords, backgroundRequest, tmuxWorktreeRequest } = classifyStartupArgs(args);
 
   // Fast-path for --version/-v: avoid evaluating the full CLI.
   if (args.length === 1 && (args[0] === '--version' || args[0] === '-v' || args[0] === '-V')) {
@@ -81,9 +82,6 @@ async function main(): Promise<void> {
 
   // Official 2.1.310 background agent fleet uses a dedicated fast path.
   // Keep supervisor and PTY workers outside regular interactive REPL initialization.
-  const backgroundRequest = args.includes('--bg') || args.includes('--background') ||
-    args[0] === '--internal-bg-supervisor' ||
-    args.some(arg => ['agents', 'attach', 'logs', 'stop', 'kill', 'respawn', 'rm', 'daemon'].includes(arg));
   if (backgroundRequest) {
     const { interceptBackgroundCli } = await import('../cli/background/index.mjs');
     try {
@@ -204,8 +202,7 @@ async function main(): Promise<void> {
   // legacy TEMPLATES new/list/reply dispatch has no release entrypoint.
 
   // Fast-path for --worktree --tmux: exec into tmux before loading full CLI
-  const hasTmuxFlag = args.includes('--tmux') || args.includes('--tmux=classic');
-  if (hasTmuxFlag && (args.includes('-w') || args.includes('--worktree') || args.some(a => a.startsWith('--worktree=')))) {
+  if (tmuxWorktreeRequest) {
     profileCheckpoint('cli_tmux_worktree_fast_path');
     const {
       enableConfigs
