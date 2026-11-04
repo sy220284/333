@@ -160,6 +160,8 @@ export type PluginOperationResult = {
 export type PluginUpdateResult = {
   success: boolean
   message: string
+  failureCode?: string
+  shownCommand?: ReturnType<typeof commandSourceDisclosure>
   pluginId?: string
   newVersion?: string
   oldVersion?: string
@@ -917,6 +919,7 @@ export async function disableAllPluginsOp(): Promise<PluginOperationResult> {
 export async function updatePluginOp(
   plugin: string,
   scope: PluginScope,
+  commandConsent?: { yes?: boolean; acceptCommand?: string },
 ): Promise<PluginUpdateResult> {
   // Parse the plugin identifier to get the full plugin ID
   const { name: pluginName, marketplace: marketplaceName } =
@@ -966,6 +969,33 @@ export async function updatePluginOp(
     }
   }
 
+  let authorizedCommandSource = false
+  if (typeof entry.source !== 'string' && entry.source.source === 'command') {
+    const revision = await getCommandSourceCatalogRevision(marketplaceInstallLocation)
+    const shownCommand = commandSourceDisclosure({
+      pluginId,
+      command: entry.source.command,
+      mode: entry.source.mode,
+      catalogRevision: revision,
+    }, commandConsent?.acceptCommand)
+    const isNestedSession = process.env.CLAUDECODE === '1' ||
+      process.env.CLAUDE_CODE_CHILD_SESSION === '1'
+    if (!isAuthorizedSourceCommand(shownCommand, {
+      yes: commandConsent?.yes,
+      acceptCommand: commandConsent?.acceptCommand,
+      isNestedSession,
+    })) {
+      return {
+        success: false,
+        message: `The marketplace install command for ${pluginId} requires explicit confirmation before updating.`,
+        pluginId,
+        scope,
+        failureCode: 'command_source_refused',
+        shownCommand,
+      }
+    }
+    authorizedCommandSource = true
+  }
   return performPluginUpdate({
     pluginId,
     pluginName,
@@ -974,6 +1004,7 @@ export async function updatePluginOp(
     installation,
     scope,
     projectPath,
+    authorizedCommandSource,
   })
 }
 
@@ -989,6 +1020,7 @@ async function performPluginUpdate({
   installation,
   scope,
   projectPath,
+  authorizedCommandSource,
 }: {
   pluginId: string
   pluginName: string
@@ -997,6 +1029,7 @@ async function performPluginUpdate({
   installation: { version?: string; installPath: string }
   scope: PluginScope
   projectPath: string | undefined
+  authorizedCommandSource?: boolean
 }): Promise<PluginUpdateResult> {
   const fs = getFsImplementation()
   const oldVersion = installation.version
@@ -1011,6 +1044,7 @@ async function performPluginUpdate({
     // Remote plugin: download to temp directory first
     const cacheResult = await cachePlugin(entry.source, {
       manifest: { name: entry.name },
+      authorizedCommandSource,
     })
     sourcePath = cacheResult.path
     shouldCleanupSource = true
