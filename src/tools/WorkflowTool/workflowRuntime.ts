@@ -23,7 +23,7 @@ export function workflowMeta(script: string){
  const literalPhases=value.phases
  if(literalPhases!==undefined&&!Array.isArray(literalPhases))
    throw Error('Invalid workflow meta name, description or phases')
- const phases=(literalPhases??[]).map(phase=>{
+ const phases=(Array.isArray(literalPhases)?literalPhases:[]).map(phase=>{
    if(!phase||typeof phase!=='object'||Array.isArray(phase)||
      typeof phase.title!=='string'||!phase.title.trim()||
      phase.detail!==undefined&&typeof phase.detail!=='string')
