@@ -213,6 +213,10 @@ jobs:
         id: acceptance_046
         continue-on-error: true
         run: node --test tests/m1-account-email-disclosure-317.test.mjs
+      - name: 317无共同Git历史审查：原生快照构建与调用链验证
+        id: acceptance_047
+        continue-on-error: true
+        run: node --test tests/m6-ultrareview-unrelated-history-317.test.mjs
       - name: 317云端审查启动配置与远端轮询一致性
         id: acceptance_045
         continue-on-error: true
@@ -487,6 +491,10 @@ jobs:
           fi
           if [ "${{ steps.acceptance_046.outcome }}" = failure ]; then
             echo "::error::验收失败：317账户隐私外发权限保护或原版提示文本不一致"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_047.outcome }}" = failure ]; then
+            echo "::error::验收失败：317无共同历史审查未正确创建完整Git快照"
             failures=$((failures+1))
           fi
           echo "完整验收发现 $failures 项失败"
