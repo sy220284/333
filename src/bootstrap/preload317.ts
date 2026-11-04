@@ -88,12 +88,15 @@ export function filterPreloadEnvironment317(environment: Record<string, unknown>
   const kept: Record<string, string> = Object.create(null)
   const dropped = []
   for (const [name, value] of Object.entries(environment)) {
-    const problem = INVALID_ENV_NAME_317.test(name) ? 'invalid-name'
-      : typeof value !== 'string' ? 'non-string-value'
-      : value.includes(String.fromCharCode(0)) ? 'nul-in-value'
-      : undefined
-    if (problem) dropped.push({ name, problem })
-    else kept[name] = value
+    if (INVALID_ENV_NAME_317.test(name)) {
+      dropped.push({ name, problem: 'invalid-name' })
+    } else if (typeof value !== 'string') {
+      dropped.push({ name, problem: 'non-string-value' })
+    } else if (value.includes(String.fromCharCode(0))) {
+      dropped.push({ name, problem: 'nul-in-value' })
+    } else {
+      kept[name] = value
+    }
   }
   return { kept, dropped }
 }
