@@ -5,7 +5,7 @@ import {
   prepareFleet, fleetSocket, listSessions, createSessionRecord, reserveNewSession, saveSession,
   editSession, deleteSession, matchSession, readSession, readTail,
   removeWorktreeSafely, isAlive, assertNoUnmanagedLiveWorker
-} from './sessionStore.mjs'
+} from './sessionStore.ts'
 
 const active = new Map()
 const outputQueue = new Map()
