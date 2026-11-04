@@ -80,7 +80,10 @@ test('M1 C19-T03: invalid vendor symlink fails before existing distribution is r
     const originalManifest = readFileSync(manifestPath)
     const outputVendor = join(dir, 'dist/vendor/audio-capture/x64-linux/audio-capture.node')
     const originalBytes = readFileSync(outputVendor)
-    symlinkSync(join(dir, 'LICENSE.md'), join(dir, 'vendor', 'wrong.node'))
+    const outside = join(dir, 'outside-vendor')
+    mkdirSync(outside)
+    // Directory junctions work on Windows runners without symlink privilege.
+    symlinkSync(outside, join(dir, 'vendor', 'outside-link'), process.platform === 'win32' ? 'junction' : 'dir')
     const result = build(dir)
     assert.notEqual(result.status, 0, result.stdout)
     assert.match(result.stderr, /Vendor resource must be a regular file/)
