@@ -7,11 +7,16 @@ export const DECLARES_DIFF_FINDS_NESTED_REPOSITORY = 'diff-finds-nested-reposito
 export const DECLARES_NO_REPOSITORY_CHECKED_OUT = 'no-repository-checked-out'
 const prefix = '--' + RUNNER_DECLARES_ARG_KEY + '='
 
-export function runnerDeclarationArgument(declarations) {
+export function runnerDeclarationArgument(declarations: readonly string[]): string {
   return prefix + declarations.join(',')
 }
 
-export function parseRunnerDeclaration(arg) {
+export type RunnerDeclarationFlags317 = {
+  nestedRepository: boolean
+  noRepositoryCheckedOut: boolean
+}
+
+export function parseRunnerDeclaration(arg: unknown): RunnerDeclarationFlags317 | null {
   if (typeof arg !== 'string' || !arg.startsWith(prefix)) return null
   const entries = arg.slice(prefix.length).split(',')
   const nestedRepository = entries.includes(DECLARES_DIFF_FINDS_NESTED_REPOSITORY)
@@ -22,7 +27,12 @@ export function parseRunnerDeclaration(arg) {
   }
 }
 
-export function adoptRunnerDeclaration(arg, state) {
+export type RunnerDeclarationState317 = {
+  setRunnerDeclaredNestedRepositoryDiff: (enabled: boolean) => void
+  setRunnerDeclaredNoRepositoryCheckedOut: (enabled: boolean) => void
+}
+
+export function adoptRunnerDeclaration(arg: unknown, state: RunnerDeclarationState317): void {
   const flags = parseRunnerDeclaration(arg)
   if (!flags?.nestedRepository) return
   state.setRunnerDeclaredNestedRepositoryDiff(true)
