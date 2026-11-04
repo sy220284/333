@@ -40,10 +40,39 @@ test('MCP commands enforce transport/auth boundaries and durably clear one serve
       const result = run(args); assert.equal(result.status, 1, result.stdout + result.stderr); assert.match(result.stderr, expected)
     }
     const logout = run(['logout', 'demo']); assert.equal(logout.status, 0, logout.stderr); assert.match(logout.stdout, /Signed out of "demo"/)
-    const saved = JSON.parse(readFileSync(join(home, '.credentials.json'), 'utf8'))
-    assert.equal(saved.mcpOAuth[key], undefined)
-    assert.equal(saved.mcpOAuth.other.accessToken, 'keep-me')
+    // On macOS successful updates migrate .credentials.json into Keychain.
+    // Inspect through the same secure-storage provider used by the CLI, so the
+    // test proves the surviving OAuth credentials remain available on either
+    // platform instead of depending on the obsolete plaintext file path.
+    const inspect = spawnSync('bun', ['-e', `
+      import { getSecureStorage } from './src/utils/secureStorage/index.ts'
+      const stored = getSecureStorage().read()
+      process.stdout.write(JSON.stringify({
+        removed: stored?.mcpOAuth?.[process.env.MCP_TEST_DEMO_KEY] === undefined,
+        retained: stored?.mcpOAuth?.other?.accessToken === 'keep-me',
+      }))
+    `], {
+      cwd: resolve(import.meta.dirname, '..'),
+      env: { ...env, MCP_TEST_DEMO_KEY: key },
+      encoding: 'utf8',
+      timeout: 25_000,
+    })
+    assert.ifError(inspect.error)
+    assert.equal(inspect.status, 0, inspect.stderr)
+    assert.deepEqual(JSON.parse(inspect.stdout), { removed: true, retained: true })
     const cache = JSON.parse(readFileSync(join(home, 'mcp-needs-auth-cache.json'), 'utf8'))
     assert.equal(cache.demo, undefined); assert.deepEqual(cache.other, { timestamp: 2 })
-  } finally { rmSync(home, { recursive: true, force: true }) }
+  } finally {
+    // The isolated CLAUDE_CONFIG_DIR also scopes the macOS Keychain name.
+    // Delete the test keychain item so the test leaves no credentials behind.
+    const cleanup = spawnSync('bun', ['-e', `
+      import { getSecureStorage } from './src/utils/secureStorage/index.ts'
+      if (!getSecureStorage().delete()) process.exitCode = 1
+    `], {
+      cwd: resolve(import.meta.dirname, '..'), env, encoding: 'utf8', timeout: 25_000,
+    })
+    rmSync(home, { recursive: true, force: true })
+    assert.ifError(cleanup.error)
+    assert.equal(cleanup.status, 0, cleanup.stderr)
+  }
 })
