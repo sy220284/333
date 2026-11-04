@@ -114,26 +114,58 @@ export function protectEvalMockText317(text: string): string {
   const trimmed = text.trimStart()
   return BLOCKED_OUTPUT.test(trimmed) ? '| ' + trimmed : text
 }
+function compareExpectedRules317(input: unknown, expected: Record<string, Expected>,
+  prefix = ''): string | null {
+  for (const [key, rule] of Object.entries(expected)) {
+    const path = prefix ? prefix + '.' + key : key
+    const value = nested(input, path)
+    const printable = value === undefined ? '(missing)' : shorten(JSON.stringify(value), 80)
+    if (Array.isArray(rule)) {
+      if (rule.some(candidate => {
+        if (typeof value === 'string') return value === candidate
+        if (typeof value === 'boolean' || typeof value === 'number') return String(value) === candidate
+        return false
+      })) continue
+      return path + ' = ' + printable + ' is not one of [' + rule.join(', ') + ']'
+    }
+    if (typeof rule === 'object' && rule !== null) {
+      const failure = compareExpectedRules317(input, rule, path)
+      if (failure) return failure
+      continue
+    }
+    if (typeof rule !== 'string') return 'invalid expected guard at ' + path
+    const regex = /^\/(.+)\/([a-z]*)$/s.exec(rule)
+    if (regex) {
+      const flags = regex[2] ?? ''
+      if (/[^is]/.test(flags) || regex[1]!.length > 8192)
+        return path + ': ' + rule + ' is not a usable guard'
+      let pattern: RegExp
+      try { pattern = new RegExp(regex[1], flags) }
+      catch { return path + ': ' + rule + ' is not a usable guard' }
+      const subject = typeof value === 'string' ? value
+        : typeof value === 'number' || typeof value === 'boolean' ? String(value) : null
+      if (subject === null || subject.length > 8192 || !pattern.test(subject))
+        return path + ' = ' + printable + ' does not match ' + rule
+      continue
+    }
+    if (['string', 'number', 'bool', 'boolean', 'object', 'array'].includes(rule)) {
+      const kind = value === null || value === undefined ? 'missing'
+        : Array.isArray(value) ? 'array' : typeof value === 'boolean' ? 'bool' : typeof value
+      const sought = rule === 'boolean' ? 'bool' : rule
+      if (kind !== sought) return path + ' = ' + printable + ' is not a ' + rule
+      continue
+    }
+    const literal = typeof value === 'string' ? value === rule
+      : typeof value === 'number' || typeof value === 'boolean' ? String(value) === rule : false
+    if (!literal) return path + ' = ' + printable + ' is not "' + rule + '"'
+  }
+  return null
+}
 export function compareEvalMockExpected317(actual: unknown, expected: Expected): string | null {
   if (expected === null) return null
-  if (Array.isArray(expected))
-    return expected.some(item => compareEvalMockExpected317(actual, item) === null)
-      ? null : 'expected one of ' + JSON.stringify(expected)
-  if (typeof expected === 'object') {
-    if (!actual || typeof actual !== 'object' || Array.isArray(actual))
-      return 'expected an object'
-    for (const [key, rule] of Object.entries(expected)) {
-      const problem = compareEvalMockExpected317((actual as Record<string, unknown>)[key], rule)
-      if (problem !== null) return key + ': ' + problem
-    }
-    return null
-  }
-  if (expected.startsWith('/') && expected.endsWith('/') && expected.length > 1) {
-    try { return new RegExp(expected.slice(1, -1)).test(String(actual ?? ''))
-      ? null : 'does not match ' + expected }
-    catch (error) { return 'invalid regular expression ' + expected + ': ' + String(error) }
-  }
-  return actual === expected ? null : 'expected ' + JSON.stringify(expected)
+  if (typeof expected !== 'object' || Array.isArray(expected))
+    return 'expect must be an object of named input guards'
+  return compareExpectedRules317(actual, expected)
 }
 
 export async function interpolateEvalMock317(template: string, input: Record<string, unknown>,
