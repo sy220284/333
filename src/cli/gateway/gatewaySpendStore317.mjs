@@ -223,7 +223,7 @@ export async function createGatewaySpendStore317(sql) {
       const rows=await sql`SELECT cents FROM pooled_spend WHERE rbac_group_id=${group} AND period=${period}`
       return rows.length?BigInt(rows[0].cents):0n
     },
-    async addSpend(identity,cents,now=new Date()) {
+    async addSpend(identity,cents,now=new Date(),payingGroup=null) {
       const delta=Number(cents)
       if(!Number.isFinite(delta)||delta<0) throw new Error('spent amount must be a finite nonnegative number of cents')
       if(delta===0) return
@@ -237,9 +237,13 @@ export async function createGatewaySpendStore317(sql) {
             ON CONFLICT(principal,period) DO UPDATE SET cents=spend.cents+EXCLUDED.cents`
         }
         const monthly=spendPeriodStart317('monthly',now)
-        for(const group of new Set(groups)) {
+        // The original spend meter attributes each inference to one
+        // paying group. Deducting from all groups would charge the same
+        // request multiple times and prematurely exhaust shared budgets.
+        if (payingGroup !== null) {
+          if (!groups.includes(payingGroup)) throw new Error('Paying group must belong to the authenticated identity')
           await tx`INSERT INTO pooled_spend(rbac_group_id,period,cents)
-            VALUES(${group},${monthly},${delta})
+            VALUES(${payingGroup},${monthly},${delta})
             ON CONFLICT(rbac_group_id,period) DO UPDATE SET cents=pooled_spend.cents+EXCLUDED.cents`
         }
       })
