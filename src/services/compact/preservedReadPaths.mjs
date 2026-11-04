@@ -38,12 +38,36 @@ export function collectPreservedReadFilePaths(messages, readToolName, normalizeP
   return paths
 }
 
-/** A compaction marker or failed Read cannot replace actual file bytes. */
+/**
+ * These strings still occur in the actual 2.1.317 bundle's historical
+ * transcript recognizer (chunk-aqqhd5p4.js:605-606). Current Read executions
+ * always return bytes; a historical hint cannot be used as file content.
+ */
+const HISTORICAL_READ_HINT_PREFIXES = [
+  'File unchanged since last read.',
+  'Wasted call — file unchanged since your last Read.',
+  '<system-reminder>This file is already in your context',
+]
+
+/** A compaction marker or result without file bytes cannot replace a Read. */
 export function hasFullReadResultContent(result, clearedMarker, persistedPrefix, provenancePrefix) {
   if (result.is_error === true) return false
   if (typeof result.content !== 'string') return true
   const content = result.content.startsWith(provenancePrefix)
     ? result.content.slice(provenancePrefix.length)
     : result.content
-  return content !== clearedMarker && !content.startsWith(persistedPrefix)
+  return content !== clearedMarker &&
+    !content.startsWith(persistedPrefix) &&
+    !HISTORICAL_READ_HINT_PREFIXES.some(prefix => content.startsWith(prefix))
+}
+
+/**
+ * Original 2.1.317 transcript reconstruction tracks truncated Read outputs
+ * (chunk-328ynszm.js:1302-1315). When the model saw a partial view, retaining
+ * raw bytes for cache comparisons must never grant Edit/Write permission.
+ */
+export function isPartialReadResult(message, result) {
+  return message?.toolUseResult?.file?.truncatedByTokenCap === true ||
+    (typeof result.content === 'string' &&
+      result.content.includes('[Truncated: PARTIAL view'))
 }
