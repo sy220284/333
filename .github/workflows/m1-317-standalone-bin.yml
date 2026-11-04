@@ -36,6 +36,7 @@ on:
       - 'src/bootstrap/bgSpare317.ts'
       - 'src/bootstrap/bgSpare317.mjs'
       - 'src/bootstrap/preload317.ts'
+      - 'src/bootstrap/providerClaimEnv317.ts'
       - 'src/bootstrap/claimRebind317.ts'
       - 'src/bootstrap/fastPathSettings317.ts'
       - 'src/utils/config.ts'

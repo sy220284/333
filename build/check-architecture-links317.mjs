@@ -18,6 +18,7 @@ const contracts = [
   ['M1', 'src/entrypoints/pluginTestFastPath317.ts', 'src/cli/handlers/pluginTest317.ts'],
   ['M1', 'src/bootstrap/bgSpare317.ts', 'src/bootstrap/preload317.ts'],
   ['M1', 'src/bootstrap/preload317.ts', 'src/bootstrap/claimRebind317.ts'],
+  ['M1', 'src/bootstrap/preload317.ts', 'src/bootstrap/providerClaimEnv317.ts'],
   ['M1', 'src/bootstrap/claimRebind317.ts', 'src/bootstrap/fastPathSettings317.ts'],
   ['M1', 'src/bootstrap/claimRebind317.ts', 'src/utils/config.ts'],
   ['M1', 'src/bootstrap/claimRebind317.ts', 'src/utils/settings/settingsCache.ts'],
