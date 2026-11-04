@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, statSync, readFileSync } from 'node:fs';
 import { builtinModules } from 'node:module';
 import { join, resolve, dirname } from 'node:path';
+import { stageRuntimeVendor317 } from './stage-runtime-vendor317.mjs';
 
 if (typeof Bun === 'undefined' || !Bun.build) throw Error('Bun bundler required');
 const root = resolve(import.meta.dir, '..');
@@ -149,5 +150,8 @@ if (!result.success) {
     }
   }
   if (leaked.length) throw Error(`Disabled-source reference leaked into release build: ${leaked.join(', ')}`);
-  console.log(`Compiled ${result.outputs.length} artifacts from extracted source`);
+  // dist/cli.js is also an executable source-mode entrypoint used before
+  // compile-standalone and package-release. Its native tools must exist now.
+  const staged = stageRuntimeVendor317(root);
+  console.log(`Compiled ${result.outputs.length} artifacts from extracted source; verified ${staged.files.length} host runtime resources for ${staged.host}`);
 }
