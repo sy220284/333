@@ -152,21 +152,47 @@ def audit(binary: Path, root: Path, expected_sha256: str, version: str,
             "status": "MATCH" if actual == asset["sha256"] else
                       "DIFFERS" if actual else "MISSING",
         })
+    # Repository-owned extras are classified separately from the original
+    # x64 release. Their explicitly reviewed hashes are enforced, so this
+    # distinction cannot silently mask a changed or missing skill.
+    extra_file = root / "build/317-project-extra-skills.json"
+    extra = {}
+    if extra_file.is_file():
+        spec = json.loads(extra_file.read_text(encoding="utf-8"))
+        if spec.get("target_version") != version or not isinstance(spec.get("skills"), dict):
+            raise RuntimeError("Additional-skill manifest must identify the same verified target version")
+        extra = spec["skills"]
+        if any(not isinstance(name, str) or not isinstance(sha, str) or
+               not SHA256.fullmatch(sha) or name in found
+               for name, sha in extra.items()):
+            raise RuntimeError("Additional-skill manifest contains invalid or official skill entries")
     known_names = set(found)
     for source in sorted(source_root.glob("*/SKILL.md")):
-        if source.parent.name not in known_names:
+        name = source.parent.name
+        if name not in known_names:
+            actual = hashlib.sha256(source.read_bytes()).hexdigest()
             rows.append({
-                "name": source.parent.name,
+                "name": name,
                 "source_path": str(source.relative_to(root)),
-                "candidate_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
-                "status": "NOT_LOCATED_IN_BINARY",
+                "candidate_sha256": actual,
+                "status": ("PROJECT_EXTRA_MATCH" if extra.get(name) == actual else
+                           "PROJECT_EXTRA_DIFFERS" if name in extra else
+                           "NOT_LOCATED_IN_BINARY"),
             })
+    for name in sorted(set(extra) - {x["name"] for x in rows}):
+        rows.append({
+            "name": name,
+            "source_path": f"src/skills/bundled/{name}/SKILL.md",
+            "candidate_sha256": None,
+            "status": "PROJECT_EXTRA_MISSING",
+        })
     return {
         "target_version": version, "official_x64_sha256": binary_hash,
         "decoded_frames": frame_count, "located_skills": len(found),
         "comparison_scope": "embedded skill bytes; not registration, tools, or UI",
         "counts": {status: sum(x["status"] == status for x in rows)
-                   for status in ("MATCH", "DIFFERS", "MISSING", "NOT_LOCATED_IN_BINARY")},
+                   for status in ("MATCH", "DIFFERS", "MISSING", "NOT_LOCATED_IN_BINARY",
+                                  "PROJECT_EXTRA_MATCH", "PROJECT_EXTRA_DIFFERS", "PROJECT_EXTRA_MISSING")},
         "skills": rows,
     }
 
@@ -188,7 +214,7 @@ def main():
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(json.dumps({"version": args.target, "found": report["located_skills"], "counts": report["counts"]}))
-    if args.strict and any(s["status"] != "MATCH" for s in report["skills"]):
+    if args.strict and any(s["status"] not in ("MATCH", "PROJECT_EXTRA_MATCH") for s in report["skills"]):
         raise SystemExit("Official target skill resources require migration and executable verification")
 
 
