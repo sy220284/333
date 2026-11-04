@@ -28,3 +28,8 @@
 - M2统一验证入口为`npm run test:m2`。设置`CLAUDE_CODE_317_REFERENCE`为已核验的官方317原生程序绝对路径后，同时执行原版请求、费用和文件权限副作用对照。
 - 类型检查使用`node tools/dev/dev.mjs typecheck:all`，SDK接口使用`node tools/governance/regenerate-sdk-types.mjs --check`。原始压缩脚本资源保持原文，源码扫描时区分这些资源与TS/TSX实现。
 - 检查范围和实际失败写回原有任务卡及进度文件；仅根据实际通过结果更新状态。
+
+## 2.1.317 架构边界自动核验
+
+- 保留 M1→M6 功能分层和真实生产执行链。跨层入口、生命周期或工具池修改须同步更新 `docs/upgrade/2.1.317-架构边界与函数映射.md` 中的已核实映射。
+- 在提交前执行 `node build/check-architecture-links317.mjs`，验证真实导入边和专用启动先于普通交互入口；语义、状态和跨平台行为继续执行相关实测，不能仅以结构检查代替功能验收。
