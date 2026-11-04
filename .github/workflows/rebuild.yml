@@ -203,7 +203,7 @@ jobs:
           bun test tests/m3-mcp-auth-317.test.ts
           node --test tests/m3-mcp-auth-cli-317.test.mjs
       - name: 317会话命令队列优先级和FIFO真实回归
-        run: node --test tests/m2-queue-priority-317.test.mjs tests/m2-session-identity-317.test.mjs
+        run: node --test tests/m2-queue-priority-317.test.mjs tests/m2-session-identity-317.test.mjs tests/m2-session-queue-partitions-317.test.mjs
       - name: 317工具生命周期异常与取消清理
         run: node --test tests/m3-tool-lifecycle-317.test.mjs
       - name: 317代理退出异常释放所有资源
@@ -212,6 +212,10 @@ jobs:
         run: node --test tests/m4-remote-poll-lifecycle-317.test.mjs
       - name: 317会话队列UUID日志与多模态保护
         run: node --test tests/m2-queue-operation-317.test.mjs
+      - name: Storage V5 会话归属、跨工作区路径和恢复暂存日志
+        run: |
+          node --test tests/m4-session-transcript-paths-v5.test.mjs
+          bun test tests/m4-session-storage-v5-integration.test.ts
       - name: CCR恢复原子替换与路径安全
         run: node --test tests/m4-ccr-transcript-restore-317.test.mjs
       - name: 远程Agent kill与轮询释放一致性
