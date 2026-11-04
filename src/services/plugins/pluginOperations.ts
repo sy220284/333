@@ -22,7 +22,7 @@ import {
   clearAllCaches,
   markPluginVersionOrphaned,
 } from '../../utils/plugins/cacheUtils.js'
-import { commandSourceDisclosure, installedSourceCommandKey, isAuthorizedSourceCommand } from '../../utils/plugins/commandSourceConsent.mjs'
+import { commandSourceDisclosure, installedSourceCommandKey, isAuthorizedSourceCommand } from '../../utils/plugins/commandSourceConsent.ts'
 import { getCommandSourceCatalogRevision } from '../../utils/plugins/commandSourceCatalog.js'
 import {
   findReverseDependents,
