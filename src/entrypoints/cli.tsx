@@ -105,6 +105,21 @@ async function main(): Promise<void> {
   // Original 317 postpones JIT for ordinary launches, never for warmed spares.
   if (args[0] !== '--preload' && args[0] !== '--bg-spare') scheduleJitPolicy317({ args });
 
+  // Official 2.1.317 runs the eval MCP stand-in independently of the REPL,
+  // before chrome, daemon and background-session routing.
+  if (args[0] === '--eval-mock-server') {
+    profileCheckpoint('cli_eval_mock_server_path');
+    const { runEvalMockServer317 } = await import('../bootstrap/evalMockServer317.ts');
+    try {
+      await runEvalMockServer317(args[1], args[2]);
+    } catch (error) {
+      process.stderr.write('--eval-mock-server: ' +
+        (error instanceof Error ? error.message : String(error)) + '\n');
+      process.exitCode = 1;
+    }
+    return;
+  }
+
   // Official 317 calls ensureFastPathSettingsLoaded before dedicated workers.
   // These routes bypass Commander's ordinary preAction settings initialization.
   const ensureWorkerStartupPolicy = async (ptySupervisor = false): Promise<boolean> => {
