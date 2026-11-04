@@ -53,3 +53,46 @@ test('2.1.317 plugin marketplace add --json: one structured line and idempotent 
     }
   }
 })
+
+test('317 --claudeai host catalog refusal follows original 317 and never writes local settings', {
+  timeout: 120_000,
+}, () => {
+  for (const [variant, binary, prefix] of commands) {
+    const temp = mkdtempSync(join(tmpdir(), '333-claudeai-marketplace-'))
+    const config = join(temp, 'config')
+    mkdirSync(config, { recursive: true })
+    const env = {
+      ...process.env, HOME: temp, USERPROFILE: temp,
+      CLAUDE_CONFIG_DIR: config, XDG_CONFIG_HOME: join(temp, '.config'),
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
+      DISABLE_TELEMETRY: '1', NO_COLOR: '1', CI: '1',
+    }
+    for (const key of Object.keys(env))
+      if (key.startsWith('ANTHROPIC_') || key.startsWith('CLAUDE_CODE_OAUTH_'))
+        delete env[key]
+    const cases = [
+      { options: ['--claudeai', '--scope', 'project'], message: /--claudeai takes only the marketplace name/ },
+      { options: ['--claudeai', '--sparse', 'plugins'], message: /--claudeai takes only the marketplace name/ },
+      { options: ['--claudeai'], message: /claude\.ai marketplaces are not available here/ },
+      { options: ['--claudeai', '--json'], message: /claude\.ai marketplaces are not available here/ },
+    ]
+    try {
+      for (const scenario of cases) {
+        const result = spawnSync(binary,
+          [...prefix, 'plugin', 'marketplace', 'add', 'unlisted-test-market', ...scenario.options], {
+            cwd: temp, env, encoding: 'utf8', timeout: 20_000,
+          })
+        assert.equal(result.error, undefined, `${variant}: ${result.error?.message}`)
+        assert.equal(result.status, 1, `${variant}: ${result.stderr}\n${result.stdout}`)
+        assert.match(result.stderr, scenario.message, variant)
+      }
+      let settingsCreated = false
+      try { readFileSync(join(config, 'settings.json'), 'utf8'); settingsCreated = true }
+      catch (error) { if (error.code !== 'ENOENT') throw error }
+      assert.equal(settingsCreated, false,
+        variant + ': invalid hosted marketplace created local settings')
+    } finally {
+      rmSync(temp, { recursive: true, force: true })
+    }
+  }
+})
