@@ -13,13 +13,13 @@ import { checkHasTrustDialogAccepted } from '../../utils/config.js'
 import { checkRemoteAgentEligibility, formatPreconditionError } from '../../tasks/RemoteAgentTask/RemoteAgentTask.js'
 import { checkOverageGate } from '../../commands/review/reviewRemote.js'
 import { getUltrareviewRuntimeEnvironment } from '../../utils/review/ultrareviewRuntime.js'
-import { resolveUltrareviewGitBase } from '../../utils/review/ultrareviewGitBase.mjs'
+import { resolveUltrareviewGitBase } from '../../utils/review/ultrareviewGitBase.ts'
 import { detectCurrentRepositoryWithHost } from '../../utils/detectRepository.js'
 import { getClaudeAIOAuthTokens } from '../../utils/auth.js'
 import { pollRemoteSessionEvents, teleportToRemote } from '../../utils/teleport.js'
 import { prepareApiRequest, getOAuthHeaders, isTransientNetworkError } from '../../utils/teleport/api.js'
 import { REMOTE_REVIEW_PROGRESS_TAG } from '../../constants/xml.js'
-import { extractTag, textOfReviewEvent, extractLatestRemoteReview, formatRemoteReviewFindings } from './ultrareviewProtocol.mjs'
+import { extractTag, textOfReviewEvent, extractLatestRemoteReview, formatRemoteReviewFindings } from './ultrareviewProtocol.ts'
 
 export type UltrareviewCliOptions = {
   json?: boolean

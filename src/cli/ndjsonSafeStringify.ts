@@ -1,5 +1,5 @@
 import { jsonStringify } from '../utils/slowOperations.js'
-import { escapeUnsafeJsonWireCharacters } from './jsonWireEscaping.mjs'
+import { escapeUnsafeJsonWireCharacters } from './jsonWireEscaping.ts'
 
 /**
  * JSON and stream-json share the exact Claude Code 2.1.317 wire protocol:

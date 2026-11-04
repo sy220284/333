@@ -13,7 +13,7 @@ import * as authModule from '../utils/auth.js'
 import { isEnvTruthy } from '../utils/envUtils.js'
 import { SETTING_SOURCES } from '../utils/settings/constants.js'
 import * as remoteControlSettings from '../utils/settings/settings.js'
-import { isRemoteControlDisabledFromSources } from './remoteControlPolicy.mjs'
+import { isRemoteControlDisabledFromSources } from './remoteControlPolicy.ts'
 import { lt } from '../utils/semver.js'
 
 /**

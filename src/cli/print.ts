@@ -60,7 +60,7 @@ import {
 } from 'src/utils/sessionState.js'
 import { externalMetadataToAppState } from 'src/state/onChangeAppState.js'
 import { getInMemoryErrors, logError, logMCPDebug } from 'src/utils/log.js'
-import { denyUnansweredPrompt } from '../services/cli/upgradeMode.mjs'
+import { denyUnansweredPrompt } from '../services/cli/upgradeMode.ts'
 import {
   writeToStdout,
   registerProcessOutputErrorHandlers,

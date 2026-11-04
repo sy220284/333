@@ -11,7 +11,7 @@ import { getGlobalClaudeFile } from '../../utils/env.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { errorMessage, getErrnoCode } from '../../utils/errors.js'
 import { findGitRoot } from '../../utils/git.js'
-import { executePurgeItem, planPurge, type PurgeItem } from '../../utils/purgeProject.mjs'
+import { executePurgeItem, planPurge, type PurgeItem } from '../../utils/purgeProject.ts'
 import { cliError, cliOk } from '../exit.js'
 
 type PurgeOptions = { all?: boolean; yes?: boolean; interactive?: boolean; dryRun?: boolean }

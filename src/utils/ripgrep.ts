@@ -6,7 +6,7 @@ import * as path from 'path'
 import { logEvent } from 'src/services/analytics/index.js'
 import { fileURLToPath } from 'url'
 import { isInBundledMode } from './bundledMode.js'
-import { resolvePackagedRipgrep } from './ripgrepVendor317.mjs'
+import { resolvePackagedRipgrep } from './ripgrepVendor317.ts'
 import { logForDebugging } from './debug.js'
 import { isEnvDefinedFalsy } from './envUtils.js'
 import { execFileNoThrow } from './execFileNoThrow.js'
@@ -17,7 +17,7 @@ import { countCharInString } from './stringUtils.js'
 import {
   classifyRipgrepFailure,
   classifyRipgrepProcessExit,
-} from './ripgrepResultPolicy.mjs'
+} from './ripgrepResultPolicy.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 // we use node:path.join instead of node:url.resolve because the former doesn't encode spaces
