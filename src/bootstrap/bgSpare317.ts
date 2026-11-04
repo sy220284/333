@@ -1,5 +1,5 @@
 import { createServer, type Server } from 'node:net'
-import { createHash, timingSafeEqual } from 'node:crypto'
+import { timingSafeEqual } from 'node:crypto'
 import { chmodSync, readFileSync, unlinkSync } from 'node:fs'
 import { runClaimedSession317 } from './preload317.ts'
 import { assertSocketVacant317 } from './socketOwnership317.ts'
