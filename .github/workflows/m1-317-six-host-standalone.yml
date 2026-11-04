@@ -49,7 +49,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: m1-317-six-standalone-${{ github.sha }}
+  # Keep the currently running six-platform build intact, and coalesce
+  # superseded queued commits into the newest branch head.
+  group: m1-317-six-standalone-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
