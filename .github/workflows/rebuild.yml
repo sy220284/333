@@ -183,6 +183,11 @@ jobs:
         continue-on-error: true
         if: runner.os == 'Linux'
         run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-details-native-parity-317.test.mjs
+      - name: 317独立ultrareview官方x64启动与信任差分
+        if: runner.os == 'Linux'
+        continue-on-error: true
+        id: acceptance_042
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m6-ultrareview-cli-native-parity-317.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
         id: acceptance_025
         continue-on-error: true
@@ -433,6 +438,10 @@ jobs:
           fi
           if [ "${{ steps.acceptance_041.outcome }}" = failure ]; then
             echo "::error::验收失败：对照官方 x64 验证 Claude API 版本迁移命令和资源"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_042.outcome }}" = failure ]; then
+            echo "::error::验收失败：317独立ultrareview官方x64启动与信任差分"
             failures=$((failures+1))
           fi
           echo "完整验收发现 $failures 项失败"
