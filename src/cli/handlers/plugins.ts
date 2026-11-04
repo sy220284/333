@@ -739,8 +739,11 @@ export async function pluginInstallHandler(
     }
     try {
       const parsed = await parseMarketplaceInput(options.marketplace)
-      if (!parsed || 'error' in parsed) {
-        throw new Error(!parsed ? 'Invalid marketplace source' : parsed.error)
+      if (!parsed) {
+        throw new Error('Invalid marketplace source')
+      }
+      if ('error' in parsed) {
+        throw new Error(parsed.error)
       }
       const added = await addMarketplaceSource(parsed)
       saveMarketplaceToSettings(added.name, { source: added.resolvedSource }, 'userSettings')
