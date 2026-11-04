@@ -459,19 +459,42 @@ export async function disableAllPlugins(): Promise<void> {
 export async function updatePluginCli(
   plugin: string,
   scope: PluginScope,
+  options: { json?: boolean; yes?: boolean; acceptCommand?: string } = {},
 ): Promise<void> {
+  let commandApprovalFailure: Awaited<ReturnType<typeof updatePluginOp>> | undefined
   try {
-    writeToStdout(
-      `Checking for updates for plugin "${plugin}" at ${scope} scope…\n`,
-    )
+    if (!options.json) {
+      writeToStdout(`Checking for updates for plugin "${plugin}" at ${scope} scope…\n`)
+    }
 
-    const result = await updatePluginOp(plugin, scope)
+    const result = await updatePluginOp(plugin, scope, options)
 
     if (!result.success) {
+      if (result.shownCommand) {
+        commandApprovalFailure = result
+        const { name, marketplace } = parsePluginIdentifier(result.shownCommand.pluginId)
+        const shown = result.shownCommand
+        writeToStdout(
+          `"${name}" is updated by running a command from marketplace "${marketplace}" on this machine:\n` +
+          `  ${shown.command}\n` +
+          `  (mode "${shown.mode}")\n`,
+        )
+      }
       throw new Error(result.message)
     }
 
-    writeToStdout(`${figures.tick} ${result.message}\n`)
+    if (options.json) {
+      writeToStdout(`${JSON.stringify({
+        command: 'update', outcome: 'ok', plugin,
+        pluginId: result.pluginId ?? plugin,
+        scope, message: result.message,
+        oldVersion: result.oldVersion,
+        newVersion: result.newVersion,
+        alreadyUpToDate: result.alreadyUpToDate,
+      })}\n`)
+    } else {
+      writeToStdout(`${figures.tick} ${result.message}\n`)
+    }
 
     if (!result.alreadyUpToDate) {
       const { name, marketplace } = parsePluginIdentifier(
@@ -498,6 +521,14 @@ export async function updatePluginCli(
 
     await gracefulShutdown(0)
   } catch (error) {
+    if (options.json) {
+      writeToStdout(`${JSON.stringify({
+        command: 'update', outcome: 'failed', plugin, scope,
+        message: errorMessage(error),
+        failureCode: commandApprovalFailure?.failureCode ?? classifyPluginCommandError(error),
+        ...(commandApprovalFailure?.shownCommand && { shownCommand: commandApprovalFailure.shownCommand }),
+      })}\n`)
+    }
     handlePluginCommandError(error, 'update', plugin)
   }
 }
