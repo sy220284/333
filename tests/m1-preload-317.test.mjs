@@ -67,8 +67,15 @@ test('M1 C19-T02 preload claim validates every field before changing process sta
   const home = mkdtempSync(join(tmpdir(), '333-preload-validate-'))
   try {
     assert.throws(() => validatePreloadClaim317({ cwd: home, argv: [1], env: {} }), /argv/)
-    assert.throws(() => validatePreloadClaim317({ cwd: home, argv: [], env: { 'INVALID-NAME': 'x' } }), /name/)
-    assert.throws(() => validatePreloadClaim317({ cwd: home, argv: [], env: { GOOD: 'bad\0value' } }), /value/)
+    const mixed = validatePreloadClaim317({cwd:home,argv:[],env:{
+      'INVALID-NAME':'accepted', '=INVALID':'drop', GOOD:'kept',
+      BAD_NULL:'bad' + String.fromCharCode(0), BAD_NUMBER:3,
+    }})
+    assert.deepEqual(mixed.dropped.map(item => item.problem),
+      ['invalid-name','nul-in-value','non-string-value'])
+    assert.deepEqual(Object.fromEntries(mixed.env),
+      {'INVALID-NAME':'accepted',GOOD:'kept'})
+    
     const before = { CLAUDE_CODE_SESSION_ID: 'old', ANTHROPIC_API_KEY: 'old', KEEP: 'yes' }
     const argv = ['bun', 'cli', '--preload']
     let moved

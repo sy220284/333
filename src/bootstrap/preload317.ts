@@ -10,7 +10,8 @@ import { dirname } from 'node:path'
  */
 export const DEFAULT_PRELOAD_SOCKET_317 = '/home/claude/.claude/remote/spare.sock'
 const MAX_CLAIM_BYTES = 8 * 1024 * 1024
-const ENV_KEY = /^[A-Za-z_][A-Za-z0-9_]*$/
+// Verified upstream 317 Y$i: empty names, '=' and controls are invalid.
+const INVALID_ENV_NAME_317 = /^$|[=\x00-\x1f\x7f-\x9f]/
 /** Exact 2.1.317 chunk-9qvrfvhr.js DAe reset list: 113 literals, plus
  * CAo's two names and ZWe (host skill catalog). Remove inherited session
  * state before preload dependencies initialize and again on claim replay. */
@@ -95,6 +96,21 @@ function verifySocketPath(socketPath) {
   }
 }
 
+/** Original 317 rhr() drops individual invalid env keys and accepts other valid keys. */
+export function filterPreloadEnvironment317(environment) {
+  const kept = {}
+  const dropped = []
+  for (const [name, value] of Object.entries(environment)) {
+    const problem = INVALID_ENV_NAME_317.test(name) ? 'invalid-name'
+      : typeof value !== 'string' ? 'non-string-value'
+      : value.includes(String.fromCharCode(0)) ? 'nul-in-value'
+      : undefined
+    if (problem) dropped.push({ name, problem })
+    else kept[name] = value
+  }
+  return { kept, dropped }
+}
+
 export function validatePreloadClaim317(claim) {
   if (!claim || typeof claim !== 'object' || Array.isArray(claim))
     throw new Error('Preload claim must be an object')
@@ -104,14 +120,8 @@ export function validatePreloadClaim317(claim) {
     throw new Error('Preload claim requires argv strings')
   if (!claim.env || typeof claim.env !== 'object' || Array.isArray(claim.env))
     throw new Error('Preload claim requires env object')
-  const changes = []
-  for (const [name, value] of Object.entries(claim.env)) {
-    if (!ENV_KEY.test(name)) throw new Error('Invalid preload environment variable name')
-    if (typeof value !== 'string' || value.includes('\0'))
-      throw new Error('Invalid preload environment value for ' + name)
-    changes.push([name, value])
-  }
-  return { cwd: realpathSync(claim.cwd), argv: claim.argv, env: changes }
+  const { kept, dropped } = filterPreloadEnvironment317(claim.env)
+  return { cwd: realpathSync(claim.cwd), argv: claim.argv, env: Object.entries(kept), dropped }
 }
 
 export function applyPreloadClaim317(claim, {
