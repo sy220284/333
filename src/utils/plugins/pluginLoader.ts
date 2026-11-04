@@ -3103,7 +3103,10 @@ async function loadSkillsDirPlugins317(): Promise<{
           source,
           plugin: entry.name,
           manifestPath,
-          parseError: jsonError + ' (in ' + manifestPath + ')',
+          // Bun parser messages use ASCII quotes; the native CLI renders
+          // expected JSON delimiters using right single quotation marks.
+          parseError: jsonError.replace(/Expected '([^']+)'/g, 'Expected ’$1’') +
+            ' (in ' + manifestPath + ')',
         })
       } else if (validationError) {
         errors.push({
