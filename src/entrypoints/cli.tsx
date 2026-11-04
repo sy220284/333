@@ -105,6 +105,14 @@ async function main(): Promise<void> {
   // Upstream 317 tunes JIT after startup; the timer must not keep CLI alive.
   scheduleJitPolicy317({ args });
 
+  // 317 remote preloader is a one-shot socket claim that must run before
+  // importing the interactive CLI or starting background session services.
+  if (args[0] === '--preload') {
+    const { runPreload317 } = await import('../bootstrap/preload317.mjs');
+    await runPreload317(args.slice(1));
+    return;
+  }
+
   // Official 317 rejects desktop/background combinations before opening Desktop.
   // Check root-option-prefixed session verbs too (e.g. --settings={} logs deadbeef).
   if (flagWords.includes('--desktop') &&
