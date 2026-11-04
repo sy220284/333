@@ -15,3 +15,14 @@ export async function* withToolInProgress(setInProgressToolUseIDs, id, createStr
     })
   }
 }
+
+/**
+ * Observe an eagerly running streamed tool without leaving a detached rejected
+ * .finally() promise. Consumers still receive the original rejection from the
+ * returned tracked promise, while queued tools resume only after success.
+ */
+export function observeToolExecutionPromise(execution, onSettled, onCompleted, onError) {
+  const tracked = execution.finally(onSettled)
+  void tracked.then(onCompleted).catch(onError)
+  return tracked
+}
