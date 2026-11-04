@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, cpSync, copyFileSync, chmodSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, relative, resolve } from 'node:path';
-import { stageOfficialNative317 } from './stage-official-317-native.mjs';
+import { stageOfficialNative317, OFFICIAL_317_BUILDS } from './stage-official-317-native.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const releaseVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
@@ -21,10 +21,12 @@ if (upstream.version !== releaseVersion || upstream.platform !== 'linux-x64' || 
 }
 mkdirSync(dist,{recursive:true});
 cpSync(join(root,'vendor'),join(dist,'vendor'),{recursive:true,force:true});
-if (process.platform === 'linux' && process.arch === 'x64') {
-  const staged = stageOfficialNative317();
-  if (staged.sha256 !== upstream.binary_sha256) throw Error('Native runtime provenance differs from extracted module graph');
-  console.log('Official 317 native runtime staged:', staged.sha256);
+const releasePlatform = `${process.platform}-${process.arch}`;
+if (OFFICIAL_317_BUILDS[releasePlatform]) {
+  const staged = stageOfficialNative317({ platform: releasePlatform });
+  if (staged.sha256 !== OFFICIAL_317_BUILDS[releasePlatform].sha256) throw Error('317 native runtime does not match the verified platform manifest');
+  if (releasePlatform === 'linux-x64' && staged.sha256 !== upstream.binary_sha256) throw Error('317 Linux runtime differs from the exact decompiled ELF');
+  console.log('Official 317 native runtime staged:', releasePlatform, staged.sha256);
 }
 copyFileSync(join(root,'LICENSE.md'),join(dist,'LICENSE.md'));
 const pkg = {
@@ -49,10 +51,12 @@ if (!['auto','official-native','extracted-js','official-317','rebuilt'].includes
   console.error('Unknown CLAUDE_CODE_333_RUNTIME: ' + mode);
   process.exit(2);
 }
-const originalNative = join(__dirname,'vendor','claude-code-2.1.317','native','linux-x64','claude');
+const platform = process.platform + '-' + process.arch;
+const nativeAvailable = ['linux-x64','darwin-arm64','win32-x64'].includes(platform);
+const originalNative = join(__dirname,'vendor','claude-code-2.1.317','native',platform,process.platform==='win32'?'claude.exe':'claude');
 const extracted = join(__dirname,'vendor','claude-code-2.1.317','modules','cli.mjs');
 const rebuilt = join(__dirname,'cli.js');
-const useNative = mode === 'official-native' || (mode === 'auto' && process.platform === 'linux' && process.arch === 'x64');
+const useNative = mode === 'official-native' || (mode === 'auto' && nativeAvailable);
 const useExtracted = mode === 'extracted-js' || mode === 'official-317';
 const source = useNative ? originalNative : useExtracted ? extracted : rebuilt;
 if (!existsSync(source)) {
@@ -70,8 +74,8 @@ writeFileSync(join(dist,'launcher.cjs'),launcher);
 if(process.platform!=='win32')chmodSync(join(dist,'launcher.cjs'),0o755);
 writeFileSync(join(dist,'README.md'), `# Claude Code ${releaseVersion} — 333 Full Upstream Runtime
 
-On Linux x64 this release launches the SHA-256 pinned **official 2.1.317
-native executable**. It contains private Anthropic Bun APIs, such as
+On Linux x64, macOS ARM64, and Windows x64 this release launches SHA-256
+pinned **official 2.1.317 native executables**. It contains private Anthropic Bun APIs, such as
 \`Bun.ant.CellSegmenter\`, which the public Bun runtime lacks.
 
 The complete 2,924-module source snapshot is in
@@ -88,9 +92,10 @@ CLAUDE_CODE_333_RUNTIME=rebuilt node launcher.cjs --help
 CLAUDE_CODE_333_RUNTIME=extracted-js node launcher.cjs --help
 \`\`\`
 
-macOS/Windows keep the independent rebuilt CLI as their default pending a
-verified platform-specific 317 runtime. The Linux binary is downloaded only
-at release build time and validated against the pinned official SHA-256.
+On architectures not yet independently tested, the rebuilt CLI remains the
+explicit platform default. Verified binaries are downloaded only at release
+build time, pinned per platform to the SHA-256 validated against official npm
+release archives.
 The original upstream runtime, decompiled code and resources remain subject
 to Anthropic's license terms.
 `);
@@ -108,5 +113,5 @@ function walk(dir) {
 }
 walk(dist);
 files.sort((a,b)=>a.path.localeCompare(b.path));
-writeFileSync(join(dist,'integrity.json'),`${JSON.stringify({version:releaseVersion,source:'official-native-317-linux-x64-or-src/entrypoints/cli.tsx',official_source:'vendor/claude-code-2.1.317/modules/cli.mjs',native_source:'vendor/claude-code-2.1.317/native/linux-x64/claude',files},null,2)}\n`);
+writeFileSync(join(dist,'integrity.json'),`${JSON.stringify({version:releaseVersion,source:'official-native-317-on-verified-platforms-or-src/entrypoints/cli.tsx',official_source:'vendor/claude-code-2.1.317/modules/cli.mjs',native_source:OFFICIAL_317_BUILDS[releasePlatform] ? `vendor/claude-code-2.1.317/native/${releasePlatform}/${OFFICIAL_317_BUILDS[releasePlatform].file}` : null,files},null,2)}\n`);
 console.log(`Packaged independent CLI with ${files.length} verified assets`);
