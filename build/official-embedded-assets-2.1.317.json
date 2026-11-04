@@ -1,0 +1,511 @@
+{
+  "version": "2.1.317",
+  "source_binary_sha256": "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0",
+  "resources": [
+    {
+      "path": "src/constants/official317/loopAutonomousPreamble.md",
+      "bytes": 4972,
+      "sha256": "8baa2e53d41f65f6b776661c36a888c26a42ac475d7fb0e14d105eb6e27580f7"
+    },
+    {
+      "path": "src/constants/official317/loopAutonomousPreamblePersistent.md",
+      "bytes": 5380,
+      "sha256": "3b682315b0a4a9f8c56dba9b3ff7e53d85cdb622d058c6166c469d1828318439"
+    },
+    {
+      "path": "src/constants/official317/simple_plan.txt",
+      "bytes": 1826,
+      "sha256": "e82b593e79aa880fe03aad6fa8f637ca6580cd6195c61f185c53530cf191473a"
+    },
+    {
+      "path": "src/constants/official317/visual_plan.txt",
+      "bytes": 2673,
+      "sha256": "56a5fc359985c281abc7abd5fa36c3607f219cb099a400ef017df9af2dd37061"
+    },
+    {
+      "path": "src/skills/bundled/artifact-design/assets/anthropicSans400.woff2.asset",
+      "bytes": 10980,
+      "sha256": "c5bbe23d93c6ca027d4f80d8126578531be9bf79fad3b3becf43c49be1b60b0e"
+    },
+    {
+      "path": "src/skills/bundled/artifact-design/assets/anthropicSerif400.woff2.asset",
+      "bytes": 14756,
+      "sha256": "993aed14940fe69a8062ed6117f52bff394c4d68393d95e05b70154ab70fbd17"
+    },
+    {
+      "path": "src/skills/bundled/artifact-design/assets/hljsBundle.generated.min.js",
+      "bytes": 170297,
+      "sha256": "545c774f92b2946a32d56fc76a7207367f22eac688cb50754cd622eb94fdcc6b"
+    },
+    {
+      "path": "src/skills/bundled/artifact-design/examples/band-state.d.ts",
+      "bytes": 176,
+      "sha256": "a21a656c7a02dbb0ca5627c8978b9e92d9576614d996a7fe7bbbe507bdabd357"
+    },
+    {
+      "path": "src/skills/bundled/artifact-design/examples/band.tsx",
+      "bytes": 1447,
+      "sha256": "c11083271a8357dde1a9487353963ea2d7c1ad33b8892a649a649126b0bb5c39"
+    },
+    {
+      "path": "src/skills/bundled/artifact-design/examples/pane-state.d.ts",
+      "bytes": 181,
+      "sha256": "be62e7ae3be91cac0f556e3047aef255ea7b7c07698488ecb40957ae11d8d369"
+    },
+    {
+      "path": "src/skills/bundled/artifact-design/examples/pane.test.tsx",
+      "bytes": 2126,
+      "sha256": "1e45eb9c479c44c6a96657cad80861cb87b83045f6413a72d41148a37775cb8e"
+    },
+    {
+      "path": "src/skills/bundled/artifact-design/examples/pane.tsx",
+      "bytes": 1732,
+      "sha256": "7f09400916f4894a7af732ca45cb12e7cda9ed5d3bfbb78db3f4cbd77dfc1c13"
+    },
+    {
+      "path": "src/skills/bundled/artifact-design/examples/reference.md",
+      "bytes": 80979,
+      "sha256": "ec94bab4b1be31e79ad7c1c1398103793dee82f056969308e9b698647dd98a78"
+    },
+    {
+      "path": "src/skills/bundled/artifact-design/examples/tool-call.ts",
+      "bytes": 701,
+      "sha256": "0453adc1d830fca71c8756221f8bbcb32719b2391002025aafdd5d7d9c2ad9b8"
+    },
+    {
+      "path": "src/skills/bundled/artifact-design/references/design.md",
+      "bytes": 5663,
+      "sha256": "1c8416267ed34616fb55a01f60ef8cfafe80d7b6b7f23943d1fa87686f4e21e5"
+    },
+    {
+      "path": "src/skills/bundled/artifact-design/references/designHowTo.md",
+      "bytes": 3217,
+      "sha256": "73df43c069ad72767188c62b0f230393aa3efec39537f4de39018ce9b56518b6"
+    },
+    {
+      "path": "src/skills/bundled/artifact-design/references/designTwoSteps.md",
+      "bytes": 4671,
+      "sha256": "3d83f507315bbbdd431df110b3aca26945105bf9f352d3e77e33991ce7a575ea"
+    },
+    {
+      "path": "src/skills/bundled/artifact-design/references/slides.md",
+      "bytes": 5868,
+      "sha256": "292933f8e5d301770f788af83cb27776c1ed8addae4a0a15608a6c828957fad9"
+    },
+    {
+      "path": "src/skills/bundled/artifact-design/references/slidesHowTo.md",
+      "bytes": 3013,
+      "sha256": "845bc695f82757f5996f2f6d9b3f96b92ade872568a2edd3bffca053aeef4367"
+    },
+    {
+      "path": "src/skills/bundled/artifact-design/references/slidesTwoSteps.md",
+      "bytes": 4170,
+      "sha256": "3c163b6382b93146df5cfb63416e157d2d1beb395f172086ac7b1bb932f9617d"
+    },
+    {
+      "path": "src/skills/bundled/artifact-diagramming/SKILL.md",
+      "bytes": 4057,
+      "sha256": "18090854d77cc043802d3bc90fba1fb22d67361162473a73decf38f2c800e017"
+    },
+    {
+      "path": "src/skills/bundled/artifact-diagramming/assets/mermaid.min.js",
+      "bytes": 785819,
+      "sha256": "d98ea41d54f7d3253f244c7834baf3f322f2aaa9e09fa9205db627e58ebd84cf"
+    },
+    {
+      "path": "src/skills/bundled/claude-config/SKILL.md",
+      "bytes": 7160,
+      "sha256": "aa74b270052ffad17c65df36895a32480080c71ab56b8dbba7c4d02ede810e0c"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/.claude-plugin/plugin.json",
+      "bytes": 763,
+      "sha256": "e4c4ca232145fc10bc4a1619c6f567a47e929fcd0b63b984b7bdf051ae4fd707"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/NOTICE",
+      "bytes": 335,
+      "sha256": "8f99904209539b0c367f8714eb880075cf8f8a45d3ba2cf3892a9e49d72fe046"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/onboarding.md",
+      "bytes": 47946,
+      "sha256": "86d7a7da624b84f8f72f8f0b6f62a58118daedf83f65d08ef51bcbc8d1b3a895"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/ct.mjs",
+      "bytes": 139817,
+      "sha256": "e0637aa3a5a531d60e87149005c8ac650ec9cdd6a3338fc23f54ab5c6c506e28"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/ctbrowser.mjs",
+      "bytes": 14621,
+      "sha256": "2f7a7d0138da825e1553d9f4c5fd96942d9858dda569bab27e771e5165450c39"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/install-tools.mjs",
+      "bytes": 333,
+      "sha256": "7617c033489bbce06645a0509707488d28ca9e3a9752f4c8adf9c0db40c4d354"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/allow-tool.mjs",
+      "bytes": 99611,
+      "sha256": "a101569fd88b57acbf94c50ac99603beb267617f0de7b37311686a345d7816b5"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/config.mjs",
+      "bytes": 99134,
+      "sha256": "eb9cbcbd226b7b4a095ade4349b28943e8d6f4d7666c383bc0e5f6aeb53b4374"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/ct-auth.mjs",
+      "bytes": 20148,
+      "sha256": "84f2920c2eddf2f872f5885f46b35a9bbdea8f46c8a1b6b378663bad0d0d2be2"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/discover.mjs",
+      "bytes": 43842,
+      "sha256": "91181b3199359757110b06f17db085a945c41e26f995be84eb5b7bdb5c2740a7"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/envreport.mjs",
+      "bytes": 28619,
+      "sha256": "3ad0f8c9a3aa685d7574cbf4a129059ace961be0adaae446f336e0ae34da3320"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/fence-proxy.mjs",
+      "bytes": 12123,
+      "sha256": "bf0e0e50c06317f2e6c44caa40158107a4a29f3318ae88b462268e479310ee22"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/guard.mjs",
+      "bytes": 14332,
+      "sha256": "9062a576b5629e49a18e2d36807d460c3d184491363a16a48235f2d5c0c342a7"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/hosts.mjs",
+      "bytes": 6777,
+      "sha256": "54f0d177db1e0df8716bde491d364761461ec0559eb00753239fa406a39bb08c"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/live-page.mjs",
+      "bytes": 40317,
+      "sha256": "01e68a883c9f49d417f00706f3bf87a588aad32f68e3b0397931350389836f29"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/open-page.mjs",
+      "bytes": 8039,
+      "sha256": "c719458e82806886eb509e425a9bbdf4b71f21b6e2a617832fbae3d0f670d5cc"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/psl-data.json",
+      "bytes": 167048,
+      "sha256": "d2c3348b6d4a4db8df267de386ee2bd6f0077e509e2df21bad49298701013c82"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/run-tools.mjs",
+      "bytes": 68553,
+      "sha256": "7a5dafe75d4a1bd86dfc4a6251e10980f1ec4a164228b7101865158e49e6f439"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/runs.mjs",
+      "bytes": 11351,
+      "sha256": "cdab14bdc1a22a31ff897d8e5613b74a255de84219f508c3c6c86ee98acb7481"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/signin.mjs",
+      "bytes": 33603,
+      "sha256": "0ec40e03af3f241560c62fd3e9aa452e2af66f117be6a4e99bb285e46aded5d5"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/tools-lock.json",
+      "bytes": 1917,
+      "sha256": "ef092fd0e91682f290c819d4ae9b1df0074b41b006a299f0142ae1302003a3bc"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/tools.mjs",
+      "bytes": 54985,
+      "sha256": "3556e9b62c6b35c6d192bf0b4af8a99cf45db094e4df9bf6d3e3561dbd06b251"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/lib/vet.mjs",
+      "bytes": 14874,
+      "sha256": "6af855d160ac146633e871d30699a2ec3ff09b9db8758281fc3cc1fce82b8a07"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/playwright-mcp.mjs",
+      "bytes": 106115,
+      "sha256": "95edf639acd5964bea191012d247c4c6d03d3597213ae4d62eaef030539befda"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/stop-on-exit.mjs",
+      "bytes": 8197,
+      "sha256": "3eee68691f57501a8c805f95599a656019491c306e0473e8767f26b8e72cb54f"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/scripts/tools-snapshot.json",
+      "bytes": 16387,
+      "sha256": "85463d363faa9f4a65b5d71db185bc84af93b37aa14dc8dfac19f5ec64213ca7"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/skills/sign-in/SKILL.md",
+      "bytes": 1060,
+      "sha256": "961a841db097991c114c4ec0cb30480c3fa9be3d09eac392123b81e98665677f"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/skills/sign-in/scripts/check.mjs",
+      "bytes": 2501,
+      "sha256": "c7b0c7282ed5143b04fd64e19823859f9b8808cfb0721b050afce334320b8c49"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/skills/sign-in/scripts/sign-in.mjs",
+      "bytes": 11857,
+      "sha256": "296503c3d7b8990c45df39e3cab170d4d6fe40cc43ff6c533ce60650df52ff7c"
+    },
+    {
+      "path": "src/skills/bundled/claude-test-conversation/spec-format.md",
+      "bytes": 6889,
+      "sha256": "0722dfe8af76d1277c7bdf6dad52a4cc7f722c93530c1eb7986ef6bc7f2b953c"
+    },
+    {
+      "path": "src/skills/bundled/cowork-plugin-authoring/references/component-schemas.md",
+      "bytes": 11602,
+      "sha256": "e1c0f1fd06680a7b59346a67c442fea3ec36509578a8fda87adc326f1f36eb47"
+    },
+    {
+      "path": "src/skills/bundled/cowork-plugin-authoring/references/example-plugins.md",
+      "bytes": 7976,
+      "sha256": "ab30ff199a3bb57912d43f448aaca43a1f7429aa9e64674321f6129345e57da4"
+    },
+    {
+      "path": "src/skills/bundled/cowork-plugin-authoring/references/mcp-servers.md",
+      "bytes": 4132,
+      "sha256": "6c2c4e502fcc8303ead294e5693fe7c505213666441b24b09a9ebe2aa0069c53"
+    },
+    {
+      "path": "src/skills/bundled/cowork-plugin-authoring/references/search-strategies.md",
+      "bytes": 1629,
+      "sha256": "66a53f10aac4738b8fd091de6054145511f8416e8633627f8a5a4dd9250f355a"
+    },
+    {
+      "path": "src/skills/bundled/data-visualization/SKILL.md",
+      "bytes": 8140,
+      "sha256": "3971a411fd0673a4f97ca277c6d8e13e0f786e1f0c1179d365974b6721b2c623"
+    },
+    {
+      "path": "src/skills/bundled/data-visualization/assets/chart.umd.min.js",
+      "bytes": 64021,
+      "sha256": "bd2f410be835f42c3001faa320f78673904613b4f8ba5017b98024c8cc3c7ddf"
+    },
+    {
+      "path": "src/skills/bundled/data-visualization/references/anti-patterns.md",
+      "bytes": 6359,
+      "sha256": "aa0032b9ecdb9db27d3706b42a07e15f3120cc711269713ce63fc56699cc75b4"
+    },
+    {
+      "path": "src/skills/bundled/data-visualization/references/choosing-a-form.md",
+      "bytes": 4659,
+      "sha256": "91ae24c582d0380fb3d958a9c374b63a458456048efb3e41b837c9460d7f6b56"
+    },
+    {
+      "path": "src/skills/bundled/data-visualization/references/color-formula.md",
+      "bytes": 8509,
+      "sha256": "6924caad41a9a19c14764a95e97430a30a9891abac13c6a1a5dd5a01727b5187"
+    },
+    {
+      "path": "src/skills/bundled/data-visualization/references/components.md",
+      "bytes": 2305,
+      "sha256": "e0558ce3d3aa04827dd0dc995b2bd8f4f0606edf90c8cf076aae0e2c58b302db"
+    },
+    {
+      "path": "src/skills/bundled/data-visualization/references/interaction.md",
+      "bytes": 3741,
+      "sha256": "2050b65e1a0d919627db870215f423956e17f82c1285eb336537b732cb0c7893"
+    },
+    {
+      "path": "src/skills/bundled/data-visualization/references/marks-and-anatomy.md",
+      "bytes": 7209,
+      "sha256": "69d1e529eec61ff012f7e77ae9f2e0d66ca34e2ab91862790f29884dc86c4203"
+    },
+    {
+      "path": "src/skills/bundled/data-visualization/references/palette.md",
+      "bytes": 9523,
+      "sha256": "b0eb3882e9cf8467a2979c4f63a69f2f83510318e7ebeb7a07e0ebd89189bba1"
+    },
+    {
+      "path": "src/skills/bundled/data-visualization/scripts/validate_palette.js",
+      "bytes": 19958,
+      "sha256": "25df43beb77674dad34348b9fe338d5a47f568e08bcf51b38780e51386cf866e"
+    },
+    {
+      "path": "src/skills/bundled/data-visualization/scripts/validate_palette.py",
+      "bytes": 17684,
+      "sha256": "949f8c86dc1c98c589f1455bb2d7cd8967ffecf85d77eed2789dce62ce6c2cf4"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/lib/bundle.mjs",
+      "bytes": 15686,
+      "sha256": "2680b62649b8fb24650cee9c16ea37f0ebb1872def756962aa8c6de2def2721d"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/lib/capture.mjs",
+      "bytes": 15723,
+      "sha256": "b51d7aff26487cd2fed0ec432a47e2d138c39303437792342f79539f261648b9"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/lib/common.mjs",
+      "bytes": 12029,
+      "sha256": "92890bbce8d3d76d9473c6c7a09f83622730f8806811ac4bfbb63f157901f0ec"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/lib/css-fallback.mjs",
+      "bytes": 5462,
+      "sha256": "05b9498cff750f1b2519ad13c02f097b59f52ef0aa0ddcca8c250d915b33a525"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/lib/css.mjs",
+      "bytes": 8432,
+      "sha256": "d8084a4107dc61c64a501491b35656f83cf821c7196f450d80bf93ccc02569ec"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/lib/detect.mjs",
+      "bytes": 1471,
+      "sha256": "47479300b8c49afa78409a2a1c47a2b0b0fa8d8a400b2f5d134d206f8461e759"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/lib/docs.mjs",
+      "bytes": 13432,
+      "sha256": "40e5d99baf3c72b0e39249d96613ebe9e4cf3103a2f4c6ce6ea8049431db0108"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/lib/dts.mjs",
+      "bytes": 30120,
+      "sha256": "674618e662674ec8e2d3275df4ad9acf246a2577048cc9fe7a72ae1bc549dd22"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/lib/emit.mjs",
+      "bytes": 37817,
+      "sha256": "368f67e69c06c472ee5411f9d00f6ec1fa971438d7c0b1e0390844f8cff5743d"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/lib/http-serve.mjs",
+      "bytes": 2054,
+      "sha256": "9936afc8af74258343770ad1497b7f7a7e993a8adeeb92f123e3b1f3896897cd"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/lib/preview-rebuild.mjs",
+      "bytes": 16294,
+      "sha256": "438e0846c7ed985a3800478b17ee6bd879940811265cb77717c8c127d822abd5"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/lib/previews.mjs",
+      "bytes": 9596,
+      "sha256": "19061b6f2a4236377cb02398eb45049ae1a87e0188f7edb6700a0e0380ac536f"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/lib/remote-diff.mjs",
+      "bytes": 13764,
+      "sha256": "e1ea1b5f09ebfb368a7734f5f8c45d259f7d88dfc6befc9f8c7cdc52b6069b31"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/lib/source-kit.mjs",
+      "bytes": 7500,
+      "sha256": "f59246d33e041229d7d9eb55a9efced676dd794451619d3043bd97cfad6e4987"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/lib/story-imports.mjs",
+      "bytes": 15829,
+      "sha256": "6795125e4f7a180d4fc18b6453c047e2d372fae97d0781460c2b1c8b50a76ec3"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/lib/sync-hashes.mjs",
+      "bytes": 10800,
+      "sha256": "91e02e0761897472e48f89295c521892f1b442fd5b31edf2c7d08b667d616de9"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/package-build.mjs",
+      "bytes": 55699,
+      "sha256": "3e6584fdad080a45aee401860decd7fa1992c9088182f2cd3e1b6d2d67681d7a"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/package-validate.mjs",
+      "bytes": 51938,
+      "sha256": "0b84d3ea1c7c62093e6eb64f2028bb25adf5c97e0e2751195ae45105b19a88f7"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/resync.mjs",
+      "bytes": 23240,
+      "sha256": "509db748227c1ea3a9a8f3d1c3dd2387861058b701ef46c5fefe9f35f8264d43"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/storybook/compare.mjs",
+      "bytes": 46123,
+      "sha256": "8a83bb7e69179e1a54153eea16874fc22f3c4c0490c4f062f5eaaabd05ce7368"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/storybook/preview-gen-storybook.mjs",
+      "bytes": 6916,
+      "sha256": "9cb720a9fbdc5d1b19fd4578a55778f621c51e21c3504ad73a6c9e3283ea6717"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/storybook/probe.mjs",
+      "bytes": 7074,
+      "sha256": "c3881006ee164e46904acaed1dc8541e7adec56d3942a12c141d2cc5de342134"
+    },
+    {
+      "path": "src/skills/bundled/design-sync/storybook/source-storybook.mjs",
+      "bytes": 18663,
+      "sha256": "cd243f62f2243df912ff9b515ccd84659f5a9eb5eff37ca0f6345bcb64bed41d"
+    },
+    {
+      "path": "src/skills/bundled/official-extras/appifact_sdk.js",
+      "bytes": 25159,
+      "sha256": "1318b718036bd571083117345cc59dd6f57e57940352d0feeac8f5d02ba42177"
+    },
+    {
+      "path": "src/skills/bundled/official-extras/artifact-plan.html",
+      "bytes": 38063,
+      "sha256": "b7d078b5beb32e8fb2ef5905a3c017e41caf162c7576cd09eb96b3e5e5102b0b"
+    },
+    {
+      "path": "src/skills/bundled/official-extras/claude-tag.md",
+      "bytes": 5840,
+      "sha256": "d7aba9281b8f5b3b55e509f1a8ca511e090e6f66c582bc24b0eb5b9d5fa135e4"
+    },
+    {
+      "path": "src/skills/bundled/official-extras/kit-modules.js",
+      "bytes": 82755,
+      "sha256": "1b333a6c98ea2776f6d320871c302ae606c3ccdeb83467cc21b57aa7f0a5a615"
+    },
+    {
+      "path": "src/skills/bundled/official-extras/live-sources.md",
+      "bytes": 6193,
+      "sha256": "4c23fbaa349da5ceb732b970b56ab9b789139f3d14e48aaa665619aae7bb715a"
+    },
+    {
+      "path": "src/skills/bundled/official-extras/recent-changes.md",
+      "bytes": 4986,
+      "sha256": "f08693190dc17ea49163a3c583ae43f20d4e334eaff2502691936b373dc8beca"
+    },
+    {
+      "path": "src/skills/bundled/official-extras/state-library.js",
+      "bytes": 4060,
+      "sha256": "7908c3310f4764acd78ef09276fc3ed5c1315e456b5aa95aa18363b8baf87b55"
+    },
+    {
+      "path": "src/skills/bundled/plugin-authoring/references/plugin-eval-quickref.md",
+      "bytes": 10378,
+      "sha256": "ac56c5fee4bca34cd7fb7e83f58058eda03fe84fe017066fd7b4212956fa719e"
+    },
+    {
+      "path": "src/skills/bundled/plugin-authoring/references/plugin-eval.md",
+      "bytes": 83457,
+      "sha256": "d83bb3c6b948bc85d80f109113eb002738e1e96fd24d3ff151b733abb2457f67"
+    },
+    {
+      "path": "src/types/official317/claude-code.d.ts",
+      "bytes": 676381,
+      "sha256": "2c5480b6f6d5df65215cd63058160d0bd81e77705d717adbd97ffb9c053f39d8"
+    }
+  ]
+}
