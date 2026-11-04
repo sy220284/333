@@ -1,4 +1,4 @@
-// 2.1.310 bundled Claude API resources; see build/claude-api-2.1.310-manifest.json.
+// Native Claude Code 2.1.317 exact embedded resource map (chunk-3v68bj2z.js).
 import file000 from './claude-api/SKILL.md'
 import file001 from './claude-api/csharp/claude-api/README.md'
 import file002 from './claude-api/csharp/claude-api/batches.md'
@@ -86,25 +86,26 @@ import file083 from './claude-api/shared/managed-agents-secure.md'
 import file084 from './claude-api/shared/managed-agents-self-hosted-sandboxes.md'
 import file085 from './claude-api/shared/managed-agents-tools.md'
 import file086 from './claude-api/shared/managed-agents-webhooks.md'
-import file087 from './claude-api/shared/model-migration.md'
-import file088 from './claude-api/shared/models.md'
-import file089 from './claude-api/shared/opentelemetry.md'
-import file090 from './claude-api/shared/platform-availability.md'
-import file091 from './claude-api/shared/preserved-thinking-migration.md'
-import file092 from './claude-api/shared/preserved-thinking-migration/causes.md'
-import file093 from './claude-api/shared/preserved-thinking-migration/drop_block_probe.py.txt'
-import file094 from './claude-api/shared/preserved-thinking-migration/prefix_diff.py.txt'
-import file095 from './claude-api/shared/prompt-audit.md'
-import file096 from './claude-api/shared/prompt-caching.md'
-import file097 from './claude-api/shared/token-counting.md'
-import file098 from './claude-api/shared/tool-use-concepts.md'
-import file099 from './claude-api/typescript/claude-api/README.md'
-import file100 from './claude-api/typescript/claude-api/batches.md'
-import file101 from './claude-api/typescript/claude-api/files-api.md'
-import file102 from './claude-api/typescript/claude-api/opentelemetry.md'
-import file103 from './claude-api/typescript/claude-api/streaming.md'
-import file104 from './claude-api/typescript/claude-api/tool-use.md'
-import file105 from './claude-api/typescript/managed-agents/README.md'
+import file087 from './claude-api/shared/message-threads.md'
+import file088 from './claude-api/shared/model-migration.md'
+import file089 from './claude-api/shared/models.md'
+import file090 from './claude-api/shared/opentelemetry.md'
+import file091 from './claude-api/shared/platform-availability.md'
+import file092 from './claude-api/shared/preserved-thinking-migration.md'
+import file093 from './claude-api/shared/preserved-thinking-migration/causes.md'
+import file094 from './claude-api/shared/preserved-thinking-migration/drop_block_probe.py.txt'
+import file095 from './claude-api/shared/preserved-thinking-migration/prefix_diff.py.txt'
+import file096 from './claude-api/shared/prompt-audit.md'
+import file097 from './claude-api/shared/prompt-caching.md'
+import file098 from './claude-api/shared/token-counting.md'
+import file099 from './claude-api/shared/tool-use-concepts.md'
+import file100 from './claude-api/typescript/claude-api/README.md'
+import file101 from './claude-api/typescript/claude-api/batches.md'
+import file102 from './claude-api/typescript/claude-api/files-api.md'
+import file103 from './claude-api/typescript/claude-api/opentelemetry.md'
+import file104 from './claude-api/typescript/claude-api/streaming.md'
+import file105 from './claude-api/typescript/claude-api/tool-use.md'
+import file106 from './claude-api/typescript/managed-agents/README.md'
 
 export const SKILL_MODEL_VARS: Record<string, string> = {
   "FABLE_ID": "claude-fable-5-1",
@@ -216,23 +217,24 @@ export const SKILL_FILES: Record<string, string> = {
   "shared/managed-agents-self-hosted-sandboxes.md": file084,
   "shared/managed-agents-tools.md": file085,
   "shared/managed-agents-webhooks.md": file086,
-  "shared/model-migration.md": file087,
-  "shared/models.md": file088,
-  "shared/opentelemetry.md": file089,
-  "shared/platform-availability.md": file090,
-  "shared/preserved-thinking-migration.md": file091,
-  "shared/preserved-thinking-migration/causes.md": file092,
-  "shared/preserved-thinking-migration/drop_block_probe.py": file093,
-  "shared/preserved-thinking-migration/prefix_diff.py": file094,
-  "shared/prompt-audit.md": file095,
-  "shared/prompt-caching.md": file096,
-  "shared/token-counting.md": file097,
-  "shared/tool-use-concepts.md": file098,
-  "typescript/claude-api/README.md": file099,
-  "typescript/claude-api/batches.md": file100,
-  "typescript/claude-api/files-api.md": file101,
-  "typescript/claude-api/opentelemetry.md": file102,
-  "typescript/claude-api/streaming.md": file103,
-  "typescript/claude-api/tool-use.md": file104,
-  "typescript/managed-agents/README.md": file105,
+  "shared/message-threads.md": file087,
+  "shared/model-migration.md": file088,
+  "shared/models.md": file089,
+  "shared/opentelemetry.md": file090,
+  "shared/platform-availability.md": file091,
+  "shared/preserved-thinking-migration.md": file092,
+  "shared/preserved-thinking-migration/causes.md": file093,
+  "shared/preserved-thinking-migration/drop_block_probe.py": file094,
+  "shared/preserved-thinking-migration/prefix_diff.py": file095,
+  "shared/prompt-audit.md": file096,
+  "shared/prompt-caching.md": file097,
+  "shared/token-counting.md": file098,
+  "shared/tool-use-concepts.md": file099,
+  "typescript/claude-api/README.md": file100,
+  "typescript/claude-api/batches.md": file101,
+  "typescript/claude-api/files-api.md": file102,
+  "typescript/claude-api/opentelemetry.md": file103,
+  "typescript/claude-api/streaming.md": file104,
+  "typescript/claude-api/tool-use.md": file105,
+  "typescript/managed-agents/README.md": file106,
 }

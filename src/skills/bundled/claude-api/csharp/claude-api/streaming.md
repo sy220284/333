@@ -9,7 +9,7 @@ var parameters = new MessageCreateParams
 {
     Model = "{{OPUS_ID}}",
     MaxTokens = 64000,
-    Messages = [new() { Role = Role.User, Content = "Write a haiku" }]
+    Messages = [new UserMessageParam { Content = "Write a haiku" }]
 };
 
 await foreach (RawMessageStreamEvent streamEvent in client.Messages.CreateStreaming(parameters))
