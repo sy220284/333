@@ -16,6 +16,9 @@ on:
       - 'src/utils/ripgrepVendor317.mjs'
       - 'tests/m1-ripgrep-vendor-resolution-317.test.mjs'
       - 'src/entrypoints/cli.tsx'
+      - 'src/entrypoints/runnerDeclaration317.mjs'
+      - 'src/bootstrap/state.ts'
+      - 'tests/m1-runner-declares-317.test.mjs'
       - 'tests/m1-version-verbose-317.test.mjs'
       - 'build/verify-official-native-by-platform.mjs'
       - 'native/audio-capture-src/index.ts'
@@ -116,6 +119,8 @@ jobs:
         run: M1_NATIVE_BINARY_RUN=1 node --test tests/m1-startup-cli-317.test.mjs
       - name: 对比官方317和重建程序的三平台真实冷启动及帮助性能
         run: node --test tests/m1-coldstart-official-native-317.test.mjs
+      - name: 原版317与三平台重建程序逐项对照Runner能力声明及早期启动状态
+        run: node --test tests/m1-runner-declares-317.test.mjs
       - name: 对齐原版317版本与详细上游提交信息
         run: node --test tests/m1-version-verbose-317.test.mjs
       - name: 验证 317 压缩执行文件可定位平台 ripgrep
