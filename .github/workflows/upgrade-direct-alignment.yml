@@ -39,7 +39,7 @@ jobs:
           bun-version: 1.4.4
       - name: 对照原版新增模型、压缩、权限与 Bash 功能链回归
         run: |
-          node --test tests/m2-disable-compact-settings-317.test.mjs tests/m2-auto-mode-rule-slots-317.test.mjs tests/m3-bash-shellopts-317.test.mjs
+          node --test tests/m2-disable-compact-settings-317.test.mjs tests/m2-auto-mode-rule-slots-317.test.mjs tests/m3-bash-shellopts-317.test.mjs tests/m2-terminal-hyperlink-forced-off-317.test.mjs
           node --test tests/m2-disable-ultrathink-317.test.mjs
           node --experimental-strip-types --test tests/m2-ultrathink-keyword-scope-317.test.mjs
       - name: 检查功能覆盖关系
