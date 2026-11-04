@@ -4,6 +4,7 @@ import { classifyStartupArgs } from './startupRouting317.mjs';
 import { adoptRunnerDeclaration } from './runnerDeclaration317.mjs';
 import { noteProcessStartTuning, startGarbageCollectionCount } from '../bootstrap/processStart317.mjs';
 import { scheduleJitPolicy317 } from '../bootstrap/jitPolicy317.mjs';
+import { guardRelayTokenDescriptor317 } from '../bootstrap/relayTokenGuard317.mjs';
 import { randomUUID } from 'node:crypto';
 import { getStartupCwdError, writeStartupFailureResult, reportCliStartupFailure } from '../utils/cliStartupFailure.mjs';
 
@@ -41,6 +42,9 @@ if (feature('ABLATION_BASELINE') && process.env.CLAUDE_CODE_ABLATION_BASELINE) {
  * The version fast path loads only the startup guards, without the full CLI.
  */
 async function main(): Promise<void> {
+  // The original 317 invokes this protection before argv scanning, profiler,
+  // config access and remote MCP service initialization.
+  await guardRelayTokenDescriptor317();
   // Official 317: this launch-only first argument is removed before URI/CLI
   // parsing. Its state is adopted after cwd validation and before profiler/
   // regular CLI initialization, with no change for unrecognized declarations.
