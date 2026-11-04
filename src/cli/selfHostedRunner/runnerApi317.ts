@@ -190,6 +190,59 @@ export class SelfHostedRunnerApi317 {
       runner_token: nonEmpty(result.runner_token, 'runner_token') }
   }
 
+  /** Server hints are used to provision an isolated runner slot ahead of work. */
+  async pollSpawnHints(payload: Record<string, unknown>, signal?: AbortSignal): Promise<{
+    hints: Array<Record<string, unknown>>
+    warm_hints: Array<Record<string, unknown>>
+    pending_count: number
+    backing_off_count: number
+    circuit_broken_count: number
+    pool_pending_session_count: number
+    pool_active_session_count: number
+    slots?: number
+  }> {
+    const result = await this.request('PollSpawnHints', 'POST',
+      ROOT + '/spawn-hints/poll', this.poolSecret, payload, signal, 30_000)
+    const slots = result.slots
+    const normalize = (raw: unknown): Array<Record<string, unknown>> => {
+      if (!Array.isArray(raw)) throw new TypeError('PollSpawnHints: invalid hint list')
+      return raw.map(item => {
+        const hint = object(item, 'spawn hint')
+        return { ...hint, session_uuid: hint.session_uuid ?? '',
+          attempt: hint.attempt ?? 0, work_order_jwt: hint.work_order_jwt ?? '',
+          sources: hint.sources ?? [] }
+      })
+    }
+    const integer = (name: string): number => {
+      const value = result[name] ?? 0
+      if (!Number.isSafeInteger(value) || (value as number) < 0) {
+        throw new TypeError('PollSpawnHints: invalid '+name)
+      }
+      return value as number
+    }
+    return {
+      hints: normalize(result.hints ?? []),
+      warm_hints: normalize(result.warm_hints ?? []),
+      pending_count: integer('pending_count'),
+      backing_off_count: integer('backing_off_count'),
+      circuit_broken_count: integer('circuit_broken_count'),
+      pool_pending_session_count: integer('pool_pending_session_count'),
+      pool_active_session_count: integer('pool_active_session_count'),
+      ...(typeof slots === 'number' && Number.isInteger(slots) && slots >= 1 && {slots}),
+    }
+  }
+
+  /** Reject malformed or unsafe prewarming work; errors are reported verbatim but bounded. */
+  async nackSpawnHint(hint: {
+    session_uuid: string; attempt: number; error: string; retryable: boolean;
+    failure_kind?: string; [key: string]: unknown
+  }, signal?: AbortSignal): Promise<void> {
+    if (typeof hint.error !== 'string') throw new TypeError('NackSpawnHint: missing error')
+    await this.request('NackSpawnHint', 'POST', ROOT + '/spawn-hints/nack',
+      this.poolSecret, {...hint, session_uuid: safeId(hint.session_uuid,'session_uuid'),
+        error: hint.error.slice(0,512)}, signal)
+  }
+
   async pollWork(token: string, runnerId: string, availableCapacity: number, signal?: AbortSignal,
     wakeSource?: string): Promise<PollWork317> {
     if (!Number.isSafeInteger(availableCapacity) || availableCapacity < 0) {
