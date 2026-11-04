@@ -9,6 +9,8 @@ on:
       - 'build/package-release.mjs'
       - 'build/public-dependencies.lock.json'
       - 'build/official-native-audio-317.json'
+      - 'tests/m1-official-native-sources-317.test.mjs'
+      - 'build/sync-all-official-native-317.mjs'
       - 'tests/release-integrity.test.mjs'
       - 'tests/m1-vendor-packaging-317.test.mjs'
       - 'tests/distribution-isolation.test.mjs'
@@ -60,6 +62,8 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
+      - name: 验签入库的官方六架构原生模块
+        run: node --test tests/m1-official-native-sources-317.test.mjs
       - name: 从真实源码独立重建317候选
         run: |
           set -euo pipefail
