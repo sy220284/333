@@ -843,7 +843,7 @@ async function installFromCommandSource(
     windowsHide: true,
   })
   const returned = stdout.trim()
-  if (!returned || returned.includes('\\n') || returned.includes('\\r')) {
+  if (!returned || /[\r\n]/.test(returned)) {
     throw new Error('Plugin source command must print exactly one directory path')
   }
   const sourcePath = resolve(returned)
