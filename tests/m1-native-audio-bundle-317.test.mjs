@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { copyFileSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative, resolve } from 'node:path'
 import { test } from 'node:test'
@@ -49,6 +49,22 @@ test('M1 C19-T04: compiled Bun process loads exact platform audio addon, and cor
     assert.equal(on.recording, false, 'Audio recording started unexpectedly')
     assert.equal(on.playing, false, 'Playback started unexpectedly')
     assert.ok([0, 1, 2, 3].includes(on.microphone), 'Invalid microphone authorization status')
+    // Real installations often expose a CLI link in ~/.local/bin. A link's
+    // directory must not become the native addon search root.
+    if (process.platform !== 'win32') {
+      const binDir = join(dir, 'global-bin')
+      mkdirSync(binDir)
+      const alias = join(binDir, 'claude')
+      symlinkSync(binary, alias)
+      const symlinkRun = spawnSync(alias, [], {
+        cwd: binDir, encoding: 'utf8', timeout: 15_000,
+        env: { ...process.env, DISABLE_TELEMETRY: '1' },
+      })
+      assert.equal(symlinkRun.error, undefined, String(symlinkRun.error))
+      assert.equal(symlinkRun.status, 0, symlinkRun.stderr)
+      assert.equal(JSON.parse(symlinkRun.stdout).available, true,
+        'Symlink launcher failed to locate the original release native addon')
+    }
     renameSync(target, target + '.missing')
     const off = run()
     assert.equal(off.available, false, 'Runtime incorrectly retained missing addon')
