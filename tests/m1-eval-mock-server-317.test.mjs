@@ -130,3 +130,53 @@ test('317 eval mock rejects changed specs and unknown file without entering MCP'
     } finally { rmSync(data.dir,{recursive:true,force:true}) }
   }
 })
+
+test('317 eval mock interpolates bounded fixture and enforces typed, regex and path guards',
+  { timeout: 75_000 }, async () => {
+    for (const [name, binary, prefix] of bins) {
+      const data = fixture()
+      let worker
+      try {
+        writeFileSync(join(data.dir, 'note.txt'), 'FROM_FILE')
+        for (const tool of ['file', 'type', 'regex', 'outside'])
+          data.spec.tools.push({ name: tool, description: tool, inputSchema: {} })
+        const addResponder = (body, expect = null) => ({
+          kind:'fixed', body, isError:false, expect, baseDir:data.dir,
+        })
+        data.spec.responders.file = addResponder('{{file:note.txt}}')
+        data.spec.responders.type = addResponder('ok', { text: 'string' })
+        data.spec.responders.regex = addResponder('ok', { text: '/^OK/i' })
+        data.spec.responders.outside = addResponder('{{file:../outside.txt}}')
+        data.bytes = Buffer.from(JSON.stringify(data.spec))
+        writeFileSync(data.specPath, data.bytes)
+        worker = start(binary, prefix, data)
+        const init = await worker.result(1,'initialize',{
+          protocolVersion:'2025-03-26',capabilities:{},clientInfo:{name:'m1',version:'1'},
+        })
+        assert.equal(init.result?.serverInfo?.name,'eval-mock/fixture',name)
+        worker.sendNotification('notifications/initialized')
+        const calls = [
+          ['file',{},'FROM_FILE',false],
+          ['type',{text:10},'eval aborted by mock nonce-123: fixture/type — input violates expect: text = 10 is not a string',true],
+          ['type',{text:'YES'},'ok',false],
+          ['regex',{text:'ok!'},'ok',false],
+          ['regex',{text:'other'},'eval aborted by mock nonce-123: fixture/regex — input violates expect: text = "other" does not match /^OK/i',true],
+          ['outside',{},"{{file:../outside.txt}} names a path outside the mock's directory",true],
+        ]
+        for (let index=0;index<calls.length;index++) {
+          const [tool, args, expected, isError] = calls[index]
+          const reply = await worker.result(index+2,'tools/call',{name:tool,arguments:args})
+          assert.deepEqual(reply.result,
+            {content:[{type:'text',text:expected}],...(isError?{isError:true}:{})},
+            name+' '+tool+' #'+index)
+        }
+        const lines = readFileSync(data.callLogPath,'utf8').trim().split('\n').map(JSON.parse)
+        assert.equal(lines.length,7,name)
+        assert.deepEqual(lines.slice(1).map(line=>line.seq),[0,1,2,3,4,5],name)
+        await worker.stop()
+      } finally {
+        if(worker&&worker.child.exitCode==null)worker.child.kill('SIGKILL')
+        rmSync(data.dir,{recursive:true,force:true})
+      }
+    }
+  })
