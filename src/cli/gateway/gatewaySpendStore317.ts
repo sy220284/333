@@ -118,7 +118,7 @@ export async function createGatewaySpendStore317(sql) {
       const rows=await sql`SELECT * FROM spend_limits WHERE id=${id}`
       return rowLimit(rows[0])
     },
-    async list({scopeType,limit=20,afterId,beforeId}={}) {
+    async list({scopeType,limit=20,afterId,beforeId}: {scopeType?: string; limit?: number; afterId?: string; beforeId?: string} = {}) {
       if (!Number.isInteger(limit)||limit<1||limit>LIMIT) throw new Error('limit must be 1–1000')
       if (afterId && beforeId) throw new Error('after_id and before_id are mutually exclusive')
       if (scopeType && !SCOPES.has(scopeType)) throw new Error('scope_type invalid')
@@ -192,7 +192,7 @@ export async function createGatewaySpendStore317(sql) {
         return true
       })
     },
-    async listAudit({limit=100,afterId}={}) {
+    async listAudit({limit=100,afterId}: {limit?: number; afterId?: string} = {}) {
       if(!Number.isInteger(limit)||limit<1||limit>LIMIT) throw new Error('limit must be 1–1000')
       if(afterId!==undefined&&(!/^\d{1,18}$/.test(String(afterId)))) {
         throw new Error('after_id must be an audit event id')

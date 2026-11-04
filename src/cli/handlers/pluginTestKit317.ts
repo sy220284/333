@@ -46,7 +46,7 @@ function normalizeRealmValue(value, seen = new WeakMap()) {
     return array
   }
   if (tag === '[object Error]') {
-    const error = { name: value.name, message: value.message }
+    const error: {name: string; message: string; cause?: unknown} = { name: value.name, message: value.message }
     seen.set(value, error)
     if ('cause' in value) error.cause = normalizeRealmValue(value.cause, seen)
     return error
@@ -68,7 +68,7 @@ export function createPluginTestKit317() {
   let tierValue = 'user'
   let tierAssigned = false
   const scopes = []
-  const report = (name, body, options = {}) => {
+  const report = (name, body, options: {plugins?: unknown[]; timeoutMs?: number; options?: Record<string, unknown>} = {}) => {
     if (!collecting) throw new TypeError('test() is called while the file loads, not inside a test')
     if (typeof name !== 'string' || typeof body !== 'function') {
       throw new TypeError('test(name, body) or test(name, options, body): a string, then a function')
@@ -158,7 +158,7 @@ export function createPluginTestKit317() {
   }
   const expect = actual => makeExpect(actual)
   const mock = {
-    fn(implementation = () => undefined) {
+    fn(implementation: (...args: unknown[]) => unknown = () => undefined) {
       const calls = []
       const stub = (...args) => { calls.push(args); return implementation(...args) }
       stub.mock = { calls }

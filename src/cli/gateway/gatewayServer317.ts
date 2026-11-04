@@ -77,7 +77,14 @@ async function configFromFile(path) {
   return readGatewayConfig317(path, parseYaml)
 }
 
-export async function createGatewayService317(config, deps = {}) {
+type GatewayServiceDeps317 = {
+  store?: Awaited<ReturnType<typeof openGatewayStore317>>
+  oidc?: Awaited<ReturnType<typeof createOidcProvider317>> | null
+  spend?: Awaited<ReturnType<Awaited<ReturnType<typeof openGatewayStore317>>['createSpend']>>
+  cri?: ReturnType<typeof createCriAdmission317>
+  serve?: typeof Bun.serve
+}
+export async function createGatewayService317(config, deps: GatewayServiceDeps317 = {}) {
   if (typeof Bun === 'undefined' || typeof Bun.serve !== 'function') {
     throw new Error('claude gateway requires the native Bun runtime')
   }

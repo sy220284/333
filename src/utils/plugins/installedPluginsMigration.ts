@@ -6,7 +6,7 @@ import { isDeepStrictEqual } from 'node:util'
 const MAX_REGISTRY_BYTES = 16 * 1024 * 1024
 const PLUGIN_ID = /^[a-z0-9][-a-z0-9._]*@[a-z0-9][-a-z0-9._]*$/i
 const SCOPES = new Set(['managed', 'user', 'project', 'local'])
-const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value)
+const isObject = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value)
 
 function readRegistry(path) {
   let stat
@@ -68,6 +68,11 @@ export function normalizeInstalledPluginsRecords(data, resolveCachePath) {
 function convertV1(registry, resolveCachePath) {
   const plugins = Object.create(null)
   for (const [id, record] of Object.entries(registry.plugins)) {
+    // Preserve the exact validated V1 shape at the private conversion boundary.
+    if (!isObject(record) || typeof record.version !== 'string' ||
+        typeof record.installedAt !== 'string' || typeof record.installPath !== 'string') {
+      throw new Error('Invalid V1 plugin installation record: '+id)
+    }
     plugins[id] = [{
       scope: 'user',
       installPath: resolveCachePath(id, record.version),
@@ -82,9 +87,13 @@ function convertV1(registry, resolveCachePath) {
 
 function mergeRegistries(primary, secondary) {
   const plugins = Object.create(null)
-  for (const [id, records] of Object.entries(primary.plugins)) plugins[id] = records.map(record => ({ ...record }))
+  for (const [id, records] of Object.entries(primary.plugins)) {
+    if (!Array.isArray(records)) throw new Error('Expected V2 plugin installation list: '+id)
+    plugins[id] = records.map(record => ({ ...record }))
+  }
   if (!secondary) return { version: 2, plugins }
   for (const [id, records] of Object.entries(secondary.plugins)) {
+    if (!Array.isArray(records)) throw new Error('Expected V2 plugin installation list: '+id)
     const current = plugins[id] ?? []
     for (const incoming of records) {
       const matching = current.find(record => record.scope === incoming.scope && record.projectPath === incoming.projectPath)

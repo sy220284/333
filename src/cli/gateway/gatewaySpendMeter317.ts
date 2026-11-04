@@ -16,7 +16,15 @@ const OPUS_MID = Object.freeze({input:10,output:50,cache_read:1,
 const OPUS_55 = Object.freeze({input:8,output:40,cache_read:.4,
   cache_write:10,cache_write_1h:16,web_search:.01})
 
-function modelPrices(model,config,upstream) {
+type GatewayPricingConfig317 = {
+  pricing?: {
+    multiplier?: number
+    overrides?: Array<{upstream: string; model: string;
+      input?: number; output?: number; cache_read?: number;
+      cache_write?: number; cache_write_1h?: number; web_search?: number}>
+  }
+}
+function modelPrices(model,config: GatewayPricingConfig317,upstream) {
   const override=(config.pricing?.overrides??[]).find(x=>
     x.upstream===upstream && x.model.toLowerCase()===model.toLowerCase())
   if (override) return {...FALLBACK,...override}
@@ -25,7 +33,7 @@ function modelPrices(model,config,upstream) {
   if (/claude-opus/i.test(model)) return OPUS_HIGH
   return FALLBACK
 }
-export function centsForGatewayUsage317(usage,model,config={},upstream) {
+export function centsForGatewayUsage317(usage,model,config: GatewayPricingConfig317 = {},upstream) {
   const rate=modelPrices(model,config,upstream)
   const read=Number(usage?.cache_read_input_tokens??0)
   const write=Number(usage?.cache_creation_input_tokens??0)
@@ -163,7 +171,7 @@ export async function precheckGatewaySpend317(store,identity,config,now=new Date
     eligible.find(p=>p.spent<p.limit)?.group??null,caps}
 }
 export function createGatewaySseUsage317() {
-  let buffer='', usage={}, seen=false
+  let buffer='', usage: Record<string, unknown> & { _estimated_output_chars?: number; output_tokens?: number } = {}, seen=false
   const decoder=new TextDecoder()
   const consume=(frame)=>{
     const data=frame.split(/\r?\n/).filter(line=>line.startsWith('data:'))
@@ -176,8 +184,8 @@ export function createGatewaySseUsage317() {
     }
     if(event.type==='message_delta'&&event.usage) {
       for(const [key,val] of Object.entries(event.usage)) {
-        if(typeof val==='number')usage[key]=Math.max(usage[key]??0,val)
-        else if(val&&typeof val==='object')usage[key]={...(usage[key]??{}),...val}
+        if(typeof val==='number')usage[key]=Math.max(typeof usage[key] === 'number' ? usage[key] : 0,val)
+        else if(val&&typeof val==='object'){const existing=usage[key];usage[key]={...(existing&&typeof existing==='object'?existing:{}),...val}}
       }
       seen=true
     }

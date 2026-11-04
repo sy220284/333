@@ -56,7 +56,7 @@ export function localCatalogRevision(marketplaceJson, packageJson = null) {
 }
 
 /** A mismatch must not authorize anything. Never auto-accept a stale digest. */
-export function isAuthorizedSourceCommand(shown, { yes = false, acceptCommand, isNestedSession = false } = {}) {
+export function isAuthorizedSourceCommand(shown, { yes = false, acceptCommand, isNestedSession = false }: {yes?: boolean; acceptCommand?: string; isNestedSession?: boolean} = {}) {
   if (isNestedSession) return false
   if (yes) return true
   return typeof acceptCommand === 'string' &&

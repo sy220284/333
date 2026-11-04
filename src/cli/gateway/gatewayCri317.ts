@@ -52,7 +52,7 @@ function parseJwsParts(token) {
   }catch{return null}
 }
 export function isCriJwt317(token){return parseJwsParts(token)?.header.typ===TYPE}
-export function createCriAdmission317(config,adapters={}) {
+export function createCriAdmission317(config,adapters: {now?: () => number; fetch?: typeof fetch} = {}) {
   if(!config.enabled)throw new Error('Cannot create CRI admission when disabled')
   const now=adapters.now??Date.now,fetchJwks=adapters.fetch??fetch
   const allowedOrgs=new Set(config.org_allowlist),audience=new Set(config.audience)
