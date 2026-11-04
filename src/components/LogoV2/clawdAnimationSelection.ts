@@ -2,7 +2,7 @@ import {
 	clawdAnimations,
 	clickAnimationNames,
 	clawdAppearance,
-} from "./clawdAnimationData.mjs";
+} from "./clawdAnimationData.ts";
 
 export function getClickAnimationNames(appleTerminal: boolean): string[] {
 	const clickCandidates = clickAnimationNames.filter(
