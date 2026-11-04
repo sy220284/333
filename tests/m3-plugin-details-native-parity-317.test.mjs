@@ -37,6 +37,10 @@ test('317 plugin details: native and rebuilt commands match installed inventory,
       const fullInit = invoke(['plugin', 'init', 'component-example', '--author', 'Verification',
         '--with', 'skills', 'agents', 'hooks', 'mcp', 'lsp'])
       assert.equal(fullInit.status, 0, fullInit.err + fullInit.out)
+      const listJson = invoke(['plugin', 'list', '--json'])
+      const listHuman = invoke(['plugin', 'list'])
+      assert.equal(listJson.status, 0, listJson.err + listJson.out)
+      assert.equal(listHuman.status, 0, listHuman.err + listHuman.out)
       const full = invoke(['plugin', 'details', 'component-example'])
       assert.equal(full.status, 0, full.err + full.out)
       assert.match(full.out, /Skills \(1\)\s+example/)
@@ -45,8 +49,12 @@ test('317 plugin details: native and rebuilt commands match installed inventory,
       const missing = invoke(['plugin', 'details', 'not-installed-example'])
       assert.equal(missing.status, 1, missing.err + missing.out)
       assert.match(missing.out, /not found.*claude plugin list/)
-      outputs[kind] = { basic, missing, fullInventory: full.out.split('Projected token cost')[0],
-        fullHasCost: full.out.includes('Per-component (rounded)') }
+      outputs[kind] = {
+        basic, missing, fullInventory: full.out.split('Projected token cost')[0],
+        fullHasCost: full.out.includes('Per-component (rounded)'),
+        list: listJson.out.replaceAll(configDir, '<config>'),
+        humanList: listHuman.out.replaceAll(configDir, '<config>'),
+      }
     }
     assert.deepEqual(outputs.rebuilt, outputs.official,
       '2.1.317 plugin details inventory or CLI result does not match installed x64')
