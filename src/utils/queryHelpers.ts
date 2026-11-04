@@ -18,7 +18,10 @@ import {
   EXTERNAL_ARTIFACT_PROVENANCE,
   PERSISTED_TOOL_RESULT_PREFIX,
 } from '../services/compact/keepRecentToolResults.js'
-import { hasFullReadResultContent } from '../services/compact/preservedReadPaths.mjs'
+import {
+  hasFullReadResultContent,
+  isPartialReadResult,
+} from '../services/compact/preservedReadPaths.mjs'
 import { FILE_WRITE_TOOL_NAME } from '../tools/FileWriteTool/prompt.js'
 import type { Message } from '../types/message.js'
 import type { OrphanedPermission } from '../types/textInputTypes.js'
@@ -445,15 +448,29 @@ export function extractReadFilesFromMessages(
               '',
             )
 
-            // Extract the actual file content from the tool result
-            // Tool results for text files contain line numbers, we need to strip those
-            const fileContent = processedContent
-              .split('\n')
-              .map(stripLineNumberPrefix)
-              .join('\n')
-              .trim()
+            // The 2.1.317 native transcript hydrator prefers the original
+            // tool result's file content when exactly one Read result exists.
+            // Displayed cat -n text is only the secondary reconstruction path.
+            const toolReadData = message.toolUseResult as
+              | { file?: { content?: unknown; truncatedByTokenCap?: boolean } }
+              | undefined
+            const rawFileContent = toolReadData?.file?.content
+            const readResultCount = message.message.content.filter(
+              block => block.type === 'tool_result',
+            ).length
+            const fileContent =
+              readResultCount === 1 &&
+              typeof rawFileContent === 'string' &&
+              rawFileContent.length > 0
+                ? rawFileContent.trim()
+                : processedContent
+                    .split('\n')
+                    .map(stripLineNumberPrefix)
+                    .join('\n')
+                    .trim()
 
-            // Cache the file content with the message timestamp
+            // A partial view cannot authorize a full-file Edit/Write.
+            // Preserve that state when resuming a 2.1.317 conversation.
             if (message.timestamp) {
               const timestamp = new Date(message.timestamp).getTime()
               cache.set(readFilePath, {
@@ -461,6 +478,7 @@ export function extractReadFilesFromMessages(
                 timestamp,
                 offset: undefined,
                 limit: undefined,
+                isPartialView: isPartialReadResult(message, content),
               })
             }
           }
