@@ -16,4 +16,6 @@ vendor/ripgrep/**/rg binary
 research/claude-code-2.1.88/dependencies/node_modules/** -text
 
 # Preserve the original whitespace in pinned upstream skill reference data.
-src/skills/bundled/claude-api/** whitespace=-blank-at-eol,-blank-at-eof
+# These 107 official resource files are SHA-pinned byte-for-byte.
+# Preserve their source line endings on Windows as well as Linux/macOS.
+src/skills/bundled/claude-api/** -text -eol whitespace=-blank-at-eol,-blank-at-eof
