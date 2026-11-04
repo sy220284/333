@@ -5,14 +5,14 @@ import { getSessionId, getOriginalCwd, getSessionProjectDir } from '../../bootst
 import { createTaskStateBase, generateTaskId, type Task, type TaskStateBase, type SetAppState } from '../../Task.js'
 import type { ToolUseContext } from '../../Tool.js'
 import { AgentTool } from '../../tools/AgentTool/AgentTool.js'
-import { executeWorkflowScript, validateWorkflowScript } from '../../tools/WorkflowTool/workflowRuntime.mjs'
+import { executeWorkflowScript, validateWorkflowScript } from '../../tools/WorkflowTool/workflowRuntime.ts'
 import { registerCleanup } from '../../utils/cleanupRegistry.js'
 import { getProjectDir } from '../../utils/sessionStorage.js'
-import { workflowSessionScripts, workflowPaths } from './workflowStoragePaths.mjs'
-import { readWorkflowSummary, createWorkflowSummaryRecorder, syncWorkflowScript } from './workflowSummaryStore.mjs'
+import { workflowSessionScripts, workflowPaths } from './workflowStoragePaths.ts'
+import { readWorkflowSummary, createWorkflowSummaryRecorder, syncWorkflowScript } from './workflowSummaryStore.ts'
 import { enqueuePendingNotification } from '../../utils/messageQueueManager.js'
 import { registerTask, updateTaskState } from '../../utils/task/framework.js'
-import { createWorkflowCallCounter } from './workflowCacheKeys.mjs'
+import { createWorkflowCallCounter } from './workflowCacheKeys.ts'
 
 export type LocalWorkflowTaskState = TaskStateBase & {
   type: 'local_workflow'
