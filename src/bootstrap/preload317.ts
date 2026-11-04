@@ -83,9 +83,9 @@ function unlinkIfPresent(path) {
 }
 
 /** Original 317 rhr() drops individual invalid env keys and accepts other valid keys. */
-export function filterPreloadEnvironment317(environment) {
+export function filterPreloadEnvironment317(environment: Record<string, unknown>) {
   // Null prototype preserves an own '__proto__' key from JSON safely.
-  const kept = Object.create(null)
+  const kept: Record<string, string> = Object.create(null)
   const dropped = []
   for (const [name, value] of Object.entries(environment)) {
     const problem = INVALID_ENV_NAME_317.test(name) ? 'invalid-name'
@@ -126,10 +126,13 @@ export function applyPreloadClaim317(claim, {
   return normalized
 }
 
+export type PreloadClaim317 = {
+  cwd: string; argv: string[]; env: Record<string, unknown>; sessionId?: unknown
+}
+
 /** Shared 317 post-claim state restoration for --preload and authenticated --bg-spare. */
-export async function runClaimedSession317(claim: {
-  cwd: string; argv: string[]; env: Record<string,unknown>; sessionId?: unknown
-}, source = 'spare_claim'): Promise<void> {
+export async function runClaimedSession317(claim: PreloadClaim317,
+  source = 'spare_claim'): Promise<void> {
   applyPreloadClaim317(claim)
   const state = await import('./state.js')
   const claimedCwd = process.cwd()
@@ -161,7 +164,7 @@ export async function runPreload317(args = process.argv.slice(2), {
   let finished = false
   let resolveClaim
   let rejectClaim
-  const claimPromise = new Promise((resolve, reject) => {
+  const claimPromise = new Promise<PreloadClaim317>((resolve, reject) => {
     resolveClaim = resolve; rejectClaim = reject
   })
   const cleanup = () => {

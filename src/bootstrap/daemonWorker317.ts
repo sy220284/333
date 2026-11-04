@@ -126,7 +126,7 @@ export async function runDaemonWorker317(kind: string | undefined,
   const configValue = envelope && typeof envelope === 'object' ?
     (envelope as Record<string, unknown>).config : undefined
   const config = validateHeartbeatConfig317(configValue)
-  if (!config.ok) {
+  if ('issues' in config) {
     stderr('config validation failed: ' + JSON.stringify(config.issues, null, 2) + '\n')
     return DAEMON_WORKER_CONFIG_ERROR_317
   }

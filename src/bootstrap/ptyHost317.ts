@@ -93,7 +93,7 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
   let child: ReturnType<typeof Bun.spawn> | undefined
   let server: ReturnType<typeof createServer> | undefined
   let ownsSocket = false
-  let stopped = false, forceClosed = false, lastExitCode = 0, lastSignal: string | undefined
+  let stopped = false, forceClosed = false, lastExitCode = 0, lastSignal: number | NodeJS.Signals | undefined
   let ptyReceivedData = false
   let terminalClosed = false
   const closeTerminalOnce = () => {

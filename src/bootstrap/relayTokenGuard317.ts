@@ -45,8 +45,13 @@ async function setProcessNonDumpable317({
 } = {}) {
   if (platform !== 'linux') return false
 
-  if (typeof bun?.ant?.setDumpable === 'function') {
-    if (!bun.ant.setDumpable(false))
+  // Official Bun exposes this private runtime capability; the public Bun
+  // type declarations omit it, so describe precisely the optional surface.
+  const extendedBun = bun as (typeof Bun & {
+    ant?: { setDumpable?: (enabled: boolean) => boolean }
+  }) | undefined
+  if (typeof extendedBun?.ant?.setDumpable === 'function') {
+    if (!extendedBun.ant.setDumpable(false))
       throw new Error('Cannot disable Linux process dumpability for remote runner')
     return true
   }

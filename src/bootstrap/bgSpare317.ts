@@ -128,7 +128,7 @@ export async function runBgSpare317(args: string[],
     process.off('uncaughtException', onUnhandled)
     try {
       await onClaim(claim)
-      return process.exitCode ?? 0
+      return Number(process.exitCode ?? 0)
     } catch (error) {
       process.stderr.write('[bg-spare] post-claim init failed: ' + String(error) + '\n')
       return 1

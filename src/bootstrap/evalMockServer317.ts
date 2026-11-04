@@ -16,7 +16,8 @@ const RELAY_FAILURE = 'mock agent responder failed'
 const BLOCKED_OUTPUT = /^(?:eval aborted by mock|MCP server "|MCP error -32000: Connection closed)/
 
 type ToolEntry = { name: string; description: string; inputSchema: Record<string, unknown> }
-type Expected = string | string[] | Record<string, Expected> | null
+interface ExpectedMap317 { [key: string]: Expected }
+type Expected = string | string[] | ExpectedMap317 | null
 type FixedResponder = { kind: 'fixed'; body: string; isError: boolean; expect: Expected; baseDir: string }
 type AgentResponder = { kind: 'agent'; prompt: string; abortWhen: string | null; expect: Expected;
   baseDir: string; replay: { mockHash: string; replayDir: string; pinned: Record<string, string> } }
@@ -281,9 +282,11 @@ export async function runEvalMockServer317(specPath: string | undefined,
         if (mismatch) verdict = { verdict: 'abort', text: 'input violates expect: ' + mismatch }
         else if (responder.kind === 'fixed') {
           const interpolated = await interpolateEvalMock317(responder.body, input, responder.baseDir)
-          verdict = interpolated.ok
-            ? { verdict: responder.isError ? 'tool_error' : 'ok', text: interpolated.text }
-            : { verdict: 'tool_error', text: interpolated.reason }
+          if ('reason' in interpolated) {
+            verdict = { verdict: 'tool_error', text: interpolated.reason }
+          } else {
+            verdict = { verdict: responder.isError ? 'tool_error' : 'ok', text: interpolated.text }
+          }
         } else if (!spec.agent) verdict = {
           verdict: 'tool_error', text: 'agent mock responder called without a harness relay',
         }

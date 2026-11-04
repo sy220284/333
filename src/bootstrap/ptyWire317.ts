@@ -21,7 +21,7 @@ function encode(kind: number, bytes: Buffer): Buffer {
 }
 export function createPtyFrameDecoder317(onFrame: (frame: PtyFrame317) => void,
   onFailure: (reason: string) => void): (chunk: Buffer) => void {
-  let buffer = Buffer.alloc(0)
+  let buffer: Buffer = Buffer.alloc(0)
   let ended = false
   return chunk => {
     if (ended) return
