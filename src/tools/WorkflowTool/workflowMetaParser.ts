@@ -3,9 +3,9 @@ export type WorkflowMetaLiteral317 = string | number | boolean | null | Workflow
 export function parseWorkflowMetaLiteral(source: string): Record<string, WorkflowMetaLiteral317> {
   if (typeof source !== 'string' || source.length > 65536) throw new Error('Workflow meta literal too large')
   let i = 0
-  const fail = () => { throw new Error(`Workflow meta must be a static literal (offset ${i})`) }
+  const fail = (): never => { throw new Error(`Workflow meta must be a static literal (offset ${i})`) }
   const space = () => { while (i < source.length && /\s/.test(source[i])) i++ }
-  function str() {
+  function str(): string {
     const quote = source[i++]
     let result = ''
     while (i < source.length) {
@@ -14,7 +14,7 @@ export function parseWorkflowMetaLiteral(source: string): Record<string, Workflo
       if (c === '\\') {
         const escaped = source[i++]
         if (escaped === undefined) fail()
-        const names = { n:'\n', r:'\r', t:'\t', b:'\b', f:'\f', v:'\v', '0':'\0' }
+        const names: Record<string, string> = { n:'\n', r:'\r', t:'\t', b:'\b', f:'\f', v:'\v', '0':'\0' }
         if (escaped in names) result += names[escaped]
         else if (escaped === quote || escaped === '\\' || escaped === '"' || escaped === "'") result += escaped
         else if (escaped === 'u' || escaped === 'x') {
@@ -31,14 +31,14 @@ export function parseWorkflowMetaLiteral(source: string): Record<string, Workflo
     }
     fail()
   }
-  function value(depth) {
+  function value(depth: number): WorkflowMetaLiteral317 {
     if (depth > 12) fail()
     space()
     const c = source[i]
     if (c === "'" || c === '"') return str()
     if (c === '{') {
       i++
-      const object = Object.create(null)
+      const object: Record<string, WorkflowMetaLiteral317> = Object.create(null)
       space()
       if (source[i] === '}') { i++; return object }
       while (i < source.length) {
@@ -65,7 +65,7 @@ export function parseWorkflowMetaLiteral(source: string): Record<string, Workflo
     }
     if (c === '[') {
       i++
-      const values = []
+      const values: WorkflowMetaLiteral317[] = []
       space()
       if (source[i] === ']') { i++; return values }
       while (i < source.length) {
@@ -86,5 +86,5 @@ export function parseWorkflowMetaLiteral(source: string): Record<string, Workflo
   const result = value(0)
   space()
   if (i !== source.length || !result || Array.isArray(result) || typeof result !== 'object') fail()
-  return result as Record<string, WorkflowMetaLiteral317>
+  return result
 }
