@@ -4,6 +4,16 @@
  * chosen for the main model. This function is pure so the precedence
  * contract can be verified without starting an agent session.
  */
+import type { EffortValue } from '../../utils/effort.js'
+export type SubagentEffortInputs317 = {
+  configuredEffort?: EffortValue
+  environmentEffort?: EffortValue
+  savedEffort?: EffortValue
+  modelDefaultEffort?: EffortValue
+  parentEffort?: EffortValue
+  agentModel: string
+  parentModel: string
+}
 export function resolveSubagentEffortValue({
   configuredEffort,
   environmentEffort,
@@ -12,7 +22,7 @@ export function resolveSubagentEffortValue({
   parentEffort,
   agentModel,
   parentModel,
-}) {
+}: SubagentEffortInputs317): EffortValue | undefined {
   if (configuredEffort !== undefined) return configuredEffort
   if (environmentEffort !== undefined) return environmentEffort
   if (agentModel !== parentModel) return savedEffort ?? modelDefaultEffort
