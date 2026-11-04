@@ -1,0 +1,42 @@
+name: M4 317 SDK 会话真实存储验收
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - 'src/entrypoints/agentSdkTypes.ts'
+      - 'src/utils/sessionStorage.ts'
+      - 'src/utils/sessionStoragePortable.ts'
+      - 'src/utils/listSessionsImpl.ts'
+      - 'tests/m4-sdk-session-metadata-317.test.ts'
+      - '.github/workflows/m4-sdk-session-317.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: m4-sdk-session-317-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  session-sdk:
+    name: SDK会话生产操作与原子存储
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 安装冻结依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: SDK会话元数据写入和再次读取
+        run: bun test tests/m4-sdk-session-metadata-317.test.ts
+      - name: 原有Storage V5跨会话归属回归
+        run: bun test tests/m4-session-storage-v5-integration.test.ts
+      - name: 全仓类型检查
+        run: |
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          node tools/dev/dev.mjs typecheck:all
