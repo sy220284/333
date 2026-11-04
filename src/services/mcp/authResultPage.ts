@@ -1,4 +1,4 @@
-import { authResultAssets } from "./authResultAssets.mjs";
+import { authResultAssets } from "./authResultAssets.ts";
 
 export { authResultAssets };
 
