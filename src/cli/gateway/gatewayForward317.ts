@@ -104,6 +104,7 @@ export async function forwardGatewayInference317(request, context) {
   if (typeof payload.model !== 'string' || !payload.model) {
     return proxyError(400, 'invalid_request_error', 'model is required', requestId)
   }
+  const clientModel = payload.model
   const chosen = chooseUpstream(config, identity, payload.model)
   if (!chosen) return proxyError(403, 'permission_error', 'model is not available to this identity', requestId)
   if (chosen.model !== payload.model) {
@@ -128,7 +129,7 @@ export async function forwardGatewayInference317(request, context) {
       const meta = Object.fromEntries([...request.headers]
         .filter(([key])=>key.toLowerCase().startsWith('x-stainless-')))
       response = await forwardGatewaySdk317(upstream, payload, path, {
-        requestId, requestedModel: chosen.model === payload.model ? undefined : payload.model,
+        requestId, requestedModel: clientModel,
         signal: upstreamAbort.signal,
         timeoutMs: config.timeouts?.upstream_ttfb_ms ?? 120000,
         extraHeaders: meta,
