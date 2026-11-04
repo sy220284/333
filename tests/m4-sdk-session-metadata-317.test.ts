@@ -53,8 +53,11 @@ test('SDK 317 session metadata: list, detail, rename, tag and clear persist in r
     expect(firstFork.sessionId).toBe(fork.sessionId)
     await expect(sdk.forkSession(session,{dir:project,upToMessageId:'absent'})).rejects.toThrow('upToMessageId')
     const after=await sdk.listSessions({dir:project})
-    expect(after[0].summary).toBe('Renamed through SDK')
-    expect(after[0].tag).toBeUndefined()
+    const sourceAgain=after.find(item=>item.sessionId===session)
+    const forkAgain=after.find(item=>item.sessionId===fork.sessionId)
+    expect(sourceAgain?.summary).toBe('Renamed through SDK')
+    expect(sourceAgain?.tag).toBeUndefined()
+    expect(forkAgain?.summary).toBe('Independent Fork')
   }finally{
     if(old===undefined) delete process.env.CLAUDE_CONFIG_DIR
     else process.env.CLAUDE_CONFIG_DIR=old
