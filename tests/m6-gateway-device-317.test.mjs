@@ -40,7 +40,7 @@ const fakeIdp = {
   authorize({state,nonce,challenge,redirectUri}) {
     expect(nonce.length).toBeGreaterThan(15)
     expect(challenge.length).toBeGreaterThan(30)
-    expect(redirectUri).toMatch(/\\/oauth\\/callback$/)
+    expect(redirectUri.endsWith('/oauth/callback')).toBe(true)
     return 'https://idp.example.test/authorize?state=' + state
   },
   async exchange(code, verifier, redirectUri, nonce) {
