@@ -94,16 +94,6 @@ jobs:
         run: node --test tests/m1-obsolete-command-parity.test.mjs
       - name: 新版退场模块和正式替代入口复查
         run: node --test tests/m1-retired-module-routing.test.mjs
-      - name: 2.1.317 后台会话状态与原版 CLI 行为验收
-        run: node --test tests/m1-background-agent-parity.test.mjs
-      - name: 2.1.317 后台会话真实全生命周期验收
-        run: node --test tests/m1-background-lifecycle.test.mjs
-      - name: 317项目清理的范围、安全改写与真实命令
-        run: node --test tests/m3-purge-317.test.mjs tests/m3-purge-cli-317.test.mjs tests/m3-purge-pty-317.test.mjs
-      - name: 验证317权限、上下文、Bash、终端与认证状态功能链
-        run: |
-          node --test tests/m2-disable-compact-settings-317.test.mjs tests/m2-auto-mode-rule-slots-317.test.mjs tests/m3-bash-shellopts-317.test.mjs tests/m3-shell-snapshot-317.test.mjs tests/m2-terminal-hyperlink-forced-off-317.test.mjs tests/m4-auth-status-parity-317.test.mjs
-          bun test tests/m2-disable-ultrathink-317.test.mjs tests/m2-ultrathink-keyword-scope-317.test.mjs
       - name: 317插件安装配置解析及歧义规则
         run: node --test tests/m3-plugin-install-config-317.test.mjs
       - name: 取得已锁定SHA的原版2.1.317 Linux x64执行参考
@@ -119,6 +109,16 @@ jobs:
       - name: 317插件安装配置的源码和真实x64差分
         if: runner.os == 'Linux'
         run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-config-native-parity-317.test.mjs
+      - name: 2.1.317 后台会话状态与原版 CLI 行为验收
+        run: node --test tests/m1-background-agent-parity.test.mjs
+      - name: 2.1.317 后台会话真实全生命周期验收
+        run: node --test tests/m1-background-lifecycle.test.mjs
+      - name: 317项目清理的范围、安全改写与真实命令
+        run: node --test tests/m3-purge-317.test.mjs tests/m3-purge-cli-317.test.mjs tests/m3-purge-pty-317.test.mjs
+      - name: 验证317权限、上下文、Bash、终端与认证状态功能链
+        run: |
+          node --test tests/m2-disable-compact-settings-317.test.mjs tests/m2-auto-mode-rule-slots-317.test.mjs tests/m3-bash-shellopts-317.test.mjs tests/m3-shell-snapshot-317.test.mjs tests/m2-terminal-hyperlink-forced-off-317.test.mjs tests/m4-auth-status-parity-317.test.mjs
+          bun test tests/m2-disable-ultrathink-317.test.mjs tests/m2-ultrathink-keyword-scope-317.test.mjs
       - name: 验证317自动模式默认规则筛选与用户设置安全重置
         run: node --test tests/m4-auto-mode-defaults-label-317.test.mjs tests/m4-auto-mode-reset-317.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
