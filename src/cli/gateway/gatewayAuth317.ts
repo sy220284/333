@@ -54,7 +54,7 @@ const decode = (data: string): Record<string, unknown> => {
 const now = (): number => Math.floor(Date.now() / 1000)
 const accepted = new Set(['RS256','RS384','PS256','ES256'])
 
-export function signGatewaySession317(claims: Record<string, unknown>, secret: string | string[], issuer: string, ttlHours = 12): string {
+export function signGatewaySession317(claims: Record<string, unknown>, secret: string | string[], issuer: string, ttlHours: number = 12): string {
   const issuedAt = now()
   const header = encode({ typ: 'JWT', alg: 'HS256' })
   const payload = encode({
