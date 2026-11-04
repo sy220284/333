@@ -73,12 +73,12 @@ async function _bundleWithFallback(
         failReason: 'git_error',
       }
     }
-  
+
     const { size: allSize } = await stat(bundlePath)
     if (allSize <= maxBytes) {
       return { ok: true, size: allSize, scope: 'all' }
     }
-  
+
     // bundle create overwrites in place.
     logForDebugging(
       `[gitBundle] --all bundle is ${(allSize / 1024 / 1024).toFixed(1)}MB (> ${(maxBytes / 1024 / 1024).toFixed(0)}MB), retrying HEAD-only`,
@@ -91,12 +91,12 @@ async function _bundleWithFallback(
         failReason: 'git_error',
       }
     }
-  
+
     const { size: headSize } = await stat(bundlePath)
     if (headSize <= maxBytes) {
       return { ok: true, size: headSize, scope: 'head' }
     }
-  
+
     // Last resort: squash to a single parentless commit. Uses the stash tree
     // when WIP exists (bakes uncommitted changes in — can't bundle the stash
     // ref separately since its parents would drag history back).
