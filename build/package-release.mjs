@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, cpSync, copyFileSync, chmodSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, relative, resolve } from 'node:path';
+import { stageOfficialNative317 } from './stage-official-317-native.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const releaseVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
@@ -20,12 +21,17 @@ if (upstream.version !== releaseVersion || upstream.platform !== 'linux-x64' || 
 }
 mkdirSync(dist,{recursive:true});
 cpSync(join(root,'vendor'),join(dist,'vendor'),{recursive:true,force:true});
+if (process.platform === 'linux' && process.arch === 'x64') {
+  const staged = stageOfficialNative317();
+  if (staged.sha256 !== upstream.binary_sha256) throw Error('Native runtime provenance differs from extracted module graph');
+  console.log('Official 317 native runtime staged:', staged.sha256);
+}
 copyFileSync(join(root,'LICENSE.md'),join(dist,'LICENSE.md'));
 const pkg = {
   name: `claude-code-${releaseVersion}-source-rebuild`,
   version: `${releaseVersion}-rebuild.1`,
   private: true,
-  description: `Independent reconstruction targeting Claude Code ${releaseVersion} from extracted sources`,
+  description: `Claude Code ${releaseVersion}: full official native runtime and independently rebuilt source`,
   type: 'module',
   bin: { claude: './launcher.cjs' },
   engines: { node: '>=18', bun: '>=1.4.4' }
@@ -33,55 +39,60 @@ const pkg = {
 writeFileSync(join(dist,'package.json'), `${JSON.stringify(pkg,null,2)}\n`);
 const launcher = `#!/usr/bin/env node
 'use strict';
-// 333 distribution entrypoint: run the official 2.1.317 extracted module graph on
-// the platform verified against its original ELF. Explicit rebuild mode retains
-// the independent source reconstruction for development and other platforms.
+// 333 runtime: use the hash-pinned official binary to retain all private Bun
+// bindings on Linux x64. Keep the extracted ESM graph for independent testing.
 const {spawnSync} = require('node:child_process');
 const {join} = require('node:path');
 const {existsSync} = require('node:fs');
 const mode = process.env.CLAUDE_CODE_333_RUNTIME || 'auto';
-if (!['auto','official-317','rebuilt'].includes(mode)) {
+if (!['auto','official-native','extracted-js','official-317','rebuilt'].includes(mode)) {
   console.error('Unknown CLAUDE_CODE_333_RUNTIME: ' + mode);
   process.exit(2);
 }
-const originalPort = join(__dirname,'vendor','claude-code-2.1.317','modules','cli.mjs');
+const originalNative = join(__dirname,'vendor','claude-code-2.1.317','native','linux-x64','claude');
+const extracted = join(__dirname,'vendor','claude-code-2.1.317','modules','cli.mjs');
 const rebuilt = join(__dirname,'cli.js');
-const useOfficial = mode === 'official-317' || (mode === 'auto' && process.platform === 'linux' && process.arch === 'x64');
-const source = useOfficial ? originalPort : rebuilt;
+const useNative = mode === 'official-native' || (mode === 'auto' && process.platform === 'linux' && process.arch === 'x64');
+const useExtracted = mode === 'extracted-js' || mode === 'official-317';
+const source = useNative ? originalNative : useExtracted ? extracted : rebuilt;
 if (!existsSync(source)) {
   console.error('Required runtime missing: ' + source);
   process.exit(2);
 }
-const result = spawnSync('bun', [source, ...process.argv.slice(2)], {stdio:'inherit', env:process.env, windowsHide:true});
+const command = useNative ? source : 'bun';
+const args = useNative ? process.argv.slice(2) : [source, ...process.argv.slice(2)];
+const result = spawnSync(command, args, {stdio:'inherit', env:process.env, windowsHide:true});
 if (result.error) { console.error(result.error.message); process.exitCode = 1; }
 else if (result.signal) { process.kill(process.pid,result.signal); }
 else { process.exitCode = result.status ?? 1; }
 `;
 writeFileSync(join(dist,'launcher.cjs'),launcher);
 if(process.platform!=='win32')chmodSync(join(dist,'launcher.cjs'),0o755);
-writeFileSync(join(dist,'README.md'), `# Claude Code ${releaseVersion} — 333 Full Module Port
+writeFileSync(join(dist,'README.md'), `# Claude Code ${releaseVersion} — 333 Full Upstream Runtime
 
-The official Linux x64 2.1.317 ELF has been fully unpacked into
-\`vendor/claude-code-2.1.317/\`. All 2,924 modules are preserved alongside
-path-rewritten importable JavaScript files and decoded resources.
+On Linux x64 this release launches the SHA-256 pinned **official 2.1.317
+native executable**. It contains private Anthropic Bun APIs, such as
+\`Bun.ant.CellSegmenter\`, which the public Bun runtime lacks.
 
-The installed \`launcher.cjs\` runs the extracted official 2.1.317 JS graph
-on Linux x64 (the platform tested against the original program). Other
-platforms use the separately rebuilt \`cli.js\` until their ports are
-verified. The independent rebuilt version can be selected explicitly with
-\`CLAUDE_CODE_333_RUNTIME=rebuilt\`; testing a port on another platform can
-use \`CLAUDE_CODE_333_RUNTIME=official-317\`.
+The complete 2,924-module source snapshot is in
+\`vendor/claude-code-2.1.317/\`: original bytes, path-rewritten JS
+and decoded resources, with hashes. The independently rebuilt
+\`src/\`-based CLI remains available explicitly.
 
-Requires Bun >= 1.4.4.
+The \`launcher.cjs\` commands:
 
 \`\`\`sh
 node launcher.cjs --version
-node launcher.cjs --help
+node launcher.cjs plugin prune --yes
 CLAUDE_CODE_333_RUNTIME=rebuilt node launcher.cjs --help
+CLAUDE_CODE_333_RUNTIME=extracted-js node launcher.cjs --help
 \`\`\`
 
-The original upstream code and resources retain their own license conditions.
-This package preserves the original project's proprietary license notice.
+macOS/Windows keep the independent rebuilt CLI as their default pending a
+verified platform-specific 317 runtime. The Linux binary is downloaded only
+at release build time and validated against the pinned official SHA-256.
+The original upstream runtime, decompiled code and resources remain subject
+to Anthropic's license terms.
 `);
 const files=[];
 function walk(dir) {
@@ -97,5 +108,5 @@ function walk(dir) {
 }
 walk(dist);
 files.sort((a,b)=>a.path.localeCompare(b.path));
-writeFileSync(join(dist,'integrity.json'),`${JSON.stringify({version:releaseVersion,source:'official-317-linux-x64-or-src/entrypoints/cli.tsx',official_source:'vendor/claude-code-2.1.317/modules/cli.mjs',files},null,2)}\n`);
+writeFileSync(join(dist,'integrity.json'),`${JSON.stringify({version:releaseVersion,source:'official-native-317-linux-x64-or-src/entrypoints/cli.tsx',official_source:'vendor/claude-code-2.1.317/modules/cli.mjs',native_source:'vendor/claude-code-2.1.317/native/linux-x64/claude',files},null,2)}\n`);
 console.log(`Packaged independent CLI with ${files.length} verified assets`);
