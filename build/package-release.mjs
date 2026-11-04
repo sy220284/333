@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, cpSync, copyFileSync, chmodSync, readdirSync, readFileSync, statSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, cpSync, copyFileSync, chmodSync, readdirSync, readFileSync, statSync, lstatSync, writeFileSync, rmSync, renameSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, relative, resolve } from 'node:path';
 
@@ -9,21 +9,60 @@ const dist = join(root, 'dist');
 if (!existsSync(join(dist, 'cli.js'))) throw Error('First build the CLI from src/ with bun build/rebuild.mjs');
 if (!existsSync(join(root, 'build/public-dependencies.lock.json'))) throw Error('Missing the verified public dependency lockfile');
 mkdirSync(dist,{recursive:true});
-// Never merge vendor files into an existing distribution: removed native addons
-// must not survive a second build. Validate the source before clearing dist.
+// Package native resources as one verified transaction. Never expose a half-
+// copied vendor directory, and restore the previous release if activation fails.
+// Stage/backup are siblings of dist, so they cannot leak into integrity.json.
 const vendorSource = join(root, 'vendor');
-if (!existsSync(vendorSource)) throw Error('Missing vendor platform resources');
-function checkVendorTree(dir) {
+if (!existsSync(vendorSource) || !lstatSync(vendorSource).isDirectory())
+  throw Error('Missing or invalid vendor platform resources');
+const vendorOutput = join(dist, 'vendor');
+const vendorStage = join(root, '.vendor-stage-' + process.pid);
+const vendorBackup = join(root, '.vendor-backup-' + process.pid);
+if (existsSync(vendorStage) || existsSync(vendorBackup))
+  throw Error('Vendor packaging staging path already exists');
+function vendorInventory(dir, prefix = '') {
+  const files = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
-    if (entry.isDirectory()) checkVendorTree(path);
-    else if (!entry.isFile()) throw Error(`Vendor resource must be a regular file: ${path}`);
+    const name = prefix + entry.name;
+    if (entry.isDirectory()) files.push(...vendorInventory(path, name + '/'));
+    else if (entry.isFile()) {
+      const data = readFileSync(path);
+      files.push({ path: name, bytes: data.length, sha256: createHash('sha256').update(data).digest('hex') });
+    } else throw Error(`Vendor resource must be a regular file: ${path}`);
   }
+  return files.sort((a, b) => a.path.localeCompare(b.path));
 }
-checkVendorTree(vendorSource);
-const vendorOutput = join(dist, 'vendor');
-rmSync(vendorOutput, { recursive: true, force: true });
-cpSync(vendorSource, vendorOutput, { recursive: true, force: true });
+const sourceInventory = vendorInventory(vendorSource);
+let movedPrevious = false;
+try {
+  cpSync(vendorSource, vendorStage, { recursive: true, force: false, errorOnExist: true });
+  const stagedInventory = vendorInventory(vendorStage);
+  if (JSON.stringify(stagedInventory) !== JSON.stringify(sourceInventory))
+    throw Error('Staged vendor files do not match their source SHA-256 inventory');
+  if (existsSync(vendorOutput)) {
+    renameSync(vendorOutput, vendorBackup);
+    movedPrevious = true;
+  }
+  try {
+    renameSync(vendorStage, vendorOutput);
+  } catch (error) {
+    if (movedPrevious) {
+      renameSync(vendorBackup, vendorOutput);
+      movedPrevious = false;
+    }
+    throw error;
+  }
+  if (movedPrevious) {
+    rmSync(vendorBackup, { recursive: true, force: true });
+    movedPrevious = false;
+  }
+} finally {
+  if (existsSync(vendorStage)) rmSync(vendorStage, { recursive: true, force: true });
+  // If a rollback itself failed, leave its evidence and previous bytes intact.
+  if (movedPrevious && !existsSync(vendorOutput) && existsSync(vendorBackup))
+    renameSync(vendorBackup, vendorOutput);
+}
 copyFileSync(join(root,'LICENSE.md'),join(dist,'LICENSE.md'));
 const pkg = {
   name: `claude-code-${releaseVersion}-source-rebuild`,
