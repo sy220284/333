@@ -258,20 +258,3 @@ export async function discoverEvalCases317(
   }
   return cases.sort((a, b) => a.dir.localeCompare(b.dir))
 }
-).test(caseInfo.name))) continue
-      if (requestedTags.length && !requestedTags.some(tag => caseInfo.tags?.includes(tag))) continue
-      cases.push(caseInfo)
-      if (cases.length > MAX_CASES) throw new Error(`eval suite exceeded ${MAX_CASES} cases`)
-      continue
-    }
-    const children = await readdir(dir, { withFileTypes: true })
-    for (const entry of children) {
-      if (!entry.isDirectory() || entry.name.startsWith('.') || ['results','mocks','node_modules'].includes(entry.name)) continue
-      const path = join(dir, entry.name)
-      const real = await realpath(path)
-      if (!inside(root, real)) throw new Error(`eval directory leaves root: ${path}`)
-      todo.push(path)
-    }
-  }
-  return cases.sort((a, b) => a.dir.localeCompare(b.dir))
-}
