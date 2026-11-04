@@ -1,7 +1,7 @@
 import { createServer, type Server } from 'node:net'
 import { timingSafeEqual } from 'node:crypto'
 import { chmodSync, readFileSync, unlinkSync } from 'node:fs'
-import { runClaimedSession317 } from './preload317.ts'
+import { runClaimedSession317, validatePreloadClaim317 } from './preload317.ts'
 import { assertSocketVacant317 } from './socketOwnership317.ts'
 
 const MAX_CLAIM_BYTES = 8 * 1024 * 1024
@@ -46,9 +46,13 @@ export async function runBgSpare317(args: string[],
       const data: unknown = JSON.parse(readFileSync(tokensPath, 'utf8'))
       const token = (data && typeof data === 'object' &&
         !Array.isArray(data)) ? (data as Record<string, unknown>).claimAuth : null
-      if (typeof token === 'string' && token) expectedAuth = token
+      if (typeof token !== 'string' || token.length === 0)
+        throw new Error('claimAuth is missing or invalid')
+      expectedAuth = token
     } catch (error) {
-      process.stderr.write('[bg-spare] tokens file unreadable; claim gate degraded\n')
+      process.stderr.write('[bg-spare] claim tokens unavailable: ' +
+        (error instanceof Error ? error.message : String(error)) + '\n')
+      return 1
     } finally {
       removeSocket(tokensPath)
     }
@@ -104,6 +108,13 @@ export async function runBgSpare317(args: string[],
           return
         }
         if (expectedAuth && !authEquals(frame?.auth, expectedAuth)) {
+          peer.destroy()
+          return
+        }
+        // A malformed but authenticated claim must not consume a warm worker.
+        // Validate its filesystem and startup state before the one-shot handoff.
+        try { validatePreloadClaim317(frame) }
+        catch {
           peer.destroy()
           return
         }

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { spawn, spawnSync } from 'node:child_process'
 import { connect } from 'node:net'
-import { mkdtempSync, existsSync, rmSync } from 'node:fs'
+import { mkdtempSync, existsSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 const cli = resolve(import.meta.dirname, '../dist/cli.js')
@@ -17,12 +17,13 @@ async function until(check, maxMs = 12000) {
     await new Promise(resolve => setTimeout(resolve, 30))
   }
 }
-function launch(binary, prefix, sock, configDir, auth) {
+function launch(binary, prefix, sock, configDir, auth, extraEnv = {}) {
   const child = spawn(binary, [...prefix, '--bg-spare', sock], {
     stdio: ['ignore', 'pipe', 'pipe'], env: {
       ...process.env, CLAUDE_CONFIG_DIR: configDir,
       DISABLE_TELEMETRY: '1', CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
       ...(auth ? { CLAUDE_BG_CLAIM_AUTH: auth } : {}),
+      ...extraEnv,
     },
   })
   let stdout = '', stderr = '', closed = false
@@ -144,5 +145,60 @@ test('317 PTY host plus authenticated bg-spare forms one complete claim-to-outpu
         if (!done) host.kill('SIGKILL')
         rmSync(dir, { recursive: true, force: true })
       }
+    }
+  })
+
+test('317 spare refuses missing or malformed explicit claim-token files before opening a socket',
+  { skip: process.platform === 'win32', timeout: 18000 }, () => {
+    for (const payload of [null, '{bad json', '{"claimAuth":""}', '{"claimAuth":42}']) {
+      const dir = mkdtempSync(join(tmpdir(), '333-bgspare-token-fail-'))
+      const tokens = join(dir, 'tokens.json'), socket = join(dir, 'claim.sock')
+      try {
+        if (payload !== null) writeFileSync(tokens, payload, { mode: 0o600 })
+        const result = spawnSync('bun', [cli, '--bg-spare', socket], {
+          encoding: 'utf8', timeout: 10000,
+          env: {
+            ...process.env, CLAUDE_CONFIG_DIR: dir,
+            CLAUDE_BG_SOCKET_TOKENS_PATH: tokens,
+            CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
+          },
+        })
+        assert.ifError(result.error)
+        assert.equal(result.status, 1, result.stderr)
+        assert.match(result.stderr, /claim tokens unavailable:/)
+        assert.equal(existsSync(socket), false, 'unverified tokens opened a claim listener')
+        assert.equal(existsSync(tokens), false, 'one-time token file remained on disk')
+      } finally {
+        rmSync(dir, { recursive: true, force: true })
+      }
+    }
+  })
+
+test('317 authenticated spare rejects malformed claims and preserves its one-shot handoff',
+  { skip: process.platform === 'win32', timeout: 30000 }, async () => {
+    const dir = mkdtempSync(join(tmpdir(), '333-bgspare-claim-validation-'))
+    const tokens = join(dir, 'tokens.json'), socket = join(dir, 'claim.sock')
+    writeFileSync(tokens, JSON.stringify({ claimAuth: 'trusted-claim' }), { mode: 0o600 })
+    const started = launch('bun', [cli], socket, dir, undefined, {
+      CLAUDE_BG_SOCKET_TOKENS_PATH: tokens,
+    })
+    try {
+      await until(() => existsSync(socket) || started.isClosed())
+      assert.equal(started.isClosed(), false, 'valid token prevented startup')
+      assert.equal(existsSync(tokens), false, 'one-time token was not removed')
+      await claim(socket, { auth: 'trusted-claim', cwd: dir, env: [], argv: ['--version'] })
+      await claim(socket, { auth: 'trusted-claim', cwd: join(dir, 'missing'), env: {}, argv: ['--version'] })
+      await new Promise(resolve => setTimeout(resolve, 100))
+      assert.equal(started.isClosed(), false, 'invalid startup state consumed the worker')
+      assert.equal(existsSync(socket), true)
+      await claim(socket, { auth: 'trusted-claim', cwd: dir, env: {}, argv: ['--version'] })
+      const result = await Promise.race([started.done,
+        new Promise((_, reject) => setTimeout(() => reject(Error('valid claim timed out')), 12000))])
+      assert.equal(result.code, 0, JSON.stringify(result))
+      assert.equal(result.stdout.trim(), '2.1.317 (Claude Code)')
+      assert.equal(existsSync(socket), false)
+    } finally {
+      started.child.kill('SIGKILL')
+      rmSync(dir, { recursive: true, force: true })
     }
   })
