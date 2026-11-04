@@ -45,6 +45,10 @@ export async function executePluginEvalSuite317(cases, settings, adapters = {}) 
           prompt: job.caseInfo.execution.prompt,
           workspace,
           pluginDir: job.arm === 'with' ? settings.pluginRoot : undefined,
+          // Record/mock mode must not auto-connect host or plugin MCP servers.
+          // --strict-mcp-config preserves the explicit plugin's hooks/skills,
+          // unlike --bare, while isolating the network boundary.
+          strictMcpConfig: (settings.mocks ?? 'record') === 'record',
           model: settings.model ?? job.caseInfo.execution.model,
           timeoutSeconds: job.caseInfo.execution.timeout_seconds,
           allowedTools: settings.allowedTools ?? job.caseInfo.execution.allowed_tools ?? [],
