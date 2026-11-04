@@ -81,3 +81,14 @@ test('Node 工具、官方扩展、压缩资源与原生二进制保留各自格
   assert.match(pkg.scripts.rebuild, /node build\/[^ ]+\.mjs/)
   assert.match(pkg.scripts['test:all'], /node --test tests\/[^ ]+\.test\.mjs/)
 })
+
+test('Node 测试入口只直接运行 MJS，TypeScript 测试交给 Bun', () => {
+  const pkg = JSON.parse(readFileSync(file('package.json'), 'utf8'))
+  for (const [name, command] of Object.entries(pkg.scripts ?? {})) {
+    for (const part of command.split(/\\s*&&\\s*/)) {
+      if (!/^node --test(?:\\s|$)/.test(part.trim())) continue
+      assert.doesNotMatch(part, /(?:^|\\s)\\S+\\.test\\.ts(?:\\s|$)/,
+        name + ': Node --test should run .mjs; run .test.ts through Bun')
+    }
+  }
+})
