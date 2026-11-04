@@ -1,3 +1,17 @@
+import type { Tip } from './types.js'
+import type { ThemeName } from '../../utils/theme.js'
+
+export type SpinnerTipEligibility317 = {
+  isFirstPartyBackend: boolean
+  isCommandOffered: (command: string) => boolean | Promise<boolean>
+  sessionsSinceShown: (id: string) => number
+  lifetimeShown: (id: string) => number
+  hasFailed: (id: string) => boolean
+  markFailed: (id: string) => void
+  report: (error: unknown, cause: string) => void
+}
+export type SpinnerTipFailureHandler317 = Pick<SpinnerTipEligibility317, 'markFailed' | 'report'>
+
 /**
  * Spinner-tip eligibility in 2.1.310.
  *
@@ -5,10 +19,10 @@
  * Dependencies are supplied by the caller so eligibility never depends on UI state
  * and can be tested with actual command and provider policies.
  */
-export async function selectEligibleTips(candidates, {
+export async function selectEligibleTips(candidates: Tip[], {
   isFirstPartyBackend, isCommandOffered, sessionsSinceShown, lifetimeShown,
   hasFailed, markFailed, report,
-}) {
+}: SpinnerTipEligibility317): Promise<Tip[]> {
   const selected = await Promise.all(candidates.map(async tip => {
     if (hasFailed(tip.id)) return false
     if (!isFirstPartyBackend && tip.providerAgnostic !== true) return false
@@ -37,7 +51,7 @@ export async function selectEligibleTips(candidates, {
 }
 
 /** Prefer the tip not seen for longest; priority only breaks a tie. */
-export function selectLongestUnshown(availableTips, sessionsSinceShown) {
+export function selectLongestUnshown(availableTips: Tip[], sessionsSinceShown: (id: string) => number): Tip | undefined {
   return availableTips.map(tip => ({
     tip, sessions: sessionsSinceShown(tip.id),
   })).sort((a, b) =>
@@ -48,7 +62,7 @@ export function selectLongestUnshown(availableTips, sessionsSinceShown) {
 }
 
 /** A broken tip must not blank the REPL or increment its impression count. */
-export async function resolveTipContent(tip, theme, { markFailed, report }) {
+export async function resolveTipContent(tip: Tip, theme: ThemeName, { markFailed, report }: SpinnerTipFailureHandler317): Promise<string> {
   try {
     return await tip.content({ theme })
   } catch (error) {
