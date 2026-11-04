@@ -98,7 +98,8 @@ function verifySocketPath(socketPath) {
 
 /** Original 317 rhr() drops individual invalid env keys and accepts other valid keys. */
 export function filterPreloadEnvironment317(environment) {
-  const kept = {}
+  // Null prototype preserves an own '__proto__' key from JSON safely.
+  const kept = Object.create(null)
   const dropped = []
   for (const [name, value] of Object.entries(environment)) {
     const problem = INVALID_ENV_NAME_317.test(name) ? 'invalid-name'
