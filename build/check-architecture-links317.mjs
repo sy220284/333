@@ -23,6 +23,7 @@ const contracts = [
   ['M1', 'src/bootstrap/claimRebind317.ts', 'src/utils/config.ts'],
   ['M1', 'src/bootstrap/claimRebind317.ts', 'src/utils/settings/settingsCache.ts'],
   ['M1', 'src/bootstrap/claimRebind317.ts', 'src/utils/settings/mdm/rawRead.ts'],
+  ['M1', 'src/bootstrap/claimRebind317.ts', 'src/utils/sessionStorage.ts'],
   ['M2', 'src/screens/REPL.tsx', 'src/query.ts'],
   ['M2', 'src/QueryEngine.ts', 'src/query.ts'],
   ['M3', 'src/query.ts', 'src/services/tools/StreamingToolExecutor.ts'],
@@ -84,6 +85,31 @@ for (const [label, needle] of [
   if (normalEntry < 0 || index < 0 || index >= normalEntry) {
     failures.push('M1: ' + label + ' must dispatch before interactive main import')
   }
+}
+
+// Keep one CLI flag registration. Duplicate Commander options prevent the
+// entire inference and tool execution process from starting.
+const main = read('src/main.tsx')
+const permissionPromptRegistrationCount = [
+  ...main.matchAll(/(?:new Option|program\.option)\(['"]--permission-prompt-tool\s/g),
+].length
+if (permissionPromptRegistrationCount !== 1 ||
+    !main.includes('permissionPromptToolName: options.permissionPromptTool')) {
+  failures.push('M3: --permission-prompt-tool requires one CLI registration and the headless consumer')
+}
+const headless = read('src/cli/print.ts')
+if (!headless.includes('getCanUseToolFn(') ||
+    !headless.includes('toolMatchesName(t, permissionPromptToolName)')) {
+  failures.push('M2/M3: permission prompt MCP tool must reach its permission dispatcher')
+}
+
+// A warmed process may change config home while retaining the same cwd.
+const claimRebind = read('src/bootstrap/claimRebind317.ts')
+const invalidateConfigAt = claimRebind.indexOf('envUtils.getClaudeConfigHomeDir.cache.clear()')
+const resetStorageAt = claimRebind.indexOf('await rebindSessionStorageForClaim317()')
+if (invalidateConfigAt < 0 || resetStorageAt <= invalidateConfigAt ||
+    !read('src/utils/sessionStorage.ts').includes('sessionTranscriptPaths.clear()')) {
+  failures.push('M1/M4: claimed Storage V5 ownership must reset after config home invalidation')
 }
 
 if (failures.length) {
