@@ -46,6 +46,21 @@ test('gateway 317: config validates secret, DB, IdP and untrusted public exposur
   })).toThrow('requires https')
 })
 
+test('gateway 317: official JWT secret rotation keeps old sessions while signing with first secret', () => {
+  const old = 'old-secret-'.repeat(5)
+  const next = 'new-secret-'.repeat(5)
+  const issuer = 'https://gateway.example.test'
+  const legacy = signGatewaySession317({ sub:'employee' }, old, issuer, 1)
+  const rotated = signGatewaySession317({ sub:'employee' }, [next, old], issuer, 1)
+  expect(verifyGatewaySession317(legacy, [next, old], issuer)?.sub).toBe('employee')
+  expect(verifyGatewaySession317(rotated, next, issuer)?.sub).toBe('employee')
+  expect(verifyGatewaySession317(rotated, old, issuer)).toBeNull()
+  expect(validateGatewayConfig317({
+    ...configuration('https://api.anthropic.com'),
+    session:{ jwt_secret:[next,old] },
+  }).session.jwt_secret).toEqual([next,old])
+})
+
 test('gateway 317: session signature, expiry and origin are checked', () => {
   const signed = signGatewaySession317({ sub:'alice',groups:['engineering'] },
     secret,'https://gw.example.test',1)
