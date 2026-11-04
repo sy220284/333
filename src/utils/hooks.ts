@@ -120,7 +120,7 @@ import type {
 } from './settings/types.js'
 import { getHookDisplayText } from './hooks/hooksSettings.js'
 import { logForDebugging } from './debug.js'
-import { capPreCompactHookOutput } from './hooks/preCompactOutput.mjs'
+import { capPreCompactHookOutput } from './hooks/preCompactOutput.ts'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { firstLineOf } from './stringUtils.js'
 import {
@@ -143,14 +143,14 @@ import {
 } from './hooks/hookEvents.js'
 import { createAttachmentMessage } from './attachments.js'
 import { all } from './generators.js'
-import { acquireHookPermit, limitHookGenerator } from './hooks/hookConcurrency.mjs'
+import { acquireHookPermit, limitHookGenerator } from './hooks/hookConcurrency.ts'
 import { findToolByName, type Tools, type ToolUseContext } from '../Tool.js'
 import { execPromptHook } from './hooks/execPromptHook.js'
 import type { Message, AssistantMessage } from '../types/message.js'
 import { execAgentHook } from './hooks/execAgentHook.js'
 import { execHttpHook } from './hooks/execHttpHook.js'
-import { classifySdkCallbackFailure } from './hooks/callbackFailurePolicy.mjs'
-import { resolveHookTimeoutMs } from './hooks/hookTimeout.mjs'
+import { classifySdkCallbackFailure } from './hooks/callbackFailurePolicy.ts'
+import { resolveHookTimeoutMs } from './hooks/hookTimeout.ts'
 import type { ShellCommand } from './ShellCommand.js'
 import {
   getSessionHooks,

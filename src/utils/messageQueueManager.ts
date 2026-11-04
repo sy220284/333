@@ -18,8 +18,8 @@ import { extractTextContent } from './messages.js'
 import { objectGroupBy } from './objectGroupBy.js'
 import { recordQueueOperation } from './sessionStorage.js'
 import { createSignal } from './signal.js'
-import { QUEUE_PRIORITY_ORDER as PRIORITY_ORDER, sortQueuedCommandsByPriority } from './queuePriority317.mjs'
-import { createDiscardedQueueRecords, createQueueOperationRecord, partitionQueueForClear } from './queueOperation317.mjs'
+import { QUEUE_PRIORITY_ORDER as PRIORITY_ORDER, sortQueuedCommandsByPriority } from './queuePriority317.ts'
+import { createDiscardedQueueRecords, createQueueOperationRecord, partitionQueueForClear } from './queueOperation317.ts'
 
 export type SetAppState = (f: (prev: AppState) => AppState) => void
 

@@ -12,7 +12,7 @@ import type { AgentDefinitionsResult } from '../tools/AgentTool/loadAgentsDir.js
 import { getAgentDescriptionsTotalTokens, AGENT_DESCRIPTIONS_THRESHOLD } from './statusNoticeHelpers.js';
 import { isSupportedJetBrainsTerminal, toIDEDisplayName, getTerminalIdeType } from './ide.js';
 import { isJetBrainsPluginInstalledCachedSync } from './jetbrains.js';
-import { getIgnoredProjectTelemetryEnvKeys } from './telemetry/projectTelemetryPolicy.mjs';
+import { getIgnoredProjectTelemetryEnvKeys } from './telemetry/projectTelemetryPolicy.ts';
 
 // Types
 export type StatusNoticeType = 'warning' | 'info';

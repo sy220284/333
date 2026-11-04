@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { registerCleanup } from './cleanupRegistry.js'
-import { wrapCrossSessionMessage } from './peerMessageEnvelope.mjs'
+import { wrapCrossSessionMessage } from './peerMessageEnvelope.ts'
 import { logForDebugging } from './debug.js'
 
 let activeServer: Server | null = null

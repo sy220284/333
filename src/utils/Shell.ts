@@ -1,4 +1,4 @@
-import { cleanBashSpawnEnvironment } from './bash/childEnv.mjs'
+import { cleanBashSpawnEnvironment } from './bash/childEnv.ts'
 import { execFileSync, spawn } from 'child_process'
 import { constants as fsConstants, readFileSync, unlinkSync } from 'fs'
 import { type FileHandle, mkdir, open, realpath } from 'fs/promises'

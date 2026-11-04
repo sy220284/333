@@ -21,7 +21,7 @@ import {
 import {
   hasFullReadResultContent,
   isPartialReadResult,
-} from '../services/compact/preservedReadPaths.mjs'
+} from '../services/compact/preservedReadPaths.ts'
 import { FILE_WRITE_TOOL_NAME } from '../tools/FileWriteTool/prompt.js'
 import type { Message } from '../types/message.js'
 import type { OrphanedPermission } from '../types/textInputTypes.js'

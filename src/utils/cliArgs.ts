@@ -1,4 +1,4 @@
-import { getCliFlagValue } from './cliArgv317.mjs'
+import { getCliFlagValue } from './cliArgv317.ts'
 
 /**
  * Parse a CLI flag value early, before Commander.js processes arguments.

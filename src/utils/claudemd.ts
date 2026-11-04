@@ -46,7 +46,7 @@ import {
   getOriginalCwd,
 } from '../bootstrap/state.js'
 import { truncateEntrypointContent } from '../memdir/memdir.js'
-import { shouldLexMemoryContent } from './memoryLexGate.mjs'
+import { shouldLexMemoryContent } from './memoryLexGate.ts'
 import { getAutoMemEntrypoint, isAutoMemoryEnabled } from '../memdir/paths.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import {
