@@ -1,4 +1,6 @@
 import { createRequire } from 'node:module'
+import { existsSync, realpathSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 
 /**
  * Claude Code 2.1.317 Linux native clipboard extension. The shipped N-API
@@ -17,7 +19,22 @@ function nativeClipboardAddon() {
   if (attempted) return cached
   attempted = true
   const platform = process.arch + '-linux'
+  // Production --compile executables are installed via aliases/symlinks.
+  // Locate the verified addon beside the physical executable first, matching
+  // native audio and ripgrep resource resolution.
+  const installedRoot = dirname(realpathSync(process.execPath))
   for (const suffix of [platform, platform + '-musl']) {
+    const packagedAddon = join(installedRoot, 'vendor', 'clipboard-napi',
+      suffix, 'clipboard-napi.node')
+    if (existsSync(packagedAddon)) {
+      const addon = load(packagedAddon)
+      if (typeof addon?.setLinuxClipboardText !== 'function' ||
+          typeof addon?.getLinuxClipboardText !== 'function') {
+        throw new Error('Official 2.1.317 clipboard addon ABI mismatch: ' + packagedAddon)
+      }
+      cached = addon
+      return cached
+    }
     for (const path of [
       './vendor/clipboard-napi/' + suffix + '/clipboard-napi.node',
       '../clipboard-napi/' + suffix + '/clipboard-napi.node',
