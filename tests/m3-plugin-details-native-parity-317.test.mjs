@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
@@ -49,7 +49,19 @@ test('317 plugin details: native and rebuilt commands match installed inventory,
       const missing = invoke(['plugin', 'details', 'not-installed-example'])
       assert.equal(missing.status, 1, missing.err + missing.out)
       assert.match(missing.out, /not found.*claude plugin list/)
+      // The official listing surfaces a corrupt user-skill plugin, including
+      // the error type and manifest path, instead of reporting an empty list.
+      const malformed = join(configDir, 'skills', 'malformed-example', '.claude-plugin')
+      mkdirSync(malformed, { recursive: true })
+      writeFileSync(join(malformed, 'plugin.json'), '{ invalid json\\n')
+      const malformedJson = invoke(['plugin', 'list', '--json'])
+      const malformedHuman = invoke(['plugin', 'list'])
+      assert.equal(malformedJson.status, 0, malformedJson.err + malformedJson.out)
+      assert.equal(malformedHuman.status, 0, malformedHuman.err + malformedHuman.out)
+      assert.match(malformedJson.out, /manifest-parse-error/)
       outputs[kind] = {
+        invalidJson: malformedJson.out.replaceAll(configDir, '<config>'),
+        invalidHuman: malformedHuman.out.replaceAll(configDir, '<config>'),
         basic, missing, fullInventory: full.out.split('Projected token cost')[0],
         fullHasCost: full.out.includes('Per-component (rounded)'),
         list: listJson.out.replaceAll(configDir, '<config>'),
