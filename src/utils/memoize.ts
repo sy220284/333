@@ -15,7 +15,7 @@ type MemoizedFunction<Args extends unknown[], Result> = {
   }
 }
 
-type LRUMemoizedFunction<Args extends unknown[], Result> = {
+export type LRUMemoizedFunction<Args extends unknown[], Result> = {
   (...args: Args): Result
   cache: {
     clear: () => void
