@@ -2,6 +2,7 @@ import { readFile, readdir, stat } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import type { LoadedPlugin } from '../../types/plugin.js'
 import { loadAllPlugins } from '../../utils/plugins/pluginLoader.js'
+import { coerceDescriptionToString, parseFrontmatter } from '../../utils/frontmatterParser.js'
 
 type Member = { name: string; path: string }
 async function list(path?: string) {
@@ -75,11 +76,15 @@ async function scan(plugin: LoadedPlugin) {
     : keys(l).concat(keys(plugin.manifest.lspServers))
   return { commands: c, agents: a, skills: s, hooks: h, mcp: [...new Set(mcp)], lsp: [...new Set(lsp)] }
 }
-async function cost(m: Member): Promise<{ always: number; invoke: number }> {
-  const text = await readFile(m.path, 'utf8')
-  const fm = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text)
-  const desc = fm?.[1]?.match(/^\s*description:\s*(.*)/m)?.[1] ?? m.name
-  return { always: (m.name + ': ' + desc).length, invoke: (fm ? text.slice(fm[0].length) : text).trim().length }
+async function cost(m: Member, namespace?: string): Promise<{ always: number; invoke: number }> {
+  const raw = await readFile(m.path, 'utf8')
+  const parsed = parseFrontmatter(raw, m.path)
+  const description = coerceDescriptionToString(parsed.frontmatter.description, m.name) ?? m.name
+  const whenToUse = parsed.frontmatter['when-to-use']
+  const qualified = namespace ? namespace + ':' + m.name : m.name
+  const meta = [qualified, description, whenToUse == null ? '' : String(whenToUse)]
+    .filter(Boolean).join(' ')
+  return { always: meta.length, invoke: parsed.content.trim().length }
 }
 const estimate = (n: number) => Math.round(n / 4)
 const display = (n: number) => n < 20 ? '< 20' : '~' + Math.round(n / 10) * 10
@@ -114,7 +119,10 @@ export async function pluginDetailsHandler(name: string): Promise<void> {
   for (const [label, names, suffix] of entries)
     lines.push('  ' + label + ' (' + names.length + ')' + (names.length ? '  ' + names.join(', ') + suffix : ''))
   const members = [...v.skills, ...v.agents, ...v.commands]
-  const size = await Promise.all(members.map(cost))
+  const size = await Promise.all(members.map((member, index) =>
+    cost(member, index < v.skills.length || index >= v.skills.length + v.agents.length
+      ? plugin.name : undefined),
+  ))
   const always = size.reduce((sum, member) => sum + member.always, 0)
   lines.push('', 'Projected token cost',
     '  Always-on:   ~' + estimate(always).toLocaleString() + ' tok   added to every session')
