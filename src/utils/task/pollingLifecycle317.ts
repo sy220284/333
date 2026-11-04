@@ -3,12 +3,23 @@
  * timer and prevent responses to in-flight requests from scheduling again.
  * Timer methods are injectable for deterministic lifecycle tests.
  */
-export function createPollingLifecycle(timers = {
-  schedule: (callback, delay) => setTimeout(callback, delay),
-  cancel: handle => clearTimeout(handle),
-}) {
+export type PollingTimers317<Handle> = {
+  schedule(callback: () => void, delay: number): Handle
+  cancel(handle: Handle): void
+}
+export type PollingLifecycle317 = {
+  readonly active: boolean
+  schedule(callback: () => void | Promise<void>, delay: number): void
+  stop(): void
+}
+export function createPollingLifecycle<Handle = ReturnType<typeof setTimeout>>(
+  timers: PollingTimers317<Handle> = {
+    schedule: (callback: () => void, delay: number) => setTimeout(callback, delay) as Handle,
+    cancel: (handle: Handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+  },
+): PollingLifecycle317 {
   let active = true
-  let pending
+  let pending: Handle | undefined
   return {
     get active() { return active },
     schedule(callback, delay) {
