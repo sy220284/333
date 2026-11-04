@@ -2,7 +2,7 @@ import { getRemoteManagedSettingsSyncFromCache } from '../remoteManagedSettings/
 import { logForDebugging } from '../../utils/debug.js'
 import { isSettingSourceEnabled } from '../../utils/settings/constants.js'
 import { getSettingsForSource } from '../../utils/settings/settings.js'
-import { createCustomTipProvider } from './customTips.mjs'
+import { createCustomTipProvider } from './customTips.ts'
 
 // Keep one cache for this process, matching the target's once-per-session file read.
 const provider = createCustomTipProvider({
