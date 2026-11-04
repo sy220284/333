@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { createDiscardedQueueRecords, createQueueOperationRecord } from '../src/utils/queueOperation317.mjs'
+import { createDiscardedQueueRecords, createQueueOperationRecord, partitionQueueForClear } from '../src/utils/queueOperation317.mjs'
 
 test('2.1.317 queue: journal links enqueue, dequeue and removal by UUID', () => {
   const sessionId = 'session-317'
@@ -70,4 +70,34 @@ test('317 清空队列: 逐条记录取消，跳过未记录和仍在检查的�
   assert.deepEqual(records.map(record => record.commandUuid), ['user-317', 'image-317'])
   assert.ok(records.every(record => record.reason === 'cleared_on_cancel'))
   assert.equal(JSON.stringify(records).includes('PRIVATE-IMAGE'), false)
+})
+
+test('317 条件清理: 保留远端通知，仅记录丢弃的本地消息', () => {
+  const queue = [
+    { uuid: 'user-1', value: 'cancel me', mode: 'prompt' },
+    { uuid: 'peer-1', value: 'retain peer', origin: { kind: 'peer' } },
+    { uuid: 'task-1', value: 'retain notification', mode: 'task-notification' },
+  ]
+  const { retained, discarded } = partitionQueueForClear(
+    queue, command => command.origin?.kind === 'peer' || command.mode === 'task-notification',
+  )
+  assert.deepEqual(retained.map(command => command.uuid), ['peer-1', 'task-1'])
+  assert.deepEqual(discarded.map(command => command.uuid), ['user-1'])
+  assert.deepEqual(
+    createDiscardedQueueRecords(discarded, 'session-317').map(record => record.commandUuid),
+    ['user-1'],
+  )
+  assert.deepEqual(queue.map(command => command.uuid), ['user-1', 'peer-1', 'task-1'])
+})
+
+test('317 条件清理: 保留条件报错时原队列内容保持不变', () => {
+  const queue = [{ uuid: 'first' }, { uuid: 'second' }]
+  assert.throws(
+    () => partitionQueueForClear(queue, command => {
+      if (command.uuid === 'second') throw Error('predicate failure')
+      return true
+    }),
+    /predicate failure/,
+  )
+  assert.deepEqual(queue.map(command => command.uuid), ['first', 'second'])
 })
