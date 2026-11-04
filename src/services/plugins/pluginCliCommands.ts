@@ -103,10 +103,11 @@ function handlePluginCommandError(
 export async function installPlugin(
   plugin: string,
   scope: InstallableScope = 'user',
+  json = false,
 ): Promise<void> {
   try {
     // biome-ignore lint/suspicious/noConsole:: intentional console output
-    console.log(`Installing plugin "${plugin}"...`)
+    if (!json) console.log(`Installing plugin "${plugin}"...`)
 
     const result = await installPluginOp(plugin, scope)
 
@@ -115,7 +116,18 @@ export async function installPlugin(
     }
 
     // biome-ignore lint/suspicious/noConsole:: intentional console output
-    console.log(`${figures.tick} ${result.message}`)
+    if (json) {
+      writeToStdout(`${JSON.stringify({
+        command: 'install',
+        outcome: 'ok',
+        plugin,
+        pluginId: result.pluginId ?? plugin,
+        scope: result.scope ?? scope,
+        message: result.message,
+      })}\n`)
+    } else {
+      console.log(`${figures.tick} ${result.message}`)
+    }
 
     // _PROTO_* routes to PII-tagged plugin_name/marketplace_name BQ columns.
     // Unredacted plugin_id was previously logged to general-access
@@ -141,6 +153,17 @@ export async function installPlugin(
     // eslint-disable-next-line custom-rules/no-process-exit
     process.exit(0)
   } catch (error) {
+    if (json) {
+      const category = classifyPluginCommandError(error)
+      writeToStdout(`${JSON.stringify({
+        command: 'install',
+        outcome: 'failed',
+        plugin,
+        scope,
+        message: errorMessage(error),
+        failureCode: category === 'not-found' ? 'not_found' : category,
+      })}\n`)
+    }
     handlePluginCommandError(error, 'install', plugin)
   }
 }
