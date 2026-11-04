@@ -218,15 +218,6 @@ export type FileReadOutput =
          */
         outputDir: string;
       };
-    }
-  | {
-      type: "file_unchanged";
-      file: {
-        /**
-         * The path to the file
-         */
-        filePath: string;
-      };
     };
 export type ListMcpResourcesOutput = {
   /**
