@@ -151,32 +151,20 @@ function copyNative(text: string): boolean {
         case 'wl-copy': {
           const generation = ++waylandCopyGeneration
           void (async () => {
-            const result = await execFileNoThrow('wl-copy', [], {
-              ...opts, useToolMemoryCgroup: false,
-            })
+            const result = await execFileNoThrow('wl-copy', [], opts)
             if (result.code === 0 && generation === waylandCopyGeneration) {
-              await execFileNoThrow('wl-copy', ['--primary'], {
-                ...opts, useToolMemoryCgroup: false,
-              })
+              await execFileNoThrow('wl-copy', ['--primary'], opts)
             }
           })()
           return true
         }
         case 'xclip':
-          void execFileNoThrow('xclip', ['-selection', 'clipboard'], {
-            ...opts, useToolMemoryCgroup: false,
-          })
-          void execFileNoThrow('xclip', ['-selection', 'primary'], {
-            ...opts, useToolMemoryCgroup: false,
-          })
+          void execFileNoThrow('xclip', ['-selection', 'clipboard'], opts)
+          void execFileNoThrow('xclip', ['-selection', 'primary'], opts)
           return true
         case 'xsel':
-          void execFileNoThrow('xsel', ['--clipboard', '--input'], {
-            ...opts, useToolMemoryCgroup: false,
-          })
-          void execFileNoThrow('xsel', ['--primary', '--input'], {
-            ...opts, useToolMemoryCgroup: false,
-          })
+          void execFileNoThrow('xsel', ['--clipboard', '--input'], opts)
+          void execFileNoThrow('xsel', ['--primary', '--input'], opts)
           return true
         case 'addon': {
           const result = writeLinuxClipboardNative(text)
