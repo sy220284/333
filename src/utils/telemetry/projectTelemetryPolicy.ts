@@ -7,20 +7,20 @@
  * source. Keeping this pure makes the trust boundary testable without a
  * telemetry exporter or network.
  */
-const truthy = v => ['true','1','yes','on'].includes(String(v).trim().toLowerCase())
+const truthy = (v: unknown): boolean => ['true','1','yes','on'].includes(String(v).trim().toLowerCase())
 
 /**
  * The target 2.1.310 runtime trace gate is explicit opt-in only.
  * Either trusted environment variable can enable it; no test/internal
  * build flag and no automatic usage-based rollout changes that result.
  */
-export function isEnhancedTracingOptedIn(env) {
+export function isEnhancedTracingOptedIn(env: Readonly<Record<string, string | undefined>>): boolean {
   const value = env.CLAUDE_CODE_ENHANCED_TELEMETRY_BETA ??
     env.ENABLE_ENHANCED_TELEMETRY_BETA
   return truthy(value)
 }
 
-export function isPrivilegedTelemetrySetting(name, value) {
+export function isPrivilegedTelemetrySetting(name: string, value: unknown): boolean {
   const key = name.toUpperCase()
   // A lower-trust project must not undo a user/managed decision to disable
   // collection or nonessential network traffic. False is the privileged
@@ -91,18 +91,21 @@ export function isPrivilegedTelemetrySetting(name, value) {
  * merged settings. Existing process-spawn env is not touched. Lower-trust
  * settings are still allowed to *disable* exports and content capture.
  */
-let ignoredProjectTelemetryEnvKeys = []
+let ignoredProjectTelemetryEnvKeys: string[] = []
 
 /**
  * Names only (never secret values). Used by /status and /doctor to explain
  * which project settings were not applied. Recomputed on each settings pass.
  */
-export function getIgnoredProjectTelemetryEnvKeys() {
+export function getIgnoredProjectTelemetryEnvKeys(): string[] {
   return [...ignoredProjectTelemetryEnvKeys]
 }
 
-export function resolveProjectTelemetryEnv(mergedEnv, trustedEnv) {
-  const ignored = new Set()
+export function resolveProjectTelemetryEnv(
+  mergedEnv: Readonly<Record<string, string | undefined>>,
+  trustedEnv: Readonly<Record<string, string | undefined>>,
+): Record<string, string | undefined> {
+  const ignored = new Set<string>()
   const result = { ...mergedEnv }
   for (const [key, value] of Object.entries(result)) {
     const upper = key.toUpperCase()
