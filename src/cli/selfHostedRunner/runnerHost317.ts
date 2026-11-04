@@ -259,6 +259,10 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
   }
 }
 
+export class RunnerUsageError317 extends Error {
+  readonly exitCode = 2
+  readonly name = 'RunnerUsageError317'
+}
 type CliOptions = { apiUrl: string; secretFile?: string; capacity: number; baseDir: string;
   execPath: string; pollMs: number; drainMs: number; clientLabel?: string;
   lockToAccountId?: string; agentProxyUrl?: string }
@@ -280,10 +284,10 @@ function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions 
       '--capacity','--base-dir','--exec-path','--client-label','--lock-to-account',
       '--agent-proxy-url','--poll-interval-ms','--drain-wait-sec',
       '--drain-wait-bg-tasks-sec'].includes(flag)){
-      throw new Error('Unknown self-hosted-runner argument: '+flag)
+      throw new RunnerUsageError317('unknown flag '+flag)
     }
     const value=argv[++i]
-    if(!value || value.startsWith('--')) throw new Error(flag+' requires a value')
+    if(!value || value.startsWith('--')) throw new RunnerUsageError317('flag '+flag+' requires a value')
     switch(flag){
       case '--api-url': parsed.apiUrl=value;break
       case '--environment-secret-file':
@@ -299,15 +303,18 @@ function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions 
       case '--drain-wait-bg-tasks-sec': parsed.drainMs=Number(value)*1000;break
     }
   }
-  if(!parsed.baseDir) throw new Error('Runner base directory must be specified on Windows')
+  if(!Number.isSafeInteger(parsed.capacity) || parsed.capacity<1) {
+    throw new RunnerUsageError317('--capacity must be a positive integer, got: '+String(parsed.capacity))
+  }
+  if(!parsed.baseDir) throw new RunnerUsageError317('--base-dir is required on Windows')
   if(parsed.agentProxyUrl){
     const url=new URL(parsed.agentProxyUrl)
     if(url.protocol!=='https:' || url.username || url.password) {
-      throw new Error('Agent proxy must be an HTTPS URL without embedded credentials')
+      throw new RunnerUsageError317('--agent-proxy-url must use https:// and contain no embedded credentials')
     }
   }
-  if(!Number.isSafeInteger(parsed.pollMs)||parsed.pollMs<250) throw new Error('Invalid runner polling interval')
-  if(!Number.isSafeInteger(parsed.drainMs)||parsed.drainMs<0) throw new Error('Invalid runner drain wait')
+  if(!Number.isSafeInteger(parsed.pollMs)||parsed.pollMs<250) throw new RunnerUsageError317('Invalid runner polling interval')
+  if(!Number.isSafeInteger(parsed.drainMs)||parsed.drainMs<0) throw new RunnerUsageError317('Invalid runner drain wait')
   return parsed
 }
 
@@ -323,11 +330,19 @@ export async function selfHostedRunnerMain317(argv: readonly string[]): Promise<
       '  --drain-wait-sec <n>           Wait before terminating active sessions\n')
     return
   }
-  const secret=config.secretFile
-    ? (await readFile(config.secretFile,'utf8')).trim()
-    : (process.env.SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET ??
+  let secret: string | undefined
+  if (config.secretFile) {
+    try { secret=(await readFile(config.secretFile,'utf8')).trim() }
+    catch (error) {
+      throw new RunnerUsageError317('Failed to read environment secret file '+
+        config.secretFile+' ('+(error instanceof Error ? error.message : String(error))+')')
+    }
+  } else {
+    secret=(process.env.SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET ??
       process.env.SELF_HOSTED_RUNNER_POOL_SECRET)?.trim()
-  if(!secret) throw new Error('Self-hosted runner requires an environment secret')
+  }
+  if(!secret) throw new RunnerUsageError317(
+    'No environment secret provided. Use --environment-secret-file or set SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET.')
   const api=new SelfHostedRunnerApi317({baseUrl:config.apiUrl,poolSecret:secret,
     agentProxyUrl:config.agentProxyUrl})
   const controller=new AbortController()
