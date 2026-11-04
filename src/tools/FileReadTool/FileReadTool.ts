@@ -236,6 +236,9 @@ const inputSchema = lazySchema(() =>
       .describe(
         `Page range for PDF files (e.g., "1-5", "3", "10-20"). Only applicable to PDF files. Maximum ${PDF_MAX_PAGES_PER_READ} pages per request.`,
       ),
+    allow_large: z.boolean().optional().describe(
+      'Set to true to read a text file, or a line range of one, that is over the usual size limits, up to what still fits in your context. Only use this when you genuinely need all of it or the user asked for the whole file; otherwise read it in parts with offset and limit, or search it.',
+    ),
   }),
 )
 type InputSchema = ReturnType<typeof inputSchema>
@@ -336,6 +339,10 @@ export const FileReadTool = buildTool({
     return DESCRIPTION
   },
   async prompt() {
+    // The 2.1.317 native --bare tool advertises the compact search hint.
+    if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
+      return 'read files, images, PDFs, notebooks'
+    }
     const limits = getDefaultFileReadingLimits()
     const maxSizeInstruction = limits.includeMaxSizeInPrompt
       ? `. Files larger than ${formatFileSize(limits.maxSizeBytes)} will return an error; use offset and limit for larger files`
@@ -485,7 +492,7 @@ export const FileReadTool = buildTool({
     return { result: true }
   },
   async call(
-    { file_path, offset = 1, limit = undefined, pages },
+    { file_path, offset = 1, limit = undefined, pages, allow_large = false },
     context,
     _canUseTool?,
     parentMessage?,
@@ -543,6 +550,7 @@ export const FileReadTool = buildTool({
         readFileState,
         context,
         parentMessage?.message.id,
+        allow_large,
       )
     } catch (error) {
       // Handle file-not-found: suggest similar files
@@ -566,6 +574,7 @@ export const FileReadTool = buildTool({
               readFileState,
               context,
               parentMessage?.message.id,
+              allow_large,
             )
           } catch (altError) {
             if (!isENOENT(altError)) {
@@ -747,6 +756,7 @@ async function callInner(
   readFileState: ToolUseContext['readFileState'],
   context: ToolUseContext,
   messageId: string | undefined,
+  allowLarge = false,
 ): Promise<{
   data: Output
   newMessages?: ReturnType<typeof createUserMessage>[]
@@ -956,7 +966,11 @@ async function callInner(
       resolvedFilePath,
       lineOffset,
       limit,
-      limit === undefined ? maxSizeBytes : undefined,
+      // allow_large applies to text only. Keep the model's token budget
+      // as the ultimate cap; expand the byte cap enough for dense text.
+      limit === undefined
+        ? (allowLarge ? Math.max(maxSizeBytes, maxTokens * 16) : maxSizeBytes)
+        : undefined,
       context.abortController.signal,
     )
 
