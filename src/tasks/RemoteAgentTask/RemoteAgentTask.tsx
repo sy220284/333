@@ -16,6 +16,7 @@ import { deleteRemoteAgentMetadata, listRemoteAgentMetadata, type RemoteAgentMet
 import { jsonStringify } from '../../utils/slowOperations.js';
 import { appendTaskOutput, evictTaskOutput, getTaskOutputPath, initTaskOutput } from '../../utils/task/diskOutput.js';
 import { registerTask, updateTaskState } from '../../utils/task/framework.js';
+import { createPollingLifecycle } from '../../utils/task/pollingLifecycle317.mjs';
 import { fetchSession } from '../../utils/teleport/api.js';
 import { archiveRemoteSession, pollRemoteSessionEvents } from '../../utils/teleport.js';
 import type { TodoList } from '../../utils/todo/types.js';
@@ -539,7 +540,7 @@ async function restoreRemoteAgentTasksImpl(context: TaskContext): Promise<void> 
  * Returns a cleanup function to stop polling.
  */
 function startRemoteSessionPolling(taskId: string, context: TaskContext): () => void {
-  let isRunning = true;
+  const polling = createPollingLifecycle();
   const POLL_INTERVAL_MS = 1000;
   const reviewTimeout = getUltrareviewClientTimeout();
   const REMOTE_REVIEW_TIMEOUT_MS = reviewTimeout.milliseconds;
@@ -554,7 +555,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
   // at end of run; scanning only the delta (response.newEvents) is O(new).
   let cachedReviewContent: string | null = null;
   const poll = async (): Promise<void> => {
-    if (!isRunning) return;
+    if (!polling.active) return;
     try {
       const appState = context.getAppState();
       const task = appState.tasks?.[taskId] as RemoteAgentTaskState | undefined;
@@ -566,6 +567,8 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
         return;
       }
       const response = await pollRemoteSessionEvents(task.sessionId, lastEventId);
+      // Stop may arrive while HTTP is in flight; do not publish stale results.
+      if (!polling.active) return;
       lastEventId = response.lastEventId;
       const logGrew = response.newEvents.length > 0;
       if (logGrew) {
@@ -787,19 +790,15 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
       }
     }
 
-    // Continue polling
-    if (isRunning) {
-      setTimeout(poll, POLL_INTERVAL_MS);
-    }
+    // Schedule through the task-owned timer so stop() can cancel it.
+    polling.schedule(poll, POLL_INTERVAL_MS);
   };
 
   // Start polling
   void poll();
 
   // Return cleanup function
-  return () => {
-    isRunning = false;
-  };
+  return () => polling.stop();
 }
 
 /**
