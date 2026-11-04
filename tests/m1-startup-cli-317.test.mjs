@@ -80,3 +80,27 @@ test('real model requests preserve --desktop prompt text and the final settings 
     server.closeAllConnections(); await new Promise(done => server.close(done)); rmSync(home, { recursive: true, force: true, maxRetries: 3 })
   }
 })
+
+test('official desktop/background conflict fails before loading Desktop or interactive CLI', () => {
+  const cases = [
+    { args: ['--desktop', '--bg'], message: "--desktop opens the Claude Desktop app and can't run in the background" },
+    { args: ['--desktop', '--background'], message: "--desktop opens the Claude Desktop app and can't run in the background" },
+    { args: ['--desktop', 'logs', 'deadbeef'], message: "--desktop can't be combined with \`claude logs\`." },
+    { args: ['--settings={}', '--desktop', 'stop', 'deadbeef'], message: "--desktop can't be combined with \`claude stop\`." },
+  ]
+  const targets = [['rebuilt', process.execPath, [cli]]]
+  if (process.env.CLAUDE_TARGET_X64) targets.push(['official', process.env.CLAUDE_TARGET_X64, []])
+  for (const [label, bin, prefix] of targets) {
+    // Under the rebuild test suite process.execPath points to Node; use Bun for the bundled CLI.
+    const executable = label === 'rebuilt' ? 'bun' : bin
+    for (const { args, message } of cases) {
+      const result = spawnSync(executable, [...prefix, ...args], {
+        cwd: resolve(import.meta.dirname, '..'), encoding: 'utf8', timeout: 12_000,
+        env: { ...process.env, DISABLE_TELEMETRY: '1', CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' },
+      })
+      assert.ifError(result.error)
+      assert.equal(result.status, 1, label + ' ' + JSON.stringify(result))
+      assert.ok(result.stderr.includes(message), label + ' ' + result.stderr)
+    }
+  }
+})

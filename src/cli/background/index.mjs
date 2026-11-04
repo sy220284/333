@@ -1,3 +1,4 @@
+import { backgroundSessionVerbIndex317, hasCliFlag } from '../../utils/cliArgv317.mjs'
 import { connect } from 'node:net'
 import { spawn } from 'node:child_process'
 import { open, mkdir } from 'node:fs/promises'
@@ -75,19 +76,6 @@ const VALUE_FLAGS = new Set([
   '--file', '--project-config-root', '--system-prompt-file',
   '--append-system-prompt-file', '--resume-session-at',
 ])
-function verbAt(argv) {
-  let skipValue = false
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]
-    if (arg === '--') return -1
-    if (skipValue) { skipValue = false; continue }
-    if (VALUE_FLAGS.has(arg)) { skipValue = true; continue }
-    if (arg.startsWith('-') && arg.includes('=')) continue
-    if (arg.startsWith('-')) continue
-    return COMMANDS.has(arg) ? i : -1
-  }
-  return -1
-}
 function rootArg(argv, key) {
   const i = argv.indexOf(key)
   return i !== -1 ? argv[i + 1] : undefined
@@ -390,10 +378,11 @@ export async function interceptBackgroundCli(args) {
     await runBackgroundSupervisor()
     return true
   }
-  const at = verbAt(args)
+  const sessionVerbIndex = backgroundSessionVerbIndex317(args)
+  const at = sessionVerbIndex !== -1 ? sessionVerbIndex : (COMMANDS.has(args[0]) ? 0 : -1)
   const verb = at === -1 ? null : args[at]
   const flags = activeBackgroundFlags(args)
-  const bg = flags.has('--bg') || flags.has('--background')
+  const bg = hasCliFlag('--bg', args) || hasCliFlag('--background', args)
   if (!verb && !bg) return false
   if (verb === 'daemon') { await daemon(args.slice(at + 1)); return true }
   if (verb === 'agents') {

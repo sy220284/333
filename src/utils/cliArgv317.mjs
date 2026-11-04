@@ -58,3 +58,30 @@ export function rejectDeepLinkArgumentInjection(argv = process.argv) {
   if (argv.length > index + 2) return 'claude: rejected deep-link invocation — unexpected arguments after the URI.\n' + 'The OS protocol handler passes exactly `--handle-uri <uri>`; extra arguments indicate argument injection via the URL. If invoking --handle-uri manually, place other flags before it.'
   return null
 }
+
+/** 2.1.317 chunk-7bjr5mdw.js: only six session verbs may follow root
+ * options, and only with a full eight-hex-character session ID. This shared
+ * scanner is used by both bootstrap routing and the background dispatcher. */
+const BG_SESSION_VERBS_317 = new Set(['attach', 'logs', 'stop', 'kill', 'respawn', 'rm'])
+const BG_DISALLOWED_PREFIX_317 = new Set(['-p', '--print', '--bg', '--background', '--routine', '-h', '--help', '-v', '-V', '--version'])
+const BG_ROOT_BOOLEAN_317 = new Set(['-d2e', '--debug-to-stderr', '--verbose', '-p', '--print', '--bare', '--safe-mode', '--init', '--init-only', '--maintenance', '--include-hook-events', '--include-partial-messages', '--forward-subagent-text', '--session-mirror', '--await-claim', '--await-initialize', '--dangerously-skip-permissions', '--allow-dangerously-skip-permissions', '--replay-user-messages', '--host-auth-is-org-sign-in', '--enable-auth-status', '--restricted', '--allow-other-models', '--exclude-dynamic-system-prompt-sections', '--include-unsupported-models', '-c', '--continue', '--fork-session', '--deep-link-origin', '--no-session-persistence', '--reply-on-resume', '--ide', '--desktop', '--strict-mcp-config', '--disable-slash-commands', '--chrome', '--no-chrome', '--tmux', '--enable-auto-mode', '--bg', '--background', '--agents-view-if-allowed', '--brief', '--ax-screen-reader', '--plan-mode-required', '--hard-fail'])
+const BG_BAD_VALUE_FLAGS_317 = new Set(['--exec', '-m', '--handle-uri'])
+
+export function backgroundSessionVerbIndex317(argv = process.argv.slice(2), { behindRootOptions = true } = {}) {
+  const at = firstCliPositionalIndex(argv)
+  if (at === -1 || !BG_SESSION_VERBS_317.has(argv[at])) return -1
+  if (at === 0) return 0
+  if (!behindRootOptions || argv[at - 1] === '--') return -1
+  const id = argv[at + 1]
+  if (id === undefined || !(/^[a-f0-9]{8}$/.test(id) || (argv[at] === 'respawn' && id === '--all'))) return -1
+  for (let index = 0; index < at; index = skipValue(argv, index) + 1) {
+    const word = argv[index]
+    if (BG_DISALLOWED_PREFIX_317.has(word) || word.startsWith('--routine=') || /^-[A-Za-z]{2,}$/.test(word)) return -1
+    const eq = word.indexOf('=')
+    const flag = eq === -1 ? word : word.slice(0, eq)
+    if (!BG_ROOT_BOOLEAN_317.has(word) &&
+      !(VALUE_FLAGS.has(flag) && !BG_BAD_VALUE_FLAGS_317.has(flag)) &&
+      !OPTIONAL_VALUE_FLAGS.has(flag)) return -1
+  }
+  return at
+}

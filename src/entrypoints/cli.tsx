@@ -66,7 +66,7 @@ async function main(): Promise<void> {
   // starts remote GC profiling when explicitly enabled, before --version.
   noteProcessStartTuning();
   startGarbageCollectionCount();
-  const { flagWords, backgroundRequest, tmuxWorktreeRequest } = classifyStartupArgs(args);
+  const { flagWords, backgroundRequest, sessionVerbIndex, tmuxWorktreeRequest } = classifyStartupArgs(args);
 
   // Fast-path for --version/-v: avoid evaluating the full CLI.
   // The 2.1.317 native executable accepts --version --verbose before full
@@ -104,6 +104,18 @@ async function main(): Promise<void> {
   profileCheckpoint('cli_entry');
   // Upstream 317 tunes JIT after startup; the timer must not keep CLI alive.
   scheduleJitPolicy317({ args });
+
+  // Official 317 rejects desktop/background combinations before opening Desktop.
+  // Check root-option-prefixed session verbs too (e.g. --settings={} logs deadbeef).
+  if (flagWords.includes('--desktop') &&
+      (sessionVerbIndex !== -1 || flagWords.includes('--bg') || flagWords.includes('--background'))) {
+    const verb = sessionVerbIndex !== -1 ? args[sessionVerbIndex] : undefined;
+    process.stderr.write(verb
+      ? `--desktop can't be combined with \`claude ${verb}\`.\n`
+      : "--desktop opens the Claude Desktop app and can't run in the background (`--bg`, `--background`, `--routine`).\n");
+    process.exitCode = 1;
+    return;
+  }
 
   // Desktop is a one-shot native handoff, not an interactive REPL. Handle it
   // before main.tsx initializes terminal listeners and startup background tasks:

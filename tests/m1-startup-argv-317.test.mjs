@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { getCliFlagValue, hasCliFlag, isStreamJsonLaunch, rejectDeepLinkArgumentInjection } from '../src/utils/cliArgv317.mjs'
+import { getCliFlagValue, hasCliFlag, isStreamJsonLaunch, rejectDeepLinkArgumentInjection, backgroundSessionVerbIndex317 } from '../src/utils/cliArgv317.mjs'
+import { classifyStartupArgs } from '../src/entrypoints/startupRouting317.mjs'
 
 test('317 early configuration parsing chooses the final actual flag and stops at --', () => {
   assert.equal(getCliFlagValue('--settings', ['--settings', 'a', '--settings=b']), 'b')
@@ -57,4 +58,34 @@ test('startup framing obeys opt-in, stream format, wire escaping and flush error
   assert.equal(await writeStartupFrames([], { argv: ['-p', '--output-format=text'], stdout }), false)
   const broken = new Writable({ write(_chunk, _encoding, done) { done(new Error('broken pipe')) } })
   assert.equal(await writeStartupFrames([{}], { argv, stdout: broken }), false)
+})
+
+test('317 bootstrap recognizes session verbs after safe root options, matching official argv contracts', () => {
+  const valid = [
+    [['logs', 'deadbeef'], 0],
+    [['--settings={}', 'logs', 'deadbeef'], 1],
+    [['--model', 'sonnet', 'logs', 'deadbeef'], 2],
+    [['--settings', '{}', '--desktop', 'stop', 'deadbeef'], 3],
+    [['--verbose', '--settings={}', 'respawn', '--all'], 2],
+  ]
+  for (const [argv, index] of valid) {
+    assert.equal(backgroundSessionVerbIndex317(argv), index, argv.join(' '))
+    assert.equal(classifyStartupArgs(argv).sessionVerbIndex, index)
+    assert.equal(classifyStartupArgs(argv).backgroundRequest, true)
+  }
+  for (const argv of [
+    ['--model', 'logs', 'deadbeef'],
+    ['--settings={}', 'logs', 'missing'],
+    ['--settings={}', 'logs'],
+    ['--settings={}', '--', 'logs', 'deadbeef'],
+    ['--print', 'logs', 'deadbeef'],
+    ['--settings={}', '--routine=test', 'stop', 'deadbeef'],
+    ['--settings={}', '--exec', 'stop', 'deadbeef'],
+    ['--settings={}', 'stop', 'DEADBEEF'],
+    ['--desktop', '--system-prompt', '--bg'],
+  ]) {
+    assert.equal(backgroundSessionVerbIndex317(argv), -1, argv.join(' '))
+  }
+  assert.equal(classifyStartupArgs(['--settings={}', 'logs', 'missing']).backgroundRequest, false)
+  assert.equal(classifyStartupArgs(['--system-prompt', '--bg']).backgroundRequest, false)
 })
