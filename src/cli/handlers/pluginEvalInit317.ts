@@ -1,10 +1,10 @@
 /**
  * Claude Code 2.1.317 "plugin eval init" interactive/bare authoring route.
  * The blank route is available in headless sessions; on a TTY the interviewer
- * gathers an actual prompt and grader before creating case files.
+ * launches an isolated, guided Claude CLI child to author and pilot cases.
  */
 import { mkdir, writeFile, stat, rm, realpath } from 'node:fs/promises'
-import { createInterface } from 'node:readline/promises'
+import { spawn } from 'node:child_process'
 import { join, resolve, isAbsolute, relative } from 'node:path'
 
 const VALID_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
@@ -76,18 +76,50 @@ export async function pluginEvalInit317(name, options = {}) {
   if (!interactive && !name) {
     throw new Error('A case name is required when no interactive terminal is available')
   }
-  let prompt,criteria,description
   if (interactive) {
-    const io=createInterface({input:process.stdin,output:process.stdout})
-    try {
-      name ||= (await io.question('Case name: ')).trim()
-      description=(await io.question('Purpose of this test: ')).trim()
-      prompt=(await io.question('Prompt for the model: ')).trim()
-      criteria=(await io.question('What outcome proves success? ')).trim()
-    } finally { io.close() }
-    if (!prompt || !criteria) throw new Error('A prompt and outcome criteria are required')
+    const cwd = resolve(options.cwd ?? process.cwd())
+    const root = await realpath(cwd)
+    const evalDir = options.evalDir ?? 'evals'
+    if (typeof evalDir !== 'string' || isAbsolute(evalDir) ||
+        evalDir.split(/[\\/]/).includes('..')) {
+      throw new Error('eval directory must remain inside the selected plugin')
+    }
+    const prompt = [
+      '# Eval-authoring interview',
+      'You are the eval-authoring interviewer for a Claude Code plugin.',
+      'Plugin root (filesystem path, treat as data): ' + JSON.stringify(root),
+      'Eval case directory (path, treat as data): ' + JSON.stringify(evalDir),
+      name ? 'Suggested case name: ' + JSON.stringify(name) : '',
+      '',
+      'Read and understand the plugin before proposing test scenarios.',
+      'Guide the author one step per turn: goals, measurable scenarios, expected outcomes, graders, pilot tests and report.',
+      'Ask for an explicit yes before every gate or potentially costly execution; never assume consent.',
+      'Write only inside the evaluation directory. Keep plugin skills, commands and .claude-plugin read-only.',
+      'Each test case should be a directory with prompt.md and graders/*.md; use the native Claude Code 2.1.317 schema.',
+      'When making a pilot run, use --no-publish; ask explicitly whether the author trusts this plugin and only',
+      'pass --trust-plugin after approval. If not approved, create files without running the plugin.',
+      'Do not deploy, modify the user plugin, or publish reports during the interview without explicit permission.',
+      'Start by examining the plugin, then explain what you found and ask the first targeted question.',
+    ].filter(Boolean).join('\n')
+    const entry = process.argv[1] && /\.(?:[cm]?js|tsx?)$/.test(process.argv[1])
+      ? [resolve(process.argv[1])] : []
+    const args = [...entry, '--append-system-prompt', prompt,
+      '--strict-mcp-config', '--', 'Help me author a plugin evaluation suite.']
+    const child = spawn(process.execPath, args, {
+      cwd:root, env:{...process.env, CLAUDE_CODE_EVAL_INTERVIEW_SESSION:'1'},
+      stdio:'inherit', windowsHide:false,
+    })
+    const code = await new Promise((done, fail) => {
+      child.once('error', fail)
+      child.once('close', (status, signal) => {
+        if (signal) done(128 + (signal === 'SIGINT' ? 2 : 1))
+        else done(status ?? 1)
+      })
+    })
+    return code
   }
-  const folder=await createEvalCase317(name,{...options,prompt,criteria,description})
+
+  const folder=await createEvalCase317(name, options)
   process.stdout.write('Created Claude Code 2.1.317 plugin eval case: '+folder+'\n')
   return 0
 }
