@@ -49,6 +49,16 @@ jobs:
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
           bun build/rebuild.mjs
+      - name: Linux对照已验签317官方x64同步原生剪贴板与音频资源
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 \
+            'https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude' \
+            --output "$RUNNER_TEMP/claude-2.1.317"
+          echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  $RUNNER_TEMP/claude-2.1.317" | sha256sum --check
+          node build/sync-official-native-from-binary.mjs \
+            --binary "$RUNNER_TEMP/claude-2.1.317" --vendor-root vendor --sync
       - name: 生成自包含本机执行程序并打包完整发行资源
         run: |
           set -euo pipefail
@@ -62,6 +72,10 @@ jobs:
           grep -q 'Usage:' /tmp/m1-317-binary-help.txt
           expected="$(node -p 'require("./package.json").version') (Claude Code)"
           test "$("$binary" --version)" = "$expected"
+      - name: 检验正式发行完整性、原生资源、启动器以及仓库外安装
+        run: |
+          node --test tests/release-integrity.test.mjs
+          node --test tests/distribution-isolation.test.mjs
       - name: 仓库外独立运行且无需调用Bun
         run: |
           set -euo pipefail
