@@ -29,6 +29,27 @@ type GatewaySpendRow317 = {
   created_at: string | Date
   updated_at: string | Date
 }
+export type GatewaySpendLimit317 = NonNullable<ReturnType<typeof rowLimit>>
+export type GatewaySpendStore317 = {
+  read(id: string): Promise<GatewaySpendLimit317 | null>
+  list(options?: {scopeType?: string; limit?: number; afterId?: string; beforeId?: string}):
+    Promise<{data: Array<GatewaySpendLimit317 | null>; has_more: boolean; first_id: string | null; last_id: string | null}>
+  upsert(body: GatewaySpendUpsertInput317, actor: string): Promise<GatewaySpendLimit317>
+  delete(id: string, actor: string): Promise<boolean>
+  listAudit(options?: {limit?: number; afterId?: string}): Promise<{
+    data: Array<{
+      type: string; id: string; created_at: string; actor: string; action: string
+      target_id: string | null; before: unknown; after: unknown; reason: string | null
+    }>
+    has_more: boolean
+  }>
+  getApplicableCaps(identity: GatewaySpendIdentity317): Promise<Array<GatewaySpendLimit317 | null>>
+  getSpend(principal: string, period: string): Promise<number>
+  getPoolSpend(group: string, period: string): Promise<bigint>
+  addSpend(identity: GatewaySpendIdentity317, cents: number, now?: Date,
+    payingGroup?: string | null): Promise<void>
+}
+
 type GatewayAuditItem317 = {
   actor: string
   action: string
@@ -102,7 +123,7 @@ const keyOf = (scope: GatewaySpendScopeInput317, period: string) => {
   }
   return {type:scope.type,id}
 }
-export async function createGatewaySpendStore317(sql: GatewaySpendSql317) {
+export async function createGatewaySpendStore317(sql: GatewaySpendSql317): Promise<GatewaySpendStore317> {
   if (!sql || typeof sql.begin !== 'function') throw new Error('Gateway spend engine requires durable PostgreSQL')
   await sql`
     CREATE TABLE IF NOT EXISTS spend_limits (
