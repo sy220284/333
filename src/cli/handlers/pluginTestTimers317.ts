@@ -3,12 +3,21 @@
  * Timers belong to a file's sandbox: callbacks cannot outlive it.
  * Rejected/throwing async timer callbacks are reported as test failures.
  */
-export function createPluginTestTimers317() {
+export type PluginTestTimers317 = {
+  setTimeout: <Args extends unknown[]>(callback: (...args: Args) => unknown, delay: number, ...args: Args) => number
+  setInterval: <Args extends unknown[]>(callback: (...args: Args) => unknown, delay: number, ...args: Args) => number
+  clearTimeout(id: number): void
+  clearInterval(id: number): void
+  readonly failures: Error[]
+  dispose(): void
+}
+export function createPluginTestTimers317(): PluginTestTimers317 {
   let nextId = 0
   let disposed = false
-  const live = new Map()
-  const failures = []
-  const schedule = (repeated, fn, delay, ...args) => {
+  const live = new Map<number, ReturnType<typeof setTimeout>>()
+  const failures: Error[] = []
+  const schedule = <Args extends unknown[]>(repeated: boolean,
+    fn: (...args: Args) => unknown, delay: number, ...args: Args): number => {
     if (disposed) throw new Error('plugin test environment was unloaded')
     if (typeof fn !== 'function') throw new TypeError('a timer takes a function')
     const ms = Number.isFinite(delay) && Number(delay) > 0 ? Math.min(Number(delay), 2147483647) : 0
@@ -23,7 +32,7 @@ export function createPluginTestTimers317() {
     live.set(id, timer)
     return id
   }
-  const cancel = id => {
+  const cancel = (id: number): void => {
     const timer = live.get(id)
     if (timer !== undefined) { clearTimeout(timer); live.delete(id) }
   }
