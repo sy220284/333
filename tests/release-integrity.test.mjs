@@ -14,6 +14,17 @@ import { test } from 'node:test';
 
 const root=resolve(import.meta.dirname,'..'),dist=join(root,'dist');
 const expectedVersion=JSON.parse(readFileSync(join(root,'package.json'),'utf8')).version;
+const hostVendorDir = process.arch + '-' + process.platform;
+const knownVendorDirs = new Set([
+  'x64-linux', 'arm64-linux', 'x64-darwin', 'arm64-darwin',
+  'x64-win32', 'arm64-win32',
+]);
+function isCurrentPlatformResource(name) {
+  const segments = name.split('/');
+  return segments.length < 3 ||
+    !knownVendorDirs.has(segments[2]) || segments[2] === hostVendorDir;
+}
+
 const metadata=JSON.parse(readFileSync(join(dist,'integrity.json'),'utf8'));
 function vendorFiles(dir, prefix='vendor') {
   return readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
@@ -26,7 +37,7 @@ function vendorFiles(dir, prefix='vendor') {
 }
 test('release vendor inventory matches exactly the current source tree', () => {
   assert.equal(metadata.version, expectedVersion);
-  const sourceFiles = vendorFiles(join(root, 'vendor'));
+  const sourceFiles = vendorFiles(join(root, 'vendor')).filter(isCurrentPlatformResource);
   const packagedFiles = vendorFiles(join(dist, 'vendor'));
   const indexedFiles = metadata.files.filter(f=>f.path.startsWith('vendor/')).map(f=>f.path).sort();
   assert.deepEqual(packagedFiles, sourceFiles);
@@ -48,6 +59,29 @@ test('official 2.1.317 Linux x64 native resources survive packaging and load in 
     assert.equal(bytes.length, mod.size, mod.name);
     assert.equal(createHash('sha256').update(bytes).digest('hex'), mod.sha256, mod.name);
     assert.ok(Object.keys(load(full)).length > 0, `Empty native addon: ${mod.name}`);
+  }
+});
+test('platform package uses only the SHA-256 pinned official 2.1.317 native audio for this architecture', () => {
+  const official = JSON.parse(readFileSync(join(root, 'build/official-native-audio-317.json'), 'utf8'));
+  const platform = process.platform + '-' + process.arch;
+  const pinned = official.modules[platform];
+  assert.ok(pinned, 'No pinned native audio manifest for ' + platform);
+  const name = 'vendor/audio-capture/' + hostVendorDir + '/audio-capture.node';
+  const binary = join(dist, name);
+  assert.equal(existsSync(binary), true, name);
+  const bytes = readFileSync(binary);
+  assert.equal(bytes.length, pinned.audio_size);
+  assert.equal(createHash('sha256').update(bytes).digest('hex'), pinned.audio_sha256);
+  const entry = metadata.files.find(item => item.path === name);
+  assert.ok(entry, 'Native audio missing from integrity manifest');
+  assert.equal(entry.sha256, pinned.audio_sha256);
+  const module = createRequire(import.meta.url)(binary);
+  for (const method of ['startRecording', 'stopRecording', 'isRecording',
+    'startPlayback', 'writePlaybackData', 'stopPlayback', 'isPlaying']) {
+    assert.equal(typeof module[method], 'function', method);
+  }
+  for (const f of metadata.files.filter(item => item.path.startsWith('vendor/'))) {
+    assert.ok(isCurrentPlatformResource(f.path), 'Foreign-platform binary leaked into release: ' + f.path);
   }
 });
 test('every packaged file matches signed-style SHA-256 content manifest', () => {
