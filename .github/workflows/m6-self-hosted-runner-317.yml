@@ -54,6 +54,14 @@ jobs:
             exit 1
           fi
           grep -F 'error: --capacity must be a positive integer, got: 0' capacity.log
+          TOKEN=$(node -e 'const b = v => Buffer.from(JSON.stringify(v)).toString("base64url"); console.log(b({alg:"RS256",kid:"test"})+"."+b({sub:"session_317",exp:4102444800})+".not-a-signature")')
+          bun dist/cli.js self-hosted-runner decode-token "$TOKEN" --no-verify | grep -F '"sub": "session_317"'
+          bun dist/cli.js self-hosted-runner decode-token "$TOKEN" --no-verify --header | grep -F '"alg": "RS256"'
+          if bun dist/cli.js self-hosted-runner decode-token "$TOKEN" --api-url file:///tmp/unsafe 2>jwt-invalid.log; then
+            echo 'Unsafe JWT base URL was accepted' >&2
+            exit 1
+          fi
+          grep -F 'decode-token: invalid API URL' jwt-invalid.log
       - name: 全仓TypeScript类型检查
         run: |
           npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
