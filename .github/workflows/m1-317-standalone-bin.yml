@@ -76,6 +76,8 @@ jobs:
         run: |
           node --test tests/release-integrity.test.mjs
           node --test tests/distribution-isolation.test.mjs
+      - name: 自包含原生执行程序走真实模型请求、配置优先级及JSON响应
+        run: M1_NATIVE_BINARY_RUN=1 node --test tests/m1-startup-cli-317.test.mjs
       - name: 仓库外独立运行且无需调用Bun
         run: |
           set -euo pipefail
