@@ -302,6 +302,17 @@ export type QueuedCommand = {
   /** Defaults to the priority implied by `mode` when enqueued. */
   priority?: QueuePriority
   uuid?: UUID
+  /** 2.1.317: original source UUID and receipt ID for queued remote messages. */
+  attachmentSourceUuid?: UUID
+  deliveryId?: string
+  /** Only submitted text may be journaled while command screening is active. */
+  promptSubmitted?: { text: string }
+  screeningPending?: boolean
+  screeningOwed?: boolean
+  /** Messages excluded from queue journaling by the originating subsystem. */
+  unlogged?: boolean
+  /** Plugin/agent chain that queued this command. */
+  queuedUnder?: string[]
   orphanedPermission?: OrphanedPermission
   /** Raw pasted contents including images. Images are resized at execution time. */
   pastedContents?: Record<number, PastedContent>
