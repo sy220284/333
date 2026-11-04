@@ -52,6 +52,18 @@ export function enforcesRequiredVersionForWorker317(route: string): boolean {
   return route === '--daemon-worker'
 }
 
+/**
+ * The official 317 cli.js uses a different admission rule for its background
+ * family: the daemon supervisor only loads settings; inspection/cleanup verbs
+ * may finish even after the organisation's version gate rejects new work.
+ */
+export type BackgroundVersionDisposition317 = 'skip' | 'warn' | 'reject'
+export function backgroundVersionDisposition317(verb: string): BackgroundVersionDisposition317 {
+  if (verb === 'daemon' || verb === '--internal-bg-supervisor') return 'skip'
+  if (verb === 'logs' || verb === 'stop' || verb === 'kill' || verb === 'rm') return 'warn'
+  return 'reject'
+}
+
 let startupSettingsPromise: Promise<RequiredVersionPolicy317 | null> | undefined
 
 /** A claimed warm session must not inherit the previous policy result. */
