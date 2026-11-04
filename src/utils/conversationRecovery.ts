@@ -34,6 +34,7 @@ import {
 } from './messages.js'
 import { copyPlanForResume } from './plans.js'
 import { processSessionStartHooks } from './sessionStart.js'
+import { precomputeResumeCommitV5 } from './resumePreparationV5.mjs'
 import {
   buildConversationChain,
   checkResumeConsistency,
@@ -466,25 +467,29 @@ export async function loadConversationForResume(
       if (!sessionId) {
         sessionId = getSessionIdFromLog(log) as UUID
       }
-      // Pass the original session ID to ensure the plan slug is associated with
-      // the session we're resuming, not the temporary session ID before resume
-      if (sessionId) {
-        await copyPlanForResume(log, asSessionId(sessionId))
-      }
-
-      // Copy file history for resume
-      void copyFileHistoryForResume(log)
-
       messages = log.messages
       checkResumeConsistency(messages)
     }
 
-    // Restore skill state from invoked_skills attachments before deserialization.
-    // This ensures skills survive multiple compaction cycles after resume.
-    restoreSkillStateFromMessages(messages!)
+    // Stage the resume identity and source path before mutating session state.
+    // Explicit JSONL resumes must keep their cross-project path, and validation
+    // errors must not copy plans, file backups or modify invoked-skill state.
+    const prepared = precomputeResumeCommitV5(
+      messages!,
+      sessionId,
+      sourceJsonlFile,
+      log?.fullPath,
+    )
+    const deserialized = deserializeMessagesWithInterruptDetection(prepared.messages)
 
-    // Deserialize messages to handle unresolved tool uses and ensure proper format
-    const deserialized = deserializeMessagesWithInterruptDetection(messages!)
+    // All conversation normalization succeeded: commit ancillary resume state.
+    if (log) {
+      if (sessionId) {
+        await copyPlanForResume(log, asSessionId(sessionId))
+      }
+      await copyFileHistoryForResume(log)
+    }
+    restoreSkillStateFromMessages(prepared.messages)
     messages = deserialized.messages
 
     // Process session start hooks for resume
@@ -514,7 +519,7 @@ export async function loadConversationForResume(
       prUrl: log?.prUrl,
       prRepository: log?.prRepository,
       // Include full path for cross-directory resume
-      fullPath: log?.fullPath,
+      fullPath: prepared.fullPath,
     }
   } catch (error) {
     logError(error as Error)
