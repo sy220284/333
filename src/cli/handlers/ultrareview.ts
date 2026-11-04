@@ -13,6 +13,7 @@ import { checkHasTrustDialogAccepted } from '../../utils/config.js'
 import { checkRemoteAgentEligibility, formatPreconditionError } from '../../tasks/RemoteAgentTask/RemoteAgentTask.js'
 import { checkOverageGate } from '../../commands/review/reviewRemote.js'
 import { getUltrareviewRuntimeEnvironment } from '../../utils/review/ultrareviewRuntime.js'
+import { resolveUltrareviewGitBase } from '../../utils/review/ultrareviewGitBase.mjs'
 import { detectCurrentRepositoryWithHost } from '../../utils/detectRepository.js'
 import { getClaudeAIOAuthTokens } from '../../utils/auth.js'
 import { pollRemoteSessionEvents, teleportToRemote } from '../../utils/teleport.js'
@@ -184,15 +185,19 @@ export async function ultrareviewCliHandler(target: string | undefined, options:
       })
     } else {
       const branch = target || await getDefaultBranch() || 'main'
-      const merged = await execFileNoThrow(gitExe(), ['merge-base', branch, 'HEAD'], { preserveOutputOnError: false })
-      let comparisonBase = merged.stdout.trim()
-      let forceAllFiles = false
-      if (merged.code !== 0 || !comparisonBase) {
-        // A first commit or unrelated histories have no fork point. The
-        // official 2.1.317 review can send a parentless snapshot, but only
-        // after the user has approved expanding the scope to every tracked file.
-        const head = await execFileNoThrow(gitExe(), ['rev-parse', '--verify', 'HEAD^{commit}'], { preserveOutputOnError: false })
-        if (head.code !== 0) return outputError('The repository has no commits to review.')
+      const base = await resolveUltrareviewGitBase(
+        branch, (args, input) => execFileNoThrow(gitExe(), args, {
+          preserveOutputOnError: false,
+          ...(input !== undefined && { input }),
+        }),
+      )
+      if (base.kind === 'no-commits') return outputError('The repository has no commits to review.')
+      if (base.kind === 'invalid-empty-tree') {
+        return outputError('Could not construct an empty-tree comparison for the review.')
+      }
+      if (base.kind === 'all-files') {
+        // Expanding scope to the full repository needs a separate, explicit
+        // human decision, even if workspace trust has already been granted.
         if (!process.stdin.isTTY || !process.stderr.isTTY) {
           return outputError('No common Git history with ' + branch + '. All-file review needs confirmation in a terminal.')
         }
@@ -205,16 +210,9 @@ export async function ultrareviewCliHandler(target: string | undefined, options:
           confirmed = /^y(?:es)?$/i.test(answer.trim())
         } finally { rl.close() }
         if (!confirmed) return fail('Ultrareview cancelled.')
-        const emptyTree = await execFileNoThrow(gitExe(), ['hash-object', '-t', 'tree', '--stdin'], {
-          input: '',
-          preserveOutputOnError: false,
-        })
-        if (emptyTree.code !== 0 || !/^[a-f0-9]{40,64}$/.test(emptyTree.stdout.trim())) {
-          return outputError('Could not construct an empty-tree comparison for the review.')
-        }
-        comparisonBase = emptyTree.stdout.trim()
-        forceAllFiles = true
       }
+      const comparisonBase = base.base
+      const forceAllFiles = base.forceAllFiles
       const diff = await execFileNoThrow(gitExe(), ['diff', '--shortstat', comparisonBase], { preserveOutputOnError: false })
       if (diff.code !== 0) return outputError('Could not compare the current worktree with the review base.')
       if (!diff.stdout.trim()) return outputError('No changes against the ' + branch + ' fork point.')
