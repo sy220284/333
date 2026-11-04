@@ -63,7 +63,11 @@ test('2.1.317 plugin install --marketplace/--json: real local source, idempotenc
 
       const second = run(['plugin', 'install', 'demo', '--marketplace', marketplace, '--json'])
       assert.equal(second.status, 0, `${version}: ${second.stderr}`)
-      assert.equal(readJsonLine(second).pluginId, 'demo@m1-install-json')
+      const repeated = readJsonLine(second)
+      assert.equal(repeated.pluginId, 'demo@m1-install-json')
+      assert.match(repeated.message, /already installed/)
+      assert.equal(repeated.installedVersion, '1.0.0')
+      assert.equal(repeated.availableVersion, '1.0.0')
 
       const missing = run(['plugin', 'install', 'missing@m1-install-json', '--json'])
       assert.notEqual(missing.status, 0)
