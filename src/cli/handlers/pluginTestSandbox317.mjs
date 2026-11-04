@@ -7,6 +7,7 @@ import { readFile, realpath, stat } from 'node:fs/promises'
 import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path'
 import * as vm from 'node:vm'
 import { createPluginTestKit317 } from './pluginTestKit317.mjs'
+import { createPluginTestTimers317 } from './pluginTestTimers317.mjs'
 
 const EXTENSIONS = ['', '.js', '.mjs', '.ts', '.tsx', '/index.js', '/index.ts']
 const isInside = (root, target) => {
@@ -51,15 +52,18 @@ export async function runPluginTestFile317(rootPath, filePath, { defaultTimeoutM
     throw new Error(`claude plugin test: ${file} is not in ${root}`)
   }
   const kit = createPluginTestKit317()
+  const timers = createPluginTestTimers317()
   const events = new Map()
   const context = vm.createContext({
     console: Object.freeze({
       log: (...args) => process.stderr.write(args.join(' ') + '\n'),
       error: (...args) => process.stderr.write(args.join(' ') + '\n'),
     }),
-    setTimeout, clearTimeout, setInterval, clearInterval,
+    setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout,
+    setInterval: timers.setInterval, clearInterval: timers.clearInterval,
     AbortController, URL, TextEncoder, TextDecoder,
   })
+  try {
   const namespace = kit.namespace
   const kitModule = new vm.SyntheticModule(Object.keys(namespace), function () {
     for (const [name, value] of Object.entries(namespace)) this.setExport(name, value)
@@ -142,5 +146,18 @@ export async function runPluginTestFile317(rootPath, filePath, { defaultTimeoutM
       clearTimeout(timer)
     }
   }
+  // The original test harness grants three late event-loop turns to surface
+  // asynchronous timer failures before its VM environment is released.
+  for (let i = 0; i < 3; i++) await new Promise(resolve => setImmediate(resolve))
+  const thrown = timers.failures
+  if (thrown.length) {
+    results.push({
+      title: 'a timer callback threw', ms: 0,
+      failure: thrown.map(error => error.stack ?? error.message).join('\n'),
+    })
+  }
   return { file, results }
+  } finally {
+    timers.dispose()
+  }
 }
