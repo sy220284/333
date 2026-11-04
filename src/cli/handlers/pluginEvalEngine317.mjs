@@ -3,9 +3,9 @@
  * arm, weighted graders and budget accounting. Model invocation is injectable
  * for deterministic tests; production calls the rebuilt Claude CLI.
  */
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, readFile, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve, relative, isAbsolute } from 'node:path'
 import { gradeEvalResult317, aggregateEvalScore317 } from './pluginEvalGraders317.mjs'
 import { runEvalModel317, judgeEvalOutput317 } from './pluginEvalModel317.mjs'
 
@@ -49,6 +49,7 @@ export async function executePluginEvalSuite317(cases, settings, adapters = {}) 
           disallowedTools: [...(job.caseInfo.execution.disallowed_tools ?? []),
             ...(settings.disallowedTools ?? [])],
           maxBudgetUsd: Number.isFinite(maxCostUsd) ? Math.max(0, maxCostUsd - costUsd) : undefined,
+          maxTurns: job.caseInfo.execution.max_turns,
           env: job.caseInfo.execution.env ?? {},
         })
         const actual = {
@@ -61,12 +62,30 @@ export async function executePluginEvalSuite317(cases, settings, adapters = {}) 
         let judgeCostUsd = 0
         for (const grader of job.caseInfo.graders) {
           if (job.arm === 'without' && grader.arm === 'with-only') continue
-          const verdict = await gradeEvalResult317(grader, actual,
-            async request => {
-              const response = await judge(request, { workspace, judgeModel: settings.judgeModel })
-              judgeCostUsd += Number(response?.costUsd ?? 0)
-              return response
-            })
+          let verdict
+          if (result.error) {
+            // A model failure cannot be promoted to success by an empty-output
+            // regex or an expected-absent-file grader.
+            verdict = { name: grader.name, type: grader.type,
+              weight: grader.weight ?? 1, pass: false, score: 0, error: result.error }
+          } else {
+            if (grader.type === 'baseline') {
+              const baseFile = resolve(job.caseInfo.dir, grader.baseline_file)
+              const root = await realpath(job.caseInfo.dir)
+              const resolvedFile = await realpath(baseFile)
+              const rel = relative(root, resolvedFile)
+              if (rel === '..' || rel.startsWith('../') || rel.startsWith('..\\') || isAbsolute(rel)) {
+                throw new Error('baseline reference file escaped its case directory')
+              }
+              actual.baseline = await readFile(resolvedFile, 'utf8')
+            }
+            verdict = await gradeEvalResult317(grader, actual,
+              async request => {
+                const response = await judge(request, { workspace, judgeModel: settings.judgeModel })
+                judgeCostUsd += Number(response?.costUsd ?? 0)
+                return response
+              })
+          }
           const indicatorOnly = ablation === 'with-without' &&
             grader.type === 'tool_used' && grader.tool === 'Skill'
           verdicts.push({ ...verdict, indicatorOnly })
