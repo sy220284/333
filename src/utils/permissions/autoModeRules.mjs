@@ -22,3 +22,19 @@ export function renderAutoModeRuleBlock(rules, originalBlock, builtins = []) {
   }
   return parts.join('\n')
 }
+
+/** Keep indented bullet continuations inside their parent rule. */
+export function parseTaggedAutoModeBullets(template, tagName) {
+  const escaped = tagName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = template.match(new RegExp(`<${escaped}>([\\s\\S]*?)<\\/${escaped}>`))
+  if (!match) return []
+  const rules = []
+  for (const line of (match[1] ?? '').split('\n')) {
+    if (line.startsWith('- ')) {
+      rules.push(line.slice(2))
+    } else if (rules.length > 0) {
+      rules[rules.length - 1] += '\n' + line
+    }
+  }
+  return rules
+}

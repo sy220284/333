@@ -30,7 +30,7 @@ import { extractTextContent } from '../messages.js'
 import { resolveAntModel } from '../model/antModels.js'
 import { getMainLoopModel } from '../model/model.js'
 import { getAutoModeConfig } from '../settings/settings.js'
-import { renderAutoModeRuleBlock } from './autoModeRules.mjs'
+import { parseTaggedAutoModeBullets, renderAutoModeRuleBlock } from './autoModeRules.mjs'
 import { sideQuery } from '../sideQuery.js'
 import { jsonStringify } from '../slowOperations.js'
 import { tokenCountWithEstimation } from '../tokens.js'
@@ -109,15 +109,7 @@ export function getDefaultExternalAutoModeRules(): AutoModeRules {
 }
 
 function extractTaggedBullets(tagName: string): string[] {
-  const match = EXTERNAL_PERMISSIONS_TEMPLATE.match(
-    new RegExp(`<${tagName}>([\\s\\S]*?)</${tagName}>`),
-  )
-  if (!match) return []
-  return (match[1] ?? '')
-    .split('\n')
-    .map(line => line.trim())
-    .filter(line => line.startsWith('- '))
-    .map(line => line.slice(2))
+  return parseTaggedAutoModeBullets(EXTERNAL_PERMISSIONS_TEMPLATE, tagName)
 }
 
 /**
