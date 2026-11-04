@@ -11,6 +11,8 @@ import { readGatewayConfig317 } from './gatewayConfig317.mjs'
 import { createOidcProvider317, verifyGatewaySession317 } from './gatewayAuth317.mjs'
 import { createGatewayDeviceFlow317 } from './gatewayDevice317.mjs'
 import { openGatewayStore317 } from './gatewayStore317.mjs'
+import { handleGatewayAdmin317, isGatewayAdminPath317 } from './gatewayAdmin317.mjs'
+import { precheckGatewaySpend317, gatewayUsageResponse317 } from './gatewaySpendMeter317.mjs'
 import { createGatewayManagedSettings317, responseForManagedSettings317 } from './gatewayManaged317.mjs'
 import {
   forwardGatewayInference317, forwardGatewayTelemetry317, listGatewayModels317,
@@ -81,15 +83,14 @@ export async function createGatewayService317(config, deps = {}) {
   if (config.cri?.enabled && !config.oidc) {
     throw new Error('CRI JWT admission requires pinned Anthropic issuer verification')
   }
-  if (config.admin) {
-    throw new Error('Gateway admin spending limits require the durable spend policy engine')
-  }
   // Validate and load managed policy before binding the listening socket.
   const managed = await createGatewayManagedSettings317(config.managed)
   const store = deps.store ?? await openGatewayStore317(config.store)
   let server
   try {
     const oidc = deps.oidc ?? (config.oidc ? await createOidcProvider317(config.oidc) : null)
+    // Initialize the spend authority before opening the listening socket.
+    const spend = config.admin ? (deps.spend ?? await store.createSpend()) : null
     const publicUrl = config.listen.public_url ??
       'http://' + config.listen.host + ':' + config.listen.port
     const device = createGatewayDeviceFlow317({
@@ -128,6 +129,12 @@ export async function createGatewayService317(config, deps = {}) {
       const route = request.method + ' ' + url.pathname
       try {
         if (authFree[route]) return await authFree[route]()
+        if (isGatewayAdminPath317(url.pathname)) {
+          if (!spend) return error(404, 'not_found_error', 'not found', requestId)
+          return await handleGatewayAdmin317(request, {
+            config, publicUrl, spend, audit: (...args) => store.audit(...args),
+          })
+        }
         const token = bearer(request)
         const identity = token && verifyGatewaySession317(
           token, config.session.jwt_secret, publicUrl)
@@ -138,6 +145,9 @@ export async function createGatewayService317(config, deps = {}) {
           config, identity, store, audit: (name, sub, id, meta) =>
             store.audit(name, sub, id, meta),
         }
+        if (url.pathname === '/api/oauth/usage' && request.method === 'GET' && spend) {
+          return gatewayUsageResponse317(spend, identity, config)
+        }
         if (url.pathname === '/managed/settings' && request.method === 'GET') {
           return responseForManagedSettings317(request, identity, managed)
         }
@@ -146,6 +156,18 @@ export async function createGatewayService317(config, deps = {}) {
         }
         if (['/v1/messages','/v1/messages/count_tokens'].includes(url.pathname)
           && request.method === 'POST') {
+          if (spend && url.pathname === '/v1/messages') {
+            const policy = await precheckGatewaySpend317(spend, identity, config)
+            if (policy.checkError) {
+              await store.audit('spend.check_error', identity.sub, requestId, {
+                error: String(policy.checkError),
+              })
+            }
+            if (policy.blocked) return policy.blocked
+            return forwardGatewayInference317(request, {
+              ...context, spend, spendPolicy: policy,
+            })
+          }
           return forwardGatewayInference317(request, context)
         }
         if (['/v1/metrics','/v1/traces','/v1/logs'].includes(url.pathname)

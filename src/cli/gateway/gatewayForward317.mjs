@@ -4,6 +4,7 @@
  * are chosen from validated server config, and only allowlisted metadata is sent.
  */
 import { randomUUID } from 'node:crypto'
+import { meterGatewayResponse317 } from './gatewaySpendMeter317.mjs'
 
 const FORWARD = new Set([
   'anthropic-version','anthropic-beta','content-type','accept',
@@ -140,7 +141,17 @@ export async function forwardGatewayInference317(request, context) {
     response.body?.cancel()
     return proxyError(502, 'api_error', 'upstream redirect refused', requestId)
   }
-  return new Response(response.body, { status:response.status, headers:responseHeaders })
+  const proxied = new Response(response.body, {
+    status: response.status, headers: responseHeaders,
+  })
+  if (context.spend && path === '/v1/messages') {
+    return meterGatewayResponse317(proxied, {
+      store: context.spend, identity, config, model: payload.model,
+      upstream: upstream.name, payingGroup: context.spendPolicy?.payingGroup ?? null,
+      headers: context.spendPolicy?.headers ?? {}, audit,
+    })
+  }
+  return proxied
 }
 
 export function listGatewayModels317(config, identity) {

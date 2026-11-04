@@ -3,6 +3,7 @@
  * No permissive defaults for authentication, database or public exposure.
  */
 import { readFile } from 'node:fs/promises'
+import { validateGatewayAdmin317 } from './gatewayAdmin317.mjs'
 
 const LOOPBACK = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
 const nonempty = (value, name) => {
@@ -108,6 +109,7 @@ export function validateGatewayConfig317(value) {
       ...store, postgres_url },
     session: { ...session, jwt_secret: secrets, ttl_hours: session.ttl_hours ?? 1 },
     upstreams,
+    ...(value.admin && {admin:validateGatewayAdmin317(value.admin)}),
     models: value.models ?? [],
     telemetry,
     limits: { max_request_bytes: 33554432, ...(value.limits ?? {}) },

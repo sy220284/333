@@ -66,6 +66,11 @@ export async function openGatewayStore317(config) {
         metadata JSONB NOT NULL DEFAULT '{}'::jsonb
       )`
     return {
+      // Spend limits reuse the gateway's durable PostgreSQL connection.
+      async createSpend() {
+        const { createGatewaySpendStore317 } = await import('./gatewaySpendStore317.mjs')
+        return createGatewaySpendStore317(database)
+      },
       async newDevice(deviceCode, userCode, expiresSeconds) {
         await database`
           INSERT INTO claude_gateway_device_authorizations
