@@ -38,9 +38,11 @@ export type PersistableScope = Exclude<PluginScope, never> // All scopes are per
 import { getOriginalCwd } from '../../bootstrap/state.js'
 import { getHeadForDir } from '../git/gitFilesystem.js'
 import { getInitialSettings } from '../settings/settings.js'
-import { getPluginCachePath } from './pluginLoader.js'
+import { getPluginCachePath, getVersionedCachePath } from './pluginLoader.js'
+import { migrateInstalledPluginsRecords } from './installedPluginsMigration.mjs'
 
 let initializationPromise: Promise<void> | null = null
+let installedPluginsMigrationChecked = false
 
 /**
  * Memoized cache of installed plugins data (V2 format)
@@ -73,6 +75,7 @@ export function getInstalledPluginsFilePath(): string {
  * the in-memory state.
  */
 export function clearInstalledPluginsCache(): void {
+  installedPluginsMigrationChecked = false
   installedPluginsCacheV2 = null
   inMemoryInstalledPlugins = null
   logForDebugging('Cleared installed plugins cache')
@@ -83,6 +86,10 @@ export function clearInstalledPluginsCache(): void {
  * Invalid data is an error; only a missing file starts an empty registry.
  */
 function readInstalledPluginsFileRaw(): InstalledPluginsFileV2 | null {
+  if (!installedPluginsMigrationChecked) {
+    migrateInstalledPluginsRecords(getPluginsDirectory(), getVersionedCachePath)
+    installedPluginsMigrationChecked = true
+  }
   const fs = getFsImplementation()
   let fileContent: string
   try {
