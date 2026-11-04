@@ -183,6 +183,7 @@ export function addPluginInstallation(
     installedAt: metadata.installedAt || new Date().toISOString(),
     lastUpdated: new Date().toISOString(),
     gitCommitSha: metadata.gitCommitSha,
+    ...(metadata.sourceCommand !== undefined && { sourceCommand: metadata.sourceCommand }),
     ...(metadata.auto !== undefined && { auto: metadata.auto }),
     ...(projectPath && { projectPath }),
   }
@@ -275,6 +276,7 @@ export function updateInstallationPathOnDisk(
   newPath: string,
   newVersion: string,
   gitCommitSha?: string,
+  sourceCommand?: string | null,
 ): void {
   ensureInstalledPluginsMigrated()
   const diskData = loadInstalledPluginsFromDisk()
@@ -298,6 +300,8 @@ export function updateInstallationPathOnDisk(
     if (gitCommitSha !== undefined) {
       entry.gitCommitSha = gitCommitSha
     }
+    if (sourceCommand === null) delete entry.sourceCommand
+    else if (sourceCommand !== undefined) entry.sourceCommand = sourceCommand
 
     const filePath = getInstalledPluginsFilePath()
 
@@ -619,6 +623,8 @@ export function addInstalledPlugin(
     installedAt: metadata.installedAt,
     lastUpdated: metadata.lastUpdated,
     gitCommitSha: metadata.gitCommitSha,
+    ...(metadata.sourceCommand !== undefined && { sourceCommand: metadata.sourceCommand }),
+    ...(metadata.auto !== undefined && { auto: metadata.auto }),
     ...(projectPath && { projectPath }),
   }
 
@@ -675,6 +681,7 @@ export function removeInstalledPlugin(
         lastUpdated: firstInstall.lastUpdated,
         installPath: firstInstall.installPath,
         gitCommitSha: firstInstall.gitCommitSha,
+        sourceCommand: firstInstall.sourceCommand,
       }
     : undefined
 
