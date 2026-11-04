@@ -1398,7 +1398,7 @@ async function* queryLoop(
           notifyCommandLifecycle(cmd.uuid, 'started')
         }
       }
-      removeFromQueue(consumedCommands)
+      removeFromQueue(consumedCommands, { reason: 'absorbed_mid_turn' })
     }
 
     // Instrumentation: Track file change attachments after they're added
