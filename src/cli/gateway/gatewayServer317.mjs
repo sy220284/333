@@ -11,6 +11,7 @@ import { readGatewayConfig317 } from './gatewayConfig317.mjs'
 import { createOidcProvider317, verifyGatewaySession317 } from './gatewayAuth317.mjs'
 import { createGatewayDeviceFlow317 } from './gatewayDevice317.mjs'
 import { openGatewayStore317 } from './gatewayStore317.mjs'
+import { createGatewayManagedSettings317, responseForManagedSettings317 } from './gatewayManaged317.mjs'
 import {
   forwardGatewayInference317, forwardGatewayTelemetry317, listGatewayModels317,
 } from './gatewayForward317.mjs'
@@ -80,9 +81,11 @@ export async function createGatewayService317(config, deps = {}) {
   if (config.cri?.enabled && !config.oidc) {
     throw new Error('CRI JWT admission requires pinned Anthropic issuer verification')
   }
-  if (config.admin || config.managed?.policies?.length) {
-    throw new Error('Gateway admin spending and managed settings require the complete policy engine')
+  if (config.admin) {
+    throw new Error('Gateway admin spending limits require the durable spend policy engine')
   }
+  // Validate and load managed policy before binding the listening socket.
+  const managed = await createGatewayManagedSettings317(config.managed)
   const store = deps.store ?? await openGatewayStore317(config.store)
   let server
   try {
@@ -134,6 +137,9 @@ export async function createGatewayService317(config, deps = {}) {
         const context = {
           config, identity, store, audit: (name, sub, id, meta) =>
             store.audit(name, sub, id, meta),
+        }
+        if (url.pathname === '/managed/settings' && request.method === 'GET') {
+          return responseForManagedSettings317(request, identity, managed)
         }
         if (url.pathname === '/v1/models' && request.method === 'GET') {
           return listGatewayModels317(config, identity)
