@@ -2,6 +2,8 @@ import { existsSync, mkdirSync, statSync, readFileSync } from 'node:fs';
 import { builtinModules } from 'node:module';
 import { join, resolve, dirname } from 'node:path';
 import { stageRuntimeVendor317 } from './stage-runtime-vendor317.mjs';
+import { verifyOfficialEmbeddedAssets317 } from './verify-official-embedded-assets.mjs';
+verifyOfficialEmbeddedAssets317();
 
 if (typeof Bun === 'undefined' || !Bun.build) throw Error('Bun bundler required');
 const root = resolve(import.meta.dir, '..');
