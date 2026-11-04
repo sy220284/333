@@ -13,7 +13,7 @@ test('317 kill() releases registered timer exactly once', () => {
   registry.stop('task-1')
   assert.equal(stops, 1)
   cleanup()
-  assert.equal(stops, 2)
+  assert.equal(stops, 1)
 })
 
 test('317 restarting remote poller cancels old timer and owns new cleanup', () => {
@@ -27,7 +27,7 @@ test('317 restarting remote poller cancels old timer and owns new cleanup', () =
   assert.equal(registry.has('task-1'), true)
   newCleanup()
   assert.equal(registry.has('task-1'), false)
-  assert.deepEqual(stopped, ['old', 'old', 'new'])
+  assert.deepEqual(stopped, ['old', 'new'])
 })
 
 test('317 two remote tasks have independent stop lifecycles', () => {
