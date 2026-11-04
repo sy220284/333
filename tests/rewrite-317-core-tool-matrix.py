@@ -157,7 +157,7 @@ def main():
         root = Path(tmp)
         for case in ('Read','Write','Edit','Bash'):
             official = run(case, [str(base)], 'native', root)
-            current = run(case, ['node', str(ported)] if args.ported_launcher else ['bun', str(ported)], 'ported', root)
+            current = run(case, ['node', str(ported)] if args.rebuilt_launcher else ['bun', str(ported)], 'ported', root)
             for key in ('calls','registered_tools','system_parts','results_ok','files'):
                 if official[key] != current[key]:
                     raise AssertionError(json.dumps({'case': case, 'mismatch': key, 'native': official, 'ported': current}, ensure_ascii=False))
