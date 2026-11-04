@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, writeFile, readFile, readdir, symlink, stat, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, readFile, readdir, symlink, stat, rm, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -96,7 +96,10 @@ test('canonical project aliases share a purge plan without crossing the path bou
   assert.ok(plan.items.some(item => item.path === dir))
   assert.equal(plan.items.filter(item => item.kind === 'config-key').length, 2)
   const history = plan.items.find(item => item.kind === 'history-lines')
-  assert.deepEqual(new Set(history.matchPaths), new Set([alias, project]))
+  assert.ok(history.matchPaths.includes(alias))
+  assert.ok(history.matchPaths.includes(project))
+  const canonical = await realpath(project)
+  assert.deepEqual(new Set(history.matchPaths), new Set([alias, project, canonical]))
 }))
 
 

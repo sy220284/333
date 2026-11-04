@@ -87,7 +87,23 @@ export async function planPurge(home, project, { all = false, projectKeys = [], 
     const requested = resolve(project).normalize('NFC')
     let canonical = requested
     try { canonical = (await realpath(requested)).normalize('NFC') } catch (error) { if (!isAbsent(error)) throw error }
-    const paths = [...new Set([requested, canonical])]
+    // macOS may canonicalize /var to /private/var. The project's saved
+    // configuration key retains the original spelling and its transcript
+    // directory uses that spelling. Include only keys whose realpath is the
+    // exact same project, so aliases remain discoverable without sweeping
+    // unrelated paths that share a string prefix.
+    const paths = [requested, canonical]
+    for (const alias of [...projectKeys, ...configAliases]) {
+      const normalized = resolve(alias).normalize('NFC')
+      if (paths.includes(normalized)) continue
+      try {
+        if ((await realpath(normalized)).normalize('NFC') === canonical) {
+          paths.push(normalized)
+        }
+      } catch (error) {
+        if (!isAbsent(error)) throw error
+      }
+    }
     const roots = paths.map(path => path.replace(/[^a-zA-Z0-9]/g, '-'))
     const directories = []
     for (const entry of await entries(join(home, 'projects'))) {
