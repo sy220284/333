@@ -134,6 +134,7 @@ export async function cacheAndRegisterPlugin(
   localSourcePath?: string,
   asDependency = false,
   deferRegistration?: (registration: () => void) => void,
+  authorizedCommandSource = false,
 ): Promise<string> {
   // For local plugins, we need the resolved absolute path
   // Cast to PluginSource since cachePlugin handles any string path at runtime
@@ -144,6 +145,7 @@ export async function cacheAndRegisterPlugin(
 
   const cacheResult = await cachePlugin(source, {
     manifest: entry as PluginMarketplaceEntry,
+    authorizedCommandSource,
   })
 
   // For local plugins, use the original source path for Git SHA calculation
@@ -365,11 +367,13 @@ export async function installResolvedPlugin({
   entry,
   scope,
   marketplaceInstallLocation,
+  authorizedSourceCommands,
 }: {
   pluginId: string
   entry: PluginMarketplaceEntry
   scope: 'user' | 'project' | 'local'
   marketplaceInstallLocation?: string
+  authorizedSourceCommands?: readonly string[]
 }): Promise<InstallCoreResult> {
   const settingSource = scopeToSettingSource(scope)
 
@@ -480,6 +484,7 @@ export async function installResolvedPlugin({
       localSourcePath,
       id !== pluginId,
       register => pendingRegistrations.push(register),
+      authorizedSourceCommands?.includes(id) === true,
     )
   }
 
