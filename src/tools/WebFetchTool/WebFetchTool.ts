@@ -1,6 +1,6 @@
 import { z } from 'zod/v4'
 import { buildTool, type ToolDef } from '../../Tool.js'
-import { withWebToolDeadline } from '../../utils/webToolDeadline.mjs'
+import { withWebToolDeadline } from '../../utils/webToolDeadline.ts'
 import type { PermissionUpdate } from '../../types/permissions.js'
 import { formatFileSize } from '../../utils/format.js'
 import { lazySchema } from '../../utils/lazySchema.js'
