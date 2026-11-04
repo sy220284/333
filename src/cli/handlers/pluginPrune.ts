@@ -5,7 +5,7 @@ import {
   uninstallPluginOp,
   VALID_INSTALLABLE_SCOPES,
 } from '../../services/plugins/pluginOperations.js'
-import { computeAutoDependencyOrphans } from '../../utils/plugins/autoDependencyPrune.mjs'
+import { computeAutoDependencyOrphans } from '../../utils/plugins/autoDependencyPrune.ts'
 import { loadInstalledPluginsV2 } from '../../utils/plugins/installedPluginsManager.js'
 import { loadAllPlugins } from '../../utils/plugins/pluginLoader.js'
 
