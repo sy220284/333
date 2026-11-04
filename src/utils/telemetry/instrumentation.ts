@@ -85,7 +85,7 @@ function telemetryTimeout(ms: number, message: string): Promise<never> {
   })
 }
 
-export function bootstrapTelemetry() {
+export function bootstrapTelemetry() : void {
   if (process.env.USER_TYPE === 'ant') {
     // Read from ANT_ prefixed variables that are defined at build time
     if (process.env.ANT_OTEL_METRICS_EXPORTER) {
@@ -322,7 +322,7 @@ async function getOtlpTraceExporters() {
   return exporters
 }
 
-export function isTelemetryEnabled() {
+export function isTelemetryEnabled() : boolean {
   return isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_TELEMETRY)
 }
 

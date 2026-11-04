@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto'
  * The digest is bound to the command text, plugin, source mode and the
  * current marketplace revision; it must be recalculated after every refresh.
  */
-export function installedSourceCommandKey(source: { source: "command"; command: string; mode: "copy"|"link" }) {
+export function installedSourceCommandKey(source: { source: "command"; command: string; mode: "copy"|"link" }) : string {
   if (!source || source.source !== 'command') return undefined
   return source.mode === 'link' ? source.command + '\n[mode: link]' : source.command
 }
@@ -17,7 +17,7 @@ export function commandSourceDigest(disclosure) : string {
   return createHash('sha256').update(JSON.stringify(tuple), 'utf8').digest('hex')
 }
 
-export function commandSourceDisclosure({ pluginId, command, mode, catalogRevision }: { pluginId: string; command: string; mode: "copy"|"link"; catalogRevision: string }, suppliedDigest: string|undefined) {
+export function commandSourceDisclosure({ pluginId, command, mode, catalogRevision }: { pluginId: string; command: string; mode: "copy"|"link"; catalogRevision: string }, suppliedDigest: string|undefined) : { acceptCommandMatched?: boolean; sha256: string; kind: "command_source"; pluginId: string; command: string; mode: "copy" | "link"; catalogRevision: string; } {
   if (typeof pluginId !== 'string' || !pluginId.includes('@')) throw new TypeError('Plugin identifier is required')
   if (typeof command !== 'string' || command.trim() === '') throw new TypeError('Source command must be non-empty')
   if (mode !== 'copy' && mode !== 'link') throw new TypeError('Source mode must be copy or link')

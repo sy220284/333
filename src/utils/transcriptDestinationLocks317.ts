@@ -15,7 +15,7 @@ export function transcriptDestinationKey(path: string) : string {
   return process.platform === 'win32' ? absolute.toLowerCase() : absolute
 }
 
-export async function withTranscriptDestinationLocks(paths: string[], operation: () => Promise<void>) {
+export async function withTranscriptDestinationLocks(paths: string[], operation: () => Promise<void>) : Promise<void> {
   const keys = [...new Set(paths.map(transcriptDestinationKey))].sort()
   const acquired = []
   try {
