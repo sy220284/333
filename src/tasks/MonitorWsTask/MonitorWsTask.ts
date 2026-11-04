@@ -6,7 +6,7 @@ import { registerCleanup } from '../../utils/cleanupRegistry.js'
 import { enqueuePendingNotification } from '../../utils/messageQueueManager.js'
 import { escapeXml } from '../../utils/xml.js'
 import { registerTask, updateTaskState } from '../../utils/task/framework.js'
-import { isPublicIp, validateMonitorWsUrl } from '../../utils/monitorProtocol.mjs'
+import { isPublicIp, validateMonitorWsUrl } from '../../utils/monitorProtocol.ts'
 
 export type MonitorWsTaskState = TaskStateBase & {
   type: 'monitor_ws'
