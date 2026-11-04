@@ -5,6 +5,13 @@ on:
     branches:
       - upgrade/2.1.310-m1-evidence
     paths:
+      - '.gitattributes'
+      - 'build/official-embedded-assets-2.1.317.json'
+      - 'build/verify-official-embedded-assets.mjs'
+      - 'src/skills/bundled/**'
+      - 'src/constants/official317/**'
+      - 'src/types/official317/**'
+      - 'tests/m1-official-resource-checkout-317.test.mjs'
       - 'src/utils/messageQueueManager.ts'
       - 'src/utils/sessionQueuePartitions317.*'
       - 'src/utils/sessionStorage.ts'
@@ -50,6 +57,8 @@ jobs:
             ~/.npm
             .rebuild/public
           key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
+      - name: 官方317资源字节与跨平台 Git 检出属性
+        run: node --test tests/m1-official-resource-checkout-317.test.mjs
       - name: 完整依赖与资源恢复
         run: |
           node build/verify-bundled-assets.mjs
