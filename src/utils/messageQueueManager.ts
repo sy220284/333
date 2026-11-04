@@ -19,7 +19,7 @@ import { objectGroupBy } from './objectGroupBy.js'
 import { recordQueueOperation } from './sessionStorage.js'
 import { createSignal } from './signal.js'
 import { QUEUE_PRIORITY_ORDER as PRIORITY_ORDER, sortQueuedCommandsByPriority } from './queuePriority317.mjs'
-import { createQueueOperationRecord } from './queueOperation317.mjs'
+import { createDiscardedQueueRecords, createQueueOperationRecord } from './queueOperation317.mjs'
 
 export type SetAppState = (f: (prev: AppState) => AppState) => void
 
@@ -308,8 +308,14 @@ export function clearCommandQueue(): void {
   if (commandQueue.length === 0) {
     return
   }
+  const discarded = createDiscardedQueueRecords(commandQueue, getSessionId())
   commandQueue.length = 0
   notifySubscribers()
+  // Mirror the official 2.1.317 queue's remove(reason=cleared_on_cancel)
+  // journal so recovery can distinguish cancellation from delivery.
+  for (const record of discarded) {
+    void recordQueueOperation(record)
+  }
 }
 
 /**
