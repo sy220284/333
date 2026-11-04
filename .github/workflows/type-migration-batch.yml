@@ -113,6 +113,15 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m '批量修复已审计的TypeScript返回类型缺口（编译验证通过）'
-          git fetch origin upgrade/2.1.310-m1-evidence
-          git rebase origin/upgrade/2.1.310-m1-evidence
-          git push origin HEAD:upgrade/2.1.310-m1-evidence
+          for attempt in $(seq 1 15); do
+            git fetch origin upgrade/2.1.310-m1-evidence
+            git rebase origin/upgrade/2.1.310-m1-evidence
+            if git push origin HEAD:upgrade/2.1.310-m1-evidence; then
+              echo "已推送并验证第 $attempt 次提交尝试"
+              exit 0
+            fi
+            echo "同期提交导致分支前移，重新合并第 $attempt 次"
+            sleep 2
+          done
+          echo '批次修改经本地验证，但15次重试后仍未写入GitHub' >&2
+          exit 1
