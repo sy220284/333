@@ -85,6 +85,11 @@ jobs:
           node --test tests/distribution-isolation.test.mjs
       - name: 六架构原生独立程序真实模型SSE、工具与设置端到端
         run: M1_NATIVE_BINARY_RUN=1 node --test tests/m1-startup-cli-317.test.mjs
+      - name: Runner、后台宿主、预热接管与 Storage V5 六架构端到端联动
+        run: |
+          set -euo pipefail
+          node --test tests/m1-bg-spare-317.test.mjs tests/m1-daemon-worker-317.test.mjs tests/m1-preload-317.test.mjs tests/m1-runner-declares-317.test.mjs tests/m1-startup-socket-ownership-317.test.mjs
+          bun test tests/m4-session-storage-v5-integration.test.ts
       - name: 发行元数据记录至构建证据
         run: |
           node --input-type=module <<'NODE'
