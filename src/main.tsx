@@ -3665,6 +3665,21 @@ async function run(): Promise<CommanderCommand> {
 
   // Official 2.1.317 plugin configuration: exposes saved values without
   // leaking secrets and validates stdin JSON before writing any settings.
+  pluginCmd.command('init <name>').alias('new')
+    .description('Scaffold a new plugin at ~/.claude/skills/<name>/ (auto-loads next session as <name>@skills-dir)')
+    .option('--author <name>', 'Author name (default: git config user.name)')
+    .option('--author-email <email>', 'Author email (default: git config user.email)')
+    .option('--description <text>', 'Manifest description')
+    .option('-f, --force', 'Overwrite an existing .claude-plugin/ at the target')
+    .option('--with <components...>', 'Also scaffold: skills, agents, hooks, mcp, lsp, output-style, channel')
+    .action(async (name: string, opts: {
+      author?: string; authorEmail?: string; description?: string;
+      force?: boolean; with?: string[]
+    }) => {
+      const { pluginInitHandler } = await import('./cli/handlers/pluginInit.js')
+      await pluginInitHandler(name, opts)
+    })
+
   pluginCmd.command('configure <plugin>').description("Show a plugin's options or save values from stdin").option('--json', 'Output as JSON').option('--values-stdin', 'Read option values from stdin as a JSON object of single-line strings').addOption(coworkOption()).action(async (plugin: string, options: {
     json?: boolean;
     valuesStdin?: boolean;
