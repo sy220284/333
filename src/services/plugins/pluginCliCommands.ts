@@ -19,7 +19,7 @@ import {
   saveMcpServerUserConfig,
   type UserConfigSchema,
 } from '../../utils/plugins/mcpbHandler.js'
-import { routeInstallConfigAssignments } from '../../utils/plugins/pluginInstallConfigRouting.mjs'
+import { routeInstallConfigAssignments } from '../../utils/plugins/pluginInstallConfigRouting.ts'
 import { loadAllPlugins } from '../../utils/plugins/pluginLoader.js'
 import { getPluginStorageId, loadPluginOptions, savePluginOptions } from '../../utils/plugins/pluginOptionsStorage.js'
 import { parsePluginIdentifier } from '../../utils/plugins/pluginIdentifier.js'
