@@ -53,5 +53,8 @@
   "include": [
     "src",
     "native"
+  ],
+  "exclude": [
+    "src/skills/bundled/artifact-design/examples/**"
   ]
 }
