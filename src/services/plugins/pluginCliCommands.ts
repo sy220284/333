@@ -191,14 +191,26 @@ export async function installPlugin(
   json = false,
   configEntries: string[] = [],
   npmRegistry?: string,
+  commandConsent?: { yes?: boolean; acceptCommand?: string },
 ): Promise<void> {
+  let commandApprovalFailure: Awaited<ReturnType<typeof installPluginOp>> | undefined
   try {
     // biome-ignore lint/suspicious/noConsole:: intentional console output
     if (!json) console.log(`Installing plugin "${plugin}"...`)
 
-    const result = await installPluginOp(plugin, scope, npmRegistry)
+    const result = await installPluginOp(plugin, scope, npmRegistry, commandConsent)
 
     if (!result.success) {
+      if (result.shownCommand) {
+        commandApprovalFailure = result
+        const { name, marketplace } = parsePluginIdentifier(result.shownCommand.pluginId)
+        const shown = result.shownCommand
+        writeToStdout(
+          `"${name}" is installed by running a command from marketplace "${marketplace}" on this machine:\n` +
+          `  ${shown.command}\n` +
+          `  (mode "${shown.mode}": its output directory is ${shown.mode === 'copy' ? 'copied into the plugin cache' : 'linked'})\n`,
+        )
+      }
       throw new Error(result.message)
     }
 
@@ -258,7 +270,11 @@ export async function installPlugin(
         plugin,
         scope,
         message: errorMessage(error),
-        failureCode: category === 'not-found' ? 'not_found' : category,
+        failureCode: commandApprovalFailure?.failureCode ??
+          (category === 'not-found' ? 'not_found' : category),
+        ...(commandApprovalFailure?.shownCommand && {
+          shownCommand: commandApprovalFailure.shownCommand,
+        }),
       })}\n`)
     }
     handlePluginCommandError(error, 'install', plugin)
