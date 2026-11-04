@@ -19,11 +19,11 @@ export function computeAutoDependencyOrphans(
     if (active.auto === true) automatic.add(id)
     else manual.add(id)
   }
-  if (!automatic.size) return { orphans: new Set(), unloadable: [], autoCount: 0 }
+  if (!automatic.size) return { orphans: new Set<string>(), unloadable: [] as string[], autoCount: 0 }
   const byId = new Map(loaded.map(plugin => [plugin.source, plugin]))
   const unloadable = [...manual, ...automatic].filter(id => !byId.has(id))
   if (unloadable.length) {
-    return { orphans: new Set(), unloadable, autoCount: automatic.size }
+    return { orphans: new Set<string>(), unloadable, autoCount: automatic.size }
   }
   const reachable = new Set<string>()
   const qualify = (dep: string, source: string): string => {

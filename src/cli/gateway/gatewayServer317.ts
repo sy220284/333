@@ -153,7 +153,7 @@ export async function createGatewayService317(config, deps: GatewayServiceDeps31
           request.method === 'POST' &&
           ['/v1/messages','/v1/messages/count_tokens'].includes(url.pathname))
         const admission = criAttempt ? await cri.authenticate(token) : null
-        if (admission && !admission.ok) {
+        if (admission?.ok === false) {
           await store.audit('cri.denied', null, requestId, {
             reason: admission.reason, path: url.pathname,
           })

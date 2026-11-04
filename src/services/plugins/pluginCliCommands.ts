@@ -156,7 +156,10 @@ async function applyInstallConfig(
       serverSchemas[bundle.manifest.name] = bundle.manifest.user_config
     }
   }
-  const routed = routeInstallConfigAssignments(assignments, topSchema, serverSchemas)
+  const routed: {
+    topLevel: Record<string, string>
+    servers: Record<string, Record<string, string>>
+  } = routeInstallConfigAssignments(assignments, topSchema, serverSchemas)
   // Validate ALL inputs before performing any persistent write.
   const topValidated = validatePluginCliValues(
     routed.topLevel, topSchema, loadPluginOptions(storageId),

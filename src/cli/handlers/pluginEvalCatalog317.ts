@@ -68,9 +68,10 @@ function validateGrader(grader, dir) {
   }
   if (grader.type === 'regex') {
     if (typeof grader.pattern !== 'string') throw new Error(`grader ${grader.name}: regex pattern required`)
-    if (grader.flags !== undefined && typeof grader.flags !== 'string') throw new Error(`grader ${grader.name}: invalid regex flags`)
-    if (!/^[dgimsuvy]*$/.test(grader.flags ?? '')) throw new Error(`grader ${grader.name}: invalid regex flags`)
-    new RegExp(grader.pattern, grader.flags ?? '')
+    const flags = grader.flags
+    if (flags !== undefined && typeof flags !== 'string') throw new Error(`grader ${grader.name}: invalid regex flags`)
+    if (!/^[dgimsuvy]*$/.test(flags ?? '')) throw new Error(`grader ${grader.name}: invalid regex flags`)
+    new RegExp(grader.pattern, flags ?? '')
   }
   if (grader.type === 'file_exists' && typeof grader.path !== 'string') {
     throw new Error(`grader ${grader.name}: path required`)
@@ -195,7 +196,7 @@ export async function readEvalCase317(dir) {
     ['execution.timeout_seconds', data.execution.timeout_seconds, 3600],
     ['runs', data.runs, 50],
   ]) {
-    if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > cap) {
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || typeof cap !== 'number' || value > cap) {
       throw new Error(`eval ${data.name}: ${name} must be an integer in 1..${cap}`)
     }
   }
