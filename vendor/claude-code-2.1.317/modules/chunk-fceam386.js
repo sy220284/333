@@ -1,6 +1,0 @@
-// @bun @bytecode
-// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
-
-// Version: 2.1.317
-import{q,Il}from"./chunk-wxyh2ndv.js";import{Ar,Gr}from"./chunk-v1dhx02j.js";import{i}from"./chunk-jdmxbspc.js";var t={claudeMd:!0,skills:!0,workflows:!1,plugins:!0,pluginMonitors:!1,themes:!1,hljsLanguages:!0,hooks:!0,statusLine:!1,fileSuggestion:!1,mcpAutoDiscovered:!1,mcpClaudeAi:!1,mcpAgentFrontmatter:!0,agents:!0,outputStyles:!1,lspServers:!0,keybindings:!1},l={claudeMd:!1,skills:!1,workflows:!1,plugins:!1,pluginMonitors:!1,themes:!1,hljsLanguages:!1,hooks:!0,statusLine:!0,fileSuggestion:!0,mcpAutoDiscovered:!1,mcpClaudeAi:!1,mcpAgentFrontmatter:!1,agents:!1,outputStyles:!1,lspServers:!1,keybindings:!1},a={claudeMd:!1,skills:!1,workflows:!1,plugins:!1,pluginMonitors:!1,themes:!1,hljsLanguages:!1,hooks:!1,statusLine:!0,fileSuggestion:!0,mcpAutoDiscovered:!1,mcpClaudeAi:!1,mcpAgentFrontmatter:!1,agents:!1,outputStyles:!1,lspServers:!1,keybindings:!0};function lr(e,s){if(a[e]&&q())return!0;if(Gr()&&!l[e])return!0;if(Ar()&&!s?.explicitlyRequested)return t[e];return!1}function Ox(){return Boolean(i.CLAUDE_CODE_DISABLE_CLAUDE_MDS||lr("claudeMd",{explicitlyRequested:Il().length>0}))}
-export{lr,Ox};

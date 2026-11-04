@@ -1,5 +1,0 @@
-// @bun @bytecode
-// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
-
-// Version: 2.1.317
-import{wt}from"./chunk-8tz6agpn.js";import{Be}from"./chunk-dbgyrqyp.js";var t=Be("./anti-patterns-evn314kn.md");var a=Be("./choosing-a-form-tgtb06w1.md");var r="./color-formula-22636152.md.zst";var s=wt(r,import.meta.dirname);var o=Be("./components-yjv8r4qd.md");var i=Be("./interaction-d4xwjtb3.md");var n=Be("./marks-and-anatomy-183sms53.md");var l="./palette-f0ae74f9.md.zst";var h=wt(l,import.meta.dirname);var d=Be("./SKILL-6rrqfkf8.md");var c=(e)=>typeof e==="string"?e:e.default,w=import.meta.require("./chunk-62bz8f4r.js"),k=import.meta.require("./chunk-5t8wdwwk.js"),P=d,J={"references/anti-patterns.md":t,"references/choosing-a-form.md":a,"references/color-formula.md":s,"references/components.md":o,"references/interaction.md":i,"references/marks-and-anatomy.md":n,"references/palette.md":h,"scripts/validate_palette.js":c(w),"scripts/validate_palette.py":c(k)};export{J as SKILL_FILES,P as SKILL_MD};

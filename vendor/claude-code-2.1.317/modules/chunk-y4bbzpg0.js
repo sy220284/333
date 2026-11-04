@@ -1,6 +1,0 @@
-// @bun @bytecode
-// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
-
-// Version: 2.1.317
-import{d}from"./chunk-5x4vp4dg.js";import{t}from"./chunk-qx8w2w8f.js";import{v}from"./chunk-yx0yvz1d.js";import{Tge,wIt}from"./chunk-wdx9vt3f.js";import{kOe}from"./chunk-aypzp7vs.js";import{F9o,Gi,wEn}from"./chunk-ttn3wae7.js";function hAo(){if(!F9o())return"off";try{return v("tengu_vast_tulip",!1)===!0?"enforce":"observe"}catch{return t("tool host attestation: reading tengu_vast_tulip threw; observing",{level:"warn"}),"observe"}}function s(e){let o=kOe(),{status:r,meetsLevel:n,configException:i}=wIt(e,o,{isCloudWorker:!1});return{status:r,verdict:!o.enforce?"not_policed":n?"pass":i?"config_exception":"below_floor"}}function w_e(e){let o=hAo();return o==="off"?void 0:{mode:o,...s(Tge(e))}}function MAe(e){return e?.mode==="enforce"&&e.verdict==="below_floor"}function uzn(){let e=w_e("UNSPECIFIED");return{attestation:e,heldBack:MAe(e)}}function pUs(e){try{e?.(wEn,Gi["repository_trust.served_calls.unattested"])}catch(o){t(`[remote-tools] the notice sink threw on ${wEn}: ${d(o)}`,{level:"error"})}}
-export{hAo,w_e,MAe,uzn,pUs};

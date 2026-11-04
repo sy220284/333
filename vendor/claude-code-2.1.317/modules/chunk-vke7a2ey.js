@@ -1,6 +1,0 @@
-// @bun @bytecode
-// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
-
-// Version: 2.1.317
-import{Pw}from"./chunk-wxyh2ndv.js";import{Ar}from"./chunk-v1dhx02j.js";import{Go}from"./chunk-50jvyf08.js";import{Hje}from"./chunk-mf6cjfte.js";import{QS,$ee,kE,Po}from"./chunk-thp9mgjc.js";import{VMs}from"./chunk-m75914pe.js";import{$A}from"./chunk-s40gr246.js";import{ko}from"./chunk-ee73q1a3.js";function Xnn(){return $ee(Go)}async function Nbo(){await Promise.all([$A(),Hje()])}function $bo(e,r){return VMs(r.scope)&&!Po(e)}function $Ge(e,r){return $bo(e,r)&&!t(r)}function t(e){return import.meta.require("./chunk-rgyrdt8j.js").mcpClientModule().isFirstPartyDesignServerConfig(e)}function Fbo(e){switch(e.type){case void 0:case"stdio":case"http":case"sse":case"ws":return!0;case"sdk":case"sse-ide":case"ws-ide":case"claudeai-proxy":return!1}}function i(e){return Object.assign(QS(),ko(e,Fbo))}async function Ubo({storageV5:e}={}){if(Pw()||Ar())return{configs:QS(),deniedBySettings:!1};await Nbo();let{servers:r}=await kE({},{purpose:"deviceBridge",storageV5:e});return{configs:i(r),deniedBySettings:Xnn()}}async function NUn(e={}){let{configs:r,deniedBySettings:o}=await Ubo(e);return o?QS():r}
-export{Xnn,Nbo,$bo,$Ge,Fbo,Ubo,NUn};

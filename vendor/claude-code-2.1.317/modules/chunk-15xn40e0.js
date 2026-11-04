@@ -1,6 +1,0 @@
-// @bun @bytecode
-// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
-
-// Version: 2.1.317
-import{l3e}from"./chunk-se9d4zwh.js";import{tt,Kr}from"./chunk-26xg87f0.js";import{go,q9}from"./chunk-4p8ngxfv.js";import{pi,So}from"./chunk-wgx3jefn.js";import{tr,ki}from"./chunk-thp9mgjc.js";import{Es}from"./chunk-n2b35g7f.js";import{R,y,j}from"./chunk-3j5jca5v.js";j();j();function h(){let[o]=y(()=>l3e()?q9:go);return o}function ZLe(o,{selfOpened:u,hasOpeningGrace:r=u,onCancelled:S,owedAtExit:b}){let[C,s]=y(!1),n=R(!1),[c,E]=y(!1),e=R(!1),i=h(),x=Kr(r?i:null),d=!r||x,A=tt()?!0:!1,g=pi(i),{refusedWithin:v,noteRefused:w}=So();function _(){if(r&&(g()||v(i)))return w(),!0;return!1}let a=Es(()=>{if(e.current)return;let t=n.current;n.current=!0;let l=S(t);if(l===void 0){e.current=!0;let p=b?.(t);if(p===void 0){ki(1);return}p.then((m)=>tr(1,"other",m===void 0?void 0:{finalMessage:m}),()=>tr(1));return}s(!0),f(l)},void 0,u&&!c);function D(){if(n.current||!d)return!1;return n.current=!0,s(!0),!0}function f(t){if(e.current)return;e.current=!0,E(!0),o(t)}return{choicesDisabled:!d&&!A,decided:C,take:D,refuseInput:_,settled:()=>e.current,handBack:f,exit:a,exitHintShowing:a.pending&&!c}}
-export{ZLe};

@@ -1,6 +1,0 @@
-// @bun @bytecode
-// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
-
-// Version: 2.1.317
-import{p}from"/$bunfs/root/chunk-c3q80g49.js";import{Ve,dre}from"/$bunfs/root/chunk-zvxmwtvh.js";import{ic,He}from"/$bunfs/root/chunk-e56bj9s5.js";function mno(e,n){return e!==void 0&&Number.isInteger(e)&&e>=6&&e<=n?e:6}var Z3t={first:5,permissionRequestRenames:6,readAllowLarge:7,editOriginalFile:8,containerSearchTools:9,managedHookCall:10,keptBackgroundCommands:11,readCallsByToolUseId:12,repoRulesReadHere:13,repoRulesOnRenders:14,repoRulesOnUploads:15,whichCopyAsk:16,runAnswersKept:17,repoHooksListing:18,readOutputDropsFileUnchanged:19,shellDirectoryHeld:20,pluginHttpHookCall:21},r=Math.max(...Object.values(Z3t)),d={[Ve]:{[dre]:Z3t.readAllowLarge}};var vRn={version:r,min_version:mno(void 0,r)},lge={version:vRn.version,min_version:1},e8t=p(()=>He({version:ic().min(1),min_version:ic().min(1)}).refine(({version:e,min_version:n})=>n<=e));function mPt(e){return e8t().safeParse(e).data}function gPt(e,n){if(n.version<e.min_version)return{kind:"peer_too_old"};return e.version<n.min_version?{kind:"self_too_old"}:{kind:"agreed",version:Math.min(e.version,n.version)}}
-export{mno,Z3t,vRn,lge,e8t,mPt,gPt};

@@ -1,6 +1,0 @@
-// @bun @bytecode
-// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
-
-// Version: 2.1.317
-import{v,Pe,ue}from"./chunk-yx0yvz1d.js";import{b,de}from"./chunk-hd335g9m.js";import{a}from"./chunk-sqwfq8wd.js";import{zg}from"./chunk-8yj6zwg4.js";import{be,Kn}from"./chunk-mf6cjfte.js";import{wq}from"./chunk-s28bsda3.js";function fwo(u,{requireOnboarding:n=!0}={}){let o=ue();if(n&&!o.hasCompletedOnboarding||o.hasSeenAutoDefaultNudge||!v("tengu_maple_pier",!0))return null;let e=be("userSettings")?.permissions?.defaultMode,t=["projectSettings","localSettings","flagSettings","policySettings"].some((r)=>be(r)?.permissions?.defaultMode);if(e&&e!=="auto"&&!t&&wq(u))return e;return null}function pwo(u,n,o){if(ue().hasSeenAutoDefaultNudge)return;let e=zg(n.current_mode);if(u==="shown"){a("tengu_auto_default_nudge_shown",{current_mode:de(e),surface:b("ide")});return}let t=n.choice==="accept"?"accept":"decline";if(t==="accept")Kn("userSettings",{permissions:{defaultMode:"auto"}},void 0,o);Pe((r)=>r.hasSeenAutoDefaultNudge?r:{...r,hasSeenAutoDefaultNudge:!0},o),a("tengu_auto_default_nudge_resolved",{choice:b(t),outcome:t==="accept"?b("switched"):b("declined"),current_mode:de(e),surface:b("ide")})}
-export{fwo,pwo};

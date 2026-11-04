@@ -19,6 +19,3 @@ research/claude-code-2.1.88/dependencies/node_modules/** -text
 # These 107 official resource files are SHA-pinned byte-for-byte.
 # Preserve their source line endings on Windows as well as Linux/macOS.
 src/skills/bundled/claude-api/** -text -eol whitespace=-blank-at-eol,-blank-at-eof
-
-# 2.1.317 官方 ELF 全量模块逐字节镜像：Git 不修改任何换行符或内容。
-vendor/claude-code-2.1.317/** -text

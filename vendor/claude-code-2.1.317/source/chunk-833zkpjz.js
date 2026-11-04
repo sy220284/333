@@ -1,5 +1,0 @@
-// @bun @bytecode
-// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
-
-// Version: 2.1.317
-import{ccs}from"/$bunfs/root/chunk-6bhdxahy.js";import"/$bunfs/root/chunk-cxdy1zwk.js";import"/$bunfs/root/chunk-vhrg6qez.js";import"/$bunfs/root/chunk-mtmpvyvr.js";import"/$bunfs/root/chunk-pvyy6gna.js";import"/$bunfs/root/chunk-6q2b5tav.js";import"/$bunfs/root/chunk-2jfwmp5n.js";import"/$bunfs/root/chunk-z08m662t.js";import"/$bunfs/root/chunk-15pb8hw3.js";import"/$bunfs/root/chunk-7hh5s6s6.js";import"/$bunfs/root/chunk-rjhx5pq3.js";import{xe}from"/$bunfs/root/chunk-dbgyrqyp.js";var m=xe(ccs());var e=m.AssumeRoleCommand;var r=m.STSClient;export{e as AssumeRoleCommand,r as STSClient};

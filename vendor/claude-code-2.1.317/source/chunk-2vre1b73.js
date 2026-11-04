@@ -1,7 +1,0 @@
-// @bun @bytecode
-// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
-
-// Version: 2.1.317
-import{y9}from"/$bunfs/root/chunk-xkb87seb.js";import{Zwr}from"/$bunfs/root/chunk-ftd6jk9c.js";import{IQt}from"/$bunfs/root/chunk-7bsarx3n.js";import{QMt,Zco}from"/$bunfs/root/chunk-0ftpbvta.js";import{Rve}from"/$bunfs/root/chunk-yx0yvz1d.js";var d=new RegExp(`^<${y9}[ \\t>]`),S=`</${y9}>`,C=["",`
-`],I=/\sfrom-plugin\s*(?:=\s*(?:"[^"<>]*"|'[^'<>]*'|[^\s>]*))?/gi,A=/from-plugin/i;function $q(e,n){if(typeof e==="string")return h(e,n===Rve);if(!Array.isArray(e))return e;let t=e;for(let o of C){let s=[],l=[],r="";t.forEach((i,p)=>{if(i.type==="text"){if(l.length>0)r+=o;s.push(r.length),l.push(p),r+=i.text}});let a=Zco(r);if(a.length===0)continue;let g=t.slice(),u=0;l.forEach((i,p)=>{let c=g[i],P=s[p],_=s[p+1]??1/0;if(c.type!=="text")return;let f=[],E=0;for(;u<a.length&&a[u]<_;u++){let m=a[u]-P;f.push(c.text.slice(E,m),"<\\"),E=m+IQt(c.text,m)}if(f.length>0)f.push(c.text.slice(E)),g[i]={...c,text:f.join("")}}),t=g}return t}function X8s(e){return h(e,!0)}function h(e,n){let t=e.trimEnd(),o=t.length-S.length,s=Zwr.test(e);if(!(o>0&&t.endsWith(S)&&(s||n&&d.test(e))))return QMt(e);let r=B(e.slice(1,o));return A.test(O(r))?QMt(e):`<${QMt(r)}${e.slice(o)}`}function B(e){let n=O(e);return n.replace(I,"")+e.slice(n.length)}function O(e){let n=e.indexOf(">");return n<0?e:e.slice(0,n)}
-export{$q,X8s};

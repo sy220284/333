@@ -1,6 +1,0 @@
-// @bun @bytecode
-// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
-
-// Version: 2.1.317
-import{Qf}from"./chunk-qx8w2w8f.js";import{_r}from"./chunk-d01ffsyh.js";import{P}from"./chunk-tkwtwx7k.js";import{f9}from"./chunk-xx070fcm.js";import{Xr}from"./chunk-y1has5v0.js";import{Pa}from"./chunk-50jvyf08.js";import{Ve}from"./chunk-zvxmwtvh.js";import n from"path";function sgn(){let r=[process.execPath],o=process.argv[1];if(!Qf()&&o)r.push(o);return r}var a="--eval-artifacts-server",ign=["publish_version","edit_version","publish_files","create_from_type"],R8s=["guide","get_artifact","read_artifact","list_artifacts","list_files","read_file","list_types"];function agn(r){return r.map((o)=>Xr(Pa,o))}var p=/[*?[{]/;function x8s(r,o){let e=(o.alwaysAllowRules.cliArg??[]).flatMap((t)=>{let{toolName:s,ruleContent:i}=_r(t);return s===Ve&&i?.startsWith("//")===!0?[i.slice(1).replace(/\/\*\*$/,"")]:[]});return[r,...e.filter((t)=>!p.test(t)).map((t)=>n.posix.normalize(t).replace(/\/+$/,"")).filter((t)=>t!==""&&t!==".").map((t)=>P()==="windows"?f9(t):t)]}function P8s(r,o){let[e=process.execPath,...t]=sgn();return{type:"stdio",command:e,args:[...t,a,r,...o],env:{}}}
-export{sgn,ign,R8s,agn,x8s,P8s};

@@ -1,6 +1,0 @@
-// @bun @bytecode
-// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
-
-// Version: 2.1.317
-import{qf,_Mt}from"/$bunfs/root/chunk-yx0yvz1d.js";import{ne}from"/$bunfs/root/chunk-sctdt2my.js";import{qm}from"/$bunfs/root/chunk-qx8w2w8f.js";import{Nc}from"/$bunfs/root/chunk-b70e80yc.js";import{sd}from"/$bunfs/root/chunk-2z63wn86.js";import{dEr}from"/$bunfs/root/chunk-fnzgktb2.js";import{gp}from"/$bunfs/root/chunk-ve5cqzqa.js";var g="claudecode/agentId",p="claudecode/agentType",d="claudecode/isObserver",c=128,f=64;function rpn(r){let{name:e,config:n}=r;if(e!==Nc)return!1;return sd(n)||n.scope==="dynamic"&&"url"in n&&typeof n.url==="string"&&dEr(n.url)}function _8n(r,e){let n=_Mt(e.agentId,e.agentContext);if(n===void 0||!rpn(r))return{};let t=ne(qm(e.agentType??""),c);return{[g]:n,...t!==""&&{[p]:t},...u(n,e)&&{[d]:!0}}}function u(r,{agentContext:e,taskRegistry:n}){let t=[r],s=new Set;for(let i=t.pop();i!==void 0;i=t.pop()){if(s.has(i))continue;if(s.size>=f)return!0;s.add(i);let o=n.get(i);if(o!==void 0&&gp(o))return!0;if(o!==void 0&&"parentAgentId"in o&&typeof o.parentAgentId==="string")t.push(o.parentAgentId);if(!qf(e)){let a=i===e.agentId?e.parentAgentId:i===r?e.agentId:void 0;if(a!==void 0)t.push(a)}}return!1}
-export{rpn,_8n};

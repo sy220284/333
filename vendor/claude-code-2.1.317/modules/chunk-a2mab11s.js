@@ -1,6 +1,0 @@
-// @bun @bytecode
-// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
-
-// Version: 2.1.317
-import"./chunk-y9ysdmh2.js";import"./chunk-ft5hc2h0.js";import"./chunk-wxyh2ndv.js";import"./chunk-tpv9n38f.js";import"./chunk-hd335g9m.js";import"./chunk-5x4vp4dg.js";import"./chunk-k4p8c4ay.js";import"./chunk-q0j77z7t.js";import"./chunk-agahg8zh.js";import"./chunk-v1dhx02j.js";import"./chunk-5p7p4cyx.js";import"./chunk-jdmxbspc.js";import"./chunk-svppe5z4.js";import"./chunk-qx8w2w8f.js";import"./chunk-1wm7dwg2.js";import"./chunk-ccfgd08p.js";import"./chunk-sctdt2my.js";import"./chunk-xkb87seb.js";import"./chunk-tkwtwx7k.js";import"./chunk-kqhresa7.js";import"./chunk-tgqpevk8.js";import"./chunk-d5z2b50q.js";import{bn}from"./chunk-qxw1d3qz.js";import"./chunk-df4s59en.js";async function a(r,t){let o=e(r.remote,r.inputPrompt);if(o===null)return bn("Error: claude -p --cloud needs a task: pass it as the prompt, as --cloud's value, or on stdin.");let{runHeadlessCloudPrint:s}=await import("./chunk-5fwdb090.js");return s(r,t,{prompt:o,outputFormat:r.outputFormat==="json"?"json":"text"})}function e(r,t){let o=[r??"",typeof t==="string"?t:""].filter((s)=>s.trim()!=="");return o.length===0?null:o.join(`
-`)}export{a as runHeadlessCloudPrintArm};

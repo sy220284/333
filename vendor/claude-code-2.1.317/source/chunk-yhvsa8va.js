@@ -1,6 +1,0 @@
-// @bun @bytecode
-// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
-
-// Version: 2.1.317
-import{iOs}from"/$bunfs/root/chunk-tpv9n38f.js";import{bl,si}from"/$bunfs/root/chunk-q0j77z7t.js";import{RO,Wwe,Wit,U1}from"/$bunfs/root/chunk-nr1mj4f2.js";import{Oi}from"/$bunfs/root/chunk-1dza7qzz.js";import{Z6,wO}from"/$bunfs/root/chunk-ttn3wae7.js";var a0e=(()=>{try{return iOs(process.cwd())}catch{return process.cwd()}})();function PFr(r,e){let n=RO(r),t=RO(e);if(U1(n)||U1(t))return!0;if(n.skipped!==t.skipped)return!0;return Wwe(n,t)}function cet(r,e){if(si(r)||bl(r))return[];let n=Oi(r),t=n!==null&&n!==void 0?[n]:(()=>{let o=wO(r);return o.length>0?o:[r]})();return e===void 0?t:t.filter((o)=>Z6(o,e)!=="same")}function Obt(r,e){if(si(r)||bl(r))return[];let n=Oi(r),t=n!==null&&n!==void 0?[n]:wO(r);return e===void 0?t:t.filter((s)=>Z6(s,e)!=="same")}function k2e(r,e,n){if(e.length===0)return!1;if(!e.every((s)=>{let o=Z6(r,s);if(o==="indeterminate")return!1;if(o==="same")return!0;return!PFr(s,r)}))return!1;if(n?.requireCovered===!0){let s=RO(r);if(U1(s))return!1;let o=(a)=>a.some((u)=>{let i=RO(u);if(U1(i))return!1;return Wit(s,i)});return o(n.coveredWitnesses??e)||o(n.extraCoveredRoots??[])}return!0}
-export{a0e,PFr,cet,Obt,k2e};

@@ -1,6 +1,0 @@
-// @bun @bytecode
-// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
-
-// Version: 2.1.317
-import{U}from"/$bunfs/root/chunk-wxyh2ndv.js";import{W}from"/$bunfs/root/chunk-agahg8zh.js";import{t}from"/$bunfs/root/chunk-qx8w2w8f.js";import{l}from"/$bunfs/root/chunk-xkb87seb.js";import{ri}from"/$bunfs/root/chunk-p0fqg352.js";var Jgr="in-process";class KAi{captured=null;cliOverride=null;setCliOverride(e){this.cliOverride=e}capture(e){this.captured=e}replaceWith(e){this.captured=e,this.cliOverride=null}}var ZVi=new W(()=>new KAi);function o(){return ZVi.of(U().host)}function DJi(e){o().setCliOverride(e)}function Yas(){return o().cliOverride}function Xas(e){o().replaceWith(e),t(`[TeammateModeSnapshot] CLI override cleared, new mode: ${e}`)}function Jas(){return o().captured!==null}function jro(){let e=o();if(e.cliOverride)e.capture(e.cliOverride),t(`[TeammateModeSnapshot] Captured from CLI override: ${e.captured}`);else e.capture(ri("teammateMode",Jgr).value),t(`[TeammateModeSnapshot] Captured from config: ${e.captured}`)}function i9t(){let e=o();if(e.captured===null)l(Error("getTeammateModeFromSnapshot called before capture - this indicates an initialization bug")),jro();return e.captured??Jgr}
-export{Jgr,KAi,ZVi,DJi,Yas,Xas,Jas,jro,i9t};

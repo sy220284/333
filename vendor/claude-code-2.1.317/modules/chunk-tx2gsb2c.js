@@ -1,6 +1,0 @@
-// @bun @bytecode
-// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
-
-// Version: 2.1.317
-import{Jn,mh}from"./chunk-q0j77z7t.js";import{g5}from"./chunk-sctdt2my.js";import{posix as a}from"path";var mhr=String.raw`\s\u2800\uFFF9-\uFFFB\p{Cc}\p{M}\p{Default_Ignorable_Code_Point}`,c=new RegExp(`^[${mhr}]+`,"u");function kls(n){return n.replace(c,"")}function Qro(n,r=Als(n)){return Jn(n)||uIt(n)||g5.test(r[0])||r.map(kls).some((e)=>Jn(e)||uIt(e))}var u=/^\.\.\//;function uIt(n){return mh(n)||mh(a.normalize(n).replace(u,"/"))||l(n)&&mh("/"+n)}function l(n){let r=a.normalize(n);return r===".."||r.startsWith("../")}function Tls(n){let r=n.slice(7);return Qro(r)||Qro(r.slice(1))}var i=/(?:%[0-9A-Fa-f]{2}){1,512}/g,f=/^%[0-9A-Fa-f]{2}/;function Als(n){if(!n.includes("%"))return[n,n];let r=new TextDecoder("utf-8",{fatal:!1,ignoreBOM:!0});return[n.replace(i,(e,t)=>{let o=t+e.length;return r.decode(s(e),{stream:f.test(n.slice(o,o+3))})}),n.replace(i,(e)=>Array.from(s(e),(t)=>String.fromCharCode(t)).join(""))]}function s(n){return Uint8Array.from(n.slice(1).split("%"),(r)=>parseInt(r,16))}
-export{mhr,kls,Qro,uIt,Tls,Als};

@@ -1,6 +1,0 @@
-// @bun @bytecode
-// (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
-
-// Version: 2.1.317
-import{Dn}from"/$bunfs/root/chunk-g1g78ahf.js";var Ay="SubagentHandback";var mt="Agent",cgr="Launch a new agent to handle complex, multi-step tasks",jTi="The task for the agent to perform",WTi="A short (3-5 word) description of the task",GTi=["sonnet","opus","haiku","fable"],Qis="Name for the spawned agent.",zTi=`${Qis} Makes it addressable via ${Dn}({to: name}) while running.`,_R="fork",KTi=`agent:builtin:${_R}`,Zis=200,VTi=5,Du="Task",$Pt=1e5,H8t=new Set(["Explore","Plan"]),mBe="NOTE: this agent stopped at its ",aro=`; ${Dn} to task-id to continue`,ugr=` Send the agent a message (${Dn}) to let it continue from where it stopped.`,fgr=`The subagent ended without delivering a report through ${Ay}, so no report was delivered.`,pgr=` Send the agent a message (${Dn}) to ask it to deliver its report.`,eas=` Once its requests are accepted again, send the agent a message (${Dn}) to let it continue from where it stopped instead of starting a new agent.`,mgr="subagent_type is required: the general-purpose agent is not available in this session";
-export{Ay,mt,cgr,jTi,WTi,GTi,Qis,zTi,_R,KTi,Zis,VTi,Du,$Pt,H8t,mBe,aro,ugr,fgr,pgr,eas,mgr};
