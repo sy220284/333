@@ -24,7 +24,7 @@ import {
 } from './mdm/settings.js'
 import { getSettingsFilePathForSource } from './settings.js'
 import { getCachedSettingsFileDigest, resetSettingsCache } from './settingsCache.js'
-import { findUnobservedStartupChanges } from './startupReconcile.mjs'
+import { findUnobservedStartupChanges } from './startupReconcile.ts'
 
 /**
  * Time in milliseconds to wait for file writes to stabilize before processing.
