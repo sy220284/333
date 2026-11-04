@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/m1-317-cross-arch-native.yml'
       - 'build/probe-official-platform-audio-317.mjs'
+      - 'build/official-native-audio-317.json'
   workflow_dispatch:
 
 permissions:
