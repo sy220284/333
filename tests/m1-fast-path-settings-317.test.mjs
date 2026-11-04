@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { checkRequiredFastPathVersion317, enforcesRequiredVersionForWorker317 } from '../src/bootstrap/fastPathSettings317.ts'
+import { checkRequiredFastPathVersion317, enforcesRequiredVersionForWorker317, backgroundVersionDisposition317 } from '../src/bootstrap/fastPathSettings317.ts'
 
 const version = '2.1.317'
 
@@ -55,4 +55,24 @@ test('2.1.317 full version gate belongs to daemon-worker, not already-admitted w
   for (const route of ['--daemon-worker', '--bg-pty-host', '--bg-spare', '--preload'])
     assert.match(source, new RegExp('ensureWorkerStartupPolicy\\(\\x27' + route + '\\x27'),
       route + ' is not dispatched through the matching startup policy')
+})
+
+test('317 background fleet keeps inspection and cleanup routable under version restrictions', () => {
+  for (const verb of ['logs', 'stop', 'kill', 'rm'])
+    assert.equal(backgroundVersionDisposition317(verb), 'warn', verb)
+  for (const verb of ['agents', 'attach', 'respawn', '--bg', '--background'])
+    assert.equal(backgroundVersionDisposition317(verb), 'reject', verb)
+  for (const route of ['daemon', '--internal-bg-supervisor'])
+    assert.equal(backgroundVersionDisposition317(route), 'skip', route)
+
+  const source = readFileSync(
+    fileURLToPath(new URL('../src/entrypoints/cli.tsx', import.meta.url)), 'utf8')
+  const entry = source.indexOf('if (backgroundRequest)')
+  const dispatch = source.indexOf('interceptBackgroundCli(args)', entry)
+  const policy = source.indexOf('await ensureFastPathSettingsLoaded317()', entry)
+  assert.ok(entry > 0 && policy > entry && dispatch > policy,
+    'background supervisor bypasses policy and session bootstrap before dispatch')
+  const daemon = source.indexOf("if (args[0] === '--daemon-worker')")
+  assert.match(source.slice(daemon, daemon + 1300), /configureGlobalAgents\(\)/,
+    'daemon worker did not install active proxy and mTLS dispatchers')
 })
