@@ -82,7 +82,7 @@ async function prepareEvalPlugin317(root, settings) {
     }
     return { plugin, workspace }
   } catch (error) {
-    await rm(workspace, { recursive: true, force: true })
+    await rm(workspace, { recursive: true, force: true, maxRetries: 12, retryDelay: 200 })
     throw error
   }
 }
@@ -135,6 +135,6 @@ export async function pluginEvalHandler317(target, options = {}, adapters = {}) 
     }
     return data.cases.some(c => c.score === null || c.score < threshold) ? 1 : 0
   } finally {
-    if (!options.keepTemp) await rm(temp.workspace, { recursive: true, force: true })
+    if (!options.keepTemp) await rm(temp.workspace, { recursive: true, force: true, maxRetries: 12, retryDelay: 200 })
   }
 }
