@@ -29,6 +29,9 @@ on:
       - 'src/bootstrap/processStart317.d.mts'
       - 'tests/m1-process-start-317.test.mjs'
       - 'tests/m1-preload-317.test.mjs'
+      - 'tests/m1-bg-spare-317.test.mjs'
+      - 'src/bootstrap/bgSpare317.ts'
+      - 'src/bootstrap/bgSpare317.mjs'
       - 'src/bootstrap/preload317.ts'
       - 'src/bootstrap/preload317.mjs'
       - 'src/bootstrap/daemonWorker317.ts'
@@ -145,6 +148,8 @@ jobs:
         run: node --test tests/m1-daemon-worker-317.test.mjs
       - name: 317官方与重建预加载会话接管及真实模型请求双跑
         run: node --test tests/m1-preload-317.test.mjs
+      - name: 317后台预热备用进程认证、令牌回收和真实模型原版对照
+        run: node --test tests/m1-bg-spare-317.test.mjs
       - name: 对比官方317和重建程序的三平台真实冷启动及帮助性能
         run: node --test tests/m1-coldstart-official-native-317.test.mjs
       - name: 测试317早期GC及allocator调优，远程运行双阶段采样
