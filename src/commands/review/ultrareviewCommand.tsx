@@ -3,11 +3,30 @@ import React from 'react';
 import type { LocalJSXCommandCall, LocalJSXCommandOnDone } from '../../types/command.js';
 import { checkOverageGate, confirmOverage, launchRemoteReview } from './reviewRemote.js';
 import { UltrareviewOverageDialog } from './UltrareviewOverageDialog.js';
+import { UltrareviewAllFilesDialog } from './UltrareviewAllFilesDialog.js';
+import { execFileNoThrow } from '../../utils/execFileNoThrow.js';
+import { getDefaultBranch, gitExe } from '../../utils/git.js';
+import { resolveUltrareviewGitBase } from '../../utils/review/ultrareviewGitBase.mjs';
 function contentBlocksToString(blocks: ContentBlockParam[]): string {
   return blocks.map(b => b.type === 'text' ? b.text : '').filter(Boolean).join('\n');
 }
-async function launchAndDone(args: string, context: Parameters<LocalJSXCommandCall>[1], onDone: LocalJSXCommandOnDone, billingNote: string, signal?: AbortSignal): Promise<void> {
-  const result = await launchRemoteReview(args, context, billingNote);
+/**
+ * A whole-tree cloud upload must be approved separately from workspace trust
+ * and billing. PR-number review has an explicit target and needs no expansion.
+ */
+async function getAllFilesApprovalBranch(args: string): Promise<string | null> {
+  if (/^[1-9]\\d*$/.test(args.trim())) return null;
+  const branch = (await getDefaultBranch()) || 'main';
+  const base = await resolveUltrareviewGitBase(
+    branch, (gitArgs, input) => execFileNoThrow(gitExe(), gitArgs, {
+      preserveOutputOnError: false,
+      ...(input !== undefined && { input }),
+    }),
+  );
+  return base.kind === 'all-files' ? branch : null;
+}
+async function launchAndDone(args: string, context: Parameters<LocalJSXCommandCall>[1], onDone: LocalJSXCommandOnDone, billingNote: string, signal?: AbortSignal, allowAllFiles = false): Promise<void> {
+  const result = await launchRemoteReview(args, context, billingNote, { signal, allowAllFiles });
   // User hit Escape during the ~5s launch — the dialog already showed
   // "cancelled" and unmounted, so skip onDone (would write to a dead
   // transcript slot) and let the caller skip confirmOverage.
@@ -39,6 +58,26 @@ export const call: LocalJSXCommandCall = async (onDone, context, args) => {
     });
     return null;
   }
+  const allFilesBranch = await getAllFilesApprovalBranch(args);
+  if (allFilesBranch !== null) {
+    const note = gate.kind === 'needs-confirm'
+      ? ' This review bills as Extra Usage.'
+      : gate.kind === 'proceed' ? gate.billingNote : '';
+    return <UltrareviewAllFilesDialog
+      baseBranch={allFilesBranch}
+      billsExtraUsage={gate.kind === 'needs-confirm'}
+      onProceed={async signal => {
+        await launchAndDone(args, context, onDone, note, signal, true);
+        if (gate.kind === 'needs-confirm' && !signal.aborted) confirmOverage();
+      }}
+      onCancel={() => onDone('Ultrareview cancelled.', { display: 'system' })}
+      onError={error => onDone(
+        'Ultrareview failed: ' + (error instanceof Error ? error.message : String(error)),
+        { display: 'system' },
+      )}
+    />;
+  }
+
   if (gate.kind === 'needs-confirm') {
     return <UltrareviewOverageDialog onProceed={async signal => {
       await launchAndDone(args, context, onDone, ' This review bills as Extra Usage.', signal);
