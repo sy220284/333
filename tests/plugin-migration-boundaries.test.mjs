@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { stripTypeScriptTypes } from 'node:module'
 import { test } from 'node:test'
+import { normalizeInstalledPluginsRecords } from '../src/utils/plugins/installedPluginsMigration.mjs'
 
 function productionFunction(file, name, dependencies, prefix = '') {
   const source = stripTypeScriptTypes(readFileSync(new URL(`../src/utils/plugins/${file}`, import.meta.url), 'utf8'))
@@ -13,33 +14,65 @@ function productionFunction(file, name, dependencies, prefix = '') {
 
 test('current plugin initialization publishes one session snapshot', async () => {
   let snapshots = 0
+  let migrationChecks = 0
   const initialize = productionFunction('installedPluginsManager.ts', 'initializeVersionedPlugins', {
     clearInstalledPluginsCache: () => {},
+    ensureInstalledPluginsMigrated: () => { migrationChecks++ },
     getInMemoryInstalledPlugins: () => { snapshots++; return { version: 2, plugins: {} } },
     logForDebugging: () => {},
   }, 'let initializationPromise = null')
   await Promise.all([initialize(), initialize()])
   await initialize()
   assert.equal(snapshots, 1)
+  assert.equal(migrationChecks, 1)
 })
 
-test('V1 registry, malformed JSON and read errors are rejected without implicit migration', () => {
+test('V1 registry is normalized read-only; malformed JSON, invalid V1 and read errors are rejected', () => {
   const source = stripTypeScriptTypes(readFileSync(new URL('../src/utils/plugins/installedPluginsManager.ts', import.meta.url), 'utf8'))
   const start = source.indexOf('function readInstalledPluginsFileRaw(')
   const end = source.indexOf('\n}', start) + 2
   assert.ok(start >= 0 && end > start)
   let content = JSON.stringify({ version: 2, plugins: {} })
-  const create = new Function('getFsImplementation','getInstalledPluginsFilePath','isENOENT','InstalledPluginsFileSchemaV2','jsonParse', `${source.slice(start,end)}\nreturn readInstalledPluginsFileRaw`)
+  const create = new Function(
+    'getFsImplementation', 'getInstalledPluginsFilePath', 'isENOENT',
+    'InstalledPluginsFileSchemaV2', 'jsonParse',
+    'normalizeInstalledPluginsRecords', 'getVersionedCachePath',
+    `${source.slice(start, end)}\nreturn readInstalledPluginsFileRaw`,
+  )
   const read = create(
-    () => ({ readFileSync: () => { if (content === null) { const error = new Error('missing'); error.code = 'ENOENT'; throw error } return content } }),
+    () => ({
+      readFileSync: () => {
+        if (content === null) {
+          const error = new Error('missing')
+          error.code = 'ENOENT'
+          throw error
+        }
+        return content
+      },
+    }),
     () => 'installed_plugins.json',
     error => error.code === 'ENOENT',
-    () => ({ parse: value => { if (value.version !== 2) throw new Error('Only V2 registry is supported'); return value } }),
+    () => ({ parse: value => {
+      if (value.version !== 2) throw new Error('V2 normalized result required')
+      return value
+    } }),
     JSON.parse,
+    normalizeInstalledPluginsRecords,
+    (id, version) => `/cache/${id}/${version}`,
   )
   assert.equal(read().version, 2)
-  content = JSON.stringify({ version: 1, plugins: {} })
-  assert.throws(read, /Only V2 registry/)
+  content = JSON.stringify({
+    version: 1,
+    plugins: { 'legacy@market': { version: '1.0.0', installedAt: '2026-01-01', installPath: '/legacy/path' } },
+  })
+  const original = content
+  const converted = read()
+  assert.equal(converted.version, 2)
+  assert.equal(converted.plugins['legacy@market'][0].scope, 'user')
+  assert.equal(converted.plugins['legacy@market'][0].installPath, '/cache/legacy@market/1.0.0')
+  assert.equal(content, original, 'read-only conversion cannot change the original file')
+  content = JSON.stringify({ version: 1, plugins: { 'broken': {} } })
+  assert.throws(read, /Invalid V1 plugin installation/)
   content = '{ invalid-json'
   assert.throws(read, /JSON|position|Unexpected/)
   content = null
