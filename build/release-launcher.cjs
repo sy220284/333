@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 'use strict'
 
-// M1 C19-T02/T05: launcher must keep handling termination while the
-// Bun-built CLI is running. A synchronous child blocks signal forwarding.
+// M1 C19-T02/T05: the distributed entrypoint launches the self-contained
+// native program, with no external Bun runtime. Forward signals and preserve
+// the native process exit status.
 const { spawn } = require('node:child_process')
 const { constants } = require('node:os')
 const { join } = require('node:path')
 
-const child = spawn('bun', [join(__dirname, 'cli.js'), ...process.argv.slice(2)], {
+const nativeCli = join(__dirname, process.platform === 'win32' ? 'claude.exe' : 'claude')
+const child = spawn(nativeCli, process.argv.slice(2), {
   stdio: 'inherit',
   env: process.env,
   windowsHide: true,
