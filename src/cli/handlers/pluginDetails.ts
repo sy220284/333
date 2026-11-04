@@ -56,7 +56,12 @@ async function skills(paths: (string | undefined)[]): Promise<Member[]> {
 async function scan(plugin: LoadedPlugin) {
   const c = await files([plugin.commandsPath, ...plugin.commandsPaths ?? []])
   const a = await files([plugin.agentsPath, ...plugin.agentsPaths ?? []])
-  const s = await skills([plugin.skillsPath, ...plugin.skillsPaths ?? []])
+  // The root SKILL.md in a skills-dir plugin is its entry point; the
+  // native component inventory counts only optional skills/ subcomponents.
+  const skillRoots = plugin.source.endsWith('@skills-dir')
+    ? [join(plugin.path, 'skills')]
+    : [plugin.skillsPath, ...plugin.skillsPaths ?? []]
+  const s = await skills(skillRoots)
   const m = await json(join(plugin.path, '.mcp.json'))
   const l = await json(join(plugin.path, '.lsp.json'))
   const h = plugin.hooksConfig
