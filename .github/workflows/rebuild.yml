@@ -216,6 +216,8 @@ jobs:
         run: node --test tests/m3-plugin-test-options-317.test.mjs
       - name: 317插件测试VM计时器与异步错误追踪
         run: node --test tests/m3-plugin-test-timers-317.test.mjs
+      - name: 企业网关托管设置匹配与ETag原版协议
+        run: node --test tests/m6-gateway-managed-settings-317.test.mjs
       - name: 317模型目录、读取边界和嵌套会话
         id: acceptance_008
         continue-on-error: true
