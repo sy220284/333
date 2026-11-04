@@ -142,7 +142,7 @@ def import_binary(binary, dest):
                 raise ValueError('Unexpected Bun CLI entrypoint')
             manifest = {'version': VERSION, 'platform': 'linux-x64', 'binary_sha256': BINARY_SHA256,
                         'bun_offset': base, 'bun_size': size, 'module_count': len(records),
-                        'kinds': {k: sum(r['kind'] == k for r in records) for k in set(KINDS.values())},
+                        'kinds': {k: sum(r['kind'] == k for r in records) for k in ('js', 'file', 'text', 'napi')},
                         'description': 'source: exact bytes; modules: path-rewritten candidate, not yet runtime-verified; decoded: zstd output',
                         'files': records}
             (dest / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf8')
