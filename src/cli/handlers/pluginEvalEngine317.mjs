@@ -58,10 +58,15 @@ export async function executePluginEvalSuite317(cases, settings, adapters = {}) 
           mockCalls: result.mockCalls ?? [],
         }
         const verdicts = []
+        let judgeCostUsd = 0
         for (const grader of job.caseInfo.graders) {
           if (job.arm === 'without' && grader.arm === 'with-only') continue
           const verdict = await gradeEvalResult317(grader, actual,
-            request => judge(request, { workspace, judgeModel: settings.judgeModel }))
+            async request => {
+              const response = await judge(request, { workspace, judgeModel: settings.judgeModel })
+              judgeCostUsd += Number(response?.costUsd ?? 0)
+              return response
+            })
           const indicatorOnly = ablation === 'with-without' &&
             grader.type === 'tool_used' && grader.tool === 'Skill'
           verdicts.push({ ...verdict, indicatorOnly })
@@ -72,9 +77,9 @@ export async function executePluginEvalSuite317(cases, settings, adapters = {}) 
           ...summary, verdicts,
           output: result.lastMessage ?? '', trace: result.trace ?? [],
           error: result.error,
-          costUsd: result.costUsd ?? 0,
+          costUsd: Number(result.costUsd ?? 0) + judgeCostUsd,
         }
-        costUsd += Number(result.costUsd ?? 0)
+        costUsd += Number(result.costUsd ?? 0) + judgeCostUsd
         if (costUsd >= maxCostUsd) budgetExceeded = true
       } finally {
         if (!settings.keepTemp) await rm(workspace, { recursive: true, force: true })
