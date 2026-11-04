@@ -1,5 +1,5 @@
 import vm from 'node:vm'
-import { parseWorkflowMetaLiteral } from './workflowMetaParser.mjs'
+import { parseWorkflowMetaLiteral } from './workflowMetaParser.ts'
 import {createHash} from 'node:crypto'
 const metaPattern=/\bexport\s+const\s+meta\s*=\s*/
 export function workflowMeta(script){
