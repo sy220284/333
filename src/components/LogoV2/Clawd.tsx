@@ -3,7 +3,7 @@ import * as React from "react";
 import { Box, Text } from "../../ink.js";
 import { env } from "../../utils/env.js";
 import { isScreenReaderEnabled } from "../../utils/accessibility/screenReaderRuntime.js";
-import { clawdAppearance } from "./clawdAnimationData.mjs";
+import { clawdAppearance } from "./clawdAnimationData.ts";
 
 type NamedPose = keyof typeof clawdAppearance.poses;
 type Eyes = keyof typeof clawdAppearance.eyes;
