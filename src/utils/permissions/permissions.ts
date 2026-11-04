@@ -14,7 +14,7 @@ import { REPL_TOOL_NAME } from '../../tools/REPLTool/constants.js'
 import type { AssistantMessage } from '../../types/message.js'
 import { extractOutputRedirections } from '../bash/commands.js'
 import { getAccountInformation } from '../auth.js'
-import { shouldConfirmAccountEmailDisclosure } from '../accountEmailDisclosure.mjs'
+import { ACCOUNT_EMAIL_DISCLOSURE_REASON, shouldConfirmAccountEmailDisclosure } from '../accountEmailDisclosure.mjs'
 import { logForDebugging } from '../debug.js'
 import { AbortError, toError } from '../errors.js'
 import { logError } from '../log.js'
@@ -1079,10 +1079,10 @@ function getAccountEmailDisclosureDecision(
   if (!shouldConfirmAccountEmailDisclosure(tool.name, input, email)) return null
   return {
     behavior: 'ask',
-    message: 'This tool call contains your account email address and may send it over the network. Allow?',
+    message: ACCOUNT_EMAIL_DISCLOSURE_REASON,
     decisionReason: {
       type: 'safetyCheck',
-      reason: 'Potential outbound disclosure of the active account email',
+      reason: ACCOUNT_EMAIL_DISCLOSURE_REASON,
       classifierApprovable: false,
     },
   }
