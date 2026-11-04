@@ -1,0 +1,10 @@
+{
+  "strict": [
+    "src/cli/background/sessionStore.ts",
+    "src/entrypoints/startupRouting317.ts",
+    "src/tasks/LocalWorkflowTask/workflowHistory.ts",
+    "src/tasks/LocalWorkflowTask/workflowStoragePaths.ts",
+    "src/utils/cliArgv317.ts",
+    "src/utils/telemetry/projectTelemetryPolicy.ts"
+  ]
+}
