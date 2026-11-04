@@ -29,7 +29,10 @@ test('317 native and rebuilt plugin installation preserve config status and keyc
     userConfig: {
       token: { title: 'Secret token', description: 'Verification token', type: 'string', required: true, sensitive: true },
     },
+    // A corrupt unrelated MCPB must not block a valid top-level option.
+    mcpServers: './server.mcpb',
   }))
+  writeFileSync(join(plugin, 'server.mcpb'), 'invalid-archive')
   const exercise = (kind, command, home) => {
     const isNative = kind === 'native'
     const executable = isNative ? target : 'bun'
