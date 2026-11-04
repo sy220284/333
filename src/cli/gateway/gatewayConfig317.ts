@@ -96,7 +96,7 @@ function validateUpstream(item: unknown, names: Set<string>): GatewayUpstream317
     if (provider === 'anthropicGoogleCloud') {
       nonempty(item.project_id,'anthropicGoogleCloud.project_id')
       nonempty(item.workspace_id,'anthropicGoogleCloud.workspace_id')
-      item = {...item, location: item.location ?? 'global'}
+      // The normalized global default is applied to the returned copy.
     }
     if (provider === 'vertex') {
       nonempty(item.project_id,'vertex.project_id')
@@ -121,7 +121,9 @@ function validateUpstream(item: unknown, names: Set<string>): GatewayUpstream317
     }
     if (typeof value !== 'string' || /[\r\n]/.test(value)) throw new Error('invalid upstream header ' + key)
   }
-  return { ...item, name, provider: provider as GatewayProvider317,
+  return { ...item,
+    ...(provider === 'anthropicGoogleCloud' && {location: item.location ?? 'global'}),
+    name, provider: provider as GatewayProvider317,
     base_url, headers: headers as Record<string, string> }
 }
 export function validateGatewayConfig317(value: unknown) {
