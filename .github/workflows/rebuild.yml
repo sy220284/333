@@ -119,6 +119,8 @@ jobs:
       - name: 317插件安装配置的源码和真实x64差分
         if: runner.os == 'Linux'
         run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-config-native-parity-317.test.mjs
+      - name: 验证317自动模式默认规则筛选与用户设置安全重置
+        run: node --test tests/m4-auto-mode-defaults-label-317.test.mjs tests/m4-auto-mode-reset-317.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
         run: node --test tests/cli-parity.test.mjs
       - name: 复核多级模型回退与自动压缩真实参数语义

@@ -3775,6 +3775,13 @@ async function run(): Promise<CommanderCommand> {
         autoModeConfigHandler();
         process.exit(0);
       });
+      autoModeCmd.command('reset').description('Reset auto mode configuration to the shipped defaults by removing the autoMode section from your user settings file')
+        .option('-y, --yes', 'Skip the confirmation prompt')
+        .action(async ({ yes }: { yes?: boolean }) => {
+          const { autoModeResetHandler } = await import('./cli/handlers/autoMode.js');
+          const ok = await autoModeResetHandler({ yes: Boolean(yes) });
+          process.exit(ok ? 0 : 1);
+        });
       autoModeCmd.command('critique').description('Get AI feedback on your custom auto mode rules').option('--model <model>', 'Override which model is used').action(async options => {
         const {
           autoModeCritiqueHandler

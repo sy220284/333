@@ -1,3 +1,10 @@
+import { readFileSync } from 'node:fs'
+import { createInterface } from 'node:readline/promises'
+import { writeFileSyncAndFlush_DEPRECATED } from '../../utils/file.js'
+import { markInternalWrite } from '../../utils/settings/internalWrites.js'
+import { resetSettingsCache } from '../../utils/settings/settingsCache.js'
+import { getSettingsFilePathForSource } from '../../utils/settings/settings.js'
+import { removeAutoModeSection } from './autoModeCliPolicy.mjs'
 import { filterAutoModeRulesByLabel } from './autoModeCliPolicy.mjs'
 /**
  * Auto mode subcommand handlers — dump default/merged classifier rules and
@@ -44,6 +51,69 @@ export function autoModeConfigHandler(): void {
     hard_deny: expandAutoModeRules(config?.hard_deny, defaults.hard_deny),
     environment: expandAutoModeRules(config?.environment, defaults.environment),
   })
+}
+
+/** Reset user rules only. Preserve every other key, including unknown fields. */
+export async function autoModeResetHandler(options: { yes: boolean }): Promise<boolean> {
+  const path = getSettingsFilePathForSource('userSettings')
+  if (!path) {
+    process.stderr.write('Could not resolve the user settings file path.\n')
+    return false
+  }
+  let raw: string
+  try {
+    raw = readFileSync(path, 'utf8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      process.stdout.write(`Auto mode configuration is already at defaults — ${path} has no autoMode section.\n`)
+      return true
+    }
+    process.stderr.write(`Could not read ${path}: ${errorMessage(error)}\n`)
+    return false
+  }
+  let data: unknown
+  try {
+    data = raw.trim() ? JSON.parse(raw) : {}
+  } catch (error) {
+    process.stderr.write(`Invalid user settings JSON at ${path}: ${errorMessage(error)}\n`)
+    return false
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    process.stderr.write(`Invalid user settings JSON at ${path}: expected an object.\n`)
+    return false
+  }
+  const next = removeAutoModeSection(data as Record<string, unknown>)
+  if (!next) {
+    process.stdout.write(`Auto mode configuration is already at defaults — ${path} has no autoMode section.\n`)
+    return true
+  }
+  if (!options.yes) {
+    if (!process.stdin.isTTY || !process.stdout.isTTY) {
+      process.stderr.write('Confirmation required. For headless use, add --yes.\n')
+      return false
+    }
+    const prompt = createInterface({ input: process.stdin, output: process.stdout })
+    let answer: string
+    try {
+      answer = await prompt.question(`Remove autoMode rules from ${path}? [y/N] `)
+    } finally {
+      prompt.close()
+    }
+    if (!/^(y|yes)$/i.test(answer.trim())) {
+      process.stdout.write('Aborted.\n')
+      return false
+    }
+  }
+  try {
+    markInternalWrite(path)
+    writeFileSyncAndFlush_DEPRECATED(path, jsonStringify(next, null, 2) + '\n')
+    resetSettingsCache()
+  } catch (error) {
+    process.stderr.write(`Could not reset auto mode settings in ${path}: ${errorMessage(error)}\n`)
+    return false
+  }
+  process.stdout.write(`Auto mode configuration reset to defaults — autoMode section removed from ${path}.\nRun \`claude auto-mode config\` to see the effective rules.\n`)
+  return true
 }
 
 const CRITIQUE_SYSTEM_PROMPT =

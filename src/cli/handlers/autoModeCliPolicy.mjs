@@ -14,3 +14,11 @@ export function filterAutoModeRulesByLabel(rules, prefix) {
     environment: rules.environment.filter(matches),
   }
 }
+
+/** A reset removes user-level autoMode only, without rewriting other values. */
+export function removeAutoModeSection(settings) {
+  if (!Object.hasOwn(settings, 'autoMode')) return null
+  const next = { ...settings }
+  delete next.autoMode
+  return next
+}
