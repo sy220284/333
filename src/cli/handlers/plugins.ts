@@ -702,7 +702,7 @@ export async function marketplaceUpdateHandler(
 // plugin install (lines 5690–5721)
 export async function pluginInstallHandler(
   plugin: string,
-  options: { scope?: string; cowork?: boolean },
+  options: { scope?: string; cowork?: boolean; json?: boolean; marketplace?: string },
 ): Promise<void> {
   if (options.cowork) setUseCoworkPlugins(true)
   const scope = options.scope || 'user'
@@ -732,7 +732,35 @@ export async function pluginInstallHandler(
     scope: scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
 
-  await installPlugin(plugin, scope as 'user' | 'project' | 'local')
+  let installId = plugin
+  if (options.marketplace) {
+    if (plugin.includes('@')) {
+      cliError('--marketplace expects a bare plugin name without @marketplace')
+    }
+    try {
+      const parsed = await parseMarketplaceInput(options.marketplace)
+      if (!parsed || 'error' in parsed) {
+        throw new Error(!parsed ? 'Invalid marketplace source' : parsed.error)
+      }
+      const added = await addMarketplaceSource(parsed)
+      saveMarketplaceToSettings(added.name, { source: added.resolvedSource }, 'userSettings')
+      clearAllCaches()
+      installId = `${plugin}@${added.name}`
+    } catch (error) {
+      if (options.json) {
+        process.stdout.write(jsonStringify({
+          command: 'install',
+          outcome: 'failed',
+          plugin,
+          scope,
+          message: errorMessage(error),
+          failureCode: 'marketplace_error',
+        }) + '\n')
+      }
+      cliError(`Failed to add marketplace: ${errorMessage(error)}`)
+    }
+  }
+  await installPlugin(installId, scope as 'user' | 'project' | 'local', options.json)
 }
 
 /** Official 2.1.317 plugin configure: inspect top-level schema or save JSON stdin. */
