@@ -60,7 +60,7 @@ test('every packaged file matches signed-style SHA-256 content manifest', () => 
     assert.equal(createHash('sha256').update(content).digest('hex'),f.sha256,f.path);
   }
 });
-test('repository package uses rebuilt launcher's canonical entrypoint', () => {
+test("repository package uses rebuilt launcher canonical entrypoint", () => {
   const rootPackage = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
   const releasePackage = JSON.parse(readFileSync(join(dist, 'package.json'), 'utf8'));
   assert.equal(rootPackage.bin.claude, 'dist/launcher.cjs');
