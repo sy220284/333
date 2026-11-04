@@ -68,6 +68,7 @@ function validateGrader(grader, dir) {
   }
   if (grader.type === 'regex') {
     if (typeof grader.pattern !== 'string') throw new Error(`grader ${grader.name}: regex pattern required`)
+    if (grader.flags !== undefined && typeof grader.flags !== 'string') throw new Error(`grader ${grader.name}: invalid regex flags`)
     if (!/^[dgimsuvy]*$/.test(grader.flags ?? '')) throw new Error(`grader ${grader.name}: invalid regex flags`)
     new RegExp(grader.pattern, grader.flags ?? '')
   }
@@ -87,7 +88,7 @@ function validateGrader(grader, dir) {
   if (grader.type === 'baseline' && typeof grader.baseline_file !== 'string') {
     throw new Error(`grader ${grader.name}: baseline_file required`)
   }
-  if (grader.arm !== undefined && !['with-only', 'both'].includes(grader.arm)) {
+  if (grader.arm !== undefined && (typeof grader.arm !== 'string' || !['with-only', 'both'].includes(grader.arm))) {
     throw new Error(`grader ${grader.name}: arm must be with-only or both`)
   }
   return { weight: 1, ...grader, name: grader.name, type: grader.type } as EvalGrader317
@@ -134,7 +135,11 @@ export async function readEvalCase317(dir) {
     markdownGraders.push(grader)
   }
   if (rawYaml === null && markdown === null && markdownGraders.length === 0) return null
-  const data = {
+  const data: Record<string, unknown> & {
+    context: Record<string, unknown>;
+    execution: Record<string, unknown>;
+    graders: unknown[]
+  } = {
     ...base, ...top,
     schema_version: top.schema_version ?? base.schema_version ?? '1.1',
     name: top.name ?? base.name ?? basename(root),
@@ -222,17 +227,39 @@ export async function readEvalCase317(dir) {
   return { ...data, dir: root } as EvalCase317
 }
 
-export async function discoverEvalCases317(evalRoot, options = {}) {
+export async function discoverEvalCases317(
+  evalRoot: string,
+  options: {case?: string | string[]; tags?: string | string[]} = {},
+): Promise<EvalCase317[]> {
   const root = await realpath(evalRoot)
-  const todo = [root], cases = []
+  const todo = [root], cases: EvalCase317[] = []
+  const casePatterns = options.case === undefined ? [] : Array.isArray(options.case) ? options.case : [options.case]
+  const requestedTags = options.tags === undefined ? [] : Array.isArray(options.tags) ? options.tags : [options.tags]
   let inspected = 0
   while (todo.length) {
     const dir = todo.pop()
     if (++inspected > MAX_FILE_COUNT) throw new Error('eval directory scan exceeded its limit')
     const caseInfo = await readEvalCase317(dir)
     if (caseInfo) {
-      if (options.case && !new RegExp('^' + options.case.split('*').map(x => x.replace(/[|\\{}()[\]^$+?.]/g, '\\$&')).join('.*') + '$').test(caseInfo.name)) continue
-      if (options.tags?.length && !options.tags.some(tag => caseInfo.tags?.includes(tag))) continue
+      if (casePatterns.length && !casePatterns.some(pattern => new RegExp('^' + pattern.split('*').map(x => x.replace(/[|\\{}()[\]^$+?.]/g, '\\if (options.case && !new RegExp('^' + options.case.split('*').map(x => x.replace(/[|\\{}()[\]^$+?.]/g, '\\$&')).join('.*') + '$').test(caseInfo.name)) continue')).join('.*') + '
+      if (requestedTags.length && !requestedTags.some(tag => caseInfo.tags?.includes(tag))) continue
+      cases.push(caseInfo)
+      if (cases.length > MAX_CASES) throw new Error(`eval suite exceeded ${MAX_CASES} cases`)
+      continue
+    }
+    const children = await readdir(dir, { withFileTypes: true })
+    for (const entry of children) {
+      if (!entry.isDirectory() || entry.name.startsWith('.') || ['results','mocks','node_modules'].includes(entry.name)) continue
+      const path = join(dir, entry.name)
+      const real = await realpath(path)
+      if (!inside(root, real)) throw new Error(`eval directory leaves root: ${path}`)
+      todo.push(path)
+    }
+  }
+  return cases.sort((a, b) => a.dir.localeCompare(b.dir))
+}
+).test(caseInfo.name))) continue
+      if (requestedTags.length && !requestedTags.some(tag => caseInfo.tags?.includes(tag))) continue
       cases.push(caseInfo)
       if (cases.length > MAX_CASES) throw new Error(`eval suite exceeded ${MAX_CASES} cases`)
       continue
