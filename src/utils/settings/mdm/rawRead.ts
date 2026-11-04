@@ -128,3 +128,12 @@ export function startMdmRawRead(): void {
 export function getMdmRawReadPromise(): Promise<RawReadResult> | null {
   return rawReadPromise
 }
+
+/**
+ * The next claimed background session must start its own MDM/HKCU read.
+ * Reusing a resolved warm-process promise would restore the prior owner's
+ * settings even after the parsed caches are reset.
+ */
+export function resetMdmRawReadForClaim317(): void {
+  rawReadPromise = null
+}

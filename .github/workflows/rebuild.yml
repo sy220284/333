@@ -107,6 +107,8 @@ jobs:
         run: bun build/rebuild.mjs
       - name: M1 插件测试独立启动分流：真实子进程和隔离边界
         run: node --test tests/m1-plugin-test-fastpath-317.test.mjs
+      - name: M1 317预热会话配置、凭据及存储身份重绑定
+        run: bun test tests/m1-claim-rebind-317.test.mjs
       - name: 317源码运行资源：平台原生组件事务化装载与安全回滚
         run: node --test tests/m1-source-runtime-vendor-317.test.mjs
       - name: 317插件测试执行器：真实子进程、Hooks沙箱和退出码

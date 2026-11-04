@@ -147,6 +147,10 @@ export async function runClaimedSession317(claim: PreloadClaim317,
     state.switchSession(asSessionId(claim.sessionId))
     state.setSessionSource(source)
   }
+  // The accepted session must not reuse the warm process's settings,
+  // credentials, global config watcher or provider caches.
+  const { rebindClaimedSessionDependencies317 } = await import('./claimRebind317.ts')
+  await rebindClaimedSessionDependencies317()
   const { main } = await import('../main.js')
   await main()
 }

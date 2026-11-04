@@ -866,6 +866,10 @@ registerCleanup(async () => {
 // fs.watchFile poll interval for detecting writes from other instances (ms)
 const CONFIG_FRESHNESS_POLL_MS = 1000
 let freshnessWatcherStarted = false
+// Ownership is explicit: a preloaded worker may switch CLAUDE_CONFIG_DIR
+// between the warm environment and the accepted session.
+let activeFreshnessWatchFile317: string | null = null
+
 
 // fs.watchFile polls stat on the libuv threadpool and only calls us when mtime
 // changed — a stalled stat never blocks the main thread.
@@ -873,6 +877,7 @@ function startGlobalConfigFreshnessWatcher(): void {
   if (freshnessWatcherStarted || process.env.NODE_ENV === 'test') return
   freshnessWatcherStarted = true
   const file = getGlobalClaudeFile()
+  activeFreshnessWatchFile317 = file
   watchFile(
     file,
     { interval: CONFIG_FRESHNESS_POLL_MS, persistent: false },
@@ -904,7 +909,10 @@ function startGlobalConfigFreshnessWatcher(): void {
   )
   registerCleanup(async () => {
     unwatchFile(file)
-    freshnessWatcherStarted = false
+    if (activeFreshnessWatchFile317 === file) {
+      activeFreshnessWatchFile317 = null
+      freshnessWatcherStarted = false
+    }
   })
 }
 
@@ -954,6 +962,23 @@ export function getGlobalConfig(): GlobalConfig {
     // If anything goes wrong, fall back to uncached behavior
     return getConfig(getGlobalClaudeFile(), createDefaultGlobalConfig)
   }
+}
+
+/**
+ * 317 one-shot warm-process session handoff: invalidate the previous owner's
+ * config and filesystem watcher before the new session reads its config.
+ * Keeping the old watcher would allow an old file-change event to overwrite
+ * the newly claimed session's globalConfigCache.
+ */
+export function rebindGlobalConfigForClaim317(): void {
+  if (activeFreshnessWatchFile317 !== null) {
+    unwatchFile(activeFreshnessWatchFile317)
+    activeFreshnessWatchFile317 = null
+    freshnessWatcherStarted = false
+  }
+  globalConfigCache = { config: null, mtime: 0 }
+  lastReadFileStats = null
+  getProjectPathForConfig.cache.clear()
 }
 
 /**
