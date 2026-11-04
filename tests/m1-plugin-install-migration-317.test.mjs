@@ -4,7 +4,10 @@ import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync,
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { migrateInstalledPluginsRecords } from '../src/utils/plugins/installedPluginsMigration.mjs'
+import {
+  migrateInstalledPluginsRecords,
+  normalizeInstalledPluginsRecords,
+} from '../src/utils/plugins/installedPluginsMigration.mjs'
 
 const v1 = (version = '1.2.3') => ({ version: 1, plugins: { 'alpha@market': { version, installedAt: '2026-01-01', installPath: '/legacy/path', gitCommitSha: '123abc' } } })
 const v2 = (id = 'beta@market') => ({ version: 2, plugins: { [id]: [{ scope: 'project', projectPath: '/project', installPath: '/active/plugin', version: '2.0.0' }] } })
@@ -77,4 +80,14 @@ test('317: registry symlink is rejected at migration boundary', () => inSandbox(
   put(dir, 'outside.json', v1())
   symlinkSync(join(dir, 'outside.json'), join(dir, 'installed_plugins.json'))
   assert.throws(() => migrateInstalledPluginsRecords(dir, cache), /Unsafe/)
+}))
+
+test('317: read-only V1 normalization does not modify the source file', () => inSandbox((dir, cache) => {
+  put(dir, 'installed_plugins.json', v1())
+  const before = readFileSync(join(dir, 'installed_plugins.json'))
+  const viewed = normalizeInstalledPluginsRecords(get(dir), cache)
+  assert.equal(viewed.version, 2)
+  assert.equal(viewed.plugins['alpha@market'][0].scope, 'user')
+  assert.deepEqual(readFileSync(join(dir, 'installed_plugins.json')), before)
+  assert.equal(readdirSync(dir).length, 1)
 }))
