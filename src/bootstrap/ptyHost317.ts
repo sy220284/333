@@ -83,6 +83,12 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
   let child: ReturnType<typeof Bun.spawn> | undefined
   let server: ReturnType<typeof createServer> | undefined
   let stopped = false, forceClosed = false, lastExitCode = 0, lastSignal: string | undefined
+  let terminalClosed = false
+  const closeTerminalOnce = () => {
+    if (!terminal || terminalClosed) return
+    terminalClosed = true
+    terminal.close()
+  }
   const timers: Array<ReturnType<typeof setTimeout> | ReturnType<typeof setInterval>> = []
   const closeHandlers: Array<[NodeJS.Signals, () => void]> = []
   const send = (peer: Socket, frame: Buffer) => {
@@ -221,11 +227,18 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
     lastExitCode = await child.exited
     lastSignal = child.signalCode ?? undefined
     stopped = true
-    terminal.close()
+    closeTerminalOnce()
     broadcast(encodePtyControl317({ t: 'exit', code: lastExitCode, ...(lastSignal ? { signal: lastSignal } : {}) }))
-    for (const peer of peers) peer.end()
-    // Upstream permits late subscribers briefly after a worker exits.
-    if (!peers.size) await new Promise(resolve => setTimeout(resolve, 100))
+    // Flush the exit frame to attached clients before socket teardown.
+    const closingPeers = [...peers]
+    for (const peer of closingPeers) peer.end()
+    await Promise.race([
+      Promise.all(closingPeers.map(peer => new Promise<void>(resolve => {
+        if (peer.destroyed) { resolve(); return }
+        peer.once('close', () => resolve())
+      }))),
+      new Promise(resolve => setTimeout(resolve, 2000)),
+    ])
     return lastExitCode
   } catch (error) {
     recordFailure(socket, 'spawn/server failed: ' + String(error))
@@ -236,7 +249,7 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
     for (const timer of timers) clearInterval(timer)
     for (const [sig, handler] of closeHandlers) process.off(sig, handler)
     if (!stopped) forceTerminate('SIGTERM')
-    terminal?.close()
+    closeTerminalOnce()
     for (const peer of peers) peer.destroy()
     await new Promise(resolve => server?.close(() => resolve(undefined)) ?? resolve(undefined))
     if (server && process.platform !== 'win32') removeSocket(socket)
