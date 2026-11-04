@@ -8,6 +8,7 @@ import { TodoWriteTool } from '../../tools/TodoWriteTool/TodoWriteTool.js';
 import { type BackgroundRemoteSessionPrecondition, checkBackgroundRemoteSessionEligibility } from '../../utils/background/remote/remoteSession.js';
 import { logForDebugging } from '../../utils/debug.js';
 import { logError } from '../../utils/log.js';
+import { getUltrareviewClientTimeout } from '../../utils/review/ultrareviewRuntime.js';
 import { enqueuePendingNotification } from '../../utils/messageQueueManager.js';
 import { extractTag, extractTextContent } from '../../utils/messages.js';
 import { emitTaskTerminatedSdk } from '../../utils/sdkEventQueue.js';
@@ -36,7 +37,7 @@ export type RemoteAgentTaskState = TaskStateBase & {
   /**
    * When the local poller started watching this task (at spawn or on restore).
    * Review timeout clocks from here so a restore doesn't immediately time out
-   * a task spawned >30min ago.
+   * a task spawned before the current polling window.
    */
   pollStartedAt: number;
   /** True when this task was created by a teleported /ultrareview command. */
@@ -540,7 +541,8 @@ async function restoreRemoteAgentTasksImpl(context: TaskContext): Promise<void> 
 function startRemoteSessionPolling(taskId: string, context: TaskContext): () => void {
   let isRunning = true;
   const POLL_INTERVAL_MS = 1000;
-  const REMOTE_REVIEW_TIMEOUT_MS = 30 * 60 * 1000;
+  const reviewTimeout = getUltrareviewClientTimeout();
+  const REMOTE_REVIEW_TIMEOUT_MS = reviewTimeout.milliseconds;
   // Remote sessions flip to 'idle' between tool turns. With 100+ rapid
   // turns, a 1s poll WILL catch a transient idle mid-run. Require stable
   // idle (no log growth for N consecutive polls) before believing it.
@@ -675,7 +677,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
       // is the discriminator — bughunter mode always has one (run_hunt.sh),
       // prompt mode never does — and it arrives before the kickoff
       // post_stage so there's no race. When the hook is running, only the
-      // <remote-review> tag or the 30min timeout complete the task.
+      // <remote-review> tag or the configured review deadline complete the task.
       // Filtering on hook_event avoids a (theoretical) non-SessionStart hook
       // in prompt mode from blocking stableIdle — the code_review container
       // only registers SessionStart, but the 30min-hang failure mode is
@@ -748,7 +750,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
             ...t,
             status: 'failed'
           }));
-          const reason = result && result.subtype !== 'success' ? 'remote session returned an error' : reviewTimedOut && !sessionDone ? 'remote session exceeded 30 minutes' : 'no review output — orchestrator may have exited early';
+          const reason = result && result.subtype !== 'success' ? 'remote session returned an error' : reviewTimedOut && !sessionDone ? `remote session exceeded ${reviewTimeout.minutes} minutes` : 'no review output — orchestrator may have exited early';
           enqueueRemoteReviewFailureNotification(taskId, reason, context.setAppState);
           void evictTaskOutput(taskId);
           void removeRemoteAgentMetadata(taskId);
@@ -775,7 +777,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
             status: 'failed',
             endTime: Date.now()
           }));
-          enqueueRemoteReviewFailureNotification(taskId, 'remote session exceeded 30 minutes', context.setAppState);
+          enqueueRemoteReviewFailureNotification(taskId, `remote session exceeded ${reviewTimeout.minutes} minutes`, context.setAppState);
           void evictTaskOutput(taskId);
           void removeRemoteAgentMetadata(taskId);
           return; // Stop polling
