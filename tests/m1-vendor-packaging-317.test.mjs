@@ -58,7 +58,9 @@ function build(dir, preload) {
 function assertNoPackagingTemps(dir) {
   assert.deepEqual(
     readdirSync(dir).filter(name => name.startsWith('.vendor-stage-') ||
-      name.startsWith('.vendor-backup-')),
+      name.startsWith('.vendor-backup-') ||
+      name.startsWith('.official-317-stage-') ||
+      name.startsWith('.official-317-backup-')),
     [],
     'A successful or recovered package operation must not leak temporary directories',
   )
