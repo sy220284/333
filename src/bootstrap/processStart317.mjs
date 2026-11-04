@@ -1,4 +1,5 @@
-import { GCProfiler } from 'node:v8'
+import { createRequire } from 'node:module'
+const nativeRequire = createRequire(import.meta.url)
 
 // Original 2.1.317: chunk-c3eav5v2.js (startup memory tuning)
 // and chunk-51t2xkvt.js (remote-runner GC profiling).
@@ -64,6 +65,7 @@ export function startGarbageCollectionCount(env = process.env) {
   countingStarted = true
   if (env.CLAUDE_CODE_REMOTE !== 'true' || env.CLAUDE_CODE_COUNT_GARBAGE_COLLECTIONS !== '1')
     return
+  const { GCProfiler } = nativeRequire('node:v8')
   if (typeof GCProfiler !== 'function')
     throw Error('GCProfiler is unavailable for remote 2.1.317 execution')
   firstMessageProfiler = new GCProfiler()
