@@ -34,6 +34,23 @@ test('核心 TypeScript 实现不得经由同名 MJS 测试转接入口导入', 
   assert.deepEqual(failures, [], '生产模块应直接引用 .ts；.mjs 转接仅保留给 Node 测试')
 })
 
+test('TypeScript 组件导入应使用实际存在的 TSX 路径', () => {
+  const mismatches = []
+  for (const source of walk('src').filter(p => /\.tsx?$/.test(p) && !p.startsWith(bundled))) {
+    const text = readFileSync(file(source), 'utf8')
+    const imports = /\bfrom\s*['"](\.{1,2}\/[^'"]+\.jsx)['"]/g
+    for (const match of text.matchAll(imports)) {
+      const actual = resolve(dirname(file(source)), match[1])
+      const canonical = actual.slice(0, -4) + '.tsx'
+      if (!existsSync(actual) && existsSync(canonical)) {
+        mismatches.push(relative(root, file(source)) + ': ' + match[1] + ' -> ' +
+          relative(root, canonical))
+      }
+    }
+  }
+  assert.deepEqual(mismatches, [], '导入路径须指向真实 TypeScript/TSX 源码')
+})
+
 test('迁移后的 MJS 入口仅转接同名 TypeScript 源码', () => {
   const failures = []
   for (const source of walk('src').filter(p => p.endsWith('.mjs') &&
