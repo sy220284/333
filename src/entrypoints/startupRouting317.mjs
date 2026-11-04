@@ -5,7 +5,7 @@
  * before "--": prompt text must never launch background processes or worktrees.
  * The actual feature, trust and policy gates remain in the route handlers.
  */
-import { beforeDoubleDash } from '../utils/cliArgv317.mjs'
+import { beforeDoubleDash, hasCliFlag, findCliArgument } from '../utils/cliArgv317.mjs'
 
 const BACKGROUND_COMMANDS = new Set([
   'agents', 'attach', 'logs', 'stop', 'kill', 'respawn', 'rm', 'daemon',
@@ -14,10 +14,12 @@ const BACKGROUND_COMMANDS = new Set([
 export function classifyStartupArgs(args) {
   const flagWords = beforeDoubleDash(args)
   const command = flagWords[0]
-  const has = flag => flagWords.includes(flag)
+  // Use the official argv scanner: option values (e.g. --prefill "--bg")
+  // must not be mistaken for standalone mode switches.
+  const has = flag => hasCliFlag(flag, flagWords)
   const tmux = has('--tmux') || has('--tmux=classic')
   const worktree = has('-w') || has('--worktree') ||
-    flagWords.some(arg => arg.startsWith('--worktree='))
+    findCliArgument(arg => arg.startsWith('--worktree='), flagWords) !== -1
   return {
     flagWords,
     command,
