@@ -3649,6 +3649,20 @@ async function run(): Promise<CommanderCommand> {
   });
 
   // Plugin install command
+  program.command('ultrareview [target]')
+    .description('Run a cloud-hosted multi-agent code review of the current branch (or a PR number / base branch) and print the findings')
+    .option('--json', 'Print the raw bugs.json payload instead of formatted findings')
+    .option('--no-post', 'Do not post the findings to the PR (the default; accepted for parity with the /ultrareview and /code-review ultra flags)')
+    .option('--post', 'Post the finished review findings to the PR as you (PR targets only; one plain comment, not a review)')
+    .option('--timeout <minutes>', 'Maximum minutes to wait for the review to finish (default: 45)')
+    .option('--trust-workspace', 'Trust the current folder for this run only, without asking (for scripts and CI)')
+    .action(async (target: string | undefined, options: {
+      json?: boolean; post?: boolean; timeout?: string; trustWorkspace?: boolean
+    }) => {
+      const { ultrareviewCliHandler } = await import('./cli/handlers/ultrareview.js')
+      await ultrareviewCliHandler(target, options)
+    })
+
   pluginCmd.command('install <plugin>').alias('i').description('Install a plugin from available marketplaces (use plugin@marketplace for specific marketplace)').option('-s, --scope <scope>', 'Installation scope: user, project, or local', 'user').option('--json', 'Print one machine-readable result line on stdout').option('--marketplace <source>', 'Install from a marketplace URL, repository, or path, adding it first if needed').option('--config <key=value>', 'Set a userConfig field; repeatable', (value: string, values: string[]) => [...values, value], []).option('--registry <url>', 'Use an alternate npm registry for npm-sourced plugins').addOption(coworkOption()).action(async (plugin: string, options: {
     scope?: string;
     cowork?: boolean;
