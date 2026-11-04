@@ -2696,7 +2696,7 @@ function appendEntryToFile(
     // A missing parent is recoverable. Disk-full, permissions and I/O errors
     // retain their original failure instead of performing another write.
     if (!shouldRetrySessionAppendAfterMkdir(getErrnoCode(error))) throw error
-    fs.mkdirSync(dirname(fullPath), { mode: 0o700, recursive: true })
+    fs.mkdirSync(dirname(fullPath), { mode: 0o700 })
     fs.appendFileSync(fullPath, line, { mode: 0o600 })
   }
 }
