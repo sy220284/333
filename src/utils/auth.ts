@@ -40,7 +40,6 @@ import {
   isValidAwsStsOutput,
 } from './aws.js'
 import { AwsAuthStatusManager } from './awsAuthStatusManager.js'
-import { clearBetasCaches } from './betas.js'
 import {
   type AccountInfo,
   checkHasTrustDialogAccepted,
@@ -1233,7 +1232,6 @@ export function saveOAuthTokensIfNeeded(tokens: OAuthTokens): {
     }
 
     getClaudeAIOAuthTokens.cache?.clear?.()
-    clearBetasCaches()
     clearToolSchemaCache()
     return updateStatus
   } catch (error) {
