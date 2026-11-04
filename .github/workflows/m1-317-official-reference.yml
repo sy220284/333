@@ -21,6 +21,9 @@ on:
       - 'src/skills/bundledSkills.ts'
       - 'tests/bundled-skill-extraction.test.mjs'
       - 'build/install-public-deps.mjs'
+      - 'build/public-dependencies.lock.json'
+      - 'tests/m1-prometheus-security-317.test.mjs'
+      - 'tests/fixtures/m1-prometheus-server-child.mjs'
       - 'src/main.tsx'
       - 'src/cli/handlers/**'
       - 'src/tools/FileReadTool/**'
@@ -97,7 +100,7 @@ jobs:
           node build/verify-bundled-assets.mjs
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
-          node --test tests/bundled-skill-extraction.test.mjs
+          node --test tests/bundled-skill-extraction.test.mjs tests/m1-prometheus-security-317.test.mjs
           bun build/rebuild.mjs
           test -s dist/cli.js
           printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-317-candidate"
