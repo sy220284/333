@@ -9,6 +9,8 @@ import { join, resolve, relative, isAbsolute } from 'node:path'
 import { gradeEvalResult317, aggregateEvalScore317 } from './pluginEvalGraders317.mjs'
 import { runEvalModel317, judgeEvalOutput317 } from './pluginEvalModel317.mjs'
 
+const addUsd = (a, b) => Number((Number(a) + Number(b)).toFixed(12))
+
 export async function executePluginEvalSuite317(cases, settings, adapters = {}) {
   const runModel = adapters.runModel ?? runEvalModel317
   const judge = adapters.judge ?? judgeEvalOutput317
@@ -82,7 +84,7 @@ export async function executePluginEvalSuite317(cases, settings, adapters = {}) 
             verdict = await gradeEvalResult317(grader, actual,
               async request => {
                 const response = await judge(request, { workspace, judgeModel: settings.judgeModel })
-                judgeCostUsd += Number(response?.costUsd ?? 0)
+                judgeCostUsd = addUsd(judgeCostUsd, response?.costUsd ?? 0)
                 return response
               })
           }
@@ -96,9 +98,9 @@ export async function executePluginEvalSuite317(cases, settings, adapters = {}) 
           ...summary, verdicts,
           output: result.lastMessage ?? '', trace: result.trace ?? [],
           error: result.error,
-          costUsd: Number(result.costUsd ?? 0) + judgeCostUsd,
+          costUsd: addUsd(result.costUsd ?? 0, judgeCostUsd),
         }
-        costUsd += Number(result.costUsd ?? 0) + judgeCostUsd
+        costUsd = addUsd(costUsd, addUsd(result.costUsd ?? 0, judgeCostUsd))
         if (costUsd >= maxCostUsd) budgetExceeded = true
       } finally {
         if (!settings.keepTemp) await rm(workspace, { recursive: true, force: true })
