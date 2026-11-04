@@ -290,6 +290,7 @@ export async function uninstallPlugin(
   plugin: string,
   scope: InstallableScope = 'user',
   keepData = false,
+  json = false,
 ): Promise<void> {
   try {
     const result = await uninstallPluginOp(plugin, scope, !keepData)
@@ -298,8 +299,15 @@ export async function uninstallPlugin(
       throw new Error(result.message)
     }
 
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
-    console.log(`${figures.tick} ${result.message}`)
+    if (json) {
+      writeToStdout(JSON.stringify({
+        command: 'uninstall', outcome: 'ok', plugin,
+        pluginId: result.pluginId ?? plugin, scope: result.scope ?? scope,
+        message: result.message,
+      }) + '\n')
+    } else {
+      console.log(`${figures.tick} ${result.message}`)
+    }
 
     const { name, marketplace } = parsePluginIdentifier(
       result.pluginId || plugin,
@@ -319,6 +327,13 @@ export async function uninstallPlugin(
     // eslint-disable-next-line custom-rules/no-process-exit
     process.exit(0)
   } catch (error) {
+    if (json) {
+      writeToStdout(JSON.stringify({
+        command: 'uninstall', outcome: 'failed', plugin, scope,
+        message: errorMessage(error),
+        failureCode: classifyPluginCommandError(error),
+      }) + '\n')
+    }
     handlePluginCommandError(error, 'uninstall', plugin)
   }
 }
