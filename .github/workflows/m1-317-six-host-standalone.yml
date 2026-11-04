@@ -31,6 +31,9 @@ on:
       - 'tests/m1-startup-socket-ownership-317.test.mjs'
       - 'tests/m1-fast-path-settings-317.test.mjs'
       - 'tests/m1-startup-argv-317.test.mjs'
+      - 'tests/m1-claim-rebind-317.test.mjs'
+      - 'tests/m4-session-transcript-paths-v5.test.mjs'
+      - 'tests/m4-resume-preparation-v5.test.mjs'
       - 'tests/m4-session-storage-v5-integration.test.ts'
       - 'build/public-dependencies.lock.json'
       - 'tests/m1-six-host-native-audio-317.test.mjs'
@@ -111,6 +114,8 @@ jobs:
         run: |
           set -euo pipefail
           node --test --test-concurrency=1 tests/m1-bg-spare-317.test.mjs tests/m1-daemon-worker-317.test.mjs tests/m1-preload-317.test.mjs tests/m1-runner-declares-317.test.mjs tests/m1-startup-socket-ownership-317.test.mjs
+          bun test tests/m1-claim-rebind-317.test.mjs
+          node --test tests/m4-session-transcript-paths-v5.test.mjs tests/m4-resume-preparation-v5.test.mjs
           bun test tests/m4-session-storage-v5-integration.test.ts
           # Verify the actual PTY transport, exec recording and background
           # supervisor dispatch/restore chain, not just a warm-spare handshake.
