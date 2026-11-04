@@ -100,6 +100,10 @@ jobs:
         run: node --test tests/m1-background-lifecycle.test.mjs
       - name: 317项目清理的范围、安全改写与真实命令
         run: node --test tests/m3-purge-317.test.mjs tests/m3-purge-cli-317.test.mjs tests/m3-purge-pty-317.test.mjs
+      - name: 验证317权限、上下文、Bash、终端与认证状态功能链
+        run: |
+          node --test tests/m2-disable-compact-settings-317.test.mjs tests/m2-auto-mode-rule-slots-317.test.mjs tests/m3-bash-shellopts-317.test.mjs tests/m3-shell-snapshot-317.test.mjs tests/m2-terminal-hyperlink-forced-off-317.test.mjs tests/m4-auth-status-parity-317.test.mjs
+          bun test tests/m2-disable-ultrathink-317.test.mjs tests/m2-ultrathink-keyword-scope-317.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
         run: node --test tests/cli-parity.test.mjs
       - name: 复核多级模型回退与自动压缩真实参数语义
