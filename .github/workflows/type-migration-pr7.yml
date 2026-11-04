@@ -1,0 +1,52 @@
+name: PR7 TypeScript 迁移独立验收
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence, main]
+    paths:
+      - 'src/cli/gateway/**'
+      - 'tools/dev/type-migration-*.mjs'
+      - 'tools/dev/type-migration-targets.json'
+      - '.github/workflows/type-migration-pr7.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/cli/gateway/**'
+      - 'tools/dev/type-migration-*.mjs'
+      - 'tools/dev/type-migration-targets.json'
+      - '.github/workflows/type-migration-pr7.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: type-migration-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  strict:
+    name: 完整类型检查与迁移模块严格编译
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 安装冻结的 TypeScript 编译器
+        run: npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+      - name: 还原依赖和声明
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 全仓 TypeScript 类型检查
+        run: node tools/dev/dev.mjs typecheck:all
+      - name: 全仓 TypeScript 内容级审计
+        run: node tools/dev/type-migration-audit.mjs
+      - name: 已迁移核心模块严格类型编译
+        run: node tools/dev/type-migration-strict.mjs
+      - name: 上传内容级审计证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: typescript-migration-${{ github.sha }}
+          path: .rebuild/governance/type-migration-report.json
+          retention-days: 30
+          if-no-files-found: warn
