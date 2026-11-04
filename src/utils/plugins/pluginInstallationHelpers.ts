@@ -5,7 +5,7 @@
  * system to reduce code duplication and improve maintainability.
  */
 
-import { installedSourceCommandKey } from './commandSourceConsent.mjs'
+import { installedSourceCommandKey } from './commandSourceConsent.ts'
 import { randomBytes } from 'crypto'
 import { rename, rm } from 'fs/promises'
 import { dirname, join, resolve, sep } from 'path'

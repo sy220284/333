@@ -1,6 +1,6 @@
 import { isSettingSourceEnabled } from '../settings/constants.js'
 import { getSettingsForSource } from '../settings/settings.js'
-import { resolveScreenReaderMode, screenReaderChildEnvironment } from './screenReaderMode.mjs'
+import { resolveScreenReaderMode, screenReaderChildEnvironment } from './screenReaderMode.ts'
 
 const TRUSTED_SOURCES = ['policySettings', 'flagSettings', 'userSettings'] as const
 

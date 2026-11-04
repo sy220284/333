@@ -11,7 +11,7 @@
  */
 
 import { createHash } from 'crypto'
-import { commandSourceTreeFingerprint } from './commandSourceFingerprint.mjs'
+import { commandSourceTreeFingerprint } from './commandSourceFingerprint.ts'
 import { logForDebugging } from '../debug.js'
 import { getHeadForDir } from '../git/gitFilesystem.js'
 import type { PluginManifest, PluginSource } from './schemas.js'

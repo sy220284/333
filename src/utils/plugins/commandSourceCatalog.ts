@@ -2,7 +2,7 @@ import { readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { execFileNoThrowWithCwd } from '../execFileNoThrow.js'
 import { gitExe } from '../git.js'
-import { localCatalogRevision } from './commandSourceConsent.mjs'
+import { localCatalogRevision } from './commandSourceConsent.ts'
 
 async function readable(path: string): Promise<string | null> {
   try {

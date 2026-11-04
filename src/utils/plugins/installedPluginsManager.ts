@@ -42,7 +42,7 @@ import { getPluginCachePath, getVersionedCachePath } from './pluginLoader.js'
 import {
   migrateInstalledPluginsRecords,
   normalizeInstalledPluginsRecords,
-} from './installedPluginsMigration.mjs'
+} from './installedPluginsMigration.ts'
 
 let initializationPromise: Promise<void> | null = null
 let installedPluginsMigrationChecked = false
