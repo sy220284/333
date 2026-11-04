@@ -2,7 +2,7 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/gr
 import {
   buildUltrareviewEnvironment,
   getUltrareviewClientWaitMinutes,
-} from './ultrareviewConfig.mjs'
+} from './ultrareviewConfig.ts'
 
 function getReviewConfig(): Record<string, unknown> | null {
   return getFeatureValue_CACHED_MAY_BE_STALE<Record<string, unknown> | null>(
