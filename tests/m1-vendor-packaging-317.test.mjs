@@ -179,3 +179,21 @@ test('M1 C19-T03: partial source copy fails before switching the previous releas
     assertNoPackagingTemps(dir)
   })
 })
+
+test('M1 C19-T05: obsolete top-level release files cannot silently enter the signed package', () => {
+  fixture(dir => {
+    const stale = join(dir, 'dist/old-version-native.node')
+    writeFileSync(stale, 'old untracked executable content')
+    const rejected = build(dir)
+    assert.notEqual(rejected.status, 0)
+    assert.match(rejected.stderr, /Unregistered stale release artifact: old-version-native\.node/)
+    assert.equal(existsSync(join(dir, 'dist/vendor')), false, 'Packaging must fail before changing vendor')
+    assertNoPackagingTemps(dir)
+    rmSync(stale)
+    const clean = build(dir)
+    assert.equal(clean.status, 0, clean.stderr)
+    assertNoPackagingTemps(dir)
+    const meta = JSON.parse(readFileSync(join(dir, 'dist/integrity.json'), 'utf8'))
+    assert.equal(meta.files.some(file => file.path.includes('old-version-native')), false)
+  })
+})
