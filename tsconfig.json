@@ -47,7 +47,8 @@
       "ES2023",
       "DOM",
       "DOM.Iterable"
-    ]
+    ],
+    "allowImportingTsExtensions": true
   },
   "include": [
     "src",
