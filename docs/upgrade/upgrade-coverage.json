@@ -1,11 +1,11 @@
 {
-  "schema": 2,
+  "schema": 3,
   "target_version": "2.1.317",
   "baseline_version": "2.1.88",
-  "status_semantics": "20条新版完整功能链分六层实施，102/84仅为历史回归下限；UNVERIFIED不代表真实执行通过",
+  "status_semantics": "直接对照官方317代码和x64行为升级，六层20链，已梳理137功能/137场景；完成进度以源码与实际测试为准。",
   "counts": {
-    "features": 102,
-    "scenarios": 84,
+    "features": 137,
+    "scenarios": 137,
     "tasks": 6,
     "chains": 20
   },
@@ -64,7 +64,10 @@
         "F093",
         "F094",
         "F096",
-        "F097"
+        "F097",
+        "F110",
+        "F125",
+        "F126"
       ]
     },
     {
@@ -105,7 +108,12 @@
         "F067",
         "F071",
         "F080",
-        "F098"
+        "F098",
+        "F123",
+        "F124",
+        "F127",
+        "F132",
+        "F133"
       ]
     },
     {
@@ -136,7 +144,13 @@
         "F069",
         "F070",
         "F089",
-        "F095"
+        "F095",
+        "F108",
+        "F116",
+        "F121",
+        "F122",
+        "F131",
+        "F134"
       ]
     },
     {
@@ -171,7 +185,20 @@
         "F084",
         "F091",
         "F092",
-        "F100"
+        "F100",
+        "F103",
+        "F104",
+        "F105",
+        "F106",
+        "F107",
+        "F109",
+        "F117",
+        "F118",
+        "F119",
+        "F128",
+        "F129",
+        "F135",
+        "F136"
       ]
     },
     {
@@ -206,7 +233,15 @@
         "F088",
         "F099",
         "F101",
-        "F102"
+        "F102",
+        "F111",
+        "F112",
+        "F113",
+        "F114",
+        "F115",
+        "F120",
+        "F130",
+        "F137"
       ]
     }
   ],
@@ -222,7 +257,7 @@
         "F087",
         "F016"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C02",
@@ -236,9 +271,10 @@
         "F024",
         "F025",
         "F086",
-        "F097"
+        "F097",
+        "F125"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C03",
@@ -260,7 +296,7 @@
         "F039",
         "F040"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C04",
@@ -283,9 +319,11 @@
         "F090",
         "F093",
         "F094",
-        "F096"
+        "F096",
+        "F110",
+        "F126"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C05",
@@ -301,9 +339,11 @@
         "F064",
         "F069",
         "F089",
-        "F095"
+        "F095",
+        "F122",
+        "F134"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C06",
@@ -312,9 +352,13 @@
       "features": [
         "F054",
         "F055",
-        "F098"
+        "F098",
+        "F123",
+        "F124",
+        "F132",
+        "F133"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C07",
@@ -326,9 +370,13 @@
         "F014",
         "F026",
         "F062",
-        "F070"
+        "F070",
+        "F108",
+        "F116",
+        "F121",
+        "F131"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C08",
@@ -338,7 +386,7 @@
         "F051",
         "F091"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C09",
@@ -347,9 +395,19 @@
       "features": [
         "F052",
         "F084",
-        "F100"
+        "F100",
+        "F103",
+        "F104",
+        "F105",
+        "F106",
+        "F107",
+        "F118",
+        "F119",
+        "F128",
+        "F135",
+        "F136"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C10",
@@ -357,9 +415,10 @@
       "layer": "M5",
       "features": [
         "F053",
-        "F092"
+        "F092",
+        "F109"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C11",
@@ -368,9 +427,10 @@
       "features": [
         "F002",
         "F003",
-        "F071"
+        "F071",
+        "F127"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C12",
@@ -385,9 +445,10 @@
         "F013",
         "F072",
         "F078",
-        "F088"
+        "F088",
+        "F137"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C13",
@@ -396,7 +457,7 @@
       "features": [
         "F065"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C14",
@@ -407,14 +468,22 @@
         "F068",
         "F099"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C15",
       "name": "企业网关/云会话/自建Runner",
       "layer": "M6",
-      "features": [],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "features": [
+        "F111",
+        "F112",
+        "F113",
+        "F114",
+        "F115",
+        "F120",
+        "F130"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C16",
@@ -426,7 +495,7 @@
         "F067",
         "F080"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C17",
@@ -438,7 +507,7 @@
         "F082",
         "F083"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C18",
@@ -449,9 +518,11 @@
         "F074",
         "F075",
         "F076",
-        "F077"
+        "F077",
+        "F117",
+        "F129"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C19",
@@ -460,7 +531,7 @@
       "features": [
         "F079"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     },
     {
       "id": "C20",
@@ -470,7 +541,7 @@
         "F101",
         "F102"
       ],
-      "status": "PENDING_SOURCE_AND_RUNTIME_VERIFICATION"
+      "status": "PENDING_317_CODE_ALIGNMENT"
     }
   ],
   "features": [
@@ -487,7 +558,7 @@
         "E33",
         "E35"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F002",
@@ -499,7 +570,7 @@
       "scenarios": [
         "E01"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F003",
@@ -511,9 +582,10 @@
       "scenarios": [
         "E23",
         "E24",
-        "E66"
+        "E66",
+        "E99"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F004",
@@ -523,9 +595,13 @@
         "M4"
       ],
       "scenarios": [
-        "E33"
+        "E33",
+        "E74",
+        "E87",
+        "E97",
+        "E108"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F005",
@@ -537,7 +613,7 @@
       "scenarios": [
         "E36"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F006",
@@ -549,7 +625,7 @@
       "scenarios": [
         "E36"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F007",
@@ -562,7 +638,7 @@
         "E03",
         "E04"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F008",
@@ -574,7 +650,7 @@
       "scenarios": [
         "E37"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F009",
@@ -587,7 +663,7 @@
         "E37",
         "E53"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F010",
@@ -599,7 +675,7 @@
       "scenarios": [
         "E20"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F011",
@@ -613,7 +689,7 @@
         "E53",
         "E59"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F012",
@@ -626,7 +702,7 @@
         "E26",
         "E33"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F013",
@@ -638,7 +714,7 @@
       "scenarios": [
         "E26"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F014",
@@ -650,7 +726,7 @@
       "scenarios": [
         "E38"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F015",
@@ -665,7 +741,7 @@
         "E27",
         "L07"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F016",
@@ -677,7 +753,7 @@
       "scenarios": [
         "E18"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F017",
@@ -691,7 +767,7 @@
         "L07",
         "L08"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F018",
@@ -704,7 +780,7 @@
         "E18",
         "E52"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F019",
@@ -714,9 +790,10 @@
         "M3"
       ],
       "scenarios": [
-        "E01"
+        "E01",
+        "E80"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F020",
@@ -730,7 +807,7 @@
         "E34",
         "E52"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F021",
@@ -743,7 +820,7 @@
         "E18",
         "E65"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F022",
@@ -757,7 +834,7 @@
         "E16",
         "E65"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F023",
@@ -769,9 +846,10 @@
       "scenarios": [
         "E09",
         "E16",
-        "E51"
+        "E51",
+        "E107"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F024",
@@ -783,7 +861,7 @@
       "scenarios": [
         "E17"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F025",
@@ -795,7 +873,7 @@
       "scenarios": [
         "E17"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F026",
@@ -813,7 +891,7 @@
         "E48",
         "L09"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F027",
@@ -823,9 +901,10 @@
         "M2"
       ],
       "scenarios": [
-        "E39"
+        "E39",
+        "E78"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F028",
@@ -840,7 +919,7 @@
         "E19",
         "E58"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F029",
@@ -853,7 +932,7 @@
         "E03",
         "E19"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F030",
@@ -867,7 +946,7 @@
         "E05",
         "E13"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F031",
@@ -879,7 +958,7 @@
       "scenarios": [
         "E02"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F032",
@@ -895,7 +974,7 @@
         "E46",
         "E60"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F033",
@@ -907,7 +986,7 @@
       "scenarios": [
         "E40"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F034",
@@ -919,7 +998,7 @@
       "scenarios": [
         "E41"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F035",
@@ -931,7 +1010,7 @@
       "scenarios": [
         "E42"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F036",
@@ -943,7 +1022,7 @@
       "scenarios": [
         "E06"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F037",
@@ -956,7 +1035,7 @@
         "E08",
         "E30"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F038",
@@ -970,7 +1049,7 @@
         "E20",
         "E32"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F039",
@@ -982,7 +1061,7 @@
       "scenarios": [
         "E21"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F040",
@@ -996,7 +1075,7 @@
         "E23",
         "E34"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F041",
@@ -1010,9 +1089,11 @@
         "E05",
         "E31",
         "E60",
-        "E64"
+        "E64",
+        "E76",
+        "E109"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F042",
@@ -1025,7 +1106,7 @@
         "E04",
         "E22"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F043",
@@ -1042,7 +1123,7 @@
         "E60",
         "L06"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F044",
@@ -1054,7 +1135,7 @@
       "scenarios": [
         "E06"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F045",
@@ -1066,7 +1147,7 @@
       "scenarios": [
         "E11"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F046",
@@ -1078,7 +1159,7 @@
       "scenarios": [
         "E07"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F047",
@@ -1094,7 +1175,7 @@
         "E22",
         "E62"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F048",
@@ -1107,9 +1188,10 @@
         "E05",
         "E06",
         "E32",
-        "L06"
+        "L06",
+        "E79"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F049",
@@ -1122,7 +1204,7 @@
         "E08",
         "E61"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F050",
@@ -1137,7 +1219,7 @@
         "E55",
         "E68"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F051",
@@ -1149,7 +1231,7 @@
       "scenarios": [
         "E43"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F052",
@@ -1162,9 +1244,13 @@
         "E22",
         "E56",
         "E62",
-        "E68"
+        "E68",
+        "E84",
+        "E85",
+        "E102",
+        "E105"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F053",
@@ -1176,9 +1262,10 @@
       "scenarios": [
         "E07",
         "E21",
-        "E57"
+        "E57",
+        "E75"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F054",
@@ -1191,7 +1278,7 @@
         "E21",
         "E22"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F055",
@@ -1205,7 +1292,7 @@
         "E35",
         "L10"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F056",
@@ -1223,7 +1310,7 @@
         "L01",
         "L13"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F057",
@@ -1241,7 +1328,7 @@
         "L01",
         "L04"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F058",
@@ -1254,7 +1341,7 @@
         "E13",
         "L04"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F059",
@@ -1267,7 +1354,7 @@
         "E10",
         "E28"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F060",
@@ -1280,7 +1367,7 @@
         "E09",
         "E50"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F061",
@@ -1293,7 +1380,7 @@
         "E10",
         "E11"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F062",
@@ -1310,7 +1397,7 @@
         "L09",
         "L14"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F063",
@@ -1325,7 +1412,7 @@
         "L08",
         "L15"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F064",
@@ -1341,7 +1428,7 @@
         "L11",
         "L16"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F065",
@@ -1351,9 +1438,10 @@
         "M6"
       ],
       "scenarios": [
-        "E25"
+        "E25",
+        "L18"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F066",
@@ -1365,9 +1453,10 @@
       "scenarios": [
         "E24",
         "E25",
-        "E67"
+        "E67",
+        "L19"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F067",
@@ -1381,7 +1470,7 @@
         "E25",
         "E34"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F068",
@@ -1394,7 +1483,7 @@
         "E25",
         "E33"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F069",
@@ -1406,7 +1495,7 @@
       "scenarios": [
         "E14"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F070",
@@ -1418,7 +1507,7 @@
       "scenarios": [
         "E14"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F071",
@@ -1428,9 +1517,10 @@
         "M3"
       ],
       "scenarios": [
-        "E27"
+        "E27",
+        "E88"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F072",
@@ -1442,7 +1532,7 @@
       "scenarios": [
         "E28"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F073",
@@ -1452,9 +1542,10 @@
         "M5"
       ],
       "scenarios": [
-        "E29"
+        "E29",
+        "L23"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F074",
@@ -1466,7 +1557,7 @@
       "scenarios": [
         "E29"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F075",
@@ -1478,7 +1569,7 @@
       "scenarios": [
         "E29"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F076",
@@ -1488,9 +1579,11 @@
         "M5"
       ],
       "scenarios": [
-        "E30"
+        "E30",
+        "E83",
+        "E95"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F077",
@@ -1502,7 +1595,7 @@
       "scenarios": [
         "E30"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F078",
@@ -1513,9 +1606,10 @@
       ],
       "scenarios": [
         "E45",
-        "E66"
+        "E66",
+        "E103"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F079",
@@ -1527,9 +1621,10 @@
       "scenarios": [
         "E01",
         "E26",
-        "E35"
+        "E35",
+        "L27"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F080",
@@ -1541,7 +1636,7 @@
       "scenarios": [
         "E35"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F081",
@@ -1553,7 +1648,7 @@
       "scenarios": [
         "E46"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F082",
@@ -1570,7 +1665,7 @@
         "L13",
         "L15"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F083",
@@ -1584,7 +1679,7 @@
         "L03",
         "L14"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F084",
@@ -1594,9 +1689,14 @@
         "M5"
       ],
       "scenarios": [
-        "E49"
+        "E49",
+        "E69",
+        "E70",
+        "E71",
+        "E72",
+        "E73"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F085",
@@ -1608,7 +1708,7 @@
       "scenarios": [
         "E50"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F086",
@@ -1620,7 +1720,7 @@
       "scenarios": [
         "E51"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F087",
@@ -1632,7 +1732,7 @@
       "scenarios": [
         "E52"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F088",
@@ -1644,7 +1744,7 @@
       "scenarios": [
         "E53"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F089",
@@ -1655,9 +1755,10 @@
       ],
       "scenarios": [
         "E54",
-        "L09"
+        "L09",
+        "E108"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F090",
@@ -1667,9 +1768,10 @@
         "M2"
       ],
       "scenarios": [
-        "E55"
+        "E55",
+        "E77"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F091",
@@ -1681,7 +1783,7 @@
       "scenarios": [
         "E56"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F092",
@@ -1693,7 +1795,7 @@
       "scenarios": [
         "E57"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F093",
@@ -1705,7 +1807,7 @@
       "scenarios": [
         "E61"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F094",
@@ -1715,9 +1817,10 @@
         "M2"
       ],
       "scenarios": [
-        "E62"
+        "E62",
+        "E93"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F095",
@@ -1727,9 +1830,10 @@
         "M4"
       ],
       "scenarios": [
-        "E63"
+        "E63",
+        "E100"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F096",
@@ -1739,9 +1843,10 @@
         "M2"
       ],
       "scenarios": [
-        "E64"
+        "E64",
+        "E92"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F097",
@@ -1751,9 +1856,11 @@
         "M2"
       ],
       "scenarios": [
-        "E65"
+        "E65",
+        "E91",
+        "E107"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F098",
@@ -1764,9 +1871,12 @@
       ],
       "scenarios": [
         "E66",
-        "L10"
+        "L10",
+        "E89",
+        "E90",
+        "E98"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F099",
@@ -1776,9 +1886,14 @@
         "M6"
       ],
       "scenarios": [
-        "E67"
+        "E67",
+        "E81",
+        "E82",
+        "E86",
+        "E96",
+        "L22"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F100",
@@ -1789,9 +1904,11 @@
       ],
       "scenarios": [
         "E68",
-        "L12"
+        "L12",
+        "E94",
+        "E101"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F101",
@@ -1803,9 +1920,10 @@
       "scenarios": [
         "L11",
         "L13",
-        "L16"
+        "L16",
+        "L26"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
     },
     {
       "id": "F102",
@@ -1816,9 +1934,474 @@
       ],
       "scenarios": [
         "L12",
-        "L16"
+        "L16",
+        "E104",
+        "E110",
+        "L26"
       ],
-      "status": "UNVERIFIED"
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F103",
+      "title": "插件固定位置 UI 绘制 $.ui.place",
+      "chain": "C09",
+      "tasks": [
+        "M5"
+      ],
+      "scenarios": [
+        "E69",
+        "E106",
+        "L17"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F104",
+      "title": "插件背景与玻璃层 $.ui.backdrop",
+      "chain": "C09",
+      "tasks": [
+        "M5"
+      ],
+      "scenarios": [
+        "E70",
+        "E106",
+        "L17"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F105",
+      "title": "插件输入草稿渲染 $.prompt.paint",
+      "chain": "C09",
+      "tasks": [
+        "M5"
+      ],
+      "scenarios": [
+        "E71",
+        "E106",
+        "L18"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F106",
+      "title": "插件面板 Pane.backgroundColor",
+      "chain": "C09",
+      "tasks": [
+        "M5"
+      ],
+      "scenarios": [
+        "E72",
+        "L17"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F107",
+      "title": "插件 prompt.media 授权和消费",
+      "chain": "C09",
+      "tasks": [
+        "M5"
+      ],
+      "scenarios": [
+        "E73",
+        "L18"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F108",
+      "title": "嵌套子会话 ID 与身份隔离开关",
+      "chain": "C07",
+      "tasks": [
+        "M4"
+      ],
+      "scenarios": [
+        "E74",
+        "E108",
+        "L19"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F109",
+      "title": "MCP 后台任务禁用开关与任务管理",
+      "chain": "C10",
+      "tasks": [
+        "M5"
+      ],
+      "scenarios": [
+        "E75"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F110",
+      "title": "受管策略读取例外 blockReadsExemptPaths",
+      "chain": "C04",
+      "tasks": [
+        "M2"
+      ],
+      "scenarios": [
+        "E76"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F111",
+      "title": "企业管理策略 layered 分层判定",
+      "chain": "C15",
+      "tasks": [
+        "M6"
+      ],
+      "scenarios": [
+        "E77",
+        "E109",
+        "L20"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F112",
+      "title": "企业网关 pooled_budget 共享预算",
+      "chain": "C15",
+      "tasks": [
+        "M6"
+      ],
+      "scenarios": [
+        "E78",
+        "L20"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F113",
+      "title": "Bedrock 输入标签和防护追踪参数",
+      "chain": "C15",
+      "tasks": [
+        "M6"
+      ],
+      "scenarios": [
+        "E79",
+        "L20"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F114",
+      "title": "企业 OIDC user_id_claim 身份映射",
+      "chain": "C15",
+      "tasks": [
+        "M6"
+      ],
+      "scenarios": [
+        "E80",
+        "E109",
+        "L20"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F115",
+      "title": "自建 Runner 空闲保活和上限保护",
+      "chain": "C15",
+      "tasks": [
+        "M6"
+      ],
+      "scenarios": [
+        "E81",
+        "L21"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F116",
+      "title": "项目会话 /send-to-project 发送与回执",
+      "chain": "C07",
+      "tasks": [
+        "M4"
+      ],
+      "scenarios": [
+        "E82",
+        "L22"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F117",
+      "title": "FetchAttachment 附件获取执行入口",
+      "chain": "C18",
+      "tasks": [
+        "M5"
+      ],
+      "scenarios": [
+        "E83",
+        "L23"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F118",
+      "title": "插件命令哈希授权 --accept-command",
+      "chain": "C09",
+      "tasks": [
+        "M5"
+      ],
+      "scenarios": [
+        "E84",
+        "E105",
+        "L24"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F119",
+      "title": "插件 .mcpb 服务级配置及敏感数据存储",
+      "chain": "C09",
+      "tasks": [
+        "M5"
+      ],
+      "scenarios": [
+        "E85",
+        "E105",
+        "L24"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F120",
+      "title": "企业 gateway 命令及服务启动",
+      "chain": "C15",
+      "tasks": [
+        "M6"
+      ],
+      "scenarios": [
+        "E86",
+        "E104",
+        "E110",
+        "L20"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F121",
+      "title": "purge 本地项目数据清理命令",
+      "chain": "C07",
+      "tasks": [
+        "M4"
+      ],
+      "scenarios": [
+        "E87",
+        "E104",
+        "E110"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F122",
+      "title": "--brief Agent SendUserMessage 面向用户的信息链",
+      "chain": "C05",
+      "tasks": [
+        "M4"
+      ],
+      "scenarios": [
+        "E88"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F123",
+      "title": "--include-hook-events SDK 流式 Hook 事件",
+      "chain": "C06",
+      "tasks": [
+        "M3"
+      ],
+      "scenarios": [
+        "E89",
+        "L25"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F124",
+      "title": "--forward-subagent-text 子代理消息转发",
+      "chain": "C06",
+      "tasks": [
+        "M3"
+      ],
+      "scenarios": [
+        "E90",
+        "L25"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F125",
+      "title": "动态系统提示词部分分离并缓存",
+      "chain": "C02",
+      "tasks": [
+        "M2"
+      ],
+      "scenarios": [
+        "E91",
+        "E107"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F126",
+      "title": "--permission-prompts headless 授权接管",
+      "chain": "C04",
+      "tasks": [
+        "M2"
+      ],
+      "scenarios": [
+        "E92"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F127",
+      "title": "--bare 受限最小模式与资源加载",
+      "chain": "C11",
+      "tasks": [
+        "M3"
+      ],
+      "scenarios": [
+        "E93",
+        "E110",
+        "L27"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F128",
+      "title": "--plugin-url 临时 URL 扩展装载",
+      "chain": "C09",
+      "tasks": [
+        "M5"
+      ],
+      "scenarios": [
+        "E94",
+        "L24"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F129",
+      "title": "--file 启动前附件资源下载",
+      "chain": "C18",
+      "tasks": [
+        "M5"
+      ],
+      "scenarios": [
+        "E95",
+        "L23"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F130",
+      "title": "--environment 自建云运行环境选择",
+      "chain": "C15",
+      "tasks": [
+        "M6"
+      ],
+      "scenarios": [
+        "E96",
+        "L21"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F131",
+      "title": "--from-pr 从 PR 找回或选择会话",
+      "chain": "C07",
+      "tasks": [
+        "M4"
+      ],
+      "scenarios": [
+        "E97"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F132",
+      "title": "--replay-user-messages stdin/stdout 回显确认",
+      "chain": "C06",
+      "tasks": [
+        "M3"
+      ],
+      "scenarios": [
+        "E98",
+        "L25"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F133",
+      "title": "--include-partial-messages 非交互流式分片",
+      "chain": "C06",
+      "tasks": [
+        "M3"
+      ],
+      "scenarios": [
+        "E99",
+        "L25"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F134",
+      "title": "--bg、attach/stop/respawn/rm 后台会话命令",
+      "chain": "C05",
+      "tasks": [
+        "M4"
+      ],
+      "scenarios": [
+        "E100",
+        "L27"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F135",
+      "title": "import 其他 AI Coding Agent 配置导入",
+      "chain": "C09",
+      "tasks": [
+        "M5"
+      ],
+      "scenarios": [
+        "E101"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F136",
+      "title": "插件 details/eval/prune/tag/test 管理子命令",
+      "chain": "C09",
+      "tasks": [
+        "M5"
+      ],
+      "scenarios": [
+        "E102",
+        "E104",
+        "E106",
+        "E110"
+      ],
+      "status": "PENDING_ALIGNMENT"
+    },
+    {
+      "id": "F137",
+      "title": "--prompt-suggestions 后续输入建议输出",
+      "chain": "C12",
+      "tasks": [
+        "M6"
+      ],
+      "scenarios": [
+        "E103"
+      ],
+      "status": "PENDING_ALIGNMENT"
     }
   ],
   "scenarios": [
@@ -1830,7 +2413,10 @@
         "F002",
         "F019",
         "F079"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E02",
@@ -1840,7 +2426,10 @@
         "F022",
         "F028",
         "F031"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E03",
@@ -1851,7 +2440,10 @@
         "F030",
         "F032",
         "F038"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E04",
@@ -1860,7 +2452,10 @@
         "F007",
         "F041",
         "F042"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E05",
@@ -1870,7 +2465,10 @@
         "F041",
         "F043",
         "F048"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E06",
@@ -1880,7 +2478,10 @@
         "F044",
         "F047",
         "F048"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E07",
@@ -1889,7 +2490,10 @@
         "F046",
         "F047",
         "F053"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E08",
@@ -1899,7 +2503,10 @@
         "F032",
         "F037",
         "F049"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E09",
@@ -1909,7 +2516,10 @@
         "F026",
         "F056",
         "F060"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E10",
@@ -1919,7 +2529,10 @@
         "F057",
         "F059",
         "F061"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E11",
@@ -1927,7 +2540,10 @@
       "features": [
         "F045",
         "F061"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E12",
@@ -1936,7 +2552,10 @@
         "F056",
         "F057",
         "F064"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E13",
@@ -1945,7 +2564,10 @@
         "F030",
         "F057",
         "F058"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E14",
@@ -1955,7 +2577,10 @@
         "F062",
         "F069",
         "F070"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E15",
@@ -1965,7 +2590,10 @@
         "F020",
         "F026",
         "F067"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E16",
@@ -1974,7 +2602,10 @@
         "F022",
         "F023",
         "F026"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E17",
@@ -1983,7 +2614,10 @@
         "F024",
         "F025",
         "F047"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E18",
@@ -1993,7 +2627,10 @@
         "F017",
         "F018",
         "F021"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E19",
@@ -2002,7 +2639,10 @@
         "F028",
         "F029",
         "F040"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E20",
@@ -2011,7 +2651,10 @@
         "F010",
         "F038",
         "F050"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E21",
@@ -2020,7 +2663,10 @@
         "F039",
         "F053",
         "F054"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E22",
@@ -2030,7 +2676,10 @@
         "F047",
         "F052",
         "F054"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E23",
@@ -2039,7 +2688,10 @@
         "F003",
         "F032",
         "F040"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E24",
@@ -2049,7 +2701,10 @@
         "F003",
         "F055",
         "F066"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E25",
@@ -2059,7 +2714,10 @@
         "F066",
         "F067",
         "F068"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E26",
@@ -2068,7 +2726,10 @@
         "F012",
         "F013",
         "F079"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E27",
@@ -2076,7 +2737,10 @@
       "features": [
         "F071",
         "F015"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E28",
@@ -2084,7 +2748,10 @@
       "features": [
         "F072",
         "F059"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E29",
@@ -2093,7 +2760,10 @@
         "F073",
         "F074",
         "F075"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E30",
@@ -2102,7 +2772,10 @@
         "F037",
         "F076",
         "F077"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E31",
@@ -2111,7 +2784,10 @@
         "F041",
         "F043",
         "F050"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E32",
@@ -2120,7 +2796,10 @@
         "F038",
         "F043",
         "F048"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E33",
@@ -2130,7 +2809,10 @@
         "F004",
         "F012",
         "F068"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E34",
@@ -2140,7 +2822,10 @@
         "F026",
         "F040",
         "F067"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E35",
@@ -2150,7 +2835,10 @@
         "F055",
         "F079",
         "F080"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E36",
@@ -2158,7 +2846,10 @@
       "features": [
         "F005",
         "F006"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E37",
@@ -2167,63 +2858,90 @@
         "F008",
         "F009",
         "F011"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E38",
       "title": "为同一会话添加两个项目目录并进入工作树",
       "features": [
         "F014"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E39",
       "title": "大量工具调用后检查 token 与成本统计",
       "features": [
         "F027"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E40",
       "title": "Windows PowerShell 命令执行与停止",
       "features": [
         "F033"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E41",
       "title": "打开并定点编辑 Notebook 单元格",
       "features": [
         "F034"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E42",
       "title": "项目语言服务正常/不可用分别查询定义",
       "features": [
         "F035"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E43",
       "title": "安装技能并执行一次任务，再卸载",
       "features": [
         "F051"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E44",
       "title": "工作流子角色被要求返回结构化 JSON",
       "features": [
         "F063"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E45",
       "title": "有/无下一句话建议两种状态",
       "features": [
         "F078"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E46",
@@ -2231,7 +2949,10 @@
       "features": [
         "F081",
         "F032"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E47",
@@ -2239,7 +2960,10 @@
       "features": [
         "F082",
         "F063"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E48",
@@ -2247,7 +2971,10 @@
       "features": [
         "F083",
         "F026"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E49",
@@ -2256,7 +2983,10 @@
         "F084",
         "F043",
         "F057"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E50",
@@ -2264,7 +2994,10 @@
       "features": [
         "F085",
         "F060"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E51",
@@ -2272,7 +3005,10 @@
       "features": [
         "F086",
         "F023"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E52",
@@ -2281,7 +3017,10 @@
         "F087",
         "F018",
         "F020"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E53",
@@ -2290,7 +3029,10 @@
         "F088",
         "F009",
         "F011"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E54",
@@ -2299,7 +3041,10 @@
         "F089",
         "F056",
         "F057"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E55",
@@ -2307,7 +3052,10 @@
       "features": [
         "F090",
         "F050"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E56",
@@ -2315,7 +3063,10 @@
       "features": [
         "F091",
         "F052"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E57",
@@ -2323,7 +3074,10 @@
       "features": [
         "F092",
         "F053"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E58",
@@ -2331,7 +3085,10 @@
       "features": [
         "F062",
         "F028"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E59",
@@ -2339,7 +3096,10 @@
       "features": [
         "F011",
         "F056"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E60",
@@ -2348,7 +3108,10 @@
         "F041",
         "F043",
         "F032"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E61",
@@ -2356,7 +3119,10 @@
       "features": [
         "F093",
         "F049"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E62",
@@ -2365,7 +3131,10 @@
         "F094",
         "F047",
         "F052"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E63",
@@ -2373,7 +3142,10 @@
       "features": [
         "F095",
         "F062"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E64",
@@ -2381,7 +3153,10 @@
       "features": [
         "F096",
         "F041"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E65",
@@ -2390,7 +3165,10 @@
         "F097",
         "F022",
         "F021"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E66",
@@ -2399,7 +3177,10 @@
         "F098",
         "F003",
         "F078"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E67",
@@ -2407,7 +3188,10 @@
       "features": [
         "F099",
         "F066"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "E68",
@@ -2416,7 +3200,10 @@
         "F100",
         "F052",
         "F050"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "L01",
@@ -2425,7 +3212,10 @@
         "F056",
         "F057",
         "F082"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "L02",
@@ -2433,7 +3223,10 @@
       "features": [
         "F064",
         "F082"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "L03",
@@ -2441,7 +3234,10 @@
       "features": [
         "F062",
         "F083"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "L04",
@@ -2449,7 +3245,10 @@
       "features": [
         "F057",
         "F058"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "L05",
@@ -2457,7 +3256,10 @@
       "features": [
         "F064",
         "F082"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "L06",
@@ -2465,7 +3267,10 @@
       "features": [
         "F043",
         "F048"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "L07",
@@ -2473,7 +3278,10 @@
       "features": [
         "F015",
         "F017"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "L08",
@@ -2481,7 +3289,10 @@
       "features": [
         "F017",
         "F063"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "L09",
@@ -2490,7 +3301,10 @@
         "F026",
         "F062",
         "F089"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "L10",
@@ -2498,7 +3312,10 @@
       "features": [
         "F055",
         "F098"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "L11",
@@ -2506,7 +3323,10 @@
       "features": [
         "F101",
         "F064"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "L12",
@@ -2514,7 +3334,10 @@
       "features": [
         "F102",
         "F100"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "L13",
@@ -2523,7 +3346,10 @@
         "F082",
         "F101",
         "F056"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "L14",
@@ -2531,7 +3357,10 @@
       "features": [
         "F083",
         "F062"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "L15",
@@ -2539,7 +3368,10 @@
       "features": [
         "F082",
         "F063"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     },
     {
       "id": "L16",
@@ -2548,7 +3380,826 @@
         "F101",
         "F102",
         "F064"
-      ]
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E69",
+      "title": "插件 ui.place 放置与卸载固定位置内容",
+      "features": [
+        "F103",
+        "F084"
+      ],
+      "acceptance": "官方插件注册→放置位置→更新→卸载，检查 UI 位置与事件",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E70",
+      "title": "插件 ui.backdrop 玻璃背景创建及清理",
+      "features": [
+        "F104",
+        "F084"
+      ],
+      "acceptance": "背景 blur/tint/opacity、覆盖顺序、取消和卸载",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E71",
+      "title": "插件 prompt.paint 输入草稿绘制与撤销",
+      "features": [
+        "F105",
+        "F084"
+      ],
+      "acceptance": "局部着色保持文本/光标/undo 一致",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E72",
+      "title": "插件 Pane.backgroundColor 主题与透明渲染",
+      "features": [
+        "F106",
+        "F084"
+      ],
+      "acceptance": "主题色和 transparent 在受支持宿主渲染",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E73",
+      "title": "插件 prompt.media 授权和媒体访问",
+      "features": [
+        "F107",
+        "F084"
+      ],
+      "acceptance": "有效授权、拒绝、资源失效、插件重载",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E74",
+      "title": "嵌套 CLI 子会话 ID 分配与禁用环境开关",
+      "features": [
+        "F108",
+        "F004"
+      ],
+      "acceptance": "父子进程与 transcript 身份隔离/恢复",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E75",
+      "title": "MCP 后台任务禁用开关和任务退场",
+      "features": [
+        "F109",
+        "F053"
+      ],
+      "acceptance": "设置/取消环境变量后工具注册及后台任务状态",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E76",
+      "title": "blockReadsExemptPaths 的读取许可与越界",
+      "features": [
+        "F110",
+        "F041"
+      ],
+      "acceptance": "受管配置豁免/拒绝、软链及工作区边界",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E77",
+      "title": "enterprise layered 策略优先级",
+      "features": [
+        "F111",
+        "F090"
+      ],
+      "acceptance": "受管/用户/项目/命令级组合冲突判定",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E78",
+      "title": "enterprise pooled_budget 额度共享和拒绝",
+      "features": [
+        "F112",
+        "F027"
+      ],
+      "acceptance": "同组织多个请求预算扣减、超额响应及回滚",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E79",
+      "title": "Bedrock input_tagging 和 guardrail_trace",
+      "features": [
+        "F113",
+        "F048"
+      ],
+      "acceptance": "请求透传及返回诊断、错误与拒绝",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E80",
+      "title": "OIDC user_id_claim 的身份与权限隔离",
+      "features": [
+        "F114",
+        "F019"
+      ],
+      "acceptance": "身份声明来源校验、缺失和错误身份",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E81",
+      "title": "自建 Runner 空闲保活/到期终止",
+      "features": [
+        "F115",
+        "F099"
+      ],
+      "acceptance": "hold idle file、max hold minute 及停机回收",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E82",
+      "title": "/send-to-project 项目会话发送失败与重试",
+      "features": [
+        "F116",
+        "F099"
+      ],
+      "acceptance": "项目选择、权限、消息交付与失败重试",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E83",
+      "title": "FetchAttachment 下载与授权结果",
+      "features": [
+        "F117",
+        "F076"
+      ],
+      "acceptance": "附件 ID、权限、输出类型、保存及取消",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E84",
+      "title": "插件安装 --accept-command SHA 验证",
+      "features": [
+        "F118",
+        "F052"
+      ],
+      "acceptance": "命令哈希授权、来源变化、缺失/错误确认",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E85",
+      "title": "插件 mcpb userConfig 服务路径注入与密钥",
+      "features": [
+        "F119",
+        "F052"
+      ],
+      "acceptance": "server.key、隐私值存储、拒绝与重载",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E86",
+      "title": "gateway --help 到实际网关启动链",
+      "features": [
+        "F120",
+        "F099"
+      ],
+      "acceptance": "命令入口、配置验证、启动/异常/退出",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E87",
+      "title": "purge --help 到项目数据清理",
+      "features": [
+        "F121",
+        "F004"
+      ],
+      "acceptance": "预检、目标目录、用户确认、删除边界与错误",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E88",
+      "title": "--brief SendUserMessage 代理回执",
+      "features": [
+        "F122",
+        "F071"
+      ],
+      "acceptance": "代理工具注册、用户消息和流输出",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E89",
+      "title": "--include-hook-events stream-json 次序",
+      "features": [
+        "F123",
+        "F098"
+      ],
+      "acceptance": "Hook 开始/结束/失败事件在流中顺序",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E90",
+      "title": "--forward-subagent-text 父工具链关联",
+      "features": [
+        "F124",
+        "F098"
+      ],
+      "acceptance": "子代理内容与 parent_tool_use_id 不串号",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E91",
+      "title": "--exclude-dynamic-system-prompt-sections 缓存",
+      "features": [
+        "F125",
+        "F097"
+      ],
+      "acceptance": "系统/用户消息分界、缓存与恢复",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E92",
+      "title": "--permission-prompts host/none 模式",
+      "features": [
+        "F126",
+        "F096"
+      ],
+      "acceptance": "无交互权限询问由 host 或 none 正确响应",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E93",
+      "title": "--bare 最小模式初始化与配置隔离",
+      "features": [
+        "F127",
+        "F094"
+      ],
+      "acceptance": "禁用自动 Hook/plugin sync、保留显式技能/MCP",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E94",
+      "title": "--plugin-url 会话级扩展下载",
+      "features": [
+        "F128",
+        "F100"
+      ],
+      "acceptance": "URL 校验/安装/作用域和临时清理",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E95",
+      "title": "--file 启动附件 ID 到路径映射",
+      "features": [
+        "F129",
+        "F076"
+      ],
+      "acceptance": "授权下载、相对路径越界和失败清理",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E96",
+      "title": "--environment 自建云会话调度",
+      "features": [
+        "F130",
+        "F099"
+      ],
+      "acceptance": "环境 ID、身份、连接超时和恢复",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E97",
+      "title": "--from-pr PR 关联会话恢复与选择",
+      "features": [
+        "F131",
+        "F004"
+      ],
+      "acceptance": "PR 编号/URL、过滤/歧义、错误与恢复",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E98",
+      "title": "--replay-user-messages 输入输出确认",
+      "features": [
+        "F132",
+        "F098"
+      ],
+      "acceptance": "stream-json 原始消息回显且无重复副作用",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E99",
+      "title": "--include-partial-messages 增量流序列",
+      "features": [
+        "F133",
+        "F003"
+      ],
+      "acceptance": "文本/工具块按原版顺序重组",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E100",
+      "title": "--bg/attach/stop/respawn/rm 任务生命周期",
+      "features": [
+        "F134",
+        "F095"
+      ],
+      "acceptance": "同一 ID 的启动、附着、终止、重启和删除",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E101",
+      "title": "import 其他 Agent 配置兼容入口",
+      "features": [
+        "F135",
+        "F100"
+      ],
+      "acceptance": "命令存在、受限可达/未开放状态按原版判断",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E102",
+      "title": "插件 details/eval/prune/tag/test 子命令",
+      "features": [
+        "F136",
+        "F052"
+      ],
+      "acceptance": "逐命令参数/状态/退出码和实际副作用",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E103",
+      "title": "--prompt-suggestions 流式预测输出",
+      "features": [
+        "F137",
+        "F078"
+      ],
+      "acceptance": "用户轮次结束后的建议事件与关停",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E104",
+      "title": "全量 2.1.317 CLI 顶层18命令和帮助对照",
+      "features": [
+        "F120",
+        "F121",
+        "F102",
+        "F136"
+      ],
+      "acceptance": "官方 x64 18命令、插件16子命令和候选注册对照",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E105",
+      "title": "插件安装 SHA 授权与 mcpb 恶意配置",
+      "features": [
+        "F118",
+        "F119",
+        "F052"
+      ],
+      "acceptance": "拒绝错误哈希、敏感键和重复安装",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E106",
+      "title": "插件生命周期与 UI 退场回收",
+      "features": [
+        "F103",
+        "F104",
+        "F105",
+        "F136"
+      ],
+      "acceptance": "启用/禁用/卸载后 UI/Hook 不残留",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E107",
+      "title": "系统提示词压缩后恢复边界",
+      "features": [
+        "F125",
+        "F097",
+        "F023"
+      ],
+      "acceptance": "跨轮提示快照与动态信息重新注入",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E108",
+      "title": "嵌套子代理与会话隔离复测",
+      "features": [
+        "F108",
+        "F089",
+        "F004"
+      ],
+      "acceptance": "子进程 session ID 和消息持久化不串号",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E109",
+      "title": "多策略冲突下账号身份拒绝",
+      "features": [
+        "F111",
+        "F114",
+        "F041"
+      ],
+      "acceptance": "受管/网关/请求来源冲突的拒绝优先级",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E110",
+      "title": "真实 x64 无授权 CLI 14 场景回归",
+      "features": [
+        "F120",
+        "F121",
+        "F127",
+        "F136",
+        "F102"
+      ],
+      "acceptance": "帮助/非交互/认证分支退出码及输出差分",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L17",
+      "title": "Desktop 插件固定区域与玻璃层宿主",
+      "features": [
+        "F103",
+        "F104",
+        "F106"
+      ],
+      "acceptance": "真实桌面宿主接口与视觉/取消/卸载",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L18",
+      "title": "IDE 插件草稿绘制与媒体访问",
+      "features": [
+        "F105",
+        "F107",
+        "F065"
+      ],
+      "acceptance": "真实编辑器扩展/输入框与插件协议",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L19",
+      "title": "Remote Control 嵌套会话身份恢复",
+      "features": [
+        "F108",
+        "F066"
+      ],
+      "acceptance": "双设备、断线、ID 隔离与认证",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L20",
+      "title": "企业 layered/OIDC/Bedrock 网关",
+      "features": [
+        "F111",
+        "F112",
+        "F113",
+        "F114",
+        "F120"
+      ],
+      "acceptance": "真实企业网关服务端与权限测试",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L21",
+      "title": "自建 Runner 空闲保活与云环境路由",
+      "features": [
+        "F115",
+        "F130"
+      ],
+      "acceptance": "真实自建运行器终止/保活与调度",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L22",
+      "title": "云端项目会话发送与持久化",
+      "features": [
+        "F116",
+        "F099"
+      ],
+      "acceptance": "真实项目权限、重试、回执和恢复",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L23",
+      "title": "外部附件传输和 Artifact 权限",
+      "features": [
+        "F117",
+        "F129",
+        "F073"
+      ],
+      "acceptance": "服务端文件授权、下载与失效回收",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L24",
+      "title": "插件注册表下载与 mcpb 授权",
+      "features": [
+        "F118",
+        "F119",
+        "F128"
+      ],
+      "acceptance": "真实注册表及系统密钥存储",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L25",
+      "title": "SDK 宿主 Hook 与子代理消息事件",
+      "features": [
+        "F123",
+        "F124",
+        "F132",
+        "F133"
+      ],
+      "acceptance": "宿主 stream-json 串行/并发、错误与断线",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L26",
+      "title": "真实云 Ultrareview 命令完整链",
+      "features": [
+        "F102",
+        "F101"
+      ],
+      "acceptance": "云代码审查入站/出站与权限和报告",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L27",
+      "title": "三平台原版安装与 CLI 差异",
+      "features": [
+        "F127",
+        "F134",
+        "F079"
+      ],
+      "acceptance": "Linux/macOS/Windows 入口、资源哈希与启动",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
     }
   ]
 }

@@ -1,4 +1,4 @@
-name: Claude Code 2.1.317 六层实现与证据核验
+name: Claude Code 2.1.317 六层源码与行为核验
 on:
   pull_request:
     branches: [main]
@@ -6,6 +6,8 @@ on:
       - 'build/m1-evidence/**'
       - 'build/m1-map-release.mjs'
       - 'build/upgrade-coverage.mjs'
+      - 'build/compare-317.mjs'
+      - 'tests/compare-317.test.mjs'
       - 'docs/upgrade/m1-evidence/**'
       - 'docs/upgrade/upgrade-coverage.json'
       - 'docs/upgrade/2.1.317-功能与场景源数据.json'
@@ -65,13 +67,7 @@ on:
       - 'src/remote/sdkMessageAdapter.ts'
       - 'src/types/message.ts'
       - 'src/QueryEngine.ts'
-      - 'build/upgrade-feature-evidence-registry.mjs'
-      - 'build/upgrade-chain-audit.mjs'
-      - 'tests/upgrade-feature-evidence-registry.test.mjs'
-      - 'tests/upgrade-chain-audit.test.mjs'
       - 'docs/upgrade/2.1.317-六层完整功能链路.json'
-      - 'docs/upgrade/2.1.317-功能链路签收.json'
-      - 'docs/upgrade/2.1.317-功能与场景签收.json'
       - 'docs/upgrade/implementation/**'
       - 'tests/m1-screen-reader-terminal-parity.py'
       - 'build/m1-cli-diagnose.mjs'
@@ -196,7 +192,7 @@ jobs:
       - name: 验证Ink开发者工具本地连接及清理生命周期
         run: node --experimental-strip-types --test tests/m1-ink-devtools.test.mjs
       - name: 验证新版六层完整功能链及历史功能/场景回归
-        run: node --test tests/m1-workflow-cache.test.mjs tests/m1-workflow-commands.test.mjs tests/m1-workflow-meta-literal.test.mjs tests/m1-workflow-finalization.test.mjs tests/m1-workflow-history.test.mjs tests/m1-workflow-storage.test.mjs tests/m1-workflow-runtime.test.mjs tests/m1-monitor-protocol.test.mjs tests/m1-monitor-task-identity.test.mjs tests/m1-account-peer-discovery.test.mjs tests/upgrade-coverage.test.mjs tests/upgrade-chain-audit.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs tests/m1-privacy-settings.test.mjs tests/m1-snapshot-terminal-behavior.test.mjs tests/m1-source-gap-audit.test.mjs tests/m1-inline-map-audit.test.mjs tests/m1-doctor-source-restoration.test.mjs tests/m1-spinner-tips.test.mjs tests/m1-custom-spinner-tips.test.mjs tests/m1-list-agents.test.mjs tests/m1-tool-pool-single-source.test.mjs tests/m1-screen-reader-mode.test.mjs tests/m1-taskoutput-retirement.test.mjs
+        run: node --test tests/m1-workflow-cache.test.mjs tests/m1-workflow-commands.test.mjs tests/m1-workflow-meta-literal.test.mjs tests/m1-workflow-finalization.test.mjs tests/m1-workflow-history.test.mjs tests/m1-workflow-storage.test.mjs tests/m1-workflow-runtime.test.mjs tests/m1-monitor-protocol.test.mjs tests/m1-monitor-task-identity.test.mjs tests/m1-account-peer-discovery.test.mjs tests/upgrade-coverage.test.mjs tests/compare-317.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs tests/m1-privacy-settings.test.mjs tests/m1-snapshot-terminal-behavior.test.mjs tests/m1-source-gap-audit.test.mjs tests/m1-inline-map-audit.test.mjs tests/m1-doctor-source-restoration.test.mjs tests/m1-spinner-tips.test.mjs tests/m1-custom-spinner-tips.test.mjs tests/m1-list-agents.test.mjs tests/m1-tool-pool-single-source.test.mjs tests/m1-screen-reader-mode.test.mjs tests/m1-taskoutput-retirement.test.mjs
       - name: 验证 CA 证书来源隔离与宿主管理边界
         run: node --experimental-strip-types --test tests/m1-ca-cert-source-policy.test.mjs
       - name: 验证禁用及企业策略限制 MCP 重新连接
@@ -207,8 +203,6 @@ jobs:
         run: node --experimental-strip-types --test tests/m1-mcp-headless-pending.test.mjs
       - name: 验证读取符号链接时的真实文件目标与越界提示
         run: node --experimental-strip-types --test tests/m1-symlink-read-permission.test.mjs
-      - name: 验证102项能力运行证据矩阵
-        run: node build/m1-evidence/generate-runtime-acceptance.mjs --check
       - name: 验证远程流事件合并及 SDK 字段映射
         run: node --test tests/m1-sdk-stream-coalescing.test.mjs tests/m1-sdk-stream-mapping.test.mjs tests/m1-thinking-display.test.mjs
       - name: 生成PR7前研究库90项功能开关的三版本源码差分
@@ -233,11 +227,10 @@ jobs:
           printf 'declare const Bun: { stripANSI(input: string): string }\n' > "${RUNNER_TEMP}/m1-bun-ambient.d.ts"
           node "${RUNNER_TEMP}/m1-typescript/node_modules/typescript/lib/tsc.js" --strict --skipLibCheck --target ES2023 --module CommonJS --moduleResolution Node --rootDir src/ink --outDir "${RUNNER_TEMP}/m1-ink-events" src/ink/events/paste-event.ts "${RUNNER_TEMP}/m1-bun-ambient.d.ts"
           M1_INK_EVENTS_DIR="${RUNNER_TEMP}/m1-ink-events" node --test tests/m1-ink-paste-event.test.mjs
-      - name: 验证六层20链与既有102功能84场景独立签收
+      - name: 直接检查317源码与六层功能归属
         run: |
-          node --test tests/upgrade-feature-evidence-registry.test.mjs
-          node build/upgrade-chain-audit.mjs --report "${RUNNER_TEMP}/upgrade-chain-audit.json"
-          node build/upgrade-feature-evidence-registry.mjs --report "${RUNNER_TEMP}/m1-feature-evidence-registry.json"
+          node build/upgrade-coverage.mjs
+          node build/compare-317.mjs
       - name: 扫描当前分支的实际缺失类型与运行模块
         run: node build/m1-source-gap-ast.mjs --old-src src --typescript-module "${RUNNER_TEMP}/m1-typescript/node_modules/typescript/lib/typescript.js" --out "${RUNNER_TEMP}/m1-current-source-gaps.json"
       - name: 保存逐路径导入与符号契约证据
