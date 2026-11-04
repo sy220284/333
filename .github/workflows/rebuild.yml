@@ -214,7 +214,7 @@ jobs:
         run: node --test tests/m2-queue-operation-317.test.mjs
       - name: Storage V5 会话归属、跨工作区路径和恢复暂存日志
         run: |
-          node --test tests/m4-session-transcript-paths-v5.test.mjs
+          node --test tests/m4-session-transcript-paths-v5.test.mjs tests/m4-resume-preparation-v5.test.mjs
           bun test tests/m4-session-storage-v5-integration.test.ts
       - name: CCR恢复原子替换与路径安全
         run: node --test tests/m4-ccr-transcript-restore-317.test.mjs
