@@ -16,6 +16,7 @@ on:
       - 'build/verify-official-native-by-platform.mjs'
       - 'native/audio-capture-src/index.ts'
       - 'tests/m1-native-audio-bundle-317.test.mjs'
+      - 'tests/m1-coldstart-official-native-317.test.mjs'
       - 'tests/model-loop-local.test.mjs'
       - 'tests/search-loop-local.test.mjs'
       - 'tests/claude-api-version-parity.test.mjs'
@@ -68,6 +69,8 @@ jobs:
             'https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude' \
             --output "$RUNNER_TEMP/claude-2.1.317"
           echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  $RUNNER_TEMP/claude-2.1.317" | sha256sum --check
+          chmod +x "$RUNNER_TEMP/claude-2.1.317"
+          echo "CLAUDE_REFERENCE_BIN=$RUNNER_TEMP/claude-2.1.317" >> "$GITHUB_ENV"
           node build/sync-official-native-from-binary.mjs \
             --binary "$RUNNER_TEMP/claude-2.1.317" --vendor-root vendor --sync
       - name: 官方317原版Windows/macOS验签并直接比较原生音频模块
@@ -84,6 +87,8 @@ jobs:
           node build/verify-official-native-by-platform.mjs             --binary "$RUNNER_TEMP/m1-platform-reference/$executable"             --manifest "$RUNNER_TEMP/m1-platform-reference/manifest.json"             --vendor-root vendor --sync
           node build/verify-official-native-by-platform.mjs             --binary "$RUNNER_TEMP/m1-platform-reference/$executable"             --manifest "$RUNNER_TEMP/m1-platform-reference/manifest.json"             --vendor-root vendor
           node -e "const arch=process.arch+'-'+process.platform; const api=require('./vendor/audio-capture/'+arch+'/audio-capture.node'); if (!Object.keys(api).length) throw Error('Native audio exposes no functions')"
+          if [ "$RUNNER_OS" != "Windows" ]; then chmod +x "$RUNNER_TEMP/m1-platform-reference/$executable"; fi
+          echo "CLAUDE_REFERENCE_BIN=$RUNNER_TEMP/m1-platform-reference/$executable" >> "$GITHUB_ENV"
       - name: 校验已验签平台音频模块在编译后Bun程序中的真实装载
         run: node --test tests/m1-native-audio-bundle-317.test.mjs
       - name: 生成自包含本机执行程序并打包完整发行资源
@@ -105,6 +110,8 @@ jobs:
           node --test tests/distribution-isolation.test.mjs
       - name: 自包含原生执行程序走真实模型请求、配置优先级及JSON响应
         run: M1_NATIVE_BINARY_RUN=1 node --test tests/m1-startup-cli-317.test.mjs
+      - name: 对比官方317和重建程序的三平台真实冷启动及帮助性能
+        run: node --test tests/m1-coldstart-official-native-317.test.mjs
       - name: 对齐原版317版本与详细上游提交信息
         run: node --test tests/m1-version-verbose-317.test.mjs
       - name: 验证 317 压缩执行文件可定位平台 ripgrep
