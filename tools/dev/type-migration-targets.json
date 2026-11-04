@@ -1,6 +1,7 @@
 {
   "strict": [
     "src/cli/background/sessionStore.ts",
+    "src/cli/gateway/gatewayAuth317.ts",
     "src/entrypoints/startupRouting317.ts",
     "src/tasks/LocalWorkflowTask/workflowHistory.ts",
     "src/tasks/LocalWorkflowTask/workflowStoragePaths.ts",
