@@ -35,7 +35,7 @@ jobs:
         run: python3 -m py_compile tests/m1-screen-reader-terminal-parity.py
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
