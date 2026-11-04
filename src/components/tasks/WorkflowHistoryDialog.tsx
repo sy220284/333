@@ -7,7 +7,7 @@ import { Dialog } from '../design-system/Dialog.js'
 import { BackgroundTasksDialog } from './BackgroundTasksDialog.js'
 import { getSessionId,getSessionProjectDir,getOriginalCwd } from '../../bootstrap/state.js'
 import { getProjectDir } from '../../utils/sessionStorage.js'
-import { readWorkflowHistory } from '../../tasks/LocalWorkflowTask/workflowHistory.mjs'
+import { readWorkflowHistory } from '../../tasks/LocalWorkflowTask/workflowHistory.ts'
 type Summary={runId:string,workflowName?:string,summary?:string,status?:string,startTime?:number,
  result?:unknown,scriptPath?:string,workflowProgress?:Array<{title:string}>,
  agentCount?:number,durationMs?:number,error?:string}
