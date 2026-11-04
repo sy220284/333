@@ -75,6 +75,21 @@ jobs:
         run: bun test tests/m6-gateway-runtime-317.test.mjs
       - name: 317网关OAuth设备授权、OIDC批准、Token刷新撤销实测
         run: bun test tests/m6-gateway-device-317.test.mjs
+      - name: 317企业网关真实Postgres事务及OAuth存储验证
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          docker run --rm -d --name gateway-postgres-317 \\
+            -e POSTGRES_PASSWORD=gateway-test-only \\
+            -p 127.0.0.1:55432:5432 postgres:16
+          trap 'docker rm -f gateway-postgres-317 >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 40); do
+            if docker exec gateway-postgres-317 pg_isready -U postgres -d postgres >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          docker exec gateway-postgres-317 pg_isready -U postgres -d postgres
+          GATEWAY_TEST_POSTGRES_URL='postgres://postgres:gateway-test-only@127.0.0.1:55432/postgres' \\
+            bun test tests/m6-gateway-postgres-317.test.mjs
       - name: 新构建版本和基础交互验收
         run: |
           set -euo pipefail
