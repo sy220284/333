@@ -1,6 +1,7 @@
 import { createServer } from 'node:net'
 import { mkdirSync, unlinkSync, writeFileSync, chmodSync, realpathSync } from 'node:fs'
 import { dirname } from 'node:path'
+import { clearInheritedHostProviderEnvironment317 } from './providerClaimEnv317.ts'
 import { assertSocketVacant317 } from './socketOwnership317.ts'
 
 /**
@@ -119,6 +120,8 @@ export function applyPreloadClaim317(claim, {
 } = {}) {
   const normalized = validatePreloadClaim317(claim)
   chdir(normalized.cwd)
+  // Managed-host claims drop the warm process's stale inference routing.
+  clearInheritedHostProviderEnvironment317(Object.fromEntries(normalized.env), env)
   for (const name of PRELOAD_RESET_KEYS_317) delete env[name]
   // The official claim replaces token values with those provided by the
   // session; credentials inherited from a different warmed session must go.

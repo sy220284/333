@@ -63,6 +63,45 @@ test('M1 C19-T02 317 preload reset list matches verified original bytecode', () 
   } finally {rmSync(home,{recursive:true,force:true})}
 })
 
+test('317 provider-managed claim clears old endpoints, headers, proxy and CA only for host owner', () => {
+  const cwd = mkdtempSync(join(tmpdir(), '333-host-claim-'))
+  try {
+    const old = {
+      CLAUDE_CODE_USE_BEDROCK: '1',
+      ANTHROPIC_BASE_URL: 'https://old.invalid',
+      ANTHROPIC_CUSTOM_HEADERS: 'old-secret',
+      HTTP_PROXY: 'http://old.invalid',
+      NODE_EXTRA_CA_CERTS: '/old/ca.pem',
+      ANTHROPIC_DEFAULT_SONNET_MODEL: 'old-model',
+      CLAUDE_CODE_USE_ANTHROPIC_GOOGLE_CLOUD: '1',
+      KEEP_CONTEXT: 'ok',
+    }
+    applyPreloadClaim317({
+      cwd, argv: ['--version'],
+      env: {
+        CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST: 'true',
+        ANTHROPIC_BASE_URL: 'https://accepted.invalid',
+        ANTHROPIC_API_KEY: 'accepted-key',
+      },
+    }, { env: old, argv: ['bun', 'cli', '--preload'], chdir: () => {} })
+    for (const key of ['CLAUDE_CODE_USE_BEDROCK','ANTHROPIC_CUSTOM_HEADERS',
+      'HTTP_PROXY','NODE_EXTRA_CA_CERTS','ANTHROPIC_DEFAULT_SONNET_MODEL',
+      'CLAUDE_CODE_USE_ANTHROPIC_GOOGLE_CLOUD']) {
+      assert.equal(old[key], undefined, key)
+    }
+    assert.equal(old.ANTHROPIC_BASE_URL, 'https://accepted.invalid')
+    assert.equal(old.ANTHROPIC_API_KEY, 'accepted-key')
+    assert.equal(old.KEEP_CONTEXT, 'ok')
+    const personal = { ANTHROPIC_BASE_URL: 'https://user.invalid' }
+    applyPreloadClaim317({ cwd, argv: [], env: {} }, {
+      env: personal, argv: ['bun', 'cli', '--preload'], chdir: () => {},
+    })
+    assert.equal(personal.ANTHROPIC_BASE_URL, 'https://user.invalid')
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
 test('M1 C19-T02 preload claim validates every field before changing process state', () => {
   const home = mkdtempSync(join(tmpdir(), '333-preload-validate-'))
   try {
