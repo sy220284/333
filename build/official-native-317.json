@@ -1,0 +1,19 @@
+{
+  "version": "2.1.317",
+  "platform": "x64-linux",
+  "binary_sha256": "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0",
+  "modules": [
+    {
+      "name": "clipboard-napi.node",
+      "offset": 326335503,
+      "size": 1072904,
+      "sha256": "092e2ac6a89598ace2279ae8ee2c9738474669a27fd69a65b528b5eca7329221"
+    },
+    {
+      "name": "audio-capture.node",
+      "offset": 327746187,
+      "size": 492184,
+      "sha256": "185f990044394fbd4811284cfe9812d261453571c4dfbfa27dadd299c53036eb"
+    }
+  ]
+}
