@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { withToolInProgress } from '../src/services/tools/toolExecutionLifecycle317.mjs'
+import { withToolInProgress, observeToolExecutionPromise } from '../src/services/tools/toolExecutionLifecycle317.mjs'
 
 function registry() {
   let active = new Set()
@@ -58,4 +58,54 @@ test('2.1.317 tool lifetime: setup failure does not leave an active ID', async (
   })
   await assert.rejects(stream.next(), /could not initialize/)
   assert.deepEqual(state.ids, [])
+})
+
+test('2.1.317 streamed tools: settlement is observed once and resumes queued work', async () => {
+  const events = []
+  const promise = observeToolExecutionPromise(
+    Promise.resolve('finished'),
+    () => events.push('cleanup'),
+    () => events.push('resume'),
+    () => events.push('error'),
+  )
+  assert.equal(await promise, 'finished')
+  await new Promise(resolve => setImmediate(resolve))
+  assert.deepEqual(events, ['cleanup', 'resume'])
+})
+
+test('2.1.317 streamed tools: execution errors propagate, cleanup and block queued work', async () => {
+  const events = []
+  const failure = new Error('streamed execution failed')
+  const promise = observeToolExecutionPromise(
+    Promise.reject(failure),
+    () => events.push('cleanup'),
+    () => events.push('resume'),
+    error => {
+      assert.equal(error, failure)
+      events.push('error')
+    },
+  )
+  await assert.rejects(promise, error => error === failure)
+  await new Promise(resolve => setImmediate(resolve))
+  assert.deepEqual(events, ['cleanup', 'error'])
+})
+
+test('2.1.317 streamed tools: cancelling child execution settles and releases active identity', async () => {
+  const active = new Set(['tool-1'])
+  const controller = new AbortController()
+  const execute = new Promise((resolve, reject) =>
+    controller.signal.addEventListener('abort', () => reject(new Error('cancelled')), { once: true }),
+  )
+  const events = []
+  const tracked = observeToolExecutionPromise(
+    execute,
+    () => { active.delete('tool-1'); events.push('cleanup') },
+    () => events.push('resume'),
+    () => events.push('cancelled'),
+  )
+  controller.abort('streaming_fallback')
+  await assert.rejects(tracked, /cancelled/)
+  await new Promise(resolve => setImmediate(resolve))
+  assert.deepEqual([...active], [])
+  assert.deepEqual(events, ['cleanup', 'cancelled'])
 })
