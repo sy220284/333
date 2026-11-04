@@ -96,15 +96,27 @@ graders:
     })
     // Determine whether the rebuilt non-interactive model loop reaches the
     // mock API before attributing a failure to the eval child launcher.
+    const debugFile = join(root, 'headless-startup-debug.log')
     const direct = await invoke([
       '-p','Say the verification text','--output-format','stream-json',
-      '--verbose','--permission-mode','dontAsk','--setting-sources','user',
+      '--verbose','--debug-file',debugFile,
+      '--permission-mode','dontAsk','--setting-sources','user',
       '--model',model,'--max-turns','1','--no-session-persistence',
-    ],env,root,15000)
+    ],env,root,12000)
+    // Distinguish a normal headless prefetch/setup hang from a more basic
+    // SDK transport failure without altering the real eval acceptance test.
+    const bare = direct.code === 0 ? null : await invoke([
+      '-p','Say the verification text','--output-format','stream-json',
+      '--verbose','--bare','--permission-mode','dontAsk',
+      '--setting-sources','user','--model',model,'--max-turns','1',
+    ],env,root,12000)
+    const debug = existsSync(debugFile) ? readFileSync(debugFile,'utf8') : '(debug file not created)'
     assert.equal(direct.code,0,
       'Direct rebuilt -p child failed before plugin eval: signal='+direct.signal+
       '; requests='+requests+'\\nSTDOUT='+direct.stdout.slice(-1800)+
-      '\\nSTDERR='+direct.stderr.slice(-1800))
+      '\\nSTDERR='+direct.stderr.slice(-1800)+
+      '\\nDEBUG='+debug.slice(-8000)+
+      '\\nBARE='+JSON.stringify(bare)?.slice(0,3500))
     assert.equal(requests,1,'Direct rebuilt print mode must invoke the model API')
     requests=0
     const run=await invoke([
