@@ -4,6 +4,7 @@ import { dirname } from 'node:path'
 import { mkdirSync } from 'node:fs'
 import { timingSafeEqual } from 'node:crypto'
 import { assertSocketVacant317 } from './socketOwnership317.ts'
+import { createPtyRecording317 } from './ptyRecording317.ts'
 import {
   createPtyFrameDecoder317, encodePtyControl317, encodePtyData317, PtyReplay317,
   PTY_CTRL_KIND_317, PTY_DATA_KIND_317, PTY_MAX_DIMENSION_317,
@@ -65,6 +66,8 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
   const authAsked = new WeakSet<Socket>()
   const heartbeat = new WeakMap<Socket, { armed: boolean; missed: number }>()
   const replay = new PtyReplay317()
+  // Exact upstream CLAUDE_PTY_RECORD format: dimensions then timed raw chunks.
+  const recording = createPtyRecording317(process.env.CLAUDE_PTY_RECORD, cols, rows)
   let ptyAuth = process.env.CLAUDE_BG_PTY_AUTH
   delete process.env.CLAUDE_BG_PTY_AUTH
   const tokensPath = process.env.CLAUDE_BG_SOCKET_TOKENS_PATH
@@ -144,6 +147,7 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
       const chunk = Buffer.from(data)
       ptyReceivedData = true
       replay.push(chunk)
+      recording?.write(chunk)
       broadcast(encodePtyData317(chunk))
     } })
     child = Bun.spawn(command, { cwd: process.cwd(), windowsHide: true, detached: false,
@@ -276,6 +280,7 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
     for (const [sig, handler] of closeHandlers) process.off(sig, handler)
     if (!stopped) forceTerminate('SIGTERM')
     closeTerminalOnce()
+    recording?.close()
     for (const peer of peers) peer.destroy()
     await new Promise(resolve => server?.close(() => resolve(undefined)) ?? resolve(undefined))
     if (ownsSocket && process.platform !== 'win32') removeSocket(socket)
