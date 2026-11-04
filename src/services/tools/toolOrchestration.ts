@@ -127,25 +127,30 @@ async function* runToolsSerially(
     toolUseContext.setInProgressToolUseIDs(prev =>
       new Set(prev).add(toolUse.id),
     )
-    for await (const update of runToolUse(
-      toolUse,
-      assistantMessages.find(_ =>
-        _.message.content.some(
-          _ => _.type === 'tool_use' && _.id === toolUse.id,
-        ),
-      )!,
-      canUseTool,
-      currentContext,
-    )) {
-      if (update.contextModifier) {
-        currentContext = update.contextModifier.modifyContext(currentContext)
+    try {
+      for await (const update of runToolUse(
+        toolUse,
+        assistantMessages.find(_ =>
+          _.message.content.some(
+            _ => _.type === 'tool_use' && _.id === toolUse.id,
+          ),
+        )!,
+        canUseTool,
+        currentContext,
+      )) {
+        if (update.contextModifier) {
+          currentContext = update.contextModifier.modifyContext(currentContext)
+        }
+        yield {
+          message: update.message,
+          newContext: currentContext,
+        }
       }
-      yield {
-        message: update.message,
-        newContext: currentContext,
-      }
+    } finally {
+      // Cancellation, validation exceptions and rejected tools must not
+      // leave the UI or session believing this tool is still running.
+      markToolUseAsComplete(toolUseContext, toolUse.id)
     }
-    markToolUseAsComplete(toolUseContext, toolUse.id)
   }
 }
 
@@ -160,17 +165,21 @@ async function* runToolsConcurrently(
       toolUseContext.setInProgressToolUseIDs(prev =>
         new Set(prev).add(toolUse.id),
       )
-      yield* runToolUse(
-        toolUse,
-        assistantMessages.find(_ =>
-          _.message.content.some(
-            _ => _.type === 'tool_use' && _.id === toolUse.id,
-          ),
-        )!,
-        canUseTool,
-        toolUseContext,
-      )
-      markToolUseAsComplete(toolUseContext, toolUse.id)
+      try {
+        yield* runToolUse(
+          toolUse,
+          assistantMessages.find(_ =>
+            _.message.content.some(
+              _ => _.type === 'tool_use' && _.id === toolUse.id,
+            ),
+          )!,
+          canUseTool,
+          toolUseContext,
+        )
+      } finally {
+        // Also fires when the concurrent stream is closed or throws.
+        markToolUseAsComplete(toolUseContext, toolUse.id)
+      }
     }),
     getMaxToolUseConcurrency(),
   )
