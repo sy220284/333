@@ -3,8 +3,8 @@
  * No permissive defaults for authentication, database or public exposure.
  */
 import { readFile } from 'node:fs/promises'
-import { validateGatewayAdmin317 } from './gatewayAdmin317.mjs'
-import { validateCriConfig317 } from './gatewayCri317.mjs'
+import { validateGatewayAdmin317 } from './gatewayAdmin317.ts'
+import { validateCriConfig317 } from './gatewayCri317.ts'
 
 const LOOPBACK = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
 const nonempty = (value, name) => {
