@@ -27,6 +27,7 @@ import {
   getPromptId,
   getSessionId,
   getSessionProjectDir,
+  onSessionSwitch,
   isSessionPersistenceDisabled,
   switchSession,
 } from '../bootstrap/state.js'
@@ -205,10 +206,22 @@ export function getProjectsDir(): string {
 
 const sessionTranscriptPaths = new SessionTranscriptPathsV5()
 
+// Explicit worktree resumes change both session ID and its owning directory.
+// Honor that committed move; an unrelated async writer keeps the old owner.
+onSessionSwitch(sessionId => {
+  const projectDir = getSessionProjectDir()
+  if (projectDir !== null) {
+    sessionTranscriptPaths.remember(sessionId, join(projectDir, `${sessionId}.jsonl`))
+  }
+})
+
 export function getTranscriptPath(): string {
   const projectDir = getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
   const sessionId = getSessionId()
-  return sessionTranscriptPaths.remember(sessionId, join(projectDir, `${sessionId}.jsonl`))
+  return sessionTranscriptPaths.resolve(sessionId, () => {
+    const path = join(projectDir, `${sessionId}.jsonl`)
+    return sessionTranscriptPaths.remember(sessionId, path)
+  })
 }
 
 export function getTranscriptPathForSession(sessionId: string): string {
