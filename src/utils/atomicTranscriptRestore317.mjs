@@ -8,19 +8,16 @@ import { writeFile, rename, unlink } from 'node:fs/promises'
 
 export async function replaceTranscriptAtomically(path, content) {
   const temporary = path + '.restore-' + randomUUID() + '.tmp'
-  let staged = false
   try {
     await writeFile(temporary, content, { encoding: 'utf8', mode: 0o600, flag: 'wx' })
-    staged = true
     await rename(temporary, path)
-    staged = false
   } finally {
-    if (staged) {
-      try {
-        await unlink(temporary)
-      } catch (error) {
-        if (error?.code !== 'ENOENT') throw error
-      }
+    // The write itself may fail AFTER creating a partial temporary file.
+    // Always attempt cleanup, including the failed-write path.
+    try {
+      await unlink(temporary)
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error
     }
   }
 }
