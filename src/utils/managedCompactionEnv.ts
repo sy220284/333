@@ -6,9 +6,9 @@
  */
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on'])
 
-export function filterSettingsCompactionEnv(env) {
+export function filterSettingsCompactionEnv(env: Record<string, string | undefined> | undefined): Record<string, string | undefined> {
   if (!env) return {}
-  const filtered = {}
+  const filtered: Record<string, string | undefined> = {}
   for (const [key, value] of Object.entries(env)) {
     if (
       key.toUpperCase() === 'DISABLE_COMPACT' &&

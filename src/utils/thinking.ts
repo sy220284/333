@@ -83,28 +83,8 @@ export function getRainbowColor(
 // Provider-aware thinking support detection (aligns with modelSupportsISP in betas.ts)
 export function modelSupportsThinking(model: string): boolean {
   const supported3P = get3PModelCapabilityOverride(model, 'thinking')
-  if (supported3P !== undefined) {
-    return supported3P
-  }
-  if (process.env.USER_TYPE === 'ant') {
-    if (resolveAntModel(model.toLowerCase())) {
-      return true
-    }
-  }
-  // IMPORTANT: Do not change thinking support without notifying the model
-  // launch DRI and research. This can greatly affect model quality and bashing.
-  const configured = getModelCapabilityEnvOverride(model, 'thinking')
-  if (configured !== undefined) return configured
-  const entry = getCatalogModel(model)
-  if (entry?.capabilities.includes('adaptive_thinking')) return true
-  const canonical = getCanonicalName(model)
-  const provider = getAPIProvider()
-  // 1P and Foundry: all Claude 4+ models (including Haiku 4.5)
-  if (provider === 'foundry' || provider === 'firstParty') {
-    return !canonical.includes('claude-3-')
-  }
-  // 3P (Bedrock/Vertex): only Opus 4+ and Sonnet 4+
-  return canonical.includes('sonnet-4') || canonical.includes('opus-4')
+  if (supported3P !== undefined) return supported3P
+  return !getCanonicalName(model).includes('claude-3-')
 }
 
 // @[MODEL LAUNCH]: Add the new model to the allowlist if it supports adaptive thinking.
@@ -118,29 +98,11 @@ export function modelSupportsAdaptiveThinking(model: string): boolean {
   const entry = getCatalogModel(model)
   if (entry) return entry.capabilities.includes('adaptive_thinking')
   const canonical = getCanonicalName(model)
-  // Supported by a subset of Claude 4 models
-  if (canonical.includes('opus-4-6') || canonical.includes('sonnet-4-6')) {
-    return true
-  }
-  // Exclude any other known legacy models (allowlist above catches 4-6 variants first)
-  if (
-    canonical.includes('opus') ||
-    canonical.includes('sonnet') ||
-    canonical.includes('haiku')
-  ) {
-    return false
-  }
-  // IMPORTANT: Do not change adaptive thinking support without notifying the
-  // model launch DRI and research. This can greatly affect model quality and
-  // bashing.
-
-  // Newer models (4.6+) are all trained on adaptive thinking and MUST have it
-  // enabled for model testing. DO NOT default to false for first party, otherwise
-  // we may silently degrade model quality.
-
-  // Default to true for unknown model strings on 1P and Foundry (because Foundry
-  // is a proxy). Do not default to true for other 3P as they have different formats
-  // for their model strings.
+  if (canonical.includes('claude-3-') || [
+    'claude-opus-4-0', 'claude-opus-4-1', 'claude-opus-4-5',
+    'claude-sonnet-4-0', 'claude-sonnet-4-5', 'claude-haiku-4-5',
+  ].includes(canonical)) return false
+  if (canonical === 'claude-mythos-5') return true
   const provider = getAPIProvider()
   return provider === 'firstParty' || provider === 'foundry'
 }

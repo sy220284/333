@@ -66,7 +66,7 @@ test('M1 C19-T02/T05: terminating launcher forwards SIGTERM to child and waits f
     writeFileSync(stub, '#!/usr/bin/env node\n' +
       "const fs = require('node:fs');\n" +
       "process.on('SIGTERM', () => { fs.writeFileSync(process.env.STUB_ACK, 'clean'); process.exit(23) });\n" +
-      "process.stdout.write('READY\\n'); process.stdin.resume();\n")
+      "setInterval(() => {}, 1000); process.stdout.write('READY\\n');\n")
     chmodSync(stub, 0o755)
     copyFileSync(launcher, join(dir, 'launcher.cjs'))
     writeFileSync(join(dir, 'cli.js'), '/* stub */')

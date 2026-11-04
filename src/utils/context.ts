@@ -6,6 +6,7 @@ import { getCanonicalName } from './model/model.js'
 import { resolveAntModel } from './model/antModels.js'
 import { getModelCapability } from './model/modelCapabilities.js'
 import { getCatalogModel } from './model/modelCatalog.js'
+import { getAPIProvider } from './model/providers.js'
 
 // Model context window size (200k tokens for all models right now)
 export const MODEL_CONTEXT_WINDOW_DEFAULT = 200_000
@@ -15,7 +16,7 @@ export const COMPACT_MAX_OUTPUT_TOKENS = 20_000
 
 // Default max output tokens
 const MAX_OUTPUT_TOKENS_DEFAULT = 32_000
-const MAX_OUTPUT_TOKENS_UPPER_LIMIT = 64_000
+const MAX_OUTPUT_TOKENS_UPPER_LIMIT = 128_000
 
 // Capped default for slot-reservation optimization. BQ p99 output = 4,911
 // tokens, so 32k/64k defaults over-reserve 8-16× slot capacity. With the cap
@@ -31,7 +32,7 @@ export const ESCALATED_MAX_TOKENS = 64_000
  * Used by C4E admins to disable 1M context for HIPAA compliance.
  */
 export function is1mContextDisabled(): boolean {
-  return isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_1M_CONTEXT)
+  return Boolean(process.env.CLAUDE_CODE_DISABLE_1M_CONTEXT)
 }
 
 export function has1mContext(model: string): boolean {
@@ -49,26 +50,19 @@ export function modelSupports1M(model: string): boolean {
   const catalog = getCatalogModel(model)
   if (catalog) return catalog.context?.supports_1m_beta === true
   const canonical = getCanonicalName(model)
-  return canonical.includes('claude-sonnet-4') || canonical.includes('opus-4-6')
+  if (canonical.includes('claude-3-') || ['claude-opus-4-0', 'claude-opus-4-1', 'claude-opus-4-5', 'claude-haiku-4-5'].includes(canonical)) return false
+  return getAPIProvider() === 'firstParty' || getAPIProvider() === 'foundry'
 }
 
 export function getContextWindowForModel(
   model: string,
   betas?: string[],
 ): number {
-  // Allow override via environment variable (ant-only)
-  // This takes precedence over all other context window resolution, including 1M detection,
-  // so users can cap the effective context window for local decisions (auto-compact, etc.)
-  // while still using a 1M-capable endpoint.
-  if (
-    process.env.USER_TYPE === 'ant' &&
-    process.env.CLAUDE_CODE_MAX_CONTEXT_TOKENS
-  ) {
-    const override = parseInt(process.env.CLAUDE_CODE_MAX_CONTEXT_TOKENS, 10)
-    if (!isNaN(override) && override > 0) {
-      return override
-    }
-  }
+  const configured = Number(process.env.CLAUDE_CODE_MAX_CONTEXT_TOKENS)
+  const canonical = getCanonicalName(model)
+  const custom = !getCatalogModel(model) && !canonical.startsWith('claude-3-') &&
+    (!canonical.startsWith('claude-') || canonical !== model.toLowerCase())
+  if (configured > 0 && (isEnvTruthy(process.env.DISABLE_COMPACT) || custom)) return configured
 
   // [1m] suffix — explicit client-side opt-in, respected over all detection
   if (has1mContext(model)) {

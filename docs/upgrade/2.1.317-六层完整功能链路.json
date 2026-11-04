@@ -155,7 +155,7 @@
       "official_source_starts": [
         "chunk-74x0zd10.js（模型目录与provider能力）"
       ],
-      "current_difference": "已有22项模型目录、能力覆盖及effort修正；完整API请求和全部消费者仍待对齐。",
+      "current_difference": "本轮接通新版目录到模型别名、真实API请求、费用统计及选择器；按模型effort设置生效并写回。原版请求对照通过，完整served/published目录及所有provider/资格/回退消费者仍需对齐。",
       "related_chains": [
         "C02",
         "C03",
@@ -171,7 +171,13 @@
           "implementation": "逐函数对比新版模型目录、别名、供应商ID、自定义模型及上下文后缀解析；沿用已移植目录并补剩余消费者差异",
           "associated_updates": "模型选择器、显示名称、成本表、CLI和SDK模型参数",
           "acceptance": "同一输入在各入口得到一致模型身份，未知值和自定义值遵守原版处理方式",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "目录驱动20项provider配置、四个模型家族别名、原生1M后缀、规范身份和显示名称；2,600组原版函数差分一致。"
+          ],
+          "remaining_scope": [
+            "served/published目录、behavesAs、远程资格及其他provider的完整模型目录消费者。"
+          ]
         },
         {
           "id": "C01-T02",
@@ -179,7 +185,13 @@
           "implementation": "核对五槽位能力覆盖、effort别名、xhigh、默认值、上限来源和不支持能力时的实际处理",
           "associated_updates": "配置schema、环境变量、命令行、模型设置页和子Agent继承",
           "acceptance": "缺省、显式覆盖、受管上限和不同模型组合均产生正确effort",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "按模型effort设置表、规范键优先级、旧用户全局effort适用范围、CLI覆盖与推理上限接通请求；/effort和选择器按模型写入。"
+          ],
+          "remaining_scope": [
+            "组织模型资格附带的effort上限/默认值、运行中切换与Hook/子Agent全分支。"
+          ]
         },
         {
           "id": "C01-T03",
@@ -187,7 +199,13 @@
           "implementation": "对齐请求构造、输出/思考预算、上下文长度、流式选项和各供应商参数转换，拆分旧请求分支",
           "associated_updates": "SDK类型、API请求体、provider适配与相关请求头",
           "acceptance": "捕获真实请求内容并与原版比较，参数类型、缺省省略和限制一致",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "原版/重建进程对照模型ID、max_tokens、output_config.effort、adaptive thinking和费用，覆盖三个家族、1M后缀、设置覆盖与上限。"
+          ],
+          "remaining_scope": [
+            "全部provider转换、请求重试及模型能力拒绝分支。"
+          ]
         },
         {
           "id": "C01-T04",
@@ -195,7 +213,13 @@
           "implementation": "核对模型不可用、过载、额度、能力拒绝时的回退次序、重试次数和当前模型更新",
           "associated_updates": "重试器、会话状态、费用统计及状态提示",
           "acceptance": "失败后只按原版执行必要重试和回退，重复请求副作用及显示状态一致",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "回退链TS实现补齐输入、可选主模型及返回类型，既有回退回归沿用。"
+          ],
+          "remaining_scope": [
+            "完整错误矩阵、原版过载/额度回退次序和跨模型状态副作用比较。"
+          ]
         },
         {
           "id": "C01-T05",
@@ -203,7 +227,13 @@
           "implementation": "贯通交互、print、SDK、子Agent、插件和企业网关对模型能力的使用，消除各自计算默认值的旧实现",
           "associated_updates": "C02上下文、C05代理、C12界面、C15网关和C16认证网络",
           "acceptance": "同一配置跨入口执行后的模型、预算、费用及错误结果一致",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "选择器别名名称、价格、费用统计使用同一目录；同步新版长上下文、1小时缓存、US区域及fast计价。"
+          ],
+          "remaining_scope": [
+            "SDK、子Agent、企业网关和模型设置动态更新的全部关联行为。"
+          ]
         }
       ],
       "acceptance_scenarios": [
@@ -267,7 +297,7 @@
         "chunk-thp9mgjc.js:32216（微压缩控制）",
         "chunk-7bjr5mdw.js:65（提示词/非交互选项消费者）"
       ],
-      "current_difference": "已有部分压缩/禁用策略修正；提示词、微压缩、摘要与恢复整链仍待逐函数比对。",
+      "current_difference": "本轮补齐文本文档、JSON密度、嵌套内容与搜索结果估算，接通微压缩及API上下文统计；新版空闲清理、完整提示词、摘要和恢复整链仍待核对。",
       "related_chains": [
         "C01",
         "C03",
@@ -300,7 +330,13 @@
           "implementation": "对齐时间/大小触发、最近工具结果选择、Read保留路径和上下文占用计算",
           "associated_updates": "消息类型、工具结果缓存、文件读取状态与压缩提示",
           "acceptance": "长会话及重复Read后保留内容、触发点和下轮可读信息与原版一致",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "移植317文本文档/JSON密度、嵌套内容、搜索结果token计算，共用于API上下文估算和微压缩节省量；补齐Read保留模块TS类型。"
+          ],
+          "remaining_scope": [
+            "新版空闲后服务端清理计划、恢复后的已清理结果识别与相关Read消费者。"
+          ]
         },
         {
           "id": "C02-T04",
@@ -316,7 +352,13 @@
           "implementation": "对齐环境、受管、flag及被排除设置来源的压缩/ultrathink限制，联调模型预算和恢复会话",
           "associated_updates": "C01预算、C04来源优先级、C07转录及输入组件",
           "acceptance": "受保护禁用值不会被低优先级来源解除，恢复后上下文和压缩状态一致",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "压缩禁用环境筛选转换为有实际参数及返回类型的TS，原有禁用与Read恢复回归通过。"
+          ],
+          "remaining_scope": [
+            "完整受管/排除来源、禁用策略与跨轮摘要恢复对照。"
+          ]
         }
       ],
       "acceptance_scenarios": [
@@ -522,7 +564,7 @@
         "chunk-z227w65w.js:1867（读取边界例外）",
         "chunk-nj8ddyrh.js（配置/权限schema）"
       ],
-      "current_difference": "已有读取围栏、可信规则来源和自动模式规则修正；完整权限/沙箱/审批消费者仍需核对。",
+      "current_difference": "本轮实测修复项目附加目录被错误标成CLI授权导致的围栏越界；Read/Edit真实副作用与原版对照通过。全部分类、沙箱及SDK/远程审批消费者继续对齐。",
       "related_chains": [
         "C03",
         "C05",
@@ -540,7 +582,14 @@
           "implementation": "逐函数对比受管、用户、项目、local、flag及环境来源的启用条件、覆盖和合并；保留已修正的可信来源规则",
           "associated_updates": "设置schema、setting-sources、自动模式配置和企业策略",
           "acceptance": "排除来源、受管默认规则及嵌套拒绝条目按新版次序生效",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "修复启动附加目录丢失来源：项目配置目录保留projectSettings来源，命令行显式授权保持独立；自动规则合并补齐TS类型。",
+            "按317 Xsn/olt/rlt保存会话已启用的读写围栏，设置重载只能收紧；读取例外按当前flag设置刷新。"
+          ],
+          "remaining_scope": [
+            "全部受管设置来源、运行中重载和远程审批策略。"
+          ]
         },
         {
           "id": "C04-T02",
@@ -548,7 +597,14 @@
           "implementation": "对齐读写围栏、flag读取例外、敏感路径、符号链接、真实路径及网络目标的权限判断",
           "associated_updates": "Read/Edit/Write/Notebook、Bash、MCP和附件入口",
           "acceptance": "别名、软链、路径穿越、拒绝规则和范围例外不扩大授权",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "真实Read/Edit进程对照项目附加目录、flag读取例外、项目伪例外、目录外写入和符号链接；修复项目目录被标成CLI授权的越界。",
+            "写围栏按317 ABr限制EnterWorktree/ExitWorktree；toolsNarrowing贯穿规则收集、权限原因显示和上下文类型。"
+          ],
+          "remaining_scope": [
+            "网络目标、沙箱平台、SDK/远程权限上下文及所有敏感路径分支。"
+          ]
         },
         {
           "id": "C04-T03",
@@ -572,7 +628,13 @@
           "implementation": "追踪所有工具、子Agent、插件、附件和远程执行的检查位置，删除绕过新版检查的旧直达路径",
           "associated_updates": "C03/C05/C09/C10/C14/C18消费者和审计输出",
           "acceptance": "权限决定、实际副作用、错误信息及恢复后的授权范围相互一致",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "文件权限围栏生产消费者接入TS模块并验证真实副作用及拒绝后文件未写入。"
+          ],
+          "remaining_scope": [
+            "Agent、插件、MCP、附件和远程执行的全部权限消费者。"
+          ]
         }
       ],
       "acceptance_scenarios": [

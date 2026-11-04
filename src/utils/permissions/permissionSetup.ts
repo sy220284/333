@@ -11,12 +11,14 @@ import type {
   ToolPermissionContext,
   ToolPermissionRulesBySource,
 } from '../../Tool.js'
+import { applyFileFencePolicy } from './readFencePolicy.js'
 import { getCwd } from '../cwd.js'
 import { isEnvTruthy } from '../envUtils.js'
 import type { SettingSource } from '../settings/constants.js'
-import { SETTING_SOURCES } from '../settings/constants.js'
+import { SETTING_SOURCES, getEnabledSettingSources } from '../settings/constants.js'
 import {
   getInitialSettings,
+  getSettingsForSource,
   getSettingsFilePathForSource,
   getUseAutoModeDuringPlan,
   hasAutoModeOptIn,
@@ -985,28 +987,31 @@ export async function initializeToolPermissionContext({
     rulesFromDisk,
   )
 
-  // Add directories from settings and --add-dir
-  const allAdditionalDirectories = [
-    ...(settings.permissions?.additionalDirectories || []),
-    ...addDirs,
-  ]
-  // Parallelize fs validation; apply updates serially (cumulative context).
-  // validateDirectoryForWorkspace only reads permissionContext to check if the
-  // dir is already covered — behavioral difference from parallelizing is benign
-  // (two overlapping --add-dirs both succeed instead of one being flagged
-  // alreadyInWorkingDirectory, which was silently skipped anyway).
-  const validationResults = await Promise.all(
-    allAdditionalDirectories.map(dir =>
-      validateDirectoryForWorkspace(dir, toolPermissionContext),
-    ),
+  toolPermissionContext = applyFileFencePolicy(
+    toolPermissionContext,
+    getEnabledSettingSources().map(source => getSettingsForSource(source)),
+    process.env.CLAUDE_CODE_RESTRICTED === '1' ? [] : getSettingsForSource('flagSettings')?.permissions?.blockReadsExemptPaths ?? [],
   )
-  for (const result of validationResults) {
+
+  // Preserve each directory's authorisation source. A repository must not
+  // turn its additionalDirectories into CLI grants and escape file fences.
+  const allAdditionalDirectories: { dir: string; destination: PermissionRuleSource }[] = [
+    ...getEnabledSettingSources().flatMap(source =>
+      (getSettingsForSource(source)?.permissions?.additionalDirectories ?? [])
+        .map(dir => ({ dir, destination: source }))),
+    ...addDirs.map(dir => ({ dir, destination: 'cliArg' as const })),
+  ]
+  const validationResults = await Promise.all(
+    allAdditionalDirectories.map(async ({ dir, destination }) => ({
+      destination,
+      result: await validateDirectoryForWorkspace(dir, toolPermissionContext),
+    })),
+  )
+  for (const { result, destination } of validationResults) {
     if (result.resultType === 'success') {
-      toolPermissionContext = applyPermissionUpdate(toolPermissionContext, {
-        type: 'addDirectories',
-        directories: [result.absolutePath],
-        destination: 'cliArg',
-      })
+      const directories = new Map(toolPermissionContext.additionalWorkingDirectories)
+      directories.set(result.absolutePath, { path: result.absolutePath, source: destination })
+      toolPermissionContext = { ...toolPermissionContext, additionalWorkingDirectories: directories }
     } else if (
       result.resultType !== 'alreadyInWorkingDirectory' &&
       result.resultType !== 'pathNotFound'

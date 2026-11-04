@@ -2,22 +2,9 @@ import type { BetaUsage as Usage } from '@anthropic-ai/sdk/resources/beta/messag
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from 'src/services/analytics/index.js'
 import { logEvent } from 'src/services/analytics/index.js'
 import { setHasUnknownModelCost } from '../bootstrap/state.js'
+import { MODEL_CATALOG } from './model/modelCatalog.js'
 import { isFastModeEnabled } from './fastMode.js'
 import {
-  CLAUDE_3_5_HAIKU_CONFIG,
-  CLAUDE_3_5_V2_SONNET_CONFIG,
-  CLAUDE_3_7_SONNET_CONFIG,
-  CLAUDE_HAIKU_4_5_CONFIG,
-  CLAUDE_OPUS_4_1_CONFIG,
-  CLAUDE_OPUS_4_5_CONFIG,
-  CLAUDE_OPUS_4_6_CONFIG,
-  CLAUDE_OPUS_4_CONFIG,
-  CLAUDE_SONNET_4_5_CONFIG,
-  CLAUDE_SONNET_4_6_CONFIG,
-  CLAUDE_SONNET_4_CONFIG,
-} from './model/configs.js'
-import {
-  firstPartyNameToCanonical,
   getCanonicalName,
   getDefaultMainLoopModelSetting,
   type ModelShortName,
@@ -30,6 +17,8 @@ export type ModelCosts = {
   promptCacheWriteTokens: number
   promptCacheReadTokens: number
   webSearchRequests: number
+  promptCacheWrite1hTokens?: number
+  longPrompt?: ModelCosts & { abovePromptTokens: number }
 }
 
 // Standard pricing tier for Sonnet models: $3 input / $15 output per Mtok
@@ -101,55 +90,72 @@ export function getOpus46CostTier(fastMode: boolean): ModelCosts {
 // @[MODEL LAUNCH]: Add a pricing entry for the new model below.
 // Costs from https://platform.claude.com/docs/en/about-claude/pricing
 // Web search cost: $10 per 1000 requests = $0.01 per request
-export const MODEL_COSTS: Record<ModelShortName, ModelCosts> = {
-  [firstPartyNameToCanonical(CLAUDE_3_5_HAIKU_CONFIG.firstParty)]:
-    COST_HAIKU_35,
-  [firstPartyNameToCanonical(CLAUDE_HAIKU_4_5_CONFIG.firstParty)]:
-    COST_HAIKU_45,
-  [firstPartyNameToCanonical(CLAUDE_3_5_V2_SONNET_CONFIG.firstParty)]:
-    COST_TIER_3_15,
-  [firstPartyNameToCanonical(CLAUDE_3_7_SONNET_CONFIG.firstParty)]:
-    COST_TIER_3_15,
-  [firstPartyNameToCanonical(CLAUDE_SONNET_4_CONFIG.firstParty)]:
-    COST_TIER_3_15,
-  [firstPartyNameToCanonical(CLAUDE_SONNET_4_5_CONFIG.firstParty)]:
-    COST_TIER_3_15,
-  [firstPartyNameToCanonical(CLAUDE_SONNET_4_6_CONFIG.firstParty)]:
-    COST_TIER_3_15,
-  [firstPartyNameToCanonical(CLAUDE_OPUS_4_CONFIG.firstParty)]: COST_TIER_15_75,
-  [firstPartyNameToCanonical(CLAUDE_OPUS_4_1_CONFIG.firstParty)]:
-    COST_TIER_15_75,
-  [firstPartyNameToCanonical(CLAUDE_OPUS_4_5_CONFIG.firstParty)]:
-    COST_TIER_5_25,
-  [firstPartyNameToCanonical(CLAUDE_OPUS_4_6_CONFIG.firstParty)]:
-    COST_TIER_5_25,
+type CatalogPricing = {
+  input: number; output: number; cache_write_5m?: number; cache_write_1h?: number
+  cache_read?: number; web_search?: number
+  long_prompt?: Omit<CatalogPricing, 'long_prompt'> & { above_prompt_tokens: number }
 }
+
+function catalogCosts(id: string, pricing: CatalogPricing): ModelCosts {
+  if (pricing.cache_write_5m === undefined || pricing.cache_read === undefined || pricing.web_search === undefined) {
+    throw new Error(`Model catalog ${id} has incomplete pricing`)
+  }
+  return {
+    inputTokens: pricing.input, outputTokens: pricing.output,
+    promptCacheWriteTokens: pricing.cache_write_5m,
+    promptCacheReadTokens: pricing.cache_read, webSearchRequests: pricing.web_search,
+    ...(pricing.cache_write_1h !== undefined && { promptCacheWrite1hTokens: pricing.cache_write_1h }),
+    ...(pricing.long_prompt !== undefined && { longPrompt: {
+      abovePromptTokens: pricing.long_prompt.above_prompt_tokens,
+      ...catalogCosts(id, { ...pricing.long_prompt, web_search: pricing.web_search }),
+    } }),
+  }
+}
+
+// No model.ts calls during initialization: that module also imports cost display.
+export const MODEL_COSTS: Record<ModelShortName, ModelCosts> = Object.fromEntries(
+  MODEL_CATALOG.models.map(entry => {
+    const tiers: Record<string, CatalogPricing> = MODEL_CATALOG.pricing_tiers
+    const pricing = typeof entry.pricing === 'string' ? tiers[entry.pricing] : entry.pricing
+    if (!pricing) throw new Error(`Model catalog ${entry.id} missing pricing`)
+    return [entry.id, catalogCosts(entry.id, pricing)]
+  }),
+)
 
 /**
  * Calculates the USD cost based on token usage and model cost configuration
  */
 function tokensToUSDCost(modelCosts: ModelCosts, usage: Usage): number {
-  return (
-    (usage.input_tokens / 1_000_000) * modelCosts.inputTokens +
-    (usage.output_tokens / 1_000_000) * modelCosts.outputTokens +
-    ((usage.cache_read_input_tokens ?? 0) / 1_000_000) *
-      modelCosts.promptCacheReadTokens +
-    ((usage.cache_creation_input_tokens ?? 0) / 1_000_000) *
-      modelCosts.promptCacheWriteTokens +
-    (usage.server_tool_use?.web_search_requests ?? 0) *
-      modelCosts.webSearchRequests
-  )
+  const input = usage.input_tokens + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0)
+  const costs = modelCosts.longPrompt && input > modelCosts.longPrompt.abovePromptTokens ? modelCosts.longPrompt : modelCosts
+  const cached = usage.cache_creation_input_tokens ?? 0
+  const oneHour = Math.min(cached, Math.max(0, usage.cache_creation?.ephemeral_1h_input_tokens ?? 0))
+  const writeCost = costs.promptCacheWrite1hTokens !== undefined && oneHour > 0
+    ? oneHour / 1_000_000 * costs.promptCacheWrite1hTokens + (cached - oneHour) / 1_000_000 * costs.promptCacheWriteTokens
+    : cached / 1_000_000 * costs.promptCacheWriteTokens
+  const tokens = usage.input_tokens / 1_000_000 * costs.inputTokens +
+    usage.output_tokens / 1_000_000 * costs.outputTokens +
+    (usage.cache_read_input_tokens ?? 0) / 1_000_000 * costs.promptCacheReadTokens + writeCost
+  return tokens * (usage.inference_geo === 'us' ? 1.1 : 1) +
+    (usage.server_tool_use?.web_search_requests ?? 0) * costs.webSearchRequests
 }
 
 export function getModelCosts(model: string, usage: Usage): ModelCosts {
   const shortName = getCanonicalName(model)
 
-  // Check if this is an Opus 4.6 model with fast mode active.
+  if (usage.speed === 'fast') {
+    const fastPrice = shortName === 'claude-opus-5-5' ? [8, 40, 10, 16, 0.4]
+      : ['claude-opus-4-8', 'claude-opus-5'].includes(shortName) ? [10, 50, 12.5, 20, 1]
+      : ['claude-opus-4-6', 'claude-opus-4-7'].includes(shortName) ? [30, 150, 37.5, 60, 3] : undefined
+    if (fastPrice) return { inputTokens: fastPrice[0]!, outputTokens: fastPrice[1]!, promptCacheWriteTokens: fastPrice[2]!, promptCacheWrite1hTokens: fastPrice[3]!, promptCacheReadTokens: fastPrice[4]!, webSearchRequests: 0.01 }
+  }
+
+  // Standard catalog prices apply when the response did not use fast mode.
   if (
-    shortName === firstPartyNameToCanonical(CLAUDE_OPUS_4_6_CONFIG.firstParty)
+    shortName === 'claude-opus-4-6'
   ) {
     const isFastMode = usage.speed === 'fast'
-    return getOpus46CostTier(isFastMode)
+    return isFastMode ? COST_TIER_30_150 : MODEL_COSTS[shortName]!
   }
 
   const costs = MODEL_COSTS[shortName]

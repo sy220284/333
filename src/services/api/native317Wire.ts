@@ -15,11 +15,11 @@ export const NATIVE_317_API_VERSION = '2023-06-01'
 /** Fetch(Request, init) replaces the Request headers only when init.headers
  * exists. A fetch wrapper must preserve those original headers, otherwise the
  * beta-route and OAuth decisions silently lose their identifying headers. */
-export function native317RequestHeaders(input, init) {
+export function native317RequestHeaders(input: RequestInfo | URL, init?: RequestInit): Headers {
   return new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined))
 }
 
-export function native317MessagesRequest(input, init, { apiKey } = {}) {
+export function native317MessagesRequest(input: RequestInfo | URL, init?: RequestInit, { apiKey }: { apiKey?: string } = {}): { input: RequestInfo | URL; init: RequestInit | undefined } {
   const uri = input instanceof Request ? input.url : String(input)
   const parsed = new URL(uri)
   if (parsed.pathname !== '/v1/messages' &&

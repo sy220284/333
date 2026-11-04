@@ -58,7 +58,7 @@ import { installAsciicastRecorder } from './utils/asciicast.js';
 import { getSubscriptionType, isClaudeAISubscriber, prefetchAwsCredentialsAndBedRockInfoIfSafe, prefetchGcpCredentialsIfSafe, validateForceLoginOrg } from './utils/auth.js';
 import { checkHasTrustDialogAccepted, getGlobalConfig, getRemoteControlAtStartup, isAutoUpdaterDisabled, saveGlobalConfig } from './utils/config.js';
 import { seedEarlyInput, stopCapturingEarlyInput } from './utils/earlyInput.js';
-import { getInitialEffortSetting, parseEffortValue } from './utils/effort.js';
+import { parseEffortValue } from './utils/effort.js';
 import { getInitialFastModeSetting, isFastModeEnabled, prefetchFastModeStatus, resolveFastModeStatusFromCache } from './utils/fastMode.js';
 import { applyConfigEnvironmentVariables } from './utils/managedEnv.js';
 import { createSystemMessage, createUserMessage } from './utils/messages.js';
@@ -2434,7 +2434,7 @@ async function run(): Promise<CommanderCommand> {
           tools: mcpTools
         },
         toolPermissionContext,
-        effortValue: parseEffortValue(options.effort) ?? getInitialEffortSetting(),
+        effortValue: parseEffortValue(options.effort),
         ...(isFastModeEnabled() && {
           fastMode: getInitialFastModeSetting(effectiveModel ?? null)
         }),
@@ -2826,7 +2826,7 @@ async function run(): Promise<CommanderCommand> {
           content: String(inputPrompt)
         })
       } : null,
-      effortValue: parseEffortValue(options.effort) ?? getInitialEffortSetting(),
+      effortValue: parseEffortValue(options.effort),
       activeOverlays: new Set<string>(),
       fastMode: getInitialFastModeSetting(resolvedInitialModel),
       ...(isAdvisorEnabled() && advisorModel && {

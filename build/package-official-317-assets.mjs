@@ -9,8 +9,10 @@ export function packageOfficialEmbeddedAssets317(root, dist) {
   const manifestFile = join(root, 'build/official-embedded-assets-2.1.317.json')
   const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'))
   const folder = join(dist, 'official-317')
-  const stage = join(root, '.official-317-stage-' + process.pid)
-  const backup = join(root, '.official-317-backup-' + process.pid)
+  // Activation and rollback must stay on the destination filesystem.
+  // The source checkout and an isolated release may be different mounts.
+  const stage = join(dist, '.official-317-stage-' + process.pid)
+  const backup = join(dist, '.official-317-backup-' + process.pid)
   if (existsSync(stage) || existsSync(backup)) {
     throw Error('Stale official 317 asset staging directory exists')
   }

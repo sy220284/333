@@ -114,6 +114,7 @@ const PERMISSION_RULE_SOURCES = [
   'cliArg',
   'command',
   'session',
+  'toolsNarrowing',
 ] as const satisfies readonly PermissionRuleSource[]
 
 export function permissionRuleSourceDisplayString(

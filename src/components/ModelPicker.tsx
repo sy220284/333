@@ -12,6 +12,7 @@ import { convertEffortValueToLevel, type EffortLevel, getDefaultEffortForModel, 
 import { getDefaultMainLoopModel, type ModelSetting, modelDisplayString, parseUserSpecifiedModel } from '../utils/model/model.js';
 import { getModelOptions } from '../utils/model/modelOptions.js';
 import { getSettingsForSource, updateSettingsForSource } from '../utils/settings/settings.js';
+import { effortModelIdentity, modelEffortSettingsUpdate } from '../utils/effortSettings.js';
 import { ConfigurableShortcutHint } from './ConfigurableShortcutHint.js';
 import { Select } from './CustomSelect/index.js';
 import { Byline } from './design-system/Byline.js';
@@ -216,12 +217,10 @@ export function ModelPicker(t0) {
         effort: effort as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
       });
       if (!skipSettingsWrite) {
-        const effortLevel = resolvePickerEffortPersistence(effort, getDefaultEffortLevelForOption(value_0), getSettingsForSource("userSettings")?.effortLevel, hasToggledEffort);
+        const effortLevel = resolvePickerEffortPersistence(effort, getDefaultEffortLevelForOption(value_0), getSettingsForSource("userSettings")?.modelSettings?.[effortModelIdentity(resolveOptionModel(value_0) ?? getDefaultMainLoopModel())]?.effortLevel, hasToggledEffort);
         const persistable = toPersistableEffort(effortLevel);
         if (persistable !== undefined) {
-          updateSettingsForSource("userSettings", {
-            effortLevel: persistable
-          });
+          updateSettingsForSource("userSettings", modelEffortSettingsUpdate(resolveOptionModel(value_0) ?? getDefaultMainLoopModel(), persistable));
         }
         setAppState(prev_0 => ({
           ...prev_0,

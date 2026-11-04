@@ -127,6 +127,9 @@ export type ToolPermissionContext = DeepImmutable<{
   alwaysDenyRules: ToolPermissionRulesBySource
   alwaysAskRules: ToolPermissionRulesBySource
   isBypassPermissionsModeAvailable: boolean
+  blockReadsOutsideWorkingDirectories?: boolean
+  blockWritesOutsideWorkingDirectories?: boolean
+  readBlockExemptPaths?: string[]
   isAutoModeAvailable?: boolean
   strippedDangerousRules?: ToolPermissionRulesBySource
   /** When true, permission prompts are auto-denied (e.g., background agents that can't show UI) */

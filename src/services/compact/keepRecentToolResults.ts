@@ -1,3 +1,4 @@
+import { estimateCompactToolContent } from '../contentTokenEstimation.js'
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { Message } from '../../types/message.js'
 
@@ -62,16 +63,7 @@ function countResultTokens(
   result: ToolResultBlockParam,
   estimate: (text: string) => number,
 ): number {
-  const content = result.content
-  if (!content) return 0
-  if (typeof content === 'string') return estimate(content)
-  if (!Array.isArray(content)) return 0
-  return content.reduce((total, part) => {
-    if (part.type === 'text') return total + estimate(part.text)
-    // The public SDK currently types inline results as text | image.
-    // Document blocks from newer servers also take the same ~2k estimate.
-    return total + 2000
-  }, 0)
+  return estimateCompactToolContent(result.content, estimate)
 }
 
 /** This is also used by the request hook before advertising context_hint. */
@@ -98,7 +90,7 @@ export function getKeepRecentCandidates(
   let tokensSaved = 0
   // Match roughTokenCountEstimation's Math.round(length / 4) without loading
   // the entire API/model/renderer module graph in compact-only tests.
-  const estimate = options.estimateTextTokens ?? ((text: string) => Math.round(text.length / 4))
+  const estimate = options.estimateTextTokens ?? ((text: string, bytesPerToken = 4) => Math.round(text.length / bytesPerToken))
   for (const message of messages) {
     if (message.type !== 'user' || !Array.isArray(message.message.content)) continue
     for (const block of message.message.content) {

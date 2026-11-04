@@ -129,6 +129,10 @@ jobs:
             --output .rebuild/oracle/claude
           echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  .rebuild/oracle/claude" | sha256sum --check
           chmod 755 .rebuild/oracle/claude
+      - name: M2模型请求费用与读写边界原版对照
+        env:
+          CLAUDE_CODE_317_REFERENCE: ${{ runner.os == 'Linux' && format('{0}/.rebuild/oracle/claude', github.workspace) || '' }}
+        run: npm run test:m2
       - name: 采集原版317缺失子命令的真实参数与帮助
         if: runner.os == 'Linux'
         run: |

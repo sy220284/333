@@ -1,5 +1,5 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
-import { getInitialSettings, getSettingsForSource } from './settings/settings.js'
+import { getSettingsForSource } from './settings/settings.js'
 import { getEnabledSettingSources } from './settings/constants.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook.js'
 import { getAPIProvider } from './model/providers.js'
@@ -7,6 +7,7 @@ import { get3PModelCapabilityOverride } from './model/modelSupportOverrides.js'
 import { isEnvTruthy } from './envUtils.js'
 import { getCatalogModel, getModelCapabilityEnvOverride } from './model/modelCatalog.js'
 import { getModelCapability } from './model/modelCapabilities.js'
+import { buildEffortSettingsTable, lookupSettingsEffort } from './effortSettings.js'
 import type { EffortLevel } from 'src/entrypoints/sdk/runtimeTypes.js'
 
 export type { EffortLevel }
@@ -60,7 +61,7 @@ function supportsEffortCapability(model: string, capability: 'effort' | 'max_eff
   if (capability !== 'effort') legacy.push('claude-opus-4-5')
   if (capability === 'xhigh_effort') legacy.push('claude-opus-4-6', 'claude-sonnet-4-6')
   if (name.includes('claude-3-') || legacy.includes(name)) return false
-  if (capability === 'effort' && isEnvTruthy(process.env.CLAUDE_CODE_ALWAYS_ENABLE_EFFORT)) return true
+  if (capability === 'effort' && Boolean(process.env.CLAUDE_CODE_ALWAYS_ENABLE_EFFORT)) return true
   if (entry?.capabilities.includes(capability) || name === 'claude-mythos-5') return true
   return getAPIProvider() === 'firstParty' || getAPIProvider() === 'foundry'
 }
@@ -115,12 +116,6 @@ export function toPersistableEffort(
   return undefined
 }
 
-export function getInitialEffortSetting(): EffortLevel | undefined {
-  // toPersistableEffort filters session-scoped 'max' on read, so a manually
-  // edited settings.json doesn't leak session-scoped max into a fresh session.
-  return toPersistableEffort(getInitialSettings().effortLevel)
-}
-
 /**
  * Decide what effort level (if any) to persist when the user selects a model
  * in ModelPicker. Keeps an explicit prior /effort choice sticky even when it
@@ -168,7 +163,12 @@ export function resolveAppliedEffort(
   const envOverride = getEffortEnvOverride()
   const cap = resolveEffortCap(model, getEnabledSettingSources().map(source => getSettingsForSource(source)).filter((layer): layer is NonNullable<typeof layer> => layer != null))
   if (envOverride === null && cap === null) return undefined
-  let resolved = envOverride === null ? getDefaultEffortForModel(model) : envOverride ?? appStateEffortValue ?? getDefaultEffortForModel(model)
+  const layers = getEnabledSettingSources().flatMap(source => {
+    const settings = getSettingsForSource(source)
+    return settings ? [{ source, settings }] : []
+  })
+  const settingsEffort = lookupSettingsEffort(buildEffortSettingsTable(layers), model)
+  let resolved = envOverride === null ? getDefaultEffortForModel(model) : envOverride ?? appStateEffortValue ?? settingsEffort ?? getDefaultEffortForModel(model)
   if (cap !== null && typeof resolved === 'number') resolved = convertEffortValueToLevel(resolved)
   if (cap !== null && typeof resolved === 'string' && EFFORT_LEVELS.indexOf(resolved) > EFFORT_LEVELS.indexOf(cap)) resolved = cap
   // Clamp model-unsupported high effort tiers before constructing API requests.
@@ -245,7 +245,7 @@ export function getEffortLevelDescription(level: EffortLevel): string {
     case 'xhigh':
       return 'Extra high reasoning for complex tasks'
     case 'max':
-      return 'Maximum capability with deepest reasoning (Opus 4.6 only)'
+      return 'Maximum capability with deepest reasoning (on supported models)'
   }
 }
 

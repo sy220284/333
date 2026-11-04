@@ -28,6 +28,9 @@ function fixture(run) {
     const officialFiles = new Set([
       'build/package-release.mjs',
       'build/release-launcher.cjs',
+      ...readdirSync(join(root, 'build'), { withFileTypes: true })
+        .filter(entry => entry.isFile() && entry.name.endsWith('.mjs'))
+        .map(entry => 'build/' + entry.name),
       'build/verify-official-embedded-assets.mjs',
       'build/package-official-317-assets.mjs',
       manifestFile,

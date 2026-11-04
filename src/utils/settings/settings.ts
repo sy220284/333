@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { mergeAutoModeRulesBySource } from '../permissions/autoModeRules.mjs'
+import { mergeAutoModeRulesBySource } from '../permissions/autoModeRules.js'
 import mergeWith from 'lodash-es/mergeWith.js'
 import { createHash } from 'node:crypto'
 import { dirname, join, resolve } from 'path'

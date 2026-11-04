@@ -1,3 +1,4 @@
+import { estimateCompactToolContent } from '../contentTokenEstimation.js'
 import { feature } from 'bun:bundle'
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { QuerySource } from '../../constants/querySource.js'
@@ -47,22 +48,7 @@ export const COMPACTABLE_TOOLS = new Set<string>([
 
 // Helper to calculate tool result tokens
 function calculateToolResultTokens(block: ToolResultBlockParam): number {
-  if (!block.content) {
-    return 0
-  }
-
-  if (typeof block.content === 'string') {
-    return roughTokenCountEstimation(block.content)
-  }
-
-  // Array of TextBlockParam | ImageBlockParam | DocumentBlockParam
-  return block.content.reduce((sum, item) => {
-    if (item.type === 'text') {
-      return sum + roughTokenCountEstimation(item.text)
-    }
-    // SDK-typed image blocks and newer document blocks share the media estimate.
-    return sum + IMAGE_MAX_TOKEN_SIZE
-  }, 0)
+  return estimateCompactToolContent(block.content)
 }
 
 /**

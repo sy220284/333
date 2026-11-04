@@ -32,7 +32,7 @@ import { getPlanSlug, getPlansDirectory } from '../plans.js'
 import { getPlatform } from '../platform.js'
 import { getProjectDir } from '../sessionStorage.js'
 import { SETTING_SOURCES, getEnabledSettingSources } from '../settings/constants.js'
-import { fileFenceContext, isFileFenceEnabled, normalizeReadExemptPaths } from './readFencePolicy.mjs'
+import { fileFenceContext, isFileFenceEnabled, normalizeReadExemptPaths } from './readFencePolicy.js'
 import { getInitialSettings, getSettingsForSource } from '../settings/settings.js'
 import {
   getSettingsFilePathForSource,
@@ -45,7 +45,7 @@ import type {
   PermissionDecision,
   PermissionResult,
 } from './PermissionResult.js'
-import { shouldRejectOutOfScopeWrite } from './writeScopePolicy.mjs'
+import { shouldRejectOutOfScopeWrite } from './writeScopePolicy.js'
 import type { PermissionRule, PermissionRuleSource } from './PermissionRule.js'
 import { createReadRuleSuggestion } from './PermissionUpdate.js'
 import type { PermissionUpdate } from './PermissionUpdateSchema.js'
@@ -1050,10 +1050,10 @@ export function checkReadPermissionForTool(
   // 6× = 30 syscalls per Read permission check).
   const pathsToCheck = getPathsForPermissionCheck(path)
 
-  if (isFileFenceEnabled(getEnabledSettingSources().map(source => getSettingsForSource(source)), 'read') &&
+  if ((toolPermissionContext.blockReadsOutsideWorkingDirectories === true || isFileFenceEnabled(getEnabledSettingSources().map(source => getSettingsForSource(source)), 'read')) &&
       !pathInAllowedWorkingPath(path, fileFenceContext(toolPermissionContext), pathsToCheck)) {
     const exemptions = process.env.CLAUDE_CODE_RESTRICTED === '1' ? [] : normalizeReadExemptPaths(
-      getSettingsForSource('flagSettings')?.permissions?.blockReadsExemptPaths ?? [],
+      toolPermissionContext.readBlockExemptPaths ?? getSettingsForSource('flagSettings')?.permissions?.blockReadsExemptPaths ?? [],
     )
     const exempt = pathsToCheck.length > 0 && pathsToCheck.every(candidate =>
       exemptions.some(directory => pathInWorkingPath(candidate, directory)) ||
@@ -1244,9 +1244,9 @@ export function isWriteOutsideWorkingDirectoriesForbidden(
   const effectiveEnabled =
     getInitialSettings().permissions?.blockWritesOutsideWorkingDirectories
   const anyLayerEnabled = isFileFenceEnabled(getEnabledSettingSources().map(source => getSettingsForSource(source)), 'write')
-  if (!managedEnabled && !effectiveEnabled && !anyLayerEnabled) return false
+  if (!managedEnabled && !effectiveEnabled && !anyLayerEnabled && context.blockWritesOutsideWorkingDirectories !== true) return false
   return shouldRejectOutOfScopeWrite(
-    managedEnabled || anyLayerEnabled,
+    managedEnabled || anyLayerEnabled || context.blockWritesOutsideWorkingDirectories,
     effectiveEnabled,
     pathInAllowedWorkingPath(path, fileFenceContext(context), precomputedPathsToCheck),
   )

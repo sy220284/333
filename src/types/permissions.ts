@@ -60,6 +60,7 @@ export type PermissionRuleSource =
   | 'cliArg'
   | 'command'
   | 'session'
+  | 'toolsNarrowing'
 
 /**
  * The value of a permission rule - specifies which tool and optional content
@@ -434,6 +435,9 @@ export type ToolPermissionContext = {
   readonly alwaysDenyRules: ToolPermissionRulesBySource
   readonly alwaysAskRules: ToolPermissionRulesBySource
   readonly isBypassPermissionsModeAvailable: boolean
+  readonly blockReadsOutsideWorkingDirectories?: boolean
+  readonly blockWritesOutsideWorkingDirectories?: boolean
+  readonly readBlockExemptPaths?: readonly string[]
   readonly strippedDangerousRules?: ToolPermissionRulesBySource
   readonly shouldAvoidPermissionPrompts?: boolean
   readonly awaitAutomatedChecksBeforeDialog?: boolean

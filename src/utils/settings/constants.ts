@@ -70,7 +70,7 @@ export function getSourceDisplayName(
  * @returns Display name for the source in lowercase
  */
 export function getSettingSourceDisplayNameLowercase(
-  source: SettingSource | 'cliArg' | 'command' | 'session',
+  source: SettingSource | 'cliArg' | 'command' | 'session' | 'toolsNarrowing',
 ): string {
   switch (source) {
     case 'userSettings':
@@ -89,6 +89,8 @@ export function getSettingSourceDisplayNameLowercase(
       return 'command configuration'
     case 'session':
       return 'current session'
+    case 'toolsNarrowing':
+      return 'launch tool restrictions'
   }
 }
 
@@ -98,7 +100,7 @@ export function getSettingSourceDisplayNameLowercase(
  * @returns Display name for the source with first letter capitalized
  */
 export function getSettingSourceDisplayNameCapitalized(
-  source: SettingSource | 'cliArg' | 'command' | 'session',
+  source: SettingSource | 'cliArg' | 'command' | 'session' | 'toolsNarrowing',
 ): string {
   switch (source) {
     case 'userSettings':
@@ -117,6 +119,8 @@ export function getSettingSourceDisplayNameCapitalized(
       return 'Command configuration'
     case 'session':
       return 'Current session'
+    case 'toolsNarrowing':
+      return 'Launch tool restrictions'
   }
 }
 
