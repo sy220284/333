@@ -47,8 +47,10 @@ export function firstCliPositionalIndex(argv) {
   }
   return -1
 }
+/** Only parsed CLI flags select print mode; option values and prompt data are inert. */
+export function isPrintModeLaunch(argv = process.argv.slice(2)) { return hasCliFlag('-p', argv) || hasCliFlag('--print', argv) }
 export function isStreamJsonLaunch(argv = process.argv.slice(2)) {
-  const headless = hasCliFlag('-p', argv) || hasCliFlag('--print', argv) || hasCliFlag('--init-only', argv) || findCliArgument(word => word.startsWith('--sdk-url'), argv) !== -1 || !process.stdout.isTTY
+  const headless = isPrintModeLaunch(argv) || hasCliFlag('--init-only', argv) || findCliArgument(word => word.startsWith('--sdk-url'), argv) !== -1 || !process.stdout.isTTY
   return headless && getCliFlagValue('--output-format', argv) === 'stream-json'
 }
 /** 317 chunk-jygy021m.js: the OS handler passes exactly --handle-uri <URI>. */
