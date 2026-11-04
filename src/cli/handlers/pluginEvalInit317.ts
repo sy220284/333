@@ -8,7 +8,6 @@ import { createInterface } from 'node:readline/promises'
 import { join, resolve, isAbsolute, relative } from 'node:path'
 
 const VALID_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
-const yamlScalar = value => JSON.stringify(String(value))
 async function present(path) {
   try { await stat(path); return true }
   catch (error) { if (error?.code === 'ENOENT') return false; throw error }
@@ -48,30 +47,19 @@ export async function createEvalCase317(name, options = {}) {
   }
   const folder=join(suite,name)
   if (await present(folder)) throw new Error('eval case already exists: '+folder)
-  const prompt=options.prompt ?? '# Describe the test task here\n'
-  const criteria=options.criteria ?? 'The final answer fulfills the requested task accurately.'
-  const rawCase=[
-    'schema_version: "1.1"',
-    'name: '+yamlScalar(name),
-    'description: '+yamlScalar(options.description ?? ''),
-    'tags: []',
-    'context:',
-    '  add_dirs: []',
-    'execution:',
-    '  max_turns: 10',
-    '  timeout_seconds: 300',
-    'runs: 3',
-    '',
-  ].join('\n')
+  const prompt = options.prompt === undefined
+    ? '---\nmax_turns: 10\nallowed_tools: [Read, Glob, Grep, Skill]\n---\n\nTODO: describe what the agent should do\n'
+    : options.prompt
+  const grader = options.criteria === undefined
+    ? '---\ntype: llm\nweight: 1\n---\n\nTODO: describe what a successful response looks like\n'
+    : '---\ntype: llm\nweight: 1\n---\n\n' + options.criteria + '\n'
   let made=false
   try {
     await mkdir(folder,{recursive:false})
     made=true
     await mkdir(join(folder,'graders'))
-    await writeFile(join(folder,'case.yaml'),rawCase,{flag:'wx'})
     await writeFile(join(folder,'prompt.md'),prompt.endsWith('\n')?prompt:prompt+'\n',{flag:'wx'})
-    await writeFile(join(folder,'graders','outcome.md'),
-      '---\ntype: llm\nweight: 1\n---\n'+criteria+'\n',{flag:'wx'})
+    await writeFile(join(folder,'graders','criteria.md'),grader,{flag:'wx'})
   } catch (error) {
     if (made) await rm(folder,{recursive:true,force:true})
     throw error
