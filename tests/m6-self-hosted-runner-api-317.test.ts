@@ -133,7 +133,7 @@ describe('2.1.317 self-hosted runner API', () => {
         warm_hints:[{session_uuid:'standby_456',attempt:1,work_order_jwt:'standby-jwt',sources:[]}],
         pending_count:1,backing_off_count:0,circuit_broken_count:0,
         pool_pending_session_count:2,pool_active_session_count:1,slots:3,
-      })
+      },{headers:{date:'Thu, 05 Nov 2026 01:00:00 GMT'}})
       if(path.endsWith('/spawn-hints/nack')) return Response.json({})
       throw new Error('Unexpected endpoint '+path)
     })
@@ -142,6 +142,7 @@ describe('2.1.317 self-hosted runner API', () => {
     expect(hints.warm_hints[0].work_order_jwt).toBe('standby-jwt')
     expect(hints.pool_active_session_count).toBe(1)
     expect(hints.slots).toBe(3)
+    expect(hints.server_date).toBe('Thu, 05 Nov 2026 01:00:00 GMT')
     await client.nackSpawnHint({session_uuid:'assignment_123',attempt:2,
       error:'hook failed',retryable:true,failure_kind:'spawn_hook'})
     expect(calls.map(c=>c.path)).toEqual([
@@ -153,6 +154,15 @@ describe('2.1.317 self-hosted runner API', () => {
       session_uuid:'assignment_123',attempt:2,error:'hook failed',
       retryable:true,failure_kind:'spawn_hook',
     })
+  })
+
+  test('GET /remote includes supported capabilities and session-only credential',async()=>{
+    const {client,calls}=mockClient(async()=>Response.json({sources:[],push_targets:[]}))
+    await client.getSessionRemoteConfig('session_1','session-token')
+    expect(calls).toHaveLength(1)
+    expect(calls[0].headers.get('x-self-hosted-runner-capabilities')).toBe('runner-pty')
+    expect(calls[0].headers.get('x-self-hosted-runner-version')).toBeNull()
+    expect(calls[0].token).toBe('Bearer session-token')
   })
 
   test('spawn hint validation rejects non-array server responses and unsafe identifiers',async()=>{
