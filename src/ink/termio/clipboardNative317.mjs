@@ -51,7 +51,7 @@ export function isLocalLinuxClipboardDisplay(env = process.env) {
 
 /** The native extension returns false if the compositor cannot accept a write. */
 export function writeLinuxClipboardNative(text) {
-  if (process.platform !== 'linux' || !isLocalLinuxClipboardDisplay()) return false
+  if (process.platform !== 'linux' || process.env.SSH_CONNECTION || !isLocalLinuxClipboardDisplay()) return false
   const addon = nativeClipboardAddon()
   if (!addon) return false
   try {
@@ -63,7 +63,7 @@ export function writeLinuxClipboardNative(text) {
 
 /** Used only after wl-paste / xclip / xsel have failed. */
 export async function readLinuxClipboardNative(primary = false, timeoutMs = 2000) {
-  if (process.platform !== 'linux' || !isLocalLinuxClipboardDisplay()) return null
+  if (process.platform !== 'linux' || process.env.SSH_CONNECTION || !isLocalLinuxClipboardDisplay()) return null
   const addon = nativeClipboardAddon()
   if (!addon) return null
   try {
