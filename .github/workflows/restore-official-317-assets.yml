@@ -10,6 +10,7 @@ on:
       - 'src/constants/official317/**'
       - 'build/official-embedded-assets-2.1.317.json'
       - 'tools/upgrade/restore-official-317-assets.py'
+      - 'research/official-317-unaltered/**'
       - '.github/workflows/restore-official-317-assets.yml'
   workflow_dispatch:
 
@@ -50,7 +51,7 @@ jobs:
         run: |
           set -euo pipefail
           node build/verify-official-embedded-assets.mjs
-          node --test tests/m1-official-embedded-assets-317.test.mjs tests/m1-package-official-assets-317.test.mjs
+          node --test tests/m1-official-embedded-assets-317.test.mjs tests/m1-package-official-assets-317.test.mjs tests/m1-bundled-skill-entrypoints-317.test.mjs
       - name: 检查技能脚本和参考文件真实相对路径
         shell: bash
         run: |
@@ -81,7 +82,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git add src/skills/bundled src/types/official317 src/constants/official317 build/official-embedded-assets-2.1.317.json
+          git add src/skills/bundled src/types/official317 src/constants/official317 research/official-317-unaltered build/official-embedded-assets-2.1.317.json
           python3 - <<'PY'
           import importlib.util
           import subprocess
@@ -90,12 +91,16 @@ jobs:
           spec=importlib.util.spec_from_file_location('restore317',script)
           module=importlib.util.module_from_spec(spec)
           spec.loader.exec_module(module)
-          for _,_,resource,_,_ in module.module_index():
-            staged=subprocess.check_output(['git','rev-parse',':'+resource],text=True).strip()
-            direct=subprocess.check_output(['git','hash-object','--no-filters',resource],text=True).strip()
-            if staged!=direct:
-              raise SystemExit('Git filters altered official resource bytes: '+resource)
-          print('All 101 staged Git blobs match verified original files')
+          import json
+          manifest=json.loads(Path('build/official-embedded-assets-2.1.317.json').read_text())
+          assert len(module.module_index())==len(manifest['resources'])==101
+          for entry in manifest['resources']:
+            for resource in [entry['path'], *([entry['upstream_backup']] if entry.get('upstream_backup') else [])]:
+              staged=subprocess.check_output(['git','rev-parse',':'+resource],text=True).strip()
+              direct=subprocess.check_output(['git','hash-object','--no-filters',resource],text=True).strip()
+              if staged!=direct:
+                raise SystemExit('Git filters altered verified resource bytes: '+resource)
+          print('All 101 packaged resources and upstream archives match Git staged blobs')
           PY
       - name: 将已逐字节验证的官方资源提交至PR7分支
         shell: bash
@@ -103,7 +108,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/skills/bundled src/types/official317 src/constants/official317 build/official-embedded-assets-2.1.317.json
+          git add src/skills/bundled src/types/official317 src/constants/official317 research/official-317-unaltered build/official-embedded-assets-2.1.317.json
           if git diff --cached --quiet; then
             echo "资源已存在且内容一致，无需重复提交"
           else
