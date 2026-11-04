@@ -139,6 +139,16 @@ jobs:
         id: acceptance_013
         continue-on-error: true
         run: node --test tests/m3-plugin-install-config-317.test.mjs
+      - name: 317插件安装失败原版差分：确保启用状态与依赖缓存一致
+        id: acceptance_044
+        continue-on-error: true
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-install-transaction-317.test.mjs
+          else
+            node --test tests/m3-plugin-install-transaction-317.test.mjs
+          fi
       - name: 317插件安装配置的源码和真实x64差分
         id: acceptance_014
         continue-on-error: true
@@ -457,6 +467,10 @@ jobs:
           fi
           if [ "${{ steps.acceptance_043.outcome }}" = failure ]; then
             echo "::error::验收失败：317远程审查结果协议与分段事件解析"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_044.outcome }}" = failure ]; then
+            echo "::error::验收失败：317插件安装事务与原版x64状态不一致"
             failures=$((failures+1))
           fi
           echo "完整验收发现 $failures 项失败"
