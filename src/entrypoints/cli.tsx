@@ -113,6 +113,21 @@ async function main(): Promise<void> {
     if (await runPluginTestFastPath317(args.slice(2))) return;
   }
 
+  // Official 317 cli.js:429-459 dispatches self-hosted runner before REPL.
+  // Keep host registration, worker credentials and process lifecycle isolated.
+  if (args[0] === 'self-hosted-runner') {
+    profileCheckpoint('cli_self_hosted_runner_path');
+    try {
+      const { selfHostedRunnerMain317 } = await import('../cli/selfHostedRunner/runnerHost317.ts');
+      await selfHostedRunnerMain317(args.slice(1));
+    } catch (error) {
+      process.stderr.write('self-hosted-runner: ' +
+        (error instanceof Error ? error.message : String(error)) + '\n');
+      process.exitCode = 1;
+    }
+    return;
+  }
+
   // Official 2.1.317 runs the eval MCP stand-in independently of the REPL,
   // before chrome, daemon and background-session routing.
   if (args[0] === '--eval-mock-server') {
