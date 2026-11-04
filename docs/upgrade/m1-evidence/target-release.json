@@ -14,7 +14,7 @@
   "feature_acceptance_target": 102,
   "scenario_acceptance_target": 84,
   "binary_source_status": "官方 2.1.317 Linux x64 已在 GitHub Actions 41672565537 下载并完成 manifest SHA-256 校验，--version 实测通过；候选版构建失败阻断后续严格差分，Windows x64 仍待实测",
-  "product_package_version_policy": "package.json仍为2.1.310，待产品功能与运行差分验收后再声明版本为2.1.317",
+  "product_package_version_policy": "package.json、依赖冻结锁与官方最终目标已统一为2.1.317；正式发布取决于原版二进制行为、全功能链路和M10完整签收",
   "ci_writeback": "本轮不处理",
   "verified_x64_sha256": "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0",
   "release_snapshots": [
