@@ -11,6 +11,7 @@ on:
       - 'tests/m1-claude-api-manifest-317.test.mjs'
       - 'tests/m1-official-bundled-skills-317.test.mjs'
       - 'tests/m1-317-chain-matrix.test.mjs'
+      - 'tests/m1-target-release-317.test.mjs'
       - 'docs/upgrade/m1-evidence/2.1.317-366项功能链路分组矩阵.json'
       - '.github/workflows/m1-317-official-reference.yml'
   pull_request:
