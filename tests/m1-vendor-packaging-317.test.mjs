@@ -35,6 +35,9 @@ function fixture(run) {
       'build/package-official-317-assets.mjs',
       manifestFile,
       ...manifest.resources.map(item => item.path),
+      // Import the immutable original for every runtime-normalized official
+      // script; the production verifier checks both hashes before packaging.
+      ...manifest.resources.flatMap(item => item.upstream_backup ? [item.upstream_backup] : []),
     ])
     const fakeFiles = ['build/public-dependencies.lock.json', 'LICENSE.md',
       'package.json', 'dist/cli.js', nativeAudio, nativeRg, 'vendor/ripgrep/COPYING']
