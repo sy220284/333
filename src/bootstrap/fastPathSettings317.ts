@@ -45,6 +45,11 @@ export function checkRequiredFastPathVersion317(
 
 let startupSettingsPromise: Promise<RequiredVersionPolicy317 | null> | undefined
 
+/** A claimed warm session must not inherit the previous policy result. */
+export function resetFastPathSettingsForClaim317(): void {
+  startupSettingsPromise = undefined
+}
+
 /**
  * The upstream startup invokes ensureFastPathSettingsLoaded before the
  * dedicated daemon/spare/PTY/preload handlers. Those handlers never execute

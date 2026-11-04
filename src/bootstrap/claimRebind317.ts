@@ -19,6 +19,7 @@ export async function rebindClaimedSessionDependencies317(): Promise<void> {
     keychain,
     keychainPrefetch,
     auth,
+    fastPathSettings,
     proxy,
     caCerts,
     mtls,
@@ -33,6 +34,7 @@ export async function rebindClaimedSessionDependencies317(): Promise<void> {
     import('../utils/secureStorage/macOsKeychainHelpers.js'),
     import('../utils/secureStorage/keychainPrefetch.js'),
     import('../utils/auth.js'),
+    import('./fastPathSettings317.ts'),
     import('../utils/proxy.js'),
     import('../utils/caCerts.js'),
     import('../utils/mtls.js'),
@@ -50,6 +52,7 @@ export async function rebindClaimedSessionDependencies317(): Promise<void> {
   mdm.clearMdmSettingsCache()
   mdmRaw.resetMdmRawReadForClaim317()
   remoteSettings.resetSyncCache()
+  fastPathSettings.resetFastPathSettingsForClaim317()
 
   auth.clearOAuthTokenCache()
   auth.getApiKeyFromConfigOrMacOSKeychain.cache.clear()

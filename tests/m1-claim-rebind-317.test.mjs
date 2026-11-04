@@ -9,6 +9,7 @@ import { getClaudeConfigHomeDir } from '../src/utils/envUtils.ts'
 import { enableConfigs, getGlobalConfig, getProjectPathForConfig } from '../src/utils/config.ts'
 import { getSettingsForSource } from '../src/utils/settings/settings.ts'
 import { getOriginalCwd, setOriginalCwd } from '../src/bootstrap/state.ts'
+import { ensureFastPathSettingsLoaded317 } from '../src/bootstrap/fastPathSettings317.ts'
 
 test('317 claimed session rebinds global config, project and settings ownership', async () => {
   const a = mkdtempSync(join(tmpdir(), '333-warm-owner-'))
@@ -30,6 +31,8 @@ test('317 claimed session rebinds global config, project and settings ownership'
     enableConfigs()
     assert.equal(getGlobalConfig().numStartups, 11)
     assert.equal(getSettingsForSource('userSettings')?.env?.CLAIM_ID, 'warm')
+    const warmPolicy = ensureFastPathSettingsLoaded317()
+    await warmPolicy
     const oldPath = getProjectPathForConfig()
 
     // This mimics the accepted claim boundary: the new owner differs from
@@ -42,6 +45,9 @@ test('317 claimed session rebinds global config, project and settings ownership'
     assert.equal(getClaudeConfigHomeDir(), b)
     assert.equal(getGlobalConfig().numStartups, 29)
     assert.equal(getSettingsForSource('userSettings')?.env?.CLAIM_ID, 'accepted')
+    const claimPolicy = ensureFastPathSettingsLoaded317()
+    assert.notEqual(claimPolicy, warmPolicy, 'reused previous session startup policy Promise')
+    await claimPolicy
     assert.notEqual(getProjectPathForConfig(), oldPath)
     // A delayed event on the old file must not leak its contents into
     // the accepted owner's cache after handoff.
