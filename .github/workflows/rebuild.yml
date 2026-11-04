@@ -62,6 +62,10 @@ jobs:
         shell: pwsh
         run: git config --global core.longpaths true
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Source-mode .mjs bridges load TypeScript modules directly.
+          node-version: '24'
       - name: 提前校验全部MJS测试语法
         run: node build/check-test-syntax.mjs
       - name: 317 六层生产导入边界与快速启动顺序检查
