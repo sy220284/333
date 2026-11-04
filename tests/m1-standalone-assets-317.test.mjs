@@ -35,7 +35,7 @@ test('317 standalone bundled resources have a unique official pinned identity', 
   const result = check(root)
   assert.equal(result.error, undefined, result.error?.message)
   assert.equal(result.status, 0, result.stderr)
-  assert.match(result.stdout, /Verified 6 standalone bundled asset hashes against 2\\.1\\.317/)
+  assert.match(result.stdout, /Verified 6 standalone bundled asset hashes against 2\.1\.317/)
 })
 
 test('317 standalone verifier rejects changed asset bytes', () => fixture(home => {
