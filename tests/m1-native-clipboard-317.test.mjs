@@ -21,16 +21,23 @@ test('M1 C19-T04: native clipboard only trusts local X11 and Wayland displays', 
 test('M1 C19-T04: network forwarded displays cannot invoke native clipboard extension', async () => {
   const display = process.env.DISPLAY
   const wayland = process.env.WAYLAND_DISPLAY
+  const ssh = process.env.SSH_CONNECTION
   try {
     process.env.DISPLAY = 'localhost:10.0'
     process.env.WAYLAND_DISPLAY = 'wayland-0'
     assert.equal(writeLinuxClipboardNative('remote-display-denied'), false)
+    assert.equal(await readLinuxClipboardNative(), null)
+    process.env.DISPLAY = ':0'
+    process.env.SSH_CONNECTION = '198.51.100.5 50444 192.0.2.5 22'
+    assert.equal(writeLinuxClipboardNative('ssh-forwarded-denied'), false)
     assert.equal(await readLinuxClipboardNative(), null)
   } finally {
     if (display === undefined) delete process.env.DISPLAY
     else process.env.DISPLAY = display
     if (wayland === undefined) delete process.env.WAYLAND_DISPLAY
     else process.env.WAYLAND_DISPLAY = wayland
+    if (ssh === undefined) delete process.env.SSH_CONNECTION
+    else process.env.SSH_CONNECTION = ssh
   }
 })
 
