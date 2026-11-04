@@ -64,6 +64,36 @@ test('317 shared socket owner guard preserves active owners and non-socket conte
     assert.equal(readFileSync(sock,'utf8'),'REGULAR_FILE')
   } finally {rmSync(dir,{recursive:true,force:true})}
 })
+test('317 crashed worker socket is reclaimed and a replacement can bind', {
+  skip: process.platform === 'win32', timeout: 20000,
+}, async () => {
+  const dir = mkdtempSync(join(tmpdir(), '333-stale-socket-'))
+  const sock = join(dir, 'stale.sock')
+  const child = spawn(process.execPath, ['-e',
+    "require('node:net').createServer().listen(process.argv[1],()=>process.stdout.write('READY\\n'))", sock], {
+    stdio:['ignore','pipe','pipe'],
+  })
+  try {
+    await new Promise((resolve,reject) => {
+      child.stdout.once('data', resolve)
+      child.once('error', reject)
+      child.once('close', code => reject(Error('owner exited before listening: ' + code)))
+    })
+    assert.equal(existsSync(sock), true)
+    child.kill('SIGKILL')
+    await new Promise(resolve => child.once('close', resolve))
+    assert.equal(existsSync(sock), true, 'crashed owner should leave a stale socket')
+    await assertSocketVacant317(sock, 'PTY host')
+    assert.equal(existsSync(sock), false)
+    const replacement = await openOwner(sock)
+    assert.equal(await checkOwner(sock), 'ORIGINAL_OWNER')
+    await new Promise(resolve => replacement.close(resolve))
+  } finally {
+    child.kill('SIGKILL')
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('317 preload, warm spare and PTY host cannot take over another live worker socket', {
   skip:process.platform==='win32',timeout:75000,
 },async()=>{
