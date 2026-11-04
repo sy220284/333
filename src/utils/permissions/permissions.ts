@@ -1108,11 +1108,6 @@ export async function checkRuleBasedPermissions(
     }
   }
 
-  // 2.1.317: Account email outbound disclosure requires human confirmation
-  // even if the tool is normally preapproved or the user bypasses permissions.
-  const emailDisclosure = getAccountEmailDisclosureDecision(tool, input)
-  if (emailDisclosure) return emailDisclosure
-
   // 1b. Entire tool has an ask rule
   const askRule = getAskRuleForTool(appState.toolPermissionContext, tool)
   if (askRule) {
@@ -1155,6 +1150,12 @@ export async function checkRuleBasedPermissions(
   if (toolPermissionResult?.behavior === 'deny') {
     return toolPermissionResult
   }
+
+  // Match official 2.1.317: the email warning is an additional check after
+  // native tool policy, so an existing deny remains authoritative.
+  // It still precedes bypassPermissions and all automatic approval paths.
+  const emailDisclosure = getAccountEmailDisclosureDecision(tool, input)
+  if (emailDisclosure) return emailDisclosure
 
   // 1f. Content-specific ask rules from tool.checkPermissions
   // (e.g. Bash(npm publish *) → {ask, type:'rule', ruleBehavior:'ask'})
@@ -1205,11 +1206,6 @@ async function hasPermissionsToUseToolInner(
     }
   }
 
-  // 2.1.317: Run this safety check before bypassPermissions, sandbox and
-  // preapproved-tool fast paths so the user is always asked before disclosure.
-  const emailDisclosure = getAccountEmailDisclosureDecision(tool, input)
-  if (emailDisclosure) return emailDisclosure
-
   // 1b. Check if the entire tool should always ask for permission
   const askRule = getAskRuleForTool(appState.toolPermissionContext, tool)
   if (askRule) {
@@ -1256,6 +1252,12 @@ async function hasPermissionsToUseToolInner(
   if (toolPermissionResult?.behavior === 'deny') {
     return toolPermissionResult
   }
+
+  // Match official 2.1.317: the email warning is an additional check after
+  // native tool policy, so an existing deny remains authoritative.
+  // It still precedes bypassPermissions and all automatic approval paths.
+  const emailDisclosure = getAccountEmailDisclosureDecision(tool, input)
+  if (emailDisclosure) return emailDisclosure
 
   // 1e. Tool requires user interaction even in bypass mode
   if (
