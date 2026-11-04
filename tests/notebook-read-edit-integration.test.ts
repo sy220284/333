@@ -49,8 +49,8 @@ test('real Read → NotebookEdit → Read shares the same file snapshot and retu
     expect(secondRead.data.file.cells[0]?.source).toBe('print(2)')
     expect(JSON.parse(readFileSync(notebook_path, 'utf8')).cells[0].source).toBe('print(2)')
 
-    // The next Read of the same unmodified file may deduplicate, because the
-    // immediately previous Read is now current. The first read after an Edit may not.
+    // The range state tracks the latest Read, and subsequent Reads still
+    // return complete contents even when the file has not changed.
     expect(readFileState.get(notebook_path)?.offset).toBe(1)
   } finally {
     rmSync(directory, { recursive: true, force: true })

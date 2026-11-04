@@ -486,10 +486,9 @@ export const NotebookEditTool = buildTool({
         throw new Error('Notebook changed during checkpointing. Read it again before editing.')
       }
       writeTextContent(fullPath, updatedContent, encoding, lineEndings)
-      // Update readFileState with post-write mtime (matches FileEditTool/
-      // FileWriteTool). offset:undefined breaks FileReadTool's dedup match —
-      // without this, Read→NotebookEdit→Read in the same millisecond would
-      // return the file_unchanged stub against stale in-context content.
+      // Refresh file state after the edit and clear range tracking so later
+      // Read and edit checks compare against the actual post-write content.
+      // Read always returns full results for unchanged files in 2.1.317.
       readFileState.set(fullPath, {
         content: updatedContent,
         timestamp: getFileModificationTime(fullPath),
