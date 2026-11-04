@@ -1906,9 +1906,33 @@
         "Linux x64原版+候选版"
       ],
       "classification_basis": "逐条原文人工复核",
-      "implementation_evidence": "未在原台账附源文件，待核当前实现",
-      "verification": "PENDING_SOURCE_BINARY_E2E",
-      "owner": "C11"
+      "implementation_evidence": "src/cli/jsonWireEscaping.mjs → src/cli/ndjsonSafeStringify.ts → src/cli/structuredIO.ts / src/cli/print.ts: 转义 C1/DEL/Unicode Cf/行分隔符；保留可逆 JSON 和 SDK 消息行为",
+      "verification": "SCENARIO_E2E_PASS_PENDING_FULL_CHAIN",
+      "owner": "C11",
+      "evidence": {
+        "official_elf_sha256": "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0",
+        "original_source": "2.1.317 Linux x64 --output-format json/stream-json: native mock SSE test with DEL/C1/Cf/astral Cf characters",
+        "candidate_commit": "3640ca2da623096d0b8f43f2936f932a2a3437c9",
+        "ci_run": "https://github.com/sy220284/333/actions/runs/41770655567",
+        "ci_step": "官方317与重建版JSON及stream-json控制字符端到端协议对照",
+        "tests": [
+          "tests/m1-317-json-wire.test.mjs",
+          "tests/m1-317-json-wire-e2e.test.mjs"
+        ],
+        "matched": [
+          "JSON control and format characters escaped with canonical UTF-16 \\uXXXX",
+          "supplementary Unicode Cf surrogate pair escapes",
+          "json and stream-json both parse into original text",
+          "native vs rebuilt subprocess same result with local mocked SSE",
+          "SDK transport uses same shared serializer"
+        ],
+        "outstanding": [
+          "M3/C11 whole command and SDK event schema sign-off",
+          "multi-platform Windows/macOS host integration",
+          "cross-process backpressure and interruption/retry parity"
+        ],
+        "full_chain_signed_off": false
+      }
     },
     {
       "id": "2.1.311#069",
@@ -7312,8 +7336,8 @@
     "acceptance": "逐条必须有官方源码/二进制对照、入口、异常及跨端验证；各链状态独立跟踪"
   },
   "verification_summary": {
-    "scenario_e2e_pass_pending_chain": 1,
-    "pending_source_binary_e2e": 365,
+    "scenario_e2e_pass_pending_chain": 2,
+    "pending_source_binary_e2e": 364,
     "formally_closed": 0
   }
 }
