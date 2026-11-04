@@ -2,8 +2,7 @@ import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { copyFileSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { dirname, join, relative, resolve } from 'node:path'
 import { test } from 'node:test'
 
 const root = resolve(import.meta.dirname, '..')
@@ -14,7 +13,8 @@ const original = join(root, 'vendor/audio-capture', platform, 'audio-capture.nod
 test('M1 C19-T04: compiled Bun process loads exact platform audio addon, and correctly reports removal', {
   timeout: 90_000,
 }, () => {
-  const dir = mkdtempSync(join(tmpdir(), '333-audio-compiled-317-'))
+  mkdirSync(join(root, '.rebuild'), { recursive: true })
+  const dir = mkdtempSync(join(root, '.rebuild', '333-audio-compiled-317-'))
   const file = join(dir, 'entry.ts')
   const binary = join(dir, process.platform === 'win32' ? 'audio-check.exe' : 'audio-check')
   const target = join(dir, 'vendor/audio-capture', platform, 'audio-capture.node')
@@ -24,7 +24,7 @@ test('M1 C19-T04: compiled Bun process loads exact platform audio addon, and cor
     writeFileSync(file,
       'import { isNativeAudioAvailable, isNativeRecordingActive, isNativePlaying, ' +
       'stopNativeRecording, stopNativePlayback, microphoneAuthorizationStatus } from ' +
-      JSON.stringify(pathToFileURL(source).href) + ';\n' +
+      JSON.stringify(relative(dir, source).replaceAll('\\', '/')) + ';\n' +
       'const available=isNativeAudioAvailable(); ' +
       'if(available){stopNativeRecording();stopNativeRecording();stopNativePlayback();stopNativePlayback()};' +
       'console.log(JSON.stringify({available,recording:isNativeRecordingActive(),playing:isNativePlaying(),' +
