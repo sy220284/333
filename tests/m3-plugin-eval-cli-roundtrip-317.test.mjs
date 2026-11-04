@@ -26,13 +26,13 @@ function responseSse() {
     usage:{output_tokens:7},
   }) + frame('message_stop',{type:'message_stop'})
 }
-function invoke(args,env,cwd) {
+function invoke(args,env,cwd,timeoutMs=120000) {
   return new Promise((resolveRun,reject) => {
     const child = spawn('bun',[resolve('dist/cli.js'), ...args], {
       cwd,env,stdio:['ignore','pipe','pipe'],
     })
     let stdout='',stderr=''
-    const timeout=setTimeout(()=>child.kill('SIGKILL'),120000)
+    const timeout=setTimeout(()=>child.kill('SIGKILL'),timeoutMs)
     child.stdout.on('data',b=>{stdout+=b.toString()})
     child.stderr.on('data',b=>{stderr+=b.toString()})
     child.once('error',e=>{clearTimeout(timeout);reject(e)})
@@ -94,6 +94,19 @@ graders:
       CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1',DISABLE_TELEMETRY:'1',
       CI:'1',TERM:'dumb',NO_COLOR:'1',
     })
+    // Determine whether the rebuilt non-interactive model loop reaches the
+    // mock API before attributing a failure to the eval child launcher.
+    const direct = await invoke([
+      '-p','Say the verification text','--output-format','stream-json',
+      '--verbose','--permission-mode','dontAsk','--setting-sources','user',
+      '--model',model,'--max-turns','1','--no-session-persistence',
+    ],env,root,15000)
+    assert.equal(direct.code,0,
+      'Direct rebuilt -p child failed before plugin eval: signal='+direct.signal+
+      '; requests='+requests+'\\nSTDOUT='+direct.stdout.slice(-1800)+
+      '\\nSTDERR='+direct.stderr.slice(-1800))
+    assert.equal(requests,1,'Direct rebuilt print mode must invoke the model API')
+    requests=0
     const run=await invoke([
       'plugin','eval',plugin,'--trust-plugin','--runs','1',
       '--ablation','with-without','--no-publish',
