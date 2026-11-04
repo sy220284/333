@@ -55,3 +55,8 @@ jobs:
           chmod 755 .rebuild/oracle/claude
       - name: 逐字对照原版CLI版本及详细版本
         run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/rewrite-317-cli-native-parity.test.mjs
+      - name: 使用模拟模型API验证Read/Write/Edit/Bash真实调用链与原版一致
+        run: |
+          python3 tests/rewrite-317-core-tool-matrix.py \
+            --official "$PWD/.rebuild/oracle/claude" \
+            --ported "$PWD/dist/cli.js"
