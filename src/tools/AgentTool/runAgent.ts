@@ -360,7 +360,7 @@ export async function* runAgent({
 
   // Register agent in Perfetto trace for hierarchy visualization
   if (isPerfettoTracingEnabled()) {
-    const parentId = toolUseContext.agentId ?? getSessionId()
+    const parentId = toolUseContext.agentId ?? toolUseContext.sessionId ?? getSessionId()
     registerPerfettoAgent(agentId, agentDefinition.agentType, parentId)
   }
 
