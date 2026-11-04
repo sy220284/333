@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+import { mergeAutoModeRulesBySource } from '../permissions/autoModeRules.mjs'
 import mergeWith from 'lodash-es/mergeWith.js'
 import { createHash } from 'node:crypto'
 import { dirname, join, resolve } from 'path'
@@ -965,43 +966,30 @@ export function getAutoModeConfig():
       environment: z.array(z.string()).optional(),
     })
 
-    const allow: string[] = []
-    const soft_deny: string[] = []
-    const hard_deny: string[] = []
-    const environment: string[] = []
+    const bySource: Partial<Record<'userSettings' | 'flagSettings' | 'policySettings', {
+      allow?: string[]; soft_deny?: string[]; hard_deny?: string[]
+      deny?: string[]; environment?: string[]
+    }>> = {}
 
-    for (const source of [
-      'userSettings',
-      'localSettings',
-      'flagSettings',
-      'policySettings',
-    ] as const) {
+    // The original classifier only trusts user, explicit flag and managed
+    // settings. Project and local files are repository-controllable and cannot
+    // define a classifier allowlist.
+    for (const source of ['userSettings', 'flagSettings', 'policySettings'] as const) {
       if (!isSettingSourceEnabled(source)) continue
       const settings = getSettingsForSource(source)
       if (!settings) continue
       const result = schema.safeParse(
         (settings as Record<string, unknown>).autoMode,
       )
-      if (result.success) {
-        if (result.data.allow) allow.push(...result.data.allow)
-        if (result.data.soft_deny) soft_deny.push(...result.data.soft_deny)
-        if (result.data.hard_deny) hard_deny.push(...result.data.hard_deny)
-        if (process.env.USER_TYPE === 'ant') {
-          if (result.data.deny) soft_deny.push(...result.data.deny)
+      if (result.success && result.data) {
+        bySource[source] = {
+          ...result.data,
+          // The old 'deny' spelling is restricted to internal users.
+          ...process.env.USER_TYPE !== 'ant' && { deny: undefined },
         }
-        if (result.data.environment)
-          environment.push(...result.data.environment)
       }
     }
-
-    if (allow.length > 0 || soft_deny.length > 0 || hard_deny.length > 0 || environment.length > 0) {
-      return {
-        ...(allow.length > 0 && { allow }),
-        ...(soft_deny.length > 0 && { soft_deny }),
-        ...(hard_deny.length > 0 && { hard_deny }),
-        ...(environment.length > 0 && { environment }),
-      }
-    }
+    return mergeAutoModeRulesBySource(bySource)
   }
   return undefined
 }

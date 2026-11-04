@@ -38,3 +38,34 @@ export function parseTaggedAutoModeBullets(template, tagName) {
   }
   return rules
 }
+
+/** Preserve the 2.1.317 source precedence for classifier rules. */
+export function mergeAutoModeRulesBySource(sources, managedAllowLocked = false) {
+  const allowBySource = {}
+  const soft_deny = []
+  const hard_deny = []
+  const environment = []
+  for (const source of ['userSettings', 'flagSettings', 'policySettings']) {
+    const config = sources[source]
+    if (!config) continue
+    if (config.allow) allowBySource[source] = config.allow
+    if (config.soft_deny) soft_deny.push(...config.soft_deny)
+    if (config.deny) soft_deny.push(...config.deny)
+    if (config.hard_deny) hard_deny.push(...config.hard_deny)
+    if (config.environment) environment.push(...config.environment)
+  }
+  const policyAllow = allowBySource.policySettings
+  let flagAllow = allowBySource.flagSettings ?? []
+  if (
+    flagAllow.includes('$defaults') &&
+    ((policyAllow?.length > 0 && !policyAllow.includes('$defaults')) || managedAllowLocked)
+  ) flagAllow = flagAllow.filter(rule => rule !== '$defaults')
+  const allow = [...(allowBySource.userSettings ?? []), ...flagAllow, ...(policyAllow ?? [])]
+  if (!allow.length && !soft_deny.length && !hard_deny.length && !environment.length) return undefined
+  return {
+    ...(allow.length ? { allow } : {}),
+    ...(soft_deny.length ? { soft_deny } : {}),
+    ...(hard_deny.length ? { hard_deny } : {}),
+    ...(environment.length ? { environment } : {}),
+  }
+}

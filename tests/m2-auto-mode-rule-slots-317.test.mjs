@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { expandAutoModeRules, renderAutoModeRuleBlock, parseTaggedAutoModeBullets } from '../src/utils/permissions/autoModeRules.mjs'
+import { expandAutoModeRules, renderAutoModeRuleBlock, parseTaggedAutoModeBullets, mergeAutoModeRulesBySource } from '../src/utils/permissions/autoModeRules.mjs'
 
 test('317 default rules expand once, in place', () => {
   assert.deepEqual(expandAutoModeRules([], ['a','b']), ['a','b'])
@@ -29,4 +29,30 @@ test('317 external classifier resource exposes 16/72/1/21 rules with nested hard
   }
   const hard = parseTaggedAutoModeBullets(txt, 'user_hard_deny_rules_to_replace')
   assert.ok(hard[0].includes('\n  - **What is being sent?**'))
+})
+
+test('317 trusted auto mode rule sources ignore repository local and project settings', () => {
+  assert.deepEqual(mergeAutoModeRulesBySource({
+    localSettings: { allow: ['dangerous'] },
+    projectSettings: { allow: ['dangerous'] },
+    userSettings: { allow: ['read-only'] },
+  }), { allow: ['read-only'] })
+})
+test('317 managed allow rule prevents flag $defaults from reintroducing exceptions', () => {
+  const config = mergeAutoModeRulesBySource({
+    userSettings: { allow: ['user'] },
+    flagSettings: { allow: ['$defaults', 'flag'] },
+    policySettings: { allow: ['managed'] },
+  })
+  assert.deepEqual(config.allow, ['user', 'flag', 'managed'])
+  assert.deepEqual(mergeAutoModeRulesBySource({
+    flagSettings: { allow: ['$defaults', 'flag'] },
+    policySettings: { allow: ['$defaults', 'managed'] },
+  }).allow, ['$defaults', 'flag', '$defaults', 'managed'])
+})
+test('317 per-source soft/hard deny and environment are additive', () => {
+  assert.deepEqual(mergeAutoModeRulesBySource({
+    userSettings: { soft_deny: ['soft'], hard_deny: ['hard'], environment: ['env1'] },
+    policySettings: { soft_deny: ['policy-soft'], hard_deny: ['policy-hard'], environment: ['env2'] },
+  }), { soft_deny: ['soft','policy-soft'], hard_deny: ['hard','policy-hard'], environment: ['env1','env2'] })
 })
