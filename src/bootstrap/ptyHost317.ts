@@ -1,4 +1,4 @@
-import { createServer, type Socket } from 'node:net'
+import { createServer, connect, type Socket } from 'node:net'
 import { appendFileSync, chmodSync, existsSync, lstatSync, readFileSync, unlinkSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { mkdirSync } from 'node:fs'
@@ -21,6 +21,26 @@ function tokenMatches(value: unknown, expected?: string): boolean {
 function removeSocket(path: string): void {
   try { unlinkSync(path) }
   catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
+}
+/** Preserve another running PTY host's socket. Reclaim only a proven stale one. */
+export async function assertPtySocketVacant317(path:string):Promise<void> {
+  if(!existsSync(path))return
+  if(!lstatSync(path).isSocket())throw Error('PTY path exists and is not a socket')
+  const live=await new Promise<boolean>((resolve,reject)=>{
+    const peer=connect(path)
+    const timer=setTimeout(()=>{peer.destroy();reject(Error('PTY socket ownership probe timed out: '+path))},1000)
+    timer.unref()
+    const done=()=>{clearTimeout(timer);peer.destroy()}
+    peer.once('connect',()=>{done();resolve(true)})
+    peer.once('error',error=>{
+      done()
+      const code=(error as NodeJS.ErrnoException).code
+      if(code==='ECONNREFUSED'||code==='ENOENT')resolve(false)
+      else reject(error)
+    })
+  })
+  if(live)throw Error('Another PTY host already owns '+path)
+  removeSocket(path)
 }
 function recordFailure(path: string | undefined, error: string): void {
   if (!path) return
@@ -75,6 +95,12 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
   }
   const execMode = process.env.CLAUDE_PTY_HOST_EXEC === '1'
   delete process.env.CLAUDE_PTY_HOST_EXEC
+  // 317 exec-mode consumes the credentials file and drops its path from the child.
+  if (execMode && tokensPath) {
+    delete process.env.CLAUDE_BG_SOCKET_TOKENS_PATH
+    try { unlinkSync(tokensPath) }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
+  }
   const admitSilent = process.env.CLAUDE_BG_SOCK_ADMIT_SILENT_PEERS === '1'
   if (execMode) delete process.env.CLAUDE_BG_SOCK_ADMIT_SILENT_PEERS
   const immediateHello = admitSilent || (!ptyAuth && !tokensPath)
@@ -82,6 +108,7 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
   let terminal: Bun.Terminal | undefined
   let child: ReturnType<typeof Bun.spawn> | undefined
   let server: ReturnType<typeof createServer> | undefined
+  let ownsSocket = false
   let stopped = false, forceClosed = false, lastExitCode = 0, lastSignal: string | undefined
   let terminalClosed = false
   const closeTerminalOnce = () => {
@@ -126,6 +153,7 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
     }
   }
   try {
+    await assertPtySocketVacant317(socket)
     // Keep host auth credentials out of the newly launched terminal session.
     terminal = new Bun.Terminal({ cols, rows, data(_terminal, data) {
       const chunk = Buffer.from(data)
@@ -137,10 +165,6 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
       ...(spawnSpare ? { argv0: 'claude bg-spare' } : {}),
     })
     try {
-      if (existsSync(socket)) {
-        if (!lstatSync(socket).isSocket()) throw Error('PTY path exists and is not a socket')
-        removeSocket(socket)
-      }
       server = createServer(peer => {
         peers.add(peer)
         peer.on('error', () => peer.destroy())
@@ -190,6 +214,7 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
         server!.once('error', reject)
         server!.listen(socket)
       })
+      ownsSocket = true
       if (process.platform !== 'win32') chmodSync(socket, 0o600)
       server.unref()
     } catch (error) {
@@ -252,6 +277,6 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
     closeTerminalOnce()
     for (const peer of peers) peer.destroy()
     await new Promise(resolve => server?.close(() => resolve(undefined)) ?? resolve(undefined))
-    if (server && process.platform !== 'win32') removeSocket(socket)
+    if (ownsSocket && process.platform !== 'win32') removeSocket(socket)
   }
 }
