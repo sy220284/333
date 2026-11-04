@@ -3,7 +3,7 @@ import { spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { connect } from 'node:net'
 import { createServer } from 'node:http'
-import { mkdtempSync, existsSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, existsSync, readFileSync, rmSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
@@ -90,7 +90,7 @@ test('M1 C19-T02 preload claim validates every field before changing process sta
     applyPreloadClaim317({ cwd: home, argv: ['--version'], env: { ANTHROPIC_API_KEY: 'new', FRESH: 'yes' } }, {
       env: before, argv, chdir: target => { moved = target },
     })
-    assert.equal(moved, home)
+    assert.equal(moved, realpathSync(home))
     assert.deepEqual(argv, ['bun', 'cli', '--version'])
     assert.equal(before.CLAUDE_CODE_SESSION_ID, undefined)
     assert.equal(before.ANTHROPIC_API_KEY, 'new')
