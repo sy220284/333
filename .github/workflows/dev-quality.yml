@@ -56,6 +56,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: 核验源码语言与文件格式契约
+        run: node --test tests/language-file-contract.test.mjs
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
