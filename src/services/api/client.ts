@@ -1,5 +1,5 @@
 import Anthropic, { type ClientOptions } from '@anthropic-ai/sdk'
-import { native317MessagesRequest, native317RequestHeaders } from './native317Wire.mjs'
+import { native317MessagesRequest, native317RequestHeaders } from './native317Wire.ts'
 import { randomUUID } from 'crypto'
 import type { GoogleAuth } from 'google-auth-library'
 import {
