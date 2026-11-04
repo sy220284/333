@@ -122,6 +122,13 @@ test('api-version opens the bundled 2.1.317 migration guide through the actual R
         `${name}: native 317 headless Agent SDK system introduction drifted`)
       assert.equal(initial.thinking?.display, 'omitted',
         `${name}: native 317 headless thinking display must be omitted`)
+      for (const modelName of ['claude-fable-5-1', 'claude-opus-5-5',
+        'claude-sonnet-5-5', 'claude-haiku-5-5']) {
+        assert.ok(systemText.includes(modelName),
+          `${name}: native 317 model-family guidance missing ${modelName}`)
+      }
+      assert.ok(systemText.includes('Fast mode for Claude Code uses Claude Opus with faster output'),
+        `${name}: native 317 fast-mode prompt guidance diverged`)
       const prompt = JSON.stringify(initial.messages)
       assert.ok(prompt.includes('api-version-migration.md'), `${name}: missing migration guide instruction`)
       assert.ok(prompt.includes('Base directory for this skill:'), `${name}: missing extracted skill directory`)
