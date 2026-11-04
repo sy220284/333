@@ -6,7 +6,7 @@ import { env } from "../../utils/env.js";
 import { isScreenReaderEnabled } from "../../utils/accessibility/screenReaderRuntime.js";
 import { getInitialSettings } from "../../utils/settings/settings.js";
 import { Clawd, type ClawdPose } from "./Clawd.js";
-import { clawdAnimations, clawdIdleSequence } from "./clawdAnimationData.mjs";
+import { clawdAnimations, clawdIdleSequence } from "./clawdAnimationData.ts";
 import { getClickAnimationNames } from "./clawdAnimationSelection.js";
 
 type AnimationName = keyof typeof clawdAnimations;
