@@ -839,6 +839,17 @@ export const SettingsSchema = lazySchema(() =>
               ),
           }
         : {}),
+      // 2.1.317 managed-policy execution gate, distinct from the updater's
+      // minimumVersion preference. Only policySettings is consulted by
+      // fastPathSettings317 for enforcement.
+      requiredMinimumVersion: z
+        .string()
+        .optional()
+        .describe('Organization-required minimum Claude Code version'),
+      requiredMaximumVersion: z
+        .string()
+        .optional()
+        .describe('Organization-required maximum Claude Code version'),
       minimumVersion: z
         .string()
         .optional()
