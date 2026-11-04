@@ -10,6 +10,35 @@ export const TERMINAL_STATES = new Set(['stopped', 'completed', 'failed', 'remov
 const TERMINAL_FIELDS = ['sessionId', 'id', 'cwd', 'createdAt', 'updatedAt', 'state', 'argv', 'logPath']
 const queue = new Map()
 
+/** The on-disk session identity and lifecycle contract shared by the CLI and supervisor. */
+export interface BackgroundRecord317 {
+  id: string
+  sessionId: string
+  cwd: string
+  argv: string[]
+  logPath: string
+  createdAt: string
+  updatedAt: string
+  state: string
+  name?: string | null
+  nameSource?: string
+  agent?: string | null
+  model?: string | null
+  pid?: number | null
+  exitCode?: number | null
+  worktreePath?: string | null
+  detail?: string
+  startedAt?: number
+  respawnCount?: number
+  cols?: number
+  rows?: number
+}
+export interface BackgroundView317 extends BackgroundRecord317 { running: boolean }
+export type BackgroundRmOptions317 = {
+  discardUnpushed?: { headSha: string; worktreeDigest: string }
+  forceRemoveWorktree?: string
+}
+
 export function fleetHome(env = process.env) {
   const root = env.CLAUDE_CONFIG_DIR || join(env.HOME || homedir(), '.claude')
   return join(resolve(root), 'background')
@@ -36,13 +65,20 @@ export function isAlive(pid) {
     throw error
   }
 }
-function assertRecord(record) {
-  if (!record || typeof record !== 'object' || Array.isArray(record)) throw new Error('Invalid session record')
-  for (const field of TERMINAL_FIELDS) if (record[field] === undefined) throw new Error(`Missing session field: ${field}`)
-  if (!/^[a-f0-9]{8}$/.test(record.id) || typeof record.sessionId !== 'string' ||
-      !Array.isArray(record.argv) || !record.argv.every(a => typeof a === 'string') ||
-      typeof record.cwd !== 'string' || typeof record.logPath !== 'string') throw new Error('Invalid background session record')
-  return record
+function assertRecord(record: unknown): BackgroundRecord317 {
+  if (!record || typeof record !== 'object' || Array.isArray(record))
+    throw new Error('Invalid session record')
+  const data = record as Record<string, unknown>
+  for (const field of TERMINAL_FIELDS)
+    if (data[field] === undefined) throw new Error(`Missing session field: ${field}`)
+  if (typeof data.id !== 'string' || !/^[a-f0-9]{8}$/.test(data.id) ||
+      typeof data.sessionId !== 'string' || !Array.isArray(data.argv) ||
+      !data.argv.every(a => typeof a === 'string') ||
+      typeof data.cwd !== 'string' || typeof data.logPath !== 'string' ||
+      typeof data.createdAt !== 'string' || typeof data.updatedAt !== 'string' ||
+      typeof data.state !== 'string')
+    throw new Error('Invalid background session record')
+  return record as BackgroundRecord317
 }
 export function createSessionRecord({ sessionId = randomUUID(), id = sessionId.slice(0, 8), argv, cwd, name, agent, model, env = process.env }) {
   const now = new Date().toISOString()
@@ -137,12 +173,14 @@ export async function deleteSession(id, env = process.env) {
     catch (error) { if (error.code === 'ENOENT') return false; throw error }
   })
 }
-export async function listSessions({ all = false, cwd, env = process.env } = {}) {
+export async function listSessions({ all = false, cwd, env = process.env }: {
+  all?: boolean; cwd?: string; env?: NodeJS.ProcessEnv
+} = {}): Promise<BackgroundView317[]> {
   const root = join(fleetHome(env), 'jobs')
   let names
   try { names = await readdir(root) }
   catch (error) { if (error.code === 'ENOENT') return []; throw error }
-  const jobs = []
+  const jobs: BackgroundView317[] = []
   for (const name of names.sort()) {
     if (!/^[a-f0-9]{8}\.json$/.test(name)) continue
     const job = await readSession(name.slice(0, 8), env)
@@ -165,7 +203,8 @@ export function assertNoUnmanagedLiveWorker(record, managedIds = new Set()) {
   }
 }
 
-export function matchSession(jobs, query, { usage = 'id', name = true } = {}) {
+export function matchSession<T extends BackgroundRecord317>(jobs: T[], query: string,
+  { usage = 'id', name = true } = {}): T {
   if (!query || typeof query !== 'string') throw new Error(`Usage: claude ${usage}`)
   const idMatches = jobs.filter(j => j.id.startsWith(query.toLowerCase()) || j.sessionId === query)
   if (idMatches.length === 1) return idMatches[0]
@@ -231,7 +270,8 @@ export function worktreeSafety(worktreePath) {
 export function worktreeDigest(worktreePath) {
   return createHash('sha256').update(resolve(worktreePath)).digest('hex').slice(0, 12)
 }
-export async function removeWorktreeSafely(worktreePath, { discardUnpushed, forceRemoveWorktree } = {}) {
+export async function removeWorktreeSafely(worktreePath: string | null | undefined,
+  { discardUnpushed, forceRemoveWorktree }: BackgroundRmOptions317 = {}) {
   if (!worktreePath) return
   const safety = worktreeSafety(worktreePath)
   const digest = worktreeDigest(worktreePath)
