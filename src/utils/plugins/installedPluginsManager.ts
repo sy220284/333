@@ -184,6 +184,8 @@ export function addPluginInstallation(
     lastUpdated: new Date().toISOString(),
     gitCommitSha: metadata.gitCommitSha,
     ...(metadata.sourceCommand !== undefined && { sourceCommand: metadata.sourceCommand }),
+    ...(metadata.sourceProducerPath !== undefined && { sourceProducerPath: metadata.sourceProducerPath }),
+    ...(metadata.previousProducerPaths?.length && { previousProducerPaths: metadata.previousProducerPaths }),
     ...(metadata.auto !== undefined && { auto: metadata.auto }),
     ...(projectPath && { projectPath }),
   }
@@ -269,6 +271,16 @@ export function loadInstalledPluginsFromDisk(): InstalledPluginsFileV2 {
  * @param newPath - New install path (to new version directory)
  * @param newVersion - New version string
  */
+/** Keep the prior producer directories protected while older sessions still use them. */
+function previousSourceProducerPaths(
+  previous: { sourceProducerPath?: string; previousProducerPaths?: string[] } | undefined,
+  next: string | undefined,
+): string[] {
+  const current = previous?.sourceProducerPath
+  return [...(previous?.previousProducerPaths ?? []).filter(path => path !== current && path !== next),
+    ...(current && current !== next ? [current] : [])].filter(Boolean).slice(-32)
+}
+
 export function updateInstallationPathOnDisk(
   pluginId: string,
   scope: PersistableScope,
@@ -277,6 +289,7 @@ export function updateInstallationPathOnDisk(
   newVersion: string,
   gitCommitSha?: string,
   sourceCommand?: string | null,
+  sourceProducerPath?: string | null,
 ): void {
   ensureInstalledPluginsMigrated()
   const diskData = loadInstalledPluginsFromDisk()
@@ -302,6 +315,15 @@ export function updateInstallationPathOnDisk(
     }
     if (sourceCommand === null) delete entry.sourceCommand
     else if (sourceCommand !== undefined) entry.sourceCommand = sourceCommand
+
+    if (sourceProducerPath !== undefined || sourceCommand === null) {
+      const next = sourceCommand === null ? undefined : sourceProducerPath ?? undefined
+      const previousPaths = previousSourceProducerPaths(entry, next)
+      if (next) entry.sourceProducerPath = next
+      else delete entry.sourceProducerPath
+      if (previousPaths.length) entry.previousProducerPaths = previousPaths
+      else delete entry.previousProducerPaths
+    }
 
     const filePath = getInstalledPluginsFilePath()
 
@@ -624,6 +646,8 @@ export function addInstalledPlugin(
     lastUpdated: metadata.lastUpdated,
     gitCommitSha: metadata.gitCommitSha,
     ...(metadata.sourceCommand !== undefined && { sourceCommand: metadata.sourceCommand }),
+    ...(metadata.sourceProducerPath !== undefined && { sourceProducerPath: metadata.sourceProducerPath }),
+    ...(metadata.previousProducerPaths?.length && { previousProducerPaths: metadata.previousProducerPaths }),
     ...(metadata.auto !== undefined && { auto: metadata.auto }),
     ...(projectPath && { projectPath }),
   }
@@ -638,6 +662,11 @@ export function addInstalledPlugin(
 
   const isUpdate = existingIndex >= 0
   if (isUpdate) {
+    const prior = installations[existingIndex]
+    if (metadata.sourceProducerPath) {
+      const previous = previousSourceProducerPaths(prior, metadata.sourceProducerPath)
+      if (previous.length) v2Entry.previousProducerPaths = previous
+    }
     installations[existingIndex] = v2Entry
   } else {
     installations.push(v2Entry)
@@ -682,6 +711,8 @@ export function removeInstalledPlugin(
         installPath: firstInstall.installPath,
         gitCommitSha: firstInstall.gitCommitSha,
         sourceCommand: firstInstall.sourceCommand,
+        sourceProducerPath: firstInstall.sourceProducerPath,
+        previousProducerPaths: firstInstall.previousProducerPaths,
       }
     : undefined
 
