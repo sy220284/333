@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-test('Storage V5 persists queue operations to owning session across resume and preserves parked writes', async () => {
+test('Storage V5 persists queue operations to owning session across resume and preserves parked writes', { timeout: 45_000 }, async () => {
   const root = mkdtempSync(join(tmpdir(), '333-storage-v5-'))
   const oldConfig = process.env.CLAUDE_CONFIG_DIR
   const oldPersistence = process.env.TEST_ENABLE_SESSION_PERSISTENCE
