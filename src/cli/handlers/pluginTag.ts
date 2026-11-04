@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { validateManifest, validatePluginContents } from '../../utils/plugins/validatePlugin.js'
-import { cliError, cliOk } from '../exit.js'
+import { cliOk } from '../exit.js'
 
 type TagOptions = {
   dryRun?: boolean
@@ -25,7 +25,9 @@ function git(cwd: string, args: string[]) {
   return { status: result.status, stdout: result.stdout.trim(), stderr: result.stderr.trim() }
 }
 function fail(message: string): never {
-  return cliError('✘ ' + message)
+  // The official 2.1.317 plugin tag command emits validation failures to stdout.
+  process.stdout.write('✘ ' + message + '\n')
+  process.exit(1)
 }
 function pluginManifest(input: string): { root: string; file: string; data: Record<string, unknown> } {
   const selected = resolve(input)
