@@ -21,9 +21,9 @@ test('核心 TypeScript 实现不得经由同名 MJS 测试转接入口导入', 
   const failures = []
   // Include bundled skill implementations; their TypeScript is production
   // code too. Path aliases (src/...) must obey the same canonical rule.
-  for (const source of walk('src').filter(p => /\\.tsx?$/.test(p))) {
+  for (const source of walk('src').filter(p => /\.tsx?$/.test(p))) {
     const text = readFileSync(file(source), 'utf8')
-    const imports = /(?:\\bfrom\\s*|\\bimport\\s*\\(\\s*|\\bimport\\s*|\\brequire\\s*\\(\\s*)['"`]((?:\\.{1,2}\\/|src\\/)[^'"`]+\\.mjs)['"`]/g
+    const imports = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s*|\brequire\s*\(\s*)['"`]((?:\.{1,2}\/|src\/)[^'"`]+\.mjs)['"`]/g
     for (const match of text.matchAll(imports)) {
       const original = match[1].startsWith('src/')
         ? file(match[1])
