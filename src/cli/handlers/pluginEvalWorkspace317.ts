@@ -63,7 +63,7 @@ export async function runEvalScaffold317(script, workspace, timeoutSeconds = 300
   }
   child.stdout.on('data', collect)
   child.stderr.on('data', collect)
-  return await new Promise((ok, fail) => {
+  return await new Promise<{ code: number; stderr: string; signal: NodeJS.Signals | null }>((ok, fail) => {
     child.once('error', fail)
     child.once('close', (code, signal) => ok({
       code: code ?? 1,

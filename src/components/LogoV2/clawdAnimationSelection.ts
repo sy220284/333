@@ -6,8 +6,10 @@ import {
 
 export function getClickAnimationNames(appleTerminal: boolean): string[] {
 	const clickCandidates = clickAnimationNames.filter(
-		(name) =>
-			(('x' in (clawdAnimations[name as keyof typeof clawdAnimations][0] ?? {}) && clawdAnimations[name as keyof typeof clawdAnimations][0]?.x) ?? 0) === 0,
+		(name) => {
+      const first = clawdAnimations[name as keyof typeof clawdAnimations][0]
+      return !first || !('x' in first) || (first.x ?? 0) === 0
+    },
 	);
 	if (!appleTerminal) return clickCandidates;
 	return clickCandidates.filter((name) => {

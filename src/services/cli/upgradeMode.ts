@@ -1,3 +1,5 @@
+import type { PermissionDecision } from '../../types/permissions.js'
+
 /** Source-level contracts observed in the official 2.1.310 Linux x64 CLI. */
 const blockedExecutionTools = Object.freeze(['Bash', 'PowerShell', 'WebFetch'])
 
@@ -28,17 +30,11 @@ export function parsePromptSuggestions(value: unknown): boolean | undefined {
 }
 
 /** A host cannot be asked when --permission-prompts none is selected. */
-export type NoPromptPermissionDecision = {
-  behavior: string
-  message?: string
-  decisionReason?: { type: string; [key: string]: unknown }
-}
+export type NoPromptPermissionDecision = PermissionDecision
 
-export function denyUnansweredPrompt<T extends NoPromptPermissionDecision>(decision: T): T | {
-  behavior: 'deny'
-  message: string
-  decisionReason: { type: string; [key: string]: unknown }
-} {
+export function denyUnansweredPrompt<Input extends Record<string, unknown>>(
+  decision: PermissionDecision<Input>,
+): PermissionDecision<Input> {
   if (decision.behavior !== 'ask') return decision
   return {
     behavior: 'deny',

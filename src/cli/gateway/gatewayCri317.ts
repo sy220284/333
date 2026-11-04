@@ -57,7 +57,7 @@ export function createCriAdmission317(config,adapters: {now?: () => number; fetc
   const now=adapters.now??Date.now,fetchJwks=adapters.fetch??fetch
   const allowedOrgs=new Set(config.org_allowlist),audience=new Set(config.audience)
   let keys=new Map(),fetchedAt=0,expiresAt=0,lastAttempt=0,refreshing=null
-  const failure=(status,reason)=>({ok:false,status,reason})
+  const failure=(status: number,reason: string)=>({ok:false as const,status,reason})
   async function refresh(force=false) {
     if(refreshing)return refreshing
     if(!force&&now()-lastAttempt<COOLDOWN_MS)return false
@@ -117,7 +117,7 @@ export function createCriAdmission317(config,adapters: {now?: () => number; fetc
         typeof claims.org!=='string'||!claims.org)return failure(401,'invalid_token')
       const org=claims.org.toLowerCase()
       if(!allowedOrgs.has(org))return failure(401,'org_not_allowed')
-      return {ok:true,claims:{sub:claims.sub,org,cri:true,
+      return {ok:true as const,claims:{sub:claims.sub,org,cri:true,
         ...(typeof claims.act?.sub==='string'?{act:{sub:claims.act.sub}}:{}),
         exp:claims.exp,iat:claims.iat}}
     },

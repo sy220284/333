@@ -3819,7 +3819,7 @@ async function run(): Promise<CommanderCommand> {
     .option('--dry-run', 'List what would be removed without removing')
     .option('-s, --scope <scope>', 'Prune at scope: user, project, or local (default: "user")', 'user')
     .option('-y, --yes', 'Skip the confirmation prompt (required when stdin or stdout is not a TTY)')
-    .action(async (options: { dryRun?: boolean; scope: string; yes?: boolean }) => {
+    .action(async (options: { dryRun?: boolean; scope?: string; yes?: boolean }) => {
       const { pluginPruneHandler } = await import('./cli/handlers/pluginPrune.js');
       await pluginPruneHandler(options);
     });

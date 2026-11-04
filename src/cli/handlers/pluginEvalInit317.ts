@@ -75,7 +75,7 @@ export async function createEvalCase317(name: string, options: EvalInitOptions31
   return folder
 }
 
-export async function pluginEvalInit317(name: string | undefined, options: EvalInitOptions317 = {}) {
+export async function pluginEvalInit317(name: string | undefined, options: EvalInitOptions317 = {}): Promise<number> {
   const interactive = !options.bare && (options.interactive ||
     (process.stdin.isTTY && process.stdout.isTTY))
   if (interactive && !(process.stdin.isTTY && process.stdout.isTTY)) {
