@@ -1,3 +1,4 @@
+import { filterSettingsCompactionEnv } from './managedCompactionEnv.mjs'
 import { isRemoteManagedSettingsEligible } from '../services/remoteManagedSettings/syncCache.js'
 import { clearCACertsCache } from './caCerts.js'
 import { isEnvTruthy } from './envUtils.js'
@@ -93,8 +94,10 @@ function withoutCcdSpawnEnvKeys(
 function filterSettingsEnv(
   env: Record<string, string> | undefined,
 ): Record<string, string> {
-  return withoutCcdSpawnEnvKeys(
-    withoutHostManagedProviderVars(withoutSSHTunnelVars(env)),
+  return filterSettingsCompactionEnv(
+    withoutCcdSpawnEnvKeys(
+      withoutHostManagedProviderVars(withoutSSHTunnelVars(env)),
+    ),
   )
 }
 
