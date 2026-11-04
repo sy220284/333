@@ -1,4 +1,5 @@
 import { getCatalogModel, getModelCapabilityEnvOverride } from './model/modelCatalog.js'
+import { isEnvTruthy } from './envUtils.js'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import type { Theme } from './theme.js'
 import { feature } from 'bun:bundle'
@@ -19,6 +20,11 @@ export type ThinkingConfig =
  * controls code inclusion in external builds; the GB flag controls rollout.
  */
 export function isUltrathinkEnabled(): boolean {
+  // 2.1.317: this explicit runtime opt-out overrides feature rollout.
+  // Both the message attachment and terminal highlighting consume this gate.
+  if (isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_ULTRATHINK)) {
+    return false
+  }
   if (!feature('ULTRATHINK')) {
     return false
   }
