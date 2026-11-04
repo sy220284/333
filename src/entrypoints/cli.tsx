@@ -1,6 +1,7 @@
 import { feature } from 'bun:bundle';
 import { rejectDeepLinkArgumentInjection } from '../utils/cliArgv317.mjs';
 import { classifyStartupArgs } from './startupRouting317.mjs';
+import { parseRunnerDeclaration } from './runnerDeclaration317.mjs';
 import { randomUUID } from 'node:crypto';
 import { getStartupCwdError, writeStartupFailureResult, reportCliStartupFailure } from '../utils/cliStartupFailure.mjs';
 
@@ -38,6 +39,12 @@ if (feature('ABLATION_BASELINE') && process.env.CLAUDE_CODE_ABLATION_BASELINE) {
  * The version fast path loads only the startup guards, without the full CLI.
  */
 async function main(): Promise<void> {
+  // Official 317: this launch-only first argument is removed before URI/CLI
+  // parsing. Its state is adopted after cwd validation and before profiler/
+  // regular CLI initialization, with no change for unrecognized declarations.
+  const runnerArg = process.argv[2]?.startsWith('--runner-declares=')
+    ? process.argv.splice(2, 1)[0]
+    : undefined;
   const args = process.argv.slice(2);
   const injectionError = rejectDeepLinkArgumentInjection(args);
   if (injectionError) {
@@ -69,6 +76,18 @@ async function main(): Promise<void> {
     await writeStartupFailureResult({ sessionId: randomUUID(), message: cwdError, reason: 'cwd_unavailable' });
     process.exitCode = 1;
     return;
+  }
+
+  if (runnerArg) {
+    const declared = parseRunnerDeclaration(runnerArg);
+    if (declared?.nestedRepository) {
+      const {
+        setRunnerDeclaredNestedRepositoryDiff,
+        setRunnerDeclaredNoRepositoryCheckedOut,
+      } = await import('../bootstrap/state.js');
+      setRunnerDeclaredNestedRepositoryDiff(true);
+      if (declared.noRepositoryCheckedOut) setRunnerDeclaredNoRepositoryCheckedOut(true);
+    }
   }
 
   // For all other paths, load the startup profiler
