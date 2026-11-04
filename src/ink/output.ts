@@ -1,21 +1,12 @@
-import {
-  type AnsiCode,
-  type StyledChar,
-  styledCharsFromTokens,
-  tokenize,
-} from '@alcalzone/ansi-tokenize'
 import { logForDebugging } from '../utils/debug.js'
-import { getGraphemeSegmenter } from '../utils/intl.js'
 import sliceAnsi from '../utils/sliceAnsi.js'
 import { reorderBidi } from './bidi.js'
+import { segmentTerminalCells, type TerminalCellSegment } from './terminalCellSegmentation.js'
 import { type Rectangle, unionRect } from './layout/geometry.js'
 import {
   blitRegion,
   CellWidth,
-  extractHyperlinkFromStyles,
-  filterOutHyperlinkStyles,
   markNoSelectRegion,
-  OSC8_PREFIX,
   resetScreen,
   type Screen,
   type StylePool,
@@ -35,12 +26,6 @@ import { widestLine } from './widest-line.js'
  * hyperlink is stored as a string (not interned ID) since hyperlinkPool
  * resets every 5 min; setCellAt interns it per-frame (cheap Map.get).
  */
-type ClusteredChar = {
-  value: string
-  width: number
-  styleId: number
-  hyperlink: string | undefined
-}
 
 /**
  * Collects write/blit/clear/clip operations from the render tree, then
@@ -175,7 +160,7 @@ export default class Output {
 
   private readonly operations: Operation[] = []
 
-  private charCache: Map<string, ClusteredChar[]> = new Map()
+  private charCache: Map<string, TerminalCellSegment[]> = new Map()
 
   constructor(options: Options) {
     const { width, height, stylePool, screen } = options
@@ -531,94 +516,6 @@ export default class Output {
   }
 }
 
-function stylesEqual(a: AnsiCode[], b: AnsiCode[]): boolean {
-  if (a === b) return true // Reference equality fast path
-  const len = a.length
-  if (len !== b.length) return false
-  if (len === 0) return true // Both empty
-  for (let i = 0; i < len; i++) {
-    if (a[i]!.code !== b[i]!.code) return false
-  }
-  return true
-}
-
-/**
- * Convert a string with ANSI codes into styled characters with proper grapheme
- * clustering. Fixes ansi-tokenize splitting grapheme clusters (like family
- * emojis) into individual code points.
- *
- * Also precomputes styleId + hyperlink per style run (not per char) — an
- * 80-char line with 3 style runs does 3 intern calls instead of 80.
- */
-function styledCharsWithGraphemeClustering(
-  chars: StyledChar[],
-  stylePool: StylePool,
-): ClusteredChar[] {
-  const charCount = chars.length
-  if (charCount === 0) return []
-
-  const result: ClusteredChar[] = []
-  const bufferChars: string[] = []
-  let bufferStyles: AnsiCode[] = chars[0]!.styles
-
-  for (let i = 0; i < charCount; i++) {
-    const char = chars[i]!
-    const styles = char.styles
-
-    // Different styles means we need to flush and start new buffer
-    if (bufferChars.length > 0 && !stylesEqual(styles, bufferStyles)) {
-      flushBuffer(bufferChars.join(''), bufferStyles, stylePool, result)
-      bufferChars.length = 0
-    }
-
-    bufferChars.push(char.value)
-    bufferStyles = styles
-  }
-
-  // Final flush
-  if (bufferChars.length > 0) {
-    flushBuffer(bufferChars.join(''), bufferStyles, stylePool, result)
-  }
-
-  return result
-}
-
-function flushBuffer(
-  buffer: string,
-  styles: AnsiCode[],
-  stylePool: StylePool,
-  out: ClusteredChar[],
-): void {
-  // Compute styleId + hyperlink ONCE for the whole style run.
-  // Every grapheme in this buffer shares the same styles.
-  //
-  // Extract and track hyperlinks separately, filter from styles.
-  // Always check for OSC 8 codes to filter, not just when a URL is
-  // extracted. The tokenizer treats OSC 8 close codes (empty URL) as
-  // active styles, so they must be filtered even when no hyperlink
-  // URL is present.
-  const hyperlink = extractHyperlinkFromStyles(styles) ?? undefined
-  const hasOsc8Styles =
-    hyperlink !== undefined ||
-    styles.some(
-      s =>
-        s.code.length >= OSC8_PREFIX.length && s.code.startsWith(OSC8_PREFIX),
-    )
-  const filteredStyles = hasOsc8Styles
-    ? filterOutHyperlinkStyles(styles)
-    : styles
-  const styleId = stylePool.intern(filteredStyles)
-
-  for (const { segment: grapheme } of getGraphemeSegmenter().segment(buffer)) {
-    out.push({
-      value: grapheme,
-      width: stringWidth(grapheme),
-      styleId,
-      hyperlink,
-    })
-  }
-}
-
 /**
  * Write a single line's characters into the screen buffer.
  * Extracted from Output.get() so JSC can optimize this tight,
@@ -637,15 +534,12 @@ function writeLineToScreen(
   y: number,
   screenWidth: number,
   stylePool: StylePool,
-  charCache: Map<string, ClusteredChar[]>,
+  charCache: Map<string, TerminalCellSegment[]>,
 ): number {
   let characters = charCache.get(line)
   if (!characters) {
     characters = reorderBidi(
-      styledCharsWithGraphemeClustering(
-        styledCharsFromTokens(tokenize(line)),
-        stylePool,
-      ),
+      segmentTerminalCells(line, stylePool),
     )
     charCache.set(line, characters)
   }
