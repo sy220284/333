@@ -60,7 +60,7 @@ jobs:
               if result.returncode==0:
                   print('Compilation passed after',attempt,'isolation attempts')
                   break
-              match=re.findall(r'(src/[^():\\s]+\\.tsx?)\\(\\d+,\\d+\\): error TS\\d+',result.stdout)
+              match=re.findall(r'(src/[^():\s]+\.tsx?)\(\d+,\d+\): error TS\d+',result.stdout)
               offending=set(match)&candidates
               if not offending:
                   print(result.stdout[-10000:])
@@ -68,12 +68,12 @@ jobs:
               for name in sorted(offending):
                   related=[line for line in result.stdout.splitlines() if name+'(' in line and 'error TS' in line]
                   blocked.append({'path':name,'diagnostics':related})
-                  print('Deferred invalid inferred type:',name,*related,sep='\\n')
+                  print('Deferred invalid inferred type:',name,*related,sep='\n')
                   subprocess.run(['git','restore','--source=HEAD','--',name],check=True)
                   candidates.remove(name)
           else:
               raise SystemExit('TypeScript inference isolation exceeded 20 attempts')
-          (root/'blocked-errors.json').write_text(json.dumps(blocked,indent=2,ensure_ascii=False)+'\\n')
+          (root/'blocked-errors.json').write_text(json.dumps(blocked,indent=2,ensure_ascii=False)+'\n')
           print('Validated candidate files:',len(candidates),'deferred:',len(blocked))
           PY
       - name: 校验候选类型与代码内容、禁止任意类型
