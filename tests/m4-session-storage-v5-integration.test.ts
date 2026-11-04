@@ -171,6 +171,9 @@ test('explicit resumed worktree path overrides the prior location for the same s
     switchSession(session, secondDir)
     expect(getTranscriptPath()).toBe(join(secondDir, session + '.jsonl'))
     expect(getTranscriptPathForSession(session)).toBe(join(secondDir, session + '.jsonl'))
+    switchSession(session)
+    expect(getTranscriptPath()).not.toBe(join(secondDir, session + '.jsonl'))
+    expect(getTranscriptPathForSession(session)).toBe(getTranscriptPath())
   } finally {
     switchSession(original)
   }
