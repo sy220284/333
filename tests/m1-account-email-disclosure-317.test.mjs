@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { shouldConfirmAccountEmailDisclosure } from '../src/utils/accountEmailDisclosure.mjs'
+import { ACCOUNT_EMAIL_DISCLOSURE_REASON, shouldConfirmAccountEmailDisclosure } from '../src/utils/accountEmailDisclosure.mjs'
 
 const email = 'user@example.test'
 const toolInput = command => ({ command })
@@ -52,4 +52,14 @@ test('both permission pipelines preserve deny before disclosure, and disclosure 
   }
   assert.ok(second.indexOf('getAccountEmailDisclosureDecision(tool, input)') <
     second.indexOf("const shouldBypassPermissions ="), 'disclosure must precede bypassPermissions')
+})
+
+test('2.1.317 original tool.check privacy prompt is shared by both permission paths', () => {
+  assert.equal(
+    ACCOUNT_EMAIL_DISCLOSURE_REASON,
+    "This call's input holds your account email address, which may leave this machine. If nobody asked to send it, go on without it.",
+  )
+  const source = readFileSync(new URL('../src/utils/permissions/permissions.ts', import.meta.url), 'utf8')
+  assert.match(source, /message: ACCOUNT_EMAIL_DISCLOSURE_REASON/)
+  assert.match(source, /reason: ACCOUNT_EMAIL_DISCLOSURE_REASON/)
 })
