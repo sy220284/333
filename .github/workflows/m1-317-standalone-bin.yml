@@ -18,6 +18,8 @@ on:
       - 'src/utils/ripgrepVendor317.mjs'
       - 'tests/m1-ripgrep-vendor-resolution-317.test.mjs'
       - 'src/entrypoints/cli.tsx'
+      - 'src/bootstrap/jitPolicy317.mjs'
+      - 'tests/m1-jit-startup-317.test.mjs'
       - 'src/entrypoints/runnerDeclaration317.mjs'
       - 'src/bootstrap/state.ts'
       - 'tests/m1-runner-declares-317.test.mjs'
@@ -67,6 +69,8 @@ jobs:
           bun-version: 1.4.4
       - name: 验签入库的官方六架构原生模块
         run: node --test tests/m1-official-native-sources-317.test.mjs
+      - name: 317启动延迟JIT调优的原版语义与进程退出安全性
+        run: node --test tests/m1-jit-startup-317.test.mjs
       - name: 从真实源码独立重建317候选
         run: |
           set -euo pipefail
