@@ -46,6 +46,9 @@ on:
       - 'src/bootstrap/ptyHost317.mjs'
       - 'src/bootstrap/ptyWire317.ts'
       - 'src/bootstrap/ptyWire317.mjs'
+      - 'src/bootstrap/ptyRecording317.ts'
+      - 'src/bootstrap/ptyRecording317.mjs'
+      - 'tests/m1-pty-recording-317.test.mjs'
       - 'tests/m1-pty-host-317.test.mjs'
       - 'tests/m1-version-verbose-317.test.mjs'
       - 'build/verify-official-native-by-platform.mjs'
@@ -156,6 +159,8 @@ jobs:
         run: M1_NATIVE_BINARY_RUN=1 node --test tests/m1-startup-cli-317.test.mjs
       - name: 原版与重建版317 PTY宿主真实子进程与二进制流对照
         run: node --test tests/m1-pty-host-317.test.mjs
+      - name: 317 PTY录制格式和官方x64二进制行为对照
+        run: node --test tests/m1-pty-recording-317.test.mjs
       - name: 317评测MCP模拟服务原版双跑及真实工具日志
         run: node --test tests/m1-eval-mock-server-317.test.mjs
       - name: 317 daemon worker心跳和错误协议原版双跑
