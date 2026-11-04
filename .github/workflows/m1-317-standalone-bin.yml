@@ -13,6 +13,7 @@ on:
       - 'tests/m1-ripgrep-vendor-resolution-317.test.mjs'
       - 'src/entrypoints/cli.tsx'
       - 'tests/m1-version-verbose-317.test.mjs'
+      - 'build/verify-official-native-by-platform.mjs'
       - 'tests/model-loop-local.test.mjs'
       - 'tests/search-loop-local.test.mjs'
       - 'tests/claude-api-version-parity.test.mjs'
@@ -67,6 +68,19 @@ jobs:
           echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  $RUNNER_TEMP/claude-2.1.317" | sha256sum --check
           node build/sync-official-native-from-binary.mjs \
             --binary "$RUNNER_TEMP/claude-2.1.317" --vendor-root vendor --sync
+      - name: 官方317原版Windows/macOS验签并直接比较原生音频模块
+        if: runner.os != 'Linux'
+        run: |
+          set -euo pipefail
+          base='https://downloads.claude.ai/claude-code-releases/2.1.317'
+          mkdir -p "$RUNNER_TEMP/m1-platform-reference"
+          curl --fail --location --silent --show-error --retry-all-errors --retry 5             "$base/manifest.json" -o "$RUNNER_TEMP/m1-platform-reference/manifest.json"
+          platform="$(node -p "process.platform+'-'+process.arch")"
+          executable=claude
+          if [ "$RUNNER_OS" = "Windows" ]; then executable=claude.exe; fi
+          curl --fail --location --silent --show-error --retry-all-errors --retry 5             "$base/$platform/$executable" -o "$RUNNER_TEMP/m1-platform-reference/$executable"
+          node build/verify-official-native-by-platform.mjs             --binary "$RUNNER_TEMP/m1-platform-reference/$executable"             --manifest "$RUNNER_TEMP/m1-platform-reference/manifest.json"             --vendor-root vendor
+          node -e "const arch=process.arch+'-'+process.platform; const api=require('./vendor/audio-capture/'+arch+'/audio-capture.node'); if (!Object.keys(api).length) throw Error('Native audio exposes no functions')"
       - name: 生成自包含本机执行程序并打包完整发行资源
         run: |
           set -euo pipefail
