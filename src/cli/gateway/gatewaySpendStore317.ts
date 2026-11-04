@@ -5,17 +5,50 @@
  */
 import { randomUUID } from 'node:crypto'
 
+type GatewaySpendSql317 = InstanceType<typeof Bun.SQL>
+type GatewaySpendIdentity317 = { sub: string; groups?: string[] }
+type GatewaySpendScopeInput317 = {
+  type: string
+  user_id?: string
+  rbac_group_id?: string
+}
+type GatewaySpendUpsertInput317 = {
+  scope: GatewaySpendScopeInput317
+  period: string
+  amount?: string | null
+  pooled_budget?: { amount?: string | null; paused?: boolean | null } | null
+}
+type GatewaySpendRow317 = {
+  id: string
+  scope_type: string
+  scope_id: string
+  amount: string | number | bigint | null
+  period: string
+  pooled_limit_enabled: boolean
+  pooled_monthly_credit_limit: string | number | bigint | null
+  created_at: string | Date
+  updated_at: string | Date
+}
+type GatewayAuditItem317 = {
+  actor: string
+  action: string
+  target?: string | null
+  before?: unknown
+  after?: unknown
+  reason?: string | null
+}
+
 const LIMIT = 1000
 const SCOPES = new Set(['organization','user','rbac_group'])
 const PERIODS = new Set(['daily','weekly','monthly'])
-export const toCents317 = value => {
+export const toCents317 = (value: unknown): string | null => {
   if (value === null) return null
   if (typeof value !== 'string' || !/^\d{1,18}$/.test(value)) {
     throw new Error('amount must be a decimal string of cents (1–18 digits), or null')
   }
   return BigInt(value).toString()
 }
-export function spendPeriodStart317(period, at = new Date()) {
+export function spendPeriodStart317(period: string, at: Date = new Date()): string {
   if (!PERIODS.has(period)) throw new Error('Invalid spend period: '+period)
   const time = new Date(at)
   if (period === 'monthly') return time.toISOString().slice(0,7)
@@ -30,14 +63,14 @@ export function spendPeriodStart317(period, at = new Date()) {
   const week=Math.ceil(((thursday.getTime()-first)/86400000+1)/7)
   return year+'-W'+String(week).padStart(2,'0')
 }
-export function spendPeriodReset317(period, at = new Date()) {
+export function spendPeriodReset317(period: string, at: Date = new Date()): Date {
   const current = new Date(at)
   const year=current.getUTCFullYear(),month=current.getUTCMonth(),day=current.getUTCDate()
   if (period==='monthly') return new Date(Date.UTC(year,month+1,1))
   if (period==='daily') return new Date(Date.UTC(year,month,day+1))
   return new Date(Date.UTC(year,month,day+8-(current.getUTCDay()||7)))
 }
-function rowLimit(row) {
+function rowLimit(row: GatewaySpendRow317 | null | undefined) {
   if (!row) return null
   return {
     type:'spend_limit', id:row.id,
@@ -58,7 +91,7 @@ function rowLimit(row) {
     updated_at:new Date(row.updated_at).toISOString(),
   }
 }
-const keyOf = (scope,period) => {
+const keyOf = (scope: GatewaySpendScopeInput317, period: string) => {
   if (!SCOPES.has(scope?.type) || !PERIODS.has(period)) {
     throw new Error('Invalid spend scope or period')
   }
@@ -69,7 +102,7 @@ const keyOf = (scope,period) => {
   }
   return {type:scope.type,id}
 }
-export async function createGatewaySpendStore317(sql) {
+export async function createGatewaySpendStore317(sql: GatewaySpendSql317) {
   if (!sql || typeof sql.begin !== 'function') throw new Error('Gateway spend engine requires durable PostgreSQL')
   await sql`
     CREATE TABLE IF NOT EXISTS spend_limits (
@@ -105,7 +138,7 @@ export async function createGatewaySpendStore317(sql) {
       actor TEXT NOT NULL, action TEXT NOT NULL, target TEXT,
       before JSONB, after JSONB, reason TEXT
     )`
-  async function audit(tx, item) {
+  async function audit(tx: GatewaySpendSql317, item: GatewayAuditItem317): Promise<void> {
     await tx`INSERT INTO admin_audit(actor,action,target,before,after,reason)
        VALUES(${item.actor},${item.action},${item.target??null},
          ${item.before===undefined?null:JSON.stringify(item.before)}::jsonb,
@@ -114,7 +147,7 @@ export async function createGatewaySpendStore317(sql) {
   }
   const columns = 'id,scope_type,scope_id,amount,period,currency,pooled_limit_enabled,pooled_monthly_credit_limit,created_at,updated_at'
   return {
-    async read(id) {
+    async read(id: string) {
       const rows=await sql`SELECT * FROM spend_limits WHERE id=${id}`
       return rowLimit(rows[0])
     },
@@ -126,7 +159,7 @@ export async function createGatewaySpendStore317(sql) {
         WHERE (${scopeType??null}::text IS NULL OR scope_type=${scopeType??null})
         ORDER BY created_at, id`
       if (afterId||beforeId) {
-        const cursor=all.findIndex(r=>r.id===(afterId??beforeId))
+        const cursor=all.findIndex((r: GatewaySpendRow317)=>r.id===(afterId??beforeId))
         if (cursor<0) throw new Error('spend limit cursor not found')
         all=afterId?all.slice(cursor+1):all.slice(0,cursor)
       }
@@ -136,7 +169,7 @@ export async function createGatewaySpendStore317(sql) {
         first_id:data[0]?.id??null,last_id:data.at(-1)?.id??null,
       }
     },
-    async upsert(body,actor) {
+    async upsert(body: GatewaySpendUpsertInput317, actor: string) {
       const {type,id}=keyOf(body.scope,body.period)
       const amount=body.amount===undefined?undefined:toCents317(body.amount)
       const pool=body.pooled_budget
@@ -148,7 +181,7 @@ export async function createGatewaySpendStore317(sql) {
       if(poolPaused!==undefined&&poolPaused!==null&&typeof poolPaused!=='boolean') {
         throw new Error('pooled_budget.paused must be a boolean')
       }
-      return sql.begin(async tx=>{
+      return sql.begin(async (tx: GatewaySpendSql317)=>{
         await tx`SELECT pg_advisory_xact_lock(hashtext(${type+':'+id+':'+body.period}))`
         const existing=(await tx`SELECT * FROM spend_limits
           WHERE scope_type=${type} AND scope_id=${id} AND period=${body.period}
@@ -179,13 +212,14 @@ export async function createGatewaySpendStore317(sql) {
           updated_at=NOW()
         RETURNING *`
         const next=rowLimit(rows[0])
+        if (!next) throw new Error('Spend upsert returned no row')
         await audit(tx,{actor,action:'spend_limit.upsert',
           target:next.id,before:rowLimit(existing),after:next})
         return next
       })
     },
-    async delete(id,actor) {
-      return sql.begin(async tx=>{
+    async delete(id: string, actor: string) {
+      return sql.begin(async (tx: GatewaySpendSql317)=>{
         const rows=await tx`DELETE FROM spend_limits WHERE id=${id} RETURNING *`
         if(!rows.length) return false
         await audit(tx,{actor,action:'spend_limit.delete',target:id,before:rowLimit(rows[0])})
@@ -201,13 +235,13 @@ export async function createGatewaySpendStore317(sql) {
         FROM admin_audit
         WHERE (${afterId??null}::bigint IS NULL OR id<${afterId??null}::bigint)
         ORDER BY id DESC LIMIT ${limit+1}`
-      return {data:rows.slice(0,limit).map(row=>({
+      return {data:rows.slice(0,limit).map((row: {id: string | number | bigint;at: string | Date;actor: string;action: string;target: string | null;before: unknown;after: unknown;reason: string | null})=>({
         type:'audit_event',id:String(row.id),created_at:new Date(row.at).toISOString(),
         actor:row.actor,action:row.action,target_id:row.target,
         before:row.before??null,after:row.after??null,reason:row.reason??null,
       })),has_more:rows.length>limit}
     },
-    async getApplicableCaps(identity) {
+    async getApplicableCaps(identity: GatewaySpendIdentity317) {
       const groups=Array.isArray(identity.groups)?identity.groups:[]
       const rows=await sql`SELECT * FROM spend_limits
         WHERE (scope_type='organization')
@@ -215,21 +249,21 @@ export async function createGatewaySpendStore317(sql) {
           OR (scope_type='rbac_group' AND scope_id=ANY(${sql.array(groups,'TEXT')}))`
       return rows.map(rowLimit)
     },
-    async getSpend(principal,period) {
+    async getSpend(principal: string, period: string): Promise<number> {
       const rows=await sql`SELECT cents FROM spend WHERE principal=${principal} AND period=${period}`
       return rows.length?Number(rows[0].cents):0
     },
-    async getPoolSpend(group,period) {
+    async getPoolSpend(group: string, period: string): Promise<bigint> {
       const rows=await sql`SELECT cents FROM pooled_spend WHERE rbac_group_id=${group} AND period=${period}`
       return rows.length?BigInt(rows[0].cents):0n
     },
-    async addSpend(identity,cents,now=new Date(),payingGroup=null) {
+    async addSpend(identity: GatewaySpendIdentity317, cents: number, now: Date = new Date(), payingGroup: string | null = null): Promise<void> {
       const delta=Number(cents)
       if(!Number.isFinite(delta)||delta<0) throw new Error('spent amount must be a finite nonnegative number of cents')
       if(delta===0) return
       const groups=Array.isArray(identity.groups)?identity.groups:[]
       const periods=['daily','weekly','monthly']
-      await sql.begin(async tx=>{
+      await sql.begin(async (tx: GatewaySpendSql317)=>{
         for(const period of periods) {
           const bucket=spendPeriodStart317(period,now)
           await tx`INSERT INTO spend(principal,period,cents)
