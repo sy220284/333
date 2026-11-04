@@ -1,3 +1,4 @@
+import type { ToolUseContext } from '../Tool.js'
 import { parseFrontmatter } from '../utils/frontmatterParser.js'
 import { parseSlashCommandToolsFromFrontmatter } from '../utils/markdownConfigLoader.js'
 import { executeShellCommandsInPrompt } from '../utils/promptShellExecution.js'
@@ -202,7 +203,7 @@ export default createMovedToPluginCommand({
   progressMessage: 'analyzing code changes for security risks',
   pluginName: 'security-review',
   pluginCommand: 'security-review',
-  async getPromptWhileMarketplaceIsPrivate(_args, context) {
+  async getPromptWhileMarketplaceIsPrivate(_args: string, context: ToolUseContext) {
     // Parse frontmatter from the markdown
     const parsed = parseFrontmatter(SECURITY_REVIEW_MARKDOWN)
 
