@@ -194,7 +194,7 @@ export async function interpolateEvalMock317(template: string, input: Record<str
     const relativeFile = relative(baseDir, file)
     if (!relativeFile || relativeFile === '..' || relativeFile.startsWith('..' + '/') ||
       relativeFile.startsWith('..' + '\\') || isAbsolute(relativeFile)) {
-      error ??= '{{file:' + fileName + '}} names a path outside the mock directory'
+      error ??= '{{file:' + fileName + '}} names a path outside the mock\'s directory'
       continue
     }
     segments.push(openRegular(file, MAX_FIXTURE_BYTES, 'mock fixture').catch(reason => {
