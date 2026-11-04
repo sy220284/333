@@ -76,6 +76,11 @@ test('M1 C19-T02 preload claim validates every field before changing process sta
     assert.deepEqual(Object.fromEntries(mixed.env),
       {'INVALID-NAME':'accepted',GOOD:'kept'})
     
+    const inherited = JSON.parse('{"__proto__":"own-value","KEEP":"ok"}')
+    const checked = validatePreloadClaim317({cwd:home,argv:[],env:inherited})
+    assert.equal(Object.fromEntries(checked.env).__proto__, Object.prototype)
+    assert.deepEqual(checked.env, [['__proto__','own-value'],['KEEP','ok']],
+      'prototype must remain untouched while preserving own JSON keys')
     const before = { CLAUDE_CODE_SESSION_ID: 'old', ANTHROPIC_API_KEY: 'old', KEEP: 'yes' }
     const argv = ['bun', 'cli', '--preload']
     let moved
