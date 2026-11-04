@@ -143,8 +143,19 @@ export function applyPreloadClaim317(claim, {
 export async function runPreload317(args = process.argv.slice(2), {
   onClaim = async claim => {
     applyPreloadClaim317(claim)
-    const { setOriginalCwd } = await import('./state.js')
-    setOriginalCwd(process.cwd())
+    const sessionState = await import('./state.js')
+    const claimedCwd = process.cwd()
+    sessionState.setOriginalCwd(claimedCwd)
+    sessionState.setProjectRoot(claimedCwd)
+    sessionState.setCwdState(claimedCwd)
+    // Official chunk-d1js6kn4.js restores a caller-supplied identity through
+    // the production session store before main() emits any SDK/model messages.
+    // The upstream accepts opaque nonempty session IDs, including non-UUID IDs.
+    if (typeof claim.sessionId === 'string' && claim.sessionId) {
+      const { asSessionId } = await import('../types/ids.js')
+      sessionState.switchSession(asSessionId(claim.sessionId))
+      sessionState.setSessionSource('spare_claim')
+    }
     const { main } = await import('../main.js')
     await main()
   },
