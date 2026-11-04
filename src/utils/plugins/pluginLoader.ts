@@ -152,12 +152,16 @@ export function getVersionedCachePathIn(
   )
   // Sanitize version to prevent path traversal attacks
   const sanitizedVersion = version.replace(/[^a-zA-Z0-9\-_.]/g, '-')
+  const safeVersion =
+    sanitizedVersion === '.' || sanitizedVersion === '..'
+      ? '-'
+      : sanitizedVersion
   return join(
     baseDir,
     'cache',
     sanitizedMarketplace,
     sanitizedPlugin,
-    sanitizedVersion,
+    safeVersion,
   )
 }
 
