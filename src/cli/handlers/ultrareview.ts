@@ -35,7 +35,9 @@ function fail(message: string): void {
   process.exitCode = 1
 }
 function outputError(message: string): void {
-  fail(message)
+  // The official 2.1.317 standalone CLI prefixes launch failures, including
+  // the no-credential branch; workspace trust failures use fail() directly.
+  fail('Ultrareview could not launch: ' + message)
 }
 function isPrNumber(target: string): boolean {
   return /^[1-9]\d*$/.test(target)
