@@ -3365,6 +3365,9 @@ async function run(): Promise<CommanderCommand> {
   program.addOption(new Option('--system-prompt-snapshot <mode>', 'Persist the complete initial system prompt until compaction')
     .choices(['on','off']));
   program.option('--safe-mode', 'Ignore non-managed customizations and run with built-in features');
+  // The official 2.1.317 CLI accepts this SDK/MCP callback option but keeps
+  // it out of --help. The existing print() path consumes options.permissionPromptTool.
+  program.addOption(new Option('--permission-prompt-tool <tool>').hideHelp());
   program.addOption(new Option('--permission-prompts <target>', 'Who answers permission prompts: host or none')
     .choices(['host', 'none']).default('host'));
   program.addOption(new Option('--prompt-suggestions [value]', 'Enable prompt suggestions (stream-json print mode)')

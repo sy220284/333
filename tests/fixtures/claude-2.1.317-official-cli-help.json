@@ -47,7 +47,6 @@
         "--no-session-persistence",
         "--output-format",
         "--permission-mode",
-        "--permission-prompt-tool",
         "--permission-prompts",
         "--plugin-dir",
         "--plugin-url",

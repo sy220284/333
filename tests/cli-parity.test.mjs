@@ -105,3 +105,18 @@ test('bootstrap route classification ignores literal prompt words after --', asy
   assert.equal(classifyStartupArgs(['--worktree=demo', '--tmux']).tmuxWorktreeRequest, true);
   assert.equal(classifyStartupArgs(['--tmux=classic', '-w']).tmuxWorktreeRequest, true);
 });
+
+test('2.1.317 hidden permission callback flag is accepted and reaches the SDK route', () => {
+  const help = compiledHelp(['--permission-prompt-tool', 'mcp__permission', '--help'])
+  assert.match(help, /Usage: claude/)
+  assert.equal(sections(help).flags.includes('--permission-prompt-tool'), false,
+    'the upstream hides this SDK-only flag from public help')
+  if (process.platform === 'linux' && process.env.CLAUDE_TARGET_X64) {
+    const native = nativeHelp(process.env.CLAUDE_TARGET_X64,
+      ['--permission-prompt-tool', 'mcp__permission', '--help'])
+    assert.deepEqual(sections(help), sections(native))
+  }
+  const main = readFileSync(resolve(root, 'src/main.tsx'), 'utf8')
+  assert.match(main, /permissionPromptToolName: options\.permissionPromptTool/,
+    'accepted option was not forwarded to real permission execution')
+})
