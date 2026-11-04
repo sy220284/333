@@ -3,7 +3,7 @@ import { getBridgeBaseUrl } from './bridgeConfig.js'
 import { getSelfBridgeSessionId } from './replBridgeHandle.js'
 import { getClaudeAIOAuthTokens } from '../utils/auth.js'
 import { prepareApiRequest } from '../utils/teleport/api.js'
-import { discoverAccountPeers, peerIdentityKey } from '../utils/accountPeerDirectory.mjs'
+import { discoverAccountPeers, peerIdentityKey } from '../utils/accountPeerDirectory.ts'
 import { logForDebugging } from '../utils/debug.js'
 import { errorMessage } from '../utils/errors.js'
 
