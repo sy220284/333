@@ -209,6 +209,10 @@ jobs:
         continue-on-error: true
         id: acceptance_042
         run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m6-ultrareview-cli-native-parity-317.test.mjs
+      - name: 317账户隐私保护：七工具检查与原版提示文案
+        id: acceptance_046
+        continue-on-error: true
+        run: node --test tests/m1-account-email-disclosure-317.test.mjs
       - name: 317云端审查启动配置与远端轮询一致性
         id: acceptance_045
         continue-on-error: true
@@ -479,6 +483,10 @@ jobs:
           fi
           if [ "${{ steps.acceptance_045.outcome }}" = failure ]; then
             echo "::error::验收失败：317云端审查配置或任务轮询时限不一致"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_046.outcome }}" = failure ]; then
+            echo "::error::验收失败：317账户隐私外发权限保护或原版提示文本不一致"
             failures=$((failures+1))
           fi
           echo "完整验收发现 $failures 项失败"
