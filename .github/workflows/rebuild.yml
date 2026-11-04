@@ -115,6 +115,8 @@ jobs:
         run: |
           bun test tests/m3-mcp-auth-317.test.ts
           node --test tests/m3-mcp-auth-cli-317.test.mjs
+      - name: 317会话命令队列优先级和FIFO真实回归
+        run: node --test tests/m2-queue-priority-317.test.mjs
       - name: 317模型目录、读取边界和嵌套会话
         id: acceptance_008
         continue-on-error: true
