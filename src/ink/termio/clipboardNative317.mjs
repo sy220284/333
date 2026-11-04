@@ -38,6 +38,11 @@ function nativeClipboardAddon() {
   return null
 }
 
+/** Check the actual N-API export surface of the installed Linux addon. */
+export function isLinuxClipboardAddonLoadable() {
+  return nativeClipboardAddon() !== null
+}
+
 /** X11 :0/unix:0 or a Wayland compositor local to the running process. */
 export function isLocalLinuxClipboardDisplay(env = process.env) {
   if (env.DISPLAY) return /^(unix)?:/.test(env.DISPLAY)
