@@ -74,9 +74,22 @@ export function createPluginTestKit317() {
       throw new TypeError('test(name, body) or test(name, options, body): a string, then a function')
     }
     if (!options || typeof options !== 'object' || Array.isArray(options)) {
-      throw new TypeError('test options must be an object')
+      throw new TypeError('test(name, options, body): options is an object')
     }
-    cases.push({ title: [...scopes, name].join(' › '), body, options })
+    const { plugins = [], timeoutMs = 5000, options: values } = options
+    if (!Array.isArray(plugins)) {
+      throw new TypeError('test(name, { plugins }): an array of plugins')
+    }
+    if (typeof timeoutMs !== 'number' || !Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+      throw new TypeError('test(name, { timeoutMs }): a positive finite number')
+    }
+    if (values !== undefined && (!values || typeof values !== 'object' || Array.isArray(values))) {
+      throw new TypeError('test(name, { options }): an object of plugin userConfig values')
+    }
+    cases.push({
+      title: [...scopes, name].join(' > '), body,
+      options: { ...options, plugins, timeoutMs },
+    })
   }
   const test = (name, ...rest) => {
     const [options, body] = rest.length === 1 ? [{}, rest[0]] : rest
