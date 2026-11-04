@@ -227,7 +227,7 @@ def stream(model, text=None, tool=None, chunk_pause=0.0, thinking=False):
     ]
     return b''.join(prefix)
 
-def probe(binary, scenario):
+def probe(binary, scenario, target):
     scene = scenario.split('-')[0]
     columns = 80 if scenario.endswith('-narrow') else 140
     reduced_motion = scenario.endswith('-reduced')
@@ -241,7 +241,7 @@ def probe(binary, scenario):
     }))
     (home / '.claude.json').write_text(json.dumps({
         'hasCompletedOnboarding': True,
-        'lastOnboardingVersion': '2.1.310',
+        'lastOnboardingVersion': target,
         'theme': 'dark',
         'customApiKeyResponses': {'approved': ['local-only'], 'rejected': []},
         'projects': {str(project): {'hasTrustDialogAccepted': True}},
@@ -346,7 +346,7 @@ def probe(binary, scenario):
     answer_seen_at = None
     try:
         while time.monotonic()-started < 42 and proc.poll() is None:
-            ready,_,_ = select.select([master],[],[],0.12)
+            ready,_,_ = select.select([master],[],[],0.04)
             if ready:
                 try:
                     part = os.read(master,65536)
@@ -357,7 +357,7 @@ def probe(binary, scenario):
             if not sent and now-started > 4:
                 os.write(master,(PROMPT+'\r').encode())
                 sent=True
-            if sent and now-last_capture>=0.25:
+            if sent and now-last_capture>=0.08:
                 last_capture=now
                 rows=[line.rstrip() for line in screen_rows(screen) if line.strip()]
                 visible=' '.join(rows[-7:])
@@ -425,7 +425,7 @@ def main():
     parser.add_argument('--candidate',required=True)
     parser.add_argument('--report',required=True)
     parser.add_argument('--target',default='2.1.310',help='Actual reference release; historical tests default to 2.1.310')
-    parser.add_argument('--strict-animations',action='store_true',help='Fail when animated glyph sets differ')
+    parser.add_argument('--strict-animations',action='store_true',help='Check glyph sets after dense capture; keep per-frame mismatch evidence')
     args=parser.parse_args()
     reference_version=subprocess.run([args.reference,'--version'],capture_output=True,text=True,timeout=12)
     if reference_version.returncode != 0 or not reference_version.stdout.strip().startswith(args.target+' '):
@@ -439,8 +439,8 @@ def main():
         'comparison':{},
     }
     for scenario in ('stream','tool','retry','thinking','stream-narrow','stream-reduced'):
-        a=probe(args.reference,scenario)
-        b=probe(args.candidate,scenario)
+        a=probe(args.reference,scenario,args.target)
+        b=probe(args.candidate,scenario,args.target)
         report['official'][scenario]=a
         report['rebuilt'][scenario]=b
         visual = compare_terminal_frames(a, b)
