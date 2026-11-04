@@ -18,19 +18,24 @@ export const toCents317 = value => {
 export function spendPeriodStart317(period, at = new Date()) {
   if (!PERIODS.has(period)) throw new Error('Invalid spend period: '+period)
   const time = new Date(at)
-  time.setUTCHours(0,0,0,0)
-  if (period === 'monthly') time.setUTCDate(1)
-  if (period === 'weekly') {
-    const mondayOffset = (time.getUTCDay()+6) % 7
-    time.setUTCDate(time.getUTCDate()-mondayOffset)
-  }
-  return time.toISOString().slice(0,10)
+  if (period === 'monthly') return time.toISOString().slice(0,7)
+  if (period === 'daily') return time.toISOString().slice(0,10)
+  // The native gateway keys weekly spend by ISO week year and number.
+  const thursday = new Date(Date.UTC(
+    time.getUTCFullYear(),time.getUTCMonth(),time.getUTCDate()))
+  const weekday=thursday.getUTCDay() || 7
+  thursday.setUTCDate(thursday.getUTCDate()+4-weekday)
+  const year=thursday.getUTCFullYear()
+  const first=Date.UTC(year,0,1)
+  const week=Math.ceil(((thursday.getTime()-first)/86400000+1)/7)
+  return year+'-W'+String(week).padStart(2,'0')
 }
 export function spendPeriodReset317(period, at = new Date()) {
-  const start = new Date(spendPeriodStart317(period,at)+'T00:00:00.000Z')
-  if (period === 'monthly') start.setUTCMonth(start.getUTCMonth()+1)
-  else start.setUTCDate(start.getUTCDate()+(period==='weekly'?7:1))
-  return start
+  const current = new Date(at)
+  const year=current.getUTCFullYear(),month=current.getUTCMonth(),day=current.getUTCDate()
+  if (period==='monthly') return new Date(Date.UTC(year,month+1,1))
+  if (period==='daily') return new Date(Date.UTC(year,month,day+1))
+  return new Date(Date.UTC(year,month,day+8-(current.getUTCDay()||7)))
 }
 function rowLimit(row) {
   if (!row) return null
@@ -84,7 +89,7 @@ export async function createGatewaySpendStore317(sql) {
   await sql`
     CREATE TABLE IF NOT EXISTS spend (
       principal TEXT NOT NULL, period TEXT NOT NULL,
-      cents BIGINT NOT NULL DEFAULT 0,
+      cents DOUBLE PRECISION NOT NULL DEFAULT 0,
       PRIMARY KEY (principal,period)
     )`
   await sql`
@@ -212,29 +217,29 @@ export async function createGatewaySpendStore317(sql) {
     },
     async getSpend(principal,period) {
       const rows=await sql`SELECT cents FROM spend WHERE principal=${principal} AND period=${period}`
-      return rows.length?BigInt(rows[0].cents):0n
+      return rows.length?Number(rows[0].cents):0
     },
     async getPoolSpend(group,period) {
       const rows=await sql`SELECT cents FROM pooled_spend WHERE rbac_group_id=${group} AND period=${period}`
       return rows.length?BigInt(rows[0].cents):0n
     },
     async addSpend(identity,cents,now=new Date()) {
-      const delta=BigInt(cents)
-      if(delta<0n) throw new Error('spent amount must not be negative')
-      if(delta===0n) return
+      const delta=Number(cents)
+      if(!Number.isFinite(delta)||delta<0) throw new Error('spent amount must be a finite nonnegative number of cents')
+      if(delta===0) return
       const groups=Array.isArray(identity.groups)?identity.groups:[]
       const periods=['daily','weekly','monthly']
       await sql.begin(async tx=>{
         for(const period of periods) {
           const bucket=spendPeriodStart317(period,now)
           await tx`INSERT INTO spend(principal,period,cents)
-            VALUES(${identity.sub},${bucket},${delta.toString()})
+            VALUES(${identity.sub},${bucket},${delta})
             ON CONFLICT(principal,period) DO UPDATE SET cents=spend.cents+EXCLUDED.cents`
         }
         const monthly=spendPeriodStart317('monthly',now)
         for(const group of new Set(groups)) {
           await tx`INSERT INTO pooled_spend(rbac_group_id,period,cents)
-            VALUES(${group},${monthly},${delta.toString()})
+            VALUES(${group},${monthly},${delta})
             ON CONFLICT(rbac_group_id,period) DO UPDATE SET cents=pooled_spend.cents+EXCLUDED.cents`
         }
       })
