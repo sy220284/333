@@ -83,6 +83,13 @@ test('317 native and rebuilt CLI reject changed command digests and execute only
       assert.equal(grant.json?.outcome, 'ok', side)
       const settings = JSON.parse(readFileSync(join(home, 'settings.json'), 'utf8'))
       assert.equal(settings.enabledPlugins?.['source-audit@source-market'], true, side)
+      const uninstall = run(side, root, home, ['plugin', 'uninstall', 'source-audit@source-market', '--json'])
+      assert.equal(uninstall.status, 0, side + ' uninstall: ' + uninstall.stderr)
+      const yes = run(side, root, home, [
+        'plugin', 'install', 'source-audit@source-market', '--yes', '--json',
+      ])
+      assert.equal(yes.status, 0, side + ' yes: ' + yes.stderr + yes.stdout)
+      assert.equal(yes.json?.outcome, 'ok', side)
     }
   } finally {
     rmSync(root, { recursive: true, force: true })
