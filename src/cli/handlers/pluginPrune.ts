@@ -1,4 +1,5 @@
 import { createInterface } from 'node:readline/promises'
+import { cliError, cliOk } from '../exit.js'
 import {
   getProjectPathForScope,
   uninstallPluginOp,
@@ -17,9 +18,7 @@ export async function pluginPruneHandler(options: {
 }): Promise<void> {
   const requestedScope = options.scope ?? 'user'
   if (!VALID_INSTALLABLE_SCOPES.includes(requestedScope as Scope)) {
-    process.stderr.write(`Invalid scope: ${requestedScope}. Must be one of: user, project, local.\n`)
-    process.exitCode = 1
-    return
+    return cliError(`Invalid scope: ${requestedScope}. Must be one of: user, project, local.`)
   }
   const scope = requestedScope as Scope
   const projectPath = getProjectPathForScope(scope)
@@ -45,16 +44,14 @@ export async function pluginPruneHandler(options: {
         )
       })()
   if (scan.unloadable.length) {
-    process.stdout.write(`Skipped — cannot determine orphans: ${scan.unloadable.join(', ')} failed to load. Fix or uninstall, then retry.\n`)
-    return
+    return cliOk(`Skipped — cannot determine orphans: ${scan.unloadable.join(', ')} failed to load. Fix or uninstall, then retry.`)
   }
   if (!scan.orphans.size) {
-    process.stdout.write(
+    return cliOk(
       scan.autoCount === 0
-        ? `Nothing to prune (no auto-installed plugins at ${scope} scope).\n`
-        : `Nothing to prune (${scan.autoCount} auto-installed ${scan.autoCount === 1 ? 'plugin' : 'plugins'} at ${scope} scope, all still needed).\n`,
+        ? `Nothing to prune (no auto-installed plugins at ${scope} scope).`
+        : `Nothing to prune (${scan.autoCount} auto-installed ${scan.autoCount === 1 ? 'plugin' : 'plugins'} at ${scope} scope, all still needed).`,
     )
-    return
   }
   const targets = [...scan.orphans]
   const details = targets.map(id => {
@@ -65,13 +62,11 @@ export async function pluginPruneHandler(options: {
   })
   const preview = `${targets.length} auto-installed ${targets.length === 1 ? 'plugin' : 'plugins'} no longer needed at ${scope} scope:\n${details.join('\n')}`
   if (options.dryRun) {
-    process.stdout.write(preview + '\n(dry run — nothing removed)\n')
-    return
+    return cliOk(preview + '\n(dry run — nothing removed)')
   }
   if (!options.yes) {
     if (!process.stdin.isTTY || !process.stdout.isTTY) {
-      process.stdout.write(preview + `\nNot a TTY — run \`claude plugin prune${scope === 'user' ? '' : ` --scope ${scope}`} -y\` to remove.\n`)
-      return
+      return cliOk(preview + `\nNot a TTY — run \`claude plugin prune${scope === 'user' ? '' : ` --scope ${scope}`} -y\` to remove.`)
     }
     const rl = createInterface({ input: process.stdin, output: process.stdout })
     let reply: string
@@ -81,19 +76,16 @@ export async function pluginPruneHandler(options: {
       rl.close()
     }
     if (!/^(y|yes)$/i.test(reply.trim())) {
-      process.stdout.write('Aborted.\n')
-      return
+      return cliOk('Aborted.')
     }
   }
   const removed: string[] = []
   for (const id of targets) {
     const result = await uninstallPluginOp(id, scope, true)
     if (!result.success) {
-      process.stderr.write(`Failed to prune ${id}: ${result.message}\n`)
-      process.exitCode = 1
-      return
+      return cliError(`Failed to prune ${id}: ${result.message}`)
     }
     removed.push(id.split('@')[0] ?? id)
   }
-  process.stdout.write(`Removed ${removed.length} auto-installed ${removed.length === 1 ? 'plugin' : 'plugins'}: ${removed.join(', ')}\n`)
+  return cliOk(`Removed ${removed.length} auto-installed ${removed.length === 1 ? 'plugin' : 'plugins'}: ${removed.join(', ')}`)
 }
