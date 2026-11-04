@@ -134,6 +134,8 @@ jobs:
         run: node --test tests/m4-remote-poll-lifecycle-317.test.mjs
       - name: 317会话队列UUID日志与多模态保护
         run: node --test tests/m2-queue-operation-317.test.mjs
+      - name: CCR恢复原子替换与路径安全
+        run: node --test tests/m4-ccr-transcript-restore-317.test.mjs
       - name: 317模型目录、读取边界和嵌套会话
         id: acceptance_008
         continue-on-error: true
