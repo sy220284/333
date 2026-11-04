@@ -56,7 +56,7 @@ export async function writeStartupFrames(frames: readonly unknown[], { goesOn = 
   } catch { return false } finally { clearTimeout(timer) }
 }
 export async function writeStartupFailureResult(input: StartupFailureInput317, { argv = process.argv.slice(2), env = process.env, stdout = process.stdout }: StartupFailureWriteOptions317 = {}): Promise<boolean> {
-  if (!ALWAYS_RESULT.has(input.reason) && !isStartupFailureResultRequested(env)) return false
+  if (!ALWAYS_RESULT.has(input.reason ?? '') && !isStartupFailureResultRequested(env)) return false
   return writeStartupFrames([buildStartupFailureResult({ ...input, sessionId: startupResultSessionId(input.sessionId, argv) })], { argv, stdout })
 }
 export function getStartupCwdError(getCwd: () => unknown = () => process.cwd()): string | undefined {
