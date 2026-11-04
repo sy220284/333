@@ -4,9 +4,11 @@
  * to reconcile interrupted turns and queued peer notifications on resume.
  */
 export function createQueueOperationRecord(operation, command, sessionId, now = new Date(), metadata = {}) {
+  const screening = command?.promptSubmitted === undefined &&
+    (command?.screeningPending === true || command?.screeningOwed === true)
   const content = typeof command?.promptSubmitted?.text === 'string'
     ? command.promptSubmitted.text
-    : typeof command?.value === 'string' ? command.value : undefined
+    : typeof command?.value === 'string' && !screening ? command.value : undefined
   const uuid = operation === 'remove'
     ? command?.attachmentSourceUuid ?? command?.uuid
     : command?.uuid
