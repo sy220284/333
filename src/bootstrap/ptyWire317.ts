@@ -4,7 +4,7 @@ export const PTY_CTRL_KIND_317 = 1
 export const PTY_MAX_FRAME_BYTES_317 = 1_048_576
 export const PTY_REPLAY_BYTES_317 = 262_144
 export const PTY_MAX_DIMENSION_317 = 10_000
-export type PtyFrame317 = { kind: 0; payload: Buffer } | { kind: 1; ctrl: Record<string, unknown> }
+export type PtyFrame317 = { kind: 0; payload: Buffer } | { kind: 1; ctrl: unknown }
 export function encodePtyData317(value: Buffer | string): Buffer {
   return encode(PTY_DATA_KIND_317, typeof value === 'string' ? Buffer.from(value) : value)
 }
@@ -12,7 +12,7 @@ export function encodePtyControl317(value: Record<string, unknown>): Buffer {
   return encode(PTY_CTRL_KIND_317, Buffer.from(JSON.stringify(value)))
 }
 function encode(kind: number, bytes: Buffer): Buffer {
-  if (bytes.length > PTY_MAX_FRAME_BYTES_317) throw new RangeError('PTY frame too large')
+  // Official upstream applies the 1 MiB limit only while receiving frames.
   const frame = Buffer.allocUnsafe(bytes.length + 5)
   frame.writeUInt32BE(bytes.length, 0)
   frame.writeUInt8(kind, 4)
@@ -39,8 +39,7 @@ export function createPtyFrameDecoder317(onFrame: (frame: PtyFrame317) => void,
       else if (type === PTY_CTRL_KIND_317) {
         try {
           const ctrl: unknown = JSON.parse(payload.toString('utf8'))
-          if (!ctrl || typeof ctrl !== 'object' || Array.isArray(ctrl)) throw Error('bad ctrl object')
-          onFrame({ kind: 1, ctrl: ctrl as Record<string, unknown> })
+          onFrame({ kind: 1, ctrl })
         } catch {
           ended = true; onFailure('bad ctrl json')
           return
