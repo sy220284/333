@@ -19,7 +19,8 @@ export function signGatewaySession317(claims, secret, issuer, ttlHours = 12) {
     ...claims, iss: issuer, iat: issuedAt, exp: issuedAt + Math.floor(ttlHours * 3600),
   })
   const body = header + '.' + payload
-  const signature = createHmac('sha256', secret).update(body).digest('base64url')
+  const signingSecret = Array.isArray(secret) ? secret[0] : secret
+  const signature = createHmac('sha256', signingSecret).update(body).digest('base64url')
   return body + '.' + signature
 }
 
@@ -32,11 +33,20 @@ export function verifyGatewaySession317(jwt, secret, issuer) {
     header = decode(parts[0]); claims = decode(parts[1])
   } catch { return null }
   if (header.alg !== 'HS256' || header.typ !== 'JWT') return null
-  const expected = createHmac('sha256', secret).update(parts[0] + '.' + parts[1]).digest()
   let actual
   try { actual = Buffer.from(parts[2], 'base64url') }
   catch { return null }
-  if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return null
+  if (actual.length !== 32) return null
+  // The first secret signs newly minted sessions; all configured secrets can
+  // verify old tokens during a controlled key rotation. Evaluate every key.
+  const secrets = Array.isArray(secret) ? secret : [secret]
+  let verified = 0
+  for (const candidate of secrets) {
+    const expected = createHmac('sha256', candidate)
+      .update(parts[0] + '.' + parts[1]).digest()
+    verified |= Number(timingSafeEqual(actual, expected))
+  }
+  if (!verified) return null
   if (claims.iss !== issuer || typeof claims.sub !== 'string' || !claims.sub ||
     typeof claims.exp !== 'number' || claims.exp <= now() ||
     typeof claims.iat !== 'number' || claims.iat > now() + 60) return null
