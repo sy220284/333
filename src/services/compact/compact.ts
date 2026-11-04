@@ -19,7 +19,7 @@ import {
 import {
   collectPreservedReadFilePaths,
   hasFullReadResultContent,
-} from './preservedReadPaths.mjs'
+} from './preservedReadPaths.ts'
 import { ToolSearchTool } from '../../tools/ToolSearchTool/ToolSearchTool.js'
 import type { AgentId } from '../../types/ids.js'
 import type {
