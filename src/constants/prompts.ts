@@ -57,7 +57,9 @@ import {
 import { SLEEP_TOOL_NAME } from '../tools/SleepTool/prompt.js'
 import { TICK_TAG } from './xml.js'
 import { logForDebugging } from '../utils/debug.js'
-import { loadMemoryPrompt } from '../memdir/memdir.js'
+import { loadMemoryPrompt, ensureMemoryDirExists } from '../memdir/memdir.js'
+import { getAutoMemPath, isAutoMemoryEnabled } from '../memdir/paths.js'
+import { build317AgentPrompt } from './agentPrompt317.js'
 import { isUndercover } from '../utils/undercover.js'
 import { isMcpInstructionsDeltaEnabled } from '../utils/mcpInstructionsDelta.js'
 import { getAntModelOverrideConfig } from '../utils/model/antModels.js'
@@ -404,6 +406,32 @@ export async function getSystemPrompt(
     return [
       `You are Claude Code, Anthropic's official CLI for Claude.\n\nCWD: ${getCwd()}\nDate: ${getSessionStartDate()}`,
     ]
+  }
+
+  // Native 2.1.317 uses a compact Agent SDK prompt for headless sessions.
+  // Keep the existing dynamic memory, language, output-style and MCP sources,
+  // but assemble one coherent section instead of the former static/dynamic
+  // 2.1.88 text split. Interactive and feature-gated sessions keep their own
+  // dedicated prompts until separately verified against the official PTY.
+  if (getIsNonInteractiveSession() &&
+      typeof MACRO !== 'undefined' &&
+      MACRO.VERSION === '2.1.317') {
+    const outputStyleConfig = await getOutputStyleConfig()
+    const memoryPath = isAutoMemoryEnabled() ? getAutoMemPath() : undefined
+    if (memoryPath) await ensureMemoryDirExists(memoryPath)
+    return [build317AgentPrompt({
+      model,
+      cwd: getCwd(),
+      availableTools: tools.map(tool => tool.name),
+      memoryPath,
+      extraDirectories: additionalWorkingDirectories,
+      languageGuidance: getLanguageSection(),
+      outputStyleGuidance: getOutputStyleSection(outputStyleConfig),
+      mcpGuidance: isMcpInstructionsDeltaEnabled()
+        ? null
+        : getMcpInstructionsSection(mcpClients),
+      scratchpadGuidance: getScratchpadInstructions(),
+    })]
   }
 
   const cwd = getCwd()
