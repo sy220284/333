@@ -157,9 +157,12 @@ export function validateGatewayConfig317(value: unknown) {
     const client_id = nonempty(rawOidc.client_id, 'oidc.client_id')
     const issuer = nonempty(rawOidc.issuer, 'oidc.issuer')
     safeHttps(issuer, 'oidc.issuer')
-    const client_secret = rawOidc.client_secret
-    if (client_secret !== undefined && typeof client_secret !== 'string')
-      throw new Error('oidc.client_secret must be a string')
+    let client_secret: string | undefined
+    if (rawOidc.client_secret !== undefined) {
+      if (typeof rawOidc.client_secret !== 'string')
+        throw new Error('oidc.client_secret must be a string')
+      client_secret = rawOidc.client_secret
+    }
     const scopes = rawOidc.scopes
     if (scopes !== undefined && (!Array.isArray(scopes) ||
       scopes.some((scope: unknown) => typeof scope !== 'string')))
