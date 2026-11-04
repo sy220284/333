@@ -37,13 +37,58 @@ function validateUpstream(item, names) {
   const name = nonempty(item.name, 'upstream.name')
   if (names.has(name)) throw new Error('Duplicate upstream: ' + name)
   names.add(name)
-  if (item.provider !== 'anthropic') {
-    throw new Error('The selected gateway build does not yet implement upstream provider: ' + item.provider)
+  const provider = item.provider
+  const types = new Set([
+    'anthropic', 'bedrock', 'mantle', 'anthropicAws',
+    'anthropicGoogleCloud', 'vertex', 'foundry',
+  ])
+  if (!types.has(provider)) throw new Error('Unsupported 2.1.317 upstream provider: ' + provider)
+  const auth = item.auth ?? {}
+  if (!auth || typeof auth !== 'object' || Array.isArray(auth))
+    throw new Error('upstream.auth must be a mapping')
+  const validCredential = value => typeof value === 'string' && value.length > 0
+  const awsAccess = validCredential(auth.aws_access_key_id)
+  const awsSecret = validCredential(auth.aws_secret_access_key)
+  if (provider === 'anthropic') {
+    const direct = validCredential(auth.api_key) || validCredential(auth.oauth_token)
+    const wif = validCredential(auth.federation_rule_id) &&
+      validCredential(auth.organization_id) && validCredential(auth.identity_token_file)
+    if (!direct && !wif)
+      throw new Error('Anthropic upstream requires API key, OAuth token or complete OIDC federation credentials')
+  } else if (provider === 'foundry') {
+    nonempty(item.resource,'foundry.resource')
+    if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,62}[A-Za-z0-9]$/.test(item.resource))
+      throw new Error('foundry.resource must be 2–64 letters, digits or hyphens')
+    if (!validCredential(auth.api_key) && auth.use_azure_ad !== true)
+      throw new Error('foundry auth requires api_key or use_azure_ad: true')
+  } else {
+    if (provider === 'bedrock' || provider === 'mantle' || provider === 'anthropicAws') {
+      nonempty(item.region, 'upstream.region')
+      if (provider !== 'bedrock' && !/^[a-z0-9-]+$/.test(item.region))
+        throw new Error('AWS region must contain lowercase letters, digits and hyphens')
+      if (awsAccess !== awsSecret)
+        throw new Error('AWS access key and secret must be configured together')
+      if (auth.aws_session_token && !awsAccess)
+        throw new Error('AWS session token requires access key and secret')
+      if (provider === 'bedrock' && item.assume_role && auth.aws_bearer_token)
+        throw new Error('bedrock assume_role requires SigV4 credentials')
+    }
+    if (provider === 'mantle' && (!Array.isArray(item.models) || item.models.length === 0))
+      throw new Error('mantle upstream requires a models list')
+    if (provider === 'anthropicAws')
+      nonempty(item.workspace_id,'anthropicAws.workspace_id')
+    if (provider === 'anthropicGoogleCloud') {
+      nonempty(item.project_id,'anthropicGoogleCloud.project_id')
+      nonempty(item.workspace_id,'anthropicGoogleCloud.workspace_id')
+      item = {...item, location: item.location ?? 'global'}
+    }
+    if (provider === 'vertex') {
+      nonempty(item.project_id,'vertex.project_id')
+      nonempty(item.region,'vertex.region')
+    }
   }
-  if (!item.auth || (typeof item.auth.api_key !== 'string' && typeof item.auth.oauth_token !== 'string')) {
-    throw new Error('Anthropic upstream ' + name + ' requires auth.api_key or auth.oauth_token')
-  }
-  const base_url = safeHttps(item.base_url ?? 'https://api.anthropic.com', 'upstream.base_url')
+  const base_url = item.base_url !== undefined ? safeHttps(item.base_url, 'upstream.base_url')
+    : provider === 'anthropic' ? 'https://api.anthropic.com' : undefined
   for (const field of ['models','groups']) {
     if (item[field] !== undefined && (!Array.isArray(item[field]) || !item[field].length ||
       item[field].some(x => typeof x !== 'string' || !x))) {
@@ -52,7 +97,7 @@ function validateUpstream(item, names) {
   }
   const headers = item.headers ?? {}
   if (!headers || typeof headers !== 'object' || Array.isArray(headers)) throw new Error('upstream.headers must be a mapping')
-  const reserved = /^(authorization|host|connection|content-length|transfer-encoding|x-api-key|anthropic-|x-stainless-|x-claude-gateway-)/i
+  const reserved = /^(authorization|proxy-authorization|host|connection|content-length|content-encoding|transfer-encoding|x-api-key|api-key|x-litellm-end-user-id|anthropic-|x-stainless-|x-claude-gateway-|x-goog-|x-amz-|x-amzn-)/i
   for (const [key, value] of Object.entries(headers)) {
     if (reserved.test(key) || !/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/.test(key)) {
       throw new Error('upstream.headers contains forbidden header ' + key)
