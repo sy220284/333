@@ -129,6 +129,9 @@ jobs:
       - name: 317插件prune官方x64对照验收
         if: runner.os == 'Linux'
         run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m4-plugin-prune-native-parity-317.test.mjs
+      - name: 317插件tag官方x64发布链路对照
+        if: runner.os == 'Linux'
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-tag-native-parity-317.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
         run: node --test tests/cli-parity.test.mjs
       - name: 复核多级模型回退与自动压缩真实参数语义
