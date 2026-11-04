@@ -6,8 +6,8 @@
 import { readFile, realpath, stat } from 'node:fs/promises'
 import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path'
 import * as vm from 'node:vm'
-import { createPluginTestKit317 } from './pluginTestKit317.mjs'
-import { createPluginTestTimers317 } from './pluginTestTimers317.mjs'
+import { createPluginTestKit317 } from './pluginTestKit317.ts'
+import { createPluginTestTimers317 } from './pluginTestTimers317.ts'
 
 const EXTENSIONS = ['', '.js', '.mjs', '.ts', '.tsx', '/index.js', '/index.ts']
 const isInside = (root, target) => {
