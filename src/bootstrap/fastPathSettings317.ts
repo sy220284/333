@@ -13,7 +13,11 @@ export type RequiredVersionPolicy317 = {
 export function checkRequiredFastPathVersion317(
   currentVersion: string,
   policy: RequiredVersionPolicy317 | null,
+  topLevelCommand?: string,
 ): string | null {
+  // Updating/repairing Claude must remain possible under version restrictions.
+  if (topLevelCommand === 'update' || topLevelCommand === 'install' || topLevelCommand === 'doctor')
+    return null
   if (!policy || (!policy.requiredMinimumVersion && !policy.requiredMaximumVersion))
     return null
   const current = semver.parse(currentVersion)?.version
