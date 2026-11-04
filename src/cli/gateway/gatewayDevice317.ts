@@ -5,35 +5,73 @@
  */
 import { randomBytes } from 'node:crypto'
 import { signGatewaySession317, createGatewayOidcLogin317 } from './gatewayAuth317.ts'
+import type { GatewayOidcProvider317 } from './gatewayAuth317.ts'
+
+type GatewayDeviceClaims317 = Record<string, unknown> & { sub: string }
+type GatewayDeviceStatus317 =
+  | { status: 'pending' | 'slow_down' | 'expired' | 'denied' }
+  | { status: 'approved'; claims: GatewayDeviceClaims317 }
+type GatewayRateLimit317 = { max: number; window_seconds: number }
+type GatewayDeviceConfig317 = {
+  session: { jwt_secret: string | string[]; ttl_hours: number }
+  rate_limits: {
+    device_authorization: GatewayRateLimit317
+    device_verify: GatewayRateLimit317
+  }
+  oidc?: {
+    groups_claim?: string
+    email_claim?: string
+    allowed_email_domains?: string[]
+    allowed_groups?: string[]
+  }
+}
+type GatewayDeviceStore317 = {
+  incrementRateLimit(kind: string, clientIp: string | null, windowSeconds: number): Promise<number>
+  audit(event: string, subject: string | null, requestId: string | null,
+    metadata: Record<string, unknown>): Promise<void>
+  newDevice(deviceCode: string, userCode: string, expiresSeconds: number): Promise<void>
+  denyCode(userCode: string): Promise<boolean>
+  approveCode(userCode: string, claims: GatewayDeviceClaims317): Promise<boolean>
+  consumeDevice(deviceCode: string): Promise<GatewayDeviceStatus317>
+  createRefresh(token: string, claims: GatewayDeviceClaims317, expiresSeconds: number): Promise<void>
+  rotateRefresh(token: string): Promise<GatewayDeviceClaims317 | null>
+  revoke(token: string): Promise<void>
+}
+export type GatewayDeviceDeps317 = {
+  publicUrl: string
+  config: GatewayDeviceConfig317
+  oidc: GatewayOidcProvider317 | null
+  store: GatewayDeviceStore317
+}
 
 const base20 = 'BCDFGHJKLMNPQRSTVWXZ'
 const noStore = { 'cache-control': 'no-store', pragma: 'no-cache' }
-const makeJson = (payload, status = 200) => Response.json(payload, { status, headers: noStore })
+const makeJson = (payload: Record<string, unknown>, status: number = 200): Response => Response.json(payload, { status, headers: noStore })
 const errorJson = (code: string, status = 400, message?: string) => makeJson({
   error: code, ...(message && { error_description: message }),
 }, status)
-const escape = data => String(data).replace(/[&<>"']/g, char => ({
+const escape = (data: string): string => String(data).replace(/[&<>"']/g, char => ({
   '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;',
-}[char]))
+} as Record<string, string>)[char]))
 const randomCode = () => Array.from(randomBytes(8), b => base20[b % base20.length])
   .join('').replace(/^(.{4})/, '$1-')
-const form = async request => {
+const form = async (request: Request): Promise<URLSearchParams> => {
   const text = await request.text()
   if (text.length > 16384) throw new Error('OAuth form exceeds 16 KiB')
   return new URLSearchParams(text)
 }
 
-export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
+export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }: GatewayDeviceDeps317) {
   const idp = oidc
     ? createGatewayOidcLogin317(oidc, { publicUrl })
     : null
-  const pending = new Map()
-  const limit = async (kind, clientIp, configured) => {
+  const pending = new Map<string, {userCode: string; expires: number}>()
+  const limit = async (kind: string, clientIp: string | null, configured: GatewayRateLimit317): Promise<boolean> => {
     const count = await store.incrementRateLimit(kind, clientIp, configured.window_seconds)
     return count <= configured.max
   }
   // Same-origin browser form enforcement before an authorization state is created.
-  const sameOrigin = request => {
+  const sameOrigin = (request: Request): boolean => {
     const fetchSite = request.headers.get('sec-fetch-site')
     if (fetchSite !== null) return fetchSite === 'same-origin' || fetchSite === 'none'
     return request.headers.get('origin') === publicUrl
@@ -54,7 +92,7 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
     scopes_supported: ['openid','profile','email'],
     gateway_protocol_version: 1,
   })
-  const createTokens = async claims => {
+  const createTokens = async (claims: GatewayDeviceClaims317): Promise<Response> => {
     const permitted = {
       sub: claims.sub,
       ...(claims.email && { email: claims.email }),
@@ -71,7 +109,7 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
       expires_in: Math.floor(config.session.ttl_hours * 3600),
     })
   }
-  async function deviceAuthorization(request, clientIp) {
+  async function deviceAuthorization(request: Request, clientIp: string | null): Promise<Response> {
     if (!idp) return errorJson('unsupported_grant_type')
     if (!await limit('devauth', clientIp, config.rate_limits.device_authorization)) {
       await store.audit('device.authorize', null, null, {result:'rate_limited',client_ip:clientIp})
@@ -91,7 +129,7 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
       expires_in: 600, interval: 5,
     })
   }
-  function verificationPage(request) {
+  function verificationPage(request: Request): Response {
     if (!idp) return new Response('OIDC login is not configured', { status: 404 })
     const url = new URL(request.url)
     const code = url.searchParams.get('user_code') ?? ''
@@ -109,7 +147,7 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
       'x-frame-options':'DENY',
     } })
   }
-  async function verifyDevice(request, clientIp) {
+  async function verifyDevice(request: Request, clientIp: string | null): Promise<Response> {
     if (!sameOrigin(request)) {
       await store.audit('device.verify', null, null, {result:'csrf_rejected',client_ip:clientIp})
       return new Response('Device approval requires a same-origin browser form', {status:403})
@@ -123,12 +161,14 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
     if (userCode.length !== 8 || [...userCode].some(x => !base20.includes(x))) {
       return errorJson('invalid_request', 400, 'Invalid device code')
     }
+    if (!idp) return errorJson('unsupported_grant_type')
     const url = idp.start()
     const state = new URL(url).searchParams.get('state')
+    if (!state) throw new Error('OIDC login did not return a state')
     pending.set(state, { userCode, expires: Date.now() + 600000 })
     return Response.redirect(url, 303)
   }
-  async function denyDevice(request,clientIp) {
+  async function denyDevice(request: Request, clientIp: string | null): Promise<Response> {
     if (!sameOrigin(request)) return new Response('Invalid device approval origin',{status:403})
     if (!await limit('device',clientIp,config.rate_limits.device_verify)) return errorJson('slow_down',429)
     const body = await form(request)
@@ -140,19 +180,21 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
       status:denied?200:400,headers:{'cache-control':'no-store'},
     })
   }
-  async function callback(request) {
+  async function callback(request: Request): Promise<Response> {
     const url = new URL(request.url)
     const state = url.searchParams.get('state')
     const code = url.searchParams.get('code')
+    if (!state || !code) return new Response('Expired or invalid authorization state', {status:400})
     const item = pending.get(state)
-    if (!state || !code || !item || item.expires <= Date.now()) {
+    if (!item || item.expires <= Date.now()) {
       return new Response('Expired or invalid authorization state', { status: 400 })
     }
     pending.delete(state)
+    if (!idp) return errorJson('unsupported_grant_type')
     const identity = await idp.finish(state, code)
     const groupsClaim = config.oidc?.groups_claim ?? 'groups'
     const rawGroups = identity[groupsClaim]
-    const groups = Array.isArray(rawGroups) ? rawGroups.filter(x => typeof x === 'string')
+    const groups = Array.isArray(rawGroups) ? rawGroups.filter((x: unknown): x is string => typeof x === 'string')
       : typeof rawGroups === 'string' ? [rawGroups] : []
     const rawEmail = identity[config.oidc?.email_claim ?? 'email']
     const email = typeof rawEmail === 'string' ? rawEmail : undefined
@@ -176,7 +218,7 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
       },
     })
   }
-  async function token(request) {
+  async function token(request: Request): Promise<Response> {
     const input = await form(request)
     const grant = input.get('grant_type')
     if (grant === 'urn:ietf:params:oauth:grant-type:device_code') {
@@ -198,7 +240,7 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }) {
     }
     return errorJson('unsupported_grant_type')
   }
-  async function revoke(request) {
+  async function revoke(request: Request): Promise<Response> {
     const data = await form(request)
     const token = data.get('token')
     if (token) await store.revoke(token)
