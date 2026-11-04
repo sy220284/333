@@ -93,7 +93,7 @@ async function createBedrockClient() {
   return new BedrockClient(clientConfig)
 }
 
-export async function createBedrockRuntimeClient() {
+export async function createBedrockRuntimeClient(): Promise<import('@aws-sdk/client-bedrock-runtime').BedrockRuntimeClient> {
   const { BedrockRuntimeClient } = await import(
     '@aws-sdk/client-bedrock-runtime'
   )
