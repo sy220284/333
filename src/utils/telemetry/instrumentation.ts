@@ -61,7 +61,7 @@ import { isBetaTracingEnabled } from './betaSessionTracing.js'
 import { BigQueryMetricsExporter } from './bigqueryExporter.js'
 import { ClaudeCodeDiagLogger } from './logger.js'
 import { initializePerfettoTracing } from './perfettoTracing.js'
-import { resolveOTLPTimeoutMs } from './otlpTimeout.mjs'
+import { resolveOTLPTimeoutMs } from './otlpTimeout.ts'
 import {
   endInteractionSpan,
   isEnhancedTelemetryEnabled,
