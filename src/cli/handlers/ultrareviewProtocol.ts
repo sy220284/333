@@ -10,7 +10,7 @@ const severitySymbol: Record<string, string> = {
   nit: '🟡',
   pre_existing: '🟣',
 }
-export function extractTag(text, tag) {
+export function extractTag(text: string, tag: string): string | undefined {
   const startTag = '<' + tag + '>'
   const endTag = '</' + tag + '>'
   const end = text.lastIndexOf(endTag)
@@ -22,7 +22,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
-export function textOfReviewEvent(event) {
+export function textOfReviewEvent(event: unknown): string {
   if (!isRecord(event)) return ''
   if ((event.subtype === 'hook_response' || event.subtype === 'hook_progress') &&
     typeof event.stdout === 'string') return event.stdout
@@ -32,7 +32,7 @@ export function textOfReviewEvent(event) {
     ? content.filter(isRecord).filter(part => part.type === 'text').map(part => part.text == null ? '' : String(part.text)).join('\n')
     : ''
 }
-export function extractLatestRemoteReview(events) {
+export function extractLatestRemoteReview(events: readonly unknown[]): string | undefined {
   for (let i = events.length - 1; i >= 0; i--) {
     const result = extractTag(textOfReviewEvent(events[i]), REMOTE_REVIEW_TAG)
     if (result) return result
@@ -43,7 +43,7 @@ export function extractLatestRemoteReview(events) {
     .map(textOfReviewEvent).join('')
   return extractTag(concatenated, REMOTE_REVIEW_TAG)
 }
-export function formatRemoteReviewFindings(text) {
+export function formatRemoteReviewFindings(text: string): string {
   let parsed
   try { parsed = JSON.parse(text) } catch { return text }
   if (!Array.isArray(parsed)) return text
