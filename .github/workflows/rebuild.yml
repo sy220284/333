@@ -76,6 +76,10 @@ jobs:
         run: node --test tests/distribution-isolation.test.mjs
       - name: 317代理绕过和远程消息上传
         run: bun test tests/m3-proxy-http-317.test.ts tests/m1-ccr-close.test.ts
+      - name: 317启动参数、安全边界和错误协议
+        run: |
+          node --test tests/m1-startup-argv-317.test.mjs tests/m1-startup-cli-317.test.mjs tests/m1-headless-startup-error-314.test.mjs
+          bun test tests/m1-startup-sdk-317.test.ts
       - name: 317 MCP登录、退出和授权码交换
         run: |
           bun test tests/m3-mcp-auth-317.test.ts

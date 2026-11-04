@@ -2271,7 +2271,24 @@
           "implementation": "移植配置初始化、功能开关、懒加载、收信服务和退出清理的新版顺序，拆开导入副作用，解决初始化循环",
           "associated_updates": "entrypoint、setup、环境读取、错误展示及后台服务入口",
           "acceptance": "正常启动、帮助、非交互、显式服务失败和退出均有正确输出及退出码",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "移植317早期argv扫描规则并接通eagerParseCliFlag、启动模式和SIGINT判定",
+            "移植URI追加参数保护及Windows搜索路径保护的提前设置",
+            "移植cwd失效检测、可选stream-json启动失败结果、会话ID选择及SDK字段",
+            "修正--后desktop/bare文本被当成启动开关"
+          ],
+          "remaining_scope": [
+            "全部能力开关、Runner/存储引导和剩余专用启动快路径的逐函数对齐",
+            "完整启动到退出生命周期及适用宿主联调"
+          ],
+          "verification": [
+            "15000组原版/移植参数函数直接差分通过",
+            "5项参数/启动结果测试、3项CLI进程测试与3项既有启动错误测试通过",
+            "真实模型请求验证--desktop提示文本及重复settings最后值生效",
+            "原版与重建版cwd失效的退出码、stderr和结构化字段一致（随机uuid各自生成）",
+            "SDK运行时解析保留启动失败字段测试通过；整套回归163项，160通过，3项既有CLI能力缺口失败"
+          ]
         },
         {
           "id": "C19-T03",

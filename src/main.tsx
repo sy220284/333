@@ -1,3 +1,4 @@
+import { hasCliFlag, findCliArgument, firstCliPositionalIndex } from './utils/cliArgv317.mjs';
 // These side-effects must run before all other imports:
 // 1. profileCheckpoint marks entry before heavy module evaluation begins
 // 2. startMdmRawRead fires MDM subprocesses (plutil/reg query) so they run in
@@ -465,8 +466,8 @@ function eagerLoadSettings(): void {
   // Managed policy still loads, but --safe-mode discards every user-controlled
   // settings source, including --settings. Restricted mode retains the explicit
   // --settings overlay while suppressing user/project/local settings files.
-  const safeMode = process.argv.includes('--safe-mode');
-  const restricted = process.argv.includes('--restricted');
+  const safeMode = hasCliFlag('--safe-mode');
+  const restricted = hasCliFlag('--restricted');
   if (restricted) process.env.CLAUDE_CODE_RESTRICTED = '1';
   if (safeMode) {
     // A safe session still honors security denials in project/user settings.
@@ -501,7 +502,8 @@ function initializeEntrypoint(isNonInteractive: boolean): void {
   const cliArgs = process.argv.slice(2);
 
   // Check for MCP serve command (handle flags before mcp serve, e.g., --debug mcp serve)
-  const mcpIndex = cliArgs.indexOf('mcp');
+  const firstWord = firstCliPositionalIndex(cliArgs);
+  const mcpIndex = firstWord !== -1 && cliArgs[firstWord] === 'mcp' ? firstWord : -1;
   if (mcpIndex !== -1 && cliArgs[mcpIndex + 1] === 'serve') {
     process.env.CLAUDE_CODE_ENTRYPOINT = 'mcp';
     return;
@@ -536,7 +538,7 @@ export async function main() {
     // In print mode, print.ts registers its own SIGINT handler that aborts
     // the in-flight query and calls gracefulShutdown; skip here to avoid
     // preempting it with a synchronous process.exit().
-    if (process.argv.includes('-p') || process.argv.includes('--print')) {
+    if (hasCliFlag('-p') || hasCliFlag('--print')) {
       return;
     }
     process.exit(0);
@@ -581,9 +583,9 @@ export async function main() {
   // Check for -p/--print and --init-only flags early to set isInteractiveSession before init()
   // This is needed because telemetry initialization calls auth functions that need this flag
   const cliArgs = process.argv.slice(2);
-  const hasPrintFlag = cliArgs.includes('-p') || cliArgs.includes('--print');
-  const hasInitOnlyFlag = cliArgs.includes('--init-only');
-  const hasSdkUrl = cliArgs.some(arg => arg.startsWith('--sdk-url'));
+  const hasPrintFlag = hasCliFlag('-p', cliArgs) || hasCliFlag('--print', cliArgs);
+  const hasInitOnlyFlag = hasCliFlag('--init-only', cliArgs);
+  const hasSdkUrl = findCliArgument(arg => arg.startsWith('--sdk-url'), cliArgs) !== -1;
   const isNonInteractive = hasPrintFlag || hasInitOnlyFlag || hasSdkUrl || !process.stdout.isTTY;
 
   // Stop capturing early input for non-interactive modes
