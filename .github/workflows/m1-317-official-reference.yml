@@ -11,6 +11,9 @@ on:
       - 'tests/m1-subagent-effort-317.test.mjs'
       - 'build/m1-cli-surface-audit.mjs'
       - 'tests/m1-plugin-data-size-parity.test.mjs'
+      - 'tests/m1-marketplace-add-json-317.test.mjs'
+      - 'build/m1-cli-help-options.mjs'
+      - 'tests/m1-cli-help-options.test.mjs'
       - 'tools/upgrade/audit-final-release-skills.py'
       - 'tests/test_final_release_skills_audit.py'
       - 'tests/m1-x64-conversation-ui-scenarios.py'
@@ -100,7 +103,7 @@ jobs:
           node build/verify-bundled-assets.mjs
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
-          node --test tests/bundled-skill-extraction.test.mjs tests/m1-prometheus-security-317.test.mjs
+          node --test tests/bundled-skill-extraction.test.mjs tests/m1-prometheus-security-317.test.mjs tests/m1-cli-help-options.test.mjs
           bun build/rebuild.mjs
           test -s dist/cli.js
           printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-317-candidate"
@@ -118,7 +121,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          CLAUDE_TARGET_X64="${RUNNER_TEMP}/m1-317-reference/claude" node --test tests/m1-plugin-data-size-parity.test.mjs
+          CLAUDE_TARGET_X64="${RUNNER_TEMP}/m1-317-reference/claude" node --test tests/m1-plugin-data-size-parity.test.mjs tests/m1-marketplace-add-json-317.test.mjs
       - name: 最终版六种真实终端情境及动画帧对照
         shell: bash
         run: |
