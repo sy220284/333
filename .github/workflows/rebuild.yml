@@ -107,6 +107,26 @@ jobs:
           command -v Xvfb
           command -v xvfb-run
           xvfb-run -a node --test tests/m1-native-clipboard-xvfb-317.test.mjs
+      - name: 按官方317原版恢复并实测Windows/macOS音频原生模块
+        if: runner.os != 'Linux'
+        run: |
+          set -euo pipefail
+          base='https://downloads.claude.ai/claude-code-releases/2.1.317'
+          mkdir -p .rebuild/oracle
+          curl --fail --location --silent --show-error --retry-all-errors --retry 5 \
+            "$base/manifest.json" -o .rebuild/oracle/manifest.json
+          platform="$(node -p "process.platform+'-'+process.arch")"
+          executable=claude
+          if [ "$RUNNER_OS" = "Windows" ]; then executable=claude.exe; fi
+          curl --fail --location --silent --show-error --retry-all-errors --retry 5 \
+            "$base/$platform/$executable" -o ".rebuild/oracle/$executable"
+          node build/verify-official-native-by-platform.mjs \
+            --binary ".rebuild/oracle/$executable" \
+            --manifest .rebuild/oracle/manifest.json --vendor-root vendor --sync
+          node build/verify-official-native-by-platform.mjs \
+            --binary ".rebuild/oracle/$executable" \
+            --manifest .rebuild/oracle/manifest.json --vendor-root vendor
+          node -e "const key=process.arch+'-'+process.platform;const api=require('./vendor/audio-capture/'+key+'/audio-capture.node');if(!api.startRecording||!api.stopRecording)throw Error('Original audio API mismatch')"
       - name: 从当前源码编译本机自包含执行程序并验证版本及帮助
         run: node build/compile-standalone.mjs
       - name: 打包独立发行程序和平台资源
