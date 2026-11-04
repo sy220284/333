@@ -8,7 +8,7 @@ export const SHORT_ID_PATTERN = /^[a-f0-9]{1,8}$/
 export const MAX_LOG_BYTES = 1024 * 1024
 export const TERMINAL_STATES = new Set(['stopped', 'completed', 'failed', 'removed'])
 const TERMINAL_FIELDS = ['sessionId', 'id', 'cwd', 'createdAt', 'updatedAt', 'state', 'argv', 'logPath']
-const queue = new Map()
+const queue = new Map<string, Promise<unknown>>()
 
 /** The on-disk session identity and lifecycle contract shared by the CLI and supervisor. */
 export interface BackgroundRecord317 {
@@ -39,23 +39,23 @@ export type BackgroundRmOptions317 = {
   forceRemoveWorktree?: string
 }
 
-export function fleetHome(env = process.env) {
+export function fleetHome(env: NodeJS.ProcessEnv = process.env): string {
   const root = env.CLAUDE_CONFIG_DIR || join(env.HOME || homedir(), '.claude')
   return join(resolve(root), 'background')
 }
-export function fleetSocket(env = process.env) {
+export function fleetSocket(env: NodeJS.ProcessEnv = process.env): string {
   const root = resolve(env.CLAUDE_CONFIG_DIR || join(env.HOME || homedir(), '.claude'))
   const digest = createHash('sha256').update(root).digest('hex').slice(0, 12)
   if (process.platform === 'win32') return `\\\\.\\pipe\\claude-bg-${digest}`
   const uid = typeof process.getuid === 'function' ? process.getuid() : 'user'
   return join(tmpdir(), `cc-daemon-${uid}`, digest, 'control.sock')
 }
-export function sessionPath(id, env = process.env) {
+export function sessionPath(id: string, env: NodeJS.ProcessEnv = process.env): string {
   if (!/^[a-f0-9]{8}$/.test(id)) throw new Error('Invalid background session id')
   return join(fleetHome(env), 'jobs', `${id}.json`)
 }
-export function isAlive(pid) {
-  if (!Number.isSafeInteger(pid) || pid < 1) return false
+export function isAlive(pid: number | null | undefined): boolean {
+  if (typeof pid !== 'number' || !Number.isSafeInteger(pid) || pid < 1) return false
   try {
     process.kill(pid, 0)
     return true
@@ -80,7 +80,17 @@ function assertRecord(record: unknown): BackgroundRecord317 {
     throw new Error('Invalid background session record')
   return record as BackgroundRecord317
 }
-export function createSessionRecord({ sessionId = randomUUID(), id = sessionId.slice(0, 8), argv, cwd, name, agent, model, env = process.env }) {
+export type CreateSessionOptions317 = {
+  sessionId?: string
+  id?: string
+  argv: string[]
+  cwd: string
+  name?: string | null
+  agent?: string | null
+  model?: string | null
+  env?: NodeJS.ProcessEnv
+}
+export function createSessionRecord({ sessionId = randomUUID(), id = sessionId.slice(0, 8), argv, cwd, name, agent, model, env = process.env }: CreateSessionOptions317): BackgroundRecord317 {
   const now = new Date().toISOString()
   return assertRecord({
     id, sessionId, argv: [...argv], cwd: resolve(cwd), name: name || null,
@@ -90,21 +100,21 @@ export function createSessionRecord({ sessionId = randomUUID(), id = sessionId.s
     exitCode: null, worktreePath: null, startedAt: Date.now(),
   })
 }
-export async function prepareFleet(env = process.env) {
+export async function prepareFleet(env: NodeJS.ProcessEnv = process.env): Promise<string> {
   const root = fleetHome(env)
   await mkdir(join(root, 'jobs'), { recursive: true, mode: 0o700 })
   await mkdir(join(root, 'logs'), { recursive: true, mode: 0o700 })
   if (process.platform !== 'win32') await mkdir(dirname(fleetSocket(env)), { recursive: true, mode: 0o700 })
   return root
 }
-export async function readSession(id, env = process.env) {
+export async function readSession(id: string, env: NodeJS.ProcessEnv = process.env): Promise<BackgroundRecord317 | null> {
   try { return assertRecord(JSON.parse(await readFile(sessionPath(id, env), 'utf8'))) }
   catch (error) {
     if (error.code === 'ENOENT') return null
     throw error
   }
 }
-async function serialized(id, work) {
+async function serialized<T>(id: string, work: () => Promise<T>): Promise<T> {
   const previous = queue.get(id) || Promise.resolve()
   const next = previous.catch(() => {}).then(work)
   queue.set(id, next)
@@ -114,7 +124,7 @@ async function serialized(id, work) {
 // Reserve a new short ID atomically. A daemon restart or two concurrent
 // dispatches must never overwrite an existing conversation with the same
 // eight-hex-digit prefix. Existing records are updated via saveSession.
-export async function reserveNewSession(record, env = process.env) {
+export async function reserveNewSession(record: BackgroundRecord317, env: NodeJS.ProcessEnv = process.env): Promise<BackgroundRecord317> {
   assertRecord(record)
   await prepareFleet(env)
   return serialized(record.id, async () => {
@@ -133,7 +143,7 @@ export async function reserveNewSession(record, env = process.env) {
   })
 }
 
-export async function saveSession(record, env = process.env) {
+export async function saveSession(record: BackgroundRecord317, env: NodeJS.ProcessEnv = process.env): Promise<BackgroundRecord317> {
   assertRecord(record)
   await prepareFleet(env)
   return serialized(record.id, async () => {
@@ -149,7 +159,7 @@ export async function saveSession(record, env = process.env) {
     return record
   })
 }
-export async function editSession(id, patch, env = process.env) {
+export async function editSession(id: string, patch: Partial<BackgroundRecord317>, env: NodeJS.ProcessEnv = process.env): Promise<BackgroundRecord317 | null> {
   return serialized(id, async () => {
     const current = await readSession(id, env)
     if (!current) return null
@@ -164,7 +174,7 @@ export async function editSession(id, patch, env = process.env) {
     return updated
   })
 }
-export async function deleteSession(id, env = process.env) {
+export async function deleteSession(id: string, env: NodeJS.ProcessEnv = process.env): Promise<boolean> {
   // The same session must not be deleted while an edit or reservation is
   // writing its record. The supervisor remains the cross-process owner.
   return serialized(id, async () => {
@@ -197,14 +207,14 @@ export async function listSessions({ all = false, cwd, env = process.env }: {
 // owned by a still-running worker from its predecessor. The native target
 // restores such workers via a persistent rendezvous protocol; until a worker
 // can be contacted, preserve its session record and transcript unchanged.
-export function assertNoUnmanagedLiveWorker(record, managedIds = new Set()) {
+export function assertNoUnmanagedLiveWorker(record: BackgroundRecord317, managedIds: ReadonlySet<string> = new Set<string>()): void {
   if (!managedIds.has(record.id) && isAlive(record.pid)) {
     throw new Error(`Background session ${record.id} still has a live worker (pid ${record.pid}) owned by another supervisor. Keep its session data and reconnect to its owning service before modifying it.`)
   }
 }
 
 export function matchSession<T extends BackgroundRecord317>(jobs: T[], query: string,
-  { usage = 'id', name = true } = {}): T {
+  { usage = 'id', name = true }: { usage?: string; name?: boolean } = {}): T {
   if (!query || typeof query !== 'string') throw new Error(`Usage: claude ${usage}`)
   const idMatches = jobs.filter(j => j.id.startsWith(query.toLowerCase()) || j.sessionId === query)
   if (idMatches.length === 1) return idMatches[0]
@@ -214,7 +224,7 @@ export function matchSession<T extends BackgroundRecord317>(jobs: T[], query: st
   if (named.length > 1) throw new Error(`Ambiguous prefix '${query}', matches: ${named.map(x => x.id).join(', ')}`)
   throw new Error(`No job matching '${query}'. Run 'claude agents' to list running sessions.`)
 }
-export async function readTail(file, maxBytes = MAX_LOG_BYTES) {
+export async function readTail(file: string, maxBytes: number = MAX_LOG_BYTES): Promise<string> {
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 0 || maxBytes > MAX_LOG_BYTES) {
     throw new RangeError(`Log tail must be between 0 and ${MAX_LOG_BYTES} bytes`)
   }
@@ -241,7 +251,7 @@ export async function readTail(file, maxBytes = MAX_LOG_BYTES) {
     await fh.close()
   }
 }
-export function stripUnsafeTerminal(text) {
+export function stripUnsafeTerminal(text: string): string {
   // Keep terminal cursor/SGR sequences while removing OSC/DCS payloads.
   // Construct control bytes explicitly so the same policy works with Unicode
   // output and does not introduce literal C0 characters in source patterns.
@@ -255,7 +265,8 @@ export function stripUnsafeTerminal(text) {
   }).join('')
 }
 
-export function worktreeSafety(worktreePath) {
+export type WorktreeSafety317 = { ok: boolean; path: string | null; reason?: string }
+export function worktreeSafety(worktreePath: string | null | undefined): WorktreeSafety317 {
   if (!worktreePath) return { ok: true, path: null }
   const worktree = resolve(worktreePath)
   const status = spawnSync('git', ['-C', worktree, 'status', '--porcelain', '--untracked-files=all'], { encoding: 'utf8', timeout: 8000 })
@@ -267,11 +278,11 @@ export function worktreeSafety(worktreePath) {
   if (commits.status !== 0 || Number(commits.stdout.trim()) > 0) return { ok: false, reason: 'worktree has unpushed commits', path: worktree }
   return { ok: true, path: worktree }
 }
-export function worktreeDigest(worktreePath) {
+export function worktreeDigest(worktreePath: string): string {
   return createHash('sha256').update(resolve(worktreePath)).digest('hex').slice(0, 12)
 }
 export async function removeWorktreeSafely(worktreePath: string | null | undefined,
-  { discardUnpushed, forceRemoveWorktree }: BackgroundRmOptions317 = {}) {
+  { discardUnpushed, forceRemoveWorktree }: BackgroundRmOptions317 = {}): Promise<void> {
   if (!worktreePath) return
   const safety = worktreeSafety(worktreePath)
   const digest = worktreeDigest(worktreePath)
