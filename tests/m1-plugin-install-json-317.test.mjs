@@ -58,13 +58,16 @@ test('2.1.317 plugin install --marketplace/--json: real local source, idempotenc
       return JSON.parse(lines[0])
     }
     try {
-      const first = run(['plugin', 'install', 'demo', '--marketplace', marketplace, '--config', 'mode=fast', '--config', 'token=secret-probe', '--json'])
+      const first = run(['plugin', 'install', 'demo', '--marketplace', marketplace, '--config', 'mode=fast', '--config', 'token=secret-probe', '--registry', 'https://registry.example.test', '--json'])
       assert.equal(first.status, 0, `${version}: ${first.stderr}`)
       const created = readJsonLine(first)
       assert.equal(created.command, 'install')
       assert.equal(created.outcome, 'ok')
       assert.equal(created.pluginId, 'demo@m1-install-json')
       assert.equal(created.configApplied, true)
+      const source = readFileSync(new URL('../src/services/plugins/pluginOperations.ts', import.meta.url), 'utf8')
+      assert.match(source, /foundPlugin\.source\.source === 'npm'/)
+      assert.match(source, /registry: npmRegistry/)
       const settingsFile = join(home, '.claude', 'settings.json')
       const settings = JSON.parse(readFileSync(settingsFile, 'utf8'))
       assert.equal(settings.pluginConfigs['demo@m1-install-json'].options.mode, 'fast')
