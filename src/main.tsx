@@ -3777,9 +3777,16 @@ async function run(): Promise<CommanderCommand> {
   });
 
   // Plugin update command
-  pluginCmd.command('update <plugin>').description('Update a plugin to the latest version (restart required to apply)').option('-s, --scope <scope>', `Installation scope: ${VALID_UPDATE_SCOPES.join(', ')} (default: user)`).addOption(coworkOption()).action(async (plugin: string, options: {
+  pluginCmd.command('update <plugin>').description('Update a plugin to the latest version (restart required to apply)').option('-s, --scope <scope>', `Installation scope: ${VALID_UPDATE_SCOPES.join(', ')} (default: user)`)
+    .option('-y, --yes', 'Authorize the current marketplace-declared update command')
+    .addOption(new Option('--accept-command <sha256>', 'Accept exactly the displayed command hash for the current marketplace revision').conflicts('yes'))
+    .option('--json', 'Print one structured result line with command consent metadata')
+    .addOption(coworkOption()).action(async (plugin: string, options: {
     scope?: string;
     cowork?: boolean;
+    yes?: boolean;
+    acceptCommand?: string;
+    json?: boolean;
   }) => {
     const {
       pluginUpdateHandler
