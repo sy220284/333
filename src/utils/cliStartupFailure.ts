@@ -1,7 +1,7 @@
 /** Startup failure framing from 2.1.317 chunk-jqk86hjp/chunk-md5wm0jt. */
 import { randomUUID } from 'node:crypto'
-import { escapeUnsafeJsonWireCharacters } from '../cli/jsonWireEscaping.mjs'
-import { getCliFlagValue, isStreamJsonLaunch } from './cliArgv317.mjs'
+import { escapeUnsafeJsonWireCharacters } from '../cli/jsonWireEscaping.ts'
+import { getCliFlagValue, isStreamJsonLaunch } from './cliArgv317.ts'
 
 const ALWAYS_RESULT = new Set(['org_config_required_unavailable', 'org_config_refused'])
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
