@@ -5,6 +5,7 @@ import { resolve } from 'node:path'
 import { test } from 'node:test'
 import {
   shouldProtectRelayToken317, guardRelayTokenDescriptor317,
+  shouldProtectRunnerReviewTokens317, guardRunnerReviewTokens317,
 } from '../src/bootstrap/relayTokenGuard317.mjs'
 
 const remote = { CLAUDE_CODE_REMOTE: 'true', CCR_AGENT_PROXY_TOKEN_FILE_DESCRIPTOR: '5' }
@@ -131,4 +132,68 @@ test('M1 C19-T02: original relay guard executes before argv scanning and all CLI
   const profiler = entry.indexOf("profileCheckpoint('cli_entry')")
   const cli = entry.indexOf("await import('../main.js')")
   assert.ok(guard > 0 && guard < runner && runner < profiler && profiler < cli)
+})
+
+test('M1 C19-T02: 317 BYOC review guard requires exact three self-hosted identity fields', async () => {
+  const review = {
+    CLAUDE_CODE_REMOTE_SESSION_ORIGIN: 'review',
+    CLAUDE_CODE_ENVIRONMENT_KIND: 'byoc',
+    CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE: 'self_hosted',
+  }
+  assert.equal(shouldProtectRunnerReviewTokens317(review), true)
+  for (const changed of [
+    { CLAUDE_CODE_REMOTE_SESSION_ORIGIN: 'prompt' },
+    { CLAUDE_CODE_ENVIRONMENT_KIND: 'hosted' },
+    { CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE: 'cloud' },
+  ]) assert.equal(shouldProtectRunnerReviewTokens317({ ...review, ...changed }), false)
+  const applied = []
+  assert.equal(await guardRunnerReviewTokens317({
+    env: review,
+    platform: 'linux',
+    bun: { ant: { setDumpable: state => { applied.push(state); return true } } },
+    ffiLoader: () => { throw Error('Unexpected FFI fallback') },
+  }), true)
+  assert.deepEqual(applied, [false])
+  assert.equal(await guardRunnerReviewTokens317({
+    env: { ...review, CLAUDE_CODE_ENVIRONMENT_KIND: 'hosted' },
+    platform: 'linux',
+    bun: { ant: { setDumpable: () => { throw Error('Should never be called') } } },
+  }), false)
+})
+
+test('M1 C19-T02: real standard Bun disables Linux dumpability on self-hosted review startup', {
+  skip: process.platform !== 'linux',
+}, () => {
+  const script = [
+    'import { dlopen, FFIType } from "bun:ffi";',
+    'import { guardRunnerReviewTokens317 } from "./src/bootstrap/relayTokenGuard317.mjs";',
+    'const libc=dlopen("libc.so.6",{prctl:{args:Array(5).fill(FFIType.i32),returns:FFIType.i32}});',
+    'const applied=await guardRunnerReviewTokens317({',
+    '  env:{CLAUDE_CODE_REMOTE_SESSION_ORIGIN:"review",',
+    '       CLAUDE_CODE_ENVIRONMENT_KIND:"byoc",',
+    '       CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE:"self_hosted"},',
+    '  platform:"linux"',
+    '});',
+    'const after=libc.symbols.prctl(3,0,0,0,0);',
+    'libc.close();',
+    'console.log(JSON.stringify({after,applied}));',
+    'if(!applied||after!==0)process.exit(2);',
+  ].join('\n')
+  const res = spawnSync('bun', ['-e', script], {
+    cwd: resolve(import.meta.dirname, '..'),
+    encoding: 'utf8', timeout: 12_000,
+  })
+  assert.equal(res.error, undefined, String(res.error))
+  assert.equal(res.status, 0, res.stderr)
+  const output = JSON.parse(res.stdout.trim())
+  assert.equal(output.applied, true)
+  assert.equal(output.after, 0)
+})
+
+test('M1 C19-T02: review guard runs after URI security check and before runtime initialization', () => {
+  const entry = readFileSync(resolve(import.meta.dirname, '../src/entrypoints/cli.tsx'), 'utf8')
+  const uri = entry.indexOf('const injectionError = rejectDeepLinkArgumentInjection(args)')
+  const review = entry.indexOf('await guardRunnerReviewTokens317()')
+  const processTuning = entry.indexOf('noteProcessStartTuning();')
+  assert.ok(uri > 0 && uri < review && review < processTuning)
 })
