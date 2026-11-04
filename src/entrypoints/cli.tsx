@@ -121,9 +121,16 @@ async function main(): Promise<void> {
       const { selfHostedRunnerMain317 } = await import('../cli/selfHostedRunner/runnerHost317.ts');
       await selfHostedRunnerMain317(args.slice(1));
     } catch (error) {
-      process.stderr.write('self-hosted-runner: ' +
-        (error instanceof Error ? error.message : String(error)) + '\n');
-      process.exitCode = 1;
+      const usage = error instanceof Error && error.name === 'RunnerUsageError317';
+      if (usage) {
+        process.stderr.write('error: ' + error.message +
+          "\nRun 'claude self-hosted-runner --help' for usage.\n");
+        process.exitCode = 2;
+      } else {
+        process.stderr.write('self-hosted-runner: ' +
+          (error instanceof Error ? error.message : String(error)) + '\n');
+        process.exitCode = 1;
+      }
     }
     return;
   }
