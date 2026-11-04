@@ -139,7 +139,14 @@ async function applyInstallConfig(
     : Array.isArray(specs)
       ? specs.filter((source): source is string => typeof source === 'string')
       : []
-  for (const source of sources) {
+  // Original 2.1.317 accepts declared top-level options even when an
+  // unrelated bundled MCPB archive is missing or corrupt. Inspect bundled
+  // manifests only when an option cannot be resolved at top level.
+  const needsBundleDiscovery = assignments.some(assignment => {
+    const equals = assignment.indexOf('=')
+    return equals > 0 && !Object.hasOwn(topSchema, assignment.slice(0, equals))
+  })
+  for (const source of needsBundleDiscovery ? sources : []) {
     if (!isMcpbSource(source)) continue
     const bundle = await loadMcpbFile(source, installed.path, storageId, undefined, undefined, true)
     if (bundle.manifest.user_config && Object.keys(bundle.manifest.user_config).length > 0) {
