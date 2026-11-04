@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+import { releaseAgentResources } from './agentCleanup317.mjs'
 import { killMonitorWsTasksForAgent } from '../../tasks/MonitorWsTask/MonitorWsTask.js'
 import type { UUID } from 'crypto'
 import { randomUUID } from 'crypto'
@@ -835,38 +836,32 @@ export async function* runAgent({
       agentDefinition.callback()
     }
   } finally {
-    // Clean up agent-specific MCP servers (runs on normal completion, abort, or error)
-    await mcpCleanup()
-    // Clean up agent's session hooks
-    if (agentDefinition.hooks) {
-      clearSessionHooks(rootSetAppState, agentId)
-    }
-    // Clean up prompt cache tracking state for this agent
-    if (feature('PROMPT_CACHE_BREAK_DETECTION')) {
-      cleanupAgentTracking(agentId)
-    }
-    // Release cloned file state cache memory
-    agentToolUseContext.readFileState.clear()
-    // Release the cloned fork context messages
-    initialMessages.length = 0
-    // Release perfetto agent registry entry
-    unregisterPerfettoAgent(agentId)
-    // Release transcript subdir mapping
-    clearAgentTranscriptSubdir(agentId)
-    // Release this agent's todos entry. Without this, every subagent that
-    // called TodoWrite leaves a key in AppState.todos forever (even after all
-    // items complete, the value is [] but the key stays). Whale sessions
-    // spawn hundreds of agents; each orphaned key is a small leak that adds up.
-    rootSetAppState(prev => {
-      if (!(agentId in prev.todos)) return prev
-      const { [agentId]: _removed, ...todos } = prev.todos
-      return { ...prev, todos }
-    })
-    // Kill any background bash tasks this agent spawned. Without this, a
-    // `run_in_background` shell loop (e.g. test fixture fake-logs.sh) outlives
-    // the agent as a PPID=1 zombie once the main session eventually exits.
-    killShellTasksForAgent(agentId, toolUseContext.getAppState, rootSetAppState)
-    killMonitorWsTasksForAgent(agentId, toolUseContext.getAppState, rootSetAppState)
+    // Every resource is released even when an earlier disposer rejects.
+    // Errors propagate as an AggregateError with the failing step names.
+    await releaseAgentResources([
+      ['agent MCP servers', mcpCleanup],
+      ['session hooks', () => {
+        if (agentDefinition.hooks) clearSessionHooks(rootSetAppState, agentId)
+      }],
+      ['prompt cache tracking', () => {
+        if (feature('PROMPT_CACHE_BREAK_DETECTION')) cleanupAgentTracking(agentId)
+      }],
+      ['cloned file cache', () => agentToolUseContext.readFileState.clear()],
+      ['forked message references', () => { initialMessages.length = 0 }],
+      ['perfetto agent registration', () => unregisterPerfettoAgent(agentId)],
+      ['transcript directory mapping', () => clearAgentTranscriptSubdir(agentId)],
+      ['agent todo state', () => {
+        rootSetAppState(prev => {
+          if (!(agentId in prev.todos)) return prev
+          const { [agentId]: _removed, ...todos } = prev.todos
+          return { ...prev, todos }
+        })
+      }],
+      ['background shells', () =>
+        killShellTasksForAgent(agentId, toolUseContext.getAppState, rootSetAppState)],
+      ['background monitors', () =>
+        killMonitorWsTasksForAgent(agentId, toolUseContext.getAppState, rootSetAppState)],
+    ])
   }
 }
 
