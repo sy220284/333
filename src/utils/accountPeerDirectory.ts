@@ -11,7 +11,14 @@ const active = row => row.acceptsPeerMessages !== false && !row.unreachableFromH
  * Control endpoint establishes a bridge address (2.1.310 chunk-xje85fg4).
  * Merge identity first so one session cannot appear twice or shadow its route.
  */
-export function mergeSessionPeers({ local = [], cloud = [], bridge = [], selfId, verifiedAccountList = true } = {}) {
+type PeerSnapshot317 = {
+  id?: string; bridgeSessionId?: string; title?: string; status?: string;
+  workerStatus?: string; offline?: boolean; remoteControl?: boolean;
+  acceptsPeerMessages?: boolean; unreachableFromHere?: boolean;
+}
+export function mergeSessionPeers({ local = [], cloud = [], bridge = [], selfId, verifiedAccountList = true }:
+  { local?: PeerSnapshot317[]; cloud?: PeerSnapshot317[]; bridge?: PeerSnapshot317[];
+    selfId?: string; verifiedAccountList?: boolean } = {}) {
   const seen = new Set(local.map(p => canonicalId(p.bridgeSessionId)).filter(Boolean))
   if (canonicalId(selfId)) seen.add(canonicalId(selfId))
   const bridgeById = new Map()

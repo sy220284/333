@@ -25,14 +25,14 @@ export function buildStartupFailureResult({ sessionId, message, reason, resultIn
 /** A broken output pipe must not hide the original startup failure. */
 export async function writeStartupFrames(frames, { goesOn = false, stdout = process.stdout, argv = process.argv.slice(2) } = {}) {
   if (!isStreamJsonLaunch(argv) || stdout.writableEnded || stdout.destroyed) return false
-  let finish = () => {}
-  const flushed = new Promise(resolve => { finish = resolve })
+  let finish: (value: boolean) => void = () => {}
+  const flushed = new Promise<boolean>(resolve => { finish = resolve })
   const onError = () => finish(false)
   stdout.once('error', onError)
   let timer
   try {
     stdout.write(frames.map(frame => escapeUnsafeJsonWireCharacters(JSON.stringify(frame)) + '\n').join(''), error => finish(!error))
-    const timeout = new Promise(resolve => { timer = setTimeout(() => resolve(false), 1000) })
+    const timeout = new Promise<boolean>(resolve => { timer = setTimeout(() => resolve(false), 1000) })
     const written = await Promise.race([flushed, timeout])
     if (goesOn && written) stdout.off('error', onError)
     return written
@@ -44,7 +44,7 @@ export async function writeStartupFailureResult(input, { argv = process.argv.sli
 }
 export function getStartupCwdError(getCwd = () => process.cwd()) {
   try { getCwd(); return undefined } catch (error) {
-    const code = error instanceof Error && typeof error.code === 'string' ? error.code : undefined
+    const code = error instanceof Error && 'code' in error && typeof error.code === 'string' ? error.code : undefined
     return code === 'ENOENT'
       ? 'The current directory no longer exists (it was deleted or moved). Start Claude Code from an existing directory.'
       : `Can't read the current directory${code ? ` (${code})` : ''}. Start Claude Code from a different directory.`

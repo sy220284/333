@@ -1,7 +1,7 @@
 import { readdir,readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { workflowMeta } from './workflowRuntime.ts'
-export async function listWorkflowFiles(cwd,{onError}={}){
+export async function listWorkflowFiles(cwd,{onError}: {onError?: (failure: {file: string; error: unknown}) => void} = {}){
  const dir=join(cwd,'.claude','workflows')
  let entries
  try{entries=await readdir(dir,{withFileTypes:true})}

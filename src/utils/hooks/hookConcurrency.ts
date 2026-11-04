@@ -51,7 +51,7 @@ export function acquireHookPermit(sessionId, timeoutMs, signal) {
   if (signal?.aborted) return Promise.resolve(() => {})
   const key = sessionId || 'local-session'
   const state = getState(key)
-  return new Promise(resolve => {
+  return new Promise<() => void>(resolve => {
     const waiter = {
       expired: false,
       timer: undefined,

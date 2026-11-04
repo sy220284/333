@@ -9,6 +9,11 @@ import { randomBytes } from 'node:crypto'
 import { basename, dirname, join, resolve, sep } from 'node:path'
 import lockfile from 'proper-lockfile'
 
+export type PurgeItem = {
+  path: string; reason: string
+  kind: 'dir' | 'file' | 'config-key' | 'history-lines' | 'history-siblings'
+  matchPaths?: string[]
+}
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const sibling = name => /^history\.jsonl\.tmp\.[0-9a-f]{8}$/.test(name) || /^\.[0-9a-f]{16}\.tmp$/.test(name)
 const isAbsent = error => error?.code === 'ENOENT'
@@ -72,7 +77,7 @@ async function directoryOwnership(path, paths) {
 
 export async function planPurge(home, project, { all = false, projectKeys = [], configAliases = [] } = {}) {
   home = resolve(home)
-  const items = [], warnings = []
+  const items: PurgeItem[] = [], warnings: string[] = []
   if (all) {
     for (const [name, reason] of [['projects', 'all project transcripts (.jsonl) and memory/'], ['tasks', 'all session task lists'], ['debug', 'all session debug logs'], ['file-history', 'all session file edit history']]) {
       const path = join(home, name)
@@ -115,7 +120,7 @@ export async function planPurge(home, project, { all = false, projectKeys = [], 
       const owned = await directoryOwnership(path, paths)
       if (owned === true || (exact && owned === null)) directories.push(path)
     }
-    const sessions = new Set()
+    const sessions = new Set<string>()
     for (const path of directories) for (const entry of await entries(path)) {
       if (entry.isFile() && entry.name.endsWith('.jsonl') && uuid.test(entry.name.slice(0, -6))) sessions.add(entry.name.slice(0, -6))
     }
@@ -186,7 +191,7 @@ async function cleanHistorySiblings(path) {
   }, { allowMissing: true })
 }
 
-export async function executePurgeItem(item, { removeProject } = {}) {
+export async function executePurgeItem(item: PurgeItem, { removeProject }: {removeProject?: (key: string) => void | Promise<void>} = {}) {
   switch (item.kind) {
     case 'config-key':
       if (!removeProject) throw new Error('Project config removal requires the configuration writer')

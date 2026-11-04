@@ -35,7 +35,7 @@ export function validateWorkflowScript(script){
 }
 /** @param {{script:string,args?:unknown,agent:(prompt:string,options?:Record<string,unknown>)=>Promise<unknown>,onPhase?:(phase:string)=>void,onLog?:(message:string)=>void,signal?:AbortSignal}} config */
 /** @param {{script:string,args?:unknown,agent:(prompt:string,options?:Record<string,unknown>)=>Promise<unknown>,onPhase?:(name:string)=>void,onLog?:(line:string)=>void,signal?:AbortSignal}} input */
-export async function executeWorkflowScript({script,args={},agent,onPhase=()=>{},onLog=()=>{},signal}){
+export async function executeWorkflowScript({script,args={},agent,onPhase=(_phase: string)=>{},onLog=(_line: string)=>{},signal}){
   const {meta,runnable}=validateWorkflowScript(script)
   const check=()=>{if(signal?.aborted)throw new Error('Workflow cancelled')}
   check()

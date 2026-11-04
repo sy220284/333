@@ -3,7 +3,13 @@
  * Keep content text-only, and retain the delivery and removal identifiers used
  * to reconcile interrupted turns and queued peer notifications on resume.
  */
-export function createQueueOperationRecord(operation, command, sessionId, now = new Date(), metadata = {}) {
+import type { QueueOperation, QueueOperationMessage } from '../types/messageQueueTypes.js'
+import type { QueuedCommand } from '../types/textInputTypes.js'
+type QueueJournalCommand317 = Partial<QueuedCommand> & { pluginQueueRecordHookActive?: boolean }
+export function createQueueOperationRecord(
+  operation: QueueOperation, command: QueueJournalCommand317 | undefined,
+  sessionId: string, now = new Date(), metadata: {reason?: string} = {},
+): QueueOperationMessage {
   // Official $pe: submitted text has priority; unapproved prompt text and
   // queue-record plugin owned content are kept out of the transcript journal.
   const screening = command?.screeningPending === true || command?.screeningOwed === true

@@ -60,7 +60,7 @@ function queueForActiveSession(): QueuedCommand[] {
   return sessionQueues.getExisting(getSessionId()) ?? []
 }
 
-function notifySubscribers(sessionId = getSessionId()): void {
+function notifySubscribers(sessionId: string = getSessionId()): void {
   sessionQueues.changed(sessionId)
   queueChanged.emit()
 }

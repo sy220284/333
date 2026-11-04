@@ -4,7 +4,12 @@
  * when unreachable through the current loaded manifests. A stale/missing
  * plugin disables pruning of the entire scope to prevent data loss.
  */
-export function computeAutoDependencyOrphans(installations, loaded, scope, projectPath) {
+type PruneInstallation317 = {scope: string; projectPath?: string; auto?: boolean}
+type PruneLoadedPlugin317 = {source: string; manifest?: {dependencies?: string[]}}
+export function computeAutoDependencyOrphans(
+  installations: Record<string, PruneInstallation317[]>,
+  loaded: PruneLoadedPlugin317[], scope: string, projectPath?: string,
+) {
   const manual = new Set()
   const automatic = new Set()
   for (const [id, entries] of Object.entries(installations ?? {})) {

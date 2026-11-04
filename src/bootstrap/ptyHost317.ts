@@ -251,7 +251,7 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
       if (ptyReceivedData) quietTicks = 0
       else if (++quietTicks >= 2) break
     }
-    lastSignal = child.signalCode ?? undefined
+    lastSignal = child.signalCode == null ? undefined : String(child.signalCode)
     stopped = true
     closeTerminalOnce()
     broadcast(encodePtyControl317({ t: 'exit', code: lastExitCode, ...(lastSignal ? { signal: lastSignal } : {}) }))

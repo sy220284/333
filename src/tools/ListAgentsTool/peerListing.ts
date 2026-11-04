@@ -1,4 +1,14 @@
 /** Team mailbox recipients are distinct from static agent templates. */
+type InProcessTeammateTask317 = {
+  type: 'in_process_teammate'; identity: {agentId: string};
+  isIdle?: boolean; status: string
+}
+function isInProcessTeammateTask317(value: unknown): value is InProcessTeammateTask317 {
+  if (!value || typeof value !== 'object') return false
+  const task = value as Partial<InProcessTeammateTask317>
+  return task.type === 'in_process_teammate' &&
+    typeof task.identity?.agentId === 'string' && typeof task.status === 'string'
+}
 export function listReachableTeammates(teamFile, selfName, liveTeammates = {}, tasks = {}) {
   const seen = new Set([selfName.toLowerCase()])
   const agents = []
@@ -6,7 +16,7 @@ export function listReachableTeammates(teamFile, selfName, liveTeammates = {}, t
   // not from the persisted roster, which may lag or contain stale status.
   const taskStatuses = new Map()
   for (const task of Object.values(tasks)) {
-    if (task?.type !== 'in_process_teammate' || !task.identity?.agentId) continue
+    if (!isInProcessTeammateTask317(task)) continue
     taskStatuses.set(task.identity.agentId, task.isIdle ? 'idle' : task.status)
   }
   const include = (member, agentId) => {
@@ -29,7 +39,7 @@ export function listReachableTeammates(teamFile, selfName, liveTeammates = {}, t
 }
 /** A teammate still has a local_agent task, but must not claim the same
  * human-readable name in both sections of the official ListAgents listing. */
-export function hideTeammateNamesInSubagents(subagents, liveTeammates = {}) {
+export function hideTeammateNamesInSubagents(subagents, liveTeammates: Record<string, {name?: string}> = {}) {
   const teammateNames = new Set(Object.values(liveTeammates ?? {}).map(t => t.name))
   return subagents.map(agent => teammateNames.has(agent.name)
     ? { ...agent, name: undefined } : agent)

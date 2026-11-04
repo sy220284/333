@@ -3,7 +3,10 @@
  * The caller supplies settings by source; no merged untrusted settings are read.
  */
 const ANSI_CONTROL_SEQUENCE = new RegExp(`${String.fromCharCode(27)}\\[[0-?]*[ -/]*[@-~]`, 'g')
-export function resolveScreenReaderMode({argv=[],env={},trustedSettings=[]}={}) {
+export function resolveScreenReaderMode({
+  argv=[],env={},trustedSettings=[],
+}: {argv?: string[]; env?: Record<string, string | undefined>;
+  trustedSettings?: Array<{settings?: {axScreenReader?: boolean}}> } = {}) {
   if (argv.includes('--ax-screen-reader')) return {enabled:true,source:'flag'}
   if (Object.hasOwn(env,'CLAUDE_AX_SCREEN_READER')) {
     const value=env.CLAUDE_AX_SCREEN_READER

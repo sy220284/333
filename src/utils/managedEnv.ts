@@ -195,6 +195,7 @@ export function applySafeConfigEnvironmentVariables(): void {
   )
   for (const [key, value] of Object.entries(settingsEnv)) {
     if (SAFE_ENV_VARS.has(key.toUpperCase())) {
+      if (typeof value !== 'string') throw new TypeError('Invalid settings environment value: '+key)
       process.env[key] = value
     }
   }
