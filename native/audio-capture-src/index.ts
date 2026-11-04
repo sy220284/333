@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { existsSync, realpathSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
 type AudioCaptureNapi = {
@@ -38,8 +38,11 @@ function loadModule(): AudioCaptureNapi | null {
   // Bun --compile rewrites import.meta.url to the virtual /$bunfs tree.
   // The M1 distributable instead ships the byte-verified official native
   // addon next to the compiled executable; load that real path first.
+  // A global install commonly exposes a symlink to the compiled CLI.
+  // Resolve the executable's physical location before finding its matching
+  // byte-pinned addon; a link directory can contain a different release.
   const vendorPath = join(
-    dirname(process.execPath),
+    dirname(realpathSync(process.execPath)),
     'vendor', 'audio-capture', `${process.arch}-${platform}`, 'audio-capture.node',
   )
   if (existsSync(vendorPath)) {
