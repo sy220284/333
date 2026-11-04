@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { createServer } from 'node:http'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -26,6 +26,13 @@ function respond() {
     sse('message_delta',{type:'message_delta',delta:{stop_reason:'end_turn',stop_sequence:null},usage:{output_tokens:1}}),
     sse('message_stop',{type:'message_stop'}),
   ].join('')
+}
+function listTranscriptFiles(dir) {
+  if (!existsSync(dir)) return []
+  return readdirSync(dir,{withFileTypes:true}).flatMap(entry => {
+    const path=join(dir,entry.name)
+    return entry.isDirectory()?listTranscriptFiles(path):path.endsWith('.jsonl')?[path]:[]
+  })
 }
 async function launch(binary, prefix, baseUrl, envExtra) {
   const home = mkdtempSync(join(tmpdir(),'cc317-nested-id-'))
@@ -57,7 +64,17 @@ async function launch(binary, prefix, baseUrl, envExtra) {
         if(expired) return reject(new Error('Timed out: '+binary+' '+err.slice(-400)))
         const events=out.split(/\r?\n/).filter(Boolean).map(line=>JSON.parse(line))
         const ids=new Set(events.map(e=>e.session_id).filter(Boolean))
-        done({code,events,ids:[...ids],stderr:err})
+        const files=listTranscriptFiles(join(home,'.claude','projects'))
+        const transcriptSessionIds=new Set()
+        for(const file of files) {
+          assert.ok(statSync(file).size>0,'saved transcript empty')
+          for(const line of readFileSync(file,'utf8').split(/\r?\n/).filter(Boolean)) {
+            const id=JSON.parse(line).sessionId
+            if(id)transcriptSessionIds.add(id)
+          }
+        }
+        done({code,events,ids:[...ids],transcriptFiles:files.map(file=>file.slice(home.length)),
+          transcriptSessionIds:[...transcriptSessionIds],stderr:err})
       })
     })
   } finally {rmSync(home,{recursive:true,force:true})}
@@ -88,6 +105,9 @@ test('317 native and rebuilt processes share remote UUIDv5 while isolating child
         assert.equal(out.code,0,`${name} ${variant}: ${out.stderr}`)
         assert.ok(out.events.some(e=>e.type==='result' && e.result==='ACK'),`${name} ${variant}: no result`)
         assert.equal(out.ids.length,1,`${name} ${variant}: mixed IDs ${JSON.stringify(out.ids)}`)
+        assert.equal(out.transcriptFiles.length,1,`${name} ${variant}: orphan/mixed transcripts ${JSON.stringify(out.transcriptFiles)}`)
+        assert.ok(out.transcriptFiles[0].endsWith('/'+out.ids[0]+'.jsonl'),`${name} ${variant}: transcript path owned by wrong session`)
+        assert.deepEqual(out.transcriptSessionIds,[out.ids[0]],`${name} ${variant}: transcript messages stamped with another session`)
         runs[variant]=out.ids[0]
       }
       assert.match(runs.root,/^[0-9a-f]{8}-[0-9a-f-]{27}$/)
