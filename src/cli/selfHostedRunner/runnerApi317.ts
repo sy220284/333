@@ -136,6 +136,7 @@ export class SelfHostedRunnerApi317 {
     operation: string, method: 'GET' | 'POST' | 'PUT', path: string,
     token: string, payload: unknown = undefined, signal?: AbortSignal,
     timeoutMs = 15_000, scope: 'runner' | 'worker' = 'runner',
+    onResponseHeaders?: (headers: Headers) => void,
   ): Promise<JsonObject> {
     const headers = new Headers({
       Authorization: 'Bearer ' + nonEmpty(token, 'session token'),
@@ -146,7 +147,7 @@ export class SelfHostedRunnerApi317 {
     if (scope === 'runner') {
       headers.set('x-self-hosted-runner-version', VERSION)
     }
-    if (operation === 'RegisterRunner') {
+    if (operation === 'GetSessionRemoteConfig' && this.capabilities.length > 0) {
       headers.set('x-self-hosted-runner-capabilities', this.capabilities.join(','))
     }
     const controller = joinSignal(signal, timeoutMs)
@@ -156,6 +157,7 @@ export class SelfHostedRunnerApi317 {
         method, headers, signal: controller.signal,
         ...(payload !== undefined && { body: JSON.stringify(payload) }),
       })
+      onResponseHeaders?.(response.headers)
       const text = await response.text()
       let parsed: unknown
       try { parsed = text ? JSON.parse(text) as unknown : {} }
@@ -200,9 +202,12 @@ export class SelfHostedRunnerApi317 {
     pool_pending_session_count: number
     pool_active_session_count: number
     slots?: number
+    server_date: string | null
   }> {
+    let serverDate: string | null = null
     const result = await this.request('PollSpawnHints', 'POST',
-      ROOT + '/spawn-hints/poll', this.poolSecret, payload, signal, 30_000)
+      ROOT + '/spawn-hints/poll', this.poolSecret, payload, signal, 30_000,
+      'runner', headers => { serverDate = headers.get('date') })
     const slots = result.slots
     const normalize = (raw: unknown): Array<Record<string, unknown>> => {
       if (!Array.isArray(raw)) throw new TypeError('PollSpawnHints: invalid hint list')
@@ -229,6 +234,7 @@ export class SelfHostedRunnerApi317 {
       pool_pending_session_count: integer('pool_pending_session_count'),
       pool_active_session_count: integer('pool_active_session_count'),
       ...(typeof slots === 'number' && Number.isInteger(slots) && slots >= 1 && {slots}),
+      server_date: serverDate,
     }
   }
 
