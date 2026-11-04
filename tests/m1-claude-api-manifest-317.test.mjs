@@ -59,6 +59,21 @@ test('317技能注册入口的107条静态导入与完整清单逐一吻合', ()
   }
   for (const file of manifest.files) {
     if (file.path === 'SKILL.md') continue
+    if (file.path === 'ruby/claude-api/tool-use.md') {
+      assert.ok(code.includes(JSON.stringify(file.path)+': rubyToolUseDecoded'), file.path+': decoded runtime source must be registered')
+      continue
+    }
     assert.ok(code.includes(JSON.stringify(file.path)+': file'), file.path+': missing registry key')
   }
+})
+
+test('官方317 Ruby指南保留UTF-16LE原件并准确产生运行时UTF-8内容', () => {
+  const mod = readFileSync(resolve(root, 'src/skills/bundled/claudeApiRubyDecoded.ts'),'utf8')
+  const token = mod.match(/export const rubyToolUseDecoded = ("(?:\\.|[^"\\])*")/)
+  assert.ok(token, 'missing exact decoded text resource')
+  const decoded = JSON.parse(token[1])
+  assert.equal(sha256(Buffer.from(decoded, 'utf8')),
+    'f08ce45f19c7ff571d6aa72f7c51691f07c96baeadb30911ce8188428e753600')
+  assert.match(decoded,/Tool Use - Ruby/)
+  assert.ok(!decoded.includes('\\u0000'))
 })
