@@ -13,6 +13,7 @@ import type {
   CallToolResult,
   ToolAnnotations,
 } from '@modelcontextprotocol/sdk/types.js'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 // Control protocol types for SDK builders (bridge subpath consumers)
 /** @alpha */
@@ -71,20 +72,22 @@ export type {
 }
 
 export function tool<Schema extends AnyZodRawShape>(
-  _name: string,
-  _description: string,
-  _inputSchema: Schema,
-  _handler: (
+  name: string,
+  description: string,
+  inputSchema: Schema,
+  handler: (
     args: InferShape<Schema>,
     extra: unknown,
   ) => Promise<CallToolResult>,
-  _extras?: {
+  extras?: {
     annotations?: ToolAnnotations
     searchHint?: string
     alwaysLoad?: boolean
   },
 ): SdkMcpToolDefinition<Schema> {
-  throw new Error('not implemented')
+  if (!name.trim()) throw new TypeError('SDK tool name is required')
+  if (typeof handler !== 'function') throw new TypeError('SDK tool handler is required')
+  return { name, description, inputSchema, handler, ...(extras ?? {}) }
 }
 
 type CreateSdkMcpServerOptions = {
@@ -101,9 +104,26 @@ type CreateSdkMcpServerOptions = {
  * If your SDK MCP calls will run longer than 60s, override CLAUDE_CODE_STREAM_CLOSE_TIMEOUT
  */
 export function createSdkMcpServer(
-  _options: CreateSdkMcpServerOptions,
+  options: CreateSdkMcpServerOptions,
 ): McpSdkServerConfigWithInstance {
-  throw new Error('not implemented')
+  if (!options.name.trim()) throw new TypeError('SDK MCP server name is required')
+  const instance = new McpServer({
+    name: options.name,
+    version: options.version ?? '1.0.0',
+  })
+  const registered = new Set<string>()
+  for (const definition of options.tools ?? []) {
+    if (registered.has(definition.name)) {
+      throw new Error('Duplicate SDK MCP tool: ' + definition.name)
+    }
+    registered.add(definition.name)
+    instance.registerTool(definition.name, {
+      description: definition.description,
+      inputSchema: definition.inputSchema,
+      ...(definition.annotations && { annotations: definition.annotations }),
+    }, (args, extra) => definition.handler(args, extra))
+  }
+  return { type: 'sdk', name: options.name, instance }
 }
 
 export class AbortError extends Error {}
