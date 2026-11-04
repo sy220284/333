@@ -6,6 +6,9 @@
  * command before prompting. A local echo or file edit is not an exfiltration.
  * The caller must preserve prior tool-specific deny decisions.
  */
+export const ACCOUNT_EMAIL_DISCLOSURE_REASON =
+  "This call's input holds your account email address, which may leave this machine. If nobody asked to send it, go on without it."
+
 const WEB_TOOLS = new Set(['WebBrowser', 'WebFetch', 'WebSearch'])
 const SHELL_TOOLS = new Set(['Bash', 'Monitor', 'PowerShell', 'Tmux'])
 const NETWORK_COMMAND = /\b(curl|wget|https?|httpie|xh|nc|ncat|socat|telnet|ssh|scp|sftp|rsync|ftp|lftp|rclone|iwr|irm|invoke-webrequest|invoke-restmethod)\b/
