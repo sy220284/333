@@ -53,66 +53,42 @@ test('rebuilt CLI uses target version while original source is retained as old b
   assert.equal(compiledHelp(['--version']).trim(), `${targetVersion} (Claude Code)`);
   assert.equal(originalHelp(['--version']).trim(), '2.1.88 (Claude Code)');
 });
-for (const args of [
-  ['--help'], ['auth','--help'], ['auth','login','--help'], ['mcp','--help'],
-  ['mcp','add','--help'], ['plugin','--help'], ['agents','--help'],
-]) {
-  test(`CLI options and commands parity: ${args.join(' ')}`, () => {
-    const baseline = sections(originalHelp(args));
-    const rebuilt = sections(compiledHelp(args));
-    assert.ok(baseline.flags.length + baseline.commands.length > 0, 'Empty baseline command metadata');
-    // 2.1.310 changes intentionally expand the top-level CLI. Keep the old
-    // baseline as an exact guard for every unchanged command/option.
-    if (args.length === 1 && args[0] === '--help') {
-      const approvedAdded = new Set([
-        '--bg', '--desktop', '--autocompact', '--permission-prompts', '--prompt-suggestions',
-        '--restricted', '--safe-mode', '--ax-screen-reader', '--teleport', '--cloud', '--environment',
-        '--remote-control', '--remote-control-session-name-prefix', '--system-prompt-snapshot', '--plugin-url', '--exclude-dynamic-system-prompt-sections', '--forward-subagent-text', '--permission-prompt-tool',
-      ]);
-      const added = rebuilt.flags.filter(flag => !baseline.flags.includes(flag));
-      assert.deepEqual(added.filter(flag => !approvedAdded.has(flag)), [],
-        'Unexpected extra CLI option beyond reviewed 2.1.310 migration');
-      for(const required of ['--desktop','--bg','--autocompact','--restricted','--safe-mode','--permission-prompts','--prompt-suggestions','--teleport','--ax-screen-reader']){
-        assert.ok(added.includes(required), `Expected reviewed 2.1.310 option missing: ${required}`);
-      }
-      // The target 2.1.310 x64 no longer exposes the old --mcp-debug
-      // help switch. Preserve the other 2.1.88 options, with this precise
-      // retirement supported by official --help evidence.
-      const officiallyRetiredFlags = new Set(['--mcp-debug']);
-      assert.deepEqual(
-        baseline.flags.filter(flag => !rebuilt.flags.includes(flag) && !officiallyRetiredFlags.has(flag)),
-        [],
-        'Unreviewed old CLI options were removed unexpectedly',
-      );
-      assert.equal(rebuilt.flags.includes('--mcp-debug'), false,
-        'Retired --mcp-debug unexpectedly returned to the public CLI help');
-      // Official 2.1.310 ships a background-session fleet: these commands
-      // did not exist in the 2.1.88 baseline, and must be checked against
-      // the new binary, not rejected as unexplained additions.
-      const targetCommands = new Set(['attach', 'logs', 'stop', 'respawn', 'rm', 'daemon', 'import']);
-      const addedCommands = rebuilt.commands.filter(command => !baseline.commands.includes(command));
-      assert.deepEqual(addedCommands.filter(command => !targetCommands.has(command)), [],
-        'Unknown new CLI subcommand outside official 2.1.310');
-      for (const required of targetCommands) {
-        assert.ok(rebuilt.commands.includes(required), `Missing reviewed 2.1.310 public command: ${required}`);
-      }
-      assert.deepEqual(baseline.commands.filter(command => !rebuilt.commands.includes(command)), [],
-        'Older public CLI command was lost unexpectedly');
-      const help = compiledHelp(args);
-      assert.match(help, /--fallback-model <model>/,
-        'Ordered fallback model interface missing');
-      assert.match(help, /--autocompact <auto\|tokens>/,
-        'Auto-compact window interface missing');
-    } else if (args[0] === 'agents') {
-      assert.ok(rebuilt.flags.includes('--json'), 'Official background agents JSON mode is missing');
-      assert.ok(rebuilt.flags.includes('--all'), 'Official background agents completion filter is missing');
-      assert.ok(rebuilt.flags.includes('--cwd'), 'Official background agents cwd filter is missing');
-      assert.ok(rebuilt.flags.includes('--setting-sources'), 'Existing settings source selector was lost');
-    } else {
-      assert.deepEqual(rebuilt, baseline, 'Unchanged CLI options or subcommands differ from 2.1.88 original');
+// The 2.1.88 CLI is retained for historical compatibility checks only.
+// Public commands and flags are matched to the byte-verified 2.1.317 native
+// executable, captured in tests/fixtures/claude-2.1.317-official-cli-help.json.
+const official317 = JSON.parse(
+  readFileSync(resolve(root, 'tests/fixtures/claude-2.1.317-official-cli-help.json'), 'utf8'),
+);
+assert.equal(official317.version, targetVersion);
+
+function nativeHelp(executable, args) {
+  const output = spawnSync(executable, args, {
+    cwd: root,
+    encoding: 'utf8',
+    timeout: 18000,
+    env: {
+      ...process.env,
+      DISABLE_TELEMETRY: '1',
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
+    },
+  });
+  assert.equal(output.error, undefined, output.error?.message);
+  assert.equal(output.status, 0, output.stderr);
+  return output.stdout;
+}
+
+for (const [commandLine, expected] of Object.entries(official317.commands)) {
+  test(`2.1.317 native CLI help parity: ${commandLine}`, () => {
+    const args = commandLine.split(' ');
+    if (process.platform === 'linux' && process.env.CLAUDE_TARGET_X64) {
+      const native = sections(nativeHelp(process.env.CLAUDE_TARGET_X64, args));
+      assert.deepEqual(native, expected, `The official x64 reference changed: ${commandLine}`);
     }
+    const actual = sections(compiledHelp(args));
+    assert.deepEqual(actual, expected, `2.1.317 CLI discrepancy: ${commandLine}`);
   });
 }
+
 test('legacy -d2e alias is accepted by reconstructed Commander configuration', () => {
   assert.match(compiledHelp(['-d2e','--help']), /Usage: claude/);
   assert.match(compiledHelp(['--debug-to-stderr','--help']), /Usage: claude/);
