@@ -3587,6 +3587,18 @@ async function run(): Promise<CommanderCommand> {
   registerPurge(program);
   registerPurge(program.command('project', { hidden: true }));
   const pluginCmd = program.command('plugin').alias('plugins').description('Manage Claude Code plugins').configureHelp(createSortedHelpConfig());
+  pluginCmd.command('test [dir]').description("Run a mod's tests")
+    .addOption(new Option('--file <path>').hideHelp())
+    .action(async (dir: string | undefined, options: { file?: string }) => {
+      try {
+        const { pluginTestHandler317 } = await import('./cli/handlers/pluginTest317.mjs');
+        const status = await pluginTestHandler317(dir ?? '.', options);
+        if (status !== 0) process.exitCode = status;
+      } catch (error) {
+        process.stderr.write(`claude plugin test: ${error instanceof Error ? error.message : String(error)}\n`);
+        process.exitCode = 1;
+      }
+    });
   pluginCmd.command('validate <path>').description('Validate a plugin or marketplace manifest').addOption(coworkOption()).action(async (manifestPath: string, options: {
     cowork?: boolean;
   }) => {
