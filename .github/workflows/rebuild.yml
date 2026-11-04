@@ -72,6 +72,23 @@ jobs:
           expected_version=$(node -p "require('./package.json').version")
           test "$(bun dist/cli.js --version)" = "$expected_version (Claude Code)"
           bun dist/cli.js --help | grep -F -- '--print'
+      - name: 取得已锁定SHA的原版2.1.317 Linux x64执行参考
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          mkdir -p .rebuild/oracle
+          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
+            'https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude' \
+            --output .rebuild/oracle/claude
+          echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  .rebuild/oracle/claude" | sha256sum --check
+          chmod 755 .rebuild/oracle/claude
+      - name: 按官方317原版x64同步并实测Linux原生模块
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          node build/sync-official-native-from-binary.mjs --binary .rebuild/oracle/claude --vendor-root vendor --sync
+          node build/sync-official-native-from-binary.mjs --binary .rebuild/oracle/claude --vendor-root vendor
+          node -e "for (const name of ['clipboard-napi','audio-capture']) { const mod = require('./vendor/'+name+'/x64-linux/'+name+'.node'); if (!Object.keys(mod).length) throw Error(name+' exported nothing'); }"
       - name: 打包独立发行程序和平台资源
         run: node build/package-release.mjs
       - name: 校验发行文件完整性与启动器
@@ -122,16 +139,6 @@ jobs:
         id: acceptance_013
         continue-on-error: true
         run: node --test tests/m3-plugin-install-config-317.test.mjs
-      - name: 取得已锁定SHA的原版2.1.317 Linux x64执行参考
-        if: runner.os == 'Linux'
-        run: |
-          set -euo pipefail
-          mkdir -p .rebuild/oracle
-          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
-            'https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude' \
-            --output .rebuild/oracle/claude
-          echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  .rebuild/oracle/claude" | sha256sum --check
-          chmod 755 .rebuild/oracle/claude
       - name: 317插件安装配置的源码和真实x64差分
         id: acceptance_014
         continue-on-error: true
