@@ -13,6 +13,19 @@ if (!existsSync(executable) || !statSync(executable).isFile() || !statSync(execu
   throw Error('Missing native executable: run node build/compile-standalone.mjs before packaging');
 if (!existsSync(join(root, 'build/public-dependencies.lock.json'))) throw Error('Missing the verified public dependency lockfile');
 mkdirSync(dist,{recursive:true});
+// A release is a closed set of files: reject stale executables, old chunks and
+// unrelated build outputs before changing the previous package.
+const expectedRoot = new Set([
+  'cli.js', 'cli.js.map', nativeName, 'vendor', 'LICENSE.md',
+  'package.json', 'launcher.cjs', 'README.md', 'integrity.json',
+]);
+for (const entry of readdirSync(dist, { withFileTypes: true })) {
+  if (!expectedRoot.has(entry.name))
+    throw Error('Unregistered stale release artifact: ' + entry.name);
+  if (entry.isSymbolicLink())
+    throw Error('Release root contains a symbolic link: ' + entry.name);
+}
+
 // Package native resources as one verified transaction. Never expose a half-
 // copied vendor directory, and restore the previous release if activation fails.
 // Stage/backup are siblings of dist, so they cannot leak into integrity.json.
@@ -109,7 +122,7 @@ function walk(dir) {
      const rel=relative(dist,p).replaceAll('\\','/');
      if(rel==='integrity.json')continue;
      files.push({path:rel,bytes:statSync(p).size,sha256:createHash('sha256').update(readFileSync(p)).digest('hex')});
-   }
+   } else throw Error('Distribution contains a non-regular file: ' + rel);
  }
 }
 walk(dist);
