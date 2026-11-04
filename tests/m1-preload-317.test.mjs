@@ -145,6 +145,7 @@ test('M1 C19-T02 preloaded process uses claimed API host and auth for a real SSE
   skip: process.platform === 'win32', timeout: 90_000,
 }, async () => {
   const requests = []
+  const claimedSessionId = 'caller-chosen-preload-session'
   const event = (type, data) => 'event: ' + type + '\ndata: ' + JSON.stringify(data) + '\n\n'
   const server = createServer((req, res) => {
     if (req.method !== 'POST' || !req.url.startsWith('/v1/messages')) {
@@ -184,7 +185,7 @@ test('M1 C19-T02 preloaded process uses claimed API host and auth for a real SSE
       })
       try {
         await until(() => existsSync(sock))
-        await sendClaim(sock, { cwd:home,
+        await sendClaim(sock, { cwd:home, sessionId:claimedSessionId,
           argv:['--bare','-p','hello','--output-format=json','--model','claude-sonnet-4-6'],
           env: {
             ANTHROPIC_BASE_URL:'http://127.0.0.1:' + server.address().port,
@@ -196,7 +197,9 @@ test('M1 C19-T02 preloaded process uses claimed API host and auth for a real SSE
         const result = await Promise.race([started.done,
           new Promise((_, reject) => setTimeout(() => reject(Error(name + ' model timeout')), 28_000))])
         assert.equal(result.code, 0, name + ' ' + JSON.stringify(result))
-        assert.equal(JSON.parse(result.stdout.trim()).result, 'PRELOAD_CLAIM_OK', name)
+        const output = JSON.parse(result.stdout.trim())
+        assert.equal(output.result, 'PRELOAD_CLAIM_OK', name)
+        assert.equal(output.session_id, claimedSessionId, name + ' did not restore claimed session identity')
         assert.equal(requests.at(-1).key, 'fresh-credential', name + ' retained old auth')
         assert.equal(requests.at(-1).model, 'claude-sonnet-4-6')
         assert.equal(existsSync(sock), false)
