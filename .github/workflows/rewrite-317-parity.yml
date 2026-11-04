@@ -27,6 +27,8 @@ jobs:
           node build/install-public-deps.mjs
       - name: 测试333原生SDK工具与MCP实际调用
         run: bun test tests/rewrite-317-sdk-mcp.test.ts
+      - name: 验证317私有字符单元替代层的真实终端处理
+        run: bun test tests/rewrite-317-cell-segmentation.test.ts
       - name: 从333 TypeScript源码重建独立CLI
         run: bun build/rebuild.mjs
       - name: 检查插件清理命令启动阶段的实际输出和存活进程
