@@ -145,7 +145,7 @@ test('317 daemon refuses invalid proxy before parsing worker kind or stdin', {
   const env = {
     CLAUDE_CONFIG_DIR: dir,
     https_proxy: undefined, HTTPS_PROXY: undefined,
-    http_proxy: undefined, HTTP_PROXY: 'bad url',
+    http_proxy: 'bad url', HTTP_PROXY: undefined,
     ALL_PROXY: undefined, all_proxy: undefined,
     CLAUDE_CODE_HOST_CREDS_FILE: undefined,
   }
@@ -156,9 +156,9 @@ test('317 daemon refuses invalid proxy before parsing worker kind or stdin', {
       assert.equal(result.code, 78, name + JSON.stringify(result))
       assert.equal(result.stdout, '', name)
       assert.equal(result.stderr.trim(), [
-        'Invalid proxy URL in HTTP_PROXY: "bad url" cannot be parsed as a URL.',
+        'Invalid proxy URL in http_proxy: "bad url" cannot be parsed as a URL.',
         'Proxy settings must be a complete URL including the scheme, e.g. "http://proxy.example.com:8080".',
-        'Fix or unset HTTP_PROXY and restart Claude Code.',
+        'Fix or unset http_proxy and restart Claude Code.',
         'Error: the proxy setting named above is refused.',
         'Start the daemon again once this is mended.',
       ].join('\n'), name)
