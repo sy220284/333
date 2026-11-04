@@ -1,5 +1,5 @@
-import { getUserSnapshotContent } from './snapshotExtractors.mjs'
-import { cleanBashSpawnEnvironment } from './childEnv.mjs'
+import { getUserSnapshotContent } from './snapshotExtractors.ts'
+import { cleanBashSpawnEnvironment } from './childEnv.ts'
 import { execFile } from 'child_process'
 import { execa } from 'execa'
 import { mkdir, stat } from 'fs/promises'

@@ -29,7 +29,7 @@ import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
 import { getDefaultBranch, gitExe } from '../../utils/git.js'
 import { teleportToRemote } from '../../utils/teleport.js'
 import { getUltrareviewRuntimeEnvironment } from '../../utils/review/ultrareviewRuntime.js'
-import { resolveUltrareviewGitBase } from '../../utils/review/ultrareviewGitBase.mjs'
+import { resolveUltrareviewGitBase } from '../../utils/review/ultrareviewGitBase.ts'
 
 // One-time session flag: once the user confirms overage billing via the
 // dialog, all subsequent /ultrareview invocations in this session proceed
