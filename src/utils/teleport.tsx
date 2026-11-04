@@ -766,6 +766,8 @@ export async function teleportToRemote(options: {
    * exact local state. Needs .git/ only, not a GitHub remote.
    */
   useBundle?: boolean;
+  /** Use a parentless HEAD snapshot when Git history cannot be compared (2.1.317 ultrareview). */
+  bundleForceScope?: 'squashed';
   /**
    * Called with a user-facing message when the bundle path is attempted but
    * fails. The wrapper stderr.writes it (pre-REPL). Remote-agent callers
@@ -842,10 +844,12 @@ export async function teleportToRemote(options: {
           sessionId: getSessionId(),
           baseUrl: getOauthConfig().BASE_API_URL
         }, {
-          signal
+          signal,
+          forceScope: options.bundleForceScope,
         });
         if (bundle.success === false) {
           logError(new Error(`Bundle upload failed: ${bundle.error}`));
+          options.onBundleFail?.(bundle.error);
           return null;
         }
         seedBundleFileId = bundle.fileId;
