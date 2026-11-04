@@ -86,5 +86,5 @@ export function parseWorkflowMetaLiteral(source: string): Record<string, Workflo
   const result = value(0)
   space()
   if (i !== source.length || !result || Array.isArray(result) || typeof result !== 'object') fail()
-  return result
+  return result as Record<string, WorkflowMetaLiteral317>
 }
