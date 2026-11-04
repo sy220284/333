@@ -21,6 +21,12 @@ on:
       - 'src/bootstrap/state.ts'
       - 'src/QueryEngine.ts'
       - 'src/query.ts'
+      - 'src/main.tsx'
+      - 'src/cli/print.ts'
+      - 'src/bootstrap/preload317.ts'
+      - 'src/bootstrap/bgSpare317.ts'
+      - 'src/bootstrap/claimRebind317.ts'
+      - 'tests/m1-claim-rebind-317.test.mjs'
       - 'tests/m4-session-storage-v5-integration.test.ts'
       - 'tests/m2-session-queue-manager-integration-317.test.ts'
       - 'tests/m4-resume-preparation-v5.test.mjs'
@@ -72,6 +78,8 @@ jobs:
           node build/install-public-deps.mjs
       - name: 从最新 TypeScript 源码完整构建
         run: bun build/rebuild.mjs
+      - name: 预热会话身份与配置缓存重绑定
+        run: bun test tests/m1-claim-rebind-317.test.mjs
       - name: 新架构队列、存储、恢复单元验收
         run: |
           node --test tests/m2-session-queue-partitions-317.test.mjs tests/m4-session-transcript-paths-v5.test.mjs tests/m4-resume-preparation-v5.test.mjs tests/m4-ccr-concurrent-restore-317.test.mjs
