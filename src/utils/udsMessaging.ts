@@ -5,9 +5,34 @@ import { dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { registerCleanup } from './cleanupRegistry.js'
 import { wrapCrossSessionMessage } from './peerMessageEnvelope.mjs'
+import { logForDebugging } from './debug.js'
 
 let activeServer: Server | null = null
 let currentPath: string | undefined
+let lastStartFailureCause: 'bind_failed' | undefined
+
+export function getUdsStartFailureCause(): 'bind_failed' | undefined {
+  return lastStartFailureCause
+}
+
+// 317 chunk-00bcssqf: automatic inbox binding is optional during startup;
+// an explicitly requested endpoint must report its failure to the caller.
+export async function startCrossSessionInbox(socketPath?: string): Promise<boolean> {
+  lastStartFailureCause = 'bind_failed'
+  const path = socketPath ?? getDefaultUdsSocketPath()
+  try {
+    await startUdsMessaging(path)
+  } catch (error) {
+    if (socketPath !== undefined) {
+      throw new Error(`--messaging-socket-path: cannot bind at ${path}: ${String(error)}`, { cause: error })
+    }
+    logForDebugging(`[uds-messaging] Failed to start: ${String(error)}`, { level: 'error' })
+    return false
+  }
+  if (currentPath === undefined) return false
+  lastStartFailureCause = undefined
+  return true
+}
 
 export function getDefaultUdsSocketPath(): string {
   const base = tmpdir().length > 35 ? '/tmp' : tmpdir()

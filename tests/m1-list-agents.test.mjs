@@ -80,7 +80,7 @@ test('tools registration, alias, output, gate and receiver are wired',async()=>{
   assert.match(mod,/listing: z\.string\(\)/)
   assert.match(mod,/isEnabled\(\) \{ return isCrossSessionMessagingEnabled\(\) \}/)
   assert.match(pool,/ListAgentsTool,/)
-  assert.match(setup,/startUdsMessaging\(/)
+  assert.match(setup,/startCrossSessionInbox\(/)
   assert.match(sender,/resolveUnifiedPeerRecipient\(/)
   assert.match(recv,/enqueuePendingNotification\(/)
 })

@@ -95,7 +95,7 @@ export async function setup(
     // (SessionStart in particular) can spawn and snapshot process.env.
     if (isCrossSessionMessagingEnabled()) {
       const m = await import('./utils/udsMessaging.js')
-      await m.startUdsMessaging(messagingSocketPath ?? m.getDefaultUdsSocketPath())
+      await m.startCrossSessionInbox(messagingSocketPath)
     }
   }
 

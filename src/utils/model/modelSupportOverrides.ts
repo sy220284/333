@@ -4,11 +4,16 @@ import { getAPIProvider } from './providers.js'
 export type ModelCapabilityOverride =
   | 'effort'
   | 'max_effort'
+  | 'xhigh_effort'
   | 'thinking'
   | 'adaptive_thinking'
   | 'interleaved_thinking'
 
 const TIERS = [
+  {
+    modelEnvVar: 'ANTHROPIC_DEFAULT_FABLE_MODEL',
+    capabilitiesEnvVar: 'ANTHROPIC_DEFAULT_FABLE_MODEL_SUPPORTED_CAPABILITIES',
+  },
   {
     modelEnvVar: 'ANTHROPIC_DEFAULT_OPUS_MODEL',
     capabilitiesEnvVar: 'ANTHROPIC_DEFAULT_OPUS_MODEL_SUPPORTED_CAPABILITIES',
@@ -21,6 +26,10 @@ const TIERS = [
     modelEnvVar: 'ANTHROPIC_DEFAULT_HAIKU_MODEL',
     capabilitiesEnvVar: 'ANTHROPIC_DEFAULT_HAIKU_MODEL_SUPPORTED_CAPABILITIES',
   },
+  {
+    modelEnvVar: 'ANTHROPIC_CUSTOM_MODEL_OPTION',
+    capabilitiesEnvVar: 'ANTHROPIC_CUSTOM_MODEL_OPTION_SUPPORTED_CAPABILITIES',
+  },
 ] as const
 
 /**
@@ -32,12 +41,13 @@ export const get3PModelCapabilityOverride = memoize(
     if (getAPIProvider() === 'firstParty') {
       return undefined
     }
-    const m = model.toLowerCase()
+    // 317 chunk-q8rt2ywd Lv/Ft: [1m] changes context size, not model identity.
+    const m = model.replace(/\[1m\]$/i, '').toLowerCase()
     for (const tier of TIERS) {
-      const pinned = process.env[tier.modelEnvVar]
+      const pinned = process.env[tier.modelEnvVar]?.trim()
       const capabilities = process.env[tier.capabilitiesEnvVar]
       if (!pinned || capabilities === undefined) continue
-      if (m !== pinned.toLowerCase()) continue
+      if (m !== pinned.replace(/\[1m\]$/i, '').toLowerCase()) continue
       return capabilities
         .toLowerCase()
         .split(',')
