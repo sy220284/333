@@ -11,6 +11,7 @@ import { getOauthConfig } from '../../constants/oauth.js'
 import { checkHasTrustDialogAccepted } from '../../utils/config.js'
 import { checkRemoteAgentEligibility, formatPreconditionError } from '../../tasks/RemoteAgentTask/RemoteAgentTask.js'
 import { checkOverageGate } from '../../commands/review/reviewRemote.js'
+import { getUltrareviewRuntimeEnvironment } from '../../utils/review/ultrareviewRuntime.js'
 import { detectCurrentRepositoryWithHost } from '../../utils/detectRepository.js'
 import { getClaudeAIOAuthTokens } from '../../utils/auth.js'
 import { pollRemoteSessionEvents, teleportToRemote } from '../../utils/teleport.js'
@@ -106,15 +107,6 @@ async function confirmWorkspaceTrust(): Promise<boolean> {
   }
   return false
 }
-function envVars() {
-  return {
-    BUGHUNTER_DRY_RUN: '1',
-    BUGHUNTER_FLEET_SIZE: '5',
-    BUGHUNTER_MAX_DURATION: '10',
-    BUGHUNTER_AGENT_TIMEOUT: '600',
-    BUGHUNTER_TOTAL_WALLCLOCK: '22',
-  }
-}
 export async function ultrareviewCliHandler(target: string | undefined, options: UltrareviewCliOptions): Promise<void> {
   const argv = process.argv
   const trustIndex = argv.indexOf('--trust-workspace')
@@ -170,7 +162,7 @@ export async function ultrareviewCliHandler(target: string | undefined, options:
         signal: signal.signal, branchName: 'refs/pull/' + target + '/head',
         environmentId: ENV_ID,
         environmentVariables: { BUGHUNTER_PR_NUMBER: target,
-          BUGHUNTER_REPOSITORY: repo.owner + '/' + repo.name, ...envVars() },
+          BUGHUNTER_REPOSITORY: repo.owner + '/' + repo.name, ...getUltrareviewRuntimeEnvironment() },
       })
     } else {
       const branch = target || await getDefaultBranch() || 'main'
@@ -181,7 +173,7 @@ export async function ultrareviewCliHandler(target: string | undefined, options:
       session = await teleportToRemote({
         initialMessage: null, description: 'ultrareview: ' + branch,
         signal: signal.signal, useBundle: true, environmentId: ENV_ID,
-        environmentVariables: { BUGHUNTER_BASE_BRANCH: merged.stdout.trim(), ...envVars() },
+        environmentVariables: { BUGHUNTER_BASE_BRANCH: merged.stdout.trim(), ...getUltrareviewRuntimeEnvironment() },
       })
     }
     if (!session) return outputError('The cloud session could not start.')
