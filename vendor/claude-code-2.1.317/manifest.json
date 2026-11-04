@@ -6,9 +6,9 @@
   "bun_size": 183466106,
   "module_count": 2924,
   "kinds": {
-    "text": 98,
-    "file": 133,
     "js": 2691,
+    "file": 133,
+    "text": 98,
     "napi": 2
   },
   "description": "source: exact bytes; modules: path-rewritten candidate, not yet runtime-verified; decoded: zstd output",
