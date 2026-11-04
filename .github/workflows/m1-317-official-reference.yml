@@ -1,6 +1,18 @@
 name: M1 官方 2.1.317 x64 二进制来源与运行基准
 
 on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - 'build/claude-api-2.1.317-manifest.json'
+      - 'build/restore-claude-api.mjs'
+      - 'src/skills/bundled/**'
+      - 'src/main.tsx'
+      - 'tests/m1-claude-api-manifest-317.test.mjs'
+      - 'tests/m1-official-bundled-skills-317.test.mjs'
+      - 'tests/m1-317-chain-matrix.test.mjs'
+      - 'docs/upgrade/m1-evidence/2.1.317-366项功能链路分组矩阵.json'
+      - '.github/workflows/m1-317-official-reference.yml'
   pull_request:
     branches: [main]
     paths:
