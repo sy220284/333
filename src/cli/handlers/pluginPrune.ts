@@ -24,6 +24,20 @@ export async function pluginPruneHandler(options: {
   const scope = requestedScope as Scope
   const projectPath = getProjectPathForScope(scope)
   const state = loadInstalledPluginsV2()
+  // The graph is empty when there are no automatically installed plugins
+  // in this scope. Avoid loading every marketplace manifest and plugin hook
+  // merely to prove that no removal can occur. This also makes the command
+  // independent from optional plugin-runtime startup in the common case.
+  const preflight = computeAutoDependencyOrphans(
+    state.plugins,
+    [],
+    scope,
+    projectPath,
+  )
+  if (preflight.autoCount === 0) {
+    process.stdout.write(`Nothing to prune (no auto-installed plugins at ${scope} scope).\\n`)
+    return
+  }
   const plugins = await loadAllPlugins()
   const scan = computeAutoDependencyOrphans(
     state.plugins,

@@ -9,6 +9,7 @@
  * sdk/controlTypes.ts directly.
  */
 
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type {
   CallToolResult,
   ToolAnnotations,
@@ -71,20 +72,22 @@ export type {
 }
 
 export function tool<Schema extends AnyZodRawShape>(
-  _name: string,
-  _description: string,
-  _inputSchema: Schema,
-  _handler: (
+  name: string,
+  description: string,
+  inputSchema: Schema,
+  handler: (
     args: InferShape<Schema>,
     extra: unknown,
   ) => Promise<CallToolResult>,
-  _extras?: {
+  extras?: {
     annotations?: ToolAnnotations
     searchHint?: string
     alwaysLoad?: boolean
   },
 ): SdkMcpToolDefinition<Schema> {
-  throw new Error('not implemented')
+  // Keep the public SDK descriptor independent from the MCP transport.
+  // The handler and raw Zod shape are retained for in-process registration.
+  return { name, description, inputSchema, handler, ...extras }
 }
 
 type CreateSdkMcpServerOptions = {
@@ -101,9 +104,26 @@ type CreateSdkMcpServerOptions = {
  * If your SDK MCP calls will run longer than 60s, override CLAUDE_CODE_STREAM_CLOSE_TIMEOUT
  */
 export function createSdkMcpServer(
-  _options: CreateSdkMcpServerOptions,
+  options: CreateSdkMcpServerOptions,
 ): McpSdkServerConfigWithInstance {
-  throw new Error('not implemented')
+  const instance = new McpServer({
+    name: options.name,
+    version: options.version ?? '1.0.0',
+  })
+  // Register against the same MCP server used by 333's SDK transport.
+  // A duplicate tool or invalid schema must fail here, before connecting.
+  for (const definition of options.tools ?? []) {
+    instance.registerTool(
+      definition.name,
+      {
+        description: definition.description,
+        inputSchema: definition.inputSchema,
+        ...(definition.annotations && { annotations: definition.annotations }),
+      },
+      (args, extra) => definition.handler(args, extra),
+    )
+  }
+  return { type: 'sdk', name: options.name, instance }
 }
 
 export class AbortError extends Error {}

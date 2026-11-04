@@ -46,11 +46,17 @@ async function main(): Promise<void> {
   }
   const flagWords = beforeDoubleDash(args);
 
-  // Fast-path for --version/-v: avoid evaluating the full CLI.
-  if (args.length === 1 && (args[0] === '--version' || args[0] === '-v' || args[0] === '-V')) {
-    // MACRO.VERSION is inlined at build time
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
+  // 2.1.317: --version --verbose is a two-line fast path (including the
+  // release commit). Keep the 333 build's own entrypoint and public Bun runtime.
+  const versionRequested = ['--version', '-v', '-V'].includes(args[0] ?? '');
+  if (versionRequested && (args.length === 1 || (args.length === 2 && args[1] === '--verbose'))) {
+    // biome-ignore lint/suspicious/noConsole: intentional CLI output
     console.log(`${MACRO.VERSION} (Claude Code)`);
+    if (args.length === 2 && MACRO.VERSION === '2.1.317') {
+      // Verified against the corresponding upstream x64 release, not a guess
+      // from this repository's Git HEAD.
+      console.log('Commit: 3d3e7cb16b5577dccaee9520c8dc1189d02d61b7');
+    }
     return;
   }
 
