@@ -6,6 +6,62 @@
  */
 import assert from 'node:assert/strict'
 
+/**
+ * Comparison across vm.SourceTextModule realms needs structural cloning:
+ * Node's assert.deepStrictEqual also compares object prototypes, and an
+ * ordinary object created in the isolated VM has a different Object.prototype.
+ * Keep numbers (including NaN), undefined, Date, RegExp and circular identity.
+ */
+function normalizeRealmValue(value, seen = new WeakMap()) {
+  if (value === null || typeof value !== 'object') return value
+  if (seen.has(value)) return seen.get(value)
+  const tag = Object.prototype.toString.call(value)
+  if (tag === '[object Date]') return new Date(Date.prototype.getTime.call(value))
+  if (tag === '[object RegExp]') return new RegExp(value.source, value.flags)
+  if (tag === '[object ArrayBuffer]') return Uint8Array.from(new Uint8Array(value))
+  if (ArrayBuffer.isView(value)) return Uint8Array.from(new Uint8Array(
+    value.buffer, value.byteOffset, value.byteLength,
+  ))
+  if (tag === '[object Map]') {
+    const map = new Map()
+    seen.set(value, map)
+    for (const [key, item] of value) {
+      map.set(normalizeRealmValue(key, seen), normalizeRealmValue(item, seen))
+    }
+    return map
+  }
+  if (tag === '[object Set]') {
+    const set = new Set()
+    seen.set(value, set)
+    for (const item of value) set.add(normalizeRealmValue(item, seen))
+    return set
+  }
+  if (Array.isArray(value)) {
+    const array = new Array(value.length)
+    seen.set(value, array)
+    for (const key of Reflect.ownKeys(value)) {
+      if (key === 'length') continue
+      array[key] = normalizeRealmValue(value[key], seen)
+    }
+    return array
+  }
+  if (tag === '[object Error]') {
+    const error = { name: value.name, message: value.message }
+    seen.set(value, error)
+    if ('cause' in value) error.cause = normalizeRealmValue(value.cause, seen)
+    return error
+  }
+  if (tag === '[object Object]') {
+    const plain = {}
+    seen.set(value, plain)
+    for (const key of Reflect.ownKeys(value)) {
+      plain[key] = normalizeRealmValue(value[key], seen)
+    }
+    return plain
+  }
+  return value
+}
+
 export function createPluginTestKit317() {
   const cases = []
   let collecting = true
@@ -59,8 +115,14 @@ export function createPluginTestKit317() {
     return {
       get not() { return makeExpect(actual, !inverted) },
       toBe(expected) { check(expected, assert.strictEqual, 'toBe') },
-      toEqual(expected) { check(expected, assert.deepStrictEqual, 'toEqual') },
-      toStrictEqual(expected) { check(expected, assert.deepStrictEqual, 'toStrictEqual') },
+      toEqual(expected) {
+        check(expected, (a, b) =>
+          assert.deepStrictEqual(normalizeRealmValue(a), normalizeRealmValue(b)), 'toEqual')
+      },
+      toStrictEqual(expected) {
+        check(expected, (a, b) =>
+          assert.deepStrictEqual(normalizeRealmValue(a), normalizeRealmValue(b)), 'toStrictEqual')
+      },
       toContain(expected) {
         check(expected, (a, b) => assert.ok(
           (typeof a === 'string' || Array.isArray(a)) && a.includes(b),
