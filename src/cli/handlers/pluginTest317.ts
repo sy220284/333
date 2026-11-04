@@ -7,8 +7,8 @@ import { spawn } from 'node:child_process'
 import { readFile, realpath, stat } from 'node:fs/promises'
 import { availableParallelism } from 'node:os'
 import { resolve, join, relative, isAbsolute } from 'node:path'
-import { discoverPluginTests317 } from '../../utils/plugins/pluginTestDiscovery317.mjs'
-import { runPluginTestFile317 } from './pluginTestSandbox317.mjs'
+import { discoverPluginTests317 } from '../../utils/plugins/pluginTestDiscovery317.ts'
+import { runPluginTestFile317 } from './pluginTestSandbox317.ts'
 
 const REPORT_PREFIX = '@@CLAUDE_PLUGIN_TEST_RESULT_317@@'
 const PER_FILE_TIMEOUT_MS = 600000
