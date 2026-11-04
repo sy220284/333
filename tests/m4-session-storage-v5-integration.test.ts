@@ -156,11 +156,11 @@ test('late transcript writes keep their original session and path after /resume'
   }
 })
 
-test('explicit resumed worktree path overrides the prior location for the same session', () => {
-  const { switchSession, getSessionId } = require('../src/bootstrap/state.js')
-  const { asSessionId } = require('../src/types/ids.js')
+test('explicit resumed worktree path overrides the prior location for the same session', async () => {
+  const { switchSession, getSessionId } = await import('../src/bootstrap/state.js')
+  const { asSessionId } = await import('../src/types/ids.js')
   const { getTranscriptPath, getTranscriptPathForSession } =
-    require('../src/utils/sessionStorage.js')
+    await import('../src/utils/sessionStorage.js')
   const original = getSessionId()
   const session = asSessionId('ffffffff-ffff-4fff-8fff-ffffffffffff')
   const firstDir = join(tmpdir(), 'cc-v5-worktree-one')
