@@ -12,6 +12,8 @@ on:
       - 'tests/m1-official-bundled-skills-317.test.mjs'
       - 'tests/m1-317-chain-matrix.test.mjs'
       - 'tests/m1-target-release-317.test.mjs'
+      - 'tests/m1-x64-conversation-ui-scenarios.py'
+      - 'tests/test_m1_retry_phase_glyphs.py'
       - 'docs/upgrade/m1-evidence/2.1.317-366项功能链路分组矩阵.json'
       - '.github/workflows/m1-317-official-reference.yml'
   pull_request:
@@ -162,6 +164,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m pip install --disable-pip-version-check pyte==0.8.2
+          python3 -m unittest discover -s tests -p test_m1_retry_phase_glyphs.py
           python3 tests/m1-x64-conversation-ui-scenarios.py \
             --reference "${RUNNER_TEMP}/m1-317-reference/claude" \
             --candidate "${RUNNER_TEMP}/m1-317-candidate" \
