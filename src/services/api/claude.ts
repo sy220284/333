@@ -1643,7 +1643,7 @@ async function* queryModel(
         // thinking without a budget.
         thinking = {
           type: 'adaptive',
-          display: 'updates',
+          display: options.isNonInteractiveSession ? 'omitted' : 'updates',
         } satisfies BetaMessageStreamParams['thinking']
       } else {
         // For models that do not support adaptive thinking, use the default
@@ -1659,7 +1659,7 @@ async function* queryModel(
         thinking = {
           budget_tokens: thinkingBudget,
           type: 'enabled',
-          display: 'updates',
+          display: options.isNonInteractiveSession ? 'omitted' : 'updates',
         } satisfies BetaMessageStreamParams['thinking']
       }
     }
