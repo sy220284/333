@@ -33,7 +33,7 @@ test('2.1.317 no-merge-base review: one snapshot commit contains the full tree w
     assert.match(emptySha, /^[0-9a-f]{40,64}$/)
     const diff = git(cwd, ['diff', '--shortstat', emptySha])
     assert.equal(diff.status, 0)
-    assert.ok(diff.stdout.includes('file changed'))
+    assert.match(diff.stdout, /\d+ files? changed/)
 
     const snapshot = git(cwd, ['commit-tree', 'HEAD^{tree}', '-m', 'seed'])
     assert.equal(snapshot.status, 0, snapshot.stderr)
