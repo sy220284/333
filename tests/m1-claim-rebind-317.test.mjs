@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'bun:test'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { rebindClaimedSessionDependencies317 } from '../src/bootstrap/claimRebind317.ts'
@@ -43,6 +43,11 @@ test('317 claimed session rebinds global config, project and settings ownership'
     assert.equal(getGlobalConfig().numStartups, 29)
     assert.equal(getSettingsForSource('userSettings')?.env?.CLAIM_ID, 'accepted')
     assert.notEqual(getProjectPathForConfig(), oldPath)
+    // A delayed event on the old file must not leak its contents into
+    // the accepted owner's cache after handoff.
+    writeFileSync(join(a, configName), JSON.stringify({ numStartups: 77 }))
+    await new Promise(resolve => setTimeout(resolve, 1300))
+    assert.equal(getGlobalConfig().numStartups, 29)
   } finally {
     setOriginalCwd(oldCwd)
     if (oldDir === undefined) delete process.env.CLAUDE_CONFIG_DIR

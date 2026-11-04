@@ -869,6 +869,7 @@ let freshnessWatcherStarted = false
 // Ownership is explicit: a preloaded worker may switch CLAUDE_CONFIG_DIR
 // between the warm environment and the accepted session.
 let activeFreshnessWatchFile317: string | null = null
+let freshnessWatcherGeneration317 = 0
 
 
 // fs.watchFile polls stat on the libuv threadpool and only calls us when mtime
@@ -878,10 +879,14 @@ function startGlobalConfigFreshnessWatcher(): void {
   freshnessWatcherStarted = true
   const file = getGlobalClaudeFile()
   activeFreshnessWatchFile317 = file
+  const generation = ++freshnessWatcherGeneration317
   watchFile(
     file,
     { interval: CONFIG_FRESHNESS_POLL_MS, persistent: false },
     curr => {
+      // Async disk reads from an earlier claimed session must never overwrite
+      // the new owner's global config, even after the old watcher is removed.
+      if (generation !== freshnessWatcherGeneration317) return
       // Our own writes fire this too — the write-through's Date.now()
       // overshoot makes cache.mtime > file mtime, so we skip the re-read.
       // Bun/Node also fire with curr.mtimeMs=0 when the file doesn't exist
@@ -890,6 +895,7 @@ function startGlobalConfigFreshnessWatcher(): void {
       void getFsImplementation()
         .readFile(file, { encoding: 'utf-8' })
         .then(content => {
+          if (generation !== freshnessWatcherGeneration317) return
           // A write-through may have advanced the cache while we were reading;
           // don't regress to the stale snapshot watchFile stat'd.
           if (curr.mtimeMs <= globalConfigCache.mtime) return
@@ -971,6 +977,8 @@ export function getGlobalConfig(): GlobalConfig {
  * the newly claimed session's globalConfigCache.
  */
 export function rebindGlobalConfigForClaim317(): void {
+  // Invalidate in-flight watcher reads before dropping the old file owner.
+  freshnessWatcherGeneration317++
   if (activeFreshnessWatchFile317 !== null) {
     unwatchFile(activeFreshnessWatchFile317)
     activeFreshnessWatchFile317 = null
