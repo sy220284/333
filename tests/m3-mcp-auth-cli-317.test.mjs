@@ -17,7 +17,7 @@ test('MCP commands enforce transport/auth boundaries and durably clear one serve
   }
   try {
     writeFileSync(join(home, '.claude.json'), JSON.stringify({ mcpServers: {
-      local: { type: 'stdio', command: 'echo', args: ['hello'] },
+      local: { command: 'echo', args: ['hello'] },
       hosted: { type: 'http', url: 'https://gmail.mcp.claude.com/mcp' },
       demo: { type: 'http', url: 'https://example.com/mcp' },
       static: { type: 'http', url: 'https://example.com/static', headers: { authorization: 'Bearer test' } },

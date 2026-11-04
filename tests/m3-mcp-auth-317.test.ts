@@ -136,3 +136,13 @@ test('negative-auth cache errors are reported and the write queue recovers', asy
     rmSync(home, { recursive: true, force: true })
   }
 })
+
+
+test('omitted stdio transport is normalized at the shared schema boundary', async () => {
+  const { McpServerConfigSchema } = await import('../src/services/mcp/types.js')
+  const schema = McpServerConfigSchema()
+  expect(schema.parse({ command: 'echo' })).toEqual({ type: 'stdio', command: 'echo', args: [] })
+  expect(schema.parse({ type: 'stdio', command: 'echo', args: ['hello'] }).type).toBe('stdio')
+  expect(schema.safeParse({ type: 'http', command: 'echo' }).success).toBe(false)
+  expect(schema.safeParse({ command: '' }).success).toBe(false)
+})
