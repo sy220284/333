@@ -16,12 +16,13 @@ const sha256 = data => createHash('sha256').update(data).digest('hex')
 function fixture(run) {
   const dir = mkdtempSync(join(tmpdir(), '333-vendor-release-317-'))
   try {
-    for (const file of ['build/package-release.mjs', 'build/public-dependencies.lock.json',
+    for (const file of ['build/package-release.mjs', 'build/release-launcher.cjs', 'build/public-dependencies.lock.json',
       'LICENSE.md', 'package.json', 'dist/cli.js',
       'vendor/audio-capture/x64-linux/audio-capture.node', 'vendor/ripgrep/COPYING']) {
       const dest = join(dir, file)
       mkdirSync(dirname(dest), { recursive: true })
       if (file === 'build/package-release.mjs') copyFileSync(packageScript, dest)
+      else if (file === 'build/release-launcher.cjs') copyFileSync(join(root, file), dest)
       else writeFileSync(dest, file === 'package.json' ? '{"version":"2.1.317"}\n' : file)
     }
     run(dir)
