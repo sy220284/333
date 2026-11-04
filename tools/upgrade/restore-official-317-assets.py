@@ -123,6 +123,25 @@ def main():
             missing.append(name)
     if missing:
         raise ValueError("Unrestored official resources: " + ", ".join(missing))
+    # The manifest is derived from exact official ELF bytes for offline builds.
+    manifest = {
+        "version": "2.1.317",
+        "source_binary_sha256": SOURCE_SHA,
+        "resources": sorted((
+            {"path": name, "bytes": len(contents), "sha256": hashlib.sha256(contents).hexdigest()}
+            for _, contents, name in prepared
+        ), key=lambda item: item["path"]),
+    }
+    manifest_path = args.root / "build/official-embedded-assets-2.1.317.json"
+    if manifest_path.is_symlink() or (manifest_path.exists() and not manifest_path.is_file()):
+        raise ValueError("Official resource manifest destination is not a regular file")
+    manifest_bytes = (json.dumps(manifest, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+    if args.write:
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        if not manifest_path.exists() or manifest_path.read_bytes() != manifest_bytes:
+            replace_from_verified_binary(manifest_path, manifest_bytes)
+    elif not manifest_path.is_file() or manifest_path.read_bytes() != manifest_bytes:
+        raise ValueError("Official offline resource manifest missing or checksum mismatch")
     print(json.dumps({"target":"2.1.317","result":"PASS","verified":len(prepared),"repaired":len(repaired),"repaired_paths":repaired,"bytes":sum(len(b) for _,b,_ in prepared)}))
 
 if __name__ == "__main__":
