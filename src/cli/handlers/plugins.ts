@@ -219,7 +219,7 @@ export async function pluginListHandler(options: {
       version: string
       scope: string
       enabled: boolean
-      projectEnabled: boolean
+      projectEnabled?: boolean
       installPath: string
       installedAt?: string
       lastUpdated?: string
