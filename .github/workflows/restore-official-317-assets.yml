@@ -8,6 +8,7 @@ on:
       - 'src/skills/bundled/**'
       - 'src/types/official317/**'
       - 'src/constants/official317/**'
+      - 'build/official-embedded-assets-2.1.317.json'
       - 'tools/upgrade/restore-official-317-assets.py'
       - '.github/workflows/restore-official-317-assets.yml'
   workflow_dispatch:
@@ -74,7 +75,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git add src/skills/bundled src/types/official317 src/constants/official317
+          git add src/skills/bundled src/types/official317 src/constants/official317 build/official-embedded-assets-2.1.317.json
           python3 - <<'PY'
           import importlib.util
           import subprocess
@@ -96,7 +97,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/skills/bundled src/types/official317 src/constants/official317
+          git add src/skills/bundled src/types/official317 src/constants/official317 build/official-embedded-assets-2.1.317.json
           if git diff --cached --quiet; then
             echo "资源已存在且内容一致，无需重复提交"
           else
