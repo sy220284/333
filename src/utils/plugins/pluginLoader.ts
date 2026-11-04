@@ -833,7 +833,7 @@ const execSourceCommand = promisify(shellExec)
 async function installFromCommandSource(
   source: { command: string; mode: 'copy' | 'link' },
   targetPath: string,
-): Promise<void> {
+): Promise<string> {
   if (source.mode === 'link' && process.platform === 'win32') {
     throw new Error('Linked command sources are not supported on Windows')
   }
@@ -856,6 +856,7 @@ async function installFromCommandSource(
   } else {
     await installFromLocal(sourcePath, targetPath)
   }
+  return sourcePath
 }
 
 /**
@@ -908,7 +909,7 @@ export async function cachePlugin(
     manifest?: PluginManifest
     authorizedCommandSource?: boolean
   },
-): Promise<{ path: string; manifest: PluginManifest; gitCommitSha?: string }> {
+): Promise<{ path: string; manifest: PluginManifest; gitCommitSha?: string; sourceProducerPath?: string }> {
   const cachePath = getPluginCachePath()
 
   await getFsImplementation().mkdir(cachePath)
@@ -918,6 +919,7 @@ export async function cachePlugin(
 
   let shouldCleanup = false
   let gitCommitSha: string | undefined
+  let sourceProducerPath: string | undefined
 
   try {
     logForDebugging(
@@ -955,7 +957,7 @@ export async function cachePlugin(
           if (options?.authorizedCommandSource !== true) {
             throw new Error('Marketplace command source requires explicit per-command user authorization')
           }
-          await installFromCommandSource(source, tempPath)
+          sourceProducerPath = await installFromCommandSource(source, tempPath)
           break
         case 'pip':
           throw new Error('Python package plugins are not yet supported')
@@ -1047,6 +1049,7 @@ export async function cachePlugin(
     path: finalPath,
     manifest,
     ...(gitCommitSha && { gitCommitSha }),
+    ...(sourceProducerPath && { sourceProducerPath }),
   }
 }
 
