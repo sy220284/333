@@ -33,7 +33,7 @@ function readRegistry(path) {
         throw new Error(`Invalid V1 plugin record for ${id} in ${path}`)
       }
     } else if (!Array.isArray(records) || records.some(record =>
-      !isObject(record) || !SCOPES.has(record.scope) || typeof record.installPath !== 'string' ||
+      !isObject(record) || typeof record.scope !== 'string' || !SCOPES.has(record.scope) || typeof record.installPath !== 'string' ||
       (record.projectPath !== undefined && typeof record.projectPath !== 'string')
     )) {
       throw new Error(`Invalid V2 plugin records for ${id} in ${path}`)

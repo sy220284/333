@@ -10,8 +10,8 @@ export function computeAutoDependencyOrphans(
   installations: Record<string, PruneInstallation317[]>,
   loaded: PruneLoadedPlugin317[], scope: string, projectPath?: string,
 ) {
-  const manual = new Set()
-  const automatic = new Set()
+  const manual = new Set<string>()
+  const automatic = new Set<string>()
   for (const [id, entries] of Object.entries(installations ?? {})) {
     const active = entries.find(record =>
       record.scope === scope && record.projectPath === projectPath)
@@ -25,13 +25,13 @@ export function computeAutoDependencyOrphans(
   if (unloadable.length) {
     return { orphans: new Set(), unloadable, autoCount: automatic.size }
   }
-  const reachable = new Set()
-  const qualify = (dep, source) => {
+  const reachable = new Set<string>()
+  const qualify = (dep: string, source: string): string => {
     if (dep.includes('@')) return dep
     const suffix = source.slice(source.lastIndexOf('@') + 1)
     return suffix === 'inline' || suffix === source ? dep : `${dep}@${suffix}`
   }
-  function visit(id) {
+  function visit(id: string): void {
     if (reachable.has(id)) return
     reachable.add(id)
     const plugin = byId.get(id)

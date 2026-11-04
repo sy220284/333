@@ -24,7 +24,7 @@ export function commandSourceDisclosure({ pluginId, command, mode, catalogRevisi
   if (typeof catalogRevision !== 'string' || catalogRevision === '') {
     throw new TypeError('Marketplace revision must be known')
   }
-  const shown = { kind: 'command_source', pluginId, command, mode, catalogRevision }
+  const shown = { kind: 'command_source' as const, pluginId, command, mode, catalogRevision }
   return {
     ...shown,
     sha256: commandSourceDigest(shown),

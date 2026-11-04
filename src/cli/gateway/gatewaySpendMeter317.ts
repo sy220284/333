@@ -222,7 +222,7 @@ export function createGatewaySseUsage317() {
 export function meterGatewayResponse317(response,context) {
   const {store,identity,config,model,upstream,payingGroup,headers={},audit}=context
   const h=new Headers(response.headers)
-  for(const [key,value] of Object.entries(headers))h.set(key,value)
+  for(const [key,value] of Object.entries(headers))h.set(key,String(value))
   if(response.status>=400 || !response.body) return new Response(response.body,{
     status:response.status,headers:h,
   })

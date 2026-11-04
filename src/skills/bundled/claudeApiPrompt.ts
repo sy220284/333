@@ -38,7 +38,7 @@ function onboardingSource(args) {
   return url !== undefined && rest.length === 0 && firstPartyUrl(url) ? 'first_party' : 'third_party'
 }
 
-function quickstarts(files) {
+function quickstarts(files: Record<string, string>) {
   return Object.entries(files).filter(([path]) => path.startsWith(QUICKSTART_PREFIX) && path.endsWith('.md')).map(([path, text]) => ({
     name: path.slice(QUICKSTART_PREFIX.length, -3), path,
     alias: /^console_key: (\S+)$/m.exec(text)?.[1] ?? '',

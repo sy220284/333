@@ -1,5 +1,5 @@
 export declare function classifyStartupArgs(args: string[]): {
-  flagWords: string[]
+  flagWords: readonly string[]
   command: string | undefined
   sessionVerbIndex: number
   backgroundRequest: boolean

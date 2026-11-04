@@ -72,7 +72,7 @@ function pickHeaders(request, up, requestId) {
   for (const [key, value] of request.headers) {
     if (FORWARD.has(key.toLowerCase())) headers.set(key, value)
   }
-  for (const [name, value] of Object.entries(up.headers ?? {})) headers.set(name, value)
+  for (const [name, value] of Object.entries(up.headers ?? {})) headers.set(name, String(value))
   if (up.auth?.api_key) headers.set('x-api-key', up.auth.api_key)
   else if (up.auth?.oauth_token) headers.set('authorization', 'Bearer ' + up.auth.oauth_token)
   headers.set('x-request-id', requestId)

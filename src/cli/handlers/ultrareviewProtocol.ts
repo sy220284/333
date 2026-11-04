@@ -5,7 +5,7 @@
  */
 export const REMOTE_REVIEW_TAG = 'remote-review'
 export const REMOTE_REVIEW_PROGRESS_TAG = 'remote-review-progress'
-const severitySymbol = {
+const severitySymbol: Record<string, string> = {
   normal: '🔴',
   nit: '🟡',
   pre_existing: '🟣',
@@ -18,14 +18,18 @@ export function extractTag(text, tag) {
   const start = text.lastIndexOf(startTag, end)
   return start >= 0 ? text.slice(start + startTag.length, end).trim() : undefined
 }
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
 export function textOfReviewEvent(event) {
-  if (!event || typeof event !== 'object') return ''
+  if (!isRecord(event)) return ''
   if ((event.subtype === 'hook_response' || event.subtype === 'hook_progress') &&
     typeof event.stdout === 'string') return event.stdout
   if (event.type !== 'assistant') return ''
-  const content = event.message?.content
+  const content = isRecord(event.message) ? event.message.content : undefined
   return Array.isArray(content)
-    ? content.filter(part => part?.type === 'text').map(part => part.text ?? '').join('\n')
+    ? content.filter(isRecord).filter(part => part.type === 'text').map(part => part.text == null ? '' : String(part.text)).join('\n')
     : ''
 }
 export function extractLatestRemoteReview(events) {
@@ -35,7 +39,7 @@ export function extractLatestRemoteReview(events) {
   }
   // A hook can flush across two distinct events when stdout is large.
   const concatenated = events
-    .filter(e => e?.type === 'system' && ['hook_progress', 'hook_response'].includes(e?.subtype))
+    .filter(e => isRecord(e) && e.type === 'system' && typeof e.subtype === 'string' && ['hook_progress', 'hook_response'].includes(e.subtype))
     .map(textOfReviewEvent).join('')
   return extractTag(concatenated, REMOTE_REVIEW_TAG)
 }
@@ -46,7 +50,7 @@ export function formatRemoteReviewFindings(text) {
   if (!parsed.length) return 'Review complete — no findings.'
   const out = ['Review complete — ' + parsed.length + ' ' + (parsed.length === 1 ? 'finding' : 'findings'), '']
   for (const result of parsed) {
-    if (!result || typeof result !== 'object') continue
+    if (!isRecord(result)) continue
     const severity = typeof result.severity === 'string' ? result.severity : 'normal'
     const file = typeof result.file_path === 'string' ? result.file_path : '?'
     const start = typeof result.start_line === 'number' ? result.start_line : 0

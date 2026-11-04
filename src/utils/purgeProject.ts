@@ -125,7 +125,7 @@ export async function planPurge(home, project, { all = false, projectKeys = [], 
       if (entry.isFile() && entry.name.endsWith('.jsonl') && uuid.test(entry.name.slice(0, -6))) sessions.add(entry.name.slice(0, -6))
     }
     for (const id of sessions) {
-      for (const [path, kind, reason] of [[join(home, 'tasks', id), 'dir', `tasks for session ${id}`], [join(home, 'debug', `${id}.txt`), 'file', `debug log for session ${id}`], [join(home, 'file-history', id), 'dir', `file edit history for session ${id}`]]) {
+      for (const [path, kind, reason] of ([[join(home, 'tasks', id), 'dir', `tasks for session ${id}`], [join(home, 'debug', `${id}.txt`), 'file', `debug log for session ${id}`], [join(home, 'file-history', id), 'dir', `file edit history for session ${id}`]] as const)) {
         if (await metadata(path)) items.push({ path, kind, reason })
       }
     }

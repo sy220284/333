@@ -9,7 +9,7 @@ export async function withWebToolDeadline(parent, operation, timeoutMs = 300_000
   const child = new AbortController()
   let timer
   let onAbort
-  const deadline = new Promise((_, reject) => {
+  const deadline = new Promise<never>((_, reject) => {
     const finish = reason => {
       child.abort(reason)
       reject(reason)
