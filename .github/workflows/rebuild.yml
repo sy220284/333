@@ -183,6 +183,10 @@ jobs:
         continue-on-error: true
         if: runner.os == 'Linux'
         run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-details-native-parity-317.test.mjs
+      - name: 317远程审查结果协议与分段事件解析
+        id: acceptance_043
+        continue-on-error: true
+        run: node --test tests/m6-ultrareview-protocol-317.test.mjs
       - name: 317独立ultrareview官方x64启动与信任差分
         if: runner.os == 'Linux'
         continue-on-error: true
@@ -442,6 +446,10 @@ jobs:
           fi
           if [ "${{ steps.acceptance_042.outcome }}" = failure ]; then
             echo "::error::验收失败：317独立ultrareview官方x64启动与信任差分"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_043.outcome }}" = failure ]; then
+            echo "::error::验收失败：317远程审查结果协议与分段事件解析"
             failures=$((failures+1))
           fi
           echo "完整验收发现 $failures 项失败"

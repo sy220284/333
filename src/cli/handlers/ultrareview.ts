@@ -15,7 +15,8 @@ import { detectCurrentRepositoryWithHost } from '../../utils/detectRepository.js
 import { getClaudeAIOAuthTokens } from '../../utils/auth.js'
 import { pollRemoteSessionEvents, teleportToRemote } from '../../utils/teleport.js'
 import { prepareApiRequest, getOAuthHeaders, isTransientNetworkError } from '../../utils/teleport/api.js'
-import { REMOTE_REVIEW_TAG, REMOTE_REVIEW_PROGRESS_TAG } from '../../constants/xml.js'
+import { REMOTE_REVIEW_PROGRESS_TAG } from '../../constants/xml.js'
+import { extractTag, textOfReviewEvent, extractLatestRemoteReview, formatRemoteReviewFindings } from './ultrareviewProtocol.mjs'
 
 export type UltrareviewCliOptions = {
   json?: boolean
@@ -26,69 +27,6 @@ export type UltrareviewCliOptions = {
 const ENV_ID = 'env_011111111111111111111113'
 const MAX_FAILED_POLLS = 5
 const POLL_INTERVAL_MS = 3000
-const severitySymbol: Record<string, string> = {
-  normal: '🔴',
-  nit: '🟡',
-  pre_existing: '🟣',
-}
-function fail(message: string): never {
-  process.stderr.write(message + '\n')
-  process.exit(1)
-}
-function outputError(message: string): never {
-  return fail('Ultrareview could not launch: ' + message)
-}
-function isPrNumber(value: string) { return /^\d+$/.test(value) }
-function sleep(ms: number, signal: AbortSignal) {
-  return new Promise<void>((resolve, reject) => {
-    if (signal.aborted) { reject(signal.reason); return }
-    const timer = setTimeout(() => { signal.removeEventListener('abort', aborted); resolve() }, ms)
-    function aborted() { clearTimeout(timer); signal.removeEventListener('abort', aborted); reject(signal.reason) }
-    signal.addEventListener('abort', aborted, { once: true })
-  })
-}
-function tagged(text: string, tag: string): string | undefined {
-  const open = '<' + tag + '>', close = '</' + tag + '>'
-  const end = text.lastIndexOf(close), start = text.lastIndexOf(open, end)
-  return end > start && start >= 0 ? text.slice(start + open.length, end).trim() : undefined
-}
-function eventText(event: unknown): string {
-  if (!event || typeof event !== 'object') return ''
-  const e = event as Record<string, unknown>
-  if ((e.subtype === 'hook_response' || e.subtype === 'hook_progress') && typeof e.stdout === 'string') return e.stdout
-  if (e.type !== 'assistant') return ''
-  const message = e.message as { content?: Array<{ type?: string; text?: string }> } | undefined
-  return (message?.content ?? []).filter(c => c.type === 'text').map(c => c.text ?? '').join('\n')
-}
-function findReview(messages: unknown[]): string | undefined {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const v = tagged(eventText(messages[i]), REMOTE_REVIEW_TAG)
-    if (v) return v
-  }
-  const output = messages.map(eventText).join('')
-  return tagged(output, REMOTE_REVIEW_TAG)
-}
-function renderFindings(raw: string): string {
-  let results: unknown
-  try { results = JSON.parse(raw) } catch { return raw }
-  if (!Array.isArray(results)) return raw
-  if (results.length === 0) return 'Review complete — no findings.'
-  const out = ['Review complete — ' + results.length + ' ' + (results.length === 1 ? 'finding' : 'findings'), '']
-  for (const result of results) {
-    if (!result || typeof result !== 'object') continue
-    const finding = result as Record<string, unknown>
-    const severity = typeof finding.severity === 'string' ? finding.severity : 'normal'
-    const file = typeof finding.file_path === 'string' ? finding.file_path : '?'
-    const start = typeof finding.start_line === 'number' ? finding.start_line : 0
-    const end = typeof finding.end_line === 'number' ? finding.end_line : start
-    out.push((severitySymbol[severity] ?? severitySymbol.normal) +
-      ' ' + file + ':' + (start === end ? start : start + '-' + end))
-    const comment = typeof finding.pr_comment === 'string' ? finding.pr_comment.trim() : ''
-    if (comment) out.push(comment)
-    out.push('')
-  }
-  return out.join('\n').trimEnd()
-}
 function startupFailure(messages: unknown[]): string | undefined {
   for (let i = messages.length - 1; i >= 0; i--) {
     const e = messages[i] as Record<string, unknown> | undefined
@@ -108,13 +46,13 @@ async function pollReview(sessionId: string, deadline: number, signal: AbortSign
       consecutiveFailures = 0
       messages.push(...response.newEvents)
       for (const event of response.newEvents) {
-        const update = tagged(eventText(event), REMOTE_REVIEW_PROGRESS_TAG)
+        const update = extractTag(textOfReviewEvent(event), REMOTE_REVIEW_PROGRESS_TAG)
         if (update && update !== progress) {
           progress = update
           process.stderr.write('  ' + update + '\n')
         }
       }
-      const found = findReview(messages)
+      const found = extractLatestRemoteReview(messages)
       if (found) return found
       if (response.sessionStatus === 'archived') {
         throw new Error('cloud session was archived before producing output')
@@ -252,7 +190,7 @@ export async function ultrareviewCliHandler(target: string | undefined, options:
     const minutes = Number(options.timeout)
     const timeout = options.timeout && Number.isFinite(minutes) && minutes > 0 ? minutes : 45
     const raw = await pollReview(session.id, Date.now() + timeout * 60_000, signal.signal)
-    const parsed = options.json ? raw : renderFindings(raw)
+    const parsed = options.json ? raw : formatRemoteReviewFindings(raw)
     process.stdout.write(parsed + '\n')
     if (options.post) {
       if (!target || !isPrNumber(target)) {
