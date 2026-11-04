@@ -19,7 +19,7 @@ import type {
 import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { Stream } from '@anthropic-ai/sdk/streaming.mjs'
 import { createHash, randomUUID } from 'node:crypto'
-import { resolvePromptSnapshot, promptSnapshotMode } from '../cli/systemPromptSnapshot.mjs'
+import { resolvePromptSnapshot, promptSnapshotMode } from '../cli/systemPromptSnapshot.ts'
 import { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from '../../constants/systemPromptBoundary.js'
 import {
   getAPIProvider,
@@ -103,7 +103,7 @@ import {
 } from '../claudeAiLimits.js'
 import { getAPIContextManagement } from '../compact/apiMicrocompact.js'
 import { getRequestThinkingDisplay, getStreamThinkingDisplay } from './thinkingDisplay.js'
-import { matchesDefaultModelVariant } from './modelCacheMatch.mjs'
+import { matchesDefaultModelVariant } from './modelCacheMatch.ts'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const autoModeStateModule = feature('TRANSCRIPT_CLASSIFIER')
