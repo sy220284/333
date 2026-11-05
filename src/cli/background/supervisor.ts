@@ -125,6 +125,8 @@ async function launch(record, { resume = false } = {}) {
           failure = error
         } finally {
           const current = active.get(record.id)
+          active.delete(record.id)
+          outputQueue.delete(record.id)
           if (current) {
             if (failure) for (const peer of current.subscribers)
               send(peer, { event: 'error', message: 'Session exit recording failed: ' + String(failure) })
@@ -134,11 +136,9 @@ async function launch(record, { resume = false } = {}) {
               process.stderr.write('Terminal close failed: ' + String(error) + '\\n')
             }
           }
-          active.delete(record.id)
-          outputQueue.delete(record.id)
           if (failure) process.stderr.write('Session exit recording failed: ' + String(failure) + '\\n')
         }
-      })()
+      })().catch(error => process.stderr.write('Background exit finalization failed: ' + String(error) + '\\n'))
     },
   })
   const next = {
