@@ -5,6 +5,7 @@ on:
     paths:
       - 'src/cli/selfHostedRunner/**'
       - 'tests/m6-runner-operator-tools-317.test.ts'
+      - 'tests/m6-runner-health-317.test.mjs'
       - 'src/cli/handlers/pluginEvalPublish317.ts'
       - 'src/cli/handlers/pluginEvalEntry317.ts'
       - 'tests/m3-plugin-eval-publish-317.test.ts'
@@ -62,6 +63,8 @@ jobs:
         run: node build/check-architecture-links317.mjs
       - name: Runner真实协议、宿主生命周期和错误路径测试
         run: bun test tests/m6-self-hosted-runner-api-317.test.ts tests/m6-self-hosted-runner-host-317.test.ts tests/m6-self-hosted-runner-child-mode-317.test.ts tests/m6-self-hosted-runner-jwt-317.test.ts tests/m6-self-hosted-runner-workspace-317.test.ts tests/m6-self-hosted-runner-cli-args-317.test.ts tests/m6-self-hosted-runner-agents-317.test.ts tests/m6-runner-idle-hold-317.test.ts
+      - name: Runner真实/healthz与/metrics服务、容量指标和关闭测试
+        run: node --experimental-strip-types --test tests/m6-runner-health-317.test.mjs
       - name: Runner配置与诊断九项管理工具生产路径、权限、登录及API模拟
         run: bun test tests/m6-runner-operator-tools-317.test.ts
       - name: Runner管理入口、签名工单和异步编排的原版协议测试
@@ -89,6 +92,12 @@ jobs:
           bun dist/cli.js self-hosted-runner --help | grep -F 'Usage: claude self-hosted-runner'
           bun dist/cli.js self-hosted-runner --help | grep -F -- '--hold-idle-file'
           bun dist/cli.js self-hosted-runner --help | grep -F -- '--max-hold-min'
+          bun dist/cli.js self-hosted-runner --help | grep -F -- '--health-port'
+          bun dist/cli.js self-hosted-runner --help | grep -F -- '--log-file'
+          if bun dist/cli.js self-hosted-runner --health-port 99999 2>invalid-health.log; then
+            echo 'Invalid health port accepted' >&2; exit 1
+          fi
+          grep -F 'error: --health-port must be an integer' invalid-health.log
           if bun dist/cli.js self-hosted-runner --unknown 2>invalid.log; then
             echo 'Unknown option was accepted' >&2
             exit 1
