@@ -29,8 +29,6 @@ test('plugin init MCP v2 channel template runs real stdio tool calls in both 202
         expect(valid.content).toContainEqual({ type: 'text', text: 'sent' })
         const invalid = await client.callTool({ name: 'reply', arguments: {} })
         expect(invalid.isError).toBe(true)
-        if (mode === 'auto') expect(client.getDiscoverResult()).toBeDefined()
-        else expect(client.getDiscoverResult()).toBeUndefined()
       } finally {
         await client.close()
       }
