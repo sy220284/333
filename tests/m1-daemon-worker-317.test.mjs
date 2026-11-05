@@ -8,7 +8,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { checkDaemonStartupProxy317 } from '../src/bootstrap/daemonProxy317.ts'
 import { validateHeartbeatConfig317, runDaemonWorker317, watchDaemonWorkerParent317,
-  isDaemonWorkerAdmitted317, classifyDaemonWorkerFailure317 }
+  isDaemonWorkerAdmitted317, classifyDaemonWorkerFailure317,
+  isDaemonWorkerParentAlive317 }
   from '../src/bootstrap/daemonWorker317.mjs'
 
 const cli = resolve(import.meta.dirname, '../dist/cli.js')
@@ -337,4 +338,17 @@ test('317 supervisor IPC token cannot inherit local OAuth when not issued', asyn
   assert.match(stdout, /Run `claude auth login`/)
   assert.equal(stderr, '')
   assert.equal(parent.listenerCount('message'), 0)
+})
+
+test('317 daemon parent is alive only when signal-zero probe succeeds', () => {
+  let seen = null
+  assert.equal(isDaemonWorkerParentAlive317(234, (pid, signal) => {
+    seen = [pid, signal]
+  }), true)
+  assert.deepEqual(seen, [234, 0])
+  for (const code of ['ESRCH', 'EPERM', 'EACCES']) {
+    const error = Object.assign(new Error('probe failure'), {code})
+    assert.equal(isDaemonWorkerParentAlive317(234, () => {throw error}), false,
+      'upstream He() fails closed for '+code)
+  }
 })
