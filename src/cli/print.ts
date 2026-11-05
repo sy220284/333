@@ -4755,9 +4755,8 @@ function handleChannelEnable(
   // useManageMCPConnections. drainCommandQueue processes it between turns —
   // channel messages queue at priority 'next' and are seen by the model on
   // the turn after they arrive.
-  /* @mcp-codemod-error setNotificationHandler with a non-string first argument: v2 takes a method string — use the typed two-argument spec form, or the three-argument custom form (setNotificationHandler('method/name', { params, result? }, handler)). No change is needed if the argument already holds a method string. */
   connection.client.setNotificationHandler(
-    ChannelMessageNotificationSchema(),
+    'notifications/claude/channel', { params: ChannelMessageNotificationSchema().shape.params },
     async notification => {
       const { content, meta } = notification.params
       logMCPDebug(
@@ -4832,9 +4831,8 @@ function reregisterChannelHandlerAfterReconnect(
     connection.name,
     'Channel notifications re-registered after reconnect',
   )
-  /* @mcp-codemod-error setNotificationHandler with a non-string first argument: v2 takes a method string — use the typed two-argument spec form, or the three-argument custom form (setNotificationHandler('method/name', { params, result? }, handler)). No change is needed if the argument already holds a method string. */
   connection.client.setNotificationHandler(
-    ChannelMessageNotificationSchema(),
+    'notifications/claude/channel', { params: ChannelMessageNotificationSchema().shape.params },
     async notification => {
       const { content, meta } = notification.params
       logMCPDebug(

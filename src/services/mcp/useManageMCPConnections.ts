@@ -509,9 +509,8 @@ export function useManageMCPConnections(
             switch (gate.action) {
               case 'register':
                 logMCPDebug(client.name, 'Channel notifications registered')
-                /* @mcp-codemod-error setNotificationHandler with a non-string first argument: v2 takes a method string — use the typed two-argument spec form, or the three-argument custom form (setNotificationHandler('method/name', { params, result? }, handler)). No change is needed if the argument already holds a method string. */
                 client.client.setNotificationHandler(
-                  ChannelMessageNotificationSchema(),
+                  'notifications/claude/channel', { params: ChannelMessageNotificationSchema().shape.params },
                   async notification => {
                     const { content, meta } = notification.params
                     logMCPDebug(
@@ -547,9 +546,8 @@ export function useManageMCPConnections(
                     'claude/channel/permission'
                   ] !== undefined
                 ) {
-                  /* @mcp-codemod-error setNotificationHandler with a non-string first argument: v2 takes a method string — use the typed two-argument spec form, or the three-argument custom form (setNotificationHandler('method/name', { params, result? }, handler)). No change is needed if the argument already holds a method string. */
                   client.client.setNotificationHandler(
-                    ChannelPermissionNotificationSchema(),
+                    CHANNEL_PERMISSION_METHOD, { params: ChannelPermissionNotificationSchema().shape.params },
                     async notification => {
                       const { request_id, behavior } = notification.params
                       const resolved =
@@ -575,7 +573,6 @@ export function useManageMCPConnections(
                 client.client.removeNotificationHandler(
                   'notifications/claude/channel',
                 )
-                /* @mcp-codemod-error removeNotificationHandler takes the method string in v2 — replace the schema-derived argument with the literal method name (no change needed if this already passes a string). */
                 client.client.removeNotificationHandler(
                   CHANNEL_PERMISSION_METHOD,
                 )

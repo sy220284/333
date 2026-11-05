@@ -10,6 +10,7 @@
  */
 
 import { McpServer } from "@modelcontextprotocol/server";
+import { z } from 'zod/v4';
 import type { CallToolResult, ToolAnnotations } from "@modelcontextprotocol/server";
 
 // Control protocol types for SDK builders (bridge subpath consumers)
@@ -114,10 +115,9 @@ export function createSdkMcpServer(
       throw new Error('Duplicate SDK MCP tool: ' + definition.name)
     }
     registered.add(definition.name)
-    /* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
     instance.registerTool(definition.name, {
       description: definition.description,
-      inputSchema: definition.inputSchema,
+      inputSchema: z.object(definition.inputSchema),
       ...(definition.annotations && { annotations: definition.annotations }),
     }, (args, ctx) => definition.handler(args, ctx))
   }
