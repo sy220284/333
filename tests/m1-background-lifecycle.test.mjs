@@ -17,7 +17,20 @@ function execute(bin, prefix, args, env, cwd, timeout = 17000) {
   return { status: result.status, stdout: result.stdout, stderr: result.stderr }
 }
 
-test('2.1.317 background real lifecycle: dispatch, list, logs, stop, respawn, remove', { timeout: 170000 }, () => {
+async function waitForAgents(bin,prefix,env,cwd,predicate,explanation,timeout=8000){
+  const deadline=Date.now()+timeout
+  let last
+  while(Date.now()<deadline){
+    const output=execute(bin,prefix,['agents','--json','--all'],env,cwd)
+    assert.equal(output.status,0,'agents --all failed during '+explanation+': '+output.stderr)
+    last=JSON.parse(output.stdout)
+    if(predicate(last))return last
+    await new Promise(done=>setTimeout(done,100))
+  }
+  assert.fail(explanation+' did not converge within '+timeout+'ms: '+JSON.stringify(last))
+}
+
+test('2.1.317 background real lifecycle: dispatch, list, logs, stop, respawn, remove', { timeout: 170000 }, async () => {
   for (const [name, bin, prefix] of binaries) {
     const home = mkdtempSync(join(tmpdir(), 'bg-lifecycle-'))
     const cwdDir = join(home, 'project')
@@ -61,7 +74,14 @@ test('2.1.317 background real lifecycle: dispatch, list, logs, stop, respawn, re
       const stopped = execute(bin, prefix, ['stop', id], env, cwd)
       assert.equal(stopped.status, 0, `${name} stop: ${stopped.stderr}`)
       assert.ok(stopped.stdout.includes(`stopped ${id}`))
-      assert.deepEqual(JSON.parse(execute(bin, prefix, ['agents', '--json'], env, cwd).stdout), [])
+      // Official 2.1.317 acknowledges stop before the daemon finalizes its
+      // persisted state. Compare the eventual result on both binaries;
+      // retain a strict deadline so a stuck process still fails this test.
+      const stoppedItems=await waitForAgents(bin,prefix,env,cwd,
+        items=>items.length===1&&items[0].id===id&&items[0].state==='stopped',
+        name+' stop should persist a terminal state')
+      assert.equal(stoppedItems[0].state,'stopped')
+      assert.deepEqual(JSON.parse(execute(bin,prefix,['agents','--json'],env,cwd).stdout),[])
       const all = JSON.parse(execute(bin, prefix, ['agents', '--json', '--all'], env, cwd).stdout)
       assert.equal(all.length, 1)
       assert.equal(all[0].state, 'stopped')
@@ -70,10 +90,14 @@ test('2.1.317 background real lifecycle: dispatch, list, logs, stop, respawn, re
       assert.ok(respawned.stdout.includes(`respawned ${id}`))
       const stoppedAgain = execute(bin, prefix, ['stop', id], env, cwd)
       assert.equal(stoppedAgain.status, 0, `${name} second stop: ${stoppedAgain.stderr}`)
+      await waitForAgents(bin,prefix,env,cwd,
+        items=>items.length===1&&items[0].id===id&&items[0].state==='stopped',
+        name+' second stop should persist a terminal state')
       const removed = execute(bin, prefix, ['rm', id], env, cwd)
       assert.equal(removed.status, 0, `${name} rm: ${removed.stderr}`)
       assert.ok(removed.stdout.includes(`removed ${id}`))
-      assert.deepEqual(JSON.parse(execute(bin, prefix, ['agents', '--json', '--all'], env, cwd).stdout), [])
+      await waitForAgents(bin,prefix,env,cwd,items=>items.length===0,
+        name+' removal must delete the record')
     } finally {
       const shutdown = execute(bin, prefix, ['daemon', 'stop', '--any'], env, cwd, 10000)
       assert.equal(shutdown.status, 0, `${name} daemon shutdown did not finish: ${shutdown.stderr}`)
