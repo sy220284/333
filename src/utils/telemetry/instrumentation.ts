@@ -323,7 +323,8 @@ async function getOtlpTraceExporters() {
 }
 
 export function isTelemetryEnabled() : boolean {
-  return isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_TELEMETRY)
+  // 333 local diagnostics supersede vendor/OTLP telemetry network exporters.
+  return false
 }
 
 function getBigQueryExportingReader() {
@@ -335,6 +336,9 @@ function getBigQueryExportingReader() {
 }
 
 function isBigQueryMetricsEnabled() {
+  return false
+}
+function wasBigQueryMetricsEnabledBeforeIndependence() {
   // BigQuery metrics are enabled for:
   // 1. API customers (excluding Claude.ai subscribers and Bedrock/Vertex)
   // 2. Claude for Enterprise (C4E) users
@@ -511,7 +515,7 @@ export async function initializeTelemetry(): Promise<import('@opentelemetry/api'
 
   // Check if beta tracing is enabled - this is a separate code path
   // Available to all users who set ENABLE_BETA_TRACING_DETAILED=1 and BETA_TRACING_ENDPOINT
-  if (isBetaTracingEnabled()) {
+  if (false && isBetaTracingEnabled()) {
     const betaTracingReady = initializeBetaTracing(resource).catch(error => {
       logForDebugging(
         `Beta tracing init failed: ${errorMessage(error)}`,
