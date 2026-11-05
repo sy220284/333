@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { createServer } from 'node:http'
-import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
@@ -91,5 +91,69 @@ test('running CLI sends separated prompt and persists the actual model prompt', 
   }finally{
     if(srv.listening)await new Promise(done=>srv.close(done))
     rmSync(temp,{recursive:true,force:true})
+  }
+})
+
+
+test('normal CLI sends 2.1.317 system guidance and selected style through the real API wire', async () => {
+  const temp = mkdtempSync(join(tmpdir(), 'm2-prompt-317-'))
+  const home = join(temp, 'home')
+  const config = join(home, '.claude')
+  mkdirSync(config, { recursive: true })
+  writeFileSync(join(config, 'settings.json'), JSON.stringify({ outputStyle: 'Concise' }))
+
+  let payload
+  const server = createServer((req, res) => {
+    if (req.method !== 'POST' || !req.url?.startsWith('/v1/messages')) {
+      res.writeHead(404)
+      res.end()
+      return
+    }
+    let body = ''
+    req.on('data', chunk => { body += chunk.toString() })
+    req.on('end', () => {
+      payload = JSON.parse(body)
+      res.writeHead(200, { 'content-type': 'text/event-stream' })
+      res.end(mockResponse())
+    })
+  })
+
+  try {
+    await new Promise(resolveListen => server.listen(0, '127.0.0.1', resolveListen))
+    const env = Object.fromEntries(Object.entries(process.env).filter(([name]) =>
+      !/ANTHROPIC|CLAUDE|AWS_|GOOGLE_|OPENAI_|TOKEN|SECRET|API_KEY/i.test(name)))
+    Object.assign(env, {
+      HOME: home,
+      CLAUDE_CONFIG_DIR: config,
+      TERM: 'dumb',
+      CI: '1',
+      NO_COLOR: '1',
+      ANTHROPIC_BASE_URL: 'http://127.0.0.1:' + server.address().port,
+      ANTHROPIC_API_KEY: 'sk-ant-api03-local-fixture-only',
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
+      DISABLE_TELEMETRY: '1',
+    })
+    const result = await invoke('bun', [
+      resolve('dist/cli.js'),
+      '--print',
+      '--output-format', 'json',
+      '--model', model,
+      '--max-turns', '1',
+      'Check prompt integration in the current session',
+    ], env, temp)
+    assert.equal(result.code, 0, 'CLI failed: ' + result.err.slice(-900))
+    assert.ok(payload, 'Model API request was not captured')
+
+    const systemText = payload.system.map(block =>
+      typeof block === 'string' ? block : block.text ?? '').join('\n')
+    assert.match(systemText, /Concise Style Active/)
+    assert.match(systemText, /For UI or frontend changes, start the dev server/)
+    assert.match(systemText, /Finish the full task as requested/)
+    assert.match(systemText, /The system may send updates, reminders, or modifications/)
+    assert.match(JSON.stringify(payload.messages),
+      /Be concise: lead with the result, skip preamble and narration/)
+  } finally {
+    if (server.listening) await new Promise(resolveClose => server.close(resolveClose))
+    rmSync(temp, { recursive: true, force: true })
   }
 })
