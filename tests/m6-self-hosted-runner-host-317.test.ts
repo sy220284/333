@@ -18,7 +18,7 @@ function fakeApi(impl: Partial<StubApi>): SelfHostedRunnerApi317 {
     getSessionRemoteConfig:async()=>({
       sources:[],push_targets:[],claude_code_args:{},
       environment_variables:{TEST_REMOTE_ENV:'test-value'},
-      api_base_url:'https://api.example.test',
+      api_base_url:'https://api.example.test',inference_auth:{access_token:'inference-test-token',expires_in_seconds:3600},
     }),
     registerWorker:async()=>3,
     updateSessionWorkerState:async()=>{},
@@ -82,7 +82,7 @@ test('Runner 317: source-backed assignment is reported as setup failure before s
   const api=fakeApi({
     pollWork:async()=>({assignment_ids:['session_1'],session_assignments:[]}),
     getSessionRemoteConfig:async()=>({sources:[{repo:'unconfigured'}],push_targets:[],
-      claude_code_args:{},environment_variables:{},api_base_url:'https://api.example.test'}),
+      claude_code_args:{},environment_variables:{},api_base_url:'https://api.example.test',inference_auth:{access_token:'inference-test-token',expires_in_seconds:3600}}),
     reportSessionFailure:async()=>{steps.push('failed');aborted.abort();return {}},
     deregisterRunner:async()=>{steps.push('deregister')},
   })
@@ -174,7 +174,7 @@ test('Runner 317: end-to-end source-backed assignment runs inside checked-out re
         push_targets:[{type:'git_repository',git_info:{
           repo:'owner/project',branches:['feature/runner']}}],
         claude_code_args:{},environment_variables:{},
-        api_base_url:'https://api.example.test',
+        api_base_url:'https://api.example.test',inference_auth:{access_token:'inference-test-token',expires_in_seconds:3600},
       }),
       updateSessionWorkerState:async()=>{steps.push('state')},
       releaseSession:async()=>{steps.push('release');aborted.abort();return {released:true}},
@@ -215,7 +215,7 @@ test('Runner 317: completed sessions never push even when preservation is enable
         push_targets:[{type:'git_repository',git_info:{
           repo:'owner/project',branches:['claude/finish']}}],
         claude_code_args:{},environment_variables:{},
-        api_base_url:'https://api.example.test',
+        api_base_url:'https://api.example.test',inference_auth:{access_token:'inference-test-token',expires_in_seconds:3600},
       }),
       releaseSession:async()=>{aborted.abort();return {released:true}},
     })
@@ -247,7 +247,7 @@ test('Runner 317: capacity slots prepare independent assignments concurrently an
       await bothReady
       return {
         sources:[],push_targets:[],claude_code_args:{},environment_variables:{},
-        api_base_url:'https://api.example.test',
+        api_base_url:'https://api.example.test',inference_auth:{access_token:'inference-test-token',expires_in_seconds:3600},
       }
     },
     releaseSession:async()=>{
@@ -287,7 +287,7 @@ test('Runner 317: failed preparation is joined while another capacity slot compl
       if(id==='session_a') throw Error('checkout setup rejected')
       return {
         sources:[],push_targets:[],claude_code_args:{},environment_variables:{},
-        api_base_url:'https://api.example.test',
+        api_base_url:'https://api.example.test',inference_auth:{access_token:'inference-test-token',expires_in_seconds:3600},
       }
     },
     reportSessionFailure:async(_,id)=>{steps.push('failure:'+id);return {}},
@@ -364,7 +364,7 @@ test('Runner 317: release pushes unfinished work only with the explicit preserva
           push_targets:[{type:'git_repository',git_info:{
             repo:'owner/project',branches:['claude/preserve']}}],
           claude_code_args:{},environment_variables:{},
-          api_base_url:'https://api.example.test',
+          api_base_url:'https://api.example.test',inference_auth:{access_token:'inference-test-token',expires_in_seconds:3600},
         }),
         releaseSession:async()=>{aborted.abort();return {released:true}},
       })
@@ -397,7 +397,7 @@ test('Runner 317: remote session cannot re-inject host-only runner credentials i
       getSessionRemoteConfig:async()=>({
         sources:[],push_targets:[],claude_code_args:{},
         environment_variables:{[secretName]:'attacker-injected-host-secret'},
-        api_base_url:'https://api.example.test',
+        api_base_url:'https://api.example.test',inference_auth:{access_token:'inference-test-token',expires_in_seconds:3600},
       }),
       reportSessionFailure:async(_,id,kind)=>{
         expect(id).toBe('session_1')
@@ -445,7 +445,7 @@ test('Runner 317: real child receives private prompt and MCP files and they are 
     const api=fakeApi({
       pollWork:async()=>({assignment_ids:['session_1'],session_assignments:[]}),
       getSessionRemoteConfig:async()=>({
-        sources:[],push_targets:[],api_base_url:'https://api.example.test',
+        sources:[],push_targets:[],api_base_url:'https://api.example.test',inference_auth:{access_token:'inference-test-token',expires_in_seconds:3600},
         environment_variables:{TEST_CAPTURE_PATH:cap},
         claude_code_args:{model:'opus','max-turns':5,'system-prompt':'sensitive runner prompt'},
         mcp_config:{content:Buffer.from(mcpContent).toString('base64')},
