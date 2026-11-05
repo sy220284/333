@@ -3,7 +3,7 @@
  * remote request. Never runs during ordinary startup: probes may incur cost.
  * Existing project/system prompts are not read or modified.
  */
-import { createHash, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { promises as fs, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
@@ -40,7 +40,7 @@ async function persist(report: CapabilityReport): Promise<void> {
   await fs.mkdir(directory, { recursive: true, mode: 0o700 })
   const list = readReports().filter(item => item.model !== report.model)
   list.push(report)
-  const temporary = path + '.' + randomUUID() + '.tmp'
+  const temporary = `${path}.${randomUUID()}.tmp`
   try {
     await fs.writeFile(temporary,JSON.stringify(list,null,2),{encoding:'utf8',mode:0o600,flag:'wx'})
     await fs.rename(temporary,path)
