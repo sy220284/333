@@ -17,7 +17,8 @@ import { isLocalShellTask } from './guards.js'
 
 type SetAppStateFn = (updater: (prev: AppState) => AppState) => void
 
-export function killTask(taskId: string, setAppState: SetAppStateFn): void {
+export function killTask(taskId: string, setAppState: SetAppStateFn): Promise<import('../../utils/ShellCommand.js').ExecResult> | undefined {
+  let completion: Promise<import('../../utils/ShellCommand.js').ExecResult> | undefined
   let notification: { toolUseId?: string; description: string } | undefined
   updateTaskState(taskId, setAppState, task => {
     if (task.status !== 'running' || !isLocalShellTask(task)) {
@@ -26,6 +27,7 @@ export function killTask(taskId: string, setAppState: SetAppStateFn): void {
 
     try {
       logForDebugging(`LocalShellTask ${taskId} kill requested`)
+      completion=task.shellCommand?.result
       task.shellCommand?.kill()
       task.shellCommand?.cleanup()
     } catch (error) {
@@ -60,6 +62,7 @@ export function killTask(taskId: string, setAppState: SetAppStateFn): void {
     })
   }
   void evictTaskOutput(taskId)
+  return completion
 }
 
 /**
