@@ -1,6 +1,6 @@
 /**
- * Verify actual provider tool-call and streaming behavior with one tiny
- * remote request. Never runs during ordinary startup: probes may incur cost.
+ * Verify actual provider tool-call and streaming behavior with two small
+ * remote requests. Never runs during ordinary startup: probes may incur cost.
  * Existing project/system prompts are not read or modified.
  */
 import { randomUUID } from 'node:crypto'
@@ -47,58 +47,109 @@ async function persist(report: CapabilityReport): Promise<void> {
     await fs.chmod(path,0o600)
   } finally { await fs.rm(temporary,{force:true}) }
 }
-function inspectEvents(text: string): {stream:boolean; tool:boolean; valid:boolean; details?:string} {
-  const events = text.split(/\r?\n/).filter(row => row.startsWith('data: '))
-    .map(row => row.slice(6).trim()).filter(row=>row && row!=='[DONE]').map(row=>JSON.parse(row))
-  const start = events.find(event=>event.type==='message_start')
-  const end = events.find(event=>event.type==='message_stop')
-  const toolStart = events.find(event=>event.type==='content_block_start' && event.content_block?.name==='333_probe')
-  if (!start || !end) return {stream:false,tool:false,valid:false,details:'Incomplete streaming protocol'}
-  if (!toolStart) return {stream:true,tool:false,valid:false,details:'Model did not invoke requested tool'}
-  const index=toolStart.index
-  const input=events.filter(e=>e.type==='content_block_delta' && e.index===index && e.delta?.type==='input_json_delta')
-    .map(e=>e.delta.partial_json).join('')
-  let value: unknown
-  try { value=JSON.parse(input) }
-  catch { return {stream:true,tool:true,valid:false,details:'Tool input JSON was incomplete'} }
-  if (typeof value!=='object'||value===null||(value as {ok?:unknown}).ok!==true) {
-    return {stream:true,tool:true,valid:false,details:'Tool input did not satisfy required schema'}
-  }
-  return {stream:true,tool:true,valid:true}
+type ProbeResult = {
+  stream: boolean
+  tool: boolean
+  roundTrip: boolean
+  details?: string
 }
-export async function verifyIndependentModel(model: string): Promise<CapabilityReport> {
-  const route=resolveIndependentModel(model)
-  if (!route) throw new Error('Expected model ID in provider/model format')
-  const bearer=route.provider==='chatgpt'? await getChatGPTAccessToken():getIndependentApiKey(route)
-  const body={
+function parseStream(text: string): Record<string, any>[] {
+  // biome-ignore lint/suspicious/noExplicitAny: Normalized provider SSE event fields vary.
+  return text.split(/\\r?\\n/).filter(row => row.startsWith('data: '))
+    .map(row => row.slice(6).trim()).filter(row => row && row !== '[DONE]')
+    .map(row => JSON.parse(row) as Record<string, any>)
+}
+function inspectToolRequest(text: string): ProbeResult & { toolId?: string } {
+  const events = parseStream(text)
+  if (!events.some(e => e.type === 'message_start') || !events.some(e => e.type === 'message_stop')) {
+    return { stream: false, tool: false, roundTrip: false, details: 'Incomplete first streaming response' }
+  }
+  const start = events.find(e => e.type === 'content_block_start' && e.content_block?.name === '333_probe')
+  if (!start) return { stream: true, tool: false, roundTrip: false, details: 'Model did not invoke requested tool' }
+  const toolId = start.content_block?.id
+  if (typeof toolId !== 'string' || !toolId) {
+    return { stream: true, tool: true, roundTrip: false, details: 'Tool invocation is missing an ID' }
+  }
+  const input = events.filter(e => e.type === 'content_block_delta' &&
+    e.index === start.index && e.delta?.type === 'input_json_delta')
+    .map(e => e.delta.partial_json).join('')
+  let value: unknown
+  try { value = JSON.parse(input) }
+  catch { return { stream: true, tool: true, roundTrip: false, details: 'Incomplete tool argument JSON' } }
+  if (typeof value !== 'object' || value === null || (value as { ok?: unknown }).ok !== true) {
+    return { stream: true, tool: true, roundTrip: false, details: 'Tool arguments failed validation' }
+  }
+  return { stream: true, tool: true, roundTrip: false, toolId }
+}
+
+/** Verify the tool result is accepted in the next turn; a tool call alone is insufficient. */
+export async function runModelToolRoundTrip(
+  model: string,
+  send: (request: Record<string, unknown>) => Promise<string>,
+): Promise<ProbeResult> {
+  const body = {
     model,
-    system:[{type:'text',text:'This is a short compatibility test. Invoke the 333_probe tool with ok=true.'}],
-    messages:[{role:'user',content:'Use 333_probe({ok:true}) now.'}],
-    max_tokens:256,
-    stream:true,
-    tool_choice:{type:'tool',name:'333_probe'},
-    tools:[{name:'333_probe',description:'Validate tool-call protocol',input_schema:{
-      type:'object',properties:{ok:{type:'boolean'}},required:['ok'],additionalProperties:false,
-    }}],
+    system: [{ type: 'text', text: 'Compatibility test. Call 333_probe with ok=true; after its tool result, respond with exactly PROBE_OK.' }],
+    messages: [{ role: 'user', content: 'Call 333_probe({ok:true}) now.' }],
+    max_tokens: 256,
+    stream: true,
+    tool_choice: { type: 'tool', name: '333_probe' },
+    tools: [{ name: '333_probe', description: 'Validate tool round-trip',
+      input_schema: { type: 'object', properties: { ok: { type: 'boolean' } },
+        required: ['ok'], additionalProperties: false } }],
   }
-  const begin=Date.now()
-  const internal=new Request('https://333-model-bridge.invalid/v1/messages',{
-    method:'POST',body:JSON.stringify(body),headers:{'content-type':'application/json'},
-  })
-  const http=makeIndependentFetch(route,bearer)
-  const response=await http(internal,{signal:AbortSignal.timeout(30000)})
-  if (!response.ok) {
-    const error=await response.text()
-    throw new Error(`Capability probe ${route.provider} HTTP ${response.status}: ${error.slice(0,350)}`)
+  const first = inspectToolRequest(await send(body))
+  if (!first.toolId) return first
+  const followUp = {
+    ...body,
+    tool_choice: { type: 'auto' },
+    messages: [
+      ...body.messages,
+      { role: 'assistant', content: [{ type: 'tool_use', id: first.toolId,
+        name: '333_probe', input: { ok: true } }] },
+      { role: 'user', content: [{ type: 'tool_result', tool_use_id: first.toolId,
+        content: 'Tool succeeded. Respond with PROBE_OK.' }] },
+    ],
   }
-  const text=await response.text()
-  if (text.length>1_000_000)throw new Error('Capability probe response exceeded limit')
-  const result=inspectEvents(text)
-  const report:CapabilityReport={
-    model,provider:route.provider,protocol:route.protocol,timestamp:new Date().toISOString(),
-    latencyMs:Date.now()-begin,stream:result.stream,
-    toolCalling:result.tool,toolRoundTrip:result.valid,
-    ...(result.details?{details:result.details}:{}),
+  const events = parseStream(await send(followUp))
+  const complete = events.some(e => e.type === 'message_start') &&
+    events.some(e => e.type === 'message_stop') &&
+    events.some(e => e.type === 'message_delta' && e.delta?.stop_reason === 'end_turn')
+  const output = events.filter(e => e.type === 'content_block_delta' &&
+    e.delta?.type === 'text_delta').map(e => e.delta.text).join('')
+  if (!complete || !output.includes('PROBE_OK')) {
+    return { stream: true, tool: true, roundTrip: false,
+      details: 'Tool result was not followed by a completed PROBE_OK reply' }
+  }
+  return { stream: true, tool: true, roundTrip: true }
+}
+
+export async function verifyIndependentModel(model: string): Promise<CapabilityReport> {
+  const route = resolveIndependentModel(model)
+  if (!route) throw new Error('Expected model ID in provider/model format')
+  const bearer = route.provider === 'chatgpt'
+    ? await getChatGPTAccessToken() : getIndependentApiKey(route)
+  const http = makeIndependentFetch(route, bearer)
+  const send = async (body: Record<string, unknown>): Promise<string> => {
+    const request = new Request('https://333-model-bridge.invalid/v1/messages', {
+      method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json' },
+    })
+    const response = await http(request, { signal: AbortSignal.timeout(30000) })
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(`Capability probe ${route.provider} HTTP ${response.status}: ${error.slice(0,350)}`)
+    }
+    const text = await response.text()
+    if (text.length > 1_000_000) throw new Error('Capability probe response exceeded limit')
+    return text
+  }
+  const begin = Date.now()
+  const result = await runModelToolRoundTrip(model, send)
+  const report: CapabilityReport = {
+    model, provider: route.provider, protocol: route.protocol,
+    timestamp: new Date().toISOString(), latencyMs: Date.now() - begin,
+    stream: result.stream, toolCalling: result.tool, toolRoundTrip: result.roundTrip,
+    ...(result.details ? { details: result.details } : {}),
   }
   await persist(report)
   return report

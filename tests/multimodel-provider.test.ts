@@ -3,6 +3,7 @@ import test from 'node:test'
 import { type ProviderRoute, resolveIndependentModel, getIndependentApiKey, discoverIndependentModels } from '../src/services/api/multimodel/registry.ts'
 import { toResponses, toChatCompletions, toGemini } from '../src/services/api/multimodel/convert.ts'
 import { makeIndependentFetch } from '../src/services/api/multimodel/transport.ts'
+import { runModelToolRoundTrip } from '../src/services/api/multimodel/capabilityProbe.ts'
 
 const body = {
   model: 'openai/gpt-6.1-sol',
@@ -133,4 +134,50 @@ test('ChatGPT lists only model entries exposed for the connected account', async
       { slug: 'internal-hidden', visibility: 'hidden' },
     ] }))) as typeof fetch)
   assert.deepEqual(results, ['gpt-6.1-sol'])
+})
+
+test('model capability probe performs a real tool-result second turn', async () => {
+  const requests: Record<string, unknown>[] = []
+  const answer = (...entries: unknown[]) => entries.map(e => `data: ${JSON.stringify(e)}\\n\\n`).join('')
+  const send = async (request: Record<string, unknown>): Promise<string> => {
+    requests.push(request)
+    return requests.length === 1 ? answer(
+      { type: 'message_start' },
+      { type: 'content_block_start', index: 0, content_block: { name: '333_probe', id: 'toolu_probe' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: '{"ok":true}' } },
+      { type: 'message_stop' },
+    ) : answer(
+      { type: 'message_start' },
+      { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'PROBE_OK' } },
+      { type: 'message_delta', delta: { stop_reason: 'end_turn' } },
+      { type: 'message_stop' },
+    )
+  }
+  const result = await runModelToolRoundTrip('openai/gpt-6.1-sol', send)
+  assert.equal(result.roundTrip, true)
+  assert.equal(requests.length, 2)
+  const second = requests[1] as {messages: Array<{ role: string; content: unknown }>}
+  assert.equal(second.messages[1].role, 'assistant')
+  assert.deepEqual(second.messages[2].content, [
+    { type: 'tool_result', tool_use_id: 'toolu_probe', content: 'Tool succeeded. Respond with PROBE_OK.' },
+  ])
+})
+
+test('capability probe reports failure when follow-up does not finish', async () => {
+  let count = 0
+  const send = async (): Promise<string> => {
+    count++
+    return count === 1
+      ? ['data: {"type":"message_start"}',
+         'data: {"type":"content_block_start","index":0,"content_block":{"name":"333_probe","id":"toolu_probe"}}',
+         'data: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\\\"ok\\\":true}"}}',
+         'data: {"type":"message_stop"}'].join('\\n')
+      : ['data: {"type":"message_start"}',
+         'data: {"type":"message_delta","delta":{"stop_reason":"tool_use"}}',
+         'data: {"type":"message_stop"}'].join('\\n')
+  }
+  const result = await runModelToolRoundTrip('openai/gpt-6.1-sol', send)
+  assert.equal(result.tool, true)
+  assert.equal(result.roundTrip, false)
+  assert.equal(count, 2)
 })

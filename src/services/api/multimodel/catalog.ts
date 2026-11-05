@@ -11,6 +11,8 @@ import {
   getIndependentApiKey, resolveIndependentModel, discoverIndependentModelDetails,
 } from './registry.js'
 import { getChatGPTAccessToken } from '../../auth/chatgptOAuth.js'
+import { getCatalogModelsForProvider } from '../../../utils/model/modelCatalog.js'
+import { getAPIProvider } from '../../../utils/model/providers.js'
 import { mergeDiscoveredModelProfiles } from './profiles.js'
 
 const ROOT = join(homedir(), '.333', 'models')
@@ -72,6 +74,33 @@ export async function refreshProviderModels(provider: IndependentProvider): Prom
   }
   return refreshed
 }
+export type RegisteredModel = {
+  id: string
+  provider: string
+  label: string
+  source: 'built-in' | 'discovered'
+  restricted: boolean
+}
+
+/** One inventory for CLI, SDK inspection and support diagnostics. */
+export function getRegisteredModelInventory(): RegisteredModel[] {
+  const provider = getAPIProvider()
+  const catalogProvider = provider === 'firstParty' ? 'first_party' : provider
+  const native = getCatalogModelsForProvider(catalogProvider).flatMap(entry => {
+    const id = entry.provider_ids[catalogProvider]
+    return typeof id === 'string'
+      ? [{ id, provider, label: entry.display_name, source: 'built-in' as const,
+          restricted: entry.family === 'mythos' }]
+      : []
+  })
+  const independent = getSavedModelOptions().map(option => {
+    const provider = option.value.slice(0, option.value.indexOf('/'))
+    return { id: option.value, provider, label: option.label,
+      source: 'discovered' as const, restricted: false }
+  })
+  return [...native, ...independent]
+}
+
 export function listSupportedProviders(): IndependentProvider[] {
   return Object.keys(PROVIDERS) as IndependentProvider[]
 }
