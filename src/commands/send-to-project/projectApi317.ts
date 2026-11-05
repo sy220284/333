@@ -233,8 +233,8 @@ export function createProjectsClient317(config:ProjectClientConfig317){
       }
       const recordResponse=Array.isArray(response)?
         response.find(o=>record(o)&&o.id===1):response
-      if(!record(recordResponse)||recordResponse.id!==1||
-        recordResponse.error||!recordResponse.result)
+      if(!record(recordResponse)||recordResponse.id!==1||recordResponse.error||
+        !record(recordResponse.result)||recordResponse.result.isError===true)
         throw new ProjectApiError317('Project coordinator did not confirm the handoff',null,true)
     },
     createMessageId:()=>randomUUID().replaceAll('-',''),
