@@ -235,6 +235,14 @@ async function stop(id) {
   // Wait for that transaction before permitting an immediate respawn.
   if (!await settleWithin(job.finalization, 5000))
     throw new Error(`Session exit state did not finalize: ${id}`)
+  // The PTY child may have exited while its independent host is still
+  // flushing and removing its Unix socket. A respawn must wait for that
+  // host to relinquish the address before binding a replacement.
+  const deadline=Date.now()+5_000
+  while(isAlive(job.proc.pid) && Date.now()<deadline)
+    await new Promise(resolve=>setTimeout(resolve,50))
+  if(isAlive(job.proc.pid))
+    throw new Error(`PTY host did not release its process after stop: ${id}`)
   await editSession(id, { state: 'stopped', detail: 'stopped', pid: null })
 }
 async function dispatch(request) {
