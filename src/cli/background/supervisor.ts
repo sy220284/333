@@ -114,6 +114,7 @@ async function launch(record, { resume = false } = {}) {
   const rows = Number.isInteger(record.rows) && record.rows >= 5 ? record.rows : 30
   const subscribers = new Set()
   const earlyOutput = []
+  let firstReplay = true
   // A child can exit before its initial session record has been committed.
   // Serialize the exit transition behind that commit to avoid resurrecting a
   // completed job as 'working' when launch() finishes.
@@ -131,7 +132,20 @@ async function launch(record, { resume = false } = {}) {
         CLAUDE_CODE_SESSION_LOG:record.logPath,
         CLAUDE_CODE_BACKGROUND_SESSION_ID:record.id,
       },executable:binary,prefix,args,
-      onReplay:async data=>{if(data.length)earlyOutput.push(Buffer.from(data))},
+      onReplay:async data=>{
+        if(!data.length)return
+        let bytes=data
+        if(!firstReplay){
+          await outputQueue.get(record.id)
+          const known=await readPtyTailBytes317(record.logPath,data.length)
+          bytes=unrecordedPtyReplay317(known,data)
+        }
+        firstReplay=false
+        if(bytes.length){
+          if(active.has(record.id))recordOutput(record.id,bytes)
+          else earlyOutput.push(Buffer.from(bytes))
+        }
+      },
       onOutput:data=>{
         if(active.has(record.id))recordOutput(record.id,data)
         else earlyOutput.push(Buffer.from(data))
