@@ -43,6 +43,9 @@ on:
       - 'tests/m4-session-storage-v5-integration.test.ts'
       - 'build/public-dependencies.lock.json'
       - 'tests/m1-six-host-native-audio-317.test.mjs'
+      - 'tests/release-integrity.test.mjs'
+      - 'tests/distribution-isolation.test.mjs'
+      - 'build/release-launcher.cjs'
   workflow_dispatch:
 
 permissions:
