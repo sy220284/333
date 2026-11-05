@@ -94,6 +94,7 @@ import {
   incrementBudgetContinuationCount,
 } from './bootstrap/state.js'
 import { createBudgetTracker, checkTokenBudget } from './query/tokenBudget.js'
+import { observeQuery317 } from './services/agentObserver/observeQuery317.js'
 import { count } from './utils/array.js'
 
 
@@ -204,7 +205,12 @@ export async function* query(
   Terminal
 > {
   const consumedCommandUuids: string[] = []
-  const terminal = yield* queryLoop(params, consumedCommandUuids)
+  const loop = queryLoop(params, consumedCommandUuids)
+  const terminal = yield* (
+    params.querySource.startsWith('repl_main_thread')
+      ? observeQuery317(params, loop)
+      : loop
+  )
   // Only reached if queryLoop returned normally. Skipped on throw (error
   // propagates through yield*) and on .return() (Return completion closes
   // both generators). This gives the same asymmetric started-without-completed
