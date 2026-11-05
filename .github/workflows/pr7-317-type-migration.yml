@@ -28,6 +28,8 @@ jobs:
           node-version: '24'
       - name: 安装冻结 TypeScript 类型工具
         run: npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+      - name: 安装权威清单指定的JavaScript AST解析器
+        run: node tools/dev/toolchain.mjs install-ast
       - name: 从源码和声明重建缺失的函数类型
         run: |
           node tools/upgrade/rewrite-317-types.mjs --apply
