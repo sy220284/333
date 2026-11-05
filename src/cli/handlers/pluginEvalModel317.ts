@@ -151,7 +151,7 @@ export type PluginEvalJudgeRequest317 = {
 export async function judgeEvalOutput317(
   { grader, output, context }: PluginEvalJudgeRequest317,
   options: { workspace?: string; judgeModel?: string; timeoutSeconds?: number } = {},
-) {
+): Promise<{score: number; reason: string; costUsd: number}> {
   const reference = grader.type === 'baseline'
     ? `Reference answer: ${String(context.baseline ?? '')}\n`
     : ''
