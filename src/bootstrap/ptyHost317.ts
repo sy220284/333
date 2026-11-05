@@ -78,6 +78,8 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
       if (!ptyAuth) recordFailure(socket, 'tokens-file unreadable; DATA gate fail-open')
     }
   }
+  const persistAfterSupervisorExit = process.env.CLAUDE_BG_PTY_PERSIST === '1'
+  delete process.env.CLAUDE_BG_PTY_PERSIST
   const execMode = process.env.CLAUDE_PTY_HOST_EXEC === '1'
   const execFiles = execMode
     ? ptyExecFiles317(socket, (await import('../utils/envUtils.js')).getClaudeConfigHomeDir())
@@ -236,7 +238,7 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
       pulse.unref(); timers.push(pulse)
       let missing = 0
       const watchdog = setInterval(() => {
-        if (stopped) return
+        if (stopped || persistAfterSupervisorExit) return
         if (process.ppid === originalParent || peers.size) { missing = 0; return }
         if (++missing >= 30) {
           recordFailure(socket, 'orphan watchdog: parent changed without clients')
