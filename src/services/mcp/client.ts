@@ -3189,10 +3189,10 @@ async function callMCPTool({
           request:async (method,params,requestSignal,headers) => {
             if(method==='tasks/cancel')return client.request(
               {method,params},z.object({}).passthrough(),
-              {signal:requestSignal,timeout:5_000,headers},
+              {signal:requestSignal,timeout:5_000,headers} as Parameters<typeof client.request>[2],
             )
             return client.request({method,params},z.object({}).passthrough(),
-              {signal:requestSignal,timeout:60_000,headers})
+              {signal:requestSignal,timeout:60_000,headers} as Parameters<typeof client.request>[2])
           },
           onStatus:state=>onProgress?.({
             type:'mcp_progress',status:'progress',serverName:name,toolName:tool,
