@@ -7,7 +7,7 @@ import { stringWidth } from '../../ink/stringWidth.js';
 import { getLayoutMode, calculateLayoutDimensions, calculateOptimalLeftWidth, formatWelcomeMessage, truncatePath, getRecentActivitySync, getRecentReleaseNotesSync, getLogoDisplayData } from '../../utils/logoV2Utils.js';
 import { truncate } from '../../utils/format.js';
 import { getDisplayPath } from '../../utils/file.js';
-import { Clawd } from './Clawd.js';
+import { BrandMark } from './BrandMark.js';
 import { FeedColumn } from './FeedColumn.js';
 import { createRecentActivityFeed, createWhatsNewFeed, createProjectOnboardingFeed, createGuestPassesFeed } from './feedConfigs.js';
 import { getGlobalConfig, saveGlobalConfig } from 'src/utils/config.js';
@@ -35,8 +35,8 @@ import { feature } from 'bun:bundle';
 /* eslint-disable @typescript-eslint/no-require-imports */
 const ChannelsNoticeModule = feature('KAIROS') || feature('KAIROS_CHANNELS') ? require('./ChannelsNotice.js') as typeof import('./ChannelsNotice.js') : null;
 /* eslint-enable @typescript-eslint/no-require-imports */
-import { useShowGuestPassesUpsell, incrementGuestPassesSeenCount } from './GuestPassesUpsell.js';
-import { useShowOverageCreditUpsell, incrementOverageCreditUpsellSeenCount, createOverageCreditFeed } from './OverageCreditUpsell.js';
+import { incrementGuestPassesSeenCount } from './GuestPassesUpsell.js';
+import { incrementOverageCreditUpsellSeenCount, createOverageCreditFeed } from './OverageCreditUpsell.js';
 import { plural } from '../../utils/stringUtils.js';
 import { useAppState } from '../../state/AppState.js';
 import { getEffortSuffix } from '../../utils/effort.js';
@@ -59,8 +59,8 @@ export function LogoV2() {
     t0 = $[0];
   }
   const showOnboarding = t0;
-  const showGuestPassesUpsell = useShowGuestPassesUpsell();
-  const showOverageCreditUpsell = useShowOverageCreditUpsell();
+  const showGuestPassesUpsell = false;
+  const showOverageCreditUpsell = false;
   const agent = useAppState(_temp);
   const effortValue = useAppState(_temp2);
   const activePermissionMode = useAppState(state => state.toolPermissionContext.mode);
@@ -173,13 +173,13 @@ export function LogoV2() {
     // Accessibility uses the same live model, billing and workspace metadata
     // as the normal logo, without Clawd art, decorative borders or animation.
     return <Box flexDirection="column">
-      <Text>Claude Code v{version}</Text>
+      <Text>333 v{version}</Text>
       <Text>{fullModelDisplayName}{effortSuffix} · {billingType}</Text>
       <Text>{agentName ? `@${agentName} · ${cwd}` : cwd}</Text>
       {activePermissionMode === 'auto' && <>
-        <Text>Auto mode is now Claude Code's default permission mode.</Text>
-        <Text>Auto mode lets Claude handle permission prompts automatically. Claude checks each tool call for risky actions and prompt injection before executing, runs the ones it assesses as lower-risk, and blocks the rest.</Text>
-        <Text>https://code.claude.com/docs/en/permission-modes</Text>
+        <Text>自动模式已启用，333 将执行必要的工具安全检查。</Text>
+        <Text>333 会逐项判断工具调用的风险，自动执行允许的操作并拦截危险操作。</Text>
+        <Text>https://github.com/sy220284/333</Text>
         <Text>auto mode on (shift+tab to cycle)</Text>
       </>}
       {announcement && <Text>{announcement}</Text>}
@@ -257,8 +257,8 @@ export function LogoV2() {
   }
   const layoutMode = getLayoutMode(columns);
   const userTheme = resolveThemeSetting(getGlobalConfig().theme);
-  const borderTitle = ` ${color("claude", userTheme)("Claude Code")} ${color("inactive", userTheme)(`v${version}`)} `;
-  const compactBorderTitle = color("claude", userTheme)(" Claude Code ");
+  const borderTitle = ` ${color("accent", userTheme)("333")} ${color("inactive", userTheme)(`v${version}`)} `;
+  const compactBorderTitle = color("accent", userTheme)(" 333 ");
   if (layoutMode === "compact") {
     let welcomeMessage = formatWelcomeMessage(username);
     if (stringWidth(welcomeMessage) > columns - 4) {
@@ -288,7 +288,7 @@ export function LogoV2() {
     }
     let t12;
     if ($[34] === Symbol.for("react.memo_cache_sentinel")) {
-      t12 = <Box marginY={1}><Clawd /></Box>;
+      t12 = <Box marginY={1}><BrandMark /></Box>;
       $[34] = t12;
     } else {
       t12 = $[34];
@@ -371,7 +371,7 @@ export function LogoV2() {
   }
   let t19;
   if ($[48] === Symbol.for("react.memo_cache_sentinel")) {
-    t19 = <Clawd />;
+    t19 = <BrandMark />;
     $[48] = t19;
   } else {
     t19 = $[48];
