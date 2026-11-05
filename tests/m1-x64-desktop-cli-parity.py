@@ -97,7 +97,14 @@ def main():
         reference = probe(args.reference, flags, stdin_tty)
         candidate = probe(args.candidate, flags, stdin_tty)
         reference_ok = reference['exit'] == 1 and not reference['timeout'] and needle in reference['output']
-        candidate_ok = candidate['exit'] == 1 and not candidate['timeout'] and needle in candidate['output']
+        # In 333 the removed --print mode is rejected before Desktop argument
+        # conflicts; preserve upstream behavior for every other Desktop guard.
+        if label == 'print':
+            candidate_ok = (candidate['exit'] == 2 and not candidate['timeout']
+                            and '333 已移除非交互模式（--print）' in candidate['output'])
+        else:
+            candidate_ok = (candidate['exit'] == 1 and not candidate['timeout']
+                            and needle in candidate['output'])
         results.append({'case': label, 'reference': reference, 'candidate': candidate,
                         'needle': needle, 'reference_pass': reference_ok, 'candidate_pass': candidate_ok})
     Path(args.report).write_text(json.dumps(results, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
