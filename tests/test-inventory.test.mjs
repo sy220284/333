@@ -19,6 +19,9 @@ test('new unregistered tests are automatically selected for execution', () => {
     assert.deepEqual(found.pending, ['tests/sub/new.test.mjs'])
     assert.equal(found.tests.length, 3)
     assert.equal(found.registered.length, 2)
+    const workflowOnly = discoverUnregisteredTests(root, { workflowOnly: true })
+    assert.deepEqual(workflowOnly.pending, ['tests/ci.test.ts'])
+    assert.equal(workflowOnly.tests.length, 3)
   } finally {
     rmSync(root, { recursive:true, force:true })
   }
