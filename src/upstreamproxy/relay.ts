@@ -63,7 +63,7 @@ const PING_INTERVAL_MS = 30_000
  * protobufjs would be the general answer; for a single-field bytes message
  * the hand encoding is 10 lines and avoids a runtime dep in the hot path.
  */
-export function encodeChunk(data: Uint8Array): Uint8Array {
+export function encodeChunk(data: Uint8Array): Uint8Array<ArrayBuffer> {
   const len = data.length
   // varint encoding of length — most chunks fit in 1–3 length bytes
   const varint: number[] = []
@@ -73,7 +73,9 @@ export function encodeChunk(data: Uint8Array): Uint8Array {
     n >>>= 7
   }
   varint.push(n)
-  const out = new Uint8Array(1 + varint.length + len)
+  // A dedicated ArrayBuffer makes the encoded chunk directly transferable to
+  // WebSocket without a second Uint8Array copy.
+  const out = new Uint8Array(new ArrayBuffer(1 + varint.length + len))
   out[0] = 0x0a
   out.set(varint, 1)
   out.set(data, 1 + varint.length)
@@ -381,7 +383,7 @@ function openTunnel(
     // responds with its own "HTTP/1.1 200" over the tunnel; we just pipe it.
     const head =
       `${connectLine}\r\n` + `Proxy-Authorization: ${authHeader}\r\n` + `\r\n`
-    ws.send(Uint8Array.from(encodeChunk(Buffer.from(head, 'utf8'))).buffer)
+    ws.send(encodeChunk(Buffer.from(head, 'utf8')).buffer)
     // Flush anything that arrived while the WS handshake was in flight —
     // trailing bytes from the CONNECT packet and any data() callbacks that
     // fired before onopen.
@@ -429,7 +431,7 @@ function openTunnel(
 
 function sendKeepalive(ws: WebSocketLike): void {
   if (ws.readyState === WebSocket.OPEN) {
-    ws.send(Uint8Array.from(encodeChunk(new Uint8Array(0))).buffer)
+    ws.send(encodeChunk(new Uint8Array(0)).buffer)
   }
 }
 
@@ -437,7 +439,7 @@ function forwardToWs(ws: WebSocketLike, data: Buffer): void {
   if (ws.readyState !== WebSocket.OPEN) return
   for (let off = 0; off < data.length; off += MAX_CHUNK_BYTES) {
     const slice = data.subarray(off, off + MAX_CHUNK_BYTES)
-    ws.send(Uint8Array.from(encodeChunk(slice)).buffer)
+    ws.send(encodeChunk(slice).buffer)
   }
 }
 
