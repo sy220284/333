@@ -1,0 +1,36 @@
+name: 333 交互式唯一入口专项验收
+
+on:
+  push:
+    branches:
+      - feature/interactive-only-333
+      - main
+  pull_request:
+    paths:
+      - 'src/entrypoints/interactiveOnly317.ts'
+      - 'src/entrypoints/cli.tsx'
+      - 'src/main.tsx'
+      - 'src/entrypoints/sdk/sessionRuntime317.ts'
+      - 'build/check-architecture-links317.mjs'
+      - 'build/m1-x64-reference-probe.mjs'
+      - 'tests/interactive-only-317.test.mjs'
+      - 'package.json'
+      - '.github/workflows/interactive-only.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  interactive-only:
+    name: 验证交互入口、拒绝非交互及架构边界
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - name: 交互式唯一入口回归
+        run: node --test tests/interactive-only-317.test.mjs
+      - name: 原版升级架构保护
+        run: node build/check-architecture-links317.mjs
