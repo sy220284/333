@@ -625,9 +625,13 @@ export function useManageMCPConnections(
           // account-scoped user permission are explicitly enabled.
           if (client.capabilities?.experimental?.['claude/artifact-comments'] &&
               isEnvTruthy(process.env.CLAUDE_CODE_EXPERIMENTAL_ARTIFACT_COMMENTS)) {
-            const toolNames = (await client.client.listTools()).tools.map(tool => tool.name)
-            const artifactTool = toolNames.find(name =>
-              name === 'Artifact' || name === 'artifact')
+            // Reuse the already validated tool list supplied by the connection
+            // callback. This avoids asynchronous work in the synchronous hook
+            // and does not race with server reconnects.
+            const artifactTool = tools
+              .filter(tool => tool.isMcp && tool.mcpInfo?.serverName === client.name)
+              .map(tool => tool.mcpInfo?.toolName)
+              .find(name => name === 'Artifact' || name === 'artifact')
             if (artifactTool) {
               registerArtifactCommentNotifications317({
                 server: client,

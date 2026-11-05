@@ -1,4 +1,4 @@
-import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
+import type { JSONRPCMessage } from '@modelcontextprotocol/server'
 import { SdkControlServerTransport } from '../../services/mcp/SdkControlTransport.js'
 import { parseSdkTransportMessage } from '../../services/mcp/validateSdkTransportMessage.js'
 import { spawn } from 'node:child_process'

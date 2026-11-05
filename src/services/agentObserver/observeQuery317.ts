@@ -87,19 +87,22 @@ export async function* observeQuery317<T extends StreamValue317>(
   try {
     for (;;) {
       const step = await stream.next()
-      if (step.done === true) {
-        finished = true
-        if (step.value.reason === 'completed' && activity.length > 0 &&
-            !params.toolUseContext.abortController.signal.aborted) {
-          activity.push({ type: 'turn_ended', reason: 'completed' })
-          void entry.runtime
-            .then(runtime => runtime?.afterTurn(activity))
-            .catch(logError)
-        }
-        return step.value
+      // Explicitly narrow the yielded result before using it as an activity.
+      // AsyncGenerator<T, Terminal> also carries the terminal return value.
+      if (step.done === false) {
+        captureActivity(step.value, activity, entry.messages)
+        yield step.value
+        continue
       }
-      captureActivity(step.value, activity, entry.messages)
-      yield step.value
+      finished = true
+      if (step.value.reason === 'completed' && activity.length > 0 &&
+          !params.toolUseContext.abortController.signal.aborted) {
+        activity.push({ type: 'turn_ended', reason: 'completed' })
+        void entry.runtime
+          .then(runtime => runtime?.afterTurn(activity))
+          .catch(logError)
+      }
+      return step.value
     }
   } finally {
     if (!finished) await stream.return({ reason: 'aborted_streaming' })

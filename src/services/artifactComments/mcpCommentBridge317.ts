@@ -187,12 +187,16 @@ export function registerArtifactCommentNotifications317(args: {
   const backend = buildArtifactMcpBackend317(args.server, args.toolName, args.approveWrite)
   const model = createArtifactCommentModel317(args.signal)
   const lease = artifactEventLease317(args.server.name)
-  args.server.client.setNotificationHandler(EventSchema317, async notification => {
+  args.server.client.setNotificationHandler(
+    'notifications/claude/artifact/comment',
+    { params: EventSchema317.shape.params },
+    async notification => {
+    const params = EventSchema317.shape.params.parse(notification)
     const event: CommentEvent317 = {
-      eventId: notification.params.event_id,
-      artifactUrl: notification.params.artifact_url,
-      threadId: notification.params.thread_id,
-      trigger: notification.params.trigger,
+      eventId: params.event_id,
+      artifactUrl: params.artifact_url,
+      threadId: params.thread_id,
+      trigger: params.trigger,
     }
     const url = new URL(event.artifactUrl)
     if (url.hostname !== args.allowedDomain || url.username || url.password ||
@@ -206,6 +210,7 @@ export function registerArtifactCommentNotifications317(args: {
       args.notifyError('Artifact comment processing failed: ' +
         (error instanceof Error ? error.message : String(error)))
     }
-  })
+    },
+  )
   return true
 }
