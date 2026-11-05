@@ -36,6 +36,6 @@ jobs:
       - name: 网关官方317既有配置与真实协议回归
         run: bun test tests/m6-gateway-runtime-317.test.mjs tests/m6-gateway-ttfb-sse-317.test.mjs tests/m6-gateway-device-317.test.mjs tests/m6-gateway-user-id-claim-317.test.mjs
       - name: 网关个人与共享预算、流式计费及数据库异常处理
-        run: bun test tests/m6-gateway-spend-integration-317.test.mjs
+        run: node --experimental-strip-types --test tests/m6-gateway-spend-integration-317.test.mjs
       - name: CRI 认证回归使用可注入Node运行环境
         run: node --experimental-strip-types --test tests/m6-gateway-cri-317.test.mjs
