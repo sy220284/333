@@ -285,24 +285,24 @@ export async function runDaemonWorker317(kind: string | undefined,
       stdout('Error: You must be logged in to use Remote Control.\n\nRemote Control is only available with claude.ai subscriptions. Run `claude auth login` to sign in with your claude.ai account.\n')
       return 1
     }
-    try {
-      await (options.remoteControlRunner ?? runRemoteControlWorker317)(
-        remote, controller.signal, line => stdout(line + '\n'), getAccessToken, reportAuth401)
-      return 0
-    } catch (error) {
-      if (error instanceof Error && error.name === 'BridgeHeadlessPermanentError') {
-        stdout(error.message + '\n')
-        return DAEMON_WORKER_UNAVAILABLE_317
-      }
-      const failure = classifyDaemonWorkerFailure317(error)
-      if (failure) {
-        const message = error instanceof Error ? error.message : String(error)
-        stdout((failure === 'rate_limited' ? 'rate limited (429): ' :
-          'folder already served: ') + message + '\n')
-        return DAEMON_WORKER_TEMP_FAILURE_317
-      }
-      throw error
+    await (options.remoteControlRunner ?? runRemoteControlWorker317)(
+      remote, controller.signal, line => stdout(line + '\n'), getAccessToken, reportAuth401)
+    return 0
+  } catch (error) {
+    // The official 317 L6i dispatcher owns EX_TEMPFAIL for every worker
+    // implementation. Keep one catch across heartbeat, scheduled and RC.
+    if (error instanceof Error && error.name === 'BridgeHeadlessPermanentError') {
+      stdout(error.message + '\n')
+      return DAEMON_WORKER_UNAVAILABLE_317
     }
+    const failure = classifyDaemonWorkerFailure317(error)
+    if (failure) {
+      const message = error instanceof Error ? error.message : String(error)
+      stdout((failure === 'rate_limited' ? 'rate limited (429): ' :
+        'folder already served: ') + message + '\n')
+      return DAEMON_WORKER_TEMP_FAILURE_317
+    }
+    throw error
   } finally {
     for (const request of pendingAuth.values()) {
       clearTimeout(request.timer)
