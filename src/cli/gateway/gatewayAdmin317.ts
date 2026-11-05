@@ -137,7 +137,7 @@ export function parseGatewaySpendLimit317(value: unknown): GatewaySpendPayload31
     throw new Error('scope.rbac_group_id is required')
   }
   const period=value.period
-  if (!VALID_PERIODS.has(period)) throw new Error('period must be daily, weekly, or monthly')
+  if (typeof period !== 'string' || !VALID_PERIODS.has(period)) throw new Error('period must be daily, weekly, or monthly')
   if (value.currency !== undefined && value.currency!=='USD') throw new Error('currency must be USD')
   const cents = (candidate: unknown): candidate is string | null =>
     candidate===null || (typeof candidate==='string'&&/^\d{1,18}$/.test(candidate))
