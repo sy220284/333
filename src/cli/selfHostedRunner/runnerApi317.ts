@@ -57,6 +57,7 @@ export type RemoteConfig317 = {
   environment_variables: Record<string, unknown>
   api_base_url?: string
   cwd?: string
+  inference_auth?: { access_token?: unknown; expires_in_seconds?: unknown }
   [key: string]: unknown
 }
 export type RunnerRegistrationOptions317 = {
