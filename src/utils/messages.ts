@@ -3819,7 +3819,9 @@ You have exited auto mode. The user may now want to interact more directly. You 
         return [
           createUserMessage({
             content: wrapInSystemReminder(
-              `Task "${attachment.description}" (${attachment.taskId}) was stopped by the user.`,
+              formatBackgroundTaskNotification(
+                `Task "${attachment.description}" (${attachment.taskId}) was stopped by the user.`,
+              ),
             ),
             isMeta: true,
           }),
@@ -3846,7 +3848,9 @@ You have exited auto mode. The user may now want to interact more directly. You 
         }
         return [
           createUserMessage({
-            content: wrapInSystemReminder(parts.join(' ')),
+            content: wrapInSystemReminder(
+              formatBackgroundTaskNotification(parts.join(' ')),
+            ),
             isMeta: true,
           }),
         ]
@@ -3876,7 +3880,9 @@ You have exited auto mode. The user may now want to interact more directly. You 
 
       return [
         createUserMessage({
-          content: wrapInSystemReminder(messageParts.join(' ')),
+          content: wrapInSystemReminder(
+            formatBackgroundTaskNotification(messageParts.join(' ')),
+          ),
           isMeta: true,
         }),
       ]
