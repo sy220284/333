@@ -1,6 +1,7 @@
 import { feature } from 'bun:bundle'
 import { relative } from 'path'
 import {
+  getIsNonInteractiveSession,
   getOriginalCwd,
   handleAutoModeTransition,
   handlePlanModeTransition,
@@ -779,6 +780,7 @@ export function initialPermissionModeFromCLI({
   // settings and live circuit-breaker checks still decide availability.
   if (
     feature('TRANSCRIPT_CLASSIFIER') &&
+    !getIsNonInteractiveSession() &&
     !dangerouslySkipPermissions &&
     !permissionModeCli &&
     !settings.permissions?.defaultMode &&
@@ -1449,7 +1451,7 @@ export async function checkAndDisableBypassPermissions(
 }
 
 export function isDefaultPermissionModeAuto(): boolean {
-  if (!feature('TRANSCRIPT_CLASSIFIER')) return false
+  if (!feature('TRANSCRIPT_CLASSIFIER') || getIsNonInteractiveSession()) return false
   const settings = getInitialSettings() || {}
   if (settings.permissions?.defaultMode) {
     return settings.permissions.defaultMode === 'auto'
