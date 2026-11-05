@@ -226,8 +226,11 @@ async function stop(id) {
   catch (error) { throw new Error(`Could not interrupt session ${id}: ${error.message}`) }
   const settled = await settleWithin(job.proc.exited, 4500)
   if (!settled && active.get(id) === job) {
-    job.proc.kill('SIGTERM')
-    await settleWithin(job.proc.exited, 750)
+    // SIGINT is translated to TERM by the PTY protocol. A repeated TERM
+    // cannot make progress once a child ignores or stalls during shutdown.
+    // Escalate to KILL and wait for its exit-frame transaction.
+    job.proc.kill('SIGKILL')
+    await settleWithin(job.proc.exited, 2_000)
   }
   if (active.get(id) === job && isAlive(job.proc.pid))
     throw new Error(`Could not confirm session termination: ${id}`)
