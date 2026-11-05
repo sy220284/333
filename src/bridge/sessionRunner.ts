@@ -62,6 +62,8 @@ type SessionSpawnerDeps = {
   runnerRuntime?: { apiBaseUrl: string; configDir: string; inferenceToken?: string }
   onDebug: (msg: string) => void
   onActivity?: (sessionId: string, activity: SessionActivity) => void
+  /** 317 child token rotation receipt from control_response. */
+  onTokenAck?: (sessionId: string, requestId: string) => void
   onPermissionRequest?: (
     sessionId: string,
     request: PermissionRequest,
@@ -436,7 +438,15 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
             if (parsed && typeof parsed === 'object') {
               const msg = parsed as Record<string, unknown>
 
-              if (msg.type === 'control_request') {
+              if (msg.type === 'control_response') {
+                const response=msg.response
+                if(response && typeof response==='object' && !Array.isArray(response)){
+                  const requestId=(response as Record<string,unknown>).request_id
+                  if(typeof requestId==='string' && requestId.startsWith('shr-token-')){
+                    deps.onTokenAck?.(opts.sessionId,requestId)
+                  }
+                }
+              } else if (msg.type === 'control_request') {
                 const request = msg.request as
                   | Record<string, unknown>
                   | undefined
@@ -550,7 +560,7 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
             child.stdin.write(data)
           }
         },
-        updateAccessToken(token: string): void {
+        updateAccessToken(token: string, requestId?: string): void {
           handle.accessToken = token
           // Send the fresh token to the child process via stdin. The child's
           // StructuredIO handles update_environment_variables messages by
@@ -560,6 +570,7 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
             jsonStringify({
               type: 'update_environment_variables',
               variables: { CLAUDE_CODE_SESSION_ACCESS_TOKEN: token },
+              ...(requestId && {request_id:requestId}),
             }) + '\n',
           )
           deps.onDebug(

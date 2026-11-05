@@ -186,7 +186,7 @@ export type SessionHandle = {
   lastStderr: string[] // ring buffer of last stderr lines
   writeStdin(data: string): void // write directly to child stdin
   /** Update the access token for a running session (e.g. after token refresh). */
-  updateAccessToken(token: string): void
+  updateAccessToken(token: string, requestId?: string): void
 }
 
 export type SessionSpawnOpts = {
