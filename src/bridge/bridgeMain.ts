@@ -2903,8 +2903,12 @@ export async function runBridgeHeadless(
     environmentId = reg.environment_id
     environmentSecret = reg.environment_secret
   } catch (err) {
-    // Transient — let supervisor backoff-retry.
-    throw new Error(`Bridge registration failed: ${errorMessage(err)}`)
+    // Preserve the original HTTP status in the error cause chain. The
+    // 2.1.317 daemon supervisor distinguishes 429 (temporary exit 75)
+    // from generic registration failures via the nested response status.
+    throw new Error(`Bridge registration failed: ${errorMessage(err)}`, {
+      cause: err,
+    })
   }
 
   const spawner = createSessionSpawner({
