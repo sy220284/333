@@ -883,7 +883,8 @@
           "implementation": "移植SDK hook_callback、permission、elicitation及其他正式控制事件的路由、request_id和回执处理",
           "associated_updates": "controlSchemas、structuredIO、错误封装及宿主消费者",
           "acceptance": "未知、重复、延迟和取消回执得到与原版相同的处理",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS_FUNCTION_DIFF",
+          "progress": "已对齐SDK取消清除pending、桥接关闭回调与Promise归属；3例实测通过。其余控制事件及宿主退役路径继续核对。"
         },
         {
           "id": "C06-T04",
@@ -2019,7 +2020,8 @@
           "implementation": "对齐403/429/529、断流、超时、退避、Retry-After、重试预算及已产生副作用后的恢复",
           "associated_updates": "请求状态、模型回退、上传幂等、用户错误与取消信号",
           "acceptance": "失败注入得到一致请求次数和间隔，不重复已成功的副作用",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS_FUNCTION_DIFF",
+          "progress": "已对齐退避/Retry-After下限、等待门槛、重试预算、额度严格递减；原函数1440组合、6类原版请求对照及生产循环5例通过。400/422字段探测、持久watchdog和断流恢复继续推进。"
         },
         {
           "id": "C16-T04",
@@ -2035,7 +2037,8 @@
           "implementation": "追踪API、MCP、插件市场、附件、Runner和远程消息的连接/认证路径，替换各自旧分支",
           "associated_updates": "C01/C09/C10/C14/C15/C18/C20网络调用方",
           "acceptance": "同一代理/身份/取消设置跨服务一致生效，并正确清理连接和错误状态",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS_FUNCTION_DIFF",
+          "progress": "生产withRetry接入TS统一重试算术；保留远端设置、策略限制、团队记忆、设置同步与压缩消费者。其他网络路径继续核对。"
         }
       ],
       "acceptance_scenarios": [

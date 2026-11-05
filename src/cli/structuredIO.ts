@@ -504,6 +504,10 @@ export class StructuredIO {
         // Track the tool_use ID as resolved before rejecting, so that a
         // late response from the host is ignored by the orphan handler.
         this.trackResolvedToolUseId(request.request)
+        if (request.request.request.subtype === 'can_use_tool') {
+          this.onControlRequestResolved?.(requestId)
+        }
+        this.pendingRequests.delete(requestId)
         request.reject(new AbortError())
       }
     }
@@ -512,9 +516,10 @@ export class StructuredIO {
         once: true,
       })
     }
+    let pending: PendingRequest<unknown> | undefined
     try {
       return await new Promise<Response>((resolve, reject) => {
-        this.pendingRequests.set(requestId, {
+        pending = {
           request: {
             type: 'control_request',
             request_id: requestId,
@@ -525,13 +530,16 @@ export class StructuredIO {
           },
           reject,
           schema,
-        })
+        }
+        this.pendingRequests.set(requestId, pending)
       })
     } finally {
       if (signal) {
         signal.removeEventListener('abort', aborted)
       }
-      this.pendingRequests.delete(requestId)
+      if (this.pendingRequests.get(requestId) === pending) {
+        this.pendingRequests.delete(requestId)
+      }
     }
   }
 

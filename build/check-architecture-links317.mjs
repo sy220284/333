@@ -28,6 +28,7 @@ const contracts = [
   ['M2', 'src/QueryEngine.ts', 'src/query.ts'],
   ['M3', 'src/query.ts', 'src/services/tools/StreamingToolExecutor.ts'],
   ['M3', 'src/services/tools/toolExecution.ts', 'src/services/mcp/client.ts'],
+  ['M3', 'src/services/api/withRetry.ts', 'src/services/api/retryPolicy317.ts'],
   ['M4', 'src/tools/AgentTool/runAgent.ts', 'src/query.ts'],
   ['M4', 'src/utils/sessionStorage.ts', 'src/utils/sessionTranscriptPathsV5.ts'],
   ['M5', 'src/main.tsx', 'src/utils/plugins/pluginLoader.ts'],
