@@ -384,3 +384,44 @@ test('Runner 317: release pushes unfinished work only with the explicit preserva
     }finally{rmSync(root,{recursive:true,force:true})}
   }
 })
+
+test('Runner 317: remote session cannot re-inject host-only runner credentials into child',async()=>{
+  for(const secretName of [
+    'SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET',
+    'SELF_HOSTED_RUNNER_POOL_SECRET',
+    'SELF_HOSTED_RUNNER_WORK_ORDER_JWT',
+  ]) {
+    const root=temp(),aborted=new AbortController(),events:string[]=[]
+    const api=fakeApi({
+      pollWork:async()=>({assignment_ids:['session_1'],session_assignments:[]}),
+      getSessionRemoteConfig:async()=>({
+        sources:[],push_targets:[],claude_code_args:{},
+        environment_variables:{[secretName]:'attacker-injected-host-secret'},
+        api_base_url:'https://api.example.test',
+      }),
+      reportSessionFailure:async(_,id,kind)=>{
+        expect(id).toBe('session_1')
+        expect(kind).toBe('setup_failed')
+        events.push('failure')
+        aborted.abort()
+        return {}
+      },
+      deregisterRunner:async()=>{events.push('deregister')},
+    })
+    try {
+      await startSelfHostedRunnerHost317({
+        api,baseDir:root,capacity:1,execPath:process.execPath,
+        scriptArgs:[],env:{
+          SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET:'inherited-host-secret',
+          SELF_HOSTED_RUNNER_POOL_SECRET:'inherited-pool-secret',
+          SELF_HOSTED_RUNNER_WORK_ORDER_JWT:'inherited-work-order',
+        },signal:aborted.signal,
+        createChild(){events.push('spawn');return makeHandle()},
+      })
+      expect(events).toEqual(['failure','deregister'])
+    } finally {
+      aborted.abort()
+      rmSync(root,{recursive:true,force:true})
+    }
+  }
+})

@@ -69,19 +69,26 @@ function boundedPollDelay(raw: string | undefined, fallback: number): number {
   if (!Number.isFinite(n) || n <= 0) return fallback
   return Math.max(250, Math.min(60_000, n * 1000))
 }
+const HOST_ONLY_RUNNER_ENV_KEYS_317 = new Set([
+  'SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET',
+  'SELF_HOSTED_RUNNER_POOL_SECRET',
+  'SELF_HOSTED_RUNNER_WORK_ORDER_JWT',
+])
 function secureChildEnvironment(base: NodeJS.ProcessEnv, supplied: Record<string, unknown>): NodeJS.ProcessEnv {
-  // The environment secret and runner token must never be passed into a child.
+  // Host credentials remain private even if a remote assignment attempts to
+  // reintroduce a removed name in its environment_variables payload.
   const env = {...base}
-  for (const key of ['SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET', 'SELF_HOSTED_RUNNER_POOL_SECRET',
-    'SELF_HOSTED_RUNNER_WORK_ORDER_JWT', 'CLAUDE_CODE_OAUTH_TOKEN']) delete env[key]
+  for (const key of HOST_ONLY_RUNNER_ENV_KEYS_317) delete env[key]
+  delete env.CLAUDE_CODE_OAUTH_TOKEN
   for (const [key,value] of Object.entries(supplied)) {
     if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key) || typeof value !== 'string' || value.includes('\0')) {
       throw new Error('Runner remote configuration contains an invalid environment entry')
     }
     // Dynamic library injection and Node CLI option hooks must not come from
     // a session. Normal application environment still comes from the server.
-    if (['NODE_OPTIONS','BUN_OPTIONS','NODE_EXTRA_CA_CERTS','LD_PRELOAD',
-      'DYLD_INSERT_LIBRARIES','SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET'].includes(key)) {
+    if (HOST_ONLY_RUNNER_ENV_KEYS_317.has(key) ||
+        ['NODE_OPTIONS','BUN_OPTIONS','NODE_EXTRA_CA_CERTS','LD_PRELOAD',
+          'DYLD_INSERT_LIBRARIES'].includes(key)) {
       throw new Error('Runner remote configuration attempted process-level injection: ' + key)
     }
     env[key] = value
