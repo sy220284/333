@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Exercise real Monitor/Workflow tool use on native 2.1.310 and rebuilt CLI.
+// Exercise real Monitor/Workflow tool use on native 2.1.317 and rebuilt CLI.
 // The fake model API requests only a shell printf and a pure, no-agent workflow.
 import {createHash} from 'node:crypto'
 import {createReadStream,mkdtempSync,rmSync,mkdirSync,writeFileSync,readdirSync,readFileSync,existsSync} from 'node:fs'
@@ -14,8 +14,9 @@ const opt=Object.fromEntries(Array.from({length:argv.length/2},(_,i)=>[argv[i*2]
 if(!opt['--reference']||!opt['--candidate']||!opt['--report'])throw Error('Missing --reference, --candidate, --report')
 const hash=createHash('sha256')
 for await(const block of createReadStream(opt['--reference']))hash.update(block)
-if(hash.digest('hex')!=='b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56')
- throw Error('Official 2.1.310 Linux x64 SHA-256 mismatch')
+const target = JSON.parse(readFileSync(new URL('../docs/upgrade/m1-evidence/target-release.json', import.meta.url), 'utf8'))
+if(hash.digest('hex')!==target.verified_x64_sha256)
+ throw Error('Official '+target.target_version+' Linux x64 SHA-256 mismatch')
 const script=["export const meta={name:'probe-return',description:'Pure workflow',phases:[{title:'Run'}]}",
  "phase('Run')","return {answer:42}"].join('\n')
 const bodyFor={
