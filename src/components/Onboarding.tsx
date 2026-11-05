@@ -7,6 +7,7 @@ import { Box, Link, Newline, Text, useTheme } from '../ink.js';
 import { useKeybindings } from '../keybindings/useKeybinding.js';
 import { isAnthropicAuthEnabled } from '../utils/auth.js';
 import { resolveIndependentModel } from '../services/api/multimodel/registry.js';
+import { getMainLoopModel } from '../utils/model/model.js';
 import { normalizeApiKeyForConfig } from '../utils/authPortable.js';
 import { getCustomApiKeyStatus } from '../utils/config.js';
 import { env } from '../utils/env.js';
@@ -33,12 +34,9 @@ export function Onboarding({
 }: Props): React.ReactNode {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [skipOAuth, setSkipOAuth] = useState(false);
-  const [oauthEnabled] = useState(() => {
-    const index = process.argv.findIndex(value => value === '--model' || value.startsWith('--model='));
-    const value = index < 0 ? process.env.ANTHROPIC_MODEL
-      : process.argv[index] === '--model' ? process.argv[index + 1] : process.argv[index].slice('--model='.length);
-    return !resolveIndependentModel(value) && isAnthropicAuthEnabled();
-  });
+  const [oauthEnabled] = useState(() =>
+    !resolveIndependentModel(getMainLoopModel()) && isAnthropicAuthEnabled()
+  );
   const [theme, setTheme] = useTheme();
   useEffect(() => {
     logEvent('tengu_began_setup', {
@@ -102,6 +100,7 @@ export function Onboarding({
   const preflightStep = <PreflightStep onSuccess={goToNextStep} />;
   // Create the steps array - determine which steps to include based on reAuth and oauthEnabled
   const apiKeyNeedingApproval = useMemo(() => {
+    if (resolveIndependentModel(getMainLoopModel())) return '';
     // Add API key step if needed
     // On homespace, ANTHROPIC_API_KEY is preserved in process.env for child
     // processes but ignored by Claude Code itself (see auth.ts).
