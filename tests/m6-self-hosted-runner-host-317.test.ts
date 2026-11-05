@@ -232,3 +232,80 @@ test('Runner 317: completed sessions never push even when preservation is enable
     expect(git('--git-dir',bare,'branch','--list','claude/finish')).toBe('')
   }finally { rmSync(root,{recursive:true,force:true}) }
 })
+
+test('Runner 317: capacity slots prepare independent assignments concurrently and never over-admit', async()=>{
+  const root=temp(),aborted=new AbortController(),started:string[]=[],spawned:string[]=[]
+  let releaseBarrier!:()=>void
+  const bothReady=new Promise<void>(resolve=>{releaseBarrier=resolve})
+  let released=0
+  const watchdog=setTimeout(()=>{aborted.abort();releaseBarrier()},2500)
+  const api=fakeApi({
+    pollWork:async()=>({assignment_ids:['session_a','session_b','session_c'],session_assignments:[]}),
+    getSessionRemoteConfig:async(id)=>{
+      started.push(id)
+      if(started.length===2) releaseBarrier()
+      await bothReady
+      return {
+        sources:[],push_targets:[],claude_code_args:{},environment_variables:{},
+        api_base_url:'https://api.example.test',
+      }
+    },
+    releaseSession:async()=>{
+      released++
+      if(released===2) aborted.abort()
+      return {released:true}
+    },
+  })
+  try{
+    await startSelfHostedRunnerHost317({
+      api,baseDir:root,capacity:2,execPath:process.execPath,
+      scriptArgs:[],env:{},signal:aborted.signal,
+      createChild(id){spawned.push(id);return makeHandle()},
+    })
+    expect(started).toEqual(['session_a','session_b'])
+    expect(spawned.slice().sort()).toEqual(['session_a','session_b'])
+    expect(released).toBe(2)
+  }finally {
+    clearTimeout(watchdog)
+    aborted.abort()
+    rmSync(root,{recursive:true,force:true})
+  }
+})
+
+test('Runner 317: failed preparation is joined while another capacity slot completes',async()=>{
+  const root=temp(),aborted=new AbortController(),steps:string[]=[]
+  let ready!:()=>void
+  const simultaneous=new Promise<void>(resolve=>{ready=resolve})
+  let preparations=0
+  const watchdog=setTimeout(()=>{aborted.abort();ready()},2500)
+  const api=fakeApi({
+    pollWork:async()=>({assignment_ids:['session_a','session_b'],session_assignments:[]}),
+    getSessionRemoteConfig:async(id)=>{
+      preparations++
+      if(preparations===2) ready()
+      await simultaneous
+      if(id==='session_a') throw Error('checkout setup rejected')
+      return {
+        sources:[],push_targets:[],claude_code_args:{},environment_variables:{},
+        api_base_url:'https://api.example.test',
+      }
+    },
+    reportSessionFailure:async(_,id)=>{steps.push('failure:'+id);return {}},
+    releaseSession:async(_,id)=>{steps.push('release:'+id);aborted.abort();return {released:true}},
+    deregisterRunner:async()=>{steps.push('deregister')},
+  })
+  try{
+    await startSelfHostedRunnerHost317({
+      api,baseDir:root,capacity:2,execPath:process.execPath,scriptArgs:[],
+      env:{},signal:aborted.signal,createChild(){return makeHandle()},
+    })
+    expect(preparations).toBe(2)
+    expect(steps).toContain('failure:session_a')
+    expect(steps).toContain('release:session_b')
+    expect(steps.at(-1)).toBe('deregister')
+  }finally{
+    clearTimeout(watchdog)
+    aborted.abort()
+    rmSync(root,{recursive:true,force:true})
+  }
+})

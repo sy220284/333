@@ -259,15 +259,24 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
         notFoundErrors=0
         const assigned = new Set(poll.assignment_ids)
         for (const id of [...retained]) if (!assigned.has(id) && !active.has(id)) retained.delete(id)
+        // Each admission consumes one capacity slot until preparation has
+        // either installed an active session or finished reporting failure.
+        // Launch the bounded batch together: a slow checkout must not hold
+        // the other slots idle while their independent work is ready.
+        const preparing: Promise<void>[] = []
         for (const id of poll.assignment_ids) {
-          if (active.size>=options.capacity || active.has(id) || retained.has(id)) continue
+          if (active.size + preparing.length >= options.capacity ||
+              active.has(id) || retained.has(id)) continue
           retained.add(id)
-          // Fire off preparation but keep capacity reservations while it starts.
-          const start = launch(id)
-          // Preparation is joined here so an unbounded number of assignments
-          // cannot bypass capacity while worker registration is in flight.
-          await start
+          preparing.push(launch(id))
         }
+        // Join *all* preparations before the next poll or host teardown.
+        // Promise.all() would reject early and detach the other in-flight
+        // setups from the shutdown lifecycle.
+        const outcomes = await Promise.allSettled(preparing)
+        const rejected = outcomes.find(
+          (outcome): outcome is PromiseRejectedResult => outcome.status === 'rejected')
+        if (rejected) throw rejected.reason
         await wait(boundedPollDelay(poll.suggested_poll_interval,
           options.pollIntervalMs ?? 2_000),ownedAbort.signal)
       } catch (error) {
