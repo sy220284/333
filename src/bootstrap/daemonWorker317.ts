@@ -225,8 +225,14 @@ export async function runDaemonWorker317(kind: string | undefined,
       return 0
     }
     const remote = config as RemoteControlConfig317
-    const { getClaudeAIOAuthTokens } = await import('../utils/auth.js')
-    const getAccessToken = () => accessToken ?? getClaudeAIOAuthTokens()?.accessToken
+    let fallbackToken: () => string | undefined = () => undefined
+    // An IPC-issued token is already authoritative. Load the local OAuth store
+    // only when the supervisor did not issue a session token.
+    if (!accessToken) {
+      const { getClaudeAIOAuthTokens } = await import('../utils/auth.js')
+      fallbackToken = () => getClaudeAIOAuthTokens()?.accessToken
+    }
+    const getAccessToken = () => accessToken ?? fallbackToken()
     if (!getAccessToken()) {
       stdout('Remote Control is not authenticated — run `claude auth login`.\n')
       return 1

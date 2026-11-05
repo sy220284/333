@@ -59,9 +59,10 @@ export function validateRemoteControlConfig317(value: unknown):
     ...(data.name !== undefined && {name:data.name as string}),
     spawnMode: (data.spawnMode ?? 'same-dir') as 'same-dir'|'worktree',
     capacity:capacity as number,
-    ...(data.permissionMode !== undefined && {permissionMode:
-      (data.permissionMode === 'manual' ? 'default' : data.permissionMode)
-        as RemoteControlConfig317['permissionMode']}),
+    ...(data.permissionMode !== undefined && {
+      permissionMode: (data.permissionMode === 'manual' ? 'default' : data.permissionMode)
+        as RemoteControlConfig317['permissionMode'],
+    }),
     ...(data.sandbox !== undefined && {sandbox:data.sandbox as boolean}),
     ...(data.sessionTimeoutSeconds !== undefined && {
       sessionTimeoutSeconds:data.sessionTimeoutSeconds as number}),
