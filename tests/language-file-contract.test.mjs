@@ -118,11 +118,13 @@ test('主测试套件的 MJS 与 TypeScript 测试分别使用对应运行器', 
   const pkg = JSON.parse(readFileSync(file('package.json'), 'utf8'))
   for (const name of ['test:all', 'test:m2']) {
     const parts = pkg.scripts[name].split(/\s*&&\s*/)
-    assert.equal(parts.length, name === 'test:all' ? 3 : 2,
-      name + ': expected Node/Bun suites followed by inventory for the full run')
+    assert.equal(parts.length, name === 'test:all' ? 4 : 2,
+      name + ': expected Node/Bun suites, inventory and M3 tests for the full run')
     if (name === 'test:all') {
       assert.equal(parts[2], 'node build/run-unregistered-tests.mjs',
         'test:all must actually run all unregistered tests')
+      assert.equal(parts[3], 'npm run test:m3',
+        'test:all must also verify the M3 tool, SDK and network paths')
     }
     assert.match(parts[0], /^node --test /, name)
     assert.match(parts[1], /^bun test /, name)
