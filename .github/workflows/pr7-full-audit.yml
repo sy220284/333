@@ -48,9 +48,34 @@ jobs:
           node --test tests/language-file-contract.test.mjs tests/test-inventory.test.mjs
       - name: 完整重建、资源字节校验、现有回归与遗漏测试自动补跑
         run: npm run verify
-      - name: 导出全仓测试发现清单
+      - name: 官方317 Linux x64与重建版后台全生命周期双跑
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          mkdir -p .rebuild/oracle
+          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
+            'https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude' \
+            --output .rebuild/oracle/claude
+          echo 'eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  .rebuild/oracle/claude' | sha256sum --check
+          chmod +x .rebuild/oracle/claude
+          CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test \
+            tests/m1-background-lifecycle.test.mjs \
+            tests/m1-background-agent-parity.test.mjs
+      - name: 导出20链真实签收、代码差分和测试发现清单
         if: always()
-        run: node build/run-unregistered-tests.mjs --list
+        run: |
+          mkdir -p .rebuild/chain-317
+          node build/upgrade-chain-audit.mjs --report .rebuild/chain-317/verified-chain-status.json
+          node build/compare-317.mjs --json > .rebuild/chain-317/source-differences.json
+          node build/run-unregistered-tests.mjs --list > .rebuild/chain-317/test-discovery.json
+      - name: 保存固定提交的20条签收与差分证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chain-317-acceptance-${{ matrix.os }}
+          path: .rebuild/chain-317/
+          retention-days: 30
+          if-no-files-found: error
 
   typecheck:
     name: 全仓类型和代码质量（Linux）
@@ -77,3 +102,15 @@ jobs:
         run: npm run dev:bootstrap
       - name: 全仓严格类型诊断（失败即保留待修复状态）
         run: npm run dev:typecheck:all
+
+  signoff-gate:
+    name: 20条功能链完整签收总闸
+    if: always()
+    needs: [full-verification, typecheck]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: 完整功能链签收未满足时严格报错
+        run: node build/upgrade-chain-audit.mjs --require-closed
