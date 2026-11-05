@@ -95,3 +95,37 @@ export async function updateIndependentProfile(
   }
   return next
 }
+
+/** Apply one provider discovery response as a single atomic update. */
+export async function mergeDiscoveredModelProfiles(
+  provider: string,
+  details: ReadonlyArray<{ id: string; contextWindow?: number; maxOutputTokens?: number; supportsTools?: boolean; supportsVision?: boolean }>,
+): Promise<number> {
+  const current = readIndependentProfiles()
+  const next = { ...current }
+  let changed = 0
+  const checkedAt = new Date().toISOString()
+  for (const detail of details) {
+    const id = `${provider}/${detail.id}`
+    if (!resolveIndependentModel(id) || next[id]?.source === 'manual') continue
+    if (detail.contextWindow === undefined && detail.maxOutputTokens === undefined &&
+        detail.supportsTools === undefined && detail.supportsVision === undefined) continue
+    next[id] = validatedProfile(id, {
+      ...next[id], ...detail,
+      source: 'provider', checkedAt,
+    })
+    changed++
+  }
+  if (changed === 0) return 0
+  await fs.mkdir(ROOT, { recursive: true, mode: 0o700 })
+  const temporary = join(ROOT, `profiles.${randomUUID()}.tmp`)
+  try {
+    await fs.writeFile(temporary, JSON.stringify(next, null, 2),
+      { encoding: 'utf8', mode: 0o600, flag: 'wx' })
+    await fs.rename(temporary, PATH)
+    await fs.chmod(PATH, 0o600)
+  } finally {
+    await fs.rm(temporary, { force: true })
+  }
+  return changed
+}
