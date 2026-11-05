@@ -150,6 +150,7 @@ import env from './commands/env/index.js'
 import exit from './commands/exit/index.js'
 import exportCommand from './commands/export/index.js'
 import model from './commands/model/index.js'
+import know from './commands/know.js'
 import outputStyle from './commands/output-style/index.js'
 import remoteEnv from './commands/remote-env/index.js'
 import upgrade from './commands/upgrade/index.js'
@@ -264,6 +265,7 @@ const COMMANDS = memoize((): Command[] => [
   memory,
   mobile,
   model,
+  know,
   outputStyle,
   remoteEnv,
   plugin,
