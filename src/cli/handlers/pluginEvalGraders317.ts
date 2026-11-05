@@ -122,7 +122,7 @@ export async function gradeEvalResult317(
             (flagsValue !== undefined && typeof flagsValue !== 'string')) {
           throw new Error('Invalid regex grader pattern or flags')
         }
-        const pattern = new RegExp(patternValue, (flagsValue ?? '').replaceAll('g', '') + 'g')
+        const pattern = new RegExp(patternValue, (typeof flagsValue === 'string' ? flagsValue : '').replaceAll('g', '') + 'g')
         const count = [...evidence.matchAll(pattern)].length
         if (typeof grader.match === 'string' && grader.match.startsWith('count:')) {
           const wanted = Number(grader.match.slice(6))
@@ -151,7 +151,8 @@ export async function gradeEvalResult317(
             (maximum !== undefined && typeof maximum !== 'number')) {
           throw new Error('tool count bounds must be numeric')
         }
-        pass = count >= (minimum ?? 1) && (maximum === undefined || count <= maximum)
+        pass = count >= (typeof minimum === 'number' ? minimum : 1) &&
+          (typeof maximum !== 'number' || count <= maximum)
         return { ...details, pass, score: Number(pass), evidence: `uses=${count}` }
       }
       case 'tool_order': {
