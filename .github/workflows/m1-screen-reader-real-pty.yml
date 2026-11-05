@@ -10,6 +10,7 @@ on:
       - 'src/utils/accessibility/screenReaderRuntime.ts'
       - 'tests/m1-screen-reader-mode.test.mjs'
       - 'src/utils/model/model.ts'
+      - 'src/utils/betas.ts'
       - 'src/utils/permissions/permissionSetup.ts'
       - 'src/interactiveHelpers.tsx'
       - 'src/components/LogoV2/LogoV2.tsx'
