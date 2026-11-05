@@ -1,6 +1,7 @@
 {
   "strict": [
     "src/cli/background/sessionStore.ts",
+    "src/cli/gateway/gatewayAdmin317.ts",
     "src/cli/gateway/gatewayAuth317.ts",
     "src/cli/gateway/gatewayDevice317.ts",
     "src/cli/gateway/gatewaySpendMeter317.ts",
@@ -14,6 +15,7 @@
     "src/entrypoints/startupRouting317.ts",
     "src/tasks/LocalWorkflowTask/workflowHistory.ts",
     "src/tasks/LocalWorkflowTask/workflowStoragePaths.ts",
+    "src/utils/accountPeerDirectory.ts",
     "src/utils/cliArgv317.ts",
     "src/utils/cliStartupFailure.ts",
     "src/utils/hooks/hookConcurrency.ts",
