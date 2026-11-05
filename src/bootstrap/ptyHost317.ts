@@ -1,9 +1,9 @@
 import { createServer, type Socket } from 'node:net'
-import { appendFileSync, chmodSync, existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { appendFileSync, chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { mkdirSync } from 'node:fs'
 import { timingSafeEqual } from 'node:crypto'
-import { assertSocketVacant317 } from './socketOwnership317.ts'
+import { assertSocketVacant317, captureSocketIdentity317, unlinkOwnedSocket317, type SocketIdentity317 } from './socketOwnership317.ts'
 import { createPtyRecording317 } from './ptyRecording317.ts'
 import { ptyExecFiles317 } from './ptyExecFiles317.ts'
 import {
@@ -20,10 +20,6 @@ function tokenMatches(value: unknown, expected?: string): boolean {
   if (!expected || typeof value !== 'string') return false
   const left = Buffer.from(value), right = Buffer.from(expected)
   return left.length === right.length && timingSafeEqual(left, right)
-}
-function removeSocket(path: string): void {
-  try { unlinkSync(path) }
-  catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
 }
 export function assertPtySocketVacant317(path: string): Promise<void> {
   return assertSocketVacant317(path, 'PTY host')
@@ -101,6 +97,7 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
   let child: ReturnType<typeof Bun.spawn> | undefined
   let server: ReturnType<typeof createServer> | undefined
   let ownsSocket = false
+  let socketOwner: SocketIdentity317 | undefined
   let stopped = false, forceClosed = false, lastExitCode = 0, lastSignal: string | number | undefined
   let ptyReceivedData = false
   let terminalClosed = false
@@ -215,8 +212,11 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
         server!.once('error', reject)
         server!.listen(socket)
       })
+      if (process.platform !== 'win32') {
+        chmodSync(socket, 0o600)
+        socketOwner = await captureSocketIdentity317(socket, 'PTY host')
+      }
       ownsSocket = true
-      if (process.platform !== 'win32') chmodSync(socket, 0o600)
       server.unref()
     } catch (error) {
       forceTerminate('SIGTERM')
@@ -332,6 +332,9 @@ export async function runPtyHost317(args: string[], options: PtyHostOptions317 =
     recording?.close()
     for (const peer of peers) peer.destroy()
     await new Promise(resolve => server?.close(() => resolve(undefined)) ?? resolve(undefined))
-    if (ownsSocket && process.platform !== 'win32') removeSocket(socket)
+    if (ownsSocket && socketOwner) {
+      try { await unlinkOwnedSocket317(socket, socketOwner) }
+      catch (error) { recordFailure(socket, 'socket cleanup failed: ' + String(error)) }
+    }
   }
 }
