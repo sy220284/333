@@ -301,7 +301,10 @@ export async function getAnthropicClient({
     const vertexArgs: ConstructorParameters<typeof AnthropicVertex>[0] = {
       ...ARGS,
       region: getVertexRegionForModel(model),
-      googleAuth,
+      // Vertex SDK currently resolves Google Auth v10 while the application
+      // uses v11. Both provide getClient/getRequestHeaders, but private
+      // class members make the two class types nominally distinct.
+      googleAuth: googleAuth as unknown as NonNullable<ConstructorParameters<typeof AnthropicVertex>[0]['googleAuth']>,
       ...(isDebugToStdErr() && { logger: createStderrLogger() }),
     }
     // we have always been lying about the return type - this doesn't support batching or models

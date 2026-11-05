@@ -6,6 +6,7 @@ import { Byline } from '../../components/design-system/Byline.js';
 import { Box, Text } from '../../ink.js';
 import { useKeybinding, useKeybindings } from '../../keybindings/useKeybinding.js';
 import type { LoadedPlugin } from '../../types/plugin.js';
+import type { PluginMarketplaceEntry } from '../../utils/plugins/schemas.js';
 import { count } from '../../utils/array.js';
 import { openBrowser } from '../../utils/browser.js';
 import { logForDebugging } from '../../utils/debug.js';
@@ -140,10 +141,12 @@ export function BrowseMarketplace({
         } of marketplaces_0) {
           if (marketplace) {
             // Count how many plugins from this marketplace are installed
-            const installedFromThisMarketplace = count(marketplace.plugins, plugin => isPluginInstalled(createPluginId(plugin.name, name)));
+            // Marketplace entries were already validated by PluginMarketplaceSchema.
+            const marketplacePlugins = marketplace.plugins as PluginMarketplaceEntry[];
+            const installedFromThisMarketplace = count(marketplacePlugins, plugin => isPluginInstalled(createPluginId(plugin.name, name)));
             marketplaceInfos.push({
               name,
-              totalPlugins: marketplace.plugins.length,
+              totalPlugins: marketplacePlugins.length,
               installedCount: installedFromThisMarketplace,
               source: getMarketplaceSourceDisplay(marketplaceConfig.source)
             });

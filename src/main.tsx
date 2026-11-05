@@ -1326,10 +1326,12 @@ async function run(): Promise<CommanderCommand> {
         // broke Coworker (inc-5122). The policy filter below already exempts
         // type:'sdk', and the entries are inert without an SDK transport on
         // stdin, so there's no bypass risk from letting them through.
-        const scopedConfigs = mapValues(allConfigs, config => ({
-          ...config,
-          scope: 'dynamic' as const
-        }));
+        // Preserve the validated server type instead of losing it through
+        // the generic mapValues helper's unknown-value inference.
+        const scopedConfigs: Record<string, ScopedMcpServerConfig> = {};
+        for (const [name, config] of Object.entries(allConfigs)) {
+          scopedConfigs[name] = { ...config, scope: 'dynamic' };
+        }
 
         // Enforce managed policy (allowedMcpServers / deniedMcpServers) on
         // --mcp-config servers. Without this, the CLI flag bypasses the

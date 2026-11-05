@@ -133,7 +133,9 @@ export async function createGatewayProviderClient317(up, testFactory) {
     }
     case 'vertex': {
       const {AnthropicVertex}=await import('@anthropic-ai/vertex-sdk')
-      const credentials=await googleAuthOptions(up)
+      // Vertex SDK installs its own Google Auth major; both credential
+      // implementations implement the same documented token transport.
+      const credentials=await googleAuthOptions(up) as ConstructorParameters<typeof AnthropicVertex>[0]
       return new AnthropicVertex({region:up.region,projectId:up.project_id,
         ...(up.base_url&&{baseURL:up.base_url}),...credentials,
         defaultHeaders:up.headers??{},timeout:API_TIMEOUT_MS,maxRetries:0})

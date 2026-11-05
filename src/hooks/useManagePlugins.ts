@@ -185,22 +185,19 @@ export function useManagePlugins({
 
       // Count component types across enabled plugins
       const hook_count = enabled.reduce((sum, p) => {
-        if (!p.hooksConfig) return sum
-        return (
-          sum +
-          Object.values(p.hooksConfig).reduce(
-            (s, matchers) =>
-              s + (matchers?.reduce((h, m) => h + m.hooks.length, 0) ?? 0),
-            0,
-          )
-        )
+        const hooks = p.hooksConfig
+        if (!hooks) return sum
+        return Object.keys(hooks).reduce((total, event) =>
+          total + (hooks[event as keyof typeof hooks]?.reduce(
+            (count, matcher) => count + matcher.hooks.length, 0,
+          ) ?? 0), sum)
       }, 0)
 
       return {
         enabled_count: enabled.length,
         disabled_count: disabled.length,
-        inline_count: count(enabled, p => p.source.endsWith('@inline')),
-        marketplace_count: count(enabled, p => !p.source.endsWith('@inline')),
+        inline_count: enabled.filter(p => p.source.endsWith('@inline')).length,
+        marketplace_count: enabled.filter(p => !p.source.endsWith('@inline')).length,
         error_count: errors.length,
         skill_count: commands.length,
         agent_count: agents.length,

@@ -1282,7 +1282,7 @@ export async function getAllMcpConfigs(): Promise<{
 
   // Kick off the claude.ai fetch before getClaudeCodeMcpConfigs so it overlaps
   // with loadAllPluginsCacheOnly() inside. Memoized — the awaited call below is a cache hit.
-  const claudeaiPromise = fetchClaudeAIMcpConfigsIfEligible()
+  const claudeaiPromise = fetchClaudeAIMcpConfigsIfEligible() as Promise<Record<string, ScopedMcpServerConfig>>
   const { servers: claudeCodeServers, errors } = await getClaudeCodeMcpConfigs(
     {},
     claudeaiPromise,
