@@ -78,9 +78,15 @@ function validate(test, execution, productMode = false) {
     if (test.id === 'help') {
       const retired = ['--print', '--input-format', '--output-format',
         '--permission-prompts', '--forward-subagent-text']
+      // Option descriptions may quote removed flags; only registered visible
+      // option *names* indicate a public CLI entrypoint.
+      const visibleFlags = out.split(/\r?\n/).map(line =>
+        line.match(/^ {2}(?:-[a-z0-9],\s*)?(--[a-z][a-z0-9-]*)/i)?.[1]
+      ).filter(Boolean)
       return {
-        ok: execution.exit_code === 0 && /--autocompact/.test(out) &&
-          /--ax-screen-reader/.test(out) && retired.every(flag => !out.includes(flag)),
+        ok: execution.exit_code === 0 && visibleFlags.includes('--autocompact') &&
+          visibleFlags.includes('--ax-screen-reader') &&
+          retired.every(flag => !visibleFlags.includes(flag)),
         reason:'interactive_help_only',
       }
     }
