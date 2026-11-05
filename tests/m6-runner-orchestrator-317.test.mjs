@@ -47,6 +47,19 @@ test('spawn-hints poll/nack use original paths and bearer auth',async()=>{
   assert.equal(recorded[1].url,'https://api.anthropic.com/v1/code/runners/self-hosted/spawn-hints/nack')
   assert.equal(recorded[0].options.headers.authorization,'Bearer '+secret)
 })
+test('successful nack may be empty HTTP 204 while poll requires JSON',async()=>{
+  const seen=[]
+  const api=createOrchestratorApi317('https://api.anthropic.com',secret,
+    async (url,options)=>{
+      seen.push(url)
+      return url.endsWith('/nack')?
+        new Response(null,{status:204}):
+        Response.json({hints:[],warm_hints:[]})
+    })
+  await api.nack({session_uuid:'abc123',attempt:1,retryable:true},
+    AbortSignal.timeout(2000))
+  assert.equal(seen.length,1)
+})
 test('orchestrator dispatches and nacks retryable hook failures; shutdown drains',async()=>{
   const home=await mkdtemp(join(tmpdir(),'orchestrator317-'))
   const original=process.env.SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET
