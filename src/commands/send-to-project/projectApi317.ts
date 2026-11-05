@@ -48,7 +48,7 @@ function projectId(id:string):string{
 }
 function parseProject(v:unknown):Project317|null{
   const a=record(v)&&record(v.channel)?v.channel:v
-  if(!record(a)||!text(a.id)||!PROJECT_ID.test(a.id) || typeof a.name!=='string')return null
+  if(!record(a)||typeof a.id!=='string'||!PROJECT_ID.test(a.id) || typeof a.name!=='string')return null
   const visibility=a.visibility==='private'||a.visibility==='public'?a.visibility:undefined
   const channelSessionId=text(a.channel_session_id)
   const overviewSessionId=text(a.overview_session_id)
@@ -75,8 +75,10 @@ export function verifyPersonalProject317(raw:unknown):Project317{
   return p
 }
 function extractError(v:unknown,status:number):string{
-  if(record(v)&&record(v.error)&&text(v.error.message))
-    return v.error.message.slice(0,240)
+  if(record(v)&&record(v.error)){
+    const message=text(v.error.message)
+    if(message)return message.slice(0,240)
+  }
   return 'Claude Projects request failed (HTTP '+status+')'
 }
 function secureBaseUrl(raw:string):string{
@@ -167,14 +169,16 @@ export function createProjectsClient317(config:ProjectClientConfig317){
         throw new ProjectApiError317('Invalid message deduplication key',null)
       const {data}=await request('POST','/v1/code/channels/'+encodeURIComponent(projectId(id))+
         '/messages',{body,client_message_id:clientMessageId},signal)
-      if(!record(data)||!text(data.message_id)||!MESSAGE_ID.test(data.message_id)||
-         !text(data.thread_root_id)||!MESSAGE_ID.test(data.thread_root_id)){
+      const messageId=record(data)?text(data.message_id):null
+      const threadRootId=record(data)?text(data.thread_root_id):null
+      if(!messageId||!MESSAGE_ID.test(messageId)||
+         !threadRootId||!MESSAGE_ID.test(threadRootId)){
         throw new ProjectApiError317(
           'Message may have arrived, but server response is incomplete; check the project before retrying',
           null,true)
       }
-      return {messageId:data.message_id,threadRootId:data.thread_root_id,
-        deduplicated:data.deduplicated===true}
+      return {messageId,threadRootId,
+        deduplicated:record(data)&&data.deduplicated===true}
     },
     async memory(id:string,path:string,content:string,signal?:AbortSignal):Promise<'created'|'existing'>{
       if(!/^\/[a-zA-Z0-9._/-]{1,140}$/.test(path)||path.includes('..'))
@@ -198,8 +202,8 @@ export function createProjectsClient317(config:ProjectClientConfig317){
           proposal,client_request_id:clientRequestId,
           ...(sourceSessionId?{source_session_id:sourceSessionId}:{}),
         },signal)
-        if(!record(data)||!record(data.message)||!text(data.message.id)||
-          !MESSAGE_ID.test(data.message.id)){
+        const setupId=record(data)&&record(data.message)?text(data.message.id):null
+        if(!setupId||!MESSAGE_ID.test(setupId)){
           throw new ProjectApiError317('Setup reply is incomplete; check the project before retrying',null,true)
         }
         return {kind:'submitted',alreadySubmitted:data.already_submitted===true,
