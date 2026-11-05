@@ -30,61 +30,27 @@ test('deep-link argument injection is rejected before configuration side effects
   } finally { rmSync(home, { recursive: true, force: true }) }
 })
 
-test('deleted cwd produces the 317 structured startup failure without loading the REPL', { skip: process.platform === 'win32' }, () => {
-  const script = `import os,sys,tempfile,json,subprocess,pathlib
-with tempfile.TemporaryDirectory(prefix='333-cwd-') as home:
- gone=pathlib.Path(home)/'gone';gone.mkdir()
- child='import os,sys;os.chdir(sys.argv[1]);os.rmdir(sys.argv[1]);os.execvpe(sys.argv[2],sys.argv[2:],os.environ)'
- result=subprocess.run(['python3','-c',child,str(gone),'bun',sys.argv[1],'-p','prompt','--output-format=stream-json','--session-id',sys.argv[2]],env={**os.environ,'CLAUDE_CONFIG_DIR':home,'CLAUDE_CODE_STARTUP_FAILURE_RESULTS':'1'},text=True,capture_output=True,timeout=10)
- print(json.dumps({'status':result.returncode,'stdout':result.stdout,'stderr':result.stderr}))`
-  const child = spawnSync('python3', ['-c', script, cli, id], { encoding: 'utf8', timeout: 15_000 })
-  assert.ifError(child.error); assert.equal(child.status, 0, child.stderr)
-  const result = JSON.parse(child.stdout), frame = JSON.parse(result.stdout)
-  assert.equal(result.status, 1); assert.match(result.stderr, /current directory no longer exists/)
-  assert.equal(frame.session_id, id); assert.equal(frame.startup_failure_reason, 'cwd_unavailable')
-  assert.equal(frame.result_index, 0); assert.equal(frame.is_error, true)
-})
-
-test('real model requests preserve --desktop prompt text and the final settings model', async () => {
-  const home = mkdtempSync(join(tmpdir(), '333-argv-model-'))
-  const requests = []
-  const sse = (event, data) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
-  const server = createServer((request, response) => {
-    if (request.method === 'HEAD') { response.end(); return }
-    if (request.method !== 'POST' || !request.url.startsWith('/v1/messages')) { response.writeHead(404); response.end(); return }
-    const chunks = []; request.on('data', chunk => chunks.push(chunk))
-    request.on('end', () => {
-      const message = JSON.parse(Buffer.concat(chunks).toString()); requests.push(message)
-      response.writeHead(200, { 'content-type': 'text/event-stream' })
-      response.end([
-        sse('message_start', { type: 'message_start', message: { id: 'msg_startup', type: 'message', role: 'assistant', model: message.model, content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 2, output_tokens: 0 } } }),
-        sse('content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }),
-        sse('content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'STARTUP_OK' } }),
-        sse('content_block_stop', { type: 'content_block_stop', index: 0 }),
-        sse('message_delta', { type: 'message_delta', delta: { stop_reason: 'end_turn', stop_sequence: null }, usage: { output_tokens: 2 } }),
-        sse('message_stop', { type: 'message_stop' }),
-      ].join(''))
-    })
-  })
-  await new Promise(done => server.listen(0, '127.0.0.1', done))
-  const env = { ...process.env, CLAUDE_CONFIG_DIR: home, ANTHROPIC_BASE_URL: `http://127.0.0.1:${server.address().port}`, ANTHROPIC_API_KEY: 'test-startup-key', DISABLE_TELEMETRY: '1', CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', CI: 'true', NO_COLOR: '1' }
-  delete env.ANTHROPIC_MODEL
+test('333 在无界面启动入口拒绝 print、JSON、stream-json 和 SDK 传输', async () => {
+  const home = mkdtempSync(join(tmpdir(), '333-interactive-only-'))
   try {
-    const prompt = await launch(['--bare', '-p', '--model', model, '--output-format=json', '--', '--desktop'], env)
-    assert.equal(prompt.status, 0, JSON.stringify(prompt)); assert.equal(JSON.parse(prompt.stdout).result, 'STARTUP_OK')
-    assert.match(JSON.stringify(requests.at(-1).messages), /--desktop/)
-    // Desktop/background/bare-looking option values must remain data, and the
-    // model loop must execute instead of entering an unrelated startup route.
-    for (const value of ['--desktop', '--bg', '--bare']) {
-      const reserved = await launch(['-p', 'hello', '--system-prompt', value, '--model', model, '--output-format=json'], env)
-      assert.equal(reserved.status, 0, `${value}: ${JSON.stringify(reserved)}`)
-      assert.equal(JSON.parse(reserved.stdout).result, 'STARTUP_OK')
+    const env = { ...process.env, CLAUDE_CONFIG_DIR: home, DISABLE_TELEMETRY: '1',
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', CI: 'true', NO_COLOR: '1' }
+    for (const args of [
+      ['-p', 'hello'],
+      ['--print', '--output-format', 'json', 'hello'],
+      ['--print', '--output-format', 'stream-json', 'hello'],
+      ['--sdk-url', 'ws://127.0.0.1:3000', 'hello'],
+      ['--print', '--model', 'claude-sonnet-4-6', 'hello'],
+      ['--print', '--settings', '{"model":"claude-sonnet-4-6"}', 'hello'],
+    ]) {
+      const result = await launch(args, env)
+      assert.equal(result.status, 2, JSON.stringify({ args, result }))
+      assert.equal(result.stdout, '')
+      assert.match(result.stderr, /333 已移除非交互模式/, args.join(' '))
     }
-    const settings = await launch(['--bare', '-p', 'hello', '--settings={"model":"wrong-first-model"}', `--settings={"model":"${model}"}`, '--output-format=json'], env)
-    assert.equal(settings.status, 0, JSON.stringify(settings)); assert.equal(JSON.parse(settings.stdout).result, 'STARTUP_OK')
-    assert.equal(requests.at(-1).model, model)
+    assert.equal(existsSync(join(home, '.claude.json')), false)
   } finally {
-    server.closeAllConnections(); await new Promise(done => server.close(done)); rmSync(home, { recursive: true, force: true, maxRetries: 3 })
+    rmSync(home, { recursive: true, force: true })
   }
 })
 
