@@ -71,6 +71,9 @@ export function getInteractiveOnlyError317(
   ) !== -1
   if (helpOrVersion) return null
 
+  // Desktop opens the graphical interactive app; terminal TTYs are not required.
+  if (findCliArgument(word => word === '--desktop', argv) !== -1) return null
+
   const atCommand = firstCliPositionalIndex(argv)
   const command = atCommand === -1 ? undefined : argv[atCommand]
   if (command && ADMINISTRATIVE_COMMANDS.has(command)) return null
