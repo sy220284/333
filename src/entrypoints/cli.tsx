@@ -1,6 +1,7 @@
 import { feature } from 'bun:bundle';
 import { rejectDeepLinkArgumentInjection } from '../utils/cliArgv317.ts';
 import { classifyStartupArgs } from './startupRouting317.ts';
+import { getInteractiveOnlyError317 } from './interactiveOnly317.ts';
 import { adoptRunnerDeclaration } from './runnerDeclaration317.ts';
 import { noteProcessStartTuning, startGarbageCollectionCount } from '../bootstrap/processStart317.ts';
 import { scheduleJitPolicy317 } from '../bootstrap/jitPolicy317.ts';
@@ -56,6 +57,17 @@ async function main(): Promise<void> {
   if (injectionError) {
     process.stderr.write(injectionError + '\n');
     process.exitCode = 1;
+    return;
+  }
+  // Enforce interactive-only conversations before importing settings, SDK
+  // transports, background services, or the main terminal application.
+  const modeError = getInteractiveOnlyError317(args, {
+    stdinIsTTY: Boolean(process.stdin.isTTY),
+    stdoutIsTTY: Boolean(process.stdout.isTTY),
+  });
+  if (modeError) {
+    process.stderr.write(modeError + '\n');
+    process.exitCode = 2;
     return;
   }
   // Self-hosted code-review workers have a separate credential-bearing
