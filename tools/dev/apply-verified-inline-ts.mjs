@@ -58,6 +58,16 @@ for(const path of previous.acceptedPaths) {
     errors.push({path,reason:'invalid-or-ambiguous-source-map'});continue
   }
   let original=map.sourcesContent[0]
+  // Compiled UI may have received subsequent Simplified-Chinese copy edits.
+  // Source maps preserve the earlier upstream text, so detect and preserve
+  // current user-facing Chinese phrases instead of silently reverting them.
+  const compiledCode=current.replace(sourcemap,'')
+  const chinesePhrases=new Set(compiledCode.match(/[\u3400-\u9fff]{2,}/g)??[])
+  const localizedDifferences=[...chinesePhrases].filter(phrase=>!original.includes(phrase))
+  if(localizedDifferences.length) {
+    skipped.push({path,reason:'preserve-localized-ui-changes',changedPhrases:localizedDifferences.length})
+    continue
+  }
   if(!original.endsWith('\n'))original+='\n'
   writeFileSync(dst,original)
   applied.push(path)
