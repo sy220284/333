@@ -2,7 +2,7 @@ import { createServer, type Server } from 'node:net'
 import { timingSafeEqual } from 'node:crypto'
 import { chmodSync, readFileSync, unlinkSync } from 'node:fs'
 import { runClaimedSession317, validatePreloadClaim317 } from './preload317.ts'
-import { assertSocketVacant317 } from './socketOwnership317.ts'
+import { assertSocketVacant317, captureSocketIdentity317, unlinkOwnedSocketSync317, type SocketIdentity317 } from './socketOwnership317.ts'
 
 const MAX_CLAIM_BYTES = 8 * 1024 * 1024
 function removeSocket(path: string): void {
@@ -59,10 +59,14 @@ export async function runBgSpare317(args: string[],
   }
   const startingParent = process.ppid
   let ownsSocket = false
+  let socketOwner: SocketIdentity317 | undefined
   const cleanup = () => {
-    if (!ownsSocket) return
+    if (!ownsSocket || !socketOwner) return
     ownsSocket = false
-    removeSocket(socketPath)
+    try { unlinkOwnedSocketSync317(socketPath, socketOwner) }
+    catch (error) {
+      process.stderr.write('[bg-spare] socket cleanup failed: ' + String(error) + '\n')
+    }
   }
   const interrupted = () => { cleanup(); process.exit(0) }
   const onUnhandled = (error: unknown) => {
@@ -130,8 +134,11 @@ export async function runBgSpare317(args: string[],
       server!.once('error', reject)
       server!.listen(socketPath)
     })
-    ownsSocket = true
-    if (process.platform !== 'win32') chmodSync(socketPath, 0o600)
+    if (process.platform !== 'win32') {
+      chmodSync(socketPath, 0o600)
+      socketOwner = await captureSocketIdentity317(socketPath, 'Background spare')
+      ownsSocket = true
+    }
     const claim = await claimPromise
     cleanup()
     clearInterval(watchdog)
