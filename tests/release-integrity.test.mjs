@@ -164,6 +164,15 @@ test('release is runnable from an isolated folder without repository node_module
     assert.equal(p.status, 0, p.stderr);
     assert.equal(p.stdout.trim(), `${expectedVersion} (Claude Code)`);
   } finally {
-    rmSync(sandbox, {recursive: true, force: true});
+    // On Windows ARM64, the native launcher can exit before Windows releases
+    // its just-executed .exe file handle. Node's built-in recursive removal
+    // retries only the known transient OS errors (including EPERM/EBUSY).
+    // Exhausted retries still throw, so orphaned releases fail the test.
+    rmSync(sandbox, {
+      recursive: true, force: true,
+      maxRetries: process.platform === 'win32' ? 20 : 0,
+      retryDelay: 150,
+    });
+    assert.equal(existsSync(sandbox), false, 'isolated release directory was not removed');
   }
 });
