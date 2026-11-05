@@ -104,21 +104,41 @@ async function launch(record, { resume = false } = {}) {
     },
     onExit(_proc, exitCode, signalCode) {
       void (async () => {
-        await outputQueue.get(record.id)
-        const snapshot = await readSession(record.id)
-        const stoppedByUser = snapshot?.state === 'stopping' || snapshot?.state === 'stopped'
-        const state = stoppedByUser ? 'stopped' : exitCode === 0 ? 'completed' : 'failed'
-        await editSession(record.id, {
-          state, exitCode, signalCode, pid: null,
-          detail: stoppedByUser ? 'stopped' : 'process exited',
-        })
-        const current = active.get(record.id)
-        if (current) {
-          for (const peer of current.subscribers) send(peer, { event: 'exit', exitCode, signalCode })
-          current.proc.terminal?.close()
+        let failure
+        try {
+          // Terminal persistence can fail (disk full, read-only log, etc.).
+          // The exited worker must still be reaped and the failure recorded.
+          let outputError
+          try { await outputQueue.get(record.id) }
+          catch (error) { outputError = error }
+          const snapshot = await readSession(record.id)
+          const stoppedByUser = snapshot?.state === 'stopping' || snapshot?.state === 'stopped'
+          const state = outputError ? 'failed' :
+            stoppedByUser ? 'stopped' : exitCode === 0 ? 'completed' : 'failed'
+          await editSession(record.id, {
+            state, exitCode, signalCode, pid: null,
+            detail: outputError ? 'terminal output could not be persisted: ' +
+              String(outputError) : stoppedByUser ? 'stopped' : 'process exited',
+          })
+          if (outputError) failure = outputError
+        } catch (error) {
+          failure = error
+        } finally {
+          const current = active.get(record.id)
+          if (current) {
+            if (failure) for (const peer of current.subscribers)
+              send(peer, { event: 'error', message: 'Session exit recording failed: ' + String(failure) })
+            for (const peer of current.subscribers) send(peer, { event: 'exit', exitCode, signalCode })
+            try { current.proc.terminal?.close() }
+            catch (error) {
+              process.stderr.write('Terminal close failed: ' + String(error) + '\\n')
+            }
+          }
+          active.delete(record.id)
+          outputQueue.delete(record.id)
+          if (failure) process.stderr.write('Session exit recording failed: ' + String(failure) + '\\n')
         }
-        active.delete(record.id)
-      })().catch(error => process.stderr.write(`Session exit recording failed: ${error.message}\n`))
+      })()
     },
   })
   const next = {
