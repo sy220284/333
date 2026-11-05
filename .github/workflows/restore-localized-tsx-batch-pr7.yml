@@ -4,6 +4,7 @@ on:
     branches: [upgrade/2.1.310-m1-evidence]
     paths:
       - '.github/workflows/restore-localized-tsx-batch-pr7.yml'
+      - 'tools/dev/restore-localized-inline-tsx.mjs'
   workflow_dispatch:
 permissions:
   contents: write
