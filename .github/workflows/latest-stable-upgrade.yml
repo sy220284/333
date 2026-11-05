@@ -7,7 +7,7 @@ permissions:
   contents: write
 concurrency:
   group: latest-stable-deps-pr7
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   upgrade:
     runs-on: ubuntu-latest
