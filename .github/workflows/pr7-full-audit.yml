@@ -46,6 +46,10 @@ jobs:
           echo "审计提交：$(git rev-parse HEAD)"
           node build/check-test-syntax.mjs
           node --test tests/language-file-contract.test.mjs tests/test-inventory.test.mjs
+      - name: 20条功能链与137项功能/场景映射严格检查
+        run: |
+          node --test tests/compare-317.test.mjs tests/upgrade-coverage.test.mjs
+          node build/upgrade-coverage.mjs
       - name: 完整重建、资源字节校验、现有回归与遗漏测试自动补跑
         run: npm run verify
       - name: 官方317 Linux x64与重建版后台全生命周期双跑
