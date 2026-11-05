@@ -25,6 +25,7 @@ test('317 socket cleanup refuses another owner or a replacement file', async () 
     expect((await lstat(path)).isSocket()).toBe(true)
     await new Promise<void>((resolve, reject) =>
       server.close(error => error ? reject(error) : resolve()))
+    await rm(path, { force: true })
     await writeFile(path, 'replacement owner')
     expect(await unlinkOwnedSocket317(path, owner)).toBe(false)
     expect((await lstat(path)).isFile()).toBe(true)
