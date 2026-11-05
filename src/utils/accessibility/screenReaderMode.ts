@@ -2,6 +2,20 @@
  * Project/local settings can request a warning but cannot enable this mode.
  * The caller supplies settings by source; no merged untrusted settings are read.
  */
+export type AccessibleTreeNode317 = {
+  nodeName?: string
+  nodeValue?: unknown
+  isHidden?: boolean
+  attributes?: { display?: string }
+  childNodes?: AccessibleTreeNode317[]
+}
+export type ScreenReaderAnnouncementQueue317 = {
+  queue(value: string, options?: {hold?: boolean; now?: number}): void
+  remaining(now?: number): number
+  endStartupQuiet(): void
+  drain(now?: number): string[]
+  pending(): number
+}
 const ANSI_CONTROL_SEQUENCE = new RegExp(`${String.fromCharCode(27)}\\[[0-?]*[ -/]*[@-~]`, 'g')
 export function resolveScreenReaderMode({
   argv=[],env={},trustedSettings=[],
@@ -18,20 +32,20 @@ export function resolveScreenReaderMode({
   }
   return {enabled:false}
 }
-export function screenReaderChildEnvironment(mode) : { CLAUDE_AX_SCREEN_READER: string; } | { CLAUDE_AX_SCREEN_READER?: undefined; } {
+export function screenReaderChildEnvironment(mode: { enabled: boolean }) : { CLAUDE_AX_SCREEN_READER: string; } | { CLAUDE_AX_SCREEN_READER?: undefined; } {
   return mode.enabled ? {CLAUDE_AX_SCREEN_READER:'1'} : {}
 }
 /** Plain accessibility text is rendered without the terminal diff/animation
  * engine. This traversal preserves user text but excludes decorative frames.
  */
-export function flattenAccessibleTree(root) : string {
-  const blocks=[]
+export function flattenAccessibleTree(root: AccessibleTreeNode317 | null | undefined): string {
+  const blocks: string[]=[]
   let segment=''
   const flush=()=>{
     if(segment.trim()) blocks.push(segment)
     segment=''
   }
-  const walk=node=>{
+  const walk=(node: AccessibleTreeNode317 | null | undefined): void=>{
     if(!node||node.isHidden||node.attributes?.display==='none') return
     if(node.nodeName==='#text') {
       segment+=String(node.nodeValue??'')
@@ -82,19 +96,19 @@ export function accessibleOutputDelta(previous: string='',current: string='') : 
  * quiet (3s), hold (1s) and maximum of 16 announcements. A monotonic
  * caller-supplied clock lets tests exercise timing without sleeping.
  */
-export function createScreenReaderAnnouncementQueue({quietMs=3000,holdMs=1000,max=16}: { quietMs?: number; holdMs?: number; max?: number; }={}) {
-  let openedAt=null
+export function createScreenReaderAnnouncementQueue({quietMs=3000,holdMs=1000,max=16}: { quietMs?: number; holdMs?: number; max?: number; }={}): ScreenReaderAnnouncementQueue317 {
+  let openedAt: number | null=null
   let quietEnded=false
   let heldUntil=0
-  let queued=[]
-  const remaining=(now=Date.now())=>{
+  let queued: string[]=[]
+  const remaining=(now: number=Date.now()): number=>{
     if(!queued.length)return 0
     const quietRemaining=quietEnded||openedAt===null?0:
       Math.max(0,openedAt+Math.min(Math.max(0,quietMs),600000)-now)
     return Math.max(quietRemaining,Math.max(0,heldUntil-now))
   }
   return {
-    queue(value,{hold=false,now=Date.now()}={}){
+    queue(value: string,{hold=false,now=Date.now()}: {hold?:boolean;now?:number}={}){
       if(typeof value!=='string'||!value.trim())return
       if(openedAt===null)openedAt=now
       queued.push(value)
@@ -103,7 +117,7 @@ export function createScreenReaderAnnouncementQueue({quietMs=3000,holdMs=1000,ma
     },
     remaining,
     endStartupQuiet(){quietEnded=true},
-    drain(now=Date.now()){
+    drain(now: number=Date.now()): string[]{
       if(remaining(now)>0)return []
       const result=queued
       queued=[]
