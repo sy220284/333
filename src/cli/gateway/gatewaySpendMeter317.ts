@@ -206,7 +206,7 @@ export async function precheckGatewaySpend317(store: GatewaySpendStore317, ident
   eligible.sort((a,b)=>b.limit-a.limit||a.group.localeCompare(b.group))
   if(eligible.length && !eligible.some(p=>p.spent<p.limit)) {
     const row=eligible[0]
-    const groupCap={
+    const groupCap: GatewayPoolBinding317={
       period:'monthly',spent:row.spent,limit:row.limit,
       exceeded:true,utilization:row.limit>0?row.spent/row.limit:1,
       reset:spendPeriodReset317('monthly',now),scope_type:'group_pool',
