@@ -7,11 +7,13 @@
  * its credentials, checkout directory, worker epoch and terminal handle.
  */
 import { mkdir, readFile } from 'node:fs/promises'
+import { createWriteStream } from 'node:fs'
 import { join, resolve, sep } from 'node:path'
 import { hostname } from 'node:os'
 import { createSessionSpawner } from '../../bridge/sessionRunner.js'
 import type { SessionHandle } from '../../bridge/types.js'
 import { RunnerHttpError317, SelfHostedRunnerApi317 } from './runnerApi317.ts'
+import { createRunnerHealthServer317,createRunnerHealthState317 } from './runnerHealth317.ts'
 import type { RunnerHostSnapshot317 } from './runnerHealth317.ts'
 import { prepareRunnerWorkspace317, pushRunnerOutcomeBranches317 } from './runnerWorkspace317.ts'
 import { mapRunnerRemoteCliArgs317, stageRunnerPromptFlags317, stageRunnerMcpConfig317 } from './runnerCliArgs317.ts'
@@ -595,6 +597,7 @@ export class RunnerUsageError317 extends Error {
 type CliOptions = { apiUrl: string; secretFile?: string; capacity: number; baseDir: string;
   execPath: string; pollMs: number; drainMs: number; pushOutcomeOnRelease: boolean;
   idleReleaseMs: number; holdIdleFile?: string; maxHoldMs: number;
+  healthPort:number;logFile?:string;
   clientLabel?: string;
   lockToAccountId?: string; agentProxyUrl?: string }
 function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions | 'help' {
@@ -607,6 +610,8 @@ function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions 
     apiUrl: env.SELF_HOSTED_RUNNER_API_URL ?? 'https://api.anthropic.com',
     capacity:Number(env.SELF_HOSTED_RUNNER_CAPACITY ?? 1),
     baseDir:env.SELF_HOSTED_RUNNER_BASE_DIR ?? (process.platform === 'win32' ? '' : '/workspace'),
+    healthPort:Number(env.SELF_HOSTED_RUNNER_HEALTH_PORT??8080),
+    logFile:env.SELF_HOSTED_RUNNER_LOG_FILE,
     execPath:env.SELF_HOSTED_RUNNER_EXEC_PATH ?? process.execPath,pollMs:2000,
     drainMs:Number(env.SELF_HOSTED_RUNNER_DRAIN_WAIT_MS ?? 0),
     pushOutcomeOnRelease:['true','1'].includes(
@@ -629,7 +634,7 @@ function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions 
       '--capacity','--base-dir','--exec-path','--client-label','--lock-to-account',
       '--agent-proxy-url','--poll-interval-ms','--drain-wait-sec',
       '--drain-wait-bg-tasks-sec','--release-idle-session-min',
-      '--hold-idle-file','--max-hold-min'].includes(flag)){
+      '--hold-idle-file','--max-hold-min','--health-port','--log-file'].includes(flag)){
       throw new RunnerUsageError317('unknown flag '+flag)
     }
     const value=argv[++i]
@@ -643,6 +648,8 @@ function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions 
       case '--capacity': parsed.capacity=Number(value);break
       case '--base-dir': parsed.baseDir=value;break
       case '--exec-path': parsed.execPath=value;break
+      case '--health-port': parsed.healthPort=Number(value);break
+      case '--log-file': parsed.logFile=resolve(value);break
       case '--client-label': parsed.clientLabel=value;break
       case '--lock-to-account': parsed.lockToAccountId=value;break
       case '--agent-proxy-url': parsed.agentProxyUrl=value;break
@@ -659,6 +666,8 @@ function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions 
     throw new RunnerUsageError317('--capacity must be a positive integer, got: '+String(parsed.capacity))
   }
   if(!parsed.baseDir) throw new RunnerUsageError317('--base-dir is required on Windows')
+  if(!Number.isSafeInteger(parsed.healthPort)||parsed.healthPort<0||parsed.healthPort>65535)
+    throw new RunnerUsageError317('--health-port must be an integer in [0, 65535] (0 disables)')
   if(parsed.agentProxyUrl){
     const url=new URL(parsed.agentProxyUrl)
     if(url.protocol!=='https:' || url.username || url.password) {
@@ -678,6 +687,8 @@ export async function selfHostedRunnerMain317(argv: readonly string[]): Promise<
       '  --environment-secret-file <path> Host environment credential\n'+
       '  --capacity <n>                 Concurrent sessions\n'+
       '  --base-dir <path>              Isolated sessions directory\n'+
+      '  --health-port <port>           Local /healthz and /metrics listener (default 8080)\n'+
+      '  --log-file <path>              Append operator-visible Runner logs\n'+
       '  --exec-path <path>             Claude child executable\n'+
       '  --drain-wait-sec <n>           Wait before terminating active sessions\n'+
       '  --release-idle-session-min <n> Release idle sessions after n minutes (0 disables)\n'+
@@ -705,7 +716,24 @@ export async function selfHostedRunnerMain317(argv: readonly string[]): Promise<
   const onTerm=()=>controller.abort()
   process.on('SIGINT',onTerm)
   process.on('SIGTERM',onTerm)
+  const state=createRunnerHealthState317(config.capacity)
+  let logfile:ReturnType<typeof createWriteStream>|undefined
+  const status=(message:string)=>{
+    process.stderr.write(message+'\n')
+    if(logfile?.writable)logfile.write(message+'\n')
+    if(/\[runner:(?:warn|error)\]|\bfailed\b/i.test(message))
+      state.failure(message.replace(/Bearer\s+\S+/gi,'Bearer <redacted>').slice(0,1024))
+  }
+  const health=createRunnerHealthServer317(state,status)
   try{
+    if(config.logFile){
+      logfile=createWriteStream(config.logFile,{flags:'a',mode:0o600})
+      logfile.on('error',error=>{
+        process.stderr.write('[runner:warn] log-file write failed: '+error.message+'\n')
+        logfile=undefined
+      })
+    }
+    await health.listen(config.healthPort)
     const executable = config.execPath
     const isScriptRuntime=/[\\/]bun(?:\.exe)?$/i.test(executable)
     const args = isScriptRuntime && process.argv[1] ? [process.argv[1]] : []
@@ -716,8 +744,11 @@ export async function selfHostedRunnerMain317(argv: readonly string[]): Promise<
       maxHoldMs:config.maxHoldMs,
       pushOutcomeOnRelease:config.pushOutcomeOnRelease,
       clientLabel:config.clientLabel,lockToAccountId:config.lockToAccountId,
-      signal:controller.signal,onStatus:line=>process.stderr.write(line+'\n')})
+      signal:controller.signal,onStatus:status,
+      onStateChange:snapshot=>state.update(snapshot)})
   }finally{
+    await health.close()
+    if(logfile?.writable)await new Promise<void>(resolve=>logfile!.end(resolve))
     process.off('SIGINT',onTerm)
     process.off('SIGTERM',onTerm)
   }
