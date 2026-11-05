@@ -3600,6 +3600,40 @@ async function run(): Promise<CommanderCommand> {
       claudeai
     });
   });
+  const providerKeys = auth.command('api-key').description('管理模型服务商的本地 API Key');
+  providerKeys.command('set <provider>').description('从安全输入或环境变量保存密钥')
+    .option('--from-env <name>', '从指定环境变量读取密钥')
+    .action(async (provider: string, options: { fromEnv?: string }) => {
+      const { validateApiKeyProvider, setProviderApiKey } = await import('./services/auth/apiKeyVault.js');
+      validateApiKeyProvider(provider);
+      let key: string;
+      if (options.fromEnv) {
+        key = process.env[options.fromEnv] ?? '';
+      } else {
+        if (process.stdin.isTTY) {
+          throw new Error('终端交互输入请先设置环境变量，再使用 --from-env；或从标准输入管道提供密钥');
+        }
+        let text = '';
+        for await (const chunk of process.stdin) {
+          text += chunk.toString();
+          if (text.length > 8192) throw new Error('API Key 输入过长');
+        }
+        key = text.trimEnd();
+      }
+      await setProviderApiKey(provider, key);
+      process.stdout.write(`已保存 ${provider} 的本机 API Key\n`);
+    });
+  providerKeys.command('list').description('列出已配置服务商（不显示密钥）').action(async () => {
+    const { listProviderApiKeyAccounts } = await import('./services/auth/apiKeyVault.js');
+    for (const provider of listProviderApiKeyAccounts()) process.stdout.write(`${provider}\n`);
+  });
+  providerKeys.command('delete <provider>').description('删除该服务商的本机 API Key')
+    .action(async (provider: string) => {
+      const { validateApiKeyProvider, deleteProviderApiKey } = await import('./services/auth/apiKeyVault.js');
+      validateApiKeyProvider(provider);
+      await deleteProviderApiKey(provider);
+      process.stdout.write(`已删除 ${provider} 的本机 API Key\n`);
+    });
   auth.command('chatgpt-login').description('通过官方浏览器授权连接 ChatGPT 账号').action(async () => {
     const { loginWithChatGPT } = await import('./services/auth/chatgptOAuth.js');
     const identity = await loginWithChatGPT();
