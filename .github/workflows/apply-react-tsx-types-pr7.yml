@@ -30,7 +30,9 @@ jobs:
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
       - name: 分批恢复明确Props和JSX返回类型，冲突逐文件隔离
-        run: node tools/dev/annotate-react-compiler-tsx.mjs --apply
+        run: |
+          node --check tools/dev/annotate-react-compiler-tsx.mjs
+          node tools/dev/annotate-react-compiler-tsx.mjs --apply
       - name: 完整源码内容审计及严格编译
         run: |
           node tools/dev/type-migration-audit.mjs
@@ -59,6 +61,7 @@ jobs:
             node tools/dev/dev.mjs typecheck:all
             node tools/dev/type-migration-audit.mjs
             node tools/dev/audit-restored-ui-localization.mjs
+            node --test tests/chinese-only-ui.test.mjs
             if git push origin HEAD:refs/heads/upgrade/2.1.310-m1-evidence; then
               echo '已提交批量类型恢复后的真实TSX源码'
               exit 0
