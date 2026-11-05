@@ -1,0 +1,42 @@
+name: M5 317 MCP后台任务协议与禁用开关验收
+on:
+  push:
+    branches:
+      - upgrade/2.1.310-m1-evidence
+    paths:
+      - 'src/services/mcp/mcpTasks317.ts'
+      - 'src/services/mcp/client.ts'
+      - 'tests/m5-mcp-tasks-317.test.ts'
+      - '.github/workflows/m5-mcp-tasks-317.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: m5-mcp-tasks-317-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  mcp-tasks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 恢复官方依赖及项目锁定依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: MCP任务成功、失败、取消与开关真实测试
+        run: bun test tests/m5-mcp-tasks-317.test.ts
+      - name: 全仓TypeScript类型检查
+        run: |
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          node tools/dev/dev.mjs typecheck:all
+      - name: 源码独立重建和入口连通性验证
+        run: |
+          bun build/rebuild.mjs
+          node build/check-architecture-links317.mjs

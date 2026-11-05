@@ -1,36 +1,14 @@
-import {
-  discoverAuthorizationServerMetadata,
-  discoverOAuthServerInfo,
-  type OAuthClientProvider,
-  type OAuthDiscoveryState,
-  auth as sdkAuth,
-  refreshAuthorization as sdkRefreshAuthorization,
-} from '@modelcontextprotocol/sdk/client/auth.js'
-import {
-  InvalidGrantError,
-  OAuthError,
-  ServerError,
-  TemporarilyUnavailableError,
-  TooManyRequestsError,
-} from '@modelcontextprotocol/sdk/server/auth/errors.js'
-import {
-  type AuthorizationServerMetadata,
-  type OAuthClientInformation,
-  type OAuthClientInformationFull,
-  type OAuthClientMetadata,
-  OAuthErrorResponseSchema,
-  OAuthMetadataSchema,
-  type OAuthTokens,
-  OAuthTokensSchema,
-} from '@modelcontextprotocol/sdk/shared/auth.js'
-import type { FetchLike } from '@modelcontextprotocol/sdk/shared/transport.js'
+import { OAuthErrorResponseSchema, OAuthMetadataSchema, OAuthTokensSchema } from "@modelcontextprotocol/core";
+import type { AuthorizationServerMetadata, OAuthClientInformation, OAuthClientInformationFull, OAuthClientMetadata, OAuthTokens, FetchLike } from "@modelcontextprotocol/server";
+import { OAuthError, OAuthErrorCode } from '@modelcontextprotocol/client';
+import { discoverAuthorizationServerMetadata, discoverOAuthServerInfo, auth as sdkAuth, refreshAuthorization as sdkRefreshAuthorization } from "@modelcontextprotocol/client";
+import type { OAuthClientProvider, OAuthDiscoveryState, OAuthClientInformationContext } from "@modelcontextprotocol/client";
 import axios from 'axios'
 import { createHash, randomBytes, randomUUID } from 'crypto'
 import { mkdir } from 'fs/promises'
 import { createServer, type Server } from 'http'
 import { join } from 'path'
 import { parse } from 'url'
-import xss from 'xss'
 import { MCP_CLIENT_METADATA_URL } from '../../constants/oauth.js'
 import { openBrowser } from '../../utils/browser.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
@@ -46,6 +24,7 @@ import { jsonParse, jsonStringify } from '../../utils/slowOperations.js'
 import { logEvent } from '../analytics/index.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../analytics/metadata.js'
 import { buildRedirectUri, findAvailablePort } from './oauthPort.js'
+import { renderAuthResultPage } from './authResultPage.js'
 import type { McpHTTPServerConfig, McpSSEServerConfig } from './types.js'
 import { getLoggingSafeMcpBaseUrl } from './utils.js'
 import { performCrossAppAccess, XaaTokenExchangeError } from './xaa.js'
@@ -237,24 +216,11 @@ function createAuthFetch(): FetchLike {
 }
 
 /**
- * Fetches authorization server metadata, using a configured metadata URL if available,
- * otherwise performing RFC 9728 → RFC 8414 discovery via the SDK.
- *
- * Discovery order when no configured URL:
- * 1. RFC 9728: probe /.well-known/oauth-protected-resource on the MCP server,
- *    read authorization_servers[0], then RFC 8414 against that URL.
- * 2. Fallback: RFC 8414 directly against the MCP server URL (path-aware). Covers
- *    legacy servers that co-host auth metadata at /.well-known/oauth-authorization-server/{path}
- *    without implementing RFC 9728. The SDK's own fallback strips the path, so this
- *    preserves the pre-existing path-aware probe for backward compatibility.
- *
- * Note: configuredMetadataUrl is user-controlled via .mcp.json. Project-scoped MCP
- * servers require user approval before connecting (same trust level as the MCP server
- * URL itself). The HTTPS requirement here is defense-in-depth beyond schema validation
- * — RFC 8414 mandates OAuth metadata retrieval over TLS.
+ * Resolve OAuth metadata through a configured HTTPS URL or RFC 9728/RFC 8414 discovery.
+ * Old path-specific discovery fallbacks are not used.
  */
 async function fetchAuthServerMetadata(
-  serverName: string,
+  _serverName: string,
   serverUrl: string,
   configuredMetadataUrl: string | undefined,
   fetchFn?: FetchLike,
@@ -278,36 +244,15 @@ async function fetchAuthServerMetadata(
     )
   }
 
-  try {
-    const { authorizationServerMetadata } = await discoverOAuthServerInfo(
-      serverUrl,
-      {
-        ...(fetchFn && { fetchFn }),
-        ...(resourceMetadataUrl && { resourceMetadataUrl }),
-      },
-    )
-    if (authorizationServerMetadata) {
-      return authorizationServerMetadata
-    }
-  } catch (err) {
-    // Any error from the RFC 9728 → RFC 8414 chain (5xx from the root or
-    // resolved-AS probe, schema parse failure, network error) — fall through
-    // to the legacy path-aware retry.
-    logMCPDebug(
-      serverName,
-      `RFC 9728 discovery failed, falling back: ${errorMessage(err)}`,
-    )
-  }
+  const { authorizationServerMetadata } = await discoverOAuthServerInfo(
+    serverUrl,
+    {
+      ...(fetchFn && { fetchFn }),
+      ...(resourceMetadataUrl && { resourceMetadataUrl }),
+    },
+  )
+  return authorizationServerMetadata
 
-  // Fallback only when the URL has a path component; for root URLs the SDK's
-  // own fallback already probed the same endpoints.
-  const url = new URL(serverUrl)
-  if (url.pathname === '/') {
-    return undefined
-  }
-  return discoverAuthorizationServerMetadata(url, {
-    ...(fetchFn && { fetchFn }),
-  })
 }
 
 export class AuthenticationCancelledError extends Error {
@@ -612,7 +557,10 @@ export async function revokeServerTokens(
         },
       },
     }
-    storage.update(updatedData)
+    const result = storage.update(updatedData)
+    if (!result.success) {
+      throw new Error(result.warning || `Failed to preserve OAuth state for "${serverName}"`)
+    }
     logMCPDebug(serverName, 'Preserved step-up auth state across revocation')
   }
 }
@@ -628,7 +576,10 @@ export function clearServerTokensFromLocalStorage(
   const serverKey = getServerKey(serverName, serverConfig)
   if (existingData.mcpOAuth[serverKey]) {
     delete existingData.mcpOAuth[serverKey]
-    storage.update(existingData)
+    const result = storage.update(existingData)
+    if (!result.success) {
+      throw new Error(result.warning || `Failed to clear stored OAuth credentials for "${serverName}"`)
+    }
     logMCPDebug(serverName, 'Cleared stored tokens')
   }
 }
@@ -851,7 +802,7 @@ export async function performMCPOAuthFlow(
   abortSignal?: AbortSignal,
   options?: {
     skipBrowserOpen?: boolean
-    onWaitingForCallback?: (submit: (callbackUrl: string) => void) => void
+    onWaitingForCallback?: (submit: (callbackUrl: string) => boolean) => void
   },
 ): Promise<void> {
   // XAA (SEP-990): if configured, bypass the per-server consent dance.
@@ -1026,12 +977,12 @@ export async function performMCPOAuthFlow(
     }
 
     // Setup a server to receive the callback
-    const authorizationCode = await new Promise<string>((resolve, reject) => {
+    const authorizationResponse = await new Promise<{ code: string; iss?: string }>((resolve, reject) => {
       let resolved = false
-      const resolveOnce = (code: string) => {
+      const resolveOnce = (code: string, iss?: string) => {
         if (resolved) return
         resolved = true
-        resolve(code)
+        resolve({ code, iss })
       }
       const rejectOnce = (error: Error) => {
         if (resolved) return
@@ -1060,41 +1011,29 @@ export async function performMCPOAuthFlow(
             const code = parsed.searchParams.get('code')
             const state = parsed.searchParams.get('state')
             const error = parsed.searchParams.get('error')
-
+            // A pasted address must belong to this sign-in. Invalid/stale
+            // callbacks leave the listener alive so the user can try again.
+            if (parsed.protocol !== 'http:' ||
+                !['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname) ||
+                parsed.pathname !== '/callback' || state !== oauthState ||
+                (!code && !error)) return false
             if (error) {
-              const errorDescription =
-                parsed.searchParams.get('error_description') || ''
               cleanup()
-              rejectOnce(
-                new Error(`OAuth error: ${error} - ${errorDescription}`),
-              )
-              return
+              rejectOnce(new Error(`OAuth error: ${error} - ${parsed.searchParams.get('error_description') || ''}`))
+              return true
             }
-
-            if (!code) {
-              // Not a valid callback URL, ignore so the user can try again
-              return
-            }
-
-            if (state !== oauthState) {
-              cleanup()
-              rejectOnce(
-                new Error('OAuth state mismatch - possible CSRF attack'),
-              )
-              return
-            }
-
-            logMCPDebug(
-              serverName,
-              `Received auth code via manual callback URL`,
-            )
+            logMCPDebug(serverName, 'Received auth code via manual callback URL')
             cleanup()
-            resolveOnce(code)
+            resolveOnce(code!, parsed.searchParams.get('iss') ?? undefined)
+            return true
           } catch {
-            // Invalid URL, ignore so the user can try again
+            return false
           }
         })
       }
+
+      // The terminal callback can synchronously cancel a headless login.
+      if (abortSignal?.aborted) return
 
       server = createServer((req, res) => {
         const parsedUrl = parse(req.url || '', true)
@@ -1108,25 +1047,16 @@ export async function performMCPOAuthFlow(
 
           // Validate OAuth state to prevent CSRF attacks
           if (!error && state !== oauthState) {
-            res.writeHead(400, { 'Content-Type': 'text/html' })
-            res.end(
-              `<h1>Authentication Error</h1><p>Invalid state parameter. Please try again.</p><p>You can close this window.</p>`,
-            )
+            res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' })
+            res.end(renderAuthResultPage({ ok: false, heading: '身份验证失败', message: '验证状态不一致，请重新尝试。' }))
             cleanup()
             rejectOnce(new Error('OAuth state mismatch - possible CSRF attack'))
             return
           }
 
           if (error) {
-            res.writeHead(200, { 'Content-Type': 'text/html' })
-            // Sanitize error messages to prevent XSS
-            const sanitizedError = xss(String(error))
-            const sanitizedErrorDescription = errorDescription
-              ? xss(String(errorDescription))
-              : ''
-            res.end(
-              `<h1>Authentication Error</h1><p>${sanitizedError}: ${sanitizedErrorDescription}</p><p>You can close this window.</p>`,
-            )
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+            res.end(renderAuthResultPage({ ok: false, heading: '身份验证失败', message: '请关闭此窗口并重新尝试。', detail: `${String(error)}${errorDescription ? `: ${String(errorDescription)}` : ''}` }))
             cleanup()
             let errorMessage = `OAuth error: ${error}`
             if (errorDescription) {
@@ -1140,12 +1070,10 @@ export async function performMCPOAuthFlow(
           }
 
           if (code) {
-            res.writeHead(200, { 'Content-Type': 'text/html' })
-            res.end(
-              `<h1>Authentication Successful</h1><p>You can close this window. Return to Claude Code.</p>`,
-            )
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+            res.end(renderAuthResultPage({ ok: true, heading: '身份验证成功', message: '请返回 Claude Code。此窗口即将关闭。' }))
             cleanup()
-            resolveOnce(code)
+            resolveOnce(code, typeof parsedUrl.query.iss === 'string' ? parsedUrl.query.iss : undefined)
           }
         }
       })
@@ -1219,7 +1147,8 @@ export async function performMCPOAuthFlow(
     logMCPDebug(serverName, `Completing auth flow with authorization code`)
     const result = await sdkAuth(provider, {
       serverUrl: serverConfig.url,
-      authorizationCode,
+      authorizationCode: authorizationResponse.code,
+      iss: authorizationResponse.iss,
       resourceMetadataUrl: wwwAuthParams.resourceMetadataUrl,
     })
 
@@ -1294,7 +1223,7 @@ export async function performMCPOAuthFlow(
     // ServerError, InvalidClientError, etc.) via parseErrorResponse. Extract the
     // OAuth error code directly from the SDK error instance.
     if (error instanceof OAuthError) {
-      oauthErrorCode = error.errorCode
+      oauthErrorCode = error.code
       // SDK does not attach HTTP status as a property, but the fallback ServerError
       // embeds it in the message as "HTTP {status}:" when the response body was
       // unparseable. Best-effort extraction.
@@ -1304,7 +1233,7 @@ export async function performMCPOAuthFlow(
       }
       // If client not found, clear the stored client ID and suggest retry
       if (
-        error.errorCode === 'invalid_client' &&
+        error.code === 'invalid_client' &&
         error.message.includes('Client not found')
       ) {
         const storage = getSecureStorage()
@@ -1479,7 +1408,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
     return this._state
   }
 
-  async clientInformation(): Promise<OAuthClientInformation | undefined> {
+  async clientInformation(ctx?: OAuthClientInformationContext): Promise<(OAuthClientInformation & { issuer?: string }) | undefined> {
     const storage = getSecureStorage()
     const data = storage.read()
     const serverKey = getServerKey(this.serverName, this.serverConfig)
@@ -1491,6 +1420,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       return {
         client_id: storedInfo.clientId,
         client_secret: storedInfo.clientSecret,
+        issuer: storedInfo.clientIssuer,
       }
     }
 
@@ -1502,6 +1432,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       return {
         client_id: configClientId,
         client_secret: clientConfig?.clientSecret,
+        ...(ctx?.issuer && { issuer: ctx.issuer }),
       }
     }
 
@@ -1511,7 +1442,8 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
   }
 
   async saveClientInformation(
-    clientInformation: OAuthClientInformationFull,
+    clientInformation: OAuthClientInformationFull & { issuer?: string },
+    ctx?: OAuthClientInformationContext,
   ): Promise<void> {
     const storage = getSecureStorage()
     const existingData = storage.read() || {}
@@ -1527,6 +1459,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
           serverUrl: this.serverConfig.url,
           clientId: clientInformation.client_id,
           clientSecret: clientInformation.client_secret,
+          clientIssuer: clientInformation.issuer ?? ctx?.issuer,
           // Provide default values for required fields if not present
           accessToken: existingData.mcpOAuth?.[serverKey]?.accessToken || '',
           expiresAt: existingData.mcpOAuth?.[serverKey]?.expiresAt || 0,
@@ -1534,10 +1467,13 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       },
     }
 
-    storage.update(updatedData)
+    const result = storage.update(updatedData)
+    if (!result.success) {
+      throw new Error(result.warning || `Failed to save OAuth credentials for "${this.serverName}"`)
+    }
   }
 
-  async tokens(): Promise<OAuthTokens | undefined> {
+  async tokens(_ctx?: OAuthClientInformationContext): Promise<(OAuthTokens & { issuer?: string }) | undefined> {
     // Cross-process token changes (another CC instance refreshed or invalidated)
     // are picked up via the keychain cache TTL (see macOsKeychainStorage.ts).
     // In-process writes already invalidate the cache via storage.update().
@@ -1691,6 +1627,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       expires_in: expiresIn,
       scope: tokenData.scope,
       token_type: 'Bearer',
+      issuer: tokenData.tokenIssuer,
     }
 
     logMCPDebug(this.serverName, `Returning tokens`)
@@ -1701,7 +1638,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
     return tokens
   }
 
-  async saveTokens(tokens: OAuthTokens): Promise<void> {
+  async saveTokens(tokens: OAuthTokens & { issuer?: string }, ctx?: OAuthClientInformationContext): Promise<void> {
     this._pendingStepUpScope = undefined
     const storage = getSecureStorage()
     const existingData = storage.read() || {}
@@ -1723,11 +1660,15 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
           refreshToken: tokens.refresh_token,
           expiresAt: Date.now() + (tokens.expires_in || 3600) * 1000,
           scope: tokens.scope,
+          tokenIssuer: tokens.issuer ?? ctx?.issuer ?? this._metadata?.issuer ?? existingData.mcpOAuth?.[serverKey]?.tokenIssuer,
         },
       },
     }
 
-    storage.update(updatedData)
+    const result = storage.update(updatedData)
+    if (!result.success) {
+      throw new Error(result.warning || `Failed to save OAuth credentials for "${this.serverName}"`)
+    }
   }
 
   /**
@@ -2286,7 +2227,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       } catch (error) {
         // Invalid grant means the refresh token itself is invalid/revoked/expired.
         // But another process may have already refreshed successfully — check first.
-        if (error instanceof InvalidGrantError) {
+        if (error instanceof OAuthError && error.code === OAuthErrorCode.InvalidGrant) {
           logMCPDebug(
             this.serverName,
             `Token refresh failed with invalid_grant: ${error.message}`,
@@ -2329,9 +2270,10 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
           error instanceof Error &&
           /timeout|timed out|etimedout|econnreset/i.test(error.message)
         const isTransientServerError =
-          error instanceof ServerError ||
-          error instanceof TemporarilyUnavailableError ||
-          error instanceof TooManyRequestsError
+          error instanceof OAuthError &&
+          (error.code === OAuthErrorCode.ServerError ||
+            error.code === OAuthErrorCode.TemporarilyUnavailable ||
+            error.code === OAuthErrorCode.TooManyRequests)
         const isRetryable = isTimeoutError || isTransientServerError
 
         if (!isRetryable || attempt >= MAX_ATTEMPTS) {

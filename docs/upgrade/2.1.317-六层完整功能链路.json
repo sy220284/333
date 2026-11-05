@@ -1,0 +1,2528 @@
+{
+  "schema": 1,
+  "target_version": "2.1.317",
+  "purpose": "333 完整新版功能实现与行为/语义对齐；按六层分工覆盖全部20条功能链及持续发现的新能力",
+  "independent_update_tracking": {
+    "scope": "SEPARATE",
+    "rule": "本方案核查全部真实新版功能链；不读取、不计入或编辑366条更新专项的分组、数量或进度"
+  },
+  "acceptance_baseline": {
+    "historical_features": 102,
+    "historical_scenarios": 84,
+    "policy": "旧102功能/84场景保留回归，另增35项新版实现检查和53场景；只维护功能链→源码→修改→必要测试。",
+    "reconciled_features": 137,
+    "reconciled_scenarios": 137,
+    "official_added_features": 35,
+    "new_scenarios": 53
+  },
+  "layers": [
+    {
+      "id": "M1",
+      "index": 0,
+      "title": "构建基础",
+      "scope": "官方资源、依赖、原生扩展、启动、独立构建和三平台发行",
+      "chain_ids": [
+        "C19"
+      ],
+      "requires": []
+    },
+    {
+      "id": "M2",
+      "index": 1,
+      "title": "核心决策",
+      "scope": "模型及API参数、提示词和上下文/压缩/记忆、权限沙箱和安全规则",
+      "chain_ids": [
+        "C01",
+        "C02",
+        "C04"
+      ],
+      "requires": [
+        "M1"
+      ]
+    },
+    {
+      "id": "M3",
+      "index": 2,
+      "title": "执行能力",
+      "scope": "文件与命令工具、Hooks/SDK与控制事件、CLI协议、认证/网络/TLS/遥测",
+      "chain_ids": [
+        "C03",
+        "C06",
+        "C11",
+        "C16"
+      ],
+      "requires": [
+        "M1",
+        "M2"
+      ]
+    },
+    {
+      "id": "M4",
+      "index": 3,
+      "title": "任务运行",
+      "scope": "Agent/团队/后台任务与消息、会话保存/恢复/身份隔离",
+      "chain_ids": [
+        "C05",
+        "C07"
+      ],
+      "requires": [
+        "M2",
+        "M3"
+      ]
+    },
+    {
+      "id": "M5",
+      "index": 4,
+      "title": "扩展能力",
+      "scope": "技能及官方资源、插件和市场、MCP/认证、Monitor/Workflow/调度、附件/PDF/Artifact",
+      "chain_ids": [
+        "C08",
+        "C09",
+        "C10",
+        "C17",
+        "C18"
+      ],
+      "requires": [
+        "M2",
+        "M3",
+        "M4"
+      ]
+    },
+    {
+      "id": "M6",
+      "index": 5,
+      "title": "用户和云端",
+      "scope": "终端UI/无障碍/动效、IDE、Remote Control、企业云及自建Runner、Slack/Code Review外部服务",
+      "chain_ids": [
+        "C12",
+        "C13",
+        "C14",
+        "C15",
+        "C20"
+      ],
+      "requires": [
+        "M2",
+        "M3",
+        "M4",
+        "M5"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "id": "C01",
+      "name": "模型目录/推理强度/API参数",
+      "layer": "M2",
+      "layer_index": 1,
+      "flow": [
+        "选择模型",
+        "识别能力",
+        "计算effort/限制",
+        "请求/回退",
+        "成本/UI"
+      ],
+      "source_candidates": [
+        "src/utils/model/model.ts",
+        "src/utils/effort.ts",
+        "src/services/api/claude.ts",
+        "src/utils/model/modelCatalog.ts",
+        "src/utils/context.ts",
+        "src/utils/thinking.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "模型ID/网关/effort/上下文预算/回退差分",
+      "baseline_feature_ids": [
+        "F017",
+        "F018",
+        "F027",
+        "F087",
+        "F016"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-74x0zd10.js（模型目录与provider能力）"
+      ],
+      "current_difference": "本轮接通新版目录到模型别名、真实API请求、费用统计及选择器；按模型effort设置生效并写回。原版请求对照通过，完整served/published目录及所有provider/资格/回退消费者仍需对齐。",
+      "related_chains": [
+        "C02",
+        "C03",
+        "C05",
+        "C12",
+        "C15",
+        "C16"
+      ],
+      "work_packages": [
+        {
+          "id": "C01-T01",
+          "title": "模型目录与身份解析",
+          "implementation": "逐函数对比新版模型目录、别名、供应商ID、自定义模型及上下文后缀解析；沿用已移植目录并补剩余消费者差异",
+          "associated_updates": "模型选择器、显示名称、成本表、CLI和SDK模型参数",
+          "acceptance": "同一输入在各入口得到一致模型身份，未知值和自定义值遵守原版处理方式",
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "目录驱动20项provider配置、四个模型家族别名、原生1M后缀、规范身份和显示名称；2,600组原版函数差分一致。"
+          ],
+          "remaining_scope": [
+            "served/published目录、behavesAs、远程资格及其他provider的完整模型目录消费者。"
+          ]
+        },
+        {
+          "id": "C01-T02",
+          "title": "能力覆盖与推理档位",
+          "implementation": "核对五槽位能力覆盖、effort别名、xhigh、默认值、上限来源和不支持能力时的实际处理",
+          "associated_updates": "配置schema、环境变量、命令行、模型设置页和子Agent继承",
+          "acceptance": "缺省、显式覆盖、受管上限和不同模型组合均产生正确effort",
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "按模型effort设置表、规范键优先级、旧用户全局effort适用范围、CLI覆盖与推理上限接通请求；/effort和选择器按模型写入。"
+          ],
+          "remaining_scope": [
+            "组织模型资格附带的effort上限/默认值、运行中切换与Hook/子Agent全分支。"
+          ]
+        },
+        {
+          "id": "C01-T03",
+          "title": "请求参数与底层模型接入",
+          "implementation": "对齐请求构造、输出/思考预算、上下文长度、流式选项和各供应商参数转换，拆分旧请求分支",
+          "associated_updates": "SDK类型、API请求体、provider适配与相关请求头",
+          "acceptance": "捕获真实请求内容并与原版比较，参数类型、缺省省略和限制一致",
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "原版/重建进程对照模型ID、max_tokens、output_config.effort、adaptive thinking和费用，覆盖三个家族、1M后缀、设置覆盖与上限。"
+          ],
+          "remaining_scope": [
+            "全部provider转换、请求重试及模型能力拒绝分支。"
+          ]
+        },
+        {
+          "id": "C01-T04",
+          "title": "模型错误与回退状态",
+          "implementation": "核对模型不可用、过载、额度、能力拒绝时的回退次序、重试次数和当前模型更新",
+          "associated_updates": "重试器、会话状态、费用统计及状态提示",
+          "acceptance": "失败后只按原版执行必要重试和回退，重复请求副作用及显示状态一致",
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "回退链TS实现补齐输入、可选主模型及返回类型，既有回退回归沿用。"
+          ],
+          "remaining_scope": [
+            "完整错误矩阵、原版过载/额度回退次序和跨模型状态副作用比较。"
+          ]
+        },
+        {
+          "id": "C01-T05",
+          "title": "模型跨链联调",
+          "implementation": "贯通交互、print、SDK、子Agent、插件和企业网关对模型能力的使用，消除各自计算默认值的旧实现",
+          "associated_updates": "C02上下文、C05代理、C12界面、C15网关和C16认证网络",
+          "acceptance": "同一配置跨入口执行后的模型、预算、费用及错误结果一致",
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "选择器别名名称、价格、费用统计使用同一目录；同步新版长上下文、1小时缓存、US区域及fast计价。"
+          ],
+          "remaining_scope": [
+            "SDK、子Agent、企业网关和模型设置动态更新的全部关联行为。"
+          ]
+        }
+      ],
+      "acceptance_scenarios": [
+        "E18",
+        "E39",
+        "E52",
+        "L07",
+        "L08",
+        "E78"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C02",
+      "name": "提示词/上下文/压缩/记忆",
+      "layer": "M2",
+      "layer_index": 1,
+      "flow": [
+        "载入指令",
+        "拼装上下文",
+        "微压缩/压缩",
+        "保存摘要",
+        "恢复下轮"
+      ],
+      "source_candidates": [
+        "src/constants/prompts.ts",
+        "src/services/compact/compact.ts",
+        "src/services/SessionMemory/sessionMemory.ts",
+        "src/utils/claudemd.ts",
+        "src/services/compact/microCompact.ts",
+        "src/services/compact/autoCompact.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "超长文本、修改CLAUDE.md、压缩后Read及恢复",
+      "baseline_feature_ids": [
+        "F005",
+        "F021",
+        "F022",
+        "F023",
+        "F024",
+        "F025",
+        "F086",
+        "F097",
+        "F125"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-thp9mgjc.js:32216（微压缩控制）",
+        "chunk-7bjr5mdw.js:65（提示词/非交互选项消费者）"
+      ],
+      "current_difference": "本轮补齐文本文档、JSON密度、嵌套内容与搜索结果估算，接通微压缩及API上下文统计；新版空闲清理、完整提示词、摘要和恢复整链仍待核对。",
+      "related_chains": [
+        "C01",
+        "C03",
+        "C05",
+        "C06",
+        "C07",
+        "C08",
+        "C12"
+      ],
+      "work_packages": [
+        {
+          "id": "C02-T01",
+          "title": "指令与提示词来源",
+          "implementation": "对比系统、用户、项目、目录规则、记忆及附加提示的读取、去重、作用范围和拼装次序",
+          "associated_updates": "CLAUDE.md、规则目录、内置提示词、设置来源及技能注入",
+          "acceptance": "多来源和运行中变更能正确生效，原版不读取的来源不会进入上下文",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C02-T02",
+          "title": "动态系统部分与请求缓存",
+          "implementation": "移植动态/静态提示拆分、缓存边界和请求重用逻辑，追踪每个生成函数的消费者",
+          "associated_updates": "API消息结构、缓存标记、SDK开关与上下文统计",
+          "acceptance": "实际请求中提示内容、顺序、缓存标记及动态更新行为一致",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C02-T03",
+          "title": "微压缩与工具结果保留",
+          "implementation": "对齐时间/大小触发、最近工具结果选择、Read保留路径和上下文占用计算",
+          "associated_updates": "消息类型、工具结果缓存、文件读取状态与压缩提示",
+          "acceptance": "长会话及重复Read后保留内容、触发点和下轮可读信息与原版一致",
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "移植317文本文档/JSON密度、嵌套内容、搜索结果token计算，共用于API上下文估算和微压缩节省量；补齐Read保留模块TS类型。"
+          ],
+          "remaining_scope": [
+            "新版空闲后服务端清理计划、恢复后的已清理结果识别与相关Read消费者。"
+          ]
+        },
+        {
+          "id": "C02-T04",
+          "title": "完整压缩及记忆落盘",
+          "implementation": "核对摘要生成、PreCompact/PostCompact调用、会话记忆、压缩边界和摘要恢复；重写旧压缩分支中不同的状态转移",
+          "associated_updates": "压缩提示词、Hook接口、摘要存储、标题和恢复入口",
+          "acceptance": "成功、取消、摘要失败、磁盘失败及恢复后都不丢失原版要求保留的信息",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C02-T05",
+          "title": "禁用策略与跨轮恢复",
+          "implementation": "对齐环境、受管、flag及被排除设置来源的压缩/ultrathink限制，联调模型预算和恢复会话",
+          "associated_updates": "C01预算、C04来源优先级、C07转录及输入组件",
+          "acceptance": "受保护禁用值不会被低优先级来源解除，恢复后上下文和压缩状态一致",
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "压缩禁用环境筛选转换为有实际参数及返回类型的TS，原有禁用与Read恢复回归通过。"
+          ],
+          "remaining_scope": [
+            "完整受管/排除来源、禁用策略与跨轮摘要恢复对照。"
+          ]
+        }
+      ],
+      "acceptance_scenarios": [
+        "E02",
+        "E09",
+        "E16",
+        "E17",
+        "E18",
+        "E36",
+        "E51",
+        "E65",
+        "E91",
+        "E107"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C03",
+      "name": "基础工具/文件编辑/命令执行",
+      "layer": "M3",
+      "layer_index": 2,
+      "flow": [
+        "解析工具参数",
+        "权限检查",
+        "读写/启动进程",
+        "结果回传/清理"
+      ],
+      "source_candidates": [
+        "src/tools/BashTool/BashTool.tsx",
+        "src/tools/FileReadTool/FileReadTool.ts",
+        "src/tools/FileEditTool/FileEditTool.ts",
+        "src/utils/ShellCommand.ts",
+        "src/utils/Shell.ts",
+        "src/utils/bash/ShellSnapshot.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "读写副作用、超时取消、Windows和Bash回归",
+      "baseline_feature_ids": [
+        "F010",
+        "F028",
+        "F029",
+        "F030",
+        "F031",
+        "F032",
+        "F033",
+        "F034",
+        "F035",
+        "F036",
+        "F037",
+        "F038",
+        "F039",
+        "F040"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-tm88cq46.js:12（Bash身份）",
+        "chunk-zvxmwtvh.js:5（Read身份/能力）",
+        "chunk-h404ga6t.js:1070（工具执行分派）"
+      ],
+      "current_difference": "已有真实文件工具回归和Shell环境修正；全部工具schema、执行器及平台分支仍需核对。",
+      "related_chains": [
+        "C04",
+        "C06",
+        "C07",
+        "C12",
+        "C18",
+        "C19"
+      ],
+      "work_packages": [
+        {
+          "id": "C03-T01",
+          "title": "工具注册与参数契约",
+          "implementation": "逐个对比新版工具集合、输入输出schema、必填/可选参数、默认值、别名及能力开关",
+          "associated_updates": "工具注册表、SDK声明、提示说明和命令入口",
+          "acceptance": "有效输入、缺参、边界值及未知参数的结果与原版一致",
+          "status": "IN_PROGRESS_FUNCTION_DIFF",
+          "progress": "进行中：TaskStop已同步317 task_id/shell_id输入契约、KillShell/KillBash别名和新版名称说明，空参数由验证器返回原版错误；全部工具契约继续核对。"
+        },
+        {
+          "id": "C03-T02",
+          "title": "文件读取、搜索与编辑",
+          "implementation": "移植Read/Grep/Glob/Edit/Write/Notebook等真实执行器，核对编码、范围、匹配、原子写入和重复读取语义",
+          "associated_updates": "工具结果组件、行号/分页、PDF图像分支和文件状态缓存",
+          "acceptance": "真实文件差分、二进制/大文件/空文件、编辑冲突及错误返回符合原版",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C03-T03",
+          "title": "Shell及平台进程执行",
+          "implementation": "对齐Bash/PowerShell、cwd、环境继承、Shell快照、输出上限、退出状态及子会话标记",
+          "associated_updates": "ShellCommand、Shell/ShellSnapshot、平台进程接口和命令权限检查",
+          "acceptance": "继承SHELLOPTS等环境、非零中间命令、Windows路径和快照恢复有正确执行结果",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C03-T04",
+          "title": "取消、超时和后台转换",
+          "implementation": "对齐工具超时、中断、前后台切换、进程树停止、输出尾部读取及资源回收",
+          "associated_updates": "任务系统、TaskStop、输出文件、通知和SDK事件",
+          "acceptance": "停止后没有遗留执行进程，最终输出和任务状态只有一份且顺序正确",
+          "status": "IN_PROGRESS_FUNCTION_DIFF",
+          "progress": "进行中：停止入口已接通队友处理器；后台Shell终止时发送一次SDK结束事件并保留输出路径，原版/重建版4组真实进程对照通过。完整超时/后台切换和各平台进程树继续核对。"
+        },
+        {
+          "id": "C03-T05",
+          "title": "工具闭环及关联同步",
+          "implementation": "核对每个工具从入口到权限、执行、落盘、渲染的全部调用，替换旧结果转换和错误吞并",
+          "associated_updates": "C04权限、C06事件、C07状态、C12组件和C18资源",
+          "acceptance": "对同一临时工作区执行原版/重建版操作，比较返回值和实际副作用",
+          "status": "PENDING_FUNCTION_DIFF"
+        }
+      ],
+      "acceptance_scenarios": [
+        "E02",
+        "E03",
+        "E05",
+        "E06",
+        "E08",
+        "E13",
+        "E19",
+        "E20",
+        "E21",
+        "E23",
+        "E30",
+        "E32",
+        "E34",
+        "E40",
+        "E41",
+        "E42",
+        "E46",
+        "E58",
+        "E60"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C04",
+      "name": "权限/沙箱/安全审核",
+      "layer": "M2",
+      "layer_index": 1,
+      "flow": [
+        "载入受管策略",
+        "路径/网络/敏感数据预检",
+        "拒绝/询问",
+        "执行",
+        "审计"
+      ],
+      "source_candidates": [
+        "src/utils/permissions/permissions.ts",
+        "src/utils/permissions/filesystem.ts",
+        "src/hooks/useCanUseTool.tsx",
+        "src/utils/settings/types.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "受管权限、符号链接、自动模式/绕过模式、双端审批",
+      "baseline_feature_ids": [
+        "F007",
+        "F041",
+        "F042",
+        "F043",
+        "F044",
+        "F045",
+        "F046",
+        "F047",
+        "F048",
+        "F049",
+        "F050",
+        "F060",
+        "F085",
+        "F090",
+        "F093",
+        "F094",
+        "F096",
+        "F110",
+        "F126"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-z227w65w.js:1867（读取边界例外）",
+        "chunk-nj8ddyrh.js（配置/权限schema）"
+      ],
+      "current_difference": "本轮实测修复项目附加目录被错误标成CLI授权导致的围栏越界；Read/Edit真实副作用与原版对照通过。全部分类、沙箱及SDK/远程审批消费者继续对齐。",
+      "related_chains": [
+        "C03",
+        "C05",
+        "C06",
+        "C09",
+        "C10",
+        "C14",
+        "C15",
+        "C18"
+      ],
+      "work_packages": [
+        {
+          "id": "C04-T01",
+          "title": "策略来源和优先级",
+          "implementation": "逐函数对比受管、用户、项目、local、flag及环境来源的启用条件、覆盖和合并；保留已修正的可信来源规则",
+          "associated_updates": "设置schema、setting-sources、自动模式配置和企业策略",
+          "acceptance": "排除来源、受管默认规则及嵌套拒绝条目按新版次序生效",
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "修复启动附加目录丢失来源：项目配置目录保留projectSettings来源，命令行显式授权保持独立；自动规则合并补齐TS类型。",
+            "按317 Xsn/olt/rlt保存会话已启用的读写围栏，设置重载只能收紧；读取例外按当前flag设置刷新。"
+          ],
+          "remaining_scope": [
+            "全部受管设置来源、运行中重载和远程审批策略。"
+          ]
+        },
+        {
+          "id": "C04-T02",
+          "title": "路径、网络及读写边界",
+          "implementation": "对齐读写围栏、flag读取例外、敏感路径、符号链接、真实路径及网络目标的权限判断",
+          "associated_updates": "Read/Edit/Write/Notebook、Bash、MCP和附件入口",
+          "acceptance": "别名、软链、路径穿越、拒绝规则和范围例外不扩大授权",
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "真实Read/Edit进程对照项目附加目录、flag读取例外、项目伪例外、目录外写入和符号链接；修复项目目录被标成CLI授权的越界。",
+            "写围栏按317 ABr限制EnterWorktree/ExitWorktree；toolsNarrowing贯穿规则收集、权限原因显示和上下文类型。"
+          ],
+          "remaining_scope": [
+            "网络目标、沙箱平台、SDK/远程权限上下文及所有敏感路径分支。"
+          ]
+        },
+        {
+          "id": "C04-T03",
+          "title": "自动模式与安全分类",
+          "implementation": "移植分类器规则解析、默认展开、硬拒绝/软拒绝/允许合并及模式切换，拆开旧Yolo分支",
+          "associated_updates": "规则资源、分类请求、提示词、危险操作判断和权限UI",
+          "acceptance": "同一规则及调用输入得到一致分类、拒绝原因和执行结果",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C04-T04",
+          "title": "审批、沙箱与取消",
+          "implementation": "对齐交互审批、SDK permission-prompts、远程双端审批、bypass可用性和沙箱失败处理",
+          "associated_updates": "权限弹窗、控制消息、请求ID、沙箱系统接口及撤销通知",
+          "acceptance": "重复批准、取消、断连和超时只产生一次决定，批准绑定正确操作",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C04-T05",
+          "title": "权限结果贯穿执行链",
+          "implementation": "追踪所有工具、子Agent、插件、附件和远程执行的检查位置，删除绕过新版检查的旧直达路径",
+          "associated_updates": "C03/C05/C09/C10/C14/C18消费者和审计输出",
+          "acceptance": "权限决定、实际副作用、错误信息及恢复后的授权范围相互一致",
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "文件权限围栏生产消费者接入TS模块并验证真实副作用及拒绝后文件未写入。"
+          ],
+          "remaining_scope": [
+            "Agent、插件、MCP、附件和远程执行的全部权限消费者。"
+          ]
+        }
+      ],
+      "acceptance_scenarios": [
+        "E03",
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08",
+        "E09",
+        "E11",
+        "E17",
+        "E20",
+        "E22",
+        "E31",
+        "E32",
+        "E49",
+        "E50",
+        "E55",
+        "E60",
+        "E61",
+        "E62",
+        "E64",
+        "E68",
+        "L06",
+        "E76",
+        "E77",
+        "E79",
+        "E92",
+        "E93",
+        "E109"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C05",
+      "name": "Agent/团队/后台消息",
+      "layer": "M4",
+      "layer_index": 3,
+      "flow": [
+        "载入Agent",
+        "继承模型/权限",
+        "启动team和后台任务",
+        "消息调度",
+        "清理"
+      ],
+      "source_candidates": [
+        "src/tools/AgentTool/runAgent.ts",
+        "src/tasks/LocalAgentTask/LocalAgentTask.tsx",
+        "src/tools/SendMessageTool/SendMessageTool.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "团队/子代理/背景进程/消息到达/工作树恢复",
+      "baseline_feature_ids": [
+        "F015",
+        "F056",
+        "F057",
+        "F058",
+        "F059",
+        "F063",
+        "F064",
+        "F069",
+        "F089",
+        "F095",
+        "F122",
+        "F134"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-qt9gcqyp.js:6（Agent参数及身份）",
+        "chunk-z72h8qe0.js:378（后台会话入口）"
+      ],
+      "current_difference": "已有代理与后台会话代码；团队消息、监督、恢复和跨Runner状态尚未整链完成。",
+      "related_chains": [
+        "C01",
+        "C04",
+        "C06",
+        "C07",
+        "C12",
+        "C14"
+      ],
+      "work_packages": [
+        {
+          "id": "C05-T01",
+          "title": "Agent定义与继承",
+          "implementation": "逐函数对比内置/用户/项目/插件代理、模型/effort/工具/权限继承和可用性",
+          "associated_updates": "代理定义schema、内置提示词、选择器和C01/C04接口",
+          "acceptance": "相同父会话与代理定义生成一致执行环境，继承不扩大权限",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C05-T02",
+          "title": "启动、隔离与后台运行",
+          "implementation": "移植本地、进程内、远程代理启动、worktree隔离和前后台状态转移",
+          "associated_updates": "Agent执行器、子进程环境、后台任务及工作树Hook",
+          "acceptance": "并发启动、后台转换和工作树创建/清理与原版一致",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C05-T03",
+          "title": "团队消息与用户通知",
+          "implementation": "对齐SendMessage/SendUserMessage、ListAgents、brief、收信唤醒、投递与回复关联",
+          "associated_updates": "消息schema、inbox、任务通知、UI及stream-json转发",
+          "acceptance": "交错消息、迟到消息、重复投递和用户信息只归属正确接收方",
+          "status": "IN_PROGRESS_FUNCTION_DIFF",
+          "progress": "进行中：停止目标已支持队友地址、恢复ID、名字及注册代理名；归一化、重名拒绝、运行记录优先与原版24组对照一致。完整消息投递/用户通知继续核对。"
+        },
+        {
+          "id": "C05-T04",
+          "title": "后台监督与生命周期",
+          "implementation": "核对bg、attach、logs、stop、respawn、rm、守护进程及失败回收的真实运行逻辑",
+          "associated_updates": "SessionStore、daemon、任务输出、会话清理和CLI入口",
+          "acceptance": "崩溃、停止、重启及再次连接后状态、输出和子进程清理正确",
+          "status": "IN_PROGRESS_FUNCTION_DIFF",
+          "progress": "进行中：接通InProcessTeammateTask停止分派与调用者归属；停止实际中断、唤醒等待者、清空队列。后台Shell补齐一次SDK终止事件。跨Runner、观察者、keepalive及级联停止仍待实现验证。"
+        },
+        {
+          "id": "C05-T05",
+          "title": "完成、失败与恢复联调",
+          "implementation": "对齐handback、任务中止、token/费用统计、消息落盘和resume后的代理状态",
+          "associated_updates": "C06事件、C07存储、C12进度界面和C14远程任务",
+          "acceptance": "长任务跨断连/重启后不串会话，不漏掉最终状态或已提交消息",
+          "status": "PENDING_FUNCTION_DIFF"
+        }
+      ],
+      "acceptance_scenarios": [
+        "E02",
+        "E09",
+        "E10",
+        "E12",
+        "E13",
+        "E14",
+        "E15",
+        "E27",
+        "E28",
+        "E44",
+        "E47",
+        "E49",
+        "E54",
+        "E59",
+        "E63",
+        "L01",
+        "L02",
+        "L04",
+        "L05",
+        "L07",
+        "L08",
+        "L09",
+        "L11",
+        "L13",
+        "L15",
+        "L16",
+        "E88",
+        "E100",
+        "E108",
+        "L27"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C06",
+      "name": "Hooks/SDK/控制事件",
+      "layer": "M3",
+      "layer_index": 2,
+      "flow": [
+        "发现Hook",
+        "匹配/并发/超时",
+        "回调阻止/放行",
+        "SDK事件/提示回执"
+      ],
+      "source_candidates": [
+        "src/utils/hooks.ts",
+        "src/entrypoints/sdk/controlSchemas.ts",
+        "src/cli/structuredIO.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "24+12并发、onFailure阻断、超时、中断、流事件顺序",
+      "baseline_feature_ids": [
+        "F054",
+        "F055",
+        "F098",
+        "F123",
+        "F124",
+        "F132",
+        "F133"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-aqhsn9c5.js:1941（Hook失败语义）",
+        "chunk-4j0ac1xm.js:382（SDK Hook事件）",
+        "chunk-nj8ddyrh.js:1116（Hook配置）"
+      ],
+      "current_difference": "已有onFailure、部分Hook并发/输出和SDK流式事件修正；所有事件及消费者仍需核对。",
+      "related_chains": [
+        "C03",
+        "C04",
+        "C05",
+        "C11",
+        "C13",
+        "C14"
+      ],
+      "work_packages": [
+        {
+          "id": "C06-T01",
+          "title": "Hook发现与事件契约",
+          "implementation": "对齐全部正式Hook事件、设置/插件来源、matcher、schema和能力限制，沿用已经修复的事件分支",
+          "associated_updates": "配置校验、插件Hook声明、SDK生成类型与事件说明",
+          "acceptance": "不同来源相同事件的发现、匹配及输入字段一致",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C06-T02",
+          "title": "并发、失败及超时调度",
+          "implementation": "逐函数对比并发队列、顺序、命令/提示/代理Hook、onFailure:block、输出限额和取消处理",
+          "associated_updates": "Hook执行器、子进程、PreCompact输出限制及状态回调",
+          "acceptance": "并发压力、输出超限、异常、超时和取消不会漏掉阻断或错误状态",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C06-T03",
+          "title": "控制请求与回执",
+          "implementation": "移植SDK hook_callback、permission、elicitation及其他正式控制事件的路由、request_id和回执处理",
+          "associated_updates": "controlSchemas、structuredIO、错误封装及宿主消费者",
+          "acceptance": "未知、重复、延迟和取消回执得到与原版相同的处理",
+          "status": "IN_PROGRESS_FUNCTION_DIFF",
+          "progress": "进行中：保留已验证的取消pending归属与桥接回调；SDK stop_task复用统一停止解析与运行处理器。完整宿主Hook退役/elicitation及控制协议继续实施。"
+        },
+        {
+          "id": "C06-T04",
+          "title": "流式事件与子代理转发",
+          "implementation": "对齐include-hook-events、forward-subagent-text、partial messages、用户消息回显及事件排序",
+          "associated_updates": "stdout协议、消息UUID、父子会话关系和SDK类型",
+          "acceptance": "控制字符、分片、多个子代理交错输出仍可无歧义解析并保持原版次序",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C06-T05",
+          "title": "协议生成和调用侧同步",
+          "implementation": "同步schema、运行类型、声明生成与UI/IDE/远程消费者，移除已废弃的事件转换",
+          "associated_updates": "C03/C04/C05/C11/C13/C14和SDK声明文件",
+          "acceptance": "生成声明与运行事件一致，完整成功/失败/取消往返通过",
+          "status": "PENDING_FUNCTION_DIFF"
+        }
+      ],
+      "acceptance_scenarios": [
+        "E21",
+        "E22",
+        "E24",
+        "E35",
+        "E66",
+        "L10",
+        "E89",
+        "E90",
+        "E98",
+        "E99",
+        "L25"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C07",
+      "name": "会话存储/恢复/身份隔离",
+      "layer": "M4",
+      "layer_index": 3,
+      "flow": [
+        "会话ID/路径分配",
+        "保存转录/配置/标题",
+        "断点恢复",
+        "隔离输出"
+      ],
+      "source_candidates": [
+        "src/utils/sessionStorage.ts",
+        "src/utils/sessionRestore.ts",
+        "src/cli/print.ts",
+        "src/commands/resume/resume.tsx",
+        "src/utils/remoteSessionIdentity.mjs",
+        "src/utils/purgeProject.mjs"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "嵌套-p、断电/磁盘满、跨进程、恢复不丢轮次",
+      "baseline_feature_ids": [
+        "F004",
+        "F006",
+        "F014",
+        "F026",
+        "F062",
+        "F070",
+        "F108",
+        "F116",
+        "F121",
+        "F131"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-wxyh2ndv.js:15（会话身份）",
+        "chunk-6gzy9446.js:570（项目清理/存储分支）",
+        "chunk-atk8p360.js:513（项目发送）"
+      ],
+      "current_difference": "嵌套ID隔离及purge文件存储分支已有实测；完整存储抽象、跨项目发送、恢复和远端转录仍需核对。",
+      "related_chains": [
+        "C02",
+        "C05",
+        "C11",
+        "C14",
+        "C15"
+      ],
+      "work_packages": [
+        {
+          "id": "C07-T01",
+          "title": "会话身份和路径分配",
+          "implementation": "复核已移植UUIDv5、嵌套会话隔离、SDK/MCP例外；对齐长路径、别名、worktree和会话目录身份",
+          "associated_updates": "bootstrap、Shell子进程、SDK消息ID和项目目录解析",
+          "acceptance": "多进程、嵌套print、符号链接和不同运行时使用正确且独立的身份",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C07-T02",
+          "title": "转录和底层存储接口",
+          "implementation": "逐函数对比新版存储抽象、记录序列、追加/原子替换、索引和旧格式转换；缺失底层接口需连同消费者补齐",
+          "associated_updates": "transcript、项目配置、标题、任务/文件历史和存储schema",
+          "acceptance": "追加、中途失败、半条记录、磁盘满和并发写入能按原版读取或明确报错",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C07-T03",
+          "title": "恢复、分叉及历史定位",
+          "implementation": "对齐resume/continue/fork、from-pr、标题选择、轮次和分支恢复，清理旧恢复捷径",
+          "associated_updates": "CLI/TUI选择器、索引、消息树和恢复提示",
+          "acceptance": "恢复同一会话后的消息、模型、权限、分支及下一轮行为一致",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C07-T04",
+          "title": "跨项目发送和远程同步",
+          "implementation": "移植send-to-project、收发回执、远程转录对齐、去重和断点继续",
+          "associated_updates": "消息ID、项目路由、SDK/Bridge协议及通知界面",
+          "acceptance": "跨项目、断连重发和父子会话消息不串号、不重复提交",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C07-T05",
+          "title": "项目清理与存储回收",
+          "implementation": "复核已实现purge文件分支，继续核对新版存储接口分支、项目键/历史/暂存文件及恢复后引用回收",
+          "associated_updates": "C11命令、tasks/debug/file-history、历史锁、备份提示和配置写入器",
+          "acceptance": "预览、确认、逐项/全部清理、失败重试与原版一致，用户源文件及未选项目保持完整",
+          "status": "PENDING_FUNCTION_DIFF"
+        }
+      ],
+      "acceptance_scenarios": [
+        "E09",
+        "E14",
+        "E15",
+        "E16",
+        "E33",
+        "E34",
+        "E36",
+        "E38",
+        "E48",
+        "E58",
+        "E63",
+        "L03",
+        "L09",
+        "L14",
+        "E74",
+        "E82",
+        "E87",
+        "E97",
+        "E104",
+        "E108",
+        "E110",
+        "L19",
+        "L22"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C08",
+      "name": "技能/资源发现/同步",
+      "layer": "M5",
+      "layer_index": 4,
+      "flow": [
+        "技能目录发现",
+        "路径条件匹配",
+        "缓存/云同步",
+        "原子安装",
+        "调用"
+      ],
+      "source_candidates": [
+        "src/skills/loadSkillsDir.ts",
+        "src/skills/bundledFiles.mjs",
+        "src/skills/bundled/index.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "技能资源官方哈希、失效重试、增删更新多进程测试",
+      "baseline_feature_ids": [
+        "F051",
+        "F091"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-e12bddym.js:65（技能文件解析消费者）",
+        "chunk-qtsc1480.js:303（待下载技能及状态）",
+        "02_解压文本与资源/（技能/资源原文）"
+      ],
+      "current_difference": "官方技能及Claude API资源部分已逐字节核对；发现、同步、调用、插件关联及其余资源仍待核对。",
+      "related_chains": [
+        "C02",
+        "C05",
+        "C09",
+        "C12",
+        "C19"
+      ],
+      "work_packages": [
+        {
+          "id": "C08-T01",
+          "title": "技能发现与优先级",
+          "implementation": "逐函数对比内置、用户、项目、插件、同步和临时目录的发现、去重及覆盖次序",
+          "associated_updates": "skills加载器、命令列表、来源标记和策略来源",
+          "acceptance": "同名、多目录、受管限制和被排除来源显示及调用正确",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C08-T02",
+          "title": "技能语义和参数",
+          "implementation": "对齐frontmatter、触发描述、路径条件、参数替换、模型/effort、allowed-tools和执行上下文",
+          "associated_updates": "SKILL.md解析、提示词注入、代理定义和权限检查",
+          "acceptance": "相同技能内容在发现、选中、展开和执行各阶段保持同一语义",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C08-T03",
+          "title": "官方技能及依赖资源",
+          "implementation": "逐项移植新版技能正文、代码样例、脚本、附件、提示词和内部引用，保留已有字节一致项",
+          "associated_updates": "Claude API完整资源、设计/测试/Artifact技能、素材清单和释放器",
+          "acceptance": "每项引用能实际读取/执行，正文版本和资源字节符合原版",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C08-T04",
+          "title": "下载、同步和缓存更新",
+          "implementation": "对齐云同步、懒下载、原子落地、增删、失效和多进程竞争，移除旧缓存路径",
+          "associated_updates": "同步接口、认证、哈希、临时目录和界面下载状态",
+          "acceptance": "断网、下载取消、部分包、并发更新后技能可用性及错误状态正确",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C08-T05",
+          "title": "技能调用与关联插件",
+          "implementation": "贯通斜杠命令、模型调用、插件技能、CLI及恢复后的资源定位",
+          "associated_updates": "C02上下文、C05代理、C09插件、C12界面和C19发行资源",
+          "acceptance": "从入口到真实工具/模型执行及资源释放完整可达，更新后不继续引用旧资源",
+          "status": "PENDING_FUNCTION_DIFF"
+        }
+      ],
+      "acceptance_scenarios": [
+        "E43",
+        "E56"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C09",
+      "name": "插件/市场/安装升级",
+      "layer": "M5",
+      "layer_index": 4,
+      "flow": [
+        "manifest解析",
+        "插件目录隔离",
+        "安装启停",
+        "加载命令/Hook",
+        "卸载回收"
+      ],
+      "source_candidates": [
+        "src/utils/plugins/pluginLoader.ts",
+        "src/utils/plugins/installedPluginsManager.ts",
+        "src/services/plugins/pluginOperations.ts",
+        "src/cli/handlers/plugins.ts",
+        "src/utils/plugins/schemas.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "多插件、空.mcp.json、损坏目录、启动性能、迁移",
+      "baseline_feature_ids": [
+        "F052",
+        "F084",
+        "F100",
+        "F103",
+        "F104",
+        "F105",
+        "F106",
+        "F107",
+        "F118",
+        "F119",
+        "F128",
+        "F135",
+        "F136"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-8whgsfmt.js:658（插件命令分派）",
+        "chunk-s4eb8wvv.js:154（init）",
+        "chunk-s4eb8wvv.js:683（安装授权）",
+        "chunk-4mdyfn4v.js:265（tag依赖与版本）",
+        "chunk-thp9mgjc.js:71156（prompt.paint）",
+        "chunk-thp9mgjc.js:71482（插件UI）"
+      ],
+      "current_difference": "明确缺少details/eval/init/prune/tag/test等完整命令、命令哈希授权和部分新版函数式插件能力；现有安装/配置代码需沿调用链逐项对照。",
+      "related_chains": [
+        "C04",
+        "C08",
+        "C10",
+        "C11",
+        "C12",
+        "C17",
+        "C18"
+      ],
+      "work_packages": [
+        {
+          "id": "C09-T01",
+          "title": "插件结构、装载和依赖",
+          "implementation": "对比manifest、来源、作用域、依赖解析、技能目录adoption、同步/临时URL和函数式插件运行时；按职责拆分旧loader",
+          "associated_updates": "schemas、installed_plugins、缓存布局、插件SDK及能力注册",
+          "acceptance": "新版各类插件实际加载，依赖/命名冲突与受管限制按原版处理",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C09-T02",
+          "title": "安装更新及命令授权",
+          "implementation": "移植命令源下载/构建、命令哈希、--accept-command/--yes、已接受授权存储、变更失效及安装事务",
+          "associated_updates": "CLI、市场元数据、执行环境、敏感配置、安全存储和失败回滚",
+          "acceptance": "首次安装、哈希改变、非TTY、错误授权及更新失败均符合原版且无越权执行",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C09-T03",
+          "title": "新版管理命令及迁移",
+          "implementation": "接通details/eval/init/prune/tag/test与既有validate/install/configure/update/uninstall完整处理器，并对齐导入配置和迁移",
+          "associated_updates": "脚手架原版资源、依赖图、Git版本标签、评测运行器、HTML报告及命令说明",
+          "acceptance": "每项命令能完成真实功能，安装/启停/更新/移除后的磁盘和设置状态正确",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C09-T04",
+          "title": "函数式UI和多媒体能力",
+          "implementation": "移植ui.place、ui.backdrop、Pane.backgroundColor、prompt.paint、prompt.media及其权限、状态和生命周期",
+          "associated_updates": "插件运行时、TUI绘制/输入、媒体队列、取消回调和宿主协议",
+          "acceptance": "真实插件可绘制/更新/撤销，非法调用、权限拒绝和重载不会残留组件或媒体",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C09-T05",
+          "title": "MCPB配置及全链回归",
+          "implementation": "对齐.mcpb服务级userConfig、敏感字段、headersHelper/Hook/技能注入、损坏包处理及数据保留",
+          "associated_updates": "C08技能、C10连接器、C12组件、包资源与安全存储接口",
+          "acceptance": "多插件冲突、空配置、损坏目录、迁移、卸载保留数据及重启均有正确结果",
+          "status": "PENDING_FUNCTION_DIFF"
+        }
+      ],
+      "acceptance_scenarios": [
+        "E22",
+        "E49",
+        "E56",
+        "E62",
+        "E68",
+        "L12",
+        "E69",
+        "E70",
+        "E71",
+        "E72",
+        "E73",
+        "E84",
+        "E85",
+        "E94",
+        "E101",
+        "E102",
+        "E104",
+        "E105",
+        "E106",
+        "E110",
+        "L17",
+        "L18",
+        "L24"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C10",
+      "name": "MCP/连接器/认证",
+      "layer": "M5",
+      "layer_index": 4,
+      "flow": [
+        "配置和组织策略",
+        "MCP连接与OAuth",
+        "工具发现",
+        "重连",
+        "会话执行"
+      ],
+      "source_candidates": [
+        "src/services/mcp/client.ts",
+        "src/services/mcp/MCPConnectionManager.tsx",
+        "src/services/mcp/config.ts",
+        "src/commands/mcp/mcp.tsx",
+        "src/cli/handlers/mcpAuth.ts",
+        "src/services/mcp/claudeai.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "延迟连接、禁用与凭证撤销、headersHelper、复连",
+      "baseline_feature_ids": [
+        "F053",
+        "F092",
+        "F109"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-zchq3qdt.js:458（登录退出）",
+        "chunk-z3skx0pz.js:24（认证类型边界）",
+        "chunk-a33c5f4b.js:84（组织连接器加载）",
+        "chunk-fsyfgpr7.js:9（MCP任务开关）"
+      ],
+      "current_difference": "已有login/logout、回调、安全存储和默认stdio修正；组织连接器多账号/资格、会话级身份、design-login及云转接仍有差异。",
+      "related_chains": [
+        "C03",
+        "C04",
+        "C09",
+        "C11",
+        "C13",
+        "C14",
+        "C16"
+      ],
+      "work_packages": [
+        {
+          "id": "C10-T01",
+          "title": "配置、审批和组织连接器",
+          "implementation": "对比所有配置来源、项目审批、组织策略、claude.ai连接器列表、多账号安装、去重和eligibility",
+          "associated_updates": "MCP schema、设置来源、连接器展示、工具权限和配置错误反馈",
+          "acceptance": "禁用/拒绝/未审批服务不误连接，多账号和同名服务能正确识别",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C10-T02",
+          "title": "认证、撤销及云端转接",
+          "implementation": "复核login/logout、无浏览器回调、凭据写入结果，补齐会话级服务身份、design-login和OAuth失败转接",
+          "associated_updates": "安全存储、负缓存、浏览器链接、头部认证与CLI/TUI认证入口",
+          "acceptance": "首次/再次登录、过期、写入失败、取消、云端托管及头部认证行为一致",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C10-T03",
+          "title": "连接、发现及协议能力",
+          "implementation": "移植stdio/HTTP/SSE/SDK等适用传输、初始化、能力发现、缓存响应和连接生命周期",
+          "associated_updates": "MCP SDK、工具/resource/prompt schema、headersHelper和代理TLS",
+          "acceptance": "真实服务初始化、工具发现与调用的请求/响应及错误映射一致",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C10-T04",
+          "title": "后台任务与重连",
+          "implementation": "对齐MCP任务开关、任务状态/取消、掉线重连、auth cache失效和工具列表变更",
+          "associated_updates": "任务系统、连接管理器、事件订阅、权限及UI通知",
+          "acceptance": "服务重启、凭据撤销、任务禁用和重复通知后状态可恢复且不重复执行",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C10-T05",
+          "title": "MCP全消费者同步",
+          "implementation": "更新模型工具映射、插件MCPB、IDE MCP、SDK及远程服务调用，移除各自的旧配置解释",
+          "associated_updates": "C03工具、C04审批、C09插件、C13IDE、C14桥接和C16网络",
+          "acceptance": "同一服务在各入口具有一致权限、身份、参数、结果及清理行为",
+          "status": "PENDING_FUNCTION_DIFF"
+        }
+      ],
+      "acceptance_scenarios": [
+        "E07",
+        "E21",
+        "E57",
+        "E75"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C11",
+      "name": "CLI/非交互/输出协议",
+      "layer": "M3",
+      "layer_index": 2,
+      "flow": [
+        "参数和环境解析",
+        "CLI初始化",
+        "工具/消息循环",
+        "JSON或text输出",
+        "退出码"
+      ],
+      "source_candidates": [
+        "src/entrypoints/cli.tsx",
+        "src/main.tsx",
+        "src/cli/print.ts",
+        "src/commands.ts",
+        "src/cli/handlers/purge.tsx",
+        "src/cli/jsonWireEscaping.mjs"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "官方x64十场景、--print/stream-json、退出码与stderr",
+      "baseline_feature_ids": [
+        "F002",
+        "F003",
+        "F071",
+        "F127"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-gsvwtjad.js:736（purge注册与handler）",
+        "chunk-gsvwtjad.js:911（gateway入口）",
+        "chunk-gsvwtjad.js:931（ultrareview入口）",
+        "chunk-7bjr5mdw.js（print参数消费者）"
+      ],
+      "current_difference": "purge及MCP登录退出已接通；gateway、ultrareview及插件新命令仍有明确缺口；完整CLI协议仍需逐项核对。",
+      "related_chains": [
+        "C05",
+        "C06",
+        "C07",
+        "C09",
+        "C10",
+        "C15",
+        "C20"
+      ],
+      "work_packages": [
+        {
+          "id": "C11-T01",
+          "title": "完整CLI入口及参数",
+          "implementation": "对照原版全部命令、别名、隐藏入口、参数语法、默认值、冲突和环境开关；展开命令到真实handler",
+          "associated_updates": "main、entrypoint、命令说明、SDK CLI配置与退出帮助",
+          "acceptance": "帮助差分和实际参数调用同时通过，命令可到达真实执行器",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C11-T02",
+          "title": "初始化与运行模式",
+          "implementation": "对齐交互、print、SDK、bare、brief、cloud及组合模式的初始化、能力装载和模式互斥",
+          "associated_updates": "setup、提示词加载、插件/技能开关和权限模式",
+          "acceptance": "模式变化产生正确资源装载、请求内容、工具集合和错误行为",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C11-T03",
+          "title": "文本、JSON及流协议",
+          "implementation": "对齐stdout/stderr分工、JSON转义、stream-json帧、UUID、回显与退出状态，清除旧协议转换差异",
+          "associated_updates": "print、structuredIO、消息schema、进度输出和CLI错误处理",
+          "acceptance": "真实进程输出可解析，控制字符、空结果、中断及错误码与原版一致",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C11-T04",
+          "title": "管理命令的完整消费者",
+          "implementation": "复核已接通purge及MCP登录退出；为gateway、ultrareview及新版plugin子命令接入所属链路真实处理器",
+          "associated_updates": "C07清理、C09插件、C10认证、C15网关、C20云审查",
+          "acceptance": "每个命令都完成成功/错误/取消路径；只注册名称不计完成",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C11-T05",
+          "title": "跨模式回归与旧入口处置",
+          "implementation": "核对已移除或变更的旧命令；按原版决定保留别名、迁移或删除，并同步所有调用方",
+          "associated_updates": "脚本启动器、文档示例、IDE/远程启动参数和发行入口",
+          "acceptance": "原版同参数组合的输出、状态和副作用一致，旧入口不形成第二套逻辑",
+          "status": "PENDING_FUNCTION_DIFF"
+        }
+      ],
+      "acceptance_scenarios": [
+        "E01",
+        "E23",
+        "E24",
+        "E27",
+        "E66",
+        "E88",
+        "E93",
+        "E99",
+        "E110",
+        "L27"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C12",
+      "name": "TUI/无障碍/动画交互",
+      "layer": "M6",
+      "layer_index": 5,
+      "flow": [
+        "键鼠/输入焦点",
+        "终端组件渲染",
+        "审批/任务/动画",
+        "TTY与读屏反馈"
+      ],
+      "source_candidates": [
+        "src/components/PromptInput/PromptInput.tsx",
+        "src/components/AgentProgressLine.tsx",
+        "src/components/MessageModel.tsx"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "终端PTY帧与快捷键、屏幕阅读器、宽窄布局",
+      "baseline_feature_ids": [
+        "F001",
+        "F008",
+        "F009",
+        "F011",
+        "F012",
+        "F013",
+        "F072",
+        "F078",
+        "F088",
+        "F137"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-aw52zsa8.js:40（选择焦点）",
+        "chunk-7bjr5mdw.js:15（suggestions输出）",
+        "chunk-savnjncy.js:566（界面状态消费者）"
+      ],
+      "current_difference": "已有中文界面、动画与部分终端能力适配；新版组件、插件绘制及所有交互状态尚需整链核对。",
+      "related_chains": [
+        "C03",
+        "C05",
+        "C06",
+        "C09",
+        "C13",
+        "C14",
+        "C18",
+        "C19"
+      ],
+      "work_packages": [
+        {
+          "id": "C12-T01",
+          "title": "终端交互与状态容器",
+          "implementation": "对比输入、焦点、快捷键、选择/审批弹窗、粘贴、鼠标和快速连续事件的状态更新",
+          "associated_updates": "Ink、AppState、KeybindingProvider、Select和PromptInput",
+          "acceptance": "真实终端中焦点、默认选项、取消及连续按键与实际执行一致",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C12-T02",
+          "title": "消息、任务与组件更新",
+          "implementation": "移植新版消息/工具结果、代理进度、状态栏、通知及不同运行模式的渲染",
+          "associated_updates": "文本/图像/附件组件、任务组件、布局、主题和加载状态",
+          "acceptance": "成功、等待、失败、取消、重连和恢复时每个入口/组件状态正确",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C12-T03",
+          "title": "图形素材、动画及终端能力",
+          "implementation": "同步新版图标、角色/动画帧、颜色、背景层和终端能力探测，保留所需的中文界面适配",
+          "associated_updates": "动画素材、Clawd、主题令牌、超链接及平台终端探测",
+          "acceptance": "宽窄终端、无色/低能力终端和动画状态切换真实可用",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C12-T04",
+          "title": "读屏与输入建议",
+          "implementation": "对齐读屏、无障碍、suggestions生成/输出、提示可见性和减弱动效条件",
+          "associated_updates": "语义文本、键盘导航、prompt-suggestions、SDK输出和建议组件",
+          "acceptance": "读屏内容、焦点顺序及建议生成/接受/取消行为一致",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C12-T05",
+          "title": "插件及宿主UI联调",
+          "implementation": "贯通插件place/backdrop/paint/media与IDE/远程会话状态，处置旧组件和旧素材引用",
+          "associated_updates": "C09插件API、C13IDE、C14远程、C18附件和C19资源",
+          "acceptance": "截图/终端帧与交互结果核对通过，组件更新和卸载不留下旧状态",
+          "status": "PENDING_FUNCTION_DIFF"
+        }
+      ],
+      "acceptance_scenarios": [
+        "E01",
+        "E24",
+        "E26",
+        "E28",
+        "E33",
+        "E35",
+        "E37",
+        "E45",
+        "E53",
+        "E59",
+        "E66",
+        "E103"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C13",
+      "name": "IDE/编辑器扩展",
+      "layer": "M6",
+      "layer_index": 5,
+      "flow": [
+        "VSCode/JetBrains事件",
+        "选区/当前文件",
+        "IDE面板和命令",
+        "回传"
+      ],
+      "source_candidates": [
+        "src/bridge/bridgeUI.ts",
+        "src/bridge/bridgePermissionCallbacks.ts",
+        "src/cli/remoteIO.ts",
+        "src/utils/ide.ts",
+        "src/utils/jetbrains.ts",
+        "src/services/mcp/vscodeSdkMcp.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "真实IDE扩展与外部发行物双侧差分",
+      "baseline_feature_ids": [
+        "F065"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-kt281mwf.js:430（openDiff）",
+        "chunk-ddy1vja2.js:3543（selection_changed协议）",
+        "chunk-m1dw0p0f.js:1636（IDE连接通知）"
+      ],
+      "current_difference": "有CLI侧IDE/Bridge实现；匹配版本的扩展端代码、资源和真实宿主协议需要同步核对。",
+      "related_chains": [
+        "C04",
+        "C06",
+        "C07",
+        "C10",
+        "C12",
+        "C14",
+        "C19"
+      ],
+      "work_packages": [
+        {
+          "id": "C13-T01",
+          "title": "IDE发现、连接和版本",
+          "implementation": "对比VSCode/JetBrains发现、握手、扩展版本、会话关联和本地连接权限",
+          "associated_updates": "IDE工具、安装信息、启动参数、端口和IPC/传输协议",
+          "acceptance": "真实IDE中能发现并连接正确会话，版本不符及断连行为正确",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C13-T02",
+          "title": "选区、文件与差异交互",
+          "implementation": "移植当前文件、selection_changed、openDiff、编辑确认与路径/行列转换",
+          "associated_updates": "CLI端工具、扩展侧消息schema、编辑器面板和权限组件",
+          "acceptance": "跨平台路径、Unicode位置、编辑接受/拒绝和文件变更往返一致",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C13-T03",
+          "title": "协议与控制事件双侧更新",
+          "implementation": "对齐工具调用、审批、通知、取消和错误封装，更新SDK/CLI到扩展的所有字段",
+          "associated_updates": "IDE MCP、Bridge、扩展命令和事件订阅",
+          "acceptance": "请求ID、参数、返回值及取消回执在两侧完整对应",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C13-T04",
+          "title": "扩展组件和发行依赖",
+          "implementation": "获取匹配目标版本的扩展/宿主接口，核对界面组件、素材和安装资源，补仓库当前缺少的对应部分",
+          "associated_updates": "VSCode/JetBrains对应发行物、依赖清单和安装入口",
+          "acceptance": "使用匹配版本的真实宿主加载更新后的双方组件，安装后入口可达",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C13-T05",
+          "title": "重连、多会话和恢复",
+          "implementation": "对齐重启、重载扩展、多工作区、切换会话及远程环境的恢复",
+          "associated_updates": "C07身份、C12UI、C14桥接和C16网络",
+          "acceptance": "跨窗口及重连后选区、审批和工具结果均归属正确会话",
+          "status": "PENDING_FUNCTION_DIFF"
+        }
+      ],
+      "acceptance_scenarios": [
+        "E25",
+        "L18"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C14",
+      "name": "远程控制/桌面/移动桥接",
+      "layer": "M6",
+      "layer_index": 5,
+      "flow": [
+        "Remote Control握手",
+        "桥接权限/消息",
+        "sessionRunner",
+        "重连/状态同步"
+      ],
+      "source_candidates": [
+        "src/bridge/remoteBridgeCore.ts",
+        "src/bridge/sessionRunner.ts",
+        "src/bridge/bridgePermissionCallbacks.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "双设备、并发批准、断连重连与重启后消息",
+      "baseline_feature_ids": [
+        "F066",
+        "F068",
+        "F099"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-wdx9vt3f.js:93（控制回执/取消）",
+        "chunk-wdx9vt3f.js:119（重放及父子帧过滤）"
+      ],
+      "current_difference": "已有Remote Control及消息桥接；完整双端审批、重连、消息生命周期和真实外部宿主尚需核对。",
+      "related_chains": [
+        "C04",
+        "C05",
+        "C06",
+        "C07",
+        "C12",
+        "C15",
+        "C18"
+      ],
+      "work_packages": [
+        {
+          "id": "C14-T01",
+          "title": "远程握手与身份",
+          "implementation": "对比Remote Control、桌面/移动桥接的启动、注册、认证、会话映射和能力协商",
+          "associated_updates": "Bridge配置、令牌/链接、SDK控制schema与宿主入口",
+          "acceptance": "两端连接相同会话，过期身份、错误会话和不可用能力处理一致",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C14-T02",
+          "title": "消息投递与去重",
+          "implementation": "移植入站/出站消息、队列、UUID、父子帧、回显过滤和交付确认",
+          "associated_updates": "remoteIO、REPL桥接、消息持久化和stream-json",
+          "acceptance": "乱序、重放、重复投递、fork及subagent帧不会串号或重复执行",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C14-T03",
+          "title": "权限和控制同步",
+          "implementation": "对齐双端审批、控制取消、工具回执、远程输入及并发决定的仲裁",
+          "associated_updates": "C04权限、C06协议、移动/桌面审批组件和通知",
+          "acceptance": "两端同时批准、拒绝或取消时只落实正确的一次决定",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C14-T04",
+          "title": "重连、Runner与生命周期",
+          "implementation": "核对心跳、超时、sessionRunner启动、连接迁移、进程退出和后台唤醒",
+          "associated_updates": "C05后台任务、C07恢复、C15Runner以及网络重试",
+          "acceptance": "断网、服务器重启和本地重启后会话及未完成操作按原版恢复",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C14-T05",
+          "title": "外部宿主与资源同步",
+          "implementation": "同步桌面/移动宿主协议、附件、状态面板和能力资源；本地模拟与实际双端验证分别记录",
+          "associated_updates": "客户端宿主组件、C12UI、C18附件及对应版本接口",
+          "acceptance": "在真实两端完成消息、工具、审批、附件及恢复闭环，剩余远端差异明确保留",
+          "status": "PENDING_FUNCTION_DIFF"
+        }
+      ],
+      "acceptance_scenarios": [
+        "E24",
+        "E25",
+        "E33",
+        "E67",
+        "E81",
+        "E82",
+        "E86",
+        "E96",
+        "L19",
+        "L22"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C15",
+      "name": "企业网关/云会话/自建Runner",
+      "layer": "M6",
+      "layer_index": 5,
+      "flow": [
+        "组织策略身份",
+        "云runner调度",
+        "RPC/心跳/重试",
+        "环境/合规反馈"
+      ],
+      "source_candidates": [
+        "src/cli/background/sessionStore.mjs",
+        "src/bridge/sessionRunner.ts",
+        "src/cli/remoteIO.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "企业Gateway/Runner实际服务端故障注入及外部组件",
+      "baseline_feature_ids": [
+        "F111",
+        "F112",
+        "F113",
+        "F114",
+        "F115",
+        "F120",
+        "F130"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-dexp3670.js:13010（OIDC身份）",
+        "chunk-dexp3670.js:13055（layered策略）",
+        "chunk-dexp3670.js:13973（pooled_budget）",
+        "chunk-j5svdpw5.js:3729（Runner）",
+        "chunk-gsvwtjad.js:911（gateway）"
+      ],
+      "current_difference": "gateway完整服务、layered/OIDC/共享预算及Runner新版能力仍有明确差异，需从原版核心实现展开移植。",
+      "related_chains": [
+        "C01",
+        "C04",
+        "C07",
+        "C11",
+        "C14",
+        "C16",
+        "C20"
+      ],
+      "work_packages": [
+        {
+          "id": "C15-T01",
+          "title": "企业策略与身份基础",
+          "implementation": "移植layered策略、来源归并、OIDC及user_id_claim、服务账号/令牌的真实判定",
+          "associated_updates": "设置schema、身份映射、秘密存储、管理界面与请求头",
+          "acceptance": "组织策略和身份字段对请求、权限及隔离产生与原版一致的效果",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C15-T02",
+          "title": "Gateway完整服务",
+          "implementation": "移植gateway命令到配置、启动监听、路由、认证、模型映射、请求转发和停止的全部实现",
+          "associated_updates": "M3命令壳、网关配置schema、API/流式适配及服务资源",
+          "acceptance": "真实客户端经网关完成请求；非法身份、路由错误、取消和关闭路径正确",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C15-T03",
+          "title": "预算、供应商和企业参数",
+          "implementation": "对齐pooled_budget、限额、Bedrock输入标签/防护追踪、供应商身份和成本归属",
+          "associated_updates": "C01模型请求、C04策略、C16认证网络及预算界面",
+          "acceptance": "共享预算、额度拒绝和供应商参数在真实请求中正确传递并生效",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C15-T04",
+          "title": "云环境和自建Runner",
+          "implementation": "对齐environment选择、Runner注册/调度、RPC、空闲保活、上限、会话启动与回收",
+          "associated_updates": "sessionRunner、云API、任务存储、环境素材和CLI/宿主选择器",
+          "acceptance": "真实Runner能接单、执行、保活、超限拒绝、取消和释放资源",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C15-T05",
+          "title": "故障恢复与外部接口",
+          "implementation": "同步策略刷新、失联处理、重试、凭据轮换、合规反馈及服务端协议版本",
+          "associated_updates": "C07状态、C14桥接、C20外部任务、部署配置和接口schema",
+          "acceptance": "对应真实服务端故障注入和恢复通过，模拟通过不替代缺少的外部验证",
+          "status": "PENDING_FUNCTION_DIFF"
+        }
+      ],
+      "acceptance_scenarios": [
+        "E77",
+        "E78",
+        "E79",
+        "E80",
+        "E81",
+        "E86",
+        "E96",
+        "E104",
+        "E109",
+        "E110",
+        "L20",
+        "L21"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C16",
+      "name": "认证/网络/TLS/遥测",
+      "layer": "M3",
+      "layer_index": 2,
+      "flow": [
+        "令牌/证书/代理加载",
+        "联网/重试/超时",
+        "遥测输出",
+        "错误映射"
+      ],
+      "source_candidates": [
+        "src/utils/auth.ts",
+        "src/services/api/withRetry.ts",
+        "src/utils/telemetry/instrumentation.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "403/429/529/TLS/OTLP断流代理/超时",
+      "baseline_feature_ids": [
+        "F019",
+        "F020",
+        "F067",
+        "F080"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-p0hdjemv.js:285（令牌撤销与错误）",
+        "chunk-4s95zenc.js:26（网关认证元数据）"
+      ],
+      "current_difference": "已修复HTTP代理绕过错误连接器并有上传回归；所有认证来源、TLS、退避与关闭消费者仍待核对。",
+      "related_chains": [
+        "C01",
+        "C09",
+        "C10",
+        "C14",
+        "C15",
+        "C18",
+        "C20"
+      ],
+      "work_packages": [
+        {
+          "id": "C16-T01",
+          "title": "认证来源与凭据生命周期",
+          "implementation": "对比OAuth、API key、helper、fd、网关/企业身份的来源优先级、刷新、撤销和持久化结果",
+          "associated_updates": "安全存储、登录退出、模型provider和远程凭据转交",
+          "acceptance": "过期、撤销、写入失败及来源冲突均有正确状态和错误信息",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C16-T02",
+          "title": "代理、TLS及连接器",
+          "implementation": "移植HTTP/HTTPS/SOCKS、no_proxy、自定义CA、mTLS和连接池的新版选择逻辑",
+          "associated_updates": "实例和全局代理、API/MCP/上传/遥测连接及证书资源",
+          "acceptance": "HTTP不误用HTTPS连接器，证书错误、直连/代理和上传连接符合原版",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C16-T03",
+          "title": "错误分类、重试及限流",
+          "implementation": "对齐403/429/529、断流、超时、退避、Retry-After、重试预算及已产生副作用后的恢复",
+          "associated_updates": "请求状态、模型回退、上传幂等、用户错误与取消信号",
+          "acceptance": "失败注入得到一致请求次数和间隔，不重复已成功的副作用",
+          "status": "IN_PROGRESS_FUNCTION_DIFF",
+          "progress": "已对齐退避/Retry-After下限、等待门槛、重试预算、额度严格递减；原函数1440组合、6类原版请求对照及生产循环5例通过。400/422字段探测、持久watchdog和断流恢复继续推进。"
+        },
+        {
+          "id": "C16-T04",
+          "title": "遥测、隐私与关闭",
+          "implementation": "核对OTLP/事件导出、脱敏、关闭开关、队列重试、flush及进程退出等待",
+          "associated_updates": "日志、诊断信息、用户设置和企业策略",
+          "acceptance": "禁用条件下不发送相关数据，断网与退出不导致无限等待或敏感信息泄露",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C16-T05",
+          "title": "网络消费者统一接入",
+          "implementation": "追踪API、MCP、插件市场、附件、Runner和远程消息的连接/认证路径，替换各自旧分支",
+          "associated_updates": "C01/C09/C10/C14/C15/C18/C20网络调用方",
+          "acceptance": "同一代理/身份/取消设置跨服务一致生效，并正确清理连接和错误状态",
+          "status": "IN_PROGRESS_FUNCTION_DIFF",
+          "progress": "生产withRetry接入TS统一重试算术；保留远端设置、策略限制、团队记忆、设置同步与压缩消费者。其他网络路径继续核对。"
+        }
+      ],
+      "acceptance_scenarios": [
+        "E01",
+        "E15",
+        "E25",
+        "E34",
+        "E35",
+        "E52",
+        "E80"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C17",
+      "name": "Monitor/loop/调度",
+      "layer": "M5",
+      "layer_index": 4,
+      "flow": [
+        "监测/周期请求",
+        "权限与调度",
+        "后台状态",
+        "唤醒/停止和结果"
+      ],
+      "source_candidates": [
+        "src/tools/MonitorTool/MonitorTool.ts",
+        "src/skills/bundled/loop.ts",
+        "src/tasks/MonitorWsTask/MonitorWsTask.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "同条件云schedule/本地loop/monitor失败注入",
+      "baseline_feature_ids": [
+        "F061",
+        "F081",
+        "F082",
+        "F083"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-vfm8bhss.js:4（Monitor身份）",
+        "chunk-z1t9ay6t.js:8（Cron工具及时间字段）",
+        "chunk-bfpxs5v9.js:158（调度删除执行器）"
+      ],
+      "current_difference": "已有Monitor/loop/Workflow模块；新版调度参数、持久化、唤醒和云端条件需要逐函数核对。",
+      "related_chains": [
+        "C04",
+        "C05",
+        "C07",
+        "C08",
+        "C12",
+        "C14",
+        "C15"
+      ],
+      "work_packages": [
+        {
+          "id": "C17-T01",
+          "title": "能力识别和调度入口",
+          "implementation": "对比Monitor、loop、Cron及Workflow的正式能力、开关、入口和宿主条件，区分本地任务与云调度",
+          "associated_updates": "工具注册、内置技能、斜杠命令、配置schema及任务菜单",
+          "acceptance": "只暴露原版在该宿主可用的能力，参数校验及不可用原因一致",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C17-T02",
+          "title": "参数与时间语义",
+          "implementation": "移植cron表达式、时区、一次/周期、存活期限、最大任务数和调度计算",
+          "associated_updates": "工具schema、调度存储、时间计算和提示文本",
+          "acceptance": "边界时间、时区变化、重复创建和过期任务得到正确下一次运行时间",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C17-T03",
+          "title": "监测与执行生命周期",
+          "implementation": "对齐监测连接、事件过滤、权限、任务启动、停止和结果提交",
+          "associated_updates": "MonitorWsTask、WebSocket、Workflow运行器和工具输出",
+          "acceptance": "事件到执行完整可达，失败/取消不继续触发任务或丢失最终状态",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C17-T04",
+          "title": "持久化、重启和去重",
+          "implementation": "对比调度记录、工作流历史、唤醒、重连、退避及重启后的补偿处理",
+          "associated_updates": "C05后台任务、C07存储、运行缓存和历史视图",
+          "acceptance": "断网、崩溃、重复事件、过期和重启后既不重复执行也不错误补跑",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C17-T05",
+          "title": "关联技能和用户反馈",
+          "implementation": "同步loop/Workflow说明、任务状态、通知、历史及云调度接口",
+          "associated_updates": "C08技能、C12终端界面、C14远程唤醒及C15Runner",
+          "acceptance": "用户能创建、查看、停止和恢复任务，界面状态与真实运行一致",
+          "status": "PENDING_FUNCTION_DIFF"
+        }
+      ],
+      "acceptance_scenarios": [
+        "E10",
+        "E11",
+        "E46",
+        "E47",
+        "E48",
+        "L01",
+        "L02",
+        "L03",
+        "L05",
+        "L13",
+        "L14",
+        "L15"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C18",
+      "name": "附件/PDF/Artifact",
+      "layer": "M5",
+      "layer_index": 4,
+      "flow": [
+        "附件载入",
+        "PDF/文档页数或文本解析",
+        "工具上传/共享",
+        "列表和授权结果"
+      ],
+      "source_candidates": [
+        "src/tools/FileReadTool/FileReadTool.ts",
+        "src/utils/pdf.ts",
+        "src/components/PromptInput/PromptInput.tsx"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "PDF Read与@双入口、Artifact跨账号权限",
+      "baseline_feature_ids": [
+        "F073",
+        "F074",
+        "F075",
+        "F076",
+        "F077",
+        "F117",
+        "F129"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-h404ga6t.js:1070（附件/任务文件执行分派）",
+        "chunk-hy0q7sz1.js（FetchAttachment实际执行器）"
+      ],
+      "current_difference": "已有Read/PDF和输入入口；FetchAttachment及新版文件服务、Artifact身份/资源能力仍需补齐和联调。",
+      "related_chains": [
+        "C03",
+        "C04",
+        "C07",
+        "C09",
+        "C12",
+        "C14",
+        "C16"
+      ],
+      "work_packages": [
+        {
+          "id": "C18-T01",
+          "title": "附件入口和类型识别",
+          "implementation": "对比--file、@引用、拖放、Read、图片/粘贴、远程引用与FetchAttachment的输入格式和限额",
+          "associated_updates": "输入组件、SDK附件schema、文件识别和权限提示",
+          "acceptance": "同一文件从各入口进入后被一致识别，非法路径、格式和大小明确报错",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C18-T02",
+          "title": "解析、分页和模型内容",
+          "implementation": "移植PDF页数/页范围、文本提取、图像转换、文档页渲染和截断策略",
+          "associated_updates": "PDF/图像依赖、平台原生资源、Read返回类型和预览组件",
+          "acceptance": "多页、加密、损坏、超大及混合内容产生与原版一致的模型输入",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C18-T03",
+          "title": "获取、下载及安全落地",
+          "implementation": "接通FetchAttachment、文件引用、上传/下载及归档落地的真实执行器；对齐hash/size/offset和文件名规则",
+          "associated_updates": "文件服务接口、暂存文件、原子安装、取消信号与目录持有策略",
+          "acceptance": "超限、哈希不符、路径穿越、软链和取消时不留下错误文件或扩大访问范围",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C18-T04",
+          "title": "Artifact和共享授权",
+          "implementation": "对齐Artifact创建、读取、版本、资源访问、共享及跨账号授权",
+          "associated_updates": "artifact-design技能、素材、服务接口、授权UI和身份传递",
+          "acceptance": "有权/无权、跨账号、旧版本和链接资源场景均得到正确结果",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C18-T05",
+          "title": "附件生命周期全链同步",
+          "implementation": "对齐缓存、重试、会话恢复、插件媒体、远程任务附件及删除回收",
+          "associated_updates": "C07存储、C09插件媒体、C12输入、C14远程及C16网络",
+          "acceptance": "附件从选取到模型/工具消费再到恢复或清理无断链，状态和副作用可核对",
+          "status": "PENDING_FUNCTION_DIFF"
+        }
+      ],
+      "acceptance_scenarios": [
+        "E29",
+        "E30",
+        "E83",
+        "E95",
+        "L23"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C19",
+      "name": "构建/资源/启动性能",
+      "layer": "M1",
+      "layer_index": 0,
+      "flow": [
+        "官方来源哈希",
+        "冻结依赖与技能恢复",
+        "独立构建",
+        "三平台/CI运行"
+      ],
+      "source_candidates": [
+        "build/rebuild.mjs",
+        "build/restore-claude-api.mjs",
+        "build/verify-bundled-assets.mjs",
+        "src/main.tsx"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "317资料SHA/技能清单/真实构建与资源字节差分",
+      "baseline_feature_ids": [
+        "F079"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "cli.js（新版主入口）",
+        "00_说明和核验/模块总清单.json",
+        "01_完整嵌入文件_原样/",
+        "02_解压文本与资源/"
+      ],
+      "current_difference": "资源与Linux独立构建已有专项通过；三平台全部底层能力和正式发行链仍需逐项核对。",
+      "related_chains": [
+        "C01",
+        "C03",
+        "C08",
+        "C09",
+        "C12",
+        "C13",
+        "C15"
+      ],
+      "work_packages": [
+        {
+          "id": "C19-T01",
+          "title": "原版模块、资源和发行依赖盘点",
+          "implementation": "沿cli启动入口、模块导入和原生装载展开新版依赖，核对旧仓库缺失、版本不同和旧包遗留项；补齐依赖并清理已被替换的装载路径",
+          "associated_updates": "内嵌文件、解压资源、第三方依赖、原生扩展、平台vendor与许可证",
+          "acceptance": "目标版本、资源哈希、依赖锁和平台清单一致，缺失依赖能定位到实际消费者",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C19-T02",
+          "title": "启动与能力装载顺序",
+          "implementation": "移植配置初始化、功能开关、懒加载、收信服务和退出清理的新版顺序，拆开导入副作用，解决初始化循环",
+          "associated_updates": "entrypoint、setup、环境读取、错误展示及后台服务入口",
+          "acceptance": "正常启动、帮助、非交互、显式服务失败和退出均有正确输出及退出码",
+          "status": "IN_PROGRESS",
+          "implemented_scope": [
+            "移植317早期argv扫描规则并接通eagerParseCliFlag、启动模式和SIGINT判定",
+            "移植URI追加参数保护及Windows搜索路径保护的提前设置",
+            "移植cwd失效检测、可选stream-json启动失败结果、会话ID选择及SDK字段",
+            "修正--后desktop/bare文本被当成启动开关"
+          ],
+          "remaining_scope": [
+            "全部能力开关、Runner/存储引导和剩余专用启动快路径的逐函数对齐",
+            "完整启动到退出生命周期及适用宿主联调"
+          ],
+          "verification": [
+            "15000组原版/移植参数函数直接差分通过",
+            "5项参数/启动结果测试、3项CLI进程测试与3项既有启动错误测试通过",
+            "真实模型请求验证--desktop提示文本及重复settings最后值生效",
+            "原版与重建版cwd失效的退出码、stderr和结构化字段一致（随机uuid各自生成）",
+            "SDK运行时解析保留启动失败字段测试通过；整套回归163项，160通过，3项既有CLI能力缺口失败"
+          ]
+        },
+        {
+          "id": "C19-T03",
+          "title": "独立构建及资源解析",
+          "implementation": "调整源码打包、文本资源导入、SDK声明生成和相对路径解析，保证每个被启用能力进入发行物",
+          "associated_updates": "build脚本、资源恢复器、声明文件、启动器及完整性清单",
+          "acceptance": "在仓库外运行发行包，实际调用技能、文件工具与平台资源",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C19-T04",
+          "title": "三平台底层能力装载",
+          "implementation": "逐项对齐Linux/macOS/Windows的进程、终端、文件系统、原生扩展与权限接口；不能仅检查JS可编译",
+          "associated_updates": "平台vendor、Shell实现、原生模块入口、安装和升级路径",
+          "acceptance": "三平台各自构建并运行适用能力；平台专有分支按原版可用条件验证",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C19-T05",
+          "title": "构建回归与旧产物清理",
+          "implementation": "统一源码到发行物的执行路径，移除不再参与运行的旧引用，检查冷启动与错误恢复成本",
+          "associated_updates": "CI触发、缓存键、发布清单、干净安装和版本显示",
+          "acceptance": "同一提交的资源、构建、独立启动和异常测试通过，旧依赖不再被误加载",
+          "status": "PENDING_FUNCTION_DIFF"
+        }
+      ],
+      "acceptance_scenarios": [
+        "E01",
+        "E26",
+        "E35",
+        "L27"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    },
+    {
+      "id": "C20",
+      "name": "Slack Claude Tag/Code Review外部服务",
+      "layer": "M6",
+      "layer_index": 5,
+      "flow": [
+        "外部事件/身份",
+        "Slack/PR消息处理",
+        "异步执行",
+        "结果/去重/权限"
+      ],
+      "source_candidates": [
+        "src/commands/review/reviewRemote.ts",
+        "src/bridge/remoteBridgeCore.ts"
+      ],
+      "required_semantics": [
+        "入口注册与可达条件",
+        "类型、参数、状态、返回和异常语义",
+        "权限/安全策略和副作用边界",
+        "执行/并发/取消/超时/重试",
+        "数据持久化、恢复及资源清理",
+        "UI、SDK、CLI或外部消费者结果回传"
+      ],
+      "acceptance": "Slack/Code Review真实服务端对照及重复事件",
+      "baseline_feature_ids": [
+        "F101",
+        "F102"
+      ],
+      "implementation_strategy": [
+        "对照317真实实现检查入口/函数语义",
+        "移植官方模块及依赖、接通调用者",
+        "源码缺失时依据x64实际输入输出重写",
+        "执行功能/异常/恢复回归，修正差异"
+      ],
+      "status": "PENDING_317_CODE_ALIGNMENT",
+      "official_source_starts": [
+        "chunk-gsvwtjad.js:931（云审查CLI）",
+        "chunk-ygv5qy17.js:620（ultrareviewHandler及finding格式）"
+      ],
+      "current_difference": "ultrareview入口与云审查整链尚未接通；Slack/PR事件、外部服务接口及结果投递需从新版实现完整展开。",
+      "related_chains": [
+        "C04",
+        "C11",
+        "C12",
+        "C13",
+        "C14",
+        "C15",
+        "C16"
+      ],
+      "work_packages": [
+        {
+          "id": "C20-T01",
+          "title": "外部事件和命令入口",
+          "implementation": "分析Slack Claude Tag、Code Review、ultrareview的正式入口、目标选择、参数、宿主和账号条件",
+          "associated_updates": "M3命令、服务注册、PR/消息标识及登录/权限提示",
+          "acceptance": "合法和非法目标、参数冲突及不可用账号条件得到原版结果",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C20-T02",
+          "title": "云任务和审查执行",
+          "implementation": "移植ultrareview完整handler、任务创建、云代理审查、轮询/等待、取消和完成处理",
+          "associated_updates": "C15云执行、C01模型、任务状态和远端请求schema",
+          "acceptance": "真实目标可创建和完成审查，失败、等待中退出及取消语义正确",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C20-T03",
+          "title": "身份、权限及事件去重",
+          "implementation": "对齐Slack/PR事件验证、项目权限、请求幂等、重复事件和跨账号隔离",
+          "associated_updates": "OAuth、服务端回调、事件ID、审批及安全存储",
+          "acceptance": "伪造/无权/重复/跨账号事件不会误触发任务或泄露结果",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C20-T04",
+          "title": "结果、评论及关联组件",
+          "implementation": "同步finding严重度、文件/行号、报告、PR/Slack回传、通知及本地展示",
+          "associated_updates": "审查结果schema、链接/报告素材、C12界面和外部接口",
+          "acceptance": "结果字段及语义正确，重试不重复发送评论或消息",
+          "status": "PENDING_FUNCTION_DIFF"
+        },
+        {
+          "id": "C20-T05",
+          "title": "完整宿主回归和底层补齐",
+          "implementation": "核对仓库未提供的宿主/服务端部分，补客户端、接口适配、资源与版本约束，保留实际部署验证要求",
+          "associated_updates": "C13/C14/C15宿主、认证、服务配置和发布依赖",
+          "acceptance": "从真实事件到任务、审批、执行、结果及重启恢复完整跑通，未验证项保持未完成",
+          "status": "PENDING_FUNCTION_DIFF"
+        }
+      ],
+      "acceptance_scenarios": [
+        "L11",
+        "L12",
+        "L13",
+        "L16",
+        "E104",
+        "E110",
+        "L26"
+      ],
+      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+    }
+  ],
+  "verification_policy": {
+    "official_reference": "2.1.317反编译模块和官方x64实际行为",
+    "source_preference": "直接移植新版实现→调整上下游→源码缺失时对照x64行为重写",
+    "completion": "直接修改并运行必要的原版差分/功能/恢复及适用宿主测试；进度只更新实际结果，不新增人工签收或多份证明报告。"
+  },
+  "task_revision": {
+    "date": "2026-11-04",
+    "source_snapshot": "e40318557d4a66a4551d2a04dab56fdb87911bd6",
+    "target": "Claude Code 2.1.317",
+    "scope": "现有旧版仓库全量实现、底层能力及所有关联消费者升级",
+    "work_package_count": 100,
+    "completion_meaning": "任务拆分完成不表示产品实现完成；各包从未完成状态推进到实际运行对齐。"
+  },
+  "implementation_requirements": [
+    "以旧仓库实际生产调用链为改造对象，先定位新版入口、导入依赖、核心函数和全部消费者，再逐函数比较。",
+    "对齐参数名称/类型/必填与可选/缺省及null语义、配置来源和优先级、功能开关、返回结构、事件顺序及错误码。",
+    "对齐状态转移、权限、并发、超时、取消、重试、幂等、副作用、持久化和恢复；保留新版的能力启用和宿主条件。",
+    "优先移植完整职责模块及依赖；有耦合则按职责拆分再接回生产调用链；缺失或不适配的实现按原版代码和x64行为重写。",
+    "同包同步更新调用方/被调用方、组件、素材、提示词、技能、插件、接口schema、SDK类型、原生依赖及构建发行资源。",
+    "已有且逐函数一致的代码保留；已完成专项沿用对应提交和测试，只补剩余差异。废弃逻辑按新版生命周期删除并同步迁移消费者。",
+    "每包直接运行适用的功能与原版对照测试，覆盖成功、边界、错误、取消及恢复；只改入口、类型、开关或名称不足以完成工作包。",
+    "当前137功能/137场景是已有回归范围，100个工作包是本轮拆分；新版调用链中新发现的函数、资源和能力继续纳入，不以这些数量限制升级范围。"
+  ],
+  "change_methods": {
+    "保留": "确认新版职责、语义及消费者一致后保留并回归",
+    "移植": "连同所依赖函数、协议、资源、能力条件和消费者整体移植",
+    "拆分": "将混合职责的旧实现拆为新版职责模块并接通旧入口的全部消费者",
+    "重写": "源码缺失或架构不适配时，依据新版代码及x64实际输入输出/状态/副作用重写",
+    "清理": "处理新版废弃的接口、资源和依赖，完成数据或调用方迁移后移除重复路径"
+  }
+}

@@ -40,7 +40,6 @@ import {
   isValidAwsStsOutput,
 } from './aws.js'
 import { AwsAuthStatusManager } from './awsAuthStatusManager.js'
-import { clearBetasCaches } from './betas.js'
 import {
   type AccountInfo,
   checkHasTrustDialogAccepted,
@@ -70,7 +69,7 @@ import {
   getUsername,
 } from './secureStorage/macOsKeychainHelpers.js'
 import {
-  getSettings_DEPRECATED,
+  getInitialSettings,
   getSettingsForSource,
 } from './settings/settings.js'
 import { sleep } from './sleep.js'
@@ -119,7 +118,7 @@ export function isAnthropicAuthEnabled(): boolean {
 
   // Check if user has configured an external API key source
   // This allows externally-provided API keys to work (without requiring proxy configuration)
-  const settings = getSettings_DEPRECATED() || {}
+  const settings = getInitialSettings() || {}
   const apiKeyHelper = settings.apiKeyHelper
   const hasExternalAuthToken =
     process.env.ANTHROPIC_AUTH_TOKEN ||
@@ -150,7 +149,7 @@ export function isAnthropicAuthEnabled(): boolean {
 
 /** Where the auth token is being sourced from, if any. */
 // this code is closely related to isAnthropicAuthEnabled
-export function getAuthTokenSource() {
+export function getAuthTokenSource() : { source: "apiKeyHelper"; hasToken: boolean; } | { source: "none"; hasToken: boolean; } | { source: "ANTHROPIC_AUTH_TOKEN"; hasToken: boolean; } | { source: "CLAUDE_CODE_OAUTH_TOKEN"; hasToken: boolean; } | { source: "CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR"; hasToken: boolean; } | { source: "CCR_OAUTH_TOKEN_FILE"; hasToken: boolean; } | { source: "claude.ai"; hasToken: boolean; } {
   // --bare: API-key-only. apiKeyHelper (from --settings) is the only
   // bearer-token-shaped source allowed. OAuth env vars, FD tokens, and
   // keychain are ignored.
@@ -272,15 +271,11 @@ export function getAnthropicApiKeyWithSource(
       }
     }
 
-    if (
-      !apiKeyEnv &&
-      !process.env.CLAUDE_CODE_OAUTH_TOKEN &&
-      !process.env.CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR
-    ) {
-      throw new Error(
-        'ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN env var is required',
-      )
-    }
+    // CI mode restricts API-key lookup to explicitly supplied credentials.
+    // Offline commands (mcp/plugin list, help) still need a valid no-key
+    // result. Authentication is enforced when making a model request; a
+    // lookup-time throw can otherwise abort startup before the CLI prints its
+    // result and incorrectly leave a zero exit code.
 
     if (apiKeyEnv) {
       return {
@@ -356,7 +351,7 @@ export function getConfiguredApiKeyHelper(): string | undefined {
   if (isBareMode()) {
     return getSettingsForSource('flagSettings')?.apiKeyHelper
   }
-  const mergedSettings = getSettings_DEPRECATED() || {}
+  const mergedSettings = getInitialSettings() || {}
   return mergedSettings.apiKeyHelper
 }
 
@@ -381,7 +376,7 @@ function isApiKeyHelperFromProjectOrLocalSettings(): boolean {
  * Get the configured awsAuthRefresh from settings
  */
 function getConfiguredAwsAuthRefresh(): string | undefined {
-  const mergedSettings = getSettings_DEPRECATED() || {}
+  const mergedSettings = getInitialSettings() || {}
   return mergedSettings.awsAuthRefresh
 }
 
@@ -406,7 +401,7 @@ export function isAwsAuthRefreshFromProjectSettings(): boolean {
  * Get the configured awsCredentialExport from settings
  */
 function getConfiguredAwsCredentialExport(): string | undefined {
-  const mergedSettings = getSettings_DEPRECATED() || {}
+  const mergedSettings = getInitialSettings() || {}
   return mergedSettings.awsCredentialExport
 }
 
@@ -814,7 +809,7 @@ export function clearAwsCredentialsCache(): void {
  * Get the configured gcpAuthRefresh from settings
  */
 function getConfiguredGcpAuthRefresh(): string | undefined {
-  const mergedSettings = getSettings_DEPRECATED() || {}
+  const mergedSettings = getInitialSettings() || {}
   return mergedSettings.gcpAuthRefresh
 }
 
@@ -1237,7 +1232,6 @@ export function saveOAuthTokensIfNeeded(tokens: OAuthTokens): {
     }
 
     getClaudeAIOAuthTokens.cache?.clear?.()
-    clearBetasCaches()
     clearToolSchemaCache()
     return updateStatus
   } catch (error) {
@@ -1425,8 +1419,8 @@ export async function getClaudeAIOAuthTokensAsync(): Promise<OAuthTokens | null>
 let pendingRefreshCheck: Promise<boolean> | null = null
 
 export function checkAndRefreshOAuthTokenIfNeeded(
-  retryCount = 0,
-  force = false,
+  retryCount: number = 0,
+  force: boolean = false,
 ): Promise<boolean> {
   // Deduplicate concurrent non-retry, non-force calls
   if (retryCount === 0 && !force) {
@@ -1741,7 +1735,7 @@ export function isUsing3PServices(): boolean {
  * Get the configured otelHeadersHelper from settings
  */
 function getConfiguredOtelHeadersHelper(): string | undefined {
-  const mergedSettings = getSettings_DEPRECATED() || {}
+  const mergedSettings = getInitialSettings() || {}
   return mergedSettings.otelHeadersHelper
 }
 
@@ -1860,7 +1854,7 @@ export type UserAccountInfo = {
   email?: string
 }
 
-export function getAccountInformation() {
+export function getAccountInformation() : UserAccountInfo {
   const apiProvider = getAPIProvider()
   // Only provide account info for first-party Anthropic API
   if (apiProvider !== 'firstParty') {
@@ -1909,7 +1903,7 @@ export function getAccountInformation() {
  * Result of org validation — either success or a descriptive error.
  */
 export type OrgValidationResult =
-  | { valid: true }
+  | { valid: true; message?: never }
   | { valid: false; message: string }
 
 /**

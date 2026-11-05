@@ -13,7 +13,6 @@
  * (SDK -p mode via query.enableRemoteControl).
  */
 
-import { feature } from 'bun:bundle'
 import { hostname } from 'os'
 import { getOriginalCwd, getSessionId } from '../bootstrap/state.js'
 import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
@@ -56,7 +55,6 @@ import {
 import {
   checkBridgeMinVersion,
   isBridgeEnabledBlocking,
-  isCseShimEnabled,
   isEnvLessBridgeEnabled,
 } from './bridgeEnabled.js'
 import {
@@ -69,7 +67,6 @@ import { checkEnvLessBridgeMinVersion } from './envLessBridgeConfig.js'
 import { getPollIntervalConfig } from './pollConfig.js'
 import type { BridgeState, ReplBridgeHandle } from './replBridge.js'
 import { initBridgeCore } from './replBridge.js'
-import { setCseShimGate } from './sessionIdCompat.js'
 import type { BridgeWorkerType } from './types.js'
 
 export type InitBridgeOptions = {
@@ -126,10 +123,6 @@ export async function initReplBridge(
     outboundOnly,
     tags,
   } = options ?? {}
-
-  // Wire the cse_ shim kill switch so toCompatSessionId respects the
-  // GrowthBook gate. Daemon/SDK paths skip this — shim defaults to active.
-  setCseShimGate(isCseShimEnabled)
 
   // 1. Runtime gate
   if (!(await isBridgeEnabledBlocking())) {
@@ -255,7 +248,8 @@ export async function initReplBridge(
   // The slug fallback (e.g. "remote-control-graceful-unicorn") makes
   // auto-started sessions distinguishable in the claude.ai list before the
   // first prompt.
-  let title = `remote-control-${generateShortWordSlug()}`
+  const prefix = process.env.CLAUDE_CODE_REMOTE_CONTROL_NAME_PREFIX?.trim() || hostname()
+  let title = `${prefix}-${generateShortWordSlug()}`
   let hasTitle = false
   let hasExplicitTitle = false
   if (initialName) {
@@ -470,19 +464,8 @@ export async function initReplBridge(
       ? process.env.CLAUDE_BRIDGE_SESSION_INGRESS_URL
       : baseUrl
 
-  // Assistant-mode sessions advertise a distinct worker_type so the web UI
-  // can filter them into a dedicated picker. KAIROS guard keeps the
-  // assistant module out of external builds entirely.
-  let workerType: BridgeWorkerType = 'claude_code'
-  if (feature('KAIROS')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    const { isAssistantMode } =
-      require('../assistant/index.js') as typeof import('../assistant/index.js')
-    /* eslint-enable @typescript-eslint/no-require-imports */
-    if (isAssistantMode()) {
-      workerType = 'claude_code_assistant'
-    }
-  }
+  // Official 2.1.310 remote control identifies normal CLI bridge workers.
+  const workerType: BridgeWorkerType = 'claude_code'
 
   // 6. Delegate. BridgeCoreHandle is a structural superset of
   // ReplBridgeHandle (adds writeSdkMessages which REPL callers don't use),

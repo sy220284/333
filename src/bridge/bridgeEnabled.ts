@@ -11,6 +11,9 @@ import {
 // namespace after mock.module() (daemon/auth.test.ts), breaking spyOn.
 import * as authModule from '../utils/auth.js'
 import { isEnvTruthy } from '../utils/envUtils.js'
+import { SETTING_SOURCES } from '../utils/settings/constants.js'
+import * as remoteControlSettings from '../utils/settings/settings.js'
+import { isRemoteControlDisabledFromSources } from './remoteControlPolicy.ts'
 import { lt } from '../utils/semver.js'
 
 /**
@@ -25,12 +28,29 @@ import { lt } from '../utils/semver.js'
  * The `feature('BRIDGE_MODE')` guard ensures the GrowthBook string literal
  * is only referenced when bridge mode is enabled at build time.
  */
+/** True when any configured settings source explicitly disables Remote Control. */
+export function isRemoteControlDisabledBySettings(): boolean {
+  try {
+    return isRemoteControlDisabledFromSources(
+      SETTING_SOURCES.map(source => remoteControlSettings.getSettingsForSource(source)),
+    )
+  } catch (error) {
+    // CLI may evaluate command visibility before global config is enabled.
+    // Once startup finishes, command filtering re-evaluates the live setting.
+    if (error instanceof Error && error.message.includes('Config accessed before allowed')) {
+      return false
+    }
+    throw error
+  }
+}
+
 export function isBridgeEnabled(): boolean {
   // Positive ternary pattern — see docs/feature-gating.md.
   // Negative pattern (if (!feature(...)) return) does not eliminate
   // inline string literals from external builds.
   return feature('BRIDGE_MODE')
-    ? isClaudeAISubscriber() &&
+    ? !isRemoteControlDisabledBySettings() &&
+        isClaudeAISubscriber() &&
         getFeatureValue_CACHED_MAY_BE_STALE('tengu_ccr_bridge', false)
     : false
 }
@@ -49,7 +69,8 @@ export function isBridgeEnabled(): boolean {
  */
 export async function isBridgeEnabledBlocking(): Promise<boolean> {
   return feature('BRIDGE_MODE')
-    ? isClaudeAISubscriber() &&
+    ? !isRemoteControlDisabledBySettings() &&
+        isClaudeAISubscriber() &&
         (await checkGate_CACHED_OR_BLOCKING('tengu_ccr_bridge'))
     : false
 }
@@ -69,6 +90,9 @@ export async function isBridgeEnabledBlocking(): Promise<boolean> {
  */
 export async function getBridgeDisabledReason(): Promise<string | null> {
   if (feature('BRIDGE_MODE')) {
+    if (isRemoteControlDisabledBySettings()) {
+      return 'Remote Control is disabled by the disableRemoteControl setting. Check your local or organization-managed settings.'
+    }
     if (!isClaudeAISubscriber()) {
       return 'Remote Control requires a claude.ai subscription. Run `claude auth login` to sign in with your claude.ai account.'
     }
@@ -127,24 +151,6 @@ export function isEnvLessBridgeEnabled(): boolean {
   return feature('BRIDGE_MODE')
     ? getFeatureValue_CACHED_MAY_BE_STALE('tengu_bridge_repl_v2', false)
     : false
-}
-
-/**
- * Kill-switch for the `cse_*` → `session_*` client-side retag shim.
- *
- * The shim exists because compat/convert.go:27 validates TagSession and the
- * claude.ai frontend routes on `session_*`, while v2 worker endpoints hand out
- * `cse_*`. Once the server tags by environment_kind and the frontend accepts
- * `cse_*` directly, flip this to false to make toCompatSessionId a no-op.
- * Defaults to true — the shim stays active until explicitly disabled.
- */
-export function isCseShimEnabled(): boolean {
-  return feature('BRIDGE_MODE')
-    ? getFeatureValue_CACHED_MAY_BE_STALE(
-        'tengu_bridge_repl_v2_cse_shim_enabled',
-        true,
-      )
-    : true
 }
 
 /**

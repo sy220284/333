@@ -1,3 +1,4 @@
+import type { Notification } from '../../context/notifications.js';
 import * as React from 'react';
 import { getOauthProfileFromApiKey } from 'src/services/oauth/getOauthProfile.js';
 import { isClaudeAISubscriber } from 'src/utils/auth.js';
@@ -10,7 +11,7 @@ const MAX_SHOW_COUNT = 3;
 /**
  * Hook to check if the user has a subscription on Console but isn't logged into it.
  */
-export function useCanSwitchToExistingSubscription() {
+export function useCanSwitchToExistingSubscription() : void {
   useStartupNotification(_temp2);
 }
 
@@ -18,7 +19,7 @@ export function useCanSwitchToExistingSubscription() {
  * Checks if the user has a subscription but is not currently logged into it.
  * This helps inform users they should run /login to access their subscription.
  */
-async function _temp2() {
+async function _temp2(): Promise<Notification | null> {
   if ((getGlobalConfig().subscriptionNoticeCount ?? 0) >= MAX_SHOW_COUNT) {
     return null;
   }

@@ -44,7 +44,7 @@ function hasMemoryFileRead(messages: Message[]): boolean {
   }
   return false;
 }
-export function useMemorySurvey(messages: Message[], isLoading: boolean, hasActivePrompt = false, {
+export function useMemorySurvey(messages: Message[], isLoading: boolean, hasActivePrompt: boolean = false, {
   enabled = true
 }: {
   enabled?: boolean;
@@ -87,7 +87,7 @@ export function useMemorySurvey(messages: Message[], isLoading: boolean, hasActi
     });
   }, []);
   const shouldShowTranscriptPrompt = useCallback((selected_0: FeedbackSurveyResponse) => {
-    if ("external" !== 'ant') {
+    if (process.env.USER_TYPE !== 'ant') {
       return false;
     }
     if (selected_0 !== 'bad' && selected_0 !== 'good') {

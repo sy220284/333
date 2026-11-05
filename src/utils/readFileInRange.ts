@@ -72,7 +72,7 @@ export class FileTooLargeError extends Error {
 
 export async function readFileInRange(
   filePath: string,
-  offset = 0,
+  offset: number = 0,
   maxLines?: number,
   maxBytes?: number,
   signal?: AbortSignal,

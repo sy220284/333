@@ -1,8 +1,12 @@
+import { findKeywordTriggerPositions } from './ultraplan/keyword.js'
+import { getCatalogModel, getModelCapabilityEnvOverride } from './model/modelCatalog.js'
+import { isEnvTruthy } from './envUtils.js'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import type { Theme } from './theme.js'
 import { feature } from 'bun:bundle'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import { getCanonicalName } from './model/model.js'
+import { resolveAntModel } from './model/antModels.js'
 import { get3PModelCapabilityOverride } from './model/modelSupportOverrides.js'
 import { getAPIProvider } from './model/providers.js'
 import { getSettingsWithErrors } from './settings/settings.js'
@@ -17,6 +21,11 @@ export type ThinkingConfig =
  * controls code inclusion in external builds; the GB flag controls rollout.
  */
 export function isUltrathinkEnabled(): boolean {
+  // 2.1.317: this explicit runtime opt-out overrides feature rollout.
+  // Both the message attachment and terminal highlighting consume this gate.
+  if (isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_ULTRATHINK)) {
+    return false
+  }
   if (!feature('ULTRATHINK')) {
     return false
   }
@@ -27,34 +36,19 @@ export function isUltrathinkEnabled(): boolean {
  * Check if text contains the "ultrathink" keyword.
  */
 export function hasUltrathinkKeyword(text: string): boolean {
-  return /\bultrathink\b/i.test(text)
+  return findThinkingTriggerPositions(text).length > 0
 }
 
 /**
- * Find positions of "ultrathink" keyword in text (for UI highlighting/notification)
+ * The same lexical trigger rules as ultraplan/ultrareview. Do not raise effort
+ * for quoted words, path components or slash-command arguments.
  */
 export function findThinkingTriggerPositions(text: string): Array<{
   word: string
   start: number
   end: number
 }> {
-  const positions: Array<{ word: string; start: number; end: number }> = []
-  // Fresh /g literal each call — String.prototype.matchAll copies lastIndex
-  // from the source regex, so a shared instance would leak state from
-  // hasUltrathinkKeyword's .test() into this call on the next render.
-  const matches = text.matchAll(/\bultrathink\b/gi)
-
-  for (const match of matches) {
-    if (match.index !== undefined) {
-      positions.push({
-        word: match[0],
-        start: match.index,
-        end: match.index + match[0].length,
-      })
-    }
-  }
-
-  return positions
+  return findKeywordTriggerPositions(text, 'ultrathink')
 }
 
 const RAINBOW_COLORS: Array<keyof Theme> = [
@@ -89,24 +83,8 @@ export function getRainbowColor(
 // Provider-aware thinking support detection (aligns with modelSupportsISP in betas.ts)
 export function modelSupportsThinking(model: string): boolean {
   const supported3P = get3PModelCapabilityOverride(model, 'thinking')
-  if (supported3P !== undefined) {
-    return supported3P
-  }
-  if (process.env.USER_TYPE === 'ant') {
-    if (resolveAntModel(model.toLowerCase())) {
-      return true
-    }
-  }
-  // IMPORTANT: Do not change thinking support without notifying the model
-  // launch DRI and research. This can greatly affect model quality and bashing.
-  const canonical = getCanonicalName(model)
-  const provider = getAPIProvider()
-  // 1P and Foundry: all Claude 4+ models (including Haiku 4.5)
-  if (provider === 'foundry' || provider === 'firstParty') {
-    return !canonical.includes('claude-3-')
-  }
-  // 3P (Bedrock/Vertex): only Opus 4+ and Sonnet 4+
-  return canonical.includes('sonnet-4') || canonical.includes('opus-4')
+  if (supported3P !== undefined) return supported3P
+  return !getCanonicalName(model).includes('claude-3-')
 }
 
 // @[MODEL LAUNCH]: Add the new model to the allowlist if it supports adaptive thinking.
@@ -115,30 +93,16 @@ export function modelSupportsAdaptiveThinking(model: string): boolean {
   if (supported3P !== undefined) {
     return supported3P
   }
+  const configured = getModelCapabilityEnvOverride(model, 'adaptive_thinking')
+  if (configured !== undefined) return configured
+  const entry = getCatalogModel(model)
+  if (entry) return entry.capabilities.includes('adaptive_thinking')
   const canonical = getCanonicalName(model)
-  // Supported by a subset of Claude 4 models
-  if (canonical.includes('opus-4-6') || canonical.includes('sonnet-4-6')) {
-    return true
-  }
-  // Exclude any other known legacy models (allowlist above catches 4-6 variants first)
-  if (
-    canonical.includes('opus') ||
-    canonical.includes('sonnet') ||
-    canonical.includes('haiku')
-  ) {
-    return false
-  }
-  // IMPORTANT: Do not change adaptive thinking support without notifying the
-  // model launch DRI and research. This can greatly affect model quality and
-  // bashing.
-
-  // Newer models (4.6+) are all trained on adaptive thinking and MUST have it
-  // enabled for model testing. DO NOT default to false for first party, otherwise
-  // we may silently degrade model quality.
-
-  // Default to true for unknown model strings on 1P and Foundry (because Foundry
-  // is a proxy). Do not default to true for other 3P as they have different formats
-  // for their model strings.
+  if (canonical.includes('claude-3-') || [
+    'claude-opus-4-0', 'claude-opus-4-1', 'claude-opus-4-5',
+    'claude-sonnet-4-0', 'claude-sonnet-4-5', 'claude-haiku-4-5',
+  ].includes(canonical)) return false
+  if (canonical === 'claude-mythos-5') return true
   const provider = getAPIProvider()
   return provider === 'firstParty' || provider === 'foundry'
 }

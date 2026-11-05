@@ -1,0 +1,49 @@
+/**
+ * Classify 2.1.317 bootstrap-only routes before importing the full CLI.
+ *
+ * Keep command detection anchored at argv[0] and inspect option words only
+ * before "--": prompt text must never launch background processes or worktrees.
+ * The actual feature, trust and policy gates remain in the route handlers.
+ */
+import { beforeDoubleDash, hasCliFlag, findCliArgument, backgroundSessionVerbIndex317 } from '../utils/cliArgv317.ts'
+
+export type StartupRouting317 = {
+  flagWords: string[]
+  command: string | undefined
+  sessionVerbIndex: number
+  desktopRequest: boolean
+  backgroundFlagRequest: boolean
+  helpRequest: boolean
+  bareRequest: boolean
+  backgroundRequest: boolean
+  tmuxWorktreeRequest: boolean
+}
+
+const BACKGROUND_COMMANDS = new Set([
+  'agents', 'attach', 'logs', 'stop', 'kill', 'respawn', 'rm', 'daemon',
+])
+
+export function classifyStartupArgs(args: string[]): StartupRouting317 {
+  const flagWords = beforeDoubleDash(args)
+  const command = flagWords[0]
+  const sessionVerbIndex = backgroundSessionVerbIndex317(args)
+  // Use the official argv scanner: option values (e.g. --prefill "--bg")
+  // must not be mistaken for standalone mode switches.
+  const has = (flag: string): boolean => hasCliFlag(flag, flagWords)
+  const tmux = has('--tmux') || has('--tmux=classic')
+  const worktree = has('-w') || has('--worktree') ||
+    findCliArgument(arg => arg.startsWith('--worktree='), flagWords) !== -1
+  return {
+    flagWords,
+    command,
+    sessionVerbIndex,
+    // Use the same value-aware scanner for all launch-mode decisions.
+    desktopRequest: has('--desktop'),
+    backgroundFlagRequest: has('--bg') || has('--background'),
+    helpRequest: has('--help') || has('-h'),
+    bareRequest: has('--bare'),
+    backgroundRequest: has('--bg') || has('--background') || sessionVerbIndex !== -1 ||
+      command === '--internal-bg-supervisor' || BACKGROUND_COMMANDS.has(command),
+    tmuxWorktreeRequest: tmux && worktree,
+  }
+}

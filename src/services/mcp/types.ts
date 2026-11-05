@@ -1,8 +1,4 @@
-import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import type {
-  Resource,
-  ServerCapabilities,
-} from '@modelcontextprotocol/sdk/types.js'
+import type { Client, Resource, ServerCapabilities } from "@modelcontextprotocol/client";
 import { z } from 'zod/v4'
 import { lazySchema } from '../../utils/lazySchema.js'
 
@@ -27,7 +23,7 @@ export type Transport = z.infer<ReturnType<typeof TransportSchema>>
 
 export const McpStdioServerConfigSchema = lazySchema(() =>
   z.object({
-    type: z.literal('stdio').optional(), // Optional for backwards compatibility
+    type: z.literal('stdio').default('stdio'),
     command: z.string().min(1, 'Command cannot be empty'),
     args: z.array(z.string()).default([]),
     env: z.record(z.string(), z.string()).optional(),
@@ -159,6 +155,21 @@ export type McpClaudeAIProxyServerConfig = z.infer<
   ReturnType<typeof McpClaudeAIProxyServerConfigSchema>
 >
 export type McpServerConfig = z.infer<ReturnType<typeof McpServerConfigSchema>>
+
+/**
+ * Narrow an MCP server config to the current explicit stdio transport.
+ * Check the executable contract (command string)
+ * before downstream callers read stdio-only fields.
+ */
+export function isMcpStdioServerConfig(
+  config: McpServerConfig,
+): config is McpStdioServerConfig {
+  return (
+    config.type === 'stdio' &&
+    'command' in config &&
+    typeof config.command === 'string'
+  )
+}
 
 export type ScopedMcpServerConfig = McpServerConfig & {
   scope: ConfigScope

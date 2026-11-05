@@ -9,7 +9,7 @@ import { useStartupNotification } from './notifs/useStartupNotification.js';
  * Hook that handles official marketplace auto-installation and shows
  * notifications for success/failure in the bottom right of the REPL.
  */
-export function useOfficialMarketplaceNotification() {
+export function useOfficialMarketplaceNotification() : void {
   useStartupNotification(_temp);
 }
 async function _temp() {
@@ -24,16 +24,7 @@ async function _temp() {
       timeoutMs: 10000
     });
   }
-  if (result.installed) {
-    logForDebugging("Showing marketplace installation success notification");
-    notifs.push({
-      key: "marketplace-installed",
-      jsx: <Text color="success">✓ Anthropic marketplace installed · /plugin to see available plugins</Text>,
-      priority: "immediate",
-      timeoutMs: 7000
-    });
-  } else {
-    if (result.skipped && result.reason === "unknown") {
+  if (result.skipped && result.reason === "unknown") {
       logForDebugging("Showing marketplace installation failure notification");
       notifs.push({
         key: "marketplace-install-failed",
@@ -41,7 +32,6 @@ async function _temp() {
         priority: "immediate",
         timeoutMs: 8000
       });
-    }
   }
   return notifs;
 }

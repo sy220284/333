@@ -19,6 +19,8 @@ export const KEYBINDING_CONTEXTS = [
   'HistorySearch',
   'Task',
   'ThemePicker',
+  'Scroll',
+  'MessageActions',
   'Settings',
   'Tabs',
   // New contexts for keybindings migration
@@ -47,6 +49,8 @@ export const KEYBINDING_CONTEXT_DESCRIPTIONS: Record<
   HistorySearch: 'When searching command history (ctrl+r)',
   Task: 'When a task/agent is running in the foreground',
   ThemePicker: 'When the theme picker is open',
+  Scroll: 'When navigating or selecting content in the scrollable transcript',
+  MessageActions: 'When choosing actions on a selected chat message',
   Settings: 'When the settings menu is open',
   Tabs: 'When tab navigation is active',
   Attachments: 'When navigating image attachments in a select dialog',
@@ -121,6 +125,30 @@ export const KEYBINDING_ACTIONS = [
   'task:background',
   // Theme picker actions
   'theme:toggleSyntaxHighlighting',
+  // Transcript scroll and selection actions (ScrollKeybindingHandler)
+  'scroll:pageUp',
+  'scroll:pageDown',
+  'scroll:lineUp',
+  'scroll:lineDown',
+  'scroll:top',
+  'scroll:bottom',
+  'scroll:halfPageUp',
+  'scroll:halfPageDown',
+  'scroll:fullPageUp',
+  'scroll:fullPageDown',
+  'selection:copy',
+  // Message selection actions (MESSAGE_ACTIONS feature)
+  'messageActions:prev',
+  'messageActions:next',
+  'messageActions:top',
+  'messageActions:bottom',
+  'messageActions:prevUser',
+  'messageActions:nextUser',
+  'messageActions:escape',
+  'messageActions:ctrlc',
+  'messageActions:enter',
+  'messageActions:c',
+  'messageActions:p',
   // Help menu actions
   'help:dismiss',
   // Attachment navigation (select dialog image attachments)

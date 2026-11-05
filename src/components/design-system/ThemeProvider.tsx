@@ -44,7 +44,7 @@ export function ThemeProvider({
   children,
   initialState,
   onThemeSave = defaultSaveTheme
-}: Props) {
+}: Props) : React.JSX.Element {
   const [themeSetting, setThemeSetting] = useState(initialState ?? defaultInitialTheme);
   const [previewTheme, setPreviewTheme] = useState<ThemeSetting | null>(null);
 
@@ -141,7 +141,7 @@ export function useTheme() {
  * Returns the raw theme setting as stored in config. Use this in UI that
  * needs to show 'auto' as a distinct choice (e.g., ThemePicker).
  */
-export function useThemeSetting() {
+export function useThemeSetting() : "dark" | "light" | "light-daltonized" | "dark-daltonized" | "light-ansi" | "dark-ansi" | "auto" {
   return useContext(ThemeContext).themeSetting;
 }
 export function usePreviewTheme() {

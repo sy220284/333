@@ -1,0 +1,31 @@
+name: PR7 CodeQL 告警定位与复核
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths: [.github/workflows/pr7-codeql-alert-evidence.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  checks: read
+  security-events: read
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 取得 CodeQL 检查的原始告警
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api --paginate repos/${{ github.repository }}/check-runs/125720572244/annotations > codeql-annotations.json
+          jq 'length' codeql-annotations.json
+          jq -r '.[] | [.annotation_level,.path,.start_line,.title,.message] | @tsv' codeql-annotations.json > codeql-annotations.tsv
+          test -s codeql-annotations.json
+      - name: 保存完整证据
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr7-codeql-alert-evidence
+          path: |
+            codeql-annotations.json
+            codeql-annotations.tsv
+          retention-days: 7

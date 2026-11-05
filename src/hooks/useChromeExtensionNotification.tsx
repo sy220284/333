@@ -1,3 +1,4 @@
+import type { Notification } from '../context/notifications.js';
 import * as React from 'react';
 import { Text } from '../ink.js';
 import { isClaudeAISubscriber } from '../utils/auth.js';
@@ -13,10 +14,10 @@ function getChromeFlag(): boolean | undefined {
   }
   return undefined;
 }
-export function useChromeExtensionNotification() {
+export function useChromeExtensionNotification() : void {
   useStartupNotification(_temp);
 }
-async function _temp() {
+async function _temp(): Promise<Notification | null> {
   const chromeFlag = getChromeFlag();
   if (!shouldEnableClaudeInChrome(chromeFlag)) {
     return null;
@@ -36,13 +37,6 @@ async function _temp() {
       jsx: <Text color="warning">Chrome extension not detected · https://claude.ai/chrome to install</Text>,
       priority: "immediate",
       timeoutMs: 3000
-    };
-  }
-  if (chromeFlag === undefined) {
-    return {
-      key: "claude-in-chrome-default-enabled",
-      text: "Claude in Chrome enabled \xB7 /chrome",
-      priority: "low"
     };
   }
   return null;

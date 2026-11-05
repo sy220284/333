@@ -46,6 +46,7 @@ import {
   getOriginalCwd,
 } from '../bootstrap/state.js'
 import { truncateEntrypointContent } from '../memdir/memdir.js'
+import { shouldLexMemoryContent } from './memoryLexGate.ts'
 import { getAutoMemEntrypoint, isAutoMemoryEnabled } from '../memdir/paths.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import {
@@ -360,8 +361,11 @@ function parseMemoryFileContent(
   // is required by extract (so ~/path doesn't tokenize as strikethrough) and
   // doesn't affect strip (html blocks are a CommonMark rule).
   const hasComment = withoutFrontmatter.includes('<!--')
+  // A very long list item can make marked.lexer expensive. If the file has
+  // neither a comment to strip nor an @include directive to resolve, retain
+  // the original Markdown and skip lexing entirely.
   const tokens =
-    hasComment || includeBasePath !== undefined
+    shouldLexMemoryContent(withoutFrontmatter, includeBasePath !== undefined)
       ? new Lexer({ gfm: false }).lex(withoutFrontmatter)
       : undefined
 

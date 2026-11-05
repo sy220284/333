@@ -29,6 +29,16 @@ import { trySessionMemoryCompaction } from './sessionMemoryCompact.js'
 // Based on p99.99 of compact summary output being 17,387 tokens.
 const MAX_OUTPUT_TOKENS_FOR_SUMMARY = 20_000
 
+// CLI-scoped override is shared by TUI, SDK/headless, and the main query loop.
+let cliAutoCompactWindow: number | 'auto' | undefined
+
+export function setCliAutoCompactWindow(value: number | 'auto' | undefined): void {
+  if (typeof value === 'number' && (!Number.isFinite(value) || value < 100_000 || value > 1_000_000)) {
+    throw new RangeError('Auto-compact window must contain 100k to 1M tokens')
+  }
+  cliAutoCompactWindow = value
+}
+
 // Returns the context window size minus the max output tokens for the model
 export function getEffectiveContextWindowSize(model: string): number {
   const reservedTokensForSummary = Math.min(
@@ -37,11 +47,19 @@ export function getEffectiveContextWindowSize(model: string): number {
   )
   let contextWindow = getContextWindowForModel(model, getSdkBetas())
 
-  const autoCompactWindow = process.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW
-  if (autoCompactWindow) {
-    const parsed = parseInt(autoCompactWindow, 10)
-    if (!isNaN(parsed) && parsed > 0) {
-      contextWindow = Math.min(contextWindow, parsed)
+  // An explicit CLI override takes precedence over environment settings.
+  // "auto" restores the model's normal window without forcing a fixed size.
+  if (cliAutoCompactWindow !== undefined) {
+    if (cliAutoCompactWindow !== 'auto') {
+      contextWindow = Math.min(contextWindow, cliAutoCompactWindow)
+    }
+  } else {
+    const autoCompactWindow = process.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW
+    if (autoCompactWindow) {
+      const parsed = parseInt(autoCompactWindow, 10)
+      if (!isNaN(parsed) && parsed > 0) {
+        contextWindow = Math.min(contextWindow, parsed)
+      }
     }
   }
 
@@ -164,7 +182,7 @@ export async function shouldAutoCompact(
   // Snip removes messages but the surviving assistant's usage still reflects
   // pre-snip context, so tokenCountWithEstimation can't see the savings.
   // Subtract the rough-delta that snip already computed.
-  snipTokensFreed = 0,
+  snipTokensFreed: number = 0,
 ): Promise<boolean> {
   // Recursion guards. session_memory and compact are forked agents that
   // would deadlock.
@@ -176,12 +194,6 @@ export async function shouldAutoCompact(
   // which destroys the MAIN thread's committed log (module-level state
   // shared across forks). Inside feature() so the string DCEs from
   // external builds (it's in excluded-strings.txt).
-  if (feature('CONTEXT_COLLAPSE')) {
-    if (querySource === 'marble_origami') {
-      return false
-    }
-  }
-
   if (!isAutoCompactEnabled()) {
     return false
   }
@@ -212,16 +224,6 @@ export async function shouldAutoCompact(
   // CLAUDE_CONTEXT_COLLAPSE env override is honored here too. require()
   // inside the block breaks the init-time cycle (this file exports
   // getEffectiveContextWindowSize which collapse's index imports).
-  if (feature('CONTEXT_COLLAPSE')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    const { isContextCollapseEnabled } =
-      require('../contextCollapse/index.js') as typeof import('../contextCollapse/index.js')
-    /* eslint-enable @typescript-eslint/no-require-imports */
-    if (isContextCollapseEnabled()) {
-      return false
-    }
-  }
-
   const tokenCount = tokenCountWithEstimation(messages) - snipTokensFreed
   const threshold = getAutoCompactThreshold(model)
   const effectiveWindow = getEffectiveContextWindowSize(model)
@@ -347,5 +349,64 @@ export async function autoCompactIfNeeded(
       )
     }
     return { wasCompacted: false, consecutiveFailures: nextFailures }
+  }
+}
+
+
+/**
+ * Public-release 413 recovery. In 2.1.310, a two-turn conversation that
+ * receives a prompt-too-long error runs a compact summary and retries the
+ * original user turn. The old REACTIVE_COMPACT feature() block is ant-only
+ * and tree-shaken from the public build, so its dynamic import cannot serve
+ * as the public fallback.
+ *
+ * Reuse the same complete compaction pipeline as proactive autocompact,
+ * including pre/post hooks, transcript boundary, file/skill restoration and
+ * cache updates. It is single-shot per query to prevent infinite 413 loops.
+ */
+export async function tryRecoverFrom413WithCompact(
+  messages: Message[],
+  toolUseContext: ToolUseContext,
+  cacheSafeParams: CacheSafeParams,
+  querySource: QuerySource,
+  alreadyAttempted: boolean,
+): Promise<CompactionResult | null> {
+  if (
+    alreadyAttempted ||
+    !isAutoCompactEnabled() ||
+    querySource === 'compact' ||
+    querySource === 'session_memory' ||
+    toolUseContext.abortController.signal.aborted
+  ) {
+    return null
+  }
+
+  // A single user exchange has no older turn to summarize. The target x64
+  // reports a terminal prompt_too_long here rather than issuing more calls.
+  const userTurns = messages.filter(
+    message => message.type === 'user' && !message.isCompactSummary,
+  ).length
+  if (userTurns < 2) return null
+
+  try {
+    const result = await compactConversation(
+      messages,
+      toolUseContext,
+      cacheSafeParams,
+      true,
+      undefined,
+      true,
+      { isRecompactionInChain: false, turnsSincePreviousCompact: -1,
+        autoCompactThreshold: getAutoCompactThreshold(toolUseContext.options.mainLoopModel), querySource },
+    )
+    setLastSummarizedMessageId(undefined)
+    runPostCompactCleanup(querySource)
+    logForDebugging('413 recovery: compacted history and ready to retry request')
+    return result
+  } catch (error) {
+    // Preserve the original 413 as the public result; record the concrete
+    // compaction failure for diagnosis rather than hiding it.
+    logError(error)
+    return null
   }
 }

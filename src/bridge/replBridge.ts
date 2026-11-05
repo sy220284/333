@@ -28,7 +28,7 @@ import {
   buildCCRv2SdkUrl,
   sameSessionId,
 } from './workSecret.js'
-import { toCompatSessionId, toInfraSessionId } from './sessionIdCompat.js'
+import { toSessionApiId, toWorkerApiId } from './sessionIdProtocol.js'
 import { updateSessionBridgeId } from '../utils/concurrentSessions.js'
 import { getTrustedDeviceToken } from './trustedDevice.js'
 import { HybridTransport } from '../cli/transports/HybridTransport.js'
@@ -388,17 +388,8 @@ export async function initBridgeCore(
       )
       return false
     }
-    // The pointer stores what createBridgeSession returned (session_*,
-    // compat/convert.go:41). /bridge/reconnect is an environments-layer
-    // endpoint — once the server's ccr_v2_compat_enabled gate is on it
-    // looks sessions up by their infra tag (cse_*) and returns "Session
-    // not found" for the session_* costume. We don't know the gate state
-    // pre-poll, so try both; the re-tag is a no-op if the ID is already
-    // cse_* (doReconnect Strategy 1 path — currentSessionId never mutates
-    // to cse_* but future-proof the check).
-    const infraId = toInfraSessionId(sessionId)
-    const candidates =
-      infraId === sessionId ? [sessionId] : [sessionId, infraId]
+    // The reconnect endpoint uses worker-side cse_* session identifiers.
+    const candidates = [toWorkerApiId(sessionId)]
     for (const id of candidates) {
       try {
         await api.reconnectSession(environmentId, id)
@@ -788,7 +779,7 @@ export async function initBridgeCore(
     currentSessionId = newSessionId
     // Re-publish to the PID file so peer dedup (peerRegistry.ts) picks up the
     // new ID — setReplBridgeHandle only fires at init/teardown, not reconnect.
-    void updateSessionBridgeId(toCompatSessionId(newSessionId)).catch(() => {})
+    void updateSessionBridgeId(toSessionApiId(newSessionId)).catch(() => {})
     // Reset per-session transport state IMMEDIATELY after the session swap,
     // before any await. If this runs after `await writeBridgePointer` below,
     // there's a window where handle.bridgeSessionId already returns session B

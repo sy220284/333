@@ -17,7 +17,7 @@ export function relativeFiles(root, files) {
   const prefix = resolve(root) + sep;
   return [...new Set(files.map(file => {
     const absolute = resolve(root, file);
-    if (!absolute.startsWith(prefix)) throw new Error('拒绝仓库外路径: ' + file);
+    if (!absolute.startsWith(prefix)) throw new Error(`拒绝仓库外路径: ${file}`);
     return normalizePath(relative(root, absolute));
   }))].sort();
 }
@@ -29,5 +29,5 @@ export function nativeMagic(buffer, platform) {
   if (platform === 'darwin') {
     return ['feedface', 'feedfacf', 'cefaedfe', 'cffaedfe', 'cafebabe', 'bebafeca'].includes(buffer.subarray(0, 4).toString('hex'));
   }
-  throw new Error('不支持的平台: ' + platform);
+  throw new Error(`不支持的平台: ${platform}`);
 }

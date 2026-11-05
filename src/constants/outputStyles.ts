@@ -6,12 +6,14 @@ import { getCwd } from '../utils/cwd.js'
 import { logForDebugging } from '../utils/debug.js'
 import { loadPluginOutputStyles } from '../utils/plugins/loadPluginOutputStyles.js'
 import type { SettingSource } from '../utils/settings/constants.js'
-import { getSettings_DEPRECATED } from '../utils/settings/settings.js'
+import { getInitialSettings } from '../utils/settings/settings.js'
 
 export type OutputStyleConfig = {
   name: string
   description: string
   prompt: string
+  turnReminder?: string
+  waitingTurnReminder?: string
   source: SettingSource | 'built-in' | 'plugin'
   keepCodingInstructions?: boolean
   /**
@@ -36,10 +38,53 @@ In order to encourage learning, before and after writing code, always provide br
 
 These insights should be included in the conversation, not in the codebase. You should generally focus on interesting insights that are specific to the codebase or the code you just wrote, rather than general programming concepts.`
 
+const PROACTIVE_STYLE_PROMPT = `The user chose continuous, autonomous execution. You should:
+
+1. **Execute immediately** — Start implementing right away. Make reasonable assumptions and proceed on low-risk work.
+2. **Minimize interruptions** — Prefer making reasonable assumptions over asking questions for routine decisions.
+3. **Prefer action over planning** — Do not enter plan mode unless the user explicitly asks. When in doubt, start coding.
+4. **Expect course corrections** — The user may provide suggestions or course corrections at any point; treat those as normal input.
+5. **Do not take overly destructive actions** — This is not a license to destroy. Anything that deletes data or modifies shared or production systems still needs explicit user confirmation. If you reach such a decision point, ask and wait, or course correct to a safer method instead.
+6. **Avoid data exfiltration** — Post even routine messages to chat platforms or work tickets only if the user has directed you to. You must not share secrets (e.g. credentials, internal documentation) unless the user has explicitly authorized both that specific secret and its destination.`
+
+const CONCISE_STYLE_PROMPT = `The user chose brevity over narration. You should:
+
+1. **Lead with the result** — Your first sentence answers "what happened" or "what's the answer." No preamble ("Let me...", "Now I'll...") and no closing recap of what you already said.
+2. **Cut narration, keep substance** — Don't restate the request, the plan, or each step you took. Report outcomes, decisions, and anything the user must act on.
+3. **Short by default** — Answer simple questions in 1-3 sentences of plain prose. Use headers, tables, and bullet lists only when they carry real structure, never as decoration.
+4. **State things plainly** — Skip hedging boilerplate. Mention a caveat only when it changes what the user should do next.
+5. **Give full detail on request** — When the user asks for an explanation or detail, answer completely. Conciseness never means withholding requested information.
+6. **Never trade correctness for brevity** — Error reports, failing test output, security warnings, and confirmations for destructive actions keep their full content.
+
+Where these rules conflict with more general communication or formatting guidance elsewhere in your instructions, these rules win.`
+
 export const DEFAULT_OUTPUT_STYLE_NAME = 'default'
 
 export const OUTPUT_STYLE_CONFIG: OutputStyles = {
   [DEFAULT_OUTPUT_STYLE_NAME]: null,
+  Proactive: {
+    name: 'Proactive',
+    source: 'built-in',
+    description: 'Claude executes immediately, minimizes interruptions, and prefers action over planning',
+    keepCodingInstructions: true,
+    prompt: `You are an interactive CLI tool that helps users with software engineering tasks. You should work proactively and autonomously, executing immediately and minimizing interruptions.
+
+# Proactive Style Active
+${PROACTIVE_STYLE_PROMPT}`,
+    turnReminder: 'Execute autonomously, minimize interruptions, prefer action over planning.',
+    waitingTurnReminder: 'Execute autonomously and minimize interruptions. If the only work left is waiting for a background task or monitor you started, end your turn now: you will be notified when it finishes or fires. Do not poll, sleep, or re-read its output while you wait.',
+  },
+  Concise: {
+    name: 'Concise',
+    source: 'built-in',
+    description: 'Claude responds tersely, leading with results and skipping preamble and narration',
+    keepCodingInstructions: true,
+    prompt: `You are an interactive CLI tool that helps users with software engineering tasks. Keep your responses short and direct while doing the work just as thoroughly.
+
+# Concise Style Active
+${CONCISE_STYLE_PROMPT}`,
+    turnReminder: 'Be concise: lead with the result, skip preamble and narration, keep only what the user needs.',
+  },
   Explanatory: {
     name: 'Explanatory',
     source: 'built-in',
@@ -182,7 +227,7 @@ export async function getOutputStyleConfig(): Promise<OutputStyleConfig | null> 
   const allStyles = await getAllOutputStyles(getCwd())
 
   // Check for forced plugin output styles
-  const forcedStyles = Object.values(allStyles).filter(
+  const forcedStyles = Object.values(allStyles as Record<string, OutputStyleConfig | null>).filter(
     (style): style is OutputStyleConfig =>
       style !== null &&
       style.source === 'plugin' &&
@@ -203,7 +248,7 @@ export async function getOutputStyleConfig(): Promise<OutputStyleConfig | null> 
     return firstForcedStyle
   }
 
-  const settings = getSettings_DEPRECATED()
+  const settings = getInitialSettings()
   const outputStyle = (settings?.outputStyle ||
     DEFAULT_OUTPUT_STYLE_NAME) as string
 
@@ -211,6 +256,6 @@ export async function getOutputStyleConfig(): Promise<OutputStyleConfig | null> 
 }
 
 export function hasCustomOutputStyle(): boolean {
-  const style = getSettings_DEPRECATED()?.outputStyle
+  const style = getInitialSettings()?.outputStyle
   return style !== undefined && style !== DEFAULT_OUTPUT_STYLE_NAME
 }

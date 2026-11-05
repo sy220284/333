@@ -1,4 +1,4 @@
-import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import type { Client } from "@modelcontextprotocol/client";
 import axios from 'axios'
 import { execa } from 'execa'
 import capitalize from 'lodash-es/capitalize.js'
@@ -826,7 +826,7 @@ export async function detectIDEs(
   return detectedIDEs
 }
 
-export async function maybeNotifyIDEConnected(client: Client) {
+export async function maybeNotifyIDEConnected(client: Client) : Promise<void> {
   await client.notification({
     method: 'ide_connected',
     params: {

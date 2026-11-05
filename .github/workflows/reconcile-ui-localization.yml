@@ -1,0 +1,78 @@
+name: 原始TSX恢复后的中文UI差异修复
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - '.github/workflows/reconcile-ui-localization.yml'
+      - 'tools/dev/reconcile-restored-ui-localization.mjs'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: original-tsx-chinese-ui-reconciliation
+  cancel-in-progress: false
+jobs:
+  restore:
+    name: 审计并恢复被原始TSX覆盖的中文交互界面
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 安装类型编译与实际运行依赖
+        run: |
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 精确修复199个TSX回写文件中丢失的中文界面内容
+        run: node tools/dev/reconcile-restored-ui-localization.mjs
+      - name: 实测中文化、TSX文件格式和关键UI交互
+        run: |
+          node --test tests/chinese-only-ui.test.mjs tests/language-file-contract.test.mjs tests/welcome-layout.test.mjs tests/clawd-animations.test.mjs tests/clawd-animation-selection.test.mjs
+      - name: 全仓类型编译、严格验收、生产构建
+        run: |
+          node tools/dev/dev.mjs typecheck:all
+          node tools/dev/type-migration-audit.mjs
+          node tools/dev/type-migration-strict.mjs
+          bun build/rebuild.mjs
+          git diff --check
+      - name: 保护并提交中文界面修复到PR7
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -u src
+          if git diff --cached --quiet; then
+            echo '中文UI在现有分支上已保持完整'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m '恢复317源码移植后中文界面文案并验证TypeScript构建'
+          for attempt in 1 2 3 4 5; do
+            git fetch origin upgrade/2.1.310-m1-evidence
+            git rebase origin/upgrade/2.1.310-m1-evidence
+            if git push origin HEAD:refs/heads/upgrade/2.1.310-m1-evidence; then
+              echo '中文界面与原始TypeScript恢复已同时写入PR7'
+              exit 0
+            fi
+            echo "并发提交冲突：第 ${attempt} 次重试"
+          done
+          exit 1
+      - name: 保留逐文件中文UI差异及恢复证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-localization-reconciliation-${{ github.sha }}
+          path: |
+            .rebuild/governance/ui-localization-reconciliation.json
+            .rebuild/governance/type-migration-report.json
+          if-no-files-found: warn
+          retention-days: 30

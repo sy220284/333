@@ -11,7 +11,7 @@ import { onPluginsAutoUpdated } from '../../utils/plugins/pluginAutoupdate.js';
  * Hook that displays a notification when plugins have been auto-updated.
  * The notification tells the user to run /reload-plugins to apply the updates.
  */
-export function usePluginAutoupdateNotification() {
+export function usePluginAutoupdateNotification() : void {
   const $ = _c(7);
   const {
     addNotification

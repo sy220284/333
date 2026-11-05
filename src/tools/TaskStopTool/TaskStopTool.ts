@@ -1,10 +1,19 @@
+import { isStoppableTask } from '../../tasks/agentLifecycle317.js'
 import { z } from 'zod/v4'
-import type { TaskStateBase } from '../../Task.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
-import { stopTask } from '../../tasks/stopTask.js'
+import {
+  stopTask,
+  resolveTaskToStop,
+  StopTaskError,
+} from '../../tasks/stopTask.js'
+import { getAgentId } from '../../utils/teammate.js'
 import { lazySchema } from '../../utils/lazySchema.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
-import { DESCRIPTION, TASK_STOP_TOOL_NAME } from './prompt.js'
+import {
+  DESCRIPTION,
+  TASK_STOP_TOOL_NAME,
+  TASK_STOP_ALIASES,
+} from './prompt.js'
 import { renderToolResultMessage, renderToolUseMessage } from './UI.js'
 
 const inputSchema = lazySchema(() =>
@@ -12,8 +21,9 @@ const inputSchema = lazySchema(() =>
     task_id: z
       .string()
       .optional()
-      .describe('The ID of the background task to stop'),
-    // shell_id is accepted for backward compatibility with the deprecated KillShell tool
+      .describe(
+        'The ID of the background task to stop. Agent-team teammates and named background agents are also accepted by agent ID or name.',
+      ),
     shell_id: z.string().optional().describe('Deprecated: use task_id instead'),
   }),
 )
@@ -38,12 +48,10 @@ export type Output = z.infer<OutputSchema>
 
 export const TaskStopTool = buildTool({
   name: TASK_STOP_TOOL_NAME,
+  aliases: [...TASK_STOP_ALIASES],
   searchHint: 'kill a running background task',
-  // KillShell is the deprecated name - kept as alias for backward compatibility
-  // with existing transcripts and SDK users
-  aliases: ['KillShell'],
   maxResultSizeChars: 100_000,
-  userFacingName: () => (process.env.USER_TYPE === 'ant' ? '' : 'Stop Task'),
+  userFacingName: () => 'Stop Task',
   get inputSchema(): InputSchema {
     return inputSchema()
   },
@@ -58,36 +66,26 @@ export const TaskStopTool = buildTool({
     return input.task_id ?? input.shell_id ?? ''
   },
   async validateInput({ task_id, shell_id }, { getAppState }) {
-    // Support both task_id and shell_id (deprecated KillShell compat)
     const id = task_id ?? shell_id
-    if (!id) {
+    if (!id)
       return {
         result: false,
         message: 'Missing required parameter: task_id',
         errorCode: 1,
       }
+    try {
+      const task = resolveTaskToStop(id, getAppState())
+      if (!isStoppableTask(task, getAppState().tasks))
+        return {
+          result: false,
+          message: `Task ${id} is not running (status: ${task.status})`,
+          errorCode: 3,
+        }
+      return { result: true }
+    } catch (error) {
+      if (!(error instanceof StopTaskError)) throw error
+      return { result: false, message: error.message, errorCode: 1 }
     }
-
-    const appState = getAppState()
-    const task = appState.tasks?.[id] as TaskStateBase | undefined
-
-    if (!task) {
-      return {
-        result: false,
-        message: `No task found with ID: ${id}`,
-        errorCode: 1,
-      }
-    }
-
-    if (task.status !== 'running') {
-      return {
-        result: false,
-        message: `Task ${id} is not running (status: ${task.status})`,
-        errorCode: 3,
-      }
-    }
-
-    return { result: true }
   },
   async description() {
     return `Stop a running background task by ID`
@@ -106,17 +104,14 @@ export const TaskStopTool = buildTool({
   renderToolResultMessage,
   async call(
     { task_id, shell_id },
-    { getAppState, setAppState, abortController },
+    { getAppState, setAppState, setAppStateForTasks, agentId },
   ) {
-    // Support both task_id and shell_id (deprecated KillShell compat)
     const id = task_id ?? shell_id
-    if (!id) {
-      throw new Error('Missing required parameter: task_id')
-    }
-
+    if (!id) throw new Error('Missing required parameter: task_id')
     const result = await stopTask(id, {
+      callerAgentId: agentId ?? getAgentId(),
       getAppState,
-      setAppState,
+      setAppState: setAppStateForTasks ?? setAppState,
     })
 
     return {

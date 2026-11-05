@@ -1,3 +1,5 @@
+import { existsSync, realpathSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 
 type AudioCaptureNapi = {
   startRecording(
@@ -31,6 +33,31 @@ function loadModule(): AudioCaptureNapi | null {
   const platform = process.platform
   if (platform !== 'darwin' && platform !== 'linux' && platform !== 'win32') {
     return null
+  }
+
+  // Bun --compile rewrites import.meta.url to the virtual /$bunfs tree.
+  // The M1 distributable instead ships the byte-verified official native
+  // addon next to the compiled executable; load that real path first.
+  // A global install commonly exposes a symlink to the compiled CLI.
+  // Resolve the executable's physical location before finding its matching
+  // byte-pinned addon; a link directory can contain a different release.
+  const vendorPath = join(
+    dirname(realpathSync(process.execPath)),
+    'vendor', 'audio-capture', `${process.arch}-${platform}`, 'audio-capture.node',
+  )
+  if (existsSync(vendorPath)) {
+    // A present but incompatible shipped addon is a packaging failure. Keep
+    // the error visible so the release cannot claim native audio is available.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const addon = require(vendorPath) as AudioCaptureNapi
+    if (typeof addon.startRecording !== 'function' ||
+        typeof addon.stopRecording !== 'function' ||
+        typeof addon.startPlayback !== 'function' ||
+        typeof addon.stopPlayback !== 'function') {
+      throw new Error('Audio addon does not provide the official 2.1.317 API: ' + vendorPath)
+    }
+    cachedModule = addon
+    return cachedModule
   }
 
   // Candidate 1: native-embed path (bun compile). AUDIO_CAPTURE_NODE_PATH is

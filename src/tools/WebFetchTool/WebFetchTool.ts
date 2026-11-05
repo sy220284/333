@@ -1,5 +1,6 @@
 import { z } from 'zod/v4'
 import { buildTool, type ToolDef } from '../../Tool.js'
+import { withWebToolDeadline } from '../../utils/webToolDeadline.ts'
 import type { PermissionUpdate } from '../../types/permissions.js'
 import { formatFileSize } from '../../utils/format.js'
 import { lazySchema } from '../../utils/lazySchema.js'
@@ -209,36 +210,87 @@ ${DESCRIPTION}`
     { url, prompt },
     { abortController, options: { isNonInteractiveSession } },
   ) {
-    const start = Date.now()
+    return withWebToolDeadline(abortController, async requestController => {
+      const start = Date.now()
 
-    const response = await getURLMarkdownContent(url, abortController)
+      const response = await getURLMarkdownContent(url, requestController)
 
-    // Check if we got a redirect to a different host
-    if ('type' in response && response.type === 'redirect') {
-      const statusText =
-        response.statusCode === 301
-          ? 'Moved Permanently'
-          : response.statusCode === 308
-            ? 'Permanent Redirect'
-            : response.statusCode === 307
-              ? 'Temporary Redirect'
-              : 'Found'
+      // Check if we got a redirect to a different host
+      if ('type' in response && response.type === 'redirect') {
+        const statusText =
+          response.statusCode === 301
+            ? 'Moved Permanently'
+            : response.statusCode === 308
+              ? 'Permanent Redirect'
+              : response.statusCode === 307
+                ? 'Temporary Redirect'
+                : 'Found'
 
-      const message = `REDIRECT DETECTED: The URL redirects to a different host.
+        const message = `REDIRECT DETECTED: The URL redirects to a different host.
 
-Original URL: ${response.originalUrl}
-Redirect URL: ${response.redirectUrl}
-Status: ${response.statusCode} ${statusText}
+  Original URL: ${response.originalUrl}
+  Redirect URL: ${response.redirectUrl}
+  Status: ${response.statusCode} ${statusText}
 
-To complete your request, I need to fetch content from the redirected URL. Please use WebFetch again with these parameters:
-- url: "${response.redirectUrl}"
-- prompt: "${prompt}"`
+  To complete your request, I need to fetch content from the redirected URL. Please use WebFetch again with these parameters:
+  - url: "${response.redirectUrl}"
+  - prompt: "${prompt}"`
+
+        const output: Output = {
+          bytes: Buffer.byteLength(message),
+          code: response.statusCode,
+          codeText: statusText,
+          result: message,
+          durationMs: Date.now() - start,
+          url,
+        }
+
+        return {
+          data: output,
+        }
+      }
+
+      const {
+        content,
+        bytes,
+        code,
+        codeText,
+        contentType,
+        persistedPath,
+        persistedSize,
+      } = response as FetchedContent
+
+      const isPreapproved = isPreapprovedUrl(url)
+
+      let result: string
+      if (
+        isPreapproved &&
+        contentType.includes('text/markdown') &&
+        content.length < MAX_MARKDOWN_LENGTH
+      ) {
+        result = content
+      } else {
+        result = await applyPromptToMarkdown(
+          prompt,
+          content,
+          requestController.signal,
+          isNonInteractiveSession,
+          isPreapproved,
+        )
+      }
+
+      // Binary content (PDFs, etc.) was additionally saved to disk with a
+      // mime-derived extension. Note it so Claude can inspect the raw file
+      // if the Haiku summary above isn't enough.
+      if (persistedPath) {
+        result += `\n\n[Binary content (${contentType}, ${formatFileSize(persistedSize ?? bytes)}) also saved to ${persistedPath}]`
+      }
 
       const output: Output = {
-        bytes: Buffer.byteLength(message),
-        code: response.statusCode,
-        codeText: statusText,
-        result: message,
+        bytes,
+        code,
+        codeText,
+        result,
         durationMs: Date.now() - start,
         url,
       }
@@ -246,56 +298,7 @@ To complete your request, I need to fetch content from the redirected URL. Pleas
       return {
         data: output,
       }
-    }
-
-    const {
-      content,
-      bytes,
-      code,
-      codeText,
-      contentType,
-      persistedPath,
-      persistedSize,
-    } = response as FetchedContent
-
-    const isPreapproved = isPreapprovedUrl(url)
-
-    let result: string
-    if (
-      isPreapproved &&
-      contentType.includes('text/markdown') &&
-      content.length < MAX_MARKDOWN_LENGTH
-    ) {
-      result = content
-    } else {
-      result = await applyPromptToMarkdown(
-        prompt,
-        content,
-        abortController.signal,
-        isNonInteractiveSession,
-        isPreapproved,
-      )
-    }
-
-    // Binary content (PDFs, etc.) was additionally saved to disk with a
-    // mime-derived extension. Note it so Claude can inspect the raw file
-    // if the Haiku summary above isn't enough.
-    if (persistedPath) {
-      result += `\n\n[Binary content (${contentType}, ${formatFileSize(persistedSize ?? bytes)}) also saved to ${persistedPath}]`
-    }
-
-    const output: Output = {
-      bytes,
-      code,
-      codeText,
-      result,
-      durationMs: Date.now() - start,
-      url,
-    }
-
-    return {
-      data: output,
-    }
+    })
   },
   mapToolResultToToolResultBlockParam({ result }, toolUseID) {
     return {

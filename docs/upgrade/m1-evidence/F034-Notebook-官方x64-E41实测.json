@@ -1,0 +1,137 @@
+{
+  "schema": 1,
+  "release": "2.1.310",
+  "date": "2026-11-02",
+  "platform": "Linux x64",
+  "executable_sha256": "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56",
+  "provenance": "资料库/claude-code-2.1.310-linux-x64.tar.gz",
+  "replay_script": "tests/m1-notebook-e41-cli.mjs",
+  "comparison_mode": "real official executable / fake localhost SSE model / isolated HOME and CWD / fake API key / telemetry disabled",
+  "environment": {
+    "CLAUDE_CODE_SIMPLE": "unset",
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:<random port>",
+    "ANTHROPIC_API_KEY": "fake local only"
+  },
+  "options": [
+    "-p",
+    "Read and edit the notebook, then read it again",
+    "--tools",
+    "default",
+    "--permission-mode",
+    "acceptEdits",
+    "--model",
+    "claude-sonnet-4-6",
+    "--output-format",
+    "json",
+    "--max-turns",
+    "4"
+  ],
+  "official_observations": {
+    "real_model_requests": 4,
+    "initial_model_visible_tools": [
+      "Agent",
+      "Bash",
+      "Edit",
+      "ListAgents",
+      "Read",
+      "ReportFindings",
+      "ScheduleWakeup",
+      "Skill",
+      "ToolSearch",
+      "Workflow",
+      "DeferredToolPlaceholder",
+      "Write"
+    ],
+    "deferred_tool_notice": "NotebookEdit available through ToolSearch in normal mode; model-visible tool schema initially deferred",
+    "initial_read": "<cell id=\"stable-cell\">print(1)</cell id=\"stable-cell\">",
+    "edit_result": "Updated cell stable-cell with print(2)",
+    "next_read": "<cell id=\"stable-cell\">print(2)</cell id=\"stable-cell\">",
+    "disk_before": "print(1)",
+    "disk_after": "print(2)",
+    "exit_code": 0,
+    "final_result": "OFFICIAL_NOTEBOOK_E41_OK",
+    "is_error": false
+  },
+  "negative_control": {
+    "switch": "CLAUDE_CODE_SIMPLE=1",
+    "outcome": "NotebookEdit absent from tools and direct tool request rejected as unavailable; first Read still succeeds",
+    "impact": "Simplified mode must not be mistaken for the default 2.1.310 tool registration policy"
+  },
+  "source_anchors": [
+    "chunk-j0tbz6ra.js:58095–58192",
+    "chunk-j0tbz6ra.js:83810–83965",
+    "chunk-p8z8s65a.js:4192–4194",
+    "chunk-gmxe4kpt.js:663"
+  ],
+  "status": "OFFICIAL_AND_REBUILT_E41_REAL_PROCESS_CONFIRMED; DEFERRED_TOOL_REGISTRATION_DIFFERENCE_PENDING_PR7",
+  "note": "Target x64 normal-mode tool path has been actually exercised against fake local SSE; prior SIMPLE-mode negative observation was an isolation mistake and has been corrected. No live cloud model requested.",
+  "candidate_observations": {
+    "candidate_commit": "a39393b702409a63a027151c3889725c95575e24",
+    "actions_run": 41435775007,
+    "actions_url": "https://github.com/sy220284/333/actions/runs/41435775007",
+    "platform": "Linux x64 Bun 1.4.4, rebuilt dist/cli.js",
+    "model_requests": 4,
+    "actual_file_before": "print(1)",
+    "actual_file_after": "print(2)",
+    "output": "E41_NOTEBOOK_ROUNDTRIP_OK",
+    "exit_code": 0,
+    "status": "success",
+    "evidence": "GitHub Actions Ubuntu local-edit-parity job output: scenario E41 passed true, modelRequests 4; both Read calls and NotebookEdit were executed by the actual rebuilt process."
+  },
+  "cross_platform_subchain": {
+    "actions_run": 41437290049,
+    "ubuntu": "success",
+    "macos": "success",
+    "windows": "success",
+    "test_counts": {
+      "linux_and_macos": "16 sed + 17 Notebook semantic + 3 real tool integration; Linux 2 CLI E41",
+      "windows": "17 Notebook semantic + 2 real integration"
+    },
+    "build_run": 41436920400,
+    "build_status": "success",
+    "codeql_run": 41436920360,
+    "codeql_status": "success"
+  },
+  "known_difference": {
+    "official_default_tools": "ToolSearch + DeferredToolPlaceholder; NotebookEdit exposed on demand",
+    "candidate_default_tools": "NotebookEdit directly in initial model-visible tools; ToolSearch alignment is owned by concurrent PR #7",
+    "impact": "E41 file behavior matches for the verified route, but full default tool-discovery behavior is not yet equivalent."
+  },
+  "next_full_gate": "PR #7 tool registry/ToolSearch integration, M10 permission/symlink/abnormal-path checks, and PR #9 baseline TypeScript/security governance.",
+  "official_type_conversion_real_run": [
+    {
+      "scenario": "code_to_markdown",
+      "real_exit_code": 0,
+      "model_requests": 4,
+      "file": {
+        "cell_type": "markdown",
+        "source": "# Hello",
+        "execution_count": null,
+        "outputs": []
+      },
+      "script": "/mnt/data/official2310/official-notebook-convert-test.mjs",
+      "verified_on": "2026-11-02"
+    },
+    {
+      "scenario": "markdown_to_code",
+      "real_exit_code": 0,
+      "model_requests": 4,
+      "file": {
+        "cell_type": "code",
+        "source": "value=1",
+        "execution_count_present": false,
+        "outputs_present": false
+      },
+      "script": "/mnt/data/official2310/official-notebook-markdown-to-code-test.mjs",
+      "verified_on": "2026-11-02"
+    }
+  ],
+  "candidate_type_conversion": {
+    "commit": "7889f157ef488d87583ed741cd1851a7f307754c",
+    "actions_run": 41437290049,
+    "actions_url": "https://github.com/sy220284/333/actions/runs/41437290049",
+    "code_verify_run": 41436920335,
+    "tests": "Linux/macOS 17 Notebook semantic + 3 real tool integration, Linux 2 real CLI E41; Windows 17 Notebook semantic + 2 real integration; three platforms success",
+    "status": "PASSED"
+  }
+}

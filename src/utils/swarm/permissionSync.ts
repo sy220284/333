@@ -451,7 +451,7 @@ export async function resolvePermission(
  */
 export async function cleanupOldResolutions(
   teamName?: string,
-  maxAgeMs = 3600000,
+  maxAgeMs: number = 3600000,
 ): Promise<number> {
   const team = teamName || getTeamName()
   if (!team) {

@@ -28,6 +28,11 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  # Preserve all three OS results for every source revision.
+  group: dev-quality-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
 jobs:
   quality:
     name: 开发工具与原生验证（${{ matrix.os }}）
@@ -51,6 +56,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: 核验源码语言与文件格式契约
+        run: node --test tests/language-file-contract.test.mjs
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
@@ -106,6 +113,7 @@ jobs:
           echo "npm audit 退出码: $rc"
           node tools/dev/audit-report.mjs "$RUNNER_TEMP/dependency-audit.json"
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: 333-dependency-audit
           path: ${{ runner.temp }}/dependency-audit.json

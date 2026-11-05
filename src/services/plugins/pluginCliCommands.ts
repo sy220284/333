@@ -11,6 +11,17 @@ import { errorMessage } from '../../utils/errors.js'
 import { gracefulShutdown } from '../../utils/gracefulShutdown.js'
 import { logError } from '../../utils/log.js'
 import { getManagedPluginNames } from '../../utils/plugins/managedPlugins.js'
+import { validatePluginCliValues } from '../../utils/plugins/pluginCliConfig.js'
+import {
+  isMcpbSource,
+  loadMcpbFile,
+  loadMcpServerUserConfig,
+  saveMcpServerUserConfig,
+  type UserConfigSchema,
+} from '../../utils/plugins/mcpbHandler.js'
+import { routeInstallConfigAssignments } from '../../utils/plugins/pluginInstallConfigRouting.ts'
+import { loadAllPlugins } from '../../utils/plugins/pluginLoader.js'
+import { getPluginStorageId, loadPluginOptions, savePluginOptions } from '../../utils/plugins/pluginOptionsStorage.js'
 import { parsePluginIdentifier } from '../../utils/plugins/pluginIdentifier.js'
 import type { PluginScope } from '../../utils/plugins/schemas.js'
 import { writeToStdout } from '../../utils/process.js'
@@ -96,6 +107,83 @@ function handlePluginCommandError(
 }
 
 /**
+ * Save --config after installation, using the same validators and secure
+ * storage as the interactive plugin configuration flow. Invalid input is
+ * reported without removing an installed plugin or changing stored values.
+ */
+async function applyInstallConfig(
+  pluginId: string,
+  assignments: string[],
+): Promise<{ applied: boolean; warning?: string }> {
+  try {
+  const loaded = await loadAllPlugins()
+  const installed = [...loaded.enabled, ...loaded.disabled].find(
+    entry => entry.source === pluginId || entry.repository === pluginId,
+  )
+  if (!installed) {
+    throw new Error(`--config was given but plugin "${pluginId}" failed to load after install`)
+  }
+  const storageId = getPluginStorageId(installed)
+  const topSchema = installed.manifest.userConfig ?? {}
+  const serverSchemas: Record<string, UserConfigSchema> = {}
+
+  // Channel manifests and .mcpb bundles both provide per-server schemas.
+  for (const channel of installed.manifest.channels ?? []) {
+    if (channel.userConfig && Object.keys(channel.userConfig).length > 0) {
+      serverSchemas[channel.server] = channel.userConfig
+    }
+  }
+  const specs = installed.manifest.mcpServers
+  const sources = typeof specs === 'string'
+    ? [specs]
+    : Array.isArray(specs)
+      ? specs.filter((source): source is string => typeof source === 'string')
+      : []
+  // Original 2.1.317 accepts declared top-level options even when an
+  // unrelated bundled MCPB archive is missing or corrupt. Inspect bundled
+  // manifests only when an option cannot be resolved at top level.
+  const needsBundleDiscovery = assignments.some(assignment => {
+    const equals = assignment.indexOf('=')
+    return equals > 0 && !Object.hasOwn(topSchema, assignment.slice(0, equals))
+  })
+  for (const source of needsBundleDiscovery ? sources : []) {
+    if (!isMcpbSource(source)) continue
+    const bundle = await loadMcpbFile(source, installed.path, storageId, undefined, undefined, true)
+    if (bundle.manifest.user_config && Object.keys(bundle.manifest.user_config).length > 0) {
+      if (serverSchemas[bundle.manifest.name]) {
+        throw new Error(`Duplicate bundled MCP server configuration name: ${bundle.manifest.name}`)
+      }
+      serverSchemas[bundle.manifest.name] = bundle.manifest.user_config
+    }
+  }
+  const routed: {
+    topLevel: Record<string, string>
+    servers: Record<string, Record<string, string>>
+  } = routeInstallConfigAssignments(assignments, topSchema, serverSchemas)
+  // Validate ALL inputs before performing any persistent write.
+  const topValidated = validatePluginCliValues(
+    routed.topLevel, topSchema, loadPluginOptions(storageId),
+  )
+  const validatedServers = Object.entries(routed.servers).map(([server, values]) => ({
+    server,
+    schema: serverSchemas[server]!,
+    values: validatePluginCliValues(
+      values, serverSchemas[server]!, loadMcpServerUserConfig(storageId, server) ?? {},
+    ),
+  }))
+  if (Object.keys(topValidated).length > 0) {
+    savePluginOptions(storageId, topValidated, topSchema)
+  }
+  for (const server of validatedServers) {
+    saveMcpServerUserConfig(storageId, server.server, server.values, server.schema)
+  }
+  return { applied: true }
+  } catch (error) {
+    return { applied: false, warning: errorMessage(error) }
+  }
+}
+
+/**
  * CLI command: Install a plugin non-interactively
  * @param plugin Plugin identifier (name or plugin@marketplace)
  * @param scope Installation scope: user, project, or local (defaults to 'user')
@@ -103,19 +191,55 @@ function handlePluginCommandError(
 export async function installPlugin(
   plugin: string,
   scope: InstallableScope = 'user',
+  json: boolean = false,
+  configEntries: string[] = [],
+  npmRegistry?: string,
+  commandConsent?: { yes?: boolean; acceptCommand?: string },
 ): Promise<void> {
+  let commandApprovalFailure: Awaited<ReturnType<typeof installPluginOp>> | undefined
   try {
     // biome-ignore lint/suspicious/noConsole:: intentional console output
-    console.log(`Installing plugin "${plugin}"...`)
+    if (!json) console.log(`Installing plugin "${plugin}"...`)
 
-    const result = await installPluginOp(plugin, scope)
+    const result = await installPluginOp(plugin, scope, npmRegistry, commandConsent)
 
     if (!result.success) {
+      if (result.shownCommand) {
+        commandApprovalFailure = result
+        const { name, marketplace } = parsePluginIdentifier(result.shownCommand.pluginId)
+        const shown = result.shownCommand
+        writeToStdout(
+          `"${name}" is installed by running a command from marketplace "${marketplace}" on this machine:\n` +
+          `  ${shown.command}\n` +
+          `  (mode "${shown.mode}": its output directory is ${shown.mode === 'copy' ? 'copied into the plugin cache' : 'linked'})\n`,
+        )
+      }
       throw new Error(result.message)
     }
 
+    const configStatus = configEntries.length > 0
+      ? await applyInstallConfig(result.pluginId ?? plugin, configEntries)
+      : undefined
+    const configMessage = configStatus?.warning
+      ? `${result.message}\n⚠ Installed, but --config not applied: ${configStatus.warning}`
+      : result.message
+
     // biome-ignore lint/suspicious/noConsole:: intentional console output
-    console.log(`${figures.tick} ${result.message}`)
+    if (json) {
+      writeToStdout(`${JSON.stringify({
+        command: 'install',
+        outcome: 'ok',
+        plugin,
+        pluginId: result.pluginId ?? plugin,
+        scope: result.scope ?? scope,
+        message: configMessage,
+        ...(configStatus && { configApplied: configStatus.applied }),
+        ...(result.installedVersion && { installedVersion: result.installedVersion }),
+        ...(result.availableVersion && { availableVersion: result.availableVersion }),
+      })}\n`)
+    } else {
+      console.log(`${figures.tick} ${configMessage}`)
+    }
 
     // _PROTO_* routes to PII-tagged plugin_name/marketplace_name BQ columns.
     // Unredacted plugin_id was previously logged to general-access
@@ -141,6 +265,21 @@ export async function installPlugin(
     // eslint-disable-next-line custom-rules/no-process-exit
     process.exit(0)
   } catch (error) {
+    if (json) {
+      const category = classifyPluginCommandError(error)
+      writeToStdout(`${JSON.stringify({
+        command: 'install',
+        outcome: 'failed',
+        plugin,
+        scope,
+        message: errorMessage(error),
+        failureCode: commandApprovalFailure?.failureCode ??
+          (category === 'not-found' ? 'not_found' : category),
+        ...(commandApprovalFailure?.shownCommand && {
+          shownCommand: commandApprovalFailure.shownCommand,
+        }),
+      })}\n`)
+    }
     handlePluginCommandError(error, 'install', plugin)
   }
 }
@@ -153,7 +292,8 @@ export async function installPlugin(
 export async function uninstallPlugin(
   plugin: string,
   scope: InstallableScope = 'user',
-  keepData = false,
+  keepData: boolean = false,
+  json: boolean = false,
 ): Promise<void> {
   try {
     const result = await uninstallPluginOp(plugin, scope, !keepData)
@@ -162,8 +302,15 @@ export async function uninstallPlugin(
       throw new Error(result.message)
     }
 
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
-    console.log(`${figures.tick} ${result.message}`)
+    if (json) {
+      writeToStdout(JSON.stringify({
+        command: 'uninstall', outcome: 'ok', plugin,
+        pluginId: result.pluginId ?? plugin, scope: result.scope ?? scope,
+        message: result.message,
+      }) + '\n')
+    } else {
+      console.log(`${figures.tick} ${result.message}`)
+    }
 
     const { name, marketplace } = parsePluginIdentifier(
       result.pluginId || plugin,
@@ -183,6 +330,13 @@ export async function uninstallPlugin(
     // eslint-disable-next-line custom-rules/no-process-exit
     process.exit(0)
   } catch (error) {
+    if (json) {
+      writeToStdout(JSON.stringify({
+        command: 'uninstall', outcome: 'failed', plugin, scope,
+        message: errorMessage(error),
+        failureCode: classifyPluginCommandError(error),
+      }) + '\n')
+    }
     handlePluginCommandError(error, 'uninstall', plugin)
   }
 }
@@ -195,6 +349,7 @@ export async function uninstallPlugin(
 export async function enablePlugin(
   plugin: string,
   scope?: InstallableScope,
+  json: boolean = false,
 ): Promise<void> {
   try {
     const result = await enablePluginOp(plugin, scope)
@@ -203,8 +358,18 @@ export async function enablePlugin(
       throw new Error(result.message)
     }
 
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
-    console.log(`${figures.tick} ${result.message}`)
+    if (json) {
+      writeToStdout(`${JSON.stringify({
+        command: 'enable',
+        outcome: 'ok',
+        plugin,
+        pluginId: result.pluginId ?? plugin,
+        scope: result.scope ?? scope ?? 'user',
+        message: result.message,
+      })}\n`)
+    } else {
+      console.log(`${figures.tick} ${result.message}`)
+    }
 
     const { name, marketplace } = parsePluginIdentifier(
       result.pluginId || plugin,
@@ -224,6 +389,18 @@ export async function enablePlugin(
     // eslint-disable-next-line custom-rules/no-process-exit
     process.exit(0)
   } catch (error) {
+    if (json) {
+      const message = errorMessage(error)
+      writeToStdout(`${JSON.stringify({
+        command: 'enable',
+        outcome: 'failed',
+        plugin,
+        message,
+        failureCode: message.includes('Use plugin@marketplace format.')
+          ? 'ambiguous_marketplace'
+          : classifyPluginCommandError(error).replaceAll('-', '_'),
+      })}\n`)
+    }
     handlePluginCommandError(error, 'enable', plugin)
   }
 }
@@ -300,19 +477,42 @@ export async function disableAllPlugins(): Promise<void> {
 export async function updatePluginCli(
   plugin: string,
   scope: PluginScope,
+  options: { json?: boolean; yes?: boolean; acceptCommand?: string } = {},
 ): Promise<void> {
+  let commandApprovalFailure: Awaited<ReturnType<typeof updatePluginOp>> | undefined
   try {
-    writeToStdout(
-      `Checking for updates for plugin "${plugin}" at ${scope} scope…\n`,
-    )
+    if (!options.json) {
+      writeToStdout(`Checking for updates for plugin "${plugin}" at ${scope} scope…\n`)
+    }
 
-    const result = await updatePluginOp(plugin, scope)
+    const result = await updatePluginOp(plugin, scope, options)
 
     if (!result.success) {
+      if (result.shownCommand) {
+        commandApprovalFailure = result
+        const { name, marketplace } = parsePluginIdentifier(result.shownCommand.pluginId)
+        const shown = result.shownCommand
+        writeToStdout(
+          `"${name}" is updated by running a command from marketplace "${marketplace}" on this machine:\n` +
+          `  ${shown.command}\n` +
+          `  (mode "${shown.mode}")\n`,
+        )
+      }
       throw new Error(result.message)
     }
 
-    writeToStdout(`${figures.tick} ${result.message}\n`)
+    if (options.json) {
+      writeToStdout(`${JSON.stringify({
+        command: 'update', outcome: 'ok', plugin,
+        pluginId: result.pluginId ?? plugin,
+        scope, message: result.message,
+        updateOutcome: result.alreadyUpToDate ? 'up_to_date' : 'updated',
+        oldVersion: result.oldVersion,
+        newVersion: result.newVersion,
+      })}\n`)
+    } else {
+      writeToStdout(`${figures.tick} ${result.message}\n`)
+    }
 
     if (!result.alreadyUpToDate) {
       const { name, marketplace } = parsePluginIdentifier(
@@ -339,6 +539,14 @@ export async function updatePluginCli(
 
     await gracefulShutdown(0)
   } catch (error) {
+    if (options.json) {
+      writeToStdout(`${JSON.stringify({
+        command: 'update', outcome: 'failed', plugin, scope,
+        message: errorMessage(error),
+        failureCode: commandApprovalFailure?.failureCode ?? classifyPluginCommandError(error),
+        ...(commandApprovalFailure?.shownCommand && { shownCommand: commandApprovalFailure.shownCommand }),
+      })}\n`)
+    }
     handlePluginCommandError(error, 'update', plugin)
   }
 }

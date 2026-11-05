@@ -24,17 +24,6 @@ const fetchMcpSkillsForClient = feature('MCP_SKILLS')
       require('../../skills/mcpSkills.js') as typeof import('../../skills/mcpSkills.js')
     ).fetchMcpSkillsForClient
   : null
-const clearSkillIndexCache = feature('EXPERIMENTAL_SKILL_SEARCH')
-  ? (
-      require('../skillSearch/localSearch.js') as typeof import('../skillSearch/localSearch.js')
-    ).clearSkillIndexCache
-  : null
-
-import {
-  PromptListChangedNotificationSchema,
-  ResourceListChangedNotificationSchema,
-  ToolListChangedNotificationSchema,
-} from '@modelcontextprotocol/sdk/types.js'
 import omit from 'lodash-es/omit.js'
 import reject from 'lodash-es/reject.js'
 import {
@@ -46,6 +35,7 @@ import {
   doesEnterpriseMcpConfigExist,
   filterMcpServersByPolicy,
   getClaudeCodeMcpConfigs,
+  getMcpReconnectBlockReason,
   isMcpServerDisabled,
   setMcpServerEnabled,
 } from 'src/services/mcp/config.js'
@@ -81,6 +71,8 @@ import {
   fetchClaudeAIMcpConfigsIfEligible,
 } from './claudeai.js'
 import { registerElicitationHandler } from './elicitationHandler.js'
+import { registerArtifactCommentNotifications317 } from '../artifactComments/mcpCommentBridge317.js'
+import { isEnvTruthy } from '../../utils/envUtils.js'
 import { getMcpPrefix } from './mcpStringUtils.js'
 import { commandBelongsToServer, excludeStalePluginClients } from './utils.js'
 
@@ -142,8 +134,8 @@ function addErrorsToAppState(
  */
 export function useManageMCPConnections(
   dynamicMcpConfig: Record<string, ScopedMcpServerConfig> | undefined,
-  isStrictMcpConfig = false,
-) {
+  isStrictMcpConfig: boolean = false,
+) : { reconnectMcpServer: (serverName: string) => Promise<{ client: MCPServerConnection; tools: Tool[]; commands: Command[]; resources?: ServerResource[]; }>; toggleMcpServer: (serverName: string) => Promise<void>; } {
   const store = useAppStateStore()
   const _authVersion = useAppState(s => s.authVersion)
   // Incremented by /reload-plugins (refreshActivePlugins) to pick up newly
@@ -343,11 +335,9 @@ export function useManageMCPConnections(
             // as to whether it was disconnected due to a disable, but appstate is stale at this
             // point. Getting a live reference to appstate feels a little hacky, so we'll just
             // check the disk state. We may want to refactor some of this.
-            if (isMcpServerDisabled(client.name)) {
-              logMCPDebug(
-                client.name,
-                `Server is disabled, skipping automatic reconnection`,
-              )
+            const closeBlock = getMcpReconnectBlockReason(client.name, client.config)
+            if (closeBlock) {
+              logMCPDebug(client.name, `Reconnection blocked: ${closeBlock}`)
               return
             }
 
@@ -375,12 +365,18 @@ export function useManageMCPConnections(
                   attempt++
                 ) {
                   // Check if server was disabled while we were waiting
-                  if (isMcpServerDisabled(client.name)) {
-                    logMCPDebug(
-                      client.name,
-                      `Server disabled during reconnection, stopping retry`,
-                    )
+                  const retryBlock = getMcpReconnectBlockReason(client.name, client.config)
+                  if (retryBlock) {
+                    logMCPDebug(client.name, `Reconnection retry blocked: ${retryBlock}`)
                     reconnectTimersRef.current.delete(client.name)
+                    if (retryBlock === 'managed-policy') {
+                      updateServer({
+                        name: client.name,
+                        type: 'failed',
+                        config: client.config,
+                        error: 'MCP server is blocked by enterprise managed policy',
+                      })
+                    }
                     return
                   }
 
@@ -398,6 +394,17 @@ export function useManageMCPConnections(
                       client.config,
                     )
                     const elapsed = Date.now() - reconnectStartTime
+
+                    if (result.client.type === 'disabled') {
+                      reconnectTimersRef.current.delete(client.name)
+                      onConnectionAttempt(result)
+                      return
+                    }
+                    if (result.client.type === 'failed' && result.client.error?.includes('managed policy')) {
+                      reconnectTimersRef.current.delete(client.name)
+                      onConnectionAttempt(result)
+                      return
+                    }
 
                     if (result.client.type === 'connected') {
                       logMCPDebug(
@@ -505,9 +512,9 @@ export function useManageMCPConnections(
               case 'register':
                 logMCPDebug(client.name, 'Channel notifications registered')
                 client.client.setNotificationHandler(
-                  ChannelMessageNotificationSchema(),
+                  'notifications/claude/channel', { params: ChannelMessageNotificationSchema().shape.params },
                   async notification => {
-                    const { content, meta } = notification.params
+                    const { content, meta } = notification
                     logMCPDebug(
                       client.name,
                       `notifications/claude/channel: ${content.slice(0, 80)}`,
@@ -542,9 +549,9 @@ export function useManageMCPConnections(
                   ] !== undefined
                 ) {
                   client.client.setNotificationHandler(
-                    ChannelPermissionNotificationSchema(),
+                    CHANNEL_PERMISSION_METHOD, { params: ChannelPermissionNotificationSchema().shape.params },
                     async notification => {
-                      const { request_id, behavior } = notification.params
+                      const { request_id, behavior } = notification
                       const resolved =
                         channelPermCallbacksRef.current?.resolve(
                           request_id,
@@ -613,11 +620,62 @@ export function useManageMCPConnections(
             }
           }
 
+          // Artifact comment notifications are a separate server-declared capability.
+          // No event handler or external write is active unless both feature and
+          // account-scoped user permission are explicitly enabled.
+          if (client.capabilities?.experimental?.['claude/artifact-comments'] &&
+              isEnvTruthy(process.env.CLAUDE_CODE_EXPERIMENTAL_ARTIFACT_COMMENTS)) {
+            try {
+            // Reuse the already validated tool list supplied by the connection
+            // callback. This avoids asynchronous work in the synchronous hook
+            // and does not race with server reconnects.
+            const artifactTool = tools
+              .filter(tool => tool.isMcp && tool.mcpInfo?.serverName === client.name)
+              .map(tool => tool.mcpInfo?.toolName)
+              .find(name => name === 'Artifact' || name === 'artifact')
+            if (artifactTool) {
+              registerArtifactCommentNotifications317({
+                server: client,
+                toolName: artifactTool,
+                allowedDomain:
+                  process.env.CLAUDE_CODE_ARTIFACT_COMMENT_DOMAIN || 'claude.ai',
+                approveWrite: async () =>
+                  isEnvTruthy(process.env.CLAUDE_CODE_ARTIFACT_COMMENT_ALLOW_WRITES) &&
+                  store.getState().toolPermissionContext.mode === 'bypassPermissions',
+                notifyError: message => {
+                  addNotification({
+                    key: 'artifact-comments-error',
+                    priority: 'high',
+                    text: message,
+                    color: 'warning',
+                    timeoutMs: 12000,
+                  })
+                },
+                signal: new AbortController().signal,
+              })
+              logMCPDebug(client.name, 'Artifact comment event handler registered')
+            } else {
+              logMCPDebug(client.name, 'Artifact comment capability without Artifact tool')
+            }
+            } catch (error) {
+              addNotification({
+                key: 'artifact-comment-provider-unavailable',
+                priority: 'high',
+                text: 'Artifact comment event integration failed: ' +
+                  (error instanceof Error ? error.message : String(error)),
+                color: 'warning',
+                timeoutMs: 12000,
+              })
+            }
+          } else {
+            client.client.removeNotificationHandler('notifications/claude/artifact/comment')
+          }
+
           // Register notification handlers for list_changed notifications
           // These allow the server to notify us when tools, prompts, or resources change
           if (client.capabilities?.tools?.listChanged) {
             client.client.setNotificationHandler(
-              ToolListChangedNotificationSchema,
+              'notifications/tools/list_changed',
               async () => {
                 logMCPDebug(
                   client.name,
@@ -666,7 +724,7 @@ export function useManageMCPConnections(
 
           if (client.capabilities?.prompts?.listChanged) {
             client.client.setNotificationHandler(
-              PromptListChangedNotificationSchema,
+              'notifications/prompts/list_changed',
               async () => {
                 logMCPDebug(
                   client.name,
@@ -689,9 +747,6 @@ export function useManageMCPConnections(
                     ...client,
                     commands: [...mcpPrompts, ...mcpSkills],
                   })
-                  // MCP skills changed — invalidate skill-search index so
-                  // next discovery rebuilds with the new set.
-                  clearSkillIndexCache?.()
                 } catch (error) {
                   logMCPError(
                     client.name,
@@ -704,7 +759,7 @@ export function useManageMCPConnections(
 
           if (client.capabilities?.resources?.listChanged) {
             client.client.setNotificationHandler(
-              ResourceListChangedNotificationSchema,
+              'notifications/resources/list_changed',
               async () => {
                 logMCPDebug(
                   client.name,
@@ -733,9 +788,6 @@ export function useManageMCPConnections(
                       resources: newResources,
                       commands: [...mcpPrompts, ...mcpSkills],
                     })
-                    // MCP skills changed — invalidate skill-search index so
-                    // next discovery rebuilds with the new set.
-                    clearSkillIndexCache?.()
                   } else {
                     const newResources = await fetchResourcesForClient(client)
                     updateServer({ ...client, resources: newResources })

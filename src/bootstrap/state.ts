@@ -1,9 +1,9 @@
 import type { BetaMessageStreamParams } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type { Attributes, Meter, MetricOptions } from '@opentelemetry/api'
-import type { logs } from '@opentelemetry/api-logs'
+import type { logs } from '@opentelemetry/api'
 import type { LoggerProvider } from '@opentelemetry/sdk-logs'
 import type { MeterProvider } from '@opentelemetry/sdk-metrics'
-import type { BasicTracerProvider } from '@opentelemetry/sdk-trace-base'
+import type { TracerProvider } from '@opentelemetry/sdk-trace'
 import { realpathSync } from 'fs'
 import sumBy from 'lodash-es/sumBy.js'
 import { cwd } from 'process'
@@ -16,6 +16,8 @@ import type { HookCallbackMatcher } from 'src/types/hooks.js'
 // (rule only checks ./ and / prefixes); explicit disable documents intent.
 // eslint-disable-next-line custom-rules/bootstrap-isolation
 import { randomUUID } from 'src/utils/crypto.js'
+// eslint-disable-next-line custom-rules/bootstrap-isolation
+import { resolveInitialSessionId } from 'src/utils/remoteSessionIdentity.ts'
 import type { ModelSetting } from 'src/utils/model/model.js'
 import type { ModelStrings } from 'src/utils/model/modelStrings.js'
 import type { SettingSource } from 'src/utils/settings/constants.js'
@@ -48,6 +50,9 @@ type State = {
   // never updated by mid-session EnterWorktreeTool.
   // Use for project identity (history, skills, sessions) not file operations.
   projectRoot: string
+  // 317 self-hosted Runner declarations, latched before the main CLI import.
+  runnerDeclaredNestedRepositoryDiff: boolean
+  runnerDeclaredNoRepositoryCheckedOut: boolean
   totalCostUSD: number
   totalAPIDuration: number
   totalAPIDurationWithoutRetries: number
@@ -106,7 +111,7 @@ type State = {
   // Meter provider state
   meterProvider: MeterProvider | null
   // Tracer provider state
-  tracerProvider: BasicTracerProvider | null
+  tracerProvider: TracerProvider | null
   // Agent color state
   agentColorMap: Map<string, AgentColorName>
   agentColorIndex: number
@@ -277,6 +282,8 @@ function getInitialState(): State {
   const state: State = {
     originalCwd: resolvedCwd,
     projectRoot: resolvedCwd,
+    runnerDeclaredNestedRepositoryDiff: false,
+    runnerDeclaredNoRepositoryCheckedOut: false,
     totalCostUSD: 0,
     totalAPIDuration: 0,
     totalAPIDurationWithoutRetries: 0,
@@ -328,7 +335,7 @@ function getInitialState(): State {
     codeEditToolDecisionCounter: null,
     activeTimeCounter: null,
     statsStore: null,
-    sessionId: randomUUID() as SessionId,
+    sessionId: resolveInitialSessionId() as SessionId,
     parentSessionId: undefined,
     // Logger state
     loggerProvider: null,
@@ -432,20 +439,34 @@ export function getSessionId(): SessionId {
   return STATE.sessionId
 }
 
+/**
+ * Original 2.1.317 xw()/wCs(): moving to a different session detaches the
+ * outgoing request journal, compaction and telemetry context. The next
+ * session must not inherit a request ID or pending compaction from the last.
+ * Same-ID ownership relocation preserves the ongoing request.
+ */
+function resetOutgoingSessionJournal(): void {
+  STATE.planSlugCache.delete(STATE.sessionId)
+  STATE.lastMainRequestId = undefined
+  STATE.lastApiCompletionTimestamp = null
+  STATE.pendingPostCompaction = false
+  STATE.lastAPIRequest = null
+  STATE.lastAPIRequestMessages = null
+  STATE.lastClassifierRequests = null
+  STATE.promptId = null
+}
+
 export function regenerateSessionId(
   options: { setCurrentAsParent?: boolean } = {},
 ): SessionId {
-  if (options.setCurrentAsParent) {
-    STATE.parentSessionId = STATE.sessionId
-  }
-  // Drop the outgoing session's plan-slug entry so the Map doesn't
-  // accumulate stale keys. Callers that need to carry the slug across
-  // (REPL.tsx clearContext) read it before calling clearConversation.
-  STATE.planSlugCache.delete(STATE.sessionId)
-  // Regenerated sessions live in the current project: reset projectDir to
-  // null so getTranscriptPath() derives from originalCwd.
+  const previousSessionId = STATE.sessionId
+  resetOutgoingSessionJournal()
+  STATE.parentSessionId = options.setCurrentAsParent
+    ? previousSessionId : undefined
+  // The new session owns its own journal and project location.
   STATE.sessionId = randomUUID() as SessionId
   STATE.sessionProjectDir = null
+  sessionSwitched.emit(STATE.sessionId)
   return STATE.sessionId
 }
 
@@ -469,10 +490,11 @@ export function switchSession(
   sessionId: SessionId,
   projectDir: string | null = null,
 ): void {
-  // Drop the outgoing session's plan-slug entry so the Map stays bounded
-  // across repeated /resume. Only the current session's slug is ever read
-  // (plans.ts getPlanSlug defaults to getSessionId()).
-  STATE.planSlugCache.delete(STATE.sessionId)
+  if (STATE.sessionId !== sessionId) {
+    resetOutgoingSessionJournal()
+    // An unrelated resumed session cannot inherit the former session's parent.
+    STATE.parentSessionId = undefined
+  }
   STATE.sessionId = sessionId
   STATE.sessionProjectDir = projectDir
   sessionSwitched.emit(sessionId)
@@ -508,6 +530,24 @@ export function getOriginalCwd(): string {
  * It IS set at startup by --worktree, since that worktree is the session's project.
  * Use for project identity (history, skills, sessions) not file operations.
  */
+export function getRunnerDeclaredNestedRepositoryDiff(): boolean {
+  return STATE.runnerDeclaredNestedRepositoryDiff
+}
+
+export function getRunnerDeclaredNoRepositoryCheckedOut(): boolean {
+  return STATE.runnerDeclaredNoRepositoryCheckedOut
+}
+
+export function setRunnerDeclaredNestedRepositoryDiff(enabled: boolean): void {
+  if (!enabled) throw new Error('Runner nested repository declaration is one-way')
+  STATE.runnerDeclaredNestedRepositoryDiff = true
+}
+
+export function setRunnerDeclaredNoRepositoryCheckedOut(enabled: boolean): void {
+  if (!enabled) throw new Error('Runner checkout declaration is one-way')
+  STATE.runnerDeclaredNoRepositoryCheckedOut = true
+}
+
 export function getProjectRoot(): string {
   return STATE.projectRoot
 }
@@ -941,7 +981,7 @@ export function setModelStrings(modelStrings: ModelStrings): void {
 
 // Test utility function to reset model strings for re-initialization.
 // Separate from setModelStrings because we only want to accept 'null' in tests.
-export function resetModelStringsForTestingOnly() {
+export function resetModelStringsForTestingOnly() : void {
   STATE.modelStrings = null
 }
 
@@ -1047,10 +1087,10 @@ export function getMeterProvider(): MeterProvider | null {
 export function setMeterProvider(provider: MeterProvider | null): void {
   STATE.meterProvider = provider
 }
-export function getTracerProvider(): BasicTracerProvider | null {
+export function getTracerProvider(): TracerProvider | null {
   return STATE.tracerProvider
 }
-export function setTracerProvider(provider: BasicTracerProvider | null): void {
+export function setTracerProvider(provider: TracerProvider | null): void {
   STATE.tracerProvider = provider
 }
 

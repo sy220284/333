@@ -5,7 +5,10 @@
 import { Buffer } from 'buffer'
 import { env } from '../../utils/env.js'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
+import { getPlatform } from '../../utils/platform.js'
 import { BEL, ESC, ESC_TYPE, SEP } from './ansi.js'
+import { windowsClipboardWriteInvocation, writeLinuxClipboardNative, isLinuxClipboardAddonLoadable } from './clipboardNative317.ts'
+import { clipboardMultiplexer, encodeClipboardOsc52, suppressClipboardOsc52 } from './clipboardOsc317.ts'
 import type { Action, Color, TabStatusAction } from './types.js'
 
 export const OSC_PREFIX = ESC + String.fromCharCode(ESC_TYPE.OSC)
@@ -62,165 +65,160 @@ export function wrapForMultiplexer(sequence: string): string {
 export type ClipboardPath = 'native' | 'tmux-buffer' | 'osc52'
 
 export function getClipboardPath(): ClipboardPath {
-  const nativeAvailable =
-    process.platform === 'darwin' && !process.env['SSH_CONNECTION']
+  const platform = getPlatform()
+  const nativeAvailable = !process.env['SSH_CONNECTION'] && (
+    platform === 'macos' ||
+    platform === 'windows' ||
+    platform === 'wsl' ||
+    (platform === 'linux' && typeof linuxCopy === 'string')
+  )
   if (nativeAvailable) return 'native'
   if (process.env['TMUX']) return 'tmux-buffer'
   return 'osc52'
 }
 
 /**
- * Wrap a payload in tmux's DCS passthrough: ESC P tmux ; <payload> ESC \
- * tmux forwards the payload to the outer terminal, bypassing its own parser.
- * Inner ESCs must be doubled. Requires `set -g allow-passthrough on` in
- * ~/.tmux.conf; without it, tmux silently drops the whole DCS (no regression).
- */
-function tmuxPassthrough(payload: string): string {
-  return `${ESC}Ptmux;${payload.replaceAll(ESC, ESC + ESC)}${ST}`
-}
-
-/**
- * Load text into tmux's paste buffer via `tmux load-buffer`.
- * -w (tmux 3.2+) propagates to the outer terminal's clipboard via tmux's
- * own OSC 52 emission. -w is dropped for iTerm2: tmux's OSC 52 emission
- * crashes the iTerm2 session over SSH.
- *
- * Returns true if the buffer was loaded successfully.
+ * The 2.1.317 terminal clipboard path prefers the native compositor when
+ * local. tmux buffers and OSC 52 are separate transports and are both tried.
  */
 export async function tmuxLoadBuffer(text: string): Promise<boolean> {
   if (!process.env['TMUX']) return false
-  const args =
-    process.env['LC_TERMINAL'] === 'iTerm2'
-      ? ['load-buffer', '-']
-      : ['load-buffer', '-w', '-']
-  const { code } = await execFileNoThrow('tmux', args, {
-    input: text,
-    useCwd: false,
-    timeout: 2000,
-  })
-  return code === 0
-}
-
-/**
- * OSC 52 clipboard write: ESC ] 52 ; c ; <base64> BEL/ST
- * 'c' selects the clipboard (vs 'p' for primary selection on X11).
- *
- * When inside tmux ($TMUX set), `tmux load-buffer -w -` is the primary
- * path. tmux's buffer is always reachable — works over SSH, survives
- * detach/reattach, immune to stale env vars. The -w flag (tmux 3.2+) tells
- * tmux to also propagate to the outer terminal via its own OSC 52 path,
- * which tmux wraps correctly for the attached client. On older tmux, -w is
- * ignored and the buffer is still loaded. -w is dropped for iTerm2 (#22432)
- * because tmux's own OSC 52 emission (empty selection param: ESC]52;;b64)
- * crashes iTerm2 over SSH.
- *
- * After load-buffer succeeds, we ALSO return a DCS-passthrough-wrapped
- * OSC 52 for the caller to write to stdout. Our sequence uses explicit `c`
- * (not tmux's crashy empty-param variant), so it sidesteps the #22432 path.
- * With `allow-passthrough on` + an OSC-52-capable outer terminal, selection
- * reaches the system clipboard; with either off, tmux silently drops the
- * DCS and prefix+] still works. See Greg Smith's "free pony" in
- * https://anthropic.slack.com/archives/C07VBSHV7EV/p1773177228548119.
- *
- * If load-buffer fails entirely, fall through to raw OSC 52.
- *
- * Outside tmux, write raw OSC 52 to stdout (caller handles the write).
- *
- * Local (no SSH_CONNECTION): also shell out to a native clipboard utility.
- * OSC 52 and tmux -w both depend on terminal settings — iTerm2 disables
- * OSC 52 by default, VS Code shows a permission prompt on first use. Native
- * utilities (pbcopy/wl-copy/xclip/xsel/clip.exe) always work locally. Over
- * SSH these would write to the remote clipboard — OSC 52 is the right path there.
- *
- * Returns the sequence for the caller to write to stdout (raw OSC 52
- * outside tmux, DCS-wrapped inside).
- */
-export async function setClipboard(text: string): Promise<string> {
-  const b64 = Buffer.from(text, 'utf8').toString('base64')
-  const raw = osc(OSC.CLIPBOARD, 'c', b64)
-
-  // Native safety net — fire FIRST, before the tmux await, so a quick
-  // focus-switch after selecting doesn't race pbcopy. Previously this ran
-  // AFTER awaiting tmux load-buffer, adding ~50-100ms of subprocess latency
-  // before pbcopy even started — fast cmd+tab → paste would beat it
-  // (https://anthropic.slack.com/archives/C07VBSHV7EV/p1773943921788829).
-  // Gated on SSH_CONNECTION (not SSH_TTY) since tmux panes inherit SSH_TTY
-  // forever but SSH_CONNECTION is in tmux's default update-environment and
-  // clears on local attach. Fire-and-forget.
-  if (!process.env['SSH_CONNECTION']) copyNative(text)
-
-  const tmuxBufferLoaded = await tmuxLoadBuffer(text)
-
-  // Inner OSC uses BEL directly (not osc()) — ST's ESC would need doubling
-  // too, and BEL works everywhere for OSC 52.
-  if (tmuxBufferLoaded) return tmuxPassthrough(`${ESC}]52;c;${b64}${BEL}`)
-  return raw
-}
-
-// Linux clipboard tool: undefined = not yet probed, null = none available.
-// Probe order: wl-copy (Wayland) → xclip (X11) → xsel (X11 fallback).
-// Cached after first attempt so repeated mouse-ups skip the probe chain.
-let linuxCopy: 'wl-copy' | 'xclip' | 'xsel' | null | undefined
-
-/**
- * Shell out to a native clipboard utility as a safety net for OSC 52.
- * Only called when not in an SSH session (over SSH, these would write to
- * the remote machine's clipboard — OSC 52 is the right path there).
- * Fire-and-forget: failures are silent since OSC 52 may have succeeded.
- */
-function copyNative(text: string): void {
   const opts = { input: text, useCwd: false, timeout: 2000 }
-  switch (process.platform) {
-    case 'darwin':
-      void execFileNoThrow('pbcopy', [], opts)
-      return
-    case 'linux': {
-      if (linuxCopy === null) return
-      if (linuxCopy === 'wl-copy') {
-        void execFileNoThrow('wl-copy', [], opts)
-        return
-      }
-      if (linuxCopy === 'xclip') {
-        void execFileNoThrow('xclip', ['-selection', 'clipboard'], opts)
-        return
-      }
-      if (linuxCopy === 'xsel') {
-        void execFileNoThrow('xsel', ['--clipboard', '--input'], opts)
-        return
-      }
-      // First call: probe wl-copy (Wayland) then xclip/xsel (X11), cache winner.
-      void execFileNoThrow('wl-copy', [], opts).then(r => {
-        if (r.code === 0) {
-          linuxCopy = 'wl-copy'
-          return
-        }
-        void execFileNoThrow('xclip', ['-selection', 'clipboard'], opts).then(
-          r2 => {
-            if (r2.code === 0) {
-              linuxCopy = 'xclip'
-              return
-            }
-            void execFileNoThrow('xsel', ['--clipboard', '--input'], opts).then(
-              r3 => {
-                linuxCopy = r3.code === 0 ? 'xsel' : null
-              },
-            )
-          },
-        )
-      })
+  // New tmux versions propagate with -w; old servers reject that option.
+  // Official 317 retries without -w before giving up on the buffer.
+  const propagated = await execFileNoThrow('tmux', ['load-buffer', '-w', '-'], opts)
+  if (propagated.code === 0) return true
+  const local = await execFileNoThrow('tmux', ['load-buffer', '-'], opts)
+  return local.code === 0
+}
+
+// A failed addon that has already worked is retried, matching the official
+// compositor recovery contract. A consistently failing addon is downgraded.
+let linuxCopy: 'wl-copy' | 'xclip' | 'xsel' | 'addon' | null | undefined
+let linuxProbe: Promise<void> | undefined
+let addonWriteFailed = false
+let addonWriteSucceeded = false
+let waylandCopyGeneration = 0
+
+async function hasClipboardCommand(command: string): Promise<boolean> {
+  const result = await execFileNoThrow('which', [command], {
+    useCwd: false, timeout: 2000,
+  })
+  return result.code === 0
+}
+
+async function probeLinuxClipboard(): Promise<void> {
+  if (getPlatform() !== 'linux') return
+  if (typeof linuxCopy === 'string' && linuxCopy !== 'addon') return
+  if (linuxProbe) return linuxProbe
+  const probing = (async () => {
+    if (process.env.WAYLAND_DISPLAY && await hasClipboardCommand('wl-copy')) {
+      linuxCopy = 'wl-copy'
       return
     }
-    case 'win32':
-      // clip.exe is always available on Windows. Unicode handling is
-      // imperfect (system locale encoding) but good enough for a fallback.
-      void execFileNoThrow('clip', [], opts)
+    if (process.env.DISPLAY) {
+      if (await hasClipboardCommand('xclip')) {
+        linuxCopy = 'xclip'
+        return
+      }
+      if (await hasClipboardCommand('xsel')) {
+        linuxCopy = 'xsel'
+        return
+      }
+    }
+    if (!addonWriteFailed && isLinuxClipboardAddonLoadable()) {
+      linuxCopy = 'addon'
       return
+    }
+    linuxCopy = null
+  })()
+  linuxProbe = probing
+  try {
+    await probing
+  } finally {
+    if (linuxProbe === probing) linuxProbe = undefined
   }
 }
 
-/** @internal test-only */
+function copyNative(text: string): boolean {
+  const opts = { input: text, useCwd: false, timeout: 2000 }
+  switch (getPlatform()) {
+    case 'macos':
+      void execFileNoThrow('pbcopy', [], opts)
+      return true
+    case 'linux':
+      switch (linuxCopy) {
+        case 'wl-copy': {
+          const generation = ++waylandCopyGeneration
+          void (async () => {
+            const result = await execFileNoThrow('wl-copy', [], opts)
+            if (result.code === 0 && generation === waylandCopyGeneration) {
+              await execFileNoThrow('wl-copy', ['--primary'], opts)
+            }
+          })()
+          return true
+        }
+        case 'xclip':
+          void execFileNoThrow('xclip', ['-selection', 'clipboard'], opts)
+          void execFileNoThrow('xclip', ['-selection', 'primary'], opts)
+          return true
+        case 'xsel':
+          void execFileNoThrow('xsel', ['--clipboard', '--input'], opts)
+          void execFileNoThrow('xsel', ['--primary', '--input'], opts)
+          return true
+        case 'addon': {
+          const result = writeLinuxClipboardNative(text)
+          if (result) addonWriteSucceeded = true
+          else if (!addonWriteSucceeded) addonWriteFailed = true
+          void probeLinuxClipboard()
+          return result
+        }
+      }
+      return false
+    case 'windows':
+    case 'wsl': {
+      const { command, args } = windowsClipboardWriteInvocation(getPlatform())
+      void execFileNoThrow(command, args, opts)
+      return true
+    }
+    default:
+      return false
+  }
+}
+
+/**
+ * Sends the same OSC 52 data as the official x64: tmux gets a raw OSC and a
+ * DCS passthrough, screen gets 76-byte DCS chunks, and VTE terminals known
+ * to print escape sequences suppress unsafe OSC when native copying works.
+ */
+export async function setClipboard(text: string): Promise<string> {
+  const b64 = Buffer.from(text, 'utf8').toString('base64')
+  const platform = getPlatform()
+  let nativeSucceeded = false
+  if (!process.env['SSH_CONNECTION']) {
+    if (platform === 'linux' && typeof linuxCopy !== 'string') {
+      await probeLinuxClipboard()
+    }
+    nativeSucceeded = copyNative(text)
+  }
+  await tmuxLoadBuffer(text)
+  if (suppressClipboardOsc52({
+    platform, terminal: env.terminal, nativeWriteSucceeded: nativeSucceeded,
+  })) return ''
+  return encodeClipboardOsc52(
+    b64,
+    clipboardMultiplexer(),
+    env.terminal === 'kitty' ? ST : BEL,
+  )
+}
+
+/** @internal test-only: reset mutable clipboard selection state. */
 export function _resetLinuxCopyCache(): void {
   linuxCopy = undefined
+  linuxProbe = undefined
+  addonWriteFailed = false
+  addonWriteSucceeded = false
+  waylandCopyGeneration = 0
 }
 
 /**

@@ -1,0 +1,184 @@
+name: M1 官方 2.1.317 Linux x64 安装后真实行为对照
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m1-official-x64-installed-parity.yml'
+      - 'build/m1-x64-reference-probe.mjs'
+      - 'build/m1-import-release-parity.mjs'
+      - 'build/m1-cli-surface-audit.mjs'
+      - 'build/m1-plugin-enable-json-parity.mjs'
+      - 'tests/m1-plugin-data-size-parity.test.mjs'
+      - 'tests/m1-317-oracle-identity.test.mjs'
+      - 'tests/m1-x64-local-api.py'
+      - 'tests/m1_x64_stream_events_test.py'
+      - 'src/**'
+      - 'build/rebuild.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Every source revision must finish its own reference parity run. Concurrent
+  # PR pushes previously cancelled fully-built CLI tests before acceptance.
+  group: official-x64-installed-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  installed-reference:
+    name: 固定版本安装、校验与真实 CLI/工具链试验
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 固定版身份和全项目目标一致性检查
+        run: node --test tests/m1-317-oracle-identity.test.mjs
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 使用 Anthropic 官方原生安装器安装 Linux x64 2.1.317
+        shell: bash
+        run: |
+          set -euo pipefail
+          export HOME="${RUNNER_TEMP}/claude-2.1.317-install-home"
+          export XDG_CONFIG_HOME="${HOME}/.config"
+          export DISABLE_AUTOUPDATER=1
+          mkdir -p "${HOME}" "${XDG_CONFIG_HOME}"
+          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
+            'https://claude.ai/install.sh' -o "${RUNNER_TEMP}/claude-official-install.sh"
+          bash "${RUNNER_TEMP}/claude-official-install.sh" 2.1.317
+          binary="${HOME}/.local/bin/claude"
+          test -x "${binary}"
+          version="$("${binary}" --version)"
+          echo "安装后版本：${version}"
+          [[ "${version}" == 2.1.317* ]]
+          resolved="$(readlink -f "${binary}")"
+          test -f "${resolved}"
+          echo 'eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  '"${resolved}" | sha256sum --check
+          "${binary}" --help > "${RUNNER_TEMP}/claude-installed-help.txt"
+          test -s "${RUNNER_TEMP}/claude-installed-help.txt"
+          printf 'CLAUDE_REFERENCE_BIN=%s\n' "${binary}" >> "${GITHUB_ENV}"
+          printf 'CLAUDE_INSTALLED_HOME=%s\n' "${HOME}" >> "${GITHUB_ENV}"
+          printf 'DISABLE_AUTOUPDATER=1\n' >> "${GITHUB_ENV}"
+          printf 'version=%s\nresolved=%s\nsha256=%s\n' \
+            "${version}" "${resolved}" \
+            'eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0' \
+            > "${RUNNER_TEMP}/claude-official-install-evidence.txt"
+      - name: 安装版执行官方 CLI 基准并保存实际结果
+        shell: bash
+        run: |
+          set -euo pipefail
+          HOME="${CLAUDE_INSTALLED_HOME}" node build/m1-x64-reference-probe.mjs \
+            --reference "${CLAUDE_REFERENCE_BIN}" \
+            --report "${RUNNER_TEMP}/claude-installed-cli-parity.json"
+      - name: 从当前 PR 源码独立构建候选程序
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/verify-bundled-assets.mjs
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+          bun test tests/m1-desktop-deeplink.test.ts
+          node --test tests/m1-desktop-cli-guards.test.mjs
+          bun build/rebuild.mjs
+          test -s dist/cli.js
+          printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-installed-parity-candidate"
+          chmod +x "${RUNNER_TEMP}/m1-installed-parity-candidate"
+      - name: 同一隔离环境严格对照官方安装版与 PR 候选版全部 CLI 基准
+        shell: bash
+        run: |
+          set -euo pipefail
+          HOME="${CLAUDE_INSTALLED_HOME}" node build/m1-x64-reference-probe.mjs \
+            --reference "${CLAUDE_REFERENCE_BIN}" \
+            --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
+            --allow-candidate-diff false \
+            --report "${RUNNER_TEMP}/claude-installed-candidate-strict-parity.json"
+      - name: 真实终端核对 Desktop 新版公开入口及错误优先级
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/m1-x64-desktop-cli-parity.py \
+            --reference "${CLAUDE_REFERENCE_BIN}" \
+            --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
+            --report "${RUNNER_TEMP}/claude-installed-desktop-cli-parity.json"
+      - name: 对照官方 x64 校验旧 assistant 命令退场
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/m1-assistant-release-parity.mjs \
+            --reference "${CLAUDE_REFERENCE_BIN}" \
+            --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
+            --report "${RUNNER_TEMP}/claude-installed-assistant-retirement-parity.json"
+      - name: 使用官方x64校验代理配置文件与错误分支
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/m1-agents-config-parity.mjs \
+            --reference "${CLAUDE_REFERENCE_BIN}" \
+            --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
+            --report "${RUNNER_TEMP}/claude-installed-agents-config-parity.json"
+      - name: 对照原版未开放import命令及选项完整性
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/m1-import-release-parity.mjs \
+            --reference "${CLAUDE_REFERENCE_BIN}" \
+            --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
+            --report "${RUNNER_TEMP}/claude-installed-import-parity.json"
+      - name: 对照全量公开命令帮助与参数并留存未闭环差异
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/m1-cli-surface-audit.mjs \
+            --target 2.1.317 \
+            --reference "${CLAUDE_REFERENCE_BIN}" \
+            --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
+            --report "${RUNNER_TEMP}/claude-installed-cli-surface-gaps.json"
+      - name: 真实对照插件启用的JSON结果和配置写回
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/m1-plugin-enable-json-parity.mjs \
+            --reference "${CLAUDE_REFERENCE_BIN}" \
+            --candidate "${RUNNER_TEMP}/m1-installed-parity-candidate" \
+            --report "${RUNNER_TEMP}/claude-installed-plugin-enable-json-parity.json"
+      - name: 官方原版与候选版双跑插件数据大小及配置覆盖规则
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLAUDE_TARGET_X64="${CLAUDE_REFERENCE_BIN}" node --test tests/m1-plugin-data-size-parity.test.mjs
+      - name: 安装版执行本机模拟 API 与工具权限实测
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p 'm1_x64_stream_events_test.py'
+          HOME="${CLAUDE_INSTALLED_HOME}" python3 tests/m1-x64-local-api.py \
+            --binary "${CLAUDE_REFERENCE_BIN}" \
+            --report "${RUNNER_TEMP}/claude-installed-loopback-api.json"
+      - name: 归档安装及运行结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: official-2.1.317-installed-x64-real-parity
+          path: |
+            ${{ runner.temp }}/claude-official-install-evidence.txt
+            ${{ runner.temp }}/claude-installed-help.txt
+            ${{ runner.temp }}/claude-installed-cli-parity.json
+            ${{ runner.temp }}/claude-installed-candidate-strict-parity.json
+            ${{ runner.temp }}/claude-installed-loopback-api.json
+            ${{ runner.temp }}/claude-installed-assistant-retirement-parity.json
+            ${{ runner.temp }}/claude-installed-desktop-cli-parity.json
+            ${{ runner.temp }}/claude-installed-agents-config-parity.json
+            ${{ runner.temp }}/claude-installed-import-parity.json
+            ${{ runner.temp }}/claude-installed-cli-surface-gaps.json
+            ${{ runner.temp }}/claude-installed-plugin-enable-json-parity.json
+          retention-days: 30
+          if-no-files-found: warn

@@ -1,0 +1,3977 @@
+{
+  "schema": 1,
+  "target": "2.1.310",
+  "records": [
+    {
+      "F_id": "F001",
+      "first_code_anchor": "chunk-6d8swme1.js:303",
+      "static_keyword": "--resume",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E01",
+        "E24",
+        "E33",
+        "E35"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/main.tsx",
+        "src/ink.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "--resume",
+          "location": "chunk-6d8swme1.js:303",
+          "code_snippet": "function Bd(e) { return `To send text as a prompt and print the reply instead, add -p; it also works with --continue and --resume <session-id> (for example",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--continue",
+          "location": "chunk-6d8swme1.js:303",
+          "code_snippet": "function Bd(e) { return `To send text as a prompt and print the reply instead, add -p; it also works with --continue and --resume <session-id> (for example",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--resume",
+          "location": "chunk-c3npf81n.js:20",
+          "code_snippet": "var a = new Set([\"--prefill\", \"--prefill-b64\", \"--deep-link-repo\", \"--deep-link-last-fetch\", \"--deep-link-cwd-b64\", \"--handle-uri\", \"--settings\", \"--manage",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--continue",
+          "location": "chunk-c3npf81n.js:70",
+          "code_snippet": "var g = new Set([\"attach\", \"logs\", \"stop\", \"kill\", \"respawn\", \"rm\"]), m = new Set([\"-p\", \"--print\", \"--bg\", \"--background\", \"--routine\", \"-h\", \"--help\", \"-",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--resume",
+          "location": "chunk-mh7sh27p.js:702",
+          "code_snippet": "throw new KYe(\"Allowed choices are on, off.\"); return h === \"on\"; })).addOption(new as(\"--append-subagent-system-prompt <prompt>\", \"Append a system prompt ",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F002",
+      "first_code_anchor": "chunk-6d8swme1.js:741",
+      "static_keyword": "--print",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E01"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/cli/print.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "--print",
+          "location": "chunk-6d8swme1.js:741",
+          "code_snippet": "return { ok: !1, error: `Error: the task was given twice: as --cloud's value (${UFt(p)}) and as the prompt. With --print, give it in one place; to name the",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--output-format",
+          "location": "chunk-6d8swme1.js:703",
+          "code_snippet": "return { ok: !1, error: `${Ce}${oe} does not support --output-format stream-json` };",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--print",
+          "location": "chunk-c3npf81n.js:48",
+          "code_snippet": "function Bit(e = process.argv.slice(2)) { let n = bS(\"-p\", e) || bS(\"--print\", e), t = bS(\"--init-only\", e), o = KCt((s) => s.startsWith(\"--sdk-url\"), e) !",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--output-format",
+          "location": "chunk-c3npf81n.js:20",
+          "code_snippet": "var a = new Set([\"--prefill\", \"--prefill-b64\", \"--deep-link-repo\", \"--deep-link-last-fetch\", \"--deep-link-cwd-b64\", \"--handle-uri\", \"--settings\", \"--manage",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--print",
+          "location": "chunk-mh7sh27p.js:698",
+          "code_snippet": "let B = r.name(\"claude\").description(\"Claude Code - starts an interactive session by default, use -p/--print for non-interactive output\").argument(\"[prompt",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F003",
+      "first_code_anchor": "chunk-6d8swme1.js:702",
+      "static_keyword": "stream-json",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E23",
+        "E24",
+        "E66"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/cli/structuredIO.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "stream-json",
+          "location": "chunk-6d8swme1.js:702",
+          "code_snippet": "if ((e.print || o.nonInteractive) && o.outputFormat === \"stream-json\")",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--include-partial-messages",
+          "location": "chunk-6d8swme1.js:2002",
+          "code_snippet": "return pn(\"Error: --include-partial-messages requires --print and --output-format=stream-json.\");",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "stream-json",
+          "location": "chunk-mh7sh27p.js:393",
+          "code_snippet": "if (x === \"stream-json\")",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--include-partial-messages",
+          "location": "chunk-mh7sh27p.js:698",
+          "code_snippet": "let B = r.name(\"claude\").description(\"Claude Code - starts an interactive session by default, use -p/--print for non-interactive output\").argument(\"[prompt",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "stream-json",
+          "location": "chunk-at88wjsn.js:1795",
+          "code_snippet": "var xF = p(() => u({ type: A(\"rate_limit_event\"), rate_limit_info: cYr(), uuid: m(), session_id: o() }).describe(\"Rate limit event emitted when rate limit ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F004",
+      "first_code_anchor": "chunk-mh7sh27p.js:702",
+      "static_keyword": "--resume",
+      "owner_M": [
+        "M4"
+      ],
+      "related_scenarios": [
+        "E33"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/commands/resume",
+        "src/history.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "--resume",
+          "location": "chunk-mh7sh27p.js:702",
+          "code_snippet": "throw new KYe(\"Allowed choices are on, off.\"); return h === \"on\"; })).addOption(new as(\"--append-subagent-system-prompt <prompt>\", \"Append a system prompt ",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--continue",
+          "location": "chunk-mh7sh27p.js:702",
+          "code_snippet": "throw new KYe(\"Allowed choices are on, off.\"); return h === \"on\"; })).addOption(new as(\"--append-subagent-system-prompt <prompt>\", \"Append a system prompt ",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--resume",
+          "location": "chunk-mdxeekqd.js:1037",
+          "code_snippet": "let Bn = He?.keepParent ? gee() : {}, $o = Sn !== void 0 && (Mn === void 0 || No === null) && !(Bn.appendSystemPrompt ?? \"\").includes(Sn) ? Sn : void 0, Xo",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--continue",
+          "location": "chunk-mdxeekqd.js:12818",
+          "code_snippet": "et = e(s, { children: r(n, { color: \"error\", wrap: \"truncate\", children: [\"Critical memory usage (\", Ve, \") \\u2014 restart and resume with claude --continu",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--resume",
+          "location": "chunk-sr1bpqdt.js:359",
+          "code_snippet": "k.push(AA(\"--resume\", ke));",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F006",
+      "first_code_anchor": "chunk-3827ysmv.js:262",
+      "static_keyword": "/share",
+      "owner_M": [
+        "M4"
+      ],
+      "related_scenarios": [
+        "E36"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/commands/export",
+        "share"
+      ],
+      "additional_static_branches": [
+        "chunk-3827ysmv.js:259-265",
+        "chunk-5nwfcyzp.js:184-187"
+      ],
+      "static_semantics_observation": "/share 的分支会根据可用凭据、Provider 和用户配置决定普通提交或生成本地打包；已定位条件判定及界面调用，尚未核实脱敏、附件和远端实际行为。",
+      "static_evidence_scope": "SOURCE_ONLY; no runtime or full call-chain signoff",
+      "candidate_evidence": [
+        {
+          "anchor": "/share",
+          "location": "chunk-3827ysmv.js:262",
+          "code_snippet": "return { kind: \"bundle\", ...y }; if (e === \"/share\" && (i.CLAUDE_CODE_ENABLE_SHARE_BUNDLE || nd()?.[tn] === !0))",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/share",
+          "location": "chunk-563gzepf.js:4538",
+          "code_snippet": "var om = [\"/usr/local/share/gcm-core\", \"/usr/lib/git-core\", \"/usr/libexec/git-core\", \"/usr/local/libexec/git-core\", \"/opt/homebrew/opt/git/libexec/git-core",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/share",
+          "location": "chunk-5nwfcyzp.js:185",
+          "code_snippet": "return d(b.reason), null; let _ = yas() ?? void 0, W = Oe(b.kind); return e(xt, { abortController: o, messages: a, initialDescription: h, onDone: d, applyM",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 3,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F007",
+      "first_code_anchor": "chunk-kmt6qr99.js:29",
+      "static_keyword": "--permission-mode",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E03",
+        "E04"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/commands/plan",
+        "ExitPlanModeTool"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "--permission-mode",
+          "location": "chunk-kmt6qr99.js:29",
+          "code_snippet": "function uCn(e) { let o = S(e), t = S({ ...e, settingsModeForwardable: !1 }), i = o.permissionMode !== t.permissionMode, n = o.permissionMode, r = n === \"d",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/plan",
+          "location": "chunk-kmt6qr99.js:29",
+          "code_snippet": "function uCn(e) { let o = S(e), t = S({ ...e, settingsModeForwardable: !1 }), i = o.permissionMode !== t.permissionMode, n = o.permissionMode, r = n === \"d",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "ExitPlanMode",
+          "location": "chunk-92hm4yb6.js:1901",
+          "code_snippet": "E = e(n, { dimColor: !0, children: \"Please revise your plan based on the feedback and call ExitPlanMode again.\" }), f[16] = E;",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/plan",
+          "location": "chunk-92hm4yb6.js:303",
+          "code_snippet": "return r(s, { flexDirection: \"column\", marginTop: 1, children: [r(s, { flexDirection: \"row\", children: [e(n, { color: G$(\"plan\"), children: ko }), e(n, { c",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "ExitPlanMode",
+          "location": "chunk-at88wjsn.js:1799",
+          "code_snippet": "var ZA = p(() => oe().describe(\"A JSON-RPC 2.0 message as defined by the Model Context Protocol (request, notification, or response object).\")), BW = p(() ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F008",
+      "first_code_anchor": "chunk-f3ak9604.js:199",
+      "static_keyword": "ask_user_question",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E37"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/tools/AskUserQuestionTool"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "ask_user_question",
+          "location": "chunk-f3ak9604.js:199",
+          "code_snippet": "return T((E) => ({ ...E, askUserQuestionTimeout: l })), { error: h.error }; a(\"tengu_ask_user_question_timeout_changed\", { value: c(o), source: b(\"config_p",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "askUserQuestion",
+          "location": "chunk-f3ak9604.js:81",
+          "code_snippet": "function nEr() { return { ...!1, askUserQuestionTimeout: rTt(), dialogExpiry: Mwn(), crossSessionInbound: Ve(\"crossSessionInbound\")?.value, modelProposedGo",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "AskUserQuestion",
+          "location": "chunk-jz8fz1z5.js:257",
+          "code_snippet": "return \"[malformed AskUserQuestion input]\";",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "ask_user_question",
+          "location": "chunk-jz8fz1z5.js:316",
+          "code_snippet": "} return { result: !0 }; }, async checkPermissions(e) { return { behavior: \"ask\", message: \"Answer questions?\", updatedInput: V(e) }; }, async call(e) { le",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "AskUserQuestion",
+          "location": "chunk-mdxeekqd.js:23104",
+          "code_snippet": "je = Z[4], Ve = Z[5]; let Ge = cc.useRenderInput(\"AskUserQuestion\", je, Ve), et = hxe(), dt = C(void 0), yt; if (Z[6] !== D || Z[7] !== Ce || Z[8] !== x ||",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F009",
+      "first_code_anchor": "chunk-j0tbz6ra.js:40824",
+      "static_keyword": "/tui",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E37",
+        "E53"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/components",
+        "src/commands/diff"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "/tui",
+          "location": "chunk-j0tbz6ra.js:40824",
+          "code_snippet": "return e(`Focus view is set by \"viewMode\": \"focus\" in settings.json \\u2014 remove it there and restart Claude Code to turn it off. ${\"Focus view needs the ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "fullscreen",
+          "location": "chunk-j0tbz6ra.js:1097",
+          "code_snippet": "function AXe(e) { let n = hY.get()?.columns, r = process.stdout.columns, s = r > 0; return { isFullscreen: e === \"fullscreen\", columns: n ?? (s ? r : Pwt) ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/tui",
+          "location": "chunk-jak6ta5v.js:604",
+          "code_snippet": "return !1; return k(\"tengu_maple_rung\", !1); } }, { id: \"push-notif\", content: async (e) => `Get pinged on your phone when long tasks finish \\xB7 enable pu",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "fullscreen",
+          "location": "chunk-jak6ta5v.js:604",
+          "code_snippet": "return !1; return k(\"tengu_maple_rung\", !1); } }, { id: \"push-notif\", content: async (e) => `Get pinged on your phone when long tasks finish \\xB7 enable pu",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/tui",
+          "location": "chunk-mdxeekqd.js:2773",
+          "code_snippet": "function Imi(h, x) { return `Cannot switch renderers in this session \\u2014 it has restrictions a restart can't carry over (${x.join(\"; \")}). Nothing was c",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F010",
+      "first_code_anchor": "chunk-7rnqxvcm.js:9662",
+      "static_keyword": "--rewind-files",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E20"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/commands/rewind"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "--rewind-files",
+          "location": "chunk-7rnqxvcm.js:9662",
+          "code_snippet": "process.stderr.write(`Error: --rewind-files requires --resume",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "rewindFiles",
+          "location": "chunk-7rnqxvcm.js:9661",
+          "code_snippet": "if (C.rewindFiles && !C.resume) {",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/rewind",
+          "location": "chunk-at88wjsn.js:1798",
+          "code_snippet": "var eW = p(() => u({ type: A(\"system\"), subtype: A(\"local_command_output\"), content: o(), uuid: m(), session_id: o() }).describe(\"Output from a local slash",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "rewindFiles",
+          "location": "chunk-at88wjsn.js:1794",
+          "code_snippet": "var J5o = p(() => u({ title: o().max(200).refine(mA), description: o().max(2000).regex(/\\S/), displayName: o().max(64).refine(mA) }).describe(\"@internal De",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/rewind",
+          "location": "chunk-5rw2zfa0.js:1744",
+          "code_snippet": "return c; return c ? {} : { commit: \"\", pr: \"\", sessionUrl: !1 }; }).pipe(a).optional().describe('Customize attribution text for commits and PRs. Each fiel",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F011",
+      "first_code_anchor": "chunk-j0tbz6ra.js:16731",
+      "static_keyword": "/config",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E37",
+        "E53",
+        "E59"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/keybindings",
+        "src/vim",
+        "src/commands/theme"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "/config",
+          "location": "chunk-j0tbz6ra.js:16731",
+          "code_snippet": "var p1e = () => $e([o(), v(), M(), sm()]), Eg = p1e, QP = p1e, XD = () => $e([p1e(), T(o())]), lMo = p(() => u({ name: Eg().optional().describe(\"Display na",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "vimMode",
+          "location": "chunk-j0tbz6ra.js:66691",
+          "code_snippet": "function HGr({ session: e, permissionMode: n, exceeds200kTokens: r, fastMode: s, settings: h, messages: y, addedDirs: S, mainLoopModel: w, gitWorktree: D, ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/config",
+          "location": "chunk-mdxeekqd.js:1804",
+          "code_snippet": "dt.current++, He({ ...oo, text: `${oo.text} \\xB7 disable auto-copy in /config`, row1Hint: void 0, timeoutMs: Math.max(oo.timeoutMs, 4000) });",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "vimMode",
+          "location": "chunk-mdxeekqd.js:5239",
+          "code_snippet": "function ev() { let h = Xm(); return kt(h.subscribe, () => h.getState().vimMode); }",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "keybindings.json",
+          "location": "chunk-n7dvjfwp.js:1914",
+          "code_snippet": "var Fs = { $schema: \"https://www.schemastore.org/claude-code-keybindings.json\", $docs: \"https://code.claude.com/docs/en/keybindings\", bindings: [{ context:",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F012",
+      "first_code_anchor": "chunk-j0tbz6ra.js:1185",
+      "static_keyword": "/status",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E26",
+        "E33"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/commands/status",
+        "cost"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "/status",
+          "location": "chunk-j0tbz6ra.js:1185",
+          "code_snippet": "function r$e({ caBundlePath: e, hasReadme: n, installedClis: r }) { let s = n ? `see ${xvo(e)} and ` : \"\", h = r.length > 0 ? ` Installed CLIs preconfigure",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "statusLine",
+          "location": "chunk-j0tbz6ra.js:3371",
+          "code_snippet": "let { message: Ge, statusLine: Je } = gKt(Q, Ee?.error?.message), rt = Ge ?? `Access denied fetching session events: ${Je}`;",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/status",
+          "location": "chunk-6d8swme1.js:1424",
+          "code_snippet": "t(`managed settings: MCP policy keys in ${n.map(({ source: S }) => n$e[S]).join(\", \")} not applied: not the managed settings source that applies for them (",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "context_window",
+          "location": "chunk-6d8swme1.js:1293",
+          "code_snippet": "return {}; let n = e.mainLoopKnowledge, r = e.picker.main; return { main_loop_model: Kr(e.mainLoopModel, o), behaves_as_applied: n.status === \"mapped\", beh",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/status",
+          "location": "chunk-6h7ejyet.js:5108",
+          "code_snippet": "var uQ = Symbol(\"in-tree settings unreadable\"), QA = \"\", c0r = \"this checkout's .claude/settings.json or .claude/settings.local.json cannot be read or pars",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F013",
+      "first_code_anchor": "chunk-1g7w7v7r.js:56",
+      "static_keyword": "audio-capture",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E26"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/commands/voice/",
+        "src/voice/",
+        "src/services/voice.ts",
+        "src/services/voiceStreamSTT.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "audio-capture",
+          "location": "chunk-1g7w7v7r.js:56",
+          "code_snippet": "function f(e) { return e.audioNapiPromise ??= (async () => { let o = Date.now(), r = await import(\"/$bunfs/root/chunk-2ctyt5p9.js\"); return r.isNativeAudio",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "microphone",
+          "location": "chunk-1g7w7v7r.js:74",
+          "code_snippet": "return { available: !1, reason: `Voice mode requires microphone access, but no audio device is available in this environment.",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "audio-capture",
+          "location": "chunk-2ctyt5p9.js:17",
+          "code_snippet": "catch { } let o = `x64-${t}`, u = (t === \"linux\" ? [o, `${o}-musl`] : [o]).flatMap((n) => [`./vendor/audio-capture/${n}/audio-capture.node`, `../audio-capt",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "microphone",
+          "location": "chunk-2ctyt5p9.js:37",
+          "code_snippet": "function v() { let t = r(); if (!t || !t.microphoneAuthorizationStatus)",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "transcription",
+          "location": "chunk-8twqkjww.js:185",
+          "code_snippet": "function L(e) { return `voice_transcription_connection_failed_${e ?? \"no_response\"}`; }",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F014",
+      "first_code_anchor": "chunk-j0tbz6ra.js:38857",
+      "static_keyword": "--add-dir",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E38"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/commands/add-dir",
+        "EnterWorktreeTool"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "--add-dir",
+          "location": "chunk-j0tbz6ra.js:38857",
+          "code_snippet": "case \"includes\": return `its git configuration (${s}) pulls in include files, lies inside this working tree, its repository or a directory your settings op",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "EnterWorktree",
+          "location": "chunk-j0tbz6ra.js:41832",
+          "code_snippet": "let r = UYe() === \"none\", s = e ? r ? P8s : i.CLAUDE_BG_ISOLATION === \"worktree\" ? I8s : O8s : r ? \"Edit files directly in your working directory \\u2014 th",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--add-dir",
+          "location": "chunk-5rw2zfa0.js:1744",
+          "code_snippet": "return c; return c ? {} : { commit: \"\", pr: \"\", sessionUrl: !1 }; }).pipe(a).optional().describe('Customize attribution text for commits and PRs. Each fiel",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "EnterWorktree",
+          "location": "chunk-5rw2zfa0.js:1744",
+          "code_snippet": "return c; return c ? {} : { commit: \"\", pr: \"\", sessionUrl: !1 }; }).pipe(a).optional().describe('Customize attribution text for commits and PRs. Each fiel",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--add-dir",
+          "location": "chunk-c3npf81n.js:20",
+          "code_snippet": "var a = new Set([\"--prefill\", \"--prefill-b64\", \"--deep-link-repo\", \"--deep-link-last-fetch\", \"--deep-link-cwd-b64\", \"--handle-uri\", \"--settings\", \"--manage",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F015",
+      "first_code_anchor": "chunk-2pjf4p7s.js:1016",
+      "static_keyword": "tool_use",
+      "owner_M": [
+        "M2"
+      ],
+      "related_scenarios": [
+        "E02",
+        "E15",
+        "E27",
+        "L07"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/QueryEngine.ts",
+        "src/query.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "tool_use",
+          "location": "chunk-2pjf4p7s.js:1016",
+          "code_snippet": "async function Ro({ idx: M, promptStr: K, label: V, agent: Re, model: Ie, permissionMode: _e, evalSignal: ke }) { let rt = e.agentContext, xe = typeof Ie =",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "tool_result",
+          "location": "chunk-2pjf4p7s.js:1208",
+          "code_snippet": "if (typeof Ze === \"object\" && Ze?.type === \"tool_result\") {",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "tool_use",
+          "location": "chunk-6h7ejyet.js:1319",
+          "code_snippet": "var px = { end_turn: !0, max_tokens: !0, stop_sequence: !0, tool_use: !0, pause_turn: !0, compaction: !0, refusal: !0, model_context_window_exceeded: !0 },",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "tool_result",
+          "location": "chunk-6h7ejyet.js:1275",
+          "code_snippet": "function hMo(e) { let n = e.match(/messages[.[](\\d+)[\\].]+content[.[](\\d+)[\\].]+(?:tool_result[.[]content[.[](\\d+)[\\].]+)?(image|document|pdf)/); if (n)",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "tool_use",
+          "location": "chunk-7j5nm2vr.js:158",
+          "code_snippet": "function qr(e) { return e.type === \"assistant\" && Array.isArray(e.message.content) && e.message.content.some((n) => n?.type === \"tool_use\" && (n.name === H",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F016",
+      "first_code_anchor": "chunk-bbw420pv.js:488",
+      "static_keyword": "message_delta",
+      "owner_M": [
+        "M2"
+      ],
+      "related_scenarios": [
+        "E18"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/services/api/claude.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "message_delta",
+          "location": "chunk-bbw420pv.js:488",
+          "code_snippet": "if (v.event === \"message_start\" || v.event === \"message_delta\" || v.event === \"message_stop\" || v.event === \"content_block_start\" || v.event === \"content_b",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "thinking_delta",
+          "location": "chunk-bbw420pv.js:1691",
+          "code_snippet": "case \"thinking_delta\": {",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "message_delta",
+          "location": "chunk-bc0w6gb3.js:138",
+          "code_snippet": "var tn = { message_start: !0, message_delta: !0, message_stop: !0, content_block_start: !0, content_block_delta: !0, content_block_stop: !0 }, nn = { text_",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "thinking_delta",
+          "location": "chunk-bc0w6gb3.js:57",
+          "code_snippet": "case \"thinking_delta\": return { event: e, deltaType: \"thinking_delta\", chunk: e.delta.thinking, estimatedTokens: e.delta.estimated_tokens ?? void 0 };",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "message_delta",
+          "location": "chunk-j0tbz6ra.js:31435",
+          "code_snippet": "var U5o = [\"message_start\", \"message_delta\", \"message_stop\", \"content_block_start\", \"content_block_delta\", \"content_block_stop\"];",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F017",
+      "first_code_anchor": "chunk-6d8swme1.js:1875",
+      "static_keyword": "--fallback-model",
+      "owner_M": [
+        "M2"
+      ],
+      "related_scenarios": [
+        "E18",
+        "L07",
+        "L08"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/commands/model"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "--fallback-model",
+          "location": "chunk-6d8swme1.js:1875",
+          "code_snippet": "Sr().includeUnsupportedModels = ks, _Tn(hDe(o)), Pts(KOo(o)), Its({ ...typeof o.appendSystemPrompt === \"string\" && o.appendSystemPrompt !== \"\" && { appendS",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--model",
+          "location": "chunk-6d8swme1.js:878",
+          "code_snippet": "bO(\"--model\", [\"-m\"], p, void 0, e.storageV5); if (y !== void 0)",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--fallback-model",
+          "location": "chunk-5rw2zfa0.js:1744",
+          "code_snippet": "return c; return c ? {} : { commit: \"\", pr: \"\", sessionUrl: !1 }; }).pipe(a).optional().describe('Customize attribution text for commits and PRs. Each fiel",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--model",
+          "location": "chunk-5rw2zfa0.js:1664",
+          "code_snippet": "var sdi = p(() => Na(bTt())), Nm = p(() => $e([o(), u({}).passthrough().describe('{ id: stable id (letters, digits, \".\", \"_\", \"-\"; max 64), text: the tip (",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--fallback-model",
+          "location": "chunk-8w56k4pg.js:21",
+          "code_snippet": "var yDe = new Set([\"--model\", \"-m\", \"--permission-mode\", \"--inherit-permission-mode\", \"--proactivity\", \"--agent\", \"--agents\", \"--routine\", \"--effort\", \"--f",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F018",
+      "first_code_anchor": "chunk-4a46xy3v.js:223",
+      "static_keyword": "ANTHROPIC_BASE_URL",
+      "owner_M": [
+        "M2"
+      ],
+      "related_scenarios": [
+        "E18",
+        "E52"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/utils/model"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "ANTHROPIC_BASE_URL",
+          "location": "chunk-4a46xy3v.js:223",
+          "code_snippet": "let l = i.ANTHROPIC_BASE_URL;",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "ANTHROPIC_BEDROCK_BASE_URL",
+          "location": "chunk-4a46xy3v.js:228",
+          "code_snippet": "let l = i.ANTHROPIC_BEDROCK_BASE_URL;",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "ANTHROPIC_BASE_URL",
+          "location": "chunk-5rw2zfa0.js:1314",
+          "code_snippet": "var Zi = { apiKeyHelper: [\"ANTHROPIC_BASE_URL\", \"_CLAUDE_CODE_ASSUME_FIRST_PARTY_BASE_URL\"], awsAuthRefresh: [...Ro, \"ANTHROPIC_BEDROCK_BASE_URL\", \"ANTHROP",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "ANTHROPIC_BEDROCK_BASE_URL",
+          "location": "chunk-5rw2zfa0.js:1314",
+          "code_snippet": "var Zi = { apiKeyHelper: [\"ANTHROPIC_BASE_URL\", \"_CLAUDE_CODE_ASSUME_FIRST_PARTY_BASE_URL\"], awsAuthRefresh: [...Ro, \"ANTHROPIC_BEDROCK_BASE_URL\", \"ANTHROP",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "ANTHROPIC_BASE_URL",
+          "location": "chunk-ajtyjx88.js:2940",
+          "code_snippet": "function Ad() { if (i.ANTHROPIC_BASE_URL)",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F019",
+      "first_code_anchor": "chunk-0bk2wq2d.js:4523",
+      "static_keyword": "auth login",
+      "owner_M": [
+        "M2"
+      ],
+      "related_scenarios": [
+        "E01"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/cli/handlers/auth.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "auth login",
+          "location": "chunk-0bk2wq2d.js:4523",
+          "code_snippet": "let c = await Zf.getAzdAccessToken(n, r, this.timeout), l = ((o = c.stderr) === null || o === void 0 ? void 0 : o.match(\"not logged in, run `azd login` to ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/login",
+          "location": "chunk-0bk2wq2d.js:369",
+          "code_snippet": "(function (e) { e.AzureChina = \"https://login.chinacloudapi.cn\", e.AzureGermany = \"https://login.microsoftonline.de\", e.AzureGovernment = \"https://login.mi",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "auth login",
+          "location": "chunk-ajtyjx88.js:10029",
+          "code_snippet": "let y = pe(\"policySettings\")?.forceLoginMethod, S = e ? \"pin Anthropic sign-ins to your organization (forceLoginOrgUUID)\" : y === \"claudeai\" || y === \"cons",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/login",
+          "location": "chunk-ajtyjx88.js:2935",
+          "code_snippet": "var s2t = \"Cloud gateway session expired \\u2014 run /login to reconnect.\";",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "auth login",
+          "location": "chunk-bg29rnhz.js:93",
+          "code_snippet": "var F = \"The refused sign-in could not be fully undone: this machine's previous sign-in state could not be confirmed restored, and the refused sign-in was ",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F020",
+      "first_code_anchor": "chunk-j0tbz6ra.js:3556",
+      "static_keyword": "retry-after",
+      "owner_M": [
+        "M2"
+      ],
+      "related_scenarios": [
+        "E15",
+        "E34",
+        "E52"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/services/api/withRetry.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "retry-after",
+          "location": "chunk-j0tbz6ra.js:3556",
+          "code_snippet": "var j$ = \"x-cc-retry-after-too-long\";",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "rate_limit_error",
+          "location": "chunk-j0tbz6ra.js:31388",
+          "code_snippet": "var T5o = [\"invalid_request_error\", \"authentication_error\", \"billing_error\", \"permission_error\", \"not_found_error\", \"request_too_large\", \"rate_limit_error\"",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "retry-after",
+          "location": "chunk-s6eb4jds.js:12380",
+          "code_snippet": "function WB(e, t) { e.body?.cancel().catch(() => { }); let n = Xt(e.status, Lu(e.status), kf[e.status] ?? \"upstream error\", t), o = e.headers.get(\"retry-af",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "rate_limit_error",
+          "location": "chunk-s6eb4jds.js:12397",
+          "code_snippet": "var Bk = new Set([\"invalid_request_error\", \"authentication_error\", \"permission_error\", \"not_found_error\", \"request_too_large\", \"rate_limit_error\", \"not_sup",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "retry-after",
+          "location": "chunk-f7aya6cs.js:282",
+          "code_snippet": "return; let n = N3r.from(e.config?.headers ?? {}).get(\"Authorization\"), r = e.response?.headers?.[\"retry-after\"]; return { status: e.response?.status, sent",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F023",
+      "first_code_anchor": "chunk-460hw2jb.js:17",
+      "static_keyword": "/compact",
+      "owner_M": [
+        "M4"
+      ],
+      "related_scenarios": [
+        "E09",
+        "E16",
+        "E51"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/services/compact/"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "/compact",
+          "location": "chunk-460hw2jb.js:17",
+          "code_snippet": "let p = Ne(process.env.DISABLE_COMPACT) ? \"/clear\" : \"/compact or /clear\";",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "compaction",
+          "location": "chunk-460hw2jb.js:19",
+          "code_snippet": "} let m = Ne(process.env.DISABLE_COMPACT) ? \"/clear\" : \"/compact\"; return `Context is ${n} tokens past the ${i}-token compaction window \\u2014 run ${m} to ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/compact",
+          "location": "chunk-7rnqxvcm.js:10659",
+          "code_snippet": "return Promise.resolve(); return Pi = Cp(I, Pi, void 0), ef(I, void 0, \"tool_register\").then(() => { }); }, resolveMcpServer: async (I) => ME(await WCn({ .",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "compaction",
+          "location": "chunk-7rnqxvcm.js:1138",
+          "code_snippet": "Y(\"info\", \"cli_user_message_dedup_reexecuted\", { ...Me && { nothing_stored_after_compaction: !0 }, runs_by_holders_rule: C === !0, ...Ce !== void 0 && { in",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/compact",
+          "location": "chunk-92hm4yb6.js:1072",
+          "code_snippet": "d = m[0]; let g = d, f = Ne(process.env.DISABLE_COMPACT) ? \"/clear to continue\" : \"/compact or /clear to continue\", h = K(XP), M = Elt(), x = !h && !M && d",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F027",
+      "first_code_anchor": "chunk-at88wjsn.js:1767",
+      "static_keyword": "output_tokens",
+      "owner_M": [
+        "M2"
+      ],
+      "related_scenarios": [
+        "E39"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/services/api/usage.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "output_tokens",
+          "location": "chunk-at88wjsn.js:1767",
+          "code_snippet": "var yH = p(() => u({ type: A(\"ephemeral\"), ttl: B([\"5m\", \"1h\"]).optional() })), mt = () => yH().nullable().optional().describe(\"Cache breakpoint at this bl",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "cache_read_input_tokens",
+          "location": "chunk-at88wjsn.js:1767",
+          "code_snippet": "var yH = p(() => u({ type: A(\"ephemeral\"), ttl: B([\"5m\", \"1h\"]).optional() })), mt = () => yH().nullable().optional().describe(\"Cache breakpoint at this bl",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "output_tokens",
+          "location": "chunk-ex7g3k30.js:1537",
+          "code_snippet": "let at = je(Oe.input_tokens) ?? 0, nt = je(Oe.output_tokens) ?? 0, Ye = je(Oe.cache_read_input_tokens) ?? 0, tt = je(Oe.cache_creation_input_tokens) ?? 0, ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "cache_read_input_tokens",
+          "location": "chunk-ex7g3k30.js:1537",
+          "code_snippet": "let at = je(Oe.input_tokens) ?? 0, nt = je(Oe.output_tokens) ?? 0, Ye = je(Oe.cache_read_input_tokens) ?? 0, tt = je(Oe.cache_creation_input_tokens) ?? 0, ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "output_tokens",
+          "location": "chunk-j0tbz6ra.js:8940",
+          "code_snippet": "e.set(we, { ...Te, message: { ...Te.message, usage: { ...Te.message.usage, input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_in",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F029",
+      "first_code_anchor": "chunk-j0tbz6ra.js:28939",
+      "static_keyword": "FileWriteTool",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E03",
+        "E19"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/tools/FileWriteTool"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "FileWriteTool",
+          "location": "chunk-j0tbz6ra.js:28939",
+          "code_snippet": "return Ge(rt, s.message.model, xe ? n : void 0, xe ? we : void 0), dR({ operation: \"write\", tool: \"FileWriteTool\", filePath: K, type: \"update\" }), { data: ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "Write(",
+          "location": "chunk-j0tbz6ra.js:6764",
+          "code_snippet": "async trackWrite(e) { this.incrementPendingWrites(); try {",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "Write(",
+          "location": "chunk-d5zj5299.js:1013",
+          "code_snippet": "await h.mkdir(Rs(Le(), \"cache\")), await h.atomicWrite(Es(), _({ entries: s }));",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "writeFile",
+          "location": "chunk-d5zj5299.js:2389",
+          "code_snippet": "import { mkdir as fm, writeFile as pm } from \"fs/promises\";",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "Write(",
+          "location": "chunk-ghkyq94m.js:4426",
+          "code_snippet": "h = OI(A), await vu(h, n, { flag: \"wx\" }).catch((S) => { throw w = E(S) !== \"EEXIST\", S; }), w = !0, await y.recheckBeforeWrite(), await _3e(h, A).catch((S",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F031",
+      "first_code_anchor": "chunk-dcgwjwpg.js:45",
+      "static_keyword": "GlobTool",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E02"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/tools/GlobTool",
+        "GrepTool"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "GlobTool",
+          "location": "chunk-dcgwjwpg.js:45",
+          "code_snippet": "var he = { Read: \"Reading\", Write: \"Writing\", Edit: \"Editing\", MultiEdit: \"Editing\", Bash: \"Running\", Glob: \"Searching\", Grep: \"Searching\", WebFetch: \"Fetc",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "GrepTool",
+          "location": "chunk-dcgwjwpg.js:45",
+          "code_snippet": "var he = { Read: \"Reading\", Write: \"Writing\", Edit: \"Editing\", MultiEdit: \"Editing\", Bash: \"Running\", Glob: \"Searching\", Grep: \"Searching\", WebFetch: \"Fetc",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "ripgrep",
+          "location": "chunk-1ww4jg8j.js:11500",
+          "code_snippet": "throw new sg(`ripgrep failed with exit code ${I}: ${C}`, w.split(`",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "ripgrep",
+          "location": "chunk-5rw2zfa0.js:670",
+          "code_snippet": "} }).optional()), Bsr = p(() => u({ enabled: M().optional().describe(\"Run Bash commands inside the sandbox. Default: false. \" + ci), failIfUnavailable: M()",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 4,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F032",
+      "first_code_anchor": "chunk-j0tbz6ra.js:56782",
+      "static_keyword": "BashTool",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E03",
+        "E08",
+        "E23",
+        "E46",
+        "E60"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/tools/BashTool"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "BashTool",
+          "location": "chunk-j0tbz6ra.js:56782",
+          "code_snippet": "function rRn(e) { return e.bashToolShellPath ??= yyi().then((n) => (e.resolvedBashToolShellPath = n, n), (n) => { throw e.bashToolShellPath = null, n; }), ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "bashCommandClamp",
+          "location": "chunk-j0tbz6ra.js:23916",
+          "code_snippet": "function eHs(e, n) { let r = ae(n).bashCommandClamps; if (r !== void 0 && r.length > 0)",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "bashCommandClamp",
+          "location": "chunk-3ykk7zcv.js:1673",
+          "code_snippet": "async function en(e, n) { let s = ae(n); if (s.bashCommandClamps !== void 0 && s.bashCommandClamps.length > 0)",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "shellCommand",
+          "location": "chunk-3ykk7zcv.js:2127",
+          "code_snippet": "Q(); }).catch(() => { }); async function J(X) { return (await WWe({ command: U, shell: \"powershell\", description: j || U, shellCommand: H, toolUseId: T, ag",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "BashTool",
+          "location": "chunk-dcgwjwpg.js:45",
+          "code_snippet": "var he = { Read: \"Reading\", Write: \"Writing\", Edit: \"Editing\", MultiEdit: \"Editing\", Bash: \"Running\", Glob: \"Searching\", Grep: \"Searching\", WebFetch: \"Fetc",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F033",
+      "first_code_anchor": "chunk-3ykk7zcv.js:2123",
+      "static_keyword": "PowerShellTool",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E40"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/tools/PowerShellTool"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "PowerShellTool",
+          "location": "chunk-3ykk7zcv.js:2123",
+          "code_snippet": "return t(`PowerShellTool: exec spawn failed: ${X}`), { stdout: \"\", stderr: `Failed to execute PowerShell command: ${d(X)}`, code: 0, interrupted: !1 };",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "powershell.exe",
+          "location": "chunk-3ykk7zcv.js:1355",
+          "code_snippet": "var zt = new Set([\"pwsh\", \"pwsh.exe\", \"powershell\", \"powershell.exe\"]);",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "PowerShellTool",
+          "location": "chunk-j0tbz6ra.js:57457",
+          "code_snippet": "e = import.meta.require(\"/$bunfs/root/chunk-3ykk7zcv.js\").PowerShellTool; return e; }; })();",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "powershell.exe",
+          "location": "chunk-j0tbz6ra.js:59082",
+          "code_snippet": "async function tLr() { let { stdout: e, code: n } = await it(\"powershell.exe\", [\"-NoProfile\", \"-NonInteractive\", \"-Command\", \"$env:USERPROFILE\"]); if (n ==",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "powershell.exe",
+          "location": "chunk-1ww4jg8j.js:12755",
+          "code_snippet": "case \"powershell.exe\": return { exe: y ? e : Zr.win32.join(n, \"System32\", \"WindowsPowerShell\", \"v1.0\", \"powershell.exe\"), args: G1 };",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F034",
+      "first_code_anchor": "chunk-j0tbz6ra.js:52347",
+      "static_keyword": "NotebookEdit",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E41"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/tools/NotebookEditTool"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "NotebookEdit",
+          "location": "chunk-j0tbz6ra.js:52347",
+          "code_snippet": "- EDIT REMOVALS: Edit calls show both \\`removes\\` (the replaced text) and \\`adds\\`. Judge deletions as seriously as additions \\u2014 removing a guard, chec",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "cell_type",
+          "location": "chunk-j0tbz6ra.js:58116",
+          "code_snippet": "cat <notebook_path> | jq '.cells[] | select(.cell_type==\"code\") | .source' # All code sources` : `Use ${At} to read specific portions:",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "cell_type",
+          "location": "chunk-cqd2httk.js:390",
+          "code_snippet": "return { title: \"Edit notebook\", subtitle: void 0, question: { kind: \"file-action\", verbPhrase: _, fileName: Je(R.notebook_path, s) }, content: w ? { kind:",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "notebook_path",
+          "location": "chunk-cqd2httk.js:364",
+          "code_snippet": "else if (zs(R.notebook_path) || uy(R.notebook_path))",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "cell_type",
+          "location": "chunk-fdpv147k.js:263",
+          "code_snippet": "function P(o) { let a = w(23), { notebook_path: t, cell_id: i, new_source: m, cell_type: c, edit_mode: d, verbose: p } = o, l = d === void 0 ? \"replace\" : ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F035",
+      "first_code_anchor": "chunk-pp7zwndm.js:1564",
+      "static_keyword": "textDocument/definition",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E42"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/tools/LSPTool"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "textDocument/definition",
+          "location": "chunk-pp7zwndm.js:1564",
+          "code_snippet": "case \"goToDefinition\": return { method: \"textDocument/definition\", params: { textDocument: { uri: n }, position: s } };",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "textDocument/references",
+          "location": "chunk-pp7zwndm.js:1565",
+          "code_snippet": "case \"findReferences\": return { method: \"textDocument/references\", params: { textDocument: { uri: n }, position: s, context: { includeDeclaration: !0 } } }",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 2,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F036",
+      "first_code_anchor": "chunk-89p7tfyk.js:530",
+      "static_keyword": "WebSearch",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E06"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/tools/WebSearchTool",
+        "WebFetchTool"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "WebSearch",
+          "location": "chunk-89p7tfyk.js:530",
+          "code_snippet": "if (A === \"WebSearch\")",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "WebFetch",
+          "location": "chunk-89p7tfyk.js:532",
+          "code_snippet": "if (A === \"WebFetch\")",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "WebSearch",
+          "location": "chunk-ajtyjx88.js:1859",
+          "code_snippet": "var WP = new Set([\"numStartups\", \"skillUsage\", \"pluginUsage\", \"memoryUsageCount\", \"promptQueueUseCount\", \"btwUseCount\", \"queuedCommandUpHintCount\", \"lspRec",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "WebFetch",
+          "location": "chunk-ajtyjx88.js:13922",
+          "code_snippet": "var Al = { [_4e]: \"Bash\", [gar]: \"WebFetch\" }, hj = new Set(cl.values());",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "WebSearch",
+          "location": "chunk-at88wjsn.js:1794",
+          "code_snippet": "var J5o = p(() => u({ title: o().max(200).refine(mA), description: o().max(2000).regex(/\\S/), displayName: o().max(64).refine(mA) }).describe(\"@internal De",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F037",
+      "first_code_anchor": "chunk-dmtyt8s1.js:9",
+      "static_keyword": "computer_use",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E08",
+        "E30"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/commands/chrome"
+      ],
+      "additional_static_branches": [
+        "chunk-dmtyt8s1.js:9",
+        "chunk-j0tbz6ra.js:54339-54352"
+      ],
+      "static_semantics_observation": "找到电脑操作通知类型及工具规则允许的权限分支；该证据仅覆盖通知/允许判定，尚未证明 Chrome 执行工具的消费者与实际结果。",
+      "static_evidence_scope": "SOURCE_ONLY; no runtime or full call-chain signoff",
+      "candidate_evidence": [
+        {
+          "anchor": "computer_use",
+          "location": "chunk-dmtyt8s1.js:9",
+          "code_snippet": "var CZ = [\"auto\", \"iterm2\", \"terminal_bell\", \"iterm2_with_bell\", \"kitty\", \"ghostty\", \"notifications_disabled\"], Odi = [\"permission_prompt\", \"idle_prompt\", ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "computer_use",
+          "location": "chunk-j0tbz6ra.js:54344",
+          "code_snippet": "a(\"tengu_auto_mode_computer_use_rule_allow\", { computerUseActionKind: c(rt), ruleSource: c(Ge.source) });",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "computer_use",
+          "location": "chunk-mdxeekqd.js:23898",
+          "code_snippet": "var S7 = us({ kind: \"computer_use_approval\", payload: p(() => $u((h) => typeof h === \"object\" && h !== null)), result: p(() => $u((h) => typeof h === \"obje",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 3,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F038",
+      "first_code_anchor": "chunk-j0tbz6ra.js:33395",
+      "static_keyword": "commit-push-pr",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E03",
+        "E20",
+        "E32"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/commands/commit.ts",
+        "commit-push-pr.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "commit-push-pr",
+          "location": "chunk-j0tbz6ra.js:33395",
+          "code_snippet": "> - **Skills** are packaged instructions Claude invokes automatically when a task matches, or that you trigger with a slash command (e.g. \\`/frontend-desig",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "git commit",
+          "location": "chunk-j0tbz6ra.js:1139",
+          "code_snippet": "- Never run \\`git commit\\`, push to a remote, or create or update a pull request unless the user explicitly confirms it in this conversation. Finishing a t",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "git commit",
+          "location": "chunk-89p7tfyk.js:562",
+          "code_snippet": "if (J.includes(\"git commit\"))",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "git push",
+          "location": "chunk-89p7tfyk.js:564",
+          "code_snippet": "if (J.includes(\"git push\"))",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "git commit",
+          "location": "chunk-cyhgb7ss.js:97",
+          "code_snippet": "git commit -m @'",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F039",
+      "first_code_anchor": "chunk-34bfdsb0.js:1967",
+      "static_keyword": "ToolSearch",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E21"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/tools/ToolSearchTool"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "ToolSearch",
+          "location": "chunk-34bfdsb0.js:1967",
+          "code_snippet": "se(e, xe ? \"Allow rules do not apply: this server's name starts like a claude.ai connector's. To use allow rules, the server needs another name, and the ru",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "tool_schema",
+          "location": "chunk-34bfdsb0.js:1319",
+          "code_snippet": "function qn(e) { return _o(\"tengu_mcp_drop_invalid_tool_schemas\", e); }",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "ToolSearch",
+          "location": "chunk-j0tbz6ra.js:30336",
+          "code_snippet": "async function rH(e, n) { let h = Ae(), y = w9t(), S = (lo) => qU(n.querySource) ? m5(lo) : lo(), w = n.model, D = w !== void 0 ? S(() => y.modelConfig(w))",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "tool_schema",
+          "location": "chunk-j0tbz6ra.js:30655",
+          "code_snippet": "return this.#o(\"bound_reached\", s); if (this.#e.refusedToolSchemas.set(y.name, $9t(y.input_schema)), this.#t++, f(\"api_tool_schema_replacement\", \"replaced\"",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "ToolSearch",
+          "location": "chunk-r4g83g7p.js:2454",
+          "code_snippet": "se(e, fe ? \"Allow rules do not apply: this server's name starts like a claude.ai connector's. To use allow rules, the server needs another name, and the ru",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F040",
+      "first_code_anchor": "chunk-89p7tfyk.js:603",
+      "static_keyword": "tool_result",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E19",
+        "E23",
+        "E34"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/Tool.ts",
+        "src/tools/utils.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "tool_result",
+          "location": "chunk-89p7tfyk.js:603",
+          "code_snippet": "if (C.type === \"tool_result\" && \"content\" in C) {",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "tool_error",
+          "location": "chunk-89p7tfyk.js:456",
+          "code_snippet": "var Oe = p(() => u({ session_id: o(), transcript_mtime: v().optional(), project_path: o(), start_time: o(), duration_minutes: v(), user_message_count: v(),",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "tool_result",
+          "location": "chunk-at88wjsn.js:1765",
+          "code_snippet": "var nA = [\"server_tool_use\", \"web_search_tool_result\", \"web_fetch_tool_result\", \"advisor_tool_result\", \"code_execution_tool_result\", \"bash_code_execution_t",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "tool_error",
+          "location": "chunk-at88wjsn.js:1799",
+          "code_snippet": "var ZA = p(() => oe().describe(\"A JSON-RPC 2.0 message as defined by the Model Context Protocol (request, notification, or response object).\")), BW = p(() ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "tool_result",
+          "location": "chunk-j0tbz6ra.js:1596",
+          "code_snippet": "return r; if (e.type === \"tool_result\" && \"content\" in e && Array.isArray(e.content) && e.content.some((s) => Ed(s) && n(s)))",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F041",
+      "first_code_anchor": "chunk-sr1bpqdt.js:376",
+      "static_keyword": "--permission-mode",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E04",
+        "E05",
+        "E31",
+        "E60",
+        "E64"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/utils/permissions/PermissionMode.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "--permission-mode",
+          "location": "chunk-sr1bpqdt.js:376",
+          "code_snippet": "k.push(AA(\"--permission-mode\", q));",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--disallowedTools",
+          "location": "chunk-sr1bpqdt.js:363",
+          "code_snippet": "k.push(AA(\"--disallowedTools\", ve.join(\",\")));",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--permission-mode",
+          "location": "chunk-8w56k4pg.js:21",
+          "code_snippet": "var yDe = new Set([\"--model\", \"-m\", \"--permission-mode\", \"--inherit-permission-mode\", \"--proactivity\", \"--agent\", \"--agents\", \"--routine\", \"--effort\", \"--f",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--disallowedTools",
+          "location": "chunk-8w56k4pg.js:21",
+          "code_snippet": "var yDe = new Set([\"--model\", \"-m\", \"--permission-mode\", \"--inherit-permission-mode\", \"--proactivity\", \"--agent\", \"--agents\", \"--routine\", \"--effort\", \"--f",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--permission-mode",
+          "location": "chunk-c3npf81n.js:20",
+          "code_snippet": "var a = new Set([\"--prefill\", \"--prefill-b64\", \"--deep-link-repo\", \"--deep-link-last-fetch\", \"--deep-link-cwd-b64\", \"--handle-uri\", \"--settings\", \"--manage",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F043",
+      "first_code_anchor": "chunk-j0tbz6ra.js:19164",
+      "static_keyword": "HARD BLOCK",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E05",
+        "E31",
+        "E32",
+        "E49",
+        "E60",
+        "L06"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/utils/permissions/permissionRuleParser.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "HARD BLOCK",
+          "location": "chunk-j0tbz6ra.js:19164",
+          "code_snippet": "var b1t = '- A completed tool call may also be followed by a standalone host-context line: content the application hosting this agent \\u2014 the software r",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "SOFT BLOCK",
+          "location": "chunk-j0tbz6ra.js:19164",
+          "code_snippet": "var b1t = '- A completed tool call may also be followed by a standalone host-context line: content the application hosting this agent \\u2014 the software r",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "HARD BLOCK",
+          "location": "chunk-5rw2zfa0.js:1471",
+          "code_snippet": "var Ln = { autoMode: { buildGate: () => !0, shape: () => ({ skipAutoPermissionPrompt: M().optional().describe(\"Whether the user has accepted the auto mode ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "SOFT BLOCK",
+          "location": "chunk-5rw2zfa0.js:1471",
+          "code_snippet": "var Ln = { autoMode: { buildGate: () => !0, shape: () => ({ skipAutoPermissionPrompt: M().optional().describe(\"Whether the user has accepted the auto mode ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "classifier_verdict",
+          "location": "chunk-9gax3c5r.js:628",
+          "code_snippet": "var Ho = new Set([\"synced_file_changed\", \"mcp_auth_required\", \"tunnel_stream_interrupted\", \"composer_notice\", \"composer_notice_dismissed\", \"workflow_launch",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F047",
+      "first_code_anchor": "chunk-j0tbz6ra.js:41652",
+      "static_keyword": "prompt injection",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E06",
+        "E07",
+        "E17",
+        "E22",
+        "E62"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/constants/prompts.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "prompt injection",
+          "location": "chunk-j0tbz6ra.js:41652",
+          "code_snippet": "let n = [\"All text you output outside of tool use is displayed to the user. Output text to communicate with the user. You can use Github-flavored markdown ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "system-reminder",
+          "location": "chunk-j0tbz6ra.js:1475",
+          "code_snippet": "return `<system-reminder>${n}</system-reminder>",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "prompt injection",
+          "location": "chunk-mdxeekqd.js:18760",
+          "code_snippet": "Dt = e(s, { marginBottom: 1, flexDirection: \"column\", children: e(n, { children: \"Auto mode lets Claude handle permission prompts automatically. Claude che",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "system-reminder",
+          "location": "chunk-mdxeekqd.js:5514",
+          "code_snippet": "var wHe = `<system-reminder>",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "prompt injection",
+          "location": "chunk-n7dvjfwp.js:1778",
+          "code_snippet": "- Rule syntax \\u2014 default to EXACT rules matching the observed denied invocations: \\`Bash(gh pr view)\\`, \\`Bash(git log --oneline -20)\\`. Prefix wildcar",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F048",
+      "first_code_anchor": "chunk-5rw2zfa0.js:670",
+      "static_keyword": "exfiltrat",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E05",
+        "E06",
+        "E32",
+        "L06"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/utils/permissions/"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "exfiltrat",
+          "location": "chunk-5rw2zfa0.js:670",
+          "code_snippet": "} }).optional()), Bsr = p(() => u({ enabled: M().optional().describe(\"Run Bash commands inside the sandbox. Default: false. \" + ci), failIfUnavailable: M()",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "allowedDomains",
+          "location": "chunk-5rw2zfa0.js:623",
+          "code_snippet": "var ho = \"When managed settings or a --settings file set allowUnsandboxedCommands: false, or managed settings set network.allowManagedDomainsOnly: true\", O",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "exfiltrat",
+          "location": "chunk-j0tbz6ra.js:17045",
+          "code_snippet": "6. **Avoid data exfiltration** \\u2014 Post even routine messages to chat platforms or work tickets only if the user has directed you to. You must not share",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "allowedDomains",
+          "location": "chunk-j0tbz6ra.js:18794",
+          "code_snippet": "async function aWt(e) { let n = async (r) => L((await Promise.all(r.map(async (s) => [s, await hNo(s).catch(() => s)]))).flat()); return { filesystem: { di",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "exfiltrat",
+          "location": "chunk-wrz9h488.js:26",
+          "code_snippet": "var te = Tt({ network: q.describe(\"Network restrictions configuration\"), filesystem: V.describe(\"Filesystem restrictions configuration\"), credentials: L.op",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F049",
+      "first_code_anchor": "chunk-1ww4jg8j.js:12330",
+      "static_keyword": "allowNestedUserNamespaces",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E08",
+        "E61"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/utils/sandbox/"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "allowNestedUserNamespaces",
+          "location": "chunk-1ww4jg8j.js:12330",
+          "code_snippet": "async function A1(e) { let { command: n, commandId: r, needsNetworkRestriction: s, httpSocketPath: h, socksSocketPath: y, httpProxyPort: b, socksProxyPort:",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "sandbox",
+          "location": "chunk-1ww4jg8j.js:10048",
+          "code_snippet": "function yE(e = {}) { let n = so.rsa.generateKeyPair(2048), r = so.createCertificate(); r.publicKey = n.publicKey, r.serialNumber = bE(), r.validity.notBef",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "allowNestedUserNamespaces",
+          "location": "chunk-563gzepf.js:2706",
+          "code_snippet": "let b = L(r.flatMap((x) => { let ee = Bn(x); return ee.toolName === qn && ee.ruleContent?.startsWith(\"domain:\") ? [ee.ruleContent.slice(7)] : []; })), y = ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "sandbox",
+          "location": "chunk-563gzepf.js:1260",
+          "code_snippet": "Set \\`timeout_seconds\\` and \\`allowed_tools\\` on every case to fit what its graders check (see \"Tools follow graders\" above; skills that do real work need ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "allowNestedUserNamespaces",
+          "location": "chunk-5rw2zfa0.js:670",
+          "code_snippet": "} }).optional()), Bsr = p(() => u({ enabled: M().optional().describe(\"Run Bash commands inside the sandbox. Default: false. \" + ci), failIfUnavailable: M()",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F050",
+      "first_code_anchor": "chunk-3fdpcjpk.js:124",
+      "static_keyword": "PermissionRequest",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E20",
+        "E31",
+        "E55",
+        "E68"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/utils/permissions/denialTracking.ts"
+      ],
+      "additional_static_branches": [
+        "chunk-3fdpcjpk.js:114-140"
+      ],
+      "static_semantics_observation": "服务端 MCP 调用会检查设置可读性及元信息中的工具权限请求；无法读取配置时返回错误、禁止运行。该分支不能覆盖全部破坏性操作/共享资源审批。",
+      "static_evidence_scope": "SOURCE_ONLY; no runtime or full call-chain signoff",
+      "candidate_evidence": [
+        {
+          "anchor": "PermissionRequest",
+          "location": "chunk-3fdpcjpk.js:124",
+          "code_snippet": "let { refuseCallerInterface: r } = import.meta.require(\"/$bunfs/root/chunk-r4cbj61x.js\"), { bringsToolHostPermissionRequest: y } = import.meta.require(\"/$b",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "PermissionRequest",
+          "location": "chunk-5rw2zfa0.js:3209",
+          "code_snippet": "var My = 'a PreToolUse/PermissionRequest hook that cannot be loaded does not run, nor does any other hook of the document where \"hooks\" is listed here as i",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "PermissionRequest",
+          "location": "chunk-6anjcmdx.js:111",
+          "code_snippet": "h.target_device_id = this.selectedDeviceId; Object.assign(h, pTr({ ...t, permissionMode: t?.permissionMode ?? this.permissionMode, allowedDomains: t?.allow",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 3,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F051",
+      "first_code_anchor": "chunk-j0tbz6ra.js:2792",
+      "static_keyword": "/skills",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E43"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/tools/SkillTool",
+        "src/commands/skills"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "/skills",
+          "location": "chunk-j0tbz6ra.js:2792",
+          "code_snippet": "var LRt = \"/skills/run/scripts/stop-on-exit.mjs && \";",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "skillDir",
+          "location": "chunk-j0tbz6ra.js:32996",
+          "code_snippet": "vn = !0, vjr(e, { pluginId: r }, Do, ho); return []; }, ro = { type: \"prompt\", name: e, description: Ge, hasUserSpecifiedDescription: Q !== null, allowedTo",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/claude-api",
+          "location": "chunk-jak6ta5v.js:610",
+          "code_snippet": "} } }, { id: \"console-api-key\", content: async (e) => `Build your AI product with Claude API. Run ${Qn(\"suggestion\", e.theme)(\"/claude-api\")} to get starte",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/skills",
+          "location": "chunk-jak6ta5v.js:588",
+          "code_snippet": "} } }, ...[], { id: \"permissions\", providerAgnostic: !0, content: async () => \"Use /permissions to pre-approve and pre-deny bash, edit, and MCP tools\", coo",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/skills",
+          "location": "chunk-at88wjsn.js:1797",
+          "code_snippet": "var GF = p(() => u({ type: A(\"system\"), subtype: A(\"init\"), agents: T(o()).optional(), apiKeySource: ZH(), startup_timing: me(o(), oe()).optional().describ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F052",
+      "first_code_anchor": "chunk-7kz3kchp.js:210",
+      "static_keyword": "--plugin-dir",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E22",
+        "E56",
+        "E62",
+        "E68"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/cli/handlers/plugins.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "--plugin-dir",
+          "location": "chunk-7kz3kchp.js:210",
+          "code_snippet": "let { enabled: v, disabled: m, errors: k, warnings: F } = await sv(i, u), B = [...v, ...m], h = new Map(B.map((M) => [M.source, M])), A = { plugins: B, err",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--plugin-url",
+          "location": "chunk-7kz3kchp.js:210",
+          "code_snippet": "let { enabled: v, disabled: m, errors: k, warnings: F } = await sv(i, u), B = [...v, ...m], h = new Map(B.map((M) => [M.source, M])), A = { plugins: B, err",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--plugin-dir",
+          "location": "chunk-at88wjsn.js:1797",
+          "code_snippet": "var GF = p(() => u({ type: A(\"system\"), subtype: A(\"init\"), agents: T(o()).optional(), apiKeySource: ZH(), startup_timing: me(o(), oe()).optional().describ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--plugin-url",
+          "location": "chunk-at88wjsn.js:1797",
+          "code_snippet": "var GF = p(() => u({ type: A(\"system\"), subtype: A(\"init\"), agents: T(o()).optional(), apiKeySource: ZH(), startup_timing: me(o(), oe()).optional().describ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--plugin-dir",
+          "location": "chunk-j0tbz6ra.js:66493",
+          "code_snippet": "function NGr(e, n = (r) => Mm(r)) { let r = new Map([[\"--settings\", { json: !0 }], [\"--mcp-config\", { json: !0 }], [\"--agents\", { json: !0 }], [\"--add-dir\"",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F053",
+      "first_code_anchor": "chunk-at88wjsn.js:1783",
+      "static_keyword": "--mcp-config",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E07",
+        "E21",
+        "E57"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/cli/handlers/mcp.tsx",
+        "src/tools/MCPTool"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "--mcp-config",
+          "location": "chunk-at88wjsn.js:1783",
+          "code_snippet": "var Ge = p(() => u({ inputTokens: v().int(), outputTokens: v().int(), thinkingTokens: v().int().optional().describe(\"Thinking tokens, already counted insid",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "mcpServers",
+          "location": "chunk-at88wjsn.js:1794",
+          "code_snippet": "var J5o = p(() => u({ title: o().max(200).refine(mA), description: o().max(2000).regex(/\\S/), displayName: o().max(64).refine(mA) }).describe(\"@internal De",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--mcp-config",
+          "location": "chunk-j0tbz6ra.js:66493",
+          "code_snippet": "function NGr(e, n = (r) => Mm(r)) { let r = new Map([[\"--settings\", { json: !0 }], [\"--mcp-config\", { json: !0 }], [\"--agents\", { json: !0 }], [\"--add-dir\"",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "mcpServers",
+          "location": "chunk-j0tbz6ra.js:16731",
+          "code_snippet": "var p1e = () => $e([o(), v(), M(), sm()]), Eg = p1e, QP = p1e, XD = () => $e([p1e(), T(o())]), lMo = p(() => u({ name: Eg().optional().describe(\"Display na",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "mcp-server",
+          "location": "chunk-34bfdsb0.js:2174",
+          "code_snippet": "KC(e.config.pluginSource), MN(e.config.pluginSource, \"mcp\", { kind: \"mcp-server\", name: e.name }); let U = Me(); if (U)",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F054",
+      "first_code_anchor": "chunk-at88wjsn.js:1786",
+      "static_keyword": "PreToolUse",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E21",
+        "E22"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/commands/hooks"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "PreToolUse",
+          "location": "chunk-at88wjsn.js:1786",
+          "code_snippet": "var cn = p(() => $e([n0(), r0(), o0(), io()])), i0 = p(() => u({ type: A(\"claudeai-proxy\"), url: o(), id: o(), timeout: Kt() })), l0 = p(() => $e([cn(), i0",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "PostToolUse",
+          "location": "chunk-at88wjsn.js:1786",
+          "code_snippet": "var cn = p(() => $e([n0(), r0(), o0(), io()])), i0 = p(() => u({ type: A(\"claudeai-proxy\"), url: o(), id: o(), timeout: Kt() })), l0 = p(() => $e([cn(), i0",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "PreToolUse",
+          "location": "chunk-j0tbz6ra.js:401",
+          "code_snippet": "var $Rr = (e) => e !== \"PreToolUse\" && UKr.includes(e);",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "PostToolUse",
+          "location": "chunk-j0tbz6ra.js:414",
+          "code_snippet": "function akt(e) { let { openCalls: n, withheldCalls: r, withheldWatches: s } = Ie(), h = Reflect.get(e, \"tool_use_id\"), S = Reflect.get(e, \"hook_event_name",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "PreToolUse",
+          "location": "chunk-5rw2zfa0.js:3198",
+          "code_snippet": "var Je = \"https://code.claude.com/docs/en\", ky = [{ matches: (e) => e.path === \"permissions.defaultMode\" && e.code === \"invalid_value\", tip: { suggestion: ",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F055",
+      "first_code_anchor": "chunk-6d8swme1.js:1655",
+      "static_keyword": "--sdk-url",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E24",
+        "E35",
+        "L10"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/entrypoints/",
+        "sdk-tools.d.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "--sdk-url",
+          "location": "chunk-6d8swme1.js:1655",
+          "code_snippet": "return pn(\"Error: --watch-artifact requires an interactive session (not print mode, --sdk-url, --init-only, or redirected output)\");",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--output-format",
+          "location": "chunk-6d8swme1.js:703",
+          "code_snippet": "return { ok: !1, error: `${Ce}${oe} does not support --output-format stream-json` };",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--sdk-url",
+          "location": "chunk-at88wjsn.js:1795",
+          "code_snippet": "var xF = p(() => u({ type: A(\"rate_limit_event\"), rate_limit_info: cYr(), uuid: m(), session_id: o() }).describe(\"Rate limit event emitted when rate limit ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--output-format",
+          "location": "chunk-at88wjsn.js:1795",
+          "code_snippet": "var xF = p(() => u({ type: A(\"rate_limit_event\"), rate_limit_info: cYr(), uuid: m(), session_id: o() }).describe(\"Rate limit event emitted when rate limit ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--sdk-url",
+          "location": "chunk-c3npf81n.js:20",
+          "code_snippet": "var a = new Set([\"--prefill\", \"--prefill-b64\", \"--deep-link-repo\", \"--deep-link-last-fetch\", \"--deep-link-cwd-b64\", \"--handle-uri\", \"--settings\", \"--manage",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F061",
+      "first_code_anchor": "chunk-62bczwa8.js:222",
+      "static_keyword": "/schedule",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E10",
+        "E11"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/tools/ScheduleCronTool"
+      ],
+      "additional_static_branches": [
+        "chunk-8mtqgphq.js:13-18",
+        "chunk-62bczwa8.js:215-230"
+      ],
+      "static_semantics_observation": "本地 CronCreate 创建受环境变量和运行时门控限制，持久化另有独立开关；提示路径区分云端日程和仅当前会话。未发起任何调度操作，尚无实际持久化/执行复验。",
+      "static_evidence_scope": "SOURCE_ONLY; no runtime or full call-chain signoff",
+      "candidate_evidence": [
+        {
+          "anchor": "/schedule",
+          "location": "chunk-62bczwa8.js:222",
+          "code_snippet": "If they pick **Cloud schedule**: do NOT call ${Hp}. Invoke the \\`schedule\\` skill directly via the ${Ao} tool with \\`args\\` set to their original input ver",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/schedule",
+          "location": "chunk-82n8x00g.js:33",
+          "code_snippet": "var Ne = [\"**/.claude/scheduled_tasks.lock\", \"**/.claude/scheduled_tasks.json\", \"**/.claude/routines/.state/\", \"**/.claude/worktrees/\", \"**/.claude/checkpo",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/schedule",
+          "location": "chunk-8mtqgphq.js:17",
+          "code_snippet": "function p0o(e) { return e ? \"Schedule a prompt to run at a future time \\u2014 either recurring on a cron schedule, or once at a specific time. Pass durabl",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 3,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F062",
+      "first_code_anchor": "chunk-05z051sc.js:2198",
+      "static_keyword": "--bg",
+      "owner_M": [
+        "M4"
+      ],
+      "related_scenarios": [
+        "E14",
+        "E58",
+        "E63",
+        "L03",
+        "L09",
+        "L14"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/tasks",
+        "src/tools/TaskListTool"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "--bg",
+          "location": "chunk-05z051sc.js:2198",
+          "code_snippet": "return r(s, { flexDirection: \"column\", children: [r(s, { ref: fo ? vt : void 0, paddingLeft: ve, backgroundColor: sn, onMouseEnter: Bt || Ye ? void 0 : Fn,",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "respawn",
+          "location": "chunk-05z051sc.js:236",
+          "code_snippet": "function oc(h) { let E = new Date(h.startedAt).toISOString(), R = new Date(h.updatedAt ?? h.startedAt).toISOString(); return { state: h.state ?? h.status ?",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--bg",
+          "location": "chunk-7vavdsaz.js:1742",
+          "code_snippet": "H(\"note: the next `claude agents` or `claude --bg` will start a new one\");",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "respawn",
+          "location": "chunk-7vavdsaz.js:766",
+          "code_snippet": "W++, a(\"tengu_bg_adopt_upgrade_respawn\", {}), le(T.dispatch, 0, !0).catch((oe) => l(oe));",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--bg",
+          "location": "chunk-c1yc65r1.js:1443",
+          "code_snippet": "return \"claude agents\"; if (r.includes(\"--bg\"))",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F066",
+      "first_code_anchor": "chunk-8w56k4pg.js:21",
+      "static_keyword": "--remote-control",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E24",
+        "E25",
+        "E67"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/bridge/"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "--remote-control",
+          "location": "chunk-8w56k4pg.js:21",
+          "code_snippet": "var yDe = new Set([\"--model\", \"-m\", \"--permission-mode\", \"--inherit-permission-mode\", \"--proactivity\", \"--agent\", \"--agents\", \"--routine\", \"--effort\", \"--f",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "remote-control-session-name-prefix",
+          "location": "chunk-8w56k4pg.js:21",
+          "code_snippet": "var yDe = new Set([\"--model\", \"-m\", \"--permission-mode\", \"--inherit-permission-mode\", \"--proactivity\", \"--agent\", \"--agents\", \"--routine\", \"--effort\", \"--f",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--remote-control",
+          "location": "chunk-c3npf81n.js:20",
+          "code_snippet": "var a = new Set([\"--prefill\", \"--prefill-b64\", \"--deep-link-repo\", \"--deep-link-last-fetch\", \"--deep-link-cwd-b64\", \"--handle-uri\", \"--settings\", \"--manage",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "remote-control-session-name-prefix",
+          "location": "chunk-c3npf81n.js:20",
+          "code_snippet": "var a = new Set([\"--prefill\", \"--prefill-b64\", \"--deep-link-repo\", \"--deep-link-last-fetch\", \"--deep-link-cwd-b64\", \"--handle-uri\", \"--settings\", \"--manage",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--remote-control",
+          "location": "chunk-mh7sh27p.js:728",
+          "code_snippet": "})), r.addOption(new as(\"--teleport [session]\", \"Resume a teleport session, optionally specify session ID\")), r.addOption(new as(\"--cloud [description|sess",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F067",
+      "first_code_anchor": "chunk-j0tbz6ra.js:59070",
+      "static_keyword": "WebSocket",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E15",
+        "E25",
+        "E34"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/cli/transports/"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "WebSocket",
+          "location": "chunk-j0tbz6ra.js:59070",
+          "code_snippet": "return { workspaceFolders: r, port: parseInt(K), pid: s, ideName: h, useWebSocket: y, runningInWindows: S, authToken: w };",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "text/event-stream",
+          "location": "chunk-j0tbz6ra.js:31394",
+          "code_snippet": "case \"text/event-stream\": return \"event-stream\";",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "text/event-stream",
+          "location": "chunk-twczwv3g.js:3662",
+          "code_snippet": "let k = await fetch(l, { method: \"GET\", headers: { Authorization: `Bearer ${s.runnerToken}`, Accept: \"text/event-stream\", \"anthropic-version\": \"2023-06-01\"",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--sdk-url",
+          "location": "chunk-twczwv3g.js:2449",
+          "code_snippet": "} e.onSessionActivity?.(j, ie); }, Jn = i.CLAUDE_RUNNER_DISABLE_TURN_BEGAN_BEFORE_INIT ? 0 : uo(), { sdkUrl: _r, resumeUrl: yn } = Su(u.api_base_url, l), e",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "WebSocket",
+          "location": "chunk-34bfdsb0.js:1399",
+          "code_snippet": "let D = { \"User-Agent\": A5(), ...r.authToken && { \"X-Claude-Code-Ide-Authorization\": r.authToken } }, U = new globalThis.WebSocket(r.url, { protocols: [\"mc",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F068",
+      "first_code_anchor": "chunk-c3npf81n.js:70",
+      "static_keyword": "--desktop",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E25",
+        "E33"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/commands/desktop",
+        "mobile"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "--desktop",
+          "location": "chunk-c3npf81n.js:70",
+          "code_snippet": "var g = new Set([\"attach\", \"logs\", \"stop\", \"kill\", \"respawn\", \"rm\"]), m = new Set([\"-p\", \"--print\", \"--bg\", \"--background\", \"--routine\", \"-h\", \"--help\", \"-",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--cloud",
+          "location": "chunk-c3npf81n.js:20",
+          "code_snippet": "var a = new Set([\"--prefill\", \"--prefill-b64\", \"--deep-link-repo\", \"--deep-link-last-fetch\", \"--deep-link-cwd-b64\", \"--handle-uri\", \"--settings\", \"--manage",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--desktop",
+          "location": "chunk-mh7sh27p.js:601",
+          "code_snippet": "return pn(`--desktop can't be combined with \\`claude ${P.join(\" \")}\\`.`);",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--cloud",
+          "location": "chunk-mh7sh27p.js:394",
+          "code_snippet": "return pn(\"Error: --cloud <session_id> does not support --output-format stream-json\");",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--cloud",
+          "location": "chunk-6d8swme1.js:683",
+          "code_snippet": "return { ok: !1, error: \"Error: --attach-serve cannot be combined with --cloud/--remote\" };",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F075",
+      "first_code_anchor": "chunk-ghkyq94m.js:3978",
+      "static_keyword": "/artifact",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E29"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [],
+      "candidate_evidence": [
+        {
+          "anchor": "/artifact",
+          "location": "chunk-ghkyq94m.js:3978",
+          "code_snippet": "${[\"- **publish** (the default): takes `file_path`, plus `icon` on a first publish and an optional one-sentence `description`, and with `url` updates that ",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "artifactId",
+          "location": "chunk-ghkyq94m.js:4946",
+          "code_snippet": "let cn = Zv({ operation: \"write\", artifactId: \"\", owned: !0, public: !1, outsideOrg: !1, networkOff: !1, turnStartedByHuman: !1, canWrite: !0, routineWrite",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/artifact",
+          "location": "chunk-0a5g8f4s.js:21",
+          "code_snippet": "t = new URL(r, \"https://artifact.invalid/\");",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/artifact",
+          "location": "chunk-0hcnhpx5.js:67",
+          "code_snippet": "var I = \"anthropic.com/artifact-route\", ge = 300000, te = 5000, ie = 1000, re = 5000, he = 1048576, fCr = [\"X-Frame-Surface\", \"X-Frame-Platform\", \"X-Frame-",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 4,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution",
+      "verified_entry_branch": "Artifact publish/read schema and permission state",
+      "verified_execution_candidates": [
+        "chunk-ghkyq94m.js:3976-3983",
+        "chunk-ghkyq94m.js:4943-4961"
+      ],
+      "positive_branch_description": "Artifact create permitted only by actual authorization and user-consent context",
+      "negative_branch_description": "no live human consent surface returns explicit deny at 4954-55",
+      "function_link_grade": "ENTRY_AND_CONSUMER_PARTIAL_NO_END_TO_END_TEST"
+    },
+    {
+      "F_id": "F076",
+      "first_code_anchor": "chunk-ajtyjx88.js:11844",
+      "static_keyword": "claude_test_draft",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E30"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [],
+      "candidate_evidence": [
+        {
+          "anchor": "claude_test_draft",
+          "location": "chunk-ajtyjx88.js:11844",
+          "code_snippet": "var GG = [\"advisor_fable_consent\", \"agent_handback_pointer_notice\", \"agent_intent_forward\", \"agent_launcher\", \"agent_observer_arm\", \"agent_observer_deliver",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "claude_test_run",
+          "location": "chunk-ajtyjx88.js:11844",
+          "code_snippet": "var GG = [\"advisor_fable_consent\", \"agent_handback_pointer_notice\", \"agent_intent_forward\", \"agent_launcher\", \"agent_observer_arm\", \"agent_observer_deliver",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "claude_test_draft",
+          "location": "chunk-pmkym69z.js:1931",
+          "code_snippet": "await jr(\"claude_test_draft\", o), r.isDraftSent = !0;",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "claude_test_run",
+          "location": "chunk-pmkym69z.js:1936",
+          "code_snippet": "await jr(\"claude_test_run\", s.counts);",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "renderClaudeTestDraftResult",
+          "location": "chunk-92hm4yb6.js:6378",
+          "code_snippet": "var Ef = { name: import.meta.require(\"/$bunfs/root/chunk-8sback0q.js\").SEARCH_MCP_REGISTRY_TOOL_NAME, ui: import.meta.require(\"/$bunfs/root/chunk-40dgzkjx.",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution",
+      "verified_entry_branch": "interactive /claude-test builtin skill",
+      "verified_execution_candidates": [
+        "chunk-pmkym69z.js:439-499",
+        "chunk-pmkym69z.js:1384-1395",
+        "chunk-pmkym69z.js:1887",
+        "chunk-pmkym69z.js:1922-1945"
+      ],
+      "positive_branch_description": "browser runner evaluates saved specs and emits draft/run outcome events",
+      "negative_branch_description": "-p prohibited and missing browser helper or node yields explicit startup failure",
+      "function_link_grade": "ENTRY_AND_CONSUMER_PARTIAL_NO_END_TO_END_TEST"
+    },
+    {
+      "F_id": "F077",
+      "first_code_anchor": "chunk-5kfjd6mt.js:121",
+      "static_keyword": "designSystem",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E30"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [],
+      "candidate_evidence": [
+        {
+          "anchor": "designSystem",
+          "location": "chunk-5kfjd6mt.js:121",
+          "code_snippet": "var U = new Map([[\"slides\", { index: \"project/deck.json\", files: \"one `project/slides/<id>.html` per slide, <id> being its entry in the index's `order`, ea",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "design-system",
+          "location": "chunk-5kfjd6mt.js:121",
+          "code_snippet": "var U = new Map([[\"slides\", { index: \"project/deck.json\", files: \"one `project/slides/<id>.html` per slide, <id> being its entry in the index's `order`, ea",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "designSystem",
+          "location": "chunk-ghkyq94m.js:1353",
+          "code_snippet": "return P.design_systems_note = C.length > 1 || n ? \"the Design System type could not be told apart in the type listing \\u2014 list the design systems with ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "design-system",
+          "location": "chunk-ghkyq94m.js:7486",
+          "code_snippet": "return r; let h = Z().quickstartRan.get(e.typeLock.slug), w = h !== void 0 && Gd(h.toolUseId, n), y = w ? h.savedPages : void 0, A = r.instructions === voi",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "designSystem",
+          "location": "chunk-s0erxfxe.js:158",
+          "code_snippet": "`) : u.text.replace(r, () => _(b)).replace(c, \"\"), R = (l.system === null ? N.replace(p, \"\") : N).replaceAll(a, () => g ? a : _(S)), m = e.systemUrl !== vo",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution",
+      "verified_entry_branch": "/design-sync command registration → DesignSyncTool",
+      "verified_execution_candidates": [
+        "chunk-n7dvjfwp.js:1608-1647",
+        "chunk-vs02frgz.js:169",
+        "chunk-vs02frgz.js:250-267",
+        "chunk-vs02frgz.js:293-347"
+      ],
+      "positive_branch_description": "authenticated allowed providers send design-system bundled component content",
+      "negative_branch_description": "no interactive login, unsupported provider or nonessential-traffic restriction refuses execution",
+      "function_link_grade": "ENTRY_AND_CONSUMER_PARTIAL_NO_END_TO_END_TEST"
+    },
+    {
+      "F_id": "F079",
+      "first_code_anchor": "chunk-n7dvjfwp.js:1657",
+      "static_keyword": "doctor",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E01",
+        "E26",
+        "E35"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/commands/doctor"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "doctor",
+          "location": "chunk-n7dvjfwp.js:1657",
+          "code_snippet": "var As = \"I ran `/doctor prompt-audit`, which hands off to the bundled claude-api skill's prompt audit. That skill is not available in this session: it is ",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/doctor",
+          "location": "chunk-n7dvjfwp.js:1657",
+          "code_snippet": "var As = \"I ran `/doctor prompt-audit`, which hands off to the bundled claude-api skill's prompt audit. That skill is not available in this session: it is ",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "doctor",
+          "location": "chunk-nfq1km28.js:68",
+          "code_snippet": "a(\"tengu_doctor_command\", {});",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/doctor",
+          "location": "chunk-nfq1km28.js:133",
+          "code_snippet": "l.push(\"\", \"For a full setup checkup that can also fix issues, run /doctor in a Claude Code session.\"), Ur(l.join(`",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "doctor",
+          "location": "chunk-f7xqx2r2.js:91",
+          "code_snippet": "return n(\"no_launcher\", \"Can't restart. The installed version wasn't found. To check your installs, run /doctor.\"); let S = H2n(D2n); if (S !== void 0)",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F080",
+      "first_code_anchor": "chunk-at88wjsn.js:814",
+      "static_keyword": "OpenTelemetry",
+      "owner_M": [],
+      "related_scenarios": [
+        "E35"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "src/services/api/logging.ts"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "OpenTelemetry",
+          "location": "chunk-at88wjsn.js:814",
+          "code_snippet": "var lr = x(function (Mc) { Object.defineProperty(Mc, \"__esModule\", { value: !0 }); Mc.getSpanContext = Mc.setSpanContext = Mc.deleteSpan = Mc.setSpan = Mc.",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "DISABLE_TELEMETRY",
+          "location": "chunk-at88wjsn.js:1799",
+          "code_snippet": "var ZA = p(() => oe().describe(\"A JSON-RPC 2.0 message as defined by the Model Context Protocol (request, notification, or response object).\")), BW = p(() ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "OpenTelemetry",
+          "location": "chunk-5rw2zfa0.js:1744",
+          "code_snippet": "return c; return c ? {} : { commit: \"\", pr: \"\", sessionUrl: !1 }; }).pipe(a).optional().describe('Customize attribution text for commits and PRs. Each fiel",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "DISABLE_TELEMETRY",
+          "location": "chunk-5rw2zfa0.js:1339",
+          "code_snippet": "var na = [\"apiKeyHelper\", \"awsAuthRefresh\", \"awsCredentialExport\", \"fileSuggestion\", \"gcpAuthRefresh\", \"otelHeadersHelper\", \"processWrapper\", \"policyHelper",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "DISABLE_TELEMETRY",
+          "location": "chunk-twczwv3g.js:2474",
+          "code_snippet": "let Cn = p.kind === \"agent-loop\" ? h : void 0, Gt = i.SELF_HOSTED_RUNNER_AGENT_PROXY_URL !== void 0, Qn = l_r(u.environment_variables?.CCR_AGENT_PROXY_RELA",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F086",
+      "first_code_anchor": "chunk-55823wbc.js:462",
+      "static_keyword": "CLAUDE_CODE_AUTO_COMPACT_WINDOW",
+      "owner_M": [
+        "M4"
+      ],
+      "related_scenarios": [
+        "E51"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [],
+      "additional_static_branches": [
+        "chunk-55823wbc.js:456-483"
+      ],
+      "static_semantics_observation": "自动压缩窗口面板读取设置/模型上限及环境变量，UI 按 100k 至 1M 边界调整；该证据尚未覆盖实际模型压缩与崩溃恢复。",
+      "static_evidence_scope": "SOURCE_ONLY; no runtime or full call-chain signoff",
+      "candidate_evidence": [
+        {
+          "anchor": "CLAUDE_CODE_AUTO_COMPACT_WINDOW",
+          "location": "chunk-55823wbc.js:462",
+          "code_snippet": "ye = wje(i.CLAUDE_CODE_AUTO_COMPACT_WINDOW), o[1] = ye;",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "CLAUDE_CODE_AUTO_COMPACT_WINDOW",
+          "location": "chunk-5rw2zfa0.js:1339",
+          "code_snippet": "var na = [\"apiKeyHelper\", \"awsAuthRefresh\", \"awsCredentialExport\", \"fileSuggestion\", \"gcpAuthRefresh\", \"otelHeadersHelper\", \"processWrapper\", \"policyHelper",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "CLAUDE_CODE_AUTO_COMPACT_WINDOW",
+          "location": "chunk-6d8swme1.js:764",
+          "code_snippet": "let C = u ? \"\" : ` or update to a Claude Code version that recognizes ${e}`, M = `CLAUDE_CODE_DISABLE_1M_CONTEXT is set, but the ${h / 1000}K limit isn't e",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 3,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F087",
+      "first_code_anchor": "chunk-j0tbz6ra.js:43175",
+      "static_keyword": "beta header",
+      "owner_M": [
+        "M2"
+      ],
+      "related_scenarios": [
+        "E52"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [],
+      "candidate_evidence": [
+        {
+          "anchor": "beta header",
+          "location": "chunk-j0tbz6ra.js:43175",
+          "code_snippet": "case \"vertex_model_unsupported\": return t(`Tool search disabled for model '${e}' on Vertex: this model's Vertex serving stack rejects the tool-search beta ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "mid-conversation system",
+          "location": "chunk-j0tbz6ra.js:41647",
+          "code_snippet": "var bur = \"The system may send updates, reminders, or modifications to rules via mid-conversation system turns. These are system-controlled, unlike functio",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--fallback-model",
+          "location": "chunk-5rw2zfa0.js:1744",
+          "code_snippet": "return c; return c ? {} : { commit: \"\", pr: \"\", sessionUrl: !1 }; }).pipe(a).optional().describe('Customize attribution text for commits and PRs. Each fiel",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--fallback-model",
+          "location": "chunk-6d8swme1.js:1875",
+          "code_snippet": "Sr().includeUnsupportedModels = ks, _Tn(hDe(o)), Pts(KOo(o)), Its({ ...typeof o.appendSystemPrompt === \"string\" && o.appendSystemPrompt !== \"\" && { appendS",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 4,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F088",
+      "first_code_anchor": "chunk-j0tbz6ra.js:40824",
+      "static_keyword": "/tui fullscreen",
+      "owner_M": [
+        "M5"
+      ],
+      "related_scenarios": [
+        "E53"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [],
+      "candidate_evidence": [
+        {
+          "anchor": "/tui fullscreen",
+          "location": "chunk-j0tbz6ra.js:40824",
+          "code_snippet": "return e(`Focus view is set by \"viewMode\": \"focus\" in settings.json \\u2014 remove it there and restart Claude Code to turn it off. ${\"Focus view needs the ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/diff",
+          "location": "chunk-j0tbz6ra.js:48302",
+          "code_snippet": "return !0; let r = /differing field\\(s\\):\\s*([A-Za-z_,\\s-]+)/i.exec(e.message); if (!r)",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/diff",
+          "location": "chunk-at88wjsn.js:1800",
+          "code_snippet": "var t6o = p(() => Gr(\"kind\", [u({ kind: A(\"workspace_root\") }), u({ kind: A(\"diff_root\") }), u({ kind: A(\"repo\"), repo: o().describe(\"A repository, as owne",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "redraw",
+          "location": "chunk-at88wjsn.js:1798",
+          "code_snippet": "var eW = p(() => u({ type: A(\"system\"), subtype: A(\"local_command_output\"), content: o(), uuid: m(), session_id: o() }).describe(\"Output from a local slash",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "/diff",
+          "location": "chunk-f2sw2f56.js:414",
+          "code_snippet": "var zs = \"The diff panel couldn't read git state \\u2014 git didn't answer; run /diff \" + \"again\";",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F089",
+      "first_code_anchor": "chunk-at88wjsn.js:1794",
+      "static_keyword": "parent_tool_use_id",
+      "owner_M": [
+        "M7"
+      ],
+      "related_scenarios": [
+        "E54",
+        "L09"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [],
+      "candidate_evidence": [
+        {
+          "anchor": "parent_tool_use_id",
+          "location": "chunk-at88wjsn.js:1794",
+          "code_snippet": "var J5o = p(() => u({ title: o().max(200).refine(mA), description: o().max(2000).regex(/\\S/), displayName: o().max(64).refine(mA) }).describe(\"@internal De",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "agent.spawn",
+          "location": "chunk-at88wjsn.js:1799",
+          "code_snippet": "var ZA = p(() => oe().describe(\"A JSON-RPC 2.0 message as defined by the Model Context Protocol (request, notification, or response object).\")), BW = p(() ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "parent_tool_use_id",
+          "location": "chunk-j0tbz6ra.js:34465",
+          "code_snippet": "function cQo(e) { let n = e.findLast((s) => s.type === \"assistant\" && !s.parent_tool_use_id && s.message.content.some((h) => h.type === \"tool_use\" && h.nam",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "agent.spawn",
+          "location": "chunk-j0tbz6ra.js:495",
+          "code_snippet": "var Lkt = { \"tool.call\": (e) => ({ ...e, tool_use_id: e.tool_use_id ?? `toolu_${Oto().replace(/-/g, \"\")}` }), \"tool.check\": (e) => e, \"tool.describe\": (e) ",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "parent_tool_use_id",
+          "location": "chunk-7rnqxvcm.js:1722",
+          "code_snippet": "else if (e.type === \"result\" || (e.type === \"assistant\" || e.type === \"user\" && !(\"isReplay\" in e) || e.type === \"stream_event\" && (e.event.type === \"conte",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F090",
+      "first_code_anchor": "chunk-j0tbz6ra.js:67780",
+      "static_keyword": "tool_decision",
+      "owner_M": [
+        "M3"
+      ],
+      "related_scenarios": [
+        "E55"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "claude_code.safety_event"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "tool_decision",
+          "location": "chunk-j0tbz6ra.js:67780",
+          "code_snippet": "Sat(s, h, V, Te).then((je) => U$r()?.add(1, je)); y.toolDecisions.set(D, { source: Te, decision: V, timestamp: Date.now(), ...n.decision === \"accept\" && n.",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "permission_mode",
+          "location": "chunk-j0tbz6ra.js:1737",
+          "code_snippet": "var Enn = 64, GPs = 1024, Dvt = 200, zPs = 256000, Nvt = 1024, Lvt = 16, alo = 128000, Fvt = 1024, Mvo = 4096, eRr = 32, jjn = 256, $vt = 260, O$e = p(() =",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "permission_mode",
+          "location": "chunk-9gax3c5r.js:1425",
+          "code_snippet": "let n = bi(e) === \"set_permission_mode\";",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "classifier_verdict",
+          "location": "chunk-9gax3c5r.js:628",
+          "code_snippet": "var Ho = new Set([\"synced_file_changed\", \"mcp_auth_required\", \"tunnel_stream_interrupted\", \"composer_notice\", \"composer_notice_dismissed\", \"workflow_launch",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "tool_decision",
+          "location": "chunk-at88wjsn.js:1786",
+          "code_snippet": "var cn = p(() => $e([n0(), r0(), o0(), io()])), i0 = p(() => u({ type: A(\"claudeai-proxy\"), url: o(), id: o(), timeout: Kt() })), l0 = p(() => $e([cn(), i0",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F091",
+      "first_code_anchor": "chunk-j0tbz6ra.js:44970",
+      "static_keyword": "synced plugin",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E56"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [],
+      "candidate_evidence": [
+        {
+          "anchor": "synced plugin",
+          "location": "chunk-j0tbz6ra.js:44970",
+          "code_snippet": "throw ane(e, y), new R(`Unknown skill: ${e.name}`, \"forked skill refused: synced plugin\");",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "skills synced",
+          "location": "chunk-j0tbz6ra.js:19746",
+          "code_snippet": "var bnn = `uses ${Jqe.map((e) => `\"${e}\"`).join(\" or \")}, the names reserved for the skills synced from your claude.ai account`, fFo = /^[ -~]*$/, pFo = /[",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "synced plugin",
+          "location": "chunk-5rw2zfa0.js:1742",
+          "code_snippet": "return; return c ? c(f) : f; }, a) : a.catch(void 0); return { $schema: () => o().optional().describe(\"JSON Schema reference for Claude Code settings\"), ap",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "synced plugin",
+          "location": "chunk-6d8swme1.js:1941",
+          "code_snippet": "O_(\"remote thin client: synced plugin lane closes\"), Jrs();",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 4,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F092",
+      "first_code_anchor": "chunk-n7dvjfwp.js:2401",
+      "static_keyword": "PermissionRequest",
+      "owner_M": [
+        "M6"
+      ],
+      "related_scenarios": [
+        "E57"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [],
+      "candidate_evidence": [
+        {
+          "anchor": "PermissionRequest",
+          "location": "chunk-n7dvjfwp.js:2401",
+          "code_snippet": "| PermissionRequest | Tool name | Run before permission prompt |",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "ask user",
+          "location": "chunk-n7dvjfwp.js:1758",
+          "code_snippet": "${_v() ? `Skip the version lookup and propose nothing. Report exactly: \"This session runs Claude Code ${{ ISSUES_EXPLAINER: \"report the issue at https://gi",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "PermissionRequest",
+          "location": "chunk-3fdpcjpk.js:124",
+          "code_snippet": "let { refuseCallerInterface: r } = import.meta.require(\"/$bunfs/root/chunk-r4cbj61x.js\"), { bringsToolHostPermissionRequest: y } = import.meta.require(\"/$b",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "ask user",
+          "location": "chunk-44dr868s.js:99",
+          "code_snippet": "p = !1, t(`extra-usage: fetchUtilization failed, falling through to ask user: ${m}`, { level: \"error\" });",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 4,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    },
+    {
+      "F_id": "F102",
+      "first_code_anchor": "chunk-kfdf5pq3.js:892",
+      "static_keyword": "ultrareview",
+      "owner_M": [
+        "M9"
+      ],
+      "related_scenarios": [
+        "L12",
+        "L16"
+      ],
+      "target_entry": null,
+      "consumer": null,
+      "permission_path": null,
+      "result_path": null,
+      "failure_path": null,
+      "cancellation_path": null,
+      "resume_path": null,
+      "runtime_test": null,
+      "final_semantics": null,
+      "status": "ANCHOR_IDENTIFIED",
+      "old_sources": [
+        "reviewRemote.ts:128–300",
+        "/code-review ultra"
+      ],
+      "candidate_evidence": [
+        {
+          "anchor": "ultrareview",
+          "location": "chunk-kfdf5pq3.js:892",
+          "code_snippet": "Cn(s), s.command(\"ultrareview [target]\").usage(\"[target] [options]\").description(\"Run a cloud-hosted multi-agent code review of the current branch (or a PR",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--trust-workspace",
+          "location": "chunk-kfdf5pq3.js:892",
+          "code_snippet": "Cn(s), s.command(\"ultrareview [target]\").usage(\"[target] [options]\").description(\"Run a cloud-hosted multi-agent code review of the current branch (or a PR",
+          "quality": "CLI_HELP_OR_SCHEMA_UNCONFIRMED",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "ultrareview",
+          "location": "chunk-ajtyjx88.js:11844",
+          "code_snippet": "var GG = [\"advisor_fable_consent\", \"agent_handback_pointer_notice\", \"agent_intent_forward\", \"agent_launcher\", \"agent_observer_arm\", \"agent_observer_deliver",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "--trust-workspace",
+          "location": "chunk-ajtyjx88.js:1729",
+          "code_snippet": "var Xnt = \"no workspace trust record counts in this process, because CLAUDE_CODE_IGNORE_PERSISTED_TRUST is set (a self-hosted runner sets it when started w",
+          "quality": "POSSIBLE_PROMPT_OR_TEXT_ONLY",
+          "release_runtime_verified": false
+        },
+        {
+          "anchor": "ultrareview",
+          "location": "chunk-bsmfzcxb.js:53",
+          "code_snippet": "let u = await jt.get(\"/v1/ultrareview/preflight\", { auth: \"teleport-org\", timeout: 5000, credentials: o, headers: { [P2t]: q() } });",
+          "quality": "STATIC_EXECUTION_CANDIDATE",
+          "release_runtime_verified": false
+        }
+      ],
+      "candidate_count": 5,
+      "call_chain_status": "ENTRY_TO_RESULT_UNCONFIRMED",
+      "old_vs_new_status": "NEEDS_SOURCE_BRANCH_COMPARISON",
+      "evidence_warning": "Candidate source snippets can include help, schemas, prompts or feature flags without actual business execution"
+    }
+  ]
+}

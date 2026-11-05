@@ -520,9 +520,7 @@ export const getPluginCommands = memoize(async (): Promise<Command[]> => {
                 if (plugin.commandsMetadata) {
                   // Find metadata by matching the command's absolute path to the metadata source
                   // Convert metadata.source (relative to plugin root) to absolute path for comparison
-                  for (const [name, metadata] of Object.entries(
-                    plugin.commandsMetadata,
-                  )) {
+                  for (const [name, metadata] of Object.entries(plugin.commandsMetadata as Record<string, CommandMetadata>)) {
                     if (metadata.source) {
                       const fullMetadataPath = join(
                         plugin.path,
@@ -605,9 +603,7 @@ export const getPluginCommands = memoize(async (): Promise<Command[]> => {
       // when iterating through commandsPaths. This loop handles metadata entries
       // that specify inline content instead of file references.
       if (plugin.commandsMetadata) {
-        for (const [name, metadata] of Object.entries(
-          plugin.commandsMetadata,
-        )) {
+        for (const [name, metadata] of Object.entries(plugin.commandsMetadata as Record<string, CommandMetadata>)) {
           // Only process entries with inline content (no source)
           if (metadata.content && !metadata.source) {
             try {

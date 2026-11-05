@@ -2,10 +2,7 @@ import type {
   ToolResultBlockParam,
   ToolUseBlockParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
-import type {
-  ElicitRequestURLParams,
-  ElicitResult,
-} from '@modelcontextprotocol/sdk/types.js'
+import type { ElicitRequestURLParams, ElicitResult } from "@modelcontextprotocol/server";
 import type { UUID } from 'crypto'
 import type { z } from 'zod/v4'
 import type { Command } from './commands.js'
@@ -81,7 +78,7 @@ import type {
   PromptRequest,
   PromptResponse,
 } from './types/hooks.js'
-import type { AgentId } from './types/ids.js'
+import type { AgentId, SessionId } from './types/ids.js'
 import type { DeepImmutable } from './types/utils.js'
 import type { AttributionState } from './utils/commitAttribution.js'
 import type { FileHistoryState } from './utils/fileHistory.js'
@@ -127,6 +124,9 @@ export type ToolPermissionContext = DeepImmutable<{
   alwaysDenyRules: ToolPermissionRulesBySource
   alwaysAskRules: ToolPermissionRulesBySource
   isBypassPermissionsModeAvailable: boolean
+  blockReadsOutsideWorkingDirectories?: boolean
+  blockWritesOutsideWorkingDirectories?: boolean
+  readBlockExemptPaths?: string[]
   isAutoModeAvailable?: boolean
   strippedDangerousRules?: ToolPermissionRulesBySource
   /** When true, permission prompts are auto-denied (e.g., background agents that can't show UI) */
@@ -156,6 +156,8 @@ export type CompactProgressEvent =
   | { type: 'compact_end' }
 
 export type ToolUseContext = {
+  /** Stable identity of the owning conversation, shared with subagents. */
+  sessionId?: SessionId
   options: {
     commands: Command[]
     debug: boolean
@@ -168,6 +170,8 @@ export type ToolUseContext = {
     isNonInteractiveSession: boolean
     agentDefinitions: AgentDefinitionsResult
     maxBudgetUsd?: number
+    /** Forward subagent text/thinking as SDK assistant/user messages with parent ID. */
+    forwardSubagentText?: boolean
     /** Custom system prompt that replaces the default system prompt */
     customSystemPrompt?: string
     /** Additional system prompt appended after the main system prompt */
@@ -233,6 +237,8 @@ export type ToolUseContext = {
   pushApiMetricsEntry?: (ttftMs: number) => void
   setStreamMode?: (mode: SpinnerMode) => void
   onCompactProgress?: (event: CompactProgressEvent) => void
+  /** Interactive spinner receives the true max-output recovery transition. */
+  onOutputLimitRecovery?: (status: { attempt: number; limit: number } | null) => void
   setSDKStatus?: (status: SDKStatus) => void
   openMessageSelector?: () => void
   updateFileHistoryState: (
@@ -439,6 +445,8 @@ export type Tool<
    * When true, this tool is deferred (sent with defer_loading: true) and requires
    * ToolSearch to be used before it can be called.
    */
+  /** Tool runs code or shell commands; permission and classifier paths must retain this metadata. */
+  readonly enablesCodeExecution?: boolean
   readonly shouldDefer?: boolean
   /**
    * When true, this tool is never deferred — its full schema appears in the

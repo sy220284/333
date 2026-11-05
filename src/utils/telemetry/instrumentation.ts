@@ -1,5 +1,5 @@
 import { DiagLogLevel, diag, trace } from '@opentelemetry/api'
-import { logs } from '@opentelemetry/api-logs'
+import { logs } from '@opentelemetry/api'
 // OTLP/Prometheus exporters are dynamically imported inside the protocol
 // switch statements below. A process uses at most one protocol variant per
 // signal, but static imports would load all 6 (~1.2MB) on every startup.
@@ -20,10 +20,10 @@ import {
   PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics'
 import {
-  BasicTracerProvider,
+  TracerProvider,
   BatchSpanProcessor,
   ConsoleSpanExporter,
-} from '@opentelemetry/sdk-trace-base'
+} from '@opentelemetry/sdk-trace'
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
@@ -54,13 +54,14 @@ import { isEnvTruthy } from '../envUtils.js'
 import { errorMessage } from '../errors.js'
 import { getMTLSConfig } from '../mtls.js'
 import { getProxyUrl, shouldBypassProxy } from '../proxy.js'
-import { getSettings_DEPRECATED } from '../settings/settings.js'
+import { getInitialSettings } from '../settings/settings.js'
 import { jsonStringify } from '../slowOperations.js'
 import { profileCheckpoint } from '../startupProfiler.js'
 import { isBetaTracingEnabled } from './betaSessionTracing.js'
 import { BigQueryMetricsExporter } from './bigqueryExporter.js'
 import { ClaudeCodeDiagLogger } from './logger.js'
 import { initializePerfettoTracing } from './perfettoTracing.js'
+import { resolveOTLPTimeoutMs } from './otlpTimeout.ts'
 import {
   endInteractionSpan,
   isEnhancedTelemetryEnabled,
@@ -84,7 +85,7 @@ function telemetryTimeout(ms: number, message: string): Promise<never> {
   })
 }
 
-export function bootstrapTelemetry() {
+export function bootstrapTelemetry() : void {
   if (process.env.USER_TYPE === 'ant') {
     // Read from ANT_ prefixed variables that are defined at build time
     if (process.env.ANT_OTEL_METRICS_EXPORTER) {
@@ -169,7 +170,7 @@ async function getOtlpReaders() {
           const { OTLPMetricExporter } = await import(
             '@opentelemetry/exporter-metrics-otlp-grpc'
           )
-          exporters.push(new OTLPMetricExporter())
+          exporters.push(new OTLPMetricExporter({ timeoutMillis: resolveOTLPTimeoutMs(process.env.OTEL_EXPORTER_OTLP_TIMEOUT) }))
           break
         }
         case 'http/json': {
@@ -238,7 +239,7 @@ async function getOtlpLogExporters() {
           const { OTLPLogExporter } = await import(
             '@opentelemetry/exporter-logs-otlp-grpc'
           )
-          exporters.push(new OTLPLogExporter())
+          exporters.push(new OTLPLogExporter({ timeoutMillis: resolveOTLPTimeoutMs(process.env.OTEL_EXPORTER_OTLP_TIMEOUT) }))
           break
         }
         case 'http/json': {
@@ -289,7 +290,7 @@ async function getOtlpTraceExporters() {
           const { OTLPTraceExporter } = await import(
             '@opentelemetry/exporter-trace-otlp-grpc'
           )
-          exporters.push(new OTLPTraceExporter())
+          exporters.push(new OTLPTraceExporter({ timeoutMillis: resolveOTLPTimeoutMs(process.env.OTEL_EXPORTER_OTLP_TIMEOUT) }))
           break
         }
         case 'http/json': {
@@ -321,7 +322,7 @@ async function getOtlpTraceExporters() {
   return exporters
 }
 
-export function isTelemetryEnabled() {
+export function isTelemetryEnabled() : boolean {
   return isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_TELEMETRY)
 }
 
@@ -373,11 +374,11 @@ async function initializeBetaTracing(
 
   // Initialize trace exporter
   const traceExporter = new OTLPTraceExporter(httpConfig)
-  const spanProcessor = new BatchSpanProcessor(traceExporter, {
+  const spanProcessor = new BatchSpanProcessor({ exporter: traceExporter,
     scheduledDelayMillis: DEFAULT_TRACES_EXPORT_INTERVAL_MS,
   })
 
-  const tracerProvider = new BasicTracerProvider({
+  const tracerProvider = new TracerProvider({
     resource,
     spanProcessors: [spanProcessor],
   })
@@ -390,7 +391,7 @@ async function initializeBetaTracing(
   const loggerProvider = new LoggerProvider({
     resource,
     processors: [
-      new BatchLogRecordProcessor(logExporter, {
+      new BatchLogRecordProcessor({ exporter: logExporter,
         scheduledDelayMillis: DEFAULT_LOGS_EXPORT_INTERVAL_MS,
       }),
     ],
@@ -406,19 +407,18 @@ async function initializeBetaTracing(
   )
   setEventLogger(eventLogger)
 
-  // Setup flush handlers - flush both logs AND traces
-  process.on('beforeExit', async () => {
-    await loggerProvider?.forceFlush()
-    await tracerProvider?.forceFlush()
-  })
-
-  process.on('exit', () => {
-    void loggerProvider?.forceFlush()
-    void tracerProvider?.forceFlush()
+  // Async exporters cannot be awaited from Node's synchronous 'exit' event.
+  // Graceful shutdown uses registerCleanup; natural idle exit is flushed once.
+  process.once('beforeExit', () => {
+    void Promise.all([loggerProvider.forceFlush(), tracerProvider.forceFlush()])
+      .catch(error => logForDebugging(
+        `Beta tracing idle flush failed: ${errorMessage(error)}`,
+        { level: 'error' },
+      ))
   })
 }
 
-export async function initializeTelemetry() {
+export async function initializeTelemetry(): Promise<import('@opentelemetry/api').Meter> {
   profileCheckpoint('telemetry_init_start')
   bootstrapTelemetry()
 
@@ -512,9 +512,12 @@ export async function initializeTelemetry() {
   // Check if beta tracing is enabled - this is a separate code path
   // Available to all users who set ENABLE_BETA_TRACING_DETAILED=1 and BETA_TRACING_ENDPOINT
   if (isBetaTracingEnabled()) {
-    void initializeBetaTracing(resource).catch(e =>
-      logForDebugging(`Beta tracing init failed: ${e}`, { level: 'error' }),
-    )
+    const betaTracingReady = initializeBetaTracing(resource).catch(error => {
+      logForDebugging(
+        `Beta tracing init failed: ${errorMessage(error)}`,
+        { level: 'error' },
+      )
+    })
     // Still set up meter provider for metrics (but skip regular logs/traces setup)
     const meterProvider = new MeterProvider({
       resource,
@@ -530,6 +533,9 @@ export async function initializeTelemetry() {
       )
       try {
         endInteractionSpan()
+
+        // Ensure exporters finish initializing before reading their providers.
+        await betaTracingReady
 
         // Force flush + shutdown together inside the timeout. Previously forceFlush
         // was awaited unbounded BEFORE the race, blocking exit on slow OTLP endpoints.
@@ -554,8 +560,12 @@ export async function initializeTelemetry() {
           Promise.all(chains),
           telemetryTimeout(timeoutMs, 'OpenTelemetry shutdown timeout'),
         ])
-      } catch {
-        // Ignore shutdown errors
+      } catch (error) {
+        logForDebugging(
+          `Beta telemetry shutdown failed: ${errorMessage(error)}`,
+          { level: 'error' },
+        )
+        throw error
       }
     }
     registerCleanup(shutdownTelemetry)
@@ -582,15 +592,13 @@ export async function initializeTelemetry() {
     if (logExporters.length > 0) {
       const loggerProvider = new LoggerProvider({
         resource,
-        // Add batch processors for each exporter
-        processors: logExporters.map(
-          exporter =>
-            new BatchLogRecordProcessor(exporter, {
-              scheduledDelayMillis: parseInt(
-                process.env.OTEL_LOGS_EXPORT_INTERVAL ||
-                  DEFAULT_LOGS_EXPORT_INTERVAL_MS.toString(),
-              ),
-            }),
+        processors: logExporters.map(exporter =>
+          new BatchLogRecordProcessor({ exporter: exporter,
+            scheduledDelayMillis: parseInt(
+              process.env.OTEL_LOGS_EXPORT_INTERVAL ||
+                DEFAULT_LOGS_EXPORT_INTERVAL_MS.toString(),
+            ),
+          }),
         ),
       })
 
@@ -606,20 +614,17 @@ export async function initializeTelemetry() {
       setEventLogger(eventLogger)
       logForDebugging('[3P telemetry] Event logger set successfully')
 
-      // 'beforeExit' is emitted when Node.js empties its event loop and has no additional work to schedule.
-      // Unlike 'exit', it allows us to perform async operations, so it works well for letting
-      // network requests complete before the process exits naturally.
-      process.on('beforeExit', async () => {
-        await loggerProvider?.forceFlush()
-        // Also flush traces - they use BatchSpanProcessor which needs explicit flush
-        const tracerProvider = getTracerProvider()
-        await tracerProvider?.forceFlush()
-      })
-
-      process.on('exit', () => {
-        // Final attempt to flush logs and traces
-        void loggerProvider?.forceFlush()
-        void getTracerProvider()?.forceFlush()
+      // Natural idle exits flush the providers once; graceful exits await the
+      // registered cleanup below. The 'exit' event cannot await promises.
+      process.once('beforeExit', () => {
+        const tracer = getTracerProvider()
+        void Promise.all([
+          loggerProvider.forceFlush(),
+          ...(tracer ? [tracer.forceFlush()] : []),
+        ]).catch(error => logForDebugging(
+          `Telemetry idle flush failed: ${errorMessage(error)}`,
+          { level: 'error' },
+        ))
       })
     }
   }
@@ -631,7 +636,7 @@ export async function initializeTelemetry() {
       // Create span processors for each exporter
       const spanProcessors = traceExporters.map(
         exporter =>
-          new BatchSpanProcessor(exporter, {
+          new BatchSpanProcessor({ exporter: exporter,
             scheduledDelayMillis: parseInt(
               process.env.OTEL_TRACES_EXPORT_INTERVAL ||
                 DEFAULT_TRACES_EXPORT_INTERVAL_MS.toString(),
@@ -639,7 +644,7 @@ export async function initializeTelemetry() {
           }),
       )
 
-      const tracerProvider = new BasicTracerProvider({
+      const tracerProvider = new TracerProvider({
         resource,
         spanProcessors,
       })
@@ -768,10 +773,12 @@ function parseOtelHeadersEnvVar(): Record<string, string> {
 function getOTLPExporterConfig() {
   const proxyUrl = getProxyUrl()
   const mtlsConfig = getMTLSConfig()
-  const settings = getSettings_DEPRECATED()
+  const settings = getInitialSettings()
 
   // Build base config
-  const config: Record<string, unknown> = {}
+  const config: Record<string, unknown> = {
+    timeoutMillis: resolveOTLPTimeoutMs(process.env.OTEL_EXPORTER_OTLP_TIMEOUT),
+  }
 
   // Parse static headers from env var once (doesn't change at runtime)
   const staticHeaders = parseOtelHeadersEnvVar()

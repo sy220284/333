@@ -1,0 +1,157 @@
+name: PR7 固定提交全量复审（构建、回归、类型）
+# 固定审计轮次：修复CLI参数与核心类型契约后再次验收
+
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - '.github/workflows/pr7-full-audit.yml'
+      - 'src/cli/background/ptyWorker317.ts'
+      - 'src/cli/background/supervisor.ts'
+      - 'src/utils/sessionStoragePortable.ts'
+      - 'src/utils/listSessionsImpl.ts'
+      - 'src/entrypoints/agentSdkTypes.ts'
+      - 'tests/m1-background-lifecycle.test.mjs'
+      - 'tests/m1-preload-317.test.mjs'
+      - 'tests/m3-m4-task-stop-cli-317.test.mjs'
+      - 'src/remote/**'
+      - 'src/tasks/**'
+      - 'src/ink/termio/clipboardNative317.ts'
+      - 'tests/m4-sdk-session-metadata-317.test.ts'
+      - 'build/compare-317.mjs'
+      - 'tests/compare-317.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Lock each audit to its triggering commit; later PR pushes must not cancel it.
+concurrency:
+  group: pr7-audit-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  full-verification:
+    name: 全量构建和回归（${{ matrix.os }}）
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Windows 启用 Git 长路径
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 锁定复审提交并校验 Node 测试语法
+        run: |
+          echo "审计提交：$(git rev-parse HEAD)"
+          node build/check-test-syntax.mjs
+          node --test tests/language-file-contract.test.mjs tests/test-inventory.test.mjs
+      - name: 20条功能链与137项功能/场景映射严格检查
+        run: |
+          node --test tests/compare-317.test.mjs tests/upgrade-coverage.test.mjs
+          node build/upgrade-coverage.mjs
+      - name: 完整重建、资源字节校验、现有回归与遗漏测试自动补跑
+        run: npm run verify
+      - name: 获取并校验官方 317 Linux x64 原版
+        id: official-x64
+        if: runner.os == 'Linux' && !cancelled()
+        run: |
+          set -euo pipefail
+          mkdir -p .rebuild/oracle
+          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
+            'https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude' \
+            --output .rebuild/oracle/claude
+          echo 'eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  .rebuild/oracle/claude' | sha256sum --check
+          chmod +x .rebuild/oracle/claude
+      - name: 原版与重建版执行同条件 CLI 对照
+        if: steps.official-x64.outcome == 'success' && !cancelled()
+        run: |
+          set -euo pipefail
+          export CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude"
+          mkdir -p .rebuild/chain-317
+          node build/m1-x64-reference-probe.mjs \
+            --reference "$CLAUDE_TARGET_X64" --candidate "$PWD/dist/claude" \
+            --allow-candidate-diff false --report .rebuild/chain-317/linux-x64-cli-parity.json
+      - name: 原版与重建版执行 Preload 和任务生命周期对照
+        if: steps.official-x64.outcome == 'success' && !cancelled()
+        env:
+          CLAUDE_TARGET_X64: ${{ github.workspace }}/.rebuild/oracle/claude
+        run: |
+          set -euo pipefail
+          mkdir -p .rebuild/chain-317
+          node --test --test-concurrency=1 \
+            --test-reporter=spec --test-reporter-destination=stdout \
+            --test-reporter=tap --test-reporter-destination=.rebuild/chain-317/linux-x64-lifecycle.tap \
+            tests/m1-background-lifecycle.test.mjs \
+            tests/m1-background-agent-parity.test.mjs \
+            tests/m1-preload-317.test.mjs \
+            tests/m3-m4-task-stop-cli-317.test.mjs \
+            tests/m4-plugin-prune-native-parity-317.test.mjs
+      - name: 导出20链真实签收、代码差分和测试发现清单
+        if: always()
+        run: |
+          mkdir -p .rebuild/chain-317
+          node build/upgrade-chain-audit.mjs --report .rebuild/chain-317/verified-chain-status.json
+          node build/compare-317.mjs --json > .rebuild/chain-317/source-differences.json
+          node build/run-unregistered-tests.mjs --list > .rebuild/chain-317/test-discovery.json
+      - name: 保存固定提交的20条签收与差分证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chain-317-acceptance-${{ matrix.os }}
+          path: .rebuild/chain-317/
+          retention-days: 30
+          if-no-files-found: error
+
+  typecheck:
+    name: 全仓类型和代码质量（Linux）
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 恢复原始依赖和公开依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 安装冻结开发工具
+        run: npm run dev:bootstrap
+      - name: 全仓严格类型诊断（失败即保留待修复状态）
+        run: npm run dev:typecheck:all
+
+  signoff-gate:
+    name: 20条功能链完整签收总闸
+    if: always()
+    needs: [full-verification, typecheck]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: 完整功能链签收未满足时严格报错
+        run: node build/upgrade-chain-audit.mjs --require-closed

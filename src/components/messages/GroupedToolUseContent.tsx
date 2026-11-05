@@ -1,4 +1,4 @@
-import type { ToolResultBlockParam, ToolUseBlockParam } from '@anthropic-ai/sdk/resources/messages/messages.mjs';
+import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/messages/messages.mjs';
 import * as React from 'react';
 import { filterToolProgressMessages, findToolByName, type Tools } from '../../Tool.js';
 import type { GroupedToolUseMessage } from '../../types/message.js';
@@ -37,18 +37,20 @@ export function GroupedToolUseContent({
       }
     }
   }
-  const toolUsesData = message.messages.map(msg => {
-    const content = msg.message.content[0];
-    const result = resultsByToolUseId.get(content.id);
-    return {
-      param: content as ToolUseBlockParam,
-      isResolved: lookups.resolvedToolUseIDs.has(content.id),
-      isError: lookups.erroredToolUseIDs.has(content.id),
-      isInProgress: inProgressToolUseIDs.has(content.id),
-      progressMessages: filterToolProgressMessages(lookups.progressMessagesByToolUseID.get(content.id) ?? []),
-      result
-    };
-  });
+  const toolUsesData = message.messages.flatMap(msg =>
+    msg.message.content.flatMap(content => {
+      if (content.type !== 'tool_use') return [];
+      const result = resultsByToolUseId.get(content.id);
+      return [{
+        param: content,
+        isResolved: lookups.resolvedToolUseIDs.has(content.id),
+        isError: lookups.erroredToolUseIDs.has(content.id),
+        isInProgress: inProgressToolUseIDs.has(content.id),
+        progressMessages: filterToolProgressMessages(lookups.progressMessagesByToolUseID.get(content.id) ?? []),
+        result
+      }];
+    })
+  );
   const anyInProgress = toolUsesData.some(d => d.isInProgress);
   return tool.renderGroupedToolUse(toolUsesData, {
     shouldAnimate: shouldAnimate && anyInProgress,

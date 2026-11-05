@@ -7,22 +7,10 @@ import type {
   PermissionMode,
   SDKMessage,
 } from 'src/entrypoints/agentSdkTypes.js'
-import {
-  AGENT_TOOL_NAME,
-  LEGACY_AGENT_TOOL_NAME,
-} from 'src/tools/AgentTool/constants.js'
 import { getAnthropicApiKeyWithSource } from '../auth.js'
 import { getCwd } from '../cwd.js'
 import { getFastModeState } from '../fastMode.js'
-import { getSettings_DEPRECATED } from '../settings/settings.js'
-
-// TODO(next-minor): remove this translation once SDK consumers have migrated
-// to the 'Agent' tool name. The wire name was renamed Task → Agent in #19647,
-// but emitting the new name in init/result events broke SDK consumers on a
-// patch-level release. Keep emitting 'Task' until the next minor.
-export function sdkCompatToolName(name: string): string {
-  return name === AGENT_TOOL_NAME ? LEGACY_AGENT_TOOL_NAME : name
-}
+import { getInitialSettings } from '../settings/settings.js'
 
 type CommandLike = { name: string; userInvocable?: boolean }
 
@@ -51,7 +39,7 @@ export type SystemInitInputs = {
  *     QueryEngine SDKMessage layer
  */
 export function buildSystemInitMessage(inputs: SystemInitInputs): SDKMessage {
-  const settings = getSettings_DEPRECATED()
+  const settings = getInitialSettings()
   const outputStyle = settings?.outputStyle ?? DEFAULT_OUTPUT_STYLE_NAME
 
   const initMessage: SDKMessage = {
@@ -59,7 +47,7 @@ export function buildSystemInitMessage(inputs: SystemInitInputs): SDKMessage {
     subtype: 'init',
     cwd: getCwd(),
     session_id: getSessionId(),
-    tools: inputs.tools.map(tool => sdkCompatToolName(tool.name)),
+    tools: inputs.tools.map(tool => tool.name),
     mcp_servers: inputs.mcpClients.map(client => ({
       name: client.name,
       status: client.type,

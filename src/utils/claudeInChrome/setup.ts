@@ -104,23 +104,17 @@ export function setupClaudeInChrome(): {
   }
   const hasEnv = Object.keys(env).length > 0
 
+  // Start installation eagerly for interactive startup, but retain the
+  // Promise so the MCP connection can await completion before socket auth.
+  // A browser extension launched between setup() and the old fire-and-forget
+  // manifest write would otherwise see "native host not found".
+  void ensureChromeNativeHostReady().catch(e =>
+    logForDebugging(`[Claude in Chrome] Failed to install native host: ${e}`, {
+      level: 'error',
+    }),
+  )
+
   if (isNativeBuild) {
-    // Create a wrapper script that calls the same binary with --chrome-native-host. This
-    // is needed because the native host manifest "path" field cannot contain arguments.
-    const execCommand = `"${process.execPath}" --chrome-native-host`
-
-    // Run asynchronously without blocking; best-effort so swallow errors
-    void createWrapperScript(execCommand)
-      .then(manifestBinaryPath =>
-        installChromeNativeHostManifest(manifestBinaryPath),
-      )
-      .catch(e =>
-        logForDebugging(
-          `[Claude in Chrome] Failed to install native host: ${e}`,
-          { level: 'error' },
-        ),
-      )
-
     return {
       mcpConfig: {
         [CLAUDE_IN_CHROME_MCP_SERVER_NAME]: {
@@ -138,19 +132,6 @@ export function setupClaudeInChrome(): {
     const __filename = fileURLToPath(import.meta.url)
     const __dirname = join(__filename, '..')
     const cliPath = join(__dirname, 'cli.js')
-
-    void createWrapperScript(
-      `"${process.execPath}" "${cliPath}" --chrome-native-host`,
-    )
-      .then(manifestBinaryPath =>
-        installChromeNativeHostManifest(manifestBinaryPath),
-      )
-      .catch(e =>
-        logForDebugging(
-          `[Claude in Chrome] Failed to install native host: ${e}`,
-          { level: 'error' },
-        ),
-      )
 
     const mcpConfig = {
       [CLAUDE_IN_CHROME_MCP_SERVER_NAME]: {
@@ -186,6 +167,24 @@ function getNativeMessagingHostsDirs(): string[] {
 
   // macOS and Linux: return all browser native messaging directories
   return getAllNativeMessagingHostsDirs().map(({ path }) => path)
+}
+
+let nativeHostReady: Promise<void> | undefined
+
+/**
+ * One installation result shared between startup and MCP connection.
+ * Connection failure propagates rather than incorrectly reporting a connected
+ * browser when Windows registration or native-host manifest creation failed.
+ */
+export function ensureChromeNativeHostReady(): Promise<void> {
+  nativeHostReady ??= (async () => {
+    const command = isInBundledMode()
+      ? `"${process.execPath}" --chrome-native-host`
+      : `"${process.execPath}" "${join(fileURLToPath(import.meta.url), '..', 'cli.js')}" --chrome-native-host`
+    const path = await createWrapperScript(command)
+    await installChromeNativeHostManifest(path)
+  })()
+  return nativeHostReady
 }
 
 export async function installChromeNativeHostManifest(
@@ -244,8 +243,10 @@ export async function installChromeNativeHostManifest(
 
   // Windows requires registry entries pointing to the manifest for each browser
   if (getPlatform() === 'windows') {
-    const manifestPath = join(manifestDirs[0]!, NATIVE_HOST_MANIFEST_NAME)
-    registerWindowsNativeHosts(manifestPath)
+    const manifestDir = manifestDirs[0]
+    if (!manifestDir) throw new Error('No Windows native host manifest directory available')
+    const manifestPath = join(manifestDir, NATIVE_HOST_MANIFEST_NAME)
+    await registerWindowsNativeHosts(manifestPath)
   }
 
   // Restart the native host if we have rewritten any manifest
@@ -268,33 +269,30 @@ export async function installChromeNativeHostManifest(
 /**
  * Register the native host in Windows registry for all supported browsers
  */
-function registerWindowsNativeHosts(manifestPath: string): void {
+async function registerWindowsNativeHosts(manifestPath: string): Promise<void> {
   const registryKeys = getAllWindowsRegistryKeys()
-
-  for (const { browser, key } of registryKeys) {
+  let succeeded = 0
+  const failures: string[] = []
+  await Promise.all(registryKeys.map(async ({ browser, key }) => {
     const fullKey = `${key}\\${NATIVE_HOST_IDENTIFIER}`
-    // Use reg.exe to add the registry entry
-    // https://developer.chrome.com/docs/extensions/develop/concepts/native-messaging
-    void execFileNoThrowWithCwd('reg', [
-      'add',
-      fullKey,
-      '/ve', // Set the default (unnamed) value
-      '/t',
-      'REG_SZ',
-      '/d',
-      manifestPath,
-      '/f', // Force overwrite without prompt
-    ]).then(result => {
-      if (result.code === 0) {
-        logForDebugging(
-          `[Claude in Chrome] Registered native host for ${browser} in Windows registry: ${fullKey}`,
-        )
-      } else {
-        logForDebugging(
-          `[Claude in Chrome] Failed to register native host for ${browser} in Windows registry: ${result.stderr}`,
-        )
-      }
-    })
+    const result = await execFileNoThrowWithCwd('reg', [
+      'add', fullKey, '/ve', '/t', 'REG_SZ', '/d', manifestPath, '/f',
+    ])
+    if (result.code === 0) {
+      succeeded++
+      logForDebugging(
+        `[Claude in Chrome] Registered native host for ${browser}: ${fullKey}`,
+      )
+    } else {
+      failures.push(`${browser}:${result.code}`)
+      logForDebugging(
+        `[Claude in Chrome] Failed native host registration for ${browser}: ${result.stderr}`,
+        { level: 'error' },
+      )
+    }
+  }))
+  if (succeeded === 0) {
+    throw new Error(`Chrome native host registry registration failed: ${failures.join(', ')}`)
   }
 }
 

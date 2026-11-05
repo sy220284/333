@@ -10,7 +10,6 @@ import {
 } from '../../constants/apiLimits.js'
 import { hasBinaryExtension } from '../../constants/files.js'
 import { memoryFreshnessNote } from '../../memdir/memoryAge.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { logEvent } from '../../services/analytics/index.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -34,7 +33,6 @@ import {
   addLineNumbers,
   FILE_NOT_FOUND_CWD_NOTE,
   findSimilarFile,
-  getFileModificationTimeAsync,
   suggestPathUnderCwd,
 } from '../../utils/file.js'
 import { logFileOperation } from '../../utils/fileOperationAnalytics.js'
@@ -78,7 +76,6 @@ import { getDefaultFileReadingLimits } from './limits.js'
 import {
   DESCRIPTION,
   FILE_READ_TOOL_NAME,
-  FILE_UNCHANGED_STUB,
   LINE_FORMAT_INSTRUCTION,
   OFFSET_INSTRUCTION_DEFAULT,
   OFFSET_INSTRUCTION_TARGETED,
@@ -239,6 +236,9 @@ const inputSchema = lazySchema(() =>
       .describe(
         `Page range for PDF files (e.g., "1-5", "3", "10-20"). Only applicable to PDF files. Maximum ${PDF_MAX_PAGES_PER_READ} pages per request.`,
       ),
+    allow_large: z.boolean().optional().describe(
+      'Set to true to read a text file, or a line range of one, that is over the usual size limits, up to what still fits in your context. Only use this when you genuinely need all of it or the user asked for the whole file; otherwise read it in parts with offset and limit, or search it.',
+    ),
   }),
 )
 type InputSchema = ReturnType<typeof inputSchema>
@@ -322,12 +322,6 @@ const outputSchema = lazySchema(() => {
           .describe('Directory containing extracted page images'),
       }),
     }),
-    z.object({
-      type: z.literal('file_unchanged'),
-      file: z.object({
-        filePath: z.string().describe('The path to the file'),
-      }),
-    }),
   ])
 })
 type OutputSchema = ReturnType<typeof outputSchema>
@@ -345,6 +339,10 @@ export const FileReadTool = buildTool({
     return DESCRIPTION
   },
   async prompt() {
+    // The 2.1.317 native --bare tool advertises the compact search hint.
+    if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
+      return 'read files, images, PDFs, notebooks'
+    }
     const limits = getDefaultFileReadingLimits()
     const maxSizeInstruction = limits.includeMaxSizeInPrompt
       ? `. Files larger than ${formatFileSize(limits.maxSizeBytes)} will return an error; use offset and limit for larger files`
@@ -494,7 +492,7 @@ export const FileReadTool = buildTool({
     return { result: true }
   },
   async call(
-    { file_path, offset = 1, limit = undefined, pages },
+    { file_path, offset = 1, limit = undefined, pages, allow_large = false },
     context,
     _canUseTool?,
     parentMessage?,
@@ -519,58 +517,6 @@ export const FileReadTool = buildTool({
     // Use expandPath for consistent path normalization with FileEditTool/FileWriteTool
     // (especially handles whitespace trimming and Windows path separators)
     const fullFilePath = expandPath(file_path)
-
-    // Dedup: if we've already read this exact range and the file hasn't
-    // changed on disk, return a stub instead of re-sending the full content.
-    // The earlier Read tool_result is still in context — two full copies
-    // waste cache_creation tokens on every subsequent turn. BQ proxy shows
-    // ~18% of Read calls are same-file collisions (up to 2.64% of fleet
-    // cache_creation). Only applies to text/notebook reads — images/PDFs
-    // aren't cached in readFileState so won't match here.
-    //
-    // Ant soak: 1,734 dedup hits in 2h, no Read error regression.
-    // Killswitch pattern: GB can disable if the stub message confuses
-    // the model externally.
-    // 3P default: killswitch off = dedup enabled. Client-side only — no
-    // server support needed, safe for Bedrock/Vertex/Foundry.
-    const dedupKillswitch = getFeatureValue_CACHED_MAY_BE_STALE(
-      'tengu_read_dedup_killswitch',
-      false,
-    )
-    const existingState = dedupKillswitch
-      ? undefined
-      : readFileState.get(fullFilePath)
-    // Only dedup entries that came from a prior Read (offset is always set
-    // by Read). Edit/Write store offset=undefined — their readFileState
-    // entry reflects post-edit mtime, so deduping against it would wrongly
-    // point the model at the pre-edit Read content.
-    if (
-      existingState &&
-      !existingState.isPartialView &&
-      existingState.offset !== undefined
-    ) {
-      const rangeMatch =
-        existingState.offset === offset && existingState.limit === limit
-      if (rangeMatch) {
-        try {
-          const mtimeMs = await getFileModificationTimeAsync(fullFilePath)
-          if (mtimeMs === existingState.timestamp) {
-            const analyticsExt = getFileExtensionForAnalytics(fullFilePath)
-            logEvent('tengu_file_read_dedup', {
-              ...(analyticsExt !== undefined && { ext: analyticsExt }),
-            })
-            return {
-              data: {
-                type: 'file_unchanged' as const,
-                file: { filePath: file_path },
-              },
-            }
-          }
-        } catch {
-          // stat failed — fall through to full read
-        }
-      }
-    }
 
     // Discover skills from this file's path (fire-and-forget, non-blocking)
     // Skip in simple mode - no skills available
@@ -604,6 +550,7 @@ export const FileReadTool = buildTool({
         readFileState,
         context,
         parentMessage?.message.id,
+        allow_large,
       )
     } catch (error) {
       // Handle file-not-found: suggest similar files
@@ -627,6 +574,7 @@ export const FileReadTool = buildTool({
               readFileState,
               context,
               parentMessage?.message.id,
+              allow_large,
             )
           } catch (altError) {
             if (!isENOENT(altError)) {
@@ -682,12 +630,6 @@ export const FileReadTool = buildTool({
           tool_use_id: toolUseID,
           type: 'tool_result',
           content: `PDF pages extracted: ${data.file.count} page(s) from ${data.file.filePath} (${formatFileSize(data.file.originalSize)})`,
-        }
-      case 'file_unchanged':
-        return {
-          tool_use_id: toolUseID,
-          type: 'tool_result',
-          content: FILE_UNCHANGED_STUB,
         }
       case 'text': {
         let content: string
@@ -814,6 +756,7 @@ async function callInner(
   readFileState: ToolUseContext['readFileState'],
   context: ToolUseContext,
   messageId: string | undefined,
+  allowLarge = false,
 ): Promise<{
   data: Output
   newMessages?: ReturnType<typeof createUserMessage>[]
@@ -898,7 +841,7 @@ async function callInner(
         resolvedFilePath,
         parsedRange ?? undefined,
       )
-      if (!extractResult.success) {
+      if (extractResult.success === false) {
         throw new Error(extractResult.error.message)
       }
       logEvent('tengu_pdf_page_extraction', {
@@ -961,7 +904,7 @@ async function callInner(
 
     if (shouldExtractPages) {
       const extractResult = await extractPDFPages(resolvedFilePath)
-      if (extractResult.success) {
+      if (extractResult.success === true) {
         logEvent('tengu_pdf_page_extraction', {
           success: true,
           pageCount: extractResult.data.file.count,
@@ -985,7 +928,7 @@ async function callInner(
     }
 
     const readResult = await readPDF(resolvedFilePath)
-    if (!readResult.success) {
+    if (readResult.success === false) {
       throw new Error(readResult.error.message)
     }
     const pdfData = readResult.data
@@ -1023,7 +966,11 @@ async function callInner(
       resolvedFilePath,
       lineOffset,
       limit,
-      limit === undefined ? maxSizeBytes : undefined,
+      // allow_large applies to text only. Keep the model's token budget
+      // as the ultimate cap; expand the byte cap enough for dense text.
+      limit === undefined
+        ? (allowLarge ? Math.max(maxSizeBytes, maxTokens * 16) : maxSizeBytes)
+        : undefined,
       context.abortController.signal,
     )
 
@@ -1156,12 +1103,7 @@ export async function readImageWithTokenBudget(
       // Fallback: heavily compressed version from the SAME buffer
       try {
         const sharpModule = await import('sharp')
-        const sharp =
-          (
-            sharpModule as {
-              default?: typeof sharpModule
-            } & typeof sharpModule
-          ).default || sharpModule
+        const sharp = sharpModule.default
 
         const fallbackBuffer = await sharp(imageBuffer)
           .resize(400, 400, {

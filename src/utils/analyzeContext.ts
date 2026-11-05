@@ -288,7 +288,7 @@ async function countSystemTokens(
       )
       .map(content => ({ name: extractSectionName(content), content })),
     ...Object.entries(systemContext)
-      .filter(([, content]) => content.length > 0)
+      .filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0)
       .map(([name, content]) => ({ name, content })),
   ]
 
@@ -1113,15 +1113,6 @@ export async function analyzeContextUsage(
   let skipReservedBuffer = false
   if (feature('REACTIVE_COMPACT')) {
     if (getFeatureValue_CACHED_MAY_BE_STALE('tengu_cobalt_raccoon', false)) {
-      skipReservedBuffer = true
-    }
-  }
-  if (feature('CONTEXT_COLLAPSE')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    const { isContextCollapseEnabled } =
-      require('../services/contextCollapse/index.js') as typeof import('../services/contextCollapse/index.js')
-    /* eslint-enable @typescript-eslint/no-require-imports */
-    if (isContextCollapseEnabled()) {
       skipReservedBuffer = true
     }
   }

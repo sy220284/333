@@ -52,13 +52,19 @@ type SessionSpawnerDeps = {
    * exits with "bad option: --sdk-url" (see anthropics/claude-code#28334).
    */
   scriptArgs: string[]
+  additionalArgs?: string[]
+  additionalDirs?: readonly string[]
   env: NodeJS.ProcessEnv
   verbose: boolean
   sandbox: boolean
   debugFile?: string
   permissionMode?: string
+  /** Original 317 self-hosted runner child contract; bridge sessions remain unchanged. */
+  runnerRuntime?: { apiBaseUrl: string; configDir: string; inferenceToken?: string }
   onDebug: (msg: string) => void
   onActivity?: (sessionId: string, activity: SessionActivity) => void
+  /** 317 child token rotation receipt from control_response. */
+  onTokenAck?: (sessionId: string, requestId: string) => void
   onPermissionRequest?: (
     sessionId: string,
     request: PermissionRequest,
@@ -125,6 +131,12 @@ function extractActivities(
   const now = Date.now()
 
   switch (msg.type) {
+    case 'user': {
+      // Every new user turn disarms an idle-release timer, including the
+      // replayed CCR messages that reach this long-lived process.
+      activities.push({type:'user',summary:'User turn received',timestamp:now})
+      break
+    }
     case 'assistant': {
       const message = msg.message as Record<string, unknown> | undefined
       if (!message) break
@@ -289,26 +301,53 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
         '--print',
         '--sdk-url',
         opts.sdkUrl,
-        '--session-id',
-        opts.sessionId,
+        ...(deps.runnerRuntime
+          ? []
+          : ['--session-id', opts.sessionId]),
         '--input-format',
         'stream-json',
         '--output-format',
         'stream-json',
         '--replay-user-messages',
+        ...(deps.runnerRuntime ? ['--resume=' + opts.sdkUrl] : []),
         ...(deps.verbose ? ['--verbose'] : []),
         ...(debugFile ? ['--debug-file', debugFile] : []),
         ...(deps.permissionMode
           ? ['--permission-mode', deps.permissionMode]
           : []),
+        ...(deps.additionalDirs ?? []).flatMap(dir=>['--add-dir',dir]),
+        ...(deps.additionalArgs ?? []),
       ]
 
+      // 317: a replacement worker must continue the existing session while
+      // checking any tool call interrupted before its outcome was recorded.
+      const resumedRunner = Boolean(deps.runnerRuntime && (opts.workerEpoch ?? 0) > 1)
+      const cutOffCallWarning = resumedRunner &&
+        deps.env.CLAUDE_CODE_RESUME_SHOWS_CUT_OFF_CALLS !== 'false'
+      const resumePrompt = "Continue from where you left off. This session moved to a new runner; files you created earlier may no longer exist, so verify the working directory state before relying on prior edits."
+      const cutOffWarning = " If the result of a tool call above starts with \"[Tool call interrupted\", the runner that ran it stopped or lost its connection before the call's result was recorded. The call may have had nothing to do with that, or it may have caused it, for example by using too much memory. Before you run it again, check what it did and whether it could have brought the runner down; if it could, do the work another way."
       const env: NodeJS.ProcessEnv = {
         ...deps.env,
         // Strip the bridge's OAuth token so the child CC process uses
         // the session access token for inference instead.
-        CLAUDE_CODE_OAUTH_TOKEN: undefined,
-        CLAUDE_CODE_ENVIRONMENT_KIND: 'bridge',
+        CLAUDE_CODE_OAUTH_TOKEN: deps.runnerRuntime?.inferenceToken,
+        CLAUDE_CODE_ENVIRONMENT_KIND: deps.runnerRuntime ? 'byoc' : 'bridge',
+        ...(deps.runnerRuntime && {
+          CLAUDE_CONFIG_DIR: deps.runnerRuntime.configDir,
+          CLAUDE_CODE_REMOTE: 'true',
+          CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE: 'self_hosted',
+          CLAUDE_CODE_OAUTH_SCOPES: 'user:inference user:ccr_inference user:file_upload',
+          ANTHROPIC_BASE_URL: deps.runnerRuntime.apiBaseUrl,
+          SESSION_INGRESS_URL: deps.runnerRuntime.apiBaseUrl,
+          DISABLE_AUTOUPDATER: '1',
+          CLAUDE_CODE_RETRY_WATCHDOG: '1',
+          CLAUDE_CODE_TEE_SDK_STDOUT: '1',
+          CLAUDE_CODE_RESUME_INTERRUPTED_TURN: resumedRunner ? '1' : undefined,
+          CLAUDE_CODE_RESUME_SHOWS_CUT_OFF_CALLS: cutOffCallWarning ? '1' : undefined,
+          CLAUDE_CODE_RESUME_PROMPT: resumedRunner
+            ? resumePrompt + (cutOffCallWarning ? cutOffWarning : '')
+            : undefined,
+        }),
         ...(deps.sandbox && { CLAUDE_CODE_FORCE_SANDBOX: '1' }),
         CLAUDE_CODE_SESSION_ACCESS_TOKEN: opts.accessToken,
         // v1: HybridTransport (WS reads + POST writes) to Session-Ingress.
@@ -325,7 +364,12 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
       deps.onDebug(
         `[bridge:session] Spawning sessionId=${opts.sessionId} sdkUrl=${opts.sdkUrl} accessToken=${opts.accessToken ? 'present' : 'MISSING'}`,
       )
-      deps.onDebug(`[bridge:session] Child args: ${args.join(' ')}`)
+      // Server-delivered prompts and CLI flags may contain private content.
+      // Preserve full argument diagnostics only for ordinary local bridge
+      // launches; the self-hosted runner records the count without values.
+      deps.onDebug(deps.runnerRuntime
+        ? `[bridge:session] Child args: ${args.length} runner arguments (values redacted)`
+        : `[bridge:session] Child args: ${args.join(' ')}`)
       if (debugFile) {
         deps.onDebug(`[bridge:session] Debug log: ${debugFile}`)
       }
@@ -414,7 +458,15 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
             if (parsed && typeof parsed === 'object') {
               const msg = parsed as Record<string, unknown>
 
-              if (msg.type === 'control_request') {
+              if (msg.type === 'control_response') {
+                const response=msg.response
+                if(response && typeof response==='object' && !Array.isArray(response)){
+                  const requestId=(response as Record<string,unknown>).request_id
+                  if(typeof requestId==='string' && requestId.startsWith('shr-token-')){
+                    deps.onTokenAck?.(opts.sessionId,requestId)
+                  }
+                }
+              } else if (msg.type === 'control_request') {
                 const request = msg.request as
                   | Record<string, unknown>
                   | undefined
@@ -518,13 +570,17 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
         },
         writeStdin(data: string): void {
           if (child.stdin && !child.stdin.destroyed) {
+            // Runtime environment refreshes carry bearer tokens. Record
+            // the control operation without exposing credential values.
+            const credentialUpdate = data.includes('"update_environment_variables"')
             deps.onDebug(
-              `[bridge:ws] sessionId=${opts.sessionId} >>> ${debugTruncate(data)}`,
+              `[bridge:ws] sessionId=${opts.sessionId} >>> ${credentialUpdate
+                ? '[environment values redacted]' : debugTruncate(data)}`,
             )
             child.stdin.write(data)
           }
         },
-        updateAccessToken(token: string): void {
+        updateAccessToken(token: string, requestId?: string): void {
           handle.accessToken = token
           // Send the fresh token to the child process via stdin. The child's
           // StructuredIO handles update_environment_variables messages by
@@ -534,6 +590,7 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
             jsonStringify({
               type: 'update_environment_variables',
               variables: { CLAUDE_CODE_SESSION_ACCESS_TOKEN: token },
+              ...(requestId && {request_id:requestId}),
             }) + '\n',
           )
           deps.onDebug(

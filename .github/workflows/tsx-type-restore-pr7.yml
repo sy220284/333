@@ -1,0 +1,29 @@
+name: PR7 React编译UI类型恢复候选审计
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - 'tools/dev/annotate-react-compiler-tsx.mjs'
+      - '.github/workflows/tsx-type-restore-pr7.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 安装冻结TS类型分析器
+        run: npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+      - name: 识别真实Props类型和React组件语义
+        run: node tools/dev/annotate-react-compiler-tsx.mjs
+      - name: 保存可类型化源码统计与逐文件证据
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-tsx-type-recovery-preview
+          path: .rebuild/governance/react-compiler-tsx-types.json
+          retention-days: 30

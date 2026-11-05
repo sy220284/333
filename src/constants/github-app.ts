@@ -1,4 +1,4 @@
-export const PR_TITLE = 'Add Claude Code GitHub Workflow'
+export const PR_TITLE: "Add Claude Code GitHub Workflow" = 'Add Claude Code GitHub Workflow'
 
 export const GITHUB_ACTION_SETUP_DOCS_URL =
   'https://github.com/anthropics/claude-code-action/blob/main/docs/setup.md'

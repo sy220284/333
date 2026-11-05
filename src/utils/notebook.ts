@@ -15,6 +15,7 @@ import type {
 } from '../types/notebook.js'
 import { getFsImplementation } from './fsOperations.js'
 import { expandPath } from './path.js'
+import { isValidNotebookContent, MAX_NOTEBOOK_BYTES } from './notebookCells.js'
 import { jsonParse } from './slowOperations.js'
 
 const LARGE_OUTPUT_THRESHOLD = 10000
@@ -166,10 +167,24 @@ export async function readNotebook(
   cellId?: string,
 ): Promise<NotebookCellSource[]> {
   const fullPath = expandPath(notebookPath)
-  const buffer = await getFsImplementation().readFileBytes(fullPath)
+  const fs = getFsImplementation()
+  const fileStats = await fs.stat(fullPath)
+  if (!fileStats.isFile()) {
+    throw new Error('Notebook path is not a regular file.')
+  }
+  if (fileStats.size > MAX_NOTEBOOK_BYTES) {
+    throw new Error('Notebook file exceeds the maximum readable size (100 MiB).')
+  }
+  const buffer = await fs.readFileBytes(fullPath)
+  if (buffer.byteLength > MAX_NOTEBOOK_BYTES) {
+    throw new Error('Notebook file exceeds the maximum readable size (100 MiB).')
+  }
   const content = buffer.toString('utf-8')
-  const notebook = jsonParse(content) as NotebookContent
-  const language = notebook.metadata.language_info?.name ?? 'python'
+  const notebook: unknown = jsonParse(content)
+  if (!isValidNotebookContent(notebook)) {
+    throw new Error('Notebook cells are missing or contain invalid source content.')
+  }
+  const language = notebook.metadata?.language_info?.name ?? 'python'
   if (cellId) {
     const cell = notebook.cells.find(c => c.id === cellId)
     if (!cell) {
@@ -177,6 +192,18 @@ export async function readNotebook(
     }
     return [processCell(cell, notebook.cells.indexOf(cell), language, true)]
   }
+  return processNotebookCellsForRead(notebook)
+}
+
+/**
+ * The Read tool stores this exact projection in readFileState. Reuse it from
+ * NotebookEdit instead of comparing against raw JSON (which is not what the
+ * model actually saw and may contain additional metadata).
+ */
+export function processNotebookCellsForRead(
+  notebook: NotebookContent,
+): NotebookCellSource[] {
+  const language = notebook.metadata?.language_info?.name ?? 'python'
   return notebook.cells.map((cell, index) =>
     processCell(cell, index, language, false),
   )
@@ -202,7 +229,7 @@ export function mapNotebookCellsToToolResult(
         const prev = acc[acc.length - 1]
         if (prev && prev.type === 'text' && curr.type === 'text') {
           // Merge the text blocks
-          prev.text += '\n' + curr.text
+          prev.text += `\n${curr.text}`
           return acc
         }
 
@@ -216,9 +243,9 @@ export function mapNotebookCellsToToolResult(
 
 export function parseCellId(cellId: string): number | undefined {
   const match = cellId.match(/^cell-(\d+)$/)
-  if (match && match[1]) {
+  if (match?.[1]) {
     const index = parseInt(match[1], 10)
-    return isNaN(index) ? undefined : index
+    return Number.isNaN(index) ? undefined : index
   }
   return undefined
 }

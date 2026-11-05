@@ -11,7 +11,7 @@ import {
 import { getAddDirEnabledPlugins } from './addDirPluginSettings.js'
 import {
   getInMemoryInstalledPlugins,
-  migrateFromEnabledPlugins,
+  initializeVersionedPlugins,
 } from './installedPluginsManager.js'
 import { getPluginById } from './marketplaceManager.js'
 import {
@@ -187,21 +187,17 @@ export function settingSourceToScope(
 /**
  * Gets the list of currently installed plugins
  * Reads from installed_plugins.json which tracks global installation state.
- * Automatically runs migration on first call if needed.
+ * Initializes the current installed plugin registry on first call.
  *
  * Always uses V2 format and initializes the in-memory session state
- * (which triggers V1→V2 migration if needed).
+ * (which loads the current V2 registry).
  *
  * @returns Array of installed plugin IDs
  */
 export async function getInstalledPlugins(): Promise<string[]> {
-  // Trigger sync in background (don't await - don't block startup)
-  // This syncs enabledPlugins from settings.json to installed_plugins.json
-  void migrateFromEnabledPlugins().catch(error => {
-    logError(error)
-  })
+  await initializeVersionedPlugins()
 
-  // Always use V2 format - initializes in-memory session state and triggers V1→V2 migration
+  // Use the current V2 registry and initialize the in-memory session snapshot
   const v2Data = getInMemoryInstalledPlugins()
   const installed = Object.keys(v2Data.plugins)
   logForDebugging(`Found ${installed.length} installed plugins`)

@@ -20,7 +20,7 @@ export function parseDirectMemberMessage(input: string): {
 }
 
 export type DirectMessageResult =
-  | { success: true; recipientName: string }
+  | { success: true; recipientName: string; error?: never }
   | {
       success: false
       error: 'no_team_context' | 'unknown_recipient'

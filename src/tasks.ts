@@ -1,17 +1,13 @@
-import { feature } from 'bun:bundle'
 import type { Task, TaskType } from './Task.js'
+import { InProcessTeammateTask } from './tasks/InProcessTeammateTask/InProcessTeammateTask.js'
 import { DreamTask } from './tasks/DreamTask/DreamTask.js'
 import { LocalAgentTask } from './tasks/LocalAgentTask/LocalAgentTask.js'
 import { LocalShellTask } from './tasks/LocalShellTask/LocalShellTask.js'
 import { RemoteAgentTask } from './tasks/RemoteAgentTask/RemoteAgentTask.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-const LocalWorkflowTask: Task | null = feature('WORKFLOW_SCRIPTS')
-  ? require('./tasks/LocalWorkflowTask/LocalWorkflowTask.js').LocalWorkflowTask
-  : null
-const MonitorMcpTask: Task | null = feature('MONITOR_TOOL')
-  ? require('./tasks/MonitorMcpTask/MonitorMcpTask.js').MonitorMcpTask
-  : null
+import { LocalWorkflowTask } from './tasks/LocalWorkflowTask/LocalWorkflowTask.js'
+import { MonitorWsTask } from './tasks/MonitorWsTask/MonitorWsTask.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 /**
@@ -23,11 +19,12 @@ export function getAllTasks(): Task[] {
   const tasks: Task[] = [
     LocalShellTask,
     LocalAgentTask,
+    InProcessTeammateTask,
     RemoteAgentTask,
     DreamTask,
   ]
-  if (LocalWorkflowTask) tasks.push(LocalWorkflowTask)
-  if (MonitorMcpTask) tasks.push(MonitorMcpTask)
+  tasks.push(LocalWorkflowTask)
+  tasks.push(MonitorWsTask)
   return tasks
 }
 

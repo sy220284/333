@@ -43,6 +43,16 @@ type ParsedSettings = {
   errors: ValidationError[]
 }
 const parseFileCache = new Map<string, ParsedSettings>()
+// Raw-content hash from the original settings read, used to catch edits
+// made while chokidar was still installing startup watches.
+const parsedFileDigests = new Map<string, string>()
+
+export function getCachedSettingsFileDigest(path: string): string | undefined {
+  return parsedFileDigests.get(path)
+}
+export function setCachedSettingsFileDigest(path: string, digest: string): void {
+  parsedFileDigests.set(path, digest)
+}
 
 export function getCachedParsedFile(path: string): ParsedSettings | undefined {
   return parseFileCache.get(path)
@@ -56,6 +66,7 @@ export function resetSettingsCache(): void {
   sessionSettingsCache = null
   perSourceCache.clear()
   parseFileCache.clear()
+  parsedFileDigests.clear()
 }
 
 /**

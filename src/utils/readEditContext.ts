@@ -31,7 +31,7 @@ export type EditContext = {
 export async function readEditContext(
   path: string,
   needle: string,
-  contextLines = 3,
+  contextLines: number = 3,
 ): Promise<EditContext | null> {
   const handle = await openForScan(path)
   if (handle === null) return null

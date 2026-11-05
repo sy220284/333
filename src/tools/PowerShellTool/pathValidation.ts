@@ -902,7 +902,7 @@ function isPathAllowed(
       resolvedPath,
       precomputedPathsToCheck,
     )
-    if (!safetyCheck.safe) {
+    if (safetyCheck.safe === false) {
       return {
         allowed: false,
         decisionReason: {
@@ -1529,7 +1529,7 @@ export function checkPathConstraints(
   input: { command: string },
   parsed: ParsedPowerShellCommand,
   toolPermissionContext: ToolPermissionContext,
-  compoundCommandHasCd = false,
+  compoundCommandHasCd: boolean = false,
 ): PermissionResult {
   if (!parsed.valid) {
     return {

@@ -212,7 +212,7 @@ If verification fails because this skill's instructions are outdated (dev server
 **verifier-playwright**:
 \`\`\`yaml
 allowed-tools:
-  - Bash(npm:*)
+  - Bash(npm *)
   - Bash(yarn:*)
   - Bash(pnpm:*)
   - Bash(bun:*)
@@ -237,7 +237,7 @@ allowed-tools:
 allowed-tools:
   - Bash(curl:*)
   - Bash(http:*)
-  - Bash(npm:*)
+  - Bash(npm *)
   - Bash(yarn:*)
   - Read
   - Glob

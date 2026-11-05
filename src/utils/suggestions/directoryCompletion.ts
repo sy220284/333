@@ -167,7 +167,7 @@ export function isPathLikeToken(token: string): boolean {
  */
 export async function scanDirectoryForPaths(
   dirPath: string,
-  includeHidden = false,
+  includeHidden: boolean = false,
 ): Promise<PathEntry[]> {
   const cacheKey = `${dirPath}:${includeHidden}`
   const cached = pathCache.get(cacheKey)

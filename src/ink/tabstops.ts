@@ -8,7 +8,7 @@ const DEFAULT_TAB_INTERVAL = 8
 
 export function expandTabs(
   text: string,
-  interval = DEFAULT_TAB_INTERVAL,
+  interval: number = DEFAULT_TAB_INTERVAL,
 ): string {
   if (!text.includes('\t')) {
     return text

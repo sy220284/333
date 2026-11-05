@@ -14,3 +14,22 @@ vendor/ripgrep/**/rg binary
 
 # Preserve the original CRLF bytes from cli.js.map in archived dependency sources
 research/claude-code-2.1.88/dependencies/node_modules/** -text
+
+# 2.1.317 official embedded resource tree is hashed byte-for-byte.
+# Keep original line endings and compressed bytes on Windows, macOS and Linux.
+# Git's core.autocrlf must not rewrite NOTICE, scripts, markdown or declarations.
+src/skills/bundled/** -text -eol
+src/constants/official317/** -text -eol
+src/types/official317/** -text -eol
+
+# Preserve the original whitespace in pinned upstream skill reference data.
+# These 107 official resource files are SHA-pinned byte-for-byte.
+# Preserve their source line endings on Windows as well as Linux/macOS.
+src/skills/bundled/claude-api/** -text -eol whitespace=-blank-at-eol,-blank-at-eof
+
+# Upstream 2.1.317 stores compressed binary payloads with .js extensions.
+# Preserve original bytes; Git newline filters corrupt these zstd frames.
+src/skills/bundled/artifact-diagramming/assets/mermaid.min.js -text -eol
+src/skills/bundled/data-visualization/assets/chart.umd.min.js -text -eol
+src/skills/bundled/artifact-design/assets/hljsBundle.generated.min.js -text -eol
+research/official-317-unaltered/** -text

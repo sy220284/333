@@ -1,0 +1,971 @@
+{
+  "version": "2.1.317",
+  "native_executable_sha256": "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0",
+  "mapping_module": "04_逐模块可阅读JavaScript/chunk-3v68bj2z.js",
+  "mapping_module_sha256": "e7fef3b413f9e9985b43bdde22b2b70154ce43183950d91d7f3db97be6dcb17b",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "stored_path": "SKILL.md",
+      "sha256": "35c1458f04fcfddc6d3f46faa6c66e9b44ba71709daf343a8e63a05a63eb976d",
+      "git_sha": "eb87a7c5785c8d646ccaf727c6fda21e7a465544",
+      "source": "02_解压文本与资源/SKILL-8ede598e.md",
+      "source_sha256": "35c1458f04fcfddc6d3f46faa6c66e9b44ba71709daf343a8e63a05a63eb976d",
+      "bytes": 108948
+    },
+    {
+      "path": "csharp/claude-api/README.md",
+      "stored_path": "csharp/claude-api/README.md",
+      "sha256": "df52b29f12975af7f8dbdc06fbeed14e256e7e7358b8db5af4075a0549a574a6",
+      "git_sha": "610a3439d9032d5c7199887a43f35e5af64aebe9",
+      "source": "02_解压文本与资源/README-953f3461.md",
+      "source_sha256": "df52b29f12975af7f8dbdc06fbeed14e256e7e7358b8db5af4075a0549a574a6",
+      "bytes": 18909
+    },
+    {
+      "path": "csharp/claude-api/batches.md",
+      "stored_path": "csharp/claude-api/batches.md",
+      "sha256": "610e9e6ce246e676df16c218c5e826ba2b174d1dc461b334f78eb474d0b9fc01",
+      "git_sha": "2746fb4a3dcd75c127b88ca6393c29b208bc6203",
+      "source": "elf:328432055:409",
+      "source_sha256": "610e9e6ce246e676df16c218c5e826ba2b174d1dc461b334f78eb474d0b9fc01",
+      "bytes": 409
+    },
+    {
+      "path": "csharp/claude-api/files-api.md",
+      "stored_path": "csharp/claude-api/files-api.md",
+      "sha256": "766ccf5dca9ef3caba8cefeddde10f6d171a7bd2ff4c97689462fad2d0d18e4b",
+      "git_sha": "46f85ca24528c5605d95c6a39bc44aafab1d58e5",
+      "source": "elf:328432465:900",
+      "source_sha256": "766ccf5dca9ef3caba8cefeddde10f6d171a7bd2ff4c97689462fad2d0d18e4b",
+      "bytes": 900
+    },
+    {
+      "path": "csharp/claude-api/opentelemetry.md",
+      "stored_path": "csharp/claude-api/opentelemetry.md",
+      "sha256": "58f011deb089d2a00740c68fcb399014a1bf066c3f4b46b61b30cecd7a11ccb2",
+      "git_sha": "435ff9fbd950f7a2f5cd0f4b1655cf7cddab3f0c",
+      "source": "elf:328433366:2537",
+      "source_sha256": "58f011deb089d2a00740c68fcb399014a1bf066c3f4b46b61b30cecd7a11ccb2",
+      "bytes": 2537
+    },
+    {
+      "path": "csharp/claude-api/streaming.md",
+      "stored_path": "csharp/claude-api/streaming.md",
+      "sha256": "c0184016b2857bc9dd1c9a6e307485bc45fd668f63927465b091afc605734b5d",
+      "git_sha": "2a7abba3a85bc24ae99e1220add6a538080ca895",
+      "source": "elf:328442753:780",
+      "source_sha256": "c0184016b2857bc9dd1c9a6e307485bc45fd668f63927465b091afc605734b5d",
+      "bytes": 780
+    },
+    {
+      "path": "csharp/claude-api/tool-use.md",
+      "stored_path": "csharp/claude-api/tool-use.md",
+      "sha256": "8a389c8519aeaf35df57597d5a1c8142a9cedfc6bbf86b278b7e114674968b94",
+      "git_sha": "ebbd5643d33c9e5fab3824194b0bdee240f15bf1",
+      "source": "elf:328443534:7606",
+      "source_sha256": "8a389c8519aeaf35df57597d5a1c8142a9cedfc6bbf86b278b7e114674968b94",
+      "bytes": 7606
+    },
+    {
+      "path": "curl/examples.md",
+      "stored_path": "curl/examples.md",
+      "sha256": "c43a4281c32d49e374f96640a3e68240d0348757a75a5696843f4b0c1edd3a37",
+      "git_sha": "377d85038b89ce030259753c71a719cf69ff7cd0",
+      "source": "02_解压文本与资源/examples-edce50f1.md",
+      "source_sha256": "c43a4281c32d49e374f96640a3e68240d0348757a75a5696843f4b0c1edd3a37",
+      "bytes": 9696
+    },
+    {
+      "path": "curl/managed-agents.md",
+      "stored_path": "curl/managed-agents.md",
+      "sha256": "9617c59de9929c99714368ecd3edf4cfbd6303f45fe8a24cf8b89fb14dd41e29",
+      "git_sha": "7cccb9b4c2fcfa0bf73357c10a3ca84c3b1f02e0",
+      "source": "02_解压文本与资源/managed-agents-ffd8c358.md",
+      "source_sha256": "9617c59de9929c99714368ecd3edf4cfbd6303f45fe8a24cf8b89fb14dd41e29",
+      "bytes": 10992
+    },
+    {
+      "path": "go/claude-api/README.md",
+      "stored_path": "go/claude-api/README.md",
+      "sha256": "7ae97e1e26967274207ec36d314fcf3fcb83a4fff21a7b29731f5814261a647d",
+      "git_sha": "a60b5bede86fcfc539b64e919832012b05bf3a05",
+      "source": "02_解压文本与资源/README-97a573bf.md",
+      "source_sha256": "7ae97e1e26967274207ec36d314fcf3fcb83a4fff21a7b29731f5814261a647d",
+      "bytes": 8472
+    },
+    {
+      "path": "go/claude-api/files-api.md",
+      "stored_path": "go/claude-api/files-api.md",
+      "sha256": "7bf67ece5e4d18b1fb07085a55b680420cc7bd4de94a1fb2bb73cb23f39c20f0",
+      "git_sha": "b62f163fcf38c823812ec4181ad2ee75e0c3c2e7",
+      "source": "elf:328457269:936",
+      "source_sha256": "7bf67ece5e4d18b1fb07085a55b680420cc7bd4de94a1fb2bb73cb23f39c20f0",
+      "bytes": 936
+    },
+    {
+      "path": "go/claude-api/opentelemetry.md",
+      "stored_path": "go/claude-api/opentelemetry.md",
+      "sha256": "900bc47c139d4e12302ceec37cf5a8e7e7ae2c1e6d3135492023981745699fc5",
+      "git_sha": "e3d2e85c8c850604ba0452e10c9527031dba6908",
+      "source": "elf:328458206:2129",
+      "source_sha256": "900bc47c139d4e12302ceec37cf5a8e7e7ae2c1e6d3135492023981745699fc5",
+      "bytes": 2129
+    },
+    {
+      "path": "go/claude-api/streaming.md",
+      "stored_path": "go/claude-api/streaming.md",
+      "sha256": "a823de50c841c161a1f491470eccd5118e00b8027724cd7d92a1da7316abe7ff",
+      "git_sha": "9e2a039b29cca352c9edae6310d8c68a15762533",
+      "source": "elf:328463650:1022",
+      "source_sha256": "a823de50c841c161a1f491470eccd5118e00b8027724cd7d92a1da7316abe7ff",
+      "bytes": 1022
+    },
+    {
+      "path": "go/claude-api/tool-use.md",
+      "stored_path": "go/claude-api/tool-use.md",
+      "sha256": "26a5d76518671220911b8b126cd4ad6df580e2532f7c703b1f0f6b10e0fb3389",
+      "git_sha": "bda406038dd97d2d17ae0b0259f452e8bf085397",
+      "source": "02_解压文本与资源/tool-use-e3278a9d.md",
+      "source_sha256": "26a5d76518671220911b8b126cd4ad6df580e2532f7c703b1f0f6b10e0fb3389",
+      "bytes": 10007
+    },
+    {
+      "path": "go/managed-agents/README.md",
+      "stored_path": "go/managed-agents/README.md",
+      "sha256": "3882ca88e2fb86fb1a3545be005cb94cb664c72e5af034a096904d22a8a6b0be",
+      "git_sha": "8d21e5eb64c72bce18ecf03850dfe5afafc898af",
+      "source": "02_解压文本与资源/README-3e67ddbd.md",
+      "source_sha256": "3882ca88e2fb86fb1a3545be005cb94cb664c72e5af034a096904d22a8a6b0be",
+      "bytes": 20825
+    },
+    {
+      "path": "java/claude-api/README.md",
+      "stored_path": "java/claude-api/README.md",
+      "sha256": "ed7de7841611005fc592a7075a2d22ca9f683db8b8162b8d960ce78fcc99add4",
+      "git_sha": "03a71899cdc039eeb4f0566ff71d35688c659ee3",
+      "source": "02_解压文本与资源/README-7f1026fd.md",
+      "source_sha256": "ed7de7841611005fc592a7075a2d22ca9f683db8b8162b8d960ce78fcc99add4",
+      "bytes": 11959
+    },
+    {
+      "path": "java/claude-api/files-api.md",
+      "stored_path": "java/claude-api/files-api.md",
+      "sha256": "067133c821cad15d495de2317c24c95f6046307e14867b439cc3092cb6b5a485",
+      "git_sha": "5d537e348b5f8e36f07f058aee13e37d65e06019",
+      "source": "elf:328473401:1163",
+      "source_sha256": "067133c821cad15d495de2317c24c95f6046307e14867b439cc3092cb6b5a485",
+      "bytes": 1163
+    },
+    {
+      "path": "java/claude-api/opentelemetry.md",
+      "stored_path": "java/claude-api/opentelemetry.md",
+      "sha256": "939edd41104bf18b85e83ffef6b6fdb46b72169a99ab0ba654497a6cf93c9fff",
+      "git_sha": "08a4cc5895dcddeddbf49d10b5737116425222c3",
+      "source": "elf:328474565:2692",
+      "source_sha256": "939edd41104bf18b85e83ffef6b6fdb46b72169a99ab0ba654497a6cf93c9fff",
+      "bytes": 2692
+    },
+    {
+      "path": "java/claude-api/streaming.md",
+      "stored_path": "java/claude-api/streaming.md",
+      "sha256": "9e010d6b689fcec932b16a66b1e70ce7504b33450339aeb6728e83c01e077a68",
+      "git_sha": "e0a3f5bceab27883250e9e8d4ffa556ddfca8b35",
+      "source": "elf:328481575:651",
+      "source_sha256": "9e010d6b689fcec932b16a66b1e70ce7504b33450339aeb6728e83c01e077a68",
+      "bytes": 651
+    },
+    {
+      "path": "java/claude-api/tool-use.md",
+      "stored_path": "java/claude-api/tool-use.md",
+      "sha256": "0e0bbc5bc6b21273accc66994317ac4f439b7785744cf0316ce6879ddae983ee",
+      "git_sha": "a807f989d7a381273f64a2c84ea1e85917037004",
+      "source": "02_解压文本与资源/tool-use-aa5934a4.md",
+      "source_sha256": "0e0bbc5bc6b21273accc66994317ac4f439b7785744cf0316ce6879ddae983ee",
+      "bytes": 11032
+    },
+    {
+      "path": "java/managed-agents/README.md",
+      "stored_path": "java/managed-agents/README.md",
+      "sha256": "017e68f1fa553a69453d8b6c0047ce7e7edbb93f591c770efbdb86c6e2f5e3f4",
+      "git_sha": "2dd13bfa60c7e571c90374c305b3e4ca5a36d7ee",
+      "source": "02_解压文本与资源/README-0a1b121e.md",
+      "source_sha256": "017e68f1fa553a69453d8b6c0047ce7e7edbb93f591c770efbdb86c6e2f5e3f4",
+      "bytes": 19776
+    },
+    {
+      "path": "php/claude-api/README.md",
+      "stored_path": "php/claude-api/README.md",
+      "sha256": "255a7c5c681668d31a80404603f9b0fb07d2a1554c67c6f41f5837d1c62a1c5e",
+      "git_sha": "9438fc670fc141ceacf5a222eb7c05d33e9d5402",
+      "source": "elf:328494554:6829",
+      "source_sha256": "255a7c5c681668d31a80404603f9b0fb07d2a1554c67c6f41f5837d1c62a1c5e",
+      "bytes": 6829
+    },
+    {
+      "path": "php/claude-api/batches.md",
+      "stored_path": "php/claude-api/batches.md",
+      "sha256": "0e81fcd4cf93107086d1f809185bc39f238c66fa106cbfa01e263c0afe6c7bb8",
+      "git_sha": "11e16132e90f17b8fb36e9e9943f31d2fabc7d32",
+      "source": "elf:328490970:443",
+      "source_sha256": "0e81fcd4cf93107086d1f809185bc39f238c66fa106cbfa01e263c0afe6c7bb8",
+      "bytes": 443
+    },
+    {
+      "path": "php/claude-api/files-api.md",
+      "stored_path": "php/claude-api/files-api.md",
+      "sha256": "0715a0d4cce88fd885f57bd33b4654071a9068d5f8a892143b062c78fe51afc9",
+      "git_sha": "26bd142dcdb34b63d7158409fac0e89f08745695",
+      "source": "elf:328491414:476",
+      "source_sha256": "0715a0d4cce88fd885f57bd33b4654071a9068d5f8a892143b062c78fe51afc9",
+      "bytes": 476
+    },
+    {
+      "path": "php/claude-api/opentelemetry.md",
+      "stored_path": "php/claude-api/opentelemetry.md",
+      "sha256": "e7bc09cdaa21392601a8950d0057f6cc32cb4d53713d7bf32b671010385db0d4",
+      "git_sha": "6458a299119f064c2ec144e800c481bf99b76fbf",
+      "source": "elf:328491891:2662",
+      "source_sha256": "e7bc09cdaa21392601a8950d0057f6cc32cb4d53713d7bf32b671010385db0d4",
+      "bytes": 2662
+    },
+    {
+      "path": "php/claude-api/streaming.md",
+      "stored_path": "php/claude-api/streaming.md",
+      "sha256": "0b5cfee1d5ea58c864e43f3d5ddca116e9eb4f99477d0560fd4bdac327d7df79",
+      "git_sha": "0b021409c88017cc95b49dfda764f1ea32acc446",
+      "source": "elf:328501384:673",
+      "source_sha256": "0b5cfee1d5ea58c864e43f3d5ddca116e9eb4f99477d0560fd4bdac327d7df79",
+      "bytes": 673
+    },
+    {
+      "path": "php/claude-api/tool-use.md",
+      "stored_path": "php/claude-api/tool-use.md",
+      "sha256": "ebde4ebb0529d5cf1d79f32259077e7b59c8e5827bf1c207b6635a03200931cb",
+      "git_sha": "e699c4d1f36d9f82efd44b4a6b4e99d462f1c1e2",
+      "source": "02_解压文本与资源/tool-use-49b89f92.md",
+      "source_sha256": "ebde4ebb0529d5cf1d79f32259077e7b59c8e5827bf1c207b6635a03200931cb",
+      "bytes": 9686
+    },
+    {
+      "path": "php/managed-agents/README.md",
+      "stored_path": "php/managed-agents/README.md",
+      "sha256": "1ca10bcdc252e1f0559c05e700a7e6bf2186c6a0f4c62b403a499d1ebad16383",
+      "git_sha": "4e8ded9d8a990f17d705b98de185988a688d4419",
+      "source": "02_解压文本与资源/README-18458fac.md",
+      "source_sha256": "1ca10bcdc252e1f0559c05e700a7e6bf2186c6a0f4c62b403a499d1ebad16383",
+      "bytes": 16578
+    },
+    {
+      "path": "python/claude-api/README.md",
+      "stored_path": "python/claude-api/README.md",
+      "sha256": "436ee2a7596b4f8390e2672427f064fbb58b1aa1e4b764518397400d7356f892",
+      "git_sha": "39f359e9bf4fa596874dc66ec60c35d759cd0c3e",
+      "source": "02_解压文本与资源/README-fee5091c.md",
+      "source_sha256": "436ee2a7596b4f8390e2672427f064fbb58b1aa1e4b764518397400d7356f892",
+      "bytes": 20635
+    },
+    {
+      "path": "python/claude-api/batches.md",
+      "stored_path": "python/claude-api/batches.md",
+      "sha256": "62756d8f098854e60f3439799bea0ba49cbe369c27884f4eecf26606e85a43a2",
+      "git_sha": "9584fa988ec7060a15534c48fe256cfdc3a28bd6",
+      "source": "elf:328510471:5705",
+      "source_sha256": "62756d8f098854e60f3439799bea0ba49cbe369c27884f4eecf26606e85a43a2",
+      "bytes": 5705
+    },
+    {
+      "path": "python/claude-api/files-api.md",
+      "stored_path": "python/claude-api/files-api.md",
+      "sha256": "a2abcf465e6c48f9722cfddeab8662efaa96f468e074456a55dc28d64c6b0232",
+      "git_sha": "c22ab3fe605dc765dc171618cf7d880cfae2822d",
+      "source": "elf:328516177:4487",
+      "source_sha256": "a2abcf465e6c48f9722cfddeab8662efaa96f468e074456a55dc28d64c6b0232",
+      "bytes": 4487
+    },
+    {
+      "path": "python/claude-api/opentelemetry.md",
+      "stored_path": "python/claude-api/opentelemetry.md",
+      "sha256": "b308f90123debe38f91bcb38b03aaefd115637c1dbdacd933180a5aeb44d0990",
+      "git_sha": "a000bd2a3b6f3caf476c6787dbc3533511337c70",
+      "source": "elf:328520665:2675",
+      "source_sha256": "b308f90123debe38f91bcb38b03aaefd115637c1dbdacd933180a5aeb44d0990",
+      "bytes": 2675
+    },
+    {
+      "path": "python/claude-api/sdk-upgrade.md",
+      "stored_path": "python/claude-api/sdk-upgrade.md",
+      "sha256": "5f16cbd3141e98ba866e3f241f4eb66cd60d35ac47c3f6e1e4993e4f5af7f3e2",
+      "git_sha": "092a1372b3396fe905160447b76313d29f4e68ec",
+      "source": "02_解压文本与资源/sdk-upgrade-177de4f0.md",
+      "source_sha256": "5f16cbd3141e98ba866e3f241f4eb66cd60d35ac47c3f6e1e4993e4f5af7f3e2",
+      "bytes": 29686
+    },
+    {
+      "path": "python/claude-api/streaming.md",
+      "stored_path": "python/claude-api/streaming.md",
+      "sha256": "0d492deae397fb3f66d4a0ba1b6eb45c7162d5be33faf8d3a37307f594995d9a",
+      "git_sha": "b3fbaed5ba1583a1d84549967d69963695c5b204",
+      "source": "02_解压文本与资源/streaming-ade1ca37.md",
+      "source_sha256": "0d492deae397fb3f66d4a0ba1b6eb45c7162d5be33faf8d3a37307f594995d9a",
+      "bytes": 12015
+    },
+    {
+      "path": "python/claude-api/tool-use.md",
+      "stored_path": "python/claude-api/tool-use.md",
+      "sha256": "4f4b7a115923bd81a3c8372e6c61eb133e44997afcd1e65881f296de2ddef4af",
+      "git_sha": "9a5a30d089e7edf9e97368910a2884347e583c8b",
+      "source": "02_解压文本与资源/tool-use-4d326604.md",
+      "source_sha256": "4f4b7a115923bd81a3c8372e6c61eb133e44997afcd1e65881f296de2ddef4af",
+      "bytes": 19973
+    },
+    {
+      "path": "python/managed-agents/README.md",
+      "stored_path": "python/managed-agents/README.md",
+      "sha256": "1da1fcc14ec04756004b0d27d016b5a4d66681304a4d1a70d85c751c2980529f",
+      "git_sha": "7bc5b74e26625bd979a80c120bcf4db942ba7626",
+      "source": "02_解压文本与资源/README-74802ac4.md",
+      "source_sha256": "1da1fcc14ec04756004b0d27d016b5a4d66681304a4d1a70d85c751c2980529f",
+      "bytes": 15028
+    },
+    {
+      "path": "ruby/claude-api/README.md",
+      "stored_path": "ruby/claude-api/README.md",
+      "sha256": "ed597c383f10dd6b63a84e11de9f085659ae32ba901dbc01866b4da78a37f20b",
+      "git_sha": "3437f0bf72e904411ed9c1286cab32677b0b6504",
+      "source": "elf:328557259:4830",
+      "source_sha256": "ed597c383f10dd6b63a84e11de9f085659ae32ba901dbc01866b4da78a37f20b",
+      "bytes": 4830
+    },
+    {
+      "path": "ruby/claude-api/opentelemetry.md",
+      "stored_path": "ruby/claude-api/opentelemetry.md",
+      "sha256": "0fcba3938aef3e5c2676baa6d427c6b702b71471f606fe4c04c079d1674c1577",
+      "git_sha": "187da0c83aa542e28277d5cbab36355136a23dc9",
+      "source": "elf:328555430:1828",
+      "source_sha256": "0fcba3938aef3e5c2676baa6d427c6b702b71471f606fe4c04c079d1674c1577",
+      "bytes": 1828
+    },
+    {
+      "path": "ruby/claude-api/streaming.md",
+      "stored_path": "ruby/claude-api/streaming.md",
+      "sha256": "aa12ad5001565f869444d68db1860cb1fd6051749953124ea9a67bfd2dae1299",
+      "git_sha": "9338c9ab556d2561aa2e9ea9c09c085203ebba51",
+      "source": "elf:328562090:231",
+      "source_sha256": "aa12ad5001565f869444d68db1860cb1fd6051749953124ea9a67bfd2dae1299",
+      "bytes": 231
+    },
+    {
+      "path": "ruby/claude-api/tool-use.md",
+      "stored_path": "ruby/claude-api/tool-use.md",
+      "sha256": "e9c2b0f3ba9b330cf3505716bd822d8df367b209a8338bb8dca7966f513fff6d",
+      "git_sha": "b84bb096e18690601c683b56f62e21e79adede05",
+      "source": "elf:328562322:5358",
+      "source_sha256": "e9c2b0f3ba9b330cf3505716bd822d8df367b209a8338bb8dca7966f513fff6d",
+      "bytes": 5358
+    },
+    {
+      "path": "ruby/managed-agents/README.md",
+      "stored_path": "ruby/managed-agents/README.md",
+      "sha256": "3dbe2a44968a0789e7dedb845a32a6db2ed5e6b4aae629343d9b1d8ba15b6272",
+      "git_sha": "8314ec833df47aec00168428c2a8250449e61b0e",
+      "source": "02_解压文本与资源/README-9fa39165.md",
+      "source_sha256": "3dbe2a44968a0789e7dedb845a32a6db2ed5e6b4aae629343d9b1d8ba15b6272",
+      "bytes": 12389
+    },
+    {
+      "path": "shared/admin-api.md",
+      "stored_path": "shared/admin-api.md",
+      "sha256": "65c402b5e8b7c6cf552f5b19b83fc287e55fef0375317fa6a25c923dd90d13e2",
+      "git_sha": "b301d06df6b0c8cfdc2de9ea3304c2328eb9b3cd",
+      "source": "02_解压文本与资源/admin-api-5bcdca12.md",
+      "source_sha256": "65c402b5e8b7c6cf552f5b19b83fc287e55fef0375317fa6a25c923dd90d13e2",
+      "bytes": 15150
+    },
+    {
+      "path": "shared/agent-design.md",
+      "stored_path": "shared/agent-design.md",
+      "sha256": "9960728faf6976a2ddfceed02ed72af122d3b2558af573a9a0ea207b3adec2bc",
+      "git_sha": "517cec6b2a5529296b999916f43533425d30effb",
+      "source": "02_解压文本与资源/agent-design-fa62971c.md",
+      "source_sha256": "9960728faf6976a2ddfceed02ed72af122d3b2558af573a9a0ea207b3adec2bc",
+      "bytes": 8736
+    },
+    {
+      "path": "shared/anthropic-cli.md",
+      "stored_path": "shared/anthropic-cli.md",
+      "sha256": "153f4177d7ce3b7b348d46ec50d3b3097cd6c4b1600996e9379da5f86d7e8180",
+      "git_sha": "79af32a53bf07af40cb236e8bd61be816af6e8d4",
+      "source": "02_解压文本与资源/anthropic-cli-926ef37b.md",
+      "source_sha256": "153f4177d7ce3b7b348d46ec50d3b3097cd6c4b1600996e9379da5f86d7e8180",
+      "bytes": 25680
+    },
+    {
+      "path": "shared/api-version-migration.md",
+      "stored_path": "shared/api-version-migration.md",
+      "sha256": "bd5effc7b542638b62f88b5c5bb9938c709724ab6db44e5dff29079133cce59e",
+      "git_sha": "b19b8ad19114942b84679d95faacd94d8d9b8f47",
+      "source": "02_解压文本与资源/api-version-migration-bb01764e.md",
+      "source_sha256": "bd5effc7b542638b62f88b5c5bb9938c709724ab6db44e5dff29079133cce59e",
+      "bytes": 37815
+    },
+    {
+      "path": "shared/claude-platform-on-aws.md",
+      "stored_path": "shared/claude-platform-on-aws.md",
+      "sha256": "516b8821b76dd21e93a4eadb8eb58e48f4ed39a45eb7a807f4fd7dc30a6f9b33",
+      "git_sha": "c44c3fbd27d4aa1f3354f3dfe55096ecaa142818",
+      "source": "elf:328637630:4676",
+      "source_sha256": "516b8821b76dd21e93a4eadb8eb58e48f4ed39a45eb7a807f4fd7dc30a6f9b33",
+      "bytes": 4676
+    },
+    {
+      "path": "shared/cost-optimization.md",
+      "stored_path": "shared/cost-optimization.md",
+      "sha256": "6461da10416a1656b4f30e95bf602d045f18a3f689a015514cd86fb884e4b4e7",
+      "git_sha": "270c2f53cefcc30c602b6389e382931d7caad75c",
+      "source": "02_解压文本与资源/cost-optimization-8713d7eb.md",
+      "source_sha256": "6461da10416a1656b4f30e95bf602d045f18a3f689a015514cd86fb884e4b4e7",
+      "bytes": 58680
+    },
+    {
+      "path": "shared/error-codes.md",
+      "stored_path": "shared/error-codes.md",
+      "sha256": "bc7886ebcae51c6baf61d552bba2f912a124cc8f796b3f338492548bb484d51a",
+      "git_sha": "a4291cd9ccfce48b75edc4e0fd644e91ca07e61d",
+      "source": "02_解压文本与资源/error-codes-1459f94b.md",
+      "source_sha256": "bc7886ebcae51c6baf61d552bba2f912a124cc8f796b3f338492548bb484d51a",
+      "bytes": 21265
+    },
+    {
+      "path": "shared/evals/build-eval.md",
+      "stored_path": "shared/evals/build-eval.md",
+      "sha256": "c08e4aaf8be1f2ad6f75b62bdffff27241de55fea94cfa6650b4030cbc67bd0a",
+      "git_sha": "85cc306279159504b3b3af239394222fec7a264a",
+      "source": "02_解压文本与资源/build-eval-e9acb85b.md",
+      "source_sha256": "c08e4aaf8be1f2ad6f75b62bdffff27241de55fea94cfa6650b4030cbc67bd0a",
+      "bytes": 55207
+    },
+    {
+      "path": "shared/evals/cost-hillclimb.md",
+      "stored_path": "shared/evals/cost-hillclimb.md",
+      "sha256": "dd46a354fed24d96c7f9acf42f9da64f5cceaa797949662d82374fd2cf7a3515",
+      "git_sha": "d929871e2663848dbf0872825d053c9e73efb938",
+      "source": "02_解压文本与资源/cost-hillclimb-be195324.md",
+      "source_sha256": "dd46a354fed24d96c7f9acf42f9da64f5cceaa797949662d82374fd2cf7a3515",
+      "bytes": 31711
+    },
+    {
+      "path": "shared/evals/eval-audit.md",
+      "stored_path": "shared/evals/eval-audit.md",
+      "sha256": "a013f8eb0452c51c5a31860df0fb47219dcdb4da507092fc98867225095026ba",
+      "git_sha": "bc277162f32f11c98639621d94c4a3b90ce6d33d",
+      "source": "02_解压文本与资源/eval-audit-d52687b9.md",
+      "source_sha256": "a013f8eb0452c51c5a31860df0fb47219dcdb4da507092fc98867225095026ba",
+      "bytes": 27892
+    },
+    {
+      "path": "shared/evals/eval-hillclimb.md",
+      "stored_path": "shared/evals/eval-hillclimb.md",
+      "sha256": "1c1529ed51351934563f01cc98696d70c3089275789fa21996d797ac76a392e7",
+      "git_sha": "82b3f10759dc175a7986428d0df24cdae6c42e48",
+      "source": "02_解压文本与资源/eval-hillclimb-643520d6.md",
+      "source_sha256": "1c1529ed51351934563f01cc98696d70c3089275789fa21996d797ac76a392e7",
+      "bytes": 69160
+    },
+    {
+      "path": "shared/evals/report/SCHEMA.md",
+      "stored_path": "shared/evals/report/SCHEMA.md",
+      "sha256": "9a83404a9b3c413113df39d9bdf08e003ff4d6a75386f4010887da3298766687",
+      "git_sha": "fb0d09db801f163809cdf184eb94cd74e0c5bc20",
+      "source": "02_解压文本与资源/SCHEMA-7cf439b0.md",
+      "source_sha256": "9a83404a9b3c413113df39d9bdf08e003ff4d6a75386f4010887da3298766687",
+      "bytes": 16121
+    },
+    {
+      "path": "shared/evals/report/build-report-lite.mjs",
+      "stored_path": "shared/evals/report/build-report-lite.mjs",
+      "sha256": "af79ca5fa5f06747dbcaa1d40017c8c8e81e0aa11cb8e32b848043893cdb03c7",
+      "git_sha": "ba1c1ba05eadd9b121a1a1cc07cf59443e70754a",
+      "source": "elf:328770756:27329",
+      "source_sha256": "af79ca5fa5f06747dbcaa1d40017c8c8e81e0aa11cb8e32b848043893cdb03c7",
+      "bytes": 27329
+    },
+    {
+      "path": "shared/evals/report/runner-scaffold.mjs",
+      "stored_path": "shared/evals/report/runner-scaffold.mjs",
+      "sha256": "c3a87ba4b94b3018b83c075d5148ba7760580aa447699d513d45ab55b82a531a",
+      "git_sha": "2f0220b41b4b30eb12606aa7ff95a9fee2f6e924",
+      "source": "elf:328737613:33142",
+      "source_sha256": "c3a87ba4b94b3018b83c075d5148ba7760580aa447699d513d45ab55b82a531a",
+      "bytes": 33142
+    },
+    {
+      "path": "shared/google-cloud-anthropic-managed.md",
+      "stored_path": "shared/google-cloud-anthropic-managed.md",
+      "sha256": "681dc6da16f557d27f86e393df6430328d7d6885e4de5a3fcf3063d187ff9281",
+      "git_sha": "610427c5ef569fd58a8cf533d49f39e65d44d90c",
+      "source": "02_解压文本与资源/google-cloud-anthropic-managed-690a44d5.md",
+      "source_sha256": "681dc6da16f557d27f86e393df6430328d7d6885e4de5a3fcf3063d187ff9281",
+      "bytes": 9560
+    },
+    {
+      "path": "shared/live-sources.md",
+      "stored_path": "shared/live-sources.md",
+      "sha256": "2ba4ce4249c446b06c288b6a7538d69439fa3397972debc432f0432380bc068b",
+      "git_sha": "aa0e1583aa4717a5620b1a1de06464e636fed7e9",
+      "source": "02_解压文本与资源/live-sources-402c4c07.md",
+      "source_sha256": "2ba4ce4249c446b06c288b6a7538d69439fa3397972debc432f0432380bc068b",
+      "bytes": 19545
+    },
+    {
+      "path": "shared/managed-agents-api-reference.md",
+      "stored_path": "shared/managed-agents-api-reference.md",
+      "sha256": "1e0d2d8f811b50dd2c2e106ea8a71be6e495d35641751bb53d344aec7c7cf1de",
+      "git_sha": "716121827c40dac47129042129a9c2aef8c5536b",
+      "source": "02_解压文本与资源/managed-agents-api-reference-4f7ed5d8.md",
+      "source_sha256": "1e0d2d8f811b50dd2c2e106ea8a71be6e495d35641751bb53d344aec7c7cf1de",
+      "bytes": 35405
+    },
+    {
+      "path": "shared/managed-agents-client-patterns.md",
+      "stored_path": "shared/managed-agents-client-patterns.md",
+      "sha256": "043d7eeff816ca4afddfabe07f19ce6586e4aab3b973a66d10811dfb7d1b12fc",
+      "git_sha": "fa7920089e401c25cbf074c912801cb7e988ba40",
+      "source": "02_解压文本与资源/managed-agents-client-patterns-05c93984.md",
+      "source_sha256": "043d7eeff816ca4afddfabe07f19ce6586e4aab3b973a66d10811dfb7d1b12fc",
+      "bytes": 12478
+    },
+    {
+      "path": "shared/managed-agents-core.md",
+      "stored_path": "shared/managed-agents-core.md",
+      "sha256": "6947276dda47c9fc2fcb962e6996a0a57d3fcabf662f054ebe77f57ee161079f",
+      "git_sha": "093909e4035014169bf3201b7f67b4501f18ad8b",
+      "source": "02_解压文本与资源/managed-agents-core-46842085.md",
+      "source_sha256": "6947276dda47c9fc2fcb962e6996a0a57d3fcabf662f054ebe77f57ee161079f",
+      "bytes": 33788
+    },
+    {
+      "path": "shared/managed-agents-environments.md",
+      "stored_path": "shared/managed-agents-environments.md",
+      "sha256": "bf4af056837e4cde0baa5ece68b784f0b5623d500bdcacc81991da13cec06012",
+      "git_sha": "8852e96dc8d66fffd73ca5be1af472d8c686c865",
+      "source": "02_解压文本与资源/managed-agents-environments-c5b1b3cc.md",
+      "source_sha256": "bf4af056837e4cde0baa5ece68b784f0b5623d500bdcacc81991da13cec06012",
+      "bytes": 14379
+    },
+    {
+      "path": "shared/managed-agents-events.md",
+      "stored_path": "shared/managed-agents-events.md",
+      "sha256": "77a409fe06490b1941a51cf2192e26f485852c2a699c393cc267ae60f0da5b0c",
+      "git_sha": "22db57856e173f5fb544be69be1ad20ddf1ef2ab",
+      "source": "02_解压文本与资源/managed-agents-events-98177506.md",
+      "source_sha256": "77a409fe06490b1941a51cf2192e26f485852c2a699c393cc267ae60f0da5b0c",
+      "bytes": 26030
+    },
+    {
+      "path": "shared/managed-agents-memory.md",
+      "stored_path": "shared/managed-agents-memory.md",
+      "sha256": "ab45ddaf130730d37bf818c68a0fb81b42e45b03dff9d0a0e19df54083a7a884",
+      "git_sha": "408894899b85068c948ed6ea999c502d16805953",
+      "source": "02_解压文本与资源/managed-agents-memory-3a172a12.md",
+      "source_sha256": "ab45ddaf130730d37bf818c68a0fb81b42e45b03dff9d0a0e19df54083a7a884",
+      "bytes": 11412
+    },
+    {
+      "path": "shared/managed-agents-multiagent.md",
+      "stored_path": "shared/managed-agents-multiagent.md",
+      "sha256": "20e3f0c1903efef4aa918c07300d4f076afdd9927dcec5cf92eda90ac60b4308",
+      "git_sha": "372204f775b5ca15893d94902f4c52bb74751096",
+      "source": "02_解压文本与资源/managed-agents-multiagent-63f142d6.md",
+      "source_sha256": "20e3f0c1903efef4aa918c07300d4f076afdd9927dcec5cf92eda90ac60b4308",
+      "bytes": 74575
+    },
+    {
+      "path": "shared/managed-agents-onboarding-from-quickstart.md",
+      "stored_path": "shared/managed-agents-onboarding-from-quickstart.md",
+      "sha256": "83973d657f2d8ac41a87eca2d617d36be43a78a229c96ad2d8b33508e8c5e7db",
+      "git_sha": "743df25300e48e749eec8b3795acfae83de4073a",
+      "source": "02_解压文本与资源/managed-agents-onboarding-from-quickstart-4995fc19.md",
+      "source_sha256": "83973d657f2d8ac41a87eca2d617d36be43a78a229c96ad2d8b33508e8c5e7db",
+      "bytes": 19847
+    },
+    {
+      "path": "shared/managed-agents-onboarding-from-url.md",
+      "stored_path": "shared/managed-agents-onboarding-from-url.md",
+      "sha256": "d1f85e6cffab6af6f413519ae6c9613335addb80fadde1e94e64f3d8abd53114",
+      "git_sha": "10320829185525f90e01ad0520b0eaff4e31ca98",
+      "source": "02_解压文本与资源/managed-agents-onboarding-from-url-7fa0ab6b.md",
+      "source_sha256": "d1f85e6cffab6af6f413519ae6c9613335addb80fadde1e94e64f3d8abd53114",
+      "bytes": 35351
+    },
+    {
+      "path": "shared/managed-agents-onboarding.md",
+      "stored_path": "shared/managed-agents-onboarding.md",
+      "sha256": "5b94f354dd4f5256b333bca4bf1eb679cf88e8f63388226f142495bc3fd04bd2",
+      "git_sha": "39b4d62e4cb57541b24da7eb760df5fbb8e8545d",
+      "source": "02_解压文本与资源/managed-agents-onboarding-0b38bb5f.md",
+      "source_sha256": "5b94f354dd4f5256b333bca4bf1eb679cf88e8f63388226f142495bc3fd04bd2",
+      "bytes": 17278
+    },
+    {
+      "path": "shared/managed-agents-outcomes.md",
+      "stored_path": "shared/managed-agents-outcomes.md",
+      "sha256": "d36e1703b5d4f72c3e5463437699b0057ff18b4d915ba255742571a7e787821e",
+      "git_sha": "e8080c35fb02c0c2dee77b611d8ee492ce2cd847",
+      "source": "02_解压文本与资源/managed-agents-outcomes-bad5446f.md",
+      "source_sha256": "d36e1703b5d4f72c3e5463437699b0057ff18b4d915ba255742571a7e787821e",
+      "bytes": 8957
+    },
+    {
+      "path": "shared/managed-agents-overview.md",
+      "stored_path": "shared/managed-agents-overview.md",
+      "sha256": "b2addf98359b76d95a4878c94648537bfa81c44cc3ceabc5e1a18384461ac94b",
+      "git_sha": "d173073b86b3d1af17730d8eb5c7ca7a21b72110",
+      "source": "02_解压文本与资源/managed-agents-overview-b29fb63b.md",
+      "source_sha256": "b2addf98359b76d95a4878c94648537bfa81c44cc3ceabc5e1a18384461ac94b",
+      "bytes": 14765
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/bug-hunter.md",
+      "stored_path": "shared/managed-agents-quickstarts/bug-hunter.md",
+      "sha256": "e7529cf183237046b1ef099e21f0ec9f8eef94fc2bc77050b52378ee9e7a4146",
+      "git_sha": "e056a8b747ff9ee16a378ae1d8d6f32cf3c78dc3",
+      "source": "elf:329231422:8092",
+      "source_sha256": "e7529cf183237046b1ef099e21f0ec9f8eef94fc2bc77050b52378ee9e7a4146",
+      "bytes": 8092
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/contract-tracker.md",
+      "stored_path": "shared/managed-agents-quickstarts/contract-tracker.md",
+      "sha256": "794e23e8dbd2df46d57f2f8fe4b6f893fa987deb47daa78c7bb36b99f7dd499f",
+      "git_sha": "252844c696d39ba92f2d515dd26855bfbfce6e52",
+      "source": "elf:329239515:1802",
+      "source_sha256": "794e23e8dbd2df46d57f2f8fe4b6f893fa987deb47daa78c7bb36b99f7dd499f",
+      "bytes": 1802
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/data-analyst.md",
+      "stored_path": "shared/managed-agents-quickstarts/data-analyst.md",
+      "sha256": "7c49347389e7b372f3a0ae72d1c9b3a45732656cc2ac7241b7901faa57aa2a08",
+      "git_sha": "44da9578133d662030281c742489ee3da53f6214",
+      "source": "elf:329241318:1557",
+      "source_sha256": "7c49347389e7b372f3a0ae72d1c9b3a45732656cc2ac7241b7901faa57aa2a08",
+      "bytes": 1557
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/deep-researcher.md",
+      "stored_path": "shared/managed-agents-quickstarts/deep-researcher.md",
+      "sha256": "5bfac67f99ff5a9057a93dc18a80f135bf9d6e8089088b0fad30be150c1c54e8",
+      "git_sha": "63cacc91ffb13f7f2632780f402458ae94878418",
+      "source": "elf:329242876:2426",
+      "source_sha256": "5bfac67f99ff5a9057a93dc18a80f135bf9d6e8089088b0fad30be150c1c54e8",
+      "bytes": 2426
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/explainer-video-maker.md",
+      "stored_path": "shared/managed-agents-quickstarts/explainer-video-maker.md",
+      "sha256": "725b495062159e5215b3e5885fbfc781fdee2f7505bec71ac9329bcb98cba888",
+      "git_sha": "050e40f5556690897b3ee1e0b31cb4a14483f285",
+      "source": "elf:329245303:4882",
+      "source_sha256": "725b495062159e5215b3e5885fbfc781fdee2f7505bec71ac9329bcb98cba888",
+      "bytes": 4882
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/field-monitor.md",
+      "stored_path": "shared/managed-agents-quickstarts/field-monitor.md",
+      "sha256": "f0ed1fe506ae642a807d66b4fb5a5a3b01912ae4dcc7482798ff60f17ed7ef6e",
+      "git_sha": "c66bbcb45fdc43cdc342931c315cde2586c72585",
+      "source": "elf:329250186:2101",
+      "source_sha256": "f0ed1fe506ae642a807d66b4fb5a5a3b01912ae4dcc7482798ff60f17ed7ef6e",
+      "bytes": 2101
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/incident-commander.md",
+      "stored_path": "shared/managed-agents-quickstarts/incident-commander.md",
+      "sha256": "d72b3ab03e48caa2d1b6a17e3c51df28bde3ea840d580c66af1a5014e967cca8",
+      "git_sha": "82bf689d7249445f3c9f3c6436feefbff7b3f7b8",
+      "source": "elf:329252288:1719",
+      "source_sha256": "d72b3ab03e48caa2d1b6a17e3c51df28bde3ea840d580c66af1a5014e967cca8",
+      "bytes": 1719
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/performance-tuner.md",
+      "stored_path": "shared/managed-agents-quickstarts/performance-tuner.md",
+      "sha256": "ad392a2f5acf2a5899f6154f7558fc5daa9a0f9d2e311496cef82998968ad1d2",
+      "git_sha": "703b049d86d44caf9218d56dbc6862eca7ab531e",
+      "source": "02_解压文本与资源/performance-tuner-6c866b59.md",
+      "source_sha256": "ad392a2f5acf2a5899f6154f7558fc5daa9a0f9d2e311496cef82998968ad1d2",
+      "bytes": 11390
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/sprint-retro-facilitator.md",
+      "stored_path": "shared/managed-agents-quickstarts/sprint-retro-facilitator.md",
+      "sha256": "8c35991555fb11f0dedda77e5750072f8c6007c31cf81131b4aff1028bae34df",
+      "git_sha": "2050fb18b8257ce6fe191fa5e8b3f1f9829a6294",
+      "source": "elf:329258097:2087",
+      "source_sha256": "8c35991555fb11f0dedda77e5750072f8c6007c31cf81131b4aff1028bae34df",
+      "bytes": 2087
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/structured-extractor.md",
+      "stored_path": "shared/managed-agents-quickstarts/structured-extractor.md",
+      "sha256": "452c38bd10ebf31a875904125572915cda852849611fa340221e6561f1fcb60f",
+      "git_sha": "f15f181382809da038c3a4355c59d79f4203aafc",
+      "source": "elf:329260185:1537",
+      "source_sha256": "452c38bd10ebf31a875904125572915cda852849611fa340221e6561f1fcb60f",
+      "bytes": 1537
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/support-agent.md",
+      "stored_path": "shared/managed-agents-quickstarts/support-agent.md",
+      "sha256": "1485fff930c269be340ab34801a82eb2bfaf0cd5a66429035f41053d0ec5ba32",
+      "git_sha": "93076c7c74239fff1e99d0d58314949f676e48af",
+      "source": "elf:329261723:1477",
+      "source_sha256": "1485fff930c269be340ab34801a82eb2bfaf0cd5a66429035f41053d0ec5ba32",
+      "bytes": 1477
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/support-to-eng-escalator.md",
+      "stored_path": "shared/managed-agents-quickstarts/support-to-eng-escalator.md",
+      "sha256": "76bc7d1c6427e2617a6ebe3aa0f108cbe5a0d7501ddb1e64faaff3d85ea1bcd3",
+      "git_sha": "f04174f6ad0b4c7b147e2458780d5b2770f2d381",
+      "source": "elf:329263201:1838",
+      "source_sha256": "76bc7d1c6427e2617a6ebe3aa0f108cbe5a0d7501ddb1e64faaff3d85ea1bcd3",
+      "bytes": 1838
+    },
+    {
+      "path": "shared/managed-agents-quickstarts/watchlist-scanner.md",
+      "stored_path": "shared/managed-agents-quickstarts/watchlist-scanner.md",
+      "sha256": "d09230e53328dfe895d1924da49cb0e75b4045ce6810e2a2e62c08e5c548e72d",
+      "git_sha": "522ec52adc3d490f156d6b2a4723d1812d8f1c76",
+      "source": "elf:329265040:5638",
+      "source_sha256": "d09230e53328dfe895d1924da49cb0e75b4045ce6810e2a2e62c08e5c548e72d",
+      "bytes": 5638
+    },
+    {
+      "path": "shared/managed-agents-scheduled-deployments.md",
+      "stored_path": "shared/managed-agents-scheduled-deployments.md",
+      "sha256": "0f797a414f772f228ebfa7894daf42aab3a1d6930376b1ac574dff1e8e0475b1",
+      "git_sha": "4c5ede07660dda58c01bdb3ac41578610642d2ed",
+      "source": "02_解压文本与资源/managed-agents-scheduled-deployments-7c6a1a7e.md",
+      "source_sha256": "0f797a414f772f228ebfa7894daf42aab3a1d6930376b1ac574dff1e8e0475b1",
+      "bytes": 9561
+    },
+    {
+      "path": "shared/managed-agents-secure.md",
+      "stored_path": "shared/managed-agents-secure.md",
+      "sha256": "3e000c3a9edf66c01be63833a6d1a7fbe67f776b4e1a0f106e836b4626fb2a3c",
+      "git_sha": "c9b9eed9c89773c4bcb7db839982078cf10eb557",
+      "source": "02_解压文本与资源/managed-agents-secure-c68f6729.md",
+      "source_sha256": "3e000c3a9edf66c01be63833a6d1a7fbe67f776b4e1a0f106e836b4626fb2a3c",
+      "bytes": 29074
+    },
+    {
+      "path": "shared/managed-agents-self-hosted-sandboxes.md",
+      "stored_path": "shared/managed-agents-self-hosted-sandboxes.md",
+      "sha256": "66b99904806e3a6712dac009952a765f7fd7556982c61cfef99c6fad5ed34631",
+      "git_sha": "a9f7a82cc42ce50ced2e1089f0c36ac39423373e",
+      "source": "02_解压文本与资源/managed-agents-self-hosted-sandboxes-b2d3e09c.md",
+      "source_sha256": "66b99904806e3a6712dac009952a765f7fd7556982c61cfef99c6fad5ed34631",
+      "bytes": 29331
+    },
+    {
+      "path": "shared/managed-agents-tools.md",
+      "stored_path": "shared/managed-agents-tools.md",
+      "sha256": "815560d3707ef77ccab1cd979470f886fc51f4c23cff3eaee7339e03a69dc51e",
+      "git_sha": "6c2c66e34ded595594979299c1089d523001ec1e",
+      "source": "02_解压文本与资源/managed-agents-tools-7cc8a37b.md",
+      "source_sha256": "815560d3707ef77ccab1cd979470f886fc51f4c23cff3eaee7339e03a69dc51e",
+      "bytes": 37896
+    },
+    {
+      "path": "shared/managed-agents-webhooks.md",
+      "stored_path": "shared/managed-agents-webhooks.md",
+      "sha256": "38746f77a3ee971f9b1f7d47cec9e753131bf271fd795aed5c3da1764c9a6ac1",
+      "git_sha": "25f0592cdf26bed177b36e9e2579dea9676357fd",
+      "source": "02_解压文本与资源/managed-agents-webhooks-c9326ad3.md",
+      "source_sha256": "38746f77a3ee971f9b1f7d47cec9e753131bf271fd795aed5c3da1764c9a6ac1",
+      "bytes": 11321
+    },
+    {
+      "path": "shared/message-threads.md",
+      "stored_path": "shared/message-threads.md",
+      "sha256": "c01361eb26391dc482d8b6ca860ebd07a522b530823c23b6e0c3ec0b23f415bf",
+      "git_sha": "cd2cd12c9459b8a7a49e1f0ec76b042bc8cae1bb",
+      "source": "02_解压文本与资源/message-threads-da289221.md",
+      "source_sha256": "c01361eb26391dc482d8b6ca860ebd07a522b530823c23b6e0c3ec0b23f415bf",
+      "bytes": 17654
+    },
+    {
+      "path": "shared/model-migration.md",
+      "stored_path": "shared/model-migration.md",
+      "sha256": "c17170c0872d0c16a5db4e67af9c736d6a7796028eae0d950f2d9fe74e7c5b16",
+      "git_sha": "d8ec6410d8d977c4af28e94e33a7c2b193d0ea56",
+      "source": "02_解压文本与资源/model-migration-01792ec1.md",
+      "source_sha256": "c17170c0872d0c16a5db4e67af9c736d6a7796028eae0d950f2d9fe74e7c5b16",
+      "bytes": 350243
+    },
+    {
+      "path": "shared/models.md",
+      "stored_path": "shared/models.md",
+      "sha256": "97415335d1236faab744566c631f2902ff51371b14be702ff66f5010949aad76",
+      "git_sha": "56af005228518003a309358d69c6ce9b6f3138f9",
+      "source": "02_解压文本与资源/models-98c76443.md",
+      "source_sha256": "97415335d1236faab744566c631f2902ff51371b14be702ff66f5010949aad76",
+      "bytes": 17726
+    },
+    {
+      "path": "shared/opentelemetry.md",
+      "stored_path": "shared/opentelemetry.md",
+      "sha256": "15fc267f5eb94a65f3c054470da1b81359b4273d334fe76136c6dd1f7f1d4282",
+      "git_sha": "705f8bd8c24f5854800ee12d1cbb4c9701ca81f1",
+      "source": "02_解压文本与资源/opentelemetry-b47b95fd.md",
+      "source_sha256": "15fc267f5eb94a65f3c054470da1b81359b4273d334fe76136c6dd1f7f1d4282",
+      "bytes": 52014
+    },
+    {
+      "path": "shared/platform-availability.md",
+      "stored_path": "shared/platform-availability.md",
+      "sha256": "25027c628fd2cb8bd165b13a5dfa2cd472e87098549f19941242df2d4995ed3a",
+      "git_sha": "1030794283399c937c2b162e339d2df0ae4a855c",
+      "source": "02_解压文本与资源/platform-availability-599e0672.md",
+      "source_sha256": "25027c628fd2cb8bd165b13a5dfa2cd472e87098549f19941242df2d4995ed3a",
+      "bytes": 16982
+    },
+    {
+      "path": "shared/preserved-thinking-migration.md",
+      "stored_path": "shared/preserved-thinking-migration.md",
+      "sha256": "b1b1b7f97b6abb2dc5af5c5357f888d8a3fede740d743237a7533313a6da62b3",
+      "git_sha": "797e48c7d3637db9a7bfc2752de86b97e4c9634d",
+      "source": "02_解压文本与资源/preserved-thinking-migration-a3fbbf86.md",
+      "source_sha256": "b1b1b7f97b6abb2dc5af5c5357f888d8a3fede740d743237a7533313a6da62b3",
+      "bytes": 64347
+    },
+    {
+      "path": "shared/preserved-thinking-migration/causes.md",
+      "stored_path": "shared/preserved-thinking-migration/causes.md",
+      "sha256": "052db248974a03164ef9f2a65e06424631145190d63ef90d37f3d8bb2623f5c7",
+      "git_sha": "a82ce8f2b231bbc7061bee4055c5e6aca121fd24",
+      "source": "02_解压文本与资源/causes-b4ea8327.md",
+      "source_sha256": "052db248974a03164ef9f2a65e06424631145190d63ef90d37f3d8bb2623f5c7",
+      "bytes": 44985
+    },
+    {
+      "path": "shared/preserved-thinking-migration/drop_block_probe.py",
+      "stored_path": "shared/preserved-thinking-migration/drop_block_probe.py",
+      "sha256": "35e24416c6c4a00424db1443f48e5d6383c62b4c3ccbf0ae90736e17a22c144b",
+      "git_sha": "4950057a2f6f9781e32504bac6c86d96bc98a1a1",
+      "source": "02_解压文本与资源/drop_block_probe-4e056aa7.py",
+      "source_sha256": "35e24416c6c4a00424db1443f48e5d6383c62b4c3ccbf0ae90736e17a22c144b",
+      "bytes": 67673
+    },
+    {
+      "path": "shared/preserved-thinking-migration/prefix_diff.py",
+      "stored_path": "shared/preserved-thinking-migration/prefix_diff.py",
+      "sha256": "734934b81b5f26e9ed2f8f51f44fed6554233de4f37b22a8845ae4ffcb622ac0",
+      "git_sha": "cfa88044b45b4acb8b82044f51872f4f7e306c2f",
+      "source": "02_解压文本与资源/prefix_diff-69deb9d3.py",
+      "source_sha256": "734934b81b5f26e9ed2f8f51f44fed6554233de4f37b22a8845ae4ffcb622ac0",
+      "bytes": 94008
+    },
+    {
+      "path": "shared/prompt-audit.md",
+      "stored_path": "shared/prompt-audit.md",
+      "sha256": "393618e7ffad18485e30c207f0925d2bfc548a2b3cea8d55be2b99ae1726209d",
+      "git_sha": "f2ab124ac39bffe93215bc8d0ea261af7852435c",
+      "source": "02_解压文本与资源/prompt-audit-13fbfd4d.md",
+      "source_sha256": "393618e7ffad18485e30c207f0925d2bfc548a2b3cea8d55be2b99ae1726209d",
+      "bytes": 49367
+    },
+    {
+      "path": "shared/prompt-caching.md",
+      "stored_path": "shared/prompt-caching.md",
+      "sha256": "f8b779ab5722ec67d39dc0a3a92023411174124580a1c189813fef60cf90c645",
+      "git_sha": "b14fffefcfd838d1f848c6e7edcbf24fc1858972",
+      "source": "02_解压文本与资源/prompt-caching-d1170a77.md",
+      "source_sha256": "f8b779ab5722ec67d39dc0a3a92023411174124580a1c189813fef60cf90c645",
+      "bytes": 33384
+    },
+    {
+      "path": "shared/token-counting.md",
+      "stored_path": "shared/token-counting.md",
+      "sha256": "5ca71e961ce1ec436e8c0481747bab2c3bd3b6159d307f0ff4eb45ad01ff4a8e",
+      "git_sha": "6dbc7a8f2edb0d817b2c6accbdf56a0f79d2fd70",
+      "source": "elf:329186066:1591",
+      "source_sha256": "5ca71e961ce1ec436e8c0481747bab2c3bd3b6159d307f0ff4eb45ad01ff4a8e",
+      "bytes": 1591
+    },
+    {
+      "path": "shared/tool-use-concepts.md",
+      "stored_path": "shared/tool-use-concepts.md",
+      "sha256": "429c1f2b2b5b4f0fd48eece7bee0929e26e57584c138e92ea2aff99b4370c3e6",
+      "git_sha": "119f646ff0d683b62d6a9093ac4abdabc65a7bc8",
+      "source": "02_解压文本与资源/tool-use-concepts-a96dc911.md",
+      "source_sha256": "429c1f2b2b5b4f0fd48eece7bee0929e26e57584c138e92ea2aff99b4370c3e6",
+      "bytes": 45155
+    },
+    {
+      "path": "typescript/claude-api/README.md",
+      "stored_path": "typescript/claude-api/README.md",
+      "sha256": "fb0a0fab4d0eda29c962ce84f8b26694b1119cb2e41f1bb9036eaf5d38e793c4",
+      "git_sha": "65c6db7aa580c1f02b9e787338d43653b46a9c3d",
+      "source": "02_解压文本与资源/README-22740b0c.md",
+      "source_sha256": "fb0a0fab4d0eda29c962ce84f8b26694b1119cb2e41f1bb9036eaf5d38e793c4",
+      "bytes": 15865
+    },
+    {
+      "path": "typescript/claude-api/batches.md",
+      "stored_path": "typescript/claude-api/batches.md",
+      "sha256": "5c7d37ac6169aec0c9c1e9b666ea3dff6acf77be89bae86ccdc191ddf26f8f53",
+      "git_sha": "6136966ac2914b00849c7403521682b754fe475f",
+      "source": "elf:329203277:2586",
+      "source_sha256": "5c7d37ac6169aec0c9c1e9b666ea3dff6acf77be89bae86ccdc191ddf26f8f53",
+      "bytes": 2586
+    },
+    {
+      "path": "typescript/claude-api/files-api.md",
+      "stored_path": "typescript/claude-api/files-api.md",
+      "sha256": "b87751f1984fc6592319f47cbbffb184b46a9f726ac2ec6036ccd0a0c5a3bc10",
+      "git_sha": "b73dc512859f65d1b1266a031ae087837e30aa64",
+      "source": "elf:329205864:2380",
+      "source_sha256": "b87751f1984fc6592319f47cbbffb184b46a9f726ac2ec6036ccd0a0c5a3bc10",
+      "bytes": 2380
+    },
+    {
+      "path": "typescript/claude-api/opentelemetry.md",
+      "stored_path": "typescript/claude-api/opentelemetry.md",
+      "sha256": "6cc69fe0a60b62aa959795a33a46a1e1f7820ca3243a9af186ac8a5e2ba4a1f7",
+      "git_sha": "bdabf73bf21171ac0cbf49a9def3c9f14d3439c6",
+      "source": "elf:329208245:2446",
+      "source_sha256": "6cc69fe0a60b62aa959795a33a46a1e1f7820ca3243a9af186ac8a5e2ba4a1f7",
+      "bytes": 2446
+    },
+    {
+      "path": "typescript/claude-api/streaming.md",
+      "stored_path": "typescript/claude-api/streaming.md",
+      "sha256": "75df6c73d6e54747a5a512211618461cc193553e2350f40cd27a3ea1c33f3cec",
+      "git_sha": "797e165270a23277d5b7cd9c400bcdd599e9bb25",
+      "source": "02_解压文本与资源/streaming-3abfaa5d.md",
+      "source_sha256": "75df6c73d6e54747a5a512211618461cc193553e2350f40cd27a3ea1c33f3cec",
+      "bytes": 9599
+    },
+    {
+      "path": "typescript/claude-api/tool-use.md",
+      "stored_path": "typescript/claude-api/tool-use.md",
+      "sha256": "731c22e511ce89d559a1c343f3cf793c05f729f7364416e1993c0af958c1ccec",
+      "git_sha": "fc2c066b24520fb9e6d9e651095fe23948b60285",
+      "source": "02_解压文本与资源/tool-use-5eeac3c5.md",
+      "source_sha256": "731c22e511ce89d559a1c343f3cf793c05f729f7364416e1993c0af958c1ccec",
+      "bytes": 23254
+    },
+    {
+      "path": "typescript/managed-agents/README.md",
+      "stored_path": "typescript/managed-agents/README.md",
+      "sha256": "c4d0cc1c6154326aff567fe20567ee5fc7bb63a758453a06b475597594ebf37b",
+      "git_sha": "947cbe1ad8e19e02487032c74dec2f225cd65794",
+      "source": "02_解压文本与资源/README-c729f2c2.md",
+      "source_sha256": "c4d0cc1c6154326aff567fe20567ee5fc7bb63a758453a06b475597594ebf37b",
+      "bytes": 14217
+    }
+  ]
+}

@@ -53,6 +53,7 @@ async function _bundleWithFallback(
   maxBytes: number,
   hasStash: boolean,
   signal: AbortSignal | undefined,
+  forceScope?: 'squashed',
 ): Promise<BundleCreateResult> {
   // --all picks up refs/seed/stash; HEAD needs it explicit.
   const extra = hasStash ? ['refs/seed/stash'] : []
@@ -63,44 +64,51 @@ async function _bundleWithFallback(
       { cwd: gitRoot, abortSignal: signal },
     )
 
-  const allResult = await mkBundle('--all')
-  if (allResult.code !== 0) {
-    return {
-      ok: false,
-      error: `git bundle create --all failed (${allResult.code}): ${allResult.stderr.slice(0, 200)}`,
-      failReason: 'git_error',
+  if (forceScope !== 'squashed') {
+    const allResult = await mkBundle('--all')
+    if (allResult.code !== 0) {
+      return {
+        ok: false,
+        error: `git bundle create --all failed (${allResult.code}): ${allResult.stderr.slice(0, 200)}`,
+        failReason: 'git_error',
+      }
     }
-  }
 
-  const { size: allSize } = await stat(bundlePath)
-  if (allSize <= maxBytes) {
-    return { ok: true, size: allSize, scope: 'all' }
-  }
-
-  // bundle create overwrites in place.
-  logForDebugging(
-    `[gitBundle] --all bundle is ${(allSize / 1024 / 1024).toFixed(1)}MB (> ${(maxBytes / 1024 / 1024).toFixed(0)}MB), retrying HEAD-only`,
-  )
-  const headResult = await mkBundle('HEAD')
-  if (headResult.code !== 0) {
-    return {
-      ok: false,
-      error: `git bundle create HEAD failed (${headResult.code}): ${headResult.stderr.slice(0, 200)}`,
-      failReason: 'git_error',
+    const { size: allSize } = await stat(bundlePath)
+    if (allSize <= maxBytes) {
+      return { ok: true, size: allSize, scope: 'all' }
     }
+
+    // bundle create overwrites in place.
+    logForDebugging(
+      `[gitBundle] --all bundle is ${(allSize / 1024 / 1024).toFixed(1)}MB (> ${(maxBytes / 1024 / 1024).toFixed(0)}MB), retrying HEAD-only`,
+    )
+    const headResult = await mkBundle('HEAD')
+    if (headResult.code !== 0) {
+      return {
+        ok: false,
+        error: `git bundle create HEAD failed (${headResult.code}): ${headResult.stderr.slice(0, 200)}`,
+        failReason: 'git_error',
+      }
+    }
+
+    const { size: headSize } = await stat(bundlePath)
+    if (headSize <= maxBytes) {
+      return { ok: true, size: headSize, scope: 'head' }
+    }
+
+    // Last resort: squash to a single parentless commit. Uses the stash tree
+    // when WIP exists (bakes uncommitted changes in — can't bundle the stash
+    // ref separately since its parents would drag history back).
+    logForDebugging(
+      `[gitBundle] HEAD bundle is ${(headSize / 1024 / 1024).toFixed(1)}MB, retrying squashed-root`,
+    )
+  } else {
+    logForDebugging('[gitBundle] Explicitly requested a squashed-root bundle for unrelated git history')
   }
 
-  const { size: headSize } = await stat(bundlePath)
-  if (headSize <= maxBytes) {
-    return { ok: true, size: headSize, scope: 'head' }
-  }
-
-  // Last resort: squash to a single parentless commit. Uses the stash tree
-  // when WIP exists (bakes uncommitted changes in — can't bundle the stash
-  // ref separately since its parents would drag history back).
-  logForDebugging(
-    `[gitBundle] HEAD bundle is ${(headSize / 1024 / 1024).toFixed(1)}MB, retrying squashed-root`,
-  )
+  // Explicit squashed mode provides a parentless snapshot even for small
+  // repositories, as the official 2.1.317 no-merge-base review path requires.
   const treeRef = hasStash ? 'refs/seed/stash^{tree}' : 'HEAD^{tree}'
   const commitTree = await execFileNoThrowWithCwd(
     gitExe(),
@@ -115,11 +123,18 @@ async function _bundleWithFallback(
     }
   }
   const squashedSha = commitTree.stdout.trim()
-  await execFileNoThrowWithCwd(
+  const refResult = await execFileNoThrowWithCwd(
     gitExe(),
     ['update-ref', 'refs/seed/root', squashedSha],
     { cwd: gitRoot },
   )
+  if (refResult.code !== 0) {
+    return {
+      ok: false,
+      error: `git update-ref refs/seed/root failed (${refResult.code}): ${refResult.stderr.slice(0, 200)}`,
+      failReason: 'git_error',
+    }
+  }
   const squashResult = await execFileNoThrowWithCwd(
     gitExe(),
     ['bundle', 'create', bundlePath, 'refs/seed/root'],
@@ -151,7 +166,7 @@ async function _bundleWithFallback(
 // squashed tree); untracked not captured.
 export async function createAndUploadGitBundle(
   config: FilesApiConfig,
-  opts?: { cwd?: string; signal?: AbortSignal },
+  opts?: { cwd?: string; signal?: AbortSignal; forceScope?: 'squashed' },
 ): Promise<BundleUploadResult> {
   const workdir = opts?.cwd ?? getCwd()
   const gitRoot = findGitRoot(workdir)
@@ -228,9 +243,10 @@ export async function createAndUploadGitBundle(
       maxBytes,
       hasWip,
       opts?.signal,
+      opts?.forceScope,
     )
 
-    if (!bundle.ok) {
+    if (bundle.ok === false) {
       logForDebugging(`[gitBundle] ${bundle.error}`)
       logEvent('tengu_ccr_bundle_upload', {
         outcome:
@@ -249,7 +265,7 @@ export async function createAndUploadGitBundle(
       signal: opts?.signal,
     })
 
-    if (!upload.success) {
+    if (upload.success === false) {
       logEvent('tengu_ccr_bundle_upload', {
         outcome:
           'failed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

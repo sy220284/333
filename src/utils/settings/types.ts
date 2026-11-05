@@ -80,6 +80,12 @@ export const PermissionsSchema = lazySchema(() =>
         .array(z.string())
         .optional()
         .describe('Additional directories to include in the permission scope'),
+      blockWritesOutsideWorkingDirectories: z
+        .boolean()
+        .optional()
+        .describe('Refuse Write, Edit and NotebookEdit outside permitted working directories in every permission mode'),
+      blockReadsOutsideWorkingDirectories: z.boolean().optional(),
+      blockReadsExemptPaths: z.array(z.string()).optional(),
     })
     .passthrough(),
 )
@@ -388,6 +394,13 @@ export const SettingsSchema = lazySchema(() =>
             'If undefined, all models are available. If empty array, only the default model is available. ' +
             'Typically set in managed settings by enterprise administrators.',
         ),
+      modelPicker: z.object({
+        options: z.array(z.object({
+          model: z.string(),
+          label: z.string().optional(),
+          behavesAs: z.string().optional(),
+        }).passthrough()),
+      }).passthrough().optional(),
       modelOverrides: z
         .record(z.string(), z.string())
         .optional()
@@ -661,6 +674,10 @@ export const SettingsSchema = lazySchema(() =>
         .describe(
           'Probability (0–1) that the session quality survey appears when eligible. 0.05 is a reasonable starting point.',
         ),
+      axScreenReader: z
+        .boolean()
+        .optional()
+        .describe('Use flat text accessible to screen readers; only user or managed settings can enable this mode'),
       spinnerTipsEnabled: z
         .boolean()
         .optional()
@@ -676,12 +693,21 @@ export const SettingsSchema = lazySchema(() =>
         ),
       spinnerTipsOverride: z
         .object({
-          excludeDefault: z.boolean().optional(),
-          tips: z.array(z.string()),
+          excludeDefault: z.boolean().optional().catch(undefined),
+          tips: z.preprocess(
+            value => Array.isArray(value)
+              ? value.filter(entry => typeof entry === 'string' || !!entry && typeof entry === 'object' && !Array.isArray(entry))
+              : [],
+            z.array(z.union([z.string(), z.object({}).passthrough()])),
+          ).optional(),
+          tipsFile: z.string().optional().catch(undefined),
+          label: z.string().optional().catch(undefined),
         })
+        .passthrough()
         .optional()
+        .catch(undefined)
         .describe(
-          'Override spinner tips. tips: array of tip strings. excludeDefault: if true, only show custom tips (default: false).',
+          'Add custom spinner tips as strings or objects with id, text, cooldownSessions and priority. Trusted settings may specify a local tipsFile, label and excludeDefault.',
         ),
       syntaxHighlightingDisabled: z
         .boolean()
@@ -700,12 +726,13 @@ export const SettingsSchema = lazySchema(() =>
           'When false, thinking is disabled. When absent or true, thinking is ' +
             'enabled automatically for supported models.',
         ),
+      maxEffortLevel: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).optional(),
+      modelSettings: z.record(z.string(), z.object({
+        effortLevel: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).optional(),
+        maxEffortLevel: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).optional(),
+      })).optional(),
       effortLevel: z
-        .enum(
-          process.env.USER_TYPE === 'ant'
-            ? ['low', 'medium', 'high', 'max']
-            : ['low', 'medium', 'high'],
-        )
+        .enum(['low', 'medium', 'high', 'xhigh'])
         .optional()
         .catch(undefined)
         .describe('Persisted effort level for supported models.'),
@@ -792,6 +819,10 @@ export const SettingsSchema = lazySchema(() =>
         .describe(
           'Per-plugin configuration including MCP server user configs, keyed by plugin ID (plugin@marketplace format)',
         ),
+      disableRemoteControl: z
+        .boolean()
+        .optional()
+        .describe('Turn off Remote Control for this device, including CLI, interactive and auto-connect entrypoints'),
       remote: z
         .object({
           defaultEnvironmentId: z
@@ -815,6 +846,17 @@ export const SettingsSchema = lazySchema(() =>
               ),
           }
         : {}),
+      // 2.1.317 managed-policy execution gate, distinct from the updater's
+      // minimumVersion preference. Only policySettings is consulted by
+      // fastPathSettings317 for enforcement.
+      requiredMinimumVersion: z
+        .string()
+        .optional()
+        .describe('Organization-required minimum Claude Code version'),
+      requiredMaximumVersion: z
+        .string()
+        .optional()
+        .describe('Organization-required maximum Claude Code version'),
       minimumVersion: z
         .string()
         .optional()
@@ -988,7 +1030,11 @@ export const SettingsSchema = lazySchema(() =>
                 soft_deny: z
                   .array(z.string())
                   .optional()
-                  .describe('Rules for the auto mode classifier deny section'),
+                  .describe('Rules for the auto mode classifier soft-deny section'),
+                hard_deny: z
+                  .array(z.string())
+                  .optional()
+                  .describe('Rules for the auto mode classifier hard-deny section'),
                 ...(process.env.USER_TYPE === 'ant'
                   ? {
                       // Back-compat alias for ant users; external users use soft_deny

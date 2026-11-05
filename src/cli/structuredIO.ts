@@ -1,8 +1,5 @@
 import { feature } from 'bun:bundle'
-import type {
-  ElicitResult,
-  JSONRPCMessage,
-} from '@modelcontextprotocol/sdk/types.js'
+import type { ElicitResult, JSONRPCMessage } from "@modelcontextprotocol/server";
 import { randomUUID } from 'crypto'
 import type { AssistantMessage } from 'src//types/message.js'
 import type {
@@ -39,12 +36,12 @@ import { writeToStdout } from 'src/utils/process.js'
 import { jsonStringify } from 'src/utils/slowOperations.js'
 import { z } from 'zod/v4'
 import { notifyCommandLifecycle } from '../utils/commandLifecycle.js'
-import { normalizeControlMessageKeys } from '../utils/controlMessageCompat.js'
 import { executePermissionRequestHooks } from '../utils/hooks.js'
 import {
   applyPermissionUpdates,
   persistPermissionUpdates,
 } from '../utils/permissions/PermissionUpdate.js'
+import { permissionUpdateSchema } from '../utils/permissions/PermissionUpdateSchema.js'
 import {
   notifySessionStateChanged,
   type RequiresActionDetails,
@@ -338,7 +335,7 @@ export class StructuredIO {
       return undefined
     }
     try {
-      const message = normalizeControlMessageKeys(jsonParse(line)) as
+      const message = jsonParse(line) as
         | StdinMessage
         | SDKMessage
       if (message.type === 'keep_alive') {
@@ -448,9 +445,14 @@ export class StructuredIO {
       if (message.type === 'assistant' || message.type === 'system') {
         return message
       }
-      if (message.message.role !== 'user') {
+      // The SDK wire envelope types message as unknown. Validate the inner
+      // role before treating it as a user turn, instead of assuming structure.
+      const payload = message.message
+      const actualRole = payload && typeof payload === 'object' && 'role' in payload
+        ? payload.role : undefined
+      if (actualRole !== 'user') {
         exitWithMessage(
-          `Error: Expected message role 'user', got '${message.message.role}'`,
+          `Error: Expected message role 'user', got '${String(actualRole ?? 'missing')}'`,
         )
       }
       return message
@@ -499,6 +501,10 @@ export class StructuredIO {
         // Track the tool_use ID as resolved before rejecting, so that a
         // late response from the host is ignored by the orphan handler.
         this.trackResolvedToolUseId(request.request)
+        if (request.request.request.subtype === 'can_use_tool') {
+          this.onControlRequestResolved?.(requestId)
+        }
+        this.pendingRequests.delete(requestId)
         request.reject(new AbortError())
       }
     }
@@ -507,9 +513,10 @@ export class StructuredIO {
         once: true,
       })
     }
+    let pending: PendingRequest<unknown> | undefined
     try {
       return await new Promise<Response>((resolve, reject) => {
-        this.pendingRequests.set(requestId, {
+        pending = {
           request: {
             type: 'control_request',
             request_id: requestId,
@@ -520,13 +527,16 @@ export class StructuredIO {
           },
           reject,
           schema,
-        })
+        }
+        this.pendingRequests.set(requestId, pending)
       })
     } finally {
       if (signal) {
         signal.removeEventListener('abort', aborted)
       }
-      this.pendingRequests.delete(requestId)
+      if (this.pendingRequests.get(requestId) === pending) {
+        this.pendingRequests.delete(requestId)
+      }
     }
   }
 
@@ -658,32 +668,32 @@ export class StructuredIO {
     }
   }
 
-  createHookCallback(callbackId: string, timeout?: number): HookCallback {
+  createHookCallback(
+    callbackId: string,
+    timeout?: number,
+    onFailure?: 'block',
+  ): HookCallback {
     return {
       type: 'callback',
       timeout,
+      onFailure,
       callback: async (
         input: HookInput,
         toolUseID: string | null,
         abort: AbortSignal | undefined,
       ): Promise<HookJSONOutput> => {
-        try {
-          const result = await this.sendRequest<HookJSONOutput>(
-            {
-              subtype: 'hook_callback',
-              callback_id: callbackId,
-              input,
-              tool_use_id: toolUseID || undefined,
-            },
-            hookJSONOutputSchema(),
-            abort,
-          )
-          return result
-        } catch (error) {
-          // biome-ignore lint/suspicious/noConsole:: intentional console output
-          console.error(`Error in hook callback ${callbackId}:`, error)
-          return {}
-        }
+        // Propagate failures and invalid SDK output to the hook execution
+        // boundary. Returning {} would silently approve a blocked tool call.
+        return this.sendRequest<HookJSONOutput>(
+          {
+            subtype: 'hook_callback',
+            callback_id: callbackId,
+            input,
+            tool_use_id: toolUseID || undefined,
+          },
+          hookJSONOutputSchema(),
+          abort,
+        )
       },
     }
   }
@@ -758,15 +768,15 @@ export class StructuredIO {
   async sendMcpMessage(
     serverName: string,
     message: JSONRPCMessage,
-  ): Promise<JSONRPCMessage> {
-    const response = await this.sendRequest<{ mcp_response: JSONRPCMessage }>(
+  ): Promise<JSONRPCMessage | null> {
+    const response = await this.sendRequest<{ mcp_response: JSONRPCMessage | null }>(
       {
         subtype: 'mcp_message',
         server_name: serverName,
         message,
       },
       z.object({
-        mcp_response: z.any() as z.Schema<JSONRPCMessage>,
+        mcp_response: z.any() as z.Schema<JSONRPCMessage | null>,
       }),
     )
     return response.mcp_response
@@ -816,7 +826,10 @@ async function executePermissionRequestHooksForSDK(
         const finalInput = decision.updatedInput || input
 
         // Apply permission updates if provided by hook ("always allow")
-        const permissionUpdates = decision.updatedPermissions ?? []
+        // Hook outputs are a wire protocol. Parse all requested permission
+        // changes with the shared schema before persisting or applying them.
+        const permissionUpdates = (decision.updatedPermissions ?? [])
+          .map(update => permissionUpdateSchema().parse(update))
         if (permissionUpdates.length > 0) {
           persistPermissionUpdates(permissionUpdates)
           const currentAppState = toolUseContext.getAppState()

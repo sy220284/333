@@ -32,7 +32,7 @@ const INITIAL_STATE: PrStatusState = {
  * Pass `enabled: false` to skip polling entirely (hook still must be
  * called unconditionally to satisfy the rules of hooks).
  */
-export function usePrStatus(isLoading: boolean, enabled = true): PrStatusState {
+export function usePrStatus(isLoading: boolean, enabled: boolean = true): PrStatusState {
   const [prStatus, setPrStatus] = useState<PrStatusState>(INITIAL_STATE)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const disabledRef = useRef(false)

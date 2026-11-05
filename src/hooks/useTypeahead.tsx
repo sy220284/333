@@ -183,9 +183,9 @@ export function applyShellSuggestion(suggestion: SuggestionItem, input: string, 
   // Prepare the replacement text based on completion type
   let replacementText: string;
   if (completionType === 'variable') {
-    replacementText = '$' + suggestion.displayText + ' ';
+    replacementText = `${suggestion.displayText} `;
   } else if (completionType === 'command') {
-    replacementText = suggestion.displayText + ' ';
+    replacementText = `${suggestion.displayText} `;
   } else {
     replacementText = suggestion.displayText;
   }
@@ -199,7 +199,7 @@ function applyTriggerSuggestion(suggestion: SuggestionItem, input: string, curso
   if (!m || m.index === undefined) return;
   const prefixStart = m.index + (m[1]?.length ?? 0);
   const before = input.slice(0, prefixStart);
-  const newInput = before + suggestion.displayText + ' ' + input.slice(cursorOffset);
+  const newInput = `${before}${suggestion.displayText} ${input.slice(cursorOffset)}`;
   onInputChange(newInput);
   setCursorOffset(before.length + suggestion.displayText.length + 1);
 }
@@ -243,7 +243,7 @@ export function applyDirectorySuggestion(input: string, suggestionId: string, to
   const after = input.slice(tokenStartPos + tokenLength);
   // Always add @ prefix - if token already has it, we're replacing
   // the whole token (including @) with @suggestion.id
-  const replacement = '@' + suggestionId + suffix;
+  const replacement = `@${suggestionId}${suffix}`;
   const newInput = before + replacement + after;
   return {
     newInput,
@@ -258,7 +258,7 @@ export function applyDirectorySuggestion(input: string, suggestionId: string, to
  * @param includeAtSymbol Whether to consider @ symbol as part of the token
  * @returns The completable token and its start position, or null if not found
  */
-export function extractCompletionToken(text: string, cursorPos: number, includeAtSymbol = false): {
+export function extractCompletionToken(text: string, cursorPos: number, includeAtSymbol: boolean = false): {
   token: string;
   startPos: number;
   isQuoted?: boolean;
@@ -492,7 +492,7 @@ export function useTypeahead({
   // subsequent tests in the shard. The subscriber still registers so
   // fileSuggestions tests that trigger a refresh directly work correctly.
   useEffect(() => {
-    if ("production" !== 'test') {
+    if (process.env.NODE_ENV !== 'test') {
       startBackgroundCacheRefresh();
     }
     return onIndexBuildComplete(() => {
@@ -926,7 +926,7 @@ export function useTypeahead({
         // Replace the partial command with the full command + space
         const before = input.slice(0, midInputCommand.startPos);
         const after = input.slice(midInputCommand.startPos + midInputCommand.token.length);
-        const newInput = before + '/' + effectiveGhostText.fullCommand + ' ' + after;
+        const newInput = `${before}/${effectiveGhostText.fullCommand} ${after}`;
         const newCursorOffset = midInputCommand.startPos + 1 + effectiveGhostText.fullCommand.length + 1;
         onInputChange(newInput);
         setCursorOffset(newCursorOffset);

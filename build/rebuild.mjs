@@ -1,9 +1,14 @@
-import { existsSync, mkdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, statSync, readFileSync } from 'node:fs';
 import { builtinModules } from 'node:module';
 import { join, resolve, dirname } from 'node:path';
+import { stageRuntimeVendor317 } from './stage-runtime-vendor317.mjs';
+import { verifyOfficialEmbeddedAssets317 } from './verify-official-embedded-assets.mjs';
+verifyOfficialEmbeddedAssets317();
 
 if (typeof Bun === 'undefined' || !Bun.build) throw Error('Bun bundler required');
 const root = resolve(import.meta.dir, '..');
+const releaseVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
+if (!/^\d+\.\d+\.\d+$/.test(releaseVersion)) throw Error('Invalid release version in package.json');
 const snapshot = join(root, '.rebuild/deps/node_modules');
 if (!existsSync(snapshot)) throw Error('Run node build/restore-dependencies.mjs first');
 const builtins = new Set(builtinModules.map(x => x.replace(/^node:/, '')));
@@ -36,7 +41,6 @@ const packageEntry = {
   'zod/v3': 'zod/v3/external.js',
   'lodash-es': 'lodash-es/entrypoint.js',
   '@azure/msal-common/node': '@azure/msal-common/dist/index-node.mjs',
-  '@opentelemetry/otlp-exporter-base/node-http': '@opentelemetry/otlp-exporter-base/build/src/index-node-http.js',
   'react-reconciler': 'react-reconciler/cjs/react-reconciler.production.js',
   'react-reconciler/constants.js': 'react-reconciler/cjs/react-reconciler-constants.production.js',
   '@aws-sdk/client-bedrock': '@aws-sdk/client-bedrock/dist-cjs/index.js',
@@ -84,7 +88,7 @@ const plugin = {
     build.onResolve({ filter: /\.js$/ }, args => {
       const normalized = args.importer ? resolve(dirname(args.importer), args.path).replaceAll('\\', '/') : args.path;
       if ([...excluded].some(p => normalized.endsWith(p))) {
-        return { path: marker + '/' + normalized.replaceAll('.', '_').replaceAll('/', '_'), external: true };
+        return { path: `${marker}/${normalized.replaceAll('.', '_').replaceAll('/', '_')}`, external: true };
       }
     });
     build.onResolve({ filter: /^[^./]/ }, args => {
@@ -99,7 +103,12 @@ const plugin = {
       if (native[id]) return { path: join(root, 'native', native[id], 'index.ts') };
       const ns = id.startsWith('@') ? id.split('/').slice(0,2).join('/') : id.split('/')[0];
       // Resolve complete published package metadata first; preserve map snapshots for internal packages.
-      if (ns !== '@ant/computer-use-mcp' && ns !== '@ant/claude-for-chrome-mcp' && ns !== '@ant/computer-use-input' && ns !== '@ant/computer-use-swift' && existsSync(join(root, 'node_modules', ns, 'package.json'))) return;
+      // All public packages must resolve through their latest npm export map.
+      // Only unpublished @ant packages are recovered from the archived sourcemap.
+      if (!ns.startsWith('@ant/')) {
+        if (!existsSync(join(root, 'node_modules', ns, 'package.json'))) unresolved.add(id);
+        return;
+      }
       const path = resolvePackage(id);
       if (path) return { path };
       unresolved.add(id);
@@ -114,14 +123,14 @@ const result = await Bun.build({
   format: 'esm',
   sourcemap: 'external',
   splitting: false,
-  features: ['TRANSCRIPT_CLASSIFIER', 'KAIROS_BRIEF', 'BUILDING_CLAUDE_APPS'],
+  features: ['TRANSCRIPT_CLASSIFIER', 'KAIROS_BRIEF', 'BUILDING_CLAUDE_APPS', 'BRIDGE_MODE'],
   loader: { '.md': 'text', '.txt': 'text' },
   minify: true,
   jsx: { runtime: 'classic', factory: 'React.createElement', fragment: 'React.Fragment', importSource: 'react', sideEffects: false, development: false },
   define: {
     'process.env.USER_TYPE': '"external"',
     'process.env.NODE_ENV': '"production"',
-    'MACRO.VERSION': '"2.1.88"',
+    'MACRO.VERSION': JSON.stringify(releaseVersion),
     'MACRO.BUILD_TIME': JSON.stringify(new Date().toISOString()),
     'MACRO.FEEDBACK_CHANNEL': '"#claude-code"',
     'MACRO.ISSUES_EXPLAINER': '"report the issue using /bug"',
@@ -133,7 +142,7 @@ const result = await Bun.build({
 });
 if (!result.success) {
   for (const error of result.logs) console.error(error);
-  console.error('Unresolved public dependency modules: ' + [...unresolved].sort().join(', '));
+  console.error(`Unresolved public dependency modules: ${[...unresolved].sort().join(', ')}`);
   process.exitCode = 1;
 } else {
   const leaked = [];
@@ -142,10 +151,13 @@ if (!result.success) {
     const emitted = await output.text();
     if (emitted.includes(marker)) {
       const references = [...emitted.matchAll(/__unavailable_release_feature__\/[a-zA-Z0-9_]+/g)].map(x => x[0]);
-      console.error('Unexpected disabled feature import in ' + output.path + ': ' + [...new Set(references)].join(', '));
+      console.error(`Unexpected disabled feature import in ${output.path}: ${[...new Set(references)].join(', ')}`);
       leaked.push(output.path);
     }
   }
-  if (leaked.length) throw Error('Disabled-source reference leaked into release build: ' + leaked.join(', '));
-  console.log('Compiled ' + result.outputs.length + ' artifacts from extracted source');
+  if (leaked.length) throw Error(`Disabled-source reference leaked into release build: ${leaked.join(', ')}`);
+  // dist/cli.js is also an executable source-mode entrypoint used before
+  // compile-standalone and package-release. Its native tools must exist now.
+  const staged = stageRuntimeVendor317(root);
+  console.log(`Compiled ${result.outputs.length} artifacts from extracted source; verified ${staged.files.length} host runtime resources for ${staged.host}`);
 }

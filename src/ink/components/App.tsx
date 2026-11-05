@@ -85,6 +85,7 @@ type Props = {
   // Dispatch a keyboard event through the DOM tree. Called for each
   // parsed key alongside the legacy EventEmitter path.
   readonly dispatchKeyboardEvent: (parsedKey: ParsedKey) => void;
+  readonly dispatchPasteEvent: (text: string) => void;
 };
 
 // Multi-click detection thresholds. 500ms is the macOS default; a small
@@ -506,8 +507,13 @@ function processKeysInBatch(app: App, items: ParsedInput[], _unused1: undefined,
     const event = new InputEvent(item);
     app.internal_eventEmitter.emit('input', event);
 
-    // Also dispatch through the DOM tree so onKeyDown handlers fire.
-    app.props.dispatchKeyboardEvent(item);
+    // Preserve the existing input stream. The newer Ink DOM protocol sends
+    // pasted content as one PasteEvent, rather than a synthetic keydown.
+    if (item.isPasted) {
+      app.props.dispatchPasteEvent(item.sequence ?? '');
+    } else {
+      app.props.dispatchKeyboardEvent(item);
+    }
   }
 }
 

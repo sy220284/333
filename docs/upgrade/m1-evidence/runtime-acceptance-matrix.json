@@ -1,0 +1,1062 @@
+{
+  "schema": 1,
+  "target_version": "2.1.317",
+  "source": "docs/upgrade/upgrade-coverage.json",
+  "evidence_source": "docs/upgrade/m1-evidence/verified-runtime-evidence.json",
+  "summary": {
+    "features": 102,
+    "scenarios": 84,
+    "evidence_linked": 2,
+    "formally_accepted": 0
+  },
+  "note": "evidence_linked 仅表示已有指向具体功能的测试证据，正式完成须以功能全链路、官方 x64 对照及 新版功能链 签收为准",
+  "features": [
+    {
+      "id": "F001",
+      "title": "交互式终端聊天",
+      "status": "UNVERIFIED",
+      "scenario_count": 4,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F002",
+      "title": "一次性 `-p` 执行",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F003",
+      "title": "JSON、stream-json 非交互",
+      "status": "UNVERIFIED",
+      "scenario_count": 3,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F004",
+      "title": "会话恢复与历史选择",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F005",
+      "title": "清空、压缩上下文",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F006",
+      "title": "会话导出、分享",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F007",
+      "title": "任务计划与审批",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F008",
+      "title": "交互式追问",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F009",
+      "title": "TUI 会话、全屏与 Diff",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F010",
+      "title": "撤销和回退",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F011",
+      "title": "主题、键位、Vim 设置",
+      "status": "UNVERIFIED",
+      "scenario_count": 3,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F012",
+      "title": "状态栏与用量",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F013",
+      "title": "语音输入",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F014",
+      "title": "多目录项目与 Worktree",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F015",
+      "title": "Agent 模型-工具循环",
+      "status": "UNVERIFIED",
+      "scenario_count": 4,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F016",
+      "title": "流式块与思考内容",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F017",
+      "title": "模型选择、切换及上下文能力",
+      "status": "UNVERIFIED",
+      "scenario_count": 3,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F018",
+      "title": "可扩展模型适配",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F019",
+      "title": "登录、凭证与刷新",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F020",
+      "title": "限流、重试、取消",
+      "status": "UNVERIFIED",
+      "scenario_count": 3,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F021",
+      "title": "提示词缓存、用量",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F022",
+      "title": "动态主系统提示词",
+      "status": "UNVERIFIED",
+      "scenario_count": 3,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F023",
+      "title": "长上下文压缩与恢复",
+      "status": "UNVERIFIED",
+      "scenario_count": 3,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F024",
+      "title": "自动记忆与召回",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F025",
+      "title": "Dream 记忆去重/合并",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F026",
+      "title": "执行状态存储和崩溃恢复",
+      "status": "UNVERIFIED",
+      "scenario_count": 7,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F027",
+      "title": "运行成本与令牌统计",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F028",
+      "title": "Read 文件/多格式阅读",
+      "status": "UNVERIFIED",
+      "scenario_count": 4,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F029",
+      "title": "Write 文件",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F030",
+      "title": "Edit 原位编辑",
+      "status": "UNVERIFIED",
+      "scenario_count": 3,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F031",
+      "title": "Glob/Grep 搜索",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F032",
+      "title": "Bash 命令与进程",
+      "status": "UNVERIFIED",
+      "scenario_count": 5,
+      "evidence": [
+        {
+          "source": "https://github.com/sy220284/333/actions/runs/41439617990",
+          "result": "success",
+          "scope": "Bash sed -i 预览/写回与跨平台专项；不覆盖全部 Bash 场景"
+        },
+        {
+          "source": "tests/sed-edit-write-integration.test.ts",
+          "result": "included-in-cross-platform-ci",
+          "scope": "BashTool.call 实际文件落盘"
+        }
+      ],
+      "next_checks": [
+        "E08 软链接及越界路径",
+        "E23 大输出和进程生命周期",
+        "E46 多后端监控",
+        "E60 权限规则"
+      ]
+    },
+    {
+      "id": "F033",
+      "title": "PowerShell",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F034",
+      "title": "Notebook 编辑",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [
+        {
+          "source": "docs/upgrade/m1-evidence/F034-Notebook-官方x64-E41实测.json",
+          "result": "official-x64-observed",
+          "scope": "官方 2.1.310 x64 Notebook 单元格读→编辑→读 E41"
+        },
+        {
+          "source": "https://github.com/sy220284/333/actions/runs/41439617990",
+          "result": "success",
+          "scope": "候选版 E41、Notebook 编辑跨平台测试"
+        }
+      ],
+      "next_checks": [
+        "Notebook 异常中断/历史恢复",
+        "文件软链接/权限和并发全局边界",
+        "新版功能链和场景签收"
+      ]
+    },
+    {
+      "id": "F035",
+      "title": "LSP 语义查询",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F036",
+      "title": "网络检索与网页读取",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F037",
+      "title": "Chrome/浏览器交互",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F038",
+      "title": "Git 提交、推送、PR",
+      "status": "UNVERIFIED",
+      "scenario_count": 3,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F039",
+      "title": "工具发现与 Schema",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F040",
+      "title": "工具截断、错误、取消",
+      "status": "UNVERIFIED",
+      "scenario_count": 3,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F041",
+      "title": "权限模式与细粒度规则",
+      "status": "UNVERIFIED",
+      "scenario_count": 5,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F042",
+      "title": "自动权限分类器",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F043",
+      "title": "自动模式 HARD/SOFT/ALLOW 分级",
+      "status": "UNVERIFIED",
+      "scenario_count": 6,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F044",
+      "title": "后台消息身份防伪",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F045",
+      "title": "定时任务身份防伪",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F046",
+      "title": "Worker 回传不构成授权",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F047",
+      "title": "不可信页面/项目文件指令隔离",
+      "status": "UNVERIFIED",
+      "scenario_count": 5,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F048",
+      "title": "浏览器/CI/外网外传保护",
+      "status": "UNVERIFIED",
+      "scenario_count": 4,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F049",
+      "title": "工作区沙盒与软链保护",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F050",
+      "title": "破坏性操作/共享资源审批",
+      "status": "UNVERIFIED",
+      "scenario_count": 4,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F051",
+      "title": "技能加载与调用",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F052",
+      "title": "插件安装、管理、卸载",
+      "status": "UNVERIFIED",
+      "scenario_count": 4,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F053",
+      "title": "MCP 资源与工具",
+      "status": "UNVERIFIED",
+      "scenario_count": 3,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F054",
+      "title": "生命周期 Hook 与失败处理",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F055",
+      "title": "SDK 集成",
+      "status": "UNVERIFIED",
+      "scenario_count": 3,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F056",
+      "title": "协调者分配、验证与 Agent 管理",
+      "status": "UNVERIFIED",
+      "scenario_count": 7,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F057",
+      "title": "Worker 分工、提交隔离",
+      "status": "UNVERIFIED",
+      "scenario_count": 7,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F058",
+      "title": "Fork 独立任务上下文",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F059",
+      "title": "Observer 只读旁路",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F060",
+      "title": "自动执行模式",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F061",
+      "title": "可选定时执行入口",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F062",
+      "title": "后台工作、任务列表、输出文件与恢复",
+      "status": "UNVERIFIED",
+      "scenario_count": 6,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F063",
+      "title": "工作流内部返回型 Agent",
+      "status": "UNVERIFIED",
+      "scenario_count": 4,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F064",
+      "title": "验证 Agent 与安全审查",
+      "status": "UNVERIFIED",
+      "scenario_count": 5,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F065",
+      "title": "IDE 关联编辑器",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F066",
+      "title": "远程 Bridge 与配对",
+      "status": "UNVERIFIED",
+      "scenario_count": 3,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F067",
+      "title": "WebSocket/SSE",
+      "status": "UNVERIFIED",
+      "scenario_count": 3,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F068",
+      "title": "桌面与移动平台入口",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F069",
+      "title": "后台工作树分离",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F070",
+      "title": "容器重启旧进程状态",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F071",
+      "title": "`/btw` 一次性侧问",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F072",
+      "title": "“You should know” 即时提示",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F073",
+      "title": "Artifact 评论分析",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F074",
+      "title": "Artifact 评论无工具回复",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F075",
+      "title": "Artifact 模板与页面",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F076",
+      "title": "浏览器与 Claude Test 附件",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F077",
+      "title": "设计系统同步附件",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F078",
+      "title": "下一句话预测",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F079",
+      "title": "诊断和环境检查",
+      "status": "UNVERIFIED",
+      "scenario_count": 3,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F080",
+      "title": "日志、隐私和性能统计",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F081",
+      "title": "Monitor 工具及插件监控",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F082",
+      "title": "动态 Workflows 引擎",
+      "status": "UNVERIFIED",
+      "scenario_count": 6,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F083",
+      "title": "Workflow 任务日志与恢复",
+      "status": "UNVERIFIED",
+      "scenario_count": 3,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F084",
+      "title": "Mods 的深度插件 API",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F085",
+      "title": "自动模式环境引导",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F086",
+      "title": "空闲压缩与小窗口模型切换",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F087",
+      "title": "跨提供者协议退让",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F088",
+      "title": "全屏 TUI Diff 与快捷键终态",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F089",
+      "title": "Agent 后台生命周期与模型继承",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F090",
+      "title": "安全事件可审计",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F091",
+      "title": "云端启用技能与插件同步",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F092",
+      "title": "非交互 MCP 询问超时",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F093",
+      "title": "受限工作区模式 `--restricted`",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F094",
+      "title": "安全诊断启动 `--safe-mode`",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F095",
+      "title": "CLI 后台任务全生命周期",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F096",
+      "title": "无人值守权限回答策略",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F097",
+      "title": "系统提示快照与动态分界",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F098",
+      "title": "SDK/headless 事件拓展",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F099",
+      "title": "云端/桌面和迁移会话入口",
+      "status": "UNVERIFIED",
+      "scenario_count": 1,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F100",
+      "title": "扩展装载、迁移及管理 CLI",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F101",
+      "title": "**新版普通本地代码审查 `/code-review`**",
+      "status": "UNVERIFIED",
+      "scenario_count": 3,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    },
+    {
+      "id": "F102",
+      "title": "**云端 Ultrareview 与本地 Ultra 级深审分流**",
+      "status": "UNVERIFIED",
+      "scenario_count": 2,
+      "evidence": [],
+      "next_checks": [
+        "待建立新版原版执行对照与产品入口回归证据"
+      ]
+    }
+  ]
+}

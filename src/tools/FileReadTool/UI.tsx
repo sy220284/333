@@ -133,12 +133,6 @@ export function renderToolResultMessage(output: Output): React.ReactNode {
           </Text>
         </MessageResponse>;
       }
-    case 'file_unchanged':
-      {
-        return <MessageResponse height={1}>
-          <Text dimColor>Unchanged since last read</Text>
-        </MessageResponse>;
-      }
   }
 }
 export function renderToolUseErrorMessage(result: ToolResultBlockParam['content'], {

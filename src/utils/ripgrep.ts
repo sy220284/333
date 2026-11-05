@@ -1,4 +1,10 @@
-import type { ChildProcess, ExecFileException } from 'child_process'
+import type { ChildProcess } from 'child_process'
+// The embedded rg path constructs process errors; native execFile also
+// returns errors. Only these fields are used by the retry classification.
+type RipgrepExecutionError = Error & {
+  code?: string | number | null
+  signal?: NodeJS.Signals | null
+}
 import { execFile, spawn } from 'child_process'
 import memoize from 'lodash-es/memoize.js'
 import { homedir } from 'os'
@@ -6,6 +12,7 @@ import * as path from 'path'
 import { logEvent } from 'src/services/analytics/index.js'
 import { fileURLToPath } from 'url'
 import { isInBundledMode } from './bundledMode.js'
+import { resolvePackagedRipgrep } from './ripgrepVendor317.ts'
 import { logForDebugging } from './debug.js'
 import { isEnvDefinedFalsy } from './envUtils.js'
 import { execFileNoThrow } from './execFileNoThrow.js'
@@ -13,6 +20,10 @@ import { findExecutable } from './findExecutable.js'
 import { logError } from './log.js'
 import { getPlatform } from './platform.js'
 import { countCharInString } from './stringUtils.js'
+import {
+  classifyRipgrepFailure,
+  classifyRipgrepProcessExit,
+} from './ripgrepResultPolicy.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 // we use node:path.join instead of node:url.resolve because the former doesn't encode spaces
@@ -44,8 +55,24 @@ const getRipgrepConfig = memoize((): RipgrepConfig => {
     }
   }
 
-  // In bundled (native) mode, ripgrep is statically compiled into bun-internal
-  // and dispatches based on argv[0]. We spawn ourselves with argv0='rg'.
+  // Prefer the verified physical vendor shipped beside the executable.
+  // Native Bun compilation exposes /$bunfs/root virtual module paths that
+  // cannot be passed to spawn()/execFile(). The process location may differ
+  // from Bun's internal runtime, so inspect physical entrypoints as well.
+  const packaged = resolvePackagedRipgrep({
+    execPath: process.execPath,
+    argv0: process.argv[0],
+    scriptPath: process.argv[1],
+    modulePath: __filename,
+    arch: process.arch,
+    platform: process.platform,
+  })
+  if (packaged.path) {
+    return { mode: 'builtin', command: packaged.path, args: [] }
+  }
+
+  // Official native releases can embed their own argv0='rg' dispatcher.
+  // Only use that mode when there is no standalone external vendor resource.
   if (isInBundledMode()) {
     return {
       mode: 'embedded',
@@ -55,13 +82,13 @@ const getRipgrepConfig = memoize((): RipgrepConfig => {
     }
   }
 
-  const rgRoot = path.resolve(__dirname, 'vendor', 'ripgrep')
-  const command =
-    process.platform === 'win32'
-      ? path.resolve(rgRoot, `${process.arch}-win32`, 'rg.exe')
-      : path.resolve(rgRoot, `${process.arch}-${process.platform}`, 'rg')
-
-  return { mode: 'builtin', command, args: [] }
+  // A missing dependency is a packaging error, not "zero search results".
+  // Refuse to execute paths inside $bunfs or an untrusted cwd/PATH.
+  throw new Error(
+    'Packaged ripgrep executable is missing for ' +
+    process.arch + '-' + process.platform + '; checked: ' +
+    packaged.candidates.join(', '),
+  )
 })
 
 export function ripgrepCommand(): {
@@ -105,12 +132,23 @@ export class RipgrepTimeoutError extends Error {
   }
 }
 
+/** A non-timeout ripgrep failure with incomplete or unusable results. */
+export class RipgrepIncompleteError extends Error {
+  constructor(
+    message: string,
+    public readonly partialResults: string[],
+  ) {
+    super(message)
+    this.name = 'RipgrepIncompleteError'
+  }
+}
+
 function ripGrepRaw(
   args: string[],
   target: string,
   abortSignal: AbortSignal,
   callback: (
-    error: ExecFileException | null,
+    error: RipgrepExecutionError | null,
     stdout: string,
     stderr: string,
   ) => void,
@@ -172,34 +210,66 @@ function ripGrepRaw(
     // escalate to SIGKILL which cannot be caught or ignored.
     // On Windows, child.kill('SIGTERM') throws; use default signal.
     let killTimeoutId: ReturnType<typeof setTimeout> | undefined
+    let settled = false
+    let timedOut = false
     const timeoutId = setTimeout(() => {
+      if (settled) return
+      timedOut = true
       if (process.platform === 'win32') {
         child.kill()
       } else {
         child.kill('SIGTERM')
-        killTimeoutId = setTimeout(c => c.kill('SIGKILL'), 5_000, child)
       }
+      // A killed child may never emit close (observed on Windows). After
+      // five seconds force the promise to settle as an incomplete search.
+      // Escalate on POSIX but do not depend on process termination to report.
+      killTimeoutId = setTimeout(() => {
+        if (settled) return
+        child.kill(process.platform === 'win32' ? undefined : 'SIGKILL')
+        settled = true
+        clearTimeout(timeoutId)
+        const error: RipgrepExecutionError = new Error(
+          'ripgrep did not close after its search deadline',
+        )
+        error.signal = 'SIGTERM'
+        child.stdout?.destroy()
+        child.stderr?.destroy()
+        callback(error, stdout, stderr)
+      }, 5_000)
     }, timeout)
 
-    // On Windows, both 'close' and 'error' can fire for the same process
-    // (e.g. when AbortSignal kills the child). Guard against double-callback.
-    let settled = false
+    // Windows can fire both close and error; only the first settles.
+    // A child terminated by the deadline can still exit 0/1. Never treat
+    // that partial scan (or an output buffer overrun) as a full result set.
     child.on('close', (code, signal) => {
       if (settled) return
       settled = true
       clearTimeout(timeoutId)
       clearTimeout(killTimeoutId)
-      if (code === 0 || code === 1) {
-        // 0 = matches found, 1 = no matches (both are success)
+      const outcome = classifyRipgrepProcessExit({
+        code,
+        signal,
+        timedOut,
+        stdoutTruncated,
+        stderrTruncated,
+        wasAborted: abortSignal.aborted,
+      })
+      if (outcome === 'complete') {
         callback(null, stdout, stderr)
-      } else {
-        const error: ExecFileException = new Error(
-          `ripgrep exited with code ${code}`,
-        )
+        return
+      }
+      const error: RipgrepExecutionError = new Error(
+        `ripgrep exited with ${outcome} (code ${code})`,
+      )
+      if (outcome === 'timeout') error.signal = 'SIGTERM'
+      else if (outcome === 'overflow') {
+        error.code = 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER'
+      } else if (outcome === 'cancelled') error.code = 'ABORT_ERR'
+      else {
         error.code = code ?? undefined
         error.signal = signal ?? undefined
-        callback(error, stdout, stderr)
       }
+      callback(error, stdout, stderr)
     })
 
     child.on('error', (err: NodeJS.ErrnoException) => {
@@ -207,7 +277,7 @@ function ripGrepRaw(
       settled = true
       clearTimeout(timeoutId)
       clearTimeout(killTimeoutId)
-      const error: ExecFileException = err
+      const error: RipgrepExecutionError = err
       callback(error, stdout, stderr)
     })
 
@@ -356,7 +426,7 @@ export async function ripGrep(
 
   return new Promise((resolve, reject) => {
     const handleResult = (
-      error: ExecFileException | null,
+      error: RipgrepExecutionError | null,
       stdout: string,
       stderr: string,
       isRetry: boolean,
@@ -441,19 +511,23 @@ export async function ripGrep(
         logError(error)
       }
 
-      // If we timed out with no results, throw an error so Claude knows the search
-      // didn't complete rather than thinking there were no matches
-      if (isTimeout && lines.length === 0) {
-        reject(
-          new RipgrepTimeoutError(
-            `Ripgrep search timed out after ${getPlatform() === 'wsl' ? 60 : 20} seconds. The search may have matched files but did not complete in time. Try searching a more specific path or pattern.`,
-            lines,
-          ),
-        )
-        return
+      // 2.1.317: An incomplete rg scan is NEVER a successful search.
+      // Previously, timeouts with some stdout returned lines as if they were
+      // exhaustive; both Grep and Glob then silently missed remaining files.
+      const failure = classifyRipgrepFailure({
+        isTimeout,
+        isBufferOverflow,
+        wasAborted: abortSignal.aborted,
+        partialResults: lines,
+      })
+      if (failure.kind === 'cancelled') {
+        reject(error)
+      } else if (failure.kind === 'timeout') {
+        reject(new RipgrepTimeoutError(failure.message, lines))
+      } else {
+        reject(new RipgrepIncompleteError(failure.message, lines))
       }
-
-      resolve(lines)
+      return
     }
 
     ripGrepRaw(args, target, abortSignal, (error, stdout, stderr) => {

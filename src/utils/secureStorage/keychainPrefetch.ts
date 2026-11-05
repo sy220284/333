@@ -114,3 +114,14 @@ export function getLegacyApiKeyPrefetchResult(): {
 export function clearLegacyApiKeyPrefetch(): void {
   legacyApiKeyPrefetch = null
 }
+
+/**
+ * Warm spare/preload handoff can change credentials and their storage scope.
+ * Wait for the old prefetch to finish, then make the next session perform a
+ * fresh read. Waiting also prevents late writes from the old prefetch.
+ */
+export async function resetKeychainPrefetchForClaim317(): Promise<void> {
+  await ensureKeychainPrefetchCompleted()
+  legacyApiKeyPrefetch = null
+  prefetchPromise = null
+}

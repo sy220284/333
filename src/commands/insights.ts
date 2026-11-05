@@ -1,6 +1,6 @@
 import { execFileSync } from 'child_process'
 import { diffLines } from 'diff'
-import { constants as fsConstants } from 'fs'
+import { constants as fsConstants, type Dirent } from 'node:fs'
 import {
   copyFile,
   mkdir,
@@ -17,7 +17,6 @@ import type { Command } from '../commands.js'
 import { queryWithModel } from '../services/api/claude.js'
 import {
   AGENT_TOOL_NAME,
-  LEGACY_AGENT_TOOL_NAME,
 } from '../tools/AgentTool/constants.js'
 import type { LogOption } from '../types/logs.js'
 import { getClaudeConfigHomeDir } from '../utils/envUtils.js'
@@ -120,7 +119,7 @@ const collectFromRemoteHost: (
           }
 
           const projectsDir = join(tempDir, 'projects')
-          let projectDirents: Awaited<ReturnType<typeof readdir>>
+          let projectDirents: Dirent<string>[]
           try {
             projectDirents = await readdir(projectsDir, { withFileTypes: true })
           } catch {
@@ -146,7 +145,7 @@ const collectFromRemoteHost: (
               }
 
               // Copy session files (skip existing)
-              let files: Awaited<ReturnType<typeof readdir>>
+              let files: Dirent<string>[]
               try {
                 files = await readdir(projectPath, { withFileTypes: true })
               } catch {
@@ -541,8 +540,7 @@ function extractToolStats(log: LogOption): {
 
             // Check for special tool usage
             if (
-              toolName === AGENT_TOOL_NAME ||
-              toolName === LEGACY_AGENT_TOOL_NAME
+              toolName === AGENT_TOOL_NAME
             )
               usesTaskAgent = true
             if (toolName.startsWith('mcp__')) usesMcp = true
@@ -1841,7 +1839,7 @@ function generateBarChart(
       .slice(0, maxItems)
   }
 
-  if (entries.length === 0) return '<p class="empty">No data</p>'
+  if (entries.length === 0) return '<p class="empty">暂无数据</p>'
 
   const maxVal = Math.max(...entries.map(e => e[1]))
   return entries
@@ -1861,7 +1859,7 @@ function generateBarChart(
 }
 
 function generateResponseTimeHistogram(times: number[]): string {
-  if (times.length === 0) return '<p class="empty">No response time data</p>'
+  if (times.length === 0) return '<p class="empty">暂无响应时间数据</p>'
 
   // Create buckets (matching Python reference)
   const buckets: Record<string, number> = {
@@ -1885,7 +1883,7 @@ function generateResponseTimeHistogram(times: number[]): string {
   }
 
   const maxVal = Math.max(...Object.values(buckets))
-  if (maxVal === 0) return '<p class="empty">No response time data</p>'
+  if (maxVal === 0) return '<p class="empty">暂无响应时间数据</p>'
 
   return Object.entries(buckets)
     .map(([label, count]) => {
@@ -1900,14 +1898,14 @@ function generateResponseTimeHistogram(times: number[]): string {
 }
 
 function generateTimeOfDayChart(messageHours: number[]): string {
-  if (messageHours.length === 0) return '<p class="empty">No time data</p>'
+  if (messageHours.length === 0) return '<p class="empty">暂无时间数据</p>'
 
   // Group into time periods
   const periods = [
-    { label: 'Morning (6-12)', range: [6, 7, 8, 9, 10, 11] },
-    { label: 'Afternoon (12-18)', range: [12, 13, 14, 15, 16, 17] },
-    { label: 'Evening (18-24)', range: [18, 19, 20, 21, 22, 23] },
-    { label: 'Night (0-6)', range: [0, 1, 2, 3, 4, 5] },
+    { label: '上午（6—12 时）', range: [6, 7, 8, 9, 10, 11] },
+    { label: '下午（12—18 时）', range: [12, 13, 14, 15, 16, 17] },
+    { label: '晚上（18—24 时）', range: [18, 19, 20, 21, 22, 23] },
+    { label: '凌晨（0—6 时）', range: [0, 1, 2, 3, 4, 5] },
   ]
 
   const hourCounts: Record<number, number> = {}
@@ -1967,12 +1965,12 @@ function generateHtmlReport(
   const atAGlanceHtml = atAGlance
     ? `
     <div class="at-a-glance">
-      <div class="glance-title">At a Glance</div>
+      <div class="glance-title">一览</div>
       <div class="glance-sections">
-        ${atAGlance.whats_working ? `<div class="glance-section"><strong>What's working:</strong> ${escapeHtmlWithBold(atAGlance.whats_working)} <a href="#section-wins" class="see-more">Impressive Things You Did →</a></div>` : ''}
-        ${atAGlance.whats_hindering ? `<div class="glance-section"><strong>What's hindering you:</strong> ${escapeHtmlWithBold(atAGlance.whats_hindering)} <a href="#section-friction" class="see-more">Where Things Go Wrong →</a></div>` : ''}
-        ${atAGlance.quick_wins ? `<div class="glance-section"><strong>Quick wins to try:</strong> ${escapeHtmlWithBold(atAGlance.quick_wins)} <a href="#section-features" class="see-more">Features to Try →</a></div>` : ''}
-        ${atAGlance.ambitious_workflows ? `<div class="glance-section"><strong>Ambitious workflows:</strong> ${escapeHtmlWithBold(atAGlance.ambitious_workflows)} <a href="#section-horizon" class="see-more">On the Horizon →</a></div>` : ''}
+        ${atAGlance.whats_working ? `<div class="glance-section"><strong>有效的做法：</strong> ${escapeHtmlWithBold(atAGlance.whats_working)} <a href="#section-wins" class="see-more">已完成的亮眼成果 →</a></div>` : ''}
+        ${atAGlance.whats_hindering ? `<div class="glance-section"><strong>当前阻碍：</strong> ${escapeHtmlWithBold(atAGlance.whats_hindering)} <a href="#section-friction" class="see-more">问题发生的位置 →</a></div>` : ''}
+        ${atAGlance.quick_wins ? `<div class="glance-section"><strong>可以立即尝试的改进：</strong> ${escapeHtmlWithBold(atAGlance.quick_wins)} <a href="#section-features" class="see-more">值得尝试的功能 →</a></div>` : ''}
+        ${atAGlance.ambitious_workflows ? `<div class="glance-section"><strong>进阶工作流：</strong> ${escapeHtmlWithBold(atAGlance.ambitious_workflows)} <a href="#section-horizon" class="see-more">未来方向 →</a></div>` : ''}
       </div>
     </div>
     `
@@ -1983,7 +1981,7 @@ function generateHtmlReport(
   const projectAreasHtml =
     projectAreas.length > 0
       ? `
-    <h2 id="section-work">What You Work On</h2>
+    <h2 id="section-work">你的工作内容</h2>
     <div class="project-areas">
       ${projectAreas
         .map(
@@ -1991,7 +1989,7 @@ function generateHtmlReport(
         <div class="project-area">
           <div class="area-header">
             <span class="area-name">${escapeHtml(area.name)}</span>
-            <span class="area-count">~${area.session_count} sessions</span>
+            <span class="area-count">约 ${area.session_count} 个会话</span>
           </div>
           <div class="area-desc">${escapeHtml(area.description)}</div>
         </div>
@@ -2006,10 +2004,10 @@ function generateHtmlReport(
   const interactionStyle = insights.interaction_style
   const interactionHtml = interactionStyle?.narrative
     ? `
-    <h2 id="section-usage">How You Use Claude Code</h2>
+    <h2 id="section-usage">Claude Code 使用方式</h2>
     <div class="narrative">
       ${markdownToHtml(interactionStyle.narrative)}
-      ${interactionStyle.key_pattern ? `<div class="key-insight"><strong>Key pattern:</strong> ${escapeHtml(interactionStyle.key_pattern)}</div>` : ''}
+      ${interactionStyle.key_pattern ? `<div class="key-insight"><strong>主要使用特点：</strong> ${escapeHtml(interactionStyle.key_pattern)}</div>` : ''}
     </div>
     `
     : ''
@@ -2019,7 +2017,7 @@ function generateHtmlReport(
   const whatWorksHtml =
     whatWorks?.impressive_workflows && whatWorks.impressive_workflows.length > 0
       ? `
-    <h2 id="section-wins">Impressive Things You Did</h2>
+    <h2 id="section-wins">已完成的亮眼成果</h2>
     ${whatWorks.intro ? `<p class="section-intro">${escapeHtml(whatWorks.intro)}</p>` : ''}
     <div class="big-wins">
       ${whatWorks.impressive_workflows
@@ -2041,7 +2039,7 @@ function generateHtmlReport(
   const frictionHtml =
     frictionAnalysis?.categories && frictionAnalysis.categories.length > 0
       ? `
-    <h2 id="section-friction">Where Things Go Wrong</h2>
+    <h2 id="section-friction">遇到的困难</h2>
     ${frictionAnalysis.intro ? `<p class="section-intro">${escapeHtml(frictionAnalysis.intro)}</p>` : ''}
     <div class="friction-categories">
       ${frictionAnalysis.categories
@@ -2067,12 +2065,12 @@ function generateHtmlReport(
       suggestions.claude_md_additions &&
       suggestions.claude_md_additions.length > 0
         ? `
-    <h2 id="section-features">Existing CC Features to Try</h2>
+    <h2 id="section-features">值得尝试的现有功能</h2>
     <div class="claude-md-section">
-      <h3>Suggested CLAUDE.md Additions</h3>
-      <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Just copy this into Claude Code to add it to your CLAUDE.md.</p>
+      <h3>建议补充的 CLAUDE.md 内容</h3>
+      <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">复制以下内容到 Claude Code，即可添加到 CLAUDE.md。</p>
       <div class="claude-md-actions">
-        <button class="copy-all-btn" onclick="copyAllCheckedClaudeMd()">Copy All Checked</button>
+        <button class="copy-all-btn" onclick="copyAllCheckedClaudeMd()">复制所有已勾选项目</button>
       </div>
       ${suggestions.claude_md_additions
         .map(
@@ -2103,7 +2101,7 @@ function generateHtmlReport(
         <div class="feature-card">
           <div class="feature-title">${escapeHtml(feat.feature || '')}</div>
           <div class="feature-oneliner">${escapeHtml(feat.one_liner || '')}</div>
-          <div class="feature-why"><strong>Why for you:</strong> ${escapeHtml(feat.why_for_you || '')}</div>
+          <div class="feature-why"><strong>推荐原因：</strong> ${escapeHtml(feat.why_for_you || '')}</div>
           ${
             feat.example_code
               ? `
@@ -2129,7 +2127,7 @@ function generateHtmlReport(
     ${
       suggestions.usage_patterns && suggestions.usage_patterns.length > 0
         ? `
-    <h2 id="section-patterns">New Ways to Use Claude Code</h2>
+    <h2 id="section-patterns">Claude Code 的新用法</h2>
     <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Just copy this into Claude Code and it'll walk you through it.</p>
     <div class="patterns-section">
       ${suggestions.usage_patterns
@@ -2168,7 +2166,7 @@ function generateHtmlReport(
   const horizonHtml =
     horizonData?.opportunities && horizonData.opportunities.length > 0
       ? `
-    <h2 id="section-horizon">On the Horizon</h2>
+    <h2 id="section-horizon">下一步方向</h2>
     ${horizonData.intro ? `<p class="section-intro">${escapeHtml(horizonData.intro)}</p>` : ''}
     <div class="horizon-section">
       ${horizonData.opportunities
@@ -2177,7 +2175,7 @@ function generateHtmlReport(
         <div class="horizon-card">
           <div class="horizon-title">${escapeHtml(opp.title || '')}</div>
           <div class="horizon-possible">${escapeHtml(opp.whats_possible || '')}</div>
-          ${opp.how_to_try ? `<div class="horizon-tip"><strong>Getting started:</strong> ${escapeHtml(opp.how_to_try)}</div>` : ''}
+          ${opp.how_to_try ? `<div class="horizon-tip"><strong>如何开始：</strong> ${escapeHtml(opp.how_to_try)}</div>` : ''}
           ${opp.copyable_prompt ? `<div class="pattern-prompt"><div class="prompt-label">Paste into Claude Code:</div><code>${escapeHtml(opp.copyable_prompt)}</code><button class="copy-btn" onclick="copyText(this)">Copy</button></div>` : ''}
         </div>
       `,
@@ -2200,14 +2198,14 @@ function generateHtmlReport(
     ccImprovements.length > 0 || modelImprovements.length > 0
       ? `
     <h2 id="section-feedback" class="feedback-header">Closing the Loop: Feedback for Other Teams</h2>
-    <p class="feedback-intro">Suggestions for the CC product and model teams based on your usage patterns. Click to expand.</p>
+    <p class="feedback-intro">根据你的使用情况，为产品与模型团队整理的建议。点击展开查看。</p>
     ${
       ccImprovements.length > 0
         ? `
     <div class="collapsible-section">
       <div class="collapsible-header" onclick="toggleCollapsible(this)">
         <span class="collapsible-arrow">▶</span>
-        <h3>Product Improvements for CC Team</h3>
+        <h3>给 Claude Code 团队的产品改进建议</h3>
       </div>
       <div class="collapsible-content">
         <div class="suggestions-section">
@@ -2217,7 +2215,7 @@ function generateHtmlReport(
             <div class="feedback-card team-card">
               <div class="feedback-title">${escapeHtml(imp.title || '')}</div>
               <div class="feedback-detail">${escapeHtml(imp.detail || '')}</div>
-              ${imp.evidence ? `<div class="feedback-evidence"><em>Evidence:</em> ${escapeHtml(imp.evidence)}</div>` : ''}
+              ${imp.evidence ? `<div class="feedback-evidence"><em>依据：</em> ${escapeHtml(imp.evidence)}</div>` : ''}
             </div>
           `,
             )
@@ -2234,7 +2232,7 @@ function generateHtmlReport(
     <div class="collapsible-section">
       <div class="collapsible-header" onclick="toggleCollapsible(this)">
         <span class="collapsible-arrow">▶</span>
-        <h3>Model Behavior Improvements</h3>
+        <h3>模型行为改进建议</h3>
       </div>
       <div class="collapsible-content">
         <div class="suggestions-section">
@@ -2244,7 +2242,7 @@ function generateHtmlReport(
             <div class="feedback-card model-card">
               <div class="feedback-title">${escapeHtml(imp.title || '')}</div>
               <div class="feedback-detail">${escapeHtml(imp.detail || '')}</div>
-              ${imp.evidence ? `<div class="feedback-evidence"><em>Evidence:</em> ${escapeHtml(imp.evidence)}</div>` : ''}
+              ${imp.evidence ? `<div class="feedback-evidence"><em>依据：</em> ${escapeHtml(imp.evidence)}</div>` : ''}
             </div>
           `,
             )
@@ -2418,7 +2416,7 @@ function generateHtmlReport(
         navigator.clipboard.writeText(combined).then(() => {
           btn.textContent = 'Copied ' + texts.length + ' items!';
           btn.classList.add('copied');
-          setTimeout(() => { btn.textContent = 'Copy All Checked'; btn.classList.remove('copied'); }, 2000);
+          setTimeout(() => { btn.textContent = '复制所有已勾选项目'; btn.classList.remove('copied'); }, 2000);
         });
       }
     }
@@ -2426,10 +2424,10 @@ function generateHtmlReport(
     const rawHourCounts = ${hourCountsJson};
     function updateHourHistogram(offsetFromPT) {
       const periods = [
-        { label: "Morning (6-12)", range: [6,7,8,9,10,11] },
-        { label: "Afternoon (12-18)", range: [12,13,14,15,16,17] },
-        { label: "Evening (18-24)", range: [18,19,20,21,22,23] },
-        { label: "Night (0-6)", range: [0,1,2,3,4,5] }
+        { label: "上午（6—12 时）", range: [6,7,8,9,10,11] },
+        { label: "下午（12—18 时）", range: [12,13,14,15,16,17] },
+        { label: "晚上（18—24 时）", range: [18,19,20,21,22,23] },
+        { label: "凌晨（0—6 时）", range: [0,1,2,3,4,5] }
       ];
       const adjustedCounts = {};
       for (const [hour, count] of Object.entries(rawHourCounts)) {
@@ -2482,59 +2480,59 @@ function generateHtmlReport(
   `
 
   return `<!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <title>Claude Code Insights</title>
+  <title>Claude Code 使用分析</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>${css}</style>
 </head>
 <body>
   <div class="container">
-    <h1>Claude Code Insights</h1>
-    <p class="subtitle">${data.total_messages.toLocaleString()} messages across ${data.total_sessions} sessions${data.total_sessions_scanned && data.total_sessions_scanned > data.total_sessions ? ` (${data.total_sessions_scanned.toLocaleString()} total)` : ''} | ${data.date_range.start} to ${data.date_range.end}</p>
+    <h1>Claude Code 使用分析</h1>
+    <p class="subtitle">${data.total_messages.toLocaleString()} 条消息，分布于 ${data.total_sessions} 个会话${data.total_sessions_scanned && data.total_sessions_scanned > data.total_sessions ? ` (${data.total_sessions_scanned.toLocaleString()} 总计)` : ''} | ${data.date_range.start} 至 ${data.date_range.end}</p>
 
     ${atAGlanceHtml}
 
     <nav class="nav-toc">
-      <a href="#section-work">What You Work On</a>
-      <a href="#section-usage">How You Use CC</a>
-      <a href="#section-wins">Impressive Things</a>
-      <a href="#section-friction">Where Things Go Wrong</a>
-      <a href="#section-features">Features to Try</a>
-      <a href="#section-patterns">New Usage Patterns</a>
-      <a href="#section-horizon">On the Horizon</a>
-      <a href="#section-feedback">Team Feedback</a>
+      <a href="#section-work">工作内容</a>
+      <a href="#section-usage">使用方式</a>
+      <a href="#section-wins">亮眼成果</a>
+      <a href="#section-friction">遇到的困难</a>
+      <a href="#section-features">功能建议</a>
+      <a href="#section-patterns">新用法</a>
+      <a href="#section-horizon">未来方向</a>
+      <a href="#section-feedback">团队反馈</a>
     </nav>
 
     <div class="stats-row">
-      <div class="stat"><div class="stat-value">${data.total_messages.toLocaleString()}</div><div class="stat-label">Messages</div></div>
-      <div class="stat"><div class="stat-value">+${data.total_lines_added.toLocaleString()}/-${data.total_lines_removed.toLocaleString()}</div><div class="stat-label">Lines</div></div>
-      <div class="stat"><div class="stat-value">${data.total_files_modified}</div><div class="stat-label">Files</div></div>
-      <div class="stat"><div class="stat-value">${data.days_active}</div><div class="stat-label">Days</div></div>
-      <div class="stat"><div class="stat-value">${data.messages_per_day}</div><div class="stat-label">Msgs/Day</div></div>
+      <div class="stat"><div class="stat-value">${data.total_messages.toLocaleString()}</div><div class="stat-label">消息数</div></div>
+      <div class="stat"><div class="stat-value">+${data.total_lines_added.toLocaleString()}/-${data.total_lines_removed.toLocaleString()}</div><div class="stat-label">代码行数</div></div>
+      <div class="stat"><div class="stat-value">${data.total_files_modified}</div><div class="stat-label">文件数</div></div>
+      <div class="stat"><div class="stat-value">${data.days_active}</div><div class="stat-label">天数</div></div>
+      <div class="stat"><div class="stat-value">${data.messages_per_day}</div><div class="stat-label">每日消息数</div></div>
     </div>
 
     ${projectAreasHtml}
 
     <div class="charts-row">
       <div class="chart-card">
-        <div class="chart-title">What You Wanted</div>
+        <div class="chart-title">你的需求</div>
         ${generateBarChart(data.goal_categories, '#2563eb')}
       </div>
       <div class="chart-card">
-        <div class="chart-title">Top Tools Used</div>
+        <div class="chart-title">常用工具</div>
         ${generateBarChart(data.tool_counts, '#0891b2')}
       </div>
     </div>
 
     <div class="charts-row">
       <div class="chart-card">
-        <div class="chart-title">Languages</div>
+        <div class="chart-title">编程语言</div>
         ${generateBarChart(data.languages, '#10b981')}
       </div>
       <div class="chart-card">
-        <div class="chart-title">Session Types</div>
+        <div class="chart-title">会话类型</div>
         ${generateBarChart(data.session_types || {}, '#8b5cf6')}
       </div>
     </div>
@@ -2543,7 +2541,7 @@ function generateHtmlReport(
 
     <!-- Response Time Distribution -->
     <div class="chart-card" style="margin: 24px 0;">
-      <div class="chart-title">User Response Time Distribution</div>
+      <div class="chart-title">用户响应时间分布</div>
       ${generateResponseTimeHistogram(data.user_response_times)}
       <div style="font-size: 12px; color: #64748b; margin-top: 8px;">
         Median: ${data.median_response_time.toFixed(1)}s &bull; Average: ${data.avg_response_time.toFixed(1)}s
@@ -2552,7 +2550,7 @@ function generateHtmlReport(
 
     <!-- Multi-clauding Section (matching Python reference) -->
     <div class="chart-card" style="margin: 24px 0;">
-      <div class="chart-title">Multi-Clauding (Parallel Sessions)</div>
+      <div class="chart-title">多会话并行使用</div>
       ${
         data.multi_clauding.overlap_events === 0
           ? `
@@ -2564,20 +2562,20 @@ function generateHtmlReport(
         <div style="display: flex; gap: 24px; margin: 12px 0;">
           <div style="text-align: center;">
             <div style="font-size: 24px; font-weight: 700; color: #7c3aed;">${data.multi_clauding.overlap_events}</div>
-            <div style="font-size: 11px; color: #64748b; text-transform: uppercase;">Overlap Events</div>
+            <div style="font-size: 11px; color: #64748b; text-transform: uppercase;">重叠事件</div>
           </div>
           <div style="text-align: center;">
             <div style="font-size: 24px; font-weight: 700; color: #7c3aed;">${data.multi_clauding.sessions_involved}</div>
-            <div style="font-size: 11px; color: #64748b; text-transform: uppercase;">Sessions Involved</div>
+            <div style="font-size: 11px; color: #64748b; text-transform: uppercase;">涉及会话数</div>
           </div>
           <div style="text-align: center;">
             <div style="font-size: 24px; font-weight: 700; color: #7c3aed;">${data.total_messages > 0 ? Math.round((100 * data.multi_clauding.user_messages_during) / data.total_messages) : 0}%</div>
-            <div style="font-size: 11px; color: #64748b; text-transform: uppercase;">Of Messages</div>
+            <div style="font-size: 11px; color: #64748b; text-transform: uppercase;">消息占比</div>
           </div>
         </div>
         <p style="font-size: 13px; color: #475569; margin-top: 12px;">
-          You run multiple Claude Code sessions simultaneously. Multi-clauding is detected when sessions
-          overlap in time, suggesting parallel workflows.
+          你同时运行多个 Claude Code 会话。系统通过会话时间重叠判断并行工作，
+          以了解同时推进的工作流。
         </p>
       `
       }
@@ -2587,22 +2585,22 @@ function generateHtmlReport(
     <div class="charts-row">
       <div class="chart-card">
         <div class="chart-title" style="display: flex; align-items: center; gap: 12px;">
-          User Messages by Time of Day
+          不同时段的用户消息数
           <select id="timezone-select" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0;">
             <option value="0">PT (UTC-8)</option>
             <option value="3">ET (UTC-5)</option>
-            <option value="8">London (UTC)</option>
+            <option value="8">伦敦（UTC）</option>
             <option value="9">CET (UTC+1)</option>
-            <option value="17">Tokyo (UTC+9)</option>
-            <option value="custom">Custom offset...</option>
+            <option value="17">东京（UTC+9）</option>
+            <option value="custom">自定义时差…</option>
           </select>
-          <input type="number" id="custom-offset" placeholder="UTC offset" style="display: none; width: 80px; font-size: 12px; padding: 4px; border-radius: 4px; border: 1px solid #e2e8f0;">
+          <input type="number" id="custom-offset" placeholder="UTC 时差" style="display: none; width: 80px; font-size: 12px; padding: 4px; border-radius: 4px; border: 1px solid #e2e8f0;">
         </div>
         ${generateTimeOfDayChart(data.message_hours)}
       </div>
       <div class="chart-card">
-        <div class="chart-title">Tool Errors Encountered</div>
-        ${Object.keys(data.tool_error_categories).length > 0 ? generateBarChart(data.tool_error_categories, '#dc2626') : '<p class="empty">No tool errors</p>'}
+        <div class="chart-title">工具错误统计</div>
+        ${Object.keys(data.tool_error_categories).length > 0 ? generateBarChart(data.tool_error_categories, '#dc2626') : '<p class="empty">没有工具错误</p>'}
       </div>
     </div>
 
@@ -2755,7 +2753,7 @@ type LiteSessionInfo = {
 async function scanAllSessions(): Promise<LiteSessionInfo[]> {
   const projectsDir = getProjectsDir()
 
-  let dirents: Awaited<ReturnType<typeof readdir>>
+  let dirents: Dirent<string>[]
   try {
     dirents = await readdir(projectsDir, { withFileTypes: true })
   } catch {
@@ -3039,9 +3037,9 @@ function safeKeys(obj: Record<string, unknown> | undefined | null): string[] {
 const usageReport: Command = {
   type: 'prompt',
   name: 'insights',
-  description: 'Generate a report analyzing your Claude Code sessions',
+  description: '生成 Claude Code 会话使用分析报告',
   contentLength: 0, // Dynamic content
-  progressMessage: 'analyzing your sessions',
+  progressMessage: '正在分析你的会话',
   source: 'builtin',
   async getPromptForCommand(args) {
     let collectRemote = false

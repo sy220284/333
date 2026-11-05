@@ -32,7 +32,7 @@ export function capitalize(str: string): string {
 export function plural(
   n: number,
   word: string,
-  pluralWord = word + 's',
+  pluralWord: string = word + 's',
 ): string {
   return n === 1 ? word : pluralWord
 }
@@ -54,7 +54,7 @@ export function firstLineOf(s: string): string {
 export function countCharInString(
   str: { indexOf(search: string, start?: number): number },
   char: string,
-  start = 0,
+  start: number = 0,
 ): number {
   let count = 0
   let i = str.indexOf(char, start)

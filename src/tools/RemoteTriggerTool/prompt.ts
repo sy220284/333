@@ -1,4 +1,4 @@
-export const REMOTE_TRIGGER_TOOL_NAME = 'RemoteTrigger'
+export const REMOTE_TRIGGER_TOOL_NAME: "RemoteTrigger" = 'RemoteTrigger'
 
 export const DESCRIPTION =
   'Manage scheduled remote Claude Code agents (triggers) via the claude.ai CCR API. Auth is handled in-process — the token never reaches the shell.'

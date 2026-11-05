@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "rule": "实测限定于证据覆盖的操作；完成状态由 docs/upgrade/upgrade-coverage.json 和 完整功能链和场景验收 统一确认，不自动修改",
+  "features": {
+    "F032": {
+      "scenarios": [],
+      "tests": [
+        {
+          "source": "https://github.com/sy220284/333/actions/runs/41439617990",
+          "result": "success",
+          "scope": "Bash sed -i 预览/写回与跨平台专项；不覆盖全部 Bash 场景"
+        },
+        {
+          "source": "tests/sed-edit-write-integration.test.ts",
+          "result": "included-in-cross-platform-ci",
+          "scope": "BashTool.call 实际文件落盘"
+        }
+      ],
+      "remaining": [
+        "E08 软链接及越界路径",
+        "E23 大输出和进程生命周期",
+        "E46 多后端监控",
+        "E60 权限规则"
+      ]
+    },
+    "F034": {
+      "scenarios": [
+        "E41"
+      ],
+      "tests": [
+        {
+          "source": "docs/upgrade/m1-evidence/F034-Notebook-官方x64-E41实测.json",
+          "result": "official-x64-observed",
+          "scope": "官方 2.1.310 x64 Notebook 单元格读→编辑→读 E41"
+        },
+        {
+          "source": "https://github.com/sy220284/333/actions/runs/41439617990",
+          "result": "success",
+          "scope": "候选版 E41、Notebook 编辑跨平台测试"
+        }
+      ],
+      "remaining": [
+        "Notebook 异常中断/历史恢复",
+        "文件软链接/权限和并发全局边界",
+        "新版功能链和场景签收"
+      ]
+    }
+  }
+}

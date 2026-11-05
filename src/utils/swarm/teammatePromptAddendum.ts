@@ -5,7 +5,7 @@
  * It explains visibility constraints and communication requirements.
  */
 
-export const TEAMMATE_SYSTEM_PROMPT_ADDENDUM = `
+export const TEAMMATE_SYSTEM_PROMPT_ADDENDUM: string = `
 # Agent Teammate Communication
 
 IMPORTANT: You are running as an agent in a team. To communicate with anyone on your team:

@@ -1,3 +1,4 @@
+import { getForcedHyperlinkSetting } from './hyperlinkEnvPolicy.ts'
 import supportsHyperlinksLib from 'supports-hyperlinks'
 
 // Additional terminals that support OSC 8 hyperlinks but aren't detected by supports-hyperlinks.
@@ -26,13 +27,15 @@ type SupportsHyperlinksOptions = {
 export function supportsHyperlinks(
   options?: SupportsHyperlinksOptions,
 ): boolean {
+  const env = options?.env ?? process.env
+  const forced = getForcedHyperlinkSetting(env)
+  if (forced !== null) return forced
+
   const stdoutSupported =
     options?.stdoutSupported ?? supportsHyperlinksLib.stdout
   if (stdoutSupported) {
     return true
   }
-
-  const env = options?.env ?? process.env
 
   // Check for additional terminals not detected by supports-hyperlinks
   const termProgram = env['TERM_PROGRAM']

@@ -47,7 +47,7 @@ import { spawnTeammate } from '../shared/spawnMultiAgent.js';
 import { setAgentColor } from './agentColorManager.js';
 import { agentToolResultSchema, classifyHandoffIfNeeded, emitTaskProgress, extractPartialResult, finalizeAgentTool, getLastToolUseName, runAsyncAgentLifecycle } from './agentToolUtils.js';
 import { GENERAL_PURPOSE_AGENT } from './built-in/generalPurposeAgent.js';
-import { AGENT_TOOL_NAME, LEGACY_AGENT_TOOL_NAME, ONE_SHOT_BUILTIN_AGENT_TYPES } from './constants.js';
+import { AGENT_TOOL_NAME, ONE_SHOT_BUILTIN_AGENT_TYPES } from './constants.js';
 import { buildForkedMessages, buildWorktreeNotice, FORK_AGENT, isForkSubagentEnabled, isInForkChild } from './forkSubagent.js';
 import type { AgentDefinition } from './loadAgentsDir.js';
 import { filterAgentsByMcpRequirements, hasRequiredMcpServers, isBuiltInAgent } from './loadAgentsDir.js';
@@ -96,7 +96,7 @@ const fullInputSchema = lazySchema(() => {
     mode: permissionModeSchema().optional().describe('Permission mode for spawned teammate (e.g., "plan" to require plan approval).')
   });
   return baseInputSchema().merge(multiAgentInputSchema).extend({
-    isolation: ("external" === 'ant' ? z.enum(['worktree', 'remote']) : z.enum(['worktree'])).optional().describe("external" === 'ant' ? 'Isolation mode. "worktree" creates a temporary git worktree so the agent works on an isolated copy of the repo. "remote" launches the agent in a remote CCR environment (always runs in background).' : 'Isolation mode. "worktree" creates a temporary git worktree so the agent works on an isolated copy of the repo.'),
+    isolation: (process.env.USER_TYPE === 'ant' ? z.enum(['worktree', 'remote']) : z.enum(['worktree'])).optional().describe(process.env.USER_TYPE === 'ant' ? 'Isolation mode. "worktree" creates a temporary git worktree so the agent works on an isolated copy of the repo. "remote" launches the agent in a remote CCR environment (always runs in background).' : 'Isolation mode. "worktree" creates a temporary git worktree so the agent works on an isolated copy of the repo.'),
     cwd: z.string().optional().describe('Absolute path to run the agent in. Overrides the working directory for all filesystem and shell operations within this agent. Mutually exclusive with isolation: "worktree".')
   });
 });
@@ -225,7 +225,6 @@ export const AgentTool = buildTool({
   },
   name: AGENT_TOOL_NAME,
   searchHint: 'delegate work to a subagent',
-  aliases: [LEGACY_AGENT_TOOL_NAME],
   maxResultSizeChars: 100_000,
   async description() {
     return 'Launch a new agent';
@@ -432,7 +431,7 @@ export const AgentTool = buildTool({
 
     // Remote isolation: delegate to CCR. Gated ant-only — the guard enables
     // dead code elimination of the entire block for external builds.
-    if ("external" === 'ant' && effectiveIsolation === 'remote') {
+    if (process.env.USER_TYPE === 'ant' && effectiveIsolation === 'remote') {
       const eligibility = await checkRemoteAgentEligibility();
       if (!eligibility.eligible) {
         const reasons = eligibility.errors.map(formatPreconditionError).join('\n');
@@ -522,7 +521,7 @@ export const AgentTool = buildTool({
         // Log agent memory loaded event for subagents
         if (selectedAgent.memory) {
           logEvent('tengu_agent_memory_loaded', {
-            ...("external" === 'ant' && {
+            ...(process.env.USER_TYPE === 'ant' && {
               agent_type: selectedAgent.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
             }),
             scope: selectedAgent.memory as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -687,6 +686,8 @@ export const AgentTool = buildTool({
       const asyncAgentId = earlyAgentId;
       const agentBackgroundTask = registerAsyncAgent({
         agentId: asyncAgentId,
+        parentAgentId: toolUseContext.agentId,
+        forkWorker: isForkPath,
         description,
         prompt,
         selectedAgent,
@@ -818,6 +819,8 @@ export const AgentTool = buildTool({
         if (!isBackgroundTasksDisabled) {
           const registration = registerAgentForeground({
             agentId: syncAgentId,
+            parentAgentId: toolUseContext.agentId,
+            forkWorker: isForkPath,
             description,
             prompt,
             selectedAgent,
@@ -1061,7 +1064,12 @@ export const AgentTool = buildTool({
               result
             } = raceResult;
             if (result.done) break;
+            // Async iterators may finish with a void return value. The
+            // progress and transcript paths below require a real Message.
             const message = result.value;
+            if (typeof message !== 'object' || message === null) {
+              throw new Error('Subagent stream yielded an invalid message before completion');
+            }
             agentMessages.push(message);
 
             // Emit task_progress for the VS Code subagent panel
@@ -1102,25 +1110,24 @@ export const AgentTool = buildTool({
             }
             const normalizedNew = normalizeMessages([message]);
             for (const m of normalizedNew) {
-              for (const content of m.message.content) {
-                if (content.type !== 'tool_use' && content.type !== 'tool_result') {
-                  continue;
-                }
-
-                // Forward progress updates
-                if (onProgress) {
-                  onProgress({
-                    toolUseID: `agent_${assistantMessage.message.id}`,
-                    data: {
-                      message: m,
-                      type: 'agent_progress',
-                      // prompt only needed on first progress message (UI.tsx:624
-                      // reads progressMessages[0]). Omit here to avoid duplication.
-                      prompt: '',
-                      agentId: syncAgentId
-                    }
-                  });
-                }
+              const toolContent = m.message.content.some(content =>
+                content.type === 'tool_use' || content.type === 'tool_result');
+              const readableContent = m.message.content.some(content =>
+                content.type === 'text' || content.type === 'thinking' || content.type === 'redacted_thinking');
+              // SDK hosts explicitly opt in to observing subagent prose and
+              // reasoning. One progress message per normalized subagent
+              // message prevents duplicate text when tools coexist with prose.
+              if (onProgress && (toolContent ||
+                  (toolUseContext.options.forwardSubagentText && readableContent))) {
+                onProgress({
+                  toolUseID: `agent_${assistantMessage.message.id}`,
+                  data: {
+                    message: m,
+                    type: 'agent_progress',
+                    prompt: '',
+                    agentId: syncAgentId
+                  }
+                });
               }
             }
           }
@@ -1283,8 +1290,8 @@ export const AgentTool = buildTool({
 
     // Only route through auto mode classifier when in auto mode
     // In all other modes, auto-approve sub-agent generation
-    // Note: "external" === 'ant' guard enables dead code elimination for external builds
-    if ("external" === 'ant' && appState.toolPermissionContext.mode === 'auto') {
+    // Note: process.env.USER_TYPE === 'ant' guard enables dead code elimination for external builds
+    if (process.env.USER_TYPE === 'ant' && appState.toolPermissionContext.mode === 'auto') {
       return {
         behavior: 'passthrough',
         message: 'Agent tool requires permission to spawn sub-agents.'

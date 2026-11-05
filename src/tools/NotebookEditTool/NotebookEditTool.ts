@@ -1,23 +1,31 @@
-import { feature } from 'bun:bundle'
-import { extname, isAbsolute, resolve } from 'path'
+import { extname, isAbsolute, resolve } from 'node:path'
 import {
   fileHistoryEnabled,
   fileHistoryTrackEdit,
 } from 'src/utils/fileHistory.js'
 import { z } from 'zod/v4'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { buildTool, type ToolDef, type ToolUseContext } from '../../Tool.js'
-import type { NotebookCell, NotebookContent } from '../../types/notebook.js'
+import type { NotebookContent } from '../../types/notebook.js'
 import { getCwd } from '../../utils/cwd.js'
 import { isENOENT } from '../../utils/errors.js'
+import { isEnvTruthy } from '../../utils/envUtils.js'
+import { processNotebookCellsForRead } from '../../utils/notebook.js'
 import { getFileModificationTime, writeTextContent } from '../../utils/file.js'
 import { readFileSyncWithMetadata } from '../../utils/fileRead.js'
+import { getFsImplementation } from '../../utils/fsOperations.js'
+import { withNotebookFileLock } from '../../utils/notebookFileLock.js'
 import { safeParseJSON } from '../../utils/json.js'
 import { lazySchema } from '../../utils/lazySchema.js'
-import { parseCellId } from '../../utils/notebook.js'
-import { checkWritePermissionForTool } from '../../utils/permissions/filesystem.js'
+import { expandPath } from '../../utils/path.js'
+import {
+  checkWritePermissionForTool,
+  isWriteOutsideWorkingDirectoriesForbidden,
+} from '../../utils/permissions/filesystem.js'
 import type { PermissionDecision } from '../../utils/permissions/PermissionResult.js'
 import { jsonParse, jsonStringify } from '../../utils/slowOperations.js'
 import { NOTEBOOK_EDIT_TOOL_NAME } from './constants.js'
+import { applyNotebookEdit, isValidNotebookContent, locateNotebookEdit, MAX_NOTEBOOK_BYTES } from './notebookMutation.js'
 import { DESCRIPTION, PROMPT } from './prompt.js'
 import {
   getToolUseSummary,
@@ -26,6 +34,11 @@ import {
   renderToolUseMessage,
   renderToolUseRejectedMessage,
 } from './UI.js'
+
+/** A UNC path can access remote shares during stat/read before permission checks. */
+function isUncNotebookPath(path: string): boolean {
+  return path.startsWith('\\\\\\\\') || path.startsWith('//')
+}
 
 export const inputSchema = lazySchema(() =>
   z.strictObject({
@@ -62,6 +75,10 @@ export const outputSchema = lazySchema(() =>
     new_source: z
       .string()
       .describe('The new source code that was written to the cell'),
+    old_source: z
+      .string()
+      .optional()
+      .describe('Previous source of the replaced or deleted cell'),
     cell_id: z
       .string()
       .optional()
@@ -113,14 +130,34 @@ export const NotebookEditTool = buildTool({
     return outputSchema()
   },
   toAutoClassifierInput(input) {
-    if (feature('TRANSCRIPT_CLASSIFIER')) {
-      const mode = input.edit_mode ?? 'replace'
+    const mode = input.edit_mode ?? 'replace'
+    // 2.1.310 defaults to the readable text classifier transcript. When
+    // editRemovalVisibility is enabled, it switches to structured additions
+    // and removals. Both branches must carry the edit through permissions.
+    const envToggle = process.env.CLAUDE_CODE_AUTO_MODE_EDIT_REMOVAL
+    const showRemovals = envToggle === undefined
+      ? getFeatureValue_CACHED_MAY_BE_STALE('editRemovalVisibility', false)
+      : isEnvTruthy(envToggle)
+    if (!showRemovals) {
       return `${input.notebook_path} ${mode}: ${input.new_source}`
     }
-    return ''
+    return {
+      notebook_path: input.notebook_path,
+      mode,
+      ...(input.cell_id !== undefined && { cell_id: input.cell_id }),
+      ...(mode !== 'delete' && input.cell_type !== undefined && { cell_type: input.cell_type }),
+      ...(mode === 'delete'
+        ? { ignored_source: input.new_source }
+        : { adds: input.new_source }),
+    }
   },
   getPath(input): string {
     return input.notebook_path
+  },
+  backfillObservableInput(input) {
+    if (typeof input.notebook_path === 'string') {
+      input.notebook_path = expandPath(input.notebook_path)
+    }
   },
   async checkPermissions(input, context): Promise<PermissionDecision> {
     const appState = context.getAppState()
@@ -181,9 +218,24 @@ export const NotebookEditTool = buildTool({
       ? notebook_path
       : resolve(getCwd(), notebook_path)
 
-    // SECURITY: Skip filesystem operations for UNC paths to prevent NTLM credential leaks.
-    if (fullPath.startsWith('\\\\') || fullPath.startsWith('//')) {
-      return { result: true }
+    // Reject UNC paths before any stat/read or permission-side filesystem access.
+    if (isUncNotebookPath(notebook_path)) {
+      return {
+        result: false,
+        message: 'UNC notebook paths are not supported.',
+        errorCode: 12,
+      }
+    }
+
+
+    if (isWriteOutsideWorkingDirectoriesForbidden(
+      fullPath, toolUseContext.getAppState().toolPermissionContext,
+    )) {
+      return {
+        result: false,
+        message: 'Writing outside working directories is blocked by permissions.blockWritesOutsideWorkingDirectories.',
+        errorCode: 13,
+      }
     }
 
     if (extname(fullPath) !== '.ipynb') {
@@ -227,13 +279,35 @@ export const NotebookEditTool = buildTool({
         errorCode: 9,
       }
     }
-    if (getFileModificationTime(fullPath) > readTimestamp.timestamp) {
-      return {
-        result: false,
-        message:
-          'File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.',
-        errorCode: 10,
+    // The 2.1.310 tool limits both source and updated notebooks to 100 MiB.
+    // Stat before reading: giant notebooks must be rejected without allocating
+    // the entire file into a JavaScript string.
+    try {
+      const stats = getFsImplementation().statSync(fullPath)
+      if (stats.size > MAX_NOTEBOOK_BYTES) {
+        return {
+          result: false,
+          message: 'Notebook is too large to edit (maximum 100 MiB).',
+          errorCode: 13,
+        }
       }
+      if (Math.floor(stats.mtimeMs) > readTimestamp.timestamp) {
+        return {
+          result: false,
+          message:
+            'File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.',
+          errorCode: 10,
+        }
+      }
+    } catch (error) {
+      if (isENOENT(error)) {
+        return {
+          result: false,
+          message: 'Notebook file does not exist.',
+          errorCode: 1,
+        }
+      }
+      throw error
     }
 
     let content: string
@@ -250,43 +324,34 @@ export const NotebookEditTool = buildTool({
       throw e
     }
     const notebook = safeParseJSON(content) as NotebookContent | null
-    if (!notebook) {
+    if (!isValidNotebookContent(notebook)) {
       return {
         result: false,
-        message: 'Notebook is not valid JSON.',
+        message: 'Notebook cells are missing or contain invalid source content.',
         errorCode: 6,
       }
     }
-    if (!cell_id) {
-      if (edit_mode !== 'insert') {
-        return {
-          result: false,
-          message: 'Cell ID must be specified when not inserting a new cell.',
-          errorCode: 7,
-        }
+    // Read stores a cell projection, while Edit stores raw JSON. Compare
+    // both representations so a same-millisecond external edit is detected.
+    if (
+      readTimestamp.content !== content &&
+      readTimestamp.content !== jsonStringify(processNotebookCellsForRead(notebook))
+    ) {
+      return {
+        result: false,
+        message: 'Notebook content changed since it was read. Read it again before editing.',
+        errorCode: 10,
       }
-    } else {
-      // First try to find the cell by its actual ID
-      const cellIndex = notebook.cells.findIndex(cell => cell.id === cell_id)
-
-      if (cellIndex === -1) {
-        // If not found, try to parse as a numeric index (cell-N format)
-        const parsedCellIndex = parseCellId(cell_id)
-        if (parsedCellIndex !== undefined) {
-          if (!notebook.cells[parsedCellIndex]) {
-            return {
-              result: false,
-              message: `Cell with index ${parsedCellIndex} does not exist in notebook.`,
-              errorCode: 7,
-            }
-          }
-        } else {
-          return {
-            result: false,
-            message: `Cell with ID "${cell_id}" not found in notebook.`,
-            errorCode: 8,
-          }
-        }
+    }
+    try {
+      // Validation must use the same lookup semantics as the actual edit.
+      // Do not mutate safeParseJSON's memoized object here.
+      locateNotebookEdit(notebook, { cell_id, cell_type, new_source: '', edit_mode })
+    } catch (error) {
+      return {
+        result: false,
+        message: error instanceof Error ? error.message : 'Invalid notebook edit.',
+        errorCode: 7,
       }
     }
 
@@ -308,15 +373,37 @@ export const NotebookEditTool = buildTool({
       ? notebook_path
       : resolve(getCwd(), notebook_path)
 
-    if (fileHistoryEnabled()) {
-      await fileHistoryTrackEdit(
-        updateFileHistoryState,
-        fullPath,
-        parentMessage.uuid,
-      )
+    // Deny remote UNC paths before resolving the lock key or touching the FS.
+    // A direct tool call must be safe even if validation was bypassed.
+    if (isUncNotebookPath(notebook_path)) {
+      return {
+        data: {
+          new_source,
+          cell_type: cell_type ?? 'code',
+          language: 'python',
+          edit_mode: originalEditMode ?? 'replace',
+          error: 'UNC notebook paths are not supported.',
+          cell_id,
+          notebook_path: fullPath,
+          original_file: '',
+          updated_file: '',
+        },
+      }
     }
 
+    // Capture the caller's view before waiting on the per-file transaction.
+    // A second queued edit must not borrow the first edit's refreshed Read state.
+    const observedReadState = readFileState.get(fullPath)
+    return withNotebookFileLock(fullPath, async () => {
     try {
+      if (readFileState.get(fullPath) !== observedReadState) {
+        throw new Error(
+          'Notebook changed during a concurrent edit. Read it again before editing.',
+        )
+      }
+      if (getFsImplementation().statSync(fullPath).size > MAX_NOTEBOOK_BYTES) {
+        throw new Error('Notebook is too large to edit (maximum 100 MiB).')
+      }
       // readFileSyncWithMetadata gives content + encoding + line endings in
       // one safeResolvePath + readFileSync pass, replacing the previous
       // detectFileEncoding + readFile + detectLineEndings chain (each of
@@ -337,7 +424,7 @@ export const NotebookEditTool = buildTool({
             new_source,
             cell_type: cell_type ?? 'code',
             language: 'python',
-            edit_mode: 'replace',
+            edit_mode: originalEditMode ?? 'replace',
             error: 'Notebook is not valid JSON.',
             cell_id,
             notebook_path: fullPath,
@@ -347,93 +434,61 @@ export const NotebookEditTool = buildTool({
         }
       }
 
-      let cellIndex
-      if (!cell_id) {
-        cellIndex = 0 // Default to inserting at the beginning if no cell_id is provided
-      } else {
-        // First try to find the cell by its actual ID
-        cellIndex = notebook.cells.findIndex(cell => cell.id === cell_id)
-
-        // If not found, try to parse as a numeric index (cell-N format)
-        if (cellIndex === -1) {
-          const parsedCellIndex = parseCellId(cell_id)
-          if (parsedCellIndex !== undefined) {
-            cellIndex = parsedCellIndex
-          }
-        }
-
-        if (originalEditMode === 'insert') {
-          cellIndex += 1 // Insert after the cell with this ID
-        }
+      // Recheck the read snapshot after permission approval, just before the
+      // write. An external edit must never be overwritten by a stale cell ID.
+      const snapshot = readFileState.get(fullPath)
+      if (!snapshot) {
+        throw new Error('File has not been read yet. Read it first before writing to it.')
       }
-
-      // Convert replace to insert if trying to replace one past the end
-      let edit_mode = originalEditMode
-      if (edit_mode === 'replace' && cellIndex === notebook.cells.length) {
-        edit_mode = 'insert'
-        if (!cell_type) {
-          cell_type = 'code' // Default to code if no cell_type specified
-        }
+      if (getFileModificationTime(fullPath) > snapshot.timestamp) {
+        throw new Error('Notebook changed since it was read. Read it again before editing.')
       }
-
-      const language = notebook.metadata.language_info?.name ?? 'python'
-      let new_cell_id = undefined
       if (
-        notebook.nbformat > 4 ||
-        (notebook.nbformat === 4 && notebook.nbformat_minor >= 5)
+        snapshot.content !== content &&
+        snapshot.content !== jsonStringify(processNotebookCellsForRead(notebook))
       ) {
-        if (edit_mode === 'insert') {
-          new_cell_id = Math.random().toString(36).substring(2, 15)
-        } else if (cell_id !== null) {
-          new_cell_id = cell_id
-        }
+        throw new Error(
+          'Notebook content changed since it was read. Read it again before editing.',
+        )
       }
 
-      if (edit_mode === 'delete') {
-        // Delete the specified cell
-        notebook.cells.splice(cellIndex, 1)
-      } else if (edit_mode === 'insert') {
-        let new_cell: NotebookCell
-        if (cell_type === 'markdown') {
-          new_cell = {
-            cell_type: 'markdown',
-            id: new_cell_id,
-            source: new_source,
-            metadata: {},
-          }
-        } else {
-          new_cell = {
-            cell_type: 'code',
-            id: new_cell_id,
-            source: new_source,
-            metadata: {},
-            execution_count: null,
-            outputs: [],
-          }
-        }
-        // Insert the new cell
-        notebook.cells.splice(cellIndex, 0, new_cell)
-      } else {
-        // Find the specified cell
-        const targetCell = notebook.cells[cellIndex]! // validateInput ensures cell_number is in bounds
-        targetCell.source = new_source
-        if (targetCell.cell_type === 'code') {
-          // Reset execution count and clear outputs since cell was modified
-          targetCell.execution_count = null
-          targetCell.outputs = []
-        }
-        if (cell_type && cell_type !== targetCell.cell_type) {
-          targetCell.cell_type = cell_type
-        }
-      }
+      const mutation = applyNotebookEdit(notebook, {
+        cell_id,
+        cell_type,
+        new_source,
+        edit_mode: originalEditMode,
+      })
+      const language = notebook.metadata?.language_info?.name ?? 'python'
       // Write back to file
       const IPYNB_INDENT = 1
       const updatedContent = jsonStringify(notebook, null, IPYNB_INDENT)
+      const encodedContent =
+        lineEndings === 'CRLF'
+          ? updatedContent.replaceAll('\r\n', '\n').replaceAll('\n', '\r\n')
+          : updatedContent
+      if (Buffer.byteLength(encodedContent, encoding) > MAX_NOTEBOOK_BYTES) {
+        throw new Error(
+          'Edit rejected: the updated notebook exceeds the maximum readable size (100 MiB). The file was left unchanged.',
+        )
+      }
+      if (getFileModificationTime(fullPath) > snapshot.timestamp) {
+        throw new Error('Notebook changed during edit preparation. Read it again before editing.')
+      }
+      if (fileHistoryEnabled()) {
+        await fileHistoryTrackEdit(
+          updateFileHistoryState,
+          fullPath,
+          parentMessage.uuid,
+        )
+      }
+      // A checkpoint may take time; guard the write immediately afterwards.
+      if (getFileModificationTime(fullPath) > snapshot.timestamp) {
+        throw new Error('Notebook changed during checkpointing. Read it again before editing.')
+      }
       writeTextContent(fullPath, updatedContent, encoding, lineEndings)
-      // Update readFileState with post-write mtime (matches FileEditTool/
-      // FileWriteTool). offset:undefined breaks FileReadTool's dedup match —
-      // without this, Read→NotebookEdit→Read in the same millisecond would
-      // return the file_unchanged stub against stale in-context content.
+      // Refresh file state after the edit and clear range tracking so later
+      // Read and edit checks compare against the actual post-write content.
+      // Read always returns full results for unchanged files in 2.1.317.
       readFileState.set(fullPath, {
         content: updatedContent,
         timestamp: getFileModificationTime(fullPath),
@@ -442,10 +497,11 @@ export const NotebookEditTool = buildTool({
       })
       const data = {
         new_source,
-        cell_type: cell_type ?? 'code',
+        old_source: mutation.old_source,
+        cell_type: mutation.cell_type,
         language,
-        edit_mode: edit_mode ?? 'replace',
-        cell_id: new_cell_id || undefined,
+        edit_mode: mutation.edit_mode,
+        cell_id: mutation.cell_id,
         error: '',
         notebook_path: fullPath,
         original_file: content,
@@ -460,7 +516,7 @@ export const NotebookEditTool = buildTool({
           new_source,
           cell_type: cell_type ?? 'code',
           language: 'python',
-          edit_mode: 'replace',
+          edit_mode: originalEditMode ?? 'replace',
           error: error.message,
           cell_id,
           notebook_path: fullPath,
@@ -486,5 +542,6 @@ export const NotebookEditTool = buildTool({
         data,
       }
     }
+    })
   },
 } satisfies ToolDef<InputSchema, Output>)

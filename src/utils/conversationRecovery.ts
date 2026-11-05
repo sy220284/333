@@ -1,7 +1,5 @@
 import { feature } from 'bun:bundle'
 import type { UUID } from 'crypto'
-import { relative } from 'path'
-import { getCwd } from 'src/utils/cwd.js'
 import { addInvokedSkill } from '../bootstrap/state.js'
 import { asSessionId } from '../types/ids.js'
 import type {
@@ -36,6 +34,7 @@ import {
 } from './messages.js'
 import { copyPlanForResume } from './plans.js'
 import { processSessionStartHooks } from './sessionStart.js'
+import { precomputeResumeCommitV5 } from './resumePreparationV5.ts'
 import {
   buildConversationChain,
   checkResumeConsistency,
@@ -58,78 +57,12 @@ const BRIEF_TOOL_NAME: string | null =
         require('../tools/BriefTool/prompt.js') as typeof import('../tools/BriefTool/prompt.js')
       ).BRIEF_TOOL_NAME
     : null
-const LEGACY_BRIEF_TOOL_NAME: string | null =
-  feature('KAIROS') || feature('KAIROS_BRIEF')
-    ? (
-        require('../tools/BriefTool/prompt.js') as typeof import('../tools/BriefTool/prompt.js')
-      ).LEGACY_BRIEF_TOOL_NAME
-    : null
 const SEND_USER_FILE_TOOL_NAME: string | null = feature('KAIROS')
   ? (
       require('../tools/SendUserFileTool/prompt.js') as typeof import('../tools/SendUserFileTool/prompt.js')
     ).SEND_USER_FILE_TOOL_NAME
   : null
 /* eslint-enable @typescript-eslint/no-require-imports */
-
-/**
- * Transforms legacy attachment types to current types for backward compatibility
- */
-function migrateLegacyAttachmentTypes(message: Message): Message {
-  if (message.type !== 'attachment') {
-    return message
-  }
-
-  const attachment = message.attachment as {
-    type: string
-    [key: string]: unknown
-  } // Handle legacy types not in current type system
-
-  // Transform legacy attachment types
-  if (attachment.type === 'new_file') {
-    return {
-      ...message,
-      attachment: {
-        ...attachment,
-        type: 'file',
-        displayPath: relative(getCwd(), attachment.filename as string),
-      },
-    } as SerializedMessage // Cast entire message since we know the structure is correct
-  }
-
-  if (attachment.type === 'new_directory') {
-    return {
-      ...message,
-      attachment: {
-        ...attachment,
-        type: 'directory',
-        displayPath: relative(getCwd(), attachment.path as string),
-      },
-    } as SerializedMessage // Cast entire message since we know the structure is correct
-  }
-
-  // Backfill displayPath for attachments from old sessions
-  if (!('displayPath' in attachment)) {
-    const path =
-      'filename' in attachment
-        ? (attachment.filename as string)
-        : 'path' in attachment
-          ? (attachment.path as string)
-          : 'skillDir' in attachment
-            ? (attachment.skillDir as string)
-            : undefined
-    if (path) {
-      return {
-        ...message,
-        attachment: {
-          ...attachment,
-          displayPath: relative(getCwd(), path),
-        },
-      } as Message
-    }
-  }
-
-  return message
-}
 
 export type TeleportRemoteResponse = {
   log: Message[]
@@ -165,15 +98,10 @@ export function deserializeMessagesWithInterruptDetection(
   serializedMessages: Message[],
 ): DeserializeResult {
   try {
-    // Transform legacy attachment types before processing
-    const migratedMessages = serializedMessages.map(
-      migrateLegacyAttachmentTypes,
-    )
-
     // Strip invalid permissionMode values from deserialized user messages.
     // The field is unvalidated JSON from disk and may contain modes from a different build.
     const validModes = new Set<string>(PERMISSION_MODES)
-    for (const msg of migratedMessages) {
+    for (const msg of serializedMessages) {
       if (
         msg.type === 'user' &&
         msg.permissionMode !== undefined &&
@@ -185,7 +113,7 @@ export function deserializeMessagesWithInterruptDetection(
 
     // Filter out unresolved tool uses and any synthetic messages that follow them
     const filteredToolUses = filterUnresolvedToolUses(
-      migratedMessages,
+      serializedMessages,
     ) as NormalizedMessage[]
 
     // Filter out orphaned thinking-only assistant messages that can cause API errors
@@ -363,7 +291,6 @@ function isTerminalToolResult(
       if (b.type === 'tool_use' && b.id === toolUseId) {
         return (
           b.name === BRIEF_TOOL_NAME ||
-          b.name === LEGACY_BRIEF_TOOL_NAME ||
           b.name === SEND_USER_FILE_TOOL_NAME
         )
       }
@@ -540,25 +467,29 @@ export async function loadConversationForResume(
       if (!sessionId) {
         sessionId = getSessionIdFromLog(log) as UUID
       }
-      // Pass the original session ID to ensure the plan slug is associated with
-      // the session we're resuming, not the temporary session ID before resume
-      if (sessionId) {
-        await copyPlanForResume(log, asSessionId(sessionId))
-      }
-
-      // Copy file history for resume
-      void copyFileHistoryForResume(log)
-
       messages = log.messages
       checkResumeConsistency(messages)
     }
 
-    // Restore skill state from invoked_skills attachments before deserialization.
-    // This ensures skills survive multiple compaction cycles after resume.
-    restoreSkillStateFromMessages(messages!)
+    // Stage the resume identity and source path before mutating session state.
+    // Explicit JSONL resumes must keep their cross-project path, and validation
+    // errors must not copy plans, file backups or modify invoked-skill state.
+    const prepared = precomputeResumeCommitV5(
+      messages!,
+      sessionId,
+      sourceJsonlFile,
+      log?.fullPath,
+    )
+    const deserialized = deserializeMessagesWithInterruptDetection(prepared.messages)
 
-    // Deserialize messages to handle unresolved tool uses and ensure proper format
-    const deserialized = deserializeMessagesWithInterruptDetection(messages!)
+    // All conversation normalization succeeded: commit ancillary resume state.
+    if (log) {
+      if (sessionId) {
+        await copyPlanForResume(log, asSessionId(sessionId))
+      }
+      await copyFileHistoryForResume(log)
+    }
+    restoreSkillStateFromMessages(prepared.messages)
     messages = deserialized.messages
 
     // Process session start hooks for resume
@@ -588,7 +519,7 @@ export async function loadConversationForResume(
       prUrl: log?.prUrl,
       prRepository: log?.prRepository,
       // Include full path for cross-directory resume
-      fullPath: log?.fullPath,
+      fullPath: prepared.fullPath,
     }
   } catch (error) {
     logError(error as Error)

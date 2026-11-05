@@ -1,0 +1,82 @@
+name: PR7 批量恢复React组件原生TypeScript签名
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - '.github/workflows/apply-react-tsx-types-pr7.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: pr7-tsx-signature-migration
+  cancel-in-progress: false
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 准备完整TypeScript类型与产品依赖
+        run: |
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 分批恢复明确Props和JSX返回类型，冲突逐文件隔离
+        run: |
+          node --check tools/dev/annotate-react-compiler-tsx.mjs
+          node tools/dev/annotate-react-compiler-tsx.mjs --apply
+      - name: 完整源码内容审计及严格编译
+        run: |
+          node tools/dev/type-migration-audit.mjs
+          node tools/dev/type-migration-strict.mjs
+      - name: 真实产品构建、中文界面及语言格式回归
+        run: |
+          bun build/rebuild.mjs
+          node --test tests/language-file-contract.test.mjs tests/chinese-only-ui.test.mjs tests/welcome-layout.test.mjs tests/clawd-animations.test.mjs
+          node tools/dev/audit-restored-ui-localization.mjs
+          git diff --check
+      - name: 将已验证TSX组件签名提交到最新PR7
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add src
+          if git diff --cached --quiet; then
+            echo '本批组件全部已有类型或需要另行移植，查看证据报告'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m '批量恢复React编译组件Props与返回类型，保留中文UI行为'
+          for attempt in 1 2 3 4 5; do
+            git fetch origin upgrade/2.1.310-m1-evidence
+            git rebase origin/upgrade/2.1.310-m1-evidence
+            node tools/dev/dev.mjs typecheck:all
+            node tools/dev/type-migration-audit.mjs
+            node tools/dev/audit-restored-ui-localization.mjs
+            node --test tests/chinese-only-ui.test.mjs
+            if git push origin HEAD:refs/heads/upgrade/2.1.310-m1-evidence; then
+              echo '已提交批量类型恢复后的真实TSX源码'
+              exit 0
+            fi
+          done
+          echo '并发提交多次冲突；保留报告，退出'
+          exit 1
+      - name: 保存逐文件TypeScript恢复证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr7-react-tsx-signatures
+          path: |
+            .rebuild/governance/react-compiler-tsx-types.json
+            .rebuild/governance/type-migration-report.json
+            .rebuild/governance/tsx-localization-regression.json
+          retention-days: 30
+          if-no-files-found: warn

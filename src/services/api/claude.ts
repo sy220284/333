@@ -1,6 +1,5 @@
 import type {
   BetaContentBlock,
-  BetaContentBlockParam,
   BetaImageBlockParam,
   BetaJSONOutputFormat,
   BetaMessage,
@@ -19,7 +18,9 @@ import type {
 } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { Stream } from '@anthropic-ai/sdk/streaming.mjs'
-import { randomUUID } from 'crypto'
+import { createHash, randomUUID } from 'node:crypto'
+import { resolvePromptSnapshot, promptSnapshotMode } from '../cli/systemPromptSnapshot.ts'
+import { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from '../../constants/systemPromptBoundary.js'
 import {
   getAPIProvider,
   isFirstPartyAnthropicBaseUrl,
@@ -68,7 +69,7 @@ import {
   getSonnet1mExpTreatmentEnabled,
 } from '../../utils/context.js'
 import { resolveAppliedEffort } from '../../utils/effort.js'
-import { isEnvTruthy } from '../../utils/envUtils.js'
+import { getClaudeConfigHomeDir, isEnvTruthy } from '../../utils/envUtils.js'
 import { errorMessage } from '../../utils/errors.js'
 import { computeFingerprintFromMessages } from '../../utils/fingerprint.js'
 import { captureAPIRequest, logError } from '../../utils/log.js'
@@ -83,6 +84,7 @@ import {
   stripToolReferenceBlocksFromUserMessage,
 } from '../../utils/messages.js'
 import {
+  getCanonicalName,
   getDefaultOpusModel,
   getDefaultSonnetModel,
   getSmallFastModel,
@@ -100,6 +102,8 @@ import {
   extractQuotaStatusFromHeaders,
 } from '../claudeAiLimits.js'
 import { getAPIContextManagement } from '../compact/apiMicrocompact.js'
+import { createThinkingDisplayRecovery317, getRequestThinkingDisplay, getStreamThinkingDisplay } from './thinkingDisplay.js'
+import { matchesDefaultModelVariant } from './modelCacheMatch.ts'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const autoModeStateModule = feature('TRANSCRIPT_CLASSIFIER')
@@ -115,7 +119,6 @@ import {
 } from '@anthropic-ai/sdk/error'
 import {
   getAfkModeHeaderLatched,
-  getCacheEditingHeaderLatched,
   getFastModeHeaderLatched,
   getLastApiCompletionTimestamp,
   getPromptCache1hAllowlist,
@@ -123,7 +126,6 @@ import {
   getSessionId,
   getThinkingClearLatched,
   setAfkModeHeaderLatched,
-  setCacheEditingHeaderLatched,
   setFastModeHeaderLatched,
   setLastMainRequestId,
   setPromptCache1hAllowlist,
@@ -196,7 +198,6 @@ import {
   TOOL_SEARCH_TOOL_NAME,
 } from '../../tools/ToolSearchTool/prompt.js'
 import { count } from '../../utils/array.js'
-import { insertBlockAfterToolResults } from '../../utils/contentArray.js'
 import { validateBoundedIntEnvVar } from '../../utils/envValidation.js'
 import { safeParseJSON } from '../../utils/json.js'
 import { getInferenceProfileBackingModel } from '../../utils/model/bedrock.js'
@@ -219,16 +220,16 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '../analytics/index.js'
-import {
-  consumePendingCacheEdits,
-  getPinnedCacheEdits,
-  markToolsSentToAPIState,
-  pinCacheEdits,
-} from '../compact/microCompact.js'
+import { COMPACTABLE_TOOLS } from '../compact/microCompact.js'
 import { getInitializationStatus } from '../lsp/manager.js'
 import { isToolFromMcpServer } from '../mcp/utils.js'
 import { withStreamingVCR, withVCR } from '../vcr.js'
 import { CLIENT_REQUEST_ID_HEADER, getAnthropicClient } from './client.js'
+import {
+  ContextHintRecoveryError,
+  createContextHintController,
+  type HintError,
+} from './contextHintController.js'
 import {
   API_ERROR_MESSAGE_PREFIX,
   CUSTOM_OFF_SWITCH_MESSAGE,
@@ -343,13 +344,13 @@ export function getPromptCachingEnabled(model: string): boolean {
   // Check if we should disable for default Sonnet
   if (isEnvTruthy(process.env.DISABLE_PROMPT_CACHING_SONNET)) {
     const defaultSonnet = getDefaultSonnetModel()
-    if (model === defaultSonnet) return false
+    if (matchesDefaultModelVariant(model, defaultSonnet, getCanonicalName)) return false
   }
 
   // Check if we should disable for default Opus
   if (isEnvTruthy(process.env.DISABLE_PROMPT_CACHING_OPUS)) {
     const defaultOpus = getDefaultOpusModel()
-    if (model === defaultOpus) return false
+    if (matchesDefaultModelVariant(model, defaultOpus, getCanonicalName)) return false
   }
 
   return true
@@ -500,7 +501,7 @@ export function configureTaskBudgetParams(
   }
 }
 
-export function getAPIMetadata() {
+export function getAPIMetadata() : { user_id: string; } {
   // https://docs.google.com/document/d/1dURO9ycXXQCBS0V4Vhl4poDBRgkelFc5t2BNPoEgH5Q/edit?tab=t.0#heading=h.5g7nec5b09w5
   let extra: JsonObject = {}
   const extraStr = process.env.CLAUDE_CODE_EXTRA_METADATA
@@ -551,12 +552,10 @@ export async function verifyApiKey(
           }),
         async anthropic => {
           const messages: MessageParam[] = [{ role: 'user', content: 'test' }]
-          // biome-ignore lint/plugin: API key verification is intentionally a minimal direct call
           await anthropic.beta.messages.create({
             model,
             max_tokens: 1,
             messages,
-            temperature: 1,
             ...(betas.length > 0 && { betas }),
             metadata: getAPIMetadata(),
             ...getExtraBodyParams(),
@@ -587,7 +586,7 @@ export async function verifyApiKey(
 
 export function userMessageToMessageParam(
   message: UserMessage,
-  addCache = false,
+  addCache: boolean = false,
   enablePromptCaching: boolean,
   querySource?: QuerySource,
 ): MessageParam {
@@ -632,7 +631,7 @@ export function userMessageToMessageParam(
 
 export function assistantMessageToMessageParam(
   message: AssistantMessage,
-  addCache = false,
+  addCache: boolean = false,
   enablePromptCaching: boolean,
   querySource?: QuerySource,
 ): MessageParam {
@@ -815,6 +814,12 @@ function getNonstreamingFallbackTimeoutMs(): number {
  * Encapsulates the common pattern of creating a withRetry generator,
  * iterating to yield system messages, and returning the final BetaMessage.
  */
+function thinkingDisplayRecoveryForModel317(model: string) {
+  return createThinkingDisplayRecovery317(JSON.stringify([
+    getSessionId(), getAPIProvider(), process.env.ANTHROPIC_BASE_URL, model,
+  ]))
+}
+
 export async function* executeNonStreamingRequest(
   clientOptions: {
     model: string
@@ -840,6 +845,7 @@ export async function* executeNonStreamingRequest(
   originatingRequestId?: string | null,
 ): AsyncGenerator<SystemAPIErrorMessage, BetaMessage> {
   const fallbackTimeoutMs = getNonstreamingFallbackTimeoutMs()
+  const displayRecovery = thinkingDisplayRecoveryForModel317(retryOptions.model)
   const generator = withRetry(
     () =>
       getAnthropicClient({
@@ -850,7 +856,7 @@ export async function* executeNonStreamingRequest(
       }),
     async (anthropic, attempt, context) => {
       const start = Date.now()
-      const retryParams = paramsFromContext(context)
+      const retryParams = displayRecovery.prepare(paramsFromContext(context))
       captureRequest(retryParams)
       onAttempt(attempt, start, retryParams.max_tokens)
 
@@ -860,8 +866,7 @@ export async function* executeNonStreamingRequest(
       )
 
       try {
-        // biome-ignore lint/plugin: non-streaming API call
-        return await anthropic.beta.messages.create(
+        const result = await anthropic.beta.messages.create(
           {
             ...adjustedParams,
             model: normalizeModelStringForAPI(adjustedParams.model),
@@ -871,6 +876,8 @@ export async function* executeNonStreamingRequest(
             timeout: fallbackTimeoutMs,
           },
         )
+        displayRecovery.accepted()
+        return result
       } catch (err) {
         // User aborts are not errors — re-throw immediately without logging
         if (err instanceof APIUserAbortError) throw err
@@ -901,6 +908,7 @@ export async function* executeNonStreamingRequest(
       ...(isFastModeEnabled() && { fastMode: retryOptions.fastMode }),
       signal: retryOptions.signal,
       initialConsecutive529Errors: retryOptions.initialConsecutive529Errors,
+      retryRejectedRequest: displayRecovery.retry,
       querySource: retryOptions.querySource,
     },
   )
@@ -938,15 +946,17 @@ function getPreviousRequestIdFromMessages(
 }
 
 function isMedia(
-  block: BetaContentBlockParam,
+  block: unknown,
 ): block is BetaImageBlockParam | BetaRequestDocumentBlock {
-  return block.type === 'image' || block.type === 'document'
+  return typeof block === 'object' && block !== null && 'type' in block &&
+    (block.type === 'image' || block.type === 'document')
 }
 
 function isToolResult(
-  block: BetaContentBlockParam,
+  block: unknown,
 ): block is BetaToolResultBlockParam {
-  return block.type === 'tool_result'
+  return typeof block === 'object' && block !== null &&
+    'type' in block && block.type === 'tool_result'
 }
 
 /**
@@ -1021,10 +1031,28 @@ async function* queryModel(
   tools: Tools,
   signal: AbortSignal,
   options: Options,
+  contextHintRetried = false,
 ): AsyncGenerator<
   StreamEvent | AssistantMessage | SystemAPIErrorMessage,
   void
 > {
+  const originalSystemPrompt = systemPrompt
+  const contextHintController = contextHintRetried
+    ? null
+    : createContextHintController({
+        enabled: getFeatureValue_CACHED_MAY_BE_STALE('tengu_hazel_osprey', false),
+        firstParty: shouldIncludeFirstPartyOnlyBetas(),
+        querySource: options.querySource,
+        compactableTools: COMPACTABLE_TOOLS,
+        is529Error: error => error.status === 529,
+        persist: async (content, toolUseId) => {
+          if (!content) return null
+          const { persistToolResult } = await import('../../utils/toolResultStorage.js')
+          const result = await persistToolResult(content, toolUseId)
+          if ('error' in result) throw new Error(result.error)
+          return `<persisted-output>Tool result saved to: ${result.filepath}\n\nUse Read to view</persisted-output>`
+        },
+      })
   // Check cheap conditions first — the off-switch await blocks on GrowthBook
   // init (~10ms). For non-Opus models (haiku, sonnet) this skips the await
   // entirely. Subscribers don't hit this path at all.
@@ -1181,29 +1209,6 @@ async function* queryModel(
     }
   }
 
-  // Determine if cached microcompact is enabled for this model.
-  // Computed once here (in async context) and captured by paramsFromContext.
-  // The beta header is also captured here to avoid a top-level import of the
-  // ant-only CACHE_EDITING_BETA_HEADER constant.
-  let cachedMCEnabled = false
-  let cacheEditingBetaHeader = ''
-  if (feature('CACHED_MICROCOMPACT')) {
-    const {
-      isCachedMicrocompactEnabled,
-      isModelSupportedForCacheEditing,
-      getCachedMCConfig,
-    } = await import('../compact/cachedMicrocompact.js')
-    const betas = await import('src/constants/betas.js')
-    cacheEditingBetaHeader = betas.CACHE_EDITING_BETA_HEADER
-    const featureEnabled = isCachedMicrocompactEnabled()
-    const modelSupported = isModelSupportedForCacheEditing(options.model)
-    cachedMCEnabled = featureEnabled && modelSupported
-    const config = getCachedMCConfig()
-    logForDebugging(
-      `Cached MC gate: enabled=${featureEnabled} modelSupported=${modelSupported} model=${options.model} supportedModels=${jsonStringify(config.supportedModels)}`,
-    )
-  }
-
   const useGlobalCacheFeature = shouldUseGlobalCacheScope()
   const willDefer = (t: Tool) =>
     useToolSearch && (deferredToolNames.has(t.name) || shouldDeferLspTool(t))
@@ -1324,6 +1329,26 @@ async function* queryModel(
   // so the fingerprint reflects the actual user input.
   const fingerprint = computeFingerprintFromMessages(messagesForAPI)
 
+  // Only default system prompts contain the registry boundary. When enabled,
+  // move machine-specific sections into a stable first user message, keeping
+  // the full model-visible instructions intact while sharing the system cache.
+  if (isEnvTruthy(process.env.CLAUDE_CODE_EXCLUDE_DYNAMIC_SYSTEM_PROMPT_SECTIONS)) {
+    const boundary = systemPrompt.indexOf(SYSTEM_PROMPT_DYNAMIC_BOUNDARY)
+    if (boundary >= 0) {
+      const dynamic = systemPrompt.slice(boundary + 1).filter(Boolean)
+      systemPrompt = asSystemPrompt(systemPrompt.slice(0, boundary))
+      if (dynamic.length > 0) {
+        messagesForAPI = [
+          createUserMessage({
+            content: `<dynamic_system_context>\n${dynamic.join('\n\n')}\n</dynamic_system_context>`,
+            isMeta: true,
+          }),
+          ...messagesForAPI,
+        ]
+      }
+    }
+  }
+
   // When the delta attachment is enabled, deferred tools are announced
   // via persisted deferred_tools_delta attachments instead of this
   // ephemeral prepend (which busts cache whenever the pool changes).
@@ -1367,6 +1392,39 @@ async function* queryModel(
       ...(injectChromeHere ? [CHROME_TOOL_SEARCH_INSTRUCTIONS] : []),
     ].filter(Boolean),
   )
+
+  // Persist the exact rendered request prompt once per session. Exclude
+  // subagents: each can have a different prompt but shares the session UUID.
+  // A compact summary is the durable epoch boundary and remains stable on
+  // resume. This is intentionally AFTER attribution and dynamic fragments
+  // so the stored record exactly matches what was sent to the provider.
+  if (!options.agentId) {
+    const mode = promptSnapshotMode(
+      process.env.CLAUDE_CODE_SYSTEM_PROMPT_SNAPSHOT,
+      isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE),
+      isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) || isEnvTruthy(process.env.CLAUDE_CODE_BACKGROUND),
+    )
+    if (mode === 'on') {
+      const sessionId = getSessionId()
+      if (sessionId) {
+        const compact = [...messages].reverse().find(
+          (message): message is Extract<Message, { type: 'user' }> =>
+            message.type === 'user' && Boolean(message.isCompactSummary),
+        )
+        const revision = compact
+          ? createHash('sha256').update(JSON.stringify(compact.message)).digest('hex')
+          : 'initial'
+        systemPrompt = asSystemPrompt(resolvePromptSnapshot({
+          prompt: [...systemPrompt],
+          sessionId,
+          compactRevision: revision,
+          cwd: process.cwd(),
+          home: getClaudeConfigHomeDir(),
+          mode,
+        }))
+      }
+    }
+  }
 
   // Prepend system prompt block for easy API identification
   logAPIPrefix(systemPrompt)
@@ -1428,19 +1486,6 @@ async function* queryModel(
     setFastModeHeaderLatched(true)
   }
 
-  let cacheEditingHeaderLatched = getCacheEditingHeaderLatched() === true
-  if (feature('CACHED_MICROCOMPACT')) {
-    if (
-      !cacheEditingHeaderLatched &&
-      cachedMCEnabled &&
-      getAPIProvider() === 'firstParty' &&
-      options.querySource === 'repl_main_thread'
-    ) {
-      cacheEditingHeaderLatched = true
-      setCacheEditingHeaderLatched(true)
-    }
-  }
-
   // Only latch from agentic queries so a classifier call doesn't flip the
   // main thread's context_management mid-turn.
   let thinkingClearLatched = getThinkingClearLatched() === true
@@ -1479,7 +1524,7 @@ async function* queryModel(
       betas,
       autoModeActive: afkHeaderLatched,
       isUsingOverage: currentLimits.isUsingOverage ?? false,
-      cachedMCEnabled: cacheEditingHeaderLatched,
+      cachedMCEnabled: false,
       effortValue: effort,
       extraBodyParams: getExtraBodyParams(),
     })
@@ -1525,12 +1570,6 @@ async function* queryModel(
     }
   }
 
-  // Consume pending cache edits ONCE before paramsFromContext is defined.
-  // paramsFromContext is called multiple times (logging, retries), so consuming
-  // inside it would cause the first call to steal edits from subsequent calls.
-  const consumedCacheEdits = cachedMCEnabled ? consumePendingCacheEdits() : null
-  const consumedPinnedEdits = cachedMCEnabled ? getPinnedCacheEdits() : []
-
   // Capture the betas sent in the last API request, including the ones that
   // were dynamically added, so we can log and send it to telemetry.
   let lastRequestBetas: string[] | undefined
@@ -1555,6 +1594,11 @@ async function* queryModel(
           ]
         : []
     const extraBodyParams = getExtraBodyParams(bedrockBetas)
+    const hintRequest = contextHintController?.buildRequestParams(messages)
+    if (hintRequest) {
+      if (!betasParams.includes(hintRequest.beta)) betasParams.push(hintRequest.beta)
+      if (hintRequest.body) Object.assign(extraBodyParams, hintRequest.body)
+    }
 
     const outputConfig: BetaOutputConfig = {
       ...((extraBodyParams.output_config as BetaOutputConfig) ?? {}),
@@ -1603,13 +1647,13 @@ async function* queryModel(
     // setting that can greatly affect model quality and bashing.
     if (hasThinking && modelSupportsThinking(options.model)) {
       if (
-        !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING) &&
         modelSupportsAdaptiveThinking(options.model)
       ) {
         // For models that support adaptive thinking, always use adaptive
         // thinking without a budget.
         thinking = {
           type: 'adaptive',
+          display: options.isNonInteractiveSession ? 'omitted' : 'updates',
         } satisfies BetaMessageStreamParams['thinking']
       } else {
         // For models that do not support adaptive thinking, use the default
@@ -1625,6 +1669,7 @@ async function* queryModel(
         thinking = {
           budget_tokens: thinkingBudget,
           type: 'enabled',
+          display: options.isNonInteractiveSession ? 'omitted' : 'updates',
         } satisfies BetaMessageStreamParams['thinking']
       }
     }
@@ -1642,7 +1687,7 @@ async function* queryModel(
     // Fast mode: header is latched session-stable (cache-safe), but
     // `speed='fast'` stays dynamic so cooldown still suppresses the actual
     // fast-mode request without changing the cache key.
-    let speed: BetaMessageStreamParams['speed']
+    let speed: 'standard' | 'fast' | undefined
     const isFastModeForRetry =
       isFastModeEnabled() &&
       isFastModeAvailable() &&
@@ -1669,25 +1714,6 @@ async function* queryModel(
       }
     }
 
-    // Cache editing beta: header is latched session-stable; useCachedMC
-    // (controls cache_edits body behavior) stays live so edits stop when
-    // the feature disables but the header doesn't flip.
-    const useCachedMC =
-      cachedMCEnabled &&
-      getAPIProvider() === 'firstParty' &&
-      options.querySource === 'repl_main_thread'
-    if (
-      cacheEditingHeaderLatched &&
-      getAPIProvider() === 'firstParty' &&
-      options.querySource === 'repl_main_thread' &&
-      !betasParams.includes(cacheEditingBetaHeader)
-    ) {
-      betasParams.push(cacheEditingBetaHeader)
-      logForDebugging(
-        'Cache editing beta header enabled for cached microcompact',
-      )
-    }
-
     // Only send temperature when thinking is disabled — the API requires
     // temperature: 1 when thinking is enabled, which is already the default.
     const temperature = !hasThinking
@@ -1702,9 +1728,6 @@ async function* queryModel(
         messagesForAPI,
         enablePromptCaching,
         options.querySource,
-        useCachedMC,
-        consumedCacheEdits,
-        consumedPinnedEdits,
         options.skipCacheWrite,
       ),
       system,
@@ -1760,6 +1783,9 @@ async function* queryModel(
 
   const newMessages: AssistantMessage[] = []
   let ttftMs = 0
+  let apiMessageId: string | undefined
+  let requestThinkingDisplay: string | undefined
+  const thinkingBlockStartTimes = new WeakMap<object, number>()
   let partialMessage: BetaMessage | undefined = undefined
   const contentBlocks: (BetaContentBlock | ConnectorTextBlock)[] = []
   let usage: NonNullableUsage = EMPTY_USAGE
@@ -1775,6 +1801,7 @@ async function* queryModel(
 
   try {
     queryCheckpoint('query_client_creation_start')
+    const displayRecovery = thinkingDisplayRecoveryForModel317(options.model)
     const generator = withRetry(
       () =>
         getAnthropicClient({
@@ -1794,7 +1821,8 @@ async function* queryModel(
         // client_creation_start is meaningful on attempt 1.
         queryCheckpoint('query_client_creation_end')
 
-        const params = paramsFromContext(context)
+        const params = displayRecovery.prepare(paramsFromContext(context))
+        requestThinkingDisplay = getRequestThinkingDisplay(params.thinking)
         captureAPIRequest(params, options.querySource) // Capture for bug reports
 
         maxOutputTokens = params.max_tokens
@@ -1818,18 +1846,32 @@ async function* queryModel(
         // Use raw stream instead of BetaMessageStream to avoid O(n²) partial JSON parsing
         // BetaMessageStream calls partialParse() on every input_json_delta, which we don't need
         // since we handle tool input accumulation ourselves
-        // biome-ignore lint/plugin: main conversation loop handles attribution separately
-        const result = await anthropic.beta.messages
-          .create(
-            { ...params, stream: true },
-            {
-              signal,
-              ...(clientRequestId && {
-                headers: { [CLIENT_REQUEST_ID_HEADER]: clientRequestId },
-              }),
-            },
+        let result: {
+          request_id: string | null
+          response: Response
+          data: Stream<BetaRawMessageStreamEvent>
+        }
+        try {
+          result = await anthropic.beta.messages
+            .create(
+              { ...params, stream: true },
+              {
+                signal,
+                ...(clientRequestId && {
+                  headers: { [CLIENT_REQUEST_ID_HEADER]: clientRequestId },
+                }),
+              },
+            )
+            .withResponse()
+        } catch (error) {
+          const recovery = await contextHintController?.onRequestError(
+            error as HintError,
+            messages,
           )
-          .withResponse()
+          if (recovery) throw new ContextHintRecoveryError(recovery)
+          throw error
+        }
+        displayRecovery.accepted()
         queryCheckpoint('query_response_headers_received')
         streamRequestId = result.request_id
         streamResponse = result.response
@@ -1842,6 +1884,7 @@ async function* queryModel(
         ...(isFastModeEnabled() ? { fastMode: isFastMode } : false),
         signal,
         querySource: options.querySource,
+        retryRejectedRequest: displayRecovery.retry,
       },
     )
 
@@ -1859,6 +1902,7 @@ async function* queryModel(
     // reset state
     newMessages.length = 0
     ttftMs = 0
+    apiMessageId = undefined
     partialMessage = undefined
     contentBlocks.length = 0
     usage = EMPTY_USAGE
@@ -1979,6 +2023,9 @@ async function* queryModel(
         switch (part.type) {
           case 'message_start': {
             partialMessage = part.message
+            apiMessageId = typeof part.message?.id === 'string' && part.message.id !== ''
+              ? part.message.id
+              : undefined
             ttftMs = Date.now() - start
             usage = updateUsage(usage, part.message?.usage)
             // Capture research from message_start if available (internal only).
@@ -2027,15 +2074,18 @@ async function* queryModel(
                   text: '',
                 }
                 break
-              case 'thinking':
-                contentBlocks[part.index] = {
+              case 'thinking': {
+                const thinkingBlock = {
                   ...part.content_block,
                   // also awkward
                   thinking: '',
                   // initialize signature to ensure field exists even if signature_delta never arrives
                   signature: '',
                 }
+                contentBlocks[part.index] = thinkingBlock
+                thinkingBlockStartTimes.set(thinkingBlock, performance.now())
                 break
+              }
               default:
                 // even more awkwardly, the sdk mutates the contents of text blocks
                 // as it works. we want the blocks to be immutable, so that we can
@@ -2189,6 +2239,15 @@ async function* queryModel(
               })
               throw new Error('Message not found')
             }
+            const thinkingStartedAt = contentBlock.type === 'thinking'
+              ? thinkingBlockStartTimes.get(contentBlock)
+              : undefined
+            const thinkingDurationMs = thinkingStartedAt !== undefined
+              ? Math.max(1, Math.round(performance.now() - thinkingStartedAt))
+              : undefined
+            const thinkingDisplay = contentBlock.type === 'thinking'
+              ? requestThinkingDisplay
+              : undefined
             const m: AssistantMessage = {
               message: {
                 ...partialMessage,
@@ -2202,6 +2261,8 @@ async function* queryModel(
               type: 'assistant',
               uuid: randomUUID(),
               timestamp: new Date().toISOString(),
+              ...(thinkingDurationMs !== undefined && { thinkingDurationMs }),
+              ...(thinkingDisplay !== undefined && { thinkingDisplay }),
               ...(process.env.USER_TYPE === 'ant' &&
                 research !== undefined && { research }),
               ...(advisorModel && { advisorModel }),
@@ -2257,7 +2318,6 @@ async function* queryModel(
 
             const refusalMessage = getErrorMessageIfRefusal(
               part.delta.stop_reason,
-              options.model,
             )
             if (refusalMessage) {
               yield refusalMessage
@@ -2276,7 +2336,7 @@ async function* queryModel(
               })
             }
 
-            if (stopReason === 'model_context_window_exceeded') {
+            if (String(stopReason) === 'model_context_window_exceeded') {
               logEvent('tengu_context_window_exceeded', {
                 max_tokens: maxOutputTokens,
                 output_tokens: usage.output_tokens,
@@ -2296,11 +2356,15 @@ async function* queryModel(
             break
         }
 
+        const thinkingDisplay = getStreamThinkingDisplay(part, requestThinkingDisplay)
         yield {
           type: 'stream_event',
           event: part,
           ...(part.type === 'message_start' ? { ttftMs } : undefined),
+          ...(apiMessageId !== undefined ? { apiMessageId } : undefined),
+          ...(thinkingDisplay !== undefined ? { thinkingDisplay } : undefined),
         }
+        if (part.type === 'message_stop') apiMessageId = undefined
       }
       // Clear the idle timeout watchdog now that the stream loop has exited
       clearStreamIdleTimers()
@@ -2429,6 +2493,15 @@ async function* queryModel(
           model:
             options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         })
+      }
+
+      if (
+        !signal.aborted &&
+        newMessages.length === 0 &&
+        contextHintController?.classifyStreamError(streamingError as HintError)
+      ) {
+        const recovery = await contextHintController.onStreamFallback(messages)
+        if (recovery) throw new ContextHintRecoveryError(recovery)
       }
 
       if (streamingError instanceof APIUserAbortError) {
@@ -2596,6 +2669,23 @@ async function* queryModel(
       clearStreamIdleTimers()
     }
   } catch (errorFromRetry) {
+    const retryCause =
+      errorFromRetry instanceof CannotRetryError
+        ? errorFromRetry.originalError
+        : errorFromRetry
+    if (retryCause instanceof ContextHintRecoveryError) {
+      releaseStreamResources()
+      yield* queryModel(
+        retryCause.recovery.messages,
+        originalSystemPrompt,
+        thinkingConfig,
+        tools,
+        signal,
+        options,
+        true,
+      )
+      return
+    }
     // FallbackTriggeredError must propagate to query.ts, which performs the
     // actual model switch. Swallowing it here would turn the fallback into a
     // no-op — the user would just see "Model fallback triggered: X -> Y" as
@@ -2830,11 +2920,6 @@ async function* queryModel(
     }
   }
 
-  // Mark all registered tools as sent to API so they become eligible for deletion
-  if (feature('CACHED_MICROCOMPACT') && cachedMCEnabled) {
-    markToolsSentToAPIState()
-  }
-
   // Track the last requestId for the main conversation chain so shutdown
   // can send a cache eviction hint to inference. Exclude backgrounded
   // sessions (Ctrl+B) which share the repl_main_thread querySource but
@@ -2967,19 +3052,8 @@ export function updateUsage(
     // so the string is eliminated from external builds by dead code elimination.
     // Uses the same > 0 guard as other token fields to prevent message_delta
     // from overwriting the real value with 0.
-    ...(feature('CACHED_MICROCOMPACT')
-      ? {
-          cache_deleted_input_tokens:
-            (partUsage as unknown as { cache_deleted_input_tokens?: number })
-              .cache_deleted_input_tokens != null &&
-            (partUsage as unknown as { cache_deleted_input_tokens: number })
-              .cache_deleted_input_tokens > 0
-              ? (partUsage as unknown as { cache_deleted_input_tokens: number })
-                  .cache_deleted_input_tokens
-              : ((usage as unknown as { cache_deleted_input_tokens?: number })
-                  .cache_deleted_input_tokens ?? 0),
-        }
-      : {}),
+    fallback_credit: usage.fallback_credit,
+    output_tokens_details: usage.output_tokens_details,
     inference_geo: usage.inference_geo,
     iterations: partUsage.iterations ?? usage.iterations,
     speed: (partUsage as BetaUsage).speed ?? usage.speed,
@@ -3031,32 +3105,12 @@ export function accumulateUsage(
             ).cache_deleted_input_tokens ?? 0),
         }
       : {}),
+    fallback_credit: messageUsage.fallback_credit,
+    output_tokens_details: messageUsage.output_tokens_details,
     inference_geo: messageUsage.inference_geo, // Use the most recent
     iterations: messageUsage.iterations, // Use the most recent
     speed: messageUsage.speed, // Use the most recent
   }
-}
-
-function isToolResultBlock(
-  block: unknown,
-): block is { type: 'tool_result'; tool_use_id: string } {
-  return (
-    block !== null &&
-    typeof block === 'object' &&
-    'type' in block &&
-    (block as { type: string }).type === 'tool_result' &&
-    'tool_use_id' in block
-  )
-}
-
-type CachedMCEditsBlock = {
-  type: 'cache_edits'
-  edits: { type: 'delete'; cache_reference: string }[]
-}
-
-type CachedMCPinnedEdits = {
-  userMessageIndex: number
-  block: CachedMCEditsBlock
 }
 
 // Exported for testing cache_reference placement constraints
@@ -3064,10 +3118,7 @@ export function addCacheBreakpoints(
   messages: (UserMessage | AssistantMessage)[],
   enablePromptCaching: boolean,
   querySource?: QuerySource,
-  useCachedMC = false,
-  newCacheEdits?: CachedMCEditsBlock | null,
-  pinnedEdits?: CachedMCPinnedEdits[],
-  skipCacheWrite = false,
+  skipCacheWrite: boolean = false,
 ): MessageParam[] {
   logEvent('tengu_api_cache_breakpoints', {
     totalMessageCount: messages.length,
@@ -3104,108 +3155,6 @@ export function addCacheBreakpoints(
       querySource,
     )
   })
-
-  if (!useCachedMC) {
-    return result
-  }
-
-  // Track all cache_references being deleted to prevent duplicates across blocks.
-  const seenDeleteRefs = new Set<string>()
-
-  // Helper to deduplicate a cache_edits block against already-seen deletions
-  const deduplicateEdits = (block: CachedMCEditsBlock): CachedMCEditsBlock => {
-    const uniqueEdits = block.edits.filter(edit => {
-      if (seenDeleteRefs.has(edit.cache_reference)) {
-        return false
-      }
-      seenDeleteRefs.add(edit.cache_reference)
-      return true
-    })
-    return { ...block, edits: uniqueEdits }
-  }
-
-  // Re-insert all previously-pinned cache_edits at their original positions
-  for (const pinned of pinnedEdits ?? []) {
-    const msg = result[pinned.userMessageIndex]
-    if (msg && msg.role === 'user') {
-      if (!Array.isArray(msg.content)) {
-        msg.content = [{ type: 'text', text: msg.content as string }]
-      }
-      const dedupedBlock = deduplicateEdits(pinned.block)
-      if (dedupedBlock.edits.length > 0) {
-        insertBlockAfterToolResults(msg.content, dedupedBlock)
-      }
-    }
-  }
-
-  // Insert new cache_edits into the last user message and pin them
-  if (newCacheEdits && result.length > 0) {
-    const dedupedNewEdits = deduplicateEdits(newCacheEdits)
-    if (dedupedNewEdits.edits.length > 0) {
-      for (let i = result.length - 1; i >= 0; i--) {
-        const msg = result[i]
-        if (msg && msg.role === 'user') {
-          if (!Array.isArray(msg.content)) {
-            msg.content = [{ type: 'text', text: msg.content as string }]
-          }
-          insertBlockAfterToolResults(msg.content, dedupedNewEdits)
-          // Pin so this block is re-sent at the same position in future calls
-          pinCacheEdits(i, newCacheEdits)
-
-          logForDebugging(
-            `Added cache_edits block with ${dedupedNewEdits.edits.length} deletion(s) to message[${i}]: ${dedupedNewEdits.edits.map(e => e.cache_reference).join(', ')}`,
-          )
-          break
-        }
-      }
-    }
-  }
-
-  // Add cache_reference to tool_result blocks that are within the cached prefix.
-  // Must be done AFTER cache_edits insertion since that modifies content arrays.
-  if (enablePromptCaching) {
-    // Find the last message containing a cache_control marker
-    let lastCCMsg = -1
-    for (let i = 0; i < result.length; i++) {
-      const msg = result[i]!
-      if (Array.isArray(msg.content)) {
-        for (const block of msg.content) {
-          if (block && typeof block === 'object' && 'cache_control' in block) {
-            lastCCMsg = i
-          }
-        }
-      }
-    }
-
-    // Add cache_reference to tool_result blocks that are strictly before
-    // the last cache_control marker. The API requires cache_reference to
-    // appear "before or on" the last cache_control — we use strict "before"
-    // to avoid edge cases where cache_edits splicing shifts block indices.
-    //
-    // Create new objects instead of mutating in-place to avoid contaminating
-    // blocks reused by secondary queries that use models without cache_editing support.
-    if (lastCCMsg >= 0) {
-      for (let i = 0; i < lastCCMsg; i++) {
-        const msg = result[i]!
-        if (msg.role !== 'user' || !Array.isArray(msg.content)) {
-          continue
-        }
-        let cloned = false
-        for (let j = 0; j < msg.content.length; j++) {
-          const block = msg.content[j]
-          if (block && isToolResultBlock(block)) {
-            if (!cloned) {
-              msg.content = [...msg.content]
-              cloned = true
-            }
-            msg.content[j] = Object.assign({}, block, {
-              cache_reference: block.tool_use_id,
-            })
-          }
-        }
-      }
-    }
-  }
 
   return result
 }

@@ -1,6 +1,5 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { feature } from 'bun:bundle'
-import { TASK_OUTPUT_TOOL_NAME } from '../tools/TaskOutputTool/constants.js'
 import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../tools/ExitPlanModeTool/constants.js'
 import { ENTER_PLAN_MODE_TOOL_NAME } from '../tools/EnterPlanModeTool/constants.js'
 import { AGENT_TOOL_NAME } from '../tools/AgentTool/constants.js'
@@ -33,8 +32,7 @@ import {
   CRON_LIST_TOOL_NAME,
 } from '../tools/ScheduleCronTool/prompt.js'
 
-export const ALL_AGENT_DISALLOWED_TOOLS = new Set([
-  TASK_OUTPUT_TOOL_NAME,
+export const ALL_AGENT_DISALLOWED_TOOLS: Set<string> = new Set([
   EXIT_PLAN_MODE_V2_TOOL_NAME,
   ENTER_PLAN_MODE_TOOL_NAME,
   // Allow Agent tool for agents when user is ant (enables nested agents)

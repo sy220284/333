@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
 import { coerce } from 'semver'
 import { getIsNonInteractiveSession } from '../bootstrap/state.js'
-import { getGlobalConfig, saveGlobalConfig } from './config.js'
+import { saveGlobalConfig } from './config.js'
 import { getClaudeConfigHomeDir } from './envUtils.js'
 import { toError } from './errors.js'
 import { logError } from './log.js'
@@ -45,34 +45,6 @@ let changelogMemoryCache: string | null = null
 /** @internal exported for tests */
 export function _resetChangelogCacheForTesting(): void {
   changelogMemoryCache = null
-}
-
-/**
- * Migrate changelog from old config-based storage to file-based storage.
- * This should be called once at startup to ensure the migration happens
- * before any other config saves that might re-add the deprecated field.
- */
-export async function migrateChangelogFromConfig(): Promise<void> {
-  const config = getGlobalConfig()
-  if (!config.cachedChangelog) {
-    return
-  }
-
-  const cachePath = getChangelogCachePath()
-
-  // If cache file doesn't exist, create it from old config
-  try {
-    await mkdir(dirname(cachePath), { recursive: true })
-    await writeFile(cachePath, config.cachedChangelog, {
-      encoding: 'utf-8',
-      flag: 'wx', // Write only if file doesn't exist
-    })
-  } catch {
-    // File already exists, which is fine - skip silently
-  }
-
-  // Remove the deprecated field from config
-  saveGlobalConfig(({ cachedChangelog: _, ...rest }) => rest)
 }
 
 /**

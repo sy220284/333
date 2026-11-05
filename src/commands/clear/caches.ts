@@ -2,7 +2,6 @@
  * Session cache clearing utilities.
  * This module is imported at startup by main.tsx, so keep imports minimal.
  */
-import { feature } from 'bun:bundle'
 import {
   clearInvokedSkills,
   setLastEmittedDate,
@@ -91,22 +90,7 @@ export function clearSessionCaches(
   // Clear swarm permission pending callbacks
   if (!hasPreserved) clearAllPendingCallbacks()
 
-  // Clear tungsten session usage tracking
-  if (process.env.USER_TYPE === 'ant') {
-    void import('../../tools/TungstenTool/TungstenTool.js').then(
-      ({ clearSessionsWithTungstenUsage, resetInitializationState }) => {
-        clearSessionsWithTungstenUsage()
-        resetInitializationState()
-      },
-    )
-  }
-  // Clear attribution caches (file content cache, pending bash states)
-  // Dynamic import to preserve dead code elimination for COMMIT_ATTRIBUTION feature flag
-  if (feature('COMMIT_ATTRIBUTION')) {
-    void import('../../utils/attributionHooks.js').then(
-      ({ clearAttributionCaches }) => clearAttributionCaches(),
-    )
-  }
+  // External 2.1.310 builds omit internal Tungsten and attribution modules.
   // Clear repository detection caches
   clearRepositoryCaches()
   // Clear bash command prefix caches (Haiku-extracted prefixes)

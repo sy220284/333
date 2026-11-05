@@ -1,0 +1,48 @@
+name: 简体中文界面专项验收
+on:
+  push:
+    paths:
+      - 'src/components/**'
+      - 'src/commands/**'
+      - 'src/hooks/**'
+      - 'src/services/mcp/**'
+      - 'src/constants/prompts.ts'
+      - 'src/utils/settings/settings.ts'
+      - 'src/utils/intl.ts'
+      - 'src/utils/formatBriefTimestamp.ts'
+      - 'tests/chinese-only-ui.test.mjs'
+      - 'tools/localization/**'
+  pull_request:
+    paths:
+      - 'src/components/**'
+      - 'src/commands/**'
+      - 'src/hooks/**'
+      - 'src/services/mcp/**'
+      - 'src/constants/prompts.ts'
+      - 'src/utils/settings/settings.ts'
+      - 'src/utils/intl.ts'
+      - 'src/utils/formatBriefTimestamp.ts'
+      - 'tests/chinese-only-ui.test.mjs'
+      - 'tools/localization/**'
+jobs:
+  check:
+    name: 中文界面回归测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 校验语言入口与中文显示约定
+        run: node --test tests/chinese-only-ui.test.mjs
+      - name: 全仓扫描中文界面残留英文
+        run: node tools/localization/audit-ui.mjs
+      - name: 检查汉化是否破坏 TypeScript 语法和调用标识符
+        run: |
+          npm install --prefix "${RUNNER_TEMP}/333-ui-typescript" --no-save --ignore-scripts --no-package-lock typescript@5.9.3
+          TS_COMPILER_PATH="${RUNNER_TEMP}/333-ui-typescript/node_modules/typescript/lib/typescript.js" node tools/localization/check-code-integrity.mjs
+          TS_COMPILER_PATH="${RUNNER_TEMP}/333-ui-typescript/node_modules/typescript/lib/typescript.js" node --test tests/chinese-source-integrity.test.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 333-localization-audit
+          path: .localization-audit.json

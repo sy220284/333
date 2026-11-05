@@ -36,9 +36,7 @@ const cronTools = feature('AGENT_TRIGGERS')
 const RemoteTriggerTool = feature('AGENT_TRIGGERS_REMOTE')
   ? require('./tools/RemoteTriggerTool/RemoteTriggerTool.js').RemoteTriggerTool
   : null
-const MonitorTool = feature('MONITOR_TOOL')
-  ? require('./tools/MonitorTool/MonitorTool.js').MonitorTool
-  : null
+import { MonitorTool } from './tools/MonitorTool/MonitorTool.js'
 const SendUserFileTool = feature('KAIROS')
   ? require('./tools/SendUserFileTool/SendUserFileTool.js').SendUserFileTool
   : null
@@ -51,7 +49,6 @@ const SubscribePRTool = feature('KAIROS_GITHUB_WEBHOOKS')
   ? require('./tools/SubscribePRTool/SubscribePRTool.js').SubscribePRTool
   : null
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
-import { TaskOutputTool } from './tools/TaskOutputTool/TaskOutputTool.js'
 import { WebSearchTool } from './tools/WebSearchTool/WebSearchTool.js'
 import { TodoWriteTool } from './tools/TodoWriteTool/TodoWriteTool.js'
 import { ExitPlanModeV2Tool } from './tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
@@ -74,6 +71,7 @@ import { LSPTool } from './tools/LSPTool/LSPTool.js'
 import { ListMcpResourcesTool } from './tools/ListMcpResourcesTool/ListMcpResourcesTool.js'
 import { ReadMcpResourceTool } from './tools/ReadMcpResourceTool/ReadMcpResourceTool.js'
 import { ToolSearchTool } from './tools/ToolSearchTool/ToolSearchTool.js'
+import { ListAgentsTool } from './tools/ListAgentsTool/ListAgentsTool.js'
 import { EnterPlanModeTool } from './tools/EnterPlanModeTool/EnterPlanModeTool.js'
 import { EnterWorktreeTool } from './tools/EnterWorktreeTool/EnterWorktreeTool.js'
 import { ExitWorktreeTool } from './tools/ExitWorktreeTool/ExitWorktreeTool.js'
@@ -85,14 +83,6 @@ import { TaskListTool } from './tools/TaskListTool/TaskListTool.js'
 import uniqBy from 'lodash-es/uniqBy.js'
 import { isToolSearchEnabledOptimistic } from './utils/toolSearch.js'
 import { isTodoV2Enabled } from './utils/tasks.js'
-// Dead code elimination: conditional import for CLAUDE_CODE_VERIFY_PLAN
-/* eslint-disable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
-const VerifyPlanExecutionTool =
-  process.env.USER_TYPE === 'ant' && process.env.CLAUDE_CODE_VERIFY_PLAN === 'true'
-    ? require('./tools/VerifyPlanExecutionTool/VerifyPlanExecutionTool.js')
-        .VerifyPlanExecutionTool
-    : null
-/* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 import { SYNTHETIC_OUTPUT_TOOL_NAME } from './tools/SyntheticOutputTool/SyntheticOutputTool.js'
 export {
   ALL_AGENT_DISALLOWED_TOOLS,
@@ -101,11 +91,7 @@ export {
   COORDINATOR_MODE_ALLOWED_TOOLS,
 } from './constants/tools.js'
 import { feature } from 'bun:bundle'
-// Dead code elimination: conditional import for OVERFLOW_TEST_TOOL
 /* eslint-disable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
-const OverflowTestTool = feature('OVERFLOW_TEST_TOOL')
-  ? require('./tools/OverflowTestTool/OverflowTestTool.js').OverflowTestTool
-  : null
 const CtxInspectTool = feature('CONTEXT_COLLAPSE')
   ? require('./tools/CtxInspectTool/CtxInspectTool.js').CtxInspectTool
   : null
@@ -122,15 +108,7 @@ const coordinatorModeModule = feature('COORDINATOR_MODE')
 const SnipTool = feature('HISTORY_SNIP')
   ? require('./tools/SnipTool/SnipTool.js').SnipTool
   : null
-const ListPeersTool = feature('UDS_INBOX')
-  ? require('./tools/ListPeersTool/ListPeersTool.js').ListPeersTool
-  : null
-const WorkflowTool = feature('WORKFLOW_SCRIPTS')
-  ? (() => {
-      require('./tools/WorkflowTool/bundled/index.js').initBundledWorkflows()
-      return require('./tools/WorkflowTool/WorkflowTool.js').WorkflowTool
-    })()
-  : null
+import { WorkflowTool } from './tools/WorkflowTool/WorkflowTool.js'
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 import type { ToolPermissionContext } from './Tool.js'
 import { getDenyRuleForTool } from './utils/permissions/permissions.js'
@@ -146,6 +124,13 @@ import {
 } from './tools/REPLTool/constants.js'
 export { REPL_ONLY_TOOLS }
 /* eslint-disable @typescript-eslint/no-require-imports */
+// Runner operator tools are available only inside the explicit setup/doctor
+// child session. Regular CLI/agents never load privileged Runner tools.
+const selfHostedRunnerWizardTools =
+  ['setup','doctor'].includes(process.env.CLAUDE_CODE_SELF_HOSTED_RUNNER_WIZARD ?? '')
+    ? (require('./cli/selfHostedRunner/wizardTools317.ts') as
+        typeof import('./cli/selfHostedRunner/wizardTools317.ts')).SELF_HOSTED_RUNNER_TOOLS
+    : []
 const getPowerShellTool = () => {
   if (!isPowerShellToolEnabled()) return null
   return (
@@ -192,7 +177,6 @@ export function getToolsForDefaultPreset(): string[] {
 export function getAllBaseTools(): Tools {
   return [
     AgentTool,
-    TaskOutputTool,
     BashTool,
     // Ant-native builds have bfs/ugrep embedded in the bun binary (same ARGV0
     // trick as ripgrep). When available, find/grep in Claude's shell are aliased
@@ -208,6 +192,7 @@ export function getAllBaseTools(): Tools {
     WebSearchTool,
     TaskStopTool,
     AskUserQuestionTool,
+    ...selfHostedRunnerWizardTools,
     SkillTool,
     EnterPlanModeTool,
     ...(process.env.USER_TYPE === 'ant' ? [ConfigTool] : []),
@@ -216,23 +201,21 @@ export function getAllBaseTools(): Tools {
     ...(isTodoV2Enabled()
       ? [TaskCreateTool, TaskGetTool, TaskUpdateTool, TaskListTool]
       : []),
-    ...(OverflowTestTool ? [OverflowTestTool] : []),
-    ...(CtxInspectTool ? [CtxInspectTool] : []),
+      ...(CtxInspectTool ? [CtxInspectTool] : []),
     ...(TerminalCaptureTool ? [TerminalCaptureTool] : []),
     ...(isEnvTruthy(process.env.ENABLE_LSP_TOOL) ? [LSPTool] : []),
     ...(isWorktreeModeEnabled() ? [EnterWorktreeTool, ExitWorktreeTool] : []),
     getSendMessageTool(),
-    ...(ListPeersTool ? [ListPeersTool] : []),
+    ListAgentsTool,
     ...(isAgentSwarmsEnabled()
       ? [getTeamCreateTool(), getTeamDeleteTool()]
       : []),
-    ...(VerifyPlanExecutionTool ? [VerifyPlanExecutionTool] : []),
-    ...(process.env.USER_TYPE === 'ant' && REPLTool ? [REPLTool] : []),
-    ...(WorkflowTool ? [WorkflowTool] : []),
+      ...(process.env.USER_TYPE === 'ant' && REPLTool ? [REPLTool] : []),
+    WorkflowTool,
     ...(SleepTool ? [SleepTool] : []),
     ...cronTools,
     ...(RemoteTriggerTool ? [RemoteTriggerTool] : []),
-    ...(MonitorTool ? [MonitorTool] : []),
+    MonitorTool,
     BriefTool,
     ...(SendUserFileTool ? [SendUserFileTool] : []),
     ...(PushNotificationTool ? [PushNotificationTool] : []),
@@ -364,24 +347,4 @@ export function assembleToolPool(
   )
 }
 
-/**
- * Get all tools including both built-in tools and MCP tools.
- *
- * This is the preferred function when you need the complete tools list for:
- * - Tool search threshold calculations (isToolSearchEnabled)
- * - Token counting that includes MCP tools
- * - Any context where MCP tools should be considered
- *
- * Use getTools() only when you specifically need just built-in tools.
- *
- * @param permissionContext - Permission context for filtering built-in tools
- * @param mcpTools - MCP tools from appState.mcp.tools
- * @returns Combined array of built-in and MCP tools
- */
-export function getMergedTools(
-  permissionContext: ToolPermissionContext,
-  mcpTools: Tools,
-): Tools {
-  const builtInTools = getTools(permissionContext)
-  return [...builtInTools, ...mcpTools]
-}
+

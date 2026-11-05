@@ -26,9 +26,9 @@ export type QueryConfig = {
   }
 }
 
-export function buildQueryConfig(): QueryConfig {
+export function buildQueryConfig(sessionId: SessionId = getSessionId()): QueryConfig {
   return {
-    sessionId: getSessionId(),
+    sessionId,
     gates: {
       streamingToolExecution: checkStatsigFeatureGate_CACHED_MAY_BE_STALE(
         'tengu_streaming_tool_execution2',

@@ -2,11 +2,6 @@ import { feature } from 'bun:bundle'
 import type { UUID } from 'crypto'
 import uniqBy from 'lodash-es/uniqBy.js'
 
-/* eslint-disable @typescript-eslint/no-require-imports */
-const sessionTranscriptModule = feature('KAIROS')
-  ? (require('../sessionTranscript/sessionTranscript.js') as typeof import('../sessionTranscript/sessionTranscript.js'))
-  : null
-
 import { APIUserAbortError } from '@anthropic-ai/sdk'
 import { markPostCompaction } from 'src/bootstrap/state.js'
 import { getInvokedSkillsForAgent } from '../../bootstrap/state.js'
@@ -15,10 +10,16 @@ import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
 import type { Tool, ToolUseContext } from '../../Tool.js'
 import type { LocalAgentTaskState } from '../../tasks/LocalAgentTask/LocalAgentTask.js'
 import { FileReadTool } from '../../tools/FileReadTool/FileReadTool.js'
+import { FILE_READ_TOOL_NAME } from '../../tools/FileReadTool/prompt.js'
 import {
-  FILE_READ_TOOL_NAME,
-  FILE_UNCHANGED_STUB,
-} from '../../tools/FileReadTool/prompt.js'
+  CLEARED_TOOL_RESULT,
+  EXTERNAL_ARTIFACT_PROVENANCE,
+  PERSISTED_TOOL_RESULT_PREFIX,
+} from './keepRecentToolResults.js'
+import {
+  collectPreservedReadFilePaths,
+  hasFullReadResultContent,
+} from './preservedReadPaths.js'
 import { ToolSearchTool } from '../../tools/ToolSearchTool/ToolSearchTool.js'
 import type { AgentId } from '../../types/ids.js'
 import type {
@@ -142,6 +143,12 @@ const MAX_COMPACT_STREAMING_RETRIES = 2
  * tool_result content from tools). Assistant messages contain text, tool_use,
  * and thinking blocks but not images.
  */
+/** Newer API versions can contain document blocks not yet modeled in the pinned SDK. */
+function hasDocumentType(value: unknown): value is { type: 'document' } {
+  return typeof value === 'object' && value !== null &&
+    'type' in value && value.type === 'document'
+}
+
 export function stripImagesFromMessages(messages: Message[]): Message[] {
   return messages.map(message => {
     if (message.type !== 'user') {
@@ -159,7 +166,7 @@ export function stripImagesFromMessages(messages: Message[]): Message[] {
         hasMediaBlock = true
         return [{ type: 'text' as const, text: '[image]' }]
       }
-      if (block.type === 'document') {
+      if (hasDocumentType(block)) {
         hasMediaBlock = true
         return [{ type: 'text' as const, text: '[document]' }]
       }
@@ -171,7 +178,7 @@ export function stripImagesFromMessages(messages: Message[]): Message[] {
             toolHasMedia = true
             return { type: 'text' as const, text: '[image]' }
           }
-          if (item.type === 'document') {
+          if (hasDocumentType(item)) {
             toolHasMedia = true
             return { type: 'text' as const, text: '[document]' }
           }
@@ -209,16 +216,7 @@ export function stripImagesFromMessages(messages: Message[]): Message[] {
  * don't exist on external builds).
  */
 export function stripReinjectedAttachments(messages: Message[]): Message[] {
-  if (feature('EXPERIMENTAL_SKILL_SEARCH')) {
-    return messages.filter(
-      m =>
-        !(
-          m.type === 'attachment' &&
-          (m.attachment.type === 'skill_discovery' ||
-            m.attachment.type === 'skill_listing')
-        ),
-    )
-  }
+  // Preserve the standard skill listing during canonical compaction.
   return messages
 }
 
@@ -710,12 +708,6 @@ export async function compactConversation(
     // instead of the user-set session name.
     reAppendSessionMetadata()
 
-    // Write a reduced transcript segment for the pre-compaction messages
-    // (assistant mode only). Fire-and-forget — errors are logged internally.
-    if (feature('KAIROS')) {
-      void sessionTranscriptModule?.writeSessionTranscriptSegment(messages)
-    }
-
     context.onCompactProgress?.({
       type: 'hooks_start',
       hookType: 'post_compact',
@@ -1056,12 +1048,6 @@ export async function partialCompactConversation(
     // the 16KB tail window that readLiteMetadata reads for --resume display.
     reAppendSessionMetadata()
 
-    if (feature('KAIROS')) {
-      void sessionTranscriptModule?.writeSessionTranscriptSegment(
-        messagesToSummarize,
-      )
-    }
-
     context.onCompactProgress?.({
       type: 'hooks_start',
       hookType: 'post_compact',
@@ -1329,6 +1315,12 @@ async function streamCompactSummary({
 
       while (!next.done) {
         const event = next.value
+        // Generators may yield void while waiting for a stream event. Such a
+        // tick cannot carry content or assistant state.
+        if (typeof event !== 'object' || event === null) {
+          next = await streamIter.next()
+          continue
+        }
 
         if (
           !hasStartedStreaming &&
@@ -1418,7 +1410,17 @@ export async function createPostCompactFileAttachments(
   maxFiles: number,
   preservedMessages: Message[] = [],
 ): Promise<AttachmentMessage[]> {
-  const preservedReadPaths = collectReadToolFilePaths(preservedMessages)
+  const preservedReadPaths = collectPreservedReadFilePaths(
+    preservedMessages,
+    FILE_READ_TOOL_NAME,
+    expandPath,
+    result => hasFullReadResultContent(
+      result,
+      CLEARED_TOOL_RESULT,
+      PERSISTED_TOOL_RESULT_PREFIX,
+      EXTERNAL_ARTIFACT_PROVENANCE,
+    ),
+  )
   const recentFiles = Object.entries(readFileState)
     .map(([filename, state]) => ({ filename, ...state }))
     .filter(
@@ -1596,62 +1598,6 @@ export async function createAsyncAgentAttachmentsIfNeeded(
       }),
     ]
   })
-}
-
-/**
- * Scan messages for Read tool_use blocks and collect their file_path inputs
- * (normalized via expandPath). Used to dedup post-compact file restoration
- * against what's already visible in the preserved tail.
- *
- * Skips Reads whose tool_result is a dedup stub — the stub points at an
- * earlier full Read that may have been compacted away, so we want
- * createPostCompactFileAttachments to re-inject the real content.
- */
-function collectReadToolFilePaths(messages: Message[]): Set<string> {
-  const stubIds = new Set<string>()
-  for (const message of messages) {
-    if (message.type !== 'user' || !Array.isArray(message.message.content)) {
-      continue
-    }
-    for (const block of message.message.content) {
-      if (
-        block.type === 'tool_result' &&
-        typeof block.content === 'string' &&
-        block.content.startsWith(FILE_UNCHANGED_STUB)
-      ) {
-        stubIds.add(block.tool_use_id)
-      }
-    }
-  }
-
-  const paths = new Set<string>()
-  for (const message of messages) {
-    if (
-      message.type !== 'assistant' ||
-      !Array.isArray(message.message.content)
-    ) {
-      continue
-    }
-    for (const block of message.message.content) {
-      if (
-        block.type !== 'tool_use' ||
-        block.name !== FILE_READ_TOOL_NAME ||
-        stubIds.has(block.id)
-      ) {
-        continue
-      }
-      const input = block.input
-      if (
-        input &&
-        typeof input === 'object' &&
-        'file_path' in input &&
-        typeof input.file_path === 'string'
-      ) {
-        paths.add(expandPath(input.file_path))
-      }
-    }
-  }
-  return paths
 }
 
 const SKILL_TRUNCATION_MARKER =

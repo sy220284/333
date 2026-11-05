@@ -178,13 +178,10 @@ function filterRulesByContentsMatchingInput(
   function strEquals(a: string, b: string): boolean {
     return a.toLowerCase() === b.toLowerCase()
   }
-  function strStartsWith(str: string, prefix: string): boolean {
-    return str.toLowerCase().startsWith(prefix.toLowerCase())
-  }
   // SECURITY: stripModulePrefix on RULE names widens the
-  // secondary-canonical match — a deny rule `Module\Remove-Item:*` blocking
+  // secondary-canonical match — a deny rule `Module\Remove-Item *` blocking
   // `rm` is the intent (fail-safe over-match), but an allow rule
-  // `ModuleA\Get-Thing:*` also matching `ModuleB\Get-Thing` is fail-OPEN.
+  // `ModuleA\Get-Thing *` also matching `ModuleB\Get-Thing` is fail-OPEN.
   // Deny/ask over-match is fine; allow must never over-match.
   function stripModulePrefixForRule(name: string): string {
     if (behavior === 'allow') {
@@ -208,7 +205,7 @@ function filterRulesByContentsMatchingInput(
   // single space. PowerShell accepts any whitespace (tab, etc.) as separator,
   // but prefix rule matching uses `prefix + ' '` (literal space). Without this,
   // `rm\t./x` canonicalizes to `remove-item\t./x` and misses the deny rule
-  // `Remove-Item:*`, while acceptEdits auto-allow (using AST cmd.name) still
+  // `Remove-Item *`, while acceptEdits auto-allow (using AST cmd.name) still
   // matches — a deny-rule bypass. Build unconditionally (not just when the
   // canonical differs) so non-space-separated raw commands are also normalized.
   const rest = command.slice(rawCmdName.length).replace(/^\s+/, ' ')
@@ -224,18 +221,6 @@ function filterRulesByContentsMatchingInput(
         switch (rule.type) {
           case 'exact':
             return strEquals(rule.command, cmd)
-          case 'prefix':
-            switch (matchMode) {
-              case 'exact':
-                return strEquals(rule.prefix, cmd)
-              case 'prefix': {
-                if (strEquals(cmd, rule.prefix)) {
-                  return true
-                }
-                return strStartsWith(cmd, rule.prefix + ' ')
-              }
-            }
-            break
           case 'wildcard':
             if (matchMode === 'exact') {
               return false
@@ -259,7 +244,7 @@ function filterRulesByContentsMatchingInput(
       // This ensures 'deny rm' also blocks 'Remove-Item'
       // SECURITY: stripModulePrefix applied to DENY/ASK rule command
       // names too, not just input. Otherwise a deny rule written as
-      // `Microsoft.PowerShell.Management\Remove-Item:*` is bypassed by `rm`,
+      // `Microsoft.PowerShell.Management\Remove-Item *` is bypassed by `rm`,
       // `del`, or plain `Remove-Item` — resolveToCanonical won't match the
       // module-qualified form against COMMON_ALIASES.
       if (rule.type === 'exact') {
@@ -281,29 +266,6 @@ function filterRulesByContentsMatchingInput(
             return true
           }
         }
-      } else if (rule.type === 'prefix') {
-        const rawRuleCmdName = rule.prefix.split(/\s+/)[0] ?? ''
-        const ruleCanonical = resolveToCanonical(
-          stripModulePrefixForRule(rawRuleCmdName),
-        )
-        if (ruleCanonical === inputCanonical) {
-          const ruleRest = rule.prefix
-            .slice(rawRuleCmdName.length)
-            .replace(/^\s+/, ' ')
-          const canonicalPrefix = inputCanonical + ruleRest
-          if (matchMode === 'exact') {
-            if (strEquals(canonicalPrefix, canonicalCommand)) {
-              return true
-            }
-          } else {
-            if (
-              strEquals(canonicalCommand, canonicalPrefix) ||
-              strStartsWith(canonicalCommand, canonicalPrefix + ' ')
-            ) {
-              return true
-            }
-          }
-        }
       } else if (rule.type === 'wildcard') {
         // Resolve the wildcard pattern's command name to canonical and re-match
         // This ensures 'deny rm *' also blocks 'Remove-Item secret.txt'
@@ -313,7 +275,7 @@ function filterRulesByContentsMatchingInput(
         )
         if (ruleCanonical === inputCanonical && matchMode !== 'exact') {
           // Rebuild the pattern with the canonical cmdlet name
-          // Normalize separator same as exact and prefix branches.
+          // Normalize separator same as exact branch.
           // Without this, a wildcard rule `rm\t*` produces canonicalPattern
           // with a literal tab that never matches the space-normalized
           // canonicalCommand.

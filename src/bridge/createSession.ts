@@ -2,7 +2,7 @@ import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
 import { logForDebugging } from '../utils/debug.js'
 import { errorMessage } from '../utils/errors.js'
 import { extractErrorDetail } from './debugUtils.js'
-import { toCompatSessionId } from './sessionIdCompat.js'
+import { toSessionApiId } from './sessionIdProtocol.js'
 
 type GitSource = {
   type: 'git_repository'
@@ -357,9 +357,9 @@ export async function updateBridgeSessionTitle(
   // Compat gateway only accepts session_* (compat/convert.go:27). v2 callers
   // pass raw cse_*; retag here so all callers can pass whatever they hold.
   // Idempotent for v1's session_* and bridgeMain's pre-converted compatSessionId.
-  const compatId = toCompatSessionId(sessionId)
-  const url = `${opts?.baseUrl ?? getOauthConfig().BASE_API_URL}/v1/sessions/${compatId}`
-  logForDebugging(`[bridge] Updating session title: ${compatId} → ${title}`)
+  const sessionApiId = toSessionApiId(sessionId)
+  const url = `${opts?.baseUrl ?? getOauthConfig().BASE_API_URL}/v1/sessions/${sessionApiId}`
+  logForDebugging(`[bridge] Updating session title: ${sessionApiId} → ${title}`)
 
   try {
     const response = await axios.patch(

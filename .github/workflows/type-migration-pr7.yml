@@ -1,0 +1,125 @@
+name: PR7 TypeScript 迁移独立验收
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence, main]
+    paths:
+      - 'src/cli/gateway/**'
+      - 'src/utils/accountPeerDirectory.ts'
+      - 'src/tools/ListAgentsTool/peerListing.ts'
+      - 'src/bootstrap/processStart317.ts'
+      - 'src/utils/livePeerSessions.ts'
+      - 'src/utils/sessionHydrationCommit317.ts'
+      - 'src/utils/accessibility/screenReaderMode.ts'
+      - 'src/cli/handlers/pluginEvalWorkspace317.ts'
+      - 'src/tasks/LocalWorkflowTask/workflowCacheKeys.ts'
+      - 'src/bootstrap/preload317.ts'
+      - 'src/utils/plugins/commandSourceConsent.ts'
+      - 'src/cli/handlers/pluginEvalGraders317.ts'
+      - 'src/cli/handlers/pluginEvalCatalog317.ts'
+      - 'src/cli/handlers/pluginEvalModel317.ts'
+      - 'src/utils/hooks/hookConcurrency.ts'
+      - 'src/utils/webToolDeadline.ts'
+      - 'src/skills/bundled/claudeApi.ts'
+      - 'src/skills/bundled/claudeApiPrompt.ts'
+      - 'tools/dev/type-migration-*.mjs'
+      - 'tools/dev/type-migration-targets.json'
+      - '.github/workflows/type-migration-pr7.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/cli/gateway/**'
+      - 'src/utils/accountPeerDirectory.ts'
+      - 'src/tools/ListAgentsTool/peerListing.ts'
+      - 'src/bootstrap/processStart317.ts'
+      - 'src/utils/livePeerSessions.ts'
+      - 'src/utils/sessionHydrationCommit317.ts'
+      - 'src/utils/accessibility/screenReaderMode.ts'
+      - 'src/cli/handlers/pluginEvalWorkspace317.ts'
+      - 'src/tasks/LocalWorkflowTask/workflowCacheKeys.ts'
+      - 'src/bootstrap/preload317.ts'
+      - 'src/utils/plugins/commandSourceConsent.ts'
+      - 'src/cli/handlers/pluginEvalGraders317.ts'
+      - 'src/cli/handlers/pluginEvalCatalog317.ts'
+      - 'src/cli/handlers/pluginEvalModel317.ts'
+      - 'src/utils/hooks/hookConcurrency.ts'
+      - 'src/utils/webToolDeadline.ts'
+      - 'src/skills/bundled/claudeApi.ts'
+      - 'src/skills/bundled/claudeApiPrompt.ts'
+      - 'tools/dev/type-migration-*.mjs'
+      - 'tools/dev/type-migration-targets.json'
+      - '.github/workflows/type-migration-pr7.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: type-migration-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  strict:
+    name: 完整类型检查与迁移模块严格编译
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: gateway-test-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 安装冻结的 TypeScript 编译器
+        run: npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+      - name: 还原依赖和声明
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 全仓 TypeScript 类型检查
+        run: node tools/dev/dev.mjs typecheck:all
+      - name: 全仓 TypeScript 内容级审计
+        run: node tools/dev/type-migration-audit.mjs
+      - name: 已迁移核心模块严格类型编译
+        run: node tools/dev/type-migration-strict.mjs
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 网关授权与推理链真实运行回归
+        run: bun test tests/m6-gateway-device-317.test.mjs tests/m6-gateway-runtime-317.test.mjs
+      - name: 网关授权、IP限流、费用及管理员限额真实行为回归
+        run: node --test tests/m6-gateway-jsonb-317.test.mjs tests/m6-gateway-device-rate-317.test.mjs tests/m6-gateway-admin-317.test.mjs tests/m6-gateway-spend-integration-317.test.mjs
+      - name: PostgreSQL 实例下的真实设备授权与令牌事务验证
+        env:
+          GATEWAY_TEST_POSTGRES_URL: postgres://postgres:gateway-test-only@127.0.0.1:5432/postgres
+        run: bun test tests/m6-gateway-postgres-317.test.mjs
+      - name: Hook并发调度和Web超时取消真实行为回归
+        run: node --test tests/m1-hook-concurrency-312.test.mjs tests/m1-web-tools-deadline-311.test.mjs
+      - name: 插件评测评分器与执行引擎行为回归
+        run: node --test tests/m3-plugin-eval-graders-317.test.mjs tests/m3-plugin-eval-engine-317.test.mjs
+      - name: 账户会话发现、列表及管理员真实API回归
+        run: node --test tests/m1-account-peer-discovery.test.mjs tests/m1-list-agents.test.mjs tests/m6-gateway-admin-317.test.mjs
+      - name: 队友发现及插件命令来源授权真实性回归
+        run: node --test tests/m1-list-agents.test.mjs tests/m3-plugin-source-command-consent-317.test.mjs tests/m3-plugin-source-fingerprint-317.test.mjs
+      - name: 预加载进程与会话声明真实行为回归
+        run: node --test tests/m1-preload-317.test.mjs
+      - name: GC启动配置、工作流缓存与本机会话发现回归
+        run: node --test tests/m1-process-start-317.test.mjs tests/m1-workflow-cache.test.mjs tests/m1-account-peer-discovery.test.mjs
+      - name: Session恢复提交与插件评测工作区行为回归
+        run: node --test tests/m4-session-hydration-commit-317.test.mjs tests/m3-plugin-eval-cleanup-317.test.mjs
+      - name: 屏幕阅读器文本、输出队列及模式切换真实回归
+        run: node --test tests/m1-screen-reader-mode.test.mjs
+      - name: 上传内容级审计证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: typescript-migration-${{ github.sha }}
+          path: .rebuild/governance/type-migration-report.json
+          retention-days: 30
+          if-no-files-found: warn

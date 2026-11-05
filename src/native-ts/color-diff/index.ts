@@ -18,7 +18,8 @@
  */
 
 import { diffArrays } from 'diff'
-import type * as hljsNamespace from 'highlight.js'
+// Runtime highlight.js is a CommonJS module. Its published ESM namespace
+// declarations omit the actual getLanguage/highlight API in this build.
 import { basename, extname } from 'path'
 
 // Lazy: defers loading highlight.js until first render. The full bundle
@@ -30,7 +31,13 @@ import { basename, extname } from 'path'
 // pushed later tests in the same shard into GC-pause territory and a
 // beforeEach/afterEach hook timeout (officialRegistry.test.ts, PR #24150).
 // Same lazy pattern the NAPI wrapper used for dlopen.
-type HLJSApi = typeof hljsNamespace
+type HLJSApi = {
+  getLanguage(name: string): { name?: string } | undefined
+  highlight(
+    code: string,
+    options: { language: string; ignoreIllegals: boolean },
+  ): unknown
+}
 let cachedHljs: HLJSApi | null = null
 function hljs(): HLJSApi {
   if (cachedHljs) return cachedHljs
@@ -483,20 +490,27 @@ function flattenHljs(
   }
 }
 
-// result.emitter is in the public HighlightResult type, but rootNode is
-// internal to TokenTreeEmitter. Type guard validates the shape once so we
+// highlight.js exposes _emitter on HighlightResult (emitter is NOT a
+// property in current releases); rootNode is internal to TokenTreeEmitter. Type guard validates the shape once so we
 // fail loudly (via logError) instead of a silent try/catch swallow — the
 // prior `as unknown as` cast hid a version mismatch (_emitter vs emitter,
 // scope vs kind) behind a silent gray fallback.
-function hasRootNode(emitter: unknown): emitter is { rootNode: HljsNode } {
-  return (
-    typeof emitter === 'object' &&
-    emitter !== null &&
-    'rootNode' in emitter &&
-    typeof emitter.rootNode === 'object' &&
-    emitter.rootNode !== null &&
-    'children' in emitter.rootNode
-  )
+function getEmitterRoot(result: unknown): HljsNode | null {
+  if (typeof result !== 'object' || result === null) return null
+  const typed = result as { _emitter?: unknown; emitter?: unknown }
+  // The published 2.1.88 highlight.js source uses result.emitter.root.
+  // Current public highlight.js versions expose result._emitter.rootNode.
+  // Both are real library contracts; keep the same parsed token tree.
+  for (const candidate of [typed._emitter, typed.emitter]) {
+    if (typeof candidate !== 'object' || candidate === null) continue
+    const shape = candidate as { rootNode?: unknown; root?: unknown }
+    const root = shape.rootNode ?? shape.root
+    if (typeof root !== 'object' || root === null) continue
+    if (Array.isArray((root as { children?: unknown }).children)) {
+      return root as HljsNode
+    }
+  }
+  return null
 }
 
 let loggedEmitterShapeError = false
@@ -521,19 +535,21 @@ function highlightLine(
     // hljs throws on unknown language despite ignoreIllegals
     return [[defaultStyle(theme), code]]
   }
-  if (!hasRootNode(result.emitter)) {
+  const emitterRoot = getEmitterRoot(result)
+  if (!emitterRoot) {
     if (!loggedEmitterShapeError) {
       loggedEmitterShapeError = true
+      const emitter = result as { emitter?: unknown; _emitter?: unknown }
       logError(
         new Error(
-          `color-diff: hljs emitter shape mismatch (keys: ${Object.keys(result.emitter).join(',')}). Syntax highlighting disabled.`,
+          `color-diff: highlight.js emitter shape mismatch (keys: ${Object.keys(emitter._emitter ?? emitter.emitter ?? {}).join(',')}). Syntax highlighting disabled.`,
         ),
       )
     }
     return [[defaultStyle(theme), code]]
   }
   const blocks: Block[] = []
-  flattenHljs(result.emitter.rootNode, theme, undefined, blocks)
+  flattenHljs(emitterRoot, theme, undefined, blocks)
   return blocks
 }
 

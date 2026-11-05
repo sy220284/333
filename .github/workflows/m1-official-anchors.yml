@@ -1,0 +1,68 @@
+name: M1 官方2.1.310新增功能源码锚点核查
+
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - '.github/workflows/m1-official-anchors.yml'
+      - 'tools/upgrade/probe-official-embedded-anchors.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  official-code-anchors:
+    name: 固定哈希官方x64的Artifact、Claude Test及设计同步证据
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: 获取并校验不可变官方2.1.310目标二进制
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
+            'https://downloads.claude.ai/claude-code-releases/2.1.310/linux-x64/claude' \
+            -o "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
+          echo 'b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  '"${RUNNER_TEMP}/claude-2.1.310-linux-x64" | sha256sum --check
+      - name: 检查官方嵌入文件并建立新增功能证据定位表
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/upgrade/probe-official-embedded-anchors.py \
+            --binary "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --output "${RUNNER_TEMP}/2.1.310-feature-anchors.json" \
+            --require-anchors
+      - name: 输出三项新增功能的可复核原始代码定位摘要
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          report = json.loads((Path(os.environ['RUNNER_TEMP']) / '2.1.310-feature-anchors.json').read_text('utf-8'))
+          for group in ('F075_artifact', 'F076_claude_test', 'F077_design_sync'):
+              print(f'=== {group}: {report["groups"][group]} verified frame(s) ===')
+              n = 0
+              for record in report['records']:
+                  hits = [hit for hit in record['hits'] if hit['feature'] == group]
+                  if not hits:
+                      continue
+                  print('sha256:', record['sha256'], 'uncompressed_bytes:', record['bytes'], 'kind:', record['resource_kind'])
+                  if group == 'F076_claude_test' and n < 5:
+                      print('frame-before:', record['binary_preceding_180'])
+                  for hit in hits[:4]:
+                      print('anchor:', hit['needle'], 'count:', hit['instances'], 'nearby:', hit['context'])
+                  n += 1
+                  if n >= (20 if group == 'F076_claude_test' else 4):
+                      break
+          PY
+      - name: 留存目标指纹、模块哈希与精确匹配位置
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-2.1.310-feature-anchors
+          path: ${{ runner.temp }}/2.1.310-feature-anchors.json
+          retention-days: 30
+          if-no-files-found: warn

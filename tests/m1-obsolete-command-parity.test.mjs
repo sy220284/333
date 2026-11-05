@@ -1,0 +1,145 @@
+import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { test } from 'node:test'
+
+const root = resolve(import.meta.dirname, '..')
+const source = path => readFileSync(join(root, path), 'utf8')
+
+test('2.1.317 removes obsolete slash commands without removing Vim editor mode', () => {
+  const registry = source('src/commands.ts')
+  assert.doesNotMatch(registry, /commands\/vim\/index\.js|commands\/tag\/index\.js/)
+  assert.doesNotMatch(registry, /^\s*(vim|tag),/m)
+  const config = source('src/components/Settings/Config.tsx')
+  assert.match(config, /id: 'editorMode'/)
+  assert.match(config, /options: \['normal', 'vim'\]/)
+})
+
+test('/agents retains the hidden instructions instead of loading the retired wizard', () => {
+  const index = source('src/commands/agents/index.ts')
+  assert.match(index, /type: 'local'/)
+  assert.match(index, /isHidden: true/)
+  assert.match(index, /supportsNonInteractive: true/)
+  assert.doesNotMatch(index, /local-jsx|AgentsMenu|import\('\.\/agents\.js'\)/)
+  assert.match(index, /\.claude\/agents\//)
+})
+
+test('2.1.317 suppresses redundant Agent classifier approval text but preserves other tool messages', () => {
+  const view = source('src/components/messages/UserToolResultMessage/UserToolSuccessMessage.tsx').split('//# sourceMappingURL=')[0]
+  assert.match(view, /yoloReason && tool\.name !== 'Agent' && <MessageResponse/)
+  assert.match(view, /Allowed by auto mode classifier/)
+})
+
+test('retired TaskOutput executable is absent; background outputs are still available through Read', () => {
+  assert.equal(existsSync(join(root, 'src/tools/TaskOutputTool/TaskOutputTool.tsx')), false)
+  assert.equal(existsSync(join(root, 'src/utils/task/outputFormatting.ts')), false)
+  const registry = source('src/tools.ts')
+  assert.doesNotMatch(registry, /TaskOutputTool/)
+  assert.match(registry, /FileReadTool/)
+  assert.match(source('src/utils/task/TaskOutput.ts'), /getTaskOutputPath/)
+})
+
+test('local command metadata flows through slash parser, QueryEngine and SDK result schema', () => {
+  const processInput = source('src/utils/processUserInput/processUserInput.ts')
+  const slash = source('src/utils/processUserInput/processSlashCommand.tsx')
+  const query = source('src/QueryEngine.ts')
+  const sdk = source('src/entrypoints/sdk/coreSchemas.ts')
+  assert.match(processInput, /localCommand\?: string/)
+  assert.match(slash, /localCommand: returnedCommand\.name/)
+  assert.match(query, /num_turns: localCommand \? 0 : messages\.length - 1/)
+  assert.match(query, /local_command: localCommand/)
+  assert.match(sdk, /local_command: z\.string\(\)\.optional\(\)/)
+})
+
+test('retired teammate default-model setting is removed; new teammates inherit the leader model', () => {
+  const config = source('src/components/Settings/Config.tsx')
+  const settings = source('src/utils/config.ts')
+  const spawn = source('src/tools/shared/spawnMultiAgent.ts')
+  assert.doesNotMatch(config, /teammateDefaultModel|TeammateModel|getHardcodedTeammateModelFallback/)
+  assert.doesNotMatch(settings, /teammateDefaultModel/)
+  assert.doesNotMatch(spawn, /teammateDefaultModel|getHardcodedTeammateModelFallback/)
+  assert.match(spawn, /return leaderModel \?\? getMainLoopModel\(\)/)
+  assert.match(spawn, /process\.env\.CLAUDE_CODE_SUBAGENT_MODEL/)
+  assert.match(spawn, /CLAUDE_CODE_SUBAGENT_MODEL_FORCE/)
+  assert.match(config, /id: 'teammateMode'/)
+})
+
+test('obsolete startup toasts and permission footer hints are gone, operational error notices remain', () => {
+  const chrome = source('src/hooks/useChromeExtensionNotification.tsx').split('//# sourceMappingURL=')[0]
+  const marketplace = source('src/hooks/useOfficialMarketplaceNotification.tsx').split('//# sourceMappingURL=')[0]
+  const ide = source('src/hooks/notifs/useIDEStatusIndicator.tsx').split('//# sourceMappingURL=')[0]
+  const bash = source('src/components/permissions/BashPermissionRequest/BashPermissionRequest.tsx').split('//# sourceMappingURL=')[0]
+  const powershell = source('src/components/permissions/PowerShellPermissionRequest/PowerShellPermissionRequest.tsx').split('//# sourceMappingURL=')[0]
+  assert.doesNotMatch(chrome, /claude-in-chrome-default-enabled|Claude in Chrome enabled/)
+  assert.match(chrome, /chrome-extension-not-detected|chrome-requires-subscription/)
+  assert.doesNotMatch(marketplace, /marketplace-installed|installation success notification/)
+  assert.match(marketplace, /checkAndInstallOfficialMarketplace|marketplace-install-failed|marketplace-config-save-failed/)
+  assert.doesNotMatch(ide, /ide-status-hint|MAX_IDE_HINT_SHOW_COUNT|\/ide for/)
+  assert.match(ide, /ide-status-install-error|ide-status-disconnected/)
+  assert.doesNotMatch(bash, /ctrl\\+e to/)
+  assert.doesNotMatch(powershell, /ctrl\\+e to/)
+})
+
+test('2.1.317 removes sandbox startup banners without losing status and sandbox controls', () => {
+  const welcome = source('src/components/LogoV2/LogoV2.tsx').split('//# sourceMappingURL=')[0]
+  const status = source('src/utils/status.tsx')
+  const sandbox = source('src/components/sandbox/SandboxSettings.tsx')
+  assert.doesNotMatch(welcome, /showSandboxStatus|SandboxManager|Bash 命令将在沙箱中运行/)
+  assert.match(status, /SandboxManager/)
+  assert.match(sandbox, /SandboxManager/)
+})
+
+test('new target removes stale refusal model and DNS cache auto-approval', () => {
+  const errors = source('src/services/api/errors.ts')
+  const api = source('src/services/api/claude.ts')
+  const powershell = source('src/tools/PowerShellTool/readOnlyValidation.ts')
+  assert.doesNotMatch(errors, /try running \/model claude-sonnet-4-20250514/)
+  assert.match(errors, /content: baseMessage,/)
+  assert.match(api, /getErrorMessageIfRefusal\(\s*part\.delta\.stop_reason,\s*\)/)
+  assert.doesNotMatch(powershell, /['"]get-dnsclientcache['"]\s*:/)
+  assert.doesNotMatch(powershell, /['"]\/displaydns['"]/)
+  assert.match(powershell, /safeFlags: \['\/all', '\/allcompartments'\]/)
+})
+
+test('official 2.1.317 and rebuilt CLI both resolve /agents locally without a model turn', { timeout: 90000 }, () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pr7-agents-retirement-'))
+  const env = {
+    ...process.env,
+    HOME: folder,
+    USERPROFILE: folder,
+    XDG_CONFIG_HOME: folder,
+    XDG_CACHE_HOME: folder,
+    CLAUDE_CONFIG_DIR: join(folder, '.claude'),
+    DISABLE_TELEMETRY: '1',
+    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
+    NO_COLOR: '1',
+  }
+  delete env.ANTHROPIC_API_KEY
+  delete env.ANTHROPIC_AUTH_TOKEN
+  delete env.ANTHROPIC_BASE_URL
+  const targets = [['rebuilt', 'bun', [join(root, 'dist', 'cli.js')]]]
+  if (process.env.CLAUDE_TARGET_X64) targets.push(['official-x64', process.env.CLAUDE_TARGET_X64, []])
+  try {
+    for (const [label, command, prefix] of targets) {
+      const args = [...prefix, '--print', '--bare', '--output-format', 'json', '/agents']
+      const run = spawnSync(command, args, {
+        cwd: folder,
+        env,
+        encoding: 'utf8',
+        timeout: 20000,
+        maxBuffer: 1024 * 1024,
+      })
+      assert.equal(run.error, undefined, `${label}: ${run.error?.message}`)
+      assert.equal(run.status, 0, `${label}: ${run.stderr.slice(-1200)}`)
+      const result = JSON.parse(run.stdout.trim())
+      assert.equal(result.local_command, 'agents', `${label}: missing local command route`)
+      assert.equal(result.num_turns, 0, `${label}: old wizard attempted model invocation`)
+      assert.equal(result.is_error, false, `${label}: local command failed`)
+      assert.match(result.result, /\.claude\/agents\//, `${label}: missing agent config path`)
+    }
+  } finally {
+    rmSync(folder, { recursive: true, force: true })
+  }
+})

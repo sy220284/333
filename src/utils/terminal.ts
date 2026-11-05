@@ -71,7 +71,7 @@ function wrapText(
 export function renderTruncatedContent(
   content: string,
   terminalWidth: number,
-  suppressExpandHint = false,
+  suppressExpandHint: boolean = false,
 ): string {
   const trimmedContent = content.trimEnd()
   if (!trimmedContent) {

@@ -12,6 +12,8 @@ export type CrossProjectResumeResult =
       isCrossProject: true
       isSameRepoWorktree: true
       projectPath: string
+      /** Same-repository worktrees resume directly; no shell command is needed. */
+      command?: never
     }
   | {
       isCrossProject: true

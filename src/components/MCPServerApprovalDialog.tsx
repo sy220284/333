@@ -1,7 +1,7 @@
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index.js';
-import { getSettings_DEPRECATED, updateSettingsForSource } from '../utils/settings/settings.js';
+import { getInitialSettings, updateSettingsForSource } from '../utils/settings/settings.js';
 import { Select } from './CustomSelect/index.js';
 import { Dialog } from './design-system/Dialog.js';
 import { MCPServerDialogCopy } from './MCPServerDialogCopy.js';
@@ -25,7 +25,7 @@ export function MCPServerApprovalDialog(t0) {
         case "yes":
         case "yes_all":
           {
-            const currentSettings_0 = getSettings_DEPRECATED() || {};
+            const currentSettings_0 = getInitialSettings() || {};
             const enabledServers = currentSettings_0.enabledMcpjsonServers || [];
             if (!enabledServers.includes(serverName)) {
               updateSettingsForSource("localSettings", {
@@ -42,7 +42,7 @@ export function MCPServerApprovalDialog(t0) {
           }
         case "no":
           {
-            const currentSettings = getSettings_DEPRECATED() || {};
+            const currentSettings = getInitialSettings() || {};
             const disabledServers = currentSettings.disabledMcpjsonServers || [];
             if (!disabledServers.includes(serverName)) {
               updateSettingsForSource("localSettings", {
@@ -79,13 +79,13 @@ export function MCPServerApprovalDialog(t0) {
   let t5;
   if ($[6] === Symbol.for("react.memo_cache_sentinel")) {
     t5 = [{
-      label: "Use this and all future MCP servers in this project",
+      label: "允许此项目当前及今后的所有 MCP 服务器",
       value: "yes_all"
     }, {
-      label: "Use this MCP server",
+      label: "仅允许此 MCP 服务器",
       value: "yes"
     }, {
-      label: "Continue without using this MCP server",
+      label: "不使用此 MCP 服务器并继续",
       value: "no"
     }];
     $[6] = t5;

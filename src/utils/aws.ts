@@ -17,7 +17,7 @@ type AwsError = {
   name: string
 }
 
-export function isAwsCredentialsProviderError(err: unknown) {
+export function isAwsCredentialsProviderError(err: unknown) : boolean {
   return (err as AwsError | undefined)?.name === 'CredentialsProviderError'
 }
 

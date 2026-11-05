@@ -19,6 +19,7 @@ import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { getGlobalClaudeFile } from './env.js'
 import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
 import { ConfigParseError, getErrnoCode } from './errors.js'
+import { isUnrecoverableConfigWriteError } from './sessionWriteFailurePolicy.ts'
 import { writeFileSyncAndFlush_DEPRECATED } from './file.js'
 import { getFsImplementation } from './fsOperations.js'
 import { findCanonicalGitRoot } from './git.js'
@@ -114,10 +115,6 @@ export type ProjectConfig = {
   projectOnboardingSeenCount: number
   hasClaudeMdExternalIncludesApproved?: boolean
   hasClaudeMdExternalIncludesWarningShown?: boolean
-  // MCP server approval fields - migrated to settings but kept for backward compatibility
-  enabledMcpjsonServers?: string[]
-  disabledMcpjsonServers?: string[]
-  enableAllProjectMcpServers?: boolean
   // List of disabled MCP servers (all scopes) - used for enable/disable toggle
   disabledMcpServers?: string[]
   // Opt-in list for built-in MCP servers that default to disabled
@@ -139,8 +136,6 @@ const DEFAULT_PROJECT_CONFIG: ProjectConfig = {
   allowedTools: [],
   mcpContextUris: [],
   mcpServers: {},
-  enabledMcpjsonServers: [],
-  disabledMcpjsonServers: [],
   hasTrustDialogAccepted: false,
   projectOnboardingSeenCount: 0,
   hasClaudeMdExternalIncludesApproved: false,
@@ -202,8 +197,6 @@ export type GlobalConfig = {
   lastReleaseNotesSeen?: string
   // Timestamp when changelog was last fetched (content stored in ~/.claude/cache/changelog.md)
   changelogLastFetched?: number
-  // @deprecated - Migrated to ~/.claude/cache/changelog.md. Keep for migration support.
-  cachedChangelog?: string
   mcpServers?: Record<string, McpServerConfig>
   // claude.ai MCP connectors that have successfully connected at least once.
   // Used to gate "connector unavailable" / "needs auth" startup notifications:
@@ -212,10 +205,6 @@ export type GlobalConfig = {
   // something the user has demonstrably ignored and shouldn't nag about.
   claudeAiMcpEverConnected?: string[]
   preferredNotifChannel: NotificationChannel
-  /**
-   * @deprecated. Use the Notification hook instead (docs/hooks.md).
-   */
-  customNotifyCommand?: string
   verbose: boolean
   customApiKeyResponses?: {
     approved?: string[]
@@ -225,18 +214,11 @@ export type GlobalConfig = {
   hasAcknowledgedCostThreshold?: boolean
   hasSeenUndercoverAutoNotice?: boolean // ant-only: whether the one-time auto-undercover explainer has been shown
   hasSeenUltraplanTerms?: boolean // ant-only: whether the one-time CCR terms notice has been shown in the ultraplan launch dialog
-  hasResetAutoModeOptInForDefaultOffer?: boolean // ant-only: one-shot migration guard, re-prompts churned auto-mode users
   oauthAccount?: AccountInfo
-  iterm2KeyBindingInstalled?: boolean // Legacy - keeping for backward compatibility
   editorMode?: EditorMode
-  bypassPermissionsModeAccepted?: boolean
   hasUsedBackslashReturn?: boolean
   autoCompactEnabled: boolean // Controls whether auto-compact is enabled
   showTurnDuration: boolean // Controls whether to show turn duration message (e.g., "Cooked for 1m 6s")
-  /**
-   * @deprecated Use settings.env instead.
-   */
-  env: { [key: string]: string } // Environment variables to set for the CLI
   hasSeenTasksHint?: boolean // Whether the user has seen the tasks hint
   hasUsedStash?: boolean // Whether the user has used the stash feature (Ctrl+S)
   hasUsedBackgroundTask?: boolean // Whether the user has backgrounded a task (Ctrl+B)
@@ -259,12 +241,13 @@ export type GlobalConfig = {
 
   // IDE dialogs
   hasIdeOnboardingBeenShown?: Record<string, boolean> // Map of terminal name to whether IDE onboarding has been shown
-  ideHintShownCount?: number // Number of times the /ide command hint has been shown
   hasIdeAutoConnectDialogBeenShown?: boolean // Whether the auto-connect IDE dialog has been shown
 
   tipsHistory: {
     [tipId: string]: number // Key is tipId, value is the numStartups when tip was last shown
   }
+  /** Lifetime impression limits (2.1.310), incremented once per shown session. */
+  tipLifetimeShows?: Record<string, number>
 
   // /buddy companion soul — bones regenerated from userId on read. See src/buddy/.
   companion?: import('../buddy/types.js').StoredCompanion
@@ -424,19 +407,6 @@ export type GlobalConfig = {
   // Idle-return dialog tracking
   idleReturnDismissed?: boolean // "Don't ask again" picked
 
-  // Opus 4.5 Pro migration tracking
-  opusProMigrationComplete?: boolean
-  opusProMigrationTimestamp?: number
-
-  // Sonnet 4.5 1m migration tracking
-  sonnet1m45MigrationComplete?: boolean
-
-  // Opus 4.0/4.1 → current Opus migration (shows one-time notif)
-  legacyOpusMigrationTimestamp?: number
-
-  // Sonnet 4.5 → 4.6 migration (pro/max/team premium)
-  sonnet45To46MigrationTimestamp?: number
-
   // Cached statsig gate values
   cachedStatsigGates: {
     [gateName: string]: boolean
@@ -524,10 +494,6 @@ export type GlobalConfig = {
 
   // Teammate spawn mode: 'auto' | 'tmux' | 'in-process'
   teammateMode?: 'auto' | 'tmux' | 'in-process' // How to spawn teammates (default: 'auto')
-  // Model for new teammates when the tool call doesn't pass one.
-  // undefined = hardcoded Opus (backward-compat); null = leader's model; string = model alias/ID.
-  teammateDefaultModel?: string | null
-
   // PR status footer configuration (feature-flagged via GrowthBook)
   prStatusFooterEnabled?: boolean // Show PR review status in footer (default: true)
 
@@ -571,10 +537,6 @@ export type GlobalConfig = {
     timestamp: number
   }
 
-  // Version of the last-applied migration set. When equal to
-  // CURRENT_MIGRATION_VERSION, runMigrations() skips all sync migrations
-  // (avoiding 11× saveGlobalConfig lock+re-read on every startup).
-  migrationVersion?: number
 }
 
 /**
@@ -602,7 +564,6 @@ function createDefaultGlobalConfig(): GlobalConfig {
       approved: [],
       rejected: [],
     },
-    env: {},
     tipsHistory: {},
     memoryUsageCount: 0,
     promptQueueUseCount: 0,
@@ -638,7 +599,6 @@ export const GLOBAL_CONFIG_KEYS = [
   'autoCompactEnabled',
   'showTurnDuration',
   'diffTool',
-  'env',
   'tipsHistory',
   'todoFeatureEnabled',
   'showExpandedTodos',
@@ -818,10 +778,7 @@ export function saveGlobalConfig(
         if (config === current) {
           return current
         }
-        written = {
-          ...config,
-          projects: removeProjectHistory(current.projects),
-        }
+        written = config
         return written
       },
     )
@@ -832,6 +789,10 @@ export function saveGlobalConfig(
       writeThroughGlobalConfigCache(written)
     }
   } catch (error) {
+    // A full disk/quota or inaccessible config file cannot be repaired by
+    // retrying without the lock. Preserve the original failure so -p can
+    // report it and return a nonzero exit status.
+    if (isUnrecoverableConfigWriteError(getErrnoCode(error))) throw error
     logForDebugging(`Failed to save config with lock: ${error}`, {
       level: 'error',
     })
@@ -856,10 +817,7 @@ export function saveGlobalConfig(
     if (config === currentConfig) {
       return
     }
-    written = {
-      ...config,
-      projects: removeProjectHistory(currentConfig.projects),
-    }
+    written = config
     saveConfig(getGlobalClaudeFile(), written, DEFAULT_GLOBAL_CONFIG)
     writeThroughGlobalConfigCache(written)
   }
@@ -905,92 +863,14 @@ registerCleanup(async () => {
   reportConfigCacheStats()
 })
 
-/**
- * Migrates old autoUpdaterStatus to new installMethod and autoUpdates fields
- * @internal
- */
-function migrateConfigFields(config: GlobalConfig): GlobalConfig {
-  // Already migrated
-  if (config.installMethod !== undefined) {
-    return config
-  }
-
-  // autoUpdaterStatus is removed from the type but may exist in old configs
-  const legacy = config as GlobalConfig & {
-    autoUpdaterStatus?:
-      | 'migrated'
-      | 'installed'
-      | 'disabled'
-      | 'enabled'
-      | 'no_permissions'
-      | 'not_configured'
-  }
-
-  // Determine install method and auto-update preference from old field
-  let installMethod: InstallMethod = 'unknown'
-  let autoUpdates = config.autoUpdates ?? true // Default to enabled unless explicitly disabled
-
-  switch (legacy.autoUpdaterStatus) {
-    case 'migrated':
-      installMethod = 'local'
-      break
-    case 'installed':
-      installMethod = 'native'
-      break
-    case 'disabled':
-      // When disabled, we don't know the install method
-      autoUpdates = false
-      break
-    case 'enabled':
-    case 'no_permissions':
-    case 'not_configured':
-      // These imply global installation
-      installMethod = 'global'
-      break
-    case undefined:
-      // No old status, keep defaults
-      break
-  }
-
-  return {
-    ...config,
-    installMethod,
-    autoUpdates,
-  }
-}
-
-/**
- * Removes history field from projects (migrated to history.jsonl)
- * @internal
- */
-function removeProjectHistory(
-  projects: Record<string, ProjectConfig> | undefined,
-): Record<string, ProjectConfig> | undefined {
-  if (!projects) {
-    return projects
-  }
-
-  const cleanedProjects: Record<string, ProjectConfig> = {}
-  let needsCleaning = false
-
-  for (const [path, projectConfig] of Object.entries(projects)) {
-    // history is removed from the type but may exist in old configs
-    const legacy = projectConfig as ProjectConfig & { history?: unknown }
-    if (legacy.history !== undefined) {
-      needsCleaning = true
-      const { history, ...cleanedConfig } = legacy
-      cleanedProjects[path] = cleanedConfig
-    } else {
-      cleanedProjects[path] = projectConfig
-    }
-  }
-
-  return needsCleaning ? cleanedProjects : projects
-}
-
 // fs.watchFile poll interval for detecting writes from other instances (ms)
 const CONFIG_FRESHNESS_POLL_MS = 1000
 let freshnessWatcherStarted = false
+// Ownership is explicit: a preloaded worker may switch CLAUDE_CONFIG_DIR
+// between the warm environment and the accepted session.
+let activeFreshnessWatchFile317: string | null = null
+let freshnessWatcherGeneration317 = 0
+
 
 // fs.watchFile polls stat on the libuv threadpool and only calls us when mtime
 // changed — a stalled stat never blocks the main thread.
@@ -998,10 +878,15 @@ function startGlobalConfigFreshnessWatcher(): void {
   if (freshnessWatcherStarted || process.env.NODE_ENV === 'test') return
   freshnessWatcherStarted = true
   const file = getGlobalClaudeFile()
+  activeFreshnessWatchFile317 = file
+  const generation = ++freshnessWatcherGeneration317
   watchFile(
     file,
     { interval: CONFIG_FRESHNESS_POLL_MS, persistent: false },
     curr => {
+      // Async disk reads from an earlier claimed session must never overwrite
+      // the new owner's global config, even after the old watcher is removed.
+      if (generation !== freshnessWatcherGeneration317) return
       // Our own writes fire this too — the write-through's Date.now()
       // overshoot makes cache.mtime > file mtime, so we skip the re-read.
       // Bun/Node also fire with curr.mtimeMs=0 when the file doesn't exist
@@ -1010,16 +895,17 @@ function startGlobalConfigFreshnessWatcher(): void {
       void getFsImplementation()
         .readFile(file, { encoding: 'utf-8' })
         .then(content => {
+          if (generation !== freshnessWatcherGeneration317) return
           // A write-through may have advanced the cache while we were reading;
           // don't regress to the stale snapshot watchFile stat'd.
           if (curr.mtimeMs <= globalConfigCache.mtime) return
           const parsed = safeParseJSON(stripBOM(content))
           if (parsed === null || typeof parsed !== 'object') return
           globalConfigCache = {
-            config: migrateConfigFields({
+            config: {
               ...createDefaultGlobalConfig(),
               ...(parsed as Partial<GlobalConfig>),
-            }),
+            },
             mtime: curr.mtimeMs,
           }
           lastReadFileStats = { mtime: curr.mtimeMs, size: curr.size }
@@ -1029,7 +915,10 @@ function startGlobalConfigFreshnessWatcher(): void {
   )
   registerCleanup(async () => {
     unwatchFile(file)
-    freshnessWatcherStarted = false
+    if (activeFreshnessWatchFile317 === file) {
+      activeFreshnessWatchFile317 = null
+      freshnessWatcherStarted = false
+    }
   })
 }
 
@@ -1065,9 +954,7 @@ export function getGlobalConfig(): GlobalConfig {
     } catch {
       // File doesn't exist
     }
-    const config = migrateConfigFields(
-      getConfig(getGlobalClaudeFile(), createDefaultGlobalConfig),
-    )
+    const config = getConfig(getGlobalClaudeFile(), createDefaultGlobalConfig)
     globalConfigCache = {
       config,
       mtime: stats?.mtimeMs ?? Date.now(),
@@ -1079,10 +966,32 @@ export function getGlobalConfig(): GlobalConfig {
     return config
   } catch {
     // If anything goes wrong, fall back to uncached behavior
-    return migrateConfigFields(
-      getConfig(getGlobalClaudeFile(), createDefaultGlobalConfig),
-    )
+    return getConfig(getGlobalClaudeFile(), createDefaultGlobalConfig)
   }
+}
+
+/**
+ * 317 one-shot warm-process session handoff: invalidate the previous owner's
+ * config and filesystem watcher before the new session reads its config.
+ * Keeping the old watcher would allow an old file-change event to overwrite
+ * the newly claimed session's globalConfigCache.
+ */
+export function rebindGlobalConfigForClaim317(): void {
+  // Invalidate in-flight watcher reads before dropping the old file owner.
+  freshnessWatcherGeneration317++
+  if (activeFreshnessWatchFile317 !== null) {
+    unwatchFile(activeFreshnessWatchFile317)
+    activeFreshnessWatchFile317 = null
+    freshnessWatcherStarted = false
+  }
+  globalConfigCache = { config: null, mtime: 0 }
+  // Workspace trust is scoped to the old claimed identity, not the process.
+  _trustAccepted = false
+  lastReadFileStats = null
+  // The accepted session must validate its own global config. The warm
+  // process already set this latch when reading the previous owner's file.
+  configReadingAllowed = false
+  getProjectPathForConfig.cache.clear()
 }
 
 /**
@@ -1663,6 +1572,9 @@ export function saveCurrentProjectConfig(
       writeThroughGlobalConfigCache(written)
     }
   } catch (error) {
+    // Config write failures must reach the headless CLI, not be masked by
+    // a second write or by an auth-loss fallback.
+    if (isUnrecoverableConfigWriteError(getErrnoCode(error))) throw error
     logForDebugging(`Failed to save config with lock: ${error}`, {
       level: 'error',
     })

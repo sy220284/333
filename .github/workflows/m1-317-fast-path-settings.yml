@@ -1,0 +1,57 @@
+name: M1 317专用启动设置与版本策略三平台验收
+
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - 'src/bootstrap/fastPathSettings317.ts'
+      - 'src/entrypoints/cli.tsx'
+      - 'src/utils/settings/types.ts'
+      - 'tests/m1-fast-path-settings-317.test.mjs'
+      - 'tests/m1-fast-path-settings-schema-317.test.ts'
+      - '.github/workflows/m1-317-fast-path-settings.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m1-317-fast-path-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  fast-path:
+    name: 受管启动协议及版本策略 (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Windows 检出前启用 Git 长路径
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .rebuild/public
+          key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
+      - name: 还原与生产一致的依赖
+        shell: bash
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 校验组织策略版本、专用CLI入口与异常文本
+        run: node --test tests/m1-fast-path-settings-317.test.mjs
+      - name: 用真实Zod配置确认组织策略字段
+        run: bun test tests/m1-fast-path-settings-schema-317.test.ts

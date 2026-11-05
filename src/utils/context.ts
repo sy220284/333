@@ -3,7 +3,11 @@ import { CONTEXT_1M_BETA_HEADER } from '../constants/betas.js'
 import { getGlobalConfig } from './config.js'
 import { isEnvTruthy } from './envUtils.js'
 import { getCanonicalName } from './model/model.js'
+import { resolveAntModel } from './model/antModels.js'
 import { getModelCapability } from './model/modelCapabilities.js'
+import { getModelBehavior317 } from './model/modelBehavior317.js'
+import { getCatalogModel } from './model/modelCatalog.js'
+import { getAPIProvider } from './model/providers.js'
 
 // Model context window size (200k tokens for all models right now)
 export const MODEL_CONTEXT_WINDOW_DEFAULT = 200_000
@@ -13,7 +17,7 @@ export const COMPACT_MAX_OUTPUT_TOKENS = 20_000
 
 // Default max output tokens
 const MAX_OUTPUT_TOKENS_DEFAULT = 32_000
-const MAX_OUTPUT_TOKENS_UPPER_LIMIT = 64_000
+const MAX_OUTPUT_TOKENS_UPPER_LIMIT = 128_000
 
 // Capped default for slot-reservation optimization. BQ p99 output = 4,911
 // tokens, so 32k/64k defaults over-reserve 8-16× slot capacity. With the cap
@@ -29,7 +33,7 @@ export const ESCALATED_MAX_TOKENS = 64_000
  * Used by C4E admins to disable 1M context for HIPAA compliance.
  */
 export function is1mContextDisabled(): boolean {
-  return isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_1M_CONTEXT)
+  return Boolean(process.env.CLAUDE_CODE_DISABLE_1M_CONTEXT)
 }
 
 export function has1mContext(model: string): boolean {
@@ -44,27 +48,22 @@ export function modelSupports1M(model: string): boolean {
   if (is1mContextDisabled()) {
     return false
   }
+  const catalog = getCatalogModel(getModelBehavior317(model))
+  if (catalog) return catalog.context?.supports_1m_beta === true
   const canonical = getCanonicalName(model)
-  return canonical.includes('claude-sonnet-4') || canonical.includes('opus-4-6')
+  if (canonical.includes('claude-3-') || ['claude-opus-4-0', 'claude-opus-4-1', 'claude-opus-4-5', 'claude-haiku-4-5'].includes(canonical)) return false
+  return getAPIProvider() === 'firstParty' || getAPIProvider() === 'foundry'
 }
 
 export function getContextWindowForModel(
   model: string,
   betas?: string[],
 ): number {
-  // Allow override via environment variable (ant-only)
-  // This takes precedence over all other context window resolution, including 1M detection,
-  // so users can cap the effective context window for local decisions (auto-compact, etc.)
-  // while still using a 1M-capable endpoint.
-  if (
-    process.env.USER_TYPE === 'ant' &&
-    process.env.CLAUDE_CODE_MAX_CONTEXT_TOKENS
-  ) {
-    const override = parseInt(process.env.CLAUDE_CODE_MAX_CONTEXT_TOKENS, 10)
-    if (!isNaN(override) && override > 0) {
-      return override
-    }
-  }
+  const configured = Number(process.env.CLAUDE_CODE_MAX_CONTEXT_TOKENS)
+  const canonical = getCanonicalName(model)
+  const custom = !getCatalogModel(getModelBehavior317(model)) && !canonical.startsWith('claude-3-') &&
+    (!canonical.startsWith('claude-') || canonical !== model.toLowerCase())
+  if (configured > 0 && (isEnvTruthy(process.env.DISABLE_COMPACT) || custom)) return configured
 
   // [1m] suffix — explicit client-side opt-in, respected over all detection
   if (has1mContext(model)) {
@@ -81,6 +80,10 @@ export function getContextWindowForModel(
     }
     return cap.max_input_tokens
   }
+
+  const catalogWindow = getCatalogModel(getModelBehavior317(model))?.context?.window
+  if (catalogWindow && betas?.includes(CONTEXT_1M_BETA_HEADER) && modelSupports1M(model)) return 1_000_000
+  if (catalogWindow) return is1mContextDisabled() ? Math.min(catalogWindow, MODEL_CONTEXT_WINDOW_DEFAULT) : catalogWindow
 
   if (betas?.includes(CONTEXT_1M_BETA_HEADER) && modelSupports1M(model)) {
     return 1_000_000
@@ -164,7 +167,11 @@ export function getModelMaxOutputTokens(model: string): {
 
   const m = getCanonicalName(model)
 
-  if (m.includes('opus-4-6')) {
+  const catalog = getCatalogModel(getModelBehavior317(model))
+  if (catalog) {
+    defaultTokens = catalog.max_output_tokens.default
+    upperLimit = catalog.max_output_tokens.upper
+  } else if (m.includes('opus-4-6')) {
     defaultTokens = 64_000
     upperLimit = 128_000
   } else if (m.includes('sonnet-4-6')) {

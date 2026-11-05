@@ -55,7 +55,7 @@ export type ApiQueryResult<TResult> =
 
 export function createApiQueryHook<TResult>(
   config: ApiQueryHookConfig<TResult>,
-) {
+) : (context: ApiQueryHookContext) => Promise<void> {
   return async (context: ApiQueryHookContext): Promise<void> => {
     try {
       const shouldRun = await config.shouldRun(context)

@@ -112,7 +112,7 @@ export async function generateUnifiedSuggestions(
   query: string,
   mcpResources: Record<string, ServerResource[]>,
   agents: AgentDefinition[],
-  showOnEmpty = false,
+  showOnEmpty: boolean = false,
 ): Promise<SuggestionItem[]> {
   if (!query && !showOnEmpty) {
     return []

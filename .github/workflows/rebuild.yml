@@ -1,11 +1,49 @@
 name: 源码独立重建验证
 on:
   push:
-    branches: [main, rebuild/bun-from-src]
+    branches: [main, rebuild/bun-from-src, upgrade/2.1.310-m1-evidence]
   pull_request:
     branches: [main]
   workflow_dispatch:
+concurrency:
+  # On the active M1 upgrade branch, preserve the running three-platform
+  # rebuild and coalesce pending revisions; otherwise rapid commits prevent
+  # any complete same-SHA acceptance. Other branches keep normal cancellation.
+  group: rebuild-${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: ${{ github.ref_name != 'upgrade/2.1.310-m1-evidence' }}
+
 jobs:
+  typecheck-contract:
+    name: 全仓TypeScript真实接口检查
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 安装冻结的TypeScript检查工具
+        run: npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+      - name: 恢复当前源码的完整声明与依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 完整TypeScript类型检查（失败阻断验收）
+        run: node tools/dev/dev.mjs typecheck:all
+      - name: 全仓TypeScript内容级审计与已重写模块验收
+        run: node tools/dev/type-migration-audit.mjs
+      - name: 已重写模块的TypeScript严格类型编译
+        run: node tools/dev/type-migration-strict.mjs
+      - name: 保存全仓类型迁移缺口清单
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 333-typescript-migration-audit
+          path: .rebuild/governance/type-migration-report.json
+          retention-days: 30
+          if-no-files-found: warn
   rebuild:
     strategy:
       fail-fast: false
@@ -24,6 +62,16 @@ jobs:
         shell: pwsh
         run: git config --global core.longpaths true
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Source-mode .mjs bridges load TypeScript modules directly.
+          node-version: '24'
+      - name: 提前校验全部MJS测试语法
+        run: node build/check-test-syntax.mjs
+      - name: 317 六层生产导入边界与快速启动顺序检查
+        run: node build/check-architecture-links317.mjs
+      - name: 全仓语言文件格式与模块入口校验
+        run: node --test tests/language-file-contract.test.mjs
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
@@ -34,9 +82,11 @@ jobs:
             ~/.npm
             .rebuild/public
           key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
+      - name: 校验六架构官方317原生音频和Linux剪贴板原始字节
+        run: node --test tests/m1-official-native-sources-317.test.mjs
       - name: 校验已入库的原始发行资源
         run: node build/verify-bundled-assets.mjs
-      - name: 校验 Claude API 原始 26 份技能资源
+      - name: 校验 Claude API 2.1.317 技能资源
         run: node build/restore-claude-api.mjs --verify
       - name: 从源码映射恢复精确依赖快照
         run: node build/restore-dependencies.mjs
@@ -49,35 +99,607 @@ jobs:
             ~/.npm
             .rebuild/public
           key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
+      - name: 验收SDK控制消息与快捷键配置的真实解析协议
+        id: acceptance_001
+        continue-on-error: true
+        run: bun test tests/sdk-control-protocol.test.ts tests/keybinding-schema-contract.test.ts tests/bridge-capability-contract.test.ts tests/context-hint-microcompact.test.ts tests/context-hint-controller.test.ts tests/sdk-stream-events.test.ts tests/browser-mcp-extension-detection.test.ts tests/sdk-stream-accumulator.test.ts tests/computer-use-platform.test.ts tests/m1-computer-use-sentinel.test.ts
+      - name: 验证命令输出与补丁差异的真实运行边界
+        id: acceptance_002
+        continue-on-error: true
+        run: bun test tests/m1-runtime-boundaries.test.ts tests/m1-generators.test.ts
       - name: 仅从 src 源码构建
         run: bun build/rebuild.mjs
+      - name: M1 插件测试独立启动分流：真实子进程和隔离边界
+        run: node --test tests/m1-plugin-test-fastpath-317.test.mjs
+      - name: M1 317预热会话配置、凭据及存储身份重绑定
+        run: bun test tests/m1-claim-rebind-317.test.mjs
+      - name: 317源码运行资源：平台原生组件事务化装载与安全回滚
+        run: node --test tests/m1-source-runtime-vendor-317.test.mjs
+      - name: 317插件测试执行器：真实子进程、Hooks沙箱和退出码
+        run: node --test tests/m3-plugin-test-runner-317.test.mjs
+      - name: 317企业网关真实鉴权、Bun服务和SSE上游验证
+        run: bun test tests/m6-gateway-runtime-317.test.mjs
+      - name: 317网关OAuth设备授权、OIDC批准、Token刷新撤销实测
+        run: bun test tests/m6-gateway-device-317.test.mjs
+      - name: 317网关JSONB身份字段读取及Token安全校验
+        run: node --test tests/m6-gateway-jsonb-317.test.mjs
+      - name: 317模型请求Beta路径、版本、API Key/OAuth原生协议
+        run: node --test tests/m2-native-api-wire-317.test.mjs
+      - name: 317企业网关真实Postgres事务及OAuth存储验证
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          docker run --rm -d --name gateway-postgres-317 \
+            -e POSTGRES_PASSWORD=gateway-test-only \
+            -p 127.0.0.1:55432:5432 postgres:16
+          trap 'docker rm -f gateway-postgres-317 >/dev/null 2>&1 || true' EXIT
+          # postgres:16 uses a temporary UNIX-socket-only server during initdb.
+          # Wait for the final TCP listener and a real authenticated SQL query.
+          ready=0
+          for i in $(seq 1 40); do
+            if docker exec gateway-postgres-317 pg_isready -h 127.0.0.1 -p 5432 -U postgres -d postgres >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            docker logs gateway-postgres-317
+            echo 'PostgreSQL TCP service did not become ready' >&2
+            exit 1
+          fi
+          docker exec -e PGPASSWORD=gateway-test-only gateway-postgres-317 psql -h 127.0.0.1 -U postgres -d postgres -Atqc 'SELECT 1' | grep -qx '1'
+          GATEWAY_TEST_POSTGRES_URL='postgres://postgres:gateway-test-only@127.0.0.1:55432/postgres' \
+            bun test tests/m6-gateway-postgres-317.test.mjs
+      - name: 317插件评测Windows工作区清理与结果保存
+        run: node --test tests/m3-plugin-eval-cleanup-317.test.mjs
+      - name: 317插件评测CLI真实模型SSE及双臂报告闭环
+        run: node --test tests/m3-plugin-eval-cli-roundtrip-317.test.mjs
       - name: 新构建版本和基础交互验收
         run: |
           set -euo pipefail
           test -f dist/cli.js
-          bun dist/cli.js --version | grep -F '2.1.88'
+          expected_version=$(node -p "require('./package.json').version")
+          test "$(bun dist/cli.js --version)" = "$expected_version (Claude Code)"
           bun dist/cli.js --help | grep -F -- '--print'
+      - name: 取得已锁定SHA的原版2.1.317 Linux x64执行参考
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          mkdir -p .rebuild/oracle
+          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
+            'https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude' \
+            --output .rebuild/oracle/claude
+          echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  .rebuild/oracle/claude" | sha256sum --check
+          chmod 755 .rebuild/oracle/claude
+      - name: M2模型请求费用与读写边界原版对照
+        env:
+          CLAUDE_CODE_317_REFERENCE: ${{ runner.os == 'Linux' && format('{0}/.rebuild/oracle/claude', github.workspace) || '' }}
+        run: npm run test:m2
+      - name: 采集原版317缺失子命令的真实参数与帮助
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          for args in "gateway --help" "plugin eval --help" "plugin test --help"; do
+            echo "::group::原版 claude $args"
+            ./.rebuild/oracle/claude $args
+            echo "::endgroup::"
+          done
+      - name: 按官方317原版x64同步并实测Linux原生模块
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          node build/sync-official-native-from-binary.mjs --binary .rebuild/oracle/claude --vendor-root vendor --sync
+          node build/sync-official-native-from-binary.mjs --binary .rebuild/oracle/claude --vendor-root vendor
+          node -e "for (const name of ['clipboard-napi','audio-capture']) { const mod = require('./vendor/'+name+'/x64-linux/'+name+'.node'); if (!Object.keys(mod).length) throw Error(name+' exported nothing'); }"
+          node --test tests/m1-native-audio-317.test.mjs
+      - name: 在真实虚拟X11显示环境中验证317原生剪贴板中文读写
+        if: runner.os == 'Linux'
+        run: |
+          command -v Xvfb
+          command -v xvfb-run
+          xvfb-run -a node --test tests/m1-native-clipboard-xvfb-317.test.mjs
+      - name: 按官方317原版恢复并实测Windows/macOS音频原生模块
+        if: runner.os != 'Linux'
+        run: |
+          set -euo pipefail
+          base='https://downloads.claude.ai/claude-code-releases/2.1.317'
+          mkdir -p .rebuild/oracle
+          curl --fail --location --silent --show-error --retry-all-errors --retry 5 \
+            "$base/manifest.json" -o .rebuild/oracle/manifest.json
+          platform="$(node -p "process.platform+'-'+process.arch")"
+          executable=claude
+          if [ "$RUNNER_OS" = "Windows" ]; then executable=claude.exe; fi
+          curl --fail --location --silent --show-error --retry-all-errors --retry 5 \
+            "$base/$platform/$executable" -o ".rebuild/oracle/$executable"
+          node build/verify-official-native-by-platform.mjs \
+            --binary ".rebuild/oracle/$executable" \
+            --manifest .rebuild/oracle/manifest.json --vendor-root vendor --sync
+          node build/verify-official-native-by-platform.mjs \
+            --binary ".rebuild/oracle/$executable" \
+            --manifest .rebuild/oracle/manifest.json --vendor-root vendor
+          node -e "const key=process.arch+'-'+process.platform;const api=require('./vendor/audio-capture/'+key+'/audio-capture.node');if(!api.startRecording||!api.stopRecording)throw Error('Original audio API mismatch')"
+      - name: 从当前源码编译本机自包含执行程序并验证版本及帮助
+        run: node build/compile-standalone.mjs
       - name: 打包独立发行程序和平台资源
         run: node build/package-release.mjs
       - name: 校验发行文件完整性与启动器
+        id: acceptance_003
+        continue-on-error: true
         run: node --test tests/release-integrity.test.mjs
       - name: 验证发行包在仓库外独立运行
+        id: acceptance_004
+        continue-on-error: true
         run: node --test tests/distribution-isolation.test.mjs
+      - name: 317代理绕过和远程消息上传
+        id: acceptance_005
+        continue-on-error: true
+        run: bun test tests/m3-proxy-http-317.test.ts tests/m1-ccr-close.test.ts
+      - name: 317启动参数、安全边界和错误协议
+        id: acceptance_006
+        continue-on-error: true
+        run: |
+          node --test tests/m1-startup-argv-317.test.mjs tests/m1-startup-cli-317.test.mjs tests/m1-print-routing-317.test.mjs tests/m1-headless-startup-error-314.test.mjs
+          node --test tests/m1-fast-path-settings-317.test.mjs
+          bun test tests/m1-fast-path-settings-schema-317.test.ts
+          bun test tests/m1-startup-sdk-317.test.ts
+      - name: 317 PTY宿主子进程、二进制流及重连回收验收
+        run: node --test tests/m1-pty-host-317.test.mjs
+      - name: 317 PTY原始二进制录制、尺寸及微秒时序双跑验证
+        run: node --test tests/m1-pty-recording-317.test.mjs
+      - name: 317评测MCP独立服务、模拟回应与调用日志原版对照
+        run: node --test tests/m1-eval-mock-server-317.test.mjs
+      - name: 317 daemon worker心跳、配置校验及退出生命周期
+        run: node --test tests/m1-daemon-worker-317.test.mjs
+      - name: 317预加载会话接管、认证切换和退出清理
+        run: node --test tests/m1-preload-317.test.mjs
+      - name: 317预加载、PTY和后台备用进程抢占与异常清理复验
+        run: node --test tests/m1-startup-socket-ownership-317.test.mjs
+      - name: 317后台预热备用会话令牌验证与真实模型请求
+        run: node --test tests/m1-bg-spare-317.test.mjs
+      - name: 317 MCP登录、退出和授权码交换
+        id: acceptance_007
+        continue-on-error: true
+        run: |
+          bun test tests/m3-mcp-auth-317.test.ts
+          node --test tests/m3-mcp-auth-cli-317.test.mjs
+      - name: 317会话命令队列优先级和FIFO真实回归
+        run: node --test tests/m2-queue-priority-317.test.mjs tests/m2-session-identity-317.test.mjs tests/m2-session-queue-partitions-317.test.mjs
+      - name: 317工具生命周期异常与取消清理
+        run: node --test tests/m3-tool-lifecycle-317.test.mjs
+      - name: 317代理退出异常释放所有资源
+        run: node --test tests/m4-agent-cleanup-317.test.mjs
+      - name: 317远程任务轮询停止和异步竞态
+        run: node --test tests/m4-remote-poll-lifecycle-317.test.mjs
+      - name: 317会话队列UUID日志与多模态保护
+        run: node --test tests/m2-queue-operation-317.test.mjs
+      - name: Storage V5 会话归属、跨工作区路径和恢复暂存日志
+        run: |
+          node --test tests/m4-session-transcript-paths-v5.test.mjs tests/m4-resume-preparation-v5.test.mjs
+          bun test tests/m4-session-storage-v5-integration.test.ts
+      - name: CCR恢复原子替换与路径安全
+        run: node --test tests/m4-ccr-transcript-restore-317.test.mjs
+      - name: 远程Agent kill与轮询释放一致性
+        run: node --test tests/m4-remote-poll-registry-317.test.mjs
+      - name: CCR会话写入完成后才切换身份
+        run: node --test tests/m4-session-hydration-commit-317.test.mjs
+      - name: 317会话恢复并发事务串行与失败释放
+        run: node --test tests/m4-ccr-concurrent-restore-317.test.mjs
+      - name: 317插件测试目录发现与安全边界
+        run: node --test tests/m3-plugin-test-discovery-317.test.mjs
+      - name: 317插件评测原版案例与六类评分器验收
+        run: |
+          bun test tests/m3-plugin-eval-catalog-317.test.mjs
+          node --test tests/m3-plugin-eval-graders-317.test.mjs
+      - name: 317插件评测双臂执行、成本及报告验收
+        run: node --test tests/m3-plugin-eval-engine-317.test.mjs
+      - name: 官方317 plugin test参数与执行时限
+        run: node --test tests/m3-plugin-test-options-317.test.mjs
+      - name: 317插件测试VM计时器与异步错误追踪
+        run: node --test tests/m3-plugin-test-timers-317.test.mjs
+      - name: 企业网关托管设置匹配与ETag原版协议
+        run: node --test tests/m6-gateway-managed-settings-317.test.mjs
+      - name: 317模型目录、读取边界和嵌套会话
+        id: acceptance_008
+        continue-on-error: true
+        run: node --test tests/m2-effort-catalog-317.test.mjs tests/m2-read-fence-317.test.mjs tests/m4-nested-session-317.test.mjs
+      - name: 317模型能力覆盖与上下文后缀匹配
+        id: acceptance_009
+        continue-on-error: true
+        run: node --test tests/m2-model-capability-overrides-317.test.mjs
+      - name: 317收信端口失败时的启动语义
+        id: acceptance_010
+        continue-on-error: true
+        run: node --test tests/m1-inbox-startup-317.test.mjs
+      - name: 过时命令清理与代理管理新版行为回归
+        id: acceptance_011
+        continue-on-error: true
+        run: node --test tests/m1-obsolete-command-parity.test.mjs
+      - name: 新版退场模块和正式替代入口复查
+        id: acceptance_012
+        continue-on-error: true
+        run: node --test tests/m1-retired-module-routing.test.mjs
+      - name: 317插件安装配置解析及歧义规则
+        id: acceptance_013
+        continue-on-error: true
+        run: node --test tests/m3-plugin-install-config-317.test.mjs
+      - name: 317插件安装失败原版差分：确保启用状态与依赖缓存一致
+        id: acceptance_044
+        continue-on-error: true
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-install-transaction-317.test.mjs
+          else
+            node --test tests/m3-plugin-install-transaction-317.test.mjs
+          fi
+      - name: 317插件安装配置的源码和真实x64差分
+        id: acceptance_014
+        continue-on-error: true
+        if: runner.os == 'Linux'
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-config-native-parity-317.test.mjs
+      - name: 与317原版x64对照插件初始化生成结果
+        id: acceptance_015
+        continue-on-error: true
+        if: runner.os == 'Linux'
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-init-native-parity-317.test.mjs
+      - name: 2.1.317 后台会话状态与原版 CLI 行为验收
+        id: acceptance_016
+        continue-on-error: true
+        run: node --test tests/m1-background-agent-parity.test.mjs
+      - name: 2.1.317 后台会话真实全生命周期验收
+        id: acceptance_017
+        continue-on-error: true
+        run: node --test tests/m1-background-lifecycle.test.mjs
+      - name: 317项目清理的范围、安全改写与真实命令
+        id: acceptance_018
+        continue-on-error: true
+        run: node --test tests/m3-purge-317.test.mjs tests/m3-purge-cli-317.test.mjs tests/m3-purge-pty-317.test.mjs
+      - name: 验证317权限、上下文、Bash、终端与认证状态功能链
+        id: acceptance_019
+        continue-on-error: true
+        run: |
+          node --test tests/m2-disable-compact-settings-317.test.mjs tests/m2-auto-mode-rule-slots-317.test.mjs tests/m3-bash-shellopts-317.test.mjs tests/m3-shell-snapshot-317.test.mjs tests/m2-terminal-hyperlink-forced-off-317.test.mjs tests/m4-auth-status-parity-317.test.mjs
+          bun test tests/m2-disable-ultrathink-317.test.mjs tests/m2-ultrathink-keyword-scope-317.test.mjs
+      - name: 验证317自动模式默认规则筛选与用户设置安全重置
+        id: acceptance_020
+        continue-on-error: true
+        run: node --test tests/m4-auto-mode-defaults-label-317.test.mjs tests/m4-auto-mode-reset-317.test.mjs
+      - name: 317插件依赖安装标记及prune真实卸载图扫描
+        id: acceptance_021
+        continue-on-error: true
+        run: node --test tests/m4-plugin-prune-317.test.mjs
+      - name: 317插件prune官方x64对照验收
+        id: acceptance_022
+        continue-on-error: true
+        if: runner.os == 'Linux'
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m4-plugin-prune-native-parity-317.test.mjs
+      - name: 317插件tag官方x64发布链路对照
+        id: acceptance_023
+        continue-on-error: true
+        if: runner.os == 'Linux'
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-tag-native-parity-317.test.mjs
+      - name: 317插件details官方x64组件盘点差分
+        id: acceptance_024
+        continue-on-error: true
+        if: runner.os == 'Linux'
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-details-native-parity-317.test.mjs
+      - name: 317远程审查结果协议与分段事件解析
+        id: acceptance_043
+        continue-on-error: true
+        run: node --test tests/m6-ultrareview-protocol-317.test.mjs
+      - name: 317独立ultrareview官方x64启动与信任差分
+        if: runner.os == 'Linux'
+        continue-on-error: true
+        id: acceptance_042
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m6-ultrareview-cli-native-parity-317.test.mjs
+      - name: 317插件来源命令授权：SHA256及市场修订版本
+        id: acceptance_048
+        continue-on-error: true
+        run: node --test tests/m3-plugin-source-command-consent-317.test.mjs tests/m3-plugin-source-fingerprint-317.test.mjs
+      - name: 317插件来源命令：官方x64与重建版双端安装及授权
+        id: acceptance_049
+        continue-on-error: true
+        if: runner.os == 'Linux'
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-command-source-native-317.test.mjs
+      - name: 317账户隐私保护：七工具检查与原版提示文案
+        id: acceptance_046
+        continue-on-error: true
+        run: node --test tests/m1-account-email-disclosure-317.test.mjs
+      - name: 317无共同Git历史审查：原生快照构建与调用链验证
+        id: acceptance_047
+        continue-on-error: true
+        run: node --test tests/m6-ultrareview-unrelated-history-317.test.mjs
+      - name: 317云端审查启动配置与远端轮询一致性
+        id: acceptance_045
+        continue-on-error: true
+        run: node --test tests/m6-ultrareview-runtime-config-317.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
+        id: acceptance_025
+        continue-on-error: true
         run: node --test tests/cli-parity.test.mjs
+      - name: 复核多级模型回退与自动压缩真实参数语义
+        id: acceptance_026
+        continue-on-error: true
+        run: node --test tests/upgrade-coverage.test.mjs tests/fallback-model-chain.test.mjs tests/auto-compact-window.test.mjs
+      - name: 复核529故障后的模型回退与工具集合权限
+        id: acceptance_027
+        continue-on-error: true
+        run: node --test tests/fallback-529-integration.test.mjs tests/tool-presets.test.mjs
+      - name: 复核新版CLI参数、云目标与系统提示快照
+        id: acceptance_028
+        continue-on-error: true
+        run: node --test tests/upgrade-mode-options.test.mjs tests/cloud-target.test.mjs tests/system-prompt-snapshot.test.mjs
+      - name: 复核新版受限模式的入口到模型执行
+        id: acceptance_029
+        continue-on-error: true
+        run: node --test tests/upgrade-mode-integration.test.mjs
+      - name: 复测会话 ZIP 插件实际装载与目录权限
+        id: acceptance_030
+        continue-on-error: true
+        run: bun test tests/session-plugin-sources.test.mjs
+      - name: 官方x64与重建版旧代理向导退场真实行为对照
+        id: acceptance_031
+        continue-on-error: true
+        if: runner.os == 'Linux'
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m1-obsolete-command-parity.test.mjs
+      - name: 后台会话原版 x64 与构建版行为严格对照
+        id: acceptance_032
+        continue-on-error: true
+        if: runner.os == 'Linux'
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m1-background-agent-parity.test.mjs
+      - name: 官方 x64 与移植版后台会话双端生命周期验收
+        id: acceptance_033
+        continue-on-error: true
+        if: runner.os == 'Linux'
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m1-background-lifecycle.test.mjs
+      - name: 对原版和当前构建版实际注入529并验证模型回退顺序
+        id: acceptance_034
+        continue-on-error: true
+        if: runner.os == 'Linux'
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/fallback-529-integration.test.mjs
+      - name: 对原版和当前构建版实际验证安全模式与工具权限
+        id: acceptance_035
+        continue-on-error: true
+        if: runner.os == 'Linux'
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/upgrade-mode-integration.test.mjs
+      - name: 验证系统提示词在实际模型请求中的分层及磁盘快照
+        id: acceptance_036
+        continue-on-error: true
+        if: runner.os == 'Linux'
+        run: node --test tests/system-prompt-api-roundtrip.test.mjs
       - name: 模拟模型回调与本地 Read 工具端到端差分验收
+        id: acceptance_037
+        continue-on-error: true
         run: node --test tests/model-loop-local.test.mjs
       - name: Glob 与 Grep 文件搜索模型工具往返差分验收
+        id: acceptance_038
+        continue-on-error: true
         run: node --test tests/search-loop-local.test.mjs
-      - name: 验收已恢复 Claude API 内置技能的全部原文进入新版 CLI
-        run: node --test tests/claude-api-skill.test.mjs
+      - name: 验证 Claude API 资源和失败重试
+        id: acceptance_039
+        continue-on-error: true
+        run: node --test tests/claude-api-skill.test.mjs tests/claude-api-prompt.test.mjs tests/bundled-skill-extraction.test.mjs
+      - name: 验证 Claude API 版本迁移命令的实际读取链路
+        id: acceptance_040
+        continue-on-error: true
+        if: runner.os != 'Linux'
+        run: node --test tests/claude-api-version-parity.test.mjs
+      - name: 对照官方 x64 验证 Claude API 版本迁移命令和资源
+        id: acceptance_041
+        continue-on-error: true
+        if: runner.os == 'Linux'
+        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/claude-api-version-parity.test.mjs
       - name: 保存独立重建版发行产物
         uses: actions/upload-artifact@v4
         with:
-          name: rebuilt-claude-2.1.88-${{ matrix.os }}
+          name: rebuilt-claude-2.1.317-${{ matrix.os }}
           path: dist/
           retention-days: 14
           if-no-files-found: error
+      - name: 汇总独立验收：保留全部失败证据
+        if: always()
+        shell: bash
+        run: |
+          failures=0
+          if [ "${{ steps.acceptance_001.outcome }}" = failure ]; then
+            echo "::error::验收失败：验收SDK控制消息与快捷键配置的真实解析协议"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_002.outcome }}" = failure ]; then
+            echo "::error::验收失败：验证命令输出与补丁差异的真实运行边界"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_003.outcome }}" = failure ]; then
+            echo "::error::验收失败：校验发行文件完整性与启动器"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_004.outcome }}" = failure ]; then
+            echo "::error::验收失败：验证发行包在仓库外独立运行"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_005.outcome }}" = failure ]; then
+            echo "::error::验收失败：317代理绕过和远程消息上传"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_006.outcome }}" = failure ]; then
+            echo "::error::验收失败：317启动参数、安全边界和错误协议"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_007.outcome }}" = failure ]; then
+            echo "::error::验收失败：317 MCP登录、退出和授权码交换"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_008.outcome }}" = failure ]; then
+            echo "::error::验收失败：317模型目录、读取边界和嵌套会话"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_009.outcome }}" = failure ]; then
+            echo "::error::验收失败：317模型能力覆盖与上下文后缀匹配"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_010.outcome }}" = failure ]; then
+            echo "::error::验收失败：317收信端口失败时的启动语义"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_011.outcome }}" = failure ]; then
+            echo "::error::验收失败：过时命令清理与代理管理新版行为回归"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_012.outcome }}" = failure ]; then
+            echo "::error::验收失败：新版退场模块和正式替代入口复查"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_013.outcome }}" = failure ]; then
+            echo "::error::验收失败：317插件安装配置解析及歧义规则"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_014.outcome }}" = failure ]; then
+            echo "::error::验收失败：317插件安装配置的源码和真实x64差分"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_015.outcome }}" = failure ]; then
+            echo "::error::验收失败：与317原版x64对照插件初始化生成结果"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_016.outcome }}" = failure ]; then
+            echo "::error::验收失败：2.1.317 后台会话状态与原版 CLI 行为验收"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_017.outcome }}" = failure ]; then
+            echo "::error::验收失败：2.1.317 后台会话真实全生命周期验收"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_018.outcome }}" = failure ]; then
+            echo "::error::验收失败：317项目清理的范围、安全改写与真实命令"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_019.outcome }}" = failure ]; then
+            echo "::error::验收失败：验证317权限、上下文、Bash、终端与认证状态功能链"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_020.outcome }}" = failure ]; then
+            echo "::error::验收失败：验证317自动模式默认规则筛选与用户设置安全重置"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_021.outcome }}" = failure ]; then
+            echo "::error::验收失败：317插件依赖安装标记及prune真实卸载图扫描"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_022.outcome }}" = failure ]; then
+            echo "::error::验收失败：317插件prune官方x64对照验收"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_023.outcome }}" = failure ]; then
+            echo "::error::验收失败：317插件tag官方x64发布链路对照"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_024.outcome }}" = failure ]; then
+            echo "::error::验收失败：317插件details官方x64组件盘点差分"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_025.outcome }}" = failure ]; then
+            echo "::error::验收失败：与原版 CLI 参数和命令差分验收"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_026.outcome }}" = failure ]; then
+            echo "::error::验收失败：复核多级模型回退与自动压缩真实参数语义"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_027.outcome }}" = failure ]; then
+            echo "::error::验收失败：复核529故障后的模型回退与工具集合权限"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_028.outcome }}" = failure ]; then
+            echo "::error::验收失败：复核新版CLI参数、云目标与系统提示快照"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_029.outcome }}" = failure ]; then
+            echo "::error::验收失败：复核新版受限模式的入口到模型执行"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_030.outcome }}" = failure ]; then
+            echo "::error::验收失败：复测会话 ZIP 插件实际装载与目录权限"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_031.outcome }}" = failure ]; then
+            echo "::error::验收失败：官方x64与重建版旧代理向导退场真实行为对照"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_032.outcome }}" = failure ]; then
+            echo "::error::验收失败：后台会话原版 x64 与构建版行为严格对照"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_033.outcome }}" = failure ]; then
+            echo "::error::验收失败：官方 x64 与移植版后台会话双端生命周期验收"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_034.outcome }}" = failure ]; then
+            echo "::error::验收失败：对原版和当前构建版实际注入529并验证模型回退顺序"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_035.outcome }}" = failure ]; then
+            echo "::error::验收失败：对原版和当前构建版实际验证安全模式与工具权限"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_036.outcome }}" = failure ]; then
+            echo "::error::验收失败：验证系统提示词在实际模型请求中的分层及磁盘快照"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_037.outcome }}" = failure ]; then
+            echo "::error::验收失败：模拟模型回调与本地 Read 工具端到端差分验收"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_038.outcome }}" = failure ]; then
+            echo "::error::验收失败：Glob 与 Grep 文件搜索模型工具往返差分验收"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_039.outcome }}" = failure ]; then
+            echo "::error::验收失败：验证 Claude API 资源和失败重试"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_040.outcome }}" = failure ]; then
+            echo "::error::验收失败：验证 Claude API 版本迁移命令的实际读取链路"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_041.outcome }}" = failure ]; then
+            echo "::error::验收失败：对照官方 x64 验证 Claude API 版本迁移命令和资源"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_042.outcome }}" = failure ]; then
+            echo "::error::验收失败：317独立ultrareview官方x64启动与信任差分"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_043.outcome }}" = failure ]; then
+            echo "::error::验收失败：317远程审查结果协议与分段事件解析"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_044.outcome }}" = failure ]; then
+            echo "::error::验收失败：317插件安装事务与原版x64状态不一致"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_045.outcome }}" = failure ]; then
+            echo "::error::验收失败：317云端审查配置或任务轮询时限不一致"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_046.outcome }}" = failure ]; then
+            echo "::error::验收失败：317账户隐私外发权限保护或原版提示文本不一致"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_047.outcome }}" = failure ]; then
+            echo "::error::验收失败：317无共同历史审查未正确创建完整Git快照"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_048.outcome }}" = failure ]; then
+            echo "::error::验收失败：317插件来源命令授权摘要或市场版本校验不一致"
+            failures=$((failures+1))
+          fi
+          if [ "${{ steps.acceptance_049.outcome }}" = failure ]; then
+            echo "::error::验收失败：317插件命令来源拒绝和安装与原版x64不一致"
+            failures=$((failures+1))
+          fi
+          echo "完整验收发现 $failures 项失败"
+          test "$failures" -eq 0
   research-integrity:
     name: 核验全量源码映射研究数据
     runs-on: ubuntu-latest

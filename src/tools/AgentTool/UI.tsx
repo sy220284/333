@@ -15,6 +15,7 @@ import { MessageResponse } from '../../components/MessageResponse.js';
 import { ToolUseLoader } from '../../components/ToolUseLoader.js';
 import { Box, Text } from '../../ink.js';
 import { getDumpPromptsPath } from '../../services/api/dumpPrompts.js';
+import { EMPTY_USAGE } from '../../services/api/emptyUsage.js';
 import { findToolByName, type Tools } from '../../Tool.js';
 import type { Message, ProgressMessage } from '../../types/message.js';
 import type { AgentToolProgress } from '../../types/tools.js';
@@ -99,7 +100,7 @@ type ProcessedMessage = {
  */
 function processProgressMessages(messages: ProgressMessage<Progress>[], tools: Tools, isAgentRunning: boolean): ProcessedMessage[] {
   // Only process for ants
-  if ("external" !== 'ant') {
+  if (process.env.USER_TYPE !== 'ant') {
     return messages.filter((m): m is ProgressMessage<AgentToolProgress> => hasProgressMessage(m.data) && m.data.message.type !== 'user').map(m => ({
       type: 'original',
       message: m
@@ -378,14 +379,19 @@ export function renderToolResultMessage(data: Output, progressMessagesForMessage
   const finalAssistantMessage = createAssistantMessage({
     content: completionMessage,
     usage: {
+      ...EMPTY_USAGE,
       ...usage,
+      server_tool_use: {
+        web_search_requests: usage.server_tool_use?.web_search_requests ?? 0,
+        web_fetch_requests: usage.server_tool_use?.web_fetch_requests ?? 0,
+      },
       inference_geo: null,
       iterations: null,
       speed: null
     }
   });
   return <Box flexDirection="column">
-      {"external" === 'ant' && <MessageResponse>
+      {process.env.USER_TYPE === 'ant' && <MessageResponse>
           <Text color="warning">
             [ANT-ONLY] API calls: {getDisplayPath(getDumpPromptsPath(agentId))}
           </Text>
@@ -591,7 +597,7 @@ export function renderToolUseRejectedMessage(_input: {
   const firstData = progressMessagesForMessage[0]?.data;
   const agentId = firstData && hasProgressMessage(firstData) ? firstData.agentId : undefined;
   return <>
-      {"external" === 'ant' && agentId && <MessageResponse>
+      {process.env.USER_TYPE === 'ant' && agentId && <MessageResponse>
           <Text color="warning">
             [ANT-ONLY] API calls: {getDisplayPath(getDumpPromptsPath(agentId))}
           </Text>

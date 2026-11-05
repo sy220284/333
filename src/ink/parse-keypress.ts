@@ -49,6 +49,10 @@ const KITTY_FLAGS_RE = /^\x1b\[\?(\d+)u$/
 // Ctrl+F3 = CSI 1;5 R, etc.) — plain CSI row;col R is genuinely ambiguous.
 // eslint-disable-next-line no-control-regex
 const CURSOR_POSITION_RE = /^\x1b\[\?(\d+);(\d+)R$/
+// 2.1.310: CSI ? 997 ; 1/2 n — unsolicited dark/light theme notification.
+// eslint-disable-next-line no-control-regex
+const THEME_NOTIFICATION_PATTERN = String.raw`^\x1b\[\?997;([12])n$`
+const THEME_NOTIFICATION_RE = new RegExp(THEME_NOTIFICATION_PATTERN)
 // OSC response: OSC code ; data (BEL|ST)
 // eslint-disable-next-line no-control-regex
 const OSC_RESPONSE_RE = /^\x1b\](\d+);(.*?)(?:\x07|\x1b\\)$/s
@@ -106,6 +110,7 @@ export type TerminalResponse =
   | { type: 'cursorPosition'; row: number; col: number }
   /** OSC response: generic operating-system-command reply (e.g. OSC 11 bg color) */
   | { type: 'osc'; code: number; data: string }
+  | { type: 'themeNotify'; dark: boolean }
   /** XTVERSION: terminal name/version string (answer to CSI > 0 q).
    *  Example values: "xterm.js(5.5.0)", "ghostty 1.2.0", "iTerm2 3.6". */
   | { type: 'xtversion'; name: string }
@@ -142,6 +147,11 @@ function parseTerminalResponse(s: string): TerminalResponse | null {
 
     if ((m = KITTY_FLAGS_RE.exec(s))) {
       return { type: 'kittyKeyboard', flags: parseInt(m[1]!, 10) }
+    }
+
+    const themeMatch = THEME_NOTIFICATION_RE.exec(s)
+    if (themeMatch) {
+      return { type: 'themeNotify', dark: themeMatch[1] === '1' }
     }
 
     if ((m = CURSOR_POSITION_RE.exec(s))) {
@@ -197,7 +207,7 @@ function inputToString(input: Buffer | string): string {
   if (Buffer.isBuffer(input)) {
     if (input[0]! > 127 && input[1] === undefined) {
       ;(input[0] as unknown as number) -= 128
-      return '\x1b' + String(input)
+      return `\x1b${String(input)}`
     } else {
       return String(input)
     }
@@ -274,7 +284,7 @@ export function parseMultipleKeypresses(
         // range would match typed input like `[MAX]` batched into one read
         // and silently drop it as a phantom click. Click/drag orphans leak
         // as visible garbage instead; deletable garbage beats silent loss.
-        const resynthesized = '\x1b' + token.value
+        const resynthesized = `\x1b${token.value}`
         const mouse = parseMouseEvent(resynthesized)
         keys.push(mouse ?? parseKeypress(resynthesized))
       } else {
@@ -629,8 +639,8 @@ function parseKeypress(s: string = ''): ParsedKey {
 
   // Handle CSI u (kitty keyboard protocol): ESC [ codepoint [; modifier] u
   // Example: ESC[13;2u = Shift+Enter, ESC[27u = Escape (no modifiers)
-  let match: RegExpExecArray | null
-  if ((match = CSI_U_RE.exec(s))) {
+  let match = CSI_U_RE.exec(s)
+  if (match) {
     const codepoint = parseInt(match[1]!, 10)
     // Modifier defaults to 1 (no modifiers) when not present
     const modifier = match[2] ? parseInt(match[2], 10) : 1
@@ -654,7 +664,8 @@ function parseKeypress(s: string = ''): ParsedKey {
   // Handle xterm modifyOtherKeys: ESC [ 27 ; modifier ; keycode ~
   // Must run before FN_KEY_RE — FN_KEY_RE only allows 2 params before ~ and
   // would leave the tail as garbage if it partially matched.
-  if ((match = MODIFY_OTHER_KEYS_RE.exec(s))) {
+  match = MODIFY_OTHER_KEYS_RE.exec(s)
+  if (match) {
     const mods = decodeModifier(parseInt(match[1]!, 10))
     const name = keycodeToName(parseInt(match[2]!, 10))
     return {
@@ -678,7 +689,8 @@ function parseKeypress(s: string = ''): ParsedKey {
   // + direction while ignoring modifier bits (Shift=0x04, Meta=0x08,
   // Ctrl=0x10) — modified wheel events (e.g. Ctrl+scroll, button=80)
   // should still be recognized as wheelup/wheeldown.
-  if ((match = SGR_MOUSE_RE.exec(s))) {
+  match = SGR_MOUSE_RE.exec(s)
+  if (match) {
     const button = parseInt(match[1]!, 10)
     if ((button & 0x43) === 0x40) return createNavKey(s, 'wheelup', false)
     if ((button & 0x43) === 0x41) return createNavKey(s, 'wheeldown', false)

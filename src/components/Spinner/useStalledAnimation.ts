@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { SPINNER_STALL_AFTER_MS, SPINNER_STALL_FADE_MS } from './statusLogic.js'
 
 // Hook to handle the transition to red when tokens stop flowing.
 // Driven by the parent's animation clock time instead of independent intervals,
@@ -6,8 +7,8 @@ import { useRef } from 'react'
 export function useStalledAnimation(
   time: number,
   currentResponseLength: number,
-  hasActiveTools = false,
-  reducedMotion = false,
+  hasActiveTools: boolean = false,
+  reducedMotion: boolean = false,
 ): {
   isStalled: boolean
   stalledIntensity: number
@@ -18,12 +19,16 @@ export function useStalledAnimation(
   const stalledIntensityRef = useRef(0)
   const lastSmoothTime = useRef(time)
 
-  // Reset timer when new tokens arrive (check actual length change)
+  // 2.1.310's watchdog resets on actual new output; reducing the counter
+  // must not impersonate a freshly received token.
   if (currentResponseLength > lastResponseLength.current) {
     lastTokenTime.current = time
     lastResponseLength.current = currentResponseLength
+    mountTime.current = time
     stalledIntensityRef.current = 0
     lastSmoothTime.current = time
+  } else if (currentResponseLength < lastResponseLength.current) {
+    lastResponseLength.current = currentResponseLength
   }
 
   // Derive time since last token from animation clock
@@ -38,10 +43,10 @@ export function useStalledAnimation(
   }
 
   // Calculate stalled intensity based on time since last token
-  // Start showing red after 3 seconds of no new tokens (only when no tools are active)
-  const isStalled = timeSinceLastToken > 3000 && !hasActiveTools
+  // Target 2.1.310: start warning after 10s without tokens; fade over the next 10s.
+  const isStalled = timeSinceLastToken > SPINNER_STALL_AFTER_MS && !hasActiveTools
   const intensity = isStalled
-    ? Math.min((timeSinceLastToken - 3000) / 2000, 1) // Fade over 2 seconds
+    ? Math.min((timeSinceLastToken - SPINNER_STALL_AFTER_MS) / SPINNER_STALL_FADE_MS, 1) // Fade over the next 10 seconds
     : 0
 
   // Smooth intensity transition driven by animation frame ticks

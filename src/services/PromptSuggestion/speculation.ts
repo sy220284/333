@@ -403,7 +403,7 @@ export async function startSpeculation(
   suggestionText: string,
   context: REPLHookContext,
   setAppState: (f: (prev: AppState) => AppState) => void,
-  isPipelined = false,
+  isPipelined: boolean = false,
   cacheSafeParams?: CacheSafeParams,
 ): Promise<void> {
   if (!isSpeculationEnabled()) return

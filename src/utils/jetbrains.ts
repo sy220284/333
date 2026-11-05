@@ -170,7 +170,7 @@ async function isJetBrainsPluginInstalledMemoized(
 
 export async function isJetBrainsPluginInstalledCached(
   ideType: IdeType,
-  forceRefresh = false,
+  forceRefresh: boolean = false,
 ): Promise<boolean> {
   if (forceRefresh) {
     pluginInstalledCache.delete(ideType)

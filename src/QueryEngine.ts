@@ -1,9 +1,12 @@
 import { feature } from 'bun:bundle'
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
+import { toSDKStreamEvent } from './entrypoints/sdk/streamEventMapper.js'
+import { bindSessionId } from './query/sessionIdentity317.ts'
 import last from 'lodash-es/last.js'
 import {
   getSessionId,
+  getIsNonInteractiveSession,
   isSessionPersistenceDisabled,
 } from 'src/bootstrap/state.js'
 import type {
@@ -33,7 +36,7 @@ import type { CanUseToolFn } from './hooks/useCanUseTool.js'
 import { loadMemoryPrompt } from './memdir/memdir.js'
 import { hasAutoMemPathOverride } from './memdir/paths.js'
 import { query } from './query.js'
-import { categorizeRetryableAPIError } from './services/api/errors.js'
+import { categorizeRetryableAPIError, isPromptTooLongMessage } from './services/api/errors.js'
 import type { MCPServerConnection } from './services/mcp/types.js'
 import type { AppState } from './state/AppState.js'
 import { type Tools, type ToolUseContext, toolMatchesName } from './Tool.js'
@@ -58,7 +61,10 @@ import {
 } from './utils/fileStateCache.js'
 import { headlessProfilerCheckpoint } from './utils/headlessProfiler.js'
 import { registerStructuredOutputEnforcement } from './utils/hooks/hookHelpers.js'
-import { getInMemoryErrors } from './utils/log.js'
+import { getInMemoryErrors, logError } from './utils/log.js'
+import type { CacheSafeParams } from './utils/forkedAgent.js'
+import { createObserverRuntime317, type ObserverRuntime317 } from './services/agentObserver/observerRuntime317.js'
+import type { ObserverActivity317 } from './services/agentObserver/observer317.js'
 import { countToolCalls, SYNTHETIC_MESSAGES } from './utils/messages.js'
 import {
   getMainLoopModel,
@@ -94,7 +100,6 @@ import {
 } from './utils/messages/mappers.js'
 import {
   buildSystemInitMessage,
-  sdkCompatToolName,
 } from './utils/messages/systemInit.js'
 import {
   getScratchpadDir,
@@ -109,26 +114,21 @@ import {
 
 // Dead code elimination: conditional import for coordinator mode
 /* eslint-disable @typescript-eslint/no-require-imports */
+const getCoordinatorModule = feature('COORDINATOR_MODE')
+  ? (require('./coordinator/coordinatorMode.js') as typeof import('./coordinator/coordinatorMode.js'))
+  : null
 const getCoordinatorUserContext: (
   mcpClients: ReadonlyArray<{ name: string }>,
   scratchpadDir?: string,
-) => { [k: string]: string } = feature('COORDINATOR_MODE')
-  ? require('./coordinator/coordinatorMode.js').getCoordinatorUserContext
-  : () => ({})
+) => { [k: string]: string } = getCoordinatorModule?.getCoordinatorUserContext ?? (() => ({}))
 /* eslint-enable @typescript-eslint/no-require-imports */
 
-// Dead code elimination: conditional import for snip compaction
-/* eslint-disable @typescript-eslint/no-require-imports */
-const snipModule = feature('HISTORY_SNIP')
-  ? (require('./services/compact/snipCompact.js') as typeof import('./services/compact/snipCompact.js'))
-  : null
-const snipProjection = feature('HISTORY_SNIP')
-  ? (require('./services/compact/snipProjection.js') as typeof import('./services/compact/snipProjection.js'))
-  : null
-/* eslint-enable @typescript-eslint/no-require-imports */
+// 2.1.310 no longer ships the experimental HISTORY_SNIP runtime.
 
 export type QueryEngineConfig = {
   cwd: string
+  /** Identity is owned by this engine, not by the current global CLI session. */
+  sessionId?: ReturnType<typeof getSessionId>
   tools: Tools
   commands: Command[]
   mcpClients: MCPServerConnection[]
@@ -152,6 +152,7 @@ export type QueryEngineConfig = {
   /** Handler for URL elicitations triggered by MCP tool -32042 errors. */
   handleElicitation?: ToolUseContext['handleElicitation']
   includePartialMessages?: boolean
+  forwardSubagentText?: boolean
   setSDKStatus?: (status: SDKStatus) => void
   abortController?: AbortController
   orphanedPermission?: OrphanedPermission
@@ -182,6 +183,7 @@ export type QueryEngineConfig = {
  * persists across turns.
  */
 export class QueryEngine {
+  private readonly sessionId: ReturnType<typeof getSessionId>
   private config: QueryEngineConfig
   private mutableMessages: Message[]
   private abortController: AbortController
@@ -196,8 +198,11 @@ export class QueryEngine {
   // many turns in SDK mode.
   private discoveredSkillNames = new Set<string>()
   private loadedNestedMemoryPaths = new Set<string>()
+  private observerRuntime: ObserverRuntime317 | null | undefined
+  private observerCacheParams: CacheSafeParams | undefined
 
   constructor(config: QueryEngineConfig) {
+    this.sessionId = bindSessionId(config.sessionId, getSessionId)
     this.config = config
     this.mutableMessages = config.initialMessages ?? []
     this.abortController = config.abortController ?? createAbortController()
@@ -230,6 +235,7 @@ export class QueryEngine {
       setAppState,
       replayUserMessages = false,
       includePartialMessages = false,
+      forwardSubagentText = false,
       agents = [],
       setSDKStatus,
       orphanedPermission,
@@ -261,7 +267,7 @@ export class QueryEngine {
       // Track denials for SDK reporting
       if (result.behavior !== 'allow') {
         this.permissionDenials.push({
-          tool_name: sdkCompatToolName(tool.name),
+          tool_name: tool.name,
           tool_use_id: toolUseID,
           tool_input: input,
         })
@@ -318,9 +324,19 @@ export class QueryEngine {
         ? await loadMemoryPrompt()
         : null
 
+    const coordinatorPrompt =
+      getCoordinatorModule && isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE)
+        ? getCoordinatorModule.getCoordinatorSystemPrompt()
+        : undefined
     const systemPrompt = asSystemPrompt([
-      ...(customPrompt !== undefined ? [customPrompt] : defaultSystemPrompt),
-      ...(memoryMechanicsPrompt ? [memoryMechanicsPrompt] : []),
+      ...(coordinatorPrompt !== undefined
+        ? [coordinatorPrompt]
+        : customPrompt !== undefined
+          ? [customPrompt]
+          : defaultSystemPrompt),
+      ...(coordinatorPrompt === undefined && memoryMechanicsPrompt
+        ? [memoryMechanicsPrompt]
+        : []),
       ...(appendSystemPrompt ? [appendSystemPrompt] : []),
     ])
 
@@ -329,10 +345,11 @@ export class QueryEngine {
       toolMatchesName(t, SYNTHETIC_OUTPUT_TOOL_NAME),
     )
     if (jsonSchema && hasStructuredOutputTool) {
-      registerStructuredOutputEnforcement(setAppState, getSessionId())
+      registerStructuredOutputEnforcement(setAppState, this.sessionId)
     }
 
     let processUserInputContext: ProcessUserInputContext = {
+      sessionId: this.sessionId,
       messages: this.mutableMessages,
       // Slash commands that mutate the message array (e.g. /force-snip)
       // call setMessages(fn).  In interactive mode this writes back to
@@ -362,6 +379,7 @@ export class QueryEngine {
         agentDefinitions: { activeAgents: agents, allAgents: [] },
         theme: resolveThemeSetting(getGlobalConfig().theme),
         maxBudgetUsd,
+        forwardSubagentText,
       },
       getAppState,
       setAppState,
@@ -413,6 +431,7 @@ export class QueryEngine {
       allowedTools,
       model: modelFromUserInput,
       resultText,
+      localCommand,
     } = await processUserInput({
       input: prompt,
       mode: 'prompt',
@@ -455,7 +474,8 @@ export class QueryEngine {
         await transcriptPromise
         if (
           isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-          isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+          isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK) ||
+          getIsNonInteractiveSession()
         ) {
           await flushSessionStorage()
         }
@@ -490,6 +510,7 @@ export class QueryEngine {
     // Recreate after processing the prompt to pick up updated messages and
     // model (from slash commands).
     processUserInputContext = {
+      sessionId: this.sessionId,
       messages,
       setMessages: () => {},
       onChangeAPIKey: () => {},
@@ -510,6 +531,7 @@ export class QueryEngine {
         theme: resolveThemeSetting(getGlobalConfig().theme),
         agentDefinitions: { activeAgents: agents, allAgents: [] },
         maxBudgetUsd,
+        forwardSubagentText,
       },
       getAppState,
       setAppState,
@@ -571,7 +593,7 @@ export class QueryEngine {
               ...msg.message,
               content: stripAnsi(msg.message.content),
             },
-            session_id: getSessionId(),
+            session_id: this.sessionId,
             parent_tool_use_id: null,
             uuid: msg.uuid,
             timestamp: msg.timestamp,
@@ -598,7 +620,7 @@ export class QueryEngine {
           yield {
             type: 'system',
             subtype: 'compact_boundary' as const,
-            session_id: getSessionId(),
+            session_id: this.sessionId,
             uuid: msg.uuid,
             compact_metadata: toSDKCompactMetadata(msg.compactMetadata),
           } as SDKCompactBoundaryMessage
@@ -609,7 +631,8 @@ export class QueryEngine {
         await recordTranscript(messages)
         if (
           isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-          isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+          isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK) ||
+          getIsNonInteractiveSession()
         ) {
           await flushSessionStorage()
         }
@@ -619,12 +642,14 @@ export class QueryEngine {
         type: 'result',
         subtype: 'success',
         is_error: false,
+        terminal_reason: 'completed',
         duration_ms: Date.now() - startTime,
         duration_api_ms: getTotalAPIDuration(),
-        num_turns: messages.length - 1,
+        num_turns: localCommand ? 0 : messages.length - 1,
         result: resultText ?? '',
+        ...(localCommand ? { local_command: localCommand } : {}),
         stop_reason: null,
-        session_id: getSessionId(),
+        session_id: this.sessionId,
         total_cost_usd: getTotalCost(),
         usage: this.totalUsage,
         modelUsage: getModelUsage(),
@@ -653,6 +678,33 @@ export class QueryEngine {
           )
         })
     }
+
+    if (this.observerRuntime === undefined) {
+      const currentAgent = agents.find(agent => agent.agentType === initialAppState.agent)
+      this.observerRuntime = currentAgent
+        ? await createObserverRuntime317({
+            sessionId: this.sessionId,
+            agent: currentAgent,
+            agents,
+            getCacheParams: () => {
+              if (!this.observerCacheParams) {
+                throw new Error('Observer invoked before parent context was established')
+              }
+              return this.observerCacheParams
+            },
+            getPermissionContext: () => getAppState().toolPermissionContext,
+            canUseTool: wrappedCanUseTool,
+          })
+        : null
+    }
+    this.observerCacheParams = {
+      systemPrompt,
+      userContext,
+      systemContext,
+      toolUseContext: processUserInputContext,
+      forkContextMessages: messages,
+    }
+    const observerActivity: ObserverActivity317[] = []
 
     // Track current message usage (reset on each message_start)
     let currentMessageUsage: NonNullableUsage = EMPTY_USAGE
@@ -684,6 +736,19 @@ export class QueryEngine {
       maxTurns,
       taskBudget,
     })) {
+      if (this.observerRuntime && message.type === 'assistant') {
+        for (const block of message.message.content) {
+          if (block.type === 'text' && block.text.trim()) {
+            observerActivity.push({ type: 'assistant_text', text: block.text })
+          } else if (block.type === 'tool_use') {
+            observerActivity.push({
+              type: 'tool_call',
+              name: block.name,
+              input: JSON.stringify(block.input ?? {}),
+            })
+          }
+        }
+      }
       // Record assistant, user, and compact boundary messages
       if (
         message.type === 'assistant' ||
@@ -739,7 +804,7 @@ export class QueryEngine {
               yield {
                 type: 'user',
                 message: msgToAck.message,
-                session_id: getSessionId(),
+                session_id: this.sessionId,
                 parent_tool_use_id: null,
                 uuid: msgToAck.uuid,
                 timestamp: msgToAck.timestamp,
@@ -816,13 +881,7 @@ export class QueryEngine {
           }
 
           if (includePartialMessages) {
-            yield {
-              type: 'stream_event' as const,
-              event: message.event,
-              session_id: getSessionId(),
-              parent_tool_use_id: null,
-              uuid: randomUUID(),
-            }
+            yield toSDKStreamEvent(message, this.sessionId, randomUUID())
           }
 
           break
@@ -843,7 +902,8 @@ export class QueryEngine {
             if (persistSession) {
               if (
                 isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-                isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+                isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK) ||
+                getIsNonInteractiveSession()
               ) {
                 await flushSessionStorage()
               }
@@ -856,7 +916,7 @@ export class QueryEngine {
               is_error: true,
               num_turns: message.attachment.turnCount,
               stop_reason: lastStopReason,
-              session_id: getSessionId(),
+              session_id: this.sessionId,
               total_cost_usd: getTotalCost(),
               usage: this.totalUsage,
               modelUsage: getModelUsage(),
@@ -883,7 +943,7 @@ export class QueryEngine {
                 role: 'user' as const,
                 content: message.attachment.prompt,
               },
-              session_id: getSessionId(),
+              session_id: this.sessionId,
               parent_tool_use_id: null,
               uuid: message.attachment.source_uuid || message.uuid,
               timestamp: message.timestamp,
@@ -935,7 +995,7 @@ export class QueryEngine {
             yield {
               type: 'system',
               subtype: 'compact_boundary' as const,
-              session_id: getSessionId(),
+              session_id: this.sessionId,
               uuid: message.uuid,
               compact_metadata: toSDKCompactMetadata(message.compactMetadata),
             }
@@ -949,7 +1009,7 @@ export class QueryEngine {
               retry_delay_ms: message.retryInMs,
               error_status: message.error.status ?? null,
               error: categorizeRetryableAPIError(message.error),
-              session_id: getSessionId(),
+              session_id: this.sessionId,
               uuid: message.uuid,
             }
           }
@@ -962,7 +1022,7 @@ export class QueryEngine {
             type: 'tool_use_summary' as const,
             summary: message.summary,
             preceding_tool_use_ids: message.precedingToolUseIds,
-            session_id: getSessionId(),
+            session_id: this.sessionId,
             uuid: message.uuid,
           }
           break
@@ -973,7 +1033,8 @@ export class QueryEngine {
         if (persistSession) {
           if (
             isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-            isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+            isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK) ||
+            getIsNonInteractiveSession()
           ) {
             await flushSessionStorage()
           }
@@ -986,7 +1047,7 @@ export class QueryEngine {
           is_error: true,
           num_turns: turnCount,
           stop_reason: lastStopReason,
-          session_id: getSessionId(),
+          session_id: this.sessionId,
           total_cost_usd: getTotalCost(),
           usage: this.totalUsage,
           modelUsage: getModelUsage(),
@@ -1016,7 +1077,8 @@ export class QueryEngine {
           if (persistSession) {
             if (
               isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-              isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+              isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK) ||
+              getIsNonInteractiveSession()
             ) {
               await flushSessionStorage()
             }
@@ -1029,7 +1091,7 @@ export class QueryEngine {
             is_error: true,
             num_turns: turnCount,
             stop_reason: lastStopReason,
-            session_id: getSessionId(),
+            session_id: this.sessionId,
             total_cost_usd: getTotalCost(),
             usage: this.totalUsage,
             modelUsage: getModelUsage(),
@@ -1073,7 +1135,8 @@ export class QueryEngine {
     if (persistSession) {
       if (
         isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-        isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+        isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK) ||
+        getIsNonInteractiveSession()
       ) {
         await flushSessionStorage()
       }
@@ -1088,7 +1151,7 @@ export class QueryEngine {
         is_error: true,
         num_turns: turnCount,
         stop_reason: lastStopReason,
-        session_id: getSessionId(),
+        session_id: this.sessionId,
         total_cost_usd: getTotalCost(),
         usage: this.totalUsage,
         modelUsage: getModelUsage(),
@@ -1120,6 +1183,8 @@ export class QueryEngine {
     // Extract the text result based on message type
     let textResult = ''
     let isApiError = false
+    let promptTooLong = false
+    let apiErrorStatus: number | undefined
 
     if (result.type === 'assistant') {
       const lastContent = last(result.message.content)
@@ -1130,18 +1195,39 @@ export class QueryEngine {
         textResult = lastContent.text
       }
       isApiError = Boolean(result.isApiErrorMessage)
+      promptTooLong = isApiError && isPromptTooLongMessage(result)
+      if (promptTooLong) {
+        // The SDK carries the original HTTP status in errorDetails. Keep 400
+        // and 413 distinct for callers diagnosing context-window failures.
+        const status = result.errorDetails?.match(/(?:^|\D)(400|413)(?:\D|$)/)?.[1]
+        apiErrorStatus = status ? Number(status) : undefined
+      }
+    }
+
+    if (this.observerRuntime && !isApiError &&
+        !this.abortController.signal.aborted) {
+      observerActivity.push({
+        type: 'turn_ended',
+        reason: lastStopReason ?? 'completed',
+      })
+      void this.observerRuntime.afterTurn(
+        observerActivity,
+        typeof prompt === 'string' ? prompt : undefined,
+      ).catch(logError)
     }
 
     yield {
       type: 'result',
       subtype: 'success',
       is_error: isApiError,
+      terminal_reason: promptTooLong ? 'prompt_too_long' : isApiError ? 'api_error' : 'completed',
+      ...(apiErrorStatus !== undefined && { api_error_status: apiErrorStatus }),
       duration_ms: Date.now() - startTime,
       duration_api_ms: getTotalAPIDuration(),
       num_turns: turnCount,
       result: textResult,
       stop_reason: lastStopReason,
-      session_id: getSessionId(),
+      session_id: this.sessionId,
       total_cost_usd: getTotalCost(),
       usage: this.totalUsage,
       modelUsage: getModelUsage(),
@@ -1168,7 +1254,7 @@ export class QueryEngine {
   }
 
   getSessionId(): string {
-    return getSessionId()
+    return this.sessionId
   }
 
   setModel(model: string): void {
@@ -1210,6 +1296,7 @@ export async function* ask({
   abortController,
   replayUserMessages = false,
   includePartialMessages = false,
+  forwardSubagentText = false,
   handleElicitation,
   agents = [],
   setSDKStatus,
@@ -1241,6 +1328,7 @@ export async function* ask({
   abortController?: AbortController
   replayUserMessages?: boolean
   includePartialMessages?: boolean
+  forwardSubagentText?: boolean
   handleElicitation?: ToolUseContext['handleElicitation']
   agents?: AgentDefinition[]
   setSDKStatus?: (status: SDKStatus) => void
@@ -1270,18 +1358,10 @@ export async function* ask({
     handleElicitation,
     replayUserMessages,
     includePartialMessages,
+    forwardSubagentText,
     setSDKStatus,
     abortController,
     orphanedPermission,
-    ...(feature('HISTORY_SNIP')
-      ? {
-          snipReplay: (yielded: Message, store: Message[]) => {
-            if (!snipProjection!.isSnipBoundaryMessage(yielded))
-              return undefined
-            return snipModule!.snipCompactIfNeeded(store, { force: true })
-          },
-        }
-      : {}),
   })
 
   try {

@@ -32,6 +32,8 @@
  * - Error collection and reporting
  */
 
+import { exec as shellExec } from 'node:child_process'
+import { promisify } from 'node:util'
 import {
   copyFile,
   readdir,
@@ -59,7 +61,7 @@ import type {
   PluginManifest,
 } from '../../types/plugin.js'
 import { logForDebugging } from '../debug.js'
-import { isEnvTruthy } from '../envUtils.js'
+import { getClaudeConfigHomeDir, isEnvTruthy } from '../envUtils.js'
 import {
   errorMessage,
   getErrnoPath,
@@ -73,7 +75,7 @@ import { getFsImplementation } from '../fsOperations.js'
 import { gitExe } from '../git.js'
 import { lazySchema } from '../lazySchema.js'
 import { logError } from '../log.js'
-import { getSettings_DEPRECATED } from '../settings/settings.js'
+import { getInitialSettings } from '../settings/settings.js'
 import {
   clearPluginSettingsBase,
   getPluginSettingsBase,
@@ -152,12 +154,16 @@ export function getVersionedCachePathIn(
   )
   // Sanitize version to prevent path traversal attacks
   const sanitizedVersion = version.replace(/[^a-zA-Z0-9\-_.]/g, '-')
+  const safeVersion =
+    sanitizedVersion === '.' || sanitizedVersion === '..'
+      ? '-'
+      : sanitizedVersion
   return join(
     baseDir,
     'cache',
     sanitizedMarketplace,
     sanitizedPlugin,
-    sanitizedVersion,
+    safeVersion,
   )
 }
 
@@ -235,55 +241,6 @@ export async function probeSeedCacheAnyVersion(
     }
   }
   return null
-}
-
-/**
- * Get legacy (non-versioned) cache path for a plugin.
- * Format: ~/.claude/plugins/cache/{plugin-name}/
- *
- * Used for backward compatibility with existing installations.
- *
- * @param pluginName - Plugin name (without marketplace suffix)
- * @returns Absolute path to legacy plugin directory
- */
-export function getLegacyCachePath(pluginName: string): string {
-  const cachePath = getPluginCachePath()
-  return join(cachePath, pluginName.replace(/[^a-zA-Z0-9\-_]/g, '-'))
-}
-
-/**
- * Resolve plugin path with fallback to legacy location.
- *
- * Always:
- * 1. Try versioned path first if version is provided
- * 2. Fall back to legacy path for existing installations
- * 3. Return versioned path for new installations
- *
- * @param pluginId - Plugin identifier in format "name@marketplace"
- * @param version - Optional version string
- * @returns Absolute path to plugin directory
- */
-export async function resolvePluginPath(
-  pluginId: string,
-  version?: string,
-): Promise<string> {
-  // Try versioned path first
-  if (version) {
-    const versionedPath = getVersionedCachePath(pluginId, version)
-    if (await pathExists(versionedPath)) {
-      return versionedPath
-    }
-  }
-
-  // Fall back to legacy path for existing installations
-  const pluginName = parsePluginIdentifier(pluginId).name || pluginId
-  const legacyPath = getLegacyCachePath(pluginName)
-  if (await pathExists(legacyPath)) {
-    return legacyPath
-  }
-
-  // Return versioned path for new installations
-  return version ? getVersionedCachePath(pluginId, version) : legacyPath
 }
 
 /**
@@ -867,6 +824,41 @@ async function installFromLocal(
   await rm(gitPath, { recursive: true, force: true })
 }
 
+const execSourceCommand = promisify(shellExec)
+
+/**
+ * Only the CLI/plugin caller can authorize a marketplace-declared command.
+ * A source must never execute during a cache refresh or a background preload.
+ */
+async function installFromCommandSource(
+  source: { command: string; mode: 'copy' | 'link' },
+  targetPath: string,
+): Promise<string> {
+  if (source.mode === 'link' && process.platform === 'win32') {
+    throw new Error('Linked command sources are not supported on Windows')
+  }
+  const { stdout } = await execSourceCommand(source.command, {
+    timeout: 60_000,
+    maxBuffer: 1024 * 1024,
+    windowsHide: true,
+  })
+  const returned = stdout.trim()
+  if (!returned || /[\r\n]/.test(returned)) {
+    throw new Error('Plugin source command must print exactly one directory path')
+  }
+  const sourcePath = resolve(returned)
+  const metadata = await stat(sourcePath)
+  if (!metadata.isDirectory()) {
+    throw new Error('Plugin source command output is not a directory')
+  }
+  if (source.mode === 'link') {
+    await symlink(sourcePath, targetPath, 'dir')
+  } else {
+    await installFromLocal(sourcePath, targetPath)
+  }
+  return sourcePath
+}
+
 /**
  * Generate a temporary cache name for a plugin
  */
@@ -897,6 +889,9 @@ export function generateTemporaryCacheNameForPlugin(
       case 'git-subdir':
         prefix = 'subdir'
         break
+      case 'command':
+        prefix = 'command'
+        break
       default:
         prefix = 'unknown'
     }
@@ -912,8 +907,9 @@ export async function cachePlugin(
   source: PluginSource,
   options?: {
     manifest?: PluginManifest
+    authorizedCommandSource?: boolean
   },
-): Promise<{ path: string; manifest: PluginManifest; gitCommitSha?: string }> {
+): Promise<{ path: string; manifest: PluginManifest; gitCommitSha?: string; sourceProducerPath?: string }> {
   const cachePath = getPluginCachePath()
 
   await getFsImplementation().mkdir(cachePath)
@@ -923,6 +919,7 @@ export async function cachePlugin(
 
   let shouldCleanup = false
   let gitCommitSha: string | undefined
+  let sourceProducerPath: string | undefined
 
   try {
     logForDebugging(
@@ -956,6 +953,12 @@ export async function cachePlugin(
             source.sha,
           )
           break
+        case 'command':
+          if (options?.authorizedCommandSource !== true) {
+            throw new Error('Marketplace command source requires explicit per-command user authorization')
+          }
+          sourceProducerPath = await installFromCommandSource(source, tempPath)
+          break
         case 'pip':
           throw new Error('Python package plugins are not yet supported')
         default:
@@ -977,7 +980,6 @@ export async function cachePlugin(
   }
 
   const manifestPath = join(tempPath, '.claude-plugin', 'plugin.json')
-  const legacyManifestPath = join(tempPath, 'plugin.json')
   let manifest: PluginManifest
 
   if (await pathExists(manifestPath)) {
@@ -1024,53 +1026,6 @@ export async function cachePlugin(
         `Plugin has a corrupt manifest file at ${manifestPath}. JSON parse error: ${errorMsg}`,
       )
     }
-  } else if (await pathExists(legacyManifestPath)) {
-    try {
-      const content = await readFile(legacyManifestPath, {
-        encoding: 'utf-8',
-      })
-      const parsed = jsonParse(content)
-      const result = PluginManifestSchema().safeParse(parsed)
-
-      if (result.success) {
-        manifest = result.data
-      } else {
-        // Manifest exists but is invalid - throw error
-        const errors = result.error.issues
-          .map(err => `${err.path.join('.')}: ${err.message}`)
-          .join(', ')
-
-        logForDebugging(
-          `Invalid legacy manifest at ${legacyManifestPath}: ${errors}`,
-          { level: 'error' },
-        )
-
-        throw new Error(
-          `Plugin has an invalid manifest file at ${legacyManifestPath}. Validation errors: ${errors}`,
-        )
-      }
-    } catch (error) {
-      // Check if this is a validation error we just threw
-      if (
-        error instanceof Error &&
-        error.message.includes('invalid manifest file')
-      ) {
-        throw error
-      }
-
-      // JSON parse error
-      const errorMsg = errorMessage(error)
-      logForDebugging(
-        `Failed to parse legacy manifest at ${legacyManifestPath}: ${errorMsg}`,
-        {
-          level: 'error',
-        },
-      )
-
-      throw new Error(
-        `Plugin has a corrupt manifest file at ${legacyManifestPath}. JSON parse error: ${errorMsg}`,
-      )
-    }
   } else {
     manifest = options?.manifest || {
       name: tempName,
@@ -1094,6 +1049,7 @@ export async function cachePlugin(
     path: finalPath,
     manifest,
     ...(gitCommitSha && { gitCommitSha }),
+    ...(sourceProducerPath && { sourceProducerPath }),
   }
 }
 
@@ -1350,7 +1306,7 @@ export async function createPluginFromPath(
   source: string,
   enabled: boolean,
   fallbackName: string,
-  strict = true,
+  strict: boolean = true,
 ): Promise<{ plugin: LoadedPlugin; errors: PluginError[] }> {
   const errors: PluginError[] = []
 
@@ -1893,7 +1849,7 @@ async function loadPluginsFromMarketplaces({
   plugins: LoadedPlugin[]
   errors: PluginError[]
 }> {
-  const settings = getSettings_DEPRECATED()
+  const settings = getInitialSettings()
   // Merge --add-dir plugins at lowest priority; standard settings win on conflict
   const enabledPlugins = {
     ...getAddDirEnabledPlugins(),
@@ -3152,6 +3108,77 @@ export const loadAllPluginsCacheOnly = memoize(
  * session plugins, builtins, merge, verifyAndDemote, and cachePluginSettings
  * are identical (invariants 1-3).
  */
+/**
+ * Official 2.1.317 discovers manifests created by plugin init in the user's
+ * skills directory as name@skills-dir plugins. Ordinary SKILL.md folders stay
+ * under the skill loader; only directories with plugin.json enter the plugin
+ * loader. This shares enabled/disabled and policy handling with all plugin CLI
+ * commands, rather than special-casing details/list/configure.
+ */
+async function loadSkillsDirPlugins317(): Promise<{
+  plugins: LoadedPlugin[]
+  errors: PluginError[]
+}> {
+  const root = join(getClaudeConfigHomeDir(), 'skills')
+  let dirs
+  try {
+    dirs = await readdir(root, { withFileTypes: true })
+  } catch (error) {
+    if (isENOENT(error)) return { plugins: [], errors: [] }
+    throw error
+  }
+  const result: LoadedPlugin[] = []
+  const errors: PluginError[] = []
+  const configured = getInitialSettings().enabledPlugins ?? {}
+  for (const entry of dirs) {
+    if (!entry.isDirectory()) continue
+    const folder = join(root, entry.name)
+    if (!(await pathExists(join(folder, '.claude-plugin', 'plugin.json')))) continue
+    const source = entry.name + '@skills-dir'
+    try {
+      const loaded = await createPluginFromPath(
+        folder, source, configured[source] !== false, entry.name,
+      )
+      result.push(loaded.plugin)
+      errors.push(...loaded.errors)
+    } catch (error) {
+      const reason = errorMessage(error)
+      const manifestPath = join(folder, '.claude-plugin', 'plugin.json')
+      const jsonError = /JSON parse error:\s*([\s\S]*)$/i.exec(reason)?.[1]?.trim()
+      const validationError = /Validation errors:\s*([\s\S]*)$/i.exec(reason)?.[1]?.trim()
+      if (jsonError) {
+        errors.push({
+          type: 'manifest-parse-error',
+          source,
+          plugin: entry.name,
+          manifestPath,
+          // Bun parser messages use ASCII quotes; the native CLI renders
+          // expected JSON delimiters using right single quotation marks.
+          parseError: jsonError.replace(/Expected '([^']+)'/g, 'Expected ’$1’') +
+            ' (in ' + manifestPath + ')',
+        })
+      } else if (validationError) {
+        errors.push({
+          type: 'manifest-validation-error',
+          source,
+          plugin: entry.name,
+          manifestPath,
+          validationErrors: [validationError],
+        })
+      } else {
+        errors.push({
+          type: 'generic-error',
+          source,
+          plugin: entry.name,
+          error: reason,
+        })
+      }
+      logError(toError(error))
+    }
+  }
+  return { plugins: result, errors }
+}
+
 async function assemblePluginLoadResult(
   marketplaceLoader: () => Promise<{
     plugins: LoadedPlugin[]
@@ -3162,11 +3189,12 @@ async function assemblePluginLoadResult(
   // getInlinePlugins() is a synchronous state read with no dependency on
   // marketplace loading, so these two sources can be fetched concurrently.
   const inlinePlugins = getInlinePlugins()
-  const [marketplaceResult, sessionResult] = await Promise.all([
+  const [marketplaceResult, sessionResult, skillDirectoryResult] = await Promise.all([
     marketplaceLoader(),
     inlinePlugins.length > 0
       ? loadSessionOnlyPlugins(inlinePlugins)
       : Promise.resolve({ plugins: [], errors: [] }),
+    loadSkillsDirPlugins317(),
   ])
   // 3. Load built-in plugins that ship with the CLI
   const builtinResult = getBuiltinPlugins()
@@ -3175,7 +3203,12 @@ async function assemblePluginLoadResult(
   // UNLESS the installed plugin is locked by managed settings
   // (policySettings). See mergePluginSources() for details.
   const { plugins: allPlugins, errors: mergeErrors } = mergePluginSources({
-    session: sessionResult.plugins,
+    session: [
+      ...sessionResult.plugins,
+      ...skillDirectoryResult.plugins.filter(
+        plugin => !sessionResult.plugins.some(explicit => explicit.name === plugin.name),
+      ),
+    ],
     marketplace: marketplaceResult.plugins,
     builtin: [...builtinResult.enabled, ...builtinResult.disabled],
     managedNames: getManagedPluginNames(),
@@ -3183,6 +3216,7 @@ async function assemblePluginLoadResult(
   const allErrors = [
     ...marketplaceResult.errors,
     ...sessionResult.errors,
+    ...skillDirectoryResult.errors,
     ...mergeErrors,
   ]
 

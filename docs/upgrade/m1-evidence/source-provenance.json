@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "target": "2.1.310",
+  "reference_release": "anthropics/claude-code@v2.1.310",
+  "official_changelog_blob": "eab938de43f5584aa4417b95b601b63822bc2417",
+  "decompiled_library_archive": "/反编译/Claude-Code-2.1.310-Linux-x64-完整反编译包.tar.zst",
+  "decompiled_library_sha256": "7ea6528d27dd2a6ea05a4a27685616c19e53d9655245e3fb335e2e6d841f9cf9",
+  "source_state": "metadata-only index; downloaded release source should never be confused with executable behavioral evidence",
+  "version_count": 180,
+  "change_count": 6313,
+  "change_groups": [
+    {
+      "file": "changelog-1.json",
+      "count": 2100
+    },
+    {
+      "file": "changelog-2.json",
+      "count": 2100
+    },
+    {
+      "file": "changelog-3.json",
+      "count": 2113
+    }
+  ]
+}

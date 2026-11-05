@@ -12,7 +12,6 @@ import { SLEEP_TOOL_NAME } from '../../tools/SleepTool/prompt.js'
 import { TASK_CREATE_TOOL_NAME } from '../../tools/TaskCreateTool/constants.js'
 import { TASK_GET_TOOL_NAME } from '../../tools/TaskGetTool/constants.js'
 import { TASK_LIST_TOOL_NAME } from '../../tools/TaskListTool/constants.js'
-import { TASK_OUTPUT_TOOL_NAME } from '../../tools/TaskOutputTool/constants.js'
 import { TASK_STOP_TOOL_NAME } from '../../tools/TaskStopTool/prompt.js'
 import { TASK_UPDATE_TOOL_NAME } from '../../tools/TaskUpdateTool/constants.js'
 import { TEAM_CREATE_TOOL_NAME } from '../../tools/TeamCreateTool/constants.js'
@@ -24,22 +23,6 @@ import { YOLO_CLASSIFIER_TOOL_NAME } from './yoloClassifier.js'
 // Ant-only tool names: conditional require so Bun can DCE these in external builds.
 // Gates mirror tools.ts. Keeps the tool name strings out of cli.js.
 /* eslint-disable @typescript-eslint/no-require-imports */
-const TERMINAL_CAPTURE_TOOL_NAME = feature('TERMINAL_PANEL')
-  ? (
-      require('../../tools/TerminalCaptureTool/prompt.js') as typeof import('../../tools/TerminalCaptureTool/prompt.js')
-    ).TERMINAL_CAPTURE_TOOL_NAME
-  : null
-const OVERFLOW_TEST_TOOL_NAME = feature('OVERFLOW_TEST_TOOL')
-  ? (
-      require('../../tools/OverflowTestTool/OverflowTestTool.js') as typeof import('../../tools/OverflowTestTool/OverflowTestTool.js')
-    ).OVERFLOW_TEST_TOOL_NAME
-  : null
-const VERIFY_PLAN_EXECUTION_TOOL_NAME =
-  process.env.USER_TYPE === 'ant'
-    ? (
-        require('../../tools/VerifyPlanExecutionTool/constants.js') as typeof import('../../tools/VerifyPlanExecutionTool/constants.js')
-      ).VERIFY_PLAN_EXECUTION_TOOL_NAME
-    : null
 const WORKFLOW_TOOL_NAME = feature('WORKFLOW_SCRIPTS')
   ? (
       require('../../tools/WorkflowTool/constants.js') as typeof import('../../tools/WorkflowTool/constants.js')
@@ -70,7 +53,6 @@ const SAFE_YOLO_ALLOWLISTED_TOOLS = new Set([
   TASK_UPDATE_TOOL_NAME,
   TASK_LIST_TOOL_NAME,
   TASK_STOP_TOOL_NAME,
-  TASK_OUTPUT_TOOL_NAME,
   // Plan mode / UI
   ASK_USER_QUESTION_TOOL_NAME,
   ENTER_PLAN_MODE_TOOL_NAME,
@@ -85,10 +67,6 @@ const SAFE_YOLO_ALLOWLISTED_TOOLS = new Set([
   ...(WORKFLOW_TOOL_NAME ? [WORKFLOW_TOOL_NAME] : []),
   // Misc safe
   SLEEP_TOOL_NAME,
-  // Ant-only safe tools (gates mirror tools.ts)
-  ...(TERMINAL_CAPTURE_TOOL_NAME ? [TERMINAL_CAPTURE_TOOL_NAME] : []),
-  ...(OVERFLOW_TEST_TOOL_NAME ? [OVERFLOW_TEST_TOOL_NAME] : []),
-  ...(VERIFY_PLAN_EXECUTION_TOOL_NAME ? [VERIFY_PLAN_EXECUTION_TOOL_NAME] : []),
   // Internal classifier tool
   YOLO_CLASSIFIER_TOOL_NAME,
 ])

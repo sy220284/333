@@ -236,7 +236,7 @@ export async function prepareForkedCommandContext(
  */
 export function extractResultText(
   agentMessages: Message[],
-  defaultText = 'Execution completed',
+  defaultText: string = 'Execution completed',
 ): string {
   const lastAssistantMessage = getLastAssistantMessage(agentMessages)
   if (!lastAssistantMessage) return defaultText
@@ -441,6 +441,8 @@ export function createSubagentContext(
     setSDKStatus: undefined,
     openMessageSelector: undefined,
 
+    // The nested agent belongs to the same conversation even if bootstrap changes.
+    sessionId: parentContext.sessionId,
     // Fields that can be overridden or copied from parent
     options: overrides?.options ?? parentContext.options,
     messages: overrides?.messages ?? parentContext.messages,

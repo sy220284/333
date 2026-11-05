@@ -25,7 +25,7 @@ export const MAX_TOOL_RESULT_TOKENS = 100_000
  * Bytes per token estimate for calculating token count from byte size.
  * This is a conservative estimate - actual token count may vary.
  */
-export const BYTES_PER_TOKEN = 4
+export const BYTES_PER_TOKEN: 4 = 4
 
 /**
  * Maximum size for tool results in bytes (derived from token limit).

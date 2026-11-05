@@ -3,7 +3,7 @@ import { logForDebugging } from 'src/utils/debug.js'
 import { fileHistoryEnabled } from 'src/utils/fileHistory.js'
 import {
   getInitialSettings,
-  getSettings_DEPRECATED,
+
   getSettingsForSource,
 } from 'src/utils/settings/settings.js'
 import { shouldOfferTerminalSetup } from '../../commands/terminalSetup/terminalSetup.js'
@@ -53,7 +53,11 @@ import {
   formatCreditAmount,
   getCachedReferrerReward,
 } from '../api/referral.js'
-import { getSessionsSinceLastShown } from './tipHistory.js'
+import { getSessionsSinceLastShown, getTipLifetimeShows } from './tipHistory.js'
+import { getCustomSpinnerTips, isDefaultSpinnerTipSuppressed } from './customTipSettings.js'
+import { selectEligibleTips, resolveTipContent } from './tipEligibility.ts'
+import { getAPIProvider, isFirstPartyAnthropicBaseUrl } from '../../utils/model/providers.js'
+import { getOriginalCwd } from '../../bootstrap/state.js'
 import type { Tip, TipContext } from './types.js'
 
 let _isOfficialMarketplaceInstalledCache: boolean | undefined
@@ -126,7 +130,7 @@ const externalTips: Tip[] = [
     isRelevant: async () => {
       try {
         const config = getGlobalConfig()
-        const settings = getSettings_DEPRECATED()
+        const settings = getInitialSettings()
         // Show if they've used plan mode but haven't set a default
         const hasUsedPlanMode = Boolean(config.lastPlanModeUse)
         const hasDefaultMode = Boolean(settings?.permissions?.defaultMode)
@@ -250,7 +254,7 @@ const externalTips: Tip[] = [
     content: async () =>
       'Use /statusline to set up a custom status line that will display beneath the input box',
     cooldownSessions: 25,
-    isRelevant: async () => getSettings_DEPRECATED().statusLine === undefined,
+    isRelevant: async () => getInitialSettings().statusLine === undefined,
   },
   {
     id: 'prompt-queue',
@@ -533,7 +537,7 @@ const externalTips: Tip[] = [
       }
       if (getEffortEnvOverride() !== undefined) return false
       const persisted = getInitialSettings().effortLevel
-      if (persisted === 'high' || persisted === 'max') return false
+      if (persisted === 'high' || persisted === 'xhigh') return false
       return (
         getFeatureValue_CACHED_MAY_BE_STALE<'off' | 'copy_a' | 'copy_b'>(
           'tengu_tide_elm',
@@ -652,35 +656,81 @@ const internalOnlyTips: Tip[] =
       ]
     : []
 
-function getCustomTips(): Tip[] {
-  const settings = getInitialSettings()
-  const override = settings.spinnerTipsOverride
-  if (!override?.tips?.length) return []
-
-  return override.tips.map((content, i) => ({
-    id: `custom-tip-${i}`,
-    content: async () => content,
-    cooldownSessions: 0,
-    isRelevant: async () => true,
-  }))
+// Neutral tips remain available on Bedrock, Vertex, Foundry, and custom gateways.
+// Provider-specific upsells are deliberately not in this set.
+const providerAgnosticTipIds = new Set([
+  'new-user-warmup', 'plan-mode-for-complex-tasks', 'default-permission-mode-config',
+  'git-worktrees', 'color-when-multi-clauding', 'terminal-setup', 'shift-enter',
+  'shift-enter-setup', 'memory-command', 'theme-command', 'colorterm-truecolor',
+  'powershell-tool-env', 'status-line', 'prompt-queue',
+  'enter-to-steer-in-relatime', 'todo-list', 'vscode-command-install',
+  'ide-upsell-external-terminal', 'permissions', 'drag-and-drop-images',
+  'paste-images-mac', 'double-esc', 'double-esc-code-restore', 'continue',
+  'rename-conversation', 'custom-commands', 'shift-tab', 'image-paste',
+  'custom-agents', 'agent-flag', 'effort-high-nudge', 'subagent-fanout-nudge',
+  'loop-command-nudge',
+])
+const tipCommands: Readonly<Record<string, string>> = {
+  'terminal-setup': 'terminal-setup',
+  'shift-enter-setup': 'terminal-setup',
+  'memory-command': 'memory',
+  'theme-command': 'theme',
+  'status-line': 'statusline',
+  'permissions': 'permissions',
+  'continue': 'resume',
+  'rename-conversation': 'rename',
+  'custom-agents': 'agents',
 }
 
+/** Failed tip eligibility checks must not be retried on every spinner turn. */
+const failedTipIds = new Set<string>()
+/** 2.1.310: a broken spinner tip is not retried for the current process. */
+export async function contentSafe(
+  tip: Tip,
+  theme: import('../../utils/theme.js').ThemeName,
+): Promise<string> {
+  return resolveTipContent(tip, theme, {
+    markFailed: id => { failedTipIds.add(id) },
+    report: (error, kind) =>
+      logForDebugging(`${kind}: ${error}`, { level: 'warn' }),
+  })
+}
+
+
 export async function getRelevantTips(context?: TipContext): Promise<Tip[]> {
-  const settings = getInitialSettings()
-  const override = settings.spinnerTipsOverride
-  const customTips = getCustomTips()
-
-  // If excludeDefault is true and there are custom tips, skip built-in tips entirely
-  if (override?.excludeDefault && customTips.length > 0) {
-    return customTips
+  const { tips: customTips, trustedCount } = await getCustomSpinnerTips()
+  const builtInTips = trustedCount > 0 && isDefaultSpinnerTipSuppressed()
+    ? []
+    : [...externalTips, ...internalOnlyTips].map(tip => ({
+      ...tip,
+      providerAgnostic: providerAgnosticTipIds.has(tip.id),
+      advertisedCommand: tipCommands[tip.id],
+    }))
+  const candidates = [...builtInTips, ...customTips]
+  // Fetch the live command menu at most once for this pick: provider, auth and
+  // feature gates are recalculated by getCommands on every invocation.
+  let offeredCommands: Promise<Set<string>> | undefined
+  const isCommandOffered = async (name: string): Promise<boolean> => {
+    offeredCommands ??= import('../../commands.js')
+      .then(module => module.getCommands(getOriginalCwd()))
+      .then(commands => new Set(commands.flatMap(cmd => [cmd.name, ...(cmd.aliases ?? [])])))
+    return (await offeredCommands).has(name.startsWith('/') ? name.slice(1) : name)
   }
-
-  // Otherwise, filter built-in tips as before and combine with custom
-  const tips = [...externalTips, ...internalOnlyTips]
-  const isRelevant = await Promise.all(tips.map(_ => _.isRelevant(context)))
-  const filtered = tips
-    .filter((_, index) => isRelevant[index])
-    .filter(_ => getSessionsSinceLastShown(_.id) >= _.cooldownSessions)
-
-  return [...filtered, ...customTips]
+  const isFirstPartyBackend = getAPIProvider() === 'firstParty' &&
+    isFirstPartyAnthropicBaseUrl()
+  const tips = candidates.map(tip => ({
+    ...tip,
+    isRelevant: () => tip.isRelevant(context),
+  }))
+  return selectEligibleTips(tips, {
+    isFirstPartyBackend,
+    isCommandOffered,
+    sessionsSinceShown: getSessionsSinceLastShown,
+    lifetimeShown: getTipLifetimeShows,
+    hasFailed: (id: string) => failedTipIds.has(id),
+    markFailed: (id: string) => { failedTipIds.add(id) },
+    report: (error: unknown, message: string) => logForDebugging(
+      `${message}: ${error}`, { level: 'warn' },
+    ),
+  }) as Promise<Tip[]>
 }

@@ -12,9 +12,10 @@ import {
   COST_HAIKU_45,
   formatModelPricing,
 } from '../modelCost.js'
-import { getSettings_DEPRECATED } from '../settings/settings.js'
+import { getInitialSettings } from '../settings/settings.js'
 import { checkOpus1mAccess, checkSonnet1mAccess } from './check1mAccess.js'
 import { getAPIProvider } from './providers.js'
+import { getAntModels } from './antModels.js'
 import { isModelAllowed } from './modelAllowlist.js'
 import {
   getCanonicalName,
@@ -32,6 +33,10 @@ import {
 } from './model.js'
 import { has1mContext } from '../context.js'
 import { getGlobalConfig } from '../config.js'
+import { getCatalogModel } from './modelCatalog.js'
+import { isModelAlias } from './aliases.js'
+import { getPublicModelDisplayName, parseUserSpecifiedModel } from './model.js'
+import { getModelPricingString } from '../modelCost.js'
 
 // @[MODEL LAUNCH]: Update all the available and default model option strings below.
 
@@ -42,7 +47,7 @@ export type ModelOption = {
   descriptionForModel?: string
 }
 
-export function getDefaultOptionForUser(fastMode = false): ModelOption {
+export function getDefaultOptionForUser(fastMode: boolean = false): ModelOption {
   if (process.env.USER_TYPE === 'ant') {
     const currentModel = renderDefaultModelSetting(
       getDefaultMainLoopModelSetting(),
@@ -69,7 +74,7 @@ export function getDefaultOptionForUser(fastMode = false): ModelOption {
   return {
     value: null,
     label: 'Default (recommended)',
-    description: `Use the default model (currently ${renderDefaultModelSetting(getDefaultMainLoopModelSetting())})${is3P ? '' : ` · ${formatModelPricing(COST_TIER_3_15)}`}`,
+    description: `Use the default model (currently ${renderDefaultModelSetting(getDefaultMainLoopModelSetting())})${is3P ? '' : ` · ${getModelPricingString(getDefaultSonnetModel()) ?? formatModelPricing(COST_TIER_3_15)}`}`,
   }
 }
 
@@ -98,7 +103,7 @@ function getSonnet46Option(): ModelOption {
   return {
     value: is3P ? getModelStrings().sonnet46 : 'sonnet',
     label: 'Sonnet',
-    description: `Sonnet 4.6 · Best for everyday tasks${is3P ? '' : ` · ${formatModelPricing(COST_TIER_3_15)}`}`,
+    description: `Sonnet 4.6 · Best for everyday tasks${is3P ? '' : ` · ${getModelPricingString(getDefaultSonnetModel()) ?? formatModelPricing(COST_TIER_3_15)}`}`,
     descriptionForModel:
       'Sonnet 4.6 - best for everyday tasks. Generally recommended for most coding tasks',
   }
@@ -145,13 +150,13 @@ export function getSonnet46_1MOption(): ModelOption {
   return {
     value: is3P ? getModelStrings().sonnet46 + '[1m]' : 'sonnet[1m]',
     label: 'Sonnet (1M context)',
-    description: `Sonnet 4.6 for long sessions${is3P ? '' : ` · ${formatModelPricing(COST_TIER_3_15)}`}`,
+    description: `Sonnet 4.6 for long sessions${is3P ? '' : ` · ${getModelPricingString(getDefaultSonnetModel()) ?? formatModelPricing(COST_TIER_3_15)}`}`,
     descriptionForModel:
       'Sonnet 4.6 with 1M context window - for long sessions with large codebases',
   }
 }
 
-export function getOpus46_1MOption(fastMode = false): ModelOption {
+export function getOpus46_1MOption(fastMode: boolean = false): ModelOption {
   const is3P = getAPIProvider() !== 'firstParty'
   return {
     value: is3P ? getModelStrings().opus46 + '[1m]' : 'opus[1m]',
@@ -222,11 +227,11 @@ export function getMaxSonnet46_1MOption(): ModelOption {
   return {
     value: 'sonnet[1m]',
     label: 'Sonnet (1M context)',
-    description: `Sonnet 4.6 with 1M context${billingInfo}${is3P ? '' : ` · ${formatModelPricing(COST_TIER_3_15)}`}`,
+    description: `Sonnet 4.6 with 1M context${billingInfo}${is3P ? '' : ` · ${getModelPricingString(getDefaultSonnetModel()) ?? formatModelPricing(COST_TIER_3_15)}`}`,
   }
 }
 
-export function getMaxOpus46_1MOption(fastMode = false): ModelOption {
+export function getMaxOpus46_1MOption(fastMode: boolean = false): ModelOption {
   const billingInfo = isClaudeAISubscriber() ? ' · Billed as extra usage' : ''
   return {
     value: 'opus[1m]',
@@ -458,8 +463,16 @@ function getKnownModelOption(model: string): ModelOption | null {
   }
 }
 
-export function getModelOptions(fastMode = false): ModelOption[] {
-  const options = getModelOptionsBase(fastMode)
+export function getModelOptions(fastMode: boolean = false): ModelOption[] {
+  const options = getModelOptionsBase(fastMode).map(option => {
+    if (option.value === null || !isModelAlias(option.value)) return option
+    const model = parseUserSpecifiedModel(option.value)
+    const entry = getCatalogModel(model)
+    const label = getPublicModelDisplayName(model)
+    if (!entry || !label) return option
+    const price = getModelPricingString(model)
+    return { ...option, label, description: [entry.display_name, price].filter(Boolean).join(' · '), descriptionForModel: `${label} (${model})` }
+  })
 
   // Add the custom model from the ANTHROPIC_CUSTOM_MODEL_OPTION env var
   const envCustomModel = process.env.ANTHROPIC_CUSTOM_MODEL_OPTION
@@ -529,7 +542,7 @@ export function getModelOptions(fastMode = false): ModelOption[] {
  * Always preserves the "Default" option (value: null).
  */
 function filterModelOptionsByAllowlist(options: ModelOption[]): ModelOption[] {
-  const settings = getSettings_DEPRECATED() || {}
+  const settings = getInitialSettings() || {}
   if (!settings.availableModels) {
     return options // No restrictions
   }

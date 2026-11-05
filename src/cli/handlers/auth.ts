@@ -22,6 +22,7 @@ import { OAuthService } from '../../services/oauth/index.js'
 import type { OAuthTokens } from '../../services/oauth/types.js'
 import {
   clearOAuthTokenCache,
+  checkAndRefreshOAuthTokenIfNeeded,
   getAnthropicApiKeyWithSource,
   getAuthTokenSource,
   getOauthAccountInfo,
@@ -31,6 +32,12 @@ import {
   validateForceLoginOrg,
 } from '../../utils/auth.js'
 import { saveGlobalConfig } from '../../utils/config.js'
+import { isAnalyticsDisabled } from '../../services/analytics/config.js'
+import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
+import { getProjectsDir } from '../../utils/sessionStoragePortable.js'
+import { isSettingSourceEnabled } from '../../utils/settings/constants.js'
+import { getSettingsForSource } from '../../utils/settings/settings.js'
+import { settleOAuthRefreshOnExit } from './oauthStatusWait.ts'
 import { logForDebugging } from '../../utils/debug.js'
 import { isRunningOnHomespace } from '../../utils/envUtils.js'
 import { errorMessage } from '../../utils/errors.js'
@@ -158,8 +165,8 @@ export async function authLogin({
       await installOAuthTokens(tokens)
 
       const orgResult = await validateForceLoginOrg()
-      if (!orgResult.valid) {
-        process.stderr.write(orgResult.message + '\n')
+      if (orgResult.valid === false) {
+        process.stderr.write(`${orgResult.message}\n`)
         process.exit(1)
       }
 
@@ -179,7 +186,7 @@ export async function authLogin({
       logError(err)
       const sslHint = getSSLErrorHint(err)
       process.stderr.write(
-        `Login failed: ${errorMessage(err)}\n${sslHint ? sslHint + '\n' : ''}`,
+        `Login failed: ${errorMessage(err)}\n${sslHint ? `${sslHint}\n` : ''}`,
       )
       process.exit(1)
     }
@@ -208,8 +215,8 @@ export async function authLogin({
     await installOAuthTokens(result)
 
     const orgResult = await validateForceLoginOrg()
-    if (!orgResult.valid) {
-      process.stderr.write(orgResult.message + '\n')
+    if (orgResult.valid === false) {
+      process.stderr.write(`${orgResult.message}\n`)
       process.exit(1)
     }
 
@@ -221,7 +228,7 @@ export async function authLogin({
     logError(err)
     const sslHint = getSSLErrorHint(err)
     process.stderr.write(
-      `Login failed: ${errorMessage(err)}\n${sslHint ? sslHint + '\n' : ''}`,
+      `Login failed: ${errorMessage(err)}\n${sslHint ? `${sslHint}\n` : ''}`,
     )
     process.exit(1)
   } finally {
@@ -233,6 +240,10 @@ export async function authStatus(opts: {
   json?: boolean
   text?: boolean
 }): Promise<void> {
+  // Official 2.1.317 waits for token refresh to finish before exiting.
+  const refresh = checkAndRefreshOAuthTokenIfNeeded()
+  await settleOAuthRefreshOnExit(refresh, 8_500)
+
   const { source: authTokenSource, hasToken } = getAuthTokenSource()
   const { source: apiKeySource } = getAnthropicApiKeyWithSource()
   const hasApiKeyEnvVar =
@@ -298,10 +309,21 @@ export async function authStatus(opts: {
         : hasApiKeyEnvVar
           ? 'ANTHROPIC_API_KEY'
           : null
+    const configDirectory = getClaudeConfigHomeDir()
+    const overrideFromUntrustedSource = (['projectSettings', 'localSettings'] as const)
+      .some(source => {
+        if (!isSettingSourceEnabled(source)) return false
+        const configured = getSettingsForSource(source)?.env?.CLAUDE_CONFIG_DIR
+        return typeof configured === 'string' &&
+          configured !== configDirectory
+      })
     const output: Record<string, string | boolean | null> = {
       loggedIn,
       authMethod,
       apiProvider,
+      analyticsDisabled: isAnalyticsDisabled(),
+      projectsDirectory: overrideFromUntrustedSource ? null : getProjectsDir(),
+      configDirectory,
     }
     if (resolvedApiKeySource) {
       output.apiKeySource = resolvedApiKeySource
@@ -313,7 +335,7 @@ export async function authStatus(opts: {
       output.subscriptionType = subscriptionType ?? null
     }
 
-    process.stdout.write(jsonStringify(output, null, 2) + '\n')
+    process.stdout.write(`${jsonStringify(output, null, 2)}\n`)
   }
   process.exit(loggedIn ? 0 : 1)
 }

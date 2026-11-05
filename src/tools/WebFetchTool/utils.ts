@@ -12,7 +12,7 @@ import {
   isBinaryContentType,
   persistBinaryContent,
 } from '../../utils/mcpOutputStorage.js'
-import { getSettings_DEPRECATED } from '../../utils/settings/settings.js'
+import { getInitialSettings } from '../../utils/settings/settings.js'
 import { asSystemPrompt } from '../../utils/systemPromptType.js'
 import { isPreapprovedHost } from './preapproved.js'
 import { makeSecondaryModelPrompt } from './prompt.js'
@@ -263,7 +263,7 @@ export async function getWithPermittedRedirects(
   url: string,
   signal: AbortSignal,
   redirectChecker: (originalUrl: string, redirectUrl: string) => boolean,
-  depth = 0,
+  depth: number = 0,
 ): Promise<AxiosResponse<ArrayBuffer> | RedirectInfo> {
   if (depth > MAX_REDIRECTS) {
     throw new Error(`Too many redirects (exceeded ${MAX_REDIRECTS})`)
@@ -383,7 +383,7 @@ export async function getURLMarkdownContent(
     // Check if the user has opted to skip the blocklist check
     // This is for enterprise customers with restrictive security policies
     // that prevent outbound connections to claude.ai
-    const settings = getSettings_DEPRECATED()
+    const settings = getInitialSettings()
     if (!settings.skipWebFetchPreflight) {
       const checkResult = await checkDomainBlocklist(hostname)
       switch (checkResult.status) {
@@ -430,7 +430,10 @@ export async function getURLMarkdownContent(
   // This lets GC reclaim up to MAX_HTTP_CONTENT_LENGTH (10MB) before Turndown
   // builds its DOM tree (which can be 3-5x the HTML size).
   ;(response as { data: unknown }).data = null
-  const contentType = response.headers['content-type'] ?? ''
+  const rawContentType = response.headers['content-type']
+  // Axios header values may also be arrays or header objects. The content-type
+  // parser and binary persistence require a single HTTP media type string.
+  const contentType = typeof rawContentType === 'string' ? rawContentType : ''
 
   // Binary content: save raw bytes to disk with a proper extension so Claude
   // can inspect the file later. We still fall through to the utf-8 decode +

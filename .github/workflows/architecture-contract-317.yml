@@ -1,0 +1,59 @@
+name: Claude Code 2.1.317 核心架构契约验证
+
+on:
+  push:
+    branches:
+      - upgrade/2.1.310-m1-evidence
+    paths:
+      - 'src/utils/cliArgv317.*'
+      - 'src/utils/accountPeerDirectory.*'
+      - 'src/bridge/peerDiscovery.ts'
+      - 'src/bridge/peerSessions.ts'
+      - 'src/tools/SendMessageTool/SendMessageTool.ts'
+      - 'tests/m1-account-peer-discovery.test.mjs'
+      - 'src/utils/sessionQueuePartitions317.*'
+      - 'src/utils/messageQueueManager.ts'
+      - 'src/utils/sessionTranscriptPathsV5.*'
+      - 'src/utils/sessionStorage.ts'
+      - 'src/utils/resumePreparationV5.*'
+      - 'src/utils/conversationRecovery.ts'
+      - 'tests/m4-resume-preparation-v5.test.mjs'
+      - 'tests/m4-session-transcript-paths-v5.test.mjs'
+      - 'tests/m4-session-storage-v5-integration.test.ts'
+      - 'src/types/textInputTypes.ts'
+      - 'src/bootstrap/state.ts'
+      - 'src/query/sessionIdentity317.*'
+      - 'src/services/tools/toolExecutionLifecycle317.*'
+      - 'src/services/tools/StreamingToolExecutor.ts'
+      - 'src/query/config.ts'
+      - 'src/query.ts'
+      - 'src/QueryEngine.ts'
+      - 'src/main.tsx'
+      - 'src/screens/REPL.tsx'
+      - 'src/Tool.ts'
+      - 'src/utils/forkedAgent.ts'
+      - 'src/tools/AgentTool/runAgent.ts'
+      - 'tests/m1-print-routing-317.test.mjs'
+      - 'tests/m2-session-identity-317.test.mjs'
+      - 'tests/m2-session-queue-partitions-317.test.mjs'
+      - 'tests/m3-tool-lifecycle-317.test.mjs'
+      - '.github/workflows/architecture-contract-317.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  architecture-contract:
+    name: CLI、会话身份及工具生命周期
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 验证317独立运行架构契约
+        run: |
+          node --version
+          node --test tests/m1-print-routing-317.test.mjs tests/m2-session-identity-317.test.mjs tests/m2-session-queue-partitions-317.test.mjs tests/m4-session-transcript-paths-v5.test.mjs tests/m4-resume-preparation-v5.test.mjs tests/m3-tool-lifecycle-317.test.mjs tests/m1-account-peer-discovery.test.mjs

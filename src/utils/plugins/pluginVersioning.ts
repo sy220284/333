@@ -11,6 +11,7 @@
  */
 
 import { createHash } from 'crypto'
+import { commandSourceTreeFingerprint } from './commandSourceFingerprint.ts'
 import { logForDebugging } from '../debug.js'
 import { getHeadForDir } from '../git/gitFilesystem.js'
 import type { PluginManifest, PluginSource } from './schemas.js'
@@ -41,6 +42,15 @@ export async function calculatePluginVersion(
   providedVersion?: string,
   gitCommitSha?: string,
 ): Promise<string> {
+  // A 2.1.317 command source is versioned by the plugin's actual contents,
+  // even when its manifest declares a semantic version. Changing the command
+  // output without changing plugin.json must still invalidate the cache.
+  if (typeof source === 'object' && source.source === 'command') {
+    if (!installPath) throw new Error('Command-source version requires a materialized plugin directory')
+    const digest = await commandSourceTreeFingerprint(installPath)
+    return `${manifest?.version ?? providedVersion ?? 'unknown'}-${digest.slice(0, 12)}`
+  }
+
   // 1. Use explicit version from plugin.json if available
   if (manifest?.version) {
     logForDebugging(

@@ -1,0 +1,157 @@
+#!/usr/bin/env node
+/**
+ * Test inventory and execution contract for both main and workflow-only suites.
+ *
+ * Tests are runnable artifacts with runtime, fixtures and platform requirements;
+ * the filename suffix alone cannot select their runtime. Nothing is silently
+ * skipped: missing prerequisites and failures fail the aggregate CI result.
+ */
+import { spawnSync } from 'node:child_process'
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join, relative, resolve, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const WORKFLOW_ONLY = process.argv.includes('--workflow-only')
+
+function walk(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+    if (entry.name === 'node_modules' || entry.name.startsWith('.')) return []
+    const abs = join(dir, entry.name)
+    return entry.isDirectory() ? walk(abs) : entry.isFile() ? [abs] : []
+  })
+}
+
+export function discoverUnregisteredTests(root = ROOT, options = {}) {
+  const tests = walk(join(root, 'tests'))
+    .map(abs => relative(root, abs).split(sep).join('/'))
+    .filter(path => /\.test\.(mjs|ts)$/.test(path)).sort()
+  const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+  const commands = Object.values(manifest.scripts ?? {}).join('\n')
+  const workflows = walk(join(root, '.github', 'workflows'))
+    .filter(path => /\.ya?ml$/.test(path))
+    .map(path => readFileSync(path, 'utf8')).join('\n')
+  const workflowOnly = options.workflowOnly === true
+  const registered = tests.filter(path => workflowOnly
+    ? commands.includes(path) || !workflows.includes(path)
+    : commands.includes(path) || workflows.includes(path))
+  const pending = tests.filter(path => !commands.includes(path) &&
+    (workflowOnly ? workflows.includes(path) : !workflows.includes(path)))
+  if (pending.length + registered.length !== tests.length) throw Error('Test inventory inconsistent')
+  return { tests, registered, pending }
+}
+
+function checked(program, args, options = {}) {
+  const result = spawnSync(program, args, {
+    cwd: ROOT, stdio: 'inherit', timeout: 15 * 60_000, ...options,
+  })
+  if (result.error || result.status !== 0) {
+    throw new Error(program + ' ' + args.join(' ') +
+      ': ' + (result.error?.message ?? 'exit status ' + (result.status ?? 'unknown')))
+  }
+}
+
+export function runtimeForTest(file, source = readFileSync(resolve(ROOT, file), 'utf8')) {
+  // This node:test suite embeds TypeScript imports in a subprocess script
+  // string; run it under Node to avoid Bun's 5s implicit test timeout.
+  if (file === 'tests/m1-runner-declares-317.test.mjs') return 'node'
+  if (file.endsWith('.ts') || /\b(?:from|import)\s*(?:\(|.*?\sfrom\s*)?['"]bun(?::|['"])/.test(source) ||
+      /\bBun\.(?:serve|spawn|file|SQL|env|sleep)\b/.test(source) ||
+      /(?:from|import)\s*(?:\(|.*?\sfrom\s*)?['"][^'"]+\.ts['"]/.test(source)) {
+    return 'bun'
+  }
+  return 'node'
+}
+
+/** Every fixture is created before the corresponding test and always cleaned up. */
+function runTest(file, runtime, options = {}) {
+  const env = { ...process.env }
+  let args = runtime === 'bun' ? ['test', file] : ['--test', file]
+  let program = runtime === 'bun' ? 'bun' : process.execPath
+  let disposable = null
+  try {
+    if (file === 'tests/governance-contract-trace.test.mjs') {
+      // TypeScript 7 checks production source; the separately pinned TS5.9
+      // JavaScript parser is required for AST-based governance analysis.
+      const parser = process.env.TS_COMPILER_PATH
+      if (!parser || !existsSync(parser)) {
+        throw new Error('Governance AST parser missing: install pinned TypeScript 5.9.3 and set TS_COMPILER_PATH')
+      }
+      mkdirSync(resolve(ROOT, '.rebuild/governance'), { recursive: true })
+      const dir = resolve(ROOT, '.rebuild/governance')
+      const log = join(dir, 'typescript.log')
+      const typecheck = spawnSync(process.execPath, ['tools/dev/dev.mjs', 'typecheck:all'], {
+        cwd: ROOT, encoding: 'utf8', timeout: 15 * 60_000,
+      })
+      if (typecheck.error) throw typecheck.error
+      writeFileSync(log, (typecheck.stdout ?? '') + (typecheck.stderr ?? ''))
+      checked(process.execPath, ['tools/governance/summarize.mjs', 'types',
+        log, join(dir, 'type-report.json')])
+      checked(process.execPath, ['tools/governance/missing-sources.mjs',
+        join(dir, 'type-report.json'), join(dir, 'missing-sources.json')])
+      checked(process.execPath, ['tools/governance/contract-trace.mjs',
+        join(dir, 'missing-sources.json'), join(dir, 'missing-contracts.json')])
+      args = [file, join(dir, 'missing-contracts.json')]
+    }
+    if (file === 'tests/m1-source-gap-ast.test.mjs') {
+      env.M1_TYPESCRIPT_MODULE = process.env.M1_TYPESCRIPT_MODULE ??
+        process.env.TS_COMPILER_PATH
+      if (!env.M1_TYPESCRIPT_MODULE || !existsSync(env.M1_TYPESCRIPT_MODULE)) {
+        throw new Error('Pinned TypeScript parser must be installed and passed as TS_COMPILER_PATH')
+      }
+    }
+    if (file === 'tests/m1-ink-paste-event.test.mjs') {
+      const parser = process.env.TS_COMPILER_PATH
+      const compiler = parser ? join(dirname(parser), 'tsc.js') : undefined
+      if (!compiler || !existsSync(compiler)) {
+        throw new Error('Ink event compilation requires tsc.js beside the pinned TypeScript parser')
+      }
+      disposable = mkdtempSync(join(tmpdir(), '333-ink-event-test-'))
+      const ambient = join(disposable, 'bun-ambient.d.ts')
+      writeFileSync(ambient, 'declare const Bun: { stripANSI(input: string): string }\n')
+      checked(process.execPath, [
+        compiler, '--strict', '--skipLibCheck', '--target', 'ES2023',
+        '--module', 'CommonJS', '--moduleResolution', 'Node', '--rootDir', 'src/ink/events',
+        '--outDir', join(disposable, 'events'), 'src/ink/events/paste-event.ts', ambient,
+      ])
+      env.M1_INK_EVENTS_DIR = disposable
+    }
+    if (file === 'tests/m1-six-host-native-audio-317.test.mjs') {
+      env.M1_TARGET_PLATFORM = process.platform + '-' + process.arch
+    }
+    if (file === 'tests/m1-native-clipboard-xvfb-317.test.mjs' &&
+        process.platform === 'linux' && process.arch === 'x64') {
+      program = 'xvfb-run'
+      args = ['-a', process.execPath, '--test', file]
+    }
+    console.log(JSON.stringify({ suite: file, runtime, program, args, host: process.platform + '-' + process.arch }))
+    checked(program, args, { env, ...options })
+  } finally {
+    if (disposable) rmSync(disposable, { recursive: true, force: true })
+  }
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const { tests, registered, pending } = discoverUnregisteredTests(ROOT, { workflowOnly: WORKFLOW_ONLY })
+  const plan = pending.map(file => ({ file, runtime: runtimeForTest(file) }))
+  console.log(JSON.stringify({
+    mode: WORKFLOW_ONLY ? 'workflow-only' : 'unregistered',
+    total: tests.length, explicitlyScheduled: registered.length,
+    discoveredForExecution: plan.length, planned: plan,
+  }, null, 2))
+  if (!process.argv.includes('--list')) {
+    const failures = []
+    for (const { file, runtime } of plan) {
+      try {
+        runTest(file, runtime)
+      } catch (error) {
+        failures.push({ test: file, runtime, cause: String(error) })
+        console.error(JSON.stringify({ failedTest: file, runtime, cause: String(error) }))
+        if (!WORKFLOW_ONLY) break
+      }
+    }
+    console.log(JSON.stringify({ executed: plan.length, failed: failures.length, failures }, null, 2))
+    if (failures.length) process.exitCode = 1
+  }
+}

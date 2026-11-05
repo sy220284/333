@@ -181,8 +181,7 @@ export function deletePermissionRuleFromSettings(
     return false
   }
 
-  // Normalize raw settings entries via roundtrip parse→serialize so legacy
-  // names (e.g. "KillShell") match their canonical form ("TaskStop").
+  // Canonicalize rule formatting before comparing stored settings entries.
   const normalizeEntry = (raw: string): string =>
     permissionRuleValueToString(permissionRuleValueFromString(raw))
 
@@ -261,7 +260,7 @@ export function addPermissionRulesToSettings(
     const existingRules = existingPermissions[ruleBehavior] || []
 
     // Filter out duplicates - normalize existing entries via roundtrip
-    // parse→serialize so legacy names match their canonical form.
+    // Parse→serialize the same canonical rule form as persisted settings.
     const existingRulesSet = new Set(
       existingRules.map(raw =>
         permissionRuleValueToString(permissionRuleValueFromString(raw)),

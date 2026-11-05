@@ -5,6 +5,7 @@
  * system to reduce code duplication and improve maintainability.
  */
 
+import { installedSourceCommandKey } from './commandSourceConsent.ts'
 import { randomBytes } from 'crypto'
 import { rename, rm } from 'fs/promises'
 import { dirname, join, resolve, sep } from 'path'
@@ -32,6 +33,7 @@ import {
 import {
   addInstalledPlugin,
   getGitCommitSha,
+  loadInstalledPluginsV2,
 } from './installedPluginsManager.js'
 import { getManagedPluginNames } from './managedPlugins.js'
 import { getMarketplaceCacheOnly, getPluginById } from './marketplaceManager.js'
@@ -131,6 +133,9 @@ export async function cacheAndRegisterPlugin(
   scope: PluginScope = 'user',
   projectPath?: string,
   localSourcePath?: string,
+  asDependency: boolean = false,
+  deferRegistration?: (registration: () => void) => void,
+  authorizedCommandSource: boolean = false,
 ): Promise<string> {
   // For local plugins, we need the resolved absolute path
   // Cast to PluginSource since cachePlugin handles any string path at runtime
@@ -141,6 +146,7 @@ export async function cacheAndRegisterPlugin(
 
   const cacheResult = await cachePlugin(source, {
     manifest: entry as PluginMarketplaceEntry,
+    authorizedCommandSource,
   })
 
   // For local plugins, use the original source path for Git SHA calculation
@@ -208,8 +214,17 @@ export async function cacheAndRegisterPlugin(
     finalPath = zipPath
   }
 
-  // Add to both V1 and V2 installed_plugins files with correct scope
-  addInstalledPlugin(
+  // An existing manual installation must never become an auto-removable
+  // dependency during reinstall. A directly requested root clears auto status.
+  const existing = loadInstalledPluginsV2().plugins[pluginId]?.find(item =>
+    item.scope === scope && item.projectPath === projectPath,
+  )
+  const auto = asDependency && (!existing || existing.auto === true)
+
+  // Installation commits its registry record only after every dependency
+  // has been materialized and settings can be written. Other callers keep
+  // the existing immediate-registration behavior.
+  const registerInstallation = () => addInstalledPlugin(
     pluginId,
     {
       version,
@@ -217,10 +232,18 @@ export async function cacheAndRegisterPlugin(
       lastUpdated: now,
       installPath: finalPath,
       gitCommitSha,
+      auto,
+      ...(authorizedCommandSource && typeof entry.source !== 'string' &&
+        entry.source.source === 'command' && {
+        sourceCommand: installedSourceCommandKey(entry.source),
+        ...(cacheResult.sourceProducerPath && { sourceProducerPath: cacheResult.sourceProducerPath }),
+      }),
     },
     scope,
     projectPath,
   )
+  if (deferRegistration) deferRegistration(registerInstallation)
+  else registerInstallation()
 
   return finalPath
 }
@@ -350,11 +373,13 @@ export async function installResolvedPlugin({
   entry,
   scope,
   marketplaceInstallLocation,
+  authorizedSourceCommands,
 }: {
   pluginId: string
   entry: PluginMarketplaceEntry
   scope: 'user' | 'project' | 'local'
   marketplaceInstallLocation?: string
+  authorizedSourceCommands?: readonly string[]
 }): Promise<InstallCoreResult> {
   const settingSource = scopeToSettingSource(scope)
 
@@ -407,7 +432,7 @@ export async function installResolvedPlugin({
     getEnabledPluginIdsForScope(settingSource),
     allowedCrossMarketplaces,
   )
-  if (!resolution.ok) {
+  if (resolution.ok === false) {
     return { ok: false, reason: 'resolution-failed', resolution }
   }
 
@@ -426,22 +451,12 @@ export async function installResolvedPlugin({
     }
   }
 
-  // ── ACTION: write entire closure to settings in one call ──
-  const closureEnabled: Record<string, true> = {}
-  for (const id of resolution.closure) closureEnabled[id] = true
-  const { error } = updateSettingsForSource(settingSource, {
-    enabledPlugins: {
-      ...getSettingsForSource(settingSource)?.enabledPlugins,
-      ...closureEnabled,
-    },
-  })
-  if (error) {
-    return {
-      ok: false,
-      reason: 'settings-write-failed',
-      message: error.message,
-    }
-  }
+  // Prepare the complete closure before making any plugin visible as
+  // installed. Official 2.1.317 leaves enabledPlugins unchanged if a source
+  // cannot be materialized (for example a missing marketplace directory).
+  // Defer registry writes as well: the settings transaction must not declare
+  // a plugin usable while a dependency is still being fetched.
+  const pendingRegistrations: Array<() => void> = []
 
   // ── Materialize: cache each closure member ──
   const projectPath = scope !== 'user' ? getCwd() : undefined
@@ -453,7 +468,11 @@ export async function installResolvedPlugin({
       const mktLocation = (await getPluginById(id))?.marketplaceInstallLocation
       if (mktLocation) info = { entry, marketplaceInstallLocation: mktLocation }
     }
-    if (!info) continue
+    if (!info) {
+      throw new Error(
+        `Failed to materialize plugin "${id}": marketplace entry or installation location is missing`,
+      )
+    }
 
     let localSourcePath: string | undefined
     const { source } = info.entry
@@ -469,8 +488,29 @@ export async function installResolvedPlugin({
       scope,
       projectPath,
       localSourcePath,
+      id !== pluginId,
+      register => pendingRegistrations.push(register),
+      authorizedSourceCommands?.includes(id) === true,
     )
   }
+
+  // ── COMMIT: settings are updated once, after successful materialization ──
+  const closureEnabled: Record<string, true> = {}
+  for (const id of resolution.closure) closureEnabled[id] = true
+  const { error } = updateSettingsForSource(settingSource, {
+    enabledPlugins: {
+      ...getSettingsForSource(settingSource)?.enabledPlugins,
+      ...closureEnabled,
+    },
+  })
+  if (error) {
+    return {
+      ok: false,
+      reason: 'settings-write-failed',
+      message: error.message,
+    }
+  }
+  for (const register of pendingRegistrations) register()
 
   clearAllCaches()
 
@@ -524,7 +564,7 @@ export async function installPluginFromMarketplace({
       marketplaceInstallLocation,
     })
 
-    if (!result.ok) {
+    if (result.ok === false) {
       switch (result.reason) {
         case 'local-source-no-location':
           return {

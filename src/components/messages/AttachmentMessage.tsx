@@ -1,10 +1,10 @@
 import { c as _c } from "react/compiler-runtime";
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Ansi, Box, Text } from '../../ink.js';
 import type { Attachment } from 'src/utils/attachments.js';
 import type { NullRenderingAttachmentType } from './nullRenderingAttachments.js';
-import { useAppState } from '../../state/AppState.js';
+import { useAppState, type AppState } from '../../state/AppState.js';
 import { getDisplayPath } from 'src/utils/file.js';
 import { formatFileSize } from 'src/utils/format.js';
 import { MessageResponse } from '../MessageResponse.js';
@@ -17,7 +17,6 @@ import { UserImageMessage } from './UserImageMessage.js';
 import { toInkColor } from '../../utils/ink.js';
 import { jsonParse } from '../../utils/slowOperations.js';
 import { plural } from '../../utils/stringUtils.js';
-import { isEnvTruthy } from '../../utils/envUtils.js';
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js';
 import { tryRenderPlanApprovalMessage, formatTeammateMessageContent } from './PlanApprovalMessage.js';
 import { BLACK_CIRCLE } from '../../constants/figures.js';
@@ -25,7 +24,6 @@ import { TeammateMessageContent } from './UserTeammateMessage.js';
 import { isShutdownApproved } from '../../utils/teammateMailbox.js';
 import { CtrlOToExpand } from '../CtrlOToExpand.js';
 import { FilePathLink } from '../FilePathLink.js';
-import { feature } from 'bun:bundle';
 import { useSelectedMessageBg } from '../messageActions.js';
 type Props = {
   addMargin: boolean;
@@ -40,10 +38,6 @@ export function AttachmentMessage({
   isTranscriptMode
 }: Props): React.ReactNode {
   const bg = useSelectedMessageBg();
-  // Hoisted to mount-time — per-message component, re-renders on every scroll.
-  const isDemoEnv = feature('EXPERIMENTAL_SKILL_SEARCH') ?
-  // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useMemo(() => isEnvTruthy(process.env.IS_DEMO), []) : false;
   // Handle teammate_mailbox BEFORE switch
   if (isAgentSwarmsEnabled() && attachment.type === 'teammate_mailbox') {
     // Filter out idle notifications BEFORE counting - they are hidden in the UI
@@ -102,27 +96,6 @@ export function AttachmentMessage({
       </Box>;
   }
 
-  // skill_discovery rendered here (not in the switch) so the 'skill_discovery'
-  // string literal stays inside a feature()-guarded block. A case label can't
-  // be conditionally eliminated; an if-body can.
-  if (feature('EXPERIMENTAL_SKILL_SEARCH')) {
-    if (attachment.type === 'skill_discovery') {
-      if (attachment.skills.length === 0) return null;
-      // Ant users get shortIds inline so they can /skill-feedback while the
-      // turn is still fresh. External users (when this un-gates) just see
-      // names — shortId is undefined outside ant builds anyway.
-      const names = attachment.skills.map(s => s.shortId ? `${s.name} [${s.shortId}]` : s.name).join(', ');
-      const firstId = attachment.skills[0]?.shortId;
-      const hint = "external" === 'ant' && !isDemoEnv && firstId ? ` · /skill-feedback ${firstId} 1=wrong 2=noisy 3=good [comment]` : '';
-      return <Line>
-          <Text bold>{attachment.skills.length}</Text> relevant{' '}
-          {plural(attachment.skills.length, 'skill')}: {names}
-          {hint && <Text dimColor>{hint}</Text>}
-        </Line>;
-    }
-  }
-
-  // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check -- teammate_mailbox/skill_discovery handled before switch
   switch (attachment.type) {
     case 'directory':
       return <Line>
@@ -134,11 +107,6 @@ export function AttachmentMessage({
         return <Line>
             Read <Text bold>{attachment.displayPath}</Text> (
             {attachment.content.file.cells.length} cells)
-          </Line>;
-      }
-      if (attachment.content.type === 'file_unchanged') {
-        return <Line>
-            Read <Text bold>{attachment.displayPath}</Text> (unchanged)
           </Line>;
       }
       return <Line>
@@ -348,9 +316,9 @@ export function AttachmentMessage({
       // a case) or render nothing (add to the array). Messages.tsx pre-filters
       // these so this branch is defense-in-depth for other render paths.
       //
-      // skill_discovery and teammate_mailbox are handled BEFORE the switch in
-      // runtime-gated blocks (feature() / isAgentSwarmsEnabled()) that TS can't
-      // narrow through — excluded here via type union (compile-time only, no emit).
+      // skill_discovery and teammate_mailbox are rendered before the switch,
+      // guarded by their respective runtime feature checks.  TypeScript
+      // cannot narrow through those checks, so keep both in this contract.
       attachment.type satisfies NullRenderingAttachmentType | 'skill_discovery' | 'teammate_mailbox';
       return null;
   }
@@ -435,7 +403,7 @@ function TeammateTaskStatus(t0) {
     attachment
   } = t0;
   const bg = useSelectedMessageBg();
-  let t1;
+  let t1: (state: AppState) => AppState['tasks'][string];
   if ($[0] !== attachment.taskId) {
     t1 = s => s.tasks[attachment.taskId];
     $[0] = attachment.taskId;

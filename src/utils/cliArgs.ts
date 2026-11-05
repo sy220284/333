@@ -1,3 +1,5 @@
+import { getCliFlagValue } from './cliArgv317.ts'
+
 /**
  * Parse a CLI flag value early, before Commander.js processes arguments.
  * Supports both space-separated (--flag value) and equals-separated (--flag=value) syntax.
@@ -14,18 +16,7 @@ export function eagerParseCliFlag(
   flagName: string,
   argv: string[] = process.argv,
 ): string | undefined {
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]
-    // Handle --flag=value syntax
-    if (arg?.startsWith(`${flagName}=`)) {
-      return arg.slice(flagName.length + 1)
-    }
-    // Handle --flag value syntax
-    if (arg === flagName && i + 1 < argv.length) {
-      return argv[i + 1]
-    }
-  }
-  return undefined
+  return getCliFlagValue(flagName, argv)
 }
 
 /**

@@ -1,12 +1,6 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import {
-  CallToolRequestSchema,
-  type CallToolResult,
-  ListToolsRequestSchema,
-  type ListToolsResult,
-  type Tool,
-} from '@modelcontextprotocol/sdk/types.js'
+import { serveStdio } from '@modelcontextprotocol/server/stdio'
+import { Server } from "@modelcontextprotocol/server";
+import type { CallToolResult, ListToolsResult, Tool } from "@modelcontextprotocol/server";
 import { getDefaultAppState } from 'src/state/AppStateStore.js'
 import review from '../commands/review.js'
 import type { Command } from '../commands.js'
@@ -16,6 +10,7 @@ import {
   type ToolUseContext,
 } from '../Tool.js'
 import { getTools } from '../tools.js'
+import { parseMcpToolArguments } from './mcpInputValidation.js'
 import { createAbortController } from '../utils/abortController.js'
 import { createFileStateCacheWithSizeLimit } from '../utils/fileStateCache.js'
 import { logError } from '../utils/log.js'
@@ -44,6 +39,11 @@ export async function startMCPServer(
     READ_FILE_STATE_CACHE_SIZE,
   )
   setCwd(cwd)
+  // The v2 stdio entry constructs one server for the selected protocol era.
+  // On modern discovery followed by a legacy fallback, the probe instance is
+  // discarded and a fresh legacy instance is created. The factory therefore
+  // has no externally visible initialization side effects.
+  const createServer = () => {
   const server = new Server(
     {
       name: 'claude/tengu',
@@ -57,7 +57,7 @@ export async function startMCPServer(
   )
 
   server.setRequestHandler(
-    ListToolsRequestSchema,
+    'tools/list',
     async (): Promise<ListToolsResult> => {
       // TODO: Also re-expose any MCP tools
       const toolPermissionContext = getEmptyToolPermissionContext()
@@ -97,7 +97,7 @@ export async function startMCPServer(
   )
 
   server.setRequestHandler(
-    CallToolRequestSchema,
+    'tools/call',
     async ({ params: { name, arguments: args } }): Promise<CallToolResult> => {
       const toolPermissionContext = getEmptyToolPermissionContext()
       // TODO: Also re-expose any MCP tools
@@ -133,22 +133,24 @@ export async function startMCPServer(
         updateAttributionState: () => {},
       }
 
-      // TODO: validate input types with zod
       try {
         if (!tool.isEnabled()) {
           throw new Error(`Tool ${name} is not enabled`)
         }
+        // MCP input is untrusted. Parse the real tool schema before running
+        // tool-specific validation, permission checks or any tool side effects.
+        const validatedInput = parseMcpToolArguments(name, tool.inputSchema, args)
         const validationResult = await tool.validateInput?.(
-          (args as never) ?? {},
+          validatedInput as never,
           toolUseContext,
         )
-        if (validationResult && !validationResult.result) {
+        if (validationResult?.result === false) {
           throw new Error(
             `Tool ${name} input is invalid: ${validationResult.message}`,
           )
         }
         const finalResult = await tool.call(
-          (args ?? {}) as never,
+          validatedInput as never,
           toolUseContext,
           hasPermissionsToUseTool,
           createAssistantMessage({
@@ -187,10 +189,14 @@ export async function startMCPServer(
     },
   )
 
-  async function runServer() {
-    const transport = new StdioServerTransport()
-    await server.connect(transport)
+  return server
   }
 
-  return await runServer()
+  // The official SDK owns both the 2025-era initialization handshake and the
+  // 2026-07-28 per-request envelope. Legacy clients remain fully supported.
+  // Request handlers retain their existing tool permission + schema checks.
+  serveStdio(() => createServer(), {
+    legacy: 'serve',
+    onerror: error => logError(error),
+  })
 }

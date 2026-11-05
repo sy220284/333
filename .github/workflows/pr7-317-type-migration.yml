@@ -1,0 +1,67 @@
+name: PR7 317 源码真实 TypeScript 类型重建
+# first wave TS type fixes 2026-11-04
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths: ['.github/workflows/pr7-317-type-migration.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pr7-317-type-migration
+  cancel-in-progress: false
+
+jobs:
+  rewrite:
+    name: 对照声明重写、类型检查、回写与复核
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 安装冻结 TypeScript 类型工具
+        run: npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+      - name: 从源码和声明重建缺失的函数类型
+        run: |
+          node tools/upgrade/rewrite-317-types.mjs --apply
+          node tools/upgrade/rewrite-317-types.mjs --check
+          git diff --check
+      - name: 恢复项目完整依赖以进行全仓类型检查
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 全仓 TypeScript 类型检查和语言入口测试
+        run: |
+          node tools/dev/dev.mjs typecheck:all
+          node --test tests/language-file-contract.test.mjs
+      - name: 提交已验证的重写内容到原 PR 分支
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- src/; then
+            echo "全部声明已在 TypeScript 源码中体现"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/
+          git commit -m '对照317反编译接口声明完成TypeScript实现类型重写'
+          for attempt in 1 2 3 4 5; do
+            git fetch origin upgrade/2.1.310-m1-evidence
+            git rebase origin/upgrade/2.1.310-m1-evidence
+            node tools/upgrade/rewrite-317-types.mjs --check
+            if git push origin HEAD:refs/heads/upgrade/2.1.310-m1-evidence; then
+              echo "已回写原 PR 分支并复核接口"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo '并行提交更新频繁，未获得安全推送机会' >&2
+          exit 1

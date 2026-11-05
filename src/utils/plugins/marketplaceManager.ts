@@ -184,11 +184,19 @@ export function getDeclaredMarketplaces(): Record<string, DeclaredMarketplace> {
   // Lowest precedence: implicit < --add-dir < merged settings.
   // An explicit extraKnownMarketplaces entry for claude-plugins-official
   // in --add-dir or settings wins.
-  return {
+  const merged = {
     ...implicit,
     ...getAddDirExtraMarketplaces(),
     ...(getInitialSettings().extraKnownMarketplaces ?? {}),
   }
+  const declared: Record<string, DeclaredMarketplace> = {}
+  for (const [name, marketplace] of Object.entries(merged)) {
+    if (!marketplace.source) {
+      throw new Error(`插件市场 ${name} 缺少必须的 source 配置`)
+    }
+    declared[name] = { ...marketplace, source: marketplace.source }
+  }
+  return declared
 }
 
 /**

@@ -1066,6 +1066,13 @@ export const PluginSourceSchema = lazySchema(() =>
     ),
     z
       .object({
+        source: z.literal('command'),
+        command: z.string().min(1).describe('A marketplace-declared local install command; run only after explicit consent'),
+        mode: z.enum(['copy', 'link']).default('copy').describe('Copy the returned plugin directory or link it into the cache'),
+      })
+      .describe('Marketplace command source, requiring a revision-bound command confirmation'),
+    z
+      .object({
         source: z.literal('npm'),
         package: NpmPackageNameSchema()
           .or(z.string()) // Allow URLs and local paths as well
@@ -1458,36 +1465,10 @@ export const InstalledPluginSchema = lazySchema(() =>
       .string()
       .optional()
       .describe('Git commit SHA for git-based plugins (for version tracking)'),
-  }),
-)
-
-/**
- * Schema for the installed_plugins.json file (V1 format)
- *
- * Contains a version number and maps plugin IDs to their installation metadata.
- * Maintained automatically by Claude Code, not edited by users.
- *
- * The version field tracks schema changes. When the version doesn't match
- * the current schema version, Claude Code will update the file on next startup.
- *
- * Example file:
- * {
- *   "version": 1,
- *   "plugins": {
- *     "code-formatter@anthropic-tools": { ... },
- *     "db-assistant@company-internal": { ... }
- *   }
- * }
- */
-export const InstalledPluginsFileSchemaV1 = lazySchema(() =>
-  z.object({
-    version: z.literal(1).describe('Schema version 1'),
-    plugins: z
-      .record(
-        PluginIdSchema(), // Validated plugin ID key (e.g., "formatter@tools")
-        InstalledPluginSchema(),
-      )
-      .describe('Map of plugin IDs to their installation metadata'),
+    sourceCommand: z.string().optional().describe('Previously accepted marketplace install command and its source mode'),
+    sourceProducerPath: z.string().max(4096).optional().describe('Last absolute producer directory returned by an authorized plugin command'),
+    previousProducerPaths: z.array(z.string().max(4096)).max(32).optional().describe('Prior producer directories retained for sandbox protection'),
+    auto: z.boolean().optional(),
   }),
 )
 
@@ -1538,6 +1519,10 @@ export const PluginInstallationEntrySchema = lazySchema(() =>
       .string()
       .optional()
       .describe('Git commit SHA for git-based plugins'),
+    sourceCommand: z.string().optional().describe('Accepted marketplace-declared install command and source mode'),
+    sourceProducerPath: z.string().max(4096).optional().describe('Last absolute producer directory returned by an authorized plugin command'),
+    previousProducerPaths: z.array(z.string().max(4096)).max(32).optional().describe('Prior producer directories retained for sandbox protection'),
+    auto: z.boolean().optional().describe('Installed automatically as a dependency'),
   }),
 )
 
@@ -1566,14 +1551,6 @@ export const InstalledPluginsFileSchemaV2 = lazySchema(() =>
       .record(PluginIdSchema(), z.array(PluginInstallationEntrySchema()))
       .describe('Map of plugin IDs to arrays of installation entries'),
   }),
-)
-
-/**
- * Combined schema that accepts both V1 and V2 formats
- * Used for reading existing files before migration
- */
-export const InstalledPluginsFileSchema = lazySchema(() =>
-  z.union([InstalledPluginsFileSchemaV1(), InstalledPluginsFileSchemaV2()]),
 )
 
 /**
@@ -1644,7 +1621,14 @@ export const KnownMarketplacesFileSchema = lazySchema(() =>
  *
  * @see CommandMetadataSchema for runtime validation rules
  */
-export type CommandMetadata = z.infer<ReturnType<typeof CommandMetadataSchema>>
+export type CommandMetadata = {
+  source?: string
+  content?: string
+  description?: string
+  argumentHint?: string
+  model?: string
+  allowedTools?: string[]
+}
 export type MarketplaceSource = z.infer<
   ReturnType<typeof MarketplaceSourceSchema>
 >
@@ -1663,9 +1647,6 @@ export type PluginMarketplaceEntry = z.infer<
 >
 export type PluginId = z.infer<ReturnType<typeof PluginIdSchema>> // string in "plugin@marketplace" format
 export type InstalledPlugin = z.infer<ReturnType<typeof InstalledPluginSchema>>
-export type InstalledPluginsFileV1 = z.infer<
-  ReturnType<typeof InstalledPluginsFileSchemaV1>
->
 export type InstalledPluginsFileV2 = z.infer<
   ReturnType<typeof InstalledPluginsFileSchemaV2>
 >

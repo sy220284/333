@@ -6,6 +6,7 @@ import { Byline } from '../../components/design-system/Byline.js';
 import { Box, Text } from '../../ink.js';
 import { useKeybinding, useKeybindings } from '../../keybindings/useKeybinding.js';
 import type { LoadedPlugin } from '../../types/plugin.js';
+import type { PluginMarketplaceEntry } from '../../utils/plugins/schemas.js';
 import { count } from '../../utils/array.js';
 import { openBrowser } from '../../utils/browser.js';
 import { logForDebugging } from '../../utils/debug.js';
@@ -140,10 +141,12 @@ export function BrowseMarketplace({
         } of marketplaces_0) {
           if (marketplace) {
             // Count how many plugins from this marketplace are installed
-            const installedFromThisMarketplace = count(marketplace.plugins, plugin => isPluginInstalled(createPluginId(plugin.name, name)));
+            // Marketplace entries were already validated by PluginMarketplaceSchema.
+            const marketplacePlugins = marketplace.plugins as PluginMarketplaceEntry[];
+            const installedFromThisMarketplace = count(marketplacePlugins, plugin => isPluginInstalled(createPluginId(plugin.name, name)));
             marketplaceInfos.push({
               name,
-              totalPlugins: marketplace.plugins.length,
+              totalPlugins: marketplacePlugins.length,
               installedCount: installedFromThisMarketplace,
               source: getMarketplaceSourceDisplay(marketplaceConfig.source)
             });
@@ -163,7 +166,7 @@ export function BrowseMarketplace({
         const errorResult = formatMarketplaceLoadingErrors(failures, successCount);
         if (errorResult) {
           if (errorResult.type === 'warning') {
-            setWarning(errorResult.message + '. Showing available marketplaces.');
+            setWarning(`${errorResult.message}. Showing available marketplaces.`);
           } else {
             throw new Error(errorResult.message);
           }
@@ -328,7 +331,7 @@ export function BrowseMarketplace({
         marketplaceName: plugin_1.marketplaceName,
         scope: 'user'
       });
-      if (result.success) {
+      if (result.success === true) {
         successCount_0++;
       } else {
         failureCount++;
@@ -345,14 +348,14 @@ export function BrowseMarketplace({
     // Handle installation results
     if (failureCount === 0) {
       // All succeeded
-      const message = `✓ Installed ${successCount_0} ${plural(successCount_0, 'plugin')}. ` + `Run /reload-plugins to activate.`;
+      const message = `✓ Installed ${successCount_0} ${plural(successCount_0, 'plugin')}. Run /reload-plugins to activate.`;
       setResult(message);
     } else if (successCount_0 === 0) {
       // All failed - show error with reasons
       setError(`Failed to install: ${formatFailureDetails(newFailedPlugins, true)}`);
     } else {
       // Mixed results - show partial success
-      const message_0 = `✓ Installed ${successCount_0} of ${successCount_0 + failureCount} plugins. ` + `Failed: ${formatFailureDetails(newFailedPlugins, false)}. ` + `Run /reload-plugins to activate successfully installed plugins.`;
+      const message_0 = `✓ Installed ${successCount_0} of ${successCount_0 + failureCount} plugins. Failed: ${formatFailureDetails(newFailedPlugins, false)}. Run /reload-plugins to activate successfully installed plugins.`;
       setResult(message_0);
     }
 
@@ -377,7 +380,7 @@ export function BrowseMarketplace({
       marketplaceName: plugin_2.marketplaceName,
       scope
     });
-    if (result_0.success) {
+    if (result_0.success === true) {
       const loaded = await findPluginOptionsTarget(plugin_2.pluginId);
       if (loaded) {
         setIsInstalling(false);
@@ -567,7 +570,7 @@ export function BrowseMarketplace({
 
   // Loading state
   if (loading) {
-    return <Text>Loading…</Text>;
+    return <Text>正在加载…</Text>;
   }
 
   // Error state
@@ -580,9 +583,9 @@ export function BrowseMarketplace({
     if (marketplaces.length === 0) {
       return <Box flexDirection="column">
           <Box marginBottom={1}>
-            <Text bold>Select marketplace</Text>
+            <Text bold>选择插件市场</Text>
           </Box>
-          <Text>No marketplaces configured.</Text>
+          <Text>尚未配置插件市场。</Text>
           <Text dimColor>
             Add a marketplace first using {"'Add marketplace'"}.
           </Text>
@@ -595,7 +598,7 @@ export function BrowseMarketplace({
     }
     return <Box flexDirection="column">
         <Box marginBottom={1}>
-          <Text bold>Select marketplace</Text>
+          <Text bold>选择插件市场</Text>
         </Box>
 
         {/* Warning banner for marketplace load failures */}
@@ -639,13 +642,13 @@ export function BrowseMarketplace({
     const menuOptions = buildPluginDetailsMenuOptions(hasHomepage_1, githubRepo_1);
     return <Box flexDirection="column">
         <Box marginBottom={1}>
-          <Text bold>Plugin Details</Text>
+          <Text bold>插件详情</Text>
         </Box>
 
         {/* Plugin metadata */}
         <Box flexDirection="column" marginBottom={1}>
           <Text bold>{selectedPlugin.entry.name}</Text>
-          {selectedPlugin.entry.version && <Text dimColor>Version: {selectedPlugin.entry.version}</Text>}
+          {selectedPlugin.entry.version && <Text dimColor>版本：{selectedPlugin.entry.version}</Text>}
           {selectedPlugin.entry.description && <Box marginTop={1}>
               <Text>{selectedPlugin.entry.description}</Text>
             </Box>}
@@ -659,7 +662,7 @@ export function BrowseMarketplace({
 
         {/* What will be installed */}
         <Box flexDirection="column" marginBottom={1}>
-          <Text bold>Will install:</Text>
+          <Text bold>将安装：</Text>
           {selectedPlugin.entry.commands && <Text dimColor>
               · Commands:{' '}
               {Array.isArray(selectedPlugin.entry.commands) ? selectedPlugin.entry.commands.join(', ') : Object.keys(selectedPlugin.entry.commands).join(', ')}
@@ -695,7 +698,7 @@ export function BrowseMarketplace({
 
         {/* Error message */}
         {installError && <Box marginBottom={1}>
-            <Text color="error">Error: {installError}</Text>
+            <Text color="error">错误：{installError}</Text>
           </Box>}
 
         {/* Menu options */}
@@ -724,9 +727,9 @@ export function BrowseMarketplace({
   if (availablePlugins.length === 0) {
     return <Box flexDirection="column">
         <Box marginBottom={1}>
-          <Text bold>Install plugins</Text>
+          <Text bold>安装插件</Text>
         </Box>
-        <Text dimColor>No new plugins available to install.</Text>
+        <Text dimColor>没有可安装的新插件。</Text>
         <Text dimColor>
           All plugins from this marketplace are already installed.
         </Text>
@@ -742,12 +745,12 @@ export function BrowseMarketplace({
   const visiblePlugins = pagination.getVisibleItems(availablePlugins);
   return <Box flexDirection="column">
       <Box marginBottom={1}>
-        <Text bold>Install Plugins</Text>
+        <Text bold>安装插件</Text>
       </Box>
 
       {/* Scroll up indicator */}
       {pagination.scrollPosition.canScrollUp && <Box>
-          <Text dimColor> {figures.arrowUp} more above</Text>
+          <Text dimColor> {figures.arrowUp} 项在上方</Text>
         </Box>}
 
       {/* Plugin list */}
@@ -766,8 +769,8 @@ export function BrowseMarketplace({
                 {plugin_6.isInstalled ? figures.tick : isInstalling_0 ? figures.ellipsis : isSelectedForInstall ? figures.radioOn : figures.radioOff}{' '}
                 {plugin_6.entry.name}
                 {plugin_6.entry.category && <Text dimColor> [{plugin_6.entry.category}]</Text>}
-                {plugin_6.entry.tags?.includes('community-managed') && <Text dimColor> [Community Managed]</Text>}
-                {plugin_6.isInstalled && <Text dimColor> (installed)</Text>}
+                {plugin_6.entry.tags?.includes('community-managed') && <Text dimColor> [社区维护]</Text>}
+                {plugin_6.isInstalled && <Text dimColor>（已安装）</Text>}
                 {installCounts && selectedMarketplace === OFFICIAL_MARKETPLACE_NAME && <Text dimColor>
                       {' · '}
                       {formatInstallCount(installCounts.get(plugin_6.pluginId) ?? 0)}{' '}
@@ -786,7 +789,7 @@ export function BrowseMarketplace({
 
       {/* Scroll down indicator */}
       {pagination.scrollPosition.canScrollDown && <Box>
-          <Text dimColor> {figures.arrowDown} more below</Text>
+          <Text dimColor> {figures.arrowDown} 项在下方</Text>
         </Box>}
 
       {/* Error messages shown in the UI */}

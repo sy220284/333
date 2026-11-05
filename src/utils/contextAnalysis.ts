@@ -169,7 +169,6 @@ function processBlock(
     case 'image':
     case 'server_tool_use':
     case 'web_search_tool_result':
-    case 'search_result':
     case 'document':
     case 'thinking':
     case 'redacted_thinking':
@@ -177,13 +176,12 @@ function processBlock(
     case 'mcp_tool_use':
     case 'mcp_tool_result':
     case 'container_upload':
-    case 'web_fetch_tool_result':
-    case 'bash_code_execution_tool_result':
-    case 'text_editor_code_execution_tool_result':
-    case 'tool_search_tool_result':
-    case 'compaction':
-      // Don't care about these for now..
-      stats['other'] += tokens
+      stats.other += tokens
+      break
+    default:
+      // Count blocks introduced by newer SDK versions without misattributing
+      // them to known tool calls or dropping their tokens from the total.
+      stats.other += tokens
       break
   }
 }

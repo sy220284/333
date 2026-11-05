@@ -3,7 +3,6 @@ import React, { type ReactNode } from 'react';
 import { getOriginalCwd } from '../../bootstrap/state.js';
 import { Text } from '../../ink.js';
 import type { PermissionUpdate } from '../../utils/permissions/PermissionUpdateSchema.js';
-import { permissionRuleExtractPrefix } from '../../utils/permissions/shellRuleMatching.js';
 function commandListDisplay(commands: string[]): ReactNode {
   switch (commands.length) {
     case 0:
@@ -79,7 +78,7 @@ export function generateShellSuggestionsLabel(suggestions: PermissionUpdate[], s
   // Extract shell command prefixes, optionally transforming for display
   const shellCommands = [...new Set(shellRules.flatMap(rule => {
     if (!rule.ruleContent) return [];
-    const command = permissionRuleExtractPrefix(rule.ruleContent) ?? rule.ruleContent;
+    const command = rule.ruleContent;
     return commandTransform ? commandTransform(command) : command;
   }))];
 

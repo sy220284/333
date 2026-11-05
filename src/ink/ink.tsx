@@ -17,6 +17,7 @@ import type { CursorDeclaration, CursorDeclarationSetter } from './components/Cu
 import { FRAME_INTERVAL_MS } from './constants.js';
 import * as dom from './dom.js';
 import { KeyboardEvent } from './events/keyboard-event.js';
+import { PasteEvent } from './events/paste-event.js';
 import { FocusManager } from './focus.js';
 import { emptyFrame, type Frame, type FrameEvent } from './frame.js';
 import { dispatchClick, dispatchHover } from './hit-test.js';
@@ -37,6 +38,8 @@ import { SYNC_OUTPUT_SUPPORTED, supportsExtendedKeys, type Terminal, writeDiffTo
 import { CURSOR_HOME, cursorMove, cursorPosition, DISABLE_KITTY_KEYBOARD, DISABLE_MODIFY_OTHER_KEYS, ENABLE_KITTY_KEYBOARD, ENABLE_MODIFY_OTHER_KEYS, ERASE_SCREEN } from './termio/csi.js';
 import { DBP, DFE, DISABLE_MOUSE_TRACKING, ENABLE_MOUSE_TRACKING, ENTER_ALT_SCREEN, EXIT_ALT_SCREEN, SHOW_CURSOR } from './termio/dec.js';
 import { CLEAR_ITERM2_PROGRESS, CLEAR_TAB_STATUS, setClipboard, supportsTabStatus, wrapForMultiplexer } from './termio/osc.js';
+import { getScreenReaderActivationSource, getScreenReaderMode, isScreenReaderEnabled } from '../utils/accessibility/screenReaderRuntime.js';
+import { accessibleOutputDelta, createScreenReaderAnnouncementQueue, flattenAccessibleTree } from '../utils/accessibility/screenReaderMode.ts';
 import { TerminalWriteProvider } from './useTerminalNotification.js';
 
 // Alt-screen: renderer.ts sets cursor.visible = !isTTY || screen.height===0,
@@ -82,6 +85,10 @@ export default class Ink {
   // Ignore last render after unmounting a tree to prevent empty output before exit
   private isUnmounted = false;
   private isPaused = false;
+  private previousAccessibleText = '';
+  private readonly accessibleAnnouncements = createScreenReaderAnnouncementQueue();
+  private accessibleFlushTimer: ReturnType<typeof setTimeout> | null = null;
+  private accessibilityModeAnnounced = false;
   private readonly container: FiberRoot;
   private rootNode: dom.DOMElement;
   readonly focusManager: FocusManager;
@@ -257,7 +264,6 @@ export default class Ink {
       }
     };
 
-    // @ts-expect-error @types/react-reconciler@0.32.3 declares 11 args with transitionCallbacks,
     // but react-reconciler 0.33.0 source only accepts 10 args (no transitionCallbacks)
     this.container = reconciler.createContainer(this.rootNode, ConcurrentRoot, null, false, null, 'id', noop,
     // onUncaughtError
@@ -267,7 +273,7 @@ export default class Ink {
     // onRecoverableError
     noop // onDefaultTransitionIndicator
     );
-    if ("production" === 'development') {
+    if (process.env.NODE_ENV === 'development') {
       reconciler.injectIntoDevTools({
         bundleType: 0,
         // Reporting React DOM's version, not Ink's
@@ -429,6 +435,37 @@ export default class Ink {
       this.drainTimer = null;
     }
 
+    const screenReader = getScreenReaderMode();
+    if (screenReader.enabled) {
+      // Screen readers consume persistent semantic text, not an animated
+      // screen-buffer diff. Skip all cursor control/erase sequences and emit
+      // only the changed accessible text from the mounted React/Ink tree.
+      flushInteractionTime();
+      const current = flattenAccessibleTree(this.rootNode);
+      const output = accessibleOutputDelta(this.previousAccessibleText, current);
+      this.previousAccessibleText = current;
+      if (!this.accessibilityModeAnnounced) {
+        this.accessibilityModeAnnounced = true;
+        this.options.stdout.write(`[Screen Reader Mode: on via ${getScreenReaderActivationSource()}]\n`);
+      }
+      if (output) this.accessibleAnnouncements.queue(output);
+      const remaining = this.accessibleAnnouncements.remaining();
+      if (this.accessibleFlushTimer !== null) {
+        clearTimeout(this.accessibleFlushTimer);
+        this.accessibleFlushTimer = null;
+      }
+      if (remaining > 0) {
+        this.accessibleFlushTimer = setTimeout(() => {
+          this.accessibleFlushTimer = null;
+          this.onRender();
+        }, remaining);
+      } else {
+        for (const announcement of this.accessibleAnnouncements.drain()) {
+          this.options.stdout.write(announcement);
+        }
+      }
+      return;
+    }
     // Flush deferred interaction-time update before rendering so we call
     // Date.now() at most once per frame instead of once per keypress.
     // Done before the render to avoid dirtying state that would trigger
@@ -789,7 +826,6 @@ export default class Ink {
   }
   pause(): void {
     // Flush pending React updates and render before pausing.
-    // @ts-expect-error flushSyncFromReconciler exists in react-reconciler 0.31 but not in @types/react-reconciler
     reconciler.flushSyncFromReconciler();
     this.onRender();
     this.isPaused = true;
@@ -1266,6 +1302,10 @@ export default class Ink {
     if (!this.altScreenActive) return;
     dispatchHover(this.rootNode, col, row, this.hoveredNodes);
   }
+  dispatchPasteEvent(text: string): void {
+    const target = this.focusManager.activeElement ?? this.rootNode;
+    dispatcher.dispatchDiscrete(target, new PasteEvent(text));
+  }
   dispatchKeyboardEvent(parsedKey: ParsedKey): void {
     const target = this.focusManager.activeElement ?? this.rootNode;
     const event = new KeyboardEvent(parsedKey);
@@ -1441,15 +1481,13 @@ export default class Ink {
   };
   render(node: ReactNode): void {
     this.currentNode = node;
-    const tree = <App stdin={this.options.stdin} stdout={this.options.stdout} stderr={this.options.stderr} exitOnCtrlC={this.options.exitOnCtrlC} onExit={this.unmount} terminalColumns={this.terminalColumns} terminalRows={this.terminalRows} selection={this.selection} onSelectionChange={this.notifySelectionChange} onClickAt={this.dispatchClick} onHoverAt={this.dispatchHover} getHyperlinkAt={this.getHyperlinkAt} onOpenHyperlink={this.openHyperlink} onMultiClick={this.handleMultiClick} onSelectionDrag={this.handleSelectionDrag} onStdinResume={this.reassertTerminalModes} onCursorDeclaration={this.setCursorDeclaration} dispatchKeyboardEvent={this.dispatchKeyboardEvent}>
+    const tree = <App stdin={this.options.stdin} stdout={this.options.stdout} stderr={this.options.stderr} exitOnCtrlC={this.options.exitOnCtrlC} onExit={this.unmount} terminalColumns={this.terminalColumns} terminalRows={this.terminalRows} selection={this.selection} onSelectionChange={this.notifySelectionChange} onClickAt={this.dispatchClick} onHoverAt={this.dispatchHover} getHyperlinkAt={this.getHyperlinkAt} onOpenHyperlink={this.openHyperlink} onMultiClick={this.handleMultiClick} onSelectionDrag={this.handleSelectionDrag} onStdinResume={this.reassertTerminalModes} onCursorDeclaration={this.setCursorDeclaration} dispatchKeyboardEvent={this.dispatchKeyboardEvent} dispatchPasteEvent={this.dispatchPasteEvent}>
         <TerminalWriteProvider value={this.writeRaw}>
           {node}
         </TerminalWriteProvider>
       </App>;
 
-    // @ts-expect-error updateContainerSync exists in react-reconciler but not in @types/react-reconciler
     reconciler.updateContainerSync(tree, this.container, null, noop);
-    // @ts-expect-error flushSyncWork exists in react-reconciler but not in @types/react-reconciler
     reconciler.flushSyncWork();
   }
   unmount(error?: Error | number | null): void {
@@ -1464,10 +1502,18 @@ export default class Ink {
     this.restoreStderr?.();
     this.unsubscribeTTYHandlers?.();
 
-    // Non-TTY environments don't handle erasing ansi escapes well, so it's better to
-    // only render last frame of non-static output
-    const diff = this.log.renderPreviousOutput_DEPRECATED(this.frontFrame);
-    writeDiffToTerminal(this.terminal, optimize(diff));
+    // Accessibility output is a persistent text transcript. Drain queued
+    // announcements before exit, without replaying the normal frame diff.
+    if (isScreenReaderEnabled()) {
+      this.accessibleAnnouncements.endStartupQuiet();
+      for (const announcement of this.accessibleAnnouncements.drain()) {
+        this.options.stdout.write(announcement);
+      }
+    } else {
+      // On the standard terminal, restore the previous framed output.
+      const diff = this.log.renderPreviousOutput_DEPRECATED(this.frontFrame);
+      writeDiffToTerminal(this.terminal, optimize(diff));
+    }
 
     // Clean up terminal modes synchronously before process exit.
     // React's componentWillUnmount won't run in time when process.exit() is called,
@@ -1513,10 +1559,12 @@ export default class Ink {
       clearTimeout(this.drainTimer);
       this.drainTimer = null;
     }
+    if (this.accessibleFlushTimer !== null) {
+      clearTimeout(this.accessibleFlushTimer);
+      this.accessibleFlushTimer = null;
+    }
 
-    // @ts-expect-error updateContainerSync exists in react-reconciler but not in @types/react-reconciler
     reconciler.updateContainerSync(null, this.container, null, noop);
-    // @ts-expect-error flushSyncWork exists in react-reconciler but not in @types/react-reconciler
     reconciler.flushSyncWork();
     instances.delete(this.options.stdout);
 

@@ -1,6 +1,7 @@
 import { feature } from 'bun:bundle'
 import { relative } from 'path'
 import {
+  getIsNonInteractiveSession,
   getOriginalCwd,
   handleAutoModeTransition,
   handlePlanModeTransition,
@@ -11,12 +12,14 @@ import type {
   ToolPermissionContext,
   ToolPermissionRulesBySource,
 } from '../../Tool.js'
+import { applyFileFencePolicy } from './readFencePolicy.js'
 import { getCwd } from '../cwd.js'
 import { isEnvTruthy } from '../envUtils.js'
 import type { SettingSource } from '../settings/constants.js'
-import { SETTING_SOURCES } from '../settings/constants.js'
+import { SETTING_SOURCES, getEnabledSettingSources } from '../settings/constants.js'
 import {
-  getSettings_DEPRECATED,
+  getInitialSettings,
+  getSettingsForSource,
   getSettingsFilePathForSource,
   getUseAutoModeDuringPlan,
   hasAutoModeOptIn,
@@ -61,6 +64,7 @@ import { modelSupportsAutoMode } from '../betas.js'
 import { logForDebugging } from '../debug.js'
 import { gracefulShutdown } from '../gracefulShutdown.js'
 import { getMainLoopModel } from '../model/model.js'
+import { getAPIProvider } from '../model/providers.js'
 import {
   CROSS_PLATFORM_CODE_EXEC,
   DANGEROUS_BASH_PATTERNS,
@@ -76,7 +80,6 @@ import {
 } from './PermissionUpdate.js'
 import type { PermissionUpdateDestination } from './PermissionUpdateSchema.js'
 import {
-  normalizeLegacyToolName,
   permissionRuleValueFromString,
   permissionRuleValueToString,
 } from './permissionRuleParser.js'
@@ -241,7 +244,7 @@ export function isDangerousTaskPermission(
   toolName: string,
   _ruleContent: string | undefined,
 ): boolean {
-  return normalizeLegacyToolName(toolName) === AGENT_TOOL_NAME
+  return toolName === AGENT_TOOL_NAME
 }
 
 function formatPermissionSource(source: PermissionRuleSource): string {
@@ -693,7 +696,7 @@ export function initialPermissionModeFromCLI({
   permissionModeCli: string | undefined
   dangerouslySkipPermissions: boolean | undefined
 }): { mode: PermissionMode; notification?: string } {
-  const settings = getSettings_DEPRECATED() || {}
+  const settings = getInitialSettings() || {}
 
   // Check GrowthBook gate first - highest precedence
   const growthBookDisableBypassPermissionsMode =
@@ -770,6 +773,22 @@ export function initialPermissionModeFromCLI({
     } else {
       orderedModes.push(settingsMode)
     }
+  }
+
+  // 2.1.317's first-party API sessions start in Auto mode when no user or
+  // organization override has selected another mode. The classifier's model,
+  // settings and live circuit-breaker checks still decide availability.
+  if (
+    feature('TRANSCRIPT_CLASSIFIER') &&
+    !getIsNonInteractiveSession() &&
+    !dangerouslySkipPermissions &&
+    !permissionModeCli &&
+    !settings.permissions?.defaultMode &&
+    getAPIProvider() === 'firstParty' &&
+    canSelectImplicitAutoMode(getAutoModeEnabledStateIfCached(), isEnvTruthy(process.env.CLAUDE_CODE_REMOTE)) &&
+    isAutoModeGateEnabled()
+  ) {
+    orderedModes.push('auto')
   }
 
   let result: { mode: PermissionMode; notification?: string } | undefined
@@ -890,8 +909,6 @@ export async function initializeToolPermissionContext({
   overlyBroadBashPermissions: DangerousPermissionInfo[]
 }> {
   // Parse comma-separated allowed and disallowed tools if provided
-  // Normalize legacy tool names (e.g., 'Task' → 'Agent') so that in-memory
-  // rule removal in stripDangerousPermissionsForAutoMode matches correctly.
   const parsedAllowedToolsCli = parseToolListFromCLI(allowedToolsCli).map(
     rule => permissionRuleValueToString(permissionRuleValueFromString(rule)),
   )
@@ -901,9 +918,7 @@ export async function initializeToolPermissionContext({
   // We need to check if base tools were explicitly provided (not just empty default)
   if (baseToolsCli && baseToolsCli.length > 0) {
     const baseToolsResult = parseBaseToolsFromCLI(baseToolsCli)
-    // Normalize legacy tool names (e.g., 'Task' → 'Agent') so user-provided
-    // base tool lists using old names still match canonical names.
-    const baseToolsSet = new Set(baseToolsResult.map(normalizeLegacyToolName))
+    const baseToolsSet = new Set(baseToolsResult)
     const allToolNames = getToolsForDefaultPreset()
     const toolsToDisallow = allToolNames.filter(tool => !baseToolsSet.has(tool))
     parsedDisallowedToolsCli = [...parsedDisallowedToolsCli, ...toolsToDisallow]
@@ -933,7 +948,7 @@ export async function initializeToolPermissionContext({
     checkStatsigFeatureGate_CACHED_MAY_BE_STALE(
       'tengu_disable_bypass_permissions_mode',
     )
-  const settings = getSettings_DEPRECATED() || {}
+  const settings = getInitialSettings() || {}
   const settingsDisableBypassPermissionsMode =
     settings.permissions?.disableBypassPermissionsMode === 'disable'
   const isBypassPermissionsModeAvailable =
@@ -990,28 +1005,31 @@ export async function initializeToolPermissionContext({
     rulesFromDisk,
   )
 
-  // Add directories from settings and --add-dir
-  const allAdditionalDirectories = [
-    ...(settings.permissions?.additionalDirectories || []),
-    ...addDirs,
-  ]
-  // Parallelize fs validation; apply updates serially (cumulative context).
-  // validateDirectoryForWorkspace only reads permissionContext to check if the
-  // dir is already covered — behavioral difference from parallelizing is benign
-  // (two overlapping --add-dirs both succeed instead of one being flagged
-  // alreadyInWorkingDirectory, which was silently skipped anyway).
-  const validationResults = await Promise.all(
-    allAdditionalDirectories.map(dir =>
-      validateDirectoryForWorkspace(dir, toolPermissionContext),
-    ),
+  toolPermissionContext = applyFileFencePolicy(
+    toolPermissionContext,
+    getEnabledSettingSources().map(source => getSettingsForSource(source)),
+    process.env.CLAUDE_CODE_RESTRICTED === '1' ? [] : getSettingsForSource('flagSettings')?.permissions?.blockReadsExemptPaths ?? [],
   )
-  for (const result of validationResults) {
+
+  // Preserve each directory's authorisation source. A repository must not
+  // turn its additionalDirectories into CLI grants and escape file fences.
+  const allAdditionalDirectories: { dir: string; destination: PermissionRuleSource }[] = [
+    ...getEnabledSettingSources().flatMap(source =>
+      (getSettingsForSource(source)?.permissions?.additionalDirectories ?? [])
+        .map(dir => ({ dir, destination: source }))),
+    ...addDirs.map(dir => ({ dir, destination: 'cliArg' as const })),
+  ]
+  const validationResults = await Promise.all(
+    allAdditionalDirectories.map(async ({ dir, destination }) => ({
+      destination,
+      result: await validateDirectoryForWorkspace(dir, toolPermissionContext),
+    })),
+  )
+  for (const { result, destination } of validationResults) {
     if (result.resultType === 'success') {
-      toolPermissionContext = applyPermissionUpdate(toolPermissionContext, {
-        type: 'addDirectories',
-        directories: [result.absolutePath],
-        destination: 'cliArg',
-      })
+      const directories = new Map(toolPermissionContext.additionalWorkingDirectories)
+      directories.set(result.absolutePath, { path: result.absolutePath, source: destination })
+      toolPermissionContext = { ...toolPermissionContext, additionalWorkingDirectories: directories }
     } else if (
       result.resultType !== 'alreadyInWorkingDirectory' &&
       result.resultType !== 'pathNotFound'
@@ -1267,7 +1285,7 @@ export function shouldDisableBypassPermissions(): Promise<boolean> {
 }
 
 function isAutoModeDisabledBySettings(): boolean {
-  const settings = getSettings_DEPRECATED() || {}
+  const settings = getInitialSettings() || {}
   return (
     (settings as { disableAutoMode?: 'disable' }).disableAutoMode ===
       'disable' ||
@@ -1310,7 +1328,9 @@ export function getAutoModeUnavailableReason(): AutoModeUnavailableReason | null
  */
 export type AutoModeEnabledState = 'enabled' | 'disabled' | 'opt-in'
 
-const AUTO_MODE_ENABLED_DEFAULT: AutoModeEnabledState = 'disabled'
+// Absent rollout data follows the 2.1.317 first-party default offer.
+// A cached explicit 'disabled' remains authoritative and blocks entry.
+const AUTO_MODE_ENABLED_DEFAULT: AutoModeEnabledState = 'enabled'
 
 function parseAutoModeEnabledState(value: unknown): AutoModeEnabledState {
   if (value === 'enabled' || value === 'disabled' || value === 'opt-in') {
@@ -1352,6 +1372,19 @@ export function getAutoModeEnabledStateIfCached():
 }
 
 /**
+ * An implicit default is permitted only for the general enabled rollout.
+ * 'opt-in' requires an explicit choice; disabled is a circuit breaker.
+ * Cold-start (undefined) retains the official 2.1.317 default, subject to
+ * the other provider, model, settings and runtime gates at the call sites.
+ */
+export function canSelectImplicitAutoMode(
+  rollout: AutoModeEnabledState | undefined,
+  remoteSession: boolean,
+): boolean {
+  return !remoteSession && (rollout === undefined || rollout === 'enabled')
+}
+
+/**
  * Returns true if the user has opted in to auto mode via any trusted mechanism:
  * - CLI flag (--enable-auto-mode / --permission-mode auto) — session-scoped
  *   availability request; the startup dialog in showSetupScreens enforces
@@ -1373,7 +1406,7 @@ export function isBypassPermissionsModeDisabled(): boolean {
     checkStatsigFeatureGate_CACHED_MAY_BE_STALE(
       'tengu_disable_bypass_permissions_mode',
     )
-  const settings = getSettings_DEPRECATED() || {}
+  const settings = getInitialSettings() || {}
   const settingsDisableBypassPermissionsMode =
     settings.permissions?.disableBypassPermissionsMode === 'disable'
 
@@ -1431,11 +1464,16 @@ export async function checkAndDisableBypassPermissions(
 }
 
 export function isDefaultPermissionModeAuto(): boolean {
-  if (feature('TRANSCRIPT_CLASSIFIER')) {
-    const settings = getSettings_DEPRECATED() || {}
-    return settings.permissions?.defaultMode === 'auto'
+  if (!feature('TRANSCRIPT_CLASSIFIER') || getIsNonInteractiveSession() || isEnvTruthy(process.env.CLAUDE_CODE_REMOTE)) return false
+  const settings = getInitialSettings() || {}
+  if (settings.permissions?.defaultMode) {
+    return settings.permissions.defaultMode === 'auto'
   }
-  return false
+  return (
+    getAPIProvider() === 'firstParty' &&
+    isAutoModeGateEnabled() &&
+    canSelectImplicitAutoMode(getAutoModeEnabledStateIfCached(), false)
+  )
 }
 
 /**

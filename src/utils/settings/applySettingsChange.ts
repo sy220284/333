@@ -11,7 +11,9 @@ import {
 import { syncPermissionRulesFromDisk } from '../permissions/permissions.js'
 import { loadAllPermissionRulesFromDisk } from '../permissions/permissionsLoader.js'
 import type { SettingSource } from './constants.js'
-import { getInitialSettings } from './settings.js'
+import { getInitialSettings, getSettingsForSource } from './settings.js'
+import { getEnabledSettingSources } from './constants.js'
+import { applyFileFencePolicy } from '../permissions/readFencePolicy.js'
 
 /**
  * Apply a settings change to app state. Re-reads settings from disk,
@@ -65,28 +67,17 @@ export function applySettingsChange(
       newContext = createDisabledBypassPermissionsContext(newContext)
     }
 
+    newContext = applyFileFencePolicy(
+      newContext,
+      getEnabledSettingSources().map(layer => getSettingsForSource(layer)),
+      process.env.CLAUDE_CODE_RESTRICTED === '1' ? [] : getSettingsForSource('flagSettings')?.permissions?.blockReadsExemptPaths ?? [],
+    )
     newContext = transitionPlanAutoMode(newContext)
-
-    // Sync effortLevel from settings to top-level AppState when it changes
-    // (e.g. via applyFlagSettings from IDE). Only propagate if the setting
-    // itself changed — otherwise unrelated settings churn (e.g. tips dismissal
-    // on startup) would clobber a --effort CLI flag value held in AppState.
-    const prevEffort = prev.settings.effortLevel
-    const newEffort = newSettings.effortLevel
-    const effortChanged = prevEffort !== newEffort
 
     return {
       ...prev,
       settings: newSettings,
       toolPermissionContext: newContext,
-      // Only propagate a defined new value — when the disk key is absent
-      // (e.g. /effort max for non-ants writes undefined; --effort CLI flag),
-      // prev.settings.effortLevel can be stale (internal writes suppress the
-      // watcher that would resync AppState.settings), so effortChanged would
-      // be true and we'd wipe a session-scoped value held in effortValue.
-      ...(effortChanged && newEffort !== undefined
-        ? { effortValue: newEffort }
-        : {}),
     }
   })
 }

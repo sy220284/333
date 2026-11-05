@@ -27,6 +27,7 @@ import {
   getPromptId,
   getSessionId,
   getSessionProjectDir,
+  onSessionSwitch,
   isSessionPersistenceDisabled,
   switchSession,
 } from '../bootstrap/state.js'
@@ -70,7 +71,11 @@ import { getCwd } from './cwd.js'
 import { logForDebugging } from './debug.js'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
-import { isFsInaccessible } from './errors.js'
+import { getErrnoCode, isFsInaccessible } from './errors.js'
+import { shouldRetrySessionAppendAfterMkdir } from './sessionWriteFailurePolicy.ts'
+import { SessionTranscriptPathsV5 } from './sessionTranscriptPathsV5.ts'
+import { commitRestoredSession, requireFetchedSessionEntries } from './sessionHydrationCommit317.ts'
+import { replaceTranscriptAtomically, replaceTranscriptBatchAtomically, assertSafeAgentTranscriptId } from './atomicTranscriptRestore317.ts'
 import type { FileHistorySnapshot } from './fileHistory.js'
 import { formatFileSize } from './format.js'
 import { getFsImplementation } from './fsOperations.js'
@@ -89,7 +94,7 @@ import {
   readTranscriptForLoad,
   SKIP_PRECOMPACT_THRESHOLD,
 } from './sessionStoragePortable.js'
-import { getSettings_DEPRECATED } from './settings/settings.js'
+import { getInitialSettings } from './settings/settings.js'
 import { jsonParse, jsonStringify } from './slowOperations.js'
 import type { ContentReplacementRecord } from './toolResultStorage.js'
 import { validateUuid } from './uuid.js'
@@ -199,9 +204,25 @@ export function getProjectsDir(): string {
   return join(getClaudeConfigHomeDir(), 'projects')
 }
 
+const sessionTranscriptPaths = new SessionTranscriptPathsV5()
+
+// Explicit worktree resumes change both session ID and its owning directory.
+// Honor that committed move; an unrelated async writer keeps the old owner.
+onSessionSwitch(sessionId => {
+  // switchSession(id, null) explicitly selects the current project again.
+  // Rebind both forms of the session switch so an earlier worktree location
+  // never shadows a newly selected owner.
+  const projectDir = getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
+  sessionTranscriptPaths.remember(sessionId, join(projectDir, `${sessionId}.jsonl`))
+})
+
 export function getTranscriptPath(): string {
   const projectDir = getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
-  return join(projectDir, `${getSessionId()}.jsonl`)
+  const sessionId = getSessionId()
+  return sessionTranscriptPaths.resolve(sessionId, () => {
+    const path = join(projectDir, `${sessionId}.jsonl`)
+    return sessionTranscriptPaths.remember(sessionId, path)
+  })
 }
 
 export function getTranscriptPathForSession(sessionId: string): string {
@@ -217,11 +238,11 @@ export function getTranscriptPathForSession(sessionId: string): string {
   // track a sessionId→projectDir map. Callers wanting a specific other
   // session's path should pass fullPath explicitly (most save* functions
   // already accept this).
-  if (sessionId === getSessionId()) {
-    return getTranscriptPath()
-  }
-  const projectDir = getProjectDir(getOriginalCwd())
-  return join(projectDir, `${sessionId}.jsonl`)
+  if (sessionId === getSessionId()) return getTranscriptPath()
+  return sessionTranscriptPaths.resolve(sessionId, () => {
+    const projectDir = getProjectDir(getOriginalCwd())
+    return join(projectDir, `${sessionId}.jsonl`)
+  })
 }
 
 // 50 MB — session JSONL can grow to multiple GB (inc-3930). Callers that
@@ -244,13 +265,29 @@ export function clearAgentTranscriptSubdir(agentId: string): void {
   agentTranscriptSubdirs.delete(agentId)
 }
 
+const agentTranscriptOwners317 = new Map<
+  AgentId,
+  { sessionId: SessionId; projectDir: string; subdir?: string }
+>()
+export function captureAgentTranscriptOwner317(agentId: AgentId): void {
+  const sessionId = getSessionId()
+  const projectDir = getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
+  agentTranscriptOwners317.set(agentId, {
+    sessionId,
+    projectDir,
+    subdir: agentTranscriptSubdirs.get(agentId),
+  })
+  sessionTranscriptPaths.remember(sessionId, join(projectDir, `${sessionId}.jsonl`))
+}
+
 export function getAgentTranscriptPath(agentId: AgentId): string {
   // Same sessionProjectDir consistency as getTranscriptPathForSession —
   // subagent transcripts live under the session dir, so if the session
   // transcript is at sessionProjectDir, subagent transcripts are too.
-  const projectDir = getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
-  const sessionId = getSessionId()
-  const subdir = agentTranscriptSubdirs.get(agentId)
+  const owner = agentTranscriptOwners317.get(agentId)
+  const projectDir = owner?.projectDir ?? getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
+  const sessionId = owner?.sessionId ?? getSessionId()
+  const subdir = owner?.subdir ?? agentTranscriptSubdirs.get(agentId)
   const base = subdir
     ? join(projectDir, sessionId, 'subagents', subdir)
     : join(projectDir, sessionId, 'subagents')
@@ -280,6 +317,12 @@ export type AgentMetadata = {
  * Also stores the worktreePath when the agent was spawned with worktree
  * isolation, enabling resume to restore the correct cwd.
  */
+let transcriptMirror317: ((filePath: string, entries: Record<string, unknown>[]) => Promise<void>) | undefined
+
+export function setTranscriptMirror317(writer: typeof transcriptMirror317): void {
+  transcriptMirror317 = writer
+}
+
 export async function writeAgentMetadata(
   agentId: AgentId,
   metadata: AgentMetadata,
@@ -287,6 +330,7 @@ export async function writeAgentMetadata(
   const path = getAgentMetadataPath(agentId)
   await mkdir(dirname(path), { recursive: true })
   await writeFile(path, JSON.stringify(metadata))
+  await transcriptMirror317?.(path, [{ ...metadata, type: 'agent_metadata' }])
 }
 
 export async function readAgentMetadata(
@@ -483,8 +527,25 @@ export function resetProjectForTesting(): void {
   project = null
 }
 
+/**
+ * A warm --preload/--bg-spare process can claim a session whose config root
+ * differs even when its cwd and session ID are unchanged. Invalidate both
+ * layers of path ownership after the old writer has drained. A new Project
+ * instance must not retain the warm process's pending transcript state.
+ */
+export async function rebindSessionStorageForClaim317(): Promise<void> {
+  if (project) await project.flush()
+  project = null
+  getProjectDir.cache.clear()
+  sessionTranscriptPaths.clear()
+  const sessionId = getSessionId()
+  const projectDir = getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
+  sessionTranscriptPaths.remember(sessionId, join(projectDir, `${sessionId}.jsonl`))
+}
+
 export function setSessionFileForTesting(path: string): void {
   getProject().sessionFile = path
+  sessionTranscriptPaths.remember(getSessionId(), path)
 }
 
 type InternalEventWriter = (
@@ -549,7 +610,15 @@ class Project {
   sessionFile: string | null = null
   // Entries buffered while sessionFile is null. Flushed by materializeSessionFile
   // on the first user/assistant message — prevents metadata-only session files.
-  private pendingEntries: Entry[] = []
+  // V5: journals are buffered under their owning session, including when
+  // the user switches sessions before the first transcript is materialized.
+  private pendingEntriesBySession = new Map<string, Entry[]>()
+
+  private queuePendingEntry(sessionId: string, entry: Entry): void {
+    const pending = this.pendingEntriesBySession.get(sessionId) ?? []
+    pending.push(entry)
+    this.pendingEntriesBySession.set(sessionId, pending)
+  }
   private remoteIngressUrl: string | null = null
   private internalEventWriter: InternalEventWriter | null = null
   private internalEventReader: InternalEventReader | null = null
@@ -564,6 +633,8 @@ class Project {
   >()
   private flushTimer: ReturnType<typeof setTimeout> | null = null
   private activeDrain: Promise<void> | null = null
+  /** Sticky until the session ends: an earlier lost write can never be retroactively restored. */
+  private persistenceFailure: Error | null = null
   private FLUSH_INTERVAL_MS = 100
   private readonly MAX_CHUNK_BYTES = 100 * 1024 * 1024
 
@@ -577,6 +648,20 @@ class Project {
     this.flushTimer = null
     this.activeDrain = null
     this.writeQueues = new Map()
+    this.persistenceFailure = null
+  }
+
+  private recordPersistenceFailure(error: unknown): void {
+    if (this.persistenceFailure) return
+    this.persistenceFailure = new Error(
+      'Session transcript could not be saved to disk. The filesystem may be full or the disk quota exceeded.',
+      { cause: error },
+    )
+    logError(this.persistenceFailure)
+  }
+
+  private throwIfPersistenceFailed(): void {
+    if (this.persistenceFailure) throw this.persistenceFailure
   }
 
   private incrementPendingWrites(): void {
@@ -634,11 +719,15 @@ class Project {
   private async appendToFile(filePath: string, data: string): Promise<void> {
     try {
       await fsAppendFile(filePath, data, { mode: 0o600 })
-    } catch {
-      // Directory may not exist — some NFS-like filesystems return
-      // unexpected error codes, so don't discriminate on code.
+    } catch (error) {
+      // ENOSPC/EDQUOT and permission failures must surface to the caller.
+      // Only a genuinely missing directory warrants a mkdir + retry.
+      if (!shouldRetrySessionAppendAfterMkdir(getErrnoCode(error))) throw error
       await mkdir(dirname(filePath), { recursive: true, mode: 0o700 })
       await fsAppendFile(filePath, data, { mode: 0o600 })
+    }
+    if (transcriptMirror317) {
+      await transcriptMirror317(filePath, data.trimEnd().split('\n').map(line => JSON.parse(line)))
     }
   }
 
@@ -652,28 +741,33 @@ class Project {
       let content = ''
       const resolvers: Array<() => void> = []
 
-      for (const { entry, resolve } of batch) {
-        const line = jsonStringify(entry) + '\n'
+      try {
+        for (const { entry, resolve } of batch) {
+          const line = jsonStringify(entry) + '\n'
 
-        if (content.length + line.length >= this.MAX_CHUNK_BYTES) {
-          // Flush chunk and resolve its entries before starting a new one
-          await this.appendToFile(filePath, content)
-          for (const r of resolvers) {
-            r()
+          if (content.length + line.length >= this.MAX_CHUNK_BYTES) {
+            if (content.length > 0) {
+              await this.appendToFile(filePath, content)
+            }
+            for (const r of resolvers) r()
+            resolvers.length = 0
+            content = ''
           }
-          resolvers.length = 0
-          content = ''
+
+          content += line
+          resolvers.push(resolve)
         }
 
-        content += line
-        resolvers.push(resolve)
-      }
-
-      if (content.length > 0) {
-        await this.appendToFile(filePath, content)
-        for (const r of resolvers) {
-          r()
+        if (content.length > 0) {
+          await this.appendToFile(filePath, content)
+          for (const r of resolvers) r()
         }
+      } catch (error) {
+        // Record the first lost write, and settle queued promises so flush()
+        // can report it. Most enqueueWrite callers are intentionally fire-
+        // and-forget; rejecting their promises would create unhandled errors.
+        this.recordPersistenceFailure(error)
+        for (const { resolve } of batch) resolve()
       }
     }
 
@@ -686,8 +780,9 @@ class Project {
   }
 
   resetSessionFile(): void {
+    // Preserve unmaterialized entries by their original session ID.
+    // /resume may return to that session and should not silently lose them.
     this.sessionFile = null
-    this.pendingEntries = []
   }
 
   /**
@@ -853,11 +948,13 @@ class Project {
 
     // Wait for non-queue tracked operations (e.g. removeMessageByUuid)
     if (this.pendingWriteCount === 0) {
+      this.throwIfPersistenceFailed()
       return
     }
-    return new Promise<void>(resolve => {
+    await new Promise<void>(resolve => {
       this.flushResolvers.push(resolve)
     })
+    this.throwIfPersistenceFailed()
   }
 
   /**
@@ -963,10 +1060,29 @@ class Project {
     )
     return (
       (getNodeEnv() === 'test' && !allowTestPersistence) ||
-      getSettings_DEPRECATED()?.cleanupPeriodDays === 0 ||
+      getInitialSettings()?.cleanupPeriodDays === 0 ||
       isSessionPersistenceDisabled() ||
       isEnvTruthy(process.env.CLAUDE_CODE_SKIP_PROMPT_HISTORY)
     )
+  }
+
+  async flushPendingEntriesForActiveSession(): Promise<void> {
+    await this.flushPendingEntriesForCurrentSession()
+  }
+
+  private async flushPendingEntriesForCurrentSession(): Promise<void> {
+    if (this.sessionFile === null) return
+    await this.flushPendingEntriesForSession(getSessionId(), this.sessionFile)
+  }
+
+  private async flushPendingEntriesForSession(sessionId: string, destination: string): Promise<void> {
+    const pending = this.pendingEntriesBySession.get(sessionId)
+    if (!pending?.length) return
+    this.pendingEntriesBySession.delete(sessionId)
+    // Both identity and path are fixed before awaiting the disk write.
+    for (const entry of pending) {
+      await this.enqueueWrite(destination, entry)
+    }
   }
 
   /**
@@ -981,13 +1097,7 @@ class Project {
     this.ensureCurrentSessionFile()
     // mode/agentSetting are cache-only pre-materialization; write them now.
     this.reAppendSessionMetadata()
-    if (this.pendingEntries.length > 0) {
-      const buffered = this.pendingEntries
-      this.pendingEntries = []
-      for (const entry of buffered) {
-        await this.appendEntry(entry)
-      }
-    }
+    await this.flushPendingEntriesForCurrentSession()
   }
 
   async insertMessageChain(
@@ -996,17 +1106,33 @@ class Project {
     agentId?: string,
     startingParentUuid?: UUID | null,
     teamInfo?: { teamName?: string; agentName?: string },
+    ownerSessionId: UUID = getSessionId() as UUID,
   ) {
+    // Capture both before trackWrite or any branch lookup yields control.
+    // A concurrent /resume must not retarget an in-flight message chain.
+    const ownerFilePath = getTranscriptPathForSession(ownerSessionId)
     return this.trackWrite(async () => {
       let parentUuid: UUID | null = startingParentUuid ?? null
 
       // First user/assistant message materializes the session file.
       // Hook progress/attachment messages alone stay buffered.
+      const hasUserOrAssistant = messages.some(
+        m => m.type === 'user' || m.type === 'assistant',
+      )
       if (
+        ownerSessionId === getSessionId() &&
         this.sessionFile === null &&
-        messages.some(m => m.type === 'user' || m.type === 'assistant')
+        hasUserOrAssistant
       ) {
         await this.materializeSessionFile()
+      }
+
+      // Flush only the owning session's parked operations. A different
+      // conversation may have become active during recordTranscript's awaits.
+      if (hasUserOrAssistant) {
+        await this.flushPendingEntriesForSession(ownerSessionId, ownerFilePath)
+      } else if (ownerSessionId === getSessionId()) {
+        await this.flushPendingEntriesForCurrentSession()
       }
 
       // Get current git branch once for this message chain
@@ -1019,7 +1145,7 @@ class Project {
       }
 
       // Get slug if one exists for this session (used for plan files, etc.)
-      const sessionId = getSessionId()
+      const sessionId = ownerSessionId
       const slug = getPlanSlugCache().get(sessionId)
 
       for (const message of messages) {
@@ -1062,7 +1188,11 @@ class Project {
           gitBranch,
           slug,
         }
-        await this.appendEntry(transcriptMessage)
+        await this.appendEntry(
+          transcriptMessage,
+          sessionId,
+          hasUserOrAssistant ? ownerFilePath : undefined,
+        )
         if (isChainParticipant(message)) {
           parentUuid = message.uuid
         }
@@ -1071,7 +1201,7 @@ class Project {
       // Cache this turn's user prompt for reAppendSessionMetadata —
       // the --resume picker shows what the user was last doing.
       // Overwritten every turn by design.
-      if (!isSidechain) {
+      if (!isSidechain && ownerSessionId === getSessionId()) {
         const text = getFirstMeaningfulUserMessageTextContent(messages)
         if (text) {
           const flat = text.replace(/\n/g, ' ').trim()
@@ -1100,7 +1230,9 @@ class Project {
 
   async insertQueueOperation(queueOp: QueueOperationMessage) {
     return this.trackWrite(async () => {
-      await this.appendEntry(queueOp)
+      // The command's session ID was fixed when it entered the queue.
+      // Do not silently retarget its journal after switchSession().
+      await this.appendEntry(queueOp, queueOp.sessionId as UUID)
     })
   }
 
@@ -1125,7 +1257,11 @@ class Project {
     })
   }
 
-  async appendEntry(entry: Entry, sessionId: UUID = getSessionId() as UUID) {
+  async appendEntry(
+    entry: Entry,
+    sessionId: UUID = getSessionId() as UUID,
+    ownerFilePath?: string,
+  ) {
     if (this.shouldSkipPersistence()) {
       return
     }
@@ -1134,16 +1270,25 @@ class Project {
     const isCurrentSession = sessionId === currentSessionId
 
     let sessionFile: string
-    if (isCurrentSession) {
+    if (ownerFilePath) {
+      // A message chain already captured its owner before async work began.
+      sessionFile = ownerFilePath
+    } else if (isCurrentSession) {
       // Buffer until materializeSessionFile runs (first user/assistant message).
       if (this.sessionFile === null) {
-        this.pendingEntries.push(entry)
+        this.queuePendingEntry(sessionId, entry)
         return
       }
       sessionFile = this.sessionFile
     } else {
       const existing = await this.getExistingSessionFile(sessionId)
       if (!existing) {
+        // A queue operation can arrive while its original session is parked
+        // before first user/assistant output. Hold it for that session.
+        if (entry.type === 'queue-operation') {
+          this.queuePendingEntry(sessionId, entry)
+          return
+        }
         logError(
           new Error(
             `appendEntry: session file not found for other session ${sessionId}`,
@@ -1436,6 +1581,7 @@ export async function recordTranscript(
       undefined,
       startingParentUuid,
       teamInfo,
+      sessionId,
     )
   }
   // Return the last ACTUALLY recorded chain-participant's UUID, OR the
@@ -1452,16 +1598,18 @@ export async function recordSidechainTranscript(
   messages: Message[],
   agentId?: string,
   startingParentUuid?: UUID | null,
-) {
+) : Promise<void> {
   await getProject().insertMessageChain(
     cleanMessagesForLogging(messages),
     true,
     agentId,
     startingParentUuid,
+    undefined,
+    agentId ? agentTranscriptOwners317.get(asAgentId(agentId))?.sessionId as UUID | undefined : undefined,
   )
 }
 
-export async function recordQueueOperation(queueOp: QueueOperationMessage) {
+export async function recordQueueOperation(queueOp: QueueOperationMessage) : Promise<void> {
   await getProject().insertQueueOperation(queueOp)
 }
 
@@ -1477,7 +1625,7 @@ export async function recordFileHistorySnapshot(
   messageId: UUID,
   snapshot: FileHistorySnapshot,
   isSnapshotUpdate: boolean,
-) {
+) : Promise<void> {
   await getProject().insertFileHistorySnapshot(
     messageId,
     snapshot,
@@ -1487,14 +1635,14 @@ export async function recordFileHistorySnapshot(
 
 export async function recordAttributionSnapshot(
   snapshot: AttributionSnapshotMessage,
-) {
+) : Promise<void> {
   await getProject().insertAttributionSnapshot(snapshot)
 }
 
 export async function recordContentReplacement(
   replacements: ContentReplacementRecord[],
   agentId?: AgentId,
-) {
+) : Promise<void> {
   await getProject().insertContentReplacement(replacements, agentId)
 }
 
@@ -1502,7 +1650,7 @@ export async function recordContentReplacement(
  * Reset the session file pointer after switchSession/regenerateSessionId.
  * The new file is created lazily on the first user/assistant message.
  */
-export async function resetSessionFilePointer() {
+export async function resetSessionFilePointer() : Promise<void> {
   getProject().resetSessionFile()
 }
 
@@ -1581,31 +1729,37 @@ export async function recordContextCollapseSnapshot(snapshot: {
 }
 
 export async function flushSessionStorage(): Promise<void> {
-  await getProject().flush()
+  const project = getProject()
+  await project.flushPendingEntriesForActiveSession()
+  await project.flush()
 }
 
 export async function hydrateRemoteSession(
   sessionId: string,
   ingressUrl: string,
 ): Promise<boolean> {
-  switchSession(asSessionId(sessionId))
-
+  assertSafeAgentTranscriptId(sessionId)
   const project = getProject()
+  const projectDir = getProjectDir(getOriginalCwd())
 
   try {
     const remoteLogs =
-      (await sessionIngress.getSessionLogs(sessionId, ingressUrl)) || []
+      requireFetchedSessionEntries(await sessionIngress.getSessionLogs(sessionId, ingressUrl))
 
     // Ensure the project directory and session file exist
-    const projectDir = getProjectDir(getOriginalCwd())
     await mkdir(projectDir, { recursive: true, mode: 0o700 })
 
-    const sessionFile = getTranscriptPathForSession(sessionId)
-
-    // Replace local logs with remote logs. writeFile truncates, so no
-    // unlink is needed; an empty remoteLogs array produces an empty file.
+    // Compute the target without switching the active session. The outgoing
+    // session must survive an ingress or disk failure intact.
+    const sessionFile = join(projectDir, `${sessionId}.jsonl`)
     const content = remoteLogs.map(e => jsonStringify(e) + '\n').join('')
-    await writeFile(sessionFile, content, { encoding: 'utf8', mode: 0o600 })
+    await commitRestoredSession(
+      () => replaceTranscriptAtomically(sessionFile, content),
+      () => {
+        switchSession(asSessionId(sessionId))
+        project.setRemoteIngressUrl(ingressUrl)
+      },
+    )
 
     logForDebugging(`Hydrated ${remoteLogs.length} entries from remote`)
     return remoteLogs.length > 0
@@ -1613,11 +1767,6 @@ export async function hydrateRemoteSession(
     logForDebugging(`Error hydrating session from remote: ${error}`)
     logForDiagnosticsNoPII('error', 'hydrate_remote_session_fail')
     return false
-  } finally {
-    // Set remote ingress URL after hydrating the remote session
-    // to ensure we've always synced with the remote session
-    // prior to enabling persistence
-    project.setRemoteIngressUrl(ingressUrl)
   }
 }
 
@@ -1632,9 +1781,9 @@ export async function hydrateRemoteSession(
 export async function hydrateFromCCRv2InternalEvents(
   sessionId: string,
 ): Promise<boolean> {
+  assertSafeAgentTranscriptId(sessionId)
   const startMs = Date.now()
-  switchSession(asSessionId(sessionId))
-
+  const projectDir = getProjectDir(getOriginalCwd())
   const project = getProject()
   const reader = project.getInternalEventReader()
   if (!reader) {
@@ -1651,56 +1800,52 @@ export async function hydrateFromCCRv2InternalEvents(
       return false
     }
 
-    const projectDir = getProjectDir(getOriginalCwd())
-    await mkdir(projectDir, { recursive: true, mode: 0o700 })
-
-    // Write foreground transcript
-    const sessionFile = getTranscriptPathForSession(sessionId)
-    const fgContent = events.map(e => jsonStringify(e.payload) + '\n').join('')
-    await writeFile(sessionFile, fgContent, { encoding: 'utf8', mode: 0o600 })
-
-    logForDebugging(
-      `Hydrated ${events.length} foreground entries from CCR v2 internal events`,
-    )
-
-    // Fetch and write subagent events
-    let subagentEventCount = 0
+    // Read BOTH foreground and subagent streams before touching any local
+    // transcript. A remote failure must not truncate a previously resumable
+    // session; all JSONL is fully serialized before the staging phase.
     const subagentReader = project.getInternalSubagentEventReader()
-    if (subagentReader) {
-      const subagentEvents = await subagentReader()
-      if (subagentEvents && subagentEvents.length > 0) {
-        subagentEventCount = subagentEvents.length
-        // Group by agent_id
-        const byAgent = new Map<string, Record<string, unknown>[]>()
-        for (const e of subagentEvents) {
-          const agentId = e.agent_id || ''
-          if (!agentId) continue
-          let list = byAgent.get(agentId)
-          if (!list) {
-            list = []
-            byAgent.set(agentId, list)
-          }
-          list.push(e.payload)
-        }
-
-        // Write each agent's transcript to its own file
-        for (const [agentId, entries] of byAgent) {
-          const agentFile = getAgentTranscriptPath(asAgentId(agentId))
-          await mkdir(dirname(agentFile), { recursive: true, mode: 0o700 })
-          const agentContent = entries
-            .map(p => jsonStringify(p) + '\n')
-            .join('')
-          await writeFile(agentFile, agentContent, {
-            encoding: 'utf8',
-            mode: 0o600,
-          })
-        }
-
-        logForDebugging(
-          `Hydrated ${subagentEvents.length} subagent entries across ${byAgent.size} agents`,
-        )
-      }
+    const subagentEvents = subagentReader ? await subagentReader() : []
+    if (!subagentEvents) {
+      throw new Error('CCR v2 subagent transcript read failed')
     }
+    const byAgent = new Map<string, Record<string, unknown>[]>()
+    for (const event of subagentEvents) {
+      const agentId = event.agent_id
+      if (!agentId) continue
+      assertSafeAgentTranscriptId(agentId)
+      const group = byAgent.get(agentId)
+      if (group) group.push(event.payload)
+      else byAgent.set(agentId, [event.payload])
+    }
+    await mkdir(projectDir, { recursive: true, mode: 0o700 })
+    const sessionFile = join(projectDir, `${sessionId}.jsonl`)
+    const entries = [{
+      path: sessionFile,
+      content: events.map(e => jsonStringify(e.payload) + '\n').join(''),
+    }]
+    for (const [agentId, payloads] of byAgent) {
+      // The target session may differ from the current active session.
+      // Preserve any known subagent grouping without using getSessionId().
+      const subdir = agentTranscriptSubdirs.get(agentId)
+      const agentFile = subdir
+        ? join(projectDir, sessionId, 'subagents', subdir, `agent-${agentId}.jsonl`)
+        : join(projectDir, sessionId, 'subagents', `agent-${agentId}.jsonl`)
+      await mkdir(dirname(agentFile), { recursive: true, mode: 0o700 })
+      entries.push({
+        path: agentFile,
+        content: payloads.map(p => jsonStringify(p) + '\n').join(''),
+      })
+    }
+    // Stage all files first; commit each file with a same-filesystem rename.
+    // A failed staging write cannot damage either main or agent JSONL.
+    await commitRestoredSession(
+      () => replaceTranscriptBatchAtomically(entries),
+      () => switchSession(asSessionId(sessionId)),
+    )
+    const subagentEventCount = subagentEvents.length
+    logForDebugging(
+      `Hydrated ${events.length} foreground entries and ${subagentEventCount} subagent entries across ${byAgent.size} agents from CCR v2`,
+    )
 
     logForDiagnosticsNoPII('info', 'hydrate_ccr_v2_completed', {
       duration_ms: Date.now() - startMs,
@@ -2577,7 +2722,10 @@ function appendEntryToFile(
   const line = jsonStringify(entry) + '\n'
   try {
     fs.appendFileSync(fullPath, line, { mode: 0o600 })
-  } catch {
+  } catch (error) {
+    // A missing parent is recoverable. Disk-full, permissions and I/O errors
+    // retain their original failure instead of performing another write.
+    if (!shouldRetrySessionAppendAfterMkdir(getErrnoCode(error))) throw error
     fs.mkdirSync(dirname(fullPath), { mode: 0o700 })
     fs.appendFileSync(fullPath, line, { mode: 0o600 })
   }
@@ -2619,7 +2767,7 @@ export async function saveCustomTitle(
   customTitle: string,
   fullPath?: string,
   source: 'user' | 'auto' = 'user',
-) {
+) : Promise<void> {
   // Fall back to computed path if fullPath is not provided
   const resolvedPath = fullPath ?? getTranscriptPathForSession(sessionId)
   appendEntryToFile(resolvedPath, {
@@ -2687,7 +2835,7 @@ export function saveTaskSummary(sessionId: UUID, summary: string): void {
   })
 }
 
-export async function saveTag(sessionId: UUID, tag: string, fullPath?: string) {
+export async function saveTag(sessionId: UUID, tag: string, fullPath?: string) : Promise<void> {
   // Fall back to computed path if fullPath is not provided
   const resolvedPath = fullPath ?? getTranscriptPathForSession(sessionId)
   appendEntryToFile(resolvedPath, { type: 'tag', tag, sessionId })
@@ -2821,7 +2969,7 @@ export async function saveAgentName(
   agentName: string,
   fullPath?: string,
   source: 'user' | 'auto' = 'user',
-) {
+) : Promise<void> {
   const resolvedPath = fullPath ?? getTranscriptPathForSession(sessionId)
   appendEntryToFile(resolvedPath, { type: 'agent-name', agentName, sessionId })
   // Cache for current session only (for immediate visibility)
@@ -2839,7 +2987,7 @@ export async function saveAgentColor(
   sessionId: UUID,
   agentColor: string,
   fullPath?: string,
-) {
+) : Promise<void> {
   const resolvedPath = fullPath ?? getTranscriptPathForSession(sessionId)
   appendEntryToFile(resolvedPath, {
     type: 'agent-color',

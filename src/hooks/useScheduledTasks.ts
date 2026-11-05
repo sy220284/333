@@ -13,6 +13,7 @@ import { removeCronTasks } from '../utils/cronTasks.js'
 import { logForDebugging } from '../utils/debug.js'
 import { enqueuePendingNotification } from '../utils/messageQueueManager.js'
 import { createScheduledTaskFireMessage } from '../utils/messages.js'
+import { formatScheduledTaskPrompt } from '../utils/systemNotificationPrompts.js'
 import { WORKLOAD_CRON } from '../utils/workloadContext.js'
 
 type Props = {
@@ -68,9 +69,9 @@ export function useScheduledTasks({
     // forward isMeta, so their messages remain visible in the
     // transcript. This is acceptable since normal mode is not the
     // primary use case for scheduled tasks.
-    const enqueueForLead = (prompt: string) =>
+    const enqueueForLead = (prompt: string, scheduledFire = false) =>
       enqueuePendingNotification({
-        value: prompt,
+        value: scheduledFire ? formatScheduledTaskPrompt(prompt) : prompt,
         mode: 'prompt',
         priority: 'later',
         isMeta: true,
@@ -95,7 +96,7 @@ export function useScheduledTasks({
             store.getState().tasks,
           )
           if (teammate && !isTerminalTaskStatus(teammate.status)) {
-            injectUserMessageToTeammate(teammate.id, task.prompt, setAppState)
+            injectUserMessageToTeammate(teammate.id, formatScheduledTaskPrompt(task.prompt), setAppState)
             return
           }
           // Teammate is gone — clean up the orphaned cron so it doesn't keep
@@ -111,7 +112,7 @@ export function useScheduledTasks({
           `Running scheduled task (${formatCronFireTime(new Date())})`,
         )
         setMessages(prev => [...prev, msg])
-        enqueueForLead(task.prompt)
+        enqueueForLead(task.prompt, true)
       },
       isLoading: () => isLoadingRef.current,
       assistantMode,

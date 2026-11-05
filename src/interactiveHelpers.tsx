@@ -26,6 +26,7 @@ import { type FpsMetrics, FpsTracker } from './utils/fpsTracker.js';
 import { updateGithubRepoPathMapping } from './utils/githubRepoPathMapping.js';
 import { applyConfigEnvironmentVariables } from './utils/managedEnv.js';
 import type { PermissionMode } from './utils/permissions/PermissionMode.js';
+import { isDefaultPermissionModeAuto } from './utils/permissions/permissionSetup.js';
 import { getBaseRenderOptions } from './utils/renderOptions.js';
 import { getSettingsWithAllErrors } from './utils/settings/allErrors.js';
 import { hasAutoModeOptIn, hasSkipDangerousModePermissionPrompt } from './utils/settings/settings.js';
@@ -102,7 +103,7 @@ export async function renderAndRun(root: Root, element: React.ReactNode): Promis
   await gracefulShutdown(0);
 }
 export async function showSetupScreens(root: Root, permissionMode: PermissionMode, allowDangerouslySkipPermissions: boolean, commands?: Command[], claudeInChrome?: boolean, devChannels?: ChannelEntry[]): Promise<boolean> {
-  if ("production" === 'test' || isEnvTruthy(false) || process.env.IS_DEMO // Skip onboarding in demo mode
+  if (process.env.NODE_ENV === 'test' || isEnvTruthy(false) || process.env.IS_DEMO // Skip onboarding in demo mode
   ) {
     return false;
   }
@@ -226,7 +227,7 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
     // gate denied it (org not allowlisted, settings disabled), showing
     // consent for an unavailable feature is pointless. The
     // verifyAutoModeGateAccess notification will explain why instead.
-    if (permissionMode === 'auto' && !hasAutoModeOptIn()) {
+    if (permissionMode === 'auto' && !hasAutoModeOptIn() && !isDefaultPermissionModeAuto()) {
       const {
         AutoModeOptInDialog
       } = await import('./components/AutoModeOptInDialog.js');

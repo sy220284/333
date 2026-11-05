@@ -1,5 +1,7 @@
 import { feature } from 'bun:bundle'
+import { mergeAutoModeRulesBySource } from '../permissions/autoModeRules.js'
 import mergeWith from 'lodash-es/mergeWith.js'
+import { createHash } from 'node:crypto'
 import { dirname, join, resolve } from 'path'
 import { z } from 'zod/v4'
 import {
@@ -26,6 +28,7 @@ import { profileCheckpoint } from '../startupProfiler.js'
 import {
   type EditableSettingSource,
   getEnabledSettingSources,
+  isSettingSourceEnabled,
   type SettingSource,
 } from './constants.js'
 import { markInternalWrite } from './internalWrites.js'
@@ -41,6 +44,7 @@ import {
   getSessionSettingsCache,
   resetSettingsCache,
   setCachedParsedFile,
+  setCachedSettingsFileDigest,
   setCachedSettingsForSource,
   setSessionSettingsCache,
 } from './settingsCache.js'
@@ -205,6 +209,10 @@ function parseSettingsFileUncached(path: string): {
   try {
     const { resolvedPath } = safeResolvePath(getFsImplementation(), path)
     const content = readFileSync(resolvedPath)
+    setCachedSettingsFileDigest(
+      path,
+      createHash('sha256').update(content).digest('hex'),
+    )
 
     if (content.trim() === '') {
       return { settings: {}, errors: [] }
@@ -306,14 +314,28 @@ export function getRelativeSettingsFilePathForSource(
   }
 }
 
+/**
+ * Native 2.1.310 safe mode disables untrusted customizations but does not
+ * remove explicit security denial rules. Dropping a project deny would turn
+ * a previously prohibited tool into an allowed one.
+ */
+function safeModeSettings(source: SettingSource, settings: SettingsJson | null): SettingsJson | null {
+  if (!settings || !isEnvTruthy(process.env.CLAUDE_CODE_SAFE_MODE) || source === 'policySettings') return settings
+  const denies = settings.permissions?.deny
+  return Array.isArray(denies) && denies.length > 0
+    ? { permissions: { deny: denies } }
+    : null
+}
+
 export function getSettingsForSource(
   source: SettingSource,
 ): SettingsJson | null {
   const cached = getCachedSettingsForSource(source)
   if (cached !== undefined) return cached
   const result = getSettingsForSourceUncached(source)
-  setCachedSettingsForSource(source, result)
-  return result
+  const filtered = safeModeSettings(source, result)
+  setCachedSettingsForSource(source, filtered)
+  return filtered
 }
 
 function getSettingsForSourceUncached(
@@ -757,10 +779,11 @@ function loadSettingsFromDisk(): SettingsWithErrors {
             }
           }
 
-          if (settings) {
+          const allowedSettings = safeModeSettings(source, settings)
+          if (allowedSettings) {
             mergedSettings = mergeWith(
               mergedSettings,
-              settings,
+              allowedSettings,
               settingsMergeCustomizer,
             )
           }
@@ -772,10 +795,11 @@ function loadSettingsFromDisk(): SettingsWithErrors {
         const inlineSettings = getFlagSettingsInline()
         if (inlineSettings) {
           const parsed = SettingsSchema().safeParse(inlineSettings)
-          if (parsed.success) {
+          const allowed = parsed.success ? safeModeSettings(source, parsed.data) : null
+          if (allowed) {
             mergedSettings = mergeWith(
               mergedSettings,
-              parsed.data,
+              allowed,
               settingsMergeCustomizer,
             )
           }
@@ -814,10 +838,6 @@ export function getInitialSettings(): SettingsJson {
   return settings || {}
 }
 
-/**
- * @deprecated Use getInitialSettings() instead. This alias exists for backwards compatibility.
- */
-export const getSettings_DEPRECATED = getInitialSettings
 
 export type SettingsWithSources = {
   effective: SettingsJson
@@ -934,49 +954,41 @@ export function getUseAutoModeDuringPlan(): boolean {
  * otherwise inject classifier allow/deny rules (RCE risk).
  */
 export function getAutoModeConfig():
-  | { allow?: string[]; soft_deny?: string[]; environment?: string[] }
+  | { allow?: string[]; soft_deny?: string[]; hard_deny?: string[]; environment?: string[] }
   | undefined {
   if (feature('TRANSCRIPT_CLASSIFIER')) {
     const schema = z.object({
       allow: z.array(z.string()).optional(),
       soft_deny: z.array(z.string()).optional(),
+      hard_deny: z.array(z.string()).optional(),
       deny: z.array(z.string()).optional(),
       environment: z.array(z.string()).optional(),
     })
 
-    const allow: string[] = []
-    const soft_deny: string[] = []
-    const environment: string[] = []
+    const bySource: Partial<Record<'userSettings' | 'flagSettings' | 'policySettings', {
+      allow?: string[]; soft_deny?: string[]; hard_deny?: string[]
+      deny?: string[]; environment?: string[]
+    }>> = {}
 
-    for (const source of [
-      'userSettings',
-      'localSettings',
-      'flagSettings',
-      'policySettings',
-    ] as const) {
+    // The original classifier only trusts user, explicit flag and managed
+    // settings. Project and local files are repository-controllable and cannot
+    // define a classifier allowlist.
+    for (const source of ['userSettings', 'flagSettings', 'policySettings'] as const) {
+      if (!isSettingSourceEnabled(source)) continue
       const settings = getSettingsForSource(source)
       if (!settings) continue
       const result = schema.safeParse(
         (settings as Record<string, unknown>).autoMode,
       )
-      if (result.success) {
-        if (result.data.allow) allow.push(...result.data.allow)
-        if (result.data.soft_deny) soft_deny.push(...result.data.soft_deny)
-        if (process.env.USER_TYPE === 'ant') {
-          if (result.data.deny) soft_deny.push(...result.data.deny)
+      if (result.success && result.data) {
+        bySource[source] = {
+          ...result.data,
+          // The old 'deny' spelling is restricted to internal users.
+          ...process.env.USER_TYPE !== 'ant' && { deny: undefined },
         }
-        if (result.data.environment)
-          environment.push(...result.data.environment)
       }
     }
-
-    if (allow.length > 0 || soft_deny.length > 0 || environment.length > 0) {
-      return {
-        ...(allow.length > 0 && { allow }),
-        ...(soft_deny.length > 0 && { soft_deny }),
-        ...(environment.length > 0 && { environment }),
-      }
-    }
+    return mergeAutoModeRulesBySource(bySource)
   }
   return undefined
 }

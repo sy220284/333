@@ -8,22 +8,24 @@ load_manifest() {
   # shellcheck disable=SC1090
   source "$TOOLCHAIN_DIR/toolchain-components.env"
   TOOLS_ROOT="${DEV333_TOOLS_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/333-dev}"
-  # shellcheck disable=SC2034  # read by tools/dev/install.sh after sourcing lib.sh
+  # Read by scripts sourcing this shared library (ShellCheck checks lib.sh independently).
+  # shellcheck disable=SC2034
   ENV_FILE="${DEV333_TOOLCHAIN_ENV_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/333/dev-toolchain.env}"
   REPO_ROOT="${DEV333_REPO_ROOT:-$PWD}"
 }
 require_repo() {
   [ -f "$REPO_ROOT/package.json" ] && [ -f "$REPO_ROOT/build/public-dependencies.lock.json" ] || die "找不到 333 仓库根目录；请设置 DEV333_REPO_ROOT"
 }
+# ShellCheck checks this sourced library independently; ARCH_KIND is used by install.sh.
+# shellcheck disable=SC2034
 detect_arch() {
   [ "$(uname -s)" = Linux ] || die "离线组件支持 Linux/WSL x64；macOS/Windows 使用 rebuild.yml"
   case "$(uname -m)" in
-    x86_64|amd64) # shellcheck disable=SC2034
-                  ARCH_KIND=x64 ;;
+    x86_64|amd64) ARCH_KIND=x64 ;;
     *) die "当前发布组件仅支持 Linux x64：$(uname -m)" ;;
   esac
 }
-assert_profile() { case "$1" in build|full|dev) ;; *) die "仅支持 build/full/dev：$1";; esac; }
+assert_profile() { case "$1" in build|full) ;; *) die "仅支持 build/full：$1";; esac; }
 component_parts() { if [ "$1" = npm-public ]; then echo "$NPM_PUBLIC_PARTS"; else echo 1; fi; }
 artifacts_for() {
   local count i
@@ -33,8 +35,7 @@ artifacts_for() {
 }
 components_for() {
   printf '%s\n' $BUILD_COMPONENTS
-  if [ "$1" = full ] || [ "$1" = dev ]; then printf '%s\n' $FULL_EXTRA_COMPONENTS; fi
-  if [ "$1" = dev ]; then printf '%s\n' $DEV_EXTRA_COMPONENTS; fi
+  if [ "$1" = full ]; then printf '%s\n' $FULL_EXTRA_COMPONENTS; fi
 }
 node_path() {
   if [ -x "$TOOLS_ROOT/node/bin/node" ]; then echo "$TOOLS_ROOT/node/bin/node"
@@ -98,13 +99,6 @@ component_ready() {
     actionlint)
       p="$(actionlint_path)" || return 1
       "$p" -version 2>/dev/null | grep -Fq "$ACTIONLINT_VERSION"
-      ;;
-    dev-tools)
-      local dev_bin="$TOOLS_ROOT/dev-tools/node_modules/.bin"
-      [ -x "$dev_bin/tsc" ] || dev_bin="$TOOLCHAIN_DIR/node_modules/.bin"
-      [ -x "$dev_bin/tsc" ] && [ -x "$dev_bin/biome" ] &&
-        [ "$("$dev_bin/tsc" --version 2>/dev/null)" = 'Version 5.9.3' ] &&
-        "$dev_bin/biome" --version 2>/dev/null | grep -Fq '2.6.3'
       ;;
     *) die "未知组件：$1" ;;
   esac

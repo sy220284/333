@@ -30,6 +30,7 @@ import { extractTextContent } from '../messages.js'
 import { resolveAntModel } from '../model/antModels.js'
 import { getMainLoopModel } from '../model/model.js'
 import { getAutoModeConfig } from '../settings/settings.js'
+import { parseTaggedAutoModeBullets, renderAutoModeRuleBlock } from './autoModeRules.js'
 import { sideQuery } from '../sideQuery.js'
 import { jsonStringify } from '../slowOperations.js'
 import { tokenCountWithEstimation } from '../tokens.js'
@@ -85,6 +86,7 @@ function isUsingExternalPermissions(): boolean {
 export type AutoModeRules = {
   allow: string[]
   soft_deny: string[]
+  hard_deny: string[]
   environment: string[]
 }
 
@@ -100,21 +102,14 @@ export type AutoModeRules = {
 export function getDefaultExternalAutoModeRules(): AutoModeRules {
   return {
     allow: extractTaggedBullets('user_allow_rules_to_replace'),
-    soft_deny: extractTaggedBullets('user_deny_rules_to_replace'),
+    soft_deny: extractTaggedBullets('user_soft_deny_rules_to_replace'),
+    hard_deny: extractTaggedBullets('user_hard_deny_rules_to_replace'),
     environment: extractTaggedBullets('user_environment_to_replace'),
   }
 }
 
 function extractTaggedBullets(tagName: string): string[] {
-  const match = EXTERNAL_PERMISSIONS_TEMPLATE.match(
-    new RegExp(`<${tagName}>([\\s\\S]*?)</${tagName}>`),
-  )
-  if (!match) return []
-  return (match[1] ?? '')
-    .split('\n')
-    .map(line => line.trim())
-    .filter(line => line.startsWith('- '))
-    .map(line => line.slice(2))
+  return parseTaggedAutoModeBullets(EXTERNAL_PERMISSIONS_TEMPLATE, tagName)
 }
 
 /**
@@ -132,7 +127,11 @@ export function buildDefaultExternalSystemPrompt(): string {
       (_m, defaults: string) => defaults,
     )
     .replace(
-      /<user_deny_rules_to_replace>([\s\S]*?)<\/user_deny_rules_to_replace>/,
+      /<user_soft_deny_rules_to_replace>([\s\S]*?)<\/user_soft_deny_rules_to_replace>/,
+      (_m, defaults: string) => defaults,
+    )
+    .replace(
+      /<user_hard_deny_rules_to_replace>([\s\S]*?)<\/user_hard_deny_rules_to_replace>/,
       (_m, defaults: string) => defaults,
     )
     .replace(
@@ -498,44 +497,34 @@ export async function buildYoloSystemPrompt(
   const includePowerShellGuidance = feature('POWERSHELL_AUTO_MODE')
     ? !usingExternal
     : false
-  const allowDescriptions = [
-    ...(includeBashPromptRules ? getBashPromptAllowDescriptions(context) : []),
-    ...(autoMode?.allow ?? []),
-  ]
-  const denyDescriptions = [
+  const builtInAllow = includeBashPromptRules
+    ? getBashPromptAllowDescriptions(context)
+    : []
+  const builtInSoftDeny = [
     ...(includeBashPromptRules ? getBashPromptDenyDescriptions(context) : []),
     ...(includePowerShellGuidance ? POWERSHELL_DENY_GUIDANCE : []),
-    ...(autoMode?.soft_deny ?? []),
   ]
-
-  // All three sections use the same <foo_to_replace>...</foo_to_replace>
-  // delimiter pattern. The external template wraps its defaults inside the
-  // tags, so user-provided values REPLACE the defaults entirely. The
-  // anthropic template keeps its defaults outside the tags and uses an empty
-  // tag pair at the end of each section, so user-provided values are
-  // strictly ADDITIVE.
-  const userAllow = allowDescriptions.length
-    ? allowDescriptions.map(d => `- ${d}`).join('\n')
-    : undefined
-  const userDeny = denyDescriptions.length
-    ? denyDescriptions.map(d => `- ${d}`).join('\n')
-    : undefined
-  const userEnvironment = autoMode?.environment?.length
-    ? autoMode.environment.map(e => `- ${e}`).join('\n')
-    : undefined
 
   return systemPrompt
     .replace(
       /<user_allow_rules_to_replace>([\s\S]*?)<\/user_allow_rules_to_replace>/,
-      (_m, defaults: string) => userAllow ?? defaults,
+      (_m, defaults: string) =>
+        renderAutoModeRuleBlock(autoMode?.allow, defaults, builtInAllow),
     )
     .replace(
-      /<user_deny_rules_to_replace>([\s\S]*?)<\/user_deny_rules_to_replace>/,
-      (_m, defaults: string) => userDeny ?? defaults,
+      /<user_soft_deny_rules_to_replace>([\s\S]*?)<\/user_soft_deny_rules_to_replace>/,
+      (_m, defaults: string) =>
+        renderAutoModeRuleBlock(autoMode?.soft_deny, defaults, builtInSoftDeny),
+    )
+    .replace(
+      /<user_hard_deny_rules_to_replace>([\s\S]*?)<\/user_hard_deny_rules_to_replace>/,
+      (_m, defaults: string) =>
+        renderAutoModeRuleBlock(autoMode?.hard_deny, defaults),
     )
     .replace(
       /<user_environment_to_replace>([\s\S]*?)<\/user_environment_to_replace>/,
-      (_m, defaults: string) => userEnvironment ?? defaults,
+      (_m, defaults: string) =>
+        renderAutoModeRuleBlock(autoMode?.environment, defaults),
     )
 }
 // ============================================================================

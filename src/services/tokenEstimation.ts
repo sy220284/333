@@ -1,3 +1,4 @@
+import { estimateContentTokens } from './contentTokenEstimation.js'
 import type { Anthropic } from '@anthropic-ai/sdk'
 import type { BetaMessageParam as MessageParam } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 // @aws-sdk/client-bedrock-runtime is imported dynamically in countTokensWithBedrock()
@@ -201,10 +202,10 @@ export async function countMessagesTokensWithAPI(
 }
 
 export function roughTokenCountEstimation(
-  content: string,
+  content: unknown,
   bytesPerToken: number = 4,
 ): number {
-  return Math.round(content.length / bytesPerToken)
+  return typeof content === 'string' ? Math.round(content.length / bytesPerToken) : 0
 }
 
 /**
@@ -368,70 +369,8 @@ export function roughTokenCountEstimationForMessage(message: {
   return 0
 }
 
-function roughTokenCountEstimationForContent(
-  content:
-    | string
-    | Array<Anthropic.ContentBlock>
-    | Array<Anthropic.ContentBlockParam>
-    | undefined,
-): number {
-  if (!content) {
-    return 0
-  }
-  if (typeof content === 'string') {
-    return roughTokenCountEstimation(content)
-  }
-  let totalTokens = 0
-  for (const block of content) {
-    totalTokens += roughTokenCountEstimationForBlock(block)
-  }
-  return totalTokens
-}
-
-function roughTokenCountEstimationForBlock(
-  block: string | Anthropic.ContentBlock | Anthropic.ContentBlockParam,
-): number {
-  if (typeof block === 'string') {
-    return roughTokenCountEstimation(block)
-  }
-  if (block.type === 'text') {
-    return roughTokenCountEstimation(block.text)
-  }
-  if (block.type === 'image' || block.type === 'document') {
-    // https://platform.claude.com/docs/en/build-with-claude/vision#calculate-image-costs
-    // tokens = (width px * height px)/750
-    // Images are resized to max 2000x2000 (5333 tokens). Use a conservative
-    // estimate that matches microCompact's IMAGE_MAX_TOKEN_SIZE to avoid
-    // underestimating and triggering auto-compact too late.
-    //
-    // document: base64 PDF in source.data.  Must NOT reach the
-    // jsonStringify catch-all — a 1MB PDF is ~1.33M base64 chars →
-    // ~325k estimated tokens, vs the ~2000 the API actually charges.
-    // Same constant as microCompact's calculateToolResultTokens.
-    return 2000
-  }
-  if (block.type === 'tool_result') {
-    return roughTokenCountEstimationForContent(block.content)
-  }
-  if (block.type === 'tool_use') {
-    // input is the JSON the model generated — arbitrarily large (bash
-    // commands, Edit diffs, file contents).  Stringify once for the
-    // char count; the API re-serializes anyway so this is what it sees.
-    return roughTokenCountEstimation(
-      block.name + jsonStringify(block.input ?? {}),
-    )
-  }
-  if (block.type === 'thinking') {
-    return roughTokenCountEstimation(block.thinking)
-  }
-  if (block.type === 'redacted_thinking') {
-    return roughTokenCountEstimation(block.data)
-  }
-  // server_tool_use, web_search_tool_result, mcp_tool_use, etc. —
-  // text-like payloads (tool inputs, search results, no base64).
-  // Stringify-length tracks the serialized form the API sees; the
-  // key/bracket overhead is single-digit percent on real blocks.
-  return roughTokenCountEstimation(jsonStringify(block))
+function roughTokenCountEstimationForContent(content: unknown): number {
+  return estimateContentTokens(content)
 }
 
 async function countTokensWithBedrock({

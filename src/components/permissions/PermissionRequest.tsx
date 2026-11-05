@@ -1,5 +1,4 @@
 import { c as _c } from "react/compiler-runtime";
-import { feature } from 'bun:bundle';
 import * as React from 'react';
 import { EnterPlanModeTool } from 'src/tools/EnterPlanModeTool/EnterPlanModeTool.js';
 import { ExitPlanModeV2Tool } from 'src/tools/ExitPlanModeTool/ExitPlanModeV2Tool.js';
@@ -33,12 +32,10 @@ import { SkillPermissionRequest } from './SkillPermissionRequest/SkillPermission
 import { WebFetchPermissionRequest } from './WebFetchPermissionRequest/WebFetchPermissionRequest.js';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-const ReviewArtifactTool = feature('REVIEW_ARTIFACT') ? (require('../../tools/ReviewArtifactTool/ReviewArtifactTool.js') as typeof import('../../tools/ReviewArtifactTool/ReviewArtifactTool.js')).ReviewArtifactTool : null;
-const ReviewArtifactPermissionRequest = feature('REVIEW_ARTIFACT') ? (require('./ReviewArtifactPermissionRequest/ReviewArtifactPermissionRequest.js') as typeof import('./ReviewArtifactPermissionRequest/ReviewArtifactPermissionRequest.js')).ReviewArtifactPermissionRequest : null;
-const WorkflowTool = feature('WORKFLOW_SCRIPTS') ? (require('../../tools/WorkflowTool/WorkflowTool.js') as typeof import('../../tools/WorkflowTool/WorkflowTool.js')).WorkflowTool : null;
-const WorkflowPermissionRequest = feature('WORKFLOW_SCRIPTS') ? (require('../../tools/WorkflowTool/WorkflowPermissionRequest.js') as typeof import('../../tools/WorkflowTool/WorkflowPermissionRequest.js')).WorkflowPermissionRequest : null;
-const MonitorTool = feature('MONITOR_TOOL') ? (require('../../tools/MonitorTool/MonitorTool.js') as typeof import('../../tools/MonitorTool/MonitorTool.js')).MonitorTool : null;
-const MonitorPermissionRequest = feature('MONITOR_TOOL') ? (require('./MonitorPermissionRequest/MonitorPermissionRequest.js') as typeof import('./MonitorPermissionRequest/MonitorPermissionRequest.js')).MonitorPermissionRequest : null;
+import { WorkflowTool } from '../../tools/WorkflowTool/WorkflowTool.js';
+import { WorkflowPermissionRequest } from '../../tools/WorkflowTool/WorkflowPermissionRequest.js';
+import { MonitorTool } from '../../tools/MonitorTool/MonitorTool.js';
+import { MonitorPermissionRequest } from './MonitorPermissionRequest/MonitorPermissionRequest.js';
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs';
 /* eslint-enable @typescript-eslint/no-require-imports */
 import type { z } from 'zod/v4';
@@ -54,8 +51,6 @@ function permissionComponentForTool(tool: Tool): React.ComponentType<PermissionR
       return BashPermissionRequest;
     case PowerShellTool:
       return PowerShellPermissionRequest;
-    case ReviewArtifactTool:
-      return ReviewArtifactPermissionRequest ?? FallbackPermissionRequest;
     case WebFetchTool:
       return WebFetchPermissionRequest;
     case NotebookEditTool:
@@ -69,9 +64,9 @@ function permissionComponentForTool(tool: Tool): React.ComponentType<PermissionR
     case AskUserQuestionTool:
       return AskUserQuestionPermissionRequest;
     case WorkflowTool:
-      return WorkflowPermissionRequest ?? FallbackPermissionRequest;
+      return WorkflowPermissionRequest;
     case MonitorTool:
-      return MonitorPermissionRequest ?? FallbackPermissionRequest;
+      return MonitorPermissionRequest;
     case GlobTool:
     case GrepTool:
     case FileReadTool:
@@ -128,18 +123,15 @@ export type ToolUseConfirm<Input extends AnyObject = AnyObject> = {
 function getNotificationMessage(toolUseConfirm: ToolUseConfirm): string {
   const toolName = toolUseConfirm.tool.userFacingName(toolUseConfirm.input as never);
   if (toolUseConfirm.tool === ExitPlanModeV2Tool) {
-    return 'Claude Code needs your approval for the plan';
+    return 'Claude Code 需要你批准计划';
   }
   if (toolUseConfirm.tool === EnterPlanModeTool) {
-    return 'Claude Code wants to enter plan mode';
-  }
-  if (feature('REVIEW_ARTIFACT') && toolUseConfirm.tool === ReviewArtifactTool) {
-    return 'Claude needs your approval for a review artifact';
+    return 'Claude Code 希望进入规划模式';
   }
   if (!toolName || toolName.trim() === '') {
-    return 'Claude Code needs your attention';
+    return 'Claude Code 需要你的关注';
   }
-  return `Claude needs your permission to use ${toolName}`;
+  return `Claude 请求使用 ${toolName} 的权限`;
 }
 
 // TODO: Move this to Tool.renderPermissionRequest

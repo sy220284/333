@@ -1,0 +1,124 @@
+name: 原版317嵌入资源源码恢复与闭环验收
+on:
+  push:
+    branches:
+      - upgrade/2.1.310-m1-evidence
+    paths:
+      - '.gitattributes'
+      - 'src/skills/bundled/**'
+      - 'src/types/official317/**'
+      - 'src/constants/official317/**'
+      - 'build/official-embedded-assets-2.1.317.json'
+      - 'tools/upgrade/restore-official-317-assets.py'
+      - 'research/official-317-unaltered/**'
+      - '.github/workflows/restore-official-317-assets.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: restore-official-317-assets
+  cancel-in-progress: false
+
+jobs:
+  restore-and-verify:
+    name: 官方ELF核验、101项资源恢复、技能调用文件校验
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+      - name: 获取严格锁定的2.1.317官方原生执行文件
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --show-error --silent --retry 4 --retry-delay 3 \
+            https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude \
+            -o "$RUNNER_TEMP/claude-2.1.317"
+          echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  $RUNNER_TEMP/claude-2.1.317" | sha256sum --check
+      - name: 从已验明来源的原版ELF恢复及修复101项资源
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/upgrade/restore-official-317-assets.py \
+            --binary "$RUNNER_TEMP/claude-2.1.317" \
+            --root "$GITHUB_WORKSPACE" --write
+      - name: 离线校验101项原版字节及破坏性用例
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/verify-official-embedded-assets.mjs
+          node --test tests/m1-official-embedded-assets-317.test.mjs tests/m1-package-official-assets-317.test.mjs tests/m1-bundled-skill-entrypoints-317.test.mjs
+      - name: 检查技能脚本和参考文件真实相对路径
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('src/skills/bundled')
+          required={
+            'claude-test-conversation': ['scripts/ct.mjs','scripts/stop-on-exit.mjs','scripts/lib/config.mjs','scripts/lib/runs.mjs','scripts/lib/tools.mjs','scripts/lib/tools-lock.json'],
+            'cowork-plugin-authoring': ['references/component-schemas.md','references/example-plugins.md','references/mcp-servers.md','references/search-strategies.md'],
+            'design-sync': ['package-build.mjs','package-validate.mjs','resync.mjs','lib/bundle.mjs','lib/common.mjs'],
+          }
+          for name, paths in required.items():
+            for sub in paths:
+              target=root/name/sub
+              if not target.is_file() or target.stat().st_size == 0:
+                raise SystemExit(f'Missing official skill dependency: {target}')
+          print('All selected skill call-path dependencies are present')
+          PY
+      - name: 校验恢复脚本和全部JavaScript文件的基础语法
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/upgrade/restore-official-317-assets.py
+          find src/skills/bundled/claude-test-conversation/scripts -name '*.mjs' -type f \
+            -print0 | xargs -0 -n1 node --check
+      - name: 验证101项资源加入Git索引后仍保持原始二进制字节
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add src/skills/bundled src/types/official317 src/constants/official317 research/official-317-unaltered build/official-embedded-assets-2.1.317.json
+          python3 - <<'PY'
+          import importlib.util
+          import subprocess
+          from pathlib import Path
+          script=Path('tools/upgrade/restore-official-317-assets.py')
+          spec=importlib.util.spec_from_file_location('restore317',script)
+          module=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          import json
+          manifest=json.loads(Path('build/official-embedded-assets-2.1.317.json').read_text())
+          assert len(module.module_index())==len(manifest['resources'])==101
+          for entry in manifest['resources']:
+            for resource in [entry['path'], *([entry['upstream_backup']] if entry.get('upstream_backup') else [])]:
+              staged=subprocess.check_output(['git','rev-parse',':'+resource],text=True).strip()
+              direct=subprocess.check_output(['git','hash-object','--no-filters',resource],text=True).strip()
+              if staged!=direct:
+                raise SystemExit('Git filters altered verified resource bytes: '+resource)
+          print('All 101 packaged resources and upstream archives match Git staged blobs')
+          PY
+      - name: 将已逐字节验证的官方资源提交至PR7分支
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/skills/bundled src/types/official317 src/constants/official317 research/official-317-unaltered build/official-embedded-assets-2.1.317.json
+          if git diff --cached --quiet; then
+            echo "资源已存在且内容一致，无需重复提交"
+          else
+            git commit -m "补齐原版317资源：恢复101项真实嵌入文件并闭合技能引用路径"
+            git pull --rebase origin upgrade/2.1.310-m1-evidence
+            git push origin HEAD:refs/heads/upgrade/2.1.310-m1-evidence
+          fi
+      - name: 对提交后的源码恢复结果复核
+        shell: bash
+        run: |
+          python3 tools/upgrade/restore-official-317-assets.py \
+            --binary "$RUNNER_TEMP/claude-2.1.317" \
+            --root "$GITHUB_WORKSPACE"

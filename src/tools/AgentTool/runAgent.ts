@@ -1,6 +1,11 @@
 import { feature } from 'bun:bundle'
+import { releaseAgentResources } from './agentCleanup317.ts'
+import { killMonitorWsTasksForAgent } from '../../tasks/MonitorWsTask/MonitorWsTask.js'
 import type { UUID } from 'crypto'
-import { randomUUID } from 'crypto'
+import { randomUUID, createHash } from 'crypto'
+import { asSessionId } from '../../types/ids.js'
+import { createObserverRuntime317 } from '../../services/agentObserver/observerRuntime317.js'
+import type { ObserverActivity317 } from '../../services/agentObserver/observer317.js'
 import uniqBy from 'lodash-es/uniqBy.js'
 import { logForDebugging } from 'src/utils/debug.js'
 import { getProjectRoot, getSessionId } from '../../bootstrap/state.js'
@@ -57,10 +62,14 @@ import { clearSessionHooks } from '../../utils/hooks/sessionHooks.js'
 import { executeSubagentStartHooks } from '../../utils/hooks.js'
 import { createUserMessage } from '../../utils/messages.js'
 import { getAgentModel } from '../../utils/model/agent.js'
+import { getDefaultEffortForModel, parseEffortValue } from '../../utils/effort.js'
+import { isSettingSourceEnabled } from '../../utils/settings/constants.js'
+import { getSettingsForSource } from '../../utils/settings/settings.js'
 import type { ModelAlias } from '../../utils/model/aliases.js'
 import {
   clearAgentTranscriptSubdir,
   recordSidechainTranscript,
+  captureAgentTranscriptOwner317,
   setAgentTranscriptSubdir,
   writeAgentMetadata,
 } from '../../utils/sessionStorage.js'
@@ -80,6 +89,7 @@ import {
 import type { ContentReplacementState } from '../../utils/toolResultStorage.js'
 import { createAgentId } from '../../utils/uuid.js'
 import { resolveAgentTools } from './agentToolUtils.js'
+import { resolveSubagentEffortValue } from './subagentEffortPolicy.ts'
 import { type AgentDefinition, isBuiltInAgent } from './loadAgentsDir.js'
 
 /**
@@ -351,10 +361,11 @@ export async function* runAgent({
   if (transcriptSubdir) {
     setAgentTranscriptSubdir(agentId, transcriptSubdir)
   }
+  captureAgentTranscriptOwner317(agentId)
 
   // Register agent in Perfetto trace for hierarchy visualization
   if (isPerfettoTracingEnabled()) {
-    const parentId = toolUseContext.agentId ?? getSessionId()
+    const parentId = toolUseContext.agentId ?? toolUseContext.sessionId ?? getSessionId()
     registerPerfettoAgent(agentId, agentDefinition.agentType, parentId)
   }
 
@@ -478,11 +489,27 @@ export async function* runAgent({
       }
     }
 
-    // Override effort level if agent defines one
-    const effortValue =
-      agentDefinition.effort !== undefined
-        ? agentDefinition.effort
-        : state.effortValue
+    // 2.1.316/317: explicit agent effort wins, then the subagent-only
+    // environment override. Agents on a different model use the saved
+    // effort setting or that model's default, not the main session's effort.
+    const usesDifferentModel =
+      resolvedAgentModel !== toolUseContext.options.mainLoopModel
+    const effortValue = resolveSubagentEffortValue({
+      configuredEffort: agentDefinition.effort,
+      environmentEffort: parseEffortValue(
+        process.env.CLAUDE_CODE_SUBAGENT_EFFORT,
+      ),
+      parentEffort: state.effortValue,
+      agentModel: resolvedAgentModel,
+      parentModel: toolUseContext.options.mainLoopModel,
+      savedEffort:
+        usesDifferentModel && isSettingSourceEnabled('userSettings')
+          ? getSettingsForSource('userSettings')?.effortLevel
+          : undefined,
+      modelDefaultEffort: usesDifferentModel
+        ? getDefaultEffortForModel(resolvedAgentModel)
+        : undefined,
+    })
 
     if (
       toolPermissionContext === state.toolPermissionContext &&
@@ -713,6 +740,46 @@ export async function* runAgent({
     contentReplacementState,
   })
 
+  const parentObservedAgent = appState.agent
+    ? appState.agentDefinitions.activeAgents.find(a => a.agentType === appState.agent)
+    : undefined
+  const inheritedObserver =
+    parentObservedAgent?.observeSubagents === true && parentObservedAgent.observer
+      ? parentObservedAgent.observer
+      : undefined
+  const targetObserverType = agentDefinition.observer ?? inheritedObserver
+  const observedAgent = targetObserverType
+    ? { ...agentDefinition, observer: targetObserverType }
+    : agentDefinition
+  const observerActivity: ObserverActivity317[] = []
+  let observerRuntime: Awaited<ReturnType<typeof createObserverRuntime317>> = null
+  if (targetObserverType) {
+    const hash = createHash('sha256')
+      .update(String(toolUseContext.sessionId ?? getSessionId()))
+      .update(':')
+      .update(String(agentId))
+      .digest('hex')
+      .slice(0, 32)
+    const observerSessionId = asSessionId(
+      `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20)}`,
+    )
+    observerRuntime = await createObserverRuntime317({
+      sessionId: observerSessionId,
+      notificationSessionId: toolUseContext.sessionId ?? getSessionId(),
+      agent: observedAgent,
+      agents: toolUseContext.options.agentDefinitions.activeAgents,
+      getCacheParams: () => ({
+        systemPrompt: agentSystemPrompt,
+        userContext: resolvedUserContext,
+        systemContext: resolvedSystemContext,
+        toolUseContext: agentToolUseContext,
+        forkContextMessages: initialMessages,
+      }),
+      getPermissionContext: () => agentToolUseContext.getAppState().toolPermissionContext,
+      canUseTool,
+    })
+  }
+
   // Preserve tool use results for subagents with viewable transcripts (in-process teammates)
   if (preserveToolUseResults) {
     agentToolUseContext.preserveToolUseResults = true
@@ -744,6 +811,7 @@ export async function* runAgent({
   // Track the last recorded message UUID for parent chain continuity
   let lastRecordedUuid: UUID | null = initialMessages.at(-1)?.uuid ?? null
 
+  let primaryFailure: unknown
   try {
     for await (const message of query({
       messages: initialMessages,
@@ -756,6 +824,19 @@ export async function* runAgent({
       maxTurns: maxTurns ?? agentDefinition.maxTurns,
     })) {
       onQueryProgress?.()
+      if (observerRuntime && message.type === 'assistant') {
+        for (const block of message.message.content) {
+          if (block.type === 'text' && block.text.trim()) {
+            observerActivity.push({ type: 'assistant_text', text: block.text })
+          } else if (block.type === 'tool_use') {
+            observerActivity.push({
+              type: 'tool_call',
+              name: block.name,
+              input: JSON.stringify(block.input ?? {}),
+            })
+          }
+        }
+      }
       // Forward subagent API request starts to parent's metrics display
       // so TTFT/OTPS update during subagent execution.
       if (
@@ -809,53 +890,53 @@ export async function* runAgent({
       throw new AbortError()
     }
 
+    if (observerRuntime) {
+      observerActivity.push({ type: 'turn_ended', reason: 'completed' })
+      void observerRuntime.afterTurn(observerActivity).catch(error => {
+        logForDebugging('Observer failed after subagent completion: ' + String(error))
+      })
+    }
+
     // Run callback if provided (only built-in agents have callbacks)
     if (isBuiltInAgent(agentDefinition) && agentDefinition.callback) {
       agentDefinition.callback()
     }
+  } catch (agentError) {
+    primaryFailure = agentError
+    throw agentError
   } finally {
-    // Clean up agent-specific MCP servers (runs on normal completion, abort, or error)
-    await mcpCleanup()
-    // Clean up agent's session hooks
-    if (agentDefinition.hooks) {
-      clearSessionHooks(rootSetAppState, agentId)
-    }
-    // Clean up prompt cache tracking state for this agent
-    if (feature('PROMPT_CACHE_BREAK_DETECTION')) {
-      cleanupAgentTracking(agentId)
-    }
-    // Release cloned file state cache memory
-    agentToolUseContext.readFileState.clear()
-    // Release the cloned fork context messages
-    initialMessages.length = 0
-    // Release perfetto agent registry entry
-    unregisterPerfettoAgent(agentId)
-    // Release transcript subdir mapping
-    clearAgentTranscriptSubdir(agentId)
-    // Release this agent's todos entry. Without this, every subagent that
-    // called TodoWrite leaves a key in AppState.todos forever (even after all
-    // items complete, the value is [] but the key stays). Whale sessions
-    // spawn hundreds of agents; each orphaned key is a small leak that adds up.
-    rootSetAppState(prev => {
-      if (!(agentId in prev.todos)) return prev
-      const { [agentId]: _removed, ...todos } = prev.todos
-      return { ...prev, todos }
-    })
-    // Kill any background bash tasks this agent spawned. Without this, a
-    // `run_in_background` shell loop (e.g. test fixture fake-logs.sh) outlives
-    // the agent as a PPID=1 zombie once the main session eventually exits.
-    killShellTasksForAgent(agentId, toolUseContext.getAppState, rootSetAppState)
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    if (feature('MONITOR_TOOL')) {
-      const mcpMod =
-        require('../../tasks/MonitorMcpTask/MonitorMcpTask.js') as typeof import('../../tasks/MonitorMcpTask/MonitorMcpTask.js')
-      mcpMod.killMonitorMcpTasksForAgent(
-        agentId,
-        toolUseContext.getAppState,
-        rootSetAppState,
-      )
-    }
-    /* eslint-enable @typescript-eslint/no-require-imports */
+    // Every resource is released even when an earlier disposer rejects.
+    // Errors propagate as an AggregateError with the failing step names.
+    await releaseAgentResources([
+      ['agent MCP servers', mcpCleanup],
+      ['session hooks', () => {
+        if (agentDefinition.hooks) clearSessionHooks(rootSetAppState, agentId)
+      }],
+      ['prompt cache tracking', () => {
+        if (feature('PROMPT_CACHE_BREAK_DETECTION')) cleanupAgentTracking(agentId)
+      }],
+      ['cloned file cache', () => agentToolUseContext.readFileState.clear()],
+      ['forked message references', () => { initialMessages.length = 0 }],
+      ['perfetto agent registration', () => unregisterPerfettoAgent(agentId)],
+      ['transcript directory mapping', () => clearAgentTranscriptSubdir(agentId)],
+      ['agent todo state', () => {
+        rootSetAppState(prev => {
+          if (!(agentId in prev.todos)) return prev
+          const { [agentId]: _removed, ...todos } = prev.todos
+          return { ...prev, todos }
+        })
+      }],
+      ['background shells', () => {
+        if (!isAsync || primaryFailure || agentAbortController.signal.aborted) {
+          killShellTasksForAgent(agentId, toolUseContext.getAppState, rootSetAppState)
+        }
+      }],
+      ['background monitors', () => {
+        if (!isAsync || primaryFailure || agentAbortController.signal.aborted) {
+          killMonitorWsTasksForAgent(agentId, toolUseContext.getAppState, rootSetAppState)
+        }
+      }],
+    ], primaryFailure)
   }
 }
 

@@ -29,7 +29,7 @@ export function Settings(t0) {
   const [selectedTab, setSelectedTab] = useState(defaultTab);
   const [tabsHidden, setTabsHidden] = useState(false);
   const [configOwnsEsc, setConfigOwnsEsc] = useState(false);
-  const [gatesOwnsEsc, setGatesOwnsEsc] = useState(false);
+  const [gatesOwnsEsc] = useState(false);
   const insideModal = useIsInsideModal();
   const {
     rows
@@ -43,7 +43,7 @@ export function Settings(t0) {
       if (tabsHidden) {
         return;
       }
-      onClose("Status dialog dismissed", {
+      onClose("已关闭状态面板", {
         display: "system"
       });
     };
@@ -69,7 +69,7 @@ export function Settings(t0) {
   useKeybinding("confirm:no", handleEscape, t3);
   let t4;
   if ($[5] !== context || $[6] !== diagnosticsPromise) {
-    t4 = <Tab key="status" title="Status"><Status context={context} diagnosticsPromise={diagnosticsPromise} /></Tab>;
+    t4 = <Tab key="status" id="Status" title="状态"><Status context={context} diagnosticsPromise={diagnosticsPromise} /></Tab>;
     $[5] = context;
     $[6] = diagnosticsPromise;
     $[7] = t4;
@@ -78,7 +78,7 @@ export function Settings(t0) {
   }
   let t5;
   if ($[8] !== contentHeight || $[9] !== context || $[10] !== onClose) {
-    t5 = <Tab key="config" title="Config"><Suspense fallback={null}><Config context={context} onClose={onClose} setTabsHidden={setTabsHidden} onIsSearchModeChange={setConfigOwnsEsc} contentHeight={contentHeight} /></Suspense></Tab>;
+    t5 = <Tab key="config" id="Config" title="设置"><Suspense fallback={null}><Config context={context} onClose={onClose} setTabsHidden={setTabsHidden} onIsSearchModeChange={setConfigOwnsEsc} contentHeight={contentHeight} /></Suspense></Tab>;
     $[8] = contentHeight;
     $[9] = context;
     $[10] = onClose;
@@ -88,14 +88,14 @@ export function Settings(t0) {
   }
   let t6;
   if ($[12] === Symbol.for("react.memo_cache_sentinel")) {
-    t6 = <Tab key="usage" title="Usage"><Usage /></Tab>;
+    t6 = <Tab key="usage" id="Usage" title="用量"><Usage /></Tab>;
     $[12] = t6;
   } else {
     t6 = $[12];
   }
   let t7;
   if ($[13] !== contentHeight) {
-    t7 = false ? [<Tab key="gates" title="Gates"><Gates onOwnsEscChange={setGatesOwnsEsc} contentHeight={contentHeight} /></Tab>] : [];
+    t7 = [];
     $[13] = contentHeight;
     $[14] = t7;
   } else {

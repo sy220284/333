@@ -1,0 +1,128 @@
+name: M6 317 自托管Runner底层与实际宿主验收
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - 'src/cli/selfHostedRunner/**'
+      - 'tests/m6-runner-operator-tools-317.test.ts'
+      - 'tests/m6-runner-health-317.test.mjs'
+      - 'src/cli/handlers/pluginEvalPublish317.ts'
+      - 'src/cli/handlers/pluginEvalEntry317.ts'
+      - 'tests/m3-plugin-eval-publish-317.test.ts'
+      - 'tests/m6-runner-code-sign-317.test.mjs'
+      - 'tests/m6-runner-orchestrator-317.test.mjs'
+      - 'src/bridge/sessionRunner.ts'
+      - 'src/cli/background/**'
+      - 'src/bootstrap/socketOwnership317.ts'
+      - 'src/bootstrap/ptyHost317.ts'
+      - 'src/bootstrap/bgSpare317.ts'
+      - 'tests/m1-background-pty-*.test.ts'
+      - 'tests/m1-background-lifecycle.test.mjs'
+      - 'src/bridge/types.ts'
+      - 'tests/m6-runner-idle-hold-317.test.ts'
+      - 'src/entrypoints/cli.tsx'
+      - 'tests/m6-self-hosted-runner-*'
+      - '.github/workflows/m6-self-hosted-runner-317.yml'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/cli/selfHostedRunner/**'
+      - 'src/bridge/sessionRunner.ts'
+      - 'src/cli/background/**'
+      - 'src/bootstrap/socketOwnership317.ts'
+      - 'src/bootstrap/ptyHost317.ts'
+      - 'src/bootstrap/bgSpare317.ts'
+      - 'tests/m1-background-pty-*.test.ts'
+      - 'tests/m1-background-lifecycle.test.mjs'
+      - 'tests/m6-self-hosted-runner-*'
+      - '.github/workflows/m6-self-hosted-runner-317.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: m6-runner-317-${{ github.sha }}
+  # Each source revision retains a full reproducible Runner acceptance result.
+  cancel-in-progress: false
+jobs:
+  runner-core:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 恢复项目冻结的第三方依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 核验317跨模块生产调用链与启动顺序
+        run: node build/check-architecture-links317.mjs
+      - name: Runner真实协议、宿主生命周期和错误路径测试
+        run: bun test tests/m6-self-hosted-runner-api-317.test.ts tests/m6-self-hosted-runner-host-317.test.ts tests/m6-self-hosted-runner-child-mode-317.test.ts tests/m6-self-hosted-runner-jwt-317.test.ts tests/m6-self-hosted-runner-workspace-317.test.ts tests/m6-self-hosted-runner-cli-args-317.test.ts tests/m6-self-hosted-runner-agents-317.test.ts tests/m6-runner-idle-hold-317.test.ts
+      - name: Runner真实/healthz与/metrics服务、容量指标和关闭测试
+        run: node --experimental-strip-types --test tests/m6-runner-health-317.test.mjs
+      - name: Runner配置与诊断九项管理工具生产路径、权限、登录及API模拟
+        run: bun test tests/m6-runner-operator-tools-317.test.ts
+      - name: Runner管理入口、签名工单和异步编排的原版协议测试
+        run: node --experimental-strip-types --test tests/m6-runner-code-sign-317.test.mjs tests/m6-runner-orchestrator-317.test.mjs
+      - name: 评测报告Claude.ai发布的OAuth与失败路径测试
+        run: bun test tests/m3-plugin-eval-publish-317.test.ts
+      - name: 独立PTY宿主真实启动、认证重连及输出恢复测试
+        run: bun test tests/m1-background-pty-replay-317.test.ts tests/m1-background-pty-connection-317.test.ts tests/m1-background-pty-adoption-317.test.ts
+      - name: 从TypeScript源代码重建Runner入口
+        run: bun build/rebuild.mjs
+      - name: 后台 Agent 真实进程启停、日志、停止及重新恢复测试
+        run: node --test tests/m1-background-lifecycle.test.mjs
+      - name: Runner独立CLI帮助、拒绝未知参数、凭据缺失
+        shell: bash
+        run: |
+          set -euo pipefail
+          bun dist/cli.js self-hosted-runner orchestrator --help | grep -F 'Usage: claude self-hosted-runner orchestrator'
+          bun dist/cli.js self-hosted-runner setup --help | grep -F 'Usage: claude self-hosted-runner setup'
+          bun dist/cli.js self-hosted-runner doctor --help | grep -F 'Usage: claude self-hosted-runner doctor'
+          if bun dist/cli.js self-hosted-runner code-sign -Y sign missing 2>sign-no-context.log; then
+            echo 'Remote code-sign unexpectedly accepted missing session context' >&2
+            exit 1
+          fi
+          grep -F 'code-sign:' sign-no-context.log
+          bun dist/cli.js self-hosted-runner --help | grep -F 'Usage: claude self-hosted-runner'
+          bun dist/cli.js self-hosted-runner --help | grep -F -- '--hold-idle-file'
+          bun dist/cli.js self-hosted-runner --help | grep -F -- '--max-hold-min'
+          bun dist/cli.js self-hosted-runner --help | grep -F -- '--health-port'
+          bun dist/cli.js self-hosted-runner --help | grep -F -- '--log-file'
+          if bun dist/cli.js self-hosted-runner --health-port 99999 2>invalid-health.log; then
+            echo 'Invalid health port accepted' >&2; exit 1
+          fi
+          grep -F 'error: --health-port must be an integer' invalid-health.log
+          if bun dist/cli.js self-hosted-runner --unknown 2>invalid.log; then
+            echo 'Unknown option was accepted' >&2
+            exit 1
+          fi
+          grep -F 'error: unknown flag --unknown' invalid.log
+          grep -F "Run 'claude self-hosted-runner --help' for usage." invalid.log
+          if env -u SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET bun dist/cli.js self-hosted-runner --api-url https://localhost.invalid 2>missing.log; then
+            echo 'Missing environment secret was accepted' >&2
+            exit 1
+          fi
+          grep -F 'No environment secret provided.' missing.log
+          if env -u SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET bun dist/cli.js self-hosted-runner --capacity 0 2>capacity.log; then
+            echo 'Invalid capacity was accepted' >&2
+            exit 1
+          fi
+          grep -F 'error: --capacity must be a positive integer, got: 0' capacity.log
+          TOKEN=$(node -e 'const b = v => Buffer.from(JSON.stringify(v)).toString("base64url"); console.log(b({alg:"RS256",kid:"test"})+"."+b({sub:"session_317",exp:4102444800})+".not-a-signature")')
+          bun dist/cli.js self-hosted-runner decode-token "$TOKEN" --no-verify | grep -F '"sub": "session_317"'
+          bun dist/cli.js self-hosted-runner decode-token "$TOKEN" --no-verify --header | grep -F '"alg": "RS256"'
+          if bun dist/cli.js self-hosted-runner decode-token "$TOKEN" --api-url file:///tmp/unsafe 2>jwt-invalid.log; then
+            echo 'Unsafe JWT base URL was accepted' >&2
+            exit 1
+          fi
+          grep -F 'decode-token: invalid API URL' jwt-invalid.log
+      - name: 全仓TypeScript类型检查
+        run: |
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          node tools/dev/dev.mjs typecheck:all

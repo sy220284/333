@@ -1,7 +1,7 @@
-import type {
-  McpbManifest,
-  McpbUserConfigurationOption,
-} from '@anthropic-ai/mcpb'
+import type { McpbManifestAny } from '@anthropic-ai/mcpb'
+
+type McpbManifest = McpbManifestAny
+type McpbUserConfigurationOption = NonNullable<McpbManifest['user_config']>[string]
 import axios from 'axios'
 import { createHash } from 'crypto'
 import { chmod, writeFile } from 'fs/promises'
@@ -15,7 +15,8 @@ import { getFsImplementation } from '../fsOperations.js'
 import { logError } from '../log.js'
 import { getSecureStorage } from '../secureStorage/index.js'
 import {
-  getSettings_DEPRECATED,
+  getInitialSettings,
+  getSettingsForSource,
   updateSettingsForSource,
 } from '../settings/settings.js'
 import { jsonParse, jsonStringify } from '../slowOperations.js'
@@ -143,7 +144,7 @@ export function loadMcpServerUserConfig(
   serverName: string,
 ): UserConfigValues | null {
   try {
-    const settings = getSettings_DEPRECATED()
+    const settings = getInitialSettings()
     const nonSensitive =
       settings.pluginConfigs?.[pluginId]?.mcpServers?.[serverName]
 
@@ -286,7 +287,7 @@ export function saveMcpServerUserConfig(
     // sensitive keys doesn't scrub them, the disk copy merges back in. Instead:
     // set each sensitive key to explicit `undefined` — mergeWith (with the
     // customizer at settings.ts:349) treats explicit undefined as a delete.
-    const settings = getSettings_DEPRECATED()
+    const settings = getSettingsForSource('userSettings') ?? {}
     const existingInSettings =
       settings.pluginConfigs?.[pluginId]?.mcpServers?.[serverName] ?? {}
     const keysToScrubFromSettings = Object.keys(existingInSettings).filter(k =>
@@ -296,15 +297,6 @@ export function saveMcpServerUserConfig(
       Object.keys(nonSensitive).length > 0 ||
       keysToScrubFromSettings.length > 0
     ) {
-      if (!settings.pluginConfigs) {
-        settings.pluginConfigs = {}
-      }
-      if (!settings.pluginConfigs[pluginId]) {
-        settings.pluginConfigs[pluginId] = {}
-      }
-      if (!settings.pluginConfigs[pluginId].mcpServers) {
-        settings.pluginConfigs[pluginId].mcpServers = {}
-      }
       // Build the scrub-via-undefined map. The UserConfigValues type doesn't
       // include undefined, but updateSettingsForSource's mergeWith customizer
       // needs explicit undefined to delete — cast is deliberate internal
@@ -313,11 +305,13 @@ export function saveMcpServerUserConfig(
       const scrubbed = Object.fromEntries(
         keysToScrubFromSettings.map(k => [k, undefined]),
       ) as Record<string, undefined>
-      settings.pluginConfigs[pluginId].mcpServers![serverName] = {
+      const serverConfig = {
         ...nonSensitive,
         ...scrubbed,
       } as UserConfigValues
-      const result = updateSettingsForSource('userSettings', settings)
+      const result = updateSettingsForSource('userSettings', {
+        pluginConfigs: { [pluginId]: { mcpServers: { [serverName]: serverConfig } } },
+      })
       if (result.error) {
         throw result.error
       }

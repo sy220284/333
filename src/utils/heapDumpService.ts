@@ -87,7 +87,7 @@ export type MemoryDiagnostics = {
  */
 export async function captureMemoryDiagnostics(
   trigger: 'manual' | 'auto-1.5GB',
-  dumpNumber = 0,
+  dumpNumber: number = 0,
 ): Promise<MemoryDiagnostics> {
   const usage = process.memoryUsage()
   const heapStats = getHeapStatistics()
@@ -220,7 +220,7 @@ export async function captureMemoryDiagnostics(
  */
 export async function performHeapDump(
   trigger: 'manual' | 'auto-1.5GB' = 'manual',
-  dumpNumber = 0,
+  dumpNumber: number = 0,
 ): Promise<HeapDumpResult> {
   try {
     const sessionId = getSessionId()

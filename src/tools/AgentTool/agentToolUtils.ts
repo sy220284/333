@@ -57,7 +57,7 @@ import { emitTaskProgress as emitTaskProgressEvent } from '../../utils/task/sdkP
 import { isInProcessTeammate } from '../../utils/teammateContext.js'
 import { getTokenCountFromUsage } from '../../utils/tokens.js'
 import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../ExitPlanModeTool/constants.js'
-import { AGENT_TOOL_NAME, LEGACY_AGENT_TOOL_NAME } from './constants.js'
+import { AGENT_TOOL_NAME } from './constants.js'
 import type { AgentDefinition } from './loadAgentsDir.js'
 export type ResolvedAgentTools = {
   hasWildcard: boolean
@@ -125,8 +125,8 @@ export function resolveAgentTools(
     'tools' | 'disallowedTools' | 'source' | 'permissionMode'
   >,
   availableTools: Tools,
-  isAsync = false,
-  isMainThread = false,
+  isAsync: boolean = false,
+  isMainThread: boolean = false,
 ): ResolvedAgentTools {
   const {
     tools: agentTools,
@@ -352,7 +352,13 @@ export function finalizeAgentTool(
     totalDurationMs: Date.now() - startTime,
     totalTokens,
     totalToolUseCount,
-    usage: lastAssistantMessage.message.usage,
+    usage: {
+      ...lastAssistantMessage.message.usage,
+      server_tool_use: {
+        web_search_requests: lastAssistantMessage.message.usage.server_tool_use?.web_search_requests ?? 0,
+        web_fetch_requests: lastAssistantMessage.message.usage.server_tool_use?.web_fetch_requests ?? 0,
+      },
+    },
   }
 }
 
@@ -431,9 +437,7 @@ export async function classifyHandoffIfNeeded({
     logEvent('tengu_auto_mode_decision', {
       decision:
         handoffDecision as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      toolName:
-        // Use legacy name for analytics continuity across the Task→Agent rename
-        LEGACY_AGENT_TOOL_NAME as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      toolName: AGENT_TOOL_NAME as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       inProtectedNamespace: isInProtectedNamespace(),
       classifierModel:
         classifierResult.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

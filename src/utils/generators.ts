@@ -14,59 +14,52 @@ export async function lastX<A>(as: AsyncGenerator<A>): Promise<A> {
 export async function returnValue<A>(
   as: AsyncGenerator<unknown, A>,
 ): Promise<A> {
-  let e
-  do {
-    e = await as.next()
-  } while (!e.done)
-  return e.value
+  while (true) {
+    const result = await as.next()
+    if (result.done) return result.value
+  }
 }
 
 type QueuedGenerator<A> = {
-  done: boolean | void
-  value: A | void
+  result: IteratorResult<A, void>
   generator: AsyncGenerator<A, void>
-  promise: Promise<QueuedGenerator<A>>
 }
 
 // Run all generators concurrently up to a concurrency cap, yielding values as they come in
 export async function* all<A>(
   generators: AsyncGenerator<A, void>[],
-  concurrencyCap = Infinity,
+  concurrencyCap: number = Infinity,
 ): AsyncGenerator<A, void> {
-  const next = (generator: AsyncGenerator<A, void>) => {
-    const promise: Promise<QueuedGenerator<A>> = generator
-      .next()
-      .then(({ done, value }) => ({
-        done,
-        value,
-        generator,
-        promise,
-      }))
-    return promise
+  if (concurrencyCap !== Infinity &&
+      (!Number.isInteger(concurrencyCap) || concurrencyCap < 1)) {
+    throw new RangeError('Generator concurrency cap must be a positive integer')
   }
+  const next = async (generator: AsyncGenerator<A, void>): Promise<QueuedGenerator<A>> => ({
+    generator,
+    result: await generator.next(),
+  })
   const waiting = [...generators]
-  const promises = new Set<Promise<QueuedGenerator<A>>>()
+  // The generator itself identifies the outstanding operation. Each active
+  // generator has exactly one next() request, so no promise self-reference is needed.
+  const active = new Map<AsyncGenerator<A, void>, Promise<QueuedGenerator<A>>>()
 
-  // Start initial batch up to concurrency cap
-  while (promises.size < concurrencyCap && waiting.length > 0) {
-    const gen = waiting.shift()!
-    promises.add(next(gen))
+  while (active.size < concurrencyCap && waiting.length > 0) {
+    const generator = waiting.shift()
+    if (generator) active.set(generator, next(generator))
   }
 
-  while (promises.size > 0) {
-    const { done, value, generator, promise } = await Promise.race(promises)
-    promises.delete(promise)
+  while (active.size > 0) {
+    const { result, generator } = await Promise.race(active.values())
+    active.delete(generator)
 
-    if (!done) {
-      promises.add(next(generator))
-      // TODO: Clean this up
-      if (value !== undefined) {
-        yield value
+    if (result.done === false) {
+      active.set(generator, next(generator))
+      if (result.value !== undefined) {
+        yield result.value
       }
-    } else if (waiting.length > 0) {
-      // Start a new generator when one finishes
-      const nextGen = waiting.shift()!
-      promises.add(next(nextGen))
+    } else {
+      const nextGenerator = waiting.shift()
+      if (nextGenerator) active.set(nextGenerator, next(nextGenerator))
     }
   }
 }

@@ -125,7 +125,7 @@ export function isPathInSandboxWriteAllowlist(resolvedPath: string): boolean {
 // Sandbox config paths are session-stable; memoize their resolved forms to
 // avoid repeated lstat/realpath syscalls on every write-target check.
 // Matches the getResolvedWorkingDirPaths pattern in filesystem.ts.
-const getResolvedSandboxConfigPath = memoize(getPathsForPermissionCheck)
+const getResolvedSandboxConfigPath: (path: string) => string[] = memoize(getPathsForPermissionCheck)
 
 /**
  * Checks if a resolved path is allowed for the given operation type.
@@ -183,7 +183,7 @@ export function isPathAllowed(
       resolvedPath,
       precomputedPathsToCheck,
     )
-    if (!safetyCheck.safe) {
+    if (safetyCheck.safe === false) {
       return {
         allowed: false,
         decisionReason: {

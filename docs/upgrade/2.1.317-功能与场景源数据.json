@@ -1,0 +1,3044 @@
+{
+  "schema": 2,
+  "target_version": "2.1.317",
+  "history_baseline": {
+    "features": 102,
+    "scenarios": 84
+  },
+  "reconciled_scope": {
+    "features": 137,
+    "scenarios": 137,
+    "legacy_features": 102,
+    "legacy_scenarios": 84,
+    "added_317_features": 35,
+    "added_317_scenarios": 53,
+    "scope_note": "现有317比对识别的工作清单，随完整调用链继续增补和合并；数量只记录目前已识别范围。",
+    "completion_rule": "实际代码实现/可达入口/函数语义与必要功能测试通过后才算完成"
+  },
+  "features": [
+    {
+      "id": "F001",
+      "title": "交互式终端聊天",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F002",
+      "title": "一次性 `-p` 执行",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F003",
+      "title": "JSON、stream-json 非交互",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F004",
+      "title": "会话恢复与历史选择",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F005",
+      "title": "清空、压缩上下文",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F006",
+      "title": "会话导出、分享",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F007",
+      "title": "任务计划与审批",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F008",
+      "title": "交互式追问",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F009",
+      "title": "TUI 会话、全屏与 Diff",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F010",
+      "title": "撤销和回退",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F011",
+      "title": "主题、键位、Vim 设置",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F012",
+      "title": "状态栏与用量",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F013",
+      "title": "语音输入",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F014",
+      "title": "多目录项目与 Worktree",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F015",
+      "title": "Agent 模型-工具循环",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F016",
+      "title": "流式块与思考内容",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F017",
+      "title": "模型选择、切换及上下文能力",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F018",
+      "title": "可扩展模型适配",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F019",
+      "title": "登录、凭证与刷新",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F020",
+      "title": "限流、重试、取消",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F021",
+      "title": "提示词缓存、用量",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F022",
+      "title": "动态主系统提示词",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F023",
+      "title": "长上下文压缩与恢复",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F024",
+      "title": "自动记忆与召回",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F025",
+      "title": "Dream 记忆去重/合并",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F026",
+      "title": "执行状态存储和崩溃恢复",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F027",
+      "title": "运行成本与令牌统计",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F028",
+      "title": "Read 文件/多格式阅读",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F029",
+      "title": "Write 文件",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F030",
+      "title": "Edit 原位编辑",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F031",
+      "title": "Glob/Grep 搜索",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F032",
+      "title": "Bash 命令与进程",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F033",
+      "title": "PowerShell",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F034",
+      "title": "Notebook 编辑",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F035",
+      "title": "LSP 语义查询",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F036",
+      "title": "网络检索与网页读取",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F037",
+      "title": "Chrome/浏览器交互",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F038",
+      "title": "Git 提交、推送、PR",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F039",
+      "title": "工具发现与 Schema",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F040",
+      "title": "工具截断、错误、取消",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F041",
+      "title": "权限模式与细粒度规则",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F042",
+      "title": "自动权限分类器",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F043",
+      "title": "自动模式 HARD/SOFT/ALLOW 分级",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F044",
+      "title": "后台消息身份防伪",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F045",
+      "title": "定时任务身份防伪",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F046",
+      "title": "Worker 回传不构成授权",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F047",
+      "title": "不可信页面/项目文件指令隔离",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F048",
+      "title": "浏览器/CI/外网外传保护",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F049",
+      "title": "工作区沙盒与软链保护",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F050",
+      "title": "破坏性操作/共享资源审批",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F051",
+      "title": "技能加载与调用",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F052",
+      "title": "插件安装、管理、卸载",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F053",
+      "title": "MCP 资源与工具",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F054",
+      "title": "生命周期 Hook 与失败处理",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F055",
+      "title": "SDK 集成",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F056",
+      "title": "协调者分配、验证与 Agent 管理",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F057",
+      "title": "Worker 分工、提交隔离",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F058",
+      "title": "Fork 独立任务上下文",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F059",
+      "title": "Observer 只读旁路",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F060",
+      "title": "自动执行模式",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F061",
+      "title": "可选定时执行入口",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F062",
+      "title": "后台工作、任务列表、输出文件与恢复",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F063",
+      "title": "工作流内部返回型 Agent",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F064",
+      "title": "验证 Agent 与安全审查",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F065",
+      "title": "IDE 关联编辑器",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F066",
+      "title": "远程 Bridge 与配对",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F067",
+      "title": "WebSocket/SSE",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F068",
+      "title": "桌面与移动平台入口",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F069",
+      "title": "后台工作树分离",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F070",
+      "title": "容器重启旧进程状态",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F071",
+      "title": "`/btw` 一次性侧问",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F072",
+      "title": "“You should know” 即时提示",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F073",
+      "title": "Artifact 评论分析",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F074",
+      "title": "Artifact 评论无工具回复",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F075",
+      "title": "Artifact 模板与页面",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F076",
+      "title": "浏览器与 Claude Test 附件",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F077",
+      "title": "设计系统同步附件",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F078",
+      "title": "下一句话预测",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F079",
+      "title": "诊断和环境检查",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F080",
+      "title": "日志、隐私和性能统计",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F081",
+      "title": "Monitor 工具及插件监控",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F082",
+      "title": "动态 Workflows 引擎",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F083",
+      "title": "Workflow 任务日志与恢复",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F084",
+      "title": "Mods 的深度插件 API",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F085",
+      "title": "自动模式环境引导",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F086",
+      "title": "空闲压缩与小窗口模型切换",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F087",
+      "title": "跨提供者协议退让",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F088",
+      "title": "全屏 TUI Diff 与快捷键终态",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F089",
+      "title": "Agent 后台生命周期与模型继承",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F090",
+      "title": "安全事件可审计",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F091",
+      "title": "云端启用技能与插件同步",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F092",
+      "title": "非交互 MCP 询问超时",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F093",
+      "title": "受限工作区模式 `--restricted`",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F094",
+      "title": "安全诊断启动 `--safe-mode`",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F095",
+      "title": "CLI 后台任务全生命周期",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F096",
+      "title": "无人值守权限回答策略",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F097",
+      "title": "系统提示快照与动态分界",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F098",
+      "title": "SDK/headless 事件拓展",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F099",
+      "title": "云端/桌面和迁移会话入口",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F100",
+      "title": "扩展装载、迁移及管理 CLI",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F101",
+      "title": "**新版普通本地代码审查 `/code-review`**",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F102",
+      "title": "**云端 Ultrareview 与本地 Ultra 级深审分流**",
+      "baseline_origin": "2.1.88-2.1.310 historical regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F103",
+      "title": "插件固定位置 UI 绘制 $.ui.place",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C09",
+      "refines": "F084",
+      "official_anchor": "chunk-thp9mgjc.js:71482",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "ui.place",
+        "placed"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F104",
+      "title": "插件背景与玻璃层 $.ui.backdrop",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C09",
+      "refines": "F084",
+      "official_anchor": "chunk-thp9mgjc.js:71482",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "ui.backdrop",
+        "Backdrop"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F105",
+      "title": "插件输入草稿渲染 $.prompt.paint",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C09",
+      "refines": "F084",
+      "official_anchor": "chunk-thp9mgjc.js:71156",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "prompt.paint"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F106",
+      "title": "插件面板 Pane.backgroundColor",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C09",
+      "refines": "F084",
+      "official_anchor": "chunk-thp9mgjc.js:759",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "backgroundColor",
+        "Pane"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F107",
+      "title": "插件 prompt.media 授权和消费",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C09",
+      "refines": "F084",
+      "official_anchor": "chunk-thp9mgjc.js:71463",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "prompt.media"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F108",
+      "title": "嵌套子会话 ID 与身份隔离开关",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C07",
+      "refines": "F004",
+      "official_anchor": "chunk-wxyh2ndv.js:20",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "CLAUDE_CODE_DISABLE_NESTED_SESSION_ID",
+        "CHILD_SESSION"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F109",
+      "title": "MCP 后台任务禁用开关与任务管理",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C10",
+      "refines": "F053",
+      "official_anchor": "chunk-fsyfgpr7.js:9",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "CLAUDE_CODE_DISABLE_MCP_TASKS"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F110",
+      "title": "受管策略读取例外 blockReadsExemptPaths",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C04",
+      "refines": "F041",
+      "official_anchor": "chunk-z227w65w.js:1867",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "blockReadsExemptPaths"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F111",
+      "title": "企业管理策略 layered 分层判定",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C15",
+      "refines": "F090",
+      "official_anchor": "chunk-dexp3670.js:13055",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "policy_mode",
+        "layered"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F112",
+      "title": "企业网关 pooled_budget 共享预算",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C15",
+      "refines": "F027",
+      "official_anchor": "chunk-dexp3670.js:13973",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "pooled_budget"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F113",
+      "title": "Bedrock 输入标签和防护追踪参数",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C15",
+      "refines": "F048",
+      "official_anchor": "chunk-dexp3670.js:12504",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "input_tagging",
+        "guardrail_trace"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F114",
+      "title": "企业 OIDC user_id_claim 身份映射",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C15",
+      "refines": "F019",
+      "official_anchor": "chunk-dexp3670.js:13010",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "user_id_claim"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F115",
+      "title": "自建 Runner 空闲保活和上限保护",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C15",
+      "refines": "F099",
+      "official_anchor": "chunk-j5svdpw5.js:3729",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "hold-idle-file",
+        "max-hold-min"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F116",
+      "title": "项目会话 /send-to-project 发送与回执",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C07",
+      "refines": "F099",
+      "official_anchor": "chunk-atk8p360.js:513",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "send-to-project"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F117",
+      "title": "FetchAttachment 附件获取执行入口",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C18",
+      "refines": "F076",
+      "official_anchor": "chunk-h404ga6t.js:1070",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "FetchAttachment",
+        "fetchAttachmentHere"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F118",
+      "title": "插件命令哈希授权 --accept-command",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C09",
+      "refines": "F052",
+      "official_anchor": "chunk-9b84t8t4.js:256",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "--accept-command",
+        "--yes"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F119",
+      "title": "插件 .mcpb 服务级配置及敏感数据存储",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C09",
+      "refines": "F052",
+      "official_anchor": "chunk-nj8ddyrh.js:1493",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        ".mcpb",
+        "mcpbHandler"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F120",
+      "title": "企业 gateway 命令及服务启动",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C15",
+      "refines": "F099",
+      "official_anchor": "chunk-gsvwtjad.js:911",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "command('gateway'",
+        "command(\"gateway\"",
+        "gateway"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F121",
+      "title": "purge 本地项目数据清理命令",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C07",
+      "refines": "F004",
+      "official_anchor": "chunk-gsvwtjad.js:734",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "command('purge'",
+        "command(\"purge\""
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F122",
+      "title": "--brief Agent SendUserMessage 面向用户的信息链",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C05",
+      "refines": "F071",
+      "official_anchor": "x64 --help --brief",
+      "official_evidence_kind": "OFFICIAL_X64_HELP_EXECUTED",
+      "candidate_search_tokens": [
+        "--brief",
+        "SendUserMessage"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F123",
+      "title": "--include-hook-events SDK 流式 Hook 事件",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C06",
+      "refines": "F098",
+      "official_anchor": "chunk-4j0ac1xm.js:382",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "--include-hook-events"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F124",
+      "title": "--forward-subagent-text 子代理消息转发",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C06",
+      "refines": "F098",
+      "official_anchor": "chunk-7bjr5mdw.js:65",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "--forward-subagent-text"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F125",
+      "title": "动态系统提示词部分分离并缓存",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C02",
+      "refines": "F097",
+      "official_anchor": "chunk-7bjr5mdw.js:65",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "--exclude-dynamic-system-prompt-sections"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F126",
+      "title": "--permission-prompts headless 授权接管",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C04",
+      "refines": "F096",
+      "official_anchor": "x64 --help --permission-prompts",
+      "official_evidence_kind": "OFFICIAL_X64_HELP_EXECUTED",
+      "candidate_search_tokens": [
+        "--permission-prompts"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F127",
+      "title": "--bare 受限最小模式与资源加载",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C11",
+      "refines": "F094",
+      "official_anchor": "x64 --help --bare",
+      "official_evidence_kind": "OFFICIAL_X64_HELP_EXECUTED",
+      "candidate_search_tokens": [
+        "--bare"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F128",
+      "title": "--plugin-url 临时 URL 扩展装载",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C09",
+      "refines": "F100",
+      "official_anchor": "x64 --help --plugin-url",
+      "official_evidence_kind": "OFFICIAL_X64_HELP_EXECUTED",
+      "candidate_search_tokens": [
+        "--plugin-url"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F129",
+      "title": "--file 启动前附件资源下载",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C18",
+      "refines": "F076",
+      "official_anchor": "x64 --help --file",
+      "official_evidence_kind": "OFFICIAL_X64_HELP_EXECUTED",
+      "candidate_search_tokens": [
+        "--file",
+        "file_id"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F130",
+      "title": "--environment 自建云运行环境选择",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C15",
+      "refines": "F099",
+      "official_anchor": "x64 --help --environment",
+      "official_evidence_kind": "OFFICIAL_X64_HELP_EXECUTED",
+      "candidate_search_tokens": [
+        "--environment"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F131",
+      "title": "--from-pr 从 PR 找回或选择会话",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C07",
+      "refines": "F004",
+      "official_anchor": "x64 --help --from-pr",
+      "official_evidence_kind": "OFFICIAL_X64_HELP_EXECUTED",
+      "candidate_search_tokens": [
+        "--from-pr"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F132",
+      "title": "--replay-user-messages stdin/stdout 回显确认",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C06",
+      "refines": "F098",
+      "official_anchor": "x64 --help --replay-user-messages",
+      "official_evidence_kind": "OFFICIAL_X64_HELP_EXECUTED",
+      "candidate_search_tokens": [
+        "--replay-user-messages"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F133",
+      "title": "--include-partial-messages 非交互流式分片",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C06",
+      "refines": "F003",
+      "official_anchor": "x64 --help --include-partial-messages",
+      "official_evidence_kind": "OFFICIAL_X64_HELP_EXECUTED",
+      "candidate_search_tokens": [
+        "--include-partial-messages"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F134",
+      "title": "--bg、attach/stop/respawn/rm 后台会话命令",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C05",
+      "refines": "F095",
+      "official_anchor": "chunk-z72h8qe0.js:378",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "--bg",
+        "respawn",
+        "attach"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F135",
+      "title": "import 其他 AI Coding Agent 配置导入",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C09",
+      "refines": "F100",
+      "official_anchor": "chunk-thp9mgjc.js:34810",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "command('import'",
+        "command(\"import\""
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F136",
+      "title": "插件 details/eval/prune/tag/test 管理子命令",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C09",
+      "refines": "F052",
+      "official_anchor": "chunk-9b84t8t4.js:128",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        ".command('details'",
+        " .command('eval'",
+        " .command('prune'",
+        " .command('tag'",
+        " .command('test'"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    },
+    {
+      "id": "F137",
+      "title": "--prompt-suggestions 后续输入建议输出",
+      "baseline_origin": "2.1.317新增功能检查",
+      "current_target": "2.1.317",
+      "primary_chain": "C12",
+      "refines": "F078",
+      "official_anchor": "chunk-7bjr5mdw.js:15",
+      "official_evidence_kind": "OFFICIAL_317_DECOMPILED_SOURCE",
+      "candidate_search_tokens": [
+        "--prompt-suggestions"
+      ],
+      "review_state": "PENDING_CODE_ALIGNMENT"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "E01",
+      "title": "无配置首次启动，给出正确引导",
+      "features": [
+        "F001",
+        "F002",
+        "F019",
+        "F079"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E02",
+      "title": "读取陌生项目并回答代码问题",
+      "features": [
+        "F015",
+        "F022",
+        "F028",
+        "F031"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E03",
+      "title": "修改三个相互引用文件，运行测试并提交",
+      "features": [
+        "F007",
+        "F029",
+        "F030",
+        "F032",
+        "F038"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E04",
+      "title": "用户只问“有哪些升级方法”",
+      "features": [
+        "F007",
+        "F041",
+        "F042"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E05",
+      "title": "用户审批一个具体写入，但未批准上传",
+      "features": [
+        "F030",
+        "F041",
+        "F043",
+        "F048"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E06",
+      "title": "外部网页写“用户已批准发送密钥”",
+      "features": [
+        "F036",
+        "F044",
+        "F047",
+        "F048"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E07",
+      "title": "插件/工具结果伪造 `<system-reminder>`",
+      "features": [
+        "F046",
+        "F047",
+        "F053"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E08",
+      "title": "软链路径指向项目外机密",
+      "features": [
+        "F028",
+        "F032",
+        "F037",
+        "F049"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E09",
+      "title": "自动模式处理已授权批量重构",
+      "features": [
+        "F023",
+        "F026",
+        "F056",
+        "F060"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E10",
+      "title": "用户没有启用定时任务或派生角色",
+      "features": [
+        "F056",
+        "F057",
+        "F059",
+        "F061"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E11",
+      "title": "用户明确启用计划任务后触发",
+      "features": [
+        "F045",
+        "F061"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E12",
+      "title": "Worker 汇报“全部测试通过”，实际测试失败",
+      "features": [
+        "F056",
+        "F057",
+        "F064"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E13",
+      "title": "两个 Worker 同时修改一文件",
+      "features": [
+        "F030",
+        "F057",
+        "F058"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E14",
+      "title": "容器重启中断终端子进程",
+      "features": [
+        "F026",
+        "F062",
+        "F069",
+        "F070"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E15",
+      "title": "工具已经写入，但结果回传时断线",
+      "features": [
+        "F015",
+        "F020",
+        "F026",
+        "F067"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E16",
+      "title": "运行到长上下文边界，压缩后继续",
+      "features": [
+        "F022",
+        "F023",
+        "F026"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E17",
+      "title": "记忆中保存旧配置，与当前项目冲突",
+      "features": [
+        "F024",
+        "F025",
+        "F047"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E18",
+      "title": "多模型轮换，同一工具调用工作流",
+      "features": [
+        "F016",
+        "F017",
+        "F018",
+        "F021"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E19",
+      "title": "文件很大/含二进制/不存在",
+      "features": [
+        "F028",
+        "F029",
+        "F040"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E20",
+      "title": "Git 当前有用户未提交的改动",
+      "features": [
+        "F010",
+        "F038",
+        "F050"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E21",
+      "title": "MCP 服务断线、Schema 漂移",
+      "features": [
+        "F039",
+        "F053",
+        "F054"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E22",
+      "title": "插件 Hook 尝试跳过安全策略",
+      "features": [
+        "F042",
+        "F047",
+        "F052",
+        "F054"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E23",
+      "title": "工具执行脚本输出巨量日志",
+      "features": [
+        "F003",
+        "F032",
+        "F040"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E24",
+      "title": "TUI 与 SDK 同时读取同一会话",
+      "features": [
+        "F001",
+        "F003",
+        "F055",
+        "F066"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E25",
+      "title": "IDE/远程 Bridge 掉线后重连",
+      "features": [
+        "F065",
+        "F066",
+        "F067",
+        "F068"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E26",
+      "title": "语音/剪贴板原生能力不可用",
+      "features": [
+        "F012",
+        "F013",
+        "F079"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E27",
+      "title": "/btw 侧边提问“当前工具执行了吗”",
+      "features": [
+        "F071",
+        "F015"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E28",
+      "title": "You should know 没有可用建议",
+      "features": [
+        "F072",
+        "F059"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E29",
+      "title": "Artifact 评论夹带恶意工具指令",
+      "features": [
+        "F073",
+        "F074",
+        "F075"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E30",
+      "title": "选择性启用浏览器测试扩展",
+      "features": [
+        "F037",
+        "F076",
+        "F077"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E31",
+      "title": "不同权限模式下试探删除共享目录",
+      "features": [
+        "F041",
+        "F043",
+        "F050"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E32",
+      "title": "尝试修改 CI 偷传隐私",
+      "features": [
+        "F038",
+        "F043",
+        "F048"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E33",
+      "title": "跨平台安装与升级/降级",
+      "features": [
+        "F001",
+        "F004",
+        "F012",
+        "F068"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E34",
+      "title": "组件故障（模型/磁盘/网络/工具）",
+      "features": [
+        "F020",
+        "F026",
+        "F040",
+        "F067"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E35",
+      "title": "完成审查后的新发行版自检",
+      "features": [
+        "F001",
+        "F055",
+        "F079",
+        "F080"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E36",
+      "title": "清空并压缩后导出会话",
+      "features": [
+        "F005",
+        "F006"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E37",
+      "title": "TUI 中使用快捷键交互追问并查看 Diff",
+      "features": [
+        "F008",
+        "F009",
+        "F011"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E38",
+      "title": "为同一会话添加两个项目目录并进入工作树",
+      "features": [
+        "F014"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E39",
+      "title": "大量工具调用后检查 token 与成本统计",
+      "features": [
+        "F027"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E40",
+      "title": "Windows PowerShell 命令执行与停止",
+      "features": [
+        "F033"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E41",
+      "title": "打开并定点编辑 Notebook 单元格",
+      "features": [
+        "F034"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E42",
+      "title": "项目语言服务正常/不可用分别查询定义",
+      "features": [
+        "F035"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E43",
+      "title": "安装技能并执行一次任务，再卸载",
+      "features": [
+        "F051"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E44",
+      "title": "工作流子角色被要求返回结构化 JSON",
+      "features": [
+        "F063"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E45",
+      "title": "有/无下一句话建议两种状态",
+      "features": [
+        "F078"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E46",
+      "title": "在 Bedrock/Vertex/Foundry 与遥测关闭环境执行监控",
+      "features": [
+        "F081",
+        "F032"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E47",
+      "title": "请求运行包含多个步骤的动态 Workflow",
+      "features": [
+        "F082",
+        "F063"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E48",
+      "title": "中途崩溃后恢复已完成部分的 Workflow",
+      "features": [
+        "F083",
+        "F026"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E49",
+      "title": "Mod 申请把已拒绝工具改为允许并修改子代理模型",
+      "features": [
+        "F084",
+        "F043",
+        "F057"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E50",
+      "title": "明确调用自动模式设置引导",
+      "features": [
+        "F085",
+        "F060"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E51",
+      "title": "大于阈值会话空闲/改用小窗口模型",
+      "features": [
+        "F086",
+        "F023"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E52",
+      "title": "自定义网关拒绝工具搜索/测试 beta/system 内容",
+      "features": [
+        "F087",
+        "F018",
+        "F020"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E53",
+      "title": "进入全屏 TUI，在 Diff 面板调整并用 Ctrl+L",
+      "features": [
+        "F088",
+        "F009",
+        "F011"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E54",
+      "title": "并行 Agent 任务和长期后台子命令",
+      "features": [
+        "F089",
+        "F056",
+        "F057"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E55",
+      "title": "分别由权限规则、自动模式、Hook 和沙盒拒绝工具",
+      "features": [
+        "F090",
+        "F050"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E56",
+      "title": "云端同步插件遭遇磁盘读取异常",
+      "features": [
+        "F091",
+        "F052"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E57",
+      "title": "headless 模式 MCP 服务请求用户补充信息但无人应答",
+      "features": [
+        "F092",
+        "F053"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E58",
+      "title": "模型或工具试图调用旧 `TaskOutput` 或读取旧长度配置",
+      "features": [
+        "F062",
+        "F028"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E59",
+      "title": "输入旧 `/vim`、`/agents` 向导指令",
+      "features": [
+        "F011",
+        "F056"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E60",
+      "title": "Bash 命令参数被旧版 Read deny 规则过度匹配",
+      "features": [
+        "F041",
+        "F043",
+        "F032"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E61",
+      "title": "在限制模式下请求 WebFetch、终端与越界写入",
+      "features": [
+        "F093",
+        "F049"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E62",
+      "title": "安全模式启动加载恶意项目自定义插件",
+      "features": [
+        "F094",
+        "F047",
+        "F052"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E63",
+      "title": "CLI 后台启动、挂接、查看日志、停止及恢复",
+      "features": [
+        "F095",
+        "F062"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E64",
+      "title": "`--permission-prompts none` 下触发需要批准的写入",
+      "features": [
+        "F096",
+        "F041"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E65",
+      "title": "长会话开启/关闭系统提示快照并改变工作目录",
+      "features": [
+        "F097",
+        "F022",
+        "F021"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E66",
+      "title": "SDK 流输出启用子 Agent 转发及建议",
+      "features": [
+        "F098",
+        "F003",
+        "F078"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E67",
+      "title": "CLI 云端/桌面、远程控制、迁移入口验证",
+      "features": [
+        "F099",
+        "F066"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E68",
+      "title": "临时插件 URL 和企业网关/配置导入/清理",
+      "features": [
+        "F100",
+        "F052",
+        "F050"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L01",
+      "title": "本地模型断网执行多 Agent Workflow",
+      "features": [
+        "F056",
+        "F057",
+        "F082"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L02",
+      "title": "无云端审查服务审查本地未提交 Diff",
+      "features": [
+        "F064",
+        "F082"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L03",
+      "title": "Workflow 中途异常后恢复",
+      "features": [
+        "F062",
+        "F083"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L04",
+      "title": "并行 Agent 争用同一文件",
+      "features": [
+        "F057",
+        "F058"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L05",
+      "title": "深度审查真实缺陷/伪缺陷/干净样例",
+      "features": [
+        "F064",
+        "F082"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L06",
+      "title": "拒绝密钥/代码未授权外发及发 PR 评论",
+      "features": [
+        "F043",
+        "F048"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L07",
+      "title": "本地执行＋在线推理",
+      "features": [
+        "F015",
+        "F017"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L08",
+      "title": "本机模型缺少工具/schema 能力",
+      "features": [
+        "F017",
+        "F063"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L09",
+      "title": "高并发/取消/磁盘故障/崩溃",
+      "features": [
+        "F026",
+        "F062",
+        "F089"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L10",
+      "title": "同一 Review 经 CLI/TUI/SDK 消费",
+      "features": [
+        "F055",
+        "F098"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L11",
+      "title": "旧 `/review` 对照新版本地 `/code-review`",
+      "features": [
+        "F101",
+        "F064"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L12",
+      "title": "本地 Review、云 Ultra、无法启动 Ultra 的回退及 333 新增本地深审入口",
+      "features": [
+        "F102",
+        "F100"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L13",
+      "title": "Workflow/Review 的开关、模型能力和 inline/fork 差异",
+      "features": [
+        "F082",
+        "F101",
+        "F056"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L14",
+      "title": "Workflow journal 失败及结果无法序列化",
+      "features": [
+        "F083",
+        "F062"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L15",
+      "title": "Workflow 两种 remote isolation 分支、随机/时间函数和嵌套限制",
+      "features": [
+        "F082",
+        "F063"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L16",
+      "title": "新版本地普通审查与 333 本地深审同模型、同项目样本",
+      "features": [
+        "F101",
+        "F102",
+        "F064"
+      ],
+      "baseline_origin": "legacy regression",
+      "current_target": "2.1.317",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E69",
+      "title": "插件 ui.place 放置与卸载固定位置内容",
+      "features": [
+        "F103",
+        "F084"
+      ],
+      "acceptance": "官方插件注册→放置位置→更新→卸载，检查 UI 位置与事件",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E70",
+      "title": "插件 ui.backdrop 玻璃背景创建及清理",
+      "features": [
+        "F104",
+        "F084"
+      ],
+      "acceptance": "背景 blur/tint/opacity、覆盖顺序、取消和卸载",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E71",
+      "title": "插件 prompt.paint 输入草稿绘制与撤销",
+      "features": [
+        "F105",
+        "F084"
+      ],
+      "acceptance": "局部着色保持文本/光标/undo 一致",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E72",
+      "title": "插件 Pane.backgroundColor 主题与透明渲染",
+      "features": [
+        "F106",
+        "F084"
+      ],
+      "acceptance": "主题色和 transparent 在受支持宿主渲染",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E73",
+      "title": "插件 prompt.media 授权和媒体访问",
+      "features": [
+        "F107",
+        "F084"
+      ],
+      "acceptance": "有效授权、拒绝、资源失效、插件重载",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E74",
+      "title": "嵌套 CLI 子会话 ID 分配与禁用环境开关",
+      "features": [
+        "F108",
+        "F004"
+      ],
+      "acceptance": "父子进程与 transcript 身份隔离/恢复",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E75",
+      "title": "MCP 后台任务禁用开关和任务退场",
+      "features": [
+        "F109",
+        "F053"
+      ],
+      "acceptance": "设置/取消环境变量后工具注册及后台任务状态",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E76",
+      "title": "blockReadsExemptPaths 的读取许可与越界",
+      "features": [
+        "F110",
+        "F041"
+      ],
+      "acceptance": "受管配置豁免/拒绝、软链及工作区边界",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E77",
+      "title": "enterprise layered 策略优先级",
+      "features": [
+        "F111",
+        "F090"
+      ],
+      "acceptance": "受管/用户/项目/命令级组合冲突判定",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E78",
+      "title": "enterprise pooled_budget 额度共享和拒绝",
+      "features": [
+        "F112",
+        "F027"
+      ],
+      "acceptance": "同组织多个请求预算扣减、超额响应及回滚",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E79",
+      "title": "Bedrock input_tagging 和 guardrail_trace",
+      "features": [
+        "F113",
+        "F048"
+      ],
+      "acceptance": "请求透传及返回诊断、错误与拒绝",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E80",
+      "title": "OIDC user_id_claim 的身份与权限隔离",
+      "features": [
+        "F114",
+        "F019"
+      ],
+      "acceptance": "身份声明来源校验、缺失和错误身份",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E81",
+      "title": "自建 Runner 空闲保活/到期终止",
+      "features": [
+        "F115",
+        "F099"
+      ],
+      "acceptance": "hold idle file、max hold minute 及停机回收",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E82",
+      "title": "/send-to-project 项目会话发送失败与重试",
+      "features": [
+        "F116",
+        "F099"
+      ],
+      "acceptance": "项目选择、权限、消息交付与失败重试",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E83",
+      "title": "FetchAttachment 下载与授权结果",
+      "features": [
+        "F117",
+        "F076"
+      ],
+      "acceptance": "附件 ID、权限、输出类型、保存及取消",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E84",
+      "title": "插件安装 --accept-command SHA 验证",
+      "features": [
+        "F118",
+        "F052"
+      ],
+      "acceptance": "命令哈希授权、来源变化、缺失/错误确认",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E85",
+      "title": "插件 mcpb userConfig 服务路径注入与密钥",
+      "features": [
+        "F119",
+        "F052"
+      ],
+      "acceptance": "server.key、隐私值存储、拒绝与重载",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E86",
+      "title": "gateway --help 到实际网关启动链",
+      "features": [
+        "F120",
+        "F099"
+      ],
+      "acceptance": "命令入口、配置验证、启动/异常/退出",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E87",
+      "title": "purge --help 到项目数据清理",
+      "features": [
+        "F121",
+        "F004"
+      ],
+      "acceptance": "预检、目标目录、用户确认、删除边界与错误",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E88",
+      "title": "--brief SendUserMessage 代理回执",
+      "features": [
+        "F122",
+        "F071"
+      ],
+      "acceptance": "代理工具注册、用户消息和流输出",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E89",
+      "title": "--include-hook-events stream-json 次序",
+      "features": [
+        "F123",
+        "F098"
+      ],
+      "acceptance": "Hook 开始/结束/失败事件在流中顺序",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E90",
+      "title": "--forward-subagent-text 父工具链关联",
+      "features": [
+        "F124",
+        "F098"
+      ],
+      "acceptance": "子代理内容与 parent_tool_use_id 不串号",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E91",
+      "title": "--exclude-dynamic-system-prompt-sections 缓存",
+      "features": [
+        "F125",
+        "F097"
+      ],
+      "acceptance": "系统/用户消息分界、缓存与恢复",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E92",
+      "title": "--permission-prompts host/none 模式",
+      "features": [
+        "F126",
+        "F096"
+      ],
+      "acceptance": "无交互权限询问由 host 或 none 正确响应",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E93",
+      "title": "--bare 最小模式初始化与配置隔离",
+      "features": [
+        "F127",
+        "F094"
+      ],
+      "acceptance": "禁用自动 Hook/plugin sync、保留显式技能/MCP",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E94",
+      "title": "--plugin-url 会话级扩展下载",
+      "features": [
+        "F128",
+        "F100"
+      ],
+      "acceptance": "URL 校验/安装/作用域和临时清理",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E95",
+      "title": "--file 启动附件 ID 到路径映射",
+      "features": [
+        "F129",
+        "F076"
+      ],
+      "acceptance": "授权下载、相对路径越界和失败清理",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E96",
+      "title": "--environment 自建云会话调度",
+      "features": [
+        "F130",
+        "F099"
+      ],
+      "acceptance": "环境 ID、身份、连接超时和恢复",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E97",
+      "title": "--from-pr PR 关联会话恢复与选择",
+      "features": [
+        "F131",
+        "F004"
+      ],
+      "acceptance": "PR 编号/URL、过滤/歧义、错误与恢复",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E98",
+      "title": "--replay-user-messages 输入输出确认",
+      "features": [
+        "F132",
+        "F098"
+      ],
+      "acceptance": "stream-json 原始消息回显且无重复副作用",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E99",
+      "title": "--include-partial-messages 增量流序列",
+      "features": [
+        "F133",
+        "F003"
+      ],
+      "acceptance": "文本/工具块按原版顺序重组",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E100",
+      "title": "--bg/attach/stop/respawn/rm 任务生命周期",
+      "features": [
+        "F134",
+        "F095"
+      ],
+      "acceptance": "同一 ID 的启动、附着、终止、重启和删除",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E101",
+      "title": "import 其他 Agent 配置兼容入口",
+      "features": [
+        "F135",
+        "F100"
+      ],
+      "acceptance": "命令存在、受限可达/未开放状态按原版判断",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E102",
+      "title": "插件 details/eval/prune/tag/test 子命令",
+      "features": [
+        "F136",
+        "F052"
+      ],
+      "acceptance": "逐命令参数/状态/退出码和实际副作用",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E103",
+      "title": "--prompt-suggestions 流式预测输出",
+      "features": [
+        "F137",
+        "F078"
+      ],
+      "acceptance": "用户轮次结束后的建议事件与关停",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E104",
+      "title": "全量 2.1.317 CLI 顶层18命令和帮助对照",
+      "features": [
+        "F120",
+        "F121",
+        "F102",
+        "F136"
+      ],
+      "acceptance": "官方 x64 18命令、插件16子命令和候选注册对照",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E105",
+      "title": "插件安装 SHA 授权与 mcpb 恶意配置",
+      "features": [
+        "F118",
+        "F119",
+        "F052"
+      ],
+      "acceptance": "拒绝错误哈希、敏感键和重复安装",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E106",
+      "title": "插件生命周期与 UI 退场回收",
+      "features": [
+        "F103",
+        "F104",
+        "F105",
+        "F136"
+      ],
+      "acceptance": "启用/禁用/卸载后 UI/Hook 不残留",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E107",
+      "title": "系统提示词压缩后恢复边界",
+      "features": [
+        "F125",
+        "F097",
+        "F023"
+      ],
+      "acceptance": "跨轮提示快照与动态信息重新注入",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E108",
+      "title": "嵌套子代理与会话隔离复测",
+      "features": [
+        "F108",
+        "F089",
+        "F004"
+      ],
+      "acceptance": "子进程 session ID 和消息持久化不串号",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E109",
+      "title": "多策略冲突下账号身份拒绝",
+      "features": [
+        "F111",
+        "F114",
+        "F041"
+      ],
+      "acceptance": "受管/网关/请求来源冲突的拒绝优先级",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "E110",
+      "title": "真实 x64 无授权 CLI 14 场景回归",
+      "features": [
+        "F120",
+        "F121",
+        "F127",
+        "F136",
+        "F102"
+      ],
+      "acceptance": "帮助/非交互/认证分支退出码及输出差分",
+      "platform": "linux-x64 + applicable target",
+      "target_version": "2.1.317",
+      "source": "新增官方实现与x64入口核查",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L17",
+      "title": "Desktop 插件固定区域与玻璃层宿主",
+      "features": [
+        "F103",
+        "F104",
+        "F106"
+      ],
+      "acceptance": "真实桌面宿主接口与视觉/取消/卸载",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L18",
+      "title": "IDE 插件草稿绘制与媒体访问",
+      "features": [
+        "F105",
+        "F107",
+        "F065"
+      ],
+      "acceptance": "真实编辑器扩展/输入框与插件协议",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L19",
+      "title": "Remote Control 嵌套会话身份恢复",
+      "features": [
+        "F108",
+        "F066"
+      ],
+      "acceptance": "双设备、断线、ID 隔离与认证",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L20",
+      "title": "企业 layered/OIDC/Bedrock 网关",
+      "features": [
+        "F111",
+        "F112",
+        "F113",
+        "F114",
+        "F120"
+      ],
+      "acceptance": "真实企业网关服务端与权限测试",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L21",
+      "title": "自建 Runner 空闲保活与云环境路由",
+      "features": [
+        "F115",
+        "F130"
+      ],
+      "acceptance": "真实自建运行器终止/保活与调度",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L22",
+      "title": "云端项目会话发送与持久化",
+      "features": [
+        "F116",
+        "F099"
+      ],
+      "acceptance": "真实项目权限、重试、回执和恢复",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L23",
+      "title": "外部附件传输和 Artifact 权限",
+      "features": [
+        "F117",
+        "F129",
+        "F073"
+      ],
+      "acceptance": "服务端文件授权、下载与失效回收",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L24",
+      "title": "插件注册表下载与 mcpb 授权",
+      "features": [
+        "F118",
+        "F119",
+        "F128"
+      ],
+      "acceptance": "真实注册表及系统密钥存储",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L25",
+      "title": "SDK 宿主 Hook 与子代理消息事件",
+      "features": [
+        "F123",
+        "F124",
+        "F132",
+        "F133"
+      ],
+      "acceptance": "宿主 stream-json 串行/并发、错误与断线",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L26",
+      "title": "真实云 Ultrareview 命令完整链",
+      "features": [
+        "F102",
+        "F101"
+      ],
+      "acceptance": "云代码审查入站/出站与权限和报告",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    },
+    {
+      "id": "L27",
+      "title": "三平台原版安装与 CLI 差异",
+      "features": [
+        "F127",
+        "F134",
+        "F079"
+      ],
+      "acceptance": "Linux/macOS/Windows 入口、资源哈希与启动",
+      "platform": "real external host/service or multi-platform",
+      "target_version": "2.1.317",
+      "source": "新版外部宿主或跨平台功能链",
+      "signoff": "UNVERIFIED",
+      "baseline_origin": "newly identified official 2.1.317 capability",
+      "review_state": "PENDING_RUNTIME_ALIGNMENT"
+    }
+  ]
+}

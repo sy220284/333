@@ -9,10 +9,11 @@
  * sdk/controlTypes.ts directly.
  */
 
-import type {
-  CallToolResult,
-  ToolAnnotations,
-} from '@modelcontextprotocol/sdk/types.js'
+import { McpServer } from "@modelcontextprotocol/server";
+import { z } from 'zod/v4';
+import { createSessionRuntime317 } from './sdk/sessionRuntime317.js'
+import { watchDaemonScheduledTasks317, formatMissedDaemonTasks317 } from './sdk/daemonTasks317.js'
+import type { CallToolResult, ToolAnnotations } from "@modelcontextprotocol/server";
 
 // Control protocol types for SDK builders (bridge subpath consumers)
 /** @alpha */
@@ -71,20 +72,22 @@ export type {
 }
 
 export function tool<Schema extends AnyZodRawShape>(
-  _name: string,
-  _description: string,
-  _inputSchema: Schema,
-  _handler: (
+  name: string,
+  description: string,
+  inputSchema: Schema,
+  handler: (
     args: InferShape<Schema>,
     extra: unknown,
   ) => Promise<CallToolResult>,
-  _extras?: {
+  extras?: {
     annotations?: ToolAnnotations
     searchHint?: string
     alwaysLoad?: boolean
   },
 ): SdkMcpToolDefinition<Schema> {
-  throw new Error('not implemented')
+  if (!name.trim()) throw new TypeError('SDK tool name is required')
+  if (typeof handler !== 'function') throw new TypeError('SDK tool handler is required')
+  return { name, description, inputSchema, handler, ...(extras ?? {}) }
 }
 
 type CreateSdkMcpServerOptions = {
@@ -101,9 +104,26 @@ type CreateSdkMcpServerOptions = {
  * If your SDK MCP calls will run longer than 60s, override CLAUDE_CODE_STREAM_CLOSE_TIMEOUT
  */
 export function createSdkMcpServer(
-  _options: CreateSdkMcpServerOptions,
+  options: CreateSdkMcpServerOptions,
 ): McpSdkServerConfigWithInstance {
-  throw new Error('not implemented')
+  if (!options.name.trim()) throw new TypeError('SDK MCP server name is required')
+  const instance = new McpServer({
+    name: options.name,
+    version: options.version ?? '1.0.0',
+  })
+  const registered = new Set<string>()
+  for (const definition of options.tools ?? []) {
+    if (registered.has(definition.name)) {
+      throw new Error('Duplicate SDK MCP tool: ' + definition.name)
+    }
+    registered.add(definition.name)
+    instance.registerTool(definition.name, {
+      description: definition.description,
+      inputSchema: z.object(definition.inputSchema),
+      ...(definition.annotations && { annotations: definition.annotations }),
+    }, (args, ctx) => definition.handler(args, ctx))
+  }
+  return { type: 'sdk', name: options.name, instance }
 }
 
 export class AbortError extends Error {}
@@ -117,8 +137,68 @@ export function query(_params: {
   prompt: string | AsyncIterable<SDKUserMessage>
   options?: Options
 }): Query
-export function query(): Query {
-  throw new Error('query is not implemented in the SDK')
+export function query({ prompt, options = {} }: {
+  prompt: string | AsyncIterable<SDKUserMessage>
+  options?: InternalOptions
+}): InternalQuery {
+  const session = createSessionRuntime317(options, options.resume)
+  const signal = options.abortController?.signal
+  const abort = () => session.close()
+  signal?.addEventListener('abort', abort, { once: true })
+  if (signal?.aborted) abort()
+
+  async function* read() {
+    try {
+      const input = typeof prompt === 'string' ? [prompt] : prompt
+      for await (const message of input) {
+        signal?.throwIfAborted()
+        await session.send(message)
+        yield* session.stream()
+        signal?.throwIfAborted()
+      }
+    } finally {
+      cleanup()
+    }
+  }
+
+  function cleanup() {
+    signal?.removeEventListener('abort', abort)
+    session.close()
+  }
+
+  const generator = read()
+  const finish = generator.return.bind(generator)
+  return Object.assign(generator, {
+    async return(value: void | PromiseLike<void>) {
+      cleanup()
+      return finish(value)
+    },
+    initializationResult: () => session.initialization,
+    async interrupt() { await session.control({ subtype: 'interrupt' }) },
+    async setPermissionMode(mode: Parameters<Query['setPermissionMode']>[0]) {
+      await session.control({ subtype: 'set_permission_mode', mode })
+    },
+    async setModel(model?: string) { await session.control({ subtype: 'set_model', model }) },
+    async setMaxThinkingTokens(max_thinking_tokens: number | null) {
+      await session.control({ subtype: 'set_max_thinking_tokens', max_thinking_tokens })
+    },
+    async supportedCommands() {
+      return (await session.initialization).commands as Awaited<ReturnType<Query['supportedCommands']>>
+    },
+    async supportedModels() {
+      return (await session.initialization).models as Awaited<ReturnType<Query['supportedModels']>>
+    },
+    async mcpServerStatus() {
+      return (await session.control({ subtype: 'mcp_status' })).mcpServers as Awaited<ReturnType<Query['mcpServerStatus']>>
+    },
+    async mcpReconnect(serverName: string) { await session.control({ subtype: 'mcp_reconnect', serverName }) },
+    async mcpToggle(serverName: string, enabled: boolean) {
+      await session.control({ subtype: 'mcp_toggle', serverName, enabled })
+    },
+    async rewindFiles(user_message_id: string) {
+      return await session.control({ subtype: 'rewind_files', user_message_id }) as Awaited<ReturnType<Query['rewindFiles']>>
+    },
+  })
 }
 
 /**
@@ -127,9 +207,9 @@ export function query(): Query {
  * @alpha
  */
 export function unstable_v2_createSession(
-  _options: SDKSessionOptions,
+  options: SDKSessionOptions,
 ): SDKSession {
-  throw new Error('unstable_v2_createSession is not implemented in the SDK')
+  return createSessionRuntime317(options)
 }
 
 /**
@@ -138,10 +218,10 @@ export function unstable_v2_createSession(
  * @alpha
  */
 export function unstable_v2_resumeSession(
-  _sessionId: string,
-  _options: SDKSessionOptions,
+  sessionId: string,
+  options: SDKSessionOptions,
 ): SDKSession {
-  throw new Error('unstable_v2_resumeSession is not implemented in the SDK')
+  return createSessionRuntime317(options, sessionId)
 }
 
 // @[MODEL LAUNCH]: Update the example model ID in this docstring.
@@ -158,10 +238,19 @@ export function unstable_v2_resumeSession(
  * ```
  */
 export async function unstable_v2_prompt(
-  _message: string,
-  _options: SDKSessionOptions,
+  message: string,
+  options: SDKSessionOptions,
 ): Promise<SDKResultMessage> {
-  throw new Error('unstable_v2_prompt is not implemented in the SDK')
+  const session = unstable_v2_createSession(options)
+  try {
+    await session.send(message)
+    for await (const event of session.stream()) {
+      if (event.type === 'result') return event
+    }
+    throw new Error('SDK prompt ended without a result')
+  } finally {
+    session.close()
+  }
 }
 
 /**
@@ -176,10 +265,43 @@ export async function unstable_v2_prompt(
  * @returns Array of messages, or empty array if session not found
  */
 export async function getSessionMessages(
-  _sessionId: string,
-  _options?: GetSessionMessagesOptions,
+  sessionId: string,
+  options?: GetSessionMessagesOptions,
 ): Promise<SessionMessage[]> {
-  throw new Error('getSessionMessages is not implemented in the SDK')
+  const { validateUuid, resolveSessionFilePath } = await import('../utils/sessionStoragePortable.js')
+  const valid = validateUuid(sessionId)
+  if (!valid) return []
+  const file = await resolveSessionFilePath(valid, options?.dir)
+  if (!file) return []
+  const offset = options?.offset ?? 0
+  const limit = options?.limit
+  if (!Number.isSafeInteger(offset) || offset < 0 ||
+      (limit !== undefined && (!Number.isSafeInteger(limit) || limit < 0))) {
+    throw new RangeError('Session message pagination requires non-negative integer limit and offset')
+  }
+  // Reuse the canonical transcript loader: parentUuid ordering, sibling
+  // assistant blocks, parallel tool_results and compact boundaries all pass
+  // through the same read path as --resume.
+  const { loadTranscriptFromFile } = await import('../utils/sessionStorage.js')
+  const log = await loadTranscriptFromFile(file.filePath)
+  if (log.isSidechain) return []
+  const messages: SessionMessage[] = []
+  for (const entry of log.messages) {
+    const uuid = entry.uuid
+    if (!uuid) continue
+    if (entry.type === 'user') {
+      messages.push({ type: 'user', uuid, session_id: valid,
+        message: entry.message } as SessionMessage)
+    } else if (entry.type === 'assistant') {
+      messages.push({ type: 'assistant', uuid, session_id: valid,
+        message: entry.message, parent_tool_use_id: entry.parent_tool_use_id ?? null,
+        ...(entry.error && {error: entry.error}),
+      } as SessionMessage)
+    } else if (entry.type === 'system' && options?.includeSystemMessages) {
+      messages.push({...entry, uuid, session_id: valid} as unknown as SessionMessage)
+    }
+  }
+  return messages.slice(offset, limit === undefined ? undefined : offset + limit)
 }
 
 /**
@@ -202,9 +324,10 @@ export async function getSessionMessages(
  * ```
  */
 export async function listSessions(
-  _options?: ListSessionsOptions,
+  options?: ListSessionsOptions,
 ): Promise<SDKSessionInfo[]> {
-  throw new Error('listSessions is not implemented in the SDK')
+  const { listSessionsImpl } = await import('../utils/listSessionsImpl.js')
+  return listSessionsImpl(options)
 }
 
 /**
@@ -217,10 +340,19 @@ export async function listSessions(
  * @param options - `{ dir?: string }` project path; omit to search all project directories
  */
 export async function getSessionInfo(
-  _sessionId: string,
-  _options?: GetSessionInfoOptions,
+  sessionId: string,
+  options?: GetSessionInfoOptions,
 ): Promise<SDKSessionInfo | undefined> {
-  throw new Error('getSessionInfo is not implemented in the SDK')
+  const { validateUuid, resolveSessionFilePath, readSessionLite } =
+    await import('../utils/sessionStoragePortable.js')
+  const valid = validateUuid(sessionId)
+  if (!valid) return undefined
+  const file = await resolveSessionFilePath(valid, options?.dir)
+  if (!file) return undefined
+  const lite = await readSessionLite(file.filePath)
+  if (!lite) return undefined
+  const { parseSessionInfoFromLite } = await import('../utils/listSessionsImpl.js')
+  return parseSessionInfoFromLite(valid, lite, file.projectPath) ?? undefined
 }
 
 /**
@@ -230,11 +362,18 @@ export async function getSessionInfo(
  * @param options - `{ dir?: string }` project path; omit to search all projects
  */
 export async function renameSession(
-  _sessionId: string,
-  _title: string,
-  _options?: SessionMutationOptions,
+  sessionId: string,
+  title: string,
+  options?: SessionMutationOptions,
 ): Promise<void> {
-  throw new Error('renameSession is not implemented in the SDK')
+  const { validateUuid, resolveSessionFilePath } = await import('../utils/sessionStoragePortable.js')
+  const valid = validateUuid(sessionId)
+  if (!valid) throw new TypeError('Invalid session ID')
+  if (typeof title !== 'string' || title.length === 0) throw new TypeError('Title must be non-empty')
+  const file = await resolveSessionFilePath(valid, options?.dir)
+  if (!file) throw new Error('Session not found: ' + sessionId)
+  const { saveCustomTitle } = await import('../utils/sessionStorage.js')
+  await saveCustomTitle(valid, title, file.filePath)
 }
 
 /**
@@ -244,11 +383,19 @@ export async function renameSession(
  * @param options - `{ dir?: string }` project path; omit to search all projects
  */
 export async function tagSession(
-  _sessionId: string,
-  _tag: string | null,
-  _options?: SessionMutationOptions,
+  sessionId: string,
+  tag: string | null,
+  options?: SessionMutationOptions,
 ): Promise<void> {
-  throw new Error('tagSession is not implemented in the SDK')
+  const { validateUuid, resolveSessionFilePath } = await import('../utils/sessionStoragePortable.js')
+  const valid = validateUuid(sessionId)
+  if (!valid) throw new TypeError('Invalid session ID')
+  if (tag !== null && typeof tag !== 'string') throw new TypeError('Tag must be a string or null')
+  const file = await resolveSessionFilePath(valid, options?.dir)
+  if (!file) throw new Error('Session not found: ' + sessionId)
+  const { saveTag } = await import('../utils/sessionStorage.js')
+  // The last tag entry wins. An empty string is the canonical cleared value.
+  await saveTag(valid, tag ?? '', file.filePath)
 }
 
 /**
@@ -266,10 +413,69 @@ export async function tagSession(
  * @returns `{ sessionId }` — UUID of the new forked session
  */
 export async function forkSession(
-  _sessionId: string,
-  _options?: ForkSessionOptions,
+  sessionId: string,
+  options?: ForkSessionOptions,
 ): Promise<ForkSessionResult> {
-  throw new Error('forkSession is not implemented in the SDK')
+  const { validateUuid, resolveSessionFilePath } = await import('../utils/sessionStoragePortable.js')
+  const valid = validateUuid(sessionId)
+  if (!valid) throw new TypeError('Invalid session ID')
+  const file = await resolveSessionFilePath(valid, options?.dir)
+  if (!file) throw new Error('Session not found: ' + sessionId)
+  const { loadTranscriptFromFile } = await import('../utils/sessionStorage.js')
+  const log = await loadTranscriptFromFile(file.filePath)
+  if (log.isSidechain || log.messages.length === 0) {
+    throw new Error('A sidechain or empty session cannot be forked')
+  }
+  // loadTranscriptFromFile uses the same parent-link and compact-boundary
+  // reconstruction as --resume, including parallel tool-result siblings.
+  const until = options?.upToMessageId
+    ? log.messages.findIndex(item => item.uuid === options.upToMessageId)
+    : log.messages.length - 1
+  if (until < 0) throw new Error('Cannot fork: upToMessageId is not in this session')
+  if (options?.title !== undefined && (typeof options.title !== 'string' ||
+      options.title.length === 0)) throw new TypeError('Fork title must be non-empty')
+  const {randomUUID} = await import('node:crypto')
+  const {writeFile, unlink} = await import('node:fs/promises')
+  const {dirname, join} = await import('node:path')
+  const newId = randomUUID()
+  const ids = new Map<string,ReturnType<typeof randomUUID>>()
+  let last: string | null = null
+  const entries = log.messages.slice(0, until + 1).map(entry => {
+    const previousId = entry.uuid
+    const uuid = randomUUID()
+    if (previousId) ids.set(previousId,uuid)
+    const next = {...entry, uuid, parentUuid:last, sessionId:newId}
+    last = uuid
+    return next
+  })
+  // Rebind tool-result origin IDs to the fork's own assistant messages.
+  for (const entry of entries) {
+    if ('sourceToolAssistantUUID' in entry &&
+        typeof entry.sourceToolAssistantUUID === 'string') {
+      entry.sourceToolAssistantUUID = ids.get(entry.sourceToolAssistantUUID)
+    }
+  }
+  const output = entries.map(e=>JSON.stringify(e))
+  if (options?.title) output.push(JSON.stringify({
+    type:'custom-title',customTitle:options.title,sessionId:newId,
+  }))
+  const destination = join(dirname(file.filePath), newId + '.jsonl')
+  // Exclusive create makes a concurrent fork or random UUID collision fail
+  // rather than damaging an existing session. File-history snapshots are
+  // intentionally not copied, so rewind cannot cross the fork boundary.
+  try {
+    await writeFile(destination, output.join('\n')+'\n', {flag:'wx',mode:0o600})
+  } catch (error) {
+    const e = error as NodeJS.ErrnoException
+    if (e.code !== 'EEXIST') {
+      try { await unlink(destination) }
+      catch (cleanupError) {
+        if ((cleanupError as NodeJS.ErrnoException).code !== 'ENOENT') throw cleanupError
+      }
+    }
+    throw error
+  }
+  return {sessionId:newId}
 }
 
 // ============================================================================
@@ -347,12 +553,12 @@ export type ScheduledTasksHandle = {
  *
  * @internal
  */
-export function watchScheduledTasks(_opts: {
+export function watchScheduledTasks(opts: {
   dir: string
   signal: AbortSignal
   getJitterConfig?: () => CronJitterConfig
 }): ScheduledTasksHandle {
-  throw new Error('not implemented')
+  return watchDaemonScheduledTasks317(opts)
 }
 
 /**
@@ -360,8 +566,8 @@ export function watchScheduledTasks(_opts: {
  * with the user (via AskUserQuestion) before executing.
  * @internal
  */
-export function buildMissedTaskNotification(_missed: CronTask[]): string {
-  throw new Error('not implemented')
+export function buildMissedTaskNotification(missed: CronTask[]): string {
+  return formatMissedDaemonTasks317(missed)
 }
 
 /**
@@ -437,7 +643,10 @@ export type RemoteControlHandle = {
  * @internal
  */
 export async function connectRemoteControl(
-  _opts: ConnectRemoteControlOptions,
+  opts: ConnectRemoteControlOptions,
 ): Promise<RemoteControlHandle | null> {
-  throw new Error('not implemented')
+  // Remote control is opt-in and the expensive bridge is loaded on demand;
+  // CLI and SDK now share the same reconnecting v2 transport and credentials.
+  const { connectSdkRemoteControl317 } = await import('./sdk/remoteControl317.js')
+  return connectSdkRemoteControl317(opts)
 }

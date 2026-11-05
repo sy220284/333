@@ -110,7 +110,7 @@ export function useIdeSelection(
 
     // Register notification handler for selection_changed events
     ideClient.client.setNotificationHandler(
-      SelectionChangedSchema(),
+      'selection_changed', { params: SelectionChangedSchema().shape.params },
       notification => {
         if (currentIDERef.current !== ideClient) {
           return
@@ -118,7 +118,7 @@ export function useIdeSelection(
 
         try {
           // Get the selection data from the notification params
-          const selectionData = notification.params
+          const selectionData = notification
 
           // Process selection data - validate it has required properties
           if (

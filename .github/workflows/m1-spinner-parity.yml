@@ -1,0 +1,115 @@
+name: 自定义工作提示真实终端对照
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m1-spinner-parity.yml'
+      - 'src/services/tips/**'
+      - 'src/components/Spinner.tsx'
+      - 'src/components/Spinner/**'
+      - 'src/components/Message.tsx'
+      - 'src/components/messages/thinkingDurationLabel.ts'
+      - 'tests/m1-thinking-duration-label.test.mjs'
+      - 'tests/m1-spinner-animation-status.test.mjs'
+      - 'src/screens/REPL.tsx'
+      - 'src/state/AppStateStore.ts'
+      - 'src/utils/settings/**'
+      - 'tests/m1-spinner-tips.test.mjs'
+      - 'tests/m1-spinner-settings-integration.test.mjs'
+      - 'tests/m1-custom-spinner-tips.test.mjs'
+      - 'tests/m1-spinner-pty-harness.test.py'
+      - 'tests/m1-x64-spinner-tips.py'
+      - 'tests/m1-x64-conversation-ui-scenarios.py'
+      - 'tests/m1-x64-conversation-ui-request-routing.test.py'
+      - 'build/rebuild.mjs'
+      - 'build/restore-*.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: spinner-parity-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  spinner-parity:
+    name: 两轮对话中的提示与官方 x64 对照
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 2
+      # The PR path filter is cumulative. Only run expensive tests when this
+      # commit itself affects the spinner chain, or on an explicit dispatch.
+      - name: 判断本次提交是否涉及提示链路
+        id: relevant
+        shell: bash
+        run: |
+          if [[ '${{ github.event.pull_request.number }}' == '7' ]] || [[ '${{ github.event_name }}' == 'workflow_dispatch' ]] || git diff-tree --root --no-commit-id --name-only -r HEAD | grep -Eq '^(src/services/tips/|src/components/Spinner\.tsx$|src/components/Spinner/|src/screens/REPL\.tsx$|src/state/AppStateStore\.ts$|src/utils/settings/|tests/m1-spinner-animation-status\.test\.mjs$|tests/m1-(spinner-tips\.test\.mjs|custom-spinner-tips\.test\.mjs|spinner-pty-harness\.test\.py|x64-spinner-tips\.py|x64-conversation-ui-scenarios\.py)$|build/(rebuild|restore-.*)\.mjs$|\.github/workflows/m1-spinner-parity\.yml$)'; then
+            echo 'run=true' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.relevant.outputs.run == 'true'
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        if: steps.relevant.outputs.run == 'true'
+        with:
+          bun-version: 1.4.4
+      - name: 恢复锁定依赖并校验发行素材
+        if: steps.relevant.outputs.run == 'true'
+        run: |
+          node build/verify-bundled-assets.mjs
+          node build/restore-claude-api.mjs --verify
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 安装固定版本终端画面解码器
+        if: steps.relevant.outputs.run == 'true'
+        run: python3 -m pip install --disable-pip-version-check pyte==0.8.2
+      - name: 验证提示来源和两轮请求识别
+        if: steps.relevant.outputs.run == 'true'
+        run: |
+          node --test tests/m1-spinner-tips.test.mjs tests/m1-custom-spinner-tips.test.mjs
+          node --test tests/m1-spinner-settings-integration.test.mjs
+          node --experimental-strip-types --test tests/m1-spinner-animation-status.test.mjs
+          node --experimental-strip-types --test tests/m1-thinking-duration-label.test.mjs
+          python3 tests/m1-spinner-pty-harness.test.py
+      - name: 源码重建并准备固定哈希的官方 x64
+        if: steps.relevant.outputs.run == 'true'
+        run: |
+          bun build/rebuild.mjs
+          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
+            'https://downloads.claude.ai/claude-code-releases/2.1.310/linux-x64/claude' \
+            --output "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
+          echo "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  ${RUNNER_TEMP}/claude-2.1.310-linux-x64" | sha256sum --check
+          chmod 700 "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
+          printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-current-cli"
+          chmod 700 "${RUNNER_TEMP}/m1-current-cli"
+      - name: 对照真实两轮对话的内联与文件提示
+        if: steps.relevant.outputs.run == 'true'
+        run: |
+          python3 tests/m1-x64-spinner-tips.py \
+            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --candidate "${RUNNER_TEMP}/m1-current-cli" \
+            | tee "${RUNNER_TEMP}/m1-spinner-parity.json"
+      - name: 验证后台标题调用不会误充真实对话
+        if: steps.relevant.outputs.run == 'true'
+        run: python3 tests/m1-x64-conversation-ui-request-routing.test.py
+      - name: 官方与重建版同场景流式、工具、重试终端帧对照
+        if: steps.relevant.outputs.run == 'true'
+        run: |
+          python3 tests/m1-x64-conversation-ui-scenarios.py \
+            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --candidate "${RUNNER_TEMP}/m1-current-cli" \
+            --report "${RUNNER_TEMP}/m1-dialogue-ui-parity.json"
+      - name: 保存真实终端对照结果
+        if: always() && steps.relevant.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-spinner-parity-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            ${{ runner.temp }}/m1-spinner-parity.json
+            ${{ runner.temp }}/m1-dialogue-ui-parity.json
+          if-no-files-found: warn
+          retention-days: 30

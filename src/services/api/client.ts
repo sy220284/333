@@ -1,4 +1,6 @@
 import Anthropic, { type ClientOptions } from '@anthropic-ai/sdk'
+import { native317MessagesRequest, native317RequestHeaders } from './native317Wire.ts'
+import { createFoundryAzureTokenProvider } from './providerCredentials.ts'
 import { randomUUID } from 'crypto'
 import type { GoogleAuth } from 'google-auth-library'
 import {
@@ -136,7 +138,8 @@ export async function getAnthropicClient({
     await configureApiKeyHeaders(defaultHeaders, getIsNonInteractiveSession())
   }
 
-  const resolvedFetch = buildFetch(fetchOverride, source)
+  const native317Auth = { apiKey: undefined as string | undefined }
+  const resolvedFetch = buildFetch(fetchOverride, source, native317Auth)
 
   const ARGS = {
     defaultHeaders,
@@ -159,34 +162,43 @@ export async function getAnthropicClient({
         ? process.env.ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION
         : getAWSRegion()
 
-    const bedrockArgs: ConstructorParameters<typeof AnthropicBedrock>[0] = {
+    const bearerToken = process.env.AWS_BEARER_TOKEN_BEDROCK
+    const skipBedrockAuth = isEnvTruthy(process.env.CLAUDE_CODE_SKIP_BEDROCK_AUTH)
+    // Discriminated constructor credentials must be assembled atomically:
+    // Bedrock's SDK treats a partial access-key pair as invalid.
+    const credentials = !bearerToken && !skipBedrockAuth
+      ? await refreshAndGetAwsCredentials()
+      : null
+    const sharedArgs = {
       ...ARGS,
       awsRegion,
-      ...(isEnvTruthy(process.env.CLAUDE_CODE_SKIP_BEDROCK_AUTH) && {
-        skipAuth: true,
-      }),
       ...(isDebugToStdErr() && { logger: createStderrLogger() }),
     }
-
-    // Add API key authentication if available
-    if (process.env.AWS_BEARER_TOKEN_BEDROCK) {
-      bedrockArgs.skipAuth = true
-      // Add the Bearer token for Bedrock API key authentication
-      bedrockArgs.defaultHeaders = {
-        ...bedrockArgs.defaultHeaders,
-        Authorization: `Bearer ${process.env.AWS_BEARER_TOKEN_BEDROCK}`,
-      }
-    } else if (!isEnvTruthy(process.env.CLAUDE_CODE_SKIP_BEDROCK_AUTH)) {
-      // Refresh auth and get credentials with cache clearing
-      const cachedCredentials = await refreshAndGetAwsCredentials()
-      if (cachedCredentials) {
-        bedrockArgs.awsAccessKey = cachedCredentials.accessKeyId
-        bedrockArgs.awsSecretKey = cachedCredentials.secretAccessKey
-        bedrockArgs.awsSessionToken = cachedCredentials.sessionToken
-      }
+    // Construct each credential variant independently so TypeScript resolves the
+    // SDK's paired-credentials overload instead of collapsing into a union.
+    if (bearerToken) {
+      return new AnthropicBedrock({
+        ...sharedArgs,
+        skipAuth: true,
+        defaultHeaders: {
+          ...defaultHeaders,
+          Authorization: `Bearer ${bearerToken}`,
+        },
+      }) as unknown as Anthropic
     }
-    // we have always been lying about the return type - this doesn't support batching or models
-    return new AnthropicBedrock(bedrockArgs) as unknown as Anthropic
+    if (skipBedrockAuth) {
+      return new AnthropicBedrock({ ...sharedArgs, skipAuth: true }) as unknown as Anthropic
+    }
+    if (credentials) {
+      return new AnthropicBedrock({
+        ...sharedArgs,
+        awsAccessKey: credentials.accessKeyId,
+        awsSecretKey: credentials.secretAccessKey,
+        awsSessionToken: credentials.sessionToken,
+      }) as unknown as Anthropic
+    }
+    // With no static credentials the SDK uses the AWS provider chain.
+    return new AnthropicBedrock(sharedArgs) as unknown as Anthropic
   }
   if (isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)) {
     const { AnthropicFoundry } = await import('@anthropic-ai/foundry-sdk')
@@ -198,15 +210,7 @@ export async function getAnthropicClient({
         // Mock token provider for testing/proxy scenarios (similar to Vertex mock GoogleAuth)
         azureADTokenProvider = () => Promise.resolve('')
       } else {
-        // Use real Azure AD authentication with DefaultAzureCredential
-        const {
-          DefaultAzureCredential: AzureCredential,
-          getBearerTokenProvider,
-        } = await import('@azure/identity')
-        azureADTokenProvider = getBearerTokenProvider(
-          new AzureCredential(),
-          'https://cognitiveservices.azure.com/.default',
-        )
+        azureADTokenProvider = await createFoundryAzureTokenProvider()
       }
     }
 
@@ -290,19 +294,35 @@ export async function getAnthropicClient({
     const vertexArgs: ConstructorParameters<typeof AnthropicVertex>[0] = {
       ...ARGS,
       region: getVertexRegionForModel(model),
-      googleAuth,
+      // Vertex SDK currently resolves Google Auth v10 while the application
+      // uses v11. Both provide getClient/getRequestHeaders, but private
+      // class members make the two class types nominally distinct.
+      googleAuth: googleAuth as unknown as NonNullable<ConstructorParameters<typeof AnthropicVertex>[0]['googleAuth']>,
       ...(isDebugToStdErr() && { logger: createStderrLogger() }),
     }
     // we have always been lying about the return type - this doesn't support batching or models
     return new AnthropicVertex(vertexArgs) as unknown as Anthropic
   }
 
-  // Determine authentication method based on available tokens
+  // Resolve auth before building the SDK client. A clean, unauthenticated
+  // launch should produce the CLI's documented login error, rather than the
+  // internal SDK constructor's credential-selection diagnostic.
+  const resolvedApiKey = isClaudeAISubscriber() ? null : apiKey || getAnthropicApiKey()
+  native317Auth.apiKey = resolvedApiKey ?? undefined
+  const resolvedAuthToken = isClaudeAISubscriber()
+    ? getClaudeAIOAuthTokens()?.accessToken
+    : undefined
+  if (
+    !resolvedApiKey && !resolvedAuthToken &&
+    !defaultHeaders.Authorization && !defaultHeaders.authorization &&
+    !process.env.ANTHROPIC_UNIX_SOCKET
+  ) {
+    throw new Error('Not logged in · Please run /login')
+  }
+
   const clientConfig: ConstructorParameters<typeof Anthropic>[0] = {
-    apiKey: isClaudeAISubscriber() ? null : apiKey || getAnthropicApiKey(),
-    authToken: isClaudeAISubscriber()
-      ? getClaudeAIOAuthTokens()?.accessToken
-      : undefined,
+    apiKey: resolvedApiKey,
+    authToken: resolvedAuthToken,
     // Set baseURL from OAuth config when using staging OAuth
     ...(process.env.USER_TYPE === 'ant' &&
     isEnvTruthy(process.env.USE_STAGING_OAUTH)
@@ -358,6 +378,7 @@ export const CLIENT_REQUEST_ID_HEADER = 'x-client-request-id'
 function buildFetch(
   fetchOverride: ClientOptions['fetch'],
   source: string | undefined,
+  native317Auth: { apiKey?: string },
 ): ClientOptions['fetch'] {
   // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
   const inner = fetchOverride ?? globalThis.fetch
@@ -367,16 +388,19 @@ function buildFetch(
     getAPIProvider() === 'firstParty' && isFirstPartyAnthropicBaseUrl()
   return (input, init) => {
     // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
-    const headers = new Headers(init?.headers)
+    const headers = native317RequestHeaders(input, init)
     // Generate a client-side request ID so timeouts (which return no server
     // request ID) can still be correlated with server logs by the API team.
     // Callers that want to track the ID themselves can pre-set the header.
     if (injectClientRequestId && !headers.has(CLIENT_REQUEST_ID_HEADER)) {
       headers.set(CLIENT_REQUEST_ID_HEADER, randomUUID())
     }
+    const request = getAPIProvider() === 'firstParty'
+      ? native317MessagesRequest(input, { ...init, headers }, native317Auth)
+      : { input, init: { ...init, headers } }
     try {
       // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
-      const url = input instanceof Request ? input.url : String(input)
+      const url = request.input instanceof Request ? request.input.url : String(request.input)
       const id = headers.get(CLIENT_REQUEST_ID_HEADER)
       logForDebugging(
         `[API REQUEST] ${new URL(url).pathname}${id ? ` ${CLIENT_REQUEST_ID_HEADER}=${id}` : ''} source=${source ?? 'unknown'}`,
@@ -384,6 +408,6 @@ function buildFetch(
     } catch {
       // never let logging crash the fetch
     }
-    return inner(input, { ...init, headers })
+    return inner(request.input, request.init)
   }
 }

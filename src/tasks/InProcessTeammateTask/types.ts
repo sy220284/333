@@ -12,6 +12,7 @@ import type { AgentProgress } from '../LocalAgentTask/LocalAgentTask.js'
  */
 export type TeammateIdentity = {
   agentId: string // e.g., "researcher@my-team"
+  resumableAgentId?: string // transcript identity accepted by TaskStop after resume
   agentName: string // e.g., "researcher"
   teamName: string
   color?: string

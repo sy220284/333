@@ -6,10 +6,13 @@
  * non-Bun branch so native Bun builds never load the ~270KB yaml parser.
  */
 
+import { createRequire } from 'node:module'
+
+const load = createRequire(import.meta.url)
+
 export function parseYaml(input: string): unknown {
   if (typeof Bun !== 'undefined') {
     return Bun.YAML.parse(input)
   }
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return (require('yaml') as typeof import('yaml')).parse(input)
+  return (load('yaml') as typeof import('yaml')).parse(input)
 }

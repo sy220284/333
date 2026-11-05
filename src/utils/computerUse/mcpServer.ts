@@ -2,8 +2,7 @@ import {
   buildComputerUseTools,
   createComputerUseMcpServer,
 } from '@ant/computer-use-mcp'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
+import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { homedir } from 'os'
 
 import { shutdownDatadog } from '../../services/analytics/datadog.js'
@@ -70,7 +69,7 @@ export async function createComputerUseMcpServerForCli(): Promise<
     coordinateMode,
     installedAppNames,
   )
-  server.setRequestHandler(ListToolsRequestSchema, async () =>
+  server.setRequestHandler('tools/list', async () =>
     adapter.isDisabled() ? { tools: [] } : { tools },
   )
 

@@ -1,16 +1,18 @@
+import { filterSettingsCompactionEnv } from './managedCompactionEnv.ts'
 import { isRemoteManagedSettingsEligible } from '../services/remoteManagedSettings/syncCache.js'
 import { clearCACertsCache } from './caCerts.js'
-import { getGlobalConfig } from './config.js'
 import { isEnvTruthy } from './envUtils.js'
 import {
   isProviderManagedEnvVar,
+  isSettingsCACertBlockedByManagedHost,
   SAFE_ENV_VARS,
 } from './managedEnvConstants.js'
 import { clearMTLSCache } from './mtls.js'
 import { clearProxyCache, configureGlobalAgents } from './proxy.js'
+import { resolveProjectTelemetryEnv } from './telemetry/projectTelemetryPolicy.ts'
 import { isSettingSourceEnabled } from './settings/constants.js'
 import {
-  getSettings_DEPRECATED,
+  getInitialSettings,
   getSettingsForSource,
 } from './settings/settings.js'
 
@@ -49,9 +51,16 @@ function withoutHostManagedProviderVars(
   if (!isEnvTruthy(process.env.CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST)) {
     return env
   }
+  const blockSettingsCA = isSettingsCACertBlockedByManagedHost(
+    true,
+    process.env.CLAUDE_CODE_ENTRYPOINT,
+  )
   const out: Record<string, string> = {}
   for (const [key, value] of Object.entries(env)) {
-    if (!isProviderManagedEnvVar(key)) {
+    if (
+      !isProviderManagedEnvVar(key) &&
+      !(blockSettingsCA && key.toUpperCase() === 'NODE_EXTRA_CA_CERTS')
+    ) {
       out[key] = value
     }
   }
@@ -85,8 +94,10 @@ function withoutCcdSpawnEnvKeys(
 function filterSettingsEnv(
   env: Record<string, string> | undefined,
 ): Record<string, string> {
-  return withoutCcdSpawnEnvKeys(
-    withoutHostManagedProviderVars(withoutSSHTunnelVars(env)),
+  return filterSettingsCompactionEnv(
+    withoutCcdSpawnEnvKeys(
+      withoutHostManagedProviderVars(withoutSSHTunnelVars(env)),
+    ),
   )
 }
 
@@ -109,6 +120,20 @@ const TRUSTED_SETTING_SOURCES = [
 ] as const
 
 /**
+ * Build the allowed telemetry configuration from trusted settings only.
+ * Project/local settings may contain an env override, but they are not
+ * allowed to expand data collection or choose an exporter destination.
+ */
+function getTrustedTelemetryEnv(): Record<string, string> {
+  const trusted: Record<string, string> = {}
+  for (const source of TRUSTED_SETTING_SOURCES) {
+    if (!isSettingSourceEnabled(source)) continue
+    Object.assign(trusted, filterSettingsEnv(getSettingsForSource(source)?.env))
+  }
+  return trusted
+}
+
+/**
  * Apply environment variables from trusted sources to process.env.
  * Called before the trust dialog so that user/enterprise env vars like
  * ANTHROPIC_BASE_URL take effect during first-run/onboarding.
@@ -129,11 +154,6 @@ export function applySafeConfigEnvironmentVariables(): void {
         ? new Set(Object.keys(process.env))
         : null
   }
-
-  // Global config (~/.claude.json) is user-controlled. In CCD mode,
-  // filterSettingsEnv strips keys that were in the spawn env snapshot so
-  // the desktop host's operational vars (OTEL, etc.) are not overridden.
-  Object.assign(process.env, filterSettingsEnv(getGlobalConfig().env))
 
   // Apply ALL env vars from trusted setting sources, policySettings last.
   // Gate on isSettingSourceEnabled so SDK settingSources: [] (isolation mode)
@@ -169,9 +189,13 @@ export function applySafeConfigEnvironmentVariables(): void {
   // unchanged (it has the highest merge priority in both loops) — except
   // provider-routing vars, which filterSettingsEnv strips from every source
   // when CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST is set.
-  const settingsEnv = filterSettingsEnv(getSettings_DEPRECATED()?.env)
+  const settingsEnv = resolveProjectTelemetryEnv(
+    filterSettingsEnv(getInitialSettings()?.env),
+    getTrustedTelemetryEnv(),
+  )
   for (const [key, value] of Object.entries(settingsEnv)) {
     if (SAFE_ENV_VARS.has(key.toUpperCase())) {
+      if (typeof value !== 'string') throw new TypeError('Invalid settings environment value: '+key)
       process.env[key] = value
     }
   }
@@ -185,9 +209,13 @@ export function applySafeConfigEnvironmentVariables(): void {
  * dangerous environment variables such as LD_PRELOAD, PATH, etc.
  */
 export function applyConfigEnvironmentVariables(): void {
-  Object.assign(process.env, filterSettingsEnv(getGlobalConfig().env))
-
-  Object.assign(process.env, filterSettingsEnv(getSettings_DEPRECATED()?.env))
+  Object.assign(
+    process.env,
+    resolveProjectTelemetryEnv(
+      filterSettingsEnv(getInitialSettings()?.env),
+      getTrustedTelemetryEnv(),
+    ),
+  )
 
   // Clear caches so agents are rebuilt with the new env vars
   clearCACertsCache()

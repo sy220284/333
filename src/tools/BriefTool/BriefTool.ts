@@ -13,7 +13,6 @@ import {
   BRIEF_TOOL_NAME,
   BRIEF_TOOL_PROMPT,
   DESCRIPTION,
-  LEGACY_BRIEF_TOOL_NAME,
 } from './prompt.js'
 import { renderToolResultMessage, renderToolUseMessage } from './UI.js'
 
@@ -135,7 +134,6 @@ export function isBriefEnabled(): boolean {
 
 export const BriefTool = buildTool({
   name: BRIEF_TOOL_NAME,
-  aliases: [LEGACY_BRIEF_TOOL_NAME],
   searchHint:
     'send a message to the user — your primary visible output channel',
   maxResultSizeChars: 100_000,

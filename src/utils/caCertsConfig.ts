@@ -9,12 +9,13 @@
  * bundle (`connectRemoteControl` path) bloats from ~0.4 MB to ~10.8 MB.
  *
  * `getCACertificates()` only reads `process.env.NODE_EXTRA_CA_CERTS`. This
- * module is the one place allowed to import `config.ts` to *populate* that
- * env var at CLI startup. Only `init.ts` imports this file.
+ * module populates that variable from trusted user settings during CLI startup. Only `init.ts` imports this file.
  */
 
-import { getGlobalConfig } from './config.js'
 import { logForDebugging } from './debug.js'
+import { isEnvTruthy } from './envUtils.js'
+import { isSettingsCACertBlockedByManagedHost } from './managedEnvConstants.js'
+import { isSettingSourceEnabled } from './settings/constants.js'
 import { getSettingsForSource } from './settings/settings.js'
 
 /**
@@ -28,14 +29,14 @@ import { getSettingsForSource } from './settings/settings.js'
  * is lazy-initialized) and ensure Node.js compatibility.
  *
  * This is safe to call before the trust dialog because we only read from
- * user-controlled files (~/.claude/settings.json and ~/.claude.json),
+ * user-controlled settings (~/.claude/settings.json),
  * not from project-level settings.
  */
 export function applyExtraCACertsFromConfig(): void {
   if (process.env.NODE_EXTRA_CA_CERTS) {
     return // Already set in environment, nothing to do
   }
-  const configPath = getExtraCertsPathFromConfig()
+  const configPath = getExtraCertsPathFromUserSettings()
   if (configPath) {
     process.env.NODE_EXTRA_CA_CERTS = configPath
     logForDebugging(
@@ -45,42 +46,45 @@ export function applyExtraCACertsFromConfig(): void {
 }
 
 /**
- * Read NODE_EXTRA_CA_CERTS from settings/config as a fallback.
- *
- * NODE_EXTRA_CA_CERTS is categorized as a non-safe env var (it allows
- * trusting attacker-controlled servers), so it's only applied to process.env
- * after the trust dialog. But we need the CA cert early to establish the TLS
- * connection to an HTTPS proxy during init().
- *
- * We read from global config (~/.claude.json) and user settings
- * (~/.claude/settings.json). These are user-controlled files that don't
- * require trust approval.
+ * Read the trusted user-level settings.env certificate path before TLS startup.
+ * Project-local settings cannot inject CA certs before trust approval.
  */
-function getExtraCertsPathFromConfig(): string | undefined {
+function getExtraCertsPathFromUserSettings(): string | undefined {
   try {
-    const globalConfig = getGlobalConfig()
-    const globalEnv = globalConfig?.env
-    // Only read from user-controlled settings (~/.claude/settings.json),
-    // not project-level settings, to prevent malicious projects from
-    // injecting CA certs before the trust dialog.
+    // SDK settingSources: [] isolates user settings, including their CA bundle.
+    if (!isSettingSourceEnabled('userSettings')) {
+      logForDebugging('CA certs: skipping disabled user settings source')
+      return undefined
+    }
+
+    // Match the normal managed-env filter and the 2.1.310 host-managed gate.
+    if (
+      isSettingsCACertBlockedByManagedHost(
+        isEnvTruthy(process.env.CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST),
+        process.env.CLAUDE_CODE_ENTRYPOINT,
+      )
+    ) {
+      logForDebugging('CA certs: skipping settings-sourced CA under host-managed provider')
+      return undefined
+    }
+
+    // Read only trusted user settings, never unapproved project settings.
     const settings = getSettingsForSource('userSettings')
     const settingsEnv = settings?.env
 
     logForDebugging(
-      `CA certs: Config fallback - globalEnv keys: ${globalEnv ? Object.keys(globalEnv).join(',') : 'none'}, settingsEnv keys: ${settingsEnv ? Object.keys(settingsEnv).join(',') : 'none'}`,
+      `CA certs: User settings.env keys: ${settingsEnv ? Object.keys(settingsEnv).join(',') : 'none'}`,
     )
 
-    // Settings override global config (same precedence as applyConfigEnvironmentVariables)
-    const path =
-      settingsEnv?.NODE_EXTRA_CA_CERTS || globalEnv?.NODE_EXTRA_CA_CERTS
+    const path = settingsEnv?.NODE_EXTRA_CA_CERTS
     if (path) {
       logForDebugging(
-        `CA certs: Found NODE_EXTRA_CA_CERTS in config/settings: ${path}`,
+        `CA certs: Found NODE_EXTRA_CA_CERTS in user settings: ${path}`,
       )
     }
     return path
   } catch (error) {
-    logForDebugging(`CA certs: Config fallback failed: ${error}`, {
+    logForDebugging(`CA certs: User settings lookup failed: ${error}`, {
       level: 'error',
     })
     return undefined

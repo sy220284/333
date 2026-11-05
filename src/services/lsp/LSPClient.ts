@@ -5,7 +5,7 @@ import {
   StreamMessageReader,
   StreamMessageWriter,
   Trace,
-} from 'vscode-jsonrpc/node.js'
+} from 'vscode-jsonrpc/node'
 import type {
   InitializeParams,
   InitializeResult,
@@ -367,7 +367,9 @@ export function createLSPClient(
 
       checkStartFailed()
 
-      connection.onRequest(method, handler)
+      // The request method's handler owns its parameter contract; the
+      // JSON-RPC SDK now delivers the wire payload as unknown.
+      connection.onRequest(method, async (params: unknown): Promise<unknown> => handler(params as TParams))
     },
 
     async stop(): Promise<void> {

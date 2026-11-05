@@ -103,7 +103,9 @@ export async function readMailbox(
     }
     logForDebugging(`Failed to read inbox for ${agentName}: ${error}`)
     logError(error)
-    return []
+    // A corrupt or unreadable inbox still contains data. Propagate the failure
+    // so writers cannot replace its contents with an empty message list.
+    throw error
   }
 }
 
@@ -156,7 +158,8 @@ export async function writeToMailbox(
         `[TeammateMailbox] writeToMailbox: failed to create inbox file: ${error}`,
       )
       logError(error)
-      return
+      // A failed mailbox creation cannot be reported as delivered.
+      throw error
     }
   }
 
@@ -184,6 +187,8 @@ export async function writeToMailbox(
   } catch (error) {
     logForDebugging(`Failed to write to inbox for ${recipientName}: ${error}`)
     logError(error)
+    // SendMessage must never acknowledge a failed append/lock/rewrite.
+    throw error
   } finally {
     if (release) {
       await release()

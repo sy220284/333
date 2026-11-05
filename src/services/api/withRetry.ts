@@ -46,13 +46,17 @@ import {
 } from '../rateLimitMocking.js'
 import { REPEATED_529_ERROR_MESSAGE } from './errors.js'
 import { extractConnectionErrorDetails } from './errorUtils.js'
+import {
+  adjustOverflowOutputTokens,
+  getRetryDelay,
+  getRetryLimit,
+  getRetryWaitLimit,
+} from './retryPolicy317.js'
+export { BASE_DELAY_MS, getRetryDelay } from './retryPolicy317.js'
 
 const abortError = () => new APIUserAbortError()
 
-const DEFAULT_MAX_RETRIES = 10
-const FLOOR_OUTPUT_TOKENS = 3000
 const MAX_529_RETRIES = 3
-export const BASE_DELAY_MS = 500
 
 // Foreground query sources where the user IS blocking on the result — these
 // retry on 529. Everything else (summaries, titles, suggestions, classifiers)
@@ -67,7 +71,6 @@ const FOREGROUND_529_RETRY_SOURCES = new Set<QuerySource>([
   'sdk',
   'agent:custom',
   'agent:default',
-  'agent:builtin',
   'compact',
   'hook_agent',
   'hook_prompt',
@@ -84,7 +87,9 @@ const FOREGROUND_529_RETRY_SOURCES = new Set<QuerySource>([
 function shouldRetry529(querySource: QuerySource | undefined): boolean {
   // undefined → retry (conservative for untagged call paths)
   return (
-    querySource === undefined || FOREGROUND_529_RETRY_SOURCES.has(querySource)
+    querySource === undefined ||
+    querySource.startsWith('agent:builtin:') ||
+    FOREGROUND_529_RETRY_SOURCES.has(querySource)
   )
 }
 
@@ -125,6 +130,7 @@ export interface RetryContext {
 }
 
 interface RetryOptions {
+  retryRejectedRequest?: (error: APIError) => boolean
   maxRetries?: number
   model: string
   fallbackModel?: string
@@ -253,6 +259,10 @@ export async function* withRetry<T>(
       return await operation(client, attempt, retryContext)
     } catch (error) {
       lastError = error
+      if (error instanceof APIError && options.retryRejectedRequest?.(error)) {
+        attempt--
+        continue
+      }
       logForDebugging(
         `API error (attempt ${attempt}/${maxRetries + 1}): ${error instanceof APIError ? `${error.status} ${error.message}` : errorMessage(error)}`,
         { level: 'error' },
@@ -328,7 +338,8 @@ export async function* withRetry<T>(
         is529Error(error) &&
         // If FALLBACK_FOR_ALL_PRIMARY_MODELS is not set, fall through only if the primary model is a non-custom Opus model.
         // TODO: Revisit if the isNonCustomOpusModel check should still exist, or if isNonCustomOpusModel is a stale artifact of when Claude Code was hardcoded on Opus.
-        (process.env.FALLBACK_FOR_ALL_PRIMARY_MODELS ||
+        (Boolean(options.fallbackModel) ||
+          process.env.FALLBACK_FOR_ALL_PRIMARY_MODELS ||
           (!isClaudeAISubscriber() && isNonCustomOpusModel(options.model)))
       ) {
         consecutive529Errors++
@@ -390,29 +401,15 @@ export async function* withRetry<T>(
         if (overflowData) {
           const { inputTokens, contextLimit } = overflowData
 
-          const safetyBuffer = 1000
-          const availableContext = Math.max(
-            0,
-            contextLimit - inputTokens - safetyBuffer,
+          const adjustedMaxTokens = adjustOverflowOutputTokens(
+            inputTokens,
+            contextLimit,
+            retryContext.maxTokensOverride,
           )
-          if (availableContext < FLOOR_OUTPUT_TOKENS) {
-            logError(
-              new Error(
-                `availableContext ${availableContext} is less than FLOOR_OUTPUT_TOKENS ${FLOOR_OUTPUT_TOKENS}`,
-              ),
-            )
+          if (adjustedMaxTokens === undefined) {
+            logError(new Error('max_tokens overflow adjustment has insufficient space or made no progress'))
             throw error
           }
-          // Ensure we have enough tokens for thinking + at least 1 output token
-          const minRequired =
-            (retryContext.thinkingConfig.type === 'enabled'
-              ? retryContext.thinkingConfig.budgetTokens
-              : 0) + 1
-          const adjustedMaxTokens = Math.max(
-            FLOOR_OUTPUT_TOKENS,
-            availableContext,
-            minRequired,
-          )
           retryContext.maxTokensOverride = adjustedMaxTokens
 
           logEvent('tengu_max_tokens_context_overflow_adjustment', {
@@ -459,7 +456,20 @@ export async function* withRetry<T>(
           PERSISTENT_RESET_CAP_MS,
         )
       } else {
-        delayMs = getRetryDelay(attempt, retryAfter)
+        const overloaded = is529Error(error)
+        const maxDelay = overloaded && process.env.CLAUDE_CODE_OVERLOADED_RETRY_MAX_DELAY_MS !== undefined
+          ? Number(process.env.CLAUDE_CODE_OVERLOADED_RETRY_MAX_DELAY_MS) : undefined
+        const baseDelay = overloaded && process.env.CLAUDE_CODE_OVERLOADED_RETRY_BASE_DELAY_MS !== undefined
+          ? Number(process.env.CLAUDE_CODE_OVERLOADED_RETRY_BASE_DELAY_MS) : undefined
+        delayMs = getRetryDelay(attempt, retryAfter, maxDelay, Math.random, baseDelay)
+        if (isPersistentRetryEnabled()) {
+          delayMs = Math.min(delayMs, PERSISTENT_RESET_CAP_MS)
+        } else if (delayMs > getRetryWaitLimit(maxDelay)) {
+          logEvent('tengu_api_retry_after_too_long', {
+            delayMs, status: (error as APIError).status, provider: getAPIProviderForStatsig(),
+          })
+          throw new CannotRetryError(error, retryContext)
+        }
       }
 
       // In persistent mode the for-loop `attempt` is clamped at maxRetries+1;
@@ -525,26 +535,6 @@ function getRetryAfter(error: unknown): string | null {
       ((error as APIError).headers as Headers)?.get?.('retry-after')) ??
     null
   )
-}
-
-export function getRetryDelay(
-  attempt: number,
-  retryAfterHeader?: string | null,
-  maxDelayMs = 32000,
-): number {
-  if (retryAfterHeader) {
-    const seconds = parseInt(retryAfterHeader, 10)
-    if (!isNaN(seconds)) {
-      return seconds * 1000
-    }
-  }
-
-  const baseDelay = Math.min(
-    BASE_DELAY_MS * Math.pow(2, attempt - 1),
-    maxDelayMs,
-  )
-  const jitter = Math.random() * 0.25 * baseDelay
-  return baseDelay + jitter
 }
 
 export function parseMaxTokensContextOverflowError(error: APIError):
@@ -787,10 +777,7 @@ function shouldRetry(error: APIError): boolean {
 }
 
 export function getDefaultMaxRetries(): number {
-  if (process.env.CLAUDE_CODE_MAX_RETRIES) {
-    return parseInt(process.env.CLAUDE_CODE_MAX_RETRIES, 10)
-  }
-  return DEFAULT_MAX_RETRIES
+  return getRetryLimit(process.env.CLAUDE_CODE_MAX_RETRIES, isPersistentRetryEnabled())
 }
 function getMaxRetries(options: RetryOptions): number {
   return options.maxRetries ?? getDefaultMaxRetries()

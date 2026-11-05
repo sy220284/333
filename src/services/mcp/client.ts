@@ -1,41 +1,14 @@
 import { feature } from 'bun:bundle'
+import {z} from 'zod/v4'
+import {mcpTasksEnabled317,readMcpTaskHandle317,driveMcpTaskForeground317} from './mcpTasks317.js'
 import type {
   Base64ImageSource,
   ContentBlockParam,
-  MessageParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
-import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import {
-  SSEClientTransport,
-  type SSEClientTransportOptions,
-} from '@modelcontextprotocol/sdk/client/sse.js'
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
-import {
-  StreamableHTTPClientTransport,
-  type StreamableHTTPClientTransportOptions,
-} from '@modelcontextprotocol/sdk/client/streamableHttp.js'
-import {
-  createFetchWithInit,
-  type FetchLike,
-  type Transport,
-} from '@modelcontextprotocol/sdk/shared/transport.js'
-import {
-  CallToolResultSchema,
-  ElicitRequestSchema,
-  type ElicitRequestURLParams,
-  type ElicitResult,
-  ErrorCode,
-  type JSONRPCMessage,
-  type ListPromptsResult,
-  ListPromptsResultSchema,
-  ListResourcesResultSchema,
-  ListRootsRequestSchema,
-  type ListToolsResult,
-  ListToolsResultSchema,
-  McpError,
-  type PromptMessage,
-  type ResourceLink,
-} from '@modelcontextprotocol/sdk/types.js'
+import { CallToolResultSchema } from "@modelcontextprotocol/core";
+import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
+import { Client, SSEClientTransport, StreamableHTTPClientTransport, createFetchWithInit, ProtocolError, UnauthorizedError, ProtocolErrorCode } from "@modelcontextprotocol/client";
+import type { SSEClientTransportOptions, StreamableHTTPClientTransportOptions, FetchLike, Transport, ElicitRequestURLParams, ElicitResult, JSONRPCMessage, PromptMessage, ResourceLink } from "@modelcontextprotocol/client";
 import mapValues from 'lodash-es/mapValues.js'
 import memoize from 'lodash-es/memoize.js'
 import zipObject from 'lodash-es/zipObject.js'
@@ -67,6 +40,7 @@ import { logForDebugging } from '../../utils/debug.js'
 import { isEnvDefinedFalsy, isEnvTruthy } from '../../utils/envUtils.js'
 import {
   errorMessage,
+  getErrnoCode,
   TelemetrySafeError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 } from '../../utils/errors.js'
 import { getMCPUserAgent } from '../../utils/http.js'
@@ -96,6 +70,7 @@ import {
 import { recursivelySanitizeUnicode } from '../../utils/sanitization.js'
 import { getSessionIngressAuthToken } from '../../utils/sessionIngressAuth.js'
 import { subprocessEnv } from '../../utils/subprocessEnv.js'
+import { buildStdioMcpEnvironment } from './stdioEnvironment.ts'
 import {
   isPersistError,
   persistToolResult,
@@ -119,8 +94,6 @@ const fetchMcpSkillsForClient = feature('MCP_SKILLS')
       require('../../skills/mcpSkills.js') as typeof import('../../skills/mcpSkills.js')
     ).fetchMcpSkillsForClient
   : null
-
-import { UnauthorizedError } from '@modelcontextprotocol/sdk/client/auth.js'
 import type { AssistantMessage } from 'src/types/message.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { classifyMcpToolForCollapse } from '../../tools/MCPTool/classifyForCollapse.js'
@@ -132,9 +105,13 @@ import {
   wrapFetchWithStepUpDetection,
 } from './auth.js'
 import { markClaudeAiMcpConnected } from './claudeai.js'
-import { getAllMcpConfigs, isMcpServerDisabled } from './config.js'
+import { getAllMcpConfigs, getMcpReconnectBlockReason, isMcpServerDisabled } from './config.js'
+import { canRetryMcpToolAfterSessionLoss } from './reconnectGate.js'
+import { describeMcpUrlElicitationRejection } from './elicitationOutcome.js'
+import { isHeadlessMcpElicitationPending } from './headlessElicitationState.js'
 import { getMcpServerHeaders } from './headersHelper.js'
 import { SdkControlClientTransport } from './SdkControlTransport.js'
+import { isMcpStdioServerConfig } from './types.js'
 import type {
   ConnectedMCPServer,
   MCPServerConnection,
@@ -163,7 +140,7 @@ export class McpAuthError extends Error {
  * The caller should get a fresh client via ensureConnectedClient and retry.
  */
 class McpSessionExpiredError extends Error {
-  constructor(serverName: string) {
+  constructor(serverName: string, readonly mayHaveRun: boolean) {
     super(`MCP server "${serverName}" session expired`)
     this.name = 'McpSessionExpiredError'
   }
@@ -306,6 +283,27 @@ function setMcpAuthCacheEntry(serverId: string): void {
     .catch(() => {
       // Best-effort cache write
     })
+}
+
+/** Remove only this server's negative authentication cache, after pending writes. */
+export function removeMcpAuthCacheEntry(serverId: string): Promise<void> {
+  const operation = writeChain.then(async () => {
+    let cache: McpAuthCacheData
+    try {
+      cache = jsonParse(await readFile(getMcpAuthCachePath(), 'utf-8')) as McpAuthCacheData
+    } catch (error) {
+      if (getErrnoCode(error) === 'ENOENT') return
+      throw error
+    }
+    if (!(serverId in cache)) return
+    const updated = { ...cache }
+    delete updated[serverId]
+    await writeFile(getMcpAuthCachePath(), jsonStringify(updated))
+    authCachePromise = null
+  })
+  // Keep the serialization queue usable after an error; the caller still receives it.
+  writeChain = operation.catch(() => { authCachePromise = null })
+  return operation
 }
 
 export function clearMcpAuthCache(): void {
@@ -903,9 +901,16 @@ export const connectToServer = memoize(
         )
         logMCPDebug(name, `claude.ai proxy transport created successfully`)
       } else if (
-        (serverRef.type === 'stdio' || !serverRef.type) &&
+        isMcpStdioServerConfig(serverRef) &&
         isClaudeInChromeMCPServer(name)
       ) {
+        // The extension must see the native host manifest before its first
+        // handshake. setupClaudeInChrome starts this during startup; awaiting
+        // the shared promise closes the registration/connect race.
+        const { ensureChromeNativeHostReady } = await import(
+          '../../utils/claudeInChrome/setup.js'
+        )
+        await ensureChromeNativeHostReady()
         // Run the Chrome MCP server in-process to avoid spawning a ~325 MB subprocess
         const { createChromeContext } = await import(
           '../../utils/claudeInChrome/mcpServer.js'
@@ -924,7 +929,7 @@ export const connectToServer = memoize(
         logMCPDebug(name, `In-process Chrome MCP server started`)
       } else if (
         feature('CHICAGO_MCP') &&
-        (serverRef.type === 'stdio' || !serverRef.type) &&
+        isMcpStdioServerConfig(serverRef) &&
         isComputerUseMCPServer!(name)
       ) {
         // Run the Computer Use MCP server in-process — same rationale as
@@ -941,7 +946,7 @@ export const connectToServer = memoize(
         await inProcessServer.connect(serverTransport)
         transport = clientTransport
         logMCPDebug(name, `In-process Computer Use MCP server started`)
-      } else if (serverRef.type === 'stdio' || !serverRef.type) {
+      } else if (isMcpStdioServerConfig(serverRef)) {
         const finalCommand =
           process.env.CLAUDE_CODE_SHELL_PREFIX || serverRef.command
         const finalArgs = process.env.CLAUDE_CODE_SHELL_PREFIX
@@ -950,14 +955,14 @@ export const connectToServer = memoize(
         transport = new StdioClientTransport({
           command: finalCommand,
           args: finalArgs,
-          env: {
-            ...subprocessEnv(),
-            ...serverRef.env,
-          } as Record<string, string>,
+          env: buildStdioMcpEnvironment(
+            subprocessEnv(),
+            serverRef.env,
+          ) as Record<string, string>,
           stderr: 'pipe', // prevents error output from the MCP server from printing to the UI
         })
       } else {
-        throw new Error(`Unsupported server type: ${serverRef.type}`)
+        throw new Error(`Unsupported server configuration: ${JSON.stringify(serverRef)}`)
       }
 
       // Set up stderr logging for stdio transport before connecting in case there are any stderr
@@ -965,7 +970,7 @@ export const connectToServer = memoize(
       // Store handler reference for cleanup to prevent memory leaks
       let stderrHandler: ((data: Buffer) => void) | undefined
       let stderrOutput = ''
-      if (serverRef.type === 'stdio' || !serverRef.type) {
+      if (isMcpStdioServerConfig(serverRef)) {
         const stdioTransport = transport as StdioClientTransport
         if (stdioTransport.stderr) {
           stderrHandler = (data: Buffer) => {
@@ -991,12 +996,17 @@ export const connectToServer = memoize(
           websiteUrl: PRODUCT_URL,
         },
         {
+          // Negotiate the 2026-07-28 stateless protocol when available.
+          // The official v2 client probes first and falls back to the 2025
+          // handshake for servers which have not upgraded.
+          versionNegotiation: { mode: 'auto' },
           capabilities: {
             roots: {},
             // Empty object declares the capability. Sending {form:{},url:{}}
             // breaks Java MCP SDK servers (Spring AI) whose Elicitation class
             // has zero fields and fails on unknown properties.
             elicitation: {},
+            ...(mcpTasksEnabled317()?{tasks:{list:{},cancel:{}}}:{}),
           },
         },
       )
@@ -1006,7 +1016,7 @@ export const connectToServer = memoize(
         logMCPDebug(name, `Client created, setting up request handler`)
       }
 
-      client.setRequestHandler(ListRootsRequestSchema, async () => {
+      client.setRequestHandler('roots/list', async () => {
         logMCPDebug(name, `Received ListRoots request from server`)
         return {
           roots: [
@@ -1188,7 +1198,7 @@ export const connectToServer = memoize(
       // Register default elicitation handler that returns cancel during the
       // window before registerElicitationHandler overwrites it in
       // onConnectionAttempt (useManageMCPConnections).
-      client.setRequestHandler(ElicitRequestSchema, async request => {
+      client.setRequestHandler('elicitation/create', async request => {
         logMCPDebug(
           name,
           `Elicitation request received during initialization: ${jsonStringify(request)}`,
@@ -1418,7 +1428,7 @@ export const connectToServer = memoize(
         }
 
         // Remove stderr event listener to prevent memory leaks
-        if (stderrHandler && (serverRef.type === 'stdio' || !serverRef.type)) {
+        if (stderrHandler && isMcpStdioServerConfig(serverRef)) {
           const stdioTransport = transport as StdioClientTransport
           stdioTransport.stderr?.off('data', stderrHandler)
         }
@@ -1749,10 +1759,9 @@ export const fetchToolsForClient = memoizeWithLRU(
         return []
       }
 
-      const result = (await client.client.request(
-        { method: 'tools/list' },
-        ListToolsResultSchema,
-      )) as ListToolsResult
+      // The SDK walks all pages, validates responses and caches tool definitions
+      // for output-schema checks and modern MCP parameter-header mirroring.
+      const result = await client.client.listTools()
 
       // Sanitize tool data from MCP server
       const toolsToProcess = recursivelySanitizeUnicode(result.tools)
@@ -1912,7 +1921,12 @@ export const fetchToolsForClient = memoizeWithLRU(
                   // cleared, so retry with a fresh client.
                   if (
                     error instanceof McpSessionExpiredError &&
-                    attempt < MAX_SESSION_RETRIES
+                    attempt < MAX_SESSION_RETRIES &&
+                    canRetryMcpToolAfterSessionLoss(
+                      error.mayHaveRun,
+                      tool.annotations?.readOnlyHint === true,
+                      tool.annotations?.idempotentHint === true,
+                    )
                   ) {
                     logMCPDebug(
                       client.name,
@@ -2006,10 +2020,7 @@ export const fetchResourcesForClient = memoizeWithLRU(
         return []
       }
 
-      const result = await client.client.request(
-        { method: 'resources/list' },
-        ListResourcesResultSchema,
-      )
+      const result = await client.client.listResources()
 
       if (!result.resources) return []
 
@@ -2040,10 +2051,7 @@ export const fetchCommandsForClient = memoizeWithLRU(
       }
 
       // Request prompts list from client
-      const result = (await client.client.request(
-        { method: 'prompts/list' },
-        ListPromptsResultSchema,
-      )) as ListPromptsResult
+      const result = await client.client.listPrompts()
 
       if (!result.prompts) return []
 
@@ -2143,6 +2151,25 @@ export async function reconnectMcpServerImpl(
   commands: Command[]
   resources?: ServerResource[]
 }> {
+  // The server may have been disabled or denied since the initial connection.
+  // Check before touching credentials, opening sockets or spawning a process.
+  const blockReason = getMcpReconnectBlockReason(name, config)
+  if (blockReason === 'disabled') {
+    return { client: { name, type: 'disabled', config }, tools: [], commands: [] }
+  }
+  if (blockReason === 'managed-policy') {
+    return {
+      client: {
+        name,
+        type: 'failed',
+        config,
+        error: `MCP server ${name} is blocked by enterprise managed policy`,
+      },
+      tools: [],
+      commands: [],
+    }
+  }
+
   try {
     // Invalidate the keychain cache so we read fresh credentials from disk.
     // This is necessary when another process (e.g. the VS Code extension host)
@@ -2544,7 +2571,7 @@ export async function transformResultContent(
             imageBuffer.length,
             ext,
           )
-          const content: MessageParam['content'] = []
+          const content: ContentBlockParam[] = []
           if (prefix) {
             content.push({
               type: 'text',
@@ -2641,7 +2668,7 @@ export type TransformedMCPResult = {
  * Generates a compact, jq-friendly type signature for a value.
  * e.g. "{title: string, items: [{id: number, name: string}]}"
  */
-export function inferCompactSchema(value: unknown, depth = 2): string {
+export function inferCompactSchema(value: unknown, depth: number = 2): string {
   if (value === null) return 'null'
   if (Array.isArray(value)) {
     if (value.length === 0) return '[]'
@@ -2862,8 +2889,8 @@ export async function callMCPToolWithUrlElicitationRetry({
       // The MCP SDK's Protocol creates plain McpError (not UrlElicitationRequiredError)
       // for error responses, so we check the error code instead of instanceof.
       if (
-        !(error instanceof McpError) ||
-        error.code !== ErrorCode.UrlElicitationRequired
+        !(error instanceof ProtocolError) ||
+        error.code !== ProtocolErrorCode.UrlElicitationRequired
       ) {
         throw error
       }
@@ -3011,7 +3038,11 @@ export async function callMCPToolWithUrlElicitationRetry({
             `User ${finalResult.action === 'decline' ? 'declined' : finalResult.action + 'ed'} URL elicitation ${elicitationId}`,
           )
           return {
-            content: `URL elicitation was ${finalResult.action === 'decline' ? 'declined' : finalResult.action + 'ed'} by the user. The tool "${tool}" could not complete because it requires the user to open a URL.`,
+            content: describeMcpUrlElicitationRejection(
+              tool,
+              finalResult.action,
+              handleElicitation !== undefined,
+            ),
           }
         }
 
@@ -3075,7 +3106,9 @@ async function callMCPTool({
         (reject, name, tool, timeoutMs) => {
           reject(
             new TelemetrySafeError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS(
-              `MCP server "${name}" tool "${tool}" timed out after ${Math.floor(timeoutMs / 1000)}s`,
+              isHeadlessMcpElicitationPending(client)
+                ? `MCP server "${name}" tool "${tool}" timed out while the server's elicitation request was unanswered. No approval was received. Do not automatically repeat this tool call; wait for a new user instruction.`
+                : `MCP server "${name}" tool "${tool}" timed out after ${Math.floor(timeoutMs / 1000)}s`,
               'MCP tool timeout',
             ),
           )
@@ -3088,38 +3121,53 @@ async function callMCPTool({
       )
     })
 
-    const result = await Promise.race([
-      client.callTool(
-        {
-          name: tool,
-          arguments: args,
-          _meta: meta,
-        },
-        CallToolResultSchema,
-        {
-          signal,
-          timeout: timeoutMs,
-          onprogress: onProgress
-            ? sdkProgress => {
-                onProgress({
-                  type: 'mcp_progress',
-                  status: 'progress',
-                  serverName: name,
-                  toolName: tool,
-                  progress: sdkProgress.progress,
-                  total: sdkProgress.total,
-                  progressMessage: sdkProgress.message,
-                })
-              }
-            : undefined,
-        },
-      ),
+    // 317: the task-capable MCP protocol can return an SEP-2663 task handle
+    // instead of an ordinary CallToolResult. Only the official runtime gate
+    // plus a server-advertised task capability activates this request shape.
+    const advertised = client.getServerCapabilities() as
+      | {tasks?:{requests?:{tools?:{call?:unknown}}}} | undefined
+    const useTasks = mcpTasksEnabled317() && !!advertised?.tasks?.requests?.tools?.call
+    const onSdkProgress = onProgress
+      ? (sdkProgress: {progress:number;total?:number;message?:string}) => {
+          onProgress({
+            type:'mcp_progress',status:'progress',serverName:name,toolName:tool,
+            progress:sdkProgress.progress,total:sdkProgress.total,
+            progressMessage:sdkProgress.message,
+          })
+        }
+      : undefined
+    const requestOptions={signal,timeout:timeoutMs,onprogress:onSdkProgress}
+    const raw = await Promise.race([
+      useTasks
+        ? client.request(
+            {method:'tools/call',params:{name:tool,arguments:args,_meta:meta}},
+            z.object({}).passthrough(),requestOptions,
+          )
+        : client.callTool({name:tool,arguments:args,_meta:meta},requestOptions),
       timeoutPromise,
     ]).finally(() => {
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
+      if (timeoutId)clearTimeout(timeoutId)
     })
+    const task=useTasks?readMcpTaskHandle317(raw):null
+    const resolved = task
+      ? await driveMcpTaskForeground317({
+          task,signal,
+          request:async (method,params,requestSignal,headers) => {
+            if(method==='tasks/cancel')return client.request(
+              {method,params},z.object({}).passthrough(),
+              {signal:requestSignal,timeout:5_000,headers} as Parameters<typeof client.request>[2],
+            )
+            return client.request({method,params},z.object({}).passthrough(),
+              {signal:requestSignal,timeout:60_000,headers} as Parameters<typeof client.request>[2])
+          },
+          onStatus:state=>onProgress?.({
+            type:'mcp_progress',status:'progress',serverName:name,toolName:tool,
+            progressMessage:state.statusMessage??('Task '+task.taskId+' '+state.status),
+          }),
+          onDebug:message=>logMCPDebug(name,message),
+        })
+      : raw
+    const result=CallToolResultSchema.parse(resolved)
 
     if ('isError' in result && result.isError) {
       let errorDetails = 'Unknown error'
@@ -3227,7 +3275,9 @@ async function callMCPTool({
         )
         logEvent('tengu_mcp_session_expired', {})
         await clearServerCache(name, config)
-        throw new McpSessionExpiredError(name)
+        // A definitive 404/-32001 did not run. An opaque HTTP connection
+        // close may have happened after execution; do not blindly retry.
+        throw new McpSessionExpiredError(name, !isSessionExpired)
       }
     }
 

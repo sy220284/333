@@ -114,7 +114,7 @@ export async function setupGitHubActions(
   apiKeyOrOAuthToken: string | null,
   secretName: string,
   updateProgress: () => void,
-  skipWorkflow = false,
+  skipWorkflow: boolean = false,
   selectedWorkflows: Workflow[],
   authType: 'api_key' | 'oauth_token',
   context?: {
@@ -122,7 +122,7 @@ export async function setupGitHubActions(
     workflowExists?: boolean
     secretExists?: boolean
   },
-) {
+) : Promise<void> {
   try {
     logEvent('tengu_setup_github_actions_started', {
       skip_workflow: skipWorkflow,

@@ -60,6 +60,7 @@ import {
 } from 'src/utils/sessionState.js'
 import { externalMetadataToAppState } from 'src/state/onChangeAppState.js'
 import { getInMemoryErrors, logError, logMCPDebug } from 'src/utils/log.js'
+import { denyUnansweredPrompt } from '../services/cli/upgradeMode.ts'
 import {
   writeToStdout,
   registerProcessOutputErrorHandlers,
@@ -70,10 +71,11 @@ import {
   loadConversationForResume,
   type TurnInterruptionState,
 } from 'src/utils/conversationRecovery.js'
-import type {
-  MCPServerConnection,
-  McpSdkServerConfig,
-  ScopedMcpServerConfig,
+import {
+  isMcpStdioServerConfig,
+  type MCPServerConnection,
+  type McpSdkServerConfig,
+  type ScopedMcpServerConfig,
 } from 'src/services/mcp/types.js'
 import {
   ChannelMessageNotificationSchema,
@@ -88,6 +90,7 @@ import {
 import { parsePluginIdentifier } from 'src/utils/plugins/pluginIdentifier.js'
 import { validateUuid } from 'src/utils/uuid.js'
 import { fromArray } from 'src/utils/generators.js'
+import { parseSdkTransportMessage } from 'src/services/mcp/validateSdkTransportMessage.js'
 import { ask } from 'src/QueryEngine.js'
 import type { PermissionPromptTool } from 'src/utils/queryHelpers.js'
 import {
@@ -127,7 +130,7 @@ import type {
   SDKControlMcpSetServersResponse,
   SDKControlReloadPluginsResponse,
 } from 'src/entrypoints/sdk/controlTypes.js'
-import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk'
+import type { ExternalPermissionMode as PermissionMode } from 'src/types/permissions.js'
 import type { PermissionMode as InternalPermissionMode } from 'src/types/permissions.js'
 import { cwd } from 'process'
 import { getCwd } from 'src/utils/cwd.js'
@@ -162,7 +165,7 @@ import {
 } from 'src/constants/outputStyles.js'
 import { TEAMMATE_MESSAGE_TAG, TICK_TAG } from 'src/constants/xml.js'
 import {
-  getSettings_DEPRECATED,
+  getInitialSettings,
   getSettingsWithSources,
 } from 'src/utils/settings/settings.js'
 import { settingsChangeDetector } from 'src/utils/settings/changeDetector.js'
@@ -213,6 +216,7 @@ import {
   saveMode,
   saveAiGeneratedTitle,
   restoreSessionMetadata,
+  setTranscriptMirror317,
 } from 'src/utils/sessionStorage.js'
 import { incrementPromptCount } from 'src/utils/commitAttribution.js'
 import {
@@ -238,11 +242,8 @@ import {
   runElicitationResultHooks,
 } from 'src/services/mcp/elicitationHandler.js'
 import { executeNotificationHooks } from 'src/utils/hooks.js'
-import {
-  ElicitRequestSchema,
-  ElicitationCompleteNotificationSchema,
-} from '@modelcontextprotocol/sdk/types.js'
 import { getMcpPrefix } from 'src/services/mcp/mcpStringUtils.js'
+import { beginHeadlessMcpElicitation } from 'src/services/mcp/headlessElicitationState.js'
 import {
   commandBelongsToServer,
   filterToolsByServer,
@@ -295,6 +296,7 @@ import {
   type ChannelEntry,
 } from 'src/bootstrap/state.js'
 import { runWithWorkload, WORKLOAD_CRON } from 'src/utils/workloadContext.js'
+import { formatScheduledTaskPrompt } from 'src/utils/systemNotificationPrompts.js'
 import type { UUID } from 'crypto'
 import { randomUUID } from 'crypto'
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
@@ -321,6 +323,7 @@ import {
 } from 'src/utils/queryProfiler.js'
 import { asSessionId } from 'src/types/ids.js'
 import { jsonStringify } from '../utils/slowOperations.js'
+import { ndjsonSafeStringify } from './ndjsonSafeStringify.js'
 import { skillChangeDetector } from '../utils/skills/skillChangeDetector.js'
 import { getCommands, clearCommandsCache } from '../commands.js'
 import {
@@ -468,6 +471,7 @@ export async function runHeadless(
     outputFormat: string | undefined
     jsonSchema: Record<string, unknown> | undefined
     permissionPromptToolName: string | undefined
+    permissionPrompts?: 'host' | 'none'
     allowedTools: string[] | undefined
     thinkingConfig: ThinkingConfig | undefined
     maxTurns: number | undefined
@@ -486,6 +490,9 @@ export async function runHeadless(
     enableAuthStatus: boolean | undefined
     agent: string | undefined
     workload: string | undefined
+    promptSuggestions?: boolean | undefined
+    sessionMirror?: boolean
+    forwardSubagentText?: boolean | undefined
     setupTrigger?: 'init' | 'maintenance' | undefined
     sessionStartHooksPromise?: ReturnType<typeof processSessionStartHooks>
     setSDKStatus?: (status: SDKStatus) => void
@@ -593,6 +600,10 @@ export async function runHeadless(
   // structuredIO.write below.
   if (options.outputFormat === 'stream-json') {
     installStreamJsonStdoutGuard()
+    if (options.sessionMirror) {
+      setTranscriptMirror317((filePath, entries) =>
+        structuredIO.write({ type: 'transcript_mirror', filePath, entries }))
+    }
   }
 
   // #34044: if user explicitly set sandbox.enabled=true but deps are missing,
@@ -818,12 +829,17 @@ export async function runHeadless(
     notifySessionStateChanged('requires_action', details)
   }
 
-  const canUseTool = getCanUseToolFn(
-    effectivePermissionPromptToolName,
+  const baseCanUseTool = getCanUseToolFn(
+    options.permissionPrompts === 'none' ? undefined : effectivePermissionPromptToolName,
     structuredIO,
     () => getAppState().mcp.tools,
     onPermissionPrompt,
   )
+  // Deny only decisions that still require a human response. Rules that
+  // already allowed or rejected the operation remain authoritative.
+  const canUseTool: CanUseToolFn = options.permissionPrompts === 'none'
+    ? async (...args) => denyUnansweredPrompt(await baseCanUseTool(...args))
+    : baseCanUseTool
   if (options.permissionPromptToolName) {
     // Remove the permission prompt tool from the list of available tools.
     filteredTools = filteredTools.filter(
@@ -890,6 +906,7 @@ export async function runHeadless(
     // (session_state_changed(idle) and any late task_notification drain after
     // result in the finally block).
     if (
+      message.type !== 'transcript_mirror' &&
       message.type !== 'control_response' &&
       message.type !== 'control_request' &&
       message.type !== 'control_cancel_request' &&
@@ -920,10 +937,10 @@ export async function runHeadless(
         throw new Error('No messages returned')
       }
       if (options.verbose) {
-        writeToStdout(jsonStringify(messages) + '\n')
+        writeToStdout(ndjsonSafeStringify(messages) + '\n')
         break
       }
-      writeToStdout(jsonStringify(lastMessage) + '\n')
+      writeToStdout(ndjsonSafeStringify(lastMessage) + '\n')
       break
     case 'stream-json':
       // already logged above
@@ -941,7 +958,13 @@ export async function runHeadless(
           )
           break
         case 'error_during_execution':
-          writeToStdout(`Execution error`)
+          // Surface failed transcript/config writes, including ENOSPC/EDQUOT,
+          // instead of hiding the cause behind an unhelpful generic message.
+          writeToStdout(
+            lastMessage.errors.length > 0
+              ? `Execution error: ${lastMessage.errors.join('; ')}\n`
+              : 'Execution error\n',
+          )
           break
         case 'error_max_turns':
           writeToStdout(`Error: Reached max turns (${options.maxTurns})`)
@@ -988,6 +1011,7 @@ function runHeadlessStreaming(
     verbose: boolean | undefined
     jsonSchema: Record<string, unknown> | undefined
     permissionPromptToolName: string | undefined
+    permissionPrompts?: 'host' | 'none'
     allowedTools: string[] | undefined
     thinkingConfig: ThinkingConfig | undefined
     maxTurns: number | undefined
@@ -1003,6 +1027,7 @@ function runHeadlessStreaming(
     agent?: string | undefined
     setSDKStatus?: (status: SDKStatus) => void
     promptSuggestions?: boolean | undefined
+    forwardSubagentText?: boolean | undefined
     workload?: string | undefined
   },
   turnInterruptionState?: TurnInterruptionState,
@@ -1278,85 +1303,90 @@ function runHeadlessStreaming(
       // created with elicitation capability declared (e.g., SDK-created clients).
       try {
         connection.client.setRequestHandler(
-          ElicitRequestSchema,
+          'elicitation/create',
           async (request, extra) => {
-            logMCPDebug(
-              serverName,
-              `Elicitation request received in print mode: ${jsonStringify(request)}`,
-            )
-
-            const mode = request.params.mode === 'url' ? 'url' : 'form'
-
-            logEvent('tengu_mcp_elicitation_shown', {
-              mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-            })
-
-            // Run elicitation hooks first — they can provide a response programmatically
-            const hookResponse = await runElicitationHooks(
-              serverName,
-              request.params,
-              extra.signal,
-            )
-            if (hookResponse) {
+            const finishElicitation = beginHeadlessMcpElicitation(connection.client)
+            try {
               logMCPDebug(
                 serverName,
-                `Elicitation resolved by hook: ${jsonStringify(hookResponse)}`,
+                `Elicitation request received in print mode: ${jsonStringify(request)}`,
               )
+
+              const mode = request.params.mode === 'url' ? 'url' : 'form'
+
+              logEvent('tengu_mcp_elicitation_shown', {
+                mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              })
+
+              // Run elicitation hooks first — they can provide a response programmatically
+              const hookResponse = await runElicitationHooks(
+                serverName,
+                request.params,
+                extra.mcpReq.signal,
+              )
+              if (hookResponse) {
+                logMCPDebug(
+                  serverName,
+                  `Elicitation resolved by hook: ${jsonStringify(hookResponse)}`,
+                )
+                logEvent('tengu_mcp_elicitation_response', {
+                  mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  action:
+                    hookResponse.action as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                })
+                return hookResponse
+              }
+
+              // Delegate to SDK consumer via control protocol
+              const url =
+                'url' in request.params
+                  ? (request.params.url as string)
+                  : undefined
+              const requestedSchema =
+                'requestedSchema' in request.params
+                  ? (request.params.requestedSchema as
+                      | Record<string, unknown>
+                      | undefined)
+                  : undefined
+
+              const elicitationId =
+                'elicitationId' in request.params
+                  ? (request.params.elicitationId as string | undefined)
+                  : undefined
+
+              const rawResult = await structuredIO.handleElicitation(
+                serverName,
+                request.params.message,
+                requestedSchema,
+                extra.mcpReq.signal,
+                mode,
+                url,
+                elicitationId,
+              )
+
+              const result = await runElicitationResultHooks(
+                serverName,
+                rawResult,
+                extra.mcpReq.signal,
+                mode,
+                elicitationId,
+              )
+
               logEvent('tengu_mcp_elicitation_response', {
                 mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
                 action:
-                  hookResponse.action as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  result.action as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
               })
-              return hookResponse
+              return result
+            } finally {
+              finishElicitation()
             }
-
-            // Delegate to SDK consumer via control protocol
-            const url =
-              'url' in request.params
-                ? (request.params.url as string)
-                : undefined
-            const requestedSchema =
-              'requestedSchema' in request.params
-                ? (request.params.requestedSchema as
-                    | Record<string, unknown>
-                    | undefined)
-                : undefined
-
-            const elicitationId =
-              'elicitationId' in request.params
-                ? (request.params.elicitationId as string | undefined)
-                : undefined
-
-            const rawResult = await structuredIO.handleElicitation(
-              serverName,
-              request.params.message,
-              requestedSchema,
-              extra.signal,
-              mode,
-              url,
-              elicitationId,
-            )
-
-            const result = await runElicitationResultHooks(
-              serverName,
-              rawResult,
-              extra.signal,
-              mode,
-              elicitationId,
-            )
-
-            logEvent('tengu_mcp_elicitation_response', {
-              mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-              action:
-                result.action as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-            })
-            return result
           },
         )
 
         // Surface completion notifications to SDK consumers (URL mode)
         connection.client.setNotificationHandler(
-          ElicitationCompleteNotificationSchema,
+          'notifications/elicitation/complete',
           notification => {
             const { elicitationId } = notification.params
             logMCPDebug(
@@ -1642,10 +1672,7 @@ function runHeadlessStreaming(
           url: connection.config.url,
           id: connection.config.id,
         }
-      } else if (
-        connection.config.type === 'stdio' ||
-        connection.config.type === undefined
-      ) {
+      } else if (isMcpStdioServerConfig(connection.config)) {
         config = {
           type: 'stdio' as const,
           command: connection.config.command,
@@ -1794,13 +1821,11 @@ function runHeadlessStreaming(
     const supportedConfigs: Record<string, McpServerConfigForProcessTransport> =
       {}
     for (const [name, config] of Object.entries(newConfigs)) {
-      const type = config.type
       if (
-        type === undefined ||
-        type === 'stdio' ||
-        type === 'sse' ||
-        type === 'http' ||
-        type === 'sdk'
+        isMcpStdioServerConfig(config) ||
+        config.type === 'sse' ||
+        config.type === 'http' ||
+        config.type === 'sdk'
       ) {
         supportedConfigs[name] = config
       }
@@ -2186,6 +2211,7 @@ function runHeadlessStreaming(
               abortController,
               replayUserMessages: options.replayUserMessages,
               includePartialMessages: options.includePartialMessages,
+              forwardSubagentText: options.forwardSubagentText,
               handleElicitation: (serverName, params, elicitSignal) =>
                 structuredIO.handleElicitation(
                   serverName,
@@ -2706,12 +2732,11 @@ function runHeadlessStreaming(
     cronSchedulerModule &&
     cronGate?.isKairosCronEnabled()
   ) {
-    cronScheduler = cronSchedulerModule.createCronScheduler({
-      onFire: prompt => {
-        if (inputClosed) return
-        enqueue({
-          mode: 'prompt',
-          value: prompt,
+    const enqueueCronPrompt = (prompt: string, scheduledFire: boolean) => {
+      if (inputClosed) return
+      enqueue({
+        mode: 'prompt',
+        value: scheduledFire ? formatScheduledTaskPrompt(prompt) : prompt,
           uuid: randomUUID(),
           priority: 'later',
           // System-generated — matches useScheduledTasks.ts REPL equivalent.
@@ -2722,10 +2747,13 @@ function runHeadlessStreaming(
           // so the API can serve cron requests at lower QoS. drainCommandQueue
           // reads this per-iteration and hoists it into bootstrap state for
           // the ask() call.
-          workload: WORKLOAD_CRON,
-        })
-        void run()
-      },
+        workload: WORKLOAD_CRON,
+      })
+      void run()
+    }
+    cronScheduler = cronSchedulerModule.createCronScheduler({
+      onFire: prompt => enqueueCronPrompt(prompt, false),
+      onFireTask: task => enqueueCronPrompt(task.prompt, true),
       isLoading: () => running || inputClosed,
       getJitterConfig: cronJitterConfigModule?.getCronJitterConfig,
       isKilled: () => !cronGate?.isKairosCronEnabled(),
@@ -2977,21 +3005,28 @@ function runHeadlessStreaming(
             sendControlResponseError(message, errorMessage(error))
           }
         } else if (message.request.subtype === 'mcp_message') {
-          // Handle MCP notifications from SDK servers
-          const mcpRequest = message.request
-          const sdkClient = sdkClients.find(
-            client => client.name === mcpRequest.server_name,
-          )
-          // Check client exists - dynamically added SDK servers may have
-          // placeholder clients with null client until updateSdkMcp() runs
-          if (
-            sdkClient &&
-            sdkClient.type === 'connected' &&
-            sdkClient.client?.transport?.onmessage
-          ) {
-            sdkClient.client.transport.onmessage(mcpRequest.message)
+          // Validate the untrusted protocol payload before dispatching it to
+          // a connected SDK MCP transport. Invalid JSON-RPC reports an error
+          // instead of acknowledging an undelivered message as successful.
+          try {
+            const mcpRequest = message.request
+            const parsedMessage = parseSdkTransportMessage(mcpRequest.message)
+            const sdkClient = sdkClients.find(
+              client => client.name === mcpRequest.server_name,
+            )
+            // Dynamically added SDK servers may have placeholder connections
+            // until updateSdkMcp() completes.
+            if (
+              sdkClient &&
+              sdkClient.type === 'connected' &&
+              sdkClient.client?.transport?.onmessage
+            ) {
+              sdkClient.client.transport.onmessage(parsedMessage)
+            }
+            sendControlResponseSuccess(message)
+          } catch (error) {
+            sendControlResponseError(message, errorMessage(error))
           }
-          sendControlResponseSuccess(message)
         } else if (message.request.subtype === 'rewind_files') {
           const appState = getAppState()
           const result = await handleRewindFiles(
@@ -4426,7 +4461,7 @@ async function handleInitializeRequest(
     }
   }
 
-  const settings = getSettings_DEPRECATED()
+  const settings = getInitialSettings()
   const outputStyle = settings?.outputStyle || DEFAULT_OUTPUT_STYLE_NAME
   const availableOutputStyles = await getAllOutputStyles(getCwd())
 
@@ -4437,7 +4472,7 @@ async function handleInitializeRequest(
     for (const [event, matchers] of Object.entries(request.hooks)) {
       hooks[event as HookEvent] = matchers.map(matcher => {
         const callbacks = matcher.hookCallbackIds.map(callbackId => {
-          return structuredIO.createHookCallback(callbackId, matcher.timeout)
+          return structuredIO.createHookCallback(callbackId, matcher.timeout, matcher.onFailure)
         })
         return {
           matcher: matcher.matcher,
@@ -4731,9 +4766,9 @@ function handleChannelEnable(
   // channel messages queue at priority 'next' and are seen by the model on
   // the turn after they arrive.
   connection.client.setNotificationHandler(
-    ChannelMessageNotificationSchema(),
+    'notifications/claude/channel', { params: ChannelMessageNotificationSchema().shape.params },
     async notification => {
-      const { content, meta } = notification.params
+      const { content, meta } = notification
       logMCPDebug(
         serverName,
         `notifications/claude/channel: ${content.slice(0, 80)}`,
@@ -4807,9 +4842,9 @@ function reregisterChannelHandlerAfterReconnect(
     'Channel notifications re-registered after reconnect',
   )
   connection.client.setNotificationHandler(
-    ChannelMessageNotificationSchema(),
+    'notifications/claude/channel', { params: ChannelMessageNotificationSchema().shape.params },
     async notification => {
-      const { content, meta } = notification.params
+      const { content, meta } = notification
       logMCPDebug(
         connection.name,
         `notifications/claude/channel: ${content.slice(0, 80)}`,
@@ -4859,7 +4894,7 @@ function emitLoadError(
       uuid: randomUUID(),
       errors: [message],
     }
-    process.stdout.write(jsonStringify(errorResult) + '\n')
+    process.stdout.write(ndjsonSafeStringify(errorResult) + '\n')
   } else {
     process.stderr.write(message + '\n')
   }

@@ -26,6 +26,9 @@ import { errorMessage } from '../../utils/errors.js'
 import { logError } from '../../utils/log.js'
 import { clearAllCaches } from '../../utils/plugins/cacheUtils.js'
 import { getInstallCounts } from '../../utils/plugins/installCounts.js'
+import { getPluginDataDirSize } from '../../utils/plugins/pluginDirectories.js'
+import { getPluginStorageId, loadPluginOptions, savePluginOptions } from '../../utils/plugins/pluginOptionsStorage.js'
+import { PluginCliConfigError, readPluginConfigStdin, validatePluginCliValues } from '../../utils/plugins/pluginCliConfig.js'
 import {
   isPluginInstalled,
   loadInstalledPluginsV2,
@@ -56,6 +59,7 @@ import {
   validatePluginContents,
 } from '../../utils/plugins/validatePlugin.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
+import { getSettingsForSource } from '../../utils/settings/settings.js'
 import { plural } from '../../utils/stringUtils.js'
 import { cliError, cliOk } from '../exit.js'
 
@@ -158,17 +162,25 @@ export async function pluginListHandler(options: {
   json?: boolean
   available?: boolean
   cowork?: boolean
+  dataSize?: boolean | string
 }): Promise<void> {
   if (options.cowork) setUseCoworkPlugins(true)
   logEvent('tengu_plugin_list_command', {})
 
   const installedData = loadInstalledPluginsV2()
-  const { getPluginEditableScopes } = await import(
+  // Resolve actual enabled state from merged settings. Editable scopes only
+  // identify where to write changes, and can disagree with policy or local
+  // overrides; the CLI list reports effective runtime state.
+  const { checkEnabledPlugins } = await import(
     '../../utils/plugins/pluginStartupCheck.js'
   )
-  const enabledPlugins = getPluginEditableScopes()
+  const enabledPlugins = new Set(await checkEnabledPlugins())
 
   const pluginIds = Object.keys(installedData.plugins)
+  if (options.json && typeof options.dataSize === 'string' &&
+      !(installedData.plugins[options.dataSize]?.length > 0)) {
+    cliError('--data-size names a plugin that is not installed')
+  }
 
   // Load all plugins once. The JSON and human paths both need:
   //  - loadErrors (to show load failures per plugin)
@@ -183,6 +195,12 @@ export async function pluginListHandler(options: {
   const allLoadedPlugins = [...loadedEnabled, ...loadedDisabled]
   const inlinePlugins = allLoadedPlugins.filter(p =>
     p.source.endsWith('@inline'),
+  )
+  const skillsDirPlugins = allLoadedPlugins.filter(p =>
+    p.source.endsWith('@skills-dir'),
+  )
+  const skillsDirLoadErrors = loadErrors.filter(e =>
+    e.source.endsWith('@skills-dir'),
   )
   // Path-level inline failures (dir doesn't exist, parse error before
   // manifest is read) use source='inline[N]'. Plugin-level errors after
@@ -201,12 +219,16 @@ export async function pluginListHandler(options: {
       version: string
       scope: string
       enabled: boolean
+      projectEnabled?: boolean
       installPath: string
       installedAt?: string
       lastUpdated?: string
       projectPath?: string
       mcpServers?: Record<string, unknown>
       errors?: string[]
+      dataDirSize?: { bytes: number; human: string }
+      dataDirUnreadable?: boolean
+      errorDetails?: Array<{ type: string; path: string }>
     }> = []
 
     for (const pluginId of pluginIds.sort()) {
@@ -221,6 +243,16 @@ export async function pluginListHandler(options: {
             e.source === pluginId || ('plugin' in e && e.plugin === pluginName),
         )
         .map(getPluginErrorMessage)
+
+      let dataDirSize: { bytes: number; human: string } | undefined
+      let dataDirUnreadable = false
+      if (options.dataSize === true || options.dataSize === pluginId) {
+        try {
+          dataDirSize = await getPluginDataDirSize(pluginId, { throwIfUnreadable: true }) ?? undefined
+        } catch {
+          dataDirUnreadable = true
+        }
+      }
 
       for (const installation of installations) {
         // Try to find the loaded plugin to get MCP servers
@@ -242,12 +274,15 @@ export async function pluginListHandler(options: {
           version: installation.version || 'unknown',
           scope: installation.scope,
           enabled: enabledPlugins.has(pluginId),
+          projectEnabled: getSettingsForSource('projectSettings')?.enabledPlugins?.[pluginId] === true,
           installPath: installation.installPath,
           installedAt: installation.installedAt,
           lastUpdated: installation.lastUpdated,
           projectPath: installation.projectPath,
           mcpServers,
           errors: pluginErrors.length > 0 ? pluginErrors : undefined,
+          dataDirSize,
+          dataDirUnreadable: dataDirUnreadable || undefined,
         })
       }
     }
@@ -272,12 +307,41 @@ export async function pluginListHandler(options: {
         version: p.manifest.version ?? 'unknown',
         scope: 'session',
         enabled: p.enabled !== false,
+        projectEnabled: getSettingsForSource('projectSettings')?.enabledPlugins?.[p.source] === true,
         installPath: p.path,
         mcpServers:
           servers && Object.keys(servers).length > 0 ? servers : undefined,
         errors: pErrors.length > 0 ? pErrors : undefined,
       })
     }
+    // Standalone manifests under ~/.claude/skills are user-scoped native
+    // plugins. They do not appear in installed_plugins.json's V2 registry.
+    for (const p of skillsDirPlugins) {
+      plugins.push({
+        id: p.source,
+        version: p.manifest.version ?? 'unknown',
+        scope: 'user',
+        enabled: p.enabled !== false,
+        installPath: p.path,
+      })
+    }
+    // A malformed skills-directory manifest has no LoadedPlugin, but still
+    // appears as a failed user-scoped plugin in the official JSON listing.
+    for (const error of skillsDirLoadErrors.filter(error =>
+      !skillsDirPlugins.some(plugin => error.source === plugin.source))) {
+      const errorPath = 'manifestPath' in error ? error.manifestPath :
+        'path' in error ? error.path : ''
+      plugins.push({
+        id: error.source,
+        version: 'unknown',
+        scope: 'user',
+        enabled: false,
+        installPath: '',
+        errors: [getPluginErrorMessage(error)],
+        errorDetails: [{ type: error.type, path: errorPath }],
+      })
+    }
+
     // Path-level inline failures (--plugin-dir /nonexistent): no LoadedPlugin
     // exists so the loop above can't surface them. Mirror the human-path
     // handling so JSON consumers see the failure instead of silent omission.
@@ -289,6 +353,7 @@ export async function pluginListHandler(options: {
         version: 'unknown',
         scope: 'session',
         enabled: false,
+        projectEnabled: false,
         installPath: 'path' in e ? e.path : '',
         errors: [getPluginErrorMessage(e)],
       })
@@ -336,8 +401,10 @@ export async function pluginListHandler(options: {
             }
           }
         }
-      } catch {
-        // Silently ignore marketplace loading errors
+      } catch (error) {
+        // --available must not report a complete but empty marketplace list
+        // when loading the underlying source failed.
+        cliError(`Unable to enumerate available marketplace plugins: ${errorMessage(error)}`)
       }
 
       cliOk(jsonStringify({ installed: plugins, available }, null, 2))
@@ -346,11 +413,11 @@ export async function pluginListHandler(options: {
     }
   }
 
-  if (pluginIds.length === 0 && inlinePlugins.length === 0) {
+  if (pluginIds.length === 0 && inlinePlugins.length === 0 && skillsDirPlugins.length === 0) {
     // inlineLoadErrors can exist with zero inline plugins (e.g. --plugin-dir
     // points at a nonexistent path). Don't early-exit over them — fall
     // through to the session section so the failure is visible.
-    if (inlineLoadErrors.length === 0) {
+    if (inlineLoadErrors.length === 0 && skillsDirLoadErrors.length === 0) {
       cliOk(
         'No plugins installed. Use `claude plugin install` to install a plugin.',
       )
@@ -400,6 +467,29 @@ export async function pluginListHandler(options: {
     }
   }
 
+  if (skillsDirPlugins.length > 0 || skillsDirLoadErrors.length > 0) {
+    console.log('Skills-directory plugins (.claude/skills/*):\n')
+    for (const p of skillsDirPlugins) {
+      const errors = skillsDirLoadErrors.filter(e =>
+        e.source === p.source || ('plugin' in e && e.plugin === p.name))
+      const status = errors.length > 0
+        ? figures.cross + ' loaded with errors'
+        : p.enabled !== false ? figures.tick + ' loaded' : figures.cross + ' disabled'
+      console.log('  ' + figures.pointer + ' ' + p.source)
+      console.log('    Version: ' + (p.manifest.version ?? 'unknown'))
+      console.log('    Scope: user')
+      console.log('    Path: ' + p.path)
+      console.log('    Status: ' + status)
+      for (const error of errors) console.log('    Error: ' + getPluginErrorMessage(error))
+      console.log('')
+    }
+    for (const error of skillsDirLoadErrors.filter(e =>
+      !skillsDirPlugins.some(p => e.source === p.source))) {
+      console.log('  ' + figures.pointer + ' ' + error.source + ': ' +
+        figures.cross + ' ' + getPluginErrorMessage(error) + '\n')
+    }
+  }
+
   if (inlinePlugins.length > 0 || inlineLoadErrors.length > 0) {
     // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log('Session-only plugins (--plugin-dir):\n')
@@ -446,9 +536,19 @@ export async function pluginListHandler(options: {
 // marketplace add (lines 5433–5487)
 export async function marketplaceAddHandler(
   source: string,
-  options: { cowork?: boolean; sparse?: string[]; scope?: string },
+  options: { cowork?: boolean; claudeai?: boolean; sparse?: string[]; scope?: string; json?: boolean },
 ): Promise<void> {
   if (options.cowork) setUseCoworkPlugins(true)
+  // A claude.ai-hosted marketplace is attached to an account and must never
+  // be written to local/project settings as an arbitrary Git/URL source.
+  // The 317 public CLI refuses this route when the host catalog is absent.
+  if (options.claudeai) {
+    if (options.sparse !== undefined || options.scope !== undefined) {
+      cliError(`${figures.cross} --claudeai takes only the marketplace name (no --sparse or --scope: a claude.ai marketplace is hosted for your account, not declared in settings)`)
+    }
+    console.log('Adding marketplace…')
+    cliError(`${figures.cross} Failed to add marketplace: claude.ai marketplaces are not available here — sign in to claude.ai (claude /login) with plugin sync on, then run: claude plugin marketplace list`)
+  }
   try {
     const parsed = await parseMarketplaceInput(source)
 
@@ -490,12 +590,12 @@ export async function marketplaceAddHandler(
     }
 
     // biome-ignore lint/suspicious/noConsole:: intentional console output
-    console.log('Adding marketplace...')
+    if (!options.json) console.log('Adding marketplace...')
 
     const { name, alreadyMaterialized, resolvedSource } =
       await addMarketplaceSource(marketplaceSource, message => {
         // biome-ignore lint/suspicious/noConsole:: intentional console output
-        console.log(message)
+        if (!options.json) console.log(message)
       })
 
     // Write intent to settings at the requested scope
@@ -513,11 +613,14 @@ export async function marketplaceAddHandler(
         sourceType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
 
-    cliOk(
-      alreadyMaterialized
-        ? `${figures.tick} Marketplace '${name}' already on disk — declared in ${scope} settings`
-        : `${figures.tick} Successfully added marketplace: ${name} (declared in ${scope} settings)`,
-    )
+    const message = alreadyMaterialized
+      ? `Marketplace '${name}' already on disk — declared in ${scope} settings`
+      : `Successfully added marketplace: ${name} (declared in ${scope} settings)`
+    if (options.json) {
+      cliOk(jsonStringify({ command: 'marketplace-add', outcome: 'ok', marketplace: name, message }))
+    } else {
+      cliOk(`${figures.tick} ${message}`)
+    }
   } catch (error) {
     handleMarketplaceError(error, 'add marketplace')
   }
@@ -667,7 +770,7 @@ export async function marketplaceUpdateHandler(
 // plugin install (lines 5690–5721)
 export async function pluginInstallHandler(
   plugin: string,
-  options: { scope?: string; cowork?: boolean },
+  options: { scope?: string; cowork?: boolean; json?: boolean; marketplace?: string; config?: string[]; registry?: string; yes?: boolean; acceptCommand?: string },
 ): Promise<void> {
   if (options.cowork) setUseCoworkPlugins(true)
   const scope = options.scope || 'user'
@@ -697,13 +800,108 @@ export async function pluginInstallHandler(
     scope: scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
 
-  await installPlugin(plugin, scope as 'user' | 'project' | 'local')
+  let installId = plugin
+  if (options.marketplace) {
+    if (plugin.includes('@')) {
+      cliError('--marketplace expects a bare plugin name without @marketplace')
+    }
+    try {
+      const parsed = await parseMarketplaceInput(options.marketplace)
+      if (!parsed) {
+        throw new Error('Invalid marketplace source')
+      }
+      if ('error' in parsed) {
+        throw new Error(parsed.error)
+      }
+      const added = await addMarketplaceSource(parsed)
+      saveMarketplaceToSettings(added.name, { source: added.resolvedSource }, 'userSettings')
+      clearAllCaches()
+      installId = `${plugin}@${added.name}`
+    } catch (error) {
+      if (options.json) {
+        process.stdout.write(jsonStringify({
+          command: 'install',
+          outcome: 'failed',
+          plugin,
+          scope,
+          message: errorMessage(error),
+          failureCode: 'marketplace_error',
+        }) + '\n')
+      }
+      cliError(`Failed to add marketplace: ${errorMessage(error)}`)
+    }
+  }
+  await installPlugin(installId, scope as 'user' | 'project' | 'local', options.json, options.config, options.registry, {
+    yes: options.yes,
+    acceptCommand: options.acceptCommand,
+  })
+}
+
+/** Official 2.1.317 plugin configure: inspect top-level schema or save JSON stdin. */
+export async function pluginConfigureHandler(
+  pluginId: string,
+  options: { cowork?: boolean; json?: boolean; valuesStdin?: boolean },
+): Promise<void> {
+  if (options.cowork) setUseCoworkPlugins(true)
+  const loaded = await loadAllPlugins()
+  const plugin = [...loaded.enabled, ...loaded.disabled].find(p => p.source === pluginId)
+  if (!plugin) {
+    cliError(`No installed plugin has the id "${pluginId}". Use its full id (name@marketplace), as \`claude plugin list\` shows it.`)
+  }
+  const id = getPluginStorageId(plugin)
+  const schema: Record<string, { title: string; sensitive?: boolean }> = plugin.manifest.userConfig as Record<string, { title: string; sensitive?: boolean }> | undefined ?? {}
+  const displayName = plugin.name
+  const stored = loadPluginOptions(id)
+  // CLI configuration reports every unset option, including optional fields.
+  // The interactive plugin enable flow uses getUnconfiguredOptions for a
+  // different purpose: prompting only for missing *required* values.
+  const getUnsetOptionNames = (values: Record<string, unknown>): string[] =>
+    Object.keys(schema).filter(name => values[name] === undefined || values[name] === null || values[name] === '')
+  if (options.valuesStdin) {
+    if (process.stdin.isTTY) {
+      cliError('No option values were piped in. Example: claude plugin configure <plugin> --values-stdin < values.json')
+    }
+    let normalized
+    try {
+      const supplied = await readPluginConfigStdin(process.stdin)
+      normalized = validatePluginCliValues(supplied, schema, stored)
+      if (Object.keys(normalized).length) savePluginOptions(id, normalized, schema)
+    } catch (error) {
+      if (error instanceof PluginCliConfigError) {
+        if (options.json) process.stdout.write(jsonStringify({
+          pluginId: id, displayName, refused: { option: error.option, message: error.message },
+        }) + '\n')
+        cliError(`Failed to save configuration: ${error.message}`)
+      }
+      throw error
+    }
+    const saved = Object.keys(normalized)
+    const unconfigured = getUnsetOptionNames({ ...stored, ...normalized })
+    if (options.json) {
+      cliOk(jsonStringify({ pluginId: id, displayName, saved, unconfigured }))
+    }
+    cliOk(saved.length ? 'Configuration saved. Restart Claude Code to apply it.' : 'No configuration changes.')
+  }
+  const unconfigured = getUnsetOptionNames(stored)
+  const configured: string[] = []
+  const inputs: Record<string, string> = {}
+  for (const [name, field] of Object.entries(schema)) {
+    const value = stored[name]
+    if (value !== undefined && value !== '') configured.push(name)
+    inputs[name] = field.sensitive ? '' : value === undefined ? '' : String(value)
+  }
+  if (options.json) {
+    cliOk(jsonStringify({ pluginId: id, displayName, schema, inputs, choices: {}, configured, unconfigured }, null, 2))
+  }
+  const lines = Object.entries(schema).map(([name, field]) =>
+    `${field.title || name}: ${configured.includes(name) ? 'configured' : 'not configured'}`)
+  cliOk(lines.length ? lines.join('\n') : 'This plugin has no configurable options.')
 }
 
 // plugin uninstall (lines 5738–5769)
 export async function pluginUninstallHandler(
   plugin: string,
-  options: { scope?: string; cowork?: boolean; keepData?: boolean },
+  options: { scope?: string; cowork?: boolean; keepData?: boolean; json?: boolean },
 ): Promise<void> {
   if (options.cowork) setUseCoworkPlugins(true)
   const scope = options.scope || 'user'
@@ -733,13 +931,14 @@ export async function pluginUninstallHandler(
     plugin,
     scope as 'user' | 'project' | 'local',
     options.keepData,
+    options.json,
   )
 }
 
 // plugin enable (lines 5783–5818)
 export async function pluginEnableHandler(
   plugin: string,
-  options: { scope?: string; cowork?: boolean },
+  options: { scope?: string; cowork?: boolean; json?: boolean },
 ): Promise<void> {
   if (options.cowork) setUseCoworkPlugins(true)
   let scope: (typeof VALID_INSTALLABLE_SCOPES)[number] | undefined
@@ -775,7 +974,7 @@ export async function pluginEnableHandler(
       'auto') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
 
-  await enablePlugin(plugin, scope)
+  await enablePlugin(plugin, scope, options.json === true)
 }
 
 // plugin disable (lines 5833–5902)
@@ -845,7 +1044,7 @@ export async function pluginDisableHandler(
 // plugin update (lines 5918–5948)
 export async function pluginUpdateHandler(
   plugin: string,
-  options: { scope?: string; cowork?: boolean },
+  options: { scope?: string; cowork?: boolean; json?: boolean; yes?: boolean; acceptCommand?: string },
 ): Promise<void> {
   if (options.cowork) setUseCoworkPlugins(true)
   const { name, marketplace } = parsePluginIdentifier(plugin)
@@ -874,5 +1073,5 @@ export async function pluginUpdateHandler(
     cliError('--cowork can only be used with user scope')
   }
 
-  await updatePluginCli(plugin, scope)
+  await updatePluginCli(plugin, scope, options)
 }

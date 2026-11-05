@@ -34,6 +34,7 @@ import { renderableSearchText } from '../utils/transcriptSearch.js';
 import { Divider } from './design-system/Divider.js';
 import type { UnseenDivider } from './FullscreenLayout.js';
 import { LogoV2 } from './LogoV2/LogoV2.js';
+
 import { StreamingMarkdown } from './Markdown.js';
 import { hasContentAfterIndex, MessageRow } from './MessageRow.js';
 import { InVirtualListContext, type MessageActionsNav, MessageActionsSelectedContext, type MessageActionsState } from './messageActions.js';
@@ -52,7 +53,7 @@ import type { JumpHandle } from './VirtualMessageList.js';
 // and pegs CPU at 100%. Memo on agentDefinitions so a new messages array
 // doesn't invalidate the logo subtree. LogoV2/StatusNotices internally
 // subscribe to useAppState/useSettings for their own updates.
-const LogoHeader = React.memo(function LogoHeader(t0) {
+const LogoHeader = React.memo(function LogoHeader(t0: { agentDefinitions: AgentDefinitionsResult }) {
   const $ = _c(3);
   const {
     agentDefinitions
@@ -316,7 +317,7 @@ export function computeSliceStart(collapsed: ReadonlyArray<{
   uuid: string;
 }>, anchorRef: {
   current: SliceAnchor;
-}, cap = MAX_MESSAGES_WITHOUT_VIRTUALIZATION, step = MESSAGE_CAP_STEP): number {
+}, cap: number = MAX_MESSAGES_WITHOUT_VIRTUALIZATION, step: number = MESSAGE_CAP_STEP): number {
   const anchor = anchorRef.current;
   const anchorIdx = anchor ? collapsed.findIndex(m => m.uuid === anchor.uuid) : -1;
   // Anchor found → use it. Anchor lost → fall back to stored index

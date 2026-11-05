@@ -50,7 +50,7 @@ export function dispatchClick(
   root: DOMElement,
   col: number,
   row: number,
-  cellIsBlank = false,
+  cellIsBlank: boolean = false,
 ): boolean {
   let target: DOMElement | undefined = hitTest(root, col, row) ?? undefined
   if (!target) return false

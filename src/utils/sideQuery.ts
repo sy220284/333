@@ -1,5 +1,5 @@
 import type Anthropic from '@anthropic-ai/sdk'
-import type { BetaToolUnion } from '@anthropic-ai/sdk/resources/beta/messages.js'
+import type { BetaToolUnion, BetaJSONOutputFormat } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import {
   getLastApiCompletionTimestamp,
   setLastApiCompletionTimestamp,
@@ -23,7 +23,6 @@ type TextBlockParam = Anthropic.TextBlockParam
 type Tool = Anthropic.Tool
 type ToolChoice = Anthropic.ToolChoice
 type BetaMessage = Anthropic.Beta.Messages.BetaMessage
-type BetaJSONOutputFormat = Anthropic.Beta.Messages.BetaJSONOutputFormat
 type BetaThinkingConfigParam = Anthropic.Beta.Messages.BetaThinkingConfigParam
 
 export type SideQueryOptions = {

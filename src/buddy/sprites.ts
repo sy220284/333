@@ -451,7 +451,7 @@ const HAT_LINES: Record<Hat, string> = {
   tinyduck: '    ,>      ',
 }
 
-export function renderSprite(bones: CompanionBones, frame = 0): string[] {
+export function renderSprite(bones: CompanionBones, frame: number = 0): string[] {
   const frames = BODIES[bones.species]
   const body = frames[frame % frames.length]!.map(line =>
     line.replaceAll('{E}', bones.eye),

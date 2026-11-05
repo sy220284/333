@@ -984,7 +984,9 @@ export function refreshGrowthBookAfterAuthChange(): void {
 /**
  * Reset GrowthBook client state (primarily for testing)
  */
-export function resetGrowthBook(): void {
+export function resetGrowthBook(
+  options: { preservePendingExposures?: boolean; preserveLoggedExposures?: boolean } = {},
+): void {
   stopPeriodicGrowthBookRefresh()
   // Remove process handlers before destroying client to prevent accumulation
   if (currentBeforeExitHandler) {
@@ -1000,8 +1002,8 @@ export function resetGrowthBook(): void {
   clientCreatedWithAuth = false
   reinitializingPromise = null
   experimentDataByFeature.clear()
-  pendingExposures.clear()
-  loggedExposures.clear()
+  if (!options.preservePendingExposures) pendingExposures.clear()
+  if (!options.preserveLoggedExposures) loggedExposures.clear()
   remoteEvalFeatureValues.clear()
   getGrowthBookClient.cache?.clear?.()
   initializeGrowthBook.cache?.clear?.()

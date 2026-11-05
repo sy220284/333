@@ -1,8 +1,6 @@
-import { randomUUID } from 'crypto'
-import type {
-  SDKPartialAssistantMessage,
-  StdoutMessage,
-} from 'src/entrypoints/sdk/controlTypes.js'
+import { randomUUID } from 'node:crypto'
+import type { SDKPartialAssistantMessage } from 'src/entrypoints/sdk/coreTypes.generated.js'
+import type { StdoutMessage } from 'src/entrypoints/sdk/controlTypes.js'
 import { decodeJwtExpiry } from '../../bridge/jwtUtils.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { logForDiagnosticsNoPII } from '../../utils/diagLogs.js'
@@ -28,16 +26,16 @@ import {
 } from './SerialBatchEventUploader.js'
 import type { SSETransport, StreamClientEvent } from './SSETransport.js'
 import { WorkerStateUploader } from './WorkerStateUploader.js'
+import { prepareStreamEventsForUpload } from './streamAccumulator.js'
+export { coalesceStreamEvents, prepareStreamEventsForUpload } from './streamAccumulator.js'
 
 /** Default interval between heartbeat events (20s; server TTL is 60s). */
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 20_000
 
 /**
  * stream_event messages accumulate in a delay buffer for up to this many ms
- * before enqueue. Mirrors HybridTransport's batching window. text_delta
- * events for the same content block accumulate into a single full-so-far
- * snapshot per flush — each emitted event is self-contained so a client
- * connecting mid-stream sees complete text, not a fragment.
+ * before enqueue. Adjacent compatible deltas are combined within that batch;
+ * later batches retain only the new content so viewers do not repeat text.
  */
 const STREAM_EVENT_FLUSH_INTERVAL_MS = 100
 
@@ -76,150 +74,6 @@ type EventPayload = {
 type ClientEvent = {
   payload: EventPayload
   ephemeral?: boolean
-}
-
-/**
- * Structural subset of a stream_event carrying a text_delta. Not a narrowing
- * of SDKPartialAssistantMessage — RawMessageStreamEvent's delta is a union and
- * narrowing through two levels defeats the discriminant.
- */
-type CoalescedStreamEvent = {
-  type: 'stream_event'
-  uuid: string
-  session_id: string
-  parent_tool_use_id: string | null
-  event: {
-    type: 'content_block_delta'
-    index: number
-    delta: { type: 'text_delta'; text: string }
-  }
-}
-
-/**
- * Accumulator state for text_delta coalescing. Keyed by API message ID so
- * lifetime is tied to the assistant message — cleared when the complete
- * SDKAssistantMessage arrives (writeEvent), which is reliable even when
- * abort/error paths skip content_block_stop/message_stop delivery.
- */
-export type StreamAccumulatorState = {
-  /** API message ID (msg_...) → blocks[blockIndex] → chunk array. */
-  byMessage: Map<string, string[][]>
-  /**
-   * {session_id}:{parent_tool_use_id} → active message ID.
-   * content_block_delta events don't carry the message ID (only
-   * message_start does), so we track which message is currently streaming
-   * for each scope. At most one message streams per scope at a time.
-   */
-  scopeToMessage: Map<string, string>
-}
-
-export function createStreamAccumulator(): StreamAccumulatorState {
-  return { byMessage: new Map(), scopeToMessage: new Map() }
-}
-
-function scopeKey(m: {
-  session_id: string
-  parent_tool_use_id: string | null
-}): string {
-  return `${m.session_id}:${m.parent_tool_use_id ?? ''}`
-}
-
-/**
- * Accumulate text_delta stream_events into full-so-far snapshots per content
- * block. Each flush emits ONE event per touched block containing the FULL
- * accumulated text from the start of the block — a client connecting
- * mid-stream receives a self-contained snapshot, not a fragment.
- *
- * Non-text-delta events pass through unchanged. message_start records the
- * active message ID for the scope; content_block_delta appends chunks;
- * the snapshot event reuses the first text_delta UUID seen for that block in
- * this flush so server-side idempotency remains stable across retries.
- *
- * Cleanup happens in writeEvent when the complete assistant message arrives
- * (reliable), not here on stop events (abort/error paths skip those).
- */
-export function accumulateStreamEvents(
-  buffer: SDKPartialAssistantMessage[],
-  state: StreamAccumulatorState,
-): EventPayload[] {
-  const out: EventPayload[] = []
-  // chunks[] → snapshot already in `out` this flush. Keyed by the chunks
-  // array reference (stable per {messageId, index}) so subsequent deltas
-  // rewrite the same entry instead of emitting one event per delta.
-  const touched = new Map<string[], CoalescedStreamEvent>()
-  for (const msg of buffer) {
-    switch (msg.event.type) {
-      case 'message_start': {
-        const id = msg.event.message.id
-        const prevId = state.scopeToMessage.get(scopeKey(msg))
-        if (prevId) state.byMessage.delete(prevId)
-        state.scopeToMessage.set(scopeKey(msg), id)
-        state.byMessage.set(id, [])
-        out.push(msg)
-        break
-      }
-      case 'content_block_delta': {
-        if (msg.event.delta.type !== 'text_delta') {
-          out.push(msg)
-          break
-        }
-        const messageId = state.scopeToMessage.get(scopeKey(msg))
-        const blocks = messageId ? state.byMessage.get(messageId) : undefined
-        if (!blocks) {
-          // Delta without a preceding message_start (reconnect mid-stream,
-          // or message_start was in a prior buffer that got dropped). Pass
-          // through raw — can't produce a full-so-far snapshot without the
-          // prior chunks anyway.
-          out.push(msg)
-          break
-        }
-        const chunks = (blocks[msg.event.index] ??= [])
-        chunks.push(msg.event.delta.text)
-        const existing = touched.get(chunks)
-        if (existing) {
-          existing.event.delta.text = chunks.join('')
-          break
-        }
-        const snapshot: CoalescedStreamEvent = {
-          type: 'stream_event',
-          uuid: msg.uuid,
-          session_id: msg.session_id,
-          parent_tool_use_id: msg.parent_tool_use_id,
-          event: {
-            type: 'content_block_delta',
-            index: msg.event.index,
-            delta: { type: 'text_delta', text: chunks.join('') },
-          },
-        }
-        touched.set(chunks, snapshot)
-        out.push(snapshot)
-        break
-      }
-      default:
-        out.push(msg)
-    }
-  }
-  return out
-}
-
-/**
- * Clear accumulator entries for a completed assistant message. Called from
- * writeEvent when the SDKAssistantMessage arrives — the reliable end-of-stream
- * signal that fires even when abort/interrupt/error skip SSE stop events.
- */
-export function clearStreamAccumulatorForMessage(
-  state: StreamAccumulatorState,
-  assistant: {
-    session_id: string
-    parent_tool_use_id: string | null
-    message: { id: string }
-  },
-): void {
-  state.byMessage.delete(assistant.message.id)
-  const scope = scopeKey(assistant)
-  if (state.scopeToMessage.get(scope) === assistant.message.id) {
-    state.scopeToMessage.delete(scope)
-  }
 }
 
 type RequestResult = { ok: true } | { ok: false; retryAfterMs?: number }
@@ -277,12 +131,6 @@ export class CCRClient {
   // and enables text_delta coalescing). Mirrors HybridTransport's pattern.
   private streamEventBuffer: SDKPartialAssistantMessage[] = []
   private streamEventTimer: ReturnType<typeof setTimeout> | null = null
-  // Full-so-far text accumulator. Persists across flushes so each emitted
-  // text_delta event carries the complete text from the start of the block —
-  // mid-stream reconnects see a self-contained snapshot. Keyed by API message
-  // ID; cleared in writeEvent when the complete assistant message arrives.
-  private streamTextAccumulator = createStreamAccumulator()
-
   private readonly workerState: WorkerStateUploader
   private readonly eventUploader: SerialBatchEventUploader<ClientEvent>
   private readonly internalEventUploader: SerialBatchEventUploader<WorkerEvent>
@@ -372,7 +220,7 @@ export class CCRClient {
           { worker_epoch: this.workerEpoch, events: batch },
           'client events',
         )
-        if (!result.ok) {
+        if (result.ok === false) {
           throw new RetryableError(
             'client event POST failed',
             result.retryAfterMs,
@@ -395,7 +243,7 @@ export class CCRClient {
           { worker_epoch: this.workerEpoch, events: batch },
           'internal events',
         )
-        if (!result.ok) {
+        if (result.ok === false) {
           throw new RetryableError(
             'internal event POST failed',
             result.retryAfterMs,
@@ -426,7 +274,7 @@ export class CCRClient {
           },
           'delivery batch',
         )
-        if (!result.ok) {
+        if (result.ok === false) {
           throw new RetryableError('delivery POST failed', result.retryAfterMs)
         }
       },
@@ -488,7 +336,7 @@ export class CCRClient {
       },
       'PUT worker (init)',
     )
-    if (!result.ok) {
+    if (result.ok === false) {
       // 409 → onEpochMismatch may throw, but request() catches it and returns
       // false. Without this check we'd continue to startHeartbeat(), leaking a
       // 20s timer against a dead epoch. Throw so connect()'s rejection handler
@@ -727,10 +575,9 @@ export class CCRClient {
    * These events are visible to frontend clients via the SSE stream.
    * Injects a UUID if missing to ensure server-side idempotency on retry.
    *
-   * stream_event messages are held in a 100ms delay buffer and accumulated
-   * (text_deltas for the same content block emit a full-so-far snapshot per
-   * flush). A non-stream_event write flushes the buffer first so downstream
-   * ordering is preserved.
+   * stream_event messages are held in a 100ms delay buffer and adjacent
+   * compatible deltas are combined. A non-stream_event write flushes the
+   * buffer first so downstream ordering is preserved.
    */
   async writeEvent(message: StdoutMessage): Promise<void> {
     if (message.type === 'stream_event') {
@@ -744,9 +591,6 @@ export class CCRClient {
       return
     }
     await this.flushStreamEventBuffer()
-    if (message.type === 'assistant') {
-      clearStreamAccumulatorForMessage(this.streamTextAccumulator, message)
-    }
     await this.eventUploader.enqueue(this.toClientEvent(message))
   }
 
@@ -762,8 +606,8 @@ export class CCRClient {
   }
 
   /**
-   * Drain the stream_event delay buffer: accumulate text_deltas into
-   * full-so-far snapshots, clear the timer, enqueue the resulting events.
+   * Drain the stream_event delay buffer, coalesce adjacent deltas and enqueue
+   * the resulting events.
    * Called from the timer, from writeEvent on a non-stream message, and from
    * flush(). close() drops the buffer — call flush() first if you need
    * delivery.
@@ -776,10 +620,10 @@ export class CCRClient {
     if (this.streamEventBuffer.length === 0) return
     const buffered = this.streamEventBuffer
     this.streamEventBuffer = []
-    const payloads = accumulateStreamEvents(
-      buffered,
-      this.streamTextAccumulator,
+    const payloads = prepareStreamEventsForUpload(buffered, (event, bytes) =>
+      logForDebugging(`CCRClient: dropping oversize ephemeral ${event.event.type} event (${bytes} bytes)`, { level: 'warn' }),
     )
+    if (payloads.length === 0) return
     await this.eventUploader.enqueue(
       payloads.map(payload => ({ payload, ephemeral: true })),
     )
@@ -988,8 +832,6 @@ export class CCRClient {
       this.streamEventTimer = null
     }
     this.streamEventBuffer = []
-    this.streamTextAccumulator.byMessage.clear()
-    this.streamTextAccumulator.scopeToMessage.clear()
     this.workerState.close()
     this.eventUploader.close()
     this.internalEventUploader.close()

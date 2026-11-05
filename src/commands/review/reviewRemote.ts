@@ -10,7 +10,6 @@
  */
 
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
@@ -29,6 +28,8 @@ import { detectCurrentRepositoryWithHost } from '../../utils/detectRepository.js
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
 import { getDefaultBranch, gitExe } from '../../utils/git.js'
 import { teleportToRemote } from '../../utils/teleport.js'
+import { getUltrareviewRuntimeEnvironment } from '../../utils/review/ultrareviewRuntime.js'
+import { resolveUltrareviewGitBase } from '../../utils/review/ultrareviewGitBase.ts'
 
 // One-time session flag: once the user confirms overage billing via the
 // dialog, all subsequent /ultrareview invocations in this session proceed
@@ -129,7 +130,12 @@ export async function launchRemoteReview(
   args: string,
   context: ToolUseContext,
   billingNote?: string,
+  options: { allowAllFiles?: boolean; signal?: AbortSignal } = {},
 ): Promise<ContentBlockParam[] | null> {
+  const signal = options.signal
+    ? AbortSignal.any([context.abortController.signal, options.signal])
+    : context.abortController.signal
+  if (signal.aborted) return null
   const eligibility = await checkRemoteAgentEligibility()
   // Synthetic DEFAULT_CODE_REVIEW_ENVIRONMENT_ID works without per-org CCR
   // setup, so no_remote_environment isn't a blocker. Server-side quota
@@ -165,42 +171,10 @@ export async function launchRemoteReview(
   // UUID{...,0x02}) encodes with version prefix '01' — NOT Python's
   // legacy tagged_id() format. Verified in prod.
   const CODE_REVIEW_ENV_ID = 'env_011111111111111111111113'
-  // Lite-review bypasses bughunter.go entirely, so it doesn't see the
-  // webhook's bug_hunter_config (different GB project). These env vars are
-  // the only tuning surface — without them, run_hunt.sh's bash defaults
-  // apply (60min, 120s agent timeout), and 120s kills verifiers mid-run
-  // which causes infinite respawn.
-  //
-  // total_wallclock must stay below RemoteAgentTask's 30min poll timeout
-  // with headroom for finalization (~3min synthesis). Per-field guards
-  // match autoDream.ts — GB cache can return stale wrong-type values.
-  const raw = getFeatureValue_CACHED_MAY_BE_STALE<Record<
-    string,
-    unknown
-  > | null>('tengu_review_bughunter_config', null)
-  const posInt = (v: unknown, fallback: number, max?: number): number => {
-    if (typeof v !== 'number' || !Number.isFinite(v)) return fallback
-    const n = Math.floor(v)
-    if (n <= 0) return fallback
-    return max !== undefined && n > max ? fallback : n
-  }
-  // Upper bounds: 27min on wallclock leaves ~3min for finalization under
-  // RemoteAgentTask's 30min poll timeout. If GB is set above that, the
-  // hang we're fixing comes back — fall to the safe default instead.
-  const commonEnvVars = {
-    BUGHUNTER_DRY_RUN: '1',
-    BUGHUNTER_FLEET_SIZE: String(posInt(raw?.fleet_size, 5, 20)),
-    BUGHUNTER_MAX_DURATION: String(posInt(raw?.max_duration_minutes, 10, 25)),
-    BUGHUNTER_AGENT_TIMEOUT: String(
-      posInt(raw?.agent_timeout_seconds, 600, 1800),
-    ),
-    BUGHUNTER_TOTAL_WALLCLOCK: String(
-      posInt(raw?.total_wallclock_minutes, 22, 27),
-    ),
-    ...(process.env.BUGHUNTER_DEV_BUNDLE_B64 && {
-      BUGHUNTER_DEV_BUNDLE_B64: process.env.BUGHUNTER_DEV_BUNDLE_B64,
-    }),
-  }
+  // Shared with standalone CLI and the polling deadline. These values
+  // follow the official 2.1.317 review config, including model overrides,
+  // result relay and optional code-quality checks.
+  const commonEnvVars = getUltrareviewRuntimeEnvironment()
 
   let session
   let command
@@ -215,7 +189,7 @@ export async function launchRemoteReview(
     session = await teleportToRemote({
       initialMessage: null,
       description: `ultrareview: ${repo.owner}/${repo.name}#${prNumber}`,
-      signal: context.abortController.signal,
+      signal,
       branchName: `refs/pull/${prNumber}/head`,
       environmentId: CODE_REVIEW_ENV_ID,
       environmentVariables: {
@@ -234,22 +208,24 @@ export async function launchRemoteReview(
     // deletes refs/remotes/origin/* — the base branch name won't resolve
     // in the container. Pass the merge-base SHA instead: it's reachable
     // from HEAD's history so `git diff <sha>` works without a named ref.
-    const { stdout: mbOut, code: mbCode } = await execFileNoThrow(
-      gitExe(),
-      ['merge-base', baseBranch, 'HEAD'],
-      { preserveOutputOnError: false },
+    const base = await resolveUltrareviewGitBase(
+      baseBranch, (args, input) => execFileNoThrow(gitExe(), args, {
+        preserveOutputOnError: false,
+        ...(input !== undefined && { input }),
+      }),
     )
-    const mergeBaseSha = mbOut.trim()
-    if (mbCode !== 0 || !mergeBaseSha) {
-      logEvent('tengu_review_remote_precondition_failed', {})
-      return [
-        {
-          type: 'text',
-          text: `Could not find merge-base with ${baseBranch}. Make sure you're in a git repo with a ${baseBranch} branch.`,
-        },
-      ]
+    if (base.kind === 'no-commits') {
+      return [{ type: 'text', text: 'The repository has no commits to review.' }]
     }
-
+    if (base.kind === 'invalid-empty-tree') {
+      return [{ type: 'text', text: 'Could not construct an empty-tree comparison for the review.' }]
+    }
+    if (base.kind === 'all-files' && options.allowAllFiles !== true) {
+      // Do not expand a cloud upload to every tracked file without the
+      // separate, explicit confirmation owned by the interactive dialog.
+      return [{ type: 'text', text: 'No common Git history. Uploading all tracked files requires confirmation.' }]
+    }
+    const mergeBaseSha = base.base
     // Bail early on empty diffs instead of launching a container that
     // will just echo "no changes".
     const { stdout: diffStat, code: diffCode } = await execFileNoThrow(
@@ -257,7 +233,10 @@ export async function launchRemoteReview(
       ['diff', '--shortstat', mergeBaseSha],
       { preserveOutputOnError: false },
     )
-    if (diffCode === 0 && !diffStat.trim()) {
+    if (diffCode !== 0) {
+      return [{ type: 'text', text: 'Could not compare the current worktree with the review base.' }]
+    }
+    if (!diffStat.trim()) {
       logEvent('tengu_review_remote_precondition_failed', {})
       return [
         {
@@ -270,9 +249,10 @@ export async function launchRemoteReview(
     session = await teleportToRemote({
       initialMessage: null,
       description: `ultrareview: ${baseBranch}`,
-      signal: context.abortController.signal,
+      signal,
       useBundle: true,
       environmentId: CODE_REVIEW_ENV_ID,
+      ...(base.forceAllFiles && { bundleForceScope: 'squashed' as const }),
       environmentVariables: {
         BUGHUNTER_BASE_BRANCH: mergeBaseSha,
         ...commonEnvVars,

@@ -1,5 +1,4 @@
 import { feature } from 'bun:bundle'
-import memoize from 'lodash-es/memoize.js'
 import {
   checkStatsigFeatureGate_CACHED_MAY_BE_STALE,
   getFeatureValue_CACHED_MAY_BE_STALE,
@@ -13,6 +12,7 @@ import {
   CONTEXT_MANAGEMENT_BETA_HEADER,
   INTERLEAVED_THINKING_BETA_HEADER,
   PROMPT_CACHING_SCOPE_BETA_HEADER,
+  THINKING_TOKEN_COUNT_BETA_HEADER,
   REDACT_THINKING_BETA_HEADER,
   STRUCTURED_OUTPUTS_BETA_HEADER,
   SUMMARIZE_CONNECTOR_TEXT_BETA_HEADER,
@@ -189,7 +189,10 @@ export function modelSupportsAutoMode(model: string): boolean {
       return true
     }
     // External allowlist (firstParty already checked above).
-    return /^claude-(opus|sonnet)-4-6/.test(m)
+    // 2.1.317's model catalog defaults to Opus 5.5 / Sonnet 5.5.
+    // Keeping the previous 4.6-only allowlist blocked Auto mode even when
+    // the current default model supported it, causing a startup mismatch.
+    return /^claude-(?:opus|sonnet)-(?:4-6|5-5)$/.test(m)
   }
   return false
 }
@@ -227,11 +230,19 @@ export function shouldIncludeFirstPartyOnlyBetas(): boolean {
 export function shouldUseGlobalCacheScope(): boolean {
   return (
     getAPIProvider() === 'firstParty' &&
+    !getIsNonInteractiveSession() &&
     !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS)
   )
 }
 
-export const getAllModelBetas = memoize((model: string): string[] => {
+/**
+ * Beta selection depends on the live session mode, auth provider, user
+ * credentials, settings, environment, and feature gates. Caching only on
+ * model name can reuse interactive-only beta headers in a later headless
+ * request (or keep previous-account headers after login/logout). Recompute
+ * on every API request, including CLI, SDK, and background worker paths.
+ */
+export function getAllModelBetas(model: string): string[] {
   const betaHeaders = []
   const isHaiku = getCanonicalName(model).includes('haiku')
   const provider = getAPIProvider()
@@ -351,8 +362,12 @@ export const getAllModelBetas = memoize((model: string): string[] => {
     betaHeaders.push(WEB_SEARCH_BETA_HEADER)
   }
 
-  // Always send the beta header for 1P. The header is a no-op without a scope field.
-  if (includeFirstPartyOnlyBetas) {
+  // The official 2.1.317 headless Messages request uses the thinking
+  // token-count contract. The prompt-caching-scope beta belongs to the
+  // interactive path and must not leak into a headless prompt request.
+  if (includeFirstPartyOnlyBetas && getIsNonInteractiveSession() && modelSupportsISP(model)) {
+    betaHeaders.push(THINKING_TOKEN_COUNT_BETA_HEADER)
+  } else if (includeFirstPartyOnlyBetas && !getIsNonInteractiveSession()) {
     betaHeaders.push(PROMPT_CACHING_SCOPE_BETA_HEADER)
   }
 
@@ -366,22 +381,20 @@ export const getAllModelBetas = memoize((model: string): string[] => {
     )
   }
   return betaHeaders
-})
+}
 
-export const getModelBetas = memoize((model: string): string[] => {
+export function getModelBetas(model: string): string[] {
   const modelBetas = getAllModelBetas(model)
   if (getAPIProvider() === 'bedrock') {
     return modelBetas.filter(b => !BEDROCK_EXTRA_PARAMS_HEADERS.has(b))
   }
   return modelBetas
-})
+}
 
-export const getBedrockExtraBodyParamsBetas = memoize(
-  (model: string): string[] => {
+export function getBedrockExtraBodyParamsBetas(model: string): string[] {
     const modelBetas = getAllModelBetas(model)
-    return modelBetas.filter(b => BEDROCK_EXTRA_PARAMS_HEADERS.has(b))
-  },
-)
+  return modelBetas.filter(b => BEDROCK_EXTRA_PARAMS_HEADERS.has(b))
+}
 
 /**
  * Merge SDK-provided betas with auto-detected model betas.
@@ -427,8 +440,4 @@ export function getMergedBetas(
   return [...baseBetas, ...sdkBetas.filter(b => !baseBetas.includes(b))]
 }
 
-export function clearBetasCaches(): void {
-  getAllModelBetas.cache?.clear?.()
-  getModelBetas.cache?.clear?.()
-  getBedrockExtraBodyParamsBetas.cache?.clear?.()
-}
+

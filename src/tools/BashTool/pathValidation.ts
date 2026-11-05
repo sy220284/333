@@ -703,7 +703,7 @@ function validateCommandPaths(
 export function createPathChecker(
   command: PathCommand,
   operationTypeOverride?: FileOperationType,
-) {
+) : (args: string[], cwd: string, context: ToolPermissionContext, compoundCommandHasCd?: boolean) => PermissionResult {
   return (
     args: string[],
     cwd: string,

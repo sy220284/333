@@ -1,3 +1,4 @@
+import { isStoppableTask } from '../../tasks/agentLifecycle317.js'
 import {
   OUTPUT_FILE_TAG,
   STATUS_TAG,
@@ -129,7 +130,7 @@ export function evictTerminalTask(
   setAppState(prev => {
     const task = prev.tasks?.[taskId]
     if (!task) return prev
-    if (!isTerminalTaskStatus(task.status)) return prev
+    if (!isTerminalTaskStatus(task.status) || isStoppableTask(task, prev.tasks)) return prev
     if (!task.notified) return prev
     // Panel grace period — blocks eviction until deadline passes.
     // 'retain' in task narrows to LocalAgentTaskState (the only type with
@@ -148,7 +149,7 @@ export function evictTerminalTask(
  */
 export function getRunningTasks(state: AppState): TaskState[] {
   const tasks = state.tasks ?? {}
-  return Object.values(tasks).filter(task => task.status === 'running')
+  return Object.values(tasks).filter(task => isStoppableTask(task, tasks))
 }
 
 /**
@@ -235,7 +236,7 @@ export function applyTaskOffsetsAndEvictions(
       const fresh = newTasks[id]
       // Re-check terminal+notified on fresh state (TOCTOU: resume may have
       // replaced the task during the generateTaskAttachments await)
-      if (!fresh || !isTerminalTaskStatus(fresh.status) || !fresh.notified) {
+      if (!fresh || !isTerminalTaskStatus(fresh.status) || isStoppableTask(fresh, prev.tasks) || !fresh.notified) {
         continue
       }
       if ('retain' in fresh && (fresh.evictAfter ?? Infinity) > Date.now()) {

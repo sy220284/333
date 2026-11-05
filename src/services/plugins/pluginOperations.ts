@@ -22,6 +22,8 @@ import {
   clearAllCaches,
   markPluginVersionOrphaned,
 } from '../../utils/plugins/cacheUtils.js'
+import { commandSourceDisclosure, installedSourceCommandKey, isAuthorizedSourceCommand } from '../../utils/plugins/commandSourceConsent.ts'
+import { getCommandSourceCatalogRevision } from '../../utils/plugins/commandSourceCatalog.js'
 import {
   findReverseDependents,
   formatReverseDependentsSuffix,
@@ -141,9 +143,13 @@ export function isPluginEnabledAtProjectScope(pluginId: string): boolean {
 export type PluginOperationResult = {
   success: boolean
   message: string
+  failureCode?: string
+  shownCommand?: ReturnType<typeof commandSourceDisclosure>
   pluginId?: string
   pluginName?: string
   scope?: PluginScope
+  installedVersion?: string
+  availableVersion?: string
   /** Plugins that declare this plugin as a dependency (warning on uninstall/disable) */
   reverseDependents?: string[]
 }
@@ -154,6 +160,8 @@ export type PluginOperationResult = {
 export type PluginUpdateResult = {
   success: boolean
   message: string
+  failureCode?: string
+  shownCommand?: ReturnType<typeof commandSourceDisclosure>
   pluginId?: string
   newVersion?: string
   oldVersion?: string
@@ -321,6 +329,8 @@ export function getPluginInstallationFromV2(pluginId: string): {
 export async function installPluginOp(
   plugin: string,
   scope: InstallableScope = 'user',
+  npmRegistry?: string,
+  commandConsent?: { yes?: boolean; acceptCommand?: string },
 ): Promise<PluginOperationResult> {
   assertInstallableScope(scope)
 
@@ -368,17 +378,97 @@ export async function installPluginOp(
     }
   }
 
-  const entry = foundPlugin
+  // Official --registry applies to npm package sources for this install,
+  // without modifying the marketplace's persistent source declaration.
+  let entry = foundPlugin
+  if (npmRegistry && typeof foundPlugin.source !== 'string' && foundPlugin.source.source === 'npm') {
+    try {
+      const url = new URL(npmRegistry)
+      if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+        throw new Error('Unsupported registry protocol')
+      }
+    } catch {
+      return { success: false, message: '--registry must be an HTTP(S) URL for npm sources' }
+    }
+    entry = { ...foundPlugin, source: { ...foundPlugin.source, registry: npmRegistry } }
+  }
   const pluginId = `${entry.name}@${foundMarketplace}`
+
+  // The managed deny policy applies on every installation attempt, including
+  // an already-cached plugin. The idempotent path must never bypass it.
+  if (isPluginBlockedByPolicy(pluginId)) {
+    return {
+      success: false,
+      message: `Plugin "${entry.name}" is blocked by your organization's policy and cannot be installed`,
+    }
+  }
+
+  // Official 2.1.317 is idempotent for an already-installed, enabled plugin.
+  // Check both the V2 registry and the actual install path: a stale record
+  // must be repaired by installation rather than reported as successful.
+  const existing = loadInstalledPluginsV2().plugins[pluginId]?.find(installation =>
+    installation.scope === scope &&
+    (scope === 'user' || installation.projectPath === getOriginalCwd()),
+  )
+  const currentSetting = getSettingsForSource(scopeToSettingSource(scope))
+  if (
+    existing &&
+    getFsImplementation().existsSync(existing.installPath) &&
+    currentSetting?.enabledPlugins?.[pluginId] === true
+  ) {
+    return {
+      success: true,
+      message: `Plugin "${pluginId}" is already installed (scope: ${scope})`,
+      pluginId,
+      pluginName: entry.name,
+      scope,
+      installedVersion: existing.version,
+      availableVersion: entry.version ?? existing.version,
+    }
+  }
+
+  // Marketplace commands are executable code, so an install must be tied
+  // to the exact current catalog revision, command text and plugin ID. The
+  // cache layer independently rejects any command without this grant.
+  let authorizedSourceCommands: string[] | undefined
+  if (typeof entry.source !== 'string' && entry.source.source === 'command') {
+    if (!marketplaceInstallLocation) {
+      return { success: false, message: 'Cannot authorize command source without a marketplace location' }
+    }
+    const revision = await getCommandSourceCatalogRevision(marketplaceInstallLocation)
+    const shownCommand = commandSourceDisclosure({
+      pluginId,
+      command: entry.source.command,
+      mode: entry.source.mode,
+      catalogRevision: revision,
+    }, commandConsent?.acceptCommand)
+    const isNestedSession = process.env.CLAUDECODE === '1' ||
+      process.env.CLAUDE_CODE_CHILD_SESSION === '1'
+    const approved = isAuthorizedSourceCommand(shownCommand, {
+      yes: commandConsent?.yes,
+      acceptCommand: commandConsent?.acceptCommand,
+      isNestedSession,
+    })
+    if (!approved) {
+      return {
+        success: false,
+        failureCode: 'command_source_refused',
+        shownCommand,
+        message: `${pluginId} is installed by running a command on this machine (${JSON.stringify(entry.source.command)}) that has not been approved, so it was not run.`,
+      }
+    }
+    authorizedSourceCommands = [pluginId]
+  }
 
   const result = await installResolvedPlugin({
     pluginId,
     entry,
     scope,
     marketplaceInstallLocation,
+    authorizedSourceCommands,
   })
 
-  if (!result.ok) {
+  if (result.ok === false) {
     switch (result.reason) {
       case 'local-source-no-location':
         return {
@@ -427,7 +517,7 @@ export async function installPluginOp(
 export async function uninstallPluginOp(
   plugin: string,
   scope: InstallableScope = 'user',
-  deleteDataDir = true,
+  deleteDataDir: boolean = true,
 ): Promise<PluginOperationResult> {
   // Validate scope at runtime for early error detection
   assertInstallableScope(scope)
@@ -515,7 +605,7 @@ export async function uninstallPluginOp(
 
   clearAllCaches()
 
-  // Remove from installed_plugins_v2.json for this scope
+  // Remove this scope's entry from the current installed_plugins.json V2 registry
   removePluginInstallation(pluginId, scope, projectPath)
 
   const updatedData = loadInstalledPluginsV2()
@@ -829,6 +919,7 @@ export async function disableAllPluginsOp(): Promise<PluginOperationResult> {
 export async function updatePluginOp(
   plugin: string,
   scope: PluginScope,
+  commandConsent?: { yes?: boolean; acceptCommand?: string },
 ): Promise<PluginUpdateResult> {
   // Parse the plugin identifier to get the full plugin ID
   const { name: pluginName, marketplace: marketplaceName } =
@@ -878,6 +969,36 @@ export async function updatePluginOp(
     }
   }
 
+  let authorizedCommandSource = false
+  if (typeof entry.source !== 'string' && entry.source.source === 'command') {
+    const revision = await getCommandSourceCatalogRevision(marketplaceInstallLocation)
+    const shownCommand = commandSourceDisclosure({
+      pluginId,
+      command: entry.source.command,
+      mode: entry.source.mode,
+      catalogRevision: revision,
+    }, commandConsent?.acceptCommand)
+    const isNestedSession = process.env.CLAUDECODE === '1' ||
+      process.env.CLAUDE_CODE_CHILD_SESSION === '1'
+    const samePreviouslyApprovedCommand = !isNestedSession &&
+      entry.source.mode === 'copy' &&
+      installation.sourceCommand === installedSourceCommandKey(entry.source)
+    if (!samePreviouslyApprovedCommand && !isAuthorizedSourceCommand(shownCommand, {
+      yes: commandConsent?.yes,
+      acceptCommand: commandConsent?.acceptCommand,
+      isNestedSession,
+    })) {
+      return {
+        success: false,
+        message: `The marketplace install command for ${pluginId} requires explicit confirmation before updating.`,
+        pluginId,
+        scope,
+        failureCode: 'command_source_refused',
+        shownCommand,
+      }
+    }
+    authorizedCommandSource = true
+  }
   return performPluginUpdate({
     pluginId,
     pluginName,
@@ -886,6 +1007,7 @@ export async function updatePluginOp(
     installation,
     scope,
     projectPath,
+    authorizedCommandSource,
   })
 }
 
@@ -901,14 +1023,16 @@ async function performPluginUpdate({
   installation,
   scope,
   projectPath,
+  authorizedCommandSource,
 }: {
   pluginId: string
   pluginName: string
   entry: PluginMarketplaceEntry
   marketplaceInstallLocation: string
-  installation: { version?: string; installPath: string }
+  installation: { version?: string; installPath: string; sourceCommand?: string; sourceProducerPath?: string }
   scope: PluginScope
   projectPath: string | undefined
+  authorizedCommandSource?: boolean
 }): Promise<PluginUpdateResult> {
   const fs = getFsImplementation()
   const oldVersion = installation.version
@@ -917,16 +1041,19 @@ async function performPluginUpdate({
   let newVersion: string
   let shouldCleanupSource = false
   let gitCommitSha: string | undefined
+  let sourceProducerPath: string | undefined
 
   // Handle remote vs local plugins
   if (typeof entry.source !== 'string') {
     // Remote plugin: download to temp directory first
     const cacheResult = await cachePlugin(entry.source, {
       manifest: { name: entry.name },
+      authorizedCommandSource,
     })
     sourcePath = cacheResult.path
     shouldCleanupSource = true
     gitCommitSha = cacheResult.gitCommitSha
+    sourceProducerPath = cacheResult.sourceProducerPath
 
     // Calculate version from downloaded plugin. For git-subdir sources,
     // cachePlugin captured the commit SHA before discarding the ephemeral
@@ -1019,6 +1146,16 @@ async function performPluginUpdate({
       installation.installPath === versionedPath ||
       installation.installPath === zipPath
     if (isUpToDate) {
+      if (typeof entry.source !== 'string' && entry.source.source === 'command' &&
+          sourceProducerPath && installation.sourceProducerPath !== sourceProducerPath) {
+        // A command may now resolve to a different producer directory while
+        // returning byte-identical plugin content. Persist its current path
+        // for background re-resolution and sandbox write protection.
+        updateInstallationPathOnDisk(
+          pluginId, scope, projectPath, installation.installPath, newVersion,
+          gitCommitSha, installedSourceCommandKey(entry.source), sourceProducerPath,
+        )
+      }
       return {
         success: true,
         message: `${pluginName} is already at the latest version (${newVersion}).`,
@@ -1050,6 +1187,9 @@ async function performPluginUpdate({
       versionedPath,
       newVersion,
       gitCommitSha,
+      typeof entry.source !== 'string' && entry.source.source === 'command'
+        ? installedSourceCommandKey(entry.source) : null,
+      sourceProducerPath ?? null,
     )
 
     if (oldVersionPath && oldVersionPath !== versionedPath) {

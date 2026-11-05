@@ -8,6 +8,7 @@ import { TodoWriteTool } from '../../tools/TodoWriteTool/TodoWriteTool.js';
 import { type BackgroundRemoteSessionPrecondition, checkBackgroundRemoteSessionEligibility } from '../../utils/background/remote/remoteSession.js';
 import { logForDebugging } from '../../utils/debug.js';
 import { logError } from '../../utils/log.js';
+import { getUltrareviewClientTimeout } from '../../utils/review/ultrareviewRuntime.js';
 import { enqueuePendingNotification } from '../../utils/messageQueueManager.js';
 import { extractTag, extractTextContent } from '../../utils/messages.js';
 import { emitTaskTerminatedSdk } from '../../utils/sdkEventQueue.js';
@@ -15,6 +16,8 @@ import { deleteRemoteAgentMetadata, listRemoteAgentMetadata, type RemoteAgentMet
 import { jsonStringify } from '../../utils/slowOperations.js';
 import { appendTaskOutput, evictTaskOutput, getTaskOutputPath, initTaskOutput } from '../../utils/task/diskOutput.js';
 import { registerTask, updateTaskState } from '../../utils/task/framework.js';
+import { createPollingLifecycle } from '../../utils/task/pollingLifecycle317.ts';
+import { createRemotePollingRegistry } from '../../utils/task/remotePollingRegistry317.ts';
 import { fetchSession } from '../../utils/teleport/api.js';
 import { archiveRemoteSession, pollRemoteSessionEvents } from '../../utils/teleport.js';
 import type { TodoList } from '../../utils/todo/types.js';
@@ -36,7 +39,7 @@ export type RemoteAgentTaskState = TaskStateBase & {
   /**
    * When the local poller started watching this task (at spawn or on restore).
    * Review timeout clocks from here so a restore doesn't immediately time out
-   * a task spawned >30min ago.
+   * a task spawned before the current polling window.
    */
   pollStartedAt: number;
   /** True when this task was created by a teleported /ultrareview command. */
@@ -113,6 +116,8 @@ async function removeRemoteAgentMetadata(taskId: string): Promise<void> {
 // Precondition error result
 export type RemoteAgentPreconditionResult = {
   eligible: true;
+  /** Successful eligibility has no errors. */
+  errors?: never;
 } | {
   eligible: false;
   errors: BackgroundRemoteSessionPrecondition[];
@@ -535,10 +540,14 @@ async function restoreRemoteAgentTasksImpl(context: TaskContext): Promise<void> 
  * Start polling for remote session updates.
  * Returns a cleanup function to stop polling.
  */
+const activeRemotePollers = createRemotePollingRegistry();
+
 function startRemoteSessionPolling(taskId: string, context: TaskContext): () => void {
-  let isRunning = true;
+  const polling = createPollingLifecycle();
+  const stopPolling = activeRemotePollers.register(taskId, () => polling.stop());
   const POLL_INTERVAL_MS = 1000;
-  const REMOTE_REVIEW_TIMEOUT_MS = 30 * 60 * 1000;
+  const reviewTimeout = getUltrareviewClientTimeout();
+  const REMOTE_REVIEW_TIMEOUT_MS = reviewTimeout.milliseconds;
   // Remote sessions flip to 'idle' between tool turns. With 100+ rapid
   // turns, a 1s poll WILL catch a transient idle mid-run. Require stable
   // idle (no log growth for N consecutive polls) before believing it.
@@ -550,7 +559,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
   // at end of run; scanning only the delta (response.newEvents) is O(new).
   let cachedReviewContent: string | null = null;
   const poll = async (): Promise<void> => {
-    if (!isRunning) return;
+    if (!polling.active) return;
     try {
       const appState = context.getAppState();
       const task = appState.tasks?.[taskId] as RemoteAgentTaskState | undefined;
@@ -559,9 +568,12 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
         // Session left alive so the claude.ai URL stays valid — the run_hunt.sh
         // post_stage() calls land as assistant events there, and the user may
         // want to revisit them after closing the terminal. TTL reaps it.
+        stopPolling();
         return;
       }
       const response = await pollRemoteSessionEvents(task.sessionId, lastEventId);
+      // Stop may arrive while HTTP is in flight; do not publish stale results.
+      if (!polling.active) return;
       lastEventId = response.lastEventId;
       const logGrew = response.newEvents.length > 0;
       if (logGrew) {
@@ -585,6 +597,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
         enqueueRemoteNotification(taskId, task.title, 'completed', context.setAppState, task.toolUseId);
         void evictTaskOutput(taskId);
         void removeRemoteAgentMetadata(taskId);
+        stopPolling();
         return;
       }
       const checker = completionCheckers.get(task.remoteTaskType);
@@ -599,6 +612,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
           enqueueRemoteNotification(taskId, completionResult, 'completed', context.setAppState, task.toolUseId);
           void evictTaskOutput(taskId);
           void removeRemoteAgentMetadata(taskId);
+          stopPolling();
           return;
         }
       }
@@ -673,7 +687,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
       // is the discriminator — bughunter mode always has one (run_hunt.sh),
       // prompt mode never does — and it arrives before the kickoff
       // post_stage so there's no race. When the hook is running, only the
-      // <remote-review> tag or the 30min timeout complete the task.
+      // <remote-review> tag or the configured review deadline complete the task.
       // Filtering on hook_event avoids a (theoretical) non-SessionStart hook
       // in prompt mode from blocking stableIdle — the code_review container
       // only registers SessionStart, but the 30min-hang failure mode is
@@ -717,7 +731,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
           endTime: result || sessionDone || reviewTimedOut ? Date.now() : undefined
         };
       });
-      if (raceTerminated) return;
+      if (raceTerminated) { stopPolling(); return; }
 
       // Send notification if task completed or timed out
       if (result || sessionDone || reviewTimedOut) {
@@ -738,7 +752,8 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
             enqueueRemoteReviewNotification(taskId, reviewContent, context.setAppState);
             void evictTaskOutput(taskId);
             void removeRemoteAgentMetadata(taskId);
-            return; // Stop polling
+            stopPolling();
+            return;
           }
 
           // No output or remote error — mark failed with a review-specific message.
@@ -746,16 +761,18 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
             ...t,
             status: 'failed'
           }));
-          const reason = result && result.subtype !== 'success' ? 'remote session returned an error' : reviewTimedOut && !sessionDone ? 'remote session exceeded 30 minutes' : 'no review output — orchestrator may have exited early';
+          const reason = result && result.subtype !== 'success' ? 'remote session returned an error' : reviewTimedOut && !sessionDone ? `remote session exceeded ${reviewTimeout.minutes} minutes` : 'no review output — orchestrator may have exited early';
           enqueueRemoteReviewFailureNotification(taskId, reason, context.setAppState);
           void evictTaskOutput(taskId);
           void removeRemoteAgentMetadata(taskId);
-          return; // Stop polling
+          stopPolling();
+          return;
         }
         enqueueRemoteNotification(taskId, task.title, finalStatus, context.setAppState, task.toolUseId);
         void evictTaskOutput(taskId);
         void removeRemoteAgentMetadata(taskId);
-        return; // Stop polling
+        stopPolling();
+        return;
       }
     } catch (error) {
       logError(error);
@@ -773,29 +790,26 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
             status: 'failed',
             endTime: Date.now()
           }));
-          enqueueRemoteReviewFailureNotification(taskId, 'remote session exceeded 30 minutes', context.setAppState);
+          enqueueRemoteReviewFailureNotification(taskId, `remote session exceeded ${reviewTimeout.minutes} minutes`, context.setAppState);
           void evictTaskOutput(taskId);
           void removeRemoteAgentMetadata(taskId);
-          return; // Stop polling
+          stopPolling();
+          return;
         }
       } catch {
         // Best effort — if getAppState fails, continue polling
       }
     }
 
-    // Continue polling
-    if (isRunning) {
-      setTimeout(poll, POLL_INTERVAL_MS);
-    }
+    // Schedule through the task-owned timer so stop() can cancel it.
+    polling.schedule(poll, POLL_INTERVAL_MS);
   };
 
   // Start polling
   void poll();
 
   // Return cleanup function
-  return () => {
-    isRunning = false;
-  };
+  return stopPolling;
 }
 
 /**
@@ -809,6 +823,8 @@ export const RemoteAgentTask: Task = {
   name: 'RemoteAgentTask',
   type: 'remote_agent',
   async kill(taskId, setAppState) {
+    // Cancel any outstanding timer or in-flight poll callback immediately.
+    activeRemotePollers.stop(taskId);
     let toolUseId: string | undefined;
     let description: string | undefined;
     let sessionId: string | undefined;

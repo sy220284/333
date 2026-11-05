@@ -200,7 +200,7 @@ export function buildMemoryLines(
   displayName: string,
   memoryDir: string,
   extraGuidelines?: string[],
-  skipIndex = false,
+  skipIndex: boolean = false,
 ): string[] {
   const howToSave = skipIndex
     ? [

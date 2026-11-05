@@ -365,10 +365,10 @@ export function ManageMarketplaces({
       secondaryLabel?: string;
       value: string;
     }> = [{
-      label: `Browse plugins (${marketplace.pluginCount ?? 0})`,
+      label: `浏览插件（${marketplace.pluginCount ?? 0})`,
       value: 'browse'
     }, {
-      label: 'Update marketplace',
+      label: '更新插件市场',
       secondaryLabel: marketplace.lastUpdated ? `(last updated ${new Date(marketplace.lastUpdated).toLocaleDateString()})` : undefined,
       value: 'update'
     }];
@@ -376,12 +376,12 @@ export function ManageMarketplaces({
     // Only show auto-update toggle if auto-updater is not globally disabled
     if (!shouldSkipPluginAutoupdate()) {
       options.push({
-        label: marketplace.autoUpdate ? 'Disable auto-update' : 'Enable auto-update',
+        label: marketplace.autoUpdate ? '关闭自动更新' : '开启自动更新',
         value: 'toggle-auto-update'
       });
     }
     options.push({
-      label: 'Remove marketplace',
+      label: '移除插件市场',
       value: 'remove'
     });
     return options;
@@ -536,12 +536,12 @@ export function ManageMarketplaces({
     isActive: !isProcessing && internalView === 'confirm-remove'
   });
   if (loading) {
-    return <Text>Loading marketplaces…</Text>;
+    return <Text>正在加载插件市场…</Text>;
   }
   if (marketplaceStates.length === 0) {
     return <Box flexDirection="column">
         <Box marginBottom={1}>
-          <Text bold>Manage marketplaces</Text>
+          <Text bold>管理插件市场</Text>
         </Box>
 
         {/* Add Marketplace option */}
@@ -554,7 +554,7 @@ export function ManageMarketplaces({
 
         <Box marginLeft={3}>
           <Text dimColor italic>
-            {exitState.pending ? <>Press {exitState.keyName} again to go back</> : <Byline>
+            {exitState.pending ? <>再次按 {exitState.keyName} 返回</> : <Byline>
                 <ConfigurableShortcutHint action="select:accept" context="Select" fallback="Enter" description="select" />
                 <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="go back" />
               </Byline>}
@@ -568,7 +568,7 @@ export function ManageMarketplaces({
     const pluginCount = selectedMarketplace.installedPlugins?.length || 0;
     return <Box flexDirection="column">
         <Text bold color="warning">
-          Remove marketplace <Text italic>{selectedMarketplace.name}</Text>?
+          移除插件市场 <Text italic>{selectedMarketplace.name}</Text>?
         </Text>
         <Box flexDirection="column">
           {pluginCount > 0 && <Box marginTop={1}>
@@ -627,7 +627,7 @@ export function ManageMarketplaces({
 
         {/* Processing indicator */}
         {isUpdating && <Box marginTop={1} flexDirection="column">
-            <Text color="claude">Updating marketplace…</Text>
+            <Text color="claude">正在更新插件市场…</Text>
             {progressMessage && <Text dimColor>{progressMessage}</Text>}
           </Box>}
 
@@ -681,7 +681,7 @@ export function ManageMarketplaces({
   } = getPendingCounts();
   return <Box flexDirection="column">
       <Box marginBottom={1}>
-        <Text bold>Manage marketplaces</Text>
+        <Text bold>管理插件市场</Text>
       </Box>
 
       {/* Add Marketplace option */}
@@ -735,8 +735,8 @@ export function ManageMarketplaces({
       {/* Pending changes summary */}
       {hasPendingChanges() && <Box marginTop={1} flexDirection="column">
           <Text>
-            <Text bold>Pending changes:</Text>{' '}
-            <Text dimColor>Enter to apply</Text>
+            <Text bold>待应用的更改：</Text>{' '}
+            <Text dimColor>按 Enter 应用</Text>
           </Text>
           {updateCount > 0 && <Text>
               • Update {updateCount} {plural(updateCount, 'marketplace')}
@@ -748,7 +748,7 @@ export function ManageMarketplaces({
 
       {/* Processing indicator */}
       {isProcessing && <Box marginTop={1}>
-          <Text color="claude">Processing changes…</Text>
+          <Text color="claude">正在处理更改…</Text>
         </Box>}
 
       {/* Error display */}
@@ -772,7 +772,7 @@ function ManageMarketplacesKeyHints(t0) {
   if (exitState.pending) {
     let t1;
     if ($[0] !== exitState.keyName) {
-      t1 = <Box marginTop={1}><Text dimColor={true} italic={true}>Press {exitState.keyName} again to go back</Text></Box>;
+      t1 = <Box marginTop={1}><Text dimColor={true} italic={true}>再次按 {exitState.keyName} 返回</Text></Box>;
       $[0] = exitState.keyName;
       $[1] = t1;
     } else {

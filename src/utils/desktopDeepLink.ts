@@ -2,13 +2,12 @@ import { readdir } from 'fs/promises'
 import { join } from 'path'
 import { coerce as semverCoerce } from 'semver'
 import { getSessionId } from '../bootstrap/state.js'
-import { getCwd } from './cwd.js'
 import { logForDebugging } from './debug.js'
 import { execFileNoThrow } from './execFileNoThrow.js'
 import { pathExists } from './file.js'
 import { gte as semverGte } from './semver.js'
 
-const MIN_DESKTOP_VERSION = '1.1.2396'
+export const MIN_DESKTOP_VERSION = '1.1.9669'
 
 function isDevMode(): boolean {
   if ((process.env.NODE_ENV as string) === 'development') {
@@ -29,15 +28,20 @@ function isDevMode(): boolean {
 
 /**
  * Builds a deep link URL for Claude Desktop to resume a CLI session.
- * Format: claude://resume?session={sessionId}&cwd={cwd}
- * In dev mode: claude-dev://resume?session={sessionId}&cwd={cwd}
+ * Format (2.1.310): claude://resume?session={sessionId}
+ * In dev mode: claude-dev://resume?session={sessionId}. The app resolves
+ * session identity from its stored transcript; cwd is no longer embedded.
  */
-function buildDesktopDeepLink(sessionId: string): string {
+export function buildDesktopDeepLink(sessionId: string): string {
   const protocol = isDevMode() ? 'claude-dev' : 'claude'
   const url = new URL(`${protocol}://resume`)
   url.searchParams.set('session', sessionId)
-  url.searchParams.set('cwd', getCwd())
   return url.toString()
+}
+
+export function buildDesktopNewSessionLink(folder: string): string {
+  const protocol = isDevMode() ? 'claude-dev' : 'claude'
+  return `${protocol}://code/new?folder=${encodeURIComponent(folder)}`
 }
 
 /**
@@ -197,6 +201,43 @@ async function openDeepLink(deepLinkUrl: string): Promise<boolean> {
   }
 
   return false
+}
+
+/**
+ * Launch a new or existing Desktop session using the 2.1.310 URI contract.
+ * The version and installed handler are checked before opening either path.
+ */
+export async function openDesktopTarget(
+  target: { kind: 'resume'; sessionId: string } | { kind: 'new-session'; folder: string },
+): Promise<{ success: boolean; reason?: string; error?: string; deepLinkUrl?: string }> {
+  const installed = await getDesktopInstallStatus()
+  if (installed.status === 'not-installed') {
+    return {
+      success: false,
+      reason: 'not_installed',
+      error: 'Claude Desktop is not installed. Install it from https://claude.ai/download',
+    }
+  }
+  if (installed.status === 'version-too-old') {
+    return {
+      success: false,
+      reason: 'outdated',
+      error: `Claude Desktop ${installed.version} is too old. Update to ${MIN_DESKTOP_VERSION} or later.`,
+    }
+  }
+  const deepLinkUrl = target.kind === 'resume'
+    ? buildDesktopDeepLink(target.sessionId)
+    : buildDesktopNewSessionLink(target.folder)
+  const opened = await openDeepLink(deepLinkUrl)
+  if (!opened) {
+    return {
+      success: false,
+      reason: 'open_failed',
+      error: "Couldn't open Claude Desktop. Open Claude Desktop and try again.",
+      deepLinkUrl,
+    }
+  }
+  return { success: true, deepLinkUrl }
 }
 
 /**

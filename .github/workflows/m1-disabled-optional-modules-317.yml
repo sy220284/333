@@ -1,0 +1,37 @@
+name: M1 317 条件模块与正式特性开关审计
+on:
+  push:
+    branches:
+      - upgrade/2.1.310-m1-evidence
+    paths:
+      - 'build/check-disabled-optional-modules-317.mjs'
+      - 'build/rebuild.mjs'
+      - 'src/commands.ts'
+      - 'src/tools.ts'
+      - 'src/screens/REPL.tsx'
+      - 'src/skills/bundled/index.ts'
+      - 'src/utils/permissions/yoloClassifier.ts'
+      - '.github/workflows/m1-disabled-optional-modules-317.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  feature-gates:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 正式发行缺失条件模块门禁
+        run: node build/check-disabled-optional-modules-317.mjs --details
+      - name: 恢复项目依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 以正式特性开关独立构建
+        run: bun build/rebuild.mjs

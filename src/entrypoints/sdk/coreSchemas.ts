@@ -7,6 +7,9 @@
  * @see scripts/generate-sdk-types.ts for type generation
  */
 
+import type { BetaMessage, BetaRawMessageStreamEvent } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import type { UUID } from 'node:crypto'
 import { z } from 'zod/v4'
 import { lazySchema } from '../../utils/lazySchema.js'
 
@@ -109,7 +112,7 @@ export const ThinkingConfigSchema = lazySchema(() =>
 
 export const McpStdioServerConfigSchema = lazySchema(() =>
   z.object({
-    type: z.literal('stdio').optional(), // Optional for backwards compatibility
+    type: z.literal('stdio'),
     command: z.string(),
     args: z.array(z.string()).optional(),
     env: z.record(z.string(), z.string()).optional(),
@@ -282,7 +285,7 @@ export const PermissionUpdateSchema = lazySchema(() =>
     }),
     z.object({
       type: z.literal('setMode'),
-      mode: z.lazy(() => PermissionModeSchema()),
+      mode: PermissionModeSchema(),
       destination: PermissionUpdateDestinationSchema(),
     }),
     z.object({
@@ -1057,7 +1060,7 @@ export const ModelInfoSchema = lazySchema(() =>
         .optional()
         .describe('Whether this model supports effort levels'),
       supportedEffortLevels: z
-        .array(z.enum(['low', 'medium', 'high', 'max']))
+        .array(z.enum(['low', 'medium', 'high', 'xhigh', 'max']))
         .optional()
         .describe('Available effort levels for this model'),
       supportsAdaptiveThinking: z
@@ -1166,7 +1169,7 @@ export const AgentDefinitionSchema = lazySchema(() =>
           "Scope for auto-loading agent memory files. 'user' - ~/.claude/agent-memory/<agentType>/, 'project' - .claude/agent-memory/<agentType>/, 'local' - .claude/agent-memory-local/<agentType>/",
         ),
       effort: z
-        .union([z.enum(['low', 'medium', 'high', 'max']), z.number().int()])
+        .union([z.enum(['low', 'medium', 'high', 'xhigh', 'max']), z.number().int()])
         .optional()
         .describe(
           'Reasoning effort level for this agent. Either a named level or an integer',
@@ -1234,17 +1237,95 @@ export const RewindFilesResultSchema = lazySchema(() =>
 // The generation script uses TypeOverrideMap to output the correct TS type references.
 // This allows us to define SDK message types in Zod while maintaining proper typing.
 
-/** Placeholder for APIUserMessage from @anthropic-ai/sdk */
-export const APIUserMessagePlaceholder = lazySchema(() => z.unknown())
+/** A SDK user message contains a typed user role and text or API blocks.
+ * Keep content blocks extensible: newer tools add block variants.
+ */
+export type SDKUserContent = { role: 'user'; content: string | ContentBlockParam[] }
 
-/** Placeholder for APIAssistantMessage from @anthropic-ai/sdk */
-export const APIAssistantMessagePlaceholder = lazySchema(() => z.unknown())
+function isSDKUserContent(value: unknown): value is SDKUserContent {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const message = value as Record<string, unknown>
+  if (message.role !== 'user') return false
+  if (typeof message.content === 'string') return true
+  return Array.isArray(message.content) &&
+    message.content.every(block =>
+      block !== null && typeof block === 'object' &&
+      typeof (block as Record<string, unknown>).type === 'string')
+}
+
+export const APIUserMessagePlaceholder = lazySchema(() =>
+  z.custom<SDKUserContent>(isSDKUserContent, 'Expected SDK user message content'),
+)
+
+/** Assistant messages are sent from the native SDK as full API messages.
+ * Validate the envelope before exposing it to REPL renderers or CCR adapters.
+ */
+function isAPIAssistantMessage(value: unknown): value is BetaMessage {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const message = value as Record<string, unknown>
+  return message.type === 'message' && message.role === 'assistant' &&
+    typeof message.id === 'string' && typeof message.model === 'string' &&
+    Array.isArray(message.content) &&
+    message.content.every(block => block !== null && typeof block === 'object' &&
+      typeof (block as Record<string, unknown>).type === 'string')
+}
+export const APIAssistantMessagePlaceholder = lazySchema(() =>
+  z.custom<BetaMessage>(isAPIAssistantMessage, 'Expected SDK assistant API message'),
+)
 
 /** Placeholder for RawMessageStreamEvent from @anthropic-ai/sdk */
-export const RawMessageStreamEventPlaceholder = lazySchema(() => z.unknown())
+/**
+ * Official beta.messages SSE event wire shape. Using unknown previously made
+ * SDKPartialAssistantMessage.event unusable to typed subscribers and accepted
+ * malformed events as if they had been received from the model.
+ *
+ * We validate the event envelope without dropping newer provider-specific
+ * fields: the streaming parser still owns detailed block/delta parsing.
+ */
+function isRawMessageStreamEvent(value: unknown): value is BetaRawMessageStreamEvent {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+  const e = value as Record<string, unknown>
+  if (typeof e.type !== 'string') return false
+  switch (e.type) {
+    case 'message_start': {
+      if (typeof e.message !== 'object' || e.message === null) return false
+      const message = e.message as Record<string, unknown>
+      return message.type === 'message' && typeof message.id === 'string'
+    }
+    case 'message_delta':
+      return typeof e.delta === 'object' && e.delta !== null
+    case 'message_stop':
+    case 'ping':
+      return true
+    case 'content_block_start': {
+      if (typeof e.index !== 'number' || !Number.isInteger(e.index) || e.index < 0) return false
+      if (typeof e.content_block !== 'object' || e.content_block === null) return false
+      return typeof (e.content_block as Record<string, unknown>).type === 'string'
+    }
+    case 'content_block_delta': {
+      if (typeof e.index !== 'number' || !Number.isInteger(e.index) || e.index < 0) return false
+      if (typeof e.delta !== 'object' || e.delta === null) return false
+      return typeof (e.delta as Record<string, unknown>).type === 'string'
+    }
+    case 'content_block_stop':
+      return typeof e.index === 'number' && Number.isInteger(e.index) && e.index >= 0
+    default:
+      return false
+  }
+}
+
+export const RawMessageStreamEventPlaceholder = lazySchema(() =>
+  z.custom<BetaRawMessageStreamEvent>(isRawMessageStreamEvent),
+)
 
 /** Placeholder for UUID from crypto */
-export const UUIDPlaceholder = lazySchema(() => z.string())
+export const UUIDPlaceholder = lazySchema(() =>
+  z.custom<UUID>(
+    value => typeof value === 'string' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value),
+    'Expected canonical UUID',
+  ),
+)
 
 /** Placeholder for NonNullableUsage (mapped type over Usage) */
 export const NonNullableUsagePlaceholder = lazySchema(() => z.unknown())
@@ -1350,6 +1431,8 @@ export const SDKAssistantMessageSchema = lazySchema(() =>
     message: APIAssistantMessagePlaceholder(),
     parent_tool_use_id: z.string().nullable(),
     error: SDKAssistantMessageErrorSchema().optional(),
+    thinking_duration_ms: z.number().int().positive().optional().catch(undefined),
+    thinking_display: z.string().optional().catch(undefined),
     uuid: UUIDPlaceholder(),
     session_id: z.string(),
   }),
@@ -1411,8 +1494,12 @@ export const SDKResultSuccessSchema = lazySchema(() =>
     duration_ms: z.number(),
     duration_api_ms: z.number(),
     is_error: z.boolean(),
+    terminal_reason: z.enum(['completed', 'api_error', 'prompt_too_long', 'max_turns', 'max_budget_usd', 'aborted_tools', 'aborted_streaming', 'hook_stopped', 'tool_deferred_unavailable', 'turn_setup_failed']).optional(),
+    api_error_status: z.number().int().optional(),
     num_turns: z.number(),
     result: z.string(),
+    // 2.1.310 marks commands handled entirely locally, with no model turn.
+    local_command: z.string().optional(),
     stop_reason: z.string().nullable(),
     total_cost_usd: z.number(),
     usage: NonNullableUsagePlaceholder(),
@@ -1437,6 +1524,8 @@ export const SDKResultErrorSchema = lazySchema(() =>
     duration_ms: z.number(),
     duration_api_ms: z.number(),
     is_error: z.boolean(),
+    terminal_reason: z.enum(['completed', 'api_error', 'prompt_too_long', 'max_turns', 'max_budget_usd', 'aborted_tools', 'aborted_streaming', 'hook_stopped', 'tool_deferred_unavailable', 'turn_setup_failed']).optional(),
+    api_error_status: z.number().int().optional(),
     num_turns: z.number(),
     stop_reason: z.string().nullable(),
     total_cost_usd: z.number(),
@@ -1444,6 +1533,8 @@ export const SDKResultErrorSchema = lazySchema(() =>
     modelUsage: z.record(z.string(), ModelUsageSchema()),
     permission_denials: z.array(SDKPermissionDenialSchema()),
     errors: z.array(z.string()),
+    startup_failure_reason: z.string().optional(),
+    result_index: z.number().optional(),
     fast_mode_state: FastModeStateSchema().optional(),
     uuid: UUIDPlaceholder(),
     session_id: z.string(),
@@ -1500,6 +1591,14 @@ export const SDKPartialAssistantMessageSchema = lazySchema(() =>
     parent_tool_use_id: z.string().nullable(),
     uuid: UUIDPlaceholder(),
     session_id: z.string(),
+    ttft_ms: z.number().int().optional(),
+    thinking_display: z.string().optional(),
+    api_message_id: z.string().optional(),
+    abandoned_blocks: z.object({
+      api_message_id: z.string(),
+      from_block_index: z.number().int().nonnegative(),
+    }).optional(),
+    text_runs_joined: z.literal(true).optional(),
   }),
 )
 

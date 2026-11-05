@@ -63,7 +63,8 @@ import {
   isValidImagePaste,
 } from 'src/types/textInputTypes.js'
 import { randomUUID, type UUID } from 'crypto'
-import { getSettings_DEPRECATED } from './settings/settings.js'
+import { getInitialSettings } from './settings/settings.js'
+import { getOutputStyleConfig } from '../constants/outputStyles.js'
 import { getSnippetForTwoFileDiff } from 'src/tools/FileEditTool/utils.js'
 import type {
   ContentBlockParam,
@@ -78,28 +79,13 @@ import {
   getDefaultHaikuModel,
   getDefaultOpusModel,
 } from './model/model.js'
-import type { ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
+import type { ReadResourceResult } from '@modelcontextprotocol/server'
 import { getSkillToolCommands, getMcpSkillCommands } from '../commands.js'
 import type { Command } from '../types/command.js'
 import uniqBy from 'lodash-es/uniqBy.js'
 import { getProjectRoot } from '../bootstrap/state.js'
 import { formatCommandsWithinBudget } from '../tools/SkillTool/prompt.js'
 import { getContextWindowForModel } from './context.js'
-import type { DiscoverySignal } from '../services/skillSearch/signals.js'
-// Conditional require for DCE. All skill-search string literals that would
-// otherwise leak into external builds live inside these modules. The only
-// surfaces in THIS file are: the maybe() call (gated via spread below) and
-// the skill_listing suppression check (uses the same skillSearchModules null
-// check). The type-only DiscoverySignal import above is erased at compile time.
-/* eslint-disable @typescript-eslint/no-require-imports */
-const skillSearchModules = feature('EXPERIMENTAL_SKILL_SEARCH')
-  ? {
-      featureCheck:
-        require('../services/skillSearch/featureCheck.js') as typeof import('../services/skillSearch/featureCheck.js'),
-      prefetch:
-        require('../services/skillSearch/prefetch.js') as typeof import('../services/skillSearch/prefetch.js'),
-    }
-  : null
 const autoModeStateModule = feature('TRANSCRIPT_CLASSIFIER')
   ? (require('./permissions/autoModeState.js') as typeof import('./permissions/autoModeState.js'))
   : null
@@ -203,9 +189,6 @@ const BRIEF_TOOL_NAME: string | null =
         require('../tools/BriefTool/prompt.js') as typeof import('../tools/BriefTool/prompt.js')
       ).BRIEF_TOOL_NAME
     : null
-const sessionTranscriptModule = feature('KAIROS')
-  ? (require('../services/sessionTranscript/sessionTranscript.js') as typeof import('../services/sessionTranscript/sessionTranscript.js'))
-  : null
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { hasUltrathinkKeyword, isUltrathinkEnabled } from './thinking.js'
 import {
@@ -535,12 +518,6 @@ export type Attachment =
       isInitial: boolean
     }
   | {
-      type: 'skill_discovery'
-      skills: { name: string; description: string; shortId?: string }[]
-      signal: DiscoverySignal
-      source: 'native' | 'aki' | 'both'
-    }
-  | {
       type: 'queued_command'
       prompt: string | Array<ContentBlockParam>
       source_uuid?: UUID
@@ -555,6 +532,7 @@ export type Attachment =
   | {
       type: 'output_style'
       style: string
+      turnReminder?: string
     }
   | {
       type: 'diagnostics'
@@ -583,6 +561,14 @@ export type Attachment =
     }
   | {
       type: 'auto_mode_exit'
+    }
+  // These no-content control attachments are explicitly recognized by the
+  // 2.1.310 message normalizer and must remain in the discriminated union.
+  | {
+      type: 'pen_mode_enter'
+    }
+  | {
+      type: 'pen_mode_exit'
     }
   | {
       type: 'critical_system_reminder'
@@ -709,12 +695,6 @@ export type Attachment =
       name: string
       species: string
     }
-  | {
-      type: 'bagel_console'
-      errorCount: number
-      warningCount: number
-      sample: string
-    }
 
 export type TeammateMailboxAttachment = {
   type: 'teammate_mailbox'
@@ -747,7 +727,7 @@ export async function getAttachments(
   queuedCommands: QueuedCommand[],
   messages?: Message[],
   querySource?: QuerySource,
-  options?: { skipSkillDiscovery?: boolean },
+  _options?: { skipSkillDiscovery?: boolean },
 ): Promise<Attachment[]> {
   if (
     isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_ATTACHMENTS) ||
@@ -786,31 +766,6 @@ export async function getAttachments(
             ),
           ),
         ),
-        // Skill discovery on turn 0 (user input as signal). Inter-turn
-        // discovery runs via startSkillDiscoveryPrefetch in query.ts,
-        // gated on write-pivot detection — see skillSearch/prefetch.ts.
-        // feature() here lets DCE drop the 'skill_discovery' string (and the
-        // function it calls) from external builds.
-        //
-        // skipSkillDiscovery gates out the SKILL.md-expansion path
-        // (getMessagesForPromptSlashCommand). When a skill is invoked, its
-        // SKILL.md content is passed as `input` here to extract @-mentions —
-        // but that content is NOT user intent and must not trigger discovery.
-        // Without this gate, a 110KB SKILL.md fires ~3.3s of chunked AKI
-        // queries on every skill invocation (session 13a9afae).
-        ...(feature('EXPERIMENTAL_SKILL_SEARCH') &&
-        skillSearchModules &&
-        !options?.skipSkillDiscovery
-          ? [
-              maybe('skill_discovery', () =>
-                skillSearchModules.prefetch.getTurnZeroSkillDiscovery(
-                  input,
-                  messages ?? [],
-                  context,
-                ),
-              ),
-            ]
-          : []),
       ]
     : []
 
@@ -931,13 +886,6 @@ export async function getAttachments(
           ),
         ]
       : []),
-    ...(feature('HISTORY_SNIP')
-      ? [
-          maybe('context_efficiency', () =>
-            Promise.resolve(getContextEfficiencyAttachment(messages ?? [])),
-          ),
-        ]
-      : []),
   ]
 
   // Attachments which are semantically only for the main conversation or don't have concurrency-safe implementations
@@ -949,9 +897,7 @@ export async function getAttachments(
         maybe('ide_opened_file', async () =>
           getOpenedFileFromIDE(ideSelection, toolUseContext),
         ),
-        maybe('output_style', async () =>
-          Promise.resolve(getOutputStyleAttachment()),
-        ),
+        maybe('output_style', () => getOutputStyleAttachment(toolUseContext)),
         maybe('diagnostics', async () =>
           getDiagnosticAttachments(toolUseContext),
         ),
@@ -1002,7 +948,7 @@ export async function getAttachments(
   ].filter(a => a !== undefined && a !== null)
 }
 
-async function maybe<A>(label: string, f: () => Promise<A[]>): Promise<A[]> {
+async function maybe<A extends Attachment>(label: string, f: () => Promise<A[]>): Promise<A[]> {
   const startTime = Date.now()
   try {
     const result = await f()
@@ -1436,7 +1382,6 @@ export function getDateChangeAttachments(
   // message timestamp so a multi-day gap flushes each day correctly.
   if (feature('KAIROS')) {
     if (getKairosActive() && messages !== undefined) {
-      sessionTranscriptModule?.flushOnDateChange(messages, currentDate)
     }
   }
 
@@ -1594,21 +1539,30 @@ function getCriticalSystemReminderAttachment(
   return [{ type: 'critical_system_reminder', content: reminder }]
 }
 
-function getOutputStyleAttachment(): Attachment[] {
-  const settings = getSettings_DEPRECATED()
-  const outputStyle = settings?.outputStyle || 'default'
+async function getOutputStyleAttachment(
+  toolUseContext: ToolUseContext,
+): Promise<Attachment[]> {
+  const style = await getOutputStyleConfig()
+  if (!style) return []
 
-  // Only show for non-default styles
-  if (outputStyle === 'default') {
-    return []
-  }
+  const waitingForBackgroundTask =
+    style.waitingTurnReminder !== undefined &&
+    Object.values(toolUseContext.getAppState().tasks).some(
+      task =>
+        task.status === 'running' &&
+        task.toolUseId !== undefined &&
+        task.type === 'local_bash' &&
+        task.isBackgrounded &&
+        task.agentId === undefined,
+    )
 
-  return [
-    {
-      type: 'output_style',
-      style: outputStyle,
-    },
-  ]
+  return [{
+    type: 'output_style',
+    style: style.name,
+    turnReminder: waitingForBackgroundTask
+      ? style.waitingTurnReminder
+      : style.turnReminder,
+  }]
 }
 
 async function getSelectedLinesFromIDE(
@@ -2677,24 +2631,10 @@ async function getSkillListingAttachments(
   const mcpSkills = getMcpSkillCommands(
     toolUseContext.getAppState().mcp.commands,
   )
-  let allCommands =
+  const allCommands =
     mcpSkills.length > 0
       ? uniqBy([...localCommands, ...mcpSkills], 'name')
       : localCommands
-
-  // When skill search is active, filter to bundled + MCP instead of full
-  // suppression. Resolves the turn-0 gap: main thread gets turn-0 discovery
-  // via getTurnZeroSkillDiscovery (blocking), but subagents use the async
-  // subagent_spawn signal (collected post-tools, visible turn 1). Bundled +
-  // MCP are small and intent-signaled; user/project/plugin skills go through
-  // discovery. feature() first for DCE — the property-access string leaks
-  // otherwise even with ?. on null.
-  if (
-    feature('EXPERIMENTAL_SKILL_SEARCH') &&
-    skillSearchModules?.featureCheck.isSkillSearchEnabled()
-  ) {
-    allCommands = filterToBundledAndMcp(allCommands)
-  }
 
   const agentKey = toolUseContext.agentId ?? ''
   let sent = sentSkillNames.get(agentKey)
@@ -2750,10 +2690,6 @@ async function getSkillListingAttachments(
   ]
 }
 
-// getSkillDiscoveryAttachment moved to skillSearch/prefetch.ts as
-// getTurnZeroSkillDiscovery — keeps the 'skill_discovery' string literal inside
-// a feature-gated module so it doesn't leak into external builds.
-
 export function extractAtMentionedFiles(content: string): string[] {
   // Extract filenames mentioned with @ symbol, including line range syntax: @file.txt#L10-20
   // Also supports quoted paths for files with spaces: @"my/file with spaces.txt"
@@ -2776,7 +2712,10 @@ export function extractAtMentionedFiles(content: string): string[] {
   }
 
   // Extract regular mentions
-  const regularMatchArray = content.match(regularAtMentionRegex) || []
+  const regularMatchArray = Array.from(
+    content.matchAll(regularAtMentionRegex),
+    match => match[0],
+  )
   regularMatchArray.forEach(match => {
     const filename = match.slice(match.indexOf('@') + 1)
     // Don't include if it starts with a quote (already handled as quoted)
@@ -3953,35 +3892,6 @@ export function getCompactionReminderAttachment(
 
   return [{ type: 'compaction_reminder' }]
 }
-
-/**
- * Context-efficiency nudge. Injected after every N tokens of growth without
- * a snip. Pacing is handled entirely by shouldNudgeForSnips — the 10k
- * interval resets on prior nudges, snip markers, snip boundaries, and
- * compact boundaries.
- */
-export function getContextEfficiencyAttachment(
-  messages: Message[],
-): Attachment[] {
-  if (!feature('HISTORY_SNIP')) {
-    return []
-  }
-  // Gate must match SnipTool.isEnabled() — don't nudge toward a tool that
-  // isn't in the tool list. Lazy require keeps this file snip-string-free.
-  const { isSnipRuntimeEnabled, shouldNudgeForSnips } =
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('../services/compact/snipCompact.js') as typeof import('../services/compact/snipCompact.js')
-  if (!isSnipRuntimeEnabled()) {
-    return []
-  }
-
-  if (!shouldNudgeForSnips(messages)) {
-    return []
-  }
-
-  return [{ type: 'context_efficiency' }]
-}
-
 
 function isFileReadDenied(
   filePath: string,

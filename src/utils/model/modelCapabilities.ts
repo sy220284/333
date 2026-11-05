@@ -20,8 +20,11 @@ const ModelCapabilitySchema = lazySchema(() =>
   z
     .object({
       id: z.string(),
+      behaves_as: z.string().optional(),
       max_input_tokens: z.number().optional(),
       max_tokens: z.number().optional(),
+      effort_levels: z.array(z.string()).optional(),
+      default_effort: z.string().optional(),
     })
     .strip(),
 )
@@ -72,6 +75,13 @@ const loadCache = memoize(
   path => path,
 )
 
+/** Behavior mappings require an exact served model ID. */
+export function getServedModelBehavior317(model: string): string | undefined {
+  if (!isModelCapabilitiesEligible()) return undefined
+  const key = model.trim().toLowerCase()
+  return loadCache(getCachePath())?.find(row => row.id.toLowerCase() === key)?.behaves_as
+}
+
 export function getModelCapability(model: string): ModelCapability | undefined {
   if (!isModelCapabilitiesEligible()) return undefined
   const cached = loadCache(getCachePath())
@@ -90,7 +100,8 @@ export async function refreshModelCapabilities(): Promise<void> {
     const anthropic = await getAnthropicClient({ maxRetries: 1 })
     const betas = isClaudeAISubscriber() ? [OAUTH_BETA_HEADER] : undefined
     const parsed: ModelCapability[] = []
-    for await (const entry of anthropic.models.list({ betas })) {
+    const requestOptions = betas ? { headers: { 'anthropic-beta': betas.join(',') } } : undefined
+    for await (const entry of anthropic.models.list({}, requestOptions)) {
       const result = ModelCapabilitySchema().safeParse(entry)
       if (result.success) parsed.push(result.data)
     }

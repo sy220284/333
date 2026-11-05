@@ -1,0 +1,73 @@
+name: PR7 跨模块参数类型真实改写与回归
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - '.github/workflows/pr7-apply-callsite-typed-parameters.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: pr7-callsite-types-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  rewrite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 恢复完整依赖与全仓类型基线
+        run: |
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+          node tools/dev/dev.mjs typecheck:all
+      - name: 根据实际调用方的类型重写核心导出参数
+        run: node tools/dev/infer-export-parameter-callers.mjs --apply
+      - name: 严格编译、隔离错误的推断并保留修正清单
+        run: node tools/dev/apply-inferred-types-safe.mjs --from-callsite
+      - name: 全仓审计和产品构建验证
+        run: |
+          node tools/dev/type-migration-audit.mjs
+          node tools/dev/type-migration-strict.mjs
+          bun build/rebuild.mjs
+          node --test tests/language-file-contract.test.mjs
+          node --test tests/m6-gateway-spend-integration-317.test.mjs
+          node --test tests/chinese-only-ui.test.mjs
+          node tools/dev/audit-restored-ui-localization.mjs
+          git diff --check
+      - name: 将真实类型改动提交到最新PR7
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add src native
+          git diff --cached --quiet && { echo '未产生安全类型改动'; exit 1; }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m '依据调用点证据补全TypeScript函数参数类型'
+          for attempt in 1 2 3 4 5; do
+            git fetch origin upgrade/2.1.310-m1-evidence
+            git rebase origin/upgrade/2.1.310-m1-evidence
+            node tools/dev/dev.mjs typecheck:all
+            if git push origin HEAD:refs/heads/upgrade/2.1.310-m1-evidence; then exit 0; fi
+          done
+          exit 1
+      - name: 上传真实参数证据与剩余类型缺口
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr7-applied-callsite-parameters
+          path: |
+            .rebuild/governance/type-parameter-callsite-evidence.json
+            .rebuild/governance/applied-callsite-types.json
+            .rebuild/governance/type-migration-report.json
+          retention-days: 30
+          if-no-files-found: warn

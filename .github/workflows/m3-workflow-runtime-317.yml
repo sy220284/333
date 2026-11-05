@@ -1,0 +1,38 @@
+name: M3 Workflow底层安全执行与类型验收
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - 'src/tools/WorkflowTool/workflowMetaParser.ts'
+      - 'src/tools/WorkflowTool/workflowRuntime.ts'
+      - 'tests/m1-workflow-meta-literal.test.mjs'
+      - 'tests/m1-workflow-runtime.test.mjs'
+      - '.github/workflows/m3-workflow-runtime-317.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: m3-workflow-runtime-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  workflow-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 还原冻结依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: Workflow原始元数据安全解析与真实沙箱执行回归
+        run: node --test tests/m1-workflow-meta-literal.test.mjs tests/m1-workflow-runtime.test.mjs
+      - name: 全仓TypeScript类型检查
+        run: |
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          node tools/dev/dev.mjs typecheck:all

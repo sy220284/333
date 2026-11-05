@@ -334,7 +334,7 @@ export const setupGracefulShutdown = memoize(() => {
 })
 
 export function gracefulShutdownSync(
-  exitCode = 0,
+  exitCode: 0 | 1 | number = 0,
   reason: ExitReason = 'other',
   options?: {
     getAppState?: () => AppState
@@ -389,7 +389,7 @@ export function getPendingShutdownForTesting(): Promise<void> | undefined {
 
 // Graceful shutdown function that drains the event loop
 export async function gracefulShutdown(
-  exitCode = 0,
+  exitCode: number = 0,
   reason: ExitReason = 'other',
   options?: {
     getAppState?: () => AppState

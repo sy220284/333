@@ -31,7 +31,9 @@ import {
 import { getPlanSlug, getPlansDirectory } from '../plans.js'
 import { getPlatform } from '../platform.js'
 import { getProjectDir } from '../sessionStorage.js'
-import { SETTING_SOURCES } from '../settings/constants.js'
+import { SETTING_SOURCES, getEnabledSettingSources } from '../settings/constants.js'
+import { fileFenceContext, isFileFenceEnabled, normalizeReadExemptPaths } from './readFencePolicy.js'
+import { getInitialSettings, getSettingsForSource } from '../settings/settings.js'
 import {
   getSettingsFilePathForSource,
   getSettingsRootPathForSource,
@@ -43,6 +45,7 @@ import type {
   PermissionDecision,
   PermissionResult,
 } from './PermissionResult.js'
+import { shouldRejectOutOfScopeWrite } from './writeScopePolicy.js'
 import type { PermissionRule, PermissionRuleSource } from './PermissionRule.js'
 import { createReadRuleSuggestion } from './PermissionUpdate.js'
 import type { PermissionUpdate } from './PermissionUpdateSchema.js'
@@ -1047,6 +1050,34 @@ export function checkReadPermissionForTool(
   // 6× = 30 syscalls per Read permission check).
   const pathsToCheck = getPathsForPermissionCheck(path)
 
+  if ((toolPermissionContext.blockReadsOutsideWorkingDirectories === true || isFileFenceEnabled(getEnabledSettingSources().map(source => getSettingsForSource(source)), 'read')) &&
+      !pathInAllowedWorkingPath(path, fileFenceContext(toolPermissionContext), pathsToCheck)) {
+    const exemptions = process.env.CLAUDE_CODE_RESTRICTED === '1' ? [] : normalizeReadExemptPaths(
+      toolPermissionContext.readBlockExemptPaths ?? getSettingsForSource('flagSettings')?.permissions?.blockReadsExemptPaths ?? [],
+    )
+    const exempt = pathsToCheck.length > 0 && pathsToCheck.every(candidate =>
+      exemptions.some(directory => pathInWorkingPath(candidate, directory)) ||
+      checkReadableInternalPath(candidate, input)?.behavior === 'allow',
+    )
+    if (!exempt) return {
+      behavior: 'deny',
+      message: `Reading outside allowed working directories is blocked by permissions.blockReadsOutsideWorkingDirectories: ${path}`,
+      decisionReason: { type: 'workingDir', reason: 'Configured read confinement' },
+    }
+  }
+
+  // A restricted session cannot authorize a file outside cwd and --add-dir,
+  // even through an existing broad allow rule. Both input and symlink target
+  // are checked by pathInAllowedWorkingPath.
+  if (process.env.CLAUDE_CODE_RESTRICTED === '1' &&
+      !pathInAllowedWorkingPath(path, toolPermissionContext, pathsToCheck)) {
+    return {
+      behavior: 'deny',
+      message: `Restricted mode: reading outside allowed working directories is forbidden: ${path}`,
+      decisionReason: {type:'workingDir',reason:'Restricted session file confinement'},
+    }
+  }
+
   // 1. Defense-in-depth: Block UNC paths early (before other checks)
   // This catches paths starting with \\ or // that could access network resources
   // This may catch some UNC patterns not detected by containsVulnerableUncPath
@@ -1202,6 +1233,25 @@ export function checkReadPermissionForTool(
  *   re-derived internally for error messages and internal-path checks, so a
  *   stale value would silently check deny rules for the wrong path.
  */
+/** Enforce the configured write boundary before all allow rules or bypass modes. */
+export function isWriteOutsideWorkingDirectoriesForbidden(
+  path: string,
+  context: ToolPermissionContext,
+  precomputedPathsToCheck?: readonly string[],
+): boolean {
+  const managedEnabled =
+    getSettingsForSource('policySettings')?.permissions?.blockWritesOutsideWorkingDirectories
+  const effectiveEnabled =
+    getInitialSettings().permissions?.blockWritesOutsideWorkingDirectories
+  const anyLayerEnabled = isFileFenceEnabled(getEnabledSettingSources().map(source => getSettingsForSource(source)), 'write')
+  if (!managedEnabled && !effectiveEnabled && !anyLayerEnabled && context.blockWritesOutsideWorkingDirectories !== true) return false
+  return shouldRejectOutOfScopeWrite(
+    managedEnabled || anyLayerEnabled || context.blockWritesOutsideWorkingDirectories,
+    effectiveEnabled,
+    pathInAllowedWorkingPath(path, fileFenceContext(context), precomputedPathsToCheck),
+  )
+}
+
 export function checkWritePermissionForTool<Input extends AnyObject>(
   tool: Tool<Input>,
   input: z.infer<Input>,
@@ -1219,6 +1269,21 @@ export function checkWritePermissionForTool<Input extends AnyObject>(
   // 1. Check for deny rules - check both the original path and resolved symlink path
   const pathsToCheck =
     precomputedPathsToCheck ?? getPathsForPermissionCheck(path)
+  if (isWriteOutsideWorkingDirectoriesForbidden(path, toolPermissionContext, pathsToCheck)) {
+    return {
+      behavior: 'deny',
+      message: `Write confined to working directories by permissions.blockWritesOutsideWorkingDirectories: ${path}`,
+      decisionReason: { type: 'workingDir', reason: 'Configured write confinement' },
+    }
+  }
+  if (process.env.CLAUDE_CODE_RESTRICTED === '1' &&
+      !pathInAllowedWorkingPath(path, toolPermissionContext, pathsToCheck)) {
+    return {
+      behavior: 'deny',
+      message: `Restricted mode: writing outside allowed working directories is forbidden: ${path}`,
+      decisionReason: {type:'workingDir',reason:'Restricted session file confinement'},
+    }
+  }
   for (const pathToCheck of pathsToCheck) {
     const denyRule = matchingRuleForInput(
       pathToCheck,
@@ -1303,7 +1368,7 @@ export function checkWritePermissionForTool<Input extends AnyObject>(
   // This MUST come before checking allow rules to prevent users from accidentally granting
   // permission to edit protected files
   const safetyCheck = checkPathSafetyForAutoEdit(path, pathsToCheck)
-  if (!safetyCheck.safe) {
+  if (safetyCheck.safe === false) {
     // SDK suggestion: if under .claude/skills/{name}/, emit the narrowed
     // session-scoped addRules that step 1.6 will honor on the next call.
     // Everything else (.claude/settings.json, .git/, .vscode/, .idea/) falls

@@ -3,7 +3,9 @@ import { stat } from 'fs/promises'
 import type { Readable } from 'stream'
 import treeKill from 'tree-kill'
 import { generateTaskId } from '../Task.js'
+import { registerCleanup } from './cleanupRegistry.js'
 import { formatDuration } from './format.js'
+import { logError } from './log.js'
 import {
   MAX_TASK_OUTPUT_BYTES,
   MAX_TASK_OUTPUT_BYTES_DISPLAY,
@@ -31,6 +33,8 @@ export type ExecResult = {
 
 export type ShellCommand = {
   background: (backgroundTaskId: string) => boolean
+  /** Resolves when the running command is moved to background without being killed. */
+  backgrounded?: Promise<void>
   result: Promise<ExecResult>
   kill: () => void
   status: 'running' | 'backgrounded' | 'completed' | 'killed'
@@ -128,8 +132,12 @@ class ShellCommandImpl implements ShellCommand {
   #timeout: number
   #shouldAutoBackground: boolean
   #resultResolver: ((result: ExecResult) => void) | null = null
+  #resolveBackgrounded: (() => void) | null = null
+  readonly backgrounded: Promise<void>
   #exitCodeResolver: ((code: number) => void) | null = null
+  #requestedKillExitCode: number | null = null
   #boundAbortHandler: (() => void) | null = null
+  #unregisterShutdownCleanup: (() => void) | undefined
   readonly taskOutput: TaskOutput
 
   static #handleTimeout(self: ShellCommandImpl): void {
@@ -153,6 +161,7 @@ class ShellCommandImpl implements ShellCommand {
     shouldAutoBackground = false,
     maxOutputBytes = MAX_TASK_OUTPUT_BYTES,
   ) {
+    this.backgrounded = new Promise<void>(resolve => { this.#resolveBackgrounded = resolve })
     this.#childProcess = childProcess
     this.#abortSignal = abortSignal
     this.#timeout = timeout
@@ -177,6 +186,38 @@ class ShellCommandImpl implements ShellCommand {
     }
 
     this.result = this.#createResultPromise()
+    // A foreground or background child must not outlive the owner CLI on
+    // macOS/Linux, including early auth failure or archive shutdown.
+    // Keep registration until the OS process actually exits (a result promise
+    // may resolve earlier, while tree-kill is still terminating children).
+    if (process.platform !== 'win32') {
+      this.#unregisterShutdownCleanup = registerCleanup(async () => {
+        // The state can already be 'killed' while an OS child process is
+        // still alive. Only skip when the child itself has actually exited.
+        if (this.#childProcess.exitCode !== null ||
+            this.#childProcess.signalCode !== null) return
+        this.#status = 'killed'
+        try {
+          const pid = this.#childProcess.pid
+          if (pid) {
+            await new Promise<void>((resolve, reject) => {
+              treeKill(pid, 'SIGKILL', error => {
+                if (error) reject(error)
+                else resolve()
+              })
+            })
+          }
+        } finally {
+          this.#resolveExitCode(SIGKILL)
+        }
+      })
+      const unregister = () => {
+        this.#unregisterShutdownCleanup?.()
+        this.#unregisterShutdownCleanup = undefined
+      }
+      childProcess.once('exit', unregister)
+      childProcess.once('error', unregister)
+    }
   }
 
   get status(): 'running' | 'backgrounded' | 'completed' | 'killed' {
@@ -193,12 +234,12 @@ class ShellCommandImpl implements ShellCommand {
   }
 
   #exitHandler(code: number | null, signal: NodeJS.Signals | null): void {
-    const exitCode =
-      code !== null && code !== undefined
-        ? code
-        : signal === 'SIGTERM'
-          ? 144
-          : 1
+    // An explicit kill may be requested before the child is reaped. Publish
+    // its result only from the real OS exit, keeping the original exit code
+    // semantics of user cancellation and shell timeout.
+    const exitCode = this.#requestedKillExitCode ??
+      (code !== null && code !== undefined ? code :
+        signal === 'SIGTERM' ? 144 : 1)
     this.#resolveExitCode(exitCode)
   }
 
@@ -335,11 +376,22 @@ class ShellCommandImpl implements ShellCommand {
   }
 
   #doKill(code?: number): void {
+    // Timeout, abort and output watchdog can race. Only the first caller
+    // may signal the process tree; repeated signals can interrupt cleanup
+    // in child processes. Never kill a command that already completed.
+    if (this.#status === 'killed' || this.#status === 'completed') return
     this.#status = 'killed'
+    this.#requestedKillExitCode = code ?? SIGKILL
     if (this.#childProcess.pid) {
-      treeKill(this.#childProcess.pid, 'SIGKILL')
+      // tree-kill dispatches the signal asynchronously. Resolve the command
+      // only once child_process emits exit/error; otherwise TaskStop could
+      // acknowledge before the process has actually terminated.
+      treeKill(this.#childProcess.pid, 'SIGKILL', error => {
+        if (error) logError(error)
+      })
+    } else {
+      this.#resolveExitCode(this.#requestedKillExitCode)
     }
-    this.#resolveExitCode(code ?? SIGKILL)
   }
 
   kill(): void {
@@ -360,6 +412,10 @@ class ShellCommandImpl implements ShellCommand {
         // Pipe mode: spill the in-memory buffer so readers can find it on disk.
         this.taskOutput.spillToDisk()
       }
+      // Wake any active tool iterator immediately, even if the child process
+      // is producing no output and the progress poller is quiet.
+      this.#resolveBackgrounded?.()
+      this.#resolveBackgrounded = null
       return true
     }
     return false
@@ -389,8 +445,8 @@ export function wrapSpawn(
   abortSignal: AbortSignal,
   timeout: number,
   taskOutput: TaskOutput,
-  shouldAutoBackground = false,
-  maxOutputBytes = MAX_TASK_OUTPUT_BYTES,
+  shouldAutoBackground: boolean = false,
+  maxOutputBytes: number = MAX_TASK_OUTPUT_BYTES,
 ): ShellCommand {
   return new ShellCommandImpl(
     childProcess,

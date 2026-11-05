@@ -46,7 +46,7 @@ export function onChangeAppState({
 }: {
   newState: AppState
   oldState: AppState
-}) {
+}) : void {
   // toolPermissionContext.mode — single choke point for CCR/SDK mode sync.
   //
   // Prior to this block, mode changes were relayed to CCR by only 2 of 8+

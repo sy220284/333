@@ -193,7 +193,11 @@ export function isAsyncHookJSONOutput(
 }
 
 // Compile-time assertion that SDK and Zod types match
-import type { IsEqual } from 'type-fest'
+// Compare exact structural types without depending on a non-exported type-fest alias.
+type IsEqual<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2)
+    ? true
+    : false
 type Assert<T extends true> = T
 type _assertSDKTypesMatch = Assert<
   IsEqual<SchemaHookJSONOutput, HookJSONOutput>
@@ -221,6 +225,8 @@ export type HookCallback = {
   ) => Promise<HookJSONOutput>
   /** Timeout in seconds for this hook */
   timeout?: number
+  /** When an SDK callback fails or returns invalid output, block the action. */
+  onFailure?: 'block'
   /** Internal hooks (e.g. session file access analytics) are excluded from tengu_run_hook metrics */
   internal?: boolean
 }

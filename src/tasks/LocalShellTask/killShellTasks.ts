@@ -7,13 +7,19 @@ import type { AgentId } from '../../types/ids.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { logError } from '../../utils/log.js'
 import { dequeueAllMatching } from '../../utils/messageQueueManager.js'
-import { evictTaskOutput } from '../../utils/task/diskOutput.js'
+import { emitTaskTerminatedSdk } from '../../utils/sdkEventQueue.js'
+import {
+  evictTaskOutput,
+  getTaskOutputPath,
+} from '../../utils/task/diskOutput.js'
 import { updateTaskState } from '../../utils/task/framework.js'
 import { isLocalShellTask } from './guards.js'
 
 type SetAppStateFn = (updater: (prev: AppState) => AppState) => void
 
-export function killTask(taskId: string, setAppState: SetAppStateFn): void {
+export function killTask(taskId: string, setAppState: SetAppStateFn): Promise<import('../../utils/ShellCommand.js').ExecResult> | undefined {
+  let completion: Promise<import('../../utils/ShellCommand.js').ExecResult> | undefined
+  let notification: { toolUseId?: string; description: string } | undefined
   updateTaskState(taskId, setAppState, task => {
     if (task.status !== 'running' || !isLocalShellTask(task)) {
       return task
@@ -21,12 +27,18 @@ export function killTask(taskId: string, setAppState: SetAppStateFn): void {
 
     try {
       logForDebugging(`LocalShellTask ${taskId} kill requested`)
+      completion=task.shellCommand?.result
       task.shellCommand?.kill()
       task.shellCommand?.cleanup()
     } catch (error) {
       logError(error)
     }
 
+    if (!task.notified)
+      notification = {
+        toolUseId: task.toolUseId,
+        description: task.description,
+      }
     task.unregisterCleanup?.()
     if (task.cleanupTimeoutId) {
       clearTimeout(task.cleanupTimeoutId)
@@ -42,7 +54,15 @@ export function killTask(taskId: string, setAppState: SetAppStateFn): void {
       endTime: Date.now(),
     }
   })
+  if (notification) {
+    emitTaskTerminatedSdk(taskId, 'stopped', {
+      toolUseId: notification.toolUseId,
+      summary: notification.description,
+      outputFile: getTaskOutputPath(taskId),
+    })
+  }
   void evictTaskOutput(taskId)
+  return completion
 }
 
 /**

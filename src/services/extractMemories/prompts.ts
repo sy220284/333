@@ -50,7 +50,7 @@ function opener(newMessageCount: number, existingMemories: string): string {
 export function buildExtractAutoOnlyPrompt(
   newMessageCount: number,
   existingMemories: string,
-  skipIndex = false,
+  skipIndex: boolean = false,
 ): string {
   const howToSave = skipIndex
     ? [
@@ -101,7 +101,7 @@ export function buildExtractAutoOnlyPrompt(
 export function buildExtractCombinedPrompt(
   newMessageCount: number,
   existingMemories: string,
-  skipIndex = false,
+  skipIndex: boolean = false,
 ): string {
   if (!feature('TEAMMEM')) {
     return buildExtractAutoOnlyPrompt(

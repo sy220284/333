@@ -35,7 +35,7 @@ import {
   type ReplBridgeTransport,
 } from './replBridgeTransport.js'
 import { buildCCRv2SdkUrl } from './workSecret.js'
-import { toCompatSessionId } from './sessionIdCompat.js'
+import { toSessionApiId } from './sessionIdProtocol.js'
 import { FlushGate } from './flushGate.js'
 import { createTokenRefreshScheduler } from './jwtUtils.js'
 import { getTrustedDeviceToken } from './trustedDevice.js'
@@ -973,16 +973,16 @@ async function archiveSession(
   // anthropic-beta + x-organization-uuid are required — without them the
   // compat gateway 404s before reaching the handler.
   //
-  // Unlike bridgeMain.ts (which caches compatId in sessionCompatIds to keep
+  // Unlike bridgeMain.ts (which caches sessionApiId in sessionApiIds to keep
   // in-memory titledSessions/logger keys consistent across a mid-session
-  // gate flip), this compatId is only a server URL path segment — no
+  // gate flip), this sessionApiId is only a server URL path segment — no
   // in-memory state. Fresh compute matches whatever the server currently
   // validates: if the gate is OFF, the server has been updated to accept
   // cse_* and we correctly send it.
-  const compatId = toCompatSessionId(sessionId)
+  const sessionApiId = toSessionApiId(sessionId)
   try {
     const response = await axios.post(
-      `${baseUrl}/v1/sessions/${compatId}/archive`,
+      `${baseUrl}/v1/sessions/${sessionApiId}/archive`,
       {},
       {
         headers: {
@@ -995,7 +995,7 @@ async function archiveSession(
       },
     )
     logForDebugging(
-      `[remote-bridge] Archive ${compatId} status=${response.status}`,
+      `[remote-bridge] Archive ${sessionApiId} status=${response.status}`,
     )
     return response.status
   } catch (err) {

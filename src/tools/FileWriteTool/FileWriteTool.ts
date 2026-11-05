@@ -36,6 +36,7 @@ import { logError } from '../../utils/log.js'
 import { expandPath } from '../../utils/path.js'
 import {
   checkWritePermissionForTool,
+  isWriteOutsideWorkingDirectoriesForbidden,
   matchingRuleForInput,
 } from '../../utils/permissions/filesystem.js'
 import type { PermissionDecision } from '../../utils/permissions/PermissionResult.js'
@@ -152,6 +153,16 @@ export const FileWriteTool = buildTool({
   },
   async validateInput({ file_path, content }, toolUseContext: ToolUseContext) {
     const fullFilePath = expandPath(file_path)
+
+    if (isWriteOutsideWorkingDirectoriesForbidden(
+      fullFilePath, toolUseContext.getAppState().toolPermissionContext,
+    )) {
+      return {
+        result: false,
+        message: 'Writing outside working directories is blocked by permissions.blockWritesOutsideWorkingDirectories.',
+        errorCode: 13,
+      }
+    }
 
     // Reject writes to team memory files that contain secrets
     const secretError = checkTeamMemSecrets(fullFilePath, content)
@@ -279,6 +290,11 @@ export const FileWriteTool = buildTool({
     if (meta !== null) {
       const lastWriteTime = getFileModificationTime(fullFilePath)
       const lastRead = readFileState.get(fullFilePath)
+      // An auto-injected file may contain only a prefix and its cache timestamp
+      // can be newer than disk; never overwrite content the model has not read.
+      if (lastRead?.isPartialView) {
+        throw new Error(FILE_UNEXPECTEDLY_MODIFIED_ERROR)
+      }
       if (!lastRead || lastWriteTime > lastRead.timestamp) {
         // Timestamp indicates modification, but on Windows timestamps can change
         // without content changes (cloud sync, antivirus, etc.). For full reads,

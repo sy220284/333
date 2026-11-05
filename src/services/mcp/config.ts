@@ -49,11 +49,13 @@ import {
   McpJsonConfigSchema,
   type McpServerConfig,
   McpServerConfigSchema,
+  isMcpStdioServerConfig,
   type McpSSEServerConfig,
   type McpStdioServerConfig,
   type McpWebSocketServerConfig,
   type ScopedMcpServerConfig,
 } from './types.js'
+import { resolveMcpReconnectBlockReason } from './reconnectGate.js'
 import { getProjectMcpServerStatus } from './utils.js'
 
 /**
@@ -548,6 +550,20 @@ export function filterMcpServersByPolicy<T>(configs: Record<string, T>): {
     }
   }
   return { allowed, blocked }
+}
+
+/**
+ * Check current user disablement and enterprise policy for every reconnect.
+ * An existing cached connection is not permission to bypass updated policy.
+ */
+export function getMcpReconnectBlockReason(
+  name: string,
+  config: ScopedMcpServerConfig,
+): 'disabled' | 'managed-policy' | null {
+  return resolveMcpReconnectBlockReason(
+    isMcpServerDisabled(name),
+    filterMcpServersByPolicy({ [name]: config }).blocked.length === 0,
+  )
 }
 
 /**
@@ -1266,7 +1282,7 @@ export async function getAllMcpConfigs(): Promise<{
 
   // Kick off the claude.ai fetch before getClaudeCodeMcpConfigs so it overlaps
   // with loadAllPluginsCacheOnly() inside. Memoized — the awaited call below is a cache hit.
-  const claudeaiPromise = fetchClaudeAIMcpConfigsIfEligible()
+  const claudeaiPromise = fetchClaudeAIMcpConfigsIfEligible() as Promise<Record<string, ScopedMcpServerConfig>>
   const { servers: claudeCodeServers, errors } = await getClaudeCodeMcpConfigs(
     {},
     claudeaiPromise,
@@ -1350,7 +1366,7 @@ export function parseMcpConfig(params: {
     // Check for Windows-specific npx usage without cmd wrapper
     if (
       getPlatform() === 'windows' &&
-      (!configToCheck.type || configToCheck.type === 'stdio') &&
+      isMcpStdioServerConfig(configToCheck) &&
       (configToCheck.command === 'npx' ||
         configToCheck.command.endsWith('\\npx') ||
         configToCheck.command.endsWith('/npx'))

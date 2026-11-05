@@ -1,11 +1,7 @@
 import { isPDFSupported } from '../../utils/pdfUtils.js'
-import { BASH_TOOL_NAME } from '../BashTool/toolName.js'
 
 // Use a string constant for tool names to avoid circular dependencies
 export const FILE_READ_TOOL_NAME = 'Read'
-
-export const FILE_UNCHANGED_STUB =
-  'File unchanged since last read. The content from the earlier Read tool_result in this conversation is still current — refer to that instead of re-reading.'
 
 export const MAX_LINES_TO_READ = 2000
 
@@ -43,7 +39,7 @@ ${lineFormat}
       : ''
   }
 - This tool can read Jupyter notebooks (.ipynb files) and returns all cells with their outputs, combining code, text, and visualizations.
-- This tool can only read files, not directories. To read a directory, use an ls command via the ${BASH_TOOL_NAME} tool.
+- This tool can only read files, not directories. To list files in a directory, use the registered shell tool.
 - You will regularly be asked to read screenshots. If the user provides a path to a screenshot, ALWAYS use this tool to view the file at the path. This tool will work with all temporary file paths.
-- If you read a file that exists but has empty contents you will receive a system reminder warning in place of file contents.`
+- If you read a file that exists but has empty contents you will receive a system reminder warning in place of file contents.\n- Do NOT re-read a file you just edited to verify — Edit/Write would have errored if the change failed, and the harness tracks file state for you.\n`
 }

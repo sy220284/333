@@ -352,8 +352,9 @@ export function VirtualMessageList({
     const selIdx = selectedIndex ?? -1;
     const scan = (from: number, dir: 1 | -1, pred: (i: number) => boolean = isVisible) => {
       for (let i = from; i >= 0 && i < messages.length; i += dir) {
-        if (pred(i)) {
-          select(messages[i]!);
+        const candidate = messages[i];
+        if (candidate && pred(i) && isNavigableMessage(candidate)) {
+          select(candidate);
           return true;
         }
       }
@@ -376,7 +377,10 @@ export function VirtualMessageList({
       navigateNextUser: () => scan(selIdx + 1, 1, isUser),
       navigateTop: () => scan(0, 1),
       navigateBottom: () => scan(messages.length - 1, -1),
-      getSelected: () => selIdx >= 0 ? messages[selIdx] ?? null : null
+      getSelected: () => {
+        const candidate = selIdx >= 0 ? messages[selIdx] : undefined;
+        return candidate && isNavigableMessage(candidate) ? candidate : null;
+      }
     };
   }, [messages, selectedIndex, setCursor, isVisible]);
   // Two-phase jump + search engine. Read-through-ref so the handle stays

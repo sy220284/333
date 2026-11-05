@@ -1,6 +1,6 @@
 import { updateSessionBridgeId } from '../utils/concurrentSessions.js'
 import type { ReplBridgeHandle } from './replBridge.js'
-import { toCompatSessionId } from './sessionIdCompat.js'
+import { toSessionApiId } from './sessionIdProtocol.js'
 
 /**
  * Global pointer to the active REPL bridge handle, so callers outside
@@ -14,12 +14,24 @@ import { toCompatSessionId } from './sessionIdCompat.js'
  */
 
 let handle: ReplBridgeHandle | null = null
+let outboundOnly = false
 
-export function setReplBridgeHandle(h: ReplBridgeHandle | null): void {
+// The CCR mirror can upload session events but cannot receive peer traffic.
+// Keep that capability alongside the one process-wide bridge handle so
+// message tools and the deferred-tool picker apply the same live gate.
+export function isReplBridgeActive(): boolean {
+  return handle !== null && !outboundOnly
+}
+
+export function setReplBridgeHandle(
+  h: ReplBridgeHandle | null,
+  isOutboundOnly: boolean,
+): void {
   handle = h
+  outboundOnly = isOutboundOnly
   // Publish (or clear) our bridge session ID in the session record so other
   // local peers can dedup us out of their bridge list — local is preferred.
-  void updateSessionBridgeId(getSelfBridgeCompatId() ?? null).catch(() => {})
+  void updateSessionBridgeId(getSelfBridgeSessionId() ?? null).catch(() => {})
 }
 
 export function getReplBridgeHandle(): ReplBridgeHandle | null {
@@ -30,7 +42,7 @@ export function getReplBridgeHandle(): ReplBridgeHandle | null {
  * Our own bridge session ID in the session_* compat format the API returns
  * in /v1/sessions responses — or undefined if bridge isn't connected.
  */
-export function getSelfBridgeCompatId(): string | undefined {
+export function getSelfBridgeSessionId(): string | undefined {
   const h = getReplBridgeHandle()
-  return h ? toCompatSessionId(h.bridgeSessionId) : undefined
+  return h ? toSessionApiId(h.bridgeSessionId) : undefined
 }

@@ -46,7 +46,7 @@ export function useExitOnCtrlCD(
   useKeybindingsHook: UseKeybindingsHook,
   onInterrupt?: () => boolean,
   onExit?: () => void,
-  isActive = true,
+  isActive: boolean = true,
 ): ExitState {
   const { exit } = useApp()
   const [exitState, setExitState] = useState<ExitState>({

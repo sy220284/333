@@ -48,7 +48,7 @@ import {
 } from './sessionStorage.js'
 import type { AgentId } from '../types/ids.js'
 import {
-  getSettings_DEPRECATED,
+  getInitialSettings,
   getSettingsForSource,
 } from './settings/settings.js'
 import {
@@ -108,7 +108,7 @@ import type {
   AsyncHookJSONOutput,
 } from 'src/entrypoints/agentSdkTypes.js'
 import type { StatusLineCommandInput } from '../types/statusLine.js'
-import type { ElicitResult } from '@modelcontextprotocol/sdk/types.js'
+import type { ElicitResult } from "@modelcontextprotocol/server";
 import type { FileSuggestionCommandInput } from '../types/fileSuggestion.js'
 import type { HookResultMessage } from 'src/types/message.js'
 import chalk from 'chalk'
@@ -120,11 +120,10 @@ import type {
 } from './settings/types.js'
 import { getHookDisplayText } from './hooks/hooksSettings.js'
 import { logForDebugging } from './debug.js'
+import { capPreCompactHookOutput } from './hooks/preCompactOutput.ts'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { firstLineOf } from './stringUtils.js'
 import {
-  normalizeLegacyToolName,
-  getLegacyToolNames,
   permissionRuleValueFromString,
 } from './permissions/permissionRuleParser.js'
 import { logError } from './log.js'
@@ -144,11 +143,14 @@ import {
 } from './hooks/hookEvents.js'
 import { createAttachmentMessage } from './attachments.js'
 import { all } from './generators.js'
+import { acquireHookPermit, limitHookGenerator } from './hooks/hookConcurrency.ts'
 import { findToolByName, type Tools, type ToolUseContext } from '../Tool.js'
 import { execPromptHook } from './hooks/execPromptHook.js'
 import type { Message, AssistantMessage } from '../types/message.js'
 import { execAgentHook } from './hooks/execAgentHook.js'
 import { execHttpHook } from './hooks/execHttpHook.js'
+import { classifySdkCallbackFailure } from './hooks/callbackFailurePolicy.ts'
+import { resolveHookTimeoutMs } from './hooks/hookTimeout.ts'
 import type { ShellCommand } from './ShellCommand.js'
 import {
   getSessionHooks,
@@ -874,9 +876,7 @@ async function execCommandHook(
       ? formatShellPrefixCommand(process.env.CLAUDE_CODE_SHELL_PREFIX, command)
       : command
 
-  const hookTimeoutMs = hook.timeout
-    ? hook.timeout * 1000
-    : TOOL_HOOK_EXECUTION_TIMEOUT_MS
+  const hookTimeoutMs = resolveHookTimeoutMs(hook.timeout, TOOL_HOOK_EXECUTION_TIMEOUT_MS)
 
   // Build env vars — all paths go through toHookPath for Windows POSIX conversion
   const envVars: NodeJS.ProcessEnv = {
@@ -1353,11 +1353,11 @@ function matchesPattern(matchQuery: string, matcher: string): boolean {
     if (matcher.includes('|')) {
       const patterns = matcher
         .split('|')
-        .map(p => normalizeLegacyToolName(p.trim()))
+        .map(p => p.trim())
       return patterns.includes(matchQuery)
     }
     // Simple exact match
-    return matchQuery === normalizeLegacyToolName(matcher)
+    return matchQuery === matcher
   }
 
   // Otherwise treat as regex
@@ -1365,12 +1365,6 @@ function matchesPattern(matchQuery: string, matcher: string): boolean {
     const regex = new RegExp(matcher)
     if (regex.test(matchQuery)) {
       return true
-    }
-    // Also test against legacy names so patterns like "^Task$" still match
-    for (const legacyName of getLegacyToolNames(matchQuery)) {
-      if (regex.test(legacyName)) {
-        return true
-      }
     }
     return false
   } catch {
@@ -1400,7 +1394,7 @@ async function prepareIfConditionMatcher(
     return undefined
   }
 
-  const toolName = normalizeLegacyToolName(hookInput.tool_name)
+  const toolName = hookInput.tool_name
   const tool = tools && findToolByName(tools, hookInput.tool_name)
   const input = tool?.inputSchema.safeParse(hookInput.tool_input)
   const patternMatcher =
@@ -1410,7 +1404,7 @@ async function prepareIfConditionMatcher(
 
   return ifCondition => {
     const parsed = permissionRuleValueFromString(ifCondition)
-    if (normalizeLegacyToolName(parsed.toolName) !== toolName) {
+    if (parsed.toolName !== toolName) {
       return false
     }
     if (!parsed.ruleContent) {
@@ -2145,7 +2139,7 @@ async function* executeHooks({
     hookIndex,
   ): AsyncGenerator<HookResult> {
     if (hook.type === 'callback') {
-      const callbackTimeoutMs = hook.timeout ? hook.timeout * 1000 : timeoutMs
+      const callbackTimeoutMs = resolveHookTimeoutMs(hook.timeout, timeoutMs)
       const { signal: abortSignal, cleanup } = createCombinedAbortSignal(
         signal,
         { timeoutMs: callbackTimeoutMs },
@@ -2192,7 +2186,7 @@ async function* executeHooks({
     }
 
     // Command and prompt hooks need jsonInput
-    const commandTimeoutMs = hook.timeout ? hook.timeout * 1000 : timeoutMs
+    const commandTimeoutMs = resolveHookTimeoutMs(hook.timeout, timeoutMs)
     const { signal: abortSignal, cleanup } = createCombinedAbortSignal(signal, {
       timeoutMs: commandTimeoutMs,
     })
@@ -2202,7 +2196,7 @@ async function* executeHooks({
 
     try {
       const jsonInputRes = getJsonInput()
-      if (!jsonInputRes.ok) {
+      if (jsonInputRes.ok === false) {
         yield {
           message: createAttachmentMessage({
             type: 'hook_error_during_execution',
@@ -2410,7 +2404,7 @@ async function* executeHooks({
           return
         }
 
-        if (httpJson) {
+        if (httpJson && isSyncHookJSONOutput(httpJson)) {
           const processed = processHookJSONOutput({
             json: httpJson,
             command: hook.url,
@@ -2741,7 +2735,13 @@ async function* executeHooks({
   let permissionBehavior: PermissionResult['behavior'] | undefined
 
   // Run all hooks in parallel and wait for all to complete
-  for await (const result of all(hookPromises)) {
+  const limitedHooks = hookPromises.map((generator, i) => {
+    const hook = matchingHooks[i]?.hook
+    if (hook?.type !== 'prompt' && hook?.type !== 'agent') return generator
+    const waitMs = resolveHookTimeoutMs(hook.timeout, timeoutMs)
+    return limitHookGenerator(generator, getSessionId(), waitMs, signal)
+  })
+  for await (const result of all(limitedHooks)) {
     outcomes[result.outcome]++
 
     // Check for preventContinuation early
@@ -3083,9 +3083,26 @@ async function executeHooksOutsideREPL({
   // Run all hooks in parallel with individual timeouts
   const hookPromises = matchingHooks.map(
     async ({ hook, pluginRoot, pluginId }, hookIndex) => {
+      const releaseHookPermit =
+        hook.type === 'prompt' || hook.type === 'agent'
+          ? await acquireHookPermit(
+              sessionId,
+              resolveHookTimeoutMs(hook.timeout, timeoutMs),
+              signal,
+            )
+          : undefined
+      try {
+        if (releaseHookPermit && signal?.aborted) {
+          return {
+            command: getHookDisplayText(hook),
+            succeeded: false,
+            output: 'Hook cancelled before execution',
+            blocked: false,
+          }
+        }
       // Handle callback hooks
       if (hook.type === 'callback') {
-        const callbackTimeoutMs = hook.timeout ? hook.timeout * 1000 : timeoutMs
+        const callbackTimeoutMs = resolveHookTimeoutMs(hook.timeout, timeoutMs)
         const { signal: abortSignal, cleanup } = createCombinedAbortSignal(
           signal,
           { timeoutMs: callbackTimeoutMs },
@@ -3144,7 +3161,7 @@ async function executeHooksOutsideREPL({
             command: 'callback',
             succeeded: false,
             output: errorMessage,
-            blocked: false,
+            blocked: hook.onFailure === 'block',
           }
         }
       }
@@ -3277,7 +3294,7 @@ async function executeHooksOutsideREPL({
       }
 
       // Handle command hooks
-      const commandTimeoutMs = hook.timeout ? hook.timeout * 1000 : timeoutMs
+      const commandTimeoutMs = resolveHookTimeoutMs(hook.timeout, timeoutMs)
       const { signal: abortSignal, cleanup } = createCombinedAbortSignal(
         signal,
         { timeoutMs: commandTimeoutMs },
@@ -3372,6 +3389,9 @@ async function executeHooksOutsideREPL({
           output: errorMessage,
           blocked: false,
         }
+      }
+      } finally {
+        releaseHookPermit?.()
       }
     },
   )
@@ -3987,32 +4007,34 @@ export async function executePreCompactHooks(
     return {}
   }
 
-  // Extract custom instructions from successful hooks with non-empty output
-  const successfulOutputs = results
-    .filter(result => result.succeeded && result.output.trim().length > 0)
-    .map(result => result.output.trim())
-
-  // Build user display messages with command info
+  // Official 2.1.317 caps each successful hook separately, so a large
+  // command cannot blow up the next compaction prompt or hide other hooks.
+  const successfulOutputs: string[] = []
   const displayMessages: string[] = []
   for (const result of results) {
-    if (result.succeeded) {
-      if (result.output.trim()) {
+    if (result.succeeded && !result.blocked) {
+      const capped = capPreCompactHookOutput(result.output, result.command)
+      if (capped.truncated) {
+        logForDebugging(
+          `PreCompact [${result.command}] output cut from ${capped.originalLength} to 10000 characters`,
+        )
+      }
+      if (capped.output) {
+        successfulOutputs.push(capped.output)
         displayMessages.push(
-          `PreCompact [${result.command}] completed successfully: ${result.output.trim()}`,
+          `PreCompact [${result.command}] completed successfully: ${capped.output}`,
         )
       } else {
         displayMessages.push(
           `PreCompact [${result.command}] completed successfully`,
         )
       }
+    } else if (result.output.trim()) {
+      displayMessages.push(
+        `PreCompact [${result.command}] failed: ${result.output.trim()}`,
+      )
     } else {
-      if (result.output.trim()) {
-        displayMessages.push(
-          `PreCompact [${result.command}] failed: ${result.output.trim()}`,
-        )
-      } else {
-        displayMessages.push(`PreCompact [${result.command}] failed`)
-      }
+      displayMessages.push(`PreCompact [${result.command}] failed`)
     }
   }
 
@@ -4607,7 +4629,7 @@ export async function executeStatusLineCommand(
   if (shouldAllowManagedHooksOnly()) {
     statusLine = getSettingsForSource('policySettings')?.statusLine
   } else {
-    statusLine = getSettings_DEPRECATED()?.statusLine
+    statusLine = getInitialSettings()?.statusLine
   }
 
   if (!statusLine || statusLine.type !== 'command') {
@@ -4697,7 +4719,7 @@ export async function executeFileSuggestionCommand(
   if (shouldAllowManagedHooksOnly()) {
     fileSuggestion = getSettingsForSource('policySettings')?.fileSuggestion
   } else {
-    fileSuggestion = getSettings_DEPRECATED()?.fileSuggestion
+    fileSuggestion = getInitialSettings()?.fileSuggestion
   }
 
   if (!fileSuggestion || fileSuggestion.type !== 'command') {
@@ -4861,37 +4883,68 @@ async function executeHookCallback({
         updateAttributionState: toolUseContext.updateAttributionState,
       }
     : undefined
-  const json = await hook.callback(
-    hookInput,
-    toolUseID,
-    signal,
-    hookIndex,
-    context,
-  )
-  if (isAsyncHookJSONOutput(json)) {
-    return {
-      outcome: 'success',
-      hook,
+  try {
+    const json = await hook.callback(
+      hookInput,
+      toolUseID,
+      signal,
+      hookIndex,
+      context,
+    )
+    if (isAsyncHookJSONOutput(json)) {
+      return { outcome: 'success', hook }
     }
-  }
 
-  const processed = processHookJSONOutput({
-    json,
-    command: 'callback',
-    // TODO: If the hook came from a plugin, use the full path to the plugin for easier debugging
-    hookName: `${hookEvent}:Callback`,
-    toolUseID,
-    hookEvent,
-    expectedHookEvent: hookEvent,
-    // Callbacks don't have stdout/stderr/exitCode
-    stdout: undefined,
-    stderr: undefined,
-    exitCode: undefined,
-  })
-  return {
-    ...processed,
-    outcome: 'success',
-    hook,
+    const processed = processHookJSONOutput({
+      json,
+      command: 'callback',
+      hookName: `${hookEvent}:Callback`,
+      toolUseID,
+      hookEvent,
+      expectedHookEvent: hookEvent,
+      stdout: undefined,
+      stderr: undefined,
+      exitCode: undefined,
+    })
+    return { ...processed, outcome: 'success', hook }
+  } catch (error) {
+    const { blocked, detail } = classifySdkCallbackFailure(hook.onFailure, error)
+    logError(Error(`SDK hook callback failed (${hookEvent})`, { cause: error }))
+    if (blocked) {
+      return {
+        outcome: 'blocking',
+        hook,
+        blockingError: {
+          command: 'callback',
+          blockingError: `SDK hook callback failed and blocked ${hookEvent}: ${detail}`,
+        },
+        // Also publish the error in the hook stream. A blocked SDK action
+        // must visibly tell the host/user which callback failed.
+        message: createAttachmentMessage({
+          type: 'hook_error_during_execution',
+          hookName: `${hookEvent}:Callback`,
+          toolUseID,
+          hookEvent,
+          content: detail,
+        }),
+      }
+    }
+    // Preserve the existing opt-in behavior: without onFailure: block,
+    // an SDK hook error is reported but does not approve or deny the action.
+    return {
+      outcome: 'non_blocking_error',
+      hook,
+      message: createAttachmentMessage({
+        type: 'hook_non_blocking_error',
+        hookName: `${hookEvent}:Callback`,
+        toolUseID,
+        hookEvent,
+        stderr: detail,
+        stdout: '',
+        exitCode: 1,
+        command: 'callback',
+      }),
+    }
   }
 }
 

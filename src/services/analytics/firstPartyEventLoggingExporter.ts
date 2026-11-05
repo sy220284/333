@@ -673,7 +673,13 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
         (attributes.event_name as string) || (log.body as string) || 'unknown'
 
       // Extract metadata objects directly (no JSON parsing needed)
-      const coreMetadata = attributes.core_metadata as EventMetadata | undefined
+      const coreMetadataValue = attributes.core_metadata
+      const coreMetadata = coreMetadataValue &&
+          typeof coreMetadataValue === 'object' &&
+          !Array.isArray(coreMetadataValue) &&
+          !(coreMetadataValue instanceof Uint8Array)
+        ? coreMetadataValue as unknown as EventMetadata
+        : undefined
       const userMetadata = attributes.user_metadata as CoreUserData
       const eventMetadata = (attributes.event_metadata || {}) as Record<
         string,

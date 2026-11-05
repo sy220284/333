@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "baseline": "2.1.88",
+  "evidence_grade": "READ_ONLY_ARCHIVE_AND_EMBEDDED_MAP_VERIFIED",
+  "source_archive": "资料库/claude-code-2.1.88-main(1).zip",
+  "source_src_files": 1902,
+  "legacy_cli_source_map_sources": 4756,
+  "legacy_cli_source_map_sources_with_content": 4756,
+  "inline_map_files": 552,
+  "inline_map_source_records": 552,
+  "inline_original_characters": 4502250,
+  "missing_relative_import_paths": 186,
+  "missing_relative_import_references": 658,
+  "missing_type_references": 433,
+  "missing_runtime_references": 225,
+  "missing_paths_with_direct_source_text_in_cli_map": 0,
+  "notes": [
+    "原始源码缺失不直接等于M1当前分支缺失",
+    "内嵌映射原始文本对应其所在文件，未提供186个缺失模块的独立原文",
+    "目标版同名词仅为静态候选"
+  ],
+  "verified_samples": [
+    {
+      "path": "components/wizard/WizardProvider.tsx",
+      "source_sha256": "9654214fa805ee514be35191a042bd6565e4fc19b01e455aa5f4ca27a9ef6fed",
+      "original_chars": 3639
+    },
+    {
+      "path": "components/agents/new-agent-creation/CreateAgentWizard.tsx",
+      "source_sha256": "5c2ed85f91d2f868534d06dcfb1b34aa31b97ecffa2e328fa2576dae9be1b532",
+      "original_chars": 2294
+    },
+    {
+      "path": "screens/REPL.tsx",
+      "source_sha256": "3f171c78bbbd78e176dda1087aeceb747e5c60a5f783c9d12db045cec62a5ef8",
+      "original_chars": 284839
+    },
+    {
+      "path": "main.tsx",
+      "source_sha256": "200f1c3e7301447b0fbef5063c966bbfcbba77a546364de44e9c4c97b74090fa",
+      "original_chars": 254291
+    },
+    {
+      "path": "components/FeedbackSurvey/FeedbackSurveyView.tsx",
+      "source_sha256": "105f27f8d7caf386f40efeb6ff99e4a22fa37a27f836acbc12a1c93fa5edb226",
+      "original_chars": 1829
+    }
+  ]
+}

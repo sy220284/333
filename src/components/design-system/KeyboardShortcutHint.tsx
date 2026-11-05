@@ -45,6 +45,27 @@ export function KeyboardShortcutHint(t0) {
   } = t0;
   const parens = t1 === undefined ? false : t1;
   const bold = t2 === undefined ? false : t2;
+  // UI action labels only; shortcut keys remain unchanged.
+  const actionLabels: Record<string, string> = {
+    cancel: '取消', confirm: '确认', close: '关闭', select: '选择',
+    change: '修改', save: '保存', search: '搜索', clear: '清除',
+    retry: '重试', expand: '展开', collapse: '收起', switch: '切换',
+    return: '返回', tabs: '切换标签', navigate: '导航', next: '下一项',
+    previous: '上一项', back: '返回', continue: '继续', skip: '跳过',
+    exit: '退出', submit: '提交', edit: '编辑', copy: '复制',
+    'disable external includes': '禁用外部引用',
+    cycle: '切换模式', 'return to team lead': '返回主代理',
+    'native select': '原生选择', 'view tasks': '查看任务',
+    manage: '管理', interrupt: '中断', 'stop agents': '停止代理',
+    toggle: '切换', 'toggle tasks': '切换任务',
+    'toggle agent list': '切换代理列表',
+    'show shortcuts': '显示快捷键',
+    'show tasks': '显示任务', 'hide tasks': '隐藏任务',
+    'show teammates': '显示协作代理',
+    'return to main': '返回主界面', 'show options': '显示选项',
+    'show all': '显示全部', 'toggle details': '切换详情',
+  }
+  const translatedAction = actionLabels[action.toLowerCase()] ?? action
   let t3;
   if ($[0] !== bold || $[1] !== shortcut) {
     t3 = bold ? <Text bold={true}>{shortcut}</Text> : shortcut;
@@ -58,7 +79,7 @@ export function KeyboardShortcutHint(t0) {
   if (parens) {
     let t4;
     if ($[3] !== action || $[4] !== shortcutText) {
-      t4 = <Text>({shortcutText} to {action})</Text>;
+      t4 = <Text>({shortcutText}：{translatedAction})</Text>;
       $[3] = action;
       $[4] = shortcutText;
       $[5] = t4;
@@ -69,7 +90,7 @@ export function KeyboardShortcutHint(t0) {
   }
   let t4;
   if ($[6] !== action || $[7] !== shortcutText) {
-    t4 = <Text>{shortcutText} to {action}</Text>;
+    t4 = <Text>{shortcutText}：{translatedAction}</Text>;
     $[6] = action;
     $[7] = shortcutText;
     $[8] = t4;

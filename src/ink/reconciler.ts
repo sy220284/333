@@ -27,32 +27,17 @@ import { getFocusManager, getRootNode } from './focus.js'
 import { LayoutDisplay } from './layout/node.js'
 import applyStyles, { type Styles, type TextStyles } from './styles.js'
 
-// We need to conditionally perform devtools connection to avoid
-// accidentally breaking other third-party code.
-// See https://github.com/vadimdemedes/ink/issues/384
+// DevTools is development-only and requires a reachable local server.
+// Import errors are asynchronous; observe the promise so a missing optional
+// react-devtools-core dependency never becomes an unhandled rejection.
 if (process.env.NODE_ENV === 'development') {
-  try {
-    // eslint-disable-next-line custom-rules/no-top-level-dynamic-import -- dev-only; NODE_ENV check is DCE'd in production
-    void import('./devtools.js')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
-    if (error.code === 'ERR_MODULE_NOT_FOUND') {
-      // biome-ignore lint/suspicious/noConsole: intentional warning
+  void import('./devtools.js')
+    .then(m => m.initializeInkDevtools())
+    .catch(error => {
       console.warn(
-        `
-The environment variable DEV is set to true, so Ink tried to import \`react-devtools-core\`,
-but this failed as it was not installed. Debugging with React Devtools requires it.
-
-To install use this command:
-
-$ npm install --save-dev react-devtools-core
-				`.trim() + '\n',
+        `Ink DevTools could not start: ${error}. Install react-devtools-core and run npx react-devtools to inspect this session.`,
       )
-    } else {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
-      throw error
-    }
-  }
+    })
 }
 
 // --

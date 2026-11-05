@@ -1,0 +1,469 @@
+{
+  "schema": 1,
+  "as_of": "2026-11-02",
+  "baseline_sha": "62f17780ca5265325aa2e8d32f8607a53c1a484b",
+  "target_version": "2.1.310",
+  "reference_sha256": "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56",
+  "decompiled_source": "资料库/反编译/Claude-Code-2.1.310-Linux-x64-完整反编译包.tar.zst",
+  "source_anchors": [
+    "chunk-mh7sh27p.js:721 AX CLI argument",
+    "chunk-dzh36vh3.js:1265 AX env and settings",
+    "chunk-j0tbz6ra.js:58095-58192,83810-83965 Notebook"
+  ],
+  "semantic_contract": "A code change or passing focused CI is not a fully signed M10 capability or E/L scenario.",
+  "groups": [
+    {
+      "id": "G01",
+      "name": "模型回退与529故障切换",
+      "features": [
+        "F017",
+        "F018"
+      ],
+      "code": [
+        "src/services/api/fallbackModels.mjs",
+        "src/services/api/withRetry.ts"
+      ],
+      "tests": [
+        "tests/fallback-529-integration.test.mjs"
+      ],
+      "stage": "SPECIAL_CI",
+      "acceptance": "UNVERIFIED",
+      "remaining": "全模型与多网关失败复测"
+    },
+    {
+      "id": "G02",
+      "name": "CLI受限、安全与工具模式",
+      "features": [
+        "F002",
+        "F041",
+        "F093"
+      ],
+      "code": [
+        "src/main.tsx",
+        "src/cli/print.ts"
+      ],
+      "tests": [],
+      "stage": "SOURCE_CONNECTED",
+      "acceptance": "UNVERIFIED",
+      "remaining": "官方同条件受限执行矩阵"
+    },
+    {
+      "id": "G03",
+      "name": "Bash sed-i编辑",
+      "features": [
+        "F032"
+      ],
+      "code": [
+        "src/tools/BashTool/BashTool.tsx",
+        "src/tools/BashTool/sedEditParser.ts",
+        "src/components/permissions/SedEditPermissionRequest/SedEditPermissionRequest.tsx"
+      ],
+      "tests": [
+        "tests/sed-edit-write-integration.test.ts"
+      ],
+      "stage": "SPECIAL_CI",
+      "acceptance": "UNVERIFIED",
+      "remaining": "跨权限全局撤销",
+      "closed_gap_evidence": {
+        "scope": "Bash sed -i 已批准预览的实际文件目标绑定与写回前复核",
+        "commits": [
+          "8d56b847",
+          "dd118c58",
+          "a3ccb3d3",
+          "563feee3"
+        ],
+        "focused_ci": "https://github.com/sy220284/333/actions/runs/41458494379",
+        "ci_result": "SUCCESS_LINUX_MACOS_WINDOWS",
+        "boundary": "真实文件目标与内容的防替换校验已在专项测试通过；全部 Bash 撤销、跨工具锁与官方全功能对照继续等待 M10"
+      }
+    },
+    {
+      "id": "G04",
+      "name": "Notebook编辑",
+      "features": [
+        "F034"
+      ],
+      "code": [
+        "src/tools/NotebookEditTool/notebookMutation.ts",
+        "src/utils/notebookFileLock.ts"
+      ],
+      "tests": [
+        "tests/m1-notebook-e41-cli.mjs",
+        "tests/notebook-edit-parity.test.ts"
+      ],
+      "stage": "OFFICIAL_CANDIDATE_REAL_CALL",
+      "acceptance": "UNVERIFIED",
+      "remaining": "异常文件、回退",
+      "closed_gap_evidence": {
+        "scope": "UNC 网络路径在校验/实际执行前拒绝；符号链接别名同文件锁串行",
+        "commits": [
+          "fe3d603e",
+          "cad45410",
+          "84a8d415",
+          "7e847a47",
+          "e58978ff",
+          "803353d6"
+        ],
+        "focused_ci": "https://github.com/sy220284/333/actions/runs/41458494379",
+        "ci_result": "SUCCESS_LINUX_MACOS_WINDOWS",
+        "boundary": "Notebook 实际文件测试、Read-Edit-Read 与转换测试通过；全工具异常恢复与 M10 完整功能仍未签收"
+      }
+    },
+    {
+      "id": "G05",
+      "name": "ToolSearch工具搜索",
+      "features": [
+        "F039"
+      ],
+      "code": [
+        "src/tools/ToolSearchTool/ToolSearchTool.ts",
+        "src/tools.ts"
+      ],
+      "tests": [
+        "build/m1-toolsearch-release-parity.mjs"
+      ],
+      "stage": "SPECIAL_CI",
+      "acceptance": "UNVERIFIED",
+      "remaining": "完整动态注册权限矩阵"
+    },
+    {
+      "id": "G06",
+      "name": "SDK流式事件",
+      "features": [
+        "F003",
+        "F098"
+      ],
+      "code": [
+        "src/entrypoints/sdk/streamEventMapper.ts",
+        "src/services/mcp/validateSdkTransportMessage.ts",
+        "src/cli/print.ts",
+        "src/services/api/thinkingDisplay.ts",
+        "src/services/api/claude.ts"
+      ],
+      "tests": [
+        "build/m1-sdk-stream-wire-parity.mjs",
+        "tests/m1-sdk-stream-mapping.test.mjs",
+        "tests/m1-sdk-mcp-message-validation.test.ts",
+        "build/m1-sdk-thinking-display-parity.mjs",
+        "tests/m1-thinking-display.test.mjs"
+      ],
+      "stage": "SPECIAL_CI",
+      "acceptance": "UNVERIFIED",
+      "remaining": "多Agent事件取消与重连、异常恢复、远程消息交付以及M10全场景签收",
+      "sdk_uuid_gap_evidence": {
+        "commits": [
+          "a281d5c0",
+          "95ed0a25"
+        ],
+        "result": "SDK stream event source comparison CI passed, UUID argument contract aligned",
+        "workflow": "https://github.com/sy220284/333/actions/runs/41463433408",
+        "acceptance": "UNVERIFIED"
+      },
+      "sdk_mcp_transport_evidence": {
+        "reference": "2.1.310",
+        "commits": [
+          "ee52d670",
+          "94f30db",
+          "56df941a",
+          "ef892179",
+          "2d1c728"
+        ],
+        "ci_run": "https://github.com/sy220284/333/actions/runs/41465584519",
+        "ci_result": "PASS_FULL_SDK_STREAM_X64_PARITY_AND_MCP_JSONRPC_CONTRACT_UNIT_TEST",
+        "remaining": "SDK→MCP独立官方协议实际交互的所有连接、取消、重连场景仍需M10签收"
+      },
+      "default_thinking_parity": {
+        "target": "Claude Code 2.1.310 installed Linux x64",
+        "proven_cases": [
+          "自适应默认更新展示与API请求一致",
+          "显式summarized",
+          "旧禁用自适应环境变量无效",
+          "非自适应模型固定预算更新展示",
+          "关闭思考"
+        ],
+        "source_commits": [
+          "94fdbf20",
+          "78746757",
+          "d8ef61d0",
+          "da9453ed",
+          "32eed25d",
+          "1ce8377d",
+          "0cea62f7"
+        ],
+        "strict_request_and_stream_ci": "https://github.com/sy220284/333/actions/runs/41606914901",
+        "four_modes_reference_ci": "https://github.com/sy220284/333/actions/runs/41608322069",
+        "results": "PASS_REFERENCE_AND_CANDIDATE_4_MODES",
+        "acceptance": "SPECIAL_CI_ONLY",
+        "remaining": "多轮重试、代理并行、远程客户端断连及完整M10仍需逐场景验收"
+      }
+    },
+    {
+      "id": "G07",
+      "name": "413上下文超限恢复",
+      "features": [
+        "F026"
+      ],
+      "code": [
+        "src/services/api/withRetry.ts"
+      ],
+      "tests": [
+        "build/m1-413-recovery-probe.mjs"
+      ],
+      "stage": "SPECIAL_CI",
+      "acceptance": "UNVERIFIED",
+      "remaining": "长会话全状态恢复"
+    },
+    {
+      "id": "G08",
+      "name": "ListAgents跨会话发现",
+      "features": [
+        "F056",
+        "F057"
+      ],
+      "code": [
+        "src/tools/ListAgentsTool/ListAgentsTool.ts",
+        "src/utils/accountPeerDirectory.mjs"
+      ],
+      "tests": [
+        "tests/m1-account-peer-discovery.test.mjs"
+      ],
+      "stage": "PARTIAL_RUNTIME",
+      "acceptance": "UNVERIFIED",
+      "remaining": "授权、断连重连、传输切换"
+    },
+    {
+      "id": "G09",
+      "name": "Monitor监控执行",
+      "features": [
+        "F081"
+      ],
+      "code": [
+        "src/tools/MonitorTool/MonitorTool.ts"
+      ],
+      "tests": [
+        "build/m1-monitor-workflow-roundtrip.mjs"
+      ],
+      "stage": "PARTIAL_RUNTIME",
+      "acceptance": "UNVERIFIED",
+      "remaining": "取消、异常任务与事件状态"
+    },
+    {
+      "id": "G10",
+      "name": "Workflow后台执行",
+      "features": [
+        "F082",
+        "F083"
+      ],
+      "code": [
+        "src/tools/WorkflowTool/WorkflowTool.ts"
+      ],
+      "tests": [
+        "build/m1-monitor-workflow-roundtrip.mjs"
+      ],
+      "stage": "PARTIAL_RUNTIME",
+      "acceptance": "UNVERIFIED",
+      "remaining": "完整恢复、日志、状态一致"
+    },
+    {
+      "id": "G11",
+      "name": "屏幕阅读器终端",
+      "features": [
+        "F001"
+      ],
+      "code": [
+        "src/ink/ink.tsx",
+        "src/utils/accessibility/screenReaderMode.mjs",
+        "src/utils/accessibility/screenReaderRuntime.ts"
+      ],
+      "tests": [
+        "tests/m1-screen-reader-terminal-parity.py",
+        "tests/m1-screen-reader-mode.test.mjs"
+      ],
+      "stage": "OFFICIAL_PTY_STARTUP",
+      "acceptance": "UNVERIFIED",
+      "remaining": "候选PTY，完整交互界面",
+      "closed_gap_evidence": {
+        "scope": "Ink 屏幕阅读器退出分支缺失运行时导入",
+        "commits": [
+          "82aa9eb0",
+          "aedd0ebd"
+        ],
+        "focused_ci": "https://github.com/sy220284/333/actions/runs/41458494461",
+        "ci_result": "SUCCESS_OFFICIAL_X64_VS_CANDIDATE_4_PTY_MODES",
+        "boundary": "四模式真实终端启动对照通过；完整多轮交互与退出路径真实运行仍待 M10"
+      }
+    },
+    {
+      "id": "G12",
+      "name": "插件ZIP加载",
+      "features": [
+        "F052"
+      ],
+      "code": [
+        "src/cli/handlers/plugins.ts"
+      ],
+      "tests": [],
+      "stage": "PARTIAL_RUNTIME",
+      "acceptance": "UNVERIFIED",
+      "remaining": "来源校验、异常与恢复"
+    },
+    {
+      "id": "G13",
+      "name": "自动压缩",
+      "features": [
+        "F005",
+        "F086"
+      ],
+      "code": [
+        "src/services/compact/autoCompact.ts"
+      ],
+      "tests": [
+        "tests/auto-compact-window.test.mjs"
+      ],
+      "stage": "SOURCE_CONNECTED",
+      "acceptance": "UNVERIFIED",
+      "remaining": "完整长会话复测"
+    },
+    {
+      "id": "G14",
+      "name": "遥测与隐私",
+      "features": [
+        "F080"
+      ],
+      "code": [
+        "src/commands/privacy-settings/fetchPrivacySettings.mjs"
+      ],
+      "tests": [
+        "tests/m1-privacy-settings.test.mjs"
+      ],
+      "stage": "SPECIAL_CI",
+      "acceptance": "UNVERIFIED",
+      "remaining": "服务端动态授权与失败"
+    },
+    {
+      "id": "G15",
+      "name": "Spinner提示系统",
+      "features": [
+        "F001"
+      ],
+      "code": [
+        "src/components/Spinner.tsx"
+      ],
+      "tests": [
+        "tests/m1-x64-spinner-tips.py"
+      ],
+      "stage": "SPECIAL_CI",
+      "acceptance": "UNVERIFIED",
+      "remaining": "优先级与动效完整交互"
+    },
+    {
+      "id": "G16",
+      "name": "TaskOutput入口退场",
+      "features": [
+        "F062"
+      ],
+      "code": [
+        "src/tools.ts",
+        "src/tools/FileReadTool/FileReadTool.ts",
+        "src/utils/task/TaskOutput.ts"
+      ],
+      "tests": [
+        "tests/m1-taskoutput-retirement.test.mjs",
+        "tests/m1-obsolete-command-parity.test.mjs"
+      ],
+      "stage": "SOURCE_CONNECTED",
+      "acceptance": "UNVERIFIED",
+      "remaining": "新版 Read 输出文件路径及后台任务结束、失败和会话恢复的完整双版本行为验收"
+    },
+    {
+      "id": "G17",
+      "name": "系统提示词快照",
+      "features": [
+        "F022",
+        "F097"
+      ],
+      "code": [
+        "src/services/cli/systemPromptSnapshot.mjs"
+      ],
+      "tests": [
+        "tests/system-prompt-snapshot.test.mjs"
+      ],
+      "stage": "PARTIAL_RUNTIME",
+      "acceptance": "UNVERIFIED",
+      "remaining": "多目录长会话缓存无误"
+    },
+    {
+      "id": "G18",
+      "name": "子Agent进度传递",
+      "features": [
+        "F057",
+        "F098"
+      ],
+      "code": [
+        "src/entrypoints/sdk/streamEventMapper.ts"
+      ],
+      "tests": [
+        "tests/sdk-stream-events.test.ts"
+      ],
+      "stage": "PARTIAL_RUNTIME",
+      "acceptance": "UNVERIFIED",
+      "remaining": "并行Agent实际执行"
+    },
+    {
+      "id": "G19",
+      "name": "MCP服务器调用入口真实参数校验",
+      "features": [
+        "F053",
+        "F039"
+      ],
+      "code": [
+        "src/entrypoints/mcp.ts",
+        "src/entrypoints/mcpInputValidation.ts",
+        "src/services/mcp/validateSdkTransportMessage.ts"
+      ],
+      "tests": [
+        "tests/m1-mcp-argument-validation.test.ts",
+        "tests/m1-sdk-mcp-message-validation.test.ts"
+      ],
+      "stage": "SPECIAL_CI",
+      "acceptance": "UNVERIFIED",
+      "remaining": "完整真实MCP客户端连接、插件服务的参数与权限矩阵、异常、取消、重连和原版对照仍未完成",
+      "closed_gap_evidence": {
+        "scope": "MCP server calls validate strict real tool input schemas before tool permission or execution",
+        "commits": [
+          "115d9a15",
+          "1079b925",
+          "8525c30b",
+          "58fb5be3",
+          "814ad616"
+        ],
+        "focused_ci": "https://github.com/sy220284/333/actions/runs/41463433508",
+        "ci_result": "PASS_MCP_ARGUMENT_VALIDATION_STEP",
+        "boundary": "Unit tests of invalid and valid schema inputs pass; end-to-end official candidate MCP parity awaits M10",
+        "mcp_transport_ci": "https://github.com/sy220284/333/actions/runs/41465584519",
+        "mcp_transport_ci_result": "PASS_JSONRPC_MESSAGE_VALIDATION_AND_SDK_X64_STREAM_PARITY"
+      }
+    }
+  ],
+  "latest_gap_closure_source_commit": "563feee3cddbce06a3212ffab1d0cbe89a3d76d8",
+  "latest_focused_build_ci": "https://github.com/sy220284/333/actions/runs/41458494267",
+  "full_M10_acceptance": "UNVERIFIED",
+  "maintenance_fixes": [
+    {
+      "id": "generator-queue-typing",
+      "code": [
+        "src/utils/generators.ts"
+      ],
+      "tests": [
+        "tests/m1-generators.test.ts"
+      ],
+      "commits": [
+        "3237a0dc",
+        "43c96d9e"
+      ],
+      "status": "FOCUSED_CI_PASS",
+      "workflow": "https://github.com/sy220284/333/actions/runs/41463433508",
+      "remaining": "其它真实工具执行和取消链路仍需M10"
+    }
+  ]
+}

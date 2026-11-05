@@ -1,0 +1,35 @@
+{
+  "version": "2.1.317",
+  "resources": [
+    {
+      "path": "src/skills/bundled/verify/examples/cli.md",
+      "anchor": "# Verifying a CLI change\n",
+      "sha256": "2dac3346b9080b21faec00b078a24f30da6054c910164173e4054185e45dac5c"
+    },
+    {
+      "path": "src/skills/bundled/verify/examples/server.md",
+      "anchor": "# Verifying a server/API change\n",
+      "sha256": "f9e5b8c511066f83fb6796d4cca179217f07bb7c75535c5f13598a07df7b8ec3"
+    },
+    {
+      "path": "src/skills/bundled/verify/SKILL.md",
+      "anchor": "---\nname: verify\n",
+      "sha256": "1555c291f4eaf9a496176f3d07c0e86449a6650f91179fa5d3ac1712b63837ac"
+    },
+    {
+      "path": "src/utils/permissions/yolo-classifier-prompts/auto_mode_system_prompt.txt",
+      "anchor": "You are a security monitor for autonomous AI coding agents.",
+      "sha256": "8e5ddd3085a2cd49566c7eea32afe0df3a373a203ed7c2dd562de02338d3801c"
+    },
+    {
+      "path": "src/utils/permissions/yolo-classifier-prompts/permissions_external.txt",
+      "anchor": "## Environment\n\nThree kinds of slot.",
+      "sha256": "bfb494467ebd7003029b1d5da21f99a598a6238162d5b7933329abdf45625088"
+    },
+    {
+      "path": "src/utils/ultraplan/prompt.txt",
+      "anchor": "<system-reminder>\nProduce an exceptionally thorough implementation plan",
+      "sha256": "299bfb223d7b7a48ace1ce5bb3be66970bda04da1d3395f510e9123306b1c407"
+    }
+  ]
+}

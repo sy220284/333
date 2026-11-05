@@ -1,0 +1,33 @@
+name: PR7 中文原始TSX组件自动还原预审
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - 'tools/dev/reconstruct-localized-original-tsx.mjs'
+      - '.github/workflows/pr7-localized-source-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 准备固定TS编译器
+        run: npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+      - name: 核实工具可运行
+        run: node --check tools/dev/reconstruct-localized-original-tsx.mjs
+      - name: 定位原始TSX与中文文案的一一对应关系
+        run: node tools/dev/reconstruct-localized-original-tsx.mjs
+      - name: 保存逐组件译文定位与待人工移植报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr7-original-tsx-localization-preview
+          path: .rebuild/governance/localized-original-tsx-reconstruction.json
+          retention-days: 30
+          if-no-files-found: warn

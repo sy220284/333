@@ -4,6 +4,7 @@ import { findToolByName, type ToolUseContext } from '../../Tool.js'
 import type { AssistantMessage, Message } from '../../types/message.js'
 import { all } from '../../utils/generators.js'
 import { type MessageUpdateLazy, runToolUse } from './toolExecution.js'
+import { withToolInProgress } from './toolExecutionLifecycle317.ts'
 
 function getMaxToolUseConcurrency(): number {
   return (
@@ -124,18 +125,19 @@ async function* runToolsSerially(
   let currentContext = toolUseContext
 
   for (const toolUse of toolUseMessages) {
-    toolUseContext.setInProgressToolUseIDs(prev =>
-      new Set(prev).add(toolUse.id),
-    )
-    for await (const update of runToolUse(
-      toolUse,
-      assistantMessages.find(_ =>
-        _.message.content.some(
-          _ => _.type === 'tool_use' && _.id === toolUse.id,
-        ),
-      )!,
-      canUseTool,
-      currentContext,
+    for await (const update of withToolInProgress(
+      toolUseContext.setInProgressToolUseIDs,
+      toolUse.id,
+      () => runToolUse(
+        toolUse,
+        assistantMessages.find(_ =>
+          _.message.content.some(
+            _ => _.type === 'tool_use' && _.id === toolUse.id,
+          ),
+        )!,
+        canUseTool,
+        currentContext,
+      ),
     )) {
       if (update.contextModifier) {
         currentContext = update.contextModifier.modifyContext(currentContext)
@@ -145,7 +147,6 @@ async function* runToolsSerially(
         newContext: currentContext,
       }
     }
-    markToolUseAsComplete(toolUseContext, toolUse.id)
   }
 }
 
@@ -157,32 +158,22 @@ async function* runToolsConcurrently(
 ): AsyncGenerator<MessageUpdateLazy, void> {
   yield* all(
     toolUseMessages.map(async function* (toolUse) {
-      toolUseContext.setInProgressToolUseIDs(prev =>
-        new Set(prev).add(toolUse.id),
+      yield* withToolInProgress(
+        toolUseContext.setInProgressToolUseIDs,
+        toolUse.id,
+        () => runToolUse(
+          toolUse,
+          assistantMessages.find(_ =>
+            _.message.content.some(
+              _ => _.type === 'tool_use' && _.id === toolUse.id,
+            ),
+          )!,
+          canUseTool,
+          toolUseContext,
+        ),
       )
-      yield* runToolUse(
-        toolUse,
-        assistantMessages.find(_ =>
-          _.message.content.some(
-            _ => _.type === 'tool_use' && _.id === toolUse.id,
-          ),
-        )!,
-        canUseTool,
-        toolUseContext,
-      )
-      markToolUseAsComplete(toolUseContext, toolUse.id)
     }),
     getMaxToolUseConcurrency(),
   )
 }
 
-function markToolUseAsComplete(
-  toolUseContext: ToolUseContext,
-  toolUseID: string,
-) {
-  toolUseContext.setInProgressToolUseIDs(prev => {
-    const next = new Set(prev)
-    next.delete(toolUseID)
-    return next
-  })
-}

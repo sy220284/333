@@ -9,7 +9,7 @@ export type TaskType =
   | 'remote_agent'
   | 'in_process_teammate'
   | 'local_workflow'
-  | 'monitor_mcp'
+  | 'monitor_ws'
   | 'dream'
 
 export type TaskStatus =
@@ -82,7 +82,7 @@ const TASK_ID_PREFIXES: Record<string, string> = {
   remote_agent: 'r',
   in_process_teammate: 't',
   local_workflow: 'w',
-  monitor_mcp: 'm',
+  monitor_ws: 'm',
   dream: 'd',
 }
 

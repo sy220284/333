@@ -34,7 +34,7 @@ import { logError } from './log.js';
 import { createSystemMessage, createUserMessage } from './messages.js';
 import { getMainLoopModel } from './model/model.js';
 import { isTranscriptMessage } from './sessionStorage.js';
-import { getSettings_DEPRECATED } from './settings/settings.js';
+import { getInitialSettings } from './settings/settings.js';
 import { jsonStringify } from './slowOperations.js';
 import { asSystemPrompt } from './systemPromptType.js';
 import { fetchSession, type GitRepositoryOutcome, type GitSource, getBranchFromSession, getOAuthHeaders, type SessionResource } from './teleport/api.js';
@@ -541,13 +541,14 @@ async function handleTeleportPrerequisites(root: Root, errorsToIgnore?: Set<Tele
  * @param branchName Optional branch name for the remote session to use
  * @returns Promise<TeleportToRemoteResponse | null> The created session or null if creation fails
  */
-export async function teleportToRemoteWithErrorHandling(root: Root, description: string | null, signal: AbortSignal, branchName?: string): Promise<TeleportToRemoteResponse | null> {
+export async function teleportToRemoteWithErrorHandling(root: Root, description: string | null, signal: AbortSignal, branchName?: string, environmentId?: string): Promise<TeleportToRemoteResponse | null> {
   const errorsToIgnore = new Set<TeleportLocalErrorType>(['needsGitStash']);
   await handleTeleportPrerequisites(root, errorsToIgnore);
   return teleportToRemote({
     initialMessage: description,
     signal,
     branchName,
+    ...(environmentId ? { environmentId } : {}),
     onBundleFail: msg => process.stderr.write(`\n${msg}\n`)
   });
 }
@@ -765,6 +766,8 @@ export async function teleportToRemote(options: {
    * exact local state. Needs .git/ only, not a GitHub remote.
    */
   useBundle?: boolean;
+  /** Use a parentless HEAD snapshot when Git history cannot be compared (2.1.317 ultrareview). */
+  bundleForceScope?: 'squashed';
   /**
    * Called with a user-facing message when the bundle path is attempted but
    * fails. The wrapper stderr.writes it (pre-REPL). Remote-agent callers
@@ -841,10 +844,12 @@ export async function teleportToRemote(options: {
           sessionId: getSessionId(),
           baseUrl: getOauthConfig().BASE_API_URL
         }, {
-          signal
+          signal,
+          forceScope: options.bundleForceScope,
         });
-        if (!bundle.success) {
+        if (bundle.success === false) {
           logError(new Error(`Bundle upload failed: ${bundle.error}`));
+          options.onBundleFail?.(bundle.error);
           return null;
         }
         seedBundleFileId = bundle.fileId;
@@ -1007,7 +1012,7 @@ export async function teleportToRemote(options: {
       }, {
         signal
       });
-      if (!bundle.success) {
+      if (bundle.success === false) {
         logError(new Error(`Bundle upload failed: ${bundle.error}`));
         // Only steer users to GitHub setup when there's a remote to clone from.
         const setup = repoInfo ? '. Please setup GitHub on https://claude.ai/code' : '';
@@ -1063,7 +1068,7 @@ export async function teleportToRemote(options: {
     // Prefer anthropic_cloud environments over byoc: anthropic_cloud environments (e.g. "Default")
     // are the standard compute environments with full repo access, whereas byoc environments
     // (e.g. "monorepo") are user-owned compute that may not support the current repository.
-    const settings = getSettings_DEPRECATED();
+    const settings = getInitialSettings();
     const defaultEnvironmentId = options.useDefaultEnvironment ? undefined : settings?.remote?.defaultEnvironmentId;
     let cloudEnv = environments.find(env => env.kind === 'anthropic_cloud');
     // When the caller opts out of their configured default, do not fall

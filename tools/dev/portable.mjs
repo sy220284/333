@@ -14,14 +14,14 @@ function hash(file) {
 }
 function exec(exe, args, workingDirectory = devDir) {
   const r = spawnSync(exe, args, { cwd: workingDirectory, encoding: 'utf8', timeout: 120000 });
-  if (r.error || r.status !== 0) throw new Error('命令执行失败: ' + exe + ' ' + args.join(' ') + ': ' + (r.error?.message ?? r.stderr));
+  if (r.error || r.status !== 0) throw new Error(`命令执行失败: ${exe} ${args.join(' ')}: ${r.error?.message ?? r.stderr}`);
   return r.stdout.trim();
 }
 function validate(dir) {
   const tsc = exec(process.execPath, [join(dir, 'typescript/bin/tsc'), '--version']);
   const biome = exec(process.execPath, [join(dir, '@biomejs/biome/bin/biome'), '--version']);
-  if (tsc !== 'Version ' + expected.typescript || !biome.includes(expected['@biomejs/biome'])) {
-    throw new Error('开发工具版本与锁文件不符: ' + tsc + '/' + biome);
+  if (tsc !== `Version ${expected.typescript}` || !biome.includes(expected['@biomejs/biome'])) {
+    throw new Error(`开发工具版本与锁文件不符: ${tsc}/${biome}`);
   }
 }
 const operation = process.argv[2], folder = process.argv[3] && resolve(process.argv[3]);
@@ -34,13 +34,13 @@ if (operation === 'pack') {
   validate(target);
   mkdirSync(folder, { recursive: true });
   exec('tar', ['-czf', 'payload.tar.gz', '-C', devDir.replaceAll('\\', '/'), 'node_modules'], folder);
-  writeFileSync(manifestPath, JSON.stringify({
+  writeFileSync(manifestPath, `${JSON.stringify({
     schema: 1, component: '333-dev-tools', platform: process.platform, arch: process.arch,
     nodeMajor: Number(process.versions.node.split('.')[0]),
     typescript: expected.typescript, biome: expected['@biomejs/biome'],
     lockSha256: hash(lock), archiveSha256: hash(archive),
-  }, null, 2) + '\n');
-  console.log('[OK] 已制作可迁移的离线开发包: ' + folder);
+  }, null, 2)}\n`);
+  console.log(`[OK] 已制作可迁移的离线开发包: ${folder}`);
 } else {
   const meta = JSON.parse(readFileSync(manifestPath, 'utf8'));
   if (meta.schema !== 1 || meta.component !== '333-dev-tools' ||

@@ -1,20 +1,10 @@
-import { readdir } from 'fs/promises'
+import { readdir } from 'node:fs/promises'
 import { getCwd } from '../../utils/cwd.js'
+import { isEnvTruthy } from '../../utils/envUtils.js'
 import { registerBundledSkill } from '../bundledSkills.js'
+import { buildClaudeApiPrompt, claudeApiSubcommand, processClaudeApiContent } from './claudeApiPrompt.ts'
 
-// claudeApiContent.js bundles 247KB of .md strings. Lazy-load inside
-// getPromptForCommand so they only enter memory when /claude-api is invoked.
-type SkillContent = typeof import('./claudeApiContent.js')
-
-type DetectedLanguage =
-  | 'python'
-  | 'typescript'
-  | 'java'
-  | 'go'
-  | 'ruby'
-  | 'csharp'
-  | 'php'
-  | 'curl'
+type DetectedLanguage = 'python' | 'typescript' | 'java' | 'go' | 'ruby' | 'csharp' | 'php' | 'curl'
 
 const LANGUAGE_INDICATORS: Record<DetectedLanguage, string[]> = {
   python: ['.py', 'requirements.txt', 'pyproject.toml', 'setup.py', 'Pipfile'],
@@ -28,169 +18,45 @@ const LANGUAGE_INDICATORS: Record<DetectedLanguage, string[]> = {
 }
 
 async function detectLanguage(): Promise<DetectedLanguage | null> {
-  const cwd = getCwd()
   let entries: string[]
   try {
-    entries = await readdir(cwd)
+    entries = await readdir(getCwd())
   } catch {
     return null
   }
-
-  for (const [lang, indicators] of Object.entries(LANGUAGE_INDICATORS) as [
-    DetectedLanguage,
-    string[],
-  ][]) {
-    if (indicators.length === 0) continue
-    for (const indicator of indicators) {
-      if (indicator.startsWith('.')) {
-        if (entries.some(e => e.endsWith(indicator))) return lang
-      } else {
-        if (entries.includes(indicator)) return lang
-      }
-    }
+  for (const [language, indicators] of Object.entries(LANGUAGE_INDICATORS) as [DetectedLanguage, string[]][]) {
+    if (indicators.some(indicator => indicator.startsWith('.')
+      ? entries.some(entry => entry.endsWith(indicator))
+      : entries.includes(indicator))) return language
   }
   return null
-}
-
-function getFilesForLanguage(
-  lang: DetectedLanguage,
-  content: SkillContent,
-): string[] {
-  return Object.keys(content.SKILL_FILES).filter(
-    path => path.startsWith(`${lang}/`) || path.startsWith('shared/'),
-  )
-}
-
-function processContent(md: string, content: SkillContent): string {
-  // Strip HTML comments. Loop to handle nested comments.
-  let out = md
-  let prev
-  do {
-    prev = out
-    out = out.replace(/<!--[\s\S]*?-->\n?/g, '')
-  } while (out !== prev)
-
-  out = out.replace(
-    /\{\{(\w+)\}\}/g,
-    (match, key: string) =>
-      (content.SKILL_MODEL_VARS as Record<string, string>)[key] ?? match,
-  )
-  return out
-}
-
-function buildInlineReference(
-  filePaths: string[],
-  content: SkillContent,
-): string {
-  const sections: string[] = []
-  for (const filePath of filePaths.sort()) {
-    const md = content.SKILL_FILES[filePath]
-    if (!md) continue
-    sections.push(
-      `<doc path="${filePath}">\n${processContent(md, content).trim()}\n</doc>`,
-    )
-  }
-  return sections.join('\n\n')
-}
-
-const INLINE_READING_GUIDE = `## Reference Documentation
-
-The relevant documentation for your detected language is included below in \`<doc>\` tags. Each tag has a \`path\` attribute showing its original file path. Use this to find the right section:
-
-### Quick Task Reference
-
-**Single text classification/summarization/extraction/Q&A:**
-→ Refer to \`{lang}/claude-api/README.md\`
-
-**Chat UI or real-time response display:**
-→ Refer to \`{lang}/claude-api/README.md\` + \`{lang}/claude-api/streaming.md\`
-
-**Long-running conversations (may exceed context window):**
-→ Refer to \`{lang}/claude-api/README.md\` — see Compaction section
-
-**Prompt caching / optimize caching / "why is my cache hit rate low":**
-→ Refer to \`shared/prompt-caching.md\` + \`{lang}/claude-api/README.md\` (Prompt Caching section)
-
-**Function calling / tool use / agents:**
-→ Refer to \`{lang}/claude-api/README.md\` + \`shared/tool-use-concepts.md\` + \`{lang}/claude-api/tool-use.md\`
-
-**Batch processing (non-latency-sensitive):**
-→ Refer to \`{lang}/claude-api/README.md\` + \`{lang}/claude-api/batches.md\`
-
-**File uploads across multiple requests:**
-→ Refer to \`{lang}/claude-api/README.md\` + \`{lang}/claude-api/files-api.md\`
-
-**Agent with built-in tools (file/web/terminal) (Python & TypeScript only):**
-→ Refer to \`{lang}/agent-sdk/README.md\` + \`{lang}/agent-sdk/patterns.md\`
-
-**Error handling:**
-→ Refer to \`shared/error-codes.md\`
-
-**Latest docs via WebFetch:**
-→ Refer to \`shared/live-sources.md\` for URLs`
-
-function buildPrompt(
-  lang: DetectedLanguage | null,
-  args: string,
-  content: SkillContent,
-): string {
-  // Take the SKILL.md content up to the "Reading Guide" section
-  const cleanPrompt = processContent(content.SKILL_PROMPT, content)
-  const readingGuideIdx = cleanPrompt.indexOf('## Reading Guide')
-  const basePrompt =
-    readingGuideIdx !== -1
-      ? cleanPrompt.slice(0, readingGuideIdx).trimEnd()
-      : cleanPrompt
-
-  const parts: string[] = [basePrompt]
-
-  if (lang) {
-    const filePaths = getFilesForLanguage(lang, content)
-    const readingGuide = INLINE_READING_GUIDE.replace(/\{lang\}/g, lang)
-    parts.push(readingGuide)
-    parts.push(
-      '---\n\n## Included Documentation\n\n' +
-        buildInlineReference(filePaths, content),
-    )
-  } else {
-    // No language detected — include all docs and let the model ask
-    parts.push(INLINE_READING_GUIDE.replace(/\{lang\}/g, 'unknown'))
-    parts.push(
-      'No project language was auto-detected. Ask the user which language they are using, then refer to the matching docs below.',
-    )
-    parts.push(
-      '---\n\n## Included Documentation\n\n' +
-        buildInlineReference(Object.keys(content.SKILL_FILES), content),
-    )
-  }
-
-  // Preserve the "When to Use WebFetch" and "Common Pitfalls" sections
-  const webFetchIdx = cleanPrompt.indexOf('## When to Use WebFetch')
-  if (webFetchIdx !== -1) {
-    parts.push(cleanPrompt.slice(webFetchIdx).trimEnd())
-  }
-
-  if (args) {
-    parts.push(`## User Request\n\n${args}`)
-  }
-
-  return parts.join('\n\n')
 }
 
 export function registerClaudeApiSkill(): void {
   registerBundledSkill({
     name: 'claude-api',
-    description:
-      'Build apps with the Claude API or Anthropic SDK.\n' +
-      'TRIGGER when: code imports `anthropic`/`@anthropic-ai/sdk`/`claude_agent_sdk`, or user asks to use Claude API, Anthropic SDKs, or Agent SDK.\n' +
-      'DO NOT TRIGGER when: code imports `openai`/other AI SDK, general programming, or ML/data-science tasks.',
-    allowedTools: ['Read', 'Grep', 'Glob', 'WebFetch'],
+    description: [
+      'Reference for the Claude API / Anthropic SDK — model ids, pricing, params, streaming, tool use, MCP, agents, caching, token counting, model migration.',
+      'TRIGGER — read BEFORE opening the target file; don\'t skip because it "looks like a one-liner" — whenever: the prompt names Claude/Anthropic in any form (Claude, Anthropic, Fable, Opus, Sonnet, Haiku, `anthropic`, `@anthropic-ai`, `claude-*`, `us.anthropic.*`, `[1m]`); the user asks about an LLM (pricing/model choice/limits/caching) — never answer from memory; OR the task is LLM-shaped with provider unstated (agent/MCP/tool-definition/multi-agent/RAG/LLM-judge/computer-use; generate/summarize/extract/classify/rewrite/converse over NL; debugging refusals/cutoffs/streaming/tool-calls/tokens).',
+      "SKIP only when another provider is being worked on (overrides all triggers): OpenAI/GPT/Gemini/Llama/Mistral/Cohere/Ollama named in the query; OR `grep -rE 'openai|langchain_openai|google.generativeai|genai|mistralai|cohere|ollama'` over the project hits (run this grep FIRST if no provider named — don't Read the file).",
+    ].join('\n'),
+    allowedTools: ['WebFetch(domain:platform.claude.com)'],
     userInvocable: true,
-    async getPromptForCommand(args) {
+    isEnabled: () => !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_CLAUDE_API_SKILL),
+    files: async () => {
       const content = await import('./claudeApiContent.js')
-      const lang = await detectLanguage()
-      const prompt = buildPrompt(lang, args, content)
-      return [{ type: 'text', text: prompt }]
+      // The 2.1.317 reference package extracts all 106 file resources,
+      // including the Managed Agents security guide. Command execution
+      // protection is enforced separately at the command/PreToolUse boundary.
+      return Object.fromEntries(Object.entries(content.SKILL_FILES)
+        .map(([path, value]) => [path, path.endsWith('.md') ? processClaudeApiContent(value, content) : value]))
+    },
+    async getPromptForCommand(args, _context, extractedDir) {
+      if (claudeApiSubcommand(args) === 'managed-agents-secure') {
+        return [{ type: 'text', text: 'The `managed-agents-secure` command is unavailable in this session: Claude Code’s check on its `ant` commands does not run here. Say so in one sentence and stop: do not run `ant` commands or check the deployment by hand.' }]
+      }
+      const [content, language] = await Promise.all([import('./claudeApiContent.js'), detectLanguage()])
+      return [{ type: 'text', text: buildClaudeApiPrompt(language, args, content, typeof extractedDir === 'string', false, null) }]
     },
   })
 }

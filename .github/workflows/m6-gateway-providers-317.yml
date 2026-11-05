@@ -1,0 +1,41 @@
+name: 317企业网关七上游协议真实测试
+on:
+  push:
+    branches:
+      - upgrade/2.1.310-m1-evidence
+    paths:
+      - 'src/cli/gateway/gatewayProviders317.ts'
+      - 'src/cli/gateway/gatewayForward317.ts'
+      - 'src/cli/gateway/gatewayConfig317.ts'
+      - 'src/cli/gateway/gatewayAuth317.ts'
+      - 'src/cli/gateway/gatewayDevice317.ts'
+      - 'src/cli/gateway/gatewayServer317.ts'
+      - 'src/cli/gateway/gatewaySpendMeter317.*'
+      - 'src/cli/gateway/gatewaySpendStore317.*'
+      - 'tests/m6-gateway-spend-integration-317.test.mjs'
+      - 'tests/m6-gateway-user-id-claim-317.test.mjs'
+      - 'tests/m6-gateway-providers-317.test.mjs'
+      - '.github/workflows/m6-gateway-providers-317.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  gateway-sdks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 七提供商契约、安全认证与SDK流式请求模拟测试
+        run: node --experimental-strip-types --test tests/m6-gateway-providers-317.test.mjs
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.4'
+      - name: 网关官方317既有配置与真实协议回归
+        run: bun test tests/m6-gateway-runtime-317.test.mjs tests/m6-gateway-ttfb-sse-317.test.mjs tests/m6-gateway-device-317.test.mjs tests/m6-gateway-user-id-claim-317.test.mjs
+      - name: 网关个人与共享预算、流式计费及数据库异常处理
+        run: node --experimental-strip-types --test tests/m6-gateway-spend-integration-317.test.mjs
+      - name: CRI 认证回归使用可注入Node运行环境
+        run: node --experimental-strip-types --test tests/m6-gateway-cri-317.test.mjs

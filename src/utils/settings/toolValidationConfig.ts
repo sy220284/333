@@ -98,6 +98,6 @@ export function isBashPrefixTool(toolName: string): boolean {
 }
 
 // Helper to get custom validation for a tool
-export function getCustomValidation(toolName: string) {
+export function getCustomValidation(toolName: string) : (content: string) => { valid: boolean; error?: string; suggestion?: string; examples?: string[]; } {
   return TOOL_VALIDATION_CONFIG.customValidation[toolName]
 }

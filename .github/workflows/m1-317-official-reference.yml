@@ -1,0 +1,238 @@
+name: M1 官方 2.1.317 x64 二进制来源与运行基准
+
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - 'build/claude-api-2.1.317-manifest.json'
+      - 'build/restore-claude-api.mjs'
+      - 'src/skills/bundled/**'
+      - 'src/main.tsx'
+      - 'tests/m1-claude-api-manifest-317.test.mjs'
+      - 'tests/m1-nested-session-id-317.test.mjs'
+      - 'tests/m1-nested-session-id-e2e-317.test.mjs'
+      - 'tests/m1-317-json-wire.test.mjs'
+      - 'tests/m1-317-json-wire-e2e.test.mjs'
+      - 'src/cli/jsonWireEscaping.mjs'
+      - 'src/cli/ndjsonSafeStringify.ts'
+      - 'src/cli/structuredIO.ts'
+      - 'src/cli/print.ts'
+      - 'src/utils/hooks.ts'
+      - 'src/utils/hooks/preCompactOutput.mjs'
+      - 'tests/m1-precompact-output-limit-317.test.mjs'
+      - 'src/utils/remoteSessionIdentity.mjs'
+      - 'src/bootstrap/state.ts'
+      - 'tests/m1-official-bundled-skills-317.test.mjs'
+      - 'tests/m1-317-chain-matrix.test.mjs'
+      - 'tests/m1-target-release-317.test.mjs'
+      - 'tests/m1-x64-conversation-ui-scenarios.py'
+      - 'tests/test_m1_retry_phase_glyphs.py'
+      - 'docs/upgrade/m1-evidence/2.1.317-366项功能链路分组矩阵.json'
+      - '.github/workflows/m1-317-official-reference.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m1-317-official-reference.yml'
+      - 'docs/upgrade/m1-evidence/target-release.json'
+      - 'tests/m1-target-release-317.test.mjs'
+      - 'tests/m1-read-repeat-317.test.mjs'
+      - 'tests/m1-subagent-effort-317.test.mjs'
+      - 'build/m1-cli-surface-audit.mjs'
+      - 'tests/m1-plugin-data-size-parity.test.mjs'
+      - 'tests/m1-marketplace-add-json-317.test.mjs'
+      - 'tests/m1-plugin-configure-317.test.mjs'
+      - 'src/utils/plugins/pluginCliConfig.ts'
+      - 'build/m1-cli-help-options.mjs'
+      - 'tests/m1-cli-help-options.test.mjs'
+      - 'tools/upgrade/audit-final-release-skills.py'
+      - 'tests/test_final_release_skills_audit.py'
+      - 'tests/m1-x64-conversation-ui-scenarios.py'
+      - 'src/components/Spinner/**'
+      - 'src/components/LogoV2/**'
+      - 'src/skills/bundled/**'
+      - 'src/utils/permissions/yolo-classifier-prompts/**'
+      - 'src/utils/ultraplan/prompt.txt'
+      - 'build/standalone-bundled-assets-*.json'
+      - 'build/verify-bundled-assets.mjs'
+      - 'build/restore-claude-api.mjs'
+      - 'build/claude-api-2.1.317-manifest.json'
+      - 'tests/m1-claude-api-manifest-317.test.mjs'
+      - 'tests/m1-standalone-assets-317.test.mjs'
+      - 'tests/m1-plugin-install-migration-317.test.mjs'
+      - 'src/utils/plugins/installedPluginsManager.ts'
+      - 'src/utils/plugins/installedPluginsMigration.mjs'
+      - 'tests/claude-api-version-parity.test.mjs'
+      - 'tests/claude-api-skill.test.mjs'
+      - 'src/skills/bundledFiles.mjs'
+      - 'src/skills/bundledSkills.ts'
+      - 'tests/bundled-skill-extraction.test.mjs'
+      - 'build/install-public-deps.mjs'
+      - 'build/public-dependencies.lock.json'
+      - 'tests/m1-prometheus-security-317.test.mjs'
+      - 'tests/fixtures/m1-prometheus-server-child.mjs'
+      - 'src/main.tsx'
+      - 'src/cli/handlers/**'
+      - 'src/tools/FileReadTool/**'
+      - 'src/tools/AgentTool/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m1-317-reference-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  official-x64-reference:
+    name: 获取官方校验和、验证原生程序并保存证据
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 校验仓库对当前与历史基线的独立定义
+        run: node --test tests/m1-target-release-317.test.mjs tests/m1-read-repeat-317.test.mjs tests/m1-subagent-effort-317.test.mjs tests/m1-317-chain-matrix.test.mjs tests/m1-account-email-disclosure-317.test.mjs tests/m1-official-bundled-skills-317.test.mjs tests/m1-claude-api-manifest-317.test.mjs tests/m1-nested-session-id-317.test.mjs tests/m1-317-json-wire.test.mjs tests/m1-precompact-output-limit-317.test.mjs
+      - name: 校验317独立内置资源的篡改和版本切换保护
+        run: node --test tests/m1-standalone-assets-317.test.mjs
+      - name: 校验最终版嵌入技能扫描器的哈希、归属与差异识别
+        run: python3 -m unittest discover -s tests -p test_final_release_skills_audit.py
+      - name: 获取官方 2.1.317 原生发行清单与 Linux x64
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/m1-317-reference"
+          cd "${RUNNER_TEMP}/m1-317-reference"
+          base='https://downloads.claude.ai/claude-code-releases/2.1.317'
+          curl --fail --location --show-error --silent --retry-all-errors --retry 4 --retry-delay 3 "${base}/manifest.json" -o manifest.json
+          node --input-type=module -e '
+            import {readFileSync,writeFileSync} from "node:fs";
+            const manifest=JSON.parse(readFileSync("manifest.json","utf8"));
+            const checksum=manifest.platforms?.["linux-x64"]?.checksum;
+            if (!/^[0-9a-f]{64}$/i.test(checksum??"")) throw new Error("Official Linux x64 manifest checksum unavailable");
+            writeFileSync("expected-sha256.txt",checksum.toLowerCase()+"  claude\n");
+            console.log("Official reference sha256="+checksum);
+          '
+          curl --fail --location --show-error --silent --retry-all-errors --retry 4 --retry-delay 3 "${base}/linux-x64/claude" -o claude
+          sha256sum --check expected-sha256.txt
+          chmod 755 claude
+          version="$(HOME="${RUNNER_TEMP}/m1-317-isolated-home" DISABLE_AUTOUPDATER=1 ./claude --version)"
+          echo "Installed reference version: ${version}"
+          [[ "${version}" == 2.1.317* ]]
+          HOME="${RUNNER_TEMP}/m1-317-isolated-home" DISABLE_AUTOUPDATER=1 ./claude --help > official-help.txt
+          test -s official-help.txt
+          printf '%s\n' "${version}" > actual-version.txt
+      - name: 按 2.1.317 原生压缩资源逐字节核对内置技能
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(cut -d' ' -f1 "${RUNNER_TEMP}/m1-317-reference/expected-sha256.txt")"
+          python3 tools/upgrade/audit-final-release-skills.py \
+            --binary "${RUNNER_TEMP}/m1-317-reference/claude" \
+            --root "$GITHUB_WORKSPACE" \
+            --target 2.1.317 \
+            --expected-sha256 "$expected" \
+            --extract-dir "${RUNNER_TEMP}/m1-317-reference/official-skills" \
+            --report "${RUNNER_TEMP}/m1-317-reference/skill-resource-parity.json"
+      - name: 基于当前 PR 的源码独立构建候选 CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/verify-bundled-assets.mjs
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+          node --test tests/bundled-skill-extraction.test.mjs tests/m1-prometheus-security-317.test.mjs tests/m1-cli-help-options.test.mjs
+          bun build/rebuild.mjs
+          test -s dist/cli.js
+          printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-317-candidate"
+          chmod +x "${RUNNER_TEMP}/m1-317-candidate"
+      - name: 官方317与候选版真实进程11项离线CLI严格差分
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/m1-x64-reference-probe.mjs \
+            --reference "${RUNNER_TEMP}/m1-317-reference/claude" \
+            --candidate "${RUNNER_TEMP}/m1-317-candidate" \
+            --allow-candidate-diff false \
+            --report "${RUNNER_TEMP}/m1-317-reference/official-candidate-11-cli-parity.json"
+      - name: 官方317与重建版 Claude API 技能读取和106项释放文件真实对照
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLAUDE_TARGET_X64="${RUNNER_TEMP}/m1-317-reference/claude" node --test tests/claude-api-version-parity.test.mjs tests/m1-plugin-install-migration-317.test.mjs
+      - name: 官方317与重建版嵌套会话ID及消息隔离真实进程测试
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLAUDE_TARGET_X64="${RUNNER_TEMP}/m1-317-reference/claude" node --test tests/m1-nested-session-id-e2e-317.test.mjs
+      - name: 官方317与重建版JSON及stream-json控制字符端到端协议对照
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLAUDE_TARGET_X64="${RUNNER_TEMP}/m1-317-reference/claude" node --test tests/m1-317-json-wire-e2e.test.mjs
+      - name: 官方 2.1.317 与独立重建版 32 项 CLI 参数对照
+        shell: bash
+        run: |
+          set -euo pipefail
+          node build/m1-cli-surface-audit.mjs \
+            --reference "${RUNNER_TEMP}/m1-317-reference/claude" \
+            --candidate "${RUNNER_TEMP}/m1-317-candidate" \
+            --target 2.1.317 \
+            --report "${RUNNER_TEMP}/m1-317-reference/cli-surface-parity.json"
+      - name: 使用 2.1.317 官方原版和独立重建版验证插件数据大小语义
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLAUDE_TARGET_X64="${RUNNER_TEMP}/m1-317-reference/claude" node --test tests/m1-plugin-data-size-parity.test.mjs tests/m1-marketplace-add-json-317.test.mjs tests/m1-plugin-configure-317.test.mjs
+      - name: 最终版六种真实终端情境及动画帧对照
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check pyte==0.8.2
+          python3 -m unittest discover -s tests -p test_m1_retry_phase_glyphs.py
+          python3 tests/m1-x64-conversation-ui-scenarios.py \
+            --reference "${RUNNER_TEMP}/m1-317-reference/claude" \
+            --candidate "${RUNNER_TEMP}/m1-317-candidate" \
+            --target 2.1.317 \
+            --strict-animations \
+            --report "${RUNNER_TEMP}/m1-317-reference/terminal-animation-parity.json"
+      - name: 最终版 CLI 参数与原始技能字节严格验收门禁
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']) / 'm1-317-reference'
+          cli = json.loads((root / 'cli-surface-parity.json').read_text())
+          assets = json.loads((root / 'skill-resource-parity.json').read_text())
+          print('2.1.317 target CLI gaps:', cli['differences'])
+          print('2.1.317 target skill asset results:', assets['counts'])
+          if cli['target'] != '2.1.317' or assets['target_version'] != '2.1.317':
+              raise SystemExit('A historical reference was used instead of the final target')
+          if cli['differences'] or any(v for k, v in assets['counts'].items() if k not in ('MATCH', 'PROJECT_EXTRA_MATCH')):
+              raise SystemExit('The 2.1.317 command or embedded skill assets have not reached parity')
+          PY
+      - name: 保存官方原始清单与可复现的二进制校验结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-official-2.1.317-linux-x64-reference
+          path: |
+            ${{ runner.temp }}/m1-317-reference/manifest.json
+            ${{ runner.temp }}/m1-317-reference/expected-sha256.txt
+            ${{ runner.temp }}/m1-317-reference/actual-version.txt
+            ${{ runner.temp }}/m1-317-reference/official-help.txt
+            ${{ runner.temp }}/m1-317-reference/cli-surface-parity.json
+            ${{ runner.temp }}/m1-317-reference/official-candidate-11-cli-parity.json
+            ${{ runner.temp }}/m1-317-reference/skill-resource-parity.json
+            ${{ runner.temp }}/m1-317-reference/official-skills/**
+            ${{ runner.temp }}/m1-317-reference/terminal-animation-parity.json
+          if-no-files-found: warn
+          retention-days: 90

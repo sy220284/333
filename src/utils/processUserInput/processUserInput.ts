@@ -76,6 +76,8 @@ export type ProcessUserInputBaseResult = {
   // Output text for non-interactive mode (e.g., forked commands)
   // When set, this is used as the result in -p mode instead of empty string
   resultText?: string
+  // Exact name of an executed local slash command, forwarded to SDK JSON output.
+  localCommand?: string
   // When set, prefills or submits the next input after command completes
   // Used by /discover to chain into the selected feature's command
   nextInput?: string
@@ -239,25 +241,26 @@ export async function processUserInput({
       )
     }
 
-    // TODO: Clean this up
+    // UserPromptSubmit hooks can return user, system or attachment messages.
+    // Only a hook_success attachment needs content truncation; the other
+    // message variants must reach the conversation without mutation.
     if (hookResult.message) {
-      switch (hookResult.message.attachment.type) {
-        case 'hook_success':
-          if (!hookResult.message.attachment.content) {
-            // Skip if there is no content
-            break
-          }
+      const hookMessage = hookResult.message
+      if (
+        hookMessage.type === 'attachment' &&
+        hookMessage.attachment.type === 'hook_success'
+      ) {
+        if (hookMessage.attachment.content) {
           result.messages.push({
-            ...hookResult.message,
+            ...hookMessage,
             attachment: {
-              ...hookResult.message.attachment,
-              content: applyTruncation(hookResult.message.attachment.content),
+              ...hookMessage.attachment,
+              content: applyTruncation(hookMessage.attachment.content),
             },
           })
-          break
-        default:
-          result.messages.push(hookResult.message)
-          break
+        }
+      } else {
+        result.messages.push(hookMessage)
       }
     }
   }

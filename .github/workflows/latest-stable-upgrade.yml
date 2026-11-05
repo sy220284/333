@@ -1,0 +1,122 @@
+name: 全部最新稳定依赖升级及端到端测试
+on:
+  push:
+    branches: [upgrade/latest-stable-deps-20261105]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: latest-stable-deps-pr7
+  cancel-in-progress: true
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: gateway_test
+          POSTGRES_PASSWORD: gateway_test
+          POSTGRES_DB: gateway_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U gateway_test -d gateway_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26.13.0'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - id: guard
+        name: 检查依赖是否已锁定
+        run: |
+          if test -f docs/upgrade/latest-stable-dependencies.json; then echo 'needed=false' >> "$GITHUB_OUTPUT"; else echo 'needed=true' >> "$GITHUB_OUTPUT"; fi
+      - name: 运行官方 MCP v2 迁移工具
+        if: steps.guard.outputs.needed == 'true'
+        run: |
+          set -euo pipefail
+          npx --yes @modelcontextprotocol/codemod@2.4.0 v1-to-v2 src
+          npx --yes @modelcontextprotocol/codemod@2.4.0 v1-to-v2 tests
+      - name: 适配 TypeScript 7 与 OpenTelemetry 3
+        if: steps.guard.outputs.needed == 'true'
+        run: node tools/upgrade/all-stable.mjs migrate
+      - name: 全部依赖更新至官方最新稳定标签
+        if: steps.guard.outputs.needed == 'true'
+        run: node tools/upgrade/all-stable.mjs freeze
+      - name: 推送升级源码及全部锁文件到独立 PR
+        if: steps.guard.outputs.needed == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A src native tests tools/dev build/install-public-deps.mjs build/public-dependencies.lock.json build/rebuild.mjs package.json tsconfig.json docs/upgrade/latest-stable-dependencies.json
+          git diff --cached --quiet && { echo '没有产生任何更新'; exit 1; }
+          git commit -m '全面升级最新稳定依赖并同步迁移源码接口'
+          git push origin HEAD:upgrade/latest-stable-deps-20261105
+      - name: MCP v2 全生产引用检查
+        run: |
+          set -euo pipefail
+          if grep -R --include='*.ts' --include='*.tsx' --include='*.mjs' -nE '@mcp-codemod-error|@modelcontextprotocol/sdk/' src native tests; then
+            echo 'MCP v2 存在未迁移生产接口' >&2; exit 1
+          fi
+      - name: 最新依赖安装和全量类型检查
+        run: |
+          set -euo pipefail
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 安装源码AST分析专用冻结解析器
+        run: npm install --prefix "${RUNNER_TEMP}/333-ui-typescript" --no-save --ignore-scripts --no-package-lock --no-audit --no-fund typescript@5.9.3
+      - name: TypeScript 7 全仓检查（收集诊断）
+        id: typecheck
+        continue-on-error: true
+        run: node tools/dev/dev.mjs typecheck:all
+      - name: 全链路编译及运行测试
+        id: build
+        continue-on-error: true
+        env:
+          GATEWAY_TEST_POSTGRES_URL: postgres://gateway_test:gateway_test@127.0.0.1:5432/gateway_test
+          TS_COMPILER_PATH: ${{ runner.temp }}/333-ui-typescript/node_modules/typescript/lib/typescript.js
+        run: |
+          set -euo pipefail
+          node build/verify-bundled-assets.mjs
+          node build/verify-official-embedded-assets.mjs
+          node build/restore-claude-api.mjs --verify
+          bun build/rebuild.mjs
+          node build/compile-standalone.mjs
+          node build/package-release.mjs
+          npm run test:all
+          # PR7新增的认证、Observer、Artifact、内置SDK MCP均须随依赖升级复验。
+          # 专项工作流登记的测试不能依赖“未登记测试”扫描器执行。
+          bun test tests/m3-mcp-auth-317.test.ts
+          bun test tests/m5-sdk-mcp-factory-317.test.ts tests/m1-sdk-mcp-message-validation.test.ts
+          bun test tests/m2-artifact-comment-pipeline-317.test.ts tests/m2-observer-lifecycle-317.test.ts
+          bun test tests/m5-mcp-dual-era-317.test.ts tests/m4-sdk-daemon-tasks-317.test.ts tests/m4-sdk-remote-control-317.test.ts
+          # 其余只登记在分支专属工作流里的测试也要在PR13依赖组合上运行。
+          # TypeScript 7 uses a native checker. The localization AST checker
+          # needs the pinned JS parser (same contract as chinese-only-ui.yml).
+          # This is a test-only parser, not a production compiler downgrade.
+          TS_COMPILER_PATH="${RUNNER_TEMP}/333-ui-typescript/node_modules/typescript/lib/typescript.js" node build/run-unregistered-tests.mjs --workflow-only
+      - name: 汇总验收结果（失败阻断）
+        if: always()
+        run: |
+          echo 'TypeScript: ${{ steps.typecheck.outcome }}'
+          echo '构建及运行: ${{ steps.build.outcome }}'
+          test "${{ steps.typecheck.outcome }}" = success
+          test "${{ steps.build.outcome }}" = success
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: latest-stable-upgrade
+          path: |
+            docs/upgrade/latest-stable-dependencies.json
+            .rebuild/governance/**
+            .rebuild/dependency-manifest.json
+          if-no-files-found: warn

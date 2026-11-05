@@ -259,7 +259,7 @@ export function BackgroundTask(t0) {
         }
         return t6;
       }
-    case "monitor_mcp":
+    case "monitor_ws":
       {
         let t1;
         if ($[67] !== activityLimit || $[68] !== task.description) {

@@ -183,7 +183,9 @@ export const getUserContext = memoize(
 
     return {
       ...(claudeMd && { claudeMd }),
-      currentDate: `Today's date is ${getLocalISODate()}.`,
+      // Native 2.1.317 --bare leaves date in the terse system CWD block.
+      // Do not prepend an additional synthetic reminder to a bare prompt.
+      ...(!isBareMode() && { currentDate: `Today's date is ${getLocalISODate()}.` }),
     }
   },
 )

@@ -18,14 +18,25 @@ export type CliHighlight = {
 // faulted in.
 let cliHighlightPromise: Promise<CliHighlight | null> | undefined
 
-let loadedGetLanguage: typeof import('highlight.js').getLanguage | undefined
+type HighlightLanguageLookup = (name: string) => { name?: string } | undefined
+let loadedGetLanguage: HighlightLanguageLookup | undefined
 
 async function loadCliHighlight(): Promise<CliHighlight | null> {
   try {
     const cliHighlight = await import('cli-highlight')
     // cache hit — cli-highlight already loaded highlight.js
     const highlightJs = await import('highlight.js')
-    loadedGetLanguage = highlightJs.getLanguage
+    // Published CJS builds expose getLanguage on the default export in some
+    // ESM loaders. Select the real callable API and bind its receiver.
+    const loaded = highlightJs as unknown as {
+      getLanguage?: HighlightLanguageLookup
+      default?: { getLanguage?: HighlightLanguageLookup }
+    }
+    const api = typeof loaded.getLanguage === 'function' ? loaded : loaded.default
+    if (!api || typeof api.getLanguage !== 'function') {
+      throw new Error('highlight.js does not export getLanguage')
+    }
+    loadedGetLanguage = api.getLanguage.bind(api)
     return {
       highlight: cliHighlight.highlight,
       supportsLanguage: cliHighlight.supportsLanguage,

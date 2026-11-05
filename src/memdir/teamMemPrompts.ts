@@ -21,7 +21,7 @@ import { getTeamMemPath } from './teamMemPaths.js'
  */
 export function buildCombinedMemoryPrompt(
   extraGuidelines?: string[],
-  skipIndex = false,
+  skipIndex: boolean = false,
 ): string {
   const autoDir = getAutoMemPath()
   const teamDir = getTeamMemPath()

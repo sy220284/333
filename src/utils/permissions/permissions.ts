@@ -13,6 +13,8 @@ import { POWERSHELL_TOOL_NAME } from '../../tools/PowerShellTool/toolName.js'
 import { REPL_TOOL_NAME } from '../../tools/REPLTool/constants.js'
 import type { AssistantMessage } from '../../types/message.js'
 import { extractOutputRedirections } from '../bash/commands.js'
+import { getAccountInformation } from '../auth.js'
+import { ACCOUNT_EMAIL_DISCLOSURE_REASON, shouldConfirmAccountEmailDisclosure } from '../accountEmailDisclosure.ts'
 import { logForDebugging } from '../debug.js'
 import { AbortError, toError } from '../errors.js'
 import { logError } from '../log.js'
@@ -49,6 +51,7 @@ import {
   permissionRuleValueFromString,
   permissionRuleValueToString,
 } from './permissionRuleParser.js'
+import { permissionToolNamesMatch } from './legacyToolAliases.ts'
 import {
   deletePermissionRuleFromSettings,
   type PermissionRuleFromEditableSettings,
@@ -111,6 +114,7 @@ const PERMISSION_RULE_SOURCES = [
   'cliArg',
   'command',
   'session',
+  'toolsNarrowing',
 ] as const satisfies readonly PermissionRuleSource[]
 
 export function permissionRuleSourceDisplayString(
@@ -232,7 +236,7 @@ export function getAskRules(context: ToolPermissionContext): PermissionRule[] {
 
 /**
  * Check if the entire tool matches a rule
- * For example, this matches "Bash" but not "Bash(prefix:*)" for BashTool
+ * For example, this matches "Bash" but not "Bash(prefix *)" for BashTool
  * This also matches MCP tools with a server name, e.g. the rule "mcp__server1"
  */
 function toolMatchesRule(
@@ -251,7 +255,7 @@ function toolMatchesRule(
   const nameForRuleMatch = getToolNameForPermissionCheck(tool)
 
   // Direct tool name match
-  if (rule.ruleValue.toolName === nameForRuleMatch) {
+  if (permissionToolNamesMatch(rule.ruleValue.toolName, nameForRuleMatch)) {
     return true
   }
 
@@ -270,7 +274,7 @@ function toolMatchesRule(
 
 /**
  * Check if the entire tool is listed in the always allow rules
- * For example, this finds "Bash" but not "Bash(prefix:*)" for BashTool
+ * For example, this finds "Bash" but not "Bash(prefix *)" for BashTool
  */
 export function toolAlwaysAllowedRule(
   context: ToolPermissionContext,
@@ -313,7 +317,7 @@ export function getDenyRuleForAgent(
   return (
     getDenyRules(context).find(
       rule =>
-        rule.ruleValue.toolName === agentToolName &&
+        permissionToolNamesMatch(rule.ruleValue.toolName, agentToolName) &&
         rule.ruleValue.ruleContent === agentType,
     ) || null
   )
@@ -333,7 +337,7 @@ export function filterDeniedAgents<T extends { agentType: string }>(
   const deniedAgentTypes = new Set<string>()
   for (const rule of getDenyRules(context)) {
     if (
-      rule.ruleValue.toolName === agentToolName &&
+      permissionToolNamesMatch(rule.ruleValue.toolName, agentToolName) &&
       rule.ruleValue.ruleContent !== undefined
     ) {
       deniedAgentTypes.add(rule.ruleValue.ruleContent)
@@ -344,7 +348,7 @@ export function filterDeniedAgents<T extends { agentType: string }>(
 
 /**
  * Map of rule contents to the associated rule for a given tool.
- * e.g. the string key is "prefix:*" from "Bash(prefix:*)" for BashTool
+ * e.g. the string key is "prefix *" from "Bash(prefix *)" for BashTool
  */
 export function getRuleByContentsForTool(
   context: ToolPermissionContext,
@@ -379,7 +383,7 @@ export function getRuleByContentsForToolName(
   }
   for (const rule of rules) {
     if (
-      rule.ruleValue.toolName === toolName &&
+      permissionToolNamesMatch(rule.ruleValue.toolName, toolName) &&
       rule.ruleValue.ruleContent !== undefined &&
       rule.ruleBehavior === behavior
     ) {
@@ -1068,6 +1072,23 @@ function handleDenialLimitExceeded(
  *
  * Caller must pre-check tool.requiresUserInteraction() — step 1e is not replicated.
  */
+function getAccountEmailDisclosureDecision(
+  tool: Tool,
+  input: { [key: string]: unknown },
+): PermissionAskDecision | null {
+  const email = getAccountInformation()?.email
+  if (!shouldConfirmAccountEmailDisclosure(tool.name, input, email)) return null
+  return {
+    behavior: 'ask',
+    message: ACCOUNT_EMAIL_DISCLOSURE_REASON,
+    decisionReason: {
+      type: 'safetyCheck',
+      reason: ACCOUNT_EMAIL_DISCLOSURE_REASON,
+      classifierApprovable: false,
+    },
+  }
+}
+
 export async function checkRuleBasedPermissions(
   tool: Tool,
   input: { [key: string]: unknown },
@@ -1131,8 +1152,14 @@ export async function checkRuleBasedPermissions(
     return toolPermissionResult
   }
 
+  // Match official 2.1.317: the email warning is an additional check after
+  // native tool policy, so an existing deny remains authoritative.
+  // It still precedes bypassPermissions and all automatic approval paths.
+  const emailDisclosure = getAccountEmailDisclosureDecision(tool, input)
+  if (emailDisclosure) return emailDisclosure
+
   // 1f. Content-specific ask rules from tool.checkPermissions
-  // (e.g. Bash(npm publish:*) → {ask, type:'rule', ruleBehavior:'ask'})
+  // (e.g. Bash(npm publish *) → {ask, type:'rule', ruleBehavior:'ask'})
   if (
     toolPermissionResult?.behavior === 'ask' &&
     toolPermissionResult.decisionReason?.type === 'rule' &&
@@ -1227,6 +1254,12 @@ async function hasPermissionsToUseToolInner(
     return toolPermissionResult
   }
 
+  // Match official 2.1.317: the email warning is an additional check after
+  // native tool policy, so an existing deny remains authoritative.
+  // It still precedes bypassPermissions and all automatic approval paths.
+  const emailDisclosure = getAccountEmailDisclosureDecision(tool, input)
+  if (emailDisclosure) return emailDisclosure
+
   // 1e. Tool requires user interaction even in bypass mode
   if (
     tool.requiresUserInteraction?.() &&
@@ -1237,7 +1270,7 @@ async function hasPermissionsToUseToolInner(
 
   // 1f. Content-specific ask rules from tool.checkPermissions take precedence
   // over bypassPermissions mode. When a user explicitly configures a
-  // content-specific ask rule (e.g. Bash(npm publish:*)), the tool's
+  // content-specific ask rule (e.g. Bash(npm publish *)), the tool's
   // checkPermissions returns {behavior:'ask', decisionReason:{type:'rule',
   // rule:{ruleBehavior:'ask'}}}. This must be respected even in bypass mode,
   // just as deny rules are respected at step 1d.

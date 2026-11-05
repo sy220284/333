@@ -1,0 +1,42 @@
+{
+  "version": "2.1.317",
+  "source": "Anthropic release manifest and original compiled executables; independent direct byte-range confirmation",
+  "modules": {
+    "linux-x64": {
+      "binary_sha256": "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0",
+      "audio_offset": 327746187,
+      "audio_size": 492184,
+      "audio_sha256": "185f990044394fbd4811284cfe9812d261453571c4dfbfa27dadd299c53036eb"
+    },
+    "linux-arm64": {
+      "binary_sha256": "563a0d60ad0c223d9415768210997acb0f7134ea51dc3c238e88bc2e18ddeefa",
+      "audio_offset": 327583785,
+      "audio_size": 458600,
+      "audio_sha256": "600d5d80ab268d4787a0260ae566de7db87667d0efcc55cba790b2df44bd1988"
+    },
+    "darwin-arm64": {
+      "binary_sha256": "09f153b46b5df9e8b3454716d682a91901de020cbca630f61dec1a015b32b5e9",
+      "audio_offset": 308355499,
+      "audio_size": 438064,
+      "audio_sha256": "18c68f81c53733acc30fadbfb537489bb799308db37b26b1dea6d915cac81e41"
+    },
+    "darwin-x64": {
+      "binary_sha256": "01c714bc7febdb008f28e3f6facb1dc37e46a4d8fa8db58df2e281ee51cb333c",
+      "audio_offset": 320643745,
+      "audio_size": 443180,
+      "audio_sha256": "23f2813d70a686d5278fdc9a2bcd8817507d7e6b914f7457729feb94ff62e8f2"
+    },
+    "win32-x64": {
+      "binary_sha256": "26b01ec22df2c17ac7f5703aa547d36706e8d58412136ced0344a8ced4d86038",
+      "audio_offset": 334600709,
+      "audio_size": 509440,
+      "audio_sha256": "c1bfc7eae9edfaa39e92cbc9cedb233e3582e563f9a975ed0eda69407320c07e"
+    },
+    "win32-arm64": {
+      "binary_sha256": "085bb0c34803276156b44dc529a0ad55bf74e2d2c5baaade620194b72cb27f16",
+      "audio_offset": 315134023,
+      "audio_size": 474624,
+      "audio_sha256": "bfe24148c00ebc706ddb568fa5c0ef6177a7e6013696ced4f8ebd5c034904e60"
+    }
+  }
+}

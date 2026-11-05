@@ -5,16 +5,23 @@ import {
   isSessionPersistenceDisabled,
 } from 'src/bootstrap/state.js'
 import type { SDKMessage } from 'src/entrypoints/agentSdkTypes.js'
+import { toSDKThinkingMetadata } from '../entrypoints/sdk/thinkingMessageMetadata.js'
 import type { CanUseToolFn } from '../hooks/useCanUseTool.js'
 import { runTools } from '../services/tools/toolOrchestration.js'
 import { findToolByName, type Tool, type Tools } from '../Tool.js'
 import { BASH_TOOL_NAME } from '../tools/BashTool/toolName.js'
 import { FILE_EDIT_TOOL_NAME } from '../tools/FileEditTool/constants.js'
 import type { Input as FileReadInput } from '../tools/FileReadTool/FileReadTool.js'
+import { FILE_READ_TOOL_NAME } from '../tools/FileReadTool/prompt.js'
 import {
-  FILE_READ_TOOL_NAME,
-  FILE_UNCHANGED_STUB,
-} from '../tools/FileReadTool/prompt.js'
+  CLEARED_TOOL_RESULT,
+  EXTERNAL_ARTIFACT_PROVENANCE,
+  PERSISTED_TOOL_RESULT_PREFIX,
+} from '../services/compact/keepRecentToolResults.js'
+import {
+  hasFullReadResultContent,
+  isPartialReadResult,
+} from '../services/compact/preservedReadPaths.ts'
 import { FILE_WRITE_TOOL_NAME } from '../tools/FileWriteTool/prompt.js'
 import type { Message } from '../types/message.js'
 import type { OrphanedPermission } from '../types/textInputTypes.js'
@@ -114,6 +121,7 @@ export function* normalizeMessage(message: Message): Generator<SDKMessage> {
           session_id: getSessionId(),
           uuid: _.uuid,
           error: _.error,
+          ...toSDKThinkingMetadata(message, _.message.content),
         }
       }
       return
@@ -136,6 +144,9 @@ export function* normalizeMessage(message: Message): Generator<SDKMessage> {
                 session_id: getSessionId(),
                 uuid: _.uuid,
                 error: _.error,
+                ...(message.data.message.type === 'assistant'
+                  ? toSDKThinkingMetadata(message.data.message, _.message.content)
+                  : {}),
               }
               break
             case 'user':
@@ -422,10 +433,14 @@ export function extractReadFilesFromMessages(
           if (
             readFilePath &&
             typeof content.content === 'string' &&
-            // Dedup stubs contain no file content — the earlier real Read
-            // already cached it. Chronological last-wins would otherwise
-            // overwrite the real entry with stub text.
-            !content.content.startsWith(FILE_UNCHANGED_STUB)
+            // A cleared or persisted result only points to prior content.
+            // Do not overwrite a real file snapshot with a placeholder.
+            hasFullReadResultContent(
+              content,
+              CLEARED_TOOL_RESULT,
+              PERSISTED_TOOL_RESULT_PREFIX,
+              EXTERNAL_ARTIFACT_PROVENANCE,
+            )
           ) {
             // Remove system-reminder blocks from the content
             const processedContent = content.content.replace(
@@ -433,15 +448,29 @@ export function extractReadFilesFromMessages(
               '',
             )
 
-            // Extract the actual file content from the tool result
-            // Tool results for text files contain line numbers, we need to strip those
-            const fileContent = processedContent
-              .split('\n')
-              .map(stripLineNumberPrefix)
-              .join('\n')
-              .trim()
+            // The 2.1.317 native transcript hydrator prefers the original
+            // tool result's file content when exactly one Read result exists.
+            // Displayed cat -n text is only the secondary reconstruction path.
+            const toolReadData = message.toolUseResult as
+              | { file?: { content?: unknown; truncatedByTokenCap?: boolean } }
+              | undefined
+            const rawFileContent = toolReadData?.file?.content
+            const readResultCount = message.message.content.filter(
+              block => block.type === 'tool_result',
+            ).length
+            const fileContent =
+              readResultCount === 1 &&
+              typeof rawFileContent === 'string' &&
+              rawFileContent.length > 0
+                ? rawFileContent.trim()
+                : processedContent
+                    .split('\n')
+                    .map(stripLineNumberPrefix)
+                    .join('\n')
+                    .trim()
 
-            // Cache the file content with the message timestamp
+            // A partial view cannot authorize a full-file Edit/Write.
+            // Preserve that state when resuming a 2.1.317 conversation.
             if (message.timestamp) {
               const timestamp = new Date(message.timestamp).getTime()
               cache.set(readFilePath, {
@@ -449,6 +478,7 @@ export function extractReadFilesFromMessages(
                 timestamp,
                 offset: undefined,
                 limit: undefined,
+                isPartialView: isPartialReadResult(message, content),
               })
             }
           }

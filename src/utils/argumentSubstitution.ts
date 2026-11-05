@@ -94,7 +94,7 @@ export function generateProgressiveArgumentHint(
 export function substituteArguments(
   content: string,
   args: string | undefined,
-  appendIfNoPlaceholder = true,
+  appendIfNoPlaceholder: boolean = true,
   argumentNames: string[] = [],
 ): string {
   // undefined/null means no args provided - return content unchanged

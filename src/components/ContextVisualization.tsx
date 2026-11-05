@@ -1,5 +1,4 @@
 import { c as _c } from "react/compiler-runtime";
-import { feature } from 'bun:bundle';
 import * as React from 'react';
 import { Box, Text } from '../ink.js';
 import type { ContextData } from '../utils/analyzeContext.js';
@@ -7,68 +6,8 @@ import { generateContextSuggestions } from '../utils/contextSuggestions.js';
 import { getDisplayPath } from '../utils/file.js';
 import { formatTokens } from '../utils/format.js';
 import { getSourceDisplayName, type SettingSource } from '../utils/settings/constants.js';
-import { plural } from '../utils/stringUtils.js';
 import { ContextSuggestions } from './ContextSuggestions.js';
 const RESERVED_CATEGORY_NAME = 'Autocompact buffer';
-
-/**
- * One-liner for the legend header showing what context-collapse has done.
- * Returns null when nothing's summarized/staged so we don't add visual
- * noise in the common case. This is the one place a user can see that
- * their context was rewritten — the <collapsed> placeholders are isMeta
- * and don't appear in the conversation view.
- */
-function CollapseStatus() {
-  const $ = _c(2);
-  if (feature("CONTEXT_COLLAPSE")) {
-    let t0;
-    let t1;
-    if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
-      t1 = Symbol.for("react.early_return_sentinel");
-      bb0: {
-        const {
-          getStats,
-          isContextCollapseEnabled
-        } = require("../services/contextCollapse/index.js") as typeof import('../services/contextCollapse/index.js');
-        if (!isContextCollapseEnabled()) {
-          t1 = null;
-          break bb0;
-        }
-        const s = getStats();
-        const {
-          health: h
-        } = s;
-        const parts = [];
-        if (s.collapsedSpans > 0) {
-          parts.push(`${s.collapsedSpans} ${plural(s.collapsedSpans, "span")} summarized (${s.collapsedMessages} msgs)`);
-        }
-        if (s.stagedSpans > 0) {
-          parts.push(`${s.stagedSpans} staged`);
-        }
-        const summary = parts.length > 0 ? parts.join(", ") : h.totalSpawns > 0 ? `${h.totalSpawns} ${plural(h.totalSpawns, "spawn")}, nothing staged yet` : "waiting for first trigger";
-        let line2 = null;
-        if (h.totalErrors > 0) {
-          line2 = <Text color="warning">Collapse errors: {h.totalErrors}/{h.totalSpawns} spawns failed{h.lastError ? ` (last: ${h.lastError.slice(0, 60)})` : ""}</Text>;
-        } else {
-          if (h.emptySpawnWarningEmitted) {
-            line2 = <Text color="warning">Collapse idle: {h.totalEmptySpawns} consecutive empty runs</Text>;
-          }
-        }
-        t0 = <><Text dimColor={true}>Context strategy: collapse ({summary})</Text>{line2}</>;
-      }
-      $[0] = t0;
-      $[1] = t1;
-    } else {
-      t0 = $[0];
-      t1 = $[1];
-    }
-    if (t1 !== Symbol.for("react.early_return_sentinel")) {
-      return t1;
-    }
-    return t0;
-  }
-  return null;
-}
 
 // Order for displaying source groups: Project > User > Managed > Plugin > Built-in
 const SOURCE_DISPLAY_ORDER = ['Project', 'User', 'Managed', 'Plugin', 'Built-in'];
@@ -151,7 +90,7 @@ export function ContextVisualization(t0) {
     t6 = "column";
     t7 = 1;
     if ($[21] === Symbol.for("react.memo_cache_sentinel")) {
-      t8 = <Text bold={true}>Context Usage</Text>;
+      t8 = <Text bold={true}>上下文用量</Text>;
       $[21] = t8;
     } else {
       t8 = $[21];
@@ -190,7 +129,7 @@ export function ContextVisualization(t0) {
     }
     let t15;
     if ($[30] !== model || $[31] !== percentage || $[32] !== t13 || $[33] !== t14) {
-      t15 = <Text dimColor={true}>{model} · {t13}/{t14}{" "}tokens ({percentage}%)</Text>;
+      t15 = <Text dimColor={true}>{model} · {t13}/{t14}{" "}个 Token（{percentage}%）</Text>;
       $[30] = model;
       $[31] = percentage;
       $[32] = t13;
@@ -203,9 +142,9 @@ export function ContextVisualization(t0) {
     let t17;
     let t18;
     if ($[35] === Symbol.for("react.memo_cache_sentinel")) {
-      t16 = <CollapseStatus />;
+      t16 = null; // 2.1.310 uses the shared microcompact view, not legacy collapse events
       t17 = <Text> </Text>;
-      t18 = <Text dimColor={true} italic={true}>Estimated usage by category</Text>;
+      t18 = <Text dimColor={true} italic={true}>各类别用量估算</Text>;
       $[35] = t16;
       $[36] = t17;
       $[37] = t18;
@@ -222,7 +161,7 @@ export function ContextVisualization(t0) {
         const isReserved = cat_2.name === RESERVED_CATEGORY_NAME;
         const displayName = cat_2.name;
         const symbol = cat_2.isDeferred ? " " : isReserved ? "\u26DD" : "\u26C1";
-        return <Box key={index}><Text color={cat_2.color}>{symbol}</Text><Text> {displayName}: </Text><Text dimColor={true}>{tokenDisplay} tokens ({percentDisplay})</Text></Box>;
+        return <Box key={index}><Text color={cat_2.color}>{symbol}</Text><Text> {displayName}: </Text><Text dimColor={true}>{tokenDisplay} 个 Token（{percentDisplay}）</Text></Box>;
       };
       $[38] = rawMaxTokens;
       $[39] = t19;
@@ -232,7 +171,7 @@ export function ContextVisualization(t0) {
     const t20 = visibleCategories.map(t19);
     let t21;
     if ($[40] !== categories || $[41] !== rawMaxTokens) {
-      t21 = (categories.find(_temp6)?.tokens ?? 0) > 0 && <Box><Text dimColor={true}>⛶</Text><Text> Free space: </Text><Text dimColor={true}>{formatTokens(categories.find(_temp7)?.tokens || 0)}{" "}({((categories.find(_temp8)?.tokens || 0) / rawMaxTokens * 100).toFixed(1)}%)</Text></Box>;
+      t21 = (categories.find(_temp6)?.tokens ?? 0) > 0 && <Box><Text dimColor={true}>⛶</Text><Text> 剩余空间：</Text><Text dimColor={true}>{formatTokens(categories.find(_temp7)?.tokens || 0)}{" "}({((categories.find(_temp8)?.tokens || 0) / rawMaxTokens * 100).toFixed(1)}%)</Text></Box>;
       $[40] = categories;
       $[41] = rawMaxTokens;
       $[42] = t21;
@@ -263,14 +202,14 @@ export function ContextVisualization(t0) {
     t2 = "column";
     t3 = -1;
     if ($[51] !== hasDeferredMcpTools || $[52] !== mcpTools) {
-      t4 = mcpTools.length > 0 && <Box flexDirection="column" marginTop={1}><Box><Text bold={true}>MCP tools</Text><Text dimColor={true}>{" "}· /mcp{hasDeferredMcpTools ? " (loaded on-demand)" : ""}</Text></Box>{mcpTools.some(_temp9) && <Box flexDirection="column" marginTop={1}><Text dimColor={true}>Loaded</Text>{mcpTools.filter(_temp0).map(_temp1)}</Box>}{hasDeferredMcpTools && mcpTools.some(_temp10) && <Box flexDirection="column" marginTop={1}><Text dimColor={true}>Available</Text>{mcpTools.filter(_temp11).map(_temp12)}</Box>}{!hasDeferredMcpTools && mcpTools.map(_temp13)}</Box>;
+      t4 = mcpTools.length > 0 && <Box flexDirection="column" marginTop={1}><Box><Text bold={true}>MCP 工具</Text><Text dimColor={true}>{" "}· /mcp{hasDeferredMcpTools ? "（按需加载）" : ""}</Text></Box>{mcpTools.some(_temp9) && <Box flexDirection="column" marginTop={1}><Text dimColor={true}>已加载</Text>{mcpTools.filter(_temp0).map(_temp1)}</Box>}{hasDeferredMcpTools && mcpTools.some(_temp10) && <Box flexDirection="column" marginTop={1}><Text dimColor={true}>可使用</Text>{mcpTools.filter(_temp11).map(_temp12)}</Box>}{!hasDeferredMcpTools && mcpTools.map(_temp13)}</Box>;
       $[51] = hasDeferredMcpTools;
       $[52] = mcpTools;
       $[53] = t4;
     } else {
       t4 = $[53];
     }
-    t5 = (systemTools && systemTools.length > 0 || hasDeferredBuiltinTools) && false && <Box flexDirection="column" marginTop={1}><Box><Text bold={true}>[ANT-ONLY] System tools</Text>{hasDeferredBuiltinTools && <Text dimColor={true}> (some loaded on-demand)</Text>}</Box><Box flexDirection="column" marginTop={1}><Text dimColor={true}>Loaded</Text>{systemTools?.map(_temp14)}{deferredBuiltinTools.filter(_temp15).map(_temp16)}</Box>{hasDeferredBuiltinTools && deferredBuiltinTools.some(_temp17) && <Box flexDirection="column" marginTop={1}><Text dimColor={true}>Available</Text>{deferredBuiltinTools.filter(_temp18).map(_temp19)}</Box>}</Box>;
+    t5 = (systemTools && systemTools.length > 0 || hasDeferredBuiltinTools) && false && <Box flexDirection="column" marginTop={1}><Box><Text bold={true}>[ANT-ONLY] System tools</Text>{hasDeferredBuiltinTools && <Text dimColor={true}> (some loaded on-demand)</Text>}</Box><Box flexDirection="column" marginTop={1}><Text dimColor={true}>已加载</Text>{systemTools?.map(_temp14)}{deferredBuiltinTools.filter(_temp15).map(_temp16)}</Box>{hasDeferredBuiltinTools && deferredBuiltinTools.some(_temp17) && <Box flexDirection="column" marginTop={1}><Text dimColor={true}>可使用</Text>{deferredBuiltinTools.filter(_temp18).map(_temp19)}</Box>}</Box>;
     $[0] = categories;
     $[1] = gridRows;
     $[2] = mcpTools;
@@ -312,7 +251,7 @@ export function ContextVisualization(t0) {
   }
   let t11;
   if ($[56] !== agents) {
-    t11 = agents.length > 0 && <Box flexDirection="column" marginTop={1}><Box><Text bold={true}>Custom agents</Text><Text dimColor={true}> · /agents</Text></Box>{Array.from(groupBySource(agents).entries()).map(_temp22)}</Box>;
+    t11 = agents.length > 0 && <Box flexDirection="column" marginTop={1}><Box><Text bold={true}>自定义代理</Text><Text dimColor={true}> · /agents</Text></Box>{Array.from(groupBySource(agents).entries()).map(_temp22)}</Box>;
     $[56] = agents;
     $[57] = t11;
   } else {
@@ -320,7 +259,7 @@ export function ContextVisualization(t0) {
   }
   let t12;
   if ($[58] !== memoryFiles) {
-    t12 = memoryFiles.length > 0 && <Box flexDirection="column" marginTop={1}><Box><Text bold={true}>Memory files</Text><Text dimColor={true}> · /memory</Text></Box>{memoryFiles.map(_temp23)}</Box>;
+    t12 = memoryFiles.length > 0 && <Box flexDirection="column" marginTop={1}><Box><Text bold={true}>记忆文件</Text><Text dimColor={true}> · /memory</Text></Box>{memoryFiles.map(_temp23)}</Box>;
     $[58] = memoryFiles;
     $[59] = t12;
   } else {
@@ -328,7 +267,7 @@ export function ContextVisualization(t0) {
   }
   let t13;
   if ($[60] !== skills) {
-    t13 = skills && skills.tokens > 0 && <Box flexDirection="column" marginTop={1}><Box><Text bold={true}>Skills</Text><Text dimColor={true}> · /skills</Text></Box>{Array.from(groupBySource(skills.skillFrontmatter).entries()).map(_temp25)}</Box>;
+    t13 = skills && skills.tokens > 0 && <Box flexDirection="column" marginTop={1}><Box><Text bold={true}>技能</Text><Text dimColor={true}> · /skills</Text></Box>{Array.from(groupBySource(skills.skillFrontmatter).entries()).map(_temp25)}</Box>;
     $[60] = skills;
     $[61] = t13;
   } else {
@@ -336,7 +275,7 @@ export function ContextVisualization(t0) {
   }
   let t14;
   if ($[62] !== messageBreakdown) {
-    t14 = messageBreakdown && false && <Box flexDirection="column" marginTop={1}><Text bold={true}>[ANT-ONLY] Message breakdown</Text><Box flexDirection="column" marginLeft={1}><Box><Text>Tool calls: </Text><Text dimColor={true}>{formatTokens(messageBreakdown.toolCallTokens)} tokens</Text></Box><Box><Text>Tool results: </Text><Text dimColor={true}>{formatTokens(messageBreakdown.toolResultTokens)} tokens</Text></Box><Box><Text>Attachments: </Text><Text dimColor={true}>{formatTokens(messageBreakdown.attachmentTokens)} tokens</Text></Box><Box><Text>Assistant messages (non-tool): </Text><Text dimColor={true}>{formatTokens(messageBreakdown.assistantMessageTokens)} tokens</Text></Box><Box><Text>User messages (non-tool-result): </Text><Text dimColor={true}>{formatTokens(messageBreakdown.userMessageTokens)} tokens</Text></Box></Box>{messageBreakdown.toolCallsByType.length > 0 && <Box flexDirection="column" marginTop={1}><Text bold={true}>[ANT-ONLY] Top tools</Text>{messageBreakdown.toolCallsByType.slice(0, 5).map(_temp26)}</Box>}{messageBreakdown.attachmentsByType.length > 0 && <Box flexDirection="column" marginTop={1}><Text bold={true}>[ANT-ONLY] Top attachments</Text>{messageBreakdown.attachmentsByType.slice(0, 5).map(_temp27)}</Box>}</Box>;
+    t14 = messageBreakdown && false && <Box flexDirection="column" marginTop={1}><Text bold={true}>[ANT-ONLY] Message breakdown</Text><Box flexDirection="column" marginLeft={1}><Box><Text>工具调用：</Text><Text dimColor={true}>{formatTokens(messageBreakdown.toolCallTokens)} tokens</Text></Box><Box><Text>工具结果：</Text><Text dimColor={true}>{formatTokens(messageBreakdown.toolResultTokens)} tokens</Text></Box><Box><Text>附件：</Text><Text dimColor={true}>{formatTokens(messageBreakdown.attachmentTokens)} tokens</Text></Box><Box><Text>助手消息（不含工具）：</Text><Text dimColor={true}>{formatTokens(messageBreakdown.assistantMessageTokens)} tokens</Text></Box><Box><Text>用户消息（不含工具结果）：</Text><Text dimColor={true}>{formatTokens(messageBreakdown.userMessageTokens)} tokens</Text></Box></Box>{messageBreakdown.toolCallsByType.length > 0 && <Box flexDirection="column" marginTop={1}><Text bold={true}>[ANT-ONLY] Top tools</Text>{messageBreakdown.toolCallsByType.slice(0, 5).map(_temp26)}</Box>}{messageBreakdown.attachmentsByType.length > 0 && <Box flexDirection="column" marginTop={1}><Text bold={true}>[ANT-ONLY] Top attachments</Text>{messageBreakdown.attachmentsByType.slice(0, 5).map(_temp27)}</Box>}</Box>;
     $[62] = messageBreakdown;
     $[63] = t14;
   } else {
