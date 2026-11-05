@@ -61,10 +61,10 @@ async function launch(record, { resume = false } = {}) {
   // A child can exit before its initial session record has been committed.
   // Serialize the exit transition behind that commit to avoid resurrecting a
   // completed job as 'working' when launch() finishes.
-  let settleLaunch
-  const launchCommitted = new Promise(resolve => { settleLaunch = resolve })
-  let settleFinalization
-  const finalization = new Promise(resolve => { settleFinalization = resolve })
+  let settleLaunch: (committed: boolean) => void = () => {}
+  const launchCommitted = new Promise<boolean>(resolve => { settleLaunch = resolve })
+  let settleFinalization: () => void = () => {}
+  const finalization = new Promise<void>(resolve => { settleFinalization = resolve })
   const proc = Bun.spawn(spawnArgs, {
     cwd: record.cwd,
     env: {
@@ -171,12 +171,12 @@ async function launch(record, { resume = false } = {}) {
     throw error
   }
 }
-async function settleWithin(promise, ms) {
-  let timer
+async function settleWithin(promise: Promise<unknown>, ms: number): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined
   try {
     return await Promise.race([
       promise.then(() => true),
-      new Promise(resolve => { timer = setTimeout(() => resolve(false), ms) }),
+      new Promise<boolean>(resolve => { timer = setTimeout(() => resolve(false), ms) }),
     ])
   } finally { if (timer) clearTimeout(timer) }
 }
