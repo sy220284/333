@@ -22,6 +22,13 @@ for (const [address, prefix] of [
   ['fec0::', 10],
   ['ff00::', 8],
   ['::ffff:0:0', 96],
+  // Protocol translation and automatic tunnels can encode internal IPv4 peers.
+  ['64:ff9b::', 96],
+  ['64:ff9b:1::', 48],
+  ['2001::', 32],
+  ['2002::', 16],
+  ['100::', 64],
+  ['2001:db8::', 32],
 ] as const) blockedIPv6.addSubnet(address, prefix, 'ipv6')
 
 
@@ -33,7 +40,9 @@ function privateAddress(address: string): boolean {
       (p[0] === 169 && p[1] === 254) ||
       (p[0] === 172 && p[1] >= 16 && p[1] <= 31) ||
       (p[0] === 192 && p[1] === 168) ||
-      p[0] >= 224 || (p[0] === 100 && p[1] >= 64 && p[1] <= 127)
+      p[0] >= 224 || (p[0] === 100 && p[1] >= 64 && p[1] <= 127) ||
+      (p[0] === 198 && p[1] >= 18 && p[1] <= 19) ||
+      (p[0] === 192 && p[1] === 0 && p[2] === 0)
   }
   if (isIP(v) === 6) return blockedIPv6.check(v, 'ipv6')
   return true

@@ -33,7 +33,9 @@ test('plugin pinned DNS lookup rejects local, private and mixed addresses', () =
 })
 
 test('IPv6 link-local, site-local, multicast and IPv4-mapped destinations cannot be pinned', () => {
-  for (const address of ['fe80::1', 'fe90::1', 'febf::1', 'fec0::1', 'ff02::1', '::ffff:7f00:1']) {
+  for (const address of ['fe80::1', 'fe90::1', 'febf::1', 'fec0::1', 'ff02::1', '::ffff:7f00:1',
+    '64:ff9b::a9fe:a9fe', '64:ff9b:1::a9fe:a9fe', '2002:7f00:1::', '2001:0::1',
+    '100::1', '2001:db8::1']) {
     expect(() => createPinnedPluginLookup317('plugins.example.com',
       [{ address, family: 6 }])).toThrow('public host')
   }
@@ -45,4 +47,11 @@ test('public IPv6 URL is parsed as an IP literal without DNS; private literals a
   expect(target.addresses).toEqual([{ address: '2606:4700:4700::1111', family: 6 }])
   await expect(validateRemoteUrl('https://[fe90::1]/plugin.zip')).rejects.toThrow('public host')
   await expect(validateRemoteUrl('https://[::ffff:127.0.0.1]/plugin.zip')).rejects.toThrow('public host')
+})
+
+test('benchmark/private IPv4 ranges are rejected even when not RFC1918', () => {
+  for (const address of ['198.18.0.1', '198.19.255.254', '192.0.0.15']) {
+    expect(() => createPinnedPluginLookup317('plugins.example.com',
+      [{ address, family: 4 }])).toThrow('public host')
+  }
 })
