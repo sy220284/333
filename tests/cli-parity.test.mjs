@@ -108,8 +108,8 @@ test('333 removes the SDK callback and public headless permission mode', () => {
     assert.equal(options.includes(flag), false, flag);
   }
   const main = readFileSync(resolve(root, 'src/main.tsx'), 'utf8');
-  assert.doesNotMatch(main, /permissionPromptToolName:\\s*options\\.permissionPromptTool/);
-  assert.doesNotMatch(main, /await runHeadless\\(/);
+  assert.equal(main.includes('permissionPromptToolName: options.permissionPromptTool'), false);
+  assert.equal(main.includes('await runHeadless('), false);
 });
 
 test('legacy -d2e alias is accepted by reconstructed Commander configuration', () => {
