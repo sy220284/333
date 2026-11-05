@@ -17,9 +17,10 @@ test('317 BYOC child: remote resume, session-scoped settings and correct executi
     const conf=join(base,'state')
     mkdirSync(conf,{recursive:true})
     const url='https://session.example.test/v1/code/sessions/abc_123'
+    const debugLines:string[]=[]
     const spawnBase={
       execPath:process.execPath,scriptArgs:[script],verbose:false,sandbox:false,
-      onDebug:()=>{},
+      onDebug:(line:string)=>debugLines.push(line),
     }
     const byoc=createSessionSpawner({...spawnBase,
       additionalArgs:['--model','sonnet','--max-turns','7'],
@@ -33,6 +34,8 @@ test('317 BYOC child: remote resume, session-scoped settings and correct executi
     expect(first.args).not.toContain('--session-id')
     expect(first.args).toContain('--model')
     expect(first.args).toContain('sonnet')
+    expect(debugLines.some(line=>line.includes('arguments (values redacted)'))).toBe(true)
+    expect(debugLines.some(line=>line.includes('Child args:') && line.includes('sonnet'))).toBe(false)
     expect(first.args).toContain('--max-turns')
     expect(first.args).toContain('7')
     expect(first.kind).toBe('byoc')
