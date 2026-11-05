@@ -138,7 +138,7 @@ test('ChatGPT lists only model entries exposed for the connected account', async
 
 test('model capability probe performs a real tool-result second turn', async () => {
   const requests: Record<string, unknown>[] = []
-  const answer = (...entries: unknown[]) => entries.map(e => `data: ${JSON.stringify(e)}\\n\\n`).join('')
+  const answer = (...entries: unknown[]) => entries.map(e => `data: ${JSON.stringify(e)}\n\n`).join('')
   const send = async (request: Record<string, unknown>): Promise<string> => {
     requests.push(request)
     return requests.length === 1 ? answer(
@@ -165,16 +165,19 @@ test('model capability probe performs a real tool-result second turn', async () 
 
 test('capability probe reports failure when follow-up does not finish', async () => {
   let count = 0
+  const answer = (...entries: unknown[]) => entries.map(e => 'data: ' + JSON.stringify(e) + '\n\n').join('')
   const send = async (): Promise<string> => {
     count++
-    return count === 1
-      ? ['data: {"type":"message_start"}',
-         'data: {"type":"content_block_start","index":0,"content_block":{"name":"333_probe","id":"toolu_probe"}}',
-         'data: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\\\"ok\\\":true}"}}',
-         'data: {"type":"message_stop"}'].join('\\n')
-      : ['data: {"type":"message_start"}',
-         'data: {"type":"message_delta","delta":{"stop_reason":"tool_use"}}',
-         'data: {"type":"message_stop"}'].join('\\n')
+    return count === 1 ? answer(
+      { type: 'message_start' },
+      { type: 'content_block_start', index: 0, content_block: { name: '333_probe', id: 'toolu_probe' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: '{"ok":true}' } },
+      { type: 'message_stop' },
+    ) : answer(
+      { type: 'message_start' },
+      { type: 'message_delta', delta: { stop_reason: 'tool_use' } },
+      { type: 'message_stop' },
+    )
   }
   const result = await runModelToolRoundTrip('openai/gpt-6.1-sol', send)
   assert.equal(result.tool, true)
