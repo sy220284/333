@@ -109,3 +109,49 @@ test('极深执行器真实完成四轮审查、独立复核、PR 评论及报�
   assert.equal(requests.filter(r=>r.url.endsWith('/issues/28/comments')).length,1)
   assert.equal(requests.filter(r=>r.url.startsWith('https://api.openai.com/')).length,5)
 })
+
+
+test('极深后端支持 OpenAI Responses、Anthropic、Gemini 三类原生协议', async () => {
+  const code=githubReviewerScript().replace(/^import .*$/gm,'')
+  const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor
+  const run=new AsyncFunction('readFileSync','writeFileSync','execFileSync',
+    'process','fetch','setTimeout','clearTimeout','Buffer','URL','AbortController',code)
+  for(const provider of ['openai-responses','anthropic','gemini']) {
+    const requests=[], saved=new Map()
+    const env={
+      GITHUB_REPOSITORY:'company/example',GITHUB_EVENT_PATH:'event.json',
+      GITHUB_EVENT_NAME:'workflow_dispatch',INPUT_PR_NUMBER:'5',REVIEW_MODE:'normal',
+      MODEL_PROVIDER:provider,MODEL_NAME:'model',MODEL_API_KEY:'test',GH_TOKEN:'test',
+    }
+    const fetch=async(url,opts)=>{
+      if(url.endsWith('/pulls/5')) return {
+        ok:true,text:async()=>JSON.stringify({title:'测试',head:{sha:'0123'}})
+      }
+      if(url.endsWith('/issues/5/comments')) return {
+        ok:true,text:async()=>JSON.stringify({id:2})
+      }
+      requests.push({url,headers:opts.headers,body:JSON.parse(opts.body)})
+      const answer=provider==='openai-responses'
+        ? {output:[{content:[{type:'output_text',text:'审查完成'}]}]}
+        : provider==='anthropic'
+          ? {content:[{type:'text',text:'审查完成'}]}
+          : {candidates:[{content:{parts:[{text:'审查完成'}]}}]}
+      return {ok:true,text:async()=>JSON.stringify(answer)}
+    }
+    await run(
+      ()=>JSON.stringify({}),
+      (name,text)=>saved.set(name,text),
+      ()=>'+变更',
+      {env,stdout:{write(){}}},
+      fetch,()=>0,()=>{},
+      {byteLength:s=>s.length},
+      class {constructor(url){this.protocol=url.startsWith('https://')?'https:':'http:';this.username='';this.password='';this.hash=''}},
+      class {signal={};abort(){}},
+    )
+    assert.equal(requests.length,1,provider)
+    assert.ok(saved.get('333-review-report.md').includes('审查完成'),provider)
+    if(provider==='openai-responses') assert.ok(requests[0].body.input)
+    if(provider==='anthropic') assert.ok(requests[0].headers['anthropic-version'])
+    if(provider==='gemini') assert.ok(requests[0].body.contents)
+  }
+})
