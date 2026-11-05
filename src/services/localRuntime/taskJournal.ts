@@ -29,7 +29,7 @@ export function recordLocalTaskState(task: LocalTask): Promise<void> {
   }
   const next = writing.then(async () => {
     await fs.mkdir(root, { mode: 0o700, recursive: true })
-    await fs.appendFile(file, JSON.stringify(data) + '\n', { encoding: 'utf8', mode: 0o600 })
+    await fs.appendFile(file, `${JSON.stringify(data)}\n`, { encoding: 'utf8', mode: 0o600 })
     lastStates.set(task.id, signature)
   })
   writing = next.catch(error => {
