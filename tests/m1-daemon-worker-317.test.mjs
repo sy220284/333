@@ -7,7 +7,8 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { checkDaemonStartupProxy317 } from '../src/bootstrap/daemonProxy317.ts'
-import { validateHeartbeatConfig317, runDaemonWorker317, watchDaemonWorkerParent317 }
+import { validateHeartbeatConfig317, runDaemonWorker317, watchDaemonWorkerParent317,
+  isDaemonWorkerAdmitted317 }
   from '../src/bootstrap/daemonWorker317.mjs'
 
 const cli = resolve(import.meta.dirname, '../dist/cli.js')
@@ -170,4 +171,56 @@ test('317 daemon refuses invalid proxy before parsing worker kind or stdin', {
   } finally {
     rmSync(dir, {recursive: true, force: true})
   }
+})
+
+test('317 remoteControl admission matches official fleet gate, while scheduled stays closed', () => {
+  assert.equal(isDaemonWorkerAdmitted317('heartbeat', false), true)
+  assert.equal(isDaemonWorkerAdmitted317('scheduled', true), false)
+  assert.equal(isDaemonWorkerAdmitted317('remoteControl', false), false)
+  assert.equal(isDaemonWorkerAdmitted317('remoteControl', true), true)
+})
+
+test('317 admitted remoteControl validates strict config and routes the headless bridge', async () => {
+  const parent = new EventEmitter()
+  let output = '', error = '', launched = false
+  const run = runDaemonWorker317('remoteControl', {
+    parent,
+    input:(async function*() {
+      yield Buffer.from(JSON.stringify({initialAccessToken:'initial-token',
+        config:{dir:'/tmp',spawnMode:'worktree',capacity:2,permissionMode:'manual',
+          createSessionOnStart:false}}))
+    })(),
+    stdout: s=>{output+=s},stderr:s=>{error+=s},
+    remoteControlGate:()=>true,parentWatcher:()=>()=>{},
+    remoteControlRunner:async(config, signal, log, token)=>{
+      launched=true
+      assert.equal(config.permissionMode,'default')
+      assert.equal(config.capacity,2)
+      assert.equal(config.spawnMode,'worktree')
+      assert.equal(token(),'initial-token')
+      parent.emit('message',{type:'token_update',accessToken:'renewed-token'})
+      assert.equal(token(),'renewed-token')
+      log('remote worker started')
+      parent.emit('message',{type:'shutdown'})
+      assert.equal(signal.aborted,true)
+    },
+  })
+  assert.equal(await run,0)
+  assert.equal(launched,true)
+  assert.match(output,/remote worker started/)
+  assert.equal(error,'')
+  assert.equal(parent.listenerCount('message'),0)
+})
+
+test('317 remoteControl gate rejects before reading stdin; malformed config is rejected when admitted',async()=>{
+  const blocked = await runDaemonWorker317('remoteControl',{remoteControlGate:()=>false,
+    input:(async function*(){throw Error('must not read input')})(),
+    stdout:()=>{},stderr:()=>{}})
+  assert.equal(blocked,78)
+  let error = ''
+  const invalid=await runDaemonWorker317('remoteControl',{remoteControlGate:()=>true,
+    input:(async function*(){yield '{"config":{"dir":"/tmp","unknown":true}}'})(),
+    stdout:()=>{},stderr:s=>{error+=s}})
+  assert.equal(invalid,2)
+  assert.match(error,/unrecognized_keys/)
 })

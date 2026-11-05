@@ -1,12 +1,31 @@
 import { setTimeout as delay } from 'node:timers/promises'
+import { randomUUID } from 'node:crypto'
+import {
+  validateRemoteControlConfig317,
+  runRemoteControlWorker317,
+  type RemoteControlConfig317,
+} from './daemonRemoteControl317.ts'
 
-// Port of 2.1.317 chunk-nsyknqzt.js daemon-worker protocol. The heartbeat
-// worker is always available. Other kinds require host gates and are refused
-// with the original EX_CONFIG code until their respective hosts are connected.
+// The original 2.1.317 worker table is in chunk-jkh1zydw.js. The official
+// fleetview gate for scheduled is disabled; remoteControl is admitted only
+// when tengu_radiant_heron is enabled. The admitted remote worker enters
+// runBridgeHeadless, preserving process and authentication ownership.
 export type DaemonWorkerKind317 = 'heartbeat' | 'scheduled' | 'remoteControl'
 export const DAEMON_WORKER_CONFIG_ERROR_317 = 2
 export const DAEMON_WORKER_UNAVAILABLE_317 = 78
 const KINDS = new Set(['heartbeat', 'scheduled', 'remoteControl'])
+
+export function isDaemonWorkerAdmitted317(
+  kind: DaemonWorkerKind317, remoteControlEnabled: boolean,
+): boolean {
+  return kind === 'heartbeat' || (kind === 'remoteControl' && remoteControlEnabled)
+}
+
+async function remoteControlGate317(): Promise<boolean> {
+  const { getFeatureValue_CACHED_MAY_BE_STALE } =
+    await import('../services/analytics/growthbook.js')
+  return getFeatureValue_CACHED_MAY_BE_STALE('tengu_radiant_heron', false) === true
+}
 
 type Issue317 = {
   expected?: string; origin?: string; code: string; minimum?: number
@@ -103,6 +122,8 @@ export type DaemonWorkerOptions317 = {
   stderr?: (s: string) => void
   parent?: NodeJS.Process
   parentWatcher?: typeof watchDaemonWorkerParent317
+  remoteControlGate?: () => boolean | Promise<boolean>
+  remoteControlRunner?: typeof runRemoteControlWorker317
 }
 export async function runDaemonWorker317(kind: string | undefined,
   options: DaemonWorkerOptions317 = {}): Promise<number> {
@@ -112,7 +133,9 @@ export async function runDaemonWorker317(kind: string | undefined,
     stderr('unknown worker kind: ' + String(kind) + '\n')
     return DAEMON_WORKER_CONFIG_ERROR_317
   }
-  if (kind !== 'heartbeat') {
+  const admitted = kind === 'heartbeat' || (kind === 'remoteControl' &&
+    await (options.remoteControlGate?.() ?? remoteControlGate317()))
+  if (!admitted) {
     stderr("worker kind '" + kind + "' is not available.\n")
     return DAEMON_WORKER_UNAVAILABLE_317
   }
@@ -125,26 +148,106 @@ export async function runDaemonWorker317(kind: string | undefined,
   }
   const configValue = envelope && typeof envelope === 'object' ?
     (envelope as Record<string, unknown>).config : undefined
-  const config = validateHeartbeatConfig317(configValue)
+  const config = kind === 'heartbeat'
+    ? validateHeartbeatConfig317(configValue)
+    : validateRemoteControlConfig317(configValue)
   if ('issues' in config) {
     stderr('config validation failed: ' + JSON.stringify(config.issues, null, 2) + '\n')
     return DAEMON_WORKER_CONFIG_ERROR_317
   }
+  if (kind === 'remoteControl' && 'sandbox' in config && config.sandbox === true) {
+    stdout('The sandbox key is not supported for Remote Control. Remove it.\n')
+    return DAEMON_WORKER_UNAVAILABLE_317
+  }
   const controller = new AbortController()
   const parent = options.parent ?? process
+  const envelopeData = envelope && typeof envelope === 'object' && !Array.isArray(envelope)
+    ? envelope as Record<string, unknown> : {}
+  let accessToken = typeof envelopeData.initialAccessToken === 'string'
+    ? envelopeData.initialAccessToken : undefined
+  const pendingAuth = new Map<string, {
+    resolve: (success: boolean) => void; timer: ReturnType<typeof setTimeout>
+  }>()
   const stop = () => controller.abort()
   const receive = (message: unknown) => {
-    if (message && typeof message === 'object' &&
-      (message as Record<string, unknown>).type === 'shutdown') stop()
+    if (!message || typeof message !== 'object') return
+    const data = message as Record<string, unknown>
+    if (data.type === 'shutdown') stop()
+    if (data.type === 'token_update' && typeof data.accessToken === 'string')
+      accessToken = data.accessToken
+    if (data.type === 'auth_401_result' && typeof data.requestId === 'string') {
+      const request = pendingAuth.get(data.requestId)
+      if (request) {
+        clearTimeout(request.timer)
+        pendingAuth.delete(data.requestId)
+        request.resolve(data.refreshed === true)
+      }
+    }
+  }
+  const reportAuth401 = async (failedToken: string): Promise<boolean> => {
+    if (typeof parent.send !== 'function') {
+      const { handleOAuth401Error } = await import('../utils/auth.js')
+      return handleOAuth401Error(failedToken)
+    }
+    const requestId = randomUUID()
+    return new Promise<boolean>(resolve => {
+      const timer = setTimeout(() => {
+        pendingAuth.delete(requestId)
+        resolve(false)
+      }, 30_000)
+      timer.unref()
+      pendingAuth.set(requestId, {resolve, timer})
+      try {
+        parent.send!({type:'auth_401',failedToken,requestId}, error => {
+          if (!error) return
+          const pending = pendingAuth.get(requestId)
+          if (pending) {
+            clearTimeout(pending.timer)
+            pendingAuth.delete(requestId)
+            pending.resolve(false)
+          }
+        })
+      } catch (error) {
+        clearTimeout(timer)
+        pendingAuth.delete(requestId)
+        resolve(false)
+      }
+    })
   }
   parent.on('SIGTERM', stop)
   parent.on('SIGINT', stop)
   parent.on('message', receive)
   const stopWatcher = (options.parentWatcher ?? watchDaemonWorkerParent317)(controller)
   try {
-    await runHeartbeatWorker317(config, controller.signal, line => stdout(line + '\n'))
-    return 0
+    if (kind === 'heartbeat') {
+      await runHeartbeatWorker317(config as {intervalSeconds: number}, controller.signal,
+        line => stdout(line + '\n'))
+      return 0
+    }
+    const remote = config as RemoteControlConfig317
+    const { getClaudeAIOAuthTokens } = await import('../utils/auth.js')
+    const getAccessToken = () => accessToken ?? getClaudeAIOAuthTokens()?.accessToken
+    if (!getAccessToken()) {
+      stdout('Remote Control is not authenticated — run `claude auth login`.\n')
+      return 1
+    }
+    try {
+      await (options.remoteControlRunner ?? runRemoteControlWorker317)(
+        remote, controller.signal, line => stdout(line + '\n'), getAccessToken, reportAuth401)
+      return 0
+    } catch (error) {
+      if (error instanceof Error && error.name === 'BridgeHeadlessPermanentError') {
+        stdout(error.message + '\n')
+        return DAEMON_WORKER_UNAVAILABLE_317
+      }
+      throw error
+    }
   } finally {
+    for (const request of pendingAuth.values()) {
+      clearTimeout(request.timer)
+      request.resolve(false)
+    }
+    pendingAuth.clear()
     stopWatcher()
     parent.off('SIGTERM', stop)
     parent.off('SIGINT', stop)
