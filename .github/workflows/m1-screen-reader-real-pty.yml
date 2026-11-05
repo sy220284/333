@@ -4,6 +4,11 @@ on:
   push:
     branches: [upgrade/latest-stable-deps-20261105]
     paths:
+      - 'src/ink/ink.tsx'
+      - 'src/main.tsx'
+      - 'src/utils/accessibility/screenReaderMode.mjs'
+      - 'src/utils/accessibility/screenReaderRuntime.ts'
+      - 'tests/m1-screen-reader-mode.test.mjs'
       - 'src/utils/model/model.ts'
       - 'src/utils/permissions/permissionSetup.ts'
       - 'src/interactiveHelpers.tsx'
@@ -18,16 +23,6 @@ on:
       - 'src/components/LogoV2/CondensedLogo.tsx'
       - 'src/main.tsx'
       - 'src/utils/settings/types.ts'
-      - 'src/utils/accessibility/screenReaderMode.mjs'
-      - 'src/utils/accessibility/screenReaderRuntime.ts'
-      - 'tests/m1-screen-reader-mode.test.mjs'
-      - 'tests/m1-screen-reader-terminal-parity.py'
-      - '.github/workflows/m1-screen-reader-real-pty.yml'
-  push:
-    branches: [upgrade/latest-stable-deps-20261105]
-    paths:
-      - 'src/ink/ink.tsx'
-      - 'src/main.tsx'
       - 'src/utils/accessibility/screenReaderMode.mjs'
       - 'src/utils/accessibility/screenReaderRuntime.ts'
       - 'tests/m1-screen-reader-mode.test.mjs'
