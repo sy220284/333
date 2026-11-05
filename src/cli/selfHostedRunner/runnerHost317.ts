@@ -52,7 +52,8 @@ export type RunnerHostOptions317 = {
   signal?: AbortSignal
   onStatus?: (message: string) => void
   createChild?: (sessionId: string, sdkUrl: string, accessToken: string,
-    epoch: number, cwd: string, environment: NodeJS.ProcessEnv) => SessionHandle
+    epoch: number, cwd: string, environment: NodeJS.ProcessEnv,
+    onTokenAck?: (requestId: string)=>void) => SessionHandle
 }
 type ActiveAssignment = {
   handle: SessionHandle
@@ -164,6 +165,28 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
     let inferenceRefreshPending = false
     let inferenceExpiresAt = 0
     let inferenceToken = ''
+    const pendingTokenAcks=new Map<string,{label:string;sentAtMs:number}>()
+    let tokenAckSerial=0
+    const registerTokenAck=(label:string):string=>{
+      const requestId='shr-token-'+label+'-'+(++tokenAckSerial)
+      pendingTokenAcks.set(requestId,{label,sentAtMs:Date.now()})
+      return requestId
+    }
+    const onTokenAck=(requestId:string):void=>{
+      const pending=pendingTokenAcks.get(requestId)
+      if(!pending)return
+      pendingTokenAcks.delete(requestId)
+      status('[runner:session] '+pending.label+' update acked by child for '+id)
+    }
+    const checkPendingAcks=():void=>{
+      const now=Date.now()
+      for(const [requestId,pending] of pendingTokenAcks){
+        if(now-pending.sentAtMs<90_000)continue
+        pendingTokenAcks.delete(requestId)
+        status('[runner:session] WARNING: '+pending.label+
+          ' update for '+id+' was not acknowledged by child within 90s')
+      }
+    }
     let heartbeatPending = false
     let stagedPromptFiles:string[]=[]
     const heartbeatAbort = new AbortController()
@@ -223,11 +246,12 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       ]
       const sdkUrl = new URL('/v1/code/sessions/'+encodeURIComponent(id),remoteBase).toString()
       const handle = options.createChild
-        ? options.createChild(id,sdkUrl,remoteToken,workerEpoch,childCwd,env)
+        ? options.createChild(id,sdkUrl,remoteToken,workerEpoch,childCwd,env,onTokenAck)
         : createSessionSpawner({
             execPath:options.execPath,scriptArgs:options.scriptArgs,
             additionalArgs:deliveredCliArgs,
             env,verbose:false,sandbox:false,onDebug:status,
+            onTokenAck:(_sessionId,requestId)=>onTokenAck(requestId),
             debugFile:join(sessionConfigDir,'claude-code-debug.txt'),
             runnerRuntime:{apiBaseUrl:remoteBase,configDir:sessionConfigDir,
               inferenceToken},
@@ -240,6 +264,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       // Refresh the session credential and notify the live CCR v2 child.
       // The same variable is used by heartbeat, so both paths rotate together.
       sessionRefreshTimer=setInterval(()=>{
+        checkPendingAcks()
         if(heartbeatAbort.signal.aborted || ownedAbort.signal.aborted ||
            sessionRefreshPending || !runnerTokenNeedsRefresh(remoteToken,Date.now())) return
         sessionRefreshPending=true
@@ -247,7 +272,8 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
         void options.api.refreshToken(staleToken).then(next=>{
           if(heartbeatAbort.signal.aborted || ownedAbort.signal.aborted ||
              remoteToken!==staleToken) return
-          handle.updateAccessToken(next.token)
+          const requestId=registerTokenAck('session_token')
+          handle.updateAccessToken(next.token,requestId)
           remoteToken=next.token
           status('[runner:session] refreshed session token for '+id)
         }).catch(error=>{
@@ -261,6 +287,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       // of the session token. Refresh before expiry and update the child in
       // place, preserving its conversation and tool state.
       inferenceRefreshTimer=setInterval(()=>{
+        checkPendingAcks()
         if(heartbeatAbort.signal.aborted || ownedAbort.signal.aborted ||
            inferenceRefreshPending || Date.now()+60_000<inferenceExpiresAt) return
         inferenceRefreshPending=true
@@ -269,8 +296,9 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
             if(heartbeatAbort.signal.aborted || ownedAbort.signal.aborted)return
             const fresh=runnerInferenceAuth317(config,id)
             if(fresh.token!==inferenceToken) {
+              const requestId=registerTokenAck('inference_token')
               handle.writeStdin(JSON.stringify({
-                type:'update_environment_variables',
+                type:'update_environment_variables',request_id:requestId,
                 variables:{CLAUDE_CODE_OAUTH_TOKEN:fresh.token},
               })+'\n')
               inferenceToken=fresh.token
@@ -310,6 +338,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
         if (sessionRefreshTimer) clearInterval(sessionRefreshTimer)
         if (inferenceRefreshTimer) clearInterval(inferenceRefreshTimer)
         active.delete(id)
+        pendingTokenAcks.clear()
         for(const path of stagedPromptFiles){
           try { await unlink(path) }
           catch(error) { status('[runner:session] prompt cleanup failed: '+
@@ -324,6 +353,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       if (heartbeatTimer) clearInterval(heartbeatTimer)
       if (sessionRefreshTimer) clearInterval(sessionRefreshTimer)
       if (inferenceRefreshTimer) clearInterval(inferenceRefreshTimer)
+      pendingTokenAcks.clear()
       for(const path of stagedPromptFiles){
         try { await unlink(path) }
         catch(error) { status('[runner:session] prompt cleanup failed: '+
