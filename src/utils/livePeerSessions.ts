@@ -9,7 +9,7 @@ function running(pid) {
   try { process.kill(pid, 0); return true } catch (error) { return error?.code === 'EPERM' }
 }
 /** Never advertise an address without a live owner and an actual socket. */
-export async function listLiveLocalPeers(sessionsDir: string, ownPid = process.pid) {
+export async function listLiveLocalPeers(sessionsDir: string, ownPid: number = process.pid) {
   let files
   try { files = await readdir(sessionsDir) }
   catch (error) {

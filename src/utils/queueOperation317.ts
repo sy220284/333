@@ -42,7 +42,7 @@ export function createQueueOperationRecord(
  * Restore traceability of messages discarded on Escape/cancellation. As in
  * the official queue, unlogged and still-screening commands have no journal.
  */
-export function createDiscardedQueueRecords(commands, sessionId: string, reason: string = 'cleared_on_cancel', now = new Date()) {
+export function createDiscardedQueueRecords(commands, sessionId: string, reason: string = 'cleared_on_cancel', now: Date = new Date()) {
   return commands
     .filter(command => !command.unlogged && command.screeningPending !== true)
     .map(command => createQueueOperationRecord('remove', command, sessionId, now, { reason }))

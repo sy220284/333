@@ -317,7 +317,7 @@ export function computeSliceStart(collapsed: ReadonlyArray<{
   uuid: string;
 }>, anchorRef: {
   current: SliceAnchor;
-}, cap = MAX_MESSAGES_WITHOUT_VIRTUALIZATION, step = MESSAGE_CAP_STEP): number {
+}, cap: number = MAX_MESSAGES_WITHOUT_VIRTUALIZATION, step: number = MESSAGE_CAP_STEP): number {
   const anchor = anchorRef.current;
   const anchorIdx = anchor ? collapsed.findIndex(m => m.uuid === anchor.uuid) : -1;
   // Anchor found → use it. Anchor lost → fall back to stored index

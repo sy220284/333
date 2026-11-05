@@ -3,7 +3,7 @@
  * (official Linux x64: chunk-3cs9b1gj.js, zA / IH).
  * Pure functions keep the terminal protocol testable without a live TTY.
  */
-export function clipboardMultiplexer(environment = process.env) : "tmux" | "screen" | "zellij" {
+export function clipboardMultiplexer(environment: NodeJS.ProcessEnv = process.env) : "tmux" | "screen" | "zellij" {
   if (environment.TMUX) return 'tmux'
   if (environment.STY) return 'screen'
   if (environment.ZELLIJ) return 'zellij'

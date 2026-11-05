@@ -16,7 +16,7 @@ let namesMask
 let purgeDelay
 let timerDisabled
 
-export function noteProcessStartTuning(env = process.env) : void {
+export function noteProcessStartTuning(env: NodeJS.ProcessEnv = process.env) : void {
   if (tuningNoted) return
   tuningNoted = true
   let names = 0
@@ -60,7 +60,7 @@ function finish(profiler) {
   }
 }
 
-export function startGarbageCollectionCount(env = process.env) : void {
+export function startGarbageCollectionCount(env: NodeJS.ProcessEnv = process.env) : void {
   if (countingStarted) return
   countingStarted = true
   if (env.CLAUDE_CODE_REMOTE !== 'true' || env.CLAUDE_CODE_COUNT_GARBAGE_COLLECTIONS !== '1')

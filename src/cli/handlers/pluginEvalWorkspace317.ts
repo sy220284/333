@@ -45,7 +45,7 @@ export async function resolveEvalContext317(caseInfo, sourcePluginRoot, runPlugi
   return { addDirs, scaffoldScript, historyFile }
 }
 
-export async function runEvalScaffold317(script: string, workspace: string, timeoutSeconds = 300, env = {}) : Promise<{ code: number; stderr: string; signal: NodeJS.Signals | null; }> {
+export async function runEvalScaffold317(script: string, workspace: string, timeoutSeconds: number = 300, env: {} = {}) : Promise<{ code: number; stderr: string; signal: NodeJS.Signals | null; }> {
   if (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 1 || timeoutSeconds > 3600) {
     throw new Error('Invalid eval scaffold timeout')
   }

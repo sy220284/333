@@ -10,7 +10,7 @@ interface WarningsStepProps {
   onContinue: () => void
 }
 
-export function WarningsStep({ warnings, onContinue }: WarningsStepProps) {
+export function WarningsStep({ warnings, onContinue }: WarningsStepProps): React.JSX.Element {
   // Enter to continue
   useKeybinding('confirm:yes', onContinue, { context: 'Confirmation' })
 

@@ -138,7 +138,7 @@ export type PreloadClaim317 = {
 
 /** Shared 317 post-claim state restoration for --preload and authenticated --bg-spare. */
 export async function runClaimedSession317(claim: PreloadClaim317,
-  source = 'spare_claim'): Promise<void> {
+  source: string = 'spare_claim'): Promise<void> {
   applyPreloadClaim317(claim)
   const state = await import('./state.js')
   const claimedCwd = process.cwd()
@@ -158,9 +158,9 @@ export async function runClaimedSession317(claim: PreloadClaim317,
   await main()
 }
 
-export async function runPreload317(args = process.argv.slice(2), {
+export async function runPreload317(args: string[] = process.argv.slice(2), {
   onClaim = runClaimedSession317,
-} = {}) : Promise<void> {
+}: { onClaim?: (claim: PreloadClaim317, source?: string) => Promise<void>; } = {}) : Promise<void> {
   // Original preload clears the previous session's transient environment
   // before any warming imports or socket activity can observe it.
   for (const name of PRELOAD_RESET_KEYS_317) delete process.env[name]

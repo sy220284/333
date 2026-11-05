@@ -331,7 +331,7 @@ export function createRemoteSessionConfig(
   getAccessToken: () => string,
   orgUuid: string,
   hasInitialPrompt: boolean = false,
-  viewerOnly = false,
+  viewerOnly: boolean = false,
 ): RemoteSessionConfig {
   return {
     sessionId,

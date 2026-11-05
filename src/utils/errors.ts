@@ -158,7 +158,7 @@ export function getErrnoPath(e: unknown): string | undefined {
  * traces are ~500-2000 chars of mostly-irrelevant internal frames and
  * waste context tokens. Keep the full stack in debug logs instead.
  */
-export function shortErrorStack(e: unknown, maxFrames = 5): string {
+export function shortErrorStack(e: unknown, maxFrames: number = 5): string {
   if (!(e instanceof Error)) return String(e)
   if (!e.stack) return e.message
   // V8/Bun stack format: "Name: message\n    at frame1\n    at frame2..."

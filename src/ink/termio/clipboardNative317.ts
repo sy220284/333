@@ -68,7 +68,7 @@ export function isLinuxClipboardAddonLoadable() : boolean {
 }
 
 /** X11 :0/unix:0 or a Wayland compositor local to the running process. */
-export function isLocalLinuxClipboardDisplay(env = process.env) : boolean {
+export function isLocalLinuxClipboardDisplay(env: NodeJS.ProcessEnv = process.env) : boolean {
   if (env.DISPLAY) return /^(unix)?:/.test(env.DISPLAY)
   return Boolean(env.WAYLAND_DISPLAY)
 }
@@ -86,7 +86,7 @@ export function writeLinuxClipboardNative(text: string) : boolean {
 }
 
 /** Used only after wl-paste / xclip / xsel have failed. */
-export async function readLinuxClipboardNative(primary = false, timeoutMs = 2000) : Promise<string> {
+export async function readLinuxClipboardNative(primary: boolean = false, timeoutMs: number = 2000) : Promise<string> {
   if (process.platform !== 'linux' || process.env.SSH_CONNECTION || !isLocalLinuxClipboardDisplay()) return null
   const addon = nativeClipboardAddon()
   if (!addon) return null

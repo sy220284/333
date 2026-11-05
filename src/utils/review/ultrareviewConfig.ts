@@ -19,7 +19,7 @@ export function getUltrareviewClientWaitMinutes(config) : number {
     value >= 30 && value <= 55 ? Math.floor(value) : 45
 }
 
-export function buildUltrareviewEnvironment(config, devBundle = process.env.BUGHUNTER_DEV_BUNDLE_B64) : { BUGHUNTER_DEV_BUNDLE_B64: string; BUGHUNTER_MODEL: string; BUGHUNTER_FLEET_SIZE: string; BUGHUNTER_MAX_DURATION: string; BUGHUNTER_AGENT_TIMEOUT: string; BUGHUNTER_TOTAL_WALLCLOCK: string; BUGHUNTER_RESULT_RELAY_MAX_SEC: string; BUGHUNTER_CODE_QUALITY: string; BUGHUNTER_DRY_RUN: string; AUTOPATCH_ENABLE_ASIMOV: string; } {
+export function buildUltrareviewEnvironment(config, devBundle: string = process.env.BUGHUNTER_DEV_BUNDLE_B64) : { BUGHUNTER_DEV_BUNDLE_B64: string; BUGHUNTER_MODEL: string; BUGHUNTER_FLEET_SIZE: string; BUGHUNTER_MAX_DURATION: string; BUGHUNTER_AGENT_TIMEOUT: string; BUGHUNTER_TOTAL_WALLCLOCK: string; BUGHUNTER_RESULT_RELAY_MAX_SEC: string; BUGHUNTER_CODE_QUALITY: string; BUGHUNTER_DRY_RUN: string; AUTOPATCH_ENABLE_ASIMOV: string; } {
   const waitMinutes = getUltrareviewClientWaitMinutes(config)
   const model = config?.model
   return {

@@ -14,7 +14,7 @@ import { clearToolSchemaCache } from '../../utils/toolSchemaCache.js';
 import { resetUserCache } from '../../utils/user.js';
 export async function performLogout({
   clearOnboarding = false
-}): Promise<void> {
+}: { clearOnboarding?: boolean; }): Promise<void> {
   // Flush telemetry BEFORE clearing credentials to prevent org data leakage
   const {
     flushTelemetry

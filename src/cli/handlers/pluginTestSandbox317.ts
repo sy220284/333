@@ -42,7 +42,7 @@ function compileSource(source, path) {
   return new Bun.Transpiler({ loader, target: 'bun' }).transformSync(source)
 }
 
-export async function runPluginTestFile317(rootPath: string, filePath: string, { defaultTimeoutMs = 5000 } = {}) {
+export async function runPluginTestFile317(rootPath: string, filePath: string, { defaultTimeoutMs = 5000 }: { defaultTimeoutMs?: number; } = {}) {
   if (!vm.SourceTextModule || !vm.SyntheticModule) {
     throw new Error('The native VM module engine is required for plugin test')
   }

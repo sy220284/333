@@ -8,9 +8,9 @@ export const FLOOR_OUTPUT_TOKENS = 3000
 export function getRetryDelay(
   attempt: number,
   retryAfterHeader?: string | null,
-  maxDelayMs = 32000,
+  maxDelayMs: number = 32000,
   random: () => number = Math.random,
-  baseDelayMs = BASE_DELAY_MS,
+  baseDelayMs: number = BASE_DELAY_MS,
 ): number {
   const base = Math.min(maxDelayMs, baseDelayMs * 2 ** (attempt - 1))
   const backoff = Math.round(base + random() * RETRY_JITTER_RATIO * base)

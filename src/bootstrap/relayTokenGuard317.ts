@@ -73,7 +73,7 @@ async function setProcessNonDumpable317({
 /** Protect the original remote MCP HTTP relay-token entrypoint. */
 export async function guardRelayTokenDescriptor317({
   argv = process.argv, env = process.env, ...runtime
-} = {}) : Promise<boolean> {
+}: { argv?: string[]; env?: NodeJS.ProcessEnv; } = {}) : Promise<boolean> {
   if (!shouldProtectRelayToken317(argv, env)) return false
   return setProcessNonDumpable317(runtime)
 }
@@ -81,7 +81,7 @@ export async function guardRelayTokenDescriptor317({
 /** Protect the separate BYOC self-hosted code-review runner entrypoint. */
 export async function guardRunnerReviewTokens317({
   env = process.env, ...runtime
-} = {}) : Promise<boolean> {
+}: { env?: NodeJS.ProcessEnv; } = {}) : Promise<boolean> {
   if (!shouldProtectRunnerReviewTokens317(env)) return false
   return setProcessNonDumpable317(runtime)
 }

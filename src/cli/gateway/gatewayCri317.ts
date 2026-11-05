@@ -17,7 +17,7 @@ function safeEndpoint(value,kind,allowLoopback) {
   }else if(url.protocol!=='https:')throw new Error(kind+' requires HTTPS')
   return url.toString().replace(/\/$/,'')
 }
-export function validateCriConfig317(value,env=process.env) {
+export function validateCriConfig317(value,env: NodeJS.ProcessEnv=process.env) {
   if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('cri must be an object')
   const enabled=value.enabled===true
   if(value.enabled!==undefined&&typeof value.enabled!=='boolean')throw new Error('cri.enabled must be boolean')
@@ -124,7 +124,7 @@ export function createCriAdmission317(config,adapters: {now?: () => number; fetc
   }
 }
 /** Ordered capability tokens preserve the native client's self-healing retries. */
-export function classifyCriCapability317(status: number,message: string,betaHeader=''): string {
+export function classifyCriCapability317(status: number,message: string,betaHeader: string=''): string {
   if(status!==400&&status!==413)return null
   const text=String(message??'')
   if(/(?:system\s+(?:role|message)|role\s*[:=]\s*["']?system|mid.conversation.*system)/i.test(text)&&

@@ -9,7 +9,7 @@ function isInProcessTeammateTask317(value: unknown): value is InProcessTeammateT
   return task.type === 'in_process_teammate' &&
     typeof task.identity?.agentId === 'string' && typeof task.status === 'string'
 }
-export function listReachableTeammates(teamFile, selfName, liveTeammates = {}, tasks = {}) {
+export function listReachableTeammates(teamFile, selfName, liveTeammates: {} = {}, tasks: {} = {}) {
   const seen = new Set([selfName.toLowerCase()])
   const agents = []
   // Official 2.1.310 reads in-process teammate status from running tasks,
@@ -42,7 +42,7 @@ export function listReachableTeammates(teamFile, selfName, liveTeammates = {}, t
 export function hideTeammateNamesInSubagents(
   subagents: Array<{name?: string; [key: string]: unknown}>,
   liveTeammates: ReadonlyArray<{name?: string}> | Record<string, {name?: string}> = {},
-) {
+): { [key: string]: unknown; name?: string; }[] {
   const teammateNames = new Set(Object.values(liveTeammates ?? {}).map(t => t.name))
   return subagents.map(agent => teammateNames.has(agent.name)
     ? { ...agent, name: undefined } : agent)

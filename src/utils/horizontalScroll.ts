@@ -23,7 +23,7 @@ export function calculateHorizontalScrollWindow(
   availableWidth: number,
   arrowWidth: number,
   selectedIdx: number,
-  firstItemHasSeparator = true,
+  firstItemHasSeparator: boolean = true,
 ): HorizontalScrollWindow {
   const totalItems = itemWidths.length
 

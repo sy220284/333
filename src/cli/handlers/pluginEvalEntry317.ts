@@ -100,7 +100,7 @@ async function prepareEvalPlugin317(root, settings) {
   }
 }
 
-export async function pluginEvalHandler317(target: string, options: PluginEvalOptions317 = {}, adapters = {}) : Promise<1 | 0 | 2> {
+export async function pluginEvalHandler317(target: string, options: PluginEvalOptions317 = {}, adapters: {} = {}) : Promise<1 | 0 | 2> {
   const pluginRoot = await findPluginRoot317(target)
   await requireEvalTrust317(pluginRoot, options.trustPlugin)
   const mocks = options.mocks ?? 'record'

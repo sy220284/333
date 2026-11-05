@@ -41,7 +41,7 @@ export function execSyncWithDefaults_DEPRECATED(
 export function execSyncWithDefaults_DEPRECATED(
   command: string,
   optionsOrAbortSignal?: ExecSyncOptions | AbortSignal,
-  timeout = 10 * SECONDS_IN_MINUTE * MS_IN_SECOND,
+  timeout: number = 10 * SECONDS_IN_MINUTE * MS_IN_SECOND,
 ): string | null {
   let options: ExecSyncOptions
 

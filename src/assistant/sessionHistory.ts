@@ -72,7 +72,7 @@ async function fetchPage(
  */
 export async function fetchLatestEvents(
   ctx: HistoryAuthCtx,
-  limit = HISTORY_PAGE_SIZE,
+  limit: number = HISTORY_PAGE_SIZE,
 ): Promise<HistoryPage | null> {
   return fetchPage(ctx, { limit, anchor_to_latest: true }, 'fetchLatestEvents')
 }
@@ -81,7 +81,7 @@ export async function fetchLatestEvents(
 export async function fetchOlderEvents(
   ctx: HistoryAuthCtx,
   beforeId: string,
-  limit = HISTORY_PAGE_SIZE,
+  limit: number = HISTORY_PAGE_SIZE,
 ): Promise<HistoryPage | null> {
   return fetchPage(ctx, { limit, before_id: beforeId }, 'fetchOlderEvents')
 }

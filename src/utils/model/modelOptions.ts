@@ -463,7 +463,7 @@ function getKnownModelOption(model: string): ModelOption | null {
   }
 }
 
-export function getModelOptions(fastMode = false): ModelOption[] {
+export function getModelOptions(fastMode: boolean = false): ModelOption[] {
   const options = getModelOptionsBase(fastMode).map(option => {
     if (option.value === null || !isModelAlias(option.value)) return option
     const model = parseUserSpecifiedModel(option.value)

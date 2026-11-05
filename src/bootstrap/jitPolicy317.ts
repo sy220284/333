@@ -17,7 +17,7 @@ export function scheduleJitPolicy317({
   env = process.env,
   bun = typeof Bun === 'undefined' ? undefined : Bun,
   schedule = setTimeout,
-} = {}) : boolean {
+}: { args?: string[]; env?: NodeJS.ProcessEnv; bun?: typeof Bun; schedule?: typeof setTimeout; } = {}) : boolean {
   // These specialist worker starts intentionally skip the ordinary process
   // lifecycle scheduling, matching the official 317 entrypoint.
   if (args[0] === '--preload' || args[0] === '--bg-spare') return false

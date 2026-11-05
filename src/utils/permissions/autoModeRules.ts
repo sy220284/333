@@ -45,7 +45,7 @@ export function parseTaggedAutoModeBullets(template: string, tagName: string): s
 }
 
 /** Preserve the 2.1.317 source precedence for classifier rules. */
-export function mergeAutoModeRulesBySource(sources: Partial<Record<AutoModeRuleSource, AutoModeRuleSet>>, managedAllowLocked = false): AutoModeRuleSet | undefined {
+export function mergeAutoModeRulesBySource(sources: Partial<Record<AutoModeRuleSource, AutoModeRuleSet>>, managedAllowLocked: boolean = false): AutoModeRuleSet | undefined {
   const allowBySource: Partial<Record<AutoModeRuleSource, string[]>> = {}
   const soft_deny = []
   const hard_deny = []

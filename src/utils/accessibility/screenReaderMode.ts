@@ -60,7 +60,7 @@ export function flattenAccessibleTree(root) : string {
   return blocks.join('\n').replace(ANSI_CONTROL_SEQUENCE,'')
     .replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim()
 }
-export function accessibleOutputDelta(previous='',current='') : string {
+export function accessibleOutputDelta(previous: string='',current: string='') : string {
   if(current===previous) return ''
   if(!current) return ''
   if(!previous) return `${current}\n`
@@ -82,7 +82,7 @@ export function accessibleOutputDelta(previous='',current='') : string {
  * quiet (3s), hold (1s) and maximum of 16 announcements. A monotonic
  * caller-supplied clock lets tests exercise timing without sleeping.
  */
-export function createScreenReaderAnnouncementQueue({quietMs=3000,holdMs=1000,max=16}={}) {
+export function createScreenReaderAnnouncementQueue({quietMs=3000,holdMs=1000,max=16}: { quietMs?: number; holdMs?: number; max?: number; }={}) {
   let openedAt=null
   let quietEnded=false
   let heldUntil=0

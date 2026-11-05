@@ -26,7 +26,7 @@ export type MemoryRecallShape = {
 export function summarizeMemoryRecallShape(
   candidates: readonly MemoryHeader[],
   selected: readonly MemoryHeader[],
-  now = Date.now(),
+  now: number = Date.now(),
 ): MemoryRecallShape {
   const ages = selected.map(memory =>
     Math.max(0, Math.floor((now - memory.mtimeMs) / DAY_MS)),

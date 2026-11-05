@@ -437,7 +437,7 @@ export function wrapSpawn(
   timeout: number,
   taskOutput: TaskOutput,
   shouldAutoBackground: boolean = false,
-  maxOutputBytes = MAX_TASK_OUTPUT_BYTES,
+  maxOutputBytes: number = MAX_TASK_OUTPUT_BYTES,
 ): ShellCommand {
   return new ShellCommandImpl(
     childProcess,

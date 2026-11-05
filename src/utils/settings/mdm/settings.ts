@@ -207,7 +207,7 @@ export function parseCommandOutputAsSettings(
  */
 export function parseRegQueryStdout(
   stdout: string,
-  valueName = 'Settings',
+  valueName: string = 'Settings',
 ): string | null {
   const lines = stdout.split(/\r?\n/)
   const escaped = valueName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

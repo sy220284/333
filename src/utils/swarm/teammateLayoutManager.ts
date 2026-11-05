@@ -87,7 +87,7 @@ export async function createTeammatePaneInSwarmView(
  */
 export async function enablePaneBorderStatus(
   windowTarget?: string,
-  useSwarmSocket = false,
+  useSwarmSocket: boolean = false,
 ): Promise<void> {
   const backend = await getBackend()
   return backend.enablePaneBorderStatus(windowTarget, useSwarmSocket)

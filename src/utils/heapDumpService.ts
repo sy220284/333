@@ -220,7 +220,7 @@ export async function captureMemoryDiagnostics(
  */
 export async function performHeapDump(
   trigger: 'manual' | 'auto-1.5GB' = 'manual',
-  dumpNumber = 0,
+  dumpNumber: number = 0,
 ): Promise<HeapDumpResult> {
   try {
     const sessionId = getSessionId()

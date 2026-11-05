@@ -58,7 +58,7 @@ export function connectInkDevtoolsSocket(
 }
 
 /** Probe the local-only developer service before importing DevTools. */
-export async function isReactDevtoolsReachable(port = 8097): Promise<boolean> {
+export async function isReactDevtoolsReachable(port: number = 8097): Promise<boolean> {
   return new Promise(resolve => {
     const socket = createConnection({ host: '127.0.0.1', port })
     let settled = false

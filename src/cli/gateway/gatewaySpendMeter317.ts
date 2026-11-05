@@ -87,7 +87,7 @@ function priorityBinding(rows) {
   return rows.sort((a,b)=>Number(b.exceeded)-Number(a.exceeded)||
     b.utilization-a.utilization||b.reset.getTime()-a.reset.getTime())[0]
 }
-export function unifiedSpendHeaders317(binding,now=new Date()) : {} {
+export function unifiedSpendHeaders317(binding,now: Date=new Date()) : {} {
   if(!binding) return {}
   const blocked=binding.exceeded
   const utilization=blocked?binding.utilization:Math.min(.99,Math.round(binding.utilization*100)/100)
@@ -123,7 +123,7 @@ function denySpend317(binding,headers,requestId,now=new Date()) {
     ...headers,'x-request-id':requestId,'cache-control':'no-store',
   }})
 }
-export async function precheckGatewaySpend317(store,identity,config,now=new Date()) {
+export async function precheckGatewaySpend317(store,identity,config,now: Date=new Date()) {
   if(!config.admin) return {blocked:null,headers:{},payingGroup:null}
   const requestId='req_'+randomUUID().replaceAll('-','')
   const mode=config.admin.group_limit_mode??'min'
@@ -263,7 +263,7 @@ export function meterGatewayResponse317(response,context) : Response {
   })
   return new Response(body,{status:response.status,headers:h})
 }
-export async function gatewayUsageResponse317(store,identity,config,now=new Date()) : Promise<Response> {
+export async function gatewayUsageResponse317(store,identity,config,now: Date=new Date()) : Promise<Response> {
   try{
     const caps=await currentPeriodRows(store,identity,config.admin?.group_limit_mode??'min',now)
     const binding=priorityBinding(caps)
