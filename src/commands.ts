@@ -11,6 +11,7 @@ import diff from './commands/diff/index.js'
 import doctor from './commands/doctor/index.js'
 import memory from './commands/memory/index.js'
 import help from './commands/help/index.js'
+import github from './commands/github/index.js'
 import ide from './commands/ide/index.js'
 import init from './commands/init.js'
 import keybindings from './commands/keybindings/index.js'
@@ -155,6 +156,7 @@ const COMMANDS = memoize((): Command[] => [
   fast,
   files,
   help,
+  github,
   ide,
   init,
   keybindings,
