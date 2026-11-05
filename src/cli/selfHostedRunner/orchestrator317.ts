@@ -193,7 +193,7 @@ export async function runSpawnHook317(
   const order=join(tmp,'order.jwt')
   try{
     await writeFile(order,hint.work_order_jwt,{mode:0o600,flag:'wx'})
-    const vars={...process.env,...env,CLAUDE_RUNNER_WORK_ORDER_FILE:order}
+    const vars: NodeJS.ProcessEnv={...process.env,...env,CLAUDE_RUNNER_WORK_ORDER_FILE:order}
     delete vars.SELF_HOSTED_RUNNER_POOL_SECRET
     delete vars.SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET
     return await new Promise<SpawnHookResult317>((resolvePromise)=>{
