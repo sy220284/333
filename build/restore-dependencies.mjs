@@ -23,8 +23,25 @@ for (let i = 0; i < map.sources.length; i++) {
   packages.add(parts[0].startsWith('@') ? parts.slice(0, 2).join('/') : parts[0]);
 }
 if (entries.size !== 2850 || packages.size !== 316) throw Error('Snapshot cardinality mismatch');
+// Archived private @ant source modules are not published on npm.
+// Keep their original source-map bytes immutable, but adapt the restored build
+// copies to the current MCP v2 API before TypeScript or Bun consumes them.
+function migratePrivateMcp(rel, source) {
+  if (!/^node_modules\\/@ant\\/(?:claude-for-chrome-mcp|computer-use-mcp)\\/src\\//.test(rel)) return source;
+  let code = source
+    .replaceAll('@modelcontextprotocol/sdk/server/index.js', '@modelcontextprotocol/server')
+    .replaceAll('@modelcontextprotocol/sdk/types.js', '@modelcontextprotocol/server');
+  if (rel.endsWith('/mcpServer.ts')) {
+    code = code.replace(/import \\{\\s*CallToolRequestSchema,\\s*ListToolsRequestSchema,\\s*\\} from ["']@modelcontextprotocol\\/server["'];?\\s*/g, '');
+    code = code.replace(/setRequestHandler\\(ListToolsRequestSchema/g, "setRequestHandler('tools/list'");
+    code = code.replace(/setRequestHandler\\(\\s*CallToolRequestSchema/g, "setRequestHandler(\\n    'tools/call'");
+    if (/CallToolRequestSchema|ListToolsRequestSchema|@modelcontextprotocol\\/sdk\\//.test(code)) throw new Error('Unmigrated private MCP v2 source: ' + rel);
+  }
+  return code;
+}
 const results = [];
-for (const [rel, content] of [...entries].sort(([a], [b]) => a.localeCompare(b))) {
+for (const [rel, originalContent] of [...entries].sort(([a], [b]) => a.localeCompare(b))) {
+  const content = migratePrivateMcp(rel, originalContent);
   const file = resolve(output, rel);
   if (!file.startsWith(output + sep)) throw Error('Path traversal blocked: ' + rel);
   await mkdir(dirname(file), { recursive: true });
