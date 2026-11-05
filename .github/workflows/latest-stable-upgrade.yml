@@ -12,6 +12,20 @@ jobs:
   upgrade:
     runs-on: ubuntu-latest
     timeout-minutes: 150
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: gateway_test
+          POSTGRES_PASSWORD: gateway_test
+          POSTGRES_DB: gateway_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U gateway_test -d gateway_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -65,6 +79,8 @@ jobs:
       - name: 全链路编译及运行测试
         id: build
         continue-on-error: true
+        env:
+          GATEWAY_TEST_POSTGRES_URL: postgres://gateway_test:gateway_test@127.0.0.1:5432/gateway_test
         run: |
           set -euo pipefail
           node build/verify-bundled-assets.mjs

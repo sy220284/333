@@ -1,5 +1,20 @@
 #!/usr/bin/env node
-import ts from '../dev/node_modules/typescript/lib/typescript.js';
+import { pathToFileURL } from 'node:url';
+import { existsSync as compilerExists } from 'node:fs';
+import { join as compilerJoin, resolve as compilerResolve } from 'node:path';
+
+// Resolve the same frozen compiler root as tools/dev/dev.mjs, including the
+// external (offline) developer-tools installation. Avoid assuming node_modules
+// is always checked out inside tools/dev.
+const compilerHome = process.env.DEV333_TOOLS_ROOT ??
+  compilerJoin(process.env.HOME ?? process.env.USERPROFILE ?? '.', '.local/share/333-dev');
+const compilerCandidates = [
+  compilerResolve(compilerHome, 'dev-tools/node_modules/typescript/lib/typescript.js'),
+  compilerResolve(import.meta.dirname, '../dev/node_modules/typescript/lib/typescript.js'),
+];
+const compilerPath = compilerCandidates.find(compilerExists);
+if (!compilerPath) throw new Error('治理扫描缺少冻结 TypeScript 编译器，请运行 npm run dev:bootstrap');
+const { default: ts } = await import(pathToFileURL(compilerPath).href);
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, relative, resolve, join } from 'node:path';
 const root = resolve(import.meta.dirname, '../..');

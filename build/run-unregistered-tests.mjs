@@ -53,6 +53,7 @@ function checked(program, args, options = {}) {
 }
 
 export function runtimeForTest(file, source = readFileSync(resolve(ROOT, file), 'utf8')) {
+  if (file.endsWith('.mjs') && /from\s+['"]node:test['"]/.test(source)) return 'node'
   if (file.endsWith('.ts') || /\b(?:from|import)\s*(?:\(|.*?\sfrom\s*)?['"]bun(?::|['"])/.test(source) ||
       /\bBun\.(?:serve|spawn|file|SQL|env|sleep)\b/.test(source) ||
       /(?:from|import)\s*(?:\(|.*?\sfrom\s*)?['"][^'"]+\.ts['"]/.test(source)) {
@@ -69,6 +70,18 @@ function runTest(file, runtime, options = {}) {
   let disposable = null
   try {
     if (file === 'tests/governance-contract-trace.test.mjs') {
+      // Governance uses the same frozen TypeScript installation as the dev
+      // checker; its tool root may be outside the source tree.
+      const home = process.env.DEV333_TOOLS_ROOT ??
+        join(process.env.HOME ?? process.env.USERPROFILE ?? '.', '.local/share/333-dev')
+      const available = [
+        join(home, 'dev-tools/node_modules/typescript/lib/typescript.js'),
+        resolve(ROOT, 'tools/dev/node_modules/typescript/lib/typescript.js'),
+      ]
+      if (!available.some(existsSync)) {
+        checked('npm', ['ci', '--prefix', 'tools/dev', '--ignore-scripts', '--no-audit', '--no-fund'])
+      }
+      if (!available.some(existsSync)) throw new Error('Frozen governance TypeScript compiler is missing')
       mkdirSync(resolve(ROOT, '.rebuild/governance'), { recursive: true })
       const dir = resolve(ROOT, '.rebuild/governance')
       const log = join(dir, 'typescript.log')
@@ -102,8 +115,8 @@ function runTest(file, runtime, options = {}) {
       writeFileSync(ambient, 'declare const Bun: { stripANSI(input: string): string }\n')
       checked(process.execPath, [
         compiler, '--strict', '--skipLibCheck', '--target', 'ES2023',
-        '--module', 'CommonJS', '--moduleResolution', 'Node', '--rootDir', 'src/ink',
-        '--outDir', disposable, 'src/ink/events/paste-event.ts', ambient,
+        '--module', 'CommonJS', '--moduleResolution', 'Node', '--rootDir', 'src/ink/events',
+        '--outDir', join(disposable, 'events'), 'src/ink/events/paste-event.ts', ambient,
       ])
       env.M1_INK_EVENTS_DIR = disposable
     }
