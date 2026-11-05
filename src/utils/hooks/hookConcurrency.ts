@@ -76,7 +76,7 @@ export function acquireHookPermit(sessionId: string | undefined | null, timeoutM
       if (index < 0) return
       state.queue.splice(index, 1)
       clearTimeout(waiter.timer)
-      signal?.removeEventListener('abort', waiter.onAbort)
+      if (waiter.onAbort) signal?.removeEventListener('abort', waiter.onAbort)
       resolve(() => {})
       drain(key, state)
     }
