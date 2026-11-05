@@ -111,12 +111,13 @@ import {
 
 // Dead code elimination: conditional import for coordinator mode
 /* eslint-disable @typescript-eslint/no-require-imports */
+const getCoordinatorModule = feature('COORDINATOR_MODE')
+  ? (require('./coordinator/coordinatorMode.js') as typeof import('./coordinator/coordinatorMode.js'))
+  : null
 const getCoordinatorUserContext: (
   mcpClients: ReadonlyArray<{ name: string }>,
   scratchpadDir?: string,
-) => { [k: string]: string } = feature('COORDINATOR_MODE')
-  ? require('./coordinator/coordinatorMode.js').getCoordinatorUserContext
-  : () => ({})
+) => { [k: string]: string } = getCoordinatorModule?.getCoordinatorUserContext ?? (() => ({}))
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 // 2.1.310 no longer ships the experimental HISTORY_SNIP runtime.
@@ -318,9 +319,19 @@ export class QueryEngine {
         ? await loadMemoryPrompt()
         : null
 
+    const coordinatorPrompt =
+      getCoordinatorModule && isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE)
+        ? getCoordinatorModule.getCoordinatorSystemPrompt()
+        : undefined
     const systemPrompt = asSystemPrompt([
-      ...(customPrompt !== undefined ? [customPrompt] : defaultSystemPrompt),
-      ...(memoryMechanicsPrompt ? [memoryMechanicsPrompt] : []),
+      ...(coordinatorPrompt !== undefined
+        ? [coordinatorPrompt]
+        : customPrompt !== undefined
+          ? [customPrompt]
+          : defaultSystemPrompt),
+      ...(coordinatorPrompt === undefined && memoryMechanicsPrompt
+        ? [memoryMechanicsPrompt]
+        : []),
       ...(appendSystemPrompt ? [appendSystemPrompt] : []),
     ])
 
