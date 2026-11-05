@@ -24,6 +24,9 @@ import { getInitialSettings } from '../settings/settings.js'
 import type { PermissionMode } from '../permissions/PermissionMode.js'
 import { getAPIProvider } from './providers.js'
 import { resolveIndependentModel } from '../../services/api/multimodel/registry.js'
+import { getSavedModelOptions } from '../../services/api/multimodel/catalog.js'
+import { readProviderApiKey } from '../../services/auth/apiKeyVault.js'
+import { hasSavedChatGPTAuthorization } from '../../services/auth/chatgptOAuth.js'
 import { getAntModelOverrideConfig, resolveAntModel } from './antModels.js'
 import { LIGHTNING_BOLT } from '../../constants/figures.js'
 import { isModelAllowed } from './modelAllowlist.js'
@@ -191,6 +194,27 @@ export function getRuntimeMainLoopModel(params: {
  * @returns The default model setting to use
  */
 export function getDefaultMainLoopModelSetting(): ModelName | ModelAlias {
+  // An independent account can be the first and only configured provider.
+  // Use an explicit 333 default first, otherwise the first actually
+  // discoverable model for which local credentials are already present.
+  const configured = process.env.AGENT333_DEFAULT_MODEL
+  if (configured) {
+    if (!resolveIndependentModel(configured)) throw new Error('AGENT333_DEFAULT_MODEL must use provider/model format')
+    return configured
+  }
+  if (!isClaudeAISubscriber()) {
+    for (const option of getSavedModelOptions()) {
+      if (typeof option.value !== 'string') continue
+      const route = resolveIndependentModel(option.value)
+      if (!route) continue
+      if (route.provider === 'chatgpt') {
+        if (hasSavedChatGPTAuthorization()) return option.value
+      } else if ((route.keyEnvironment && process.env[route.keyEnvironment]) ||
+        readProviderApiKey(route.provider)) {
+        return option.value
+      }
+    }
+  }
   // Ants default to defaultModel from flag config, or Opus 1M if not configured
   if (process.env.USER_TYPE === 'ant') {
     return (
