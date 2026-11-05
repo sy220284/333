@@ -420,8 +420,8 @@ function syncRemoteEvalToDisk(): void {
  * Check if GrowthBook operations should be enabled
  */
 function isGrowthBookEnabled(): boolean {
-  // GrowthBook depends on 1P event logging.
-  return is1PEventLoggingEnabled()
+  // 333 的配置以本地默认值及用户明确覆盖为准；停止远程实验接口。
+  return false
 }
 
 /**
