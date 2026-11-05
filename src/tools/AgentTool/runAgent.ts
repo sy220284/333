@@ -2,7 +2,10 @@ import { feature } from 'bun:bundle'
 import { releaseAgentResources } from './agentCleanup317.ts'
 import { killMonitorWsTasksForAgent } from '../../tasks/MonitorWsTask/MonitorWsTask.js'
 import type { UUID } from 'crypto'
-import { randomUUID } from 'crypto'
+import { randomUUID, createHash } from 'crypto'
+import { asSessionId } from '../../types/ids.js'
+import { createObserverRuntime317 } from '../../services/agentObserver/observerRuntime317.js'
+import type { ObserverActivity317 } from '../../services/agentObserver/observer317.js'
 import uniqBy from 'lodash-es/uniqBy.js'
 import { logForDebugging } from 'src/utils/debug.js'
 import { getProjectRoot, getSessionId } from '../../bootstrap/state.js'
@@ -737,6 +740,46 @@ export async function* runAgent({
     contentReplacementState,
   })
 
+  const parentObservedAgent = appState.agent
+    ? appState.agentDefinitions.activeAgents.find(a => a.agentType === appState.agent)
+    : undefined
+  const inheritedObserver =
+    parentObservedAgent?.observeSubagents === true && parentObservedAgent.observer
+      ? parentObservedAgent.observer
+      : undefined
+  const targetObserverType = agentDefinition.observer ?? inheritedObserver
+  const observedAgent = targetObserverType
+    ? { ...agentDefinition, observer: targetObserverType }
+    : agentDefinition
+  const observerActivity: ObserverActivity317[] = []
+  let observerRuntime: Awaited<ReturnType<typeof createObserverRuntime317>> = null
+  if (targetObserverType) {
+    const hash = createHash('sha256')
+      .update(String(toolUseContext.sessionId ?? getSessionId()))
+      .update(':')
+      .update(String(agentId))
+      .digest('hex')
+      .slice(0, 32)
+    const observerSessionId = asSessionId(
+      `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20)}`,
+    )
+    observerRuntime = await createObserverRuntime317({
+      sessionId: observerSessionId,
+      notificationSessionId: toolUseContext.sessionId ?? getSessionId(),
+      agent: observedAgent,
+      agents: toolUseContext.options.agentDefinitions.activeAgents,
+      getCacheParams: () => ({
+        systemPrompt: agentSystemPrompt,
+        userContext: resolvedUserContext,
+        systemContext: resolvedSystemContext,
+        toolUseContext: agentToolUseContext,
+        forkContextMessages: initialMessages,
+      }),
+      getPermissionContext: () => agentToolUseContext.getAppState().toolPermissionContext,
+      canUseTool,
+    })
+  }
+
   // Preserve tool use results for subagents with viewable transcripts (in-process teammates)
   if (preserveToolUseResults) {
     agentToolUseContext.preserveToolUseResults = true
@@ -781,6 +824,19 @@ export async function* runAgent({
       maxTurns: maxTurns ?? agentDefinition.maxTurns,
     })) {
       onQueryProgress?.()
+      if (observerRuntime && message.type === 'assistant') {
+        for (const block of message.message.content) {
+          if (block.type === 'text' && block.text.trim()) {
+            observerActivity.push({ type: 'assistant_text', text: block.text })
+          } else if (block.type === 'tool_use') {
+            observerActivity.push({
+              type: 'tool_call',
+              name: block.name,
+              input: JSON.stringify(block.input ?? {}),
+            })
+          }
+        }
+      }
       // Forward subagent API request starts to parent's metrics display
       // so TTFT/OTPS update during subagent execution.
       if (
@@ -832,6 +888,13 @@ export async function* runAgent({
 
     if (agentAbortController.signal.aborted) {
       throw new AbortError()
+    }
+
+    if (observerRuntime) {
+      observerActivity.push({ type: 'turn_ended', reason: 'completed' })
+      void observerRuntime.afterTurn(observerActivity).catch(error => {
+        logForDebugging('Observer failed after subagent completion: ' + String(error))
+      })
     }
 
     // Run callback if provided (only built-in agents have callbacks)
