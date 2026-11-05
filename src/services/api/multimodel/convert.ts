@@ -119,7 +119,7 @@ export function toResponses(body: AnthropicRequest, model: string): JSONValue {
   return result
 }
 function chatParts(parts: JSONValue[]): JSONValue[] {
-  return parts.flatMap(block => {
+  return parts.flatMap<JSONValue>(block => {
     if (block.type === 'text') return [{ type: 'text', text: String(block.text ?? '') }]
     if (block.type === 'image') return [{ type: 'image_url', image_url: { url: imageURL(block) } }]
     if (block.type === 'thinking' || block.type === 'redacted_thinking') return []
