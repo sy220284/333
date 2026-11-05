@@ -12,9 +12,9 @@ const tuningNames = [
 const falseWords = new Set(['', '0', 'false', 'no', 'off'])
 const GC_SAMPLE_MAX_MS = 3_600_000
 let tuningNoted = false
-let namesMask
-let purgeDelay
-let timerDisabled
+let namesMask: number | undefined
+let purgeDelay: number | undefined
+let timerDisabled: boolean | undefined
 
 export function noteProcessStartTuning(env: NodeJS.ProcessEnv = process.env) : void {
   if (tuningNoted) return
@@ -31,17 +31,33 @@ export function noteProcessStartTuning(env: NodeJS.ProcessEnv = process.env) : v
   timerDisabled = rawTimer !== undefined && !falseWords.has(rawTimer.toLowerCase())
 }
 
-export function processStartTuning() { return namesMask }
-export function processStartPurgeDelayMs() { return purgeDelay }
-export function processStartCollectionTimerOff() { return timerDisabled }
+export function processStartTuning(): number | undefined { return namesMask }
+export function processStartPurgeDelayMs(): number | undefined { return purgeDelay }
+export function processStartCollectionTimerOff(): boolean | undefined { return timerDisabled }
 
+export type GarbageCollectionSample317 = {
+  eden: number
+  full: number
+  wall_ms: number
+  heap_after_mib?: number
+}
+type NativeGcProfiler317 = {
+  start(): void
+  stop(): {
+    statistics: Array<{
+      gcType: string
+      cost: number
+      afterGC?: { heapStatistics?: { usedHeapSize?: number } }
+    }>
+  }
+}
 let countingStarted = false
-let firstMessage
-let firstMessageProfiler
-let finalResultProfiler
-let deadline
+let firstMessage: GarbageCollectionSample317 | undefined
+let firstMessageProfiler: NativeGcProfiler317 | undefined
+let finalResultProfiler: NativeGcProfiler317 | undefined
+let deadline: ReturnType<typeof setTimeout> | undefined
 
-function finish(profiler) {
+function finish(profiler: NativeGcProfiler317 | undefined): GarbageCollectionSample317 | undefined {
   if (!profiler) return
   try {
     const stats = profiler.stop().statistics
@@ -65,7 +81,7 @@ export function startGarbageCollectionCount(env: NodeJS.ProcessEnv = process.env
   countingStarted = true
   if (env.CLAUDE_CODE_REMOTE !== 'true' || env.CLAUDE_CODE_COUNT_GARBAGE_COLLECTIONS !== '1')
     return
-  const { GCProfiler } = nativeRequire('node:v8')
+  const { GCProfiler } = nativeRequire('node:v8') as { GCProfiler?: new () => NativeGcProfiler317 }
   if (typeof GCProfiler !== 'function')
     throw Error('GCProfiler is unavailable for remote 2.1.317 execution')
   firstMessageProfiler = new GCProfiler()
@@ -81,7 +97,10 @@ export function noteFirstMessageForGarbageCollectionCount() : void {
   firstMessageProfiler = undefined
 }
 
-export function takeGarbageCollectionCount() {
+export function takeGarbageCollectionCount(): {
+  to_first_message?: GarbageCollectionSample317
+  to_first_result: GarbageCollectionSample317
+} | undefined {
   const first = firstMessage
   clearTimeout(deadline)
   finish(firstMessageProfiler)
