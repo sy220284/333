@@ -4,13 +4,35 @@
  */
 import { lstat, readFile, readdir, realpath } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve } from 'node:path'
+import type { EvalGrader317 } from './pluginEvalCatalog317.ts'
+import type { judgeEvalOutput317 } from './pluginEvalModel317.ts'
 
-function contains(root, candidate) {
+export type EvalGraderContext317 = {
+  workspace: string
+  lastMessage?: string
+  baseline?: string
+  trace?: unknown[]
+  mockCalls?: unknown[]
+}
+export type EvalGraderVerdict317 = {
+  name: string
+  type: string
+  weight: number
+  pass: boolean
+  score: number
+  evidence?: string
+  error?: string
+}
+type EvalToolUse317 = {name: string; input?: unknown}
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
+
+function contains(root: string, candidate: string): boolean {
   const rel = relative(root, candidate)
   return rel === '' || (rel !== '..' && !rel.startsWith('../') && !rel.startsWith('..\\') && !isAbsolute(rel))
 }
 
-function globToRegex(glob) {
+function globToRegex(glob: string): RegExp {
   const escaped = glob.replace(/[|\\{}()[\]^$+?.]/g, '\\$&')
     .replace(/\*\*/g, '\u0000')
     .replace(/\*/g, '[^/]*')
@@ -18,11 +40,12 @@ function globToRegex(glob) {
   return new RegExp('^' + escaped + '$')
 }
 
-async function enumerateWorkspaceFiles(workspace, limit = 10000) {
+async function enumerateWorkspaceFiles(workspace: string, limit: number = 10000): Promise<string[]> {
   const base = await realpath(workspace)
-  const todo = [base], found = []
+  const todo: string[] = [base], found: string[] = []
   while (todo.length) {
     const current = todo.pop()
+    if (current === undefined) break
     for (const item of await readdir(current, { withFileTypes: true })) {
       const path = join(current, item.name)
       if (item.isSymbolicLink()) continue
@@ -37,32 +60,38 @@ async function enumerateWorkspaceFiles(workspace, limit = 10000) {
   return found
 }
 
-function traceToolUses(trace) {
-  const uses = []
+function traceToolUses(trace: unknown[] | undefined): EvalToolUse317[] {
+  const uses: EvalToolUse317[] = []
   for (const event of trace ?? []) {
-    if (event.name && event.type === 'tool_use') uses.push(event)
-    const blocks = event?.message?.content ?? event?.content
+    if (!isRecord(event)) continue
+    if (typeof event.name === 'string' && event.type === 'tool_use')
+      uses.push({ name: event.name, input: event.input })
+    const blocks = (isRecord(event.message) ? event.message.content : undefined) ?? event.content
     if (Array.isArray(blocks)) {
-      for (const block of blocks) if (block?.type === 'tool_use') {
-        uses.push({ name: block.name, input: block.input })
+      for (const block of blocks) {
+        if (isRecord(block) && block.type === 'tool_use' && typeof block.name === 'string')
+          uses.push({ name: block.name, input: block.input })
       }
     }
   }
   return uses
 }
 
-function toolMatches(spec, tool) {
-  const target = typeof spec === 'string' ? { tool: spec } : spec
-  if (tool.name !== target.tool) return false
-  return !target.input_match || new RegExp(target.input_match).test(JSON.stringify(tool.input ?? {}))
+function toolMatches(spec: unknown, tool: EvalToolUse317): boolean {
+  const target: unknown = typeof spec === 'string' ? { tool: spec } : spec
+  if (!isRecord(target) || typeof target.tool !== 'string' || tool.name !== target.tool) return false
+  const pattern = target.input_match
+  if (pattern === undefined || pattern === null || pattern === '') return true
+  if (typeof pattern !== 'string') throw new Error('tool input matcher must be a regex string')
+  return new RegExp(pattern).test(JSON.stringify(tool.input ?? {}))
 }
 
-async function selectedEvidence(target, context) {
+async function selectedEvidence(target: unknown, context: EvalGraderContext317): Promise<string> {
   if (!target || target === 'last_message') return String(context.lastMessage ?? '')
   if (target === 'trace') return JSON.stringify(context.trace ?? [])
   if (target === 'mock_calls') return JSON.stringify(context.mockCalls ?? [])
   if (target === 'files') return JSON.stringify(await enumerateWorkspaceFiles(context.workspace))
-  if (target?.source === 'file') {
+  if (isRecord(target) && target.source === 'file') {
     if (typeof target.path !== 'string') throw new Error('eval file evidence path is required')
     const root = await realpath(context.workspace)
     const fullPath = resolve(root, target.path)
@@ -76,16 +105,24 @@ async function selectedEvidence(target, context) {
   throw new Error('unsupported grader evidence target')
 }
 
-export async function gradeEvalResult317(grader, context, judge) {
+export async function gradeEvalResult317(
+  grader: EvalGrader317,
+  context: EvalGraderContext317,
+  judge?: typeof judgeEvalOutput317,
+): Promise<EvalGraderVerdict317> {
   const details = { name: grader.name, type: grader.type, weight: grader.weight ?? 1 }
   try {
     let pass, evidence
     switch (grader.type) {
       case 'regex': {
         evidence = await selectedEvidence(grader.target, context)
+        if (typeof grader.pattern !== 'string' ||
+            (grader.flags !== undefined && typeof grader.flags !== 'string')) {
+          throw new Error('Invalid regex grader pattern or flags')
+        }
         const pattern = new RegExp(grader.pattern, (grader.flags ?? '').replaceAll('g', '') + 'g')
         const count = [...evidence.matchAll(pattern)].length
-        if (grader.match?.startsWith('count:')) {
+        if (typeof grader.match === 'string' && grader.match.startsWith('count:')) {
           const wanted = Number(grader.match.slice(6))
           pass = count === wanted
         } else {
@@ -95,14 +132,21 @@ export async function gradeEvalResult317(grader, context, judge) {
       }
       case 'file_exists': {
         const files = await enumerateWorkspaceFiles(context.workspace)
+        if (typeof grader.path !== 'string') throw new Error('file grader path required')
         const pattern = globToRegex(grader.path)
         const exists = files.some(name => pattern.test(name))
+        if (grader.exists !== undefined && typeof grader.exists !== 'boolean') throw new Error('file grader exists must be boolean')
         pass = exists === (grader.exists ?? true)
         return { ...details, pass, score: Number(pass), evidence: `exists=${exists}` }
       }
       case 'tool_used': {
         const tools = traceToolUses(context.trace)
+        if (typeof grader.tool !== 'string') throw new Error('tool_used grader tool required')
         const count = tools.filter(tool => toolMatches({ tool: grader.tool, input_match: grader.input_match }, tool)).length
+        if ((grader.min !== undefined && typeof grader.min !== 'number') ||
+            (grader.max !== undefined && typeof grader.max !== 'number')) {
+          throw new Error('tool count bounds must be numeric')
+        }
         pass = count >= (grader.min ?? 1) && (grader.max === undefined || count <= grader.max)
         return { ...details, pass, score: Number(pass), evidence: `uses=${count}` }
       }
@@ -135,7 +179,9 @@ export async function gradeEvalResult317(grader, context, judge) {
   }
 }
 
-export function aggregateEvalScore317(verdicts) {
+export function aggregateEvalScore317(
+  verdicts: Array<{score: number; weight: number; pass: boolean; indicatorOnly?: boolean}>,
+): {score: number | null; weight: number; passes: number; failures: number} {
   const scored = verdicts.filter(v => !v.indicatorOnly)
   const weight = scored.reduce((sum, v) => sum + v.weight, 0)
   if (weight === 0) return { score: null, weight: 0, passes: 0, failures: 0 }
