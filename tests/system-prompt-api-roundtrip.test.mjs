@@ -100,7 +100,7 @@ test('normal CLI sends 2.1.317 system guidance and selected style through the re
   const home = join(temp, 'home')
   const config = join(home, '.claude')
   mkdirSync(config, { recursive: true })
-  writeFileSync(join(config, 'settings.json'), JSON.stringify({ outputStyle: 'Concise' }))
+  writeFileSync(join(config, 'settings.json'), JSON.stringify({ outputStyle: 'Concise', language: 'English' }))
 
   let payload
   const server = createServer((req, res) => {
@@ -147,6 +147,8 @@ test('normal CLI sends 2.1.317 system guidance and selected style through the re
     const systemText = payload.system.map(block =>
       typeof block === 'string' ? block : block.text ?? '').join('\n')
     assert.match(systemText, /Concise Style Active/)
+    assert.match(systemText, /Always respond in English/)
+    assert.doesNotMatch(systemText, /Always respond in Simplified Chinese/)
     assert.match(systemText, /For UI or frontend changes, start the dev server/)
     assert.match(systemText, /Finish the full task as requested/)
     assert.match(systemText, /The system may send updates, reminders, or modifications/)
