@@ -13,6 +13,34 @@ import {
 export type DaemonWorkerKind317 = 'heartbeat' | 'scheduled' | 'remoteControl'
 export const DAEMON_WORKER_CONFIG_ERROR_317 = 2
 export const DAEMON_WORKER_UNAVAILABLE_317 = 78
+export const DAEMON_WORKER_TEMP_FAILURE_317 = 75
+
+/**
+ * Official 2.1.317 chunk-jkh1zydw.js L6i -> xe/We:
+ * unwrap at most eight causes. HTTP 429 takes precedence over a concurrent
+ * folder-ownership error, and both are temporary daemon failures (EX_TEMPFAIL).
+ */
+export function classifyDaemonWorkerFailure317(error: unknown):
+  'rate_limited' | 'folder_already_served' | undefined {
+  let current: unknown = error
+  for (let depth = 0; current != null && depth < 8; depth++) {
+    if (typeof current !== 'object') break
+    const value = current as Record<string, unknown>
+    if (value.status === 429) return 'rate_limited'
+    const response = value.response
+    if (response && typeof response === 'object' &&
+      (response as Record<string, unknown>).status === 429) return 'rate_limited'
+    current = value.cause
+  }
+  current = error
+  for (let depth = 0; current != null && depth < 8; depth++) {
+    if (typeof current !== 'object') break
+    const value = current as Record<string, unknown>
+    if (value.errorType === 'bridge_folder_already_served') return 'folder_already_served'
+    current = value.cause
+  }
+  return undefined
+}
 const KINDS = new Set(['heartbeat', 'scheduled', 'remoteControl'])
 
 export function isDaemonWorkerAdmitted317(
@@ -245,6 +273,13 @@ export async function runDaemonWorker317(kind: string | undefined,
       if (error instanceof Error && error.name === 'BridgeHeadlessPermanentError') {
         stdout(error.message + '\n')
         return DAEMON_WORKER_UNAVAILABLE_317
+      }
+      const failure = classifyDaemonWorkerFailure317(error)
+      if (failure) {
+        const message = error instanceof Error ? error.message : String(error)
+        stdout((failure === 'rate_limited' ? 'rate limited (429): ' :
+          'folder already served: ') + message + '\n')
+        return DAEMON_WORKER_TEMP_FAILURE_317
       }
       throw error
     }
