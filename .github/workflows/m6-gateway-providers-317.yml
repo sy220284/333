@@ -7,6 +7,9 @@ on:
       - 'src/cli/gateway/gatewayProviders317.ts'
       - 'src/cli/gateway/gatewayForward317.ts'
       - 'src/cli/gateway/gatewayConfig317.ts'
+      - 'src/cli/gateway/gatewayAuth317.ts'
+      - 'src/cli/gateway/gatewayDevice317.ts'
+      - 'tests/m6-gateway-user-id-claim-317.test.mjs'
       - 'tests/m6-gateway-providers-317.test.mjs'
       - '.github/workflows/m6-gateway-providers-317.yml'
   workflow_dispatch:
@@ -27,6 +30,6 @@ jobs:
         with:
           bun-version: '1.4.4'
       - name: 网关官方317既有配置与真实协议回归
-        run: bun test tests/m6-gateway-runtime-317.test.mjs tests/m6-gateway-ttfb-sse-317.test.mjs
+        run: bun test tests/m6-gateway-runtime-317.test.mjs tests/m6-gateway-ttfb-sse-317.test.mjs tests/m6-gateway-device-317.test.mjs tests/m6-gateway-user-id-claim-317.test.mjs
       - name: CRI 认证回归使用可注入Node运行环境
         run: node --experimental-strip-types --test tests/m6-gateway-cri-317.test.mjs
