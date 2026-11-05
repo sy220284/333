@@ -1,12 +1,15 @@
 import { createServer } from 'node:net'
+import { spawnBackgroundPty317, reconnectBackgroundPty317 } from './ptyWorker317.ts'
+import { unrecordedPtyReplay317 } from './ptyReplay317.ts'
+import type { ManagedPtyProcess317 } from './ptyProcess317.ts'
 import { resumeFlags } from './respawnFlags317.ts'
-import { chmod, appendFile, unlink } from 'node:fs/promises'
+import { chmod, appendFile, open, unlink } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { assertSocketVacant317, captureSocketIdentity317, unlinkOwnedSocket317 } from '../../bootstrap/socketOwnership317.ts'
 import {
   prepareFleet, fleetSocket, listSessions, createSessionRecord, reserveNewSession, saveSession,
   editSession, deleteSession, matchSession, readSession, readTail,
-  removeWorktreeSafely, isAlive, assertNoUnmanagedLiveWorker
+  removeWorktreeSafely, isAlive, assertNoUnmanagedLiveWorker, type BackgroundRecord317
 } from './sessionStore.ts'
 
 const active = new Map()
@@ -46,41 +49,13 @@ function sanitizedArgs(args) {
   return out
 }
 export { resumeFlags } from './respawnFlags317.ts'
-async function launch(record, { resume = false } = {}) {
-  if (!globalThis.Bun?.spawn) throw new Error('Background interactive sessions require Bun 1.4.4 with PTY support')
-  if (active.has(record.id)) throw new Error(`Session is already running: ${record.id}`)
-  const [binary, ...prefix] = childExecutable()
-  const args = resume
-    ? [...resumeFlags(record.argv), '--resume', record.sessionId]
-    : [...sanitizedArgs(record.argv), '--session-id', record.sessionId]
-  const spawnArgs = [binary, ...prefix, ...args]
-  const cols = Number.isInteger(record.cols) && record.cols >= 20 ? record.cols : 100
-  const rows = Number.isInteger(record.rows) && record.rows >= 5 ? record.rows : 30
-  const subscribers = new Set()
-  const earlyOutput = []
-  // A child can exit before its initial session record has been committed.
-  // Serialize the exit transition behind that commit to avoid resurrecting a
-  // completed job as 'working' when launch() finishes.
-  let settleLaunch: (committed: boolean) => void = () => {}
-  const launchCommitted = new Promise<boolean>(resolve => { settleLaunch = resolve })
-  let settleFinalization: () => void = () => {}
-  const finalization = new Promise<void>(resolve => { settleFinalization = resolve })
-  const proc = Bun.spawn(spawnArgs, {
-    cwd: record.cwd,
-    env: {
-      ...process.env, CLAUDE_CODE_SESSION_KIND: 'bg',
-      CLAUDE_CODE_SESSION_NAME: record.name || '',
-      CLAUDE_CODE_SESSION_LOG: record.logPath,
-      CLAUDE_CODE_BACKGROUND_SESSION_ID: record.id,
-    },
-    terminal: {
-      cols, rows,
-      data(_terminal, data) {
-        if (active.has(record.id)) recordOutput(record.id, data)
-        else earlyOutput.push(Buffer.from(data))
-      },
-    },
-    onExit(_proc, exitCode, signalCode) {
+
+function makePtyExitHandler317(
+  record: BackgroundRecord317,
+  launchCommitted: Promise<boolean>,
+  settleFinalization: () => void,
+){
+  return (_proc: ManagedPtyProcess317, exitCode: number, signalCode?: string | number) => {
       void (async () => {
         let failure
         try {
@@ -125,12 +100,54 @@ async function launch(record, { resume = false } = {}) {
           if (failure) process.stderr.write('Session exit recording failed: ' + String(failure) + '\\n')
         }
       })().catch(error => process.stderr.write('Background exit finalization failed: ' + String(error) + '\\n'))
-    },
-  })
+  }
+}
+
+async function launch(record, { resume = false } = {}) {
+  if (!globalThis.Bun?.spawn) throw new Error('Background interactive sessions require Bun 1.4.4 with PTY support')
+  if (active.has(record.id)) throw new Error(`Session is already running: ${record.id}`)
+  const [binary, ...prefix] = childExecutable()
+  const args = resume
+    ? [...resumeFlags(record.argv), '--resume', record.sessionId]
+    : [...sanitizedArgs(record.argv), '--session-id', record.sessionId]
+  const cols = Number.isInteger(record.cols) && record.cols >= 20 ? record.cols : 100
+  const rows = Number.isInteger(record.rows) && record.rows >= 5 ? record.rows : 30
+  const subscribers = new Set()
+  const earlyOutput = []
+  // A child can exit before its initial session record has been committed.
+  // Serialize the exit transition behind that commit to avoid resurrecting a
+  // completed job as 'working' when launch() finishes.
+  let settleLaunch: (committed: boolean) => void = () => {}
+  const launchCommitted = new Promise<boolean>(resolve => { settleLaunch = resolve })
+  let settleFinalization: () => void = () => {}
+  const finalization = new Promise<void>(resolve => { settleFinalization = resolve })
+
+  let started
+  try {
+    started = await spawnBackgroundPty317({
+      id:record.id,cwd:record.cwd,cols,rows,env:{
+        ...process.env,CLAUDE_CODE_SESSION_KIND:'bg',
+        CLAUDE_CODE_SESSION_NAME:record.name||'',
+        CLAUDE_CODE_SESSION_LOG:record.logPath,
+        CLAUDE_CODE_BACKGROUND_SESSION_ID:record.id,
+      },executable:binary,prefix,args,
+      onReplay:async data=>{if(data.length)earlyOutput.push(Buffer.from(data))},
+      onOutput:data=>{
+        if(active.has(record.id))recordOutput(record.id,data)
+        else earlyOutput.push(Buffer.from(data))
+      },
+      onExit:makePtyExitHandler317(record,launchCommitted,settleFinalization),
+      onStatus:message=>process.stderr.write('[bg-pty] '+message+'\\n'),
+    })
+  }catch(error){
+    settleLaunch(false)
+    throw error
+  }
+  const {proc,socket}=started
   const next = {
     ...record,
     name: resume && record.nameSource === 'prompt' ? record.id : record.name,
-    pid: proc.pid, state: 'working', detail: '',
+    pid: proc.pid, ptySocket: socket, state: 'working', detail: '',
     respawnCount: (record.respawnCount || 0) + (resume ? 1 : 0),
     startedAt: resume ? Date.now() : record.startedAt,
     updatedAt: new Date().toISOString(),
