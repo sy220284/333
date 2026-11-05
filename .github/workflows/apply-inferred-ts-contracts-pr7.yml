@@ -78,7 +78,25 @@ jobs:
               git reset --hard "$remote"
               node tools/dev/dev.mjs typecheck:all
               node tools/dev/annotate-inferred-ts-contracts.mjs --apply --limit=40
-              node tools/dev/dev.mjs typecheck:all
+              for verify_round in 1 2 3 4 5; do
+                if node tools/dev/dev.mjs typecheck:all > .rebuild/governance/inferred-typecheck.log 2>&1; then
+                  echo "最新源码类型验收通过"
+                  break
+                fi
+                mapfile -t broken < <(grep -Eo '(src|native)/[^ ()]+[.]tsx?[(][0-9]+,[0-9]+[)]' .rebuild/governance/inferred-typecheck.log | cut -d '(' -f1 | sort -u || true)
+                reverted=0
+                for file in "${broken[@]}"; do
+                  if [ -f "$file" ] && ! git diff --quiet -- "$file"; then
+                    echo "当前模块缺失可访问的类型声明，保留原始实现：$file"
+                    git restore -- "$file"
+                    reverted=$((reverted+1))
+                  fi
+                done
+                if [ "$reverted" -eq 0 ] || [ "$verify_round" -eq 5 ]; then
+                  cat .rebuild/governance/inferred-typecheck.log
+                  exit 1
+                fi
+              done
               node tools/dev/type-migration-audit.mjs
               node tools/dev/type-migration-strict.mjs
               bun build/rebuild.mjs
