@@ -72,12 +72,29 @@ export function buildArtifactMcpBackend317(
   return {
     async readThread(event) {
       const info = await call(event, 'comments', {thread_id:event.threadId})
-      const thread = (info.thread ?? info) as Record<string, unknown>
+      const listed = Array.isArray(info.threads)
+        ? info.threads.find(item => !!item && typeof item === 'object' &&
+          'id' in item && item.id === event.threadId)
+        : null
+      const thread = (listed ?? info.thread ?? info) as Record<string, unknown>
       const active = thread && typeof thread === 'object' ? thread : {}
+      const comments = Array.isArray(active.comments)
+        ? active.comments.filter((item): item is Record<string, unknown> =>
+          !!item && typeof item === 'object')
+        : []
+      const newestHuman = [...comments].reverse().find(comment =>
+        comment.postedByArtifact !== true &&
+        (comment.sentByViewer === true || comment.isHuman === true))
+      const text = newestHuman?.text ?? newestHuman?.body ??
+        active.newestHumanRequest
       return {
-        body: asString(active.body, 'thread body', 64000),
-        newestHumanRequest: asString(active.newestHumanRequest, 'human comment', 16000),
-        summonedByEditor: active.summonedByEditor === true,
+        body: typeof active.body === 'string'
+          ? asString(active.body, 'thread body', 64000)
+          : JSON.stringify(comments).slice(0, 64000),
+        newestHumanRequest: asString(text, 'human comment', 16000),
+        summonedByEditor: active.summonedByEditor === true ||
+          (active.claudeActivated === true &&
+           comments.some(comment => comment.sentByViewer === true)),
         originVerified: active.originVerified === true,
         resolved: active.resolved === true,
       } satisfies CommentThread317
@@ -94,11 +111,19 @@ export function buildArtifactMcpBackend317(
     },
     async publish(event, html, expectedRevision) {
       if (!await approveWrite(event)) throw new Error('Artifact edit is not authorized by this session')
-      await call(event, 'publish', { html, expected_revision: expectedRevision })
+      const receipt = await call(event, 'publish', { html, expected_revision: expectedRevision })
+      if (receipt.published !== true && receipt.success !== true &&
+          receipt.status !== 'published') {
+        throw new Error('Artifact publish outcome is unverified; manual review required')
+      }
     },
     async reply(event, text) {
       if (!await approveWrite(event)) throw new Error('Artifact reply is not authorized by this session')
-      await call(event, 'reply', { thread_id:event.threadId, text })
+      const receipt = await call(event, 'reply', { thread_id:event.threadId, text })
+      if (receipt.posted !== true && receipt.success !== true &&
+          receipt.status !== 'posted') {
+        throw new Error('Artifact reply outcome is unverified; manual review required')
+      }
     },
   }
 }
