@@ -362,6 +362,7 @@ export class RemoteSessionManager {
    * Useful when the subscription becomes stale after container shutdown.
    */
   reconnect(): void {
+    this.rejectTaskStops()
     logForDebugging('[RemoteSessionManager] Reconnecting WebSocket')
     this.websocket?.reconnect()
   }
