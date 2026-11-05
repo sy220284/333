@@ -3,7 +3,7 @@
  * This is a diagnostic command: verification uses the API's published JWKS
  * and enforces signature and temporal claims unless disabled explicitly.
  */
-import { createPublicKey, constants, verify as verifySignature, type JsonWebKey } from 'node:crypto'
+import { createPublicKey, constants, verify as verifySignature } from 'node:crypto'
 import { stdin, stdout, stderr } from 'node:process'
 
 type JwtObject = Record<string, unknown>

@@ -1232,7 +1232,7 @@ export async function performMCPOAuthFlow(
       }
       // If client not found, clear the stored client ID and suggest retry
       if (
-        error.errorCode === 'invalid_client' &&
+        error.code === 'invalid_client' &&
         error.message.includes('Client not found')
       ) {
         const storage = getSecureStorage()

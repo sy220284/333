@@ -210,7 +210,7 @@ function startBunRelay(
           },
           end: () => sock.end(),
         }
-        handleData(adapter, st, data, wsUrl, authHeader, wsAuthHeader)
+        handleData(adapter, st, Buffer.from(data), wsUrl, authHeader, wsAuthHeader)
       },
       drain(sock) {
         const st = sock.data
@@ -265,7 +265,7 @@ export async function startNodeRelay(
     sock.on('data', data =>
       handleData(adapter, st, data, wsUrl, authHeader, wsAuthHeader),
     )
-    sock.on('close', () => cleanupConn(states.get(sock)))
+    sock.on('close', () => cleanupConn(states.get(sock))).buffer)
     sock.on('error', err => {
       logForDebugging(`[upstreamproxy] client socket error: ${err.message}`)
       cleanupConn(states.get(sock))
@@ -381,7 +381,7 @@ function openTunnel(
     // responds with its own "HTTP/1.1 200" over the tunnel; we just pipe it.
     const head =
       `${connectLine}\r\n` + `Proxy-Authorization: ${authHeader}\r\n` + `\r\n`
-    ws.send(encodeChunk(Buffer.from(head, 'utf8')))
+    ws.send(Uint8Array.from(encodeChunk(Buffer.from(head, 'utf8'))).buffer)
     // Flush anything that arrived while the WS handshake was in flight —
     // trailing bytes from the CONNECT packet and any data() callbacks that
     // fired before onopen.
@@ -429,7 +429,7 @@ function openTunnel(
 
 function sendKeepalive(ws: WebSocketLike): void {
   if (ws.readyState === WebSocket.OPEN) {
-    ws.send(encodeChunk(new Uint8Array(0)))
+    ws.send(Uint8Array.from(encodeChunk(new Uint8Array(0))).buffer)
   }
 }
 
@@ -437,7 +437,7 @@ function forwardToWs(ws: WebSocketLike, data: Buffer): void {
   if (ws.readyState !== WebSocket.OPEN) return
   for (let off = 0; off < data.length; off += MAX_CHUNK_BYTES) {
     const slice = data.subarray(off, off + MAX_CHUNK_BYTES)
-    ws.send(encodeChunk(slice))
+    ws.send(Uint8Array.from(encodeChunk(slice))
   }
 }
 

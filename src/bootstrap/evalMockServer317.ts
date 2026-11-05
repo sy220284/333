@@ -226,7 +226,7 @@ async function relayAgent317(agent: NonNullable<MockSpec317['agent']>, tool: str
     signal.addEventListener('abort', onAbort, { once: true })
     socket.on('connect', () => socket.write(payload))
     socket.on('data', bytes => {
-      buffer = Buffer.concat([buffer, bytes])
+      buffer = Buffer.concat([buffer, typeof bytes === 'string' ? Buffer.from(bytes) : bytes])
       if (buffer.length > MAX_RELAY_BYTES) { finish(Error('relay response too large')); return }
       const eol = buffer.indexOf(10)
       if (eol !== -1) {

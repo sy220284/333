@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { type GroveDecision, GroveDialog, PrivacySettingsDialog } from '../../components/grove/Grove.js';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../services/analytics/index.js';
-import { getGroveNoticeConfig, getGroveSettings, isQualifiedForGrove } from '../../services/api/grove.js';
+import { getGroveNoticeConfig, getGroveSettings, isQualifiedForGrove, type AccountSettings, type GroveConfig, type ApiResult } from '../../services/api/grove.js';
 import type { LocalJSXCommandOnDone } from '../../types/command.js';
 import { fetchPrivacySettingsFresh } from './fetchPrivacySettings.ts';
 const FALLBACK_MESSAGE = 'Review and manage your privacy settings at https://claude.ai/settings/data-privacy-controls';
@@ -12,7 +12,7 @@ export async function call(onDone: LocalJSXCommandOnDone): Promise<React.ReactNo
     onDone(FALLBACK_MESSAGE);
     return null;
   }
-  const current = await fetchPrivacySettingsFresh(getGroveSettings, getGroveNoticeConfig);
+  const current = await fetchPrivacySettingsFresh<AccountSettings, GroveConfig>(getGroveSettings, getGroveNoticeConfig);
   if (!current.success) {
     onDone(FETCH_ERROR_MESSAGE);
     return null;
@@ -28,7 +28,7 @@ export async function call(onDone: LocalJSXCommandOnDone): Promise<React.ReactNo
     await onDoneWithSettingsCheck();
   }
   async function onDoneWithSettingsCheck() {
-    const updatedSettingsResult = await getGroveSettings();
+    const updatedSettingsResult: ApiResult<AccountSettings> = await getGroveSettings();
     if (!updatedSettingsResult.success) {
       onDone(FETCH_ERROR_MESSAGE, {
         display: 'system'

@@ -1621,7 +1621,14 @@ export const KnownMarketplacesFileSchema = lazySchema(() =>
  *
  * @see CommandMetadataSchema for runtime validation rules
  */
-export type CommandMetadata = z.infer<ReturnType<typeof CommandMetadataSchema>>
+export type CommandMetadata = {
+  source?: string
+  content?: string
+  description?: string
+  argumentHint?: string
+  model?: string
+  allowedTools?: string[]
+}
 export type MarketplaceSource = z.infer<
   ReturnType<typeof MarketplaceSourceSchema>
 >

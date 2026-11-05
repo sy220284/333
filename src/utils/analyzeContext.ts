@@ -288,7 +288,7 @@ async function countSystemTokens(
       )
       .map(content => ({ name: extractSectionName(content), content })),
     ...Object.entries(systemContext)
-      .filter(([, content]) => content.length > 0)
+      .filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0)
       .map(([name, content]) => ({ name, content })),
   ]
 

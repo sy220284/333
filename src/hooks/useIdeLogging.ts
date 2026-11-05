@@ -27,7 +27,7 @@ export function useIdeLogging(mcpClients: MCPServerConnection[]): void {
     if (ideClient) {
       // Register the log event handler
       ideClient.client.setNotificationHandler(
-        LogEventSchema(),
+        'log_event', { params: LogEventSchema().shape.params },
         notification => {
           const { eventName, eventData } = notification
           logEvent(

@@ -849,7 +849,7 @@ export async function pluginConfigureHandler(
     cliError(`No installed plugin has the id "${pluginId}". Use its full id (name@marketplace), as \`claude plugin list\` shows it.`)
   }
   const id = getPluginStorageId(plugin)
-  const schema = plugin.manifest.userConfig ?? {}
+  const schema: Record<string, { title: string; sensitive?: boolean }> = plugin.manifest.userConfig as Record<string, { title: string; sensitive?: boolean }> | undefined ?? {}
   const displayName = plugin.name
   const stored = loadPluginOptions(id)
   // CLI configuration reports every unset option, including optional fields.
