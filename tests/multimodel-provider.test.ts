@@ -28,7 +28,7 @@ function requireRoute(id: string): ProviderRoute {
   return route
 }
 function stream(...events: unknown[]): Response {
-  return new Response(events.map(event => `data: ${JSON.stringify(event)}\n\n`).join('')}data: [DONE]\n\n`,
+  return new Response(`${events.map(event => `data: ${JSON.stringify(event)}\n\n`).join('')}data: [DONE]\n\n`,
     { headers: { 'content-type': 'text/event-stream' } })
 }
 // biome-ignore lint/suspicious/noExplicitAny: Test assertions inspect multiple independent provider event shapes.
