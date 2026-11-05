@@ -4,6 +4,7 @@ on:
     branches: [upgrade/2.1.310-m1-evidence, main]
     paths:
       - 'src/cli/gateway/**'
+      - 'src/cli/handlers/pluginEvalGraders317.ts'
       - 'src/utils/hooks/hookConcurrency.ts'
       - 'src/utils/webToolDeadline.ts'
       - 'src/skills/bundled/claudeApi.ts'
@@ -15,6 +16,7 @@ on:
     branches: [main]
     paths:
       - 'src/cli/gateway/**'
+      - 'src/cli/handlers/pluginEvalGraders317.ts'
       - 'src/utils/hooks/hookConcurrency.ts'
       - 'src/utils/webToolDeadline.ts'
       - 'src/skills/bundled/claudeApi.ts'
@@ -75,6 +77,8 @@ jobs:
         run: bun test tests/m6-gateway-postgres-317.test.mjs
       - name: Hook并发调度和Web超时取消真实行为回归
         run: node --test tests/m1-hook-concurrency-312.test.mjs tests/m1-web-tools-deadline-311.test.mjs
+      - name: 插件评测评分器与执行引擎行为回归
+        run: node --test tests/m3-plugin-eval-graders-317.test.mjs tests/m3-plugin-eval-engine-317.test.mjs
       - name: 上传内容级审计证据
         if: always()
         uses: actions/upload-artifact@v4
