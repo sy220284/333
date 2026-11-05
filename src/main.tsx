@@ -3535,6 +3535,24 @@ async function run(): Promise<CommanderCommand> {
     await mcpResetChoicesHandler();
   });
 
+  const modelsCommand = program.command('models').description('查询已连接服务商的实际模型目录');
+  modelsCommand.command('list').description('查看本地已发现模型').action(async () => {
+    const { getSavedModelOptions } = await import('./services/api/multimodel/catalog.js');
+    const entries = getSavedModelOptions();
+    for (const model of entries) process.stdout.write(`${model.value}\n`);
+  });
+  modelsCommand.command('refresh [provider]').description('从服务商刷新当前账号可用模型').action(async (provider?: string) => {
+    const { listSupportedProviders, refreshProviderModels } = await import('./services/api/multimodel/catalog.js');
+    const names = listSupportedProviders();
+    if (provider && !names.includes(provider as typeof names[number])) {
+      throw new Error(`未知服务商：${provider}。支持：${names.join(', ')}`);
+    }
+    const selected = provider ? [provider as typeof names[number]] : names;
+    for (const name of selected) {
+      const models = await refreshProviderModels(name);
+      process.stdout.write(`${name}: ${models.length} 个可用模型\n`);
+    }
+  });
   program.command('local-tasks').description('查看本机任务履历').option('--json', '使用 JSON 输出').action(async (options: { json?: boolean }) => {
     const { readLocalTasks } = await import('./services/localRuntime/taskJournal.js');
     const tasks = await readLocalTasks();
