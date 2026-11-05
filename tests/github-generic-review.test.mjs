@@ -56,3 +56,56 @@ test('审查执行链进行 Git 差异采集及不可信输入处理', () => {
     assert.ok(source.includes(keyword),keyword)
   }
 })
+
+
+test('极深执行器真实完成四轮审查、独立复核、PR 评论及报告保存', async () => {
+  const script=githubReviewerScript().replace(/^import .*$/gm,'')
+  const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor
+  const execute=new AsyncFunction('readFileSync','writeFileSync','execFileSync',
+    'process','fetch','setTimeout','clearTimeout','Buffer','URL','AbortController',script)
+  const writes=new Map()
+  const requests=[]
+  let modelCalls=0
+  const env={
+    GITHUB_REPOSITORY:'owner/example',GITHUB_EVENT_PATH:'mock.json',
+    GITHUB_EVENT_NAME:'workflow_dispatch',INPUT_PR_NUMBER:'28',REVIEW_MODE:'extreme',
+    MODEL_PROVIDER:'openai-compatible',MODEL_NAME:'test-model',
+    MODEL_API_KEY:'fake-for-test',GH_TOKEN:'fake-for-test',
+  }
+  const fetch=async (url,options) => {
+    requests.push({url,method:options.method})
+    if(url.endsWith('/pulls/28')) return {
+      ok:true,text:async()=>JSON.stringify({title:'变更测试',head:{sha:'abc'}})
+    }
+    if(url.endsWith('/issues/28/comments')) return {
+      ok:true,text:async()=>JSON.stringify({id:1})
+    }
+    if(url==='https://api.openai.com/v1/chat/completions') return {
+      ok:true,text:async()=>JSON.stringify({
+        choices:[{message:{content:'第'+(++modelCalls)+'轮核查结果'}}]
+      })
+    }
+    throw new Error('意外网络请求：'+url)
+  }
+  const FakeURL=class {
+    constructor(url) {
+      this.protocol=url.startsWith('https://') ? 'https:' : 'http:'
+      this.username='';this.password='';this.hash=''
+    }
+  }
+  const FakeAbortController=class { signal={}; abort(){} }
+  await execute(
+    ()=>JSON.stringify({}),
+    (name,body)=>writes.set(name,body),
+    (_command,args)=>{
+      assert.deepEqual(args.slice(0,3),['pr','diff','28'])
+      return 'diff --git a/a.ts b/a.ts\n+console.log(2)\n'
+    },
+    {env,stdout:{write() {}}},
+    fetch,()=>0,()=>{}, {byteLength:s=>s.length},FakeURL,FakeAbortController,
+  )
+  assert.equal(modelCalls,5)
+  assert.ok(writes.get('333-review-report.md').includes('第5轮核查结果'))
+  assert.equal(requests.filter(r=>r.url.endsWith('/issues/28/comments')).length,1)
+  assert.equal(requests.filter(r=>r.url.startsWith('https://api.openai.com/')).length,5)
+})
