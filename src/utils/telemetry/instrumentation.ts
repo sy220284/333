@@ -41,9 +41,6 @@ import {
 } from 'src/bootstrap/state.js'
 import {
   getOtelHeadersFromHelper,
-  getSubscriptionType,
-  is1PApiCustomer,
-  isClaudeAISubscriber,
 } from 'src/utils/auth.js'
 import { getPlatform, getWslVersion } from 'src/utils/platform.js'
 
