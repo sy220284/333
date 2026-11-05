@@ -203,7 +203,7 @@ export function createProjectsClient317(config:ProjectClientConfig317){
           ...(sourceSessionId?{source_session_id:sourceSessionId}:{}),
         },signal)
         const setupId=record(data)&&record(data.message)?text(data.message.id):null
-        if(!setupId||!MESSAGE_ID.test(setupId)){
+        if(!record(data)||!setupId||!MESSAGE_ID.test(setupId)){
           throw new ProjectApiError317('Setup reply is incomplete; check the project before retrying',null,true)
         }
         return {kind:'submitted',alreadySubmitted:record(data)&&data.already_submitted===true,
