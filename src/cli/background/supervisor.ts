@@ -138,8 +138,8 @@ async function launch(record, { resume = false } = {}) {
   active.set(record.id, { proc, record: next, subscribers, finalization })
   try {
     await saveSession(next)
-    settleLaunch(true)
     for (const chunk of earlyOutput) recordOutput(record.id, chunk)
+    settleLaunch(true)
     return next
   } catch (error) {
     settleLaunch(false)
