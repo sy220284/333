@@ -21,7 +21,6 @@ const VALUE_FLAGS = new Set([
   '--plan-mode-instructions','--plugin-dir','--plugin-dir-no-mcp',
   '--plugin-url','--rewind-files','--thinking','--thinking-display',
   '--remote-control-session-name-prefix','--json-schema',
-  '--project-config-root','--output-format',
 ])
 const MULTI_VALUE = new Set([
   '--allowed-tools','--allowedTools','--disallowed-tools','--disallowedTools',
@@ -39,10 +38,11 @@ const BOOL_FLAGS = new Set([
   '--personal','--allow-other-models',
 ])
 const DROP_VALUE = new Set([
+  '--output-format','--project-config-root',
   '--session-id','--resume','-r','--resume-session-at','--resume-drops-turn',
 ])
 const DROP_BOOL = new Set([
-  '--bg','--background','--continue','-c','--print','-p','--help','-h',
+  '-m','--bg','--background','--continue','-c','--print','-p','--help','-h',
   '--replay-user-messages','--no-session-persistence',
 ])
 type RespawnOption317 = { name:string; tokens:string[] }
