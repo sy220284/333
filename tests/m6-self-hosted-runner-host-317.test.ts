@@ -193,3 +193,42 @@ test('Runner 317: end-to-end source-backed assignment runs inside checked-out re
     expect(steps).toEqual(['state','spawn','release'])
   }finally{rmSync(root,{recursive:true,force:true})}
 })
+
+// The official 317 release push is opt-in and never runs after completion.
+test('Runner 317: completed sessions never push even when preservation is enabled',async()=>{
+  const root=temp(),aborted=new AbortController()
+  const bare=join(root,'owner','project.git'),writer=join(root,'writer')
+  const git=(...args:string[])=>execFileSync('git',args,{encoding:'utf8'}).trim()
+  try {
+    mkdirSync(join(root,'owner'),{recursive:true})
+    git('init','--bare','--initial-branch=main',bare)
+    git('init','--initial-branch=main',writer)
+    writeFileSync(join(writer,'payload.txt'),'initial')
+    git('-C',writer,'add','.')
+    git('-C',writer,'-c','user.name=QA','-c','user.email=qa@example.org','commit','-m','initial')
+    git('-C',writer,'remote','add','origin',bare)
+    git('-C',writer,'push','origin','main')
+    const api=fakeApi({
+      pollWork:async()=>({assignment_ids:['session_1'],session_assignments:[]}),
+      getSessionRemoteConfig:async()=>({
+        sources:[{type:'git_repository',url:'file://'+bare,revision:'main'}],
+        push_targets:[{type:'git_repository',git_info:{
+          repo:'owner/project',branches:['claude/finish']}}],
+        claude_code_args:{},environment_variables:{},
+        api_base_url:'https://api.example.test',
+      }),
+      releaseSession:async()=>{aborted.abort();return {released:true}},
+    })
+    await startSelfHostedRunnerHost317({api,baseDir:root,capacity:1,execPath:process.execPath,
+      scriptArgs:[],env:{},signal:aborted.signal,pushOutcomeOnRelease:true,
+      createChild(_id,_url,_token,_epoch,cwd){
+        writeFileSync(join(cwd,'completed.txt'),'complete')
+        git('-C',cwd,'add','.')
+        git('-C',cwd,'-c','user.name=QA','-c','user.email=qa@example.org',
+          'commit','-m','completed')
+        return makeHandle('completed')
+      },
+    })
+    expect(git('--git-dir',bare,'branch','--list','claude/finish')).toBe('')
+  }finally { rmSync(root,{recursive:true,force:true}) }
+})

@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { prepareRunnerWorkspace317 } from '../src/cli/selfHostedRunner/runnerWorkspace317.ts'
+import { prepareRunnerWorkspace317, pushRunnerOutcomeBranches317 } from '../src/cli/selfHostedRunner/runnerWorkspace317.ts'
 
 function git(args:string[]):string {
   return execFileSync('git',args,{encoding:'utf8'}).trim()
@@ -100,4 +100,64 @@ test('317 Runner: requested working directory symlink is rejected and published 
     expect(existsSync(join(work,'owner_project'))).toBe(false)
     expect(readdirSync(work)).toEqual(['escape'])
   }finally{rmSync(root,{recursive:true,force:true})}
+})
+
+test('317 Runner: a new outcome branch may be absent while source HEAD is valid', async () => {
+  const root=makeRoot(),signal=new AbortController().signal
+  try {
+    const url=seed(root),work=join(root,'work')
+    mkdirSync(work)
+    const prepared=await prepareRunnerWorkspace317({root:work,
+      sources:[{type:'git_repository',url}],
+      pushTargets:[{type:'git_repository',
+        git_info:{repo:'owner/project',branches:['claude/new-result']}}],
+      signal})
+    expect(prepared.outcomeBranches).toHaveLength(1)
+    expect(prepared.outcomeBranches[0]?.branch).toBe('claude/new-result')
+    expect(git(['-C',prepared.cwd,'branch','--show-current'])).toBe('claude/new-result')
+    expect(readFileSync(join(prepared.cwd,'README.md'),'utf8')).toBe('verified repository data')
+    const result=await pushRunnerOutcomeBranches317(prepared.outcomeBranches)
+    expect(result).toEqual({pushed:0,unchanged:1,failed:0})
+  }finally { rmSync(root,{recursive:true,force:true}) }
+})
+
+test('317 Runner: opt-in interrupted outcome push resumes from previous branch on worker epoch 2',async()=>{
+  const root=makeRoot(),signal=new AbortController().signal
+  try {
+    const url=seed(root),work=join(root,'work'),resume=join(root,'resume')
+    mkdirSync(work);mkdirSync(resume)
+    const config={sources:[{type:'git_repository',url,revision:'main'}],
+      pushTargets:[{type:'git_repository',
+        git_info:{repo:'owner/project',branches:['claude/continue']}}],signal}
+    const first=await prepareRunnerWorkspace317({...config,root:work,workerEpoch:1})
+    writeFileSync(join(first.cwd,'progress.txt'),'finished first step')
+    git(['-C',first.cwd,'add','progress.txt'])
+    git(['-C',first.cwd,'-c','user.name=Test','-c','user.email=test@example.org',
+      'commit','-m','partial progress'])
+    const committed=git(['-C',first.cwd,'rev-parse','HEAD'])
+    expect(await pushRunnerOutcomeBranches317(first.outcomeBranches))
+      .toEqual({pushed:1,unchanged:0,failed:0})
+    expect(git(['--git-dir',url.slice(7),'rev-parse','refs/heads/claude/continue']))
+      .toBe(committed)
+    const next=await prepareRunnerWorkspace317({...config,root:resume,workerEpoch:2})
+    expect(git(['-C',next.cwd,'rev-parse','HEAD'])).toBe(committed)
+    expect(readFileSync(join(next.cwd,'progress.txt'),'utf8')).toBe('finished first step')
+    expect(await pushRunnerOutcomeBranches317(next.outcomeBranches))
+      .toEqual({pushed:0,unchanged:1,failed:0})
+  }finally { rmSync(root,{recursive:true,force:true}) }
+})
+
+test('317 Runner: multiple outcomes are tracked individually for their repository', async()=>{
+  const root=makeRoot(),signal=new AbortController().signal
+  try {
+    const url=seed(root),work=join(root,'work')
+    mkdirSync(work)
+    const prepared=await prepareRunnerWorkspace317({root:work,
+      sources:[{type:'git_repository',url,revision:'main'}],
+      pushTargets:[{type:'git_repository',
+        git_info:{repo:'owner/project',branches:['claude/one','claude/two']}}],
+      signal})
+    expect(prepared.outcomeBranches.map(x=>x.branch)).toEqual(['claude/one','claude/two'])
+    expect(git(['-C',prepared.cwd,'branch','--list','claude/two'])).toContain('claude/two')
+  }finally { rmSync(root,{recursive:true,force:true}) }
 })
