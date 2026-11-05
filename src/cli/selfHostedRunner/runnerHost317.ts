@@ -190,7 +190,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       heartbeatAbort.abort()
       if (heartbeatTimer) clearInterval(heartbeatTimer)
       if (ownedAbort.signal.aborted) return
-      status('[runner:session] failed to start '+id+': 
+      status('[runner:session] failed to start '+id+': '+
         (error instanceof Error ? error.message : String(error)))
       await options.api.reportSessionFailure(runnerToken,id,'setup_failed',
         remoteToken ? 'worker_start_failed' : 'token_failed')
