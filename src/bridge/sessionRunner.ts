@@ -59,7 +59,7 @@ type SessionSpawnerDeps = {
   debugFile?: string
   permissionMode?: string
   /** Original 317 self-hosted runner child contract; bridge sessions remain unchanged. */
-  runnerRuntime?: { apiBaseUrl: string; configDir: string }
+  runnerRuntime?: { apiBaseUrl: string; configDir: string; inferenceToken?: string }
   onDebug: (msg: string) => void
   onActivity?: (sessionId: string, activity: SessionActivity) => void
   onPermissionRequest?: (
@@ -313,7 +313,7 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
         ...deps.env,
         // Strip the bridge's OAuth token so the child CC process uses
         // the session access token for inference instead.
-        CLAUDE_CODE_OAUTH_TOKEN: undefined,
+        CLAUDE_CODE_OAUTH_TOKEN: deps.runnerRuntime?.inferenceToken,
         CLAUDE_CODE_ENVIRONMENT_KIND: deps.runnerRuntime ? 'byoc' : 'bridge',
         ...(deps.runnerRuntime && {
           CLAUDE_CONFIG_DIR: deps.runnerRuntime.configDir,
@@ -539,8 +539,12 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
         },
         writeStdin(data: string): void {
           if (child.stdin && !child.stdin.destroyed) {
+            // Runtime environment refreshes carry bearer tokens. Record
+            // the control operation without exposing credential values.
+            const credentialUpdate = data.includes('"update_environment_variables"')
             deps.onDebug(
-              `[bridge:ws] sessionId=${opts.sessionId} >>> ${debugTruncate(data)}`,
+              `[bridge:ws] sessionId=${opts.sessionId} >>> ${credentialUpdate
+                ? '[environment values redacted]' : debugTruncate(data)}`,
             )
             child.stdin.write(data)
           }
