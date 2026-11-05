@@ -1,0 +1,59 @@
+name: M5 317 插件测试Hook策略与Worker通信三平台验收
+
+on:
+  push:
+    branches:
+      - upgrade/2.1.310-m1-evidence
+    paths:
+      - 'src/entrypoints/pluginTestFastPath317.ts'
+      - 'src/entrypoints/pluginTestGates317.ts'
+      - 'src/cli/handlers/pluginTest317.ts'
+      - 'src/cli/handlers/pluginTestWire317.ts'
+      - 'src/utils/settings/**'
+      - 'tests/m1-plugin-test-fastpath-317.test.mjs'
+      - '.github/workflows/m5-plugin-test-gates-317.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: m5-317-plugin-test-${{ github.sha }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  plugin-test:
+    name: 插件测试原版进程与政策 (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Windows 使用 Git 长路径
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 校验源码及恢复第三方依赖
+        run: |
+          node build/check-test-syntax.mjs
+          node build/restore-claude-api.mjs --verify
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 从源码独立编译完整CLI
+        run: bun build/rebuild.mjs
+      - name: 验证正式CLI到Worker的策略与回执协议
+        run: node --test tests/m1-plugin-test-fastpath-317.test.mjs
+      - name: 验证六层依赖与启动顺序
+        run: node build/check-architecture-links317.mjs
