@@ -1,19 +1,20 @@
 {
-  "name": "@anthropic-ai/claude-code",
+  "name": "@333/agent-cli",
   "version": "2.1.317",
   "bin": {
+    "333": "dist/launcher.cjs",
     "claude": "dist/launcher.cjs"
   },
   "engines": {
     "node": ">=22.15.0"
   },
   "type": "module",
-  "author": "Anthropic <support@anthropic.com>",
+  "author": "333 contributors",
   "license": "SEE LICENSE IN README.md",
-  "description": "Use Claude, Anthropic's AI assistant, right from your terminal. Claude can understand your codebase, edit files, run terminal commands, and handle entire workflows for you.",
-  "homepage": "https://github.com/anthropics/claude-code",
+  "description": "333 independent multi-model coding agent CLI",
+  "homepage": "https://github.com/sy220284/333",
   "bugs": {
-    "url": "https://github.com/anthropics/claude-code/issues"
+    "url": "https://github.com/sy220284/333/issues"
   },
   "scripts": {
     "prepare": "node -e \"if (!process.env.AUTHORIZED) { console.error('ERROR: Direct publishing is not allowed.\\nPlease see the release workflow documentation to publish this package.'); process.exit(1); }\"",
