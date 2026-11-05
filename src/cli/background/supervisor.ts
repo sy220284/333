@@ -132,6 +132,7 @@ async function launch(record, { resume = false } = {}) {
         CLAUDE_CODE_SESSION_LOG:record.logPath,
         CLAUDE_CODE_BACKGROUND_SESSION_ID:record.id,
       },executable:binary,prefix,args,
+      replaceDeadWorker:resume && !isAlive(record.pid),
       onReplay:async data=>{
         if(!data.length)return
         let bytes=data
