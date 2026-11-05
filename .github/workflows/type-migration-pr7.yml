@@ -9,6 +9,7 @@ on:
       - 'src/bootstrap/processStart317.ts'
       - 'src/utils/livePeerSessions.ts'
       - 'src/utils/sessionHydrationCommit317.ts'
+      - 'src/utils/accessibility/screenReaderMode.ts'
       - 'src/cli/handlers/pluginEvalWorkspace317.ts'
       - 'src/tasks/LocalWorkflowTask/workflowCacheKeys.ts'
       - 'src/bootstrap/preload317.ts'
@@ -32,6 +33,7 @@ on:
       - 'src/bootstrap/processStart317.ts'
       - 'src/utils/livePeerSessions.ts'
       - 'src/utils/sessionHydrationCommit317.ts'
+      - 'src/utils/accessibility/screenReaderMode.ts'
       - 'src/cli/handlers/pluginEvalWorkspace317.ts'
       - 'src/tasks/LocalWorkflowTask/workflowCacheKeys.ts'
       - 'src/bootstrap/preload317.ts'
@@ -111,6 +113,8 @@ jobs:
         run: node --test tests/m1-process-start-317.test.mjs tests/m1-workflow-cache.test.mjs tests/m1-account-peer-discovery.test.mjs
       - name: Session恢复提交与插件评测工作区行为回归
         run: node --test tests/m4-session-hydration-commit-317.test.mjs tests/m3-plugin-eval-cleanup-317.test.mjs
+      - name: 屏幕阅读器文本、输出队列及模式切换真实回归
+        run: node --test tests/m1-screen-reader-mode.test.mjs
       - name: 上传内容级审计证据
         if: always()
         uses: actions/upload-artifact@v4
