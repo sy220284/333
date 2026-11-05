@@ -4,6 +4,9 @@ on:
     branches: [upgrade/2.1.310-m1-evidence]
     paths:
       - 'src/cli/selfHostedRunner/**'
+      - 'src/bridge/sessionRunner.ts'
+      - 'src/bridge/types.ts'
+      - 'tests/m6-runner-idle-hold-317.test.ts'
       - 'src/entrypoints/cli.tsx'
       - 'tests/m6-self-hosted-runner-*'
       - '.github/workflows/m6-self-hosted-runner-317.yml'
@@ -33,7 +36,7 @@ jobs:
       - name: 核验317跨模块生产调用链与启动顺序
         run: node build/check-architecture-links317.mjs
       - name: Runner真实协议、宿主生命周期和错误路径测试
-        run: bun test tests/m6-self-hosted-runner-api-317.test.ts tests/m6-self-hosted-runner-host-317.test.ts tests/m6-self-hosted-runner-child-mode-317.test.ts tests/m6-self-hosted-runner-jwt-317.test.ts tests/m6-self-hosted-runner-workspace-317.test.ts tests/m6-self-hosted-runner-cli-args-317.test.ts tests/m6-self-hosted-runner-agents-317.test.ts
+        run: bun test tests/m6-self-hosted-runner-api-317.test.ts tests/m6-self-hosted-runner-host-317.test.ts tests/m6-self-hosted-runner-child-mode-317.test.ts tests/m6-self-hosted-runner-jwt-317.test.ts tests/m6-self-hosted-runner-workspace-317.test.ts tests/m6-self-hosted-runner-cli-args-317.test.ts tests/m6-self-hosted-runner-agents-317.test.ts tests/m6-runner-idle-hold-317.test.ts
       - name: 从TypeScript源代码重建Runner入口
         run: bun build/rebuild.mjs
       - name: Runner独立CLI帮助、拒绝未知参数、凭据缺失
@@ -41,6 +44,8 @@ jobs:
         run: |
           set -euo pipefail
           bun dist/cli.js self-hosted-runner --help | grep -F 'Usage: claude self-hosted-runner'
+          bun dist/cli.js self-hosted-runner --help | grep -F -- '--hold-idle-file'
+          bun dist/cli.js self-hosted-runner --help | grep -F -- '--max-hold-min'
           if bun dist/cli.js self-hosted-runner --unknown 2>invalid.log; then
             echo 'Unknown option was accepted' >&2
             exit 1
