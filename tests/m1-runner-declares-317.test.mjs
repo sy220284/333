@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { test } from 'node:test'
 import {
@@ -39,6 +40,11 @@ test('M1 C19-T02: runner capabilities are adopted only after matching declaratio
   assert.deepEqual(events, [['nested', true]])
   adoptRunnerDeclaration('--runner-declares=' + NESTED + ',' + ABSENT, state)
   assert.deepEqual(events, [['nested', true], ['nested', true], ['noCheckout', true]])
+})
+test('M1 C19-T02: production startup sends all declarations through shared parser', () => {
+  const startup = readFileSync(join(root, 'src/entrypoints/cli.tsx'), 'utf8')
+  assert.match(startup, /if \(runnerArg !== undefined\) \{[\s\S]*?adoptRunnerDeclaration\(runnerArg, state\)/)
+  assert.doesNotMatch(startup, /runnerArg\?\.includes\('diff-finds-nested-repository'\)/)
 })
 test('M1 C19-T02: real bootstrap state latches both runner declarations', () => {
   const script = [
