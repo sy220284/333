@@ -1,0 +1,36 @@
+name: PR7 TypeScript导出签名语义推断审计
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - 'tools/dev/annotate-export-signatures.mjs'
+      - '.github/workflows/pr7-export-type-inference.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 安装固定TypeScript与真实依赖
+        run: |
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 验证最新全仓 TypeScript 基准
+        run: node tools/dev/dev.mjs typecheck:all
+      - name: 检查真实类型可推断数量
+        run: node tools/dev/annotate-export-signatures.mjs
+      - name: 保存类型推断与需手工移植清单
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr7-remaining-types-inference
+          path: .rebuild/governance/export-types-inference.json
+          retention-days: 30
+          if-no-files-found: warn
