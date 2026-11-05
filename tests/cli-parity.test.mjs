@@ -85,20 +85,31 @@ for (const [commandLine, expected] of Object.entries(official317.commands)) {
       assert.deepEqual(native, expected, `The official x64 reference changed: ${commandLine}`);
     }
     const actual = sections(compiledHelp(args));
-    assert.deepEqual(actual, expected, `2.1.317 CLI discrepancy: ${commandLine}`);
+    // 333 product decision: the public headless conversation flags are retired.
+    // Compare the rest of the upstream help exactly, rather than restoring them.
+    const retired = new Set([
+      '--print', '--output-format', '--input-format', '--json-schema',
+      '--include-hook-events', '--include-partial-messages',
+      '--replay-user-messages', '--forward-subagent-text',
+      '--permission-prompts', '--no-session-persistence',
+      '--max-budget-usd', '--prompt-suggestions',
+    ]);
+    const desired = commandLine === '--help'
+      ? { ...expected, flags: expected.flags.filter(flag => !retired.has(flag)) }
+      : expected;
+    assert.deepEqual(actual, desired, `333 interactive-only CLI discrepancy: ${commandLine}`);
   });
 }
 
-test('317 hidden permission callback reaches the existing permission consumer', () => {
+test('333 removes the SDK callback and public headless permission mode', () => {
   const help = compiledHelp(['--help']);
-  assert.equal(sections(help).flags.includes('--permission-prompt-tool'), false,
-    'the official 317 SDK-only callback remains hidden from public --help');
-  assert.match(help, /--permission-prompts\s+<target>/);
+  const options = sections(help).flags;
+  for (const flag of ['--print', '--input-format', '--output-format', '--permission-prompts']) {
+    assert.equal(options.includes(flag), false, flag);
+  }
   const main = readFileSync(resolve(root, 'src/main.tsx'), 'utf8');
-  const print = readFileSync(resolve(root, 'src/cli/print.ts'), 'utf8');
-  assert.match(main, /permissionPromptToolName:\s*options\.permissionPromptTool/);
-  assert.match(print, /getCanUseToolFn\(/);
-  assert.match(print, /toolMatchesName\(t, permissionPromptToolName\)/);
+  assert.doesNotMatch(main, /permissionPromptToolName:\\s*options\\.permissionPromptTool/);
+  assert.doesNotMatch(main, /await runHeadless\\(/);
 });
 
 test('legacy -d2e alias is accepted by reconstructed Commander configuration', () => {
