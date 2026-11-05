@@ -24,7 +24,7 @@ export function isDaemonWorkerAdmitted317(
 async function remoteControlGate317(): Promise<boolean> {
   const { getFeatureValue_CACHED_MAY_BE_STALE } =
     await import('../services/analytics/growthbook.js')
-  return getFeatureValue_CACHED_MAY_BE_STALE('tengu_radiant_heron', false) === true
+  return getFeatureValue_CACHED_MAY_BE_STALE<boolean>('tengu_radiant_heron', false) === true
 }
 
 type Issue317 = {
@@ -198,7 +198,7 @@ export async function runDaemonWorker317(kind: string | undefined,
       timer.unref()
       pendingAuth.set(requestId, {resolve, timer})
       try {
-        parent.send!({type:'auth_401',failedToken,requestId}, error => {
+        parent.send!({type:'auth_401',failedToken,requestId}, undefined, undefined, error => {
           if (!error) return
           const pending = pendingAuth.get(requestId)
           if (pending) {
