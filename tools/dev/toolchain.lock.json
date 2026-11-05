@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "description": "333 开发与构建工具链唯一权威依赖锁；发行程序运行依赖由 build/public-dependencies.lock.json 管理",
+  "runtimes": {
+    "node": "26.13.0",
+    "bun": "1.4.4",
+    "python": "3.12",
+    "actionlint": "1.7.12"
+  },
+  "development": {
+    "packages": {
+      "@biomejs/biome": "2.6.5",
+      "@types/node": "26.6.6",
+      "@types/react": "19.3.0",
+      "typescript": "7.0.2",
+      "@types/bun": "1.4.4"
+    },
+    "typescriptAstParser": "5.9.3"
+  },
+  "integrity": {
+    "actionlintLinuxX64Sha256": "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8",
+    "sourceMapSha256": "7965012b7a5fc9e09d8d747a04c5c32b94696924536e217f686bb1e7ee70a657",
+    "sourceDependencies": {
+      "files": 2850,
+      "packages": 316
+    }
+  },
+  "artifacts": {
+    "schema": 2,
+    "buildComponents": [
+      "node",
+      "bun",
+      "npm-public",
+      "source-deps"
+    ],
+    "fullExtraComponents": [
+      "python",
+      "actionlint"
+    ],
+    "shardBytes": 367001600,
+    "npmPublicParts": 4
+  }
+}
