@@ -311,7 +311,7 @@ test('Runner 317: failed preparation is joined while another capacity slot compl
 })
 
 test('Runner 317: expiring session token refreshes the live CCR child without leaking runner credential',async()=>{
-  const root=temp(),aborted=new AbortController(),events:string[]=[]
+  const root=temp(),aborted=new AbortController(),events:string[]=[],statuses:string[]=[]
   const jwt=(exp:number)=>'header.'+Buffer.from(JSON.stringify({exp})).toString('base64url')+'.signature'
   const first=jwt(Math.floor(Date.now()/1000)+25)
   const rotated=jwt(Math.floor(Date.now()/1000)+3600)
@@ -331,15 +331,20 @@ test('Runner 317: expiring session token refreshes the live CCR child without le
     await startSelfHostedRunnerHost317({
       api,baseDir:root,capacity:1,execPath:process.execPath,scriptArgs:[],env:{},
       sessionTokenRefreshIntervalMs:10,signal:aborted.signal,
-      createChild(){
-        return {...makeHandle(),done,updateAccessToken(value:string){
+      onStatus:line=>statuses.push(line),
+      createChild(_id,_url,_token,_epoch,_cwd,_env,onTokenAck){
+        return {...makeHandle(),done,updateAccessToken(value:string,requestId?:string){
           expect(value).toBe(rotated)
+          expect(requestId).toMatch(/^shr-token-session_token-\\d+$/)
           events.push('child-token')
+          onTokenAck?.(requestId!)
           release()
         }}
       },
     })
     expect(events).toEqual(['refresh','child-token','release'])
+    expect(statuses.some(line=>line.includes('session_token update acked by child')))
+      .toBe(true)
   }finally{rmSync(root,{recursive:true,force:true})}
 })
 
