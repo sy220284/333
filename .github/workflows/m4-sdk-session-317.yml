@@ -13,14 +13,25 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: m4-sdk-session-317-${{ github.ref }}
-  cancel-in-progress: true
+  group: m4-sdk-session-317-${{ github.sha }}
+  cancel-in-progress: false
 jobs:
   session-sdk:
-    name: SDK会话生产操作与原子存储
-    runs-on: ubuntu-24.04
+    name: SDK会话生产操作与原子存储 (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 25
     steps:
+      - name: Windows 提前开启 Git 长路径以保留完整源码
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
