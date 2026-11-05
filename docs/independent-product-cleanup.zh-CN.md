@@ -24,3 +24,8 @@
 
 ## 检查方式
 执行 `node --test tests/independent-product-cleanup.test.mjs`，再做全量类型检查、构建和正式终端交互验证。
+
+## 官方 2.1.317 的有意产品差异
+- C20 云端 Slack/Ultra 审查链路经用户明确取消，改为 /review 三模式本地审查。上游原始参考保留在 research/ 和历史文件；项目版六层映射更新为有效入口 src/commands/review.ts。
+- 旧官方 Feedback.tsx 已退出正式程序；中文回归检查本地诊断导出文案。
+- TypeScript 严格迁移检查将已退役的云审查协议模块替换为新模式解析模块，并继续保留检查总量和生产类型约束。

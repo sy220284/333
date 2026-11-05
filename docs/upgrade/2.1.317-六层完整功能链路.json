@@ -2394,17 +2394,17 @@
     },
     {
       "id": "C20",
-      "name": "Slack Claude Tag/Code Review外部服务",
+      "name": "代码审查与原平台外部服务的独立化迁移",
       "layer": "M6",
       "layer_index": 5,
       "flow": [
-        "外部事件/身份",
-        "Slack/PR消息处理",
-        "异步执行",
-        "结果/去重/权限"
+        "用户选择普通、深度或安全审查",
+        "读取本地 Git 差异或指定 PR",
+        "复核问题证据",
+        "以本地结果呈现"
       ],
       "source_candidates": [
-        "src/commands/review/reviewRemote.ts",
+        "src/commands/review.ts",
         "src/bridge/remoteBridgeCore.ts"
       ],
       "required_semantics": [
@@ -2415,7 +2415,7 @@
         "数据持久化、恢复及资源清理",
         "UI、SDK、CLI或外部消费者结果回传"
       ],
-      "acceptance": "Slack/Code Review真实服务端对照及重复事件",
+      "acceptance": "本地三模式审查可达、参数和目标解析正确，云端付费入口与 Slack Claude Tag 无连接",
       "baseline_feature_ids": [
         "F101",
         "F102"
@@ -2426,12 +2426,12 @@
         "源码缺失时依据x64实际输入输出重写",
         "执行功能/异常/恢复回归，修正差异"
       ],
-      "status": "PENDING_317_CODE_ALIGNMENT",
+      "status": "REPLACED_BY_LOCAL_PRODUCT_REVIEW",
       "official_source_starts": [
         "chunk-gsvwtjad.js:931（云审查CLI）",
         "chunk-ygv5qy17.js:620（ultrareviewHandler及finding格式）"
       ],
-      "current_difference": "ultrareview入口与云审查整链尚未接通；Slack/PR事件、外部服务接口及结果投递需从新版实现完整展开。",
+      "current_difference": "经用户2026-11-05明确决定删除 Claude 专属 Slack/GitHub App、云端 Ultrareview、付费额度、外部事件接口；统一 /review 本地审查。保留跨模型工具、Git、Agent 与 Bridge 通用能力。",
       "related_chains": [
         "C04",
         "C11",
@@ -2447,40 +2447,40 @@
           "title": "外部事件和命令入口",
           "implementation": "分析Slack Claude Tag、Code Review、ultrareview的正式入口、目标选择、参数、宿主和账号条件",
           "associated_updates": "M3命令、服务注册、PR/消息标识及登录/权限提示",
-          "acceptance": "合法和非法目标、参数冲突及不可用账号条件得到原版结果",
-          "status": "PENDING_FUNCTION_DIFF"
+          "acceptance": "独立产品专用：不注册官方云服务入口，不发送官方反馈、统计或订阅数据。",
+          "status": "RETIRED_BY_USER_DECISION"
         },
         {
           "id": "C20-T02",
           "title": "云任务和审查执行",
           "implementation": "移植ultrareview完整handler、任务创建、云代理审查、轮询/等待、取消和完成处理",
           "associated_updates": "C15云执行、C01模型、任务状态和远端请求schema",
-          "acceptance": "真实目标可创建和完成审查，失败、等待中退出及取消语义正确",
-          "status": "PENDING_FUNCTION_DIFF"
+          "acceptance": "独立产品专用：不注册官方云服务入口，不发送官方反馈、统计或订阅数据。",
+          "status": "RETIRED_BY_USER_DECISION"
         },
         {
           "id": "C20-T03",
           "title": "身份、权限及事件去重",
           "implementation": "对齐Slack/PR事件验证、项目权限、请求幂等、重复事件和跨账号隔离",
           "associated_updates": "OAuth、服务端回调、事件ID、审批及安全存储",
-          "acceptance": "伪造/无权/重复/跨账号事件不会误触发任务或泄露结果",
-          "status": "PENDING_FUNCTION_DIFF"
+          "acceptance": "独立产品专用：不注册官方云服务入口，不发送官方反馈、统计或订阅数据。",
+          "status": "RETIRED_BY_USER_DECISION"
         },
         {
           "id": "C20-T04",
           "title": "结果、评论及关联组件",
           "implementation": "同步finding严重度、文件/行号、报告、PR/Slack回传、通知及本地展示",
           "associated_updates": "审查结果schema、链接/报告素材、C12界面和外部接口",
-          "acceptance": "结果字段及语义正确，重试不重复发送评论或消息",
-          "status": "PENDING_FUNCTION_DIFF"
+          "acceptance": "独立产品专用：不注册官方云服务入口，不发送官方反馈、统计或订阅数据。",
+          "status": "RETIRED_BY_USER_DECISION"
         },
         {
           "id": "C20-T05",
           "title": "完整宿主回归和底层补齐",
           "implementation": "核对仓库未提供的宿主/服务端部分，补客户端、接口适配、资源与版本约束，保留实际部署验证要求",
           "associated_updates": "C13/C14/C15宿主、认证、服务配置和发布依赖",
-          "acceptance": "从真实事件到任务、审批、执行、结果及重启恢复完整跑通，未验证项保持未完成",
-          "status": "PENDING_FUNCTION_DIFF"
+          "acceptance": "独立产品专用：不注册官方云服务入口，不发送官方反馈、统计或订阅数据。",
+          "status": "RETIRED_BY_USER_DECISION"
         }
       ],
       "acceptance_scenarios": [
@@ -2492,7 +2492,7 @@
         "E110",
         "L26"
       ],
-      "completion": "本链五个工作包及实施中新发现的适用能力均完成；真实入口、底层执行、关联组件/资源、接口双方和异常恢复达到原版语义并通过测试后再标记整链完成。"
+      "completion": "本项目产品路径改为 /review normal|deep|security，原版 C20 云端功能和外部服务作为退役历史范围保留文档记录；验收以独立产品指定行为与专用回归为准。"
     }
   ],
   "verification_policy": {
