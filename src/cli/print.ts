@@ -241,10 +241,6 @@ import {
   runElicitationResultHooks,
 } from 'src/services/mcp/elicitationHandler.js'
 import { executeNotificationHooks } from 'src/utils/hooks.js'
-import {
-  ElicitRequestSchema,
-  ElicitationCompleteNotificationSchema,
-} from '@modelcontextprotocol/sdk/types.js'
 import { getMcpPrefix } from 'src/services/mcp/mcpStringUtils.js'
 import { beginHeadlessMcpElicitation } from 'src/services/mcp/headlessElicitationState.js'
 import {
@@ -1299,7 +1295,7 @@ function runHeadlessStreaming(
       // created with elicitation capability declared (e.g., SDK-created clients).
       try {
         connection.client.setRequestHandler(
-          ElicitRequestSchema,
+          'elicitation/create',
           async (request, extra) => {
             const finishElicitation = beginHeadlessMcpElicitation(connection.client)
             try {
@@ -1382,7 +1378,7 @@ function runHeadlessStreaming(
 
         // Surface completion notifications to SDK consumers (URL mode)
         connection.client.setNotificationHandler(
-          ElicitationCompleteNotificationSchema,
+          'notifications/elicitation/complete',
           notification => {
             const { elicitationId } = notification.params
             logMCPDebug(
@@ -4759,6 +4755,7 @@ function handleChannelEnable(
   // useManageMCPConnections. drainCommandQueue processes it between turns —
   // channel messages queue at priority 'next' and are seen by the model on
   // the turn after they arrive.
+  /* @mcp-codemod-error setNotificationHandler with a non-string first argument: v2 takes a method string — use the typed two-argument spec form, or the three-argument custom form (setNotificationHandler('method/name', { params, result? }, handler)). No change is needed if the argument already holds a method string. */
   connection.client.setNotificationHandler(
     ChannelMessageNotificationSchema(),
     async notification => {
@@ -4835,6 +4832,7 @@ function reregisterChannelHandlerAfterReconnect(
     connection.name,
     'Channel notifications re-registered after reconnect',
   )
+  /* @mcp-codemod-error setNotificationHandler with a non-string first argument: v2 takes a method string — use the typed two-argument spec form, or the three-argument custom form (setNotificationHandler('method/name', { params, result? }, handler)). No change is needed if the argument already holds a method string. */
   connection.client.setNotificationHandler(
     ChannelMessageNotificationSchema(),
     async notification => {

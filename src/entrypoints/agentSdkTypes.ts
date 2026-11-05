@@ -9,11 +9,8 @@
  * sdk/controlTypes.ts directly.
  */
 
-import type {
-  CallToolResult,
-  ToolAnnotations,
-} from '@modelcontextprotocol/sdk/types.js'
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { McpServer } from "@modelcontextprotocol/server";
+import type { CallToolResult, ToolAnnotations } from "@modelcontextprotocol/server";
 
 // Control protocol types for SDK builders (bridge subpath consumers)
 /** @alpha */
@@ -117,11 +114,12 @@ export function createSdkMcpServer(
       throw new Error('Duplicate SDK MCP tool: ' + definition.name)
     }
     registered.add(definition.name)
+    /* @mcp-codemod-error Could not verify `inputSchema` is a schema object. Raw shapes are deprecated in v2 — pass a Standard Schema object (e.g. z.object({ … })); no change is needed if it already is one. */
     instance.registerTool(definition.name, {
       description: definition.description,
       inputSchema: definition.inputSchema,
       ...(definition.annotations && { annotations: definition.annotations }),
-    }, (args, extra) => definition.handler(args, extra))
+    }, (args, ctx) => definition.handler(args, ctx))
   }
   return { type: 'sdk', name: options.name, instance }
 }

@@ -6,7 +6,7 @@
  * resources/list_changed invalidates the same cache as MCP commands.
  */
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
-import type { Resource } from '@modelcontextprotocol/sdk/types.js'
+import type { Resource } from "@modelcontextprotocol/server";
 import type { Command } from '../types/command.js'
 import type { MCPServerConnection, ConnectedMCPServer } from '../services/mcp/types.js'
 import { normalizeNameForMCP } from '../services/mcp/normalization.js'

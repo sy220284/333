@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { z } from 'zod/v4'
-import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { Client } from "@modelcontextprotocol/client";
 import { createLinkedTransportPair } from '../src/services/mcp/InProcessTransport.ts'
 import { createSdkMcpServer, tool } from '../src/entrypoints/agentSdkTypes.ts'
 

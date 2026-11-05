@@ -1,8 +1,4 @@
-import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import type {
-  Resource,
-  ServerCapabilities,
-} from '@modelcontextprotocol/sdk/types.js'
+import type { Client, Resource, ServerCapabilities } from "@modelcontextprotocol/client";
 import { z } from 'zod/v4'
 import { lazySchema } from '../../utils/lazySchema.js'
 

@@ -1,5 +1,5 @@
 import { DiagLogLevel, diag, trace } from '@opentelemetry/api'
-import { logs } from '@opentelemetry/api-logs'
+import { logs } from '@opentelemetry/api'
 // OTLP/Prometheus exporters are dynamically imported inside the protocol
 // switch statements below. A process uses at most one protocol variant per
 // signal, but static imports would load all 6 (~1.2MB) on every startup.
@@ -23,7 +23,7 @@ import {
   BasicTracerProvider,
   BatchSpanProcessor,
   ConsoleSpanExporter,
-} from '@opentelemetry/sdk-trace-base'
+} from '@opentelemetry/sdk-trace'
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,

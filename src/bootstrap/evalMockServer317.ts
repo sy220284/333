@@ -3,9 +3,8 @@ import { open, lstat } from 'node:fs/promises'
 import { constants } from 'node:fs'
 import { dirname, isAbsolute, relative, resolve } from 'node:path'
 import { createConnection } from 'node:net'
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
+import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
+import { Server } from "@modelcontextprotocol/server";
 
 const MAX_SPEC_BYTES = 4_194_304
 const MAX_FIXTURE_BYTES = 1_048_576
@@ -261,7 +260,7 @@ export async function runEvalMockServer317(specPath: string | undefined,
   const server = new Server({ name: 'eval-mock/' + spec.server, version: '1' },
     { capabilities: { tools: {} } })
   server.onclose = () => abort.abort()
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  server.setRequestHandler('tools/list', async () => ({
     tools: spec.tools.map(tool => ({
       name: tool.name, description: tool.description,
       inputSchema: { type: 'object' as const, ...tool.inputSchema },
@@ -269,7 +268,7 @@ export async function runEvalMockServer317(specPath: string | undefined,
   }))
   // Calls are processed serially, ensuring deterministic seq and call logs.
   let queue = Promise.resolve()
-  server.setRequestHandler(CallToolRequestSchema, req => {
+  server.setRequestHandler('tools/call', req => {
     const work = queue.then(async () => {
       const name = req.params.name
       const input = (req.params.arguments ?? {}) as Record<string, unknown>

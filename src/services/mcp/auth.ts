@@ -1,29 +1,8 @@
-import {
-  discoverAuthorizationServerMetadata,
-  discoverOAuthServerInfo,
-  type OAuthClientProvider,
-  type OAuthDiscoveryState,
-  auth as sdkAuth,
-  refreshAuthorization as sdkRefreshAuthorization,
-} from '@modelcontextprotocol/sdk/client/auth.js'
-import {
-  InvalidGrantError,
-  OAuthError,
-  ServerError,
-  TemporarilyUnavailableError,
-  TooManyRequestsError,
-} from '@modelcontextprotocol/sdk/server/auth/errors.js'
-import {
-  type AuthorizationServerMetadata,
-  type OAuthClientInformation,
-  type OAuthClientInformationFull,
-  type OAuthClientMetadata,
-  OAuthErrorResponseSchema,
-  OAuthMetadataSchema,
-  type OAuthTokens,
-  OAuthTokensSchema,
-} from '@modelcontextprotocol/sdk/shared/auth.js'
-import type { FetchLike } from '@modelcontextprotocol/sdk/shared/transport.js'
+import { OAuthErrorResponseSchema, OAuthMetadataSchema, OAuthTokensSchema } from "@modelcontextprotocol/core";
+import type { AuthorizationServerMetadata, OAuthClientInformation, OAuthClientInformationFull, OAuthClientMetadata, OAuthTokens, FetchLike } from "@modelcontextprotocol/server";
+import { InvalidGrantError, OAuthError, ServerError, TemporarilyUnavailableError, TooManyRequestsError } from "@modelcontextprotocol/server-legacy/auth";
+import { discoverAuthorizationServerMetadata, discoverOAuthServerInfo, auth as sdkAuth, refreshAuthorization as sdkRefreshAuthorization } from "@modelcontextprotocol/client";
+import type { OAuthClientProvider, OAuthDiscoveryState } from "@modelcontextprotocol/client";
 import axios from 'axios'
 import { createHash, randomBytes, randomUUID } from 'crypto'
 import { mkdir } from 'fs/promises'

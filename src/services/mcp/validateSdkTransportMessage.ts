@@ -1,7 +1,5 @@
-import {
-  JSONRPCMessageSchema,
-  type JSONRPCMessage,
-} from '@modelcontextprotocol/sdk/types.js'
+import type { JSONRPCMessage } from "@modelcontextprotocol/server";
+import { JSONRPCMessageSchema } from "@modelcontextprotocol/core";
 
 /**
  * Validate the untrusted SDK control payload before entering an MCP transport.

@@ -24,12 +24,6 @@ const fetchMcpSkillsForClient = feature('MCP_SKILLS')
       require('../../skills/mcpSkills.js') as typeof import('../../skills/mcpSkills.js')
     ).fetchMcpSkillsForClient
   : null
-
-import {
-  PromptListChangedNotificationSchema,
-  ResourceListChangedNotificationSchema,
-  ToolListChangedNotificationSchema,
-} from '@modelcontextprotocol/sdk/types.js'
 import omit from 'lodash-es/omit.js'
 import reject from 'lodash-es/reject.js'
 import {
@@ -515,6 +509,7 @@ export function useManageMCPConnections(
             switch (gate.action) {
               case 'register':
                 logMCPDebug(client.name, 'Channel notifications registered')
+                /* @mcp-codemod-error setNotificationHandler with a non-string first argument: v2 takes a method string — use the typed two-argument spec form, or the three-argument custom form (setNotificationHandler('method/name', { params, result? }, handler)). No change is needed if the argument already holds a method string. */
                 client.client.setNotificationHandler(
                   ChannelMessageNotificationSchema(),
                   async notification => {
@@ -552,6 +547,7 @@ export function useManageMCPConnections(
                     'claude/channel/permission'
                   ] !== undefined
                 ) {
+                  /* @mcp-codemod-error setNotificationHandler with a non-string first argument: v2 takes a method string — use the typed two-argument spec form, or the three-argument custom form (setNotificationHandler('method/name', { params, result? }, handler)). No change is needed if the argument already holds a method string. */
                   client.client.setNotificationHandler(
                     ChannelPermissionNotificationSchema(),
                     async notification => {
@@ -579,6 +575,7 @@ export function useManageMCPConnections(
                 client.client.removeNotificationHandler(
                   'notifications/claude/channel',
                 )
+                /* @mcp-codemod-error removeNotificationHandler takes the method string in v2 — replace the schema-derived argument with the literal method name (no change needed if this already passes a string). */
                 client.client.removeNotificationHandler(
                   CHANNEL_PERMISSION_METHOD,
                 )
@@ -628,7 +625,7 @@ export function useManageMCPConnections(
           // These allow the server to notify us when tools, prompts, or resources change
           if (client.capabilities?.tools?.listChanged) {
             client.client.setNotificationHandler(
-              ToolListChangedNotificationSchema,
+              'notifications/tools/list_changed',
               async () => {
                 logMCPDebug(
                   client.name,
@@ -677,7 +674,7 @@ export function useManageMCPConnections(
 
           if (client.capabilities?.prompts?.listChanged) {
             client.client.setNotificationHandler(
-              PromptListChangedNotificationSchema,
+              'notifications/prompts/list_changed',
               async () => {
                 logMCPDebug(
                   client.name,
@@ -712,7 +709,7 @@ export function useManageMCPConnections(
 
           if (client.capabilities?.resources?.listChanged) {
             client.client.setNotificationHandler(
-              ResourceListChangedNotificationSchema,
+              'notifications/resources/list_changed',
               async () => {
                 logMCPDebug(
                   client.name,

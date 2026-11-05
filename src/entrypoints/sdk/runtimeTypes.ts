@@ -8,8 +8,7 @@
  * This is a type-only module: the actual SDK runtime still needs a separate
  * executable implementation.
  */
-import type { CallToolResult, ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { CallToolResult, ToolAnnotations, McpServer } from "@modelcontextprotocol/server";
 import type { z } from 'zod/v4'
 import type {
   AgentDefinition,

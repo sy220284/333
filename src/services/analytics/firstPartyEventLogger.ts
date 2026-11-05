@@ -1,4 +1,4 @@
-import type { AnyValueMap, Logger, logs } from '@opentelemetry/api-logs'
+import type { AnyValueMap, Logger, logs } from '@opentelemetry/api'
 import { resourceFromAttributes } from '@opentelemetry/resources'
 import {
   BatchLogRecordProcessor,
