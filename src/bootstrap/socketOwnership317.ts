@@ -53,6 +53,16 @@ export async function captureSocketIdentity317(path: string, label: string): Pro
   return { dev: stat.dev, ino: stat.ino }
 }
 
+/** Snapshot the bound Unix socket before the signal event loop can interleave.
+ * The async lstat variant opens a race between listen() readiness and SIGTERM,
+ * leaving an orphan socket if the process exits before ownership is recorded.
+ */
+export function captureSocketIdentitySync317(path: string, label: string): SocketIdentity317 {
+  const stat = lstatSync(path)
+  if (!stat.isSocket()) throw new Error(label + ' is not bound to a socket: ' + path)
+  return { dev: stat.dev, ino: stat.ino }
+}
+
 /** Never unlink a pathname now belonging to a replacement listener. */
 export async function unlinkOwnedSocket317(path: string, owner: SocketIdentity317): Promise<boolean> {
   let current
