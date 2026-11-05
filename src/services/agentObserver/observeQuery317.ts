@@ -8,7 +8,7 @@ import type { CacheSafeParams } from '../../utils/forkedAgent.js'
 import { createObserverRuntime317, type ObserverRuntime317 } from './observerRuntime317.js'
 import type { ObserverActivity317 } from './observer317.js'
 
-type StreamValue317 = Message | { type: string; [key: string]: unknown }
+type StreamValue317 = { type: string }
 type Entry317 = {
   agentType: string
   params: QueryParams
@@ -23,7 +23,7 @@ function captureActivity(value: StreamValue317, activity: ObserverActivity317[],
   if (value.type === 'assistant' && 'message' in value && value.message &&
       typeof value.message === 'object' && 'content' in value.message &&
       Array.isArray(value.message.content)) {
-    const assistant = value as Message
+    const assistant = value as unknown as Message
     if (assistant.type !== 'assistant') return
     for (const block of assistant.message.content) {
       if (block.type === 'text' && block.text.trim()) {
@@ -34,7 +34,7 @@ function captureActivity(value: StreamValue317, activity: ObserverActivity317[],
     }
     history.push(assistant)
   } else if (value.type === 'user' && 'message' in value) {
-    const user = value as Message
+    const user = value as unknown as Message
     if (user.type === 'user') history.push(user)
   }
 }
