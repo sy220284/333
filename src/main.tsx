@@ -3619,7 +3619,7 @@ async function run(): Promise<CommanderCommand> {
     .option('--from-env <name>', '从指定环境变量读取密钥')
     .action(async (provider: string, options: { fromEnv?: string }) => {
       const { validateApiKeyProvider, setProviderApiKey } = await import('./services/auth/apiKeyVault.js');
-      validateApiKeyProvider(provider);
+      const checkedProvider = validateApiKeyProvider(provider);
       let key: string;
       if (options.fromEnv) {
         key = process.env[options.fromEnv] ?? '';
@@ -3634,7 +3634,7 @@ async function run(): Promise<CommanderCommand> {
         }
         key = text.trimEnd();
       }
-      await setProviderApiKey(provider, key);
+      await setProviderApiKey(checkedProvider, key);
       process.stdout.write(`已保存 ${provider} 的本机 API Key\n`);
     });
   providerKeys.command('list').description('列出已配置服务商（不显示密钥）').action(async () => {
@@ -3644,8 +3644,8 @@ async function run(): Promise<CommanderCommand> {
   providerKeys.command('delete <provider>').description('删除该服务商的本机 API Key')
     .action(async (provider: string) => {
       const { validateApiKeyProvider, deleteProviderApiKey } = await import('./services/auth/apiKeyVault.js');
-      validateApiKeyProvider(provider);
-      await deleteProviderApiKey(provider);
+      const checkedProvider = validateApiKeyProvider(provider);
+      await deleteProviderApiKey(checkedProvider);
       process.stdout.write(`已删除 ${provider} 的本机 API Key\n`);
     });
   auth.command('chatgpt-login').description('通过官方浏览器授权连接 ChatGPT 账号').action(async () => {
