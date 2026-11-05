@@ -17,13 +17,24 @@ const NAME = /^(?!\.{1,2}$)[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/
 const BRANCH = /^(?![-/.])(?!.*(?:\.\.|@\{|\/\/|\\|:\s|\/$|\.lock(?:\/|$)))[A-Za-z0-9._/-]{1,240}$/
 type Entry = Record<string, unknown>
 type Source = { url: string; revision?: string; repoKey: string; folder: string }
-export type RunnerWorkspace317 = { cwd: string; repositories: readonly string[] }
+export type RunnerOutcomeBranch317 = {
+  repositoryPath: string
+  branch: string
+  baselineSha: string
+}
+export type RunnerWorkspace317 = {
+  cwd: string
+  repositories: readonly string[]
+  outcomeBranches: readonly RunnerOutcomeBranch317[]
+}
+export type RunnerPushResult317 = { pushed: number; unchanged: number; failed: number }
 export type RunnerWorkspaceOptions317 = {
   root: string
   sources: readonly unknown[]
   pushTargets: readonly unknown[]
   requestedCwd?: string
   signal: AbortSignal
+  workerEpoch?: number
   onStatus?: (message: string) => void
 }
 function object(value: unknown): value is Entry {
@@ -156,9 +167,11 @@ export async function prepareRunnerWorkspace317(
     folders.add(src.folder.toLowerCase())
   }
   const published:string[]=[]
+  const outcomeBranches: RunnerOutcomeBranch317[] = []
   const staged=await mkdtemp(join(root,'.runner-checkout-'))
   try {
-    const planned:{stage:string;target:string;source:Source}[]=[]
+    const planned:{stage:string;target:string;source:Source;
+      branches: {name:string; baselineSha:string}[]}[]=[]
     for(const src of sources) {
       const destination=join(root,src.folder)
       const stage=join(staged,src.folder)
@@ -166,21 +179,52 @@ export async function prepareRunnerWorkspace317(
       options.onStatus?.('[runner:git] preparing '+src.repoKey)
       await git(['clone','--no-checkout','--origin','origin','--',
         src.url,stage],root,options.signal,'clone '+src.repoKey)
-      const first=(targets.get(src.repoKey) ?? [])[0]
-      const commit=await selectedCommit(stage,src.revision ?? first,options.signal)
-      if(first) {
-        await git(['-C',stage,'checkout','-f','-B',first,commit],
-          stage,options.signal,'select branch '+src.repoKey)
-      } else {
-        await git(['-C',stage,'checkout','--detach','-f',commit],
+      const branches=targets.get(src.repoKey) ?? []
+      // A new outcome branch is permitted to be absent on origin. It starts
+      // from the source revision, never from a guessed outcome ref.
+      const sourceCommit=await selectedCommit(stage,src.revision,options.signal)
+      const initialized:{name:string;baselineSha:string}[]=[]
+      for(const name of branches) {
+        let initial=sourceCommit
+        if((options.workerEpoch ?? 1)>1) {
+          try {
+            await git(['-C',stage,'fetch','--no-write-fetch-head','origin',
+              '+refs/heads/'+name+':refs/remotes/origin/'+name],
+              stage,options.signal,'resume branch '+src.repoKey)
+            initial=await selectedCommit(stage,'refs/remotes/origin/'+name,
+              options.signal)
+            options.onStatus?.('[runner:git] resumed '+src.repoKey+' '+name)
+          } catch(error) {
+            if(options.signal.aborted) throw error
+            options.onStatus?.('[runner:git] no prior outcome branch for '+src.repoKey+
+              ' '+name+'; starting from source revision')
+          }
+        }
+        if(initialized.length===0) {
+          await git(['-C',stage,'checkout','-f','-B',name,initial],
+            stage,options.signal,'select branch '+src.repoKey)
+        } else {
+          await git(['-C',stage,'branch','--no-track',name,initial],
+            stage,options.signal,'create outcome '+src.repoKey)
+        }
+        initialized.push({name,baselineSha:initial})
+      }
+      if(initialized.length===0) {
+        await git(['-C',stage,'checkout','--detach','-f',sourceCommit],
           stage,options.signal,'checkout '+src.repoKey)
       }
-      planned.push({stage,target:destination,source:src})
+      planned.push({stage,target:destination,source:src,branches:initialized})
     }
     for(const repo of planned) {
       await ensureUnoccupied(repo.target)
       await rename(repo.stage,repo.target)
       published.push(repo.target)
+      for(const branch of repo.branches) {
+        outcomeBranches.push({
+          repositoryPath:repo.target,branch:branch.name,
+          baselineSha:branch.baselineSha,
+        })
+      }
     }
     const chosenCwd=options.requestedCwd
       ? safeRequestedDirectory(root,options.requestedCwd)
@@ -190,11 +234,55 @@ export async function prepareRunnerWorkspace317(
        (await realpath(chosenCwd))!==root) {
       throw new Error('Runner cwd resolves outside the session workspace')
     }
-    return {cwd:chosenCwd,repositories:published}
+    return {cwd:chosenCwd,repositories:published,outcomeBranches}
   }catch(error){
     for(const path of published.reverse()) await rm(path,{recursive:true,force:true})
     throw error
   }finally{
     await rm(staged,{recursive:true,force:true})
   }
+}
+
+/**
+ * Original 2.1.317: only opt-in non-completed releases preserve outcome refs.
+ * Best-effort pushes share one 30-second deadline; the current session must
+ * have added commits before anything is sent to the source remote.
+ */
+export async function pushRunnerOutcomeBranches317(
+  branches: readonly RunnerOutcomeBranch317[],
+  options: { timeoutMs?: number; onStatus?: (line:string)=>void } = {},
+): Promise<RunnerPushResult317> {
+  const budgetMs=options.timeoutMs ?? 30_000
+  if (!Number.isSafeInteger(budgetMs) || budgetMs<1) {
+    throw new RangeError('Runner push window must be a positive integer')
+  }
+  const deadline=Date.now()+budgetMs
+  const result:RunnerPushResult317={pushed:0,unchanged:0,failed:0}
+  for(const item of branches) {
+    const remaining=deadline-Date.now()
+    if(remaining<=0) {
+      result.failed++
+      options.onStatus?.('[runner:git] push-on-release budget expired for '+item.branch)
+      continue
+    }
+    try {
+      const signal=AbortSignal.timeout(remaining)
+      const current=await git(['-C',item.repositoryPath,'rev-parse','--verify',
+        'refs/heads/'+item.branch],item.repositoryPath,signal,'outcome SHA')
+      if(current===item.baselineSha) {
+        result.unchanged++
+        continue
+      }
+      await git(['-C',item.repositoryPath,'push','origin',
+        'refs/heads/'+item.branch+':refs/heads/'+item.branch],
+        item.repositoryPath,signal,'push outcome')
+      result.pushed++
+      options.onStatus?.('[runner:git] pushed outcome '+item.branch)
+    }catch(error){
+      result.failed++
+      options.onStatus?.('[runner:git] push-on-release failed for '+item.branch+
+        ': '+(error instanceof Error?error.message:String(error)))
+    }
+  }
+  return result
 }

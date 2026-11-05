@@ -12,7 +12,7 @@ import { hostname } from 'node:os'
 import { createSessionSpawner } from '../../bridge/sessionRunner.js'
 import type { SessionHandle } from '../../bridge/types.js'
 import { RunnerHttpError317, SelfHostedRunnerApi317 } from './runnerApi317.ts'
-import { prepareRunnerWorkspace317 } from './runnerWorkspace317.ts'
+import { prepareRunnerWorkspace317, pushRunnerOutcomeBranches317 } from './runnerWorkspace317.ts'
 
 export type RunnerHostOptions317 = {
   api: SelfHostedRunnerApi317
@@ -24,6 +24,7 @@ export type RunnerHostOptions317 = {
   pollIntervalMs?: number
   heartbeatIntervalMs?: number
   drainWaitMs?: number
+  pushOutcomeOnRelease?: boolean
   clientLabel?: string
   lockToAccountId?: string
   signal?: AbortSignal
@@ -153,7 +154,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       const prepared = await prepareRunnerWorkspace317({
         root:cwd, sources:remote.sources, pushTargets:remote.push_targets,
         requestedCwd:remote.cwd, signal:ownedAbort.signal,
-        onStatus:status,
+        workerEpoch, onStatus:status,
       })
       const childCwd = prepared.cwd
       const sdkUrl = new URL('/v1/code/sessions/'+encodeURIComponent(id),remoteBase).toString()
@@ -171,6 +172,11 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       status('[runner:session] started '+id)
       const completion = (async () => {
         const result = await handle.done
+        if (options.pushOutcomeOnRelease && result !== 'completed') {
+          // Preserve interrupted/failed changes before releasing this worker.
+          // This is deliberately opt-in, matching the official 317 CLI flag.
+          await pushRunnerOutcomeBranches317(prepared.outcomeBranches,{onStatus:status})
+        }
         if (result === 'failed') {
           await options.api.reportSessionFailure(runnerToken,id,'session_failed')
         } else {
@@ -303,7 +309,8 @@ export class RunnerUsageError317 extends Error {
   readonly name = 'RunnerUsageError317'
 }
 type CliOptions = { apiUrl: string; secretFile?: string; capacity: number; baseDir: string;
-  execPath: string; pollMs: number; drainMs: number; clientLabel?: string;
+  execPath: string; pollMs: number; drainMs: number; pushOutcomeOnRelease: boolean;
+  clientLabel?: string;
   lockToAccountId?: string; agentProxyUrl?: string }
 function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions | 'help' {
   if (argv.includes('--help') || argv.includes('-h')) return 'help'
@@ -313,12 +320,18 @@ function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions 
     baseDir:env.SELF_HOSTED_RUNNER_BASE_DIR ?? (process.platform === 'win32' ? '' : '/workspace'),
     execPath:env.SELF_HOSTED_RUNNER_EXEC_PATH ?? process.execPath,pollMs:2000,
     drainMs:Number(env.SELF_HOSTED_RUNNER_DRAIN_WAIT_MS ?? 0),
+    pushOutcomeOnRelease:['true','1'].includes(
+      (env.SELF_HOSTED_RUNNER_PUSH_OUTCOME_ON_RELEASE ?? '').toLowerCase()),
     clientLabel:env.SELF_HOSTED_RUNNER_CLIENT_LABEL,
     lockToAccountId:env.SELF_HOSTED_RUNNER_LOCK_TO_ACCOUNT,
     agentProxyUrl:env.SELF_HOSTED_RUNNER_AGENT_PROXY_URL,
   }
   for(let i=0;i<argv.length;i++){
     const flag=argv[i]
+    if(flag==='--push-outcome-on-release'){
+      parsed.pushOutcomeOnRelease=true
+      continue
+    }
     if(!['--api-url','--environment-secret-file','--pool-secret-file',
       '--capacity','--base-dir','--exec-path','--client-label','--lock-to-account',
       '--agent-proxy-url','--poll-interval-ms','--drain-wait-sec',
@@ -366,7 +379,8 @@ export async function selfHostedRunnerMain317(argv: readonly string[]): Promise<
       '  --capacity <n>                 Concurrent sessions\n'+
       '  --base-dir <path>              Isolated sessions directory\n'+
       '  --exec-path <path>             Claude child executable\n'+
-      '  --drain-wait-sec <n>           Wait before terminating active sessions\n')
+      '  --drain-wait-sec <n>           Wait before terminating active sessions\n'+
+      '  --push-outcome-on-release     Preserve unfinished outcome commits on shutdown\n')
     return
   }
   let secret: string | undefined
@@ -395,6 +409,7 @@ export async function selfHostedRunnerMain317(argv: readonly string[]): Promise<
     await startSelfHostedRunnerHost317({api,capacity:config.capacity,baseDir:config.baseDir,
       execPath:executable,scriptArgs:args,env:process.env,
       pollIntervalMs:config.pollMs,drainWaitMs:config.drainMs,
+      pushOutcomeOnRelease:config.pushOutcomeOnRelease,
       clientLabel:config.clientLabel,lockToAccountId:config.lockToAccountId,
       signal:controller.signal,onStatus:line=>process.stderr.write(line+'\n')})
   }finally{
