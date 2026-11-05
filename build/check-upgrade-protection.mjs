@@ -10,7 +10,6 @@ import { fileURLToPath } from 'node:url'
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const read = path => JSON.parse(readFileSync(resolve(root, path), 'utf8'))
-const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key)
 const exact = (value, fallback = null) => value === undefined ? fallback : value
 
 export function validateUpgradeProtection({ baseline, release, development, stable, toolchain, inventory, routes, updates, approvals = baseline.approvedChanges }) {

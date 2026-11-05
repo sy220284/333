@@ -54,7 +54,7 @@ test('缺少完整技术依据或真实测试证据的升级批准不能绕过�
   const oldVersion = state.baseline.dependencies.installed[item].version
   state.release.packages[item].version = '0.0.1'
   state.baseline = { ...baseline, approvedChanges: [{
-    scope: 'release-installed', key: item + '#version', before: oldVersion, after: '0.0.1',
+    scope: 'release-installed', key: `${item}#version`, before: oldVersion, after: '0.0.1',
     technicalBasis: '临时修改', replacementCoverage: '', tests: [], evidence: '',
   }] }
   assert.ok(validateUpgradeProtection(state).some(x => x.includes('批准信息不完整')))
@@ -67,5 +67,5 @@ test('20条主功能链与366项增量更新的既有编号不得丢失', () => 
   state.updates.items = state.updates.items.filter(x => x.id !== removed)
   const errors = validateUpgradeProtection(state)
   assert.ok(errors.some(x => x.includes('routes C01')))
-  assert.ok(errors.some(x => x.includes('incrementalUpdates ' + removed)))
+  assert.ok(errors.some(x => x.includes(`incrementalUpdates ${removed}`)))
 })
