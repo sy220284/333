@@ -21,7 +21,9 @@ test('317 BYOC child: remote resume, session-scoped settings and correct executi
       execPath:process.execPath,scriptArgs:[script],verbose:false,sandbox:false,
       onDebug:()=>{},
     }
-    const byoc=createSessionSpawner({...spawnBase,env:{...process.env,TEST_CAPTURE_PATH:cap1},
+    const byoc=createSessionSpawner({...spawnBase,
+      additionalArgs:['--model','sonnet','--max-turns','7'],
+      env:{...process.env,TEST_CAPTURE_PATH:cap1},
       runnerRuntime:{apiBaseUrl:'https://session.example.test',configDir:conf}})
     const result=byoc.spawn({sessionId:'abc_123',sdkUrl:url,accessToken:'single-session-token',
       useCcrV2:true,workerEpoch:7},base)
@@ -29,6 +31,10 @@ test('317 BYOC child: remote resume, session-scoped settings and correct executi
     const first=JSON.parse(readFileSync(cap1,'utf8'))
     expect(first.args).toContain('--resume='+url)
     expect(first.args).not.toContain('--session-id')
+    expect(first.args).toContain('--model')
+    expect(first.args).toContain('sonnet')
+    expect(first.args).toContain('--max-turns')
+    expect(first.args).toContain('7')
     expect(first.kind).toBe('byoc')
     expect(first.remote).toBe('true')
     expect(first.remoteType).toBe('self_hosted')
