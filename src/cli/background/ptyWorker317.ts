@@ -68,7 +68,8 @@ export async function spawnBackgroundPty317(
   const token=randomBytes(16).toString('hex')
   await mkdir(dirname(paths.socket),{recursive:true,mode:0o700})
   await writeToken(paths.credential,token)
-  const environment={...options.env,CLAUDE_BG_PTY_AUTH:token}
+  const environment={...options.env,CLAUDE_BG_PTY_AUTH:token,
+    CLAUDE_BG_PTY_PERSIST:'1'}
   delete environment.CLAUDE_BG_SOCKET_TOKENS_PATH
   const argv=[options.executable,...options.prefix,
     '--bg-pty-host',paths.socket,String(options.cols),String(options.rows),
