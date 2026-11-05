@@ -13,7 +13,7 @@ import { createSessionSpawner } from '../../bridge/sessionRunner.js'
 import type { SessionHandle } from '../../bridge/types.js'
 import { RunnerHttpError317, SelfHostedRunnerApi317 } from './runnerApi317.ts'
 import { prepareRunnerWorkspace317, pushRunnerOutcomeBranches317 } from './runnerWorkspace317.ts'
-import { mapRunnerRemoteCliArgs317, stageRunnerPromptFlags317 } from './runnerCliArgs317.ts'
+import { mapRunnerRemoteCliArgs317, stageRunnerPromptFlags317, stageRunnerMcpConfig317 } from './runnerCliArgs317.ts'
 import { unlink } from 'node:fs/promises'
 
 export type RunnerHostOptions317 = {
@@ -178,8 +178,12 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       const promptFlags=await stageRunnerPromptFlags317(
         remote.claude_code_args,sessionConfigDir,options.execPath===process.execPath)
       stagedPromptFiles=promptFlags.paths
+      const mcpFlags=await stageRunnerMcpConfig317(
+        remote.mcp_config,sessionConfigDir)
+      stagedPromptFiles=[...stagedPromptFiles,...mcpFlags.paths]
       const deliveredCliArgs=[
         ...promptFlags.args,
+        ...mcpFlags.args,
         ...mapRunnerRemoteCliArgs317(remote.claude_code_args,status),
       ]
       const sdkUrl = new URL('/v1/code/sessions/'+encodeURIComponent(id),remoteBase).toString()
