@@ -280,3 +280,22 @@ test('317 daemon returns EX_TEMPFAIL on nested 429 and occupied-folder errors', 
   await assert.rejects(runWithFailure(unexpected), /unknown failure/)
   assert.equal(parent.listenerCount('message'), 0)
 })
+
+test('317 remoteControl sandbox refusal includes upstream remediation and exit 78', async () => {
+  const parent = new EventEmitter()
+  let stdout = '', stderr = ''
+  const result = await runDaemonWorker317('remoteControl', {
+    parent,
+    input: (async function* () {
+      yield JSON.stringify({ config: { dir: '/tmp', sandbox: true } })
+    })(),
+    stdout: s => { stdout += s }, stderr: s => { stderr += s },
+    remoteControlGate: () => true,
+  })
+  assert.equal(result, 78)
+  assert.equal(stdout,
+    'The sandbox key is not supported for Remote Control. Remove it. ' +
+    'To sandbox sessions, set sandbox.enabled to true in settings.\n')
+  assert.equal(stderr, '')
+  assert.equal(parent.listenerCount('message'), 0)
+})
