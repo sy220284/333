@@ -98,3 +98,50 @@ test('317 plugin worker emits the official report marker and parseable result', 
     rmSync(parent, { recursive: true, force: true })
   }
 })
+
+test('official 317 plugin-test policy rejects disabled hooks before help or test execution', () => {
+  const parent = mkdtempSync(join(tmpdir(), '333-plugin-policy-'))
+  try {
+    const config = join(parent, 'config')
+    const plugin = join(parent, 'plugin')
+    mkdirSync(config)
+    mkdirSync(plugin)
+    writeFileSync(join(config, 'settings.json'), '{"disableAllHooks":true}\n')
+    const blocked = execute([plugin], config)
+    assert.equal(blocked.status, 1, blocked.stdout + blocked.stderr)
+    assert.equal(blocked.stderr.trim(),
+      'claude plugin test: hooks modules are turned off here (disableAllHooks, allowManagedHooksOnly or a policy)')
+    assert.doesNotMatch(blocked.stderr, /no hooks\/hooks\.json/)
+    const help = execute(['--help'], config)
+    assert.equal(help.status, 1, help.stdout + help.stderr)
+    assert.equal(help.stdout, '')
+    assert.equal(help.stderr.trim(), blocked.stderr.trim())
+    const invalid = execute(['--bad'], config)
+    assert.equal(invalid.status, 1, invalid.stdout + invalid.stderr)
+    assert.equal(invalid.stderr.trim(), blocked.stderr.trim())
+  } finally {
+    rmSync(parent, { recursive: true, force: true })
+  }
+})
+
+test('official 317 --file worker reports disabled hooks as JSON with exit code zero', () => {
+  const parent = mkdtempSync(join(tmpdir(), '333-plugin-worker-policy-'))
+  try {
+    const config = join(parent, 'config')
+    mkdirSync(config)
+    writeFileSync(join(config, 'settings.json'), '{"disableAllHooks":true}\n')
+    const file = join(parent, 'not-run.test.ts')
+    const result = execute(['--file', file, parent], config)
+    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.stderr, '')
+    const report = result.stdout.trim()
+    assert.ok(report.startsWith('claude-plugin-test-report '), report)
+    const value = JSON.parse(report.slice('claude-plugin-test-report '.length))
+    assert.equal(value.file, file)
+    assert.deepEqual(value.results, [])
+    assert.equal(value.error,
+      'hooks modules are turned off here (disableAllHooks, allowManagedHooksOnly or a policy)')
+  } finally {
+    rmSync(parent, { recursive: true, force: true })
+  }
+})

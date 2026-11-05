@@ -11,7 +11,7 @@ import { discoverPluginTests317 } from '../../utils/plugins/pluginTestDiscovery3
 import { runPluginTestFile317 } from './pluginTestSandbox317.ts'
 
 // Original 2.1.317 chunk-dh4tgvjk.js REPORT_MARK, consumed by the parent CLI.
-const REPORT_PREFIX = 'claude-plugin-test-report '
+import { PLUGIN_TEST_REPORT_MARK_317 } from './pluginTestWire317.ts'
 const PER_FILE_TIMEOUT_MS = 600000
 const ENV_KEYS = [
   'PATH','HOME','USERPROFILE','SystemRoot','TMPDIR','TEMP','TMP',
@@ -76,12 +76,12 @@ async function runOne(root, file) {
   for await (const chunk of child.stdout) output.push(chunk)
   const exit = await exitPromise
   const text = Buffer.concat(output).toString('utf8')
-  const record = text.split('\n').findLast(line => line.startsWith(REPORT_PREFIX))
+  const record = text.split('\n').findLast(line => line.startsWith(PLUGIN_TEST_REPORT_MARK_317))
   if (!record) {
     return { file, results: [], error: `its run ended without a report (exit code ${exit.code ?? exit.signal ?? '?'})` }
   }
   let result
-  try { result = JSON.parse(record.slice(REPORT_PREFIX.length)) }
+  try { result = JSON.parse(record.slice(PLUGIN_TEST_REPORT_MARK_317.length)) }
   catch (error) { return { file, results: [], error: 'invalid worker report: ' + error } }
   if (result.file !== file || !Array.isArray(result.results)) {
     return { file, results: [], error: 'worker report path or shape mismatch' }
@@ -117,7 +117,7 @@ export async function pluginTestHandler317(
     }
     await verifyPluginRoot(root)
     const result = await runPluginTestFile317(root, file)
-    process.stdout.write(REPORT_PREFIX + JSON.stringify(result) + '\n')
+    process.stdout.write(PLUGIN_TEST_REPORT_MARK_317 + JSON.stringify(result) + '\n')
     return 0
   }
 

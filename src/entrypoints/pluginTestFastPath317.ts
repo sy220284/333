@@ -51,16 +51,31 @@ export async function runPluginTestFastPath317(
   args: readonly string[],
 ): Promise<boolean> {
   const invocation = parsePluginTestFastArgs317(args)
-  if (!invocation) return false
   try {
+    // Original pluginTestGatesOf runs even for --help/invalid arguments.
+    // Worker refusals are reported through the same stdout protocol as tests.
+    const { encodePluginTestGateReport317 } = await import('../cli/handlers/pluginTestWire317.ts')
+    const refuse = (message: string): boolean => {
+      if (args[0] === '--file') {
+        process.stdout.write(encodePluginTestGateReport317(args[1], message))
+      } else {
+        process.stderr.write('claude plugin test: ' + message + '\n')
+        process.exitCode = 1
+      }
+      return true
+    }
     // Dedicated worker paths still load organization policy before execution.
     const policy = await ensureFastPathSettingsLoaded317()
     const refusal = checkRequiredFastPathVersion317(MACRO.VERSION, policy)
-    if (refusal) {
-      process.stderr.write(refusal + '\n')
-      process.exitCode = 1
-      return true
-    }
+    if (refusal) return refuse(refusal)
+    const { getInitialSettings, getSettingsForSource } =
+      await import('../utils/settings/settings.js')
+    const { pluginTestHooksPolicyRefusal317 } =
+      await import('./pluginTestGates317.ts')
+    const hooksRefusal = pluginTestHooksPolicyRefusal317(
+      getInitialSettings(), getSettingsForSource('policySettings'))
+    if (hooksRefusal) return refuse(hooksRefusal)
+    if (!invocation) return false
     if (invocation.kind === 'help') {
       process.stdout.write(PLUGIN_TEST_HELP_317)
       return true
