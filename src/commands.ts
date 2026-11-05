@@ -40,6 +40,7 @@ import resume from './commands/resume/index.js'
 import review, { ultrareview } from './commands/review.js'
 import session from './commands/session/index.js'
 import share from './commands/share/index.js'
+import sendToProject from './commands/send-to-project/index.js'
 import skills from './commands/skills/index.js'
 import status from './commands/status/index.js'
 import tasks from './commands/tasks/index.js'
@@ -291,6 +292,7 @@ const COMMANDS = memoize((): Command[] => [
   usage,
   usageReport,
   ...(webCmd ? [webCmd] : []),
+  sendToProject,
   ...(proactive ? [proactive] : []),
   ...(briefCommand ? [briefCommand] : []),
   ...(assistantCommand ? [assistantCommand] : []),
