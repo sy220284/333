@@ -12,6 +12,7 @@ import { hostname } from 'node:os'
 import { createSessionSpawner } from '../../bridge/sessionRunner.js'
 import type { SessionHandle } from '../../bridge/types.js'
 import { RunnerHttpError317, SelfHostedRunnerApi317 } from './runnerApi317.ts'
+import type { RunnerHostSnapshot317 } from './runnerHealth317.ts'
 import { prepareRunnerWorkspace317, pushRunnerOutcomeBranches317 } from './runnerWorkspace317.ts'
 import { mapRunnerRemoteCliArgs317, stageRunnerPromptFlags317, stageRunnerMcpConfig317 } from './runnerCliArgs317.ts'
 import { stageRunnerAgentFiles317 } from './runnerAgents317.ts'
@@ -57,6 +58,7 @@ export type RunnerHostOptions317 = {
   lockToAccountId?: string
   signal?: AbortSignal
   onStatus?: (message: string) => void
+  onStateChange?: (snapshot: RunnerHostSnapshot317) => void
   createChild?: (sessionId: string, sdkUrl: string, accessToken: string,
     epoch: number, cwd: string, environment: NodeJS.ProcessEnv,
     onTokenAck?: (requestId: string)=>void,
@@ -165,6 +167,11 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
   let pollErrors = 0
   let notFoundErrors = 0
   let shutdownRequested = ownedAbort.signal.aborted
+  const emitState=()=>options.onStateChange?.({
+    runnerId:runnerId||null,capacity:options.capacity,
+    activeSessions:active.size,connected:Boolean(runnerId&&runnerToken),
+  })
+  emitState()
 
   const launch = async (id: string): Promise<void> => {
     safeSessionId(id)
@@ -442,6 +449,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
         if (sessionRefreshTimer) clearInterval(sessionRefreshTimer)
         if (inferenceRefreshTimer) clearInterval(inferenceRefreshTimer)
         active.delete(id)
+        emitState()
         pendingTokenAcks.clear()
         for(const path of stagedPromptFiles){
           try { await unlink(path) }
@@ -450,6 +458,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
         }
       })
       active.set(id,{handle,completion})
+      emitState()
       // Observe the rejected completion without detaching an unhandled promise.
       void completion.catch(() => {})
     } catch (error) {
@@ -508,6 +517,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
     })
     runnerId=registered.runner_id
     runnerToken=registered.runner_token
+    emitState()
     status('[runner] registered '+runnerId)
     while (!ownedAbort.signal.aborted) {
       if (runnerTokenNeedsRefresh(runnerToken,Date.now())) {
@@ -572,6 +582,9 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
         if (shutdownRequested) throw error
       }
     }
+    runnerToken=''
+    runnerId=''
+    emitState()
   }
 }
 
