@@ -3552,7 +3552,7 @@ async function run(): Promise<CommanderCommand> {
   modelsCommand.command('verify <model>').description('真实调用模型验证流式输出和工具能力（将产生少量 API 用量）').action(async (model: string) => {
     const { verifyIndependentModel } = await import('./services/api/multimodel/capabilityProbe.js');
     const result = await verifyIndependentModel(model);
-    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     if (!result.toolRoundTrip) process.exitCode = 1;
   });
   modelsCommand.command('refresh [provider]').description('从服务商刷新当前账号可用模型').action(async (provider?: string) => {
@@ -3587,7 +3587,7 @@ async function run(): Promise<CommanderCommand> {
   program.command('local-tasks').description('查看本机任务履历').option('--json', '使用 JSON 输出').action(async (options: { json?: boolean }) => {
     const { readLocalTasks } = await import('./services/localRuntime/taskJournal.js');
     const tasks = await readLocalTasks();
-    if (options.json) process.stdout.write(JSON.stringify(tasks, null, 2) + '\n');
+    if (options.json) process.stdout.write(`${JSON.stringify(tasks, null, 2)}\n`);
     else for (const task of tasks) process.stdout.write(`${task.id}  ${task.status}  ${task.type}  ${task.description ?? ''}\n`);
   });
   // claude auth
@@ -3655,7 +3655,7 @@ async function run(): Promise<CommanderCommand> {
   });
   auth.command('chatgpt-status').description('查看 ChatGPT 授权状态').action(async () => {
     const { chatGPTStatus } = await import('./services/auth/chatgptOAuth.js');
-    process.stdout.write(JSON.stringify(await chatGPTStatus(), null, 2) + '\n');
+    process.stdout.write(`${JSON.stringify(await chatGPTStatus(), null, 2)}\n`);
   });
   auth.command('chatgpt-logout').description('撤销 ChatGPT 授权').action(async () => {
     const { logoutChatGPT } = await import('./services/auth/chatgptOAuth.js');
