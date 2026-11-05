@@ -3541,6 +3541,12 @@ async function run(): Promise<CommanderCommand> {
     const entries = getSavedModelOptions();
     for (const model of entries) process.stdout.write(`${model.value}\n`);
   });
+  modelsCommand.command('verify <model>').description('真实调用模型验证流式输出和工具能力（将产生少量 API 用量）').action(async (model: string) => {
+    const { verifyIndependentModel } = await import('./services/api/multimodel/capabilityProbe.js');
+    const result = await verifyIndependentModel(model);
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+    if (!result.toolRoundTrip) process.exitCode = 1;
+  });
   modelsCommand.command('refresh [provider]').description('从服务商刷新当前账号可用模型').action(async (provider?: string) => {
     const { listSupportedProviders, refreshProviderModels } = await import('./services/api/multimodel/catalog.js');
     const names = listSupportedProviders();
