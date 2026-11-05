@@ -74,6 +74,11 @@ jobs:
           node build/compile-standalone.mjs
           node build/package-release.mjs
           npm run test:all
+          # PR7新增的认证、Observer、Artifact、内置SDK MCP均须随依赖升级复验。
+          # 专项工作流登记的测试不能依赖“未登记测试”扫描器执行。
+          bun test tests/m3-mcp-auth-317.test.ts
+          bun test tests/m5-sdk-mcp-factory-317.test.ts tests/m1-sdk-mcp-message-validation.test.ts
+          bun test tests/m2-artifact-comment-pipeline-317.test.ts tests/m2-observer-lifecycle-317.test.ts
       - name: 汇总验收结果（失败阻断）
         if: always()
         run: |

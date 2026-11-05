@@ -28,24 +28,24 @@ test('logo model, billing and working directory remain separate spoken lines',()
  const box={nodeName:'ink-box',childNodes:[
   {nodeName:'ink-text',childNodes:[
    {nodeName:'#text',nodeValue:'Claude Code '},
-   {nodeName:'ink-text',childNodes:[{nodeName:'#text',nodeValue:'v2.1.310'}]},
+   {nodeName:'ink-text',childNodes:[{nodeName:'#text',nodeValue:'v2.1.317'}]},
   ]},
   {nodeName:'ink-text',childNodes:[{nodeName:'#text',nodeValue:'Sonnet 4.6 · API Usage Billing'}]},
   {nodeName:'ink-text',childNodes:[{nodeName:'#text',nodeValue:'~/project'}]},
  ]}
  assert.equal(flattenAccessibleTree({nodeName:'ink-root',childNodes:[box]}),
-  'Claude Code v2.1.310\nSonnet 4.6 · API Usage Billing\n~/project')
+  'Claude Code v2.1.317\nSonnet 4.6 · API Usage Billing\n~/project')
 })
 
 test('virtual-text container splits semantic sibling labels but preserves inline styled spans',()=>{
  const label=text=>({nodeName:'ink-text',childNodes:[{nodeName:'#text',nodeValue:text}]})
  const tree={nodeName:'ink-root',childNodes:[{nodeName:'ink-virtual-text',childNodes:[
-  {nodeName:'ink-text',childNodes:[label('Claude Code'),{nodeName:'#text',nodeValue:' v2.1.310'}]},
+  {nodeName:'ink-text',childNodes:[label('Claude Code'),{nodeName:'#text',nodeValue:' v2.1.317'}]},
   label('Sonnet 4.6 · API Usage Billing'),
   label('~/project'),
  ]}]}
  assert.equal(flattenAccessibleTree(tree),
-   'Claude Code v2.1.310\nSonnet 4.6 · API Usage Billing\n~/project')
+   'Claude Code v2.1.317\nSonnet 4.6 · API Usage Billing\n~/project')
 })
 
 test('CLI, settings and actual Ink rendering are connected',async()=>{

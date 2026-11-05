@@ -89,7 +89,7 @@ def probe(executable,mode,timeout):
         return {'mode':mode,'exit':proc.returncode if exited else 'terminated_after_capture',
                 'bytes':len(buffer),'cursor_control_sequences':len(CSI.findall(raw)),
                 'activation_banner': (f'[Screen Reader Mode: on via {mode}]' in text if mode!='off' else '[Screen Reader Mode: on' in text),
-                'flat_welcome':('Welcome to Claude Code' in text or bool(re.search(r'Claude Code v2\.1\.310\b',text))),
+                'flat_welcome':('Welcome to Claude Code' in text or bool(re.search(r'Claude Code v2\.1\.317\b',text))),
                 'model_and_billing_visible':bool(re.search(r'\b(?:Opus|Sonnet|Haiku)\b[^\n]*Billing',text)),
                 'workspace_visible':'~/project' in text,
                 'connection_status':'Checking connectivity' in text,
