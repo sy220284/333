@@ -28,7 +28,7 @@ function skill(name: string): string {
     'TODO: what this skill does, and the steps Claude should take.', '',
   ].join('\n')
 }
-export function channelServer(name: string): string {
+export export function channelServer(name: string): string {
   return [
     '#!/usr/bin/env bun',
     '/**',
