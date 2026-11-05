@@ -2,15 +2,15 @@
  * A single deadline for the complete web tool operation: initial HTTP calls,
  * redirects, parsing and secondary model work are all included.
  */
-export async function withWebToolDeadline(parent: AbortController, operation, timeoutMs = 300_000) {
+export async function withWebToolDeadline<T>(parent: AbortController, operation: (child: AbortController) => PromiseLike<T> | T, timeoutMs: number = 300_000): Promise<T> {
   if (parent.signal.aborted) {
     throw parent.signal.reason ?? new Error('Web tool cancelled')
   }
   const child = new AbortController()
-  let timer
-  let onAbort
+  let timer: ReturnType<typeof setTimeout> | undefined
+  let onAbort: (() => void) | undefined
   const deadline = new Promise<never>((_, reject) => {
-    const finish = reason => {
+    const finish = (reason: unknown): void => {
       child.abort(reason)
       reject(reason)
     }
@@ -25,6 +25,6 @@ export async function withWebToolDeadline(parent: AbortController, operation, ti
     return await Promise.race([operation(child), deadline])
   } finally {
     clearTimeout(timer)
-    parent.signal.removeEventListener('abort', onAbort)
+    if (onAbort) parent.signal.removeEventListener('abort', onAbort)
   }
 }
