@@ -93,8 +93,8 @@ export async function discoverIndependentModelDetails(
     if (provider === 'chatgpt' && entry.visibility !== 'list') return []
     const value = provider === 'chatgpt' ? entry.slug : provider === 'gemini' ? entry.name : entry.id
     if (typeof value !== 'string') return []
-    const id = value.replace(/^models\\//, '')
-    if (!id || id.length > 300 || /[\\x00-\\x1f]/.test(id)) return []
+    const id = value.startsWith('models/') ? value.slice('models/'.length) : value
+    if (!id || id.length > 300 || Array.from(id).some(character => character.charCodeAt(0) < 32)) return []
     const top = typeof entry.top_provider === 'object' && entry.top_provider !== null ? entry.top_provider : {}
     const contextWindow = positiveInteger(entry.context_length ?? entry.context_window ?? entry.inputTokenLimit ?? entry.max_input_tokens)
     const maxOutputTokens = positiveInteger(entry.outputTokenLimit ?? entry.max_output_tokens ?? entry.max_completion_tokens ?? top.max_completion_tokens)
