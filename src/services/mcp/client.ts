@@ -8,7 +8,7 @@ import type {
 import { CallToolResultSchema } from "@modelcontextprotocol/core";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { Client, SSEClientTransport, StreamableHTTPClientTransport, createFetchWithInit, ProtocolError, UnauthorizedError, ProtocolErrorCode } from "@modelcontextprotocol/client";
-import type { SSEClientTransportOptions, StreamableHTTPClientTransportOptions, FetchLike, Transport, ElicitRequestURLParams, ElicitResult, JSONRPCMessage, ListPromptsResult, ListToolsResult, PromptMessage, ResourceLink } from "@modelcontextprotocol/client";
+import type { SSEClientTransportOptions, StreamableHTTPClientTransportOptions, FetchLike, Transport, ElicitRequestURLParams, ElicitResult, JSONRPCMessage, PromptMessage, ResourceLink } from "@modelcontextprotocol/client";
 import mapValues from 'lodash-es/mapValues.js'
 import memoize from 'lodash-es/memoize.js'
 import zipObject from 'lodash-es/zipObject.js'
@@ -1755,9 +1755,9 @@ export const fetchToolsForClient = memoizeWithLRU(
         return []
       }
 
-      const result = (await client.client.request(
-        { method: 'tools/list' }
-      )) as ListToolsResult
+      // The SDK walks all pages, validates responses and caches tool definitions
+      // for output-schema checks and modern MCP parameter-header mirroring.
+      const result = await client.client.listTools()
 
       // Sanitize tool data from MCP server
       const toolsToProcess = recursivelySanitizeUnicode(result.tools)
@@ -2016,9 +2016,7 @@ export const fetchResourcesForClient = memoizeWithLRU(
         return []
       }
 
-      const result = await client.client.request(
-        { method: 'resources/list' }
-      )
+      const result = await client.client.listResources()
 
       if (!result.resources) return []
 
@@ -2049,9 +2047,7 @@ export const fetchCommandsForClient = memoizeWithLRU(
       }
 
       // Request prompts list from client
-      const result = (await client.client.request(
-        { method: 'prompts/list' }
-      )) as ListPromptsResult
+      const result = await client.client.listPrompts()
 
       if (!result.prompts) return []
 
