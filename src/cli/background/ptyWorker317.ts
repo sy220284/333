@@ -15,6 +15,8 @@ export type BackgroundPtyOptions317={
   executable:string
   prefix:string[]
   args:string[]
+  /** Previous worker must be confirmed dead by the supervisor. */
+  replaceDeadWorker?:boolean
   onReplay:(data:Buffer)=>Promise<void>|void
   onOutput:(data:Buffer)=>void
   onExit:(worker:ManagedPtyProcess317,code:number,signal?:string|number)=>void
@@ -67,6 +69,12 @@ export async function spawnBackgroundPty317(
   const paths=backgroundPtyPaths317(options.id,options.env)
   const token=randomBytes(16).toString('hex')
   await mkdir(dirname(paths.socket),{recursive:true,mode:0o700})
+  if(options.replaceDeadWorker){
+    try{await unlink(paths.credential)}
+    catch(error){
+      if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error
+    }
+  }
   await writeToken(paths.credential,token)
   const environment: NodeJS.ProcessEnv = {...options.env,CLAUDE_BG_PTY_AUTH:token,
     CLAUDE_BG_PTY_PERSIST:'1'}
