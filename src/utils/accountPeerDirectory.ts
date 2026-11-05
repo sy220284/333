@@ -99,7 +99,7 @@ const currentRecipients = (time: number, identityKey: string | null): PeerDirect
 /** Resolve from the *union* of local and account candidates so a colliding
  * name cannot silently select a different transport.
  */
-export function resolveUnifiedPeerRecipient(local: PeerDirectoryEntry317[], token: string, time: number = Date.now(), identityKey: string | null = null): {address: string | undefined; ambiguous: boolean} {
+export function resolveUnifiedPeerRecipient(local: ReadonlyArray<Pick<PeerDirectoryEntry317, 'name' | 'ref' | 'address'>>, token: string, time: number = Date.now(), identityKey: string | null = null): {address: string | undefined; ambiguous: boolean} {
   const remote = currentRecipients(time, identityKey)
   const m = /^(.+?) \[([A-Za-z0-9_-]{6})\]$/.exec(token)
   const candidates = [...local, ...remote]
