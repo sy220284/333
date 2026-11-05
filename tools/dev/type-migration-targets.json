@@ -5,6 +5,7 @@
     "src/cli/gateway/gatewayDevice317.ts",
     "src/cli/gateway/gatewaySpendStore317.ts",
     "src/cli/gateway/gatewayStore317.ts",
+    "src/cli/handlers/pluginEvalGraders317.ts",
     "src/cli/handlers/ultrareviewProtocol.ts",
     "src/entrypoints/runnerDeclaration317.ts",
     "src/entrypoints/startupRouting317.ts",
