@@ -17,7 +17,7 @@ const HELP={
 }
 function safeAdminUrl317(){
   // Identity is read through the same OAuth configuration as regular CLI.
-  const url=getOauthConfig().CLAUDE_AI_URL
+  const url=getOauthConfig().CLAUDE_AI_ORIGIN
   return (typeof url==='string'&&url.startsWith('https://')?url:'https://claude.ai').replace(/\/+$/,'')
 }
 export function runnerWizardInstructions317(mode:RunnerWizardMode317,adminUrl:string):string{
@@ -40,7 +40,7 @@ export function runnerWizardCommand317(
 ):{exec:string;args:string[];prompt:string}{
   const prompt=runnerWizardInstructions317(mode,opts.adminUrl??safeAdminUrl317())
   const exec=opts.execPath??process.execPath
-  const prefix=opts.isCompiled??typeof Bun!=='undefined' && typeof Bun.embeddedFiles!=='undefined'
+  const prefix=(opts.isCompiled ?? (typeof Bun !== 'undefined' && typeof Bun.embeddedFiles !== 'undefined'))
     ? [] : [opts.script??process.argv[1]].filter((v):v is string=>Boolean(v))
   const userPrompt=args.length>0&&!args[0]?.startsWith('-')?[]:[SESSION_OPENING[mode]]
   return {exec,prompt,args:[...prefix,...userPrompt,'--append-system-prompt',prompt,
