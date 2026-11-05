@@ -1,13 +1,14 @@
 #!/usr/bin/env node
+import { loadAstParser } from './ast-parser.mjs'
 /**
  * Rebuild typed TSX while preserving user-facing Chinese strings. Generated
  * and original AST textual nodes are aligned through the embedded source-map
  * VLQ positions. Ambiguous files remain unchanged and get a diagnostic record.
  */
-import ts from 'typescript'
 import {readdirSync,readFileSync,writeFileSync,mkdirSync} from 'node:fs'
 import {resolve,dirname,join,basename} from 'node:path'
 import {fileURLToPath} from 'node:url'
+const ts = await loadAstParser()
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..')
 const apply=process.argv.includes('--apply')
 const tolerance=Number(process.env.UI_MAP_MAX_OFFSET??70)

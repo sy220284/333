@@ -20,7 +20,7 @@
 2. 执行 node tools/dev/toolchain.mjs sync 生成两个 Shell 配置和 tools/dev/package.json。
 3. 开发 npm 包版本变动时，执行 npm install --prefix tools/dev --package-lock-only --ignore-scripts --no-audit --no-fund 并提交 tools/dev/package-lock.json。
 4. 执行 node tools/dev/toolchain.mjs check；它会检查派生文件、精确 npm 锁、包完整性和七条主 CI 的版本读取方式。
-5. 执行 node tools/dev/toolchain.mjs verify-runtime 核实实际 Node/Bun，再运行对应构建与六架构验收。
+5. 执行 node tools/dev/toolchain.mjs install-ast 安装独立 JS AST 解析器；执行 node tools/dev/toolchain.mjs verify-runtime 核实实际 Node/Bun，再运行对应构建与六架构验收。
 
 核心工作流通过 node tools/dev/toolchain.mjs gha-env 注入 GitHub Actions 环境变量，再供 setup-node、setup-bun、setup-python 使用，避免 CI 独立写死版本。
 

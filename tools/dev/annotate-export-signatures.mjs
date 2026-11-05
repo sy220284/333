@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { loadAstParser } from './ast-parser.mjs'
 /**
  * TypeScript semantic export-signature reconstruction.
  * Uses the TS checker to infer exact return/parameter types from implementation,
@@ -7,10 +8,10 @@
  *
  * Requires .rebuild/tsconfig.dev.json produced by dev.mjs typecheck:all.
  */
-import ts from 'typescript'
 import {readFileSync, writeFileSync, mkdirSync, existsSync} from 'node:fs'
 import {resolve,dirname} from 'node:path'
 import {fileURLToPath} from 'node:url'
+const ts = await loadAstParser()
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..')
 const apply=process.argv.includes('--apply')
 const configPath=resolve(root,'.rebuild/tsconfig.dev.json')

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { loadAstParser } from './ast-parser.mjs'
 /**
  * TypeScript content-level audit for the 333 migration.
  * Requires the pinned tools/dev TypeScript dependency, installed by dev:bootstrap.
@@ -6,11 +7,9 @@
  */
 import { readdirSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
-const require = createRequire(import.meta.url)
-const ts = require('typescript')
+const ts = await loadAstParser()
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const strictModules = new Set(JSON.parse(readFileSync(
   resolve(ROOT, 'tools/dev/type-migration-targets.json'), 'utf8',

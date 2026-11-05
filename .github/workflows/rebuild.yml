@@ -35,6 +35,8 @@ jobs:
           node build/install-public-deps.mjs
       - name: 完整TypeScript类型检查（失败阻断验收）
         run: node tools/dev/dev.mjs typecheck:all
+      - name: 安装权威清单锁定的JS AST解析器
+        run: node tools/dev/toolchain.mjs install-ast
       - name: 全仓TypeScript内容级审计与已重写模块验收
         run: node tools/dev/type-migration-audit.mjs
       - name: 已重写模块的TypeScript严格类型编译

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { loadAstParser } from './ast-parser.mjs'
 /**
  * Restore safe, compiler-inferred return types of exported .ts functions.
  * TypeScript's actual checker supplies the type; unknown, any, inaccessible
@@ -8,10 +9,8 @@
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs'
 import {resolve,dirname,relative} from 'node:path'
 import {fileURLToPath} from 'node:url'
-import {createRequire} from 'node:module'
 import {spawnSync} from 'node:child_process'
-const require=createRequire(import.meta.url)
-const ts=require('typescript')
+const ts = await loadAstParser()
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..')
 const apply=process.argv.includes('--apply')
 const configPath=resolve(root,'.rebuild/tsconfig.dev.json')
