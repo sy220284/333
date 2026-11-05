@@ -37,7 +37,8 @@ const contracts = [
   ['M4', 'src/tools/AgentTool/runAgent.ts', 'src/query.ts'],
   ['M4', 'src/utils/sessionStorage.ts', 'src/utils/sessionTranscriptPathsV5.ts'],
   ['M5', 'src/main.tsx', 'src/utils/plugins/pluginLoader.ts'],
-  ['M6', 'src/cli/print.ts', 'src/QueryEngine.ts'],
+  ['M1', 'src/entrypoints/cli.tsx', 'src/entrypoints/interactiveOnly317.ts'],
+  ['M1', 'src/main.tsx', 'src/entrypoints/interactiveOnly317.ts'],
   ['M6', 'src/entrypoints/cli.tsx', 'src/cli/selfHostedRunner/runnerHost317.ts'],
   ['M6', 'src/cli/selfHostedRunner/runnerHost317.ts', 'src/cli/selfHostedRunner/runnerApi317.ts'],
   ['M6', 'src/cli/selfHostedRunner/runnerHost317.ts', 'src/cli/selfHostedRunner/runnerWorkspace317.ts'],
@@ -99,21 +100,24 @@ for (const [label, needle] of [
   }
 }
 
-// Keep one CLI flag registration. Duplicate Commander options prevent the
-// entire inference and tool execution process from starting.
+// 333 intentionally removed public headless conversations. Preserve the
+// interactive-entry security contract rather than upstream 317 print parity.
 const main = read('src/main.tsx')
-const permissionPromptRegistrationCount = [
-  ...main.matchAll(/(?:new Option|program\.option)\(['"]--permission-prompt-tool\s/g),
-].length
-if (permissionPromptRegistrationCount !== 1 ||
-    !/new Option\('--permission-prompt-tool <tool>'[^\n]*\)\.argParser\(String\)\.hideHelp\(\)/.test(main) ||
-    !main.includes('permissionPromptToolName: options.permissionPromptTool')) {
-  failures.push('M3: --permission-prompt-tool requires one CLI registration and the headless consumer')
+const entryPolicy = read('src/entrypoints/interactiveOnly317.ts')
+if (!main.includes('getInteractiveOnlyError317(process.argv.slice(2)') ||
+    !main.includes('INTERACTIVE_ONLY_FLAGS_317.has(option.long)') ||
+    main.includes('await runHeadless(') ||
+    main.includes("await import('src/cli/print.js')")) {
+  failures.push('M1/M6: interactive entry must reject print/SDK modes and not run headless')
 }
-const headless = read('src/cli/print.ts')
-if (!headless.includes('getCanUseToolFn(') ||
-    !headless.includes('toolMatchesName(t, permissionPromptToolName)')) {
-  failures.push('M2/M3: permission prompt MCP tool must reach its permission dispatcher')
+for (const flag of ['--print', '--output-format', '--input-format', '--sdk-url',
+  '--permission-prompt-tool', '--no-session-persistence']) {
+  if (!entryPolicy.includes("'"+flag+"'")) {
+    failures.push('M1: retired headless flag must be rejected by startup policy: '+flag)
+  }
+}
+if (!cli.includes('getInteractiveOnlyError317(args,')) {
+  failures.push('M1: bootstrap must enforce the interactive entry policy')
 }
 
 // A warmed process may change config home while retaining the same cwd.
