@@ -16,7 +16,7 @@ const hash=createHash('sha256')
 for await(const block of createReadStream(opt['--reference']))hash.update(block)
 const target = JSON.parse(readFileSync(new URL('../docs/upgrade/m1-evidence/target-release.json', import.meta.url), 'utf8'))
 if(hash.digest('hex')!==target.verified_x64_sha256)
- throw Error('Official '+target.target_version+' Linux x64 SHA-256 mismatch')
+ throw Error(`Official ${target.target_version} Linux x64 SHA-256 mismatch`)
 const script=["export const meta={name:'probe-return',description:'Pure workflow',phases:[{title:'Run'}]}",
  "phase('Run')","return {answer:42}"].join('\n')
 const bodyFor={
