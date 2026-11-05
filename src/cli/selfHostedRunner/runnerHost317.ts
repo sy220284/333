@@ -16,6 +16,23 @@ import { prepareRunnerWorkspace317, pushRunnerOutcomeBranches317 } from './runne
 import { mapRunnerRemoteCliArgs317, stageRunnerPromptFlags317, stageRunnerMcpConfig317 } from './runnerCliArgs317.ts'
 import { unlink } from 'node:fs/promises'
 
+type RunnerInferenceAuth317 = { token:string; expiresInSeconds:number }
+function runnerInferenceAuth317(remote: {inference_auth?:unknown},id:string):RunnerInferenceAuth317 {
+  const raw=remote.inference_auth
+  if(!raw || typeof raw!=='object' || Array.isArray(raw)) {
+    throw new Error('Session '+id+' /remote response is missing inference_auth.access_token')
+  }
+  const value=raw as Record<string,unknown>
+  if(typeof value.access_token!=='string' || value.access_token.length===0){
+    throw new Error('Session '+id+' /remote response is missing inference_auth.access_token')
+  }
+  const ttl=value.expires_in_seconds
+  if(ttl!==undefined && (typeof ttl!=='number' || !Number.isFinite(ttl) || ttl<=0)){
+    throw new TypeError('Session '+id+' inference_auth.expires_in_seconds must be positive')
+  }
+  return {token:value.access_token,expiresInSeconds:typeof ttl==='number'?ttl:3600}
+}
+
 export type RunnerHostOptions317 = {
   api: SelfHostedRunnerApi317
   baseDir: string
@@ -26,6 +43,7 @@ export type RunnerHostOptions317 = {
   pollIntervalMs?: number
   heartbeatIntervalMs?: number
   sessionTokenRefreshIntervalMs?: number
+  inferenceTokenRefreshIntervalMs?: number
   drainWaitMs?: number
   pushOutcomeOnRelease?: boolean
   clientLabel?: string
@@ -111,6 +129,11 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
        options.sessionTokenRefreshIntervalMs < 1)) {
     throw new RangeError('Session token refresh interval must be a positive integer')
   }
+  if (options.inferenceTokenRefreshIntervalMs !== undefined &&
+      (!Number.isSafeInteger(options.inferenceTokenRefreshIntervalMs) ||
+       options.inferenceTokenRefreshIntervalMs < 1)) {
+    throw new RangeError('Inference token refresh interval must be a positive integer')
+  }
   const status = options.onStatus ?? (() => {})
   const root = resolve(options.baseDir)
   await mkdir(root, {recursive:true,mode:0o700})
@@ -135,7 +158,11 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
     let remoteBase = ''
     let heartbeatTimer: ReturnType<typeof setInterval> | undefined
     let sessionRefreshTimer: ReturnType<typeof setInterval> | undefined
+    let inferenceRefreshTimer: ReturnType<typeof setInterval> | undefined
     let sessionRefreshPending = false
+    let inferenceRefreshPending = false
+    let inferenceExpiresAt = 0
+    let inferenceToken = ''
     let heartbeatPending = false
     let stagedPromptFiles:string[]=[]
     const heartbeatAbort = new AbortController()
@@ -144,6 +171,9 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       remoteToken = issued.session_token
       if (issued.tools_host) throw new Error('Assignment requires a dedicated tools host')
       const remote = await options.api.getSessionRemoteConfig(id,remoteToken,ownedAbort.signal)
+      const inference = runnerInferenceAuth317(remote,id)
+      inferenceToken=inference.token
+      inferenceExpiresAt=Date.now()+inference.expiresInSeconds*1000
       // Reconstruct the official prep path: verified sources, target branches,
       // isolated checkout, then start the same session worker from its repo.
       remoteBase = remote.api_base_url ?? ''
@@ -194,7 +224,8 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
             additionalArgs:deliveredCliArgs,
             env,verbose:false,sandbox:false,onDebug:status,
             debugFile:join(sessionConfigDir,'claude-code-debug.txt'),
-            runnerRuntime:{apiBaseUrl:remoteBase,configDir:sessionConfigDir},
+            runnerRuntime:{apiBaseUrl:remoteBase,configDir:sessionConfigDir,
+              inferenceToken},
           }).spawn({
             sessionId:id,sdkUrl,accessToken:remoteToken,useCcrV2:true,
             workerEpoch,
@@ -221,6 +252,33 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
         }).finally(()=>{sessionRefreshPending=false})
       },options.sessionTokenRefreshIntervalMs ?? 30_000)
       sessionRefreshTimer.unref?.()
+      // /remote owns the inference credential and its lifetime, independent
+      // of the session token. Refresh before expiry and update the child in
+      // place, preserving its conversation and tool state.
+      inferenceRefreshTimer=setInterval(()=>{
+        if(heartbeatAbort.signal.aborted || ownedAbort.signal.aborted ||
+           inferenceRefreshPending || Date.now()+60_000<inferenceExpiresAt) return
+        inferenceRefreshPending=true
+        void options.api.getSessionRemoteConfig(id,remoteToken,ownedAbort.signal)
+          .then(config=>{
+            if(heartbeatAbort.signal.aborted || ownedAbort.signal.aborted)return
+            const fresh=runnerInferenceAuth317(config,id)
+            if(fresh.token!==inferenceToken) {
+              handle.writeStdin(JSON.stringify({
+                type:'update_environment_variables',
+                variables:{CLAUDE_CODE_OAUTH_TOKEN:fresh.token},
+              })+'\n')
+              inferenceToken=fresh.token
+              status('[runner:session] refreshed inference token for '+id)
+            }
+            inferenceExpiresAt=Date.now()+fresh.expiresInSeconds*1000
+          }).catch(error=>{
+            if(!heartbeatAbort.signal.aborted && !ownedAbort.signal.aborted)
+              status('[runner:session] inference token refresh failed for '+id+': '+
+                (error instanceof Error?error.message:String(error)))
+          }).finally(()=>{inferenceRefreshPending=false})
+      },options.inferenceTokenRefreshIntervalMs ?? 30_000)
+      inferenceRefreshTimer.unref?.()
       const completion = (async () => {
         const result = await handle.done
         if (options.pushOutcomeOnRelease && result !== 'completed') {
@@ -245,6 +303,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
         heartbeatAbort.abort()
         if (heartbeatTimer) clearInterval(heartbeatTimer)
         if (sessionRefreshTimer) clearInterval(sessionRefreshTimer)
+        if (inferenceRefreshTimer) clearInterval(inferenceRefreshTimer)
         active.delete(id)
         for(const path of stagedPromptFiles){
           try { await unlink(path) }
@@ -259,6 +318,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       heartbeatAbort.abort()
       if (heartbeatTimer) clearInterval(heartbeatTimer)
       if (sessionRefreshTimer) clearInterval(sessionRefreshTimer)
+      if (inferenceRefreshTimer) clearInterval(inferenceRefreshTimer)
       for(const path of stagedPromptFiles){
         try { await unlink(path) }
         catch(error) { status('[runner:session] prompt cleanup failed: '+
