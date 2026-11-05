@@ -28,13 +28,17 @@ export function classifyDaemonWorkerFailure317(error: unknown):
     const value = current as Record<string, unknown>
     // The upstream xe() picks the *first* numeric status encountered.
     // An outer HTTP 503 must not be replaced by a deeper HTTP 429.
-    if (typeof value.status === 'number')
-      return value.status === 429 ? 'rate_limited' : undefined
+    if (typeof value.status === 'number') {
+      if (value.status === 429) return 'rate_limited'
+      break
+    }
     const response = value.response
     if (response && typeof response === 'object') {
       const status = (response as Record<string, unknown>).status
-      if (typeof status === 'number')
-        return status === 429 ? 'rate_limited' : undefined
+      if (typeof status === 'number') {
+        if (status === 429) return 'rate_limited'
+        break
+      }
     }
     current = value.cause
   }
