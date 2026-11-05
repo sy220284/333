@@ -21,8 +21,10 @@ type PeerDiscoveryResult317 = {
 }
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
+const asOptionalString = (value: unknown): string | undefined =>
+  typeof value === 'string' ? value : undefined
 const active = (row: { acceptsPeerMessages?: boolean; unreachableFromHere?: boolean; status?: string }): boolean => row.acceptsPeerMessages !== false && !row.unreachableFromHere &&
-  !['archived','offline','disconnected'].includes(row.status)
+  !['archived','offline','disconnected'].includes(row.status ?? 'unknown')
 /** Cloud list entries have no proven delivery route; only an active Remote
  * Control endpoint establishes a bridge address (2.1.310 chunk-xje85fg4).
  * Merge identity first so one session cannot appear twice or shadow its route.
@@ -155,13 +157,13 @@ export async function discoverAccountPeers({
       typeof row.title==='string' && row.title.trim() &&
       row.title!=='__warming__' && !row.title.includes('__CBU_POOLED__') &&
       !row.title.startsWith('ditto:') ?
-        {id:row.id,title:row.title,status:row.status,workerStatus:row.worker_status ?? row.status,
+        {id:asOptionalString(row.id),title:row.title,status:asOptionalString(row.status),workerStatus:asOptionalString(row.worker_status) ?? asOptionalString(row.status),
           acceptsPeerMessages:row.accepts_peer_messages!==false,
           offline:row.worker_status==='offline'} : null),
     walk(request,bridgeUrl,{...headers,'anthropic-beta':'ccr-byoc-2025-07-29',
       'x-organization-uuid':orgUUID},5,'after_id',row=>
       row && (row.session_status??row.status)!=='archived' ?
-        {id:row.id,title:row.title,status:row.session_status??row.status,
+        {id:asOptionalString(row.id),title:asOptionalString(row.title),status:asOptionalString(row.session_status) ?? asOptionalString(row.status),
          acceptsPeerMessages:row.accepts_peer_messages!==false &&
            (!isRecord(row.external_metadata) || row.external_metadata.accepts_peer_messages!==false),
          offline:row.connection_status==='disconnected'} : null),
