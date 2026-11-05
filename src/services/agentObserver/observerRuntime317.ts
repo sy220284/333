@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
+import type { SessionId } from '../../types/ids.js'
 import type { ToolPermissionContext } from '../../Tool.js'
 import type { AgentDefinition } from '../../tools/AgentTool/loadAgentsDir.js'
 import { isBuiltInAgent } from '../../tools/AgentTool/loadAgentsDir.js'
@@ -32,7 +33,7 @@ function fileFor(sessionId: string): string {
 }
 
 export async function createObserverRuntime317(args: {
-  sessionId: string
+  sessionId: SessionId
   agent: AgentDefinition
   agents: AgentDefinition[]
   getCacheParams: () => CacheSafeParams
