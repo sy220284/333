@@ -12,6 +12,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { z } from 'zod/v4';
 import { createSessionRuntime317 } from './sdk/sessionRuntime317.js'
+import { watchDaemonScheduledTasks317, formatMissedDaemonTasks317 } from './sdk/daemonTasks317.js'
 import type { CallToolResult, ToolAnnotations } from "@modelcontextprotocol/server";
 
 // Control protocol types for SDK builders (bridge subpath consumers)
@@ -552,12 +553,12 @@ export type ScheduledTasksHandle = {
  *
  * @internal
  */
-export function watchScheduledTasks(_opts: {
+export function watchScheduledTasks(opts: {
   dir: string
   signal: AbortSignal
   getJitterConfig?: () => CronJitterConfig
 }): ScheduledTasksHandle {
-  throw new Error('not implemented')
+  return watchDaemonScheduledTasks317(opts)
 }
 
 /**
@@ -565,8 +566,8 @@ export function watchScheduledTasks(_opts: {
  * with the user (via AskUserQuestion) before executing.
  * @internal
  */
-export function buildMissedTaskNotification(_missed: CronTask[]): string {
-  throw new Error('not implemented')
+export function buildMissedTaskNotification(missed: CronTask[]): string {
+  return formatMissedDaemonTasks317(missed)
 }
 
 /**
