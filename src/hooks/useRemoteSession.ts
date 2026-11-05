@@ -60,6 +60,7 @@ type UseRemoteSessionResult = {
     content: RemoteMessageContent,
     opts?: { uuid?: string },
   ) => Promise<boolean>
+  listRunningTasks: () => string[]
   stopTask: (taskId: string, signal?: AbortSignal) => Promise<void>
   cancelRequest: () => void
   disconnect: () => void
@@ -594,6 +595,8 @@ export function useRemoteSession({
     managerRef.current = null
   }, [])
 
+  const listRunningTasks = useCallback(() => [...runningTaskIdsRef.current], [])
+
   const stopTask = useCallback((taskId: string, signal?: AbortSignal) => {
     const manager = managerRef.current
     if (!manager) return Promise.reject(new Error('Remote session is not connected'))
@@ -606,7 +609,7 @@ export function useRemoteSession({
   // memoization the fresh literal invalidates onSubmit on every REPL render,
   // which in turn churns PromptInput's props and downstream memoization.
   return useMemo(
-    () => ({ isRemoteMode, sendMessage, stopTask, cancelRequest, disconnect }),
-    [isRemoteMode, sendMessage, stopTask, cancelRequest, disconnect],
+    () => ({ isRemoteMode, sendMessage, listRunningTasks, stopTask, cancelRequest, disconnect }),
+    [isRemoteMode, sendMessage, listRunningTasks, stopTask, cancelRequest, disconnect],
   )
 }

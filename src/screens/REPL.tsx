@@ -3174,6 +3174,33 @@ export function REPL({
       proactiveModule?.resumeProactive();
     }
 
+    if (!speculationAccept && remoteSession.isRemoteMode && activeRemote === remoteSession) {
+      const taskCommand = /^\/tasks(?:\s+stop(?:\s+(\S+))?)?\s*$/.exec(input.trim());
+      if (taskCommand) {
+        setInputValue('');
+        helpers.setCursorOffset(0);
+        helpers.clearBuffer();
+        setPastedContents({});
+        const taskId = taskCommand[1];
+        try {
+          if (taskId) {
+            await remoteSession.stopTask(taskId);
+            setMessages(prev => [...prev, createSystemMessage(`远程任务 ${taskId} 已停止。`, 'info')]);
+          } else {
+            const ids = remoteSession.listRunningTasks();
+            const message = ids.length
+              ? `运行中的远程任务：${ids.join('、')}。使用 /tasks stop <任务 ID> 停止。`
+              : '当前没有运行中的远程任务。';
+            setMessages(prev => [...prev, createSystemMessage(message, 'info')]);
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          setMessages(prev => [...prev, createSystemMessage(`停止远程任务失败：${message}`, 'warning')]);
+        }
+        return;
+      }
+    }
+
     // Handle immediate commands - these bypass the queue and execute right away
     // even while Claude is processing. Commands opt-in via `immediate: true`.
     // Commands triggered via keybindings are always treated as immediate.

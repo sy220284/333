@@ -8,6 +8,7 @@ import { lazySchema } from '../../utils/lazySchema.js'
 export const PolicyLimitsResponseSchema = lazySchema(() =>
   z.object({
     restrictions: z.record(z.string(), z.object({ allowed: z.boolean() })),
+    artifact_create_notice: z.object({ text: z.string() }).nullish(),
   }),
 )
 
@@ -21,6 +22,8 @@ export type PolicyLimitsResponse = z.infer<
 export type PolicyLimitsFetchResult = {
   success: boolean
   restrictions?: PolicyLimitsResponse['restrictions'] | null // null means 304 Not Modified (cache is valid)
+  artifactCreateNotice?: string
+  routeMissing?: boolean
   etag?: string
   error?: string
   skipRetry?: boolean // If true, don't retry on failure (e.g., auth errors)

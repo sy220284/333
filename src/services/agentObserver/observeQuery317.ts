@@ -87,7 +87,7 @@ export async function* observeQuery317<T extends StreamValue317>(
   try {
     for (;;) {
       const step = await stream.next()
-      if (step.done) {
+      if (step.done === true) {
         finished = true
         if (step.value.reason === 'completed' && activity.length > 0 &&
             !params.toolUseContext.abortController.signal.aborted) {

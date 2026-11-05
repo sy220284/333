@@ -40,6 +40,7 @@ async function run(executable, scenario) {
       CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', DISABLE_TELEMETRY: '1', DISABLE_ERROR_REPORTING: '1',
       CLAUDE_CODE_MAX_RETRIES: '2', NO_PROXY: '127.0.0.1,localhost', HTTP_PROXY: '', HTTPS_PROXY: '', CI: '1', ...scenario.env }
     const args = ['--bare', '-p', 'Reply RETRY_OK', '--model', 'sonnet', '--tools', '', '--no-session-persistence', '--output-format', 'json']
+    args.push(...(scenario.args ?? []))
     child = spawn(executable, executable === 'bun' ? [resolve('dist/cli.js'), ...args] : args, { cwd: home, env, stdio: ['ignore', 'pipe', 'pipe'] })
     let out = '', err = ''
     child.stdout.on('data', x => { out += x }); child.stderr.on('data', x => { err += x })
@@ -51,6 +52,7 @@ async function run(executable, scenario) {
     assert.equal(result.is_error, scenario.failed ?? false, out)
     if (!scenario.failed) assert.equal(result.result, 'RETRY_OK')
     if (scenario.minimumWait) assert.ok(calls[1].time - calls[0].time >= scenario.minimumWait)
+    if (scenario.display) assert.deepEqual(calls.map(x => x.body.thinking?.display), scenario.display)
     if (scenario.maxTokens) assert.deepEqual(calls.map(x => x.body.max_tokens), scenario.maxTokens)
     return { code, calls: calls.map(x => x.body.max_tokens), failed: result.is_error }
   } finally {
@@ -72,4 +74,12 @@ const scenarios = [
 for (const scenario of scenarios) test(`317 API request: ${scenario.name}`, { timeout: 35000 }, async () => {
   const actual = await run('bun', scenario)
   if (process.env.CLAUDE_CODE_317_REFERENCE) assert.deepEqual(await run(process.env.CLAUDE_CODE_317_REFERENCE, scenario), actual)
+})
+
+test('317 API request: explicitly rejected thinking display is removed from the real resend', { timeout: 35000 }, async () => {
+  await run('bun', {
+    name: 'thinking display rejection', calls: 2, display: ['omitted', undefined],
+    args: ['--thinking', 'adaptive'],
+    error: n => n === 1 ? { status: 422, message: 'Unsupported field thinking.display' } : null,
+  })
 })

@@ -814,6 +814,12 @@ function getNonstreamingFallbackTimeoutMs(): number {
  * Encapsulates the common pattern of creating a withRetry generator,
  * iterating to yield system messages, and returning the final BetaMessage.
  */
+function thinkingDisplayRecoveryForModel317(model: string) {
+  return createThinkingDisplayRecovery317(JSON.stringify([
+    getSessionId(), getAPIProvider(), process.env.ANTHROPIC_BASE_URL, model,
+  ]))
+}
+
 export async function* executeNonStreamingRequest(
   clientOptions: {
     model: string
@@ -839,7 +845,7 @@ export async function* executeNonStreamingRequest(
   originatingRequestId?: string | null,
 ): AsyncGenerator<SystemAPIErrorMessage, BetaMessage> {
   const fallbackTimeoutMs = getNonstreamingFallbackTimeoutMs()
-  const displayRecovery = createThinkingDisplayRecovery317()
+  const displayRecovery = thinkingDisplayRecoveryForModel317(retryOptions.model)
   const generator = withRetry(
     () =>
       getAnthropicClient({
@@ -860,7 +866,7 @@ export async function* executeNonStreamingRequest(
       )
 
       try {
-        return await anthropic.beta.messages.create(
+        const result = await anthropic.beta.messages.create(
           {
             ...adjustedParams,
             model: normalizeModelStringForAPI(adjustedParams.model),
@@ -870,6 +876,8 @@ export async function* executeNonStreamingRequest(
             timeout: fallbackTimeoutMs,
           },
         )
+        displayRecovery.accepted()
+        return result
       } catch (err) {
         // User aborts are not errors — re-throw immediately without logging
         if (err instanceof APIUserAbortError) throw err
@@ -1793,7 +1801,7 @@ async function* queryModel(
 
   try {
     queryCheckpoint('query_client_creation_start')
-    const displayRecovery = createThinkingDisplayRecovery317()
+    const displayRecovery = thinkingDisplayRecoveryForModel317(options.model)
     const generator = withRetry(
       () =>
         getAnthropicClient({
@@ -1863,6 +1871,7 @@ async function* queryModel(
           if (recovery) throw new ContextHintRecoveryError(recovery)
           throw error
         }
+        displayRecovery.accepted()
         queryCheckpoint('query_response_headers_received')
         streamRequestId = result.request_id
         streamResponse = result.response

@@ -299,11 +299,14 @@ async function fetchWithRetry(
  */
 async function fetchPolicyLimits(
   cachedChecksum?: string,
+  artifactAccessToken?: string,
 ): Promise<PolicyLimitsFetchResult> {
   try {
-    await checkAndRefreshOAuthTokenIfNeeded()
+    if (!artifactAccessToken) await checkAndRefreshOAuthTokenIfNeeded()
 
-    const authHeaders = getAuthHeaders()
+    const authHeaders = artifactAccessToken
+      ? { headers: { Authorization: `Bearer ${artifactAccessToken}`, 'anthropic-beta': OAUTH_BETA_HEADER }, error: undefined }
+      : getAuthHeaders()
     if (authHeaders.error) {
       return {
         success: false,
@@ -324,7 +327,7 @@ async function fetchPolicyLimits(
 
     const response = await axios.get(endpoint, {
       headers,
-      timeout: FETCH_TIMEOUT_MS,
+      timeout: artifactAccessToken ? 3000 : FETCH_TIMEOUT_MS,
       validateStatus: status =>
         status === 200 || status === 304 || status === 404,
     })
@@ -345,6 +348,7 @@ async function fetchPolicyLimits(
       return {
         success: true,
         restrictions: {},
+        routeMissing: true,
         etag: undefined,
       }
     }
@@ -364,6 +368,7 @@ async function fetchPolicyLimits(
     return {
       success: true,
       restrictions: parsed.data.restrictions,
+      artifactCreateNotice: parsed.data.artifact_create_notice?.text,
     }
   } catch (error) {
     // 404 is handled above via validateStatus, so it won't reach here
@@ -500,6 +505,13 @@ async function fetchAndLoadPolicyLimits(): Promise<
  * timeout would silently re-enable these features for HIPAA orgs.
  */
 const ESSENTIAL_TRAFFIC_DENY_ON_MISS = new Set(['allow_product_feedback'])
+
+/** An automatic upload needs a current verdict for the same OAuth principal. */
+export async function canPublishPrivateArtifact317(accessToken: string): Promise<boolean> {
+  const result = await fetchPolicyLimits(undefined, accessToken)
+  return result.success && !result.routeMissing && Boolean(result.restrictions) &&
+    !result.artifactCreateNotice && result.restrictions?.allow_cobalt_plinth?.allowed !== false
+}
 
 /**
  * Check if a specific policy is allowed

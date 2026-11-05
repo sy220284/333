@@ -13,3 +13,9 @@ test('317 resolves configured behavior through aliases without rewriting known m
   assert.equal(resolveModelBehavior317('custom', [{ model: 'custom', behavesAs: 'custom' }]), 'custom')
   assert.equal(resolveModelBehavior317('custom', [{ model: 'custom', behavesAs: 'unknown' }]), 'custom')
 })
+
+test('served mapping wins and a cyclic served route falls through to configuration', () => {
+  const rows = [{ model: 'custom', behavesAs: 'claude-sonnet-4-6' }]
+  assert.equal(resolveModelBehavior317('custom', rows, () => 'claude-haiku-4-5'), 'claude-haiku-4-5')
+  assert.equal(resolveModelBehavior317('custom', rows, () => 'custom'), 'claude-sonnet-4-6')
+})
