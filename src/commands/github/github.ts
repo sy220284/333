@@ -5,7 +5,7 @@ import { githubWorkflow, GITHUB_SCRIPT_PATH, GITHUB_WORKFLOW_PATH } from './work
 import { githubReviewerScript } from './reviewerScript.js'
 
 import { validRepository } from './repository.js'
-const HELP = '用法：/github status | auth | repos | setup <owner/repo> | secret <owner/repo> <本机环境变量名> | review <owner/repo> <PR> [normal|deep|security|extreme] | runs <owner/repo>'
+const HELP = '用法：/github status | auth | repos | setup <owner/repo> | secret <owner/repo> <环境变量名> | review <owner/repo> <PR> [normal|deep|security|extreme] | runs <owner/repo> | run <owner/repo> <运行ID> | cancel <owner/repo> <运行ID> | rerun <owner/repo> <运行ID>'
 const result = (value: string): { type:'text'; value:string } => ({type:'text',value})
 function validPr(raw: string): string {
   if (!/^[1-9][0-9]*$/.test(raw) || !Number.isSafeInteger(Number(raw)))
@@ -14,7 +14,7 @@ function validPr(raw: string): string {
 }
 async function gh(args: string[], input?: string): Promise<string> {
   const res = await execFileNoThrow('gh', args, {
-    timeout:60000, input, preserveOutputOnError:true,
+    timeout:60000, input, preserveOutputOnError:true, useCwd:true,
   })
   if (res.code !== 0) throw new Error('GitHub 操作失败：' + (res.stderr || res.error || '请检查 gh 授权与权限').slice(0,1000))
   return res.stdout.trim()
@@ -22,34 +22,38 @@ async function gh(args: string[], input?: string): Promise<string> {
 async function checkAuth(): Promise<void> {
   await gh(['auth','status','-h','github.com'])
 }
-async function addFile(repo: string, path: string, content: string, branch: string): Promise<void> {
-  const base64 = Buffer.from(content, 'utf8').toString('base64')
-  const existing = await execFileNoThrow('gh', ['api', 'repos/' + repo + '/contents/' + path + '?ref=' + encodeURIComponent(branch), '--jq', '.sha'], {timeout:15000})
-  if (existing.code !== 0 && !existing.stderr.includes('404')) {
-    throw new Error('检查既有 Actions 文件失败：' + (existing.stderr || existing.error || '未知错误'))
-  }
-  const updateSha = existing.code === 0 ? existing.stdout.trim() : ''
-  await gh(['api','--method','PUT','repos/' + repo + '/contents/' + path,
-    '-f','message=配置 333 通用工作流','-f','content=' + base64,'-f','branch=' + branch,
-    ...(updateSha ? ['-f','sha=' + updateSha] : [])])
-}
+/** Git tree + commit + ref: both workflow files update atomically, with no half-configured branch. */
 export async function setupRepository(raw: string): Promise<string> {
   const repo = validRepository(raw)
   await checkAuth()
   const metadata = JSON.parse(await gh(['api','repos/' + repo]))
-  if (!metadata.permissions?.push) throw new Error('当前 GitHub 用户缺少写入权限')
+  if (!metadata.permissions?.push) throw new Error('当前 GitHub 用户缺少仓库写入权限')
   const base = String(metadata.default_branch)
   const head = JSON.parse(await gh(['api','repos/' + repo + '/git/ref/heads/' + base]))
+  const parent = String(head.object.sha)
+  const treeInfo = JSON.parse(await gh(['api','repos/' + repo + '/git/commits/' + parent]))
+  const elements = [
+    {path:GITHUB_WORKFLOW_PATH,mode:'100644',type:'blob',content:githubWorkflow()},
+    {path:GITHUB_SCRIPT_PATH,mode:'100644',type:'blob',content:githubReviewerScript()},
+  ]
+  const tree = JSON.parse(await gh(['api','--method','POST','repos/' + repo + '/git/trees','--input','-'],
+    JSON.stringify({base_tree:treeInfo.tree.sha,tree:elements})))
+  const commit = JSON.parse(await gh(['api','--method','POST','repos/' + repo + '/git/commits','--input','-'],
+    JSON.stringify({message:'接入 333 通用 GitHub Actions 及多模型极深审查',
+      tree:tree.sha,parents:[parent]})))
   const branch = '333/review-' + randomUUID().slice(0,8)
   await gh(['api','--method','POST','repos/' + repo + '/git/refs',
-    '-f','ref=refs/heads/' + branch,'-f','sha=' + String(head.object.sha)])
-  await addFile(repo, GITHUB_WORKFLOW_PATH, githubWorkflow(), branch)
-  await addFile(repo, GITHUB_SCRIPT_PATH, githubReviewerScript(), branch)
-  const body = '## 333 GitHub 通用集成\n\n使用 GitHub Actions 执行多模型代码审查与极深复核，可通过授权用户 @333 触发。' +
-    '\n配置 Actions Secret THREE333_MODEL_API_KEY、变量 THREE333_MODEL_NAME 和 THREE333_MODEL_PROVIDER。' +
-    '\n支持 OpenAI 兼容协议、Anthropic 和 Gemini。GitHub 自身授权与模型授权独立。'
-  return await gh(['pr','create','--repo',repo,'--head',branch,'--base',base,
-    '--title','接入 333 通用 GitHub Actions 与多模型极深审查','--body',body])
+    '-f','ref=refs/heads/' + branch,'-f','sha=' + commit.sha])
+  const body = '## 333 GitHub 通用集成\\n\\n使用 GitHub Actions 执行多模型代码审查与极深复核，可通过授权用户 @333 触发。' +
+    '\\n配置 Actions Secret THREE333_MODEL_API_KEY、变量 THREE333_MODEL_NAME 和 THREE333_MODEL_PROVIDER。' +
+    '\\n支持 OpenAI 兼容协议、Anthropic 和 Gemini。GitHub 自身授权与模型授权独立。'
+  try {
+    return await gh(['pr','create','--repo',repo,'--head',branch,'--base',base,
+      '--title','接入 333 通用 GitHub Actions 与多模型极深审查','--body',body])
+  } catch (error) {
+    throw new Error('两个配置文件已原子提交到分支 '+branch+'；创建配置 PR 失败，请以该分支重试。' +
+      (error instanceof Error ? error.message : String(error)))
+  }
 }
 export async function dispatchExtremeReview(rawRepo: string, rawPr: string, mode='extreme'): Promise<string> {
   const repo = validRepository(rawRepo)
@@ -67,7 +71,8 @@ export const call: LocalCommandCall = async (args) => {
     if (action === 'help') return result(HELP)
     if (action === 'auth') return result('运行 gh auth login -h github.com 进行 GitHub OAuth 登录。配置 Actions 时需要 gh auth refresh -h github.com -s repo,workflow；无需 Claude 账号。')
     if (action === 'status') {
-      const auth = await gh(['auth','status','-h','github.com'])
+      await checkAuth()
+      const auth = '已通过 GitHub CLI OAuth 授权检查'
       const current = await execFileNoThrow('gh',['repo','view','--json','nameWithOwner','--jq','.nameWithOwner'],{timeout:10000})
       return result(auth + '\n当前仓库：' + (current.code===0 ? current.stdout.trim() : '未识别'))
     }
@@ -88,6 +93,18 @@ export const call: LocalCommandCall = async (args) => {
     }
     if (action === 'review' && tokens.length>=3 && tokens.length<=4)
       return result(await dispatchExtremeReview(tokens[1],tokens[2],tokens[3] || 'extreme'))
+    if (['run','cancel','rerun'].includes(action) && tokens.length===3) {
+      await checkAuth()
+      const repo = validRepository(tokens[1])
+      const id = validPr(tokens[2])
+      if (action === 'run') {
+        return result(await gh(['run','view',id,'--repo',repo,'--json','databaseId,displayTitle,status,conclusion,url','--jq','.']))
+      }
+      if (action === 'cancel') {
+        return result('已请求取消：'+ await gh(['run','cancel',id,'--repo',repo]))
+      }
+      return result('已请求重新执行：'+ await gh(['run','rerun',id,'--repo',repo]))
+    }
     if (action === 'runs' && tokens.length===2) {
       await checkAuth()
       return result(await gh(['run','list','--repo',validRepository(tokens[1]),'--workflow','333-review.yml','--limit','10']))
