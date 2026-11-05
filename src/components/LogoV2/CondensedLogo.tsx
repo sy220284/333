@@ -1,4 +1,16 @@
 import * as React from 'react'
+import type { ReactNode } from 'react'
+import { useMainLoopModel } from '../../hooks/useMainLoopModel.js'
+import { useTerminalSize } from '../../hooks/useTerminalSize.js'
+import { stringWidth } from '../../ink/stringWidth.js'
+import { Box, Text } from '../../ink.js'
+import { useAppState } from '../../state/AppState.js'
+import { getEffortSuffix } from '../../utils/effort.js'
+import { truncate } from '../../utils/format.js'
+import { formatModelAndBilling, getLogoDisplayData, truncatePath } from '../../utils/logoV2Utils.js'
+import { renderModelSetting } from '../../utils/model/model.js'
+import { OffscreenFreeze } from '../OffscreenFreeze.js'
+import { BrandMark } from './BrandMark.js'
 
 export function CondensedLogo(): ReactNode {
   const { columns } = useTerminalSize()
@@ -14,7 +26,7 @@ export function CondensedLogo(): ReactNode {
   // Calculate available width for independent 333 mark and information
   const textWidth = Math.max(columns - 15, 20)
 
-  // Truncate version to fit within available width, accounting for "Claude Code v" prefix
+  // Truncate version to fit within available width, accounting for the 333 v prefix
   const versionPrefix = '333 v'
   const truncatedVersion = truncate(
     version,
