@@ -85,7 +85,11 @@ for (const [commandLine, expected] of Object.entries(official317.commands)) {
       assert.deepEqual(native, expected, `The official x64 reference changed: ${commandLine}`);
     }
     const actual = sections(compiledHelp(args));
-    assert.deepEqual(actual, expected, `2.1.317 CLI discrepancy: ${commandLine}`);
+    // 独立产品明确退役官方云端 ultrareview，其他 CLI 仍须对齐 2.1.317。
+    const expectedProduct = commandLine === '--help'
+      ? { ...expected, commands: expected.commands.filter(command => command !== 'ultrareview') }
+      : expected;
+    assert.deepEqual(actual, expectedProduct, `333 CLI difference beyond approved product removals: ${commandLine}`);
   });
 }
 
