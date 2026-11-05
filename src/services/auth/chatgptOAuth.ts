@@ -5,7 +5,7 @@
  */
 import { createHash, createPublicKey, randomBytes, randomUUID, verify as verifySignature } from 'node:crypto'
 import { createServer } from 'node:http'
-import { promises as fs } from 'node:fs'
+import { promises as fs, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { spawn } from 'node:child_process'
@@ -232,6 +232,19 @@ export async function loginWithChatGPT(): Promise<{ email?: string; subject: str
     if (loginTimeout) clearTimeout(loginTimeout)
     server.close()
   }
+}
+/** For model selection during startup. No remote request or token exposure. */
+export function hasSavedChatGPTAuthorization(): boolean {
+  let source: string
+  try { source = readFileSync(FILE, 'utf8') }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+    throw error
+  }
+  const credential = JSON.parse(source) as Partial<Credential>
+  return typeof credential.refresh_token === 'string' && credential.refresh_token.length > 0 &&
+    typeof credential.access_token === 'string' && credential.access_token.length > 0 &&
+    typeof credential.scope === 'string' && scopeGranted(credential.scope)
 }
 export async function chatGPTStatus(): Promise<{ connected: boolean; email?: string; clientId?: string }> {
   const account = await readJSON<Credential>(FILE)
