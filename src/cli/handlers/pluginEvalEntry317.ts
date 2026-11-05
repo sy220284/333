@@ -141,13 +141,11 @@ export async function pluginEvalHandler317(target: string, options: PluginEvalOp
         if (publish.status !== 'published') {
           process.stderr.write('plugin eval: remote publication unavailable ('+
             publish.reason+'); local report: '+report.reportFile+'\n')
-          return 1
         }
       } catch (error) {
         process.stderr.write('plugin eval: report publish failed: '+
           (error instanceof Error?error.message:String(error))+
           '; local report: '+report.reportFile+'\n')
-        return 1
       }
     }
     if (options.json === undefined) {
