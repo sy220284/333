@@ -1,5 +1,6 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { getInitialMainLoopModel } from '../../bootstrap/state.js'
+import { getSavedModelOptions } from '../../services/api/multimodel/catalog.js'
 import {
   isClaudeAISubscriber,
   isMaxSubscriber,
@@ -487,6 +488,14 @@ export function getModelOptions(fastMode: boolean = false): ModelOption[] {
         process.env.ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION ??
         `Custom model (${envCustomModel})`,
     })
+  }
+
+  // Append models confirmed by the connected provider's discovery endpoint.
+  // The original Claude options and prompts remain unchanged.
+  for (const option of getSavedModelOptions()) {
+    if (!options.some(existing => existing.value === option.value)) {
+      options.push(option)
+    }
   }
 
   // Append additional model options fetched during bootstrap
