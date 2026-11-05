@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { lookup } from 'node:dns/promises'
 import { request as httpsRequest } from 'node:https'
 import { mkdtemp, readFile, readdir, rm, writeFile, stat } from 'node:fs/promises'
-import { isIP } from 'node:net'
+import { BlockList, isIP } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { extractSessionZip } from './sessionZipExtractor.js'
@@ -10,6 +10,20 @@ import { registerCleanup } from '../cleanupRegistry.js'
 
 const MAX_ZIP_BYTES = 64 * 1024 * 1024
 const MAX_REDIRECTS = 4
+
+// Reject all non-global IPv6 scopes, including the full FE80::/10 range
+// and mapped IPv4 addresses that could hide an internal destination.
+const blockedIPv6 = new BlockList()
+for (const [address, prefix] of [
+  ['::', 128],
+  ['::1', 128],
+  ['fc00::', 7],
+  ['fe80::', 10],
+  ['fec0::', 10],
+  ['ff00::', 8],
+  ['::ffff:0:0', 96],
+] as const) blockedIPv6.addSubnet(address, prefix, 'ipv6')
+
 
 function privateAddress(address: string): boolean {
   const v = address.toLowerCase()
@@ -21,12 +35,7 @@ function privateAddress(address: string): boolean {
       (p[0] === 192 && p[1] === 168) ||
       p[0] >= 224 || (p[0] === 100 && p[1] >= 64 && p[1] <= 127)
   }
-  if (isIP(v) === 6) {
-    if (v === '::1' || v === '::' || v.startsWith('fe80:') ||
-      v.startsWith('fc') || v.startsWith('fd')) return true
-    if (v.startsWith('::ffff:')) return privateAddress(v.slice(7))
-    return false
-  }
+  if (isIP(v) === 6) return blockedIPv6.check(v, 'ipv6')
   return true
 }
 
@@ -58,13 +67,14 @@ export function createPinnedPluginLookup317(
   }
 }
 
-async function validateRemoteUrl(raw: string): Promise<PublicTarget> {
+export async function validateRemoteUrl(raw: string): Promise<PublicTarget> {
   let url: URL
   try { url = new URL(raw) } catch { throw new Error('Invalid --plugin-url') }
   if (url.protocol !== 'https:' || url.username || url.password || url.port) {
     throw new Error('--plugin-url requires an HTTPS URL without embedded credentials or custom ports')
   }
-  const hostname = url.hostname.replace(/^\\[|\\]$/g, '')
+  const hostname = url.hostname.startsWith('[') && url.hostname.endsWith(']')
+    ? url.hostname.slice(1, -1) : url.hostname
   if (hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local')) {
     throw new Error('--plugin-url cannot access local services')
   }

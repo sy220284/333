@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { createPinnedPluginLookup317 } from '../src/utils/plugins/sessionPluginSources.ts'
+import { createPinnedPluginLookup317, validateRemoteUrl } from '../src/utils/plugins/sessionPluginSources.ts'
 
 const publicIp = [{ address: '8.8.8.8', family: 4 }, { address: '1.1.1.1', family: 4 }]
 
@@ -30,4 +30,19 @@ test('plugin pinned DNS lookup rejects local, private and mixed addresses', () =
     [...publicIp, { address: '10.1.2.3', family: 4 }])).toThrow('public host')
   expect(() => createPinnedPluginLookup317('plugins.example.com',
     [{ address: '::1', family: 6 }])).toThrow('public host')
+})
+
+test('IPv6 link-local, site-local, multicast and IPv4-mapped destinations cannot be pinned', () => {
+  for (const address of ['fe80::1', 'fe90::1', 'febf::1', 'fec0::1', 'ff02::1', '::ffff:7f00:1']) {
+    expect(() => createPinnedPluginLookup317('plugins.example.com',
+      [{ address, family: 6 }])).toThrow('public host')
+  }
+})
+
+test('public IPv6 URL is parsed as an IP literal without DNS; private literals are denied', async () => {
+  const target = await validateRemoteUrl('https://[2606:4700:4700::1111]/plugin.zip')
+  expect(target.hostname).toBe('2606:4700:4700::1111')
+  expect(target.addresses).toEqual([{ address: '2606:4700:4700::1111', family: 6 }])
+  await expect(validateRemoteUrl('https://[fe90::1]/plugin.zip')).rejects.toThrow('public host')
+  await expect(validateRemoteUrl('https://[::ffff:127.0.0.1]/plugin.zip')).rejects.toThrow('public host')
 })
