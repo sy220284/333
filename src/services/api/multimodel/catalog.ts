@@ -7,10 +7,11 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import {
-  PROVIDERS, type IndependentProvider, discoverIndependentModels,
-  getIndependentApiKey, resolveIndependentModel,
+  PROVIDERS, type IndependentProvider,
+  getIndependentApiKey, resolveIndependentModel, discoverIndependentModelDetails,
 } from './registry.js'
 import { getChatGPTAccessToken } from '../../auth/chatgptOAuth.js'
+import { mergeDiscoveredModelProfiles } from './profiles.js'
 
 const ROOT = join(homedir(), '.333', 'models')
 const FILE = join(ROOT, 'catalog.json')
@@ -48,10 +49,12 @@ export async function refreshProviderModels(provider: IndependentProvider): Prom
   const route = resolveIndependentModel(`${provider}/probe`)
   if (!route) throw new Error(`No route registered for ${provider}`)
   const token = provider === 'chatgpt' ? await getChatGPTAccessToken() : getIndependentApiKey(route)
-  const names = await discoverIndependentModels(provider, token)
+  const details = await discoverIndependentModelDetails(provider, token)
   const at = new Date().toISOString()
-  const refreshed = [...new Set(names)].filter(name => name && !name.includes('/') || provider === 'openrouter')
+  const refreshed = [...new Set(details.map(item => item.id))]
+    .filter(name => name && name.length <= 300 && !Array.from(name).some(char => char.charCodeAt(0) < 32))
     .map(name => ({ provider, id: name, discoveredAt: at }))
+  await mergeDiscoveredModelProfiles(provider, details)
   // Preserve all other providers while atomically replacing this provider.
   await fs.mkdir(ROOT, { recursive: true, mode: 0o700 })
   const current = readSavedModelCatalog()
