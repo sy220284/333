@@ -1,4 +1,5 @@
-import { hasCliFlag, findCliArgument, firstCliPositionalIndex, isPrintModeLaunch } from './utils/cliArgv317.ts';
+import { hasCliFlag, findCliArgument, firstCliPositionalIndex } from './utils/cliArgv317.ts';
+import { getInteractiveOnlyError317, INTERACTIVE_ONLY_FLAGS_317 } from './entrypoints/interactiveOnly317.ts';
 // These side-effects must run before all other imports:
 // 1. profileCheckpoint marks entry before heavy module evaluation begins
 // 2. startMdmRawRead fires MDM subprocesses (plutil/reg query) so they run in
@@ -160,13 +161,13 @@ import { eagerParseCliFlag } from 'src/utils/cliArgs.js';
 import { createEmptyAttributionState } from 'src/utils/commitAttribution.js';
 import { countConcurrentSessions, registerSession, updateSessionName } from 'src/utils/concurrentSessions.js';
 import { getCwd } from 'src/utils/cwd.js';
-import { logForDebugging, setHasFormattedOutput } from 'src/utils/debug.js';
+import { logForDebugging } from 'src/utils/debug.js';
 import { errorMessage, getErrnoCode, isENOENT, TeleportOperationError, toError } from 'src/utils/errors.js';
 import { getFsImplementation, safeResolvePath } from 'src/utils/fsOperations.js';
 import { gracefulShutdown, gracefulShutdownSync } from 'src/utils/gracefulShutdown.js';
 import { setAllHookEventsEnabled } from 'src/utils/hooks/hookEvents.js';
 import { refreshModelCapabilities } from 'src/utils/model/modelCapabilities.js';
-import { peekForStdinData, writeToStderr } from 'src/utils/process.js';
+import { writeToStderr } from 'src/utils/process.js';
 import { setCwd } from 'src/utils/Shell.js';
 import { type ProcessedResume, processResumedConversation } from 'src/utils/sessionRestore.js';
 import { parseSettingSourcesFlag } from 'src/utils/settings/constants.js';
@@ -524,6 +525,18 @@ function initializeEntrypoint(isNonInteractive: boolean): void {
 export async function main() : Promise<void> {
   profileCheckpoint('main_function_start');
 
+  // 333 public conversations always require an attached interactive terminal.
+  // Validate here as well as in the lightweight bootstrap, including direct main() callers.
+  const interactiveOnlyError = getInteractiveOnlyError317(process.argv.slice(2), {
+    stdinIsTTY: Boolean(process.stdin.isTTY),
+    stdoutIsTTY: Boolean(process.stdout.isTTY),
+  });
+  if (interactiveOnlyError) {
+    process.stderr.write(interactiveOnlyError + '\n');
+    process.exitCode = 2;
+    return;
+  }
+
   // SECURITY: Prevent Windows from executing commands from current directory
   // This must be set before ANY command execution to prevent PATH hijacking attacks
   // See: https://docs.microsoft.com/en-us/windows/win32/api/processenv/nf-processenv-searchpathw
@@ -535,12 +548,6 @@ export async function main() : Promise<void> {
     resetCursor();
   });
   process.on('SIGINT', () => {
-    // In print mode, print.ts registers its own SIGINT handler that aborts
-    // the in-flight query and calls gracefulShutdown; skip here to avoid
-    // preempting it with a synchronous process.exit().
-    if (hasCliFlag('-p') || hasCliFlag('--print')) {
-      return;
-    }
     process.exit(0);
   });
   profileCheckpoint('main_warning_handler_initialized');
@@ -580,25 +587,9 @@ export async function main() : Promise<void> {
     }
   }
 
-  // Check for -p/--print and --init-only flags early to set isInteractiveSession before init()
-  // This is needed because telemetry initialization calls auth functions that need this flag
-  const cliArgs = process.argv.slice(2);
-  const hasPrintFlag = hasCliFlag('-p', cliArgs) || hasCliFlag('--print', cliArgs);
-  const hasInitOnlyFlag = hasCliFlag('--init-only', cliArgs);
-  const hasSdkUrl = findCliArgument(arg => arg.startsWith('--sdk-url'), cliArgs) !== -1;
-  const isNonInteractive = hasPrintFlag || hasInitOnlyFlag || hasSdkUrl || !process.stdout.isTTY;
-
-  // Stop capturing early input for non-interactive modes
-  if (isNonInteractive) {
-    stopCapturingEarlyInput();
-  }
-
-  // Set simplified tracking fields
-  const isInteractive = !isNonInteractive;
-  setIsInteractive(isInteractive);
-
-  // Initialize entrypoint based on mode - needs to be set before any event is logged
-  initializeEntrypoint(isNonInteractive);
+  // Session state and permissions now consistently use the interactive path.
+  setIsInteractive(true);
+  initializeEntrypoint(false);
 
   // Determine client type
   const clientType = (() => {
@@ -639,33 +630,6 @@ export async function main() : Promise<void> {
   profileCheckpoint('main_before_run');
   await run();
   profileCheckpoint('main_after_run');
-}
-async function getInputPrompt(prompt: string, inputFormat: 'text' | 'stream-json'): Promise<string | AsyncIterable<string>> {
-  if (!process.stdin.isTTY &&
-  // Input hijacking breaks MCP.
-  !process.argv.includes('mcp')) {
-    if (inputFormat === 'stream-json') {
-      return process.stdin;
-    }
-    process.stdin.setEncoding('utf8');
-    let data = '';
-    const onData = (chunk: string) => {
-      data += chunk;
-    };
-    process.stdin.on('data', onData);
-    // If no data arrives in 3s, stop waiting and warn. Stdin is likely an
-    // inherited pipe from a parent that isn't writing (subprocess spawned
-    // without explicit stdin handling). 3s covers slow producers like curl,
-    // jq on large files, python with import overhead. The warning makes
-    // silent data loss visible for the rare producer that's slower still.
-    const timedOut = await peekForStdinData(process.stdin, 3000);
-    process.stdin.off('data', onData);
-    if (timedOut) {
-      process.stderr.write('Warning: no stdin data received in 3s, proceeding without it. ' + 'If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.\n');
-    }
-    return [prompt, data].filter(Boolean).join('\n');
-  }
-  return prompt;
 }
 async function run(): Promise<CommanderCommand> {
   profileCheckpoint('run_function_start');
@@ -756,7 +720,7 @@ async function run(): Promise<CommanderCommand> {
     }
     profileCheckpoint('preAction_after_settings_sync');
   });
-  program.name('claude').description(`Claude Code - starts an interactive session by default, use -p/--print for non-interactive output`).argument('[prompt]', 'Your prompt', String)
+  program.name('claude').description(`333 - interactive AI workspace`).argument('[prompt]', 'Your prompt', String)
   // Subcommands inherit helpOption via commander's copyInheritedSettings —
   // setting it once here covers mcp, plugin, auth, and all other subcommands.
   .helpOption('-h, --help', 'Display help for command').option('-d, --debug [filter]', 'Enable debug mode with optional category filtering (e.g., "api,hooks" or "!1p,!file")', (_value: string | true) => {
@@ -1686,7 +1650,7 @@ async function run(): Promise<CommanderCommand> {
       process.exit(1);
     }
     const effectivePrompt = prompt || '';
-    let inputPrompt = await getInputPrompt(effectivePrompt, (inputFormat ?? 'text') as 'text' | 'stream-json');
+    let inputPrompt = effectivePrompt;
     profileCheckpoint('action_after_input_prompt');
 
     // Activate proactive mode BEFORE getTools() so SleepTool.isEnabled()
@@ -2387,286 +2351,8 @@ async function run(): Promise<CommanderCommand> {
       return;
     }
 
-    // --print mode
-    if (isNonInteractiveSession) {
-      if (outputFormat === 'stream-json' || outputFormat === 'json') {
-        setHasFormattedOutput(true);
-      }
-
-      // Apply full environment variables in print mode since trust dialog is bypassed
-      // This includes potentially dangerous environment variables from untrusted sources
-      // but print mode is considered trusted (as documented in help text)
-      applyConfigEnvironmentVariables();
-
-      // Initialize telemetry after env vars are applied so OTEL endpoint env vars and
-      // otelHeadersHelper (which requires trust to execute) are available.
-      initializeTelemetryAfterTrust();
-
-      // Kick SessionStart hooks now so the subprocess spawn overlaps with
-      // MCP connect + plugin init + print.ts import below. loadInitialMessages
-      // joins this at print.ts:4397. Guarded same as loadInitialMessages —
-      // continue/resume/teleport paths don't fire startup hooks (or fire them
-      // conditionally inside the resume branch, where this promise is
-      // undefined and the ?? fallback runs). Also skip when setupTrigger is
-      // set — those paths run setup hooks first (print.ts:544), and session
-      // start hooks must wait until setup completes.
-      const sessionStartHooksPromise = options.continue || options.resume || teleport || setupTrigger ? undefined : processSessionStartHooks('startup');
-      // Suppress transient unhandledRejection if this rejects before
-      // loadInitialMessages awaits it. Downstream await still observes the
-      // rejection — this just prevents the spurious global handler fire.
-      sessionStartHooksPromise?.catch(() => {});
-      profileCheckpoint('before_validateForceLoginOrg');
-      // Validate org restriction for non-interactive sessions
-      const orgValidation = await validateForceLoginOrg();
-      if (orgValidation.valid === false) {
-        process.stderr.write(`${orgValidation.message}\n`);
-        process.exit(1);
-      }
-
-      // Headless mode supports all prompt commands and some local commands
-      // If disableSlashCommands is true, return empty array
-      const commandsHeadless = disableSlashCommands ? [] : commands.filter(command => command.type === 'prompt' && !command.disableNonInteractive || command.type === 'local' && command.supportsNonInteractive);
-      const defaultState = getDefaultAppState();
-      const headlessInitialState: AppState = {
-        ...defaultState,
-        mcp: {
-          ...defaultState.mcp,
-          clients: mcpClients,
-          commands: mcpCommands,
-          tools: mcpTools
-        },
-        toolPermissionContext,
-        effortValue: parseEffortValue(options.effort),
-        ...(isFastModeEnabled() && {
-          fastMode: getInitialFastModeSetting(effectiveModel ?? null)
-        }),
-        ...(isAdvisorEnabled() && advisorModel && {
-          advisorModel
-        }),
-        // kairosEnabled gates the async fire-and-forget path in
-        // executeForkedSlashCommand (processSlashCommand.tsx:132) and
-        // AgentTool's shouldRunAsync. The REPL initialState sets this at
-        // ~3459; headless was defaulting to false, so the daemon child's
-        // scheduled tasks and Agent-tool calls ran synchronously — N
-        // overdue cron tasks on spawn = N serial subagent turns blocking
-        // user input. Computed at :1620, well before this branch.
-        ...(feature('KAIROS') ? {
-          kairosEnabled
-        } : {})
-      };
-
-      // Init app state
-      const headlessStore = createStore(headlessInitialState, onChangeAppState);
-
-      // Check if bypassPermissions should be disabled based on Statsig gate
-      // This runs in parallel to the code below, to avoid blocking the main loop.
-      if (toolPermissionContext.mode === 'bypassPermissions' || allowDangerouslySkipPermissions) {
-        void checkAndDisableBypassPermissions(toolPermissionContext);
-      }
-
-      // Async check of auto mode gate — corrects state and disables auto if needed.
-      // Gated on TRANSCRIPT_CLASSIFIER (not USER_TYPE) so GrowthBook kill switch runs for external builds too.
-      if (feature('TRANSCRIPT_CLASSIFIER')) {
-        void verifyAutoModeGateAccess(toolPermissionContext, headlessStore.getState().fastMode).then(({
-          updateContext
-        }) => {
-          headlessStore.setState(prev => {
-            const nextCtx = updateContext(prev.toolPermissionContext);
-            if (nextCtx === prev.toolPermissionContext) return prev;
-            return {
-              ...prev,
-              toolPermissionContext: nextCtx
-            };
-          });
-        });
-      }
-
-      // Set global state for session persistence
-      if (options.sessionPersistence === false) {
-        setSessionPersistenceDisabled(true);
-      }
-
-      // Store SDK betas in global state for context window calculation
-      // Only store allowed betas (filters by allowlist and subscriber status)
-      setSdkBetas(filterAllowedSdkBetas(betas));
-
-      // Print-mode MCP: per-server incremental push into headlessStore.
-      // Mirrors useManageMCPConnections — push pending first (so ToolSearch's
-      // pending-check at ToolSearchTool.ts:334 sees them), then replace with
-      // connected/failed as each server settles.
-      const connectMcpBatch = (configs: Record<string, ScopedMcpServerConfig>, label: string): Promise<void> => {
-        if (Object.keys(configs).length === 0) return Promise.resolve();
-        headlessStore.setState(prev => ({
-          ...prev,
-          mcp: {
-            ...prev.mcp,
-            clients: [...prev.mcp.clients, ...Object.entries(configs).map(([name, config]) => ({
-              name,
-              type: 'pending' as const,
-              config
-            }))]
-          }
-        }));
-        return getMcpToolsCommandsAndResources(({
-          client,
-          tools,
-          commands
-        }) => {
-          headlessStore.setState(prev => ({
-            ...prev,
-            mcp: {
-              ...prev.mcp,
-              clients: prev.mcp.clients.some(c => c.name === client.name) ? prev.mcp.clients.map(c => c.name === client.name ? client : c) : [...prev.mcp.clients, client],
-              tools: uniqBy([...prev.mcp.tools, ...tools], 'name'),
-              commands: uniqBy([...prev.mcp.commands, ...commands], 'name')
-            }
-          }));
-        }, configs).catch(err => logForDebugging(`[MCP] ${label} connect error: ${err}`));
-      };
-      // Await all MCP configs — print mode is often single-turn, so
-      // "late-connecting servers visible next turn" doesn't help. SDK init
-      // message and turn-1 tool list both need configured MCP tools present.
-      // Zero-server case is free via the early return in connectMcpBatch.
-      // Connectors parallelize inside getMcpToolsCommandsAndResources
-      // (processBatched with Promise.all). claude.ai is awaited too — its
-      // fetch was kicked off early (line ~2558) so only residual time blocks
-      // here. --bare skips claude.ai entirely for perf-sensitive scripts.
-      profileCheckpoint('before_connectMcp');
-      await connectMcpBatch(regularMcpConfigs, 'regular');
-      profileCheckpoint('after_connectMcp');
-      // Dedup: suppress plugin MCP servers that duplicate a claude.ai
-      // connector (connector wins), then connect claude.ai servers.
-      // Bounded wait — #23725 made this blocking so single-turn -p sees
-      // connectors, but with 40+ slow connectors tengu_startup_perf p99
-      // climbed to 76s. If fetch+connect doesn't finish in time, proceed;
-      // the promise keeps running and updates headlessStore in the
-      // background so turn 2+ still sees connectors.
-      const CLAUDE_AI_MCP_TIMEOUT_MS = 5_000;
-      const claudeaiConnect = claudeaiConfigPromise.then(claudeaiConfigs => {
-        if (Object.keys(claudeaiConfigs).length > 0) {
-          const claudeaiSigs = new Set<string>();
-          for (const config of Object.values(claudeaiConfigs)) {
-            const sig = getMcpServerSignature(config);
-            if (sig) claudeaiSigs.add(sig);
-          }
-          const suppressed = new Set<string>();
-          for (const [name, config] of Object.entries(regularMcpConfigs)) {
-            if (!name.startsWith('plugin:')) continue;
-            const sig = getMcpServerSignature(config);
-            if (sig && claudeaiSigs.has(sig)) suppressed.add(name);
-          }
-          if (suppressed.size > 0) {
-            logForDebugging(`[MCP] Lazy dedup: suppressing ${suppressed.size} plugin server(s) that duplicate claude.ai connectors: ${[...suppressed].join(', ')}`);
-            // Disconnect before filtering from state. Only connected
-            // servers need cleanup — clearServerCache on a never-connected
-            // server triggers a real connect just to kill it (memoize
-            // cache-miss path, see useManageMCPConnections.ts:870).
-            for (const c of headlessStore.getState().mcp.clients) {
-              if (!suppressed.has(c.name) || c.type !== 'connected') continue;
-              c.client.onclose = undefined;
-              void clearServerCache(c.name, c.config).catch(() => {});
-            }
-            headlessStore.setState(prev => {
-              let {
-                clients,
-                tools,
-                commands,
-                resources
-              } = prev.mcp;
-              clients = clients.filter(c => !suppressed.has(c.name));
-              tools = tools.filter(t => !t.mcpInfo || !suppressed.has(t.mcpInfo.serverName));
-              for (const name of suppressed) {
-                commands = excludeCommandsByServer(commands, name);
-                resources = excludeResourcesByServer(resources, name);
-              }
-              return {
-                ...prev,
-                mcp: {
-                  ...prev.mcp,
-                  clients,
-                  tools,
-                  commands,
-                  resources
-                }
-              };
-            });
-          }
-        }
-        // Suppress claude.ai connectors that duplicate an enabled
-        // manual server (URL-signature match). Plugin dedup above only
-        // handles `plugin:*` keys; this catches manual `.mcp.json` entries.
-        // plugin:* must be excluded here — step 1 already suppressed
-        // those (claude.ai wins); leaving them in suppresses the
-        // connector too, and neither survives (gh-39974).
-        const nonPluginConfigs = pickBy(regularMcpConfigs, (_, n) => !n.startsWith('plugin:'));
-        const {
-          servers: dedupedClaudeAi
-        } = dedupClaudeAiMcpServers(claudeaiConfigs, nonPluginConfigs);
-        return connectMcpBatch(dedupedClaudeAi, 'claudeai');
-      });
-      let claudeaiTimer: ReturnType<typeof setTimeout> | undefined;
-      const claudeaiTimedOut = await Promise.race([claudeaiConnect.then(() => false), new Promise<boolean>(resolve => {
-        claudeaiTimer = setTimeout(r => r(true), CLAUDE_AI_MCP_TIMEOUT_MS, resolve);
-      })]);
-      if (claudeaiTimer) clearTimeout(claudeaiTimer);
-      if (claudeaiTimedOut) {
-        logForDebugging(`[MCP] claude.ai connectors not ready after ${CLAUDE_AI_MCP_TIMEOUT_MS}ms — proceeding; background connection continues`);
-      }
-      profileCheckpoint('after_connectMcp_claudeai');
-
-      // In headless mode, start deferred prefetches immediately (no user typing delay)
-      // --bare / SIMPLE: startDeferredPrefetches early-returns internally.
-      // --bare / SIMPLE bypasses deferred housekeeping in headless mode.
-      // The normal session keeps its existing deferred prefetch pipeline.
-      if (!isBareMode()) {
-        startDeferredPrefetches();
-        void import('./utils/backgroundHousekeeping.js').then(m => m.startBackgroundHousekeeping());
-      }
-      logSessionTelemetry();
-      profileCheckpoint('before_print_import');
-      const {
-        runHeadless
-      } = await import('src/cli/print.js');
-      profileCheckpoint('after_print_import');
-      // Keep the CLI entrypoint alive until the model loop, tool callbacks,
-      // result stream, and graceful shutdown have completed.
-      await runHeadless(inputPrompt, () => headlessStore.getState(), headlessStore.setState, commandsHeadless, tools, sdkMcpConfigs, agentDefinitions.activeAgents, {
-        continue: options.continue,
-        resume: options.resume,
-        verbose: verbose,
-        outputFormat: outputFormat,
-        jsonSchema,
-        permissionPromptToolName: options.permissionPromptTool,
-        permissionPrompts: (options as { permissionPrompts?: 'host' | 'none' }).permissionPrompts ?? 'host',
-        allowedTools,
-        thinkingConfig,
-        maxTurns: options.maxTurns,
-        maxBudgetUsd: options.maxBudgetUsd,
-        taskBudget: options.taskBudget ? {
-          total: options.taskBudget
-        } : undefined,
-        systemPrompt,
-        appendSystemPrompt,
-        userSpecifiedModel: effectiveModel,
-        fallbackModel: userSpecifiedFallbackModel,
-        teleport,
-        sdkUrl,
-        replayUserMessages: effectiveReplayUserMessages,
-        includePartialMessages: effectiveIncludePartialMessages,
-        forkSession: options.forkSession || false,
-        resumeSessionAt: options.resumeSessionAt || undefined,
-        rewindFiles: options.rewindFiles,
-        enableAuthStatus: options.enableAuthStatus,
-        agent: agentCli,
-        promptSuggestions: suggestionOverride === true,
-        forwardSubagentText,
-        sessionMirror: (options as { sessionMirror?: boolean }).sessionMirror,
-        workload: options.workload,
-        setupTrigger: setupTrigger ?? undefined,
-        sessionStartHooksPromise
-      });
-      return;
-    }
+    // Interactive UI is the sole conversation executor. Headless/SDK model
+    // execution and its independent MCP store have been removed.
 
     // Log model config at startup
     logEvent('tengu_startup_manual_model_config', {
@@ -3440,24 +3126,14 @@ async function run(): Promise<CommanderCommand> {
   if (feature('HARD_FAIL')) {
     program.addOption(new Option('--hard-fail', 'Crash on logError calls instead of silently logging').hideHelp());
   }
+  // These obsolete flags stay parseable for type-safe migration of existing
+  // option consumers, but are hidden from help and rejected before setup.
+  for (const option of program.options) {
+    if (option.long && INTERACTIVE_ONLY_FLAGS_317.has(option.long)) option.hideHelp();
+  }
   profileCheckpoint('run_main_options_built');
 
-  // -p/--print mode: skip subcommand registration. The 52 subcommands
-  // (mcp, auth, plugin, skill, task, config, doctor, update, etc.) are
-  // never dispatched in print mode — commander routes the prompt to the
-  // default action. The subcommand registration path was measured at ~65ms
-  // on baseline — mostly the isBridgeEnabled() call (25ms settings Zod parse
-  // + 40ms sync keychain subprocess), both hidden by the try/catch that
-  // always returns false before enableConfigs(). cc:// URLs are rewritten to
-  // `open` at main() line ~851 BEFORE this runs, so argv check is safe here.
-  const isPrintMode = isPrintModeLaunch(process.argv.slice(2));
-  const isCcUrl = process.argv.some(a => a.startsWith('cc://') || a.startsWith('cc+unix://'));
-  if (isPrintMode && !isCcUrl) {
-    profileCheckpoint('run_before_parse');
-    await program.parseAsync(process.argv.map(arg => arg === '-d2e' ? '--debug-to-stderr' : arg));
-    profileCheckpoint('run_after_parse');
-    return program;
-  }
+  // CLI utility subcommands remain available to configure the interactive app.
 
   // claude mcp
 
