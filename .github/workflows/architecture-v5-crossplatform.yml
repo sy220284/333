@@ -28,6 +28,7 @@ on:
       - 'src/bootstrap/claimRebind317.ts'
       - 'tests/m1-claim-rebind-317.test.mjs'
       - 'tests/m4-session-storage-v5-integration.test.ts'
+      - 'tests/m4-session-state-transition-317.test.ts'
       - 'tests/m2-session-queue-manager-integration-317.test.ts'
       - 'tests/m4-resume-preparation-v5.test.mjs'
       - '.github/workflows/architecture-v5-crossplatform.yml'
@@ -85,6 +86,8 @@ jobs:
           node --test tests/m2-session-queue-partitions-317.test.mjs tests/m4-session-transcript-paths-v5.test.mjs tests/m4-resume-preparation-v5.test.mjs tests/m4-ccr-concurrent-restore-317.test.mjs
       - name: 真实消息队列跨会话隔离
         run: bun test tests/m2-session-queue-manager-integration-317.test.ts
+      - name: 原版317会话身份与请求日志隔离
+        run: bun test tests/m4-session-state-transition-317.test.ts
       - name: Storage V5 真实持久化与恢复
         run: bun test tests/m4-session-storage-v5-integration.test.ts
       - name: 模型与本地工具真实往返

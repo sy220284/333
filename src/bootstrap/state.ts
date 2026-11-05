@@ -439,18 +439,31 @@ export function getSessionId(): SessionId {
   return STATE.sessionId
 }
 
+/**
+ * Original 2.1.317 xw()/wCs(): moving to a different session detaches the
+ * outgoing request journal, compaction and telemetry context. The next
+ * session must not inherit a request ID or pending compaction from the last.
+ * Same-ID ownership relocation preserves the ongoing request.
+ */
+function resetOutgoingSessionJournal(): void {
+  STATE.planSlugCache.delete(STATE.sessionId)
+  STATE.lastMainRequestId = undefined
+  STATE.lastApiCompletionTimestamp = null
+  STATE.pendingPostCompaction = false
+  STATE.lastAPIRequest = null
+  STATE.lastAPIRequestMessages = null
+  STATE.lastClassifierRequests = null
+  STATE.promptId = null
+}
+
 export function regenerateSessionId(
   options: { setCurrentAsParent?: boolean } = {},
 ): SessionId {
-  if (options.setCurrentAsParent) {
-    STATE.parentSessionId = STATE.sessionId
-  }
-  // Drop the outgoing session's plan-slug entry so the Map doesn't
-  // accumulate stale keys. Callers that need to carry the slug across
-  // (REPL.tsx clearContext) read it before calling clearConversation.
-  STATE.planSlugCache.delete(STATE.sessionId)
-  // Regenerated sessions live in the current project: reset projectDir to
-  // null so getTranscriptPath() derives from originalCwd.
+  const previousSessionId = STATE.sessionId
+  resetOutgoingSessionJournal()
+  STATE.parentSessionId = options.setCurrentAsParent
+    ? previousSessionId : undefined
+  // The new session owns its own journal and project location.
   STATE.sessionId = randomUUID() as SessionId
   STATE.sessionProjectDir = null
   sessionSwitched.emit(STATE.sessionId)
@@ -477,10 +490,11 @@ export function switchSession(
   sessionId: SessionId,
   projectDir: string | null = null,
 ): void {
-  // Drop the outgoing session's plan-slug entry so the Map stays bounded
-  // across repeated /resume. Only the current session's slug is ever read
-  // (plans.ts getPlanSlug defaults to getSessionId()).
-  STATE.planSlugCache.delete(STATE.sessionId)
+  if (STATE.sessionId !== sessionId) {
+    resetOutgoingSessionJournal()
+    // An unrelated resumed session cannot inherit the former session's parent.
+    STATE.parentSessionId = undefined
+  }
   STATE.sessionId = sessionId
   STATE.sessionProjectDir = projectDir
   sessionSwitched.emit(sessionId)
