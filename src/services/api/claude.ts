@@ -102,7 +102,7 @@ import {
   extractQuotaStatusFromHeaders,
 } from '../claudeAiLimits.js'
 import { getAPIContextManagement } from '../compact/apiMicrocompact.js'
-import { createThinkingDisplayRecovery317, getRequestThinkingDisplay, getStreamThinkingDisplay } from './thinkingDisplay.js'
+import { createThinkingDisplayRecovery317, getRequestThinkingDisplay, getStreamThinkingDisplay, resolveThinkingDisplayMode317 } from './thinkingDisplay.js'
 import { matchesDefaultModelVariant } from './modelCacheMatch.ts'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -677,6 +677,7 @@ export type Options = {
   model: string
   toolChoice?: BetaToolChoiceTool | BetaToolChoiceAuto | undefined
   isNonInteractiveSession: boolean
+  includePartialMessages?: boolean
   extraToolSchemas?: BetaToolUnion[]
   maxOutputTokensOverride?: number
   fallbackModel?: string
@@ -1653,7 +1654,7 @@ async function* queryModel(
         // thinking without a budget.
         thinking = {
           type: 'adaptive',
-          display: options.isNonInteractiveSession ? 'omitted' : 'updates',
+          display: resolveThinkingDisplayMode317(options.isNonInteractiveSession, options.includePartialMessages),
         } satisfies BetaMessageStreamParams['thinking']
       } else {
         // For models that do not support adaptive thinking, use the default
@@ -1669,7 +1670,7 @@ async function* queryModel(
         thinking = {
           budget_tokens: thinkingBudget,
           type: 'enabled',
-          display: options.isNonInteractiveSession ? 'omitted' : 'updates',
+          display: resolveThinkingDisplayMode317(options.isNonInteractiveSession, options.includePartialMessages),
         } satisfies BetaMessageStreamParams['thinking']
       }
     }
