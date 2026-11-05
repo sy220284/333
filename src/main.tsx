@@ -756,7 +756,7 @@ async function run(): Promise<CommanderCommand> {
     }
     profileCheckpoint('preAction_after_settings_sync');
   });
-  program.name('claude').description(`Claude Code - starts an interactive session by default, use -p/--print for non-interactive output`).argument('[prompt]', 'Your prompt', String)
+  program.name('333').description(`333 - starts an interactive session by default, use -p/--print for non-interactive output`).argument('[prompt]', 'Your prompt', String)
   // Subcommands inherit helpOption via commander's copyInheritedSettings —
   // setting it once here covers mcp, plugin, auth, and all other subcommands.
   .helpOption('-h, --help', 'Display help for command').option('-d, --debug [filter]', 'Enable debug mode with optional category filtering (e.g., "api,hooks" or "!1p,!file")', (_value: string | true) => {
@@ -820,7 +820,7 @@ async function run(): Promise<CommanderCommand> {
     if (prompt === 'code') {
       logEvent('tengu_code_prompt_ignored', {});
       // biome-ignore lint/suspicious/noConsole:: intentional console output
-      console.warn(chalk.yellow('Tip: You can launch Claude Code with just `claude`'));
+      console.warn(chalk.yellow('Tip: You can launch 333 with just `333`'));
       prompt = undefined;
     }
 
@@ -3357,7 +3357,7 @@ async function run(): Promise<CommanderCommand> {
         pendingHookMessages
       }, renderAndRun);
     }
-  }).version(`${MACRO.VERSION} (Claude Code)`, '-v, --version', 'Output the version number');
+  }).version(`${MACRO.VERSION} (333)`, '-v, --version', 'Output the version number');
 
   // 2.1.310 options with functional consumers in this source tree.
   program.option('--bg, --background', 'Start the session in the background and return an id for attach/logs/stop/rm');
@@ -3462,7 +3462,7 @@ async function run(): Promise<CommanderCommand> {
   // claude mcp
 
   const mcp = program.command('mcp').description('Configure and manage MCP servers').configureHelp(createSortedHelpConfig()).enablePositionalOptions();
-  mcp.command('serve').description(`Start the Claude Code MCP server`).option('-d, --debug', 'Enable debug mode', () => true).option('--verbose', 'Override verbose mode setting from config', () => true).action(async ({
+  mcp.command('serve').description(`Start the 333 MCP server`).option('-d, --debug', 'Enable debug mode', () => true).option('--verbose', 'Override verbose mode setting from config', () => true).action(async ({
     debug,
     verbose
   }: {
@@ -3715,7 +3715,7 @@ async function run(): Promise<CommanderCommand> {
 
   // Plugin validate command
   const registerPurge = (parent: CommanderCommand, hidden = false) => {
-    parent.command('purge [path]', { hidden }).description('Remove local Claude Code state for a project').option('--dry-run', 'List what would be deleted without deleting anything').option('-y, --yes', 'Skip confirmation prompt').option('-i, --interactive', 'Prompt for each item before deleting').option('--all', 'Purge state for every project (mutually exclusive with [path])').action(async (path: string | undefined, options: { dryRun?: boolean; yes?: boolean; interactive?: boolean; all?: boolean }) => {
+    parent.command('purge [path]', { hidden }).description('Remove local 333 state for a project').option('--dry-run', 'List what would be deleted without deleting anything').option('-y, --yes', 'Skip confirmation prompt').option('-i, --interactive', 'Prompt for each item before deleting').option('--all', 'Purge state for every project (mutually exclusive with [path])').action(async (path: string | undefined, options: { dryRun?: boolean; yes?: boolean; interactive?: boolean; all?: boolean }) => {
       const { purgeProjectHandler } = await import('./cli/handlers/purge.js');
       await purgeProjectHandler(path, options);
     });
@@ -3736,7 +3736,7 @@ async function run(): Promise<CommanderCommand> {
         process.exitCode = 1;
       }
     });
-  const pluginCmd = program.command('plugin').alias('plugins').description('Manage Claude Code plugins').configureHelp(createSortedHelpConfig());
+  const pluginCmd = program.command('plugin').alias('plugins').description('Manage 333 plugins').configureHelp(createSortedHelpConfig());
   const pluginEvalCmd = pluginCmd.command('eval [target]')
     .description('Run eval cases against a plugin and report scored results')
     .option('--eval-dir <dir>', 'Directory within plugin that holds evaluation cases')
@@ -3824,7 +3824,7 @@ async function run(): Promise<CommanderCommand> {
   });
 
   // Marketplace subcommands
-  const marketplaceCmd = pluginCmd.command('marketplace').description('Manage Claude Code marketplaces').configureHelp(createSortedHelpConfig());
+  const marketplaceCmd = pluginCmd.command('marketplace').description('Manage 333 marketplaces').configureHelp(createSortedHelpConfig());
   marketplaceCmd.command('add <source>').description('Add a marketplace from a URL, path, or GitHub repo').addOption(coworkOption()).option('--claudeai', 'Add the marketplace of this name that claude.ai hosts for you, by its listed name or its local name (see: claude plugin marketplace list)').option('--sparse <paths...>', 'Limit checkout to specific directories via git sparse-checkout (for monorepos). Example: --sparse .claude-plugin plugins').option('--scope <scope>', 'Where to declare the marketplace: user (default), project, or local').option('--json', 'Print one machine-readable result line as the last line on stdout (same exit codes)').action(async (source: string, options: {
     cowork?: boolean;
     claudeai?: boolean;
@@ -4141,7 +4141,7 @@ async function run(): Promise<CommanderCommand> {
   // Keep the explicit exit and options from the real release. Treating import
   // as a chat prompt incorrectly starts a model query and loses --dry-run.
   program.command('import [source]')
-    .description('Import config from another AI coding agent into Claude Code')
+    .description('Import config from another AI coding agent into 333')
     .option('--dry-run', 'Show what would be imported without writing anything')
     .option('--yes', 'Skip the interactive picker. On headless surfaces, pass --yes=<digest> from the `/import` preview.')
     .action(async () => {
