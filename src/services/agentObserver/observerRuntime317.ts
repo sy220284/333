@@ -34,6 +34,7 @@ function fileFor(sessionId: string): string {
 
 export async function createObserverRuntime317(args: {
   sessionId: SessionId
+  notificationSessionId?: SessionId
   agent: AgentDefinition
   agents: AgentDefinition[]
   getCacheParams: () => CacheSafeParams
@@ -74,7 +75,7 @@ export async function createObserverRuntime317(args: {
       enqueuePendingNotification({
         mode: 'task-notification',
         priority: 'later',
-        sessionId: args.sessionId,
+        sessionId: args.notificationSessionId ?? args.sessionId,
         isMeta: true,
         origin: { kind: 'task-notification' },
         value: formatBackgroundTaskNotification(
