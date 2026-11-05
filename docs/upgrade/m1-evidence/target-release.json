@@ -1,10 +1,10 @@
 {
   "target_version": "2.1.317",
   "previous_target": "2.1.310",
-  "status": "按原版317重新清点137功能/137场景，PR7需继续实测修复",
-  "updated_on": "2026-11-04",
-  "pr": 7,
-  "branch": "upgrade/2.1.310-m1-evidence",
+  "status": "PR14 已建立升级成果保护与 333 全量系统联审规范，当前新版代码仍在修复和正式验收中",
+  "updated_on": "2026-11-05",
+  "pr": 14,
+  "branch": "toolchain/authoritative-dependency-manifest-pr14",
   "source_repo": "https://github.com/anthropics/claude-code",
   "target_release_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.317",
   "new_release_entries": 392,
@@ -13,9 +13,9 @@
   "base_legacy_change_count": 6313,
   "feature_acceptance_target": 137,
   "scenario_acceptance_target": 137,
-  "binary_source_status": "官方 2.1.317 Linux x64 已在 GitHub Actions 41672565537 下载并完成 manifest SHA-256 校验，--version 实测通过；候选版构建失败阻断后续严格差分，Windows x64 仍待实测",
-  "product_package_version_policy": "功能升级优先移植官方2.1.317完整实现；缺失源码对照x64行为重写，最终以构建和实际功能测试判断",
-  "ci_writeback": "本轮不处理",
+  "binary_source_status": "官方 2.1.317 Linux x64 SHA-256 和版本已有先前 CI 实测；PR14 当前提交的独立重建、官方差分及跨平台宿主验收以最新运行结果为准",
+  "product_package_version_policy": "官方 2.1.317 是语义基准；保留 PR13/PR14 的 TypeScript 7、MCP v2、Node/Bun、最新依赖与新增能力，使用升级版 API 修复缺口并执行双向验收",
+  "ci_writeback": "只凭当前 HEAD 的已完成真实测试和明确证据更新正式签收，不能依据静态对应、旧 SHA 或取消的工作流自动通过",
   "verified_x64_sha256": "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0",
   "release_snapshots": [
     {
