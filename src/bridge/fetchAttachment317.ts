@@ -8,8 +8,8 @@
  */
 import {randomUUID} from 'node:crypto'
 import {constants} from 'node:fs'
-import {lstat,mkdir,open,realpath,rename,rm,link} from 'node:fs/promises'
-import {isAbsolute,join,resolve} from 'node:path'
+import {lstat,mkdir,open,realpath,rename,rm,link,statfs} from 'node:fs/promises'
+import {isAbsolute,join,resolve,parse,relative} from 'node:path'
 
 const MAX_FILE_BYTES=500*1024*1024
 const MAX_NAME_BYTES=255
@@ -65,12 +65,10 @@ async function checkDirectory(path:string):Promise<string>{
   if(!isAbsolute(path)||/^[/\\]{2}/.test(path))
     throw new Error('FetchAttachment requires an absolute local directory')
   const target=resolve(path)
-  // Ensure no symlink component; otherwise a remote payload could be written
-  // outside the private upload tree.
-  const pieces=target.split(/[\\/]+/).filter(Boolean)
-  let cursor=target.startsWith('/')?'/':''
-  for(const part of pieces){
-    cursor=cursor?join(cursor,part):part
+  const root=parse(target).root
+  let cursor=root
+  for(const part of relative(root,target).split(/[\\/]+/).filter(Boolean)){
+    cursor=join(cursor,part)
     let mode
     try{mode=await lstat(cursor)}
     catch(error){
@@ -79,10 +77,24 @@ async function checkDirectory(path:string):Promise<string>{
         mode=await lstat(cursor)
       }else throw error
     }
-    if(!mode.isDirectory()||mode.isSymbolicLink())
-      throw new Error('FetchAttachment directory contains a non-directory or symbolic link')
+    if(mode.isSymbolicLink()){
+      const linked=await realpath(cursor)
+      if(/^[/\\]{2}/.test(linked))
+        throw new Error('FetchAttachment directory link leads to a network share')
+      cursor=linked
+      mode=await lstat(cursor)
+    }
+    if(!mode.isDirectory())
+      throw new Error('FetchAttachment directory contains a non-directory')
   }
-  return realpath(target)
+  const canonical=await realpath(target)
+  if(/^[/\\]{2}/.test(canonical))
+    throw new Error('FetchAttachment directory is on a network share')
+  // NFS/CIFS/SMB are not safe destinations for an on-host atomic handoff.
+  const fsInfo=await statfs(canonical)
+  if(new Set([0x6969,0x517b,0xff534d42]).has(Number(fsInfo.type)))
+    throw new Error('FetchAttachment requires a local filesystem')
+  return canonical
 }
 export async function fetchAttachmentHere317(raw:unknown,
   options:FetchAttachmentOptions317):Promise<FetchAttachmentResult317>{
