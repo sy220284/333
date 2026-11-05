@@ -106,7 +106,7 @@ export function checkUpgradeProtection() {
   // 锁住历史快照自身，避免修改比较基准后意外放行依赖降级。
   const toolchain = read('tools/dev/toolchain.lock.json')
   const baselineBytes = readFileSync(resolve(root, 'docs/upgrade/pr13-upgrade-protection-baseline.json'))
-  const header = 'blob ' + baselineBytes.length + String.fromCharCode(0)
+  const header = `blob ${baselineBytes.length}${String.fromCharCode(0)}`
   const baselineBlobSha = createHash('sha1').update(header).update(baselineBytes).digest('hex')
   if (baselineBlobSha !== toolchain.integrity.pr13BaselineBlobSha) {
     throw new Error('PR13 历史升级基准指纹不符；更新快照须同步提交权威清单供审核')
