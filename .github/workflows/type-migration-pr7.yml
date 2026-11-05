@@ -6,6 +6,7 @@ on:
       - 'src/cli/gateway/**'
       - 'src/utils/accountPeerDirectory.ts'
       - 'src/tools/ListAgentsTool/peerListing.ts'
+      - 'src/bootstrap/preload317.ts'
       - 'src/utils/plugins/commandSourceConsent.ts'
       - 'src/cli/handlers/pluginEvalGraders317.ts'
       - 'src/cli/handlers/pluginEvalCatalog317.ts'
@@ -23,6 +24,7 @@ on:
       - 'src/cli/gateway/**'
       - 'src/utils/accountPeerDirectory.ts'
       - 'src/tools/ListAgentsTool/peerListing.ts'
+      - 'src/bootstrap/preload317.ts'
       - 'src/utils/plugins/commandSourceConsent.ts'
       - 'src/cli/handlers/pluginEvalGraders317.ts'
       - 'src/cli/handlers/pluginEvalCatalog317.ts'
@@ -93,6 +95,8 @@ jobs:
         run: node --test tests/m1-account-peer-discovery.test.mjs tests/m1-list-agents.test.mjs tests/m6-gateway-admin-317.test.mjs
       - name: 队友发现及插件命令来源授权真实性回归
         run: node --test tests/m1-list-agents.test.mjs tests/m3-plugin-source-command-consent-317.test.mjs tests/m3-plugin-source-fingerprint-317.test.mjs
+      - name: 预加载进程与会话声明真实行为回归
+        run: node --test tests/m1-preload-317.test.mjs
       - name: 上传内容级审计证据
         if: always()
         uses: actions/upload-artifact@v4
