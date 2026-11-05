@@ -10,6 +10,13 @@ on:
       - 'src/entrypoints/cli.tsx'
       - 'tests/m6-self-hosted-runner-*'
       - '.github/workflows/m6-self-hosted-runner-317.yml'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/cli/selfHostedRunner/**'
+      - 'src/bridge/sessionRunner.ts'
+      - 'tests/m6-self-hosted-runner-*'
+      - '.github/workflows/m6-self-hosted-runner-317.yml'
   workflow_dispatch:
 permissions:
   contents: read
