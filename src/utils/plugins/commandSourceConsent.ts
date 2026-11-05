@@ -56,10 +56,13 @@ export function commandSourceDisclosure({ pluginId, command, mode, catalogRevisi
   }
 }
 
+const isCatalogMapping = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
+
 /** Recursively sort object keys into the official marketplace hash tree. */
 export function canonicalCatalogTree(value: unknown): unknown {
   if (Array.isArray(value)) return ['[', ...value.map(canonicalCatalogTree)]
-  if (value !== null && typeof value === 'object') {
+  if (isCatalogMapping(value)) {
     return ['{', ...Object.keys(value).sort().map(key => [key, canonicalCatalogTree(value[key])])]
   }
   return value
