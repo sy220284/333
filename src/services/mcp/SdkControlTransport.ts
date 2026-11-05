@@ -45,7 +45,7 @@ import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
 export type SendMcpMessageCallback = (
   serverName: string,
   message: JSONRPCMessage,
-) => Promise<JSONRPCMessage>
+) => Promise<JSONRPCMessage | null>
 
 /**
  * CLI-side transport for SDK MCP servers.
@@ -80,7 +80,7 @@ export class SdkControlClientTransport implements Transport {
     const response = await this.sendMcpMessage(this.serverName, message)
 
     // Pass the response back to the MCP client
-    if (this.onmessage) {
+    if (response && this.onmessage) {
       this.onmessage(response)
     }
   }

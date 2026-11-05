@@ -495,6 +495,7 @@ export async function runHeadless(
     agent: string | undefined
     workload: string | undefined
     promptSuggestions?: boolean | undefined
+    sessionMirror?: boolean
     forwardSubagentText?: boolean | undefined
     setupTrigger?: 'init' | 'maintenance' | undefined
     sessionStartHooksPromise?: ReturnType<typeof processSessionStartHooks>
@@ -603,7 +604,7 @@ export async function runHeadless(
   // structuredIO.write below.
   if (options.outputFormat === 'stream-json') {
     installStreamJsonStdoutGuard()
-    if (process.env.CLAUDE_CODE_SDK_SESSION_MIRROR === '1') {
+    if (options.sessionMirror) {
       setTranscriptMirror317((filePath, entries) =>
         structuredIO.write({ type: 'transcript_mirror', filePath, entries }))
     }

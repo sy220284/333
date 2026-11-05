@@ -1,3 +1,4 @@
+import { z } from 'zod/v4'
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
 import { access, mkdtemp, rm } from 'node:fs/promises'
@@ -7,6 +8,8 @@ import { join, resolve } from 'node:path'
 import test from 'node:test'
 import {
   query,
+  createSdkMcpServer,
+  tool,
   unstable_v2_createSession,
   unstable_v2_resumeSession,
   unstable_v2_prompt,
@@ -32,13 +35,14 @@ test('SDK sends multiple turns and resumes the transcript through the rebuilt CL
     event('message_start', { message: { id: `msg_${n}`, type: 'message', model,
       role: 'assistant', content: [], stop_reason: null, stop_sequence: null,
       usage: { input_tokens: 10, output_tokens: 0 } } })
-    const wantsTool = n === 5
+    const wantsMcp = n === 10
+    const wantsTool = n === 5 || wantsMcp
     if (wantsTool) {
       event('content_block_start', { index: 0, content_block: {
-        type: 'tool_use', id: 'toolu_permission_test', name: 'Bash', input: {},
+        type: 'tool_use', id: 'toolu_permission_test', name: wantsMcp ? 'mcp__audit__echo' : 'Bash', input: {},
       } })
       event('content_block_delta', { index: 0, delta: {
-        type: 'input_json_delta', partial_json: JSON.stringify({ command: 'touch sdk-permission-marker' }),
+        type: 'input_json_delta', partial_json: JSON.stringify(wantsMcp ? { text: 'bridge-317' } : { command: 'touch sdk-permission-marker' }),
       } })
     } else {
       event('content_block_start', { index: 0, content_block: { type: 'text', text: '' } })
@@ -155,6 +159,27 @@ test('SDK sends multiple turns and resumes the transcript through the rebuilt CL
       assert.match(prompts.at(-1)!, /restored from remote store/)
     } finally {
       await restored.return()
+    }
+
+    const calls: string[] = []
+    const mcp = createSdkMcpServer({ name: 'audit', tools: [
+      tool('echo', 'Echo the supplied text', { text: z.string() }, async ({ text }) => {
+        calls.push(text)
+        return { content: [{ type: 'text', text: 'echo: ' + text }] }
+      }),
+    ] })
+    const bridged = query({
+      prompt: 'call the SDK MCP echo tool',
+      options: { ...options, mcpServers: { audit: mcp }, allowedTools: ['mcp__audit__echo'] },
+    })
+    try {
+      let result
+      for await (const event of bridged) if (event.type === 'result') result = event
+      assert.equal(result?.subtype, 'success')
+      assert.deepEqual(calls, ['bridge-317'])
+      assert.match(prompts.at(-1)!, /echo: bridge-317/)
+    } finally {
+      await bridged.return()
     }
 
   } finally {

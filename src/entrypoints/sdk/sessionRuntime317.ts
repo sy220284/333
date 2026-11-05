@@ -1,3 +1,6 @@
+import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
+import { SdkControlServerTransport } from '../../services/mcp/SdkControlTransport.js'
+import { parseSdkTransportMessage } from '../../services/mcp/validateSdkTransportMessage.js'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { createInterface } from 'node:readline'
@@ -66,6 +69,7 @@ function startSession(
     '--output-format', 'stream-json',
   ]
   const queryOptions: InternalOptions = options
+  if (external) args.push('--session-mirror')
   if (options.model) args.push('--model', options.model)
   if (resume) args.push('--resume', resume)
   else if (queryOptions.continue && !external) args.push('--continue')
@@ -99,11 +103,25 @@ function startSession(
   if (Array.isArray(queryOptions.tools)) args.push('--tools', queryOptions.tools.join(','))
   for (const dir of queryOptions.additionalDirectories ?? []) args.push('--add-dir', dir)
   for (const plugin of queryOptions.plugins ?? []) args.push('--plugin-dir', plugin.path)
-  const servers = queryOptions.mcpServers
-  if (servers && Object.values(servers).some(server => server.type === 'sdk')) {
-    throw new Error('In-process SDK MCP servers require a message relay')
+  const sdkServers = new Map<string, {
+    transport: SdkControlServerTransport
+    pending: Map<string | number, (message: JSONRPCMessage) => void>
+    connect: () => Promise<void>
+  }>()
+  const externalServers = Object.fromEntries(Object.entries(queryOptions.mcpServers ?? {}).filter(([name, server]) => {
+    if (server.type !== 'sdk') return true
+    if (!('instance' in server)) throw new Error('Missing SDK MCP server instance: ' + name)
+    const pending = new Map<string | number, (message: JSONRPCMessage) => void>()
+    const transport = new SdkControlServerTransport(message => {
+      if ('id' in message && !('method' in message)) pending.get(message.id)?.(message)
+      else void control({ subtype: 'mcp_message', server_name: name, message }).catch(fail)
+    })
+    sdkServers.set(name, { transport, pending, connect: () => server.instance.connect(transport) })
+    return false
+  }))
+  if (Object.keys(externalServers).length) {
+    args.push('--mcp-config', JSON.stringify({ mcpServers: externalServers }))
   }
-  if (servers) args.push('--mcp-config', JSON.stringify({ mcpServers: servers }))
   const permissionTool = options.canUseTool ? 'stdio' : queryOptions.permissionPromptToolName
   if (permissionTool) args.push('--permission-prompt-tool', permissionTool)
   if (options.permissionMode) args.push('--permission-mode', options.permissionMode)
@@ -115,7 +133,6 @@ function startSession(
     cwd: options.cwd,
     env: {
       ...process.env, ...options.env, CLAUDE_CODE_ENTRYPOINT: 'sdk-ts',
-      CLAUDE_CODE_SDK_SESSION_MIRROR: external ? '1' : undefined,
       ...(external && { CLAUDE_CONFIG_DIR: external.root }),
     },
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -193,6 +210,27 @@ function startSession(
             suggestions: request.permission_suggestions,
             toolUseID: request.tool_use_id,
           })
+        } else if (request.subtype === 'mcp_message') {
+          const server = sdkServers.get(request.server_name)
+          if (!server?.transport.onmessage) throw new Error('SDK MCP server is disconnected: ' + request.server_name)
+          const message = parseSdkTransportMessage(request.message)
+          if ('method' in message && 'id' in message) {
+            const id = message.id
+            if (server.pending.has(id)) throw new Error('Duplicate SDK MCP request ID')
+            try {
+              const mcp_response = await new Promise<JSONRPCMessage>((resolve, reject) => {
+                controller.signal.addEventListener('abort', () => reject(controller.signal.reason), { once: true })
+                server.pending.set(id, resolve)
+                server.transport.onmessage!(message)
+              })
+              decision = { mcp_response }
+            } finally {
+              server.pending.delete(id)
+            }
+          } else {
+            server.transport.onmessage(message)
+            decision = { mcp_response: null }
+          }
         } else if (request.subtype === 'hook_callback') {
           const callback = callbacks.get(request.callback_id)
           if (!callback) throw new Error('Unknown SDK hook callback')
@@ -218,6 +256,7 @@ function startSession(
     closed = true
     for (const controller of permissions.values()) controller.abort()
     permissions.clear()
+    for (const server of sdkServers.values()) void server.transport.close()
     for (const request of requests.values()) request.reject(failure ?? new Error('SDK session is closed'))
     requests.clear()
     if (failure) messages.error(failure)
@@ -260,15 +299,16 @@ function startSession(
   }
 
   void pump().catch(fail)
-  const initialization = control({
+  const initialization = Promise.all([...sdkServers.values()].map(server => server.connect())).then(() => control({
     subtype: 'initialize',
+    sdkMcpServers: [...sdkServers.keys()],
     hooks,
     agents: queryOptions.agents,
     jsonSchema: queryOptions.outputFormat?.schema,
     systemPrompt: typeof queryOptions.systemPrompt === 'string' ? queryOptions.systemPrompt : undefined,
     appendSystemPrompt: queryOptions.appendSystemPrompt ??
       (typeof queryOptions.systemPrompt === 'object' ? queryOptions.systemPrompt.append : undefined),
-  }).then(async result => {
+  })).then(async result => {
     const tokens = queryOptions.thinking
       ? queryOptions.thinking.type === 'enabled' ? queryOptions.thinking.budgetTokens : undefined
       : queryOptions.maxThinkingTokens
