@@ -44,3 +44,19 @@ test('publish never reports success on unauthenticated or rejected requests',asy
     onStatus:()=>{}
   })).rejects.toThrow('HTTP 403')
 })
+
+test('automatic upload requires a policy verdict for the OAuth token and honors opt-out', async () => {
+  const calls: string[] = []
+  const deps = {
+    credentials: async () => ({ accessToken: 'policy-fixture' }),
+    authorize: async (token: string) => { calls.push(token); return false },
+    fetchImpl: async () => { throw new Error('unexpected upload') },
+    onStatus: () => {},
+  }
+  expect(await publishEvalReport317(report, { publish: false }, deps, true))
+    .toEqual({ status: 'local', reason: 'disabled' })
+  expect(calls).toEqual([])
+  expect(await publishEvalReport317(report, {}, deps, true))
+    .toEqual({ status: 'local', reason: 'policy' })
+  expect(calls).toEqual(['policy-fixture'])
+})

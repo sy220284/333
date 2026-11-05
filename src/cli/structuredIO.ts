@@ -768,15 +768,15 @@ export class StructuredIO {
   async sendMcpMessage(
     serverName: string,
     message: JSONRPCMessage,
-  ): Promise<JSONRPCMessage> {
-    const response = await this.sendRequest<{ mcp_response: JSONRPCMessage }>(
+  ): Promise<JSONRPCMessage | null> {
+    const response = await this.sendRequest<{ mcp_response: JSONRPCMessage | null }>(
       {
         subtype: 'mcp_message',
         server_name: serverName,
         message,
       },
       z.object({
-        mcp_response: z.any() as z.Schema<JSONRPCMessage>,
+        mcp_response: z.any() as z.Schema<JSONRPCMessage | null>,
       }),
     )
     return response.mcp_response

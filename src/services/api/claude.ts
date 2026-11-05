@@ -102,7 +102,7 @@ import {
   extractQuotaStatusFromHeaders,
 } from '../claudeAiLimits.js'
 import { getAPIContextManagement } from '../compact/apiMicrocompact.js'
-import { getRequestThinkingDisplay, getStreamThinkingDisplay } from './thinkingDisplay.js'
+import { createThinkingDisplayRecovery317, getRequestThinkingDisplay, getStreamThinkingDisplay } from './thinkingDisplay.js'
 import { matchesDefaultModelVariant } from './modelCacheMatch.ts'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -814,6 +814,12 @@ function getNonstreamingFallbackTimeoutMs(): number {
  * Encapsulates the common pattern of creating a withRetry generator,
  * iterating to yield system messages, and returning the final BetaMessage.
  */
+function thinkingDisplayRecoveryForModel317(model: string) {
+  return createThinkingDisplayRecovery317(JSON.stringify([
+    getSessionId(), getAPIProvider(), process.env.ANTHROPIC_BASE_URL, model,
+  ]))
+}
+
 export async function* executeNonStreamingRequest(
   clientOptions: {
     model: string
@@ -839,6 +845,7 @@ export async function* executeNonStreamingRequest(
   originatingRequestId?: string | null,
 ): AsyncGenerator<SystemAPIErrorMessage, BetaMessage> {
   const fallbackTimeoutMs = getNonstreamingFallbackTimeoutMs()
+  const displayRecovery = thinkingDisplayRecoveryForModel317(retryOptions.model)
   const generator = withRetry(
     () =>
       getAnthropicClient({
@@ -849,7 +856,7 @@ export async function* executeNonStreamingRequest(
       }),
     async (anthropic, attempt, context) => {
       const start = Date.now()
-      const retryParams = paramsFromContext(context)
+      const retryParams = displayRecovery.prepare(paramsFromContext(context))
       captureRequest(retryParams)
       onAttempt(attempt, start, retryParams.max_tokens)
 
@@ -859,7 +866,7 @@ export async function* executeNonStreamingRequest(
       )
 
       try {
-        return await anthropic.beta.messages.create(
+        const result = await anthropic.beta.messages.create(
           {
             ...adjustedParams,
             model: normalizeModelStringForAPI(adjustedParams.model),
@@ -869,6 +876,8 @@ export async function* executeNonStreamingRequest(
             timeout: fallbackTimeoutMs,
           },
         )
+        displayRecovery.accepted()
+        return result
       } catch (err) {
         // User aborts are not errors — re-throw immediately without logging
         if (err instanceof APIUserAbortError) throw err
@@ -899,6 +908,7 @@ export async function* executeNonStreamingRequest(
       ...(isFastModeEnabled() && { fastMode: retryOptions.fastMode }),
       signal: retryOptions.signal,
       initialConsecutive529Errors: retryOptions.initialConsecutive529Errors,
+      retryRejectedRequest: displayRecovery.retry,
       querySource: retryOptions.querySource,
     },
   )
@@ -1791,6 +1801,7 @@ async function* queryModel(
 
   try {
     queryCheckpoint('query_client_creation_start')
+    const displayRecovery = thinkingDisplayRecoveryForModel317(options.model)
     const generator = withRetry(
       () =>
         getAnthropicClient({
@@ -1810,7 +1821,7 @@ async function* queryModel(
         // client_creation_start is meaningful on attempt 1.
         queryCheckpoint('query_client_creation_end')
 
-        const params = paramsFromContext(context)
+        const params = displayRecovery.prepare(paramsFromContext(context))
         requestThinkingDisplay = getRequestThinkingDisplay(params.thinking)
         captureAPIRequest(params, options.querySource) // Capture for bug reports
 
@@ -1860,6 +1871,7 @@ async function* queryModel(
           if (recovery) throw new ContextHintRecoveryError(recovery)
           throw error
         }
+        displayRecovery.accepted()
         queryCheckpoint('query_response_headers_received')
         streamRequestId = result.request_id
         streamResponse = result.response
@@ -1872,6 +1884,7 @@ async function* queryModel(
         ...(isFastModeEnabled() ? { fastMode: isFastMode } : false),
         signal,
         querySource: options.querySource,
+        retryRejectedRequest: displayRecovery.retry,
       },
     )
 

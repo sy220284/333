@@ -5,6 +5,7 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/grow
 import { getAPIProvider } from './model/providers.js'
 import { get3PModelCapabilityOverride } from './model/modelSupportOverrides.js'
 import { isEnvTruthy } from './envUtils.js'
+import { getModelBehavior317 } from './model/modelBehavior317.js'
 import { getCatalogModel, getModelCapabilityEnvOverride } from './model/modelCatalog.js'
 import { getModelCapability } from './model/modelCapabilities.js'
 import { buildEffortSettingsTable, lookupSettingsEffort } from './effortSettings.js'
@@ -55,7 +56,7 @@ function supportsEffortCapability(model: string, capability: 'effort' | 'max_eff
   if (configured !== undefined) return configured
   const levels = getModelCapability(model)?.effort_levels?.map(value => value.trim().toLowerCase())
   if (levels !== undefined) return capability === 'effort' ? levels.length > 0 : levels.includes(capability === 'max_effort' ? 'max' : 'xhigh')
-  const entry = getCatalogModel(model)
+  const entry = getCatalogModel(getModelBehavior317(model))
   const name = entry?.id ?? model.toLowerCase().replace(/\[1m\]$/i, '')
   const legacy = ['claude-opus-4-0', 'claude-opus-4-1', 'claude-sonnet-4-0', 'claude-sonnet-4-5', 'claude-haiku-4-5']
   if (capability !== 'effort') legacy.push('claude-opus-4-5')
@@ -292,7 +293,7 @@ export function getOpusDefaultEffortConfig(): OpusDefaultEffortConfig {
 
 // 317 Rgr/K/Ke/Xe: remote per-model defaults, runtime metadata, then catalog.
 export function getDefaultEffortForModel(model: string): EffortValue | undefined {
-  const entry = getCatalogModel(model)
+  const entry = getCatalogModel(getModelBehavior317(model))
   const overrides = getFeatureValue_CACHED_MAY_BE_STALE<Record<string, string>>('tengu_witty_wand', {})
   const configured = overrides && typeof overrides === 'object' ? overrides[entry?.id ?? model] : undefined
   if (typeof configured === 'string') {

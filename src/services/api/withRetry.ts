@@ -130,6 +130,7 @@ export interface RetryContext {
 }
 
 interface RetryOptions {
+  retryRejectedRequest?: (error: APIError) => boolean
   maxRetries?: number
   model: string
   fallbackModel?: string
@@ -258,6 +259,10 @@ export async function* withRetry<T>(
       return await operation(client, attempt, retryContext)
     } catch (error) {
       lastError = error
+      if (error instanceof APIError && options.retryRejectedRequest?.(error)) {
+        attempt--
+        continue
+      }
       logForDebugging(
         `API error (attempt ${attempt}/${maxRetries + 1}): ${error instanceof APIError ? `${error.status} ${error.message}` : errorMessage(error)}`,
         { level: 'error' },

@@ -1,0 +1,52 @@
+name: M2 2.1.317 提示词功能与调用链验收
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - 'src/services/agentObserver/**'
+      - 'src/services/artifactComments/**'
+      - 'src/services/youShouldKnow/**'
+      - 'src/tools/AgentTool/loadAgentsDir.ts'
+      - 'src/query.ts'
+      - 'src/QueryEngine.ts'
+      - 'src/query/stopHooks.ts'
+      - 'src/state/AppStateStore.ts'
+      - 'src/commands.ts'
+      - 'src/commands/know.ts'
+      - 'src/services/mcp/useManageMCPConnections.ts'
+      - 'tests/m2-*317.test.ts'
+      - '.github/workflows/m2-prompt-functional-integration-317.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/services/agentObserver/**'
+      - 'src/services/artifactComments/**'
+      - 'src/services/youShouldKnow/**'
+      - 'tests/m2-*317.test.ts'
+      - '.github/workflows/m2-prompt-functional-integration-317.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prompt-integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.4'
+      - name: 恢复项目锁定依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 验证提示词功能、事件处理和权限隔离
+        run: |
+          bun test tests/m2-artifact-comment-pipeline-317.test.ts tests/m2-observer-lifecycle-317.test.ts tests/m2-knowledge-nudge-317.test.ts
+      - name: 检查新功能与全仓类型
+        run: |
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          node tools/dev/dev.mjs typecheck:all

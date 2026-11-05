@@ -25,7 +25,7 @@ import type {
   SdkPluginConfig,
   ThinkingConfig,
 } from './coreTypes.js'
-import type { SDKHookCallbackMatcher } from './controlTypes.js'
+import type { SDKHookCallbackMatcher, SDKHookCallbackRequest } from './controlTypes.js'
 
 /** Exactly the Zod object shape accepted by the SDK tool() factory. */
 export type AnyZodRawShape = Record<string, z.ZodType>
@@ -68,13 +68,29 @@ export type CanUseTool = (
   },
 ) => Promise<PermissionResult>
 
-export type HookCallbacks = Partial<
-  Record<HookEvent, SDKHookCallbackMatcher[]>
->
+export type HookCallback = (
+  input: SDKHookCallbackRequest['input'],
+  toolUseID: string | undefined,
+  options: { signal: AbortSignal },
+) => Promise<Record<string, unknown>>
+
+export type HookCallbacks = Partial<Record<HookEvent, Array<
+  Omit<SDKHookCallbackMatcher, 'hookCallbackIds'> & { hooks: HookCallback[] }
+>>>
 
 export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
+export type SessionStoreKey = { projectKey: string; sessionId: string; subpath?: string }
+export type SessionStore = {
+  append(key: SessionStoreKey, entries: Record<string, unknown>[]): Promise<void>
+  load(key: SessionStoreKey): Promise<Record<string, unknown>[] | null | undefined>
+  listSessions(projectKey: string): Promise<Array<{ sessionId: string; mtime: number }>>
+  listSubkeys?(key: SessionStoreKey): Promise<string[]>
+}
+
 export type Options = {
+  sessionStore?: SessionStore
+  loadTimeoutMs?: number
   abortController?: AbortController
   model?: string
   fallbackModel?: string
@@ -155,6 +171,8 @@ export interface InternalQuery extends Query {
 }
 
 export type SDKSessionOptions = {
+  sessionStore?: SessionStore
+  loadTimeoutMs?: number
   model: string
   pathToClaudeCodeExecutable?: string
   executable?: 'node' | 'bun'

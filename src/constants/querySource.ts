@@ -4,6 +4,10 @@
  */
 export type QuerySource =
   | 'agent_creation'
+  | 'agent_observer'
+  | 'artifact_comment_analyst'
+  | 'artifact_comment_reply'
+  | 'knowledge_nudge'
   | 'agent_summary'
   | 'auto_dream'
   | 'auto_mode'

@@ -71,6 +71,8 @@ import {
   fetchClaudeAIMcpConfigsIfEligible,
 } from './claudeai.js'
 import { registerElicitationHandler } from './elicitationHandler.js'
+import { registerArtifactCommentNotifications317 } from '../artifactComments/mcpCommentBridge317.js'
+import { isEnvTruthy } from '../../utils/envUtils.js'
 import { getMcpPrefix } from './mcpStringUtils.js'
 import { commandBelongsToServer, excludeStalePluginClients } from './utils.js'
 
@@ -616,6 +618,42 @@ export function useManageMCPConnections(
                 }
                 break
             }
+          }
+
+          // Artifact comment notifications are a separate server-declared capability.
+          // No event handler or external write is active unless both feature and
+          // account-scoped user permission are explicitly enabled.
+          if (client.capabilities?.experimental?.['claude/artifact-comments'] &&
+              isEnvTruthy(process.env.CLAUDE_CODE_EXPERIMENTAL_ARTIFACT_COMMENTS)) {
+            const toolNames = (await client.client.listTools()).tools.map(tool => tool.name)
+            const artifactTool = toolNames.find(name =>
+              name === 'Artifact' || name === 'artifact')
+            if (artifactTool) {
+              registerArtifactCommentNotifications317({
+                server: client,
+                toolName: artifactTool,
+                allowedDomain:
+                  process.env.CLAUDE_CODE_ARTIFACT_COMMENT_DOMAIN || 'claude.ai',
+                approveWrite: async () =>
+                  isEnvTruthy(process.env.CLAUDE_CODE_ARTIFACT_COMMENT_ALLOW_WRITES) &&
+                  store.getState().toolPermissionContext.mode === 'bypassPermissions',
+                notifyError: message => {
+                  addNotification({
+                    key: 'artifact-comments-error',
+                    priority: 'high',
+                    text: message,
+                    color: 'warning',
+                    timeoutMs: 12000,
+                  })
+                },
+                signal: new AbortController().signal,
+              })
+              logMCPDebug(client.name, 'Artifact comment event handler registered')
+            } else {
+              logMCPDebug(client.name, 'Artifact comment capability without Artifact tool')
+            }
+          } else {
+            client.client.removeNotificationHandler('notifications/claude/artifact/comment')
           }
 
           // Register notification handlers for list_changed notifications

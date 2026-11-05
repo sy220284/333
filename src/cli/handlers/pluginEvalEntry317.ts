@@ -4,6 +4,12 @@
  * evaluated headlessly without --trust-plugin.
  */
 import { mkdtemp, cp, readFile, realpath, stat, rm, writeFile, mkdir } from 'node:fs/promises'
+import { canPublishPrivateArtifact317 } from '../../services/policyLimits/index.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
+import { isEnvDefinedFalsy } from '../../utils/envUtils.js'
+import { isEssentialTrafficOnly } from '../../utils/privacyLevel.js'
+import { isClaudeAISubscriber } from '../../utils/auth.js'
+import { isFirstPartyAnthropicBaseUrl, getAPIProvider } from '../../utils/model/providers.js'
 import { tmpdir } from 'node:os'
 import { join, isAbsolute, resolve, relative } from 'node:path'
 import { discoverEvalCases317 } from './pluginEvalCatalog317.ts'
@@ -135,9 +141,20 @@ export async function pluginEvalHandler317(target: string, options: PluginEvalOp
     const report = await savePluginEvalReport317(data, { ...options, outputDir })
     // The local report remains available even when remote publishing is
     // unavailable or a deployment attempt fails.
-    if (options.publishReport) {
+    const launchedByAgent = Boolean(process.env.CLAUDE_CODE_CHILD_SESSION ||
+      process.env.CLAUDECODE && (process.env.CLAUDE_CODE_SKIP_PROMPT_HISTORY ||
+        !process.stdin.isTTY && !process.stdout.isTTY))
+    const defaultPublish = !launchedByAgent &&
+      !process.env.CLAUDE_CODE_EVAL_INTERVIEW_SESSION &&
+      getFeatureValue_CACHED_MAY_BE_STALE('tengu_quartz_thimble', true)
+    if (shouldPublishEvalReport317(options, defaultPublish)) {
       try {
-        const publish = await publishEvalReport317(data,options)
+        const publish = await publishEvalReport317(data, options, {
+          isEnabled: () => !isEssentialTrafficOnly() &&
+            !isEnvDefinedFalsy(process.env.CLAUDE_CODE_ARTIFACT) && isClaudeAISubscriber() &&
+            getAPIProvider() === 'firstParty' && isFirstPartyAnthropicBaseUrl(),
+          authorize: canPublishPrivateArtifact317,
+        }, defaultPublish)
         if (publish.status !== 'published') {
           process.stderr.write('plugin eval: remote publication unavailable ('+
             publish.reason+'); local report: '+report.reportFile+'\n')

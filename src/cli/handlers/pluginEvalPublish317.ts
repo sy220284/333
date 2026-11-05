@@ -16,6 +16,7 @@ export type PublishEvalDeps317={
   fetchImpl?:typeof fetch
   credentials?:()=>Promise<{accessToken:string;orgUUID?:string|null}>
   isEnabled?:()=>boolean
+  authorize?: (token: string) => Promise<boolean>
   onStatus?:(message:string)=>void
 }
 function requireValidPublishedUrl317(value:unknown):string{
@@ -26,17 +27,18 @@ function requireValidPublishedUrl317(value:unknown):string{
     throw Error('artifact deploy returned an untrusted viewer URL')
   return url.href
 }
-export function shouldPublishEvalReport317(options:PublishEvalOptions317){
+export function shouldPublishEvalReport317(options:PublishEvalOptions317, defaultPublish = false){
   if(options.publish===false&&options.publishReport)
     throw Error('--no-publish and --publish-report cannot be used together')
-  return options.publish!==false && options.publishReport===true
+  return options.publish!==false && (options.publishReport===true || defaultPublish)
 }
 export async function publishEvalReport317(
   report:Record<string,unknown>,options:PublishEvalOptions317,
-  deps:PublishEvalDeps317={}
+  deps:PublishEvalDeps317={},
+  defaultPublish = false,
 ):Promise<PublishEvalResult317>{
   if(options.publish===false)return {status:'local',reason:'disabled'}
-  const forced=shouldPublishEvalReport317(options)
+  const forced=shouldPublishEvalReport317(options, defaultPublish)
   const status=deps.onStatus??(msg=>process.stderr.write(msg+'\n'))
   if(!forced)return {status:'local',reason:'disabled'}
   if(deps.isEnabled&&!deps.isEnabled()){
@@ -51,6 +53,7 @@ export async function publishEvalReport317(
     return {status:'local',reason:'unauthenticated'}
   }
   if(!credentials.accessToken)return {status:'local',reason:'unauthenticated'}
+  if (deps.authorize && !await deps.authorize(credentials.accessToken)) return {status:'local',reason:'policy'}
   const cases=Array.isArray(report.cases)?report.cases:[]
   const title='Eval report — '+(typeof report.suite==='object'&&report.suite!==null &&
     'root' in report.suite?String(report.suite.root):'plugin')

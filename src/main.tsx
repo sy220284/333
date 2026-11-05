@@ -2660,6 +2660,7 @@ async function run(): Promise<CommanderCommand> {
         agent: agentCli,
         promptSuggestions: suggestionOverride === true,
         forwardSubagentText,
+        sessionMirror: (options as { sessionMirror?: boolean }).sessionMirror,
         workload: options.workload,
         setupTrigger: setupTrigger ?? undefined,
         sessionStartHooksPromise
@@ -3361,6 +3362,7 @@ async function run(): Promise<CommanderCommand> {
   program.option('--bg, --background', 'Start the session in the background and return an id for attach/logs/stop/rm');
   program.option('--restricted', 'Restrict command execution, WebFetch and untrusted settings unless explicitly authorized');
   program.option('--exclude-dynamic-system-prompt-sections', 'Move per-machine system sections into the first user message for shared prompt caching');
+  program.addOption(new Option('--session-mirror', 'Emit transcript_mirror frames on stdout').hideHelp());
   program.option('--forward-subagent-text', 'Forward subagent text and thinking as SDK messages with parent tool ID');
   program.option('--cloud [description]', 'Create a cloud session or attach by session ID or claude.ai/code URL');
   program.option('--environment <environment_id>', 'Create a session on the given self-hosted ccpool environment');

@@ -91,6 +91,9 @@ const AgentJsonSchema = lazySchema(() =>
     initialPrompt: z.string().optional(),
     memory: z.enum(['user', 'project', 'local']).optional(),
     background: z.boolean().optional(),
+    observer: z.string().trim().min(1).optional(),
+    observerMessage: z.string().optional(),
+    observeSubagents: z.boolean().optional(),
     isolation: (process.env.USER_TYPE === 'ant'
       ? z.enum(['worktree', 'remote'])
       : z.enum(['worktree'])
@@ -121,6 +124,9 @@ export type BaseAgentDefinition = {
   criticalSystemReminder_EXPERIMENTAL?: string // Short message re-injected at every user turn
   requiredMcpServers?: string[] // MCP server name patterns that must be configured for agent to be available
   background?: boolean // Always run as background task when spawned
+  observer?: string // Paired observer agent, gated by the session and permissions
+  observerMessage?: string // Additional read-only observer guidance
+  observeSubagents?: boolean // Whether observer pairing is inherited by child agents
   initialPrompt?: string // Prepended to the first user turn (slash commands work)
   memory?: AgentMemoryScope // Persistent memory scope
   isolation?: 'worktree' | 'remote' // Run in an isolated git worktree, or remotely in CCR (ant-only)
@@ -502,6 +508,9 @@ export function parseAgentFromJson(
         : {}),
       ...(parsed.initialPrompt ? { initialPrompt: parsed.initialPrompt } : {}),
       ...(parsed.background ? { background: parsed.background } : {}),
+      ...(parsed.observer ? { observer: parsed.observer } : {}),
+      ...(parsed.observerMessage ? { observerMessage: parsed.observerMessage } : {}),
+      ...(parsed.observeSubagents !== undefined ? { observeSubagents: parsed.observeSubagents } : {}),
       ...(parsed.memory ? { memory: parsed.memory } : {}),
       ...(parsed.isolation ? { isolation: parsed.isolation } : {}),
     }
@@ -718,6 +727,18 @@ export function parseAgentFromMarkdown(
         .filter((item): item is AgentMcpServerSpec => item !== null)
     }
 
+    const observer = typeof frontmatter['observer'] === 'string'
+      ? frontmatter['observer'].trim() || undefined
+      : undefined
+    const observerMessage = typeof frontmatter['observerMessage'] === 'string'
+      ? frontmatter['observerMessage']
+      : undefined
+    const observeSubagentsRaw = frontmatter['observeSubagents']
+    if (observeSubagentsRaw !== undefined &&
+        typeof observeSubagentsRaw !== 'boolean') {
+      throw new Error('observeSubagents must be a boolean')
+    }
+
     // Parse hooks from frontmatter
     const hooks = parseHooksFromFrontmatter(frontmatter, agentType)
 
@@ -753,6 +774,11 @@ export function parseAgentFromMarkdown(
         : {}),
       ...(maxTurns !== undefined ? { maxTurns } : {}),
       ...(background ? { background } : {}),
+      ...(observer ? { observer } : {}),
+      ...(observerMessage ? { observerMessage } : {}),
+      ...(observeSubagentsRaw !== undefined
+        ? { observeSubagents: observeSubagentsRaw as boolean }
+        : {}),
       ...(memory ? { memory } : {}),
       ...(isolation ? { isolation } : {}),
     }

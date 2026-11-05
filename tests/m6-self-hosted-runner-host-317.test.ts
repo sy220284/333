@@ -606,3 +606,62 @@ test('Runner 317: local expiring JWT is renewed before polling', async () => {
     expect(observed).toEqual(['runner-token-rotated'])
   } finally { rmSync(root,{recursive:true,force:true}) }
 })
+
+test('two runner hosts independently reclaim real child processes and release their leases', async () => {
+  const root = temp()
+  const script = join(root, 'hold-worker.mjs')
+  writeFileSync(script, [
+    "import { writeFileSync } from 'node:fs'",
+    "writeFileSync(process.env.RUNNER_TEST_PID, String(process.pid))",
+    "setInterval(() => {}, 1000)",
+  ].join('\n'))
+  const releases: string[] = []
+  const deregistered: string[] = []
+  const runners = ['runner_a', 'runner_b'].map(id => {
+    const abort = new AbortController()
+    const pidPath = join(root, id + '.pid')
+    const dir = join(root, id)
+    mkdirSync(dir)
+    const api = fakeApi({
+      registerRunner: async () => ({ runner_id: id, runner_token: id }),
+      pollWork: async () => ({ assignment_ids: ['session_1'], session_assignments: [] }),
+      getSessionRemoteConfig: async () => ({
+        sources: [], push_targets: [], claude_code_args: {},
+        environment_variables: { RUNNER_TEST_PID: pidPath },
+        api_base_url: 'https://api.example.test',
+        inference_auth: { access_token: 'fixture-token', expires_in_seconds: 3600 },
+      }),
+      releaseSession: async token => { releases.push(token); return { released: true } },
+      deregisterRunner: async token => { deregistered.push(token) },
+    })
+    return {
+      abort, pidPath,
+      done: startSelfHostedRunnerHost317({
+        api, baseDir: dir, capacity: 1, execPath: process.execPath,
+        scriptArgs: [script], env: {}, signal: abort.signal,
+      }),
+    }
+  })
+  try {
+    for (let attempt = 0; attempt < 100 && runners.some(runner => !existsSync(runner.pidPath)); attempt++) {
+      await Bun.sleep(20)
+    }
+    const [first, second] = runners
+    const pidA = Number(readFileSync(first!.pidPath, 'utf8'))
+    const pidB = Number(readFileSync(second!.pidPath, 'utf8'))
+    first!.abort.abort()
+    await first!.done
+    expect(() => process.kill(pidA, 0)).toThrow()
+    expect(() => process.kill(pidB, 0)).not.toThrow()
+    expect(releases).toEqual(['runner_a'])
+    second!.abort.abort()
+    await second!.done
+    expect(() => process.kill(pidB, 0)).toThrow()
+    expect(releases).toEqual(['runner_a', 'runner_b'])
+    expect(deregistered).toEqual(['runner_a', 'runner_b'])
+  } finally {
+    for (const runner of runners) runner.abort.abort()
+    await Promise.allSettled(runners.map(runner => runner.done))
+    rmSync(root, { recursive: true, force: true })
+  }
+}, 25000)
