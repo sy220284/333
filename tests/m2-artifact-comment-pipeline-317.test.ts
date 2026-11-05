@@ -102,3 +102,35 @@ test('an unverified comment event causes no model or edit call', async () => {
   assert.equal(await processArtifactComment317(event, h.backend, model, h.lease), 'ignored')
   assert.deepEqual(h.operations, ['complete'])
 })
+
+test('published edit resumes reply on redelivery without applying patch twice', async () => {
+  const h = harness()
+  let published = false
+  let replies = 0
+  const lease = {
+    ...h.lease,
+    async getPublishedReply() {
+      return published ? 'Changed the heading' : null
+    },
+    async markPublished(_id: string, reply: string) {
+      assert.equal(reply, 'Changed the heading')
+      published = true
+    },
+  }
+  const publish = h.backend.publish
+  let publications = 0
+  h.backend.publish = async (...args) => {
+    publications++
+    await publish(...args)
+  }
+  h.backend.reply = async () => {
+    replies++
+    if (replies === 1) throw new Error('temporary reply failure')
+  }
+  await assert.rejects(processArtifactComment317(event, h.backend, h.model, lease),
+    /temporary reply failure/)
+  assert.equal(published, true)
+  assert.equal(await processArtifactComment317(event, h.backend, h.model, lease), 'edited')
+  assert.equal(publications, 1)
+  assert.equal(replies, 2)
+})
