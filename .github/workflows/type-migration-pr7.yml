@@ -84,6 +84,8 @@ jobs:
           node build/install-public-deps.mjs
       - name: 全仓 TypeScript 类型检查
         run: node tools/dev/dev.mjs typecheck:all
+      - name: 安装权威清单的JavaScript AST解析器
+        run: node tools/dev/toolchain.mjs install-ast
       - name: 全仓 TypeScript 内容级审计
         run: node tools/dev/type-migration-audit.mjs
       - name: 已迁移核心模块严格类型编译

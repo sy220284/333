@@ -27,6 +27,8 @@ jobs:
           npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
+      - name: 安装权威清单的JavaScript AST解析器
+        run: node tools/dev/toolchain.mjs install-ast
       - name: 运行基准类型检查与全仓内容级审计
         run: |
           node tools/dev/dev.mjs typecheck:all
