@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { access, mkdtemp, rm } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -31,10 +31,20 @@ test('SDK sends multiple turns and resumes the transcript through the rebuilt CL
     event('message_start', { message: { id: `msg_${n}`, type: 'message', model,
       role: 'assistant', content: [], stop_reason: null, stop_sequence: null,
       usage: { input_tokens: 10, output_tokens: 0 } } })
-    event('content_block_start', { index: 0, content_block: { type: 'text', text: '' } })
-    event('content_block_delta', { index: 0, delta: { type: 'text_delta', text: `answer-${n}` } })
+    const wantsTool = n === 5
+    if (wantsTool) {
+      event('content_block_start', { index: 0, content_block: {
+        type: 'tool_use', id: 'toolu_permission_test', name: 'Bash', input: {},
+      } })
+      event('content_block_delta', { index: 0, delta: {
+        type: 'input_json_delta', partial_json: JSON.stringify({ command: 'touch sdk-permission-marker' }),
+      } })
+    } else {
+      event('content_block_start', { index: 0, content_block: { type: 'text', text: '' } })
+      event('content_block_delta', { index: 0, delta: { type: 'text_delta', text: `answer-${n}` } })
+    }
     event('content_block_stop', { index: 0 })
-    event('message_delta', { delta: { stop_reason: 'end_turn', stop_sequence: null }, usage: { output_tokens: 8 } })
+    event('message_delta', { delta: { stop_reason: wantsTool ? 'tool_use' : 'end_turn', stop_sequence: null }, usage: { output_tokens: 8 } })
     event('message_stop')
     response.end()
   }).listen(0, '127.0.0.1')
@@ -77,6 +87,23 @@ test('SDK sends multiple turns and resumes the transcript through the rebuilt CL
     assert.match(prompts[2]!, /second turn/)
     assert.match(prompts[2]!, /answer-2/)
     assert.equal((await unstable_v2_prompt('one shot', options)).subtype, 'success')
+    const callbacks: string[] = []
+    const denied = await unstable_v2_prompt('try running a tool', {
+      ...options,
+      settingSources: [],
+      permissionMode: 'default',
+      async canUseTool(tool, input, context) {
+        callbacks.push(tool)
+        assert.equal(input.command, 'touch sdk-permission-marker')
+        assert.equal(context.toolUseID, 'toolu_permission_test')
+        assert.equal(context.signal.aborted, false)
+        return { behavior: 'deny', message: 'Denied by SDK test callback' }
+      },
+    })
+    assert.equal(denied.subtype, 'success')
+    assert.deepEqual(callbacks, ['Bash'])
+    assert.match(prompts[5]!, /Denied by SDK test callback/)
+    await assert.rejects(access(join(cwd, 'sdk-permission-marker')), { code: 'ENOENT' })
   } finally {
     for (const session of sessions) session.close()
     server.closeAllConnections()

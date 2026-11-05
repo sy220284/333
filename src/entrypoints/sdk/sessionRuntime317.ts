@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { createInterface } from 'node:readline'
 import { extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import type { SDKControlRequest, SDKControlCancelRequest, SDKControlResponse } from './controlTypes.js'
 import type { SDKMessage, SDKUserMessage } from './coreTypes.js'
 import type { SDKSession, SDKSessionOptions } from './runtimeTypes.js'
 
@@ -16,7 +17,7 @@ export function createSessionRuntime317(
   if (resume !== undefined && !UUID.test(resume)) {
     throw new TypeError('Invalid session ID')
   }
-  if (options.canUseTool || options.hooks) {
+  if (options.hooks) {
     throw new Error('SDK session callbacks require the duplex control transport')
   }
   const sessionId = resume ?? randomUUID()
@@ -31,6 +32,7 @@ export function createSessionRuntime317(
     '--output-format', 'stream-json', '--model', options.model,
     resume === undefined ? '--session-id' : '--resume', sessionId,
   ]
+  if (options.canUseTool) args.push('--permission-prompt-tool', 'stdio')
   if (options.permissionMode) args.push('--permission-mode', options.permissionMode)
   if (options.settingSources) args.push('--setting-sources', options.settingSources.join(','))
   if (options.allowedTools?.length) args.push('--allowedTools', options.allowedTools.join(','))
@@ -63,9 +65,47 @@ export function createSessionRuntime317(
   let pending = false
   let reading = false
 
+  const permissions = new Map<string, AbortController>()
+
+  function write(frame: SDKUserMessage | SDKControlResponse): Promise<void> {
+    const payload = JSON.stringify(frame) + '\n'
+    return new Promise((resolve, reject) => {
+      child.stdin.write(payload, error => error ? reject(error) : resolve())
+    })
+  }
+
+  async function respondToControl({ request_id, request }: SDKControlRequest): Promise<void> {
+    const controller = new AbortController()
+    permissions.set(request_id, controller)
+    try {
+      let response: SDKControlResponse['response']
+      try {
+        if (request.subtype !== 'can_use_tool' || !options.canUseTool) {
+          throw new Error(`Unsupported SDK control request: ${request.subtype}`)
+        }
+        const decision = await options.canUseTool(request.tool_name, request.input, {
+          signal: controller.signal,
+          suggestions: request.permission_suggestions,
+          toolUseID: request.tool_use_id,
+        })
+        response = { subtype: 'success', request_id, response: decision }
+      } catch (error) {
+        response = {
+          subtype: 'error', request_id,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      }
+      if (!controller.signal.aborted) await write({ type: 'control_response', response })
+    } finally {
+      permissions.delete(request_id)
+    }
+  }
+
   function close(): void {
     if (closed) return
     closed = true
+    for (const controller of permissions.values()) controller.abort()
+    permissions.clear()
     reader.close()
     child.stdin.destroy()
     if (child.exitCode === null && child.signalCode === null) child.kill()
@@ -85,12 +125,9 @@ export function createSessionRuntime317(
             message: { role: 'user', content: message },
           }
         : { ...message, session_id: sessionId }
-      const payload = JSON.stringify(frame) + '\n'
       pending = true
       try {
-        await new Promise<void>((resolve, reject) => {
-          child.stdin.write(payload, error => error ? reject(error) : resolve())
-        })
+        await write(frame)
       } catch (error) {
         close()
         throw error
@@ -109,7 +146,20 @@ export function createSessionRuntime317(
             throw failure ?? new Error('Claude CLI closed before returning a result')
           }
           if (!line.value.trim()) continue
-          const message: SDKMessage = JSON.parse(line.value)
+          const message: SDKMessage | SDKControlRequest | SDKControlCancelRequest | SDKControlResponse =
+            JSON.parse(line.value)
+          if (message.type === 'control_request') {
+            void respondToControl(message).catch(error => {
+              failure ??= error
+              child.kill()
+            })
+            continue
+          }
+          if (message.type === 'control_cancel_request') {
+            permissions.get(message.request_id)?.abort()
+            continue
+          }
+          if (message.type === 'control_response') continue
           if (message.type === 'result') {
             completed = true
             yield message
