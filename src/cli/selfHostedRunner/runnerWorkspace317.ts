@@ -9,7 +9,7 @@
  */
 import { execFile } from 'node:child_process'
 import { lstat, mkdir, mkdtemp, realpath, rename, rm } from 'node:fs/promises'
-import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { isAbsolute, join, resolve, sep } from 'node:path'
 import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
@@ -62,10 +62,11 @@ function sourceEntry(value: unknown): Source | null {
     throw new TypeError('Runner source contains an unsafe repository path')
   }
   const repoKey = (owner + '/' + name).toLowerCase()
-  if (value.revision !== undefined && typeof value.revision !== 'string') {
+  const rawRevision = value.revision
+  if (rawRevision !== undefined && typeof rawRevision !== 'string') {
     throw new TypeError('Runner source revision must be a string')
   }
-  const revision = value.revision === undefined ? undefined : branchName(value.revision)
+  const revision = rawRevision === undefined ? undefined : branchName(rawRevision)
   return { url, revision, repoKey, folder: owner + '_' + name }
 }
 function targetBranches(values: readonly unknown[]): Map<string, string[]> {
