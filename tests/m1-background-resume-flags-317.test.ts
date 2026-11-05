@@ -42,7 +42,7 @@ test('317 background resume drops transient CLI switches and their values', () =
   expect(flags).not.toContain('-p')
   expect(flags).not.toContain('--input-format')
   expect(flags).toEqual([
-    '--model','sonnet','--output-format','json',
+    '--model','sonnet',
     '--permission-mode','default','--allowed-tools','Read',
   ])
 })
