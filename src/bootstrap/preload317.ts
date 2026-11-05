@@ -83,11 +83,26 @@ function unlinkIfPresent(path) {
   catch (error) { if (error.code !== 'ENOENT') throw error }
 }
 
+export type PreloadEnvironmentResult317 = {
+  kept: Record<string, string>
+  dropped: Array<{name: string; problem: 'invalid-name' | 'non-string-value' | 'nul-in-value'}>
+}
+export type PreloadValidatedClaim317 = {
+  cwd: string
+  argv: string[]
+  env: Array<[string, string]>
+  dropped: PreloadEnvironmentResult317['dropped']
+}
+export type PreloadClaimApplyOptions317 = {
+  env?: NodeJS.ProcessEnv
+  argv?: string[]
+  chdir?: (path: string) => void
+}
 /** Original 317 rhr() drops individual invalid env keys and accepts other valid keys. */
-export function filterPreloadEnvironment317(environment: Record<string, unknown>) {
+export function filterPreloadEnvironment317(environment: Record<string, unknown>): PreloadEnvironmentResult317 {
   // Null prototype preserves an own '__proto__' key from JSON safely.
   const kept: Record<string, string> = Object.create(null)
-  const dropped = []
+  const dropped: PreloadEnvironmentResult317['dropped'] = []
   for (const [name, value] of Object.entries(environment)) {
     if (INVALID_ENV_NAME_317.test(name)) {
       dropped.push({ name, problem: 'invalid-name' })
@@ -102,7 +117,7 @@ export function filterPreloadEnvironment317(environment: Record<string, unknown>
   return { kept, dropped }
 }
 
-export function validatePreloadClaim317(claim) {
+export function validatePreloadClaim317(claim: PreloadClaim317): PreloadValidatedClaim317 {
   if (!claim || typeof claim !== 'object' || Array.isArray(claim))
     throw new Error('Preload claim must be an object')
   if (typeof claim.cwd !== 'string' || !claim.cwd)
@@ -117,7 +132,7 @@ export function validatePreloadClaim317(claim) {
 
 export function applyPreloadClaim317(claim: PreloadClaim317, {
   env = process.env, argv = process.argv, chdir = process.chdir.bind(process),
-} = {}) {
+}: PreloadClaimApplyOptions317 = {}): PreloadValidatedClaim317 {
   const normalized = validatePreloadClaim317(claim)
   chdir(normalized.cwd)
   // Managed-host claims drop the warm process's stale inference routing.
