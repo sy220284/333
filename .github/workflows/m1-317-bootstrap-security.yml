@@ -15,6 +15,14 @@ on:
       - 'src/entrypoints/startupRouting317.mjs'
       - 'tests/m1-relay-token-guard-317.test.mjs'
       - 'tests/m1-jit-startup-317.test.mjs'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/bootstrap/socketOwnership317.ts'
+      - 'src/cli/background/supervisor.ts'
+      - 'tests/m1-socket-ownership-317.test.ts'
+      - 'tests/m1-background-resume-flags-317.test.ts'
+      - '.github/workflows/m1-317-bootstrap-security.yml'
   workflow_dispatch:
 
 permissions:
