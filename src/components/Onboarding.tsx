@@ -6,6 +6,7 @@ import { useExitOnCtrlCDWithKeybindings } from '../hooks/useExitOnCtrlCDWithKeyb
 import { Box, Link, Newline, Text, useTheme } from '../ink.js';
 import { useKeybindings } from '../keybindings/useKeybinding.js';
 import { isAnthropicAuthEnabled } from '../utils/auth.js';
+import { resolveIndependentModel } from '../services/api/multimodel/registry.js';
 import { normalizeApiKeyForConfig } from '../utils/authPortable.js';
 import { getCustomApiKeyStatus } from '../utils/config.js';
 import { env } from '../utils/env.js';
@@ -32,7 +33,12 @@ export function Onboarding({
 }: Props): React.ReactNode {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [skipOAuth, setSkipOAuth] = useState(false);
-  const [oauthEnabled] = useState(() => isAnthropicAuthEnabled());
+  const [oauthEnabled] = useState(() => {
+    const index = process.argv.findIndex(value => value === '--model' || value.startsWith('--model='));
+    const value = index < 0 ? process.env.ANTHROPIC_MODEL
+      : process.argv[index] === '--model' ? process.argv[index + 1] : process.argv[index].slice('--model='.length);
+    return !resolveIndependentModel(value) && isAnthropicAuthEnabled();
+  });
   const [theme, setTheme] = useTheme();
   useEffect(() => {
     logEvent('tengu_began_setup', {
@@ -71,9 +77,9 @@ export function Onboarding({
          */}
         <OrderedList>
           <OrderedList.Item>
-            <Text>Claude 可能出现错误</Text>
+            <Text>模型可能出现错误</Text>
             <Text dimColor wrap="wrap">
-              请仔细检查 Claude 的回答，尤其是在
+              请仔细检查模型的回答，尤其是在
               <Newline />
               执行代码之前。
               <Newline />
@@ -86,7 +92,7 @@ export function Onboarding({
             <Text dimColor wrap="wrap">
               详情请参阅：
               <Newline />
-              <Link url="https://code.claude.com/docs/en/security" />
+              <Link url="https://owasp.org/www-project-top-10-for-large-language-model-applications/" />
             </Text>
           </OrderedList.Item>
         </OrderedList>
@@ -146,7 +152,7 @@ export function Onboarding({
     steps.push({
       id: 'terminal-setup',
       component: <Box flexDirection="column" gap={1} paddingLeft={1}>
-          <Text bold>启用 Claude Code 推荐的终端设置？</Text>
+          <Text bold>启用 333 推荐的终端设置？</Text>
           <Box flexDirection="column" width={70} gap={1}>
             <Text>
               为获得更好的编码体验，建议启用以下终端设置
