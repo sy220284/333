@@ -1,0 +1,36 @@
+name: M5 317 附件协议与真实入站链验收
+on:
+  push:
+    branches:
+      - upgrade/2.1.310-m1-evidence
+    paths:
+      - 'src/bridge/fetchAttachment317.ts'
+      - 'src/bridge/inboundAttachments.ts'
+      - 'tests/m5-fetch-attachment-317.test.ts'
+      - '.github/workflows/m5-fetch-attachment-317.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fetch-attachment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 恢复冻结依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 附件协议与真实Bridge入站链测试
+        run: bun test tests/m5-fetch-attachment-317.test.ts
+      - name: 全仓TypeScript类型检查
+        run: |
+          node tools/dev/dev.mjs typecheck:all
+      - name: 真实TypeScript构建
+        run: bun build/rebuild.mjs
