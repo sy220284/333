@@ -9,9 +9,13 @@ import {resolve,dirname} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {spawnSync,execFileSync} from 'node:child_process'
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..')
-const inferred=JSON.parse(readFileSync(resolve(root,'.rebuild/governance/export-types-inference.json'),'utf8'))
-if(inferred.mode!=='apply')throw Error('Run annotate-export-signatures.mjs --apply first')
-const candidates=inferred.changes.map(v=>v.path)
+const fromCallsite=process.argv.includes('--from-callsite')
+const filename=fromCallsite?'type-parameter-callsite-evidence.json':'export-types-inference.json'
+const inferred=JSON.parse(readFileSync(resolve(root,'.rebuild/governance/'+filename),'utf8'))
+if(inferred.mode!=='apply')throw Error('Run the corresponding TypeScript inference tool with --apply first')
+const records=fromCallsite?inferred.files:inferred.changes
+const totalAnnotations=fromCallsite?inferred.inferredParameters:inferred.annotations
+const candidates=records.map(v=>v.path)
 const rejected=[]
 function check(){
   const r=spawnSync(process.execPath,['tools/dev/dev.mjs','typecheck:all'],{
@@ -38,14 +42,16 @@ while(!result.ok){
   result=check();attempts++
   if(attempts>12)throw Error('Inference compilation did not converge: '+result.diagnostics.slice(0,30).join('\n'))
 }
-const accepted=inferred.changes.filter(x=>
+const accepted=records.filter(x=>
   spawnSync('git',['diff','--quiet','HEAD','--',x.path],{cwd:root}).status===1)
 if(!accepted.length)throw Error('No inferred type changes passed compile')
 const summary={revision:process.env.GITHUB_SHA||null,
-  originalCandidates:inferred.changes.length,originalAnnotations:inferred.annotations,
-  acceptedFiles:accepted.length,acceptedAnnotations:accepted.reduce((n,x)=>n+x.count,0),
+  originalCandidates:records.length,originalAnnotations:totalAnnotations,
+  acceptedFiles:accepted.length,acceptedAnnotations:accepted.reduce((n,x)=>n+(fromCallsite?x.annotations:x.count),0),
   rejected,attempts,acceptedPaths:accepted.map(x=>x.path)}
-const out=resolve(root,'.rebuild/governance/applied-export-types.json')
+const out=resolve(root,fromCallsite?
+  '.rebuild/governance/applied-callsite-types.json':
+  '.rebuild/governance/applied-export-types.json')
 mkdirSync(dirname(out),{recursive:true})
 writeFileSync(out,JSON.stringify(summary,null,2)+'\n')
 console.log('[真实导出类型写回]',JSON.stringify({
