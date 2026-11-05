@@ -2,11 +2,21 @@
  * Up to 24 concurrent hooks. Twelve additional hooks may start only after
  * waiting at least the event timeout (minimum one second).
  */
-const states = new Map()
+type HookPermit317 = () => void
+type HookLane317 = 'active' | 'overdue'
+type HookWaiter317 = {
+  expired: boolean
+  timer: ReturnType<typeof setTimeout> | undefined
+  signal: AbortSignal | undefined
+  onAbort: (() => void) | undefined
+  resolve: (release: HookPermit317) => void
+}
+type HookState317 = { active: number; overdue: number; queue: HookWaiter317[] }
+const states = new Map<string, HookState317>()
 const MAX_ACTIVE = 24
 const MAX_OVERDUE = 12
 
-function getState(key) {
+function getState(key: string): HookState317 {
   let state = states.get(key)
   if (!state) {
     state = {active: 0, overdue: 0, queue: []}
@@ -15,9 +25,10 @@ function getState(key) {
   return state
 }
 
-function drain(key, state) {
+function drain(key: string, state: HookState317): void {
   while (state.queue.length && state.active < MAX_ACTIVE) {
     const waiter = state.queue.shift()
+    if (!waiter) break
     grant(key, state, waiter, 'active')
   }
   // Overdue eligibility belongs to each hook, not the oldest queued event.
@@ -27,14 +38,15 @@ function drain(key, state) {
     const index = state.queue.findIndex(waiter => waiter.expired)
     if (index < 0) break
     const [waiter] = state.queue.splice(index, 1)
+    if (!waiter) break
     grant(key, state, waiter, 'overdue')
   }
   if (!state.queue.length && state.active === 0 && state.overdue === 0) states.delete(key)
 }
 
-function grant(key, state, waiter, lane) {
+function grant(key: string, state: HookState317, waiter: HookWaiter317, lane: HookLane317): void {
   clearTimeout(waiter.timer)
-  waiter.signal?.removeEventListener('abort', waiter.onAbort)
+  if (waiter.onAbort) waiter.signal?.removeEventListener('abort', waiter.onAbort)
   if (lane === 'active') state.active++
   else state.overdue++
   let released = false
@@ -47,12 +59,12 @@ function grant(key, state, waiter, lane) {
   })
 }
 
-export function acquireHookPermit(sessionId, timeoutMs, signal) : Promise<() => void> {
+export function acquireHookPermit(sessionId: string | undefined | null, timeoutMs: number, signal?: AbortSignal): Promise<HookPermit317> {
   if (signal?.aborted) return Promise.resolve(() => {})
   const key = sessionId || 'local-session'
   const state = getState(key)
-  return new Promise<() => void>(resolve => {
-    const waiter = {
+  return new Promise<HookPermit317>(resolve => {
+    const waiter: HookWaiter317 = {
       expired: false,
       timer: undefined,
       signal,
@@ -80,7 +92,12 @@ export function acquireHookPermit(sessionId, timeoutMs, signal) : Promise<() => 
   })
 }
 
-export async function* limitHookGenerator(generator, sessionId, timeoutMs, signal) {
+export async function* limitHookGenerator<T>(
+  generator: AsyncIterable<T> | Iterable<T>,
+  sessionId: string | undefined | null,
+  timeoutMs: number,
+  signal?: AbortSignal,
+): AsyncGenerator<T, void, unknown> {
   const release = await acquireHookPermit(sessionId, timeoutMs, signal)
   try {
     if (signal?.aborted) return
