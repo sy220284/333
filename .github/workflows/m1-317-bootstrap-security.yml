@@ -9,6 +9,7 @@ on:
       - 'src/bootstrap/jitPolicy317.mjs'
       - 'src/bootstrap/socketOwnership317.ts'
       - 'src/cli/background/supervisor.ts'
+      - 'src/cli/background/respawnFlags317.ts'
       - 'tests/m1-socket-ownership-317.test.ts'
       - 'tests/m1-background-resume-flags-317.test.ts'
       - 'src/entrypoints/cli.tsx'
@@ -20,6 +21,7 @@ on:
     paths:
       - 'src/bootstrap/socketOwnership317.ts'
       - 'src/cli/background/supervisor.ts'
+      - 'src/cli/background/respawnFlags317.ts'
       - 'tests/m1-socket-ownership-317.test.ts'
       - 'tests/m1-background-resume-flags-317.test.ts'
       - '.github/workflows/m1-317-bootstrap-security.yml'
