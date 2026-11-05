@@ -80,7 +80,11 @@ jobs:
           bun test tests/m5-sdk-mcp-factory-317.test.ts tests/m1-sdk-mcp-message-validation.test.ts
           bun test tests/m2-artifact-comment-pipeline-317.test.ts tests/m2-observer-lifecycle-317.test.ts
           # 其余只登记在分支专属工作流里的测试也要在PR13依赖组合上运行。
-          node build/run-unregistered-tests.mjs --workflow-only
+          # TypeScript 7 uses a native checker. The localization AST checker
+          # needs the pinned JS parser (same contract as chinese-only-ui.yml).
+          # This is a test-only parser, not a production compiler downgrade.
+          npm install --prefix "${RUNNER_TEMP}/333-ui-typescript" --no-save --ignore-scripts --no-package-lock --no-audit --no-fund typescript@5.9.3
+          TS_COMPILER_PATH="${RUNNER_TEMP}/333-ui-typescript/node_modules/typescript/lib/typescript.js" node build/run-unregistered-tests.mjs --workflow-only
       - name: 汇总验收结果（失败阻断）
         if: always()
         run: |
