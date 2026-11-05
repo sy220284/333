@@ -7,6 +7,7 @@ export type CommandSourceDisclosure317 = {
   mode: 'copy' | 'link'
   catalogRevision: string
   sha256?: string
+  archiveUrl?: never
 }
 export type ArchiveSourceDisclosure317 = {
   kind: string
@@ -14,6 +15,7 @@ export type ArchiveSourceDisclosure317 = {
   command: string
   archiveUrl: string
   catalogRevision: string
+  mode?: never
 }
 export type SourceCommandDisclosure317 =
   | CommandSourceDisclosure317
