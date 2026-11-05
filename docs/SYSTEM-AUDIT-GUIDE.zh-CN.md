@@ -112,7 +112,7 @@
 1. **入口表**：入口名称、触发条件、调用对象、前台/后台、手动/自动、是否可恢复；
 2. **所有权表**：能力 Owner、状态 Owner、配置 Owner、副作用提交者、持久化 Owner；
 3. **契约表**：公开 API / Port、DTO / Event / State、字段、Schema / version、消费者；
-4. **装配表**：运行时工厂 / 生产装配入口、能力域 / Page / Tool / 后台任务 / Registry 注册、CLI 参数 / 工具权限 / 插件声明、导航与恢复入口。
+4. **装配表**：运行时工厂 / 生产装配入口、能力域 / 终端视图 / Tool / 后台任务 / Registry 注册、CLI 参数 / 工具权限 / 插件声明、导航与恢复入口。
 
 任一能力无法落到这四张表中的明确位置时，默认继续追查，不能直接判定边界完整。
 
@@ -121,10 +121,10 @@
 横向比较：
 
 ```text
-Chat / Work / Automation / Subagent / Group Chat
+CLI 交互 / SDK 查询 / Workflow / 子代理 / Agent 团队
 前台 / 后台 / 恢复
-本地 / 远程 Harness
-单聊 / 群聊
+本地 Runner / 远程 Runner / Gateway
+单 Agent / Agent 团队
 当前会话 / 跨会话
 模型 / Web / Vision / Tool / MCP
 ```
@@ -160,7 +160,7 @@ Chat / Work / Automation / Subagent / Group Chat
 → UI 最终反馈
 ```
 
-运行时编排 只按333 六层架构 承担 start-once、生命周期 scope、bootstrap / recovery 触发和初始化错误投影；不得因为链路图方便，把领域业务默认画进 Kernel。
+运行时编排 只按333 六层架构 承担 start-once、生命周期 scope、bootstrap / recovery 触发和初始化错误投影；不得因为链路图方便，把能力业务默认画进运行时编排。
 
 重点发现：
 
@@ -213,7 +213,7 @@ Chat / Work / Automation / Subagent / Group Chat
 - 相同业务规则在多个功能重复实现；
 - 主路径与旁路存在不同所有权；
 - Store / EventLog / Recovery / Route identity 等公共能力成为上限；
-- 随 Session、Memory、Automation、MCP、模型供应商和后台任务增长而持续恶化；
+- 随 Session、Memory、Workflow、MCP、模型供应商和后台任务增长而持续恶化；
 - 新功能每次都要修改多个核心模块；
 - 巨型 Store、Manager、when/if、缓存或配置对象持续膨胀。
 
@@ -275,7 +275,7 @@ Chat / Work / Automation / Subagent / Group Chat
 - 最后一公里缺失；
 - 实现只有 70%–90%；
 - 小规模好用、大规模退化；
-- 前台完整、后台不完整；
+- 交互 CLI 完整、后台 Runner 不完整；
 - 当前会话完整、恢复后语义变化。
 
 成熟度判定不能只给比例，必须写清“缺的是哪一环”。至少区分：
@@ -325,7 +325,7 @@ Chat / Work / Automation / Subagent / Group Chat
 - 是否存在多个事实源；
 - 是否存在超级管理器或系统 choke point。
 
-对 Chat / Work / Automation / Subagent / Group Chat / Remote 横向比较：
+对 CLI 交互 / SDK 查询 / Workflow / 子代理 / Agent 团队 / Remote 横向比较：
 
 - 路由；
 - 凭据；
@@ -373,7 +373,7 @@ Chat / Work / Automation / Subagent / Group Chat
 - 代码位置与业务 Owner 不一致；
 - 同一业务事实存在两个及以上可写 Owner；
 - composition root / 运行时装配 对同一能力装配多个生产实现；
-- 能力域 / Page / Tool / 后台任务 / Registry 出现重复注册或路由归属不唯一；
+- 能力域 / 终端视图 / Tool / 后台任务 / Registry 出现重复注册或路由归属不唯一；
 - 跨模块公共能力 开始解释 能力域 专属领域语义；
 - 能力域 持有完整聚合可写状态，绕过领域状态边界；
 - 运行时编排 承载具体 能力域 业务、领域状态或 Provider 装配；
@@ -382,7 +382,7 @@ Chat / Work / Automation / Subagent / Group Chat
 - UI 绕过 presentation / 能力公开 API / projection 直接消费内部实现；
 - 会话兼容状态或历史迁移字段被重新作为第二权威数据源或双写入口；
 - Session、Agent run、迟到提交栅栏和恢复协调出现重复所有者；
-- 能力目录 路由、页面 contribution、终端返回 / 状态恢复 policy 的 Owner 不唯一。
+- 能力目录 路由、终端视图贡献、终端返回 / 状态恢复 policy 的 Owner 不唯一。
 
 #### 功能设计与实现度
 
@@ -442,14 +442,14 @@ UI 文案
    - 不能只从当前 UI 点击路径向下追一次就结束。
 
 1. **全入口一致性**
-   - 页面操作、生命周期回调、后台任务、自动刷新、恢复、通知 / Deep Link、定时任务、快捷入口、外部事件是否进入同一权威业务边界；
+   - 终端视图操作、生命周期回调、后台任务、自动刷新、恢复、通知 / Deep Link、定时任务、快捷入口、外部事件是否进入同一权威业务边界；
    - 主路径走高层统一入口、旁路直接调用底层实现时，默认进入候选问题复核；
    - 手动路径与自动路径必须比较完整业务语义，不能只比较底层函数是否相同。
 
 2. **上下游状态对账**
    - 生产者成功更新状态后，Projection、Store、Flow / Callback、Consumer 与 UI 是否均获得并处理最新结果；
    - 下游成功后，上游展示和控制状态是否同步；
-   - 后台更新、页面重建和恢复后是否仍能重新获得当前状态；
+   - 后台更新、终端视图重新装载和恢复后是否仍能重新获得当前状态；
    - 编辑、重试、重新生成、取消等用户操作是否依次完成准入、业务执行、事务提交、历史修订和 UI 反馈；拒绝原因是否可解释，不能静默丢失草稿、伪造成功或将部分失败展示为全部完成。
 
 3. **字段契约对账**
@@ -475,7 +475,7 @@ UI 文案
    - 是否绕过该能力所属 Owner 的 Registry / Policy / Gateway；
    - TS/TSX 模块和包 依赖方向是否与架构一致；
    - 运行时工厂 / 生产装配入口 是否只装配一个权威实现；
-   - 能力域 catalog、页面 contribution、导航、终端返回 / 状态恢复 是否全部注册；
+   - 能力域 catalog、终端视图贡献、导航、终端返回 / 状态恢复 是否全部注册；
    - 后台任务 / Job / Tool / MCP / serializer / codec / registry 是否注册到真实生产入口；
    - CLI / 插件声明、权限、intent/filter、deep link、foreground service 等声明是否与代码入口一致；
    - 同一能力是否只保留一套生产依赖、注册、provider、worker、serializer / codec 和真实执行入口；
@@ -551,7 +551,7 @@ UI 文案
 - 是否有重复 / 过期副本；
 - Snapshot 与 EventLog 的职责是否清楚；
 - 内存与磁盘状态是否一致；
-- Session 与 Gallery / Memory / Job / Automation 是否存在多点所有权；
+- Session 与插件资源 / Memory / Job / Workflow 是否存在多点所有权；
 - 缓存与 durable state 是否冲突；
 - 删除后旧异步写是否还能回写；
 - generation / version / CAS 是否完整；
@@ -646,8 +646,8 @@ UI 文案
 
 还必须覆盖：
 
-- 页面离开 / 返回、导航栈重建；
-- 配置变化与 Activity 重建；
+- 终端视图切换、CLI 重启与会话恢复；
+- 配置变化与 CLI 重启及会话恢复；
 - 交互会话和后台执行切换；
 - 进程死亡后冷启动恢复；
 - 后台任务 / Job 被系统停止后重调度；
@@ -724,13 +724,13 @@ UI 文案
 - 成功回复、Token 和计费事实是否记录可区分但不泄密的实际 route identity；
 - 未知 / 第三方路由不能套用错误官方价格。
 
-涉及模型配置或调参时，从“持久设置/默认值 → 当前会话与模式 → UI 可选档位/上限 → 模型能力裁剪 → 运行时冻结 → 实际协议 payload → 重试/续轮及可见反馈”逐层对账。覆盖模型、账户、Chat/Work 切换与历史配置迁移，确认没有回弹、错误限幅、错档或两套语义；允许差异须有明确模型/协议依据。
+涉及模型配置或调参时，从“持久设置/默认值 → 当前会话与模式 → UI 可选档位/上限 → 模型能力裁剪 → 运行时冻结 → 实际协议 payload → 重试/续轮及可见反馈”逐层对账。覆盖模型、账户、CLI/SDK 执行模式切换与历史配置迁移，确认没有回弹、错误限幅、错档或两套语义；允许差异须有明确模型/协议依据。
 
 #### 凭据、认证与账户状态
 
 检查：
 
-- API Key 与 ChatGPT 套餐 profile / credential 是否隔离；
+- API Key 与 不同模型供应商账户 profile / credential 是否隔离；
 - OAuth callback 编码、state、nonce、PKCE、ID Token 验证是否完整；
 - access token refresh 是否 single-flight；
 - refresh token 轮换后是否原子替换；
@@ -775,10 +775,10 @@ UI 文案
 - 1k / 10k / 50k Event；
 - 大量 Session；
 - 大量 Memory；
-- 大量 Persona / Story；
-- 长 Story；
-- 多人群聊；
-- 大量 Automation / Job；
+- 大量 Agent 与会话记录；
+- 长会话与长上下文；
+- 多 Agent 任务并发；
+- 大量 Workflow / Job；
 - 大量 MCP Tool；
 - 深目录；
 - 大文件；
@@ -845,9 +845,9 @@ UI 文案
 - 失败；
 - 重试；
 - 恢复；
-- 自动任务；
+- Workflow 调度；
 - 后台任务；
-- 群聊；
+- Agent 团队；
 - 模型 / 账户切换；
 - Session 切换；
 - 数据损坏。
@@ -856,7 +856,7 @@ UI 文案
 
 - UI 是否真实反映底层状态；
 - 用户是否能区分进行中、成功、失败和等待；
-- 页面切换、重开、恢复后是否连续；
+- 终端视图切换、重开、恢复后是否连续；
 - 后台执行与前台展示是否一致；
 - 是否提示成功但实际没有完成；
 - 是否错误后无恢复入口；
@@ -866,16 +866,16 @@ UI 文案
 
 用户体验属于功能正确性，不作为“纯 UI 问题”降级处理。
 
-设备级至少检查适用项：
+终端及三平台真实宿主至少检查适用项：
 
 - loading / empty / error / partial success / retry 状态；
-- 群聊部分失败、全部失败、单成员重试；
+- Agent 团队任务部分失败、全部失败、单任务重试；
 - 后台任务 / 后台任务更新是否实时投影；
-- 运行中心是否展示完整任务事实；
-- 输入法展开、输入框扩展、长消息时最后内容是否仍可见；
-- 终端返回 / 状态恢复 / 页面跳转 / 媒体或权限返回；
-- TalkBack 状态和可访问名称；
-- 130% 字号与系统大字；
+- 任务列表和状态输出是否展示完整运行事实；
+- 终端输入扩展、窗口变化、长消息时末尾内容是否仍可见；
+- 命令切换 / 状态恢复 / 终端视图跳转 / 工具权限反馈；
+- 屏幕阅读器模式和可访问名称；
+- 不同终端宽度、字体缩放与窗口尺寸；
 - 长时间线与大量列表项；
 - 明 / 夜 / 墨主题及高对比壁纸；
 - 权限拒绝、离线、网络恢复、账户失效后的可恢复入口。
@@ -943,9 +943,9 @@ UI 文案
 - 认证方式；
 - Tool；
 - MCP Server；
-- Persona 功能；
+- Skills / Agent 定义；
 - Memory 类型；
-- Automation 类型；
+- Workflow / 后台任务类型；
 - Store Backend；
 - Session 类型。
 
@@ -981,7 +981,7 @@ UI 文案
 对 CI 失败、测试不稳定、产品与测试表现不一致的候选，逐项确认：
 
 - 失败是否绑定实际 commit、设备与系统、运行环境、测试入口、日志、复现步骤；比较相同二进制在不同环境和时序中的表现；
-- 测试操作是否真正触达被测执行路径：系统 Back、输入法、导航、Activity、通知、异步回调等，不能把命令发出视作事件送达；
+- 测试操作是否真正触达被测执行路径：终端按键、PTY 输入、命令路由、CLI 重启、通知、异步回调等，不能把命令发出视作事件送达；
 - 是否分清产品缺陷、测试驱动缺陷、模拟器/宿主焦点与输入时序、网络问题、编译或资源竞争；
 - 修复测试与环境时是否保留完整断言和覆盖；禁止以任意延长超时、重试、跳过或减弱断言制造通过；
 - 静态检查、字面串断言、模拟替身、JVM 单测、协议差分、仪器化和真机体验分别证明什么；同源代码、夹具、测试不能互相作为独立证明；
@@ -1049,7 +1049,7 @@ TS/TSX 源码、原生资源、运行时、打包和依赖升级改动，至少�
 重点：
 
 - API Key / OAuth / Relay Token；
-- ChatGPT 账户；
+- 模型供应商账户；
 - MCP；
 - Shell；
 - 文件系统；
@@ -1103,18 +1103,18 @@ TS/TSX 源码、原生资源、运行时、打包和依赖升级改动，至少�
 
 逐条审：
 
-- Chat；
-- Work；
-- Group Chat；
-- Subagent；
-- Automation；
-- Webhook；
-- Session；
-- Memory；
-- Persona / Gallery；
-- Model；
+- CLI / 终端 UI；
+- SDK / Query API；
+- Agent / Agent Team；
+- 子代理与任务控制；
+- Workflow / 后台任务；
+- Hooks / Webhook；
+- Session 保存与恢复；
+- Memory / Context；
+- Skills / Plugins / 资源；
+- Model 与供应商接口；
 - Tool / MCP；
-- Remote Harness。
+- Gateway / Runner / Remote Control。
 
 每条同时做：
 
@@ -1289,7 +1289,7 @@ TS/TSX 源码、原生资源、运行时、打包和依赖升级改动，至少�
 - 功能主路径可用但关键边界不完整；
 - 大规模或长期使用明显恶化；
 - 跨 Store 一致性缺口；
-- 背景任务 / Automation / 恢复存在重要最后一公里；
+- 后台任务 / Workflow / 恢复存在重要最后一公里；
 - 架构持续扩展风险较高；
 - 多功能共享配置或规则存在多事实源。
 
@@ -1336,11 +1336,11 @@ TS/TSX 源码、原生资源、运行时、打包和依赖升级改动，至少�
 
 ```text
 用户操作
-→ Chat
-→ EventLog
-→ Post-turn
-→ Gallery
-→ 下一轮 Context
+→ CLI/SDK 查询
+→ 会话事件日志
+→ 任务完成与持久化
+→ Memory / 上下文恢复
+→ 下一轮上下文
 ```
 
 **会拖累哪些其他功能**
