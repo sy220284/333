@@ -53,11 +53,16 @@ type ProbeResult = {
   roundTrip: boolean
   details?: string
 }
-function parseStream(text: string): Record<string, any>[] {
-  // biome-ignore lint/suspicious/noExplicitAny: Normalized provider SSE event fields vary.
-  return text.split(/\\r?\\n/).filter(row => row.startsWith('data: '))
+type ProbeEvent = {
+  type?: string
+  index?: number
+  content_block?: { name?: string; id?: string }
+  delta?: { type?: string; partial_json?: string; text?: string; stop_reason?: string }
+}
+function parseStream(text: string): ProbeEvent[] {
+  return text.split(/\r?\n/).filter(row => row.startsWith('data: '))
     .map(row => row.slice(6).trim()).filter(row => row && row !== '[DONE]')
-    .map(row => JSON.parse(row) as Record<string, any>)
+    .map(row => JSON.parse(row) as ProbeEvent)
 }
 function inspectToolRequest(text: string): ProbeResult & { toolId?: string } {
   const events = parseStream(text)
