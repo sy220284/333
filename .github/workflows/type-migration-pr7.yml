@@ -4,6 +4,8 @@ on:
     branches: [upgrade/2.1.310-m1-evidence, main]
     paths:
       - 'src/cli/gateway/**'
+      - 'src/utils/hooks/hookConcurrency.ts'
+      - 'src/utils/webToolDeadline.ts'
       - 'src/skills/bundled/claudeApi.ts'
       - 'src/skills/bundled/claudeApiPrompt.ts'
       - 'tools/dev/type-migration-*.mjs'
@@ -13,6 +15,8 @@ on:
     branches: [main]
     paths:
       - 'src/cli/gateway/**'
+      - 'src/utils/hooks/hookConcurrency.ts'
+      - 'src/utils/webToolDeadline.ts'
       - 'src/skills/bundled/claudeApi.ts'
       - 'src/skills/bundled/claudeApiPrompt.ts'
       - 'tools/dev/type-migration-*.mjs'
@@ -69,6 +73,8 @@ jobs:
         env:
           GATEWAY_TEST_POSTGRES_URL: postgres://postgres:gateway-test-only@127.0.0.1:5432/postgres
         run: bun test tests/m6-gateway-postgres-317.test.mjs
+      - name: Hook并发调度和Web超时取消真实行为回归
+        run: node --test tests/m1-hook-concurrency-312.test.mjs tests/m1-web-tools-deadline-311.test.mjs
       - name: 上传内容级审计证据
         if: always()
         uses: actions/upload-artifact@v4
