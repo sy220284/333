@@ -52,6 +52,7 @@ type SessionSpawnerDeps = {
    * exits with "bad option: --sdk-url" (see anthropics/claude-code#28334).
    */
   scriptArgs: string[]
+  additionalArgs?: string[]
   env: NodeJS.ProcessEnv
   verbose: boolean
   sandbox: boolean
@@ -305,6 +306,7 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
         ...(deps.permissionMode
           ? ['--permission-mode', deps.permissionMode]
           : []),
+        ...(deps.additionalArgs ?? []),
       ]
 
       const env: NodeJS.ProcessEnv = {

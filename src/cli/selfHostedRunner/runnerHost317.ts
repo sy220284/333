@@ -13,6 +13,7 @@ import { createSessionSpawner } from '../../bridge/sessionRunner.js'
 import type { SessionHandle } from '../../bridge/types.js'
 import { RunnerHttpError317, SelfHostedRunnerApi317 } from './runnerApi317.ts'
 import { prepareRunnerWorkspace317, pushRunnerOutcomeBranches317 } from './runnerWorkspace317.ts'
+import { mapRunnerRemoteCliArgs317 } from './runnerCliArgs317.ts'
 
 export type RunnerHostOptions317 = {
   api: SelfHostedRunnerApi317
@@ -177,6 +178,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
         ? options.createChild(id,sdkUrl,remoteToken,workerEpoch,childCwd,env)
         : createSessionSpawner({
             execPath:options.execPath,scriptArgs:options.scriptArgs,
+            additionalArgs:mapRunnerRemoteCliArgs317(remote.claude_code_args,status),
             env,verbose:false,sandbox:false,onDebug:status,
             debugFile:join(sessionConfigDir,'claude-code-debug.txt'),
             runnerRuntime:{apiBaseUrl:remoteBase,configDir:sessionConfigDir},
