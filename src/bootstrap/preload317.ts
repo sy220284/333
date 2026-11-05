@@ -78,9 +78,11 @@ export const PRELOAD_RESET_KEYS_317 = Object.freeze([
   'CLAUDE_CODE_CHILD_SESSION', 'CLAUDE_CODE_HOST_SKILL_CATALOG'
 ])
 
-function unlinkIfPresent(path) {
+function unlinkIfPresent(path: string): void {
   try { unlinkSync(path) }
-  catch (error) { if (error.code !== 'ENOENT') throw error }
+  catch (error) {
+    if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error
+  }
 }
 
 export type PreloadEnvironmentResult317 = {
