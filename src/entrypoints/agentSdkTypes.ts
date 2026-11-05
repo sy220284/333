@@ -643,7 +643,10 @@ export type RemoteControlHandle = {
  * @internal
  */
 export async function connectRemoteControl(
-  _opts: ConnectRemoteControlOptions,
+  opts: ConnectRemoteControlOptions,
 ): Promise<RemoteControlHandle | null> {
-  throw new Error('not implemented')
+  // Remote control is opt-in and the expensive bridge is loaded on demand;
+  // CLI and SDK now share the same reconnecting v2 transport and credentials.
+  const { connectSdkRemoteControl317 } = await import('./sdk/remoteControl317.js')
+  return connectSdkRemoteControl317(opts)
 }
