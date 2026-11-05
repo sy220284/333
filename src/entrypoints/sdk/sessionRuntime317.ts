@@ -19,6 +19,9 @@ export function createSessionRuntime317(
   options: SDKSessionOptions | InternalOptions,
   resume?: string,
 ) {
+  // SDK's subprocess transport launches the removed --print conversation path.
+  // Reject at the API boundary instead of spawning a child that cannot run.
+  throw new Error('333 已移除 SDK 无界面对话模式。请使用交互式终端会话。')
   if (resume !== undefined && !SDK_SESSION_UUID.test(resume)) throw new TypeError('Invalid session ID')
   const sessionId = resume ?? randomUUID()
   if (!options.sessionStore) return startSession(options, sessionId, resume)
