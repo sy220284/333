@@ -206,8 +206,8 @@ export function createProjectsClient317(config:ProjectClientConfig317){
         if(!setupId||!MESSAGE_ID.test(setupId)){
           throw new ProjectApiError317('Setup reply is incomplete; check the project before retrying',null,true)
         }
-        return {kind:'submitted',alreadySubmitted:data.already_submitted===true,
-          dropped:Array.isArray(data.dropped)?data.dropped.filter(x=>typeof x==='string'):[]}
+        return {kind:'submitted',alreadySubmitted:record(data)&&data.already_submitted===true,
+          dropped:record(data)&&Array.isArray(data.dropped)?data.dropped.filter((x:unknown):x is string=>typeof x==='string'):[]}
       }catch(error){
         if(error instanceof ProjectApiError317 && error.status!==null &&
           !error.mayHaveLanded && error.status!==401 && error.status!==403){
