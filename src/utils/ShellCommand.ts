@@ -5,6 +5,7 @@ import treeKill from 'tree-kill'
 import { generateTaskId } from '../Task.js'
 import { registerCleanup } from './cleanupRegistry.js'
 import { formatDuration } from './format.js'
+import { logError } from './log.js'
 import {
   MAX_TASK_OUTPUT_BYTES,
   MAX_TASK_OUTPUT_BYTES_DISPLAY,
@@ -134,6 +135,7 @@ class ShellCommandImpl implements ShellCommand {
   #resolveBackgrounded: (() => void) | null = null
   readonly backgrounded: Promise<void>
   #exitCodeResolver: ((code: number) => void) | null = null
+  #requestedKillExitCode: number | null = null
   #boundAbortHandler: (() => void) | null = null
   #unregisterShutdownCleanup: (() => void) | undefined
   readonly taskOutput: TaskOutput
@@ -232,12 +234,12 @@ class ShellCommandImpl implements ShellCommand {
   }
 
   #exitHandler(code: number | null, signal: NodeJS.Signals | null): void {
-    const exitCode =
-      code !== null && code !== undefined
-        ? code
-        : signal === 'SIGTERM'
-          ? 144
-          : 1
+    // An explicit kill may be requested before the child is reaped. Publish
+    // its result only from the real OS exit, keeping the original exit code
+    // semantics of user cancellation and shell timeout.
+    const exitCode = this.#requestedKillExitCode ??
+      (code !== null && code !== undefined ? code :
+        signal === 'SIGTERM' ? 144 : 1)
     this.#resolveExitCode(exitCode)
   }
 
@@ -379,10 +381,17 @@ class ShellCommandImpl implements ShellCommand {
     // in child processes. Never kill a command that already completed.
     if (this.#status === 'killed' || this.#status === 'completed') return
     this.#status = 'killed'
+    this.#requestedKillExitCode = code ?? SIGKILL
     if (this.#childProcess.pid) {
-      treeKill(this.#childProcess.pid, 'SIGKILL')
+      // tree-kill dispatches the signal asynchronously. Resolve the command
+      // only once child_process emits exit/error; otherwise TaskStop could
+      // acknowledge before the process has actually terminated.
+      treeKill(this.#childProcess.pid, 'SIGKILL', error => {
+        if (error) logError(error)
+      })
+    } else {
+      this.#resolveExitCode(this.#requestedKillExitCode)
     }
-    this.#resolveExitCode(code ?? SIGKILL)
   }
 
   kill(): void {
