@@ -116,6 +116,31 @@ export function checkToolchain() {
       fail(`开发依赖锁没有有效的版本及 integrity：${name}@${version}`)
     }
   }
+  // Active build and development pipelines must consume these versions.
+  const ciVersions = {
+    'node-version': '${{ env.TOOLCHAIN_NODE_VERSION }}',
+    'bun-version': '${{ env.TOOLCHAIN_BUN_VERSION }}',
+    'python-version': '${{ env.TOOLCHAIN_PYTHON_VERSION }}',
+  }
+  const managed = [
+    'dev-toolchain.yml', 'dev-quality.yml', 'rebuild.yml',
+    'governance-audit.yml', 'governance-bun-types.yml',
+    'latest-stable-six-host.yml', 'latest-stable-upgrade.yml',
+  ]
+  for (const workflow of managed) {
+    const content = readFileSync(join(root, '.github/workflows', workflow), 'utf8')
+    if (!content.includes('node tools/dev/toolchain.mjs gha-env')) {
+      fail(`CI 工作流未读取权威清单：${workflow}`)
+    }
+    for (const match of content.matchAll(/^[ \t]*(node-version|bun-version|python-version):[ \t]*(.+)$/gm)) {
+      if (match[2].trim() !== ciVersions[match[1]]) {
+        fail(`CI 版本绕过权威清单：${workflow} ${match[1]}=${match[2].trim()}`)
+      }
+    }
+    if (/typescript@5\.9\.3|@types\/bun@1\.4\.4/.test(content)) {
+      fail(`CI 独立写死工具版本：${workflow}`)
+    }
+  }
   const stable = readJson(join(root, 'docs/upgrade/latest-stable-dependencies.json')).versions
   for (const [name, version] of Object.entries(data.development.packages)) {
     if (stable[name] && stable[name] !== version) {
