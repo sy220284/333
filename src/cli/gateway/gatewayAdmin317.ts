@@ -6,23 +6,57 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto'
 import { verifyGatewaySession317 } from './gatewayAuth317.ts'
 import { spendPeriodStart317 } from './gatewaySpendStore317.ts'
+import type { GatewaySpendStore317, GatewaySpendLimit317 } from './gatewaySpendStore317.ts'
+import type { GatewaySessionClaims317 } from './gatewayAuth317.ts'
+
+type GatewayAdminKey317 = { id: string; key: string }
+export type GatewayAdminConfig317 = Record<string, unknown> & {
+  read_keys: GatewayAdminKey317[]
+  write_keys: GatewayAdminKey317[]
+  admin_groups: string[]
+  group_limit_mode: 'min' | 'max'
+}
+type GatewayAdminRuntimeConfig317 = {
+  admin: GatewayAdminConfig317
+  session: { jwt_secret: string | string[] }
+}
+type GatewayAdminPrincipal317 = {
+  canWrite: boolean
+  actor: string
+  identity?: GatewaySessionClaims317
+}
+type GatewaySpendPayload317 = {
+  scope: {type: string; user_id?: string; rbac_group_id?: string}
+  period: string
+  amount?: string | null
+  pooled_budget?: {amount?: string | null; paused?: boolean | null} | null
+}
+type GatewayAdminHandlerContext317 = {
+  config: GatewayAdminRuntimeConfig317
+  publicUrl: string
+  spend: GatewaySpendStore317
+  audit(event: string, subject: string | null, requestId: string | null,
+    metadata: Record<string, unknown>): Promise<void>
+}
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  v !== null && typeof v === 'object' && !Array.isArray(v)
 
 export const GATEWAY_SPEND_BASE_317 = '/v1/organizations/spend_limits'
 export const GATEWAY_COST_PATH_317 = '/v1/organizations/analytics/cost'
 const VALID_SCOPES = new Set(['organization','user','rbac_group'])
 const VALID_PERIODS = new Set(['daily','weekly','monthly'])
 
-export function validateGatewayAdmin317(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+export function validateGatewayAdmin317(value: unknown): GatewayAdminConfig317 {
+  if (!isRecord(value)) {
     throw new Error('admin must be an object')
   }
-  const ids = new Set()
-  const keys = {}
-  for (const kind of ['read_keys','write_keys']) {
+  const ids = new Set<string>()
+  const keys: { read_keys: GatewayAdminKey317[]; write_keys: GatewayAdminKey317[] } = {read_keys:[],write_keys:[]}
+  for (const kind of ['read_keys','write_keys'] as const) {
     const list = value[kind] ?? []
     if (!Array.isArray(list)) throw new Error('admin.'+kind+' must be an array')
-    keys[kind] = list.map(entry => {
-      if (!entry || typeof entry !== 'object' ||
+    keys[kind] = list.map((entry: unknown) => {
+      if (!isRecord(entry) ||
         typeof entry.id !== 'string' || !entry.id.trim() ||
         typeof entry.key !== 'string' || Buffer.byteLength(entry.key) < 32) {
         throw new Error('admin.'+kind+' entries require a unique id and a key at least 32 bytes long')
@@ -38,21 +72,21 @@ export function validateGatewayAdmin317(value) {
     throw new Error('admin.admin_groups must contain group names')
   }
   const group_limit_mode = value.group_limit_mode ?? 'min'
-  if (!['min','max'].includes(group_limit_mode)) throw new Error('admin.group_limit_mode must be min or max')
-  return { ...value, ...keys, admin_groups, group_limit_mode }
+  if (group_limit_mode !== 'min' && group_limit_mode !== 'max') throw new Error('admin.group_limit_mode must be min or max')
+  return { ...value, ...keys, admin_groups:admin_groups as string[], group_limit_mode }
 }
 
-function matchAdminKey(token, keys) {
+function matchAdminKey(token: string | null, keys: GatewayAdminKey317[]): string | null {
   if (typeof token !== 'string') return null
   const value = Buffer.from(token)
-  let id
+  let id: string | null = null
   for (const entry of keys) {
     const secret = Buffer.from(entry.key)
     if (value.length === secret.length && timingSafeEqual(value,secret)) id=entry.id
   }
   return id
 }
-export function identifyGatewayAdmin317(request: { headers: { get: (arg0: string) => string } }, config, publicUrl) {
+export function identifyGatewayAdmin317(request: Request, config: GatewayAdminRuntimeConfig317, publicUrl: string): GatewayAdminPrincipal317 | null {
   const presented = request.headers.get('x-api-key')
   if (presented) {
     const writeId = matchAdminKey(presented,config.admin.write_keys)
@@ -75,14 +109,14 @@ export function isGatewayAdminPath317(path: string) {
   return path === GATEWAY_COST_PATH_317 || path === GATEWAY_SPEND_BASE_317 ||
     path.startsWith(GATEWAY_SPEND_BASE_317+'/')
 }
-const apiError = (status,message,requestId) => Response.json({
+const apiError = (status: number, message: string, requestId: string): Response => Response.json({
   type:'error',error:{type: status===401?'authentication_error':
     status===403?'permission_error':status===404?'not_found_error':'invalid_request_error',
     message},
 },{
   status,headers:{'request-id':requestId,'cache-control':'no-store'},
 })
-function queryLimit(url,defaultLimit=20) {
+function queryLimit(url: URL, defaultLimit: number = 20): number {
   const raw = url.searchParams.get('limit')
   if (raw === null) return defaultLimit
   if (!/^\d{1,4}$/.test(raw) || Number(raw)<1 || Number(raw)>1000) {
@@ -90,12 +124,12 @@ function queryLimit(url,defaultLimit=20) {
   }
   return Number(raw)
 }
-export function parseGatewaySpendLimit317(value) {
-  if (!value || typeof value!=='object' || Array.isArray(value) ||
-    !VALID_SCOPES.has(value.scope?.type)) {
+export function parseGatewaySpendLimit317(value: unknown): GatewaySpendPayload317 {
+  if (!isRecord(value) || !isRecord(value.scope) ||
+    typeof value.scope.type !== 'string' || !VALID_SCOPES.has(value.scope.type)) {
     throw new Error('scope: expected organization, user, or rbac_group')
   }
-  const scope = value.scope
+  const scope = value.scope as {type: string; user_id?: string; rbac_group_id?: string}
   if (scope.type === 'user' && (typeof scope.user_id!=='string'||!scope.user_id.trim())) {
     throw new Error('scope.user_id is required')
   }
@@ -105,12 +139,13 @@ export function parseGatewaySpendLimit317(value) {
   const period=value.period
   if (!VALID_PERIODS.has(period)) throw new Error('period must be daily, weekly, or monthly')
   if (value.currency !== undefined && value.currency!=='USD') throw new Error('currency must be USD')
-  const cents = candidate => candidate===null || (typeof candidate==='string'&&/^\d{1,18}$/.test(candidate))
+  const cents = (candidate: unknown): candidate is string | null =>
+    candidate===null || (typeof candidate==='string'&&/^\d{1,18}$/.test(candidate))
   if (value.amount===undefined && value.pooled_budget===undefined) throw new Error('amount: Required')
   if (value.amount!==undefined && !cents(value.amount)) throw new Error('amount must be a decimal string of cents or null')
   const budget=value.pooled_budget
   if (budget!==undefined && budget!==null) {
-    if(typeof budget!=='object'||Array.isArray(budget)) throw new Error('pooled_budget must be an object or null')
+    if(!isRecord(budget)) throw new Error('pooled_budget must be an object or null')
     if(budget.amount!==undefined && !cents(budget.amount)) throw new Error('pooled_budget.amount must be a decimal string of cents')
     if(budget.paused!==undefined && budget.paused!==null && typeof budget.paused!=='boolean') {
       throw new Error('pooled_budget.paused must be a boolean')
@@ -121,14 +156,14 @@ export function parseGatewaySpendLimit317(value) {
       throw new Error('Pooled budgets are monthly and apply only to rbac_group')
     }
   }
-  return {scope,period,...value}
+  return {scope,period,...value} as GatewaySpendPayload317
 }
 
 /**
  * Admin routes are authenticated before passing to regular user JWT handling.
  * Returning null means the path belongs to inference or the device flow.
  */
-export async function handleGatewayAdmin317(request, context) {
+export async function handleGatewayAdmin317(request: Request, context: GatewayAdminHandlerContext317): Promise<Response | null> {
   const url = new URL(request.url)
   if (!isGatewayAdminPath317(url.pathname)) return null
   const requestId='req_'+randomUUID().replaceAll('-','')
@@ -136,16 +171,16 @@ export async function handleGatewayAdmin317(request, context) {
   const auth=identifyGatewayAdmin317(request,config,publicUrl)
   if (!auth) return apiError(401,'missing or invalid admin credentials',requestId)
   const verb=request.method, base=GATEWAY_SPEND_BASE_317
-  const action = async () => {
+  const action = async (): Promise<Response> => {
     if (url.pathname===base+'/effective' && verb==='GET') {
       const principal=url.searchParams.get('user_id')
       if (!principal) return apiError(400,'user_id is required',requestId)
       const groups=url.searchParams.getAll('group')
       const limits=await spend.getApplicableCaps({sub:principal,groups})
-      const byPeriod=[]
+      const byPeriod: Array<Record<string, unknown>>=[]
       for(const period of ['daily','weekly','monthly']) {
-        const periodCaps=limits.filter(x=>x.period===period)
-        const candidates=periodCaps.filter(x=>x.amount!==null)
+        const periodCaps=limits.filter((x): x is GatewaySpendLimit317 => x!==null && x.period===period)
+        const candidates=periodCaps.filter((x): x is GatewaySpendLimit317 & {amount: string} => x.amount!==null)
         const ordered=candidates.sort((a,b)=>BigInt(a.amount)<BigInt(b.amount)?-1:BigInt(a.amount)>BigInt(b.amount)?1:0)
         const matched=config.admin.group_limit_mode==='max'?ordered.at(-1):ordered[0]
         const used=await spend.getSpend(principal,spendPeriodStart317(period))
