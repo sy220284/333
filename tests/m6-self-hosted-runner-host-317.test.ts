@@ -557,35 +557,8 @@ test('Runner 317: missing inference credentials report a setup failure before sp
 })
 
 
-test('Runner 317 renews an expired runner token following a 401 and retries one poll', async () => {
-  const root=temp(), stop=new AbortController(), observedTokens:string[]=[]
-  let refreshes=0
-  const api=fakeApi({
-    pollWork:async token=>{
-      observedTokens.push(token)
-      if(observedTokens.length===1)throw new RunnerHttpError317('PollWork',401,'auth')
-      return {assignment_ids:['session_1'],session_assignments:[]}
-    },
-    refreshToken:async token=>{
-      expect(token).toBe('runner-token')
-      refreshes++
-      return {token:'runner-token-rotated'}
-    },
-    releaseSession:async()=>{stop.abort();return {released:true}},
-  })
-  try {
-    await startSelfHostedRunnerHost317({
-      api,baseDir:root,capacity:1,execPath:process.execPath,scriptArgs:[],
-      env:{},pollIntervalMs:1,signal:stop.signal,
-      createChild:()=>makeHandle(),
-    })
-    expect(observedTokens).toEqual(['runner-token','runner-token-rotated'])
-    expect(refreshes).toBe(1)
-  } finally { rmSync(root,{recursive:true,force:true}) }
-})
-
-test('Runner 317 rejects repeated 401 even after one token renewal', async () => {
-  const root=temp(), stop=new AbortController()
+test('Runner 317: server 401 is fatal without retrying a revoked runner credential', async () => {
+  const root=temp(), abort=new AbortController()
   let refreshes=0, polls=0
   const api=fakeApi({
     pollWork:async()=>{
@@ -594,15 +567,42 @@ test('Runner 317 rejects repeated 401 even after one token renewal', async () =>
     },
     refreshToken:async()=>{
       refreshes++
-      return {token:'runner-token-rotated'}
+      return {token:'another-token'}
     },
   })
   try {
     await expect(startSelfHostedRunnerHost317({
       api,baseDir:root,capacity:1,execPath:process.execPath,scriptArgs:[],
-      env:{},pollIntervalMs:1,signal:stop.signal,
+      env:{},signal:abort.signal,
     })).rejects.toBeInstanceOf(RunnerHttpError317)
+    expect(refreshes).toBe(0)
+    expect(polls).toBe(1)
+  } finally { rmSync(root,{recursive:true,force:true}) }
+})
+
+test('Runner 317: local expiring JWT is renewed before polling', async () => {
+  const root=temp(),abort=new AbortController(),observed:string[]=[]
+  const jwt='e30.'+Buffer.from(JSON.stringify({exp:1})).toString('base64url')+'.signature'
+  let refreshes=0
+  const api=fakeApi({
+    registerRunner:async()=>({runner_id:'runner_1',runner_token:jwt}),
+    refreshToken:async token=>{
+      expect(token).toBe(jwt)
+      refreshes++
+      return {token:'runner-token-rotated'}
+    },
+    pollWork:async token=>{
+      observed.push(token)
+      abort.abort()
+      return {assignment_ids:[],session_assignments:[]}
+    },
+  })
+  try {
+    await startSelfHostedRunnerHost317({
+      api,baseDir:root,capacity:1,execPath:process.execPath,scriptArgs:[],
+      env:{},signal:abort.signal,
+    })
     expect(refreshes).toBe(1)
-    expect(polls).toBe(2)
+    expect(observed).toEqual(['runner-token-rotated'])
   } finally { rmSync(root,{recursive:true,force:true}) }
 })
