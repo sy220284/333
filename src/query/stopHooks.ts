@@ -101,6 +101,8 @@ export async function* handleStopHooks(
     // Inline env check for dead code elimination in external builds
     if (!isEnvDefinedFalsy(process.env.CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION)) {
       void executePromptSuggestion(stopHookContext)
+    }
+    if (!toolUseContext.agentId) {
       scheduleKnowledgeNudge317(stopHookContext)
     }
     if (
