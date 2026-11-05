@@ -155,3 +155,20 @@ test('极深后端支持 OpenAI Responses、Anthropic、Gemini 三类原生协�
     if(provider==='gemini') assert.ok(requests[0].body.contents)
   }
 })
+
+
+test('Actions 配置可单独选择代码审查或授权消息自动响应', () => {
+  const review=githubWorkflow('review')
+  const respond=githubWorkflow('respond')
+  const both=githubWorkflow('both')
+  assert.match(review,/pull_request_target:/)
+  assert.doesNotMatch(review,/^\s+issue_comment:/m)
+  assert.match(respond,/issue_comment:/)
+  assert.doesNotMatch(respond,/^\s+pull_request_target:/m)
+  assert.match(both,/pull_request_target:/)
+  assert.match(both,/issue_comment:/)
+  for (const yaml of [review,respond,both]) {
+    assert.match(yaml,/workflow_dispatch:/)
+    assert.match(yaml,/permissions:\n  contents: read\n  pull-requests: write/)
+  }
+})
