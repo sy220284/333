@@ -139,8 +139,9 @@ export async function shutdown1PEventLogging(): Promise<void> {
  * metrics opt-out via API. It follows the same pattern as Statsig event logging.
  */
 export function is1PEventLoggingEnabled(): boolean {
-  // Respect standard analytics opt-outs
-  return !isAnalyticsDisabled()
+  // 333 writes diagnostics locally through the analytics sink instead.
+  // Never create the original remote Anthropic event exporter.
+  return false
 }
 
 /**
