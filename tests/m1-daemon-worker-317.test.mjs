@@ -182,6 +182,9 @@ test('317 remoteControl admission matches official fleet gate, while scheduled s
 
 test('317 admitted remoteControl validates strict config and routes the headless bridge', async () => {
   const parent = new EventEmitter()
+  let channelUnref = 0
+  parent.send = (_message, _handle, _options, callback) => callback?.(null)
+  parent.channel = { unref: () => { channelUnref++ } }
   let output = '', error = '', launched = false
   const run = runDaemonWorker317('remoteControl', {
     parent,
@@ -207,6 +210,7 @@ test('317 admitted remoteControl validates strict config and routes the headless
   })
   assert.equal(await run,0)
   assert.equal(launched,true)
+  assert.equal(channelUnref, 1, 'IPC channel was left referenced')
   assert.match(output,/remote worker started/)
   assert.equal(error,'')
   assert.equal(parent.listenerCount('message'),0)
