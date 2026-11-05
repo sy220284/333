@@ -65,6 +65,13 @@ export async function connectPtyHost317(
     if(socket.destroyed||!socket.writable)throw new Error('PTY host transport disconnected')
     socket.write(encodePtyControl317(data))
   }
+  const safeCtrl=(data:Record<string,unknown>)=>{
+    try{writeCtrl(data)}
+    catch(error){
+      fail(error instanceof Error?error:new Error(String(error)))
+      socket.destroy()
+    }
+  }
   const decoder=createPtyFrameDecoder317(frame=>{
     if(frame.kind===0){
       if(!live){
@@ -90,10 +97,10 @@ export async function connectPtyHost317(
         }
         return
       case 'auth-required':
-        writeCtrl({t:'auth',token})
+        safeCtrl({t:'auth',token})
         return
       case 'ping':
-        writeCtrl({t:'pong'})
+        safeCtrl({t:'pong'})
         return
       case 'live':
         if(live)return
@@ -143,7 +150,11 @@ export async function connectPtyHost317(
     pid:expectedHostPid,
     exited:exitPromise,
     closed:closedPromise,
-    write(data){socket.write(encodePtyData317(data))},
+    write(data){
+      if(socket.destroyed||!socket.writable)
+        throw new Error('PTY host transport disconnected')
+      socket.write(encodePtyData317(data))
+    },
     resize(cols,rows){writeCtrl({t:'resize',cols,rows})},
     kill(signal='SIGTERM'){writeCtrl({t:'kill',sig:signal==='SIGKILL'?'SIGKILL':'SIGTERM'})},
     detach(){detached=true;socket.destroy()},
