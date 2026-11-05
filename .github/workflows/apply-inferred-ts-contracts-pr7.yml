@@ -63,27 +63,41 @@ jobs:
           bun build/rebuild.mjs
           node --test tests/language-file-contract.test.mjs tests/m6-gateway-jsonb-317.test.mjs
           git diff --check
-      - name: 提交类型转换成果到PR7并在合并后复验
+      - name: 用最新主线重新生成、验收并提交类型签名
         shell: bash
         run: |
           set -euo pipefail
-          git add src native
-          if git diff --cached --quiet; then
-            echo '所有类型推断候选均已在主线或不适用'
-            exit 0
-          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m '依据真实TypeScript推断补齐导出函数与参数契约'
-          for attempt in 1 2 3 4 5; do
+          for attempt in 1 2 3 4 5 6; do
             git fetch origin upgrade/2.1.310-m1-evidence
-            git rebase origin/upgrade/2.1.310-m1-evidence
-            node tools/dev/dev.mjs typecheck:all
-            if git push origin HEAD:refs/heads/upgrade/2.1.310-m1-evidence; then
-              echo 'TypeScript推断转换已提交并通过最新主线类型检查'
+            remote=$(git rev-parse origin/upgrade/2.1.310-m1-evidence)
+            current=$(git rev-parse HEAD)
+            if [ "$remote" != "$current" ]; then
+              echo "主线已更新，基于最新源码重做第 $attempt 轮类型迁移"
+              git reset --hard "$remote"
+              node tools/dev/dev.mjs typecheck:all
+              node tools/dev/annotate-inferred-ts-contracts.mjs --apply --limit=40
+              node tools/dev/dev.mjs typecheck:all
+              node tools/dev/type-migration-audit.mjs
+              node tools/dev/type-migration-strict.mjs
+              bun build/rebuild.mjs
+              node --test tests/language-file-contract.test.mjs tests/m6-gateway-jsonb-317.test.mjs
+              git diff --check
+            fi
+            git add src native
+            if git diff --cached --quiet; then
+              echo '没有需要迁移的安全候选或已被其他主线提交覆盖'
               exit 0
             fi
+            git commit -m '依据TypeScript真实类型推断完成导出函数签名迁移'
+            if git push origin HEAD:refs/heads/upgrade/2.1.310-m1-evidence; then
+              echo '类型转换已针对最新主线重新验收并提交'
+              exit 0
+            fi
+            git reset --hard HEAD~1
           done
+          echo '主线持续发生并发变更，未回写未经复验的代码'
           exit 1
       - name: 保存类型推断与验收证据
         if: always()
