@@ -60,3 +60,24 @@ test('317 BYOC child: remote resume, session-scoped settings and correct executi
     expect(second.args.some((a:string)=>a.startsWith('--resume='))).toBe(false)
   }finally{rmSync(base,{recursive:true,force:true})}
 })
+
+test('317 BYOC child: control_response token receipt reaches runner acknowledgement callback',async()=>{
+  const root=mkdtempSync(join(tmpdir(),'byoc-token-ack-317-'))
+  try{
+    const script=join(root,'emit-ack.mjs')
+    writeFileSync(script,[
+      "process.stdout.write(JSON.stringify({type:'control_response',response:{request_id:'shr-token-session_token-42'}})+'\\n')",
+      "process.stdout.write(JSON.stringify({type:'control_response',response:{request_id:'ordinary'}})+'\\n')",
+    ].join('\n'))
+    const acks:string[]=[]
+    const child=createSessionSpawner({
+      execPath:process.execPath,scriptArgs:[script],env:{},verbose:false,sandbox:false,
+      onDebug:()=>{},onTokenAck:(_sessionId,id)=>acks.push(id),
+    }).spawn({
+      sessionId:'session_1',sdkUrl:'https://example.test/v1/code/sessions/session_1',
+      accessToken:'child-token',
+    },root)
+    expect(await child.done).toBe('completed')
+    expect(acks).toEqual(['shr-token-session_token-42'])
+  }finally{rmSync(root,{recursive:true,force:true})}
+})
