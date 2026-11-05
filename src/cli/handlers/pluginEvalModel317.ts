@@ -152,31 +152,41 @@ export async function judgeEvalOutput317(
   { grader, output, context }: PluginEvalJudgeRequest317,
   options: { workspace?: string; judgeModel?: string; timeoutSeconds?: number } = {},
 ): Promise<{score: number; reason: string; costUsd: number}> {
-  const reference = grader.type === 'baseline'
-    ? `Reference answer: ${String(context.baseline ?? '')}\n`
-    : ''
+  const criteria = grader.criteria?.trim()
+  if (!criteria) throw new Error('LLM grader requires explicit criteria')
+  const evidence = grader.type === 'baseline'
+    ? `BASELINE trajectory:\n${String(context.baseline ?? '')}\n\nNEW trajectory:\n${output}\n\nDoes the NEW trajectory satisfy the criterion at least as well as the BASELINE?`
+    : `Agent output:\n${output}\n\nDoes the output satisfy the criterion?`
   const instruction = [
-    'Evaluate the model answer against the precise rubric below.',
-    'Respond ONLY with JSON of shape {"score": <number between 0 and 1>, "reason": "<brief evidence>"}.',
-    'Score must describe outcome quality, not whether the plugin was invoked.',
-    'Rubric:', grader.criteria, reference,
-    'Answer:', output,
-  ].join('\n')
-  const result = await runEvalModel317({
-    prompt: instruction,
-    workspace: options.workspace ?? context.workspace,
-    model: options.judgeModel ?? 'haiku',
-    timeoutSeconds: options.timeoutSeconds ?? 120,
-    allowedTools: [],
-    disallowedTools: ['Bash','Write','Edit','WebFetch','Agent'],
-  })
-  if (result.error) throw new Error('eval judge model failed: ' + result.error)
-  const raw = result.lastMessage.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, '').trim()
-  let grade
-  try { grade = JSON.parse(raw) }
-  catch { throw new Error('eval judge model returned non-JSON verdict') }
-  if (typeof grade.score !== 'number' || grade.score < 0 || grade.score > 1) {
-    throw new Error('eval judge model returned an invalid score')
+    'You are a strict, terse evaluation judge for coding-agent traces.',
+    'Criterion:', criteria, evidence,
+    'Respond with exactly one word: PASS or FAIL.',
+  ].join('\n\n')
+
+  const votes: boolean[] = []
+  let costUsd = 0
+  for (let vote = 0; vote < 3; vote++) {
+    const result = await runEvalModel317({
+      prompt: instruction,
+      workspace: options.workspace ?? context.workspace,
+      model: options.judgeModel ?? 'haiku',
+      timeoutSeconds: options.timeoutSeconds ?? 120,
+      allowedTools: [],
+      disallowedTools: ['Bash', 'Write', 'Edit', 'WebFetch', 'Agent'],
+    })
+    if (result.error) throw new Error('eval judge model failed: ' + result.error)
+    costUsd += result.costUsd
+    const verdict = result.lastMessage.trim()
+    if (!/^(PASS|FAIL)\.?$/i.test(verdict)) {
+      throw new Error('eval judge model returned an invalid PASS/FAIL vote: ' + verdict.slice(0, 120))
+    }
+    votes.push(/^PASS/i.test(verdict))
   }
-  return { score: grade.score, reason: String(grade.reason ?? ''), costUsd: result.costUsd }
+
+  const passed = votes.filter(Boolean).length > votes.length / 2
+  return {
+    score: Number(passed),
+    reason: `judge votes: ${votes.map(vote => vote ? 'PASS' : 'FAIL').join(' ')}`,
+    costUsd,
+  }
 }
