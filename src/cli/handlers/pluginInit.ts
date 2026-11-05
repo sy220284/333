@@ -35,12 +35,8 @@ function channelServer(name: string): string {
     ' * ' + name + ' channel server — stdio MCP server implementing the channel contract.',
     ' * See https://code.claude.com/docs/en/channels-reference.',
     ' */',
-    "import { Server } from '@modelcontextprotocol/sdk/server/index.js'",
-    "import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'",
-    'import {',
-    '  CallToolRequestSchema,',
-    '  ListToolsRequestSchema,',
-    "} from '@modelcontextprotocol/sdk/types.js'",
+    "import { Server } from '@modelcontextprotocol/server'",
+    "import { StdioServerTransport } from '@modelcontextprotocol/server/stdio'",
     '',
     'const mcp = new Server(',
     "  { name: '" + name + "', version: '0.1.0' },",
@@ -58,7 +54,7 @@ function channelServer(name: string): string {
     '  },',
     ')',
     '',
-    'mcp.setRequestHandler(ListToolsRequestSchema, async () => ({',
+    'mcp.setRequestHandler('tools/list', async () => ({',
     '  tools: [',
     '    {',
     "      name: 'reply',",
@@ -72,7 +68,7 @@ function channelServer(name: string): string {
     '  ],',
     '}))',
     '',
-    'mcp.setRequestHandler(CallToolRequestSchema, async req => {',
+    'mcp.setRequestHandler('tools/call', async req => {',
     '  const args = (req.params.arguments ?? {}) as Record<string, unknown>',
     "  if (req.params.name === 'reply') {",
     '    // TODO: deliver args.text to the external service.',
@@ -142,7 +138,7 @@ function filesFor(name: string, options: InitOptions, author: string | undefined
     result.set('package.json', json({
       name: 'claude-channel-' + name, version: '0.1.0', type: 'module',
       scripts: { start: 'bun install --no-summary && bun server.ts' },
-      dependencies: { '@modelcontextprotocol/sdk': '^1.0.0' },
+      dependencies: { '@modelcontextprotocol/server': '^2.4.0' },
     }))
     result.set('server.ts', channelServer(name))
   } else if (extra.has('mcp')) {

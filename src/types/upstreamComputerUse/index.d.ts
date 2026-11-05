@@ -1,6 +1,6 @@
 /** Type-only mapping; runtime is supplied by source-map-restored @ant package. */
-import type { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import type { Tool,CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import type { Server } from '@modelcontextprotocol/server'
+import type { Tool,CallToolResult } from '@modelcontextprotocol/server'
 import type { ComputerUseHostAdapter,ComputerUseSessionContext,CoordinateMode } from './types.js'
 import type { ScreenshotResult } from './executor.js'
 export type * from './executor.js'
