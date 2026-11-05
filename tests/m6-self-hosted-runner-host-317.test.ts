@@ -335,7 +335,7 @@ test('Runner 317: expiring session token refreshes the live CCR child without le
       createChild(_id,_url,_token,_epoch,_cwd,_env,onTokenAck){
         return {...makeHandle(),done,updateAccessToken(value:string,requestId?:string){
           expect(value).toBe(rotated)
-          expect(requestId).toMatch(/^shr-token-session_token-\\d+$/)
+          expect(requestId).toMatch(/^shr-token-session_token-\d+$/)
           events.push('child-token')
           onTokenAck?.(requestId!)
           release()
