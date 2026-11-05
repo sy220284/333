@@ -21,7 +21,7 @@ test('统一代码审查区分普通、深度和安全模式', () => {
 test('正式菜单只提供统一入口及自主反馈', () => {
   const s = source('src/commands.ts')
   const commands = s.slice(s.indexOf('const COMMANDS ='), s.indexOf('export const builtInCommandNames'))
-  for (const name of ['review', 'status', 'plan', 'tasks', 'feedback']) {
+  for (const name of ['review', 'status', 'plan', 'tasks', 'feedback', 'github']) {
     assert.match(commands, new RegExp(`^  ${name},$`, 'm'), `缺少核心入口：${name}`)
   }
   for (const name of ['stickers','mobile','thinkback','thinkbackPlay','desktop','sendToProject','installSlackApp','installGitHubApp','passes','extraUsage','extraUsageNonInteractive','rateLimitOptions','ultrareview','securityReview','advisor','cost','stats','usage','workflowsCmd','heapDump']) {

@@ -30,8 +30,14 @@ async function checkAuth(): Promise<void> {
 }
 async function addFile(repo: string, path: string, content: string, branch: string): Promise<void> {
   const base64 = Buffer.from(content, 'utf8').toString('base64')
+  const existing = await execFileNoThrow('gh', ['api', 'repos/' + repo + '/contents/' + path + '?ref=' + encodeURIComponent(branch), '--jq', '.sha'], {timeout:15000})
+  if (existing.code !== 0 && !existing.stderr.includes('404')) {
+    throw new Error('检查既有 Actions 文件失败：' + (existing.stderr || existing.error || '未知错误'))
+  }
+  const updateSha = existing.code === 0 ? existing.stdout.trim() : ''
   await gh(['api','--method','PUT','repos/' + repo + '/contents/' + path,
-    '-f','message=配置 333 通用工作流','-f','content=' + base64, '-f','branch=' + branch])
+    '-f','message=配置 333 通用工作流','-f','content=' + base64,'-f','branch=' + branch,
+    ...(updateSha ? ['-f','sha=' + updateSha] : [])])
 }
 export async function setupRepository(raw: string): Promise<string> {
   const repo = validRepository(raw)

@@ -2,7 +2,7 @@
 
 ## 用户确认移除
 - 官方贴纸、移动 App 推广二维码、年度回顾、Claude Desktop 广告。
-- Claude 官方 GitHub/Slack App 安装、私有项目发送、Guest Passes、额外用量购买及额度引流。
+- 移除 Claude 官方 Slack App 推广、私有项目发送、Guest Passes、额外用量购买及额度引流。GitHub 授权、仓库选择、Actions、PR 和密钥管理保留并改为通用能力；卸除 Anthropic Action 与 Claude 登录硬绑定。
 - 官方 Ultrareview 云端付费审查、单独 CLI 命令和弹窗。
 - 向 Anthropic First-Party Event Logging 和 Datadog 发送的官方事件、GrowthBook 远程实验获取；配置以本地显式覆盖和默认值为准。
 - 不再向 Claude 官方上传反馈或完整对话；/feedback 生成仅存于本机的 0600 权限 JSON 诊断文件。
@@ -11,10 +11,18 @@
 ## 统一入口
 | 入口 | 使用示例 | 保留底层能力 |
 | --- | --- | --- |
-| /review | /review、/review deep、/review security、/review deep 123 | 本地 Git diff、PR 差异与安全审计 |
+| /review | /review、/review deep、/review security、/review 极深 123 | 本地 Git 证据采集、差异校验、三类本地审查；极深通过 GitHub Actions 执行四轮模型分析与独立复核、评论回写及证据保存 |
 | /status | /status | 概览、各模型 token/费用、上下文、历史统计 |
 | /plan | /plan、/plan open、/plan advisor <模型>、/plan advisor off | 原规划模式与顾问模型 |
 | /tasks | /tasks、/tasks active、/tasks history | 后台命令、Agent、工作流、历史任务 |
+| /github | /github auth、/github repos、/github setup owner/repo、/github review owner/repo 18 extreme | GitHub 独立授权、仓库管理、Actions 工作流与密钥、安全生成配置 PR、多模型远程审查 |
+
+## GitHub 独立集成
+- GitHub 通过本机 GitHub CLI OAuth 授权，与模型认证分开；检查权限、选择仓库、创建分支、工作流文件、配置 PR。
+- 执行 /github setup owner/repo 生成安装 PR，合并后添加 GitHub Secret THREE333_MODEL_API_KEY 和变量 THREE333_MODEL_NAME、THREE333_MODEL_PROVIDER；可选 THREE333_MODEL_BASE_URL。
+- Actions 运行在用户自己仓库，通过 OpenAI 兼容接口、Anthropic 或 Gemini API 审查；Claude 仅为可选服务商。授权用户 @333 评论可以触发自动回复。
+- 极深审查：四个独立侧重点、一次独立复核、PR/Issue 评论、Actions Artifact；限制请求大小和运行权限，失败时明确反馈。
+- Slack 可通过官方通用 MCP 入口 https://mcp.slack.com/mcp 连接，使用 Slack OAuth，无需 Claude 账号。要实现工作区自有机器人触发，可使用 Slack App OAuth 及 Slack API。
 
 ## 安全约束
 - 本地诊断不采集消息正文或 API 密钥；事件计数仅存内存。反馈描述由用户明确输入，分享由用户自行控制。
