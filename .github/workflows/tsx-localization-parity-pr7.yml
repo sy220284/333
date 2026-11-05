@@ -5,6 +5,9 @@ on:
     paths:
       - '.github/workflows/tsx-localization-parity-pr7.yml'
       - 'tools/dev/audit-restored-ui-localization.mjs'
+      - 'tools/dev/restore-inline-ts-from-prior.mjs'
+      - 'tools/dev/restore-localized-ui-after-tsx-recovery.mjs'
+      - 'src/**/*.tsx'
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,6 +19,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: 核验中文UI恢复工具的JavaScript语法
+        run: |
+          node --check tools/dev/restore-inline-ts-from-prior.mjs
+          node --check tools/dev/restore-localized-ui-after-tsx-recovery.mjs
+          node --check tools/dev/audit-restored-ui-localization.mjs
       - name: 全量核对199个恢复文件的中文文案保留情况
         run: node tools/dev/audit-restored-ui-localization.mjs
       - name: 保存中文界面逐文件审计清单
