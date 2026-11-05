@@ -192,6 +192,8 @@ export interface SDKSession {
   send(message: string | SDKUserMessage): Promise<void>
   stream(): AsyncGenerator<SDKMessage, void, unknown>
   close(): void
+  /** Wait for CLI process exit, stdio close, MCP teardown and session-store cleanup. */
+  closeAndWait(): Promise<void>
 }
 
 export type GetSessionMessagesOptions = {

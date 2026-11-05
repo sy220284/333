@@ -183,7 +183,7 @@ test('SDK sends multiple turns and resumes the transcript through the rebuilt CL
     }
 
   } finally {
-    for (const session of sessions) session.close()
+    for (const session of sessions) await session.closeAndWait()
     server.closeAllConnections()
     await new Promise<void>(resolve => server.close(() => resolve()))
     await rm(cwd, { recursive: true, force: true })
