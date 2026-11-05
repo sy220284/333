@@ -149,8 +149,6 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
     if(value!==undefined && (!Number.isFinite(value)||value<0||value>10080*60_000))
       throw new RangeError(name+' must be between 0 and 10080 minutes')
   }
-  if(options.holdIdleFile && !resolve(options.holdIdleFile).startsWith('/') && process.platform!=='win32')
-    throw new Error('Runner idle marker must use a local path')
   const status = options.onStatus ?? (() => {})
   const root = resolve(options.baseDir)
   await mkdir(root, {recursive:true,mode:0o700})
@@ -233,10 +231,17 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       if(elapsed<idleInterval){scheduleIdle(idleInterval-elapsed,version);return}
       if(options.holdIdleFile && holdDeadline>idleInterval && holdDeadline>0 && elapsed<holdDeadline){
         try {
-          const held=await Promise.race([
-            checkRunnerIdleHold317(options.holdIdleFile),
-            new Promise<boolean>((_,reject)=>setTimeout(()=>reject(new Error('hold marker check timeout')),2_000)),
-          ])
+          let timeout: ReturnType<typeof setTimeout> | undefined
+          const held=await (async()=>{
+            try{return await Promise.race([
+              checkRunnerIdleHold317(options.holdIdleFile!),
+              new Promise<boolean>((_,reject)=>{
+                timeout=setTimeout(()=>reject(new Error('hold marker check timeout')),2_000)
+                timeout.unref?.()
+              }),
+            ])}
+            finally{if(timeout)clearTimeout(timeout)}
+          })()
           if(version!==idleVersion || ownedAbort.signal.aborted || heartbeatAbort.signal.aborted)return
           if(held){
             idleCheckFailures=0
@@ -576,6 +581,10 @@ type CliOptions = { apiUrl: string; secretFile?: string; capacity: number; baseD
   clientLabel?: string;
   lockToAccountId?: string; agentProxyUrl?: string }
 function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions | 'help' {
+  const minutes=(value:string,flag:string):number=>{
+    try{return parseRunnerMinutes317(value,flag)}
+    catch(error){throw new RunnerUsageError317(error instanceof Error?error.message:String(error))}
+  }
   if (argv.includes('--help') || argv.includes('-h')) return 'help'
   const parsed: CliOptions = {
     apiUrl: env.SELF_HOSTED_RUNNER_API_URL ?? 'https://api.anthropic.com',
@@ -607,7 +616,9 @@ function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions 
       throw new RunnerUsageError317('unknown flag '+flag)
     }
     const value=argv[++i]
-    if(!value || value.startsWith('--')) throw new RunnerUsageError317('flag '+flag+' requires a value')
+    if(!value || value.startsWith('--')) throw new RunnerUsageError317(flag==='--hold-idle-file'
+      ? flag+' requires a file path (a file your host keeps fresh while the session has processes left running), got: nothing'
+      : 'flag '+flag+' requires a value')
     switch(flag){
       case '--api-url': parsed.apiUrl=value;break
       case '--environment-secret-file':
@@ -620,9 +631,9 @@ function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions 
       case '--agent-proxy-url': parsed.agentProxyUrl=value;break
       case '--poll-interval-ms': parsed.pollMs=Number(value);break
       case '--release-idle-session-min':
-        parsed.idleReleaseMs=parseRunnerMinutes317(value,flag);break
+        parsed.idleReleaseMs=minutes(value,flag);break
       case '--hold-idle-file': parsed.holdIdleFile=resolve(value);break
-      case '--max-hold-min': parsed.maxHoldMs=parseRunnerMinutes317(value,flag);break
+      case '--max-hold-min': parsed.maxHoldMs=minutes(value,flag);break
       case '--drain-wait-sec':
       case '--drain-wait-bg-tasks-sec': parsed.drainMs=Number(value)*1000;break
     }
