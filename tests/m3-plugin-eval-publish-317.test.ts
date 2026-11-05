@@ -19,7 +19,7 @@ test('publish-report submits private report using Claude.ai OAuth and returns re
     onStatus:message=>lines.push(message)
   })
   expect(output).toEqual({status:'published',url:'https://claude.ai/artifacts/test-report-1'})
-  expect(received.url).toContain('/api/frame/deploy/direct')
+  expect(received.url).toBe('https://api.anthropic.com/api/frame/deploy/direct')
   expect(received.init.headers.authorization).toBe('Bearer oauth-test')
   const body=JSON.parse(received.init.body)
   expect(body.template).toBe('plain')
