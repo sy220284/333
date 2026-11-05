@@ -12,7 +12,7 @@ concurrency:
   # Keep the currently running six-platform build intact, and coalesce
   # superseded queued commits into the newest branch head.
   group: latest-stable-six-host-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   standalone:
