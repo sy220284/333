@@ -1,8 +1,6 @@
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.js'
 import type { Command } from '../commands.js'
 import { isUltrareviewEnabled } from './review/ultrareviewEnabled.js'
-import { resolveIndependentModel } from '../services/api/multimodel/registry.js'
-import { getMainLoopModel } from '../utils/model/model.js'
 
 // Legal wants the explicit surface name plus a docs link visible before the
 // user triggers, so the description carries "Claude Code on the web" + URL.
@@ -50,9 +48,7 @@ const review: Command = {
 const ultrareview: Command = {
   type: 'local-jsx',
   name: 'ultrareview',
-  description: resolveIndependentModel(getMainLoopModel())
-    ? '通过当前模型在本机执行已有 /review 代码审查（无需云端任务或订阅）'
-    : `云端深度审查，使用 Claude 账号云服务。详见 ${CCR_TERMS_URL}`,
+  description: `多模型本地代码审查；可用时也支持 Claude 账号云端深度审查。详见 ${CCR_TERMS_URL}`,
   isEnabled: () => isUltrareviewEnabled(),
   load: () => import('./review/ultrareviewCommand.js'),
 }
