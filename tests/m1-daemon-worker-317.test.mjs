@@ -313,3 +313,28 @@ test('317 remoteControl sandbox refusal includes upstream remediation and exit 7
   assert.equal(stderr, '')
   assert.equal(parent.listenerCount('message'), 0)
 })
+
+test('317 supervisor IPC token cannot inherit local OAuth when not issued', async () => {
+  const parent = new EventEmitter()
+  let channelUnref = 0, launched = false
+  parent.send = (_message, _handle, _options, cb) => cb?.(null)
+  parent.channel = { unref: () => { channelUnref++ } }
+  let stdout = '', stderr = ''
+  const exit = await runDaemonWorker317('remoteControl', {
+    parent,
+    input: (async function* () {
+      yield JSON.stringify({config: {dir: '/tmp'}})
+    })(),
+    stdout: s => { stdout += s }, stderr: s => { stderr += s },
+    remoteControlGate: () => true,
+    parentWatcher: () => () => {},
+    remoteControlRunner: async () => { launched = true },
+  })
+  assert.equal(exit, 1)
+  assert.equal(launched, false)
+  assert.equal(channelUnref, 1)
+  assert.match(stdout, /Error: You must be logged in to use Remote Control/)
+  assert.match(stdout, /Run `claude auth login`/)
+  assert.equal(stderr, '')
+  assert.equal(parent.listenerCount('message'), 0)
+})
