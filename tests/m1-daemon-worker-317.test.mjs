@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { checkDaemonStartupProxy317 } from '../src/bootstrap/daemonProxy317.ts'
 import { validateHeartbeatConfig317, runDaemonWorker317, watchDaemonWorkerParent317,
-  isDaemonWorkerAdmitted317 }
+  isDaemonWorkerAdmitted317, classifyDaemonWorkerFailure317 }
   from '../src/bootstrap/daemonWorker317.mjs'
 
 const cli = resolve(import.meta.dirname, '../dist/cli.js')
@@ -223,4 +223,56 @@ test('317 remoteControl gate rejects before reading stdin; malformed config is r
     stdout:()=>{},stderr:s=>{error+=s}})
   assert.equal(invalid,2)
   assert.match(error,/unrecognized_keys/)
+})
+
+test('317 daemon returns EX_TEMPFAIL on nested 429 and occupied-folder errors', async () => {
+  const parent = new EventEmitter()
+  async function runWithFailure(cause) {
+    let stdout = '', stderr = ''
+    const outcome = await runDaemonWorker317('remoteControl', {
+      parent,
+      input: (async function* () {
+        yield JSON.stringify({ initialAccessToken: 'test-token', config: { dir: '/tmp' } })
+      })(),
+      stdout: s => { stdout += s }, stderr: s => { stderr += s },
+      remoteControlGate: () => true,
+      parentWatcher: () => () => {},
+      remoteControlRunner: async () => { throw cause },
+    })
+    assert.equal(parent.listenerCount('message'), 0, 'IPC listener leaked after failure')
+    return { outcome, stdout, stderr }
+  }
+
+  const limited = new Error('rate API failed', {
+    cause: { response: { status: 429 }, cause: { errorType: 'bridge_folder_already_served' } },
+  })
+  assert.equal(classifyDaemonWorkerFailure317(limited), 'rate_limited')
+  assert.deepEqual(await runWithFailure(limited), {
+    outcome: 75, stdout: 'rate limited (429): rate API failed\n', stderr: '',
+  })
+
+  const occupied = new Error('another session owns folder', {
+    cause: { cause: { errorType: 'bridge_folder_already_served' } },
+  })
+  assert.equal(classifyDaemonWorkerFailure317(occupied), 'folder_already_served')
+  assert.deepEqual(await runWithFailure(occupied), {
+    outcome: 75, stdout: 'folder already served: another session owns folder\n', stderr: '',
+  })
+
+  const chain = (depth, leaf) => {
+    let error = leaf
+    for (let i = 0; i < depth; i++) error = { cause: error }
+    return error
+  }
+  assert.equal(classifyDaemonWorkerFailure317(chain(7, { status: 429 })), 'rate_limited')
+  assert.equal(classifyDaemonWorkerFailure317(chain(8, { status: 429 })), undefined)
+
+  const permanent = new Error('permanent bridge refusal')
+  permanent.name = 'BridgeHeadlessPermanentError'
+  assert.deepEqual(await runWithFailure(permanent), {
+    outcome: 78, stdout: 'permanent bridge refusal\n', stderr: '',
+  })
+  const unexpected = new Error('unknown failure')
+  await assert.rejects(runWithFailure(unexpected), /unknown failure/)
+  assert.equal(parent.listenerCount('message'), 0)
 })
