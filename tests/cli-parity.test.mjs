@@ -89,9 +89,10 @@ for (const [commandLine, expected] of Object.entries(official317.commands)) {
   });
 }
 
-test('317 permission prompt tool option reaches existing permission consumer', () => {
+test('317 hidden permission callback reaches the existing permission consumer', () => {
   const help = compiledHelp(['--help']);
-  assert.match(help, /--permission-prompt-tool\s+<tool-name>/);
+  assert.equal(sections(help).flags.includes('--permission-prompt-tool'), false,
+    'the official 317 SDK-only callback remains hidden from public --help');
   assert.match(help, /--permission-prompts\s+<target>/);
   const main = readFileSync(resolve(root, 'src/main.tsx'), 'utf8');
   const print = readFileSync(resolve(root, 'src/cli/print.ts'), 'utf8');

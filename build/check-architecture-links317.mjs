@@ -94,6 +94,7 @@ const permissionPromptRegistrationCount = [
   ...main.matchAll(/(?:new Option|program\.option)\(['"]--permission-prompt-tool\s/g),
 ].length
 if (permissionPromptRegistrationCount !== 1 ||
+    !/new Option\('--permission-prompt-tool <tool>'[^\n]*\)\.argParser\(String\)\.hideHelp\(\)/.test(main) ||
     !main.includes('permissionPromptToolName: options.permissionPromptTool')) {
   failures.push('M3: --permission-prompt-tool requires one CLI registration and the headless consumer')
 }
