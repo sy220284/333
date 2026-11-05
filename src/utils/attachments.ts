@@ -64,6 +64,7 @@ import {
 } from 'src/types/textInputTypes.js'
 import { randomUUID, type UUID } from 'crypto'
 import { getInitialSettings } from './settings/settings.js'
+import { getOutputStyleConfig } from '../constants/outputStyles.js'
 import { getSnippetForTwoFileDiff } from 'src/tools/FileEditTool/utils.js'
 import type {
   ContentBlockParam,
@@ -531,6 +532,7 @@ export type Attachment =
   | {
       type: 'output_style'
       style: string
+      turnReminder?: string
     }
   | {
       type: 'diagnostics'
@@ -895,9 +897,7 @@ export async function getAttachments(
         maybe('ide_opened_file', async () =>
           getOpenedFileFromIDE(ideSelection, toolUseContext),
         ),
-        maybe('output_style', async () =>
-          Promise.resolve(getOutputStyleAttachment()),
-        ),
+        maybe('output_style', () => getOutputStyleAttachment(toolUseContext)),
         maybe('diagnostics', async () =>
           getDiagnosticAttachments(toolUseContext),
         ),
@@ -1539,21 +1539,30 @@ function getCriticalSystemReminderAttachment(
   return [{ type: 'critical_system_reminder', content: reminder }]
 }
 
-function getOutputStyleAttachment(): Attachment[] {
-  const settings = getInitialSettings()
-  const outputStyle = settings?.outputStyle || 'default'
+async function getOutputStyleAttachment(
+  toolUseContext: ToolUseContext,
+): Promise<Attachment[]> {
+  const style = await getOutputStyleConfig()
+  if (!style) return []
 
-  // Only show for non-default styles
-  if (outputStyle === 'default') {
-    return []
-  }
+  const waitingForBackgroundTask =
+    style.waitingTurnReminder !== undefined &&
+    Object.values(toolUseContext.getAppState().tasks).some(
+      task =>
+        task.status === 'running' &&
+        task.toolUseId !== undefined &&
+        task.type === 'local_bash' &&
+        task.isBackgrounded &&
+        task.agentId === undefined,
+    )
 
-  return [
-    {
-      type: 'output_style',
-      style: outputStyle,
-    },
-  ]
+  return [{
+    type: 'output_style',
+    style: style.name,
+    turnReminder: waitingForBackgroundTask
+      ? style.waitingTurnReminder
+      : style.turnReminder,
+  }]
 }
 
 async function getSelectedLinesFromIDE(
