@@ -57,6 +57,7 @@ jobs:
       - name: 验证 333 独立源码构建和全部回归测试
         run: |
           bun build/rebuild.mjs
+          node build/compile-standalone.mjs
           node build/package-release.mjs
           npm run test:all
       - name: 准备固定版本 actionlint

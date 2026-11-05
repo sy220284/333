@@ -1,0 +1,83 @@
+name: 全部最新稳定依赖升级及端到端测试
+on:
+  push:
+    branches: [upgrade/latest-stable-deps-20261105]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: latest-stable-deps-pr7
+  cancel-in-progress: false
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26.13.0'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - id: guard
+        name: 检查依赖是否已锁定
+        run: |
+          if test -f docs/upgrade/latest-stable-dependencies.json; then echo 'needed=false' >> "$GITHUB_OUTPUT"; else echo 'needed=true' >> "$GITHUB_OUTPUT"; fi
+      - name: 运行官方 MCP v2 迁移工具
+        if: steps.guard.outputs.needed == 'true'
+        run: |
+          set -euo pipefail
+          npx --yes @modelcontextprotocol/codemod@2.4.0 v1-to-v2 src
+          npx --yes @modelcontextprotocol/codemod@2.4.0 v1-to-v2 tests
+      - name: 适配 TypeScript 7 与 OpenTelemetry 3
+        if: steps.guard.outputs.needed == 'true'
+        run: node tools/upgrade/all-stable.mjs migrate
+      - name: 全部依赖更新至官方最新稳定标签
+        if: steps.guard.outputs.needed == 'true'
+        run: node tools/upgrade/all-stable.mjs freeze
+      - name: 更新 CI 和工具链版本
+        if: steps.guard.outputs.needed == 'true'
+        run: node tools/upgrade/all-stable.mjs actions
+      - name: 推送升级源码及全部锁文件到独立 PR
+        if: steps.guard.outputs.needed == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A src native tests tools/dev build/install-public-deps.mjs build/public-dependencies.lock.json build/rebuild.mjs package.json tsconfig.json docs/upgrade/latest-stable-dependencies.json .github/workflows
+          git diff --cached --quiet && { echo '没有产生任何更新'; exit 1; }
+          git commit -m '全面升级最新稳定依赖并同步迁移源码接口'
+          git push origin HEAD:upgrade/latest-stable-deps-20261105
+      - name: MCP v2 全生产引用检查
+        run: |
+          set -euo pipefail
+          if grep -R --include='*.ts' --include='*.tsx' --include='*.mjs' -nE '@mcp-codemod-error|@modelcontextprotocol/sdk/' src native tests; then
+            echo 'MCP v2 存在未迁移生产接口' >&2; exit 1
+          fi
+      - name: 最新依赖安装和全量类型检查
+        run: |
+          set -euo pipefail
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+          node tools/dev/dev.mjs typecheck:all
+      - name: 全链路编译及运行测试
+        run: |
+          set -euo pipefail
+          node build/verify-bundled-assets.mjs
+          node build/verify-official-embedded-assets.mjs
+          node build/restore-claude-api.mjs --verify
+          bun build/rebuild.mjs
+          node build/compile-standalone.mjs
+          node build/package-release.mjs
+          npm run test:all
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: latest-stable-upgrade
+          path: |
+            docs/upgrade/latest-stable-dependencies.json
+            .rebuild/governance/**
+            .rebuild/dependency-manifest.json
+          if-no-files-found: warn

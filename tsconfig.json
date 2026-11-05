@@ -10,37 +10,36 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "baseUrl": ".",
     "paths": {
       "src/*": [
-        "src/*"
+        "./src/*"
       ],
       "audio-capture-napi": [
-        "native/audio-capture-src/index.ts"
+        "./native/audio-capture-src/index.ts"
       ],
       "image-processor-napi": [
-        "native/image-processor-src/index.ts"
+        "./native/image-processor-src/index.ts"
       ],
       "modifiers-napi": [
-        "native/modifiers-napi-src/index.ts"
+        "./native/modifiers-napi-src/index.ts"
       ],
       "url-handler-napi": [
-        "native/url-handler-src/index.ts"
+        "./native/url-handler-src/index.ts"
       ],
       "@ant/claude-for-chrome-mcp": [
         ".rebuild/deps/node_modules/@ant/claude-for-chrome-mcp/src/index.ts"
       ],
       "@ant/computer-use-mcp": [
-        "src/types/upstreamComputerUse/index.d.ts"
+        "./src/types/upstreamComputerUse/index.d.ts"
       ],
       "@ant/computer-use-mcp/types": [
-        "src/types/upstreamComputerUse/types.ts"
+        "./src/types/upstreamComputerUse/types.ts"
       ],
       "@ant/computer-use-input": [
-        "src/types/upstreamComputerUse/nativeInput.d.ts"
+        "./src/types/upstreamComputerUse/nativeInput.d.ts"
       ],
       "@ant/computer-use-swift": [
-        "src/types/upstreamComputerUse/nativeSwift.d.ts"
+        "./src/types/upstreamComputerUse/nativeSwift.d.ts"
       ]
     },
     "lib": [
@@ -48,7 +47,12 @@
       "DOM",
       "DOM.Iterable"
     ],
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "types": [
+      "node",
+      "react",
+      "bun"
+    ]
   },
   "include": [
     "src",
