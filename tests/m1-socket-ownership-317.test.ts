@@ -7,6 +7,7 @@ import {
   assertSocketVacant317,
   captureSocketIdentity317,
   unlinkOwnedSocket317,
+  unlinkOwnedSocketSync317,
 } from '../src/bootstrap/socketOwnership317.ts'
 
 test('317 socket cleanup refuses another owner or a replacement file', async () => {
@@ -28,6 +29,7 @@ test('317 socket cleanup refuses another owner or a replacement file', async () 
     await rm(path, { force: true })
     await writeFile(path, 'replacement owner')
     expect(await unlinkOwnedSocket317(path, owner)).toBe(false)
+    expect(unlinkOwnedSocketSync317(path, owner)).toBe(false)
     expect((await lstat(path)).isFile()).toBe(true)
   } finally {
     if (server.listening) await new Promise<void>(resolve => server.close(() => resolve()))
