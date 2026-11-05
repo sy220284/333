@@ -148,7 +148,7 @@ test('M1 C19-T02 official and rebuilt preload accept a claim, run --version, rel
     try {
       await until(() => existsSync(sock) || started.child.exitCode !== null)
       if (started.child.exitCode !== null) {
-        assert.fail(name + ' preload startup exited: ' + JSON.stringify(await started.done))
+        assert.fail(`${name} preload startup exited: ${JSON.stringify(await started.done)}`)
       }
       await until(() => existsSync(sock + '.pid'))
       assert.equal(readFileSync(sock + '.pid', 'utf8'), String(started.child.pid), name + ' pid')
@@ -173,8 +173,8 @@ test('M1 C19-T02 preload TERM releases the claim socket and pid without a sessio
   const socket = join(home, 'claim.sock')
   const started = spawnPreload('bun', [cli], socket)
   try {
-    await until(() => (existsSync(socket) && existsSync(socket + '.pid')) || started.child.exitCode !== null)
-    if (started.child.exitCode !== null) assert.fail('preload TERM setup exited: ' + JSON.stringify(await started.done))
+    await until(() => (existsSync(socket) && existsSync(`${socket}.pid`)) || started.child.exitCode !== null)
+    if (started.child.exitCode !== null) assert.fail(`preload TERM setup exited: ${JSON.stringify(await started.done)}`)
     started.child.kill('SIGTERM')
     const result = await Promise.race([started.done, new Promise((_, reject) => setTimeout(() => reject(Error('terminate hung')), 8_000))])
     assert.equal(result.code, 0, JSON.stringify(result))
@@ -227,7 +227,7 @@ test('M1 C19-T02 preloaded process uses claimed API host and auth for a real SSE
       })
       try {
         await until(() => existsSync(sock) || started.child.exitCode !== null)
-        if (started.child.exitCode !== null) assert.fail(name + ' model preload setup exited: ' + JSON.stringify(await started.done))
+        if (started.child.exitCode !== null) assert.fail(`${name} model preload setup exited: ${JSON.stringify(await started.done)}`)
         await sendClaim(sock, { cwd:home, sessionId:claimedSessionId,
           argv:['--bare','-p','hello','--output-format=json','--model','claude-sonnet-4-6'],
           env: {
