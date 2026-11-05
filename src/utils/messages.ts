@@ -23,7 +23,6 @@ import { sanitizeToolNameForAnalytics } from 'src/services/analytics/metadata.js
 import type { AgentId } from 'src/types/ids.js'
 import { companionIntroText } from '../buddy/prompt.js'
 import { NO_CONTENT_MESSAGE } from '../constants/messages.js'
-import { OUTPUT_STYLE_CONFIG } from '../constants/outputStyles.js'
 import { isAutoMemoryEnabled } from '../memdir/paths.js'
 import {
   checkStatsigFeatureGate_CACHED_MAY_BE_STALE,
@@ -3656,16 +3655,13 @@ Read the team config to discover your teammates' names. Check the task list peri
       ])
     }
     case 'output_style': {
-      const outputStyle =
-        OUTPUT_STYLE_CONFIG[
-          attachment.style as keyof typeof OUTPUT_STYLE_CONFIG
-        ]
-      if (!outputStyle) {
+      if (attachment.style.length > 100 || attachment.style.trim().length === 0) {
         return []
       }
+      const safeStyleName = attachment.style.replace(/[<>\\r\\n]/g, ' ')
       return wrapMessagesInSystemReminder([
         createUserMessage({
-          content: `${outputStyle.name} output style is active. Remember to follow the specific guidelines for this style.`,
+          content: `${safeStyleName} output style is active. ${attachment.turnReminder ?? 'Remember to follow the specific guidelines for this style.'}`,
           isMeta: true,
         }),
       ])
