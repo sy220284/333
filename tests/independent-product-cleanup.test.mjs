@@ -24,10 +24,10 @@ test('正式菜单只提供统一入口及自主反馈', () => {
   for (const name of ['review', 'status', 'plan', 'tasks', 'feedback']) {
     assert.match(commands, new RegExp(`^  ${name},$`, 'm'), `缺少核心入口：${name}`)
   }
-  for (const name of ['stickers','mobile','thinkback','thinkbackPlay','desktop','sendToProject','installSlackApp','installGitHubApp','passes','extraUsage','extraUsageNonInteractive','rateLimitOptions','ultrareview','securityReview','advisor','cost','stats','usage','workflowsCmd']) {
+  for (const name of ['stickers','mobile','thinkback','thinkbackPlay','desktop','sendToProject','installSlackApp','installGitHubApp','passes','extraUsage','extraUsageNonInteractive','rateLimitOptions','ultrareview','securityReview','advisor','cost','stats','usage','workflowsCmd','heapDump']) {
     assert.doesNotMatch(commands, new RegExp(`^  ${name},$`, 'm'), `仍注册官方或重复入口：${name}`)
   }
-  assert.doesNotMatch(commands, /INTERNAL_ONLY_COMMANDS/)
+  assert.doesNotMatch(source('src/commands.ts'), /INTERNAL_ONLY_COMMANDS|agents-platform\/index\.js|commands\/mock-limits\/index\.js/)
 })
 
 test('已删除 Claude 商业推广、云审查及外部统计上传文件', () => {
