@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: pr13-upgrade-protection-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   baseline:
     name: 依赖锁与功能基准防回退
