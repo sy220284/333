@@ -172,6 +172,30 @@ function verifyRuntime(data) {
     fail(`Bun 运行时与权威清单不一致：${bun.stdout || bun.error?.message || bun.stderr}`)
   }
 }
+/** Install the separately pinned TypeScript JavaScript AST/compiler API. */
+function installAst(data) {
+  const prefix = join(root, '.rebuild/toolchain-ast')
+  const version = data.development.typescriptAstParser
+  const installed = join(prefix, 'node_modules/typescript/package.json')
+  const correct = () => {
+    try { return readJson(installed).version === version }
+    catch (error) {
+      if (error.code === 'ENOENT') return false
+      throw error
+    }
+  }
+  if (!correct()) {
+    const result = spawnSync('npm', [
+      'install', '--prefix', prefix, '--no-save', '--ignore-scripts',
+      '--no-package-lock', '--no-audit', '--no-fund', `typescript@${version}`,
+    ], { cwd: root, stdio: 'inherit', timeout: 120_000 })
+    if (result.error || result.status !== 0) {
+      fail(`安装独立AST解析器失败：${result.error?.message ?? result.status}`)
+    }
+  }
+  if (!correct()) fail(`独立AST解析器未达到锁定版本：${version}`)
+  console.log(`AST解析器 ${version} 已安装于 ${prefix}`)
+}
 const mode = process.argv[2] ?? 'check'
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
 if (mode === 'sync') {
@@ -186,11 +210,13 @@ if (mode === 'sync') {
   console.log('离线 bootstrap 工具清单及锁文件验证成功')
 } else if (mode === 'gha-env') {
   process.stdout.write(githubEnvironment(readToolchain()))
+} else if (mode === 'install-ast') {
+  installAst(checkToolchain())
 } else if (mode === 'verify-runtime') {
   verifyRuntime(checkToolchain())
   console.log('Node/Bun 实际运行版本匹配权威清单')
 } else {
-  fail('用法：node tools/dev/toolchain.mjs sync|check|check-bootstrap|gha-env|verify-runtime')
+  fail('用法：node tools/dev/toolchain.mjs sync|check|check-bootstrap|gha-env|install-ast|verify-runtime')
 }
 
 }
