@@ -13,12 +13,17 @@ test('SDK 317 session metadata: list, detail, rename, tag and clear persist in r
     mkdirSync(project,{recursive:true})
     const portable=await import('../src/utils/sessionStoragePortable.ts')
     const sdk=await import('../src/entrypoints/agentSdkTypes.ts')
-    const path=join(portable.getProjectDir(project),session+'.jsonl')
-    mkdirSync(portable.getProjectDir(project),{recursive:true})
+    // Actual CLI storage uses the canonical cwd from bootstrap. SDK list and
+    // lookup also canonicalize incoming cwd. On macOS (/var -> /private/var)
+    // and some Windows temp roots, writing under the raw alias creates a
+    // fixture in a different project key than any real CLI session.
+    const canonicalProject=await portable.canonicalizePath(project)
+    const path=join(portable.getProjectDir(canonicalProject),session+'.jsonl')
+    mkdirSync(portable.getProjectDir(canonicalProject),{recursive:true})
     const timestamp='2026-11-01T00:00:00.000Z'
     writeFileSync(path,[
       JSON.stringify({type:'user',uuid:'a0a1c0a1-1234-4234-8234-123456789abc',
-        parentUuid:null,sessionId:session,timestamp,cwd:project,message:{role:'user',content:'hello'}}),
+        parentUuid:null,sessionId:session,timestamp,cwd:canonicalProject,message:{role:'user',content:'hello'}}),
       JSON.stringify({type:'custom-title',customTitle:'Original SDK session',sessionId:session}),
     ].join('\n')+'\n')
     const listed=await sdk.listSessions({dir:project})
@@ -46,7 +51,7 @@ test('SDK 317 session metadata: list, detail, rename, tag and clear persist in r
     expect(forkMessages[0].uuid).not.toBe(sdkMessages[0].uuid)
     expect((forkMessages[0] as {message:{content:string}}).message.content).toBe('hello')
     const forkData=(await import('node:fs/promises')).readFile
-    const forkJsonl=await forkData(join(portable.getProjectDir(project),fork.sessionId+'.jsonl'),'utf8')
+    const forkJsonl=await forkData(join(portable.getProjectDir(canonicalProject),fork.sessionId+'.jsonl'),'utf8')
     expect(forkJsonl).not.toContain('file-history-snapshot')
     const firstFork=JSON.parse(forkJsonl.split('\n')[0])
     expect(firstFork.parentUuid).toBeNull()
