@@ -407,15 +407,14 @@ async function initializeBetaTracing(
   )
   setEventLogger(eventLogger)
 
-  // Setup flush handlers - flush both logs AND traces
-  process.on('beforeExit', async () => {
-    await loggerProvider?.forceFlush()
-    await tracerProvider?.forceFlush()
-  })
-
-  process.on('exit', () => {
-    void loggerProvider?.forceFlush()
-    void tracerProvider?.forceFlush()
+  // Async exporters cannot be awaited from Node's synchronous 'exit' event.
+  // Graceful shutdown uses registerCleanup; natural idle exit is flushed once.
+  process.once('beforeExit', () => {
+    void Promise.all([loggerProvider.forceFlush(), tracerProvider.forceFlush()])
+      .catch(error => logForDebugging(
+        `Beta tracing idle flush failed: ${errorMessage(error)}`,
+        { level: 'error' },
+      ))
   })
 }
 
@@ -513,9 +512,12 @@ export async function initializeTelemetry(): Promise<import('@opentelemetry/api'
   // Check if beta tracing is enabled - this is a separate code path
   // Available to all users who set ENABLE_BETA_TRACING_DETAILED=1 and BETA_TRACING_ENDPOINT
   if (isBetaTracingEnabled()) {
-    void initializeBetaTracing(resource).catch(e =>
-      logForDebugging(`Beta tracing init failed: ${e}`, { level: 'error' }),
-    )
+    const betaTracingReady = initializeBetaTracing(resource).catch(error => {
+      logForDebugging(
+        `Beta tracing init failed: ${errorMessage(error)}`,
+        { level: 'error' },
+      )
+    })
     // Still set up meter provider for metrics (but skip regular logs/traces setup)
     const meterProvider = new MeterProvider({
       resource,
@@ -531,6 +533,9 @@ export async function initializeTelemetry(): Promise<import('@opentelemetry/api'
       )
       try {
         endInteractionSpan()
+
+        // Ensure exporters finish initializing before reading their providers.
+        await betaTracingReady
 
         // Force flush + shutdown together inside the timeout. Previously forceFlush
         // was awaited unbounded BEFORE the race, blocking exit on slow OTLP endpoints.
@@ -555,8 +560,12 @@ export async function initializeTelemetry(): Promise<import('@opentelemetry/api'
           Promise.all(chains),
           telemetryTimeout(timeoutMs, 'OpenTelemetry shutdown timeout'),
         ])
-      } catch {
-        // Ignore shutdown errors
+      } catch (error) {
+        logForDebugging(
+          `Beta telemetry shutdown failed: ${errorMessage(error)}`,
+          { level: 'error' },
+        )
+        throw error
       }
     }
     registerCleanup(shutdownTelemetry)
@@ -605,20 +614,17 @@ export async function initializeTelemetry(): Promise<import('@opentelemetry/api'
       setEventLogger(eventLogger)
       logForDebugging('[3P telemetry] Event logger set successfully')
 
-      // 'beforeExit' is emitted when Node.js empties its event loop and has no additional work to schedule.
-      // Unlike 'exit', it allows us to perform async operations, so it works well for letting
-      // network requests complete before the process exits naturally.
-      process.on('beforeExit', async () => {
-        await loggerProvider?.forceFlush()
-        // Also flush traces - they use BatchSpanProcessor which needs explicit flush
-        const tracerProvider = getTracerProvider()
-        await tracerProvider?.forceFlush()
-      })
-
-      process.on('exit', () => {
-        // Final attempt to flush logs and traces
-        void loggerProvider?.forceFlush()
-        void getTracerProvider()?.forceFlush()
+      // Natural idle exits flush the providers once; graceful exits await the
+      // registered cleanup below. The 'exit' event cannot await promises.
+      process.once('beforeExit', () => {
+        const tracer = getTracerProvider()
+        void Promise.all([
+          loggerProvider.forceFlush(),
+          ...(tracer ? [tracer.forceFlush()] : []),
+        ]).catch(error => logForDebugging(
+          `Telemetry idle flush failed: ${errorMessage(error)}`,
+          { level: 'error' },
+        ))
       })
     }
   }
