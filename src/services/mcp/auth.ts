@@ -1,6 +1,6 @@
 import { OAuthErrorResponseSchema, OAuthMetadataSchema, OAuthTokensSchema } from "@modelcontextprotocol/core";
 import type { AuthorizationServerMetadata, OAuthClientInformation, OAuthClientInformationFull, OAuthClientMetadata, OAuthTokens, FetchLike } from "@modelcontextprotocol/server";
-import { InvalidGrantError, OAuthError, ServerError, TemporarilyUnavailableError, TooManyRequestsError } from "@modelcontextprotocol/server-legacy/auth";
+import { OAuthError, OAuthErrorCode } from '@modelcontextprotocol/client';
 import { discoverAuthorizationServerMetadata, discoverOAuthServerInfo, auth as sdkAuth, refreshAuthorization as sdkRefreshAuthorization } from "@modelcontextprotocol/client";
 import type { OAuthClientProvider, OAuthDiscoveryState } from "@modelcontextprotocol/client";
 import axios from 'axios'
@@ -1222,7 +1222,7 @@ export async function performMCPOAuthFlow(
     // ServerError, InvalidClientError, etc.) via parseErrorResponse. Extract the
     // OAuth error code directly from the SDK error instance.
     if (error instanceof OAuthError) {
-      oauthErrorCode = error.errorCode
+      oauthErrorCode = error.code
       // SDK does not attach HTTP status as a property, but the fallback ServerError
       // embeds it in the message as "HTTP {status}:" when the response body was
       // unparseable. Best-effort extraction.
@@ -2220,7 +2220,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       } catch (error) {
         // Invalid grant means the refresh token itself is invalid/revoked/expired.
         // But another process may have already refreshed successfully — check first.
-        if (error instanceof InvalidGrantError) {
+        if (error instanceof OAuthError && error.code === OAuthErrorCode.InvalidGrant) {
           logMCPDebug(
             this.serverName,
             `Token refresh failed with invalid_grant: ${error.message}`,
@@ -2263,9 +2263,10 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
           error instanceof Error &&
           /timeout|timed out|etimedout|econnreset/i.test(error.message)
         const isTransientServerError =
-          error instanceof ServerError ||
-          error instanceof TemporarilyUnavailableError ||
-          error instanceof TooManyRequestsError
+          error instanceof OAuthError &&
+          (error.code === OAuthErrorCode.ServerError ||
+            error.code === OAuthErrorCode.TemporarilyUnavailable ||
+            error.code === OAuthErrorCode.TooManyRequests)
         const isRetryable = isTimeoutError || isTransientServerError
 
         if (!isRetryable || attempt >= MAX_ATTEMPTS) {

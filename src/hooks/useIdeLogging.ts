@@ -29,7 +29,7 @@ export function useIdeLogging(mcpClients: MCPServerConnection[]): void {
       ideClient.client.setNotificationHandler(
         LogEventSchema(),
         notification => {
-          const { eventName, eventData } = notification.params
+          const { eventName, eventData } = notification
           logEvent(
             `tengu_ide_${eventName}`,
             eventData as { [key: string]: boolean | number | undefined },

@@ -512,7 +512,7 @@ export function useManageMCPConnections(
                 client.client.setNotificationHandler(
                   'notifications/claude/channel', { params: ChannelMessageNotificationSchema().shape.params },
                   async notification => {
-                    const { content, meta } = notification.params
+                    const { content, meta } = notification
                     logMCPDebug(
                       client.name,
                       `notifications/claude/channel: ${content.slice(0, 80)}`,
@@ -549,7 +549,7 @@ export function useManageMCPConnections(
                   client.client.setNotificationHandler(
                     CHANNEL_PERMISSION_METHOD, { params: ChannelPermissionNotificationSchema().shape.params },
                     async notification => {
-                      const { request_id, behavior } = notification.params
+                      const { request_id, behavior } = notification
                       const resolved =
                         channelPermCallbacksRef.current?.resolve(
                           request_id,

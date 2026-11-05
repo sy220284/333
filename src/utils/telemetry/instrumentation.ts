@@ -374,7 +374,7 @@ async function initializeBetaTracing(
 
   // Initialize trace exporter
   const traceExporter = new OTLPTraceExporter(httpConfig)
-  const spanProcessor = new BatchSpanProcessor(traceExporter, {
+  const spanProcessor = new BatchSpanProcessor({ exporter: traceExporter,
     scheduledDelayMillis: DEFAULT_TRACES_EXPORT_INTERVAL_MS,
   })
 
@@ -391,7 +391,7 @@ async function initializeBetaTracing(
   const loggerProvider = new LoggerProvider({
     resource,
     processors: [
-      new BatchLogRecordProcessor(logExporter, {
+      new BatchLogRecordProcessor({ exporter: logExporter,
         scheduledDelayMillis: DEFAULT_LOGS_EXPORT_INTERVAL_MS,
       }),
     ],
@@ -584,7 +584,7 @@ export async function initializeTelemetry(): Promise<import('@opentelemetry/api'
       const loggerProvider = new LoggerProvider({
         resource,
         processors: logExporters.map(exporter =>
-          new BatchLogRecordProcessor(exporter, {
+          new BatchLogRecordProcessor({ exporter: exporter,
             scheduledDelayMillis: parseInt(
               process.env.OTEL_LOGS_EXPORT_INTERVAL ||
                 DEFAULT_LOGS_EXPORT_INTERVAL_MS.toString(),
@@ -630,7 +630,7 @@ export async function initializeTelemetry(): Promise<import('@opentelemetry/api'
       // Create span processors for each exporter
       const spanProcessors = traceExporters.map(
         exporter =>
-          new BatchSpanProcessor(exporter, {
+          new BatchSpanProcessor({ exporter: exporter,
             scheduledDelayMillis: parseInt(
               process.env.OTEL_TRACES_EXPORT_INTERVAL ||
                 DEFAULT_TRACES_EXPORT_INTERVAL_MS.toString(),

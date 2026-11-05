@@ -47,13 +47,13 @@ export function useIdeAtMentioned(
     // If we found a connected IDE client, register our handler
     if (ideClient) {
       ideClient.client.setNotificationHandler(
-        AtMentionedSchema(),
+        NOTIFICATION_METHOD, { params: AtMentionedSchema().shape.params },
         notification => {
           if (ideClientRef.current !== ideClient) {
             return
           }
           try {
-            const data = notification.params
+            const data = notification
             // Adjust line numbers to be 1-based instead of 0-based
             const lineStart =
               data.lineStart !== undefined ? data.lineStart + 1 : undefined

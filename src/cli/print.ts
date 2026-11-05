@@ -1314,7 +1314,7 @@ function runHeadlessStreaming(
               const hookResponse = await runElicitationHooks(
                 serverName,
                 request.params,
-                extra.signal,
+                extra.mcpReq.signal,
               )
               if (hookResponse) {
                 logMCPDebug(
@@ -1350,7 +1350,7 @@ function runHeadlessStreaming(
                 serverName,
                 request.params.message,
                 requestedSchema,
-                extra.signal,
+                extra.mcpReq.signal,
                 mode,
                 url,
                 elicitationId,
@@ -1359,7 +1359,7 @@ function runHeadlessStreaming(
               const result = await runElicitationResultHooks(
                 serverName,
                 rawResult,
-                extra.signal,
+                extra.mcpReq.signal,
                 mode,
                 elicitationId,
               )
@@ -4758,7 +4758,7 @@ function handleChannelEnable(
   connection.client.setNotificationHandler(
     'notifications/claude/channel', { params: ChannelMessageNotificationSchema().shape.params },
     async notification => {
-      const { content, meta } = notification.params
+      const { content, meta } = notification
       logMCPDebug(
         serverName,
         `notifications/claude/channel: ${content.slice(0, 80)}`,
@@ -4834,7 +4834,7 @@ function reregisterChannelHandlerAfterReconnect(
   connection.client.setNotificationHandler(
     'notifications/claude/channel', { params: ChannelMessageNotificationSchema().shape.params },
     async notification => {
-      const { content, meta } = notification.params
+      const { content, meta } = notification
       logMCPDebug(
         connection.name,
         `notifications/claude/channel: ${content.slice(0, 80)}`,

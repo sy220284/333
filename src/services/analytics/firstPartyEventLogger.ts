@@ -1,4 +1,4 @@
-import type { AnyValueMap, Logger, logs } from '@opentelemetry/api'
+import type { Attributes, Logger, logs } from '@opentelemetry/api'
 import { resourceFromAttributes } from '@opentelemetry/resources'
 import {
   BatchLogRecordProcessor,
@@ -165,7 +165,7 @@ async function logEventTo1PAsync(
       betas: metadata.betas,
     })
 
-    // Build attributes - OTel supports nested objects natively via AnyValueMap
+    // Build attributes - OTel supports nested objects natively via Attributes
     // Cast through unknown since our nested objects are structurally compatible
     // with AnyValue but TS doesn't recognize it due to missing index signatures
     const attributes = {
@@ -175,7 +175,7 @@ async function logEventTo1PAsync(
       core_metadata: coreMetadata,
       user_metadata: getCoreUserData(true),
       event_metadata: metadata,
-    } as unknown as AnyValueMap
+    } as unknown as Attributes
 
     // Add user_id if available
     const userId = getOrCreateUserID()
@@ -370,7 +370,7 @@ export function initialize1PEventLogging(): void {
   firstPartyEventLoggerProvider = new LoggerProvider({
     resource,
     processors: [
-      new BatchLogRecordProcessor(eventLoggingExporter, {
+      new BatchLogRecordProcessor({ exporter: eventLoggingExporter,
         scheduledDelayMillis,
         maxExportBatchSize,
         maxQueueSize,
