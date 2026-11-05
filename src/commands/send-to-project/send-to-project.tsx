@@ -69,6 +69,10 @@ function SendToProject({onDone,context,args}:{
     const controller=new AbortController()
     void (async()=>{
       try{
+        if(!context.getAppState().replBridgeSessionId){
+          onDone('当前会话尚未连接 Remote Control。请先运行 /remote-control 建立可读取的会话，再使用 /send-to-project；本次没有创建或发送任何内容。',{display:'system'})
+          return
+        }
         const {accessToken,orgUUID}=await prepareApiRequest()
         const api=createProjectsClient317({baseUrl:getOauthConfig().BASE_API_URL,
           accessToken,organizationUuid:orgUUID})
@@ -110,6 +114,9 @@ function SendToProject({onDone,context,args}:{
     setStep('sending')
     let created:Project317|null=null
     try{
+      // A handoff is valid only while this same Remote Control session owns it.
+      if(!context.getAppState().replBridgeSessionId)
+        throw new Error('Remote Control 会话已断开，未创建或发送任何内容')
       // The explicit confirmation above is the only entry to mutable calls.
       const project=chosen?await client.getOwned(chosen.id):
         await client.create(newName)
