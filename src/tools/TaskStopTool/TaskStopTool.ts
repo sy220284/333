@@ -1,3 +1,4 @@
+import { isStoppableTask } from '../../tasks/agentLifecycle317.js'
 import { z } from 'zod/v4'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import {
@@ -74,7 +75,7 @@ export const TaskStopTool = buildTool({
       }
     try {
       const task = resolveTaskToStop(id, getAppState())
-      if (task.status !== 'running')
+      if (!isStoppableTask(task, getAppState().tasks))
         return {
           result: false,
           message: `Task ${id} is not running (status: ${task.status})`,

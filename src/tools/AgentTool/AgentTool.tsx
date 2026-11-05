@@ -686,6 +686,8 @@ export const AgentTool = buildTool({
       const asyncAgentId = earlyAgentId;
       const agentBackgroundTask = registerAsyncAgent({
         agentId: asyncAgentId,
+        parentAgentId: toolUseContext.agentId,
+        forkWorker: isForkPath,
         description,
         prompt,
         selectedAgent,
@@ -817,6 +819,8 @@ export const AgentTool = buildTool({
         if (!isBackgroundTasksDisabled) {
           const registration = registerAgentForeground({
             agentId: syncAgentId,
+            parentAgentId: toolUseContext.agentId,
+            forkWorker: isForkPath,
             description,
             prompt,
             selectedAgent,

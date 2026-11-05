@@ -116,6 +116,9 @@ export function createActivityDescriptionResolver(tools: Tools): ActivityDescrip
 export type LocalAgentTaskState = TaskStateBase & {
   type: 'local_agent';
   agentId: string;
+  parentAgentId?: string;
+  forkWorker?: boolean;
+  cascadeStopExempt?: boolean;
   prompt: string;
   selectedAgent?: AgentDefinition;
   agentType: string;
@@ -271,17 +274,17 @@ export const LocalAgentTask: Task = {
   name: 'LocalAgentTask',
   type: 'local_agent',
   async kill(taskId, setAppState) {
-    killAsyncAgent(taskId, setAppState);
+    killAsyncAgent(taskId, setAppState, true);
   }
 };
 
 /**
  * Kill an agent task. No-op if already killed/completed.
  */
-export function killAsyncAgent(taskId: string, setAppState: SetAppState): void {
+export function killAsyncAgent(taskId: string, setAppState: SetAppState, includeCompleted = false): void {
   let killed = false;
   updateTaskState<LocalAgentTaskState>(taskId, setAppState, task => {
-    if (task.status !== 'running') {
+    if (task.status !== 'running' && !(includeCompleted && task.status === 'completed')) {
       return task;
     }
     killed = true;
@@ -290,6 +293,7 @@ export function killAsyncAgent(taskId: string, setAppState: SetAppState): void {
     return {
       ...task,
       status: 'killed',
+      pendingMessages: [],
       endTime: Date.now(),
       evictAfter: task.retain ? undefined : Date.now() + PANEL_GRACE_MS,
       abortController: undefined,
@@ -465,6 +469,8 @@ export function failAgentTask(taskId: string, error: string, setAppState: SetApp
  */
 export function registerAsyncAgent({
   agentId,
+  parentAgentId,
+  forkWorker,
   description,
   prompt,
   selectedAgent,
@@ -473,6 +479,8 @@ export function registerAsyncAgent({
   toolUseId
 }: {
   agentId: string;
+  parentAgentId?: string;
+  forkWorker?: boolean;
   description: string;
   prompt: string;
   selectedAgent: AgentDefinition;
@@ -489,6 +497,8 @@ export function registerAsyncAgent({
     type: 'local_agent',
     status: 'running',
     agentId,
+    parentAgentId,
+    forkWorker,
     prompt,
     selectedAgent,
     agentType: selectedAgent.agentType ?? 'general-purpose',
@@ -525,6 +535,8 @@ const backgroundSignalResolvers = new Map<string, () => void>();
  */
 export function registerAgentForeground({
   agentId,
+  parentAgentId,
+  forkWorker,
   description,
   prompt,
   selectedAgent,
@@ -533,6 +545,8 @@ export function registerAgentForeground({
   toolUseId
 }: {
   agentId: string;
+  parentAgentId?: string;
+  forkWorker?: boolean;
   description: string;
   prompt: string;
   selectedAgent: AgentDefinition;
@@ -554,6 +568,8 @@ export function registerAgentForeground({
     type: 'local_agent',
     status: 'running',
     agentId,
+    parentAgentId,
+    forkWorker,
     prompt,
     selectedAgent,
     agentType: selectedAgent.agentType ?? 'general-purpose',

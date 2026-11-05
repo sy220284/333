@@ -66,6 +66,7 @@ import type { ModelAlias } from '../../utils/model/aliases.js'
 import {
   clearAgentTranscriptSubdir,
   recordSidechainTranscript,
+  captureAgentTranscriptOwner317,
   setAgentTranscriptSubdir,
   writeAgentMetadata,
 } from '../../utils/sessionStorage.js'
@@ -357,6 +358,7 @@ export async function* runAgent({
   if (transcriptSubdir) {
     setAgentTranscriptSubdir(agentId, transcriptSubdir)
   }
+  captureAgentTranscriptOwner317(agentId)
 
   // Register agent in Perfetto trace for hierarchy visualization
   if (isPerfettoTracingEnabled()) {
@@ -861,10 +863,16 @@ export async function* runAgent({
           return { ...prev, todos }
         })
       }],
-      ['background shells', () =>
-        killShellTasksForAgent(agentId, toolUseContext.getAppState, rootSetAppState)],
-      ['background monitors', () =>
-        killMonitorWsTasksForAgent(agentId, toolUseContext.getAppState, rootSetAppState)],
+      ['background shells', () => {
+        if (!isAsync || primaryFailure || agentAbortController.signal.aborted) {
+          killShellTasksForAgent(agentId, toolUseContext.getAppState, rootSetAppState)
+        }
+      }],
+      ['background monitors', () => {
+        if (!isAsync || primaryFailure || agentAbortController.signal.aborted) {
+          killMonitorWsTasksForAgent(agentId, toolUseContext.getAppState, rootSetAppState)
+        }
+      }],
     ], primaryFailure)
   }
 }

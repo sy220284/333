@@ -60,6 +60,7 @@ type UseRemoteSessionResult = {
     content: RemoteMessageContent,
     opts?: { uuid?: string },
   ) => Promise<boolean>
+  stopTask: (taskId: string, signal?: AbortSignal) => Promise<void>
   cancelRequest: () => void
   disconnect: () => void
 }
@@ -593,13 +594,19 @@ export function useRemoteSession({
     managerRef.current = null
   }, [])
 
+  const stopTask = useCallback((taskId: string, signal?: AbortSignal) => {
+    const manager = managerRef.current
+    if (!manager) return Promise.reject(new Error('Remote session is not connected'))
+    return manager.stopTask(taskId, signal)
+  }, [])
+
   // All four fields are already stable (boolean derived from a prop that
   // doesn't change mid-session, three useCallbacks with stable deps). The
   // result object is consumed by REPL's onSubmit useCallback deps — without
   // memoization the fresh literal invalidates onSubmit on every REPL render,
   // which in turn churns PromptInput's props and downstream memoization.
   return useMemo(
-    () => ({ isRemoteMode, sendMessage, cancelRequest, disconnect }),
-    [isRemoteMode, sendMessage, cancelRequest, disconnect],
+    () => ({ isRemoteMode, sendMessage, stopTask, cancelRequest, disconnect }),
+    [isRemoteMode, sendMessage, stopTask, cancelRequest, disconnect],
   )
 }

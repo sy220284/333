@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
 import type {
   SDKControlCancelRequest,
@@ -93,6 +94,41 @@ export type RemoteSessionCallbacks = {
  * - Permission request/response flow
  */
 export class RemoteSessionManager {
+  private readonly taskStops = new Map<string, { resolve: () => void; reject: (error: Error) => void }>()
+
+  private rejectTaskStops(): void {
+    for (const pending of this.taskStops.values()) {
+      pending.reject(new Error('Remote connection closed before task stop acknowledgment'))
+    }
+    this.taskStops.clear()
+  }
+
+  async stopTask(taskId: string, signal?: AbortSignal): Promise<void> {
+    if (!taskId) throw new Error('Missing task ID')
+    if (this.config.viewerOnly) throw new Error('Viewer-only sessions cannot stop tasks')
+    signal?.throwIfAborted()
+    const socket = this.websocket
+    if (!socket?.isConnected()) throw new Error('Remote session is not connected')
+
+    const requestId = randomUUID()
+    const deadline = AbortSignal.timeout(30000)
+    const cancellation = signal ? AbortSignal.any([signal, deadline]) : deadline
+    let abort: (() => void) | undefined
+    try {
+      await new Promise<void>((resolve, reject) => {
+        this.taskStops.set(requestId, { resolve, reject })
+        abort = () => reject(cancellation.reason)
+        cancellation.addEventListener('abort', abort, { once: true })
+        if (!socket.sendControlRequest({ subtype: 'stop_task', task_id: taskId }, requestId)) {
+          reject(new Error('Remote session disconnected before sending task stop'))
+        }
+      })
+    } finally {
+      if (abort) cancellation.removeEventListener('abort', abort)
+      this.taskStops.delete(requestId)
+    }
+  }
+
   private websocket: SessionsWebSocket | null = null
   private pendingPermissionRequests: Map<string, SDKControlPermissionRequest> =
     new Map()
@@ -117,10 +153,12 @@ export class RemoteSessionManager {
         this.callbacks.onConnected?.()
       },
       onClose: () => {
+        this.rejectTaskStops()
         logForDebugging('[RemoteSessionManager] Disconnected')
         this.callbacks.onDisconnected?.()
       },
       onReconnecting: () => {
+        this.rejectTaskStops()
         logForDebugging('[RemoteSessionManager] Reconnecting')
         this.callbacks.onReconnecting?.()
       },
@@ -173,7 +211,12 @@ export class RemoteSessionManager {
 
     // Handle control responses (acknowledgments)
     if (message.type === 'control_response') {
-      logForDebugging('[RemoteSessionManager] Received control response')
+      const pending = this.taskStops.get(message.response.request_id)
+      if (pending) {
+        this.taskStops.delete(message.response.request_id)
+        if (message.response.subtype === 'error') pending.reject(new Error(message.response.error))
+        else pending.resolve()
+      }
       return
     }
 
@@ -307,6 +350,7 @@ export class RemoteSessionManager {
    * Disconnect from the remote session
    */
   disconnect(): void {
+    this.rejectTaskStops()
     logForDebugging('[RemoteSessionManager] Disconnecting')
     this.websocket?.close()
     this.websocket = null
