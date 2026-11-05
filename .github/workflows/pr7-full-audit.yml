@@ -12,6 +12,11 @@ on:
       - 'src/utils/listSessionsImpl.ts'
       - 'src/entrypoints/agentSdkTypes.ts'
       - 'tests/m1-background-lifecycle.test.mjs'
+      - 'tests/m1-preload-317.test.mjs'
+      - 'tests/m3-m4-task-stop-cli-317.test.mjs'
+      - 'src/remote/**'
+      - 'src/tasks/**'
+      - 'src/ink/termio/clipboardNative317.ts'
       - 'tests/m4-sdk-session-metadata-317.test.ts'
       - 'build/compare-317.mjs'
       - 'tests/compare-317.test.mjs'
@@ -62,8 +67,9 @@ jobs:
           node build/upgrade-coverage.mjs
       - name: 完整重建、资源字节校验、现有回归与遗漏测试自动补跑
         run: npm run verify
-      - name: 官方317 Linux x64与重建版后台全生命周期双跑
-        if: runner.os == 'Linux'
+      - name: 获取并校验官方 317 Linux x64 原版
+        id: official-x64
+        if: runner.os == 'Linux' && !cancelled()
         run: |
           set -euo pipefail
           mkdir -p .rebuild/oracle
@@ -72,9 +78,30 @@ jobs:
             --output .rebuild/oracle/claude
           echo 'eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  .rebuild/oracle/claude' | sha256sum --check
           chmod +x .rebuild/oracle/claude
-          CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test \
+      - name: 原版与重建版执行同条件 CLI 对照
+        if: steps.official-x64.outcome == 'success' && !cancelled()
+        run: |
+          set -euo pipefail
+          export CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude"
+          mkdir -p .rebuild/chain-317
+          node build/m1-x64-reference-probe.mjs \
+            --reference "$CLAUDE_TARGET_X64" --candidate "$PWD/dist/claude" \
+            --allow-candidate-diff false --report .rebuild/chain-317/linux-x64-cli-parity.json
+      - name: 原版与重建版执行 Preload 和任务生命周期对照
+        if: steps.official-x64.outcome == 'success' && !cancelled()
+        env:
+          CLAUDE_TARGET_X64: ${{ github.workspace }}/.rebuild/oracle/claude
+        run: |
+          set -euo pipefail
+          mkdir -p .rebuild/chain-317
+          node --test --test-concurrency=1 \
+            --test-reporter=spec --test-reporter-destination=stdout \
+            --test-reporter=tap --test-reporter-destination=.rebuild/chain-317/linux-x64-lifecycle.tap \
             tests/m1-background-lifecycle.test.mjs \
-            tests/m1-background-agent-parity.test.mjs
+            tests/m1-background-agent-parity.test.mjs \
+            tests/m1-preload-317.test.mjs \
+            tests/m3-m4-task-stop-cli-317.test.mjs \
+            tests/m4-plugin-prune-native-parity-317.test.mjs
       - name: 导出20链真实签收、代码差分和测试发现清单
         if: always()
         run: |
