@@ -35,6 +35,7 @@ test('317 Runner: checkout a real repository and prepare the designated outcome 
     })
     expect(result.cwd).toBe(join(work,'owner_project'))
     expect(result.repositories).toEqual([result.cwd])
+    expect(result.addDirs).toEqual([result.cwd,work])
     expect(readFileSync(join(result.cwd,'README.md'),'utf8')).toBe('verified repository data')
     expect(git(['-C',result.cwd,'branch','--show-current'])).toBe('feature/runner')
     expect(git(['-C',result.cwd,'remote','get-url','origin'])).toBe(url)
@@ -52,6 +53,7 @@ test('317 Runner: multiple isolated checkouts and valid relative server working 
       pushTargets:[],requestedCwd:'owner_project',signal,
     })
     expect(result.repositories).toHaveLength(2)
+    expect(result.addDirs).toEqual([join(work,'owner_project'),join(work,'other_library'),work])
     expect(result.cwd).toBe(join(work,'owner_project'))
     expect(existsSync(join(work,'other_library','README.md'))).toBe(true)
   }finally{rmSync(root,{recursive:true,force:true})}
@@ -160,4 +162,22 @@ test('317 Runner: multiple outcomes are tracked individually for their repositor
     expect(prepared.outcomeBranches.map(x=>x.branch)).toEqual(['claude/one','claude/two'])
     expect(git(['-C',prepared.cwd,'branch','--list','claude/two'])).toContain('claude/two')
   }finally { rmSync(root,{recursive:true,force:true}) }
+})
+
+test('317 Runner: multi-repository default working directory is the root with all repos exposed',async()=>{
+  const root=makeRoot(),signal=new AbortController().signal
+  try{
+    const first=seed(root,'owner/project'),second=seed(root,'other/library')
+    const work=join(root,'work');mkdirSync(work)
+    const prepared=await prepareRunnerWorkspace317({
+      root:work,sources:[
+        {type:'git_repository',url:first,revision:'main'},
+        {type:'git_repository',url:second,revision:'main'},
+      ],pushTargets:[],signal,
+    })
+    expect(prepared.cwd).toBe(work)
+    expect(prepared.addDirs).toEqual([
+      join(work,'owner_project'),join(work,'other_library'),
+    ])
+  }finally{rmSync(root,{recursive:true,force:true})}
 })
