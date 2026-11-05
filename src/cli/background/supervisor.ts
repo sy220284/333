@@ -1,4 +1,4 @@
-import { createServer } from 'node:net'
+import { createServer, type Socket } from 'node:net'
 import { spawnBackgroundPty317, reconnectBackgroundPty317 } from './ptyWorker317.ts'
 import { unrecordedPtyReplay317 } from './ptyReplay317.ts'
 import type { ManagedPtyProcess317 } from './ptyProcess317.ts'
@@ -14,7 +14,7 @@ import {
 
 const active = new Map()
 const outputQueue = new Map()
-const serverClients = new Set()
+const serverClients = new Set<Socket>()
 let server
 let idleTimer
 
