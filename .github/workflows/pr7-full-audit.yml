@@ -4,7 +4,17 @@ name: PR7 固定提交全量复审（构建、回归、类型）
 on:
   push:
     branches: [upgrade/2.1.310-m1-evidence]
-    paths: ['.github/workflows/pr7-full-audit.yml']
+    paths:
+      - '.github/workflows/pr7-full-audit.yml'
+      - 'src/cli/background/ptyWorker317.ts'
+      - 'src/cli/background/supervisor.ts'
+      - 'src/utils/sessionStoragePortable.ts'
+      - 'src/utils/listSessionsImpl.ts'
+      - 'src/entrypoints/agentSdkTypes.ts'
+      - 'tests/m1-background-lifecycle.test.mjs'
+      - 'tests/m4-sdk-session-metadata-317.test.ts'
+      - 'build/compare-317.mjs'
+      - 'tests/compare-317.test.mjs'
   workflow_dispatch:
 
 permissions:
