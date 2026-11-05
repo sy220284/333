@@ -236,9 +236,7 @@ export function createLSPClient(
 
         // 5. Apply any queued request handlers
         for (const { method, handler } of pendingRequestHandlers) {
-          // JSON-RPC receives untyped wire values; the host's handler supplies
-      // the contract for this method, as it did before the SDK upgrade.
-      connection.onRequest(method, (params: unknown) => handler(params as TParams))
+          connection.onRequest(method, handler)
           logForDebugging(
             `Applied queued request handler for ${serverName}.${method}`,
           )
@@ -369,7 +367,9 @@ export function createLSPClient(
 
       checkStartFailed()
 
-      connection.onRequest(method, handler)
+      // The request method's handler owns its parameter contract; the
+      // JSON-RPC SDK now delivers the wire payload as unknown.
+      connection.onRequest(method, (params: unknown) => handler(params as TParams))
     },
 
     async stop(): Promise<void> {
