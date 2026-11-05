@@ -72,7 +72,10 @@ function quote(value,node,ast){
   }
   if(ts.isNoSubstitutionTemplateLiteral(node))return backtick+value
     .replaceAll(backtick,'\\'+backtick).replaceAll('$'+'{','\\$'+'{')+backtick
-  if(ts.isTemplateHead(node))return backtick+value.replaceAll(backtick,'\\'+backtick)+'
+  if(ts.isTemplateHead(node))return backtick+value.replaceAll(backtick,'\\'+backtick)+String.fromCharCode(36,123)
+  if(ts.isTemplateMiddle(node))return '}'+value.replaceAll(backtick,'\\'+backtick)+String.fromCharCode(36,123)
+  if(ts.isTemplateTail(node))return '}'+value.replaceAll(backtick,'\\'+backtick)+backtick
+  const q=old.startsWith("'")?"'":'"'
   return q+value.replaceAll('\\','\\\\').replaceAll(q,'\\'+q)
     .replaceAll('\r','\\r').replaceAll('\n','\\n')+q
 }
