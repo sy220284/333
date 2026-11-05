@@ -28,9 +28,7 @@ test('317 SDK daemon scheduler closes its async event stream on abort', async ()
     controller.abort()
     expect((await next).done).toBe(true)
     expect(handle.getNextFireTime()).toBeNull()
-    await expect(async () => {
-      for await (const unused of handle.events()) void unused
-    }).toThrow()
+    await expect(handle.events().next()).rejects.toThrow('one owner')
   } finally {
     controller.abort()
     rmSync(dir, { recursive: true, force: true })

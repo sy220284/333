@@ -79,6 +79,7 @@ jobs:
           bun test tests/m3-mcp-auth-317.test.ts
           bun test tests/m5-sdk-mcp-factory-317.test.ts tests/m1-sdk-mcp-message-validation.test.ts
           bun test tests/m2-artifact-comment-pipeline-317.test.ts tests/m2-observer-lifecycle-317.test.ts
+          bun test tests/m5-mcp-dual-era-317.test.ts tests/m4-sdk-daemon-tasks-317.test.ts tests/m4-sdk-remote-control-317.test.ts
           # 其余只登记在分支专属工作流里的测试也要在PR13依赖组合上运行。
           # TypeScript 7 uses a native checker. The localization AST checker
           # needs the pinned JS parser (same contract as chinese-only-ui.yml).
