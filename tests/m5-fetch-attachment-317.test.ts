@@ -114,3 +114,26 @@ test('317 inbound Bridge production chain uses protocol-level fetcher',()=>{
   expect(code).toContain('firstParty:')
   expect(code).not.toContain("axios.get(")
 })
+
+test('317 truncated HTTP body does not commit a corrupt attachment',async()=>{
+  const dir=fresh()
+  try{
+    const result=await fetchAttachmentHere317(payload,options(dir,{
+      fetchImpl:async()=>new Response('partial',{status:200,
+        headers:{'content-length':'22'}}),
+    }))
+    expect(result.output).toEqual({outcome:'failed',reason:'truncated'})
+    expect(readdirSync(dir)).toEqual([])
+  }finally{rmSync(dir,{recursive:true,force:true})}
+})
+test('317 invalid Content-Length is rejected before creating destination file',async()=>{
+  const dir=fresh()
+  try{
+    const result=await fetchAttachmentHere317(payload,options(dir,{
+      fetchImpl:async()=>new Response('some data',{status:200,
+        headers:{'content-length':'not-a-number'}}),
+    }))
+    expect(result.output).toEqual({outcome:'failed',reason:'length'})
+    expect(readdirSync(dir)).toEqual([])
+  }finally{rmSync(dir,{recursive:true,force:true})}
+})
