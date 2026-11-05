@@ -56,7 +56,8 @@ export async function publishEvalReport317(
     'root' in report.suite?String(report.suite.root):'plugin')
   const html=renderPluginEvalReport317(report)
   status('Publishing report to claude.ai (private to you)…')
-  const url=getOauthConfig().CLAUDE_AI_ORIGIN.replace(/\/+$/,'')+
+  // Official 317 frame host resolves to BASE_API_URL, not the claude.ai viewer origin.
+  const url=getOauthConfig().BASE_API_URL.replace(/\/+$/,'')+
     '/api/frame/deploy/direct'
   const response=await (deps.fetchImpl??fetch)(url,{
     method:'POST',headers:{authorization:'Bearer '+credentials.accessToken,
