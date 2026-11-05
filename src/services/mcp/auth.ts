@@ -2,7 +2,7 @@ import { OAuthErrorResponseSchema, OAuthMetadataSchema, OAuthTokensSchema } from
 import type { AuthorizationServerMetadata, OAuthClientInformation, OAuthClientInformationFull, OAuthClientMetadata, OAuthTokens, FetchLike } from "@modelcontextprotocol/server";
 import { OAuthError, OAuthErrorCode } from '@modelcontextprotocol/client';
 import { discoverAuthorizationServerMetadata, discoverOAuthServerInfo, auth as sdkAuth, refreshAuthorization as sdkRefreshAuthorization } from "@modelcontextprotocol/client";
-import type { OAuthClientProvider, OAuthDiscoveryState } from "@modelcontextprotocol/client";
+import type { OAuthClientProvider, OAuthDiscoveryState, OAuthClientInformationContext } from "@modelcontextprotocol/client";
 import axios from 'axios'
 import { createHash, randomBytes, randomUUID } from 'crypto'
 import { mkdir } from 'fs/promises'
@@ -977,12 +977,12 @@ export async function performMCPOAuthFlow(
     }
 
     // Setup a server to receive the callback
-    const authorizationCode = await new Promise<string>((resolve, reject) => {
+    const authorizationResponse = await new Promise<{ code: string; iss?: string }>((resolve, reject) => {
       let resolved = false
-      const resolveOnce = (code: string) => {
+      const resolveOnce = (code: string, iss?: string) => {
         if (resolved) return
         resolved = true
-        resolve(code)
+        resolve({ code, iss })
       }
       const rejectOnce = (error: Error) => {
         if (resolved) return
@@ -1024,7 +1024,7 @@ export async function performMCPOAuthFlow(
             }
             logMCPDebug(serverName, 'Received auth code via manual callback URL')
             cleanup()
-            resolveOnce(code!)
+            resolveOnce(code!, parsed.searchParams.get('iss') ?? undefined)
             return true
           } catch {
             return false
@@ -1073,7 +1073,7 @@ export async function performMCPOAuthFlow(
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
             res.end(renderAuthResultPage({ ok: true, heading: '身份验证成功', message: '请返回 Claude Code。此窗口即将关闭。' }))
             cleanup()
-            resolveOnce(code)
+            resolveOnce(code, typeof parsedUrl.query.iss === 'string' ? parsedUrl.query.iss : undefined)
           }
         }
       })
@@ -1147,7 +1147,8 @@ export async function performMCPOAuthFlow(
     logMCPDebug(serverName, `Completing auth flow with authorization code`)
     const result = await sdkAuth(provider, {
       serverUrl: serverConfig.url,
-      authorizationCode,
+      authorizationCode: authorizationResponse.code,
+      iss: authorizationResponse.iss,
       resourceMetadataUrl: wwwAuthParams.resourceMetadataUrl,
     })
 
@@ -1407,7 +1408,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
     return this._state
   }
 
-  async clientInformation(): Promise<OAuthClientInformation | undefined> {
+  async clientInformation(ctx?: OAuthClientInformationContext): Promise<(OAuthClientInformation & { issuer?: string }) | undefined> {
     const storage = getSecureStorage()
     const data = storage.read()
     const serverKey = getServerKey(this.serverName, this.serverConfig)
@@ -1419,6 +1420,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       return {
         client_id: storedInfo.clientId,
         client_secret: storedInfo.clientSecret,
+        issuer: storedInfo.clientIssuer,
       }
     }
 
@@ -1430,6 +1432,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       return {
         client_id: configClientId,
         client_secret: clientConfig?.clientSecret,
+        ...(ctx?.issuer && { issuer: ctx.issuer }),
       }
     }
 
@@ -1439,7 +1442,8 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
   }
 
   async saveClientInformation(
-    clientInformation: OAuthClientInformationFull,
+    clientInformation: OAuthClientInformationFull & { issuer?: string },
+    ctx?: OAuthClientInformationContext,
   ): Promise<void> {
     const storage = getSecureStorage()
     const existingData = storage.read() || {}
@@ -1455,6 +1459,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
           serverUrl: this.serverConfig.url,
           clientId: clientInformation.client_id,
           clientSecret: clientInformation.client_secret,
+          clientIssuer: clientInformation.issuer ?? ctx?.issuer,
           // Provide default values for required fields if not present
           accessToken: existingData.mcpOAuth?.[serverKey]?.accessToken || '',
           expiresAt: existingData.mcpOAuth?.[serverKey]?.expiresAt || 0,
@@ -1468,7 +1473,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
     }
   }
 
-  async tokens(): Promise<OAuthTokens | undefined> {
+  async tokens(_ctx?: OAuthClientInformationContext): Promise<(OAuthTokens & { issuer?: string }) | undefined> {
     // Cross-process token changes (another CC instance refreshed or invalidated)
     // are picked up via the keychain cache TTL (see macOsKeychainStorage.ts).
     // In-process writes already invalidate the cache via storage.update().
@@ -1622,6 +1627,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       expires_in: expiresIn,
       scope: tokenData.scope,
       token_type: 'Bearer',
+      issuer: tokenData.tokenIssuer,
     }
 
     logMCPDebug(this.serverName, `Returning tokens`)
@@ -1632,7 +1638,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
     return tokens
   }
 
-  async saveTokens(tokens: OAuthTokens): Promise<void> {
+  async saveTokens(tokens: OAuthTokens & { issuer?: string }, ctx?: OAuthClientInformationContext): Promise<void> {
     this._pendingStepUpScope = undefined
     const storage = getSecureStorage()
     const existingData = storage.read() || {}
@@ -1654,6 +1660,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
           refreshToken: tokens.refresh_token,
           expiresAt: Date.now() + (tokens.expires_in || 3600) * 1000,
           scope: tokens.scope,
+          tokenIssuer: tokens.issuer ?? ctx?.issuer ?? this._metadata?.issuer ?? existingData.mcpOAuth?.[serverKey]?.tokenIssuer,
         },
       },
     }

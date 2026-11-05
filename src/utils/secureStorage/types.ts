@@ -24,6 +24,10 @@ export interface StoredMcpOAuth {
   expiresAt: number
   refreshToken?: string
   scope?: string
+  /** Verified authorization-server identity on the access/refresh token set. */
+  tokenIssuer?: string
+  /** Verified authorization-server identity on the registered OAuth client. */
+  clientIssuer?: string
   clientId?: string
   clientSecret?: string
   stepUpScope?: string

@@ -71,6 +71,7 @@ test('manual OAuth rejects foreign/stale callbacks, then completes token exchang
         issuer: origin, authorization_endpoint: `${origin}/authorize`, token_endpoint: `${origin}/token`,
         response_types_supported: ['code'], code_challenge_methods_supported: ['S256'],
         token_endpoint_auth_methods_supported: ['none'],
+        authorization_response_iss_parameter_supported: true,
       })
       if (url.pathname.includes('oauth-protected-resource')) return new Response('', { status: 404 })
       if (url.pathname === '/token') { exchanged = true; return Response.json({ access_token: 'test-access', token_type: 'Bearer', expires_in: 3600 }) }
@@ -85,6 +86,7 @@ test('manual OAuth rejects foreign/stale callbacks, then completes token exchang
       const redirect = new URL(auth.searchParams.get('redirect_uri')!)
       redirect.searchParams.set('code', 'test-code')
       redirect.searchParams.set('state', auth.searchParams.get('state')!)
+      redirect.searchParams.set('iss', new URL(url).origin)
       expect(submit?.('garbage')).toBe(false)
       expect(submit?.(redirect.toString().replace('localhost', 'evil.test'))).toBe(false)
       const stale = new URL(redirect); stale.searchParams.set('state', 'stale-state')
@@ -92,7 +94,9 @@ test('manual OAuth rejects foreign/stale callbacks, then completes token exchang
       expect(submit?.(redirect.toString())).toBe(true)
     }, undefined, { skipBrowserOpen: true, onWaitingForCallback: callback => { submit = callback } })
     expect(exchanged).toBe(true)
-    expect(data.mcpOAuth?.[getServerKey('roundtrip', { type: 'http', url })]?.accessToken).toBe('test-access')
+    const saved = data.mcpOAuth?.[getServerKey('roundtrip', { type: 'http', url })]
+    expect(saved?.accessToken).toBe('test-access')
+    expect(saved?.tokenIssuer).toBe(new URL(url).origin)
   } finally { server.stop(true) }
 }, 15_000)
 
@@ -145,4 +149,25 @@ test('omitted stdio transport is normalized at the shared schema boundary', asyn
   expect(schema.parse({ type: 'stdio', command: 'echo', args: ['hello'] }).type).toBe('stdio')
   expect(schema.safeParse({ type: 'http', command: 'echo' }).success).toBe(false)
   expect(schema.safeParse({ command: '' }).success).toBe(false)
+})
+
+test('MCP SDK v2 issuer stamps persist separately for registered client and tokens', async () => {
+  data = {}; writable = true
+  const provider = new ClaudeAuthProvider('sample', config)
+  const issuer = 'https://login.example.com'
+  await provider.saveClientInformation({ client_id: 'client-1', issuer })
+  await provider.saveTokens({ access_token: 'access-1', token_type: 'Bearer', expires_in: 3600, issuer })
+  expect(data.mcpOAuth?.[key]?.clientIssuer).toBe(issuer)
+  expect(data.mcpOAuth?.[key]?.tokenIssuer).toBe(issuer)
+  expect((await provider.clientInformation())?.issuer).toBe(issuer)
+  expect((await provider.tokens())?.issuer).toBe(issuer)
+})
+
+test('SDK v2 authorization callback issuer validation rejects stripped and foreign issuers', async () => {
+  const { validateAuthorizationResponseIssuer } = await import('@modelcontextprotocol/client')
+  const expectedIssuer = 'https://login.example.com'
+  const args = { expectedIssuer, issParameterSupported: true }
+  expect(() => validateAuthorizationResponseIssuer({ ...args, iss: expectedIssuer })).not.toThrow()
+  expect(() => validateAuthorizationResponseIssuer({ ...args, iss: undefined })).toThrow()
+  expect(() => validateAuthorizationResponseIssuer({ ...args, iss: 'https://attacker.example' })).toThrow()
 })
