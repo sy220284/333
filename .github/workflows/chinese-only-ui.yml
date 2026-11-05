@@ -12,6 +12,9 @@ on:
       - 'src/utils/formatBriefTimestamp.ts'
       - 'tests/chinese-only-ui.test.mjs'
       - 'tools/localization/**'
+      - 'tools/dev/**'
+      - 'tests/chinese-source-integrity.test.mjs'
+      - '.github/workflows/chinese-only-ui.yml'
   pull_request:
     paths:
       - 'src/components/**'
@@ -30,16 +33,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: 读取权威工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - name: 校验升级成果与工具链版本
+        run: node tools/dev/toolchain.mjs check
       - name: 校验语言入口与中文显示约定
         run: node --test tests/chinese-only-ui.test.mjs
       - name: 全仓扫描中文界面残留英文
         run: node tools/localization/audit-ui.mjs
       - name: 检查汉化是否破坏 TypeScript 语法和调用标识符
         run: |
-          npm install --prefix "${RUNNER_TEMP}/333-ui-typescript" --no-save --ignore-scripts --no-package-lock typescript@5.9.3
+          npm install --prefix "${RUNNER_TEMP}/333-ui-typescript" --no-save --ignore-scripts --no-package-lock --no-audit --no-fund "typescript@${TOOLCHAIN_AST_TYPESCRIPT_VERSION}"
           TS_COMPILER_PATH="${RUNNER_TEMP}/333-ui-typescript/node_modules/typescript/lib/typescript.js" node tools/localization/check-code-integrity.mjs
           TS_COMPILER_PATH="${RUNNER_TEMP}/333-ui-typescript/node_modules/typescript/lib/typescript.js" node --test tests/chinese-source-integrity.test.mjs
       - uses: actions/upload-artifact@v4
