@@ -317,6 +317,12 @@ export type AgentMetadata = {
  * Also stores the worktreePath when the agent was spawned with worktree
  * isolation, enabling resume to restore the correct cwd.
  */
+let transcriptMirror317: ((filePath: string, entries: Record<string, unknown>[]) => Promise<void>) | undefined
+
+export function setTranscriptMirror317(writer: typeof transcriptMirror317): void {
+  transcriptMirror317 = writer
+}
+
 export async function writeAgentMetadata(
   agentId: AgentId,
   metadata: AgentMetadata,
@@ -324,6 +330,7 @@ export async function writeAgentMetadata(
   const path = getAgentMetadataPath(agentId)
   await mkdir(dirname(path), { recursive: true })
   await writeFile(path, JSON.stringify(metadata))
+  await transcriptMirror317?.(path, [{ ...metadata, type: 'agent_metadata' }])
 }
 
 export async function readAgentMetadata(
@@ -718,6 +725,9 @@ class Project {
       if (!shouldRetrySessionAppendAfterMkdir(getErrnoCode(error))) throw error
       await mkdir(dirname(filePath), { recursive: true, mode: 0o700 })
       await fsAppendFile(filePath, data, { mode: 0o600 })
+    }
+    if (transcriptMirror317) {
+      await transcriptMirror317(filePath, data.trimEnd().split('\n').map(line => JSON.parse(line)))
     }
   }
 

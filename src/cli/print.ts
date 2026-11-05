@@ -216,6 +216,7 @@ import {
   saveMode,
   saveAiGeneratedTitle,
   restoreSessionMetadata,
+  setTranscriptMirror317,
 } from 'src/utils/sessionStorage.js'
 import { incrementPromptCount } from 'src/utils/commitAttribution.js'
 import {
@@ -602,6 +603,10 @@ export async function runHeadless(
   // structuredIO.write below.
   if (options.outputFormat === 'stream-json') {
     installStreamJsonStdoutGuard()
+    if (process.env.CLAUDE_CODE_SDK_SESSION_MIRROR === '1') {
+      setTranscriptMirror317((filePath, entries) =>
+        structuredIO.write({ type: 'transcript_mirror', filePath, entries }))
+    }
   }
 
   // #34044: if user explicitly set sandbox.enabled=true but deps are missing,
@@ -904,6 +909,7 @@ export async function runHeadless(
     // (session_state_changed(idle) and any late task_notification drain after
     // result in the finally block).
     if (
+      message.type !== 'transcript_mirror' &&
       message.type !== 'control_response' &&
       message.type !== 'control_request' &&
       message.type !== 'control_cancel_request' &&

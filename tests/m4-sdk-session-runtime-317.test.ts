@@ -6,11 +6,12 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import test from 'node:test'
 import {
+  query,
   unstable_v2_createSession,
   unstable_v2_resumeSession,
   unstable_v2_prompt,
 } from '../src/entrypoints/agentSdkTypes.js'
-import type { SDKSession } from '../src/entrypoints/sdk/runtimeTypes.js'
+import type { SDKSession, SessionStore } from '../src/entrypoints/sdk/runtimeTypes.js'
 
 test('SDK sends multiple turns and resumes the transcript through the rebuilt CLI', { timeout: 30000 }, async () => {
   const cwd = await mkdtemp(join(tmpdir(), '333-sdk-session-'))
@@ -88,10 +89,15 @@ test('SDK sends multiple turns and resumes the transcript through the rebuilt CL
     assert.match(prompts[2]!, /answer-2/)
     assert.equal((await unstable_v2_prompt('one shot', options)).subtype, 'success')
     const callbacks: string[] = []
+    const hookTools: string[] = []
     const denied = await unstable_v2_prompt('try running a tool', {
       ...options,
       settingSources: [],
       permissionMode: 'default',
+      hooks: { PreToolUse: [{ matcher: 'Bash', hooks: [async input => {
+        if (input.hook_event_name === 'PreToolUse') hookTools.push(input.tool_name)
+        return {}
+      }] }] },
       async canUseTool(tool, input, context) {
         callbacks.push(tool)
         assert.equal(input.command, 'touch sdk-permission-marker')
@@ -102,8 +108,55 @@ test('SDK sends multiple turns and resumes the transcript through the rebuilt CL
     })
     assert.equal(denied.subtype, 'success')
     assert.deepEqual(callbacks, ['Bash'])
+    assert.deepEqual(hookTools, ['Bash'])
     assert.match(prompts[5]!, /Denied by SDK test callback/)
     await assert.rejects(access(join(cwd, 'sdk-permission-marker')), { code: 'ENOENT' })
+    const run = query({ prompt: 'query entrypoint', options })
+    try {
+      assert.ok((await run.supportedCommands()).length)
+      assert.ok((await run.supportedModels()).length)
+      assert.deepEqual(await run.mcpServerStatus(), [])
+      await run.setPermissionMode('default')
+      let result
+      for await (const message of run) if (message.type === 'result') result = message
+      assert.equal(result?.subtype, 'success')
+      assert.match(prompts[6]!, /query entrypoint/)
+    } finally {
+      await run.return()
+    }
+    const records = new Map<string, Record<string, unknown>[]>()
+    const store: SessionStore = {
+      async append(key, entries) {
+        const id = JSON.stringify(key)
+        records.set(id, [...(records.get(id) ?? []), ...entries])
+      },
+      async load(key) { return records.get(JSON.stringify(key)) },
+      async listSessions(projectKey) {
+        return Array.from(records.keys(), key => JSON.parse(key))
+          .filter(key => key.projectKey === projectKey && !key.subpath)
+          .map((key, index) => ({ sessionId: key.sessionId, mtime: index }))
+      },
+    }
+    const saved = await unstable_v2_prompt('store-only first turn', { ...options, sessionStore: store })
+    assert.equal(saved.subtype, 'success')
+    assert.ok(records.size > 0)
+    const restored = query({
+      prompt: 'restored from remote store',
+      options: { ...options, continue: true, sessionStore: store, env: {
+        ...options.env, CLAUDE_CONFIG_DIR: join(cwd, 'separate-host-config'),
+      } },
+    })
+    try {
+      let restoredResult
+      for await (const event of restored) if (event.type === 'result') restoredResult = event
+      assert.equal(restoredResult?.subtype, 'success')
+      assert.equal(restoredResult?.session_id, saved.session_id)
+      assert.match(prompts.at(-1)!, /store-only first turn/)
+      assert.match(prompts.at(-1)!, /restored from remote store/)
+    } finally {
+      await restored.return()
+    }
+
   } finally {
     for (const session of sessions) session.close()
     server.closeAllConnections()

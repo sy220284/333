@@ -723,6 +723,11 @@ export const SDKUpdateEnvironmentVariablesMessageSchema = lazySchema(() =>
 
 export const StdoutMessageSchema = lazySchema(() =>
   z.union([
+    z.object({
+      type: z.literal('transcript_mirror'),
+      filePath: z.string(),
+      entries: z.array(z.record(z.string(), z.unknown())),
+    }),
     SDKMessageSchema(),
     SDKStreamlinedTextMessageSchema(),
     SDKStreamlinedToolUseSummaryMessageSchema(),

@@ -138,8 +138,68 @@ export function query(_params: {
   prompt: string | AsyncIterable<SDKUserMessage>
   options?: Options
 }): Query
-export function query(): Query {
-  throw new Error('query is not implemented in the SDK')
+export function query({ prompt, options = {} }: {
+  prompt: string | AsyncIterable<SDKUserMessage>
+  options?: InternalOptions
+}): InternalQuery {
+  const session = createSessionRuntime317(options, options.resume)
+  const signal = options.abortController?.signal
+  const abort = () => session.close()
+  signal?.addEventListener('abort', abort, { once: true })
+  if (signal?.aborted) abort()
+
+  async function* read() {
+    try {
+      const input = typeof prompt === 'string' ? [prompt] : prompt
+      for await (const message of input) {
+        signal?.throwIfAborted()
+        await session.send(message)
+        yield* session.stream()
+        signal?.throwIfAborted()
+      }
+    } finally {
+      cleanup()
+    }
+  }
+
+  function cleanup() {
+    signal?.removeEventListener('abort', abort)
+    session.close()
+  }
+
+  const generator = read()
+  const finish = generator.return.bind(generator)
+  return Object.assign(generator, {
+    async return(value: void | PromiseLike<void>) {
+      cleanup()
+      return finish(value)
+    },
+    initializationResult: () => session.initialization,
+    async interrupt() { await session.control({ subtype: 'interrupt' }) },
+    async setPermissionMode(mode: Parameters<Query['setPermissionMode']>[0]) {
+      await session.control({ subtype: 'set_permission_mode', mode })
+    },
+    async setModel(model?: string) { await session.control({ subtype: 'set_model', model }) },
+    async setMaxThinkingTokens(max_thinking_tokens: number | null) {
+      await session.control({ subtype: 'set_max_thinking_tokens', max_thinking_tokens })
+    },
+    async supportedCommands() {
+      return (await session.initialization).commands as Awaited<ReturnType<Query['supportedCommands']>>
+    },
+    async supportedModels() {
+      return (await session.initialization).models as Awaited<ReturnType<Query['supportedModels']>>
+    },
+    async mcpServerStatus() {
+      return (await session.control({ subtype: 'mcp_status' })).mcpServers as Awaited<ReturnType<Query['mcpServerStatus']>>
+    },
+    async mcpReconnect(serverName: string) { await session.control({ subtype: 'mcp_reconnect', serverName }) },
+    async mcpToggle(serverName: string, enabled: boolean) {
+      await session.control({ subtype: 'mcp_toggle', serverName, enabled })
+    },
+    async rewindFiles(user_message_id: string) {
+      return await session.control({ subtype: 'rewind_files', user_message_id }) as Awaited<ReturnType<Query['rewindFiles']>>
+    },
+  })
 }
 
 /**
