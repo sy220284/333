@@ -1,4 +1,4 @@
-import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
+import { serveStdio } from '@modelcontextprotocol/server/stdio'
 import { Server } from "@modelcontextprotocol/server";
 import type { CallToolResult, ListToolsResult, Tool } from "@modelcontextprotocol/server";
 import { getDefaultAppState } from 'src/state/AppStateStore.js'
@@ -39,6 +39,11 @@ export async function startMCPServer(
     READ_FILE_STATE_CACHE_SIZE,
   )
   setCwd(cwd)
+  // The v2 stdio entry constructs one server for the selected protocol era.
+  // On modern discovery followed by a legacy fallback, the probe instance is
+  // discarded and a fresh legacy instance is created. The factory therefore
+  // has no externally visible initialization side effects.
+  const createServer = () => {
   const server = new Server(
     {
       name: 'claude/tengu',
@@ -184,10 +189,14 @@ export async function startMCPServer(
     },
   )
 
-  async function runServer() {
-    const transport = new StdioServerTransport()
-    await server.connect(transport)
+  return server
   }
 
-  return await runServer()
+  // The official SDK owns both the 2025-era initialization handshake and the
+  // 2026-07-28 per-request envelope. Legacy clients remain fully supported.
+  // Request handlers retain their existing tool permission + schema checks.
+  serveStdio(() => createServer(), {
+    legacy: 'serve',
+    onerror: error => logError(error),
+  })
 }

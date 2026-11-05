@@ -996,6 +996,10 @@ export const connectToServer = memoize(
           websiteUrl: PRODUCT_URL,
         },
         {
+          // Negotiate the 2026-07-28 stateless protocol when available.
+          // The official v2 client probes first and falls back to the 2025
+          // handshake for servers which have not upgraded.
+          versionNegotiation: { mode: 'auto' },
           capabilities: {
             roots: {},
             // Empty object declares the capability. Sending {form:{},url:{}}
