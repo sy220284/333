@@ -985,6 +985,8 @@ export function rebindGlobalConfigForClaim317(): void {
     freshnessWatcherStarted = false
   }
   globalConfigCache = { config: null, mtime: 0 }
+  // Workspace trust is scoped to the old claimed identity, not the process.
+  _trustAccepted = false
   lastReadFileStats = null
   // The accepted session must validate its own global config. The warm
   // process already set this latch when reading the previous owner's file.

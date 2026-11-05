@@ -6,9 +6,9 @@ import { tmpdir } from 'node:os'
 import { rebindClaimedSessionDependencies317 } from '../src/bootstrap/claimRebind317.ts'
 import { getGlobalClaudeFile } from '../src/utils/env.ts'
 import { getClaudeConfigHomeDir } from '../src/utils/envUtils.ts'
-import { enableConfigs, getGlobalConfig, getProjectPathForConfig } from '../src/utils/config.ts'
+import { enableConfigs, getGlobalConfig, getProjectPathForConfig, checkHasTrustDialogAccepted } from '../src/utils/config.ts'
 import { getSettingsForSource } from '../src/utils/settings/settings.ts'
-import { getOriginalCwd, setOriginalCwd } from '../src/bootstrap/state.ts'
+import { getOriginalCwd, setOriginalCwd, getSessionTrustAccepted, setSessionTrustAccepted } from '../src/bootstrap/state.ts'
 import { getTranscriptPath, getProjectDir } from '../src/utils/sessionStorage.ts'
 import { getSessionId } from '../src/bootstrap/state.ts'
 import { ensureFastPathSettingsLoaded317 } from '../src/bootstrap/fastPathSettings317.ts'
@@ -20,6 +20,7 @@ test('317 claimed session rebinds global config, project and settings ownership'
   const oldDir = process.env.CLAUDE_CONFIG_DIR
   const oldNodeEnv = process.env.NODE_ENV
   const oldCwd = getOriginalCwd()
+  const previousTrustAccepted = getSessionTrustAccepted()
   const configName = '.claude.json'
   try {
     writeFileSync(join(a, configName), JSON.stringify({ numStartups: 11 }))
@@ -32,6 +33,10 @@ test('317 claimed session rebinds global config, project and settings ownership'
     getGlobalClaudeFile.cache.clear()
     getClaudeConfigHomeDir.cache.clear()
     enableConfigs()
+    // A warmed worker can have accepted a different workspace. Even when the
+    // old trust check is latched, the claimed session must start untrusted.
+    setSessionTrustAccepted(true)
+    assert.equal(checkHasTrustDialogAccepted(), true)
     assert.equal(getGlobalConfig().numStartups, 11)
     assert.equal(getSettingsForSource('userSettings')?.env?.CLAIM_ID, 'warm')
     const warmPolicy = ensureFastPathSettingsLoaded317()
@@ -64,6 +69,10 @@ test('317 claimed session rebinds global config, project and settings ownership'
     // Config reads must be gated again after a warm process switches owners.
     assert.throws(() => getGlobalConfig(), /Config accessed before allowed/)
     enableConfigs()
+    assert.equal(getSessionTrustAccepted(), false,
+      'the warmed session trust token must not carry across a claim')
+    assert.equal(checkHasTrustDialogAccepted(), false,
+      'old trust caches must not authorize the newly claimed workspace')
     assert.equal(getGlobalConfig().numStartups, 29)
     assert.equal(getSettingsForSource('userSettings')?.env?.CLAIM_ID, 'accepted')
     const claimPolicy = ensureFastPathSettingsLoaded317()
@@ -77,6 +86,7 @@ test('317 claimed session rebinds global config, project and settings ownership'
     assert.equal(getGlobalConfig().numStartups, 29)
   } finally {
     setOriginalCwd(oldCwd)
+    setSessionTrustAccepted(previousTrustAccepted)
     if (oldDir === undefined) delete process.env.CLAUDE_CONFIG_DIR
     else process.env.CLAUDE_CONFIG_DIR = oldDir
     if (oldNodeEnv === undefined) delete process.env.NODE_ENV

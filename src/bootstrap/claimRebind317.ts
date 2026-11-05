@@ -12,6 +12,7 @@ export async function rebindClaimedSessionDependencies317(): Promise<void> {
     env,
     envUtils,
     config,
+    state,
     settingsCache,
     mdm,
     mdmRaw,
@@ -28,6 +29,7 @@ export async function rebindClaimedSessionDependencies317(): Promise<void> {
     import('../utils/env.js'),
     import('../utils/envUtils.js'),
     import('../utils/config.js'),
+    import('./state.js'),
     import('../utils/settings/settingsCache.js'),
     import('../utils/settings/mdm/settings.js'),
     import('../utils/settings/mdm/rawRead.js'),
@@ -54,6 +56,9 @@ export async function rebindClaimedSessionDependencies317(): Promise<void> {
   const { rebindSessionStorageForClaim317 } = await import('../utils/sessionStorage.js')
   await rebindSessionStorageForClaim317()
   config.rebindGlobalConfigForClaim317()
+  // Official hUn invokes HMn() for every new claim: workspace trust from
+  // a previous warm identity must never authorize the accepted workspace.
+  state.setSessionTrustAccepted(false)
   settingsCache.resetSettingsCache()
   settingsCache.clearPluginSettingsBase()
   mdm.clearMdmSettingsCache()
