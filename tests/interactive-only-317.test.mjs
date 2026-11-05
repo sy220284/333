@@ -34,7 +34,7 @@ test('没有输入或输出终端时拒绝普通会话', () => {
 
 test('帮助、管理命令、MCP、内部服务进程不受交互终端约束', () => {
   for (const args of [
-    ['--help'], ['--version'], ['-v'],
+    ['--help'], ['--version'], ['-v'], ['--desktop'], ['--desktop', '--resume'],
     ['mcp', 'list'], ['plugin', 'list'], ['auth', 'status'],
     ['doctor'], ['gateway', '--help'], ['self-hosted-runner', 'doctor'],
     ['--daemon-worker', 'message'], ['--bg-pty-host'], ['--preload'],
