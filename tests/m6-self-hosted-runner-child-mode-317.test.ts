@@ -10,7 +10,7 @@ test('317 BYOC child: remote resume, session-scoped settings and correct executi
     const script=join(base,'inspect-child.mjs')
     writeFileSync(script,[
       "import {writeFileSync} from 'node:fs'",
-      "writeFileSync(process.env.TEST_CAPTURE_PATH,JSON.stringify({args:process.argv.slice(2),kind:process.env.CLAUDE_CODE_ENVIRONMENT_KIND,configDir:process.env.CLAUDE_CONFIG_DIR,remote:process.env.CLAUDE_CODE_REMOTE,remoteType:process.env.CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE,token:process.env.CLAUDE_CODE_SESSION_ACCESS_TOKEN,epoch:process.env.CLAUDE_CODE_WORKER_EPOCH,ccr:process.env.CLAUDE_CODE_USE_CCR_V2,api:process.env.ANTHROPIC_BASE_URL}))",
+      "writeFileSync(process.env.TEST_CAPTURE_PATH,JSON.stringify({args:process.argv.slice(2),kind:process.env.CLAUDE_CODE_ENVIRONMENT_KIND,configDir:process.env.CLAUDE_CONFIG_DIR,remote:process.env.CLAUDE_CODE_REMOTE,remoteType:process.env.CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE,token:process.env.CLAUDE_CODE_SESSION_ACCESS_TOKEN,epoch:process.env.CLAUDE_CODE_WORKER_EPOCH,ccr:process.env.CLAUDE_CODE_USE_CCR_V2,api:process.env.ANTHROPIC_BASE_URL,scopes:process.env.CLAUDE_CODE_OAUTH_SCOPES,oauth:process.env.CLAUDE_CODE_OAUTH_TOKEN}))",
     ].join('\n'))
     const cap1=join(base,'byoc.json')
     const cap2=join(base,'bridge.json')
@@ -25,7 +25,7 @@ test('317 BYOC child: remote resume, session-scoped settings and correct executi
     const byoc=createSessionSpawner({...spawnBase,
       additionalArgs:['--model','sonnet','--max-turns','7'],
       env:{...process.env,TEST_CAPTURE_PATH:cap1},
-      runnerRuntime:{apiBaseUrl:'https://session.example.test',configDir:conf}})
+      runnerRuntime:{apiBaseUrl:'https://session.example.test',configDir:conf,inferenceToken:'inference-for-agent'}})
     const result=byoc.spawn({sessionId:'abc_123',sdkUrl:url,accessToken:'single-session-token',
       useCcrV2:true,workerEpoch:7},base)
     expect(await result.done).toBe('completed')
@@ -45,6 +45,8 @@ test('317 BYOC child: remote resume, session-scoped settings and correct executi
     expect(first.token).toBe('single-session-token')
     expect(first.epoch).toBe('7')
     expect(first.ccr).toBe('1')
+    expect(first.oauth).toBe('inference-for-agent')
+    expect(first.scopes).toBe('user:inference user:ccr_inference user:file_upload')
     expect(first.api).toBe('https://session.example.test')
 
     const bridge=createSessionSpawner({...spawnBase,env:{...process.env,TEST_CAPTURE_PATH:cap2}})
@@ -52,6 +54,7 @@ test('317 BYOC child: remote resume, session-scoped settings and correct executi
     expect(await other.done).toBe('completed')
     const second=JSON.parse(readFileSync(cap2,'utf8'))
     expect(second.kind).toBe('bridge')
+    expect(second.oauth).toBeUndefined()
     expect(second.args).toContain('--session-id')
     expect(second.args).toContain('abc_123')
     expect(second.args.some((a:string)=>a.startsWith('--resume='))).toBe(false)
