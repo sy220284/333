@@ -47,6 +47,7 @@ const extractMemoriesModule = feature('EXTRACT_MEMORIES')
 import type { QuerySource } from '../constants/querySource.js'
 import { executeAutoDream } from '../services/autoDream/autoDream.js'
 import { executePromptSuggestion } from '../services/PromptSuggestion/promptSuggestion.js'
+import { scheduleKnowledgeNudge317 } from '../services/youShouldKnow/knowledgeNudge317.js'
 import { isBareMode, isEnvDefinedFalsy } from '../utils/envUtils.js'
 import {
   createCacheSafeParams,
@@ -100,6 +101,7 @@ export async function* handleStopHooks(
     // Inline env check for dead code elimination in external builds
     if (!isEnvDefinedFalsy(process.env.CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION)) {
       void executePromptSuggestion(stopHookContext)
+      scheduleKnowledgeNudge317(stopHookContext)
     }
     if (
       feature('EXTRACT_MEMORIES') &&
