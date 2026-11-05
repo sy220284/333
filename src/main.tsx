@@ -3632,9 +3632,6 @@ async function run(): Promise<CommanderCommand> {
     .action(async (target: string | undefined, options: Record<string, unknown>) => {
       try {
         const { pluginEvalHandler317 } = await import('./cli/handlers/pluginEvalEntry317.ts');
-        if (options.publishReport) {
-          throw new Error('Remote report publishing requires the authenticated report API');
-        }
         const resolvedTarget = target ?? '.';
         const exitCode = await pluginEvalHandler317(resolvedTarget, options);
         if (exitCode !== 0) process.exitCode = exitCode;
