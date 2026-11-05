@@ -1,0 +1,24 @@
+name: 333 独立产品功能删改与入口专项验收
+on:
+  pull_request:
+    paths:
+      - 'src/commands/**'
+      - 'src/components/**'
+      - 'src/services/analytics/**'
+      - 'src/screens/**'
+      - 'tests/independent-product-cleanup.test.mjs'
+      - '.github/workflows/independent-product-cleanup.yml'
+  workflow_dispatch:
+jobs:
+  independent-product:
+    name: 333 独立化功能与统一入口校验
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - name: 测试审查模式、命令入口及禁用的官方回传
+        run: node --test tests/independent-product-cleanup.test.mjs
