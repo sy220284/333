@@ -31,7 +31,7 @@ jobs:
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
       - name: Runner真实协议、宿主生命周期和错误路径测试
-        run: bun test tests/m6-self-hosted-runner-api-317.test.ts tests/m6-self-hosted-runner-host-317.test.ts tests/m6-self-hosted-runner-child-mode-317.test.ts tests/m6-self-hosted-runner-jwt-317.test.ts tests/m6-self-hosted-runner-workspace-317.test.ts tests/m6-self-hosted-runner-cli-args-317.test.ts
+        run: bun test tests/m6-self-hosted-runner-api-317.test.ts tests/m6-self-hosted-runner-host-317.test.ts tests/m6-self-hosted-runner-child-mode-317.test.ts tests/m6-self-hosted-runner-jwt-317.test.ts tests/m6-self-hosted-runner-workspace-317.test.ts tests/m6-self-hosted-runner-cli-args-317.test.ts tests/m6-self-hosted-runner-agents-317.test.ts
       - name: 从TypeScript源代码重建Runner入口
         run: bun build/rebuild.mjs
       - name: Runner独立CLI帮助、拒绝未知参数、凭据缺失
