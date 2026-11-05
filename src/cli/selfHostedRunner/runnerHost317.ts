@@ -164,6 +164,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
   let runnerId = ''
   let pollErrors = 0
   let notFoundErrors = 0
+  let authenticationRefreshAttempts = 0
   let shutdownRequested = ownedAbort.signal.aborted
 
   const launch = async (id: string): Promise<void> => {
@@ -519,6 +520,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
           options.capacity-active.size,ownedAbort.signal)
         pollErrors=0
         notFoundErrors=0
+        authenticationRefreshAttempts=0
         const assigned = new Set(poll.assignment_ids)
         for (const id of [...retained]) if (!assigned.has(id) && !active.has(id)) retained.delete(id)
         // Each admission consumes one capacity slot until preparation has
@@ -544,6 +546,16 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       } catch (error) {
         if (ownedAbort.signal.aborted) break
         if (error instanceof RunnerHttpError317) {
+          // Official 317 uses a renewable runner-token credential. The token
+          // can be revoked or rotated by the server before its JWT expiry.
+          // Retry one 401 with a newly issued token; repeated 401s are fatal.
+          if (error.httpStatus === 401 && authenticationRefreshAttempts++ === 0) {
+            const next = await options.api.refreshToken(runnerToken)
+            if (!next.token || next.token === runnerToken) throw error
+            runnerToken=next.token
+            status('[runner] renewed runner token following 401; retrying poll')
+            continue
+          }
           if (error.isAuthFailure) throw error
           if (error.httpStatus===404 && ++notFoundErrors>=3) throw error
           if (error.httpStatus!==404) notFoundErrors=0
