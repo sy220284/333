@@ -53,16 +53,17 @@ export function validateRemoteControlConfig317(value: unknown):
   if (unknownKeys.length) issues.push({code:'unrecognized_keys',path:[],keys:unknownKeys,
     message:'Unrecognized keys: '+unknownKeys.join(', ')})
   if (issues.length) return {ok:false,issues}
+  const mode: RemoteControlConfig317['permissionMode'] =
+    data.permissionMode === undefined ? undefined :
+    data.permissionMode === 'manual' ? 'default' :
+    data.permissionMode as RemoteControlConfig317['permissionMode']
   return {
     ok:true,
     dir:data.dir as string,
     ...(data.name !== undefined && {name:data.name as string}),
     spawnMode: (data.spawnMode ?? 'same-dir') as 'same-dir'|'worktree',
     capacity:capacity as number,
-    ...(data.permissionMode !== undefined && {
-      permissionMode: (data.permissionMode === 'manual' ? 'default' : data.permissionMode)
-        as RemoteControlConfig317['permissionMode'],
-    }),
+    ...(mode !== undefined && { permissionMode: mode }),
     ...(data.sandbox !== undefined && {sandbox:data.sandbox as boolean}),
     ...(data.sessionTimeoutSeconds !== undefined && {
       sessionTimeoutSeconds:data.sessionTimeoutSeconds as number}),
