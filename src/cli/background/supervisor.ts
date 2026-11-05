@@ -1,6 +1,7 @@
 import { createServer } from 'node:net'
-import { chmod, appendFile, lstat, unlink } from 'node:fs/promises'
+import { chmod, appendFile, unlink } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import { assertSocketVacant317, captureSocketIdentity317, unlinkOwnedSocket317 } from '../../bootstrap/socketOwnership317.ts'
 import {
   prepareFleet, fleetSocket, listSessions, createSessionRecord, reserveNewSession, saveSession,
   editSession, deleteSession, matchSession, readSession, readTail,
@@ -170,7 +171,7 @@ async function dispatch(request) {
 async function command(request, socket) {
   switch (request.op) {
     case 'ping':
-      return { version: '2.1.310', pid: process.pid, running: active.size }
+      return { version: '2.1.317', pid: process.pid, running: active.size }
     case 'list':
       return listSessions({ all: !!request.all, cwd: request.cwd })
     case 'dispatch': {
@@ -290,26 +291,15 @@ function attachSocket(socket) {
 export async function runBackgroundSupervisor() : Promise<void> {
   await prepareFleet()
   const path = fleetSocket()
-  if (process.platform !== 'win32') {
-    try {
-      const current = await lstat(path)
-      if (!current.isSocket()) throw new Error(`Refusing to replace non-socket path ${path}`)
-      const { connect } = await import('node:net')
-      const owner = await new Promise<boolean>(resolve => {
-        const s = connect(path)
-        s.once('connect', () => { s.destroy(); resolve(true) })
-        s.once('error', error => { s.destroy(); resolve(!['ECONNREFUSED', 'ENOENT'].includes((error as NodeJS.ErrnoException).code ?? '')) })
-      })
-      if (owner) throw new Error(`Another background supervisor already owns ${path}`)
-      await unlink(path)
-    } catch (error) { if (error.code !== 'ENOENT') throw error }
-  }
+  if (process.platform !== 'win32') await assertSocketVacant317(path, 'Background supervisor')
   server = createServer(attachSocket)
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject)
     server.listen(path, () => { server.off('error', reject); resolve() })
   })
   if (process.platform !== 'win32') await chmod(path, 0o600)
+  const socketOwner = process.platform === 'win32'
+    ? undefined : await captureSocketIdentity317(path, 'Background supervisor')
   const shutdown = async () => {
     for (const id of [...active.keys()]) await stop(id)
     server.close()
@@ -317,8 +307,8 @@ export async function runBackgroundSupervisor() : Promise<void> {
   process.once('SIGINT', () => void shutdown())
   process.once('SIGTERM', () => void shutdown())
   server.on('close', () => {
-    if (process.platform !== 'win32') void unlink(path).catch(error => {
-      if (error.code !== 'ENOENT') process.stderr.write(`Cannot remove background socket: ${error.message}\n`)
+    if (socketOwner) void unlinkOwnedSocket317(path, socketOwner).catch(error => {
+      process.stderr.write(`Cannot remove background socket: ${error.message}\n`)
     })
   })
   // Supervisor is kept alive while any sessions run, and shuts down when idle.
