@@ -194,3 +194,17 @@ test('remote transport connectivity and remote worker action status remain disti
  assert.equal(waiting[0].unreachableFromHere,false)
  assert.equal(waiting[0].address,'bridge:session_status')
 })
+
+
+test('a Remote Control snapshot with an invalid ID cannot create a sendable bridge address', () => {
+  const peers=mergeSessionPeers({bridge:[
+    {id:'bad',title:'Malformed',status:'active'},
+    {id:'session_valid',title:'Valid',status:'active'},
+  ]})
+  assert.deepEqual(peers.map(p=>p.name),['Valid'])
+  assert.equal(peers[0].address,'bridge:session_valid')
+  const noRoute=mergeSessionPeers({cloud:[{id:'cse_cloud',title:'Cloud',status:'active'}],
+    bridge:[{id:'broken',title:'Bridge',status:'active'}]})
+  assert.equal(noRoute[0].unreachableFromHere,true)
+  assert.equal(noRoute[0].address,undefined)
+})

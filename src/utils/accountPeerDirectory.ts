@@ -40,7 +40,7 @@ export function mergeSessionPeers({ local = [], cloud = [], bridge = [], selfId,
   const seen = new Set(local.map(p => canonicalId(p.bridgeSessionId)).filter(Boolean))
   if (canonicalId(selfId)) seen.add(canonicalId(selfId))
   const bridgeById = new Map<string, PeerSnapshot317>()
-  const bridgeReachable = (row: PeerSnapshot317 | undefined): boolean => verifiedAccountList && !!row && active({
+  const bridgeReachable = (row: PeerSnapshot317 | undefined): boolean => verifiedAccountList && !!row && !!canonicalId(row.id) && active({
     status: row.offline ? 'offline' : row.status,
     acceptsPeerMessages: row.acceptsPeerMessages,
     unreachableFromHere: row.unreachableFromHere,
@@ -58,7 +58,8 @@ export function mergeSessionPeers({ local = [], cloud = [], bridge = [], selfId,
     seen.add(key)
     // A cloud snapshot may lag after a Remote Control session reconnects.
     // Only the verified live endpoint establishes actual reachability.
-    const connected = bridgeReachable(transport)
+    const transportId = bridgeReachable(transport) ? transport?.id : undefined
+    const connected = !!transportId
     // Worker action state and delivery connectivity are independent signals.
     // A connected bridge keeps a cloud requires_action status meaningful;
     // a disconnected transport overrides a stale cloud active snapshot.
@@ -76,8 +77,8 @@ export function mergeSessionPeers({ local = [], cloud = [], bridge = [], selfId,
       acceptsPeerMessages,
       unreachableFromHere: !connected || !acceptsPeerMessages,
     }
-    peers.push({ ...peer, address: active(peer) && connected
-      ? `bridge:${transport.id}` : undefined })
+    peers.push({ ...peer, address: active(peer) && transportId
+      ? `bridge:${transportId}` : undefined })
   }
   for (const row of cloud) include(row, 'cloud', bridgeById.get(canonicalId(row?.id)))
   for (const row of bridge) include(row, 'remote_control', row)
@@ -127,8 +128,10 @@ async function walk(
     catch { return { rows, failed:true, truncated } }
     if(!isRecord(reply) || reply.status!==200 || !isRecord(reply.data) || !Array.isArray(reply.data.data)) return { rows, failed:true, truncated }
     for(const item of reply.data.data) {
-      const row=isRecord(item)?normalize(item):null, key=canonicalId(row?.id)
-      if(!key || ids.has(key)) continue
+      const row=isRecord(item)?normalize(item):null
+      if (!row) continue
+      const key=canonicalId(row.id)
+      if (!key || ids.has(key)) continue
       ids.add(key);rows.push(row)
     }
     const pageData = reply.data

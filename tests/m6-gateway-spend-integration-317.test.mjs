@@ -5,6 +5,7 @@ import { once } from 'node:events'
 import { createGatewayService317 } from '../src/cli/gateway/gatewayServer317.mjs'
 import { validateGatewayConfig317 } from '../src/cli/gateway/gatewayConfig317.mjs'
 import { signGatewaySession317 } from '../src/cli/gateway/gatewayAuth317.mjs'
+import { createGatewaySseUsage317, precheckGatewaySpend317 } from '../src/cli/gateway/gatewaySpendMeter317.mjs'
 
 const secret = 'test-jwt-secret-value-32-bytes-xxxxxxxxxxxxxxxx'
 const readKey = 'read-' + 'a'.repeat(40)
@@ -123,4 +124,36 @@ test('317 gateway: missing durable spend initializer aborts startup',async()=>{
       serve(){throw new Error('socket must not open')},
     }),/createSpend/)
   }finally{globalThis.Bun=old}
+})
+
+
+test('317 gateway SSE usage survives chunk boundaries and estimates only missing output tokens', () => {
+  const collector=createGatewaySseUsage317()
+  const bytes=new TextEncoder().encode('data: {"type":"content_block_delta","delta":{"text":"abcdefghijkl"}}\r\n\r\n')
+  collector.push(bytes.subarray(0,26))
+  collector.push(bytes.subarray(26))
+  assert.deepEqual(collector.finish(),{output_tokens:3})
+  const reported=createGatewaySseUsage317()
+  reported.push(new TextEncoder().encode('data: {"type":"message_start","message":{"usage":{"input_tokens":2,"output_tokens":1}}}\n\n'))
+  reported.push(new TextEncoder().encode('data: {"type":"content_block_delta","delta":{"text":"abcdefgh"}}\n\n'))
+  assert.equal(reported.finish().output_tokens,1,'reported tokens take precedence over estimates')
+})
+
+test('317 gateway pooled budget uses only an active, verified group allocation', async () => {
+  const store={
+    async getApplicableCaps(){return [{id:'spl_active',scope:{type:'rbac_group',rbac_group_id:'eng'},
+      period:'monthly',amount:null,pooled_budget:{paused:false,amount:'1000'}}]},
+    async getSpend(){return 0},
+    async getPoolSpend(){return 500},
+  }
+  const result=await precheckGatewaySpend317(store,{sub:'employee',groups:['eng']},
+    {admin:{group_limit_mode:'min'}})
+  assert.equal(result.blocked,null)
+  assert.equal(result.payingGroup,'eng')
+  const paused={...store,async getApplicableCaps(){return [{id:'spl_paused',
+    scope:{type:'rbac_group',rbac_group_id:'eng'},period:'monthly',amount:null,
+    pooled_budget:{paused:true,amount:'1000'}}]}}
+  const refusal=await precheckGatewaySpend317(paused,{sub:'employee',groups:['eng']},
+    {admin:{group_limit_mode:'min'}})
+  assert.equal(refusal.payingGroup,null,'paused pool cannot authorize group spending')
 })

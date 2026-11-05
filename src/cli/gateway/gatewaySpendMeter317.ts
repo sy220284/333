@@ -198,8 +198,11 @@ export async function precheckGatewaySpend317(store: GatewaySpendStore317, ident
     const pool=poolCaps.find(row=>row?.scope.type==='rbac_group'&&
       row.scope.rbac_group_id===group&&row.period==='monthly'&&
       row.pooled_budget&&!row.pooled_budget.paused)
-    if(!pool)continue
-    const limit=Number(pool.pooled_budget.amount)
+    // The selected cap may exist without an active pooled budget.
+    // Narrow the actual budget record before using its amount.
+    const budget = pool?.pooled_budget
+    if (!budget || budget.paused) continue
+    const limit=Number(budget.amount)
     const spent=Number(await store.getPoolSpend(group,spendPeriodStart317('monthly',now)))
     eligible.push({group,limit,spent})
   }
@@ -257,9 +260,10 @@ export function createGatewaySseUsage317(): GatewaySseUsage317 {
     finish(): GatewayUsage317 | null {
       buffer+=decoder.decode()
       if(buffer.trim())consume(buffer)
-      if(!seen&&!(usage._estimated_output_chars>0))return null
-      if(usage.output_tokens===undefined&&usage._estimated_output_chars>0) {
-        usage.output_tokens=Math.ceil(usage._estimated_output_chars/4)
+      const estimatedChars=usage._estimated_output_chars ?? 0
+      if(!seen && estimatedChars<=0)return null
+      if(usage.output_tokens===undefined && estimatedChars>0) {
+        usage.output_tokens=Math.ceil(estimatedChars/4)
       }
       const {_estimated_output_chars,...rest}=usage
       return rest
@@ -280,7 +284,7 @@ export function meterGatewayResponse317(response: Response, context: GatewayMete
   const chunks: Buffer[]=[]
   const finish=async()=>{
     let metered
-    if(streaming) metered=usage.finish()
+    if(usage) metered=usage.finish()
     else{
       const full=Buffer.concat(chunks)
       try {metered=JSON.parse(full.toString('utf8')).usage}
@@ -302,7 +306,7 @@ export function meterGatewayResponse317(response: Response, context: GatewayMete
           controller.close()
           return
         }
-        if(streaming)usage.push(chunk.value)
+        if(usage)usage.push(chunk.value)
         else chunks.push(Buffer.from(chunk.value))
         controller.enqueue(chunk.value)
       }catch(error){controller.error(error)}
