@@ -11,6 +11,7 @@
     "src/cli/handlers/pluginEvalCatalog317.ts",
     "src/cli/handlers/pluginEvalGraders317.ts",
     "src/cli/handlers/pluginEvalModel317.ts",
+    "src/cli/handlers/pluginEvalWorkspace317.ts",
     "src/cli/handlers/ultrareviewProtocol.ts",
     "src/entrypoints/runnerDeclaration317.ts",
     "src/entrypoints/startupRouting317.ts",
@@ -25,6 +26,7 @@
     "src/utils/livePeerSessions.ts",
     "src/utils/plugins/commandSourceConsent.ts",
     "src/utils/remoteSessionIdentity.ts",
+    "src/utils/sessionHydrationCommit317.ts",
     "src/utils/telemetry/projectTelemetryPolicy.ts",
     "src/utils/webToolDeadline.ts"
   ]
