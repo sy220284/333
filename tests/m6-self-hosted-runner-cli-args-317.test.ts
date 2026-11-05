@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test'
-import {mapRunnerRemoteCliArgs317,stageRunnerPromptFlags317} from '../src/cli/selfHostedRunner/runnerCliArgs317.ts'
+import {mapRunnerRemoteCliArgs317,stageRunnerPromptFlags317,stageRunnerMcpConfig317} from '../src/cli/selfHostedRunner/runnerCliArgs317.ts'
 import {mkdtempSync,readFileSync,statSync,rmSync,existsSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
@@ -57,4 +57,29 @@ test('Runner 317: an older child receives a short subagent append prompt inline'
     },folder,false)
     expect(result).toEqual({args:['--append-subagent-system-prompt','short'],paths:[]})
   }finally {rmSync(folder,{recursive:true,force:true})}
+})
+
+test('Runner 317: session MCP config is decoded and passed through a private JSON file',async()=>{
+  const folder=mkdtempSync(join(tmpdir(),'runner-mcp-317-'))
+  try{
+    const payload=JSON.stringify({mcpServers:{tool:{command:'node',args:['index.js']}}})
+    const result=await stageRunnerMcpConfig317({
+      content:Buffer.from(payload).toString('base64'),
+    },folder)
+    expect(result.args[0]).toBe('--mcp-config')
+    expect(result.paths).toHaveLength(1)
+    expect(readFileSync(result.paths[0],'utf8')).toBe(payload)
+    if(process.platform!=='win32')expect(statSync(result.paths[0]).mode&0o777).toBe(0o600)
+  }finally{rmSync(folder,{recursive:true,force:true})}
+})
+test('Runner 317: missing or malformed remote MCP payload is rejected clearly',async()=>{
+  const folder=mkdtempSync(join(tmpdir(),'runner-mcp-317-'))
+  try{
+    expect(await stageRunnerMcpConfig317(undefined,folder)).toEqual({args:[],paths:[]})
+    await expect(stageRunnerMcpConfig317({content:'invalid***'},folder))
+      .rejects.toThrow('base64')
+    await expect(stageRunnerMcpConfig317({
+      content:Buffer.from('{bad json').toString('base64'),
+    },folder)).rejects.toThrow('malformed JSON')
+  }finally{rmSync(folder,{recursive:true,force:true})}
 })
