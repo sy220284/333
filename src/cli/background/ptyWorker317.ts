@@ -89,9 +89,24 @@ export async function spawnBackgroundPty317(
     if(spawned&&isAlive(spawned.pid)){
       try{spawned.kill('SIGTERM')}
       catch(killError){options.onStatus?.('PTY worker startup kill failed: '+String(killError))}
-      // Keep the credential if an unresponsive host survives, so a later
-      // supervisor can still prove ownership and attach without duplicating it.
-      try{await spawned.exited}catch{}
+      // Bound startup rollback: never block daemon dispatch indefinitely.
+      let timer:ReturnType<typeof setTimeout>|undefined
+      try {
+        await Promise.race([
+          spawned.exited,
+          new Promise<void>(resolve=>{timer=setTimeout(resolve,3_000)}),
+        ])
+      }catch(exitError){
+        options.onStatus?.('PTY rollback exit failed: '+String(exitError))
+      }finally{if(timer)clearTimeout(timer)}
+      if(isAlive(spawned.pid)){
+        try{spawned.kill('SIGKILL')}
+        catch(killError){
+          options.onStatus?.('PTY rollback force kill failed: '+String(killError))
+        }
+      }
+      // Keep the credential if the host survives; the next supervisor
+      // must be able to authenticate before attempting cleanup.
     }
     if(!spawned||!isAlive(spawned.pid)){
       try{await unlink(paths.credential)}
