@@ -20,6 +20,14 @@ if(previous.originalCandidates!==232 || previous.accepted!==199 ||
 const base='80a1268e73913b9ac834babc65a88b041f8d5df4'
 const origin=spawnSync('git',['cat-file','-e',base+'^{commit}'],{cwd:root})
 if(origin.status!==0)throw new Error('Missing verified baseline commit: '+base)
+const localizedUI = new Map([
+  ['src/components/permissions/FallbackPermissionRequest.tsx', 'label: "允许"'],
+  ['src/components/PromptInput/Notifications.tsx', '尚未登录 · 请运行 /login'],
+  ['src/components/ApproveApiKey.tsx', '检测到环境中配置了自定义 API 密钥'],
+  ['src/components/BypassPermissionsModeDialog.tsx', '跳过权限确认模式'],
+  ['src/components/ThinkingToggle.tsx', '切换思考模式'],
+  ['src/components/ManagedSettingsSecurityDialog/ManagedSettingsSecurityDialog.tsx', '需要确认的设置'],
+])
 const applied=[], skipped=[], errors=[]
 const sourcemap=/\/\/[#@]\s*sourceMappingURL=data:application\/json(?:;charset=utf-8)?;base64,([A-Za-z0-9+/=]+)\s*$/
 for(const path of previous.acceptedPaths) {
@@ -31,6 +39,13 @@ for(const path of previous.acceptedPaths) {
   if(diff.status===1){skipped.push({path,reason:'updated-since-verified-baseline'});continue}
   if(diff.status!==0)throw new Error('Git diff failed for '+path)
   const current=readFileSync(dst,'utf8')
+  const translated=localizedUI.get(path)
+  if(translated) {
+    if(!current.includes(translated))
+      throw new Error('Expected localized UI content missing: '+path)
+    skipped.push({path,reason:'preserve-existing-simplified-chinese-ui'})
+    continue
+  }
   const m=current.match(sourcemap)
   if(!m){skipped.push({path,reason:'no-current-inline-source-map'});continue}
   let map
