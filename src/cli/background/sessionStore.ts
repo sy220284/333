@@ -32,6 +32,8 @@ export interface BackgroundRecord317 {
   exitCode?: number | null
   signalCode?: number | NodeJS.Signals | null
   worktreePath?: string | null
+  /** Independent PTY host socket, used to recover workers after a daemon restart. */
+  ptySocket?: string | null
   detail?: string
   startedAt?: number
   respawnCount?: number
