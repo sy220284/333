@@ -4,6 +4,7 @@ on:
     branches: [upgrade/2.1.310-m1-evidence]
     paths:
       - '.github/workflows/replay-verified-inline-ts.yml'
+      - 'tools/dev/apply-verified-inline-ts.mjs'
   workflow_dispatch:
 permissions:
   contents: write
