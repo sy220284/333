@@ -9,9 +9,13 @@ import { join, isAbsolute, resolve, relative } from 'node:path'
 import { discoverEvalCases317 } from './pluginEvalCatalog317.ts'
 import { executePluginEvalSuite317 } from './pluginEvalEngine317.ts'
 import { savePluginEvalReport317 } from './pluginEvalReport317.ts'
+import { publishEvalReport317,shouldPublishEvalReport317 } from './pluginEvalPublish317.ts'
 
 type PluginEvalOptions317 = {
   trustPlugin?: boolean
+  publishReport?: boolean
+  publish?: boolean
+  report?: string
   mocks?: 'record' | 'off'
   allowRealServers?: boolean
   evalDir?: string
@@ -102,6 +106,7 @@ async function prepareEvalPlugin317(root, settings) {
 
 export async function pluginEvalHandler317(target: string, options: PluginEvalOptions317 = {}, adapters: {} = {}) : Promise<1 | 0 | 2> {
   const pluginRoot = await findPluginRoot317(target)
+  shouldPublishEvalReport317(options)
   await requireEvalTrust317(pluginRoot, options.trustPlugin)
   const mocks = options.mocks ?? 'record'
   if (!['record','off'].includes(mocks)) throw new Error('--mocks must be record or off')
@@ -128,6 +133,23 @@ export async function pluginEvalHandler317(target: string, options: PluginEvalOp
       ? resolve(options.outputDir)
       : join(evalDir, 'results', data.finishedAt.replace(/[:.]/g, '-'))
     const report = await savePluginEvalReport317(data, { ...options, outputDir })
+    // The local report remains available even when remote publishing is
+    // unavailable or a deployment attempt fails.
+    if (options.publishReport) {
+      try {
+        const publish = await publishEvalReport317(data,options)
+        if (publish.status !== 'published') {
+          process.stderr.write('plugin eval: remote publication unavailable ('+
+            publish.reason+'); local report: '+report.reportFile+'\n')
+          return 1
+        }
+      } catch (error) {
+        process.stderr.write('plugin eval: report publish failed: '+
+          (error instanceof Error?error.message:String(error))+
+          '; local report: '+report.reportFile+'\n')
+        return 1
+      }
+    }
     if (options.json === undefined) {
       process.stdout.write(
         'plugin eval: ' + cases.length + ' cases, score=' + (data.score ?? 'n/a') +
