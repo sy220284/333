@@ -39,7 +39,7 @@ function sections(output) {
     }
     if (/^\S/.test(line) && line.trim() && !/^(Usage|Arguments):/.test(line)) section = '';
     if (section === 'Options') {
-      const match = line.match(/^\s+(?:-[a-z0-9],\s*)?(--[a-z][a-z0-9-]*)/i);
+      const match = line.match(/^ {2}(?:-[a-z0-9],\s*)?(--[a-z][a-z0-9-]*)/i);
       if (match) flags.push(match[1]);
     }
     if (section === 'Commands') {
