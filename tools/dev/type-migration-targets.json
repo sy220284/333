@@ -3,6 +3,7 @@
     "src/cli/background/sessionStore.ts",
     "src/cli/gateway/gatewayAuth317.ts",
     "src/cli/gateway/gatewayDevice317.ts",
+    "src/cli/gateway/gatewaySpendMeter317.ts",
     "src/cli/gateway/gatewaySpendStore317.ts",
     "src/cli/gateway/gatewayStore317.ts",
     "src/cli/handlers/pluginEvalCatalog317.ts",
