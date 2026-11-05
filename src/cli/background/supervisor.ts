@@ -1,4 +1,5 @@
 import { createServer } from 'node:net'
+import { resumeFlags } from './respawnFlags317.ts'
 import { chmod, appendFile, unlink } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { assertSocketVacant317, captureSocketIdentity317, unlinkOwnedSocket317 } from '../../bootstrap/socketOwnership317.ts'
@@ -44,37 +45,7 @@ function sanitizedArgs(args) {
   }
   return out
 }
-// Resume must preserve the configuration and authorization supplied at dispatch.
-// Dropping the argument following --allowedTools/--disallowedTools would change
-// the effective permission policy after an attach or respawn.
-const PERSISTED_FLAGS_WITH_VALUES = new Set([
-  '--model', '--agent', '--effort', '--permission-mode', '--settings',
-  '--setting-sources', '--plugin-dir', '--mcp-config', '--name', '--add-dir',
-  '--system-prompt', '--append-system-prompt', '--system-prompt-file',
-  '--append-system-prompt-file', '--allowedTools', '--allowed-tools',
-  '--disallowedTools', '--disallowed-tools', '--tools', '--agents',
-  '--project-config-root', '--output-format',
-])
-export function resumeFlags(argv) {
-  const flags = []
-  for (let i = 0; i < argv.length; i++) {
-    const flag = argv[i]
-    if (flag === '--') break
-    if (flag === '--bg' || flag === '--background') continue
-    if (flag === '--resume' || flag === '-r' || flag === '--session-id') { i++; continue }
-    if (flag === '--continue' || flag === '-c') continue
-    if (PERSISTED_FLAGS_WITH_VALUES.has(flag)) {
-      if (argv[i + 1] !== undefined) flags.push(flag, argv[++i])
-      continue
-    }
-    if (flag.startsWith('--') && flag.includes('=')) {
-      if (PERSISTED_FLAGS_WITH_VALUES.has(flag.slice(0, flag.indexOf('=')))) flags.push(flag)
-      continue
-    }
-    if (flag.startsWith('-')) flags.push(flag)
-  }
-  return flags
-}
+export { resumeFlags } from './respawnFlags317.ts'
 async function launch(record, { resume = false } = {}) {
   if (!globalThis.Bun?.spawn) throw new Error('Background interactive sessions require Bun 1.4.4 with PTY support')
   if (active.has(record.id)) throw new Error(`Session is already running: ${record.id}`)
