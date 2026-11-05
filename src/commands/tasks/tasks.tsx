@@ -1,8 +1,52 @@
-import * as React from 'react';
-import type { LocalJSXCommandContext } from '../../commands.js';
-import { BackgroundTasksDialog } from '../../components/tasks/BackgroundTasksDialog.js';
-import type { LocalJSXCommandOnDone } from '../../types/command.js';
-export async function call(onDone: LocalJSXCommandOnDone, context: LocalJSXCommandContext): Promise<React.ReactNode> {
-  return <BackgroundTasksDialog toolUseContext={context} onDone={onDone} />;
+import * as React from 'react'
+import { useState } from 'react'
+import type { LocalJSXCommandContext } from '../../commands.js'
+import { BackgroundTasksDialog } from '../../components/tasks/BackgroundTasksDialog.js'
+import { WorkflowHistoryDialog } from '../../components/tasks/WorkflowHistoryDialog.js'
+import { Select } from '../../components/CustomSelect/select.js'
+import { Dialog } from '../../components/design-system/Dialog.js'
+import { Box, Text } from '../../ink.js'
+import type { LocalJSXCommandOnDone } from '../../types/command.js'
+
+type View = 'menu' | 'active' | 'workflows'
+function TaskHub({ onDone, context, initial }: {
+  onDone: LocalJSXCommandOnDone
+  context: LocalJSXCommandContext
+  initial: View
+}): React.ReactNode {
+  const [view, setView] = useState<View>(initial)
+  if (view === 'active') {
+    return <BackgroundTasksDialog toolUseContext={context} onDone={() => setView('menu')} />
+  }
+  if (view === 'workflows') {
+    return <WorkflowHistoryDialog toolUseContext={context} onDone={() => setView('menu')} />
+  }
+  return (
+    <Dialog title="333 任务管理" onCancel={() => onDone()}>
+      <Box flexDirection="column" gap={1}>
+        <Text>选择需要管理的任务类型：</Text>
+        <Select<View>
+          options={[
+            { label: '后台任务', value: 'active', description: '进程、Agent、远程任务及停止与恢复' },
+            { label: '工作流与历史', value: 'workflows', description: '工作流执行记录、结果及活动任务' },
+          ]}
+          onChange={setView}
+          onCancel={() => onDone()}
+        />
+      </Box>
+    </Dialog>
+  )
 }
-//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJSZWFjdCIsIkxvY2FsSlNYQ29tbWFuZENvbnRleHQiLCJCYWNrZ3JvdW5kVGFza3NEaWFsb2ciLCJMb2NhbEpTWENvbW1hbmRPbkRvbmUiLCJjYWxsIiwib25Eb25lIiwiY29udGV4dCIsIlByb21pc2UiLCJSZWFjdE5vZGUiXSwic291cmNlcyI6WyJ0YXNrcy50c3giXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0ICogYXMgUmVhY3QgZnJvbSAncmVhY3QnXG5pbXBvcnQgdHlwZSB7IExvY2FsSlNYQ29tbWFuZENvbnRleHQgfSBmcm9tICcuLi8uLi9jb21tYW5kcy5qcydcbmltcG9ydCB7IEJhY2tncm91bmRUYXNrc0RpYWxvZyB9IGZyb20gJy4uLy4uL2NvbXBvbmVudHMvdGFza3MvQmFja2dyb3VuZFRhc2tzRGlhbG9nLmpzJ1xuaW1wb3J0IHR5cGUgeyBMb2NhbEpTWENvbW1hbmRPbkRvbmUgfSBmcm9tICcuLi8uLi90eXBlcy9jb21tYW5kLmpzJ1xuXG5leHBvcnQgYXN5bmMgZnVuY3Rpb24gY2FsbChcbiAgb25Eb25lOiBMb2NhbEpTWENvbW1hbmRPbkRvbmUsXG4gIGNvbnRleHQ6IExvY2FsSlNYQ29tbWFuZENvbnRleHQsXG4pOiBQcm9taXNlPFJlYWN0LlJlYWN0Tm9kZT4ge1xuICByZXR1cm4gPEJhY2tncm91bmRUYXNrc0RpYWxvZyB0b29sVXNlQ29udGV4dD17Y29udGV4dH0gb25Eb25lPXtvbkRvbmV9IC8+XG59XG4iXSwibWFwcGluZ3MiOiJBQUFBLE9BQU8sS0FBS0EsS0FBSyxNQUFNLE9BQU87QUFDOUIsY0FBY0Msc0JBQXNCLFFBQVEsbUJBQW1CO0FBQy9ELFNBQVNDLHFCQUFxQixRQUFRLGlEQUFpRDtBQUN2RixjQUFjQyxxQkFBcUIsUUFBUSx3QkFBd0I7QUFFbkUsT0FBTyxlQUFlQyxJQUFJQSxDQUN4QkMsTUFBTSxFQUFFRixxQkFBcUIsRUFDN0JHLE9BQU8sRUFBRUwsc0JBQXNCLENBQ2hDLEVBQUVNLE9BQU8sQ0FBQ1AsS0FBSyxDQUFDUSxTQUFTLENBQUMsQ0FBQztFQUMxQixPQUFPLENBQUMscUJBQXFCLENBQUMsY0FBYyxDQUFDLENBQUNGLE9BQU8sQ0FBQyxDQUFDLE1BQU0sQ0FBQyxDQUFDRCxNQUFNLENBQUMsR0FBRztBQUMzRSIsImlnbm9yZUxpc3QiOltdfQ==
+export async function call(
+  onDone: LocalJSXCommandOnDone,
+  context: LocalJSXCommandContext,
+  args: string,
+): Promise<React.ReactNode> {
+  const value = args.trim().toLowerCase()
+  const initial: View = value === 'history' || value === 'workflows'
+    ? 'workflows'
+    : value === 'active'
+      ? 'active'
+      : 'menu'
+  return <TaskHub onDone={onDone} context={context} initial={initial} />
+}

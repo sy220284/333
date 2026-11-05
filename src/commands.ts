@@ -13,8 +13,6 @@ import copy from './commands/copy/index.js'
 import commitPushPr from './commands/commit-push-pr.js'
 import compact from './commands/compact/index.js'
 import config from './commands/config/index.js'
-import { context, contextNonInteractive } from './commands/context/index.js'
-import cost from './commands/cost/index.js'
 import diff from './commands/diff/index.js'
 import ctx_viz from './commands/ctx_viz/index.js'
 import doctor from './commands/doctor/index.js'
@@ -48,7 +46,6 @@ const agentsPlatform =
 /* eslint-enable @typescript-eslint/no-require-imports */
 import bughunter from './commands/bughunter/index.js'
 import terminalSetup from './commands/terminalSetup/index.js'
-import usage from './commands/usage/index.js'
 import theme from './commands/theme/index.js'
 import { feature } from 'bun:bundle'
 // Dead code elimination: conditional imports
@@ -77,7 +74,6 @@ const voiceCommand = feature('VOICE_MODE')
 const forceSnip = feature('HISTORY_SNIP')
   ? require('./commands/force-snip.js').default
   : null
-import workflowsCmd from './commands/workflows/index.js'
 const webCmd = feature('CCR_REMOTE_SETUP')
   ? (
       require('./commands/remote-setup/index.js') as typeof import('./commands/remote-setup/index.js')
@@ -115,7 +111,6 @@ import antTrace from './commands/ant-trace/index.js'
 import perfIssue from './commands/perf-issue/index.js'
 import sandboxToggle from './commands/sandbox-toggle/index.js'
 import chrome from './commands/chrome/index.js'
-import advisor from './commands/advisor.js'
 import { logError } from './utils/log.js'
 import { toError } from './utils/errors.js'
 import { logForDebugging } from './utils/debug.js'
@@ -146,7 +141,6 @@ import remoteEnv from './commands/remote-env/index.js'
 import upgrade from './commands/upgrade/index.js'
 import statusline from './commands/statusline.js'
 import effort from './commands/effort/index.js'
-import stats from './commands/stats/index.js'
 // insights.ts is 113KB (3200 lines, includes diffLines/html rendering). Lazy
 // shim defers the heavy module until /insights is actually invoked.
 const usageReport: Command = {
@@ -219,7 +213,6 @@ export const INTERNAL_ONLY_COMMANDS = [
 // since underlying functions read from config, which can't be read at module initialization time
 const COMMANDS = memoize((): Command[] => [
   addDir,
-  advisor,
   agents,
   branch,
   btw,
@@ -229,9 +222,6 @@ const COMMANDS = memoize((): Command[] => [
   compact,
   config,
   copy,
-  context,
-  contextNonInteractive,
-  cost,
   diff,
   doctor,
   effort,
@@ -257,7 +247,6 @@ const COMMANDS = memoize((): Command[] => [
   resume,
   session,
   skills,
-  stats,
   status,
   statusline,
   theme,
@@ -266,7 +255,6 @@ const COMMANDS = memoize((): Command[] => [
   rewind,
   terminalSetup,
   upgrade,
-  usage,
   usageReport,
   ...(webCmd ? [webCmd] : []),
   ...(proactive ? [proactive] : []),
@@ -283,7 +271,6 @@ const COMMANDS = memoize((): Command[] => [
   sandboxToggle,
   ...(!isUsing3PServices() ? [logout, login()] : []),
   tasks,
-  ...(workflowsCmd ? [workflowsCmd] : []),
   ...(torch ? [torch] : []),
 ])
 
