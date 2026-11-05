@@ -58,6 +58,13 @@ async function launch(record, { resume = false } = {}) {
   const rows = Number.isInteger(record.rows) && record.rows >= 5 ? record.rows : 30
   const subscribers = new Set()
   const earlyOutput = []
+  // A child can exit before its initial session record has been committed.
+  // Serialize the exit transition behind that commit to avoid resurrecting a
+  // completed job as 'working' when launch() finishes.
+  let settleLaunch
+  const launchCommitted = new Promise(resolve => { settleLaunch = resolve })
+  let settleFinalization
+  const finalization = new Promise(resolve => { settleFinalization = resolve })
   const proc = Bun.spawn(spawnArgs, {
     cwd: record.cwd,
     env: {
@@ -77,6 +84,8 @@ async function launch(record, { resume = false } = {}) {
       void (async () => {
         let failure
         try {
+          const committed = await launchCommitted
+          if (!committed) return
           // Terminal persistence can fail (disk full, read-only log, etc.).
           // The exited worker must still be reaped and the failure recorded.
           let outputError
@@ -96,9 +105,15 @@ async function launch(record, { resume = false } = {}) {
           failure = error
         } finally {
           const current = active.get(record.id)
-          active.delete(record.id)
-          outputQueue.delete(record.id)
-          if (current) {
+          // A previous worker may settle after the replacement was assigned.
+          // Only the worker that emitted this exit may clear its own slot.
+          const owned = current?.proc === _proc
+          if (owned) {
+            active.delete(record.id)
+            outputQueue.delete(record.id)
+          }
+          settleFinalization()
+          if (owned && current) {
             if (failure) for (const peer of current.subscribers)
               send(peer, { event: 'error', message: 'Session exit recording failed: ' + String(failure) })
             for (const peer of current.subscribers) send(peer, { event: 'exit', exitCode, signalCode })
@@ -120,12 +135,14 @@ async function launch(record, { resume = false } = {}) {
     startedAt: resume ? Date.now() : record.startedAt,
     updatedAt: new Date().toISOString(),
   }
-  active.set(record.id, { proc, record: next, subscribers })
+  active.set(record.id, { proc, record: next, subscribers, finalization })
   try {
     await saveSession(next)
+    settleLaunch(true)
     for (const chunk of earlyOutput) recordOutput(record.id, chunk)
     return next
   } catch (error) {
+    settleLaunch(false)
     // A child must never run untracked after its durable session record
     // failed to commit. Terminate it before allowing another dispatch.
     try { proc.kill('SIGTERM') }
