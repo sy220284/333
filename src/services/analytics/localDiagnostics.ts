@@ -32,9 +32,9 @@ async function appendEvent(event: string, attributes: Record<string, number | bo
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
   }
-  await fs.appendFile(JOURNAL, JSON.stringify({
+  await fs.appendFile(JOURNAL, `${JSON.stringify({
     time: new Date().toISOString(), event, attributes,
-  }) + '\n', { encoding: 'utf8', mode: 0o600 })
+  })}\n`, { encoding: 'utf8', mode: 0o600 })
 }
 export function recordLocalEvent(event: string, raw: Record<string, unknown> = {}): Promise<void> {
   if (!/^[a-zA-Z][a-zA-Z0-9_.:-]{0,100}$/.test(event)) {
