@@ -64,7 +64,20 @@ const valid=(string,type)=>{
 }
 const shown=(type,node)=>{
   const rendered=checker.typeToString(type,node,ts.TypeFormatFlags.NoTruncation|ts.TypeFormatFlags.UseAliasDefinedOutsideCurrentScope)
-  return valid(rendered,type)?rendered:null
+  if(!valid(rendered,type))return null
+  // TypeScript can print a type referenced in another module without adding
+  // its import. An explicit signature must reference only names actually
+  // visible from the current source file.
+  const words=rendered.replace(/(["'])(?:\\.|(?!\1).)*\1/g,'')
+  const names=[...words.matchAll(/(^|[^.\w$])([A-Za-z_$][\w$]*)/g)].map(m=>m[2])
+  const keywords=new Set(['string','number','boolean','undefined','null','void','true','false','readonly','keyof'])
+  for(const name of names){
+    if(keywords.has(name))continue
+    const visible=checker.resolveName(name,node,
+      ts.SymbolFlags.Type|ts.SymbolFlags.Namespace|ts.SymbolFlags.Value,false)
+    if(!visible)return null
+  }
+  return rendered
 }
 const all=[],unresolved=[]
 for(const source of program.getSourceFiles()){
