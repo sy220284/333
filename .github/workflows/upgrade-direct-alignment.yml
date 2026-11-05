@@ -37,6 +37,13 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
+      - name: 从升级后的依赖完整重建CLI供真实行为验收
+        run: |
+          set -euo pipefail
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+          bun build/rebuild.mjs
+          test -s dist/cli.js
       - name: 对照原版新增模型、压缩、权限与 Bash 功能链回归
         run: |
           node --test tests/m4-auth-status-parity-317.test.mjs tests/m2-disable-compact-settings-317.test.mjs tests/m2-auto-mode-rule-slots-317.test.mjs tests/m3-bash-shellopts-317.test.mjs tests/m2-terminal-hyperlink-forced-off-317.test.mjs
