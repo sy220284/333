@@ -368,11 +368,88 @@ function attachSocket(socket) {
   })
   socket.on('error', error => process.stderr.write(`Background IPC client error: ${error.message}\n`))
 }
+
+async function readPtyTailBytes317(path: string, bytes: number): Promise<Buffer> {
+  if(bytes===0)return Buffer.alloc(0)
+  let fh
+  try{fh=await open(path,'r')}
+  catch(error){
+    if((error as NodeJS.ErrnoException).code==='ENOENT')return Buffer.alloc(0)
+    throw error
+  }
+  try{
+    const size=(await fh.stat()).size
+    const amount=Math.min(size,bytes)
+    const out=Buffer.alloc(amount)
+    let read=0
+    while(read<amount){
+      const result=await fh.read(out,read,amount-read,size-amount+read)
+      if(result.bytesRead===0)break
+      read+=result.bytesRead
+    }
+    return out.subarray(0,read)
+  }finally{await fh.close()}
+}
+
+async function recoverBackgroundPtyWorkers317():Promise<void>{
+  const candidates=(await listSessions({all:true})).filter(record=>
+    typeof record.ptySocket==='string' && record.ptySocket.length>0 &&
+    record.running && record.pid && record.state!=='removed'
+  )
+  const results=await Promise.allSettled(candidates.map(async record=>{
+    const subscribers=new Set()
+    const earlyOutput:Buffer[]=[]
+    let settleLaunch:(committed:boolean)=>void=()=>{}
+    const launchCommitted=new Promise<boolean>(resolve=>{settleLaunch=resolve})
+    let settleFinalization:()=>void=()=>{}
+    const finalization=new Promise<void>(resolve=>{settleFinalization=resolve})
+    try{
+      const [binary,...prefix]=childExecutable()
+      const args=[...resumeFlags(record.argv),'--resume',record.sessionId]
+      const proc=await reconnectBackgroundPty317({
+        id:record.id,cwd:record.cwd,
+        cols:record.cols??100,rows:record.rows??30,
+        env:process.env,executable:binary,prefix,args,
+        onReplay:async replay=>{
+          const existing=await readPtyTailBytes317(record.logPath,replay.length)
+          const delta=unrecordedPtyReplay317(existing,replay)
+          if(delta.length)earlyOutput.push(delta)
+        },
+        onOutput:data=>{
+          if(active.has(record.id))recordOutput(record.id,data)
+          else earlyOutput.push(Buffer.from(data))
+        },
+        onExit:makePtyExitHandler317(record,launchCommitted,settleFinalization),
+        onStatus:message=>process.stderr.write('[bg-pty:recover] '+message+'\\n'),
+      },record.pid!,record.ptySocket!)
+      active.set(record.id,{proc,record,subscribers,finalization})
+      for(const chunk of earlyOutput)recordOutput(record.id,chunk)
+      settleLaunch(true)
+      process.stderr.write('[bg-pty] restored '+record.id+' pid='+proc.pid+'\\n')
+      if(record.state==='stopping')await stop(record.id)
+    }catch(error){
+      settleLaunch(false)
+      process.stderr.write('[bg-pty] recovery of '+record.id+' failed: '+String(error)+'\\n')
+    }
+  }))
+  for(const result of results){
+    if(result.status==='rejected')
+      process.stderr.write('[bg-pty] restore scheduling error: '+String(result.reason)+'\\n')
+  }
+}
+
 export async function runBackgroundSupervisor() : Promise<void> {
   await prepareFleet()
   const path = fleetSocket()
   if (process.platform !== 'win32') await assertSocketVacant317(path, 'Background supervisor')
-  server = createServer(attachSocket)
+  let finishRestore:()=>void=()=>{}
+  const restored=new Promise<void>(resolve=>{finishRestore=resolve})
+  server = createServer(socket=>{
+    socket.pause()
+    void restored.then(()=>{
+      if(!socket.destroyed){attachSocket(socket);socket.resume()}
+    })
+  })
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject)
     server.listen(path, () => { server.off('error', reject); resolve() })
@@ -380,6 +457,8 @@ export async function runBackgroundSupervisor() : Promise<void> {
   if (process.platform !== 'win32') await chmod(path, 0o600)
   const socketOwner = process.platform === 'win32'
     ? undefined : await captureSocketIdentity317(path, 'Background supervisor')
+  try{await recoverBackgroundPtyWorkers317()}
+  finally{finishRestore()}
   const shutdown = async () => {
     for (const id of [...active.keys()]) await stop(id)
     server.close()
