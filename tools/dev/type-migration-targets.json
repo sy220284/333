@@ -19,6 +19,7 @@
     "src/tasks/LocalWorkflowTask/workflowHistory.ts",
     "src/tasks/LocalWorkflowTask/workflowStoragePaths.ts",
     "src/tools/ListAgentsTool/peerListing.ts",
+    "src/utils/accessibility/screenReaderMode.ts",
     "src/utils/accountPeerDirectory.ts",
     "src/utils/cliArgv317.ts",
     "src/utils/cliStartupFailure.ts",
