@@ -13,7 +13,7 @@ const read = path => JSON.parse(readFileSync(resolve(root, path), 'utf8'))
 const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key)
 const exact = (value, fallback = null) => value === undefined ? fallback : value
 
-export function validateUpgradeProtection({ baseline, release, development, stable, toolchain, inventory, approvals = baseline.approvedChanges }) {
+export function validateUpgradeProtection({ baseline, release, development, stable, toolchain, inventory, routes, updates, approvals = baseline.approvedChanges }) {
   const errors = []
   const fail = message => errors.push(message)
   const approved = (scope, key, before, after) => {
@@ -83,7 +83,18 @@ export function validateUpgradeProtection({ baseline, release, development, stab
   if (inventory.target_version !== baseline.capabilities.version) fail('能力对照目标版本发生变化')
   verifyInventory('features', baseline.capabilities.featureIds)
   verifyInventory('scenarios', baseline.capabilities.scenarioIds)
-  for (const path of [...baseline.upgradedContracts.testFiles, ...baseline.capabilities.mapping]) {
+  const verifyIndexed = (label, entries, expected) => {
+    if (!Array.isArray(entries)) { fail(`升级保护缺少 ${label} 索引`); return }
+    const ids = entries.map(x => x.id)
+    if (new Set(ids).size !== ids.length) fail(`升级保护存在重复编号：${label}`)
+    for (const id of expected) if (!ids.includes(id)) fail(`升级成果缺失：${label} ${id}`)
+  }
+  if (routes?.target_version !== baseline.source.release || updates?.target_version !== baseline.source.release) {
+    fail('主功能链或增量更新的目标版本发生变化')
+  }
+  verifyIndexed('routes', routes?.routes, baseline.capabilities.routeIds)
+  verifyIndexed('incrementalUpdates', updates?.items, baseline.capabilities.updateIds)
+  for (const path of [...baseline.upgradedContracts.testFiles, ...baseline.capabilities.mapping, baseline.capabilities.routeInventory, baseline.capabilities.updateInventory]) {
     if (!existsSync(resolve(root, path))) fail(`保护基准引用的真实文件不存在：${path}`)
   }
   if (baseline.evidence.platforms.length !== 6 || !baseline.evidence.sixArch?.startsWith('https://github.com/')) {
@@ -101,6 +112,8 @@ export function checkUpgradeProtection() {
     stable: read('docs/upgrade/latest-stable-dependencies.json'),
     toolchain: read('tools/dev/toolchain.lock.json'),
     inventory: read(baseline.capabilities.inventory),
+    routes: read(baseline.capabilities.routeInventory),
+    updates: read(baseline.capabilities.updateInventory),
   })
   if (errors.length) throw new Error(`升级成果回退保护失败（${errors.length} 项）:\n${errors.join('\n')}`)
   return baseline
@@ -108,5 +121,5 @@ export function checkUpgradeProtection() {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const b = checkUpgradeProtection()
-  console.log(`PR13 升级成果已核对：${Object.keys(b.dependencies.direct).length} 项直接依赖、${Object.keys(b.dependencies.installed).length} 项安装依赖、${b.capabilities.featureIds.length} 项功能、${b.capabilities.scenarioIds.length} 个场景；MCP v2 与锁文件保持一致`)
+  console.log(`PR13 升级成果已核对：${Object.keys(b.dependencies.direct).length} 项直接依赖、${Object.keys(b.dependencies.installed).length} 项安装依赖、${b.capabilities.featureIds.length} 项功能、${b.capabilities.scenarioIds.length} 个场景、${b.capabilities.routeIds.length} 条功能链、${b.capabilities.updateIds.length} 项增量更新；MCP v2 与锁文件保持一致`)
 }
