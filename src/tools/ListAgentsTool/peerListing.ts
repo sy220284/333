@@ -1,4 +1,47 @@
 /** Team mailbox recipients are distinct from static agent templates. */
+export type TeamMember317 = {name?: string; agentId?: string; agentType?: string}
+export type TeamRecipient317 = {
+  name: string
+  to: string
+  channel: 'team'
+  type?: string
+  status?: string
+}
+export type AgentListEntry317 = {
+  name?: string
+  id?: string
+  ref?: string
+  type?: string
+  kind?: string
+  status?: string
+  unreachableFromHere?: boolean
+  acceptsPeerMessages?: boolean
+}
+export type AgentListingOptions317 = {
+  self?: string
+  subagents?: AgentListEntry317[]
+  teammates?: AgentListEntry317[]
+  sessions?: AgentListEntry317[]
+  query?: string
+  localUnreadable?: boolean
+  accountNotes?: Array<{ kind: string; text: string }>
+  canSend?: boolean
+}
+export type AgentListingResult317 = {
+  listing: string
+  sections: Array<{
+    kind: string
+    total: number
+    rows: Array<{
+      name?: string
+      ref?: string
+      id?: string
+      type?: string
+      status?: string
+    }>
+  }>
+  notes: Array<{kind: string; text: string}>
+}
 type InProcessTeammateTask317 = {
   type: 'in_process_teammate'; identity: {agentId: string};
   isIdle?: boolean; status: string
@@ -9,17 +52,22 @@ function isInProcessTeammateTask317(value: unknown): value is InProcessTeammateT
   return task.type === 'in_process_teammate' &&
     typeof task.identity?.agentId === 'string' && typeof task.status === 'string'
 }
-export function listReachableTeammates(teamFile, selfName, liveTeammates: {} = {}, tasks: {} = {}) {
+export function listReachableTeammates(
+  teamFile: {members?: TeamMember317[]} | null | undefined,
+  selfName: string,
+  liveTeammates: Record<string, TeamMember317> = {},
+  tasks: Record<string, unknown> = {},
+): TeamRecipient317[] {
   const seen = new Set([selfName.toLowerCase()])
-  const agents = []
+  const agents: TeamRecipient317[] = []
   // Official 2.1.310 reads in-process teammate status from running tasks,
   // not from the persisted roster, which may lag or contain stale status.
-  const taskStatuses = new Map()
+  const taskStatuses = new Map<string, string>()
   for (const task of Object.values(tasks)) {
     if (!isInProcessTeammateTask317(task)) continue
     taskStatuses.set(task.identity.agentId, task.isIdle ? 'idle' : task.status)
   }
-  const include = (member, agentId) => {
+  const include = (member: TeamMember317 | undefined, agentId: string | undefined): void => {
     const name = member?.name
     if (typeof name !== 'string' || !name.trim() || name.includes('@')) return
     const key = name.toLowerCase()
@@ -48,15 +96,19 @@ export function hideTeammateNamesInSubagents(
     ? { ...agent, name: undefined } : agent)
 }
 /** Text and structured output are produced from the same filtered records. */
-export function buildAgentListing({ self, subagents = [], teammates = [], sessions = [], query, localUnreadable = false, accountNotes = [], canSend = true }) {
+export function buildAgentListing({
+  self, subagents = [], teammates = [], sessions = [], query,
+  localUnreadable = false, accountNotes = [], canSend = true,
+}: AgentListingOptions317): AgentListingResult317 {
   const q = query?.trim().toLowerCase()
-  const matches = item => !q || [item.name, item.id, item.type, item.kind, item.status].some(value => String(value ?? '').toLowerCase().includes(q))
+  const matches = (item: AgentListEntry317): boolean => !q || [item.name, item.id, item.type, item.kind, item.status].some(value => String(value ?? '').toLowerCase().includes(q))
   const groups = [
     { kind: 'subagents', title: 'Subagents', values: subagents.filter(matches) },
     { kind: 'teammates', title: 'Teammates', values: teammates.filter(matches) },
     { kind: 'sessions', title: 'Peer sessions', values: sessions.filter(matches) },
   ]
-  const sections = [], paragraphs = []
+  const sections: AgentListingResult317['sections'] = []
+  const paragraphs: string[] = []
   for (const group of groups) {
     if (!group.values.length) continue
     const rows = group.values.slice(0, 100).map(item => {
