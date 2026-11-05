@@ -31,7 +31,7 @@ export async function configureIndependentPricing(model: string, price: Price): 
   if (!resolveIndependentModel(model) || !valid(price)) throw new Error('Model pricing requires qualified model ID and valid nonnegative USD rates')
   await fs.mkdir(ROOT, {recursive:true,mode:0o700})
   const next={...readIndependentPricing(),[model]:price}
-  const tmp=join(ROOT,'pricing.'+randomUUID()+'.tmp')
+  const tmp=join(ROOT,`pricing.${randomUUID()}.tmp`)
   try {
     await fs.writeFile(tmp,JSON.stringify(next,null,2),{encoding:'utf8',mode:0o600,flag:'wx'})
     await fs.rename(tmp,FILE)
