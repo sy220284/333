@@ -6,6 +6,9 @@ on:
       - 'src/cli/gateway/**'
       - 'src/utils/accountPeerDirectory.ts'
       - 'src/tools/ListAgentsTool/peerListing.ts'
+      - 'src/bootstrap/processStart317.ts'
+      - 'src/utils/livePeerSessions.ts'
+      - 'src/tasks/LocalWorkflowTask/workflowCacheKeys.ts'
       - 'src/bootstrap/preload317.ts'
       - 'src/utils/plugins/commandSourceConsent.ts'
       - 'src/cli/handlers/pluginEvalGraders317.ts'
@@ -24,6 +27,9 @@ on:
       - 'src/cli/gateway/**'
       - 'src/utils/accountPeerDirectory.ts'
       - 'src/tools/ListAgentsTool/peerListing.ts'
+      - 'src/bootstrap/processStart317.ts'
+      - 'src/utils/livePeerSessions.ts'
+      - 'src/tasks/LocalWorkflowTask/workflowCacheKeys.ts'
       - 'src/bootstrap/preload317.ts'
       - 'src/utils/plugins/commandSourceConsent.ts'
       - 'src/cli/handlers/pluginEvalGraders317.ts'
@@ -97,6 +103,8 @@ jobs:
         run: node --test tests/m1-list-agents.test.mjs tests/m3-plugin-source-command-consent-317.test.mjs tests/m3-plugin-source-fingerprint-317.test.mjs
       - name: 预加载进程与会话声明真实行为回归
         run: node --test tests/m1-preload-317.test.mjs
+      - name: GC启动配置、工作流缓存与本机会话发现回归
+        run: node --test tests/m1-process-start-317.test.mjs tests/m1-workflow-cache.test.mjs tests/m1-account-peer-discovery.test.mjs
       - name: 上传内容级审计证据
         if: always()
         uses: actions/upload-artifact@v4
