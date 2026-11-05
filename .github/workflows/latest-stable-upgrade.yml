@@ -36,16 +36,13 @@ jobs:
       - name: 全部依赖更新至官方最新稳定标签
         if: steps.guard.outputs.needed == 'true'
         run: node tools/upgrade/all-stable.mjs freeze
-      - name: 更新 CI 和工具链版本
-        if: steps.guard.outputs.needed == 'true'
-        run: node tools/upgrade/all-stable.mjs actions
       - name: 推送升级源码及全部锁文件到独立 PR
         if: steps.guard.outputs.needed == 'true'
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A src native tests tools/dev build/install-public-deps.mjs build/public-dependencies.lock.json build/rebuild.mjs package.json tsconfig.json docs/upgrade/latest-stable-dependencies.json .github/workflows
+          git add -A src native tests tools/dev build/install-public-deps.mjs build/public-dependencies.lock.json build/rebuild.mjs package.json tsconfig.json docs/upgrade/latest-stable-dependencies.json
           git diff --cached --quiet && { echo '没有产生任何更新'; exit 1; }
           git commit -m '全面升级最新稳定依赖并同步迁移源码接口'
           git push origin HEAD:upgrade/latest-stable-deps-20261105
