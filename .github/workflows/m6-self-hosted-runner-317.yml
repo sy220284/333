@@ -4,6 +4,11 @@ on:
     branches: [upgrade/2.1.310-m1-evidence]
     paths:
       - 'src/cli/selfHostedRunner/**'
+      - 'src/cli/handlers/pluginEvalPublish317.ts'
+      - 'src/cli/handlers/pluginEvalEntry317.ts'
+      - 'tests/m3-plugin-eval-publish-317.test.ts'
+      - 'tests/m6-runner-code-sign-317.test.mjs'
+      - 'tests/m6-runner-orchestrator-317.test.mjs'
       - 'src/bridge/sessionRunner.ts'
       - 'src/cli/background/**'
       - 'src/bootstrap/socketOwnership317.ts'
@@ -56,6 +61,10 @@ jobs:
         run: node build/check-architecture-links317.mjs
       - name: Runner真实协议、宿主生命周期和错误路径测试
         run: bun test tests/m6-self-hosted-runner-api-317.test.ts tests/m6-self-hosted-runner-host-317.test.ts tests/m6-self-hosted-runner-child-mode-317.test.ts tests/m6-self-hosted-runner-jwt-317.test.ts tests/m6-self-hosted-runner-workspace-317.test.ts tests/m6-self-hosted-runner-cli-args-317.test.ts tests/m6-self-hosted-runner-agents-317.test.ts tests/m6-runner-idle-hold-317.test.ts
+      - name: Runner管理入口、签名工单和异步编排的原版协议测试
+        run: node --experimental-strip-types --test tests/m6-runner-code-sign-317.test.mjs tests/m6-runner-orchestrator-317.test.mjs
+      - name: 评测报告Claude.ai发布的OAuth与失败路径测试
+        run: bun test tests/m3-plugin-eval-publish-317.test.ts
       - name: 独立PTY宿主真实启动、认证重连及输出恢复测试
         run: bun test tests/m1-background-pty-replay-317.test.ts tests/m1-background-pty-connection-317.test.ts tests/m1-background-pty-adoption-317.test.ts
       - name: 从TypeScript源代码重建Runner入口
@@ -66,6 +75,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          bun dist/cli.js self-hosted-runner orchestrator --help | grep -F 'Usage: claude self-hosted-runner orchestrator'
+          bun dist/cli.js self-hosted-runner setup --help | grep -F 'Usage: claude self-hosted-runner setup'
+          bun dist/cli.js self-hosted-runner doctor --help | grep -F 'Usage: claude self-hosted-runner doctor'
+          if bun dist/cli.js self-hosted-runner code-sign -Y sign missing 2>sign-no-context.log; then
+            echo 'Remote code-sign unexpectedly accepted missing session context' >&2
+            exit 1
+          fi
+          grep -F 'code-sign:' sign-no-context.log
           bun dist/cli.js self-hosted-runner --help | grep -F 'Usage: claude self-hosted-runner'
           bun dist/cli.js self-hosted-runner --help | grep -F -- '--hold-idle-file'
           bun dist/cli.js self-hosted-runner --help | grep -F -- '--max-hold-min'
