@@ -3658,7 +3658,7 @@ Read the team config to discover your teammates' names. Check the task list peri
       if (attachment.style.length > 100 || attachment.style.trim().length === 0) {
         return []
       }
-      const safeStyleName = attachment.style.replace(/[<>\\r\\n]/g, ' ')
+      const safeStyleName = attachment.style.replace(/[<>\r\n]/g, ' ')
       return wrapMessagesInSystemReminder([
         createUserMessage({
           content: `${safeStyleName} output style is active. ${attachment.turnReminder ?? 'Remember to follow the specific guidelines for this style.'}`,
