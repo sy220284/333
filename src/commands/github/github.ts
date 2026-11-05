@@ -73,7 +73,7 @@ export const call: LocalCommandCall = async (args) => {
     if (action === 'status') {
       await checkAuth()
       const auth = '已通过 GitHub CLI OAuth 授权检查'
-      const current = await execFileNoThrow('gh',['repo','view','--json','nameWithOwner','--jq','.nameWithOwner'],{timeout:10000})
+      const current = await execFileNoThrow('gh',['repo','view','--json','nameWithOwner','--jq','.nameWithOwner'],{timeout:10000,useCwd:true})
       return result(auth + '\n当前仓库：' + (current.code===0 ? current.stdout.trim() : '未识别'))
     }
     if (action === 'repos') {

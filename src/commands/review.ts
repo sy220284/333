@@ -7,32 +7,46 @@ import { parseReviewRequest, type ReviewMode } from './reviewMode.js'
 
 /** Git 与文件扫描先于模型分析执行，形成能独立复查的事实材料。 */
 async function evidence(mode: ReviewMode, target: string): Promise<string> {
-  const git = await execFileNoThrow('git', ['rev-parse','--is-inside-work-tree'], {timeout:8000})
+  const git = await execFileNoThrow('git', ['rev-parse','--is-inside-work-tree'], {timeout:8000,useCwd:true})
   if (git.code !== 0 || git.stdout.trim() !== 'true') throw new Error('当前工作目录不属于 Git 仓库')
   let diffArgs: string[] = ['diff','HEAD','--']
   let changedArgs: string[] = ['diff','HEAD','--name-only','--']
   let checkArgs: string[] = ['diff','HEAD','--check']
   if (/^[1-9][0-9]*$/.test(target)) {
-    const prDiff = await execFileNoThrow('gh',['pr','diff',target],{timeout:60000})
+    const prDiff = await execFileNoThrow('gh',['pr','diff',target],{timeout:60000,useCwd:true})
     if (prDiff.code !== 0) throw new Error('无法读取 PR #' + target + '：' + prDiff.stderr)
     const bytes = Buffer.byteLength(prDiff.stdout,'utf8')
     if (bytes > 110000) throw new Error('PR 差异超过 110KB；请缩小审查范围，避免遗漏')
-    const check = await execFileNoThrow('git',['diff','--check'],{timeout:15000})
+    const check = await execFileNoThrow('git',['diff','--check'],{timeout:15000,useCwd:true})
     return '目标：GitHub PR #' + target + '\n差异内容：\n' + prDiff.stdout +
       '\n工作区差异格式检查：' + (check.code === 0 ? '通过' : check.stdout || check.stderr)
   }
   if (target) {
     // A branch or commit is a baseline; never interpolate into shell commands.
-    const ref = await execFileNoThrow('git',['rev-parse','--verify',target+'^{commit}'],{timeout:8000})
+    const ref = await execFileNoThrow('git',['rev-parse','--verify',target+'^{commit}'],{timeout:8000,useCwd:true})
     if (ref.code !== 0) throw new Error('找不到指定的 Git 比对基准：' + target)
     diffArgs = ['diff',target+'...HEAD','--']
     changedArgs = ['diff',target+'...HEAD','--name-only','--']
     checkArgs = ['diff',target+'...HEAD','--check']
   } else {
-    const base = await execFileNoThrow('git',['symbolic-ref','refs/remotes/origin/HEAD'],{timeout:8000})
-    const ref = base.code===0 ? base.stdout.trim() : ''
+    const base = await execFileNoThrow('git',['symbolic-ref','refs/remotes/origin/HEAD'],{timeout:8000,useCwd:true})
+    let ref = base.code===0 ? base.stdout.trim() : ''
+    if (!ref) {
+      for (const candidate of ['refs/remotes/origin/main','refs/remotes/origin/master']) {
+        const found = await execFileNoThrow('git',['show-ref','--verify','--quiet',candidate],{timeout:8000,useCwd:true})
+        if (found.code===0) { ref=candidate; break }
+      }
+    }
+    if (!ref) {
+      const pull = await execFileNoThrow('gh',['pr','view','--json','baseRefName','--jq','.baseRefName'],{timeout:12000,useCwd:true})
+      if (pull.code===0 && /^[a-zA-Z0-9_./-]+$/.test(pull.stdout.trim())) {
+        const candidate = 'refs/remotes/origin/' + pull.stdout.trim()
+        const found = await execFileNoThrow('git',['show-ref','--verify','--quiet',candidate],{timeout:8000,useCwd:true})
+        if (found.code===0) ref=candidate
+      }
+    }
     if (ref) {
-      const common = await execFileNoThrow('git',['merge-base',ref,'HEAD'],{timeout:10000})
+      const common = await execFileNoThrow('git',['merge-base',ref,'HEAD'],{timeout:10000,useCwd:true})
       if (common.code===0 && common.stdout.trim()) {
         diffArgs = ['diff',common.stdout.trim(),'--']
         changedArgs = ['diff',common.stdout.trim(),'--name-only','--']
@@ -41,10 +55,10 @@ async function evidence(mode: ReviewMode, target: string): Promise<string> {
     }
   }
   const [diff,changed,check,status] = await Promise.all([
-    execFileNoThrow('git',diffArgs,{timeout:60000}),
-    execFileNoThrow('git',changedArgs,{timeout:20000}),
-    execFileNoThrow('git',checkArgs,{timeout:20000}),
-    execFileNoThrow('git',['status','--short'],{timeout:10000}),
+    execFileNoThrow('git',diffArgs,{timeout:60000,useCwd:true}),
+    execFileNoThrow('git',changedArgs,{timeout:20000,useCwd:true}),
+    execFileNoThrow('git',checkArgs,{timeout:20000,useCwd:true}),
+    execFileNoThrow('git',['status','--short'],{timeout:10000,useCwd:true}),
   ])
   if (diff.code !== 0 || changed.code !== 0) throw new Error('读取 Git 变更失败：'+(diff.stderr || changed.stderr))
   if (Buffer.byteLength(diff.stdout,'utf8') > 110000)
@@ -60,7 +74,7 @@ async function evidence(mode: ReviewMode, target: string): Promise<string> {
     facts.push('需要人工核验的敏感变更（仅为线索，未经确认）：\n'+
       (candidate.length ? candidate.slice(0,60).join('\n') : '未发现常见敏感调用线索'))
     if (mode==='deep') {
-      const tests = await execFileNoThrow('git',['ls-files','*test*','*spec*'],{timeout:10000})
+      const tests = await execFileNoThrow('git',['ls-files','*test*','*spec*'],{timeout:10000,useCwd:true})
       const suites = tests.stdout.split('\n').filter(Boolean)
       const matching = suites.filter(path=>changedPaths.some(changedFile=>
         path.toLowerCase().includes(changedFile.split('/').pop()?.split('.')[0]?.toLowerCase() || '\0')))
@@ -77,7 +91,7 @@ async function extremeReview(target: string): Promise<string> {
   let pr = target
   if (!/^[1-9][0-9]*$/.test(pr)) {
     const args = ['pr','view',...(pr ? [pr] : []),'--json','number','--jq','.number']
-    const found = await execFileNoThrow('gh',args,{timeout:30000})
+    const found = await execFileNoThrow('gh',args,{timeout:30000,useCwd:true})
     if (found.code !== 0) throw new Error('极深审查未找到目标 PR：'+(found.stderr || pr))
     pr = found.stdout.trim()
   }
