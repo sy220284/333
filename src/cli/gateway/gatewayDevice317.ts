@@ -4,7 +4,7 @@
  * cross-origin redirects for token endpoints.
  */
 import { randomBytes } from 'node:crypto'
-import { signGatewaySession317, createGatewayOidcLogin317 } from './gatewayAuth317.ts'
+import { signGatewaySession317, createGatewayOidcLogin317, gatewayOidcPrincipal317 } from './gatewayAuth317.ts'
 import type { GatewayOidcProvider317 } from './gatewayAuth317.ts'
 
 export type GatewayDeviceClaims317 = Record<string, unknown> & { sub: string }
@@ -23,6 +23,7 @@ type GatewayDeviceConfig317 = {
   }
   oidc?: {
     groups_claim?: string
+    user_id_claim?: string
     email_claim?: string
     allowed_email_domains?: string[]
     allowed_groups?: string[]
@@ -222,10 +223,11 @@ export function createGatewayDeviceFlow317({ publicUrl, config, oidc, store }: G
     if (allowedGroups?.length && !allowedGroups.some(group => groups.includes(group))) {
       return new Response('Group membership is not permitted', { status: 403 })
     }
-    const claims = { sub: identity.sub, email, groups, name: identity.name }
+    const principal = gatewayOidcPrincipal317(identity, config.oidc?.user_id_claim)
+    const claims = { sub: principal, email, groups, name: identity.name }
     const success = await store.approveCode(item.userCode, claims)
     if (!success) return new Response('Device code expired or already used', { status: 400 })
-    await store.audit('device.approved', identity.sub, null, {})
+    await store.audit('device.approved', principal, null, {})
     return new Response('<!doctype html><html><meta charset="utf-8"><h1>Signed in</h1><p>You may return to Claude Code.</p></html>', {
       headers: {
         'content-type': 'text/html; charset=utf-8', 'cache-control':'no-store',
