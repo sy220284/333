@@ -131,9 +131,9 @@ async function walk(
       if(!key || ids.has(key)) continue
       ids.add(key);rows.push(row)
     }
-    const page = reply.data
-    const next = cursorKey==='cursor' ? page.next_cursor :
-      page.has_more ? page.last_id : null
+    const pageData = reply.data
+    const next = cursorKey==='cursor' ? pageData.next_cursor :
+      pageData.has_more ? pageData.last_id : null
     cursor = typeof next === 'string' ? next : null
     if(!cursor) break
     if(seenCursors.has(cursor)) return {rows,failed:true,truncated:true}
