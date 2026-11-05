@@ -31,3 +31,5 @@
 Linux/WSL 的 bootstrap 在无 Node 环境仍可以使用生成的 Shell 配置读取版本。已有 Node 时，入口会校验清单与派生配置。离线 Artifact 元数据加入 TOOLCHAIN_LOCK_SHA256，安装时校验权威清单身份；可携带开发工具包会验证清单哈希、npm lock 和归档哈希。
 
 历史兼容测试可能有意使用不同 Node/Python 版本，它们属于测试条件。七条持续维护的开发、构建、依赖治理及发行工作流由权威清单统一约束。
+
+离线 bootstrap 目录独立校验：node tools/dev/toolchain.mjs check-bootstrap。这个模式只核对 bootstrap 自身携带的权威清单、派生环境与 npm 锁，不依赖尚未下载的完整仓库工作流和发行依赖文件；进入源码仓库后再运行完整 check。

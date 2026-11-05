@@ -99,7 +99,7 @@ export function projections(data = readToolchain()) {
     [join(dev, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`],
   ])
 }
-export function checkToolchain() {
+export function checkToolchain({ bootstrap = false } = {}) {
   const data = readToolchain()
   for (const [path, expected] of projections(data)) {
     if (readFileSync(path, 'utf8').replace(/\r\n/g, '\n') !== expected) fail(`${path} 与权威清单漂移；执行 sync`)
@@ -116,6 +116,7 @@ export function checkToolchain() {
       fail(`开发依赖锁没有有效的版本及 integrity：${name}@${version}`)
     }
   }
+  if (!bootstrap) {
   // Active build and development pipelines must consume these versions.
   const ciVersions = {
     'node-version': '${{ env.TOOLCHAIN_NODE_VERSION }}',
@@ -147,6 +148,7 @@ export function checkToolchain() {
       fail(`发行 SDK 清单与开发工具使用了两个版本：${name}`)
     }
   }
+  }
   return data
 }
 function githubEnvironment(data) {
@@ -176,13 +178,16 @@ if (mode === 'sync') {
 } else if (mode === 'check') {
   checkToolchain()
   console.log('工具链版本、派生文件、npm lock 和发行依赖清单一致')
+} else if (mode === 'check-bootstrap') {
+  checkToolchain({ bootstrap: true })
+  console.log('离线 bootstrap 工具清单及锁文件验证成功')
 } else if (mode === 'gha-env') {
   process.stdout.write(githubEnvironment(readToolchain()))
 } else if (mode === 'verify-runtime') {
   verifyRuntime(checkToolchain())
   console.log('Node/Bun 实际运行版本匹配权威清单')
 } else {
-  fail('用法：node tools/dev/toolchain.mjs sync|check|gha-env|verify-runtime')
+  fail('用法：node tools/dev/toolchain.mjs sync|check|check-bootstrap|gha-env|verify-runtime')
 }
 
 }

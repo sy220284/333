@@ -10,7 +10,7 @@ load_manifest() {
   # Generated shell projections remain bootstrappable without a preinstalled Node.
   # On hosts with Node, reject any edit that diverged from the JSON authority.
   if command -v node >/dev/null 2>&1; then
-    node "$TOOLCHAIN_DIR/toolchain.mjs" check >/dev/null || die "工具链派生文件与权威依赖清单不一致"
+    node "$TOOLCHAIN_DIR/toolchain.mjs" check-bootstrap >/dev/null || die "工具链派生文件与权威依赖清单不一致"
   fi
   TOOLS_ROOT="${DEV333_TOOLS_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/333-dev}"
   # Read by scripts sourcing this shared library (ShellCheck checks lib.sh independently).

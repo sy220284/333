@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { tmpdir } from 'node:os'
 import { test } from 'node:test'
 import { checkToolchain, projections, readToolchain } from '../tools/dev/toolchain.mjs'
 
@@ -66,5 +67,24 @@ test('离线包与安装和回装流程使用同一权威清单 SHA', () => {
   ]
   for (const [file, pattern] of files) {
     assert.match(readFileSync(join(root, file), 'utf8'), pattern, file)
+  }
+})
+
+test('bootstrap 脱离完整仓库仍能校验权威清单和锁文件', () => {
+  const temp = mkdtempSync(join(tmpdir(), '333-toolchain-bootstrap-'))
+  const directory = join(temp, 'tools/dev')
+  mkdirSync(directory, { recursive: true })
+  try {
+    for (const name of ['toolchain.mjs', 'toolchain.lock.json',
+      'package.json', 'package-lock.json', 'toolchain-versions.env', 'toolchain-components.env']) {
+      cpSync(join(root, 'tools/dev', name), join(directory, name))
+    }
+    const checked = spawnSync(process.execPath, [join(directory, 'toolchain.mjs'), 'check-bootstrap'], {
+      cwd: temp, encoding: 'utf8', timeout: 10000,
+    })
+    assert.equal(checked.error, undefined)
+    assert.equal(checked.status, 0, checked.stderr)
+  } finally {
+    rmSync(temp, { recursive: true, force: true })
   }
 })
