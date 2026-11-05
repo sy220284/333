@@ -51,7 +51,7 @@ function allParts(content: string | JSONValue[]): JSONValue[] {
   return typeof content === 'string' ? [{ type: 'text', text: content }] : content
 }
 function responseInput(parts: JSONValue[]): JSONValue[] {
-  return parts.flatMap(block => {
+  return parts.flatMap<JSONValue>(block => {
     if (block.type === 'text') return [{ type: 'input_text', text: String(block.text ?? '') }]
     if (block.type === 'image') return [{ type: 'input_image', image_url: imageURL(block), detail: 'auto' }]
     if (block.type === 'document') {
@@ -169,7 +169,7 @@ export function toGemini(body: AnthropicRequest): JSONValue {
   const names = resolveToolNames(body.messages)
   const contents: JSONValue[] = []
   for (const message of body.messages) {
-    const parts = allParts(message.content).flatMap(block => {
+    const parts = allParts(message.content).flatMap<JSONValue>(block => {
       if (block.type === 'text') return [{ text: String(block.text ?? '') }]
       if (block.type === 'image') {
         const source = block.source
