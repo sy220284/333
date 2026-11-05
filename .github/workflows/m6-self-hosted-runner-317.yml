@@ -7,6 +7,9 @@ on:
       - 'src/bridge/sessionRunner.ts'
       - 'src/cli/background/**'
       - 'src/bootstrap/socketOwnership317.ts'
+      - 'src/bootstrap/ptyHost317.ts'
+      - 'src/bootstrap/bgSpare317.ts'
+      - 'tests/m1-background-pty-*.test.ts'
       - 'tests/m1-background-lifecycle.test.mjs'
       - 'src/bridge/types.ts'
       - 'tests/m6-runner-idle-hold-317.test.ts'
@@ -20,6 +23,9 @@ on:
       - 'src/bridge/sessionRunner.ts'
       - 'src/cli/background/**'
       - 'src/bootstrap/socketOwnership317.ts'
+      - 'src/bootstrap/ptyHost317.ts'
+      - 'src/bootstrap/bgSpare317.ts'
+      - 'tests/m1-background-pty-*.test.ts'
       - 'tests/m1-background-lifecycle.test.mjs'
       - 'tests/m6-self-hosted-runner-*'
       - '.github/workflows/m6-self-hosted-runner-317.yml'
@@ -50,6 +56,8 @@ jobs:
         run: node build/check-architecture-links317.mjs
       - name: Runner真实协议、宿主生命周期和错误路径测试
         run: bun test tests/m6-self-hosted-runner-api-317.test.ts tests/m6-self-hosted-runner-host-317.test.ts tests/m6-self-hosted-runner-child-mode-317.test.ts tests/m6-self-hosted-runner-jwt-317.test.ts tests/m6-self-hosted-runner-workspace-317.test.ts tests/m6-self-hosted-runner-cli-args-317.test.ts tests/m6-self-hosted-runner-agents-317.test.ts tests/m6-runner-idle-hold-317.test.ts
+      - name: 独立PTY宿主真实启动、认证重连及输出恢复测试
+        run: bun test tests/m1-background-pty-replay-317.test.ts tests/m1-background-pty-connection-317.test.ts tests/m1-background-pty-adoption-317.test.ts
       - name: 从TypeScript源代码重建Runner入口
         run: bun build/rebuild.mjs
       - name: 后台 Agent 真实进程启停、日志、停止及重新恢复测试
