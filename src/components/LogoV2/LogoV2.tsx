@@ -257,8 +257,8 @@ export function LogoV2() {
   }
   const layoutMode = getLayoutMode(columns);
   const userTheme = resolveThemeSetting(getGlobalConfig().theme);
-  const borderTitle = ` ${color("accent", userTheme)("333")} ${color("inactive", userTheme)(`v${version}`)} `;
-  const compactBorderTitle = color("accent", userTheme)(" 333 ");
+  const borderTitle = ` ${color("professionalBlue", userTheme)("333")} ${color("inactive", userTheme)(`v${version}`)} `;
+  const compactBorderTitle = color("professionalBlue", userTheme)(" 333 ");
   if (layoutMode === "compact") {
     let welcomeMessage = formatWelcomeMessage(username);
     if (stringWidth(welcomeMessage) > columns - 4) {
