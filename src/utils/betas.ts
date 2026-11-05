@@ -189,7 +189,10 @@ export function modelSupportsAutoMode(model: string): boolean {
       return true
     }
     // External allowlist (firstParty already checked above).
-    return /^claude-(opus|sonnet)-4-6/.test(m)
+    // 2.1.317's model catalog defaults to Opus 5.5 / Sonnet 5.5.
+    // Keeping the previous 4.6-only allowlist blocked Auto mode even when
+    // the current default model supported it, causing a startup mismatch.
+    return /^claude-(?:opus|sonnet)-(?:4-6|5-5)$/.test(m)
   }
   return false
 }
