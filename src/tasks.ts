@@ -1,4 +1,5 @@
 import type { Task, TaskType } from './Task.js'
+import { InProcessTeammateTask } from './tasks/InProcessTeammateTask/InProcessTeammateTask.js'
 import { DreamTask } from './tasks/DreamTask/DreamTask.js'
 import { LocalAgentTask } from './tasks/LocalAgentTask/LocalAgentTask.js'
 import { LocalShellTask } from './tasks/LocalShellTask/LocalShellTask.js'
@@ -18,6 +19,7 @@ export function getAllTasks(): Task[] {
   const tasks: Task[] = [
     LocalShellTask,
     LocalAgentTask,
+    InProcessTeammateTask,
     RemoteAgentTask,
     DreamTask,
   ]

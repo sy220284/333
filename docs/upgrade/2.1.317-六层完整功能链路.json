@@ -447,7 +447,8 @@
           "implementation": "逐个对比新版工具集合、输入输出schema、必填/可选参数、默认值、别名及能力开关",
           "associated_updates": "工具注册表、SDK声明、提示说明和命令入口",
           "acceptance": "有效输入、缺参、边界值及未知参数的结果与原版一致",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS_FUNCTION_DIFF",
+          "progress": "进行中：TaskStop已同步317 task_id/shell_id输入契约、KillShell/KillBash别名和新版名称说明，空参数由验证器返回原版错误；全部工具契约继续核对。"
         },
         {
           "id": "C03-T02",
@@ -471,7 +472,8 @@
           "implementation": "对齐工具超时、中断、前后台切换、进程树停止、输出尾部读取及资源回收",
           "associated_updates": "任务系统、TaskStop、输出文件、通知和SDK事件",
           "acceptance": "停止后没有遗留执行进程，最终输出和任务状态只有一份且顺序正确",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS_FUNCTION_DIFF",
+          "progress": "进行中：停止入口已接通队友处理器；后台Shell终止时发送一次SDK结束事件并保留输出路径，原版/重建版4组真实进程对照通过。完整超时/后台切换和各平台进程树继续核对。"
         },
         {
           "id": "C03-T05",
@@ -752,7 +754,8 @@
           "implementation": "对齐SendMessage/SendUserMessage、ListAgents、brief、收信唤醒、投递与回复关联",
           "associated_updates": "消息schema、inbox、任务通知、UI及stream-json转发",
           "acceptance": "交错消息、迟到消息、重复投递和用户信息只归属正确接收方",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS_FUNCTION_DIFF",
+          "progress": "进行中：停止目标已支持队友地址、恢复ID、名字及注册代理名；归一化、重名拒绝、运行记录优先与原版24组对照一致。完整消息投递/用户通知继续核对。"
         },
         {
           "id": "C05-T04",
@@ -760,7 +763,8 @@
           "implementation": "核对bg、attach、logs、stop、respawn、rm、守护进程及失败回收的真实运行逻辑",
           "associated_updates": "SessionStore、daemon、任务输出、会话清理和CLI入口",
           "acceptance": "崩溃、停止、重启及再次连接后状态、输出和子进程清理正确",
-          "status": "PENDING_FUNCTION_DIFF"
+          "status": "IN_PROGRESS_FUNCTION_DIFF",
+          "progress": "进行中：接通InProcessTeammateTask停止分派与调用者归属；停止实际中断、唤醒等待者、清空队列。后台Shell补齐一次SDK终止事件。跨Runner、观察者、keepalive及级联停止仍待实现验证。"
         },
         {
           "id": "C05-T05",
@@ -884,7 +888,7 @@
           "associated_updates": "controlSchemas、structuredIO、错误封装及宿主消费者",
           "acceptance": "未知、重复、延迟和取消回执得到与原版相同的处理",
           "status": "IN_PROGRESS_FUNCTION_DIFF",
-          "progress": "已对齐SDK取消清除pending、桥接关闭回调与Promise归属；3例实测通过。其余控制事件及宿主退役路径继续核对。"
+          "progress": "进行中：保留已验证的取消pending归属与桥接回调；SDK stop_task复用统一停止解析与运行处理器。完整宿主Hook退役/elicitation及控制协议继续实施。"
         },
         {
           "id": "C06-T04",

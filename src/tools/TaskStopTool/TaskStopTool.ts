@@ -1,15 +1,29 @@
 import { z } from 'zod/v4'
-import type { TaskStateBase } from '../../Task.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
-import { stopTask } from '../../tasks/stopTask.js'
+import {
+  stopTask,
+  resolveTaskToStop,
+  StopTaskError,
+} from '../../tasks/stopTask.js'
+import { getAgentId } from '../../utils/teammate.js'
 import { lazySchema } from '../../utils/lazySchema.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
-import { DESCRIPTION, TASK_STOP_TOOL_NAME } from './prompt.js'
+import {
+  DESCRIPTION,
+  TASK_STOP_TOOL_NAME,
+  TASK_STOP_ALIASES,
+} from './prompt.js'
 import { renderToolResultMessage, renderToolUseMessage } from './UI.js'
 
 const inputSchema = lazySchema(() =>
   z.strictObject({
-    task_id: z.string().min(1).describe('The ID of the background task to stop'),
+    task_id: z
+      .string()
+      .optional()
+      .describe(
+        'The ID of the background task to stop. Agent-team teammates and named background agents are also accepted by agent ID or name.',
+      ),
+    shell_id: z.string().optional().describe('Deprecated: use task_id instead'),
   }),
 )
 type InputSchema = ReturnType<typeof inputSchema>
@@ -33,9 +47,10 @@ export type Output = z.infer<OutputSchema>
 
 export const TaskStopTool = buildTool({
   name: TASK_STOP_TOOL_NAME,
+  aliases: [...TASK_STOP_ALIASES],
   searchHint: 'kill a running background task',
   maxResultSizeChars: 100_000,
-  userFacingName: () => (process.env.USER_TYPE === 'ant' ? '' : 'Stop Task'),
+  userFacingName: () => 'Stop Task',
   get inputSchema(): InputSchema {
     return inputSchema()
   },
@@ -47,29 +62,29 @@ export const TaskStopTool = buildTool({
     return true
   },
   toAutoClassifierInput(input) {
-    return input.task_id
+    return input.task_id ?? input.shell_id ?? ''
   },
-  async validateInput({ task_id }, { getAppState }) {
-    const appState = getAppState()
-    const task = appState.tasks?.[task_id] as TaskStateBase | undefined
-
-    if (!task) {
+  async validateInput({ task_id, shell_id }, { getAppState }) {
+    const id = task_id ?? shell_id
+    if (!id)
       return {
         result: false,
-        message: `No task found with ID: ${task_id}`,
+        message: 'Missing required parameter: task_id',
         errorCode: 1,
       }
+    try {
+      const task = resolveTaskToStop(id, getAppState())
+      if (task.status !== 'running')
+        return {
+          result: false,
+          message: `Task ${id} is not running (status: ${task.status})`,
+          errorCode: 3,
+        }
+      return { result: true }
+    } catch (error) {
+      if (!(error instanceof StopTaskError)) throw error
+      return { result: false, message: error.message, errorCode: 1 }
     }
-
-    if (task.status !== 'running') {
-      return {
-        result: false,
-        message: `Task ${task_id} is not running (status: ${task.status})`,
-        errorCode: 3,
-      }
-    }
-
-    return { result: true }
   },
   async description() {
     return `Stop a running background task by ID`
@@ -87,12 +102,15 @@ export const TaskStopTool = buildTool({
   renderToolUseMessage,
   renderToolResultMessage,
   async call(
-    { task_id },
-    { getAppState, setAppState },
+    { task_id, shell_id },
+    { getAppState, setAppState, setAppStateForTasks, agentId },
   ) {
-    const result = await stopTask(task_id, {
+    const id = task_id ?? shell_id
+    if (!id) throw new Error('Missing required parameter: task_id')
+    const result = await stopTask(id, {
+      callerAgentId: agentId ?? getAgentId(),
       getAppState,
-      setAppState,
+      setAppState: setAppStateForTasks ?? setAppState,
     })
 
     return {
