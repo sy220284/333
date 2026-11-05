@@ -1,4 +1,6 @@
 import { feature } from 'bun:bundle'
+import {z} from 'zod/v4'
+import {mcpTasksEnabled317,readMcpTaskHandle317,driveMcpTaskForeground317} from './mcpTasks317.js'
 import type {
   Base64ImageSource,
   ContentBlockParam,
@@ -1030,6 +1032,7 @@ export const connectToServer = memoize(
             // breaks Java MCP SDK servers (Spring AI) whose Elicitation class
             // has zero fields and fails on unknown properties.
             elicitation: {},
+            ...(mcpTasksEnabled317()?{tasks:{list:{},cancel:{}}}:{}),
           },
         },
       )
@@ -3151,38 +3154,54 @@ async function callMCPTool({
       )
     })
 
-    const result = await Promise.race([
-      client.callTool(
-        {
-          name: tool,
-          arguments: args,
-          _meta: meta,
-        },
-        CallToolResultSchema,
-        {
-          signal,
-          timeout: timeoutMs,
-          onprogress: onProgress
-            ? sdkProgress => {
-                onProgress({
-                  type: 'mcp_progress',
-                  status: 'progress',
-                  serverName: name,
-                  toolName: tool,
-                  progress: sdkProgress.progress,
-                  total: sdkProgress.total,
-                  progressMessage: sdkProgress.message,
-                })
-              }
-            : undefined,
-        },
-      ),
+    // 317: the task-capable MCP protocol can return an SEP-2663 task handle
+    // instead of an ordinary CallToolResult. Only the official runtime gate
+    // plus a server-advertised task capability activates this request shape.
+    const advertised = client.getServerCapabilities() as
+      | {tasks?:{requests?:{tools?:{call?:unknown}}}} | undefined
+    const useTasks = mcpTasksEnabled317() && !!advertised?.tasks?.requests?.tools?.call
+    const onSdkProgress = onProgress
+      ? (sdkProgress: {progress:number;total?:number;message?:string}) => {
+          onProgress({
+            type:'mcp_progress',status:'progress',serverName:name,toolName:tool,
+            progress:sdkProgress.progress,total:sdkProgress.total,
+            progressMessage:sdkProgress.message,
+          })
+        }
+      : undefined
+    const requestOptions={signal,timeout:timeoutMs,onprogress:onSdkProgress}
+    const raw = await Promise.race([
+      useTasks
+        ? client.request(
+            {method:'tools/call',params:{name:tool,arguments:args,_meta:meta}},
+            z.object({}).passthrough(),requestOptions,
+          )
+        : client.callTool({name:tool,arguments:args,_meta:meta},
+            CallToolResultSchema,requestOptions),
       timeoutPromise,
     ]).finally(() => {
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
+      if (timeoutId)clearTimeout(timeoutId)
     })
+    const task=useTasks?readMcpTaskHandle317(raw):null
+    const resolved = task
+      ? await driveMcpTaskForeground317({
+          task,signal,
+          request:async (method,params,requestSignal,headers) => {
+            if(method==='tasks/cancel')return client.request(
+              {method,params},z.object({}).passthrough(),
+              {signal:requestSignal,timeout:5_000,headers},
+            )
+            return client.request({method,params},z.object({}).passthrough(),
+              {signal:requestSignal,timeout:60_000,headers})
+          },
+          onStatus:state=>onProgress?.({
+            type:'mcp_progress',status:'progress',serverName:name,toolName:tool,
+            progressMessage:state.statusMessage??('Task '+task.taskId+' '+state.status),
+          }),
+          onDebug:message=>logMCPDebug(name,message),
+        })
+      : raw
+    const result=CallToolResultSchema.parse(resolved)
 
     if ('isError' in result && result.isError) {
       let errorDetails = 'Unknown error'
