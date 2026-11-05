@@ -18,8 +18,10 @@ export type PluginEvalModelResult317 = {
   exitCode?: number | null; error?: string; mockCalls?: unknown[]
 }
 const MAX_STDOUT_BYTES = 32 * 1024 * 1024
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
 
-function cliInvocation() {
+function cliInvocation(): string[] {
   const entry = process.argv[1] ? resolve(process.argv[1]) : undefined
   if (entry && /\.(?:[cm]?js|tsx?)$/.test(entry) &&
     (process.platform === 'win32' ? entry.toLowerCase() !== resolve(process.execPath).toLowerCase() : entry !== resolve(process.execPath))) {
@@ -28,15 +30,16 @@ function cliInvocation() {
   return [process.execPath]
 }
 
-function stdoutText(events) {
+function stdoutText(events: ReadonlyArray<Record<string, unknown>>): string {
   const last = [...events].reverse().find(event =>
     event.type === 'result' && typeof event.result === 'string')
-  if (last) return last.result
+  if (last && typeof last.result === 'string') return last.result
   for (const event of [...events].reverse()) {
     if (event.type !== 'assistant') continue
-    const blocks = event.message?.content
+    const blocks = isRecord(event.message) ? event.message.content : undefined
     if (Array.isArray(blocks)) {
-      const text = blocks.filter(x => x.type === 'text').map(x => x.text).join('\n')
+      const text = blocks.filter((x: unknown) => isRecord(x) && x.type === 'text' && typeof x.text === 'string')
+        .map((x: {text: string}) => x.text).join('\n')
       if (text) return text
     }
   }
@@ -96,7 +99,7 @@ export async function runEvalModel317({
     child.once('close', (code, signal) => done({ code, signal }))
     child.once('error', fail)
   })
-  const chunks = [], errors = []
+  const chunks: Buffer[] = [], errors: Buffer[] = []
   let total = 0
   const stdout = (async () => {
     for await (const chunk of child.stdout) {
@@ -105,18 +108,18 @@ export async function runEvalModel317({
         child.kill()
         throw new Error('eval model stream exceeded 32 MiB')
       }
-      chunks.push(chunk)
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
     }
   })()
   const stderr = (async () => {
     for await (const chunk of child.stderr) {
-      if (errors.reduce((sum, x) => sum + x.length, 0) < 65536) errors.push(chunk)
+      if (errors.reduce((sum, x) => sum + x.length, 0) < 65536) errors.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
     }
   })()
   await Promise.all([stdout, stderr])
   const exit = await exitPromise
   const text = Buffer.concat(chunks).toString('utf8')
-  const events = []
+  const events: Record<string, unknown>[] = []
   for (const line of text.split(/\r?\n/)) {
     if (!line.trim()) continue
     let event
@@ -124,6 +127,7 @@ export async function runEvalModel317({
     catch (error) {
       throw new Error('eval model produced invalid JSON stream: ' + error)
     }
+    if (!isRecord(event)) throw new Error('eval model stream event must be a JSON object')
     events.push(event)
   }
   const result = [...events].reverse().find(event => event.type === 'result')
