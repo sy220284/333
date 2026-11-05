@@ -161,14 +161,22 @@ async function launch(record, { resume = false } = {}) {
     catch (killError) {
       process.stderr.write('Could not terminate untracked session: ' + String(killError) + '\\n')
     }
-    const timeout = (ms) => new Promise(resolve => setTimeout(resolve, ms))
-    await Promise.race([proc.exited, timeout(5_000)])
+    const awaitExitWithin = async (ms) => {
+      let timer
+      try {
+        await Promise.race([
+          proc.exited,
+          new Promise(resolve => { timer = setTimeout(resolve, ms) }),
+        ])
+      } finally { if (timer) clearTimeout(timer) }
+    }
+    await awaitExitWithin(5_000)
     if (isAlive(proc.pid)) {
       try { proc.kill('SIGKILL') }
       catch (killError) {
         process.stderr.write('Could not force-kill untracked session: ' + String(killError) + '\\n')
       }
-      await Promise.race([proc.exited, timeout(1_000)])
+      await awaitExitWithin(1_000)
     }
     active.delete(record.id)
     outputQueue.delete(record.id)
