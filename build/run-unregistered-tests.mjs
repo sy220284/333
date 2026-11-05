@@ -41,6 +41,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     total: tests.length, explicitlyScheduled: registered.length,
     discoveredForExecution: pending.length, tests: pending }, null, 2))
   if (!process.argv.includes('--list')) {
+    const failures = []
     for (const ext of ['.mjs', '.ts']) {
       const found = pending.filter(path => path.endsWith(ext))
       if (!found.length) continue
@@ -53,9 +54,24 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
         const outcome = spawnSync(program, [...options, ...group], {
           cwd: ROOT, stdio: 'inherit', timeout: 15 * 60_000,
         })
-        if (outcome.error) throw outcome.error
-        if (outcome.status !== 0) process.exit(outcome.status ?? 1)
+        if (outcome.error || outcome.status !== 0) {
+          const cause = outcome.error?.message ?? `exit status ${outcome.status ?? 'unknown'}`
+          failures.push({ tests: group, cause })
+          // The regular test:all path keeps its existing fail-fast behavior.
+          // In workflow-only mode, audit every previously unexecuted suite
+          // and report all failures in a single CI run.
+          if (!workflowOnly) {
+            console.error(JSON.stringify({ failedTests: failures }, null, 2))
+            process.exitCode = 1
+            break
+          }
+        }
       }
+      if (failures.length && !workflowOnly) break
+    }
+    if (failures.length) {
+      console.error(JSON.stringify({ failedTests: failures, count: failures.length }, null, 2))
+      process.exitCode = 1
     }
   }
 }

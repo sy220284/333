@@ -40,10 +40,16 @@ test('plugin registries normalize historical records before explicit V2 validati
   assert.doesNotMatch(code('utils/plugins/schemas.ts'), /InstalledPluginsFileSchemaV1|InstalledPluginsFileV1/)
 })
 
-test('retired shell and output tools are absent from current invocation paths', () => {
+test('retired standalone shell tools are absent while 317 TaskStop accepts historic input at its unified entry', () => {
   const taskStop = code('tools/TaskStopTool/TaskStopTool.ts')
-  assert.ok(taskStop.includes('task_id: z.string().min(1)'))
-  assert.doesNotMatch(taskStop, /KillShell|shell_id|aliases:/)
+  // 2.1.317 retains shell_id as an optional input to TaskStop and validates
+  // that at least one identifier is present at runtime (not in the schema).
+  assert.match(taskStop, /task_id:\s*z\s*\.string\(\)\s*\.optional\(\)/)
+  assert.match(taskStop, /shell_id:\s*z\.string\(\)\.optional\(\)/)
+  assert.match(taskStop, /const id = task_id \?\? shell_id/)
+  assert.match(taskStop, /Missing required parameter: task_id/)
+  assert.equal(existsSync(new URL('tools/KillShellTool/', root)), false)
+  assert.equal(existsSync(new URL('tools/KillBashTool/', root)), false)
   assert.doesNotMatch(code('tools/BriefTool/BriefTool.ts'), /LEGACY_BRIEF_TOOL_NAME|aliases:/)
   assert.doesNotMatch(code('services/tools/toolExecution.ts'), /getAllBaseTools|fallbackTool|deprecated tool being called by alias/)
   assert.equal(code('utils/env.ts').includes('.config.json'), false)
