@@ -1,17 +1,32 @@
 name: 全部最新稳定依赖升级及端到端测试
 on:
   push:
-    branches: [upgrade/latest-stable-deps-20261105]
-  workflow_dispatch:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'build/public-dependencies.lock.json'
+      - 'docs/upgrade/latest-stable-dependencies.json'
+      - 'tools/dev/**'
+      - '.github/workflows/latest-stable-upgrade.yml'
   pull_request:
     branches: [main]
     paths:
+      - 'package.json'
+      - 'build/public-dependencies.lock.json'
+      - 'docs/upgrade/latest-stable-dependencies.json'
       - 'tools/dev/**'
       - '.github/workflows/latest-stable-upgrade.yml'
+  workflow_dispatch:
+    inputs:
+      perform_upgrade:
+        description: '明确执行最新稳定版依赖升级并生成独立候选分支'
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: write
 concurrency:
-  group: latest-stable-deps-pr7
+  group: latest-stable-deps-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   upgrade:
@@ -43,9 +58,15 @@ jobs:
         with:
           bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
       - id: guard
-        name: 检查依赖是否已锁定
+        name: 区分普通验证与明确授权的全依赖升级
+        shell: bash
         run: |
-          if test -f docs/upgrade/latest-stable-dependencies.json; then echo 'needed=false' >> "$GITHUB_OUTPUT"; else echo 'needed=true' >> "$GITHUB_OUTPUT"; fi
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch && "${{ inputs.perform_upgrade }}" == true ]]; then
+            echo 'needed=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'needed=false' >> "$GITHUB_OUTPUT"
+          fi
       - name: 运行官方 MCP v2 迁移工具
         if: steps.guard.outputs.needed == 'true'
         run: |
@@ -58,7 +79,7 @@ jobs:
       - name: 全部依赖更新至官方最新稳定标签
         if: steps.guard.outputs.needed == 'true'
         run: node tools/upgrade/all-stable.mjs freeze
-      - name: 推送升级源码及全部锁文件到独立 PR
+      - name: 将实际升级源码推送到独立候选分支
         if: steps.guard.outputs.needed == 'true'
         run: |
           set -euo pipefail
@@ -67,7 +88,7 @@ jobs:
           git add -A src native tests tools/dev build/install-public-deps.mjs build/public-dependencies.lock.json build/rebuild.mjs package.json tsconfig.json docs/upgrade/latest-stable-dependencies.json
           git diff --cached --quiet && { echo '没有产生任何更新'; exit 1; }
           git commit -m '全面升级最新稳定依赖并同步迁移源码接口'
-          git push origin HEAD:upgrade/latest-stable-deps-20261105
+          git push origin HEAD:upgrade/toolchain-${GITHUB_RUN_ID}
       - name: 工具链版本与锁文件权威校验
         run: node tools/dev/toolchain.mjs check
       - name: MCP v2 全生产引用检查
