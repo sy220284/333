@@ -5,6 +5,8 @@ on:
     paths:
       - 'src/cli/gateway/**'
       - 'src/cli/handlers/pluginEvalGraders317.ts'
+      - 'src/cli/handlers/pluginEvalCatalog317.ts'
+      - 'src/cli/handlers/pluginEvalModel317.ts'
       - 'src/utils/hooks/hookConcurrency.ts'
       - 'src/utils/webToolDeadline.ts'
       - 'src/skills/bundled/claudeApi.ts'
@@ -17,6 +19,8 @@ on:
     paths:
       - 'src/cli/gateway/**'
       - 'src/cli/handlers/pluginEvalGraders317.ts'
+      - 'src/cli/handlers/pluginEvalCatalog317.ts'
+      - 'src/cli/handlers/pluginEvalModel317.ts'
       - 'src/utils/hooks/hookConcurrency.ts'
       - 'src/utils/webToolDeadline.ts'
       - 'src/skills/bundled/claudeApi.ts'
