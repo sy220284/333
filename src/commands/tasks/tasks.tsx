@@ -25,12 +25,12 @@ function TaskHub({ onDone, context, initial }: {
     <Dialog title="333 任务管理" onCancel={() => onDone()}>
       <Box flexDirection="column" gap={1}>
         <Text>选择需要管理的任务类型：</Text>
-        <Select>
+        <Select
           options={[
             { label: '后台任务', value: 'active', description: '进程、Agent、远程任务及停止与恢复' },
             { label: '工作流与历史', value: 'workflows', description: '工作流执行记录、结果及活动任务' },
           ]}
-          onChange={setView}
+          onChange={value => { if (value === 'active' || value === 'workflows') setView(value) }}
           onCancel={() => onDone()}
         />
       </Box>
