@@ -2877,7 +2877,8 @@
       "tests/m5-mcp-dual-era-317.test.ts",
       "tests/m5-sdk-mcp-factory-317.test.ts",
       "tests/m3-mcp-auth-317.test.ts",
-      "tests/m3-plugin-channel-v2-317.test.ts"
+      "tests/m3-plugin-channel-v2-317.test.ts",
+      "tests/m3-plugin-init-v2-e2e-317.test.ts"
     ]
   },
   "capabilities": {
