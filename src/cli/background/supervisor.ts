@@ -327,11 +327,26 @@ async function command(request, socket) {
     case 'shutdown': {
       if (!request.keepWorkers) {
         for (const id of [...active.keys()]) await stop(id)
-      } else if (active.size) {
-        throw new Error('Cannot detach live PTYs without a supervisor handoff; sessions were left running')
+      } else {
+        // All new sessions run inside their own PTY host. Disconnecting the
+        // supervisor leaves each host and its durable identity intact.
+        for(const [id,job] of active){
+          try{await outputQueue.get(id)}
+          catch(error){
+            process.stderr.write('[bg-pty] output flush failed during handoff: '+String(error)+'\\n')
+          }
+          job.proc.detach()
+          active.delete(id)
+          outputQueue.delete(id)
+          for(const peer of job.subscribers)
+            send(peer,{event:'detached',message:'Supervisor stopped; PTY worker remains alive'})
+        }
       }
-      setImmediate(() => server?.close())
-      return { stopped: true }
+      setImmediate(()=>{
+        for(const peer of serverClients)peer.end()
+        server?.close()
+      })
+      return { stopped: true, keptWorkers: !!request.keepWorkers }
     }
     default:
       throw new Error(`Unknown background daemon operation: ${String(request.op)}`)
