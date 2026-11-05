@@ -555,3 +555,54 @@ test('Runner 317: missing inference credentials report a setup failure before sp
     expect(events).toEqual(['setup-failure'])
   }finally{rmSync(root,{recursive:true,force:true})}
 })
+
+
+test('Runner 317 renews an expired runner token following a 401 and retries one poll', async () => {
+  const root=temp(), stop=new AbortController(), observedTokens:string[]=[]
+  let refreshes=0
+  const api=fakeApi({
+    pollWork:async token=>{
+      observedTokens.push(token)
+      if(observedTokens.length===1)throw new RunnerHttpError317('PollWork',401,'auth')
+      return {assignment_ids:['session_1'],session_assignments:[]}
+    },
+    refreshToken:async token=>{
+      expect(token).toBe('runner-token')
+      refreshes++
+      return {token:'runner-token-rotated'}
+    },
+    releaseSession:async()=>{stop.abort();return {released:true}},
+  })
+  try {
+    await startSelfHostedRunnerHost317({
+      api,baseDir:root,capacity:1,execPath:process.execPath,scriptArgs:[],
+      env:{},pollIntervalMs:1,signal:stop.signal,
+      createChild:()=>makeHandle(),
+    })
+    expect(observedTokens).toEqual(['runner-token','runner-token-rotated'])
+    expect(refreshes).toBe(1)
+  } finally { rmSync(root,{recursive:true,force:true}) }
+})
+
+test('Runner 317 rejects repeated 401 even after one token renewal', async () => {
+  const root=temp(), stop=new AbortController()
+  let refreshes=0, polls=0
+  const api=fakeApi({
+    pollWork:async()=>{
+      polls++
+      throw new RunnerHttpError317('PollWork',401,'auth')
+    },
+    refreshToken:async()=>{
+      refreshes++
+      return {token:'runner-token-rotated'}
+    },
+  })
+  try {
+    await expect(startSelfHostedRunnerHost317({
+      api,baseDir:root,capacity:1,execPath:process.execPath,scriptArgs:[],
+      env:{},pollIntervalMs:1,signal:stop.signal,
+    })).rejects.toBeInstanceOf(RunnerHttpError317)
+    expect(refreshes).toBe(1)
+    expect(polls).toBe(2)
+  } finally { rmSync(root,{recursive:true,force:true}) }
+})
