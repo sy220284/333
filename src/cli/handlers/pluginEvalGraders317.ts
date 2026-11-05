@@ -116,11 +116,13 @@ export async function gradeEvalResult317(
     switch (grader.type) {
       case 'regex': {
         evidence = await selectedEvidence(grader.target, context)
-        if (typeof grader.pattern !== 'string' ||
-            (grader.flags !== undefined && typeof grader.flags !== 'string')) {
+        const patternValue = grader.pattern
+        const flagsValue = grader.flags
+        if (typeof patternValue !== 'string' ||
+            (flagsValue !== undefined && typeof flagsValue !== 'string')) {
           throw new Error('Invalid regex grader pattern or flags')
         }
-        const pattern = new RegExp(grader.pattern, (grader.flags ?? '').replaceAll('g', '') + 'g')
+        const pattern = new RegExp(patternValue, (flagsValue ?? '').replaceAll('g', '') + 'g')
         const count = [...evidence.matchAll(pattern)].length
         if (typeof grader.match === 'string' && grader.match.startsWith('count:')) {
           const wanted = Number(grader.match.slice(6))
@@ -143,11 +145,13 @@ export async function gradeEvalResult317(
         const tools = traceToolUses(context.trace)
         if (typeof grader.tool !== 'string') throw new Error('tool_used grader tool required')
         const count = tools.filter(tool => toolMatches({ tool: grader.tool, input_match: grader.input_match }, tool)).length
-        if ((grader.min !== undefined && typeof grader.min !== 'number') ||
-            (grader.max !== undefined && typeof grader.max !== 'number')) {
+        const minimum = grader.min
+        const maximum = grader.max
+        if ((minimum !== undefined && typeof minimum !== 'number') ||
+            (maximum !== undefined && typeof maximum !== 'number')) {
           throw new Error('tool count bounds must be numeric')
         }
-        pass = count >= (grader.min ?? 1) && (grader.max === undefined || count <= grader.max)
+        pass = count >= (minimum ?? 1) && (maximum === undefined || count <= maximum)
         return { ...details, pass, score: Number(pass), evidence: `uses=${count}` }
       }
       case 'tool_order': {
