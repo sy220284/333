@@ -4,7 +4,7 @@
  * HTTP credentials arriving from a client are never reused by these clients.
  */
 import { readFile } from 'node:fs/promises'
-import { createFoundryAzureTokenProvider } from '../../services/api/providerCredentials.js'
+import { createFoundryAzureTokenProvider } from '../../services/api/providerCredentials.ts'
 
 const API_TIMEOUT_MS = 3600000
 const JSON_HEADERS = {'content-type':'application/json'}
