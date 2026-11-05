@@ -16,7 +16,7 @@ if (args.length !== 2 || args[0] !== '--changelog') {
   throw new Error('用法：node build/m1-verify.mjs --changelog /path/to/v2.1.310/CHANGELOG.md')
 }
 const file = readFileSync(resolve(args[1]))
-const blob = createHash('sha1').update('blob ' + file.length + String.fromCharCode(0))
+const blob = createHash('sha1').update(`blob ${file.length}${String.fromCharCode(0)}`)
   .update(file).digest('hex')
 if (provenance.reference_release !== 'anthropics/claude-code@v2.1.310' ||
     blob !== provenance.official_changelog_blob) {
@@ -26,7 +26,7 @@ const lines = file.toString('utf8').split(/\r?\n/)
 const seen = new Set()
 let total = 0
 for (const group of provenance.change_groups) {
-  const data = read('docs/upgrade/m1-evidence/' + group.file)
+  const data = read(`docs/upgrade/m1-evidence/${group.file}`)
   if (data.source_blob !== blob || data.indexed_count !== group.count ||
       data.records.length !== group.count) {
     throw new Error(`历史变更索引文件与原始 Blob 不一致：${group.file}`)
