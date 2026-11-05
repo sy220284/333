@@ -24,6 +24,7 @@ test('317 BYOC child: remote resume, session-scoped settings and correct executi
     }
     const byoc=createSessionSpawner({...spawnBase,
       additionalArgs:['--model','sonnet','--max-turns','7'],
+      additionalDirs:[join(base,'repo-one'),join(base,'repo-two')],
       env:{...process.env,TEST_CAPTURE_PATH:cap1},
       runnerRuntime:{apiBaseUrl:'https://session.example.test',configDir:conf,inferenceToken:'inference-for-agent'}})
     const result=byoc.spawn({sessionId:'abc_123',sdkUrl:url,accessToken:'single-session-token',
@@ -38,6 +39,11 @@ test('317 BYOC child: remote resume, session-scoped settings and correct executi
     expect(debugLines.some(line=>line.includes('Child args:') && line.includes('sonnet'))).toBe(false)
     expect(first.args).toContain('--max-turns')
     expect(first.args).toContain('7')
+    const addDirIndices=first.args.flatMap((value:string,index:number)=>
+      value==='--add-dir'?[index]:[])
+    expect(addDirIndices).toHaveLength(2)
+    expect(first.args[addDirIndices[0]+1]).toBe(join(base,'repo-one'))
+    expect(first.args[addDirIndices[1]+1]).toBe(join(base,'repo-two'))
     expect(first.kind).toBe('byoc')
     expect(first.remote).toBe('true')
     expect(first.remoteType).toBe('self_hosted')
