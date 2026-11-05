@@ -1,0 +1,34 @@
+name: 317中文UI原始TSX移植映射预审
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - '.github/workflows/port-localized-tsx-317.yml'
+      - 'tools/dev/restore-localized-inline-tsx.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pr7-localized-tsx-map-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 安装冻结TypeScript编译器
+        run: npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+      - name: 检查原始TSX与已翻译UI之间的源映射对应关系
+        run: node tools/dev/restore-localized-inline-tsx.mjs
+      - name: 保留每个UI组件的中文映射证据与冲突
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: localized-original-tsx-audit
+          path: .rebuild/governance/localized-original-tsx.json
+          retention-days: 30
+          if-no-files-found: warn
