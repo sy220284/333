@@ -130,7 +130,7 @@ export function checkToolchain({ bootstrap = false } = {}) {
     'dev-toolchain.yml', 'dev-quality.yml', 'rebuild.yml',
     'governance-audit.yml', 'governance-bun-types.yml',
     'latest-stable-six-host.yml', 'latest-stable-upgrade.yml',
-    'chinese-only-ui.yml', 'upgrade-protection.yml',
+    'chinese-only-ui.yml', 'upgrade-protection.yml', 'type-migration-pr7.yml',
   ]
   for (const workflow of managed) {
     const content = readFileSync(join(root, '.github/workflows', workflow), 'utf8')
