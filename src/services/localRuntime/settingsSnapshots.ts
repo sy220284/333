@@ -32,8 +32,8 @@ export async function snapshotLocalSettings(): Promise<Entry> {
     sha256: digest(contents), size: contents.byteLength,
   }
   await fs.mkdir(DIRECTORY, { recursive: true, mode: 0o700 })
-  await atomicPrivateWrite(join(DIRECTORY, entry.id + '.json'), contents)
-  await atomicPrivateWrite(join(DIRECTORY, entry.id + '.meta.json'), Buffer.from(JSON.stringify(entry)))
+  await atomicPrivateWrite(join(DIRECTORY, `${entry.id}.json`), contents)
+  await atomicPrivateWrite(join(DIRECTORY, `${entry.id}.meta.json`), Buffer.from(JSON.stringify(entry)))
   return entry
 }
 export async function listLocalSettingsSnapshots(): Promise<Entry[]> {
@@ -45,7 +45,7 @@ export async function listLocalSettingsSnapshots(): Promise<Entry[]> {
   }
   const entries = await Promise.all(names.filter(name => /^\d+-[a-f0-9-]+\.meta\.json$/.test(name)).map(async name => {
     const entry = JSON.parse(await fs.readFile(join(DIRECTORY, name), 'utf8')) as Entry
-    const contents = await fs.readFile(join(DIRECTORY, entry.id + '.json'))
+    const contents = await fs.readFile(join(DIRECTORY, `${entry.id}.json`))
     if (digest(contents) !== entry.sha256) throw new Error(`Settings snapshot corrupted: ${entry.id}`)
     return entry
   }))
@@ -53,8 +53,8 @@ export async function listLocalSettingsSnapshots(): Promise<Entry[]> {
 }
 export async function restoreLocalSettings(snapshotId: string): Promise<void> {
   if (!/^\d+-[0-9a-f-]{36}$/.test(snapshotId)) throw new Error('Invalid settings snapshot ID')
-  const snapshot = await fs.readFile(join(DIRECTORY, snapshotId + '.json'))
-  const meta = JSON.parse(await fs.readFile(join(DIRECTORY, snapshotId + '.meta.json'),'utf8')) as Entry
+  const snapshot = await fs.readFile(join(DIRECTORY, `${snapshotId}.json`))
+  const meta = JSON.parse(await fs.readFile(join(DIRECTORY, `${snapshotId}.meta.json`),'utf8')) as Entry
   if (meta.id !== snapshotId || digest(snapshot) !== meta.sha256) throw new Error('Settings snapshot integrity validation failed')
   parseSettings(snapshot)
   // Preserve the current settings before any overwrite. This is a deliberate
