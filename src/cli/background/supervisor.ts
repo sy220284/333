@@ -171,6 +171,16 @@ async function launch(record, { resume = false } = {}) {
     throw error
   }
 }
+async function settleWithin(promise, ms) {
+  let timer
+  try {
+    return await Promise.race([
+      promise.then(() => true),
+      new Promise(resolve => { timer = setTimeout(() => resolve(false), ms) }),
+    ])
+  } finally { if (timer) clearTimeout(timer) }
+}
+
 async function stop(id) {
   const job = active.get(id)
   if (!job) {
@@ -182,12 +192,17 @@ async function stop(id) {
   await editSession(id, { state: 'stopping', detail: 'stop requested' })
   try { job.proc.kill('SIGINT') }
   catch (error) { throw new Error(`Could not interrupt session ${id}: ${error.message}`) }
-  const settled = await Promise.race([job.proc.exited.then(() => true), new Promise(r => setTimeout(() => r(false), 4500))])
-  if (!settled && active.has(id)) {
+  const settled = await settleWithin(job.proc.exited, 4500)
+  if (!settled && active.get(id) === job) {
     job.proc.kill('SIGTERM')
-    await Promise.race([job.proc.exited, new Promise(r => setTimeout(r, 750))])
+    await settleWithin(job.proc.exited, 750)
   }
-  if (active.has(id) && isAlive(job.proc.pid)) throw new Error(`Could not confirm session termination: ${id}`)
+  if (active.get(id) === job && isAlive(job.proc.pid))
+    throw new Error(`Could not confirm session termination: ${id}`)
+  // Process exit is earlier than onExit's durable state/log transaction.
+  // Wait for that transaction before permitting an immediate respawn.
+  if (!await settleWithin(job.finalization, 5000))
+    throw new Error(`Session exit state did not finalize: ${id}`)
   await editSession(id, { state: 'stopped', detail: 'stopped', pid: null })
 }
 async function dispatch(request) {
