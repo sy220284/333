@@ -51,16 +51,22 @@ export function getIndependentApiKey(route: ProviderRoute, env: NodeJS.ProcessEn
   if (!key) throw new Error(`Missing ${route.keyEnvironment ?? 'API key'} for ${route.provider}/${route.model}`)
   return key
 }
-export const MODEL_HINTS: Readonly<Record<string, readonly string[]>> = {
-  openai: ['gpt-6-astra', 'gpt-6.1-sol', 'gpt-6.1-terra', 'gpt-6-luna'],
-  gemini: ['gemini-3.8-flash'],
+/** Live provider discovery is the authority for available model names. */
+export type IndependentModelDetail = {
+  id: string
+  contextWindow?: number
+  maxOutputTokens?: number
+  supportsTools?: boolean
+  supportsVision?: boolean
 }
-/** Discovery is account-specific; hints above never override server results. */
-export async function discoverIndependentModels(
+function positiveInteger(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : undefined
+}
+export async function discoverIndependentModelDetails(
   provider: IndependentProvider,
   token: string,
   fetcher: typeof fetch = fetch,
-): Promise<string[]> {
+): Promise<IndependentModelDetail[]> {
   const addresses: Record<IndependentProvider, string> = {
     openai: 'https://api.openai.com/v1/models',
     chatgpt: 'https://api.openai.com/v1/models',
@@ -86,6 +92,28 @@ export async function discoverIndependentModels(
     if (!entry || typeof entry !== 'object') return []
     if (provider === 'chatgpt' && entry.visibility !== 'list') return []
     const value = provider === 'chatgpt' ? entry.slug : provider === 'gemini' ? entry.name : entry.id
-    return typeof value === 'string' ? [value.replace(/^models\//, '')] : []
+    if (typeof value !== 'string') return []
+    const id = value.replace(/^models\\//, '')
+    if (!id || id.length > 300 || /[\\x00-\\x1f]/.test(id)) return []
+    const top = typeof entry.top_provider === 'object' && entry.top_provider !== null ? entry.top_provider : {}
+    const contextWindow = positiveInteger(entry.context_length ?? entry.context_window ?? entry.inputTokenLimit ?? entry.max_input_tokens)
+    const maxOutputTokens = positiveInteger(entry.outputTokenLimit ?? entry.max_output_tokens ?? entry.max_completion_tokens ?? top.max_completion_tokens)
+    const methods: unknown = entry.supportedGenerationMethods
+    const supportsTools = Array.isArray(methods) ? methods.includes('generateContent') : undefined
+    const modalities: unknown = entry.architecture?.input_modalities
+    const supportsVision = Array.isArray(modalities) ? modalities.includes('image') : undefined
+    return [{ id,
+      ...(contextWindow ? { contextWindow } : {}),
+      ...(maxOutputTokens ? { maxOutputTokens } : {}),
+      ...(supportsTools !== undefined ? { supportsTools } : {}),
+      ...(supportsVision !== undefined ? { supportsVision } : {}),
+    }]
   })
+}
+export async function discoverIndependentModels(
+  provider: IndependentProvider,
+  token: string,
+  fetcher: typeof fetch = fetch,
+): Promise<string[]> {
+  return (await discoverIndependentModelDetails(provider, token, fetcher)).map(model => model.id)
 }
