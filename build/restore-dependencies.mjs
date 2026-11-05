@@ -27,15 +27,17 @@ if (entries.size !== 2850 || packages.size !== 316) throw Error('Snapshot cardin
 // Keep their original source-map bytes immutable, but adapt the restored build
 // copies to the current MCP v2 API before TypeScript or Bun consumes them.
 function migratePrivateMcp(rel, source) {
-  if (!/^node_modules\\/@ant\\/(?:claude-for-chrome-mcp|computer-use-mcp)\\/src\\//.test(rel)) return source;
+  if (!rel.startsWith('node_modules/@ant/claude-for-chrome-mcp/src/') &&
+      !rel.startsWith('node_modules/@ant/computer-use-mcp/src/')) return source;
   let code = source
     .replaceAll('@modelcontextprotocol/sdk/server/index.js', '@modelcontextprotocol/server')
     .replaceAll('@modelcontextprotocol/sdk/types.js', '@modelcontextprotocol/server');
   if (rel.endsWith('/mcpServer.ts')) {
-    code = code.replace(/import \\{\\s*CallToolRequestSchema,\\s*ListToolsRequestSchema,\\s*\\} from ["']@modelcontextprotocol\\/server["'];?\\s*/g, '');
-    code = code.replace(/setRequestHandler\\(ListToolsRequestSchema/g, "setRequestHandler('tools/list'");
-    code = code.replace(/setRequestHandler\\(\\s*CallToolRequestSchema/g, "setRequestHandler(\\n    'tools/call'");
-    if (/CallToolRequestSchema|ListToolsRequestSchema|@modelcontextprotocol\\/sdk\\//.test(code)) throw new Error('Unmigrated private MCP v2 source: ' + rel);
+    code = code.replace(/import \{\s*CallToolRequestSchema,\s*ListToolsRequestSchema,\s*\} from ["']@modelcontextprotocol\/server["'];?\s*/g, '');
+    code = code.replace(/setRequestHandler\(ListToolsRequestSchema/g, "setRequestHandler('tools/list'");
+    code = code.replace(/setRequestHandler\(\s*CallToolRequestSchema/g, "setRequestHandler(\n    'tools/call'");
+    if (/CallToolRequestSchema|ListToolsRequestSchema|@modelcontextprotocol\/sdk\//.test(code))
+      throw new Error('Unmigrated private MCP v2 source: ' + rel);
   }
   return code;
 }
