@@ -117,7 +117,9 @@ test('317 coordinator may return a transport-level success with a rejected tool 
 test('317 user-facing command requires Remote Control before cloud handoff',()=>{
   const source=readFileSync(join(import.meta.dir,
     '../src/commands/send-to-project/send-to-project.tsx'),'utf8')
-  expect(source).toContain('if(!context.getAppState().replBridgeSessionId)')
+  expect(source).toContain('if(!remote.replBridgeConnected||remote.replBridgeOutboundOnly||')
+  expect(source).toContain('boundRemoteSession.current=remote.replBridgeSessionId')
+  expect(source).toContain('remote.replBridgeSessionId!==boundRemoteSession.current')
   expect(source).toContain('请先运行 /remote-control')
   expect(source).toContain("setStep('confirm')")
 })
