@@ -84,7 +84,7 @@ export function channelServer(name: string): string {
    .map((line, index, lines) => {
      const start = lines.indexOf('serveStdio(() => {')
      const end = lines.lastIndexOf('})')
-     return index > start && index < end ? '  ' + line : line
+     return index > start && index < end ? `  ${line}` : line
    }).join('\n')
 }
 function filesFor(name: string, options: InitOptions, author: string | undefined, email: string | undefined): Map<string, string> {
