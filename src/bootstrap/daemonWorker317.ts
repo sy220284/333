@@ -267,9 +267,10 @@ export async function runDaemonWorker317(kind: string | undefined,
     }
     const remote = config as RemoteControlConfig317
     let fallbackToken: () => string | undefined = () => undefined
-    // An IPC-issued token is already authoritative. Load the local OAuth store
-    // only when the supervisor did not issue a session token.
-    if (!accessToken) {
+    // A supervisor-owned worker must get its token through the authenticated
+    // IPC channel. Falling back to local credentials in this mode crosses
+    // session ownership boundaries; local OAuth belongs to direct CLI workers.
+    if (!accessToken && typeof parent.send !== 'function') {
       const { getClaudeAIOAuthTokens } = await import('../utils/auth.js')
       fallbackToken = () => getClaudeAIOAuthTokens()?.accessToken
     }
