@@ -324,10 +324,10 @@ export class SelfHostedRunnerApi317 {
   }
 
   async updateSessionWorkerState(baseUrl: string, sessionId: string, token: string,
-    epoch: number, status: string | {connectionStatus: string}, signal?: AbortSignal): Promise<void> {
+    epoch: number, status?: string | {connectionStatus: string}, signal?: AbortSignal): Promise<void> {
     await this.workerRequest('UpdateSessionWorkerState', 'PUT', baseUrl, sessionId, '/worker',
-      token, { worker_epoch: epoch, ...(typeof status === 'string'
-        ? { worker_status: status } : { connection_status: status.connectionStatus }) }, signal)
+      token, { worker_epoch: epoch, ...(status === undefined ? {} :
+        typeof status === 'string' ? { worker_status: status } : { connection_status: status.connectionStatus }) }, signal)
   }
 
   async heartbeat(baseUrl: string, sessionId: string, token: string,

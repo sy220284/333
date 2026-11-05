@@ -21,6 +21,7 @@ export type RunnerHostOptions317 = {
   scriptArgs: string[]
   env: NodeJS.ProcessEnv
   pollIntervalMs?: number
+  heartbeatIntervalMs?: number
   drainWaitMs?: number
   clientLabel?: string
   lockToAccountId?: string
@@ -89,6 +90,10 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
   if (!Number.isSafeInteger(options.capacity) || options.capacity < 1 || options.capacity > 128) {
     throw new RangeError('Runner capacity must be an integer from 1 to 128')
   }
+  if (options.heartbeatIntervalMs !== undefined &&
+      (!Number.isSafeInteger(options.heartbeatIntervalMs) || options.heartbeatIntervalMs < 1)) {
+    throw new RangeError('Runner heartbeat interval must be a positive integer')
+  }
   const status = options.onStatus ?? (() => {})
   const root = resolve(options.baseDir)
   await mkdir(root, {recursive:true,mode:0o700})
@@ -111,6 +116,9 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
     let remoteToken = ''
     let workerEpoch: number | undefined
     let remoteBase = ''
+    let heartbeatTimer: ReturnType<typeof setInterval> | undefined
+    let heartbeatPending = false
+    const heartbeatAbort = new AbortController()
     try {
       const issued = await options.api.issueSessionToken(runnerToken,id,ownedAbort.signal)
       remoteToken = issued.session_token
@@ -127,6 +135,21 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       await mkdir(sessionConfigDir,{recursive:true,mode:0o700})
       const env = secureChildEnvironment(options.env,remote.environment_variables)
       workerEpoch = await options.api.registerWorker(remoteBase,id,remoteToken,ownedAbort.signal)
+      // 317: the worker epoch is acknowledged before the CLI is launched.
+      await options.api.updateSessionWorkerState(remoteBase,id,remoteToken,workerEpoch,
+        undefined,ownedAbort.signal)
+      const heartbeatSignal = AbortSignal.any([ownedAbort.signal,heartbeatAbort.signal])
+      const epoch = workerEpoch
+      heartbeatTimer = setInterval(() => {
+        if (heartbeatSignal.aborted || heartbeatPending) return
+        heartbeatPending = true
+        void options.api.heartbeat(remoteBase,id,remoteToken,epoch,heartbeatSignal)
+          .catch(error => {
+            if (!heartbeatSignal.aborted) status('[runner:session] '+id+' heartbeat error: '+
+              (error instanceof Error ? error.message : String(error)))
+          }).finally(() => { heartbeatPending = false })
+      },options.heartbeatIntervalMs ?? 30_000)
+      heartbeatTimer.unref?.()
       const sdkUrl = new URL('/v1/code/sessions/'+encodeURIComponent(id),remoteBase).toString()
       const handle = options.createChild
         ? options.createChild(id,sdkUrl,remoteToken,workerEpoch,cwd,env)
@@ -155,13 +178,19 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
         status('[runner:session] '+id+' completion error: '+
           (error instanceof Error ? error.message : String(error)))
         throw error
-      }).finally(() => { active.delete(id) })
+      }).finally(() => {
+        heartbeatAbort.abort()
+        if (heartbeatTimer) clearInterval(heartbeatTimer)
+        active.delete(id)
+      })
       active.set(id,{handle,completion})
       // Observe the rejected completion without detaching an unhandled promise.
       void completion.catch(() => {})
     } catch (error) {
+      heartbeatAbort.abort()
+      if (heartbeatTimer) clearInterval(heartbeatTimer)
       if (ownedAbort.signal.aborted) return
-      status('[runner:session] failed to start '+id+': '+
+      status('[runner:session] failed to start '+id+': 
         (error instanceof Error ? error.message : String(error)))
       await options.api.reportSessionFailure(runnerToken,id,'setup_failed',
         remoteToken ? 'worker_start_failed' : 'token_failed')
