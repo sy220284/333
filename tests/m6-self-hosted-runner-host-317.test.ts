@@ -426,7 +426,7 @@ test('Runner 317: remote session cannot re-inject host-only runner credentials i
   }
 })
 
-test('Runner 317: real child receives private prompt and MCP files and they are cleaned after exit',async()=>{
+test('Runner 317: real child receives private prompt, MCP and Agent files and cleans all on exit',async()=>{
   const root=temp(),aborted=new AbortController(),statuses:string[]=[]
   try{
     const script=join(root,'inspect-remote-child.mjs')
@@ -437,9 +437,10 @@ test('Runner 317: real child receives private prompt and MCP files and they are 
       "const valueFor=(flag)=>args[args.indexOf(flag)+1]",
       "const promptFile=valueFor('--system-prompt-file')",
       "const mcpFile=valueFor('--mcp-config')",
+      "const agentsFile=valueFor('--agents')",
       "writeFileSync(process.env.TEST_CAPTURE_PATH,JSON.stringify({args,",
       "promptFile,mcpFile,prompt:readFileSync(promptFile,'utf8'),",
-      "mcp:readFileSync(mcpFile,'utf8'),auth:process.env.CLAUDE_CODE_OAUTH_TOKEN}))",
+      "mcp:readFileSync(mcpFile,'utf8'),agentsFile,agents:readFileSync(agentsFile,'utf8'),auth:process.env.CLAUDE_CODE_OAUTH_TOKEN}))",
     ].join('\n'))
     const mcpContent=JSON.stringify({mcpServers:{privateTool:{command:'node',args:['example.js']}}})
     const api=fakeApi({
@@ -449,6 +450,7 @@ test('Runner 317: real child receives private prompt and MCP files and they are 
         environment_variables:{TEST_CAPTURE_PATH:cap},
         claude_code_args:{model:'opus','max-turns':5,'system-prompt':'sensitive runner prompt'},
         mcp_config:{content:Buffer.from(mcpContent).toString('base64')},
+        agent_files:[{name:'researcher',content:'---\nname: researcher\ndescription: Research project files\n---\nReview source files\n'}],
       }),
       releaseSession:async()=>{aborted.abort();return {released:true}},
     })
@@ -460,6 +462,9 @@ test('Runner 317: real child receives private prompt and MCP files and they are 
     const captured=JSON.parse(readFileSync(cap,'utf8'))
     expect(captured.prompt).toBe('sensitive runner prompt')
     expect(captured.mcp).toBe(mcpContent)
+    const agentConfig=JSON.parse(captured.agents)
+    expect(agentConfig.researcher.description).toBe('Research project files')
+    expect(agentConfig.researcher.prompt).toBe('Review source files')
     expect(captured.auth).toBe('inference-test-token')
     expect(captured.args).toContain('--model')
     expect(captured.args).toContain('opus')
@@ -467,6 +472,7 @@ test('Runner 317: real child receives private prompt and MCP files and they are 
     expect(captured.args).toContain('5')
     expect(existsSync(captured.promptFile)).toBe(false)
     expect(existsSync(captured.mcpFile)).toBe(false)
+    expect(existsSync(captured.agentsFile)).toBe(false)
     expect(statuses.join(' ')).not.toContain('sensitive runner prompt')
   }finally{rmSync(root,{recursive:true,force:true})}
 })
