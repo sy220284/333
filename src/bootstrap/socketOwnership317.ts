@@ -1,5 +1,6 @@
 import { connect } from 'node:net'
 import { lstat, unlink } from 'node:fs/promises'
+import { lstatSync, unlinkSync } from 'node:fs'
 
 /** A stale Unix socket may be reclaimed; a live owner or non-socket is protected.
  * Used by all 317 warm-worker listeners before bind(). A caller must only
@@ -63,5 +64,19 @@ export async function unlinkOwnedSocket317(path: string, owner: SocketIdentity31
   if (!current.isSocket() || current.dev !== owner.dev || current.ino !== owner.ino)
     return false
   await unlink(path)
+  return true
+}
+
+/** Synchronous close-path variant for process signal/exit handlers. */
+export function unlinkOwnedSocketSync317(path: string, owner: SocketIdentity317): boolean {
+  let current
+  try { current = lstatSync(path) }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+    throw error
+  }
+  if (!current.isSocket() || current.dev !== owner.dev || current.ino !== owner.ino)
+    return false
+  unlinkSync(path)
   return true
 }
