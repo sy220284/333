@@ -44,8 +44,18 @@ function sanitizedArgs(args) {
   }
   return out
 }
-const PERSISTED_FLAGS_WITH_VALUES = new Set(['--model', '--agent', '--effort', '--permission-mode', '--settings', '--setting-sources', '--plugin-dir', '--mcp-config', '--name', '--add-dir', '--system-prompt', '--append-system-prompt'])
-function resumeFlags(argv) {
+// Resume must preserve the configuration and authorization supplied at dispatch.
+// Dropping the argument following --allowedTools/--disallowedTools would change
+// the effective permission policy after an attach or respawn.
+const PERSISTED_FLAGS_WITH_VALUES = new Set([
+  '--model', '--agent', '--effort', '--permission-mode', '--settings',
+  '--setting-sources', '--plugin-dir', '--mcp-config', '--name', '--add-dir',
+  '--system-prompt', '--append-system-prompt', '--system-prompt-file',
+  '--append-system-prompt-file', '--allowedTools', '--allowed-tools',
+  '--disallowedTools', '--disallowed-tools', '--tools', '--agents',
+  '--project-config-root', '--output-format',
+])
+export function resumeFlags(argv) {
   const flags = []
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i]
