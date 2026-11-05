@@ -313,6 +313,13 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
         ...(deps.additionalArgs ?? []),
       ]
 
+      // 317: a replacement worker must continue the existing session while
+      // checking any tool call interrupted before its outcome was recorded.
+      const resumedRunner = Boolean(deps.runnerRuntime && (opts.workerEpoch ?? 0) > 1)
+      const cutOffCallWarning = resumedRunner &&
+        deps.env.CLAUDE_CODE_RESUME_SHOWS_CUT_OFF_CALLS !== 'false'
+      const resumePrompt = "Continue from where you left off. This session moved to a new runner; files you created earlier may no longer exist, so verify the working directory state before relying on prior edits."
+      const cutOffWarning = " If the result of a tool call above starts with \"[Tool call interrupted\", the runner that ran it stopped or lost its connection before the call's result was recorded. The call may have had nothing to do with that, or it may have caused it, for example by using too much memory. Before you run it again, check what it did and whether it could have brought the runner down; if it could, do the work another way."
       const env: NodeJS.ProcessEnv = {
         ...deps.env,
         // Strip the bridge's OAuth token so the child CC process uses
@@ -329,6 +336,11 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
           DISABLE_AUTOUPDATER: '1',
           CLAUDE_CODE_RETRY_WATCHDOG: '1',
           CLAUDE_CODE_TEE_SDK_STDOUT: '1',
+          CLAUDE_CODE_RESUME_INTERRUPTED_TURN: resumedRunner ? '1' : undefined,
+          CLAUDE_CODE_RESUME_SHOWS_CUT_OFF_CALLS: cutOffCallWarning ? '1' : undefined,
+          CLAUDE_CODE_RESUME_PROMPT: resumedRunner
+            ? resumePrompt + (cutOffCallWarning ? cutOffWarning : '')
+            : undefined,
         }),
         ...(deps.sandbox && { CLAUDE_CODE_FORCE_SANDBOX: '1' }),
         CLAUDE_CODE_SESSION_ACCESS_TOKEN: opts.accessToken,
