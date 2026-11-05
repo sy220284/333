@@ -3541,6 +3541,14 @@ async function run(): Promise<CommanderCommand> {
     const entries = getSavedModelOptions();
     for (const model of entries) process.stdout.write(`${model.value}\n`);
   });
+  modelsCommand.command('price <model>').description('设置模型每百万 Token 的美元费率（输入和输出）')
+    .requiredOption('--input <usd>', '输入每百万 Token 费用（美元）')
+    .requiredOption('--output <usd>', '输出每百万 Token 费用（美元）')
+    .action(async (model: string, options: {input:string;output:string}) => {
+      const { configureIndependentPricing } = await import('./services/api/multimodel/pricing.js');
+      await configureIndependentPricing(model,{input:Number(options.input),output:Number(options.output)});
+      process.stdout.write(`已保存 ${model} 的本地费率\n`);
+    });
   modelsCommand.command('verify <model>').description('真实调用模型验证流式输出和工具能力（将产生少量 API 用量）').action(async (model: string) => {
     const { verifyIndependentModel } = await import('./services/api/multimodel/capabilityProbe.js');
     const result = await verifyIndependentModel(model);
