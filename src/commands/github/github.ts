@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import type { LocalCommandCall } from '../../types/command.js'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
-import { githubWorkflow, GITHUB_SCRIPT_PATH, GITHUB_WORKFLOW_PATH } from './workflow.js'
+import { githubWorkflow, GITHUB_SCRIPT_PATH, GITHUB_WORKFLOW_PATH, type GithubWorkflowSelection } from './workflow.js'
 import { githubReviewerScript } from './reviewerScript.js'
 
 import { validRepository } from './repository.js'
-const HELP = '用法：/github status | auth | repos | setup <owner/repo> | secret <owner/repo> <环境变量名> | review <owner/repo> <PR> [normal|deep|security|extreme] | runs <owner/repo> | run <owner/repo> <运行ID> | cancel <owner/repo> <运行ID> | rerun <owner/repo> <运行ID>'
+const HELP = '用法：/github status | auth | repos | setup [owner/repo] [review|respond|both] | secret <owner/repo> <环境变量名> | review <owner/repo> <PR> [normal|deep|security|extreme] | runs <owner/repo> | run <owner/repo> <运行ID> | cancel <owner/repo> <运行ID> | rerun <owner/repo> <运行ID>'
 const result = (value: string): { type:'text'; value:string } => ({type:'text',value})
 function validPr(raw: string): string {
   if (!/^[1-9][0-9]*$/.test(raw) || !Number.isSafeInteger(Number(raw)))
@@ -23,7 +23,8 @@ async function checkAuth(): Promise<void> {
   await gh(['auth','status','-h','github.com'])
 }
 /** Git tree + commit + ref: both workflow files update atomically, with no half-configured branch. */
-export async function setupRepository(raw: string): Promise<string> {
+export async function setupRepository(raw: string, selection: GithubWorkflowSelection = 'both'): Promise<string> {
+  if (!['review','respond','both'].includes(selection)) throw new Error('Actions 类型必须为 review、respond 或 both')
   const repo = validRepository(raw)
   await checkAuth()
   const metadata = JSON.parse(await gh(['api','repos/' + repo]))
@@ -33,7 +34,7 @@ export async function setupRepository(raw: string): Promise<string> {
   const parent = String(head.object.sha)
   const treeInfo = JSON.parse(await gh(['api','repos/' + repo + '/git/commits/' + parent]))
   const elements = [
-    {path:GITHUB_WORKFLOW_PATH,mode:'100644',type:'blob',content:githubWorkflow()},
+    {path:GITHUB_WORKFLOW_PATH,mode:'100644',type:'blob',content:githubWorkflow(selection)},
     {path:GITHUB_SCRIPT_PATH,mode:'100644',type:'blob',content:githubReviewerScript()},
   ]
   const tree = JSON.parse(await gh(['api','--method','POST','repos/' + repo + '/git/trees','--input','-'],
@@ -80,7 +81,21 @@ export const call: LocalCommandCall = async (args) => {
       await checkAuth()
       return result('可访问的仓库：\n' + await gh(['repo','list','--limit','100','--json','nameWithOwner','--jq','.[].nameWithOwner']))
     }
-    if (action === 'setup' && tokens.length===2) return result('已创建配置 PR：' + await setupRepository(tokens[1]))
+    if (action === 'setup' && tokens.length<=3) {
+      await checkAuth()
+      let selectedRepo = tokens[1]
+      if (!selectedRepo) {
+        const current = await execFileNoThrow('gh',
+          ['repo','view','--json','nameWithOwner','--jq','.nameWithOwner'],
+          {timeout:10000,useCwd:true})
+        if (current.code !== 0 || !current.stdout.trim())
+          throw new Error('当前目录无 GitHub 仓库，请先通过 /github repos 选择 owner/repo')
+        selectedRepo = current.stdout.trim()
+      }
+      const selection = tokens[2] || 'both'
+      if (!['review','respond','both'].includes(selection)) throw new Error('请选择 review、respond 或 both')
+      return result('已创建配置 PR：' + await setupRepository(selectedRepo,selection as GithubWorkflowSelection))
+    }
     if (action === 'secret' && tokens.length===3) {
       const repo = validRepository(tokens[1])
       const name = tokens[2]
