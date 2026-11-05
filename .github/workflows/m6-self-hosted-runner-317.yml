@@ -11,8 +11,9 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: m6-runner-317-${{ github.ref }}
-  cancel-in-progress: true
+  group: m6-runner-317-${{ github.sha }}
+  # Each source revision retains a full reproducible Runner acceptance result.
+  cancel-in-progress: false
 jobs:
   runner-core:
     runs-on: ubuntu-24.04
