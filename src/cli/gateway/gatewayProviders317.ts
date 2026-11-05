@@ -4,6 +4,7 @@
  * HTTP credentials arriving from a client are never reused by these clients.
  */
 import { readFile } from 'node:fs/promises'
+import { createFoundryAzureTokenProvider } from '../../services/api/providerCredentials.js'
 
 const API_TIMEOUT_MS = 3600000
 const JSON_HEADERS = {'content-type':'application/json'}
@@ -142,15 +143,12 @@ export async function createGatewayProviderClient317(up, testFactory) {
     }
     case 'foundry': {
       const {AnthropicFoundry}=await import('@anthropic-ai/foundry-sdk')
-      const credentials=auth.api_key
-        ? {apiKey:auth.api_key}
-        : {apiKey:null,azureADTokenProvider:async()=>{
-          const {DefaultAzureCredential}=await import('@azure/identity')
-          const token=await new DefaultAzureCredential().getToken(
-            'https://cognitiveservices.azure.com/.default')
-          if(!token)throw new Error('Foundry Azure AD token is unavailable')
-          return token.token
-        }}
+      const credentials = auth.api_key
+        ? { apiKey: auth.api_key }
+        : {
+            apiKey: null,
+            azureADTokenProvider: await createFoundryAzureTokenProvider(),
+          }
       return new AnthropicFoundry({
         ...(up.base_url?{baseURL:up.base_url}:{resource:up.resource}),
         ...credentials,defaultHeaders:up.headers??{},
