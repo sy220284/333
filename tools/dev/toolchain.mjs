@@ -118,10 +118,13 @@ export function checkToolchain({ bootstrap = false } = {}) {
   }
   if (!bootstrap) {
   // Active build and development pipelines must consume these versions.
+  // Escape the dollar symbol in source so the linter can parse a literal
+  // GitHub Actions expression without reporting template interpolation.
+  const gha = name => `\u0024{{ env.${name} }}`
   const ciVersions = {
-    'node-version': '${{ env.TOOLCHAIN_NODE_VERSION }}',
-    'bun-version': '${{ env.TOOLCHAIN_BUN_VERSION }}',
-    'python-version': '${{ env.TOOLCHAIN_PYTHON_VERSION }}',
+    'node-version': gha('TOOLCHAIN_NODE_VERSION'),
+    'bun-version': gha('TOOLCHAIN_BUN_VERSION'),
+    'python-version': gha('TOOLCHAIN_PYTHON_VERSION'),
   }
   const managed = [
     'dev-toolchain.yml', 'dev-quality.yml', 'rebuild.yml',
