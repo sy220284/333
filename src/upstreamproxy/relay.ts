@@ -265,7 +265,7 @@ export async function startNodeRelay(
     sock.on('data', data =>
       handleData(adapter, st, data, wsUrl, authHeader, wsAuthHeader),
     )
-    sock.on('close', () => cleanupConn(states.get(sock))).buffer)
+    sock.on('close', () => cleanupConn(states.get(sock)))
     sock.on('error', err => {
       logForDebugging(`[upstreamproxy] client socket error: ${err.message}`)
       cleanupConn(states.get(sock))
@@ -437,7 +437,7 @@ function forwardToWs(ws: WebSocketLike, data: Buffer): void {
   if (ws.readyState !== WebSocket.OPEN) return
   for (let off = 0; off < data.length; off += MAX_CHUNK_BYTES) {
     const slice = data.subarray(off, off + MAX_CHUNK_BYTES)
-    ws.send(Uint8Array.from(encodeChunk(slice))
+    ws.send(Uint8Array.from(encodeChunk(slice)).buffer)
   }
 }
 
