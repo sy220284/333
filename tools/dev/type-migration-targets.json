@@ -14,6 +14,7 @@
     "src/utils/cliStartupFailure.ts",
     "src/utils/hooks/hookConcurrency.ts",
     "src/utils/remoteSessionIdentity.ts",
-    "src/utils/telemetry/projectTelemetryPolicy.ts"
+    "src/utils/telemetry/projectTelemetryPolicy.ts",
+    "src/utils/webToolDeadline.ts"
   ]
 }
