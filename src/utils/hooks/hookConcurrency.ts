@@ -81,7 +81,7 @@ export function acquireHookPermit(sessionId: string | undefined | null, timeoutM
       drain(key, state)
     }
     state.queue.push(waiter)
-    signal?.addEventListener('abort', waiter.onAbort, {once: true})
+    if (waiter.onAbort) signal?.addEventListener('abort', waiter.onAbort, {once: true})
     // An explicit timeout of 0.1s still counts as 1 second.
     const waitingMs = Math.max(1000, Number.isFinite(timeoutMs) ? timeoutMs : 1000)
     waiter.timer = setTimeout(() => {
