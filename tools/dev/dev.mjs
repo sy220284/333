@@ -143,8 +143,16 @@ function lint(all) {
   run(bin('biome'), ['lint', '--no-errors-on-unmatched', 'src', 'native', 'build', 'tests', 'tools/dev', 'tools/governance']);
 }
 
-function boot() { npmRun(['ci', '--prefix', 'tools/dev', '--ignore-scripts', '--no-audit', '--no-fund']); }
+function boot() {
+  run(process.execPath, ['tools/dev/toolchain.mjs', 'check']);
+  npmRun(['ci', '--prefix', 'tools/dev', '--ignore-scripts', '--no-audit', '--no-fund']);
+}
 const command = process.argv[2] ?? 'help';
+// Reject drift for every command that operates on or consumes development tools.
+if (['doctor', 'typecheck', 'typecheck:all', 'lint', 'lint:all', 'format',
+  'watch', 'coverage', 'native', 'security', 'sbom', 'verify'].includes(command)) {
+  run(process.execPath, ['tools/dev/toolchain.mjs', 'check']);
+}
 switch (command) {
   case 'bootstrap': boot(); break;
   case 'doctor':

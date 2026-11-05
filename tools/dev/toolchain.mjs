@@ -142,6 +142,7 @@ function verifyRuntime(data) {
   }
 }
 const mode = process.argv[2] ?? 'check'
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
 if (mode === 'sync') {
   const data = readToolchain()
   for (const [path, content] of projections(data)) writeFileSync(path, content)
@@ -156,4 +157,6 @@ if (mode === 'sync') {
   console.log('Node/Bun 实际运行版本匹配权威清单')
 } else {
   fail('用法：node tools/dev/toolchain.mjs sync|check|gha-env|verify-runtime')
+}
+
 }
