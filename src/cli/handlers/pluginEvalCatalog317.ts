@@ -3,6 +3,7 @@
  * graders/*.md frontmatter, with strict schema and filesystem bounds.
  */
 import { lstat, readFile, readdir, realpath } from 'node:fs/promises'
+import type { Dirent } from 'node:fs'
 import { basename, join, relative, resolve, isAbsolute } from 'node:path'
 import { parseYaml } from '../../utils/yaml.js'
 
@@ -33,11 +34,11 @@ const PERMITTED_TYPES = new Set(['regex','file_exists','tool_used','tool_order',
 const TOP_FIELDS = new Set(['schema_version','name','description','tags','plugins','runs','expected_outcome'])
 const EXEC_FIELDS = new Set(['model','max_turns','timeout_seconds','allowed_tools','disallowed_tools','artifact_publish','growthbook_overrides','append_system_prompt','env'])
 
-function inside(root, target) {
+function inside(root: string, target: string): boolean {
   const rel = relative(root, target)
   return rel === '' || (rel !== '..' && !rel.startsWith('../') && !rel.startsWith('..\\') && !isAbsolute(rel))
 }
-async function readLimited(file) {
+async function readLimited(file: string): Promise<string> {
   const stat = await lstat(file)
   if (!stat.isFile()) throw new Error(`eval input must be a regular file: ${file}`)
   if (stat.size > MAX_CASE_FILE_BYTES) {
@@ -45,7 +46,7 @@ async function readLimited(file) {
   }
   return readFile(file, 'utf8')
 }
-function markdownFrontmatter(content, filename) {
+function markdownFrontmatter(content: string, filename: string): {metadata: Record<string, unknown>; body: string; hasFrontmatter: boolean} {
   if (!content.startsWith('---\n') && !content.startsWith('---\r\n')) {
     return { metadata: {}, body: content, hasFrontmatter: false }
   }
@@ -57,7 +58,7 @@ function markdownFrontmatter(content, filename) {
   }
   return { metadata, body: content.slice(match[0].length), hasFrontmatter: true }
 }
-function validateGrader(grader, dir) {
+function validateGrader(grader: unknown, dir: string): EvalGrader317 {
   if (!isMapping(grader) || typeof grader.name !== 'string' || !grader.name ||
     typeof grader.type !== 'string' || !PERMITTED_TYPES.has(grader.type)) {
     throw new Error(`invalid eval grader in ${dir}`)
@@ -97,11 +98,11 @@ function validateGrader(grader, dir) {
   return { weight: 1, ...grader, name: grader.name, type: grader.type } as EvalGrader317
 }
 
-async function readOptional(file) {
+async function readOptional(file: string): Promise<string | null> {
   try { return await readLimited(file) }
-  catch (error) { if (error?.code === 'ENOENT') return null; throw error }
+  catch (error) { if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return null; throw error }
 }
-export async function readEvalCase317(dir: string) : Promise<EvalCase317> {
+export async function readEvalCase317(dir: string) : Promise<EvalCase317 | null> {
   const root = await realpath(dir)
   const rawYaml = await readOptional(join(root, 'case.yaml'))
   const base = rawYaml === null ? {} : parseYaml(rawYaml)
@@ -120,11 +121,11 @@ export async function readEvalCase317(dir: string) : Promise<EvalCase317> {
     else throw new Error(`unknown prompt.md frontmatter field "${key}"`)
   }
   if (parsed.body.trim()) execution.prompt = parsed.body.trim()
-  const markdownGraders = []
+  const markdownGraders: Array<Record<string, unknown>> = []
   const graderDir = join(root, 'graders')
-  let entries = []
+  let entries: Dirent[] = []
   try { entries = await readdir(graderDir, { withFileTypes: true }) }
-  catch (error) { if (error?.code !== 'ENOENT') throw error }
+  catch (error) { if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error }
   for (const item of entries) {
     if (!item.name.endsWith('.md')) continue
     if (!item.isFile()) throw new Error(`grader must be a regular file: ${item.name}`)
@@ -179,7 +180,7 @@ export async function readEvalCase317(dir: string) : Promise<EvalCase317> {
   if (!Array.isArray(data.graders) || !data.graders.length) {
     throw new Error(`eval ${data.name}: at least one grader required`)
   }
-  const names = new Set()
+  const names = new Set<string>()
   data.graders = data.graders.map(g => {
     const grader = validateGrader(g, dir)
     if (typeof grader.criteria === 'string' &&
@@ -241,6 +242,7 @@ export async function discoverEvalCases317(
   let inspected = 0
   while (todo.length) {
     const dir = todo.pop()
+    if (dir === undefined) break
     if (++inspected > MAX_FILE_COUNT) throw new Error('eval directory scan exceeded its limit')
     const caseInfo = await readEvalCase317(dir)
     if (caseInfo) {
