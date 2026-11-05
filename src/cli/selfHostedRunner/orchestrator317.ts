@@ -116,7 +116,11 @@ export function createOrchestratorApi317(
         body:JSON.stringify(body)})
       const raw=await response.text()
       let data:unknown
-      try{data=JSON.parse(raw)}catch{throw Error('Invalid '+path+' response JSON (HTTP '+response.status+')')}
+      if(response.status===204 && response.ok && raw.length===0)data={}
+      else {
+        try{data=JSON.parse(raw)}
+        catch{throw Error('Invalid '+path+' response JSON (HTTP '+response.status+')')}
+      }
       if(!response.ok)throw Object.assign(Error('spawn-hints/'+path+': HTTP '+response.status+
         ' '+JSON.stringify(data).slice(0,300)),{httpStatus:response.status})
       if(data===null||typeof data!=='object'||Array.isArray(data))throw Error('Malformed '+path+' response')
