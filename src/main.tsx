@@ -2823,6 +2823,7 @@ async function run(): Promise<CommanderCommand> {
       },
       pendingWorkerRequest: null,
       pendingSandboxRequest: null,
+      knowledgeNote: null,
       authVersion: 0,
       initialMessage: inputPrompt ? {
         message: createUserMessage({
