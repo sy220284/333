@@ -38,6 +38,9 @@ export type CommentEventLease317 = {
   claim(eventId: string): Promise<boolean>
   complete(eventId: string): Promise<void>
   release(eventId: string): Promise<void>
+  /** The edit is already published; subsequent delivery may only send its reply. */
+  getPublishedReply?(eventId: string): Promise<string | null>
+  markPublished?(eventId: string, reply: string): Promise<void>
 }
 
 export type CommentDecision317 =
@@ -122,6 +125,12 @@ export async function processArtifactComment317(
   }
   if (!await lease.claim(event.eventId)) return 'already_processed'
   try {
+    const pendingReply = await lease.getPublishedReply?.(event.eventId)
+    if (pendingReply) {
+      await backend.reply(event, pendingReply)
+      await lease.complete(event.eventId)
+      return 'edited'
+    }
     const thread = await backend.readThread(event)
     if (!thread.originVerified || !thread.summonedByEditor || !thread.newestHumanRequest.trim()) {
       await lease.complete(event.eventId)
@@ -155,6 +164,7 @@ export async function processArtifactComment317(
       if (!canEdit || !page) throw new Error('Artifact edit lacks verified edit capability')
       const html = uniquelyApplyPatches(page.html, decision.edits)
       await backend.publish(event, html, page.revision)
+      await lease.markPublished?.(event.eventId, decision.reply)
       await backend.reply(event, decision.reply)
       await lease.complete(event.eventId)
       return 'edited'
