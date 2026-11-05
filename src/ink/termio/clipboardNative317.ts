@@ -28,7 +28,7 @@ function nativeClipboardAddon() {
   // where it was compiled. Such a fallback silently masks an incomplete
   // installation and can load a stale or ABI-incompatible native module.
   const compiled = typeof Bun !== 'undefined' &&
-    !/(?:^|[\\/])bun(?:\\.exe)?$/i.test(physicalExecutable)
+    !/(?:^|[\\/])bun(?:\.exe)?$/i.test(physicalExecutable)
   for (const suffix of [platform, platform + '-musl']) {
     const packagedAddon = join(installedRoot, 'vendor', 'clipboard-napi',
       suffix, 'clipboard-napi.node')

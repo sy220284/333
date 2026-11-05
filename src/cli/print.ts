@@ -295,6 +295,7 @@ import {
   type ChannelEntry,
 } from 'src/bootstrap/state.js'
 import { runWithWorkload, WORKLOAD_CRON } from 'src/utils/workloadContext.js'
+import { formatScheduledTaskPrompt } from 'src/utils/systemNotificationPrompts.js'
 import type { UUID } from 'crypto'
 import { randomUUID } from 'crypto'
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
@@ -2724,12 +2725,11 @@ function runHeadlessStreaming(
     cronSchedulerModule &&
     cronGate?.isKairosCronEnabled()
   ) {
-    cronScheduler = cronSchedulerModule.createCronScheduler({
-      onFire: prompt => {
-        if (inputClosed) return
-        enqueue({
-          mode: 'prompt',
-          value: prompt,
+    const enqueueCronPrompt = (prompt: string, scheduledFire: boolean) => {
+      if (inputClosed) return
+      enqueue({
+        mode: 'prompt',
+        value: scheduledFire ? formatScheduledTaskPrompt(prompt) : prompt,
           uuid: randomUUID(),
           priority: 'later',
           // System-generated — matches useScheduledTasks.ts REPL equivalent.
@@ -2740,10 +2740,13 @@ function runHeadlessStreaming(
           // so the API can serve cron requests at lower QoS. drainCommandQueue
           // reads this per-iteration and hoists it into bootstrap state for
           // the ask() call.
-          workload: WORKLOAD_CRON,
-        })
-        void run()
-      },
+        workload: WORKLOAD_CRON,
+      })
+      void run()
+    }
+    cronScheduler = cronSchedulerModule.createCronScheduler({
+      onFire: prompt => enqueueCronPrompt(prompt, false),
+      onFireTask: task => enqueueCronPrompt(task.prompt, true),
       isLoading: () => running || inputClosed,
       getJitterConfig: cronJitterConfigModule?.getCronJitterConfig,
       isKilled: () => !cronGate?.isKairosCronEnabled(),

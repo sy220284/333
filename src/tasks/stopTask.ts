@@ -1,3 +1,4 @@
+import { descendantTasks, isStoppableTask } from './agentLifecycle317.js'
 // Shared logic for stopping a running task.
 // Used by TaskStopTool (LLM-invoked) and SDK stop_task control request.
 
@@ -54,7 +55,7 @@ export async function stopTask(
   const requestedId = taskId
   taskId = task.id
 
-  if (task.status !== 'running') {
+  if (!isStoppableTask(task, appState.tasks)) {
     throw new StopTaskError(
       `Task ${taskId} is not running (status: ${task.status})`,
       'not_running',
@@ -82,7 +83,24 @@ export async function stopTask(
     )
   }
 
-  await taskImpl.kill(taskId, setAppState)
+  const children = task.type === 'local_agent' ? descendantTasks(taskId, appState.tasks).filter(child => isStoppableTask(child, appState.tasks)) : []
+  const errors: unknown[] = []
+  for (const target of [...children, task]) {
+    const latest = getAppState().tasks[target.id]
+    if (!latest || latest.status === 'killed' || latest.status === 'failed') continue
+    if (latest.status !== 'running' && latest.type !== 'local_agent') continue
+    const implementation = target.id === taskId ? taskImpl : getTaskByType(target.type)
+    if (!implementation) {
+      errors.push(new StopTaskError(`Unsupported task type: ${target.type}`, 'unsupported_type'))
+      continue
+    }
+    try {
+      await implementation.kill(target.id, setAppState)
+    } catch (error) {
+      errors.push(new Error(`Failed to stop task ${target.id}`, { cause: error }))
+    }
+  }
+  if (errors.length) throw new AggregateError(errors, `Task ${taskId} stop was incomplete`)
 
   // Bash: suppress the "exit code 137" notification (noise). Agent tasks: don't
   // suppress — the AbortError catch sends a notification carrying

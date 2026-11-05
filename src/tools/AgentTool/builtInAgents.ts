@@ -29,6 +29,15 @@ export function getBuiltInAgents(): AgentDefinition[] {
     return []
   }
 
+  if (
+    feature('COORDINATOR_MODE') &&
+    isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE)
+  ) {
+    const { getCoordinatorAgents } =
+      require('../../coordinator/workerAgent.js') as typeof import('../../coordinator/workerAgent.js')
+    return getCoordinatorAgents()
+  }
+
   const agents: AgentDefinition[] = [
     GENERAL_PURPOSE_AGENT,
     STATUSLINE_SETUP_AGENT,

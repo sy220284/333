@@ -11,7 +11,7 @@ async function run(cmd,args){const r=await execFile(cmd,args,{cwd:root,timeout:1
 const operation=process.argv[2];
 if(operation==='migrate'){
   const p=join(root,'tsconfig.json'),c=await json(p);delete c.compilerOptions.baseUrl;
-  for(const [key,a] of Object.entries(c.compilerOptions.paths||{}))c.compilerOptions.paths[key]=a.map(v=>v.startsWith('.')||v.startsWith('/')?v:'./'+v);
+  for(const [key,a] of Object.entries(c.compilerOptions.paths||{}))c.compilerOptions.paths[key]=a.map(v=>v.startsWith('./')||v.startsWith('../')||v.startsWith('/')?v:'./'+v);
   c.compilerOptions.types=['node','react','bun'];await save(p,c);
   const changed=[];
   async function walk(dir){for(const ent of await readdir(dir,{withFileTypes:true})){const p=join(dir,ent.name);if(ent.isDirectory())await walk(p);else if(/\.(?:ts|tsx|js|jsx|mjs|cjs)$/.test(p)){const v=await readFile(p,'utf8');const n=v.replaceAll('@opentelemetry/api-logs','@opentelemetry/api').replaceAll('@opentelemetry/sdk-trace-base','@opentelemetry/sdk-trace');if(n!==v){await writeFile(p,n);changed.push(p.slice(root.length+1))}}}}

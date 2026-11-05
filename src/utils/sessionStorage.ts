@@ -265,13 +265,29 @@ export function clearAgentTranscriptSubdir(agentId: string): void {
   agentTranscriptSubdirs.delete(agentId)
 }
 
+const agentTranscriptOwners317 = new Map<
+  AgentId,
+  { sessionId: SessionId; projectDir: string; subdir?: string }
+>()
+export function captureAgentTranscriptOwner317(agentId: AgentId): void {
+  const sessionId = getSessionId()
+  const projectDir = getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
+  agentTranscriptOwners317.set(agentId, {
+    sessionId,
+    projectDir,
+    subdir: agentTranscriptSubdirs.get(agentId),
+  })
+  sessionTranscriptPaths.remember(sessionId, join(projectDir, `${sessionId}.jsonl`))
+}
+
 export function getAgentTranscriptPath(agentId: AgentId): string {
   // Same sessionProjectDir consistency as getTranscriptPathForSession —
   // subagent transcripts live under the session dir, so if the session
   // transcript is at sessionProjectDir, subagent transcripts are too.
-  const projectDir = getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
-  const sessionId = getSessionId()
-  const subdir = agentTranscriptSubdirs.get(agentId)
+  const owner = agentTranscriptOwners317.get(agentId)
+  const projectDir = owner?.projectDir ?? getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
+  const sessionId = owner?.sessionId ?? getSessionId()
+  const subdir = owner?.subdir ?? agentTranscriptSubdirs.get(agentId)
   const base = subdir
     ? join(projectDir, sessionId, 'subagents', subdir)
     : join(projectDir, sessionId, 'subagents')
@@ -1578,6 +1594,8 @@ export async function recordSidechainTranscript(
     true,
     agentId,
     startingParentUuid,
+    undefined,
+    agentId ? agentTranscriptOwners317.get(asAgentId(agentId))?.sessionId as UUID | undefined : undefined,
   )
 }
 
@@ -1710,14 +1728,15 @@ export async function hydrateRemoteSession(
   sessionId: string,
   ingressUrl: string,
 ): Promise<boolean> {
+  assertSafeAgentTranscriptId(sessionId)
   const project = getProject()
+  const projectDir = getProjectDir(getOriginalCwd())
 
   try {
     const remoteLogs =
       requireFetchedSessionEntries(await sessionIngress.getSessionLogs(sessionId, ingressUrl))
 
     // Ensure the project directory and session file exist
-    const projectDir = getProjectDir(getOriginalCwd())
     await mkdir(projectDir, { recursive: true, mode: 0o700 })
 
     // Compute the target without switching the active session. The outgoing
@@ -1752,7 +1771,9 @@ export async function hydrateRemoteSession(
 export async function hydrateFromCCRv2InternalEvents(
   sessionId: string,
 ): Promise<boolean> {
+  assertSafeAgentTranscriptId(sessionId)
   const startMs = Date.now()
+  const projectDir = getProjectDir(getOriginalCwd())
   const project = getProject()
   const reader = project.getInternalEventReader()
   if (!reader) {
@@ -1786,7 +1807,6 @@ export async function hydrateFromCCRv2InternalEvents(
       if (group) group.push(event.payload)
       else byAgent.set(agentId, [event.payload])
     }
-    const projectDir = getProjectDir(getOriginalCwd())
     await mkdir(projectDir, { recursive: true, mode: 0o700 })
     const sessionFile = join(projectDir, `${sessionId}.jsonl`)
     const entries = [{

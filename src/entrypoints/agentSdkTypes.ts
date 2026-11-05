@@ -11,6 +11,7 @@
 
 import { McpServer } from "@modelcontextprotocol/server";
 import { z } from 'zod/v4';
+import { createSessionRuntime317 } from './sdk/sessionRuntime317.js'
 import type { CallToolResult, ToolAnnotations } from "@modelcontextprotocol/server";
 
 // Control protocol types for SDK builders (bridge subpath consumers)
@@ -145,9 +146,9 @@ export function query(): Query {
  * @alpha
  */
 export function unstable_v2_createSession(
-  _options: SDKSessionOptions,
+  options: SDKSessionOptions,
 ): SDKSession {
-  throw new Error('unstable_v2_createSession is not implemented in the SDK')
+  return createSessionRuntime317(options)
 }
 
 /**
@@ -156,10 +157,10 @@ export function unstable_v2_createSession(
  * @alpha
  */
 export function unstable_v2_resumeSession(
-  _sessionId: string,
-  _options: SDKSessionOptions,
+  sessionId: string,
+  options: SDKSessionOptions,
 ): SDKSession {
-  throw new Error('unstable_v2_resumeSession is not implemented in the SDK')
+  return createSessionRuntime317(options, sessionId)
 }
 
 // @[MODEL LAUNCH]: Update the example model ID in this docstring.
@@ -176,10 +177,19 @@ export function unstable_v2_resumeSession(
  * ```
  */
 export async function unstable_v2_prompt(
-  _message: string,
-  _options: SDKSessionOptions,
+  message: string,
+  options: SDKSessionOptions,
 ): Promise<SDKResultMessage> {
-  throw new Error('unstable_v2_prompt is not implemented in the SDK')
+  const session = unstable_v2_createSession(options)
+  try {
+    await session.send(message)
+    for await (const event of session.stream()) {
+      if (event.type === 'result') return event
+    }
+    throw new Error('SDK prompt ended without a result')
+  } finally {
+    session.close()
+  }
 }
 
 /**

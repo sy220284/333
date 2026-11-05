@@ -27,7 +27,7 @@
         "./native/url-handler-src/index.ts"
       ],
       "@ant/claude-for-chrome-mcp": [
-        ".rebuild/deps/node_modules/@ant/claude-for-chrome-mcp/src/index.ts"
+        "./.rebuild/deps/node_modules/@ant/claude-for-chrome-mcp/src/index.ts"
       ],
       "@ant/computer-use-mcp": [
         "./src/types/upstreamComputerUse/index.d.ts"

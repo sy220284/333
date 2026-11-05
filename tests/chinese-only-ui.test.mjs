@@ -2,9 +2,9 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8').split('//# sourceMappingURL=')[0]
-test('简体中文是唯一有效语言', () => {
-  assert.match(read('src/utils/settings/settings.ts'), /language: '简体中文'/)
-  assert.match(read('src/constants/prompts.ts'), /Always respond in Simplified Chinese/)
+test('界面固定简体中文，模型回答遵循合并后的语言设置', () => {
+  assert.doesNotMatch(read('src/utils/settings/settings.ts'), /language: '简体中文'/)
+  assert.match(read('src/constants/prompts.ts'), /getLanguageSection\(getInitialSettings\(\)\.language\)/)
   assert.doesNotMatch(read('src/components/Settings/Config.tsx'), /LanguagePicker|setShowSubmenu\('Language'\)|Default \(English\)/)
   assert.match(read('src/components/Settings/Config.tsx'), /显示语言：简体中文（固定）/)
 })
