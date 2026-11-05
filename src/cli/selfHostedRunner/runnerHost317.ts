@@ -12,6 +12,7 @@ import { hostname } from 'node:os'
 import { createSessionSpawner } from '../../bridge/sessionRunner.js'
 import type { SessionHandle } from '../../bridge/types.js'
 import { RunnerHttpError317, SelfHostedRunnerApi317 } from './runnerApi317.ts'
+import { prepareRunnerWorkspace317 } from './runnerWorkspace317.ts'
 
 export type RunnerHostOptions317 = {
   api: SelfHostedRunnerApi317
@@ -124,9 +125,8 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       remoteToken = issued.session_token
       if (issued.tools_host) throw new Error('Assignment requires a dedicated tools host')
       const remote = await options.api.getSessionRemoteConfig(id,remoteToken,ownedAbort.signal)
-      if (remote.sources.length || remote.push_targets.length) {
-        throw new Error('Assignment requires checkout/push lifecycle hooks that are not configured')
-      }
+      // Reconstruct the official prep path: verified sources, target branches,
+      // isolated checkout, then start the same session worker from its repo.
       remoteBase = remote.api_base_url ?? ''
       if (!remoteBase) throw new Error('Assignment lacks api_base_url')
       const cwd = sessionDirectory(root,id)
@@ -150,9 +150,15 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
           }).finally(() => { heartbeatPending = false })
       },options.heartbeatIntervalMs ?? 30_000)
       heartbeatTimer.unref?.()
+      const prepared = await prepareRunnerWorkspace317({
+        root:cwd, sources:remote.sources, pushTargets:remote.push_targets,
+        requestedCwd:remote.cwd, signal:ownedAbort.signal,
+        onStatus:status,
+      })
+      const childCwd = prepared.cwd
       const sdkUrl = new URL('/v1/code/sessions/'+encodeURIComponent(id),remoteBase).toString()
       const handle = options.createChild
-        ? options.createChild(id,sdkUrl,remoteToken,workerEpoch,cwd,env)
+        ? options.createChild(id,sdkUrl,remoteToken,workerEpoch,childCwd,env)
         : createSessionSpawner({
             execPath:options.execPath,scriptArgs:options.scriptArgs,
             env,verbose:false,sandbox:false,onDebug:status,
@@ -161,7 +167,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
           }).spawn({
             sessionId:id,sdkUrl,accessToken:remoteToken,useCcrV2:true,
             workerEpoch,
-          },cwd)
+          },childCwd)
       status('[runner:session] started '+id)
       const completion = (async () => {
         const result = await handle.done
