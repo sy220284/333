@@ -1,0 +1,98 @@
+name: PR7经类型推断验证的TS签名批次
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - '.github/workflows/apply-inferred-ts-contracts-pr7.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: pr7-inferred-ts-contracts-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 安装冻结TypeScript编译器和项目依赖
+        run: |
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 检查现有代码基线
+        run: node tools/dev/dev.mjs typecheck:all
+      - name: 将真实类型推断结果补充到源码
+        run: node tools/dev/annotate-inferred-ts-contracts.mjs --apply --limit=40
+      - name: 保留经类型检查证明正确的源码修改
+        shell: bash
+        run: |
+          set -euo pipefail
+          for round in $(seq 1 6); do
+            if node tools/dev/dev.mjs typecheck:all > .rebuild/governance/inferred-typecheck.log 2>&1; then
+              cat .rebuild/governance/inferred-typecheck.log
+              break
+            fi
+            mapfile -t broken < <(grep -Eo '(src|native)/[^ ()]+[.]tsx?[(][0-9]+,[0-9]+[)]' .rebuild/governance/inferred-typecheck.log | cut -d '(' -f1 | sort -u || true)
+            reverted=0
+            for file in "${broken[@]}"; do
+              if [ -f "$file" ] && ! git diff --quiet -- "$file"; then
+                echo "编译器拒绝此类型注释，保留原实现供人工改写：$file"
+                git restore -- "$file"
+                reverted=$((reverted+1))
+              fi
+            done
+            if [ "$reverted" -eq 0 ] || [ "$round" -eq 6 ]; then
+              cat .rebuild/governance/inferred-typecheck.log
+              exit 1
+            fi
+          done
+          node tools/dev/type-migration-audit.mjs
+          node tools/dev/type-migration-strict.mjs
+      - name: 生产构建及兼容行为回归
+        run: |
+          bun build/rebuild.mjs
+          node --test tests/language-file-contract.test.mjs tests/m6-gateway-jsonb-317.test.mjs
+          git diff --check
+      - name: 提交类型转换成果到PR7并在合并后复验
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add src native
+          if git diff --cached --quiet; then
+            echo '所有类型推断候选均已在主线或不适用'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m '依据真实TypeScript推断补齐导出函数与参数契约'
+          for attempt in 1 2 3 4 5; do
+            git fetch origin upgrade/2.1.310-m1-evidence
+            git rebase origin/upgrade/2.1.310-m1-evidence
+            node tools/dev/dev.mjs typecheck:all
+            if git push origin HEAD:refs/heads/upgrade/2.1.310-m1-evidence; then
+              echo 'TypeScript推断转换已提交并通过最新主线类型检查'
+              exit 0
+            fi
+          done
+          exit 1
+      - name: 保存类型推断与验收证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr7-inferred-ts-contract-migration
+          path: |
+            .rebuild/governance/inferred-ts-contracts.json
+            .rebuild/governance/type-migration-report.json
+            .rebuild/governance/inferred-typecheck.log
+          retention-days: 30
+          if-no-files-found: warn
