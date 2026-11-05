@@ -16,6 +16,9 @@ import { prepareRunnerWorkspace317, pushRunnerOutcomeBranches317 } from './runne
 import { mapRunnerRemoteCliArgs317, stageRunnerPromptFlags317, stageRunnerMcpConfig317 } from './runnerCliArgs317.ts'
 import { stageRunnerAgentFiles317 } from './runnerAgents317.ts'
 import { unlink } from 'node:fs/promises'
+import type { SessionActivity } from '../../bridge/types.js'
+import { checkRunnerIdleHold317, parseRunnerMinutes317, parseRunnerMilliseconds317,
+  RUNNER_HOLD_DEFAULT_MS_317, RUNNER_HOLD_RECHECK_MS_317 } from './runnerIdleHold317.ts'
 
 type RunnerInferenceAuth317 = { token:string; expiresInSeconds:number }
 function runnerInferenceAuth317(remote: {inference_auth?:unknown},id:string):RunnerInferenceAuth317 {
@@ -46,6 +49,9 @@ export type RunnerHostOptions317 = {
   sessionTokenRefreshIntervalMs?: number
   inferenceTokenRefreshIntervalMs?: number
   drainWaitMs?: number
+  idleReleaseMs?: number
+  holdIdleFile?: string
+  maxHoldMs?: number
   pushOutcomeOnRelease?: boolean
   clientLabel?: string
   lockToAccountId?: string
@@ -53,7 +59,8 @@ export type RunnerHostOptions317 = {
   onStatus?: (message: string) => void
   createChild?: (sessionId: string, sdkUrl: string, accessToken: string,
     epoch: number, cwd: string, environment: NodeJS.ProcessEnv,
-    onTokenAck?: (requestId: string)=>void) => SessionHandle
+    onTokenAck?: (requestId: string)=>void,
+    onActivity?: (activity: SessionActivity)=>void) => SessionHandle
 }
 type ActiveAssignment = {
   handle: SessionHandle
@@ -136,6 +143,14 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
        options.inferenceTokenRefreshIntervalMs < 1)) {
     throw new RangeError('Inference token refresh interval must be a positive integer')
   }
+  for(const [name,value] of [
+    ['idleReleaseMs',options.idleReleaseMs],['maxHoldMs',options.maxHoldMs],
+  ] as const){
+    if(value!==undefined && (!Number.isFinite(value)||value<0||value>10080*60_000))
+      throw new RangeError(name+' must be between 0 and 10080 minutes')
+  }
+  if(options.holdIdleFile && !resolve(options.holdIdleFile).startsWith('/') && process.platform!=='win32')
+    throw new Error('Runner idle marker must use a local path')
   const status = options.onStatus ?? (() => {})
   const root = resolve(options.baseDir)
   await mkdir(root, {recursive:true,mode:0o700})
@@ -190,6 +205,80 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
     let heartbeatPending = false
     let stagedPromptFiles:string[]=[]
     const heartbeatAbort = new AbortController()
+    let idleTimer: ReturnType<typeof setTimeout> | undefined
+    let idleSince = 0
+    let idleVersion = 0
+    let idleReleased = false
+    let idleCheckFailures = 0
+    let sessionHandle: SessionHandle | undefined
+    const idleInterval = options.idleReleaseMs ?? 0
+    const holdDeadline = options.maxHoldMs ?? RUNNER_HOLD_DEFAULT_MS_317
+    const cancelIdle = () => {
+      idleVersion++
+      idleSince=0
+      idleCheckFailures=0
+      if(idleTimer)clearTimeout(idleTimer)
+      idleTimer=undefined
+    }
+    const scheduleIdle = (delay:number,version:number) => {
+      if(idleTimer)clearTimeout(idleTimer)
+      idleTimer=setTimeout(()=>{void tryReleaseIdle(version)},Math.max(1,delay))
+      idleTimer.unref?.()
+    }
+    async function tryReleaseIdle(version:number): Promise<void> {
+      idleTimer=undefined
+      if(version!==idleVersion || idleSince===0 || !sessionHandle ||
+          ownedAbort.signal.aborted || heartbeatAbort.signal.aborted || idleReleased)return
+      const elapsed=Date.now()-idleSince
+      if(elapsed<idleInterval){scheduleIdle(idleInterval-elapsed,version);return}
+      if(options.holdIdleFile && holdDeadline>idleInterval && holdDeadline>0 && elapsed<holdDeadline){
+        try {
+          const held=await Promise.race([
+            checkRunnerIdleHold317(options.holdIdleFile),
+            new Promise<boolean>((_,reject)=>setTimeout(()=>reject(new Error('hold marker check timeout')),2_000)),
+          ])
+          if(version!==idleVersion || ownedAbort.signal.aborted || heartbeatAbort.signal.aborted)return
+          if(held){
+            idleCheckFailures=0
+            scheduleIdle(Math.min(RUNNER_HOLD_RECHECK_MS_317,holdDeadline-elapsed),version)
+            return
+          }
+        } catch(error) {
+          if(version!==idleVersion)return
+          status('[runner:session] idle marker inspection failed for '+id+': '+
+            (error instanceof Error?error.message:String(error)))
+          if(++idleCheckFailures===1){scheduleIdle(2_000,version);return}
+        }
+      }
+      if(version!==idleVersion || ownedAbort.signal.aborted || heartbeatAbort.signal.aborted)return
+      try {
+        const outcome=await options.api.releaseSession(runnerToken,id)
+        if(version!==idleVersion)return
+        if(!outcome.released){
+          status('[runner:session] server declined idle release for '+id)
+          scheduleIdle(RUNNER_HOLD_RECHECK_MS_317,version)
+          return
+        }
+        idleReleased=true
+        status('[runner:session] '+id+' idle session released')
+        sessionHandle.kill()
+      }catch(error){
+        if(version!==idleVersion || ownedAbort.signal.aborted)return
+        status('[runner:session] idle release failed for '+id+': '+
+          (error instanceof Error?error.message:String(error)))
+        scheduleIdle(RUNNER_HOLD_RECHECK_MS_317,version)
+      }
+    }
+    const onRunnerActivity = (activity: SessionActivity) => {
+      if(idleInterval===0 || idleReleased)return
+      if(activity.type==='result'){
+        cancelIdle()
+        idleSince=Date.now()
+        scheduleIdle(idleInterval,idleVersion)
+      } else {
+        cancelIdle()
+      }
+    }
     try {
       const issued = await options.api.issueSessionToken(runnerToken,id,ownedAbort.signal)
       remoteToken = issued.session_token
@@ -246,13 +335,14 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       ]
       const sdkUrl = new URL('/v1/code/sessions/'+encodeURIComponent(id),remoteBase).toString()
       const handle = options.createChild
-        ? options.createChild(id,sdkUrl,remoteToken,workerEpoch,childCwd,env,onTokenAck)
+        ? options.createChild(id,sdkUrl,remoteToken,workerEpoch,childCwd,env,onTokenAck,onRunnerActivity)
         : createSessionSpawner({
             execPath:options.execPath,scriptArgs:options.scriptArgs,
             additionalArgs:deliveredCliArgs,
             additionalDirs:prepared.addDirs,
             env,verbose:false,sandbox:false,onDebug:status,
             onTokenAck:(_sessionId,requestId)=>onTokenAck(requestId),
+            onActivity:(_sessionId,activity)=>onRunnerActivity(activity),
             debugFile:join(sessionConfigDir,'claude-code-debug.txt'),
             runnerRuntime:{apiBaseUrl:remoteBase,configDir:sessionConfigDir,
               inferenceToken},
@@ -260,6 +350,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
             sessionId:id,sdkUrl,accessToken:remoteToken,useCcrV2:true,
             workerEpoch,
           },childCwd)
+      sessionHandle=handle
       status('[runner:session] started '+id)
       // A worker's session_token expires independently of the runner_token.
       // Refresh the session credential and notify the live CCR v2 child.
@@ -315,12 +406,14 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       inferenceRefreshTimer.unref?.()
       const completion = (async () => {
         const result = await handle.done
-        if (options.pushOutcomeOnRelease && result !== 'completed') {
+        if (options.pushOutcomeOnRelease && result !== 'completed' && !idleReleased) {
           // Preserve interrupted/failed changes before releasing this worker.
           // This is deliberately opt-in, matching the official 317 CLI flag.
           await pushRunnerOutcomeBranches317(prepared.outcomeBranches,{onStatus:status})
         }
-        if (result === 'failed') {
+        if (idleReleased) {
+          status('[runner:session] idle release already acknowledged for '+id)
+        } else if (result === 'failed') {
           await options.api.reportSessionFailure(runnerToken,id,'session_failed')
         } else {
           const outcome = await options.api.releaseSession(runnerToken,id)
@@ -335,6 +428,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
         throw error
       }).finally(async () => {
         heartbeatAbort.abort()
+        cancelIdle()
         if (heartbeatTimer) clearInterval(heartbeatTimer)
         if (sessionRefreshTimer) clearInterval(sessionRefreshTimer)
         if (inferenceRefreshTimer) clearInterval(inferenceRefreshTimer)
@@ -478,6 +572,7 @@ export class RunnerUsageError317 extends Error {
 }
 type CliOptions = { apiUrl: string; secretFile?: string; capacity: number; baseDir: string;
   execPath: string; pollMs: number; drainMs: number; pushOutcomeOnRelease: boolean;
+  idleReleaseMs: number; holdIdleFile?: string; maxHoldMs: number;
   clientLabel?: string;
   lockToAccountId?: string; agentProxyUrl?: string }
 function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions | 'help' {
@@ -493,6 +588,10 @@ function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions 
     clientLabel:env.SELF_HOSTED_RUNNER_CLIENT_LABEL,
     lockToAccountId:env.SELF_HOSTED_RUNNER_LOCK_TO_ACCOUNT,
     agentProxyUrl:env.SELF_HOSTED_RUNNER_AGENT_PROXY_URL,
+    idleReleaseMs:parseRunnerMilliseconds317(env.SELF_HOSTED_RUNNER_SESSION_IDLE_MS,'SELF_HOSTED_RUNNER_SESSION_IDLE_MS'),
+    holdIdleFile:env.SELF_HOSTED_RUNNER_HOLD_IDLE_FILE,
+    maxHoldMs:parseRunnerMilliseconds317(env.SELF_HOSTED_RUNNER_MAX_HOLD_MS,
+      'SELF_HOSTED_RUNNER_MAX_HOLD_MS',RUNNER_HOLD_DEFAULT_MS_317),
   }
   for(let i=0;i<argv.length;i++){
     const flag=argv[i]
@@ -503,7 +602,8 @@ function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions 
     if(!['--api-url','--environment-secret-file','--pool-secret-file',
       '--capacity','--base-dir','--exec-path','--client-label','--lock-to-account',
       '--agent-proxy-url','--poll-interval-ms','--drain-wait-sec',
-      '--drain-wait-bg-tasks-sec'].includes(flag)){
+      '--drain-wait-bg-tasks-sec','--release-idle-session-min',
+      '--hold-idle-file','--max-hold-min'].includes(flag)){
       throw new RunnerUsageError317('unknown flag '+flag)
     }
     const value=argv[++i]
@@ -519,6 +619,10 @@ function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions 
       case '--lock-to-account': parsed.lockToAccountId=value;break
       case '--agent-proxy-url': parsed.agentProxyUrl=value;break
       case '--poll-interval-ms': parsed.pollMs=Number(value);break
+      case '--release-idle-session-min':
+        parsed.idleReleaseMs=parseRunnerMinutes317(value,flag);break
+      case '--hold-idle-file': parsed.holdIdleFile=resolve(value);break
+      case '--max-hold-min': parsed.maxHoldMs=parseRunnerMinutes317(value,flag);break
       case '--drain-wait-sec':
       case '--drain-wait-bg-tasks-sec': parsed.drainMs=Number(value)*1000;break
     }
@@ -548,6 +652,9 @@ export async function selfHostedRunnerMain317(argv: readonly string[]): Promise<
       '  --base-dir <path>              Isolated sessions directory\n'+
       '  --exec-path <path>             Claude child executable\n'+
       '  --drain-wait-sec <n>           Wait before terminating active sessions\n'+
+      '  --release-idle-session-min <n> Release idle sessions after n minutes (0 disables)\n'+
+      '  --hold-idle-file <path>        Keep idle sessions while a local marker is fresh\n'+
+      '  --max-hold-min <n>             Max idle hold window in minutes (default 1440)\n'+
       '  --push-outcome-on-release     Preserve unfinished outcome commits on shutdown\n')
     return
   }
@@ -577,6 +684,8 @@ export async function selfHostedRunnerMain317(argv: readonly string[]): Promise<
     await startSelfHostedRunnerHost317({api,capacity:config.capacity,baseDir:config.baseDir,
       execPath:executable,scriptArgs:args,env:process.env,
       pollIntervalMs:config.pollMs,drainWaitMs:config.drainMs,
+      idleReleaseMs:config.idleReleaseMs,holdIdleFile:config.holdIdleFile,
+      maxHoldMs:config.maxHoldMs,
       pushOutcomeOnRelease:config.pushOutcomeOnRelease,
       clientLabel:config.clientLabel,lockToAccountId:config.lockToAccountId,
       signal:controller.signal,onStatus:line=>process.stderr.write(line+'\n')})
