@@ -126,7 +126,7 @@ export function createArtifactCommentModel317(
   }
 }
 
-type LeaseStore = { done: string[] }
+type LeaseStore = { done: string[]; published?: Record<string, string> }
 
 export function artifactEventLease317(
   serverId: string,
@@ -136,6 +136,7 @@ export function artifactEventLease317(
   const path = join(dir, key + '.json')
   const claimed = new Set<string>()
   let done: Set<string> | undefined
+  let published = new Map<string, string>()
 
   async function load(): Promise<Set<string>> {
     if (done) return done
@@ -143,13 +144,35 @@ export function artifactEventLease317(
       const parsed = JSON.parse(await readFile(path, 'utf8')) as LeaseStore
       if (!Array.isArray(parsed.done)) throw new Error('Invalid artifact event ledger')
       done = new Set(parsed.done.filter(x=>typeof x==='string' && x.length <= 180))
+      published = new Map(Object.entries(parsed.published ?? {})
+        .filter(([id, text]) => id.length <= 180 &&
+          typeof text === 'string' && text.length <= 4000))
     } catch (error) {
       if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error
       done = new Set()
     }
     return done
   }
+  async function persist() {
+    await mkdir(dir, { recursive: true, mode: 0o700 })
+    const temp = path + '.' + randomUUID() + '.tmp'
+    await writeFile(temp, JSON.stringify({
+      done: [...(await load())].slice(-500),
+      published: Object.fromEntries(published),
+    }), { flag:'wx', mode:0o600 })
+    await rename(temp, path)
+  }
   return {
+    async getPublishedReply(id) {
+      await load()
+      return published.get(id) ?? null
+    },
+    async markPublished(id, reply) {
+      if (!claimed.has(id)) throw new Error('Artifact published event lacks an active lease')
+      await load()
+      published.set(id, reply)
+      await persist()
+    },
     async claim(id) {
       const ledger = await load()
       if (ledger.has(id) || claimed.has(id)) return false
@@ -160,11 +183,8 @@ export function artifactEventLease317(
       if (!claimed.has(id)) throw new Error('Artifact event completion has no active lease')
       const ledger = await load()
       ledger.add(id)
-      await mkdir(dir, { recursive: true, mode: 0o700 })
-      const temp = path + '.' + randomUUID() + '.tmp'
-      await writeFile(temp, JSON.stringify({done: [...ledger].slice(-500)}),
-        { flag:'wx', mode:0o600 })
-      await rename(temp, path)
+      published.delete(id)
+      await persist()
       claimed.delete(id)
     },
     async release(id) { claimed.delete(id) },
