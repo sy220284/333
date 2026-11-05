@@ -1,4 +1,5 @@
 /** Protocol-aware request conversion. Preserve incoming prompt text verbatim. */
+// biome-ignore lint/suspicious/noExplicitAny: Wire payloads are dynamic before being normalized per provider.
 type JSONValue = Record<string, any>
 export type AnthropicRequest = {
   model: string
