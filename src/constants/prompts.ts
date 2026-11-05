@@ -121,9 +121,10 @@ function getAntModelOverrideSection(): string | null {
   return getAntModelOverrideConfig()?.defaultSystemPromptSuffix || null
 }
 
-function getLanguageSection(): string {
+function getLanguageSection(language: string | undefined): string | null {
+  if (!language?.trim()) return null
   return `# Language
-Always respond in Simplified Chinese (简体中文). Use Simplified Chinese for all explanations, comments, and communications with the user. Keep programming language names, commands, paths, API names, and code identifiers unchanged.`
+Always respond in ${language}. Use ${language} for explanations and communication with the user. Keep technical terms, API names, commands, paths, and code identifiers in their original form. Preserve the correct spelling and diacritical marks of the selected language.`
 }
 
 function getOutputStyleSection(
@@ -439,7 +440,7 @@ ${CYBER_RISK_INSTRUCTION}`,
       getSystemRemindersSection(),
       await loadMemoryPrompt(),
       envInfo,
-      getLanguageSection(),
+      getLanguageSection(getInitialSettings().language),
       // When delta enabled, instructions are announced via persisted
       // mcp_instructions_delta attachments (attachments.ts) instead.
       isMcpInstructionsDeltaEnabled()
@@ -468,11 +469,15 @@ ${CYBER_RISK_INSTRUCTION}`,
     systemPromptSection('env_info_simple', () =>
       computeSimpleEnvInfo(model, additionalWorkingDirectories),
     ),
-    systemPromptSection('language', () =>
-      getLanguageSection(),
+    DANGEROUS_uncachedSystemPromptSection(
+      'language',
+      () => getLanguageSection(getInitialSettings().language),
+      'Language preference can change between turns',
     ),
-    systemPromptSection('output_style', () =>
-      getOutputStyleSection(outputStyleConfig),
+    DANGEROUS_uncachedSystemPromptSection(
+      'output_style',
+      () => getOutputStyleSection(outputStyleConfig),
+      'Output style can change between turns',
     ),
     // When delta enabled, instructions are announced via persisted
     // mcp_instructions_delta attachments (attachments.ts) instead of this
