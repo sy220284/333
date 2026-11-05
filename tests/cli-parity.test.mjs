@@ -61,6 +61,25 @@ const official317 = JSON.parse(
 );
 assert.equal(official317.version, targetVersion);
 
+// 333's additive interfaces are explicitly documented here. The official
+// 2.1.317 command and flag contract is still compared exhaustively; only
+// these intentional additions may differ from the Claude reference.
+const independentCommands = {
+  '--help': ['local-settings', 'local-tasks', 'models'],
+  'auth --help': ['api-key', 'chatgpt-login', 'chatgpt-logout', 'chatgpt-status'],
+};
+function verifyBaseAndExtensions(actual, official, commandLine) {
+  const additions = independentCommands[commandLine] ?? [];
+  for (const entry of additions) {
+    assert.ok(actual.commands.includes(entry), `333 independent command absent: ${entry}`);
+    assert.equal(actual.commands.filter(name => name === entry).length, 1);
+  }
+  assert.deepEqual(actual.flags, official.flags,
+    `Original 2.1.317 flags must stay available: ${commandLine}`);
+  assert.deepEqual(actual.commands.filter(name => !additions.includes(name)), official.commands,
+    `2.1.317 original commands changed: ${commandLine}`);
+}
+
 function nativeHelp(executable, args) {
   const output = spawnSync(executable, args, {
     cwd: root,
@@ -85,7 +104,7 @@ for (const [commandLine, expected] of Object.entries(official317.commands)) {
       assert.deepEqual(native, expected, `The official x64 reference changed: ${commandLine}`);
     }
     const actual = sections(compiledHelp(args));
-    assert.deepEqual(actual, expected, `2.1.317 CLI discrepancy: ${commandLine}`);
+    verifyBaseAndExtensions(actual, expected, commandLine);
   });
 }
 
