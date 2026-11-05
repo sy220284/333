@@ -1,0 +1,81 @@
+name: PR7 恢复中文UI并核验原始TSX改写
+on:
+  push:
+    branches: [upgrade/2.1.310-m1-evidence]
+    paths:
+      - '.github/workflows/fix-localized-tsx-recovery-pr7.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: pr7-restore-ui-localization-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 修复已恢复TSX中的中文UI文案回退
+        run: node tools/dev/restore-localized-ui-after-tsx-recovery.mjs
+      - name: 核实所有恢复组件原有中文内容均保留
+        run: node tools/dev/audit-restored-ui-localization.mjs
+      - name: 准备完整真实依赖
+        run: |
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 全量TS、严格迁移、内容审计
+        run: |
+          node tools/dev/dev.mjs typecheck:all
+          node tools/dev/type-migration-audit.mjs
+          node tools/dev/type-migration-strict.mjs
+      - name: 生产重建和交互测试
+        run: |
+          bun build/rebuild.mjs
+          node --test tests/language-file-contract.test.mjs
+          node --test tests/welcome-layout.test.mjs tests/chinese-only-ui.test.mjs tests/clawd-animations.test.mjs
+          git diff --check
+      - name: 同步当前分支并回写中文UI修复
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add src
+          if git diff --cached --quiet; then
+            echo '当前分支没有新增中文UI回退问题'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m '修复恢复TSX导致的中文界面文案丢失并通过完整回归'
+          for attempt in 1 2 3 4 5; do
+            git fetch origin upgrade/2.1.310-m1-evidence
+            git rebase origin/upgrade/2.1.310-m1-evidence
+            node tools/dev/audit-restored-ui-localization.mjs
+            node tools/dev/dev.mjs typecheck:all
+            if git push origin HEAD:refs/heads/upgrade/2.1.310-m1-evidence; then
+              echo '已修复PR7全部检测到的中文文案回退'
+              exit 0
+            fi
+          done
+          exit 1
+      - name: 保留中文UI修复与审计证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr7-ui-l10n-repair
+          path: |
+            .rebuild/governance/tsx-localization-repair.json
+            .rebuild/governance/tsx-localization-regression.json
+            .rebuild/governance/type-migration-report.json
+          retention-days: 30
+          if-no-files-found: warn
