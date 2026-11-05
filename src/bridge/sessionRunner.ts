@@ -131,6 +131,12 @@ function extractActivities(
   const now = Date.now()
 
   switch (msg.type) {
+    case 'user': {
+      // Every new user turn disarms an idle-release timer, including the
+      // replayed CCR messages that reach this long-lived process.
+      activities.push({type:'user',summary:'User turn received',timestamp:now})
+      break
+    }
     case 'assistant': {
       const message = msg.message as Record<string, unknown> | undefined
       if (!message) break
