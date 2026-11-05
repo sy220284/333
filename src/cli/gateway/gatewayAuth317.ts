@@ -19,6 +19,7 @@ export type GatewayOidcConfig317 = {
   client_id: string
   client_secret?: string
   scopes?: string[]
+  user_id_claim?: string
 }
 export type GatewayOidcClaims317 = Record<string, unknown> & {
   sub: string
@@ -53,6 +54,23 @@ const decode = (data: string): Record<string, unknown> => {
 }
 const now = (): number => Math.floor(Date.now() / 1000)
 const accepted = new Set(['RS256','RS384','PS256','ES256'])
+
+/** Resolve the effective 317 gateway principal without accepting a missing IdP subject. */
+export function gatewayOidcPrincipal317(
+  claims: GatewayOidcClaims317,
+  claimName: string = 'sub',
+): string {
+  if (typeof claims.sub !== 'string' || claims.sub.length === 0) {
+    throw new Error('IdP claims missing required `sub`')
+  }
+  const candidate: unknown = claims[claimName]
+  if (typeof candidate !== 'string' || candidate.length === 0) {
+    throw Object.assign(new Error(
+      `oidc.user_id_claim names \`${claimName}\`, which the IdP did not send as a non-empty string. Check oidc.scopes, and oidc.scope_on_refresh if only refreshes fail`,
+    ), { code: 'USER_ID_CLAIM_MISSING' })
+  }
+  return candidate
+}
 
 export function signGatewaySession317(claims: Record<string, unknown>, secret: string | string[], issuer: string, ttlHours: number = 12): string {
   const issuedAt = now()
