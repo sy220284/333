@@ -1,11 +1,27 @@
 import { createHash } from 'node:crypto'
 // Claude Code 2.1.310 account session population: cloud and Remote Control.
 const validId = /^(?:cse|session)_[A-Za-z0-9_-]+$/
-export const canonicalId = (id: string): string|undefined => validId.test(id ?? '') ? id.replace(/^(?:cse|session)_/, '') : ''
+export const canonicalId = (id: string | null | undefined): string =>
+  typeof id === 'string' && validId.test(id) ? id.replace(/^(?:cse|session)_/, '') : ''
 /** Bind names and bridge addresses to the authenticated account and organization. */
-export const peerIdentityKey = (accessToken: string, orgUUID: string) : string =>
+export const peerIdentityKey = (accessToken: string, orgUUID: string): string | null =>
   accessToken && orgUUID ? createHash('sha256').update(`${orgUUID}\0${accessToken}`).digest('hex') : null
-const active = row => row.acceptsPeerMessages !== false && !row.unreachableFromHere &&
+type PeerStatus317 = string
+export type PeerDirectoryEntry317 = {
+  name: string; id?: string; ref: string; kind: string; status: PeerStatus317
+  acceptsPeerMessages: boolean; unreachableFromHere: boolean; address?: string
+}
+type PeerDirectoryRequest317 = (
+  url: string, headers: Record<string, string>
+) => Promise<unknown>
+type PeerDiscoveryResult317 = {
+  peers: PeerDirectoryEntry317[]
+  notes: Array<{kind: string; text: string}>
+  available: boolean
+}
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
+const active = (row: { acceptsPeerMessages?: boolean; unreachableFromHere?: boolean; status?: string }): boolean => row.acceptsPeerMessages !== false && !row.unreachableFromHere &&
   !['archived','offline','disconnected'].includes(row.status)
 /** Cloud list entries have no proven delivery route; only an active Remote
  * Control endpoint establishes a bridge address (2.1.310 chunk-xje85fg4).
@@ -18,11 +34,11 @@ type PeerSnapshot317 = {
 }
 export function mergeSessionPeers({ local = [], cloud = [], bridge = [], selfId, verifiedAccountList = true }:
   { local?: PeerSnapshot317[]; cloud?: PeerSnapshot317[]; bridge?: PeerSnapshot317[];
-    selfId?: string; verifiedAccountList?: boolean } = {}) {
+    selfId?: string; verifiedAccountList?: boolean } = {}): PeerDirectoryEntry317[] {
   const seen = new Set(local.map(p => canonicalId(p.bridgeSessionId)).filter(Boolean))
   if (canonicalId(selfId)) seen.add(canonicalId(selfId))
-  const bridgeById = new Map()
-  const bridgeReachable = row => verifiedAccountList && !!row && active({
+  const bridgeById = new Map<string, PeerSnapshot317>()
+  const bridgeReachable = (row: PeerSnapshot317 | undefined): boolean => verifiedAccountList && !!row && active({
     status: row.offline ? 'offline' : row.status,
     acceptsPeerMessages: row.acceptsPeerMessages,
     unreachableFromHere: row.unreachableFromHere,
@@ -33,8 +49,8 @@ export function mergeSessionPeers({ local = [], cloud = [], bridge = [], selfId,
     if (!bridgeById.has(key) || (!bridgeReachable(bridgeById.get(key)) && bridgeReachable(row)))
       bridgeById.set(key, row)
   }
-  const peers = []
-  const include = (row, kind, transport) => {
+  const peers: PeerDirectoryEntry317[] = []
+  const include = (row: PeerSnapshot317, kind: 'cloud' | 'remote_control', transport?: PeerSnapshot317): void => {
     const key = canonicalId(row?.id)
     if (!key || seen.has(key)) return
     seen.add(key)
@@ -47,7 +63,7 @@ export function mergeSessionPeers({ local = [], cloud = [], bridge = [], selfId,
     const workerStatus = row.workerStatus ?? row.status
     const status = connected
       ? (!row.offline && workerStatus === 'requires_action'
-        ? 'requires_action' : transport.workerStatus ?? transport.status ?? workerStatus ?? 'active')
+        ? 'requires_action' : transport?.workerStatus ?? transport?.status ?? workerStatus ?? 'active')
       : (transport?.offline || row.offline ? 'offline' : workerStatus ?? 'unknown')
     const acceptsPeerMessages = row.acceptsPeerMessages !== false &&
       (transport ? transport.acceptsPeerMessages !== false : true)
@@ -65,22 +81,22 @@ export function mergeSessionPeers({ local = [], cloud = [], bridge = [], selfId,
   for (const row of bridge) include(row, 'remote_control', row)
   return peers
 }
-export function resolveRemoteRecipient(peers, token: string) {
+export function resolveRemoteRecipient(peers: ReadonlyArray<PeerDirectoryEntry317>, token: string): string | undefined {
   const m = /^(.+?) \[([A-Za-z0-9_-]{6})\]$/.exec(token)
   const found = peers.filter(p => m ? p.name === m[1] && p.ref === m[2] : p.name === token)
   return found.length === 1 && active(found[0]) ? found[0].address : undefined
 }
-let advertised = { time:0, peers:[], identityKey:null }
-export function rememberAccountRecipients(peers, time: number = Date.now(), identityKey: string = null) : void {
+let advertised: {time: number; peers: PeerDirectoryEntry317[]; identityKey: string | null} = { time:0, peers:[], identityKey:null }
+export function rememberAccountRecipients(peers: PeerDirectoryEntry317[], time: number = Date.now(), identityKey: string | null = null): void {
   advertised = { time, identityKey, peers:peers.filter(active) }
 }
-const currentRecipients = (time, identityKey) =>
+const currentRecipients = (time: number, identityKey: string | null): PeerDirectoryEntry317[] =>
   identityKey === advertised.identityKey && time >= advertised.time && time - advertised.time <= 30000
     ? advertised.peers : []
 /** Resolve from the *union* of local and account candidates so a colliding
  * name cannot silently select a different transport.
  */
-export function resolveUnifiedPeerRecipient(local, token: string, time: number = Date.now(), identityKey: string = null) {
+export function resolveUnifiedPeerRecipient(local: PeerDirectoryEntry317[], token: string, time: number = Date.now(), identityKey: string | null = null): {address: string | undefined; ambiguous: boolean} {
   const remote = currentRecipients(time, identityKey)
   const m = /^(.+?) \[([A-Za-z0-9_-]{6})\]$/.exec(token)
   const candidates = [...local, ...remote]
@@ -90,27 +106,33 @@ export function resolveUnifiedPeerRecipient(local, token: string, time: number =
   return {address: hits.length === 1 && addresses.length === 1 ? addresses[0] : undefined,
     ambiguous: hits.length > 1}
 }
-export function resolveAdvertisedRemoteRecipient(token: string, time: number = Date.now(), identityKey: string = null) {
+export function resolveAdvertisedRemoteRecipient(token: string, time: number = Date.now(), identityKey: string | null = null): string | undefined {
   return resolveRemoteRecipient(currentRecipients(time, identityKey), token)
 }
-async function walk(request, endpoint, headers, maxPages, cursorKey, normalize) {
-  const rows=[], ids=new Set()
-  let cursor=null, truncated=false
-  const seenCursors=new Set()
+async function walk(
+  request: PeerDirectoryRequest317, endpoint: URL, headers: Record<string, string>,
+  maxPages: number, cursorKey: 'cursor' | 'after_id',
+  normalize: (item: Record<string, unknown>) => PeerSnapshot317 | null,
+): Promise<{rows: PeerSnapshot317[]; failed: boolean; truncated: boolean}> {
+  const rows: PeerSnapshot317[] = [], ids = new Set<string>()
+  let cursor: string | null = null, truncated = false
+  const seenCursors = new Set<string>()
   for (let page=0;page<maxPages;page++) {
     const url=new URL(endpoint)
     if(cursor) url.searchParams.set(cursorKey,cursor)
     let reply
     try { reply=await request(url.toString(),headers) }
     catch { return { rows, failed:true, truncated } }
-    if(reply?.status!==200 || !Array.isArray(reply.data?.data)) return { rows, failed:true, truncated }
+    if(!isRecord(reply) || reply.status!==200 || !isRecord(reply.data) || !Array.isArray(reply.data.data)) return { rows, failed:true, truncated }
     for(const item of reply.data.data) {
-      const row=normalize(item), key=canonicalId(row?.id)
+      const row=isRecord(item)?normalize(item):null, key=canonicalId(row?.id)
       if(!key || ids.has(key)) continue
       ids.add(key);rows.push(row)
     }
-    cursor=cursorKey==='cursor' ? reply.data.next_cursor :
-      reply.data.has_more ? reply.data.last_id : null
+    const page = reply.data
+    const next = cursorKey==='cursor' ? page.next_cursor :
+      page.has_more ? page.last_id : null
+    cursor = typeof next === 'string' ? next : null
     if(!cursor) break
     if(seenCursors.has(cursor)) return {rows,failed:true,truncated:true}
     seenCursors.add(cursor)
@@ -118,7 +140,10 @@ async function walk(request, endpoint, headers, maxPages, cursorKey, normalize) 
   }
   return { rows, failed:false, truncated }
 }
-export async function discoverAccountPeers({request,baseUrl,accessToken,orgUUID,local=[],selfId}) {
+export async function discoverAccountPeers({
+  request, baseUrl, accessToken, orgUUID, local=[], selfId,
+}: {request: PeerDirectoryRequest317; baseUrl: string | URL; accessToken: string | null;
+  orgUUID: string | null; local?: PeerSnapshot317[]; selfId?: string}): Promise<PeerDiscoveryResult317> {
   if(!accessToken||!orgUUID) return { peers:[], notes:[], available:false }
   const headers={Authorization:`Bearer ${accessToken}`,'Content-Type':'application/json',
     'anthropic-version':'2023-06-01'}
@@ -138,7 +163,7 @@ export async function discoverAccountPeers({request,baseUrl,accessToken,orgUUID,
       row && (row.session_status??row.status)!=='archived' ?
         {id:row.id,title:row.title,status:row.session_status??row.status,
          acceptsPeerMessages:row.accepts_peer_messages!==false &&
-           row.external_metadata?.accepts_peer_messages!==false,
+           (!isRecord(row.external_metadata) || row.external_metadata.accepts_peer_messages!==false),
          offline:row.connection_status==='disconnected'} : null),
   ])
   const notes=[]
