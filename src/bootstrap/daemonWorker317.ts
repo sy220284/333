@@ -245,6 +245,9 @@ export async function runDaemonWorker317(kind: string | undefined,
   parent.on('SIGTERM', stop)
   parent.on('SIGINT', stop)
   parent.on('message', receive)
+  // Original chunk-jkh1zydw.js/he(): an IPC token channel must not keep a
+  // finished worker process alive after its active jobs have stopped.
+  if (typeof parent.send === 'function') parent.channel?.unref()
   const stopWatcher = (options.parentWatcher ?? watchDaemonWorkerParent317)(controller)
   try {
     if (kind === 'heartbeat') {
