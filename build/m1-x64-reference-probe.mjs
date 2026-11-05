@@ -68,7 +68,28 @@ function removeCredentials() {
 const envBase = removeCredentials()
 Object.assign(envBase, {CI:'1',TERM:'dumb',NO_COLOR:'1',DO_NOT_TRACK:'1',
   DISABLE_TELEMETRY:'1',CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1'})
-function validate(test, execution) {
+function validate(test, execution, productMode = false) {
+  if (productMode && ['help', 'invalid_output', 'invalid_permission',
+    'json_without_login', 'stream_without_login'].includes(test.id)) {
+    const out = execution.stdout, err = execution.stderr
+    if (execution.timed_out || execution.signal) {
+      return {ok:false,reason:'terminated'}
+    }
+    if (test.id === 'help') {
+      const retired = ['--print', '--input-format', '--output-format',
+        '--permission-prompts', '--forward-subagent-text']
+      return {
+        ok: execution.exit_code === 0 && /--autocompact/.test(out) &&
+          /--ax-screen-reader/.test(out) && retired.every(flag => !out.includes(flag)),
+        reason:'interactive_help_only',
+      }
+    }
+    return {
+      ok: execution.exit_code === 2 && !out.trim() &&
+        /333 已移除非交互模式（--print）/.test(err),
+      reason:'retired_headless_entry_rejected',
+    }
+  }
   const out = execution.stdout, err=execution.stderr
   if(execution.timed_out || execution.signal) return {ok:false,reason:'timed_out_or_terminated'}
   switch(test.id) {
@@ -100,7 +121,7 @@ function validate(test, execution) {
   }
   throw new Error(`unknown test id: ${test.id}`)
 }
-function runCase(bin,test,homeRoot) {
+function runCase(bin,test,homeRoot,productMode = false) {
   const home=join(homeRoot,test.id)
   mkdirSync(home,{recursive:true})
   const env={...envBase,HOME:home,XDG_CONFIG_HOME:join(home,'.config'),
@@ -110,7 +131,7 @@ function runCase(bin,test,homeRoot) {
   const actual={id:test.id,exit_code:call.status,signal:call.signal??null,
     timed_out:call.error?.code==='ETIMEDOUT',stdout:call.stdout??'',
     stderr:call.stderr??''}
-  const verdict=validate(test,actual)
+  const verdict=validate(test,actual,productMode)
   // The runner has a fresh HOME and no inherited account/API credentials.
   // Keep only bounded diagnostic text for local empty-list command contracts.
   const sampleAllowed = new Set(['version','version_verbose','mcp_list_empty','plugin_list_empty'])
@@ -137,18 +158,18 @@ function runCase(bin,test,homeRoot) {
     stdout_sha256:digest(actual.stdout),stderr_sha256:digest(actual.stderr),
     ...sample,...(resultShape?{structured_shape:resultShape}:{})}
 }
-function runSuite(binary) {
+function runSuite(binary,productMode = false) {
   const tmp=mkdtempSync(join(tmpdir(),'m1-claude-x64-'))
-  try {return cases.map(test=>runCase(binary,test,tmp))}
+  try {return cases.map(test=>runCase(binary,test,tmp,productMode))}
   finally {rmSync(tmp,{recursive:true,force:true})}
 }
 const referenceCases=runSuite(resolve(reference))
-const candidateCases=candidate ? runSuite(resolve(candidate)) : null
+const candidateCases=candidate ? runSuite(resolve(candidate), true) : null
 const result={schema:1,release:TARGET_RELEASE,platform:'linux-x64',reference_sha256:hash,
-  scope:'OFFLINE_UNAUTHENTICATED_CLI_CONTRACTS_ONLY',
+  scope:'OFFLINE_UNAUTHENTICATED_INTERACTIVE_ONLY_PRODUCT_CONTRACTS',
   reference:{passed:referenceCases.filter(x=>x.pass).length,total:referenceCases.length,cases:referenceCases},
   candidate:candidateCases && {passed:candidateCases.filter(x=>x.pass).length,total:candidateCases.length,cases:candidateCases},
-  evidence_mode: args['--allow-candidate-diff'] === 'true' ? 'M1_SOURCE_DELTA_CAPTURE_NOT_PRODUCT_ACCEPTANCE' : 'STRICT_TARGET_PARITY',
+  evidence_mode: args['--allow-candidate-diff'] === 'true' ? 'M1_SOURCE_DELTA_CAPTURE_NOT_PRODUCT_ACCEPTANCE' : 'STRICT_333_INTERACTIVE_ONLY',
   limitations:['No authenticated model calls','No interactive TUI rendering','No MCP server handshake',
     'No agent/workflow/tool execution','No implicit assertion of feature equivalence'] }
 mkdirSync(dirname(resolve(report)),{recursive:true})
@@ -167,8 +188,9 @@ if (candidateCases) {
     mismatch_ids: candidateMismatches.map(x => x.id),
   }))
 }
-// Evidence collection may retain known target differences, but previously
-// proven product behaviors are mandatory. Their regression must fail CI.
+// All 11 candidate cases are evaluated. The five intentional mode changes have
+// stricter, independent rejection/help contracts; other behavior still uses
+// the official reference expectations. Product regressions must fail CI.
 const requiredCandidateIds = (args['--require-candidate-cases'] ?? '')
   .split(',').map(id => id.trim()).filter(Boolean)
 const knownIds = new Set(cases.map(test => test.id))
