@@ -8,10 +8,19 @@ const ctx=()=>({
   coverage:read('docs/upgrade/upgrade-coverage.json'),
   signoffs:read('docs/upgrade/2.1.317-功能链路签收.json')
 })
-test('六层的全部20条链路都必须独立签收，空签收不得误报通过',()=>{
+test('六层签收数量由真实签收台账决定，允许后续功能逐条完成',()=>{
   const result=loadAudit()
+  const live=ctx().signoffs
   assert.equal(result.counts.layers,6)
   assert.equal(result.counts.chains,20)
+  assert.equal(result.counts.verified_chains,live.chains.length)
+  assert.equal(result.chains.filter(chain=>chain.status==='VERIFIED').length,live.chains.length)
+  assert.equal(result.all_verified,result.counts.closed_layers===6&&live.chains.length===20)
+})
+test('空签收表必须保持待验，不允许伪装为通过',()=>{
+  const x=ctx()
+  x.signoffs.chains=[]
+  const result=auditImplementation(x.manifest,x.coverage,x.signoffs)
   assert.equal(result.all_verified,false)
   assert.equal(result.counts.verified_chains,0)
   assert.equal(result.counts.closed_layers,0)
