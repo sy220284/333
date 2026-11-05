@@ -20,7 +20,7 @@ import {
   PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics'
 import {
-  BasicTracerProvider,
+  TracerProvider,
   BatchSpanProcessor,
   ConsoleSpanExporter,
 } from '@opentelemetry/sdk-trace'
@@ -378,7 +378,7 @@ async function initializeBetaTracing(
     scheduledDelayMillis: DEFAULT_TRACES_EXPORT_INTERVAL_MS,
   })
 
-  const tracerProvider = new BasicTracerProvider({
+  const tracerProvider = new TracerProvider({
     resource,
     spanProcessors: [spanProcessor],
   })
@@ -638,7 +638,7 @@ export async function initializeTelemetry(): Promise<import('@opentelemetry/api'
           }),
       )
 
-      const tracerProvider = new BasicTracerProvider({
+      const tracerProvider = new TracerProvider({
         resource,
         spanProcessors,
       })

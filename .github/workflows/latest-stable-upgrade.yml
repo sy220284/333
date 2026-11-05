@@ -58,8 +58,13 @@ jobs:
           npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
-          node tools/dev/dev.mjs typecheck:all
+      - name: TypeScript 7 全仓检查（收集诊断）
+        id: typecheck
+        continue-on-error: true
+        run: node tools/dev/dev.mjs typecheck:all
       - name: 全链路编译及运行测试
+        id: build
+        continue-on-error: true
         run: |
           set -euo pipefail
           node build/verify-bundled-assets.mjs
@@ -69,6 +74,13 @@ jobs:
           node build/compile-standalone.mjs
           node build/package-release.mjs
           npm run test:all
+      - name: 汇总验收结果（失败阻断）
+        if: always()
+        run: |
+          echo 'TypeScript: ${{ steps.typecheck.outcome }}'
+          echo '构建及运行: ${{ steps.build.outcome }}'
+          test "${{ steps.typecheck.outcome }}" = success
+          test "${{ steps.build.outcome }}" = success
       - uses: actions/upload-artifact@v7
         if: always()
         with:
