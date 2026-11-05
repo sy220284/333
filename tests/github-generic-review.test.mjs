@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { parseReviewRequest } from '../src/commands/reviewMode.ts'
-import { validRepository } from '../src/commands/github/github.ts'
+import { validRepository } from '../src/commands/github/repository.ts'
 import { githubWorkflow, GITHUB_SCRIPT_PATH, GITHUB_WORKFLOW_PATH } from '../src/commands/github/workflow.ts'
 import { githubReviewerScript } from '../src/commands/github/reviewerScript.ts'
 

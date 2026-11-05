@@ -4,15 +4,9 @@ import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
 import { githubWorkflow, GITHUB_SCRIPT_PATH, GITHUB_WORKFLOW_PATH } from './workflow.js'
 import { githubReviewerScript } from './reviewerScript.js'
 
-const REPO = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\/[A-Za-z0-9_.-]+$/
+import { validRepository } from './repository.js'
 const HELP = '用法：/github status | auth | repos | setup <owner/repo> | secret <owner/repo> <本机环境变量名> | review <owner/repo> <PR> [normal|deep|security|extreme] | runs <owner/repo>'
 const result = (value: string): { type:'text'; value:string } => ({type:'text',value})
-export function validRepository(raw: string): string {
-  const value = raw.replace(/^https:\/\/github\.com\//,'').replace(/\.git$/,'')
-  if (!REPO.test(value) || value.includes('..') || value.endsWith('/.'))
-    throw new Error('GitHub 仓库应为 owner/repo，且不能包含额外路径或域名')
-  return value
-}
 function validPr(raw: string): string {
   if (!/^[1-9][0-9]*$/.test(raw) || !Number.isSafeInteger(Number(raw)))
     throw new Error('PR 编号无效')
