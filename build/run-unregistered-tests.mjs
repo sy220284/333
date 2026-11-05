@@ -53,7 +53,9 @@ function checked(program, args, options = {}) {
 }
 
 export function runtimeForTest(file, source = readFileSync(resolve(ROOT, file), 'utf8')) {
-  if (file.endsWith('.mjs') && /from\s+['"]node:test['"]/.test(source)) return 'node'
+  // This node:test suite embeds TypeScript imports in a subprocess script
+  // string; run it under Node to avoid Bun's 5s implicit test timeout.
+  if (file === 'tests/m1-runner-declares-317.test.mjs') return 'node'
   if (file.endsWith('.ts') || /\b(?:from|import)\s*(?:\(|.*?\sfrom\s*)?['"]bun(?::|['"])/.test(source) ||
       /\bBun\.(?:serve|spawn|file|SQL|env|sleep)\b/.test(source) ||
       /(?:from|import)\s*(?:\(|.*?\sfrom\s*)?['"][^'"]+\.ts['"]/.test(source)) {
@@ -70,18 +72,12 @@ function runTest(file, runtime, options = {}) {
   let disposable = null
   try {
     if (file === 'tests/governance-contract-trace.test.mjs') {
-      // Governance uses the same frozen TypeScript installation as the dev
-      // checker; its tool root may be outside the source tree.
-      const home = process.env.DEV333_TOOLS_ROOT ??
-        join(process.env.HOME ?? process.env.USERPROFILE ?? '.', '.local/share/333-dev')
-      const available = [
-        join(home, 'dev-tools/node_modules/typescript/lib/typescript.js'),
-        resolve(ROOT, 'tools/dev/node_modules/typescript/lib/typescript.js'),
-      ]
-      if (!available.some(existsSync)) {
-        checked('npm', ['ci', '--prefix', 'tools/dev', '--ignore-scripts', '--no-audit', '--no-fund'])
+      // TypeScript 7 checks production source; the separately pinned TS5.9
+      // JavaScript parser is required for AST-based governance analysis.
+      const parser = process.env.TS_COMPILER_PATH
+      if (!parser || !existsSync(parser)) {
+        throw new Error('Governance AST parser missing: install pinned TypeScript 5.9.3 and set TS_COMPILER_PATH')
       }
-      if (!available.some(existsSync)) throw new Error('Frozen governance TypeScript compiler is missing')
       mkdirSync(resolve(ROOT, '.rebuild/governance'), { recursive: true })
       const dir = resolve(ROOT, '.rebuild/governance')
       const log = join(dir, 'typescript.log')
@@ -106,9 +102,10 @@ function runTest(file, runtime, options = {}) {
       }
     }
     if (file === 'tests/m1-ink-paste-event.test.mjs') {
-      const compiler = process.env.TS_COMPILER_PATH
+      const parser = process.env.TS_COMPILER_PATH
+      const compiler = parser ? join(dirname(parser), 'tsc.js') : undefined
       if (!compiler || !existsSync(compiler)) {
-        throw new Error('Pinned TypeScript parser must be installed for Ink event compilation')
+        throw new Error('Ink event compilation requires tsc.js beside the pinned TypeScript parser')
       }
       disposable = mkdtempSync(join(tmpdir(), '333-ink-event-test-'))
       const ambient = join(disposable, 'bun-ambient.d.ts')

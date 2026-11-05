@@ -71,7 +71,11 @@ jobs:
           node tools/governance/summarize.mjs types .rebuild/governance/typescript.log .rebuild/governance/type-report.json
       - name: 根据原始源码映射逐项核查缺失文件
         run: node tools/governance/missing-sources.mjs .rebuild/governance/type-report.json .rebuild/governance/missing-sources.json
+      - name: 安装AST分析专用冻结解析器
+        run: npm install --prefix "${RUNNER_TEMP}/333-governance-parser" --no-save --ignore-scripts --no-package-lock --no-audit --no-fund typescript@5.9.3
       - name: 提取所有缺失模块的导出与消费者调用契约
+        env:
+          TS_COMPILER_PATH: ${{ runner.temp }}/333-governance-parser/node_modules/typescript/lib/typescript.js
         run: node tools/governance/contract-trace.mjs .rebuild/governance/missing-sources.json .rebuild/governance/missing-contracts.json
       - name: 测试正式发行的缺失模块可达性分类与误判防护
         run: node tests/governance-contract-trace.test.mjs .rebuild/governance/missing-contracts.json

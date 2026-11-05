@@ -72,6 +72,8 @@ jobs:
           npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
+      - name: 安装源码AST分析专用冻结解析器
+        run: npm install --prefix "${RUNNER_TEMP}/333-ui-typescript" --no-save --ignore-scripts --no-package-lock --no-audit --no-fund typescript@5.9.3
       - name: TypeScript 7 全仓检查（收集诊断）
         id: typecheck
         continue-on-error: true
@@ -81,6 +83,7 @@ jobs:
         continue-on-error: true
         env:
           GATEWAY_TEST_POSTGRES_URL: postgres://gateway_test:gateway_test@127.0.0.1:5432/gateway_test
+          TS_COMPILER_PATH: ${{ runner.temp }}/333-ui-typescript/node_modules/typescript/lib/typescript.js
         run: |
           set -euo pipefail
           node build/verify-bundled-assets.mjs
@@ -100,7 +103,6 @@ jobs:
           # TypeScript 7 uses a native checker. The localization AST checker
           # needs the pinned JS parser (same contract as chinese-only-ui.yml).
           # This is a test-only parser, not a production compiler downgrade.
-          npm install --prefix "${RUNNER_TEMP}/333-ui-typescript" --no-save --ignore-scripts --no-package-lock --no-audit --no-fund typescript@5.9.3
           TS_COMPILER_PATH="${RUNNER_TEMP}/333-ui-typescript/node_modules/typescript/lib/typescript.js" node build/run-unregistered-tests.mjs --workflow-only
       - name: 汇总验收结果（失败阻断）
         if: always()
