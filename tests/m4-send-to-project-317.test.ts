@@ -105,3 +105,19 @@ test('317 local command is registered for real TUI with lazy TSX',()=>{
  expect(index).toContain("name: 'send-to-project'")
  expect(index).toContain("import('./send-to-project.js')")
 })
+
+test('317 coordinator may return a transport-level success with a rejected tool result',async()=>{
+  const {client}=api(()=>response({
+    jsonrpc:'2.0',id:1,
+    result:{isError:true,content:[{type:'text',text:'not delivered'}]},
+  }))
+  await expect(client.handoff('cse_test','brief'))
+    .rejects.toMatchObject({mayHaveLanded:true})
+})
+test('317 user-facing command requires Remote Control before cloud handoff',()=>{
+  const source=readFileSync(join(import.meta.dir,
+    '../src/commands/send-to-project/send-to-project.tsx'),'utf8')
+  expect(source).toContain('if(!context.getAppState().replBridgeSessionId)')
+  expect(source).toContain('请先运行 /remote-control')
+  expect(source).toContain("setStep('confirm')")
+})
