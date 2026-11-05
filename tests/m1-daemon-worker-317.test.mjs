@@ -263,6 +263,20 @@ test('317 daemon returns EX_TEMPFAIL on nested 429 and occupied-folder errors', 
     outcome: 75, stdout: 'folder already served: another session owns folder\n', stderr: '',
   })
 
+  // Upstream xe() stops on the first numeric HTTP status. A nested 429
+  // cannot override an outer 503; an independent folder-ownership failure
+  // is still tested after the HTTP scan.
+  assert.equal(classifyDaemonWorkerFailure317({
+    status: 503, cause: {status: 429},
+  }), undefined)
+  assert.equal(classifyDaemonWorkerFailure317({
+    response: {status: 503},
+    cause: {status: 429, errorType: 'bridge_folder_already_served'},
+  }), 'folder_already_served')
+  assert.equal(classifyDaemonWorkerFailure317({
+    status: '429', cause: {response: {status: 429}},
+  }), 'rate_limited')
+
   const chain = (depth, leaf) => {
     let error = leaf
     for (let i = 0; i < depth; i++) error = { cause: error }
