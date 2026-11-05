@@ -12,6 +12,7 @@ import { getOriginalCwd, setOriginalCwd } from '../src/bootstrap/state.ts'
 import { getTranscriptPath, getProjectDir } from '../src/utils/sessionStorage.ts'
 import { getSessionId } from '../src/bootstrap/state.ts'
 import { ensureFastPathSettingsLoaded317 } from '../src/bootstrap/fastPathSettings317.ts'
+import { getFeatureValue_CACHED_MAY_BE_STALE, resetGrowthBook } from '../src/services/analytics/growthbook.ts'
 
 test('317 claimed session rebinds global config, project and settings ownership', async () => {
   const a = mkdtempSync(join(tmpdir(), '333-warm-owner-'))
@@ -96,4 +97,28 @@ test('317 new MDM reads cannot reuse pre-claim raw-read results', async () => {
   await getMdmRawReadPromise()
   resetMdmRawReadForClaim317()
   assert.equal(getMdmRawReadPromise(), null)
+})
+
+
+test('317 claimed preloader resets feature-flag targeting for the new environment', async () => {
+  const beforeUserType = process.env.USER_TYPE
+  const beforeOverrides = process.env.CLAUDE_INTERNAL_FC_OVERRIDES
+  try {
+    process.env.USER_TYPE = 'ant'
+    process.env.CLAUDE_INTERNAL_FC_OVERRIDES = '{"claim_317_identity":"warm"}'
+    resetGrowthBook()
+    assert.equal(getFeatureValue_CACHED_MAY_BE_STALE('claim_317_identity', 'unset'), 'warm')
+    process.env.CLAUDE_INTERNAL_FC_OVERRIDES = '{"claim_317_identity":"accepted"}'
+    assert.equal(getFeatureValue_CACHED_MAY_BE_STALE('claim_317_identity', 'unset'),
+      'warm', 'pre-claim feature flags are intentionally cached')
+    await rebindClaimedSessionDependencies317()
+    assert.equal(getFeatureValue_CACHED_MAY_BE_STALE('claim_317_identity', 'unset'),
+      'accepted', 'the claimed environment must not inherit the warm feature targeting')
+  } finally {
+    if (beforeUserType === undefined) delete process.env.USER_TYPE
+    else process.env.USER_TYPE = beforeUserType
+    if (beforeOverrides === undefined) delete process.env.CLAUDE_INTERNAL_FC_OVERRIDES
+    else process.env.CLAUDE_INTERNAL_FC_OVERRIDES = beforeOverrides
+    resetGrowthBook()
+  }
 })
