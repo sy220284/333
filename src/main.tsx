@@ -3544,6 +3544,29 @@ async function run(): Promise<CommanderCommand> {
       if (options.json) process.stdout.write(`${JSON.stringify(entries, null, 2)}\n`);
       else for (const model of entries) process.stdout.write(`${model.id}\n`);
     });
+  modelsCommand.command('profile <model>').description('查看该模型已验证的上下文、输出和工具能力').action(async (model: string) => {
+    const { getIndependentProfile } = await import('./services/api/multimodel/profiles.js');
+    const { getSavedCapabilityReport } = await import('./services/api/multimodel/capabilityProbe.js');
+    process.stdout.write(`${JSON.stringify({
+      model, profile: getIndependentProfile(model) ?? null,
+      lastProbe: getSavedCapabilityReport(model) ?? null,
+    }, null, 2)}\n`);
+  });
+  modelsCommand.command('limits <model>').description('明确指定模型真实上下文和最大输出 Token')
+    .requiredOption('--context <tokens>', '上下文窗口 Token 数')
+    .requiredOption('--output <tokens>', '最大输出 Token 数')
+    .action(async (model: string, options: { context: string; output: string }) => {
+      const { updateIndependentProfile } = await import('./services/api/multimodel/profiles.js');
+      const contextWindow = Number(options.context);
+      const maxOutputTokens = Number(options.output);
+      if (!Number.isSafeInteger(contextWindow) || !Number.isSafeInteger(maxOutputTokens)) {
+        throw new Error('上下文和输出限制必须是整数');
+      }
+      const result = await updateIndependentProfile(model, {
+        contextWindow, maxOutputTokens, source: 'manual',
+      });
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    });
   modelsCommand.command('price <model>').description('设置模型每百万 Token 的美元费率（输入和输出）')
     .requiredOption('--input <usd>', '输入每百万 Token 费用（美元）')
     .requiredOption('--output <usd>', '输出每百万 Token 费用（美元）')
