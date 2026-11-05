@@ -38,6 +38,7 @@ export async function connectPtyHost317(
   let resolvedReady = false
   let ended = false
   let replayBytes = 0
+  let pendingExit: {code:number;signal?:string|number} | undefined
   let replayChunks:Buffer[]=[]
   let queuedLive:Buffer[]=[]
   let resolveExit!: (outcome:{code:number;signal?:string|number})=>void
@@ -68,7 +69,7 @@ export async function connectPtyHost317(
     if(frame.kind===0){
       if(!live){
         replayBytes+=frame.payload.byteLength
-        if(replayBytes>512*1024){
+        if(replayBytes>2*1024*1024){
           fail(new Error('PTY replay exceeded expected bound'))
           socket.destroy()
           return
@@ -102,6 +103,7 @@ export async function connectPtyHost317(
           replayDelivered=true
           for(const chunk of queuedLive)options.onOutput(chunk)
           queuedLive=[]
+          if(pendingExit){resolveExit(pendingExit);pendingExit=undefined}
           if(!resolvedReady){resolvedReady=true;resolveReady()}
         }).catch(error=>{
           fail(error instanceof Error?error:new Error(String(error)))
@@ -111,9 +113,11 @@ export async function connectPtyHost317(
       case 'exit':
         if(exited)return
         exited=true
-        resolveExit({code:typeof packet.code==='number'?packet.code:1,
+        const outcome={code:typeof packet.code==='number'?packet.code:1,
           ...(typeof packet.signal==='string'||typeof packet.signal==='number'
-            ?{signal:packet.signal}:{})})
+            ?{signal:packet.signal}:{})}
+        if(replayDelivered)resolveExit(outcome)
+        else pendingExit=outcome
         return
     }
   },reason=>{
