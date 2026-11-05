@@ -27,6 +27,32 @@ if(parsed.errors.length)throw Error(parsed.errors.map(x=>ts.flattenDiagnosticMes
 const program=ts.createProgram(parsed.fileNames,parsed.options)
 const checker=program.getTypeChecker()
 const isExported=node=>node.modifiers?.some(x=>x.kind===ts.SyntaxKind.ExportKeyword)
+const symbolOf=node=>{
+  if(!node)return null
+  let symbol=checker.getSymbolAtLocation(node)
+  if(symbol&&(symbol.flags&ts.SymbolFlags.Alias))symbol=checker.getAliasedSymbol(symbol)
+  return symbol||null
+}
+const callSites=new Map()
+for(const file of program.getSourceFiles()){
+  if(file.isDeclarationFile)continue
+  const name=file.fileName.replaceAll('\\','/')
+  if(!name.startsWith(root+'/src/')&&!name.startsWith(root+'/native/'))continue
+  function visit(node){
+    if(ts.isCallExpression(node)){
+      const expression=ts.isPropertyAccessExpression(node.expression)?
+        node.expression.name:node.expression
+      const symbol=symbolOf(expression)
+      if(symbol){
+        const group=callSites.get(symbol)||[]
+        group.push(node)
+        callSites.set(symbol,group)
+      }
+    }
+    ts.forEachChild(node,visit)
+  }
+  visit(file)
+}
 const valid=(string,type)=>{
   if(!string||string.length>155||/[\n\r]/.test(string))return false
   if(/\b(?:any|unknown|never)\b/.test(string))return false
@@ -51,11 +77,33 @@ for(const source of program.getSourceFiles()){
   if(code.includes('react/compiler-runtime'))continue
   const insertions=[]
   const signatures=[]
-  function annotate(node,name){
-    for(const param of node.parameters??[]){
+  function annotate(node,name,ownerSymbol){
+    for(let index=0;index<(node.parameters?.length??0);index++){
+      const param=node.parameters[index]
       if(param.type)continue
       const type=checker.getWidenedType(checker.getTypeAtLocation(param))
-      const rendered=shown(type,param)
+      let rendered=shown(type,param)
+      // A direct call is evidence of an argument type. Infer only when every
+      // known call site supplies a concrete, printable type and all callers
+      // agree; never replace arbitrary API boundaries with any or unknown.
+      if(!rendered&&ownerSymbol){
+        const calls=callSites.get(ownerSymbol)||[]
+        if(calls.length){
+          const observed=calls.map(call=>call.arguments[index]).filter(Boolean)
+          if(observed.length===calls.length){
+            const actual=observed.map(arg=>{
+              const argType=checker.getWidenedType(checker.getTypeAtLocation(arg))
+              return shown(argType,param)
+            })
+            if(actual.every(Boolean)){
+              const unique=[...new Set(actual)]
+              if(unique.length===1)rendered=unique[0]
+              else if(unique.length<=3&&unique.every(t=>['string','number','boolean','undefined','null'].includes(t)))
+                rendered=unique.join(' | ')
+            }
+          }
+        }
+      }
       if(!rendered||!ts.isIdentifier(param.name)||param.dotDotDotToken){
         unresolved.push({path:relative,function:name,kind:'parameter',at:source.getLineAndCharacterOfPosition(param.getStart()).line+1})
         continue
@@ -86,12 +134,12 @@ for(const source of program.getSourceFiles()){
   }
   function visit(node){
     if(ts.isFunctionDeclaration(node)&&node.body&&isExported(node))
-      annotate(node,node.name?.text??'<default>')
+      annotate(node,node.name?.text??'<default>',symbolOf(node.name))
     if(ts.isVariableStatement(node)&&isExported(node))
       for(const dec of node.declarationList.declarations)
         if(!dec.type&&dec.initializer&&
           (ts.isArrowFunction(dec.initializer)||ts.isFunctionExpression(dec.initializer)))
-          annotate(dec.initializer,dec.name.getText(source))
+          annotate(dec.initializer,dec.name.getText(source),symbolOf(dec.name))
     ts.forEachChild(node,visit)
   }
   visit(source)
