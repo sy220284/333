@@ -52,7 +52,7 @@ export type WorkSecret = {
 
 export type SessionDoneStatus = 'completed' | 'failed' | 'interrupted'
 
-export type SessionActivityType = 'tool_start' | 'text' | 'result' | 'error'
+export type SessionActivityType = 'user' | 'tool_start' | 'text' | 'result' | 'error'
 
 export type SessionActivity = {
   type: SessionActivityType
