@@ -287,7 +287,11 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
     try {
       const issued = await options.api.issueSessionToken(runnerToken,id,ownedAbort.signal)
       remoteToken = issued.session_token
-      if (issued.tools_host) throw new Error('Assignment requires a dedicated tools host')
+      // Official 317 x64 does not initialize its injected tools-server hosting
+      // capability; preserve its explicit rejection and never spawn a worker
+      // that would omit FetchAttachment/PlaceFiles RPC capabilities.
+      if (issued.tools_host) throw new Error(
+        'Session '+id+' needs a tool server, which this runner cannot host')
       const remote = await options.api.getSessionRemoteConfig(id,remoteToken,ownedAbort.signal)
       const inference = runnerInferenceAuth317(remote,id)
       inferenceToken=inference.token
