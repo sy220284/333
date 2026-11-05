@@ -15,6 +15,8 @@ const contracts = [
   ['M1', 'src/entrypoints/cli.tsx', 'src/bootstrap/preload317.ts'],
   ['M1', 'src/entrypoints/cli.tsx', 'src/bootstrap/bgSpare317.ts'],
   ['M1', 'src/entrypoints/cli.tsx', 'src/bootstrap/daemonWorker317.ts'],
+  ['M1', 'src/bootstrap/daemonWorker317.ts', 'src/bootstrap/daemonRemoteControl317.ts'],
+  ['M1', 'src/bootstrap/daemonRemoteControl317.ts', 'src/bridge/bridgeMain.ts'],
   ['M1', 'src/entrypoints/pluginTestFastPath317.ts', 'src/cli/handlers/pluginTest317.ts'],
   ['M1', 'src/bootstrap/bgSpare317.ts', 'src/bootstrap/preload317.ts'],
   ['M1', 'src/bootstrap/preload317.ts', 'src/bootstrap/claimRebind317.ts'],
@@ -40,6 +42,8 @@ const contracts = [
   ['M6', 'src/cli/selfHostedRunner/runnerHost317.ts', 'src/cli/selfHostedRunner/runnerApi317.ts'],
   ['M6', 'src/cli/selfHostedRunner/runnerHost317.ts', 'src/cli/selfHostedRunner/runnerWorkspace317.ts'],
   ['M6', 'src/cli/selfHostedRunner/runnerHost317.ts', 'src/bridge/sessionRunner.ts'],
+  ['M6', 'src/cli/selfHostedRunner/runnerHost317.ts', 'src/cli/selfHostedRunner/runnerCliArgs317.ts'],
+  ['M6', 'src/cli/selfHostedRunner/runnerHost317.ts', 'src/cli/selfHostedRunner/runnerAgents317.ts'],
 ]
 
 function canonicalModule(path) {
