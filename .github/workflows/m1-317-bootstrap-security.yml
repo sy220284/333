@@ -7,6 +7,10 @@ on:
       - '.github/workflows/m1-317-bootstrap-security.yml'
       - 'src/bootstrap/relayTokenGuard317.mjs'
       - 'src/bootstrap/jitPolicy317.mjs'
+      - 'src/bootstrap/socketOwnership317.ts'
+      - 'src/cli/background/supervisor.ts'
+      - 'tests/m1-socket-ownership-317.test.ts'
+      - 'tests/m1-background-resume-flags-317.test.ts'
       - 'src/entrypoints/cli.tsx'
       - 'src/entrypoints/startupRouting317.mjs'
       - 'tests/m1-relay-token-guard-317.test.mjs'
@@ -43,3 +47,6 @@ jobs:
           bun-version: 1.4.4
       - name: 启动早期JIT策略、远程令牌描述符、Linux内核转储权限验收
         run: node --test tests/m1-jit-startup-317.test.mjs tests/m1-relay-token-guard-317.test.mjs
+
+      - name: 验证后台守护进程重连边界和恢复参数一致性
+        run: bun test tests/m1-socket-ownership-317.test.ts tests/m1-background-resume-flags-317.test.ts
