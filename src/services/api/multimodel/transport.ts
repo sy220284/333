@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { ProviderRoute } from './registry.js'
 import { type AnthropicRequest, toResponses, toChatCompletions, toGemini } from './convert.js'
 
+// biome-ignore lint/suspicious/noExplicitAny: Provider wire events have different shapes and are normalized here.
 type ObjectValue = Record<string, any>
 
 function asError(status: number, message: string): Response {
@@ -27,7 +28,7 @@ class AnthropicEvents {
   private activeType: 'text' | 'tool' | null = null
   private hasTools = false
   private usage: ObjectValue = { input_tokens: 0, output_tokens: 0 }
-  constructor(private readonly model: string, private readonly emit: (event: ObjectValue) => void) {
+  constructor(model: string, private readonly emit: (event: ObjectValue) => void) {
     this.emit({ type: 'message_start', message: {
       id: `msg_${randomUUID().replaceAll('-', '')}`, type: 'message', role: 'assistant',
       model, content: [], stop_reason: null, stop_sequence: null, usage: this.usage,
@@ -87,10 +88,11 @@ async function* sseMessages(stream: ReadableStream<Uint8Array>): AsyncGenerator<
     while (true) {
       const { done, value } = await reader.read()
       buffer += decoder.decode(value, { stream: !done })
-      let pos: number
-      while ((pos = buffer.indexOf('\n')) >= 0) {
+      let pos = buffer.indexOf('\n')
+      while (pos >= 0) {
         const line = buffer.slice(0, pos).replace(/\r$/, '')
         buffer = buffer.slice(pos + 1)
+        pos = buffer.indexOf('\n')
         const payload = pushLine(line)
         if (!payload) continue
         if (payload === '[DONE]') { yield '[DONE]'; continue }
@@ -276,7 +278,8 @@ export function makeIndependentFetch(
       const detail = await response.text()
       return asError(response.status, `${route.provider} HTTP ${response.status}: ${detail.slice(0, 1500)}`)
     }
-    if (!response.body) return asError(502, `${route.provider} returned empty response`)
+    const responseBody = response.body
+    if (!responseBody) return asError(502, `${route.provider} returned empty response`)
     if (!body.stream && route.provider !== 'chatgpt') {
       return new Response(JSON.stringify(materializeResponse(await response.json() as ObjectValue, route)), {
         headers: { 'content-type': 'application/json' },
@@ -291,7 +294,7 @@ export function makeIndependentFetch(
         const cstate = { completed: false, calls: new Map<number, ObjectValue>() }
         const gstate = { completed: false, calls: [] as ObjectValue[] }
         try {
-          for await (const chunk of sseMessages(response.body!)) {
+          for await (const chunk of sseMessages(responseBody)) {
             if (chunk === '[DONE]') continue
             if (route.protocol === 'responses') emitFromResponses(chunk, events, rstate)
             else if (route.protocol === 'chat-completions') emitFromChat(chunk, events, cstate)
@@ -320,7 +323,7 @@ export function makeIndependentFetch(
       let partial = ''
       let block: ObjectValue | null = null
       for (const item of chunks) {
-        if (item.type === 'content_block_start') { block = { ...item.content_block }; partial = ''; blocks.push(block!) }
+        if (item.type === 'content_block_start') { const newBlock = { ...item.content_block }; block = newBlock; partial = ''; blocks.push(newBlock) }
         if (item.type === 'content_block_delta' && block) {
           if (item.delta.type === 'text_delta') block.text += item.delta.text
           if (item.delta.type === 'input_json_delta') partial += item.delta.partial_json
