@@ -69,7 +69,7 @@ export function listReachableTeammates(
   }
   const include = (member: TeamMember317 | undefined, agentId: string | undefined): void => {
     const name = member?.name
-    if (typeof name !== 'string' || !name.trim() || name.includes('@')) return
+    if (!member || typeof name !== 'string' || !name.trim() || name.includes('@')) return
     const key = name.toLowerCase()
     if (seen.has(key)) return
     seen.add(key)
