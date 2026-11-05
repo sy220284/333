@@ -11,9 +11,7 @@
  */
 
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
-import axios from 'axios'
 import { randomUUID } from 'crypto'
-import { mkdir, writeFile } from 'fs/promises'
 import { basename, join } from 'path'
 import { z } from 'zod/v4'
 import { getSessionId } from '../bootstrap/state.js'
@@ -21,6 +19,8 @@ import { logForDebugging } from '../utils/debug.js'
 import { getClaudeConfigHomeDir } from '../utils/envUtils.js'
 import { lazySchema } from '../utils/lazySchema.js'
 import { getBridgeAccessToken, getBridgeBaseUrl } from './bridgeConfig.js'
+import { fetchAttachmentHere317 } from './fetchAttachment317.js'
+import { getAPIProvider, isFirstPartyAnthropicBaseUrl } from '../utils/model/providers.js'
 
 const DOWNLOAD_TIMEOUT_MS = 30_000
 
@@ -72,48 +72,37 @@ async function resolveOne(att: InboundAttachment): Promise<string | undefined> {
     return undefined
   }
 
-  let data: Buffer
-  try {
-    // getOauthConfig() (via getBridgeBaseUrl) throws on a non-allowlisted
-    // CLAUDE_CODE_CUSTOM_OAUTH_URL — keep it inside the try so a bad
-    // FedStart URL degrades to "no @path" instead of crashing print.ts's
-    // reader loop (which has no catch around the await).
-    const url = `${getBridgeBaseUrl()}/api/oauth/files/${encodeURIComponent(att.file_uuid)}/content`
-    const response = await axios.get(url, {
-      headers: { Authorization: `Bearer ${token}` },
-      responseType: 'arraybuffer',
-      timeout: DOWNLOAD_TIMEOUT_MS,
-      validateStatus: () => true,
-    })
-    if (response.status !== 200) {
-      debug(`fetch ${att.file_uuid} failed: status=${response.status}`)
-      return undefined
-    }
-    data = Buffer.from(response.data)
-  } catch (e) {
-    debug(`fetch ${att.file_uuid} threw: ${e}`)
-    return undefined
-  }
-
-  // uuid-prefix makes collisions impossible across messages and within one
-  // (same filename, different files). 8 chars is enough — this isn't security.
-  const safeName = sanitizeFileName(att.file_name)
+  // UUID-prefix retains the existing inbound message naming contract. The
+  // 317 fetcher owns safe staging, byte limits, atomic placement and cleanup.
+  const safeName = sanitizeFileName(att.file_name).slice(0, 200)
   const prefix = (
     att.file_uuid.slice(0, 8) || randomUUID().slice(0, 8)
   ).replace(/[^a-zA-Z0-9_-]/g, '_')
-  const dir = uploadsDir()
-  const outPath = join(dir, `${prefix}-${safeName}`)
-
   try {
-    await mkdir(dir, { recursive: true })
-    await writeFile(outPath, data)
-  } catch (e) {
-    debug(`write ${outPath} failed: ${e}`)
+    const result = await fetchAttachmentHere317({
+      file_uuid: att.file_uuid,
+      name: prefix + '-' + safeName,
+    }, {
+      directory: uploadsDir(),
+      baseUrl: getBridgeBaseUrl(),
+      token,
+      signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
+      firstParty: getAPIProvider() === 'firstParty' &&
+        isFirstPartyAnthropicBaseUrl(),
+    })
+    if (result.output.outcome !== 'placed' && result.output.outcome !== 'kept') {
+      debug('fetch ' + att.file_uuid + ' failed: ' +
+        (result.output.reason ?? result.summary))
+      return undefined
+    }
+    if (!result.localPath) throw new Error('FetchAttachment succeeded without a local path')
+    debug('resolved ' + att.file_uuid + ' → ' + result.localPath)
+    return result.localPath
+  } catch (error) {
+    debug('fetch ' + att.file_uuid + ' failed: ' +
+      (error instanceof Error ? error.message : String(error)))
     return undefined
   }
-
-  debug(`resolved ${att.file_uuid} → ${outPath} (${data.length} bytes)`)
-  return outPath
 }
 
 /**
