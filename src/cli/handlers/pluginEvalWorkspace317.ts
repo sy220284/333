@@ -28,7 +28,7 @@ export async function resolveEvalContext317(
   sourcePluginRoot: string | null | undefined,
   runPluginRoot: string | null | undefined,
 ): Promise<ResolvedEvalContext317> {
-  const context = caseInfo.context ?? {}
+  const context: EvalCase317['context'] = caseInfo.context ?? { add_dirs: [] }
   const caseDir = await realpath(caseInfo.dir)
   const pluginDir = sourcePluginRoot ? await realpath(sourcePluginRoot) : caseDir
   async function source(name: string, type: 'add_dirs' | 'scaffold_script' | 'history_file'): Promise<string> {
