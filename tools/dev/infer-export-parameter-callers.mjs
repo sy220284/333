@@ -1,13 +1,14 @@
 #!/usr/bin/env node
+import { loadAstParser } from './ast-parser.mjs'
 /**
  * Infer missing exported parameter types from actual TypeScript call sites.
  * Call signatures are resolved by the compiler; typed argument evidence is
  * collected across src/native and widened conservatively. No "any" injection.
  */
-import ts from 'typescript'
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs'
 import {resolve,dirname} from 'node:path'
 import {fileURLToPath} from 'node:url'
+const ts = await loadAstParser()
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..')
 const apply=process.argv.includes('--apply')
 const configPath=resolve(root,'.rebuild/tsconfig.dev.json')

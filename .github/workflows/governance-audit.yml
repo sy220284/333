@@ -39,12 +39,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: 读取权威工具链版本
+        shell: bash
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.4
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
       - name: 安装冻结开发工具和源码依赖
         run: |
           npm run dev:bootstrap
@@ -72,7 +75,7 @@ jobs:
       - name: 根据原始源码映射逐项核查缺失文件
         run: node tools/governance/missing-sources.mjs .rebuild/governance/type-report.json .rebuild/governance/missing-sources.json
       - name: 安装AST分析专用冻结解析器
-        run: npm install --prefix "${RUNNER_TEMP}/333-governance-parser" --no-save --ignore-scripts --no-package-lock --no-audit --no-fund typescript@5.9.3
+        run: npm install --prefix "${RUNNER_TEMP}/333-governance-parser" --no-save --ignore-scripts --no-package-lock --no-audit --no-fund "typescript@${TOOLCHAIN_AST_TYPESCRIPT_VERSION}"
       - name: 提取所有缺失模块的导出与消费者调用契约
         env:
           TS_COMPILER_PATH: ${{ runner.temp }}/333-governance-parser/node_modules/typescript/lib/typescript.js

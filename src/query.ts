@@ -569,6 +569,7 @@ async function* queryLoop(
               toolChoice: undefined,
               isNonInteractiveSession:
                 toolUseContext.options.isNonInteractiveSession,
+              includePartialMessages: toolUseContext.options.includePartialMessages,
               fallbackModel: fallbackChain.next(currentModel),
               onStreamingFallback: () => {
                 streamingFallbackOccured = true

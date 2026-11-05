@@ -1,10 +1,10 @@
 #!/usr/bin/env node
+import { loadAstParser } from './ast-parser.mjs'
 /** Add compiler-inferred stable public constant declarations to JS-like TS sources. */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve, dirname, join } from 'node:path'
-import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
-const require = createRequire(import.meta.url), ts = require('typescript')
+const ts = await loadAstParser()
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const rp = process.env.TS_MIGRATION_REPORT ?? '.rebuild/governance/type-migration-report.json'
 const report = JSON.parse(readFileSync(resolve(root,rp),'utf8'))

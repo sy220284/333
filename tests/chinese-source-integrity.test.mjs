@@ -61,7 +61,7 @@ test('被修改的原版压缩资源必须以校验和错误失败', () => {
   const dir = mkdtempSync(join(tmpdir(), '333-original-script-check-'))
   const asset = 'src/skills/bundled/artifact-design/assets/hljsBundle.generated.min.js'
   try {
-    for (const file of ['tools/localization/check-code-integrity.mjs', 'build/official-embedded-assets-2.1.317.json', asset]) {
+    for (const file of ['tools/localization/check-code-integrity.mjs', 'tools/dev/ast-parser.mjs', 'tools/dev/toolchain.mjs', 'tools/dev/toolchain.lock.json', 'build/official-embedded-assets-2.1.317.json', asset]) {
       const destination = join(dir, file)
       mkdirSync(resolve(destination, '..'), { recursive: true })
       copyFileSync(resolve(file), destination)
@@ -70,7 +70,10 @@ test('被修改的原版压缩资源必须以校验和错误失败', () => {
     bytes[bytes.length - 1] ^= 1
     writeFileSync(join(dir, asset), bytes)
     const result = spawnSync(process.execPath, ['tools/localization/check-code-integrity.mjs', 'src'], {
-      cwd: dir, env: process.env, encoding: 'utf8',
+      cwd: dir, env: {
+        ...process.env,
+        TS_COMPILER_PATH: process.env.TS_COMPILER_PATH ?? resolve('.rebuild/toolchain-ast/node_modules/typescript/lib/typescript.js'),
+      }, encoding: 'utf8',
     })
     assert.equal(result.status, 1)
     assert.match(result.stderr, /original resource checksum mismatch/)

@@ -65,8 +65,27 @@ test('2.1.317 plugin init generates exactly the official files, modes, warnings 
       assert.ok(statSync(fullDir).isDirectory())
       products[kind] = { basic: collect(basicDir), full: collect(fullDir) }
     }
-    assert.deepEqual(products.candidate, products.original,
-      'Generated skills, agents, hooks, MCP, LSP, output-style, channel and metadata differ from official x64')
+    // MCP v2 is an intentional upgrade; all unaffected generated files stay official.
+    const candidate = structuredClone(products.candidate)
+    const original = structuredClone(products.original)
+    const candidateChannel = candidate.full['server.ts']
+    const candidatePackage = JSON.parse(candidate.full['package.json'])
+    const officialPackage = JSON.parse(original.full['package.json'])
+    assert.match(candidateChannel, /McpServer/)
+    assert.match(candidateChannel, /serveStdio/)
+    assert.match(candidateChannel, /registerTool/)
+    assert.doesNotMatch(candidateChannel, /StdioServerTransport/)
+    assert.match(candidateChannel, /zod\/v4/)
+    assert.equal(candidatePackage.dependencies['@modelcontextprotocol/server'], '^2.4.0')
+    assert.equal(candidatePackage.dependencies.zod, '^4.6.7')
+    delete candidate.full['server.ts']
+    delete original.full['server.ts']
+    delete candidatePackage.dependencies
+    delete officialPackage.dependencies
+    candidate.full['package.json'] = JSON.stringify(candidatePackage)
+    original.full['package.json'] = JSON.stringify(officialPackage)
+    assert.deepEqual(candidate, original,
+      'Generated plugin differs from official output beyond MCP v2 upgrade')
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

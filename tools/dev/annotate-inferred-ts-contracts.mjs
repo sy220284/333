@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { loadAstParser } from './ast-parser.mjs'
 /**
  * Derive explicit exported TypeScript signatures from the real project
  * typechecker. Only types proven by existing type inference are eligible.
@@ -10,9 +11,7 @@
 import {readFileSync,writeFileSync,mkdirSync,existsSync} from 'node:fs'
 import {resolve,dirname} from 'node:path'
 import {fileURLToPath} from 'node:url'
-import {createRequire} from 'node:module'
-const require=createRequire(import.meta.url)
-const ts=require('typescript')
+const ts = await loadAstParser()
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..')
 const apply=process.argv.includes('--apply')
 const limitFlag=process.argv.find(x=>x.startsWith('--limit='))

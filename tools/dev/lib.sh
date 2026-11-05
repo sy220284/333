@@ -7,6 +7,11 @@ load_manifest() {
   source "$TOOLCHAIN_DIR/toolchain-versions.env"
   # shellcheck disable=SC1090
   source "$TOOLCHAIN_DIR/toolchain-components.env"
+  # Generated shell projections remain bootstrappable without a preinstalled Node.
+  # On hosts with Node, reject any edit that diverged from the JSON authority.
+  if command -v node >/dev/null 2>&1; then
+    node "$TOOLCHAIN_DIR/toolchain.mjs" check-bootstrap >/dev/null || die "工具链派生文件与权威依赖清单不一致"
+  fi
   TOOLS_ROOT="${DEV333_TOOLS_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/333-dev}"
   # Read by scripts sourcing this shared library (ShellCheck checks lib.sh independently).
   # shellcheck disable=SC2034
@@ -63,7 +68,7 @@ component_ready() {
   case "$1" in
     node)
       p="$(node_path)" || return 1
-      [ "$("$p" -p 'process.versions.node.split(".")[0]' 2>/dev/null)" = "$NODE_MAJOR" ] || return 1
+      [ "$("$p" -p 'process.versions.node' 2>/dev/null)" = "$NODE_VERSION" ] || return 1
       if [ -x "$(dirname "$p")/npm" ]; then return 0; fi
       command -v npm >/dev/null 2>&1
       ;;
@@ -85,8 +90,8 @@ component_ready() {
         "$(node_path)" -e '
           const fs=require("fs");
           const d=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));
-          if(d.sourceMapSha256!==process.argv[2] || d.files!==2850 || d.packages!==316)process.exit(1);
-        ' "$REPO_ROOT/.rebuild/dependency-manifest.json" "$SOURCE_MAP_SHA256" >/dev/null 2>&1
+          if(d.sourceMapSha256!==process.argv[2] || d.files!==Number(process.argv[3]) || d.packages!==Number(process.argv[4]))process.exit(1);
+        ' "$REPO_ROOT/.rebuild/dependency-manifest.json" "$SOURCE_MAP_SHA256" "$SOURCE_DEPS_FILES" "$SOURCE_DEPS_PACKAGES" >/dev/null 2>&1
       ;;
     python)
       p="$(python_path)" || return 1
@@ -120,11 +125,11 @@ missing_artifacts() {
 self_test() {
   require_repo
   source_map_valid || die "cli.js.map 的 SHA-256 与原始冻结基线不一致"
-  local n b s
-  n="$(grep -oE 'node-version: [0-9]+' "$REPO_ROOT/.github/workflows/dev-toolchain.yml" | head -n1 | awk '{print $2}')"
-  b="$(grep -oE 'bun-version: [0-9.]+' "$REPO_ROOT/.github/workflows/rebuild.yml" | head -n1 | awk '{print $2}')"
-  [ "$n" = "$NODE_MAJOR" ] || die "Node 版本与工具链工作流不一致"
-  [ "$b" = "$BUN_VERSION" ] || die "Bun 版本与现有重建工作流不一致"
+  local s
+  node "$TOOLCHAIN_DIR/toolchain.mjs" check || die "权威依赖清单检查失败"
+  # Workflows must consume the manifest's output, rather than store versions.
+  grep -Fq 'TOOLCHAIN_NODE_VERSION' "$REPO_ROOT/.github/workflows/dev-toolchain.yml" || die "工具链工作流未接权威 Node 版本"
+  grep -Fq 'TOOLCHAIN_BUN_VERSION' "$REPO_ROOT/.github/workflows/rebuild.yml" || die "正式构建未接权威 Bun 版本"
   grep -Fq '"rebuild":' "$REPO_ROOT/package.json" || die "缺少重建命令"
   for s in build/restore-dependencies.mjs build/install-public-deps.mjs build/rebuild.mjs build/package-release.mjs; do
     [ -f "$REPO_ROOT/$s" ] || die "构建入口缺失：$s"

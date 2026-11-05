@@ -2,15 +2,14 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { join, resolve } from 'node:path'
-import { pathToFileURL, fileURLToPath } from 'node:url'
+import { fileURLToPath } from 'node:url'
+import { loadAstParser } from '../dev/ast-parser.mjs'
 import { dirname } from 'node:path'
 
-// A pinned compiler is installed by the Chinese UI workflow into RUNNER_TEMP.
-// Syntax verification must use an actual parser: regex-only translation passes
-// can corrupt variable names, imports, JSX identifiers and type annotations.
-const compilerPath = process.env.TS_COMPILER_PATH
-if (!compilerPath) throw new Error('TS_COMPILER_PATH must point to the pinned TypeScript compiler')
-const ts = (await import(pathToFileURL(resolve(compilerPath)).href)).default
+// The same version-verified AST parser serves localization, migration and
+// governance. An explicitly configured TS_COMPILER_PATH is validated against
+// the canonical toolchain manifest by loadAstParser().
+const ts = await loadAstParser()
 
 const targets = process.argv.slice(2)
 const roots = targets.length > 0 ? targets : ['src']

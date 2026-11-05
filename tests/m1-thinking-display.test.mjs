@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { getRequestThinkingDisplay, getStreamThinkingDisplay } from '../src/services/api/thinkingDisplay.ts'
+import { getRequestThinkingDisplay, getStreamThinkingDisplay, resolveThinkingDisplayMode317 } from '../src/services/api/thinkingDisplay.ts'
 
 test('uses the actual request display only when it is a string', () => {
   assert.equal(getRequestThinkingDisplay({ type: 'adaptive', display: 'summarized' }), 'summarized')
@@ -28,4 +28,11 @@ test('attaches display to message start and thinking content only', () => {
     assert.equal(getStreamThinkingDisplay(event, 'summarized'), expected)
     assert.equal(getStreamThinkingDisplay(event, undefined), undefined)
   }
+})
+
+test('2.1.317 streaming print keeps thinking updates, plain print remains omitted', () => {
+  assert.equal(resolveThinkingDisplayMode317(false, undefined), 'updates')
+  assert.equal(resolveThinkingDisplayMode317(true, false), 'omitted')
+  assert.equal(resolveThinkingDisplayMode317(true, undefined), 'omitted')
+  assert.equal(resolveThinkingDisplayMode317(true, true), 'updates')
 })

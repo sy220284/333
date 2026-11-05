@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { loadAstParser } from './ast-parser.mjs'
 /**
  * Restore erased TypeScript component signatures while preserving the current
  * compiled React JSX and all localized UI text. Only existing, local Props
@@ -11,10 +12,8 @@
 import {readFileSync,writeFileSync,readdirSync,mkdirSync} from 'node:fs'
 import {resolve,dirname,join} from 'node:path'
 import {fileURLToPath} from 'node:url'
-import {createRequire} from 'node:module'
 import {spawnSync} from 'node:child_process'
-const require=createRequire(import.meta.url)
-const ts=require('typescript')
+const ts = await loadAstParser()
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..')
 const apply=process.argv.includes('--apply')
 const sourceFiles=[]

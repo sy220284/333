@@ -60,6 +60,7 @@ PYTHON_MINOR=$PYTHON_MINOR
 ACTIONLINT_VERSION=$ACTIONLINT_VERSION
 SOURCE_MAP_SHA256=$SOURCE_MAP_SHA256
 PUBLIC_LOCK_SHA256=$PUBLIC_LOCK_SHA256
+TOOLCHAIN_LOCK_SHA256=$(sha256sum "$TOOLCHAIN_DIR/toolchain.lock.json" | awk '{print $1}')
 EOF
     (cd "$dir"; sha256sum component.env payload.* > SHA256SUMS; sha256sum -c SHA256SUMS)
     if [ "$(du -sb "$dir" | awk '{print $1}')" -gt 524288000 ]; then

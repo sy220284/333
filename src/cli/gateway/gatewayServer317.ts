@@ -6,6 +6,7 @@
  */
 import { readFile } from 'node:fs/promises'
 import { BlockList, isIP } from 'node:net'
+import { resolveGatewayClientIp317 } from './gatewayClientIp317.ts'
 import { randomUUID } from 'node:crypto'
 import { readGatewayConfig317 } from './gatewayConfig317.ts'
 import { createOidcProvider317, verifyGatewaySession317 } from './gatewayAuth317.ts'
@@ -112,12 +113,10 @@ export async function createGatewayService317(config, deps: GatewayServiceDeps31
       const requestId = randomUUID()
       const url = new URL(request.url)
       const remote = service.requestIP?.(request)?.address ?? null
-      let clientIp = remote
-      const type = isIP(remote) === 4 ? 'ipv4' : 'ipv6'
-      if (remote && isIP(remote) && trusted.check(remote, type)) {
-        const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-        if (forwarded && isIP(forwarded)) clientIp = forwarded
-      }
+      // Resolve the closest untrusted hop, rather than trusting client XFF input.
+      const clientIp = resolveGatewayClientIp317(
+        remote, request.headers.get('x-forwarded-for'), trusted,
+      )
       if (!allowedAddress(clientIp, allow, deny, (config.access_control?.allow_cidrs?.length ?? 0) > 0)) {
         return error(403, 'permission_error', 'access forbidden by IP policy', requestId)
       }
@@ -221,15 +220,23 @@ export async function createGatewayService317(config, deps: GatewayServiceDeps31
         const response = await handle(request, service)
         return makeResponseSecure(response, Boolean(tls))
       },
-      idleTimeout: 255,
+      // SSE idle life is governed by the upstream/stream cancellation policy.
+      idleTimeout: 0,
     })
-    let closed = false
+    let closing: Promise<void> | undefined
     return {
-      server, config, async close() {
-        if (closed) return
-        closed = true
-        await server.stop(true)
-        await store.close()
+      server, config, close(force = false): Promise<void> {
+        if (!closing) {
+          closing = (async () => {
+            try {
+              // Bun stop(false) drains in-flight requests before closing stores.
+              await server.stop(force)
+            } finally {
+              await store.close()
+            }
+          })()
+        }
+        return closing
       },
     }
   } catch (error) {

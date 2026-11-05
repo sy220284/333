@@ -1,3 +1,11 @@
+/** In streaming print mode, incremental thought display follows the API request. */
+export function resolveThinkingDisplayMode317(
+  nonInteractive: boolean,
+  partialMessages: boolean | undefined,
+): 'updates' | 'omitted' {
+  return !nonInteractive || partialMessages === true ? 'updates' : 'omitted'
+}
+
 /** Read the display mode from the request that actually produced this stream. */
 export function getRequestThinkingDisplay(thinking: unknown): string | undefined {
   try {

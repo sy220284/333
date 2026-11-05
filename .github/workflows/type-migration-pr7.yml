@@ -58,7 +58,7 @@ jobs:
   strict:
     name: 完整类型检查与迁移模块严格编译
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 50
     services:
       postgres:
         image: postgres:16
@@ -73,9 +73,13 @@ jobs:
           --health-retries 15
     steps:
       - uses: actions/checkout@v4
+      - name: 读取工具链权威版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - name: 检查工具链及升级成果保护
+        run: node tools/dev/toolchain.mjs check
       - name: 安装冻结的 TypeScript 编译器
         run: npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
       - name: 还原依赖和声明
@@ -84,15 +88,26 @@ jobs:
           node build/install-public-deps.mjs
       - name: 全仓 TypeScript 类型检查
         run: node tools/dev/dev.mjs typecheck:all
+      - name: 安装权威清单的JavaScript AST解析器
+        run: node tools/dev/toolchain.mjs install-ast
       - name: 全仓 TypeScript 内容级审计
         run: node tools/dev/type-migration-audit.mjs
       - name: 已迁移核心模块严格类型编译
         run: node tools/dev/type-migration-strict.mjs
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.4
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
+      - name: 为真实预加载、SDK 与 Gateway 回归构建当前升级版 CLI
+        run: |
+          bun build/rebuild.mjs
+          test -s dist/cli.js
+          bun dist/cli.js --version
+          # 同一套测试后续还验证真正编译的独立可执行程序。
+          node build/compile-standalone.mjs
+          test -s dist/claude
+          dist/claude --version
       - name: 网关授权与推理链真实运行回归
-        run: bun test tests/m6-gateway-device-317.test.mjs tests/m6-gateway-runtime-317.test.mjs
+        run: bun test tests/m6-gateway-device-317.test.mjs tests/m6-gateway-runtime-317.test.mjs tests/m6-gateway-client-ip-317.test.mjs
       - name: 网关授权、IP限流、费用及管理员限额真实行为回归
         run: node --test tests/m6-gateway-jsonb-317.test.mjs tests/m6-gateway-device-rate-317.test.mjs tests/m6-gateway-admin-317.test.mjs tests/m6-gateway-spend-integration-317.test.mjs
       - name: PostgreSQL 实例下的真实设备授权与令牌事务验证
@@ -103,6 +118,8 @@ jobs:
         run: node --test tests/m1-hook-concurrency-312.test.mjs tests/m1-web-tools-deadline-311.test.mjs
       - name: 插件评测评分器与执行引擎行为回归
         run: node --test tests/m3-plugin-eval-graders-317.test.mjs tests/m3-plugin-eval-engine-317.test.mjs
+      - name: 固定 HTTPS 实际连接地址与 DNS 攻击场景回归
+        run: bun test tests/session-plugin-pinned-dns-317.test.mjs
       - name: 账户会话发现、列表及管理员真实API回归
         run: node --test tests/m1-account-peer-discovery.test.mjs tests/m1-list-agents.test.mjs tests/m6-gateway-admin-317.test.mjs
       - name: 队友发现及插件命令来源授权真实性回归
