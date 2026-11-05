@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test'
-import {mkdtempSync,mkdirSync,rmSync,writeFileSync,readFileSync} from 'node:fs'
+import {mkdtempSync,mkdirSync,rmSync,writeFileSync,readFileSync,existsSync} from 'node:fs'
 import {execFileSync} from 'node:child_process'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
@@ -424,4 +424,48 @@ test('Runner 317: remote session cannot re-inject host-only runner credentials i
       rmSync(root,{recursive:true,force:true})
     }
   }
+})
+
+test('Runner 317: real child receives private prompt and MCP files and they are cleaned after exit',async()=>{
+  const root=temp(),aborted=new AbortController(),statuses:string[]=[]
+  try{
+    const script=join(root,'inspect-remote-child.mjs')
+    const cap=join(root,'delivery-capture.json')
+    writeFileSync(script,[
+      "import {readFileSync,writeFileSync} from 'node:fs'",
+      "const args=process.argv.slice(2)",
+      "const valueFor=(flag)=>args[args.indexOf(flag)+1]",
+      "const promptFile=valueFor('--system-prompt-file')",
+      "const mcpFile=valueFor('--mcp-config')",
+      "writeFileSync(process.env.TEST_CAPTURE_PATH,JSON.stringify({args,",
+      "promptFile,mcpFile,prompt:readFileSync(promptFile,'utf8'),",
+      "mcp:readFileSync(mcpFile,'utf8')}))",
+    ].join('\n'))
+    const mcpContent=JSON.stringify({mcpServers:{privateTool:{command:'node',args:['example.js']}}})
+    const api=fakeApi({
+      pollWork:async()=>({assignment_ids:['session_1'],session_assignments:[]}),
+      getSessionRemoteConfig:async()=>({
+        sources:[],push_targets:[],api_base_url:'https://api.example.test',
+        environment_variables:{TEST_CAPTURE_PATH:cap},
+        claude_code_args:{model:'opus','max-turns':5,'system-prompt':'sensitive runner prompt'},
+        mcp_config:{content:Buffer.from(mcpContent).toString('base64')},
+      }),
+      releaseSession:async()=>{aborted.abort();return {released:true}},
+    })
+    await startSelfHostedRunnerHost317({
+      api,baseDir:root,capacity:1,execPath:process.execPath,
+      scriptArgs:[script],env:{},signal:aborted.signal,
+      onStatus:line=>statuses.push(line),
+    })
+    const captured=JSON.parse(readFileSync(cap,'utf8'))
+    expect(captured.prompt).toBe('sensitive runner prompt')
+    expect(captured.mcp).toBe(mcpContent)
+    expect(captured.args).toContain('--model')
+    expect(captured.args).toContain('opus')
+    expect(captured.args).toContain('--max-turns')
+    expect(captured.args).toContain('5')
+    expect(existsSync(captured.promptFile)).toBe(false)
+    expect(existsSync(captured.mcpFile)).toBe(false)
+    expect(statuses.join(' ')).not.toContain('sensitive runner prompt')
+  }finally{rmSync(root,{recursive:true,force:true})}
 })
