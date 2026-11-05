@@ -251,7 +251,18 @@ export function makeIndependentFetch(
     const payload = route.protocol === 'responses' ? toResponses(body, route.model)
       : route.protocol === 'gemini' ? toGemini(body) : toChatCompletions(body, route.model)
     // Plan-sharing OAuth strictly requires streaming even for validation calls.
-    if (route.provider === 'chatgpt') payload.stream = true
+    if (route.provider === 'chatgpt') {
+      // ChatGPT plan usage is a narrower Responses API profile than API-key
+      // billing. The preview route rejects these fields.
+      for (const key of [
+        'max_output_tokens', 'temperature', 'top_p', 'background',
+        'conversation', 'max_tool_calls', 'metadata', 'moderation',
+        'multi_agent', 'prompt', 'prompt_cache_retention',
+        'safety_identifier', 'top_logprobs', 'truncation', 'user',
+      ]) delete payload[key]
+      payload.store = false
+      payload.stream = true
+    }
     const endpoint = route.protocol === 'gemini'
       ? `${route.endpoint}/models/${encodeURIComponent(route.model)}:${body.stream ? 'streamGenerateContent?alt=sse&' : 'generateContent?'}key=${encodeURIComponent(bearer)}`
       : route.endpoint
