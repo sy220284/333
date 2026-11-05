@@ -1,12 +1,19 @@
 #!/usr/bin/env node
-// Cover both unregistered tests and tests only scheduled in branch-specific CI.
-// The workflow-only mode prevents PR13 from treating PR7-only jobs as proof.
+/**
+ * Test inventory and execution contract for both main and workflow-only suites.
+ *
+ * Tests are runnable artifacts with runtime, fixtures and platform requirements;
+ * the filename suffix alone cannot select their runtime. Nothing is silently
+ * skipped: missing prerequisites and failures fail the aggregate CI result.
+ */
 import { spawnSync } from 'node:child_process'
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const WORKFLOW_ONLY = process.argv.includes('--workflow-only')
 
 function walk(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
@@ -15,6 +22,7 @@ function walk(dir) {
     return entry.isDirectory() ? walk(abs) : entry.isFile() ? [abs] : []
   })
 }
+
 export function discoverUnregisteredTests(root = ROOT, options = {}) {
   const tests = walk(join(root, 'tests'))
     .map(abs => relative(root, abs).split(sep).join('/'))
@@ -34,44 +42,106 @@ export function discoverUnregisteredTests(root = ROOT, options = {}) {
   return { tests, registered, pending }
 }
 
+function checked(program, args, options = {}) {
+  const result = spawnSync(program, args, {
+    cwd: ROOT, stdio: 'inherit', timeout: 15 * 60_000, ...options,
+  })
+  if (result.error || result.status !== 0) {
+    throw new Error(program + ' ' + args.join(' ') +
+      ': ' + (result.error?.message ?? 'exit status ' + (result.status ?? 'unknown')))
+  }
+}
+
+export function runtimeForTest(file, source = readFileSync(resolve(ROOT, file), 'utf8')) {
+  if (file.endsWith('.ts') || /\b(?:from|import)\s*(?:\(|.*?\sfrom\s*)?['"]bun(?::|['"])/.test(source) ||
+      /\bBun\.(?:serve|spawn|file|SQL|env|sleep)\b/.test(source) ||
+      /(?:from|import)\s*(?:\(|.*?\sfrom\s*)?['"][^'"]+\.ts['"]/.test(source)) {
+    return 'bun'
+  }
+  return 'node'
+}
+
+/** Every fixture is created before the corresponding test and always cleaned up. */
+function runTest(file, runtime, options = {}) {
+  const env = { ...process.env }
+  let args = runtime === 'bun' ? ['test', file] : ['--test', file]
+  let program = runtime === 'bun' ? 'bun' : process.execPath
+  let disposable = null
+  try {
+    if (file === 'tests/governance-contract-trace.test.mjs') {
+      mkdirSync(resolve(ROOT, '.rebuild/governance'), { recursive: true })
+      const dir = resolve(ROOT, '.rebuild/governance')
+      const log = join(dir, 'typescript.log')
+      const typecheck = spawnSync(process.execPath, ['tools/dev/dev.mjs', 'typecheck:all'], {
+        cwd: ROOT, encoding: 'utf8', timeout: 15 * 60_000,
+      })
+      if (typecheck.error) throw typecheck.error
+      writeFileSync(log, (typecheck.stdout ?? '') + (typecheck.stderr ?? ''))
+      checked(process.execPath, ['tools/governance/summarize.mjs', 'types',
+        log, join(dir, 'type-report.json')])
+      checked(process.execPath, ['tools/governance/missing-sources.mjs',
+        join(dir, 'type-report.json'), join(dir, 'missing-sources.json')])
+      checked(process.execPath, ['tools/governance/contract-trace.mjs',
+        join(dir, 'missing-sources.json'), join(dir, 'missing-contracts.json')])
+      args = [file, join(dir, 'missing-contracts.json')]
+    }
+    if (file === 'tests/m1-source-gap-ast.test.mjs') {
+      env.M1_TYPESCRIPT_MODULE = process.env.M1_TYPESCRIPT_MODULE ??
+        process.env.TS_COMPILER_PATH
+      if (!env.M1_TYPESCRIPT_MODULE || !existsSync(env.M1_TYPESCRIPT_MODULE)) {
+        throw new Error('Pinned TypeScript parser must be installed and passed as TS_COMPILER_PATH')
+      }
+    }
+    if (file === 'tests/m1-ink-paste-event.test.mjs') {
+      const compiler = process.env.TS_COMPILER_PATH
+      if (!compiler || !existsSync(compiler)) {
+        throw new Error('Pinned TypeScript parser must be installed for Ink event compilation')
+      }
+      disposable = mkdtempSync(join(tmpdir(), '333-ink-event-test-'))
+      const ambient = join(disposable, 'bun-ambient.d.ts')
+      writeFileSync(ambient, 'declare const Bun: { stripANSI(input: string): string }\n')
+      checked(process.execPath, [
+        compiler, '--strict', '--skipLibCheck', '--target', 'ES2023',
+        '--module', 'CommonJS', '--moduleResolution', 'Node', '--rootDir', 'src/ink',
+        '--outDir', disposable, 'src/ink/events/paste-event.ts', ambient,
+      ])
+      env.M1_INK_EVENTS_DIR = disposable
+    }
+    if (file === 'tests/m1-six-host-native-audio-317.test.mjs') {
+      env.M1_TARGET_PLATFORM = process.platform + '-' + process.arch
+    }
+    if (file === 'tests/m1-native-clipboard-xvfb-317.test.mjs' &&
+        process.platform === 'linux' && process.arch === 'x64') {
+      program = 'xvfb-run'
+      args = ['-a', process.execPath, '--test', file]
+    }
+    console.log(JSON.stringify({ suite: file, runtime, program, args, host: process.platform + '-' + process.arch }))
+    checked(program, args, { env, ...options })
+  } finally {
+    if (disposable) rmSync(disposable, { recursive: true, force: true })
+  }
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const workflowOnly = process.argv.includes('--workflow-only')
-  const { tests, registered, pending } = discoverUnregisteredTests(ROOT, { workflowOnly })
-  console.log(JSON.stringify({ mode: workflowOnly ? 'workflow-only' : 'unregistered',
+  const { tests, registered, pending } = discoverUnregisteredTests(ROOT, { workflowOnly: WORKFLOW_ONLY })
+  const plan = pending.map(file => ({ file, runtime: runtimeForTest(file) }))
+  console.log(JSON.stringify({
+    mode: WORKFLOW_ONLY ? 'workflow-only' : 'unregistered',
     total: tests.length, explicitlyScheduled: registered.length,
-    discoveredForExecution: pending.length, tests: pending }, null, 2))
+    discoveredForExecution: plan.length, planned: plan,
+  }, null, 2))
   if (!process.argv.includes('--list')) {
     const failures = []
-    for (const ext of ['.mjs', '.ts']) {
-      const found = pending.filter(path => path.endsWith(ext))
-      if (!found.length) continue
-      const program = ext === '.mjs' ? process.execPath : 'bun'
-      const options = ext === '.mjs' ? ['--test', '--test-concurrency=4'] : ['test']
-      // Branch-specific suites often mutate global mocks or CLI fixtures.
-      // Run each workflow-only test file in its own process for isolation.
-      const groups = workflowOnly ? found.map(path => [path]) : [found]
-      for (const group of groups) {
-        const outcome = spawnSync(program, [...options, ...group], {
-          cwd: ROOT, stdio: 'inherit', timeout: 15 * 60_000,
-        })
-        if (outcome.error || outcome.status !== 0) {
-          const cause = outcome.error?.message ?? `exit status ${outcome.status ?? 'unknown'}`
-          failures.push({ tests: group, cause })
-          // The regular test:all path keeps its existing fail-fast behavior.
-          // In workflow-only mode, audit every previously unexecuted suite
-          // and report all failures in a single CI run.
-          if (!workflowOnly) {
-            console.error(JSON.stringify({ failedTests: failures }, null, 2))
-            process.exitCode = 1
-            break
-          }
-        }
+    for (const { file, runtime } of plan) {
+      try {
+        runTest(file, runtime)
+      } catch (error) {
+        failures.push({ test: file, runtime, cause: String(error) })
+        console.error(JSON.stringify({ failedTest: file, runtime, cause: String(error) }))
+        if (!WORKFLOW_ONLY) break
       }
-      if (failures.length && !workflowOnly) break
     }
-    if (failures.length) {
-      console.error(JSON.stringify({ failedTests: failures, count: failures.length }, null, 2))
-      process.exitCode = 1
-    }
+    console.log(JSON.stringify({ executed: plan.length, failed: failures.length, failures }, null, 2))
+    if (failures.length) process.exitCode = 1
   }
 }

@@ -8,16 +8,23 @@ const root = resolve(import.meta.dirname, '..')
 const lock = JSON.parse(readFileSync(resolve(root, 'build/public-dependencies.lock.json'), 'utf8'))
 const exporterPath = 'node_modules/@opentelemetry/exporter-prometheus'
 
-test('Prometheus exporter is patched with an integrity-pinned and peer-compatible SDK', () => {
+test('Prometheus exporter is integrity-pinned and peer-compatible with the upgraded OpenTelemetry SDK', () => {
   const packages = lock.packages
-  assert.equal(packages[''].dependencies['@opentelemetry/exporter-prometheus'], '0.217.0')
+  const stable = JSON.parse(readFileSync(resolve(root, 'docs/upgrade/latest-stable-dependencies.json'), 'utf8')).versions
+  const exporterVersion = stable['@opentelemetry/exporter-prometheus']
+  assert.equal(packages[''].dependencies['@opentelemetry/exporter-prometheus'], exporterVersion)
   const exporter = packages[exporterPath]
-  assert.equal(exporter.version, '0.217.0')
+  assert.equal(exporter.version, exporterVersion)
   assert.match(exporter.integrity, /^sha512-[A-Za-z0-9+/]+={0,2}$/)
-  assert.equal(packages['node_modules/@opentelemetry/api'].version, '1.9.0')
+  const api = packages['node_modules/@opentelemetry/api']
+  assert.equal(api.version, stable['@opentelemetry/api'])
+  assert.match(api.integrity, /^sha512-[A-Za-z0-9+/]+={0,2}$/)
   for (const name of ['core', 'resources', 'sdk-metrics']) {
-    const nested = packages[exporterPath + '/node_modules/@opentelemetry/' + name]
-    assert.equal(nested?.version, '2.7.1', 'missing compatible ' + name)
+    const key = '@opentelemetry/' + name
+    const nested = packages[exporterPath + '/node_modules/' + key] ??
+      packages['node_modules/' + key]
+    assert.ok(nested, 'missing compatible ' + name)
+    assert.equal(nested.version, stable[key], 'version mismatch: ' + name)
     assert.match(nested.integrity, /^sha512-[A-Za-z0-9+/]+={0,2}$/)
   }
 })
