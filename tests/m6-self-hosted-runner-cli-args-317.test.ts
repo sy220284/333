@@ -1,5 +1,8 @@
 import {test,expect} from 'bun:test'
-import {mapRunnerRemoteCliArgs317} from '../src/cli/selfHostedRunner/runnerCliArgs317.ts'
+import {mapRunnerRemoteCliArgs317,stageRunnerPromptFlags317} from '../src/cli/selfHostedRunner/runnerCliArgs317.ts'
+import {mkdtempSync,readFileSync,statSync,rmSync,existsSync} from 'node:fs'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
 
 test('Runner 317: server arguments preserve option format, sequence and leading hyphens',()=>{
   expect(mapRunnerRemoteCliArgs317({
@@ -26,4 +29,32 @@ test('Runner 317: restricted false and explicitly empty setting sources keep ori
   })).toEqual(['--restricted','--setting-sources='])
   expect(mapRunnerRemoteCliArgs317({restricted:true})).toEqual([])
   expect(mapRunnerRemoteCliArgs317({restricted:'off'})).toEqual(['--restricted'])
+})
+
+test('Runner 317: privileged remote prompts are delivered as private files',async()=>{
+  const folder=mkdtempSync(join(tmpdir(),'runner-prompts-317-'))
+  try{
+    const result=await stageRunnerPromptFlags317({
+      'system-prompt':'system rules',
+      'append-system-prompt':'append rules',
+      'append-subagent-system-prompt':'agent rules',
+    },folder,true)
+    expect(result.paths).toHaveLength(3)
+    expect(result.args.filter(x=>x.endsWith('-file'))).toHaveLength(3)
+    expect(result.paths.map(x=>readFileSync(x,'utf8')))
+      .toEqual(['system rules','append rules','agent rules'])
+    for(const path of result.paths){
+      if(process.platform!=='win32')expect(statSync(path).mode&0o777).toBe(0o600)
+      expect(existsSync(path)).toBe(true)
+    }
+  }finally {rmSync(folder,{recursive:true,force:true})}
+})
+test('Runner 317: an older child receives a short subagent append prompt inline',async()=>{
+  const folder=mkdtempSync(join(tmpdir(),'runner-prompts-317-'))
+  try{
+    const result=await stageRunnerPromptFlags317({
+      'append-subagent-system-prompt':'short',
+    },folder,false)
+    expect(result).toEqual({args:['--append-subagent-system-prompt','short'],paths:[]})
+  }finally {rmSync(folder,{recursive:true,force:true})}
 })

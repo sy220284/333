@@ -5,6 +5,10 @@
  * chunk-j5svdpw5.js:1541/2488. CLI transport, settings, prompt files and
  * agent definitions are owned by other bootstrap stages, not this adapter.
  */
+import { randomUUID } from 'node:crypto'
+import { writeFile, unlink } from 'node:fs/promises'
+import { join } from 'node:path'
+
 const FLAG = /^[A-Za-z0-9][A-Za-z0-9-]*$/
 const RESERVED = new Set([
   'sdk-url','resume','print','input-format','output-format',
@@ -45,4 +49,45 @@ export function mapRunnerRemoteCliArgs317(
     else args.push(flag,text)
   }
   return args
+}
+
+const PROMPT_OPTIONS = [
+  ['system-prompt','remote-system-prompt.txt'],
+  ['append-system-prompt','remote-append-system-prompt.txt'],
+  ['append-subagent-system-prompt','remote-append-subagent-system-prompt.txt'],
+] as const
+
+export type RunnerPromptFlags317 = { args: string[]; paths: string[] }
+
+/** Port of 317 prompt-file staging: private mode-0600 files, no CLI secret spill. */
+export async function stageRunnerPromptFlags317(
+  values: Record<string,unknown>,
+  configDir: string,
+  childIsOwnBinary: boolean,
+):Promise<RunnerPromptFlags317>{
+  const args:string[]=[]
+  const paths:string[]=[]
+  try {
+    for(const [key,filename] of PROMPT_OPTIONS){
+      const entry=values[key]
+      const text=entry===undefined?'':String(entry)
+      if(text==='')continue
+      if(key==='append-subagent-system-prompt' && !childIsOwnBinary &&
+         Buffer.byteLength(text,'utf8')<131072){
+        args.push('--'+key,text)
+        continue
+      }
+      const path=join(configDir,randomUUID()+'-'+filename)
+      await writeFile(path,text,{encoding:'utf8',flag:'wx',mode:0o600})
+      paths.push(path)
+      args.push('--'+key+'-file',path)
+    }
+    return {args,paths}
+  }catch(error){
+    const cleanup=await Promise.allSettled(paths.map(path=>unlink(path)))
+    const failures=cleanup.filter(x=>x.status==='rejected')
+    if(failures.length) throw new AggregateError([error,...failures.map(x=>x.reason)],
+      'Remote prompt staging and cleanup failed')
+    throw error
+  }
 }

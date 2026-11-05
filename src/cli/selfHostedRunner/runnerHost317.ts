@@ -13,7 +13,8 @@ import { createSessionSpawner } from '../../bridge/sessionRunner.js'
 import type { SessionHandle } from '../../bridge/types.js'
 import { RunnerHttpError317, SelfHostedRunnerApi317 } from './runnerApi317.ts'
 import { prepareRunnerWorkspace317, pushRunnerOutcomeBranches317 } from './runnerWorkspace317.ts'
-import { mapRunnerRemoteCliArgs317 } from './runnerCliArgs317.ts'
+import { mapRunnerRemoteCliArgs317, stageRunnerPromptFlags317 } from './runnerCliArgs317.ts'
+import { unlink } from 'node:fs/promises'
 
 export type RunnerHostOptions317 = {
   api: SelfHostedRunnerApi317
@@ -136,6 +137,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
     let sessionRefreshTimer: ReturnType<typeof setInterval> | undefined
     let sessionRefreshPending = false
     let heartbeatPending = false
+    let stagedPromptFiles:string[]=[]
     const heartbeatAbort = new AbortController()
     try {
       const issued = await options.api.issueSessionToken(runnerToken,id,ownedAbort.signal)
@@ -173,12 +175,19 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
         workerEpoch, onStatus:status,
       })
       const childCwd = prepared.cwd
+      const promptFlags=await stageRunnerPromptFlags317(
+        remote.claude_code_args,sessionConfigDir,options.execPath===process.execPath)
+      stagedPromptFiles=promptFlags.paths
+      const deliveredCliArgs=[
+        ...promptFlags.args,
+        ...mapRunnerRemoteCliArgs317(remote.claude_code_args,status),
+      ]
       const sdkUrl = new URL('/v1/code/sessions/'+encodeURIComponent(id),remoteBase).toString()
       const handle = options.createChild
         ? options.createChild(id,sdkUrl,remoteToken,workerEpoch,childCwd,env)
         : createSessionSpawner({
             execPath:options.execPath,scriptArgs:options.scriptArgs,
-            additionalArgs:mapRunnerRemoteCliArgs317(remote.claude_code_args,status),
+            additionalArgs:deliveredCliArgs,
             env,verbose:false,sandbox:false,onDebug:status,
             debugFile:join(sessionConfigDir,'claude-code-debug.txt'),
             runnerRuntime:{apiBaseUrl:remoteBase,configDir:sessionConfigDir},
@@ -228,11 +237,16 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
         status('[runner:session] '+id+' completion error: '+
           (error instanceof Error ? error.message : String(error)))
         throw error
-      }).finally(() => {
+      }).finally(async () => {
         heartbeatAbort.abort()
         if (heartbeatTimer) clearInterval(heartbeatTimer)
         if (sessionRefreshTimer) clearInterval(sessionRefreshTimer)
         active.delete(id)
+        for(const path of stagedPromptFiles){
+          try { await unlink(path) }
+          catch(error) { status('[runner:session] prompt cleanup failed: '+
+            (error instanceof Error?error.message:String(error))) }
+        }
       })
       active.set(id,{handle,completion})
       // Observe the rejected completion without detaching an unhandled promise.
@@ -241,6 +255,11 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       heartbeatAbort.abort()
       if (heartbeatTimer) clearInterval(heartbeatTimer)
       if (sessionRefreshTimer) clearInterval(sessionRefreshTimer)
+      for(const path of stagedPromptFiles){
+        try { await unlink(path) }
+        catch(error) { status('[runner:session] prompt cleanup failed: '+
+          (error instanceof Error?error.message:String(error))) }
+      }
       if (ownedAbort.signal.aborted) return
       status('[runner:session] failed to start '+id+': '+
         (error instanceof Error ? error.message : String(error)))
