@@ -50,7 +50,6 @@ import { getPlatform, getWslVersion } from 'src/utils/platform.js'
 import { getCACertificates } from '../caCerts.js'
 import { registerCleanup } from '../cleanupRegistry.js'
 import { getHasFormattedOutput, logForDebugging } from '../debug.js'
-import { isEnvTruthy } from '../envUtils.js'
 import { errorMessage } from '../errors.js'
 import { getMTLSConfig } from '../mtls.js'
 import { getProxyUrl, shouldBypassProxy } from '../proxy.js'
@@ -338,19 +337,6 @@ function getBigQueryExportingReader() {
 function isBigQueryMetricsEnabled() {
   return false
 }
-function wasBigQueryMetricsEnabledBeforeIndependence() {
-  // BigQuery metrics are enabled for:
-  // 1. API customers (excluding Claude.ai subscribers and Bedrock/Vertex)
-  // 2. Claude for Enterprise (C4E) users
-  // 3. Claude for Teams users
-  const subscriptionType = getSubscriptionType()
-  const isC4EOrTeamUser =
-    isClaudeAISubscriber() &&
-    (subscriptionType === 'enterprise' || subscriptionType === 'team')
-
-  return is1PApiCustomer() || isC4EOrTeamUser
-}
-
 /**
  * Initialize beta tracing - a separate code path for detailed debugging.
  * Uses BETA_TRACING_ENDPOINT instead of OTEL_EXPORTER_OTLP_ENDPOINT.
@@ -515,7 +501,7 @@ export async function initializeTelemetry(): Promise<import('@opentelemetry/api'
 
   // Check if beta tracing is enabled - this is a separate code path
   // Available to all users who set ENABLE_BETA_TRACING_DETAILED=1 and BETA_TRACING_ENDPOINT
-  if (false && isBetaTracingEnabled()) {
+  if (telemetryEnabled && isBetaTracingEnabled()) {
     const betaTracingReady = initializeBetaTracing(resource).catch(error => {
       logForDebugging(
         `Beta tracing init failed: ${errorMessage(error)}`,
