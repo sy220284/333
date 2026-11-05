@@ -1,5 +1,6 @@
 import {expect,test} from 'bun:test'
-import {mkdtempSync,rmSync} from 'node:fs'
+import {mkdtempSync,mkdirSync,rmSync,writeFileSync,readFileSync} from 'node:fs'
+import {execFileSync} from 'node:child_process'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import type {SessionHandle} from '../src/bridge/types.ts'
@@ -147,5 +148,48 @@ test('Runner 317: worker state admission failure prevents spawning an unregister
       createChild(){steps.push('spawn');return makeHandle()},
     })
     expect(steps).toEqual(['state','failure'])
+  }finally{rmSync(root,{recursive:true,force:true})}
+})
+
+test('Runner 317: end-to-end source-backed assignment runs inside checked-out revision',async()=>{
+  const root=temp(),aborted=new AbortController()
+  const bare=join(root,'owner','project.git')
+  const writer=join(root,'writer')
+  const git=(...args:string[])=>execFileSync('git',args,{encoding:'utf8'}).trim()
+  const steps:string[]=[]
+  try{
+    mkdirSync(join(root,'owner'),{recursive:true})
+    git('init','--bare','--initial-branch=main',bare)
+    git('init','--initial-branch=main',writer)
+    writeFileSync(join(writer,'payload.txt'),'verified-source-content')
+    git('-C',writer,'add','.')
+    git('-C',writer,'-c','user.name=QA','-c','user.email=qa@example.org',
+      'commit','-m','initial')
+    git('-C',writer,'remote','add','origin',bare)
+    git('-C',writer,'push','origin','main')
+    const api=fakeApi({
+      pollWork:async()=>({assignment_ids:['session_1'],session_assignments:[]}),
+      getSessionRemoteConfig:async()=>({
+        sources:[{type:'git_repository',url:'file://'+bare,revision:'main'}],
+        push_targets:[{type:'git_repository',git_info:{
+          repo:'owner/project',branches:['feature/runner']}}],
+        claude_code_args:{},environment_variables:{},
+        api_base_url:'https://api.example.test',
+      }),
+      updateSessionWorkerState:async()=>{steps.push('state')},
+      releaseSession:async()=>{steps.push('release');aborted.abort();return {released:true}},
+    })
+    await startSelfHostedRunnerHost317({
+      api,baseDir:root,capacity:1,execPath:process.execPath,scriptArgs:[],
+      env:{},signal:aborted.signal,
+      createChild(_id,_url,_token,_epoch,cwd){
+        steps.push('spawn')
+        expect(cwd).toBe(join(root,'session_1','owner_project'))
+        expect(readFileSync(join(cwd,'payload.txt'),'utf8')).toBe('verified-source-content')
+        expect(git('-C',cwd,'branch','--show-current')).toBe('feature/runner')
+        return makeHandle()
+      },
+    })
+    expect(steps).toEqual(['state','spawn','release'])
   }finally{rmSync(root,{recursive:true,force:true})}
 })
