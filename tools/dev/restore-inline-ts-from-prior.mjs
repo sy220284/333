@@ -47,6 +47,18 @@ function original(path) {
   return output.endsWith('\n') ? output : output+'\n'
 }
 const decoded=new Map(selected.map(path=>[path,original(path)]))
+const localizedProtected=[]
+for(const path of [...selected]){
+  const compiled = snapshots.get(path).split(/\/\/[#@]\s*sourceMappingURL=data:/)[0]
+  const phrases = [...new Set(compiled.match(/[\u3400-\u9fff]{2,}/g)||[])]
+  const disappeared = phrases.filter(phrase=>!decoded.get(path).includes(phrase))
+  if(disappeared.length){
+    localizedProtected.push({path,missingChinese:disappeared})
+    selected.splice(selected.indexOf(path),1)
+    decoded.delete(path)
+    snapshots.delete(path)
+  }
+}
 function apply(paths) {
   for(const path of paths)writeFileSync(resolve(root,path),decoded.get(path))
 }
@@ -91,7 +103,7 @@ const report={
   priorAccepted:acceptedSet.size,currentCandidates:current.files.length,
   currentSelected:selected.length,restored:verified.length,
   changedSincePrior:protectedPaths,alreadyRestored:alreadyRestoredPaths,
-  additionalFailures:rejected,originallyRejected:prior.rejectedDetails,
+  localizedProtected,additionalFailures:rejected,originallyRejected:prior.rejectedDetails,
   typecheckInvocations:calls,acceptedPaths:verified
 }
 const out=resolve(root,'.rebuild/governance/inline-ts-current-batch.json')
@@ -99,6 +111,7 @@ mkdirSync(dirname(out),{recursive:true})
 writeFileSync(out,JSON.stringify(report,null,2)+'\n')
 console.log('[新版PR7源码恢复]',JSON.stringify({
   restored:verified.length,protected:protectedPaths.length,
+  localizationProtected:localizedProtected.length,
   notCandidates:alreadyRestoredPaths.length,additionalFailures:rejected.length,
   referenceRejected:prior.rejectedDetails.length,typechecks:calls
 }))
