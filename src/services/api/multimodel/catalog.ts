@@ -45,7 +45,8 @@ export function getSavedModelOptions(): Array<{ value: string; label: string; de
   }))
 }
 export async function refreshProviderModels(provider: IndependentProvider): Promise<ModelEntry[]> {
-  const route = resolveIndependentModel(`${provider}/probe`)!
+  const route = resolveIndependentModel(`${provider}/probe`)
+  if (!route) throw new Error(`No route registered for ${provider}`)
   const token = provider === 'chatgpt' ? await getChatGPTAccessToken() : getIndependentApiKey(route)
   const names = await discoverIndependentModels(provider, token)
   const at = new Date().toISOString()
