@@ -4,6 +4,50 @@
  */
 import { randomUUID } from 'node:crypto'
 import { spendPeriodStart317, spendPeriodReset317 } from './gatewaySpendStore317.ts'
+import type { GatewaySpendLimit317, GatewaySpendStore317 } from './gatewaySpendStore317.ts'
+type GatewayIdentity317 = {sub: string; groups?: string[]}
+type GatewayMode317 = 'min' | 'max'
+type GatewayUsage317 = Record<string, unknown> & {
+  input_tokens?: number; output_tokens?: number
+  cache_read_input_tokens?: number; cache_creation_input_tokens?: number
+  cache_creation?: {ephemeral_1h_input_tokens?: number}
+  server_tool_use?: {web_search_requests?: number}
+}
+type GatewayMeterConfig317 = GatewayPricingConfig317 & {
+  admin?: {group_limit_mode?: GatewayMode317}
+  enforcement?: {fail_closed_on_error?: boolean}
+}
+type GatewaySpendBinding317 = GatewaySpendLimit317 & {
+  spent: number; limit: number; reset: Date; utilization: number
+  exceeded: boolean; scope_type: string
+}
+type GatewayPoolBinding317 = {
+  period: string; spent: number; limit: number; reset: Date
+  utilization: number; exceeded: boolean; scope_type: 'group_pool'
+}
+type GatewayMeterBinding317 = GatewaySpendBinding317 | GatewayPoolBinding317
+type GatewaySpendPrecheck317 = {
+  blocked: Response | null
+  headers: Record<string, string>
+  payingGroup: string | null
+  caps?: GatewaySpendBinding317[]
+  checkError?: unknown
+}
+type GatewaySpendAudit317 = (
+  event: string, subject: string | null, requestId: string | null,
+  details: Record<string, unknown>,
+) => Promise<void>
+type GatewayMeterContext317 = {
+  store: GatewaySpendStore317; identity: GatewayIdentity317
+  config: GatewayMeterConfig317; model: string; upstream: string
+  payingGroup?: string | null; headers?: Record<string,string>
+  audit?: GatewaySpendAudit317
+}
+export type GatewaySseUsage317 = {
+  push(bytes: Uint8Array): void
+  finish(): GatewayUsage317 | null
+}
+
 
 const FALLBACK = Object.freeze({
   input:5,output:25,cache_read:.5,cache_write:6.25,cache_write_1h:10,
@@ -24,7 +68,7 @@ type GatewayPricingConfig317 = {
       cache_write?: number; cache_write_1h?: number; web_search?: number}>
   }
 }
-function modelPrices(model,config: GatewayPricingConfig317,upstream) {
+function modelPrices(model: string, config: GatewayPricingConfig317, upstream: string) {
   const override=(config.pricing?.overrides??[]).find(x=>
     x.upstream===upstream && x.model.toLowerCase()===model.toLowerCase())
   if (override) return {...FALLBACK,...override}
@@ -33,7 +77,7 @@ function modelPrices(model,config: GatewayPricingConfig317,upstream) {
   if (/claude-opus/i.test(model)) return OPUS_HIGH
   return FALLBACK
 }
-export function centsForGatewayUsage317(usage,model,config: GatewayPricingConfig317 = {},upstream) : number {
+export function centsForGatewayUsage317(usage: GatewayUsage317 | null | undefined, model: string, config: GatewayPricingConfig317 = {}, upstream: string): number {
   const rate=modelPrices(model,config,upstream)
   const read=Number(usage?.cache_read_input_tokens??0)
   const write=Number(usage?.cache_creation_input_tokens??0)
@@ -52,10 +96,10 @@ export function centsForGatewayUsage317(usage,model,config: GatewayPricingConfig
   }
   return usd*100*multiplier
 }
-function selectCap(caps,period,mode) {
+function selectCap(caps: GatewaySpendLimit317[], period: string, mode: GatewayMode317): GatewaySpendLimit317 | null {
   const matches=caps.filter(x=>x.period===period)
   if(!matches.length) return null
-  const priority={user:0,rbac_group:1,organization:2}
+  const priority: Record<string,number>={user:0,rbac_group:1,organization:2}
   const sorted=[...matches].sort((a,b)=>{
     const type=priority[a.scope?.type]-priority[b.scope?.type]
     if(type!==0) return type
@@ -69,9 +113,13 @@ function selectCap(caps,period,mode) {
   })
   return sorted[0]
 }
-const currentPeriodRows=async (store,identity,mode,now)=>{
-  const caps=await store.getApplicableCaps(identity)
-  const result=[]
+const currentPeriodRows=async (
+  store: GatewaySpendStore317, identity: GatewayIdentity317,
+  mode: GatewayMode317, now: Date,
+): Promise<GatewaySpendBinding317[]>=>{
+  const caps=(await store.getApplicableCaps(identity)).filter(
+    (cap): cap is GatewaySpendLimit317 => cap!==null)
+  const result: GatewaySpendBinding317[]=[]
   for(const period of ['daily','weekly','monthly']) {
     const cap=selectCap(caps,period,mode)
     if(!cap || cap.amount===null) continue
@@ -83,15 +131,15 @@ const currentPeriodRows=async (store,identity,mode,now)=>{
   }
   return result
 }
-function priorityBinding(rows) {
+function priorityBinding(rows: GatewayMeterBinding317[]): GatewayMeterBinding317 | undefined {
   return rows.sort((a,b)=>Number(b.exceeded)-Number(a.exceeded)||
     b.utilization-a.utilization||b.reset.getTime()-a.reset.getTime())[0]
 }
-export function unifiedSpendHeaders317(binding,now: Date=new Date()) : {} {
+export function unifiedSpendHeaders317(binding: GatewayMeterBinding317 | undefined | null, now: Date=new Date()): Record<string,string> {
   if(!binding) return {}
   const blocked=binding.exceeded
   const utilization=blocked?binding.utilization:Math.min(.99,Math.round(binding.utilization*100)/100)
-  const headers={
+  const headers: Record<string,string>={
     'anthropic-ratelimit-unified-status':blocked?'rejected':
       binding.utilization>.75?'allowed_warning':'allowed',
     'anthropic-ratelimit-unified-reset':String(Math.floor(binding.reset.getTime()/1000)),
@@ -113,7 +161,7 @@ export function unifiedSpendHeaders317(binding,now: Date=new Date()) : {} {
   }
   return headers
 }
-function denySpend317(binding,headers,requestId,now=new Date()) {
+function denySpend317(binding: GatewayMeterBinding317 | null, headers: Record<string,string>, requestId: string, now: Date = new Date()): Response {
   return Response.json({type:'error',error:{
     type:'billing_error',
     message:binding?
@@ -123,7 +171,7 @@ function denySpend317(binding,headers,requestId,now=new Date()) {
     ...headers,'x-request-id':requestId,'cache-control':'no-store',
   }})
 }
-export async function precheckGatewaySpend317(store,identity,config,now: Date=new Date()) {
+export async function precheckGatewaySpend317(store: GatewaySpendStore317, identity: GatewayIdentity317, config: GatewayMeterConfig317, now: Date=new Date()): Promise<GatewaySpendPrecheck317> {
   if(!config.admin) return {blocked:null,headers:{},payingGroup:null}
   const requestId='req_'+randomUUID().replaceAll('-','')
   const mode=config.admin.group_limit_mode??'min'
@@ -147,12 +195,12 @@ export async function precheckGatewaySpend317(store,identity,config,now: Date=ne
   const eligible=[]
   for(const group of new Set(identity.groups??[])) {
     const poolCaps=await store.getApplicableCaps({sub:identity.sub,groups:[group]})
-    const pool=poolCaps.find(row=>row.scope.type==='rbac_group'&&
+    const pool=poolCaps.find(row=>row?.scope.type==='rbac_group'&&
       row.scope.rbac_group_id===group&&row.period==='monthly'&&
       row.pooled_budget&&!row.pooled_budget.paused)
     if(!pool)continue
     const limit=Number(pool.pooled_budget.amount)
-    const spent=await store.getPoolSpend(group,spendPeriodStart317('monthly',now))
+    const spent=Number(await store.getPoolSpend(group,spendPeriodStart317('monthly',now)))
     eligible.push({group,limit,spent})
   }
   eligible.sort((a,b)=>b.limit-a.limit||a.group.localeCompare(b.group))
@@ -170,10 +218,10 @@ export async function precheckGatewaySpend317(store,identity,config,now: Date=ne
   return {blocked:null,headers,payingGroup:
     eligible.find(p=>p.spent<p.limit)?.group??null,caps}
 }
-export function createGatewaySseUsage317() {
+export function createGatewaySseUsage317(): GatewaySseUsage317 {
   let buffer='', usage: Record<string, unknown> & { _estimated_output_chars?: number; output_tokens?: number } = {}, seen=false
   const decoder=new TextDecoder()
-  const consume=(frame)=>{
+  const consume=(frame: string): void => {
     const data=frame.split(/\r?\n/).filter(line=>line.startsWith('data:'))
       .map(line=>line.slice(5).trim()).join('\n')
     if(!data || data==='[DONE]')return
@@ -196,7 +244,7 @@ export function createGatewaySseUsage317() {
     }
   }
   return {
-    push(bytes) {
+    push(bytes: Uint8Array): void {
       buffer+=decoder.decode(bytes,{stream:true})
       // Upstreams may use LF or CRLF, and a frame boundary can split
       // across TCP chunks; preserve incomplete frames for the next pull.
@@ -206,7 +254,7 @@ export function createGatewaySseUsage317() {
         buffer=buffer.slice(delimiter.index+delimiter[0].length)
       }
     },
-    finish() {
+    finish(): GatewayUsage317 | null {
       buffer+=decoder.decode()
       if(buffer.trim())consume(buffer)
       if(!seen&&!(usage._estimated_output_chars>0))return null
@@ -219,7 +267,7 @@ export function createGatewaySseUsage317() {
   }
 }
 /** Preserve raw SSE while recording tokens as the client consumes them. */
-export function meterGatewayResponse317(response,context) : Response {
+export function meterGatewayResponse317(response: Response, context: GatewayMeterContext317): Response {
   const {store,identity,config,model,upstream,payingGroup,headers={},audit}=context
   const h=new Headers(response.headers)
   for(const [key,value] of Object.entries(headers))h.set(key,String(value))
@@ -229,7 +277,7 @@ export function meterGatewayResponse317(response,context) : Response {
   const streaming=(h.get('content-type')??'').includes('text/event-stream')
   const reader=response.body.getReader()
   const usage=streaming?createGatewaySseUsage317():null
-  const chunks=[]
+  const chunks: Buffer[]=[]
   const finish=async()=>{
     let metered
     if(streaming) metered=usage.finish()
@@ -263,7 +311,7 @@ export function meterGatewayResponse317(response,context) : Response {
   })
   return new Response(body,{status:response.status,headers:h})
 }
-export async function gatewayUsageResponse317(store,identity,config,now: Date=new Date()) : Promise<Response> {
+export async function gatewayUsageResponse317(store: GatewaySpendStore317, identity: GatewayIdentity317, config: GatewayMeterConfig317, now: Date=new Date()): Promise<Response> {
   try{
     const caps=await currentPeriodRows(store,identity,config.admin?.group_limit_mode??'min',now)
     const binding=priorityBinding(caps)
