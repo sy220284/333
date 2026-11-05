@@ -139,9 +139,11 @@ export async function fetchAttachmentHere317(raw:unknown,
   if(response.status!==200)
     return result('failed','not downloaded: server returned '+response.status,
       'http_'+response.status)
-  const stated=Number(response.headers.get('content-length'))
-  if(response.headers.has('content-length')&&
-    (!Number.isFinite(stated)||stated>maxBytes))
+  const declaredLength=response.headers.has('content-length')?
+    Number(response.headers.get('content-length')):null
+  if(declaredLength!==null && (!Number.isSafeInteger(declaredLength)||declaredLength<0))
+    return result('failed','not downloaded: invalid byte count','length')
+  if(declaredLength!==null && declaredLength>maxBytes)
     return result('too_large','not downloaded: over 500 MiB')
   if(!response.body)
     return result('failed','not downloaded: empty response body','empty')
@@ -166,6 +168,8 @@ export async function fetchAttachmentHere317(raw:unknown,
       }
     }finally{reader.releaseLock()}
     if(total===0)return result('failed','not placed: the file is empty','empty')
+    if(declaredLength!==null && total!==declaredLength)
+      return result('failed','not placed: incomplete download','truncated')
     await file.sync()
     await file.close()
     const after=await lstat(staged)
