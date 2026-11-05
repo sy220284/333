@@ -73,9 +73,13 @@ jobs:
           --health-retries 15
     steps:
       - uses: actions/checkout@v4
+      - name: 读取工具链权威版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - name: 检查工具链及升级成果保护
+        run: node tools/dev/toolchain.mjs check
       - name: 安装冻结的 TypeScript 编译器
         run: npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
       - name: 还原依赖和声明
@@ -92,7 +96,7 @@ jobs:
         run: node tools/dev/type-migration-strict.mjs
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.4
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
       - name: 为真实预加载、SDK 与 Gateway 回归构建当前升级版 CLI
         run: |
           bun build/rebuild.mjs
