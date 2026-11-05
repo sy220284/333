@@ -41,6 +41,9 @@ export function readToolchain() {
   for (const name of ['actionlintLinuxX64Sha256', 'sourceMapSha256']) {
     if (!/^[a-f0-9]{64}$/.test(data.integrity[name])) fail(`无效 SHA-256：${name}`)
   }
+  if (!/^[a-f0-9]{40}$/.test(data.integrity.pr13BaselineBlobSha)) {
+    fail('PR13 历史升级基准 Git Blob SHA-1 无效')
+  }
   const a = data.artifacts
   if (!Number.isSafeInteger(a.schema) || a.schema < 1 ||
       !Number.isSafeInteger(a.shardBytes) || a.shardBytes <= 0 ||
