@@ -111,3 +111,29 @@ test('317 model picker labels and pricing follow the model that each alias actua
     assert.doesNotMatch(entry.description, /4[.][156]/);
   }
 `))
+
+test('333 inventory keeps first-party-only models and best follows the catalog', () => run(`
+  import { MODEL_CATALOG, getCatalogModelsForProvider, getCatalogPreferredModelsForProvider } from './src/utils/model/modelCatalog.ts';
+  import { getBestModel, parseUserSpecifiedModel } from './src/utils/model/model.ts';
+  import { getModelOptions } from './src/utils/model/modelOptions.ts';
+  assert.equal(MODEL_CATALOG.models.length, 22);
+  assert.equal(getCatalogModelsForProvider('first_party').length, 22);
+  assert.equal(getCatalogModelsForProvider('bedrock').some(x => x.family === 'mythos'), false);
+  assert.equal(MODEL_CATALOG.best, 'fable');
+  assert.equal(getBestModel(), 'claude-fable-5-1');
+  assert.equal(parseUserSpecifiedModel('best'), getBestModel());
+  const preferred = getCatalogPreferredModelsForProvider('first_party');
+  assert.deepEqual(preferred.map(x => x.family).sort(), ['fable', 'haiku', 'opus', 'sonnet']);
+  const picker = getModelOptions();
+  for (const row of preferred) assert.ok(picker.some(option => option.value === row.provider_ids.first_party), row.id);
+`))
+
+test('333 provider picker uses provider-resolved defaults rather than unsupported latest models', () => run(`
+  import { getCatalogPreferredModelsForProvider } from './src/utils/model/modelCatalog.ts';
+  import { getModelOptions } from './src/utils/model/modelOptions.ts';
+  const preferred = getCatalogPreferredModelsForProvider('bedrock');
+  const picker = getModelOptions();
+  for (const row of preferred) assert.ok(picker.some(option => option.value === row.provider_ids.bedrock), row.id);
+  assert.equal(preferred.find(x => x.family === 'sonnet')?.id, 'claude-sonnet-4-5');
+  assert.equal(picker.some(option => String(option.value).includes('claude-mythos')), false);
+`, { CLAUDE_CODE_USE_BEDROCK: '1' }))

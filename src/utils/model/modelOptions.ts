@@ -19,11 +19,11 @@ import { getAPIProvider } from './providers.js'
 import { getAntModels } from './antModels.js'
 import { isModelAllowed } from './modelAllowlist.js'
 import {
-  getCanonicalName,
   getClaudeAiUserDefaultModelDescription,
   getDefaultSonnetModel,
   getDefaultOpusModel,
   getDefaultHaikuModel,
+  getDefaultFableModel,
   getDefaultMainLoopModelSetting,
   getMarketingNameForModel,
   getUserSpecifiedModelSetting,
@@ -34,7 +34,7 @@ import {
 } from './model.js'
 import { has1mContext } from '../context.js'
 import { getGlobalConfig } from '../config.js'
-import { getCatalogModel } from './modelCatalog.js'
+import { getCatalogModel, getCatalogPreferredModelsForProvider } from './modelCatalog.js'
 import { isModelAlias } from './aliases.js'
 import { getPublicModelDisplayName, parseUserSpecifiedModel } from './model.js'
 import { getModelPricingString } from '../modelCost.js'
@@ -391,42 +391,22 @@ function getModelOptionsBase(fastMode = false): ModelOption[] {
 function getModelFamilyInfo(
   model: string,
 ): { alias: string; currentVersionName: string } | null {
-  const canonical = getCanonicalName(model)
-
-  // Sonnet family
-  if (
-    canonical.includes('claude-sonnet-4-6') ||
-    canonical.includes('claude-sonnet-4-5') ||
-    canonical.includes('claude-sonnet-4-') ||
-    canonical.includes('claude-3-7-sonnet') ||
-    canonical.includes('claude-3-5-sonnet')
-  ) {
-    const currentName = getMarketingNameForModel(getDefaultSonnetModel())
-    if (currentName) {
-      return { alias: 'Sonnet', currentVersionName: currentName }
-    }
+  const entry = getCatalogModel(model)
+  if (!entry) return null
+  const defaults: Record<string, () => string> = {
+    sonnet: getDefaultSonnetModel,
+    opus: getDefaultOpusModel,
+    haiku: getDefaultHaikuModel,
+    fable: getDefaultFableModel,
   }
-
-  // Opus family
-  if (canonical.includes('claude-opus-4')) {
-    const currentName = getMarketingNameForModel(getDefaultOpusModel())
-    if (currentName) {
-      return { alias: 'Opus', currentVersionName: currentName }
-    }
-  }
-
-  // Haiku family
-  if (
-    canonical.includes('claude-haiku') ||
-    canonical.includes('claude-3-5-haiku')
-  ) {
-    const currentName = getMarketingNameForModel(getDefaultHaikuModel())
-    if (currentName) {
-      return { alias: 'Haiku', currentVersionName: currentName }
-    }
-  }
-
-  return null
+  const resolveDefault = defaults[entry.family]
+  if (!resolveDefault) return null
+  const currentModel = resolveDefault()
+  const currentVersionName = getCatalogModel(currentModel)?.display_name ??
+    getMarketingNameForModel(currentModel)
+  return currentVersionName
+    ? { alias: entry.family[0]!.toUpperCase() + entry.family.slice(1), currentVersionName }
+    : null
 }
 
 /**
@@ -488,6 +468,25 @@ export function getModelOptions(fastMode: boolean = false): ModelOption[] {
         process.env.ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION ??
         `Custom model (${envCustomModel})`,
     })
+  }
+
+  // Build visible choices from the same provider-specific catalog used for
+  // model resolution. Subscription choices retain their entitlement rules.
+  // Restricted Mythos models remain selectable by explicit ID after access.
+  if (!isClaudeAISubscriber()) {
+    const provider = getAPIProvider()
+    const catalogProvider = provider === 'firstParty' ? 'first_party' : provider
+    for (const entry of getCatalogPreferredModelsForProvider(catalogProvider)) {
+      const id = entry.provider_ids[catalogProvider]
+      if (typeof id !== 'string' || options.some(option => option.value === id)) continue
+      const pricing = getModelPricingString(id)
+      options.push({
+        value: id,
+        label: entry.display_name,
+        description: [entry.display_name, pricing].filter(Boolean).join(' · '),
+        descriptionForModel: `${entry.display_name} (${id})`,
+      })
+    }
   }
 
   // Append models confirmed by the connected provider's discovery endpoint.

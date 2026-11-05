@@ -28,7 +28,7 @@ import { LIGHTNING_BOLT } from '../../constants/figures.js'
 import { isModelAllowed } from './modelAllowlist.js'
 import { type ModelAlias, isModelAlias } from './aliases.js'
 import { capitalize } from '../stringUtils.js'
-import { canonicalizeCatalogModel, getCatalogAliasModel, getCatalogModel } from './modelCatalog.js'
+import { MODEL_CATALOG, canonicalizeCatalogModel, getCatalogAliasModel, getCatalogModel } from './modelCatalog.js'
 
 export type ModelShortName = string
 export type ModelName = string
@@ -99,7 +99,10 @@ export function getMainLoopModel(): ModelName {
 }
 
 export function getBestModel(): ModelName {
-  return getDefaultOpusModel()
+  const family = MODEL_CATALOG.best
+  return family === 'fable'
+    ? getDefaultFableModel()
+    : resolveDefaultAlias(family, undefined)
 }
 
 // @[MODEL LAUNCH]: Update the default Opus model (3P providers may lag so keep defaults unchanged).
