@@ -157,3 +157,26 @@ test('317 gateway pooled budget uses only an active, verified group allocation',
     {admin:{group_limit_mode:'min'}})
   assert.equal(refusal.payingGroup,null,'paused pool cannot authorize group spending')
 })
+
+
+test('317 gateway group-pool database failures obey admission policy', async () => {
+  const failingPools={
+    async getApplicableCaps(){return [{id:'spl_pool',scope:{type:'rbac_group',rbac_group_id:'eng'},
+      period:'monthly',amount:null,pooled_budget:{amount:'1000',paused:false}}]},
+    async getSpend(){return 0},
+    async getPoolSpend(){throw new Error('group budget database unavailable')},
+  }
+  const identity={sub:'employee',groups:['eng']}
+  const failOpen=await precheckGatewaySpend317(failingPools,identity,{
+    admin:{group_limit_mode:'min'}, enforcement:{fail_closed_on_error:false},
+  })
+  assert.equal(failOpen.blocked,null)
+  assert.equal(failOpen.payingGroup,null)
+  assert.match(String(failOpen.checkError),/group budget database unavailable/)
+  const failClosed=await precheckGatewaySpend317(failingPools,identity,{
+    admin:{group_limit_mode:'min'}, enforcement:{fail_closed_on_error:true},
+  })
+  assert.equal(failClosed.blocked.status,429)
+  assert.equal(failClosed.payingGroup,null)
+  assert.equal(failClosed.blocked.headers.get('anthropic-ratelimit-unified-overage-disabled-reason'),'fetch_error')
+})

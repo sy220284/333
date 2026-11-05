@@ -171,6 +171,19 @@ function denySpend317(binding: GatewayMeterBinding317 | null, headers: Record<st
     ...headers,'x-request-id':requestId,'cache-control':'no-store',
   }})
 }
+function spendLookupFailure317(error: unknown, config: GatewayMeterConfig317,
+  requestId: string): GatewaySpendPrecheck317 {
+  if (config.enforcement?.fail_closed_on_error) {
+    return {
+      blocked: denySpend317(null,
+        {'anthropic-ratelimit-unified-overage-disabled-reason':'fetch_error'}, requestId),
+      headers: {}, payingGroup: null,
+    }
+  }
+  // Preserve the configured fail-open policy and report the failure to the
+  // gateway audit consumer; no unverified pooled budget may be selected.
+  return {blocked:null, headers:{}, payingGroup:null, checkError:error}
+}
 export async function precheckGatewaySpend317(store: GatewaySpendStore317, identity: GatewayIdentity317, config: GatewayMeterConfig317, now: Date=new Date()): Promise<GatewaySpendPrecheck317> {
   if(!config.admin) return {blocked:null,headers:{},payingGroup:null}
   const requestId='req_'+randomUUID().replaceAll('-','')
@@ -178,13 +191,7 @@ export async function precheckGatewaySpend317(store: GatewaySpendStore317, ident
   let caps
   try {caps=await currentPeriodRows(store,identity,mode,now)}
   catch(error) {
-    if(config.enforcement?.fail_closed_on_error) return {
-      blocked:denySpend317(null,{'anthropic-ratelimit-unified-overage-disabled-reason':'fetch_error'},requestId),
-      headers:{},payingGroup:null,
-    }
-    // Native default fail-open: preserve inference while a database check
-    // fails. The request path still records a diagnostic audit.
-    return {blocked:null,headers:{},payingGroup:null,checkError:error}
+    return spendLookupFailure317(error,config,requestId)
   }
   const selected=priorityBinding(caps)
   const headers=unifiedSpendHeaders317(selected,now)
@@ -192,19 +199,23 @@ export async function precheckGatewaySpend317(store: GatewaySpendStore317, ident
     blocked:denySpend317(selected,headers,requestId,now),
     headers,payingGroup:null,
   }
-  const eligible=[]
-  for(const group of new Set(identity.groups??[])) {
-    const poolCaps=await store.getApplicableCaps({sub:identity.sub,groups:[group]})
-    const pool=poolCaps.find(row=>row?.scope.type==='rbac_group'&&
-      row.scope.rbac_group_id===group&&row.period==='monthly'&&
-      row.pooled_budget&&!row.pooled_budget.paused)
-    // The selected cap may exist without an active pooled budget.
-    // Narrow the actual budget record before using its amount.
-    const budget = pool?.pooled_budget
-    if (!budget || budget.paused) continue
-    const limit=Number(budget.amount)
-    const spent=Number(await store.getPoolSpend(group,spendPeriodStart317('monthly',now)))
-    eligible.push({group,limit,spent})
+  const eligible: Array<{group:string;limit:number;spent:number}> = []
+  try {
+    for(const group of new Set(identity.groups??[])) {
+      const poolCaps=await store.getApplicableCaps({sub:identity.sub,groups:[group]})
+      const pool=poolCaps.find(row=>row?.scope.type==='rbac_group'&&
+        row.scope.rbac_group_id===group&&row.period==='monthly'&&
+        row.pooled_budget&&!row.pooled_budget.paused)
+      const budget=pool?.pooled_budget
+      if(!budget || budget.paused) continue
+      const limit=Number(budget.amount)
+      const spent=Number(await store.getPoolSpend(group,spendPeriodStart317('monthly',now)))
+      eligible.push({group,limit,spent})
+    }
+  } catch(error) {
+    // Pool reads are part of the same admission decision as individual caps:
+    // database failures must respect fail-open/fail-closed consistently.
+    return spendLookupFailure317(error,config,requestId)
   }
   eligible.sort((a,b)=>b.limit-a.limit||a.group.localeCompare(b.group))
   if(eligible.length && !eligible.some(p=>p.spent<p.limit)) {
