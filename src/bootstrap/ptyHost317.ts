@@ -1,5 +1,5 @@
 import { createServer, type Socket } from 'node:net'
-import { appendFileSync, chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, chmodSync, existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { mkdirSync } from 'node:fs'
 import { timingSafeEqual } from 'node:crypto'
