@@ -31,6 +31,7 @@ jobs:
         run: bun test tests/m5-fetch-attachment-317.test.ts
       - name: 全仓TypeScript类型检查
         run: |
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
           node tools/dev/dev.mjs typecheck:all
       - name: 真实TypeScript构建
         run: bun build/rebuild.mjs
