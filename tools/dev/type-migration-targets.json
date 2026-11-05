@@ -1,5 +1,6 @@
 {
   "strict": [
+    "src/bootstrap/processStart317.ts",
     "src/cli/background/sessionStore.ts",
     "src/cli/gateway/gatewayAdmin317.ts",
     "src/cli/gateway/gatewayAuth317.ts",
@@ -13,6 +14,7 @@
     "src/cli/handlers/ultrareviewProtocol.ts",
     "src/entrypoints/runnerDeclaration317.ts",
     "src/entrypoints/startupRouting317.ts",
+    "src/tasks/LocalWorkflowTask/workflowCacheKeys.ts",
     "src/tasks/LocalWorkflowTask/workflowHistory.ts",
     "src/tasks/LocalWorkflowTask/workflowStoragePaths.ts",
     "src/tools/ListAgentsTool/peerListing.ts",
@@ -20,6 +22,7 @@
     "src/utils/cliArgv317.ts",
     "src/utils/cliStartupFailure.ts",
     "src/utils/hooks/hookConcurrency.ts",
+    "src/utils/livePeerSessions.ts",
     "src/utils/plugins/commandSourceConsent.ts",
     "src/utils/remoteSessionIdentity.ts",
     "src/utils/telemetry/projectTelemetryPolicy.ts",
