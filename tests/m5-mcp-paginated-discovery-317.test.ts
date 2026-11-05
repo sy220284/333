@@ -63,7 +63,7 @@ test('MCP v2 native discovery collects every tool, resource and prompt page', as
     expect(prompts.map(prompt => prompt.name)).toEqual([
       'mcp__pagination-fixture__first-prompt',
       'mcp__pagination-fixture__second-prompt',
-    ].map(name => name.replace('pagination-fixture', 'pagination_fixture')))
+    ])
     expect(requests).toEqual({ tools: 2, resources: 2, prompts: 2 })
   } finally {
     fetchToolsForClient.cache.delete(connection.name)
