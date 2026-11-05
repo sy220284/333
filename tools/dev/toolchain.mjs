@@ -130,6 +130,7 @@ export function checkToolchain({ bootstrap = false } = {}) {
     'dev-toolchain.yml', 'dev-quality.yml', 'rebuild.yml',
     'governance-audit.yml', 'governance-bun-types.yml',
     'latest-stable-six-host.yml', 'latest-stable-upgrade.yml',
+    'chinese-only-ui.yml', 'upgrade-protection.yml',
   ]
   for (const workflow of managed) {
     const content = readFileSync(join(root, '.github/workflows', workflow), 'utf8')
@@ -150,6 +151,13 @@ export function checkToolchain({ bootstrap = false } = {}) {
     if (stable[name] && stable[name] !== version) {
       fail(`发行 SDK 清单与开发工具使用了两个版本：${name}`)
     }
+  }
+  // 每次完整工具链校验同步执行 PR13 历史依赖及已升级能力防回退检查。
+  const guard = spawnSync(process.execPath, [join(root, 'build/check-upgrade-protection.mjs')], {
+    cwd: root, encoding: 'utf8', timeout: 20000,
+  })
+  if (guard.error || guard.status !== 0) {
+    fail(`PR13 升级成果保护失败：${guard.stderr || guard.stdout || guard.error?.message}`)
   }
   }
   return data
