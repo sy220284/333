@@ -61,7 +61,10 @@ import {
 } from './utils/fileStateCache.js'
 import { headlessProfilerCheckpoint } from './utils/headlessProfiler.js'
 import { registerStructuredOutputEnforcement } from './utils/hooks/hookHelpers.js'
-import { getInMemoryErrors } from './utils/log.js'
+import { getInMemoryErrors, logError } from './utils/log.js'
+import type { CacheSafeParams } from './utils/forkedAgent.js'
+import { createObserverRuntime317, type ObserverRuntime317 } from './services/agentObserver/observerRuntime317.js'
+import type { ObserverActivity317 } from './services/agentObserver/observer317.js'
 import { countToolCalls, SYNTHETIC_MESSAGES } from './utils/messages.js'
 import {
   getMainLoopModel,
@@ -195,6 +198,8 @@ export class QueryEngine {
   // many turns in SDK mode.
   private discoveredSkillNames = new Set<string>()
   private loadedNestedMemoryPaths = new Set<string>()
+  private observerRuntime: ObserverRuntime317 | null | undefined
+  private observerCacheParams: CacheSafeParams | undefined
 
   constructor(config: QueryEngineConfig) {
     this.sessionId = bindSessionId(config.sessionId, getSessionId)
@@ -674,6 +679,33 @@ export class QueryEngine {
         })
     }
 
+    if (this.observerRuntime === undefined) {
+      const currentAgent = agents.find(agent => agent.agentType === initialAppState.agent)
+      this.observerRuntime = currentAgent
+        ? await createObserverRuntime317({
+            sessionId: this.sessionId,
+            agent: currentAgent,
+            agents,
+            getCacheParams: () => {
+              if (!this.observerCacheParams) {
+                throw new Error('Observer invoked before parent context was established')
+              }
+              return this.observerCacheParams
+            },
+            getPermissionContext: () => getAppState().toolPermissionContext,
+            canUseTool: wrappedCanUseTool,
+          })
+        : null
+    }
+    this.observerCacheParams = {
+      systemPrompt,
+      userContext,
+      systemContext,
+      toolUseContext: processUserInputContext,
+      forkContextMessages: messages,
+    }
+    const observerActivity: ObserverActivity317[] = []
+
     // Track current message usage (reset on each message_start)
     let currentMessageUsage: NonNullableUsage = EMPTY_USAGE
     let turnCount = 1
@@ -704,6 +736,19 @@ export class QueryEngine {
       maxTurns,
       taskBudget,
     })) {
+      if (this.observerRuntime && message.type === 'assistant') {
+        for (const block of message.message.content) {
+          if (block.type === 'text' && block.text.trim()) {
+            observerActivity.push({ type: 'assistant_text', text: block.text })
+          } else if (block.type === 'tool_use') {
+            observerActivity.push({
+              type: 'tool_call',
+              name: block.name,
+              input: JSON.stringify(block.input ?? {}),
+            })
+          }
+        }
+      }
       // Record assistant, user, and compact boundary messages
       if (
         message.type === 'assistant' ||
@@ -1157,6 +1202,18 @@ export class QueryEngine {
         const status = result.errorDetails?.match(/(?:^|\D)(400|413)(?:\D|$)/)?.[1]
         apiErrorStatus = status ? Number(status) : undefined
       }
+    }
+
+    if (this.observerRuntime && !isApiError &&
+        !this.abortController.signal.aborted) {
+      observerActivity.push({
+        type: 'turn_ended',
+        reason: lastStopReason ?? 'completed',
+      })
+      void this.observerRuntime.afterTurn(
+        observerActivity,
+        typeof prompt === 'string' ? prompt : undefined,
+      ).catch(logError)
     }
 
     yield {
