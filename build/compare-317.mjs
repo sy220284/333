@@ -30,15 +30,29 @@ export function compare317(){
  const missingRoot=officialRoot.filter(c=>!commands.includes(c))
  const officialPlugins=official.commands['plugin --help'].commands.filter(c=>c!=='help')
  const missingPlugins=officialPlugins.filter(c=>!commands.includes(c))
+ // Distinguish literal token matches from registered Commander subcommands.
+ // Exact quote/whitespace substrings in old research hints can miss real
+ // registrations, especially after switching .command() chaining styles.
+ const knownCliRoutes=new Map([
+  ['F121',['purge']],
+  ['F135',['import']],
+  ['F136',['details','eval','prune','tag','test']],
+ ])
  const chainMap=new Map(plan.routes.flatMap(r=>r.baseline_feature_ids.map(id=>[id,r])))
  const features=baseline.features.map(f=>{
   const owner=chainMap.get(f.id)
   assert.ok(owner,f.id+' no owner')
   if(!f.candidate_search_tokens?.length)return {id:f.id,chain:owner.id,owner:owner.layer,state:'EXISTING_CODE_RECHECK',source_files:owner.source_candidates}
   const found=sources.filter(s=>f.candidate_search_tokens.some(token=>s.text.includes(token)))
+  const registered=knownCliRoutes.get(f.id)
+  if(registered?.length&&registered.every(command=>commands.includes(command))){
+   return {id:f.id,chain:owner.id,owner:owner.layer,
+     state:'CLI_ENTRY_PRESENT_REQUIRES_RUNTIME_PARITY',
+     source_files:['src/main.tsx'],commands:registered}
+  }
   return {id:f.id,chain:owner.id,owner:owner.layer,state:found.length?'CANDIDATE_TOKEN_PRESENT':'TARGET_FUNCTION_NOT_FOUND',source_files:found.slice(0,8).map(x=>x.path)}
  })
- return {target:'2.1.317',implementation_status:'IN_PROGRESS',counts:{source_files_scanned:paths.length,features:features.length,scenarios:baseline.scenarios.length,chains:plan.routes.length,layers:plan.layers.length,source_tokens_present:features.filter(x=>x.state==='CANDIDATE_TOKEN_PRESENT').length,source_tokens_absent:features.filter(x=>x.state==='TARGET_FUNCTION_NOT_FOUND').length},cli:{official_root_commands:officialRoot.length,registered_root_commands:commands,missing_root_commands:missingRoot,missing_plugin_commands:missingPlugins},features,layer_status:plan.layers.map(l=>({id:l.id,name:l.title,chain_count:l.chain_ids.length,state:'IMPLEMENTATION_IN_PROGRESS'})),note:'命中源码仅说明存在相关代码；没有命中只表示本次扫描未找到，最终以新版函数语义及实际运行对齐为准。无额外证据或人工签收流程。'}
+ return {target:'2.1.317',implementation_status:'IN_PROGRESS',counts:{source_files_scanned:paths.length,features:features.length,scenarios:baseline.scenarios.length,chains:plan.routes.length,layers:plan.layers.length,source_tokens_present:features.filter(x=>x.state==='CANDIDATE_TOKEN_PRESENT').length,cli_entries_registered:features.filter(x=>x.state==='CLI_ENTRY_PRESENT_REQUIRES_RUNTIME_PARITY').length,source_tokens_absent:features.filter(x=>x.state==='TARGET_FUNCTION_NOT_FOUND').length},cli:{official_root_commands:officialRoot.length,registered_root_commands:commands,missing_root_commands:missingRoot,missing_plugin_commands:missingPlugins},features,layer_status:plan.layers.map(l=>({id:l.id,name:l.title,chain_count:l.chain_ids.length,state:'IMPLEMENTATION_IN_PROGRESS'})),note:'命中源码仅说明存在相关代码；没有命中只表示本次扫描未找到，最终以新版函数语义及实际运行对齐为准。无额外证据或人工签收流程。'}
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const result=compare317()
