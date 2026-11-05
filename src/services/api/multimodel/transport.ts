@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto'
 import type { ProviderRoute } from './registry.js'
-import { getIndependentApiKey } from './registry.js'
 import { type AnthropicRequest, toResponses, toChatCompletions, toGemini } from './convert.js'
 
 type ObjectValue = Record<string, any>
@@ -237,10 +236,11 @@ function materializeResponse(body: ObjectValue, route: ProviderRoute): ObjectVal
  * No provider credentials or telemetry reach the original Anthropic API.
  */
 export function makeIndependentFetch(
-  route: ProviderRoute, bearer: string, upstream: typeof fetch = fetch,
-): typeof fetch {
+  route: ProviderRoute, bearer: string,
+  upstream: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> = fetch,
+): (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> {
   return async (input, init) => {
-    const request = input instanceof Request ? input : new Request(input, init)
+    const request = new Request(input, init)
     if (!request.url.startsWith('https://333-model-bridge.invalid/')) {
       throw new Error('Independent model bridge received an unexpected SDK endpoint')
     }
