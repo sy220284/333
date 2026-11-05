@@ -781,7 +781,7 @@ async function run(): Promise<CommanderCommand> {
     return Number.isFinite(n) ? n : undefined;
   }).hideHelp()).option('--from-pr [value]', 'Resume a session linked to a PR by PR number/URL, or open interactive picker with optional search term', value => value || true).option('--no-session-persistence', 'Disable session persistence - sessions will not be saved to disk and cannot be resumed (only works with --print)').addOption(new Option('--resume-session-at <message id>', 'When resuming, only messages up to and including the assistant message with <message.id> (use with --resume in print mode)').argParser(String).hideHelp()).addOption(new Option('--rewind-files <user-message-id>', 'Restore files to state at the specified user message and exit (requires --resume)').hideHelp())
   // @[MODEL LAUNCH]: Update the example model ID in the --model help text.
-  .option('--model <model>', `Model for the current session. Provide an alias for the latest model (e.g. 'sonnet' or 'opus') or a model's full name (e.g. 'claude-sonnet-4-6').`).addOption(new Option('--effort <level>', `Effort level for the current session (low, medium, high, xhigh, max)`).argParser((rawValue: string) => {
+  .option('--model <model>', `模型名称：Claude 原有别名或服务商/模型，如 openai/gpt-6.1-sol、gemini/gemini-3.8-flash、deepseek/deepseek-chat。`).addOption(new Option('--effort <level>', `Effort level for the current session (low, medium, high, xhigh, max)`).argParser((rawValue: string) => {
     const value = rawValue.trim().toLowerCase() === 'med' ? 'medium' : rawValue.trim().toLowerCase();
     const allowed = ['low', 'medium', 'high', 'xhigh', 'max'];
     if (!allowed.includes(value)) {
@@ -3558,6 +3558,20 @@ async function run(): Promise<CommanderCommand> {
       console: useConsole,
       claudeai
     });
+  });
+  auth.command('chatgpt-login').description('通过官方浏览器授权连接 ChatGPT 账号').action(async () => {
+    const { loginWithChatGPT } = await import('./services/auth/chatgptOAuth.js');
+    const identity = await loginWithChatGPT();
+    process.stdout.write(`ChatGPT 已连接：${identity.email ?? identity.subject}\n`);
+  });
+  auth.command('chatgpt-status').description('查看 ChatGPT 授权状态').action(async () => {
+    const { chatGPTStatus } = await import('./services/auth/chatgptOAuth.js');
+    process.stdout.write(JSON.stringify(await chatGPTStatus(), null, 2) + '\n');
+  });
+  auth.command('chatgpt-logout').description('撤销 ChatGPT 授权').action(async () => {
+    const { logoutChatGPT } = await import('./services/auth/chatgptOAuth.js');
+    await logoutChatGPT();
+    process.stdout.write('ChatGPT 已退出\n');
   });
   auth.command('status').description('Show authentication status').option('--json', 'Output as JSON (default)').option('--text', 'Output as human-readable text').action(async (opts: {
     json?: boolean;
