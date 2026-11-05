@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 /** Stable across insertions of unrelated agent calls; distinct for repeated
  * identical prompts/options within one deterministic workflow traversal.
  */
-export function makeWorkflowCacheKey(prompt, options, ordinal) : string {
+export function makeWorkflowCacheKey(prompt: string, options: unknown, ordinal: number): string {
   if (typeof prompt !== 'string' || typeof ordinal !== 'number' ||
       !Number.isSafeInteger(ordinal) || ordinal < 0) {
     throw new Error('Invalid workflow cache invocation')
@@ -11,9 +11,9 @@ export function makeWorkflowCacheKey(prompt, options, ordinal) : string {
   const signature = JSON.stringify([prompt, options ?? {}])
   return createHash('sha256').update(signature).update('\0').update(String(ordinal)).digest('hex')
 }
-export function createWorkflowCallCounter() {
-  const seen = new Map()
-  return (prompt, options) => {
+export function createWorkflowCallCounter(): (prompt: string, options: unknown) => string {
+  const seen = new Map<string, number>()
+  return (prompt: string, options: unknown): string => {
     const signature = JSON.stringify([prompt, options ?? {}])
     const ordinal = seen.get(signature) ?? 0
     seen.set(signature, ordinal + 1)
