@@ -15,10 +15,12 @@
     "src/entrypoints/startupRouting317.ts",
     "src/tasks/LocalWorkflowTask/workflowHistory.ts",
     "src/tasks/LocalWorkflowTask/workflowStoragePaths.ts",
+    "src/tools/ListAgentsTool/peerListing.ts",
     "src/utils/accountPeerDirectory.ts",
     "src/utils/cliArgv317.ts",
     "src/utils/cliStartupFailure.ts",
     "src/utils/hooks/hookConcurrency.ts",
+    "src/utils/plugins/commandSourceConsent.ts",
     "src/utils/remoteSessionIdentity.ts",
     "src/utils/telemetry/projectTelemetryPolicy.ts",
     "src/utils/webToolDeadline.ts"
