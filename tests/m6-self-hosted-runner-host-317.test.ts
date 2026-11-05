@@ -439,7 +439,7 @@ test('Runner 317: real child receives private prompt and MCP files and they are 
       "const mcpFile=valueFor('--mcp-config')",
       "writeFileSync(process.env.TEST_CAPTURE_PATH,JSON.stringify({args,",
       "promptFile,mcpFile,prompt:readFileSync(promptFile,'utf8'),",
-      "mcp:readFileSync(mcpFile,'utf8')}))",
+      "mcp:readFileSync(mcpFile,'utf8'),auth:process.env.CLAUDE_CODE_OAUTH_TOKEN}))",
     ].join('\n'))
     const mcpContent=JSON.stringify({mcpServers:{privateTool:{command:'node',args:['example.js']}}})
     const api=fakeApi({
@@ -460,6 +460,7 @@ test('Runner 317: real child receives private prompt and MCP files and they are 
     const captured=JSON.parse(readFileSync(cap,'utf8'))
     expect(captured.prompt).toBe('sensitive runner prompt')
     expect(captured.mcp).toBe(mcpContent)
+    expect(captured.auth).toBe('inference-test-token')
     expect(captured.args).toContain('--model')
     expect(captured.args).toContain('opus')
     expect(captured.args).toContain('--max-turns')
@@ -467,5 +468,57 @@ test('Runner 317: real child receives private prompt and MCP files and they are 
     expect(existsSync(captured.promptFile)).toBe(false)
     expect(existsSync(captured.mcpFile)).toBe(false)
     expect(statuses.join(' ')).not.toContain('sensitive runner prompt')
+  }finally{rmSync(root,{recursive:true,force:true})}
+})
+
+test('Runner 317: expiring inference token refreshes from /remote and updates active child',async()=>{
+  const root=temp(),abort=new AbortController(),events:string[]=[]
+  let complete!:()=>void
+  const childDone=new Promise<'completed'>(resolve=>{complete=()=>resolve('completed')})
+  let calls=0
+  const api=fakeApi({
+    pollWork:async()=>({assignment_ids:['session_1'],session_assignments:[]}),
+    getSessionRemoteConfig:async()=>{
+      calls++
+      return {sources:[],push_targets:[],claude_code_args:{},
+        environment_variables:{},api_base_url:'https://api.example.test',
+        inference_auth:{access_token:calls===1?'inference-one':'inference-two',
+          expires_in_seconds:calls===1?0.02:3600}}
+    },
+    releaseSession:async()=>{events.push('release');abort.abort();return {released:true}},
+  })
+  try{
+    await startSelfHostedRunnerHost317({
+      api,baseDir:root,capacity:1,execPath:process.execPath,
+      scriptArgs:[],env:{},signal:abort.signal,inferenceTokenRefreshIntervalMs:10,
+      createChild(_id,_url,_token,_epoch,_cwd,_env){
+        return {...makeHandle(),done:childDone,writeStdin(data:string){
+          const payload=JSON.parse(data)
+          expect(payload.type).toBe('update_environment_variables')
+          expect(payload.variables.CLAUDE_CODE_OAUTH_TOKEN).toBe('inference-two')
+          events.push('inference-update')
+          complete()
+        }}
+      },
+    })
+    expect(events).toEqual(['inference-update','release'])
+    expect(calls).toBeGreaterThanOrEqual(2)
+  }finally{rmSync(root,{recursive:true,force:true})}
+})
+test('Runner 317: missing inference credentials report a setup failure before spawning',async()=>{
+  const root=temp(),abort=new AbortController(),events:string[]=[]
+  const api=fakeApi({
+    pollWork:async()=>({assignment_ids:['session_1'],session_assignments:[]}),
+    getSessionRemoteConfig:async()=>({
+      sources:[],push_targets:[],claude_code_args:{},
+      environment_variables:{},api_base_url:'https://api.example.test',
+    }),
+    reportSessionFailure:async()=>{events.push('setup-failure');abort.abort();return {}},
+  })
+  try{
+    await startSelfHostedRunnerHost317({api,baseDir:root,capacity:1,execPath:process.execPath,
+      scriptArgs:[],env:{},signal:abort.signal,
+      createChild(){events.push('spawn');return makeHandle()}})
+    expect(events).toEqual(['setup-failure'])
   }finally{rmSync(root,{recursive:true,force:true})}
 })
