@@ -129,8 +129,8 @@ export async function getChatGPTAccessToken(): Promise<string> {
 }
 function openBrowser(url: string): void {
   const platform = process.platform
-  const command = platform === 'win32' ? 'cmd' : platform === 'darwin' ? 'open' : 'xdg-open'
-  const args = platform === 'win32' ? ['/c', 'start', '', url] : [url]
+  const command = platform === 'win32' ? 'rundll32.exe' : platform === 'darwin' ? 'open' : 'xdg-open'
+  const args = platform === 'win32' ? ['url.dll,FileProtocolHandler', url] : [url]
   const child = spawn(command, args, { stdio: 'ignore', detached: true })
   child.on('error', () => { /* printed URL remains available if no browser is installed */ })
   child.unref()
@@ -171,6 +171,7 @@ export async function loginWithChatGPT(): Promise<{ email?: string; subject: str
       resolve({ uri, query })
     })
   })
+  let loginTimeout: NodeJS.Timeout | undefined
   try {
     const url = new URL(AUTHORIZE_ENDPOINT)
     for (const [key, value] of Object.entries({
@@ -181,11 +182,16 @@ export async function loginWithChatGPT(): Promise<{ email?: string; subject: str
       ...(registration ? {} : { agent_name_hint: '333' }),
       ...(existing?.id_token && registration ? { id_token_hint: existing.id_token } : {}),
     })) url.searchParams.set(key, value)
-    process.stdout.write(`Sign in with ChatGPT:\n${url.toString()}\n`)
+    // A retained ID token is passed to the browser but never printed to logs.
+    const displayURL = new URL(url)
+    displayURL.searchParams.delete('id_token_hint')
+    process.stdout.write(`Sign in with ChatGPT:\n${displayURL.toString()}\n`)
     openBrowser(url.toString())
     const args = await Promise.race([
       callback.query,
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('ChatGPT login timed out')), 180000)),
+      new Promise<never>((_, reject) => {
+        loginTimeout = setTimeout(() => reject(new Error('ChatGPT login timed out')), 180000)
+      }),
     ])
     if (args.get('error')) throw new Error(`ChatGPT authorization declined: ${args.get('error')}`)
     const code = args.get('code')
@@ -223,6 +229,7 @@ export async function loginWithChatGPT(): Promise<{ email?: string; subject: str
     if (!scopeGranted(tokens.scope)) throw new Error('ChatGPT login succeeded but plan usage permission was not granted')
     return { subject: identity.subject, email: identity.email, clientId: issuedId }
   } finally {
+    if (loginTimeout) clearTimeout(loginTimeout)
     server.close()
   }
 }
