@@ -21,9 +21,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      - name: 读取权威工具链版本
+        shell: bash
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
       - name: 安装冻结的TypeScript检查工具
         run: npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
       - name: 恢复当前源码的完整声明与依赖
@@ -62,10 +65,13 @@ jobs:
         shell: pwsh
         run: git config --global core.longpaths true
       - uses: actions/checkout@v4
+      - name: 读取权威工具链版本
+        shell: bash
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
           # Source-mode .mjs bridges load TypeScript modules directly.
-          node-version: '24'
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
       - name: 提前校验全部MJS测试语法
         run: node build/check-test-syntax.mjs
       - name: 317 六层生产导入边界与快速启动顺序检查
@@ -74,7 +80,7 @@ jobs:
         run: node --test tests/language-file-contract.test.mjs
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.4
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
       - uses: actions/cache/restore@v4
         id: npm-cache
         with:
@@ -708,9 +714,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - name: 读取权威工具链版本
+        shell: bash
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.TOOLCHAIN_PYTHON_VERSION }}
       - name: 对照原始 cli.js.map 全量只读复核研究目录
         run: python3 research/claude-code-2.1.88/generate.py --verify
       - name: 确认复核流程没有改写任何文件

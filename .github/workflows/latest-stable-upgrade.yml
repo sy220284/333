@@ -3,6 +3,11 @@ on:
   push:
     branches: [upgrade/latest-stable-deps-20261105]
   workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/dev/**'
+      - '.github/workflows/latest-stable-upgrade.yml'
 permissions:
   contents: write
 concurrency:
@@ -28,12 +33,15 @@ jobs:
           --health-retries=5
     steps:
       - uses: actions/checkout@v7
+      - name: 读取权威工具链版本
+        shell: bash
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v7
         with:
-          node-version: '26.13.0'
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.4
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
       - id: guard
         name: 检查依赖是否已锁定
         run: |
@@ -60,6 +68,8 @@ jobs:
           git diff --cached --quiet && { echo '没有产生任何更新'; exit 1; }
           git commit -m '全面升级最新稳定依赖并同步迁移源码接口'
           git push origin HEAD:upgrade/latest-stable-deps-20261105
+      - name: 工具链版本与锁文件权威校验
+        run: node tools/dev/toolchain.mjs check
       - name: MCP v2 全生产引用检查
         run: |
           set -euo pipefail
@@ -73,7 +83,7 @@ jobs:
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
       - name: 安装源码AST分析专用冻结解析器
-        run: npm install --prefix "${RUNNER_TEMP}/333-ui-typescript" --no-save --ignore-scripts --no-package-lock --no-audit --no-fund typescript@5.9.3
+        run: npm install --prefix "${RUNNER_TEMP}/333-ui-typescript" --no-save --ignore-scripts --no-package-lock --no-audit --no-fund "typescript@${TOOLCHAIN_AST_TYPESCRIPT_VERSION}"
       - name: TypeScript 7 全仓检查（收集诊断）
         id: typecheck
         continue-on-error: true

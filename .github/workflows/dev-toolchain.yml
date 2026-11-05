@@ -33,19 +33,23 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+      - name: 读取权威工具链版本
+        shell: bash
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.4
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.TOOLCHAIN_PYTHON_VERSION }}
       - name: 校验工具链脚本和源码基线
         run: |
           set -euo pipefail
           for f in tools/dev/*.sh; do bash -n "$f"; done
+          node tools/dev/toolchain.mjs verify-runtime
           bash tools/dev/setup-toolchain.sh --self-test
           python3 tools/dev/test-toolchain.py
       - name: 验证源代码资源与锁定依赖
@@ -83,7 +87,7 @@ jobs:
           path: ${{ runner.temp }}/toolchain-artifacts/333-toolchain-bootstrap-latest
           retention-days: 14
           if-no-files-found: error
-      - name: 上传 Node 24
+      - name: 上传 Node（权威清单版本）
         uses: actions/upload-artifact@v4
         with:
           name: 333-toolchain-node-latest
@@ -91,7 +95,7 @@ jobs:
           retention-days: 14
           compression-level: 0
           if-no-files-found: error
-      - name: 上传 Bun 1.4.4
+      - name: 上传 Bun（权威清单版本）
         uses: actions/upload-artifact@v4
         with:
           name: 333-toolchain-bun-latest
@@ -167,15 +171,18 @@ jobs:
         profile: [build, full]
     steps:
       - uses: actions/checkout@v4
+      - name: 读取权威工具链版本
+        shell: bash
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.4
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.TOOLCHAIN_PYTHON_VERSION }}
       - uses: actions/download-artifact@v4
         with:
           pattern: 333-toolchain-npm-public-part-*-latest
