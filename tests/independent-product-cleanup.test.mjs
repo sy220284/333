@@ -47,6 +47,7 @@ test('已删除 Claude 商业推广、云审查及外部统计上传文件', () 
     'src/cli/handlers/ultrareview.ts',
     'src/services/api/ultrareviewQuota.ts',
     'src/services/api/referral.ts',
+    'src/components/Passes/Passes.tsx',
     'src/components/DesktopUpsell/DesktopUpsellStartup.tsx',
   ]) assert.equal(existsSync(join(root,path)), false, `${path} 仍存在`)
   assert.doesNotMatch(source('src/main.tsx'), /program\.command\('ultrareview \[target\]'\)/)
