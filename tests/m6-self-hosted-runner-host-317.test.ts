@@ -95,6 +95,28 @@ test('Runner 317: source-backed assignment is reported as setup failure before s
   }finally{rmSync(root,{recursive:true,force:true})}
 })
 
+test('317 x64 tools_host assignments reject before child spawn when the release has no tool host',async()=>{
+  const root=temp(),aborted=new AbortController(),steps:string[]=[],messages:string[]=[]
+  const api=fakeApi({
+    pollWork:async()=>({assignment_ids:['session_1'],session_assignments:[]}),
+    issueSessionToken:async()=>({
+      session_token:'session-token',
+      tools_host:{tool_server_hosting:4499,api_base_url:'https://api.example.test'},
+    }),
+    getSessionRemoteConfig:async()=>{steps.push('config');throw Error('tools host must bypass remote config')},
+    reportSessionFailure:async()=>{steps.push('failed');aborted.abort();return {}},
+    deregisterRunner:async()=>{steps.push('deregister')},
+  })
+  try{
+    await startSelfHostedRunnerHost317({api,baseDir:root,capacity:1,execPath:process.execPath,
+      scriptArgs:[],env:{},signal:aborted.signal,onStatus:message=>messages.push(message),
+      createChild(){steps.push('spawn');return makeHandle()},
+    })
+    expect(steps).toEqual(['failed','deregister'])
+    expect(messages.join('\n')).toContain('needs a tool server, which this runner cannot host')
+  }finally{rmSync(root,{recursive:true,force:true})}
+})
+
 test('Runner 317: authentication failures stop polling and unregister the runner',async()=>{
   const root=temp(), steps:string[]=[]
   const api=fakeApi({
