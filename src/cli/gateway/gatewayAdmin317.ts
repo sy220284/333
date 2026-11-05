@@ -105,7 +105,7 @@ export function identifyGatewayAdmin317(request: Request, config: GatewayAdminRu
   }
   return null
 }
-export function isGatewayAdminPath317(path: string) {
+export function isGatewayAdminPath317(path: string): boolean {
   return path === GATEWAY_COST_PATH_317 || path === GATEWAY_SPEND_BASE_317 ||
     path.startsWith(GATEWAY_SPEND_BASE_317+'/')
 }
