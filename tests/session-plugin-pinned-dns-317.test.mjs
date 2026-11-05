@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { createPinnedPluginLookup317 } from '../src/utils/plugins/sessionPluginSources.mjs'
+import { createPinnedPluginLookup317 } from '../src/utils/plugins/sessionPluginSources.ts'
 
 const publicIp = [{ address: '8.8.8.8', family: 4 }, { address: '1.1.1.1', family: 4 }]
 

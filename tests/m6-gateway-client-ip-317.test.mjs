@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { BlockList } from 'node:net'
-import { resolveGatewayClientIp317 } from '../src/cli/gateway/gatewayClientIp317.mjs'
+import { resolveGatewayClientIp317 } from '../src/cli/gateway/gatewayClientIp317.ts'
 
 function trustedProxy(...addresses) {
   const list = new BlockList()
