@@ -1,3 +1,4 @@
+import { readProviderApiKey } from '../../auth/apiKeyVault.js'
 /**
  * 333 model registry. Qualified IDs such as openai/gpt-6.1-sol or
  * gemini/gemini-3.8-flash select an independent remote API. Unqualified
@@ -46,7 +47,7 @@ export function getIndependentApiKey(route: ProviderRoute, env: NodeJS.ProcessEn
   if (route.provider === 'chatgpt') {
     throw new Error('ChatGPT requires the dedicated OAuth credential manager')
   }
-  const key = route.keyEnvironment && env[route.keyEnvironment]
+  const key = (route.keyEnvironment && env[route.keyEnvironment]) || readProviderApiKey(route.provider)
   if (!key) throw new Error(`Missing ${route.keyEnvironment ?? 'API key'} for ${route.provider}/${route.model}`)
   return key
 }
