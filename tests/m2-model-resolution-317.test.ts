@@ -118,7 +118,7 @@ test('333 inventory keeps first-party-only models and best follows the catalog',
   import { getModelOptions } from './src/utils/model/modelOptions.ts';
   assert.equal(MODEL_CATALOG.models.length, 22);
   assert.equal(getCatalogModelsForProvider('first_party').length, 22);
-  assert.equal(getCatalogModelsForProvider('bedrock').some(x => x.family === 'mythos'), false);
+  assert.equal(getCatalogModelsForProvider('bedrock').filter(x => x.family === 'mythos').length, 2);
   assert.equal(MODEL_CATALOG.best, 'fable');
   assert.equal(getBestModel(), 'claude-fable-5-1');
   assert.equal(parseUserSpecifiedModel('best'), getBestModel());
@@ -135,5 +135,21 @@ test('333 provider picker uses provider-resolved defaults rather than unsupporte
   const picker = getModelOptions();
   for (const row of preferred) assert.ok(picker.some(option => option.value === row.provider_ids.bedrock), row.id);
   assert.equal(preferred.find(x => x.family === 'sonnet')?.id, 'claude-sonnet-4-5');
-  assert.equal(picker.some(option => String(option.value).includes('claude-mythos')), false);
+  assert.equal(picker.some(option => String(option.value).includes('claude-mythos')), false); // access-restricted family
 `, { CLAUDE_CODE_USE_BEDROCK: '1' }))
+
+test('333 official Mythos IDs are present in all supported Claude provider configurations', () => run(`
+  import { MODEL_CATALOG } from './src/utils/model/modelCatalog.ts';
+  import { ALL_MODEL_CONFIGS, CANONICAL_MODEL_IDS } from './src/utils/model/configs.ts';
+  import { firstPartyNameToCanonical } from './src/utils/model/model.ts';
+  assert.equal(Object.keys(ALL_MODEL_CONFIGS).length, MODEL_CATALOG.models.length);
+  assert.equal(CANONICAL_MODEL_IDS.length, 22);
+  for (const [key, name] of [['mythos5', 'claude-mythos-5'], ['mythos51', 'claude-mythos-5-1']]) {
+    const conf = ALL_MODEL_CONFIGS[key];
+    assert.equal(conf.firstParty, name);
+    assert.equal(conf.bedrock, 'anthropic.' + name);
+    assert.equal(conf.vertex, name);
+    assert.equal(conf.foundry, name);
+    assert.equal(firstPartyNameToCanonical(conf.bedrock), name);
+  }
+`))

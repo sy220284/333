@@ -52,7 +52,7 @@ export function canonicalizeCatalogModel(model: string): string {
   return normalized.replace(/-\d{8}$/, '')
 }
 
-/** The complete baked-in catalog also contains first-party-only models. */
+/** List the models with an explicit provider ID; entitlement is checked by the API. */
 export function getCatalogModelsForProvider(provider: CatalogProvider): CatalogModel[] {
   return MODEL_CATALOG.models.filter(model => typeof model.provider_ids[provider] === 'string')
 }
