@@ -104,15 +104,19 @@ export type ParentWatcherOptions317 = {
   exitGraceMs?: number
   platform?: NodeJS.Platform
 }
+/** Exact 317 He(): a failed signal-zero probe means the parent is gone. */
+export function isDaemonWorkerParentAlive317(
+  pid: number,
+  probe: (pid: number, signal: 0) => void = process.kill.bind(process),
+): boolean {
+  try { probe(pid, 0); return true }
+  catch { return false }
+}
+
 export function watchDaemonWorkerParent317(controller: AbortController,
   options: ParentWatcherOptions317 = {}): () => void {
   const parentPid = options.parentPid ?? (() => process.ppid)
-  const isAlive = options.isAlive ?? (pid => {
-    try { process.kill(pid, 0); return true }
-    // Official 317 He() treats any failed parent probe as not alive,
-    // including EPERM. A worker must not outlive an inaccessible supervisor.
-    catch { return false }
-  })
+  const isAlive = options.isAlive ?? isDaemonWorkerParentAlive317
   const log = options.log ?? (line => process.stdout.write(line + '\n'))
   const onGone = options.onGone ?? (() => process.exit(0))
   const intervalMs = options.intervalMs ?? 30_000
