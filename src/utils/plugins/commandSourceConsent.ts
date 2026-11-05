@@ -1,16 +1,35 @@
 import { createHash } from 'node:crypto'
 
+export type CommandSourceDisclosure317 = {
+  kind: 'command_source'
+  pluginId: string
+  command: string
+  mode: 'copy' | 'link'
+  catalogRevision: string
+  sha256?: string
+}
+export type ArchiveSourceDisclosure317 = {
+  kind: string
+  pluginId: string
+  command: string
+  archiveUrl: string
+  catalogRevision: string
+}
+export type SourceCommandDisclosure317 =
+  | CommandSourceDisclosure317
+  | ArchiveSourceDisclosure317
+
 /**
  * Claude Code 2.1.317 source command acceptance identity.
  * The digest is bound to the command text, plugin, source mode and the
  * current marketplace revision; it must be recalculated after every refresh.
  */
-export function installedSourceCommandKey(source: { source: "command"; command: string; mode: "copy"|"link" }) : string {
+export function installedSourceCommandKey(source: { source: "command"; command: string; mode: "copy"|"link" }) : string | undefined {
   if (!source || source.source !== 'command') return undefined
   return source.mode === 'link' ? source.command + '\n[mode: link]' : source.command
 }
 
-export function commandSourceDigest(disclosure) : string {
+export function commandSourceDigest(disclosure: SourceCommandDisclosure317): string {
   const tuple = disclosure.kind === 'command_source'
     ? [disclosure.kind, disclosure.pluginId, disclosure.command, disclosure.mode, disclosure.catalogRevision]
     : [disclosure.kind, disclosure.pluginId, disclosure.command, disclosure.archiveUrl, disclosure.catalogRevision]
@@ -36,7 +55,7 @@ export function commandSourceDisclosure({ pluginId, command, mode, catalogRevisi
 }
 
 /** Recursively sort object keys into the official marketplace hash tree. */
-export function canonicalCatalogTree(value) {
+export function canonicalCatalogTree(value: unknown): unknown {
   if (Array.isArray(value)) return ['[', ...value.map(canonicalCatalogTree)]
   if (value !== null && typeof value === 'object') {
     return ['{', ...Object.keys(value).sort().map(key => [key, canonicalCatalogTree(value[key])])]
@@ -44,7 +63,7 @@ export function canonicalCatalogTree(value) {
   return value
 }
 
-export function localCatalogRevision(marketplaceJson: string, packageJson = null) : string {
+export function localCatalogRevision(marketplaceJson: string, packageJson: string | null = null) : string {
   const catalog = canonicalCatalogTree(
     typeof marketplaceJson === 'string' ? JSON.parse(marketplaceJson) : marketplaceJson,
   )
@@ -56,7 +75,7 @@ export function localCatalogRevision(marketplaceJson: string, packageJson = null
 }
 
 /** A mismatch must not authorize anything. Never auto-accept a stale digest. */
-export function isAuthorizedSourceCommand(shown, { yes = false, acceptCommand, isNestedSession = false }: {yes?: boolean; acceptCommand?: string; isNestedSession?: boolean} = {}) : boolean {
+export function isAuthorizedSourceCommand(shown: { sha256: string }, { yes = false, acceptCommand, isNestedSession = false }: {yes?: boolean; acceptCommand?: string; isNestedSession?: boolean} = {}) : boolean {
   if (isNestedSession) return false
   if (yes) return true
   return typeof acceptCommand === 'string' &&
