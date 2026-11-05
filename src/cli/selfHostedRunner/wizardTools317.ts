@@ -87,7 +87,7 @@ async function spawnLocalRunner317(args:z.infer<typeof spawnSchema>){
   const childArgs=[
     ...prefix,'self-hosted-runner','--environment-secret-file',secretPath,
     '--capacity',String(args.capacity??1),
-    '--base-dir',baseDir,
+    '--base-dir',baseDir,'--health-port',String(args.health_port??8080),
   ]
   let child
   try{
@@ -105,7 +105,10 @@ async function spawnLocalRunner317(args:z.infer<typeof spawnSchema>){
   if(!pid)throw Error('Failed to start self-hosted runner: missing pid')
   child.unref()
   await writeFile(pidPath,String(pid),{mode:0o600})
-  const command=[process.execPath,...childArgs].map(x=>JSON.stringify(x)).join(' ')
+  const quoted=(value:string)=>/^[\\w@%+=:,./-]+$/.test(value)
+    ?value:"'"+value.replace(/'/g,"'\\\\''")+"'"
+  const command=[process.execPath,...childArgs].map(quoted).join(' ')+
+    ' >> '+quoted(logPath)+' 2>&1 &'
   return {pid,pid_file:pidPath,log_path:logPath,health_port:args.health_port??8080,
     command,equivalent:{ui:'Admin settings → Cloud environments → Self-hosted environments → Activity → Runners'}}
 }
