@@ -23,6 +23,7 @@ import { formatModelPricing, getOpus46CostTier } from '../modelCost.js'
 import { getInitialSettings } from '../settings/settings.js'
 import type { PermissionMode } from '../permissions/PermissionMode.js'
 import { getAPIProvider } from './providers.js'
+import { resolveIndependentModel } from '../../services/api/multimodel/registry.js'
 import { getAntModelOverrideConfig, resolveAntModel } from './antModels.js'
 import { LIGHTNING_BOLT } from '../../constants/figures.js'
 import { isModelAllowed } from './modelAllowlist.js'
@@ -35,6 +36,15 @@ export type ModelName = string
 export type ModelSetting = ModelName | ModelAlias | null
 
 export function getSmallFastModel(): ModelName {
+  const selected = getUserSpecifiedModelSetting()
+  // Internal classifiers, quota probes and summarizers must be able to run
+  // without any Claude login when a remote provider is selected.
+  if (selected) {
+    const active = parseUserSpecifiedModel(selected)
+    if (resolveIndependentModel(active)) {
+      return process.env.AGENT333_SMALL_FAST_MODEL || active
+    }
+  }
   return process.env.ANTHROPIC_SMALL_FAST_MODEL || getDefaultHaikuModel()
 }
 
