@@ -236,7 +236,9 @@ export function createLSPClient(
 
         // 5. Apply any queued request handlers
         for (const { method, handler } of pendingRequestHandlers) {
-          connection.onRequest(method, handler)
+          // JSON-RPC receives untyped wire values; the host's handler supplies
+      // the contract for this method, as it did before the SDK upgrade.
+      connection.onRequest(method, (params: unknown) => handler(params as TParams))
           logForDebugging(
             `Applied queued request handler for ${serverName}.${method}`,
           )

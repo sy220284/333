@@ -263,7 +263,7 @@ export async function startNodeRelay(
       end: () => sock.end(),
     }
     sock.on('data', data =>
-      handleData(adapter, st, data, wsUrl, authHeader, wsAuthHeader),
+      handleData(adapter, st, Buffer.from(data), wsUrl, authHeader, wsAuthHeader),
     )
     sock.on('close', () => cleanupConn(states.get(sock)))
     sock.on('error', err => {

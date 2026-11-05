@@ -35,6 +35,19 @@ function migratePrivateMcp(rel, source) {
   if (rel.endsWith('/mcpServer.ts')) {
     code = code.replace(/import \{\s*CallToolRequestSchema,\s*ListToolsRequestSchema,\s*\} from ["']@modelcontextprotocol\/server["'];?\s*/g, '');
     code = code.replace(/setRequestHandler\(ListToolsRequestSchema/g, "setRequestHandler('tools/list'");
+    if (rel.includes('/claude-for-chrome-mcp/')) {
+      const previousList = `tools: context.bridgeConfig
+        ? BROWSER_TOOLS
+        : BROWSER_TOOLS.filter((t) => t.name !== "switch_browser"),`;
+      const migratedList = `tools: (context.bridgeConfig
+        ? BROWSER_TOOLS
+        : BROWSER_TOOLS.filter((t) => t.name !== "switch_browser")).map(tool => ({
+          ...tool,
+          inputSchema: { ...tool.inputSchema, type: 'object' as const },
+        })),`;
+      if (!code.includes(previousList)) throw Error('Chrome MCP tools/list source changed');
+      code = code.replace(previousList, migratedList);
+    }
     code = code.replace(/setRequestHandler\(\s*CallToolRequestSchema/g, "setRequestHandler(\n    'tools/call'");
     if (/CallToolRequestSchema|ListToolsRequestSchema|@modelcontextprotocol\/sdk\//.test(code))
       throw new Error('Unmigrated private MCP v2 source: ' + rel);

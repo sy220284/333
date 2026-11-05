@@ -1,4 +1,10 @@
-import type { ChildProcess, ExecFileException } from 'child_process'
+import type { ChildProcess } from 'child_process'
+// The embedded rg path constructs process errors; native execFile also
+// returns errors. Only these fields are used by the retry classification.
+type RipgrepExecutionError = Error & {
+  code?: string | number | null
+  signal?: NodeJS.Signals | null
+}
 import { execFile, spawn } from 'child_process'
 import memoize from 'lodash-es/memoize.js'
 import { homedir } from 'os'
@@ -142,7 +148,7 @@ function ripGrepRaw(
   target: string,
   abortSignal: AbortSignal,
   callback: (
-    error: ExecFileException | null,
+    error: RipgrepExecutionError | null,
     stdout: string,
     stderr: string,
   ) => void,
@@ -222,7 +228,7 @@ function ripGrepRaw(
         child.kill(process.platform === 'win32' ? undefined : 'SIGKILL')
         settled = true
         clearTimeout(timeoutId)
-        const error: ExecFileException = new Error(
+        const error: RipgrepExecutionError = new Error(
           'ripgrep did not close after its search deadline',
         )
         error.signal = 'SIGTERM'
@@ -252,7 +258,7 @@ function ripGrepRaw(
         callback(null, stdout, stderr)
         return
       }
-      const error: ExecFileException = new Error(
+      const error: RipgrepExecutionError = new Error(
         `ripgrep exited with ${outcome} (code ${code})`,
       )
       if (outcome === 'timeout') error.signal = 'SIGTERM'
@@ -271,7 +277,7 @@ function ripGrepRaw(
       settled = true
       clearTimeout(timeoutId)
       clearTimeout(killTimeoutId)
-      const error: ExecFileException = err
+      const error: RipgrepExecutionError = err
       callback(error, stdout, stderr)
     })
 
@@ -420,7 +426,7 @@ export async function ripGrep(
 
   return new Promise((resolve, reject) => {
     const handleResult = (
-      error: ExecFileException | null,
+      error: RipgrepExecutionError | null,
       stdout: string,
       stderr: string,
       isRetry: boolean,
