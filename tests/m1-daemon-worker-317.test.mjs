@@ -352,3 +352,27 @@ test('317 daemon parent is alive only when signal-zero probe succeeds', () => {
       'upstream He() fails closed for '+code)
   }
 })
+
+test('317 heartbeat dispatch uses shared original temporary-error handler', async () => {
+  const parent = new EventEmitter()
+  let events = 0, output = ''
+  const outcome = await runDaemonWorker317('heartbeat', {
+    parent,
+    input: (async function* () {
+      yield JSON.stringify({config: {intervalSeconds: 1}})
+    })(),
+    stdout: message => {
+      events++
+      if (events === 1) {
+        throw Object.assign(new Error('heartbeat network quota'), {status: 429})
+      }
+      output += message
+    },
+    stderr: message => {throw new Error('unexpected stderr: '+message)},
+    parentWatcher: () => () => {},
+  })
+  assert.equal(outcome, 75)
+  assert.equal(output, 'rate limited (429): heartbeat network quota\n')
+  assert.equal(parent.listenerCount('message'), 0)
+  assert.equal(parent.listenerCount('SIGTERM'), 0)
+})
