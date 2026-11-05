@@ -47,4 +47,4 @@ jobs:
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
       - name: MCP v2 真实调用、双版本协商、参数校验和 SDK MCP 验收
-        run: bun test tests/m5-mcp-dual-era-317.test.ts tests/m5-sdk-mcp-factory-317.test.ts tests/m3-mcp-auth-317.test.ts tests/m3-plugin-channel-v2-317.test.ts tests/m3-plugin-init-v2-e2e-317.test.ts
+        run: bun test tests/m5-mcp-dual-era-317.test.ts tests/m5-sdk-mcp-factory-317.test.ts tests/m3-mcp-auth-317.test.ts tests/m3-plugin-channel-v2-317.test.ts tests/m3-plugin-init-v2-e2e-317.test.ts tests/m3-plugin-init-v2-e2e-317.test.ts
