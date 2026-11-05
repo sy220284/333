@@ -163,12 +163,14 @@ export function validateGatewayConfig317(value: unknown) {
         throw new Error('oidc.client_secret must be a string')
       client_secret = rawOidc.client_secret
     }
+    const user_id_claim = rawOidc.user_id_claim === undefined ? undefined :
+      nonempty(rawOidc.user_id_claim, 'oidc.user_id_claim')
     const scopes = rawOidc.scopes
     if (scopes !== undefined && (!Array.isArray(scopes) ||
       scopes.some((scope: unknown) => typeof scope !== 'string')))
       throw new Error('oidc.scopes must contain strings')
     oidc = { ...rawOidc, issuer, client_id,
-      client_secret, scopes: scopes as string[] | undefined }
+      client_secret, user_id_claim, scopes: scopes as string[] | undefined }
   }
   if (!Array.isArray(value.upstreams) || !value.upstreams.length) {
     throw new Error('gateway needs at least one upstream')
