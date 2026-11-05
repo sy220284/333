@@ -366,7 +366,7 @@ CLI 启动 / SDK 恢复 / 后台恢复 / 进程恢复 / 定时 后台任务 等�
 
 代码实现和调用链存在，并不能证明功能已经进入真实生产运行。
 
-DI、composition root、能力域 / Page / Tool / 后台任务 / Registry 注册、CLI 参数 / 工具权限 / 插件声明、导航和 serializer / codec 等装配环节都属于功能契约。
+运行时装配、composition root、能力域 / Page / Tool / 后台任务 / Registry 注册、CLI 参数 / 工具权限 / 插件声明、导航和 serializer / codec 等装配环节都属于功能契约。
 
 任何一个注册点遗漏，都可能形成“代码存在、测试能直接调用、用户实际入口不可用”。
 
@@ -374,7 +374,7 @@ DI、composition root、能力域 / Page / Tool / 后台任务 / Registry 注册
 
 ```text
 实现类 / API
-→ 构造 / DI provider
+→ 构造 / 运行时装配 provider
 → composition root
 → Registry / Catalog / contribution
 → CLI / 插件声明 / permission / navigation / 后台任务
@@ -385,7 +385,7 @@ DI、composition root、能力域 / Page / Tool / 后台任务 / Registry 注册
 
 #### 必查项
 
-- DI binding / provider 是否指向唯一权威实现；
+- 运行时装配 binding / provider 是否指向唯一权威实现；
 - production 与 debug / test 装配是否不同；
 - 能力域 / Page / Tool / MCP / 后台任务 / Job 是否真实注册；
 - serializer / codec / schema 是否加入生产路径；
@@ -816,9 +816,9 @@ Producer
 - UI 是否只消费窄 projection / 能力公开 API；
 - Shell 是否只承担导航栈、Drawer、系统 Back 等宿主职责；
 - 配置入口 是否只负责设置体验和配置入口，真实配置 Owner 仍归对应 能力域 / 跨模块公共能力；
-- `LocalHarnessState` 是否只承担 Runtime-owned 兼容聚合与只读投影，不成为领域双写入口；
-- Session ownership、Agent run identity、迟到提交栅栏和 recovery coordination 是否由共享 Runtime 单一持有；
-- 能力目录、page contribution、Back policy、Drawer entry、restore policy 是否保持唯一 Owner；
+- 历史会话兼容信息是否只在明确边界完成规范化，避免多个会话写入入口；
+- Session、Agent run 与恢复协调是否由各自唯一的运行时所有者持有；
+- CLI 命令、工具目录、MCP 服务注册、终端交互入口与会话恢复规则是否保持唯一所有者；
 - Tool / Model / Session / Memory / Jobs 等共享能力是否通过稳定契约被 能力域 消费；
 - 同一能力是否存在多个生产装配、多个 writer 或多个路由 Owner。
 

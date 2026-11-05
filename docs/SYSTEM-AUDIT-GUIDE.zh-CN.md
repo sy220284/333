@@ -112,7 +112,7 @@
 1. **入口表**：入口名称、触发条件、调用对象、前台/后台、手动/自动、是否可恢复；
 2. **所有权表**：能力 Owner、状态 Owner、配置 Owner、副作用提交者、持久化 Owner；
 3. **契约表**：公开 API / Port、DTO / Event / State、字段、Schema / version、消费者；
-4. **装配表**：DI / composition root、能力域 / Page / Tool / 后台任务 / Registry 注册、CLI 参数 / 工具权限 / 插件声明、导航与恢复入口。
+4. **装配表**：运行时工厂 / 生产装配入口、能力域 / Page / Tool / 后台任务 / Registry 注册、CLI 参数 / 工具权限 / 插件声明、导航与恢复入口。
 
 任一能力无法落到这四张表中的明确位置时，默认继续追查，不能直接判定边界完整。
 
@@ -342,7 +342,7 @@ Chat / Work / Automation / Subagent / Group Chat
 
 任何同类能力实现不一致，都必须判断是合理差异还是架构漂移。
 
-功能下线、替换或大规模清理时，要追查退役能力在生产 DI、路由、CLI / 插件声明、后台任务、注册表、通知、权限、资源、持久化及导入导出中的残余入口，并确认保留功能仍正常；数据迁移和兼容期限遵守现有契约，不能为了清理破坏用户数据。
+功能下线、替换或大规模清理时，要追查退役能力在生产装配、路由、CLI / 插件声明、后台任务、注册表、通知、权限、资源、持久化及导入导出中的残余入口，并确认保留功能仍正常；数据迁移和兼容期限遵守现有契约，不能为了清理破坏用户数据。
 
 #### 架构所有权与依赖
 
@@ -372,7 +372,7 @@ Chat / Work / Automation / Subagent / Group Chat
 - 参数堆积掩盖职责混乱；
 - 代码位置与业务 Owner 不一致；
 - 同一业务事实存在两个及以上可写 Owner；
-- composition root / DI 对同一能力装配多个生产实现；
+- composition root / 运行时装配 对同一能力装配多个生产实现；
 - 能力域 / Page / Tool / 后台任务 / Registry 出现重复注册或路由归属不唯一；
 - 跨模块公共能力 开始解释 能力域 专属领域语义；
 - 能力域 持有完整聚合可写状态，绕过领域状态边界；
@@ -380,8 +380,8 @@ Chat / Work / Automation / Subagent / Group Chat
 - Shell 超出导航宿主职责，持有 能力域 业务状态或执行领域规则；
 - 配置入口 超出设置入口职责，持有其他 能力域 的真实配置事实；
 - UI 绕过 presentation / 能力公开 API / projection 直接消费内部实现；
-- `LocalHarnessState` 兼容聚合被重新作为领域权威状态或双写入口；
-- Session owner、Agent run identity、迟到提交栅栏、recovery coordination 出现第二套所有权；
+- 会话兼容状态或历史迁移字段被重新作为第二权威数据源或双写入口；
+- Session、Agent run、迟到提交栅栏和恢复协调出现重复所有者；
 - 能力目录 路由、页面 contribution、终端返回 / 状态恢复 policy 的 Owner 不唯一。
 
 #### 功能设计与实现度
@@ -474,7 +474,7 @@ UI 文案
    - 能力域 是否导入 sibling 能力域内部实现；
    - 是否绕过该能力所属 Owner 的 Registry / Policy / Gateway；
    - TS/TSX 模块和包 依赖方向是否与架构一致；
-   - DI provider / binding / composition root 是否只装配一个权威实现；
+   - 运行时工厂 / 生产装配入口 是否只装配一个权威实现；
    - 能力域 catalog、页面 contribution、导航、终端返回 / 状态恢复 是否全部注册；
    - 后台任务 / Job / Tool / MCP / serializer / codec / registry 是否注册到真实生产入口；
    - CLI / 插件声明、权限、intent/filter、deep link、foreground service 等声明是否与代码入口一致；
@@ -512,7 +512,7 @@ UI 文案
 + 独立配置差异有明确依据
 + 关联功能协同
 + 自动与手动路径语义一致
-+ 注册 / DI / CLI / 插件声明 / Registry 装配完整
++ 注册 / 运行时装配 / CLI / 插件声明 / Registry 装配完整
 + 兼容与版本演进路径完整
 + 生命周期完整
 + 异常路径完整
@@ -661,7 +661,7 @@ UI 文案
 - Mutex / synchronized 锁粒度；
 - Queue / Channel 上限；
 - Flow / CoroutineScope 生命周期；
-- WorkManager；
+- 后台任务运行器及系统信号；
 - async / launch；
 - generation；
 - cancellation；
@@ -1029,6 +1029,7 @@ TS/TSX 源码、原生资源、运行时、打包和依赖升级改动，至少�
 - Linux x64/arm64；
 - macOS x64/arm64；
 - Windows x64/arm64；
+- 原生运行、终端 PTY、SDK 取消/退出与 Gateway SSE 长连接；
 - merge-gate。
 
 额外规则：
