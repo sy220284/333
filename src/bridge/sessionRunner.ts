@@ -341,7 +341,12 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
       deps.onDebug(
         `[bridge:session] Spawning sessionId=${opts.sessionId} sdkUrl=${opts.sdkUrl} accessToken=${opts.accessToken ? 'present' : 'MISSING'}`,
       )
-      deps.onDebug(`[bridge:session] Child args: ${args.join(' ')}`)
+      // Server-delivered prompts and CLI flags may contain private content.
+      // Preserve full argument diagnostics only for ordinary local bridge
+      // launches; the self-hosted runner records the count without values.
+      deps.onDebug(deps.runnerRuntime
+        ? `[bridge:session] Child args: ${args.length} runner arguments (values redacted)`
+        : `[bridge:session] Child args: ${args.join(' ')}`)
       if (debugFile) {
         deps.onDebug(`[bridge:session] Debug log: ${debugFile}`)
       }
