@@ -184,3 +184,17 @@ test('capability probe reports failure when follow-up does not finish', async ()
   assert.equal(result.roundTrip, false)
   assert.equal(count, 2)
 })
+
+test('ChatGPT accepts the standard OpenAI models response without a visibility field', async () => {
+  const seen: string[] = []
+  const result = await discoverIndependentModels('chatgpt', 'oauth-token',
+    (async (url: RequestInfo | URL) => {
+      seen.push(String(url))
+      return new Response(JSON.stringify({ object: 'list', data: [
+        { id: 'gpt-6.1-sol', object: 'model' },
+        { id: 'gpt-6-astra', object: 'model' },
+      ] }))
+    }) as typeof fetch)
+  assert.deepEqual(result, ['gpt-6.1-sol', 'gpt-6-astra'])
+  assert.deepEqual(seen, ['https://api.openai.com/v1/models'])
+})
