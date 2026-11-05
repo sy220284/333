@@ -7,6 +7,9 @@ import { UltrareviewAllFilesDialog } from './UltrareviewAllFilesDialog.js';
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js';
 import { getDefaultBranch, gitExe } from '../../utils/git.js';
 import { resolveUltrareviewGitBase } from '../../utils/review/ultrareviewGitBase.ts';
+import { getMainLoopModel } from '../../utils/model/model.js';
+import { resolveIndependentModel } from '../../services/api/multimodel/registry.js';
+import localReview from '../review.js';
 function contentBlocksToString(blocks: ContentBlockParam[]): string {
   return blocks.map(b => b.type === 'text' ? b.text : '').filter(Boolean).join('\n');
 }
@@ -45,6 +48,18 @@ async function launchAndDone(args: string, context: Parameters<LocalJSXCommandCa
   }
 }
 export const call: LocalJSXCommandCall = async (onDone, context, args) => {
+  if (resolveIndependentModel(getMainLoopModel())) {
+    // Use the existing local /review command and its exact original prompt.
+    // Cloud-only billing, repository uploads and CCR session creation are
+    // excluded for independent API models. Local review uses the selected
+    // provider and the same trusted permission/tool execution pipeline.
+    if (localReview.type !== 'prompt') {
+      throw new Error('333 local review command definition changed')
+    }
+    const blocks = await localReview.getPromptForCommand(args, context)
+    onDone(contentBlocksToString(blocks), { shouldQuery: true })
+    return null
+  }
   const gate = await checkOverageGate();
   if (gate.kind === 'not-enabled') {
     onDone('Free ultrareviews used. Enable Extra Usage at https://claude.ai/settings/billing to continue.', {
