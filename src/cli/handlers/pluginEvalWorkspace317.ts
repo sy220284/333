@@ -6,21 +6,32 @@
 import { spawn } from 'node:child_process'
 import { lstat, realpath } from 'node:fs/promises'
 import { isAbsolute, relative, resolve, sep } from 'node:path'
+import type { EvalCase317 } from './pluginEvalCatalog317.ts'
 
-const inside = (root, path) => {
+export type ResolvedEvalContext317 = {
+  addDirs: string[]
+  scaffoldScript?: string
+  historyFile?: string
+}
+
+const inside = (root: string, path: string): boolean => {
   const rel = relative(root, path)
   return rel === '' || (rel !== '..' && !rel.startsWith('..' + sep) && !isAbsolute(rel))
 }
-function allowedFileParts(path) {
+function allowedFileParts(path: string): boolean {
   const names = path.split(/[\\/]/)
   return !names.includes('.git') && !names.includes('.hg') &&
     !names.includes('.svn')
 }
-export async function resolveEvalContext317(caseInfo, sourcePluginRoot, runPluginRoot) {
+export async function resolveEvalContext317(
+  caseInfo: EvalCase317,
+  sourcePluginRoot: string | null | undefined,
+  runPluginRoot: string | null | undefined,
+): Promise<ResolvedEvalContext317> {
   const context = caseInfo.context ?? {}
   const caseDir = await realpath(caseInfo.dir)
   const pluginDir = sourcePluginRoot ? await realpath(sourcePluginRoot) : caseDir
-  async function source(name, type) {
+  async function source(name: string, type: 'add_dirs' | 'scaffold_script' | 'history_file'): Promise<string> {
     if (typeof name !== 'string' || !name.trim() || isAbsolute(name) || !allowedFileParts(name)) {
       throw new Error('eval context.' + type + ' requires a relative non-VCS path')
     }
@@ -34,7 +45,7 @@ export async function resolveEvalContext317(caseInfo, sourcePluginRoot, runPlugi
     }
     return file
   }
-  const addDirs = []
+  const addDirs: string[] = []
   for (const entry of context.add_dirs ?? []) {
     addDirs.push(await source(entry, 'add_dirs'))
   }
@@ -58,7 +69,7 @@ export async function runEvalScaffold317(script: string, workspace: string, time
   })
   let output = ''
   const limit = 65536
-  function collect(chunk) {
+  function collect(chunk: Buffer): void {
     if (output.length < limit) output += chunk.toString('utf8').slice(0,limit-output.length)
   }
   child.stdout.on('data', collect)
