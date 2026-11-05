@@ -10,7 +10,7 @@ test('317 BYOC child: remote resume, session-scoped settings and correct executi
     const script=join(base,'inspect-child.mjs')
     writeFileSync(script,[
       "import {writeFileSync} from 'node:fs'",
-      "writeFileSync(process.env.TEST_CAPTURE_PATH,JSON.stringify({args:process.argv.slice(2),kind:process.env.CLAUDE_CODE_ENVIRONMENT_KIND,configDir:process.env.CLAUDE_CONFIG_DIR,remote:process.env.CLAUDE_CODE_REMOTE,remoteType:process.env.CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE,token:process.env.CLAUDE_CODE_SESSION_ACCESS_TOKEN,epoch:process.env.CLAUDE_CODE_WORKER_EPOCH,ccr:process.env.CLAUDE_CODE_USE_CCR_V2,api:process.env.ANTHROPIC_BASE_URL,scopes:process.env.CLAUDE_CODE_OAUTH_SCOPES,oauth:process.env.CLAUDE_CODE_OAUTH_TOKEN}))",
+      "writeFileSync(process.env.TEST_CAPTURE_PATH,JSON.stringify({args:process.argv.slice(2),kind:process.env.CLAUDE_CODE_ENVIRONMENT_KIND,configDir:process.env.CLAUDE_CONFIG_DIR,remote:process.env.CLAUDE_CODE_REMOTE,remoteType:process.env.CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE,token:process.env.CLAUDE_CODE_SESSION_ACCESS_TOKEN,epoch:process.env.CLAUDE_CODE_WORKER_EPOCH,ccr:process.env.CLAUDE_CODE_USE_CCR_V2,api:process.env.ANTHROPIC_BASE_URL,scopes:process.env.CLAUDE_CODE_OAUTH_SCOPES,oauth:process.env.CLAUDE_CODE_OAUTH_TOKEN,resumeTurn:process.env.CLAUDE_CODE_RESUME_INTERRUPTED_TURN,resumeCutoff:process.env.CLAUDE_CODE_RESUME_SHOWS_CUT_OFF_CALLS,resumePrompt:process.env.CLAUDE_CODE_RESUME_PROMPT}))",
     ].join('\n'))
     const cap1=join(base,'byoc.json')
     const cap2=join(base,'bridge.json')
@@ -53,6 +53,10 @@ test('317 BYOC child: remote resume, session-scoped settings and correct executi
     expect(first.ccr).toBe('1')
     expect(first.oauth).toBe('inference-for-agent')
     expect(first.scopes).toBe('user:inference user:ccr_inference user:file_upload')
+    expect(first.resumeTurn).toBe('1')
+    expect(first.resumeCutoff).toBe('1')
+    expect(first.resumePrompt).toContain('Continue from where you left off')
+    expect(first.resumePrompt).toContain('[Tool call interrupted')
     expect(first.api).toBe('https://session.example.test')
 
     const bridge=createSessionSpawner({...spawnBase,env:{...process.env,TEST_CAPTURE_PATH:cap2}})
@@ -61,6 +65,8 @@ test('317 BYOC child: remote resume, session-scoped settings and correct executi
     const second=JSON.parse(readFileSync(cap2,'utf8'))
     expect(second.kind).toBe('bridge')
     expect(second.oauth).toBeUndefined()
+    expect(second.resumeTurn).toBeUndefined()
+    expect(second.resumePrompt).toBeUndefined()
     expect(second.args).toContain('--session-id')
     expect(second.args).toContain('abc_123')
     expect(second.args.some((a:string)=>a.startsWith('--resume='))).toBe(false)
