@@ -91,3 +91,26 @@ export async function stageRunnerPromptFlags317(
     throw error
   }
 }
+
+/** Original 2.1.317 /remote MCP configuration arrives as session-private base64. */
+export async function stageRunnerMcpConfig317(
+  value: unknown, configDir: string,
+):Promise<RunnerPromptFlags317>{
+  if(value===undefined || value===null)return {args:[],paths:[]}
+  if(typeof value!=='object' || Array.isArray(value)) {
+    throw new TypeError('Remote MCP config must be an object')
+  }
+  const encoded=(value as Record<string,unknown>).content
+  if(encoded===undefined || encoded==='') return {args:[],paths:[]}
+  if(typeof encoded!=='string' || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)){
+    throw new TypeError('Remote MCP config contains invalid base64')
+  }
+  const data=Buffer.from(encoded,'base64')
+  if(data.length>16*1024*1024)throw new RangeError('Remote MCP config exceeds 16 MiB')
+  const text=data.toString('utf8')
+  try{JSON.parse(text)}
+  catch(error){throw new TypeError('Remote MCP config contains malformed JSON',{cause:error})}
+  const path=join(configDir,randomUUID()+'-mcp-config.json')
+  await writeFile(path,text,{encoding:'utf8',flag:'wx',mode:0o600})
+  return {args:['--mcp-config',path],paths:[path]}
+}
