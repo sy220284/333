@@ -36,9 +36,10 @@ export function channelServer(name: string): string {
     ' * See https://code.claude.com/docs/en/channels-reference.',
     ' */',
     "import { McpServer } from '@modelcontextprotocol/server'",
-    "import { StdioServerTransport } from '@modelcontextprotocol/server/stdio'",
+    "import { serveStdio } from '@modelcontextprotocol/server/stdio'",
     "import { z } from 'zod/v4'",
     '',
+    'serveStdio(() => {',
     'const mcp = new McpServer(',
     "  { name: '" + name + "', version: '0.1.0' },",
     '  {',
@@ -76,9 +77,15 @@ export function channelServer(name: string): string {
     '// Each meta key becomes an attribute on the <channel> tag. Keys must be',
     '// identifiers (letters/digits/underscores) — others are silently dropped.',
     '',
-    'await mcp.connect(new StdioServerTransport())',
+    'return mcp',
+    '})',
     '',
-  ].map(line => line.startsWith('  // ') ? line.slice(2) : line).join('\n')
+  ].map(line => line.startsWith('  // ') ? line.slice(2) : line)
+   .map((line, index, lines) => {
+     const start = lines.indexOf('serveStdio(() => {')
+     const end = lines.lastIndexOf('})')
+     return index > start && index < end ? '  ' + line : line
+   }).join('\n')
 }
 function filesFor(name: string, options: InitOptions, author: string | undefined, email: string | undefined): Map<string, string> {
   const extra = new Set(options.with ?? [])
