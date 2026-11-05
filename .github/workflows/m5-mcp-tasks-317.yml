@@ -33,7 +33,9 @@ jobs:
       - name: MCP任务成功、失败、取消与开关真实测试
         run: bun test tests/m5-mcp-tasks-317.test.ts
       - name: 全仓TypeScript类型检查
-        run: node tools/dev/dev.mjs typecheck:all
+        run: |
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          node tools/dev/dev.mjs typecheck:all
       - name: 源码独立重建和入口连通性验证
         run: |
           bun build/rebuild.mjs
