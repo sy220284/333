@@ -86,12 +86,16 @@ export async function discoverIndependentModelDetails(
   })
   if (!response.ok) throw new Error(`Model discovery failed for ${provider}: HTTP ${response.status}`)
   const data = await response.json() as Record<string, unknown>
-  const list = provider === 'chatgpt' ? data.models : provider === 'gemini' ? data.models : data.data
+  const list = provider === 'gemini' ? data.models
+    : provider === 'chatgpt' ? (Array.isArray(data.models) ? data.models : data.data)
+    : data.data
   if (!Array.isArray(list)) throw new Error(`Invalid model discovery response from ${provider}`)
   return list.flatMap(entry => {
     if (!entry || typeof entry !== 'object') return []
-    if (provider === 'chatgpt' && entry.visibility !== 'list') return []
-    const value = provider === 'chatgpt' ? entry.slug : provider === 'gemini' ? entry.name : entry.id
+    if (provider === 'chatgpt' && entry.visibility !== undefined && entry.visibility !== 'list') return []
+    const value = provider === 'chatgpt'
+      ? (typeof entry.slug === 'string' ? entry.slug : entry.id)
+      : provider === 'gemini' ? entry.name : entry.id
     if (typeof value !== 'string') return []
     const id = value.startsWith('models/') ? value.slice('models/'.length) : value
     if (!id || id.length > 300 || Array.from(id).some(character => character.charCodeAt(0) < 32)) return []
