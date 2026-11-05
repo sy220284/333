@@ -224,15 +224,14 @@ async function stop(id) {
   await editSession(id, { state: 'stopping', detail: 'stop requested' })
   try { job.proc.kill('SIGINT') }
   catch (error) { throw new Error(`Could not interrupt session ${id}: ${error.message}`) }
-  const settled = await settleWithin(job.proc.exited, 4500)
-  if (!settled && active.get(id) === job) {
-    // SIGINT is translated to TERM by the PTY protocol. A repeated TERM
-    // cannot make progress once a child ignores or stalls during shutdown.
-    // Escalate to KILL and wait for its exit-frame transaction.
+  let exited = await settleWithin(job.proc.exited, 4500)
+  if (!exited && active.get(id) === job) {
+    // SIGINT maps to TERM in the PTY protocol. Escalate to KILL and wait
+    // for the actual child exit frame, independently of the hosting PID.
     job.proc.kill('SIGKILL')
-    await settleWithin(job.proc.exited, 2_000)
+    exited = await settleWithin(job.proc.exited, 2_000)
   }
-  if (active.get(id) === job && isAlive(job.proc.pid))
+  if (!exited)
     throw new Error(`Could not confirm session termination: ${id}`)
   // Process exit is earlier than onExit's durable state/log transaction.
   // Wait for that transaction before permitting an immediate respawn.
@@ -241,7 +240,9 @@ async function stop(id) {
   // The PTY child may have exited while its independent host is still
   // flushing and removing its Unix socket. A respawn must wait for that
   // host to relinquish the address before binding a replacement.
-  const deadline=Date.now()+5_000
+  // The PTY host may remain alive for up to 5s accepting an exit subscriber,
+  // then up to 2s flushing frames before releasing the socket and cwd.
+  const deadline=Date.now()+8_000
   while(isAlive(job.proc.pid) && Date.now()<deadline)
     await new Promise(resolve=>setTimeout(resolve,50))
   if(isAlive(job.proc.pid))
