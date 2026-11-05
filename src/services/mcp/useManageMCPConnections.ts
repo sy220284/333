@@ -631,6 +631,7 @@ export function useManageMCPConnections(
           // account-scoped user permission are explicitly enabled.
           if (client.capabilities?.experimental?.['claude/artifact-comments'] &&
               isEnvTruthy(process.env.CLAUDE_CODE_EXPERIMENTAL_ARTIFACT_COMMENTS)) {
+            try {
             const toolNames = (await client.client.listTools()).tools.map(tool => tool.name)
             const artifactTool = toolNames.find(name =>
               name === 'Artifact' || name === 'artifact')
@@ -657,6 +658,16 @@ export function useManageMCPConnections(
               logMCPDebug(client.name, 'Artifact comment event handler registered')
             } else {
               logMCPDebug(client.name, 'Artifact comment capability without Artifact tool')
+            }
+            } catch (error) {
+              addNotification({
+                key: 'artifact-comment-provider-unavailable',
+                priority: 'high',
+                text: 'Artifact comment event integration failed: ' +
+                  (error instanceof Error ? error.message : String(error)),
+                color: 'warning',
+                timeoutMs: 12000,
+              })
             }
           } else {
             client.client.removeNotificationHandler('notifications/claude/artifact/comment')
