@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { lookup } from 'node:dns/promises'
+import { request as httpsRequest } from 'node:https'
 import { mkdtemp, readFile, readdir, rm, writeFile, stat } from 'node:fs/promises'
 import { isIP } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -29,56 +30,105 @@ function privateAddress(address: string): boolean {
   return true
 }
 
-async function validateRemoteUrl(raw: string): Promise<URL> {
+type PublicTarget = {
+  url: URL
+  hostname: string
+  addresses: Array<{ address: string; family: number }>
+}
+
+/**
+ * The TLS socket must connect to an address validated at lookup time. Doing a
+ * separate DNS preflight followed by fetch(url) allows rebinding between them.
+ * TLS SNI, HTTP Host and certificate validation still use the original domain.
+ */
+export function createPinnedPluginLookup317(
+  hostname: string,
+  addresses: Array<{ address: string; family: number }>,
+) {
+  if (addresses.length === 0 || addresses.some(entry => privateAddress(entry.address))) {
+    throw new Error('--plugin-url destination must be a public host')
+  }
+  return (requestedHost, options, callback) => {
+    if (requestedHost !== hostname) {
+      callback(new Error('Plugin download attempted to resolve an unexpected host'))
+      return
+    }
+    if (options.all) callback(null, addresses)
+    else callback(null, addresses[0]!.address, addresses[0]!.family)
+  }
+}
+
+async function validateRemoteUrl(raw: string): Promise<PublicTarget> {
   let url: URL
   try { url = new URL(raw) } catch { throw new Error('Invalid --plugin-url') }
   if (url.protocol !== 'https:' || url.username || url.password || url.port) {
     throw new Error('--plugin-url requires an HTTPS URL without embedded credentials or custom ports')
   }
-  if (url.hostname === 'localhost' || url.hostname.endsWith('.localhost') || url.hostname.endsWith('.local')) {
+  const hostname = url.hostname.replace(/^\\[|\\]$/g, '')
+  if (hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local')) {
     throw new Error('--plugin-url cannot access local services')
   }
-  const hosts = isIP(url.hostname)
-    ? [{ address: url.hostname }]
-    : await lookup(url.hostname, { all: true, verbatim: true })
-  if (hosts.length === 0 || hosts.some(h => privateAddress(h.address))) {
+  const family = isIP(hostname)
+  const addresses = family
+    ? [{ address: hostname, family }]
+    : await lookup(hostname, { all: true, verbatim: true })
+  if (addresses.length === 0 || addresses.some(host => privateAddress(host.address))) {
     throw new Error('--plugin-url destination must be a public host')
   }
-  return url
+  return { url, hostname, addresses }
+}
+
+async function requestPinnedZip(target: PublicTarget): Promise<import('node:http').IncomingMessage> {
+  const pinnedLookup = createPinnedPluginLookup317(target.hostname, target.addresses)
+  return await new Promise((resolve, reject) => {
+    const request = httpsRequest(target.url, {
+      agent: false,
+      lookup: pinnedLookup,
+      signal: AbortSignal.timeout(30000),
+      headers: { accept: 'application/zip, application/octet-stream' },
+    }, resolve)
+    request.once('error', reject)
+    request.end()
+  })
 }
 
 async function downloadZip(raw: string): Promise<Uint8Array> {
-  let url = await validateRemoteUrl(raw)
+  let target = await validateRemoteUrl(raw)
   for (let i = 0; i <= MAX_REDIRECTS; i++) {
-    const response = await fetch(url, {
-      redirect: 'manual',
-      signal: AbortSignal.timeout(30000),
-      headers: { accept: 'application/zip, application/octet-stream' },
-    })
-    if ([301,302,303,307,308].includes(response.status)) {
-      const location = response.headers.get('location')
+    const response = await requestPinnedZip(target)
+    if ([301, 302, 303, 307, 308].includes(response.statusCode ?? 0)) {
+      const location = response.headers.location
+      // Release the old TCP/TLS socket before opening the redirected endpoint.
+      response.destroy()
       if (!location || i === MAX_REDIRECTS) throw new Error('Plugin download exceeded redirect limit')
-      url = await validateRemoteUrl(new URL(location,url).href)
+      target = await validateRemoteUrl(new URL(location, target.url).href)
       continue
     }
-    if (!response.ok || !response.body) throw new Error(`Plugin download failed (HTTP ${response.status})`)
-    const advertised = response.headers.get('content-length')
-    if (advertised && Number(advertised) > MAX_ZIP_BYTES) throw new Error('Plugin archive exceeds 64 MiB')
+    if ((response.statusCode ?? 0) < 200 || (response.statusCode ?? 0) >= 300) {
+      response.destroy()
+      throw new Error(`Plugin download failed (HTTP ${response.statusCode})`)
+    }
+    const advertised = response.headers['content-length']
+    if (advertised && Number(advertised) > MAX_ZIP_BYTES) {
+      response.destroy()
+      throw new Error('Plugin archive exceeds 64 MiB')
+    }
     const parts: Uint8Array[] = []
-    const reader = response.body.getReader()
     let length = 0
     try {
-      for (;;) {
-        const { done, value } = await reader.read()
-        if (done) break
-        length += value.length
+      for await (const chunk of response) {
+        const bytes = chunk as Uint8Array
+        length += bytes.length
         if (length > MAX_ZIP_BYTES) throw new Error('Plugin archive exceeds 64 MiB')
-        parts.push(value)
+        parts.push(bytes)
       }
-    } finally { reader.releaseLock() }
+    } catch (error) {
+      response.destroy()
+      throw error
+    }
     const out = new Uint8Array(length)
     let offset = 0
-    for (const part of parts) { out.set(part,offset); offset+=part.length }
+    for (const part of parts) { out.set(part, offset); offset += part.length }
     if (length < 4 || out[0] !== 0x50 || out[1] !== 0x4b || out[2] !== 3 || out[3] !== 4) {
       throw new Error('Downloaded plugin is not a ZIP archive')
     }
