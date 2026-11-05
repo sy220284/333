@@ -309,3 +309,78 @@ test('Runner 317: failed preparation is joined while another capacity slot compl
     rmSync(root,{recursive:true,force:true})
   }
 })
+
+test('Runner 317: expiring session token refreshes the live CCR child without leaking runner credential',async()=>{
+  const root=temp(),aborted=new AbortController(),events:string[]=[]
+  const jwt=(exp:number)=>'header.'+Buffer.from(JSON.stringify({exp})).toString('base64url')+'.signature'
+  const first=jwt(Math.floor(Date.now()/1000)+25)
+  const rotated=jwt(Math.floor(Date.now()/1000)+3600)
+  let release!:()=>void
+  const done=new Promise<'completed'>(resolve=>{release=()=>resolve('completed')})
+  const api=fakeApi({
+    pollWork:async()=>({assignment_ids:['session_1'],session_assignments:[]}),
+    issueSessionToken:async()=>({session_token:first}),
+    refreshToken:async(token)=>{
+      expect(token).toBe(first)
+      events.push('refresh')
+      return {token:rotated}
+    },
+    releaseSession:async()=>{events.push('release');aborted.abort();return {released:true}},
+  })
+  try{
+    await startSelfHostedRunnerHost317({
+      api,baseDir:root,capacity:1,execPath:process.execPath,scriptArgs:[],env:{},
+      sessionTokenRefreshIntervalMs:10,signal:aborted.signal,
+      createChild(){
+        return {...makeHandle(),done,updateAccessToken(value:string){
+          expect(value).toBe(rotated)
+          events.push('child-token')
+          release()
+        }}
+      },
+    })
+    expect(events).toEqual(['refresh','child-token','release'])
+  }finally{rmSync(root,{recursive:true,force:true})}
+})
+
+test('Runner 317: release pushes unfinished work only with the explicit preservation option',async()=>{
+  for(const enabled of [false,true]){
+    const root=temp(),aborted=new AbortController()
+    const bare=join(root,'owner','project.git'),writer=join(root,'writer')
+    const git=(...args:string[])=>execFileSync('git',args,{encoding:'utf8'}).trim()
+    try{
+      mkdirSync(join(root,'owner'),{recursive:true})
+      git('init','--bare','--initial-branch=main',bare)
+      git('init','--initial-branch=main',writer)
+      writeFileSync(join(writer,'payload.txt'),'initial')
+      git('-C',writer,'add','.')
+      git('-C',writer,'-c','user.name=QA','-c','user.email=qa@example.org','commit','-m','initial')
+      git('-C',writer,'remote','add','origin',bare)
+      git('-C',writer,'push','origin','main')
+      const api=fakeApi({
+        pollWork:async()=>({assignment_ids:['session_1'],session_assignments:[]}),
+        getSessionRemoteConfig:async()=>({
+          sources:[{type:'git_repository',url:'file://'+bare,revision:'main'}],
+          push_targets:[{type:'git_repository',git_info:{
+            repo:'owner/project',branches:['claude/preserve']}}],
+          claude_code_args:{},environment_variables:{},
+          api_base_url:'https://api.example.test',
+        }),
+        releaseSession:async()=>{aborted.abort();return {released:true}},
+      })
+      await startSelfHostedRunnerHost317({
+        api,baseDir:root,capacity:1,execPath:process.execPath,
+        scriptArgs:[],env:{},signal:aborted.signal,pushOutcomeOnRelease:enabled,
+        createChild(_id,_url,_token,_epoch,cwd){
+          writeFileSync(join(cwd,'unfinished.txt'),'unfinished')
+          git('-C',cwd,'add','.')
+          git('-C',cwd,'-c','user.name=QA','-c','user.email=qa@example.org',
+            'commit','-m','unfinished work')
+          return makeHandle('interrupted')
+        },
+      })
+      const pushed=git('--git-dir',bare,'branch','--list','claude/preserve')
+      expect(pushed.length>0).toBe(enabled)
+    }finally{rmSync(root,{recursive:true,force:true})}
+  }
+})

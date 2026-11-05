@@ -23,6 +23,7 @@ export type RunnerHostOptions317 = {
   env: NodeJS.ProcessEnv
   pollIntervalMs?: number
   heartbeatIntervalMs?: number
+  sessionTokenRefreshIntervalMs?: number
   drainWaitMs?: number
   pushOutcomeOnRelease?: boolean
   clientLabel?: string
@@ -96,6 +97,11 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       (!Number.isSafeInteger(options.heartbeatIntervalMs) || options.heartbeatIntervalMs < 1)) {
     throw new RangeError('Runner heartbeat interval must be a positive integer')
   }
+  if (options.sessionTokenRefreshIntervalMs !== undefined &&
+      (!Number.isSafeInteger(options.sessionTokenRefreshIntervalMs) ||
+       options.sessionTokenRefreshIntervalMs < 1)) {
+    throw new RangeError('Session token refresh interval must be a positive integer')
+  }
   const status = options.onStatus ?? (() => {})
   const root = resolve(options.baseDir)
   await mkdir(root, {recursive:true,mode:0o700})
@@ -119,6 +125,8 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
     let workerEpoch: number | undefined
     let remoteBase = ''
     let heartbeatTimer: ReturnType<typeof setInterval> | undefined
+    let sessionRefreshTimer: ReturnType<typeof setInterval> | undefined
+    let sessionRefreshPending = false
     let heartbeatPending = false
     const heartbeatAbort = new AbortController()
     try {
@@ -170,6 +178,27 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
             workerEpoch,
           },childCwd)
       status('[runner:session] started '+id)
+      // A worker's session_token expires independently of the runner_token.
+      // Refresh the session credential and notify the live CCR v2 child.
+      // The same variable is used by heartbeat, so both paths rotate together.
+      sessionRefreshTimer=setInterval(()=>{
+        if(heartbeatAbort.signal.aborted || ownedAbort.signal.aborted ||
+           sessionRefreshPending || !runnerTokenNeedsRefresh(remoteToken,Date.now())) return
+        sessionRefreshPending=true
+        const staleToken=remoteToken
+        void options.api.refreshToken(staleToken).then(next=>{
+          if(heartbeatAbort.signal.aborted || ownedAbort.signal.aborted ||
+             remoteToken!==staleToken) return
+          handle.updateAccessToken(next.token)
+          remoteToken=next.token
+          status('[runner:session] refreshed session token for '+id)
+        }).catch(error=>{
+          if(!heartbeatAbort.signal.aborted && !ownedAbort.signal.aborted)
+            status('[runner:session] session token refresh failed for '+id+': '+
+              (error instanceof Error?error.message:String(error)))
+        }).finally(()=>{sessionRefreshPending=false})
+      },options.sessionTokenRefreshIntervalMs ?? 30_000)
+      sessionRefreshTimer.unref?.()
       const completion = (async () => {
         const result = await handle.done
         if (options.pushOutcomeOnRelease && result !== 'completed') {
@@ -193,6 +222,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
       }).finally(() => {
         heartbeatAbort.abort()
         if (heartbeatTimer) clearInterval(heartbeatTimer)
+        if (sessionRefreshTimer) clearInterval(sessionRefreshTimer)
         active.delete(id)
       })
       active.set(id,{handle,completion})
@@ -201,6 +231,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
     } catch (error) {
       heartbeatAbort.abort()
       if (heartbeatTimer) clearInterval(heartbeatTimer)
+      if (sessionRefreshTimer) clearInterval(sessionRefreshTimer)
       if (ownedAbort.signal.aborted) return
       status('[runner:session] failed to start '+id+': '+
         (error instanceof Error ? error.message : String(error)))
