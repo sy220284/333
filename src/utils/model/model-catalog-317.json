@@ -175,7 +175,6 @@
         "mantle": "anthropic.claude-haiku-5-5"
       },
       "vertex_region_env_var": "VERTEX_REGION_CLAUDE_HAIKU_5_5",
-      "fallback_3p": "claude-haiku-4-5",
       "context": {
         "window": 1000000,
         "native_1m": true,
@@ -403,7 +402,6 @@
         "vertex": true
       },
       "vertex_region_env_var": "VERTEX_REGION_CLAUDE_5_SONNET",
-      "fallback_3p": "claude-sonnet-4-6",
       "context": {
         "window": 1000000,
         "native_1m": true,
@@ -766,7 +764,6 @@
         "vertex": true
       },
       "vertex_region_env_var": "VERTEX_REGION_CLAUDE_5_OPUS",
-      "fallback_3p": "claude-opus-4-8",
       "context": {
         "window": 1000000,
         "native_1m": true,
@@ -1092,33 +1089,32 @@
       "per_provider": {
         "bedrock": "claude-opus-5-5",
         "vertex": "claude-opus-5-5",
-        "foundry": "claude-opus-4-6",
+        "foundry": "claude-opus-5-5",
         "mantle": "claude-opus-5-5",
         "anthropic_aws": "claude-opus-5-5",
-        "gateway": "claude-opus-4-7"
+        "gateway": "claude-opus-5-5"
       }
     },
     "sonnet": {
       "default": "claude-sonnet-5-5",
       "per_provider": {
-        "bedrock": "claude-sonnet-4-5",
-        "vertex": "claude-sonnet-4-5",
-        "foundry": "claude-sonnet-4-5",
-        "mantle": "claude-sonnet-4-5",
-        "anthropic_aws": "claude-sonnet-4-6",
-        "gateway": "claude-sonnet-4-6"
+        "bedrock": "claude-sonnet-5-5",
+        "vertex": "claude-sonnet-5-5",
+        "foundry": "claude-sonnet-5-5",
+        "mantle": "claude-sonnet-5-5",
+        "anthropic_aws": "claude-sonnet-5-5",
+        "gateway": "claude-sonnet-5-5"
       }
     },
     "haiku": {
       "default": "claude-haiku-5-5",
       "per_provider": {
-        "bedrock": "claude-haiku-4-5",
-        "vertex": "claude-haiku-4-5",
-        "foundry": "claude-haiku-4-5",
-        "mantle": "claude-haiku-4-5",
-        "anthropic_aws": "claude-haiku-4-5",
-        "anthropic_google_cloud": "claude-haiku-4-5",
-        "gateway": "claude-haiku-4-5"
+        "bedrock": "claude-haiku-5-5",
+        "vertex": "claude-haiku-5-5",
+        "foundry": "claude-haiku-5-5",
+        "mantle": "claude-haiku-5-5",
+        "anthropic_aws": "claude-haiku-5-5",
+        "anthropic_google_cloud": "claude-haiku-5-5"
       }
     },
     "fable": {

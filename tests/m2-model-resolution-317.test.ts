@@ -23,8 +23,8 @@ test('317 aliases select catalog provider defaults through the production model 
 test('317 third-party aliases use provider-specific catalog entries', () => run(`
   import { parseUserSpecifiedModel } from './src/utils/model/model.ts';
   assert.equal(parseUserSpecifiedModel('opus'), 'us.anthropic.claude-opus-5-5');
-  assert.equal(parseUserSpecifiedModel('sonnet'), 'us.anthropic.claude-sonnet-4-5-20250929-v1:0');
-  assert.equal(parseUserSpecifiedModel('haiku'), 'us.anthropic.claude-haiku-4-5-20251001-v1:0');
+  assert.equal(parseUserSpecifiedModel('sonnet'), 'us.anthropic.claude-sonnet-5-5');
+  assert.equal(parseUserSpecifiedModel('haiku'), 'us.anthropic.claude-haiku-5-5');
 `, { CLAUDE_CODE_USE_BEDROCK: '1' }))
 
 test('317 custom alias pins preserve case and explicit empty values', () => run(`
@@ -117,7 +117,7 @@ test('333 inventory keeps first-party-only models and best follows the catalog',
   import { getBestModel, parseUserSpecifiedModel } from './src/utils/model/model.ts';
   import { getModelOptions } from './src/utils/model/modelOptions.ts';
   assert.equal(MODEL_CATALOG.models.length, 22);
-  assert.equal(getCatalogModelsForProvider('first_party').length, 22);
+  assert.equal(getCatalogModelsForProvider('first_party').length, 9);
   assert.equal(getCatalogModelsForProvider('bedrock').filter(x => x.family === 'mythos').length, 2);
   assert.equal(MODEL_CATALOG.best, 'fable');
   assert.equal(getBestModel(), 'claude-fable-5-1');
@@ -134,7 +134,7 @@ test('333 provider picker uses provider-resolved defaults rather than unsupporte
   const preferred = getCatalogPreferredModelsForProvider('bedrock');
   const picker = getModelOptions();
   for (const row of preferred) assert.ok(picker.some(option => option.value === row.provider_ids.bedrock), row.id);
-  assert.equal(preferred.find(x => x.family === 'sonnet')?.id, 'claude-sonnet-4-5');
+  assert.equal(preferred.find(x => x.family === 'sonnet')?.id, 'claude-sonnet-5-5');
   assert.equal(picker.some(option => String(option.value).includes('claude-mythos')), false); // access-restricted family
 `, { CLAUDE_CODE_USE_BEDROCK: '1' }))
 
@@ -153,3 +153,40 @@ test('333 official Mythos IDs are present in all supported Claude provider confi
     assert.equal(firstPartyNameToCanonical(conf.bedrock), name);
   }
 `))
+
+test('333 preinstalled Claude models contain only 5.x on all API providers', () => run(`
+  import { MODEL_CATALOG, getCatalogModel, getCatalogModelsForProvider, getCatalogPreferredModelsForProvider, isLegacyClaudeModel } from './src/utils/model/modelCatalog.ts';
+  import { getRegisteredModelInventory } from './src/services/api/multimodel/catalog.ts';
+  import { getModelOptions } from './src/utils/model/modelOptions.ts';
+  assert.equal(MODEL_CATALOG.models.length, 22); // preserved legacy session lookup table
+  for (const provider of ['first_party', 'bedrock', 'vertex', 'foundry']) {
+    const rows = getCatalogModelsForProvider(provider);
+    assert.equal(rows.length, 9, provider);
+    assert.ok(rows.every(row => !isLegacyClaudeModel(row.id)));
+    assert.ok(getCatalogPreferredModelsForProvider(provider).every(row => !isLegacyClaudeModel(row.id)));
+  }
+  assert.equal(getRegisteredModelInventory().filter(row => row.source === 'built-in').length, 9);
+  assert.equal(getCatalogModel('claude-sonnet-4-6')?.id, 'claude-sonnet-4-6');
+  const options = getModelOptions();
+  assert.ok(options.every(option => option.value === null || !isLegacyClaudeModel(option.value)));
+  for (const family of ['opus', 'sonnet', 'haiku', 'fable'])
+    assert.ok(options.some(option => option.value === family), family);
+`))
+
+test('333 explicitly selected Claude 4.x model stays available for existing sessions', () => run(`
+  import { getModelOptions } from './src/utils/model/modelOptions.ts';
+  import { parseUserSpecifiedModel } from './src/utils/model/model.ts';
+  assert.equal(parseUserSpecifiedModel('claude-sonnet-4-6'), 'claude-sonnet-4-6');
+  const rows = getModelOptions();
+  assert.equal(rows.filter(row => row.value === 'claude-sonnet-4-6').length, 1);
+`, { ANTHROPIC_MODEL: 'claude-sonnet-4-6' }))
+
+test('333 Bedrock default aliases and picker only expose current Claude presets', () => run(`
+  import { getModelOptions } from './src/utils/model/modelOptions.ts';
+  import { parseUserSpecifiedModel } from './src/utils/model/model.ts';
+  import { isLegacyClaudeModel } from './src/utils/model/modelCatalog.ts';
+  for (const family of ['opus', 'sonnet', 'haiku']) {
+    assert.equal(isLegacyClaudeModel(parseUserSpecifiedModel(family)), false, family);
+  }
+  assert.ok(getModelOptions().every(row => row.value === null || !isLegacyClaudeModel(row.value)));
+`, { CLAUDE_CODE_USE_BEDROCK: '1' }))
