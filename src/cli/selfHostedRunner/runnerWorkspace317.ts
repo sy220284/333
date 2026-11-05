@@ -25,6 +25,7 @@ export type RunnerOutcomeBranch317 = {
 export type RunnerWorkspace317 = {
   cwd: string
   repositories: readonly string[]
+  addDirs: readonly string[]
   outcomeBranches: readonly RunnerOutcomeBranch317[]
 }
 export type RunnerPushResult317 = { pushed: number; unchanged: number; failed: number }
@@ -234,7 +235,11 @@ export async function prepareRunnerWorkspace317(
        (await realpath(chosenCwd))!==root) {
       throw new Error('Runner cwd resolves outside the session workspace')
     }
-    return {cwd:chosenCwd,repositories:published,outcomeBranches}
+    // Original qd(): a single checkout also exposes the session root;
+    // multi-repo sessions run at the root with every repository added.
+    const addDirs=options.requestedCwd || published.length===1
+      ? [...published,root] : published.length>1 ? [...published] : []
+    return {cwd:chosenCwd,repositories:published,addDirs,outcomeBranches}
   }catch(error){
     for(const path of published.reverse()) await rm(path,{recursive:true,force:true})
     throw error

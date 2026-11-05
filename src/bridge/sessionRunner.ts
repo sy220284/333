@@ -53,6 +53,7 @@ type SessionSpawnerDeps = {
    */
   scriptArgs: string[]
   additionalArgs?: string[]
+  additionalDirs?: readonly string[]
   env: NodeJS.ProcessEnv
   verbose: boolean
   sandbox: boolean
@@ -308,6 +309,7 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
         ...(deps.permissionMode
           ? ['--permission-mode', deps.permissionMode]
           : []),
+        ...(deps.additionalDirs ?? []).flatMap(dir=>['--add-dir',dir]),
         ...(deps.additionalArgs ?? []),
       ]
 

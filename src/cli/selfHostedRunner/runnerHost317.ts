@@ -250,6 +250,7 @@ export async function startSelfHostedRunnerHost317(options: RunnerHostOptions317
         : createSessionSpawner({
             execPath:options.execPath,scriptArgs:options.scriptArgs,
             additionalArgs:deliveredCliArgs,
+            additionalDirs:prepared.addDirs,
             env,verbose:false,sandbox:false,onDebug:status,
             onTokenAck:(_sessionId,requestId)=>onTokenAck(requestId),
             debugFile:join(sessionConfigDir,'claude-code-debug.txt'),
