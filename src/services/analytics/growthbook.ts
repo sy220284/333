@@ -20,10 +20,7 @@ import {
   type GitHubActionsMetadata,
   getUserForGrowthBook,
 } from '../../utils/user.js'
-import {
-  is1PEventLoggingEnabled,
-  logGrowthBookExperimentTo1P,
-} from './firstPartyEventLogger.js'
+import { logGrowthBookExperimentTo1P } from './firstPartyEventLogger.js'
 
 /**
  * User attributes sent to GrowthBook for targeting.

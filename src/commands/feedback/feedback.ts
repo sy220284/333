@@ -18,7 +18,7 @@ export const call: LocalCommandCall = async (args, context) => {
     return { type: 'text', value: '反馈超过 10000 字符，请缩短后再导出。' }
   }
   const directory = join(getClaudeConfigHomeDir(), 'diagnostics')
-  const filename = '333-feedback-' + randomUUID() + '.json'
+  const filename = `333-feedback-${randomUUID()}.json`
   const destination = join(directory, filename)
   const appState = context.getAppState()
   const report = {
@@ -37,10 +37,10 @@ export const call: LocalCommandCall = async (args, context) => {
     localEventCounts: getLocalDiagnosticEventCounts(),
   }
   await mkdir(directory, { recursive: true, mode: 0o700 })
-  await writeFile(destination, JSON.stringify(report, null, 2) + '\n', {
+  await writeFile(destination, `${JSON.stringify(report, null, 2)}\n`, {
     encoding: 'utf8',
     flag: 'wx',
     mode: 0o600,
   })
-  return { type: 'text', value: '本地诊断已导出：' + destination + '\n文件尚未上传；分享前请检查描述内容。' }
+  return { type: 'text', value: `本地诊断已导出：${destination}\n文件尚未上传；分享前请检查描述内容。` }
 }

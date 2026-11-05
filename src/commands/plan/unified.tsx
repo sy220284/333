@@ -1,4 +1,3 @@
-import * as React from 'react'
 import type { LocalJSXCommandCall } from '../../types/command.js'
 import advisor from '../advisor.js'
 

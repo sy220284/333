@@ -8,7 +8,7 @@ export function parseReviewRequest(args: string): { mode: ReviewMode; target: st
   const value = args.trim()
   const match = /^(?:(?:--mode[ =])?)(normal|deep|security|普通|深度|安全)(?=\s|$)/i.exec(value)
   if (!match) return { mode: 'normal', target: value }
-  const token = match[1]!.toLowerCase()
+  const token = (match[1] ?? '').toLowerCase()
   const mode: ReviewMode = token === 'deep' || token === '深度'
     ? 'deep'
     : token === 'security' || token === '安全'
