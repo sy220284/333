@@ -60,6 +60,7 @@ export function resumeFlags(argv) {
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i]
     if (flag === '--') break
+    if (flag === '--bg' || flag === '--background') continue
     if (flag === '--resume' || flag === '-r' || flag === '--session-id') { i++; continue }
     if (flag === '--continue' || flag === '-c') continue
     if (PERSISTED_FLAGS_WITH_VALUES.has(flag)) {
