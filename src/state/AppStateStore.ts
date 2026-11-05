@@ -383,6 +383,12 @@ export type AppState = DeepImmutable<{
     requestId: string
     host: string
   } | null
+  knowledgeNote: {
+    learn: string
+    tag: 'Tip' | 'Heads up' | 'Idea'
+    explain: string
+    at: number
+  } | null
   promptSuggestion: {
     text: string | null
     promptId: 'user_intent' | 'stated_intent' | null
@@ -549,6 +555,7 @@ export function getDefaultAppState(): AppState {
     },
     pendingWorkerRequest: null,
     pendingSandboxRequest: null,
+    knowledgeNote: null,
     promptSuggestion: {
       text: null,
       promptId: null,
