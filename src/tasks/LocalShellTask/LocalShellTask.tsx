@@ -178,7 +178,24 @@ export const LocalShellTask: Task = {
   name: 'LocalShellTask',
   type: 'local_bash',
   async kill(taskId, setAppState) {
-    killTask(taskId, setAppState);
+    const completion = killTask(taskId, setAppState)
+    if (!completion) return
+    // The shared task-stop path may return success only after the OS child
+    // has exited. Keep this wait bounded so an unkillable child is surfaced
+    // as a real error instead of a false "stopped" acknowledgement.
+    let timeout: ReturnType<typeof setTimeout> | undefined
+    try {
+      await Promise.race([
+        completion,
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(() => reject(new Error(
+            'Background shell process did not terminate after TaskStop: ' + taskId,
+          )), 6_000)
+        }),
+      ])
+    } finally {
+      if (timeout) clearTimeout(timeout)
+    }
   }
 };
 export async function spawnShellTask(input: LocalShellSpawnInput & {
