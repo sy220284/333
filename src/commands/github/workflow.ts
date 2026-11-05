@@ -2,8 +2,24 @@ export const GITHUB_WORKFLOW_PATH = '.github/workflows/333-review.yml'
 export const GITHUB_SCRIPT_PATH = '.github/scripts/333-review.mjs'
 
 /** GitHub 自有授权；模型由仓库变量和 Secrets 选择，Claude 可选。 */
-export function githubWorkflow(): string {
+export type GithubWorkflowSelection = 'review' | 'respond' | 'both'
+export function githubWorkflow(selection: GithubWorkflowSelection = 'both'): string {
   const d = '$'
+  const reviewTriggers = selection === 'respond' ? [] : [
+    '  pull_request_target:',
+    '    types: [opened, synchronize, reopened, ready_for_review]',
+  ]
+  const responseTriggers = selection === 'review' ? [] : [
+    '  issue_comment:',
+    '    types: [created]',
+  ]
+  const allowPull = "(github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository)"
+  const allowComment = "(github.event_name == 'issue_comment' && contains(github.event.comment.body, '@333') && " +
+    "contains(fromJSON('[" + '"OWNER","MEMBER","COLLABORATOR"' + "]'), github.event.comment.author_association))"
+  const cases = ["github.event_name == 'workflow_dispatch'",
+    ...(selection === 'respond' ? [] : [allowPull]),
+    ...(selection === 'review' ? [] : [allowComment]),
+  ]
   return [
     'name: 333 多模型审查',
     'on:',
@@ -19,10 +35,8 @@ export function githubWorkflow(): string {
     '        type: choice',
     '        default: extreme',
     '        options: [normal, deep, security, extreme]',
-    '  pull_request_target:',
-    '    types: [opened, synchronize, reopened, ready_for_review]',
-    '  issue_comment:',
-    '    types: [created]',
+    ...reviewTriggers,
+    ...responseTriggers,
     'permissions:',
     '  contents: read',
     '  pull-requests: write',
@@ -30,10 +44,7 @@ export function githubWorkflow(): string {
     'jobs:',
     '  review:',
     '    if: >-',
-    "      github.event_name == 'workflow_dispatch' ||",
-    "      (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository) ||",
-    "      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@333') &&",
-    "      contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\"]'), github.event.comment.author_association))",
+    '      ' + cases.join(' || '),
     '    runs-on: ubuntu-latest',
     '    timeout-minutes: 45',
     '    steps:',
