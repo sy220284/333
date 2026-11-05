@@ -92,7 +92,9 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (runnerArg?.includes('diff-finds-nested-repository')) {
+  if (runnerArg !== undefined) {
+    // Official 317 cli.js passes every recognized runner launch declaration
+    // through one parser, which decides which capabilities are adopted.
     const state = await import('../bootstrap/state.js');
     adoptRunnerDeclaration(runnerArg, state);
   }
