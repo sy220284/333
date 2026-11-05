@@ -40,7 +40,7 @@ jobs:
               echo "第 $round 轮类型检查通过"
               break
             fi
-            mapfile -t bad < <(grep -Eo 'src/[^ ()]+\\.(ts|tsx)\\([0-9]+,[0-9]+\\)' .rebuild/governance/inline-restore-types.log | sed -E 's/\\([0-9]+,[0-9]+\\)$//' | sort -u || true)
+            mapfile -t bad < <(grep -Eo 'src/[^ ()]+\.(ts|tsx)\([0-9]+,[0-9]+\)' .rebuild/governance/inline-restore-types.log | sed -E 's/\([0-9]+,[0-9]+\)$//' | sort -u || true)
             reverted=0
             for path in "${bad[@]}"; do
               if [ -f "$path" ] && ! git diff --quiet -- "$path"; then
