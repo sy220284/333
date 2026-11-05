@@ -63,10 +63,12 @@ function sourceEntry(value: unknown): Source | null {
   }
   const repoKey = (owner + '/' + name).toLowerCase()
   const rawRevision = value.revision
-  if (rawRevision !== undefined && typeof rawRevision !== 'string') {
+  let revision: string | undefined
+  if (typeof rawRevision === 'string') {
+    revision = branchName(rawRevision)
+  } else if (rawRevision !== undefined) {
     throw new TypeError('Runner source revision must be a string')
   }
-  const revision = rawRevision === undefined ? undefined : branchName(rawRevision)
   return { url, revision, repoKey, folder: owner + '_' + name }
 }
 function targetBranches(values: readonly unknown[]): Map<string, string[]> {
