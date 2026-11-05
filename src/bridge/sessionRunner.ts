@@ -319,6 +319,7 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
           CLAUDE_CONFIG_DIR: deps.runnerRuntime.configDir,
           CLAUDE_CODE_REMOTE: 'true',
           CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE: 'self_hosted',
+          CLAUDE_CODE_OAUTH_SCOPES: 'user:inference user:ccr_inference user:file_upload',
           ANTHROPIC_BASE_URL: deps.runnerRuntime.apiBaseUrl,
           SESSION_INGRESS_URL: deps.runnerRuntime.apiBaseUrl,
           DISABLE_AUTOUPDATER: '1',
