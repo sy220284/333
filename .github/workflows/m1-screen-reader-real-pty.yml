@@ -1,6 +1,15 @@
 name: M1 屏幕阅读器官方x64与重建版真实PTY对照
 
 on:
+  push:
+    branches: [upgrade/latest-stable-deps-20261105]
+    paths:
+      - 'src/utils/model/model.ts'
+      - 'src/utils/permissions/permissionSetup.ts'
+      - 'src/interactiveHelpers.tsx'
+      - 'src/components/LogoV2/LogoV2.tsx'
+      - 'tests/m1-screen-reader-terminal-parity.py'
+      - '.github/workflows/m1-screen-reader-real-pty.yml'
   pull_request:
     paths:
       - 'src/ink/ink.tsx'
@@ -40,12 +49,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: 验证终端对照脚本语法
         run: python3 -m py_compile tests/m1-screen-reader-terminal-parity.py
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '26.13.0'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
@@ -76,7 +85,7 @@ jobs:
             --report "${RUNNER_TEMP}/m1-screen-reader-real-pty.json"
       - name: 保存实测终端差分和每种启用来源
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: m1-screen-reader-actual-pty
           path: ${{ runner.temp }}/m1-screen-reader-real-pty.json

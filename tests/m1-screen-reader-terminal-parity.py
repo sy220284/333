@@ -86,11 +86,18 @@ def probe(executable,mode,timeout):
             os.close(master)
         raw=buffer.decode('utf8','replace')
         text=OSC.sub('',CSI.sub('',raw)).replace('\r','').strip()
+        model_match=re.search(r'\b(Opus|Sonnet|Haiku)\s+([0-9]+(?:\.[0-9]+)?)\s*·\s*API Usage Billing',text)
+        model_name=' '.join(model_match.groups()) if model_match else None
+        auto_on=bool(re.search(r'\bauto mode on\b',text,re.I))
+        auto_notice='Auto mode is now Claude Code' in text
         return {'mode':mode,'exit':proc.returncode if exited else 'terminated_after_capture',
                 'bytes':len(buffer),'cursor_control_sequences':len(CSI.findall(raw)),
                 'activation_banner': (f'[Screen Reader Mode: on via {mode}]' in text if mode!='off' else '[Screen Reader Mode: on' in text),
                 'flat_welcome':('Welcome to Claude Code' in text or bool(re.search(r'Claude Code v2\.1\.317\b',text))),
                 'model_and_billing_visible':bool(re.search(r'\b(?:Opus|Sonnet|Haiku)\b[^\n]*Billing',text)),
+                 'model_name':model_name,
+                 'auto_mode_active':auto_on,
+                 'auto_mode_notice':auto_notice,
                 'workspace_visible':'~/project' in text,
                 'connection_status':'Checking connectivity' in text,
                 'offline_failure_visible':'Unable to connect to Anthropic services' in text,
@@ -148,6 +155,10 @@ def main():
         except AssertionError as e: failures.append(str(e))
     if 'candidate' in report['results']:
         for original,rebuild in zip(report['results']['official'],report['results']['candidate']):
+            if original['mode'] != 'off':
+                for key in ('model_name','auto_mode_active','auto_mode_notice'):
+                    if original[key] != rebuild[key]:
+                        failures.append(f"Accessible startup mismatch: {original['mode']} {key} official={original[key]!r} candidate={rebuild[key]!r}")
             if original['stage'] != rebuild['stage']:
                 failures.append(
                     f"Startup screens differ: {original['mode']} official={original['stage']} candidate={rebuild['stage']}")
