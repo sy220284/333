@@ -3553,6 +3553,23 @@ async function run(): Promise<CommanderCommand> {
       process.stdout.write(`${name}: ${models.length} 个可用模型\n`);
     }
   });
+  const localSettings = program.command('local-settings').description('在本机保存和恢复设置历史');
+  localSettings.command('snapshot').description('保存当前设置快照').action(async () => {
+    const { snapshotLocalSettings } = await import('./services/localRuntime/settingsSnapshots.js');
+    const item = await snapshotLocalSettings();
+    process.stdout.write(`设置快照已保存：${item.id}\n`);
+  });
+  localSettings.command('list').description('列出本机设置快照').action(async () => {
+    const { listLocalSettingsSnapshots } = await import('./services/localRuntime/settingsSnapshots.js');
+    for (const item of await listLocalSettingsSnapshots()) {
+      process.stdout.write(`${item.id}  ${item.timestamp}  ${item.size} bytes\n`);
+    }
+  });
+  localSettings.command('restore <snapshot-id>').description('校验后恢复指定本机设置快照').action(async (id: string) => {
+    const { restoreLocalSettings } = await import('./services/localRuntime/settingsSnapshots.js');
+    await restoreLocalSettings(id);
+    process.stdout.write(`已恢复设置快照：${id}\n`);
+  });
   program.command('local-tasks').description('查看本机任务履历').option('--json', '使用 JSON 输出').action(async (options: { json?: boolean }) => {
     const { readLocalTasks } = await import('./services/localRuntime/taskJournal.js');
     const tasks = await readLocalTasks();
