@@ -184,7 +184,7 @@ export async function runDaemonWorker317(kind: string | undefined,
     return DAEMON_WORKER_CONFIG_ERROR_317
   }
   if (kind === 'remoteControl' && 'sandbox' in config && config.sandbox === true) {
-    stdout('The sandbox key is not supported for Remote Control. Remove it.\n')
+    stdout('The sandbox key is not supported for Remote Control. Remove it. To sandbox sessions, set sandbox.enabled to true in settings.\n')
     return DAEMON_WORKER_UNAVAILABLE_317
   }
   const controller = new AbortController()
@@ -265,7 +265,7 @@ export async function runDaemonWorker317(kind: string | undefined,
     }
     const getAccessToken = () => accessToken ?? fallbackToken()
     if (!getAccessToken()) {
-      stdout('Remote Control is not authenticated — run `claude auth login`.\n')
+      stdout('Error: You must be logged in to use Remote Control.\n\nRemote Control is only available with claude.ai subscriptions. Run `claude auth login` to sign in with your claude.ai account.\n')
       return 1
     }
     try {
