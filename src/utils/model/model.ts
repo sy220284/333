@@ -246,6 +246,7 @@ export function firstPartyNameToCanonical(name: ModelName): ModelShortName {
  * @returns The short name (e.g., 'claude-3-5-haiku') if found, or the original name if no mapping exists
  */
 export function getCanonicalName(fullModelName: ModelName): ModelShortName {
+  if (resolveIndependentModel(fullModelName)) return fullModelName
   // Resolve overridden model IDs (e.g. Bedrock ARNs) back to canonical names.
   // resolved is always a 1P-format ID, so firstPartyNameToCanonical can handle it.
   return firstPartyNameToCanonical(resolveOverriddenModel(fullModelName))
@@ -355,6 +356,8 @@ export function renderModelName(model: ModelName): string {
  * @returns "Claude {ModelName}" for public models, or "Claude ({model})" for non-public models
  */
 export function getPublicModelName(model: ModelName): string {
+  const independent = resolveIndependentModel(model)
+  if (independent) return `${independent.provider} ${independent.model}`
   const publicName = getPublicModelDisplayName(model)
   if (publicName) {
     return `Claude ${publicName}`
@@ -378,6 +381,7 @@ export function parseUserSpecifiedModel(
   modelInput: ModelName | ModelAlias,
 ): ModelName {
   const modelInputTrimmed = modelInput.trim()
+  if (resolveIndependentModel(modelInputTrimmed)) return modelInputTrimmed
   const normalizedModel = modelInputTrimmed.toLowerCase()
 
   const has1mTag = has1mContext(normalizedModel)
