@@ -14,6 +14,8 @@ const original = () => ({
   stable: read('docs/upgrade/latest-stable-dependencies.json'),
   toolchain: read('tools/dev/toolchain.lock.json'),
   inventory: read('docs/upgrade/2.1.317-功能与场景源数据.json'),
+  routes: read(baseline.capabilities.routeInventory),
+  updates: read(baseline.capabilities.updateInventory),
 })
 
 test('PR13 直接依赖、510 项传递安装记录、TypeScript 7 与 MCP v2 不漂移', () => {
@@ -56,4 +58,14 @@ test('缺少完整技术依据或真实测试证据的升级批准不能绕过�
     technicalBasis: '临时修改', replacementCoverage: '', tests: [], evidence: '',
   }] }
   assert.ok(validateUpgradeProtection(state).some(x => x.includes('批准信息不完整')))
+})
+
+test('20条主功能链与366项增量更新的既有编号不得丢失', () => {
+  const state = original()
+  state.routes.routes = state.routes.routes.filter(x => x.id !== 'C01')
+  const removed = state.baseline.capabilities.updateIds[0]
+  state.updates.items = state.updates.items.filter(x => x.id !== removed)
+  const errors = validateUpgradeProtection(state)
+  assert.ok(errors.some(x => x.includes('routes C01')))
+  assert.ok(errors.some(x => x.includes('incrementalUpdates ' + removed)))
 })
