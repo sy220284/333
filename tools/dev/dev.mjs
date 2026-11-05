@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { resolve, join, dirname } from 'node:path';
+import { resolve, join, dirname, relative } from 'node:path';
 import { parseTypeScriptErrors, normalizePath } from './quality-core.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
@@ -70,12 +70,21 @@ function typescript(checkChanged) {
   // Preserve the product's native import aliases and explicitly map React's
   // package entrypoints to the real @types/react declaration tree.
   const projectConfig = JSON.parse(readFileSync(resolve(root, 'tsconfig.json'), 'utf8'));
-  const paths = {
-    ...projectConfig.compilerOptions.paths,
-    react: [resolve(reactTypes, 'index.d.ts')],
-    'react/jsx-runtime': [resolve(reactTypes, 'jsx-runtime.d.ts')],
-    'react/jsx-dev-runtime': [resolve(reactTypes, 'jsx-dev-runtime.d.ts')],
+  // TypeScript 7 rejects absolute paths in paths and no longer accepts baseUrl.
+  // The generated configuration is inside .rebuild/, so paths must be rebased
+  // from the repository tsconfig instead of copying its relative strings.
+  const fromConfig = target => {
+    const rel = relative(dirname(config), resolve(root, target)).replaceAll('\\', '/');
+    return rel.startsWith('.') ? rel : './' + rel;
   };
+  const paths = Object.fromEntries(
+    Object.entries(projectConfig.compilerOptions.paths).map(([key, targets]) =>
+      [key, targets.map(fromConfig)],
+    ),
+  );
+  paths.react = [fromConfig(resolve(reactTypes, 'index.d.ts'))];
+  paths['react/jsx-runtime'] = [fromConfig(resolve(reactTypes, 'jsx-runtime.d.ts'))];
+  paths['react/jsx-dev-runtime'] = [fromConfig(resolve(reactTypes, 'jsx-dev-runtime.d.ts'))];
   writeFileSync(config, `${JSON.stringify({ extends: '../tsconfig.json', compilerOptions: { typeRoots, paths, types: ['node', 'react', 'bun'] } }, null, 2)}\n`);
   const result = toolOutput('tsc', ['--noEmit', '--pretty', 'false', '-p', config]);
   const errors = parseTypeScriptErrors(`${result.stdout}\n${result.stderr}`);
