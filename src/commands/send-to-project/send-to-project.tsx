@@ -55,6 +55,8 @@ function SendToProject({onDone,context,args}:{
   const [projects,setProjects]=useState<Project317[]>([])
   const [chosen,setChosen]=useState<Project317|null>(null)
   const [newName,setNewName]=useState('')
+  const [nameCursor,setNameCursor]=useState(0)
+  const [messageCursor,setMessageCursor]=useState(0)
   const [message,setMessage]=useState(fitBytes(args))
   const [isBrief,setBrief]=useState(false)
   const [error,setError]=useState('')
@@ -184,6 +186,7 @@ function SendToProject({onDone,context,args}:{
       {step==='name'?<>
         <Text>输入新项目名称（仅创建你个人可见的私人项目）：</Text>
         <TextInput value={newName} onChange={setNewName} columns={70}
+          cursorOffset={nameCursor} onChangeCursorOffset={setNameCursor}
           placeholder="项目名称" onSubmit={v=>{
             if(!v.trim()||Buffer.byteLength(v.trim())>200){
               setError('项目名称须为1–200字节');return
@@ -200,6 +203,7 @@ function SendToProject({onDone,context,args}:{
       {step==='compose'?<>
         <Text>请输入消息（最多1024字节）：</Text>
         <TextInput value={message} onChange={setMessage} columns={70}
+          cursorOffset={messageCursor} onChangeCursorOffset={setMessageCursor}
           multiline placeholder="发送到项目的消息" onSubmit={v=>{
             if(!v.trim()||Buffer.byteLength(v)>1024){
               setError('消息必须为非空，最多1024字节');return
