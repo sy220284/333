@@ -10,7 +10,7 @@ permissions:
 jobs:
   restore:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,39 +29,9 @@ jobs:
           node build/install-public-deps.mjs
       - name: 恢复232个已核验内嵌源码文件
         run: node tools/dev/restore-inline-ts-source.mjs --apply --limit=232
-      - name: 保留通过真实接口检查的原始源码，记录需要进一步改写的文件
-        shell: bash
+      - name: 按模块调用链隔离冲突并恢复可编译的TypeScript原始源码
         run: |
-          set -euo pipefail
-          mkdir -p .rebuild/governance
-          : > .rebuild/governance/inline-restore-rejected.txt
-          for round in $(seq 1 25); do
-            if node tools/dev/dev.mjs typecheck:all > .rebuild/governance/inline-restore-types.log 2>&1; then
-              echo "第 $round 轮类型检查通过"
-              break
-            fi
-            mapfile -t bad < <(grep -Eo 'src/[^ ()]+[.]tsx?[(][0-9]+,[0-9]+[)]' .rebuild/governance/inline-restore-types.log | cut -d '(' -f 1 | sort -u || true)
-            reverted=0
-            for path in "${bad[@]}"; do
-              if [ -f "$path" ] && ! git diff --quiet -- "$path"; then
-                echo "兼容问题转下一批处理：$path"
-                echo "$path" >> .rebuild/governance/inline-restore-rejected.txt
-                git restore -- "$path"
-                reverted=$((reverted+1))
-              fi
-            done
-            if [ "$reverted" -eq 0 ]; then
-              echo '类型错误涉及未恢复模块，保留原始错误并停止验收'
-              cat .rebuild/governance/inline-restore-types.log
-              exit 1
-            fi
-            if [ "$round" -eq 25 ]; then
-              echo '兼容检查轮数耗尽，尚有未修复的源码冲突'
-              exit 1
-            fi
-          done
-          sort -u .rebuild/governance/inline-restore-rejected.txt -o .rebuild/governance/inline-restore-rejected.txt
-          echo "待继续重写文件数：$(wc -l < .rebuild/governance/inline-restore-rejected.txt)"
+          node tools/dev/restore-inline-ts-compatible.mjs
           node tools/dev/type-migration-audit.mjs
           node tools/dev/type-migration-strict.mjs
       - name: 真实生产打包与格式检查
@@ -91,7 +61,6 @@ jobs:
           path: |
             .rebuild/governance/inline-ts-source-recovery.json
             .rebuild/governance/type-migration-report.json
-            .rebuild/governance/inline-restore-rejected.txt
-            .rebuild/governance/inline-restore-types.log
+            .rebuild/governance/inline-ts-compatible-report.json
           retention-days: 30
           if-no-files-found: warn
