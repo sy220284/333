@@ -157,6 +157,7 @@ import {
   isPlanModeInterviewPhaseEnabled,
 } from './planModeV2.js'
 import { escapeRegExp } from './stringUtils.js'
+import { formatBackgroundTaskNotification } from './systemNotificationPrompts.js'
 import { isTodoV2Enabled } from './tasks.js'
 
 // Lazy import to avoid circular dependency (teammateMailbox -> teammate -> ... -> messages)
@@ -5320,7 +5321,7 @@ export function wrapCommandText(
 ): string {
   switch (origin?.kind) {
     case 'task-notification':
-      return `A background agent completed a task:\n${raw}`
+      return formatBackgroundTaskNotification(`A background agent completed a task:\n${raw}`)
     case 'coordinator':
       return `The coordinator sent a message while you were working:\n${raw}\n\nAddress this before completing your current task.`
     case 'channel':
