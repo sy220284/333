@@ -172,7 +172,8 @@ export function getRuntimeMainLoopModel(params: {
  *
  * This handles the built-in default:
  * - Opus for Max and Team Premium users
- * - Sonnet 4.6 for all other users (including Team Standard, Pro, Enterprise)
+ * - Opus for direct first-party API customers
+ * - Sonnet for other subscriptions and third-party providers
  *
  * @returns The default model setting to use
  */
@@ -195,8 +196,13 @@ export function getDefaultMainLoopModelSetting(): ModelName | ModelAlias {
     return getDefaultOpusModel() + (isOpus1mMergeEnabled() ? '[1m]' : '')
   }
 
-  // PAYG (1P and 3P), Enterprise, Team Standard, and Pro get Sonnet as default
-  // Note that PAYG (3P) may default to an older Sonnet model
+  // Claude Code 2.1.317 defaults direct first-party API customers to Opus.
+  // Subscriber plans retain their entitlement-specific defaults above; third-
+  // party providers keep their provider-compatible Sonnet fallback. Explicit
+  // --model, ANTHROPIC_MODEL and settings.model remain higher priority.
+  if (getAPIProvider() === 'firstParty' && !isClaudeAISubscriber()) {
+    return getDefaultOpusModel()
+  }
   return getDefaultSonnetModel()
 }
 

@@ -63,6 +63,7 @@ export function LogoV2() {
   const showOverageCreditUpsell = useShowOverageCreditUpsell();
   const agent = useAppState(_temp);
   const effortValue = useAppState(_temp2);
+  const activePermissionMode = useAppState(state => state.toolPermissionContext.mode);
   const config = getGlobalConfig();
   let changelog;
   try {
@@ -175,6 +176,12 @@ export function LogoV2() {
       <Text>Claude Code v{version}</Text>
       <Text>{fullModelDisplayName}{effortSuffix} · {billingType}</Text>
       <Text>{agentName ? `@${agentName} · ${cwd}` : cwd}</Text>
+      {activePermissionMode === 'auto' && <>
+        <Text>Auto mode is now Claude Code's default permission mode.</Text>
+        <Text>Auto mode lets Claude handle permission prompts automatically. Claude checks each tool call for risky actions and prompt injection before executing, runs the ones it assesses as lower-risk, and blocks the rest.</Text>
+        <Text>https://code.claude.com/docs/en/permission-modes</Text>
+        <Text>auto mode on (shift+tab to cycle)</Text>
+      </>}
       {announcement && <Text>{announcement}</Text>}
     </Box>;
   }

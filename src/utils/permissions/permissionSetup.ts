@@ -773,6 +773,21 @@ export function initialPermissionModeFromCLI({
     }
   }
 
+  // 2.1.317's first-party API sessions start in Auto mode when no user or
+  // organization override has selected another mode. The classifier's model,
+  // settings and live circuit-breaker checks still decide availability.
+  if (
+    feature('TRANSCRIPT_CLASSIFIER') &&
+    !dangerouslySkipPermissions &&
+    !permissionModeCli &&
+    !settings.permissions?.defaultMode &&
+    getAPIProvider() === 'firstParty' &&
+    !autoModeCircuitBrokenSync &&
+    isAutoModeGateEnabled()
+  ) {
+    orderedModes.push('auto')
+  }
+
   let result: { mode: PermissionMode; notification?: string } | undefined
 
   for (const mode of orderedModes) {
@@ -1310,7 +1325,9 @@ export function getAutoModeUnavailableReason(): AutoModeUnavailableReason | null
  */
 export type AutoModeEnabledState = 'enabled' | 'disabled' | 'opt-in'
 
-const AUTO_MODE_ENABLED_DEFAULT: AutoModeEnabledState = 'disabled'
+// Absent rollout data follows the 2.1.317 first-party default offer.
+// A cached explicit 'disabled' remains authoritative and blocks entry.
+const AUTO_MODE_ENABLED_DEFAULT: AutoModeEnabledState = 'enabled'
 
 function parseAutoModeEnabledState(value: unknown): AutoModeEnabledState {
   if (value === 'enabled' || value === 'disabled' || value === 'opt-in') {
@@ -1431,11 +1448,16 @@ export async function checkAndDisableBypassPermissions(
 }
 
 export function isDefaultPermissionModeAuto(): boolean {
-  if (feature('TRANSCRIPT_CLASSIFIER')) {
-    const settings = getInitialSettings() || {}
-    return settings.permissions?.defaultMode === 'auto'
+  if (!feature('TRANSCRIPT_CLASSIFIER')) return false
+  const settings = getInitialSettings() || {}
+  if (settings.permissions?.defaultMode) {
+    return settings.permissions.defaultMode === 'auto'
   }
-  return false
+  return (
+    getAPIProvider() === 'firstParty' &&
+    isAutoModeGateEnabled() &&
+    getAutoModeEnabledStateIfCached() !== 'disabled'
+  )
 }
 
 /**
