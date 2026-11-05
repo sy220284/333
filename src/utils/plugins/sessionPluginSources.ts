@@ -54,7 +54,7 @@ export function createPinnedPluginLookup317(
       return
     }
     if (options.all) callback(null, addresses)
-    else callback(null, addresses[0]!.address, addresses[0]!.family)
+    else callback(null, addresses[0].address, addresses[0].family)
   }
 }
 

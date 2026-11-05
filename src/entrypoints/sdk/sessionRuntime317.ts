@@ -278,7 +278,7 @@ function startSession(
     // stored and can be observed by the explicit closeAndWait() lifecycle API.
     void transportClosure.catch(error => {
       failure ??= error instanceof Error ? error : new Error(String(error))
-      queryOptions.stderr?.('SDK MCP transport shutdown failed: ' + String(error))
+      queryOptions.stderr?.(`SDK MCP transport shutdown failed: ${String(error)}`)
     })
     for (const request of requests.values()) request.reject(failure ?? new Error('SDK session is closed'))
     requests.clear()

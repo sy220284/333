@@ -19,7 +19,7 @@ export function resolveGatewayClientIp317(
   let candidate = remote
   for (let index = hops.length - 1; index >= 0; index--) {
     if (!isTrusted(candidate, proxies)) return candidate
-    candidate = hops[index]!
+    candidate = hops[index]
   }
   return candidate
 }
