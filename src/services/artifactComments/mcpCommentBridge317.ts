@@ -72,12 +72,29 @@ export function buildArtifactMcpBackend317(
   return {
     async readThread(event) {
       const info = await call(event, 'comments', {thread_id:event.threadId})
-      const thread = (info.thread ?? info) as Record<string, unknown>
+      const listed = Array.isArray(info.threads)
+        ? info.threads.find(item => !!item && typeof item === 'object' &&
+          'id' in item && item.id === event.threadId)
+        : null
+      const thread = (listed ?? info.thread ?? info) as Record<string, unknown>
       const active = thread && typeof thread === 'object' ? thread : {}
+      const comments = Array.isArray(active.comments)
+        ? active.comments.filter((item): item is Record<string, unknown> =>
+          !!item && typeof item === 'object')
+        : []
+      const newestHuman = [...comments].reverse().find(comment =>
+        comment.postedByArtifact !== true &&
+        (comment.sentByViewer === true || comment.isHuman === true))
+      const text = newestHuman?.text ?? newestHuman?.body ??
+        active.newestHumanRequest
       return {
-        body: asString(active.body, 'thread body', 64000),
-        newestHumanRequest: asString(active.newestHumanRequest, 'human comment', 16000),
-        summonedByEditor: active.summonedByEditor === true,
+        body: typeof active.body === 'string'
+          ? asString(active.body, 'thread body', 64000)
+          : JSON.stringify(comments).slice(0, 64000),
+        newestHumanRequest: asString(text, 'human comment', 16000),
+        summonedByEditor: active.summonedByEditor === true ||
+          (active.claudeActivated === true &&
+           comments.some(comment => comment.sentByViewer === true)),
         originVerified: active.originVerified === true,
         resolved: active.resolved === true,
       } satisfies CommentThread317
@@ -94,11 +111,19 @@ export function buildArtifactMcpBackend317(
     },
     async publish(event, html, expectedRevision) {
       if (!await approveWrite(event)) throw new Error('Artifact edit is not authorized by this session')
-      await call(event, 'publish', { html, expected_revision: expectedRevision })
+      const receipt = await call(event, 'publish', { html, expected_revision: expectedRevision })
+      if (receipt.published !== true && receipt.success !== true &&
+          receipt.status !== 'published') {
+        throw new Error('Artifact publish outcome is unverified; manual review required')
+      }
     },
     async reply(event, text) {
       if (!await approveWrite(event)) throw new Error('Artifact reply is not authorized by this session')
-      await call(event, 'reply', { thread_id:event.threadId, text })
+      const receipt = await call(event, 'reply', { thread_id:event.threadId, text })
+      if (receipt.posted !== true && receipt.success !== true &&
+          receipt.status !== 'posted') {
+        throw new Error('Artifact reply outcome is unverified; manual review required')
+      }
     },
   }
 }
@@ -126,7 +151,7 @@ export function createArtifactCommentModel317(
   }
 }
 
-type LeaseStore = { done: string[] }
+type LeaseStore = { done: string[]; published?: Record<string, string> }
 
 export function artifactEventLease317(
   serverId: string,
@@ -136,6 +161,7 @@ export function artifactEventLease317(
   const path = join(dir, key + '.json')
   const claimed = new Set<string>()
   let done: Set<string> | undefined
+  let published = new Map<string, string>()
 
   async function load(): Promise<Set<string>> {
     if (done) return done
@@ -143,13 +169,35 @@ export function artifactEventLease317(
       const parsed = JSON.parse(await readFile(path, 'utf8')) as LeaseStore
       if (!Array.isArray(parsed.done)) throw new Error('Invalid artifact event ledger')
       done = new Set(parsed.done.filter(x=>typeof x==='string' && x.length <= 180))
+      published = new Map(Object.entries(parsed.published ?? {})
+        .filter(([id, text]) => id.length <= 180 &&
+          typeof text === 'string' && text.length <= 4000))
     } catch (error) {
       if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error
       done = new Set()
     }
     return done
   }
+  async function persist() {
+    await mkdir(dir, { recursive: true, mode: 0o700 })
+    const temp = path + '.' + randomUUID() + '.tmp'
+    await writeFile(temp, JSON.stringify({
+      done: [...(await load())].slice(-500),
+      published: Object.fromEntries(published),
+    }), { flag:'wx', mode:0o600 })
+    await rename(temp, path)
+  }
   return {
+    async getPublishedReply(id) {
+      await load()
+      return published.get(id) ?? null
+    },
+    async markPublished(id, reply) {
+      if (!claimed.has(id)) throw new Error('Artifact published event lacks an active lease')
+      await load()
+      published.set(id, reply)
+      await persist()
+    },
     async claim(id) {
       const ledger = await load()
       if (ledger.has(id) || claimed.has(id)) return false
@@ -160,11 +208,8 @@ export function artifactEventLease317(
       if (!claimed.has(id)) throw new Error('Artifact event completion has no active lease')
       const ledger = await load()
       ledger.add(id)
-      await mkdir(dir, { recursive: true, mode: 0o700 })
-      const temp = path + '.' + randomUUID() + '.tmp'
-      await writeFile(temp, JSON.stringify({done: [...ledger].slice(-500)}),
-        { flag:'wx', mode:0o600 })
-      await rename(temp, path)
+      published.delete(id)
+      await persist()
       claimed.delete(id)
     },
     async release(id) { claimed.delete(id) },
