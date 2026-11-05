@@ -3535,6 +3535,12 @@ async function run(): Promise<CommanderCommand> {
     await mcpResetChoicesHandler();
   });
 
+  program.command('local-tasks').description('查看本机任务履历').option('--json', '使用 JSON 输出').action(async (options: { json?: boolean }) => {
+    const { readLocalTasks } = await import('./services/localRuntime/taskJournal.js');
+    const tasks = await readLocalTasks();
+    if (options.json) process.stdout.write(JSON.stringify(tasks, null, 2) + '\n');
+    else for (const task of tasks) process.stdout.write(`${task.id}  ${task.status}  ${task.type}  ${task.description ?? ''}\n`);
+  });
   // claude auth
 
   const auth = program.command('auth').description('Manage authentication').configureHelp(createSortedHelpConfig());
