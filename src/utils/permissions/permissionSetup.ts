@@ -785,7 +785,7 @@ export function initialPermissionModeFromCLI({
     !permissionModeCli &&
     !settings.permissions?.defaultMode &&
     getAPIProvider() === 'firstParty' &&
-    !autoModeCircuitBrokenSync &&
+    canSelectImplicitAutoMode(getAutoModeEnabledStateIfCached(), isEnvTruthy(process.env.CLAUDE_CODE_REMOTE)) &&
     isAutoModeGateEnabled()
   ) {
     orderedModes.push('auto')
@@ -1372,6 +1372,19 @@ export function getAutoModeEnabledStateIfCached():
 }
 
 /**
+ * An implicit default is permitted only for the general enabled rollout.
+ * 'opt-in' requires an explicit choice; disabled is a circuit breaker.
+ * Cold-start (undefined) retains the official 2.1.317 default, subject to
+ * the other provider, model, settings and runtime gates at the call sites.
+ */
+export function canSelectImplicitAutoMode(
+  rollout: AutoModeEnabledState | undefined,
+  remoteSession: boolean,
+): boolean {
+  return !remoteSession && (rollout === undefined || rollout === 'enabled')
+}
+
+/**
  * Returns true if the user has opted in to auto mode via any trusted mechanism:
  * - CLI flag (--enable-auto-mode / --permission-mode auto) — session-scoped
  *   availability request; the startup dialog in showSetupScreens enforces
@@ -1451,7 +1464,7 @@ export async function checkAndDisableBypassPermissions(
 }
 
 export function isDefaultPermissionModeAuto(): boolean {
-  if (!feature('TRANSCRIPT_CLASSIFIER') || getIsNonInteractiveSession()) return false
+  if (!feature('TRANSCRIPT_CLASSIFIER') || getIsNonInteractiveSession() || isEnvTruthy(process.env.CLAUDE_CODE_REMOTE)) return false
   const settings = getInitialSettings() || {}
   if (settings.permissions?.defaultMode) {
     return settings.permissions.defaultMode === 'auto'
@@ -1459,7 +1472,7 @@ export function isDefaultPermissionModeAuto(): boolean {
   return (
     getAPIProvider() === 'firstParty' &&
     isAutoModeGateEnabled() &&
-    getAutoModeEnabledStateIfCached() !== 'disabled'
+    canSelectImplicitAutoMode(getAutoModeEnabledStateIfCached(), false)
   )
 }
 
