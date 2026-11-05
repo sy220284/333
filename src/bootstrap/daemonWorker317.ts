@@ -109,7 +109,9 @@ export function watchDaemonWorkerParent317(controller: AbortController,
   const parentPid = options.parentPid ?? (() => process.ppid)
   const isAlive = options.isAlive ?? (pid => {
     try { process.kill(pid, 0); return true }
-    catch (error) { return (error as NodeJS.ErrnoException).code === 'EPERM' }
+    // Official 317 He() treats any failed parent probe as not alive,
+    // including EPERM. A worker must not outlive an inaccessible supervisor.
+    catch { return false }
   })
   const log = options.log ?? (line => process.stdout.write(line + '\n'))
   const onGone = options.onGone ?? (() => process.exit(0))
