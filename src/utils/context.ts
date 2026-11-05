@@ -5,6 +5,7 @@ import { isEnvTruthy } from './envUtils.js'
 import { getCanonicalName } from './model/model.js'
 import { resolveAntModel } from './model/antModels.js'
 import { getModelCapability } from './model/modelCapabilities.js'
+import { getModelBehavior317 } from './model/modelBehavior317.js'
 import { getCatalogModel } from './model/modelCatalog.js'
 import { getAPIProvider } from './model/providers.js'
 
@@ -47,7 +48,7 @@ export function modelSupports1M(model: string): boolean {
   if (is1mContextDisabled()) {
     return false
   }
-  const catalog = getCatalogModel(model)
+  const catalog = getCatalogModel(getModelBehavior317(model))
   if (catalog) return catalog.context?.supports_1m_beta === true
   const canonical = getCanonicalName(model)
   if (canonical.includes('claude-3-') || ['claude-opus-4-0', 'claude-opus-4-1', 'claude-opus-4-5', 'claude-haiku-4-5'].includes(canonical)) return false
@@ -60,7 +61,7 @@ export function getContextWindowForModel(
 ): number {
   const configured = Number(process.env.CLAUDE_CODE_MAX_CONTEXT_TOKENS)
   const canonical = getCanonicalName(model)
-  const custom = !getCatalogModel(model) && !canonical.startsWith('claude-3-') &&
+  const custom = !getCatalogModel(getModelBehavior317(model)) && !canonical.startsWith('claude-3-') &&
     (!canonical.startsWith('claude-') || canonical !== model.toLowerCase())
   if (configured > 0 && (isEnvTruthy(process.env.DISABLE_COMPACT) || custom)) return configured
 
@@ -80,7 +81,7 @@ export function getContextWindowForModel(
     return cap.max_input_tokens
   }
 
-  const catalogWindow = getCatalogModel(model)?.context?.window
+  const catalogWindow = getCatalogModel(getModelBehavior317(model))?.context?.window
   if (catalogWindow && betas?.includes(CONTEXT_1M_BETA_HEADER) && modelSupports1M(model)) return 1_000_000
   if (catalogWindow) return is1mContextDisabled() ? Math.min(catalogWindow, MODEL_CONTEXT_WINDOW_DEFAULT) : catalogWindow
 
@@ -166,7 +167,7 @@ export function getModelMaxOutputTokens(model: string): {
 
   const m = getCanonicalName(model)
 
-  const catalog = getCatalogModel(model)
+  const catalog = getCatalogModel(getModelBehavior317(model))
   if (catalog) {
     defaultTokens = catalog.max_output_tokens.default
     upperLimit = catalog.max_output_tokens.upper

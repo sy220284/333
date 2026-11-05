@@ -102,7 +102,7 @@ import {
   extractQuotaStatusFromHeaders,
 } from '../claudeAiLimits.js'
 import { getAPIContextManagement } from '../compact/apiMicrocompact.js'
-import { getRequestThinkingDisplay, getStreamThinkingDisplay } from './thinkingDisplay.js'
+import { createThinkingDisplayRecovery317, getRequestThinkingDisplay, getStreamThinkingDisplay } from './thinkingDisplay.js'
 import { matchesDefaultModelVariant } from './modelCacheMatch.ts'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -839,6 +839,7 @@ export async function* executeNonStreamingRequest(
   originatingRequestId?: string | null,
 ): AsyncGenerator<SystemAPIErrorMessage, BetaMessage> {
   const fallbackTimeoutMs = getNonstreamingFallbackTimeoutMs()
+  const displayRecovery = createThinkingDisplayRecovery317()
   const generator = withRetry(
     () =>
       getAnthropicClient({
@@ -849,7 +850,7 @@ export async function* executeNonStreamingRequest(
       }),
     async (anthropic, attempt, context) => {
       const start = Date.now()
-      const retryParams = paramsFromContext(context)
+      const retryParams = displayRecovery.prepare(paramsFromContext(context))
       captureRequest(retryParams)
       onAttempt(attempt, start, retryParams.max_tokens)
 
@@ -899,6 +900,7 @@ export async function* executeNonStreamingRequest(
       ...(isFastModeEnabled() && { fastMode: retryOptions.fastMode }),
       signal: retryOptions.signal,
       initialConsecutive529Errors: retryOptions.initialConsecutive529Errors,
+      retryRejectedRequest: displayRecovery.retry,
       querySource: retryOptions.querySource,
     },
   )
@@ -1791,6 +1793,7 @@ async function* queryModel(
 
   try {
     queryCheckpoint('query_client_creation_start')
+    const displayRecovery = createThinkingDisplayRecovery317()
     const generator = withRetry(
       () =>
         getAnthropicClient({
@@ -1810,7 +1813,7 @@ async function* queryModel(
         // client_creation_start is meaningful on attempt 1.
         queryCheckpoint('query_client_creation_end')
 
-        const params = paramsFromContext(context)
+        const params = displayRecovery.prepare(paramsFromContext(context))
         requestThinkingDisplay = getRequestThinkingDisplay(params.thinking)
         captureAPIRequest(params, options.querySource) // Capture for bug reports
 
@@ -1872,6 +1875,7 @@ async function* queryModel(
         ...(isFastModeEnabled() ? { fastMode: isFastMode } : false),
         signal,
         querySource: options.querySource,
+        retryRejectedRequest: displayRecovery.retry,
       },
     )
 

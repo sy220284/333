@@ -394,6 +394,13 @@ export const SettingsSchema = lazySchema(() =>
             'If undefined, all models are available. If empty array, only the default model is available. ' +
             'Typically set in managed settings by enterprise administrators.',
         ),
+      modelPicker: z.object({
+        options: z.array(z.object({
+          model: z.string(),
+          label: z.string().optional(),
+          behavesAs: z.string().optional(),
+        }).passthrough()),
+      }).passthrough().optional(),
       modelOverrides: z
         .record(z.string(), z.string())
         .optional()

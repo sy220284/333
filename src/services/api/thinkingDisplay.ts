@@ -24,3 +24,24 @@ export function getStreamThinkingDisplay(event: unknown, display: string | undef
     return undefined
   }
 }
+
+/** Drop a display hint rejected by an endpoint while preserving thinking itself. */
+export function createThinkingDisplayRecovery317() {
+  let display: string | undefined
+  let removed = false
+  return {
+    prepare<T extends { thinking?: object | null }>(params: T): T {
+      display = getRequestThinkingDisplay(params.thinking)
+      if (!removed || display === undefined || !params.thinking) return params
+      const thinking = { ...params.thinking } as Record<string, unknown>
+      delete thinking.display
+      return { ...params, thinking }
+    },
+    retry(error: { status?: number; message: string }): boolean {
+      if (removed || display === undefined || (error.status !== 400 && error.status !== 422)) return false
+      if (!/thinking(?:\W+\w+){0,2}\W+display/i.test(error.message)) return false
+      removed = true
+      return true
+    },
+  }
+}
