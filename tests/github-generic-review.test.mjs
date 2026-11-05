@@ -1,0 +1,58 @@
+import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
+import { test } from 'node:test'
+import { parseReviewRequest } from '../src/commands/reviewMode.ts'
+import { validRepository } from '../src/commands/github/github.ts'
+import { githubWorkflow, GITHUB_SCRIPT_PATH, GITHUB_WORKFLOW_PATH } from '../src/commands/github/workflow.ts'
+import { githubReviewerScript } from '../src/commands/github/reviewerScript.ts'
+
+test('四种审查模式真实可选，极深为远程审查', () => {
+  assert.deepEqual(parseReviewRequest('极深 18'),{mode:'extreme',target:'18'})
+  assert.deepEqual(parseReviewRequest('extreme 8'),{mode:'extreme',target:'8'})
+  assert.deepEqual(parseReviewRequest('deep main'),{mode:'deep',target:'main'})
+  assert.deepEqual(parseReviewRequest('security'),{mode:'security',target:''})
+  assert.deepEqual(parseReviewRequest('42'),{mode:'normal',target:'42'})
+})
+
+test('GitHub 仓库解析拒绝域名混淆、额外路径', () => {
+  assert.equal(validRepository('owner/repo'),'owner/repo')
+  assert.equal(validRepository('https://github.com/owner/repo.git'),'owner/repo')
+  for (const value of ['https://github.com.evil/owner/repo','owner/repo/extra','foo/..','./repo',
+    'https://example.com/owner/repo','owner/repo?token=secret']) {
+    assert.throws(()=>validRepository(value),value)
+  }
+})
+
+test('通用 GitHub 工作流包含显式调用、授权用户触发和最小权限', () => {
+  const workflow = githubWorkflow()
+  assert.equal(GITHUB_WORKFLOW_PATH,'.github/workflows/333-review.yml')
+  assert.equal(GITHUB_SCRIPT_PATH,'.github/scripts/333-review.mjs')
+  for (const value of ['workflow_dispatch:','pull_request_target:','issue_comment:',
+    'author_association','persist-credentials: false','THREE333_MODEL_API_KEY',
+    'THREE333_MODEL_PROVIDER','THREE333_MODEL_NAME','mode:','run: node .github/scripts/333-review.mjs']) {
+    assert.ok(workflow.includes(value),value)
+  }
+  assert.doesNotMatch(workflow,/anthropics\/claude-code-action|claude\.ai\/settings|CLAUDE_CODE_OAUTH_TOKEN/)
+})
+
+test('极深审查是真实四轮审查加独立复核，支持三类模型 API', () => {
+  const code=githubReviewerScript()
+  const syntax=spawnSync(process.execPath,['--input-type=module','--check'],{
+    input:code,encoding:'utf8'})
+  assert.equal(syntax.status,0,syntax.stderr)
+  for (const keyword of ['callModel(', '独立复核', '需求与代码行为', '模块调用与状态生命周期',
+    '安全边界与潜在利用', '测试覆盖与回归风险','max_completion_tokens',
+    'api.anthropic.com','generativelanguage.googleapis.com','github(','writeFileSync']) {
+    assert.ok(code.includes(keyword),keyword)
+  }
+  assert.doesNotMatch(code,/getClaudeAIOAuthTokens|checkOverageGate|ultrareviewQuota/)
+})
+
+test('审查执行链进行 Git 差异采集及不可信输入处理', () => {
+  const source=readFileSync(new URL('../src/commands/review.ts',import.meta.url),'utf8')
+  for (const keyword of ['dispatchExtremeReview(', 'execFileNoThrow(', 'diff','git',
+    '不可信输入','差异格式校验','高置信']) {
+    assert.ok(source.includes(keyword),keyword)
+  }
+})
