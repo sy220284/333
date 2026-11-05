@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { resolveIndependentModel, getIndependentApiKey, discoverIndependentModels } from '../src/services/api/multimodel/registry.ts'
+import { type ProviderRoute, resolveIndependentModel, getIndependentApiKey, discoverIndependentModels } from '../src/services/api/multimodel/registry.ts'
 import { toResponses, toChatCompletions, toGemini } from '../src/services/api/multimodel/convert.ts'
 import { makeIndependentFetch } from '../src/services/api/multimodel/transport.ts'
 
@@ -22,10 +22,16 @@ const body = {
     type: 'object', properties: { file_path: { type: 'string' } }, required: ['file_path'],
   } }],
 }
+function requireRoute(id: string): ProviderRoute {
+  const route = resolveIndependentModel(id)
+  assert.ok(route)
+  return route
+}
 function stream(...events: unknown[]): Response {
-  return new Response(events.map(event => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n',
+  return new Response(events.map(event => `data: ${JSON.stringify(event)}\n\n`).join('')}data: [DONE]\n\n`,
     { headers: { 'content-type': 'text/event-stream' } })
 }
+// biome-ignore lint/suspicious/noExplicitAny: Test assertions inspect multiple independent provider event shapes.
 function messages(sse: string): any[] {
   return sse.split('\n').filter(x => x.startsWith('data: '))
     .map(x => x.slice(6)).filter(x => x !== '[DONE]').map(x => JSON.parse(x))
@@ -36,8 +42,8 @@ test('qualified models only change providers when explicitly selected', () => {
   assert.equal(resolveIndependentModel('gemini/gemini-3.8-flash')?.protocol, 'gemini')
   assert.equal(resolveIndependentModel('xai/grok-4')?.protocol, 'chat-completions')
   assert.equal(resolveIndependentModel('unknown/model'), null)
-  assert.throws(() => getIndependentApiKey(resolveIndependentModel('openai/gpt-6.1-sol')!, {}))
-  assert.equal(getIndependentApiKey(resolveIndependentModel('openai/gpt-6.1-sol')!, { OPENAI_API_KEY: 'TEST' }), 'TEST')
+  assert.throws(() => getIndependentApiKey(requireRoute('openai/gpt-6.1-sol'), {}))
+  assert.equal(getIndependentApiKey(requireRoute('openai/gpt-6.1-sol'), { OPENAI_API_KEY: 'TEST' }), 'TEST')
 })
 test('Responses preserves prompts, tool IDs, result pairing, reasoning budget and stop rules', () => {
   const result = toResponses({ ...body, output_config: { effort: 'high' } }, 'gpt-6.1-sol')
@@ -65,8 +71,8 @@ test('Chat Completions preserves tool call order and tool results', () => {
   assert.equal(result.stream, true)
 })
 test('Responses streaming is mapped into Anthropic-style tool and text events without outbound Anthropic calls', async () => {
-  const route = resolveIndependentModel('openai/gpt-6.1-sol')!
-  let target = '', authorization = '', inputBody: any
+  const route = requireRoute('openai/gpt-6.1-sol')
+  let target = '', authorization = ''; let inputBody: Record<string, unknown>
   const backend = async (url: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     target = String(url)
     authorization = new Headers(init?.headers).get('authorization') ?? ''
@@ -95,7 +101,7 @@ test('Responses streaming is mapped into Anthropic-style tool and text events wi
   assert.equal(events.find(x => x.type === 'message_delta').delta.stop_reason, 'tool_use')
 })
 test('Chat completions streaming preserves interleaved tool fragments and terminal state', async () => {
-  const route = resolveIndependentModel('deepseek/deepseek-chat')!
+  const route = requireRoute('deepseek/deepseek-chat')
   const backend = async () => stream(
     { choices: [{ delta: { content: 'done' } }] },
     { choices: [{ delta: { tool_calls: [{ index: 0, id: 'call_a', function: { name: 'Read', arguments: '{"file_' } }] } }] },
@@ -109,7 +115,7 @@ test('Chat completions streaming preserves interleaved tool fragments and termin
   assert.equal(result.at(-1)?.type, 'message_stop')
 })
 test('Gemini native stream maps function calls into shared tools', async () => {
-  const route = resolveIndependentModel('gemini/gemini-3.8-flash')!
+  const route = requireRoute('gemini/gemini-3.8-flash')
   const backend = async () => stream(
     { candidates: [{ content: { parts: [{ text: 'ok' }, { functionCall: { name: 'Read', args: { file_path: '/a' } } }] }, finishReason: 'STOP' }], usageMetadata: { promptTokenCount: 9, candidatesTokenCount: 3 } },
   )
