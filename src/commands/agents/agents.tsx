@@ -13,6 +13,8 @@ import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js'
 import { getCwd } from '../../utils/cwd.js'
 import { activateProactive, deactivateProactive, isProactiveActive, pauseProactive, resumeProactive } from '../../proactive/index.js'
 import { createMission, formatMission, getMission, getSelectedMissionId, listMissions, selectMission, updateMissionStatus, saveMissionCheckpoint, linkMissionAssignment } from '../../utils/agentMissions.js'
+import { enqueueMissionJob, listMissionJobs, approveMissionJob, retryMissionJob, cancelMissionJob, recoverMissionJob, missionJobAssignmentId } from '../../services/agentCenter/missionJobs.js'
+import { finishMissionAssignment } from '../../utils/agentMissions.js'
 
 type View = 'home' | 'definitions' | 'tasks' | 'workflows'
 
@@ -117,6 +119,47 @@ export async function call(
       return null
     }
     const selected = getSelectedMissionId()
+    if (selected && action === 'jobs' && !value) {
+      const jobs = await listMissionJobs(selected, getCwd())
+      onDone(jobs.length ? jobs.map(job =>
+        `${job.id} [${job.status}] ${job.title} · 第 ${job.attempt} 次执行`
+      ).join('\\n') : '本长期任务暂无工作项；使用 /agents mission queue 添加。', { display: 'system' })
+      return null
+    }
+    if (selected && action === 'queue' && value) {
+      const split = value.indexOf(' :: ')
+      if (split < 1) throw new Error('用法：/agents mission queue <标题> :: <完整指令>')
+      const mission = await getMission(selected)
+      if (mission.status !== 'active') throw new Error('当前长期任务已暂停或完成')
+      if (resolve(mission.projectDir) !== resolve(getCwd())) throw new Error('任务归属其他项目')
+      const job = await enqueueMissionJob(selected, getCwd(), value.slice(0, split), value.slice(split + 4))
+      try {
+        await linkMissionAssignment(selected, missionJobAssignmentId(job.id), 'agent', job.title)
+      } catch (error) {
+        await cancelMissionJob(selected, getCwd(), job.id)
+        throw error
+      }
+      onDone(`已保存工作项 ${job.id}（待执行）；可在桌面智能体工作台启动。`, { display: 'system' })
+      return null
+    }
+    if (selected && ['approve', 'retry', 'recover', 'cancel'].includes(action) && value) {
+      const mission = await getMission(selected)
+      if (resolve(mission.projectDir) !== resolve(getCwd())) throw new Error('任务归属其他项目')
+      if (action === 'retry' && mission.status !== 'active') throw new Error('请先恢复长期任务')
+      const job = action === 'approve'
+        ? await approveMissionJob(selected, getCwd(), value)
+        : action === 'retry'
+          ? await retryMissionJob(selected, getCwd(), value)
+          : action === 'recover'
+            ? await recoverMissionJob(selected, getCwd(), value)
+            : await cancelMissionJob(selected, getCwd(), value)
+      if (action === 'approve' || action === 'cancel') {
+        await finishMissionAssignment(selected, missionJobAssignmentId(job.id),
+          action === 'approve' ? 'completed' : 'killed')
+      }
+      onDone(`工作项 ${job.id} 状态：${job.status}`, { display: 'system' })
+      return null
+    }
     if (selected && action === 'show' && !value) {
       onDone(formatMission(await getMission(selected)), { display: 'system' })
       return null
@@ -178,7 +221,7 @@ export async function call(
       onDone(`已关联执行任务：${taskId}`, { display: 'system' })
       return null
     }
-    onDone('用法：/agents mission new <目标>；/agents missions；/agents mission use <ID>；/agents mission show|pause|resume|done|clear|continue [新要求]|run|halt；/agents mission note <阶段记录>；/agents mission attach <agent|team|workflow> <任务ID> <标题>。', { display: 'system' })
+    onDone('用法：/agents mission new <目标>；/agents mission jobs；/agents mission queue <标题> :: <执行指令>；/agents mission approve|retry|recover|cancel <工作项ID>；/agents mission show|pause|resume|done|continue|run|halt；/agents mission note <进度>。', { display: 'system' })
     return null
   }
   if (verb === 'list') {
