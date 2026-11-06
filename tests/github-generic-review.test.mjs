@@ -43,7 +43,7 @@ test('极深审查是真实四轮审查加独立复核，支持三类模型 API'
   assert.equal(syntax.status,0,syntax.stderr)
   for (const keyword of ['callModel(', '独立复核', '需求与代码行为', '模块调用与状态生命周期',
     '安全边界与潜在利用', '测试覆盖与回归风险','max_completion_tokens',
-    'api.anthropic.com','generativelanguage.googleapis.com','github(','writeFileSync']) {
+    'api.anthropic.com','api.openai.com','github(','writeFileSync']) {
     assert.ok(code.includes(keyword),keyword)
   }
   assert.doesNotMatch(code,/getClaudeAIOAuthTokens|checkOverageGate|ultrareviewQuota/)
@@ -111,12 +111,12 @@ test('极深执行器真实完成四轮审查、独立复核、PR 评论及报�
 })
 
 
-test('极深后端支持 OpenAI Responses、Anthropic、Gemini 三类原生协议', async () => {
+test('极深后端支持 OpenAI Responses、Anthropic 和 OpenAI 兼容协议', async () => {
   const code=githubReviewerScript().replace(/^import .*$/gm,'')
   const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor
   const run=new AsyncFunction('readFileSync','writeFileSync','execFileSync',
     'process','fetch','setTimeout','clearTimeout','Buffer','URL','AbortController',code)
-  for(const provider of ['openai-responses','anthropic','gemini']) {
+  for(const provider of ['openai-responses','anthropic','openai-compatible']) {
     const requests=[], saved=new Map()
     const env={
       GITHUB_REPOSITORY:'company/example',GITHUB_EVENT_PATH:'event.json',
@@ -135,7 +135,7 @@ test('极深后端支持 OpenAI Responses、Anthropic、Gemini 三类原生协�
         ? {output:[{content:[{type:'output_text',text:'审查完成'}]}]}
         : provider==='anthropic'
           ? {content:[{type:'text',text:'审查完成'}]}
-          : {candidates:[{content:{parts:[{text:'审查完成'}]}}]}
+          : {choices:[{message:{content:'审查完成'}}]}
       return {ok:true,text:async()=>JSON.stringify(answer)}
     }
     await run(
@@ -152,7 +152,7 @@ test('极深后端支持 OpenAI Responses、Anthropic、Gemini 三类原生协�
     assert.ok(saved.get('333-review-report.md').includes('审查完成'),provider)
     if(provider==='openai-responses') assert.ok(requests[0].body.input)
     if(provider==='anthropic') assert.ok(requests[0].headers['anthropic-version'])
-    if(provider==='gemini') assert.ok(requests[0].body.contents)
+    if(provider==='openai-compatible') assert.ok(requests[0].body.messages)
   }
 })
 
@@ -171,4 +171,45 @@ test('Actions 配置可单独选择代码审查或授权消息自动响应', () 
     assert.match(yaml,/workflow_dispatch:/)
     assert.match(yaml,/permissions:\n  contents: read\n  pull-requests: write/)
   }
+})
+
+test('大型 PR 极深审查按全部差异分块，不丢失文件', async () => {
+  const runner = githubReviewerScript().replace(/^import .*$/gm, '')
+  const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor
+  const run = new AsyncFunction('readFileSync','writeFileSync','execFileSync',
+    'process','fetch','setTimeout','clearTimeout','Buffer','URL','AbortController',runner)
+  const diff = 'diff --git a/a.ts b/a.ts\n' + '+const value = 123;\n'.repeat(11000)
+  const env = {
+    GITHUB_REPOSITORY:'owner/example', GITHUB_EVENT_PATH:'mock.json',
+    GITHUB_EVENT_NAME:'workflow_dispatch', INPUT_PR_NUMBER:'19',
+    REVIEW_MODE:'extreme', MODEL_PROVIDER:'openai-compatible',
+    MODEL_NAME:'test-model', MODEL_API_KEY:'test', GH_TOKEN:'test',
+  }
+  let calls = 0
+  let report = ''
+  const mockedFetch = async (url) => {
+    if (url.endsWith('/pulls/19')) return {
+      ok:true, text:async()=>JSON.stringify({title:'完整审查',head:{sha:'abc'},changed_files:1}),
+    }
+    if (url.endsWith('/issues/19/comments')) return {
+      ok:true, text:async()=>JSON.stringify({id:1}),
+    }
+    calls++
+    return {
+      ok:true,
+      text:async()=>JSON.stringify({choices:[{message:{content:'当前分块已审查'}}]}),
+    }
+  }
+  await run(
+    ()=>JSON.stringify({}),(_,value)=>{ report=value },()=>diff,
+    {env,stdout:{write(){}}},mockedFetch,()=>0,()=>{},Buffer,
+    class { constructor(url) {
+      this.protocol=url.startsWith('https://')?'https:':'http:'
+      this.username=''; this.password=''; this.hash=''
+    } },
+    class {signal={};abort(){}},
+  )
+  assert.ok(calls > 5, 'full PR coverage requires more calls than a single-input review')
+  assert.match(report, /差异分块：[2-9]/)
+  assert.match(report, /第 1\//)
 })
