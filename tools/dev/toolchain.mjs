@@ -141,7 +141,7 @@ export function checkToolchain({ bootstrap = false } = {}) {
   for (const name of required) {
     if (!existsSync(join(directory, name))) fail(`必要的工具链工作流缺失：${name}`)
   }
-  const discovered = readdirSync(directory).filter(name => /\\.ya?ml$/.test(name))
+  const discovered = readdirSync(directory).filter(name => /\.ya?ml$/.test(name))
     .filter(name => readFileSync(join(directory, name), 'utf8')
       .includes('node tools/dev/toolchain.mjs gha-env'))
   const managed = [...new Set([...required, ...discovered])]
