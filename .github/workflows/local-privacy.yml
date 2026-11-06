@@ -1,0 +1,41 @@
+name: 本地遥测与隐私边界专项验收
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/utils/telemetry/**'
+      - 'src/utils/telemetryAttributes.ts'
+      - 'src/utils/privacyLevel.ts'
+      - 'src/services/analytics/**'
+      - 'src/services/api/client.ts'
+      - 'src/services/api/claude.ts'
+      - 'src/cli/print.ts'
+      - 'src/main.tsx'
+      - 'src/setup.ts'
+      - 'src/memdir/**'
+      - 'tests/local-telemetry-privacy.test.ts'
+      - 'tests/m1-otel-timeout-317.test.mjs'
+      - '.github/workflows/local-privacy.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  local-privacy:
+    name: 真实写盘、零遥测联网及模型字段最小化
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 恢复项目冻结依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 运行静态隐私与云端路径清理门禁
+        run: node --test tests/m1-otel-timeout-317.test.mjs
+      - name: 运行真实本地磁盘写入、隐私开关与性能计数测试
+        run: bun test tests/local-telemetry-privacy.test.ts
