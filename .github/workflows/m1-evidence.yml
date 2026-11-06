@@ -185,6 +185,10 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
+      - name: 恢复冻结依赖以执行完整的 Bun 运行测试
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
       - name: 验证2.1.317统一验收目标及Read和子代理策略
         run: |
           node --test tests/m1-target-release-317.test.mjs tests/m1-target-release-runner.test.mjs
