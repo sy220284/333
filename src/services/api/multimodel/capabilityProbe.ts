@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto'
 import { promises as fs, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { getIndependentApiKey, resolveIndependentModel } from './registry.js'
-import { getChatGPTAccessToken } from '../../auth/chatgptOAuth.js'
+import { getChatGPTAuthorization } from '../../auth/chatgptOAuth.js'
 import { makeIndependentFetch } from './transport.js'
 import { getModelStorageRoot } from './storage.js'
 type CapabilityReport = {
@@ -137,9 +137,12 @@ export async function runModelToolRoundTrip(
 export async function verifyIndependentModel(model: string): Promise<CapabilityReport> {
   const route = resolveIndependentModel(model)
   if (!route) throw new Error('Expected model ID in provider/model format')
-  const bearer = route.provider === 'chatgpt'
-    ? await getChatGPTAccessToken() : getIndependentApiKey(route)
-  const http = makeIndependentFetch(route, bearer)
+  const authorization = route.provider === 'chatgpt'
+    ? await getChatGPTAuthorization() : undefined
+  const bearer = authorization?.token ?? getIndependentApiKey(route)
+  // Replay identity must survive access-token rotation without crossing
+  // another ChatGPT account/workspace boundary.
+  const http = makeIndependentFetch(route, bearer, fetch, undefined, authorization?.account ?? bearer)
   const send = async (body: Record<string, unknown>): Promise<string> => {
     const request = new Request('https://333-model-bridge.invalid/v1/messages', {
       method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json' },
