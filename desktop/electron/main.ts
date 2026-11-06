@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, session } from 'electron'
 import { spawn, execFile } from 'node:child_process'
 import { existsSync, realpathSync } from 'node:fs'
-import { readdir, readFile, writeFile, rename, realpath, mkdir, rm } from 'node:fs/promises'
+import { readdir, readFile, writeFile, rename, realpath, mkdir, rm, stat } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { promisify } from 'node:util'
 import { createDesktopClient } from '../../src/services/desktop/client.js'
@@ -106,7 +106,8 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
       title:'确认修改文件',message:'将修改 '+basename(path),detail:'保存前请确认文件修改符合当前任务要求。'})
     if(answer.response!==1) return {saved:false}
     const temporary=path+'.yaoyao-'+process.pid+'.tmp'
-    await writeFile(temporary,content,{flag:'wx'})
+    const originalMode=(await stat(path)).mode & 0o777
+    await writeFile(temporary,content,{flag:'wx',mode:originalMode})
     try{await rename(temporary,path)}catch(error){await rm(temporary,{force:true});throw error}
     return {saved:true,path}
   }
