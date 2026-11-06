@@ -3674,9 +3674,12 @@ async function run(): Promise<CommanderCommand> {
   auth.command('chatgpt-login').description('通过官方浏览器授权连接 ChatGPT 账号')
     .option('--new', '注册新的 ChatGPT 账号或工作区')
     .option('--account <clientId>', '重新授权已注册的 ChatGPT 账号')
-    .action(async (options: { new?: boolean; account?: string }) => {
+    .option('--resume-pending', '恢复中断的动态客户端注册')
+    .action(async (options: { new?: boolean; account?: string; resumePending?: boolean }) => {
       const { loginWithChatGPT } = await import('./services/auth/chatgptOAuth.js');
-      const identity = await loginWithChatGPT({ addAccount: options.new, clientId: options.account });
+      const identity = await loginWithChatGPT({
+        addAccount: options.new, clientId: options.account, resumePending: options.resumePending,
+      });
       process.stdout.write(`ChatGPT 已登录：${identity.email ?? identity.subject}\n`);
       if (!identity.planEnabled) {
         process.stdout.write('当前账号尚未授权套餐推理；可以重新授权或使用 OpenAI API Key。\n');
