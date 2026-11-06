@@ -44,7 +44,7 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
     }
     const item = JSON.parse(checked.stdout)
     if (item.type !== 'file' || item.encoding !== 'base64') throw new Error('GitHub 配置文件格式不符合预期')
-    return Buffer.from(String(item.content).replace(/\\s/g, ''), 'base64').toString('utf8')
+    return Buffer.from(String(item.content).replace(/\s/g, ''), 'base64').toString('utf8')
   }
   const existing = JSON.parse(await gh([
     'pr', 'list', '--repo', repo, '--state', 'open', '--limit', '200',
@@ -52,7 +52,7 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
   ])) as Array<{ headRefName: string; headRepositoryOwner?: { login?: string }; url: string; createdAt: string }>
   const owner = repo.split('/')[0]?.toLowerCase()
   const reusable = existing
-    .filter(item => /^333\\/review-[0-9a-f]{8}$/.test(item.headRefName) &&
+    .filter(item => /^333\/review-[0-9a-f]{8}$/.test(item.headRefName) &&
       item.headRepositoryOwner?.login?.toLowerCase() === owner)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0]
   if (!reusable) {
