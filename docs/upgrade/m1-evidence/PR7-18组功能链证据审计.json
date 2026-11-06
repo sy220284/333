@@ -334,11 +334,12 @@
         "src/commands/privacy-settings/privacy-settings.tsx"
       ],
       "tests": [
-        "tests/m1-privacy-settings.test.mjs"
+        "tests/m1-local-privacy-settings.test.ts",
+        "tests/m1-telemetry-policy.test.mjs"
       ],
       "stage": "SPECIAL_CI",
       "acceptance": "UNVERIFIED",
-      "remaining": "服务端动态授权与失败"
+      "remaining": "本地隐私配置、遥测关停与模型调用边界的端到端签收"
     },
     {
       "id": "G15",
