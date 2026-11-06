@@ -4,14 +4,16 @@ import { execa } from 'execa'
 import { Box, Text } from '../../ink.js'
 import { Dialog } from '../../components/design-system/Dialog.js'
 import { Select } from '../../components/CustomSelect/select.js'
+import TextInput from '../../components/TextInput.js'
 import type { LocalJSXCommandCall, LocalJSXCommandOnDone } from '../../types/command.js'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
 import { call as runGithubCommand, setupRepository } from './github.js'
-import { getGithubModelOptions, configureGithubModel, type GithubModelOption } from './modelConfig.js'
+import { getGithubModelOptions, configureGithubModel, configureGithubCustomModel,
+  getGithubActionsProviderOptions, type GithubModelOption, type GithubActionsProvider } from './modelConfig.js'
 import type { GithubWorkflowSelection } from './workflow.js'
 import { validRepository } from './repository.js'
 
-type Stage = 'overview' | 'repos' | 'workflow' | 'models' | 'confirm' | 'finished'
+type Stage = 'overview' | 'repos' | 'workflow' | 'models' | 'provider' | 'model-name' | 'api-key' | 'confirm' | 'finished'
 type Repository = { nameWithOwner: string; isPrivate?: boolean }
 function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode {
   const [stage, setStage] = useState<Stage>('overview')
@@ -23,6 +25,10 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
   const [workflow, setWorkflow] = useState<GithubWorkflowSelection>('both')
   const [models, setModels] = useState<GithubModelOption[]>([])
   const [model, setModel] = useState('')
+  const [provider, setProvider] = useState<GithubActionsProvider>('openai')
+  const [newModel, setNewModel] = useState('')
+  const [apiKey, setApiKey] = useState('')
+  const [entry, setEntry] = useState('')
   const [result, setResult] = useState('')
 
   async function reload(): Promise<void> {
@@ -98,13 +104,18 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
       if (transferKey) {
         if (!model) throw new Error('尚未选择模型')
         setStatus('将选定 API 凭据独立写入 GitHub Actions Secrets…')
-        await configureGithubModel(name,model,true)
+        if (entry === 'new') {
+          await configureGithubCustomModel(name,provider,newModel,apiKey,true)
+        } else {
+          await configureGithubModel(name,model,true)
+        }
       }
       const output = 'GitHub 配置 PR：' + url +
         '\n仓库：' + name +
         '\n功能：' + workflow +
-        '\n模型：' + (transferKey ? model : '稍后独立配置') +
+        '\n模型：' + (transferKey ? (entry === 'new' ? provider+'/'+newModel : model) : '稍后独立配置') +
         '\n请检查并合并配置 PR，工作流才会在仓库默认分支生效。'
+      setApiKey('')
       setResult(output)
       setStatus('配置完成，请检查并合并安装 PR。')
       setStage('finished')
@@ -136,6 +147,7 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
   const modelOptions = [
     ...models.map(m=>({label:m.label,value:m.id,
       description:m.credentialSource})),
+    {label:'配置新的 GitHub Actions API Key',value:'__new__'},
     {label:'先安装工作流，稍后配置独立 Actions API Key',value:'__later__'},
   ]
   return <Dialog title="GitHub · 摇摇车仓库集成" subtitle="GitHub 授权与模型密钥分别管理"
@@ -165,15 +177,53 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
       }} onCancel={()=>setStage('repos')}/>}
       {!busy && stage === 'models' && <Select options={modelOptions}
         onChange={value=>{
-          setModel(value === '__later__' ? '' : value)
-          setStage('confirm')
+          if (value === '__new__') {
+            setEntry('new')
+            setModel('')
+            setStage('provider')
+          } else {
+            setEntry(value === '__later__' ? 'later' : 'saved')
+            setModel(value === '__later__' ? '' : value)
+            setStage('confirm')
+          }
         }} onCancel={()=>setStage('workflow')}/>}
+      {!busy && stage === 'provider' && <Select options={getGithubActionsProviderOptions()}
+        onChange={value=>{
+          setProvider(value)
+          setStage('model-name')
+        }} onCancel={()=>setStage('models')}/>}
+      {!busy && stage === 'model-name' && <Box flexDirection="column" gap={1}>
+        <Text>请输入 {provider} 在 API 中使用的准确模型 ID：</Text>
+        <TextInput value={newModel} onChange={setNewModel} focus={true}
+          onSubmit={value=>{
+            if (!/^[A-Za-z0-9_./:-]{1,180}$/.test(value)) {
+              setStatus('模型 ID 格式无效，请输入服务商的真实模型 ID。')
+              return
+            }
+            setNewModel(value)
+            setStage('api-key')
+          }} placeholder="例如 gpt-6 或 deepseek-chat" />
+      </Box>}
+      {!busy && stage === 'api-key' && <Box flexDirection="column" gap={1}>
+        <Text>请输入 {provider}/{newModel} 的 API Key，回显已隐藏：</Text>
+        <TextInput value={apiKey} onChange={setApiKey} focus={true} mask="*"
+          onSubmit={value=>{
+            if(value.length<5 || value.length>8192 || value.trim()!==value) {
+              setStatus('API Key 格式无效，请检查粘贴内容。')
+              return
+            }
+            setApiKey(value)
+            setStage('confirm')
+          }} placeholder="输入或粘贴 API Key" />
+      </Box>}
       {!busy && stage === 'confirm' && <Box flexDirection="column" gap={1}>
         <Text>仓库：{repo}　工作流：{workflow}</Text>
-        <Text>模型：{model || '稍后配置'}</Text>
-        <Text dimColor>选择上传会将所选本机 API Key 写入该仓库的 Actions Secret；不会上传 ChatGPT OAuth 凭据。</Text>
+        <Text>模型：{entry === 'new' ? provider+'/'+newModel : (model || '稍后配置')}</Text>
+        <Text dimColor>确认上传只将所选 API Key 发送到当前仓库的 GitHub Actions Secret，本地 OAuth 凭据保持独立。</Text>
         <Select options={[
-          ...(model ? [{label:'确认安装并上传所选模型 API Key',value:'upload'}] : []),
+          ...(model || entry === 'new'
+            ? [{label:entry === 'new'?'确认安装并上传新 API Key':'确认安装并上传已保存的 API Key',value:'upload'}]
+            : []),
           {label:'仅安装工作流，稍后配置 Actions 密钥',value:'install'},
           {label:'返回修改',value:'back'},
         ]} onChange={value=>{
