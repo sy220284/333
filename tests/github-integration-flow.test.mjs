@@ -10,9 +10,7 @@ import { validRepository } from '../src/commands/github/repository.ts'
 function loadInstaller(mockGh) {
   let source=readFileSync(new URL('../src/commands/github/github.ts',import.meta.url),'utf8')
   source=source.replace(/^import .*$/gm,'').replace(/^export /gm,'')
-  source="const GITHUB_WORKFLOW_PATH='.github/workflows/yaoyaoche-review.yml';"+
-    "const GITHUB_SCRIPT_PATH='.github/scripts/yaoyaoche-review.mjs';"+
-    "const GITHUB_TASK_SCRIPT_PATH='.github/scripts/yaoyaoche-task.mjs';\n"+source
+  source=`const GITHUB_WORKFLOW_PATH='.github/workflows/yaoyaoche-review.yml';const GITHUB_SCRIPT_PATH='.github/scripts/yaoyaoche-review.mjs';const GITHUB_TASK_SCRIPT_PATH='.github/scripts/yaoyaoche-task.mjs';\n${source}`
   source=stripTypeScriptTypes(source,{mode:'strip'})
   const ctor=Object.getPrototypeOf(async()=>{}).constructor
   return new ctor('execFileNoThrow','githubWorkflow','githubReviewerScript',

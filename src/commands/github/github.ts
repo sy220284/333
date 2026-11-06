@@ -145,8 +145,7 @@ export async function dispatchReview(rawRepo: string, rawPr: string, mode='norma
   if (!['normal','deep','security'].includes(mode)) throw new Error('审查模式无效')
   await checkAuth()
   await gh(['workflow','run','yaoyaoche-review.yml','--repo',repo,'-f',`pr_number=${pr}`,'-f',`mode=${mode}`])
-  return '已提交审查任务至 GitHub Actions。完成后在 PR #' + pr +
-    ' 查看评论及 Artifact： https://github.com/' + repo + '/actions/workflows/yaoyaoche-review.yml'
+  return `已提交审查任务至 GitHub Actions。完成后在 PR #${pr} 查看评论及 Artifact： https://github.com/${repo}/actions/workflows/yaoyaoche-review.yml`
 }
 export const call: LocalCommandCall = async (args) => {
   const tokens = args.trim().split(/\s+/).filter(Boolean)
