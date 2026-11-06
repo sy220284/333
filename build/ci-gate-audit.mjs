@@ -81,7 +81,7 @@ for (const name of workflows) {
   while (end < lines.length && (/^ {4}/.test(lines[end]) || !lines[end].trim())) end++
   const pushBlock = lines.slice(index + 1, end).join('\n')
   if (!/^ {4}branches:/m.test(pushBlock))
-    errors.push('工作流的任意分支 push 入口绕过 PR 调度：' + name)
+    errors.push(`工作流的任意分支 push 入口绕过 PR 调度：${name}`)
 }
 
 for (const name of ['sdk-stream-parity.yml','m1-spinner-parity.yml']) {
