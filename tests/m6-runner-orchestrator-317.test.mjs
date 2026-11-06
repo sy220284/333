@@ -13,7 +13,8 @@ const hint={jti:'test-job-1',session_uuid:'abc123',attempt:1,work_order_jwt:jwt(
   jti:'test-job-1','ccr:pool_id':'ccpool_test','ccr:spawn_account_id':'account1'
 }),sources:[{url:'https://example.org/repo.git',revision:'main'}]}
 test('orchestrator accepts official flags and validates lease and concurrency',()=>{
-  const x=parseOrchestratorArgs317(['--hook-concurrency','3','--min-idle','2',
+  const x=parseOrchestratorArgs317(['--api-url','http://127.0.0.1:8123',
+    '--hook-concurrency','3','--min-idle','2',
     '--hook-timeout','15','--expected-spawn-seconds','120','--health-port','0'])
   assert.equal(x.hookConcurrency,3);assert.equal(x.minIdle,2)
   assert.equal(x.healthPort,0)
@@ -67,7 +68,7 @@ test('orchestrator dispatches and nacks retryable hook failures; shutdown drains
     const executable=join(home,'spawn-runner')
     await writeFile(executable,'#!/bin/sh\nexit 0\n',{mode:0o755});await chmod(executable,0o755)
     process.env.SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET=secret
-    const options=parseOrchestratorArgs317(['--hooks-dir',home,'--health-port','0'])
+    const options=parseOrchestratorArgs317(['--api-url','http://127.0.0.1:8123','--hooks-dir',home,'--health-port','0'])
     const ctrl=new AbortController(),nacked=[]
     const api={
       async poll(){return{hints:[hint],warm_hints:[],server_date:null,
