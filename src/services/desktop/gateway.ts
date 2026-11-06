@@ -17,7 +17,7 @@ import type { getSessionInfo, getSessionMessages, listSessions } from '../../ent
 import type { InternalOptions, SDKSessionOptions } from '../../entrypoints/sdk/runtimeTypes.js'
 import { createHeadlessConversationSession } from '../conversation/headlessSession.js'
 import { createDesktopTaskJournal, type DesktopTaskJournal } from './taskJournal.js'
-import { isAgentProgress, projectTask, type DesktopTask } from './taskProjection.js'
+import { isAgentProgress, projectBackgroundTasks, projectTask, type DesktopTask } from './taskProjection.js'
 import { DESKTOP_PROTOCOL_VERSION, type DesktopEvent, type DesktopRequest } from './protocol.js'
 import { z } from 'zod/v4'
 
@@ -255,6 +255,12 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
             await settleExecutingJob(sessionId, success ? 'review' : 'failed', summary)
           }
           if (isAgentProgress(sdkMessage)) {
+            const background = projectBackgroundTasks(sdkMessage, entry.tasks)
+            for (const task of background) {
+              entry.tasks.set(task.taskId, task)
+              emit({ event: 'task.updated', sessionId, task })
+            }
+            if (background.length) scheduleTaskSnapshot(sessionId, entry)
             const oldTask = sdkMessage.type === 'system' && 'task_id' in sdkMessage
               ? entry.tasks.get(sdkMessage.task_id) : undefined
             const task = projectTask(sdkMessage, oldTask)
