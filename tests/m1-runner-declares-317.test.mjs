@@ -67,7 +67,7 @@ test('M1 C19-T02: real bootstrap state latches both runner declarations', () => 
 test('M1 C19-T02: official and reconstructed CLIs consume runner declaration before version/help routing', () => {
   const candidates = [
     ['rebuilt', 'bun', [join(root, 'dist/cli.js')]],
-    ['standalone', join(root, 'dist', process.platform === 'win32' ? 'claude.exe' : 'claude'), []],
+    ['standalone', join(root, 'dist', process.platform === 'win32' ? 'avenlo.exe' : 'avenlo'), []],
   ]
   if (process.env.CLAUDE_REFERENCE_BIN)
     candidates.unshift(['official 317', process.env.CLAUDE_REFERENCE_BIN, []])
@@ -83,8 +83,8 @@ test('M1 C19-T02: official and reconstructed CLIs consume runner declaration bef
           })
         assert.equal(r.error, undefined, label + ' ' + r.error)
         assert.equal(r.status, 0, label + ': ' + r.stderr)
-        if (action === '--version') assert.equal(r.stdout.trim(), `2.1.317 (${label.startsWith('official') ? 'Claude Code' : '333'})`, label)
-        else assert.match(r.stdout, label.startsWith('official') ? /Usage: claude/ : /Usage: 333/, label)
+        if (action === '--version') assert.equal(r.stdout.trim(), `2.1.317 (${label.startsWith('official') ? 'Claude Code' : 'Avenlo'})`, label)
+        else assert.match(r.stdout, label.startsWith('official') ? /Usage: claude/ : /Usage: avenlo/, label)
       }
     }
   }

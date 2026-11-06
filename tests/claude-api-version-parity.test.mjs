@@ -70,7 +70,7 @@ test('api-version opens the bundled 2.1.317 migration guide through the actual R
   try {
     await new Promise(ok => server.listen(0, '127.0.0.1', ok))
     const targets = [['333', 'bun', [join(root, 'dist/cli.js')]]]
-    if (process.env.M1_NATIVE_BINARY_RUN === '1') targets.push(['native', join(root, 'dist', process.platform === 'win32' ? 'claude.exe' : 'claude'), []])
+    if (process.env.M1_NATIVE_BINARY_RUN === '1') targets.push(['native', join(root, 'dist', process.platform === 'win32' ? 'avenlo.exe' : 'avenlo'), []])
     if (process.env.CLAUDE_TARGET_X64) targets.push(['2.1.317', process.env.CLAUDE_TARGET_X64, []])
     for (const [name, executable, prefix] of targets) {
       requests = []
