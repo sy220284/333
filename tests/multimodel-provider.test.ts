@@ -396,6 +396,25 @@ test('provider errors redact echoed credentials in HTTP bodies, headers and stre
     error instanceof Error && !error.message.includes(token) && error.message.includes('Rejected'))
 })
 
+test('DeepSeek errors preserve provider request identity and retry hints without leaking credentials', async () => {
+  const route = requireRoute('deepseek/deepseek-v4-pro')
+  const req = new Request('https://333-model-bridge.invalid/v1/messages', {
+    method: 'POST', body: JSON.stringify({ ...body, model: 'deepseek/deepseek-v4-pro' }),
+  })
+  const result = await makeIndependentFetch(route, 'test-secret', async () =>
+    new Response('retry later', { status: 429, headers: {
+      'x-deepseek-request-id': 'request-deepseek-42', 'retry-after': '3',
+    } }))(req)
+  assert.equal(result.status, 429)
+  assert.equal(result.headers.get('request-id'), 'request-deepseek-42')
+  assert.equal(result.headers.get('retry-after'), '3')
+  const tainted = await makeIndependentFetch(route, 'test-secret', async () =>
+    new Response('failed', { status: 401, headers: {
+      'x-deepseek-request-id': 'request-test-secret',
+    } }))(req.clone())
+  assert.equal(tainted.headers.get('request-id'), null)
+})
+
 test('MiniMax inference and discovery default to the mainland China API', async () => {
   assert.equal(requireRoute('minimax/MiniMax-M3.1-Flash').endpoint,
     'https://api.minimaxi.com/v1/chat/completions')
