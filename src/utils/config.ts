@@ -496,7 +496,6 @@ export type GlobalConfig = {
 
   // Cached org-level fast mode status from the API.
   // Used to detect cross-session changes and notify users.
-  penguinModeOrgEnabled?: boolean
 
   // Epoch ms when background refreshes last ran (fast mode, quota, passes, client data).
   // Used with tengu_cicada_nap_ms to throttle API calls
