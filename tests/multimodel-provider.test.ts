@@ -422,14 +422,24 @@ test('GLM model revisions reject forbidden thinking switches and map effort nati
 test('Kimi K3 and K2 generations use distinct reasoning wire fields', () => {
   assert.equal(toChatCompletions({ ...body, output_config: { effort: 'xhigh' } },
     'kimi-k3', 'kimi').reasoning_effort, 'max')
-  assert.throws(() => toChatCompletions({ ...body, output_config: { effort: 'medium' } },
-    'kimi-k3.1-pro', 'kimi'), /仅支持 max/)
+  assert.equal(toChatCompletions({ ...body, output_config: { effort: 'medium' } },
+    'kimi-k3.1-pro', 'kimi').reasoning_effort, 'high')
+  assert.equal(toChatCompletions({ ...body, output_config: { effort: 'low' } },
+    'kimi-k3.1-pro', 'kimi').reasoning_effort, 'low')
   assert.equal(toChatCompletions({ ...body, output_config: { effort: 'max' } },
     'kimi-k3.1-pro', 'kimi').reasoning_effort, 'max')
   assert.deepEqual(toChatCompletions({ ...body, thinking: { type: 'enabled' } },
     'kimi-k2.6', 'kimi').thinking, { type: 'enabled', keep: 'all' })
-  assert.deepEqual(toChatCompletions({ ...body }, 'kimi-k2.7-code', 'kimi').thinking,
-    { type: 'enabled', keep: 'all' })
+  const k27 = toChatCompletions({ ...body, thinking: { type: 'enabled' },
+    temperature: 0.5, top_p: 0.8 }, 'kimi-k2.7-code', 'kimi')
+  assert.equal(k27.thinking, undefined)
+  assert.equal(k27.reasoning_effort, undefined)
+  assert.equal(k27.temperature, undefined)
+  assert.equal(k27.top_p, undefined)
+  const k31 = toChatCompletions({ ...body, temperature: 0.5, top_p: 0.8 },
+    'kimi-k3.1-pro', 'kimi')
+  assert.equal(k31.temperature, undefined)
+  assert.equal(k31.top_p, undefined)
   assert.throws(() => toChatCompletions({ ...body, thinking: { type: 'disabled' } },
     'kimi-k3', 'kimi'), /不支持关闭思考/)
 })
