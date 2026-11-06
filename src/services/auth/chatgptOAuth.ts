@@ -22,6 +22,7 @@ const HOST_FILE = join(DIR, 'host.json')
 const ACCOUNT_FILE = join(DIR, 'chatgpt-registration.json')
 const ACCOUNTS_FILE = join(DIR, 'chatgpt-accounts.json')
 const TOKENS_DIR = join(DIR, 'chatgpt-tokens')
+const PENDING_FILE = join(DIR, 'chatgpt-pending-registration.json')
 type Credential = {
   client_id: string
   ext_agent_host_id: string
@@ -37,6 +38,7 @@ type Credential = {
 }
 type Registration = { client_id: string; subject: string; email?: string; workspace_id?: string; credential?: Credential }
 type AccountStore = { schema: 2; active: string | null; accounts: Registration[] }
+type PendingRegistration = { client_id: string; ext_agent_host_id: string; created_at: number }
 /** A registration survives sign-out, and each account/workspace has an independent token record. */
 function registrationIdentity(registration: Pick<Registration, 'client_id' | 'subject' | 'workspace_id'>): string {
   return JSON.stringify(registration.workspace_id
@@ -179,7 +181,7 @@ async function validateIDToken(token: string, clientId: string, nonce: string): 
   const jwksResponse = await fetch(jwksURL)
   if (!jwksResponse.ok) throw new Error('Unable to fetch OpenAI identity signing keys')
   const jwks = await jwksResponse.json() as { keys?: Array<Record<string, unknown>> }
-  const key = jwks.keys?.find(item => item.kid === header.kid && item.alg === header.alg)
+  const key = jwks.keys?.find(item => item.kid === header.kid && (!item.alg || item.alg === header.alg))
   if (!key) throw new Error('OpenAI ID token signing key is unknown')
   const publicKey = createPublicKey({ key: key as JsonWebKey, format: 'jwk' })
   const isValid = verifySignature(header.alg === 'ES256' ? 'sha256' : 'RSA-SHA256',
@@ -310,18 +312,27 @@ function openBrowser(url: string): void {
   child.unref()
 }
 export async function loginWithChatGPT(
-  options: { addAccount?: boolean; clientId?: string } = {},
+  options: { addAccount?: boolean; clientId?: string; resumePending?: boolean } = {},
   browser: (url: string) => void = openBrowser,
 ): Promise<{ email?: string; subject: string; clientId: string; planEnabled: boolean }> {
-  if (options.addAccount && options.clientId) throw new Error('Select an existing account or register a new one')
+  if ([options.addAccount, Boolean(options.clientId), options.resumePending].filter(Boolean).length > 1) {
+    throw new Error('Choose one ChatGPT sign-in mode')
+  }
   const hostId = await getHostId()
   const initialStore = await readAccounts()
-  const registration = options.addAccount ? undefined
+  const pending = options.resumePending
+    ? await readJSON<PendingRegistration>(PENDING_FILE) : null
+  if (options.resumePending && (!pending || pending.ext_agent_host_id !== hostId ||
+      pending.client_id === 'dynamic_agent_client' || !pending.client_id ||
+      Date.now() - pending.created_at > 86_400_000 || pending.created_at > Date.now())) {
+    throw new Error('There is no valid pending ChatGPT client registration to resume')
+  }
+  const registration = options.addAccount || options.resumePending ? undefined
     : options.clientId ? initialStore.accounts.find(entry => entry.client_id === options.clientId)
     : activeRegistration(initialStore)
   if (options.clientId && !registration) throw new Error('Unknown ChatGPT client registration')
   const existing = registration?.credential
-  const clientId = registration?.client_id ?? 'dynamic_agent_client'
+  const clientId = registration?.client_id ?? pending?.client_id ?? 'dynamic_agent_client'
   const state = randomBytes(32).toString('base64url')
   const nonce = randomBytes(32).toString('base64url')
   const verifier = randomBytes(48).toString('base64url')
@@ -361,7 +372,7 @@ export async function loginWithChatGPT(
       scope: SCOPE, resource: RESOURCE, state, nonce,
       code_challenge_method: 'S256', code_challenge: challenge,
       ext_agent_host_id: hostId,
-      ...(registration ? {} : { agent_name_hint: '333' }),
+      ...(registration || pending ? {} : { agent_name_hint: '333' }),
       ...(existing?.id_token && registration ? { id_token_hint: existing.id_token } : {}),
       ...(registration?.email ? { login_hint: registration.email } : {}),
     })) url.searchParams.set(key, value)
@@ -380,9 +391,19 @@ export async function loginWithChatGPT(
     const code = args.get('code')
     if (!code) throw new Error('ChatGPT callback missing authorization code')
     const returnedId = args.get('client_id')
-    const issuedId = registration?.client_id ?? returnedId
+    const issuedId = registration?.client_id ?? pending?.client_id ?? returnedId
     if (!issuedId || issuedId === 'dynamic_agent_client') throw new Error('Dynamic registration did not issue a client ID')
-    if (registration && returnedId && returnedId !== registration.client_id) throw new Error('ChatGPT client registration changed unexpectedly')
+    if ((registration || pending) && returnedId && returnedId !== issuedId) {
+      throw new Error('ChatGPT client registration changed unexpectedly')
+    }
+    // Save the server-issued client ID before the first code exchange.
+    // If that one-time code is invalid or the exchange is interrupted, the
+    // user can resume with a fresh PKCE challenge and the issued client ID.
+    if (!registration && !pending) {
+      await writePrivate(PENDING_FILE, {
+        client_id: issuedId, ext_agent_host_id: hostId, created_at: Date.now(),
+      } satisfies PendingRegistration)
+    }
     const params = new URLSearchParams({
       grant_type: 'authorization_code', client_id: issuedId, code, code_verifier: verifier,
       redirect_uri: callback.uri, resource: RESOURCE,
@@ -433,6 +454,8 @@ export async function loginWithChatGPT(
       // credentials until the ID token and grant have been verified.
       store.active = registrationIdentity(updated)
       await saveAccounts(store)
+      const awaiting = await readJSON<PendingRegistration>(PENDING_FILE)
+      if (awaiting?.client_id === issuedId) await fs.rm(PENDING_FILE, { force: true })
     })
     return { subject: identity.subject, email: identity.email,
       clientId: issuedId, planEnabled: scopeGranted(tokens.scope) }
