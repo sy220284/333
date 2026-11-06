@@ -8,7 +8,6 @@ import { test } from 'node:test'
 const root = resolve(import.meta.dirname, '..')
 const official = process.env.CLAUDE_REFERENCE_BIN
 const rebuilt = join(root, 'dist', process.platform === 'win32' ? 'claude.exe' : 'claude')
-const expectedVersion = '2.1.317 (Claude Code)'
 const median = items => [...items].sort((a, b) => a - b)[Math.floor(items.length / 2)]
 
 test('M1 C19-T05: independently compiled CLI cold-start and help match verified native behavior', {
@@ -32,7 +31,7 @@ test('M1 C19-T05: independently compiled CLI cold-start and help match verified 
         const elapsed = performance.now() - started
         assert.equal(p.error, undefined, name + ' ' + flag + ': ' + String(p.error))
         assert.equal(p.status, 0, name + ' ' + flag + ': ' + p.stderr)
-        if (flag === '--version') assert.equal(p.stdout.trim(), expectedVersion)
+        if (flag === '--version') assert.equal(p.stdout.trim(), `2.1.317 (${name === 'official' ? 'Claude Code' : '333'})`, name)
         else assert.match(p.stdout, /Usage:/)
         measurements[name].push(Number(elapsed.toFixed(2)))
       }
