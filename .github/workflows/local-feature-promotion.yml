@@ -19,6 +19,12 @@ on:
       - 'src/tools/BriefTool/**'
       - 'src/tools/ScheduleCronTool/**'
       - 'tests/local-feature-promotion.test.mjs'
+      - 'tests/local-voice-stt-317.test.ts'
+      - 'src/services/voiceStreamSTT.ts'
+      - 'src/services/voice.ts'
+      - 'src/voice/**'
+      - 'src/commands/voice/**'
+      - 'src/hooks/useVoice*.ts*'
       - 'tests/local-mcp-skill-discovery.test.ts'
       - 'tests/local-feature-preferences.test.ts'
       - 'tests/agent-collaboration-*.test.*'
@@ -64,3 +70,5 @@ jobs:
         run: bun test tests/local-mcp-skill-discovery.test.ts
       - name: 验证高级功能本地设置和用户交互
         run: bun test tests/local-feature-preferences.test.ts tests/agent-collaboration-mode.test.ts tests/agent-missions.test.ts tests/agent-mission-scope.test.ts
+      - name: 验证本地 Whisper 转写进程与取消处理
+        run: bun test tests/local-voice-stt-317.test.ts
