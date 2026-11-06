@@ -32,6 +32,16 @@ export type ToolAuthorizationHost = {
   isPromptFocused?: () => boolean
 }
 
+
+/** The classifier and the two-second speculative check race must preserve
+ * the original discriminated result types after moving out of the hook. */
+function _temp(result: unknown) {
+  return { type: 'result' as const, result }
+}
+function _temp2(resolve: (value: { type: 'timeout' }) => void) {
+  return setTimeout(resolve, 2000, { type: 'timeout' as const })
+}
+
 /** Performs the existing config/hook/classifier/team/interactive checks without Ink. */
 export function createToolAuthorization({ setToolPermissionContext, queueOps, onAutoModeDenied, isPromptFocused }: ToolAuthorizationHost): CanUseToolFn {
   return async (tool, input, toolUseContext, assistantMessage, toolUseID, forceDecision) => new Promise(resolve => {
