@@ -37,6 +37,16 @@ test('桌面长期任务工作台提供真实执行入口与安全状态动作',
   assert.doesNotMatch(app, /job\.status==='running'&&<button onClick=\{\(\)=>void jobAction\('missions\.jobs\.cancel'/)
 })
 
+test('多个SDK会话共享审批收件箱，但结果只回到发起请求的原会话', () => {
+  const app = source('src/App.tsx')
+  assert.match(app, /globalInbox=.*permission\.request/)
+  assert.match(app, /sessionId:pending\.sessionId,permissionId:id/)
+  assert.match(app, /sessionId:pending\.sessionId,requestId:id/)
+  assert.match(app, /item\.sessionId!==event\.sessionId/)
+  assert.match(app, /会话 \{p\.sessionId\.slice\(0,8\)\}/)
+  assert.doesNotMatch(app, /if\(!sessionId\)return\s+await operation\('权限审批'/)
+})
+
 test('长期任务视图显示正确的检查点、执行次数、终态和异常恢复说明', () => {
   const app = source('src/App.tsx')
   const css = source('src/styles.css')
