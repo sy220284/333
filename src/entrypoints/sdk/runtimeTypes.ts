@@ -64,10 +64,10 @@ export type SDKPermissionContext = {
   toolUseID?: string
   requestId?: string
   blockedPath?: string
-  mcpServer?: string
+  mcpServer?: { name: string; source: string }
   decisionReason?: string
-  decisionType?: string
-  decisionCode?: string
+  decisionReasonType?: string
+  decisionReasonCode?: string
   serverPolicyAskOnly?: boolean
   title?: string
   displayName?: string
@@ -75,10 +75,11 @@ export type SDKPermissionContext = {
   defaultToNo?: boolean
   suppressAlwaysAllowRule?: boolean
   agentID?: string
-  plugin?: Record<string, unknown>
+  plugin?: string
   requiresUserInteraction?: boolean
-  computerFolder?: string
-  matchedAskRule?: Record<string, unknown>
+  serverPrompt?: string
+  computerFolder?: { path: string; computer_name: string }
+  matchedAskRule?: { source: string; toolName: string; ruleContent?: unknown }
 }
 
 export type CanUseTool = (
