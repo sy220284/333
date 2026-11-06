@@ -6,7 +6,7 @@ import { readProviderApiKey } from '../../auth/apiKeyVault.js'
  */
 export type IndependentProvider =
   | 'openai' | 'chatgpt' | 'deepseek'
-  | 'qwen' | 'kimi' | 'zhipu' | 'minimax' | 'openrouter'
+  | 'qwen' | 'kimi' | 'zhipu' | 'minimax'
 export type Protocol = 'responses' | 'chat-completions'
 export interface ProviderRoute {
   provider: IndependentProvider
@@ -26,11 +26,10 @@ export const PROVIDERS: Readonly<Record<IndependentProvider, Definition>> = {
   kimi: { protocol: 'chat-completions', endpoint: 'https://api.moonshot.cn/v1/chat/completions', keyEnvironment: 'MOONSHOT_API_KEY' },
   zhipu: { protocol: 'chat-completions', endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions', keyEnvironment: 'ZHIPU_API_KEY' },
   minimax: { protocol: 'chat-completions', endpoint: `${MINIMAX_API_ORIGIN}/v1/chat/completions`, keyEnvironment: 'MINIMAX_API_KEY' },
-  openrouter: { protocol: 'chat-completions', endpoint: 'https://openrouter.ai/api/v1/chat/completions', keyEnvironment: 'OPENROUTER_API_KEY' },
 }
 /** Explicit migration marker for previously saved provider entries. */
 export function isRetiredIndependentProvider(provider: unknown): boolean {
-  return provider === 'gemini' || provider === 'xai'
+  return provider === 'gemini' || provider === 'xai' || provider === 'openrouter'
 }
 /** Apply model removals even when a gateway exposes those families. */
 export function isRemovedIndependentModel(model: string): boolean {
@@ -90,7 +89,6 @@ export async function discoverIndependentModelDetails(
     kimi: 'https://api.moonshot.cn/v1/models',
     zhipu: 'https://open.bigmodel.cn/api/paas/v4/models',
     minimax: `${MINIMAX_API_ORIGIN}/v1/models`,
-    openrouter: 'https://openrouter.ai/api/v1/models',
   }
   const response = await fetcher(addresses[provider], {
     headers: { Authorization: `Bearer ${token}` },
