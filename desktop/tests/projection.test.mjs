@@ -27,6 +27,6 @@ test('Electron 入口限制 IPC 与危险授权',()=>{
 })
 test('桌面九类入口已连接实际后台请求',()=>{
   const app=readFileSync(resolve(import.meta.dirname,'../src/App.tsx'),'utf8')
-  for(const method of ['sessions.open','sessions.send','sessions.interrupt','permissions.decide','missions.create','agents.setMode','models.list','workspace.list','workspace.read','workspace.gitStatus'])
+  for(const method of ['sessions.open','sessions.send','sessions.interrupt','permissions.decide','missions.create','agents.setMode','models.list','workspace.list','workspace.read','workspace.gitStatus','missions.jobs.runBatch','missions.jobs.approve'])
     assert.ok(app.includes(method),'缺少 '+method)
 })
