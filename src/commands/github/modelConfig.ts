@@ -178,3 +178,39 @@ export async function configureGithubWizardModel(
   }
   return configureGithubModel(repo, selected.id, explicitConsent)
 }
+
+/** 原版安装向导的既有 Secret 复用路径：只验证名称与模型变量，不读取密钥值。 */
+export async function verifyGithubExistingActionsModel(rawRepo: string): Promise<string> {
+  const repo = validRepository(rawRepo)
+  await gh(['auth', 'status', '-h', 'github.com'])
+  async function names(args: string[]): Promise<Array<{name: string; value?: string}>> {
+    const response = await execFileNoThrow('gh', args, {
+      timeout: 30000, useCwd: true, preserveOutputOnError: true,
+    })
+    if (response.code !== 0) {
+      throw new Error('无法读取仓库的 Actions 配置，请检查管理员权限：' +
+        (response.stderr || response.error || 'GitHub CLI 返回失败').slice(0,500))
+    }
+    const data: unknown = JSON.parse(response.stdout)
+    if (!Array.isArray(data) || !data.every(x => x && typeof x === 'object' &&
+      typeof (x as {name?: unknown}).name === 'string')) {
+      throw new Error('仓库 Actions 设置格式异常')
+    }
+    return data as Array<{name: string; value?: string}>
+  }
+  const [secrets, variables] = await Promise.all([
+    names(['secret', 'list', '--app', 'actions', '--repo', repo, '--json', 'name']),
+    names(['variable', 'list', '--repo', repo, '--json', 'name,value']),
+  ])
+  if (!secrets.some(secret => secret.name === 'YAOYAOCHE_MODEL_API_KEY')) {
+    throw new Error('仓库尚未配置 YAOYAOCHE_MODEL_API_KEY Secret，请选择新密钥或已有本机模型')
+  }
+  const values = new Map(variables.map(item => [item.name, item.value]))
+  const provider = values.get('YAOYAOCHE_MODEL_PROVIDER')
+  const model = values.get('YAOYAOCHE_MODEL_NAME')
+  if (!provider || !['openai-compatible','openai-responses','anthropic'].includes(provider) ||
+      !model?.trim()) {
+    throw new Error('仓库 Actions 模型变量不完整：需要 YAOYAOCHE_MODEL_PROVIDER 与 YAOYAOCHE_MODEL_NAME')
+  }
+  return `已验证仓库现有 Actions 模型配置：${provider} / ${model}（保留既有密钥）`
+}
