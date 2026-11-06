@@ -9,7 +9,8 @@ import { createDesktopTaskJournal } from '../src/services/desktop/taskJournal.js
 import { createMission, selectMission } from '../src/utils/agentMissions.js'
 import { getConfiguredAgentMode, setAgentMode } from '../src/utils/agentMode.js'
 import { DesktopRequestSchema } from '../src/services/desktop/protocol.js'
-import { projectTask, isAgentProgress } from '../src/services/desktop/taskProjection.js'
+import { projectTask, projectBackgroundTasks, isAgentProgress } from '../src/services/desktop/taskProjection.js'
+import { SDKMessageSchema } from '../src/entrypoints/sdk/coreSchemas.js'
 import type { SDKMessage } from '../src/entrypoints/sdk/coreTypes.js'
 import type { SDKSessionInfo } from '../src/entrypoints/sdk/coreTypes.js'
 import type { DesktopEvent, DesktopRequest } from '../src/services/desktop/protocol.js'
@@ -462,14 +463,20 @@ test('SDK 2.1.317 task_updated patch merges and cannot regress terminal tasks', 
   expect(first?.status).toBe('running')
   const patch = {
     type: 'system', subtype: 'task_updated', task_id: 'task-1',
-    patch: { status: 'completed', summary: 'Analysis complete' },
+    run_id: 'run-1',
+    patch: {
+      status: 'completed', summary: 'Analysis complete',
+      is_backgrounded: true, end_time: 120, total_paused_ms: 10,
+    },
     uuid: randomUUID(), session_id: id,
   } as unknown as SDKMessage
+  expect(SDKMessageSchema().safeParse(patch).success).toBe(true)
   expect(isAgentProgress(patch)).toBe(true)
   const finished = projectTask(patch, first, 110)
   expect(finished).toMatchObject({
     taskId: 'task-1', status: 'completed',
     description: 'Background analysis', summary: 'Analysis complete',
+    runId: 'run-1', isBackgrounded: true, endTime: 120, totalPausedMs: 10,
   })
   const late = projectTask(started, finished, 120)
   expect(late?.status).toBe('completed')
@@ -483,6 +490,7 @@ test('SDK 2.1.317 task_updated patch merges and cannot regress terminal tasks', 
     type: 'system', subtype: 'background_tasks_changed', tasks: [],
     uuid: randomUUID(), session_id: id,
   } as unknown as SDKMessage
+  expect(SDKMessageSchema().safeParse(background).success).toBe(true)
   expect(isAgentProgress(background)).toBe(true)
   expect(projectTask(background, finished)).toBeUndefined()
 })
@@ -567,4 +575,38 @@ test('host control requests stay scoped to their session and require explicit re
   } finally {
     await gateway.close()
   }
+})
+
+test('background_tasks_changed reconciles active work without inventing completion', () => {
+  const session = randomUUID()
+  const existing = new Map<string, DesktopTask>([
+    ['agent-1', {
+      taskId: 'agent-1', description: 'Prior task',
+      status: 'running', updatedAt: 10, isBackgrounded: true,
+    }],
+    ['agent-done', {
+      taskId: 'agent-done', description: 'Completed task',
+      status: 'completed', updatedAt: 10, isBackgrounded: true,
+    }],
+  ])
+  const snapshot = {
+    type: 'system', subtype: 'background_tasks_changed',
+    tasks: [
+      { task_id: 'agent-2', task_type: 'local_agent', status: 'running' },
+      { task_id: 'agent-done', status: 'running' },
+    ],
+    session_id: session, uuid: randomUUID(),
+  } as SDKMessage
+  expect(SDKMessageSchema().safeParse(snapshot).success).toBe(true)
+  const updates = projectBackgroundTasks(snapshot, existing, 200)
+  expect(updates).toHaveLength(3)
+  expect(updates.find(x => x.taskId === 'agent-2')).toMatchObject({
+    status: 'running', taskType: 'local_agent', isBackgrounded: true,
+  })
+  expect(updates.find(x => x.taskId === 'agent-done')).toMatchObject({
+    status: 'completed', isBackgrounded: true,
+  })
+  expect(updates.find(x => x.taskId === 'agent-1')).toMatchObject({
+    status: 'running', isBackgrounded: false,
+  })
 })
