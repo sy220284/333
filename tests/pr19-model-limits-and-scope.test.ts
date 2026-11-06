@@ -18,3 +18,16 @@ test('M3.1 Flash can use more than 4096 output tokens without a manual profile',
   assert.ok(limits.default >= 12000)
   assert.ok(limits.upperLimit >= 12000)
 })
+
+import { getStrictCommandScopeError } from '../src/utils/permissions/strictCommandScope.ts'
+test('strict command scope cannot be widened by a classifier or an alternate tool', () => {
+  const command = 'node --test check.mjs'
+  assert.equal(getStrictCommandScopeError('Bash', { command }, command), undefined)
+  assert.match(getStrictCommandScopeError('Bash', { command: 'node -e "probe()"' }, command)!, /拒绝/)
+  assert.match(getStrictCommandScopeError('Bash', { command: command + ' && node -e "probe()"' }, command)!, /拒绝/)
+  assert.match(getStrictCommandScopeError('PowerShell', { command }, command)!, /拒绝/)
+  assert.match(getStrictCommandScopeError('Agent', {}, command)!, /拒绝/)
+  assert.match(getStrictCommandScopeError('mcp__shell__execute', { command }, command)!, /拒绝/)
+  assert.equal(getStrictCommandScopeError('Read', {}, command), undefined)
+  assert.equal(getStrictCommandScopeError('Bash', { command: 'node -e' }, undefined), undefined)
+})
