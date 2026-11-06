@@ -103,7 +103,7 @@ describe('可选本地语音转写', () => {
       const connection = await connectVoiceStream({
         onReady: () => {},
         onTranscript: text => received.push(text),
-        onError: error => { throw new Error('unexpected voice error: ' + error) },
+        onError: error => { throw new Error(`unexpected voice error: ${error}`) },
         onClose: () => { closed++ },
       })
       expect(connection).not.toBeNull()
