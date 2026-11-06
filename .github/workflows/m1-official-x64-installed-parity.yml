@@ -24,7 +24,7 @@ concurrency:
   # Every source revision must finish its own reference parity run. Concurrent
   # PR pushes previously cancelled fully-built CLI tests before acceptance.
   group: official-x64-installed-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   installed-reference:

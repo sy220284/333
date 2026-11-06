@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 concurrency:
   # 保留正在执行的完整验收，合并后续提交的待执行检查。
-  group: rebuild-${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   typecheck-contract:

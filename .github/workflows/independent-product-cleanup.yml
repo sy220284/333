@@ -22,6 +22,10 @@ on:
       - 'tests/github-generic-review.test.mjs'
       - '.github/workflows/independent-product-cleanup.yml'
   workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   independent-product:
     name: 333 独立化功能与统一入口校验

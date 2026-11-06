@@ -28,8 +28,8 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: type-migration-${{ github.sha }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   strict:
     name: 完整类型检查与迁移模块严格编译

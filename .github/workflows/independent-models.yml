@@ -22,7 +22,7 @@ permissions:
   contents: read
 concurrency:
   group: independent-models-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   protocol:
     name: 模型协议、流式工具及账号目录模拟验证

@@ -31,6 +31,19 @@ for (const name of workflows) {
     errors.push('旧升级分支依赖：' + name)
   }
 }
+// Keep only the latest PR checks running. A lock synchronization that writes
+// repository files is permitted to finish its transaction without cancellation.
+for (const name of workflows) {
+  if (name === 'm1-public-lock-sync.yml') continue
+  const source = yaml(name)
+  if (!/^  pull_request:/m.test(source)) continue
+  if (!/^  cancel-in-progress: (true|\$\{\{ github\.event_name == 'pull_request' \}\})$/m.test(source)) {
+    errors.push('PR 检查没有取消过期运行：' + name)
+  }
+  if (/^  group:.*(?:github\.sha|pull_request\.head\.sha)/m.test(source)) {
+    errors.push('并发分组仍绑定提交 SHA：' + name)
+  }
+}
 for (const name of ['sdk-stream-parity.yml','m1-spinner-parity.yml']) {
   if (yaml(name).includes('git diff-tree --root')) errors.push('仅最后提交判断造成空跑：' + name)
   if (yaml(name).includes('/2.1.310/')) errors.push('旧版对照基准：' + name)

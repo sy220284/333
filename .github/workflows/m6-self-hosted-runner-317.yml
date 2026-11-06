@@ -17,9 +17,9 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: m6-runner-317-${{ github.sha }}
-  # Each source revision retains a full reproducible Runner acceptance result.
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   runner-core:
     runs-on: ubuntu-24.04

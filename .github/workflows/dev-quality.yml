@@ -29,9 +29,8 @@ permissions:
   contents: read
 
 concurrency:
-  # Preserve all three OS results for every source revision.
   group: dev-quality-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   quality:
