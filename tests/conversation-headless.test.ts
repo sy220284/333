@@ -1,5 +1,7 @@
 import { test, expect } from 'bun:test'
 import { createConversationMessageStore } from '../src/services/conversation/messageStore.js'
+import { createConversationAppStateStore } from '../src/services/conversation/appStateStore.js'
+import { createHeadlessConversationSession } from '../src/services/conversation/headlessSession.js'
 import { createConversationTurnRuntime } from '../src/services/conversation/turnRuntime.js'
 import { createSdkPermissionBroker } from '../src/services/conversation/permissionBroker.js'
 
@@ -61,4 +63,60 @@ test('SDK permission broker denies pending requests on abort/close', async () =>
   broker.close()
   expect((await pending).behavior).toBe('deny')
   expect(broker.getPending()).toEqual([])
+})
+
+test('headless application state emits changes without a React provider', () => {
+  type State = Parameters<typeof createConversationAppStateStore>[0]
+  const initial = { toolPermissionContext: { mode: 'default' }, mainLoopModel: null } as State
+  let changed = 0
+  const store = createConversationAppStateStore(initial, () => changed++)
+  store.setState(prev => ({ ...prev, mainLoopModel: 'test' }))
+  expect(store.getState().mainLoopModel).toBe('test')
+  expect(changed).toBe(1)
+})
+
+test('headless SDK session streams, synchronizes state and enforces permission decisions', async () => {
+  let canUseTool!: (tool: string, input: Record<string, unknown>, options: { signal: AbortSignal }) => Promise<unknown>
+  const launch = ((options: { canUseTool: typeof canUseTool }) => {
+    canUseTool = options.canUseTool
+    return {
+      sessionId: 'test-session',
+      initialization: Promise.resolve({}),
+      send: async (_message: string) => {},
+      stream: async function* () {
+        yield { type: 'assistant', text: 'ok' }
+        yield { type: 'result', subtype: 'success' }
+      },
+      control: async (_request: unknown) => ({}),
+      close: () => {},
+      closeAndWait: async () => {},
+    }
+  }) as unknown as typeof import('../src/entrypoints/sdk/sessionRuntime317.js').createSessionRuntime317
+  const session = createHeadlessConversationSession({ model: 'test' }, undefined, launch)
+  expect(typeof canUseTool).toBe('function')
+  await session.send('hello')
+  const events = []
+  for await (const item of session.stream()) events.push(item.type)
+  expect(events).toEqual(['assistant', 'result'])
+  expect(session.messages.getSnapshot().length).toBe(2)
+  expect(session.state.getState().phase).toBe('completed')
+  const decision = canUseTool('Bash', {}, { signal: new AbortController().signal })
+  const [request] = session.permissions.getPending()
+  expect(request.toolName).toBe('Bash')
+  session.permissions.settle(request.id, { behavior: 'deny', message: 'User declined' })
+  expect((await decision as { behavior: string }).behavior).toBe('deny')
+  await session.closeAndWait()
+  expect(session.state.getState().phase).toBe('closed')
+})
+
+test('consumer errors close the underlying headless turn generator', async () => {
+  let finalized = false
+  async function* execute() {
+    try { yield 'first'; yield 'second' }
+    finally { finalized = true }
+  }
+  const runtime = createConversationTurnRuntime(execute)
+  await expect(runtime.run(undefined, () => { throw Error('consumer failed') })).rejects.toThrow('consumer failed')
+  expect(finalized).toBe(true)
+  expect(runtime.getSnapshot().phase).toBe('failed')
 })

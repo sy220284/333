@@ -30,13 +30,21 @@ export function createConversationTurnRuntime<Params, Event, Result>(
     transition('running')
     try {
       const stream = execute(params)
-      while (true) {
-        const step = await stream.next()
-        if (step.done) {
-          transition(controller.signal.aborted ? 'cancelled' : 'completed')
-          return step.value
+      let exhausted = false
+      try {
+        while (true) {
+          const step = await stream.next()
+          if (step.done) {
+            exhausted = true
+            transition(controller.signal.aborted ? 'cancelled' : 'completed')
+            return step.value
+          }
+          onEvent(step.value as Event)
         }
-        onEvent(step.value as Event)
+      } finally {
+        // Match for-await semantics: consumer errors must close the query
+        // generator to release its tool/stream resources.
+        if (!exhausted) await stream.return(undefined as Result)
       }
     } catch (error) {
       transition(controller.signal.aborted ? 'cancelled' : 'failed',
