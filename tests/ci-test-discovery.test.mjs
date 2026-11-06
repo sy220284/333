@@ -56,7 +56,7 @@ test('ChatGPT 账号测试在全量回归与专项门禁中统一隔离执行', 
       `${suite} must use a separate Bun process`)
   }
   const workflow = readFileSync(new URL('../.github/workflows/independent-models.yml', import.meta.url), 'utf8')
-  assert.match(workflow, /run: npm run test:multimodel/)
+  assert.match(workflowRunCommands(workflow), /npm run test:multimodel/)
 })
 
 test('官方二进制对照只在专用任务执行，补充测试可排除重复', () => {
