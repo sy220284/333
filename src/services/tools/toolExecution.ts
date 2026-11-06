@@ -84,6 +84,7 @@ import {
   stopSessionActivity,
 } from '../../utils/sessionActivity.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
+import { countRecentPermissionDenials, permissionDenialLoopGuidance } from './permissionDenialLoop.js'
 import { Stream } from '../../utils/stream.js'
 import { logOTelEvent } from '../../utils/telemetry/events.js'
 import {
@@ -1015,6 +1016,14 @@ async function checkPermissionsAndCallTool(
     if (shouldPreventContinuation && !errorMessage) {
       errorMessage = `Execution stopped by PreToolUse hook${stopReason ? `: ${stopReason}` : ''}`
     }
+    // The existing auto-mode denial counter only covers classifier decisions.
+    // Rule, hook and dontAsk refusals are also hard boundaries; detect an
+    // uninterrupted series from the transcript so retries across a session
+    // restore receive explicit stop guidance without altering permissions.
+    const repeatWarning = permissionDenialLoopGuidance(
+      countRecentPermissionDenials(toolUseContext.messages),
+    )
+    if (repeatWarning) errorMessage = [errorMessage, repeatWarning].filter(Boolean).join('\n')
 
     // Build top-level content: tool_result (text-only for is_error compatibility) + images alongside
     const messageContent: ContentBlockParam[] = [
