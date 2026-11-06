@@ -182,14 +182,18 @@ test('ChatGPT accepts the standard OpenAI models response without a visibility f
   assert.deepEqual(seen, ['https://api.openai.com/v1/models'])
 })
 
-test('removed Gemini and xAI/Grok providers cannot be selected or configured', () => {
+test('retired Gemini, xAI/Grok and OpenRouter providers cannot be selected or configured', () => {
   assert.deepEqual(Object.keys(PROVIDERS).sort(), [
-    'chatgpt', 'deepseek', 'kimi', 'minimax', 'openai', 'openrouter', 'qwen', 'zhipu',
+    'chatgpt', 'deepseek', 'kimi', 'minimax', 'openai', 'qwen', 'zhipu',
   ])
   assert.equal(resolveIndependentModel('gemini/gemini-3.8-flash'), null)
   assert.equal(resolveIndependentModel('xai/grok-4'), null)
   assert.throws(() => validateApiKeyProvider('gemini'))
   assert.throws(() => validateApiKeyProvider('xai'))
+  assert.throws(() => validateApiKeyProvider('openrouter'))
+  assert.equal(resolveIndependentModel('openrouter/deepseek/deepseek-chat'), null)
+  assert.equal(resolveIndependentModel('openrouter/anthropic/claude-opus-5-5'), null)
+  assert.equal(resolveIndependentModel('openrouter/google/gemma-3'), null)
   assert.equal(resolveIndependentModel('deepseek/deepseek-chat')?.protocol, 'chat-completions')
   assert.equal(resolveIndependentModel('openai/gpt-6.1-sol')?.protocol, 'responses')
 })
@@ -208,9 +212,11 @@ test('DeepSeek reasoning effort, thinking mode and previous reasoning are retain
   assert.equal(payload.messages[1].content, '', 'DeepSeek tool-only turns require non-null assistant content')
   assert.equal(payload.stream_options.include_usage, true)
 })
-test('Qwen and OpenRouter model-specific thinking controls are mapped without changing prompts', () => {
-  assert.equal(toChatCompletions({ ...body, thinking: { type: 'disabled' } }, 'qwen3.8-max', 'qwen').enable_thinking, false)
-  assert.equal(toChatCompletions({ ...body, output_config: { effort: 'high' } }, 'qwen3.8-max', 'openrouter').reasoning.effort, 'high')
+test('Qwen official thinking controls preserve the prompt and chosen model', () => {
+  const result = toChatCompletions({ ...body, thinking: { type: 'disabled' } }, 'qwen3.8-max', 'qwen')
+  assert.equal(result.enable_thinking, false)
+  assert.equal(result.model, 'qwen3.8-max')
+  assert.equal(result.messages[0].content, 'Keep the exact original prompt.')
 })
 test('Chat completions streaming retains reasoning blocks and reasoning token usage', async () => {
   const route = requireRoute('deepseek/deepseek-v4-pro')
@@ -456,77 +462,4 @@ test('MiniMax M3.1 uses reasoning split and completion budget; M3 uses adaptive 
   const m3 = toChatCompletions({ ...body, thinking: { type: 'disabled' } }, 'MiniMax-M3', 'minimax')
   assert.deepEqual(m3.thinking, { type: 'disabled' })
   assert.equal(m3.reasoning_split, true)
-})
-test('OpenRouter passes reasoning controls and requests visible reasoning details', () => {
-  const enabled = toChatCompletions({ ...body, output_config: { effort: 'high' } },
-    'deepseek/deepseek-v4-pro', 'openrouter')
-  assert.deepEqual(enabled.reasoning, { effort: 'high' })
-  assert.equal(enabled.include_reasoning, true)
-  const disabled = toChatCompletions({ ...body, thinking: { type: 'disabled' } },
-    'deepseek/deepseek-v4-pro', 'openrouter')
-  assert.deepEqual(disabled.reasoning, { effort: 'none' })
-  assert.equal(disabled.include_reasoning, undefined)
-})
-
-
-test('OpenRouter non-stream tool turns preserve signed and encrypted reasoning_details', async () => {
-  const route = requireRoute('openrouter/openai/gpt-6.1-sol')
-  const details = [{ type: 'reasoning.encrypted', index: 0, format: 'openai-responses-v1',
-    data: 'encrypted-opaque', id: 'reasoning-1' }]
-  const backend = async () => Response.json({ id: 'chat_test', usage: {
-    prompt_tokens: 12, completion_tokens: 7 }, choices: [{
-    finish_reason: 'tool_calls', message: { role: 'assistant', content: null,
-      reasoning_details: details, tool_calls: [{
-        id: 'call_1', type: 'function', function: { name: 'Read', arguments: '{"file_path":"/a"}' },
-      }] },
-  }] })
-  const response = await makeIndependentFetch(route, 'test-key', backend as typeof fetch)(
-    new Request('https://333-model-bridge.invalid/v1/messages', { method: 'POST',
-      body: JSON.stringify({ ...body, model: 'openrouter/openai/gpt-6.1-sol', stream: false }) }))
-  const modelReply = await response.json()
-  const opaque = modelReply.content.find((part: { type: string }) => part.type === 'redacted_thinking')
-  assert.ok(opaque)
-  const signature = opaque.data.split(':openrouter:')[0]
-  const followup = toChatCompletions({ ...body, messages: [
-    { role: 'assistant', content: modelReply.content },
-    { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'call_1', content: 'ok' }] },
-  ] }, 'openai/gpt-6.1-sol', 'openrouter', signature)
-  const followupAssistant = followup.messages.find((message: { role?: string }) => message.role === 'assistant')
-  const followupTool = followup.messages.find((message: { role?: string }) => message.role === 'tool')
-  assert.deepEqual(followupAssistant?.reasoning_details, details)
-  assert.equal(followupAssistant?.tool_calls[0].id, 'call_1')
-  assert.equal(followupTool?.tool_call_id, 'call_1')
-  const wrongAccount = toChatCompletions({ ...body, messages: [
-    { role: 'assistant', content: modelReply.content },
-  ] }, 'openai/gpt-6.1-sol', 'openrouter', '333-replay:someone-else')
-  assert.equal(wrongAccount.messages.find((message: { role?: string }) =>
-    message.role === 'assistant')?.reasoning_details, undefined)
-})
-test('OpenRouter streamed reasoning fragments merge before being replayed', async () => {
-  const route = requireRoute('openrouter/openai/gpt-6.1-sol')
-  const backend = async () => stream(
-    { choices: [{ delta: { reasoning_details: [
-      { type: 'reasoning.text', index: 0, id: 'r1', text: 'first' },
-    ] } }] },
-    { choices: [{ delta: { reasoning_details: [
-      { type: 'reasoning.text', index: 0, text: ' second', signature: 'signed' },
-    ] } }] },
-    { choices: [{ delta: { tool_calls: [
-      { index: 0, id: 'call_8', function: { name: 'Read', arguments: '{"file_path":"/a"}' } },
-    ] }, finish_reason: 'tool_calls' }] },
-    { choices: [{ delta: {}, finish_reason: 'tool_calls' }],
-      usage: { prompt_tokens: 20, completion_tokens: 12 } },
-  )
-  const response = await makeIndependentFetch(route, 'secret', backend as typeof fetch)(
-    new Request('https://333-model-bridge.invalid/v1/messages', { method: 'POST',
-      body: JSON.stringify({ ...body, model: 'openrouter/openai/gpt-6.1-sol', stream: true }) }))
-  const events = messages(await response.text())
-  const block = events.find(e => e.type === 'content_block_start' &&
-    e.content_block?.type === 'redacted_thinking')
-  assert.ok(block)
-  const detail = JSON.parse(block.content_block.data.split(':openrouter:')[1])
-  assert.equal(detail[0].text, 'first second')
-  assert.equal(detail[0].signature, 'signed')
-  assert.equal(events.some(e => e.type === 'content_block_start' && e.content_block?.name === 'Read'), true)
-  assert.equal(events.find(e => e.type === 'message_delta').usage.input_tokens, 20)
 })
