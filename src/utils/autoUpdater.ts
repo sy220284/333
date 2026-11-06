@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getIndependentReleaseBaseUrl } from './releaseSource.js'
 import { constants as fsConstants } from 'fs'
 import { access, writeFile } from 'fs/promises'
 import { homedir } from 'os'
@@ -27,8 +28,7 @@ import {
 } from './shellConfig.js'
 import { jsonParse } from './slowOperations.js'
 
-const GCS_BUCKET_URL =
-  'https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases'
+
 
 class AutoUpdaterError extends ClaudeError {}
 
@@ -83,11 +83,11 @@ export async function assertMinVersion(): Promise<void> {
     ) {
       // biome-ignore lint/suspicious/noConsole:: intentional console output
       console.error(`
-It looks like your version of Claude Code (${MACRO.VERSION}) needs an update.
+It looks like your version of 333 (${MACRO.VERSION}) needs an update.
 A newer version (${versionConfig.minVersion} or higher) is required to continue.
 
 To update, please run:
-    claude update
+    333 update
 
 This will ensure you have access to the latest features and improvements.
 `)
@@ -385,7 +385,7 @@ export async function getLatestVersionFromGcs(
   channel: ReleaseChannel,
 ): Promise<string | null> {
   try {
-    const response = await axios.get(`${GCS_BUCKET_URL}/${channel}`, {
+    const response = await axios.get(`${getIndependentReleaseBaseUrl()}/${channel}`, {
       timeout: 5000,
       responseType: 'text',
     })

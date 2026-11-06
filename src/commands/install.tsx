@@ -113,7 +113,7 @@ function Install({
 
         // Check specifically for lock failure
         if (result.lockFailed) {
-          throw new Error('Could not install - another process is currently installing Claude. Please try again in a moment.');
+          throw new Error('Could not install - another process is currently installing 333. Please try again in a moment.');
         }
 
         // If we couldn't get the version, there might be an issue
@@ -210,7 +210,7 @@ function Install({
   useEffect(() => {
     if (state.type === 'success') {
       // Give success message time to render before exiting
-      setTimeout(onDone, 2000, 'Claude Code installation completed successfully', {
+      setTimeout(onDone, 2000, '333 安装已完成', {
         display: 'system' as const
       });
     } else if (state.type === 'error') {

@@ -1,13 +1,14 @@
 /**
  * Download functionality for native installer
  *
- * Handles downloading Claude binaries from various sources:
+ * Handles downloading 333 native packages from approved sources:
  * - Artifactory NPM packages
  * - GCS bucket
  */
 
 import { feature } from 'bun:bundle'
 import axios from 'axios'
+import { getIndependentReleaseBaseUrl } from '../releaseSource.js'
 import { createHash } from 'crypto'
 import { chmod, writeFile } from 'fs/promises'
 import { join } from 'path'
@@ -22,8 +23,7 @@ import { sleep } from '../sleep.js'
 import { jsonStringify, writeFileSync_DEPRECATED } from '../slowOperations.js'
 import { getBinaryName, getPlatform } from './installer.js'
 
-const GCS_BUCKET_URL =
-  'https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases'
+
 export const ARTIFACTORY_REGISTRY_URL =
   'https://artifactory.infra.ant.dev/artifactory/api/npm/npm-all/'
 
@@ -145,7 +145,7 @@ export async function getLatestVersion(
   }
 
   // Use GCS for external users
-  return getLatestVersionFromBinaryRepo(channel, GCS_BUCKET_URL)
+  return getLatestVersionFromBinaryRepo(channel, getIndependentReleaseBaseUrl())
 }
 
 export async function downloadVersionFromArtifactory(
@@ -513,7 +513,7 @@ export async function downloadVersion(
   }
 
   // Use GCS for external users
-  await downloadVersionFromBinaryRepo(version, stagingPath, GCS_BUCKET_URL)
+  await downloadVersionFromBinaryRepo(version, stagingPath, getIndependentReleaseBaseUrl())
   return 'binary'
 }
 

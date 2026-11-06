@@ -120,45 +120,45 @@ export async function update() : Promise<void> {
     writeToStdout('\n')
 
     if (packageManager === 'homebrew') {
-      writeToStdout('Claude is managed by Homebrew.\n')
+      writeToStdout('333 is managed by Homebrew.\n')
       const latest = await getLatestVersion(channel)
       if (latest && !gte(MACRO.VERSION, latest)) {
         writeToStdout(`Update available: ${MACRO.VERSION} → ${latest}\n`)
         writeToStdout('\n')
         writeToStdout('To update, run:\n')
-        writeToStdout(chalk.bold('  brew upgrade claude-code') + '\n')
+        writeToStdout(chalk.bold('  请通过原安装渠道升级 333') + '\n')
       } else {
-        writeToStdout('Claude is up to date!\n')
+        writeToStdout('333 已是最新版本!\n')
       }
     } else if (packageManager === 'winget') {
-      writeToStdout('Claude is managed by winget.\n')
+      writeToStdout('333 is managed by winget.\n')
       const latest = await getLatestVersion(channel)
       if (latest && !gte(MACRO.VERSION, latest)) {
         writeToStdout(`Update available: ${MACRO.VERSION} → ${latest}\n`)
         writeToStdout('\n')
         writeToStdout('To update, run:\n')
         writeToStdout(
-          chalk.bold('  winget upgrade Anthropic.ClaudeCode') + '\n',
+          chalk.bold('  请通过原安装渠道升级 333') + '\n',
         )
       } else {
-        writeToStdout('Claude is up to date!\n')
+        writeToStdout('333 已是最新版本!\n')
       }
     } else if (packageManager === 'apk') {
-      writeToStdout('Claude is managed by apk.\n')
+      writeToStdout('333 is managed by apk.\n')
       const latest = await getLatestVersion(channel)
       if (latest && !gte(MACRO.VERSION, latest)) {
         writeToStdout(`Update available: ${MACRO.VERSION} → ${latest}\n`)
         writeToStdout('\n')
         writeToStdout('To update, run:\n')
-        writeToStdout(chalk.bold('  apk upgrade claude-code') + '\n')
+        writeToStdout(chalk.bold('  请通过原安装渠道升级 333') + '\n')
       } else {
-        writeToStdout('Claude is up to date!\n')
+        writeToStdout('333 已是最新版本!\n')
       }
     } else {
       // pacman, deb, and rpm don't get specific commands because they each have
       // multiple frontends (pacman: yay/paru/makepkg, deb: apt/apt-get/aptitude/nala,
       // rpm: dnf/yum/zypper)
-      writeToStdout('Claude is managed by a package manager.\n')
+      writeToStdout('333 is managed by a package manager.\n')
       writeToStdout('Please use your package manager to update.\n')
     }
 
@@ -225,7 +225,7 @@ export async function update() : Promise<void> {
           : ''
         writeToStdout(
           chalk.yellow(
-            `Another Claude process${pidInfo} is currently running. Please try again in a moment.`,
+            `Another 333 process${pidInfo} is currently running. Please try again in a moment.`,
           ) + '\n',
         )
         await gracefulShutdown(0)
@@ -238,7 +238,7 @@ export async function update() : Promise<void> {
 
       if (result.latestVersion === MACRO.VERSION) {
         writeToStdout(
-          chalk.green(`Claude Code is up to date (${MACRO.VERSION})`) + '\n',
+          chalk.green(`333 已是最新版本 (${MACRO.VERSION})`) + '\n',
         )
       } else {
         writeToStdout(
@@ -252,7 +252,7 @@ export async function update() : Promise<void> {
     } catch (error) {
       process.stderr.write('Error: Failed to install native update\n')
       process.stderr.write(String(error) + '\n')
-      process.stderr.write('Try running "claude doctor" for diagnostics\n')
+      process.stderr.write('Try running "333 doctor" for diagnostics\n')
       await gracefulShutdown(1)
     }
   }
@@ -308,7 +308,7 @@ export async function update() : Promise<void> {
   // Check if versions match exactly, including any build metadata (like SHA)
   if (latestVersion === MACRO.VERSION) {
     writeToStdout(
-      chalk.green(`Claude Code is up to date (${MACRO.VERSION})`) + '\n',
+      chalk.green(`333 已是最新版本 (${MACRO.VERSION})`) + '\n',
     )
     await gracefulShutdown(0)
   }
@@ -391,7 +391,7 @@ export async function update() : Promise<void> {
       } else {
         process.stderr.write('Try running with sudo or fix npm permissions\n')
         process.stderr.write(
-          'Or consider using native installation with: claude install\n',
+          'Or consider using native installation with: 333 install\n',
         )
       }
       await gracefulShutdown(1)
@@ -405,7 +405,7 @@ export async function update() : Promise<void> {
         )
       } else {
         process.stderr.write(
-          'Or consider using native installation with: claude install\n',
+          'Or consider using native installation with: 333 install\n',
         )
       }
       await gracefulShutdown(1)
