@@ -39,6 +39,6 @@ function verify(args, expected) {
   if (result.status !== 0) throw Error('Standalone CLI ' + args.join(' ') + ': ' + result.stderr)
   if (!expected(result.stdout)) throw Error('Standalone CLI response mismatch: ' + args.join(' ') + '\n' + result.stdout)
 }
-verify(['--version'], stdout => stdout.trim() === version + ' (Claude Code)')
+verify(['--version'], stdout => stdout.trim() === version + ' (333)')
 verify(['--help'], stdout => stdout.includes('Usage:') && stdout.includes('--print'))
 console.log('Verified independent ' + process.platform + ' binary: ' + executable)
