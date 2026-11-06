@@ -12,8 +12,9 @@ function asError(status: number, message: string, upstream?: Headers, credential
     const value = upstream?.get(key)
     if (value != null && (!credential || !value.includes(credential))) headers.set(key, value)
   }
-  if (!headers.has('request-id') && headers.has('x-request-id')) {
-    headers.set('request-id', headers.get('x-request-id')!)
+  const upstreamRequestId = headers.get('x-request-id')
+  if (!headers.has('request-id') && upstreamRequestId) {
+    headers.set('request-id', upstreamRequestId)
   }
   const type = status === 400 ? 'invalid_request_error'
     : status === 401 || status === 403 ? 'authentication_error'
@@ -88,7 +89,7 @@ class AnthropicEvents {
     this.stopBlock()
     const index = this.index++
     this.emit({ type: 'content_block_start', index, content_block: {
-      type: 'redacted_thinking', data: this.replaySignature + ':' + JSON.stringify(item),
+      type: 'redacted_thinking', data: `${this.replaySignature}:${JSON.stringify(item)}`,
     } })
     this.emit({ type: 'content_block_stop', index })
   }
@@ -287,7 +288,7 @@ function materializeResponse(body: ObjectValue, route: ProviderRoute, signature:
         }
       }
       if (item.type === 'reasoning' && typeof item.encrypted_content === 'string') {
-        content.push({ type: 'redacted_thinking', data: signature + ':' + JSON.stringify(item) })
+        content.push({ type: 'redacted_thinking', data: `${signature}:${JSON.stringify(item)}` })
       }
       if (item.type === 'function_call' && !reason) content.push({
         type: 'tool_use', id: item.call_id, name: item.name, input: JSON.parse(item.arguments || '{}'),
@@ -346,8 +347,8 @@ export function makeIndependentFetch(
       if (body.output_config) delete body.output_config.effort
     }
     const qualifiedModel = `${route.provider}/${route.model}`
-    const signature = '333-replay:' + createHash('sha256')
-      .update(JSON.stringify([qualifiedModel, route.endpoint, accountIdentity])).digest('hex')
+    const signature = `333-replay:${createHash('sha256')
+      .update(JSON.stringify([qualifiedModel, route.endpoint, accountIdentity])).digest('hex')}`
     const payload = route.protocol === 'responses'
       ? toResponses(body, route.model, signature)
       : toChatCompletions(body, route.model, route.provider, signature)
