@@ -25,7 +25,7 @@ import type {
   SdkPluginConfig,
   ThinkingConfig,
 } from './coreTypes.js'
-import type { SDKHookCallbackMatcher, SDKHookCallbackRequest } from './controlTypes.js'
+import type { SDKHookCallbackMatcher, SDKHookCallbackRequest, SDKHostControlRequest } from './controlTypes.js'
 
 /** Exactly the Zod object shape accepted by the SDK tool() factory. */
 export type AnyZodRawShape = Record<string, z.ZodType>
@@ -87,6 +87,11 @@ export type CanUseTool = (
   options: SDKPermissionContext,
 ) => Promise<PermissionResult>
 
+export type HostControlRequestHandler = (
+  request: SDKHostControlRequest,
+  options: { signal: AbortSignal; requestId: string },
+) => Promise<Record<string, unknown>>
+
 export type HookCallback = (
   input: SDKHookCallbackRequest['input'],
   toolUseID: string | undefined,
@@ -126,6 +131,7 @@ export type Options = {
   allowDangerouslySkipPermissions?: boolean
   permissionPromptToolName?: string
   canUseTool?: CanUseTool
+  onControlRequest?: HostControlRequestHandler
   hooks?: HookCallbacks
   mcpServers?: Record<string, McpServerConfig>
   agents?: Record<string, AgentDefinition>
@@ -201,6 +207,7 @@ export type SDKSessionOptions = {
   allowedTools?: string[]
   disallowedTools?: string[]
   canUseTool?: CanUseTool
+  onControlRequest?: HostControlRequestHandler
   hooks?: HookCallbacks
   permissionMode?: PermissionMode
   cwd?: string
