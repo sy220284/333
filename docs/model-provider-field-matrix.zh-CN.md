@@ -1,6 +1,6 @@
 # 333 远程模型字段适配矩阵（2026-11-06）
 
-本文件记录 PR #19 对各供应商官方 API 文档的适配依据。实际可用模型由账号对应的 `/models` 接口发现，不使用固定模型名称清单冒充实时可用性。所有推理服务均通过远程 API，Claude 官方模型继续由 Anthropic SDK 原有链路支持。Gemini 与 xAI/Grok 已按产品要求整体退役，包括通过 OpenRouter 模型名称进行选择的场景。
+本文件记录 PR #19 对各供应商官方 API 文档的适配依据。实际可用模型由账号对应的 `/models` 接口发现，不使用固定模型名称清单冒充实时可用性。所有推理服务均通过远程 API，Claude 官方模型继续由 Anthropic SDK 原有链路支持。Gemini、xAI/Grok 和 OpenRouter 已按产品要求整体移除，历史配置及模型缓存会过滤这些入口。
 
 ## 请求字段与模型代际
 
@@ -13,7 +13,6 @@
 | Kimi（直供） | Chat Completions | K3/K2.8 使用 `reasoning_effort`；K2.6/K2.7 使用 `thinking` | K2.x 已开启思考时保留历史，配置 `keep:'all'` | K3.1 Moonshot 直供支持 `low/high/max`（默认 `max`）；K2.7 Code 省略 `thinking`/`reasoning_effort`；K3 系列不发送固定采样参数 |
 | 智谱 GLM | OpenAI 兼容 Chat | GLM-5.3 `thinking.type=enabled`；`reasoning_effort:low/high/max` | GLM-5.3 禁止关闭思考；GLM-5.1/5.2 的推理档位单独映射 | 默认模型功能以账号实际返回、能力探测和官方文档为准 |
 | MiniMax | Chat Completions | M3.1 `reasoning_effort:low/medium/high/xhigh/max` | M3.1 始终思考；M3 可使用 `thinking.type:adaptive/disabled` | M3.1 `reasoning_split:true`、`max_completion_tokens`；流式请求请求用量块 |
-| OpenRouter | Chat Completions | `reasoning:{effort}`，`include_reasoning:true` | 原样保存和回传签名/加密 `reasoning_details`，分块按索引合并 | 模型标识可含嵌套 `/`；选择列表执行 Gemini/Grok 移除策略 |
 
 ## 实现位置
 
@@ -36,8 +35,6 @@
 - Kimi 模型代际字段参考（腾讯云托管 API，需在直供 API 实测确认）： https://intl-sg.tencent-cloud.com/document/product/1300/80635
 - 智谱 GLM 5.3 字段参考（百炼托管，同样需直供验证）： https://www.alibabacloud.com/help/en/model-studio/glm-zhipu.md
 - MiniMax M3.1 字段参考（百炼托管；直供端点必须实测）： https://docs.bailian.console.aliyun.com/en/model-studio/minimax-api-by-minimax
-- OpenRouter 推理跨轮续接： https://github.com/OpenRouterTeam/docs/blob/main/guides/best-practices/reasoning-tokens.mdx
-- OpenRouter SSE 与用量： https://github.com/OpenRouterTeam/docs/blob/main/api_reference/streaming.mdx
 
 ## 验收门槛
 
