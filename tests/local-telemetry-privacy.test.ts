@@ -89,3 +89,23 @@ test('关闭遥测后本地事件和日志保持不变', async () => {
     delete process.env.DISABLE_TELEMETRY
   }
 })
+
+test('DO_NOT_TRACK 禁用本地收集，废弃详细追踪配置无法重新开启服务器上传', async () => {
+  const file = getLocalDiagnosticsFilePath()
+  await flushLocalDiagnostics()
+  const initial = readFileSync(file, 'utf8')
+  const { isBetaTracingEnabled } = await import('../src/utils/telemetry/betaSessionTracing.ts')
+  process.env.DO_NOT_TRACK = '1'
+  process.env.ENABLE_BETA_TRACING_DETAILED = '1'
+  process.env.BETA_TRACING_ENDPOINT = 'https://deprecated-collector.invalid'
+  try {
+    await logOTelEvent('must_not_be_logged_with_dnt', { duration_ms: '99' })
+    await flushLocalDiagnostics()
+    assert.equal(readFileSync(file, 'utf8'), initial)
+    assert.equal(isBetaTracingEnabled(), false)
+  } finally {
+    delete process.env.DO_NOT_TRACK
+    delete process.env.ENABLE_BETA_TRACING_DETAILED
+    delete process.env.BETA_TRACING_ENDPOINT
+  }
+})
