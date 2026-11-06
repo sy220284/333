@@ -20,6 +20,7 @@ export const SPECIALISTS = Object.freeze({
   ],
   'desktop-communication': [
     /^src\/services\/(desktop|conversation|agentCenter)\//,
+    /^src\/entrypoints\/sdk\//, /^desktop\//,
     /^src\/entrypoints\/desktopHost\.ts$/, /^tests\/(?:desktop-|conversation-headless|mission-jobs)/,
     /^docs\/desktop-protocol\.md$/,
   ],
@@ -97,6 +98,7 @@ export const SPECIALISTS = Object.freeze({
     /^tests\/(?:distribution-isolation|release-integrity|rebuild)/,
   ],
   'sdk-stream-parity': [
+    /^src\/entrypoints\/sdk\//,
     /^src\/(sdk|QueryEngine\.ts|services\/conversation\/headlessSession)/,
     /^tests\/.*(?:sdk|stream-json|stream-parity)/,
   ],
