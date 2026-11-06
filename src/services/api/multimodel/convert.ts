@@ -79,7 +79,7 @@ export function toResponses(body: AnthropicRequest, model: string, replaySignatu
           : textOf(block.content)
         input.push({ type: 'function_call_output', call_id: block.tool_use_id, output })
       } else if (block.type === 'redacted_thinking' && replaySignature &&
-          typeof block.data === 'string' && block.data.startsWith(replaySignature + ':')) {
+          typeof block.data === 'string' && block.data.startsWith(`${replaySignature}:`)) {
         const item = JSON.parse(block.data.slice(replaySignature.length + 1)) as JSONValue
         if (item.type !== 'reasoning' || typeof item.encrypted_content !== 'string') {
           throw new Error('Invalid Responses replay item')
