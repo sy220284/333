@@ -79,8 +79,9 @@ test('本地反馈导出要求显式描述，文件私密且不上传', () => {
 
 test('状态、规划、后台任务统一入口连接原运行时', () => {
   const status = source('src/commands/status/RuntimeStatusPanel.tsx')
-  for (const tab of ['overview','usage','context','cost','stats']) assert.ok(status.includes(`id="${tab}"`))
+  for (const tab of ['overview','usage','context','cost','stats','chatgpt']) assert.ok(status.includes(`id="${tab}"`))
   assert.match(status, /getLocalDiagnosticEventCounts|buildDiagnostics/)
+  assert.match(status, /ChatGPTAccountsTab|chatGPTStatus\(\)/)
   const tasks = source('src/commands/tasks/tasks.tsx')
   assert.match(tasks, /BackgroundTasksDialog/)
   assert.match(tasks, /WorkflowHistoryDialog/)
