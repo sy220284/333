@@ -105,6 +105,9 @@ jobs:
       - name: 执行真实消息投影与安全边界测试
         working-directory: desktop
         run: npm test
+      - name: 运行 React 页面真实交互测试
+        working-directory: desktop
+        run: npm run test:ui
       - name: 检查 React 类型与桌面页面构建
         working-directory: desktop
         run: |
