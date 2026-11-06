@@ -43,6 +43,14 @@
 | `sessions.setPermissionMode` | `sessionId`, `mode` | SDK 权限模式控制；绕过授权需由桌面主进程显式允许 |
 | `permissions.list` | `sessionId` | 当前等待确认的工具列表 |
 | `permissions.decide` | `sessionId`, `permissionId`, `decision` | SDK 原生 `allow/deny` 结构，支持更新输入和永久权限更新 |
+| `agents.overview` | 无 | 当前项目的模式、已选任务、任务簿、多团队和活动任务数量 |
+| `agents.setMode` | `mode: master\|super` | 显式切换本地宿主进程的协作模式，不自动创建 Worker |
+| `missions.list` | 无 | 当前项目任务簿及已选任务 ID |
+| `missions.get` | `missionId` | 读取本项目任务详情；跨项目 ID 拒绝 |
+| `missions.create` | `objective` | 本地创建并选中长期任务，切换为超级智能体模式；执行仍须用户命令授权 |
+| `missions.select` | `missionId` 或 `null` | 选择本项目任务或清除选择 |
+| `missions.updateStatus` | `missionId`、`status` | 用户主动暂停、恢复或完成任务，沿用任务簿状态门禁 |
+| `missions.checkpoint` | `missionId`、`checkpoint` | 将已核实进度记录在本地任务簿 |
 | `tasks.list` | `sessionId` | 当前或保存的任务索引 |
 | `tasks.stop` | `sessionId`, `taskId` | SDK `stop_task` 控制 |
 | `tasks.resume` | `sessionId`, `taskId`，可选 `prompt` | 从原会话恢复任务上下文；仅带用户明确提供的 `prompt` 时发起继续执行 |
@@ -52,7 +60,7 @@
 
 `session.state` 推送 running、requires_action、completed、cancelled、failed、closed 等；`session.message` 保留 SDK 原文（含工具调用、部分消息、使用统计、Agent 事件）；`permission.request` / `permission.resolved` 同步确认请求生命周期；`agent.progress` 从 SDK `tool_progress`、`task_started`、`task_progress`、`task_notification` 转出；`task.updated` 记录任务状态；`session.error` 反馈模型流或保存过程的失败。
 
-任务索引按工作区 SHA256 分类保存在本机 `~/.yaoyaoche/desktop`，支持使用 `--data-dir` 设置根目录。索引仅存任务 ID、进度和状态，不存模型上下文和工具授权密钥。重启时旧运行任务标记为 interrupted，保留终态记录；原对话上下文由 SDK 的持久化历史恢复。已取消或结束的任务需用户明确选择继续，系统不会自动重启旧 Agent 进程。
+任务簿继续使用已有的 `agent-missions` 本地存储和项目选择键，桌面与 CLI 读取同一份状态；不同项目的任务 ID 不能跨项目操作。`agents.setMode` 控制当前本机宿主进程的模式，各会话仍各自管理 SDK 执行和权限；本接口不会在读取任务、创建任务或切换模式时自动启动智能体或定时器。\n\n任务索引按工作区 SHA256 分类保存在本机 `~/.yaoyaoche/desktop`，支持使用 `--data-dir` 设置根目录。索引仅存任务 ID、进度和状态，不存模型上下文和工具授权密钥。重启时旧运行任务标记为 interrupted，保留终态记录；原对话上下文由 SDK 的持久化历史恢复。已取消或结束的任务需用户明确选择继续，系统不会自动重启旧 Agent 进程。
 
 独立桌面入口运行在受信任的本机子进程中，请勿将 stdin/stdout 通信直接暴露为无鉴权网络服务。桌面 UI 应从主进程调用此接口，并为外部文件操作保留工具审批弹窗。
 
