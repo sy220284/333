@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve } from 'node:path'
 import { test } from 'node:test'
+import { createReleasePackageManifest } from '../build/release-package-manifest.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 const source = file => readFileSync(resolve(root, file), 'utf8')
@@ -13,7 +14,17 @@ test('摇摇车 owns its CLI entrypoint without shadowing the official claude ex
   assert.equal(pkg.name, '@yaoyaoche/agent-cli')
   const launcher = source('build/release-launcher.cjs')
   assert.ok(launcher.includes("'yaoyaoche.exe' : 'yaoyaoche'"))
-  assert.ok(source('build/package-release.mjs').includes("bin: { yaoyaoche: './launcher.cjs' }"))
+  const releaseSource = source('build/package-release.mjs')
+  assert.ok(releaseSource.includes('createReleasePackageManifest(releaseVersion, desktopNativeName)'))
+  const unix = createReleasePackageManifest(pkg.version, 'desktopHost')
+  const windows = createReleasePackageManifest(pkg.version, 'desktopHost.exe')
+  assert.deepEqual(unix.bin, {
+    yaoyaoche: './launcher.cjs', 'yaoyaoche-desktop': './desktopHost',
+  })
+  assert.deepEqual(windows.bin, {
+    yaoyaoche: './launcher.cjs', 'yaoyaoche-desktop': './desktopHost.exe',
+  })
+  assert.equal(Object.hasOwn(unix.bin, 'claude'), false)
   const native = source('src/utils/nativeInstaller/installer.ts')
   assert.ok(native.includes("'yaoyaoche.exe' : 'yaoyaoche'"))
   assert.ok(native.includes("const ownPackage = '@yaoyaoche/agent-cli'"))
