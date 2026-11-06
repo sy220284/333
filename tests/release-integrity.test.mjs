@@ -43,6 +43,10 @@ test('release vendor inventory matches exactly the current source tree', () => {
   assert.deepEqual(packagedFiles, sourceFiles);
   assert.deepEqual(indexedFiles, sourceFiles);
   assert.ok(existsSync(join(dist,'cli.js')));
+  for (const entry of ['desktopHost.js', 'desktopHost.js.map']) {
+    assert.ok(existsSync(join(dist, entry)), 'Desktop host missing: ' + entry);
+    assert.ok(metadata.files.some(file => file.path === entry), 'Desktop host missing integrity entry: ' + entry);
+  }
   assert.ok(existsSync(join(dist,'desktopHost.js')));
   assert.ok(existsSync(join(dist,'launcher.cjs')));
 });

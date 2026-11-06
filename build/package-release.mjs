@@ -21,11 +21,16 @@ if (!existsSync(desktopExecutable) || !statSync(desktopExecutable).isFile() || !
   throw Error('Missing native desktop host executable: run node build/compile-standalone.mjs before packaging');
 if (!existsSync(join(root, 'build/public-dependencies.lock.json'))) throw Error('Missing the verified public dependency lockfile');
 mkdirSync(dist,{recursive:true});
+for (const desktopEntry of ['desktopHost.js', 'desktopHost.js.map']) {
+  if (!existsSync(join(dist, desktopEntry)) || !statSync(join(dist, desktopEntry)).isFile())
+    throw Error('Missing compiled desktop communication host: ' + desktopEntry);
+}
 // A release is a closed set of files: reject stale executables, old chunks and
 // unrelated build outputs before changing the previous package.
 const expectedRoot = new Set([
   'cli.js', 'cli.js.map', 'desktopHost.js', 'desktopHost.js.map', nativeName, desktopNativeName, 'vendor', 'SOURCE_NOTICES.md',
   'package.json', 'launcher.cjs', 'README.md', 'integrity.json', 'official-317',
+  'desktopHost.js', 'desktopHost.js.map',
 ]);
 for (const entry of readdirSync(dist, { withFileTypes: true })) {
   if (!expectedRoot.has(entry.name))
@@ -135,8 +140,10 @@ writeFileSync(join(dist,'README.md'), `# 摇摇车 ${releaseVersion} — Indepen
 This directory contains a CLI compiled from the extracted \`src/\` code using Bun.
 The original \`cli.js\` in the repository root is NOT packaged or used as a fallback.
 
-The packaged native executable embeds its own runtime. No global Bun installation
-is required. On Linux/macOS use:
+The packaged native CLI executable embeds its own runtime. No global Bun installation
+is required for CLI usage. The desktop SDK stream-json gateway ships as
+\`desktopHost.js\` and runs through \`bun desktopHost.js\`.
+On Linux/macOS use:
 \`\`\`sh
 ./yaoyaoche --version
 ./yaoyaoche --help
