@@ -4,7 +4,6 @@
  */
 import { promises as fs, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { homedir } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import {
   PROVIDERS, type IndependentProvider,
@@ -15,8 +14,9 @@ import { getChatGPTAccessToken } from '../../auth/chatgptOAuth.js'
 import { getCatalogModelsForProvider } from '../../../utils/model/modelCatalog.js'
 import { getAPIProvider } from '../../../utils/model/providers.js'
 import { mergeDiscoveredModelProfiles } from './profiles.js'
+import { MODEL_STORAGE_ROOT } from './storage.js'
 
-const ROOT = join(homedir(), '.333', 'models')
+const ROOT = MODEL_STORAGE_ROOT
 const FILE = join(ROOT, 'catalog.json')
 type ModelEntry = {
   provider: IndependentProvider
