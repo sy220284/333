@@ -71,6 +71,8 @@ export type IndependentModelDetail = {
   maxOutputTokens?: number
   supportsTools?: boolean
   supportsVision?: boolean
+  supportedEffort?: string[]
+  defaultEffort?: string
 }
 function positiveInteger(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : undefined
@@ -112,7 +114,17 @@ export async function discoverIndependentModelDetails(
     const top = typeof entry.top_provider === 'object' && entry.top_provider !== null ? entry.top_provider : {}
     const contextWindow = positiveInteger(entry.context_length ?? entry.context_window ?? entry.max_input_tokens)
     const maxOutputTokens = positiveInteger(entry.max_output_tokens ?? entry.max_completion_tokens ?? top.max_completion_tokens)
-    const modalities: unknown = entry.architecture?.input_modalities
+    const modalities: unknown = entry.input_modalities ?? entry.architecture?.input_modalities
+    // The DeepSeek /models contract publishes authoritative effort levels
+    // per model, including updates which cannot be inferred from model names.
+    const effort = entry.effort && typeof entry.effort === 'object' ? entry.effort : {}
+    const allowedEffort = new Set(['low', 'medium', 'high', 'xhigh', 'max'])
+    const supportedEffort: string[] | undefined = Array.isArray(effort.supported_levels) &&
+      effort.supported_levels.every(level => typeof level === 'string' && allowedEffort.has(level))
+      ? [...new Set(effort.supported_levels as string[])] : undefined
+    const defaultEffort = typeof effort.default_level === 'string' &&
+      supportedEffort?.includes(effort.default_level)
+      ? effort.default_level : undefined
     const supportsTools = Array.isArray(entry.supported_parameters)
       ? entry.supported_parameters.includes('tools') : undefined
     const supportsVision = Array.isArray(modalities) ? modalities.includes('image') : undefined
@@ -121,6 +133,8 @@ export async function discoverIndependentModelDetails(
       ...(maxOutputTokens ? { maxOutputTokens } : {}),
       ...(supportsTools !== undefined ? { supportsTools } : {}),
       ...(supportsVision !== undefined ? { supportsVision } : {}),
+      ...(supportedEffort !== undefined ? { supportedEffort } : {}),
+      ...(defaultEffort !== undefined ? { defaultEffort } : {}),
     }]
   })
 }
