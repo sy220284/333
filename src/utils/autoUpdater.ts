@@ -21,7 +21,7 @@ import { logError } from './log.js'
 import { gte, lt } from './semver.js'
 import { getInitialSettings } from './settings/settings.js'
 import {
-  filter摇摇车Aliases,
+  filterYaoyaocheAliases,
   getShellConfigPaths,
   readFileLines,
   writeFileLines,
@@ -470,7 +470,7 @@ export async function installGlobalPackage(
   }
 
   try {
-    await remove摇摇车AliasesFromShellConfigs()
+    await removeYaoyaocheAliasesFromShellConfigs()
     // Check if we're using npm from Windows path in WSL
     if (!env.isRunningWithBun() && env.isNpmFromWindowsPath()) {
       logError(new Error('Windows NPM detected in WSL environment'))
@@ -536,7 +536,7 @@ To fix this issue:
  * Remove claude aliases from shell configuration files
  * This helps clean up old installation methods when switching to native or npm global
  */
-async function remove摇摇车AliasesFromShellConfigs(): Promise<void> {
+async function removeYaoyaocheAliasesFromShellConfigs(): Promise<void> {
   const configMap = getShellConfigPaths()
 
   // Process each shell config file
@@ -545,7 +545,7 @@ async function remove摇摇车AliasesFromShellConfigs(): Promise<void> {
       const lines = await readFileLines(configFile)
       if (!lines) continue
 
-      const { filtered, hadAlias } = filter摇摇车Aliases(lines)
+      const { filtered, hadAlias } = filterYaoyaocheAliases(lines)
 
       if (hadAlias) {
         await writeFileLines(configFile, filtered)

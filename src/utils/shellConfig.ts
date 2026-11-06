@@ -7,7 +7,7 @@ import { open, readFile, stat } from 'fs/promises'
 import { homedir as osHomedir } from 'os'
 import { join } from 'path'
 import { isFsInaccessible } from './errors.js'
-import { getLocal摇摇车Path } from './localInstaller.js'
+import { getLocalYaoyaochePath } from './localInstaller.js'
 
 export const YAOYAOCHE_ALIAS_REGEX = /^\s*alias\s+yaoyaoche\s*=/
 
@@ -42,7 +42,7 @@ export function getShellConfigPaths(
  * Preserves custom user aliases that point to other locations
  * Returns the filtered lines and whether our default installer alias was found
  */
-export function filter摇摇车Aliases(lines: string[]): {
+export function filterYaoyaocheAliases(lines: string[]): {
   filtered: string[]
   hadAlias: boolean
 } {
@@ -62,7 +62,7 @@ export function filter摇摇车Aliases(lines: string[]): {
         const target = match[1].trim()
         // Only remove if it points to the installer location
         // The installer always creates aliases with the full expanded path
-        if (target === getLocal摇摇车Path()) {
+        if (target === getLocalYaoyaochePath()) {
           hadAlias = true
           return false // Remove this line
         }
@@ -111,7 +111,7 @@ export async function writeFileLines(
  * Returns the alias target if found, null otherwise
  * @param options Optional overrides for testing (env, homedir)
  */
-export async function find摇摇车Alias(
+export async function findYaoyaocheAlias(
   options?: ShellConfigOptions,
 ): Promise<string | null> {
   const configs = getShellConfigPaths(options)
@@ -139,10 +139,10 @@ export async function find摇摇车Alias(
  * Returns the alias target if valid, null otherwise
  * @param options Optional overrides for testing (env, homedir)
  */
-export async function findValid摇摇车Alias(
+export async function findValidYaoyaocheAlias(
   options?: ShellConfigOptions,
 ): Promise<string | null> {
-  const aliasTarget = await find摇摇车Alias(options)
+  const aliasTarget = await findYaoyaocheAlias(options)
   if (!aliasTarget) return null
 
   const home = options?.homedir ?? osHomedir()

@@ -49,7 +49,7 @@ import * as lockfile from '../lockfile.js'
 import { logError } from '../log.js'
 import { gt, gte } from '../semver.js'
 import {
-  filter摇摇车Aliases,
+  filterYaoyaocheAliases,
   getShellConfigPaths,
   readFileLines,
   writeFileLines,
@@ -1498,7 +1498,7 @@ export async function cleanupShellAliases(): Promise<SetupMessage[]> {
       const lines = await readFileLines(configFile)
       if (!lines) continue
 
-      const { filtered, hadAlias } = filter摇摇车Aliases(lines)
+      const { filtered, hadAlias } = filterYaoyaocheAliases(lines)
 
       if (hadAlias) {
         await writeFileLines(configFile, filtered)

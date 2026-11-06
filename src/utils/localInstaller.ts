@@ -19,7 +19,7 @@ import { jsonStringify } from './slowOperations.js'
 function getLocalInstallDir(): string {
   return join(getClaudeConfigHomeDir(), 'local')
 }
-export function getLocal摇摇车Path(): string {
+export function getLocalYaoyaochePath(): string {
   return join(getLocalInstallDir(), 'yaoyaoche')
 }
 

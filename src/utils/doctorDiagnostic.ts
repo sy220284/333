@@ -35,8 +35,8 @@ import { SandboxManager } from './sandbox/sandbox-adapter.js'
 import { getManagedFilePath } from './settings/managedPath.js'
 import { CUSTOMIZATION_SURFACES } from './settings/types.js'
 import {
-  find摇摇车Alias,
-  findValid摇摇车Alias,
+  findYaoyaocheAlias,
+  findValidYaoyaocheAlias,
   getShellConfigPaths,
 } from './shellConfig.js'
 import { jsonParse } from './slowOperations.js'
@@ -440,8 +440,8 @@ async function detectConfigurationIssues(
 
 
 
-  const existingAlias = await find摇摇车Alias()
-  const validAlias = await findValid摇摇车Alias()
+  const existingAlias = await findYaoyaocheAlias()
+  const validAlias = await findValidYaoyaocheAlias()
 
   // Check if running local installation but it's not in PATH
   if (type === 'npm-local') {

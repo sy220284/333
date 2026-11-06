@@ -54,7 +54,8 @@ try {
   for (const item of cases) {
     const original = run(reference, item.args)
     const rebuilt = run(candidate, item.args)
-    const referenceError = '`claude import` is not yet available in this build. Run `claude` and use /mcp or edit ~/.claude/settings.json directly.'\n    const candidateError = '`yaoyaoche import` is not yet available in this build. Run `yaoyaoche` and use /mcp or edit ~/.yaoyaoche/settings.json directly.'
+    const referenceError = '`claude import` is not yet available in this build. Run `claude` and use /mcp or edit ~/.claude/settings.json directly.'
+    const candidateError = '`yaoyaoche import` is not yet available in this build. Run `yaoyaoche` and use /mcp or edit ~/.yaoyaoche/settings.json directly.'
     const helpMatches = (text, executable) =>
       text.includes(`Usage: ${executable} import [options] [source]`) &&
       text.includes('--dry-run') && text.includes('--yes')
