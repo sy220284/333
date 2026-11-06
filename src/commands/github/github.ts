@@ -24,36 +24,80 @@ async function checkAuth(): Promise<void> {
 }
 /** Git tree + commit + ref: both workflow files update atomically, with no half-configured branch. */
 export async function setupRepository(raw: string, selection: GithubWorkflowSelection = 'both'): Promise<string> {
-  if (!['review','respond','both'].includes(selection)) throw new Error('Actions 类型必须为 review、respond 或 both')
+  if (!['review', 'respond', 'both'].includes(selection)) throw new Error('Actions 类型必须为 review、respond 或 both')
   const repo = validRepository(raw)
   await checkAuth()
-  const metadata = JSON.parse(await gh(['api','repos/' + repo]))
+  const metadata = JSON.parse(await gh(['api', `repos/${repo}`]))
   if (!metadata.permissions?.push) throw new Error('当前 GitHub 用户缺少仓库写入权限')
-  const base = String(metadata.default_branch)
-  const head = JSON.parse(await gh(['api','repos/' + repo + '/git/ref/heads/' + base]))
+
+  const workflow = githubWorkflow(selection)
+  const script = githubReviewerScript()
+  const main = String(metadata.default_branch)
+  async function remoteFile(path: string, ref: string): Promise<string | null> {
+    const url = `repos/${repo}/contents/${path}?ref=${encodeURIComponent(ref)}`
+    const checked = await execFileNoThrow('gh', ['api', url], {
+      timeout: 30000, preserveOutputOnError: true, useCwd: true,
+    })
+    if (checked.code !== 0) {
+      if (/HTTP 404|Not Found/i.test(checked.stderr)) return null
+      throw new Error(`读取 GitHub 现有配置失败：${checked.stderr || checked.error}`)
+    }
+    const item = JSON.parse(checked.stdout)
+    if (item.type !== 'file' || item.encoding !== 'base64') throw new Error('GitHub 配置文件格式不符合预期')
+    return Buffer.from(String(item.content).replace(/\\s/g, ''), 'base64').toString('utf8')
+  }
+  const existing = JSON.parse(await gh([
+    'pr', 'list', '--repo', repo, '--state', 'open', '--limit', '200',
+    '--json', 'headRefName,headRepositoryOwner,url,createdAt',
+  ])) as Array<{ headRefName: string; headRepositoryOwner?: { login?: string }; url: string; createdAt: string }>
+  const owner = repo.split('/')[0]?.toLowerCase()
+  const reusable = existing
+    .filter(item => /^333\\/review-[0-9a-f]{8}$/.test(item.headRefName) &&
+      item.headRepositoryOwner?.login?.toLowerCase() === owner)
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0]
+  if (!reusable) {
+    const currentWorkflow = await remoteFile(GITHUB_WORKFLOW_PATH, main)
+    const currentScript = await remoteFile(GITHUB_SCRIPT_PATH, main)
+    if (currentWorkflow === workflow && currentScript === script) {
+      return `仓库 ${repo} 已配置相同的 Actions 工作流`
+    }
+  }
+
+  const targetBranch = reusable?.headRefName ??
+    `333/review-${randomUUID().slice(0, 8)}`
+  const base = reusable ? targetBranch : main
+  if (reusable) {
+    const currentWorkflow = await remoteFile(GITHUB_WORKFLOW_PATH, targetBranch)
+    const currentScript = await remoteFile(GITHUB_SCRIPT_PATH, targetBranch)
+    if (currentWorkflow === workflow && currentScript === script) return reusable.url
+  }
+  const head = JSON.parse(await gh(['api', `repos/${repo}/git/ref/heads/${base}`]))
   const parent = String(head.object.sha)
-  const treeInfo = JSON.parse(await gh(['api','repos/' + repo + '/git/commits/' + parent]))
-  const elements = [
-    {path:GITHUB_WORKFLOW_PATH,mode:'100644',type:'blob',content:githubWorkflow(selection)},
-    {path:GITHUB_SCRIPT_PATH,mode:'100644',type:'blob',content:githubReviewerScript()},
+  const previous = JSON.parse(await gh(['api', `repos/${repo}/git/commits/${parent}`]))
+  const treeElements = [
+    { path: GITHUB_WORKFLOW_PATH, mode: '100644', type: 'blob', content: workflow },
+    { path: GITHUB_SCRIPT_PATH, mode: '100644', type: 'blob', content: script },
   ]
-  const tree = JSON.parse(await gh(['api','--method','POST','repos/' + repo + '/git/trees','--input','-'],
-    JSON.stringify({base_tree:treeInfo.tree.sha,tree:elements})))
-  const commit = JSON.parse(await gh(['api','--method','POST','repos/' + repo + '/git/commits','--input','-'],
-    JSON.stringify({message:'接入 333 通用 GitHub Actions 及多模型极深审查',
-      tree:tree.sha,parents:[parent]})))
-  const branch = '333/review-' + randomUUID().slice(0,8)
-  await gh(['api','--method','POST','repos/' + repo + '/git/refs',
-    '-f','ref=refs/heads/' + branch,'-f','sha=' + commit.sha])
-  const body = '## 333 GitHub 通用集成\\n\\n使用 GitHub Actions 执行多模型代码审查与极深复核，可通过授权用户 @333 触发。' +
-    '\\n配置 Actions Secret THREE333_MODEL_API_KEY、变量 THREE333_MODEL_NAME 和 THREE333_MODEL_PROVIDER。' +
-    '\\n支持 OpenAI 兼容协议、Anthropic 和 Gemini。GitHub 自身授权与模型授权独立。'
+  const tree = JSON.parse(await gh(['api', '--method', 'POST', `repos/${repo}/git/trees`, '--input', '-'],
+    JSON.stringify({ base_tree: previous.tree.sha, tree: treeElements })))
+  const commit = JSON.parse(await gh(['api', '--method', 'POST', `repos/${repo}/git/commits`, '--input', '-'],
+    JSON.stringify({ message: '更新 333 通用 GitHub Actions 与多模型极深审查',
+      tree: tree.sha, parents: [parent] })))
+  if (reusable) {
+    await gh(['api', '--method', 'PATCH', `repos/${repo}/git/refs/heads/${targetBranch}`,
+      '-f', `sha=${commit.sha}`, '-F', 'force=false'])
+    return reusable.url
+  }
+  await gh(['api', '--method', 'POST', `repos/${repo}/git/refs`,
+    '-f', `ref=refs/heads/${targetBranch}`, '-f', `sha=${commit.sha}`])
+  const body = '## 333 GitHub 通用集成\\n\\n通过 GitHub Actions 执行多模型审查和极深复核，授权成员可使用 @333 触发。' +
+    '\\n请配置 Secret THREE333_MODEL_API_KEY、变量 THREE333_MODEL_NAME 与 THREE333_MODEL_PROVIDER。' +
+    '\\n支持 OpenAI 兼容协议、Responses 与 Anthropic；GitHub 授权和模型授权独立。'
   try {
-    return await gh(['pr','create','--repo',repo,'--head',branch,'--base',base,
-      '--title','接入 333 通用 GitHub Actions 与多模型极深审查','--body',body])
+    return await gh(['pr', 'create', '--repo', repo, '--head', targetBranch, '--base', main,
+      '--title', '接入 333 通用 GitHub Actions 与多模型极深审查', '--body', body])
   } catch (error) {
-    throw new Error('两个配置文件已原子提交到分支 '+branch+'；创建配置 PR 失败，请以该分支重试。' +
-      (error instanceof Error ? error.message : String(error)))
+    throw new Error(`配置已提交到分支 ${targetBranch}，但 PR 创建失败：${error instanceof Error ? error.message : String(error)}`)
   }
 }
 export async function dispatchExtremeReview(rawRepo: string, rawPr: string, mode='extreme'): Promise<string> {
@@ -94,7 +138,7 @@ export const call: LocalCommandCall = async (args) => {
       }
       const selection = tokens[2] || 'both'
       if (!['review','respond','both'].includes(selection)) throw new Error('请选择 review、respond 或 both')
-      return result('已创建配置 PR：' + await setupRepository(selectedRepo,selection as GithubWorkflowSelection))
+      return result('GitHub 配置结果：' + await setupRepository(selectedRepo, selection as GithubWorkflowSelection))
     }
     if (action === 'secret' && tokens.length===3) {
       const repo = validRepository(tokens[1])
