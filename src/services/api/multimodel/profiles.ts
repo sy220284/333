@@ -128,6 +128,13 @@ function withDocumentedPreset(
   if (!preset) return saved
   const { referenceUrl, ...parameters } = preset
   const parameterSources: IndependentModelProfile['parameterSources'] = {}
+  // A published context override can invalidate a larger reference output.
+  // Leave the output unconfirmed until the endpoint supplies its own limit.
+  const limit = saved?.contextWindow ?? parameters.contextWindow
+  if (limit !== undefined && saved?.maxOutputTokens === undefined &&
+      parameters.maxOutputTokens !== undefined && parameters.maxOutputTokens > limit) {
+    delete parameters.maxOutputTokens
+  }
   for (const field of MODEL_PROFILE_FIELDS) {
     if (saved?.[field] !== undefined) {
       parameterSources[field] = saved.parameterSources?.[field] ?? saved.source
@@ -160,10 +167,11 @@ export async function updateIndependentProfile(
   if (existing[key]?.source === 'manual' && patch.source !== 'manual') return existing[key]
   const next = validatedProfile(model, {
     ...existing[key], ...patch,
-    ...(patch.source === 'manual' ? { parameterSources: Object.fromEntries(
-      MODEL_PROFILE_FIELDS.filter(field => patch[field] !== undefined)
-        .map(field => [field, 'manual' as const]),
-    ) } : {}),
+    ...(patch.source === 'manual' ? { parameterSources: {
+      ...existing[key]?.parameterSources,
+      ...Object.fromEntries(MODEL_PROFILE_FIELDS.filter(field => patch[field] !== undefined)
+        .map(field => [field, 'manual' as const])),
+    } } : {}),
     source: patch.source, checkedAt: new Date().toISOString(),
   })
   const root = getModelStorageRoot()
@@ -202,12 +210,21 @@ export async function mergeDiscoveredModelProfiles(
     if (!base && providerFields.length === 0) continue
     const parameterSources = { ...base?.parameterSources }
     for (const field of providerFields) parameterSources[field] = 'provider'
-    next[key] = validatedProfile(id, {
+    const candidate = {
       ...base, ...detail,
       parameterSources,
-      source: providerFields.length ? 'provider' : (base?.source ?? 'preset'),
+      source: providerFields.length ? 'provider' as const : (base?.source ?? 'preset' as const),
       checkedAt,
-    })
+    }
+    // Provider-supported effort levels override documentation presets;
+    // an incompatible default cannot be passed along to request builders.
+    if (candidate.defaultEffort !== undefined &&
+        candidate.supportedEffort !== undefined &&
+        !candidate.supportedEffort.includes(candidate.defaultEffort)) {
+      delete candidate.defaultEffort
+      delete candidate.parameterSources.defaultEffort
+    }
+    next[key] = validatedProfile(id, candidate)
     changed++
   }
   if (changed === 0) return 0

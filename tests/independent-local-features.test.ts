@@ -245,3 +245,22 @@ test('configured-model scan sees only configured credentials and records partial
   assert.deepEqual(report.filter(item => item.provider !== 'minimax').length, other.length)
   assert.ok(Array.isArray(getConfiguredModelSnapshots()))
 })
+
+test('provider context smaller than documented output disables an unsafe preset', async () => {
+  const model = 'qwen/qwen3.8-flash'
+  await mergeDiscoveredModelProfiles('qwen', [{ id: 'qwen3.8-flash', contextWindow: 64_000 }])
+  const profile = getIndependentProfile(model)
+  assert.equal(profile?.contextWindow, 64_000)
+  assert.equal(profile?.maxOutputTokens, undefined)
+  assert.equal(profile?.parameterSources?.maxOutputTokens, undefined)
+})
+
+test('provider effort restrictions displace an incompatible documented default', async () => {
+  const model = 'deepseek/deepseek-flash'
+  await mergeDiscoveredModelProfiles('deepseek', [{
+    id: 'deepseek-flash', supportedEffort: ['max'],
+  }])
+  const profile = getIndependentProfile(model)
+  assert.deepEqual(profile?.supportedEffort, ['max'])
+  assert.equal(profile?.defaultEffort, undefined)
+})
