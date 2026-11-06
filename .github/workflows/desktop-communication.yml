@@ -37,7 +37,7 @@ jobs:
       - name: 分套件独立校验通信接口及 SDK stream-json 双向实测
         run: |
           set -euo pipefail
-          for suite in conversation-headless desktop-communication desktop-stdio desktop-sdk-stream-json desktop-client; do
+          for suite in mission-jobs conversation-headless desktop-communication desktop-stdio desktop-sdk-stream-json desktop-client; do
             echo "::group::桌面通信套件 ${suite}"
             timeout --signal=TERM --kill-after=5s 60s bun test "tests/${suite}.test.ts"
             echo "::endgroup::"
