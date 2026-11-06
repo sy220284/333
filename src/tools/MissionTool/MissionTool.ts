@@ -1,6 +1,8 @@
 import { z } from 'zod/v4'
+import { resolve } from 'node:path'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { lazySchema } from '../../utils/lazySchema.js'
+import { getCwd } from '../../utils/cwd.js'
 import { isSuperAgentMode } from '../../utils/agentMode.js'
 import {
   getSelectedMissionId, getMission, listMissions, formatMission,
@@ -34,12 +36,14 @@ function required(value: string | undefined, label: string): string {
 
 async function execute(input: Input): Promise<string> {
   if (input.action === 'list') {
-    const missions = await listMissions()
+    const missions = (await listMissions()).filter(m => resolve(m.projectDir) === resolve(getCwd()))
     return missions.length ? missions.map(m => m.id + ' [' + m.status + '] ' + m.objective).join('\n') : '本项目尚未创建超级智能体长期任务'
   }
   const selected = input.mission_id ?? getSelectedMissionId()
   const id = required(selected, '任务 ID，请先由用户通过 /agents mission new 创建')
-  if (input.action === 'show') return formatMission(await getMission(id))
+  const mission = await getMission(id)
+  if (resolve(mission.projectDir) !== resolve(getCwd())) throw new Error('任务归属其他项目：' + mission.projectDir)
+  if (input.action === 'show') return formatMission(mission)
   if (input.action === 'checkpoint') {
     const checkpoint = required(input.checkpoint, '阶段记录')
     return formatMission(await saveMissionCheckpoint(id, checkpoint))

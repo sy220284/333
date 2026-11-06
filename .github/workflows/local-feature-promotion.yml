@@ -24,7 +24,7 @@ on:
       - 'tests/agent-collaboration-*.test.*'
       - 'tests/agent-missions*.test.*'
       - 'tests/agent-mission-scope.test.ts'
-      - 'tests/agent-mission-continue-build.test.mjs'
+      - 'tests/agent-mission-continue-build.test.mjs tests/agent-mission-tool-scope-build.test.mjs'
       - 'src/QueryEngine.ts'
       - 'src/utils/systemPrompt.ts'
       - 'src/utils/agentMissions.ts'
