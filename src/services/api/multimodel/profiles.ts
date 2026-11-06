@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto'
 import { promises as fs, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { resolveIndependentModel } from './registry.js'
+import { isRetiredIndependentProvider, resolveIndependentModel } from './registry.js'
 
 const ROOT = join(homedir(), '.333', 'models')
 const PATH = join(ROOT, 'profiles.json')
@@ -62,10 +62,14 @@ export function readIndependentProfiles(): Record<string, IndependentModelProfil
   if (profiles === null || Array.isArray(profiles) || typeof profiles !== 'object') {
     throw new Error('Invalid model profile storage')
   }
+  const active: Record<string, IndependentModelProfile> = {}
   for (const [model, profile] of Object.entries(profiles)) {
+    // Previously saved Gemini/Grok profiles must not block active providers.
+    if (isRetiredIndependentProvider(model.split('/', 1)[0])) continue
     validatedProfile(model, profile)
+    active[model] = profile
   }
-  return profiles
+  return active
 }
 export function getIndependentProfile(model: string): IndependentModelProfile | undefined {
   if (!resolveIndependentModel(model)) return undefined
