@@ -4,7 +4,6 @@ import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
 import { githubWorkflow, GITHUB_SCRIPT_PATH, GITHUB_TASK_SCRIPT_PATH, GITHUB_WORKFLOW_PATH, type GithubWorkflowSelection } from './workflow.js'
 import { githubReviewerScript } from './reviewerScript.js'
 import { githubTaskRunnerScript } from './taskRunnerScript.js'
-import { getGithubModelOptions, configureGithubModel } from './modelConfig.js'
 
 import { validRepository } from './repository.js'
 const HELP = '用法：/github status | auth | repos | setup [owner/repo] [review|respond|both] | secret <owner/repo> <环境变量名> | models | model <owner/repo> <provider/model> | review <owner/repo> <PR> [normal|deep|security] | runs <owner/repo> | run <owner/repo> <运行ID> | cancel <owner/repo> <运行ID> | rerun <owner/repo> <运行ID>'
@@ -68,6 +67,29 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
     }
   }
 
+  // A crash after the atomic branch write but before opening the PR leaves a
+  // recoverable branch. Reuse it only if all generated files match exactly.
+  if (!reusable) {
+    const matching = JSON.parse(await gh(['api',
+      'repos/' + repo + '/git/matching-refs/heads/yaoyaoche/review-']))
+    if (!Array.isArray(matching)) throw new Error('GitHub 分支列表格式不符合预期')
+    for (const record of matching.slice(0,40)) {
+      const candidate = String(record.ref || '').replace(/^refs\/heads\//,'')
+      if (!/^yaoyaoche\/review-[0-9a-f]{8}$/.test(candidate)) continue
+      const [remoteWorkflow,remoteScript,remoteTask] = await Promise.all([
+        remoteFile(GITHUB_WORKFLOW_PATH,candidate),
+        remoteFile(GITHUB_SCRIPT_PATH,candidate),
+        selection === 'review' ? Promise.resolve(null) : remoteFile(GITHUB_TASK_SCRIPT_PATH,candidate),
+      ])
+      if (remoteWorkflow === workflow && remoteScript === script &&
+          (selection === 'review' || remoteTask === taskScript)) {
+        const body = '## 摇摇车 GitHub 通用集成\n\n从此前配置中断的分支恢复。' +
+          '\n请合并本 PR 并单独配置 Actions 模型凭据。'
+        return await gh(['pr','create','--repo',repo,'--head',candidate,'--base',main,
+          '--title','恢复 摇摇车 GitHub 通用集成配置','--body',body])
+      }
+    }
+  }
   const targetBranch = reusable?.headRefName ??
     `yaoyaoche/review-${randomUUID().slice(0, 8)}`
   const base = reusable ? targetBranch : main
@@ -139,11 +161,13 @@ export const call: LocalCommandCall = async (args) => {
       return result(`${auth}\n当前仓库：${current.code===0 ? current.stdout.trim() : '未识别'}`)
     }
     if (action === 'models') {
+      const { getGithubModelOptions } = await import('./modelConfig.js')
       const models = getGithubModelOptions()
       return result(models.length ? models.map(m=>m.id+' · '+m.credentialSource).join('\n') :
         '暂无可用于 Actions 的 API 模型；ChatGPT OAuth 无法用于 Actions。请先通过 /model 配置 API Key。')
     }
     if (action === 'model' && tokens.length===3) {
+      const { configureGithubModel } = await import('./modelConfig.js')
       return result(await configureGithubModel(tokens[1], tokens[2], true))
     }
     if (action === 'repos') {
