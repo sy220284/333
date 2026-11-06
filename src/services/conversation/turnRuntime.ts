@@ -36,7 +36,7 @@ export function createConversationTurnRuntime<Params, Event, Result>(
           transition(controller.signal.aborted ? 'cancelled' : 'completed')
           return step.value
         }
-        onEvent(step.value)
+        onEvent(step.value as Event)
       }
     } catch (error) {
       transition(controller.signal.aborted ? 'cancelled' : 'failed',
