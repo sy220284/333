@@ -173,7 +173,7 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
     const pendingPath = join(root, '.333', 'auth', 'chatgpt-pending-registration.json')
     const pending = JSON.parse(readFileSync(pendingPath, 'utf8'))
     assert.equal(pending.client_id, 'oaiapp_333_three')
-    assert.equal(statSync(pendingPath).mode & 0o777, 0o600)
+    if (process.platform !== 'win32') assert.equal(statSync(pendingPath).mode & 0o777, 0o600)
     const recovered = await auth.loginWithChatGPT({ resumePending: true }, browser)
     assert.equal(recovered.clientId, 'oaiapp_333_three')
     assert.equal(opened.at(-1)?.searchParams.get('client_id'), 'oaiapp_333_three')
