@@ -164,7 +164,7 @@ test('capability probe preserves provider tool-selection constraints and verifie
     )
   }
   const report = await runModelToolRoundTrip('deepseek/deepseek-v4-pro', send, 'auto')
-  assert.equal(report.toolRoundTrip ?? report.roundTrip, true)
+  assert.equal(report.roundTrip, true)
   assert.deepEqual(requested[0].tool_choice, { type: 'auto' })
   assert.deepEqual(requested[1].tool_choice, { type: 'auto' })
   assert.equal(requested.length, 2)
