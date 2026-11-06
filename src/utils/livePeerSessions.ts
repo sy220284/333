@@ -69,7 +69,7 @@ export function resolveLocalPeerRecipient(peers: ReadonlyArray<LiveLocalPeer317>
   address: string | undefined
   ambiguous: boolean
 } {
-  const m = /^(.+?) \\[([0-9a-f]{6})\\]$/.exec(token)
+  const m = /^(.+?) \[([0-9a-f]{6})\]$/.exec(token)
   const matches = peers.filter(p => m ? p.name === m[1] && p.ref === m[2] : p.name === token)
   return {
     address: matches.length === 1 ? matches[0]?.address : undefined,
