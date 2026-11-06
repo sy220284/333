@@ -4,7 +4,7 @@ import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {SELF_HOSTED_RUNNER_TOOLS} from '../src/cli/selfHostedRunner/wizardTools317.ts'
 import {runnerWizardCommand317} from '../src/cli/selfHostedRunner/wizard317.ts'
-import {getRunnerPool317,listRunnerMachines317,listRunnerSessions317,
+import {runnerAdminRequest317,getRunnerPool317,listRunnerMachines317,listRunnerSessions317,
   listRunnerSecrets317,requeueRunnerSession317,probeRunnerLocal317,tailRunnerLog317
 } from '../src/cli/selfHostedRunner/runnerAdmin317.ts'
 const names=[
@@ -93,4 +93,28 @@ test('local Runner /healthz and /metrics return grounded data; log secrets are r
     expect(log.lines).not.toContain('ABC')
     expect(log.lines).not.toContain('sk-ant-testsecret')
   }finally{await rm(dir,{recursive:true,force:true})}
+})
+
+test('自托管 Runner 管理须明确配置地址与专用令牌，绝不转用模型 OAuth',async()=>{
+  const req={method:'GET' as const,path:'/v1/code/runners/self-hosted/pools/ccpool_abc'}
+  let calls=0
+  const fake=async()=>{calls++;return Response.json({pool:{alive_runner_count:1}})}
+  await expect(runnerAdminRequest317(req,{
+    baseUrl:'https://api.anthropic.com',
+    credentials:async()=>({accessToken:'operator-token'}),
+    fetchImpl:fake,
+  })).rejects.toThrow('官方云端地址已停用')
+  expect(calls).toBe(0)
+  const previous=process.env.SELF_HOSTED_RUNNER_ADMIN_TOKEN
+  try{
+    delete process.env.SELF_HOSTED_RUNNER_ADMIN_TOKEN
+    await expect(runnerAdminRequest317(req,{
+      baseUrl:'https://runner.example.test',
+      fetchImpl:fake,
+    })).rejects.toThrow('SELF_HOSTED_RUNNER_ADMIN_TOKEN')
+    expect(calls).toBe(0)
+  }finally{
+    if(previous===undefined)delete process.env.SELF_HOSTED_RUNNER_ADMIN_TOKEN
+    else process.env.SELF_HOSTED_RUNNER_ADMIN_TOKEN=previous
+  }
 })
