@@ -31,7 +31,15 @@ export function getGithubModelOptions(): GithubModelOption[] {
       tokenField: 'max_tokens', credentialSource: '已配置的 Anthropic API Key',
     })
   }
-  for (const saved of getSavedModelOptions()) {
+  const known = getSavedModelOptions()
+  // A selected API model remains usable even if its discovery cache has not
+  // been refreshed yet; the model ID and credential come from the live session.
+  if (typeof claude === 'string' && claude.includes('/') &&
+      !known.some(entry => entry.value === claude)) {
+    known.unshift({value:claude,label:claude.split('/').slice(1).join('/'),
+      description:claude+' · 当前使用模型'})
+  }
+  for (const saved of known) {
     const route = resolveIndependentModel(saved.value)
     // ChatGPT OAuth is account-scoped interactive authorization and cannot be
     // exported or reused as the Actions unattended API credential.
