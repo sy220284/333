@@ -43,7 +43,7 @@ function help(binary, args, label) {
   })
   assert.equal(run.error, undefined, `${label}: ${run.error?.message}`)
   assert.equal(run.status, 0, `${label}: ${run.stderr.slice(-700)}`)
-  assert.ok(run.stdout.startsWith(label.startsWith('candidate') ? 'Usage: qerivon ' : 'Usage: claude '), `${label}: 缺少 CLI 帮助`)
+  assert.ok(run.stdout.startsWith(label.startsWith('candidate') ? 'Usage: yaoyaoche ' : 'Usage: claude '), `${label}: 缺少 CLI 帮助`)
   return run.stdout.replaceAll('\r\n', '\n').trim()
 }
 try {

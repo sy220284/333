@@ -80,8 +80,8 @@ jobs:
           bun dist/cli.js --version
           # 同一套测试后续还验证真正编译的独立可执行程序。
           node build/compile-standalone.mjs
-          test -s dist/qerivon
-          dist/qerivon --version
+          test -s dist/yaoyaoche
+          dist/yaoyaoche --version
       - name: 网关授权与推理链真实运行回归
         run: bun test tests/m6-gateway-device-317.test.mjs tests/m6-gateway-runtime-317.test.mjs tests/m6-gateway-client-ip-317.test.mjs
       - name: 网关授权、IP限流、费用及管理员限额真实行为回归
