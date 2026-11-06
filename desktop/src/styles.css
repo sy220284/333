@@ -382,3 +382,18 @@ button:disabled{opacity:.42;cursor:not-allowed;transform:none!important}
 .mcp-form .mcp-wide{grid-column:span 3}
 .mcp-form button{justify-self:start}
 @media(max-width:1100px){.mcp-form{grid-template-columns:1fr 1fr}.mcp-form .mcp-wide{grid-column:span 2}}
+
+.team-directory{display:grid;grid-template-columns:minmax(185px,225px) minmax(0,1fr);align-items:stretch;gap:14px}
+.team-picker{display:flex;flex-direction:column;gap:9px}
+.team-option{display:flex;align-items:flex-start;gap:9px;flex-wrap:wrap;text-align:left;padding:14px;border:1px solid var(--line);border-radius:11px;background:var(--surface);transition:border-color .2s,transform .2s}
+.team-option strong{flex:1;min-width:0;overflow-wrap:anywhere}
+.team-option>svg{color:var(--accent)}
+.team-option span{width:100%;color:var(--muted);font-size:10px;padding-left:27px}
+.team-option.selected{border-color:var(--accent);background:var(--surface2);box-shadow:inset 3px 0 0 var(--accent)}
+.team-option:hover{border-color:var(--accent);transform:translateY(-1px)}
+.team-roster{min-height:198px}
+.team-member-list{display:flex;flex-direction:column}
+.team-member{display:flex;gap:12px;align-items:center;padding:12px 3px;border-top:1px solid var(--line)}
+.team-member:first-child{margin-top:8px}
+@media(max-width:1100px){.team-directory{grid-template-columns:1fr}}
+[data-motion=off] .team-option{transition:none}
