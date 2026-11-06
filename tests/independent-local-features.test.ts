@@ -25,7 +25,7 @@ const { discoverIndependentModelDetails } = await import('../src/services/api/mu
 const { countIndependentModelTokens } = await import('../src/services/api/multimodel/tokenCounting.ts')
 const { readSavedModelCatalog } = await import('../src/services/api/multimodel/catalog.ts')
 const { readIndependentPricing } = await import('../src/services/api/multimodel/pricing.ts')
-const { MODEL_STORAGE_ROOT } = await import('../src/services/api/multimodel/storage.ts')
+const { getModelStorageRoot } = await import('../src/services/api/multimodel/storage.ts')
 const { resolveIndependentModel } = await import('../src/services/api/multimodel/registry.ts')
 
 test('feedback is explicitly stored locally and never tries to contact a server', async () => {
@@ -111,8 +111,8 @@ test('gateway model discovery keeps other model families while filtering Gemini 
 })
 
 test('old local model, profile and price caches exclude removed providers without blocking valid entries', () => {
-  assert.equal(MODEL_STORAGE_ROOT, join(privateHome, '.333', 'models'))
-  const directory = MODEL_STORAGE_ROOT
+  assert.equal(getModelStorageRoot(), join(privateHome, '.333', 'models'))
+  const directory = getModelStorageRoot()
   mkdirSync(directory, { recursive: true })
   writeFileSync(join(directory, 'catalog.json'), JSON.stringify({
     schema: 1, models: [
@@ -122,7 +122,7 @@ test('old local model, profile and price caches exclude removed providers withou
       { provider: 'deepseek', id: 'deepseek-chat', discoveredAt: '2026-11-01' },
     ],
   }))
-  assert.deepEqual(readSavedModelCatalog().models.map(x => x.provider + '/' + x.id), [
+  assert.deepEqual(readSavedModelCatalog().models.map(x => `${x.provider}/${x.id}`), [
     'deepseek/deepseek-chat',
   ])
 

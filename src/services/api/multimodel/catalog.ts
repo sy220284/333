@@ -14,10 +14,9 @@ import { getChatGPTAccessToken } from '../../auth/chatgptOAuth.js'
 import { getCatalogModelsForProvider } from '../../../utils/model/modelCatalog.js'
 import { getAPIProvider } from '../../../utils/model/providers.js'
 import { mergeDiscoveredModelProfiles } from './profiles.js'
-import { MODEL_STORAGE_ROOT } from './storage.js'
+import { getModelStorageRoot } from './storage.js'
 
-const ROOT = MODEL_STORAGE_ROOT
-const FILE = join(ROOT, 'catalog.json')
+const catalogFile = () => join(getModelStorageRoot(), 'catalog.json')
 type ModelEntry = {
   provider: IndependentProvider
   id: string
@@ -27,7 +26,7 @@ export type SavedCatalog = { schema: 1; models: ModelEntry[] }
 
 export function readSavedModelCatalog(): SavedCatalog {
   let text: string
-  try { text = readFileSync(FILE, 'utf8') }
+  try { text = readFileSync(catalogFile(), 'utf8') }
   catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { schema: 1, models: [] }
     throw error
@@ -64,17 +63,19 @@ export async function refreshProviderModels(provider: IndependentProvider): Prom
     .map(name => ({ provider, id: name, discoveredAt: at }))
   await mergeDiscoveredModelProfiles(provider, details)
   // Preserve all other providers while atomically replacing this provider.
-  await fs.mkdir(ROOT, { recursive: true, mode: 0o700 })
+  const root = getModelStorageRoot()
+  const file = join(root, 'catalog.json')
+  await fs.mkdir(root, { recursive: true, mode: 0o700 })
   const current = readSavedModelCatalog()
   const next: SavedCatalog = {
     schema: 1,
     models: [...current.models.filter(x => x.provider !== provider), ...refreshed],
   }
-  const tmp = join(ROOT, `catalog.${randomUUID()}.tmp`)
+  const tmp = join(root, `catalog.${randomUUID()}.tmp`)
   try {
     await fs.writeFile(tmp, JSON.stringify(next, null, 2), { encoding: 'utf8', mode: 0o600, flag: 'wx' })
-    await fs.rename(tmp, FILE)
-    await fs.chmod(FILE, 0o600)
+    await fs.rename(tmp, file)
+    await fs.chmod(file, 0o600)
   } finally {
     await fs.rm(tmp, { force: true })
   }

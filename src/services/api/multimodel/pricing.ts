@@ -3,9 +3,8 @@ import { promises as fs, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { isRemovedIndependentModel, resolveIndependentModel } from './registry.js'
-import { MODEL_STORAGE_ROOT } from './storage.js'
-const ROOT = MODEL_STORAGE_ROOT
-const FILE = join(ROOT, 'pricing.json')
+import { getModelStorageRoot } from './storage.js'
+const pricingFile = () => join(getModelStorageRoot(), 'pricing.json')
 export type Price = { input: number; output: number; cacheRead?: number; cacheWrite?: number }
 function valid(price: Price): boolean {
   return Boolean(price && Number.isFinite(price.input) && price.input >= 0 &&
@@ -15,7 +14,7 @@ function valid(price: Price): boolean {
 }
 export function readIndependentPricing(): Record<string, Price> {
   let json: string
-  try { json=readFileSync(FILE,'utf8') }
+  try { json=readFileSync(pricingFile(),'utf8') }
   catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return {}
     throw error
@@ -32,12 +31,14 @@ export function readIndependentPricing(): Record<string, Price> {
 }
 export async function configureIndependentPricing(model: string, price: Price): Promise<void> {
   if (!resolveIndependentModel(model) || !valid(price)) throw new Error('Model pricing requires qualified model ID and valid nonnegative USD rates')
-  await fs.mkdir(ROOT, {recursive:true,mode:0o700})
+  const root = getModelStorageRoot()
+  const file = join(root, 'pricing.json')
+  await fs.mkdir(root, {recursive:true,mode:0o700})
   const next={...readIndependentPricing(),[model]:price}
-  const tmp=join(ROOT,`pricing.${randomUUID()}.tmp`)
+  const tmp=join(root,`pricing.${randomUUID()}.tmp`)
   try {
     await fs.writeFile(tmp,JSON.stringify(next,null,2),{encoding:'utf8',mode:0o600,flag:'wx'})
-    await fs.rename(tmp,FILE)
-    await fs.chmod(FILE,0o600)
+    await fs.rename(tmp,file)
+    await fs.chmod(file,0o600)
   } finally { await fs.rm(tmp,{force:true}) }
 }
