@@ -23,6 +23,7 @@ const { updateIndependentProfile, getIndependentProfile, mergeDiscoveredModelPro
   await import('../src/services/api/multimodel/profiles.ts')
 const { discoverIndependentModelDetails } = await import('../src/services/api/multimodel/registry.ts')
 const { getModelFieldProfile } = await import('../src/services/api/multimodel/providerFields.ts')
+const { toChatCompletions } = await import('../src/services/api/multimodel/convert.ts')
 const { countIndependentModelTokens } = await import('../src/services/api/multimodel/tokenCounting.ts')
 const { readSavedModelCatalog } = await import('../src/services/api/multimodel/catalog.ts')
 const { readIndependentPricing } = await import('../src/services/api/multimodel/pricing.ts')
@@ -160,6 +161,10 @@ test('official DeepSeek discovery persists model-specific effort limits and defa
   assert.equal(saved?.defaultEffort, 'max')
   assert.deepEqual(getModelFieldProfile('deepseek', 'deepseek-v4-pro').supportedEffort,
     ['high', 'max'])
+  assert.throws(() => toChatCompletions({
+    model: 'deepseek/deepseek-v4-pro', messages: [{ role: 'user', content: 'hello' }],
+    max_tokens: 2000, output_config: { effort: 'low' },
+  }, 'deepseek-v4-pro', 'deepseek'), /可用档位：high, max/)
   await assert.rejects(updateIndependentProfile('deepseek/deepseek-v4-pro', {
     source: 'manual', supportedEffort: ['low'], defaultEffort: 'max',
   }), /default effort/)
