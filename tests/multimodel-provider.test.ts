@@ -456,3 +456,63 @@ test('OpenRouter passes reasoning controls and requests visible reasoning detail
   assert.deepEqual(disabled.reasoning, { effort: 'none' })
   assert.equal(disabled.include_reasoning, undefined)
 })
+
+
+test('OpenRouter non-stream tool turns preserve signed and encrypted reasoning_details', async () => {
+  const route = requireRoute('openrouter/openai/gpt-6.1-sol')
+  const details = [{ type: 'reasoning.encrypted', index: 0, format: 'openai-responses-v1',
+    data: 'encrypted-opaque', id: 'reasoning-1' }]
+  const backend = async () => Response.json({ id: 'chat_test', usage: {
+    prompt_tokens: 12, completion_tokens: 7 }, choices: [{
+    finish_reason: 'tool_calls', message: { role: 'assistant', content: null,
+      reasoning_details: details, tool_calls: [{
+        id: 'call_1', type: 'function', function: { name: 'Read', arguments: '{"file_path":"/a"}' },
+      }] },
+  }] })
+  const response = await makeIndependentFetch(route, 'test-key', backend as typeof fetch)(
+    new Request('https://333-model-bridge.invalid/v1/messages', { method: 'POST',
+      body: JSON.stringify({ ...body, model: 'openrouter/openai/gpt-6.1-sol', stream: false }) }))
+  const modelReply = await response.json()
+  const opaque = modelReply.content.find((part: { type: string }) => part.type === 'redacted_thinking')
+  assert.ok(opaque)
+  const signature = opaque.data.split(':openrouter:')[0]
+  const followup = toChatCompletions({ ...body, messages: [
+    { role: 'assistant', content: modelReply.content },
+    { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'call_1', content: 'ok' }] },
+  ] }, 'openai/gpt-6.1-sol', 'openrouter', signature)
+  assert.deepEqual(followup.messages[0].reasoning_details, details)
+  assert.equal(followup.messages[0].tool_calls[0].id, 'call_1')
+  assert.equal(followup.messages[1].tool_call_id, 'call_1')
+  const wrongAccount = toChatCompletions({ ...body, messages: [
+    { role: 'assistant', content: modelReply.content },
+  ] }, 'openai/gpt-6.1-sol', 'openrouter', '333-replay:someone-else')
+  assert.equal(wrongAccount.messages.length, 0)
+})
+test('OpenRouter streamed reasoning fragments merge before being replayed', async () => {
+  const route = requireRoute('openrouter/openai/gpt-6.1-sol')
+  const backend = async () => stream(
+    { choices: [{ delta: { reasoning_details: [
+      { type: 'reasoning.text', index: 0, id: 'r1', text: 'first' },
+    ] } }] },
+    { choices: [{ delta: { reasoning_details: [
+      { type: 'reasoning.text', index: 0, text: ' second', signature: 'signed' },
+    ] } }] },
+    { choices: [{ delta: { tool_calls: [
+      { index: 0, id: 'call_8', function: { name: 'Read', arguments: '{"file_path":"/a"}' } },
+    ] }, finish_reason: 'tool_calls' }] },
+    { choices: [{ delta: {}, finish_reason: 'tool_calls' }],
+      usage: { prompt_tokens: 20, completion_tokens: 12 } },
+  )
+  const response = await makeIndependentFetch(route, 'secret', backend as typeof fetch)(
+    new Request('https://333-model-bridge.invalid/v1/messages', { method: 'POST',
+      body: JSON.stringify({ ...body, model: 'openrouter/openai/gpt-6.1-sol', stream: true }) }))
+  const events = messages(await response.text())
+  const block = events.find(e => e.type === 'content_block_start' &&
+    e.content_block?.type === 'redacted_thinking')
+  assert.ok(block)
+  const detail = JSON.parse(block.content_block.data.split(':openrouter:')[1])
+  assert.equal(detail[0].text, 'first second')
+  assert.equal(detail[0].signature, 'signed')
+  assert.equal(events.some(e => e.type === 'content_block_start' && e.content_block?.name === 'Read'), true)
+  assert.equal(events.find(e => e.type === 'message_delta').usage.input_tokens, 20)
+})
