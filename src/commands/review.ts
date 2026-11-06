@@ -125,7 +125,7 @@ const review: Command = {
         '若 Agent 工具或指定模型不可用，明确标注“交叉复核未执行”，并说明实际失败原因，继续给出主模型审查结果。',
         '第二模型调用应只审查，不允许自动修改文件或推送提交。',
         base,
-      ].join('\\n\\n')
+      ].join('\n\n')
       return [{ type: 'text', text: reviewerInstructions }]
     } catch (error) {
       return [{ type: 'text', text: `审查未启动：${error instanceof Error ? error.message : String(error)}` }]

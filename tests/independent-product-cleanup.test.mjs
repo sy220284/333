@@ -86,6 +86,7 @@ test('状态、规划、后台任务统一入口连接原运行时', () => {
   assert.match(tasks, /BackgroundTasksDialog/)
   assert.match(tasks, /WorkflowHistoryDialog/)
   const plan = source('src/commands/plan/unified.tsx')
-  assert.match(plan, /advisor\.load\(\)/)
+  assert.match(plan, /review cross/)
+  assert.doesNotMatch(plan, /advisor\.load\(\)/)
   assert.match(plan, /import\('\.\/plan\.js'\)/)
 })
