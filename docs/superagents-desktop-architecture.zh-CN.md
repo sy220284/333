@@ -19,10 +19,10 @@
 
 1. 用户创建 Mission，设置项目范围；通过 `missions.jobs.enqueue` 输入具体工作。入队同时把工作项关联进原 Mission，防止工作项待处理时误标记整个 Mission 完成。
 2. 用户明确启动工作项 `missions.jobs.start`。工作项先以跨进程文件锁从 queued 切换到 running，记录宿主进程 ID、执行 ID 与次数；另一宿主对同一工作项的启动会被拒绝。
-3. 通过现有独立 SDK 创建实际会话，调用模型与 Agent/Team/Workflow 所需的既有工具，继续沿用工具审批和宿主权限申请。
-4. SDK 返回成功结果后，工作项进入 **review（待人工审核）**。人工确认 `missions.jobs.approve` 才将工作项与 Mission 关联执行最终标记为完成。失败与异常中断保留明确信息，不自动产生另一次执行。
-5. 人工可在查看产物与外部状态后调用 `missions.jobs.retry`；被意外关闭的宿主须由 `missions.jobs.recover` 确认其进程退出，再转 interrupted。重新执行始终要求明确的 start 命令。
-6. 工作项回到 completed 或 cancelled 后，Mission 才能在既有完成门禁下终结。
+3. 用户可通过 `missions.jobs.runBatch` 一次启动最多三个排队工作项；每项仍使用自己的真实 SDK 会话、权限审批和持久执行记录。同一 Mission 的跨宿主并发占用由文件锁统一限制。\n4. 通过现有独立 SDK 创建实际会话，调用模型与 Agent/Team/Workflow 所需的既有工具，继续沿用工具审批和宿主权限申请。
+5. SDK 返回成功结果后，工作项进入 **review（待人工审核）**。人工确认 `missions.jobs.approve` 才将工作项与 Mission 关联执行最终标记为完成。失败与异常中断保留明确信息，不自动产生另一次执行。
+6. 人工可在查看产物与外部状态后调用 `missions.jobs.retry`；被意外关闭的宿主须由 `missions.jobs.recover` 确认其进程退出，再转 interrupted。重新执行始终要求明确的 start 命令。
+7. 工作项回到 completed 或 cancelled 后，Mission 才能在既有完成门禁下终结。
 
 这些操作用 SHA/ID 定位本地项目和文件，保存结果写入时采用同目录临时文件加原子替换；并发修改由文件锁顺序化。所有任务读取与恢复都不会偷偷运行模型。
 
