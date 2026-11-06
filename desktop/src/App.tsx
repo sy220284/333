@@ -1,0 +1,393 @@
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  Activity, AlertCircle, ArrowRight, Bot, Boxes, Check, ChevronDown, ChevronRight,
+  CircleStop, ClipboardList, Clock3, Code2, Cpu, FileCode2, Folder, FolderOpen,
+  GitBranch, GitPullRequest, HardDrive, History, LayoutDashboard, ListChecks,
+  LoaderCircle, LockKeyhole, MessageSquare, MoreHorizontal, PanelRightClose,
+  PanelRightOpen, Pause, Play, Plus, RefreshCw, Save, Search, Send, Settings2,
+  ShieldCheck, Sparkles, SquareTerminal, UsersRound, WandSparkles, X,
+  type LucideIcon
+} from 'lucide-react'
+import { api, type AppEvent, type Item } from './api'
+import { asObject, itemFromMessage, statusName, textFromMessage, type ConversationItem } from './projection'
+
+type View='dashboard'|'chat'|'agents'|'missions'|'files'|'models'|'integrations'|'github'|'history'|'settings'
+type Model={value:string;displayName:string;description?:string}
+type Mission={id?:string;missionId?:string;objective?:string;status?:string;checkpoints?:unknown[];[key:string]:unknown}
+type FileEntry={name:string;path:string;directory:boolean}
+type Permission={id:string;toolName:string;input?:Item;description?:string}
+type HostRequest={id:string;type?:string;request?:unknown;[key:string]:unknown}
+type Task={taskId:string;status?:string;description?:string;[key:string]:unknown}
+const NAV:{id:View;label:string;icon:LucideIcon}[]=[
+  {id:'dashboard',label:'工作台概览',icon:LayoutDashboard},
+  {id:'chat',label:'AI 对话',icon:MessageSquare},
+  {id:'agents',label:'智能体团队',icon:UsersRound},
+  {id:'missions',label:'长期任务',icon:ClipboardList},
+  {id:'files',label:'项目文件',icon:FolderOpen},
+  {id:'models',label:'模型管理',icon:Cpu},
+  {id:'integrations',label:'技能与 MCP',icon:Boxes},
+  {id:'github',label:'GitHub',icon:GitPullRequest},
+  {id:'history',label:'历史记录',icon:History},
+  {id:'settings',label:'设置与权限',icon:Settings2}
+]
+const TITLES:Record<View,[string,string]>={
+  dashboard:['工作台概览','从这里继续你的 AI 工作，让每项进展都清晰可见。'],
+  chat:['AI 对话','在同一个工作区里进行推理、工具执行和协作。'],
+  agents:['智能体团队','管理主子智能体与 Super Agents 团队协作。'],
+  missions:['长期任务','保存目标、记录检查点，按授权恢复执行。'],
+  files:['项目文件','浏览和编辑项目文件，检查真实 Git 差异。'],
+  models:['模型管理','查看后端实际发现的模型和当前会话配置。'],
+  integrations:['技能与 MCP','通过 AI 工具链使用和检查已配置的集成能力。'],
+  github:['GitHub','查看工作区 Git 状态并发起代码审查任务。'],
+  history:['历史记录','恢复当前工作区保存在本地的会话。'],
+  settings:['设置与权限','控制执行模式、工具授权和工作台偏好。']
+}
+function dateTime(ts:number){return new Date(ts).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}
+function obj(v:unknown):Item{return asObject(v)??{}}
+function presentError(v:unknown){return v instanceof Error?v.message:String(v)}
+function missionId(m:Mission){return String(m.missionId||m.id||'')}
+function json(v:unknown){try{return JSON.stringify(v,null,2)}catch{return String(v)}}
+function IconButton({label,onClick,children,disabled=false}:{
+  label:string;onClick:()=>void;children:ReactNode;disabled?:boolean
+}){return <button aria-label={label} title={label} type="button" className="icon-button" onClick={onClick} disabled={disabled}>{children}</button>}
+function Empty({icon:Icon,title,detail,action}:{
+  icon:LucideIcon;title:string;detail:string;action?:ReactNode
+}){return <div className="empty-state"><div className="empty-icon"><Icon size={28}/></div><h3>{title}</h3><p>{detail}</p>{action}</div>}
+function Section({title,subtitle,action,children}:{
+  title:string;subtitle?:string;action?:ReactNode;children:ReactNode
+}){return <section className="section"><div className="section-heading"><div><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div>{action}</div>{children}</section>}
+function StatusTag({text,tone='neutral'}:{text:string;tone?:'good'|'warn'|'neutral'|'danger'}){return <span className={'status-tag '+tone}><span className="status-dot"/>{text}</span>}
+function Panel({children,className=''}:{children:ReactNode;className?:string}){return <div className={'panel '+className}>{children}</div>}
+export function App(){
+  const [view,setView]=useState<View>('dashboard')
+  const [workspace,setWorkspace]=useState('')
+  const [connected,setConnected]=useState(false)
+  const [error,setError]=useState('')
+  const [busy,setBusy]=useState('')
+  const [sessionId,setSessionId]=useState('')
+  const [sessionPhase,setSessionPhase]=useState('idle')
+  const [sessions,setSessions]=useState<Item[]>([])
+  const [models,setModels]=useState<Model[]>([])
+  const [selectedModel,setSelectedModel]=useState('')
+  const [messages,setMessages]=useState<ConversationItem[]>([])
+  const [draft,setDraft]=useState('')
+  const [mode,setMode]=useState<'master'|'super'>('master')
+  const [overview,setOverview]=useState<Item>({})
+  const [missions,setMissions]=useState<Mission[]>([])
+  const [selectedMission,setSelectedMission]=useState('')
+  const [missionDraft,setMissionDraft]=useState('')
+  const [checkpointDraft,setCheckpointDraft]=useState('')
+  const [tasks,setTasks]=useState<Task[]>([])
+  const [permissions,setPermissions]=useState<Permission[]>([])
+  const [hostRequests,setHostRequests]=useState<HostRequest[]>([])
+  const [rightOpen,setRightOpen]=useState(true)
+  const [search,setSearch]=useState('')
+  const [files,setFiles]=useState<FileEntry[]>([])
+  const [folder,setFolder]=useState('')
+  const [currentFile,setCurrentFile]=useState('')
+  const [fileContent,setFileContent]=useState('')
+  const [savedContent,setSavedContent]=useState('')
+  const [gitStatus,setGitStatus]=useState('')
+  const [gitDiff,setGitDiff]=useState('')
+  const [isDark,setIsDark]=useState(true)
+  const [animate,setAnimate]=useState(true)
+  const [permissionMode,setPermissionMode]=useState('default')
+  const [activity,setActivity]=useState<string[]>([])
+  const inputRef=useRef<HTMLTextAreaElement>(null)
+  const messagesEnd=useRef<HTMLDivElement>(null)
+  const sessionRef=useRef('')
+  const viewRef=useRef<View>('dashboard')
+  const scrollMessages=()=>messagesEnd.current?.scrollIntoView({behavior:'smooth',block:'end'})
+  useEffect(()=>{viewRef.current=view},[view])
+  useEffect(()=>{sessionRef.current=sessionId},[sessionId])
+  const invoke=useCallback(async<T,>(method:string,args:Record<string,unknown>={}):Promise<T>=>{
+    setError('')
+    try{return await api.call<T>(method,args)}
+    catch(e){const reason=presentError(e);setError(reason);throw e}
+  },[])
+  const refresh=useCallback(async()=>{
+    const queries=await Promise.allSettled([
+      api.call<{models:Model[]}>('models.list'),
+      api.call<Item[]>('sessions.list',{limit:50,offset:0}),
+      api.call<Item>('agents.overview'),
+      api.call<{missions:Mission[];selectedMissionId:string|null}>('missions.list')
+    ])
+    if(queries[0].status==='fulfilled')setModels(queries[0].value.models??[])
+    if(queries[1].status==='fulfilled')setSessions(Array.isArray(queries[1].value)?queries[1].value:[])
+    if(queries[2].status==='fulfilled'){
+      setOverview(queries[2].value)
+      setMode(queries[2].value.mode==='super'?'super':'master')
+    }
+    if(queries[3].status==='fulfilled'){
+      setMissions(queries[3].value.missions??[])
+      setSelectedMission(queries[3].value.selectedMissionId??'')
+    }
+  },[])
+  const refreshSession=useCallback(async(id:string)=>{
+    const [p,h,t]=await Promise.allSettled([
+      api.call<Permission[]>('permissions.list',{sessionId:id}),
+      api.call<HostRequest[]>('host.list',{sessionId:id}),
+      api.call<Task[]>('tasks.list',{sessionId:id})
+    ])
+    if(p.status==='fulfilled')setPermissions(p.value??[])
+    if(h.status==='fulfilled')setHostRequests(h.value??[])
+    if(t.status==='fulfilled')setTasks(t.value??[])
+  },[])
+  useEffect(()=>{
+    let alive=true
+    const unsub=api.subscribe((event:AppEvent)=>{
+      if(!alive)return
+      if(event.event==='desktop.disconnected'){
+        setConnected(false);setError(String(event.error||'桌面后台连接已断开'));return
+      }
+      if(event.sessionId&&event.sessionId!==sessionRef.current)return
+      if(event.event==='session.state'){
+        const state=obj(event.state)
+        setSessionPhase(String(state.phase??state.status??'idle'))
+      }else if(event.event==='session.error'||event.event==='task.persistence.error'){
+        setError(String(event.error||'任务执行异常'))
+      }else if(event.event==='permission.request'){
+        const p=obj(event.permission) as Permission
+        setPermissions(old=>old.some(item=>item.id===p.id)?old:[...old,p])
+      }else if(event.event==='permission.resolved'){
+        setPermissions(old=>old.filter(item=>item.id!==event.permissionId))
+      }else if(event.event==='host.request'){
+        const r=obj(event.request) as HostRequest
+        setHostRequests(old=>old.some(item=>item.id===r.id)?old:[...old,r])
+      }else if(event.event==='host.resolved'){
+        setHostRequests(old=>old.filter(item=>item.id!==event.requestId))
+      }else if(event.event==='task.updated'&&event.task){
+        const task=obj(event.task) as Task
+        setTasks(old=>[task,...old.filter(t=>t.taskId!==task.taskId)])
+      }else if(event.event==='session.message'){
+        const payload=obj(event.message)
+        if(payload.type==='stream_event'){
+          const streaming=obj(payload.event)
+          const delta=obj(streaming.delta)
+          if(streaming.type==='content_block_delta'&&delta.type==='text_delta'&&typeof delta.text==='string'){
+            const turnId='stream-'+String(event.turnId)
+            setMessages(old=>{
+              const at=old.findIndex(item=>item.id===turnId)
+              const next={id:turnId,kind:'assistant' as const,text:(at<0?'':old[at].text)+delta.text,time:Date.now()}
+              return at<0?[...old,next]:old.map((item,i)=>i===at?next:item)
+            })
+          }
+        }else{
+          const item=itemFromMessage(payload)
+          if(item&&item.kind!=='user'){
+            setMessages(old=>{
+              const id=item.id
+              const has=old.some(m=>m.id===id)
+              const streamIndex=old.findIndex(m=>m.id==='stream-'+String(event.turnId))
+              if(item.kind==='assistant'&&streamIndex>=0){
+                return old.map((m,i)=>i===streamIndex?{...item,id:m.id}:m)
+              }
+              return has?old.map(m=>m.id===id?item:m):[...old,item]
+            })
+          }
+        }
+      }else if(event.event==='agent.progress'){
+        const e=obj(event.message);setActivity(old=>[String(e.type||'agent.progress'),...old].slice(0,20))
+      }
+    })
+    void (async()=>{
+      try{
+        const info=await api.call<{workspace:string}>('app.info')
+        if(!alive)return
+        setWorkspace(info.workspace);setFolder(info.workspace)
+        await api.call('hello')
+        if(!alive)return
+        setConnected(true);await refresh()
+      }catch(e){if(alive){setConnected(false);setError(presentError(e))}}
+    })()
+    return ()=>{alive=false;unsub()}
+  },[refresh])
+  useEffect(()=>{if(view==='chat')scrollMessages()},[messages,view])
+  useEffect(()=>{document.documentElement.dataset.theme=isDark?'dark':'light'},[isDark])
+  useEffect(()=>{document.documentElement.dataset.motion=animate?'on':'off'},[animate])
+  useEffect(()=>{
+    const onKey=(event:KeyboardEvent)=>{
+      const mod=event.ctrlKey||event.metaKey
+      if(mod&&event.key.toLowerCase()==='k'){event.preventDefault();document.getElementById('global-search')?.focus()}
+      if(mod&&event.key.toLowerCase()==='n'){event.preventDefault();void createSession()}
+      if(event.key==='Escape')setSearch('')
+    }
+    window.addEventListener('keydown',onKey)
+    return ()=>window.removeEventListener('keydown',onKey)
+  },[selectedModel])
+  async function operation(name:string,action:()=>Promise<unknown>){
+    setBusy(name)
+    try{await action()}catch{/* invoke and operation callers display errors explicitly */}finally{setBusy('')}
+  }
+  async function createSession(){
+    await operation('新建会话',async()=>{
+      const response=await invoke<{sessionId:string;models?:Model[];tasks?:Task[]}>('sessions.open',selectedModel?{model:selectedModel}:{})
+      setSessionId(response.sessionId);setSessionPhase('idle');setMessages([])
+      setTasks(response.tasks??[]);setPermissions([]);setHostRequests([])
+      setView('chat');await refresh()
+    })
+  }
+  async function resumeSession(id:string){
+    await operation('恢复会话',async()=>{
+      const response=await invoke<{sessionId:string;tasks?:Task[]}>('sessions.resume',{sessionId:id})
+      setSessionId(response.sessionId);setTasks(response.tasks??[]);setPermissions([]);setHostRequests([])
+      const history=await invoke<unknown>('sessions.history',{sessionId:id,limit:200,offset:0})
+      const rows=Array.isArray(history)?history:asObject(history)?.messages??[]
+      const next=(Array.isArray(rows)?rows:[]).map(itemFromMessage).filter(Boolean) as ConversationItem[]
+      setMessages(next);setView('chat');await refreshSession(id)
+    })
+  }
+  async function send(){
+    const text=draft.trim()
+    if(!text||busy)return
+    if(!sessionId){
+      await operation('创建会话',async()=>{
+        const response=await invoke<{sessionId:string}>('sessions.open',selectedModel?{model:selectedModel}:{})
+        setSessionId(response.sessionId);setSessionPhase('idle');setMessages([])
+        await invoke('sessions.send',{sessionId:response.sessionId,message:text})
+        setMessages([{id:'local-'+Date.now(),kind:'user',text,time:Date.now()}])
+        setDraft('');setView('chat')
+      })
+    }else{
+      await operation('发送消息',async()=>{
+        await invoke('sessions.send',{sessionId,message:text})
+        setMessages(old=>[...old,{id:'local-'+Date.now(),kind:'user',text,time:Date.now()}])
+        setDraft('')
+      })
+    }
+  }
+  async function selectWorkspace(){
+    await operation('切换工作区',async()=>{
+      const data=await invoke<{workspace:string;changed:boolean;connected?:boolean;error?:string}>('workspace.pick')
+      if(!data.changed)return
+      setWorkspace(data.workspace);setFolder(data.workspace);setSessionId('');setMessages([])
+      setPermissions([]);setHostRequests([]);setTasks([]);setFiles([])
+      setCurrentFile('');setGitStatus('');setGitDiff('')
+      setConnected(Boolean(data.connected))
+      if(data.error)setError(data.error)
+      if(data.connected)await refresh()
+    })
+  }
+  async function directory(path:string){
+    await operation('读取目录',async()=>{
+      const data=await invoke<{path:string;entries:FileEntry[]}>('workspace.list',{path})
+      setFolder(data.path);setFiles(data.entries??[])
+    })
+  }
+  async function openFile(path:string){
+    await operation('读取文件',async()=>{
+      const data=await invoke<{path:string;content:string}>('workspace.read',{path})
+      setCurrentFile(data.path);setFileContent(data.content);setSavedContent(data.content)
+    })
+  }
+  async function saveFile(){
+    if(!currentFile||fileContent===savedContent)return
+    await operation('保存文件',async()=>{
+      const response=await invoke<{saved:boolean}>('workspace.write',{path:currentFile,content:fileContent})
+      if(response.saved)setSavedContent(fileContent)
+    })
+  }
+  async function refreshGit(){
+    await operation('读取 Git',async()=>{
+      const [s,d]=await Promise.all([
+        invoke<{text:string}>('workspace.gitStatus'),
+        invoke<{text:string}>('workspace.gitDiff')
+      ])
+      setGitStatus(s.text);setGitDiff(d.text)
+    })
+  }
+  async function agentMode(next:'master'|'super'){
+    await operation('切换智能体模式',async()=>{
+      await invoke('agents.setMode',{mode:next});setMode(next);await refresh()
+    })
+  }
+  async function createMission(){
+    if(!missionDraft.trim())return
+    await operation('创建长期任务',async()=>{
+      const mission=await invoke<Mission>('missions.create',{objective:missionDraft.trim()})
+      setMissionDraft('');setSelectedMission(missionId(mission))
+      await refresh()
+    })
+  }
+  async function missionAction(id:string,status:'active'|'paused'|'completed'){
+    await operation('更新任务',async()=>{await invoke('missions.updateStatus',{missionId:id,status});await refresh()})
+  }
+  async function checkpoint(){
+    if(!selectedMission||!checkpointDraft.trim())return
+    await operation('记录检查点',async()=>{
+      await invoke('missions.checkpoint',{missionId:selectedMission,checkpoint:checkpointDraft.trim()})
+      setCheckpointDraft('');await refresh()
+    })
+  }
+  async function decision(id:string,allow:boolean){
+    if(!sessionId)return
+    await operation('权限审批',async()=>{
+      await invoke('permissions.decide',{sessionId,permissionId:id,
+        decision:allow?{behavior:'allow'}:{behavior:'deny',message:'用户已在桌面端拒绝该工具调用'}})
+      setPermissions(old=>old.filter(p=>p.id!==id))
+    })
+  }
+  const selected=missions.find(m=>missionId(m)===selectedMission)
+  const filteredNav=useMemo(()=>NAV.filter(n=>n.label.includes(search.trim())),[search])
+  function toChat(prompt:string){setDraft(prompt);setView('chat');requestAnimationFrame(()=>inputRef.current?.focus())}
+  const heading=TITLES[view]
+  const sessionActive=Boolean(sessionId)
+  return <div className="app-shell">
+    <aside className="sidebar">
+      <div className="brand"><div className="brand-mark"><Sparkles size={21}/></div><div><strong>摇摇车</strong><small>AGENT WORKSPACE</small></div></div>
+      <button className="workspace-picker" onClick={selectWorkspace} title={workspace||'选择工作区'}>
+        <div className="workspace-icon"><HardDrive size={17}/></div><div className="workspace-details"><strong>{workspace.split(/[\\/]/).filter(Boolean).at(-1)||'选择工作区'}</strong><small>{workspace?'本地工作区':'选择本地项目'}</small></div><ChevronDown size={14}/>
+      </button>
+      <div className="sidebar-top-label">工作区导航</div>
+      <nav className="nav-links" aria-label="主要导航">{filteredNav.map(({id,label,icon:Icon})=><button key={id} className={'nav-item '+(view===id?'active':'')} onClick={()=>setView(id)}><Icon size={17} strokeWidth={1.75}/><span>{label}</span>{id==='settings'&&permissions.length>0&&<b className="nav-counter">{permissions.length}</b>}</button>)}</nav>
+      <div className="sidebar-footer">
+        <div className="connection-line"><span className={'connection-light '+(connected?'online':'offline')}/><span>{connected?'本地后台已连接':'后台未连接'}</span></div>
+        <span className="muted tiny">摇摇车 Desktop · 本地运行</span>
+      </div>
+    </aside>
+    <div className="workspace-body">
+      <header className="topbar"><div className="breadcrumbs"><span>工作区</span><ChevronRight size={14}/><strong>{heading[0]}</strong></div><div className="topbar-actions">
+        <div className="searchbar"><Search size={15}/><input id="global-search" placeholder="搜索导航 · ⌘K" value={search} onChange={e=>setSearch(e.target.value)}/></div>
+        <IconButton label="刷新数据" onClick={()=>void operation('刷新',refresh)}><RefreshCw size={17}/></IconButton>
+        <IconButton label={rightOpen?'隐藏详情面板':'打开详情面板'} onClick={()=>setRightOpen(v=>!v)}>{rightOpen?<PanelRightClose size={17}/>:<PanelRightOpen size={17}/>}</IconButton>
+      </div></header>
+      <div className="content-region">
+        <main className="main-content" key={view}>
+          <div className="page-header"><div><span className="eyebrow">YAOYAO / WORKSPACE</span><h1>{heading[0]}</h1><p>{heading[1]}</p></div><div className="header-action">{view==='dashboard'||view==='chat'?<button className="primary-button" onClick={()=>void createSession()} disabled={Boolean(busy)}><Plus size={16}/>新建会话</button>:null}</div></div>
+          {error&&<div className="error-banner" role="alert"><AlertCircle size={17}/><span>{error}</span><IconButton label="关闭错误" onClick={()=>setError('')}><X size={16}/></IconButton></div>}
+          {!connected&&<div className="offline-banner"><AlertCircle size={19}/><div><strong>本地执行引擎尚未连接</strong><p>请确认桌面 Host 已构建并可启动，或选择有效工作区。页面保留可访问，执行操作需要后台连接。</p></div><button className="secondary-button" onClick={()=>void operation('重连',async()=>{await invoke('hello');setConnected(true);await refresh()})}>重新连接</button></div>}
+          {view==='dashboard'&&<div className="dashboard-page">
+            <div className="welcome-gradient"><span className="eyebrow">GOOD TO SEE YOU AGAIN</span><h2>让想法持续向前。</h2><p>从一次对话出发，组织智能体、工具与长期任务，把复杂工作变得有条理。</p><div className="welcome-actions"><button onClick={()=>void createSession()} className="primary-button"><Plus size={16}/>开始新任务</button><button onClick={()=>setView('missions')} className="ghost-button">查看任务中心<ArrowRight size={16}/></button></div><div className="hero-orb"><Bot size={86} strokeWidth={1}/></div></div>
+            <div className="dashboard-stats"><Panel><div className="stat-icon blue"><MessageSquare/></div><span className="stat-label">历史会话</span><strong>{sessions.length}</strong></Panel><Panel><div className="stat-icon purple"><UsersRound/></div><span className="stat-label">协作模式</span><strong>{mode==='super'?'Super':'主子智能体'}</strong></Panel><Panel><div className="stat-icon mint"><ClipboardList/></div><span className="stat-label">长期任务</span><strong>{missions.length}</strong></Panel><Panel><div className="stat-icon amber"><Cpu/></div><span className="stat-label">可用模型</span><strong>{models.length}</strong></Panel></div>
+            <Section title="继续工作" action={<button className="text-button" onClick={()=>setView('history')}>全部会话<ArrowRight size={15}/></button>}>
+              {sessions.length===0?<Empty icon={MessageSquare} title="开始第一段对话" detail="选择模型并创建会话，AI 执行进度将同步到工作台。" action={<button className="secondary-button" onClick={()=>void createSession()}>创建会话</button>}/>:<div className="item-list">{sessions.slice(0,5).map((s,i)=><button key={String(s.sessionId||s.id||i)} className="list-row" onClick={()=>void resumeSession(String(s.sessionId||s.id||''))}><div className="row-icon"><MessageSquare size={18}/></div><div className="row-main"><strong>{String(s.summary||s.title||s.sessionId||'历史会话')}</strong><span>点击恢复会话</span></div><ChevronRight size={17}/></button>)}</div>}
+            </Section>
+            <div className="two-columns"><Section title="长期任务" action={<button className="text-button" onClick={()=>setView('missions')}>管理任务<ArrowRight size={15}/></button>}><Panel className="mini-panel">{missions.length?<>{missions.slice(0,3).map(m=><button className="compact-row" key={missionId(m)} onClick={()=>{setSelectedMission(missionId(m));setView('missions')}}><ListChecks size={17}/><span>{m.objective||'未命名任务'}</span><StatusTag text={String(m.status||'active')}/></button>)}</>:<Empty icon={ClipboardList} title="暂时没有长期任务" detail="创建目标后可记录检查点并随时恢复。" />}</Panel></Section>
+            <Section title="快捷入口"><Panel className="quick-links">{[['智能体团队',UsersRound,'agents'],['文件与 Git',Folder,'files'],['模型选择',Cpu,'models'],['技能与连接',Boxes,'integrations']].map(([label,Icon,id])=>{const I=Icon as LucideIcon;return <button key={String(id)} onClick={()=>setView(id as View)}><I size={20}/><span>{String(label)}</span><ArrowRight size={15}/></button>})}</Panel></Section></div>
+          </div>}
+          {view==='chat'&&<div className="chat-page">
+            <div className="chat-toolbar"><div className="toolbar-left"><StatusTag text={statusName(sessionPhase)} tone={sessionPhase==='running'?'warn':'good'}/>{sessionId&&<span className="session-id" title={sessionId}>会话 {sessionId.slice(0,8)}</span>}</div><div className="toolbar-right"><select aria-label="当前模型" value={selectedModel} onChange={e=>{setSelectedModel(e.target.value);if(sessionId)void operation('切换模型',()=>invoke('sessions.setModel',{sessionId,model:e.target.value}))}}><option value="">默认模型</option>{models.map(m=><option value={m.value} key={m.value}>{m.displayName||m.value}</option>)}</select><select aria-label="权限模式" value={permissionMode} onChange={e=>{const next=e.target.value;void operation('修改权限模式',async()=>{if(!sessionId)throw new Error('请先创建会话');await invoke('sessions.setPermissionMode',{sessionId,mode:next});setPermissionMode(next)})}}><option value="default">默认权限</option><option value="acceptEdits">允许编辑</option><option value="plan">规划模式</option><option value="dontAsk">拒绝后继续</option><option value="bypassPermissions">跳过确认（危险）</option></select>{sessionId&&<IconButton label="停止当前执行" onClick={()=>void operation('中断执行',()=>invoke('sessions.interrupt',{sessionId}))}><CircleStop size={18}/></IconButton>}</div></div>
+            <div className="message-stream">{messages.length===0?<div className="chat-empty"><div className="chat-empty-icon"><Sparkles size={38}/></div><h2>今天想完成什么？</h2><p>分析项目、编写代码、管理任务，或者邀请智能体协作。</p><div className="prompt-suggestions">{['分析当前工作区的项目结构','检查 PR19 最新代码问题','规划一个多智能体协作任务'].map(t=><button key={t} onClick={()=>setDraft(t)}>{t}<ArrowRight size={14}/></button>)}</div></div>:messages.map((m,i)=><div className={'message '+m.kind} key={m.id+'-'+i}><div className="message-avatar">{m.kind==='user'?<span>我</span>:m.kind==='assistant'?<Sparkles size={17}/>:<SquareTerminal size={16}/>}</div><div className="message-content"><div className="message-meta">{m.kind==='user'?'你':m.kind==='assistant'?'摇摇车':'工具'}<time>{dateTime(m.time)}</time></div><div className="message-text">{m.text}</div></div></div>)}<div ref={messagesEnd}/></div>
+            {permissions.length>0&&<div className="inline-approval"><ShieldCheck size={18}/><span>{permissions.length} 项工具操作等待批准</span><button onClick={()=>setView('settings')}>查看审批<ArrowRight size={14}/></button></div>}
+            <div className="composer"><textarea ref={inputRef} aria-label="输入任务" value={draft} onChange={e=>setDraft(e.target.value)} placeholder="描述任务，支持使用文字引用项目文件与技能…" onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();void send()}}}/><div className="composer-footer"><div className="composer-hints"><span><Bot size={15}/> {mode==='super'?'Super Agents':'主子智能体'}</span><span>⌘ / Ctrl + Enter 发送</span></div><button className="primary-button send-button" disabled={!draft.trim()||Boolean(busy)||!connected} onClick={()=>void send()}><Send size={16}/>发送</button></div></div>
+          </div>}
+          {view==='agents'&&<div className="stack-page"><Section title="协作模式" subtitle="切换模式只变更工作区配置，不会自行启动其他智能体。"><div className="mode-cards"><button className={'mode-card '+(mode==='master'?'selected':'')} onClick={()=>void agentMode('master')}><div className="mode-icon"><Bot size={26}/></div><div><strong>主智能体 + 子智能体</strong><p>主智能体负责规划与汇总，子智能体并行执行独立工作。</p></div><span>{mode==='master'?<Check size={18}/>:<ArrowRight size={18}/>}</span></button><button className={'mode-card '+(mode==='super'?'selected':'')} onClick={()=>void agentMode('super')}><div className="mode-icon"><UsersRound size={27}/></div><div><strong>Super Agents 团队模式</strong><p>面向共享任务、团队通信、任务簿和长期目标协同。</p></div><span>{mode==='super'?<Check size={18}/>:<ArrowRight size={18}/>}</span></button></div></Section>
+            <Section title="当前团队" action={<button className="secondary-button" onClick={()=>void operation('刷新团队',refresh)}><RefreshCw size={15}/>刷新</button>}><div className="team-graph"><div className="leader-node"><Bot size={24}/><strong>主智能体 / 协调中心</strong><StatusTag text={mode==='master'?'主子模式':'团队模式'} tone="good"/></div><div className="team-branches"><div className="agent-node"><Code2/><strong>任务分析</strong><span>工具调用与需求拆解</span></div><div className="agent-node"><WandSparkles/><strong>并行执行</strong><span>按需分配的任务执行</span></div><div className="agent-node"><ShieldCheck/><strong>验证与汇总</strong><span>审查结果和运行证据</span></div></div></div><p className="help-text">上方展示协作结构，实际成员和状态以后台返回的数据为准。</p>
+            {Array.isArray(overview.teams)&&overview.teams.length>0&&<Panel><div className="item-list">{overview.teams.map((team:Item,i:number)=><div key={i} className="list-row"><div className="row-icon"><UsersRound/></div><div className="row-main"><strong>{String(team.name||team.teamName||'团队')}</strong><span>{json(team).slice(0,180)}</span></div></div>)}</div></Panel>}</Section>
+            <Section title="智能体任务" action={<button className="text-button" onClick={()=>setView('chat')}>进入对话<ArrowRight size={15}/></button>}><Panel className="mini-panel">{tasks.length?tasks.map(t=><div className="compact-row" key={t.taskId}><Activity size={16}/><span>{String(t.description||t.taskId)}</span><StatusTag text={String(t.status||'未知')}/>{sessionId&&<IconButton label="停止任务" onClick={()=>void operation('停止任务',async()=>{await invoke('tasks.stop',{sessionId,taskId:t.taskId});await refreshSession(sessionId)})}><CircleStop size={15}/></IconButton>}{sessionId&&<IconButton label="恢复任务" onClick={()=>void operation('恢复任务',async()=>{await invoke('tasks.resume',{sessionId,taskId:t.taskId});await refreshSession(sessionId)})}><Play size={15}/></IconButton>}</div>):<Empty icon={UsersRound} title="尚无运行中的智能体任务" detail="在对话中发起协作后，这里会出现真实任务进度。"/>}</Panel></Section></div>}
+          {view==='missions'&&<div className="mission-page"><div className="mission-list-column"><Panel><h3>创建长期任务</h3><textarea value={missionDraft} onChange={e=>setMissionDraft(e.target.value)} rows={3} placeholder="明确长期目标与交付要求…"/><button className="primary-button full-width" onClick={()=>void createMission()} disabled={!missionDraft.trim()||Boolean(busy)}><Plus size={15}/>创建并选中任务</button></Panel><Section title="任务簿" action={<button className="text-button" onClick={()=>void operation('刷新任务簿',refresh)}><RefreshCw size={15}/></button>}><div className="mission-list">{missions.map(m=><button key={missionId(m)} className={'mission-item '+(selectedMission===missionId(m)?'selected':'')} onClick={()=>{setSelectedMission(missionId(m));void operation('选择任务',()=>invoke('missions.select',{missionId:missionId(m)}))}}><strong>{m.objective||'未命名任务'}</strong><StatusTag text={m.status==='paused'?'已暂停':m.status==='completed'?'已完成':'执行中'} tone={m.status==='paused'?'warn':'good'}/></button>)}{missions.length===0&&<Empty icon={ClipboardList} title="任务簿为空" detail="创建长期任务后，可保存进度、暂停与恢复。"/>}</div></Section></div><div className="mission-detail"><Panel>{selected?<><div className="detail-heading"><h2>任务详情</h2><StatusTag text={selected.status||'active'} tone={selected.status==='paused'?'warn':'good'}/></div><h3 className="mission-objective">{selected.objective}</h3><p className="muted">任务 ID：{missionId(selected)}</p><div className="button-row"><button className="secondary-button" onClick={()=>void missionAction(missionId(selected),'active')}><Play size={15}/>恢复</button><button className="secondary-button" onClick={()=>void missionAction(missionId(selected),'paused')}><Pause size={15}/>暂停</button><button className="secondary-button" onClick={()=>void missionAction(missionId(selected),'completed')}><Check size={15}/>完成</button></div><div className="divider"/><h3>保存检查点</h3><textarea rows={4} placeholder="填写已验证进度、修改和下一步工作…" value={checkpointDraft} onChange={e=>setCheckpointDraft(e.target.value)}/><button className="primary-button" disabled={!checkpointDraft.trim()||Boolean(busy)} onClick={()=>void checkpoint()}><Save size={15}/>记录进度</button><div className="divider"/><h3>已有检查点</h3><div className="checkpoint-list">{Array.isArray(selected.checkpoints)&&selected.checkpoints.length?selected.checkpoints.map((c,i)=><div key={i} className="checkpoint"><Check size={15}/><pre>{typeof c==='string'?c:json(c)}</pre></div>):<p className="muted">尚无检查点记录</p>}</div></>:<Empty icon={ListChecks} title="选择一项长期任务" detail="查看目标，记录进度，并控制任务状态。"/>}</Panel></div></div>}
+          {view==='files'&&<div className="files-page"><div className="file-explorer"><div className="pane-title"><FolderOpen size={17}/>项目目录<IconButton label="刷新文件" onClick={()=>void directory(folder||workspace)}><RefreshCw size={15}/></IconButton></div><button className="folder-path" onClick={()=>void directory(workspace)} title={workspace}><HardDrive size={14}/>{workspace.split(/[\\/]/).filter(Boolean).at(-1)||'工作区'}</button>{folder!==workspace&&<button className="explorer-up" onClick={()=>void directory(folder.replace(/[\\/][^\\/]+$/,''))}>.. 上一级目录</button>}<div className="explorer-list">{files.map(f=><button key={f.path} className={'file-entry '+(currentFile===f.path?'selected':'')} onClick={()=>void (f.directory?directory(f.path):openFile(f.path))}>{f.directory?<Folder size={16}/>:<FileCode2 size={16}/>}<span>{f.name}</span></button>)}{files.length===0&&<div className="subtle-empty">选择刷新以加载文件列表</div>}</div></div><div className="file-workspace"><div className="file-tabs"><span>{currentFile?currentFile.split(/[\\/]/).at(-1):'文件预览'}</span>{currentFile&&<button className="secondary-button small" disabled={fileContent===savedContent} onClick={()=>void saveFile()}><Save size={14}/>保存文件</button>}</div>{currentFile?<textarea className="code-editor" spellCheck={false} aria-label="编辑当前文件" value={fileContent} onChange={e=>setFileContent(e.target.value)}/>:<Empty icon={FileCode2} title="选择文件开始预览" detail="点击左侧文件，查看并编辑。保存前会弹出系统确认。"/>}<div className="git-panel"><div className="pane-title"><GitBranch size={16}/>工作区差异<button className="text-button" onClick={()=>void refreshGit()}><RefreshCw size={14}/>刷新 Git</button></div><pre>{gitDiff||gitStatus||'此处显示真实 Git 状态与工作区改动。'}</pre></div></div></div>}
+          {view==='models'&&<div className="stack-page"><Section title="发现的模型" subtitle="模型目录由真实桌面后台返回，选择后应用到当前会话。" action={<button className="secondary-button" onClick={()=>void operation('刷新模型',refresh)}><RefreshCw size={15}/>重新检测</button>}><div className="model-grid">{models.map(m=><button key={m.value} className={'model-card '+(selectedModel===m.value?'selected':'')} onClick={()=>{setSelectedModel(m.value);if(sessionId)void operation('切换模型',()=>invoke('sessions.setModel',{sessionId,model:m.value}))}}><div className="model-symbol"><Cpu size={22}/></div><strong>{m.displayName||m.value}</strong><small>{m.value}</small><p>{m.description||'由已配置的模型服务商提供'}</p>{selectedModel===m.value&&<div className="selected-model"><Check size={14}/>当前选择</div>}</button>)}</div>{models.length===0&&<Empty icon={Cpu} title="尚未发现可用模型" detail="请检查模型服务商配置和桌面后台连接；模型将从 SDK 实际能力目录加载。"/>}</Section><Panel className="info-panel"><ShieldCheck size={18}/><div><strong>模型参数由后端统一管理</strong><p>服务商、上下文窗口、工具调用和推理档位以 PR19 模型配置为准，避免桌面端形成第二份失效配置。</p></div><button className="text-button" onClick={()=>toChat('检查当前配置的模型、服务商参数与上下文窗口，并列出需要修正的项')}>检查配置<ArrowRight size={15}/></button></Panel></div>}
+          {view==='integrations'&&<div className="stack-page"><div className="integration-grid"><Panel><div className="integration-icon purple"><WandSparkles size={26}/></div><h2>技能 Skills</h2><p>复用项目和用户级技能，为重复工作提供标准执行路径。</p><button className="secondary-button" onClick={()=>toChat('列出当前工作区可用的全部技能，包括来源、功能、启用状态和使用方式')}><Search size={15}/>检查已安装技能</button></Panel><Panel><div className="integration-icon blue"><Boxes size={26}/></div><h2>MCP 工具</h2><p>让 AI 使用项目服务、外部工具与本地开发能力。</p><button className="secondary-button" onClick={()=>toChat('检查当前 MCP 服务器连接情况，列出服务、工具、授权和连接错误')}><Activity size={15}/>检查 MCP 连接</button></Panel><Panel><div className="integration-icon mint"><Bot size={26}/></div><h2>插件与扩展</h2><p>保持现有插件运行机制，按需读取能力与诊断问题。</p><button className="secondary-button" onClick={()=>toChat('审计当前已安装的插件及其功能入口，检查是否能够正常调用')}><ArrowRight size={15}/>检查插件</button></Panel></div><Panel className="info-panel"><AlertCircle size={18}/><div><strong>可视化安装管理接口待后台补充</strong><p>当前页面的检查操作会提交给现有 AI 工具链；安装、卸载和密钥编辑的独立后台接口仍需按功能迁移台账接入。</p></div></Panel></div>}
+          {view==='github'&&<div className="stack-page"><Panel className="github-hero"><div className="github-badge"><GitPullRequest size={27}/></div><div><h2>项目 Git 工作区</h2><p>{workspace}</p><StatusTag text="本地仓库" tone="good"/></div><button className="secondary-button" onClick={()=>void refreshGit()}><RefreshCw size={15}/>刷新状态</button></Panel><div className="two-columns"><Section title="工作区状态"><Panel><pre className="git-output">{gitStatus||'点击「刷新状态」获取当前仓库真实状态。'}</pre></Panel></Section><Section title="智能代码审查"><Panel><p className="muted">使用仓库现有 GitHub 工具、PR 审查规则及权限体系执行任务。</p><button className="primary-button" onClick={()=>toChat('审查当前 Git 工作区和 PR19 的最新修改，按风险等级列出问题并附上代码位置')}><GitPullRequest size={16}/>发起 PR 审查</button></Panel></Section></div><Section title="未提交改动"><Panel><pre className="git-output">{gitDiff||'刷新后在这里查看 Git diff。'}</pre></Panel></Section></div>}
+          {view==='history'&&<div className="stack-page"><Section title="本地会话" action={<button className="secondary-button" onClick={()=>void operation('刷新历史',refresh)}><RefreshCw size={15}/>刷新</button>}><Panel><div className="item-list">{sessions.map((s,i)=>{const id=String(s.sessionId||s.id||'');return <button key={id||i} className="list-row" onClick={()=>void resumeSession(id)} disabled={!id}><div className="row-icon"><History size={17}/></div><div className="row-main"><strong>{String(s.summary||s.title||id||'会话')}</strong><span>{id}</span></div><span className="muted">恢复</span><ChevronRight size={17}/></button>})}{sessions.length===0&&<Empty icon={History} title="没有历史会话" detail="会话历史由后台按工作区保存，运行过的会话可从这里恢复。"/>}</div></Panel></Section></div>}
+          {view==='settings'&&<div className="stack-page"><Section title="工具权限审批" subtitle="每一项工具执行请求都需要明确处理。拒绝会直接反馈给执行引擎。"><Panel>{permissions.length===0?<Empty icon={ShieldCheck} title="当前没有待处理的审批" detail="AI 发起受保护的工具操作时，申请会出现在这里。"/>:<div className="approval-list">{permissions.map(p=><div key={p.id} className="approval-card"><div className="approval-title"><LockKeyhole size={18}/><div><strong>{p.toolName}</strong><span>{p.description||'工具请求等待确认'}</span></div></div><pre>{json(p.input)}</pre><div className="button-row"><button className="secondary-button" onClick={()=>void decision(p.id,false)}>拒绝</button><button className="primary-button" onClick={()=>void decision(p.id,true)}>本次允许</button></div></div>)}</div>}</Panel></Section>
+            <Section title="主机交互请求"><Panel>{hostRequests.length===0?<p className="muted">没有需要处理的主机交互请求。</p>:hostRequests.map(r=><div key={r.id} className="approval-card"><strong>{String(r.type||'交互请求')}</strong><pre>{json(r.request||r)}</pre><button className="secondary-button" onClick={()=>void operation('拒绝请求',async()=>{if(!sessionId)return;await invoke('host.reject',{sessionId,requestId:r.id,reason:'用户在桌面端拒绝请求'});await refreshSession(sessionId)})}>拒绝请求</button></div>)}</Panel></Section>
+            <Section title="外观与体验"><Panel className="settings-list"><label className="setting-row"><div><strong>深色主题</strong><p>深色背景与柔和分层玻璃质感</p></div><input type="checkbox" checked={isDark} onChange={e=>setIsDark(e.target.checked)}/></label><label className="setting-row"><div><strong>动态效果</strong><p>开启过渡与悬停动效，系统要求减少动态效果时自动降低</p></div><input type="checkbox" checked={animate} onChange={e=>setAnimate(e.target.checked)}/></label><div className="setting-row"><div><strong>侧边上下文面板</strong><p>显示任务、模型、审批和运行摘要</p></div><button className="secondary-button" onClick={()=>setRightOpen(v=>!v)}>{rightOpen?'收起面板':'展开面板'}</button></div></Panel></Section></div>}
+        </main>
+        {rightOpen&&<aside className="inspector"><div className="inspector-heading"><span>实时上下文</span><IconButton label="收起详情" onClick={()=>setRightOpen(false)}><X size={15}/></IconButton></div><div className="inspector-content"><div className="inspector-section"><span className="side-section-label">运行状态</span><div className="runtime-tile"><div className={'runtime-indicator '+(connected?'ok':'off')}>{connected?<Activity size={20}/>:<AlertCircle size={20}/>}</div><strong>{connected?'引擎已连接':'等待连接'}</strong><span>{statusName(sessionPhase)}</span></div></div><div className="inspector-section"><span className="side-section-label">当前配置</span><div className="detail-row"><span>智能体模式</span><strong>{mode==='super'?'Super Agents':'主子模式'}</strong></div><div className="detail-row"><span>当前模型</span><strong title={selectedModel}>{selectedModel||'默认模型'}</strong></div><div className="detail-row"><span>待审权限</span><strong className={permissions.length?'attention':''}>{permissions.length} 项</strong></div><div className="detail-row"><span>活动任务</span><strong>{tasks.length}</strong></div></div><div className="inspector-section"><span className="side-section-label">快捷操作</span><button className="inspector-action" onClick={()=>setView('settings')}><ShieldCheck size={16}/>管理权限<ChevronRight size={15}/></button><button className="inspector-action" onClick={()=>setView('missions')}><ListChecks size={16}/>任务簿<ChevronRight size={15}/></button><button className="inspector-action" onClick={()=>setView('models')}><Cpu size={16}/>模型选择<ChevronRight size={15}/></button></div><div className="inspector-section"><span className="side-section-label">最近活动</span>{activity.length?activity.slice(0,6).map((event,i)=><div className="activity-entry" key={i}><span className="activity-dot"/>{event}</div>):<p className="muted small">运行任务时，这里显示执行活动。</p>}</div></div><div className="inspector-footer"><span className={'connection-light '+(connected?'online':'offline')}/><span>本地工作区 · {busy||'已就绪'}</span></div></aside>}
+      </div>
+      <footer className="statusbar"><span><span className={'connection-light '+(connected?'online':'offline')}/>{connected?'本地连接正常':'后端不可用'}</span><span>{workspace||'未选择项目'}</span><span className="statusbar-right">{sessionId?'会话 '+sessionId.slice(0,8)+' · ':''}{statusName(sessionPhase)}</span></footer>
+    </div>
+  </div>
+}
