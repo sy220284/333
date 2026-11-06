@@ -14,7 +14,7 @@ function toolResult(reason: string, denied = true): Message {
   } as unknown as Message
 }
 const blocked = (command: string): Message => toolResult(
-  'Permission for this action has been denied. Reason: blocked cleanup (' + command + ')',
+  `Permission for this action has been denied. Reason: blocked cleanup (${command})`,
 )
 const human = { type: 'user', message: { role: 'user', content: 'New user request' } } as Message
 
