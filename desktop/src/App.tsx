@@ -18,6 +18,7 @@ type FileEntry={name:string;path:string;directory:boolean}
 type Permission={id:string;toolName:string;input?:Item;description?:string}
 type HostRequest={id:string;type?:string;request?:unknown;[key:string]:unknown}
 type Task={taskId:string;status?:string;description?:string;[key:string]:unknown}
+type MissionJob={id:string;title:string;instruction:string;status:string;attempt:number;summary?:string;sessionId?:string;history?:unknown[]}
 const NAV:{id:View;label:string;icon:LucideIcon}[]=[
   {id:'dashboard',label:'工作台概览',icon:LayoutDashboard},
   {id:'chat',label:'AI 对话',icon:MessageSquare},
@@ -77,6 +78,9 @@ export function App(){
   const [selectedMission,setSelectedMission]=useState('')
   const [missionDraft,setMissionDraft]=useState('')
   const [checkpointDraft,setCheckpointDraft]=useState('')
+  const [missionJobs,setMissionJobs]=useState<MissionJob[]>([])
+  const [jobTitle,setJobTitle]=useState('')
+  const [jobInstruction,setJobInstruction]=useState('')
   const [tasks,setTasks]=useState<Task[]>([])
   const [permissions,setPermissions]=useState<Permission[]>([])
   const [hostRequests,setHostRequests]=useState<HostRequest[]>([])
@@ -158,6 +162,9 @@ export function App(){
         setHostRequests(old=>old.some(item=>item.id===r.id)?old:[...old,r])
       }else if(event.event==='host.resolved'){
         setHostRequests(old=>old.filter(item=>item.id!==event.requestId))
+      }else if(event.event==='mission.job.updated'&&event.job){
+        const updated=obj(event.job) as unknown as MissionJob
+        setMissionJobs(old=>[updated,...old.filter(job=>job.id!==updated.id)])
       }else if(event.event==='task.updated'&&event.task){
         const task=obj(event.task) as unknown as Task
         setTasks(old=>[task,...old.filter(t=>t.taskId!==task.taskId)])
@@ -205,6 +212,14 @@ export function App(){
     return ()=>{alive=false;unsub()}
   },[refresh])
   useEffect(()=>{if(view==='chat')scrollMessages()},[messages,view])
+  useEffect(()=>{
+    let valid=true
+    if(!selectedMission){setMissionJobs([]);return}
+    api.call<MissionJob[]>('missions.jobs.list',{missionId:selectedMission})
+      .then(jobs=>{if(valid)setMissionJobs(jobs)})
+      .catch(err=>{if(valid)setError(presentError(err))})
+    return ()=>{valid=false}
+  },[selectedMission])
   useEffect(()=>{document.documentElement.dataset.theme=isDark?'dark':'light'},[isDark])
   useEffect(()=>{document.documentElement.dataset.motion=animate?'on':'off'},[animate])
   useEffect(()=>{
@@ -314,6 +329,39 @@ export function App(){
   async function missionAction(id:string,status:'active'|'paused'|'completed'){
     await operation('更新任务',async()=>{await invoke('missions.updateStatus',{missionId:id,status});await refresh()})
   }
+  async function refreshJobs(id=selectedMission){
+    if(!id)return
+    const jobs=await invoke<MissionJob[]>('missions.jobs.list',{missionId:id})
+    setMissionJobs(jobs)
+  }
+  async function addJob(){
+    if(!selectedMission||!jobTitle.trim()||!jobInstruction.trim())return
+    await operation('添加工作项',async()=>{
+      await invoke('missions.jobs.enqueue',{missionId:selectedMission,title:jobTitle.trim(),instruction:jobInstruction.trim()})
+      setJobTitle('');setJobInstruction('');await refreshJobs()
+    })
+  }
+  async function jobAction(method:string,jobId:string){
+    if(!selectedMission)return
+    await operation('工作项执行',async()=>{
+      const result=await invoke<unknown>(method,{missionId:selectedMission,jobId})
+      const info=obj(result)
+      if(method==='missions.jobs.start'&&typeof info.sessionId==='string'){
+        setSessionId(info.sessionId);sessionRef.current=info.sessionId
+      }
+      await refreshJobs()
+      await refresh()
+    })
+  }
+  async function batchJobs(){
+    if(!selectedMission)return
+    await operation('并行执行工作项',async()=>{
+      const result=await invoke<{launched:{ok:boolean;error?:string}[];remaining:number}>('missions.jobs.runBatch',{missionId:selectedMission,limit:3})
+      await refreshJobs()
+      const failed=result.launched.filter(item=>!item.ok)
+      if(failed.length)throw new Error(failed.map(item=>item.error||'执行失败').join('；'))
+    })
+  }
   async function checkpoint(){
     if(!selectedMission||!checkpointDraft.trim())return
     await operation('记录检查点',async()=>{
@@ -388,7 +436,7 @@ export function App(){
             <Section title="当前团队" action={<button className="secondary-button" onClick={()=>void operation('刷新团队',refresh)}><RefreshCw size={15}/>刷新</button>}><div className="team-graph"><div className="leader-node"><Bot size={24}/><strong>主智能体 / 协调中心</strong><StatusTag text={mode==='master'?'主子模式':'团队模式'} tone="good"/></div><div className="team-branches"><div className="agent-node"><Code2/><strong>任务分析</strong><span>工具调用与需求拆解</span></div><div className="agent-node"><WandSparkles/><strong>并行执行</strong><span>按需分配的任务执行</span></div><div className="agent-node"><ShieldCheck/><strong>验证与汇总</strong><span>审查结果和运行证据</span></div></div></div><p className="help-text">上方展示协作结构，实际成员和状态以后台返回的数据为准。</p>
             {Array.isArray(overview.teams)&&overview.teams.length>0&&<Panel><div className="item-list">{overview.teams.map((team:Item,i:number)=><div key={i} className="list-row"><div className="row-icon"><UsersRound/></div><div className="row-main"><strong>{String(team.name||team.teamName||'团队')}</strong><span>{json(team).slice(0,180)}</span></div></div>)}</div></Panel>}</Section>
             <Section title="智能体任务" action={<button className="text-button" onClick={()=>setView('chat')}>进入对话<ArrowRight size={15}/></button>}><Panel className="mini-panel">{tasks.length?tasks.map(t=><div className="compact-row" key={t.taskId}><Activity size={16}/><span>{String(t.description||t.taskId)}</span><StatusTag text={String(t.status||'未知')}/>{sessionId&&<IconButton label="停止任务" onClick={()=>void operation('停止任务',async()=>{await invoke('tasks.stop',{sessionId,taskId:t.taskId});await refreshSession(sessionId)})}><CircleStop size={15}/></IconButton>}{sessionId&&<IconButton label="恢复任务" onClick={()=>void operation('恢复任务',async()=>{await invoke('tasks.resume',{sessionId,taskId:t.taskId});await refreshSession(sessionId)})}><Play size={15}/></IconButton>}</div>):<Empty icon={UsersRound} title="尚无运行中的智能体任务" detail="在对话中发起协作后，这里会出现真实任务进度。"/>}</Panel></Section></div>}
-          {view==='missions'&&<div className="mission-page"><div className="mission-list-column"><Panel><h3>创建长期任务</h3><textarea value={missionDraft} onChange={e=>setMissionDraft(e.target.value)} rows={3} placeholder="明确长期目标与交付要求…"/><button className="primary-button full-width" onClick={()=>void createMission()} disabled={!missionDraft.trim()||Boolean(busy)}><Plus size={15}/>创建并选中任务</button></Panel><Section title="任务簿" action={<button className="text-button" onClick={()=>void operation('刷新任务簿',refresh)}><RefreshCw size={15}/></button>}><div className="mission-list">{missions.map(m=><button key={missionId(m)} className={'mission-item '+(selectedMission===missionId(m)?'selected':'')} onClick={()=>{setSelectedMission(missionId(m));void operation('选择任务',()=>invoke('missions.select',{missionId:missionId(m)}))}}><strong>{m.objective||'未命名任务'}</strong><StatusTag text={m.status==='paused'?'已暂停':m.status==='completed'?'已完成':'执行中'} tone={m.status==='paused'?'warn':'good'}/></button>)}{missions.length===0&&<Empty icon={ClipboardList} title="任务簿为空" detail="创建长期任务后，可保存进度、暂停与恢复。"/>}</div></Section></div><div className="mission-detail"><Panel>{selected?<><div className="detail-heading"><h2>任务详情</h2><StatusTag text={selected.status||'active'} tone={selected.status==='paused'?'warn':'good'}/></div><h3 className="mission-objective">{selected.objective}</h3><p className="muted">任务 ID：{missionId(selected)}</p><div className="button-row"><button className="secondary-button" onClick={()=>void missionAction(missionId(selected),'active')}><Play size={15}/>恢复</button><button className="secondary-button" onClick={()=>void missionAction(missionId(selected),'paused')}><Pause size={15}/>暂停</button><button className="secondary-button" onClick={()=>void missionAction(missionId(selected),'completed')}><Check size={15}/>完成</button></div><div className="divider"/><h3>保存检查点</h3><textarea rows={4} placeholder="填写已验证进度、修改和下一步工作…" value={checkpointDraft} onChange={e=>setCheckpointDraft(e.target.value)}/><button className="primary-button" disabled={!checkpointDraft.trim()||Boolean(busy)} onClick={()=>void checkpoint()}><Save size={15}/>记录进度</button><div className="divider"/><h3>已有检查点</h3><div className="checkpoint-list">{Array.isArray(selected.checkpoints)&&selected.checkpoints.length?selected.checkpoints.map((c,i)=><div key={i} className="checkpoint"><Check size={15}/><pre>{typeof c==='string'?c:json(c)}</pre></div>):<p className="muted">尚无检查点记录</p>}</div></>:<Empty icon={ListChecks} title="选择一项长期任务" detail="查看目标，记录进度，并控制任务状态。"/>}</Panel></div></div>}
+          {view==='missions'&&<div className="mission-page"><div className="mission-list-column"><Panel><h3>创建长期任务</h3><textarea value={missionDraft} onChange={e=>setMissionDraft(e.target.value)} rows={3} placeholder="明确长期目标与交付要求…"/><button className="primary-button full-width" onClick={()=>void createMission()} disabled={!missionDraft.trim()||Boolean(busy)}><Plus size={15}/>创建并选中任务</button></Panel><Section title="任务簿" action={<button className="text-button" onClick={()=>void operation('刷新任务簿',refresh)}><RefreshCw size={15}/></button>}><div className="mission-list">{missions.map(m=><button key={missionId(m)} className={'mission-item '+(selectedMission===missionId(m)?'selected':'')} onClick={()=>{setSelectedMission(missionId(m));void operation('选择任务',()=>invoke('missions.select',{missionId:missionId(m)}))}}><strong>{m.objective||'未命名任务'}</strong><StatusTag text={m.status==='paused'?'已暂停':m.status==='completed'?'已完成':'执行中'} tone={m.status==='paused'?'warn':'good'}/></button>)}{missions.length===0&&<Empty icon={ClipboardList} title="任务簿为空" detail="创建长期任务后，可保存进度、暂停与恢复。"/>}</div></Section></div><div className="mission-detail"><Panel>{selected?<><div className="detail-heading"><h2>任务详情</h2><StatusTag text={selected.status||'active'} tone={selected.status==='paused'?'warn':'good'}/></div><h3 className="mission-objective">{selected.objective}</h3><p className="muted">任务 ID：{missionId(selected)}</p><div className="button-row"><button className="secondary-button" onClick={()=>void missionAction(missionId(selected),'active')}><Play size={15}/>恢复</button><button className="secondary-button" onClick={()=>void missionAction(missionId(selected),'paused')}><Pause size={15}/>暂停</button><button className="secondary-button" onClick={()=>void missionAction(missionId(selected),'completed')}><Check size={15}/>完成</button></div><div className="divider"/><h3>Super Agents 工作项</h3><p className="muted">工作项先登记在本地任务簿，只有点击执行才会启动智能体。最多并发三项，结果需要人工审查。</p><div className="job-form"><input aria-label="工作项标题" placeholder="工作项标题" value={jobTitle} onChange={e=>setJobTitle(e.target.value)}/><textarea aria-label="工作项执行指令" rows={3} placeholder="给智能体的完整执行要求和验收条件" value={jobInstruction} onChange={e=>setJobInstruction(e.target.value)}/><button className="secondary-button" onClick={()=>void addJob()} disabled={!jobTitle.trim()||!jobInstruction.trim()||Boolean(busy)}><Plus size={15}/>添加工作项</button></div><div className="job-list">{missionJobs.map(job=><div className="job-card" key={job.id}><div className="job-head"><strong>{job.title}</strong><StatusTag text={job.status} tone={job.status==='completed'?'good':job.status==='review'?'warn':job.status==='failed'?'danger':'neutral'}/></div><p>{job.instruction}</p>{job.summary&&<div className="job-summary">{job.summary}</div>}<div className="job-actions">{job.status==='queued'&&<button onClick={()=>void jobAction('missions.jobs.start',job.id)} className="secondary-button small"><Play size={14}/>执行</button>}{job.status==='review'&&<button onClick={()=>void jobAction('missions.jobs.approve',job.id)} className="primary-button small"><Check size={14}/>审核通过</button>}{(job.status==='failed'||job.status==='interrupted')&&<button onClick={()=>void jobAction('missions.jobs.recover',job.id)} className="secondary-button small"><RefreshCw size={14}/>恢复队列</button>}{job.status==='review'&&<button onClick={()=>void jobAction('missions.jobs.retry',job.id)} className="secondary-button small"><RefreshCw size={14}/>重新执行</button>}{(job.status==='queued'||job.status==='running'||job.status==='review')&&<button onClick={()=>void jobAction('missions.jobs.cancel',job.id)} className="secondary-button small"><X size={14}/>取消</button>}</div></div>)}{missionJobs.length===0&&<p className="muted small">暂时没有工作项，添加后可按需开始。</p>}</div><div className="button-row"><button className="secondary-button" onClick={()=>void operation('刷新工作项',()=>refreshJobs())}><RefreshCw size={15}/>刷新</button><button className="primary-button" onClick={()=>void batchJobs()} disabled={!missionJobs.some(job=>job.status==='queued')||Boolean(busy)}><UsersRound size={15}/>并行执行待办（最多三项）</button></div><div className="divider"/><h3>保存检查点</h3><textarea rows={4} placeholder="填写已验证进度、修改和下一步工作…" value={checkpointDraft} onChange={e=>setCheckpointDraft(e.target.value)}/><button className="primary-button" disabled={!checkpointDraft.trim()||Boolean(busy)} onClick={()=>void checkpoint()}><Save size={15}/>记录进度</button><div className="divider"/><h3>已有检查点</h3><div className="checkpoint-list">{Array.isArray(selected.checkpoints)&&selected.checkpoints.length?selected.checkpoints.map((c,i)=><div key={i} className="checkpoint"><Check size={15}/><pre>{typeof c==='string'?c:json(c)}</pre></div>):<p className="muted">尚无检查点记录</p>}</div></>:<Empty icon={ListChecks} title="选择一项长期任务" detail="查看目标，记录进度，并控制任务状态。"/>}</Panel></div></div>}
           {view==='files'&&<div className="files-page"><div className="file-explorer"><div className="pane-title"><FolderOpen size={17}/>项目目录<IconButton label="刷新文件" onClick={()=>void directory(folder||workspace)}><RefreshCw size={15}/></IconButton></div><button className="folder-path" onClick={()=>void directory(workspace)} title={workspace}><HardDrive size={14}/>{workspace.split(/[\\/]/).filter(Boolean).at(-1)||'工作区'}</button>{folder!==workspace&&<button className="explorer-up" onClick={()=>void directory(folder.replace(/[\\/][^\\/]+$/,''))}>.. 上一级目录</button>}<div className="explorer-list">{files.map(f=><button key={f.path} className={'file-entry '+(currentFile===f.path?'selected':'')} onClick={()=>void (f.directory?directory(f.path):openFile(f.path))}>{f.directory?<Folder size={16}/>:<FileCode2 size={16}/>}<span>{f.name}</span></button>)}{files.length===0&&<div className="subtle-empty">选择刷新以加载文件列表</div>}</div></div><div className="file-workspace"><div className="file-tabs"><span>{currentFile?currentFile.split(/[\\/]/).at(-1):'文件预览'}</span>{currentFile&&<button className="secondary-button small" disabled={fileContent===savedContent} onClick={()=>void saveFile()}><Save size={14}/>保存文件</button>}</div>{currentFile?<textarea className="code-editor" spellCheck={false} aria-label="编辑当前文件" value={fileContent} onChange={e=>setFileContent(e.target.value)}/>:<Empty icon={FileCode2} title="选择文件开始预览" detail="点击左侧文件，查看并编辑。保存前会弹出系统确认。"/>}<div className="git-panel"><div className="pane-title"><GitBranch size={16}/>工作区差异<button className="text-button" onClick={()=>void refreshGit()}><RefreshCw size={14}/>刷新 Git</button></div><pre>{gitDiff||gitStatus||'此处显示真实 Git 状态与工作区改动。'}</pre></div></div></div>}
           {view==='models'&&<div className="stack-page"><Section title="发现的模型" subtitle="模型目录由真实桌面后台返回，选择后应用到当前会话。" action={<button className="secondary-button" onClick={()=>void operation('刷新模型',refresh)}><RefreshCw size={15}/>重新检测</button>}><div className="model-grid">{models.map(m=><button key={m.value} className={'model-card '+(selectedModel===m.value?'selected':'')} onClick={()=>{setSelectedModel(m.value);if(sessionId)void operation('切换模型',()=>invoke('sessions.setModel',{sessionId,model:m.value}))}}><div className="model-symbol"><Cpu size={22}/></div><strong>{m.displayName||m.value}</strong><small>{m.value}</small><p>{m.description||'由已配置的模型服务商提供'}</p>{selectedModel===m.value&&<div className="selected-model"><Check size={14}/>当前选择</div>}</button>)}</div>{models.length===0&&<Empty icon={Cpu} title="尚未发现可用模型" detail="请检查模型服务商配置和桌面后台连接；模型将从 SDK 实际能力目录加载。"/>}</Section><Panel className="info-panel"><ShieldCheck size={18}/><div><strong>模型参数由后端统一管理</strong><p>服务商、上下文窗口、工具调用和推理档位以 PR19 模型配置为准，避免桌面端形成第二份失效配置。</p></div><button className="text-button" onClick={()=>toChat('检查当前配置的模型、服务商参数与上下文窗口，并列出需要修正的项')}>检查配置<ArrowRight size={15}/></button></Panel></div>}
           {view==='integrations'&&<div className="stack-page"><div className="integration-grid"><Panel><div className="integration-icon purple"><WandSparkles size={26}/></div><h2>技能 Skills</h2><p>复用项目和用户级技能，为重复工作提供标准执行路径。</p><button className="secondary-button" onClick={()=>toChat('列出当前工作区可用的全部技能，包括来源、功能、启用状态和使用方式')}><Search size={15}/>检查已安装技能</button></Panel><Panel><div className="integration-icon blue"><Boxes size={26}/></div><h2>MCP 工具</h2><p>让 AI 使用项目服务、外部工具与本地开发能力。</p><button className="secondary-button" onClick={()=>toChat('检查当前 MCP 服务器连接情况，列出服务、工具、授权和连接错误')}><Activity size={15}/>检查 MCP 连接</button></Panel><Panel><div className="integration-icon mint"><Bot size={26}/></div><h2>插件与扩展</h2><p>保持现有插件运行机制，按需读取能力与诊断问题。</p><button className="secondary-button" onClick={()=>toChat('审计当前已安装的插件及其功能入口，检查是否能够正常调用')}><ArrowRight size={15}/>检查插件</button></Panel></div><Panel className="info-panel"><AlertCircle size={18}/><div><strong>可视化安装管理接口待后台补充</strong><p>当前页面的检查操作会提交给现有 AI 工具链；安装、卸载和密钥编辑的独立后台接口仍需按功能迁移台账接入。</p></div></Panel></div>}
