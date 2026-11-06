@@ -9,6 +9,7 @@ import {hostname,tmpdir} from 'node:os'
 import {resolve,join} from 'node:path'
 import {randomUUID} from 'node:crypto'
 import {createServer} from 'node:http'
+import { resolveRunnerEndpoint } from './endpointPolicy.ts'
 
 export type SpawnHint317={
   jti?:string; session_uuid:string;attempt:number;work_order_jwt:string;
@@ -25,7 +26,7 @@ export type OrchestratorOptions317={
   agentProxyUrl?:string
 }
 const DEFAULTS:OrchestratorOptions317={
-  apiUrl:'https://api.anthropic.com',healthPort:8080,hookConcurrency:4,
+  apiUrl:'',healthPort:8080,hookConcurrency:4,
   hookTimeoutMs:60_000,expectedSpawnSeconds:120,minIdle:0,
   shutdownDrainMs:0,logLevel:'info'
 }
@@ -34,6 +35,7 @@ export function parseOrchestratorArgs317(argv:readonly string[],env:NodeJS.Proce
   OrchestratorOptions317|'help'{
   if(argv.includes('--help')||argv.includes('-h'))return 'help'
   const o:OrchestratorOptions317={...DEFAULTS,
+    apiUrl:env.SELF_HOSTED_RUNNER_API_URL ?? '',
     hooksDir:env.SELF_HOSTED_RUNNER_HOOKS_DIR,
     healthPort:env.SELF_HOSTED_RUNNER_HEALTH_PORT
       ? parseInteger('SELF_HOSTED_RUNNER_HEALTH_PORT',env.SELF_HOSTED_RUNNER_HEALTH_PORT,0,65535):8080,
@@ -61,7 +63,8 @@ export function parseOrchestratorArgs317(argv:readonly string[],env:NodeJS.Proce
   }
   if(o.hookTimeoutMs+5000>=o.expectedSpawnSeconds*1000)
     throw Error('--hook-timeout plus SIGKILL grace must be less than --expected-spawn-seconds')
-  for(const [name,url] of [['--api-url',o.apiUrl],['--agent-proxy-url',o.agentProxyUrl]]){
+  o.apiUrl = resolveRunnerEndpoint(o.apiUrl)
+  for(const [name,url] of [['--agent-proxy-url',o.agentProxyUrl]]){
     if(url===undefined)continue
     const x=new URL(url)
     if(x.protocol!=='https:'||x.username||x.password||x.search||x.hash)
