@@ -748,12 +748,6 @@ async function run(): Promise<CommanderCommand> {
     void loadPolicyLimits();
     profileCheckpoint('preAction_after_remote_settings');
 
-    // Load settings sync (non-blocking, fail-open)
-    // CLI: uploads local settings to remote (CCR download is handled by print.ts)
-    if (feature('UPLOAD_USER_SETTINGS')) {
-      void import('./services/settingsSync/index.js').then(m => m.uploadUserSettingsInBackground());
-    }
-    profileCheckpoint('preAction_after_settings_sync');
   });
   program.name('avenlo').description(`Avenlo - starts an interactive session by default, use -p/--print for non-interactive output`).argument('[prompt]', 'Your prompt', String)
   // Subcommands inherit helpOption via commander's copyInheritedSettings —
