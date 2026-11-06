@@ -21,6 +21,7 @@ on:
       - 'build/rebuild.mjs'
       - 'tests/github-generic-review.test.mjs'
       - 'tests/github-integration-flow.test.mjs'
+      - 'tests/github-task-runtime.test.mjs'
       - '.github/workflows/independent-product-cleanup.yml'
   workflow_dispatch:
 concurrency:
@@ -41,4 +42,4 @@ jobs:
       - name: 全量扫描源码引用、界面残留和已删功能引用
         run: node build/audit-independent-sources.mjs
       - name: 测试审查模式、命令入口及禁用的官方回传
-        run: node --test tests/independent-product-cleanup.test.mjs tests/brand-runtime-cleanup.test.mjs tests/brand-animation.test.mjs tests/independent-ui-model-attribution.test.mjs tests/github-generic-review.test.mjs tests/github-integration-flow.test.mjs
+        run: node --test tests/independent-product-cleanup.test.mjs tests/brand-runtime-cleanup.test.mjs tests/brand-animation.test.mjs tests/independent-ui-model-attribution.test.mjs tests/github-generic-review.test.mjs tests/github-integration-flow.test.mjs tests/github-task-runtime.test.mjs
