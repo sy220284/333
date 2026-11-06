@@ -29,6 +29,10 @@
 
 以上模式配置在本地保存，用户下次进入新会话时生效；同一会话切换时工具池同步刷新。开启功能不会自行创建后台任务或子智能体。
 
+## 协调者工具与权限
+
+超级智能体模式的协调者可以使用 Agent、SendMessage、TaskStop、ListAgents、TeamCreate、TeamDelete、Workflow 和共享 Task 工具。原有 Worker、MCP 工具及权限检查按既定规则工作。普通任务维持主从模式，团队协作仅在得到当前任务授权时启动，不会因为功能开关开放而主动启动额外智能体。
+
 ## 超级智能体长期任务簿
 
 借鉴 DeepSeek Super Agent 的任务与执行记录拆分：每个任务有独立 ID、目标、当前阶段、状态以及关联 Agent/Workflow。数据保存在本机 `agent-missions/` 目录，使用文件锁与原子写入保证跨会话读写可靠。
