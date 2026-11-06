@@ -34,6 +34,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  security_findings:
+    name: 获取 PR 关联安全告警位置
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      security-events: read
+    steps:
+      - name: 查看现有 CodeQL 安全告警
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/code-scanning/alerts?ref=refs/pull/${PR_NUMBER}/merge&state=open&per_page=100" \
+            --jq '.[] | {number, rule: .rule.id, severity: .rule.security_severity_level, path: .most_recent_instance.location.path, line: .most_recent_instance.location.start_line, message: .most_recent_instance.message.text}'
   codeql:
     name: JavaScript / TypeScript 安全扫描
     runs-on: ubuntu-latest
