@@ -1,7 +1,6 @@
 name: 333 全量测试矩阵与门禁契约
 on:
-  pull_request:
-    branches: [main]
+  workflow_call:
   push:
     branches: [main]
   workflow_dispatch:

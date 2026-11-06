@@ -1,15 +1,6 @@
 name: 333 冻结依赖锁与发行基准一致性
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'build/install-public-deps.mjs'
-      - 'build/public-dependencies.lock.json'
-      - 'build/check-upgrade-protection.mjs'
-      - 'package.json'
-      - 'docs/upgrade/pr13-upgrade-protection-baseline.json'
-      - 'tools/dev/toolchain.lock.json'
-      - '.github/workflows/m1-public-lock-sync.yml'
+  workflow_call:
   push:
     branches: [main]
     paths:

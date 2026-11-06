@@ -1,24 +1,7 @@
 name: M1 Bash 文件编辑与 Notebook 单元格真实链路验收
 
 on:
-  pull_request:
-    paths:
-      - 'src/tools/BashTool/sedEditParser.ts'
-      - 'src/tools/BashTool/BashTool.tsx'
-      - 'src/components/permissions/SedEditPermissionRequest/SedEditPermissionRequest.tsx'
-      - 'tests/sed-edit-parity.test.ts'
-      - 'tests/sed-edit-write-integration.test.ts'
-      - 'src/tools/NotebookEditTool/NotebookEditTool.ts'
-      - 'src/tools/NotebookEditTool/notebookMutation.ts'
-      - 'src/utils/notebook.ts'
-      - 'src/utils/notebookCells.ts'
-      - 'src/utils/notebookFileLock.ts'
-      - 'tests/notebook-edit-parity.test.ts'
-      - 'tests/notebook-edit-write-integration.test.ts'
-      - 'tests/notebook-read-edit-integration.test.ts'
-      - 'tests/m1-notebook-e41-cli.mjs'
-      - 'tests/m1-link-production-adapters.mjs'
-      - '.github/workflows/m1-sed-preview-parity.yml'
+  workflow_call:
   workflow_dispatch:
 
 permissions:

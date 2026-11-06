@@ -2,12 +2,11 @@ name: 源码独立重建验证
 on:
   push:
     branches: [main, rebuild/bun-from-src]
-  pull_request:
-    branches: [main]
+  workflow_call:
   workflow_dispatch:
 concurrency:
   # 保留正在执行的完整验收，合并后续提交的待执行检查。
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: reusable-rebuild-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

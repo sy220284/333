@@ -1,22 +1,14 @@
 name: M1 317 启动生命周期和令牌保护验收
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    paths:
-      - 'src/bootstrap/socketOwnership317.ts'
-      - 'src/cli/background/supervisor.ts'
-      - 'src/cli/background/respawnFlags317.ts'
-      - 'tests/m1-socket-ownership-317.test.ts'
-      - 'tests/m1-background-resume-flags-317.test.ts'
-      - '.github/workflows/m1-317-bootstrap-security.yml'
+  workflow_call:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: reusable-m1-317-bootstrap-security-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

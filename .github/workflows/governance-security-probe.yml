@@ -1,23 +1,12 @@
 name: 333 冻结依赖安全与关键接口专项验证
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - '.github/workflows/governance-security-probe.yml'
-      - 'tools/governance/**'
-      - 'build/public-dependencies.lock.json'
-      - 'build/install-public-deps.mjs'
-      - 'build/restore-dependencies.mjs'
-      - 'tests/m1-prometheus-security-317.test.mjs'
-      - 'tests/m1-telemetry-policy.test.mjs'
-      - 'tests/m3-plugin-install-config-317.test.mjs'
-
+  workflow_call:
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: reusable-governance-security-probe-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

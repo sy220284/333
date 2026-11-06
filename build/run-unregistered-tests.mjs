@@ -79,7 +79,7 @@ export function discoverUnregisteredTests(root = ROOT, options = {}) {
   const workflows = walk(join(root, '.github', 'workflows'))
     .filter(path => /\.ya?ml$/.test(path))
     .map(path => readFileSync(path, 'utf8'))
-    .filter(source => /^ {2}pull_request:\s*$/m.test(source))
+    .filter(source => /^ {2}(?:pull_request|workflow_call):\s*$/m.test(source))
     .map(workflowRunCommands).join('\n')
   const workflowOnly = options.workflowOnly === true
   const supplemental = options.ciSupplemental === true

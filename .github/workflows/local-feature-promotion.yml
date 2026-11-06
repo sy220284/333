@@ -1,55 +1,9 @@
 name: 本地能力转正与旧实验退役专项验收
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'build/rebuild.mjs'
-      - 'src/services/analytics/growthbook.ts'
-      - 'src/commands/**'
-      - 'src/skills/mcpSkills.ts'
-      - 'src/services/mcp/**'
-      - 'src/utils/agentSwarmsEnabled.ts'
-      - 'src/utils/localCapabilities.ts'
-      - 'src/hooks/useScheduledTasks.ts'
-      - 'src/utils/crossSessionMessaging.ts'
-      - 'src/services/extractMemories/**'
-      - 'src/tools/ListAgentsTool/**'
-      - 'src/tools/SendMessageTool/**'
-      - 'src/utils/livePeerSessions.ts'
-      - 'src/tools/BriefTool/**'
-      - 'src/tools/ScheduleCronTool/**'
-      - 'tests/local-feature-promotion.test.mjs'
-      - 'tests/local-voice-stt-317.test.ts'
-      - 'src/services/voiceStreamSTT.ts'
-      - 'src/services/voiceLanguage.ts'
-      - 'src/services/voice.ts'
-      - 'src/voice/**'
-      - 'src/commands/voice/**'
-      - 'src/hooks/useVoice*.ts*'
-      - 'tests/local-mcp-skill-discovery.test.ts'
-      - 'tests/local-feature-preferences.test.ts'
-      - 'tests/agent-collaboration-*.test.*'
-      - 'tests/agent-missions*.test.*'
-      - 'tests/agent-mission-scope.test.ts'
-      - 'tests/agent-mission-continue-build.test.mjs'
-      - 'tests/agent-mission-tool-scope-build.test.mjs'
-      - 'src/tools/TeamCreateTool/**'
-      - 'src/tools/TeamDeleteTool/**'
-      - 'src/tools/AgentTool/AgentTool.tsx'
-      - 'src/QueryEngine.ts'
-      - 'src/utils/systemPrompt.ts'
-      - 'src/utils/agentMissions.ts'
-      - 'src/tools/MissionTool/**'
-      - 'src/tasks/LocalWorkflowTask/**'
-      - 'src/tools/AgentTool/agentToolUtils.ts'
-      - 'src/coordinator/**'
-      - 'src/utils/agentMode.ts'
-      - 'src/tools/AgentTool/builtInAgents.ts'
-      - 'src/hooks/useMergedTools.ts'
-      - '.github/workflows/local-feature-promotion.yml'
+  workflow_call:
   workflow_dispatch:
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: reusable-local-feature-promotion-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read

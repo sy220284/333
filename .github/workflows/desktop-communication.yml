@@ -1,20 +1,7 @@
 name: 桌面通信 SDK 双向协议专项验收
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - '.github/workflows/desktop-communication.yml'
-      - 'src/services/desktop/**'
-      - 'src/services/conversation/**'
-      - 'src/entrypoints/desktopHost.ts'
-      - 'src/entrypoints/sdk/**'
-      - 'build/rebuild.mjs'
-      - 'build/compile-standalone.mjs'
-      - 'build/package-release.mjs'
-      - 'tests/desktop-*.test.ts'
-      - 'tests/conversation-headless.test.ts'
-      - 'package.json'
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -23,7 +10,7 @@ permissions:
 # Match the repository-wide PR gating policy. Checkout below remains
 # pinned to the exact head SHA for each run.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: reusable-desktop-communication-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

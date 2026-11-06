@@ -1,7 +1,6 @@
 name: PR13 升级成果保护与 MCP v2 联合验收
 on:
-  pull_request:
-    branches: [main]
+  workflow_call:
   push:
     branches: [main]
   workflow_dispatch:

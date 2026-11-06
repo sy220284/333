@@ -1,26 +1,9 @@
 name: 本地遥测与隐私边界专项验收
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'src/utils/telemetry/**'
-      - 'src/utils/telemetryAttributes.ts'
-      - 'src/utils/privacyLevel.ts'
-      - 'src/services/analytics/**'
-      - 'src/services/api/client.ts'
-      - 'src/services/api/claude.ts'
-      - 'src/cli/print.ts'
-      - 'src/main.tsx'
-      - 'src/setup.ts'
-      - 'src/memdir/**'
-      - 'tests/local-telemetry-privacy.test.ts'
-      - 'tests/privacy-headers.test.ts'
-      - 'src/services/api/privacyHeaders.ts'
-      - 'tests/m1-otel-timeout-317.test.mjs'
-      - '.github/workflows/local-privacy.yml'
+  workflow_call:
   workflow_dispatch:
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: reusable-local-privacy-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read

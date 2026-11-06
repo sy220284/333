@@ -1,18 +1,11 @@
 name: M2 2.1.317 提示词功能与调用链验收
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'src/services/agentObserver/**'
-      - 'src/services/artifactComments/**'
-      - 'src/services/youShouldKnow/**'
-      - 'tests/m2-*317.test.ts'
-      - '.github/workflows/m2-prompt-functional-integration-317.yml'
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: reusable-m2-prompt-functional-integration-317-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

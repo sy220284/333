@@ -1,31 +1,11 @@
 name: 2.1.317 新版源码直接对齐
 on:
-  pull_request:
-    paths:
-      - 'src/**'
-      - 'tests/fixtures/claude-2.1.317-official-cli-help.json'
-      - 'docs/upgrade/2.1.317-功能与场景源数据.json'
-      - 'docs/upgrade/2.1.317-六层完整功能链路.json'
-      - 'docs/upgrade/upgrade-coverage.json'
-      - 'build/compare-317.mjs'
-      - 'build/upgrade-coverage.mjs'
-      - 'tests/compare-317.test.mjs'
-      - 'tests/upgrade-coverage.test.mjs'
-      - 'docs/upgrade/m1-evidence/2.1.317-366项功能链路分组矩阵.json'
-      - 'tests/m1-317-chain-matrix.test.mjs'
-      - 'tests/m1-nested-session-id-317.test.mjs'
-      - 'tests/m1-317-json-wire.test.mjs'
-      - 'tests/m1-precompact-output-limit-317.test.mjs'
-      - 'tests/m2-*-317.test.mjs'
-      - 'tests/m3-*-317.test.mjs'
-      - 'src/utils/hooks/preCompactOutput.mjs'
-      - 'src/utils/hooks.ts'
-      - '.github/workflows/upgrade-direct-alignment.yml'
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: reusable-upgrade-direct-alignment-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

@@ -1,34 +1,11 @@
 name: PR7 TypeScript 迁移独立验收
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'src/cli/gateway/**'
-      - 'src/utils/accountPeerDirectory.ts'
-      - 'src/tools/ListAgentsTool/peerListing.ts'
-      - 'src/bootstrap/processStart317.ts'
-      - 'src/utils/livePeerSessions.ts'
-      - 'src/utils/sessionHydrationCommit317.ts'
-      - 'src/utils/accessibility/screenReaderMode.ts'
-      - 'src/cli/handlers/pluginEvalWorkspace317.ts'
-      - 'src/tasks/LocalWorkflowTask/workflowCacheKeys.ts'
-      - 'src/bootstrap/preload317.ts'
-      - 'src/utils/plugins/commandSourceConsent.ts'
-      - 'src/cli/handlers/pluginEvalGraders317.ts'
-      - 'src/cli/handlers/pluginEvalCatalog317.ts'
-      - 'src/cli/handlers/pluginEvalModel317.ts'
-      - 'src/utils/hooks/hookConcurrency.ts'
-      - 'src/utils/webToolDeadline.ts'
-      - 'src/skills/bundled/claudeApi.ts'
-      - 'src/skills/bundled/claudeApiPrompt.ts'
-      - 'tools/dev/type-migration-*.mjs'
-      - 'tools/dev/type-migration-targets.json'
-      - '.github/workflows/type-migration-pr7.yml'
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: reusable-type-migration-pr7-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   strict:

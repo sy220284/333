@@ -1,28 +1,6 @@
 name: 自定义工作提示真实终端对照
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - '.github/workflows/m1-spinner-parity.yml'
-      - 'src/services/tips/**'
-      - 'src/components/Spinner.tsx'
-      - 'src/components/Spinner/**'
-      - 'src/components/Message.tsx'
-      - 'src/components/messages/thinkingDurationLabel.ts'
-      - 'tests/m1-thinking-duration-label.test.mjs'
-      - 'tests/m1-spinner-animation-status.test.mjs'
-      - 'src/screens/REPL.tsx'
-      - 'src/state/AppStateStore.ts'
-      - 'src/utils/settings/**'
-      - 'tests/m1-spinner-tips.test.mjs'
-      - 'tests/m1-spinner-settings-integration.test.mjs'
-      - 'tests/m1-custom-spinner-tips.test.mjs'
-      - 'tests/m1-spinner-pty-harness.test.py'
-      - 'tests/m1-x64-spinner-tips.py'
-      - 'tests/m1-x64-conversation-ui-scenarios.py'
-      - 'tests/m1-x64-conversation-ui-request-routing.test.py'
-      - 'build/rebuild.mjs'
-      - 'build/restore-*.mjs'
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read

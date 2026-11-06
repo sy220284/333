@@ -1,23 +1,6 @@
 name: 333 独立模型协议与本地能力验证
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'src/services/api/multimodel/**'
-      - 'src/services/auth/**'
-      - 'src/services/api/client.ts'
-      - 'src/services/api/claude.ts'
-      - 'src/QueryEngine.ts'
-      - 'src/query/**'
-      - 'src/services/localRuntime/**'
-      - 'src/services/analytics/localDiagnostics.ts'
-      - 'tests/multimodel-provider.test.ts'
-      - 'tests/pr19-model-limits-and-scope.test.ts'
-      - 'tests/chatgpt-oauth-accounts.test.ts'
-      - 'tests/chatgpt-oauth-refresh.test.ts'
-      - 'tests/independent-local-features.test.ts'
-      - 'tests/permission-denial-*.test.ts'
-      - '.github/workflows/independent-models.yml'
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read

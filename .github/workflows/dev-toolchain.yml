@@ -10,15 +10,7 @@ on:
       - 'build/install-public-deps.mjs'
       - 'build/public-dependencies.lock.json'
       - 'build/restore-dependencies.mjs'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'tools/dev/**'
-      - '.github/workflows/dev-toolchain.yml'
-      - 'build/install-public-deps.mjs'
-      - 'build/public-dependencies.lock.json'
-      - 'build/restore-dependencies.mjs'
-
+  workflow_call:
 permissions:
   contents: read
 

@@ -1,0 +1,75 @@
+import assert from 'node:assert/strict'
+import { test } from 'node:test'
+import { readFileSync, readdirSync } from 'node:fs'
+import { SPECIALISTS, WORKFLOWS, routeChanges, selectBaseline } from '../build/ci-impact.mjs'
+
+const active = plan => Object.entries(plan).filter(([, enabled]) => enabled).map(([name]) => name)
+
+test('28 个专项保留、统一入口调用，全量始终覆盖所有专项', () => {
+  const files = readdirSync(new URL('../.github/workflows/', import.meta.url))
+    .filter(x => x.endsWith('.yml') && x !== 'ci-on-demand.yml' && x !== 'latest-stable-upgrade.yml')
+  assert.deepEqual(WORKFLOWS.slice().sort(), files.map(x => x.slice(0, -4)).sort())
+  for (const name of WORKFLOWS) {
+    assert.ok(Array.isArray(SPECIALISTS[name]), '缺少路由配置：' + name)
+    const yaml = readFileSync(new URL('../.github/workflows/' + name + '.yml', import.meta.url), 'utf8')
+    assert.match(yaml, /^  workflow_call:\s*$/m, name + ' 缺少可复用调用')
+    assert.doesNotMatch(yaml, /^  pull_request:\s*$/m, name + ' 仍重复触发 PR')
+  }
+  assert.deepEqual(active(routeChanges([], true)).sort(), WORKFLOWS.slice().sort())
+})
+
+test('每次基础门禁固定启用、文档变更不启动全量检查', () => {
+  assert.deepEqual(active(routeChanges(['docs/README.md'])), ['governance-audit'])
+})
+
+test('最近提交只派发对应专项，多个提交累计改动合并为并行检查', () => {
+  const touched = [
+    'src/services/desktop/gateway.ts',
+    'src/proactive/useProactive.ts',
+    'src/cli/selfHostedRunner/runner.ts',
+  ]
+  const planned = routeChanges(touched)
+  assert.equal(planned['desktop-communication'], true)
+  assert.equal(planned['local-feature-promotion'], true)
+  assert.equal(planned['m6-self-hosted-runner-317'], true)
+  assert.equal(planned['ci-test-matrix'], false)
+  assert.equal(planned['latest-stable-six-host'], false)
+  assert.equal(planned.rebuild, false)
+})
+
+test('未知业务代码走通用检查，构建修改触发完整构建专项', () => {
+  const unknown = routeChanges(['src/features/newCapability.ts'])
+  assert.equal(unknown['dev-quality'], true)
+  assert.equal(unknown['ci-test-matrix'], false)
+  const build = routeChanges(['build/compile-standalone.mjs'])
+  assert.equal(build.rebuild, true)
+  assert.equal(build['dev-toolchain'], true)
+})
+
+test('单个工作流修改只覆盖该专项；路由修改还核验调度工具链', () => {
+  const chosen = routeChanges(['.github/workflows/sdk-stream-parity.yml'])
+  assert.equal(chosen['sdk-stream-parity'], true)
+  assert.equal(chosen['codeql'], false)
+  const dispatcher = routeChanges(['build/ci-impact.mjs'])
+  assert.equal(dispatcher['dev-toolchain'], true)
+  assert.equal(dispatcher['dev-quality'], true)
+})
+
+test('历史累计基准优先采用最近成功验收的祖先提交', () => {
+  const sha1 = '1'.repeat(40), sha2 = '2'.repeat(40), head = '3'.repeat(40)
+  const records = [
+    { event: 'pull_request', head_sha: sha1, status: 'completed', conclusion: 'success', created_at: '2026-11-06T12:00:00Z', pull_requests: [{ number: 19 }] },
+    { event: 'pull_request', head_sha: sha2, status: 'completed', conclusion: 'cancelled', created_at: '2026-11-06T13:00:00Z', pull_requests: [{ number: 19 }] },
+  ]
+  const result = selectBaseline(records, 19, head, x => x === sha1 || x === sha2)
+  assert.deepEqual(result, { sha: sha1, reason: 'last-success' })
+})
+
+test('其他 PR、非祖先的成功记录不会被误用为增量基准', () => {
+  const head = 'c'.repeat(40)
+  const records = [
+    { event: 'pull_request', head_sha: 'a'.repeat(40), status: 'completed', conclusion: 'success', created_at: '2026-11-06T12:00:00Z', pull_requests: [{ number: 20 }] },
+    { event: 'pull_request', head_sha: 'b'.repeat(40), status: 'completed', conclusion: 'success', created_at: '2026-11-06T13:00:00Z', pull_requests: [{ number: 19 }] },
+  ]
+  assert.equal(selectBaseline(records, 19, head, () => false), null)
+})

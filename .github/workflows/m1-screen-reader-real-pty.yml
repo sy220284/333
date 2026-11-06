@@ -16,19 +16,7 @@ on:
       - 'src/components/LogoV2/LogoV2.tsx'
       - 'tests/m1-screen-reader-terminal-parity.py'
       - '.github/workflows/m1-screen-reader-real-pty.yml'
-  pull_request:
-    paths:
-      - 'src/ink/ink.tsx'
-      - 'src/components/Messages.tsx'
-      - 'src/components/LogoV2/LogoV2.tsx'
-      - 'src/components/LogoV2/CondensedLogo.tsx'
-      - 'src/main.tsx'
-      - 'src/utils/settings/types.ts'
-      - 'src/utils/accessibility/screenReaderMode.mjs'
-      - 'src/utils/accessibility/screenReaderRuntime.ts'
-      - 'tests/m1-screen-reader-mode.test.mjs'
-      - 'tests/m1-screen-reader-terminal-parity.py'
-      - '.github/workflows/m1-screen-reader-real-pty.yml'
+  workflow_call:
   workflow_dispatch:
 
 permissions:

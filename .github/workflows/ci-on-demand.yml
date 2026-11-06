@@ -1,0 +1,264 @@
+name: CI 按需调度与待审全量验收
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ci-on-demand-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  plan:
+    name: 累计改动识别与检查计划
+    runs-on: ubuntu-latest
+    outputs:
+      full: ${{ steps.route.outputs.full }}
+      chinese_only_ui: ${{ steps.route.outputs.chinese_only_ui }}
+      ci_test_matrix: ${{ steps.route.outputs.ci_test_matrix }}
+      codeql: ${{ steps.route.outputs.codeql }}
+      desktop_communication: ${{ steps.route.outputs.desktop_communication }}
+      dev_quality: ${{ steps.route.outputs.dev_quality }}
+      dev_toolchain: ${{ steps.route.outputs.dev_toolchain }}
+      governance_audit: ${{ steps.route.outputs.governance_audit }}
+      governance_security_probe: ${{ steps.route.outputs.governance_security_probe }}
+      independent_models: ${{ steps.route.outputs.independent_models }}
+      independent_product_cleanup: ${{ steps.route.outputs.independent_product_cleanup }}
+      latest_stable_six_host: ${{ steps.route.outputs.latest_stable_six_host }}
+      local_feature_promotion: ${{ steps.route.outputs.local_feature_promotion }}
+      local_privacy: ${{ steps.route.outputs.local_privacy }}
+      m1_317_bootstrap_security: ${{ steps.route.outputs.m1_317_bootstrap_security }}
+      m1_317_official_reference: ${{ steps.route.outputs.m1_317_official_reference }}
+      m1_evidence: ${{ steps.route.outputs.m1_evidence }}
+      m1_official_x64_installed_parity: ${{ steps.route.outputs.m1_official_x64_installed_parity }}
+      m1_public_lock_sync: ${{ steps.route.outputs.m1_public_lock_sync }}
+      m1_screen_reader_real_pty: ${{ steps.route.outputs.m1_screen_reader_real_pty }}
+      m1_sed_preview_parity: ${{ steps.route.outputs.m1_sed_preview_parity }}
+      m1_spinner_parity: ${{ steps.route.outputs.m1_spinner_parity }}
+      m2_prompt_functional_integration_317: ${{ steps.route.outputs.m2_prompt_functional_integration_317 }}
+      m6_self_hosted_runner_317: ${{ steps.route.outputs.m6_self_hosted_runner_317 }}
+      rebuild: ${{ steps.route.outputs.rebuild }}
+      sdk_stream_parity: ${{ steps.route.outputs.sdk_stream_parity }}
+      type_migration_pr7: ${{ steps.route.outputs.type_migration_pr7 }}
+      upgrade_direct_alignment: ${{ steps.route.outputs.upgrade_direct_alignment }}
+      upgrade_protection: ${{ steps.route.outputs.upgrade_protection }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: 计算上次通过后尚未验收的改动
+        id: route
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node build/ci-impact.mjs
+
+  basic:
+    name: 每次提交的轻量基础门禁
+    needs: plan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: CI 调度规则与全量覆盖回归
+        run: |
+          node --test tests/ci-routing.test.mjs tests/ci-test-discovery.test.mjs
+          node build/ci-gate-audit.mjs
+
+  governance-audit:
+    name: 基础类型、依赖与安全检查
+    needs: plan
+    uses: ./.github/workflows/governance-audit.yml
+
+  chinese-only-ui:
+    name: chinese-only-ui ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.chinese_only_ui == 'true'
+    uses: ./.github/workflows/chinese-only-ui.yml
+
+  ci-test-matrix:
+    name: ci-test-matrix ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.ci_test_matrix == 'true'
+    uses: ./.github/workflows/ci-test-matrix.yml
+
+  codeql:
+    name: codeql ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.codeql == 'true'
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    uses: ./.github/workflows/codeql.yml
+
+  desktop-communication:
+    name: desktop-communication ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.desktop_communication == 'true'
+    uses: ./.github/workflows/desktop-communication.yml
+
+  dev-quality:
+    name: dev-quality ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.dev_quality == 'true'
+    uses: ./.github/workflows/dev-quality.yml
+
+  dev-toolchain:
+    name: dev-toolchain ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.dev_toolchain == 'true'
+    uses: ./.github/workflows/dev-toolchain.yml
+
+  governance-security-probe:
+    name: governance-security-probe ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.governance_security_probe == 'true'
+    uses: ./.github/workflows/governance-security-probe.yml
+
+  independent-models:
+    name: independent-models ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.independent_models == 'true'
+    uses: ./.github/workflows/independent-models.yml
+
+  independent-product-cleanup:
+    name: independent-product-cleanup ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.independent_product_cleanup == 'true'
+    uses: ./.github/workflows/independent-product-cleanup.yml
+
+  latest-stable-six-host:
+    name: latest-stable-six-host ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.latest_stable_six_host == 'true'
+    uses: ./.github/workflows/latest-stable-six-host.yml
+
+  local-feature-promotion:
+    name: local-feature-promotion ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.local_feature_promotion == 'true'
+    uses: ./.github/workflows/local-feature-promotion.yml
+
+  local-privacy:
+    name: local-privacy ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.local_privacy == 'true'
+    uses: ./.github/workflows/local-privacy.yml
+
+  m1-317-bootstrap-security:
+    name: m1-317-bootstrap-security ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.m1_317_bootstrap_security == 'true'
+    uses: ./.github/workflows/m1-317-bootstrap-security.yml
+
+  m1-317-official-reference:
+    name: m1-317-official-reference ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.m1_317_official_reference == 'true'
+    uses: ./.github/workflows/m1-317-official-reference.yml
+
+  m1-evidence:
+    name: m1-evidence ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.m1_evidence == 'true'
+    uses: ./.github/workflows/m1-evidence.yml
+
+  m1-official-x64-installed-parity:
+    name: m1-official-x64-installed-parity ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.m1_official_x64_installed_parity == 'true'
+    uses: ./.github/workflows/m1-official-x64-installed-parity.yml
+
+  m1-public-lock-sync:
+    name: m1-public-lock-sync ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.m1_public_lock_sync == 'true'
+    uses: ./.github/workflows/m1-public-lock-sync.yml
+
+  m1-screen-reader-real-pty:
+    name: m1-screen-reader-real-pty ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.m1_screen_reader_real_pty == 'true'
+    uses: ./.github/workflows/m1-screen-reader-real-pty.yml
+
+  m1-sed-preview-parity:
+    name: m1-sed-preview-parity ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.m1_sed_preview_parity == 'true'
+    uses: ./.github/workflows/m1-sed-preview-parity.yml
+
+  m1-spinner-parity:
+    name: m1-spinner-parity ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.m1_spinner_parity == 'true'
+    uses: ./.github/workflows/m1-spinner-parity.yml
+
+  m2-prompt-functional-integration-317:
+    name: m2-prompt-functional-integration-317 ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.m2_prompt_functional_integration_317 == 'true'
+    uses: ./.github/workflows/m2-prompt-functional-integration-317.yml
+
+  m6-self-hosted-runner-317:
+    name: m6-self-hosted-runner-317 ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.m6_self_hosted_runner_317 == 'true'
+    uses: ./.github/workflows/m6-self-hosted-runner-317.yml
+
+  rebuild:
+    name: rebuild ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.rebuild == 'true'
+    uses: ./.github/workflows/rebuild.yml
+
+  sdk-stream-parity:
+    name: sdk-stream-parity ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.sdk_stream_parity == 'true'
+    uses: ./.github/workflows/sdk-stream-parity.yml
+
+  type-migration-pr7:
+    name: type-migration-pr7 ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.type_migration_pr7 == 'true'
+    uses: ./.github/workflows/type-migration-pr7.yml
+
+  upgrade-direct-alignment:
+    name: upgrade-direct-alignment ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.upgrade_direct_alignment == 'true'
+    uses: ./.github/workflows/upgrade-direct-alignment.yml
+
+  upgrade-protection:
+    name: upgrade-protection ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.upgrade_protection == 'true'
+    uses: ./.github/workflows/upgrade-protection.yml
+
+  complete:
+    name: 统一验收结果
+    if: always()
+    needs: [plan, basic, chinese-only-ui, ci-test-matrix, codeql, desktop-communication, dev-quality, dev-toolchain, governance-audit, governance-security-probe, independent-models, independent-product-cleanup, latest-stable-six-host, local-feature-promotion, local-privacy, m1-317-bootstrap-security, m1-317-official-reference, m1-evidence, m1-official-x64-installed-parity, m1-public-lock-sync, m1-screen-reader-real-pty, m1-sed-preview-parity, m1-spinner-parity, m2-prompt-functional-integration-317, m6-self-hosted-runner-317, rebuild, sdk-stream-parity, type-migration-pr7, upgrade-direct-alignment, upgrade-protection]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 校验必需检查和所有实际运行的专项
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node --input-type=module <<'NODE'
+          const jobs = JSON.parse(process.env.JOB_RESULTS)
+          const failures = Object.entries(jobs).filter(([name, job]) => {
+            if (name === 'plan' || name === 'basic' || name === 'governance-audit')
+              return job.result !== 'success'
+            return job.result !== 'success' && job.result !== 'skipped'
+          })
+          if (failures.length) {
+            for (const [name, job] of failures)
+              console.error('::error::' + name + ' 验收状态：' + job.result)
+            process.exitCode = 1
+          } else {
+            console.log('本次所有计划内的检查均已通过。')
+          }
+          NODE
