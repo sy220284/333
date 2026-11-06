@@ -13,6 +13,7 @@ import { hostname } from 'node:os'
 import { createSessionSpawner } from '../../bridge/sessionRunner.js'
 import type { SessionHandle } from '../../bridge/types.js'
 import { RunnerHttpError317, SelfHostedRunnerApi317 } from './runnerApi317.ts'
+import { resolveRunnerEndpoint } from './endpointPolicy.ts'
 import { createRunnerHealthServer317,createRunnerHealthState317 } from './runnerHealth317.ts'
 import type { RunnerHostSnapshot317 } from './runnerHealth317.ts'
 import { prepareRunnerWorkspace317, pushRunnerOutcomeBranches317 } from './runnerWorkspace317.ts'
@@ -607,7 +608,7 @@ function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions 
   }
   if (argv.includes('--help') || argv.includes('-h')) return 'help'
   const parsed: CliOptions = {
-    apiUrl: env.SELF_HOSTED_RUNNER_API_URL ?? 'https://api.anthropic.com',
+    apiUrl: env.SELF_HOSTED_RUNNER_API_URL ?? '',
     capacity:Number(env.SELF_HOSTED_RUNNER_CAPACITY ?? 1),
     baseDir:env.SELF_HOSTED_RUNNER_BASE_DIR ?? (process.platform === 'win32' ? '' : '/workspace'),
     healthPort:Number(env.SELF_HOSTED_RUNNER_HEALTH_PORT??8080),
@@ -676,6 +677,8 @@ function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions 
   }
   if(!Number.isSafeInteger(parsed.pollMs)||parsed.pollMs<250) throw new RunnerUsageError317('Invalid runner polling interval')
   if(!Number.isSafeInteger(parsed.drainMs)||parsed.drainMs<0) throw new RunnerUsageError317('Invalid runner drain wait')
+  try { parsed.apiUrl = resolveRunnerEndpoint(parsed.apiUrl) }
+  catch (error) { throw new RunnerUsageError317(error instanceof Error ? error.message : String(error)) }
   return parsed
 }
 
