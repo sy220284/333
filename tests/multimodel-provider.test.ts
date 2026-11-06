@@ -205,6 +205,7 @@ test('DeepSeek reasoning effort, thinking mode and previous reasoning are retain
   assert.deepEqual(payload.thinking, { type: 'enabled' })
   assert.equal(payload.reasoning_effort, 'max')
   assert.equal(payload.messages[1].reasoning_content, 'verified previous thought')
+  assert.equal(payload.messages[1].content, '', 'DeepSeek tool-only turns require non-null assistant content')
   assert.equal(payload.stream_options.include_usage, true)
 })
 test('Qwen and OpenRouter model-specific thinking controls are mapped without changing prompts', () => {
