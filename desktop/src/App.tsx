@@ -80,6 +80,7 @@ export function App(){
   const [tasks,setTasks]=useState<Task[]>([])
   const [permissions,setPermissions]=useState<Permission[]>([])
   const [hostRequests,setHostRequests]=useState<HostRequest[]>([])
+  const [hostForm,setHostForm]=useState<Record<string,unknown>>({})
   const [rightOpen,setRightOpen]=useState(true)
   const [search,setSearch]=useState('')
   const [files,setFiles]=useState<FileEntry[]>([])
@@ -153,6 +154,7 @@ export function App(){
         setPermissions(old=>old.filter(item=>item.id!==event.permissionId))
       }else if(event.event==='host.request'){
         const r=obj(event.request) as unknown as HostRequest
+        setHostForm({})
         setHostRequests(old=>old.some(item=>item.id===r.id)?old:[...old,r])
       }else if(event.event==='host.resolved'){
         setHostRequests(old=>old.filter(item=>item.id!==event.requestId))
@@ -217,7 +219,7 @@ export function App(){
   },[selectedModel])
   async function operation(name:string,action:()=>Promise<unknown>){
     setBusy(name)
-    try{await action()}catch{/* invoke and operation callers display errors explicitly */}finally{setBusy('')}
+    try{await action()}catch(error){setError(presentError(error))}finally{setBusy('')}
   }
   async function createSession(){
     await operation('新建会话',async()=>{
@@ -327,6 +329,17 @@ export function App(){
       setPermissions(old=>old.filter(p=>p.id!==id))
     })
   }
+  async function respondHost(id:string,action:'accept'|'decline'){
+    if(!sessionId)return
+    await operation('主机请求',async()=>{
+      await invoke('host.respond',{sessionId,requestId:id,response:action==='accept'?{action,content:hostForm}:{action}})
+      setHostRequests(old=>old.filter(r=>r.id!==id));setHostForm({})
+    })
+  }
+  const requested=hostRequests[0]
+  const requestedDetails=obj(requested?.request)
+  const requestedSchema=obj(requestedDetails.requested_schema)
+  const requestedProperties=obj(requestedSchema.properties)
   const selected=missions.find(m=>missionId(m)===selectedMission)
   const filteredNav=useMemo(()=>NAV.filter(n=>n.label.includes(search.trim())),[search])
   function toChat(prompt:string){setDraft(prompt);setView('chat');requestAnimationFrame(()=>inputRef.current?.focus())}
@@ -387,6 +400,8 @@ export function App(){
         </main>
         {rightOpen&&<aside className="inspector"><div className="inspector-heading"><span>实时上下文</span><IconButton label="收起详情" onClick={()=>setRightOpen(false)}><X size={15}/></IconButton></div><div className="inspector-content"><div className="inspector-section"><span className="side-section-label">运行状态</span><div className="runtime-tile"><div className={'runtime-indicator '+(connected?'ok':'off')}>{connected?<Activity size={20}/>:<AlertCircle size={20}/>}</div><strong>{connected?'引擎已连接':'等待连接'}</strong><span>{statusName(sessionPhase)}</span></div></div><div className="inspector-section"><span className="side-section-label">当前配置</span><div className="detail-row"><span>智能体模式</span><strong>{mode==='super'?'Super Agents':'主子模式'}</strong></div><div className="detail-row"><span>当前模型</span><strong title={selectedModel}>{selectedModel||'默认模型'}</strong></div><div className="detail-row"><span>待审权限</span><strong className={permissions.length?'attention':''}>{permissions.length} 项</strong></div><div className="detail-row"><span>活动任务</span><strong>{tasks.length}</strong></div></div><div className="inspector-section"><span className="side-section-label">快捷操作</span><button className="inspector-action" onClick={()=>setView('settings')}><ShieldCheck size={16}/>管理权限<ChevronRight size={15}/></button><button className="inspector-action" onClick={()=>setView('missions')}><ListChecks size={16}/>任务簿<ChevronRight size={15}/></button><button className="inspector-action" onClick={()=>setView('models')}><Cpu size={16}/>模型选择<ChevronRight size={15}/></button></div><div className="inspector-section"><span className="side-section-label">最近活动</span>{activity.length?activity.slice(0,6).map((event,i)=><div className="activity-entry" key={i}><span className="activity-dot"/>{event}</div>):<p className="muted small">运行任务时，这里显示执行活动。</p>}</div></div><div className="inspector-footer"><span className={'connection-light '+(connected?'online':'offline')}/><span>本地工作区 · {busy||'已就绪'}</span></div></aside>}
       </div>
+      {permissions.length>0&&<div className="modal-backdrop" role="presentation"><div className="approval-modal" role="dialog" aria-modal="true" aria-label="工具权限审批"><div className="modal-heading"><div className="modal-icon"><ShieldCheck size={23}/></div><div><span className="eyebrow">PERMISSION REQUEST</span><h2>需要确认工具操作</h2></div></div><p className="muted">摇摇车希望执行以下操作。请检查内容后明确选择。</p><div className="approval-target"><strong>{permissions[0].toolName}</strong><pre>{json(permissions[0].input)}</pre></div><div className="modal-actions"><button className="secondary-button" onClick={()=>void decision(permissions[0].id,false)} disabled={Boolean(busy)}>拒绝</button><button className="primary-button" onClick={()=>void decision(permissions[0].id,true)} disabled={Boolean(busy)}>允许本次操作</button></div>{permissions.length>1&&<span className="modal-count">另有 {permissions.length-1} 项待审操作</span>}</div></div>}
+      {permissions.length===0&&requested&&<div className="modal-backdrop"><div className="approval-modal" role="dialog" aria-modal="true" aria-label="主机交互请求"><div className="modal-heading"><div className="modal-icon"><LockKeyhole size={23}/></div><div><span className="eyebrow">HOST REQUEST</span><h2>{requestedDetails.title||'需要您的输入'}</h2></div></div><p className="muted">{String(requestedDetails.message||requestedDetails.description||'后台请求用户处理交互内容。')}</p>{requestedDetails.subtype==='elicitation'?<><div className="host-fields">{Object.entries(requestedProperties).map(([key,value])=>{const field=obj(value);const valueType=String(field.type||'string');return <label key={key}><span>{String(field.title||key)}{Array.isArray(requestedSchema.required)&&requestedSchema.required.includes(key)?' *':''}</span>{Array.isArray(field.enum)?<select value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:e.target.value}))}><option value="">请选择</option>{field.enum.map((item:unknown,i:number)=><option key={i} value={String(item)}>{String(item)}</option>)}</select>:valueType==='boolean'?<input type="checkbox" checked={Boolean(hostForm[key])} onChange={e=>setHostForm(old=>({...old,[key]:e.target.checked}))}/>:<input type={valueType==='number'||valueType==='integer'?'number':'text'} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:valueType==='number'||valueType==='integer'?Number(e.target.value):e.target.value}))}/>}</label>})}</div><div className="modal-actions"><button className="secondary-button" onClick={()=>void respondHost(requested.id,'decline')}>拒绝</button><button className="primary-button" onClick={()=>void respondHost(requested.id,'accept')}>提交输入</button></div></>:<div className="modal-actions"><button className="secondary-button" onClick={()=>void operation('取消主机请求',async()=>{if(!sessionId)return;await invoke('host.reject',{sessionId,requestId:requested.id,reason:'桌面端未支持该主机交互类型'});setHostRequests(old=>old.filter(r=>r.id!==requested.id))})}>取消此请求</button></div>}</div></div>}
       <footer className="statusbar"><span><span className={'connection-light '+(connected?'online':'offline')}/>{connected?'本地连接正常':'后端不可用'}</span><span>{workspace||'未选择项目'}</span><span className="statusbar-right">{sessionId?'会话 '+sessionId.slice(0,8)+' · ':''}{statusName(sessionPhase)}</span></footer>
     </div>
   </div>
