@@ -146,6 +146,30 @@ test('model capability probe performs a real tool-result second turn', async () 
   ])
 })
 
+test('capability probe preserves provider tool-selection constraints and verifies both turns', async () => {
+  const requested: Record<string, unknown>[] = []
+  const answer = (...entries: unknown[]) => entries.map(entry => `data: ${JSON.stringify(entry)}\n\n`).join('')
+  const send = async (request: Record<string, unknown>): Promise<string> => {
+    requested.push(request)
+    return requested.length === 1 ? answer(
+      { type: 'message_start' },
+      { type: 'content_block_start', index: 0, content_block: { name: '333_probe', id: 'toolu_probe' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: '{"ok":true}' } },
+      { type: 'message_stop' },
+    ) : answer(
+      { type: 'message_start' },
+      { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'PROBE_OK' } },
+      { type: 'message_delta', delta: { stop_reason: 'end_turn' } },
+      { type: 'message_stop' },
+    )
+  }
+  const report = await runModelToolRoundTrip('deepseek/deepseek-v4-pro', send, 'auto')
+  assert.equal(report.toolRoundTrip ?? report.roundTrip, true)
+  assert.deepEqual(requested[0].tool_choice, { type: 'auto' })
+  assert.deepEqual(requested[1].tool_choice, { type: 'auto' })
+  assert.equal(requested.length, 2)
+})
+
 test('capability probe reports failure when follow-up does not finish', async () => {
   let count = 0
   const answer = (...entries: unknown[]) => entries.map(e => `data: ${JSON.stringify(e)}\n\n`).join('')
@@ -251,8 +275,12 @@ test('MiniMax M3.1 and Kimi K2.7 enforce documented thinking boundaries', () => 
   assert.equal(toChatCompletions({ ...body, output_config: { effort: 'max' } }, 'MiniMax-M3.1-Flash', 'minimax').reasoning_effort, 'max')
   assert.throws(() => toChatCompletions({ ...body, thinking: { type: 'disabled' } }, 'MiniMax-M3.1-Flash', 'minimax'), /保留推理能力/)
   assert.throws(() => toChatCompletions({ ...body, thinking: { type: 'disabled' } }, 'kimi-k2.7-code', 'kimi'), /不支持关闭思考/)
-  const selected = toChatCompletions({ ...body, tool_choice: { type: 'tool', name: 'Read' } }, 'kimi-k2.7-code', 'kimi')
-  assert.equal(selected.tool_choice, 'auto')
+  assert.throws(() => toChatCompletions({
+    ...body, tool_choice: { type: 'tool', name: 'Read' },
+  }, 'kimi-k2.7-code', 'kimi'), /强制指定工具/)
+  assert.equal(toChatCompletions({
+    ...body, tool_choice: { type: 'auto' },
+  }, 'kimi-k2.7-code', 'kimi').model, 'kimi-k2.7-code')
 })
 
 test('multimodal tool results retain image data and precede ordinary chat messages', () => {
