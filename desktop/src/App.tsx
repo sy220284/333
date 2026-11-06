@@ -14,7 +14,7 @@ import { asObject, itemFromMessage, statusName, textFromMessage, type Conversati
 type View='dashboard'|'chat'|'agents'|'missions'|'files'|'models'|'integrations'|'github'|'history'|'settings'
 type Model={value:string;displayName:string;description?:string}
 const PROVIDERS=[{id:'openai',name:'OpenAI API'},{id:'deepseek',name:'DeepSeek'},{id:'qwen',name:'Qwen'},{id:'kimi',name:'Kimi'},{id:'zhipu',name:'智谱 GLM'},{id:'minimax',name:'MiniMax'}] as const
-type Mission={id?:string;missionId?:string;objective?:string;status?:string;checkpoints?:unknown[];[key:string]:unknown}
+type Mission={id?:string;missionId?:string;objective?:string;status?:string;checkpoint?:string;checkpoints?:unknown[];[key:string]:unknown}
 type FileEntry={name:string;path:string;directory:boolean}
 type Permission={id:string;toolName:string;input?:Item;description?:string}
 type HostRequest={id:string;type?:string;request?:unknown;[key:string]:unknown}
