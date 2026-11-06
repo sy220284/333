@@ -13,7 +13,6 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '../services/analytics/index.js'
-import { getVoiceKeyterms } from '../services/voiceKeyterms.js'
 import { normalizeLanguageForSTT } from '../services/voiceLanguage.js'
 import {
   connectVoiceStream,
@@ -131,9 +130,6 @@ export function useVoice({
   // slow-connecting WS from an abandoned session from overwriting
   // connectionRef mid-way through the next session.
   const sessionGenRef = useRef(0)
-  // True if the early-error retry fired during this session.
-  // Tracked for the tengu_voice_recording_completed analytics event.
-  const retryUsedRef = useRef(false)
   // Bumped when the early-error retry is scheduled. Captured per
   // attemptConnect — onError swallows stale-gen events (conn 1's
   // trailing close-error) but surfaces current-gen ones (conn 2's
@@ -232,7 +228,6 @@ export function useVoice({
     // reproducing the silent-drop false-positive this ref exists to prevent.
     const recordingDurationMs = Date.now() - recordingStartRef.current
     const hadAudioSignal = hasAudioSignalRef.current
-    const retried = retryUsedRef.current
     const focusFlushedChars = focusFlushedCharsRef.current
     // wsConnected distinguishes "backend received audio but dropped it" (the
     // bug backend PR #287008 fixes) from "WS handshake never completed" —
@@ -275,7 +270,6 @@ export function useVoice({
           transcriptChars: text.length + focusFlushedChars,
           recordingDurationMs,
           hadAudioSignal,
-          retried,
           wsConnected,
           focusTriggered,
         })
@@ -452,7 +446,6 @@ export function useVoice({
     accumulatedRef.current = ''
     seenRepeatRef.current = false
     hasAudioSignalRef.current = false
-    retryUsedRef.current = false
     focusFlushedCharsRef.current = 0
     everConnectedRef.current = false
     const myGen = ++sessionGenRef.current
@@ -551,31 +544,21 @@ export function useVoice({
         getSystemLocaleLanguage() as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
 
-    // Retry once if the connection errors before delivering any transcript.
-    // The conversation-engine proxy can reject rapid reconnects (~1/N_pods
-    // same-pod collision) or CE's Deepgram upstream can fail during its own
-    // teardown window (anthropics/anthropic#287008 surfaces this as
-    // TranscriptError instead of silent-drop). A 250ms backoff clears both.
-    // Audio captured during the retry window routes to audioBuffer (via the
-    // connectionRef.current null check in the recording callback above) and
-    // is flushed by the second onReady.
-    let sawTranscript = false
+    // 本地转写在录音结束后执行一次，不进行云端连接重试。
 
     // Connect WebSocket in parallel with audio recording.
-    // Gather keyterms first (async but fast — no model calls), then connect.
     // Bail from callbacks if a newer session has started. Prevents a
     // slow-connecting zombie WS (e.g. user released, pressed again, first
     // WS still handshaking) from firing onReady/onError into the new
     // session and corrupting its connectionRef / triggering a bogus retry.
     const isStale = () => sessionGenRef.current !== myGen
 
-    const attemptConnect = (keyterms: string[]): void => {
+    const attemptConnect = (): void => {
       const myAttemptGen = attemptGenRef.current
       void connectVoiceStream(
         {
           onTranscript: (text: string, isFinal: boolean) => {
             if (isStale()) return
-            sawTranscript = true
             logForDebugging(
               `[voice] onTranscript: isFinal=${String(isFinal)} length=${text.length}`,
             )
@@ -648,42 +631,8 @@ export function useVoice({
               )
               return
             }
-            // Early-failure retry: server error before any transcript =
-            // likely a transient upstream race (CE rejection, Deepgram
-            // not ready). Clear connectionRef so audio re-buffers, back
-            // off, reconnect. Skip if the user has already released the
-            // key (state left 'recording') — no point retrying a session
-            // they've ended. Fatal errors (Cloudflare bot challenge, auth
-            // rejection) are the same failure on every retry attempt, so
-            // fall through to surface the message.
-            if (
-              !opts?.fatal &&
-              !sawTranscript &&
-              stateRef.current === 'recording'
-            ) {
-              if (!retryUsedRef.current) {
-                retryUsedRef.current = true
-                logForDebugging(
-                  `[voice] early voice_stream error (pre-transcript), retrying once: ${error}`,
-                )
-                logEvent('tengu_voice_stream_early_retry', {})
-                connectionRef.current = null
-                attemptGenRef.current++
-                setTimeout(
-                  (stateRef, attemptConnect, keyterms) => {
-                    if (stateRef.current === 'recording') {
-                      attemptConnect(keyterms)
-                    }
-                  },
-                  250,
-                  stateRef,
-                  attemptConnect,
-                  keyterms,
-                )
-                return
-              }
-            }
-            // Surfacing — bump gen so this conn's trailing close-error
+            // 本地引擎错误直接呈现，避免重复转写同一段录音。
+            // 更新代次，忽略随后到达的过期回调。
             // (ws fires error then close 1006) is swallowed above.
             attemptGenRef.current++
             logError(new Error(`[voice] voice_stream error: ${error}`))
@@ -767,10 +716,7 @@ export function useVoice({
             }
           },
         },
-        {
-          language: stt.code,
-          keyterms,
-        },
+        { language: stt.code },
       ).then(conn => {
         if (isStale()) {
           conn?.close()
@@ -778,10 +724,10 @@ export function useVoice({
         }
         if (!conn) {
           logForDebugging(
-            '[voice] Failed to connect to voice_stream (no OAuth token?)',
+            '[voice] 本地语音引擎未配置或无法启动',
           )
           onErrorRef.current?.(
-            'Voice mode requires a Claude.ai account. Please run /login to sign in.',
+            '请检查 YAOYAOCHE_WHISPER_CLI 与 YAOYAOCHE_WHISPER_MODEL 的配置。',
           )
           // Clear the audio buffer on failure
           audioBuffer.length = 0
@@ -800,7 +746,7 @@ export function useVoice({
       })
     }
 
-    void getVoiceKeyterms().then(attemptConnect)
+    attemptConnect()
   }
 
   // ── Hold-to-talk handler ────────────────────────────────────────────
