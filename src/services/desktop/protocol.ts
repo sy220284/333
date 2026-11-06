@@ -9,6 +9,7 @@ export const DESKTOP_PROTOCOL_VERSION = 1
 const id = z.string().min(1).max(128)
 const sessionId = z.string().uuid()
 const taskId = z.string().min(1).max(256)
+const missionId = z.string().regex(/^mission_[a-f0-9]{16}$/)
 const request = <T extends string, S extends z.ZodRawShape>(method: T, shape: S) =>
   z.object({ id, method: z.literal(method), ...shape }).strict()
 
@@ -29,6 +30,14 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('sessions.setPermissionMode', { sessionId, mode: z.enum(['default', 'acceptEdits', 'bypassPermissions', 'plan', 'dontAsk']) }),
   request('permissions.list', { sessionId }),
   request('permissions.decide', { sessionId, permissionId: id, decision: PermissionResultSchema() }),
+  request('agents.overview', {}),
+  request('agents.setMode', { mode: z.enum(['master', 'super']) }),
+  request('missions.list', {}),
+  request('missions.get', { missionId }),
+  request('missions.create', { objective: z.string().trim().min(1).max(4000) }),
+  request('missions.select', { missionId: missionId.nullable() }),
+  request('missions.updateStatus', { missionId, status: z.enum(['active', 'paused', 'completed']) }),
+  request('missions.checkpoint', { missionId, checkpoint: z.string().trim().min(1).max(6000) }),
   request('tasks.list', { sessionId }),
   request('tasks.stop', { sessionId, taskId }),
   request('tasks.resume', { sessionId, taskId, prompt: z.string().min(1).optional() }),
