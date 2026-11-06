@@ -486,7 +486,7 @@ test('OpenRouter non-stream tool turns preserve signed and encrypted reasoning_d
   const wrongAccount = toChatCompletions({ ...body, messages: [
     { role: 'assistant', content: modelReply.content },
   ] }, 'openai/gpt-6.1-sol', 'openrouter', '333-replay:someone-else')
-  assert.equal(wrongAccount.messages.length, 0)
+  assert.equal(wrongAccount.messages[0].reasoning_details, undefined)
 })
 test('OpenRouter streamed reasoning fragments merge before being replayed', async () => {
   const route = requireRoute('openrouter/openai/gpt-6.1-sol')
