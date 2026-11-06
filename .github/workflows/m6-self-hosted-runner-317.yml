@@ -47,7 +47,7 @@ jobs:
       - name: Runner管理入口、签名工单和异步编排的原版协议测试
         run: node --experimental-strip-types --test tests/m6-runner-code-sign-317.test.mjs tests/m6-runner-orchestrator-317.test.mjs
       - name: 评测报告Claude.ai发布的OAuth与失败路径测试
-        run: bun test tests/m3-plugin-eval-publish-317.test.ts
+        run: bun test tests/m3-plugin-eval-local-317.test.ts
       - name: 独立PTY宿主真实启动、认证重连及输出恢复测试
         run: bun test tests/m1-background-pty-replay-317.test.ts tests/m1-background-pty-connection-317.test.ts tests/m1-background-pty-adoption-317.test.ts
       - name: 从TypeScript源代码重建Runner入口

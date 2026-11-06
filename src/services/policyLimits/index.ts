@@ -506,13 +506,6 @@ async function fetchAndLoadPolicyLimits(): Promise<
  */
 const ESSENTIAL_TRAFFIC_DENY_ON_MISS = new Set(['allow_product_feedback'])
 
-/** An automatic upload needs a current verdict for the same OAuth principal. */
-export async function canPublishPrivateArtifact317(accessToken: string): Promise<boolean> {
-  const result = await fetchPolicyLimits(undefined, accessToken)
-  return result.success && !result.routeMissing && Boolean(result.restrictions) &&
-    !result.artifactCreateNotice && result.restrictions?.allow_cobalt_plinth?.allowed !== false
-}
-
 /**
  * Check if a specific policy is allowed
  * Returns true if the policy is unknown, unavailable, or explicitly allowed (fail open).

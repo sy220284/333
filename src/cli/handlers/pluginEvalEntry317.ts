@@ -4,18 +4,11 @@
  * evaluated headlessly without --trust-plugin.
  */
 import { mkdtemp, cp, readFile, realpath, stat, rm, writeFile, mkdir } from 'node:fs/promises'
-import { canPublishPrivateArtifact317 } from '../../services/policyLimits/index.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
-import { isEnvDefinedFalsy } from '../../utils/envUtils.js'
-import { isEssentialTrafficOnly } from '../../utils/privacyLevel.js'
-import { isClaudeAISubscriber } from '../../utils/auth.js'
-import { isFirstPartyAnthropicBaseUrl, getAPIProvider } from '../../utils/model/providers.js'
 import { tmpdir } from 'node:os'
 import { join, isAbsolute, resolve, relative } from 'node:path'
 import { discoverEvalCases317 } from './pluginEvalCatalog317.ts'
 import { executePluginEvalSuite317 } from './pluginEvalEngine317.ts'
 import { savePluginEvalReport317 } from './pluginEvalReport317.ts'
-import { publishEvalReport317,shouldPublishEvalReport317 } from './pluginEvalPublish317.ts'
 
 type PluginEvalOptions317 = {
   trustPlugin?: boolean
@@ -112,7 +105,9 @@ async function prepareEvalPlugin317(root, settings) {
 
 export async function pluginEvalHandler317(target: string, options: PluginEvalOptions317 = {}, adapters: {} = {}) : Promise<1 | 0 | 2> {
   const pluginRoot = await findPluginRoot317(target)
-  shouldPublishEvalReport317(options)
+  if (options.publishReport === true || options.publish === true) {
+    throw new Error('插件评估仅生成本地报告；请通过 --output-dir 选择导出目录')
+  }
   await requireEvalTrust317(pluginRoot, options.trustPlugin)
   const mocks = options.mocks ?? 'record'
   if (!['record','off'].includes(mocks)) throw new Error('--mocks must be record or off')
@@ -139,32 +134,6 @@ export async function pluginEvalHandler317(target: string, options: PluginEvalOp
       ? resolve(options.outputDir)
       : join(evalDir, 'results', data.finishedAt.replace(/[:.]/g, '-'))
     const report = await savePluginEvalReport317(data, { ...options, outputDir })
-    // The local report remains available even when remote publishing is
-    // unavailable or a deployment attempt fails.
-    const launchedByAgent = Boolean(process.env.CLAUDE_CODE_CHILD_SESSION ||
-      process.env.CLAUDECODE && (process.env.CLAUDE_CODE_SKIP_PROMPT_HISTORY ||
-        !process.stdin.isTTY && !process.stdout.isTTY))
-    const defaultPublish = !launchedByAgent &&
-      !process.env.CLAUDE_CODE_EVAL_INTERVIEW_SESSION &&
-      getFeatureValue_CACHED_MAY_BE_STALE('tengu_quartz_thimble', true)
-    if (shouldPublishEvalReport317(options, defaultPublish)) {
-      try {
-        const publish = await publishEvalReport317(data, options, {
-          isEnabled: () => !isEssentialTrafficOnly() &&
-            !isEnvDefinedFalsy(process.env.CLAUDE_CODE_ARTIFACT) && isClaudeAISubscriber() &&
-            getAPIProvider() === 'firstParty' && isFirstPartyAnthropicBaseUrl(),
-          authorize: canPublishPrivateArtifact317,
-        }, defaultPublish)
-        if (publish.status !== 'published') {
-          process.stderr.write('plugin eval: remote publication unavailable ('+
-            publish.reason+'); local report: '+report.reportFile+'\n')
-        }
-      } catch (error) {
-        process.stderr.write('plugin eval: report publish failed: '+
-          (error instanceof Error?error.message:String(error))+
-          '; local report: '+report.reportFile+'\n')
-      }
-    }
     if (options.json === undefined) {
       process.stdout.write(
         'plugin eval: ' + cases.length + ' cases, score=' + (data.score ?? 'n/a') +
