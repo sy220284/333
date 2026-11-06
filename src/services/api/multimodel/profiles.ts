@@ -222,6 +222,15 @@ export async function mergeDiscoveredModelProfiles(
       source: providerFields.length ? 'provider' as const : (base?.source ?? 'preset' as const),
       checkedAt,
     }
+    // A provider's smaller context limit invalidates an oversized reference
+    // output. Preserve authoritative provider values and leave unknown output
+    // limits unconfirmed rather than making a guessed clamp.
+    if (candidate.contextWindow !== undefined && candidate.maxOutputTokens !== undefined &&
+        candidate.maxOutputTokens > candidate.contextWindow &&
+        candidate.parameterSources.maxOutputTokens === 'preset') {
+      delete candidate.maxOutputTokens
+      delete candidate.parameterSources.maxOutputTokens
+    }
     // Provider-supported effort levels override documentation presets;
     // an incompatible default cannot be passed along to request builders.
     if (candidate.defaultEffort !== undefined &&

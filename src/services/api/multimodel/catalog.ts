@@ -162,7 +162,10 @@ export type ConfiguredModelSnapshot = {
 
 /** Inspect local cached and reference limits without a network request. */
 export function getConfiguredModelSnapshots(): ConfiguredModelSnapshot[] {
-  return getSavedModelOptions().map(option => {
+  const available = new Set(getConfiguredModelProviders())
+  return getSavedModelOptions()
+    .filter(option => available.has(option.value.split('/')[0] as IndependentProvider))
+    .map(option => {
     const profile = getIndependentProfile(option.value)
     const output = getModelMaxOutputTokens(option.value)
     return {
