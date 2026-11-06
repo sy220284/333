@@ -155,7 +155,7 @@ export class SelfHostedRunnerApi317 {
     this.onDebug('[runner:api] ' + method + ' ' + path)
     try {
       const response = await this.fetchImpl(this.rootUrl + path, {
-        method, headers, signal: controller.signal,
+        method, headers, signal: controller.signal, redirect: 'error',
         ...(payload !== undefined && { body: JSON.stringify(payload) }),
       })
       onResponseHeaders?.(response.headers)
