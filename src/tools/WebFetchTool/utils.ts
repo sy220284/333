@@ -20,7 +20,7 @@ import { makeSecondaryModelPrompt } from './prompt.js'
 // Custom error classes for domain blocking
 class DomainBlockedError extends Error {
   constructor(domain: string) {
-    super(`Qerivon is unable to fetch from ${domain}`)
+    super(`摇摇车 is unable to fetch from ${domain}`)
     this.name = 'DomainBlockedError'
   }
 }

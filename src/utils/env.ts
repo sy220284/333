@@ -12,8 +12,8 @@ type Platform = 'win32' | 'darwin' | 'linux'
 
 // Config and data paths
 export const getGlobalClaudeFile = memoize((): string => {
-  const filename = `.qerivon${fileSuffixForOauthConfig()}.json`
-  return join(process.env.QERIVON_CONFIG_DIR || process.env.CLAUDE_CONFIG_DIR || homedir(), filename)
+  const filename = `.yaoyaoche${fileSuffixForOauthConfig()}.json`
+  return join(process.env.YAOYAOCHE_CONFIG_DIR || process.env.CLAUDE_CONFIG_DIR || homedir(), filename)
 })
 
 const hasInternetAccess = memoize(async (): Promise<boolean> => {

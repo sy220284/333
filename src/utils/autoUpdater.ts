@@ -21,7 +21,7 @@ import { logError } from './log.js'
 import { gte, lt } from './semver.js'
 import { getInitialSettings } from './settings/settings.js'
 import {
-  filterQerivonAliases,
+  filter摇摇车Aliases,
   getShellConfigPaths,
   readFileLines,
   writeFileLines,
@@ -61,7 +61,7 @@ export type MaxVersionConfig = {
  *
  * Versioning approach:
  * 1. For version requirements/compatibility (assertMinVersion), we use semver comparison that ignores build metadata
- * 2. For updates ('qerivon update'), we use exact string comparison to detect any change, including SHA
+ * 2. For updates ('yaoyaoche update'), we use exact string comparison to detect any change, including SHA
  *    - This ensures users always get the latest build, even when only the SHA changes
  *    - The UI clearly shows both versions including build metadata
  *
@@ -83,11 +83,11 @@ export async function assertMinVersion(): Promise<void> {
     ) {
       // biome-ignore lint/suspicious/noConsole:: intentional console output
       console.error(`
-It looks like your version of Qerivon (${MACRO.VERSION}) needs an update.
+It looks like your version of 摇摇车 (${MACRO.VERSION}) needs an update.
 A newer version (${versionConfig.minVersion} or higher) is required to continue.
 
 To update, please run:
-    qerivon update
+    yaoyaoche update
 
 This will ensure you have access to the latest features and improvements.
 `)
@@ -470,7 +470,7 @@ export async function installGlobalPackage(
   }
 
   try {
-    await removeQerivonAliasesFromShellConfigs()
+    await remove摇摇车AliasesFromShellConfigs()
     // Check if we're using npm from Windows path in WSL
     if (!env.isRunningWithBun() && env.isNpmFromWindowsPath()) {
       logError(new Error('Windows NPM detected in WSL environment'))
@@ -482,13 +482,13 @@ export async function installGlobalPackage(
       console.error(`
 Error: Windows NPM detected in WSL
 
-You're running Qerivon in WSL but using the Windows NPM installation from /mnt/c/.
+You're running 摇摇车 in WSL but using the Windows NPM installation from /mnt/c/.
 This configuration is not supported for updates.
 
 To fix this issue:
   1. Install Node.js within your Linux distribution: e.g. sudo apt install nodejs npm
   2. Make sure Linux NPM is in your PATH before the Windows version
-  3. Try updating again with 'qerivon update'
+  3. Try updating again with 'yaoyaoche update'
 `)
       return 'install_failed'
     }
@@ -513,7 +513,7 @@ To fix this issue:
     )
     if (installResult.code !== 0) {
       const error = new AutoUpdaterError(
-        `Failed to install new version of Qerivon: ${installResult.stdout} ${installResult.stderr}`,
+        `Failed to install new version of 摇摇车: ${installResult.stdout} ${installResult.stderr}`,
       )
       logError(error)
       return 'install_failed'
@@ -536,7 +536,7 @@ To fix this issue:
  * Remove claude aliases from shell configuration files
  * This helps clean up old installation methods when switching to native or npm global
  */
-async function removeQerivonAliasesFromShellConfigs(): Promise<void> {
+async function remove摇摇车AliasesFromShellConfigs(): Promise<void> {
   const configMap = getShellConfigPaths()
 
   // Process each shell config file
@@ -545,11 +545,11 @@ async function removeQerivonAliasesFromShellConfigs(): Promise<void> {
       const lines = await readFileLines(configFile)
       if (!lines) continue
 
-      const { filtered, hadAlias } = filterQerivonAliases(lines)
+      const { filtered, hadAlias } = filter摇摇车Aliases(lines)
 
       if (hadAlias) {
         await writeFileLines(configFile, filtered)
-        logForDebugging(`Removed Qerivon alias from ${configFile}`)
+        logForDebugging(`Removed 摇摇车 alias from ${configFile}`)
       }
     } catch (error) {
       // Don't fail the whole operation if one file can't be processed

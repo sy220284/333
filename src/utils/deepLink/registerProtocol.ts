@@ -1,8 +1,8 @@
 /**
  * Protocol Handler Registration
  *
- * Registers the `qerivon://` custom URI scheme with the OS,
- * so that clicking a `qerivon://` link in a browser (or any app) will
+ * Registers the `yaoyaoche://` custom URI scheme with the OS,
+ * so that clicking a `yaoyaoche://` link in a browser (or any app) will
  * invoke `claude --handle-uri <url>`.
  *
  * Platform details:
@@ -30,10 +30,10 @@ import { which } from '../which.js'
 import { getUserBinDir, getXDGDataHome } from '../xdg.js'
 import { DEEP_LINK_PROTOCOL } from './parseDeepLink.js'
 
-export const MACOS_BUNDLE_ID = 'com.qerivon.url-handler'
-const APP_NAME = 'Qerivon URL Handler'
-const DESKTOP_FILE_NAME = 'qerivon-url-handler.desktop'
-const MACOS_APP_NAME = 'Qerivon URL Handler.app'
+export const MACOS_BUNDLE_ID = 'com.yaoyaoche.url-handler'
+const APP_NAME = '摇摇车 URL Handler'
+const DESKTOP_FILE_NAME = 'yaoyaoche-url-handler.desktop'
+const MACOS_APP_NAME = '摇摇车 URL Handler.app'
 
 // Shared between register* (writes these paths/values) and
 // isProtocolHandlerCurrent (reads them back). Keep the writer and reader
@@ -43,7 +43,7 @@ const MACOS_SYMLINK_PATH = path.join(
   MACOS_APP_DIR,
   'Contents',
   'MacOS',
-  'qerivon',
+  'yaoyaoche',
 )
 function linuxDesktopPath(): string {
   return path.join(getXDGDataHome(), 'applications', DESKTOP_FILE_NAME)
@@ -64,8 +64,8 @@ function windowsCommandValue(claudePath: string): string {
  * Register the protocol handler on macOS.
  *
  * Creates a .app bundle where the CFBundleExecutable is a symlink to the
- * already-installed (and signed) `qerivon` binary. When macOS opens a
- * `qerivon://` URL, it launches `qerivon` through this app bundle.
+ * already-installed (and signed) `yaoyaoche` binary. When macOS opens a
+ * `yaoyaoche://` URL, it launches `yaoyaoche` through this app bundle.
  * Claude then uses the url-handler NAPI module to read the URL from the
  * Apple Event and handles it normally.
  *
@@ -97,7 +97,7 @@ async function registerMacos(claudePath: string): Promise<void> {
   <key>CFBundleName</key>
   <string>${APP_NAME}</string>
   <key>CFBundleExecutable</key>
-  <string>qerivon</string>
+  <string>yaoyaoche</string>
   <key>CFBundleVersion</key>
   <string>1.0</string>
   <key>CFBundlePackageType</key>
@@ -108,7 +108,7 @@ async function registerMacos(claudePath: string): Promise<void> {
   <array>
     <dict>
       <key>CFBundleURLName</key>
-      <string>Qerivon Deep Link</string>
+      <string>摇摇车 Deep Link</string>
       <key>CFBundleURLSchemes</key>
       <array>
         <string>${DEEP_LINK_PROTOCOL}</string>
@@ -120,7 +120,7 @@ async function registerMacos(claudePath: string): Promise<void> {
 
   await fs.writeFile(path.join(contentsDir, 'Info.plist'), infoPlist)
 
-  // Symlink to the already-signed qerivon binary — avoids a new executable
+  // Symlink to the already-signed yaoyaoche binary — avoids a new executable
   // that would need signing and endpoint-security allowlisting.
   // Written LAST among the throwing fs calls: isProtocolHandlerCurrent reads
   // this symlink, so it acts as the commit marker. If Info.plist write
@@ -146,7 +146,7 @@ async function registerLinux(claudePath: string): Promise<void> {
 
   const desktopEntry = `[Desktop Entry]
 Name=${APP_NAME}
-Comment=Handle ${DEEP_LINK_PROTOCOL}:// deep links for Qerivon
+Comment=Handle ${DEEP_LINK_PROTOCOL}:// deep links for 摇摇车
 ${linuxExecLine(claudePath)}
 Type=Application
 NoDisplay=true
@@ -209,8 +209,8 @@ async function registerWindows(claudePath: string): Promise<void> {
 }
 
 /**
- * Register the `qerivon://` protocol handler with the operating system.
- * After registration, clicking a `qerivon://` link will invoke qerivon.
+ * Register the `yaoyaoche://` protocol handler with the operating system.
+ * After registration, clicking a `yaoyaoche://` link will invoke yaoyaoche.
  */
 export async function registerProtocolHandler(
   claudePath?: string,
@@ -233,13 +233,13 @@ export async function registerProtocolHandler(
 }
 
 /**
- * Resolve the qerivon binary path for protocol registration. Prefers the
- * native installer's stable symlink (~/.local/bin/qerivon) which survives
+ * Resolve the yaoyaoche binary path for protocol registration. Prefers the
+ * native installer's stable symlink (~/.local/bin/yaoyaoche) which survives
  * auto-updates; falls back to process.execPath when the symlink is absent
  * (dev builds, non-native installs).
  */
 async function resolveClaudePath(): Promise<string> {
-  const binaryName = process.platform === 'win32' ? 'qerivon.exe' : 'qerivon'
+  const binaryName = process.platform === 'win32' ? 'yaoyaoche.exe' : 'yaoyaoche'
   const stablePath = path.join(getUserBinDir(), binaryName)
   try {
     await fs.realpath(stablePath)
@@ -251,9 +251,9 @@ async function resolveClaudePath(): Promise<string> {
 
 /**
  * Check whether the OS-level protocol handler is already registered AND
- * points at the expected `qerivon` binary. Reads the registration artifact
+ * points at the expected `yaoyaoche` binary. Reads the registration artifact
  * directly (symlink target, .desktop Exec line, registry value) rather than
- * a cached flag in ~/.qerivon.json, so:
+ * a cached flag in ~/.yaoyaoche.json, so:
  *   - the check is per-machine (config can sync across machines; OS state can't)
  *   - stale paths self-heal (install-method change → re-register next session)
  *   - deleted artifacts self-heal
@@ -290,7 +290,7 @@ export async function isProtocolHandlerCurrent(
 }
 
 /**
- * Auto-register the qerivon:// deep link protocol handler when missing
+ * Auto-register the yaoyaoche:// deep link protocol handler when missing
  * or stale. Runs every session from backgroundHousekeeping (fire-and-forget),
  * but the artifact check makes it a no-op after the first successful run
  * unless the install path moves or the OS artifact is deleted.
@@ -311,7 +311,7 @@ export async function ensureDeepLinkProtocolRegistered(): Promise<void> {
   // EACCES/ENOSPC are deterministic — retrying next session won't help.
   // Throttle to once per 24h so a read-only ~/.local/share/applications
   // doesn't generate a failure event on every startup. Marker lives in
-  // ~/.qerivon (per-machine, not synced) rather than ~/.qerivon.json (can sync).
+  // ~/.yaoyaoche (per-machine, not synced) rather than ~/.yaoyaoche.json (can sync).
   const failureMarkerPath = path.join(
     getClaudeConfigHomeDir(),
     '.deep-link-register-failed',
@@ -328,7 +328,7 @@ export async function ensureDeepLinkProtocolRegistered(): Promise<void> {
   try {
     await registerProtocolHandler(claudePath)
     logEvent('tengu_deep_link_registered', { success: true })
-    logForDebugging('Auto-registered qerivon:// deep link protocol handler')
+    logForDebugging('Auto-registered yaoyaoche:// deep link protocol handler')
     await fs.rm(failureMarkerPath, { force: true }).catch(() => {})
   } catch (error) {
     const code = getErrnoCode(error)
