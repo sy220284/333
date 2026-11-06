@@ -358,3 +358,12 @@ button:disabled{opacity:.42;cursor:not-allowed;transform:none!important}
 .job-summary{max-height:260px;overflow:auto;line-height:1.75}
 [data-motion=off] .job-card{animation:none;transition:none}
 @media(prefers-reduced-motion:reduce){.job-card{animation:none;transition:none}}
+
+.job-history{margin-top:11px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--surface2)}
+.job-history>summary{padding:11px 13px;cursor:pointer;color:var(--accent-bright);font-size:11px;font-weight:620}
+.job-history>summary:hover{background:rgba(129,149,255,.08)}
+.job-history>summary:focus-visible{outline-offset:-3px}
+.job-attempt{padding:12px 13px;border-top:1px solid var(--line);font-size:11px;line-height:1.65}
+.job-attempt strong{color:var(--text)}
+.job-attempt>span{float:right;color:var(--subtle);font-size:10px}
+.job-attempt>p{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--muted);margin:7px 0 0;max-height:240px;overflow:auto}
