@@ -238,13 +238,10 @@ export const ConfigTool = buildTool({
         '../../voice/voiceModeEnabled.js'
       )
       if (!isVoiceModeEnabled()) {
-        const { isAnthropicAuthEnabled } = await import('../../utils/auth.js')
         return {
           data: {
             success: false,
-            error: !isAnthropicAuthEnabled()
-              ? '请配置本机 Whisper CLI 和模型文件后启用语音转写'
-              : '本机语音转写引擎尚未配置或不可用',
+            error: '请先设置 YAOYAOCHE_WHISPER_CLI 和 YAOYAOCHE_WHISPER_MODEL 的绝对路径，并确认文件存在',
           },
         }
       }
@@ -273,7 +270,7 @@ export const ConfigTool = buildTool({
           data: {
             success: false,
             error:
-              'Voice mode requires a Claude.ai account. Please run /login to sign in.',
+              '请先配置本地 Whisper CLI 与模型文件。',
           },
         }
       }
