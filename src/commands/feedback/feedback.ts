@@ -24,6 +24,6 @@ export const call: LocalCommandCall = async (args, context) => {
   const path = await saveLocalFeedback(description, diagnostics)
   return {
     type: 'text',
-    value: `本地 diagnostics 反馈已导出：${path}\n文件尚未上传；分享前请检查描述内容。`,
+    value: `本地诊断已导出：${path}\n文件尚未上传；分享前请检查描述内容。`,
   }
 }
