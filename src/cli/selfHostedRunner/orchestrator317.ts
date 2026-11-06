@@ -113,7 +113,7 @@ export function createOrchestratorApi317(
     if(signal.aborted)abort();else signal.addEventListener('abort',abort,{once:true})
     try{
       const response=await fetchImpl(base+API+path,{
-        method:'POST',signal:ctl.signal,
+        method:'POST',signal:ctl.signal,redirect:'error',
         headers:{'authorization':'Bearer '+secret,'content-type':'application/json',
           'anthropic-version':'2023-06-01','x-self-hosted-runner-version':'2.1.317'},
         body:JSON.stringify(body)})
