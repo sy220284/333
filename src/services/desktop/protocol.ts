@@ -20,6 +20,14 @@ const request = <T extends string, S extends z.ZodRawShape>(method: T, shape: S)
 export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('hello', {}),
   request('models.list', { sessionId: sessionId.optional() }),
+  request('mcp.list', {}),
+  request('mcp.add', { name: z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/), scope: z.enum(['project', 'user', 'local']), config: z.union([
+    z.object({ type: z.literal('http'), url: z.string().url().max(2048) }).strict(),
+    z.object({ type: z.literal('sse'), url: z.string().url().max(2048) }).strict(),
+    z.object({ type: z.literal('stdio'), command: z.string().trim().min(1).max(1024), args: z.array(z.string().max(1000)).max(80) }).strict()
+  ]) }),
+  request('mcp.remove', { name: z.string().min(1), scope: z.enum(['project','user','local']) }),
+  request('mcp.toggle', { name: z.string().min(1), enabled: z.boolean() }),
   request('sessions.open', { model: z.string().min(1).optional() }),
   request('sessions.resume', { sessionId }),
   request('sessions.list', { limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() }),
