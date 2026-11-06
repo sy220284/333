@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { readFileSync } from 'node:fs'
-const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
+const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
 test('Mission 工具接入正式工具池与协调者权限列表', () => {
   assert.match(read('src/tools.ts'), /MissionTool/)
