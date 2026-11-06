@@ -485,7 +485,7 @@ test('Responses encrypted reasoning replays only on the same connection and mode
   const history = [{ role: 'assistant' as const, content: (await first.json() as { content: [] }).content }]
   for (const key of ['key-a', 'key-b']) {
     await makeIndependentFetch(route, key, async (_url, init) => {
-      const sent = JSON.parse(String(init?.body))
+      const sent = JSON.parse(String(init?.body)) as CapturedProviderPayload
       assert.deepEqual(sent.input, key === 'key-a' ? [encrypted] : [])
       return Response.json({ status: 'completed', output: [] })
     })(request(history))
@@ -673,11 +673,20 @@ test('MiniMax M3.1 uses reasoning split and completion budget; M3 uses adaptive 
 })
 
 
+type CapturedProviderPayload = {
+  input: Array<{ type?: string; role?: string; call_id?: string; tools?: Array<{ name: string; parameters?: unknown }> }>
+  tools?: Array<{ name: string }>
+  max_output_tokens?: number
+  store?: boolean
+  stream?: boolean
+  [key: string]: unknown
+}
+
 test('ChatGPT plan sends local functions through official additional_tools input items', async () => {
   const route = requireRoute('chatgpt/gpt-6.1-sol')
-  let sent: Record<string, any> | undefined
+  let sent: CapturedProviderPayload | undefined
   const backend = async (_url: RequestInfo | URL, init?: RequestInit) => {
-    sent = JSON.parse(String(init?.body))
+    sent = JSON.parse(String(init?.body)) as CapturedProviderPayload
     return stream(
       { type: 'response.output_text.delta', delta: 'READY' },
       { type: 'response.completed', response: { output: [], usage: { input_tokens: 3, output_tokens: 1 } } },
@@ -696,14 +705,14 @@ test('ChatGPT plan sends local functions through official additional_tools input
   assert.equal(sent.stream, true)
   assert.equal(sent.tools, undefined)
   assert.equal(sent.max_output_tokens, undefined)
-  assert.equal(sent.input[0].type, 'additional_tools')
-  assert.equal(sent.input[0].role, 'developer')
-  assert.equal(sent.input[0].tools[0].name, 'Read')
-  assert.deepEqual(sent.input[0].tools[0].parameters, body.tools[0].input_schema)
-  assert.equal(sent.input[1].role, 'user')
-  assert.equal(sent.input[3].call_id, 'call_42')
-  assert.equal(sent.input[4].type, 'function_call_output')
-  assert.equal(sent.input[4].call_id, 'call_42')
+  assert.equal(sent.input[0]?.type, 'additional_tools')
+  assert.equal(sent.input[0]?.role, 'developer')
+  assert.equal(sent.input[0]?.tools?.[0]?.name, 'Read')
+  assert.deepEqual(sent.input[0]?.tools?.[0]?.parameters, body.tools[0].input_schema)
+  assert.equal(sent.input[1]?.role, 'user')
+  assert.equal(sent.input[3]?.call_id, 'call_42')
+  assert.equal(sent.input[4]?.type, 'function_call_output')
+  assert.equal(sent.input[4]?.call_id, 'call_42')
   for (const field of ['previous_response_id', 'temperature', 'top_p', 'max_output_tokens', 'metadata']) {
     assert.equal(sent[field], undefined)
   }
@@ -711,9 +720,9 @@ test('ChatGPT plan sends local functions through official additional_tools input
 
 test('OpenAI API key inference keeps ordinary Responses tools protocol independent of ChatGPT plan', async () => {
   const route = requireRoute('openai/gpt-6.1-sol')
-  let sent: Record<string, any> | undefined
+  let sent: CapturedProviderPayload | undefined
   const backend = async (_url: RequestInfo | URL, init?: RequestInit) => {
-    sent = JSON.parse(String(init?.body))
+    sent = JSON.parse(String(init?.body)) as CapturedProviderPayload
     return stream({ type: 'response.completed', response: { output: [], usage: {} } })
   }
   const request = new Request('https://333-model-bridge.invalid/v1/messages', {
@@ -721,9 +730,9 @@ test('OpenAI API key inference keeps ordinary Responses tools protocol independe
   })
   await (await makeIndependentFetch(route, 'api-key', backend as typeof fetch)(request)).text()
   assert.ok(sent)
-  assert.equal(sent.tools[0].name, 'Read')
-  assert.ok(sent.max_output_tokens > 0)
-  assert.notEqual(sent.input[0].type, 'additional_tools')
+  assert.equal(sent.tools?.[0]?.name, 'Read')
+  assert.ok((sent.max_output_tokens ?? 0) > 0)
+  assert.notEqual(sent.input[0]?.type, 'additional_tools')
 })
 
 test('ChatGPT 官方模型目录保留可选模型顺序、slug 与 display_name，隐藏模型不显示', async () => {
