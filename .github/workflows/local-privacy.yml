@@ -17,6 +17,9 @@ on:
       - 'tests/m1-otel-timeout-317.test.mjs'
       - '.github/workflows/local-privacy.yml'
   workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 jobs:
