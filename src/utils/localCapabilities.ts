@@ -30,7 +30,7 @@ export function isLocalCapability(name: string): name is LocalCapability {
 }
 
 export function isLocalCapabilityEnabled(name: LocalCapability): boolean {
-  return getFeatureValue_CACHED_MAY_BE_STALE(keyFor(name), false) === true
+  return getFeatureValue_CACHED_MAY_BE_STALE<boolean>(keyFor(name), false)
 }
 
 export function setLocalCapabilityEnabled(name: LocalCapability, enabled: boolean): void {
