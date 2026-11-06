@@ -142,12 +142,18 @@ function withDocumentedPreset(
       parameterSources[field] = 'preset'
     }
   }
-  return {
+  const merged: IndependentModelProfile = {
     ...parameters, ...saved,
     source: saved?.source ?? 'preset',
     parameterSources,
     referenceUrl,
   }
+  if (merged.defaultEffort !== undefined && merged.supportedEffort !== undefined &&
+      !merged.supportedEffort.includes(merged.defaultEffort)) {
+    delete merged.defaultEffort
+    delete merged.parameterSources?.defaultEffort
+  }
+  return merged
 }
 
 export function getIndependentProfile(model: string): IndependentModelProfile | undefined {
