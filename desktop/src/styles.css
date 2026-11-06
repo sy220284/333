@@ -323,3 +323,15 @@ button:disabled{opacity:.42;cursor:not-allowed;transform:none!important}
 [data-theme=light] .approval-modal{background:#fff;border-color:#d1dbee}
 [data-theme=light] .approval-target{background:#f3f6fc}
 [data-motion=off] .approval-modal{animation:none}
+
+.job-form{display:flex;flex-direction:column;align-items:flex-start;gap:10px;margin:15px 0}
+.job-form input{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);outline:0}
+.job-form input:focus{border-color:var(--accent)}
+.job-form textarea{margin:0}
+.job-card{border:1px solid var(--line);border-radius:11px;padding:14px;margin-top:11px;background:var(--surface)}
+.job-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.job-head strong{font-size:12px}
+.job-card>p{color:var(--muted);font-size:11px;line-height:1.7}
+.job-summary{padding:10px;border-radius:8px;background:var(--surface3);color:var(--mint);font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
+.job-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.job-actions .small{min-height:29px;padding:0 10px;font-size:10px}
