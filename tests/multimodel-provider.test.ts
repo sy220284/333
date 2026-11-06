@@ -312,18 +312,32 @@ test('capability probe reports failure when follow-up does not finish', async ()
   assert.equal(count, 2)
 })
 
-test('ChatGPT accepts the standard OpenAI models response without a visibility field', async () => {
+test('ChatGPT plan model catalog rejects API-key responses lacking visibility authorization', async () => {
   const seen: string[] = []
-  const result = await discoverIndependentModels('chatgpt', 'oauth-token',
-    (async (url: RequestInfo | URL) => {
-      seen.push(String(url))
-      return new Response(JSON.stringify({ object: 'list', data: [
-        { id: 'gpt-6.1-sol', object: 'model' },
-        { id: 'gpt-6-astra', object: 'model' },
-      ] }))
-    }) as typeof fetch)
-  assert.deepEqual(result, ['gpt-6.1-sol', 'gpt-6-astra'])
+  const fetcher = (async (url: RequestInfo | URL) => {
+    seen.push(String(url))
+    return new Response(JSON.stringify({ object: 'list', data: [
+      { id: 'gpt-6.1-sol', object: 'model' },
+      { id: 'gpt-6-astra', object: 'model' },
+    ] }))
+  }) as typeof fetch
+  await assert.rejects(() => discoverIndependentModels('chatgpt', 'oauth-token', fetcher),
+    /Invalid model discovery response/)
   assert.deepEqual(seen, ['https://api.openai.com/v1/models'])
+  // Standard /models data[] remains valid when the user supplies an API key.
+  assert.deepEqual(await discoverIndependentModels('openai', 'api-key', fetcher),
+    ['gpt-6.1-sol', 'gpt-6-astra'])
+})
+
+test('ChatGPT plan model picker excludes missing visibility, missing slugs and hidden entries', async () => {
+  const models = await discoverIndependentModels('chatgpt', 'oauth-token',
+    (async () => new Response(JSON.stringify({ models: [
+      { slug: 'gpt-6.1-sol', visibility: 'list', display_name: 'GPT-6' },
+      { slug: 'hidden', visibility: 'hidden' },
+      { slug: 'unmarked' },
+      { id: 'wrong-id', visibility: 'list' },
+    ] }))) as typeof fetch)
+  assert.deepEqual(models, ['gpt-6.1-sol'])
 })
 
 test('retired Gemini, xAI/Grok and OpenRouter providers cannot be selected or configured', () => {
