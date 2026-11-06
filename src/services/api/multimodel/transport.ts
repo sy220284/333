@@ -97,11 +97,14 @@ class AnthropicEvents {
     this.emit({ type: 'content_block_stop', index })
   }
   tool(name: string, id: string, argumentsJson: string): void {
+    // A stable provider call ID is required for second-turn tool-result pairing.
+    // DSH validates this at the event boundary; an invented ID breaks replay.
+    if (!name || !id) throw new Error('Provider tool call is missing a stable name or ID')
     this.stopBlock()
     this.hasTools = true
     const index = this.index++
     this.emit({ type: 'content_block_start', index, content_block: {
-      type: 'tool_use', id: id || `toolu_${randomUUID().replaceAll('-', '')}`, name, input: {},
+      type: 'tool_use', id, name, input: {},
     } })
     this.emit({ type: 'content_block_delta', index, delta: { type: 'input_json_delta', partial_json: argumentsJson || '{}' } })
     this.emit({ type: 'content_block_stop', index })
@@ -293,9 +296,15 @@ function materializeResponse(body: ObjectValue, route: ProviderRoute, signature:
       if (item.type === 'reasoning' && typeof item.encrypted_content === 'string') {
         content.push({ type: 'redacted_thinking', data: `${signature}:${JSON.stringify(item)}` })
       }
-      if (item.type === 'function_call' && !reason) content.push({
-        type: 'tool_use', id: item.call_id, name: item.name, input: JSON.parse(item.arguments || '{}'),
-      })
+      if (item.type === 'function_call' && !reason) {
+        if (!item.call_id || !item.name) {
+          throw new Error('Provider tool call is missing a stable name or ID')
+        }
+        content.push({
+          type: 'tool_use', id: item.call_id, name: item.name,
+          input: JSON.parse(item.arguments || '{}'),
+        })
+      }
     }
   } else {
     const message = body.choices?.[0]?.message
@@ -304,9 +313,15 @@ function materializeResponse(body: ObjectValue, route: ProviderRoute, signature:
       content.push({ type: 'thinking', thinking: reasoningText, signature })
     }
     if (message?.content) content.push({ type: 'text', text: message.content })
-    for (const call of message?.tool_calls ?? []) content.push({
-      type: 'tool_use', id: call.id, name: call.function.name, input: JSON.parse(call.function.arguments || '{}'),
-    })
+    for (const call of message?.tool_calls ?? []) {
+      if (!call.id || !call.function?.name) {
+        throw new Error('Provider tool call is missing a stable name or ID')
+      }
+      content.push({
+        type: 'tool_use', id: call.id, name: call.function.name,
+        input: JSON.parse(call.function.arguments || '{}'),
+      })
+    }
   }
   return {
     id: body.id ?? `msg_${randomUUID().replaceAll('-', '')}`, type: 'message', role: 'assistant',
