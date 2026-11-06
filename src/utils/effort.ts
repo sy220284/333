@@ -1,4 +1,6 @@
 import { getIndependentProfile } from '../services/api/multimodel/profiles.js'
+import { resolveIndependentModel } from '../services/api/multimodel/registry.js'
+import { getModelFieldProfile } from '../services/api/multimodel/providerFields.js'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { getSettingsForSource } from './settings/settings.js'
 import { getEnabledSettingSources } from './settings/constants.js'
@@ -51,6 +53,12 @@ export function resolveEffortCap(model: string, layers: readonly EffortPolicy[])
 // then legacy exclusions, baked catalog capabilities and provider defaults.
 function supportsEffortCapability(model: string, capability: 'effort' | 'max_effort' | 'xhigh_effort'): boolean {
   if (getIndependentProfile(model)?.supportsReasoning === false) return false
+  const route = resolveIndependentModel(model)
+  if (route) {
+    const allowed = getModelFieldProfile(route.provider, route.model).supportedEffort
+    return capability === 'effort' ? allowed.length > 0
+      : allowed.includes(capability === 'max_effort' ? 'max' : 'xhigh')
+  }
   const thirdParty = get3PModelCapabilityOverride(model, capability)
   if (thirdParty !== undefined) return thirdParty
   if (capability !== 'effort' && getModelCapabilityEnvOverride(model, 'effort') === false) return false
@@ -295,6 +303,20 @@ export function getOpusDefaultEffortConfig(): OpusDefaultEffortConfig {
 
 // 317 Rgr/K/Ke/Xe: remote per-model defaults, runtime metadata, then catalog.
 export function getDefaultEffortForModel(model: string): EffortValue | undefined {
+  const route = resolveIndependentModel(model)
+  if (route) {
+    const allowed = getModelFieldProfile(route.provider, route.model).supportedEffort
+    if (!allowed.length) return undefined
+    // Provider defaults follow the specific model generation, not Claude.
+    if (route.provider === 'qwen' && allowed.includes('xhigh')) return 'xhigh'
+    if ((route.provider === 'kimi' && /^kimi-k3\.1/i.test(route.model)) ||
+        (route.provider === 'minimax' && /^minimax-m3\.1/i.test(route.model)) ||
+        (route.provider === 'zhipu' && /^glm-5\.3/i.test(route.model))) {
+      return 'max'
+    }
+    return allowed.includes('high') ? 'high' : allowed.includes('medium') ? 'medium' :
+      allowed.includes('low') ? 'low' : allowed[allowed.length - 1] as EffortLevel
+  }
   const entry = getCatalogModel(getModelBehavior317(model))
   const overrides = getFeatureValue_CACHED_MAY_BE_STALE<Record<string, string>>('tengu_witty_wand', {})
   const configured = overrides && typeof overrides === 'object' ? overrides[entry?.id ?? model] : undefined
