@@ -27,6 +27,7 @@ permissions:
   actions: read
   contents: read
   security-events: write
+  checks: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -47,3 +48,24 @@ jobs:
       - uses: github/codeql-action/analyze@v4
         with:
           category: /language:javascript-typescript
+      - name: 记录 PR CodeQL 告警规则和精确位置
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..20}; do
+            check_id="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${PR_HEAD_SHA}/check-runs?per_page=100" \
+              --jq '.check_runs | map(select(.name == "CodeQL" and .status == "completed")) | last | .id // empty')"
+            if [[ -n "$check_id" ]]; then break; fi
+            sleep 2
+          done
+          if [[ -z "${check_id:-}" ]]; then
+            echo "CodeQL 完成记录未找到，无法获取告警明细" >&2
+            exit 1
+          fi
+          echo "CodeQL check run: $check_id"
+          gh api "repos/${GITHUB_REPOSITORY}/check-runs/${check_id}/annotations?per_page=100" \
+            --jq '.[] | [.annotation_level, .path, (.start_line|tostring), .title, .message] | @tsv'
