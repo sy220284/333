@@ -10,7 +10,7 @@ test('SIWC refresh separates invalid grants, temporary failures, revoked plan co
   const previousHome = process.env.HOME
   const previousProfile = process.env.USERPROFILE
   const originalFetch = globalThis.fetch
-  const dir = join(home, '.333', 'auth')
+  const dir = join(home, '.qerivon', 'auth')
   const tokenDir = join(dir, 'chatgpt-tokens')
   const client = 'oaiapp_refresh_fixture'
   const subject = 'verified-user'
