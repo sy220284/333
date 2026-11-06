@@ -68,12 +68,12 @@ function removeCredentials() {
 const envBase = removeCredentials()
 Object.assign(envBase, {CI:'1',TERM:'dumb',NO_COLOR:'1',DO_NOT_TRACK:'1',
   DISABLE_TELEMETRY:'1',CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1'})
-function validate(test, execution) {
+function validate(test, execution, isCandidate) {
   const out = execution.stdout, err=execution.stderr
   if(execution.timed_out || execution.signal) return {ok:false,reason:'timed_out_or_terminated'}
   switch(test.id) {
-    case 'version': return {ok:execution.exit_code===0 && out.trim()===TARGET_RELEASE+' (Claude Code)',reason:'version'}
-    case 'version_verbose': return {ok:execution.exit_code===0 && out.trim()===TARGET_RELEASE+' (Claude Code)\nCommit: '+TARGET_COMMIT,reason:'version_and_commit'}
+    case 'version': return {ok:execution.exit_code===0 && out.trim()===`${TARGET_RELEASE} (${isCandidate ? '333' : 'Claude Code'})`,reason:'version'}
+    case 'version_verbose': return {ok:execution.exit_code===0 && out.trim()===`${TARGET_RELEASE} (${isCandidate ? '333' : 'Claude Code'})\nCommit: ${TARGET_COMMIT}`,reason:'version_and_commit'}
     case 'help': return {ok:execution.exit_code===0 && /--autocompact/.test(out) && /--ax-screen-reader/.test(out) && /--output-format/.test(out),reason:'core_flags'}
     case 'mcp_help': return {ok:execution.exit_code===0 && /\bmcp\b/.test(out) && /add-json/.test(out) && /list/.test(out),reason:'mcp_help'}
     case 'plugin_help': return {ok:execution.exit_code===0 && /plugin/.test(out) && /marketplace/.test(out) && /list/.test(out),reason:'plugin_help'}
@@ -100,7 +100,7 @@ function validate(test, execution) {
   }
   throw new Error(`unknown test id: ${test.id}`)
 }
-function runCase(bin,test,homeRoot) {
+function runCase(bin,test,homeRoot,isCandidate) {
   const home=join(homeRoot,test.id)
   mkdirSync(home,{recursive:true})
   const env={...envBase,HOME:home,XDG_CONFIG_HOME:join(home,'.config'),
@@ -110,7 +110,7 @@ function runCase(bin,test,homeRoot) {
   const actual={id:test.id,exit_code:call.status,signal:call.signal??null,
     timed_out:call.error?.code==='ETIMEDOUT',stdout:call.stdout??'',
     stderr:call.stderr??''}
-  const verdict=validate(test,actual)
+  const verdict=validate(test,actual,isCandidate)
   // The runner has a fresh HOME and no inherited account/API credentials.
   // Keep only bounded diagnostic text for local empty-list command contracts.
   const sampleAllowed = new Set(['version','version_verbose','mcp_list_empty','plugin_list_empty'])
@@ -137,13 +137,13 @@ function runCase(bin,test,homeRoot) {
     stdout_sha256:digest(actual.stdout),stderr_sha256:digest(actual.stderr),
     ...sample,...(resultShape?{structured_shape:resultShape}:{})}
 }
-function runSuite(binary) {
+function runSuite(binary,isCandidate=false) {
   const tmp=mkdtempSync(join(tmpdir(),'m1-claude-x64-'))
-  try {return cases.map(test=>runCase(binary,test,tmp))}
+  try {return cases.map(test=>runCase(binary,test,tmp,isCandidate))}
   finally {rmSync(tmp,{recursive:true,force:true})}
 }
 const referenceCases=runSuite(resolve(reference))
-const candidateCases=candidate ? runSuite(resolve(candidate)) : null
+const candidateCases=candidate ? runSuite(resolve(candidate),true) : null
 const result={schema:1,release:TARGET_RELEASE,platform:'linux-x64',reference_sha256:hash,
   scope:'OFFLINE_UNAUTHENTICATED_CLI_CONTRACTS_ONLY',
   reference:{passed:referenceCases.filter(x=>x.pass).length,total:referenceCases.length,cases:referenceCases},

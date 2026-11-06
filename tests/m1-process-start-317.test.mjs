@@ -77,6 +77,6 @@ test('M1 317: compiled executable terminates normally when remote GC is enabled'
     })
     assert.equal(result.error, undefined, label + ' ' + String(result.error))
     assert.equal(result.status, 0, label + ' ' + result.stderr)
-    assert.equal(result.stdout.trim(), '2.1.317 (Claude Code)')
+    assert.equal(result.stdout.trim(), '2.1.317 (333)')
   }
 })

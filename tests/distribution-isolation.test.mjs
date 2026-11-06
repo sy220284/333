@@ -31,7 +31,7 @@ test('distributable starts outside repository with no source tree, original CLI,
     assert.notEqual(createHash('sha256').update(source).digest('hex'),createHash('sha256').update(output).digest('hex'));
     const version=invoke('bun',[join(packageDir,'cli.js'),'--version'],isolation);
     const expectedVersion = JSON.parse(readFileSync(join(root,'package.json'),'utf8')).version;
-    assert.equal(version.trim(),`${expectedVersion} (Claude Code)`);
+    assert.equal(version.trim(),`${expectedVersion} (333)`);
     const help=invoke(process.execPath,[join(packageDir,'launcher.cjs'),'--help'],isolation);
     assert.match(help,/--print/);
     const plugin=invoke('bun',[join(packageDir,'cli.js'),'plugin','--help'],isolation);

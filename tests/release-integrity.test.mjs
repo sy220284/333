@@ -128,7 +128,7 @@ test('compiled platform executable is packaged, signed and runs without system B
       });
       assert.equal(actual.error, undefined, String(actual.error));
       assert.equal(actual.status, 0, actual.stderr);
-      assert.equal(actual.stdout.trim(), expectedVersion + ' (Claude Code)');
+      assert.equal(actual.stdout.trim(), `${expectedVersion} (333)`);
     }
   } finally {
     rmSync(sandbox, { recursive: true, force: true });
@@ -137,7 +137,7 @@ test('compiled platform executable is packaged, signed and runs without system B
 test('installed launcher invokes newly built CLI', () => {
   const p=spawnSync(process.execPath,[join(dist,'launcher.cjs'),'--version'],{encoding:'utf8',timeout:15000});
   assert.equal(p.status,0,p.stderr);
-  assert.equal(p.stdout.trim(), `${expectedVersion} (Claude Code)`);
+  assert.equal(p.stdout.trim(), `${expectedVersion} (333)`);
 });
 
 test('release is runnable from an isolated folder without repository node_modules', () => {
@@ -155,14 +155,14 @@ test('release is runnable from an isolated folder without repository node_module
       });
       assert.equal(p.error, undefined, p.error?.message);
       assert.equal(p.status, 0, JSON.stringify({ args, stdout: p.stdout?.slice(-1200), stderr: p.stderr?.slice(-1200) }));
-      if (args[0] === '--version') assert.equal(p.stdout.trim(), `${expectedVersion} (Claude Code)`);
+      if (args[0] === '--version') assert.equal(p.stdout.trim(), `${expectedVersion} (333)`);
       else assert.match(p.stdout, /Usage:/);
     }
     const p = spawnSync(process.execPath, [join(installed, 'launcher.cjs'), '--version'], {
       cwd: sandbox, encoding: 'utf8', timeout: 25000,
     });
     assert.equal(p.status, 0, p.stderr);
-    assert.equal(p.stdout.trim(), `${expectedVersion} (Claude Code)`);
+    assert.equal(p.stdout.trim(), `${expectedVersion} (333)`);
   } finally {
     // On Windows ARM64, the native launcher can exit before Windows releases
     // its just-executed .exe file handle. Node's built-in recursive removal
