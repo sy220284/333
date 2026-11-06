@@ -12,6 +12,7 @@ import { getFeatureValue_CACHED_MAY_BE_STALE, setGrowthBookConfigOverride } from
 import { getClaudeConfigHomeDir } from './envUtils.js'
 import { getCwd } from './cwd.js'
 import * as lockfile from './lockfile.js'
+import { listMissionJobs } from '../services/agentCenter/missionJobs.js'
 
 const AssignmentSchema = z.object({
   id: z.string().min(1).max(256),
@@ -117,7 +118,7 @@ export async function listMissions(root = defaultRoot()): Promise<AgentMission[]
 
 async function changeMission(
   id: string,
-  transform: (previous: AgentMission) => AgentMission,
+  transform: (previous: AgentMission) => AgentMission | Promise<AgentMission>,
   root = defaultRoot(),
 ): Promise<AgentMission> {
   const path = missionPath(id, root)
@@ -125,7 +126,7 @@ async function changeMission(
   const release = await lockfile.lock(path, { retries: { retries: 5, minTimeout: 20, maxTimeout: 200 } })
   try {
     const previous = await getMission(id, root)
-    const candidate = transform(previous)
+    const candidate = await transform(previous)
     // Transformations return the original record for an idempotent update.
     // Preserve its revision and timestamp: mission wake-up policy measures
     // verified changes, so repeat reports must not fabricate progress.
@@ -208,8 +209,15 @@ export async function requireActiveSelectedMission(
 }
 
 export async function updateMissionStatus(id: string, status: AgentMissionStatus, root = defaultRoot()): Promise<AgentMission> {
-  return changeMission(id, mission => {
+  return changeMission(id, async mission => {
     if (status === 'completed') {
+      // The queue may have been durably written immediately before a process
+      // crashed, leaving its companion Mission assignment unlinked. Inspect
+      // both stores while holding the Mission lock before closing the mandate.
+      const jobs = await listMissionJobs(id, mission.projectDir, root)
+      const openJobs = jobs.filter(job => !['completed', 'cancelled'].includes(job.status))
+      if (openJobs.length)
+        throw new Error(`长期任务还有 ${openJobs.length} 项执行工作项尚未完成或审核`)
       const pending = mission.assignments.filter(assignment => assignment.status === 'running')
       if (pending.length > 0)
         throw new Error(`长期任务仍有 ${pending.length} 项运行中的关联执行；请先完成或停止它们再结束任务`)
