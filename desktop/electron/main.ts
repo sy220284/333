@@ -13,6 +13,8 @@ const permitted = new Set([
   'sessions.setPermissionMode','host.list','host.respond','host.reject','permissions.list',
   'permissions.decide','agents.overview','agents.setMode','missions.list','missions.get',
   'missions.create','missions.select','missions.updateStatus','missions.checkpoint',
+  'missions.jobs.list','missions.jobs.enqueue','missions.jobs.start','missions.jobs.runBatch',
+  'missions.jobs.approve','missions.jobs.retry','missions.jobs.recover','missions.jobs.cancel',
   'tasks.list','tasks.stop','tasks.resume'
 ])
 type Host = { child: ReturnType<typeof spawn>; client: ReturnType<typeof createDesktopClient> }
