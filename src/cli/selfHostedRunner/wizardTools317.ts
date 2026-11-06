@@ -110,7 +110,7 @@ async function spawnLocalRunner317(args:z.infer<typeof spawnSchema>){
   child.unref()
   await writeFile(pidPath,String(pid),{mode:0o600})
   const quoted=(value:string)=>/^[\\w@%+=:,./-]+$/.test(value)
-    ?value:"'"+value.replace(/'/g,"'\\\\''")+"'"
+    ?value:`'${value.replace(/'/g,"'\\\\''")}'`
   const command=[process.execPath,...childArgs].map(quoted).join(' ')+
     ' >> '+quoted(logPath)+' 2>&1 &'
   return {pid,pid_file:pidPath,log_path:logPath,health_port:args.health_port??8080,
