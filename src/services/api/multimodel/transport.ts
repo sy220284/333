@@ -2,6 +2,7 @@ import { createHmac, randomUUID } from 'node:crypto'
 import type { IndependentModelProfile } from './profiles.js'
 import type { ProviderRoute } from './registry.js'
 import { type AnthropicRequest, toResponses, toChatCompletions } from './convert.js'
+import { logForDebugging } from '../../../utils/debug.js'
 
 // biome-ignore lint/suspicious/noExplicitAny: Provider wire events have different shapes and are normalized here.
 type ObjectValue = Record<string, any>
@@ -160,7 +161,16 @@ async function* sseMessages(stream: ReadableStream<Uint8Array>, signal?: AbortSi
     if (last) yield last === '[DONE]' ? '[DONE]' : JSON.parse(last) as ObjectValue
   } finally {
     signal?.removeEventListener('abort', onAbort)
-    try { await reader.cancel() } finally { reader.releaseLock() }
+    // A provider may never resolve the underlying cancel() promise even
+    // after delivering a terminal event. Do not hold the completed model
+    // response hostage to remote socket cleanup.
+    try {
+      void reader.cancel().catch(error => {
+        logForDebugging(`[multimodel] SSE cleanup failed: ${error instanceof Error ? error.name : 'unknown'}`)
+      })
+    } finally {
+      reader.releaseLock()
+    }
   }
 }
 function emitFromResponses(
