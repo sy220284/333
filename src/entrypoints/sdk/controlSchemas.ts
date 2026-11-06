@@ -556,6 +556,19 @@ export const SDKControlElicitationResponseSchema = lazySchema(() =>
 )
 
 
+// SDK-to-host requests in 2.1.317. Keep unrecognized payload fields intact
+// so a trusted host can show the entire request and return a typed response.
+// Elicitation already has its own strict schema above.
+export const SDK_HOST_CONTROL_SUBTYPES = [
+  'request_user_dialog', 'oauth_token_refresh', 'host_auth_token_refresh',
+  'remote_control_work_secret', 'ui_copy', 'ui_prompt_read',
+  'ui_prompt_fill', 'ui_prompt_paint', 'ui_prompt_suggest',
+  'ui_read_selection',
+] as const
+export const SDKHostControlRequestSchema = lazySchema(() =>
+  z.object({ subtype: z.enum(SDK_HOST_CONTROL_SUBTYPES) }).catchall(z.unknown()),
+)
+
 // SDK/remote-control extensions consumed by the headless CLI. Keep these
 // request payloads in the same validated control union as legacy requests;
 // otherwise structured stdin rejects messages which print.ts already handles.
@@ -653,6 +666,7 @@ export const SDKControlRequestInnerSchema = lazySchema(() =>
     SDKControlApplyFlagSettingsRequestSchema(),
     SDKControlGetSettingsRequestSchema(),
     SDKControlElicitationRequestSchema(),
+    SDKHostControlRequestSchema(),
     SDKControlEndSessionRequestSchema(),
     SDKControlChannelEnableRequestSchema(),
     SDKControlMcpAuthenticateRequestSchema(),
