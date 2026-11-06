@@ -10,10 +10,10 @@ test('28 个专项保留、统一入口调用，全量始终覆盖所有专项',
     .filter(x => x.endsWith('.yml') && x !== 'ci-on-demand.yml' && x !== 'latest-stable-upgrade.yml')
   assert.deepEqual(WORKFLOWS.slice().sort(), files.map(x => x.slice(0, -4)).sort())
   for (const name of WORKFLOWS) {
-    assert.ok(Array.isArray(SPECIALISTS[name]), '缺少路由配置：' + name)
-    const yaml = readFileSync(new URL('../.github/workflows/' + name + '.yml', import.meta.url), 'utf8')
-    assert.match(yaml, /^  workflow_call:\s*$/m, name + ' 缺少可复用调用')
-    assert.doesNotMatch(yaml, /^  pull_request:\s*$/m, name + ' 仍重复触发 PR')
+    assert.ok(Array.isArray(SPECIALISTS[name]), `缺少路由配置：${name}`)
+    const yaml = readFileSync(new URL(`../.github/workflows/${name}.yml`, import.meta.url), 'utf8')
+    assert.match(yaml, /^ {2}workflow_call:\s*$/m, `${name} 缺少可复用调用`)
+    assert.doesNotMatch(yaml, /^ {2}pull_request:\s*$/m, `${name} 仍重复触发 PR`)
   }
   assert.deepEqual(active(routeChanges([], true)).sort(), WORKFLOWS.slice().sort())
 })
@@ -49,7 +49,7 @@ test('未知业务代码走通用检查，构建修改触发完整构建专项',
 test('单个工作流修改只覆盖该专项；路由修改还核验调度工具链', () => {
   const chosen = routeChanges(['.github/workflows/sdk-stream-parity.yml'])
   assert.equal(chosen['sdk-stream-parity'], true)
-  assert.equal(chosen['codeql'], false)
+  assert.equal(chosen.codeql, false)
   const dispatcher = routeChanges(['build/ci-impact.mjs'])
   assert.equal(dispatcher['dev-toolchain'], true)
   assert.equal(dispatcher['dev-quality'], true)
@@ -75,7 +75,7 @@ test('其他 PR、非祖先的成功记录不会被误用为增量基准', () =>
 })
 
 test('中止过期运行时汇总门禁不会继续占用 Runner', () => {
-  const read = name => readFileSync(new URL('../.github/workflows/' + name, import.meta.url), 'utf8')
+  const read = name => readFileSync(new URL(`../.github/workflows/${name}`, import.meta.url), 'utf8')
   assert.match(read('ci-on-demand.yml'), /if: \$\{\{ !cancelled\(\) \}\}/)
   assert.match(read('ci-test-matrix.yml'), /if: \$\{\{ !cancelled\(\) \}\}/)
 })
