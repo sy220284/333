@@ -54,7 +54,7 @@ test('本地会话发现与简报功能不需要账号云门控', () => {
 test('正式语音入口仅依赖本机 Whisper，旧云端语音重试和文本日志已移除', () => {
   const commands = source('src/commands.ts')
   assert.match(commands, /import voice from '.\/commands\/voice\/index\.js'/)
-  assert.match(commands, /^  voice,$/m)
+  assert.match(commands, /^ {2}voice,$/m)
 
   const entry = source('src/commands/voice/index.ts')
   assert.match(entry, /YAOYAOCHE_WHISPER_CLI/)
