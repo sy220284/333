@@ -159,8 +159,11 @@ export function applyChatModelFields(result: Wire, { provider, model, thinking, 
       // reasoning explicitly with thinking.keep.
       if (/^kimi-k2\.6/.test(id) && enabled) result.thinking.keep = 'all'
     }
+    // Kimi K2's named tool selection is not portable across direct endpoints.
+    // Reject requests that require a specific tool instead of silently
+    // changing a hard constraint into a best-effort auto selection.
     if (result.tool_choice && typeof result.tool_choice === 'object' && /^kimi-k2/.test(id)) {
-      result.tool_choice = 'auto'
+      throw new Error('Kimi K2 暂不支持强制指定工具；请使用 tool_choice=auto 并验证模型实际工具调用')
     }
   }
   // Validate the normalized wire value against provider-discovered limits,
