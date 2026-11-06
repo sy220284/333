@@ -22,7 +22,7 @@ function TaskHub({ onDone, context, initial }: {
     return <WorkflowHistoryDialog toolUseContext={context} onDone={() => setView('menu')} />
   }
   return (
-    <Dialog title="333 任务管理" onCancel={() => onDone()}>
+    <Dialog title="摇摇车 · 任务管理" onCancel={() => onDone()}>
       <Box flexDirection="column" gap={1}>
         <Text>选择需要管理的任务类型：</Text>
         <Select
