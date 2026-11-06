@@ -18,7 +18,6 @@ import {
   modelSupportsEffort,
 } from '../../utils/effort.js'
 import { env } from '../../utils/env.js'
-import { cacheKeys } from '../../utils/fileStateCache.js'
 import { getWorktreeCount } from '../../utils/git.js'
 import {
   detectRunningIDEsCached,
@@ -34,9 +33,6 @@ import {
   getUserSpecifiedModelSetting,
 } from '../../utils/model/model.js'
 import { getPlatform } from '../../utils/platform.js'
-import { isPluginInstalled } from '../../utils/plugins/installedPluginsManager.js'
-import { loadKnownMarketplacesConfigSafe } from '../../utils/plugins/marketplaceManager.js'
-import { OFFICIAL_MARKETPLACE_NAME } from '../../utils/plugins/officialMarketplace.js'
 import {
   getCurrentSessionAgentColor,
   isCustomTitleEnabled,
@@ -49,47 +45,11 @@ import { getAPIProvider, isFirstPartyAnthropicBaseUrl } from '../../utils/model/
 import { getOriginalCwd } from '../../bootstrap/state.js'
 import type { Tip, TipContext } from './types.js'
 
-let _isOfficialMarketplaceInstalledCache: boolean | undefined
-async function isOfficialMarketplaceInstalled(): Promise<boolean> {
-  if (_isOfficialMarketplaceInstalledCache !== undefined) {
-    return _isOfficialMarketplaceInstalledCache
-  }
-  const config = await loadKnownMarketplacesConfigSafe()
-  _isOfficialMarketplaceInstalledCache = OFFICIAL_MARKETPLACE_NAME in config
-  return _isOfficialMarketplaceInstalledCache
-}
-
-async function isMarketplacePluginRelevant(
-  pluginName: string,
-  context: TipContext | undefined,
-  signals: { filePath?: RegExp; cli?: string[] },
-): Promise<boolean> {
-  if (!(await isOfficialMarketplaceInstalled())) {
-    return false
-  }
-  if (isPluginInstalled(`${pluginName}@${OFFICIAL_MARKETPLACE_NAME}`)) {
-    return false
-  }
-  const { bashTools } = context ?? {}
-  if (signals.cli && bashTools?.size) {
-    if (signals.cli.some(cmd => bashTools.has(cmd))) {
-      return true
-    }
-  }
-  if (signals.filePath && context?.readFileState) {
-    const readFiles = cacheKeys(context.readFileState)
-    if (readFiles.some(fp => signals.filePath!.test(fp))) {
-      return true
-    }
-  }
-  return false
-}
-
 const externalTips: Tip[] = [
   {
     id: 'new-user-warmup',
     content: async () =>
-      `Start with small features or bug fixes, tell Claude to propose a plan, and verify its suggested edits`,
+      `Start with small features or bug fixes, ask 333 to propose a plan, and verify its suggested edits`,
     cooldownSessions: 3,
     async isRelevant() {
       const config = getGlobalConfig()
@@ -136,7 +96,7 @@ const externalTips: Tip[] = [
   {
     id: 'git-worktrees',
     content: async () =>
-      'Use git worktrees to run multiple Claude sessions in parallel.',
+      'Use git worktrees to run multiple 333 sessions in parallel.',
     cooldownSessions: 10,
     isRelevant: async () => {
       try {
@@ -151,7 +111,7 @@ const externalTips: Tip[] = [
   {
     id: 'color-when-multi-clauding',
     content: async () =>
-      'Running multiple Claude sessions? Use /color and /rename to tell them apart at a glance.',
+      'Running multiple 333 sessions? Use /color and /rename to tell them apart at a glance.',
     cooldownSessions: 10,
     isRelevant: async () => {
       if (getCurrentSessionAgentColor()) return false
@@ -209,7 +169,7 @@ const externalTips: Tip[] = [
   },
   {
     id: 'memory-command',
-    content: async () => 'Use /memory to view and manage Claude memory',
+    content: async () => 'Use /memory to view and manage project memory',
     cooldownSessions: 15,
     async isRelevant() {
       const config = getGlobalConfig()
@@ -248,7 +208,7 @@ const externalTips: Tip[] = [
   {
     id: 'prompt-queue',
     content: async () =>
-      'Hit Enter to queue up additional messages while Claude is working.',
+      'Hit Enter to queue up additional messages while 333 is working.',
     cooldownSessions: 5,
     async isRelevant() {
       const config = getGlobalConfig()
@@ -258,14 +218,14 @@ const externalTips: Tip[] = [
   {
     id: 'enter-to-steer-in-relatime',
     content: async () =>
-      'Send messages to Claude while it works to steer Claude in real-time',
+      'Send messages to 333 while it works to steer the agent in real-time',
     cooldownSessions: 20,
     isRelevant: async () => true,
   },
   {
     id: 'todo-list',
     content: async () =>
-      'Ask Claude to create a todo list when working on complex tasks to track progress and remain on track',
+      'Ask 333 to create a todo list when working on complex tasks to track progress and remain on track',
     cooldownSessions: 20,
     isRelevant: async () => true,
   },
@@ -298,7 +258,7 @@ const externalTips: Tip[] = [
   },
   {
     id: 'ide-upsell-external-terminal',
-    content: async () => 'Connect Claude to your IDE · /ide',
+    content: async () => 'Connect 333 to your IDE · /ide',
     cooldownSessions: 4,
     async isRelevant() {
       if (isSupportedTerminal()) {
@@ -316,17 +276,10 @@ const externalTips: Tip[] = [
     },
   },
   {
-    id: 'install-github-app',
-    content: async () =>
-      'Run /install-github-app to tag @claude right from your Github issues and PRs',
+    id: 'github-integration',
+    content: async () => '使用 /github 配置仓库、Actions、密钥和多模型审查。',
     cooldownSessions: 10,
-    isRelevant: async () => !getGlobalConfig().githubActionSetupCount,
-  },
-  {
-    id: 'install-slack-app',
-    content: async () => 'Run /install-slack-app to use Claude in Slack',
-    cooldownSessions: 10,
-    isRelevant: async () => !getGlobalConfig().slackAppInstallCount,
+    isRelevant: async () => true,
   },
   {
     id: 'permissions',
@@ -348,7 +301,7 @@ const externalTips: Tip[] = [
   {
     id: 'paste-images-mac',
     content: async () =>
-      'Paste images into Claude Code using control+v (not cmd+v!)',
+      'Paste images into 333 using control+v (not cmd+v!)',
     cooldownSessions: 10,
     isRelevant: async () => getPlatform() === 'macos',
   },
@@ -369,7 +322,7 @@ const externalTips: Tip[] = [
   {
     id: 'continue',
     content: async () =>
-      'Run claude --continue or claude --resume to resume a conversation',
+      'Run 333 --continue or 333 --resume to resume a conversation',
     cooldownSessions: 10,
     isRelevant: async () => true,
   },
@@ -428,13 +381,6 @@ const externalTips: Tip[] = [
     },
   },
   {
-    id: 'mobile-app',
-    content: async () =>
-      '/mobile to use Claude Code from the Claude app on your phone',
-    cooldownSessions: 15,
-    isRelevant: async () => true,
-  },
-  {
     id: 'opusplan-mode-reminder',
     content: async () =>
       `Your default model setting is Opus Plan Mode. Press ${getShortcutDisplay('chat:cycleMode', 'Chat', 'shift+tab')} twice to activate Plan Mode and plan with Claude Opus.`,
@@ -452,31 +398,6 @@ const externalTips: Tip[] = [
     },
   },
   {
-    id: 'frontend-design-plugin',
-    content: async ctx => {
-      const blue = color('suggestion', ctx.theme)
-      return `Working with HTML/CSS? Install the frontend-design plugin:\n${blue(`/plugin install frontend-design@${OFFICIAL_MARKETPLACE_NAME}`)}`
-    },
-    cooldownSessions: 3,
-    isRelevant: async context =>
-      isMarketplacePluginRelevant('frontend-design', context, {
-        filePath: /\.(html|css|htm)$/i,
-      }),
-  },
-  {
-    id: 'vercel-plugin',
-    content: async ctx => {
-      const blue = color('suggestion', ctx.theme)
-      return `Working with Vercel? Install the vercel plugin:\n${blue(`/plugin install vercel@${OFFICIAL_MARKETPLACE_NAME}`)}`
-    },
-    cooldownSessions: 3,
-    isRelevant: async context =>
-      isMarketplacePluginRelevant('vercel', context, {
-        filePath: /(?:^|[/\\])vercel\.json$/i,
-        cli: ['vercel'],
-      }),
-  },
-  {
     id: 'effort-high-nudge',
     content: async ctx => {
       const blue = color('suggestion', ctx.theme)
@@ -485,7 +406,7 @@ const externalTips: Tip[] = [
         'off' | 'copy_a' | 'copy_b'
       >('tengu_tide_elm', 'off')
       return variant === 'copy_b'
-        ? `Use ${cmd} for better one-shot answers. Claude thinks it through first.`
+        ? `Use ${cmd} for better one-shot answers. 333 analyzes the task first.`
         : `Working on something tricky? ${cmd} gives better first answers`
     },
     cooldownSessions: 3,
@@ -514,8 +435,8 @@ const externalTips: Tip[] = [
         'off' | 'copy_a' | 'copy_b'
       >('tengu_tern_alloy', 'off')
       return variant === 'copy_b'
-        ? `For big tasks, tell Claude to ${blue('use subagents')}. They work in parallel and keep your main thread clean.`
-        : `Say ${blue('"fan out subagents"')} and Claude sends a team. Each one digs deep so nothing gets missed.`
+        ? `For big tasks, ask 333 to ${blue('use subagents')}. They work in parallel and keep your main thread clean.`
+        : `Say ${blue('"fan out subagents"')} and 333 can dispatch a team. Each one digs deep so nothing gets missed.`
     },
     cooldownSessions: 3,
     isRelevant: async () => {
@@ -553,7 +474,7 @@ const externalTips: Tip[] = [
   },
   {
     id: 'feedback-command',
-    content: async () => 'Use /feedback to help us improve!',
+    content: async () => '使用 /feedback 主动导出本地诊断报告。',
     cooldownSessions: 15,
     async isRelevant() {
       if (process.env.USER_TYPE === 'ant') {
@@ -564,30 +485,10 @@ const externalTips: Tip[] = [
     },
   },
 ]
-const internalOnlyTips: Tip[] =
-  process.env.USER_TYPE === 'ant'
-    ? [
-        {
-          id: 'important-claudemd',
-          content: async () =>
-            '[ANT-ONLY] Use "IMPORTANT:" prefix for must-follow CLAUDE.md rules',
-          cooldownSessions: 30,
-          isRelevant: async () => true,
-        },
-        {
-          id: 'skillify',
-          content: async () =>
-            '[ANT-ONLY] Use /skillify at the end of a workflow to turn it into a reusable skill',
-          cooldownSessions: 15,
-          isRelevant: async () => true,
-        },
-      ]
-    : []
-
 // Neutral tips remain available on Bedrock, Vertex, Foundry, and custom gateways.
 // Provider-specific upsells are deliberately not in this set.
 const providerAgnosticTipIds = new Set([
-  'new-user-warmup', 'plan-mode-for-complex-tasks', 'default-permission-mode-config',
+  'github-integration', 'feedback-command', 'new-user-warmup', 'plan-mode-for-complex-tasks', 'default-permission-mode-config',
   'git-worktrees', 'color-when-multi-clauding', 'terminal-setup', 'shift-enter',
   'shift-enter-setup', 'memory-command', 'theme-command', 'colorterm-truecolor',
   'powershell-tool-env', 'status-line', 'prompt-queue',
@@ -599,6 +500,8 @@ const providerAgnosticTipIds = new Set([
   'loop-command-nudge',
 ])
 const tipCommands: Readonly<Record<string, string>> = {
+  'github-integration': 'github',
+  'feedback-command': 'feedback',
   'terminal-setup': 'terminal-setup',
   'shift-enter-setup': 'terminal-setup',
   'memory-command': 'memory',
@@ -629,7 +532,7 @@ export async function getRelevantTips(context?: TipContext): Promise<Tip[]> {
   const { tips: customTips, trustedCount } = await getCustomSpinnerTips()
   const builtInTips = trustedCount > 0 && isDefaultSpinnerTipSuppressed()
     ? []
-    : [...externalTips, ...internalOnlyTips].map(tip => ({
+    : externalTips.map(tip => ({
       ...tip,
       providerAgnostic: providerAgnosticTipIds.has(tip.id),
       advertisedCommand: tipCommands[tip.id],
