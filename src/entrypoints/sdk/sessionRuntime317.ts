@@ -232,8 +232,8 @@ function startSession(
             blockedPath: request.blocked_path,
             mcpServer: request.mcp_server,
             decisionReason: request.decision_reason,
-            decisionType: request.decision_type,
-            decisionCode: request.decision_code,
+            decisionReasonType: request.decision_reason_type,
+            decisionReasonCode: request.decision_reason_code,
             serverPolicyAskOnly: request.server_policy_ask_only,
             title: request.title,
             displayName: request.display_name,
@@ -243,9 +243,17 @@ function startSession(
             agentID: request.agent_id,
             plugin: request.plugin,
             requiresUserInteraction: request.requires_user_interaction,
+            serverPrompt: request.server_prompt,
             computerFolder: request.computer_folder,
-            matchedAskRule: request.matched_ask_rule,
+            matchedAskRule: request.matched_ask_rule && {
+              source: request.matched_ask_rule.source,
+              toolName: request.matched_ask_rule.tool_name,
+              ...(request.matched_ask_rule.rule_content !== undefined && {
+                ruleContent: request.matched_ask_rule.rule_content,
+              }),
+            },
           })
+          decision = { ...decision, toolUseID: request.tool_use_id }
         } else if (request.subtype === 'mcp_message') {
           const server = sdkServers.get(request.server_name)
           if (!server?.transport.onmessage) throw new Error('SDK MCP server is disconnected: ' + request.server_name)
@@ -265,13 +273,16 @@ function startSession(
             }
           } else {
             server.transport.onmessage(message)
-            decision = { mcp_response: null }
+            decision = { mcp_response: { jsonrpc: '2.0', result: {}, id: 0 } }
           }
         } else if (request.subtype === 'hook_callback') {
           const callback = callbacks.get(request.callback_id)
           if (!callback) throw new Error('Unknown SDK hook callback')
           decision = await callback(request.input, request.tool_use_id, { signal: controller.signal })
         } else if (hostControlSubtypes.has(request.subtype) && options.onControlRequest) {
+          if (request.subtype === 'remote_control_work_secret' && request.session_id !== sessionId) {
+            throw new Error('Work secret request names a different SDK session')
+          }
           decision = await options.onControlRequest(request as SDKHostControlRequest, {
             signal: controller.signal, requestId: request_id,
           })
