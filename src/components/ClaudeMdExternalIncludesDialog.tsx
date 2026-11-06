@@ -76,7 +76,7 @@ export function ClaudeMdExternalIncludesDialog({
       )}
 
       <Text dimColor>
-        重要提示：仅允许 Qerivon 访问可信文件，访问不可信文件可能造成安全风险。{' '}
+        重要提示：仅允许 摇摇车 访问可信文件，访问不可信文件可能造成安全风险。{' '}
         <Link url="https://code.claude.com/docs/en/security" />{' '}
       </Text>
 
