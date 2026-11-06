@@ -50,7 +50,6 @@ import { loadRemoteManagedSettings, refreshRemoteManagedSettings } from './servi
 import type { ToolInputJSONSchema } from './Tool.js';
 import { createSyntheticOutputTool, isSyntheticOutputToolEnabled } from './tools/SyntheticOutputTool/SyntheticOutputTool.js';
 import { getTools } from './tools.js';
-import { canUserConfigureAdvisor, getInitialAdvisorSetting, isAdvisorEnabled, isValidAdvisorModel, modelSupportsAdvisor } from './utils/advisor.js';
 import { isAgentSwarmsEnabled } from './utils/agentSwarmsEnabled.js';
 import { count, uniq } from './utils/array.js';
 import { installAsciicastRecorder } from './utils/asciicast.js';
@@ -1867,29 +1866,6 @@ async function run(): Promise<CommanderCommand> {
     setInitialMainLoopModel(getUserSpecifiedModelSetting() || null);
     const initialMainLoopModel = getInitialMainLoopModel();
     const resolvedInitialModel = parseUserSpecifiedModel(initialMainLoopModel ?? getDefaultMainLoopModel());
-    let advisorModel: string | undefined;
-    if (isAdvisorEnabled()) {
-      const advisorOption = canUserConfigureAdvisor() ? (options as {
-        advisor?: string;
-      }).advisor : undefined;
-      if (advisorOption) {
-        logForDebugging(`[AdvisorTool] --advisor ${advisorOption}`);
-        if (!modelSupportsAdvisor(resolvedInitialModel)) {
-          process.stderr.write(chalk.red(`Error: The model "${resolvedInitialModel}" does not support the advisor tool.\n`));
-          process.exit(1);
-        }
-        const normalizedAdvisorModel = normalizeModelStringForAPI(parseUserSpecifiedModel(advisorOption));
-        if (!isValidAdvisorModel(normalizedAdvisorModel)) {
-          process.stderr.write(chalk.red(`Error: The model "${advisorOption}" cannot be used as an advisor.\n`));
-          process.exit(1);
-        }
-      }
-      advisorModel = canUserConfigureAdvisor() ? advisorOption ?? getInitialAdvisorSetting() : advisorOption;
-      if (advisorModel) {
-        logForDebugging(`[AdvisorTool] Advisor model: ${advisorModel}`);
-      }
-    }
-
     // For tmux teammates with --agent-type, append the custom agent's prompt
     if (isAgentSwarmsEnabled() && storedTeammateOpts?.agentId && storedTeammateOpts?.agentName && storedTeammateOpts?.teamName && storedTeammateOpts?.agentType) {
       // Look up the custom agent definition
@@ -2359,9 +2335,6 @@ async function run(): Promise<CommanderCommand> {
         ...(isFastModeEnabled() && {
           fastMode: getInitialFastModeSetting(effectiveModel ?? null)
         }),
-        ...(isAdvisorEnabled() && advisorModel && {
-          advisorModel
-        }),
         // kairosEnabled gates the async fire-and-forget path in
         // executeForkedSlashCommand (processSlashCommand.tsx:132) and
         // AgentTool's shouldRunAsync. The REPL initialState sets this at
@@ -2752,9 +2725,6 @@ async function run(): Promise<CommanderCommand> {
       effortValue: parseEffortValue(options.effort),
       activeOverlays: new Set<string>(),
       fastMode: getInitialFastModeSetting(resolvedInitialModel),
-      ...(isAdvisorEnabled() && advisorModel && {
-        advisorModel
-      }),
       // Compute teamContext synchronously to avoid useEffect setState during render.
       // Reuse the current teammate context when resuming or joining teams.
       teamContext: computeInitialTeamContext?.()
@@ -3297,9 +3267,6 @@ async function run(): Promise<CommanderCommand> {
   // Worktree flags
   program.option('-w, --worktree [name]', 'Create a new git worktree for this session (optionally specify a name)');
   program.option('--tmux', 'Create a tmux session for the worktree (requires --worktree). Uses iTerm2 native panes when available; use --tmux=classic for traditional tmux.');
-  if (canUserConfigureAdvisor()) {
-    program.addOption(new Option('--advisor <model>', 'Enable the server-side advisor tool with the specified model (alias or full ID).').hideHelp());
-  }
   if (process.env.USER_TYPE === 'ant') {
     program.addOption(new Option('--delegate-permissions', '[ANT-ONLY] Alias for --permission-mode auto.').implies({
       permissionMode: 'auto'
