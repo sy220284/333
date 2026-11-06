@@ -82,10 +82,8 @@ export function isBriefEntitled(): boolean {
  * Assistant mode (kairosActive) bypasses opt-in since its system prompt
  * hard-codes "you MUST use SendUserMessage" (systemPrompt.md:14).
  *
- * The GB gate is re-checked here as a kill-switch AND — flipping
- * tengu_kairos_brief off mid-session disables the tool on the next 5-min
- * refresh even for opted-in sessions. No opt-in → always false regardless
- * of GB (this is the fix for "brief defaults on for enrolled ants").
+ * The user explicitly selects Brief through the CLI, settings or /brief.
+ * No external experiment assignment controls this mode.
  *
  * Called from Tool.isEnabled() (lazy, post-init), never at module scope.
  * getKairosActive() and getUserMsgOptIn() are set in main.tsx before any

@@ -1,6 +1,4 @@
 import { z } from 'zod/v4'
-import { getReplBridgeHandle, isReplBridgeActive } from '../../bridge/replBridgeHandle.js'
-import { getCurrentPeerIdentityKey } from '../../bridge/peerDiscovery.js'
 import type { Tool, ToolUseContext } from '../../Tool.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { findTeammateTaskByAgentId } from '../../tasks/InProcessTeammateTask/InProcessTeammateTask.js'
@@ -21,8 +19,7 @@ import { lazySchema } from '../../utils/lazySchema.js'
 import { parseAddress } from '../../utils/peerAddress.js'
 import { isCrossSessionMessagingEnabled } from '../../utils/crossSessionMessaging.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
-import { listLiveLocalPeers } from '../../utils/livePeerSessions.ts'
-import { resolveAdvertisedRemoteRecipient, resolveUnifiedPeerRecipient } from '../../utils/accountPeerDirectory.ts'
+import { listLiveLocalPeers, resolveLocalPeerRecipient } from '../../utils/livePeerSessions.ts'
 import { join } from 'node:path'
 import { semanticBoolean } from '../../utils/semanticBoolean.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
@@ -75,7 +72,7 @@ const inputSchema = lazySchema(() =>
       .string()
       .describe(
         isCrossSessionMessagingEnabled()
-          ? 'Recipient: teammate name, "*" for broadcast, "uds:<socket-path>" for a local peer, or "bridge:<session-id>" for a Remote Control peer (use ListPeers to discover)'
+          ? 'Recipient: teammate name, "*" for broadcast, or "uds:<socket-path>" for a local peer (use ListAgents to discover)'
           : 'Recipient: teammate name, or "*" for broadcast to all teammates',
       ),
     summary: z
@@ -588,21 +585,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
     },
 
     async checkPermissions(input, _context) {
-      if (isCrossSessionMessagingEnabled() && (parseAddress(input.to).scheme === 'bridge' || resolveAdvertisedRemoteRecipient(input.to, Date.now(), await getCurrentPeerIdentityKey()) !== undefined)) {
-        return {
-          behavior: 'ask' as const,
-          message: `Send a message to Remote Control session ${input.to}? It arrives as a user prompt on the receiving Claude (possibly another machine) via Anthropic's servers.`,
-          // safetyCheck (not mode) — permissions.ts guards this before both
-          // bypassPermissions (step 1g) and auto-mode's allowlist/classifier.
-          // Cross-machine prompt injection must stay bypass-immune.
-          decisionReason: {
-            type: 'safetyCheck',
-            reason:
-              'Cross-machine bridge message requires explicit user consent',
-            classifierApprovable: false,
-          },
-        }
-      }
+      // Cloud forwarding has been retired; remaining recipients are local.
       return { behavior: 'allow' as const, updatedInput: input }
     },
 
@@ -633,31 +616,12 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
           errorCode: 9,
         }
       }
-      if (isCrossSessionMessagingEnabled() && (parseAddress(input.to).scheme === 'bridge' || resolveAdvertisedRemoteRecipient(input.to, Date.now(), await getCurrentPeerIdentityKey()) !== undefined)) {
-        // Structured-message rejection first — it's the permanent constraint.
-        // Showing "not connected" first would make the user reconnect only to
-        // hit this error on retry.
-        if (typeof input.message !== 'string') {
-          return {
-            result: false,
-            message:
-              'structured messages cannot be sent cross-session — only plain text',
-            errorCode: 9,
-          }
+      if (addr.scheme === 'bridge') {
+        return {
+          result: false,
+          message: 'Remote Control session addresses have been retired. Use a local session address from ListAgents.',
+          errorCode: 9,
         }
-        // postInterClaudeMessage derives from= via getReplBridgeHandle() —
-        // check handle directly for the init-timing window. Also check
-        // isReplBridgeActive() to reject outbound-only (CCR mirror) mode
-        // where the bridge is write-only and peer messaging is unsupported.
-        if (!getReplBridgeHandle() || !isReplBridgeActive()) {
-          return {
-            result: false,
-            message:
-              'Remote Control is not connected — cannot send to a bridge: target. Reconnect with /remote-control first.',
-            errorCode: 9,
-          }
-        }
-        return { result: true }
       }
       if (
         isCrossSessionMessagingEnabled() &&
@@ -672,7 +636,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
       if (typeof input.message === 'string') {
         if (isCrossSessionMessagingEnabled()) {
           const { peers } = await listLiveLocalPeers(join(getClaudeConfigHomeDir(), 'sessions'))
-          const resolved = resolveUnifiedPeerRecipient(peers, input.to, Date.now(), await getCurrentPeerIdentityKey())
+          const resolved = resolveLocalPeerRecipient(peers, input.to)
           if (resolved.ambiguous) return { result: false as const, message: 'Multiple reachable peers share this name; use the exact name [ref] from ListAgents', errorCode: 9 }
           if (resolved.address) return { result: true as const }
         }
@@ -752,43 +716,10 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
     async call(input, context, canUseTool, assistantMessage) {
       if (isCrossSessionMessagingEnabled() && typeof input.message === 'string') {
         const { peers } = await listLiveLocalPeers(join(getClaudeConfigHomeDir(), 'sessions'))
-        const currentIdentityKey = await getCurrentPeerIdentityKey()
-        const peerMatch = resolveUnifiedPeerRecipient(peers, input.to, Date.now(), currentIdentityKey)
+        const peerMatch = resolveLocalPeerRecipient(peers, input.to)
         if (peerMatch.ambiguous) throw new Error('Peer name is ambiguous; use name [ref] from ListAgents')
         const peerAddress = peerMatch.address
         const addr = parseAddress(peerAddress ?? input.to)
-        if (addr.scheme === 'bridge') {
-          // Re-check handle — checkPermissions blocks on user approval (can be
-          // minutes). validateInput's check is stale if the bridge dropped
-          // during the prompt wait; without this, from="unknown" ships.
-          // Also re-check isReplBridgeActive for outbound-only mode.
-          if (!getReplBridgeHandle() || !isReplBridgeActive()) {
-            return {
-              data: {
-                success: false,
-                message: `Remote Control disconnected before send — cannot deliver to ${input.to}`,
-              },
-            }
-          }
-          /* eslint-disable @typescript-eslint/no-require-imports */
-          const { postInterClaudeMessage } =
-            require('../../bridge/peerSessions.js') as typeof import('../../bridge/peerSessions.js')
-          /* eslint-enable @typescript-eslint/no-require-imports */
-          const result = await postInterClaudeMessage(
-            addr.target,
-            input.message,
-            currentIdentityKey,
-          )
-          const preview = input.summary || truncate(input.message, 50)
-          return {
-            data: {
-              success: result.ok,
-              message: result.ok
-                ? `“${preview}” → ${input.to}`
-                : `Failed to send to ${input.to}: ${result.error ?? 'unknown'}`,
-            },
-          }
-        }
         if (addr.scheme === 'uds') {
           /* eslint-disable @typescript-eslint/no-require-imports */
           const { sendToUdsSocket } =

@@ -12,6 +12,8 @@ on:
       - 'src/utils/crossSessionMessaging.ts'
       - 'src/services/extractMemories/**'
       - 'src/tools/ListAgentsTool/**'
+      - 'src/tools/SendMessageTool/**'
+      - 'src/utils/livePeerSessions.ts'
       - 'src/tools/BriefTool/**'
       - 'src/tools/ScheduleCronTool/**'
       - 'tests/local-feature-promotion.test.mjs'

@@ -7,6 +7,7 @@ import {
 } from '../src/skills/mcpSkills.ts'
 import type { MCPServerConnection } from '../src/services/mcp/types.ts'
 import { isCrossSessionMessagingEnabled } from '../src/utils/crossSessionMessaging.ts'
+import { resolveLocalPeerRecipient, type LiveLocalPeer317 } from '../src/utils/livePeerSessions.ts'
 const URI = 'skill://local/review'
 function localClient(pages: Array<{ resources: Array<{ uri: string; name: string; description?: string }>; nextCursor?: string }>): MCPServerConnection {
   let count = 0
@@ -57,4 +58,21 @@ test('本地会话通信默认可用，用户可以明确关闭', () => {
     if (old === undefined) delete process.env.CLAUDE_CODE_HARBOR_KITE
     else process.env.CLAUDE_CODE_HARBOR_KITE = old
   }
+})
+
+test('本地会话名称冲突必须显式指定引用，云端地址不能混入', () => {
+  const p = (name: string, ref: string): LiveLocalPeer317 => ({
+    id: ref, name, ref, address: 'uds:/tmp/sessions/' + ref,
+    kind: 'interactive', status: 'busy', socketPath: '/tmp/sessions/' + ref,
+  })
+  const peers = [p('test', 'aaaaaa'), p('test', 'bbbbbb')]
+  assert.deepEqual(resolveLocalPeerRecipient(peers, 'test'), {
+    address: undefined, ambiguous: true,
+  })
+  assert.deepEqual(resolveLocalPeerRecipient(peers, 'test [bbbbbb]'), {
+    address: 'uds:/tmp/sessions/bbbbbb', ambiguous: false,
+  })
+  assert.deepEqual(resolveLocalPeerRecipient(peers, 'bridge:remote'), {
+    address: undefined, ambiguous: false,
+  })
 })

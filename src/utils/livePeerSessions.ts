@@ -64,10 +64,19 @@ export async function listLiveLocalPeers(sessionsDir: string, ownPid: number = p
   }
   return { peers: peers.sort((a,b) => a.name.localeCompare(b.name) || a.address.localeCompare(b.address)), unreadable }
 }
-/** A repeated name needs its [ref]; an unknown name is never silently routed. */
+/** Resolve only live local peers. Duplicate names require an exact [ref]. */
+export function resolveLocalPeerRecipient(peers: ReadonlyArray<LiveLocalPeer317>, token: string): {
+  address: string | undefined
+  ambiguous: boolean
+} {
+  const m = /^(.+?) \\[([0-9a-f]{6})\\]$/.exec(token)
+  const matches = peers.filter(p => m ? p.name === m[1] && p.ref === m[2] : p.name === token)
+  return {
+    address: matches.length === 1 ? matches[0]?.address : undefined,
+    ambiguous: matches.length > 1,
+  }
+}
+
 export function resolveLocalPeerAddress(peers: ReadonlyArray<LiveLocalPeer317>, token: string): string | undefined {
-  const m = /^(.+?) \[([0-9a-f]{6})\]$/.exec(token)
-  if (m) return peers.find(p => p.name === m[1] && p.ref === m[2])?.address
-  const found = peers.filter(p => p.name === token)
-  return found.length === 1 ? found[0].address : undefined
+  return resolveLocalPeerRecipient(peers, token).address
 }
