@@ -52,7 +52,7 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
   ])) as Array<{ headRefName: string; headRepositoryOwner?: { login?: string }; url: string; createdAt: string }>
   const owner = repo.split('/')[0]?.toLowerCase()
   const reusable = existing
-    .filter(item => /^Avenlo\/review-[0-9a-f]{8}$/.test(item.headRefName) &&
+    .filter(item => /^avenlo\/review-[0-9a-f]{8}$/.test(item.headRefName) &&
       item.headRepositoryOwner?.login?.toLowerCase() === owner)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0]
   if (!reusable) {

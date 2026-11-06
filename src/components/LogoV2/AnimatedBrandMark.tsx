@@ -10,13 +10,13 @@ export function AnimatedBrandMark(): React.ReactNode {
   const screenReader = isScreenReaderEnabled()
   const [ref, elapsed] = useAnimationFrame(reduceMotion || screenReader ? null : 120)
   if (screenReader) return null
-  const frames = ['│  Avenlo  │', '│ ·Avenlo· │', '│  Avenlo  │'] as const
+  const frames = ['│  Avenlo  │', '│ ·Avenlo·  │', '│  Avenlo  │'] as const
   const active = reduceMotion ? 0 : Math.floor(elapsed / 480) % frames.length
   return (
-    <Box ref={ref} flexDirection="column" flexShrink={0} width={9} height={3}>
-      <Text color="professionalBlue">╭───────╮</Text>
+    <Box ref={ref} flexDirection="column" flexShrink={0} width={12} height={3}>
+      <Text color="professionalBlue">╭──────────╮</Text>
       <Text color="professionalBlue" bold>{frames[active]}</Text>
-      <Text color="professionalBlue">╰───────╯</Text>
+      <Text color="professionalBlue">╰──────────╯</Text>
     </Box>
   )
 }

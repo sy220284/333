@@ -64,8 +64,8 @@ function windowsCommandValue(claudePath: string): string {
  * Register the protocol handler on macOS.
  *
  * Creates a .app bundle where the CFBundleExecutable is a symlink to the
- * already-installed (and signed) `claude` binary. When macOS opens a
- * `avenlo://` URL, it launches `claude` through this app bundle.
+ * already-installed (and signed) `avenlo` binary. When macOS opens a
+ * `avenlo://` URL, it launches `avenlo` through this app bundle.
  * Claude then uses the url-handler NAPI module to read the URL from the
  * Apple Event and handles it normally.
  *
@@ -120,7 +120,7 @@ async function registerMacos(claudePath: string): Promise<void> {
 
   await fs.writeFile(path.join(contentsDir, 'Info.plist'), infoPlist)
 
-  // Symlink to the already-signed claude binary — avoids a new executable
+  // Symlink to the already-signed avenlo binary — avoids a new executable
   // that would need signing and endpoint-security allowlisting.
   // Written LAST among the throwing fs calls: isProtocolHandlerCurrent reads
   // this symlink, so it acts as the commit marker. If Info.plist write
@@ -210,7 +210,7 @@ async function registerWindows(claudePath: string): Promise<void> {
 
 /**
  * Register the `avenlo://` protocol handler with the operating system.
- * After registration, clicking a `avenlo://` link will invoke claude.
+ * After registration, clicking a `avenlo://` link will invoke avenlo.
  */
 export async function registerProtocolHandler(
   claudePath?: string,
@@ -233,7 +233,7 @@ export async function registerProtocolHandler(
 }
 
 /**
- * Resolve the claude binary path for protocol registration. Prefers the
+ * Resolve the avenlo binary path for protocol registration. Prefers the
  * native installer's stable symlink (~/.local/bin/avenlo) which survives
  * auto-updates; falls back to process.execPath when the symlink is absent
  * (dev builds, non-native installs).
@@ -251,7 +251,7 @@ async function resolveClaudePath(): Promise<string> {
 
 /**
  * Check whether the OS-level protocol handler is already registered AND
- * points at the expected `claude` binary. Reads the registration artifact
+ * points at the expected `avenlo` binary. Reads the registration artifact
  * directly (symlink target, .desktop Exec line, registry value) rather than
  * a cached flag in ~/.avenlo.json, so:
  *   - the check is per-machine (config can sync across machines; OS state can't)

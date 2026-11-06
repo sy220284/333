@@ -73,7 +73,7 @@ export async function setup(
     // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.error(
       chalk.bold.red(
-        'Error: Claude Code requires Node.js version 18 or higher.',
+        'Error: Avenlo requires Node.js version 22.15.0 or higher.',
       ),
     )
     process.exit(1)
