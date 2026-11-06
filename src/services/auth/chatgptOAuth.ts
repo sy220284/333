@@ -353,10 +353,11 @@ function openBrowser(url: string): void {
   child.unref()
 }
 export async function loginWithChatGPT(
-  options: { addAccount?: boolean; clientId?: string; resumePending?: boolean } = {},
+  options: { addAccount?: boolean; clientId?: string; resumePending?: boolean; enablePlan?: boolean } = {},
   browser: (url: string) => void = openBrowser,
 ): Promise<{ email?: string; subject: string; clientId: string; planEnabled: boolean }> {
-  if ([options.addAccount, Boolean(options.clientId), options.resumePending].filter(Boolean).length > 1) {
+  if ([options.addAccount, Boolean(options.clientId), options.resumePending].filter(Boolean).length > 1 ||
+      (options.enablePlan && (options.addAccount || options.resumePending))) {
     throw new Error('Choose one ChatGPT sign-in mode')
   }
   const hostId = await getHostId()
@@ -372,6 +373,11 @@ export async function loginWithChatGPT(
     : options.clientId ? initialStore.accounts.find(entry => entry.client_id === options.clientId)
     : activeRegistration(initialStore)
   if (options.clientId && !registration) throw new Error('Unknown ChatGPT client registration')
+  // Explicit ChatGPT plan consent is only valid for an existing registration.
+  // Never initiate a fresh dynamic client under a reauthorization flag.
+  if (options.enablePlan && !registration) {
+    throw new Error('ChatGPT plan consent requires an existing registered account')
+  }
   const existing = registration?.credential
   const clientId = registration?.client_id ?? pending?.client_id ?? 'dynamic_agent_client'
   const state = randomBytes(32).toString('base64url')
@@ -416,6 +422,9 @@ export async function loginWithChatGPT(
       ...(registration || pending ? {} : { agent_name_hint: '333' }),
       ...(existing?.id_token && registration ? { id_token_hint: existing.id_token } : {}),
       ...(registration?.email ? { login_hint: registration.email } : {}),
+      // OpenAI OSS SIWC requires explicit consent when a previously signed-in
+      // account chooses to enable plan usage. Routine login never forces it.
+      ...(options.enablePlan ? { prompt: 'consent' } : {}),
     })) url.searchParams.set(key, value)
     // A retained ID token is passed to the browser but never printed to logs.
     const displayURL = new URL(url)
