@@ -93,6 +93,7 @@ export async function discoverIndependentModelDetails(
   }
   const response = await fetcher(addresses[provider], {
     headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(15_000),
   })
   if (!response.ok) throw new Error(`Model discovery failed for ${provider}: HTTP ${response.status}`)
   const data = await response.json() as Record<string, unknown>

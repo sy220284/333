@@ -174,8 +174,10 @@ export function getModelMaxOutputTokens(model: string): {
     const referenceMaximum = route.provider === 'minimax' &&
       /^minimax-m3\.1-flash$/i.test(route.model) ? 524_288 : undefined
     const maximum = profile?.maxOutputTokens ?? referenceMaximum ?? 4_096
-    // Reasoning tokens share the output budget; reserve enough for tools.
-    return { default: Math.min(maximum, 32_768), upperLimit: maximum }
+    // Reasoning tokens share the completion budget. The MiniMax reference
+    // recommends 128K for longer agent tasks, while permitting 512K explicitly.
+    const recommendedDefault = referenceMaximum ? 131_072 : 32_768
+    return { default: Math.min(maximum, recommendedDefault), upperLimit: maximum }
   }
   let defaultTokens: number
   let upperLimit: number

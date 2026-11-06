@@ -800,21 +800,18 @@ async function checkPermissionsAndCallTool(
   let hookPermissionResult: PermissionResult | undefined
   const preToolHookInfos: StopHookInfo[] = []
   const preToolHookStart = Date.now()
-  // In exact-command mode, user-defined hooks could launch unrelated
-  // subprocesses. Do not execute these hooks for a constrained task.
-  const preToolEvents = process.env.YAOYAOCHE_STRICT_COMMAND !== undefined
-    ? (async function* () {})()
-    : runPreToolUseHooks(
-        toolUseContext,
-        tool,
-        processedInput,
-        toolUseID,
-        assistantMessage.message.id,
-        requestId,
-        mcpServerType,
-        mcpServerBaseUrl,
-      )
-  for await (const result of preToolEvents) {
+  // Preserve user-installed security hooks. The hard scope guard above
+  // rejects model-invoked commands before permission hooks/classifiers.
+  for await (const result of runPreToolUseHooks(
+    toolUseContext,
+    tool,
+    processedInput,
+    toolUseID,
+    assistantMessage.message.id,
+    requestId,
+    mcpServerType,
+    mcpServerBaseUrl,
+  )) {
     switch (result.type) {
       case 'message':
         if (result.message.message.type === 'progress' && result.message.message.data.type === 'hook_progress') {

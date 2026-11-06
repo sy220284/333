@@ -31,3 +31,11 @@ test('strict command scope cannot be widened by a classifier or an alternate too
   assert.equal(getStrictCommandScopeError('Read', {}, command), undefined)
   assert.equal(getStrictCommandScopeError('Bash', { command: 'node -e' }, undefined), undefined)
 })
+
+import { SDKResultSuccessSchema, SDKResultErrorSchema } from '../src/entrypoints/sdk/coreSchemas.ts'
+test('SDK result status schema rejects contradictory success/error combinations', () => {
+  assert.equal(SDKResultSuccessSchema().shape.is_error.safeParse(true).success, false)
+  assert.equal(SDKResultSuccessSchema().shape.is_error.safeParse(false).success, true)
+  assert.equal(SDKResultErrorSchema().shape.is_error.safeParse(false).success, false)
+  assert.equal(SDKResultErrorSchema().shape.is_error.safeParse(true).success, true)
+})
