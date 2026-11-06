@@ -50,7 +50,7 @@ jobs:
         run: |
           bun build/rebuild.mjs
           node --test tests/language-file-contract.test.mjs
-          node --test tests/welcome-layout.test.mjs tests/clawd-animations.test.mjs
+          node --test tests/welcome-layout.test.mjs tests/brand-animation.test.mjs
           git diff --check
       - name: 安全同步最新分支并提交已验证源文件
         shell: bash

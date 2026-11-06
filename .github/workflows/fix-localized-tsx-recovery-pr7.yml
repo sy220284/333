@@ -43,7 +43,7 @@ jobs:
         run: |
           bun build/rebuild.mjs
           node --test tests/language-file-contract.test.mjs
-          node --test tests/welcome-layout.test.mjs tests/chinese-only-ui.test.mjs tests/clawd-animations.test.mjs
+          node --test tests/welcome-layout.test.mjs tests/chinese-only-ui.test.mjs tests/brand-animation.test.mjs
           git diff --check
       - name: 同步当前分支并回写中文UI修复
         shell: bash

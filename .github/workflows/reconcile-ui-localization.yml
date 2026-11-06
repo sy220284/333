@@ -36,7 +36,7 @@ jobs:
         run: node tools/dev/reconcile-restored-ui-localization.mjs
       - name: 实测中文化、TSX文件格式和关键UI交互
         run: |
-          node --test tests/chinese-only-ui.test.mjs tests/language-file-contract.test.mjs tests/welcome-layout.test.mjs tests/clawd-animations.test.mjs tests/clawd-animation-selection.test.mjs
+          node --test tests/chinese-only-ui.test.mjs tests/language-file-contract.test.mjs tests/welcome-layout.test.mjs tests/brand-animation.test.mjs
       - name: 全仓类型编译、严格验收、生产构建
         run: |
           node tools/dev/dev.mjs typecheck:all

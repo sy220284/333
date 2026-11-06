@@ -50,7 +50,7 @@ jobs:
       - name: 从源码进行完整生产构建与UI语言格式回归
         run: |
           bun build/rebuild.mjs
-          node --test tests/language-file-contract.test.mjs tests/welcome-layout.test.mjs tests/clawd-animations.test.mjs tests/clawd-animation-selection.test.mjs tests/chinese-only-ui.test.mjs
+          node --test tests/language-file-contract.test.mjs tests/welcome-layout.test.mjs tests/brand-animation.test.mjs tests/chinese-only-ui.test.mjs
           git diff --check
       - name: 提交已验证源码并与PR7最新代码同步
         shell: bash

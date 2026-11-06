@@ -68,14 +68,13 @@ test('retired teammate default-model setting is removed; new teammates inherit t
 
 test('obsolete startup toasts and permission footer hints are gone, operational error notices remain', () => {
   const chrome = source('src/hooks/useChromeExtensionNotification.tsx').split('//# sourceMappingURL=')[0]
-  const marketplace = source('src/hooks/useOfficialMarketplaceNotification.tsx').split('//# sourceMappingURL=')[0]
   const ide = source('src/hooks/notifs/useIDEStatusIndicator.tsx').split('//# sourceMappingURL=')[0]
   const bash = source('src/components/permissions/BashPermissionRequest/BashPermissionRequest.tsx').split('//# sourceMappingURL=')[0]
   const powershell = source('src/components/permissions/PowerShellPermissionRequest/PowerShellPermissionRequest.tsx').split('//# sourceMappingURL=')[0]
   assert.doesNotMatch(chrome, /claude-in-chrome-default-enabled|Claude in Chrome enabled/)
   assert.match(chrome, /chrome-extension-not-detected|chrome-requires-subscription/)
-  assert.doesNotMatch(marketplace, /marketplace-installed|installation success notification/)
-  assert.match(marketplace, /checkAndInstallOfficialMarketplace|marketplace-install-failed|marketplace-config-save-failed/)
+  assert.equal(existsSync(join(root, 'src/hooks/useOfficialMarketplaceNotification.tsx')), false)
+  assert.doesNotMatch(source('src/screens/REPL.tsx'), /useOfficialMarketplaceNotification/)
   assert.doesNotMatch(ide, /ide-status-hint|MAX_IDE_HINT_SHOW_COUNT|\/ide for/)
   assert.match(ide, /ide-status-install-error|ide-status-disconnected/)
   assert.doesNotMatch(bash, /ctrl\\+e to/)

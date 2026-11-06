@@ -15,8 +15,8 @@ import {
 } from '../../utils/logoV2Utils.js'
 import { renderModelSetting } from '../../utils/model/model.js'
 import { OffscreenFreeze } from '../OffscreenFreeze.js'
-import { AnimatedClawd } from './AnimatedClawd.js'
-import { Clawd } from './Clawd.js'
+import { AnimatedBrandMark } from './AnimatedBrandMark.js'
+import { BrandMark } from './BrandMark.js'
 
 export function CondensedLogo(): ReactNode {
   const { columns } = useTerminalSize()
@@ -29,7 +29,7 @@ export function CondensedLogo(): ReactNode {
   // Prefer AppState.agent (set from --agent CLI flag) over settings
   const agentName = agent ?? agentNameFromSettings
   // Calculate available width for text content
-  // Account for: condensed clawd width (11 chars) + gap (2) + padding (2) = 15 chars
+  // Account for: 333 brand mark width (9 chars) + gap (2) + padding (2) = 15 chars
   const textWidth = Math.max(columns - 15, 20)
 
   // Truncate version to fit within available width, accounting for "333 v" prefix
@@ -62,7 +62,7 @@ export function CondensedLogo(): ReactNode {
   return (
     <OffscreenFreeze>
       <Box flexDirection="row" gap={2} alignItems="center">
-      {isFullscreenEnvEnabled() ? <AnimatedClawd /> : <Clawd />}
+      {isFullscreenEnvEnabled() ? <AnimatedBrandMark /> : <BrandMark />}
 
       {/* Info */}
       <Box flexDirection="column">

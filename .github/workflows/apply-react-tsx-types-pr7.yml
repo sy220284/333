@@ -40,7 +40,7 @@ jobs:
       - name: 真实产品构建、中文界面及语言格式回归
         run: |
           bun build/rebuild.mjs
-          node --test tests/language-file-contract.test.mjs tests/chinese-only-ui.test.mjs tests/welcome-layout.test.mjs tests/clawd-animations.test.mjs
+          node --test tests/language-file-contract.test.mjs tests/chinese-only-ui.test.mjs tests/welcome-layout.test.mjs tests/brand-animation.test.mjs
           node tools/dev/audit-restored-ui-localization.mjs
           git diff --check
       - name: 将已验证TSX组件签名提交到最新PR7
