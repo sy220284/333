@@ -450,11 +450,19 @@ export async function loginWithChatGPT(
     if (registration && registration.subject !== identity.subject) {
       throw new Error('ChatGPT account identity changed during reauthorization')
     }
+    // The issued client ID binds a workspace for the OSS SIWC flow. Codex
+    // may receive an optional workspace claim, but reauthorization can omit
+    // that claim. Preserve the originally verified registration identity.
+    if (registration?.workspace_id && identity.workspaceId &&
+        registration.workspace_id !== identity.workspaceId) {
+      throw new Error('ChatGPT workspace changed during reauthorization')
+    }
+    const boundWorkspaceId = registration ? registration.workspace_id : identity.workspaceId
     // Identity-only sign-in is valid. Keep it available for later explicit
     // consent or for choosing the user's independent OpenAI API key instead.
     const credential: Credential = {
       client_id: issuedId, ext_agent_host_id: hostId, subject: identity.subject,
-      ...(identity.workspaceId ? { workspace_id: identity.workspaceId } : {}),
+      ...(boundWorkspaceId ? { workspace_id: boundWorkspaceId } : {}),
       ...(identity.email ? { email: identity.email } : {}),
       id_token: tokens.id_token, access_token: tokens.access_token,
       refresh_token: tokens.refresh_token, scope: tokens.scope,
@@ -465,12 +473,9 @@ export async function loginWithChatGPT(
       const previous = registration ? store.accounts.find(entry =>
         registrationIdentity(entry) === registrationIdentity(registration)) : undefined
       if (registration && !previous) throw new Error('ChatGPT registration changed during login')
-      if (previous && previous.workspace_id !== identity.workspaceId) {
-        throw new Error('ChatGPT workspace changed during reauthorization')
-      }
       const updated: Registration = {
         client_id: issuedId, subject: identity.subject,
-        ...(identity.workspaceId ? { workspace_id: identity.workspaceId } : {}),
+        ...(boundWorkspaceId ? { workspace_id: boundWorkspaceId } : {}),
         ...(identity.email ? { email: identity.email } : {}),
         credential,
       }
