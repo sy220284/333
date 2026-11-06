@@ -21,13 +21,13 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
   const revocations: string[] = []
   const makeToken = (clientId: string, subject: string, workspace: string): string => {
     const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url')
-    const raw = encode({ alg: 'RS256', kid: 'test-openai-kid' }) + '.' + encode({
+    const raw = `${encode({ alg: 'RS256', kid: 'test-openai-kid' })}.${encode({
       iss: 'https://auth.openai.com', aud: clientId,
       sub: subject, nonce, exp: Math.floor(Date.now() / 1000) + 3600,
-      email: subject + '@example.test',
+      email: `${subject}@example.test`,
       'https://api.openai.com/auth': { chatgpt_account_id: workspace },
-    })
-    return raw + '.' + sign('RSA-SHA256', Buffer.from(raw), privateKey).toString('base64url')
+    })}`
+    return `${raw}.${sign('RSA-SHA256', Buffer.from(raw), privateKey).toString('base64url')}`
   }
   try {
     process.env.HOME = root
@@ -56,7 +56,7 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
         const workspace = clientId === 'oaiapp_333_one' ? 'workspace-a' : 'workspace-b'
         const subject = clientId === 'oaiapp_333_one' ? 'user-a' : 'user-b'
         return Response.json({ id_token: makeToken(clientId, subject, workspace),
-          access_token: 'access-' + clientId, refresh_token: 'refresh-' + clientId,
+          access_token: `access-${clientId}`, refresh_token: `refresh-${clientId}`,
           expires_in: 3600, scope: currentScope })
       }
       if (url === 'https://auth.openai.com/oauth/revoke') {
@@ -65,7 +65,7 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
         revocations.push(token)
         return new Response(null, { status: 200 })
       }
-      throw new Error('Unexpected remote request: ' + url)
+      throw new Error(`Unexpected remote request: ${url}`)
     }
     const browser = (address: string): void => {
       const url = new URL(address)
