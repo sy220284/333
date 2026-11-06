@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { parseReviewRequest } from '../src/commands/reviewMode.ts'
+import { checkPullRequestPatch } from '../src/commands/reviewPatch.ts'
 import { validRepository } from '../src/commands/github/repository.ts'
 import { githubWorkflow, GITHUB_SCRIPT_PATH, GITHUB_WORKFLOW_PATH } from '../src/commands/github/workflow.ts'
 import { githubReviewerScript } from '../src/commands/github/reviewerScript.ts'
@@ -295,4 +296,33 @@ test('无共同 Git 历史的 PR 审查依赖 GitHub 差异接口，无需创建
   assert.equal(finished,true)
   assert.equal(urls.filter(url=>url.endsWith('/pulls/8')).length,1)
   assert.equal(urls.filter(url=>url.endsWith('/issues/8/comments')).length,1)
+})
+
+test('PR 差异格式检查基于 PR 原始补丁，保留文件与新增行号', () => {
+  const patch = [
+    'diff --git a/src/a.ts b/src/a.ts',
+    '--- a/src/a.ts',
+    '+++ b/src/a.ts',
+    '@@ -12,2 +12,3 @@',
+    ' const answer = 1',
+    '-const old = true',
+    '+const addition = true;  ',
+    '+<<<<<<< HEAD',
+    '+const next = true;',
+    'diff --git a/src/b.ts b/src/b.ts',
+    '--- a/src/b.ts',
+    '+++ b/src/b.ts',
+    '@@ -1 +1 @@',
+    '-const ready = false',
+    '+const ready = true;',
+    '',
+  ].join('\n')
+  assert.deepEqual(checkPullRequestPatch(patch), [
+    'src/a.ts:13: 行尾空白',
+    'src/a.ts:14: 未解决的合并冲突标记',
+  ])
+  assert.deepEqual(checkPullRequestPatch('diff --git a/a.ts b/a.ts\n@@ -1 +1 @@\n-const a=1\n+const a=2\n'), [])
+  const source = readFileSync(new URL('../src/commands/review.ts', import.meta.url), 'utf8')
+  assert.match(source, /checkPullRequestPatch\(prDiff\.stdout\)/)
+  assert.doesNotMatch(source, /prDiff\.code[\s\S]*?execFileNoThrow\('git', \['diff', '--check'\]/)
 })
