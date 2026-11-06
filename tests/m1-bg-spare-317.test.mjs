@@ -68,7 +68,7 @@ test('317 official and rebuilt bg-spare accept a single authenticated claim',
         const result = await Promise.race([started.done,
           new Promise((_, reject) => setTimeout(() => reject(Error(name + ' spare claim timed out')), 12000))])
         assert.equal(result.code, 0, name + JSON.stringify(result))
-        assert.equal(result.stdout.trim(), '2.1.317 (Claude Code)', name)
+        assert.equal(result.stdout.trim(), `2.1.317 (${name === 'official' ? 'Claude Code' : '333'})`, name)
         assert.equal(existsSync(sock), false, name + ' stale claim socket')
       } finally {
         started.child.kill('SIGKILL')
@@ -136,7 +136,7 @@ test('317 PTY host plus authenticated bg-spare forms one complete claim-to-outpu
         await Promise.race([exit,
           new Promise((_, reject) => setTimeout(() => reject(Error(name + ' integrated host hung')), 12000))])
         assert.equal(resultCode, 0, name + ' ' + stderr)
-        assert.ok(output.includes('2.1.317 (Claude Code)'), name + ' ' + output)
+        assert.ok(output.includes(`2.1.317 (${name === 'official' ? 'Claude Code' : '333'})`), name + ' ' + output)
         for (const event of ['hello', 'live', 'ping', 'exit'])
           assert.ok(controls.includes(event), name + ' missing ' + event + ' ' + JSON.stringify(controls))
         await until(() => !existsSync(claimSocket) && !existsSync(ptySocket))
@@ -195,7 +195,7 @@ test('317 authenticated spare rejects malformed claims and preserves its one-sho
       const result = await Promise.race([started.done,
         new Promise((_, reject) => setTimeout(() => reject(Error('valid claim timed out')), 12000))])
       assert.equal(result.code, 0, JSON.stringify(result))
-      assert.equal(result.stdout.trim(), '2.1.317 (Claude Code)')
+      assert.equal(result.stdout.trim(), '2.1.317 (333)')
       assert.equal(existsSync(socket), false)
     } finally {
       started.child.kill('SIGKILL')

@@ -83,8 +83,8 @@ test('M1 C19-T02: official and reconstructed CLIs consume runner declaration bef
           })
         assert.equal(r.error, undefined, label + ' ' + r.error)
         assert.equal(r.status, 0, label + ': ' + r.stderr)
-        if (action === '--version') assert.equal(r.stdout.trim(), '2.1.317 (Claude Code)')
-        else assert.match(r.stdout, /Usage: claude/, label)
+        if (action === '--version') assert.equal(r.stdout.trim(), `2.1.317 (${label.startsWith('official') ? 'Claude Code' : '333'})`, label)
+        else assert.match(r.stdout, label.startsWith('official') ? /Usage: claude/ : /Usage: 333/, label)
       }
     }
   }
