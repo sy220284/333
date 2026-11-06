@@ -13,7 +13,7 @@ type LocalTask = {
   startTime?: number
 }
 export type LocalTaskEntry = LocalTask & { recordedAt: string }
-const root = join(homedir(), '.qerivon', 'tasks')
+const root = join(homedir(), '.yaoyaoche', 'tasks')
 const file = join(root, 'journal.ndjson')
 const lastStates = new Map<string, string>()
 let writing: Promise<void> = Promise.resolve()
@@ -33,7 +33,7 @@ export function recordLocalTaskState(task: LocalTask): Promise<void> {
     lastStates.set(task.id, signature)
   })
   writing = next.catch(error => {
-    process.stderr.write(`[Qerivon task journal] ${String(error)}\n`)
+    process.stderr.write(`[摇摇车 task journal] ${String(error)}\n`)
   })
   return next
 }

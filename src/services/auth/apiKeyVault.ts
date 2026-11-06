@@ -1,5 +1,5 @@
 /**
- * Qerivon independent provider credential vault.
+ * 摇摇车 independent provider credential vault.
  * Only explicit user actions write API keys; no telemetry or cloud sync.
  */
 import { randomUUID } from 'node:crypto'
@@ -13,7 +13,7 @@ function vaultPath(): string {
   const configuredHome = process.platform === 'win32'
     ? process.env.USERPROFILE
     : process.env.HOME
-  return join(configuredHome || homedir(), '.qerivon', 'auth', 'provider-api-keys.json')
+  return join(configuredHome || homedir(), '.yaoyaoche', 'auth', 'provider-api-keys.json')
 }
 type Vault = { schema: 1; keys: Partial<Record<IndependentProvider, string>> }
 const SUPPORTED = new Set<string>(['openai','deepseek','qwen','kimi','zhipu','minimax'])
