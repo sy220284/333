@@ -61,6 +61,7 @@ export function getModelFieldProfile(provider: IndependentProvider, model: strin
   return { ...base, supportedEffort: discovered.supportedEffort }
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: Provider wire payloads are heterogeneous before validation.
 type Wire = Record<string, any>
 type ChatFields = {
   provider?: IndependentProvider
