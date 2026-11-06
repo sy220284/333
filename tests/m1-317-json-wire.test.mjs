@@ -43,3 +43,10 @@ test('actual JSON, stream-json and SDK outputs use the same leaf serializer', ()
   assert.match(print,/process\.stdout\.write\(ndjsonSafeStringify\(errorResult\)/)
   assert.match(io,/ndjsonSafeStringify\(message\)/)
 })
+
+test('API failure result follows the original 2.1.317 structured JSON contract', () => {
+  const source = readFileSync(new URL('../src/QueryEngine.ts', import.meta.url), 'utf8')
+  const schema = readFileSync(new URL('../src/entrypoints/sdk/coreSchemas.ts', import.meta.url), 'utf8')
+  assert.match(source, /result: textResult \|\| `API request failed/)
+  assert.match(schema, /\/\/ Official 2\.1\.317 API failures include[\s\S]*?result: z\.string\(\)\.optional\(\)/)
+})

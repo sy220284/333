@@ -1236,6 +1236,8 @@ export class QueryEngine {
         permission_denials: this.permissionDenials,
         fast_mode_state: getFastModeState(mainLoopModel, initialAppState.fastMode),
         uuid: randomUUID(),
+        // Preserve the 2.1.317 JSON error text alongside SDK diagnostics.
+        result: textResult || `API request failed (stop_reason=${lastStopReason ?? 'unknown'})`,
         errors: [textResult || `API request failed (stop_reason=${lastStopReason ?? 'unknown'})`],
       }
       return
