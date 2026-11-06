@@ -19,7 +19,7 @@ mkdirSync(dist,{recursive:true});
 // A release is a closed set of files: reject stale executables, old chunks and
 // unrelated build outputs before changing the previous package.
 const expectedRoot = new Set([
-  'cli.js', 'cli.js.map', nativeName, 'vendor', 'LICENSE.md',
+  'cli.js', 'cli.js.map', nativeName, 'vendor', 'SOURCE_NOTICES.md',
   'package.json', 'launcher.cjs', 'README.md', 'integrity.json', 'official-317',
 ]);
 for (const entry of readdirSync(dist, { withFileTypes: true })) {
@@ -110,14 +110,14 @@ try {
     renameSync(vendorBackup, vendorOutput);
 }
 packageOfficialEmbeddedAssets317(root, dist);
-copyFileSync(join(root,'LICENSE.md'),join(dist,'LICENSE.md'));
+copyFileSync(join(root,'SOURCE_NOTICES.md'),join(dist,'SOURCE_NOTICES.md'));
 const pkg = {
-  name: `claude-code-${releaseVersion}-source-rebuild`,
+  name: `333-agent-cli-${releaseVersion}-source-rebuild`,
   version: `${releaseVersion}-rebuild.1`,
   private: true,
-  description: `Independent reconstruction targeting Claude Code ${releaseVersion} from extracted sources`,
+  description: `333 independent remote-model coding agent, compatible with release ${releaseVersion}`,
   type: 'module',
-  bin: { claude: './launcher.cjs' },
+  bin: { '333': './launcher.cjs', claude: './launcher.cjs' },
   engines: { node: '>=18' }
 };
 writeFileSync(join(dist,'package.json'), `${JSON.stringify(pkg,null,2)}\n`);
@@ -125,7 +125,7 @@ writeFileSync(join(dist,'package.json'), `${JSON.stringify(pkg,null,2)}\n`);
 // the exact artifact that ships (including SIGINT/SIGTERM propagation).
 copyFileSync(join(root, 'build/release-launcher.cjs'), join(dist, 'launcher.cjs'));
 if(process.platform!=='win32')chmodSync(join(dist,'launcher.cjs'),0o755);
-writeFileSync(join(dist,'README.md'), `# Claude Code ${releaseVersion} — Independently Rebuilt CLI
+writeFileSync(join(dist,'README.md'), `# 333 ${releaseVersion} — Independently Rebuilt CLI
 
 This directory contains a CLI compiled from the extracted \`src/\` code using Bun.
 The original \`cli.js\` in the repository root is NOT packaged or used as a fallback.
@@ -141,7 +141,7 @@ On Windows run \`claude.exe --version\`. With Node, the portable
 
 The \`official-317/\` directory contains 101 SHA-verified original embedded resources,\nwith their relative skill-script paths preserved and a pinned manifest.\nThe \`vendor/\` directory contains the platform-specific native resources and
 is included in the integrity manifest.
-This package preserves the original project's proprietary license notice.
+Third-party source origins and rights notices are recorded in SOURCE_NOTICES.md.
 `);
 const files=[];
 function walk(dir) {
