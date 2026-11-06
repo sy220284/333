@@ -68,7 +68,7 @@ export const DANGEROUS_FILES = [
   '.ripgreprc',
   '.mcp.json',
   '.claude.json',
-  '.qerivon.json',
+  '.yaoyaoche.json',
 ] as const
 
 /**
@@ -80,7 +80,7 @@ export const DANGEROUS_DIRECTORIES = [
   '.vscode',
   '.idea',
   '.claude',
-  '.qerivon',
+  '.yaoyaoche',
 ] as const
 
 /**
@@ -305,18 +305,18 @@ export function isScratchpadEnabled(): boolean {
 }
 
 /**
- * Returns the user-specific Qerivon temp directory name.
+ * Returns the user-specific 摇摇车 temp directory name.
  * On Unix: 'claude-{uid}' to prevent multi-user permission conflicts
  * On Windows: 'claude' (tmpdir() is already per-user)
  */
 export function getClaudeTempDirName(): string {
   if (getPlatform() === 'windows') {
-    return 'qerivon'
+    return 'yaoyaoche'
   }
   // Use UID to create per-user directories, preventing permission conflicts
   // when multiple users share the same /tmp directory
   const uid = process.getuid?.() ?? 0
-  return `qerivon-${uid}`
+  return `yaoyaoche-${uid}`
 }
 
 /**

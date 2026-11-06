@@ -23,7 +23,7 @@ const MAX_RELEASE_NOTES_SHOWN = 5
  * The flow is:
  * 1. User updates to a new version
  * 2. We fetch the changelog in the background and store it in config
- * 3. Next time the user starts Qerivon, the cached release notes are available immediately
+ * 3. Next time the user starts 摇摇车, the cached release notes are available immediately
  */
 export const CHANGELOG_URL = 'https://github.com/sy220284/333/releases'
 const RELEASES_API_URL = 'https://api.github.com/repos/sy220284/333/releases?per_page=20'
@@ -33,7 +33,7 @@ const RELEASES_API_URL = 'https://api.github.com/repos/sy220284/333/releases?per
  * Independent release cache is stored under the configured home directory
  */
 function getChangelogCachePath(): string {
-  return join(getClaudeConfigHomeDir(), 'cache', 'changelog-qerivon.md')
+  return join(getClaudeConfigHomeDir(), 'cache', 'changelog-yaoyaoche.md')
 }
 
 // In-memory cache populated by async reads. Sync callers (React render, sync
@@ -65,10 +65,10 @@ export async function fetchAndStoreChangelog(): Promise<void> {
     headers: { Accept: 'application/vnd.github+json' },
   })
   if (response.status === 200) {
-    if (!Array.isArray(response.data)) throw new Error('Qerivon 发布记录接口返回格式异常')
+    if (!Array.isArray(response.data)) throw new Error('摇摇车 发布记录接口返回格式异常')
     const releases = response.data as Array<{ tag_name?: string; body?: string; draft?: boolean }>
     const entries = releases.filter(item => !item.draft && /^v?\d+\.\d+\.\d+/.test(item.tag_name ?? ''))
-    const changelogContent = `# Qerivon 发布记录\n\n${entries.map(item =>
+    const changelogContent = `# 摇摇车 发布记录\n\n${entries.map(item =>
       `## ${(item.tag_name ?? '').replace(/^v/, '')}\n${item.body ?? ''}`
     ).join('\n\n')}`
 

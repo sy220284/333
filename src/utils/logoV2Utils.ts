@@ -88,7 +88,7 @@ export function calculateOptimalLeftWidth(
     stringWidth(welcomeMessage),
     stringWidth(truncatedCwd),
     stringWidth(modelLine),
-    23, // Minimum for Qerivon brand mark
+    23, // Minimum for 摇摇车 brand mark
   )
   return Math.min(contentWidth + 4, MAX_LEFT_WIDTH) // +4 for padding
 }
@@ -250,7 +250,7 @@ export function getLogoDisplayData(): {
   const version = process.env.DEMO_VERSION ?? MACRO.VERSION
   const serverUrl = getDirectConnectServerUrl()
   const displayPath = process.env.DEMO_VERSION
-    ? '/project/qerivon'
+    ? '/project/yaoyaoche'
     : getDisplayPath(getCwd())
   const cwd = serverUrl
     ? `${displayPath} in ${serverUrl.replace(/^https?:\/\//, '')}`

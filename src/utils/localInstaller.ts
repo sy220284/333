@@ -19,8 +19,8 @@ import { jsonStringify } from './slowOperations.js'
 function getLocalInstallDir(): string {
   return join(getClaudeConfigHomeDir(), 'local')
 }
-export function getLocalQerivonPath(): string {
-  return join(getLocalInstallDir(), 'qerivon')
+export function getLocal摇摇车Path(): string {
+  return join(getLocalInstallDir(), 'yaoyaoche')
 }
 
 /**
@@ -28,7 +28,7 @@ export function getLocalQerivonPath(): string {
  */
 export function isRunningFromLocalInstallation(): boolean {
   const execPath = process.argv[1] || ''
-  return execPath.includes('/.qerivon/local/node_modules/')
+  return execPath.includes('/.yaoyaoche/local/node_modules/')
 }
 
 /**
@@ -64,17 +64,17 @@ export async function ensureLocalPackageEnvironment(): Promise<boolean> {
     await writeIfMissing(
       join(localInstallDir, 'package.json'),
       jsonStringify(
-        { name: 'qerivon-local', version: '0.0.1', private: true },
+        { name: 'yaoyaoche-local', version: '0.0.1', private: true },
         null,
         2,
       ),
     )
 
     // Create the wrapper script if it doesn't exist
-    const wrapperPath = join(localInstallDir, 'qerivon')
+    const wrapperPath = join(localInstallDir, 'yaoyaoche')
     const created = await writeIfMissing(
       wrapperPath,
-      `#!/bin/sh\nexec "${localInstallDir}/node_modules/.bin/qerivon" "$@"`,
+      `#!/bin/sh\nexec "${localInstallDir}/node_modules/.bin/yaoyaoche" "$@"`,
       0o755,
     )
     if (created) {
@@ -90,7 +90,7 @@ export async function ensureLocalPackageEnvironment(): Promise<boolean> {
 }
 
 /**
- * Install or update Qerivon CLI package in the local directory
+ * Install or update 摇摇车 CLI package in the local directory
  * @param channel - Release channel to use (latest or stable)
  * @param specificVersion - Optional specific version to install (overrides channel)
  */
@@ -118,7 +118,7 @@ export async function installOrUpdateClaudePackage(
 
     if (result.code !== 0) {
       const error = new Error(
-        `Failed to install Qerivon CLI package: ${result.stderr}`,
+        `Failed to install 摇摇车 CLI package: ${result.stderr}`,
       )
       logError(error)
       return result.code === 190 ? 'in_progress' : 'install_failed'

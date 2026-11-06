@@ -1,7 +1,7 @@
 /**
  * Download functionality for native installer
  *
- * Handles downloading Qerivon native packages from approved sources:
+ * Handles downloading 摇摇车 native packages from approved sources:
  * - Artifactory NPM packages
  * - GCS bucket
  */
