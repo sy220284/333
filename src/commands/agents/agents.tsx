@@ -171,6 +171,7 @@ export async function call(
     return null
   }
   if (verb === 'team-create' && arg && rest.length === 0) {
+    if (!isAgentSwarmsEnabled()) throw new Error('团队协作已由本地设置关闭，请先启用多智能体协作。')
     const { TeamCreateTool } = await import('../../tools/TeamCreateTool/TeamCreateTool.js')
     if (!context.canUseTool) throw new Error('当前命令上下文缺少工具权限检查接口')
     const result = await TeamCreateTool.call({ team_name: arg }, context, context.canUseTool, undefined)
