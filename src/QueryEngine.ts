@@ -1221,7 +1221,7 @@ export class QueryEngine {
     if (isApiError) {
       yield {
         type: 'result',
-        subtype: 'success',
+        subtype: 'error_during_execution',
         is_error: true,
         terminal_reason: promptTooLong ? 'prompt_too_long' : 'api_error',
         ...(apiErrorStatus !== undefined && { api_error_status: apiErrorStatus }),
@@ -1236,7 +1236,7 @@ export class QueryEngine {
         permission_denials: this.permissionDenials,
         fast_mode_state: getFastModeState(mainLoopModel, initialAppState.fastMode),
         uuid: randomUUID(),
-        result: textResult || `API request failed (stop_reason=${lastStopReason ?? 'unknown'})`,
+        errors: [textResult || `API request failed (stop_reason=${lastStopReason ?? 'unknown'})`],
       }
       return
     }

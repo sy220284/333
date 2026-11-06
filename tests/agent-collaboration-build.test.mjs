@@ -36,3 +36,11 @@ test('协调者模式由单一状态入口驱动，执行前统一校验长期�
   assert.match(read('src/tasks/LocalWorkflowTask/LocalWorkflowTask.ts'), /await requireActiveSelectedMission\(\)/)
   assert.match(read('src/utils/swarm/teamHelpers.ts'), /finishMissionAssignment\(missionId, `team:\$\{name\}`, 'killed'\)/)
 })
+
+test('SDK 终态区分成功与失败，任务结束类型不接受 running', () => {
+  const query = read('src/QueryEngine.ts')
+  assert.match(query, /subtype: 'error_during_execution',\s*is_error: true,\s*terminal_reason: promptTooLong/)
+  assert.match(query, /errors: \[textResult \|\| `API request failed/)
+  assert.match(read('src/remote/sdkMessageAdapter.ts'), /return msg.subtype === 'success'/)
+  assert.match(read('src/tools/AgentTool/agentToolUtils.ts'), /status: Exclude<MissionAssignmentStatus, 'running'>/)
+})

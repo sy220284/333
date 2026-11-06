@@ -51,7 +51,7 @@ function convertStreamEvent(msg: SDKPartialAssistantMessage): StreamEvent {
  * Convert an SDKResultMessage to a SystemMessage
  */
 function convertResultMessage(msg: SDKResultMessage): SystemMessage {
-  const isError = msg.is_error === true || msg.subtype !== 'success'
+  const isError = msg.subtype !== 'success'
   const content = isError
     ? ('errors' in msg && Array.isArray(msg.errors)
         ? msg.errors.join(', ')
@@ -289,7 +289,7 @@ export function isSessionEndMessage(msg: SDKMessage): boolean {
  * Check if an SDKResultMessage indicates success
  */
 export function isSuccessResult(msg: SDKResultMessage): boolean {
-  return msg.subtype === 'success' && msg.is_error !== true
+  return msg.subtype === 'success'
 }
 
 /**

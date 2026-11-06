@@ -697,7 +697,7 @@ export async function runAsyncAgentLifecycle({
 }
 
 /** Keep the Agent result authoritative even when local mission persistence fails. */
-async function syncMissionOutcome(missionId: string | undefined, taskId: string, status: MissionAssignmentStatus): Promise<string> {
+async function syncMissionOutcome(missionId: string | undefined, taskId: string, status: Exclude<MissionAssignmentStatus, 'running'>): Promise<string> {
   if (!missionId) return ''
   try {
     await finishMissionAssignment(missionId, taskId, status)
