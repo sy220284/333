@@ -1,27 +1,33 @@
-/** Unified local diagnostics sink; vendor analytics network exports removed. */
+/** The sole analytics sink: bounded private on-disk diagnostic events. */
 import { attachAnalyticsSink } from './index.js'
-import { recordLocalEvent } from './localDiagnostics.js'
+import { isLocalDiagnosticsEnabled, recordLocalEvent } from './localDiagnostics.js'
 type Metadata = Record<string, boolean | number | undefined>
 const eventCounts = new Map<string, number>()
 const MAX_EVENT_TYPES = 128
+
 export function getLocalDiagnosticEventCounts(): Record<string, number> {
   return Object.fromEntries(eventCounts)
 }
-function logEventLocally(name: string, metadata: Metadata): void {
+
+async function persistEvent(name: string, metadata: Metadata): Promise<void> {
+  if (!isLocalDiagnosticsEnabled()) return
   if (/^[a-z][a-z0-9_]{0,96}$/.test(name) && (eventCounts.has(name) || eventCounts.size < MAX_EVENT_TYPES)) {
     eventCounts.set(name, (eventCounts.get(name) ?? 0) + 1)
   }
-  void recordLocalEvent(name, metadata).catch(error => {
-    // Disk errors remain visible without terminating model requests.
-    process.stderr.write(`[333 local diagnostics] ${String(error)}\n`)
-  })
+  await recordLocalEvent(name, metadata)
 }
+
 export function initializeAnalyticsGates(): void {
-  // Vendor analytics feature gates no longer control diagnostic routing.
+  // All event routing is local and governed by the privacy level.
 }
+
 export function initializeAnalyticsSink(): void {
   attachAnalyticsSink({
-    logEvent: logEventLocally,
-    logEventAsync: (name: string, metadata: Metadata) => recordLocalEvent(name, metadata),
+    logEvent: (name: string, metadata: Metadata) => {
+      void persistEvent(name, metadata).catch(error => {
+        process.stderr.write(`[local diagnostics] ${String(error)}\n`)
+      })
+    },
+    logEventAsync: persistEvent,
   })
 }

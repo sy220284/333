@@ -6,6 +6,7 @@ import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { registerCleanup } from '../../utils/cleanupRegistry.js'
+import { isTelemetryDisabled } from '../../utils/privacyLevel.js'
 const DIAGNOSTICS_DIR = join(homedir(), '.avenlo', 'diagnostics')
 const JOURNAL = join(DIAGNOSTICS_DIR, 'events.ndjson')
 const ARCHIVE = join(DIAGNOSTICS_DIR, 'events.previous.ndjson')
@@ -13,6 +14,11 @@ const MAX_BYTES = 4 * 1024 * 1024
 const MAX_ATTRIBUTE_KEYS = 40
 let queue: Promise<void> = Promise.resolve()
 let failure: Error | null = null
+
+/** Privacy controls apply to local collection as well as network traffic. */
+export function isLocalDiagnosticsEnabled(): boolean {
+  return !isTelemetryDisabled()
+}
 function safeAttributes(raw: Record<string, unknown>): Record<string, number | boolean> {
   const out: Record<string, number | boolean> = {}
   for (const [key, value] of Object.entries(raw).slice(0, MAX_ATTRIBUTE_KEYS)) {
@@ -37,6 +43,7 @@ async function appendEvent(event: string, attributes: Record<string, number | bo
   })}\n`, { encoding: 'utf8', mode: 0o600 })
 }
 export function recordLocalEvent(event: string, raw: Record<string, unknown> = {}): Promise<void> {
+  if (!isLocalDiagnosticsEnabled()) return Promise.resolve()
   if (!/^[a-zA-Z][a-zA-Z0-9_.:-]{0,100}$/.test(event)) {
     return Promise.reject(new Error('Invalid local diagnostic event name'))
   }
