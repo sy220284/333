@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
+import { getActiveAgentMode, setAgentMode } from '../../utils/agentMode.js'
+import {
+  createMission, getMission, getSelectedMissionId, listMissions,
+  saveMissionCheckpoint, selectMission, updateMissionStatus,
+} from '../../utils/agentMissions.js'
+import { listProjectTeams } from '../../utils/teamDiscovery.js'
 import { AgentInfoSchema, ModelInfoSchema } from '../../entrypoints/sdk/coreSchemas.js'
 import type { getSessionInfo, getSessionMessages, listSessions } from '../../entrypoints/agentSdkTypes.js'
 import type { InternalOptions, SDKSessionOptions } from '../../entrypoints/sdk/runtimeTypes.js'
@@ -31,6 +37,8 @@ export type DesktopGatewayOptions = {
   model?: string
   sessionOptions?: Omit<InternalOptions, 'canUseTool' | 'resume' | 'continue' | 'cwd' | 'model'>
   dataDir?: string
+  /** Optional task-diary root for isolated local hosts and tests. */
+  missionRoot?: string
   journal?: DesktopTaskJournal
   createSession?: SessionFactory
   history?: HistoryService
@@ -237,6 +245,17 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     return { sessionId, closed: true }
   }
 
+  async function getScopedMission(missionId: string) {
+    const mission = await getMission(missionId, options.missionRoot)
+    if (resolve(mission.projectDir) !== cwd)
+      throw new Error('This mission belongs to a different workspace')
+    return mission
+  }
+  async function projectMissions() {
+    return (await listMissions(options.missionRoot))
+      .filter(mission => resolve(mission.projectDir) === cwd)
+  }
+
   async function handle(request: DesktopRequest): Promise<unknown> {
     if (closed) throw new Error('Desktop gateway is closed')
     switch (request.method) {
@@ -245,7 +264,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           protocolVersion: DESKTOP_PROTOCOL_VERSION,
           transport: 'stdio-jsonl',
           stream: 'sdk-stream-json',
-          capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery'],
+          capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'missions'],
         }
       case 'models.list': return models(request.sessionId)
       case 'sessions.open': return openSession(request.model)
@@ -280,6 +299,44 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         const broker = requireSession(request.sessionId).runtime.permissions
         if (!broker.settle(request.permissionId, request.decision)) throw new Error('Permission request expired or belongs to another session')
         return { permissionId: request.permissionId, accepted: true }
+      }
+      case 'agents.overview': {
+        const [missions, teams] = await Promise.all([projectMissions(), listProjectTeams(cwd)])
+        return {
+          mode: getActiveAgentMode(),
+          selectedMissionId: getSelectedMissionId(cwd) ?? null,
+          missions,
+          teams,
+          activeSessions: sessions.size,
+          activeTasks: [...sessions.values()]
+            .flatMap(session => [...session.tasks.values()])
+            .filter(task => task.status === 'running').length,
+        }
+      }
+      case 'agents.setMode':
+        setAgentMode(request.mode)
+        return { mode: getActiveAgentMode() }
+      case 'missions.list':
+        return { selectedMissionId: getSelectedMissionId(cwd) ?? null, missions: await projectMissions() }
+      case 'missions.get': return getScopedMission(request.missionId)
+      case 'missions.create': {
+        const mission = await createMission(request.objective, cwd, options.missionRoot)
+        selectMission(mission.id, cwd)
+        setAgentMode('super')
+        return mission
+      }
+      case 'missions.select': {
+        if (request.missionId !== null) await getScopedMission(request.missionId)
+        selectMission(request.missionId ?? undefined, cwd)
+        return { selectedMissionId: request.missionId }
+      }
+      case 'missions.updateStatus': {
+        await getScopedMission(request.missionId)
+        return updateMissionStatus(request.missionId, request.status, options.missionRoot)
+      }
+      case 'missions.checkpoint': {
+        await getScopedMission(request.missionId)
+        return saveMissionCheckpoint(request.missionId, request.checkpoint, options.missionRoot)
       }
       case 'tasks.list': {
         const active = sessions.get(request.sessionId)
