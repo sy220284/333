@@ -12,16 +12,20 @@
  *
  * The resolved level is the most restrictive signal from:
  *   CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC  →  essential-traffic
- *   DISABLE_TELEMETRY                         →  no-telemetry
+ *   DISABLE_TELEMETRY / DO_NOT_TRACK          →  no-telemetry
  */
 
 type PrivacyLevel = 'default' | 'no-telemetry' | 'essential-traffic'
 
+function enabled(value: string | undefined): boolean {
+  return value !== undefined && !['', '0', 'false', 'off', 'no'].includes(value.trim().toLowerCase())
+}
+
 export function getPrivacyLevel(): PrivacyLevel {
-  if (process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC) {
+  if (enabled(process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC)) {
     return 'essential-traffic'
   }
-  if (process.env.DISABLE_TELEMETRY) {
+  if (enabled(process.env.DISABLE_TELEMETRY) || enabled(process.env.DO_NOT_TRACK)) {
     return 'no-telemetry'
   }
   return 'default'
