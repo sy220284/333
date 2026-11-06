@@ -174,8 +174,10 @@ test('desktop host uses real SDK stream-json child for models, approval, progres
     const hostRequests = await gateway.handle({ id: 'host-list', method: 'host.list',
       sessionId: opened.sessionId }) as Array<{ id: string; request: { subtype: string } }>
     expect(hostRequests[0]?.request.subtype).toBe('elicitation')
+    const hostRequestId = hostRequests[0]?.id
+    if (!hostRequestId) throw new Error('SDK host control request missing')
     await gateway.handle({ id: 'host-reply', method: 'host.respond',
-      sessionId: opened.sessionId, requestId: hostRequests[0]!.id,
+      sessionId: opened.sessionId, requestId: hostRequestId,
       response: { action: 'accept', content: { workspace: 'local' } } })
     await until(() => events.filter(event =>
       event.event === 'session.message' && event.message.type === 'result').length >= 2)
