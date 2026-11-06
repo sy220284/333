@@ -173,7 +173,10 @@ export function toChatCompletions(body: AnthropicRequest, model: string, provide
     if (ordinary.length || calls.length || reasoningDetails.length) {
       messages.push({
         role: message.role,
-        content: ordinary.length === 0 ? null : ordinary.length === 1 && ordinary[0].type === 'text'
+        // DeepSeek tool-call assistant messages require a non-null content
+        // field even when every output block is a tool invocation.
+        content: ordinary.length === 0 ? (provider === 'deepseek' && calls.length ? '' : null)
+          : ordinary.length === 1 && ordinary[0].type === 'text'
           ? ordinary[0].text : ordinary,
         ...(calls.length ? { tool_calls: calls } : {}),
         ...(reasoningContent && (provider === 'deepseek' || provider === 'qwen' || provider === 'kimi' || provider === 'minimax')
