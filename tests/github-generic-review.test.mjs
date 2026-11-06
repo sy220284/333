@@ -38,7 +38,7 @@ test('通用 GitHub 工作流包含显式调用、授权用户触发和最小权
 
 test('极深审查是真实四轮审查加独立复核，支持三类模型 API', () => {
   const code=githubReviewerScript()
-  const syntax=spawnSync(process.execPath,['--input-type=module','--check'],{
+  const syntax=spawnSync('node',['--input-type=module','--check'],{
     input:code,encoding:'utf8'})
   assert.equal(syntax.status,0,syntax.stderr)
   for (const keyword of ['callModel(', '独立复核', '需求与代码行为', '模块调用与状态生命周期',
