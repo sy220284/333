@@ -123,7 +123,7 @@ export async function call(
       const jobs = await listMissionJobs(selected, getCwd())
       onDone(jobs.length ? jobs.map(job =>
         `${job.id} [${job.status}] ${job.title} · 第 ${job.attempt} 次执行`
-      ).join('\\n') : '本长期任务暂无工作项；使用 /agents mission queue 添加。', { display: 'system' })
+      ).join('\n') : '本长期任务暂无工作项；使用 /agents mission queue 添加。', { display: 'system' })
       return null
     }
     if (selected && action === 'queue' && value) {
