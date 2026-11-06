@@ -1,14 +1,12 @@
 import { randomUUID } from 'node:crypto'
-import type { CanUseTool } from '../../entrypoints/sdk/runtimeTypes.js'
-import type { PermissionResult, PermissionUpdate } from '../../entrypoints/sdk/coreTypes.js'
+import type { CanUseTool, SDKPermissionContext } from '../../entrypoints/sdk/runtimeTypes.js'
+import type { PermissionResult } from '../../entrypoints/sdk/coreTypes.js'
 
 export type PendingSdkPermission = Readonly<{
   id: string
   toolName: string
   input: Record<string, unknown>
-  suggestions?: PermissionUpdate[]
-  toolUseID?: string
-}>
+} & Omit<SDKPermissionContext, 'signal'>>
 
 /** A headless permission mailbox for an SDK session. There is no implicit
  * approval: each tool request waits for a matching user decision or abort. */
@@ -32,7 +30,20 @@ export function createSdkPermissionBroker() {
       return Promise.resolve({ behavior: 'deny', message: 'Tool permission request cancelled' })
     }
     const id = `${instanceId}:${++nextId}`
-    const request: PendingSdkPermission = { id, toolName, input, suggestions: options.suggestions, toolUseID: options.toolUseID }
+    const request: PendingSdkPermission = {
+      id, toolName, input,
+      suggestions: options.suggestions, toolUseID: options.toolUseID,
+      requestId: options.requestId, blockedPath: options.blockedPath,
+      mcpServer: options.mcpServer, decisionReason: options.decisionReason,
+      decisionType: options.decisionType, decisionCode: options.decisionCode,
+      serverPolicyAskOnly: options.serverPolicyAskOnly,
+      title: options.title, displayName: options.displayName,
+      description: options.description, defaultToNo: options.defaultToNo,
+      suppressAlwaysAllowRule: options.suppressAlwaysAllowRule,
+      agentID: options.agentID, plugin: options.plugin,
+      requiresUserInteraction: options.requiresUserInteraction,
+      computerFolder: options.computerFolder, matchedAskRule: options.matchedAskRule,
+    }
     return new Promise<PermissionResult>(resolve => {
       const onAbort = () => settle(id, { behavior: 'deny', message: 'Tool permission request cancelled' })
       const settleOnce = (decision: PermissionResult) => {
