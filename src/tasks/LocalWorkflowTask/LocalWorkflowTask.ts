@@ -130,7 +130,7 @@ export async function launchWorkflow(
       try {
         await finishMissionAssignment(missionId, id, status)
       } catch (syncError) {
-        tell(id, '本地超级智能体任务簿更新失败：' + String(syncError))
+        tell(id, `本地超级智能体任务簿更新失败：${String(syncError)}`)
       }
     }
   }
