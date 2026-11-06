@@ -1,20 +1,9 @@
-/**
- * Session Tracing for Claude Code using OpenTelemetry (BETA)
- *
- * This module provides a high-level API for creating and managing spans
- * to trace Claude Code workflows. Each user interaction creates a root
- * interaction span, which contains operation spans (LLM requests, tool calls, etc.).
- *
- * Requirements:
- * - Enhanced telemetry is enabled via feature('ENHANCED_TELEMETRY_BETA')
- * - Configure OTEL_TRACES_EXPORTER (console, otlp, etc.)
- */
+/** Local Perfetto session tracing support; remote trace exporters are retired. */
 
 import { context as otelContext, type Span, trace } from '@opentelemetry/api'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { isEnvTruthy } from '../envUtils.js'
 import { getTelemetryAttributes } from '../telemetryAttributes.js'
-import { isEnhancedTracingOptedIn } from './projectTelemetryPolicy.ts'
 import {
   addBetaInteractionAttributes,
   addBetaLLMRequestAttributes,
@@ -122,7 +111,8 @@ function ensureCleanupInterval(): void {
  * Priority: env var override > ant build > GrowthBook gate
  */
 export function isEnhancedTelemetryEnabled(): boolean {
-  return isEnhancedTracingOptedIn(process.env)
+  // The detailed vendor trace pipeline is retired; only local Perfetto traces remain.
+  return false
 }
 
 /**
