@@ -14,6 +14,8 @@ on:
       - 'src/setup.ts'
       - 'src/memdir/**'
       - 'tests/local-telemetry-privacy.test.ts'
+      - 'tests/privacy-headers.test.ts'
+      - 'src/services/api/privacyHeaders.ts'
       - 'tests/m1-otel-timeout-317.test.mjs'
       - '.github/workflows/local-privacy.yml'
   workflow_dispatch:
@@ -42,3 +44,5 @@ jobs:
         run: node --test tests/m1-otel-timeout-317.test.mjs
       - name: 运行真实本地磁盘写入、隐私开关与性能计数测试
         run: bun test tests/local-telemetry-privacy.test.ts
+      - name: 验证 SDK 请求头最小化行为
+        run: bun test tests/privacy-headers.test.ts
