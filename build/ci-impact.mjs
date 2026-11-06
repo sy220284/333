@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 
 export const SPECIALISTS = Object.freeze({
+  'ci-test-matrix': [], // Full validation only.
   'chinese-only-ui': [
     /^src\/(screens|components|themes?|styles?|i18n|locales)\//,
     /^src\/main\.tsx$/, /^tests\/.*(?:chinese|ui-|screen-reader)/,
