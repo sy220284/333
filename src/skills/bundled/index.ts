@@ -1,7 +1,5 @@
 import { feature } from 'bun:bundle'
-import { shouldAutoEnableClaudeInChrome } from 'src/utils/claudeInChrome/setup.js'
 import { registerBatchSkill } from './batch.js'
-import { registerClaudeInChromeSkill } from './claudeInChrome.js'
 import { registerDebugSkill } from './debug.js'
 import { registerKeybindingsSkill } from './keybindings.js'
 import { registerLoremIpsumSkill } from './loremIpsum.js'
@@ -60,9 +58,6 @@ export function initBundledSkills(): void {
     } = require('./scheduleRemoteAgents.js')
     /* eslint-enable @typescript-eslint/no-require-imports */
     registerScheduleRemoteAgentsSkill()
-  }
-  if (shouldAutoEnableClaudeInChrome()) {
-    registerClaudeInChromeSkill()
   }
   // Claude Code 2.1.317 registers both app-driving skills for normal
   // sessions. Local agents use the smaller built-in skill registry.

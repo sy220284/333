@@ -216,8 +216,6 @@ import { createAbortController } from '../utils/abortController.js';
 import { MCPConnectionManager } from 'src/services/mcp/MCPConnectionManager.js';
 import { useInstallMessages } from 'src/hooks/notifs/useInstallMessages.js';
 import { useAwaySummary } from 'src/hooks/useAwaySummary.js';
-import { useChromeExtensionNotification } from 'src/hooks/useChromeExtensionNotification.js';
-import { usePromptsFromClaudeInChrome } from 'src/hooks/usePromptsFromClaudeInChrome.js';
 import { getTipToShowOnSpinner, recordShownTip } from 'src/services/tips/tipScheduler.js';
 import { contentSafe as getSafeTipContent } from 'src/services/tips/tipRegistry.js';
 import type { Theme } from 'src/utils/theme.js';
@@ -742,7 +740,6 @@ export function REPL({
   useDeprecationWarningNotification(mainLoopModel);
   useNpmDeprecationNotification();
   useInstallMessages();
-  useChromeExtensionNotification();
   useLspInitializationNotification();
   useTeammateLifecycleNotification();
   const {
@@ -778,9 +775,6 @@ export function REPL({
     void performStartupChecks(setAppState);
   }, [setAppState, isRemoteSession]);
 
-  // Allow Claude in Chrome MCP to send prompts through MCP notifications
-  // and sync permission mode changes to the Chrome extension
-  usePromptsFromClaudeInChrome(isRemoteSession ? EMPTY_MCP_CLIENTS : mcpClients, toolPermissionContext.mode);
 
   // Initialize swarm features: teammate hooks and context
   // Handles both fresh spawns and resumed teammate sessions
