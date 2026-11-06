@@ -3,6 +3,7 @@ import { mkdir, readFile, rm, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { z } from 'zod/v4'
 import { getSessionCreatedTeams } from '../../bootstrap/state.js'
+import { findMissionByAssignmentId, finishMissionAssignment } from '../agentMissions.js'
 import { logForDebugging } from '../debug.js'
 import { getTeamsDir } from '../envUtils.js'
 import { errorMessage, getErrnoCode } from '../errors.js'
@@ -585,7 +586,21 @@ export async function cleanupSessionTeams(): Promise<void> {
   // (TeamDeleteTool's path doesn't need this — by then teammates have
   // gracefully exited and useInboxPoller has already closed their panes.)
   await Promise.allSettled(teams.map(name => killOrphanedTeammatePanes(name)))
-  await Promise.allSettled(teams.map(name => cleanupTeamDirectories(name)))
+  const outcomes = await Promise.allSettled(teams.map(async name => {
+    // Capture the owner before cleanup removes the team file. The team mission
+    // remains durable, but its now-terminated execution must be marked killed.
+    const projectDir = readTeamFile(name)?.members.find(m => m.name === TEAM_LEAD_NAME)?.cwd
+    await cleanupTeamDirectories(name)
+    if (projectDir) {
+      const missionId = await findMissionByAssignmentId(`team:${name}`, undefined, projectDir)
+      if (missionId) await finishMissionAssignment(missionId, `team:${name}`, 'killed')
+    }
+  }))
+  for (let index = 0; index < outcomes.length; index++) {
+    const outcome = outcomes[index]
+    if (outcome.status === 'rejected')
+      logForDebugging(`cleanupSessionTeams: failed to finalize ${teams[index]}: ${String(outcome.reason)}`)
+  }
   sessionCreatedTeams.clear()
 }
 

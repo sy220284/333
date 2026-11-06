@@ -1,5 +1,5 @@
 import { z } from 'zod/v4'
-import { getSelectedMissionId, getMission, linkMissionAssignment } from '../../utils/agentMissions.js'
+import { requireActiveSelectedMission, linkMissionAssignment } from '../../utils/agentMissions.js'
 import { isSuperAgentMode } from '../../utils/agentMode.js'
 import { getSessionId } from '../../bootstrap/state.js'
 import { logEvent } from '../../services/analytics/index.js'
@@ -144,13 +144,7 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
       )
     }
 
-    const missionId = isSuperAgentMode() ? getSelectedMissionId() : undefined
-    if (missionId) {
-      const mission = await getMission(missionId)
-      if (mission.status !== 'active') {
-        throw new Error(`超级智能体长期任务已${mission.status}，请先恢复再创建团队`)
-      }
-    }
+    const missionId = isSuperAgentMode() ? await requireActiveSelectedMission() : undefined
 
     // If team already exists, generate a unique name instead of failing
     const finalTeamName = generateUniqueTeamName(team_name)

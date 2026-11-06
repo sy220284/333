@@ -188,6 +188,21 @@ export function getSelectedMissionPrompt(): string {
   }
 }
 
+/** All execution paths use the same project-scoped mandate check before side effects. */
+export async function requireActiveSelectedMission(
+  projectDir = getCwd(),
+  root = defaultRoot(),
+): Promise<string | undefined> {
+  const id = getSelectedMissionId(projectDir)
+  if (!id) return undefined
+  const mission = await getMission(id, root)
+  if (resolve(mission.projectDir) !== resolve(projectDir))
+    throw new Error(`超级智能体任务归属其他项目：${mission.projectDir}`)
+  if (mission.status !== 'active')
+    throw new Error(`超级智能体任务处于 ${mission.status}，请先执行 /agents mission resume`)
+  return mission.id
+}
+
 export async function updateMissionStatus(id: string, status: AgentMissionStatus, root = defaultRoot()): Promise<AgentMission> {
   return changeMission(id, mission => ({ ...mission, status }), root)
 }
@@ -210,11 +225,16 @@ export async function linkMissionAssignment(
   }, root)
 }
 export async function finishMissionAssignment(
-  id: string, assignmentId: string, status: MissionAssignmentStatus, root = defaultRoot(),
+  id: string, assignmentId: string, status: Exclude<MissionAssignmentStatus, 'running'>, root = defaultRoot(),
 ): Promise<AgentMission> {
   return changeMission(id, mission => {
-    if (!mission.assignments.some(a => a.id === assignmentId))
-      throw new Error(`任务簿找不到关联工作 ${assignmentId}`)
+    const assignment = mission.assignments.find(a => a.id === assignmentId)
+    if (!assignment) throw new Error(`任务簿找不到关联工作 ${assignmentId}`)
+    // A completed execution is immutable. Shutdown/abort races may report the
+    // same terminal outcome twice but may not overwrite a different outcome.
+    if (assignment.status !== 'running' && assignment.status !== status)
+      throw new Error(`关联执行 ${assignmentId} 已终结为 ${assignment.status}，不能改为 ${status}`)
+    if (assignment.status === status) return mission
     return { ...mission, assignments: mission.assignments.map(a =>
       a.id === assignmentId ? { ...a, status, updatedAt: new Date().toISOString() } : a
     ) }

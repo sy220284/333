@@ -19,7 +19,7 @@ import { asAgentId } from '../../types/ids.js';
 import { runWithAgentContext } from '../../utils/agentContext.js';
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js';
 import { isSuperAgentMode } from '../../utils/agentMode.js';
-import { getSelectedMissionId, linkMissionAssignment } from '../../utils/agentMissions.js';
+import { requireActiveSelectedMission, linkMissionAssignment } from '../../utils/agentMissions.js';
 import { getCwd, runWithCwdOverride } from '../../utils/cwd.js';
 import { logForDebugging } from '../../utils/debug.js';
 import { isEnvTruthy } from '../../utils/envUtils.js';
@@ -221,10 +221,7 @@ export const AgentTool = buildTool({
     const agentsWithMcpRequirementsMet = filterAgentsByMcpRequirements(agents, mcpServersWithTools);
     const filteredAgents = filterDeniedAgents(agentsWithMcpRequirementsMet, toolPermissionContext, AGENT_TOOL_NAME);
 
-    // Use inline env check instead of coordinatorModule to avoid circular
-    // dependency issues during test module loading.
-    const isCoordinator = feature('COORDINATOR_MODE') ? isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE) : false;
-    return await getPrompt(filteredAgents, isCoordinator, allowedAgentTypes);
+    return await getPrompt(filteredAgents, isCoordinatorMode(), allowedAgentTypes);
   },
   name: AGENT_TOOL_NAME,
   searchHint: 'delegate work to a subagent',
@@ -252,6 +249,8 @@ export const AgentTool = buildTool({
   }: AgentToolInput, toolUseContext, canUseTool, assistantMessage, onProgress?) {
     const startTime = Date.now();
     const model = isCoordinatorMode() ? undefined : modelParam;
+    // Check the durable mandate before spawning either a worker or a teammate.
+    const selectedMissionId = isSuperAgentMode() ? await requireActiveSelectedMission() : undefined;
 
     // Get app state for permission mode and agent filtering
     const appState = toolUseContext.getAppState();
@@ -550,9 +549,8 @@ export const AgentTool = buildTool({
       isAsync: (run_in_background === true || selectedAgent.background === true) && !isBackgroundTasksDisabled
     };
 
-    // Use inline env check instead of coordinatorModule to avoid circular
-    // dependency issues during test module loading.
-    const isCoordinator = feature('COORDINATOR_MODE') ? isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE) : false;
+    // Use the exact same persisted/resumed mode for prompts and execution.
+    const isCoordinator = isCoordinatorMode();
 
     // Fork subagent experiment: force ALL spawns async for a unified
     // <task-notification> interaction model (not just fork spawns — all of them).
@@ -687,7 +685,7 @@ export const AgentTool = buildTool({
     };
     if (shouldRunAsync) {
       const asyncAgentId = earlyAgentId;
-      const missionId = isSuperAgentMode() ? getSelectedMissionId() : undefined;
+      const missionId = selectedMissionId;
       if (missionId) await linkMissionAssignment(missionId, String(asyncAgentId), 'agent', description);
       const agentBackgroundTask = registerAsyncAgent({
         agentId: asyncAgentId,

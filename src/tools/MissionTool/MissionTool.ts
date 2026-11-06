@@ -50,6 +50,8 @@ async function execute(input: Input): Promise<string> {
   }
   if (input.action === 'status') {
     if (!input.mission_status) throw new Error('缺少 mission_status')
+    if (input.mission_status === 'active' && mission.status !== 'active')
+      throw new Error('恢复已暂停或结束的长期任务，需要用户执行 /agents mission resume')
     return formatMission(await updateMissionStatus(id, input.mission_status))
   }
   if (input.action === 'attach') {

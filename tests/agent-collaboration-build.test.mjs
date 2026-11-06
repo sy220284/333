@@ -25,3 +25,14 @@ test('命令入口复用现有智能体编辑器与任务中心，团队工具�
   assert.match(read('src/utils/localCapabilities.ts'), /name === 'agent-teams'/)
   assert.match(read('src/hooks/useMergedTools.ts'), /agentMode,/)
 })
+
+test('协调者模式由单一状态入口驱动，执行前统一校验长期任务授权', () => {
+  const agent = read('src/tools/AgentTool/AgentTool.tsx')
+  assert.match(agent, /getPrompt\(filteredAgents, isCoordinatorMode\(\), allowedAgentTypes\)/)
+  assert.match(agent, /const isCoordinator = isCoordinatorMode\(\)/)
+  assert.doesNotMatch(agent, /feature\('COORDINATOR_MODE'\) \? isEnvTruthy/)
+  assert.match(agent, /await requireActiveSelectedMission\(\)/)
+  assert.match(read('src/tools/TeamCreateTool/TeamCreateTool.ts'), /await requireActiveSelectedMission\(\)/)
+  assert.match(read('src/tasks/LocalWorkflowTask/LocalWorkflowTask.ts'), /await requireActiveSelectedMission\(\)/)
+  assert.match(read('src/utils/swarm/teamHelpers.ts'), /finishMissionAssignment\(missionId, `team:\$\{name\}`, 'killed'\)/)
+})

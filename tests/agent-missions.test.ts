@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import {
   createMission, getMission, listMissions, linkMissionAssignment,
   finishMissionAssignment, updateMissionStatus, saveMissionCheckpoint, formatMission,
-  findMissionByAssignmentId,
+  findMissionByAssignmentId, getSelectedMissionId, selectMission, requireActiveSelectedMission,
 } from '../src/utils/agentMissions.ts'
 
 test('任务簿持久化任务目标、关联 Agent 与执行结果', async () => {
@@ -62,6 +62,32 @@ test('同名团队重复使用时只匹配当前项目中运行的长期任务',
     await finishMissionAssignment(newMission.id, 'team:reused', 'completed', root)
     assert.equal(await findMissionByAssignmentId('team:reused', root, '/project/new'), undefined)
   } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('长期任务执行入口校验本项目状态，终态不可被并发结果覆盖', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yaoyaoche-mission-gate-'))
+  const project = '/project/mission-guard'
+  const before = getSelectedMissionId(project)
+  try {
+    const mission = await createMission('会话间持续执行', project, root)
+    selectMission(mission.id, project)
+    assert.equal(await requireActiveSelectedMission(project, root), mission.id)
+    await linkMissionAssignment(mission.id, 'agent-guard', 'agent', '首轮执行', root)
+    await updateMissionStatus(mission.id, 'paused', root)
+    await assert.rejects(() => requireActiveSelectedMission(project, root), /请先执行 \/agents mission resume/)
+    await updateMissionStatus(mission.id, 'active', root)
+    await finishMissionAssignment(mission.id, 'agent-guard', 'completed', root)
+    await finishMissionAssignment(mission.id, 'agent-guard', 'completed', root)
+    await assert.rejects(
+      () => finishMissionAssignment(mission.id, 'agent-guard', 'killed', root),
+      /不能改为 killed/,
+    )
+    await updateMissionStatus(mission.id, 'completed', root)
+    await assert.rejects(() => requireActiveSelectedMission(project, root), /请先执行 \/agents mission resume/)
+  } finally {
+    selectMission(before, project)
     await rm(root, { recursive: true, force: true })
   }
 })
