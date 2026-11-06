@@ -35,3 +35,10 @@ test('333 独立包名与原生更新来源受约束', () => {
     assert.ok(!source(p).includes('claude-code-dist-86c565'))
   }
 })
+
+test('独立模型主请求与辅助请求不注入原厂计费头', () => {
+  const main = source('src/services/api/claude.ts')
+  const side = source('src/utils/sideQuery.ts')
+  assert.ok(main.includes("independentRoute ? '' : getAttributionHeader(fingerprint)"))
+  assert.match(side, /const attributionHeader = resolveIndependentModel\(model\)/)
+})

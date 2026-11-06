@@ -14,6 +14,7 @@ import { logEvent } from '../services/analytics/index.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../services/analytics/metadata.js'
 import { getAPIMetadata } from '../services/api/claude.js'
 import { getAnthropicClient } from '../services/api/client.js'
+import { resolveIndependentModel } from '../services/api/multimodel/registry.js'
 import { getModelBetas, modelSupportsStructuredOutputs } from './betas.js'
 import { computeFingerprint } from './fingerprint.js'
 import { normalizeModelStringForAPI } from './model/model.js'
@@ -140,7 +141,9 @@ export async function sideQuery(opts: SideQueryOptions): Promise<BetaMessage> {
 
   // Compute fingerprint for OAuth attribution
   const fingerprint = computeFingerprint(messageText, MACRO.VERSION)
-  const attributionHeader = getAttributionHeader(fingerprint)
+  const attributionHeader = resolveIndependentModel(model)
+    ? ''
+    : getAttributionHeader(fingerprint)
 
   // Build system as array to keep attribution header in its own block
   // (prevents server-side parsing from including system content in cc_entrypoint)
