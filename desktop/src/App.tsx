@@ -147,17 +147,17 @@ export function App(){
       }else if(event.event==='session.error'||event.event==='task.persistence.error'){
         setError(String(event.error||'任务执行异常'))
       }else if(event.event==='permission.request'){
-        const p=obj(event.permission) as Permission
+        const p=obj(event.permission) as unknown as Permission
         setPermissions(old=>old.some(item=>item.id===p.id)?old:[...old,p])
       }else if(event.event==='permission.resolved'){
         setPermissions(old=>old.filter(item=>item.id!==event.permissionId))
       }else if(event.event==='host.request'){
-        const r=obj(event.request) as HostRequest
+        const r=obj(event.request) as unknown as HostRequest
         setHostRequests(old=>old.some(item=>item.id===r.id)?old:[...old,r])
       }else if(event.event==='host.resolved'){
         setHostRequests(old=>old.filter(item=>item.id!==event.requestId))
       }else if(event.event==='task.updated'&&event.task){
-        const task=obj(event.task) as Task
+        const task=obj(event.task) as unknown as Task
         setTasks(old=>[task,...old.filter(t=>t.taskId!==task.taskId)])
       }else if(event.event==='session.message'){
         const payload=obj(event.message)
