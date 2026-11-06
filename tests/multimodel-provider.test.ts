@@ -339,3 +339,22 @@ test('MiniMax M3.1 Flash preserves reasoning and requests terminal usage during 
   assert.equal(payload.max_completion_tokens, body.max_tokens)
   assert.equal(payload.max_tokens, undefined)
 })
+
+test('provider errors redact echoed credentials in HTTP bodies, headers and streams', async () => {
+  const route = requireRoute('minimax/MiniMax-M3.1-Flash')
+  const token = 'synthetic-sensitive-provider-credential'
+  const req = () => new Request('https://333-model-bridge.invalid/v1/messages', {
+    method: 'POST', body: JSON.stringify({ ...body, model: 'minimax/MiniMax-M3.1-Flash', stream: true }),
+  })
+  const http = await makeIndependentFetch(route, token, async () =>
+    new Response(JSON.stringify({ error: { message: 'Rejected ' + token } }),
+      { status: 401, headers: { 'x-request-id': token, 'retry-after': '10' } }))(req())
+  assert.equal(http.status, 401)
+  assert.equal(http.headers.get('retry-after'), '10')
+  assert.equal(http.headers.get('request-id'), null)
+  assert.ok(!(await http.text()).includes(token))
+  const sse = await makeIndependentFetch(route, token, async () =>
+    stream({ error: { message: 'Rejected ' + token } }))(req())
+  await assert.rejects(() => sse.text(), error =>
+    error instanceof Error && !error.message.includes(token) && error.message.includes('Rejected'))
+})

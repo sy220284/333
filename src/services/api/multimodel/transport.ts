@@ -6,11 +6,11 @@ import { type AnthropicRequest, toResponses, toChatCompletions } from './convert
 // biome-ignore lint/suspicious/noExplicitAny: Provider wire events have different shapes and are normalized here.
 type ObjectValue = Record<string, any>
 
-function asError(status: number, message: string, upstream?: Headers): Response {
+function asError(status: number, message: string, upstream?: Headers, credential?: string): Response {
   const headers = new Headers({ 'content-type': 'application/json' })
   for (const key of ['retry-after', 'retry-after-ms', 'x-request-id', 'request-id']) {
     const value = upstream?.get(key)
-    if (value !== null && value !== undefined) headers.set(key, value)
+    if (value != null && (!credential || !value.includes(credential))) headers.set(key, value)
   }
   if (!headers.has('request-id') && headers.has('x-request-id')) {
     headers.set('request-id', headers.get('x-request-id')!)
@@ -317,6 +317,7 @@ export function makeIndependentFetch(
   profile?: IndependentModelProfile,
   accountIdentity = bearer,
 ): (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> {
+  const redact = (message: string): string => bearer ? message.replaceAll(bearer, '[redacted]') : message
   return async (input, init) => {
     const request = new Request(input, init)
     const url = new URL(request.url)
@@ -368,8 +369,8 @@ export function makeIndependentFetch(
       method: 'POST', headers, body: JSON.stringify(payload), signal,
     })
     if (!response.ok) {
-      const detail = await response.text()
-      return asError(response.status, `${route.provider} HTTP ${response.status}: ${detail.slice(0, 1500)}`, response.headers)
+      const detail = redact(await response.text())
+      return asError(response.status, `${route.provider} HTTP ${response.status}: ${detail.slice(0, 1500)}`, response.headers, bearer)
     }
     const responseBody = response.body
     if (!responseBody) return asError(502, `${route.provider} returned empty response`)
@@ -406,7 +407,12 @@ export function makeIndependentFetch(
           }
           events.finish(rstate.stopReason ?? cstate.stopReason)
           controller.close()
-        } catch (error) { if (!cancelled) controller.error(error) }
+        } catch (error) {
+          if (!cancelled) {
+            const message = error instanceof Error ? error.message : String(error)
+            controller.error(new Error(redact(message)))
+          }
+        }
       },
     })
     if (!body.stream && route.provider === 'chatgpt') {
