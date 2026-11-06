@@ -88,13 +88,15 @@ export async function call(
   }
   if (verb === 'team-create' && arg && rest.length === 0) {
     const { TeamCreateTool } = await import('../../tools/TeamCreateTool/TeamCreateTool.js')
-    const result = await TeamCreateTool.call({ team_name: arg }, context)
+    if (!context.canUseTool) throw new Error('当前命令上下文缺少工具权限检查接口')
+    const result = await TeamCreateTool.call({ team_name: arg }, context, context.canUseTool, undefined)
     onDone('团队已创建：' + result.data.team_name, { display: 'system' })
     return null
   }
   if (verb === 'team-delete' && !arg) {
     const { TeamDeleteTool } = await import('../../tools/TeamDeleteTool/TeamDeleteTool.js')
-    const result = await TeamDeleteTool.call({}, context)
+    if (!context.canUseTool) throw new Error('当前命令上下文缺少工具权限检查接口')
+    const result = await TeamDeleteTool.call({}, context, context.canUseTool, undefined)
     onDone(result.data.message, { display: 'system' })
     return null
   }
