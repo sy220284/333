@@ -21,7 +21,7 @@ test('317 claimed session rebinds global config, project and settings ownership'
   const oldNodeEnv = process.env.NODE_ENV
   const oldCwd = getOriginalCwd()
   const previousTrustAccepted = getSessionTrustAccepted()
-  const configName = '.claude.json'
+  const configName = '.avenlo.json'
   try {
     writeFileSync(join(a, configName), JSON.stringify({ numStartups: 11 }))
     writeFileSync(join(b, configName), JSON.stringify({ numStartups: 29 }))

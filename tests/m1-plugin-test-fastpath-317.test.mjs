@@ -26,9 +26,9 @@ test('317 plugin test help has a standalone route before the interactive CLI', (
   try {
     const r = execute(['--help'], root)
     assert.equal(r.status, 0, r.stderr)
-    assert.match(r.stdout, /^Usage: claude plugin test \[dir\]/)
+    assert.match(r.stdout, /^Usage: avenlo plugin test \[dir\]/)
     assert.match(r.stdout, /imports its kit from 'claude-code\/testing'/)
-    assert.doesNotMatch(r.stdout, /Usage: claude \[options\]/)
+    assert.doesNotMatch(r.stdout, /Usage: avenlo \[options\]/)
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
@@ -44,7 +44,7 @@ test('317 plugin test dedicated worker rejects a file outside its plugin root', 
     const r = execute(['--file', outside, root], parent)
     assert.equal(r.status, 1, r.stdout + r.stderr)
     assert.match(r.stderr, /plugin test worker file must be inside the plugin directory/)
-    assert.doesNotMatch(r.stdout, /Usage: claude \[options\]/)
+    assert.doesNotMatch(r.stdout, /Usage: avenlo \[options\]/)
   } finally {
     rmSync(parent, { recursive: true, force: true })
   }
@@ -58,7 +58,7 @@ test('317 plugin test folder runs the test handler and reports its real failure'
     const r = execute([root], parent)
     assert.equal(r.status, 1, r.stdout + r.stderr)
     assert.match(r.stderr, /no hooks\/hooks\.json naming one in "modules"/)
-    assert.doesNotMatch(r.stdout, /Usage: claude \[options\]/)
+    assert.doesNotMatch(r.stdout, /Usage: avenlo \[options\]/)
   } finally {
     rmSync(parent, { recursive: true, force: true })
   }

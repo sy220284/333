@@ -30,7 +30,7 @@ export function CondensedLogo(): ReactNode {
   const agentName = agent ?? agentNameFromSettings
   // Calculate available width for text content
   // Account for: Avenlo brand mark width (12 chars) + gap (2) + padding (2) = 18 chars
-  const textWidth = Math.max(columns - 15, 20)
+  const textWidth = Math.max(columns - 18, 20)
 
   // Truncate version to fit within available width, accounting for "Avenlo v" prefix
   const versionPrefix = 'Avenlo v'
