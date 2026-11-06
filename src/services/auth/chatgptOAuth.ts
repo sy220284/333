@@ -214,6 +214,12 @@ async function validateIDToken(token: string, clientId: string, nonce: string): 
 function scopeGranted(scopes: string): boolean {
   return scopes.split(/\s+/).includes('chatgpt.tokens.use.direct')
 }
+class InvalidChatGPTRefreshTokenError extends Error {
+  constructor(code: string) {
+    super(`ChatGPT refresh credential invalid (${code}); reauthorize the saved account`)
+    this.name = 'InvalidChatGPTRefreshTokenError'
+  }
+}
 async function refreshCredentials(current: Credential): Promise<Credential> {
   const params = new URLSearchParams({
     grant_type: 'refresh_token', client_id: current.client_id,
@@ -228,7 +234,7 @@ async function refreshCredentials(current: Credential): Promise<Credential> {
     const code = typeof diagnostic.error === 'string' ? diagnostic.error : diagnostic.code
     const invalid = ['invalid_grant', 'invalid_refresh_token', 'token_expired',
       'refresh_token_expired', 'refresh_token_invalidated', 'refresh_token_reused'].includes(code ?? '')
-    if (invalid) throw new Error(`ChatGPT refresh credential invalid (${code}); reauthorize the saved account`)
+    if (invalid) throw new InvalidChatGPTRefreshTokenError(code ?? 'invalid_grant')
     throw new Error(`ChatGPT refresh HTTP ${response.status}${code ? ` (${code})` : ''}; credentials retained`)
   }
   const data = await response.json() as Record<string, unknown>
@@ -236,7 +242,8 @@ async function refreshCredentials(current: Credential): Promise<Credential> {
     throw new Error('ChatGPT refresh response missing access or rotating refresh token')
   }
   const scopes = typeof data.scope === 'string' ? data.scope : current.scope
-  if (!scopeGranted(scopes)) throw new Error('ChatGPT plan access permission was revoked')
+  // Preserve a refreshed identity-only grant, and mark plan use disabled.
+  // A rotated refresh token must be written even when plan consent changed.
   const updated: Credential = {
     ...current, access_token: data.access_token, refresh_token: data.refresh_token,
     scope: scopes, expires_at: Date.now() + Number(data.expires_in ?? 3600) * 1000,
@@ -298,10 +305,25 @@ export async function getChatGPTAuthorization(
       throw new Error('ChatGPT account changed while the request was pending')
     }
     if (usable(current)) return { token: current.access_token, account: accountIdentity(current) }
-    const selected = await refreshCredentials(current)
+    let selected: Credential
+    try {
+      selected = await refreshCredentials(current)
+    } catch (error) {
+      if (error instanceof InvalidChatGPTRefreshTokenError) {
+        // A terminal refresh error invalidates only this registered account's
+        // tokens. Keep the issued client ID and verified identity for OAuth.
+        if (!entry) throw new Error('ChatGPT registration disappeared during refresh')
+        delete entry.credential
+        await saveAccounts(store)
+      }
+      throw error
+    }
     if (!entry) throw new Error('ChatGPT registration disappeared during refresh')
     entry.credential = selected
     await saveAccounts(store)
+    if (!scopeGranted(selected.scope)) {
+      throw new Error('ChatGPT plan usage is disabled. Reauthorize or use an API key.')
+    }
     return { token: selected.access_token, account: accountIdentity(selected) }
   })
 }
