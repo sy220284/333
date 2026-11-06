@@ -121,7 +121,7 @@ const pkg = {
   private: true,
   description: `摇摇车 independent remote-model coding agent, compatible with release ${releaseVersion}`,
   type: 'module',
-  bin: { yaoyaoche: './launcher.cjs', 'yaoyaoche-desktop': './' + desktopNativeName },
+  bin: { yaoyaoche: './launcher.cjs', 'yaoyaoche-desktop': `./${desktopNativeName}` },
   engines: { node: '>=18' }
 };
 writeFileSync(join(dist,'package.json'), `${JSON.stringify(pkg,null,2)}\n`);

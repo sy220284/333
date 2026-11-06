@@ -10,7 +10,7 @@ const executable = join(dist, nativeName)
 const desktopName = process.platform === 'win32' ? 'desktopHost.exe' : 'desktopHost'
 const desktopExecutable = join(dist, desktopName)
 const desktopSource = join(dist, 'desktopHost.js')
-if (!existsSync(desktopSource)) throw Error('Desktop source bundle missing: ' + desktopSource)
+if (!existsSync(desktopSource)) throw Error(`Desktop source bundle missing: ${desktopSource}`)
 const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
 
 if (!/^\d+\.\d+\.\d+$/.test(version)) throw Error('Invalid target release version')
@@ -37,10 +37,10 @@ const builtDesktop = spawnSync('bun', ['build', 'dist/desktopHost.js', '--compil
   cwd: root, stdio: 'inherit', windowsHide: true, timeout: 180_000,
 })
 if (builtDesktop.error) throw builtDesktop.error
-if (builtDesktop.status !== 0) throw Error('Desktop host standalone compilation failed with exit ' + builtDesktop.status)
+if (builtDesktop.status !== 0) throw Error(`Desktop host standalone compilation failed with exit ${builtDesktop.status}`)
 if (!existsSync(desktopExecutable) || !statSync(desktopExecutable).isFile() ||
   statSync(desktopExecutable).size < 10_000_000) {
-  throw Error('Desktop host native executable is invalid: ' + desktopExecutable)
+  throw Error(`Desktop host native executable is invalid: ${desktopExecutable}`)
 }
 const handshake = spawnSync(desktopExecutable, [], {
   cwd: root, encoding: 'utf8',
@@ -48,7 +48,7 @@ const handshake = spawnSync(desktopExecutable, [], {
   timeout: 30_000, maxBuffer: 1024 * 1024, windowsHide: true,
 })
 if (handshake.error) throw handshake.error
-if (handshake.status !== 0) throw Error('Desktop host handshake failed: ' + handshake.stderr)
+if (handshake.status !== 0) throw Error(`Desktop host handshake failed: ${handshake.stderr}`)
 const greeting = JSON.parse(handshake.stdout.trim())
 if (!greeting.ok || greeting.id !== 'packaging-probe' || greeting.result?.protocolVersion !== 1) {
   throw Error('Desktop host returned an invalid versioned JSON protocol handshake')
@@ -68,4 +68,4 @@ function verify(args, expected) {
 }
 verify(['--version'], stdout => stdout.trim() === `${version} (摇摇车)`)
 verify(['--help'], stdout => stdout.includes('Usage:') && stdout.includes('--print'))
-console.log('Verified independent CLI and desktop host binaries for ' + process.platform + ': ' + executable + ', ' + desktopExecutable)
+console.log(`Verified independent CLI and desktop host binaries for ${process.platform}: ${executable}, ${desktopExecutable}`)

@@ -292,7 +292,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
   async function closeSessionInternal(id: string) {
     const entry = sessions.get(id)
     if (!entry) return
-    if (entry.closing) throw new Error('Desktop session is already closing: ' + id)
+    if (entry.closing) throw new Error(`Desktop session is already closing: ${id}`)
     entry.closing = true
     entry.cancelSend?.(new Error('Desktop session closed during send'))
     try {

@@ -44,8 +44,8 @@ test('release vendor inventory matches exactly the current source tree', () => {
   assert.deepEqual(indexedFiles, sourceFiles);
   assert.ok(existsSync(join(dist,'cli.js')));
   for (const entry of ['desktopHost.js', 'desktopHost.js.map']) {
-    assert.ok(existsSync(join(dist, entry)), 'Desktop host missing: ' + entry);
-    assert.ok(metadata.files.some(file => file.path === entry), 'Desktop host missing integrity entry: ' + entry);
+    assert.ok(existsSync(join(dist, entry)), `Desktop host missing: ${entry}`);
+    assert.ok(metadata.files.some(file => file.path === entry), `Desktop host missing integrity entry: ${entry}`);
   }
   assert.ok(existsSync(join(dist,'desktopHost.js')));
   assert.ok(existsSync(join(dist,'launcher.cjs')));
@@ -188,10 +188,10 @@ test('packaged desktop bridge is SHA-256 verified and serves its protocol withou
   const native = process.platform === 'win32' ? 'desktopHost.exe' : 'desktopHost';
   for (const name of ['desktopHost.js', 'desktopHost.js.map', native]) {
     const path = join(dist, name);
-    assert.ok(existsSync(path), 'Missing desktop release artifact: ' + name);
+    assert.ok(existsSync(path), `Missing desktop release artifact: ${name}`);
     const bytes = readFileSync(path);
     const entry = metadata.files.find(file => file.path === name);
-    assert.ok(entry, 'Desktop artifact missing from integrity manifest: ' + name);
+    assert.ok(entry, `Desktop artifact missing from integrity manifest: ${name}`);
     assert.equal(entry.bytes, bytes.length);
     assert.equal(entry.sha256, createHash('sha256').update(bytes).digest('hex'));
   }

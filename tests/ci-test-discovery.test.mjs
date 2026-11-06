@@ -69,7 +69,7 @@ test('官方二进制对照只在专用任务执行，补充测试可排除重�
 
 test('GitHub installation integration uses Node-native TypeScript stripping rather than Bun loader', () => {
   const file = 'tests/github-integration-flow.test.mjs'
-  const source = readFileSync(new URL('../' + file, import.meta.url), 'utf8')
+  const source = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8')
   assert.match(source, /stripTypeScriptTypes/)
   assert.equal(runtimeForTest(file, source), 'node')
 })
