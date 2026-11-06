@@ -50,7 +50,7 @@ function sections(output) {
   return {flags:[...new Set(flags)].sort(),commands:[...new Set(commands)].sort()};
 }
 test('rebuilt CLI uses target version while original source is retained as old baseline', () => {
-  assert.equal(compiledHelp(['--version']).trim(), `${targetVersion} (Qerivon)`);
+  assert.equal(compiledHelp(['--version']).trim(), `${targetVersion} (摇摇车)`);
   assert.equal(originalHelp(['--version']).trim(), '2.1.88 (Claude Code)');
 });
 // The 2.1.88 CLI is retained for historical compatibility checks only.
@@ -61,7 +61,7 @@ const official317 = JSON.parse(
 );
 assert.equal(official317.version, targetVersion);
 
-// Qerivon's additive interfaces are explicitly documented here. The official
+// 摇摇车's additive interfaces are explicitly documented here. The official
 // 2.1.317 command and flag contract is still compared exhaustively; only
 // these intentional additions may differ from the Claude reference.
 const independentCommands = {
@@ -71,7 +71,7 @@ const independentCommands = {
 function verifyBaseAndExtensions(actual, official, commandLine) {
   const additions = independentCommands[commandLine] ?? [];
   for (const entry of additions) {
-    assert.ok(actual.commands.includes(entry), `Qerivon independent command absent: ${entry}`);
+    assert.ok(actual.commands.includes(entry), `摇摇车 independent command absent: ${entry}`);
     assert.equal(actual.commands.filter(name => name === entry).length, 1);
   }
   assert.deepEqual(actual.flags, official.flags,
@@ -123,8 +123,8 @@ test('317 hidden permission callback reaches the existing permission consumer', 
 });
 
 test('legacy -d2e alias is accepted by reconstructed Commander configuration', () => {
-  assert.match(compiledHelp(['-d2e','--help']), /Usage: qerivon/);
-  assert.match(compiledHelp(['--debug-to-stderr','--help']), /Usage: qerivon/);
+  assert.match(compiledHelp(['-d2e','--help']), /Usage: yaoyaoche/);
+  assert.match(compiledHelp(['--debug-to-stderr','--help']), /Usage: yaoyaoche/);
 });
 
 test('bootstrap route classification ignores literal prompt words after --', async () => {
@@ -141,7 +141,7 @@ test('bootstrap route classification ignores literal prompt words after --', asy
 
 test('2.1.317 hidden permission callback flag is accepted and reaches the SDK route', () => {
   const help = compiledHelp(['--permission-prompt-tool', 'mcp__permission', '--help'])
-  assert.match(help, /Usage: qerivon/)
+  assert.match(help, /Usage: yaoyaoche/)
   assert.equal(sections(help).flags.includes('--permission-prompt-tool'), false,
     'the upstream hides this SDK-only flag from public help')
   if (process.platform === 'linux' && process.env.CLAUDE_TARGET_X64) {

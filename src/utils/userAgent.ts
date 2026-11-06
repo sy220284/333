@@ -6,5 +6,5 @@
  */
 
 export function getClaudeCodeUserAgent(): string {
-  return `qerivon/${MACRO.VERSION}`
+  return `yaoyaoche/${MACRO.VERSION}`
 }
