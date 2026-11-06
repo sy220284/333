@@ -113,7 +113,7 @@ export async function getAnthropicClient({
   if (independent) {
     let authorization = independent.provider === 'chatgpt' ? await getChatGPTAuthorization() : undefined
     const upstream = fetchOverride ?? globalThis.fetch
-    const profile = getIndependentProfile(model!)
+    const profile = getIndependentProfile(`${independent.provider}/${independent.model}`)
     const makeFetch = (token: string, account?: string) => makeIndependentFetch(independent, token, upstream, profile, account)
     const fetchIndependent = authorization ? undefined : makeFetch(getIndependentApiKey(independent))
     return new Anthropic({
@@ -123,7 +123,8 @@ export async function getAnthropicClient({
       timeout: parseInt(process.env.API_TIMEOUT_MS || String(600 * 1000), 10),
       fetch: fetchIndependent ?? (async (input, init) => {
         const request = new Request(input, init)
-        const sent = authorization!
+        const sent = authorization
+        if (!sent) throw new Error('ChatGPT authorization is missing from the current request')
         const response = await makeFetch(sent.token, sent.account)(request.clone())
         if (response.status !== 401) return response
         await response.body?.cancel()
