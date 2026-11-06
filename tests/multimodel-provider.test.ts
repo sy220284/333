@@ -419,6 +419,32 @@ test('Responses encrypted reasoning replays only on the same connection and mode
   }
 })
 
+test('replay HMAC isolates API keys and remains stable after OAuth token refresh', async () => {
+  const route = requireRoute('openai/test')
+  const encrypted = { type: 'reasoning', id: 'rs_replay', summary: [], encrypted_content: 'opaque' }
+  const req = () => new Request('https://333-model-bridge.invalid/v1/messages', {
+    method: 'POST', body: JSON.stringify({ ...body, model: 'openai/test', stream: false }),
+  })
+  const signatureFor = async (bearer: string, identity?: string) => {
+    const response = await makeIndependentFetch(route, bearer, async () =>
+      Response.json({ status: 'completed', output: [encrypted] }), undefined, identity)(req())
+    const result = await response.json() as { content: Array<{ type: string; data?: string }> }
+    const replay = result.content.find(part => part.type === 'redacted_thinking')
+    assert.ok(replay?.data)
+    return replay.data.split(':').slice(0, 2).join(':')
+  }
+  const original = await signatureFor('sk-a-test-secret')
+  assert.equal(original, await signatureFor('sk-a-test-secret'))
+  assert.notEqual(original, await signatureFor('sk-b-test-secret'))
+  assert.equal(original.includes('sk-a-test-secret'), false)
+  const accountA = '["client","user","workspace-A"]'
+  const accountB = '["client","user","workspace-B"]'
+  assert.equal(await signatureFor('oauth-token-before', accountA),
+    await signatureFor('oauth-token-after', accountA))
+  assert.notEqual(await signatureFor('oauth-token-after', accountA),
+    await signatureFor('oauth-token-after', accountB))
+})
+
 test('MiniMax M3.1 Flash preserves reasoning and requests terminal usage during tool turns', () => {
   const signature = '333-replay:current'
   const request: AnthropicRequest = { ...body, messages: [
