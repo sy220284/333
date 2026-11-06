@@ -4,6 +4,7 @@ import type { InternalOptions, SDKSessionOptions } from '../../entrypoints/sdk/r
 import { createStore } from '../../state/store.js'
 import { createConversationMessageStore } from './messageStore.js'
 import { createSdkPermissionBroker } from './permissionBroker.js'
+import { createHostControlBroker } from './hostControlBroker.js'
 
 export type HeadlessSessionPhase = 'idle' | 'running' | 'requires_action' | 'completed' | 'cancelled' | 'failed' | 'closed'
 export type HeadlessSessionSnapshot = Readonly<{ phase: HeadlessSessionPhase; error?: string }>
@@ -17,7 +18,12 @@ export function createHeadlessConversationSession(
   launch: typeof createSessionRuntime317 = createSessionRuntime317,
 ) {
   const permissions = createSdkPermissionBroker()
-  const runtime = launch({ ...options, canUseTool: options.canUseTool ?? permissions.canUseTool }, resume)
+  const hostControls = createHostControlBroker()
+  const runtime = launch({
+    ...options,
+    canUseTool: options.canUseTool ?? permissions.canUseTool,
+    onControlRequest: options.onControlRequest ?? hostControls.onControlRequest,
+  }, resume)
   const messages = createConversationMessageStore<SDKMessage>()
   const state = createStore<HeadlessSessionSnapshot>({ phase: 'idle' })
   let busy = false
@@ -77,6 +83,7 @@ export function createHeadlessConversationSession(
   }
   const interrupt = async (): Promise<void> => {
     if (closed) throw new Error('Session is closed')
+    hostControls.cancelPending('Interrupted by user')
     if (busy) await runtime.control({ subtype: 'interrupt' })
   }
   const close = (): void => {
@@ -84,6 +91,7 @@ export function createHeadlessConversationSession(
     closed = true
     unsubscribe()
     permissions.close()
+    hostControls.close()
     runtime.close()
     setPhase('closed')
   }
@@ -95,6 +103,7 @@ export function createHeadlessConversationSession(
     sessionId: runtime.sessionId,
     initialization: runtime.initialization,
     permissions,
+    hostControls,
     messages,
     state,
     send,
