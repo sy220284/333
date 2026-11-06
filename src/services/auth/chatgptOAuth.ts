@@ -8,7 +8,7 @@ import { createHash, createPublicKey, randomBytes, randomUUID, verify as verifyS
 import { createServer } from 'node:http'
 import { promises as fs, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { spawn } from 'node:child_process'
 
 const AUTHORITY = 'https://auth.openai.com'
@@ -21,6 +21,7 @@ const FILE = join(DIR, 'chatgpt.json')
 const HOST_FILE = join(DIR, 'host.json')
 const ACCOUNT_FILE = join(DIR, 'chatgpt-registration.json')
 const ACCOUNTS_FILE = join(DIR, 'chatgpt-accounts.json')
+const TOKENS_DIR = join(DIR, 'chatgpt-tokens')
 type Credential = {
   client_id: string
   ext_agent_host_id: string
@@ -65,9 +66,22 @@ function validateAccountStore(value: AccountStore): AccountStore {
   if (value.active && !identities.has(value.active)) throw new Error('Selected ChatGPT account is missing')
   return value
 }
+function credentialFile(entry: Pick<Registration, 'client_id' | 'subject' | 'workspace_id'>): string {
+  // The filename is derived only from stable registration identity, never a token.
+  const key = createHash('sha256').update(registrationIdentity(entry)).digest('hex')
+  return join(TOKENS_DIR, `${key}.json`)
+}
 async function readAccounts(): Promise<AccountStore> {
   const stored = await readJSON<AccountStore>(ACCOUNTS_FILE)
-  if (stored) return validateAccountStore(stored)
+  if (stored) {
+    validateAccountStore(stored)
+    const accounts = await Promise.all(stored.accounts.map(async entry => {
+      const credential = await readJSON<Credential>(credentialFile(entry))
+      return { ...entry, ...(credential ? { credential } :
+        entry.credential ? { credential: entry.credential } : {}) }
+    }))
+    return validateAccountStore({ ...stored, accounts })
+  }
   // Import the original single-account credential without discarding it.
   const legacy = await readJSON<Credential>(FILE)
   const oldRegistration = await readJSON<Registration>(ACCOUNT_FILE)
@@ -80,7 +94,17 @@ async function readAccounts(): Promise<AccountStore> {
 }
 async function saveAccounts(value: AccountStore): Promise<void> {
   validateAccountStore(value)
-  await writePrivate(ACCOUNTS_FILE, value)
+  // Each issued client registration owns a separate 0600 token record.
+  // Index metadata has no access/refresh/ID tokens; write tokens first and
+  // the index last so a new active account never points at an absent record.
+  for (const entry of value.accounts) {
+    if (entry.credential) await writePrivate(credentialFile(entry), entry.credential)
+    else await fs.rm(credentialFile(entry), { force: true })
+  }
+  await writePrivate(ACCOUNTS_FILE, {
+    schema: 2, active: value.active,
+    accounts: value.accounts.map(({ credential: _credential, ...entry }) => entry),
+  })
   // The new atomic index takes precedence; discard duplicate legacy tokens.
   await fs.rm(FILE, { force: true })
   await fs.rm(ACCOUNT_FILE, { force: true })
@@ -120,7 +144,7 @@ async function readJSON<T>(file: string): Promise<T | null> {
   }
 }
 async function writePrivate(file: string, data: unknown): Promise<void> {
-  await fs.mkdir(DIR, { recursive: true, mode: 0o700 })
+  await fs.mkdir(dirname(file), { recursive: true, mode: 0o700 })
   const temporary = `${file}.${randomUUID()}.tmp`
   try {
     await fs.writeFile(temporary, JSON.stringify(data, null, 2), { mode: 0o600, flag: 'wx' })
@@ -428,8 +452,14 @@ export function getSavedChatGPTAccount(): string | undefined {
   }
   const saved = readSync<AccountStore>(ACCOUNTS_FILE)
   if (saved) {
-    const active = activeRegistration(validateAccountStore(saved))
-    const credential = active?.credential
+    validateAccountStore(saved)
+    const active = activeRegistration(saved)
+    if (!active) return undefined
+    const credential = readSync<Credential>(credentialFile(active)) ?? active.credential
+    if (credential && (credential.client_id !== active.client_id ||
+      credential.subject !== active.subject || credential.workspace_id !== active.workspace_id)) {
+      throw new Error('ChatGPT credential identity changed on disk')
+    }
     return credential?.access_token && credential.refresh_token &&
       scopeGranted(credential.scope) ? accountIdentity(credential) : undefined
   }
