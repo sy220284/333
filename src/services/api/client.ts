@@ -420,7 +420,7 @@ function buildFetch(
     const headers = native317RequestHeaders(input, init)
     // The Anthropic SDK adds optional platform/runtime fingerprint headers.
     // Keep model authentication and beta negotiation, but omit SDK diagnostics.
-    for (const name of headers.keys()) {
+    for (const name of [...headers.keys()]) {
       if (name.toLowerCase().startsWith('x-stainless-')) headers.delete(name)
     }
     const request = getAPIProvider() === 'firstParty'
