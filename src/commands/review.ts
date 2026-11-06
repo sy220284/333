@@ -26,8 +26,8 @@ async function evidence(mode: ReviewMode, target: string): Promise<string> {
     const ref = await execFileNoThrow('git',['rev-parse','--verify',`${target}^{commit}`],{timeout:8000,useCwd:true})
     if (ref.code !== 0) throw new Error(`找不到指定的 Git 比对基准：${target}`)
     diffArgs = ['diff',`${target}...HEAD`,'--']
-    changedArgs = ['diff',target+'...HEAD','--name-only','--']
-    checkArgs = ['diff',target+'...HEAD','--check']
+    changedArgs = ['diff',`${target}...HEAD`,'--name-only','--']
+    checkArgs = ['diff',`${target}...HEAD`,'--check']
   } else {
     const base = await execFileNoThrow('git',['symbolic-ref','refs/remotes/origin/HEAD'],{timeout:8000,useCwd:true})
     let ref = base.code===0 ? base.stdout.trim() : ''
