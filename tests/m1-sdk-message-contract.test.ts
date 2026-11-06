@@ -46,5 +46,6 @@ test('2.1.317 API error envelope keeps success subtype but is_error=true', () =>
   }
   expect(SDKResultErrorSchema().safeParse(event).success).toBe(true)
   expect(SDKResultMessageSchema().safeParse(event).success).toBe(true)
-  expect(SDKResultMessageSchema().safeParse({ ...event, is_error: false }).success).toBe(false)
+  expect(SDKResultErrorSchema().safeParse({ ...event, is_error: false }).success).toBe(false)
+  expect(SDKResultMessageSchema().safeParse({ ...event, is_error: false, terminal_reason: 'completed' }).success).toBe(true)
 })
