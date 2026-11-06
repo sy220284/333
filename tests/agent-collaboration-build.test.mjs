@@ -82,3 +82,16 @@ test('智能体名录可发现同项目多个独立团队但不暴露为可直�
   assert.match(tool,/unreachableFromHere: true/)
   assert.match(tool,/acceptsPeerMessages: false/)
 })
+
+test('自愿启用的持续任务唤醒具备完整构建入口与可中断 Sleep',()=>{
+  const build = read('build/rebuild.mjs')
+  const hook = read('src/proactive/useProactive.ts')
+  const sleep = read('src/tools/SleepTool/SleepTool.ts')
+  const center = read('src/commands/agents/agents.tsx')
+  assert.match(build, /'COORDINATOR_MODE', 'PROACTIVE'/)
+  assert.match(center, /action === 'run'/)
+  assert.match(center, /action === 'halt'/)
+  assert.match(hook, /mission.status !== 'active'/)
+  assert.match(hook, /cancelled = true; clearTimeout\(timer\)/)
+  assert.match(sleep, /signal.addEventListener\('abort', cancel/)
+})

@@ -11,6 +11,7 @@ import { Box, Text } from '../../ink.js'
 import { getActiveAgentMode, setAgentMode, type AgentMode } from '../../utils/agentMode.js'
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js'
 import { getCwd } from '../../utils/cwd.js'
+import { activateProactive, deactivateProactive, isProactiveActive, pauseProactive, resumeProactive } from '../../proactive/index.js'
 import { createMission, formatMission, getMission, getSelectedMissionId, listMissions, selectMission, updateMissionStatus, saveMissionCheckpoint, linkMissionAssignment } from '../../utils/agentMissions.js'
 
 type View = 'home' | 'definitions' | 'tasks' | 'workflows'
@@ -108,13 +109,32 @@ export async function call(
       return null
     }
     if (action === 'clear' && !value) {
+      deactivateProactive()
       selectMission()
-      onDone('已取消当前任务选择，原有档案仍保存在本地。', { display: 'system' })
+      onDone('已停止自动推进并取消当前任务选择，原有档案仍保存在本地。', { display: 'system' })
       return null
     }
     const selected = getSelectedMissionId()
     if (selected && action === 'show' && !value) {
       onDone(formatMission(await getMission(selected)), { display: 'system' })
+      return null
+    }
+    if (selected && action === 'halt' && !value) {
+      deactivateProactive()
+      onDone('已停止本会话的持续唤醒；已运行的工具任务继续按 /tasks 管理，长期任务档案保留。', { display: 'system' })
+      return null
+    }
+    if (selected && action === 'run' && !value) {
+      const mission = await getMission(selected)
+      if (mission.status !== 'active') throw new Error('请先执行 /agents mission resume，恢复长期任务授权')
+      setAgentMode('super')
+      if (isProactiveActive()) resumeProactive()
+      else activateProactive('command')
+      onDone(`持续执行已启动（仅本地当前进程）：${mission.id}；使用 /agents mission halt 停止自动唤醒。`, {
+        display: 'system',
+        nextInput: `继续已授权的超级智能体长期任务 ${mission.id}。目标：${mission.objective}。已有进度：${mission.checkpoint || '无'}。优先核实关联执行结果，再处理未完成事项；所有外部修改继续服从工具权限审批，工作结束后记录检查点。`,
+        submitNextInput: true,
+      })
       return null
     }
     if (selected && action === 'continue') {
@@ -137,7 +157,10 @@ export async function call(
     if (selected && ['pause', 'resume', 'done'].includes(action) && !value) {
       const status = action === 'pause' ? 'paused' : action === 'resume' ? 'active' : 'completed'
       const mission = await updateMissionStatus(selected, status)
-      onDone(`任务状态已更新：${mission.id} → ${mission.status}${status === 'paused' ? '\n已暂停新执行关联；现有 Agent 和 Workflow 仍按其独立生命周期运行，可从 /tasks 管理。' : ''}`, { display: 'system' })
+      if (status === 'paused') pauseProactive()
+      if (status === 'completed') deactivateProactive()
+      if (status === 'active' && isProactiveActive()) resumeProactive()
+      onDone(`任务状态已更新：${mission.id} → ${mission.status}${status === 'paused' ? '\n已暂停新执行关联和自动唤醒；现有 Agent 和 Workflow 可从 /tasks 管理。' : ''}`, { display: 'system' })
       return null
     }
     if (selected && action === 'note' && value) {
@@ -153,7 +176,7 @@ export async function call(
       onDone(`已关联执行任务：${taskId}`, { display: 'system' })
       return null
     }
-    onDone('用法：/agents mission new <目标>；/agents missions；/agents mission use <ID>；/agents mission show|pause|resume|done|clear|continue [新要求]；/agents mission note <阶段记录>；/agents mission attach <agent|team|workflow> <任务ID> <标题>。', { display: 'system' })
+    onDone('用法：/agents mission new <目标>；/agents missions；/agents mission use <ID>；/agents mission show|pause|resume|done|clear|continue [新要求]|run|halt；/agents mission note <阶段记录>；/agents mission attach <agent|team|workflow> <任务ID> <标题>。', { display: 'system' })
     return null
   }
   if (verb === 'list') {
