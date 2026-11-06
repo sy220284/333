@@ -126,6 +126,10 @@ async function changeMission(
   try {
     const previous = await getMission(id, root)
     const candidate = transform(previous)
+    // Transformations return the original record for an idempotent update.
+    // Preserve its revision and timestamp: mission wake-up policy measures
+    // verified changes, so repeat reports must not fabricate progress.
+    if (candidate === previous) return previous
     const next = MissionSchema.parse({
       ...candidate,
       id: previous.id,
@@ -216,7 +220,9 @@ export async function updateMissionStatus(id: string, status: AgentMissionStatus
 }
 export async function saveMissionCheckpoint(id: string, checkpoint: string, root = defaultRoot()): Promise<AgentMission> {
   if (!checkpoint.trim() || checkpoint.length > 6000) throw new Error('阶段记录需要 1–6000 个字符')
-  return changeMission(id, mission => ({ ...mission, checkpoint: checkpoint.trim() }), root)
+  const normalized = checkpoint.trim()
+  return changeMission(id, mission =>
+    mission.checkpoint === normalized ? mission : { ...mission, checkpoint: normalized }, root)
 }
 export async function linkMissionAssignment(
   id: string, assignmentId: string, kind: MissionAssignmentKind, title: string, root = defaultRoot(),
