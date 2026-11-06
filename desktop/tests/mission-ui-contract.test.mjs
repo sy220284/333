@@ -11,7 +11,7 @@ test('桌面安全网关完整放行工作项队列与人工审核方法', () =>
   assert.ok(main.includes("'agents.members'"), '桌面IPC缺少真实团队成员查询')
   assert.ok(protocol.includes("request('agents.members'"), '协议缺少团队成员查询')
   for (const action of [
-    'list', 'enqueue', 'start', 'runBatch', 'approve', 'retry', 'recover', 'cancel',
+    'list', 'enqueue', 'start', 'runBatch', 'runQueue', 'haltQueue', 'queueStatus', 'approve', 'retry', 'recover', 'cancel',
   ]) {
     assert.ok(main.includes(`'missions.jobs.${action}'`), `Electron IPC 未开放 ${action}`)
     assert.ok(protocol.includes(`request('missions.jobs.${action}'`), `后端协议缺少 ${action}`)
@@ -23,6 +23,9 @@ test('桌面长期任务工作台提供真实执行入口与安全状态动作',
   assert.match(app, /missions\.jobs\.list/)
   assert.match(app, /missions\.jobs\.enqueue/)
   assert.match(app, /missions\.jobs\.runBatch/)
+  assert.match(app, /missions\.jobs\.runQueue/)
+  assert.match(app, /missions\.jobs\.haltQueue/)
+  assert.match(app, /missionQueueActive/)
   assert.match(app, /missions\.jobs\.start/)
   assert.match(app, /missions\.jobs\.approve/)
   assert.match(app, /missions\.jobs\.retry/)
