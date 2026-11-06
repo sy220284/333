@@ -470,7 +470,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
       const result = task.isUltraplan || task.isLongRunning ? undefined : accumulatedLog.findLast(msg => msg.type === 'result');
 
       const newStatus = result
-        ? result.subtype === 'success' ? 'completed' as const : 'failed' as const
+        ? result.subtype === 'success' && result.is_error !== true ? 'completed' as const : 'failed' as const
         : accumulatedLog.length > 0 ? 'running' as const : 'starting' as const;
 
       // Update task state. Guard against terminal states — if stopTask raced
@@ -507,7 +507,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
 
       // Send notification if task completed or timed out
       if (result) {
-        const finalStatus = result && result.subtype !== 'success' ? 'failed' : 'completed';
+        const finalStatus = result && (result.subtype !== 'success' || result.is_error === true) ? 'failed' : 'completed';
 
         enqueueRemoteNotification(taskId, task.title, finalStatus, context.setAppState, task.toolUseId);
         void evictTaskOutput(taskId);

@@ -168,8 +168,14 @@ export function getModelMaxOutputTokens(model: string): {
 } {
   if (resolveIndependentModel(model)) {
     const profile = getIndependentProfile(model)
-    const maximum = profile?.maxOutputTokens ?? 4_096
-    return { default: Math.min(maximum, 8_192), upperLimit: maximum }
+    // Prefer the provider's published model profile. The M3.1 Flash
+    // 512K ceiling is a documented reference if /models omits that field.
+    const route = resolveIndependentModel(model)!
+    const referenceMaximum = route.provider === 'minimax' &&
+      /^minimax-m3\.1-flash$/i.test(route.model) ? 524_288 : undefined
+    const maximum = profile?.maxOutputTokens ?? referenceMaximum ?? 4_096
+    // Reasoning tokens share the output budget; reserve enough for tools.
+    return { default: Math.min(maximum, 32_768), upperLimit: maximum }
   }
   let defaultTokens: number
   let upperLimit: number

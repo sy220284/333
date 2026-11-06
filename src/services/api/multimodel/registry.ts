@@ -109,8 +109,16 @@ export async function discoverIndependentModelDetails(
     if (!id || id.length > 300 || isRemovedIndependentModel(`${provider}/${id}`) ||
         Array.from(id).some(character => character.charCodeAt(0) < 32)) return []
     const top = typeof entry.top_provider === 'object' && entry.top_provider !== null ? entry.top_provider : {}
-    const contextWindow = positiveInteger(entry.context_length ?? entry.context_window ?? entry.max_input_tokens)
-    const maxOutputTokens = positiveInteger(entry.max_output_tokens ?? entry.max_completion_tokens ?? top.max_completion_tokens)
+    const limits = typeof entry.limits === 'object' && entry.limits !== null ? entry.limits : {}
+    const capabilities = typeof entry.capabilities === 'object' && entry.capabilities !== null ? entry.capabilities : {}
+    // max_input_tokens is an input-only limit, not the full context window.
+    const contextWindow = positiveInteger(
+      entry.context_window ?? entry.context_length ?? entry.max_context_tokens ??
+      entry.max_model_len ?? limits.context_window ?? capabilities.context_window)
+    const maxOutputTokens = positiveInteger(
+      entry.max_output_tokens ?? entry.max_completion_tokens ?? entry.max_tokens ??
+      limits.max_output_tokens ?? limits.max_completion_tokens ??
+      top.max_output_tokens ?? top.max_completion_tokens)
     const modalities: unknown = entry.input_modalities ?? entry.architecture?.input_modalities
     // The DeepSeek /models contract publishes authoritative effort levels
     // per model, including updates which cannot be inferred from model names.

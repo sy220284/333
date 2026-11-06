@@ -3161,6 +3161,10 @@ async function run(): Promise<CommanderCommand> {
     const { getSavedCapabilityReport } = await import('./services/api/multimodel/capabilityProbe.js');
     process.stdout.write(`${JSON.stringify({
       model, profile: getIndependentProfile(model) ?? null,
+      effectiveLimits: await (async () => {
+        const { getContextWindowForModel, getModelMaxOutputTokens } = await import('./utils/context.js');
+        return { contextWindow: getContextWindowForModel(model), output: getModelMaxOutputTokens(model) };
+      })(),
       lastProbe: getSavedCapabilityReport(model) ?? null,
     }, null, 2)}\n`);
   });
@@ -3273,7 +3277,14 @@ async function run(): Promise<CommanderCommand> {
         key = text.trimEnd();
       }
       await setProviderApiKey(checkedProvider, key);
-      process.stdout.write(`已保存 ${provider} 的本机 API Key\n`);
+      process.stdout.write(`已保存 ${provider} 的本机 API Key；正在查询服务商模型参数…\n`);
+      const { refreshProviderModels } = await import('./services/api/multimodel/catalog.js');
+      try {
+        const models = await refreshProviderModels(checkedProvider);
+        process.stdout.write(`已查询 ${models.length} 个模型并保存服务端公布的能力参数\n`);
+      } catch (error) {
+        throw new Error(`API Key 已保存，模型能力查询失败：${error instanceof Error ? error.message : String(error)}；请检查端点并执行 models refresh ${checkedProvider}`);
+      }
     });
   providerKeys.command('list').description('列出已配置服务商（不显示密钥）').action(async () => {
     const { listProviderApiKeyAccounts } = await import('./services/auth/apiKeyVault.js');
@@ -3300,6 +3311,14 @@ async function run(): Promise<CommanderCommand> {
       process.stdout.write(`ChatGPT 已登录：${identity.email ?? identity.subject}\n`);
       if (!identity.planEnabled) {
         process.stdout.write('当前账号尚未授权套餐推理；可以重新授权或使用 OpenAI API Key。\n');
+      } else {
+        const { refreshProviderModels } = await import('./services/api/multimodel/catalog.js');
+        try {
+          const models = await refreshProviderModels('chatgpt');
+          process.stdout.write(`已保存 ${models.length} 个当前账号模型的服务端能力参数\n`);
+        } catch (error) {
+          throw new Error(`ChatGPT 已授权，模型能力查询失败：${error instanceof Error ? error.message : String(error)}`);
+        }
       }
     });
   auth.command('chatgpt-accounts').description('列出已注册的 ChatGPT 账号和工作区').action(async () => {

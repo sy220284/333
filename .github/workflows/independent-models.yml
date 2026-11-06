@@ -12,6 +12,7 @@ on:
       - 'src/services/localRuntime/**'
       - 'src/services/analytics/localDiagnostics.ts'
       - 'tests/multimodel-provider.test.ts'
+      - 'tests/pr19-model-limits-and-scope.test.ts'
       - 'tests/chatgpt-oauth-accounts.test.ts'
       - 'tests/chatgpt-oauth-refresh.test.ts'
       - 'tests/independent-local-features.test.ts'
@@ -68,4 +69,6 @@ jobs:
         # Account tests intentionally change HOME and the global fetch mock.
         # Bun can execute test files in the same process; give each suite an
         # independent process to prevent credentials and OAuth mocks crossing.
-        run: npm run test:multimodel
+        run: |
+          npm run test:multimodel
+          bun test tests/pr19-model-limits-and-scope.test.ts

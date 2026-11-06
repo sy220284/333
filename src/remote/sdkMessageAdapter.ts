@@ -51,7 +51,7 @@ function convertStreamEvent(msg: SDKPartialAssistantMessage): StreamEvent {
  * Convert an SDKResultMessage to a SystemMessage
  */
 function convertResultMessage(msg: SDKResultMessage): SystemMessage {
-  const isError = msg.subtype !== 'success'
+  const isError = msg.is_error === true || msg.subtype !== 'success'
   const content = isError
     ? msg.errors?.join(', ') || 'Unknown error'
     : 'Session completed successfully'
@@ -218,7 +218,7 @@ export function convertSDKMessage(
     case 'result':
       // Only show result messages for errors. Success results are noise
       // in multi-turn sessions (isLoading=false is sufficient signal).
-      if (msg.subtype !== 'success') {
+      if (msg.is_error === true || msg.subtype !== 'success') {
         return { type: 'message', message: convertResultMessage(msg) }
       }
       return { type: 'ignored' }

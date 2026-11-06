@@ -1218,12 +1218,33 @@ export class QueryEngine {
       ).catch(logError)
     }
 
+    if (isApiError) {
+      yield {
+        type: 'result',
+        subtype: 'error_during_execution',
+        is_error: true,
+        terminal_reason: promptTooLong ? 'prompt_too_long' : 'api_error',
+        ...(apiErrorStatus !== undefined && { api_error_status: apiErrorStatus }),
+        duration_ms: Date.now() - startTime,
+        duration_api_ms: getTotalAPIDuration(),
+        num_turns: turnCount,
+        stop_reason: lastStopReason,
+        session_id: this.sessionId,
+        total_cost_usd: getTotalCost(),
+        usage: this.totalUsage,
+        modelUsage: getModelUsage(),
+        permission_denials: this.permissionDenials,
+        fast_mode_state: getFastModeState(mainLoopModel, initialAppState.fastMode),
+        uuid: randomUUID(),
+        errors: [textResult || `API request failed (stop_reason=${lastStopReason ?? 'unknown'})`],
+      }
+      return
+    }
     yield {
       type: 'result',
       subtype: 'success',
-      is_error: isApiError,
-      terminal_reason: promptTooLong ? 'prompt_too_long' : isApiError ? 'api_error' : 'completed',
-      ...(apiErrorStatus !== undefined && { api_error_status: apiErrorStatus }),
+      is_error: false,
+      terminal_reason: 'completed',
       duration_ms: Date.now() - startTime,
       duration_api_ms: getTotalAPIDuration(),
       num_turns: turnCount,
