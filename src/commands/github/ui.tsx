@@ -9,7 +9,7 @@ import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import type { LocalJSXCommandCall, LocalJSXCommandOnDone } from '../../types/command.js'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
 import { call as runGithubCommand, setupRepository } from './github.js'
-import { getGithubModelOptions, configureGithubWizardModel,
+import { getGithubModelOptions, configureGithubWizardModel, verifyGithubExistingActionsModel,
   getGithubActionsProviderOptions, type GithubModelOption, type GithubActionsProvider } from './modelConfig.js'
 import type { GithubWorkflowSelection } from './workflow.js'
 import { validRepository } from './repository.js'
@@ -99,10 +99,11 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
       setBusy(false)
     }
   }
-  async function perform(transferKey: boolean): Promise<void> {
+  async function perform(transferKey: boolean, reuseExisting = false): Promise<void> {
     setBusy(true)
     try {
       const name = validRepository(repo)
+      const existing = reuseExisting ? await verifyGithubExistingActionsModel(name) : ''
       setStatus('检查仓库权限并创建 GitHub Actions 配置 PR…')
       const url = await setupRepository(name, workflow)
       if (transferKey) {
@@ -114,7 +115,7 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
           true,
         )
       }
-      const output = `GitHub 配置 PR：${url}\n仓库：${name}\n功能：${workflow}\n模型：${transferKey ? (entry === 'new' ? `${provider}/${newModel}` : model) : '稍后独立配置'}\n请检查并合并配置 PR，工作流才会在仓库默认分支生效。`
+      const output = `GitHub 配置 PR：${url}\n仓库：${name}\n功能：${workflow}\n模型：${reuseExisting ? existing : transferKey ? (entry === 'new' ? `${provider}/${newModel}` : model) : '稍后独立配置'}\n请检查并合并配置 PR，工作流才会在仓库默认分支生效。`
       setApiKey('')
       setResult(output)
       setStatus('配置完成，请检查并合并安装 PR。')
@@ -147,6 +148,7 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
     ...models.map(m=>({label:m.label,value:m.id,
       description:m.credentialSource})),
     {label:'配置新的 GitHub Actions API Key',value:'__new__'},
+    {label:'复用仓库已有 Actions Secret 与模型变量',value:'__existing__'},
     {label:'先安装工作流，稍后配置独立 Actions API Key',value:'__later__'},
   ]
   return <Dialog title="GitHub · 摇摇车仓库集成" subtitle="GitHub 授权与模型密钥分别管理"
@@ -176,7 +178,11 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
       }} onCancel={()=>setStage('repos')}/>}
       {!busy && stage === 'models' && <Select options={modelOptions}
         onChange={value=>{
-          if (value === '__new__') {
+          if (value === '__existing__') {
+            setEntry('existing')
+            setModel('')
+            setStage('confirm')
+          } else if (value === '__new__') {
             setEntry('new')
             setModel('')
             setStage('provider')
@@ -219,17 +225,18 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
       </Box>}
       {!busy && stage === 'confirm' && <Box flexDirection="column" gap={1}>
         <Text>仓库：{repo}　工作流：{workflow}</Text>
-        <Text>模型：{entry === 'new' ? `${provider}/${newModel}` : (model || '稍后配置')}</Text>
+        <Text>模型：{entry === 'new' ? `${provider}/${newModel}` : (entry === 'existing' ? '验证并复用仓库已有 Actions 配置' : model || '稍后配置')}</Text>
         <Text dimColor>确认上传只将所选 API Key 发送到当前仓库的 GitHub Actions Secret，本地 OAuth 凭据保持独立。</Text>
         <Select options={[
           ...(model || entry === 'new'
             ? [{label:entry === 'new'?'确认安装并上传新 API Key':'确认安装并上传已保存的 API Key',value:'upload'}]
             : []),
+          ...(entry === 'existing' ? [{label:'验证并复用仓库已有 Actions 配置',value:'reuse'}] : []),
           {label:'仅安装工作流，稍后配置 Actions 密钥',value:'install'},
           {label:'返回修改',value:'back'},
         ]} onChange={value=>{
           if (value === 'back') setStage('models')
-          else void perform(value === 'upload')
+          else void perform(value === 'upload', value === 'reuse')
         }} onCancel={()=>setStage('models')}/>
       </Box>}
       {!busy && stage === 'finished' && <Box flexDirection="column" gap={1}>
