@@ -504,6 +504,10 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           const instruction = [
             '执行已授权的超级智能体工作项；保持项目目录与工具审批边界。',
             '长期任务：' + mission.id + '。目标：' + mission.objective,
+            '前次已核实的任务检查点：' + (mission.checkpoint || '暂无'),
+            '本工作项的既往执行结果：' + (claimed.history.slice(-3)
+              .map(record => '第' + record.attempt + '次：' + record.status + '；' + record.summary)
+              .join('；') || '暂无'),
             '工作项：' + claimed.title + '。执行尝试：' + claimed.attempt,
             claimed.instruction,
             '执行前核对已有文件和提交，禁止重复已产生的外部副作用。',
