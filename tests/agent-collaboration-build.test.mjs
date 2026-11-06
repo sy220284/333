@@ -71,3 +71,14 @@ test('历史工作流恢复检查脚本和日志边界，失败时回滚新复�
   const entry=read('src/tools/WorkflowTool/WorkflowTool.ts')
   assert.match(entry,/isHistoricalWorkflow/)
 })
+
+test('智能体名录可发现同项目多个独立团队但不暴露为可直接发信地址',()=>{
+  const listing=read('src/tools/ListAgentsTool/peerListing.ts')
+  const discovery=read('src/utils/teamDiscovery.ts')
+  const tool=read('src/tools/ListAgentsTool/ListAgentsTool.ts')
+  assert.match(listing,/kind: 'teams'/)
+  assert.match(discovery,/listProjectTeams/)
+  assert.match(discovery,/resolve\(member.cwd\) === target/)
+  assert.match(tool,/unreachableFromHere: true/)
+  assert.match(tool,/acceptsPeerMessages: false/)
+})

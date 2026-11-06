@@ -1,6 +1,8 @@
 import { basename, join } from 'node:path'
 import { z } from 'zod/v4'
 import { getOriginalCwd } from '../../bootstrap/state.js'
+import { getCwd } from '../../utils/cwd.js'
+import { listProjectTeams } from '../../utils/teamDiscovery.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js'
 import { isCrossSessionMessagingEnabled } from '../../utils/crossSessionMessaging.js'
@@ -66,6 +68,7 @@ export const ListAgentsTool = buildTool({
     const ownSocket = getMessagingSocketPath()
     const ownName = process.env.CLAUDE_CODE_SESSION_NAME || basename(getOriginalCwd()) || 'Claude session'
     const self = ownSocket ? `${ownName} [${peerRef(ownSocket)}]` : undefined
+    const projectTeams = await listProjectTeams(getCwd())
     const subagents = Object.values(state.tasks).flatMap(task => {
       if (task?.type !== 'local_agent' || task.agentType === 'main-session') return []
       return [{ id: task.id,
@@ -74,7 +77,15 @@ export const ListAgentsTool = buildTool({
     })
     return { data: buildAgentListing({
       self, subagents: hideTeammateNamesInSubagents(subagents, teammates),
-      teammates, sessions, query: input.q, localUnreadable: unreadable,
+      teammates, sessions,
+      teams: projectTeams.map(team => ({
+        name: team.name,
+        type: `team · ${team.memberCount} members`,
+        status: team.runningCount ? `${team.runningCount} active` : 'idle',
+        unreachableFromHere: true,
+        acceptsPeerMessages: false,
+      })),
+      query: input.q, localUnreadable: unreadable,
       accountNotes: [],
       canSend: canSendMessage(options.refreshTools?.() ?? options.tools),
     }) }
