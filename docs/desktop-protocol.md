@@ -55,3 +55,23 @@
 任务索引按工作区 SHA256 分类保存在本机 `~/.yaoyaoche/desktop`，支持使用 `--data-dir` 设置根目录。索引仅存任务 ID、进度和状态，不存模型上下文和工具授权密钥。重启时旧运行任务标记为 interrupted，保留终态记录；原对话上下文由 SDK 的持久化历史恢复。已取消或结束的任务需用户明确选择继续，系统不会自动重启旧 Agent 进程。
 
 独立桌面入口运行在受信任的本机子进程中，请勿将 stdin/stdout 通信直接暴露为无鉴权网络服务。桌面 UI 应从主进程调用此接口，并为外部文件操作保留工具审批弹窗。
+
+## 桌面主进程调用示例
+
+`src/services/desktop/client.ts` 提供类型化客户端，负责关联并发请求、接收主动事件、断线后拒绝待完成请求。桌面主进程启动安装包内的 `desktopHost`，把子进程 stdout 作为输入、stdin 作为输出传入：
+
+```ts
+import { spawn } from 'node:child_process'
+import { createDesktopClient } from './services/desktop/client.js'
+
+const child = spawn('/应用安装目录/desktopHost', ['--cwd', '/项目目录'], {
+  stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
+})
+const desktop = createDesktopClient(child.stdout, child.stdin)
+desktop.onEvent(event => {
+  // session.message, agent.progress, permission.request, task.updated 等
+})
+const { sessionId } = await desktop.openSession()
+await desktop.send(sessionId, '检查项目源码')
+// 后续由事件回调更新桌面视图
+```
