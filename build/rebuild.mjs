@@ -117,7 +117,7 @@ const plugin = {
 };
 mkdirSync(join(root, 'dist'), { recursive: true });
 const result = await Bun.build({
-  entrypoints: [join(root, 'src/entrypoints/cli.tsx')],
+  entrypoints: [join(root, 'src/entrypoints/cli.tsx'), join(root, 'src/entrypoints/desktopHost.ts')],
   outdir: join(root, 'dist'),
   target: 'bun',
   format: 'esm',

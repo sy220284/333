@@ -53,6 +53,11 @@ export function createSdkPermissionBroker() {
     notify()
     return true
   }
+  const cancelPending = (reason: string): void => {
+    for (const id of [...pending.keys()]) {
+      settle(id, { behavior: 'deny', message: reason })
+    }
+  }
   const close = (): void => {
     if (closed) return
     closed = true
@@ -60,5 +65,5 @@ export function createSdkPermissionBroker() {
       settle(id, { behavior: 'deny', message: 'Tool permission broker closed' })
     }
   }
-  return { canUseTool, getPending, subscribe, settle, close }
+  return { canUseTool, getPending, subscribe, settle, cancelPending, close }
 }
