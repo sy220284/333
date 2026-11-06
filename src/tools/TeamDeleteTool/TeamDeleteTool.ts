@@ -105,8 +105,8 @@ export const TeamDeleteTool: Tool<InputSchema, Output> = buildTool({
       // when the separate mission journal needs repair.
       unregisterTeamForSessionCleanup(teamName)
       try {
-        const missionId = await findMissionByAssignmentId('team:' + teamName)
-        if (missionId) await finishMissionAssignment(missionId, 'team:' + teamName, 'completed')
+        const missionId = await findMissionByAssignmentId(`team:${teamName}`)
+        if (missionId) await finishMissionAssignment(missionId, `team:${teamName}`, 'completed')
       } catch (error) {
         missionUpdateError = error
       }
@@ -133,7 +133,7 @@ export const TeamDeleteTool: Tool<InputSchema, Output> = buildTool({
     }))
 
     if (missionUpdateError) {
-      throw new Error('团队已清理，但长期任务档案更新失败：' + String(missionUpdateError))
+      throw new Error(`团队已清理，但长期任务档案更新失败：${String(missionUpdateError)}`)
     }
 
     return {
