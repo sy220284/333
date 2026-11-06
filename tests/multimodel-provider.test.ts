@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { type ProviderRoute, resolveIndependentModel, getIndependentApiKey, discoverIndependentModels } from '../src/services/api/multimodel/registry.ts'
-import { toResponses, toChatCompletions, toGemini } from '../src/services/api/multimodel/convert.ts'
+import { type ProviderRoute, PROVIDERS, resolveIndependentModel, getIndependentApiKey, discoverIndependentModels } from '../src/services/api/multimodel/registry.ts'
+import { toResponses, toChatCompletions } from '../src/services/api/multimodel/convert.ts'
 import { makeIndependentFetch } from '../src/services/api/multimodel/transport.ts'
 import { runModelToolRoundTrip } from '../src/services/api/multimodel/capabilityProbe.ts'
+import { validateApiKeyProvider } from '../src/services/auth/apiKeyVault.ts'
 
 const body = {
   model: 'openai/gpt-6.1-sol',
@@ -40,8 +41,8 @@ function messages(sse: string): any[] {
 test('qualified models only change providers when explicitly selected', () => {
   assert.equal(resolveIndependentModel('claude-opus-5-5'), null)
   assert.equal(resolveIndependentModel('openai/gpt-6.1-sol')?.protocol, 'responses')
-  assert.equal(resolveIndependentModel('gemini/gemini-3.8-flash')?.protocol, 'gemini')
-  assert.equal(resolveIndependentModel('xai/grok-4')?.protocol, 'chat-completions')
+  assert.equal(resolveIndependentModel('gemini/gemini-3.8-flash'), null)
+  assert.equal(resolveIndependentModel('xai/grok-4'), null)
   assert.equal(resolveIndependentModel('unknown/model'), null)
   assert.throws(() => getIndependentApiKey(requireRoute('openai/gpt-6.1-sol'), {}))
   assert.equal(getIndependentApiKey(requireRoute('openai/gpt-6.1-sol'), { OPENAI_API_KEY: 'TEST' }), 'TEST')
@@ -57,13 +58,6 @@ test('Responses preserves prompts, tool IDs, result pairing, reasoning budget an
   assert.equal(result.input[3].type, 'function_call_output')
   assert.equal(result.input[3].call_id, 'call_42')
   assert.equal(result.tools[0].name, 'Read')
-})
-test('Gemini converts tool calls and function responses by their registered name', () => {
-  const result = toGemini(body)
-  assert.equal(result.systemInstruction.parts[0].text, 'Keep the exact original prompt.')
-  assert.equal(result.contents[1].parts[1].functionCall.name, 'Read')
-  assert.equal(result.contents[2].parts[0].functionResponse.name, 'Read')
-  assert.equal(result.tools[0].functionDeclarations[0].name, 'Read')
 })
 test('Chat Completions preserves tool call order and tool results', () => {
   const result = toChatCompletions(body, 'deepseek-chat')
@@ -113,18 +107,6 @@ test('Chat completions streaming preserves interleaved tool fragments and termin
   const result = messages(await (await makeIndependentFetch(route, 'secret', backend as typeof fetch)(request)).text())
   assert.ok(result.some(x => x.content_block?.id === 'call_a'))
   assert.ok(result.some(x => x.delta?.partial_json === '{"file_path":"/a"}'))
-  assert.equal(result.at(-1)?.type, 'message_stop')
-})
-test('Gemini native stream maps function calls into shared tools', async () => {
-  const route = requireRoute('gemini/gemini-3.8-flash')
-  const backend = async () => stream(
-    { candidates: [{ content: { parts: [{ text: 'ok' }, { functionCall: { name: 'Read', args: { file_path: '/a' } } }] }, finishReason: 'STOP' }], usageMetadata: { promptTokenCount: 9, candidatesTokenCount: 3 } },
-  )
-  const modelBody = { ...body, model: 'gemini/gemini-3.8-flash' }
-  const request = new Request('https://333-model-bridge.invalid/v1/messages', { method: 'POST', body: JSON.stringify(modelBody) })
-  const result = messages(await (await makeIndependentFetch(route, 'secret', backend as typeof fetch)(request)).text())
-  assert.ok(result.some(x => x.delta?.text === 'ok'))
-  assert.ok(result.some(x => x.content_block?.name === 'Read'))
   assert.equal(result.at(-1)?.type, 'message_stop')
 })
 test('ChatGPT lists only model entries exposed for the connected account', async () => {
@@ -197,4 +179,16 @@ test('ChatGPT accepts the standard OpenAI models response without a visibility f
     }) as typeof fetch)
   assert.deepEqual(result, ['gpt-6.1-sol', 'gpt-6-astra'])
   assert.deepEqual(seen, ['https://api.openai.com/v1/models'])
+})
+
+test('removed Gemini and xAI/Grok providers cannot be selected or configured', () => {
+  assert.deepEqual(Object.keys(PROVIDERS).sort(), [
+    'chatgpt', 'deepseek', 'kimi', 'minimax', 'openai', 'openrouter', 'qwen', 'zhipu',
+  ])
+  assert.equal(resolveIndependentModel('gemini/gemini-3.8-flash'), null)
+  assert.equal(resolveIndependentModel('xai/grok-4'), null)
+  assert.throws(() => validateApiKeyProvider('gemini'))
+  assert.throws(() => validateApiKeyProvider('xai'))
+  assert.equal(resolveIndependentModel('deepseek/deepseek-chat')?.protocol, 'chat-completions')
+  assert.equal(resolveIndependentModel('openai/gpt-6.1-sol')?.protocol, 'responses')
 })
