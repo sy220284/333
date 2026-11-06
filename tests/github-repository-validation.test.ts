@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { parseGithubRepository } from '../src/commands/install-github-app/githubRepository.js'
+import { parseGithubRepository } from '../src/commands/github/repository.js'
 describe('GitHub 仓库地址真实主机名核验', () => {
   test.each([
     ['owner/repo','owner/repo'],
