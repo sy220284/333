@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 
 const root = resolve(import.meta.dirname, '..');
-const nativeBinary = join(root,'dist',process.platform === 'win32' ? 'claude.exe' : 'claude');
+const nativeBinary = join(root,'dist',process.platform === 'win32' ? 'avenlo.exe' : 'avenlo');
 const nativeMode = process.env.M1_NATIVE_BINARY_RUN === '1';
 const model = 'claude-sonnet-4-6';
 const reply = 'MOCK_AGENT_SEARCH_OK_333';
