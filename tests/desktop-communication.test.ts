@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test'
-import { randomUUID } from 'node:crypto'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { createHash, randomUUID } from 'node:crypto'
+import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { createHeadlessConversationSession } from '../src/services/conversation/headlessSession.js'
 import { createDesktopGateway } from '../src/services/desktop/gateway.js'
 import { createDesktopTaskJournal } from '../src/services/desktop/taskJournal.js'
@@ -211,6 +211,30 @@ test('SDK task projector preserves terminal status and recovery journal persists
     } as SDKMessage, task)
     expect(done?.status).toBe('completed')
   } finally { await rm(cwd, { recursive: true, force: true }) }
+})
+
+test('a failed desktop journal write reports its error and later writes recover', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'desktop-journal-recover-'))
+  try {
+    const stateRoot = join(cwd, 'state')
+    const journal = createDesktopTaskJournal(cwd, stateRoot)
+    const sessionId = randomUUID()
+    const workspace = createHash('sha256').update(resolve(cwd)).digest('hex')
+    const journalFile = join(stateRoot, workspace, `${sessionId}.json`)
+    // A directory at the target file path makes rename() fail after the
+    // temporary snapshot was written, exercising an actual filesystem error.
+    await mkdir(journalFile, { recursive: true })
+    const running: DesktopTask = {
+      taskId: 'recover-1', description: 'Interrupted task',
+      status: 'running', updatedAt: Date.now(),
+    }
+    await expect(journal.write(sessionId, [running])).rejects.toThrow()
+    await rm(journalFile, { recursive: true })
+    await journal.write(sessionId, [{ ...running, status: 'completed' }])
+    expect((await journal.read(sessionId))[0]?.status).toBe('completed')
+  } finally {
+    await rm(cwd, { recursive: true, force: true })
+  }
 })
 
 test('desktop serializes concurrent turns even while the first SDK send is pending', async () => {
