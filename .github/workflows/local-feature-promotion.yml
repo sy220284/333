@@ -21,6 +21,7 @@ on:
       - 'tests/local-feature-promotion.test.mjs'
       - 'tests/local-voice-stt-317.test.ts'
       - 'src/services/voiceStreamSTT.ts'
+      - 'src/services/voiceLanguage.ts'
       - 'src/services/voice.ts'
       - 'src/voice/**'
       - 'src/commands/voice/**'
