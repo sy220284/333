@@ -36,18 +36,6 @@ function imageURL(block: JSONValue): string {
   }
   throw new Error('Unsupported image source: expected URL or base64')
 }
-function resolveToolNames(messages: AnthropicRequest['messages']): Map<string,string> {
-  const names = new Map<string,string>()
-  for (const message of messages) {
-    if (!Array.isArray(message.content)) continue
-    for (const part of message.content) {
-      if (part.type === 'tool_use' && typeof part.id === 'string' && typeof part.name === 'string') {
-        names.set(part.id, part.name)
-      }
-    }
-  }
-  return names
-}
 function allParts(content: string | JSONValue[]): JSONValue[] {
   return typeof content === 'string' ? [{ type: 'text', text: content }] : content
 }
@@ -165,51 +153,4 @@ export function toChatCompletions(body: AnthropicRequest, model: string): JSONVa
   if (body.tool_choice?.type === 'any') result.tool_choice = 'required'
   if (body.tool_choice?.type === 'tool') result.tool_choice = { type: 'function', function: { name: body.tool_choice.name } }
   return result
-}
-export function toGemini(body: AnthropicRequest): JSONValue {
-  const names = resolveToolNames(body.messages)
-  const contents: JSONValue[] = []
-  for (const message of body.messages) {
-    const parts = allParts(message.content).flatMap<JSONValue>(block => {
-      if (block.type === 'text') return [{ text: String(block.text ?? '') }]
-      if (block.type === 'image') {
-        const source = block.source
-        if (source?.type !== 'base64') throw new Error('Gemini image requires base64 source')
-        return [{ inlineData: { mimeType: source.media_type, data: source.data } }]
-      }
-      if (block.type === 'document') {
-        const source = block.source
-        if (source?.type !== 'base64') throw new Error('Gemini document requires base64 source')
-        return [{ inlineData: { mimeType: source.media_type, data: source.data } }]
-      }
-      if (block.type === 'tool_use') return [{ functionCall: { name: block.name, args: block.input ?? {} } }]
-      if (block.type === 'tool_result') return [{
-        functionResponse: { name: names.get(block.tool_use_id) ?? block.tool_use_id, response: { output: textOf(block.content) } },
-      }]
-      if (block.type === 'thinking' || block.type === 'redacted_thinking') return []
-      throw new Error(`Unsupported Gemini content block: ${String(block.type)}`)
-    })
-    if (parts.length) contents.push({ role: message.role === 'assistant' ? 'model' : 'user', parts })
-  }
-  const out: JSONValue = {
-    contents,
-    generationConfig: { maxOutputTokens: body.max_tokens },
-  }
-  const system = systemText(body.system)
-  if (system) out.systemInstruction = { parts: [{ text: system }] }
-  if (body.temperature !== undefined) out.generationConfig.temperature = body.temperature
-  if (body.top_p !== undefined) out.generationConfig.topP = body.top_p
-  if (body.stop_sequences?.length) out.generationConfig.stopSequences = body.stop_sequences
-  if (body.tools?.length) out.tools = [{
-    functionDeclarations: body.tools.map(t => {
-      if (t.type && t.type !== 'custom' && t.type !== 'function') throw new Error(`Unsupported Gemini server tool: ${t.type}`)
-      return { name: t.name, description: t.description ?? '', parametersJsonSchema: t.input_schema }
-    }),
-  }]
-  if (body.tool_choice?.type === 'none') out.toolConfig = { functionCallingConfig: { mode: 'NONE' } }
-  if (body.tool_choice?.type === 'any') out.toolConfig = { functionCallingConfig: { mode: 'ANY' } }
-  if (body.tool_choice?.type === 'tool') {
-    out.toolConfig = { functionCallingConfig: { mode: 'ANY', allowedFunctionNames: [body.tool_choice.name] } }
-  }
-  return out
 }
