@@ -628,7 +628,7 @@ export async function runAsyncAgentLifecycle({
     }
 
     const worktreeResult = await getWorktreeResult()
-    if (missionWarning) finalMessage += '\n' + missionWarning
+    if (missionWarning) finalMessage += `\n${missionWarning}`
 
     enqueueAgentNotification({
       taskId,
@@ -672,7 +672,7 @@ export async function runAsyncAgentLifecycle({
         status: 'killed',
         setAppState: rootSetAppState,
         toolUseId: toolUseContext.toolUseId,
-        finalMessage: partialResult + (missionWarning ? '\n' + missionWarning : ''),
+        finalMessage: partialResult + (missionWarning ? `\n${missionWarning}` : ''),
         ...worktreeResult,
       })
       return
@@ -685,7 +685,7 @@ export async function runAsyncAgentLifecycle({
       taskId,
       description,
       status: 'failed',
-      error: msg + (missionWarning ? '\n' + missionWarning : ''),
+      error: msg + (missionWarning ? `\n${missionWarning}` : ''),
       setAppState: rootSetAppState,
       toolUseId: toolUseContext.toolUseId,
       ...worktreeResult,
@@ -703,6 +703,6 @@ async function syncMissionOutcome(missionId: string | undefined, taskId: string,
     await finishMissionAssignment(missionId, taskId, status)
     return ''
   } catch (error) {
-    return '[本地超级智能体任务簿更新失败：' + String(error) + ']'
+    return `[本地超级智能体任务簿更新失败：${String(error)}]`
   }
 }
