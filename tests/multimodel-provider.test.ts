@@ -171,6 +171,43 @@ test('ChatGPT long-lived clients reject logout and account/workspace switches be
   assert.throws(() => assertChatGPTAccountIdentity(undefined, rotated), /account changed/)
 })
 
+test('completed Responses streams are not blocked by a provider cancel that never settles', async () => {
+  let cancelCalled = false
+  const encoder = new TextEncoder()
+  const upstreamBody = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+        type: 'response.completed', response: { output: [], usage: {
+          input_tokens: 3, output_tokens: 1,
+        } },
+      })}\n\n`))
+    },
+    cancel() {
+      cancelCalled = true
+      return new Promise<void>(() => {})
+    },
+  })
+  const route = requireRoute('openai/gpt-6.1-sol')
+  const request = new Request('https://333-model-bridge.invalid/v1/messages', {
+    method: 'POST', body: JSON.stringify(body),
+  })
+  const response = await makeIndependentFetch(route, 'secret', async () =>
+    new Response(upstreamBody))(request)
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    const result = await Promise.race([
+      response.text(),
+      new Promise<string>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('completed SSE stream blocked by upstream cancel')), 1500)
+      }),
+    ])
+    assert.equal(messages(result).at(-1)?.type, 'message_stop')
+    assert.equal(cancelCalled, true)
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+})
+
 test('ChatGPT lists only model entries exposed for the connected account', async () => {
   const results = await discoverIndependentModels('chatgpt', 'oauth-token',
     (async () => new Response(JSON.stringify({ models: [
