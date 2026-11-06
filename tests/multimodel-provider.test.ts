@@ -305,7 +305,8 @@ test('cancelling the translated stream cancels a pending upstream read', async (
   let cancelled = false
   const upstream = new ReadableStream<Uint8Array>({ cancel() { cancelled = true } })
   const result = await makeIndependentFetch(route, 'key', async () => new Response(upstream))(request)
-  const reader = result.body!.getReader()
+  assert.ok(result.body)
+  const reader = result.body.getReader()
   assert.equal((await reader.read()).done, false)
   await reader.cancel()
   assert.equal(cancelled, true)
@@ -355,7 +356,7 @@ test('provider errors redact echoed credentials in HTTP bodies, headers and stre
     method: 'POST', body: JSON.stringify({ ...body, model: 'minimax/MiniMax-M3.1-Flash', stream: true }),
   })
   const http = await makeIndependentFetch(route, token, async () =>
-    new Response(JSON.stringify({ error: { message: 'Rejected ' + token } }),
+    new Response(JSON.stringify({ error: { message: `Rejected ${token}` } }),
       { status: 401, headers: { 'x-request-id': token, 'retry-after': '10' } }))(req())
   assert.equal(http.status, 401)
   assert.equal(http.headers.get('retry-after'), '10')
