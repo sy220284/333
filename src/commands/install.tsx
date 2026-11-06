@@ -44,11 +44,11 @@ function getInstallationPath(): string {
   const homeDir = homedir();
   if (isWindows) {
     // Convert to Windows-style path
-    const windowsPath = join(homeDir, '.local', 'bin', 'qerivon.exe');
+    const windowsPath = join(homeDir, '.local', 'bin', 'yaoyaoche.exe');
     // Replace forward slashes with backslashes for Windows display
     return windowsPath.replace(/\//g, '\\');
   }
-  return '~/.local/bin/qerivon';
+  return '~/.local/bin/yaoyaoche';
 }
 function SetupNotes(t0) {
   const $ = _c(5);
@@ -113,7 +113,7 @@ function Install({
 
         // Check specifically for lock failure
         if (result.lockFailed) {
-          throw new Error('Could not install - another process is currently installing Qerivon. Please try again in a moment.');
+          throw new Error('Could not install - another process is currently installing 摇摇车. Please try again in a moment.');
         }
 
         // If we couldn't get the version, there might be an issue
@@ -210,12 +210,12 @@ function Install({
   useEffect(() => {
     if (state.type === 'success') {
       // Give success message time to render before exiting
-      setTimeout(onDone, 2000, 'Qerivon 安装已完成', {
+      setTimeout(onDone, 2000, '摇摇车 安装已完成', {
         display: 'system' as const
       });
     } else if (state.type === 'error') {
       // Give error message time to render before exiting
-      setTimeout(onDone, 3000, 'Qerivon installation failed', {
+      setTimeout(onDone, 3000, '摇摇车 installation failed', {
         display: 'system' as const
       });
     }
@@ -226,7 +226,7 @@ function Install({
       {state.type === 'cleaning-npm' && <Text color="warning">正在清理旧版 npm 安装…</Text>}
 
       {state.type === 'installing' && <Text color="claude">
-          Installing Qerivon native build {state.version}...
+          Installing 摇摇车 native build {state.version}...
         </Text>}
 
       {state.type === 'setting-up' && <Text color="claude">正在设置启动器和 Shell 集成…</Text>}
@@ -237,7 +237,7 @@ function Install({
           <Box>
             <StatusIcon status="success" withSpace />
             <Text color="success" bold>
-              Qerivon successfully installed!
+              摇摇车 successfully installed!
             </Text>
           </Box>
           <Box marginLeft={2} flexDirection="column" gap={1}>
@@ -279,7 +279,7 @@ function Install({
 export const install = {
   type: 'local-jsx' as const,
   name: 'install',
-  description: '安装 Qerivon 本地程序',
+  description: '安装 摇摇车 本地程序',
   argumentHint: '[options]',
   async call(onDone: (result: string, options?: {
     display?: CommandResultDisplay;

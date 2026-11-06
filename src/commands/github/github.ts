@@ -52,7 +52,7 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
   ])) as Array<{ headRefName: string; headRepositoryOwner?: { login?: string }; url: string; createdAt: string }>
   const owner = repo.split('/')[0]?.toLowerCase()
   const reusable = existing
-    .filter(item => /^qerivon\/review-[0-9a-f]{8}$/.test(item.headRefName) &&
+    .filter(item => /^yaoyaoche\/review-[0-9a-f]{8}$/.test(item.headRefName) &&
       item.headRepositoryOwner?.login?.toLowerCase() === owner)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0]
   if (!reusable) {
@@ -64,7 +64,7 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
   }
 
   const targetBranch = reusable?.headRefName ??
-    `qerivon/review-${randomUUID().slice(0, 8)}`
+    `yaoyaoche/review-${randomUUID().slice(0, 8)}`
   const base = reusable ? targetBranch : main
   if (reusable) {
     const currentWorkflow = await remoteFile(GITHUB_WORKFLOW_PATH, targetBranch)
@@ -81,7 +81,7 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
   const tree = JSON.parse(await gh(['api', '--method', 'POST', `repos/${repo}/git/trees`, '--input', '-'],
     JSON.stringify({ base_tree: previous.tree.sha, tree: treeElements })))
   const commit = JSON.parse(await gh(['api', '--method', 'POST', `repos/${repo}/git/commits`, '--input', '-'],
-    JSON.stringify({ message: '更新 Qerivon 通用 GitHub Actions 与多模型审查',
+    JSON.stringify({ message: '更新 摇摇车 通用 GitHub Actions 与多模型审查',
       tree: tree.sha, parents: [parent] })))
   if (reusable) {
     await gh(['api', '--method', 'PATCH', `repos/${repo}/git/refs/heads/${targetBranch}`,
@@ -90,12 +90,12 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
   }
   await gh(['api', '--method', 'POST', `repos/${repo}/git/refs`,
     '-f', `ref=refs/heads/${targetBranch}`, '-f', `sha=${commit.sha}`])
-  const body = '## Qerivon GitHub 通用集成\\n\\n通过 GitHub Actions 执行多模型审查，授权成员可使用 /qerivon review 触发。' +
-    '\\n请配置 Secret QERIVON_MODEL_API_KEY、变量 QERIVON_MODEL_NAME 与 QERIVON_MODEL_PROVIDER。' +
+  const body = '## 摇摇车 GitHub 通用集成\\n\\n通过 GitHub Actions 执行多模型审查，授权成员可使用 /yaoyaoche review 触发。' +
+    '\\n请配置 Secret YAOYAOCHE_MODEL_API_KEY、变量 YAOYAOCHE_MODEL_NAME 与 YAOYAOCHE_MODEL_PROVIDER。' +
     '\\n支持 OpenAI 兼容协议、Responses 与 Anthropic；GitHub 授权和模型授权独立。'
   try {
     return await gh(['pr', 'create', '--repo', repo, '--head', targetBranch, '--base', main,
-      '--title', '接入 Qerivon 通用 GitHub Actions 与多模型审查', '--body', body])
+      '--title', '接入 摇摇车 通用 GitHub Actions 与多模型审查', '--body', body])
   } catch (error) {
     throw new Error(`配置已提交到分支 ${targetBranch}，但 PR 创建失败：${error instanceof Error ? error.message : String(error)}`)
   }
@@ -105,9 +105,9 @@ export async function dispatchReview(rawRepo: string, rawPr: string, mode='norma
   const pr = validPr(rawPr)
   if (!['normal','deep','security'].includes(mode)) throw new Error('审查模式无效')
   await checkAuth()
-  await gh(['workflow','run','qerivon-review.yml','--repo',repo,'-f',`pr_number=${pr}`,'-f',`mode=${mode}`])
+  await gh(['workflow','run','yaoyaoche-review.yml','--repo',repo,'-f',`pr_number=${pr}`,'-f',`mode=${mode}`])
   return '已提交审查任务至 GitHub Actions。完成后在 PR #' + pr +
-    ' 查看评论及 Artifact： https://github.com/' + repo + '/actions/workflows/qerivon-review.yml'
+    ' 查看评论及 Artifact： https://github.com/' + repo + '/actions/workflows/yaoyaoche-review.yml'
 }
 export const call: LocalCommandCall = async (args) => {
   const tokens = args.trim().split(/\s+/).filter(Boolean)
@@ -147,8 +147,8 @@ export const call: LocalCommandCall = async (args) => {
       const secret = process.env[name]
       if (!secret) throw new Error('本机环境变量不存在，密钥只从本机环境读取')
       await checkAuth()
-      await gh(['secret','set','QERIVON_MODEL_API_KEY','--repo',repo],secret)
-      return result('Secret QERIVON_MODEL_API_KEY 写入成功，密钥值未输出。')
+      await gh(['secret','set','YAOYAOCHE_MODEL_API_KEY','--repo',repo],secret)
+      return result('Secret YAOYAOCHE_MODEL_API_KEY 写入成功，密钥值未输出。')
     }
     if (action === 'review' && tokens.length>=3 && tokens.length<=4)
       return result(await dispatchReview(tokens[1],tokens[2],tokens[3] || 'normal'))
@@ -166,7 +166,7 @@ export const call: LocalCommandCall = async (args) => {
     }
     if (action === 'runs' && tokens.length===2) {
       await checkAuth()
-      return result(await gh(['run','list','--repo',validRepository(tokens[1]),'--workflow','qerivon-review.yml','--limit','10']))
+      return result(await gh(['run','list','--repo',validRepository(tokens[1]),'--workflow','yaoyaoche-review.yml','--limit','10']))
     }
     return result(HELP)
   } catch (error) {
