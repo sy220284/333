@@ -9,7 +9,7 @@ permissions:
   contents: read
 concurrency:
   group: ci-tests-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   inventory:
     name: 测试清单与门禁覆盖校验
@@ -24,6 +24,18 @@ jobs:
           node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
       - name: 测试清单防漏检回归
         run: node --test tests/ci-test-discovery.test.mjs
+      - name: 固定校验和验证全部 GitHub Actions 语法
+        shell: bash
+        run: |
+          set -euo pipefail
+          source tools/dev/toolchain-versions.env
+          curl --fail --location --silent --show-error --retry 3 \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            -o "${RUNNER_TEMP}/actionlint.tar.gz"
+          printf '%s  %s\n' "${ACTIONLINT_LINUX_X64_SHA256}" "${RUNNER_TEMP}/actionlint.tar.gz" | sha256sum --check
+          mkdir -p "${RUNNER_TEMP}/actionlint-bin"
+          tar -xzf "${RUNNER_TEMP}/actionlint.tar.gz" -C "${RUNNER_TEMP}/actionlint-bin" actionlint
+          "${RUNNER_TEMP}/actionlint-bin/actionlint" .github/workflows/*.yml
       - name: 生成补充测试完整分片清单
         run: node build/run-unregistered-tests.mjs --ci-supplemental --shard-count=6 --shard-index=0 --list
       - name: 校验门禁配置与退役功能引用

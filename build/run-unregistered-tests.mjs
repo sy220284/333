@@ -60,10 +60,13 @@ export function discoverUnregisteredTests(root = ROOT, options = {}) {
     .filter(source => /^  pull_request:\s*$/m.test(source))
     .map(workflowRunCommands).join('\n')
   const workflowOnly = options.workflowOnly === true
-  const registered = tests.filter(path => commands.includes(path) || workflows.includes(path))
   const supplemental = options.ciSupplemental === true
   const pending = tests.filter(path => !commands.includes(path) &&
     (supplemental || (workflowOnly ? workflows.includes(path) : !workflows.includes(path))))
+  // Registered means excluded from this execution mode. Keep the sets disjoint
+  // for normal, workflow-only, and supplemental runs alike.
+  const selected = new Set(pending)
+  const registered = tests.filter(path => !selected.has(path))
   if (pending.length + registered.length !== tests.length) throw Error('Test inventory inconsistent')
   return { tests, registered, pending }
 }

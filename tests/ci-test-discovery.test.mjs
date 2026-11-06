@@ -22,6 +22,13 @@ test('不再把历史分支工作流和 PR 文件过滤路径当作测试执行'
     const { registered, pending } = discoverUnregisteredTests(root)
     assert.deepEqual(registered, ['tests/pr-run.test.mjs','tests/script.test.mjs'])
     assert.deepEqual(pending, ['tests/filter-only.test.mjs','tests/old-only.test.mjs','tests/orphan.test.mjs'])
+    const workflowOnly = discoverUnregisteredTests(root, { workflowOnly: true })
+    assert.deepEqual(workflowOnly.pending, ['tests/pr-run.test.mjs'])
+    assert.equal(workflowOnly.registered.length + workflowOnly.pending.length, workflowOnly.tests.length)
+    const supplemental = discoverUnregisteredTests(root, { ciSupplemental: true })
+    assert.deepEqual(supplemental.pending, ['tests/filter-only.test.mjs','tests/old-only.test.mjs','tests/orphan.test.mjs','tests/pr-run.test.mjs'])
+    assert.deepEqual(supplemental.registered, ['tests/script.test.mjs'])
+    assert.equal(supplemental.registered.length + supplemental.pending.length, supplemental.tests.length)
   } finally { rmSync(root, { recursive: true, force: true }) }
 })
 
