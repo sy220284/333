@@ -36,7 +36,8 @@ test('the 9 official operator tools are only visible to explicit wizard sessions
 test('runner admin tools call the official API paths with OAuth and preserve equivalent UI',async()=>{
   const logs:Array<{url:string,method:string,auth:string,body:string|undefined}>=[]
   const deps={
-    credentials:async()=>({accessToken:'oauth-token'}),
+    baseUrl:'https://runner.example.test',
+    credentials:async()=>({accessToken:'operator-token'}),
     fetchImpl:async (url:string,opts:RequestInit)=>{
       logs.push({url,method:opts.method!,auth:(opts.headers as Record<string,string>).Authorization,
         body:opts.body as string|undefined})
@@ -50,24 +51,24 @@ test('runner admin tools call the official API paths with OAuth and preserve equ
   } as const
   const pool=await getRunnerPool317('ccpool_abc',deps)
   expect(pool.pool).toEqual({alive_runner_count:1})
-  expect(pool.equivalent.ui).toContain('Cloud environments')
+  expect(pool.equivalent.ui).toContain('自托管 Runner')
   expect((await listRunnerMachines317('ccpool_abc',deps)).runners).toHaveLength(1)
   expect((await listRunnerSessions317('ccpool_abc','queued',deps)).sessions).toHaveLength(1)
   expect((await listRunnerSecrets317('ccpool_abc',deps)).secrets).toHaveLength(1)
   expect((await requeueRunnerSession317('ccsess_one','ccrunner_one',deps)).excluded_count).toBe(2)
   expect(logs.map(v=>v.url)).toEqual([
-    'https://api.anthropic.com/v1/code/runners/self-hosted/pools/ccpool_abc',
-    'https://api.anthropic.com/v1/code/runners/self-hosted/runners?pool_id=ccpool_abc',
-    'https://api.anthropic.com/v1/code/runners/self-hosted/pools/ccpool_abc/sessions?status=queued',
-    'https://api.anthropic.com/v1/code/runners/self-hosted/pools/ccpool_abc/secrets',
-    'https://api.anthropic.com/v1/code/runners/self-hosted/sessions/ccsess_one/requeue',
+    'https://runner.example.test/v1/code/runners/self-hosted/pools/ccpool_abc',
+    'https://runner.example.test/v1/code/runners/self-hosted/runners?pool_id=ccpool_abc',
+    'https://runner.example.test/v1/code/runners/self-hosted/pools/ccpool_abc/sessions?status=queued',
+    'https://runner.example.test/v1/code/runners/self-hosted/pools/ccpool_abc/secrets',
+    'https://runner.example.test/v1/code/runners/self-hosted/sessions/ccsess_one/requeue',
   ])
-  expect(logs.every(x=>x.auth==='Bearer oauth-token')).toBe(true)
+  expect(logs.every(x=>x.auth==='Bearer operator-token')).toBe(true)
   expect(JSON.parse(logs.at(-1)!.body!)).toEqual({runner_id:'ccrunner_one'})
 })
 test('runner admin refuses unsafe IDs before any network call and propagates 403',async()=>{
   let calls=0
-  const deps={credentials:async()=>({accessToken:'t'}),fetchImpl:async()=>{
+  const deps={baseUrl:'https://runner.example.test',credentials:async()=>({accessToken:'t'}),fetchImpl:async()=>{
     calls++;return Response.json({error:{message:'not authorized'}},{status:403})
   }}
   await expect(getRunnerPool317('../escape',deps)).rejects.toThrow('Invalid pool_id')
