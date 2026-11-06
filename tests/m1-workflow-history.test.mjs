@@ -35,3 +35,23 @@ test('Workflow history identifies corrupt and foreign-session summaries without 
   assert.equal(errors.length,2)
  }finally{await rm(project,{recursive:true,force:true})}
 })
+
+test('工作流中心按项目展示跨会话历史，并隔离其他项目', async () => {
+ const {readProjectWorkflowHistory} = await import('../src/tasks/LocalWorkflowTask/workflowHistory.mjs')
+ const project=await mkdtemp(join(tmpdir(),'m1-workflow-project-'))
+ const other=await mkdtemp(join(tmpdir(),'m1-workflow-other-'))
+ try {
+  await writeWorkflowSummary(workflowSummaryPath(project,'first','wf_11111111-111'),{
+   runId:'wf_11111111-111',sessionId:'first',scriptPath:'/tmp/a.js',startTime:1,status:'completed'})
+  await writeWorkflowSummary(workflowSummaryPath(project,'second','wf_22222222-222'),{
+   runId:'wf_22222222-222',sessionId:'second',scriptPath:'/tmp/b.js',startTime:4,status:'failed'})
+  await writeWorkflowSummary(workflowSummaryPath(other,'third','wf_33333333-333'),{
+   runId:'wf_33333333-333',sessionId:'third',scriptPath:'/tmp/c.js',startTime:5,status:'completed'})
+  const overview=await readProjectWorkflowHistory(project)
+  assert.deepEqual(overview.runs.map(run=>run.runId),['wf_22222222-222','wf_11111111-111'])
+  assert.deepEqual(overview.errors,[])
+ } finally {
+  await rm(project,{recursive:true,force:true})
+  await rm(other,{recursive:true,force:true})
+ }
+})

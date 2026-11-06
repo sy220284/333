@@ -5,10 +5,10 @@ import type { LocalJSXCommandOnDone } from '../../types/command.js'
 import { Box,Text,useInput } from '../../ink.js'
 import { Dialog } from '../design-system/Dialog.js'
 import { BackgroundTasksDialog } from './BackgroundTasksDialog.js'
-import { getSessionId,getSessionProjectDir,getOriginalCwd } from '../../bootstrap/state.js'
+import { getSessionProjectDir,getOriginalCwd } from '../../bootstrap/state.js'
 import { getProjectDir } from '../../utils/sessionStorage.js'
-import { readWorkflowHistory } from '../../tasks/LocalWorkflowTask/workflowHistory.ts'
-type Summary={runId:string,workflowName?:string,summary?:string,status?:string,startTime?:number,
+import { readProjectWorkflowHistory } from '../../tasks/LocalWorkflowTask/workflowHistory.ts'
+type Summary={runId:string,sessionId?:string,workflowName?:string,summary?:string,status?:string,startTime?:number,
  result?:unknown,scriptPath?:string,workflowProgress?:Array<{title:string}>,
  agentCount?:number,durationMs?:number,error?:string}
 export function WorkflowHistoryDialog({onDone,toolUseContext}:{
@@ -23,7 +23,7 @@ export function WorkflowHistoryDialog({onDone,toolUseContext}:{
  const refresh=useCallback(()=>{
   const project=getSessionProjectDir()??getProjectDir(getOriginalCwd())
   setLoading(true)
-  void readWorkflowHistory(project,getSessionId()).then(data=>{
+  void readProjectWorkflowHistory(project).then(data=>{
    setRecords(data.runs)
    setErrors(data.errors.map(e=>`${e.file}: ${e.message}`))
    setSelected(index=>Math.max(0,Math.min(index,data.runs.length-1)))
@@ -50,17 +50,17 @@ export function WorkflowHistoryDialog({onDone,toolUseContext}:{
  })
  if(showActive)return <BackgroundTasksDialog onlyWorkflows toolUseContext={toolUseContext} onDone={()=>setShowActive(false)}/>
  const record=records[selected]
- return <Dialog title="Workflow runs" subtitle="Saved results for this session" color="background" onCancel={()=>expanded?setExpanded(false):onDone()}>
+ return <Dialog title="工作流历史" subtitle="当前项目的全部会话记录" color="background" onCancel={()=>expanded?setExpanded(false):onDone()}>
   <Box flexDirection="column" gap={1}>
-   {loading&&<Text>Loading workflow history…</Text>}
-   {!loading&&records.length===0&&<Text>No saved workflows in this session</Text>}
+   {loading&&<Text>正在读取工作流历史…</Text>}
+   {!loading&&records.length===0&&<Text>当前项目暂无工作流记录</Text>}
    {!expanded&&records.map((item,index)=><Text key={item.runId} color={index===selected?'text':'secondaryText'}>
     {index===selected?'› ':'  '}{item.workflowName??'Workflow'} · {item.status??'unknown'} · {item.runId}
    </Text>)}
    {expanded&&record&&<Box flexDirection="column">
     <Text bold>{record.workflowName??'Workflow'} · {record.status??'unknown'}</Text>
     <Text>{record.summary??''}</Text>
-    <Text>Run: {record.runId}</Text>
+    <Text>运行编号：{record.runId} · 会话：{record.sessionId??'未知'}</Text>
     <Text>Steps: {(record.workflowProgress??[]).map(p=>p.title).join(' → ')||'—'}</Text>
     <Text>Agent calls: {record.agentCount??0} · Duration: {record.durationMs??0}ms</Text>
     {record.scriptPath&&<Text>Script: {record.scriptPath}</Text>}

@@ -31,3 +31,28 @@ export async function readWorkflowHistory(projectDir: string, sessionId: string)
  runs.sort((a,b)=>(Number(b.startTime)||0)-(Number(a.startTime)||0))
  return {runs,errors}
 }
+
+/** Project-wide read-only history, including records from earlier CLI sessions.
+ * Each session still validates the original owner identity before disclosure.
+ */
+export async function readProjectWorkflowHistory(projectDir: string): Promise<WorkflowHistoryResult317> {
+ let entries
+ try { entries = await readdir(projectDir, { withFileTypes: true }) }
+ catch (error) {
+   if (error instanceof Error && 'code' in error && error.code === 'ENOENT')
+     return { runs: [], errors: [] }
+   throw error
+ }
+ const sessions = entries.filter(entry => entry.isDirectory()).map(entry => entry.name)
+ const runs: WorkflowSummary317[] = [], errors: WorkflowHistoryError317[] = []
+ for (const sessionId of sessions) {
+   const history = await readWorkflowHistory(projectDir, sessionId)
+   runs.push(...history.runs)
+   errors.push(...history.errors.map(error => ({
+     ...error,
+     file: `${sessionId}/${error.file}`,
+   })))
+ }
+ runs.sort((a, b) => (Number(b.startTime) || 0) - (Number(a.startTime) || 0))
+ return { runs, errors }
+}
