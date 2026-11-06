@@ -1,6 +1,7 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { getInitialMainLoopModel } from '../../bootstrap/state.js'
 import { getSavedModelOptions } from '../../services/api/multimodel/catalog.js'
+import { isRemovedIndependentModel } from '../../services/api/multimodel/registry.js'
 import { isClaudeAISubscriber } from '../auth.js'
 import { getInitialSettings } from '../settings/settings.js'
 import { getAPIProvider } from './providers.js'
@@ -337,6 +338,7 @@ function filterModelOptionsByAllowlist(options: ModelOption[]): ModelOption[] {
   const explicitCustom = process.env.ANTHROPIC_CUSTOM_MODEL_OPTION
   return options.filter(option => {
     if (option.value === null) return true
+    if (isRemovedIndependentModel(option.value)) return false
     if (isLegacyClaudeModel(option.value) &&
         option.value !== selected && option.value !== startup && option.value !== explicitCustom) {
       return false
