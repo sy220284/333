@@ -13,6 +13,7 @@ import { Box, Text } from '../../ink.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
 import type { LocalJSXCommandOnDone } from '../../types/command.js'
 import { formatTotalCost } from '../../cost-tracker.js'
+import { chatGPTStatus } from '../../services/auth/chatgptOAuth.js'
 import type { ContextData } from '../../utils/analyzeContext.js'
 import { collectContextData } from '../context/context-noninteractive.js'
 
@@ -35,6 +36,38 @@ function ContextTab({ context, active }: { context: LocalJSXCommandContext; acti
   if (error) return <Text color="error">上下文读取失败：{error}</Text>
   if (!data) return <Text dimColor>正在计算上下文用量…</Text>
   return <ContextVisualization data={data} />
+}
+
+/** Read-only account diagnostics: credentials remain in local protected storage. */
+function ChatGPTAccountsTab({ active }: { active: boolean }): React.ReactNode {
+  const [status, setStatus] = useState<Awaited<ReturnType<typeof chatGPTStatus>> | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    if (!active) return
+    let disposed = false
+    setError(null)
+    void chatGPTStatus().then(next => {
+      if (!disposed) setStatus(next)
+    }).catch(cause => {
+      if (!disposed) setError(cause instanceof Error ? cause.message : String(cause))
+    })
+    return () => { disposed = true }
+  }, [active])
+  if (error) return <Text color="error">读取 ChatGPT 账号状态失败：{error}</Text>
+  if (!status) return <Text dimColor>正在检查 ChatGPT 授权…</Text>
+  return (
+    <Box flexDirection="column" gap={1}>
+      <Text bold>ChatGPT 账号与套餐调用授权</Text>
+      {status.accounts.length === 0 && <Text dimColor>尚未连接。运行 333 auth chatgpt-login 开始官方浏览器授权。</Text>}
+      {status.accounts.map(account => (
+        <Box key={account.clientId + (account.workspaceId ?? '')} flexDirection="column">
+          <Text>{account.active ? '● 当前' : '○ 已保存'} · {account.email ?? account.subject} · {account.clientId}</Text>
+          <Text dimColor>工作区：{account.workspaceId ?? '未提供'} · 登录：{account.connected ? '已连接' : '已退出'} · 套餐调用：{account.planEnabled ? '已授权' : '未授权'}</Text>
+        </Box>
+      ))}
+      <Text dimColor>切换：333 auth chatgpt-switch &lt;clientId&gt;；新增：333 auth chatgpt-login --new；重新授权：333 auth chatgpt-login --account &lt;clientId&gt;</Text>
+    </Box>
+  )
 }
 
 /** 统一状态面板，在内存中查询现有统计能力。 */
@@ -64,6 +97,9 @@ export function RuntimeStatusPanel({ onClose, context }: Props): React.ReactNode
         </Tab>
         <Tab id="stats" title="历史统计">
           <Stats onClose={onClose} />
+        </Tab>
+        <Tab id="chatgpt" title="ChatGPT 账号">
+          <ChatGPTAccountsTab active={selectedTab === 'chatgpt'} />
         </Tab>
       </Tabs>
     </Pane>
