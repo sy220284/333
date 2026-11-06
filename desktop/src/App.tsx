@@ -16,8 +16,8 @@ type Model={value:string;displayName:string;description?:string}
 const PROVIDERS=[{id:'openai',name:'OpenAI API'},{id:'deepseek',name:'DeepSeek'},{id:'qwen',name:'Qwen'},{id:'kimi',name:'Kimi'},{id:'zhipu',name:'智谱 GLM'},{id:'minimax',name:'MiniMax'}] as const
 type Mission={id?:string;missionId?:string;objective?:string;status?:string;checkpoint?:string;checkpoints?:unknown[];[key:string]:unknown}
 type FileEntry={name:string;path:string;directory:boolean}
-type Permission={id:string;toolName:string;input?:Item;description?:string}
-type HostRequest={id:string;type?:string;request?:unknown;[key:string]:unknown}
+type Permission={id:string;sessionId:string;toolName:string;input?:Item;description?:string}
+type HostRequest={id:string;sessionId:string;type?:string;request?:unknown;[key:string]:unknown}
 type Task={taskId:string;status?:string;description?:string;[key:string]:unknown}
 type JobStatus='queued'|'running'|'review'|'completed'|'failed'|'interrupted'|'cancelled'
 type MissionJob={id:string;title:string;instruction:string;status:JobStatus;attempt:number;summary?:string;sessionId?:string;history?:Array<{attempt:number;status:string;summary:string;finishedAt:string;sessionId?:string}>}
@@ -160,8 +160,14 @@ export function App(){
       api.call<HostRequest[]>('host.list',{sessionId:id}),
       api.call<Task[]>('tasks.list',{sessionId:id})
     ])
-    if(p.status==='fulfilled')setPermissions(p.value??[])
-    if(h.status==='fulfilled')setHostRequests(h.value??[])
+    if(p.status==='fulfilled')setPermissions(old=>[
+      ...old.filter(item=>item.sessionId!==id),
+      ...(p.value??[]).map(item=>({...item,sessionId:id}))
+    ])
+    if(h.status==='fulfilled')setHostRequests(old=>[
+      ...old.filter(item=>item.sessionId!==id),
+      ...(h.value??[]).map(item=>({...item,sessionId:id}))
+    ])
     if(t.status==='fulfilled')setTasks(t.value??[])
   },[])
   useEffect(()=>{
@@ -171,23 +177,24 @@ export function App(){
       if(event.event==='desktop.disconnected'){
         setConnected(false);setError(String(event.error||'桌面后台连接已断开'));return
       }
-      if(event.sessionId&&event.sessionId!==sessionRef.current)return
+      const globalInbox=['permission.request','permission.resolved','host.request','host.resolved']
+      if(event.sessionId&&event.sessionId!==sessionRef.current&&!globalInbox.includes(event.event))return
       if(event.event==='session.state'){
         const state=obj(event.state)
         setSessionPhase(String(state.phase??state.status??'idle'))
       }else if(event.event==='session.error'||event.event==='task.persistence.error'){
         setError(String(event.error||'任务执行异常'))
       }else if(event.event==='permission.request'){
-        const p=obj(event.permission) as unknown as Permission
+        const p={...obj(event.permission),sessionId:String(event.sessionId||'')} as Permission
         setPermissions(old=>old.some(item=>item.id===p.id)?old:[...old,p])
       }else if(event.event==='permission.resolved'){
-        setPermissions(old=>old.filter(item=>item.id!==event.permissionId))
+        setPermissions(old=>old.filter(item=>item.id!==event.permissionId||item.sessionId!==event.sessionId))
       }else if(event.event==='host.request'){
-        const r=obj(event.request) as unknown as HostRequest
+        const r={...obj(event.request),sessionId:String(event.sessionId||'')} as HostRequest
         setHostForm({})
         setHostRequests(old=>old.some(item=>item.id===r.id)?old:[...old,r])
       }else if(event.event==='host.resolved'){
-        setHostRequests(old=>old.filter(item=>item.id!==event.requestId))
+        setHostRequests(old=>old.filter(item=>item.id!==event.requestId||item.sessionId!==event.sessionId))
       }else if(event.event==='mission.queue.state'){
         if(String(event.missionId||'')!==selectedMissionRef.current)return
         setMissionQueueActive(Boolean(event.active))
@@ -287,14 +294,14 @@ export function App(){
     await operation('新建会话',async()=>{
       const response=await invoke<{sessionId:string;models?:Model[];tasks?:Task[]}>('sessions.open',selectedModel?{model:selectedModel}:{})
       setSessionId(response.sessionId);sessionRef.current=response.sessionId;setSessionPhase('idle');setMessages([])
-      setTasks(response.tasks??[]);setPermissions([]);setHostRequests([])
+      setTasks(response.tasks??[])
       setView('chat');await refresh()
     })
   }
   async function resumeSession(id:string){
     await operation('恢复会话',async()=>{
       const response=await invoke<{sessionId:string;tasks?:Task[]}>('sessions.resume',{sessionId:id})
-      setSessionId(response.sessionId);sessionRef.current=response.sessionId;setTasks(response.tasks??[]);setPermissions([]);setHostRequests([])
+      setSessionId(response.sessionId);sessionRef.current=response.sessionId;setTasks(response.tasks??[])
       const history=await invoke<unknown>('sessions.history',{sessionId:id,limit:200,offset:0})
       const rows=Array.isArray(history)?history:asObject(history)?.messages??[]
       const next=(Array.isArray(rows)?rows:[]).map(itemFromMessage).filter(Boolean) as ConversationItem[]
@@ -410,7 +417,7 @@ export function App(){
       const rows=Array.isArray(history)?history:asObject(history)?.messages??[]
       setMessages((Array.isArray(rows)?rows:[]).map(itemFromMessage).filter(Boolean) as ConversationItem[])
       setSessionId(job.sessionId!);sessionRef.current=job.sessionId!
-      setTasks([]);setPermissions([]);setHostRequests([])
+      setTasks([])
       setView('chat')
     })
   }
@@ -475,18 +482,20 @@ export function App(){
     })
   }
   async function decision(id:string,allow:boolean){
-    if(!sessionId)return
     await operation('权限审批',async()=>{
-      await invoke('permissions.decide',{sessionId,permissionId:id,
+      const pending=permissions.find(item=>item.id===id)
+      if(!pending?.sessionId)throw new Error('审批请求已过期，请刷新会话')
+      await invoke('permissions.decide',{sessionId:pending.sessionId,permissionId:id,
         decision:allow?{behavior:'allow'}:{behavior:'deny',message:'用户已在桌面端拒绝该工具调用'}})
-      setPermissions(old=>old.filter(p=>p.id!==id))
+      setPermissions(old=>old.filter(p=>p.id!==id||p.sessionId!==pending.sessionId))
     })
   }
   async function respondHost(id:string,action:'accept'|'decline'){
-    if(!sessionId)return
     await operation('主机请求',async()=>{
-      await invoke('host.respond',{sessionId,requestId:id,response:action==='accept'?{action,content:hostForm}:{action}})
-      setHostRequests(old=>old.filter(r=>r.id!==id));setHostForm({})
+      const pending=hostRequests.find(request=>request.id===id)
+      if(!pending?.sessionId)throw new Error('主机请求已过期，请刷新会话')
+      await invoke('host.respond',{sessionId:pending.sessionId,requestId:id,response:action==='accept'?{action,content:hostForm}:{action}})
+      setHostRequests(old=>old.filter(r=>r.id!==id||r.sessionId!==pending.sessionId));setHostForm({})
     })
   }
   const requested=hostRequests[0]
@@ -568,8 +577,8 @@ export function App(){
           {view==='integrations'&&<div className="stack-page"><div className="integration-grid"><Panel><div className="integration-icon purple"><WandSparkles size={26}/></div><h2>技能 Skills</h2><p>复用项目和用户级技能，为重复工作提供标准执行路径。</p><button className="secondary-button" onClick={()=>toChat('列出当前工作区可用的全部技能，包括来源、功能、启用状态和使用方式')}><Search size={15}/>检查已安装技能</button></Panel><Panel><div className="integration-icon blue"><Boxes size={26}/></div><h2>MCP 工具</h2><p>让 AI 使用项目服务、外部工具与本地开发能力。</p><button className="secondary-button" onClick={()=>toChat('检查当前 MCP 服务器连接情况，列出服务、工具、授权和连接错误')}><Activity size={15}/>检查 MCP 连接</button></Panel><Panel><div className="integration-icon mint"><Bot size={26}/></div><h2>插件与扩展</h2><p>保持现有插件运行机制，按需读取能力与诊断问题。</p><button className="secondary-button" onClick={()=>toChat('审计当前已安装的插件及其功能入口，检查是否能够正常调用')}><ArrowRight size={15}/>检查插件</button></Panel></div><Section title="MCP 服务器管理" subtitle="复用 PR19 的 MCP 配置、范围和企业策略，显示实际已登记的服务器。" action={<button className="secondary-button" onClick={()=>void operation('刷新 MCP',refresh)}><RefreshCw size={15}/>刷新</button>}><Panel><div className="mcp-list">{mcpServers.map((server,i)=><div className="mcp-row" key={server.scope+':'+server.name+':'+i}><div className="mcp-info"><div><strong>{server.name}</strong><StatusTag text={server.disabled?'已禁用':'已启用'} tone={server.disabled?'warn':'good'}/></div><p>{server.scope} · {server.type}{server.url?' · '+server.url:''}</p></div><button className="secondary-button small" onClick={()=>void manageMcp(server,'mcp.toggle')}>{server.disabled?'启用':'禁用'}</button><button className="secondary-button small" onClick={()=>void manageMcp(server,'mcp.remove')}><X size={14}/>移除</button></div>)}{mcpServers.length===0&&<p className="muted small">当前工作区尚无已登记的 MCP 服务。</p>}{mcpErrors.map((e,i)=><p className="mcp-error" key={i}><AlertCircle size={14}/>{e}</p>)}</div><div className="divider"/><h3>添加 MCP 服务</h3><div className="mcp-form"><label>名称<input placeholder="例如 github-mcp" value={mcpName} onChange={e=>setMcpName(e.target.value)}/></label><label>连接方式<select value={mcpType} onChange={e=>setMcpType(e.target.value as typeof mcpType)}><option value="http">HTTP</option><option value="sse">SSE</option><option value="stdio">本地命令（stdio）</option></select></label><label>配置范围<select value={mcpScope} onChange={e=>setMcpScope(e.target.value as typeof mcpScope)}><option value="project">当前项目</option><option value="user">用户级</option><option value="local">本地项目级</option></select></label><label className="mcp-wide">{mcpType==='stdio'?'启动命令':'服务器 URL'}<input placeholder={mcpType==='stdio'?'例如 npx':'https://mcp.example.com/mcp'} value={mcpTarget} onChange={e=>setMcpTarget(e.target.value)}/></label>{mcpType==='stdio'&&<label className="mcp-wide">命令参数（每行一项）<textarea rows={3} value={mcpArguments} onChange={e=>setMcpArguments(e.target.value)} placeholder={"-y\n@example/server"}/></label>}<button className="primary-button" onClick={()=>void installMcp()} disabled={!mcpName.trim()||!mcpTarget.trim()||Boolean(busy)}><Plus size={15}/>添加服务</button></div></Panel></Section><Panel className="info-panel"><AlertCircle size={18}/><div><strong>插件与技能继续使用既有执行引擎</strong><p>上方 MCP 已支持添加、禁用、恢复、删除及范围管理。插件市场安装和技能管理的独立桌面页面仍需复用原有插件服务接口接通。</p></div></Panel></div>}
           {view==='github'&&<div className="stack-page"><Panel className="github-hero"><div className="github-badge"><GitPullRequest size={27}/></div><div><h2>项目 Git 工作区</h2><p>{workspace}</p><StatusTag text="本地仓库" tone="good"/></div><button className="secondary-button" onClick={()=>void refreshGit()}><RefreshCw size={15}/>刷新状态</button></Panel><div className="two-columns"><Section title="工作区状态"><Panel><pre className="git-output">{gitStatus||'点击「刷新状态」获取当前仓库真实状态。'}</pre></Panel></Section><Section title="智能代码审查"><Panel><p className="muted">使用仓库现有 GitHub 工具、PR 审查规则及权限体系执行任务。</p><button className="primary-button" onClick={()=>toChat('审查当前 Git 工作区和 PR19 的最新修改，按风险等级列出问题并附上代码位置')}><GitPullRequest size={16}/>发起 PR 审查</button></Panel></Section></div><Section title="未提交改动"><Panel><pre className="git-output">{gitDiff||'刷新后在这里查看 Git diff。'}</pre></Panel></Section></div>}
           {view==='history'&&<div className="stack-page"><Section title="本地会话" action={<button className="secondary-button" onClick={()=>void operation('刷新历史',refresh)}><RefreshCw size={15}/>刷新</button>}><Panel><div className="item-list">{sessions.map((s,i)=>{const id=String(s.sessionId||s.id||'');return <button key={id||i} className="list-row" onClick={()=>void resumeSession(id)} disabled={!id}><div className="row-icon"><History size={17}/></div><div className="row-main"><strong>{String(s.summary||s.title||id||'会话')}</strong><span>{id}</span></div><span className="muted">恢复</span><ChevronRight size={17}/></button>})}{sessions.length===0&&<Empty icon={History} title="没有历史会话" detail="会话历史由后台按工作区保存，运行过的会话可从这里恢复。"/>}</div></Panel></Section></div>}
-          {view==='settings'&&<div className="stack-page"><Section title="工具权限审批" subtitle="每一项工具执行请求都需要明确处理。拒绝会直接反馈给执行引擎。"><Panel>{permissions.length===0?<Empty icon={ShieldCheck} title="当前没有待处理的审批" detail="AI 发起受保护的工具操作时，申请会出现在这里。"/>:<div className="approval-list">{permissions.map(p=><div key={p.id} className="approval-card"><div className="approval-title"><LockKeyhole size={18}/><div><strong>{p.toolName}</strong><span>{p.description||'工具请求等待确认'}</span></div></div><pre>{json(p.input)}</pre><div className="button-row"><button className="secondary-button" onClick={()=>void decision(p.id,false)}>拒绝</button><button className="primary-button" onClick={()=>void decision(p.id,true)}>本次允许</button></div></div>)}</div>}</Panel></Section>
-            <Section title="主机交互请求"><Panel>{hostRequests.length===0?<p className="muted">没有需要处理的主机交互请求。</p>:hostRequests.map(r=><div key={r.id} className="approval-card"><strong>{String(r.type||'交互请求')}</strong><pre>{json(r.request||r)}</pre><button className="secondary-button" onClick={()=>void operation('拒绝请求',async()=>{if(!sessionId)return;await invoke('host.reject',{sessionId,requestId:r.id,reason:'用户在桌面端拒绝请求'});await refreshSession(sessionId)})}>拒绝请求</button></div>)}</Panel></Section>
+          {view==='settings'&&<div className="stack-page"><Section title="工具权限审批" subtitle="每一项工具执行请求都需要明确处理。拒绝会直接反馈给执行引擎。"><Panel>{permissions.length===0?<Empty icon={ShieldCheck} title="当前没有待处理的审批" detail="AI 发起受保护的工具操作时，申请会出现在这里。"/>:<div className="approval-list">{permissions.map(p=><div key={p.id} className="approval-card"><div className="approval-title"><LockKeyhole size={18}/><div><strong>{p.toolName}</strong><span>{p.description||'工具请求等待确认'} · 会话 {p.sessionId.slice(0,8)}</span></div></div><pre>{json(p.input)}</pre><div className="button-row"><button className="secondary-button" onClick={()=>void decision(p.id,false)}>拒绝</button><button className="primary-button" onClick={()=>void decision(p.id,true)}>本次允许</button></div></div>)}</div>}</Panel></Section>
+            <Section title="主机交互请求"><Panel>{hostRequests.length===0?<p className="muted">没有需要处理的主机交互请求。</p>:hostRequests.map(r=><div key={r.id} className="approval-card"><strong>{String(r.type||'交互请求')}</strong><pre>{json(r.request||r)}</pre><button className="secondary-button" onClick={()=>void operation('拒绝请求',async()=>{await invoke('host.reject',{sessionId:r.sessionId,requestId:r.id,reason:'用户在桌面端拒绝请求'});await refreshSession(r.sessionId)})}>拒绝请求</button></div>)}</Panel></Section>
             <Section title="外观与体验"><Panel className="settings-list"><label className="setting-row"><div><strong>深色主题</strong><p>深色背景与柔和分层玻璃质感</p></div><input type="checkbox" checked={isDark} onChange={e=>setIsDark(e.target.checked)}/></label><label className="setting-row"><div><strong>动态效果</strong><p>开启过渡与悬停动效，系统要求减少动态效果时自动降低</p></div><input type="checkbox" checked={animate} onChange={e=>setAnimate(e.target.checked)}/></label><div className="setting-row"><div><strong>侧边上下文面板</strong><p>显示任务、模型、审批和运行摘要</p></div><button className="secondary-button" onClick={()=>setRightOpen(v=>!v)}>{rightOpen?'收起面板':'展开面板'}</button></div></Panel></Section></div>}
         </main>
         {rightOpen&&<aside className="inspector"><div className="inspector-heading"><span>实时上下文</span><IconButton label="收起详情" onClick={()=>setRightOpen(false)}><X size={15}/></IconButton></div><div className="inspector-content"><div className="inspector-section"><span className="side-section-label">运行状态</span><div className="runtime-tile"><div className={'runtime-indicator '+(connected?'ok':'off')}>{connected?<Activity size={20}/>:<AlertCircle size={20}/>}</div><strong>{connected?'引擎已连接':'等待连接'}</strong><span>{statusName(sessionPhase)}</span></div></div><div className="inspector-section"><span className="side-section-label">当前配置</span><div className="detail-row"><span>智能体模式</span><strong>{mode==='super'?'Super Agents':'主子模式'}</strong></div><div className="detail-row"><span>当前模型</span><strong title={selectedModel}>{selectedModel||'默认模型'}</strong></div><div className="detail-row"><span>待审权限</span><strong className={permissions.length?'attention':''}>{permissions.length} 项</strong></div><div className="detail-row"><span>活动任务</span><strong>{tasks.length}</strong></div></div><div className="inspector-section"><span className="side-section-label">快捷操作</span><button className="inspector-action" onClick={()=>setView('settings')}><ShieldCheck size={16}/>管理权限<ChevronRight size={15}/></button><button className="inspector-action" onClick={()=>setView('missions')}><ListChecks size={16}/>任务簿<ChevronRight size={15}/></button><button className="inspector-action" onClick={()=>setView('models')}><Cpu size={16}/>模型选择<ChevronRight size={15}/></button></div><div className="inspector-section"><span className="side-section-label">最近活动</span>{activity.length?activity.slice(0,6).map((event,i)=><div className="activity-entry" key={i}><span className="activity-dot"/>{event}</div>):<p className="muted small">运行任务时，这里显示执行活动。</p>}</div></div><div className="inspector-footer"><span className={'connection-light '+(connected?'online':'offline')}/><span>本地工作区 · {busy||'已就绪'}</span></div></aside>}
