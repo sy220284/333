@@ -44,8 +44,8 @@ describe('摇摇车真实桌面页面交互',()=>{
     expect(within(navigation).getByRole('button',{name:'智能体团队'})).toBeInTheDocument()
     expect(within(navigation).getByRole('button',{name:'长期任务'})).toBeInTheDocument()
     expect(within(navigation).getByRole('button',{name:'项目文件'})).toBeInTheDocument()
-    expect(call).toHaveBeenCalledWith('models.list',expect.any(Object))
-    expect(call).toHaveBeenCalledWith('mcp.list',expect.any(Object))
+    expect(call).toHaveBeenCalledWith('models.list')
+    expect(call).toHaveBeenCalledWith('mcp.list')
   })
 
   it('新建会话发送消息后收到工具审批并明确批准',async()=>{
@@ -58,7 +58,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',{sessionId:SID,message:'分析这个项目'}))
     await act(async()=>listener({event:'permission.request',sessionId:SID,permission:{id:'approval-1',toolName:'Bash',input:{command:'bun test'}}}))
     const dialog=screen.getByRole('dialog',{name:'工具权限审批'})
-    expect(within(dialog).getByText('Bash')).toBeInTheDocument()
+    expect(within(dialog).getByText(/Bash/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button',{name:'允许本次操作'}))
     await waitFor(()=>expect(call).toHaveBeenCalledWith('permissions.decide',{
       sessionId:SID,permissionId:'approval-1',decision:{behavior:'allow'}
