@@ -49,7 +49,7 @@ import * as lockfile from '../lockfile.js'
 import { logError } from '../log.js'
 import { gt, gte } from '../semver.js'
 import {
-  filterAvenloAliases,
+  filterQerivonAliases,
   getShellConfigPaths,
   readFileLines,
   writeFileLines,
@@ -109,7 +109,7 @@ export function getPlatform(): string {
 }
 
 export function getBinaryName(platform: string): string {
-  return platform.startsWith('win32') ? 'avenlo.exe' : 'avenlo'
+  return platform.startsWith('win32') ? 'qerivon.exe' : 'qerivon'
 }
 
 function getBaseDirectories() {
@@ -118,13 +118,13 @@ function getBaseDirectories() {
 
   return {
     // Data directories (permanent storage)
-    versions: join(getXDGDataHome(), 'avenlo', 'versions'),
+    versions: join(getXDGDataHome(), 'qerivon', 'versions'),
 
     // Cache directories (can be deleted)
-    staging: join(getXDGCacheHome(), 'avenlo', 'staging'),
+    staging: join(getXDGCacheHome(), 'qerivon', 'staging'),
 
     // State directories
-    locks: join(getXDGStateHome(), 'avenlo', 'locks'),
+    locks: join(getXDGStateHome(), 'qerivon', 'locks'),
 
     // User bin
     executable: join(getUserBinDir(), executableName),
@@ -465,7 +465,7 @@ async function performVersionUpdate(
     logForDebugging(`Version ${version} already installed, updating symlink`)
   }
 
-  // Create direct symlink from ~/.local/bin/avenlo to the version binary
+  // Create direct symlink from ~/.local/bin/qerivon to the version binary
   await removeDirectoryIfEmpty(executablePath)
   await updateSymlink(executablePath, installPath)
 
@@ -1498,7 +1498,7 @@ export async function cleanupShellAliases(): Promise<SetupMessage[]> {
       const lines = await readFileLines(configFile)
       if (!lines) continue
 
-      const { filtered, hadAlias } = filterAvenloAliases(lines)
+      const { filtered, hadAlias } = filterQerivonAliases(lines)
 
       if (hadAlias) {
         await writeFileLines(configFile, filtered)
@@ -1558,9 +1558,9 @@ async function manualRemoveNpmPackage(
 
     if (getPlatform().startsWith('win32')) {
       // Windows - only remove executables, not the package directory
-      const binCmd = join(globalPrefix, 'avenlo.cmd')
-      const binPs1 = join(globalPrefix, 'avenlo.ps1')
-      const binExe = join(globalPrefix, 'avenlo')
+      const binCmd = join(globalPrefix, 'qerivon.cmd')
+      const binPs1 = join(globalPrefix, 'qerivon.ps1')
+      const binExe = join(globalPrefix, 'qerivon')
 
       if (await tryRemove(binCmd, 'bin script')) {
         manuallyRemoved = true
@@ -1575,7 +1575,7 @@ async function manualRemoveNpmPackage(
       }
     } else {
       // Unix/Mac - only remove symlink, not the package directory
-      const binSymlink = join(globalPrefix, 'bin', 'avenlo')
+      const binSymlink = join(globalPrefix, 'bin', 'qerivon')
 
       if (await tryRemove(binSymlink, 'bin symlink')) {
         manuallyRemoved = true
@@ -1662,12 +1662,12 @@ export async function cleanupNpmInstallations(): Promise<{
   const warnings: string[] = []
   let removed = 0
 
-  // Native migration may remove an earlier Avenlo npm installation only.
+  // Native migration may remove an earlier Qerivon npm installation only.
   // Claude Code, other providers, and ~/.claude/local are independent software.
-  // Never remove their files or packages while installing Avenlo.
-  const ownPackage = '@avenlo/agent-cli'
+  // Never remove their files or packages while installing Qerivon.
+  const ownPackage = '@qerivon/agent-cli'
   if (MACRO.PACKAGE_URL !== ownPackage) {
-    errors.push('安装包身份与 Avenlo 不一致，已跳过 npm 清理，避免卸载其他软件')
+    errors.push('安装包身份与 Qerivon 不一致，已跳过 npm 清理，避免卸载其他软件')
     return { removed, errors, warnings }
   }
   const result = await attemptNpmUninstall(ownPackage)

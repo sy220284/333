@@ -35,8 +35,8 @@ import { SandboxManager } from './sandbox/sandbox-adapter.js'
 import { getManagedFilePath } from './settings/managedPath.js'
 import { CUSTOMIZATION_SURFACES } from './settings/types.js'
 import {
-  findAvenloAlias,
-  findValidAvenloAlias,
+  findQerivonAlias,
+  findValidQerivonAlias,
   getShellConfigPaths,
 } from './shellConfig.js'
 import { jsonParse } from './slowOperations.js'
@@ -161,7 +161,7 @@ async function getInstallationPath(): Promise<string> {
     }
 
     try {
-      const path = await which('avenlo')
+      const path = await which('qerivon')
       if (path) {
         return path
       }
@@ -171,8 +171,8 @@ async function getInstallationPath(): Promise<string> {
 
     // If we can't find it, check common locations
     try {
-      await getFsImplementation().stat(join(homedir(), '.local/bin/avenlo'))
-      return join(homedir(), '.local/bin/avenlo')
+      await getFsImplementation().stat(join(homedir(), '.local/bin/qerivon'))
+      return join(homedir(), '.local/bin/qerivon')
     } catch {
       // Not found
     }
@@ -207,9 +207,9 @@ async function detectMultipleInstallations(): Promise<
   const fs = getFsImplementation()
   const installations: Array<{ type: string; path: string }> = []
 
-  // Treat only Avenlo packages as Avenlo installations. An existing Claude Code
+  // Treat only Qerivon packages as Qerivon installations. An existing Claude Code
   // installation is independent and must not be marked for removal.
-  const packagesToCheck = ['@avenlo/agent-cli']
+  const packagesToCheck = ['@qerivon/agent-cli']
   const npmResult = await execFileNoThrow('npm', [
     '-g',
     'config',
@@ -220,12 +220,12 @@ async function detectMultipleInstallations(): Promise<
     const npmPrefix = npmResult.stdout.trim()
     const isWindows = getPlatform() === 'windows'
 
-    // First check for active installations via bin/avenlo
-    // Linux / macOS have prefix/bin/avenlo and prefix/lib/node_modules
+    // First check for active installations via bin/qerivon
+    // Linux / macOS have prefix/bin/qerivon and prefix/lib/node_modules
     // Windows has prefix/claude and prefix/node_modules
     const globalBinPath = isWindows
-      ? join(npmPrefix, 'avenlo')
-      : join(npmPrefix, 'bin', 'avenlo')
+      ? join(npmPrefix, 'qerivon')
+      : join(npmPrefix, 'bin', 'qerivon')
 
     let globalBinExists = false
     try {
@@ -237,7 +237,7 @@ async function detectMultipleInstallations(): Promise<
 
     if (globalBinExists) {
       // Check if this is actually a Homebrew cask installation, not npm-global
-      // When npm is installed via Homebrew, both can exist at /opt/homebrew/bin/avenlo
+      // When npm is installed via Homebrew, both can exist at /opt/homebrew/bin/qerivon
       // We need to resolve the symlink to see where it actually points
       let isCurrentHomebrewInstallation = false
 
@@ -258,7 +258,7 @@ async function detectMultipleInstallations(): Promise<
         installations.push({ type: 'npm-global', path: globalBinPath })
       }
     } else {
-      // If no bin/avenlo exists, check for orphaned packages (no bin/avenlo symlink)
+      // If no bin/qerivon exists, check for orphaned packages (no bin/qerivon symlink)
       for (const packageName of packagesToCheck) {
         const globalPackagePath = isWindows
           ? join(npmPrefix, 'node_modules', packageName)
@@ -280,7 +280,7 @@ async function detectMultipleInstallations(): Promise<
   // Check for native installation
 
   // Check common native installation paths
-  const nativeBinPath = join(homedir(), '.local', 'bin', 'avenlo')
+  const nativeBinPath = join(homedir(), '.local', 'bin', 'qerivon')
   try {
     await fs.stat(nativeBinPath)
     installations.push({ type: 'native', path: nativeBinPath })
@@ -291,7 +291,7 @@ async function detectMultipleInstallations(): Promise<
   // Also check if config indicates native installation
   const config = getGlobalConfig()
   if (config.installMethod === 'native') {
-    const nativeDataPath = join(homedir(), '.local', 'share', 'avenlo')
+    const nativeDataPath = join(homedir(), '.local', 'share', 'qerivon')
     try {
       await fs.stat(nativeDataPath)
       if (!installations.some(i => i.type === 'native')) {
@@ -426,27 +426,27 @@ async function detectConfigurationIssues(
     if (type === 'npm-local' && config.installMethod !== 'local') {
       warnings.push({
         issue: `Running from local installation but config install method is '${config.installMethod}'`,
-        fix: 'Consider using native installation: avenlo install',
+        fix: 'Consider using native installation: qerivon install',
       })
     }
 
     if (type === 'native' && config.installMethod !== 'native') {
       warnings.push({
         issue: `Running native installation but config install method is '${config.installMethod}'`,
-        fix: 'Run avenlo install to update configuration',
+        fix: 'Run qerivon install to update configuration',
       })
     }
   }
 
 
 
-  const existingAlias = await findAvenloAlias()
-  const validAlias = await findValidAvenloAlias()
+  const existingAlias = await findQerivonAlias()
+  const validAlias = await findValidQerivonAlias()
 
   // Check if running local installation but it's not in PATH
   if (type === 'npm-local') {
     // Check if claude is already accessible via PATH
-    const whichResult = await which('avenlo')
+    const whichResult = await which('qerivon')
     const claudeInPath = !!whichResult
 
     // Only show warning if claude is NOT in PATH AND no valid alias exists
@@ -455,13 +455,13 @@ async function detectConfigurationIssues(
         // Alias exists but points to invalid target
         warnings.push({
           issue: 'Local installation not accessible',
-          fix: `Alias exists but points to invalid target: ${existingAlias}. Update alias: alias avenlo="~/.avenlo/local/avenlo"`,
+          fix: `Alias exists but points to invalid target: ${existingAlias}. Update alias: alias qerivon="~/.qerivon/local/qerivon"`,
         })
       } else {
         // No alias exists and not in PATH
         warnings.push({
           issue: 'Local installation not accessible',
-          fix: 'Create alias: alias avenlo="~/.avenlo/local/avenlo"',
+          fix: 'Create alias: alias qerivon="~/.qerivon/local/qerivon"',
         })
       }
     }
@@ -522,7 +522,7 @@ export async function getDoctorDiagnostic(): Promise<DiagnosticInfo> {
 
     for (const install of npmInstalls) {
       if (install.type === 'npm-global') {
-        const uninstallCmd = 'npm -g uninstall @avenlo/agent-cli'
+        const uninstallCmd = 'npm -g uninstall @qerivon/agent-cli'
         warnings.push({
           issue: `Leftover npm global installation at ${install.path}`,
           fix: `Run: ${uninstallCmd}`,
@@ -560,7 +560,7 @@ export async function getDoctorDiagnostic(): Promise<DiagnosticInfo> {
     if (!hasUpdatePermissions && !getAutoUpdaterDisabledReason()) {
       warnings.push({
         issue: 'Insufficient permissions for auto-updates',
-        fix: 'Do one of: (1) Re-install node without sudo, or (2) Use `avenlo install` for native installation',
+        fix: 'Do one of: (1) Re-install node without sudo, or (2) Use `qerivon install` for native installation',
       })
     }
   }

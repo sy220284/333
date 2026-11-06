@@ -30,7 +30,7 @@ export function getUserAgent(): string {
   // so the read picks up the same setWorkload() value as getAttributionHeader.
   const workload = getWorkload()
   const workloadSuffix = workload ? `, workload/${workload}` : ''
-  return `avenlo-cli/${MACRO.VERSION} (${process.env.USER_TYPE}, ${process.env.CLAUDE_CODE_ENTRYPOINT ?? 'cli'}${agentSdkVersion}${clientApp}${workloadSuffix})`
+  return `qerivon-cli/${MACRO.VERSION} (${process.env.USER_TYPE}, ${process.env.CLAUDE_CODE_ENTRYPOINT ?? 'cli'}${agentSdkVersion}${clientApp}${workloadSuffix})`
 }
 
 export function getMCPUserAgent(): string {
@@ -45,12 +45,12 @@ export function getMCPUserAgent(): string {
     parts.push(`client-app/${process.env.CLAUDE_AGENT_SDK_CLIENT_APP}`)
   }
   const suffix = parts.length > 0 ? ` (${parts.join(', ')})` : ''
-  return `avenlo/${MACRO.VERSION}${suffix}`
+  return `qerivon/${MACRO.VERSION}${suffix}`
 }
 
 // User-Agent for user-initiated WebFetch requests to arbitrary sites.
 export function getWebFetchUserAgent(): string {
-  return `Avenlo/${MACRO.VERSION} (user-initiated fetch)`
+  return `Qerivon/${MACRO.VERSION} (user-initiated fetch)`
 }
 
 export type AuthHeaders = {

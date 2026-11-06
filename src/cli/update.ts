@@ -120,45 +120,45 @@ export async function update() : Promise<void> {
     writeToStdout('\n')
 
     if (packageManager === 'homebrew') {
-      writeToStdout('Avenlo is managed by Homebrew.\n')
+      writeToStdout('Qerivon is managed by Homebrew.\n')
       const latest = await getLatestVersion(channel)
       if (latest && !gte(MACRO.VERSION, latest)) {
         writeToStdout(`Update available: ${MACRO.VERSION} → ${latest}\n`)
         writeToStdout('\n')
         writeToStdout('To update, run:\n')
-        writeToStdout(`${chalk.bold('  请通过原安装渠道升级 Avenlo')}\n`)
+        writeToStdout(`${chalk.bold('  请通过原安装渠道升级 Qerivon')}\n`)
       } else {
-        writeToStdout('Avenlo 已是最新版本!\n')
+        writeToStdout('Qerivon 已是最新版本!\n')
       }
     } else if (packageManager === 'winget') {
-      writeToStdout('Avenlo is managed by winget.\n')
+      writeToStdout('Qerivon is managed by winget.\n')
       const latest = await getLatestVersion(channel)
       if (latest && !gte(MACRO.VERSION, latest)) {
         writeToStdout(`Update available: ${MACRO.VERSION} → ${latest}\n`)
         writeToStdout('\n')
         writeToStdout('To update, run:\n')
         writeToStdout(
-          `${chalk.bold('  请通过原安装渠道升级 Avenlo')}\n`,
+          `${chalk.bold('  请通过原安装渠道升级 Qerivon')}\n`,
         )
       } else {
-        writeToStdout('Avenlo 已是最新版本!\n')
+        writeToStdout('Qerivon 已是最新版本!\n')
       }
     } else if (packageManager === 'apk') {
-      writeToStdout('Avenlo is managed by apk.\n')
+      writeToStdout('Qerivon is managed by apk.\n')
       const latest = await getLatestVersion(channel)
       if (latest && !gte(MACRO.VERSION, latest)) {
         writeToStdout(`Update available: ${MACRO.VERSION} → ${latest}\n`)
         writeToStdout('\n')
         writeToStdout('To update, run:\n')
-        writeToStdout(`${chalk.bold('  请通过原安装渠道升级 Avenlo')}\n`)
+        writeToStdout(`${chalk.bold('  请通过原安装渠道升级 Qerivon')}\n`)
       } else {
-        writeToStdout('Avenlo 已是最新版本!\n')
+        writeToStdout('Qerivon 已是最新版本!\n')
       }
     } else {
       // pacman, deb, and rpm don't get specific commands because they each have
       // multiple frontends (pacman: yay/paru/makepkg, deb: apt/apt-get/aptitude/nala,
       // rpm: dnf/yum/zypper)
-      writeToStdout('Avenlo is managed by a package manager.\n')
+      writeToStdout('Qerivon is managed by a package manager.\n')
       writeToStdout('Please use your package manager to update.\n')
     }
 
@@ -225,7 +225,7 @@ export async function update() : Promise<void> {
           : ''
         writeToStdout(
           chalk.yellow(
-            `Another Avenlo process${pidInfo} is currently running. Please try again in a moment.`,
+            `Another Qerivon process${pidInfo} is currently running. Please try again in a moment.`,
           ) + '\n',
         )
         await gracefulShutdown(0)
@@ -238,7 +238,7 @@ export async function update() : Promise<void> {
 
       if (result.latestVersion === MACRO.VERSION) {
         writeToStdout(
-          `${chalk.green(`Avenlo 已是最新版本 (${MACRO.VERSION})`)}\n`,
+          `${chalk.green(`Qerivon 已是最新版本 (${MACRO.VERSION})`)}\n`,
         )
       } else {
         writeToStdout(
@@ -252,7 +252,7 @@ export async function update() : Promise<void> {
     } catch (error) {
       process.stderr.write('Error: Failed to install native update\n')
       process.stderr.write(String(error) + '\n')
-      process.stderr.write('Try running "avenlo doctor" for diagnostics\n')
+      process.stderr.write('Try running "qerivon doctor" for diagnostics\n')
       await gracefulShutdown(1)
     }
   }
@@ -283,14 +283,14 @@ export async function update() : Promise<void> {
     process.stderr.write('  • Network connectivity issues\n')
     process.stderr.write('  • npm registry is unreachable\n')
     process.stderr.write('  • Corporate proxy/firewall blocking npm\n')
-    if (MACRO.PACKAGE_URL === '@avenlo/agent-cli') {
-      process.stderr.write('  • Avenlo 包尚未发布到当前 npm 注册表\n')
+    if (MACRO.PACKAGE_URL === '@qerivon/agent-cli') {
+      process.stderr.write('  • Qerivon 包尚未发布到当前 npm 注册表\n')
     }
     process.stderr.write('\n')
     process.stderr.write('Try:\n')
     process.stderr.write('  • Check your internet connection\n')
     process.stderr.write('  • Run with --debug flag for more details\n')
-    const packageName = MACRO.PACKAGE_URL || '@avenlo/agent-cli'
+    const packageName = MACRO.PACKAGE_URL || '@qerivon/agent-cli'
     process.stderr.write(
       `  • Manually check: npm view ${packageName} version\n`,
     )
@@ -302,7 +302,7 @@ export async function update() : Promise<void> {
   // Check if versions match exactly, including any build metadata (like SHA)
   if (latestVersion === MACRO.VERSION) {
     writeToStdout(
-      `${chalk.green(`Avenlo 已是最新版本 (${MACRO.VERSION})`)}\n`,
+      `${chalk.green(`Qerivon 已是最新版本 (${MACRO.VERSION})`)}\n`,
     )
     await gracefulShutdown(0)
   }
@@ -380,12 +380,12 @@ export async function update() : Promise<void> {
       if (useLocalUpdate) {
         process.stderr.write('Try manually updating with:\n')
         process.stderr.write(
-          `  cd ~/.avenlo/local && npm update ${MACRO.PACKAGE_URL}\n`,
+          `  cd ~/.qerivon/local && npm update ${MACRO.PACKAGE_URL}\n`,
         )
       } else {
         process.stderr.write('Try running with sudo or fix npm permissions\n')
         process.stderr.write(
-          'Or consider using native installation with: avenlo install\n',
+          'Or consider using native installation with: qerivon install\n',
         )
       }
       await gracefulShutdown(1)
@@ -395,11 +395,11 @@ export async function update() : Promise<void> {
       if (useLocalUpdate) {
         process.stderr.write('Try manually updating with:\n')
         process.stderr.write(
-          `  cd ~/.avenlo/local && npm update ${MACRO.PACKAGE_URL}\n`,
+          `  cd ~/.qerivon/local && npm update ${MACRO.PACKAGE_URL}\n`,
         )
       } else {
         process.stderr.write(
-          'Or consider using native installation with: avenlo install\n',
+          'Or consider using native installation with: qerivon install\n',
         )
       }
       await gracefulShutdown(1)

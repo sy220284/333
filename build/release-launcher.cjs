@@ -8,7 +8,7 @@ const { spawn } = require('node:child_process')
 const { constants } = require('node:os')
 const { join } = require('node:path')
 
-const nativeCli = join(__dirname, process.platform === 'win32' ? 'avenlo.exe' : 'avenlo')
+const nativeCli = join(__dirname, process.platform === 'win32' ? 'qerivon.exe' : 'qerivon')
 const child = spawn(nativeCli, process.argv.slice(2), {
   stdio: 'inherit',
   env: process.env,

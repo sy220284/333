@@ -6,5 +6,5 @@
  */
 
 export function getClaudeCodeUserAgent(): string {
-  return `avenlo/${MACRO.VERSION}`
+  return `qerivon/${MACRO.VERSION}`
 }

@@ -1,15 +1,15 @@
 {
-  "name": "@avenlo/agent-cli",
+  "name": "@qerivon/agent-cli",
   "version": "2.1.317",
   "bin": {
-    "avenlo": "dist/launcher.cjs"
+    "qerivon": "dist/launcher.cjs"
   },
   "engines": {
     "node": ">=22.15.0"
   },
   "type": "module",
-  "author": "Avenlo contributors",
-  "description": "Avenlo independent multi-model coding agent CLI",
+  "author": "Qerivon contributors",
+  "description": "Qerivon independent multi-model coding agent CLI",
   "homepage": "https://github.com/sy220284/333",
   "bugs": {
     "url": "https://github.com/sy220284/333/issues"
