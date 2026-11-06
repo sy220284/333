@@ -62,7 +62,11 @@ export function createDesktopTaskJournal(
     write(sessionId, tasks) {
       const path = pathFor(sessionId)
       const previous = pending.get(sessionId) ?? Promise.resolve()
-      const operation = previous.then(async () => {
+      // A failed write is returned to its own caller. It must not reject all
+      // subsequent writes for this session: the next write may repair the
+      // underlying problem and safely replace the last committed snapshot.
+      const ready = previous.then(() => undefined, () => undefined)
+      const operation = ready.then(async () => {
         const content = JSON.stringify(documentSchema.parse({ version: 1, tasks }))
         if (Buffer.byteLength(content) > 2_000_000) throw new Error('Desktop task journal exceeds its size limit')
         await mkdir(directory, { recursive: true, mode: 0o700 })
@@ -75,9 +79,12 @@ export function createDesktopTaskJournal(
         }
       })
       pending.set(sessionId, operation)
-      void operation.then(() => {
+      const releasePending = () => {
         if (pending.get(sessionId) === operation) pending.delete(sessionId)
-      }, () => {})
+      }
+      // Clear failed writes as well as successful ones. The original rejected
+      // operation remains observable to the caller via its returned promise.
+      void operation.then(releasePending, releasePending)
       return operation
     },
   }
