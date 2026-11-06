@@ -9,7 +9,7 @@ import { dirname, join } from 'node:path'
 import type { IndependentProvider } from '../api/multimodel/registry.js'
 const PATH = join(homedir(), '.333', 'auth', 'provider-api-keys.json')
 type Vault = { schema: 1; keys: Partial<Record<IndependentProvider, string>> }
-const SUPPORTED = new Set<string>(['openai','gemini','xai','deepseek','qwen','kimi','zhipu','minimax','openrouter'])
+const SUPPORTED = new Set<string>(['openai','deepseek','qwen','kimi','zhipu','minimax','openrouter'])
 export function validateApiKeyProvider(provider: string): IndependentProvider {
   if (!SUPPORTED.has(provider)) throw new Error(`API Key 服务商未识别：${provider}`)
   return provider as IndependentProvider
