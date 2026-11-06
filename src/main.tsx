@@ -3675,10 +3675,12 @@ async function run(): Promise<CommanderCommand> {
     .option('--new', '注册新的 ChatGPT 账号或工作区')
     .option('--account <clientId>', '重新授权已注册的 ChatGPT 账号')
     .option('--resume-pending', '恢复中断的动态客户端注册')
-    .action(async (options: { new?: boolean; account?: string; resumePending?: boolean }) => {
+    .option('--enable-plan', '对已注册的 ChatGPT 账号显式请求套餐推理授权')
+    .action(async (options: { new?: boolean; account?: string; resumePending?: boolean; enablePlan?: boolean }) => {
       const { loginWithChatGPT } = await import('./services/auth/chatgptOAuth.js');
       const identity = await loginWithChatGPT({
         addAccount: options.new, clientId: options.account, resumePending: options.resumePending,
+        enablePlan: options.enablePlan,
       });
       process.stdout.write(`ChatGPT 已登录：${identity.email ?? identity.subject}\n`);
       if (!identity.planEnabled) {
