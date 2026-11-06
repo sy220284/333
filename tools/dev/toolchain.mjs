@@ -7,7 +7,7 @@
  * including the npm lock root, so no CI job may silently choose another tool.
  * Pure Node.js + builtins: runnable before installing product dependencies.
  */
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
@@ -129,14 +129,24 @@ export function checkToolchain({ bootstrap = false } = {}) {
     'bun-version': gha('TOOLCHAIN_BUN_VERSION'),
     'python-version': gha('TOOLCHAIN_PYTHON_VERSION'),
   }
-  const managed = [
+  // Retired workflows must not be hard-coded into release validation.
+  // Keep essential gates explicit, then discover additional active consumers
+  // so new workflows cannot bypass the shared version checks.
+  const directory = join(root, '.github/workflows')
+  const required = [
     'dev-toolchain.yml', 'dev-quality.yml', 'rebuild.yml',
-    'governance-audit.yml', 'governance-bun-types.yml',
-    'latest-stable-six-host.yml', 'latest-stable-upgrade.yml',
+    'governance-audit.yml', 'latest-stable-six-host.yml', 'latest-stable-upgrade.yml',
     'chinese-only-ui.yml', 'upgrade-protection.yml', 'type-migration-pr7.yml', 'm1-evidence.yml',
   ]
+  for (const name of required) {
+    if (!existsSync(join(directory, name))) fail(`必要的工具链工作流缺失：${name}`)
+  }
+  const discovered = readdirSync(directory).filter(name => /\\.ya?ml$/.test(name))
+    .filter(name => readFileSync(join(directory, name), 'utf8')
+      .includes('node tools/dev/toolchain.mjs gha-env'))
+  const managed = [...new Set([...required, ...discovered])]
   for (const workflow of managed) {
-    const content = readFileSync(join(root, '.github/workflows', workflow), 'utf8')
+    const content = readFileSync(join(directory, workflow), 'utf8')
     if (!content.includes('node tools/dev/toolchain.mjs gha-env')) {
       fail(`CI 工作流未读取权威清单：${workflow}`)
     }
