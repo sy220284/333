@@ -1265,38 +1265,6 @@ RESPOND WITH ONLY A VALID JSON OBJECT:
 Include 3 opportunities. Think BIG - autonomous workflows, parallel agents, iterating against tests.`,
     maxTokens: 8192,
   },
-  ...(process.env.USER_TYPE === 'ant'
-    ? [
-        {
-          name: 'cc_team_improvements',
-          prompt: `Analyze this Claude Code usage data and suggest product improvements for the CC team.
-
-RESPOND WITH ONLY A VALID JSON OBJECT:
-{
-  "improvements": [
-    {"title": "Product/tooling improvement", "detail": "3-4 sentences describing the improvement", "evidence": "3-4 sentences with specific session examples"}
-  ]
-}
-
-Include 2-3 improvements based on friction patterns observed.`,
-          maxTokens: 8192,
-        },
-        {
-          name: 'model_behavior_improvements',
-          prompt: `Analyze this Claude Code usage data and suggest model behavior improvements.
-
-RESPOND WITH ONLY A VALID JSON OBJECT:
-{
-  "improvements": [
-    {"title": "Model behavior change", "detail": "3-4 sentences describing what the model should do differently", "evidence": "3-4 sentences with specific examples"}
-  ]
-}
-
-Include 2-3 improvements based on friction patterns observed.`,
-          maxTokens: 8192,
-        },
-      ]
-    : []),
   {
     name: 'fun_ending',
     prompt: `Analyze this Claude Code usage data and find a memorable moment.
@@ -1365,20 +1333,6 @@ type InsightResults = {
       whats_possible: string
       how_to_try?: string
       copyable_prompt?: string
-    }>
-  }
-  cc_team_improvements?: {
-    improvements?: Array<{
-      title: string
-      detail: string
-      evidence?: string
-    }>
-  }
-  model_behavior_improvements?: {
-    improvements?: Array<{
-      title: string
-      detail: string
-      evidence?: string
     }>
   }
   fun_ending?: {
@@ -1961,7 +1915,7 @@ function generateHtmlReport(
             pat.copyable_prompt
               ? `
           <div class="copyable-prompt-section">
-            <div class="prompt-label">Paste into Claude Code:</div>
+            <div class="prompt-label">复制到摇摇车：</div>
             <div class="copyable-prompt-row">
               <code class="copyable-prompt">${escapeHtml(pat.copyable_prompt)}</code>
               <button class="copy-btn" onclick="copyText(this)">Copy</button>
@@ -1996,83 +1950,12 @@ function generateHtmlReport(
           <div class="horizon-title">${escapeHtml(opp.title || '')}</div>
           <div class="horizon-possible">${escapeHtml(opp.whats_possible || '')}</div>
           ${opp.how_to_try ? `<div class="horizon-tip"><strong>如何开始：</strong> ${escapeHtml(opp.how_to_try)}</div>` : ''}
-          ${opp.copyable_prompt ? `<div class="pattern-prompt"><div class="prompt-label">Paste into Claude Code:</div><code>${escapeHtml(opp.copyable_prompt)}</code><button class="copy-btn" onclick="copyText(this)">Copy</button></div>` : ''}
+          ${opp.copyable_prompt ? `<div class="pattern-prompt"><div class="prompt-label">复制到摇摇车：</div><code>${escapeHtml(opp.copyable_prompt)}</code><button class="copy-btn" onclick="copyText(this)">Copy</button></div>` : ''}
         </div>
       `,
         )
         .join('')}
     </div>
-    `
-      : ''
-
-  // Build Team Feedback section (collapsible, ant-only)
-  const ccImprovements =
-    process.env.USER_TYPE === 'ant'
-      ? insights.cc_team_improvements?.improvements || []
-      : []
-  const modelImprovements =
-    process.env.USER_TYPE === 'ant'
-      ? insights.model_behavior_improvements?.improvements || []
-      : []
-  const teamFeedbackHtml =
-    ccImprovements.length > 0 || modelImprovements.length > 0
-      ? `
-    <h2 id="section-feedback" class="feedback-header">Closing the Loop: Feedback for Other Teams</h2>
-    <p class="feedback-intro">根据你的使用情况，为产品与模型团队整理的建议。点击展开查看。</p>
-    ${
-      ccImprovements.length > 0
-        ? `
-    <div class="collapsible-section">
-      <div class="collapsible-header" onclick="toggleCollapsible(this)">
-        <span class="collapsible-arrow">▶</span>
-        <h3>给 Claude Code 团队的产品改进建议</h3>
-      </div>
-      <div class="collapsible-content">
-        <div class="suggestions-section">
-          ${ccImprovements
-            .map(
-              imp => `
-            <div class="feedback-card team-card">
-              <div class="feedback-title">${escapeHtml(imp.title || '')}</div>
-              <div class="feedback-detail">${escapeHtml(imp.detail || '')}</div>
-              ${imp.evidence ? `<div class="feedback-evidence"><em>依据：</em> ${escapeHtml(imp.evidence)}</div>` : ''}
-            </div>
-          `,
-            )
-            .join('')}
-        </div>
-      </div>
-    </div>
-    `
-        : ''
-    }
-    ${
-      modelImprovements.length > 0
-        ? `
-    <div class="collapsible-section">
-      <div class="collapsible-header" onclick="toggleCollapsible(this)">
-        <span class="collapsible-arrow">▶</span>
-        <h3>模型行为改进建议</h3>
-      </div>
-      <div class="collapsible-content">
-        <div class="suggestions-section">
-          ${modelImprovements
-            .map(
-              imp => `
-            <div class="feedback-card model-card">
-              <div class="feedback-title">${escapeHtml(imp.title || '')}</div>
-              <div class="feedback-detail">${escapeHtml(imp.detail || '')}</div>
-              ${imp.evidence ? `<div class="feedback-evidence"><em>依据：</em> ${escapeHtml(imp.evidence)}</div>` : ''}
-            </div>
-          `,
-            )
-            .join('')}
-        </div>
-      </div>
-    </div>
-    `
-        : ''
-    }
     `
       : ''
 
@@ -2089,7 +1972,7 @@ function generateHtmlReport(
 
   const css = `
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; color: #334155; line-height: 1.65; padding: 48px 24px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #334155; line-height: 1.65; padding: 48px 24px; }
     .container { max-width: 800px; margin: 0 auto; }
     h1 { font-size: 32px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
     h2 { font-size: 20px; font-weight: 600; color: #0f172a; margin-top: 48px; margin-bottom: 16px; }
@@ -2176,37 +2059,15 @@ function generateHtmlReport(
     .horizon-title { font-weight: 600; font-size: 15px; color: #5b21b6; margin-bottom: 8px; }
     .horizon-possible { font-size: 14px; color: #334155; margin-bottom: 10px; line-height: 1.5; }
     .horizon-tip { font-size: 13px; color: #6b21a8; background: rgba(255,255,255,0.6); padding: 8px 12px; border-radius: 4px; }
-    .feedback-header { margin-top: 48px; color: #64748b; font-size: 16px; }
-    .feedback-intro { font-size: 13px; color: #94a3b8; margin-bottom: 16px; }
-    .feedback-section { margin-top: 16px; }
-    .feedback-section h3 { font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 12px; }
-    .feedback-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
-    .feedback-card.team-card { background: #eff6ff; border-color: #bfdbfe; }
-    .feedback-card.model-card { background: #faf5ff; border-color: #e9d5ff; }
-    .feedback-title { font-weight: 600; font-size: 14px; color: #0f172a; margin-bottom: 6px; }
-    .feedback-detail { font-size: 13px; color: #475569; line-height: 1.5; }
-    .feedback-evidence { font-size: 12px; color: #64748b; margin-top: 8px; }
     .fun-ending { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #fbbf24; border-radius: 12px; padding: 24px; margin-top: 40px; text-align: center; }
     .fun-headline { font-size: 18px; font-weight: 600; color: #78350f; margin-bottom: 8px; }
     .fun-detail { font-size: 14px; color: #92400e; }
-    .collapsible-section { margin-top: 16px; }
-    .collapsible-header { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px 0; border-bottom: 1px solid #e2e8f0; }
-    .collapsible-header h3 { margin: 0; font-size: 14px; font-weight: 600; color: #475569; }
-    .collapsible-arrow { font-size: 12px; color: #94a3b8; transition: transform 0.2s; }
-    .collapsible-content { display: none; padding-top: 16px; }
-    .collapsible-content.open { display: block; }
-    .collapsible-header.open .collapsible-arrow { transform: rotate(90deg); }
     @media (max-width: 640px) { .charts-row { grid-template-columns: 1fr; } .stats-row { justify-content: center; } }
   `
 
   const hourCountsJson = getHourCountsJson(data.message_hours)
 
   const js = `
-    function toggleCollapsible(header) {
-      header.classList.toggle('open');
-      const content = header.nextElementSibling;
-      content.classList.toggle('open');
-    }
     function copyText(btn) {
       const code = btn.previousElementSibling;
       navigator.clipboard.writeText(code.textContent).then(() => {
@@ -2303,13 +2164,12 @@ function generateHtmlReport(
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <title>Claude Code 使用分析</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>摇摇车使用分析</title>
   <style>${css}</style>
 </head>
 <body>
   <div class="container">
-    <h1>Claude Code 使用分析</h1>
+    <h1>摇摇车使用分析</h1>
     <p class="subtitle">${data.total_messages.toLocaleString()} 条消息，分布于 ${data.total_sessions} 个会话${data.total_sessions_scanned && data.total_sessions_scanned > data.total_sessions ? ` (${data.total_sessions_scanned.toLocaleString()} 总计)` : ''} | ${data.date_range.start} 至 ${data.date_range.end}</p>
 
     ${atAGlanceHtml}
@@ -2322,7 +2182,6 @@ function generateHtmlReport(
       <a href="#section-features">功能建议</a>
       <a href="#section-patterns">新用法</a>
       <a href="#section-horizon">未来方向</a>
-      <a href="#section-feedback">团队反馈</a>
     </nav>
 
     <div class="stats-row">
@@ -2456,7 +2315,6 @@ function generateHtmlReport(
 
     ${funEndingHtml}
 
-    ${teamFeedbackHtml}
   </div>
   <script>${js}</script>
 </body>
