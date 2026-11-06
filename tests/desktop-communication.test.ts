@@ -9,13 +9,13 @@ import { createDesktopTaskJournal } from '../src/services/desktop/taskJournal.js
 import { createMission, selectMission } from '../src/utils/agentMissions.js'
 import { getConfiguredAgentMode, setAgentMode } from '../src/utils/agentMode.js'
 import { DesktopRequestSchema } from '../src/services/desktop/protocol.js'
-import { projectTask } from '../src/services/desktop/taskProjection.js'
+import { projectTask, isAgentProgress } from '../src/services/desktop/taskProjection.js'
 import type { SDKMessage } from '../src/entrypoints/sdk/coreTypes.js'
 import type { SDKSessionInfo } from '../src/entrypoints/sdk/coreTypes.js'
 import type { DesktopEvent, DesktopRequest } from '../src/services/desktop/protocol.js'
 import type { DesktopTask } from '../src/services/desktop/taskProjection.js'
 import type { DesktopGatewayOptions } from '../src/services/desktop/gateway.js'
-import type { CanUseTool } from '../src/entrypoints/sdk/runtimeTypes.js'
+import type { CanUseTool, HostControlRequestHandler } from '../src/entrypoints/sdk/runtimeTypes.js'
 
 async function until(ready: () => boolean) {
   const deadline = Date.now() + 1500
@@ -29,6 +29,7 @@ function request(method: DesktopRequest['method'], data: Record<string, unknown>
 }
 function fixture(fixtureOptions: { beforeSend?: () => Promise<void> } = {}) {
   let lastToolCallback: CanUseTool | undefined
+  let lastHostCallback: HostControlRequestHandler | undefined
   let lastControl: Record<string, unknown> | undefined
   const transcriptIds = new Set<string>()
   const store = new Map<string, DesktopTask[]>()
@@ -51,8 +52,9 @@ function fixture(fixtureOptions: { beforeSend?: () => Promise<void> } = {}) {
     },
     async write(id: string, tasks: DesktopTask[]) { store.set(id, tasks) },
   }
-  const launch = ((options: { canUseTool?: CanUseTool }, resume?: string) => {
+  const launch = ((options: { canUseTool?: CanUseTool; onControlRequest?: HostControlRequestHandler }, resume?: string) => {
     lastToolCallback = options.canUseTool
+    lastHostCallback = options.onControlRequest
     const sessionId = resume ?? randomUUID()
     transcriptIds.add(sessionId)
     let content = ''
@@ -92,6 +94,7 @@ function fixture(fixtureOptions: { beforeSend?: () => Promise<void> } = {}) {
       createSession: (options, resume) => createHeadlessConversationSession(options, resume, launch),
     } satisfies DesktopGatewayOptions,
     getToolCallback: () => lastToolCallback,
+    getHostCallback: () => lastHostCallback,
     getControl: () => lastControl,
   }
 }
@@ -373,4 +376,118 @@ test('desktop close cancels a stalled SDK send without waiting for the backend p
   await closing
   await expect(sending).rejects.toThrow('Desktop session closed during send')
   await gateway.close()
+})
+
+test('SDK 2.1.317 task_updated patch merges and cannot regress terminal tasks', () => {
+  const id = randomUUID()
+  const started = {
+    type: 'system', subtype: 'task_started', task_id: 'task-1',
+    description: 'Background analysis', uuid: randomUUID(), session_id: id,
+  } as SDKMessage
+  const first = projectTask(started, undefined, 100)
+  expect(first?.status).toBe('running')
+  const patch = {
+    type: 'system', subtype: 'task_updated', task_id: 'task-1',
+    patch: { status: 'completed', summary: 'Analysis complete' },
+    uuid: randomUUID(), session_id: id,
+  } as unknown as SDKMessage
+  expect(isAgentProgress(patch)).toBe(true)
+  const finished = projectTask(patch, first, 110)
+  expect(finished).toMatchObject({
+    taskId: 'task-1', status: 'completed',
+    description: 'Background analysis', summary: 'Analysis complete',
+  })
+  const late = projectTask(started, finished, 120)
+  expect(late?.status).toBe('completed')
+  const progress = {
+    type: 'system', subtype: 'task_progress', task_id: 'task-1',
+    description: '', usage: { total_tokens: 10, tool_uses: 1, duration_ms: 10 },
+    uuid: randomUUID(), session_id: id,
+  } as SDKMessage
+  expect(projectTask(progress, finished, 130)?.status).toBe('completed')
+  const background = {
+    type: 'system', subtype: 'background_tasks_changed', tasks: [],
+    uuid: randomUUID(), session_id: id,
+  } as unknown as SDKMessage
+  expect(isAgentProgress(background)).toBe(true)
+  expect(projectTask(background, finished)).toBeUndefined()
+})
+
+test('desktop continues model events after a task journal write failure', async () => {
+  const data = fixture()
+  const disk = data.options.journal
+  let writes = 0
+  const gateway = createDesktopGateway({
+    ...data.options,
+    journal: {
+      read: id => disk.read(id),
+      async write(id, tasks) {
+        if (++writes === 1) throw new Error('Simulated disk I/O failure')
+        await disk.write(id, tasks)
+      },
+    },
+  })
+  const events: DesktopEvent[] = []
+  gateway.subscribe(event => events.push(event))
+  try {
+    const opened = await gateway.handle(request('sessions.open')) as { sessionId: string }
+    await gateway.handle(request('sessions.send', { sessionId: opened.sessionId, message: 'verify' }))
+    await until(() => events.some(event =>
+      event.event === 'session.message' && event.message.type === 'result'))
+    await until(() => events.some(event => event.event === 'task.persistence.error'))
+    expect(events.some(event => event.event === 'session.error')).toBe(false)
+    const current = await gateway.handle(request('tasks.list', { sessionId: opened.sessionId })) as DesktopTask[]
+    expect(current[0]?.status).toBe('completed')
+    await gateway.handle(request('sessions.close', { sessionId: opened.sessionId }))
+    const saved = await disk.read(opened.sessionId)
+    expect(saved[0]?.status).toBe('completed')
+    expect(writes).toBeGreaterThan(1)
+  } finally {
+    await gateway.close()
+  }
+})
+
+test('host control requests stay scoped to their session and require explicit responses', async () => {
+  const data = fixture()
+  const gateway = createDesktopGateway(data.options)
+  const events: DesktopEvent[] = []
+  gateway.subscribe(event => events.push(event))
+  try {
+    const opened = await gateway.handle(request('sessions.open')) as { sessionId: string }
+    const callback = data.getHostCallback()
+    if (!callback) throw new Error('Missing host control callback')
+    const signal = new AbortController()
+    const reply = callback({
+      subtype: 'elicitation', mcp_server_name: 'fixture-mcp',
+      message: 'Choose a workspace', mode: 'form',
+      requested_schema: { type: 'object' },
+    }, { signal: signal.signal, requestId: 'host-1' })
+    const pending = await gateway.handle(request('host.list', {
+      sessionId: opened.sessionId,
+    })) as Array<{ id: string; request: { subtype: string; mcp_server_name: string } }>
+    expect(pending).toHaveLength(1)
+    expect(pending[0]?.request.mcp_server_name).toBe('fixture-mcp')
+    expect(events.some(event => event.event === 'host.request')).toBe(true)
+    await expect(gateway.handle(request('host.respond', {
+      sessionId: opened.sessionId, requestId: 'unknown', response: { action: 'accept' },
+    }))).rejects.toThrow('expired')
+    await gateway.handle(request('host.respond', {
+      sessionId: opened.sessionId, requestId: 'host-1',
+      response: { action: 'accept', content: { workspace: 'local' } },
+    }))
+    expect(await reply).toEqual({ action: 'accept', content: { workspace: 'local' } })
+    expect(events.some(event => event.event === 'host.resolved')).toBe(true)
+    const abort = new AbortController()
+    const blocked = callback({ subtype: 'ui_prompt_read' }, {
+      signal: abort.signal, requestId: 'host-2',
+    })
+    abort.abort()
+    await expect(blocked).rejects.toThrow('cancelled')
+    const cleared = await gateway.handle(request('host.list', {
+      sessionId: opened.sessionId,
+    })) as unknown[]
+    expect(cleared).toHaveLength(0)
+  } finally {
+    await gateway.close()
+  }
 })
