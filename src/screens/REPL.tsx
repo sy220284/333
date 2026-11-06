@@ -706,7 +706,7 @@ export function REPL({
   } = useNotifications();
 
   // eslint-disable-next-line prefer-const
-  let trySuggestBgPRIntercept = SUGGEST_BG_PR_NOOP;
+  const trySuggestBgPRIntercept = SUGGEST_BG_PR_NOOP;
   const mcpClients = useMergedClients(initialMcpClients, mcp.clients);
 
   // IDE integration

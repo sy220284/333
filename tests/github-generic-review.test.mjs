@@ -60,7 +60,7 @@ test('审查执行链进行 Git 差异采集及不可信输入处理', () => {
 
 test('极深执行器真实完成四轮审查、独立复核、PR 评论及报告保存', async () => {
   const script=githubReviewerScript().replace(/^import .*$/gm,'')
-  const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor
+  const AsyncFunction=Object.getPrototypeOf(async ()=> {}).constructor
   const execute=new AsyncFunction('readFileSync','writeFileSync','execFileSync',
     'process','fetch','setTimeout','clearTimeout','Buffer','URL','AbortController',script)
   const writes=new Map()
@@ -113,7 +113,7 @@ test('极深执行器真实完成四轮审查、独立复核、PR 评论及报�
 
 test('极深后端支持 OpenAI Responses、Anthropic 和 OpenAI 兼容协议', async () => {
   const code=githubReviewerScript().replace(/^import .*$/gm,'')
-  const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor
+  const AsyncFunction=Object.getPrototypeOf(async ()=> {}).constructor
   const run=new AsyncFunction('readFileSync','writeFileSync','execFileSync',
     'process','fetch','setTimeout','clearTimeout','Buffer','URL','AbortController',code)
   for(const provider of ['openai-responses','anthropic','openai-compatible']) {
@@ -169,7 +169,7 @@ test('Actions 配置可单独选择代码审查或授权消息自动响应', () 
   assert.match(both,/issue_comment:/)
   for (const yaml of [review,respond,both]) {
     assert.match(yaml,/workflow_dispatch:/)
-    assert.match(yaml,/permissions:\n  contents: read\n  pull-requests: write/)
+    assert.match(yaml,/permissions:\n {2}contents: read\n {2}pull-requests: write/)
   }
 })
 
