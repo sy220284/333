@@ -3,8 +3,20 @@ import { pcmToWav, isVoiceStreamAvailable, connectVoiceStream } from '../src/ser
 import { readFileSync, writeFileSync, mkdtempSync, chmodSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { normalizeLanguageForSTT } from '../src/services/voiceLanguage.js'
 
 describe('可选本地语音转写', () => {
+  it('中文和地区语言码可直接用于本地 Whisper，未知语言自动检测', () => {
+    expect(normalizeLanguageForSTT(undefined)).toEqual({ code: 'auto' })
+    expect(normalizeLanguageForSTT('中文')).toEqual({ code: 'zh' })
+    expect(normalizeLanguageForSTT('简体中文')).toEqual({ code: 'zh' })
+    expect(normalizeLanguageForSTT('Chinese')).toEqual({ code: 'zh' })
+    expect(normalizeLanguageForSTT('zh-CN')).toEqual({ code: 'zh' })
+    expect(normalizeLanguageForSTT('English')).toEqual({ code: 'en' })
+    expect(normalizeLanguageForSTT('unknown-language')).toEqual({
+      code: 'auto', fellBackFrom: 'unknown-language',
+    })
+  })
   it('录音被封装为可供 Whisper 识别的 WAV PCM', () => {
     const wav = pcmToWav(Buffer.from([0, 0, 1, 0]))
     expect(wav.subarray(0, 4).toString()).toBe('RIFF')
