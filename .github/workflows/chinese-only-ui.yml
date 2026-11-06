@@ -1,6 +1,7 @@
 name: 简体中文界面专项验收
 on:
   push:
+    branches: [main]
     paths:
       - 'src/components/**'
       - 'src/commands/**'

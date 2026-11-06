@@ -72,6 +72,18 @@ for (const name of workflows) {
     errors.push('可复用检查并发组未隔离：' + name)
 }
 
+// A generic push trigger would bypass the router on the PR branch.
+for (const name of workflows) {
+  const lines = yaml(name).split(/\r?\n/)
+  const index = lines.findIndex(line => /^ {2}push:\s*$/.test(line))
+  if (index < 0) continue
+  let end = index + 1
+  while (end < lines.length && (/^ {4}/.test(lines[end]) || !lines[end].trim())) end++
+  const pushBlock = lines.slice(index + 1, end).join('\n')
+  if (!/^ {4}branches:/m.test(pushBlock))
+    errors.push('工作流的任意分支 push 入口绕过 PR 调度：' + name)
+}
+
 for (const name of ['sdk-stream-parity.yml','m1-spinner-parity.yml']) {
   if (yaml(name).includes('git diff-tree --root')) errors.push(`仅最后提交判断造成空跑：${name}`)
   if (yaml(name).includes('/2.1.310/')) errors.push(`旧版对照基准：${name}`)
