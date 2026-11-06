@@ -296,9 +296,14 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     entry.closing = true
     entry.cancelSend?.(new Error('Desktop session closed during send'))
     try {
-      await entry.runtime.closeAndWait()
-      if (entry.sending) await entry.sending
-      if (entry.consuming) await entry.consuming
+      // Closing a stream-json child can require its in-flight send/stream to
+      // settle. Join these lifecycles concurrently; awaiting child shutdown
+      // first can deadlock the desktop IPC close request.
+      const closing = entry.runtime.closeAndWait()
+      const pending = [closing]
+      if (entry.sending) pending.push(entry.sending)
+      if (entry.consuming) pending.push(entry.consuming)
+      await Promise.all(pending)
       const stale = [...entry.tasks.values()].map(task => task.status === 'running'
         ? { ...task, status: 'interrupted' as const } : task)
       if (stale.length) await journal.write(id, stale)
