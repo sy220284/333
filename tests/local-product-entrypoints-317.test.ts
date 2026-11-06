@@ -9,9 +9,15 @@ describe('独立产品功能入口', () => {
     for (const local of ["import plan from", "import tasks from", "import review from", "import status from", "import privacySettings from", "import effort from", "import btw from"]) {
       expect(commands).toContain(local)
     }
-    for (const old of ["remote-env/index", "remote-setup/index", "commands/bridge/index", "commands/chrome/index", "commands/voice/index", "commands/fast/index"]) {
+    for (const old of ["remote-env/index", "remote-setup/index", "commands/bridge/index", "commands/chrome/index", "commands/fast/index"]) {
       expect(commands).not.toContain(old)
     }
+    expect(commands).toContain("import voice from './commands/voice/index.js'")
+    const localVoice = source('src/commands/voice/index.ts')
+    expect(localVoice).toContain('YAOYAOCHE_WHISPER_CLI')
+    expect(localVoice).toContain('YAOYAOCHE_WHISPER_MODEL')
+    expect(localVoice).not.toContain('getClaudeAIOAuthTokens')
+    expect(localVoice).not.toContain("availability: ['claude-ai']")
   })
   it('启动不再主动发送探测额度的模型请求', () => {
     expect(source('src/main.tsx')).not.toContain('checkQuotaStatus()')
