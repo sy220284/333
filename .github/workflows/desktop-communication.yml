@@ -79,3 +79,46 @@ jobs:
               if (!statSync("dist/" + path).isFile()) throw new Error("Invalid released asset: " + path)
             }
           '
+
+  desktop-workbench:
+    name: Electron 工作台类型、行为与打包前构建
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: 读取固定工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
+      - name: 安装 SDK 与桌面依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+          cd desktop
+          npm install --no-audit --no-fund
+      - name: 执行真实消息投影与安全边界测试
+        working-directory: desktop
+        run: npm test
+      - name: 检查 React 类型与桌面页面构建
+        working-directory: desktop
+        run: |
+          npm run typecheck
+          npm run build
+          test -s dist/index.html
+          test -s dist-electron/main.cjs
+          test -s dist-electron/preload.cjs
+      - name: 检查生产页面和通信边界
+        run: |
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs"
+            const html = readFileSync("desktop/dist/index.html","utf8")
+            if (!html.includes("Content-Security-Policy")) throw new Error("缺少 CSP")
+            const main = readFileSync("desktop/dist-electron/main.cjs","utf8")
+            if (!main.includes("desktop:call")) throw new Error("Electron IPC 未构建")
+          '
