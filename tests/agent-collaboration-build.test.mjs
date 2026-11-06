@@ -44,3 +44,11 @@ test('SDK 终态区分成功与失败，任务结束类型不接受 running', ()
   assert.match(read('src/remote/sdkMessageAdapter.ts'), /return msg.subtype === 'success'/)
   assert.match(read('src/tools/AgentTool/agentToolUtils.ts'), /status: Exclude<MissionAssignmentStatus, 'running'>/)
 })
+
+test('智能体中心按项目过滤长期任务，并显示全部执行类型', () => {
+  const center = read('src/commands/agents/agents.tsx')
+  assert.match(center, /resolve\(m.projectDir\) === resolve\(getCwd\(\)\)/)
+  assert.match(center, /task.type === 'local_workflow' && task.status === 'running'/)
+  assert.match(center, /setAgentMode\('super'\)/)
+  assert.match(read('src/utils/agentMissions.ts'), /if \(status === 'completed'\)/)
+})

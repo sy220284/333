@@ -204,7 +204,15 @@ export async function requireActiveSelectedMission(
 }
 
 export async function updateMissionStatus(id: string, status: AgentMissionStatus, root = defaultRoot()): Promise<AgentMission> {
-  return changeMission(id, mission => ({ ...mission, status }), root)
+  return changeMission(id, mission => {
+    if (status === 'completed') {
+      const pending = mission.assignments.filter(assignment => assignment.status === 'running')
+      if (pending.length > 0)
+        throw new Error(`长期任务仍有 ${pending.length} 项运行中的关联执行；请先完成或停止它们再结束任务`)
+    }
+    if (mission.status === status) return mission
+    return { ...mission, status }
+  }, root)
 }
 export async function saveMissionCheckpoint(id: string, checkpoint: string, root = defaultRoot()): Promise<AgentMission> {
   if (!checkpoint.trim() || checkpoint.length > 6000) throw new Error('阶段记录需要 1–6000 个字符')

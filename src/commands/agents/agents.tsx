@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { resolve } from 'node:path'
 import { useState } from 'react'
 import type { LocalJSXCommandContext, LocalJSXCommandOnDone } from '../../types/command.js'
 import { BackgroundTasksDialog } from '../../components/tasks/BackgroundTasksDialog.js'
@@ -19,7 +20,7 @@ function modeLabel(mode: AgentMode): string {
 }
 
 async function showMissions(onDone: LocalJSXCommandOnDone): Promise<void> {
-  const missions = await listMissions()
+  const missions = (await listMissions()).filter(m => resolve(m.projectDir) === resolve(getCwd()))
   const selected = getSelectedMissionId()
   onDone(missions.length ? missions.map(m =>
     `${(m.id === selected ? '* ' : '  ') + m.id} [${m.status}] ${m.objective.slice(0, 90)}`
@@ -100,8 +101,9 @@ export async function call(
     }
     if (action === 'use' && value) {
       const mission = await getMission(value)
-      if (mission.projectDir !== getCwd()) throw new Error(`任务属于另一项目：${mission.projectDir}；请从该项目目录进入再选择。`)
+      if (resolve(mission.projectDir) !== resolve(getCwd())) throw new Error(`任务属于另一项目：${mission.projectDir}；请从该项目目录进入再选择。`)
       selectMission(mission.id)
+      setAgentMode('super')
       onDone(`已选中任务：${mission.id}（${mission.status}）`, { display: 'system' })
       return null
     }
@@ -160,15 +162,25 @@ export async function call(
   }
   if (verb === 'status') {
     const state = context.getAppState()
-    const active = Object.values(state.tasks).filter(task =>
+    const activeAgents = Object.values(state.tasks).filter(task =>
       (task.type === 'local_agent' || task.type === 'in_process_teammate') && task.status === 'running'
     ).length
+    const activeWorkflows = Object.values(state.tasks).filter(task =>
+      task.type === 'local_workflow' && task.status === 'running'
+    ).length
     const selectedMission = getSelectedMissionId()
+    const mission = selectedMission ? await getMission(selectedMission) : undefined
+    if (mission && resolve(mission.projectDir) !== resolve(getCwd()))
+      throw new Error(`当前长期任务归属其他项目：${mission.projectDir}`)
+    const pending = mission?.assignments.filter(assignment => assignment.status === 'running').length ?? 0
     onDone('当前模式：' + modeLabel(getActiveAgentMode()) +
       '\n团队工具：' + (isAgentSwarmsEnabled() ? '已开放' : '已关闭') +
-      '\n本会话运行中的智能体：' + active +
+      '\n本会话运行中的智能体：' + activeAgents +
+      '\n本会话运行中的工作流：' + activeWorkflows +
       '\n当前团队：' + (state.teamContext?.teamName ?? '无') +
-      '\n当前任务簿：' + (selectedMission ?? '无'), { display: 'system' })
+      '\n当前任务簿：' + (selectedMission ?? '无') +
+      (mission ? `（${mission.status}，待核实关联执行 ${pending} 项）` : ''),
+      { display: 'system' })
     return null
   }
   if (verb === 'team-create' && arg && rest.length === 0) {

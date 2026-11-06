@@ -91,3 +91,20 @@ test('长期任务执行入口校验本项目状态，终态不可被并发结�
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test('长期任务只在关联执行全部终结后允许正式完成', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yaoyaoche-mission-close-'))
+  try {
+    const mission = await createMission('验收前完成所有工作', '/project/test-close', root)
+    await linkMissionAssignment(mission.id, 'workflow-running', 'workflow', '独立验证', root)
+    await assert.rejects(
+      () => updateMissionStatus(mission.id, 'completed', root),
+      /仍有 1 项运行中的关联执行/,
+    )
+    await updateMissionStatus(mission.id, 'paused', root)
+    await finishMissionAssignment(mission.id, 'workflow-running', 'completed', root)
+    assert.equal((await updateMissionStatus(mission.id, 'completed', root)).status, 'completed')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
