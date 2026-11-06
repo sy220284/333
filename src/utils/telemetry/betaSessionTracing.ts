@@ -26,7 +26,7 @@ export function truncateContent(
   maxSize = 60 * 1024,
 ): { content: string; truncated: boolean } {
   if (content.length <= maxSize) return { content, truncated: false }
-  return { content: content.slice(0, maxSize) + '\n\n[TRUNCATED]', truncated: true }
+  return { content: `${content.slice(0, maxSize)}\n\n[TRUNCATED]`, truncated: true }
 }
 
 export function addBetaInteractionAttributes(_span: Span, _userPrompt: string): void {}

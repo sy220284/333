@@ -25,7 +25,6 @@ import { resolvePromptSnapshot, promptSnapshotMode } from '../cli/systemPromptSn
 import { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from '../../constants/systemPromptBoundary.js'
 import {
   getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
 } from 'src/utils/model/providers.js'
 import {
   getAttributionHeader,

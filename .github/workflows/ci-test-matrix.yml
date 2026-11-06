@@ -66,7 +66,7 @@ jobs:
       - name: 原样封装发行文件的执行权限与符号链接
         run: |
           test -f dist/cli.js
-          test -x dist/claude
+          test -x dist/qerivon
           tar -czf "${RUNNER_TEMP}/ci-distribution.tar.gz" -C dist .
       - uses: actions/upload-artifact@v4
         with:
@@ -106,7 +106,7 @@ jobs:
         run: |
           mkdir -p dist
           tar -xzf "${RUNNER_TEMP}/333-distribution/ci-distribution.tar.gz" -C dist
-          test -x dist/claude
+          test -x dist/qerivon
       - name: 运行核心测试
         run: npm run test:${{ matrix.suite }}
   supplemental:
@@ -159,7 +159,7 @@ jobs:
         run: |
           mkdir -p dist
           tar -xzf "${RUNNER_TEMP}/333-distribution/ci-distribution.tar.gz" -C dist
-          test -x dist/claude
+          test -x dist/qerivon
       - name: 并行执行补充测试，失败保留原始退出码
         run: node build/run-unregistered-tests.mjs --ci-supplemental --shard-count=6 --shard-index=${{ matrix.shard }} --exclude-oracle
   oracle:
@@ -189,7 +189,7 @@ jobs:
         run: |
           mkdir -p dist
           tar -xzf "${RUNNER_TEMP}/333-distribution/ci-distribution.tar.gz" -C dist
-          test -x dist/claude
+          test -x dist/qerivon
       - name: 官方 x64 原版获取与 SHA256 校验
         shell: bash
         run: |
