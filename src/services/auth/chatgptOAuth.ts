@@ -196,7 +196,14 @@ async function refreshCredentials(current: Credential): Promise<Credential> {
     method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: params,
     signal: AbortSignal.timeout(15_000),
   })
-  if (!response.ok) throw new Error(`ChatGPT refresh failed (HTTP ${response.status}). Sign in again.`)
+  if (!response.ok) {
+    const diagnostic = await response.json().catch(() => ({})) as { error?: string; code?: string }
+    const code = typeof diagnostic.error === 'string' ? diagnostic.error : diagnostic.code
+    const invalid = ['invalid_grant', 'invalid_refresh_token', 'token_expired',
+      'refresh_token_expired', 'refresh_token_invalidated', 'refresh_token_reused'].includes(code ?? '')
+    if (invalid) throw new Error(`ChatGPT refresh credential invalid (${code}); reauthorize the saved account`)
+    throw new Error(`ChatGPT refresh HTTP ${response.status}${code ? ` (${code})` : ''}; credentials retained`)
+  }
   const data = await response.json() as Record<string, unknown>
   if (typeof data.access_token !== 'string' || typeof data.refresh_token !== 'string') {
     throw new Error('ChatGPT refresh response missing access or rotating refresh token')
@@ -280,6 +287,7 @@ function openBrowser(url: string): void {
 }
 export async function loginWithChatGPT(
   options: { addAccount?: boolean; clientId?: string } = {},
+  browser: (url: string) => void = openBrowser,
 ): Promise<{ email?: string; subject: string; clientId: string; planEnabled: boolean }> {
   if (options.addAccount && options.clientId) throw new Error('Select an existing account or register a new one')
   const hostId = await getHostId()
@@ -337,7 +345,7 @@ export async function loginWithChatGPT(
     const displayURL = new URL(url)
     displayURL.searchParams.delete('id_token_hint')
     process.stdout.write(`Sign in with ChatGPT:\n${displayURL.toString()}\n`)
-    openBrowser(url.toString())
+    browser(url.toString())
     const args = await Promise.race([
       callback.query,
       new Promise<never>((_, reject) => {
@@ -356,7 +364,8 @@ export async function loginWithChatGPT(
       redirect_uri: callback.uri, resource: RESOURCE,
     })
     const response = await fetch(TOKEN_ENDPOINT, {
-      method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: params,
+      method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: params, signal: AbortSignal.timeout(15_000),
     })
     if (!response.ok) throw new Error(`ChatGPT authorization exchange failed (HTTP ${response.status})`)
     const tokens = await response.json() as Record<string, unknown>
