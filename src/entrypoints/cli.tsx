@@ -76,7 +76,7 @@ async function main(): Promise<void> {
       (args[0] === '--version' || args[0] === '-v' || args[0] === '-V')) {
     // MACRO.VERSION is inlined at build time.
     // biome-ignore lint/suspicious/noConsole:: intentional console output
-    console.log(`${MACRO.VERSION} (Avenlo)`);
+    console.log(`${MACRO.VERSION} (Qerivon)`);
     if (verboseVersion) {
       // Independently verified against the official 2.1.317 Linux x64 binary.
       console.log('Commit: 3d3e7cb16b5577dccaee9520c8dc1189d02d61b7');
@@ -180,7 +180,7 @@ async function main(): Promise<void> {
         process.exitCode = 1;
       } else if (usage) {
         process.stderr.write('error: ' + error.message +
-          "\nRun 'avenlo self-hosted-runner --help' for usage.\n");
+          "\nRun 'qerivon self-hosted-runner --help' for usage.\n");
         process.exitCode = 2;
       } else {
         process.stderr.write('self-hosted-runner: ' +
