@@ -19,8 +19,8 @@ export const SPECIALISTS = Object.freeze({
     /^\.github\/workflows\/codeql\.yml$/,
   ],
   'desktop-communication': [
-    /^src\/services\/(desktop|conversation)\//,
-    /^src\/entrypoints\/desktopHost\.ts$/, /^tests\/(?:desktop-|conversation-headless)/,
+    /^src\/services\/(desktop|conversation|agentCenter)\//,
+    /^src\/entrypoints\/desktopHost\.ts$/, /^tests\/(?:desktop-|conversation-headless|mission-jobs)/,
     /^docs\/desktop-protocol\.md$/,
   ],
   'dev-quality': [
@@ -50,10 +50,10 @@ export const SPECIALISTS = Object.freeze({
   'local-feature-promotion': [
     /^src\/(proactive|coordinator|tasks|voice)\//,
     /^src\/tools\/(AgentTool|TeamCreateTool|TeamDeleteTool|ListAgentsTool|SendMessageTool|MissionTool|BriefTool|ScheduleCronTool)\//,
-    /^src\/services\/mcp\//, /^src\/services\/extractMemories\//,
+    /^src\/services\/mcp\//, /^src\/services\/extractMemories\//, /^src\/services\/agentCenter\//,
     /^src\/utils\/(?:agent|localCapabilities|crossSessionMessaging|livePeerSessions)/,
     /^src\/hooks\/(?:useScheduledTasks|useMergedTools|useVoice)/,
-    /^tests\/(?:agent-|local-feature|local-mcp|local-voice|proactive)/,
+    /^tests\/(?:agent-|mission-jobs|local-feature|local-mcp|local-voice|proactive)/,
   ],
   'local-privacy': [
     /^src\/services\/(analytics|telemetry|metrics|privacy)\//,
