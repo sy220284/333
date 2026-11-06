@@ -16,6 +16,7 @@ const permitted = new Set([
   'missions.create','missions.select','missions.updateStatus','missions.checkpoint',
   'missions.jobs.list','missions.jobs.enqueue','missions.jobs.start','missions.jobs.runBatch',
   'missions.jobs.approve','missions.jobs.retry','missions.jobs.recover','missions.jobs.cancel',
+  'missions.jobs.runQueue','missions.jobs.haltQueue','missions.jobs.queueStatus',
   'tasks.list','tasks.stop','tasks.resume'
 ])
 type Host = { child: ReturnType<typeof spawn>; client: ReturnType<typeof createDesktopClient> }
