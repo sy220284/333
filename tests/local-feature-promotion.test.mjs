@@ -29,6 +29,7 @@ test('自动记忆与定时任务需要用户明确开启和授权', () => {
   assert.match(cron, /CLAUDE_CODE_ENABLE_CRON/)
   assert.doesNotMatch(cron, /tengu_kairos_cron/)
   assert.match(create, /behavior:\s*'ask'/)
+  assert.match(create, /type:\s*'safetyCheck'/)
   assert.match(memory, /isLocalCapabilityEnabled\('auto-memory'\)/)
   assert.match(cron, /isLocalCapabilityEnabled\('scheduled-tasks'\)/)
   assert.match(source('src/commands.ts'), /localFeatures,/)

@@ -118,7 +118,12 @@ export const CronCreateTool = buildTool({
     return {
       behavior: 'ask' as const,
       message: `确认创建定时任务：${cronToHuman(input.cron)}。任务内容：${input.prompt}`,
-      decisionReason: { type: 'other' as const, reason: '定时任务需要用户明确授权' },
+      // safetyCheck stays confirmation-required even in bypassPermissions mode.
+      decisionReason: {
+        type: 'safetyCheck' as const,
+        reason: '创建定时任务需要用户明确授权',
+        classifierApprovable: false,
+      },
     }
   },
   async call({ cron, prompt, recurring = true, durable = false }) {
