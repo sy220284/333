@@ -74,7 +74,7 @@ test('PR 全量测试按每个实际作业核对权威工具版本，新增作�
   const content = readFileSync(join(root, '.github/workflows/ci-test-matrix.yml'), 'utf8')
   const jobsBody = content.split(/^jobs:\s*$/m)[1]
   assert.ok(jobsBody, '全量测试工作流必须声明 jobs')
-  const jobs = jobsBody.split(/^  (?=[a-z][\w-]*:)/m).filter(section => section.trim())
+  const jobs = jobsBody.split(/^ {2}(?=[a-z][\w-]*:)/m).filter(section => section.trim())
   const nodeJobs = jobs.filter(section => section.includes('actions/setup-node@'))
   const bunJobs = jobs.filter(section => section.includes('oven-sh/setup-bun@'))
   assert.ok(nodeJobs.length > 0, '至少需要一项 Node 测试作业')
