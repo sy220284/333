@@ -18,6 +18,8 @@ import { assembleToolPool } from '../../tools.js';
 import { asAgentId } from '../../types/ids.js';
 import { runWithAgentContext } from '../../utils/agentContext.js';
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js';
+import { isSuperAgentMode } from '../../utils/agentMode.js';
+import { getSelectedMissionId, linkMissionAssignment } from '../../utils/agentMissions.js';
 import { getCwd, runWithCwdOverride } from '../../utils/cwd.js';
 import { logForDebugging } from '../../utils/debug.js';
 import { isEnvTruthy } from '../../utils/envUtils.js';
@@ -685,6 +687,8 @@ export const AgentTool = buildTool({
     };
     if (shouldRunAsync) {
       const asyncAgentId = earlyAgentId;
+      const missionId = isSuperAgentMode() ? getSelectedMissionId() : undefined;
+      if (missionId) await linkMissionAssignment(missionId, String(asyncAgentId), 'agent', description);
       const agentBackgroundTask = registerAsyncAgent({
         agentId: asyncAgentId,
         parentAgentId: toolUseContext.agentId,
@@ -750,6 +754,7 @@ export const AgentTool = buildTool({
         rootSetAppState,
         agentIdForCleanup: asyncAgentId,
         enableSummarization: isCoordinator || isForkSubagentEnabled() || getSdkAgentProgressSummariesEnabled(),
+        missionId,
         getWorktreeResult: cleanupWorktreeIfNeeded
       })));
       const canReadOutputFile = toolUseContext.options.tools.some(t => toolMatchesName(t, FILE_READ_TOOL_NAME) || toolMatchesName(t, BASH_TOOL_NAME));

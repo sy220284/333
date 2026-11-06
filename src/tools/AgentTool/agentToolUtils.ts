@@ -1,3 +1,4 @@
+import { finishMissionAssignment, type MissionAssignmentStatus } from '../../utils/agentMissions.js'
 import { feature } from 'bun:bundle'
 import { z } from 'zod/v4'
 import { clearInvokedSkillsForAgent } from '../../bootstrap/state.js'
@@ -519,6 +520,7 @@ export async function runAsyncAgentLifecycle({
   rootSetAppState,
   agentIdForCleanup,
   enableSummarization,
+  missionId,
   getWorktreeResult,
 }: {
   taskId: string
@@ -532,6 +534,7 @@ export async function runAsyncAgentLifecycle({
   rootSetAppState: SetAppState
   agentIdForCleanup: string
   enableSummarization: boolean
+  missionId?: string
   getWorktreeResult: () => Promise<{
     worktreePath?: string
     worktreeBranch?: string
@@ -606,6 +609,7 @@ export async function runAsyncAgentLifecycle({
     // not gate the status transition (gh-20236).
     completeAsyncAgent(agentResult, rootSetAppState)
 
+    const missionWarning = await syncMissionOutcome(missionId, taskId, 'completed')
     let finalMessage = extractTextContent(agentResult.content, '\n')
 
     if (feature('TRANSCRIPT_CLASSIFIER')) {
@@ -624,6 +628,7 @@ export async function runAsyncAgentLifecycle({
     }
 
     const worktreeResult = await getWorktreeResult()
+    if (missionWarning) finalMessage += '\n' + missionWarning
 
     enqueueAgentNotification({
       taskId,
@@ -660,25 +665,27 @@ export async function runAsyncAgentLifecycle({
       })
       const worktreeResult = await getWorktreeResult()
       const partialResult = extractPartialResult(agentMessages)
+      const missionWarning = await syncMissionOutcome(missionId, taskId, 'killed')
       enqueueAgentNotification({
         taskId,
         description,
         status: 'killed',
         setAppState: rootSetAppState,
         toolUseId: toolUseContext.toolUseId,
-        finalMessage: partialResult,
+        finalMessage: partialResult + (missionWarning ? '\n' + missionWarning : ''),
         ...worktreeResult,
       })
       return
     }
     const msg = errorMessage(error)
     failAsyncAgent(taskId, msg, rootSetAppState)
+    const missionWarning = await syncMissionOutcome(missionId, taskId, 'failed')
     const worktreeResult = await getWorktreeResult()
     enqueueAgentNotification({
       taskId,
       description,
       status: 'failed',
-      error: msg,
+      error: msg + (missionWarning ? '\n' + missionWarning : ''),
       setAppState: rootSetAppState,
       toolUseId: toolUseContext.toolUseId,
       ...worktreeResult,
@@ -686,5 +693,16 @@ export async function runAsyncAgentLifecycle({
   } finally {
     clearInvokedSkillsForAgent(agentIdForCleanup)
     clearDumpState(agentIdForCleanup)
+  }
+}
+
+/** Keep the Agent result authoritative even when local mission persistence fails. */
+async function syncMissionOutcome(missionId: string | undefined, taskId: string, status: MissionAssignmentStatus): Promise<string> {
+  if (!missionId) return ''
+  try {
+    await finishMissionAssignment(missionId, taskId, status)
+    return ''
+  } catch (error) {
+    return '[本地超级智能体任务簿更新失败：' + String(error) + ']'
   }
 }

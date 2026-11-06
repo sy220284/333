@@ -1,3 +1,4 @@
+import { findMissionByAssignmentId } from '../../utils/agentMissions.js'
 import { promises as fsp } from 'fs'
 import { getSdkAgentProgressSummariesEnabled } from '../../bootstrap/state.js'
 import { getSystemPrompt } from '../../constants/prompts.js'
@@ -230,6 +231,7 @@ export async function resumeAgentBackground({
   void runWithAgentContext(asyncAgentContext, () =>
     wrapWithCwd(() =>
       runAsyncAgentLifecycle({
+      missionId: await findMissionByAssignmentId(String(agentId)),
         taskId: agentBackgroundTask.agentId,
         abortController: agentBackgroundTask.abortController!,
         makeStream: onCacheSafeParams =>

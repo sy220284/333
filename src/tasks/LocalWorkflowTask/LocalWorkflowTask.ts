@@ -1,3 +1,5 @@
+import { isSuperAgentMode } from '../../utils/agentMode.js'
+import { getSelectedMissionId, linkMissionAssignment, finishMissionAssignment } from '../../utils/agentMissions.js'
 import { randomUUID } from 'node:crypto'
 import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, sep } from 'node:path'
@@ -80,6 +82,7 @@ export async function launchWorkflow(
 ):Promise<{taskId:string,runId:string,transcriptDir:string,workflowName:string,scriptPath:string}> {
   const parsed=validateWorkflowScript(input.script)
   const runId=input.resumeFromRunId??`wf_${randomUUID().slice(0,12)}`
+  const missionId = isSuperAgentMode() ? getSelectedMissionId() : undefined
   const paths=workflowPaths(workflowProjectDir(),getSessionId(),runId,parsed.meta.name)
   const dir=paths.transcriptDir
   await mkdir(dir,{recursive:true,mode:0o700})

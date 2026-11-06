@@ -22,6 +22,10 @@ on:
       - 'tests/local-mcp-skill-discovery.test.ts'
       - 'tests/local-feature-preferences.test.ts'
       - 'tests/agent-collaboration-*.test.*'
+      - 'tests/agent-missions*.test.*'
+      - 'src/utils/agentMissions.ts'
+      - 'src/tasks/LocalWorkflowTask/**'
+      - 'src/tools/AgentTool/agentToolUtils.ts'
       - 'src/coordinator/**'
       - 'src/utils/agentMode.ts'
       - 'src/tools/AgentTool/builtInAgents.ts'
@@ -50,8 +54,8 @@ jobs:
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
       - name: 验证正式构建与退役边界
-        run: node --test tests/local-feature-promotion.test.mjs tests/agent-collaboration-build.test.mjs
+        run: node --test tests/local-feature-promotion.test.mjs tests/agent-collaboration-build.test.mjs tests/agent-missions-build.test.mjs
       - name: 验证本地 MCP 技能发现与读取
         run: bun test tests/local-mcp-skill-discovery.test.ts
       - name: 验证高级功能本地设置和用户交互
-        run: bun test tests/local-feature-preferences.test.ts tests/agent-collaboration-mode.test.ts
+        run: bun test tests/local-feature-preferences.test.ts tests/agent-collaboration-mode.test.ts tests/agent-missions.test.ts

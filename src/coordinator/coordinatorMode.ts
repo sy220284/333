@@ -16,6 +16,7 @@ import { TEAM_CREATE_TOOL_NAME } from '../tools/TeamCreateTool/constants.js'
 import { TEAM_DELETE_TOOL_NAME } from '../tools/TeamDeleteTool/constants.js'
 import { isEnvTruthy } from '../utils/envUtils.js'
 import { isSuperAgentMode } from '../utils/agentMode.js'
+import { getSelectedMissionPrompt } from '../utils/agentMissions.js'
 
 // Checks the same gate as isScratchpadEnabled() in
 // utils/permissions/filesystem.ts. Duplicated here because importing
@@ -106,6 +107,8 @@ export function getCoordinatorUserContext(
     content += `\n\nScratchpad directory: ${scratchpadDir}\nWorkers can read and write here without permission prompts. Use this for durable cross-worker knowledge — structure files however fits the work.`
   }
 
+  const missionContext = getSelectedMissionPrompt()
+  if (missionContext) content += '\n\n' + missionContext
   return { workerToolsContext: content }
 }
 

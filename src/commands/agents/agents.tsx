@@ -9,11 +9,21 @@ import { Dialog } from '../../components/design-system/Dialog.js'
 import { Box, Text } from '../../ink.js'
 import { getActiveAgentMode, setAgentMode, type AgentMode } from '../../utils/agentMode.js'
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js'
+import { getCwd } from '../../utils/cwd.js'
+import { createMission, formatMission, getMission, getSelectedMissionId, listMissions, selectMission, updateMissionStatus, saveMissionCheckpoint, linkMissionAssignment } from '../../utils/agentMissions.js'
 
 type View = 'home' | 'definitions' | 'tasks' | 'workflows'
 
 function modeLabel(mode: AgentMode): string {
   return mode === 'super' ? '超级智能体团队' : '主智能体 + 子智能体'
+}
+
+async function showMissions(onDone: LocalJSXCommandOnDone): Promise<void> {
+  const missions = await listMissions()
+  const selected = getSelectedMissionId()
+  onDone(missions.length ? missions.map(m =>
+    (m.id === selected ? '* ' : '  ') + m.id + ' [' + m.status + '] ' + m.objective.slice(0, 90)
+  ).join('\n') : '尚无超级智能体长期任务。使用 /agents mission new <任务目标> 创建。', { display: 'system' })
 }
 
 async function showAgentListing(context: LocalJSXCommandContext, onDone: LocalJSXCommandOnDone, query?: string): Promise<void> {
@@ -39,6 +49,7 @@ function AgentCenter({ context, onDone }: { context: LocalJSXCommandContext; onD
             { label: '管理智能体定义', value: 'definitions', description: '复用既有智能体编辑器和角色设置' },
             { label: '查看可通信智能体', value: 'list', description: '子智能体、团队成员和本机会话' },
             { label: '后台任务和成员', value: 'tasks', description: '查看、停止或恢复已有任务' },
+            { label: '长期任务档案', value: 'missions', description: '查看目标、执行记录和恢复上下文' },
             { label: '工作流及历史', value: 'workflows', description: '查看阶段执行和恢复记录' },
           ]}
           onChange={value => {
@@ -47,6 +58,8 @@ function AgentCenter({ context, onDone }: { context: LocalJSXCommandContext; onD
               onDone('已切换到' + modeLabel(value) + '；模型、权限及已有任务继续沿用当前配置。', { display: 'system' })
             } else if (value === 'list') {
               void showAgentListing(context, onDone).catch(err => onDone('智能体列表读取失败：' + String(err), { display: 'system' }))
+            } else if (value === 'missions') {
+              void showMissions(onDone).catch(err => onDone('任务簿读取失败：' + String(err), { display: 'system' }))
             } else if (value === 'definitions' || value === 'tasks' || value === 'workflows') {
               setView(value)
             }
@@ -71,6 +84,57 @@ export async function call(
     onDone('已切换到' + modeLabel(arg) + '。', { display: 'system' })
     return null
   }
+  if (verb === 'missions' && !arg) {
+    await showMissions(onDone)
+    return null
+  }
+  if (verb === 'mission') {
+    const action = arg ?? 'show'
+    const value = rest.join(' ').trim()
+    if (action === 'new' && value) {
+      const mission = await createMission(value, getCwd())
+      selectMission(mission.id)
+      setAgentMode('super')
+      onDone('已创建并选中超级智能体任务：' + mission.id + '\n目标：' + mission.objective, { display: 'system' })
+      return null
+    }
+    if (action === 'use' && value) {
+      const mission = await getMission(value)
+      selectMission(mission.id)
+      onDone('已选中任务：' + mission.id + '（' + mission.status + '）', { display: 'system' })
+      return null
+    }
+    if (action === 'clear' && !value) {
+      selectMission()
+      onDone('已取消当前任务选择，原有档案仍保存在本地。', { display: 'system' })
+      return null
+    }
+    const selected = getSelectedMissionId()
+    if (selected && action === 'show' && !value) {
+      onDone(formatMission(await getMission(selected)), { display: 'system' })
+      return null
+    }
+    if (selected && ['pause', 'resume', 'done'].includes(action) && !value) {
+      const status = action === 'pause' ? 'paused' : action === 'resume' ? 'active' : 'completed'
+      const mission = await updateMissionStatus(selected, status)
+      onDone('任务状态已更新：' + mission.id + ' → ' + mission.status, { display: 'system' })
+      return null
+    }
+    if (selected && action === 'note' && value) {
+      const mission = await saveMissionCheckpoint(selected, value)
+      onDone('已记录任务阶段：' + mission.id + '，下次会话可继续读取。', { display: 'system' })
+      return null
+    }
+    if (selected && action === 'attach' && rest.length >= 3) {
+      const [kind, taskId, ...titleParts] = rest
+      if (kind !== 'agent' && kind !== 'team' && kind !== 'workflow') throw new Error('关联类型须为 agent、team 或 workflow')
+      await linkMissionAssignment(selected, taskId!, kind, titleParts.join(' '))
+      onDone('已关联执行任务：' + taskId, { display: 'system' })
+      return null
+    }
+    onDone('用法：/agents mission new <目标>；/agents missions；/agents mission use <ID>；/agents mission show|pause|resume|done|clear；/agents mission note <阶段记录>；/agents mission attach <agent|team|workflow> <任务ID> <标题>。', { display: 'system' })
+    return null
+  }
   if (verb === 'list') {
     await showAgentListing(context, onDone, [arg, ...rest].filter(Boolean).join(' ') || undefined)
     return null
@@ -80,10 +144,12 @@ export async function call(
     const active = Object.values(state.tasks).filter(task =>
       (task.type === 'local_agent' || task.type === 'in_process_teammate') && task.status === 'running'
     ).length
+    const selectedMission = getSelectedMissionId()
     onDone('当前模式：' + modeLabel(getActiveAgentMode()) +
       '\n团队工具：' + (isAgentSwarmsEnabled() ? '已开放' : '已关闭') +
       '\n本会话运行中的智能体：' + active +
-      '\n当前团队：' + (state.teamContext?.teamName ?? '无'), { display: 'system' })
+      '\n当前团队：' + (state.teamContext?.teamName ?? '无') +
+      '\n当前任务簿：' + (selectedMission ?? '无'), { display: 'system' })
     return null
   }
   if (verb === 'team-create' && arg && rest.length === 0) {
@@ -100,6 +166,6 @@ export async function call(
     onDone(result.data.message, { display: 'system' })
     return null
   }
-  onDone('用法：/agents（交互管理）；/agents status；/agents mode master|super；/agents list [搜索词]；/agents team-create <团队名>；/agents team-delete。', { display: 'system' })
+  onDone('用法：/agents（交互管理）；/agents status；/agents mode master|super；/agents list [搜索词]；/agents team-create <团队名>；/agents team-delete；/agents mission new <目标>；/agents missions。', { display: 'system' })
   return null
 }
