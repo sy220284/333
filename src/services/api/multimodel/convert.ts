@@ -2,6 +2,7 @@
 // biome-ignore lint/suspicious/noExplicitAny: Wire payloads are dynamic before being normalized per provider.
 type JSONValue = Record<string, any>
 import type { IndependentProvider } from './registry.js'
+import { applyChatModelFields } from './providerFields.js'
 export type AnthropicRequest = {
   model: string
   messages: Array<{ role: 'user' | 'assistant'; content: string | JSONValue[] }>
@@ -184,68 +185,14 @@ export function toChatCompletions(body: AnthropicRequest, model: string, provide
   }
   if (body.tool_choice?.type === 'none') result.tool_choice = 'none'
   if (body.tool_choice?.type === 'any') result.tool_choice = 'required'
-  if (body.tool_choice?.type === 'tool') result.tool_choice = { type: 'function', function: { name: body.tool_choice.name } }
+  if (body.tool_choice?.type === 'tool') {
+    result.tool_choice = { type: 'function', function: { name: body.tool_choice.name } }
+  }
   const requestedEffort = body.output_config?.effort
   const effort = typeof requestedEffort === 'string' &&
     ['low', 'medium', 'high', 'xhigh', 'max'].includes(requestedEffort)
     ? requestedEffort : undefined
-  const thinking = body.thinking?.type
-  if (provider === 'deepseek') {
-    if (thinking === 'enabled' || thinking === 'adaptive') result.thinking = { type: 'enabled' }
-    if (thinking === 'disabled') result.thinking = { type: 'disabled' }
-    if (effort) result.reasoning_effort = effort === 'medium' || effort === 'xhigh' ? 'high' : effort
-  } else if (provider === 'qwen' && /^qwen3/i.test(model)) {
-    if (thinking === 'enabled' || thinking === 'adaptive') result.enable_thinking = true
-    if (thinking === 'disabled') result.enable_thinking = false
-    // Qwen3.8 uses low/medium/xhigh, while other Qwen revisions advertise
-    // different effort sets. Keep unspecified values at the provider default.
-    if (effort && /^qwen3\.8/i.test(model)) {
-      result.reasoning_effort = effort === 'low' ? 'low' : effort === 'medium' ? 'medium' : 'xhigh'
-    }
-  } else if (provider === 'zhipu') {
-    const alwaysThinking = /^glm-5\.3(?:-|$)/i.test(model)
-    if (thinking === 'disabled' && alwaysThinking) {
-      throw new Error('GLM-5.3 系列始终启用思考；请选择 low 推理强度代替关闭')
-    }
-    if (thinking === 'enabled' || thinking === 'adaptive') result.thinking = { type: 'enabled' }
-    if (thinking === 'disabled') result.thinking = { type: 'disabled' }
-    if (effort && /^glm-5\.[23](?:-|$)/i.test(model)) {
-      result.reasoning_effort = effort === 'low' && alwaysThinking ? 'low'
-        : effort === 'max' || effort === 'xhigh' ? 'max' : 'high'
-    }
-  } else if (provider === 'minimax') {
-    const requiresReasoning = /^MiniMax-M3\.1(?:-|$)|^MiniMax-M2\./i.test(model)
-    if (thinking === 'disabled' && requiresReasoning) {
-      throw new Error('当前 MiniMax 模型必须保留推理能力；可通过 effort 降低强度')
-    }
-    // M3.1 exposes reasoning_effort in Chat Completions; other revisions
-    // must negotiate their exact capabilities with the provider.
-    if (/^MiniMax-M3\.1(?:-|$)/i.test(model)) {
-      result.reasoning_split = true
-      result.max_completion_tokens = body.max_tokens
-      delete result.max_tokens
-      if (effort) result.reasoning_effort = effort
-      if (body.stream) result.stream_options = { include_usage: true }
-    }
-    if (thinking === 'enabled' || thinking === 'adaptive') result.thinking = { type: 'adaptive' }
-    if (thinking === 'disabled') result.thinking = { type: 'disabled' }
-  } else if (provider === 'kimi') {
-    if (thinking === 'disabled' && /^kimi-k2\.7-code/i.test(model)) {
-      throw new Error('Kimi K2.7 Code 不支持关闭思考')
-    }
-    if (thinking === 'enabled' || thinking === 'adaptive') result.thinking = { type: 'enabled' }
-    if (thinking === 'disabled') result.thinking = { type: 'disabled' }
-    // Kimi K2.x permits auto/none only. The required tool is named in the
-    // prompt and the returned invocation is verified by the caller.
-    if (body.tool_choice?.type === 'tool' && /^kimi-k2/i.test(model)) result.tool_choice = 'auto'
-  } else if (provider === 'openrouter') {
-    if (effort) result.reasoning = { effort }
-    else if (thinking === 'disabled') result.reasoning = { effort: 'none' }
-    else if (thinking === 'enabled' || thinking === 'adaptive') result.reasoning = { effort: 'high' }
-  }
-  // Explicitly request the terminal usage chunk where the provider supports it.
-  if (body.stream && (provider === 'deepseek' || provider === 'openrouter')) {
-    result.stream_options = { include_usage: true }
-  }
+  applyChatModelFields(result, { provider, model, thinking: body.thinking?.type,
+    effort, stream: Boolean(body.stream) })
   return result
 }
