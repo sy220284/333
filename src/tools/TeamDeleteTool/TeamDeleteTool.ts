@@ -73,6 +73,7 @@ export const TeamDeleteTool: Tool<InputSchema, Output> = buildTool({
     const { setAppState, getAppState } = context
     const appState = getAppState()
     const teamName = appState.teamContext?.teamName
+    let missionUpdateError: unknown
 
     if (teamName) {
       // Read team config to check for active members
@@ -100,10 +101,15 @@ export const TeamDeleteTool: Tool<InputSchema, Output> = buildTool({
       }
 
       await cleanupTeamDirectories(teamName)
-      const missionId = await findMissionByAssignmentId('team:' + teamName)
-      if (missionId) await finishMissionAssignment(missionId, 'team:' + teamName, 'completed')
-      // Already cleaned — don't try again on gracefulShutdown.
+      // The team has been deleted; always complete the in-memory cleanup even
+      // when the separate mission journal needs repair.
       unregisterTeamForSessionCleanup(teamName)
+      try {
+        const missionId = await findMissionByAssignmentId('team:' + teamName)
+        if (missionId) await finishMissionAssignment(missionId, 'team:' + teamName, 'completed')
+      } catch (error) {
+        missionUpdateError = error
+      }
 
       // Clear color assignments so new teams start fresh
       clearTeammateColors()
@@ -125,6 +131,10 @@ export const TeamDeleteTool: Tool<InputSchema, Output> = buildTool({
         messages: [], // Clear any queued messages
       },
     }))
+
+    if (missionUpdateError) {
+      throw new Error('团队已清理，但长期任务档案更新失败：' + String(missionUpdateError))
+    }
 
     return {
       data: {
