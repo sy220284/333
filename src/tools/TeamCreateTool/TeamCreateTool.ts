@@ -148,7 +148,7 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
     if (missionId) {
       const mission = await getMission(missionId)
       if (mission.status !== 'active') {
-        throw new Error('超级智能体长期任务已' + mission.status + '，请先恢复再创建团队')
+        throw new Error(`超级智能体长期任务已${mission.status}，请先恢复再创建团队`)
       }
     }
 
@@ -229,7 +229,7 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
     // otherwise the UI would claim a team exists with no recoverable record.
     if (missionId) {
       try {
-        await linkMissionAssignment(missionId, 'team:' + finalTeamName, 'team', _description || finalTeamName)
+        await linkMissionAssignment(missionId, `team:${finalTeamName}`, 'team', _description || finalTeamName)
       } catch (error) {
         await cleanupTeamDirectories(finalTeamName)
         unregisterTeamForSessionCleanup(finalTeamName)
