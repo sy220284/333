@@ -167,7 +167,7 @@ import {
 } from 'src/utils/fastMode.js'
 import { returnValue } from 'src/utils/generators.js'
 import { headlessProfilerCheckpoint } from 'src/utils/headlessProfiler.js'
-import { isMcpInstructionsDeltaEnabled } from 'src/utils/mcpInstructionsDelta.js'
+
 import { calculateUSDCost } from 'src/utils/modelCost.js'
 import { endQueryProfile, queryCheckpoint } from 'src/utils/queryProfiler.js'
 import {
@@ -190,10 +190,7 @@ import { count } from '../../utils/array.js'
 import { validateBoundedIntEnvVar } from '../../utils/envValidation.js'
 import { safeParseJSON } from '../../utils/json.js'
 import { getInferenceProfileBackingModel } from '../../utils/model/bedrock.js'
-import {
-  normalizeModelStringForAPI,
-  parseUserSpecifiedModel,
-} from '../../utils/model/model.js'
+import { normalizeModelStringForAPI } from '../../utils/model/model.js';
 import {
   startSessionActivity,
   stopSessionActivity,
@@ -211,7 +208,7 @@ import {
 } from '../analytics/index.js'
 import { COMPACTABLE_TOOLS } from '../compact/microCompact.js'
 import { getInitializationStatus } from '../lsp/manager.js'
-import { isToolFromMcpServer } from '../mcp/utils.js'
+
 import { withStreamingVCR, withVCR } from '../vcr.js'
 import { getAnthropicClient } from './client.js'
 import {
