@@ -38,7 +38,7 @@ function scenario({association='OWNER',failPrOnce=false}={}) {
   if(url===api+'/git/trees'&&options.method==='POST')return ok({sha:'newTree'})
   if(url===api+'/git/commits'&&options.method==='POST'){state.commits++;return ok({sha:'newCommit'})}
   if(url===api+'/git/refs'&&options.method==='POST'){state.branchCreated++;return ok({ref:'refs/heads/yaoyaoche/task-991'})}
-  if(url===api+'/git/ref/heads/yaoyaoche/task-991')
+  if(url===api+'/git/ref/heads/yaoyaoche%2Ftask-991')
     return state.branchCreated?ok({object:{sha:'newCommit'}}):{status:404,ok:false,text:async()=>''}
   if(url.startsWith(api+'/pulls?'))return ok([])
   if(url===api+'/pulls'&&options.method==='POST'){
