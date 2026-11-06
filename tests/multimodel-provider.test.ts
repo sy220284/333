@@ -572,3 +572,57 @@ test('MiniMax M3.1 uses reasoning split and completion budget; M3 uses adaptive 
   assert.deepEqual(m3.thinking, { type: 'disabled' })
   assert.equal(m3.reasoning_split, true)
 })
+
+
+test('ChatGPT plan sends local functions through official additional_tools input items', async () => {
+  const route = requireRoute('chatgpt/gpt-6.1-sol')
+  let sent: Record<string, any> | undefined
+  const backend = async (_url: RequestInfo | URL, init?: RequestInit) => {
+    sent = JSON.parse(String(init?.body))
+    return stream(
+      { type: 'response.output_text.delta', delta: 'READY' },
+      { type: 'response.completed', response: { output: [], usage: { input_tokens: 3, output_tokens: 1 } } },
+    )
+  }
+  const request = new Request('https://333-model-bridge.invalid/v1/messages', {
+    method: 'POST',
+    body: JSON.stringify({ ...body, model: 'chatgpt/gpt-6.1-sol', stream: true,
+      tool_choice: { type: 'auto' } }),
+  })
+  const response = await makeIndependentFetch(route, 'oauth-token', backend as typeof fetch)(request)
+  assert.equal(response.status, 200)
+  assert.ok(messages(await response.text()).some(event => event.type === 'message_stop'))
+  assert.ok(sent)
+  assert.equal(sent.store, false)
+  assert.equal(sent.stream, true)
+  assert.equal(sent.tools, undefined)
+  assert.equal(sent.max_output_tokens, undefined)
+  assert.equal(sent.input[0].type, 'additional_tools')
+  assert.equal(sent.input[0].role, 'developer')
+  assert.equal(sent.input[0].tools[0].name, 'Read')
+  assert.deepEqual(sent.input[0].tools[0].parameters, body.tools[0].input_schema)
+  assert.equal(sent.input[1].role, 'user')
+  assert.equal(sent.input[3].call_id, 'call_42')
+  assert.equal(sent.input[4].type, 'function_call_output')
+  assert.equal(sent.input[4].call_id, 'call_42')
+  for (const field of ['previous_response_id', 'temperature', 'top_p', 'max_output_tokens', 'metadata']) {
+    assert.equal(sent[field], undefined)
+  }
+})
+
+test('OpenAI API key inference keeps ordinary Responses tools protocol independent of ChatGPT plan', async () => {
+  const route = requireRoute('openai/gpt-6.1-sol')
+  let sent: Record<string, any> | undefined
+  const backend = async (_url: RequestInfo | URL, init?: RequestInit) => {
+    sent = JSON.parse(String(init?.body))
+    return stream({ type: 'response.completed', response: { output: [], usage: {} } })
+  }
+  const request = new Request('https://333-model-bridge.invalid/v1/messages', {
+    method: 'POST', body: JSON.stringify(body),
+  })
+  await (await makeIndependentFetch(route, 'api-key', backend as typeof fetch)(request)).text()
+  assert.ok(sent)
+  assert.equal(sent.tools[0].name, 'Read')
+  assert.ok(sent.max_output_tokens > 0)
+  assert.notEqual(sent.input[0].type, 'additional_tools')
+})
