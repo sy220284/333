@@ -159,7 +159,7 @@ test('M1 C19-T02 official and rebuilt preload accept a claim, run --version, rel
       } })
       const result = await Promise.race([started.done, new Promise((_, reject) => setTimeout(() => reject(Error(name + ' claim hung')), 20_000))])
       assert.equal(result.code, 0, name + ' ' + JSON.stringify(result))
-      assert.equal(result.stdout.trim(), name === 'rebuilt' ? '2.1.317 (333)' : '2.1.317 (Claude Code)', name)
+      assert.equal(result.stdout.trim(), name === 'rebuilt' ? '2.1.317 (Avenlo)' : '2.1.317 (Claude Code)', name)
       assert.equal(existsSync(sock), false, name + ' socket')
       assert.equal(existsSync(sock + '.pid'), false, name + ' pid')
     } finally {

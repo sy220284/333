@@ -83,7 +83,7 @@ test('Responses streaming is mapped into Anthropic-style tool and text events wi
     )
   }
   const client = makeIndependentFetch(route, 'sk-test', backend as typeof fetch)
-  const request = new Request('https://333-model-bridge.invalid/v1/messages', {
+  const request = new Request('https://avenlo-model-bridge.invalid/v1/messages', {
     method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json' },
   })
   const response = await client(request)
@@ -105,7 +105,7 @@ test('Chat completions streaming preserves interleaved tool fragments and termin
     { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: 'path":"/a"}' } }] }, finish_reason: 'tool_calls' }], usage: { prompt_tokens: 8, completion_tokens: 4 } },
   )
   const modelBody = { ...body, model: 'deepseek/deepseek-chat' }
-  const request = new Request('https://333-model-bridge.invalid/v1/messages', { method: 'POST', body: JSON.stringify(modelBody) })
+  const request = new Request('https://avenlo-model-bridge.invalid/v1/messages', { method: 'POST', body: JSON.stringify(modelBody) })
   const result = messages(await (await makeIndependentFetch(route, 'secret', backend as typeof fetch)(request)).text())
   assert.ok(result.some(x => x.content_block?.id === 'call_a'))
   assert.ok(result.some(x => x.delta?.partial_json === '{"file_path":"/a"}'))
@@ -113,7 +113,7 @@ test('Chat completions streaming preserves interleaved tool fragments and termin
 })
 test('missing provider tool-call ID fails safely instead of generating an unpairable ID', async () => {
   const chatRoute = requireRoute('deepseek/deepseek-chat')
-  const chatRequest = new Request('https://333-model-bridge.invalid/v1/messages', {
+  const chatRequest = new Request('https://avenlo-model-bridge.invalid/v1/messages', {
     method: 'POST', body: JSON.stringify({ ...body, model: 'deepseek/deepseek-chat' }),
   })
   const chatResult = await makeIndependentFetch(chatRoute, 'secret', async () => stream(
@@ -124,7 +124,7 @@ test('missing provider tool-call ID fails safely instead of generating an unpair
   await assert.rejects(() => chatResult.text(), /stable name or ID/)
 
   const responseRoute = requireRoute('openai/gpt-6.1-sol')
-  const responseRequest = new Request('https://333-model-bridge.invalid/v1/messages', {
+  const responseRequest = new Request('https://avenlo-model-bridge.invalid/v1/messages', {
     method: 'POST', body: JSON.stringify(body),
   })
   const responseResult = await makeIndependentFetch(responseRoute, 'secret', async () => stream(
@@ -188,7 +188,7 @@ test('completed Responses streams are not blocked by a provider cancel that neve
     },
   })
   const route = requireRoute('openai/gpt-6.1-sol')
-  const request = new Request('https://333-model-bridge.invalid/v1/messages', {
+  const request = new Request('https://avenlo-model-bridge.invalid/v1/messages', {
     method: 'POST', body: JSON.stringify(body),
   })
   const response = await makeIndependentFetch(route, 'secret', async () =>
@@ -210,7 +210,7 @@ test('completed Responses streams are not blocked by a provider cancel that neve
 
 test('ChatGPT Responses rejects incomplete and failed streams until response.completed arrives', async () => {
   const route = requireRoute('chatgpt/gpt-6.1-sol')
-  const request = () => new Request('https://333-model-bridge.invalid/v1/messages', {
+  const request = () => new Request('https://avenlo-model-bridge.invalid/v1/messages', {
     method: 'POST', body: JSON.stringify({
       ...body, model: 'chatgpt/gpt-6.1-sol', stream: true,
     }),
@@ -246,7 +246,7 @@ test('model capability probe performs a real tool-result second turn', async () 
     requests.push(request)
     return requests.length === 1 ? answer(
       { type: 'message_start' },
-      { type: 'content_block_start', index: 0, content_block: { name: '333_probe', id: 'toolu_probe' } },
+      { type: 'content_block_start', index: 0, content_block: { name: 'avenlo_probe', id: 'toolu_probe' } },
       { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: '{"ok":true}' } },
       { type: 'message_stop' },
     ) : answer(
@@ -273,7 +273,7 @@ test('capability probe preserves provider tool-selection constraints and verifie
     requested.push(request)
     return requested.length === 1 ? answer(
       { type: 'message_start' },
-      { type: 'content_block_start', index: 0, content_block: { name: '333_probe', id: 'toolu_probe' } },
+      { type: 'content_block_start', index: 0, content_block: { name: 'avenlo_probe', id: 'toolu_probe' } },
       { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: '{"ok":true}' } },
       { type: 'message_stop' },
     ) : answer(
@@ -297,7 +297,7 @@ test('capability probe reports failure when follow-up does not finish', async ()
     count++
     return count === 1 ? answer(
       { type: 'message_start' },
-      { type: 'content_block_start', index: 0, content_block: { name: '333_probe', id: 'toolu_probe' } },
+      { type: 'content_block_start', index: 0, content_block: { name: 'avenlo_probe', id: 'toolu_probe' } },
       { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: '{"ok":true}' } },
       { type: 'message_stop' },
     ) : answer(
@@ -360,10 +360,10 @@ test('DeepSeek reasoning effort, thinking mode and previous reasoning are retain
   const payload = toChatCompletions({
     ...body, thinking: { type: 'enabled' }, output_config: { effort: 'max' },
     messages: [{ role: 'assistant', content: [
-      { type: 'thinking', thinking: 'verified previous thought', signature: '333-replay:test' },
+      { type: 'thinking', thinking: 'verified previous thought', signature: 'avenlo-replay:test' },
       { type: 'tool_use', id: 'call_context', name: 'Read', input: { file_path: '/tmp' } },
     ] }],
-  }, 'deepseek-v4-pro', 'deepseek', '333-replay:test')
+  }, 'deepseek-v4-pro', 'deepseek', 'avenlo-replay:test')
   assert.deepEqual(payload.thinking, { type: 'enabled' })
   assert.equal(payload.reasoning_effort, 'max')
   assert.equal(payload.messages[1].reasoning_content, 'verified previous thought')
@@ -383,7 +383,7 @@ test('Chat completions streaming retains reasoning blocks and reasoning token us
     { choices: [{ delta: { content: 'result' }, finish_reason: 'stop' }],
       usage: { prompt_tokens: 10, completion_tokens: 20, completion_tokens_details: { reasoning_tokens: 8 } } },
   )
-  const req = new Request('https://333-model-bridge.invalid/v1/messages', {
+  const req = new Request('https://avenlo-model-bridge.invalid/v1/messages', {
     method: 'POST', body: JSON.stringify({ ...body, model: 'deepseek/deepseek-v4-pro' }),
   })
   const response = await makeIndependentFetch(route, 'test', backend as typeof fetch)(req)
@@ -443,7 +443,7 @@ test('structured outputs are mapped for both remote protocols', () => {
 
 test('the bridge retains retry identity and accounts for cached input only once', async () => {
   const route = requireRoute('openai/test')
-  const request = () => new Request('https://333-model-bridge.invalid/v1/messages', {
+  const request = () => new Request('https://avenlo-model-bridge.invalid/v1/messages', {
     method: 'POST', body: JSON.stringify({ ...body, model: 'openai/test', stream: false }),
   })
   const limited = await makeIndependentFetch(route, 'key', async () =>
@@ -461,7 +461,7 @@ test('the bridge retains retry identity and accounts for cached input only once'
 
 test('cancelling the translated stream cancels a pending upstream read', async () => {
   const route = requireRoute('openai/test')
-  const request = new Request('https://333-model-bridge.invalid/v1/messages', {
+  const request = new Request('https://avenlo-model-bridge.invalid/v1/messages', {
     method: 'POST', body: JSON.stringify({ ...body, model: 'openai/test', stream: true }),
   })
   let cancelled = false
@@ -477,7 +477,7 @@ test('cancelling the translated stream cancels a pending upstream read', async (
 test('Responses encrypted reasoning replays only on the same connection and model', async () => {
   const route = requireRoute('openai/test')
   const encrypted = { type: 'reasoning', id: 'rs_42', summary: [], encrypted_content: 'opaque' }
-  const request = (messages: AnthropicRequest['messages']) => new Request('https://333-model-bridge.invalid/v1/messages', {
+  const request = (messages: AnthropicRequest['messages']) => new Request('https://avenlo-model-bridge.invalid/v1/messages', {
     method: 'POST', body: JSON.stringify({ ...body, model: 'openai/test', messages, stream: false }),
   })
   const first = await makeIndependentFetch(route, 'key-a', async () =>
@@ -495,7 +495,7 @@ test('Responses encrypted reasoning replays only on the same connection and mode
 test('replay HMAC isolates API keys and remains stable after OAuth token refresh', async () => {
   const route = requireRoute('openai/test')
   const encrypted = { type: 'reasoning', id: 'rs_replay', summary: [], encrypted_content: 'opaque' }
-  const req = () => new Request('https://333-model-bridge.invalid/v1/messages', {
+  const req = () => new Request('https://avenlo-model-bridge.invalid/v1/messages', {
     method: 'POST', body: JSON.stringify({ ...body, model: 'openai/test', stream: false }),
   })
   const signatureFor = async (bearer: string, identity?: string) => {
@@ -519,11 +519,11 @@ test('replay HMAC isolates API keys and remains stable after OAuth token refresh
 })
 
 test('MiniMax M3.1 Flash preserves reasoning and requests terminal usage during tool turns', () => {
-  const signature = '333-replay:current'
+  const signature = 'avenlo-replay:current'
   const request: AnthropicRequest = { ...body, messages: [
     { role: 'assistant', content: [
       { type: 'thinking', thinking: 'matching', signature },
-      { type: 'thinking', thinking: 'foreign', signature: '333-replay:other' },
+      { type: 'thinking', thinking: 'foreign', signature: 'avenlo-replay:other' },
       { type: 'tool_use', id: 'call_42', name: 'Read', input: {} },
     ] },
     { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'call_42', content: 'fixture' }] },
@@ -540,7 +540,7 @@ test('MiniMax M3.1 Flash preserves reasoning and requests terminal usage during 
 test('provider errors redact echoed credentials in HTTP bodies, headers and streams', async () => {
   const route = requireRoute('minimax/MiniMax-M3.1-Flash')
   const token = 'synthetic-sensitive-provider-credential'
-  const req = () => new Request('https://333-model-bridge.invalid/v1/messages', {
+  const req = () => new Request('https://avenlo-model-bridge.invalid/v1/messages', {
     method: 'POST', body: JSON.stringify({ ...body, model: 'minimax/MiniMax-M3.1-Flash', stream: true }),
   })
   const http = await makeIndependentFetch(route, token, async () =>
@@ -558,7 +558,7 @@ test('provider errors redact echoed credentials in HTTP bodies, headers and stre
 
 test('DeepSeek errors preserve provider request identity and retry hints without leaking credentials', async () => {
   const route = requireRoute('deepseek/deepseek-v4-pro')
-  const req = new Request('https://333-model-bridge.invalid/v1/messages', {
+  const req = new Request('https://avenlo-model-bridge.invalid/v1/messages', {
     method: 'POST', body: JSON.stringify({ ...body, model: 'deepseek/deepseek-v4-pro' }),
   })
   const result = await makeIndependentFetch(route, 'test-secret', async () =>
@@ -692,7 +692,7 @@ test('ChatGPT plan sends local functions through official additional_tools input
       { type: 'response.completed', response: { output: [], usage: { input_tokens: 3, output_tokens: 1 } } },
     )
   }
-  const request = new Request('https://333-model-bridge.invalid/v1/messages', {
+  const request = new Request('https://avenlo-model-bridge.invalid/v1/messages', {
     method: 'POST',
     body: JSON.stringify({ ...body, model: 'chatgpt/gpt-6.1-sol', stream: true,
       tool_choice: { type: 'auto' } }),
@@ -725,7 +725,7 @@ test('OpenAI API key inference keeps ordinary Responses tools protocol independe
     sent = JSON.parse(String(init?.body)) as CapturedProviderPayload
     return stream({ type: 'response.completed', response: { output: [], usage: {} } })
   }
-  const request = new Request('https://333-model-bridge.invalid/v1/messages', {
+  const request = new Request('https://avenlo-model-bridge.invalid/v1/messages', {
     method: 'POST', body: JSON.stringify(body),
   })
   await (await makeIndependentFetch(route, 'api-key', backend as typeof fetch)(request)).text()

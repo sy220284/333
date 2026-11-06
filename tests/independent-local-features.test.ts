@@ -39,7 +39,7 @@ test('feedback is explicitly stored locally and never tries to contact a server'
     const path = await saveLocalFeedback('A test-only local report')
     const stored = JSON.parse(readFileSync(path, 'utf8'))
     assert.equal(stored.description, 'A test-only local report')
-    assert.equal(stored.source, '333-local')
+    assert.equal(stored.source, 'avenlo-local')
     assert.equal((await listLocalFeedback())[0]?.id, stored.id)
     if (process.platform !== 'win32') {
       assert.equal(statSync(path).mode & 0o077, 0)
@@ -108,7 +108,7 @@ test('retired Gemini, Grok and OpenRouter model IDs are refused before any API r
 })
 
 test('retired OpenRouter API keys cannot be used, listed or re-saved', async () => {
-  const directory = join(privateHome, '.333', 'auth')
+  const directory = join(privateHome, '.avenlo', 'auth')
   mkdirSync(directory, { recursive: true })
   const vault = join(directory, 'provider-api-keys.json')
   writeFileSync(vault, JSON.stringify({
@@ -126,7 +126,7 @@ test('retired OpenRouter API keys cannot be used, listed or re-saved', async () 
 })
 
 test('old local model, profile and price caches exclude removed providers without blocking valid entries', () => {
-  assert.equal(getModelStorageRoot(), join(privateHome, '.333', 'models'))
+  assert.equal(getModelStorageRoot(), join(privateHome, '.avenlo', 'models'))
   const directory = getModelStorageRoot()
   mkdirSync(directory, { recursive: true })
   writeFileSync(join(directory, 'catalog.json'), JSON.stringify({
