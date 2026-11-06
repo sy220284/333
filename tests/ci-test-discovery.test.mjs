@@ -12,7 +12,7 @@ test('不再把历史分支工作流和 PR 文件过滤路径当作测试执行'
     mkdirSync(join(root, 'tests'))
     mkdirSync(join(root, '.github', 'workflows'), { recursive: true })
     for (const name of ['script', 'pr-run', 'old-only', 'filter-only', 'orphan'])
-      writeFileSync(join(root, 'tests', name + '.test.mjs'), 'export const fixture = true\n')
+      writeFileSync(join(root, 'tests', `${name}.test.mjs`), 'export const fixture = true\n')
     writeFileSync(join(root, 'package.json'), JSON.stringify({
       scripts: { 'test:focus': 'node --test tests/script.test.mjs' }
     }))
