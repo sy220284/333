@@ -54,7 +54,7 @@
 | `missions.jobs.list` | `missionId` | 本项目长期任务的持久工作项及执行历史 |
 | `missions.jobs.enqueue` | `missionId`、`title`、`instruction` | 创建排队工作项，关联原 Mission；仅记录指令 |
 | `missions.jobs.start` | `missionId`、`jobId` | 显式抢占工作项并打开真实 SDK 会话，返回 session/turn |
-| `missions.jobs.approve` | `missionId`、`jobId` | 人工审核成功结果，解除 Mission 完成门禁 |
+| `missions.jobs.runBatch` | `missionId`、可选 `limit`（1–3） | 用户一次明确授权后并行启动最多三个待执行工作项，逐项返回成功/失败及剩余队列 |\n| `missions.jobs.approve` | `missionId`、`jobId` | 人工审核成功结果，解除 Mission 完成门禁 |
 | `missions.jobs.retry` | `missionId`、`jobId` | 重新排队失败/中断/待审核工作项，不立即执行 |
 | `missions.jobs.recover` | `missionId`、`jobId` | 对已退出宿主的遗留运行项进行人工确认后的中断修复 |
 | `missions.jobs.cancel` | `missionId`、`jobId` | 撤销未运行中的工作项并解除完成门禁 |
