@@ -105,7 +105,8 @@ export const TeamDeleteTool: Tool<InputSchema, Output> = buildTool({
       // when the separate mission journal needs repair.
       unregisterTeamForSessionCleanup(teamName)
       try {
-        const missionId = await findMissionByAssignmentId(`team:${teamName}`)
+        const projectDir = teamFile?.members.find(member => member.name === TEAM_LEAD_NAME)?.cwd
+        const missionId = await findMissionByAssignmentId(`team:${teamName}`, undefined, projectDir)
         if (missionId) await finishMissionAssignment(missionId, `team:${teamName}`, 'completed')
       } catch (error) {
         missionUpdateError = error
