@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { generateKeyPairSync, sign } from 'node:crypto'
-import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs'
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -122,7 +122,20 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
     const saved = JSON.parse(readFileSync(join(root, '.333', 'auth', 'chatgpt-accounts.json'), 'utf8'))
     assert.equal(saved.schema, 2)
     assert.equal(saved.accounts.length, 2)
+    // Index contains only account metadata; refresh and access tokens stay
+    // isolated in per-account files with owner-only permissions.
+    const indexText = readFileSync(join(root, '.333', 'auth', 'chatgpt-accounts.json'), 'utf8')
+    assert.ok(!indexText.includes('access-oaiapp_333_one'))
+    assert.ok(!indexText.includes('refresh-oaiapp_333_two'))
+    const tokenDirectory = join(root, '.333', 'auth', 'chatgpt-tokens')
+    const files = readdirSync(tokenDirectory)
+    assert.equal(files.length, 2)
+    const records = files.map(name => JSON.parse(readFileSync(join(tokenDirectory, name), 'utf8')))
+    assert.deepEqual(records.map(x => x.client_id).sort(), ['oaiapp_333_one', 'oaiapp_333_two'])
     if (process.platform !== 'win32') {
+      for (const name of files) {
+        assert.equal(statSync(join(tokenDirectory, name)).mode & 0o777, 0o600)
+      }
       assert.equal(statSync(join(root, '.333', 'auth', 'chatgpt-accounts.json')).mode & 0o777, 0o600)
     }
   } finally {
