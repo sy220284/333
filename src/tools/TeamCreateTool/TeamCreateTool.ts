@@ -1,4 +1,6 @@
 import { z } from 'zod/v4'
+import { getSelectedMissionId, getMission, linkMissionAssignment } from '../../utils/agentMissions.js'
+import { isSuperAgentMode } from '../../utils/agentMode.js'
 import { getSessionId } from '../../bootstrap/state.js'
 import { logEvent } from '../../services/analytics/index.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../../services/analytics/metadata.js'
@@ -18,6 +20,8 @@ import { TEAM_LEAD_NAME } from '../../utils/swarm/constants.js'
 import type { TeamFile } from '../../utils/swarm/teamHelpers.js'
 import {
   getTeamFilePath,
+  cleanupTeamDirectories,
+  unregisterTeamForSessionCleanup,
   readTeamFile,
   registerTeamForSessionCleanup,
   sanitizeName,
@@ -28,6 +32,7 @@ import {
   ensureTasksDir,
   resetTaskList,
   setLeaderTeamName,
+  clearLeaderTeamName,
 } from '../../utils/tasks.js'
 import { generateWordSlug } from '../../utils/words.js'
 import { TEAM_CREATE_TOOL_NAME } from './constants.js'
@@ -139,6 +144,14 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
       )
     }
 
+    const missionId = isSuperAgentMode() ? getSelectedMissionId() : undefined
+    if (missionId) {
+      const mission = await getMission(missionId)
+      if (mission.status !== 'active') {
+        throw new Error('超级智能体长期任务已' + mission.status + '，请先恢复再创建团队')
+      }
+    }
+
     // If team already exists, generate a unique name instead of failing
     const finalTeamName = generateUniqueTeamName(team_name)
 
@@ -210,6 +223,22 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
         },
       },
     }))
+
+    // A team is a first-class assignment of a durable super-agent mission.
+    // Roll back the newly created empty team when the mission write fails,
+    // otherwise the UI would claim a team exists with no recoverable record.
+    if (missionId) {
+      try {
+        await linkMissionAssignment(missionId, 'team:' + finalTeamName, 'team', _description || finalTeamName)
+      } catch (error) {
+        await cleanupTeamDirectories(finalTeamName)
+        unregisterTeamForSessionCleanup(finalTeamName)
+        clearLeaderTeamName()
+        setAppState(prev => prev.teamContext?.teamName === finalTeamName
+          ? { ...prev, teamContext: undefined } : prev)
+        throw error
+      }
+    }
 
     logEvent('tengu_team_created', {
       team_name:
