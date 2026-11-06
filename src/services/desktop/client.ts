@@ -6,6 +6,7 @@ import type { PendingSdkPermission } from '../conversation/permissionBroker.js'
 import type { PendingHostControl } from '../conversation/hostControlBroker.js'
 import type { DesktopTask } from './taskProjection.js'
 import type { AgentMission, AgentMissionStatus } from '../../utils/agentMissions.js'
+import type { MissionJob } from '../agentCenter/missionJobs.js'
 import type { AgentMode } from '../../utils/agentMode.js'
 import type { TeamSummary } from '../../utils/teamDiscovery.js'
 import { DesktopRequestSchema, type DesktopEvent, type DesktopReply, type DesktopRequest } from './protocol.js'
@@ -125,6 +126,20 @@ export function createDesktopClient(input: Readable, output: Writable) {
       invoke<AgentMission>({ method: 'missions.updateStatus', missionId, status }),
     saveMissionCheckpoint: (missionId: string, checkpoint: string) =>
       invoke<AgentMission>({ method: 'missions.checkpoint', missionId, checkpoint }),
+    listMissionJobs: (missionId: string) =>
+      invoke<MissionJob[]>({ method: 'missions.jobs.list', missionId }),
+    enqueueMissionJob: (missionId: string, title: string, instruction: string) =>
+      invoke<MissionJob>({ method: 'missions.jobs.enqueue', missionId, title, instruction }),
+    startMissionJob: (missionId: string, jobId: string) =>
+      invoke<{ sessionId: string; turnId: string; job: MissionJob }>({ method: 'missions.jobs.start', missionId, jobId }),
+    approveMissionJob: (missionId: string, jobId: string) =>
+      invoke<MissionJob>({ method: 'missions.jobs.approve', missionId, jobId }),
+    retryMissionJob: (missionId: string, jobId: string) =>
+      invoke<MissionJob>({ method: 'missions.jobs.retry', missionId, jobId }),
+    recoverMissionJob: (missionId: string, jobId: string) =>
+      invoke<MissionJob>({ method: 'missions.jobs.recover', missionId, jobId }),
+    cancelMissionJob: (missionId: string, jobId: string) =>
+      invoke<MissionJob>({ method: 'missions.jobs.cancel', missionId, jobId }),
     listTasks: (sessionId: string) => invoke<DesktopTask[]>({ method: 'tasks.list', sessionId }),
     stopTask: (sessionId: string, taskId: string) => invoke({ method: 'tasks.stop', sessionId, taskId }),
     resumeTask: (sessionId: string, taskId: string, prompt?: string) => invoke({ method: 'tasks.resume', sessionId, taskId, prompt }),
