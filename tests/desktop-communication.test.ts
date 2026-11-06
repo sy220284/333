@@ -387,6 +387,47 @@ test('超级智能体工作项从入队、真实 SDK 会话、人工审核到长
   }
 })
 
+test('一键并行分工只启动明确授权的工作项，并保留剩余队列', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'desktop-mission-batch-'))
+  const missionRoot = join(cwd, 'mission-store')
+  const beforeMode = getConfiguredAgentMode()
+  const beforeOverride = process.env.CLAUDE_CODE_COORDINATOR_MODE
+  const data = fixture()
+  const gateway = createDesktopGateway({ ...data.options, cwd, missionRoot })
+  const events: DesktopEvent[] = []
+  gateway.subscribe(event => events.push(event))
+  try {
+    const mission = await gateway.handle(request('missions.create', { objective: '验证三项工作' })) as { id: string }
+    const ids: string[] = []
+    for (let index = 0; index < 3; index++) {
+      const job = await gateway.handle(request('missions.jobs.enqueue', {
+        missionId: mission.id, title: '工作' + index, instruction: '逐项独立验证' + index,
+      })) as { id: string }
+      ids.push(job.id)
+    }
+    const batch = await gateway.handle(request('missions.jobs.runBatch', {
+      missionId: mission.id, limit: 2,
+    })) as { launched: Array<{ jobId: string; ok: boolean }>; remaining: number }
+    expect(batch.launched).toHaveLength(2)
+    expect(batch.launched.every(item => item.ok)).toBe(true)
+    expect(batch.remaining).toBe(1)
+    await until(() => events.filter(event =>
+      event.event === 'mission.job.updated' && event.job.status === 'review').length >= 2)
+    const jobs = await gateway.handle(request('missions.jobs.list', { missionId: mission.id })) as Array<{ id: string; status: string }>
+    expect(jobs.find(job => job.id === ids[2])?.status).toBe('queued')
+    await expect(gateway.handle(request('missions.jobs.runBatch', {
+      missionId: mission.id, limit: 4,
+    }))).rejects.toThrow()
+  } finally {
+    selectMission(undefined, cwd)
+    setAgentMode(beforeMode)
+    if (beforeOverride === undefined) delete process.env.CLAUDE_CODE_COORDINATOR_MODE
+    else process.env.CLAUDE_CODE_COORDINATOR_MODE = beforeOverride
+    await gateway.close()
+    await rm(cwd, { recursive: true, force: true })
+  }
+})
+
 test('desktop serializes concurrent turns even while the first SDK send is pending', async () => {
   let permit!: () => void
   const sending = new Promise<void>(resolve => { permit = resolve })
