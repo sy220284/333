@@ -132,7 +132,7 @@ export async function connectVoiceStream(
             windowsHide: true,
           })
           if (cancel.signal.aborted) return 'ws_already_closed'
-          const transcript = (await readFile(base + '.txt', 'utf8')).trim()
+          const transcript = (await readFile(`${base}.txt`, 'utf8')).trim()
           if (cancel.signal.aborted) return 'ws_already_closed'
           if (transcript) callbacks.onTranscript(transcript, true)
           return transcript ? 'post_closestream_endpoint' : 'no_data_timeout'
