@@ -27,7 +27,7 @@ const briefConfigSchema = lazySchema(() =>
 type BriefConfig = z.infer<ReturnType<typeof briefConfigSchema>>
 
 const DEFAULT_BRIEF_CONFIG: BriefConfig = {
-  enable_slash_command: false,
+  enable_slash_command: true,
 }
 
 // No TTL — this gate controls slash-command *visibility*, not a kill switch.

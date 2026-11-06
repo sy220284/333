@@ -15,6 +15,7 @@
 
 import { feature } from 'bun:bundle'
 import { basename } from 'path'
+import { isEnvTruthy } from '../../utils/envUtils.js'
 import { getIsRemoteMode } from '../../bootstrap/state.js'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
 import { ENTRYPOINT_NAME } from '../../memdir/memdir.js'
@@ -306,9 +307,6 @@ export function initExtractMemories(): void {
    *  considers messages added since the previous extraction. */
   let lastMemoryMessageUuid: string | undefined
 
-  /** One-shot flag: once we log that the gate is disabled, don't repeat. */
-  let hasLoggedGateFailure = false
-
   /** True while runExtraction is executing — prevents overlapping runs. */
   let inProgress = false
 
@@ -533,11 +531,9 @@ export function initExtractMemories(): void {
       return
     }
 
-    if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_passport_quail', false)) {
-      if (process.env.USER_TYPE === 'ant' && !hasLoggedGateFailure) {
-        hasLoggedGateFailure = true
-        logEvent('tengu_extract_memories_gate_disabled', {})
-      }
+    // Automatic extraction creates a forked agent and incurs model calls.
+    // It runs only after the user explicitly enables this local capability.
+    if (!isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_LOCAL_MEMORY_EXTRACTION)) {
       return
     }
 

@@ -35,12 +35,8 @@ export const DEFAULT_MAX_AGE_DAYS =
  */
 export function isKairosCronEnabled(): boolean {
   return feature('AGENT_TRIGGERS')
-    ? !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_CRON) &&
-        getFeatureValue_CACHED_WITH_REFRESH(
-          'tengu_kairos_cron',
-          true,
-          KAIROS_CRON_REFRESH_MS,
-        )
+    ? isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_CRON) &&
+        !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_CRON)
     : false
 }
 

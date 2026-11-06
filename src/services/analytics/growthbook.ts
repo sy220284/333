@@ -88,24 +88,13 @@ function readLocalFeature<T>(name: string, defaultValue: T): T {
   if (environment && Object.hasOwn(environment, name)) return environment[name] as T
   const configured = getConfigOverrides()
   if (configured && Object.hasOwn(configured, name)) return configured[name] as T
-  // Preserve locally persisted settings from previous sessions while all
-  // remote feature requests are disabled. Absence keeps the caller's default.
-  const cached = getCachedFeatures()
-  if (Object.hasOwn(cached, name) && cached[name] !== undefined) return cached[name] as T
+  // Only explicit local preferences can override product defaults.
+  // Historic remote experiment assignments must never decide feature access.
   return defaultValue
 }
 
-function getCachedFeatures(): Record<string, unknown> {
-  try {
-    return getGlobalConfig().cachedGrowthBookFeatures ?? {}
-  } catch {
-    // Config access is intentionally unavailable until bootstrap completes.
-    return {}
-  }
-}
-
 export function getAllGrowthBookFeatures(): Record<string, unknown> {
-  return { ...getCachedFeatures(), ...(getConfigOverrides() ?? {}), ...(getEnvOverrides() ?? {}) }
+  return { ...(getConfigOverrides() ?? {}), ...(getEnvOverrides() ?? {}) }
 }
 
 export function getGrowthBookConfigOverrides(): Record<string, unknown> {
@@ -151,7 +140,16 @@ export function getApiBaseUrlHost(): string | undefined {
   }
 }
 
-export async function initializeGrowthBook(): Promise<null> { return null }
+export async function initializeGrowthBook(): Promise<null> {
+  // Retire the on-disk vendor experiment snapshot once local config is ready.
+  // Explicitly selected growthBookOverrides remain untouched.
+  saveGlobalConfig(config => {
+    if (!config.cachedGrowthBookFeatures) return config
+    const { cachedGrowthBookFeatures: _retired, ...localConfig } = config
+    return localConfig
+  })
+  return null
+}
 export async function getFeatureValue_DEPRECATED<T>(name: string, fallback: T): Promise<T> {
   return readLocalFeature(name, fallback)
 }

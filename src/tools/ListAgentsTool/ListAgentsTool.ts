@@ -10,8 +10,6 @@ import { listLiveLocalPeers, peerRef } from '../../utils/livePeerSessions.ts'
 import { TEAM_LEAD_NAME } from '../../utils/swarm/constants.js'
 import { readTeamFileAsync } from '../../utils/swarm/teamHelpers.js'
 import { getAgentName, getTeamName } from '../../utils/teammate.js'
-import { discoverAuthenticatedPeers, getCurrentPeerIdentityKey } from '../../bridge/peerDiscovery.js'
-import { rememberAccountRecipients } from '../../utils/accountPeerDirectory.ts'
 import { getMessagingSocketPath } from '../../utils/udsMessaging.js'
 import { buildAgentListing, hideTeammateNamesInSubagents, listReachableTeammates } from './peerListing.ts'
 
@@ -61,14 +59,9 @@ export const ListAgentsTool = buildTool({
     const teamFile = teamName ? await readTeamFileAsync(teamName) : null
     const teammates = listReachableTeammates(teamFile, selfName, state.teamContext?.teammates, state.tasks)
     const { peers: localSessions, unreadable } = await listLiveLocalPeers(join(getClaudeConfigHomeDir(), 'sessions'))
-    const discoveredAccount = await discoverAuthenticatedPeers(localSessions)
-    const currentIdentity = await getCurrentPeerIdentityKey()
-    // The authenticated account may change while the remote inventory is being fetched.
-    const account = discoveredAccount.identityKey === currentIdentity
-      ? discoveredAccount
-      : { peers: [], notes: [{ kind: 'account_changed', text: '(account changed during listing; retry to discover current sessions)' }], available: false, identityKey: currentIdentity }
-    rememberAccountRecipients(account.peers, Date.now(), account.identityKey)
-    const sessions = [...localSessions, ...account.peers]
+    // Enumerate peers through the local session directory only. Listing must
+    // neither read account credentials nor contact vendor session APIs.
+    const sessions = localSessions
     // Use the socket actually bound by this process, not a stale inherited env value.
     const ownSocket = getMessagingSocketPath()
     const ownName = process.env.CLAUDE_CODE_SESSION_NAME || basename(getOriginalCwd()) || 'Claude session'
@@ -82,7 +75,7 @@ export const ListAgentsTool = buildTool({
     return { data: buildAgentListing({
       self, subagents: hideTeammateNamesInSubagents(subagents, teammates),
       teammates, sessions, query: input.q, localUnreadable: unreadable,
-      accountNotes: account.notes,
+      accountNotes: [],
       canSend: canSendMessage(options.refreshTools?.() ?? options.tools),
     }) }
   },
