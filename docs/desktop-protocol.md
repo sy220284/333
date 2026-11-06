@@ -1,6 +1,6 @@
 # 桌面通信接口（v1）
 
-本接口供本机桌面主进程调用。桌面主进程启动 `bun dist/desktopHost.js --cwd /项目路径`，通过子进程 stdin/stdout 交换 **UTF-8 JSON Lines**。无需运行 Ink，也不需要独立 HTTP 服务。使用 `npm run desktop:serve -- --cwd /项目路径` 可启动同一入口。
+本接口供本机桌面主进程调用。桌面主进程启动正式构建中的 `dist/desktopHost --cwd /项目路径`（Windows 为 `dist/desktopHost.exe`，无需安装 Bun），通过子进程 stdin/stdout 交换 **UTF-8 JSON Lines**。无需运行 Ink，也不需要独立 HTTP 服务。源码开发时也可用 `npm run desktop:serve -- --cwd /项目路径` 启动同一入口。
 
 通信层复用 SDK 已实现的 `--input-format stream-json --output-format stream-json`、`initialize` 模型列表、`control_request/can_use_tool`、`interrupt`、`stop_task` 和会话 `--resume`。接收的 SDK 消息以原始结构随 `session.message` 事件传递；任务进度另外同步为桌面友好的事件。
 

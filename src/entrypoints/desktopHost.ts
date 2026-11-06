@@ -1,9 +1,20 @@
 /** Standalone local desktop host. stdout carries protocol JSON only. */
-import { resolve } from 'node:path'
+import { existsSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { serveDesktopStdio } from '../services/desktop/stdio.js'
 import type { DesktopGatewayOptions } from '../services/desktop/gateway.js'
 
 const options: DesktopGatewayOptions = { cwd: process.cwd() }
+const nativeName = process.platform === 'win32' ? 'yaoyaoche.exe' : 'yaoyaoche'
+// The packaged native desktop host launches its sibling CLI for stream-json.
+const bundled = join(dirname(process.execPath), nativeName)
+const sourceDir = import.meta.url.startsWith('file:')
+  ? dirname(fileURLToPath(import.meta.url)) : process.cwd()
+const rebuilt = join(sourceDir, nativeName)
+const siblingCli = [bundled, rebuilt].find(candidate =>
+  candidate !== process.execPath && existsSync(candidate))
+if (siblingCli) options.sessionOptions = { pathToClaudeCodeExecutable: siblingCli }
 const argv = process.argv.slice(2)
 for (let index = 0; index < argv.length; index++) {
   const key = argv[index]
