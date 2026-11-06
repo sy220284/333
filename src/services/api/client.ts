@@ -1,7 +1,8 @@
+import { getIndependentProfile } from './multimodel/profiles.js'
 import Anthropic, { type ClientOptions } from '@anthropic-ai/sdk'
 import { resolveIndependentModel, getIndependentApiKey, isRemovedIndependentModel } from './multimodel/registry.js'
 import { makeIndependentFetch } from './multimodel/transport.js'
-import { getChatGPTAccessToken } from '../auth/chatgptOAuth.js'
+import { getChatGPTAuthorization } from '../auth/chatgptOAuth.js'
 import { native317MessagesRequest, native317RequestHeaders } from './native317Wire.ts'
 import { createFoundryAzureTokenProvider } from './providerCredentials.ts'
 import { randomUUID } from 'crypto'
@@ -110,15 +111,26 @@ export async function getAnthropicClient({
   }
   const independent = resolveIndependentModel(model)
   if (independent) {
-    const bearer = independent.provider === 'chatgpt'
-      ? await getChatGPTAccessToken()
-      : getIndependentApiKey(independent)
+    let authorization = independent.provider === 'chatgpt' ? await getChatGPTAuthorization() : undefined
+    const upstream = fetchOverride ?? globalThis.fetch
+    const profile = getIndependentProfile(model!)
+    const makeFetch = (token: string, account?: string) => makeIndependentFetch(independent, token, upstream, profile, account)
+    const fetchIndependent = authorization ? undefined : makeFetch(getIndependentApiKey(independent))
     return new Anthropic({
       apiKey: '333-internal-provider-bridge',
       baseURL: 'https://333-model-bridge.invalid',
       maxRetries,
       timeout: parseInt(process.env.API_TIMEOUT_MS || String(600 * 1000), 10),
-      fetch: makeIndependentFetch(independent, bearer, fetchOverride ?? globalThis.fetch),
+      fetch: fetchIndependent ?? (async (input, init) => {
+        const request = new Request(input, init)
+        const sent = authorization!
+        const response = await makeFetch(sent.token, sent.account)(request.clone())
+        if (response.status !== 401) return response
+        await response.body?.cancel()
+        request.signal.throwIfAborted()
+        authorization = await getChatGPTAuthorization(sent)
+        return makeFetch(authorization.token, authorization.account)(request)
+      }),
     })
   }
 

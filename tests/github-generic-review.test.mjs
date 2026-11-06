@@ -7,9 +7,9 @@ import { validRepository } from '../src/commands/github/repository.ts'
 import { githubWorkflow, GITHUB_SCRIPT_PATH, GITHUB_WORKFLOW_PATH } from '../src/commands/github/workflow.ts'
 import { githubReviewerScript } from '../src/commands/github/reviewerScript.ts'
 
-test('四种审查模式真实可选，极深为远程审查', () => {
-  assert.deepEqual(parseReviewRequest('极深 18'),{mode:'extreme',target:'18'})
-  assert.deepEqual(parseReviewRequest('extreme 8'),{mode:'extreme',target:'8'})
+test('审查仅接受普通、深度和安全模式', () => {
+  assert.throws(() => parseReviewRequest('极深 18'), /已移除/)
+  assert.throws(() => parseReviewRequest('--mode=extreme 8'), /已移除/)
   assert.deepEqual(parseReviewRequest('deep main'),{mode:'deep',target:'main'})
   assert.deepEqual(parseReviewRequest('security'),{mode:'security',target:''})
   assert.deepEqual(parseReviewRequest('42'),{mode:'normal',target:'42'})
@@ -33,16 +33,16 @@ test('通用 GitHub 工作流包含显式调用、授权用户触发和最小权
     'THREE333_MODEL_PROVIDER','THREE333_MODEL_NAME','mode:','run: node .github/scripts/333-review.mjs']) {
     assert.ok(workflow.includes(value),value)
   }
+  assert.doesNotMatch(workflow,/extreme|极深/)
   assert.doesNotMatch(workflow,/anthropics\/claude-code-action|claude\.ai\/settings|CLAUDE_CODE_OAUTH_TOKEN/)
 })
 
-test('极深审查是真实四轮审查加独立复核，支持三类模型 API', () => {
+test('深度审查包含独立复核，支持三类模型 API', () => {
   const code=githubReviewerScript()
   const syntax=spawnSync('node',['--input-type=module','--check'],{
     input:code,encoding:'utf8'})
   assert.equal(syntax.status,0,syntax.stderr)
-  for (const keyword of ['callModel(', '独立复核', '需求与代码行为', '模块调用与状态生命周期',
-    '安全边界与潜在利用', '测试覆盖与回归风险','max_completion_tokens',
+  for (const keyword of ['callModel(', '独立复核', '代码正确性及调用链', '安全、性能和测试','max_completion_tokens',
     'api.anthropic.com','api.openai.com','github(','writeFileSync']) {
     assert.ok(code.includes(keyword),keyword)
   }
@@ -51,14 +51,14 @@ test('极深审查是真实四轮审查加独立复核，支持三类模型 API'
 
 test('审查执行链进行 Git 差异采集及不可信输入处理', () => {
   const source=readFileSync(new URL('../src/commands/review.ts',import.meta.url),'utf8')
-  for (const keyword of ['dispatchExtremeReview(', 'execFileNoThrow(', 'diff','git',
+  for (const keyword of ['execFileNoThrow(', 'diff','git',
     '不可信输入','差异格式校验','高置信']) {
     assert.ok(source.includes(keyword),keyword)
   }
 })
 
 
-test('极深执行器真实完成四轮审查、独立复核、PR 评论及报告保存', async () => {
+test('深度执行器完成两轮审查、独立复核、PR 评论及报告保存', async () => {
   const script=githubReviewerScript().replace(/^import .*$/gm,'')
   const AsyncFunction=Object.getPrototypeOf(async ()=> {}).constructor
   const execute=new AsyncFunction('readFileSync','writeFileSync','execFileSync',
@@ -68,7 +68,7 @@ test('极深执行器真实完成四轮审查、独立复核、PR 评论及报�
   let modelCalls=0
   const env={
     GITHUB_REPOSITORY:'owner/example',GITHUB_EVENT_PATH:'mock.json',
-    GITHUB_EVENT_NAME:'workflow_dispatch',INPUT_PR_NUMBER:'28',REVIEW_MODE:'extreme',
+    GITHUB_EVENT_NAME:'workflow_dispatch',INPUT_PR_NUMBER:'28',REVIEW_MODE:'deep',
     MODEL_PROVIDER:'openai-compatible',MODEL_NAME:'test-model',
     MODEL_API_KEY:'fake-for-test',GH_TOKEN:'fake-for-test',
   }
@@ -104,14 +104,14 @@ test('极深执行器真实完成四轮审查、独立复核、PR 评论及报�
     {env,stdout:{write() {}}},
     fetch,()=>0,()=>{}, {byteLength:s=>s.length},FakeURL,FakeAbortController,
   )
-  assert.equal(modelCalls,5)
-  assert.ok(writes.get('333-review-report.md').includes('第5轮核查结果'))
+  assert.equal(modelCalls,3)
+  assert.ok(writes.get('333-review-report.md').includes('第3轮核查结果'))
   assert.equal(requests.filter(r=>r.url.endsWith('/issues/28/comments')).length,1)
-  assert.equal(requests.filter(r=>r.url.startsWith('https://api.openai.com/')).length,5)
+  assert.equal(requests.filter(r=>r.url.startsWith('https://api.openai.com/')).length,3)
 })
 
 
-test('极深后端支持 OpenAI Responses、Anthropic 和 OpenAI 兼容协议', async () => {
+test('审查后端支持 OpenAI Responses、Anthropic 和 OpenAI 兼容协议', async () => {
   const code=githubReviewerScript().replace(/^import .*$/gm,'')
   const AsyncFunction=Object.getPrototypeOf(async ()=> {}).constructor
   const run=new AsyncFunction('readFileSync','writeFileSync','execFileSync',
@@ -173,7 +173,7 @@ test('Actions 配置可单独选择代码审查或授权消息自动响应', () 
   }
 })
 
-test('大型 PR 极深审查按全部差异分块，不丢失文件', async () => {
+test('大型 PR 深度审查按全部差异分块，不丢失文件', async () => {
   const runner = githubReviewerScript().replace(/^import .*$/gm, '')
   const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor
   const run = new AsyncFunction('readFileSync','writeFileSync','execFileSync',
@@ -182,7 +182,7 @@ test('大型 PR 极深审查按全部差异分块，不丢失文件', async () =
   const env = {
     GITHUB_REPOSITORY:'owner/example', GITHUB_EVENT_PATH:'mock.json',
     GITHUB_EVENT_NAME:'workflow_dispatch', INPUT_PR_NUMBER:'19',
-    REVIEW_MODE:'extreme', MODEL_PROVIDER:'openai-compatible',
+    REVIEW_MODE:'deep', MODEL_PROVIDER:'openai-compatible',
     MODEL_NAME:'test-model', MODEL_API_KEY:'test', GH_TOKEN:'test',
   }
   let calls = 0

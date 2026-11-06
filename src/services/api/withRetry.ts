@@ -1,3 +1,4 @@
+import { resolveIndependentModel } from './multimodel/registry.js'
 import { feature } from 'bun:bundle'
 import type Anthropic from '@anthropic-ai/sdk'
 import {
@@ -189,6 +190,7 @@ export async function* withRetry<T>(
     ...(isFastModeEnabled() && { fastMode: options.fastMode }),
   }
   let client: Anthropic | null = null
+  const independent = resolveIndependentModel(options.model)
   let consecutive529Errors = options.initialConsecutive529Errors ?? 0
   let lastError: unknown
   let persistentAttempt = 0
@@ -199,7 +201,7 @@ export async function* withRetry<T>(
 
     // Capture whether fast mode is active before this attempt
     // (fallback may change the state mid-loop)
-    const wasFastModeActive = isFastModeEnabled()
+    const wasFastModeActive = !independent && isFastModeEnabled()
       ? retryContext.fastMode && !isFastModeCooldown()
       : false
 
@@ -244,10 +246,10 @@ export async function* withRetry<T>(
         isStaleConnection
       ) {
         // On 401 "token expired" or 403 "token revoked", force a token refresh
-        if (
+        if (!independent && (
           (lastError instanceof APIError && lastError.status === 401) ||
           isOAuthTokenRevokedError(lastError)
-        ) {
+        )) {
           const failedAccessToken = getClaudeAIOAuthTokens()?.accessToken
           if (failedAccessToken) {
             await handleOAuth401Error(failedAccessToken)
@@ -425,9 +427,14 @@ export async function* withRetry<T>(
 
       // For other errors, proceed with normal retry logic
       // Get retry-after header if available
-      const retryAfter = getRetryAfter(error)
+      const retryAfter = independent ? null : getRetryAfter(error)
+      const independentDelay = independent && error instanceof APIError ? getIndependentRetryAfterMs(error) : 0
       let delayMs: number
-      if (persistent && error instanceof APIError && error.status === 429) {
+      if (persistent && independent) {
+        persistentAttempt++
+        delayMs = Math.min(PERSISTENT_RESET_CAP_MS, Math.max(independentDelay,
+          getRetryDelay(persistentAttempt, null, PERSISTENT_MAX_BACKOFF_MS)))
+      } else if (persistent && error instanceof APIError && error.status === 429) {
         persistentAttempt++
         // Window-based limits (e.g. 5hr Max/Pro) include a reset timestamp.
         // Wait until reset rather than polling every 5 min uselessly.
@@ -461,7 +468,7 @@ export async function* withRetry<T>(
           ? Number(process.env.CLAUDE_CODE_OVERLOADED_RETRY_MAX_DELAY_MS) : undefined
         const baseDelay = overloaded && process.env.CLAUDE_CODE_OVERLOADED_RETRY_BASE_DELAY_MS !== undefined
           ? Number(process.env.CLAUDE_CODE_OVERLOADED_RETRY_BASE_DELAY_MS) : undefined
-        delayMs = getRetryDelay(attempt, retryAfter, maxDelay, Math.random, baseDelay)
+        delayMs = Math.max(independentDelay, getRetryDelay(attempt, retryAfter, maxDelay, Math.random, baseDelay))
         if (isPersistentRetryEnabled()) {
           delayMs = Math.min(delayMs, PERSISTENT_RESET_CAP_MS)
         } else if (delayMs > getRetryWaitLimit(maxDelay)) {
@@ -786,6 +793,16 @@ function getMaxRetries(options: RetryOptions): number {
 const DEFAULT_FAST_MODE_FALLBACK_HOLD_MS = 30 * 60 * 1000 // 30 minutes
 const SHORT_RETRY_THRESHOLD_MS = 20 * 1000 // 20 seconds
 const MIN_COOLDOWN_MS = 10 * 60 * 1000 // 10 minutes
+
+function getIndependentRetryAfterMs(error: APIError): number {
+  const milliseconds = Number(error.headers?.get('retry-after-ms'))
+  if (Number.isFinite(milliseconds) && milliseconds > 0) return milliseconds
+  const retryAfter = getRetryAfter(error)
+  if (!retryAfter) return 0
+  const delay = /^\d+(?:\.\d+)?$/.test(retryAfter)
+    ? Number(retryAfter) * 1000 : Date.parse(retryAfter) - Date.now()
+  return Number.isFinite(delay) ? Math.max(0, delay) : 0
+}
 
 function getRetryAfterMs(error: APIError): number | null {
   const retryAfter = getRetryAfter(error)

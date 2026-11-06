@@ -1,3 +1,4 @@
+import { lock } from '../../utils/lockfile.js'
 /**
  * Independent 333 Sign in with ChatGPT (open-source dynamic OAuth registration).
  * No Codex client impersonation; each installation registers a user-authorized
@@ -97,13 +98,13 @@ function scopeGranted(scopes: string): boolean {
   return scopes.split(/\s+/).includes('chatgpt.tokens.use.direct')
 }
 async function refreshCredentials(current: Credential): Promise<Credential> {
-  const epoch = credentialEpoch
   const params = new URLSearchParams({
     grant_type: 'refresh_token', client_id: current.client_id,
     refresh_token: current.refresh_token, resource: RESOURCE,
   })
   const response = await fetch(TOKEN_ENDPOINT, {
     method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: params,
+    signal: AbortSignal.timeout(15_000),
   })
   if (!response.ok) throw new Error(`ChatGPT refresh failed (HTTP ${response.status}). Sign in again.`)
   const data = await response.json() as Record<string, unknown>
@@ -116,20 +117,48 @@ async function refreshCredentials(current: Credential): Promise<Credential> {
     ...current, access_token: data.access_token, refresh_token: data.refresh_token,
     scope: scopes, expires_at: Date.now() + Number(data.expires_in ?? 3600) * 1000,
   }
-  if (epoch !== credentialEpoch) throw new Error('ChatGPT credentials changed while refresh was pending')
   await writePrivate(FILE, updated)
   return updated
 }
-let refreshing: Promise<Credential> | null = null
-let credentialEpoch = 0
-export async function getChatGPTAccessToken(): Promise<string> {
-  const credential = await readJSON<Credential>(FILE)
-  if (!credential) throw new Error('ChatGPT not connected; run 333 auth chatgpt-login')
-  if (!scopeGranted(credential.scope)) throw new Error('ChatGPT account lacks plan usage permission')
-  if (credential.expires_at > Date.now() + 120_000) return credential.access_token
-  refreshing ??= refreshCredentials(credential).finally(() => { refreshing = null })
-  return (await refreshing).access_token
+async function withCredentialLock<T>(operation: () => Promise<T>): Promise<T> {
+  await fs.mkdir(DIR, { recursive: true, mode: 0o700 })
+  const unlock = await lock(FILE, { realpath: false, stale: 30_000,
+    retries: { retries: 25, minTimeout: 100, maxTimeout: 1_000 } })
+  try { return await operation() } finally { await unlock() }
 }
+
+type ChatGPTAuthorization = { token: string; account: string }
+const accountIdentity = (value: Credential) => JSON.stringify([value.client_id, value.subject])
+
+export async function getChatGPTAuthorization(
+  rejected?: ChatGPTAuthorization,
+): Promise<ChatGPTAuthorization> {
+  const read = async () => {
+    const credential = await readJSON<Credential>(FILE)
+    if (!credential) throw new Error('ChatGPT not connected; run 333 auth chatgpt-login')
+    if (!scopeGranted(credential.scope)) throw new Error('ChatGPT account lacks plan usage permission')
+    if (rejected && accountIdentity(credential) !== rejected.account) {
+      throw new Error('ChatGPT account changed while the request was pending')
+    }
+    return credential
+  }
+  const usable = (credential: Credential) =>
+    credential.access_token !== rejected?.token && credential.expires_at > Date.now() + 120_000
+  const credential = await read()
+  if (usable(credential)) return { token: credential.access_token, account: accountIdentity(credential) }
+  return withCredentialLock(async () => {
+    const current = await read()
+    if (current.subject !== credential.subject || current.client_id !== credential.client_id) {
+      throw new Error('ChatGPT account changed while the request was pending')
+    }
+    const selected = usable(current) ? current : await refreshCredentials(current)
+    return { token: selected.access_token, account: accountIdentity(selected) }
+  })
+}
+export async function getChatGPTAccessToken(): Promise<string> {
+  return (await getChatGPTAuthorization()).token
+}
+
 function openBrowser(url: string): void {
   const platform = process.platform
   const command = platform === 'win32' ? 'rundll32.exe' : platform === 'darwin' ? 'open' : 'xdg-open'
@@ -228,9 +257,14 @@ export async function loginWithChatGPT(): Promise<{ email?: string; subject: str
       refresh_token: tokens.refresh_token, scope: tokens.scope,
       expires_at: Date.now() + Number(tokens.expires_in ?? 3600) * 1000,
     }
-    credentialEpoch++
-    await writePrivate(ACCOUNT_FILE, { client_id: issuedId, subject: identity.subject, email: identity.email })
-    await writePrivate(FILE, credential)
+    await withCredentialLock(async () => {
+      const current = await readJSON<Registration>(ACCOUNT_FILE)
+      if (current?.client_id !== registration?.client_id || current?.subject !== registration?.subject) {
+        throw new Error('ChatGPT account changed during login; restart the login flow')
+      }
+      await writePrivate(ACCOUNT_FILE, { client_id: issuedId, subject: identity.subject, email: identity.email })
+      await writePrivate(FILE, credential)
+    })
     return { subject: identity.subject, email: identity.email, clientId: issuedId }
   } finally {
     if (loginTimeout) clearTimeout(loginTimeout)
@@ -238,17 +272,24 @@ export async function loginWithChatGPT(): Promise<{ email?: string; subject: str
   }
 }
 /** For model selection during startup. No remote request or token exposure. */
-export function hasSavedChatGPTAuthorization(): boolean {
+export function getSavedChatGPTAccount(): string | undefined {
   let source: string
   try { source = readFileSync(FILE, 'utf8') }
   catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
     throw error
   }
   const credential = JSON.parse(source) as Partial<Credential>
-  return typeof credential.refresh_token === 'string' && credential.refresh_token.length > 0 &&
+  if (typeof credential.refresh_token === 'string' && credential.refresh_token.length > 0 &&
     typeof credential.access_token === 'string' && credential.access_token.length > 0 &&
-    typeof credential.scope === 'string' && scopeGranted(credential.scope)
+    typeof credential.scope === 'string' && scopeGranted(credential.scope) &&
+      typeof credential.client_id === 'string' && typeof credential.subject === 'string') {
+    return JSON.stringify([credential.client_id, credential.subject])
+  }
+  return undefined
+}
+export function hasSavedChatGPTAuthorization(): boolean {
+  return getSavedChatGPTAccount() !== undefined
 }
 export async function chatGPTStatus(): Promise<{ connected: boolean; email?: string; clientId?: string }> {
   const account = await readJSON<Credential>(FILE)
@@ -258,8 +299,12 @@ export async function chatGPTStatus(): Promise<{ connected: boolean; email?: str
 }
 /** Clear local identity and registration together so another account can sign in. */
 export async function logoutChatGPT(): Promise<void> {
-  credentialEpoch++
-  const credential = await readJSON<Credential>(FILE)
+  const credential = await withCredentialLock(async () => {
+    const saved = await readJSON<Credential>(FILE)
+    await fs.rm(FILE, { force: true })
+    await fs.rm(ACCOUNT_FILE, { force: true })
+    return saved
+  })
   let revocationError: Error | null = null
   if (credential) {
     try {
@@ -283,8 +328,6 @@ export async function logoutChatGPT(): Promise<void> {
       revocationError = error instanceof Error ? error : new Error(String(error))
     }
   }
-  await fs.rm(FILE, { force: true })
-  await fs.rm(ACCOUNT_FILE, { force: true })
   if (revocationError) {
     throw new Error(`ChatGPT 本地账号与凭据已清除；远端撤销失败：${revocationError.message}`)
   }

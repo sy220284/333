@@ -1,6 +1,8 @@
+import { resolveIndependentModel } from '../../services/api/multimodel/registry.js'
+import { isModelAllowed } from './modelAllowlist.js'
 import type { PermissionMode } from '../permissions/PermissionMode.js'
 import { capitalize } from '../stringUtils.js'
-import { MODEL_ALIASES, type ModelAlias } from './aliases.js'
+import { MODEL_ALIASES } from './aliases.js'
 import { applyBedrockRegionPrefix, getBedrockRegionPrefix } from './bedrock.js'
 import {
   getCanonicalName,
@@ -37,12 +39,15 @@ export function getDefaultSubagentModel(): string {
 export function getAgentModel(
   agentModel: string | undefined,
   parentModel: string,
-  toolSpecifiedModel?: ModelAlias,
+  toolSpecifiedModel?: string,
   permissionMode?: PermissionMode,
+  builtIn = false,
 ): string {
   if (process.env.CLAUDE_CODE_SUBAGENT_MODEL) {
     return parseUserSpecifiedModel(process.env.CLAUDE_CODE_SUBAGENT_MODEL)
   }
+
+  if (builtIn && !toolSpecifiedModel && resolveIndependentModel(parentModel)) return parentModel
 
   // Extract Bedrock region prefix from parent model to inherit for subagents.
   // This ensures subagents use the same cross-region inference profile (e.g., "eu.", "us.")
@@ -72,6 +77,7 @@ export function getAgentModel(
       return parentModel
     }
     const model = parseUserSpecifiedModel(toolSpecifiedModel)
+    if (!isModelAllowed(model)) throw new Error(`Agent model '${model}' is not allowed`)
     return applyParentRegionPrefix(model, toolSpecifiedModel)
   }
 

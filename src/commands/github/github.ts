@@ -5,7 +5,7 @@ import { githubWorkflow, GITHUB_SCRIPT_PATH, GITHUB_WORKFLOW_PATH, type GithubWo
 import { githubReviewerScript } from './reviewerScript.js'
 
 import { validRepository } from './repository.js'
-const HELP = '用法：/github status | auth | repos | setup [owner/repo] [review|respond|both] | secret <owner/repo> <环境变量名> | review <owner/repo> <PR> [normal|deep|security|extreme] | runs <owner/repo> | run <owner/repo> <运行ID> | cancel <owner/repo> <运行ID> | rerun <owner/repo> <运行ID>'
+const HELP = '用法：/github status | auth | repos | setup [owner/repo] [review|respond|both] | secret <owner/repo> <环境变量名> | review <owner/repo> <PR> [normal|deep|security] | runs <owner/repo> | run <owner/repo> <运行ID> | cancel <owner/repo> <运行ID> | rerun <owner/repo> <运行ID>'
 const result = (value: string): { type:'text'; value:string } => ({type:'text',value})
 function validPr(raw: string): string {
   if (!/^[1-9][0-9]*$/.test(raw) || !Number.isSafeInteger(Number(raw)))
@@ -81,7 +81,7 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
   const tree = JSON.parse(await gh(['api', '--method', 'POST', `repos/${repo}/git/trees`, '--input', '-'],
     JSON.stringify({ base_tree: previous.tree.sha, tree: treeElements })))
   const commit = JSON.parse(await gh(['api', '--method', 'POST', `repos/${repo}/git/commits`, '--input', '-'],
-    JSON.stringify({ message: '更新 333 通用 GitHub Actions 与多模型极深审查',
+    JSON.stringify({ message: '更新 333 通用 GitHub Actions 与多模型审查',
       tree: tree.sha, parents: [parent] })))
   if (reusable) {
     await gh(['api', '--method', 'PATCH', `repos/${repo}/git/refs/heads/${targetBranch}`,
@@ -90,20 +90,20 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
   }
   await gh(['api', '--method', 'POST', `repos/${repo}/git/refs`,
     '-f', `ref=refs/heads/${targetBranch}`, '-f', `sha=${commit.sha}`])
-  const body = '## 333 GitHub 通用集成\\n\\n通过 GitHub Actions 执行多模型审查和极深复核，授权成员可使用 @333 触发。' +
+  const body = '## 333 GitHub 通用集成\\n\\n通过 GitHub Actions 执行多模型审查，授权成员可使用 @333 触发。' +
     '\\n请配置 Secret THREE333_MODEL_API_KEY、变量 THREE333_MODEL_NAME 与 THREE333_MODEL_PROVIDER。' +
     '\\n支持 OpenAI 兼容协议、Responses 与 Anthropic；GitHub 授权和模型授权独立。'
   try {
     return await gh(['pr', 'create', '--repo', repo, '--head', targetBranch, '--base', main,
-      '--title', '接入 333 通用 GitHub Actions 与多模型极深审查', '--body', body])
+      '--title', '接入 333 通用 GitHub Actions 与多模型审查', '--body', body])
   } catch (error) {
     throw new Error(`配置已提交到分支 ${targetBranch}，但 PR 创建失败：${error instanceof Error ? error.message : String(error)}`)
   }
 }
-export async function dispatchExtremeReview(rawRepo: string, rawPr: string, mode='extreme'): Promise<string> {
+export async function dispatchReview(rawRepo: string, rawPr: string, mode='normal'): Promise<string> {
   const repo = validRepository(rawRepo)
   const pr = validPr(rawPr)
-  if (!['normal','deep','security','extreme'].includes(mode)) throw new Error('审查模式无效')
+  if (!['normal','deep','security'].includes(mode)) throw new Error('审查模式无效')
   await checkAuth()
   await gh(['workflow','run','333-review.yml','--repo',repo,'-f',`pr_number=${pr}`,'-f',`mode=${mode}`])
   return '已提交审查任务至 GitHub Actions。完成后在 PR #' + pr +
@@ -151,7 +151,7 @@ export const call: LocalCommandCall = async (args) => {
       return result('Secret THREE333_MODEL_API_KEY 写入成功，密钥值未输出。')
     }
     if (action === 'review' && tokens.length>=3 && tokens.length<=4)
-      return result(await dispatchExtremeReview(tokens[1],tokens[2],tokens[3] || 'extreme'))
+      return result(await dispatchReview(tokens[1],tokens[2],tokens[3] || 'normal'))
     if (['run','cancel','rerun'].includes(action) && tokens.length===3) {
       await checkAuth()
       const repo = validRepository(tokens[1])

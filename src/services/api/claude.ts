@@ -1,3 +1,5 @@
+import { resolveIndependentModel } from './multimodel/registry.js'
+import { getIndependentProfile } from './multimodel/profiles.js'
 import type {
   BetaContentBlock,
   BetaImageBlockParam,
@@ -1146,7 +1148,8 @@ async function* queryModel(
 
   // Check if tool search is enabled (checks mode, model support, and threshold for auto mode)
   // This is async because it may need to calculate MCP tool description sizes for TstAuto mode
-  let useToolSearch = await isToolSearchEnabled(
+  const independentRoute = resolveIndependentModel(options.model)
+  let useToolSearch = !independentRoute && await isToolSearchEnabled(
     options.model,
     tools,
     options.getToolPermissionContext,
@@ -1198,6 +1201,10 @@ async function* queryModel(
     filteredTools = tools.filter(
       t => !toolMatchesName(t, TOOL_SEARCH_TOOL_NAME),
     )
+  }
+
+  if (independentRoute && getIndependentProfile(options.model)?.supportsTools === false) {
+    filteredTools = []
   }
 
   // Add tool search beta header if enabled - required for defer_loading to be accepted
@@ -1304,6 +1311,16 @@ async function* queryModel(
   // Repair tool_use/tool_result pairing mismatches that can occur when resuming
   // remote/teleport sessions. Inserts synthetic error tool_results for orphaned
   // tool_uses and strips orphaned tool_results referencing non-existent tool_uses.
+  if (!independentRoute) {
+    messagesForAPI = messagesForAPI.flatMap<(typeof messagesForAPI)[number]>(message => {
+      if (message.type !== 'assistant') return [message]
+      const content = message.message.content.filter(block =>
+        !(block.type === 'thinking' && block.signature.startsWith('333-replay:')) &&
+        !(block.type === 'redacted_thinking' && block.data.startsWith('333-replay:')))
+      if (content.length === message.message.content.length) return [message]
+      return content.length ? [{ ...message, message: { ...message.message, content } }] : []
+    })
+  }
   messagesForAPI = ensureToolResultPairing(messagesForAPI)
 
   // Strip advisor blocks — the API rejects them without the beta header.

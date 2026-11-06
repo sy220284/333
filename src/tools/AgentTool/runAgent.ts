@@ -65,7 +65,6 @@ import { getAgentModel } from '../../utils/model/agent.js'
 import { getDefaultEffortForModel, parseEffortValue } from '../../utils/effort.js'
 import { isSettingSourceEnabled } from '../../utils/settings/constants.js'
 import { getSettingsForSource } from '../../utils/settings/settings.js'
-import type { ModelAlias } from '../../utils/model/aliases.js'
 import {
   clearAgentTranscriptSubdir,
   recordSidechainTranscript,
@@ -295,7 +294,7 @@ export async function* runAgent({
     abortController?: AbortController
     agentId?: AgentId
   }
-  model?: ModelAlias
+  model?: string
   maxTurns?: number
   /** Preserve toolUseResult on messages for subagents with viewable transcripts */
   preserveToolUseResults?: boolean
@@ -352,6 +351,7 @@ export async function* runAgent({
     toolUseContext.options.mainLoopModel,
     model,
     permissionMode,
+    agentDefinition.source === 'built-in',
   )
 
   const agentId = override?.agentId ? override.agentId : createAgentId()

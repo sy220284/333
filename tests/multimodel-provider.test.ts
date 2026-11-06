@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { type ProviderRoute, PROVIDERS, resolveIndependentModel, getIndependentApiKey, discoverIndependentModels } from '../src/services/api/multimodel/registry.ts'
-import { toResponses, toChatCompletions } from '../src/services/api/multimodel/convert.ts'
+import { type AnthropicRequest, toResponses, toChatCompletions } from '../src/services/api/multimodel/convert.ts'
 import { makeIndependentFetch } from '../src/services/api/multimodel/transport.ts'
 import { runModelToolRoundTrip } from '../src/services/api/multimodel/capabilityProbe.ts'
 import { validateApiKeyProvider } from '../src/services/auth/apiKeyVault.ts'
@@ -197,10 +197,10 @@ test('DeepSeek reasoning effort, thinking mode and previous reasoning are retain
   const payload = toChatCompletions({
     ...body, thinking: { type: 'enabled' }, output_config: { effort: 'max' },
     messages: [{ role: 'assistant', content: [
-      { type: 'thinking', thinking: 'verified previous thought', signature: '' },
+      { type: 'thinking', thinking: 'verified previous thought', signature: '333-replay:test' },
       { type: 'tool_use', id: 'call_context', name: 'Read', input: { file_path: '/tmp' } },
     ] }],
-  }, 'deepseek-v4-pro', 'deepseek')
+  }, 'deepseek-v4-pro', 'deepseek', '333-replay:test')
   assert.deepEqual(payload.thinking, { type: 'enabled' })
   assert.equal(payload.reasoning_effort, 'max')
   assert.equal(payload.messages[1].reasoning_content, 'verified previous thought')
@@ -245,4 +245,78 @@ test('MiniMax M3.1 and Kimi K2.7 enforce documented thinking boundaries', () => 
   assert.throws(() => toChatCompletions({ ...body, thinking: { type: 'disabled' } }, 'kimi-k2.7-code', 'kimi'), /不支持关闭思考/)
   const selected = toChatCompletions({ ...body, tool_choice: { type: 'tool', name: 'Read' } }, 'kimi-k2.7-code', 'kimi')
   assert.equal(selected.tool_choice, 'auto')
+})
+
+test('multimodal tool results retain image data and precede ordinary chat messages', () => {
+  const request: AnthropicRequest = { ...body, messages: [
+    ...body.messages.slice(0, 2),
+    { role: 'user', content: [
+      { type: 'tool_result', tool_use_id: 'call_42', content: [
+        { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAAA' } },
+      ] },
+      { type: 'text', text: 'Follow-up' },
+    ] },
+  ] }
+  const responses = toResponses(request, 'test')
+  assert.equal(responses.input.find((item: {type: string}) => item.type === 'function_call_output').output[0].type, 'input_image')
+  const chat = toChatCompletions(request, 'test')
+  assert.equal(chat.messages.at(-2).role, 'tool')
+  assert.equal(chat.messages.at(-1).content[0].image_url.url, 'data:image/png;base64,AAAA')
+})
+
+test('structured outputs are mapped for both remote protocols', () => {
+  const schema = { type: 'object', properties: {}, additionalProperties: false }
+  const request = { ...body, output_config: { format: { type: 'json_schema', schema } } }
+  assert.deepEqual(toResponses(request, 'test').text.format.schema, schema)
+  assert.deepEqual(toChatCompletions(request, 'test').response_format.json_schema.schema, schema)
+})
+
+test('the bridge retains retry identity and accounts for cached input only once', async () => {
+  const route = requireRoute('openai/test')
+  const request = () => new Request('https://333-model-bridge.invalid/v1/messages', {
+    method: 'POST', body: JSON.stringify({ ...body, model: 'openai/test', stream: false }),
+  })
+  const limited = await makeIndependentFetch(route, 'key', async () =>
+    new Response('limited', { status: 429, headers: { 'retry-after': '9', 'x-request-id': 'abc' } }))(request())
+  assert.equal(limited.headers.get('retry-after'), '9')
+  assert.equal(limited.headers.get('request-id'), 'abc')
+  const incomplete = await makeIndependentFetch(route, 'key', async () =>
+    Response.json({ status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' },
+      usage: { input_tokens: 100, input_tokens_details: { cached_tokens: 40 } } }))(request())
+  const result = await incomplete.json() as { stop_reason: string; usage: Record<string, number> }
+  assert.equal(result.stop_reason, 'max_tokens')
+  assert.equal(result.usage.input_tokens, 60)
+  assert.equal(result.usage.cache_read_input_tokens, 40)
+})
+
+test('cancelling the translated stream cancels a pending upstream read', async () => {
+  const route = requireRoute('openai/test')
+  const request = new Request('https://333-model-bridge.invalid/v1/messages', {
+    method: 'POST', body: JSON.stringify({ ...body, model: 'openai/test', stream: true }),
+  })
+  let cancelled = false
+  const upstream = new ReadableStream<Uint8Array>({ cancel() { cancelled = true } })
+  const result = await makeIndependentFetch(route, 'key', async () => new Response(upstream))(request)
+  const reader = result.body!.getReader()
+  assert.equal((await reader.read()).done, false)
+  await reader.cancel()
+  assert.equal(cancelled, true)
+})
+
+test('Responses encrypted reasoning replays only on the same connection and model', async () => {
+  const route = requireRoute('openai/test')
+  const encrypted = { type: 'reasoning', id: 'rs_42', summary: [], encrypted_content: 'opaque' }
+  const request = (messages: AnthropicRequest['messages']) => new Request('https://333-model-bridge.invalid/v1/messages', {
+    method: 'POST', body: JSON.stringify({ ...body, model: 'openai/test', messages, stream: false }),
+  })
+  const first = await makeIndependentFetch(route, 'key-a', async () =>
+    Response.json({ status: 'completed', output: [encrypted] }))(request([]))
+  const history = [{ role: 'assistant' as const, content: (await first.json() as { content: [] }).content }]
+  for (const key of ['key-a', 'key-b']) {
+    await makeIndependentFetch(route, key, async (_url, init) => {
+      const sent = JSON.parse(String(init?.body))
+      assert.deepEqual(sent.input, key === 'key-a' ? [encrypted] : [])
+      return Response.json({ status: 'completed', output: [] })
+    })(request(history))
+  }
 })

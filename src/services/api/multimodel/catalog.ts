@@ -1,3 +1,4 @@
+import { lock } from '../../../utils/lockfile.js'
 /**
  * Per-account model discovery cache. The original Claude model catalog remains
  * intact; independent provider model choices are added without modifying prompts.
@@ -10,7 +11,7 @@ import {
   getIndependentApiKey, resolveIndependentModel, discoverIndependentModelDetails,
   isRetiredIndependentProvider, isRemovedIndependentModel,
 } from './registry.js'
-import { getChatGPTAccessToken } from '../../auth/chatgptOAuth.js'
+import { getChatGPTAuthorization, getSavedChatGPTAccount } from '../../auth/chatgptOAuth.js'
 import { getCatalogModelsForProvider } from '../../../utils/model/modelCatalog.js'
 import { getAPIProvider } from '../../../utils/model/providers.js'
 import { mergeDiscoveredModelProfiles } from './profiles.js'
@@ -21,6 +22,7 @@ type ModelEntry = {
   provider: IndependentProvider
   id: string
   discoveredAt: string
+  account?: string
 }
 export type SavedCatalog = { schema: 1; models: ModelEntry[] }
 
@@ -46,7 +48,9 @@ export function readSavedModelCatalog(): SavedCatalog {
   return { schema: 1, models: activeModels }
 }
 export function getSavedModelOptions(): Array<{ value: string; label: string; description: string }> {
-  return readSavedModelCatalog().models.map(model => ({
+  const account = getSavedChatGPTAccount()
+  return readSavedModelCatalog().models.filter(model =>
+    model.provider !== 'chatgpt' || (account !== undefined && model.account === account)).map(model => ({
     value: `${model.provider}/${model.id}`,
     label: model.id,
     description: `${model.provider} · ${model.id}`,
@@ -55,29 +59,33 @@ export function getSavedModelOptions(): Array<{ value: string; label: string; de
 export async function refreshProviderModels(provider: IndependentProvider): Promise<ModelEntry[]> {
   const route = resolveIndependentModel(`${provider}/probe`)
   if (!route) throw new Error(`No route registered for ${provider}`)
-  const token = provider === 'chatgpt' ? await getChatGPTAccessToken() : getIndependentApiKey(route)
+  const auth = provider === 'chatgpt' ? await getChatGPTAuthorization() : undefined
+  const token = auth?.token ?? getIndependentApiKey(route)
   const details = await discoverIndependentModelDetails(provider, token)
   const at = new Date().toISOString()
   const refreshed = [...new Set(details.map(item => item.id))]
     .filter(name => name && name.length <= 300 && !Array.from(name).some(char => char.charCodeAt(0) < 32))
-    .map(name => ({ provider, id: name, discoveredAt: at }))
+    .map(name => ({ provider, id: name, discoveredAt: at, ...(auth && { account: auth.account }) }))
   await mergeDiscoveredModelProfiles(provider, details)
   // Preserve all other providers while atomically replacing this provider.
   const root = getModelStorageRoot()
   const file = join(root, 'catalog.json')
   await fs.mkdir(root, { recursive: true, mode: 0o700 })
-  const current = readSavedModelCatalog()
-  const next: SavedCatalog = {
-    schema: 1,
-    models: [...current.models.filter(x => x.provider !== provider), ...refreshed],
-  }
+  const release = await lock(file, { realpath: false, retries: { retries: 5, minTimeout: 25 } })
   const tmp = join(root, `catalog.${randomUUID()}.tmp`)
   try {
+    if (auth && getSavedChatGPTAccount() !== auth.account) {
+      throw new Error('ChatGPT account changed during model discovery')
+    }
+    const current = readSavedModelCatalog()
+    const next: SavedCatalog = {
+      schema: 1,
+      models: [...current.models.filter(x => x.provider !== provider), ...refreshed],
+    }
     await fs.writeFile(tmp, JSON.stringify(next, null, 2), { encoding: 'utf8', mode: 0o600, flag: 'wx' })
     await fs.rename(tmp, file)
-    await fs.chmod(file, 0o600)
   } finally {
-    await fs.rm(tmp, { force: true })
+    try { await fs.rm(tmp, { force: true }) } finally { await release() }
   }
   return refreshed
 }

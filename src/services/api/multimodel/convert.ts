@@ -54,7 +54,7 @@ function responseInput(parts: JSONValue[]): JSONValue[] {
   })
 }
 /** OpenAI Responses API: preserve tool-call IDs and tool results across turns. */
-export function toResponses(body: AnthropicRequest, model: string): JSONValue {
+export function toResponses(body: AnthropicRequest, model: string, replaySignature?: string): JSONValue {
   const input: JSONValue[] = []
   for (const message of body.messages) {
     const parts = allParts(message.content)
@@ -73,7 +73,18 @@ export function toResponses(body: AnthropicRequest, model: string): JSONValue {
         input.push({ type: 'function_call', call_id: block.id, name: block.name, arguments: JSON.stringify(block.input ?? {}) })
       } else if (block.type === 'tool_result') {
         flush()
-        input.push({ type: 'function_call_output', call_id: block.tool_use_id, output: textOf(block.content) })
+        const output = Array.isArray(block.content)
+          ? responseInput(block.content)
+          : textOf(block.content)
+        input.push({ type: 'function_call_output', call_id: block.tool_use_id, output })
+      } else if (block.type === 'redacted_thinking' && replaySignature &&
+          typeof block.data === 'string' && block.data.startsWith(replaySignature + ':')) {
+        const item = JSON.parse(block.data.slice(replaySignature.length + 1)) as JSONValue
+        if (item.type !== 'reasoning' || typeof item.encrypted_content !== 'string') {
+          throw new Error('Invalid Responses replay item')
+        }
+        flush()
+        input.push(item)
       } else {
         ordinary.push(...responseInput([block]))
       }
@@ -91,6 +102,11 @@ export function toResponses(body: AnthropicRequest, model: string): JSONValue {
     model, input, instructions: systemText(body.system),
     max_output_tokens: body.max_tokens,
     tools, store: false, stream: Boolean(body.stream),
+    ...(replaySignature && { include: ['reasoning.encrypted_content'] }),
+  }
+  const format = body.output_config?.format
+  if (format?.type === 'json_schema') {
+    result.text = { format: { type: 'json_schema', name: 'structured_output', schema: format.schema, strict: true } }
   }
   const effort = body.output_config?.effort
   if (typeof effort === 'string' && ['low','medium','high','xhigh','max'].includes(effort)) {
@@ -117,14 +133,24 @@ function chatParts(parts: JSONValue[]): JSONValue[] {
     throw new Error(`Unsupported chat content block: ${String(block.type)}`)
   })
 }
-export function toChatCompletions(body: AnthropicRequest, model: string, provider?: IndependentProvider): JSONValue {
+export function toChatCompletions(body: AnthropicRequest, model: string, provider?: IndependentProvider, replaySignature?: string): JSONValue {
   const messages: JSONValue[] = []
   const system = systemText(body.system)
   if (system) messages.push({ role: 'system', content: system })
   for (const message of body.messages) {
     const parts = allParts(message.content)
-    const ordinary = chatParts(parts)
-    const reasoningContent = parts.filter(p => p.type === 'thinking' && typeof p.thinking === 'string')
+    const results = parts.filter(p => p.type === 'tool_result')
+    const resultMedia: JSONValue[] = []
+    for (const result of results) {
+      const content = Array.isArray(result.content) ? chatParts(result.content) : []
+      const images = content.filter(part => part.type === 'image_url')
+      messages.push({ role: 'tool', tool_call_id: result.tool_use_id,
+        content: textOf(result.content) || (images.length ? '[Tool image follows]' : '') })
+      resultMedia.push(...images)
+    }
+    const ordinary = [...resultMedia, ...chatParts(parts)]
+    const reasoningContent = parts.filter(p => replaySignature && p.type === 'thinking' &&
+      p.signature === replaySignature && typeof p.thinking === 'string')
       .map(p => p.thinking as string).join('')
     const calls = parts.filter(p => p.type === 'tool_use').map(p => ({
       id: p.id, type: 'function', function: { name: p.name, arguments: JSON.stringify(p.input ?? {}) },
@@ -139,9 +165,6 @@ export function toChatCompletions(body: AnthropicRequest, model: string, provide
           ? { reasoning_content: reasoningContent } : {}),
       })
     }
-    for (const result of parts.filter(p => p.type === 'tool_result')) {
-      messages.push({ role: 'tool', tool_call_id: result.tool_use_id, content: textOf(result.content) })
-    }
   }
   const tools = (body.tools ?? []).map(t => {
     if (t.type && t.type !== 'custom' && t.type !== 'function') throw new Error(`Unsupported chat tool type: ${t.type}`)
@@ -154,6 +177,11 @@ export function toChatCompletions(body: AnthropicRequest, model: string, provide
   if (body.temperature !== undefined) result.temperature = body.temperature
   if (body.top_p !== undefined) result.top_p = body.top_p
   if (body.stop_sequences?.length) result.stop = body.stop_sequences
+  const format = body.output_config?.format
+  if (format?.type === 'json_schema') {
+    result.response_format = { type: 'json_schema',
+      json_schema: { name: 'structured_output', schema: format.schema, strict: true } }
+  }
   if (body.tool_choice?.type === 'none') result.tool_choice = 'none'
   if (body.tool_choice?.type === 'any') result.tool_choice = 'required'
   if (body.tool_choice?.type === 'tool') result.tool_choice = { type: 'function', function: { name: body.tool_choice.name } }

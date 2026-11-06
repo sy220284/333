@@ -1,3 +1,4 @@
+import { resolveIndependentModel } from '../../services/api/multimodel/registry.js';
 import { feature } from 'bun:bundle';
 import * as React from 'react';
 import { buildTool, type ToolDef, toolMatchesName } from 'src/Tool.js';
@@ -83,7 +84,7 @@ const baseInputSchema = lazySchema(() => z.object({
   description: z.string().describe('A short (3-5 word) description of the task'),
   prompt: z.string().describe('The task for the agent to perform'),
   subagent_type: z.string().optional().describe('The type of specialized agent to use for this task'),
-  model: z.enum(['sonnet', 'opus', 'haiku']).optional().describe("Optional model override for this agent. Takes precedence over the agent definition's model frontmatter. If omitted, uses the agent definition's model, or inherits from the parent."),
+  model: z.union([z.enum(['sonnet', 'opus', 'haiku']), z.string().regex(/^[^/\s]+\/[^\s]+$/).refine(value => resolveIndependentModel(value) !== null)]).optional().describe("Optional model override for this agent. Takes precedence over the agent definition's model frontmatter. If omitted, uses the agent definition's model, or inherits from the parent."),
   run_in_background: z.boolean().optional().describe('Set to true to run this agent in the background. You will be notified when it completes.')
 }));
 
@@ -414,7 +415,7 @@ export const AgentTool = buildTool({
     }
 
     // Resolve agent params for logging (these are already resolved in runAgent)
-    const resolvedAgentModel = getAgentModel(selectedAgent.model, toolUseContext.options.mainLoopModel, isForkPath ? undefined : model, permissionMode);
+    const resolvedAgentModel = getAgentModel(selectedAgent.model, toolUseContext.options.mainLoopModel, isForkPath ? undefined : model, permissionMode, isBuiltInAgent(selectedAgent));
     logEvent('tengu_agent_tool_selected', {
       agent_type: selectedAgent.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       model: resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

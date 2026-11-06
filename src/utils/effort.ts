@@ -1,3 +1,4 @@
+import { getIndependentProfile } from '../services/api/multimodel/profiles.js'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { getSettingsForSource } from './settings/settings.js'
 import { getEnabledSettingSources } from './settings/constants.js'
@@ -49,6 +50,7 @@ export function resolveEffortCap(model: string, layers: readonly EffortPolicy[])
 // 317 chunk-b1g74dkj ES/yle/hBe. Explicit overrides precede metadata,
 // then legacy exclusions, baked catalog capabilities and provider defaults.
 function supportsEffortCapability(model: string, capability: 'effort' | 'max_effort' | 'xhigh_effort'): boolean {
+  if (getIndependentProfile(model)?.supportsReasoning === false) return false
   const thirdParty = get3PModelCapabilityOverride(model, capability)
   if (thirdParty !== undefined) return thirdParty
   if (capability !== 'effort' && getModelCapabilityEnvOverride(model, 'effort') === false) return false

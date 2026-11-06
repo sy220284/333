@@ -39,14 +39,9 @@ export type ModelName = string
 export type ModelSetting = ModelName | ModelAlias | null
 
 export function getSmallFastModel(): ModelName {
-  const selected = getUserSpecifiedModelSetting()
-  // Internal classifiers, quota probes and summarizers must be able to run
-  // without any Claude login when a remote provider is selected.
-  if (selected) {
-    const active = parseUserSpecifiedModel(selected)
-    if (resolveIndependentModel(active)) {
-      return process.env.AGENT333_SMALL_FAST_MODEL || active
-    }
+  const active = getMainLoopModel()
+  if (resolveIndependentModel(active)) {
+    return process.env.AGENT333_SMALL_FAST_MODEL || active
   }
   return process.env.ANTHROPIC_SMALL_FAST_MODEL || getDefaultHaikuModel()
 }
@@ -165,6 +160,7 @@ export function getRuntimeMainLoopModel(params: {
   exceeds200kTokens?: boolean
 }): ModelName {
   const { permissionMode, mainLoopModel, exceeds200kTokens = false } = params
+  if (resolveIndependentModel(mainLoopModel)) return mainLoopModel
 
   // opusplan uses Opus in plan mode without [1m] suffix.
   if (
@@ -405,7 +401,8 @@ export function parseUserSpecifiedModel(
   modelInput: ModelName | ModelAlias,
 ): ModelName {
   const modelInputTrimmed = modelInput.trim()
-  if (resolveIndependentModel(modelInputTrimmed)) return modelInputTrimmed
+  const independent = resolveIndependentModel(modelInputTrimmed)
+  if (independent) return `${independent.provider}/${independent.model}`
   const normalizedModel = modelInputTrimmed.toLowerCase()
 
   const has1mTag = has1mContext(normalizedModel)
@@ -545,5 +542,6 @@ export function getMarketingNameForModel(modelId: string): string | undefined {
 }
 
 export function normalizeModelStringForAPI(model: string): string {
+  if (resolveIndependentModel(model)) return model
   return model.replace(/\[(1|2)m\]/gi, '')
 }

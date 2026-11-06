@@ -111,10 +111,13 @@ export async function discoverIndependentModelDetails(
     const contextWindow = positiveInteger(entry.context_length ?? entry.context_window ?? entry.max_input_tokens)
     const maxOutputTokens = positiveInteger(entry.max_output_tokens ?? entry.max_completion_tokens ?? top.max_completion_tokens)
     const modalities: unknown = entry.architecture?.input_modalities
+    const supportsTools = Array.isArray(entry.supported_parameters)
+      ? entry.supported_parameters.includes('tools') : undefined
     const supportsVision = Array.isArray(modalities) ? modalities.includes('image') : undefined
     return [{ id,
       ...(contextWindow ? { contextWindow } : {}),
       ...(maxOutputTokens ? { maxOutputTokens } : {}),
+      ...(supportsTools !== undefined ? { supportsTools } : {}),
       ...(supportsVision !== undefined ? { supportsVision } : {}),
     }]
   })

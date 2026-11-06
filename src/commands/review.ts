@@ -1,8 +1,6 @@
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.js'
 import type { Command } from '../commands.js'
 import { execFileNoThrow } from '../utils/execFileNoThrow.js'
-import { detectCurrentRepository } from '../utils/detectRepository.js'
-import { dispatchExtremeReview } from './github/github.js'
 import { parseReviewRequest, type ReviewMode } from './reviewMode.js'
 
 const MODEL_INPUT_LIMIT = 110_000
@@ -91,19 +89,6 @@ async function evidence(mode: ReviewMode, target: string): Promise<string> {
   return facts.join('\n\n')
 }
 
-async function extremeReview(target: string): Promise<string> {
-  const repo = await detectCurrentRepository()
-  if (!repo) throw new Error('极深审查需要已连接的 github.com 仓库')
-  let pr = target
-  if (!/^[1-9][0-9]*$/.test(pr)) {
-    const args = ['pr', 'view', ...(pr ? [pr] : []), '--json', 'number', '--jq', '.number']
-    const found = await execFileNoThrow('gh', args, { timeout: 30000, useCwd: true })
-    if (found.code !== 0) throw new Error(`极深审查未找到目标 PR：${found.stderr || pr}`)
-    pr = found.stdout.trim()
-  }
-  return dispatchExtremeReview(repo, pr, 'extreme')
-}
-
 function instructions(mode: ReviewMode, target: string, gitEvidence: string): string {
   const scope = target ? `用户审查目标：${target}` : '审查当前分支及工作区变更'
   const common = '你是 333 代码审查员。先核对本地执行得到的差异事实，再对每个问题定位文件、行号、复现条件、影响及根因。' +
@@ -118,14 +103,13 @@ function instructions(mode: ReviewMode, target: string, gitEvidence: string): st
 
 const review: Command = {
   type: 'prompt', name: 'review',
-  description: '统一审查：普通、深度、安全、极深（GitHub Actions 多模型执行）',
-  argumentHint: '[normal|deep|security|extreme] [PR编号|基准分支]',
+  description: '统一审查：普通、深度、安全',
+  argumentHint: '[normal|deep|security] [PR编号|基准分支]',
   progressMessage: '正在读取 Git 差异并检查代码',
   contentLength: 0, source: 'builtin',
   async getPromptForCommand(args): Promise<ContentBlockParam[]> {
-    const { mode, target } = parseReviewRequest(args)
     try {
-      if (mode === 'extreme') return [{ type: 'text', text: await extremeReview(target) }]
+      const { mode, target } = parseReviewRequest(args)
       const facts = await evidence(mode, target)
       return [{ type: 'text', text: instructions(mode, target, facts) }]
     } catch (error) {
