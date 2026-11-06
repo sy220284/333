@@ -115,3 +115,53 @@ export async function configureGithubModel(
   return '仓库 ' + repo + ' 已单独配置 Actions 模型 ' + option.id +
     '；本机授权状态及本地凭据文件未修改。'
 }
+
+export type GithubActionsProvider = 'openai' | 'deepseek' | 'qwen' | 'kimi' |
+  'zhipu' | 'minimax' | 'anthropic'
+export function getGithubActionsProviderOptions(): Array<{value: GithubActionsProvider; label: string}> {
+  return [
+    {value:'openai',label:'OpenAI API'},
+    {value:'deepseek',label:'DeepSeek'},
+    {value:'qwen',label:'通义千问 Qwen'},
+    {value:'kimi',label:'Kimi / Moonshot'},
+    {value:'zhipu',label:'智谱 GLM'},
+    {value:'minimax',label:'MiniMax'},
+    {value:'anthropic',label:'Claude / Anthropic API（可选）'},
+  ]
+}
+/**
+ * Setup a new unattended Actions-only credential without writing it into the
+ * local model vault. Used when a provider account is not configured locally.
+ */
+export async function configureGithubCustomModel(
+  rawRepo: string, provider: GithubActionsProvider, model: string, apiKey: string,
+  explicitConsent: boolean,
+): Promise<string> {
+  if(!explicitConsent) throw new Error('用户须明确授权将密钥上传到指定 GitHub 仓库')
+  const repo=validRepository(rawRepo)
+  const supported=getGithubActionsProviderOptions()
+  if(!supported.some(item=>item.value===provider))throw new Error('模型服务商不支持')
+  if(!/^[A-Za-z0-9_./:-]{1,180}$/.test(model))throw new Error('模型名称格式无效')
+  if(apiKey.length<5 || apiKey.length>8192 || apiKey.trim()!==apiKey ||
+    /[\u0000-\u001f]/.test(apiKey)) throw new Error('API Key 格式无效')
+  const option=provider==='anthropic'
+    ? {protocol:'anthropic',endpoint:'https://api.anthropic.com/v1/messages',tokenField:'max_tokens'}
+    : (() => {
+      const route=resolveIndependentModel(provider+'/'+model)
+      if(!route||route.provider==='chatgpt')throw new Error('模型路由不存在')
+      return {protocol:route.protocol==='responses'?'openai-responses':'openai-compatible',
+        endpoint:route.endpoint,tokenField:provider==='openai'?'max_completion_tokens':'max_tokens'}
+    })()
+  await gh(['auth','status','-h','github.com'])
+  await gh(['secret','set','YAOYAOCHE_MODEL_API_KEY','--repo',repo],apiKey)
+  const variables = {
+    YAOYAOCHE_MODEL_PROVIDER: option.protocol,
+    YAOYAOCHE_MODEL_NAME: model,
+    YAOYAOCHE_MODEL_BASE_URL: option.endpoint,
+    YAOYAOCHE_MODEL_TOKEN_FIELD: option.tokenField,
+  }
+  for(const [name,value] of Object.entries(variables)) {
+    await gh(['variable','set',name,'--repo',repo,'--body',value])
+  }
+  return 'GitHub Actions 已单独配置 '+provider+'/'+model+'；本机模型账号及密钥未改变。'
+}
