@@ -10,12 +10,12 @@ const compiled=new Fn('readFileSync','writeFileSync','readdirSync','mkdirSync','
  'resolve','relative','dirname','execFileSync','process','fetch','URL','AbortController',
  'setTimeout','clearTimeout','Buffer',githubTaskRunnerScript().replace(/^import .*$/gm,''))
 
-function scenario({association='OWNER',failPrOnce=false}={}) {
+function scenario({association='OWNER',failPrOnce=false,body='/yaoyaoche task 修改并测试代码'}={}) {
  const dir=mkdtempSync(join(tmpdir(),'github-task-test-'))
  mkdirSync(join(dir,'src'))
  const file=join(dir,'src','a.ts'),writes=new Map([[file,'const status_old = true;\n']])
  const api='https://api.github.com/repos/org/code'
- const event={issue:{number:77},comment:{id:991,body:'/yaoyaoche task 修改并测试代码',
+ const event={issue:{number:77},comment:{id:991,body,
   author_association:association}}
  const env={GITHUB_REPOSITORY:'org/code',GITHUB_EVENT_PATH:'event.json',
   GITHUB_EVENT_NAME:'issue_comment',MODEL_NAME:'test-model',
@@ -105,5 +105,16 @@ test('GitHub PR 创建失败后保留已提交分支，并在重试时恢复 PR'
   assert.equal(f.state.prs,1)
   const lastPr=f.history.filter(x=>x.url.endsWith('/pulls')&&x.method==='POST').at(-1)
   assert.match(JSON.parse(lastPr.body).title,/恢复/)
+ }finally{f.cleanup()}
+})
+
+test('旧版提及触发等价：正文中部 @yaoyaoche 也能执行通用开发任务',async()=>{
+ const f=scenario({body:'请 @yaoyaoche 修改并测试代码'})
+ try{
+  await f.run()
+  assert.equal(f.state.modelCalls,4)
+  assert.equal(f.state.tests,1)
+  assert.equal(f.state.prs,1)
+  assert.ok(f.history.some(x=>x.url.endsWith('/issues/77/comments')))
  }finally{f.cleanup()}
 })
