@@ -17,13 +17,15 @@ test('2.1.317 removes obsolete slash commands without removing Vim editor mode',
   assert.match(config, /options: \['normal', 'vim'\]/)
 })
 
-test('/agents retains the hidden instructions instead of loading the retired wizard', () => {
+test('/agents exposes the local collaboration center and an independent status command', () => {
   const index = source('src/commands/agents/index.ts')
-  assert.match(index, /type: 'local'/)
-  assert.match(index, /isHidden: true/)
-  assert.match(index, /supportsNonInteractive: true/)
-  assert.doesNotMatch(index, /local-jsx|AgentsMenu|import\('\.\/agents\.js'\)/)
-  assert.match(index, /\.claude\/agents\//)
+  const implementation = source('src/commands/agents/agents.tsx')
+  assert.match(index, /type: 'local-jsx'/)
+  assert.match(index, /load: \(\) => import\('\.\/agents\.js'\)/)
+  assert.match(implementation, /if \(verb === 'status'\)/)
+  assert.match(implementation, /setAgentMode\(/)
+  assert.match(implementation, /TeamCreateTool|team-create/)
+  assert.match(implementation, /AgentCenter/)
 })
 
 test('2.1.317 suppresses redundant Agent classifier approval text but preserves other tool messages', () => {
@@ -67,12 +69,10 @@ test('retired teammate default-model setting is removed; new teammates inherit t
 })
 
 test('obsolete startup toasts and permission footer hints are gone, operational error notices remain', () => {
-  const chrome = source('src/hooks/useChromeExtensionNotification.tsx').split('//# sourceMappingURL=')[0]
+  assert.equal(existsSync(join(root, 'src/hooks/useChromeExtensionNotification.tsx')), false)
   const ide = source('src/hooks/notifs/useIDEStatusIndicator.tsx').split('//# sourceMappingURL=')[0]
   const bash = source('src/components/permissions/BashPermissionRequest/BashPermissionRequest.tsx').split('//# sourceMappingURL=')[0]
   const powershell = source('src/components/permissions/PowerShellPermissionRequest/PowerShellPermissionRequest.tsx').split('//# sourceMappingURL=')[0]
-  assert.doesNotMatch(chrome, /claude-in-chrome-default-enabled|Claude in Chrome enabled/)
-  assert.match(chrome, /chrome-extension-not-detected|chrome-requires-subscription/)
   assert.equal(existsSync(join(root, 'src/hooks/useOfficialMarketplaceNotification.tsx')), false)
   assert.doesNotMatch(source('src/screens/REPL.tsx'), /useOfficialMarketplaceNotification/)
   assert.doesNotMatch(ide, /ide-status-hint|MAX_IDE_HINT_SHOW_COUNT|\/ide for/)
@@ -102,7 +102,7 @@ test('new target removes stale refusal model and DNS cache auto-approval', () =>
   assert.match(powershell, /safeFlags: \['\/all', '\/allcompartments'\]/)
 })
 
-test('official 2.1.317 and rebuilt CLI both resolve /agents locally without a model turn', { timeout: 90000 }, () => {
+test('rebuilt /agents status uses the local collaboration center without a model turn', { timeout: 90000 }, () => {
   const folder = mkdtempSync(join(tmpdir(), 'pr7-agents-retirement-'))
   const env = {
     ...process.env,
@@ -110,7 +110,7 @@ test('official 2.1.317 and rebuilt CLI both resolve /agents locally without a mo
     USERPROFILE: folder,
     XDG_CONFIG_HOME: folder,
     XDG_CACHE_HOME: folder,
-    CLAUDE_CONFIG_DIR: join(folder, '.claude'),
+    YAOYAOCHE_CONFIG_DIR: join(folder, '.yaoyaoche'),
     DISABLE_TELEMETRY: '1',
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
     NO_COLOR: '1',
@@ -119,10 +119,9 @@ test('official 2.1.317 and rebuilt CLI both resolve /agents locally without a mo
   delete env.ANTHROPIC_AUTH_TOKEN
   delete env.ANTHROPIC_BASE_URL
   const targets = [['rebuilt', 'bun', [join(root, 'dist', 'cli.js')]]]
-  if (process.env.CLAUDE_TARGET_X64) targets.push(['official-x64', process.env.CLAUDE_TARGET_X64, []])
   try {
     for (const [label, command, prefix] of targets) {
-      const args = [...prefix, '--print', '--bare', '--output-format', 'json', '/agents']
+      const args = [...prefix, '--print', '--bare', '--output-format', 'json', '/agents status']
       const run = spawnSync(command, args, {
         cwd: folder,
         env,
@@ -136,7 +135,7 @@ test('official 2.1.317 and rebuilt CLI both resolve /agents locally without a mo
       assert.equal(result.local_command, 'agents', `${label}: missing local command route`)
       assert.equal(result.num_turns, 0, `${label}: old wizard attempted model invocation`)
       assert.equal(result.is_error, false, `${label}: local command failed`)
-      assert.match(result.result, /\.claude\/agents\//, `${label}: missing agent config path`)
+      assert.match(result.result, /当前模式：/, `${label}: missing collaboration mode status`)
     }
   } finally {
     rmSync(folder, { recursive: true, force: true })

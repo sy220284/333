@@ -331,7 +331,7 @@
         "F080"
       ],
       "code": [
-        "src/commands/privacy-settings/fetchPrivacySettings.mjs"
+        "src/commands/privacy-settings/privacy-settings.tsx"
       ],
       "tests": [
         "tests/m1-privacy-settings.test.mjs"

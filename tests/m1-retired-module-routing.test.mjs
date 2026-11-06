@@ -15,7 +15,6 @@ const retiredModules = {
     'utils/ccshareResume.js',
   ],
   'src/bridge/initReplBridge.ts': ['assistant/index.js'],
-  'src/commands/bridge/bridge.tsx': ['assistant/index.js'],
   'src/hooks/useReplBridge.tsx': ['assistant/index.js', 'bridge/webhookSanitizer.js'],
   'src/components/messages/UserTextMessage.tsx': [
     'UserGitHubWebhookMessage.js', 'UserForkBoilerplateMessage.js',
@@ -41,20 +40,22 @@ test('no runtime reference remains to release-retired private modules', () => {
   }
 })
 
-test('retiring private launchers keeps public 2.1.310 remote, session, tools and permissions', () => {
+test('retired private launchers leave the reusable SDK and desktop headless chain connected', () => {
   const main = source('src/main.tsx')
   const bridge = source('src/bridge/initReplBridge.ts')
-  const repl = source('src/screens/REPL.tsx')
   const permissions = source('src/components/permissions/PermissionRequest.tsx')
-  const command = source('src/entrypoints/cli.tsx')
-  assert.match(main, /getRemoteControlAtStartup\(\)/)
-  assert.match(main, /loadTranscriptFromFile\(resolvedPath\)/)
-  assert.match(main, /teleportToRemoteWithErrorHandling/)
+  const headless = source('src/services/conversation/headlessSession.ts')
+  const broker = source('src/services/conversation/permissionBroker.ts')
+  const runtime = source('src/entrypoints/sdk/sessionRuntime317.ts')
+  assert.doesNotMatch(main, /getRemoteControlAtStartup\(\)|teleportToRemoteWithErrorHandling/)
   assert.match(bridge, /initBridgeCore\(/)
-  assert.match(repl, /useRemoteSession\(/)
   assert.match(permissions, /case WorkflowTool:/)
   assert.match(permissions, /case MonitorTool:/)
-  assert.match(command, /bridgeMain\(args\.slice\(1\)\)/)
+  assert.match(headless, /createSessionRuntime317/)
+  assert.match(headless, /createSdkPermissionBroker/)
+  assert.match(headless, /send,\s*stream,\s*interrupt/)
+  assert.match(broker, /canUseTool|settle/)
+  assert.match(runtime, /control_request|stream-json/)
 })
 
 test('retired SSH UI implementation removed with its imports', () => {

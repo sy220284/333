@@ -64,6 +64,11 @@ assert.equal(official317.version, targetVersion);
 // 摇摇车's additive interfaces are explicitly documented here. The official
 // 2.1.317 command and flag contract is still compared exhaustively; only
 // these intentional additions may differ from the Claude reference.
+// These additions belong to the local product contract, and must be tested
+// explicitly rather than compared with the unmodified official flag set.
+const independentFlags = {
+  '--help': ['--proactive', '--strict-command'],
+}
 const independentCommands = {
   '--help': ['local-settings', 'local-tasks', 'models'],
   'auth --help': ['api-key', 'chatgpt-login', 'chatgpt-logout', 'chatgpt-status', 'chatgpt-accounts', 'chatgpt-switch'],
@@ -77,7 +82,12 @@ function verifyBaseAndExtensions(actual, official, commandLine) {
   const removedFlags = commandLine === '--help'
     ? ['--cloud', '--environment', '--remote-control', '--remote-control-session-name-prefix', '--teleport'] : [];
   for (const flag of removedFlags) assert.equal(actual.flags.includes(flag), false, `Retired cloud flag remains public: ${flag}`);
-  assert.deepEqual(actual.flags, official.flags.filter(flag => !removedFlags.includes(flag)),
+  const addedFlags = independentFlags[commandLine] ?? [];
+  for (const flag of addedFlags) {
+    assert.ok(actual.flags.includes(flag), `摇摇车扩展参数缺失：${flag}`);
+  }
+  assert.deepEqual(actual.flags.filter(flag => !addedFlags.includes(flag)),
+    official.flags.filter(flag => !removedFlags.includes(flag)),
     `Original 2.1.317 flags must stay available: ${commandLine}`);
   const removed = commandLine === '--help' ? ['ultrareview'] : [];
   assert.deepEqual(actual.commands.filter(name => !additions.includes(name)),

@@ -111,7 +111,8 @@ function checked(program, args, options = {}) {
 export function runtimeForTest(file, source = readFileSync(resolve(ROOT, file), 'utf8')) {
   // This node:test suite embeds TypeScript imports in a subprocess script
   // string; run it under Node to avoid Bun's 5s implicit test timeout.
-  if (file === 'tests/m1-runner-declares-317.test.mjs') return 'node'
+  if (file === 'tests/m1-runner-declares-317.test.mjs' ||
+      file === 'tests/github-integration-flow.test.mjs') return 'node'
   if (file.endsWith('.ts') || /\b(?:from|import)\s*(?:\(|.*?\sfrom\s*)?['"]bun(?::|['"])/.test(source) ||
       /\bBun\.(?:serve|spawn|file|SQL|env|sleep)\b/.test(source) ||
       /(?:from|import)\s*(?:\(|.*?\sfrom\s*)?['"][^'"]+\.ts['"]/.test(source)) {

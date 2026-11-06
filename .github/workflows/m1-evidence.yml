@@ -267,7 +267,14 @@ jobs:
       - name: 用 Git Blob SHA 与逐行位置复核六千余项原始记录
         run: node build/m1-verify.mjs --changelog "${RUNNER_TEMP}/claude-changelog-2.1.310.md"
       - name: 确认只读验证没有改写研究数据
-        run: test -z "$(git status --porcelain)"
+        run: |
+          status="$(git status --porcelain)"
+          if [ -n "$status" ]; then
+            echo "::error::只读验证改变了工作区，文件清单如下"
+            printf '%s\n' "$status"
+            git diff --stat
+            exit 1
+          fi
 
   m1-reference-linux-x64:
     name: 2.1.317 原版 Linux x64 真实 CLI 对照

@@ -241,25 +241,32 @@ def stream(model, text=None, tool=None, chunk_pause=0.0, thinking=False):
     ]
     return b''.join(prefix)
 
-def probe(binary, scenario, target):
+def probe(binary, scenario, target, brand):
     scene = scenario.split('-')[0]
     columns = 80 if scenario.endswith('-narrow') else 140
     reduced_motion = scenario.endswith('-reduced')
     home = Path(tempfile.mkdtemp(prefix='m1-ui-tty-'))
     project = home / 'project'
     project.mkdir()
-    (home / '.claude').mkdir()
-    (home / '.claude' / 'settings.json').write_text(json.dumps({
+    # Each product has its own config home and global onboarding state.
+    # Seed the actual config path used by the binary being tested, as in the
+    # already-verified 2.1.317 screen-reader PTY harness.
+    config_home = home / ('.claude' if brand == 'official' else '.yaoyaoche')
+    config_home.mkdir()
+    (config_home / 'settings.json').write_text(json.dumps({
         'permissions': {'allow': ['Read']},
         'prefersReducedMotion': reduced_motion,
     }))
-    (home / '.claude.json').write_text(json.dumps({
+    global_config = {
         'hasCompletedOnboarding': True,
         'lastOnboardingVersion': target,
         'theme': 'dark',
         'customApiKeyResponses': {'approved': ['local-only'], 'rejected': []},
         'projects': {str(project): {'hasTrustDialogAccepted': True}},
-    }))
+    }
+    global_file = '.claude.json' if brand == 'official' else '.yaoyaoche.json'
+    for config_file in (home / global_file, config_home / global_file, config_home / '.config.json'):
+        config_file.write_text(json.dumps(global_config), encoding='utf-8')
     fixture = project / 'ui-read-fixture.txt'
     fixture.write_text(FIXTURE + '\n', encoding='utf-8')
     calls = []
@@ -344,6 +351,7 @@ def probe(binary, scenario, target):
         'DISABLE_AUTOUPDATER':'1','DISABLE_TELEMETRY':'1',
         'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC':'1',
     })
+    env['CLAUDE_CONFIG_DIR' if brand == 'official' else 'YAOYAOCHE_CONFIG_DIR'] = str(config_home)
     master, slave = pty.openpty()
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH',40,columns,0,0))
     proc = subprocess.Popen([str(Path(binary).resolve())], cwd=project,env=env,
@@ -453,8 +461,8 @@ def main():
         'comparison':{},
     }
     for scenario in ('stream','tool','retry','thinking','stream-narrow','stream-reduced'):
-        a=probe(args.reference,scenario,args.target)
-        b=probe(args.candidate,scenario,args.target)
+        a=probe(args.reference,scenario,args.target,'official')
+        b=probe(args.candidate,scenario,args.target,'rebuilt')
         report['official'][scenario]=a
         report['rebuilt'][scenario]=b
         visual = compare_terminal_frames(a, b)

@@ -165,6 +165,16 @@ if (candidateCases) {
     candidate_matches_target: candidateMismatches.length === 0,
     mismatch_count: candidateMismatches.length,
     mismatch_ids: candidateMismatches.map(x => x.id),
+    // Metadata only, to diagnose failing SDK wire contracts in CI logs
+    // without printing model prompts, auth tokens or full error messages.
+    mismatch_shapes: candidateMismatches.map(x => ({
+      id: x.id,
+      exit_code: x.exit_code,
+      timed_out: x.timed_out,
+      structured_shape: x.structured_shape ?? null,
+      stdout_bytes: x.stdout_bytes,
+      stderr_bytes: x.stderr_bytes,
+    })),
   }))
 }
 // Evidence collection may retain known target differences, but previously

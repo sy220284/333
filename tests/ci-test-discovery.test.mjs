@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { discoverUnregisteredTests, workflowRunCommands } from '../build/run-unregistered-tests.mjs'
+import { discoverUnregisteredTests, runtimeForTest, workflowRunCommands } from '../build/run-unregistered-tests.mjs'
 
 test('不再把历史分支工作流和 PR 文件过滤路径当作测试执行', () => {
   const root = mkdtempSync(join(tmpdir(), '333-gate-inventory-'))
@@ -66,3 +66,10 @@ test('官方二进制对照只在专用任务执行，补充测试可排除重�
   assert.match(source, /Official parity cannot run without verified/)
 })
 
+
+test('GitHub installation integration uses Node-native TypeScript stripping rather than Bun loader', () => {
+  const file = 'tests/github-integration-flow.test.mjs'
+  const source = readFileSync(new URL('../' + file, import.meta.url), 'utf8')
+  assert.match(source, /stripTypeScriptTypes/)
+  assert.equal(runtimeForTest(file, source), 'node')
+})
