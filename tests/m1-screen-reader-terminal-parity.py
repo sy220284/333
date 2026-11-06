@@ -28,7 +28,7 @@ def sha256(path):
             h.update(part)
     return h.hexdigest()
 
-def probe(executable,mode,timeout):
+def probe(executable,mode,timeout,brand):
     with tempfile.TemporaryDirectory(prefix='m1-ax-pty-') as scratch:
         root=Path(scratch)
         (root/'.config').mkdir()
@@ -89,11 +89,12 @@ def probe(executable,mode,timeout):
         model_match=re.search(r'\b(Opus|Sonnet|Haiku)\s+([0-9]+(?:\.[0-9]+)?)\s*·\s*API Usage Billing',text)
         model_name=' '.join(model_match.groups()) if model_match else None
         auto_on=bool(re.search(r'\bauto mode on\b',text,re.I))
-        auto_notice='Auto mode is now Claude Code' in text
+        auto_notice=('Auto mode is now Claude Code' in text if brand=='official' else '自动模式已启用' in text)
         return {'mode':mode,'exit':proc.returncode if exited else 'terminated_after_capture',
                 'bytes':len(buffer),'cursor_control_sequences':len(CSI.findall(raw)),
                 'activation_banner': (f'[Screen Reader Mode: on via {mode}]' in text if mode!='off' else '[Screen Reader Mode: on' in text),
-                'flat_welcome':('Welcome to Claude Code' in text or bool(re.search(r'Claude Code v2\.1\.317\b',text))),
+                'flat_welcome':(bool(re.search(r'Welcome to Claude Code|Claude Code v2\.1\.317\b',text))
+                                if brand=='official' else bool(re.search(r'333 v2\.1\.317\b',text))),
                 'model_and_billing_visible':bool(re.search(r'\b(?:Opus|Sonnet|Haiku)\b[^\n]*Billing',text)),
                  'model_name':model_name,
                  'auto_mode_active':auto_on,
@@ -149,7 +150,7 @@ def main():
     binaries=[('official',a.reference)]
     if a.candidate: binaries.append(('candidate',a.candidate))
     for label,executable in binaries:
-        cases=[probe(executable,mode,a.timeout) for mode in ('off','flag','env','settings')]
+        cases=[probe(executable,mode,a.timeout,label) for mode in ('off','flag','env','settings')]
         report['results'][label]=cases
         try: validate(label,cases)
         except AssertionError as e: failures.append(str(e))
