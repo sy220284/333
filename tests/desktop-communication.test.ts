@@ -471,6 +471,9 @@ test('host control requests stay scoped to their session and require explicit re
     await expect(gateway.handle(request('host.respond', {
       sessionId: opened.sessionId, requestId: 'unknown', response: { action: 'accept' },
     }))).rejects.toThrow('expired')
+    await expect(gateway.handle(request('host.respond', {
+      sessionId: opened.sessionId, requestId: 'host-1', response: {},
+    }))).rejects.toThrow()
     await gateway.handle(request('host.respond', {
       sessionId: opened.sessionId, requestId: 'host-1',
       response: { action: 'accept', content: { workspace: 'local' } },
