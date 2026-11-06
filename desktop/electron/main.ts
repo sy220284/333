@@ -2,11 +2,15 @@ import { app, BrowserWindow, dialog, ipcMain, session } from 'electron'
 import { spawn, execFile } from 'node:child_process'
 import { existsSync, realpathSync } from 'node:fs'
 import { readdir, readFile, writeFile, rename, realpath, mkdir, rm, stat } from 'node:fs/promises'
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { promisify } from 'node:util'
 import { createDesktopClient } from '../../src/services/desktop/client.js'
 import { listProviderApiKeyAccounts, setProviderApiKey, deleteProviderApiKey, validateApiKeyProvider } from '../../src/services/auth/apiKeyVault.js'
 
+function requireWindow(): BrowserWindow {
+  if (!window || window.isDestroyed()) throw new Error('桌面窗口已经关闭，请重新打开应用')
+  return window
+}
 const git = promisify(execFile)
 const permitted = new Set([
   'hello','models.list','mcp.list','mcp.add','mcp.remove','mcp.toggle','sessions.open','sessions.resume','sessions.list','sessions.history',
@@ -54,7 +58,7 @@ function connect(dir:string):Host {
     client.close()
     if(!quitting&&active===dir&&!window?.isDestroyed())window?.webContents.send('desktop:event',{
       event:'desktop.disconnected',
-      error:'本地后台已退出（'+String(signal||code)+'）'+(stderr?'：'+stderr.slice(-400):'')
+      error:`本地后台已退出（${String(signal||code)}）${stderr?`：${stderr.slice(-400)}`:''}`
     })
   })
   child.on('error',error=>{
@@ -71,7 +75,7 @@ async function safeFile(path:string):Promise<string> {
   const base=await realpath(active)
   const file=await realpath(path)
   const rel=relative(base,file)
-  if(rel==='..'||rel.startsWith('..'+sep)||isAbsolute(rel))throw new Error('文件超出当前工作区')
+  if(rel==='..'||rel.startsWith(`..${sep}`)||isAbsolute(rel))throw new Error('文件超出当前工作区')
   return file
 }
 const workspacePref = () => join(app.getPath('userData'), 'workspace.json')
@@ -84,20 +88,20 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
     const provider=validateApiKeyProvider(String(data.provider||''))
     const key=data.key
     if(typeof key!=='string')throw new Error('API Key 必须为字符串')
-    const answer=await dialog.showMessageBox(window!,{type:'question',title:'保存服务商凭证',buttons:['取消','保存'],defaultId:0,cancelId:0,message:'确认保存 '+provider+' 的 API Key？',detail:'密钥写入本地受保护凭证目录，后续会话将使用此密钥。'})
+    const answer=await dialog.showMessageBox(requireWindow(),{type:'question',title:'保存服务商凭证',buttons:['取消','保存'],defaultId:0,cancelId:0,message:`确认保存 ${provider} 的 API Key？`,detail:'密钥写入本地受保护凭证目录，后续会话将使用此密钥。'})
     if(answer.response!==1)return {saved:false}
     await setProviderApiKey(provider,key)
     return {saved:true}
   }
   if(method==='credentials.remove'){
     const provider=validateApiKeyProvider(String(data.provider||''))
-    const answer=await dialog.showMessageBox(window!,{type:'warning',title:'删除服务商凭证',buttons:['取消','确认删除'],defaultId:0,cancelId:0,message:'移除 '+provider+' 的已保存 API Key？'})
+    const answer=await dialog.showMessageBox(requireWindow(),{type:'warning',title:'删除服务商凭证',buttons:['取消','确认删除'],defaultId:0,cancelId:0,message:`移除 ${provider} 的已保存 API Key？`})
     if(answer.response!==1)return {removed:false}
     await deleteProviderApiKey(provider)
     return {removed:true}
   }
   if(method==='workspace.pick'){
-    const result=await dialog.showOpenDialog(window!,{properties:['openDirectory'],title:'选择本地工作区'})
+    const result=await dialog.showOpenDialog(requireWindow(),{properties:['openDirectory'],title:'选择本地工作区'})
     if(result.canceled||!result.filePaths[0])return {workspace:active,changed:false}
     const path=realpathSync(result.filePaths[0])
     active=path
@@ -123,10 +127,10 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
     const path=await safeFile(String(data.path||''))
     const content=data.content
     if(typeof content!=='string'||Buffer.byteLength(content)>2*1024*1024)throw new Error('文件内容无效或超过限制')
-    const answer=await dialog.showMessageBox(window!,{type:'warning',buttons:['取消','保存修改'],defaultId:0,cancelId:0,
-      title:'确认修改文件',message:'将修改 '+basename(path),detail:'保存前请确认文件修改符合当前任务要求。'})
+    const answer=await dialog.showMessageBox(requireWindow(),{type:'warning',buttons:['取消','保存修改'],defaultId:0,cancelId:0,
+      title:'确认修改文件',message:`将修改 ${basename(path)}`,detail:'保存前请确认文件修改符合当前任务要求。'})
     if(answer.response!==1) return {saved:false}
-    const temporary=path+'.yaoyao-'+process.pid+'.tmp'
+    const temporary=`${path}.yaoyao-${process.pid}.tmp`
     const originalMode=(await stat(path)).mode & 0o777
     await writeFile(temporary,content,{flag:'wx',mode:originalMode})
     try{await rename(temporary,path)}catch(error){await rm(temporary,{force:true});throw error}
@@ -139,18 +143,18 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
   }
   if(method==='mcp.add'||method==='mcp.remove'||method==='mcp.toggle'){
     const name=String(data.name||'')
-    const details=method==='mcp.add'?JSON.stringify(data.config):method==='mcp.toggle'?'启用：'+String(data.enabled):'删除现有服务配置'
-    const answer=await dialog.showMessageBox(window!,{
+    const details=method==='mcp.add'?JSON.stringify(data.config):method==='mcp.toggle'?`启用：${String(data.enabled)}`:'删除现有服务配置'
+    const answer=await dialog.showMessageBox(requireWindow(),{
       type:'warning',title:'确认 MCP 服务器配置',
       buttons:['取消','确认修改'],defaultId:0,cancelId:0,
-      message:'确认修改 MCP 服务：'+name,
-      detail:details+'\n所有 MCP 配置会遵守现有权限和企业策略。'
+      message:`确认修改 MCP 服务：${name}`,
+      detail:`${details}\n所有 MCP 配置会遵守现有权限和企业策略。`
     })
     if(answer.response!==1)return {cancelled:true}
   }
-  if(!permitted.has(method))throw new Error('未开放的桌面操作：'+method)
+  if(!permitted.has(method))throw new Error(`未开放的桌面操作：${method}`)
   if(method==='sessions.setPermissionMode'&&data.mode==='bypassPermissions'){
-    const answer=await dialog.showMessageBox(window!,{
+    const answer=await dialog.showMessageBox(requireWindow(),{
       type:'warning',buttons:['取消','确认启用'],defaultId:0,cancelId:0,
       title:'确认授权模式',message:'此模式允许工具跳过常规审批',
       detail:'请仅在可信工作区中使用，关闭该会话后重新确认。'
