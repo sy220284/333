@@ -29,6 +29,8 @@ const { readSavedModelCatalog } = await import('../src/services/api/multimodel/c
 const { readIndependentPricing } = await import('../src/services/api/multimodel/pricing.ts')
 const { getModelStorageRoot } = await import('../src/services/api/multimodel/storage.ts')
 const { resolveIndependentModel } = await import('../src/services/api/multimodel/registry.ts')
+const { validateApiKeyProvider, readProviderApiKey, listProviderApiKeyAccounts, setProviderApiKey } =
+  await import('../src/services/auth/apiKeyVault.ts')
 
 test('feedback is explicitly stored locally and never tries to contact a server', async () => {
   const oldFetch = globalThis.fetch
@@ -47,9 +49,9 @@ test('feedback is explicitly stored locally and never tries to contact a server'
 })
 
 test('provider metadata stores actual context/output limits and respects explicit overrides', async () => {
-  const model = 'openrouter/vendor/model-with-slash'
-  const discovered = await mergeDiscoveredModelProfiles('openrouter', [
-    { id: 'vendor/model-with-slash', contextWindow: 100000, maxOutputTokens: 8192, supportsTools: true },
+  const model = 'deepseek/deepseek-chat'
+  const discovered = await mergeDiscoveredModelProfiles('deepseek', [
+    { id: 'deepseek-chat', contextWindow: 100000, maxOutputTokens: 8192, supportsTools: true },
   ])
   assert.equal(discovered, 1)
   assert.equal(getIndependentProfile(model)?.contextWindow, 100000)
@@ -57,21 +59,22 @@ test('provider metadata stores actual context/output limits and respects explici
   await updateIndependentProfile(model, {
     source: 'manual', contextWindow: 160000, maxOutputTokens: 12000,
   })
-  const overwritten = await mergeDiscoveredModelProfiles('openrouter', [
-    { id: 'vendor/model-with-slash', contextWindow: 32000, maxOutputTokens: 4096 },
+  const overwritten = await mergeDiscoveredModelProfiles('deepseek', [
+    { id: 'deepseek-chat', contextWindow: 32000, maxOutputTokens: 4096 },
   ])
   assert.equal(overwritten, 0)
   assert.equal(getIndependentProfile(model)?.contextWindow, 160000)
 })
 
-test('provider discovery retains OpenRouter compound IDs and collects advertised capabilities', async () => {
+test('Qwen direct model discovery collects context, output and advertised capabilities', async () => {
   const fake = (async () => new Response(JSON.stringify({ data: [
-    { id: 'company/model-name', context_length: 120000, top_provider: { max_completion_tokens: 30000 },
-      architecture: { input_modalities: ['text', 'image'] } },
+    { id: 'qwen3.8-max', context_window: 120000, max_output_tokens: 30000,
+      input_modalities: ['text', 'image'], supported_parameters: ['tools'] },
   ] }), { status: 200 })) as typeof fetch
-  const models = await discoverIndependentModelDetails('openrouter', 'test', fake)
+  const models = await discoverIndependentModelDetails('qwen', 'test', fake)
   assert.deepEqual(models, [{
-    id: 'company/model-name', contextWindow: 120000, maxOutputTokens: 30000, supportsVision: true,
+    id: 'qwen3.8-max', contextWindow: 120000, maxOutputTokens: 30000,
+    supportsTools: true, supportsVision: true,
   }])
 })
 
@@ -83,12 +86,15 @@ test('Chat-completions provider token estimates work without external requests',
   assert.ok(result.tokens > 0)
 })
 
-test('removed providers and gateway variants are rejected before any remote request', async () => {
+test('retired Gemini, Grok and OpenRouter model IDs are refused before any API request', async () => {
   const removed = [
     'gemini/gemini-3.8-flash',
     'xai/grok-4',
+    'openrouter/deepseek/deepseek-chat',
     'openrouter/google/gemini-3.8-flash',
     'openrouter/x-ai/grok-4',
+    'openrouter/google/gemma-3',
+    'openrouter/anthropic/claude-opus-5-5',
   ]
   for (const model of removed) {
     assert.equal(resolveIndependentModel(model), null, model)
@@ -97,19 +103,26 @@ test('removed providers and gateway variants are rejected before any remote requ
       /Expected supported qualified remote model ID/,
     )
   }
-  assert.equal(resolveIndependentModel('openrouter/google/gemma-3')?.provider, 'openrouter')
-  assert.equal(resolveIndependentModel('openrouter/anthropic/claude-opus-5-5')?.provider, 'openrouter')
+  assert.equal(resolveIndependentModel('deepseek/deepseek-chat')?.provider, 'deepseek')
+  assert.equal(resolveIndependentModel('qwen/qwen3.8-max')?.provider, 'qwen')
 })
 
-test('gateway model discovery keeps other model families while filtering Gemini and Grok', async () => {
-  const fake = (async () => new Response(JSON.stringify({ data: [
-    { id: 'google/gemini-3.8-flash' },
-    { id: 'x-ai/grok-4' },
-    { id: 'google/gemma-3' },
-    { id: 'anthropic/claude-opus-5-5' },
-  ] }))) as typeof fetch
-  const results = await discoverIndependentModelDetails('openrouter', 'test-token', fake)
-  assert.deepEqual(results.map(x => x.id), ['google/gemma-3', 'anthropic/claude-opus-5-5'])
+test('retired OpenRouter API keys cannot be used, listed or re-saved', async () => {
+  const directory = join(privateHome, '.333', 'auth')
+  mkdirSync(directory, { recursive: true })
+  const vault = join(directory, 'provider-api-keys.json')
+  writeFileSync(vault, JSON.stringify({
+    schema: 1, keys: { openrouter: 'old-secret-unused', deepseek: 'active-key-123' },
+  }))
+  assert.throws(() => validateApiKeyProvider('openrouter'), /服务商未识别/)
+  assert.throws(() => readProviderApiKey('openrouter' as never), /服务商未识别/)
+  assert.deepEqual(listProviderApiKeyAccounts(), ['deepseek'])
+  assert.equal(readProviderApiKey('deepseek'), 'active-key-123')
+  await setProviderApiKey('qwen', 'qwen-valid-key')
+  const persisted = JSON.parse(readFileSync(vault, 'utf8'))
+  assert.equal(Object.hasOwn(persisted.keys, 'openrouter'), false)
+  assert.equal(persisted.keys.deepseek, 'active-key-123')
+  assert.equal(persisted.keys.qwen, 'qwen-valid-key')
 })
 
 test('old local model, profile and price caches exclude removed providers without blocking valid entries', () => {
@@ -121,6 +134,7 @@ test('old local model, profile and price caches exclude removed providers withou
       { provider: 'gemini', id: 'gemini-test', discoveredAt: '2026-11-01' },
       { provider: 'xai', id: 'grok-4', discoveredAt: '2026-11-01' },
       { provider: 'openrouter', id: 'google/gemini-3.8-flash', discoveredAt: '2026-11-01' },
+      { provider: 'openrouter', id: 'some-other-model', discoveredAt: '2026-11-01' },
       { provider: 'deepseek', id: 'deepseek-chat', discoveredAt: '2026-11-01' },
     ],
   }))
@@ -131,6 +145,7 @@ test('old local model, profile and price caches exclude removed providers withou
   writeFileSync(join(directory, 'profiles.json'), JSON.stringify({
     'gemini/gemini-test': { source: 'provider' },
     'openrouter/x-ai/grok-4': { source: 'manual' },
+    'openrouter/vendor/ordinary': { source: 'manual' },
     'deepseek/deepseek-chat': { source: 'manual', contextWindow: 100000 },
   }))
   assert.deepEqual(Object.keys(readIndependentProfiles()), ['deepseek/deepseek-chat'])
@@ -138,6 +153,7 @@ test('old local model, profile and price caches exclude removed providers withou
   writeFileSync(join(directory, 'pricing.json'), JSON.stringify({
     'xai/grok-4': { input: 1, output: 2 },
     'openrouter/google/gemini-3.8-flash': { input: 1, output: 2 },
+    'openrouter/vendor/ordinary': { input: 1, output: 2 },
     'deepseek/deepseek-chat': { input: 0.3, output: 1.5 },
   }))
   assert.deepEqual(Object.keys(readIndependentPricing()), ['deepseek/deepseek-chat'])
