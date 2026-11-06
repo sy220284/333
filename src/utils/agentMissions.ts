@@ -50,20 +50,20 @@ function checkedId(id: string): string {
   return id
 }
 function missionPath(id: string, root: string): string {
-  return join(directory(root), checkedId(id) + '.json')
+  return join(directory(root), `${checkedId(id)}.json`)
 }
 function parseMission(content: string, path: string): AgentMission {
   try {
     return MissionSchema.parse(JSON.parse(content))
   } catch (error) {
-    throw new Error('本地超级智能体任务记录损坏：' + path + '；' + String(error))
+    throw new Error(`本地超级智能体任务记录损坏：${path}；${String(error)}`)
   }
 }
 
 /** Each project keeps its own active mission, even when multiple CLIs share a config home. */
 export function missionSelectionKey(projectDir: string): string {
   const project = resolve(projectDir)
-  return 'local_agent_current_mission_' + createHash('sha256').update(project).digest('hex').slice(0, 20)
+  return `local_agent_current_mission_${createHash('sha256').update(project).digest('hex').slice(0, 20)}`
 }
 export function getSelectedMissionId(projectDir = getCwd()): string | undefined {
   const id = getFeatureValue_CACHED_MAY_BE_STALE<string>(missionSelectionKey(projectDir), '')
@@ -82,7 +82,7 @@ export async function createMission(objective: string, projectDir: string, root 
   const now = new Date().toISOString()
   const mission: AgentMission = {
     schemaVersion: 1,
-    id: 'mission_' + randomUUID().replaceAll('-', '').slice(0, 16),
+    id: `mission_${randomUUID().replaceAll('-', '').slice(0, 16)}`,
     objective: value,
     projectDir,
     status: 'active',
@@ -134,7 +134,7 @@ async function changeMission(
       revision: previous.revision + 1,
       updatedAt: new Date().toISOString(),
     })
-    const tmp = path + '.' + randomUUID() + '.tmp'
+    const tmp = `${path}.${randomUUID()}.tmp`
     try {
       await writeFile(tmp, JSON.stringify(next, null, 2), { flag: 'wx', mode: 0o600 })
       await rename(tmp, path)
@@ -148,15 +148,15 @@ async function changeMission(
 }
 
 export function formatMission(mission: AgentMission): string {
-  const items = mission.assignments.map(a => '  · [' + a.status + '] ' + a.kind + ' ' + a.title + ' (' + a.id + ')')
+  const items = mission.assignments.map(a => `  · [${a.status}] ${a.kind} ${a.title} (${a.id})`)
   return [
-    '任务：' + mission.id,
-    '目标：' + mission.objective,
-    '项目：' + mission.projectDir,
-    '状态：' + mission.status,
-    '版本：' + mission.revision,
-    '阶段记录：' + (mission.checkpoint || '尚未填写'),
-    '关联工作：' + (items.length ? '\n' + items.join('\n') : '无'),
+    `任务：${mission.id}`,
+    `目标：${mission.objective}`,
+    `项目：${mission.projectDir}`,
+    `状态：${mission.status}`,
+    `版本：${mission.revision}`,
+    `阶段记录：${mission.checkpoint || '尚未填写'}`,
+    `关联工作：${items.length ? `\n${items.join('\n')}` : '无'}`,
   ].join('\n')
 }
 
@@ -171,20 +171,20 @@ export function getSelectedMissionPrompt(): string {
       return '该超级智能体任务归属其他项目，请切换至对应项目目录后恢复。'
     }
     const assignments = mission.assignments.slice(-12).map(a =>
-      a.kind + ':' + a.id + '(' + a.status + ') ' + a.title
+      `${a.kind}:${a.id}(${a.status}) ${a.title}`
     ).join('\n')
     return [
       '本地超级智能体任务档案（仅作上下文；执行外部操作仍按用户权限审批）：',
-      '任务ID：' + mission.id,
-      '目标：' + mission.objective,
-      '项目：' + mission.projectDir,
-      '状态：' + mission.status,
-      '最近阶段：' + (mission.checkpoint || '尚无阶段记录'),
-      '关联执行：\n' + (assignments || '无'),
+      `任务ID：${mission.id}`,
+      `目标：${mission.objective}`,
+      `项目：${mission.projectDir}`,
+      `状态：${mission.status}`,
+      `最近阶段：${mission.checkpoint || '尚无阶段记录'}`,
+      `关联执行：\n${assignments || '无'}`,
       '如果任务已暂停或完成，先请求用户明确恢复或创建新的任务。',
     ].join('\n')
   } catch (error) {
-    return '本地超级智能体任务档案无法读取，请先通过 /agents mission show 修复：' + String(error)
+    return `本地超级智能体任务档案无法读取，请先通过 /agents mission show 修复：${String(error)}`
   }
 }
 
@@ -201,7 +201,7 @@ export async function linkMissionAssignment(
   if (!assignmentId.trim() || assignmentId.length > 256 || !title.trim() || title.length > 512)
     throw new Error('关联任务需要有效的任务 ID 和标题')
   return changeMission(id, mission => {
-    if (mission.status !== 'active') throw new Error('超级智能体任务处于 ' + mission.status + '，请先恢复')
+    if (mission.status !== 'active') throw new Error(`超级智能体任务处于 ${mission.status}，请先恢复`)
     if (mission.assignments.some(item => item.id === assignmentId)) return mission
     if (mission.assignments.length >= 500) throw new Error('关联任务已达到上限')
     return { ...mission, assignments: [...mission.assignments, {
@@ -214,7 +214,7 @@ export async function finishMissionAssignment(
 ): Promise<AgentMission> {
   return changeMission(id, mission => {
     if (!mission.assignments.some(a => a.id === assignmentId))
-      throw new Error('任务簿找不到关联工作 ' + assignmentId)
+      throw new Error(`任务簿找不到关联工作 ${assignmentId}`)
     return { ...mission, assignments: mission.assignments.map(a =>
       a.id === assignmentId ? { ...a, status, updatedAt: new Date().toISOString() } : a
     ) }
