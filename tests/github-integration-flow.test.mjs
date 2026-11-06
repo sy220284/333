@@ -10,7 +10,7 @@ import { validRepository } from '../src/commands/github/repository.ts'
 function loadInstaller(mockGh) {
   let source=readFileSync(new URL('../src/commands/github/github.ts',import.meta.url),'utf8')
   source=source.replace(/^import .*$/gm,'').replace(/^export /gm,'')
-  source=stripTypeScriptTypes(source,{mode:'transform'})
+  source=stripTypeScriptTypes(source,{mode:'strip'})
   const ctor=Object.getPrototypeOf(async()=>{}).constructor
   return new ctor('execFileNoThrow','githubWorkflow','githubReviewerScript',
     'githubTaskRunnerScript','validRepository','randomUUID','Buffer',
@@ -141,7 +141,7 @@ test('外部 PR 只审查 diff，原生逐行评论仅引用实际新增行',asy
 })
 test('task 脚本保持独立、支持改文件及 GitHub 原生创建 PR',()=>{
  const script=githubTaskRunnerScript()
- for(const line of ['const changes=new Map()', "cmd.action==='edit'",
+ for(const line of ['changes=new Map()', "cmd.action==='edit'",
   "cmd.action==='test'", "'/git/trees'", "'/pulls','POST'",
   "yaoyaoche/task-", "author_association"])assert.ok(script.includes(line),line)
  const syntax=githubTaskRunnerScript().replace(/^import .*$/gm,'')
