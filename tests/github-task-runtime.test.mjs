@@ -13,7 +13,7 @@ const compiled=new Fn('readFileSync','writeFileSync','readdirSync','mkdirSync','
 function scenario({association='OWNER',failPrOnce=false}={}) {
  const dir=mkdtempSync(join(tmpdir(),'github-task-test-'))
  mkdirSync(join(dir,'src'))
- const file=join(dir,'src','a.ts'),writes=new Map([[file,'const old = true;\n']])
+ const file=join(dir,'src','a.ts'),writes=new Map([[file,'const status_old = true;\n']])
  const api='https://api.github.com/repos/org/code'
  const event={issue:{number:77},comment:{id:991,body:'/yaoyaoche task 修改并测试代码',
   author_association:association}}
@@ -23,7 +23,7 @@ function scenario({association='OWNER',failPrOnce=false}={}) {
  const history=[],state={modelCalls:0,branchCreated:0,commits:0,prs:0,failedPr:0,tests:0}
  const actions=[
    {action:'read',path:'src/a.ts'},
-   {action:'edit',path:'src/a.ts',old:'old',new:'new'},
+   {action:'edit',path:'src/a.ts',old:'status_old',new:'status_new'},
    {action:'test',command:'node --test'},
    {action:'done',summary:'已修改代码并通过测试'},
  ]
@@ -73,7 +73,7 @@ test('授权评论真实执行链：读取、编辑、测试、创建分支和�
   assert.equal(f.state.branchCreated,1)
   assert.equal(f.state.commits,1)
   assert.equal(f.state.prs,1)
-  assert.match(f.writes.get(f.file),/const new = true/)
+  assert.match(f.writes.get(f.file),/const status_new = true/)
   assert.match(f.writes.get('yaoyaoche-task-report.md'),/代码 PR/)
   const pr=f.history.find(x=>x.url.endsWith('/pulls')&&x.method==='POST')
   const body=JSON.parse(pr.body)
