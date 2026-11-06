@@ -19,7 +19,8 @@ type FileEntry={name:string;path:string;directory:boolean}
 type Permission={id:string;toolName:string;input?:Item;description?:string}
 type HostRequest={id:string;type?:string;request?:unknown;[key:string]:unknown}
 type Task={taskId:string;status?:string;description?:string;[key:string]:unknown}
-type MissionJob={id:string;title:string;instruction:string;status:string;attempt:number;summary?:string;sessionId?:string;history?:unknown[]}
+type JobStatus='queued'|'running'|'review'|'completed'|'failed'|'interrupted'|'cancelled'
+type MissionJob={id:string;title:string;instruction:string;status:JobStatus;attempt:number;summary?:string;sessionId?:string;history?:unknown[]}
 const NAV:{id:View;label:string;icon:LucideIcon}[]=[
   {id:'dashboard',label:'工作台概览',icon:LayoutDashboard},
   {id:'chat',label:'AI 对话',icon:MessageSquare},
