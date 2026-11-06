@@ -111,3 +111,12 @@ test('全量矩阵和六架构工作流自身修改在 Draft 阶段只做配置�
   assert.equal(full['ci-test-matrix'], true)
   assert.equal(full['latest-stable-six-host'], true)
 })
+
+test('SDK 源码变更覆盖协议与桌面专项，桌面窗口变更也走桌面专项', () => {
+  const sdk = routeChanges(['src/entrypoints/sdk/sessionRuntime317.ts'])
+  assert.equal(sdk['sdk-stream-parity'], true)
+  assert.equal(sdk['desktop-communication'], true)
+  const desktop = routeChanges(['desktop/electron/preload.ts'])
+  assert.equal(desktop['desktop-communication'], true)
+  assert.equal(desktop['ci-test-matrix'], false)
+})
