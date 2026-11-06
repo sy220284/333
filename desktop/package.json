@@ -33,21 +33,62 @@
   "build": {
     "appId": "app.yaoyaoche.desktop",
     "productName": "摇摇车",
-    "directories": { "output": "release" },
-    "files": ["dist/**/*", "dist-electron/**/*", "package.json"],
-    "asar": true,
-    "extraResources": [
-      { "from": "../dist/desktopHost", "to": "bin/desktopHost" },
-      { "from": "../dist/yaoyaoche", "to": "bin/yaoyaoche" }
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
     ],
+    "asar": true,
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "extraResources": [
-        { "from": "../dist/desktopHost.exe", "to": "bin/desktopHost.exe" },
-        { "from": "../dist/yaoyaoche.exe", "to": "bin/yaoyaoche.exe" }
+        {
+          "from": "../dist/desktopHost.exe",
+          "to": "bin/desktopHost.exe"
+        },
+        {
+          "from": "../dist/yaoyaoche.exe",
+          "to": "bin/yaoyaoche.exe"
+        }
       ]
     },
-    "mac": { "target": ["dmg"], "category": "public.app-category.developer-tools" },
-    "linux": { "target": ["AppImage", "deb"], "category": "Development" }
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.developer-tools",
+      "extraResources": [
+        {
+          "from": "../dist/desktopHost",
+          "to": "bin/desktopHost"
+        },
+        {
+          "from": "../dist/yaoyaoche",
+          "to": "bin/yaoyaoche"
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development",
+      "extraResources": [
+        {
+          "from": "../dist/desktopHost",
+          "to": "bin/desktopHost"
+        },
+        {
+          "from": "../dist/yaoyaoche",
+          "to": "bin/yaoyaoche"
+        }
+      ]
+    }
   }
 }
