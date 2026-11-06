@@ -335,3 +335,16 @@ button:disabled{opacity:.42;cursor:not-allowed;transform:none!important}
 .job-summary{padding:10px;border-radius:8px;background:var(--surface3);color:var(--mint);font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
 .job-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .job-actions .small{min-height:29px;padding:0 10px;font-size:10px}
+
+.credentials-layout{display:grid;grid-template-columns:205px minmax(0,1fr);gap:21px}
+.provider-list{display:flex;flex-direction:column;gap:7px}
+.provider-item{display:flex;align-items:center;gap:8px;text-align:left;padding:11px 9px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.provider-item.selected{border-color:var(--accent);background:var(--surface3)}
+.provider-item svg{color:var(--accent)}
+.provider-item span:nth-child(2){flex:1;font-size:11px}
+.credential-form h3{margin:2px 0 10px}
+.credential-form p{line-height:1.75;font-size:11px;color:var(--muted)}
+.credential-form label{display:block;margin:20px 0 9px;font-size:11px;color:var(--muted)}
+.credential-form input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);outline:0}
+.credential-form input:focus{border-color:var(--accent)}
+@media(max-width:1000px){.credentials-layout{grid-template-columns:1fr}.provider-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}}
