@@ -614,7 +614,7 @@ export function useVoice({
               })
             }
           },
-          onError: (error: string, opts?: { fatal?: boolean }) => {
+          onError: (error: string) => {
             if (isStale()) {
               logForDebugging(
                 `[voice] ignoring onError from stale session: ${error}`,
