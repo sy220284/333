@@ -131,13 +131,13 @@ test('主测试套件按 Node/Bun 分类执行并包含未注册用例扫描', (
       assert.equal(parts.pop(), 'npm run test:multimodel',
         'Bun must run ChatGPT account tests through the isolated suite')
     }
-    assert.equal(parts.length, 1, name + ': unexpected command chaining')
+    assert.equal(parts.length, 1, `${name}: unexpected command chaining`)
     const direct = parts[0]
-    assert.ok(direct.startsWith(runtime), name + ': wrong runtime')
+    assert.ok(direct.startsWith(runtime), `${name}: wrong runtime`)
     const files = direct.slice(runtime.length).trim().split(/\s+/)
-    assert.ok(files.length > 0 && files.every(path => path.endsWith(suffix)), name + ': wrong test format')
-    assert.equal(new Set(files).size, files.length, name + ': duplicates')
-    for (const path of files) assert.ok(existsSync(file(path)), name + ': missing ' + path)
+    assert.ok(files.length > 0 && files.every(path => path.endsWith(suffix)), `${name}: wrong test format`)
+    assert.equal(new Set(files).size, files.length, `${name}: duplicates`)
+    for (const path of files) assert.ok(existsSync(file(path)), `${name}: missing ${path}`)
   }
   const supplementary = readFileSync(file('build/run-unregistered-tests.mjs'), 'utf8')
   assert.match(supplementary, /discoverUnregisteredTests/)
@@ -161,8 +161,8 @@ test('全量测试中所有专项用例均被主清单或补充扫描收录', ()
   for (const [name, command] of Object.entries(scripts)) {
     if (['test:node', 'test:bun', 'test:core', 'test:all'].includes(name)) continue
     for (const path of command.match(/tests\/[^\s]+\.test\.(?:mjs|ts)/g) ?? []) {
-      assert.ok(existsSync(file(path)), name + ': missing ' + path)
-      assert.ok(main.has(path) || supplementary.includes('const pending = tests.filter'), name + ': not inventoried ' + path)
+      assert.ok(existsSync(file(path)), `${name}: missing ${path}`)
+      assert.ok(main.has(path) || supplementary.includes('const pending = tests.filter'), `${name}: not inventoried ${path}`)
     }
   }
 })
