@@ -36,7 +36,7 @@ export function CondensedLogo(): ReactNode {
   const versionPrefix = '摇摇车 v'
   const truncatedVersion = truncate(
     version,
-    Math.max(textWidth - versionPrefix.length, 6),
+    Math.max(textWidth - stringWidth(versionPrefix), 6),
   )
 
   const effortSuffix = getEffortSuffix(model, effortValue)

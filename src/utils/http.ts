@@ -49,7 +49,7 @@ export function getMCPUserAgent(): string {
 
 // User-Agent for user-initiated WebFetch requests to arbitrary sites.
 export function getWebFetchUserAgent(): string {
-  return `摇摇车/${MACRO.VERSION} (user-initiated fetch)`
+  return `yaoyaoche/${MACRO.VERSION} (user-initiated fetch)`
 }
 
 export type AuthHeaders = {

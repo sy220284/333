@@ -30,8 +30,9 @@ test('摇摇车 keeps its configuration, temporary files and browser links separ
 test('Model requests identify the actual independent agent and preserve historical prefixes', () => {
   const http = source('src/utils/http.ts')
   assert.ok(http.match(/yaoyaoche-cli\/\$\{MACRO\.VERSION\}/))
-  assert.ok(http.match(/摇摇车\/\$\{MACRO\.VERSION\}/))
+  assert.ok(http.match(/yaoyaoche\/\$\{MACRO\.VERSION\}/))
   assert.doesNotMatch(http, /Claude-User/)
+  assert.ok(source('src/components/LogoV2/CondensedLogo.tsx').includes('stringWidth(versionPrefix)'))
   const system = source('src/constants/system.ts')
   assert.ok(system.includes('You are 摇摇车'))
   assert.ok(system.includes('You are 333, an independent'))
