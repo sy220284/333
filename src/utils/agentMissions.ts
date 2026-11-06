@@ -220,7 +220,19 @@ export async function finishMissionAssignment(
     ) }
   }, root)
 }
-export async function findMissionByAssignmentId(assignmentId: string, root = defaultRoot()): Promise<string | undefined> {
-  const missions = await listMissions(root)
-  return missions.find(mission => mission.assignments.some(a => a.id === assignmentId))?.id
+export async function findMissionByAssignmentId(
+  assignmentId: string,
+  root = defaultRoot(),
+  projectDir = getCwd(),
+): Promise<string | undefined> {
+  // Names can be reused after a team is deleted. Only a currently running
+  // assignment in the originating project may be finalized.
+  const matches = (await listMissions(root)).filter(mission =>
+    resolve(mission.projectDir) === resolve(projectDir) &&
+    mission.assignments.some(a => a.id === assignmentId && a.status === 'running')
+  )
+  if (matches.length > 1) {
+    throw new Error(`同一项目存在多个运行中的关联任务：${assignmentId}，请先核对任务档案`)
+  }
+  return matches[0]?.id
 }
