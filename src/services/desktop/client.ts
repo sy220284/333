@@ -60,7 +60,7 @@ export function createDesktopClient(input: Readable, output: Writable) {
     const callback = pending.get(reply.id)
     if (!callback) return
     pending.delete(reply.id)
-    if (reply.ok) callback.resolve(reply.result)
+    if (reply.ok === true) callback.resolve(reply.result)
     else callback.reject(new Error(`${reply.error.code}: ${reply.error.message}`))
   })
 
