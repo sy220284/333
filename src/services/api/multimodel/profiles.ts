@@ -3,13 +3,23 @@
  * configurable when a model endpoint does not publish limits. Never copy
  * Claude's context/output budgets to an unrelated remote model.
  */
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { promises as fs, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { isRetiredIndependentProvider, isRemovedIndependentModel, resolveIndependentModel } from './registry.js'
 import { getModelStorageRoot } from './storage.js'
+import { getSavedChatGPTAccount } from '../../auth/chatgptOAuth.js'
 
 const profilesFile = () => join(getModelStorageRoot(), 'profiles.json')
+const accountSuffix = '::account:'
+function storedModelKey(model: string, identity?: string): string | undefined {
+  if (resolveIndependentModel(model)?.provider !== 'chatgpt') return model
+  const account = identity ?? getSavedChatGPTAccount()
+  if (!account) return undefined
+  // The account name is metadata, but keeping raw user/workspace identifiers
+  // out of the profile JSON avoids exposing them to model diagnostics.
+  return model + accountSuffix + createHash('sha256').update(account).digest('hex')
+}
 
 export type IndependentModelProfile = {
   contextWindow?: number
@@ -77,28 +87,36 @@ export function readIndependentProfiles(): Record<string, IndependentModelProfil
     throw new Error('Invalid model profile storage')
   }
   const active: Record<string, IndependentModelProfile> = {}
-  for (const [model, profile] of Object.entries(profiles)) {
-    // Previously saved Gemini/Grok profiles must not block active providers.
-    if (isRetiredIndependentProvider(model.split('/', 1)[0]) || isRemovedIndependentModel(model)) continue
+  for (const [storedKey, profile] of Object.entries(profiles)) {
+    const model = storedKey.split(accountSuffix, 1)[0] ?? ''
+    // Retired or legacy unscoped ChatGPT profiles must never become
+    // authoritative for another OAuth registration's model capabilities.
+    if (isRetiredIndependentProvider(model.split('/', 1)[0]) ||
+        isRemovedIndependentModel(model) ||
+        (resolveIndependentModel(model)?.provider === 'chatgpt' &&
+          !storedKey.includes(accountSuffix))) continue
     validatedProfile(model, profile)
-    active[model] = profile
+    active[storedKey] = profile
   }
   return active
 }
 export function getIndependentProfile(model: string): IndependentModelProfile | undefined {
   if (!resolveIndependentModel(model)) return undefined
-  return readIndependentProfiles()[model]
+  const key = storedModelKey(model)
+  return key ? readIndependentProfiles()[key] : undefined
 }
 export async function updateIndependentProfile(
   model: string,
   patch: Partial<IndependentModelProfile> & { source: IndependentModelProfile['source'] },
 ): Promise<IndependentModelProfile> {
   if (!resolveIndependentModel(model)) throw new Error('Qualified provider/model ID required')
+  const key = storedModelKey(model)
+  if (!key) throw new Error('Select an authorized ChatGPT account before modifying its model profile')
   const existing = readIndependentProfiles()
   // A provider's discovery response cannot overwrite an explicit user setting.
-  if (existing[model]?.source === 'manual' && patch.source === 'provider') return existing[model]
+  if (existing[key]?.source === 'manual' && patch.source === 'provider') return existing[key]
   const next = validatedProfile(model, {
-    ...existing[model], ...patch,
+    ...existing[key], ...patch,
     source: patch.source, checkedAt: new Date().toISOString(),
   })
   const root = getModelStorageRoot()
@@ -106,7 +124,7 @@ export async function updateIndependentProfile(
   await fs.mkdir(root, { recursive: true, mode: 0o700 })
   const temporary = join(root, `profiles.${randomUUID()}.tmp`)
   try {
-    await fs.writeFile(temporary, JSON.stringify({ ...existing, [model]: next }, null, 2),
+    await fs.writeFile(temporary, JSON.stringify({ ...existing, [key]: next }, null, 2),
       { encoding: 'utf8', mode: 0o600, flag: 'wx' })
     await fs.rename(temporary, file)
     await fs.chmod(file, 0o600)
@@ -121,6 +139,7 @@ export async function mergeDiscoveredModelProfiles(
   provider: string,
   details: ReadonlyArray<{ id: string; contextWindow?: number; maxOutputTokens?: number;
     supportsTools?: boolean; supportsVision?: boolean; supportedEffort?: string[]; defaultEffort?: string }>,
+  accountIdentity?: string,
 ): Promise<number> {
   const current = readIndependentProfiles()
   const next = { ...current }
@@ -128,12 +147,13 @@ export async function mergeDiscoveredModelProfiles(
   const checkedAt = new Date().toISOString()
   for (const detail of details) {
     const id = `${provider}/${detail.id}`
-    if (!resolveIndependentModel(id) || next[id]?.source === 'manual') continue
+    const key = storedModelKey(id, accountIdentity)
+    if (!key || !resolveIndependentModel(id) || next[key]?.source === 'manual') continue
     if (detail.contextWindow === undefined && detail.maxOutputTokens === undefined &&
         detail.supportsTools === undefined && detail.supportsVision === undefined &&
         detail.supportedEffort === undefined && detail.defaultEffort === undefined) continue
-    next[id] = validatedProfile(id, {
-      ...next[id], ...detail,
+    next[key] = validatedProfile(id, {
+      ...next[key], ...detail,
       source: 'provider', checkedAt,
     })
     changed++
