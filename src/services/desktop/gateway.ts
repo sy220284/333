@@ -6,7 +6,7 @@ import {
   saveMissionCheckpoint, selectMission, updateMissionStatus,
   linkMissionAssignment, finishMissionAssignment,
 } from '../../utils/agentMissions.js'
-import { listProjectTeams } from '../../utils/teamDiscovery.js'
+import { getTeammateStatuses, listProjectTeams } from '../../utils/teamDiscovery.js'
 import {
   missionJobAssignmentId, listMissionJobs, enqueueMissionJob, claimMissionJob,
   bindMissionJobTurn, settleMissionJob, approveMissionJob, retryMissionJob,
@@ -424,6 +424,12 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
             .flatMap(session => [...session.tasks.values()])
             .filter(task => task.status === 'running').length,
         }
+      }
+      case 'agents.members': {
+        const teams = await listProjectTeams(cwd)
+        if (!teams.some(team => team.name === request.teamName))
+          throw new Error('团队不属于当前项目或已解散')
+        return getTeammateStatuses(request.teamName)
       }
       case 'agents.setMode':
         setAgentMode(request.mode)
