@@ -124,8 +124,17 @@ test('主测试套件按 Node/Bun 分类执行并包含未注册用例扫描', (
     ['test:bun', 'bun test ', '.test.ts'],
   ]) {
     const command = scripts[name]
-    assert.ok(command.startsWith(runtime), name + ': wrong runtime')
-    const files = command.slice(runtime.length).trim().split(/\s+/)
+    const parts = command.split(/\s*&&\s*/)
+    // OAuth suites deliberately run in fresh Bun processes: retain the
+    // language contract for direct files and require the isolated sub-suite.
+    if (name === 'test:bun') {
+      assert.equal(parts.pop(), 'npm run test:multimodel',
+        'Bun must run ChatGPT account tests through the isolated suite')
+    }
+    assert.equal(parts.length, 1, name + ': unexpected command chaining')
+    const direct = parts[0]
+    assert.ok(direct.startsWith(runtime), name + ': wrong runtime')
+    const files = direct.slice(runtime.length).trim().split(/\s+/)
     assert.ok(files.length > 0 && files.every(path => path.endsWith(suffix)), name + ': wrong test format')
     assert.equal(new Set(files).size, files.length, name + ': duplicates')
     for (const path of files) assert.ok(existsSync(file(path)), name + ': missing ' + path)
@@ -141,6 +150,7 @@ test('全量测试中所有专项用例均被主清单或补充扫描收录', ()
   const main = new Set([
     ...(scripts['test:node'].match(/tests\/[^\s]+\.test\.mjs/g) ?? []),
     ...(scripts['test:bun'].match(/tests\/[^\s]+\.test\.ts/g) ?? []),
+    ...(scripts['test:multimodel'].match(/tests\/[^\s]+\.test\.ts/g) ?? []),
   ])
   assert.ok(main.size > 0)
   assert.match(scripts['test:all'], /node build\/run-unregistered-tests\.mjs --ci-supplemental/)
