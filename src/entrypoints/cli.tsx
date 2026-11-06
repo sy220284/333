@@ -92,6 +92,21 @@ async function main(): Promise<void> {
     return;
   }
 
+  // One-shot inventory commands must exit without importing the full REPL CLI.
+  // The full preAction runs init() (Git repository detection, warm connections,
+  // background setup), which can keep file watchers alive after models list.
+  // The catalog reads only built-in IDs and locally discovered models.
+  if (args[0] === 'models' && args[1] === 'list' &&
+      (args.length === 2 || (args.length === 3 && args[2] === '--json'))) {
+    const { enableConfigs } = await import('../utils/config.js');
+    enableConfigs();
+    const { getRegisteredModelInventory } = await import('../services/api/multimodel/catalog.js');
+    const models = getRegisteredModelInventory();
+    if (args[2] === '--json') process.stdout.write(`${JSON.stringify(models, null, 2)}\n`);
+    else for (const model of models) process.stdout.write(`${model.id}\n`);
+    return;
+  }
+
   if (runnerArg !== undefined) {
     // Official 317 cli.js passes every recognized runner launch declaration
     // through one parser, which decides which capabilities are adopted.
