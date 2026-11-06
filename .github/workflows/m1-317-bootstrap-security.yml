@@ -1,21 +1,6 @@
 name: M1 317 启动生命周期和令牌保护验收
 
 on:
-  push:
-    branches: [upgrade/2.1.310-m1-evidence]
-    paths:
-      - '.github/workflows/m1-317-bootstrap-security.yml'
-      - 'src/bootstrap/relayTokenGuard317.mjs'
-      - 'src/bootstrap/jitPolicy317.mjs'
-      - 'src/bootstrap/socketOwnership317.ts'
-      - 'src/cli/background/supervisor.ts'
-      - 'src/cli/background/respawnFlags317.ts'
-      - 'tests/m1-socket-ownership-317.test.ts'
-      - 'tests/m1-background-resume-flags-317.test.ts'
-      - 'src/entrypoints/cli.tsx'
-      - 'src/entrypoints/startupRouting317.mjs'
-      - 'tests/m1-relay-token-guard-317.test.mjs'
-      - 'tests/m1-jit-startup-317.test.mjs'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:

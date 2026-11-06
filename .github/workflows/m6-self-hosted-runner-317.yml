@@ -1,28 +1,5 @@
 name: M6 317 自托管Runner底层与实际宿主验收
 on:
-  push:
-    branches: [upgrade/2.1.310-m1-evidence]
-    paths:
-      - 'src/cli/selfHostedRunner/**'
-      - 'tests/m6-runner-operator-tools-317.test.ts'
-      - 'tests/m6-runner-health-317.test.mjs'
-      - 'src/cli/handlers/pluginEvalPublish317.ts'
-      - 'src/cli/handlers/pluginEvalEntry317.ts'
-      - 'tests/m3-plugin-eval-publish-317.test.ts'
-      - 'tests/m6-runner-code-sign-317.test.mjs'
-      - 'tests/m6-runner-orchestrator-317.test.mjs'
-      - 'src/bridge/sessionRunner.ts'
-      - 'src/cli/background/**'
-      - 'src/bootstrap/socketOwnership317.ts'
-      - 'src/bootstrap/ptyHost317.ts'
-      - 'src/bootstrap/bgSpare317.ts'
-      - 'tests/m1-background-pty-*.test.ts'
-      - 'tests/m1-background-lifecycle.test.mjs'
-      - 'src/bridge/types.ts'
-      - 'tests/m6-runner-idle-hold-317.test.ts'
-      - 'src/entrypoints/cli.tsx'
-      - 'tests/m6-self-hosted-runner-*'
-      - '.github/workflows/m6-self-hosted-runner-317.yml'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:

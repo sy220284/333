@@ -1,34 +1,6 @@
 name: M1 官方 2.1.317 x64 二进制来源与运行基准
 
 on:
-  push:
-    branches: [upgrade/2.1.310-m1-evidence]
-    paths:
-      - 'build/claude-api-2.1.317-manifest.json'
-      - 'build/restore-claude-api.mjs'
-      - 'src/skills/bundled/**'
-      - 'src/main.tsx'
-      - 'tests/m1-claude-api-manifest-317.test.mjs'
-      - 'tests/m1-nested-session-id-317.test.mjs'
-      - 'tests/m1-nested-session-id-e2e-317.test.mjs'
-      - 'tests/m1-317-json-wire.test.mjs'
-      - 'tests/m1-317-json-wire-e2e.test.mjs'
-      - 'src/cli/jsonWireEscaping.mjs'
-      - 'src/cli/ndjsonSafeStringify.ts'
-      - 'src/cli/structuredIO.ts'
-      - 'src/cli/print.ts'
-      - 'src/utils/hooks.ts'
-      - 'src/utils/hooks/preCompactOutput.mjs'
-      - 'tests/m1-precompact-output-limit-317.test.mjs'
-      - 'src/utils/remoteSessionIdentity.mjs'
-      - 'src/bootstrap/state.ts'
-      - 'tests/m1-official-bundled-skills-317.test.mjs'
-      - 'tests/m1-317-chain-matrix.test.mjs'
-      - 'tests/m1-target-release-317.test.mjs'
-      - 'tests/m1-x64-conversation-ui-scenarios.py'
-      - 'tests/test_m1_retry_phase_glyphs.py'
-      - 'docs/upgrade/m1-evidence/2.1.317-366项功能链路分组矩阵.json'
-      - '.github/workflows/m1-317-official-reference.yml'
   pull_request:
     branches: [main]
     paths:

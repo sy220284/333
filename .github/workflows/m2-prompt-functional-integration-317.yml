@@ -1,21 +1,5 @@
 name: M2 2.1.317 提示词功能与调用链验收
 on:
-  push:
-    branches: [upgrade/2.1.310-m1-evidence]
-    paths:
-      - 'src/services/agentObserver/**'
-      - 'src/services/artifactComments/**'
-      - 'src/services/youShouldKnow/**'
-      - 'src/tools/AgentTool/loadAgentsDir.ts'
-      - 'src/query.ts'
-      - 'src/QueryEngine.ts'
-      - 'src/query/stopHooks.ts'
-      - 'src/state/AppStateStore.ts'
-      - 'src/commands.ts'
-      - 'src/commands/know.ts'
-      - 'src/services/mcp/useManageMCPConnections.ts'
-      - 'tests/m2-*317.test.ts'
-      - '.github/workflows/m2-prompt-functional-integration-317.yml'
   pull_request:
     branches: [main]
     paths:
