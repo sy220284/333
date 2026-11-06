@@ -12,7 +12,7 @@ const permitted = new Set([
   'hello','models.list','mcp.list','mcp.add','mcp.remove','mcp.toggle','sessions.open','sessions.resume','sessions.list','sessions.history',
   'sessions.close','sessions.status','sessions.send','sessions.interrupt','sessions.setModel',
   'sessions.setPermissionMode','host.list','host.respond','host.reject','permissions.list',
-  'permissions.decide','agents.overview','agents.setMode','missions.list','missions.get',
+  'permissions.decide','agents.overview','agents.members','agents.setMode','missions.list','missions.get',
   'missions.create','missions.select','missions.updateStatus','missions.checkpoint',
   'missions.jobs.list','missions.jobs.enqueue','missions.jobs.start','missions.jobs.runBatch',
   'missions.jobs.approve','missions.jobs.retry','missions.jobs.recover','missions.jobs.cancel',
