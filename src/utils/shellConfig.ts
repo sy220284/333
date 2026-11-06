@@ -1,15 +1,15 @@
 /**
  * Utilities for managing shell configuration files (like .bashrc, .zshrc)
- * Used for managing Qerivon aliases and PATH entries
+ * Used for managing 摇摇车 aliases and PATH entries
  */
 
 import { open, readFile, stat } from 'fs/promises'
 import { homedir as osHomedir } from 'os'
 import { join } from 'path'
 import { isFsInaccessible } from './errors.js'
-import { getLocalQerivonPath } from './localInstaller.js'
+import { getLocal摇摇车Path } from './localInstaller.js'
 
-export const QERIVON_ALIAS_REGEX = /^\s*alias\s+qerivon\s*=/
+export const YAOYAOCHE_ALIAS_REGEX = /^\s*alias\s+yaoyaoche\s*=/
 
 type EnvLike = Record<string, string | undefined>
 
@@ -37,32 +37,32 @@ export function getShellConfigPaths(
 }
 
 /**
- * Filter out installer-created Qerivon aliases from an array of lines
- * Only removes aliases pointing to $HOME/.qerivon/local/qerivon
+ * Filter out installer-created 摇摇车 aliases from an array of lines
+ * Only removes aliases pointing to $HOME/.yaoyaoche/local/yaoyaoche
  * Preserves custom user aliases that point to other locations
  * Returns the filtered lines and whether our default installer alias was found
  */
-export function filterQerivonAliases(lines: string[]): {
+export function filter摇摇车Aliases(lines: string[]): {
   filtered: string[]
   hadAlias: boolean
 } {
   let hadAlias = false
   const filtered = lines.filter(line => {
     // Check if this is a claude alias
-    if (QERIVON_ALIAS_REGEX.test(line)) {
+    if (YAOYAOCHE_ALIAS_REGEX.test(line)) {
       // Extract the alias target - handle spaces, quotes, and various formats
       // First try with quotes
-      let match = line.match(/alias\s+qerivon\s*=\s*["']([^"']+)["']/)
+      let match = line.match(/alias\s+yaoyaoche\s*=\s*["']([^"']+)["']/)
       if (!match) {
         // Try without quotes (capturing until end of line or comment)
-        match = line.match(/alias\s+qerivon\s*=\s*([^#\n]+)/)
+        match = line.match(/alias\s+yaoyaoche\s*=\s*([^#\n]+)/)
       }
 
       if (match && match[1]) {
         const target = match[1].trim()
         // Only remove if it points to the installer location
         // The installer always creates aliases with the full expanded path
-        if (target === getLocalQerivonPath()) {
+        if (target === getLocal摇摇车Path()) {
           hadAlias = true
           return false // Remove this line
         }
@@ -111,7 +111,7 @@ export async function writeFileLines(
  * Returns the alias target if found, null otherwise
  * @param options Optional overrides for testing (env, homedir)
  */
-export async function findQerivonAlias(
+export async function find摇摇车Alias(
   options?: ShellConfigOptions,
 ): Promise<string | null> {
   const configs = getShellConfigPaths(options)
@@ -121,9 +121,9 @@ export async function findQerivonAlias(
     if (!lines) continue
 
     for (const line of lines) {
-      if (QERIVON_ALIAS_REGEX.test(line)) {
+      if (YAOYAOCHE_ALIAS_REGEX.test(line)) {
         // Extract the alias target
-        const match = line.match(/alias\s+qerivon=["']?([^"'\s]+)/)
+        const match = line.match(/alias\s+yaoyaoche=["']?([^"'\s]+)/)
         if (match && match[1]) {
           return match[1]
         }
@@ -139,10 +139,10 @@ export async function findQerivonAlias(
  * Returns the alias target if valid, null otherwise
  * @param options Optional overrides for testing (env, homedir)
  */
-export async function findValidQerivonAlias(
+export async function findValid摇摇车Alias(
   options?: ShellConfigOptions,
 ): Promise<string | null> {
-  const aliasTarget = await findQerivonAlias(options)
+  const aliasTarget = await find摇摇车Alias(options)
   if (!aliasTarget) return null
 
   const home = options?.homedir ?? osHomedir()
