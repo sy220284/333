@@ -17,9 +17,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - name: 读取统一工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: '26'
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
       - name: 测试清单防漏检回归
         run: node --test tests/ci-test-discovery.test.mjs
       - name: 生成补充测试完整分片清单
@@ -32,12 +34,14 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: 读取统一工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: '26'
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.4.4'
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
       - name: 恢复冻结依赖
         run: |
           node build/restore-dependencies.mjs
@@ -64,12 +68,14 @@ jobs:
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
+      - name: 读取统一工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: '26'
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.4.4'
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
       - name: 安装测试依赖
         run: |
           node build/restore-dependencies.mjs
@@ -91,17 +97,19 @@ jobs:
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
+      - name: 读取统一工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: '26'
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.4.4'
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
       - name: 安装测试依赖与固定 AST 解析器
         run: |
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
-          npm install --prefix "${RUNNER_TEMP}/333-parser" --no-save --ignore-scripts --no-package-lock --no-audit --no-fund "typescript@5.9.3"
+          npm install --prefix "${RUNNER_TEMP}/333-parser" --no-save --ignore-scripts --no-package-lock --no-audit --no-fund "typescript@${TOOLCHAIN_AST_TYPESCRIPT_VERSION}"
           echo "TS_COMPILER_PATH=${RUNNER_TEMP}/333-parser/node_modules/typescript/lib/typescript.js" >> "${GITHUB_ENV}"
       - uses: actions/download-artifact@v4
         with:
