@@ -10,7 +10,7 @@ const releaseVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8
 if (!/^\d+\.\d+\.\d+$/.test(releaseVersion)) throw Error('Invalid release version in package.json');
 const dist = join(root, 'dist');
 if (!existsSync(join(dist, 'cli.js'))) throw Error('First build the CLI from src/ with bun build/rebuild.mjs');
-const nativeName = process.platform === 'win32' ? 'claude.exe' : 'claude';
+const nativeName = process.platform === 'win32' ? 'avenlo.exe' : 'avenlo';
 const executable = join(dist, nativeName);
 if (!existsSync(executable) || !statSync(executable).isFile() || !statSync(executable).size)
   throw Error('Missing native executable: run node build/compile-standalone.mjs before packaging');
@@ -112,12 +112,12 @@ try {
 packageOfficialEmbeddedAssets317(root, dist);
 copyFileSync(join(root,'SOURCE_NOTICES.md'),join(dist,'SOURCE_NOTICES.md'));
 const pkg = {
-  name: `333-agent-cli-${releaseVersion}-source-rebuild`,
+  name: `avenlo-agent-cli-${releaseVersion}-source-rebuild`,
   version: `${releaseVersion}-rebuild.1`,
   private: true,
-  description: `333 independent remote-model coding agent, compatible with release ${releaseVersion}`,
+  description: `Avenlo independent remote-model coding agent, compatible with release ${releaseVersion}`,
   type: 'module',
-  bin: { '333': './launcher.cjs', claude: './launcher.cjs' },
+  bin: { avenlo: './launcher.cjs' },
   engines: { node: '>=18' }
 };
 writeFileSync(join(dist,'package.json'), `${JSON.stringify(pkg,null,2)}\n`);
@@ -125,7 +125,7 @@ writeFileSync(join(dist,'package.json'), `${JSON.stringify(pkg,null,2)}\n`);
 // the exact artifact that ships (including SIGINT/SIGTERM propagation).
 copyFileSync(join(root, 'build/release-launcher.cjs'), join(dist, 'launcher.cjs'));
 if(process.platform!=='win32')chmodSync(join(dist,'launcher.cjs'),0o755);
-writeFileSync(join(dist,'README.md'), `# 333 ${releaseVersion} — Independently Rebuilt CLI
+writeFileSync(join(dist,'README.md'), `# Avenlo ${releaseVersion} — Independently Rebuilt CLI
 
 This directory contains a CLI compiled from the extracted \`src/\` code using Bun.
 The original \`cli.js\` in the repository root is NOT packaged or used as a fallback.
@@ -133,10 +133,10 @@ The original \`cli.js\` in the repository root is NOT packaged or used as a fall
 The packaged native executable embeds its own runtime. No global Bun installation
 is required. On Linux/macOS use:
 \`\`\`sh
-./claude --version
-./claude --help
+./avenlo --version
+./avenlo --help
 \`\`\`
-On Windows run \`claude.exe --version\`. With Node, the portable
+On Windows run \`avenlo.exe --version\`. With Node, the portable
 \`launcher.cjs\` forwards signals to the local compiled executable.
 
 The \`official-317/\` directory contains 101 SHA-verified original embedded resources,\nwith their relative skill-script paths preserved and a pinned manifest.\nThe \`vendor/\` directory contains the platform-specific native resources and

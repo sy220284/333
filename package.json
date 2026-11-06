@@ -1,16 +1,15 @@
 {
-  "name": "@333/agent-cli",
+  "name": "@avenlo/agent-cli",
   "version": "2.1.317",
   "bin": {
-    "333": "dist/launcher.cjs",
-    "claude": "dist/launcher.cjs"
+    "avenlo": "dist/launcher.cjs"
   },
   "engines": {
     "node": ">=22.15.0"
   },
   "type": "module",
-  "author": "333 contributors",
-  "description": "333 independent multi-model coding agent CLI",
+  "author": "Avenlo contributors",
+  "description": "Avenlo independent multi-model coding agent CLI",
   "homepage": "https://github.com/sy220284/333",
   "bugs": {
     "url": "https://github.com/sy220284/333/issues"

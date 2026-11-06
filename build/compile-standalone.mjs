@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path'
 const root = resolve(import.meta.dirname, '..')
 const dist = join(root, 'dist')
 const candidate = join(dist, 'cli.js')
-const nativeName = process.platform === 'win32' ? 'claude.exe' : 'claude'
+const nativeName = process.platform === 'win32' ? 'avenlo.exe' : 'avenlo'
 const executable = join(dist, nativeName)
 const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
 
@@ -15,7 +15,7 @@ if (!existsSync(candidate)) throw Error('Run bun build/rebuild.mjs before compil
 // Compile the actual JS emitted by the frozen source rebuild, not the old
 // checked-in root CLI or a downloaded official executable. This embeds Bun
 // and allows the distribution to run without a system Bun installation.
-const built = spawnSync('bun', ['build', 'dist/cli.js', '--compile', '--outfile', 'dist/claude'], {
+const built = spawnSync('bun', ['build', 'dist/cli.js', '--compile', '--outfile', 'dist/avenlo'], {
   cwd: root,
   stdio: 'inherit',
   windowsHide: true,
@@ -39,6 +39,6 @@ function verify(args, expected) {
   if (result.status !== 0) throw Error('Standalone CLI ' + args.join(' ') + ': ' + result.stderr)
   if (!expected(result.stdout)) throw Error('Standalone CLI response mismatch: ' + args.join(' ') + '\n' + result.stdout)
 }
-verify(['--version'], stdout => stdout.trim() === `${version} (333)`)
+verify(['--version'], stdout => stdout.trim() === `${version} (Avenlo)`)
 verify(['--help'], stdout => stdout.includes('Usage:') && stdout.includes('--print'))
 console.log('Verified independent ' + process.platform + ' binary: ' + executable)
