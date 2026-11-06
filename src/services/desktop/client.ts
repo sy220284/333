@@ -8,7 +8,7 @@ import type { DesktopTask } from './taskProjection.js'
 import type { AgentMission, AgentMissionStatus } from '../../utils/agentMissions.js'
 import type { MissionJob } from '../agentCenter/missionJobs.js'
 import type { AgentMode } from '../../utils/agentMode.js'
-import type { TeamSummary } from '../../utils/teamDiscovery.js'
+import type { TeamSummary, TeammateStatus } from '../../utils/teamDiscovery.js'
 import { DesktopRequestSchema, type DesktopEvent, type DesktopReply, type DesktopRequest } from './protocol.js'
 
 type Pending = { resolve: (value: unknown) => void; reject: (reason: Error) => void }
@@ -119,6 +119,8 @@ export function createDesktopClient(input: Readable, output: Writable) {
       missions: AgentMission[]; teams: TeamSummary[];
       activeSessions: number; activeTasks: number;
     }>({ method: 'agents.overview' }),
+    listTeamMembers: (teamName: string) =>
+      invoke<TeammateStatus[]>({ method: 'agents.members', teamName }),
     setAgentMode: (mode: AgentMode) =>
       invoke<{ mode: AgentMode }>({ method: 'agents.setMode', mode }),
     listMissions: () => invoke<{ selectedMissionId: string | null; missions: AgentMission[] }>({ method: 'missions.list' }),
