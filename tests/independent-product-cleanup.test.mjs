@@ -90,3 +90,39 @@ test('状态、规划、后台任务统一入口连接原运行时', () => {
   assert.doesNotMatch(plan, /advisor\.load\(\)/)
   assert.match(plan, /import\('\.\/plan\.js'\)/)
 })
+
+test('会话分析彻底本地化且不包含内部员工反馈和外部字体请求', () => {
+  const report = source('src/commands/insights.ts')
+  for (const removed of [
+    's3://anthropic-serve',
+    'atamkin/cc-user-reports',
+    'USER_TYPE === \'ant\'',
+    'cc_team_improvements',
+    'model_behavior_improvements',
+    'teamFeedbackHtml',
+    'fonts.googleapis.com',
+    'section-feedback',
+  ]) {
+    assert.equal(report.includes(removed), false, `会话报告仍有官方内部残留：${removed}`)
+  }
+  for (const retained of [
+    'generateHtmlReport(aggregated, insights)',
+    "join(getDataDir(), 'report.html')",
+    'mode: 0o600',
+    "args?.split(/\\s+/).includes('--model-analysis')",
+    '摇摇车使用分析',
+    '本地分析报告已保存',
+  ]) {
+    assert.ok(report.includes(retained), `会话报告丢失本地功能：${retained}`)
+  }
+})
+
+test('语音转写保持本地执行且音频文件临时写盘', () => {
+  const voice = source('src/services/voiceStreamSTT.ts')
+  assert.match(voice, /YAOYAOCHE_WHISPER_CLI/)
+  assert.match(voice, /YAOYAOCHE_WHISPER_MODEL/)
+  assert.match(voice, /execFileAsync\\(configured.executable/)
+  assert.match(voice, /mode: 0o600/)
+  assert.match(voice, /await rm\\(dir, \\{ recursive: true, force: true \\}\\)/)
+  assert.doesNotMatch(voice, /speech_to_text\\/voice_stream|wss:\\/\\/|fetch\\(/)
+})
