@@ -173,7 +173,7 @@ export function getConfiguredModelSnapshots(): ConfiguredModelSnapshot[] {
     const output = getModelMaxOutputTokens(option.value)
     return {
       model: option.value,
-      provider: option.value.split('/')[0]!,
+      provider: option.value.split('/')[0] as IndependentProvider,
       contextWindow: getContextWindowForModel(option.value),
       maxOutputTokens: profile?.maxOutputTokens ?? null,
       effectiveOutputCap: output.upperLimit,

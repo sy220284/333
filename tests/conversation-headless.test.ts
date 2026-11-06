@@ -19,7 +19,7 @@ test('headless message store publishes synchronous snapshots and supports unsubs
 })
 
 test('headless turn executes ordered events and final state without a renderer', async () => {
-  async function* execute(value: string) { yield value + ':1'; yield value + ':2'; return 99 }
+  async function* execute(value: string) { yield `${value}:1`; yield `${value}:2`; return 99 }
   const runtime = createConversationTurnRuntime(execute)
   const events: string[] = []
   const result = await runtime.run('task', event => events.push(event))
@@ -45,11 +45,12 @@ test('SDK permission broker requires an explicit decision and cleans up', async 
   const controller = new AbortController()
   const pending = broker.canUseTool('Bash', { command: 'pwd' }, { signal: controller.signal })
   const [item] = broker.getPending()
-  expect(item?.toolName).toBe('Bash')
-  expect(broker.settle(item!.id, { behavior: 'allow', updatedInput: { command: 'pwd' } })).toBe(true)
+  if (!item) throw new Error('Expected a pending permission request')
+  expect(item.toolName).toBe('Bash')
+  expect(broker.settle(item.id, { behavior: 'allow', updatedInput: { command: 'pwd' } })).toBe(true)
   expect((await pending).behavior).toBe('allow')
   expect(broker.getPending()).toEqual([])
-  expect(broker.settle(item!.id, { behavior: 'allow', updatedInput: {} })).toBe(false)
+  expect(broker.settle(item.id, { behavior: 'allow', updatedInput: {} })).toBe(false)
   broker.close()
 })
 
@@ -95,13 +96,14 @@ test('headless SDK session streams, synchronizes state and enforces permission d
   const session = createHeadlessConversationSession({ model: 'test' }, undefined, launch)
   expect(typeof canUseTool).toBe('function')
   await session.send('hello')
-  const events = []
+  const events: string[] = []
   for await (const item of session.stream()) events.push(item.type)
   expect(events).toEqual(['assistant', 'result'])
   expect(session.messages.getSnapshot().length).toBe(2)
   expect(session.state.getState().phase).toBe('completed')
   const decision = canUseTool('Bash', {}, { signal: new AbortController().signal })
   const [request] = session.permissions.getPending()
+  if (!request) throw new Error('Expected the SDK permission request')
   expect(request.toolName).toBe('Bash')
   session.permissions.settle(request.id, { behavior: 'deny', message: 'User declined' })
   expect((await decision as { behavior: string }).behavior).toBe('deny')
