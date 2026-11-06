@@ -72,7 +72,7 @@ export async function refreshProviderModels(provider: IndependentProvider): Prom
   }).map(item => ({ provider, id: item.id,
     ...(item.displayName ? { displayName: item.displayName } : {}),
     discoveredAt: at, ...(auth && { account: auth.account }) }))
-  await mergeDiscoveredModelProfiles(provider, details)
+  await mergeDiscoveredModelProfiles(provider, details, auth?.account)
   // Preserve all other providers while atomically replacing this provider.
   const root = getModelStorageRoot()
   const file = join(root, 'catalog.json')
