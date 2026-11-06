@@ -1,6 +1,6 @@
 import { lock } from '../../utils/lockfile.js'
 /**
- * Independent 333 Sign in with ChatGPT (open-source dynamic OAuth registration).
+ * Independent Avenlo Sign in with ChatGPT (open-source dynamic OAuth registration).
  * No Codex client impersonation; each installation registers a user-authorized
  * client with its stable agent host ID.
  */
@@ -25,7 +25,7 @@ const authHome = (): string => {
   const home = process.platform === 'win32'
     ? process.env.USERPROFILE ?? process.env.HOME
     : process.env.HOME
-  return join(home || homedir(), '.333', 'auth')
+  return join(home || homedir(), '.avenlo', 'auth')
 }
 const authPaths = {
   get dir(): string { return authHome() },
@@ -297,7 +297,7 @@ export async function getChatGPTAuthorization(
   const read = async () => {
     const entry = activeRegistration(await readAccounts())
     const credential = entry?.credential
-    if (!credential) throw new Error('ChatGPT not connected; run 333 auth chatgpt-login')
+    if (!credential) throw new Error('ChatGPT not connected; run avenlo auth chatgpt-login')
     if (!scopeGranted(credential.scope)) {
       throw new Error('ChatGPT plan usage is disabled. Reauthorize or use an API key.')
     }
@@ -404,7 +404,7 @@ export async function loginWithChatGPT(
             return
           }
           response.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' })
-          response.end('333 authorization received. You may return to the terminal.')
+          response.end('avenlo authorization received. You may return to the terminal.')
           complete(parsed.searchParams)
         })
       })
@@ -419,7 +419,7 @@ export async function loginWithChatGPT(
       scope: SCOPE, resource: RESOURCE, state, nonce,
       code_challenge_method: 'S256', code_challenge: challenge,
       ext_agent_host_id: hostId,
-      ...(registration || pending ? {} : { agent_name_hint: '333' }),
+      ...(registration || pending ? {} : { agent_name_hint: 'Avenlo' }),
       ...(existing?.id_token && registration ? { id_token_hint: existing.id_token } : {}),
       ...(registration?.email ? { login_hint: registration.email } : {}),
       // OpenAI OSS SIWC requires explicit consent when a previously signed-in

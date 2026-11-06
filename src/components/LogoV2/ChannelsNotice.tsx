@@ -135,7 +135,7 @@ export function ChannelsNotice() {
   }
   let t2;
   if ($[24] !== flag) {
-    t2 = <Text dimColor={true}>实验功能：收到的消息将进入当前会话，存在提示注入风险。若要关闭，请在不使用 {flag} 的情况下重启 Claude Code。</Text>;
+    t2 = <Text dimColor={true}>实验功能：收到的消息将进入当前会话，存在提示注入风险。若要关闭，请在不使用 {flag} 的情况下重启 Avenlo。</Text>;
     $[24] = flag;
     $[25] = t2;
   } else {

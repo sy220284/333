@@ -88,7 +88,7 @@ export function calculateOptimalLeftWidth(
     stringWidth(welcomeMessage),
     stringWidth(truncatedCwd),
     stringWidth(modelLine),
-    20, // Minimum for 333 brand mark
+    23, // Minimum for Avenlo brand mark
   )
   return Math.min(contentWidth + 4, MAX_LEFT_WIDTH) // +4 for padding
 }
@@ -250,7 +250,7 @@ export function getLogoDisplayData(): {
   const version = process.env.DEMO_VERSION ?? MACRO.VERSION
   const serverUrl = getDirectConnectServerUrl()
   const displayPath = process.env.DEMO_VERSION
-    ? '/project/333'
+    ? '/project/avenlo'
     : getDisplayPath(getCwd())
   const cwd = serverUrl
     ? `${displayPath} in ${serverUrl.replace(/^https?:\/\//, '')}`
