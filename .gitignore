@@ -1,3 +1,5 @@
 .rebuild/
 dist/
 node_modules/
+# Dependency installers may create node_modules as a symlink, not a directory.
+node_modules
