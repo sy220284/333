@@ -91,3 +91,12 @@ test('所有保留 push 入口的工作流限定到指定分支，PR 提交只�
     assert.match(lines.slice(index + 1, i).join('\n'), /^ {4}branches:/m, file)
   }
 })
+
+test('全量矩阵和六架构工作流自身修改在 Draft 阶段只做配置审查', () => {
+  const plan = routeChanges(['.github/workflows/ci-test-matrix.yml', '.github/workflows/latest-stable-six-host.yml'])
+  assert.equal(plan['ci-test-matrix'], false)
+  assert.equal(plan['latest-stable-six-host'], false)
+  const full = routeChanges([], true)
+  assert.equal(full['ci-test-matrix'], true)
+  assert.equal(full['latest-stable-six-host'], true)
+})

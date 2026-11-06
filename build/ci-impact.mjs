@@ -116,6 +116,14 @@ export const SPECIALISTS = Object.freeze({
 
 export const WORKFLOWS = Object.freeze(Object.keys(SPECIALISTS))
 
+const FULL_ONLY = new Set([
+  'ci-test-matrix',
+  'latest-stable-six-host',
+  'm1-317-official-reference',
+  'm1-evidence',
+  'm1-official-x64-installed-parity',
+])
+
 export function routeChanges(paths, full = false) {
   const result = Object.fromEntries(WORKFLOWS.map(key => [key, full || key === 'governance-audit']))
   if (full) return result
@@ -129,7 +137,7 @@ export function routeChanges(paths, full = false) {
     }
     // A workflow edit must validate the affected workflow itself.
     const workflow = /^\.github\/workflows\/([^/]+)\.yml$/.exec(path)?.[1]
-    if (workflow && Object.hasOwn(result, workflow)) result[workflow] = true
+    if (workflow && Object.hasOwn(result, workflow) && !FULL_ONLY.has(workflow)) result[workflow] = true
   }
   // Unknown production/test changes get the general cross-platform check.
   if (!matchedCode && paths.some(path => /^(src|tests|build)\//.test(path)))
