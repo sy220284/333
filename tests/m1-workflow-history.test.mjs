@@ -55,3 +55,29 @@ test('工作流中心按项目展示跨会话历史，并隔离其他项目', as
   await rm(other,{recursive:true,force:true})
  }
 })
+
+test('历史 Workflow 只从同项目已终止会话恢复，校验脚本来源',async()=>{
+ const {findWorkflowResumeSource} = await import('../src/tasks/LocalWorkflowTask/workflowHistory.mjs')
+ const {workflowSessionScripts,workflowRunDirectory} = await import('../src/tasks/LocalWorkflowTask/workflowStoragePaths.mjs')
+ const project=await mkdtemp(join(tmpdir(),'m1-workflow-resume-'))
+ const session='historical',run='wf_aaaaaaaa-aaa'
+ try{
+  const scripts=workflowSessionScripts(project,session)
+  const script=join(scripts,`example-${run}.js`)
+  await mkdir(scripts,{recursive:true})
+  await writeFile(script,'export const meta={name:"example"}')
+  await mkdir(workflowRunDirectory(project,session,run),{recursive:true})
+  await writeFile(join(workflowRunDirectory(project,session,run),'journal.jsonl'),'')
+  await writeWorkflowSummary(workflowSummaryPath(project,session,run),{
+   runId:run,sessionId:session,scriptPath:script,status:'completed'})
+  const found=await findWorkflowResumeSource(project,'new-session',run)
+  assert.equal(found.sessionId,session)
+  assert.equal(found.scriptPath,script)
+  await writeWorkflowSummary(workflowSummaryPath(project,session,run),{
+   runId:run,sessionId:session,scriptPath:script,status:'running'})
+  await assert.rejects(()=>findWorkflowResumeSource(project,'new-session',run),/请先停止原执行/)
+  await writeWorkflowSummary(workflowSummaryPath(project,session,run),{
+   runId:run,sessionId:session,scriptPath:'/tmp/outside.js',status:'completed'})
+  await assert.rejects(()=>findWorkflowResumeSource(project,'new-session',run),/脚本不属于其原会话/)
+ }finally{await rm(project,{recursive:true,force:true})}
+})

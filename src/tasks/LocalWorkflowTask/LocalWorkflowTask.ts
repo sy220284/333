@@ -11,6 +11,7 @@ import { executeWorkflowScript, validateWorkflowScript } from '../../tools/Workf
 import { registerCleanup } from '../../utils/cleanupRegistry.js'
 import { getProjectDir } from '../../utils/sessionStorage.js'
 import { workflowSessionScripts, workflowPaths } from './workflowStoragePaths.ts'
+import { findWorkflowResumeSource } from './workflowHistory.ts'
 import { readWorkflowSummary, createWorkflowSummaryRecorder, syncWorkflowScript } from './workflowSummaryStore.ts'
 import { enqueuePendingNotification } from '../../utils/messageQueueManager.js'
 import { registerTask, updateTaskState } from '../../utils/task/framework.js'
@@ -86,27 +87,46 @@ export async function launchWorkflow(
   const missionId = isSuperAgentMode() ? await requireActiveSelectedMission() : undefined
   const paths=workflowPaths(workflowProjectDir(),getSessionId(),runId,parsed.meta.name)
   const dir=paths.transcriptDir
-  await mkdir(dir,{recursive:true,mode:0o700})
   let scriptPath=paths.scriptPath
   const journal=paths.journal
   const setAppState=context.setAppStateForTasks??context.setAppState
   const cached=new Map<string,unknown>()
+  let resumedFromSessionId: string | undefined
   if(input.resumeFromRunId){
-    const existing=await readWorkflowSummary(paths.summaryPath) as {runId:string,sessionId:string,scriptPath:string}
-    if(existing.runId!==runId || existing.sessionId!==getSessionId()) throw new Error('Workflow resume belongs to another session')
-    if([...active.values()].some(job=>job.runId===runId)) throw new Error('Stop the prior workflow before resuming the run')
-    const scripts=workflowSessionScripts(workflowProjectDir(),getSessionId())+sep
-    if(!existing.scriptPath?.startsWith(scripts)||!existing.scriptPath.endsWith(`-${runId}.js`))
-      throw new Error('Stored workflow script path is invalid')
-    scriptPath=existing.scriptPath
-    const text=await readFile(journal,'utf8')
-    for(const line of text.split('\n')){
+    if([...active.values()].some(job=>job.runId===runId))
+      throw new Error('Stop the prior workflow before resuming the run')
+    let existing: Awaited<ReturnType<typeof readWorkflowSummary>> | undefined
+    try { existing=await readWorkflowSummary(paths.summaryPath) }
+    catch(error) {
+      if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error
+    }
+    let previousJournal: string
+    if(existing){
+      if(existing.runId!==runId || existing.sessionId!==getSessionId())
+        throw new Error('Workflow resume belongs to another session')
+      const scripts=workflowSessionScripts(workflowProjectDir(),getSessionId())+sep
+      if(!existing.scriptPath?.startsWith(scripts)||!existing.scriptPath.endsWith(`-${runId}.js`))
+        throw new Error('Stored workflow script path is invalid')
+      scriptPath=existing.scriptPath
+      previousJournal=await readFile(journal,'utf8')
+      await syncWorkflowScript(scriptPath,input.script)
+    }else {
+      const source=await findWorkflowResumeSource(workflowProjectDir(),getSessionId(),runId)
+      previousJournal=await readFile(source.journalPath,'utf8')
+      resumedFromSessionId=source.sessionId
+      // Save a new per-session execution without mutating the source journal.
+      await mkdir(dir,{recursive:true,mode:0o700})
+      await mkdir(dirname(scriptPath),{recursive:true,mode:0o700})
+      await writeFile(scriptPath,input.script,{flag:'wx',mode:0o600})
+      await writeFile(journal,previousJournal,{flag:'wx',mode:0o600})
+    }
+    for(const line of previousJournal.split('\n')){
       if(!line.trim())continue
       const record=JSON.parse(line) as {type:string,key?:string,result?:unknown}
       if(record.type==='agent_result'&&record.key)cached.set(record.key,record.result)
     }
-    await syncWorkflowScript(scriptPath,input.script)
   }else {
+    await mkdir(dir,{recursive:true,mode:0o700})
     await mkdir(dirname(scriptPath),{recursive:true,mode:0o700})
     await writeFile(scriptPath,input.script,{flag:'wx',mode:0o600})
     // Official 2.1.310 writes the authoritative run snapshot under
@@ -117,6 +137,7 @@ export async function launchWorkflow(
   let callCount=0
   const initialRecord:Record<string,unknown>={
     runId,sessionId:getSessionId(),timestamp:new Date(startedAt).toISOString(),
+    ...(resumedFromSessionId ? {resumedFromSessionId} : {}),
     taskId:id,script:input.script,scriptPath,result:null,agentCount:0,logs:[],
     durationMs:0,summary:parsed.meta.description,workflowName:parsed.meta.name,
     status:'running',startTime:startedAt,phases:parsed.meta.phases,

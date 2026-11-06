@@ -52,3 +52,13 @@ test('智能体中心按项目过滤长期任务，并显示全部执行类型',
   assert.match(center, /setAgentMode\('super'\)/)
   assert.match(read('src/utils/agentMissions.ts'), /if \(status === 'completed'\)/)
 })
+
+test('Workflow 恢复支持已结束的跨会话执行并保留原日志',()=>{
+  const history=read('src/tasks/LocalWorkflowTask/workflowHistory.ts')
+  const runtime=read('src/tasks/LocalWorkflowTask/LocalWorkflowTask.ts')
+  const entry=read('src/tools/WorkflowTool/WorkflowTool.ts')
+  assert.match(history,/findWorkflowResumeSource/)
+  assert.match(runtime,/resumedFromSessionId/)
+  assert.match(runtime,/writeFile\(journal,previousJournal,\{flag:'wx'/)
+  assert.match(entry,/findWorkflowResumeSource/)
+})

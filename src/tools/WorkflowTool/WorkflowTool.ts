@@ -6,6 +6,7 @@ import { getSessionProjectDir, getOriginalCwd } from '../../bootstrap/state.js'
 import { getProjectDir } from '../../utils/sessionStorage.js'
 import { workflowSessionScripts, workflowSummaryPath } from '../../tasks/LocalWorkflowTask/workflowStoragePaths.ts'
 import { readWorkflowSummary } from '../../tasks/LocalWorkflowTask/workflowSummaryStore.ts'
+import { findWorkflowResumeSource } from '../../tasks/LocalWorkflowTask/workflowHistory.ts'
 import { getSessionId } from '../../bootstrap/state.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { lazySchema } from '../../utils/lazySchema.js'
@@ -20,7 +21,7 @@ const inputSchema=lazySchema(()=>z.strictObject({
   title:z.string().optional().describe('Ignored — set the workflow title in the script\'s `meta` block.'),
   args:z.unknown().optional().describe('Optional input value exposed to the script as the global `args`, verbatim. Pass arrays/objects as actual JSON values, NOT as a JSON-encoded string — a stringified list breaks `args.filter`/`args.map` in the script. Use for parameterized named workflows (e.g. a research question).'),
   scriptPath:z.string().optional().describe('Path to a workflow script file on disk. Every Workflow invocation persists its script under the session directory and returns the path in the tool result. To iterate, edit that file with Write/Edit and re-invoke Workflow with the same `scriptPath` instead of re-sending the full script. Takes precedence over `script` and `name`.'),
-  resumeFromRunId:z.string().regex(/^wf_[a-z0-9-]{6,}$/).optional().describe('Run ID of a prior Workflow invocation to resume from. Completed agent() calls with unchanged (prompt, opts) return their cached results instantly; only edited or new calls re-run. Same-session only. Stop the prior run first (TaskStop) before resuming.'),
+  resumeFromRunId:z.string().regex(/^wf_[a-z0-9-]{6,}$/).optional().describe('Run ID of a prior Workflow invocation to resume from. Completed agent() calls with unchanged (prompt, opts) return their cached results instantly; only edited or new calls re-run. Previous session runs are also resumable after their recorded execution reaches a terminal state. Stop the prior run first (TaskStop) before resuming.'),
 }))
 type InputSchema=ReturnType<typeof inputSchema>
 const outputSchema=lazySchema(()=>z.object({
@@ -52,7 +53,15 @@ async function resolveScript(input:z.infer<InputSchema>) {
   if(input.resumeFromRunId && !input.name){
     if(!/^wf_[a-z0-9-]{6,}$/.test(input.resumeFromRunId))throw new Error('Invalid resumeFromRunId')
     const projectDir=getSessionProjectDir()??getProjectDir(getOriginalCwd())
-    const metadata=await readWorkflowSummary(workflowSummaryPath(projectDir,getSessionId(),input.resumeFromRunId))
+    let metadata: Awaited<ReturnType<typeof readWorkflowSummary>> | undefined
+    try { metadata=await readWorkflowSummary(workflowSummaryPath(projectDir,getSessionId(),input.resumeFromRunId)) }
+    catch(error) {
+      if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error
+    }
+    if(!metadata){
+      const previous=await findWorkflowResumeSource(projectDir,getSessionId(),input.resumeFromRunId)
+      return readFile(previous.scriptPath,'utf8')
+    }
     const scripts=workflowSessionScripts(projectDir,getSessionId())+sep
     if(metadata.sessionId!==getSessionId()||!metadata.scriptPath?.startsWith(scripts)||
       !metadata.scriptPath.endsWith(`-${input.resumeFromRunId}.js`))
