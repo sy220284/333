@@ -5,11 +5,11 @@
  */
 import { randomUUID } from 'node:crypto'
 import { promises as fs, readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { isRetiredIndependentProvider, isRemovedIndependentModel, resolveIndependentModel } from './registry.js'
+import { MODEL_STORAGE_ROOT } from './storage.js'
 
-const ROOT = join(homedir(), '.333', 'models')
+const ROOT = MODEL_STORAGE_ROOT
 const PATH = join(ROOT, 'profiles.json')
 
 export type IndependentModelProfile = {
