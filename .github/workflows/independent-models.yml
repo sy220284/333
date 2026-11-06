@@ -33,8 +33,29 @@ jobs:
         shell: pwsh
         run: git config --global core.longpaths true
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
-      - name: 模拟各服务商请求并验证完整工具调用
+      - uses: actions/cache/restore@v4
+        id: npm-cache
+        with:
+          path: |
+            ~/.npm
+            .rebuild/public
+          key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
+      - name: 恢复全量依赖与冻结的第三方包
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - uses: actions/cache/save@v4
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.npm
+            .rebuild/public
+          key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
+      - name: 模拟八个服务商的请求、缓存迁移与完整工具调用
         run: bun test tests/multimodel-provider.test.ts tests/independent-local-features.test.ts
