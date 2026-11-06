@@ -271,8 +271,10 @@ test('desktop close cancels a stalled SDK send without waiting for the backend p
   // the close/send ordering depends on microtask scheduling, making a
   // permanently pending mock appear to be a gateway shutdown deadlock.
   await entered
-  const expectsRejection = expect(sending).rejects.toThrow('Desktop session closed during send')
+  // Close first while the underlying SDK send is still blocked. The
+  // cancelled desktop send must settle once closing is complete.
   const closing = gateway.handle(request('sessions.close', { sessionId: opened.sessionId }))
-  await Promise.all([expectsRejection, closing])
+  await closing
+  await expect(sending).rejects.toThrow('Desktop session closed during send')
   await gateway.close()
 })
