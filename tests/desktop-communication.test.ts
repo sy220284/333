@@ -25,7 +25,7 @@ async function until(ready: () => boolean) {
 function request(method: DesktopRequest['method'], data: Record<string, unknown> = {}): DesktopRequest {
   return DesktopRequestSchema.parse({ id: randomUUID(), method, ...data })
 }
-function fixture() {
+function fixture(options: { beforeSend?: () => Promise<void> } = {}) {
   let lastToolCallback: CanUseTool | undefined
   let lastControl: Record<string, unknown> | undefined
   const transcriptIds = new Set<string>()
@@ -60,7 +60,10 @@ function fixture() {
         models: [{ value: 'fixture-model', displayName: 'Fixture Model', description: 'Local SDK fixture' }],
         agents: [{ name: 'Explore', description: 'Finds files' }],
       }),
-      async send(input: string) { content = input },
+      async send(input: string) {
+        if (options.beforeSend) await options.beforeSend()
+        content = input
+      },
       async *stream() {
         const base = { session_id: sessionId, uuid: randomUUID() }
         const started = { type: 'system', subtype: 'task_started',
@@ -208,4 +211,46 @@ test('SDK task projector preserves terminal status and recovery journal persists
     } as SDKMessage, task)
     expect(done?.status).toBe('completed')
   } finally { await rm(cwd, { recursive: true, force: true }) }
+})
+
+test('desktop serializes concurrent turns even while the first SDK send is pending', async () => {
+  let permit!: () => void
+  const sending = new Promise<void>(resolve => { permit = resolve })
+  const data = fixture({ beforeSend: () => sending })
+  const gateway = createDesktopGateway(data.options)
+  const events: DesktopEvent[] = []
+  gateway.subscribe(event => events.push(event))
+  try {
+    const opened = await gateway.handle(request('sessions.open')) as { sessionId: string }
+    const first = gateway.handle(request('sessions.send', {
+      sessionId: opened.sessionId, message: 'first',
+    }))
+    await expect(gateway.handle(request('sessions.send', {
+      sessionId: opened.sessionId, message: 'second',
+    }))).rejects.toThrow('A turn is already being consumed')
+    permit()
+    await first
+    await until(() => events.some(event => event.event === 'task.updated' && event.task.status === 'completed'))
+    await gateway.handle(request('sessions.close', { sessionId: opened.sessionId }))
+  } finally {
+    permit()
+    await gateway.close()
+  }
+})
+
+test('closing a desktop session while SDK send is pending rejects the delayed turn', async () => {
+  let permit!: () => void
+  const sending = new Promise<void>(resolve => { permit = resolve })
+  const data = fixture({ beforeSend: () => sending })
+  const gateway = createDesktopGateway(data.options)
+  const opened = await gateway.handle(request('sessions.open')) as { sessionId: string }
+  const first = gateway.handle(request('sessions.send', {
+    sessionId: opened.sessionId, message: 'pending',
+  }))
+  // Register the expected rejection before allowing the close to complete.
+  const failedSend = expect(first).rejects.toThrow('Desktop session closed during send')
+  const closing = gateway.handle(request('sessions.close', { sessionId: opened.sessionId }))
+  permit()
+  await Promise.all([failedSend, closing])
+  await gateway.close()
 })

@@ -22,6 +22,8 @@ type Entry = {
   seenPermissions: Set<string>
   unsubscribe: Array<() => void>
   consuming?: Promise<void>
+  sending?: Promise<void>
+  closing?: boolean
 }
 export type DesktopGatewayOptions = {
   cwd?: string
@@ -150,9 +152,21 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
 
   async function send(sessionId: string, message: Parameters<Headless['send']>[0]) {
     const entry = requireSession(sessionId)
-    if (entry.consuming) throw new Error('A turn is already being consumed')
-    await entry.runtime.send(message)
+    if (entry.closing || entry.consuming || entry.sending)
+      throw new Error('A turn is already being consumed or the session is closing')
+    // Reserve the session before the first await: concurrent desktop callers
+    // must never enqueue two turns into a single SDK stream simultaneously.
+    let finishSend!: () => void
+    entry.sending = new Promise<void>(resolve => { finishSend = resolve })
     const turnId = randomUUID()
+    try {
+      await entry.runtime.send(message)
+      if (entry.closing || closed) throw new Error('Desktop session closed during send')
+    } catch (error) {
+      entry.sending = undefined
+      finishSend()
+      throw error
+    }
     const pump = async () => {
       try {
         for await (const sdkMessage of entry.runtime.stream()) {
@@ -179,6 +193,8 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       }
     }
     entry.consuming = pump()
+    entry.sending = undefined
+    finishSend()
     return { sessionId, turnId }
   }
 
@@ -269,8 +285,11 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
   async function closeSessionInternal(id: string) {
     const entry = sessions.get(id)
     if (!entry) return
+    if (entry.closing) throw new Error('Desktop session is already closing: ' + id)
+    entry.closing = true
     try {
       await entry.runtime.closeAndWait()
+      if (entry.sending) await entry.sending
       if (entry.consuming) await entry.consuming
       const stale = [...entry.tasks.values()].map(task => task.status === 'running'
         ? { ...task, status: 'interrupted' as const } : task)
