@@ -56,10 +56,12 @@ export function projectTask(
       updatedAt: now,
       ...(previous?.taskType && { taskType: previous.taskType }),
       ...(previous?.workflowName && { workflowName: previous.workflowName }),
-      ...(message.tool_use_id && { toolUseId: message.tool_use_id }),
+      ...((message.tool_use_id ?? previous?.toolUseId) && {
+        toolUseId: message.tool_use_id ?? previous?.toolUseId,
+      }),
       ...(message.summary && { summary: message.summary }),
       ...(message.output_file && { outputFile: message.output_file }),
-      ...(message.usage && { usage: message.usage }),
+      ...((message.usage ?? previous?.usage) && { usage: message.usage ?? previous?.usage }),
     }
   }
   return undefined

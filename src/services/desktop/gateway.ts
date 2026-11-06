@@ -127,7 +127,14 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       emit({ event: 'session.state', sessionId: id, state: runtime.state.getState() })
       return { sessionId: id, resumed: !!resume, ...info, tasks }
     } catch (error) {
-      if (runtime) await runtime.closeAndWait()
+      if (runtime) {
+        const active = sessions.get(runtime.sessionId)
+        if (active?.runtime === runtime) {
+          for (const stop of active.unsubscribe) stop()
+          sessions.delete(runtime.sessionId)
+        }
+        await runtime.closeAndWait()
+      }
       throw error
     } finally {
       if (resume) opening.delete(resume)
@@ -189,17 +196,8 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
   }
 
   async function closeSession(sessionId: string) {
-    const entry = requireSession(sessionId)
-    try {
-      await entry.runtime.closeAndWait()
-      if (entry.consuming) await entry.consuming
-    } finally {
-      for (const stop of entry.unsubscribe) stop()
-      sessions.delete(sessionId)
-    }
-    const stale = [...entry.tasks.values()].map(task =>
-      task.status === 'running' ? { ...task, status: 'interrupted' as const } : task)
-    if (stale.length) await journal.write(sessionId, stale)
+    requireSession(sessionId)
+    await closeSessionInternal(sessionId)
     return { sessionId, closed: true }
   }
 
