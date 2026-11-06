@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto'
 import {
   PROVIDERS, type IndependentProvider,
   getIndependentApiKey, resolveIndependentModel, discoverIndependentModelDetails,
+  isRetiredIndependentProvider,
 } from './registry.js'
 import { getChatGPTAccessToken } from '../../auth/chatgptOAuth.js'
 import { getCatalogModelsForProvider } from '../../../utils/model/modelCatalog.js'
@@ -33,12 +34,16 @@ export function readSavedModelCatalog(): SavedCatalog {
   }
   const data = JSON.parse(text) as SavedCatalog
   if (data.schema !== 1 || !Array.isArray(data.models)) throw new Error('Invalid local model catalog format')
+  const activeModels: ModelEntry[] = []
   for (const model of data.models) {
-    if (!resolveIndependentModel(`${model.provider}/${model.id}`) || !model.discoveredAt) {
+    // Older 333 installations may have cached providers no longer enabled.
+    if (isRetiredIndependentProvider(model?.provider)) continue
+    if (!model || !resolveIndependentModel(`${model.provider}/${model.id}`) || !model.discoveredAt) {
       throw new Error('Invalid entry in local model catalog')
     }
+    activeModels.push(model)
   }
-  return data
+  return { schema: 1, models: activeModels }
 }
 export function getSavedModelOptions(): Array<{ value: string; label: string; description: string }> {
   return readSavedModelCatalog().models.map(model => ({
