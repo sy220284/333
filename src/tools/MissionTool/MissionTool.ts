@@ -48,7 +48,7 @@ async function execute(input: Input): Promise<string> {
   if (input.action === 'jobs') {
     const jobs = await listMissionJobs(id, getCwd())
     return jobs.length
-      ? jobs.map(job => `${job.id} [${job.status}] ${job.title}（第 ${job.attempt} 次执行）`).join('\\n')
+      ? jobs.map(job => `${job.id} [${job.status}] ${job.title}（第 ${job.attempt} 次执行）`).join('\n')
       : '本长期任务尚无执行工作项'
   }
   if (input.action === 'queue') {
