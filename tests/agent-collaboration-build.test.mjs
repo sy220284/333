@@ -95,3 +95,13 @@ test('自愿启用的持续任务唤醒具备完整构建入口与可中断 Slee
   assert.match(hook, /cancelled = true; clearTimeout\(timer\)/)
   assert.match(sleep, /signal.addEventListener\('abort', cancel/)
 })
+
+test('主动模式的构建入口、命令与 SleepTool 输出协议闭合',()=>{
+  const cmd=read('src/commands/proactive.ts')
+  assert.match(cmd,/name: 'proactive'/)
+  assert.match(cmd,/requireActiveSelectedMission\(\)/)
+  assert.match(cmd,/deactivateProactive\(\)/)
+  const sleep=read('src/tools/SleepTool/SleepTool.ts')
+  assert.match(sleep,/mapToolResultToToolResultBlockParam/)
+  assert.match(read('src/utils/teamDiscovery.ts'),/team\?\.members\.some/)
+})

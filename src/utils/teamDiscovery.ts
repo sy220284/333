@@ -99,7 +99,7 @@ export async function listProjectTeams(projectDir: string): Promise<TeamSummary[
   for (const entry of entries) {
     if (!entry.isDirectory() || !/^[a-z0-9-]+$/.test(entry.name)) continue
     const team = readTeamFile(entry.name)
-    if (!team || !team.members.some(member =>
+    if (!team?.members.some(member =>
       member.name === TEAM_LEAD_NAME && resolve(member.cwd) === target)) continue
     const members = team.members.filter(member => member.name !== TEAM_LEAD_NAME)
     summaries.push({

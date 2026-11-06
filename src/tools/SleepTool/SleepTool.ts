@@ -30,6 +30,10 @@ export const SleepTool = buildTool({
   isConcurrencySafe() { return true },
   renderToolUseMessage(input) { return `休眠 ${input.duration_ms} 毫秒` },
   async validateInput() { return { result: true as const } },
+  mapToolResultToToolResultBlockParam(data, toolUseID) {
+    return { type: 'tool_result' as const, tool_use_id: toolUseID,
+      content: `Waited ${data.duration_ms}ms; ${data.result}` }
+  },
   async call({ duration_ms }, { abortController }) {
     const signal = abortController.signal
     await new Promise<void>((resolve, reject) => {
