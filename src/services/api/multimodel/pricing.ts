@@ -3,7 +3,7 @@ import { promises as fs, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import { resolveIndependentModel } from './registry.js'
+import { isRemovedIndependentModel, resolveIndependentModel } from './registry.js'
 const ROOT = join(homedir(), '.333', 'models')
 const FILE = join(ROOT, 'pricing.json')
 export type Price = { input: number; output: number; cacheRead?: number; cacheWrite?: number }
@@ -22,10 +22,13 @@ export function readIndependentPricing(): Record<string, Price> {
   }
   const prices=JSON.parse(json) as Record<string, Price>
   if (!prices || typeof prices !== 'object' || Array.isArray(prices)) throw new Error('Invalid provider pricing store')
+  const active: Record<string, Price> = {}
   for (const [name, price] of Object.entries(prices)) {
+    if (isRemovedIndependentModel(name)) continue
     if (!resolveIndependentModel(name) || !valid(price)) throw new Error(`Invalid provider pricing record: ${name}`)
+    active[name] = price
   }
-  return prices
+  return active
 }
 export async function configureIndependentPricing(model: string, price: Price): Promise<void> {
   if (!resolveIndependentModel(model) || !valid(price)) throw new Error('Model pricing requires qualified model ID and valid nonnegative USD rates')
