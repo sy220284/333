@@ -8,6 +8,8 @@ const source = path => readFileSync(new URL(path, root), 'utf8')
 test('桌面安全网关完整放行工作项队列与人工审核方法', () => {
   const main = source('electron/main.ts')
   const protocol = source('../src/services/desktop/protocol.ts')
+  assert.ok(main.includes("'agents.members'"), '桌面IPC缺少真实团队成员查询')
+  assert.ok(protocol.includes("request('agents.members'"), '协议缺少团队成员查询')
   for (const action of [
     'list', 'enqueue', 'start', 'runBatch', 'approve', 'retry', 'recover', 'cancel',
   ]) {
@@ -27,6 +29,7 @@ test('桌面长期任务工作台提供真实执行入口与安全状态动作',
   assert.match(app, /missions\.jobs\.recover/)
   assert.match(app, /sessions\.interrupt/)
   assert.match(app, /selectedMissionRef\.current/)
+  assert.match(app, /agents\.members/)
   assert.match(app, /window\.confirm/)
   assert.doesNotMatch(app, /job\.status==='running'&&<button onClick=\{\(\)=>void jobAction\('missions\.jobs\.cancel'/)
 })
