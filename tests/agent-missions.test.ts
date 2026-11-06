@@ -35,6 +35,30 @@ test('任务簿持久化任务目标、关联 Agent 与执行结果', async () =
   }
 })
 
+test('重复任务更新保留版本号，只有可核实的进展会触发新版本', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yaoyaoche-mission-idempotency-'))
+  try {
+    const mission = await createMission('连续推进直到完成', '/project/idempotency', root)
+    const first = await saveMissionCheckpoint(mission.id, '阶段一已核实', root)
+    const repeatCheckpoint = await saveMissionCheckpoint(mission.id, '  阶段一已核实  ', root)
+    assert.equal(repeatCheckpoint.revision, first.revision)
+    assert.equal(repeatCheckpoint.updatedAt, first.updatedAt)
+    const repeatStatus = await updateMissionStatus(mission.id, 'active', root)
+    assert.equal(repeatStatus.revision, first.revision)
+    const assigned = await linkMissionAssignment(mission.id, 'agent:once', 'agent', '实际开发', root)
+    const duplicated = await linkMissionAssignment(mission.id, 'agent:once', 'agent', '实际开发', root)
+    assert.equal(duplicated.revision, assigned.revision)
+    const finished = await finishMissionAssignment(mission.id, 'agent:once', 'completed', root)
+    const repeatedFinished = await finishMissionAssignment(mission.id, 'agent:once', 'completed', root)
+    assert.equal(repeatedFinished.revision, finished.revision)
+    const progressed = await saveMissionCheckpoint(mission.id, '阶段二测试通过', root)
+    assert.equal(progressed.revision, finished.revision + 1)
+    assert.equal((await getMission(mission.id, root)).revision, progressed.revision)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('任务簿拒绝路径穿越、空目标和非法状态写入', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yaoyaoche-mission-safe-'))
   try {
