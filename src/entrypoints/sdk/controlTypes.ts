@@ -32,6 +32,7 @@ export type SDKControlApplyFlagSettingsRequest = z.infer<ReturnType<typeof schem
 export type SDKControlGetSettingsRequest = z.infer<ReturnType<typeof schemas.SDKControlGetSettingsRequestSchema>>
 export type SDKControlGetSettingsResponse = z.infer<ReturnType<typeof schemas.SDKControlGetSettingsResponseSchema>>
 export type SDKControlElicitationRequest = z.infer<ReturnType<typeof schemas.SDKControlElicitationRequestSchema>>
+export type SDKHostControlRequest = z.infer<ReturnType<typeof schemas.SDKHostControlRequestSchema>> | SDKControlElicitationRequest
 export type SDKControlElicitationResponse = z.infer<ReturnType<typeof schemas.SDKControlElicitationResponseSchema>>
 export type SDKControlEndSessionRequest = z.infer<ReturnType<typeof schemas.SDKControlEndSessionRequestSchema>>
 export type SDKControlChannelEnableRequest = z.infer<ReturnType<typeof schemas.SDKControlChannelEnableRequestSchema>>
