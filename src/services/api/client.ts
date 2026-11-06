@@ -418,6 +418,11 @@ function buildFetch(
   return (input, init) => {
     // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
     const headers = native317RequestHeaders(input, init)
+    // The Anthropic SDK adds optional platform/runtime fingerprint headers.
+    // Keep model authentication and beta negotiation, but omit SDK diagnostics.
+    for (const name of headers.keys()) {
+      if (name.toLowerCase().startsWith('x-stainless-')) headers.delete(name)
+    }
     const request = getAPIProvider() === 'firstParty'
       ? native317MessagesRequest(input, { ...init, headers }, native317Auth)
       : { input, init: { ...init, headers } }
