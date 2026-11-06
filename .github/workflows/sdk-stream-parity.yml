@@ -1,38 +1,12 @@
 name: SDK 流事件源码与原版对照
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - '.github/workflows/sdk-stream-parity.yml'
-      - 'src/cli/transports/ccrClient.ts'
-      - 'src/cli/transports/streamAccumulator.ts'
-      - 'src/entrypoints/sdk/coreSchemas.ts'
-      - 'src/entrypoints/sdk/streamEventMapper.ts'
-      - 'src/entrypoints/sdk/thinkingMessageMetadata.ts'
-      - 'src/entrypoints/mcp.ts'
-      - 'src/entrypoints/mcpInputValidation.ts'
-      - 'src/services/mcp/validateSdkTransportMessage.ts'
-      - 'src/services/api/claude.ts'
-      - 'src/services/api/thinkingDisplay.ts'
-      - 'src/remote/sdkMessageAdapter.ts'
-      - 'src/types/message.ts'
-      - 'src/utils/queryHelpers.ts'
-      - 'src/QueryEngine.ts'
-      - 'tests/m1-ccr-close.test.ts'
-      - 'tests/m1-mcp-argument-validation.test.ts'
-      - 'tests/m1-sdk-mcp-message-validation.test.ts'
-      - 'tests/m1-sdk-stream-*.test.mjs'
-      - 'tests/m1-thinking-display.test.mjs'
-      - 'tests/m1-sdk-thinking-metadata.test.mjs'
-      - 'tests/m1-sdk-thinking-schema.test.ts'
-      - 'tests/sdk-stream-*.test.ts'
-      - 'build/m1-sdk-*.mjs'
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: sdk-stream-${{ github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: false
+  group: main-ci-sdk-stream-parity-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   sdk-stream-parity:

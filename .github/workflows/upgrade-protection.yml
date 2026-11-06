@@ -1,7 +1,6 @@
 name: PR13 升级成果保护与 MCP v2 联合验收
 on:
-  pull_request:
-    branches: [main]
+  workflow_call:
   push:
     branches: [main]
   workflow_dispatch:
@@ -10,8 +9,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: pr13-upgrade-protection-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: main-ci-upgrade-protection-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   baseline:

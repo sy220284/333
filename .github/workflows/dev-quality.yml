@@ -13,25 +13,14 @@ on:
       - 'tsconfig.json'
       - 'biome.json'
       - '.github/workflows/dev-quality.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'tools/dev/**'
-      - 'src/**'
-      - 'native/**'
-      - 'tests/**'
-      - 'package.json'
-      - 'tsconfig.json'
-      - 'biome.json'
-      - '.github/workflows/dev-quality.yml'
-
+  workflow_call:
 permissions:
   contents: read
 
 concurrency:
   # Preserve all three OS results for every source revision.
-  group: dev-quality-${{ github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: false
+  group: main-ci-dev-quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   quality:

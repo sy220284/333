@@ -12,24 +12,14 @@ on:
       - 'tests/**'
       - '.github/codeql/**'
       - '.github/workflows/codeql.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - 'native/**'
-      - 'build/**'
-      - 'tools/dev/**'
-      - 'tests/**'
-      - '.github/codeql/**'
-      - '.github/workflows/codeql.yml'
-
+  workflow_call:
 permissions:
   actions: read
   contents: read
   security-events: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: main-ci-codeql-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

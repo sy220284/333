@@ -8,14 +8,6 @@ on:
       - 'docs/upgrade/latest-stable-dependencies.json'
       - 'tools/dev/**'
       - '.github/workflows/latest-stable-upgrade.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'package.json'
-      - 'build/public-dependencies.lock.json'
-      - 'docs/upgrade/latest-stable-dependencies.json'
-      - 'tools/dev/**'
-      - '.github/workflows/latest-stable-upgrade.yml'
   workflow_dispatch:
     inputs:
       perform_upgrade:

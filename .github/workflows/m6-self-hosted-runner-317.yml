@@ -23,26 +23,14 @@ on:
       - 'src/entrypoints/cli.tsx'
       - 'tests/m6-self-hosted-runner-*'
       - '.github/workflows/m6-self-hosted-runner-317.yml'
-  pull_request:
-    types: [opened, synchronize, reopened]
-    paths:
-      - 'src/cli/selfHostedRunner/**'
-      - 'src/bridge/sessionRunner.ts'
-      - 'src/cli/background/**'
-      - 'src/bootstrap/socketOwnership317.ts'
-      - 'src/bootstrap/ptyHost317.ts'
-      - 'src/bootstrap/bgSpare317.ts'
-      - 'tests/m1-background-pty-*.test.ts'
-      - 'tests/m1-background-lifecycle.test.mjs'
-      - 'tests/m6-self-hosted-runner-*'
-      - '.github/workflows/m6-self-hosted-runner-317.yml'
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: m6-runner-317-${{ github.sha }}
+  group: main-ci-m6-self-hosted-runner-317-${{ github.event.pull_request.number || github.ref }}
   # Each source revision retains a full reproducible Runner acceptance result.
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   runner-core:
     runs-on: ubuntu-24.04

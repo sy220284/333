@@ -29,59 +29,15 @@ on:
       - 'tests/test_m1_retry_phase_glyphs.py'
       - 'docs/upgrade/m1-evidence/2.1.317-366项功能链路分组矩阵.json'
       - '.github/workflows/m1-317-official-reference.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - '.github/workflows/m1-317-official-reference.yml'
-      - 'docs/upgrade/m1-evidence/target-release.json'
-      - 'tests/m1-target-release-317.test.mjs'
-      - 'tests/m1-read-repeat-317.test.mjs'
-      - 'tests/m1-subagent-effort-317.test.mjs'
-      - 'build/m1-cli-surface-audit.mjs'
-      - 'tests/m1-plugin-data-size-parity.test.mjs'
-      - 'tests/m1-marketplace-add-json-317.test.mjs'
-      - 'tests/m1-plugin-configure-317.test.mjs'
-      - 'src/utils/plugins/pluginCliConfig.ts'
-      - 'build/m1-cli-help-options.mjs'
-      - 'tests/m1-cli-help-options.test.mjs'
-      - 'tools/upgrade/audit-final-release-skills.py'
-      - 'tests/test_final_release_skills_audit.py'
-      - 'tests/m1-x64-conversation-ui-scenarios.py'
-      - 'src/components/Spinner/**'
-      - 'src/components/LogoV2/**'
-      - 'src/skills/bundled/**'
-      - 'src/utils/permissions/yolo-classifier-prompts/**'
-      - 'src/utils/ultraplan/prompt.txt'
-      - 'build/standalone-bundled-assets-*.json'
-      - 'build/verify-bundled-assets.mjs'
-      - 'build/restore-claude-api.mjs'
-      - 'build/claude-api-2.1.317-manifest.json'
-      - 'tests/m1-claude-api-manifest-317.test.mjs'
-      - 'tests/m1-standalone-assets-317.test.mjs'
-      - 'tests/m1-plugin-install-migration-317.test.mjs'
-      - 'src/utils/plugins/installedPluginsManager.ts'
-      - 'src/utils/plugins/installedPluginsMigration.mjs'
-      - 'tests/claude-api-version-parity.test.mjs'
-      - 'tests/claude-api-skill.test.mjs'
-      - 'src/skills/bundledFiles.mjs'
-      - 'src/skills/bundledSkills.ts'
-      - 'tests/bundled-skill-extraction.test.mjs'
-      - 'build/install-public-deps.mjs'
-      - 'build/public-dependencies.lock.json'
-      - 'tests/m1-prometheus-security-317.test.mjs'
-      - 'tests/fixtures/m1-prometheus-server-child.mjs'
-      - 'src/main.tsx'
-      - 'src/cli/handlers/**'
-      - 'src/tools/FileReadTool/**'
-      - 'src/tools/AgentTool/**'
+  workflow_call:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: m1-317-reference-${{ github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: false
+  group: main-ci-m1-317-official-reference-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   official-x64-reference:

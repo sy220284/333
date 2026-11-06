@@ -1,17 +1,12 @@
 name: 333 新版本类型源码补全可行性核查
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'tools/governance/upstream-map-probe.mjs'
-      - '.github/workflows/governance-upstream-probe.yml'
-
+  workflow_call:
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: main-ci-governance-upstream-probe-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

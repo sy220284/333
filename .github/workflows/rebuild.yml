@@ -2,15 +2,14 @@ name: 源码独立重建验证
 on:
   push:
     branches: [main, rebuild/bun-from-src, upgrade/2.1.310-m1-evidence]
-  pull_request:
-    branches: [main]
+  workflow_call:
   workflow_dispatch:
 concurrency:
   # On the active M1 upgrade branch, preserve the running three-platform
   # rebuild and coalesce pending revisions; otherwise rapid commits prevent
   # any complete same-SHA acceptance. Other branches keep normal cancellation.
-  group: rebuild-${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
-  cancel-in-progress: ${{ github.ref_name != 'upgrade/2.1.310-m1-evidence' }}
+  group: main-ci-rebuild-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   typecheck-contract:

@@ -1,20 +1,7 @@
 name: M1 官方 2.1.317 Linux x64 安装后真实行为对照
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - '.github/workflows/m1-official-x64-installed-parity.yml'
-      - 'build/m1-x64-reference-probe.mjs'
-      - 'build/m1-import-release-parity.mjs'
-      - 'build/m1-cli-surface-audit.mjs'
-      - 'build/m1-plugin-enable-json-parity.mjs'
-      - 'tests/m1-plugin-data-size-parity.test.mjs'
-      - 'tests/m1-317-oracle-identity.test.mjs'
-      - 'tests/m1-x64-local-api.py'
-      - 'tests/m1_x64_stream_events_test.py'
-      - 'src/**'
-      - 'build/rebuild.mjs'
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -23,8 +10,8 @@ permissions:
 concurrency:
   # Every source revision must finish its own reference parity run. Concurrent
   # PR pushes previously cancelled fully-built CLI tests before acceptance.
-  group: official-x64-installed-${{ github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: false
+  group: main-ci-m1-official-x64-installed-parity-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   installed-reference:

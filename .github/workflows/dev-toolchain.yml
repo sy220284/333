@@ -10,21 +10,13 @@ on:
       - 'build/install-public-deps.mjs'
       - 'build/public-dependencies.lock.json'
       - 'build/restore-dependencies.mjs'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'tools/dev/**'
-      - '.github/workflows/dev-toolchain.yml'
-      - 'build/install-public-deps.mjs'
-      - 'build/public-dependencies.lock.json'
-      - 'build/restore-dependencies.mjs'
-
+  workflow_call:
 permissions:
   contents: read
 
 concurrency:
-  group: 333-dev-toolchain-${{ github.ref }}
-  cancel-in-progress: true
+  group: main-ci-dev-toolchain-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   package:

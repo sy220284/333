@@ -16,17 +16,14 @@ on:
       - 'src/services/mcp/useManageMCPConnections.ts'
       - 'tests/m2-*317.test.ts'
       - '.github/workflows/m2-prompt-functional-integration-317.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'src/services/agentObserver/**'
-      - 'src/services/artifactComments/**'
-      - 'src/services/youShouldKnow/**'
-      - 'tests/m2-*317.test.ts'
-      - '.github/workflows/m2-prompt-functional-integration-317.yml'
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: main-ci-m2-prompt-functional-integration-317-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   prompt-integration:
     runs-on: ubuntu-24.04

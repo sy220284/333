@@ -1,17 +1,14 @@
 name: 333 2.1.310 SDK 类型升级候选差分
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - '.github/workflows/m1-sdk-type-candidate.yml'
+  workflow_call:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: sdk-type-candidate-${{ github.sha }}
-  cancel-in-progress: false
+  group: main-ci-m1-sdk-type-candidate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   compare:

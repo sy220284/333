@@ -1,6 +1,7 @@
 name: 简体中文界面专项验收
 on:
   push:
+    branches: [main]
     paths:
       - 'src/components/**'
       - 'src/commands/**'
@@ -15,18 +16,11 @@ on:
       - 'tools/dev/**'
       - 'tests/chinese-source-integrity.test.mjs'
       - '.github/workflows/chinese-only-ui.yml'
-  pull_request:
-    paths:
-      - 'src/components/**'
-      - 'src/commands/**'
-      - 'src/hooks/**'
-      - 'src/services/mcp/**'
-      - 'src/constants/prompts.ts'
-      - 'src/utils/settings/settings.ts'
-      - 'src/utils/intl.ts'
-      - 'src/utils/formatBriefTimestamp.ts'
-      - 'tests/chinese-only-ui.test.mjs'
-      - 'tools/localization/**'
+  workflow_call:
+concurrency:
+  group: main-ci-chinese-only-ui-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check:
     name: 中文界面回归测试
