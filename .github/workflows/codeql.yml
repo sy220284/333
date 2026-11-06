@@ -30,8 +30,8 @@ permissions:
   checks: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
 
 jobs:
   codeql:
@@ -48,6 +48,39 @@ jobs:
       - uses: github/codeql-action/analyze@v4
         with:
           category: /language:javascript-typescript
+      - name: 读取 SARIF 并输出实际发现的文件与行号
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const candidates = [
+            path.resolve('..', 'results', 'javascript.sarif'),
+            path.resolve('results', 'javascript.sarif'),
+          ];
+          const source = candidates.find(file => fs.existsSync(file));
+          if (!source) throw new Error('未找到 CodeQL SARIF 结果文件');
+          const data = JSON.parse(fs.readFileSync(source, 'utf8'));
+          const issues = data.runs.flatMap(run => (run.results || []).map(item => {
+            const location = item.locations?.[0]?.physicalLocation;
+            return {
+              rule: item.ruleId,
+              severity: item.level,
+              file: location?.artifactLocation?.uri,
+              line: location?.region?.startLine,
+              message: item.message?.text,
+            };
+          }));
+          console.log(JSON.stringify({ total: issues.length, items: issues.slice(0, 300) }, null, 2));
+          fs.copyFileSync(source, path.join(process.env.RUNNER_TEMP, '333-codeql.sarif'));
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: codeql-sarif
+          path: ${{ runner.temp }}/333-codeql.sarif
+          if-no-files-found: warn
       - name: 记录 PR CodeQL 告警规则和精确位置
         if: github.event_name == 'pull_request'
         env:
