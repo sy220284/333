@@ -69,10 +69,10 @@ describe('可选本地语音转写', () => {
         onError: error => errors.push(error),
         onClose: () => { closed++ },
       })
-      expect(connection).not.toBeNull()
-      connection!.send(Buffer.from([0, 0, 1, 0]))
-      expect(await connection!.finalize()).toBe('post_closestream_endpoint')
-      connection!.close()
+      if (!connection) throw new Error('本地语音连接未建立')
+      connection.send(Buffer.from([0, 0, 1, 0]))
+      expect(await connection.finalize()).toBe('post_closestream_endpoint')
+      connection.close()
       expect(received).toEqual(['local transcript'])
       expect(errors).toEqual([])
       expect(closed).toBe(1)
@@ -106,10 +106,10 @@ describe('可选本地语音转写', () => {
         onError: error => { throw new Error(`unexpected voice error: ${error}`) },
         onClose: () => { closed++ },
       })
-      expect(connection).not.toBeNull()
-      connection!.send(Buffer.from([0, 0, 1, 0]))
-      const processing = connection!.finalize()
-      connection!.close()
+      if (!connection) throw new Error('本地语音连接未建立')
+      connection.send(Buffer.from([0, 0, 1, 0]))
+      const processing = connection.finalize()
+      connection.close()
       expect(await processing).toBe('ws_already_closed')
       expect(received).toEqual([])
       expect(closed).toBe(1)
