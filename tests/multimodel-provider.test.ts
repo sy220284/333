@@ -320,3 +320,22 @@ test('Responses encrypted reasoning replays only on the same connection and mode
     })(request(history))
   }
 })
+
+test('MiniMax M3.1 Flash preserves reasoning and requests terminal usage during tool turns', () => {
+  const signature = '333-replay:current'
+  const request: AnthropicRequest = { ...body, messages: [
+    { role: 'assistant', content: [
+      { type: 'thinking', thinking: 'matching', signature },
+      { type: 'thinking', thinking: 'foreign', signature: '333-replay:other' },
+      { type: 'tool_use', id: 'call_42', name: 'Read', input: {} },
+    ] },
+    { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'call_42', content: 'fixture' }] },
+  ] }
+  const payload = toChatCompletions(request, 'MiniMax-M3.1-Flash', 'minimax', signature)
+  assert.equal(payload.messages[1].reasoning_content, 'matching')
+  assert.equal(payload.messages[2].tool_call_id, 'call_42')
+  assert.equal(payload.reasoning_split, true)
+  assert.equal(payload.stream_options.include_usage, true)
+  assert.equal(payload.max_completion_tokens, body.max_tokens)
+  assert.equal(payload.max_tokens, undefined)
+})

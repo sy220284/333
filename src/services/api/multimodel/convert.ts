@@ -161,7 +161,7 @@ export function toChatCompletions(body: AnthropicRequest, model: string, provide
         content: ordinary.length === 0 ? null : ordinary.length === 1 && ordinary[0].type === 'text'
           ? ordinary[0].text : ordinary,
         ...(calls.length ? { tool_calls: calls } : {}),
-        ...(reasoningContent && (provider === 'deepseek' || provider === 'qwen' || provider === 'kimi')
+        ...(reasoningContent && (provider === 'deepseek' || provider === 'qwen' || provider === 'kimi' || provider === 'minimax')
           ? { reasoning_content: reasoningContent } : {}),
       })
     }
@@ -220,7 +220,13 @@ export function toChatCompletions(body: AnthropicRequest, model: string, provide
     }
     // M3.1 exposes reasoning_effort in Chat Completions; other revisions
     // must negotiate their exact capabilities with the provider.
-    if (effort && /^MiniMax-M3\.1(?:-|$)/i.test(model)) result.reasoning_effort = effort
+    if (/^MiniMax-M3\.1(?:-|$)/i.test(model)) {
+      result.reasoning_split = true
+      result.max_completion_tokens = body.max_tokens
+      delete result.max_tokens
+      if (effort) result.reasoning_effort = effort
+      if (body.stream) result.stream_options = { include_usage: true }
+    }
     if (thinking === 'enabled' || thinking === 'adaptive') result.thinking = { type: 'adaptive' }
     if (thinking === 'disabled') result.thinking = { type: 'disabled' }
   } else if (provider === 'kimi') {
