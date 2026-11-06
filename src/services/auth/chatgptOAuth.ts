@@ -16,14 +16,20 @@ const TOKEN_ENDPOINT = `${AUTHORITY}/api/accounts/oauth/token`
 const AUTHORIZE_ENDPOINT = `${AUTHORITY}/api/accounts/authorize`
 const RESOURCE = 'https://api.openai.com/v1'
 const SCOPE = 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct'
-const DIR = join(homedir(), '.333', 'auth')
-const FILE = join(DIR, 'chatgpt.json')
-const HOST_FILE = join(DIR, 'host.json')
-const ACCOUNT_FILE = join(DIR, 'chatgpt-registration.json')
-const ACCOUNTS_FILE = join(DIR, 'chatgpt-accounts.json')
-const TOKENS_DIR = join(DIR, 'chatgpt-tokens')
-const CREDENTIAL_LOCK_FILE = join(DIR, 'chatgpt-credentials.lock-target')
-const PENDING_FILE = join(DIR, 'chatgpt-pending-registration.json')
+// Resolve the home at the operation boundary rather than at module import.
+// This keeps independently started/tested sessions in their own credential
+// directory even if the module was previously loaded under another HOME.
+const authHome = (): string => join(homedir(), '.333', 'auth')
+const authPaths = {
+  get dir(): string { return authHome() },
+  get legacyFile(): string { return join(authHome(), 'chatgpt.json') },
+  get hostFile(): string { return join(authHome(), 'host.json') },
+  get registrationFile(): string { return join(authHome(), 'chatgpt-registration.json') },
+  get accountsFile(): string { return join(authHome(), 'chatgpt-accounts.json') },
+  get tokensDir(): string { return join(authHome(), 'chatgpt-tokens') },
+  get credentialLockFile(): string { return join(authHome(), 'chatgpt-credentials.lock-target') },
+  get pendingFile(): string { return join(authHome(), 'chatgpt-pending-registration.json') },
+}
 type Credential = {
   client_id: string
   ext_agent_host_id: string
@@ -72,10 +78,10 @@ function validateAccountStore(value: AccountStore): AccountStore {
 function credentialFile(entry: Pick<Registration, 'client_id' | 'subject' | 'workspace_id'>): string {
   // The filename is derived only from stable registration identity, never a token.
   const key = createHash('sha256').update(registrationIdentity(entry)).digest('hex')
-  return join(TOKENS_DIR, `${key}.json`)
+  return join(authPaths.tokensDir, `${key}.json`)
 }
 async function readAccounts(): Promise<AccountStore> {
-  const stored = await readJSON<AccountStore>(ACCOUNTS_FILE)
+  const stored = await readJSON<AccountStore>(authPaths.accountsFile)
   if (stored) {
     validateAccountStore(stored)
     const accounts = await Promise.all(stored.accounts.map(async entry => {
@@ -86,8 +92,8 @@ async function readAccounts(): Promise<AccountStore> {
     return validateAccountStore({ ...stored, accounts })
   }
   // Import the original single-account credential without discarding it.
-  const legacy = await readJSON<Credential>(FILE)
-  const oldRegistration = await readJSON<Registration>(ACCOUNT_FILE)
+  const legacy = await readJSON<Credential>(authPaths.legacyFile)
+  const oldRegistration = await readJSON<Registration>(authPaths.registrationFile)
   const entry = legacy ? { client_id: legacy.client_id, subject: legacy.subject,
     ...(legacy.email ? { email: legacy.email } : {}),
     ...(legacy.workspace_id ? { workspace_id: legacy.workspace_id } : {}),
@@ -104,13 +110,13 @@ async function saveAccounts(value: AccountStore): Promise<void> {
     if (entry.credential) await writePrivate(credentialFile(entry), entry.credential)
     else await fs.rm(credentialFile(entry), { force: true })
   }
-  await writePrivate(ACCOUNTS_FILE, {
+  await writePrivate(authPaths.accountsFile, {
     schema: 2, active: value.active,
     accounts: value.accounts.map(({ credential: _credential, ...entry }) => entry),
   })
   // The new atomic index takes precedence; discard duplicate legacy tokens.
-  await fs.rm(FILE, { force: true })
-  await fs.rm(ACCOUNT_FILE, { force: true })
+  await fs.rm(authPaths.legacyFile, { force: true })
+  await fs.rm(authPaths.registrationFile, { force: true })
 }
 function activeRegistration(value: AccountStore): Registration | undefined {
   return value.accounts.find(entry => registrationIdentity(entry) === value.active)
@@ -158,10 +164,10 @@ async function writePrivate(file: string, data: unknown): Promise<void> {
   }
 }
 async function getHostId(): Promise<string> {
-  const existing = await readJSON<{ host_id: string }>(HOST_FILE)
+  const existing = await readJSON<{ host_id: string }>(authPaths.hostFile)
   if (existing?.host_id?.startsWith('urn:uuid:')) return existing.host_id
   const id = `urn:uuid:${randomUUID()}`
-  await writePrivate(HOST_FILE, { host_id: id })
+  await writePrivate(authPaths.hostFile, { host_id: id })
   return id
 }
 async function validateIDToken(token: string, clientId: string, nonce: string): Promise<{ subject: string; email?: string; workspaceId?: string }> {
@@ -251,13 +257,13 @@ async function refreshCredentials(current: Credential): Promise<Credential> {
   return updated
 }
 async function withCredentialLock<T>(operation: () => Promise<T>): Promise<T> {
-  await fs.mkdir(DIR, { recursive: true, mode: 0o700 })
+  await fs.mkdir(authPaths.dir, { recursive: true, mode: 0o700 })
   // proper-lockfile stats its target before creating the adjacent .lock dir.
   // New installations have no legacy chatgpt.json, so lock a dedicated,
   // persistent owner-only sentinel instead of the (removed) legacy file.
-  const target = await fs.open(CREDENTIAL_LOCK_FILE, 'a', 0o600)
+  const target = await fs.open(authPaths.credentialLockFile, 'a', 0o600)
   try { await target.chmod(0o600) } finally { await target.close() }
-  const unlock = await lock(CREDENTIAL_LOCK_FILE, { realpath: false, stale: 120_000,
+  const unlock = await lock(authPaths.credentialLockFile, { realpath: false, stale: 120_000,
     retries: { retries: 25, minTimeout: 100, maxTimeout: 1_000 } })
   try { return await operation() } finally { await unlock() }
 }
@@ -349,7 +355,7 @@ export async function loginWithChatGPT(
   const hostId = await getHostId()
   const initialStore = await readAccounts()
   const pending = options.resumePending
-    ? await readJSON<PendingRegistration>(PENDING_FILE) : null
+    ? await readJSON<PendingRegistration>(authPaths.pendingFile) : null
   if (options.resumePending && (!pending || pending.ext_agent_host_id !== hostId ||
       pending.client_id === 'dynamic_agent_client' || !pending.client_id ||
       Date.now() - pending.created_at > 86_400_000 || pending.created_at > Date.now())) {
@@ -428,7 +434,7 @@ export async function loginWithChatGPT(
     // If that one-time code is invalid or the exchange is interrupted, the
     // user can resume with a fresh PKCE challenge and the issued client ID.
     if (!registration && !pending) {
-      await writePrivate(PENDING_FILE, {
+      await writePrivate(authPaths.pendingFile, {
         client_id: issuedId, ext_agent_host_id: hostId, created_at: Date.now(),
       } satisfies PendingRegistration)
     }
@@ -487,8 +493,8 @@ export async function loginWithChatGPT(
       // credentials until the ID token and grant have been verified.
       store.active = registrationIdentity(updated)
       await saveAccounts(store)
-      const awaiting = await readJSON<PendingRegistration>(PENDING_FILE)
-      if (awaiting?.client_id === issuedId) await fs.rm(PENDING_FILE, { force: true })
+      const awaiting = await readJSON<PendingRegistration>(authPaths.pendingFile)
+      if (awaiting?.client_id === issuedId) await fs.rm(authPaths.pendingFile, { force: true })
     })
     return { subject: identity.subject, email: identity.email,
       clientId: issuedId, planEnabled: scopeGranted(tokens.scope) }
@@ -506,7 +512,7 @@ export function getSavedChatGPTAccount(): string | undefined {
       throw error
     }
   }
-  const saved = readSync<AccountStore>(ACCOUNTS_FILE)
+  const saved = readSync<AccountStore>(authPaths.accountsFile)
   if (saved) {
     validateAccountStore(saved)
     const active = activeRegistration(saved)
@@ -519,7 +525,7 @@ export function getSavedChatGPTAccount(): string | undefined {
     return credential?.access_token && credential.refresh_token &&
       scopeGranted(credential.scope) ? accountIdentity(credential) : undefined
   }
-  const legacy = readSync<Credential>(FILE)
+  const legacy = readSync<Credential>(authPaths.legacyFile)
   return legacy?.access_token && legacy.refresh_token && scopeGranted(legacy.scope)
     ? accountIdentity(legacy) : undefined
 }
