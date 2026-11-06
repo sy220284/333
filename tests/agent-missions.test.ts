@@ -3,6 +3,7 @@ import { test } from 'node:test'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { enqueueMissionJob, cancelMissionJob } from '../src/services/agentCenter/missionJobs.ts'
 import {
   createMission, getMission, listMissions, linkMissionAssignment,
   finishMissionAssignment, updateMissionStatus, saveMissionCheckpoint, formatMission,
@@ -112,6 +113,25 @@ test('长期任务执行入口校验本项目状态，终态不可被并发结�
     await assert.rejects(() => requireActiveSelectedMission(project, root), /请先执行 \/agents mission resume/)
   } finally {
     selectMission(before, project)
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('进程崩溃导致的未关联工作项同样阻止长期任务误完成', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'mission-orphan-'))
+  try {
+    const project = '/project/crash-window'
+    const mission = await createMission('跨文件持久化一致性', project, root)
+    // Simulate a host exiting after the queue is written but before the
+    // matching Mission assignment can be linked.
+    const orphan = await enqueueMissionJob(mission.id, project, '孤立任务', '待补充写入关联', root)
+    await assert.rejects(
+      () => updateMissionStatus(mission.id, 'completed', root),
+      /执行工作项尚未完成或审核/,
+    )
+    await cancelMissionJob(mission.id, project, orphan.id, root)
+    assert.equal((await updateMissionStatus(mission.id, 'completed', root)).status, 'completed')
+  } finally {
     await rm(root, { recursive: true, force: true })
   }
 })
