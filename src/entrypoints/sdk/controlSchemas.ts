@@ -112,10 +112,10 @@ export const SDKControlPermissionRequestSchema = lazySchema(() =>
       input: z.record(z.string(), z.unknown()),
       permission_suggestions: z.array(PermissionUpdateSchema()).optional(),
       blocked_path: z.string().optional(),
-      mcp_server: z.string().optional(),
+      mcp_server: z.object({ name: z.string(), source: z.string() }).optional(),
       decision_reason: z.string().optional(),
-      decision_type: z.string().optional(),
-      decision_code: z.string().optional(),
+      decision_reason_type: z.string().optional(),
+      decision_reason_code: z.string().optional(),
       server_policy_ask_only: z.boolean().optional(),
       title: z.string().optional(),
       display_name: z.string().optional(),
@@ -124,10 +124,13 @@ export const SDKControlPermissionRequestSchema = lazySchema(() =>
       suppress_always_allow_rule: z.boolean().optional(),
       tool_use_id: z.string(),
       agent_id: z.string().optional(),
-      plugin: z.record(z.string(), z.unknown()).optional(),
+      plugin: z.string().optional(),
       requires_user_interaction: z.boolean().optional(),
-      computer_folder: z.string().optional(),
-      matched_ask_rule: z.record(z.string(), z.unknown()).optional(),
+      server_prompt: z.string().optional(),
+      computer_folder: z.object({ path: z.string(), computer_name: z.string() }).optional(),
+      matched_ask_rule: z.object({
+        source: z.string(), tool_name: z.string(), rule_content: z.unknown().optional(),
+      }).optional(),
     })
     .describe('Requests permission to use a tool with the given input.'),
 )
@@ -540,6 +543,9 @@ export const SDKControlElicitationRequestSchema = lazySchema(() =>
       url: z.string().optional(),
       elicitation_id: z.string().optional(),
       requested_schema: z.record(z.string(), z.unknown()).optional(),
+      title: z.string().optional(),
+      display_name: z.string().optional(),
+      description: z.string().optional(),
     })
     .describe(
       'Requests the SDK consumer to handle an MCP elicitation (user input request).',
