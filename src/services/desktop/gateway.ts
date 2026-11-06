@@ -491,6 +491,24 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           throw error
         }
       }
+      case 'missions.jobs.runBatch': {
+        const mission = await getScopedMission(request.missionId)
+        if (mission.status !== 'active') throw new Error('当前长期任务已暂停或完成')
+        const jobs = (await listMissionJobs(mission.id, cwd, options.missionRoot))
+          .filter(job => job.status === 'queued')
+          .slice(0, request.limit ?? 3)
+        if (!jobs.length) return { launched: [], remaining: 0 }
+        const outcomes = await Promise.allSettled(jobs.map(job =>
+          handle({ id: randomUUID(), method: 'missions.jobs.start', missionId: mission.id, jobId: job.id }),
+        ))
+        return {
+          launched: outcomes.map((outcome, index) => outcome.status === 'fulfilled'
+            ? { jobId: jobs[index]!.id, ok: true, result: outcome.value }
+            : { jobId: jobs[index]!.id, ok: false, error: String(outcome.reason) }),
+          remaining: (await listMissionJobs(mission.id, cwd, options.missionRoot))
+            .filter(job => job.status === 'queued').length,
+        }
+      }
       case 'missions.jobs.approve': {
         const mission = await getScopedMission(request.missionId)
         const job = await approveMissionJob(mission.id, cwd, request.jobId, options.missionRoot)
