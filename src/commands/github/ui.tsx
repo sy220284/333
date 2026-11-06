@@ -5,6 +5,7 @@ import { Box, Text } from '../../ink.js'
 import { Dialog } from '../../components/design-system/Dialog.js'
 import { Select } from '../../components/CustomSelect/select.js'
 import TextInput from '../../components/TextInput.js'
+import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import type { LocalJSXCommandCall, LocalJSXCommandOnDone } from '../../types/command.js'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
 import { call as runGithubCommand, setupRepository } from './github.js'
@@ -16,6 +17,9 @@ import { validRepository } from './repository.js'
 type Stage = 'overview' | 'repos' | 'workflow' | 'models' | 'provider' | 'model-name' | 'api-key' | 'confirm' | 'finished'
 type Repository = { nameWithOwner: string; isPrivate?: boolean }
 function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode {
+  const terminal = useTerminalSize()
+  const [nameCursor, setNameCursor] = useState(0)
+  const [keyCursor, setKeyCursor] = useState(0)
   const [stage, setStage] = useState<Stage>('overview')
   const [busy, setBusy] = useState(true)
   const [status, setStatus] = useState('正在检查 GitHub CLI 和授权…')
@@ -195,6 +199,7 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
       {!busy && stage === 'model-name' && <Box flexDirection="column" gap={1}>
         <Text>请输入 {provider} 在 API 中使用的准确模型 ID：</Text>
         <TextInput value={newModel} onChange={setNewModel} focus={true}
+          columns={Math.max(24,terminal.columns-12)} cursorOffset={nameCursor} onChangeCursorOffset={setNameCursor}
           onSubmit={value=>{
             if (!/^[A-Za-z0-9_./:-]{1,180}$/.test(value)) {
               setStatus('模型 ID 格式无效，请输入服务商的真实模型 ID。')
@@ -207,6 +212,7 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
       {!busy && stage === 'api-key' && <Box flexDirection="column" gap={1}>
         <Text>请输入 {provider}/{newModel} 的 API Key，回显已隐藏：</Text>
         <TextInput value={apiKey} onChange={setApiKey} focus={true} mask="*"
+          columns={Math.max(24,terminal.columns-12)} cursorOffset={keyCursor} onChangeCursorOffset={setKeyCursor}
           onSubmit={value=>{
             if(value.length<5 || value.length>8192 || value.trim()!==value) {
               setStatus('API Key 格式无效，请检查粘贴内容。')
