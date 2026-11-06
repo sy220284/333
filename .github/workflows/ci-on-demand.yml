@@ -91,6 +91,7 @@ jobs:
       contents: read
       actions: read
       security-events: write
+      checks: read
     uses: ./.github/workflows/codeql.yml
 
   desktop-communication:
