@@ -70,6 +70,10 @@ function startSession(
   resume?: string,
   external?: ExternalSession,
 ) {
+  const abortSignal = options.abortController?.signal
+  if (abortSignal?.aborted) {
+    throw abortSignal.reason instanceof Error ? abortSignal.reason : new Error('SDK session aborted before start')
+  }
   const path = options.pathToClaudeCodeExecutable ??
     fileURLToPath(new URL('../../../dist/launcher.cjs', import.meta.url))
   const interpreter = options.executable ??
@@ -222,6 +226,23 @@ function startSession(
             signal: controller.signal,
             suggestions: request.permission_suggestions,
             toolUseID: request.tool_use_id,
+            requestId: request_id,
+            blockedPath: request.blocked_path,
+            mcpServer: request.mcp_server,
+            decisionReason: request.decision_reason,
+            decisionType: request.decision_type,
+            decisionCode: request.decision_code,
+            serverPolicyAskOnly: request.server_policy_ask_only,
+            title: request.title,
+            displayName: request.display_name,
+            description: request.description,
+            defaultToNo: request.default_to_no,
+            suppressAlwaysAllowRule: request.suppress_always_allow_rule,
+            agentID: request.agent_id,
+            plugin: request.plugin,
+            requiresUserInteraction: request.requires_user_interaction,
+            computerFolder: request.computer_folder,
+            matchedAskRule: request.matched_ask_rule,
           })
         } else if (request.subtype === 'mcp_message') {
           const server = sdkServers.get(request.server_name)
@@ -267,6 +288,7 @@ function startSession(
   function close(): void {
     if (closed) return
     closed = true
+    abortSignal?.removeEventListener('abort', abortSession)
     for (const controller of permissions.values()) controller.abort()
     permissions.clear()
     const closeOps = [...sdkServers.values()].map(server => server.transport.close())
@@ -328,6 +350,12 @@ function startSession(
     failure ??= error instanceof Error ? error : new Error(String(error))
     close()
   }
+
+  function abortSession(): void {
+    fail(abortSignal?.reason instanceof Error ? abortSignal.reason : new Error('SDK session aborted'))
+  }
+  abortSignal?.addEventListener('abort', abortSession, { once: true })
+  if (abortSignal?.aborted) abortSession()
 
   void pump().catch(fail)
   const initialization = Promise.all([...sdkServers.values()].map(server => server.connect())).then(() => control({
