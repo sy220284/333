@@ -138,6 +138,12 @@ export function createDesktopClient(input: Readable, output: Writable) {
       invoke<MissionJob>({ method: 'missions.jobs.enqueue', missionId, title, instruction }),
     startMissionJob: (missionId: string, jobId: string) =>
       invoke<{ sessionId: string; turnId: string; job: MissionJob }>({ method: 'missions.jobs.start', missionId, jobId }),
+    runMissionQueue: (missionId: string) =>
+      invoke<{ active: boolean; missionId: string }>({ method: 'missions.jobs.runQueue', missionId }),
+    haltMissionQueue: (missionId: string) =>
+      invoke<{ active: boolean; missionId: string }>({ method: 'missions.jobs.haltQueue', missionId }),
+    missionQueueStatus: (missionId: string) =>
+      invoke<{ active: boolean }>({ method: 'missions.jobs.queueStatus', missionId }),
     runMissionBatch: (missionId: string, limit?: number) =>
       invoke<{ launched: Array<{ jobId: string; ok: boolean; result?: unknown; error?: string }>; remaining: number }>({
         method: 'missions.jobs.runBatch', missionId, ...(limit !== undefined && { limit }),
