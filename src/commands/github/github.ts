@@ -16,7 +16,7 @@ async function gh(args: string[], input?: string): Promise<string> {
   const res = await execFileNoThrow('gh', args, {
     timeout:60000, input, preserveOutputOnError:true, useCwd:true,
   })
-  if (res.code !== 0) throw new Error('GitHub 操作失败：' + (res.stderr || res.error || '请检查 gh 授权与权限').slice(0,1000))
+  if (res.code !== 0) throw new Error(`GitHub 操作失败：${(res.stderr || res.error || '请检查 gh 授权与权限').slice(0,1000)}`)
   return res.stdout.trim()
 }
 async function checkAuth(): Promise<void> {
@@ -105,7 +105,7 @@ export async function dispatchExtremeReview(rawRepo: string, rawPr: string, mode
   const pr = validPr(rawPr)
   if (!['normal','deep','security','extreme'].includes(mode)) throw new Error('审查模式无效')
   await checkAuth()
-  await gh(['workflow','run','333-review.yml','--repo',repo,'-f','pr_number='+pr,'-f','mode='+mode])
+  await gh(['workflow','run','333-review.yml','--repo',repo,'-f',`pr_number=${pr}`,'-f',`mode=${mode}`])
   return '已提交审查任务至 GitHub Actions。完成后在 PR #' + pr +
     ' 查看评论及 Artifact： https://github.com/' + repo + '/actions/workflows/333-review.yml'
 }
@@ -119,11 +119,11 @@ export const call: LocalCommandCall = async (args) => {
       await checkAuth()
       const auth = '已通过 GitHub CLI OAuth 授权检查'
       const current = await execFileNoThrow('gh',['repo','view','--json','nameWithOwner','--jq','.nameWithOwner'],{timeout:10000,useCwd:true})
-      return result(auth + '\n当前仓库：' + (current.code===0 ? current.stdout.trim() : '未识别'))
+      return result(`${auth}\n当前仓库：${current.code===0 ? current.stdout.trim() : '未识别'}`)
     }
     if (action === 'repos') {
       await checkAuth()
-      return result('可访问的仓库：\n' + await gh(['repo','list','--limit','100','--json','nameWithOwner','--jq','.[].nameWithOwner']))
+      return result(`可访问的仓库：\n${await gh(['repo','list','--limit','100','--json','nameWithOwner','--jq','.[].nameWithOwner'])}`)
     }
     if (action === 'setup' && tokens.length<=3) {
       await checkAuth()
@@ -138,7 +138,7 @@ export const call: LocalCommandCall = async (args) => {
       }
       const selection = tokens[2] || 'both'
       if (!['review','respond','both'].includes(selection)) throw new Error('请选择 review、respond 或 both')
-      return result('GitHub 配置结果：' + await setupRepository(selectedRepo, selection as GithubWorkflowSelection))
+      return result(`GitHub 配置结果：${await setupRepository(selectedRepo, selection as GithubWorkflowSelection)}`)
     }
     if (action === 'secret' && tokens.length===3) {
       const repo = validRepository(tokens[1])
@@ -160,9 +160,9 @@ export const call: LocalCommandCall = async (args) => {
         return result(await gh(['run','view',id,'--repo',repo,'--json','databaseId,displayTitle,status,conclusion,url','--jq','.']))
       }
       if (action === 'cancel') {
-        return result('已请求取消：'+ await gh(['run','cancel',id,'--repo',repo]))
+        return result(`已请求取消：${await gh(['run','cancel',id,'--repo',repo])}`)
       }
-      return result('已请求重新执行：'+ await gh(['run','rerun',id,'--repo',repo]))
+      return result(`已请求重新执行：${await gh(['run','rerun',id,'--repo',repo])}`)
     }
     if (action === 'runs' && tokens.length===2) {
       await checkAuth()
@@ -170,6 +170,6 @@ export const call: LocalCommandCall = async (args) => {
     }
     return result(HELP)
   } catch (error) {
-    return result('GitHub 操作失败：' + (error instanceof Error ? error.message : String(error)))
+    return result(`GitHub 操作失败：${error instanceof Error ? error.message : String(error)}`)
   }
 }

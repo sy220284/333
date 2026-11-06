@@ -178,7 +178,7 @@ test('大型 PR 极深审查按全部差异分块，不丢失文件', async () =
   const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor
   const run = new AsyncFunction('readFileSync','writeFileSync','execFileSync',
     'process','fetch','setTimeout','clearTimeout','Buffer','URL','AbortController',runner)
-  const diff = 'diff --git a/a.ts b/a.ts\n' + '+const value = 123;\n'.repeat(11000)
+  const diff = `diff --git a/a.ts b/a.ts\n${'+const value = 123;\n'.repeat(11000)}`
   const env = {
     GITHUB_REPOSITORY:'owner/example', GITHUB_EVENT_PATH:'mock.json',
     GITHUB_EVENT_NAME:'workflow_dispatch', INPUT_PR_NUMBER:'19',

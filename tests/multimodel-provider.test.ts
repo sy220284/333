@@ -147,7 +147,7 @@ test('model capability probe performs a real tool-result second turn', async () 
 
 test('capability probe reports failure when follow-up does not finish', async () => {
   let count = 0
-  const answer = (...entries: unknown[]) => entries.map(e => 'data: ' + JSON.stringify(e) + '\n\n').join('')
+  const answer = (...entries: unknown[]) => entries.map(e => `data: ${JSON.stringify(e)}\n\n`).join('')
   const send = async (): Promise<string> => {
     count++
     return count === 1 ? answer(
