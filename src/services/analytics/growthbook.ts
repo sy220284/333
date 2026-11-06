@@ -144,7 +144,7 @@ export async function initializeGrowthBook(): Promise<null> {
   // Retire the on-disk vendor experiment snapshot once local config is ready.
   // Explicitly selected growthBookOverrides remain untouched.
   saveGlobalConfig(config => {
-    if (!config.cachedGrowthBookFeatures) return config
+    if (!config.cachedGrowthBookFeatures || Object.keys(config.cachedGrowthBookFeatures).length === 0) return config
     const { cachedGrowthBookFeatures: _retired, ...localConfig } = config
     return localConfig
   })

@@ -1,7 +1,5 @@
 import { feature } from 'bun:bundle'
-import { z } from 'zod/v4'
 import { getKairosActive, setUserMsgOptIn } from '../bootstrap/state.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
@@ -14,46 +12,12 @@ import type {
   LocalJSXCommandContext,
   LocalJSXCommandOnDone,
 } from '../types/command.js'
-import { lazySchema } from '../utils/lazySchema.js'
-
-// Zod guards against fat-fingered GB pushes (same pattern as pollConfig.ts /
-// cronScheduler.ts). A malformed config falls back to DEFAULT_BRIEF_CONFIG
-// entirely rather than being partially trusted.
-const briefConfigSchema = lazySchema(() =>
-  z.object({
-    enable_slash_command: z.boolean(),
-  }),
-)
-type BriefConfig = z.infer<ReturnType<typeof briefConfigSchema>>
-
-const DEFAULT_BRIEF_CONFIG: BriefConfig = {
-  enable_slash_command: true,
-}
-
-// No TTL — this gate controls slash-command *visibility*, not a kill switch.
-// CACHED_MAY_BE_STALE still has one background-update flip (first call kicks
-// off fetch; second call sees fresh value), but no additional flips after that.
-// The tool-availability gate (tengu_kairos_brief in isBriefEnabled) keeps its
-// 5-min TTL because that one IS a kill switch.
-function getBriefConfig(): BriefConfig {
-  const raw = getFeatureValue_CACHED_MAY_BE_STALE<unknown>(
-    'tengu_kairos_brief_config',
-    DEFAULT_BRIEF_CONFIG,
-  )
-  const parsed = briefConfigSchema().safeParse(raw)
-  return parsed.success ? parsed.data : DEFAULT_BRIEF_CONFIG
-}
 
 const brief = {
   type: 'local-jsx',
   name: 'brief',
   description: 'Toggle brief-only mode',
-  isEnabled: () => {
-    if (feature('KAIROS') || feature('KAIROS_BRIEF')) {
-      return getBriefConfig().enable_slash_command
-    }
-    return false
-  },
+  isEnabled: () => feature('KAIROS') || feature('KAIROS_BRIEF'),
   immediate: true,
   load: () =>
     Promise.resolve({
