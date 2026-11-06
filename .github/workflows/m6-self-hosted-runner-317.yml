@@ -58,15 +58,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bun dist/cli.js self-hosted-runner orchestrator --help | grep -F 'Usage: 333 self-hosted-runner orchestrator'
-          bun dist/cli.js self-hosted-runner setup --help | grep -F 'Usage: 333 self-hosted-runner setup'
-          bun dist/cli.js self-hosted-runner doctor --help | grep -F 'Usage: 333 self-hosted-runner doctor'
+          bun dist/cli.js self-hosted-runner orchestrator --help | grep -F 'Usage: qerivon self-hosted-runner orchestrator'
+          bun dist/cli.js self-hosted-runner setup --help | grep -F 'Usage: qerivon self-hosted-runner setup'
+          bun dist/cli.js self-hosted-runner doctor --help | grep -F 'Usage: qerivon self-hosted-runner doctor'
           if bun dist/cli.js self-hosted-runner code-sign -Y sign missing 2>sign-no-context.log; then
             echo 'Remote code-sign unexpectedly accepted missing session context' >&2
             exit 1
           fi
           grep -F 'code-sign:' sign-no-context.log
-          bun dist/cli.js self-hosted-runner --help | grep -F 'Usage: 333 self-hosted-runner'
+          bun dist/cli.js self-hosted-runner --help | grep -F 'Usage: qerivon self-hosted-runner'
           bun dist/cli.js self-hosted-runner --help | grep -F -- '--hold-idle-file'
           bun dist/cli.js self-hosted-runner --help | grep -F -- '--max-hold-min'
           bun dist/cli.js self-hosted-runner --help | grep -F -- '--health-port'
@@ -80,7 +80,7 @@ jobs:
             exit 1
           fi
           grep -F 'error: unknown flag --unknown' invalid.log
-          grep -F "Run '333 self-hosted-runner --help' for usage." invalid.log
+          grep -F "Run 'qerivon self-hosted-runner --help' for usage." invalid.log
           if env -u SELF_HOSTED_RUNNER_ENVIRONMENT_SECRET bun dist/cli.js self-hosted-runner --api-url https://localhost.invalid 2>missing.log; then
             echo 'Missing environment secret was accepted' >&2
             exit 1
