@@ -80,7 +80,7 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
       let displayed = ''
       let pressedEnter = false
       const notify = (chunk: Buffer | string) => {
-        displayed = (displayed + String(chunk).replace(new RegExp(String.raw`\x1b\[[0-9;]*m`, 'g'),'')).slice(-2500)
+        displayed = (displayed + String(chunk).replace(/\x1b\[[0-9;]*m/g,'')).slice(-2500)
         setStatus(displayed.slice(-1200))
         if (!pressedEnter && /press enter|按回车|按下回车/i.test(displayed)) {
           pressedEnter = true
