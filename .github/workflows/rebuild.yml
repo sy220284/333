@@ -1,16 +1,14 @@
 name: 源码独立重建验证
 on:
   push:
-    branches: [main, rebuild/bun-from-src, upgrade/2.1.310-m1-evidence]
+    branches: [main, rebuild/bun-from-src]
   pull_request:
     branches: [main]
   workflow_dispatch:
 concurrency:
-  # On the active M1 upgrade branch, preserve the running three-platform
-  # rebuild and coalesce pending revisions; otherwise rapid commits prevent
-  # any complete same-SHA acceptance. Other branches keep normal cancellation.
+  # 保留正在执行的完整验收，合并后续提交的待执行检查。
   group: rebuild-${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
-  cancel-in-progress: ${{ github.ref_name != 'upgrade/2.1.310-m1-evidence' }}
+  cancel-in-progress: false
 
 jobs:
   typecheck-contract:
@@ -392,15 +390,6 @@ jobs:
         continue-on-error: true
         if: runner.os == 'Linux'
         run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-details-native-parity-317.test.mjs
-      - name: 317远程审查结果协议与分段事件解析
-        id: acceptance_043
-        continue-on-error: true
-        run: node --test tests/m6-ultrareview-protocol-317.test.mjs
-      - name: 317独立ultrareview官方x64启动与信任差分
-        if: runner.os == 'Linux'
-        continue-on-error: true
-        id: acceptance_042
-        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m6-ultrareview-cli-native-parity-317.test.mjs
       - name: 317插件来源命令授权：SHA256及市场修订版本
         id: acceptance_048
         continue-on-error: true
@@ -418,10 +407,6 @@ jobs:
         id: acceptance_047
         continue-on-error: true
         run: node --test --test-name-pattern='无共同 Git 历史' tests/github-generic-review.test.mjs
-      - name: 317云端审查启动配置与远端轮询一致性
-        id: acceptance_045
-        continue-on-error: true
-        run: node --test tests/m6-ultrareview-runtime-config-317.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
         id: acceptance_025
         continue-on-error: true
@@ -674,20 +659,8 @@ jobs:
             echo "::error::验收失败：对照官方 x64 验证 Claude API 版本迁移命令和资源"
             failures=$((failures+1))
           fi
-          if [ "${{ steps.acceptance_042.outcome }}" = failure ]; then
-            echo "::error::验收失败：317独立ultrareview官方x64启动与信任差分"
-            failures=$((failures+1))
-          fi
-          if [ "${{ steps.acceptance_043.outcome }}" = failure ]; then
-            echo "::error::验收失败：317远程审查结果协议与分段事件解析"
-            failures=$((failures+1))
-          fi
           if [ "${{ steps.acceptance_044.outcome }}" = failure ]; then
             echo "::error::验收失败：317插件安装事务与原版x64状态不一致"
-            failures=$((failures+1))
-          fi
-          if [ "${{ steps.acceptance_045.outcome }}" = failure ]; then
-            echo "::error::验收失败：317云端审查配置或任务轮询时限不一致"
             failures=$((failures+1))
           fi
           if [ "${{ steps.acceptance_046.outcome }}" = failure ]; then

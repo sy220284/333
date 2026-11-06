@@ -31,7 +31,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: sdk-stream-${{ github.event.pull_request.head.sha || github.sha }}
+  group: sdk-stream-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -42,65 +42,50 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.number || github.ref }}
           fetch-depth: 2
-      # Pull-request path filters cover the cumulative diff. Skip unrelated
-      # later commits while retaining a separate, non-cancelled run for this SHA.
-      - name: 判断本次提交是否涉及流事件
-        id: relevant
-        shell: bash
-        run: |
-          if [[ '${{ github.event_name }}' == 'workflow_dispatch' ]] || git diff-tree --root --no-commit-id --name-only -r HEAD | grep -Eq '^((src/cli/transports/(ccrClient|streamAccumulator)\.ts|src/entrypoints/sdk/(coreSchemas|streamEventMapper|thinkingMessageMetadata)\.ts|src/entrypoints/(mcp|mcpInputValidation)\.ts|src/services/mcp/validateSdkTransportMessage\.ts|src/services/api/(claude|thinkingDisplay)\.ts|src/remote/sdkMessageAdapter\.ts|src/types/message\.ts|src/utils/queryHelpers\.ts|src/QueryEngine\.ts|tests/(m1-mcp-argument-validation\.test\.ts|m1-sdk-mcp-message-validation\.test\.ts|m1-ccr-close\.test\.ts|m1-sdk-stream-.*\.test\.mjs|m1-sdk-thinking-metadata\.test\.mjs|m1-sdk-thinking-schema\.test\.ts|m1-thinking-display\.test\.mjs|sdk-stream-.*\.test\.ts)|build/m1-sdk-.*\.mjs|\.github/workflows/sdk-stream-parity\.yml))$'; then
-            echo 'run=true' >> "$GITHUB_OUTPUT"
-          fi
       - uses: actions/setup-node@v4
-        if: steps.relevant.outputs.run == 'true'
         with:
-          node-version: '24'
+          node-version: '26'
       - uses: oven-sh/setup-bun@v2
-        if: steps.relevant.outputs.run == 'true'
         with:
           bun-version: 1.4.4
       - name: 恢复锁定依赖并校验发行素材
-        if: steps.relevant.outputs.run == 'true'
         run: |
           node build/verify-bundled-assets.mjs
           node build/restore-claude-api.mjs --verify
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
       - name: 验证事件合并、字段映射与远程 HTTP 上传
-        if: steps.relevant.outputs.run == 'true'
         run: |
           node --test tests/m1-sdk-stream-coalescing.test.mjs tests/m1-sdk-stream-mapping.test.mjs tests/m1-thinking-display.test.mjs tests/m1-sdk-thinking-metadata.test.mjs
           bun test tests/sdk-stream-events.test.ts tests/sdk-stream-accumulator.test.ts tests/m1-ccr-close.test.ts tests/m1-sdk-thinking-schema.test.ts
           bun test tests/m1-sdk-mcp-message-validation.test.ts tests/m1-mcp-argument-validation.test.ts
       - name: 源码重建并准备固定哈希的官方 x64
-        if: steps.relevant.outputs.run == 'true'
         run: |
           bun build/rebuild.mjs
           curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
-            "https://downloads.claude.ai/claude-code-releases/2.1.310/linux-x64/claude" \
-            --output "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
-          echo "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  ${RUNNER_TEMP}/claude-2.1.310-linux-x64" | sha256sum --check
-          chmod 700 "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
+            "https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude" \
+            --output "${RUNNER_TEMP}/claude-2.1.317-linux-x64"
+          echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  ${RUNNER_TEMP}/claude-2.1.317-linux-x64" | sha256sum --check
+          chmod 700 "${RUNNER_TEMP}/claude-2.1.317-linux-x64"
           printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-current-cli"
           chmod 700 "${RUNNER_TEMP}/m1-current-cli"
       - name: 以隔离本机 SSE 对照两个真实程序
-        if: steps.relevant.outputs.run == 'true'
         run: |
           node build/m1-sdk-stream-wire-parity.mjs \
-            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --reference "${RUNNER_TEMP}/claude-2.1.317-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
             --report "${RUNNER_TEMP}/m1-sdk-stream-wire.json"
           node build/m1-sdk-thinking-display-parity.mjs \
-            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --reference "${RUNNER_TEMP}/claude-2.1.317-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
             --report "${RUNNER_TEMP}/m1-sdk-thinking-display.json"
       - name: 保存真实差分证据
-        if: always() && steps.relevant.outputs.run == 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sdk-stream-parity-${{ github.event.pull_request.head.sha || github.sha }}
+          name: sdk-stream-parity-${{ github.event.pull_request.number || github.ref }}
           path: |
             ${{ runner.temp }}/m1-sdk-stream-wire.json
             ${{ runner.temp }}/m1-sdk-thinking-display.json
