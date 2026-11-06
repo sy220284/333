@@ -312,6 +312,80 @@ test('desktop agent center manages project-scoped missions and teams through one
   }
 })
 
+test('超级智能体工作项从入队、真实 SDK 会话、人工审核到长期任务归档全链路可用', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'desktop-mission-dispatch-'))
+  const missionRoot = join(cwd, 'private-store')
+  const beforeMode = getConfiguredAgentMode()
+  const beforeOverride = process.env.CLAUDE_CODE_COORDINATOR_MODE
+  const data = fixture()
+  const gateway = createDesktopGateway({ ...data.options, cwd, missionRoot })
+  const events: DesktopEvent[] = []
+  gateway.subscribe(event => events.push(event))
+  try {
+    const mission = await gateway.handle(request('missions.create', {
+      objective: '运行完整的本地团队审查并汇总',
+    })) as { id: string }
+    const queued = await gateway.handle(request('missions.jobs.enqueue', {
+      missionId: mission.id,
+      title: '检查可复现缺陷',
+      instruction: '请使用本地代理检测问题，再提供测试证据',
+    })) as { id: string; status: string }
+    expect(queued.status).toBe('queued')
+    expect((await gateway.handle(request('agents.overview')) as { activeSessions: number }).activeSessions).toBe(0)
+    const jobList = await gateway.handle(request('missions.jobs.list', { missionId: mission.id })) as Array<{ id: string }>
+    expect(jobList.map(job => job.id)).toEqual([queued.id])
+    await expect(gateway.handle(request('missions.updateStatus', {
+      missionId: mission.id, status: 'completed',
+    }))).rejects.toThrow('运行中')
+    await gateway.handle(request('missions.updateStatus', { missionId: mission.id, status: 'paused' }))
+    await expect(gateway.handle(request('missions.jobs.start', {
+      missionId: mission.id, jobId: queued.id,
+    }))).rejects.toThrow('已暂停')
+    await gateway.handle(request('missions.updateStatus', { missionId: mission.id, status: 'active' }))
+    const dispatched = await gateway.handle(request('missions.jobs.start', {
+      missionId: mission.id, jobId: queued.id,
+    })) as { sessionId: string; turnId: string; job: { attempt: number } }
+    expect(dispatched.sessionId).toBeTruthy()
+    expect(dispatched.turnId).toBeTruthy()
+    expect(dispatched.job.attempt).toBe(1)
+    await until(() => events.some(event =>
+      event.event === 'mission.job.updated' && event.job.id === queued.id && event.job.status === 'review'))
+    await expect(gateway.handle(request('missions.jobs.start', {
+      missionId: mission.id, jobId: queued.id,
+    }))).rejects.toThrow('不能执行')
+    const approved = await gateway.handle(request('missions.jobs.approve', {
+      missionId: mission.id, jobId: queued.id,
+    })) as { status: string }
+    expect(approved.status).toBe('completed')
+    const completed = await gateway.handle(request('missions.updateStatus', {
+      missionId: mission.id, status: 'completed',
+    })) as { status: string }
+    expect(completed.status).toBe('completed')
+    const assignments = await gateway.handle(request('missions.get', { missionId: mission.id })) as {
+      assignments: Array<{ status: string }>;
+    }
+    expect(assignments.assignments[0]?.status).toBe('completed')
+    await gateway.close()
+    const reopened = createDesktopGateway({ ...data.options, cwd, missionRoot })
+    try {
+      const jobs = await reopened.handle(request('missions.jobs.list', {
+        missionId: mission.id,
+      })) as Array<{ status: string; history: unknown[] }>
+      expect(jobs[0]?.status).toBe('completed')
+      expect(jobs[0]?.history).toHaveLength(1)
+    } finally {
+      await reopened.close()
+    }
+  } finally {
+    selectMission(undefined, cwd)
+    setAgentMode(beforeMode)
+    if (beforeOverride === undefined) delete process.env.CLAUDE_CODE_COORDINATOR_MODE
+    else process.env.CLAUDE_CODE_COORDINATOR_MODE = beforeOverride
+    await gateway.close()
+    await rm(cwd, { recursive: true, force: true })
+  }
+})
+
 test('desktop serializes concurrent turns even while the first SDK send is pending', async () => {
   let permit!: () => void
   const sending = new Promise<void>(resolve => { permit = resolve })
