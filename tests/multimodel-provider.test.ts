@@ -6,7 +6,7 @@ import { makeIndependentFetch } from '../src/services/api/multimodel/transport.t
 import { getModelFieldProfile } from '../src/services/api/multimodel/providerFields.ts'
 import { runModelToolRoundTrip } from '../src/services/api/multimodel/capabilityProbe.ts'
 import { validateApiKeyProvider } from '../src/services/auth/apiKeyVault.ts'
-import { getChatGPTAccountIdentity } from '../src/services/auth/chatgptOAuth.ts'
+import { assertChatGPTAccountIdentity, getChatGPTAccountIdentity } from '../src/services/auth/chatgptOAuth.ts'
 
 const body = {
   model: 'openai/gpt-6.1-sol',
@@ -152,6 +152,23 @@ test('Codex-style ChatGPT workspace identity cannot leak model cache or replay a
   assert.equal(getChatGPTAccountIdentity({
     client_id: 'client', subject: 'user', workspace_id: 'workspace-A',
   }), workspaceA)
+})
+
+test('ChatGPT long-lived clients reject logout and account/workspace switches before a request', () => {
+  const first = getChatGPTAccountIdentity({
+    client_id: 'client', subject: 'user', workspace_id: 'workspace-A',
+  })
+  const rotated = { account: first, token: 'rotated-token' }
+  assert.doesNotThrow(() => assertChatGPTAccountIdentity(first, rotated))
+  assert.throws(() => assertChatGPTAccountIdentity(first, {
+    account: getChatGPTAccountIdentity({
+      client_id: 'client', subject: 'user', workspace_id: 'workspace-B',
+    }),
+  }), /account changed/)
+  assert.throws(() => assertChatGPTAccountIdentity(first, {
+    account: getChatGPTAccountIdentity({ client_id: 'client', subject: 'other-user' }),
+  }), /account changed/)
+  assert.throws(() => assertChatGPTAccountIdentity(undefined, rotated), /account changed/)
 })
 
 test('ChatGPT lists only model entries exposed for the connected account', async () => {
