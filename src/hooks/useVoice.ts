@@ -14,6 +14,7 @@ import {
   logEvent,
 } from '../services/analytics/index.js'
 import { getVoiceKeyterms } from '../services/voiceKeyterms.js'
+import { normalizeLanguageForSTT } from '../services/voiceLanguage.js'
 import {
   connectVoiceStream,
   type FinalizeSource,
@@ -27,110 +28,6 @@ import { logError } from '../utils/log.js'
 import { getInitialSettings } from '../utils/settings/settings.js'
 
 // ─── Language normalization ─────────────────────────────────────────────
-
-const DEFAULT_STT_LANGUAGE = 'en'
-
-// Maps language names (English and native) to BCP-47 codes supported by
-// the voice_stream Deepgram backend.  Keys must be lowercase.
-//
-// This list must be a SUBSET of the server-side supported_language_codes
-// allowlist (GrowthBook: speech_to_text_voice_stream_config).
-// If the CLI sends a code the server rejects, the WebSocket closes with
-// 1008 "Unsupported language" and voice breaks.  Unsupported languages
-// fall back to DEFAULT_STT_LANGUAGE so recording still works.
-const LANGUAGE_NAME_TO_CODE: Record<string, string> = {
-  english: 'en',
-  spanish: 'es',
-  español: 'es',
-  espanol: 'es',
-  french: 'fr',
-  français: 'fr',
-  francais: 'fr',
-  japanese: 'ja',
-  日本語: 'ja',
-  german: 'de',
-  deutsch: 'de',
-  portuguese: 'pt',
-  português: 'pt',
-  portugues: 'pt',
-  italian: 'it',
-  italiano: 'it',
-  korean: 'ko',
-  한국어: 'ko',
-  hindi: 'hi',
-  हिन्दी: 'hi',
-  हिंदी: 'hi',
-  indonesian: 'id',
-  'bahasa indonesia': 'id',
-  bahasa: 'id',
-  russian: 'ru',
-  русский: 'ru',
-  polish: 'pl',
-  polski: 'pl',
-  turkish: 'tr',
-  türkçe: 'tr',
-  turkce: 'tr',
-  dutch: 'nl',
-  nederlands: 'nl',
-  ukrainian: 'uk',
-  українська: 'uk',
-  greek: 'el',
-  ελληνικά: 'el',
-  czech: 'cs',
-  čeština: 'cs',
-  cestina: 'cs',
-  danish: 'da',
-  dansk: 'da',
-  swedish: 'sv',
-  svenska: 'sv',
-  norwegian: 'no',
-  norsk: 'no',
-}
-
-// Subset of the GrowthBook speech_to_text_voice_stream_config allowlist.
-// Sending a code not in the server allowlist closes the connection.
-const SUPPORTED_LANGUAGE_CODES = new Set([
-  'en',
-  'es',
-  'fr',
-  'ja',
-  'de',
-  'pt',
-  'it',
-  'ko',
-  'hi',
-  'id',
-  'ru',
-  'pl',
-  'tr',
-  'nl',
-  'uk',
-  'el',
-  'cs',
-  'da',
-  'sv',
-  'no',
-])
-
-// Normalize a language preference string (from settings.language) to a
-// BCP-47 code supported by the voice_stream endpoint.  Returns the
-// default language if the input cannot be resolved.  When the input is
-// non-empty but unsupported, fellBackFrom is set to the original input so
-// callers can surface a warning.
-export function normalizeLanguageForSTT(language: string | undefined): {
-  code: string
-  fellBackFrom?: string
-} {
-  if (!language) return { code: DEFAULT_STT_LANGUAGE }
-  const lower = language.toLowerCase().trim()
-  if (!lower) return { code: DEFAULT_STT_LANGUAGE }
-  if (SUPPORTED_LANGUAGE_CODES.has(lower)) return { code: lower }
-  const fromName = LANGUAGE_NAME_TO_CODE[lower]
-  if (fromName) return { code: fromName }
-  const base = lower.split('-')[0]
-  if (base && SUPPORTED_LANGUAGE_CODES.has(base)) return { code: base }
-  return { code: DEFAULT_STT_LANGUAGE, fellBackFrom: language }
-}
 
 // Lazy-loaded voice module. We defer importing voice.ts (and its native
 // audio-capture-napi dependency) until voice input is actually activated.
