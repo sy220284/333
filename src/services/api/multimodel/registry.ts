@@ -96,16 +96,14 @@ export async function discoverIndependentModelDetails(
   })
   if (!response.ok) throw new Error(`Model discovery failed for ${provider}: HTTP ${response.status}`)
   const data = await response.json() as Record<string, unknown>
-  const list = provider === 'chatgpt'
-    ? (Array.isArray(data.models) ? data.models : data.data)
-    : data.data
+  // ChatGPT plan discovery has its own documented catalog schema.
+  // Do not treat the API-key /models data[] as an entitlement for this account.
+  const list = provider === 'chatgpt' ? data.models : data.data
   if (!Array.isArray(list)) throw new Error(`Invalid model discovery response from ${provider}`)
   return list.flatMap(entry => {
     if (!entry || typeof entry !== 'object') return []
-    if (provider === 'chatgpt' && entry.visibility !== undefined && entry.visibility !== 'list') return []
-    const value = provider === 'chatgpt'
-      ? (typeof entry.slug === 'string' ? entry.slug : entry.id)
-      : entry.id
+    if (provider === 'chatgpt' && entry.visibility !== 'list') return []
+    const value = provider === 'chatgpt' ? entry.slug : entry.id
     if (typeof value !== 'string') return []
     const id = value
     if (!id || id.length > 300 || isRemovedIndependentModel(`${provider}/${id}`) ||
