@@ -198,7 +198,8 @@ export function App(){
       }else if(event.event==='mission.queue.state'){
         if(String(event.missionId||'')!==selectedMissionRef.current)return
         setMissionQueueActive(Boolean(event.active))
-        if(typeof event.message==='string')setActivity(old=>[event.message as string,...old].slice(0,20))
+        const queueMessage=event.message
+        if(typeof queueMessage==='string')setActivity(old=>[queueMessage,...old].slice(0,20))
       }else if(event.event==='mission.job.updated'&&event.job){
         if(String(event.missionId||'')!==selectedMissionRef.current)return
         const updated=obj(event.job) as unknown as MissionJob
