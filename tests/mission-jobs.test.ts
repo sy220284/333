@@ -73,6 +73,24 @@ test('被中断的任务不自动重复执行；用户恢复后需再次显式�
   })
 })
 
+test('跨桌面宿主最多并行三项执行，任务进入审核后释放槽位', async () => {
+  await fixture(async (root, mission, project) => {
+    const jobs = []
+    for (let i = 0; i < 4; i++) {
+      jobs.push(await enqueueMissionJob(mission, project, '任务' + i, '专项验证' + i, root))
+    }
+    const started = []
+    for (let i = 0; i < 3; i++) {
+      started.push(await claimMissionJob(mission, project, jobs[i]!.id, randomUUID(), process.pid, root))
+    }
+    await expect(claimMissionJob(mission, project, jobs[3]!.id, randomUUID(), process.pid, root))
+      .rejects.toThrow('最多同时执行 3 项')
+    await settleMissionJob(mission, project, jobs[0]!.id, started[0]!.runId!, 'review', '已输出交付内容', root)
+    const next = await claimMissionJob(mission, project, jobs[3]!.id, randomUUID(), process.pid, root)
+    expect(next.status).toBe('running')
+  })
+})
+
 test('任务队列验证输入并守住项目和终态边界', async () => {
   await fixture(async (root, mission, project) => {
     expect(() => enqueueMissionJob(mission, project, ' ', '有效指令', root)).toThrow('标题')
