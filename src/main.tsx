@@ -780,7 +780,7 @@ async function run(): Promise<CommanderCommand> {
   // `mcp` and `add` as paths, then choked on --transport as an unknown
   // top-level option. Single-value + collect accumulator means each
   // --plugin-dir takes exactly one arg; repeat the flag for multiple dirs.
-  .option('--plugin-dir <path>', 'Load plugins from a directory or .zip for this session only (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--plugin-url <url>', 'Fetch a plugin .zip from HTTPS for this session only (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Claude in Chrome integration').option('--no-chrome', 'Disable Claude in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)').option('--desktop', 'Open in the Claude Desktop app instead of the terminal (with --continue or --resume <id> to pick the session)', () => true).action(async (prompt, options) => {
+  .option('--plugin-dir <path>', 'Load plugins from a directory or .zip for this session only (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--plugin-url <url>', 'Fetch a plugin .zip from HTTPS for this session only (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Claude in Chrome integration').option('--no-chrome', 'Disable Claude in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)').option('--desktop', 'Open in the Claude Desktop app instead of the terminal (with --continue or --resume <id> to pick the session)', () => true).option('--strict-command <command>', '严格任务模式：仅可执行指定的完整 Bash 命令').action(async (prompt, options) => {
     if (options.strictCommand !== undefined) {
       const command = String(options.strictCommand);
       if (!command.trim() || command.includes('\0') || command.includes('\n')) {
@@ -2994,7 +2994,6 @@ async function run(): Promise<CommanderCommand> {
   // 2.1.310 options with functional consumers in this source tree.
   program.option('--bg, --background', 'Start the session in the background and return an id for attach/logs/stop/rm');
   program.option('--restricted', 'Restrict command execution, WebFetch and untrusted settings unless explicitly authorized');
-  program.option('--strict-command <command>', '严格任务模式：仅可执行指定的完整 Bash 命令');
   program.option('--exclude-dynamic-system-prompt-sections', 'Move per-machine system sections into the first user message for shared prompt caching');
   program.addOption(new Option('--session-mirror', 'Emit transcript_mirror frames on stdout').hideHelp());
   program.option('--forward-subagent-text', 'Forward subagent text and thinking as SDK messages with parent tool ID');
