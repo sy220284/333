@@ -1,7 +1,7 @@
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.js'
 import type { Command } from '../commands.js'
 import { execFileNoThrow } from '../utils/execFileNoThrow.js'
-import { parseReviewRequest, type ReviewMode } from './reviewMode.js'
+import { parseCrossReviewSpec, parseReviewRequest, type ReviewMode } from './reviewMode.js'
 import { checkPullRequestPatch } from './reviewPatch.js'
 
 const MODEL_INPUT_LIMIT = 110_000
@@ -107,15 +107,26 @@ function instructions(mode: ReviewMode, target: string, gitEvidence: string): st
 
 const review: Command = {
   type: 'prompt', name: 'review',
-  description: '统一审查：普通、深度、安全',
-  argumentHint: '[normal|deep|security] [PR编号|基准分支]',
+  description: '统一代码审查：普通、深度、安全，以及用户选定的第二模型交叉复核',
+  argumentHint: '[normal|deep|security|cross <模型> [模式]] [PR编号|基准分支]',
   progressMessage: '正在读取 Git 差异并检查代码',
   contentLength: 0, source: 'builtin',
   async getPromptForCommand(args): Promise<ContentBlockParam[]> {
     try {
-      const { mode, target } = parseReviewRequest(args)
+      const cross = parseCrossReviewSpec(args)
+      const { mode, target } = parseReviewRequest(cross?.request ?? args)
       const facts = await evidence(mode, target)
-      return [{ type: 'text', text: instructions(mode, target, facts) }]
+      const base = instructions(mode, target, facts)
+      if (!cross) return [{ type: 'text', text: base }]
+      const reviewerInstructions = [
+        '用户明确要求第二模型交叉复核。',
+        `请先使用 Agent 工具以 model=${JSON.stringify(cross.reviewer)} 调用独立复核模型，传入以下完整 Git 证据及审查要求。等待复核返回后，再独立检查其结论。`,
+        '报告分别列出主模型发现、第二模型发现、双方一致与冲突之处；每个问题注明文件、行号、触发条件和证据。',
+        '若 Agent 工具或指定模型不可用，明确标注“交叉复核未执行”，并说明实际失败原因，继续给出主模型审查结果。',
+        '第二模型调用应只审查，不允许自动修改文件或推送提交。',
+        base,
+      ].join('\\n\\n')
+      return [{ type: 'text', text: reviewerInstructions }]
     } catch (error) {
       return [{ type: 'text', text: `审查未启动：${error instanceof Error ? error.message : String(error)}` }]
     }

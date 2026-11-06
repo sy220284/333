@@ -1,22 +1,14 @@
 import type { LocalJSXCommandCall } from '../../types/command.js'
-import advisor from '../advisor.js'
 
-/** 保留原 Plan Mode 和 Advisor 执行器，仅统一命令入口。 */
+/** 本地规划统一入口，跨模型复核统一由 /review 明确触发。 */
 export const call: LocalJSXCommandCall = async (onDone, context, args) => {
   const text = args.trim()
   if (/^advisor(?:\s|$)/i.test(text)) {
-    if (!advisor.isEnabled()) {
-      onDone('当前模型或环境未启用顾问能力。')
-      return null
-    }
-    const module = await advisor.load()
-    const response = await module.call(text.slice('advisor'.length).trim(), context)
-    if (response.type === 'text') onDone(response.value)
-    else if (response.type === 'compact') onDone(response.displayText)
+    onDone('已移除服务端顾问。需要交叉复核请使用 /review cross <模型> [deep|security] [PR编号]')
     return null
   }
   if (text === 'help') {
-    onDone('用法：/plan [描述] 进入规划模式；/plan open 编辑计划；/plan advisor <模型> 设置顾问；/plan advisor off 关闭顾问。')
+    onDone('用法：/plan [描述] 进入本地规划模式；/plan open 编辑计划；/review cross <模型> 执行可选交叉复核。')
     return null
   }
   const original = await import('./plan.js')
