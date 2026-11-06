@@ -12,8 +12,11 @@ function asError(status: number, message: string, upstream?: Headers, credential
     const value = upstream?.get(key)
     if (value != null && (!credential || !value.includes(credential))) headers.set(key, value)
   }
-  const upstreamRequestId = headers.get('x-request-id')
-  if (!headers.has('request-id') && upstreamRequestId) {
+  // DSH and Codex retain provider request identity for retry diagnostics.
+  // DeepSeek sometimes sends its own request-id header instead of x-request-id.
+  const upstreamRequestId = headers.get('x-request-id') ?? upstream?.get('x-deepseek-request-id')
+  if (!headers.has('request-id') && upstreamRequestId &&
+      (!credential || !upstreamRequestId.includes(credential))) {
     headers.set('request-id', upstreamRequestId)
   }
   const type = status === 400 ? 'invalid_request_error'
