@@ -92,6 +92,7 @@ function inspectToolRequest(text: string): ProbeResult & { toolId?: string } {
 export async function runModelToolRoundTrip(
   model: string,
   send: (request: Record<string, unknown>) => Promise<string>,
+  toolSelection: 'named' | 'auto' = 'named',
 ): Promise<ProbeResult> {
   const body = {
     model,
@@ -99,7 +100,10 @@ export async function runModelToolRoundTrip(
     messages: [{ role: 'user', content: 'Call 333_probe({ok:true}) now.' }],
     max_tokens: 256,
     stream: true,
-    tool_choice: { type: 'tool', name: '333_probe' },
+    // Some reasoning providers accept only auto tool selection. The test
+    // must exercise their real wire semantics, not request an invalid override.
+    tool_choice: toolSelection === 'named'
+      ? { type: 'tool', name: '333_probe' } : { type: 'auto' },
     tools: [{ name: '333_probe', description: 'Validate tool round-trip',
       input_schema: { type: 'object', properties: { ok: { type: 'boolean' } },
         required: ['ok'], additionalProperties: false } }],
@@ -150,7 +154,13 @@ export async function verifyIndependentModel(model: string): Promise<CapabilityR
     return text
   }
   const begin = Date.now()
-  const result = await runModelToolRoundTrip(model, send)
+  // DeepSeek reasoning mode and Kimi K2 direct APIs cannot guarantee a
+  // named tool choice. Validate that the model actually chooses and completes
+  // the tool round trip; never rewrite a real user's hard constraint.
+  const toolSelection = route.provider === 'deepseek' ||
+    (route.provider === 'kimi' && /^kimi-k2(?:[.-]|$)/i.test(route.model))
+    ? 'auto' : 'named'
+  const result = await runModelToolRoundTrip(model, send, toolSelection)
   const report: CapabilityReport = {
     model, provider: route.provider, protocol: route.protocol,
     timestamp: new Date().toISOString(), latencyMs: Date.now() - begin,
