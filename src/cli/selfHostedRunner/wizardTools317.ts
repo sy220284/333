@@ -11,6 +11,7 @@ import {
   getRunnerPool317,listRunnerSessions317,listRunnerMachines317,listRunnerSecrets317,
   requeueRunnerSession317,probeRunnerLocal317,tailRunnerLog317
 } from './runnerAdmin317.ts'
+import { resolveRunnerEndpoint } from './endpointPolicy.ts'
 
 const taggedId=z.string().regex(/^[a-zA-Z0-9_-]{1,256}$/)
 const output=z.record(z.string(),z.unknown())
@@ -60,6 +61,7 @@ const tailSchema=z.strictObject({
   bytes:z.number().int().positive().max(1_000_000).optional()
 })
 const spawnSchema=z.strictObject({
+  api_url:z.string().min(1).optional(),
   secret_file_path:z.string().min(1),
   capacity:z.number().int().min(1).max(128).optional(),
   base_dir:z.string().min(1).optional(),
@@ -70,6 +72,7 @@ const requeueSchema=z.strictObject({
   session_id:taggedId,runner_id:taggedId
 })
 async function spawnLocalRunner317(args:z.infer<typeof spawnSchema>){
+  const apiUrl=resolveRunnerEndpoint(args.api_url ?? process.env.SELF_HOSTED_RUNNER_API_URL)
   const secretPath=resolve(args.secret_file_path)
   const source=await stat(secretPath)
   if(!source.isFile())throw Error('Runner environment key must be a regular file')
@@ -85,7 +88,8 @@ async function spawnLocalRunner317(args:z.infer<typeof spawnSchema>){
   const prefix=(typeof Bun!=='undefined'&&typeof Bun.embeddedFiles!=='undefined')
     ?[]:process.argv[1]?[process.argv[1]]:[]
   const childArgs=[
-    ...prefix,'self-hosted-runner','--environment-secret-file',secretPath,
+    ...prefix,'self-hosted-runner','--api-url',apiUrl,
+    '--environment-secret-file',secretPath,
     '--capacity',String(args.capacity??1),
     '--base-dir',baseDir,'--health-port',String(args.health_port??8080),
   ]
@@ -110,7 +114,7 @@ async function spawnLocalRunner317(args:z.infer<typeof spawnSchema>){
   const command=[process.execPath,...childArgs].map(quoted).join(' ')+
     ' >> '+quoted(logPath)+' 2>&1 &'
   return {pid,pid_file:pidPath,log_path:logPath,health_port:args.health_port??8080,
-    command,equivalent:{ui:'Admin settings → Cloud environments → Self-hosted environments → Activity → Runners'}}
+    command,equivalent:{api:apiUrl+'/v1/code/runners/self-hosted/runners'}}
 }
 export const SELF_HOSTED_RUNNER_TOOLS:readonly Tool[]=[
   wizardTool317('self_hosted_runner_get_pool',
