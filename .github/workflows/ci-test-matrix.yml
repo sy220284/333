@@ -1,0 +1,130 @@
+name: 333 全量测试矩阵与门禁契约
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+jobs:
+  inventory:
+    name: 测试清单与门禁覆盖校验
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - name: 测试清单防漏检回归
+        run: node --test tests/ci-test-discovery.test.mjs
+      - name: 生成补充测试完整分片清单
+        run: node build/run-unregistered-tests.mjs --ci-supplemental --shard-count=6 --shard-index=0 --list
+      - name: 校验门禁配置与退役功能引用
+        run: node build/ci-gate-audit.mjs
+  build:
+    name: 一次构建，供全部测试分片复用
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.4'
+      - name: 恢复冻结依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 一次完成源码构建与发行打包
+        run: |
+          bun build/rebuild.mjs
+          node build/compile-standalone.mjs
+          node build/package-release.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-shared-distribution
+          path: dist/
+          retention-days: 5
+          if-no-files-found: error
+  core:
+    name: 核心测试 (${{ matrix.suite }})
+    needs: [inventory, build]
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [node, bun]
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.4'
+      - name: 安装测试依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-shared-distribution
+          path: dist/
+      - name: 运行核心测试
+        run: npm run test:${{ matrix.suite }}
+  supplemental:
+    name: 补充测试 (${{ matrix.shard }}/6)
+    needs: [inventory, build]
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.4'
+      - name: 安装测试依赖与固定 AST 解析器
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+          npm install --prefix "${RUNNER_TEMP}/333-parser" --no-save --ignore-scripts --no-package-lock --no-audit --no-fund "typescript@5.9.3"
+          echo "TS_COMPILER_PATH=${RUNNER_TEMP}/333-parser/node_modules/typescript/lib/typescript.js" >> "${GITHUB_ENV}"
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-shared-distribution
+          path: dist/
+      - name: 并行执行补充测试，失败保留原始退出码
+        run: node build/run-unregistered-tests.mjs --ci-supplemental --shard-count=6 --shard-index=${{ matrix.shard }}
+  complete:
+    name: 全量测试合并门禁
+    if: always()
+    needs: [inventory, build, core, supplemental]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 确保全部并行测试均成功
+        env:
+          INVENTORY: ${{ needs.inventory.result }}
+          BUILD: ${{ needs.build.result }}
+          CORE: ${{ needs.core.result }}
+          SUPPLEMENTAL: ${{ needs.supplemental.result }}
+        run: |
+          for result in "${INVENTORY}" "${BUILD}" "${CORE}" "${SUPPLEMENTAL}"; do
+            if [[ "${result}" != success ]]; then
+              echo "::error::测试门禁未成功：${result}"
+              exit 1
+            fi
+          done

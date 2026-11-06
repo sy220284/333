@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const WORKFLOW_ONLY = process.argv.includes('--workflow-only')
+const CI_SUPPLEMENTAL = process.argv.includes('--ci-supplemental')
 
 function walk(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
@@ -60,8 +61,9 @@ export function discoverUnregisteredTests(root = ROOT, options = {}) {
     .map(workflowRunCommands).join('\n')
   const workflowOnly = options.workflowOnly === true
   const registered = tests.filter(path => commands.includes(path) || workflows.includes(path))
+  const supplemental = options.ciSupplemental === true
   const pending = tests.filter(path => !commands.includes(path) &&
-    (workflowOnly ? workflows.includes(path) : !workflows.includes(path)))
+    (supplemental || (workflowOnly ? workflows.includes(path) : !workflows.includes(path))))
   if (pending.length + registered.length !== tests.length) throw Error('Test inventory inconsistent')
   return { tests, registered, pending }
 }
@@ -157,7 +159,7 @@ function runTest(file, runtime, options = {}) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const { tests, registered, pending } = discoverUnregisteredTests(ROOT, { workflowOnly: WORKFLOW_ONLY })
+  const { tests, registered, pending } = discoverUnregisteredTests(ROOT, { workflowOnly: WORKFLOW_ONLY, ciSupplemental: CI_SUPPLEMENTAL })
   const value = flag => {
     const item = process.argv.find(arg => arg.startsWith(flag + '='))
     return item ? Number(item.slice(flag.length + 1)) : null
@@ -170,7 +172,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const selected = pending.filter((_, i) => i % shardCount === shardIndex)
   const plan = selected.map(file => ({ file, runtime: runtimeForTest(file) }))
   console.log(JSON.stringify({
-    mode: WORKFLOW_ONLY ? 'workflow-only' : 'unregistered',
+    mode: CI_SUPPLEMENTAL ? 'ci-supplemental' : (WORKFLOW_ONLY ? 'workflow-only' : 'unregistered'),
     total: tests.length, explicitlyScheduled: registered.length,
     candidateCount: pending.length, shardIndex, shardCount,
     discoveredForExecution: plan.length, planned: plan,
