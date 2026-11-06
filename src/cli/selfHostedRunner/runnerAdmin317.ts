@@ -34,6 +34,7 @@ export async function runnerAdminRequest317(
   if(!accessToken)throw Error('Runner 管理需要显式设置 SELF_HOSTED_RUNNER_ADMIN_TOKEN')
   const response=await (deps.fetchImpl??fetch)(base+adminPath317(request.path),{
     method:request.method,
+    redirect:'error',
     headers:{'Authorization':'Bearer '+accessToken,
       'anthropic-version':'2023-06-01','content-type':'application/json'},
     ...(request.body===undefined?{}:{body:JSON.stringify(request.body)}),
