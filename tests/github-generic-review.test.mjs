@@ -82,10 +82,10 @@ test('极深执行器真实完成四轮审查、独立复核、PR 评论及报�
     }
     if(url==='https://api.openai.com/v1/chat/completions') return {
       ok:true,text:async()=>JSON.stringify({
-        choices:[{message:{content:'第'+(++modelCalls)+'轮核查结果'}}]
+        choices:[{message:{content:`第${++modelCalls}轮核查结果`}}]
       })
     }
-    throw new Error('意外网络请求：'+url)
+    throw new Error(`意外网络请求：${url}`)
   }
   const FakeURL=class {
     constructor(url) {
@@ -169,7 +169,7 @@ test('Actions 配置可单独选择代码审查或授权消息自动响应', () 
   assert.match(both,/issue_comment:/)
   for (const yaml of [review,respond,both]) {
     assert.match(yaml,/workflow_dispatch:/)
-    assert.match(yaml,/permissions:\n {2}contents: read\n {2}pull-requests: write/)
+    assert.match(yaml,/permissions:\n[ ]{2}contents: read\n[ ]{2}pull-requests: write/)
   }
 })
 
