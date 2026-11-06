@@ -4,6 +4,9 @@ import type { Readable, Writable } from 'node:stream'
 import type { SDKUserMessage, SDKSessionInfo } from '../../entrypoints/sdk/coreTypes.js'
 import type { PendingSdkPermission } from '../conversation/permissionBroker.js'
 import type { DesktopTask } from './taskProjection.js'
+import type { AgentMission, AgentMissionStatus } from '../../utils/agentMissions.js'
+import type { AgentMode } from '../../utils/agentMode.js'
+import type { TeamSummary } from '../../utils/teamDiscovery.js'
 import { DesktopRequestSchema, type DesktopEvent, type DesktopReply, type DesktopRequest } from './protocol.js'
 
 type Pending = { resolve: (value: unknown) => void; reject: (reason: Error) => void }
@@ -100,6 +103,22 @@ export function createDesktopClient(input: Readable, output: Writable) {
     listPermissions: (sessionId: string) => invoke<PendingSdkPermission[]>({ method: 'permissions.list', sessionId }),
     decidePermission: (sessionId: string, permissionId: string, decision: Extract<DesktopRequest, { method: 'permissions.decide' }>['decision']) =>
       invoke({ method: 'permissions.decide', sessionId, permissionId, decision }),
+    agentOverview: () => invoke<{
+      mode: AgentMode; selectedMissionId: string | null;
+      missions: AgentMission[]; teams: TeamSummary[];
+      activeSessions: number; activeTasks: number;
+    }>({ method: 'agents.overview' }),
+    setAgentMode: (mode: AgentMode) =>
+      invoke<{ mode: AgentMode }>({ method: 'agents.setMode', mode }),
+    listMissions: () => invoke<{ selectedMissionId: string | null; missions: AgentMission[] }>({ method: 'missions.list' }),
+    getMission: (missionId: string) => invoke<AgentMission>({ method: 'missions.get', missionId }),
+    createMission: (objective: string) => invoke<AgentMission>({ method: 'missions.create', objective }),
+    selectMission: (missionId: string | null) =>
+      invoke<{ selectedMissionId: string | null }>({ method: 'missions.select', missionId }),
+    updateMissionStatus: (missionId: string, status: AgentMissionStatus) =>
+      invoke<AgentMission>({ method: 'missions.updateStatus', missionId, status }),
+    saveMissionCheckpoint: (missionId: string, checkpoint: string) =>
+      invoke<AgentMission>({ method: 'missions.checkpoint', missionId, checkpoint }),
     listTasks: (sessionId: string) => invoke<DesktopTask[]>({ method: 'tasks.list', sessionId }),
     stopTask: (sessionId: string, taskId: string) => invoke({ method: 'tasks.stop', sessionId, taskId }),
     resumeTask: (sessionId: string, taskId: string, prompt?: string) => invoke({ method: 'tasks.resume', sessionId, taskId, prompt }),
