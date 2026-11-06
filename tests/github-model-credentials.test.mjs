@@ -28,7 +28,7 @@ function setup({saved=[],current='openai/gpt-6',key='sk-private-local'}={}) {
  }
  return builder('getSavedModelOptions','getIndependentApiKey','resolveIndependentModel',
   'getAnthropicApiKey','getMainLoopModel','execFileNoThrow','validRepository','process',
-  `${source}\nreturn {getGithubModelOptions,getGithubModelOption,getGithubActionsProviderOptions,configureGithubModel,configureGithubCustomModel}`)(
+  `${source}\nreturn {getGithubModelOptions,getGithubModelOption,getGithubActionsProviderOptions,configureGithubModel,configureGithubCustomModel,configureGithubWizardModel}`)(
   ()=>saved,
   route=>route.provider==='chatgpt'?(()=>{throw Error('OAuth token requested')})():key,
   resolve,
@@ -85,4 +85,25 @@ test('新 API Key 及模型 ID 会在上传前校验',async()=>{
  await assert.rejects(api.configureGithubCustomModel('org/code','openai','gpt-6','a',true),/API Key/)
  await assert.rejects(api.configureGithubCustomModel('org/code','chatgpt','gpt-6','sk-good-key',true),/模型服务商/)
  assert.equal(calls.length,0)
+})
+
+test('反编译向导新 API Key 模式无需已保存模型 ID',async()=>{
+ const {api,calls,writes}=await setup({current:'chatgpt/gpt-6',saved:[]})
+ const answer=await api.configureGithubWizardModel('org/code',{
+   kind:'new',provider:'deepseek',model:'deepseek-chat',apiKey:'sk-new-from-wizard',
+ },true)
+ assert.match(answer,/deepseek\/deepseek-chat/)
+ assert.equal(writes[0],'sk-new-from-wizard')
+ assert.ok(calls.some(args=>args.includes('YAOYAOCHE_MODEL_NAME')))
+ assert.ok(!JSON.stringify(calls).includes('sk-new-from-wizard'))
+})
+test('反编译向导已保存模型与新模型凭据模式独立校验',async()=>{
+ const {api,calls}=await setup({current:'openai/gpt-6'})
+ await assert.rejects(api.configureGithubWizardModel('org/code',{kind:'saved',id:''},true),/模型未在/)
+ await assert.rejects(api.configureGithubWizardModel('org/code',{
+  kind:'new',provider:'openai',model:'gpt-6',apiKey:'sk-new-from-wizard',
+ },false),/明确|授权/)
+ assert.equal(calls.length,0)
+ const result=await api.configureGithubWizardModel('org/code',{kind:'saved',id:'openai/gpt-6'},true)
+ assert.match(result,/openai\/gpt-6/)
 })
