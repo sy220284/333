@@ -22,6 +22,7 @@ const HOST_FILE = join(DIR, 'host.json')
 const ACCOUNT_FILE = join(DIR, 'chatgpt-registration.json')
 const ACCOUNTS_FILE = join(DIR, 'chatgpt-accounts.json')
 const TOKENS_DIR = join(DIR, 'chatgpt-tokens')
+const CREDENTIAL_LOCK_FILE = join(DIR, 'chatgpt-credentials.lock-target')
 const PENDING_FILE = join(DIR, 'chatgpt-pending-registration.json')
 type Credential = {
   client_id: string
@@ -244,7 +245,12 @@ async function refreshCredentials(current: Credential): Promise<Credential> {
 }
 async function withCredentialLock<T>(operation: () => Promise<T>): Promise<T> {
   await fs.mkdir(DIR, { recursive: true, mode: 0o700 })
-  const unlock = await lock(FILE, { realpath: false, stale: 30_000,
+  // proper-lockfile stats its target before creating the adjacent .lock dir.
+  // New installations have no legacy chatgpt.json, so lock a dedicated,
+  // persistent owner-only sentinel instead of the (removed) legacy file.
+  const target = await fs.open(CREDENTIAL_LOCK_FILE, 'a', 0o600)
+  try { await target.chmod(0o600) } finally { await target.close() }
+  const unlock = await lock(CREDENTIAL_LOCK_FILE, { realpath: false, stale: 120_000,
     retries: { retries: 25, minTimeout: 100, maxTimeout: 1_000 } })
   try { return await operation() } finally { await unlock() }
 }
