@@ -20,3 +20,9 @@ test('欢迎界面根据当前模型供应商显示账号或 API 计费', () => 
   assert.match(logo, /provider === 'chatgpt'/)
   assert.match(logo, /API 用量计费/)
 })
+
+test('费用命令按照正在使用的模型判断订阅与 API', () => {
+  const cost = source('src/commands/cost/cost.ts')
+  assert.match(cost, /!resolveIndependentModel\(getMainLoopModel\(\)\) && isClaudeAISubscriber\(\)/)
+  assert.doesNotMatch(cost, /your Claude Code usage/)
+})
