@@ -63,7 +63,7 @@ const rows = []
 // was retired in favor of the unified /review extreme GitHub workflow.
 const retiredCommands = new Set(['ultrareview'])
 function normalizeProductName(usage) {
-  return usage.replace(/^Usage: 333(?= |$)/, 'Usage: claude')
+  return usage.replace(/^Usage: yaoyaoche(?= |$)/, 'Usage: claude')
 }
 try {
   const release = spawnSync(reference, ['--version'], {
