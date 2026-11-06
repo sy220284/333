@@ -54,6 +54,28 @@ for (const name of ['m4-send-to-project-317.yml']) {
 if (yaml('rebuild.yml').includes('m6-ultrareview-runtime-config-317.test.mjs')) {
   errors.push('已删除云审查门禁仍在全量构建中')
 }
+
+for (const name of workflows) {
+  const source = yaml(name)
+  if (/ref:\s*\$\{\{\s*github\.event\.pull_request\.number\s*\|\|/.test(source))
+    errors.push('checkout 误用 PR 编号作为分支名：' + name)
+}
+const lockGate = yaml('m1-public-lock-sync.yml')
+if (/contents:\s*write/.test(lockGate) || /git\s+push\s+origin/.test(lockGate))
+  errors.push('依赖锁门禁不得在审查时自动改写 PR：m1-public-lock-sync.yml')
+if (!/node tools\/dev\/toolchain\.mjs check/.test(lockGate))
+  errors.push('依赖锁缺失实际基准校验：m1-public-lock-sync.yml')
+const matrix = yaml('ci-test-matrix.yml')
+if (!/needs:\s*\[inventory, build, core, supplemental, oracle\]/.test(matrix) ||
+    !/if:\s*always\(\)/.test(matrix) ||
+    !/\[\[ "\$\{result\}" != success \]\]/.test(matrix)) {
+  errors.push('全量测试缺少失败汇总门禁：ci-test-matrix.yml')
+}
+if (/^    paths(?:-ignore)?:/m.test(matrix.split(/^  pull_request:/m)[1]?.split(/^  (?:push|workflow_dispatch):/m)[0] ?? ''))
+  errors.push('全量测试门禁不得过滤 PR 路径：ci-test-matrix.yml')
+if (existsSync(root('tests/m6-ultrareview-cli-native-parity-317.test.mjs')))
+  errors.push('已退役 Ultrareview CLI 原生对照测试仍存在')
+
 if (errors.length) {
   for (const error of errors) console.error('[ci-gate] ' + error)
   process.exitCode = 1
