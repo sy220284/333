@@ -53,7 +53,7 @@ test('API failure result follows the original 2.1.317 structured JSON contract',
 
 test('offline API failure uses the official SDK result envelope with explicit error status', () => {
   const query = readFileSync(new URL('../src/QueryEngine.ts', import.meta.url), 'utf8')
-  assert.match(query, /if \\(isApiError\\) \\{[\\s\\S]*?subtype: 'success',[\\s\\S]*?is_error: true,[\\s\\S]*?terminal_reason: promptTooLong \\? 'prompt_too_long' : 'api_error'/)
+  assert.match(query, /if \(isApiError\) \{[\s\S]*?subtype: 'success',[\s\S]*?is_error: true,[\s\S]*?terminal_reason: promptTooLong \? 'prompt_too_long' : 'api_error'/)
   const probe = readFileSync(new URL('../build/m1-x64-reference-probe.mjs', import.meta.url), 'utf8')
   assert.match(probe, /id:'json_without_login'/)
   assert.match(probe, /id:'stream_without_login'/)
