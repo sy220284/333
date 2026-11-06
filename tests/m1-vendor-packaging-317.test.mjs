@@ -39,7 +39,7 @@ function fixture(run) {
       // script; the production verifier checks both hashes before packaging.
       ...manifest.resources.flatMap(item => item.upstream_backup ? [item.upstream_backup] : []),
     ])
-    const fakeFiles = ['build/public-dependencies.lock.json', 'LICENSE.md',
+    const fakeFiles = ['build/public-dependencies.lock.json', 'SOURCE_NOTICES.md',
       'package.json', 'dist/cli.js', nativeAudio, nativeRg, 'vendor/ripgrep/COPYING']
     for (const file of [...officialFiles, ...fakeFiles]) {
       const dest = join(dir, file)
