@@ -1,0 +1,72 @@
+name: 桌面通信 SDK 双向协议专项验收
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/desktop-communication.yml'
+      - 'src/services/desktop/**'
+      - 'src/services/conversation/**'
+      - 'src/entrypoints/desktopHost.ts'
+      - 'src/entrypoints/sdk/**'
+      - 'build/rebuild.mjs'
+      - 'build/compile-standalone.mjs'
+      - 'build/package-release.mjs'
+      - 'tests/desktop-*.test.ts'
+      - 'tests/conversation-headless.test.ts'
+      - 'package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Pin the validation to one exact commit, even when other PR jobs are replaced
+# by newer commits. The desktop gateway has its own acceptance boundary.
+concurrency:
+  group: desktop-communication-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  desktop-contract:
+    name: 独立桌面宿主、审批、Agent事件和会话恢复
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: 读取固定工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
+      - name: 安装冻结的 SDK 及编译依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 独立校验桌面所有控制接口及 SDK stream-json 双向实测
+        run: |
+          bun test tests/conversation-headless.test.ts \
+            tests/desktop-communication.test.ts \
+            tests/desktop-stdio.test.ts \
+            tests/desktop-sdk-stream-json.test.ts \
+            tests/desktop-client.test.ts
+      - name: 编译原 CLI 和独立桌面通信宿主并检查发布完整性
+        run: |
+          bun build/rebuild.mjs
+          node build/compile-standalone.mjs
+          node build/package-release.mjs
+          test -x dist/yaoyaoche
+          test -x dist/desktopHost
+          node --input-type=module -e '
+            import { readFileSync, statSync } from "node:fs"
+            const manifest = JSON.parse(readFileSync("dist/integrity.json", "utf8"))
+            const files = new Set(manifest.files.map(file => file.path))
+            for (const path of ["desktopHost", "desktopHost.js", "desktopHost.js.map", "yaoyaoche"]) {
+              if (!files.has(path)) throw new Error("Desktop release missing signed asset: " + path)
+              if (!statSync("dist/" + path).isFile()) throw new Error("Invalid released asset: " + path)
+            }
+          '
