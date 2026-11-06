@@ -123,11 +123,20 @@ export async function launchWorkflow(
   }
   const recorder=createWorkflowSummaryRecorder(paths.summaryPath,initialRecord)
   const updateSummary=(patch:Record<string,unknown>):Promise<void>=>recorder.update(patch)
-  const persistFinal=(status:'completed'|'failed'|'killed',value?:unknown,error?:string):Promise<void>=>
-    recorder.finish({status,result:value??null,
+  const persistFinal=async (status:'completed'|'failed'|'killed',value?:unknown,error?:string):Promise<void>=>{
+    await recorder.finish({status,result:value??null,
       ...(error?{error}:{}),durationMs:Date.now()-startedAt,agentCount:callCount})
+    if (missionId) {
+      try {
+        await finishMissionAssignment(missionId, id, status)
+      } catch (syncError) {
+        tell(id, '本地超级智能体任务簿更新失败：' + String(syncError))
+      }
+    }
+  }
   // The run must have a durable identity before it is visible as an active task.
   await updateSummary({})
+  if (missionId) await linkMissionAssignment(missionId, id, 'workflow', parsed.meta.description)
   const task:LocalWorkflowTaskState={
     ...createTaskStateBase(id,'local_workflow',parsed.meta.description,context.toolUseId),
     type:'local_workflow',status:'running',workflowRunId:runId,
