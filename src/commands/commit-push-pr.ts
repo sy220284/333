@@ -37,9 +37,9 @@ function getPromptContent(
   let prefix = ''
   let changelogSection = `
 
-## Changelog
+## 变更记录
 <!-- CHANGELOG:START -->
-[If this PR contains user-facing changes, add a changelog entry here. Otherwise, remove this section.]
+[如果包含面向用户的改动，请用中文填写变更记录；否则移除此段。]
 <!-- CHANGELOG:END -->`
   let slackStep = `
 
