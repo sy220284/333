@@ -234,9 +234,9 @@ function emitFromResponses(
       events.tool(item.name, item.id, item.arguments || '{}')
     }
   } else if (type === 'response.incomplete') {
-    state.completed = true
-    state.stopReason = responsesStopReason(data.response ?? {})
-    events.setUsage(data.response?.usage)
+    // SIWC only accepts response.completed as successful inference. Preserve
+    // an interrupted or capped response as a distinct error, not end_turn.
+    throw new Error(`Responses incomplete: ${JSON.stringify(data.response?.incomplete_details ?? {})}`)
   } else if (type === 'response.failed') {
     throw new Error(`Responses ${type}: ${JSON.stringify(data.response?.error ?? data.response?.incomplete_details ?? {})}`)
   } else if (type === 'error') {
