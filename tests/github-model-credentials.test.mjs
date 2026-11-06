@@ -8,7 +8,7 @@ let source=original.replace(/^import .*$/gm,'').replace(/^export /gm,'')
 source=stripTypeScriptTypes(source,{mode:'strip'})
 const builder=Object.getPrototypeOf(async()=>{}).constructor
 
-function setup({saved=[],current='openai/gpt-6',key='sk-private-local'}={}) {
+function setup({saved=[],current='openai/gpt-6',key='sk-private-local',existingSecret=true,existingVariables=true}={}) {
  const calls=[],writes=[]
  const routes={
   openai:{provider:'openai',model:'gpt-6',protocol:'responses',endpoint:'https://api.openai.com/v1/responses'},
@@ -24,11 +24,20 @@ function setup({saved=[],current='openai/gpt-6',key='sk-private-local'}={}) {
   assert.equal(command,'gh')
   calls.push([...args])
   if(options.input)writes.push(options.input)
+  if(args[0]==='secret'&&args[1]==='list') {
+    return {code:0,stdout:JSON.stringify(existingSecret?[{name:'YAOYAOCHE_MODEL_API_KEY'}]:[]),stderr:''}
+  }
+  if(args[0]==='variable'&&args[1]==='list') {
+    return {code:0,stdout:JSON.stringify(existingVariables?[
+      {name:'YAOYAOCHE_MODEL_PROVIDER',value:'openai-responses'},
+      {name:'YAOYAOCHE_MODEL_NAME',value:'gpt-6'},
+    ]:[]),stderr:''}
+  }
   return {code:0,stdout:'',stderr:''}
  }
  return builder('getSavedModelOptions','getIndependentApiKey','resolveIndependentModel',
   'getAnthropicApiKey','getMainLoopModel','execFileNoThrow','validRepository','process',
-  `${source}\nreturn {getGithubModelOptions,getGithubModelOption,getGithubActionsProviderOptions,configureGithubModel,configureGithubCustomModel,configureGithubWizardModel}`)(
+  `${source}\nreturn {getGithubModelOptions,getGithubModelOption,getGithubActionsProviderOptions,configureGithubModel,configureGithubCustomModel,configureGithubWizardModel,verifyGithubExistingActionsModel}`)(
   ()=>saved,
   route=>route.provider==='chatgpt'?(()=>{throw Error('OAuth token requested')})():key,
   resolve,
@@ -106,4 +115,22 @@ test('反编译向导已保存模型与新模型凭据模式独立校验',async(
  assert.equal(calls.length,0)
  const result=await api.configureGithubWizardModel('org/code',{kind:'saved',id:'openai/gpt-6'},true)
  assert.match(result,/openai\/gpt-6/)
+})
+
+test('反编译 GitHub 向导对齐：现有 Actions Secret 与模型变量完整时复用且不覆盖',async()=>{
+ const {api,calls,writes}=await setup()
+ const status=await api.verifyGithubExistingActionsModel('org/code')
+ assert.match(status,/已验证仓库现有 Actions 模型配置/)
+ assert.equal(writes.length,0)
+ assert.ok(calls.some(args=>args[0]==='secret'&&args[1]==='list'))
+ assert.ok(calls.some(args=>args[0]==='variable'&&args[1]==='list'))
+ assert.ok(!calls.some(args=>args[1]==='set'))
+})
+test('反编译 GitHub 向导对齐：配置缺失时提示补齐且不修改现有仓库',async()=>{
+ const f1=await setup({existingSecret:false})
+ await assert.rejects(f1.api.verifyGithubExistingActionsModel('org/code'),/尚未配置/)
+ assert.equal(f1.writes.length,0)
+ const f2=await setup({existingVariables:false})
+ await assert.rejects(f2.api.verifyGithubExistingActionsModel('org/code'),/变量不完整/)
+ assert.equal(f2.writes.length,0)
 })
