@@ -60,7 +60,7 @@ test('审查执行链进行 Git 差异采集及不可信输入处理', () => {
 
 test('极深执行器真实完成四轮审查、独立复核、PR 评论及报告保存', async () => {
   const script=githubReviewerScript().replace(/^import .*$/gm,'')
-  const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor
+  const AsyncFunction=Object.getPrototypeOf(async () => {}).constructor
   const execute=new AsyncFunction('readFileSync','writeFileSync','execFileSync',
     'process','fetch','setTimeout','clearTimeout','Buffer','URL','AbortController',script)
   const writes=new Map()
@@ -82,10 +82,10 @@ test('极深执行器真实完成四轮审查、独立复核、PR 评论及报�
     }
     if(url==='https://api.openai.com/v1/chat/completions') return {
       ok:true,text:async()=>JSON.stringify({
-        choices:[{message:{content:'第'+(++modelCalls)+'轮核查结果'}}]
+        choices:[{message:{content:`第${++modelCalls}轮核查结果`}}]
       })
     }
-    throw new Error('意外网络请求：'+url)
+    throw new Error(`意外网络请求：${url}`)
   }
   const FakeURL=class {
     constructor(url) {
@@ -113,7 +113,7 @@ test('极深执行器真实完成四轮审查、独立复核、PR 评论及报�
 
 test('极深后端支持 OpenAI Responses、Anthropic、Gemini 三类原生协议', async () => {
   const code=githubReviewerScript().replace(/^import .*$/gm,'')
-  const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor
+  const AsyncFunction=Object.getPrototypeOf(async () => {}).constructor
   const run=new AsyncFunction('readFileSync','writeFileSync','execFileSync',
     'process','fetch','setTimeout','clearTimeout','Buffer','URL','AbortController',code)
   for(const provider of ['openai-responses','anthropic','gemini']) {
@@ -169,6 +169,42 @@ test('Actions 配置可单独选择代码审查或授权消息自动响应', () 
   assert.match(both,/issue_comment:/)
   for (const yaml of [review,respond,both]) {
     assert.match(yaml,/workflow_dispatch:/)
-    assert.match(yaml,/permissions:\n  contents: read\n  pull-requests: write/)
+    assert.match(yaml,/permissions:\n[ ]{2}contents: read\n[ ]{2}pull-requests: write/)
+  }
+})
+
+
+test('自定义模型接口必须使用 HTTPS，不能向 HTTP 地址发送模型密钥', async () => {
+  const script = githubReviewerScript().replace(/^import .*$/gm, '')
+  const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor
+  const execute = new AsyncFunction('readFileSync','writeFileSync','execFileSync',
+    'process','fetch','setTimeout','clearTimeout','Buffer','URL','AbortController',script)
+  for (const provider of ['openai-compatible','openai-responses']) {
+    const requests = []
+    const env = {
+      GITHUB_REPOSITORY:'owner/repo', GITHUB_EVENT_PATH:'event.json',
+      GITHUB_EVENT_NAME:'workflow_dispatch', INPUT_PR_NUMBER:'17',
+      REVIEW_MODE:'normal', MODEL_PROVIDER:provider, MODEL_NAME:'test',
+      MODEL_API_KEY:'sensitive-key', GH_TOKEN:'test-token',
+      MODEL_BASE_URL:'http://evil.invalid/steal',
+    }
+    const request = async url => {
+      requests.push(url)
+      if (url.endsWith('/pulls/17')) return {
+        ok:true,text:async()=>JSON.stringify({title:'标题',head:{sha:'abc'}}),
+      }
+      throw new Error('意外向外发送：'+url)
+    }
+    await assert.rejects(execute(
+      ()=>JSON.stringify({}),
+      ()=>{},
+      ()=> 'diff --git a/a b/a\n+const x = 1\n',
+      {env,stdout:{write(){}}},
+      request,()=>0,()=>{},
+      {byteLength: data => data.length},URL,
+      class {signal={};abort(){}},
+    ),/HTTPS/,provider)
+    assert.equal(requests.length,1,provider)
+    assert.ok(requests[0].endsWith('/pulls/17'))
   }
 })

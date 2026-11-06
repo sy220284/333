@@ -16,7 +16,7 @@ async function gh(args: string[], input?: string): Promise<string> {
   const res = await execFileNoThrow('gh', args, {
     timeout:60000, input, preserveOutputOnError:true, useCwd:true,
   })
-  if (res.code !== 0) throw new Error('GitHub 操作失败：' + (res.stderr || res.error || '请检查 gh 授权与权限').slice(0,1000))
+  if (res.code !== 0) throw new Error(`GitHub 操作失败：${(res.stderr || res.error || '请检查 gh 授权与权限').slice(0,1000)}`)
   return res.stdout.trim()
 }
 async function checkAuth(): Promise<void> {
@@ -27,33 +27,34 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
   if (!['review','respond','both'].includes(selection)) throw new Error('Actions 类型必须为 review、respond 或 both')
   const repo = validRepository(raw)
   await checkAuth()
-  const metadata = JSON.parse(await gh(['api','repos/' + repo]))
+  const metadata = JSON.parse(await gh(['api',`repos/${repo}`]))
   if (!metadata.permissions?.push) throw new Error('当前 GitHub 用户缺少仓库写入权限')
   const base = String(metadata.default_branch)
-  const head = JSON.parse(await gh(['api','repos/' + repo + '/git/ref/heads/' + base]))
+  const head = JSON.parse(await gh(['api',`repos/${repo}/git/ref/heads/${base}`]))
   const parent = String(head.object.sha)
-  const treeInfo = JSON.parse(await gh(['api','repos/' + repo + '/git/commits/' + parent]))
+  const treeInfo = JSON.parse(await gh(['api',`repos/${repo}/git/commits/${parent}`]))
   const elements = [
     {path:GITHUB_WORKFLOW_PATH,mode:'100644',type:'blob',content:githubWorkflow(selection)},
     {path:GITHUB_SCRIPT_PATH,mode:'100644',type:'blob',content:githubReviewerScript()},
   ]
-  const tree = JSON.parse(await gh(['api','--method','POST','repos/' + repo + '/git/trees','--input','-'],
+  const tree = JSON.parse(await gh(['api','--method','POST',`repos/${repo}/git/trees`,'--input','-'],
     JSON.stringify({base_tree:treeInfo.tree.sha,tree:elements})))
-  const commit = JSON.parse(await gh(['api','--method','POST','repos/' + repo + '/git/commits','--input','-'],
+  const commit = JSON.parse(await gh(['api','--method','POST',`repos/${repo}/git/commits`,'--input','-'],
     JSON.stringify({message:'接入 333 通用 GitHub Actions 及多模型极深审查',
       tree:tree.sha,parents:[parent]})))
-  const branch = '333/review-' + randomUUID().slice(0,8)
-  await gh(['api','--method','POST','repos/' + repo + '/git/refs',
-    '-f','ref=refs/heads/' + branch,'-f','sha=' + commit.sha])
-  const body = '## 333 GitHub 通用集成\\n\\n使用 GitHub Actions 执行多模型代码审查与极深复核，可通过授权用户 @333 触发。' +
-    '\\n配置 Actions Secret THREE333_MODEL_API_KEY、变量 THREE333_MODEL_NAME 和 THREE333_MODEL_PROVIDER。' +
-    '\\n支持 OpenAI 兼容协议、Anthropic 和 Gemini。GitHub 自身授权与模型授权独立。'
+  const branch = `333/review-${randomUUID().slice(0,8)}`
+  await gh(['api','--method','POST',`repos/${repo}/git/refs`,
+    '-f',`ref=refs/heads/${branch}`,'-f',`sha=${commit.sha}`])
+  const body = [
+    '## 333 GitHub 通用集成\\n\\n使用 GitHub Actions 执行多模型代码审查与极深复核，可通过授权用户 @333 触发。',
+    '\\n配置 Actions Secret THREE333_MODEL_API_KEY、变量 THREE333_MODEL_NAME 和 THREE333_MODEL_PROVIDER。',
+    '\\n支持 OpenAI 兼容协议、Anthropic 和 Gemini。GitHub 自身授权与模型授权独立。',
+  ].join('')
   try {
     return await gh(['pr','create','--repo',repo,'--head',branch,'--base',base,
       '--title','接入 333 通用 GitHub Actions 与多模型极深审查','--body',body])
   } catch (error) {
-    throw new Error('两个配置文件已原子提交到分支 '+branch+'；创建配置 PR 失败，请以该分支重试。' +
-      (error instanceof Error ? error.message : String(error)))
+    throw new Error(`两个配置文件已原子提交到分支 ${branch}；创建配置 PR 失败，请以该分支重试。${error instanceof Error ? error.message : String(error)}`)
   }
 }
 export async function dispatchExtremeReview(rawRepo: string, rawPr: string, mode='extreme'): Promise<string> {
@@ -61,9 +62,8 @@ export async function dispatchExtremeReview(rawRepo: string, rawPr: string, mode
   const pr = validPr(rawPr)
   if (!['normal','deep','security','extreme'].includes(mode)) throw new Error('审查模式无效')
   await checkAuth()
-  await gh(['workflow','run','333-review.yml','--repo',repo,'-f','pr_number='+pr,'-f','mode='+mode])
-  return '已提交审查任务至 GitHub Actions。完成后在 PR #' + pr +
-    ' 查看评论及 Artifact： https://github.com/' + repo + '/actions/workflows/333-review.yml'
+  await gh(['workflow','run','333-review.yml','--repo',repo,'-f',`pr_number=${pr}`,'-f',`mode=${mode}`])
+  return `已提交审查任务至 GitHub Actions。完成后在 PR #${pr} 查看评论及 Artifact： https://github.com/${repo}/actions/workflows/333-review.yml`
 }
 export const call: LocalCommandCall = async (args) => {
   const tokens = args.trim().split(/\s+/).filter(Boolean)
@@ -75,11 +75,11 @@ export const call: LocalCommandCall = async (args) => {
       await checkAuth()
       const auth = '已通过 GitHub CLI OAuth 授权检查'
       const current = await execFileNoThrow('gh',['repo','view','--json','nameWithOwner','--jq','.nameWithOwner'],{timeout:10000,useCwd:true})
-      return result(auth + '\n当前仓库：' + (current.code===0 ? current.stdout.trim() : '未识别'))
+      return result(`${auth}\n当前仓库：${current.code===0 ? current.stdout.trim() : '未识别'}`)
     }
     if (action === 'repos') {
       await checkAuth()
-      return result('可访问的仓库：\n' + await gh(['repo','list','--limit','100','--json','nameWithOwner','--jq','.[].nameWithOwner']))
+      return result(`可访问的仓库：\n${await gh(['repo','list','--limit','100','--json','nameWithOwner','--jq','.[].nameWithOwner'])}`)
     }
     if (action === 'setup' && tokens.length<=3) {
       await checkAuth()
@@ -94,7 +94,7 @@ export const call: LocalCommandCall = async (args) => {
       }
       const selection = tokens[2] || 'both'
       if (!['review','respond','both'].includes(selection)) throw new Error('请选择 review、respond 或 both')
-      return result('已创建配置 PR：' + await setupRepository(selectedRepo,selection as GithubWorkflowSelection))
+      return result(`已创建配置 PR：${await setupRepository(selectedRepo,selection as GithubWorkflowSelection)}`)
     }
     if (action === 'secret' && tokens.length===3) {
       const repo = validRepository(tokens[1])
@@ -116,9 +116,9 @@ export const call: LocalCommandCall = async (args) => {
         return result(await gh(['run','view',id,'--repo',repo,'--json','databaseId,displayTitle,status,conclusion,url','--jq','.']))
       }
       if (action === 'cancel') {
-        return result('已请求取消：'+ await gh(['run','cancel',id,'--repo',repo]))
+        return result(`已请求取消：${await gh(['run','cancel',id,'--repo',repo])}`)
       }
-      return result('已请求重新执行：'+ await gh(['run','rerun',id,'--repo',repo]))
+      return result(`已请求重新执行：${await gh(['run','rerun',id,'--repo',repo])}`)
     }
     if (action === 'runs' && tokens.length===2) {
       await checkAuth()
@@ -126,6 +126,6 @@ export const call: LocalCommandCall = async (args) => {
     }
     return result(HELP)
   } catch (error) {
-    return result('GitHub 操作失败：' + (error instanceof Error ? error.message : String(error)))
+    return result(`GitHub 操作失败：${error instanceof Error ? error.message : String(error)}`)
   }
 }

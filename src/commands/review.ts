@@ -14,7 +14,7 @@ async function evidence(mode: ReviewMode, target: string): Promise<string> {
   let checkArgs: string[] = ['diff','HEAD','--check']
   if (/^[1-9][0-9]*$/.test(target)) {
     const prDiff = await execFileNoThrow('gh',['pr','diff',target],{timeout:60000,useCwd:true})
-    if (prDiff.code !== 0) throw new Error('无法读取 PR #' + target + '：' + prDiff.stderr)
+    if (prDiff.code !== 0) throw new Error(`无法读取 PR #${target}：${prDiff.stderr}`)
     const bytes = Buffer.byteLength(prDiff.stdout,'utf8')
     if (bytes > 110000) throw new Error('PR 差异超过 110KB；请缩小审查范围，避免遗漏')
     const check = await execFileNoThrow('git',['diff','--check'],{timeout:15000,useCwd:true})
@@ -23,9 +23,9 @@ async function evidence(mode: ReviewMode, target: string): Promise<string> {
   }
   if (target) {
     // A branch or commit is a baseline; never interpolate into shell commands.
-    const ref = await execFileNoThrow('git',['rev-parse','--verify',target+'^{commit}'],{timeout:8000,useCwd:true})
-    if (ref.code !== 0) throw new Error('找不到指定的 Git 比对基准：' + target)
-    diffArgs = ['diff',target+'...HEAD','--']
+    const ref = await execFileNoThrow('git',['rev-parse','--verify',`${target}^{commit}`],{timeout:8000,useCwd:true})
+    if (ref.code !== 0) throw new Error(`找不到指定的 Git 比对基准：${target}`)
+    diffArgs = ['diff',`${target}...HEAD`,'--']
     changedArgs = ['diff',target+'...HEAD','--name-only','--']
     checkArgs = ['diff',target+'...HEAD','--check']
   } else {
@@ -40,7 +40,7 @@ async function evidence(mode: ReviewMode, target: string): Promise<string> {
     if (!ref) {
       const pull = await execFileNoThrow('gh',['pr','view','--json','baseRefName','--jq','.baseRefName'],{timeout:12000,useCwd:true})
       if (pull.code===0 && /^[a-zA-Z0-9_./-]+$/.test(pull.stdout.trim())) {
-        const candidate = 'refs/remotes/origin/' + pull.stdout.trim()
+        const candidate = `refs/remotes/origin/${pull.stdout.trim()}`
         const found = await execFileNoThrow('git',['show-ref','--verify','--quiet',candidate],{timeout:8000,useCwd:true})
         if (found.code===0) ref=candidate
       }
@@ -60,14 +60,14 @@ async function evidence(mode: ReviewMode, target: string): Promise<string> {
     execFileNoThrow('git',checkArgs,{timeout:20000,useCwd:true}),
     execFileNoThrow('git',['status','--short'],{timeout:10000,useCwd:true}),
   ])
-  if (diff.code !== 0 || changed.code !== 0) throw new Error('读取 Git 变更失败：'+(diff.stderr || changed.stderr))
+  if (diff.code !== 0 || changed.code !== 0) throw new Error(`读取 Git 变更失败：${diff.stderr || changed.stderr}`)
   if (Buffer.byteLength(diff.stdout,'utf8') > 110000)
     throw new Error('完整差异超过 110KB，请按文件或 PR 缩小审查范围')
   const changedPaths = changed.stdout.split('\n').filter(Boolean)
-  const facts = ['实际 Git 差异（原始内容）：\n'+diff.stdout,
-    '变更文件：\n'+(changed.stdout || '无已跟踪文件变更'),
-    '工作区状态：\n'+(status.stdout || '干净'),
-    '差异格式校验：'+(check.code===0 ? '通过' : check.stdout || check.stderr)]
+  const facts = [`实际 Git 差异（原始内容）：\n${diff.stdout}`,
+    `变更文件：\n${changed.stdout || '无已跟踪文件变更'}`,
+    `工作区状态：\n${status.stdout || '干净'}`,
+    `差异格式校验：${check.code===0 ? '通过' : check.stdout || check.stderr}`]
   if (mode==='deep' || mode==='security') {
     const candidate = diff.stdout.split('\n').filter(line=>/^\+[^+]/.test(line) &&
       /(eval\s*\(|exec\s*\(|spawn\s*\(|process\.env|fetch\s*\(|https?:\/\/|chmod|writeFile)/.test(line))
@@ -92,14 +92,14 @@ async function extremeReview(target: string): Promise<string> {
   if (!/^[1-9][0-9]*$/.test(pr)) {
     const args = ['pr','view',...(pr ? [pr] : []),'--json','number','--jq','.number']
     const found = await execFileNoThrow('gh',args,{timeout:30000,useCwd:true})
-    if (found.code !== 0) throw new Error('极深审查未找到目标 PR：'+(found.stderr || pr))
+    if (found.code !== 0) throw new Error(`极深审查未找到目标 PR：${found.stderr || pr}`)
     pr = found.stdout.trim()
   }
   return dispatchExtremeReview(repo,pr,'extreme')
 }
 
 function instructions(mode: ReviewMode, target: string, gitEvidence: string): string {
-  const scope = target ? '用户审查目标：' + target : '审查当前分支及工作区变更'
+  const scope = target ? `用户审查目标：${target}` : '审查当前分支及工作区变更'
   const common = '你是 333 代码审查员。先核对本地执行得到的差异事实，再对每个问题定位文件、行号、复现条件、影响及根因。' +
     '只报告有明确证据的高置信问题，区分静态审查与真正运行过的测试。保留已经升级的功能与接口，不制造未经证实的问题。'
   const directions = mode==='security'
@@ -126,7 +126,7 @@ const review: Command = {
       const facts = await evidence(mode,target)
       return [{type:'text',text:instructions(mode,target,facts)}]
     } catch (error) {
-      return [{type:'text',text:'审查未启动：'+(error instanceof Error ? error.message : String(error))}]
+      return [{type:'text',text:`审查未启动：${error instanceof Error ? error.message : String(error)}`}]
     }
   },
 }
