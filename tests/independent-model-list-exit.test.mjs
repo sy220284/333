@@ -25,8 +25,8 @@ function runOnce(args) {
         },
       })
     assert.ifError(child.error)
-    assert.equal(child.signal, null, 'models list did not exit normally: ' + JSON.stringify(child))
-    assert.equal(child.status, 0, 'models list failed: ' + JSON.stringify(child))
+    assert.equal(child.signal, null, `models list did not exit normally: ${JSON.stringify(child)}`)
+    assert.equal(child.status, 0, `models list failed: ${JSON.stringify(child)}`)
     return child.stdout
   } finally {
     rmSync(home, { recursive: true, force: true })
