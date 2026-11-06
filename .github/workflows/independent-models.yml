@@ -57,5 +57,5 @@ jobs:
             ~/.npm
             .rebuild/public
           key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
-      - name: 模拟八个服务商的请求、缓存迁移与完整工具调用
+      - name: 模拟七个直连服务商、退役缓存迁移与完整工具调用
         run: bun test tests/multimodel-provider.test.ts tests/independent-local-features.test.ts
