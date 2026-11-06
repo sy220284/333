@@ -1,5 +1,6 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { TICK_TAG } from '../constants/xml.js'
+import { evaluateMissionWake, type MissionWakeState } from './missionWakePolicy.js'
 import { getSelectedMissionId, getMission } from '../utils/agentMissions.js'
 import { isSuperAgentMode } from '../utils/agentMode.js'
 import { logForDebugging } from '../utils/debug.js'
@@ -30,7 +31,9 @@ export function useProactive({
   )
   const submitRef = useRef(onSubmitTick)
   submitRef.current = onSubmitTick
+  const wakeState = useRef<MissionWakeState | undefined>(undefined)
   useEffect(() => {
+    if (current !== 'true:false') wakeState.current = undefined
     if (current !== 'true:false' || isLoading || queuedCommandsLength > 0 ||
         hasActiveLocalJsxUI || isInPlanMode) return
     let cancelled = false
@@ -42,6 +45,13 @@ export function useProactive({
           if (selected) {
             const mission = await getMission(selected)
             if (mission.status !== 'active') {
+              pauseProactive()
+              return
+            }
+            const next = evaluateMissionWake(wakeState.current, mission)
+            wakeState.current = next.state
+            if (!next.wake) {
+              logForDebugging('超级智能体任务连续唤醒后没有新增进度，自动暂停以防重复消耗')
               pauseProactive()
               return
             }
