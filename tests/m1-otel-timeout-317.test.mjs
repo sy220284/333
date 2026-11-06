@@ -44,6 +44,7 @@ test('普通模型和辅助 API 不再自动附加设备账户与会话追踪字
   }
   const client = source('src/services/api/client.ts')
   assert.doesNotMatch(client, /X-Claude-Code-Session-Id|['"]x-client-app['"]|x-client-request-id|CLIENT_REQUEST_ID_HEADER/)
+  assert.match(client, /stripSdkDiagnosticHeaders\(headers\)/)
   assert.doesNotMatch(source('src/services/api/logging.ts'), /clientRequestId|x-client-request-id/)
 })
 
