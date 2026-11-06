@@ -92,16 +92,6 @@ class AnthropicEvents {
     } })
     this.emit({ type: 'content_block_stop', index })
   }
-  /** Signed provider reasoning metadata for following tool turns. */
-  replayProviderDetails(details: ObjectValue[]): void {
-    if (!details.length) return
-    this.stopBlock()
-    const index = this.index++
-    this.emit({ type: 'content_block_start', index, content_block: {
-      type: 'redacted_thinking', data: this.replaySignature + ':openrouter:' + JSON.stringify(details),
-    } })
-    this.emit({ type: 'content_block_stop', index })
-  }
   tool(name: string, id: string, argumentsJson: string): void {
     this.stopBlock()
     this.hasTools = true
@@ -236,26 +226,9 @@ function emitFromResponses(
     throw new Error(`Responses stream error: ${JSON.stringify(data.error ?? data)}`)
   }
 }
-/** Streamed reasoning fragments with matching block indices form one block. */
-function mergeReasoningDetails(chunks: ObjectValue[]): ObjectValue[] {
-  const merged: ObjectValue[] = []
-  for (const part of chunks) {
-    if (!part || typeof part !== 'object') continue
-    const index = typeof part.index === 'number' ? part.index : undefined
-    const last = index === undefined ? undefined : merged.find(x => x.index === index && x.type === part.type)
-    if (!last) { merged.push({ ...part }); continue }
-    for (const [key, value] of Object.entries(part)) {
-      if (key === 'text' || key === 'summary' || key === 'data') {
-        if (typeof value === 'string') last[key] = String(last[key] ?? '') + value
-      } else if (value != null) last[key] = value
-    }
-  }
-  return merged
-}
 function emitFromChat(
   data: ObjectValue, events: AnthropicEvents,
-  state: { completed: boolean; stopReason?: string; calls: Map<number, ObjectValue>;
-    reasoningDetails: ObjectValue[] },
+  state: { completed: boolean; stopReason?: string; calls: Map<number, ObjectValue> },
 ): void {
   if (data.error) throw new Error(`Chat completion error: ${JSON.stringify(data.error)}`)
   if (data.usage) events.setUsage(data.usage)
@@ -263,7 +236,6 @@ function emitFromChat(
     const delta = choice.delta ?? {}
     if (typeof delta.reasoning_content === 'string') events.thinking(delta.reasoning_content)
     else if (typeof delta.reasoning === 'string') events.thinking(delta.reasoning)
-    if (Array.isArray(delta.reasoning_details)) state.reasoningDetails.push(...delta.reasoning_details)
     if (typeof delta.content === 'string') events.text(delta.content)
     for (const call of delta.tool_calls ?? []) {
       const index = Number(call.index ?? 0)
@@ -326,11 +298,6 @@ function materializeResponse(body: ObjectValue, route: ProviderRoute, signature:
     const reasoningText = message?.reasoning_content ?? message?.reasoning
     if (typeof reasoningText === 'string' && reasoningText) {
       content.push({ type: 'thinking', thinking: reasoningText, signature })
-    }
-    if (route.provider === 'openrouter' && Array.isArray(message?.reasoning_details) &&
-        message.reasoning_details.length) {
-      content.push({ type: 'redacted_thinking',
-        data: signature + ':openrouter:' + JSON.stringify(message.reasoning_details) })
     }
     if (message?.content) content.push({ type: 'text', text: message.content })
     for (const call of message?.tool_calls ?? []) content.push({
@@ -428,7 +395,7 @@ export function makeIndependentFetch(
         const events = new AnthropicEvents(qualifiedModel, emit, signature)
         const rstate = { completed: false, text: false, replayed: new Set<string>(), stopReason: undefined as string | undefined, tool: new Map<number, ObjectValue>() }
         const cstate = { completed: false, stopReason: undefined as string | undefined,
-          calls: new Map<number, ObjectValue>(), reasoningDetails: [] as ObjectValue[] }
+          calls: new Map<number, ObjectValue>() }
         try {
           for await (const chunk of sseMessages(responseBody, signal)) {
             if (chunk === '[DONE]' || cancelled) break
@@ -439,9 +406,6 @@ export function makeIndependentFetch(
           if (cancelled) return
           if (route.protocol === 'responses' && !rstate.completed) throw new Error('Responses ended without response.completed')
           if (route.protocol === 'chat-completions' && !cstate.completed) throw new Error('Chat stream ended without a finish_reason')
-          if (route.provider === 'openrouter' && cstate.reasoningDetails.length) {
-            events.replayProviderDetails(mergeReasoningDetails(cstate.reasoningDetails))
-          }
           for (const call of cstate.stopReason ? [] : cstate.calls.values()) {
             if (!call.name) throw new Error('Chat stream returned tool call with no name')
             events.tool(call.name, call.id, call.arguments || '{}')
