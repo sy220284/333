@@ -15,11 +15,16 @@ function loadInstaller(mockGh) {
   const ctor=Object.getPrototypeOf(async()=>{}).constructor
   return new ctor('execFileNoThrow','githubWorkflow','githubReviewerScript',
     'githubTaskRunnerScript','validRepository','randomUUID','Buffer',
-    `${source}\nreturn {setupRepository,dispatchReview}`)(mockGh,githubWorkflow,
+    `${source}\nreturn {setupRepository,dispatchReview,verifyGithubInstalledWorkflow}`)(mockGh,githubWorkflow,
     githubReviewerScript,githubTaskRunnerScript,validRepository,()=> 'aabbccdd-0000',Buffer)
 }
-function installationFixture({push=true,privateRepo=true,failPrOnce=false}={}) {
+function installationFixture({push=true,privateRepo=true,failPrOnce=false,existingWorkflow=false}={}) {
  const calls=[],state={tree:[],branches:{},created:0,prFailures:0}, files=new Map()
+ if(existingWorkflow){
+  files.set('main|.github/workflows/yaoyaoche-review.yml',githubWorkflow('both'))
+  files.set('main|.github/scripts/yaoyaoche-review.mjs',githubReviewerScript())
+  files.set('main|.github/scripts/yaoyaoche-task.mjs',githubTaskRunnerScript())
+ }
  async function exec(cmd,args,opts={}) {
   assert.equal(cmd,'gh')
   calls.push(args)
@@ -32,7 +37,7 @@ function installationFixture({push=true,privateRepo=true,failPrOnce=false}={}) {
     Object.keys(state.branches).map(v=>({ref:`refs/heads/${v}`})))
   if(args[0]==='api'&&path?.includes('/contents/')) {
    const key=path.split('/contents/')[1].split('?ref=')
-   const saved=files.get(`${decodeURIComponent(key[1])}|${key[0]}`)
+   const saved=files.get(`${decodeURIComponent(key[1]||'main')}|${key[0]}`)
    return saved===undefined?{code:1,stderr:'HTTP 404 Not Found',stdout:''}:
     success({type:'file',encoding:'base64',content:Buffer.from(saved).toString('base64')})
   }
@@ -160,4 +165,20 @@ test('task 脚本保持独立、支持改文件及 GitHub 原生创建 PR',()=>{
  assert.doesNotThrow(()=>new AsyncFunction('readFileSync','writeFileSync','readdirSync',
   'mkdirSync','lstatSync','resolve','relative','dirname','execFileSync',
   'process','fetch','URL','AbortController','setTimeout','clearTimeout','Buffer',syntax))
+})
+
+test('旧版已安装工作流可保留原文件，仅配置模型凭据',async()=>{
+ const fixture=installationFixture({existingWorkflow:true})
+ const {verifyGithubInstalledWorkflow}=await loadInstaller(fixture.exec)
+ const result=await verifyGithubInstalledWorkflow('org/code')
+ assert.match(result,/已验证并保留/)
+ assert.equal(fixture.state.created,0)
+ assert.equal(fixture.state.tree.length,0)
+ assert.ok(fixture.calls.some(x=>x[1]?.includes('/contents/.github/workflows/yaoyaoche-review.yml')))
+})
+test('旧版跳过安装路径对缺失工作流提供明确提示',async()=>{
+ const fixture=installationFixture()
+ const {verifyGithubInstalledWorkflow}=await loadInstaller(fixture.exec)
+ await assert.rejects(verifyGithubInstalledWorkflow('org/code'),/尚未完整安装/)
+ assert.equal(fixture.state.created,0)
 })
