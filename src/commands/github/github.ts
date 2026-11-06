@@ -139,6 +139,35 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
     throw new Error(`配置已提交到分支 ${targetBranch}，但 PR 创建失败：${error instanceof Error ? error.message : String(error)}`)
   }
 }
+
+/** 原版工作流冲突处理路径：选择保留时，先核实仓库已部署所引用的全部脚本。 */
+export async function verifyGithubInstalledWorkflow(rawRepo: string): Promise<string> {
+  const repo = validRepository(rawRepo)
+  await checkAuth()
+  async function getRemote(path: string): Promise<string> {
+    const meta = JSON.parse(await gh(['api', `repos/${repo}/contents/${path}`]))
+    if (meta.type !== 'file' || meta.encoding !== 'base64') {
+      throw new Error('现有 GitHub Actions 文件格式不符合预期：' + path)
+    }
+    return Buffer.from(String(meta.content).replace(/\s/g,''), 'base64').toString('utf8')
+  }
+  let workflow: string
+  try {
+    workflow = await getRemote(GITHUB_WORKFLOW_PATH)
+  } catch (error) {
+    throw new Error('仓库尚未完整安装摇摇车 Actions 工作流，请选择安装：' +
+      (error instanceof Error ? error.message : String(error)))
+  }
+  if (!workflow.includes('run: node .github/scripts/yaoyaoche-review.mjs')) {
+    throw new Error('现有工作流缺少摇摇车审查执行入口，请选择更新工作流')
+  }
+  await getRemote(GITHUB_SCRIPT_PATH)
+  if (workflow.includes('run: node .github/scripts/yaoyaoche-task.mjs')) {
+    await getRemote(GITHUB_TASK_SCRIPT_PATH)
+  }
+  return '已验证并保留仓库当前 GitHub Actions 工作流及配套脚本'
+}
+
 export async function dispatchReview(rawRepo: string, rawPr: string, mode='normal'): Promise<string> {
   const repo = validRepository(rawRepo)
   const pr = validPr(rawPr)
