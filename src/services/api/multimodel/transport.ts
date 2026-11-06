@@ -379,7 +379,18 @@ export function makeIndependentFetch(
         'conversation', 'max_tool_calls', 'metadata', 'moderation',
         'multi_agent', 'prompt', 'prompt_cache_retention',
         'safety_identifier', 'top_logprobs', 'truncation', 'user',
+        'previous_response_id',
       ]) delete payload[key]
+      // OpenAI's ChatGPT-plan route requires locally executed functions
+      // in a developer additional_tools input item, not an unrestricted
+      // top-level tools list. Keep the original names, schemas and order.
+      const localTools = Array.isArray(payload.tools) ? payload.tools : []
+      delete payload.tools
+      if (localTools.length) {
+        const input = payload.input
+        if (!Array.isArray(input)) throw new Error('ChatGPT Responses input must be an array')
+        payload.input = [{ type: 'additional_tools', role: 'developer', tools: localTools }, ...input]
+      }
       payload.store = false
       payload.stream = true
     }
