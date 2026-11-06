@@ -36,9 +36,9 @@ function wizardTool317<S extends z.ZodType<Record<string,unknown>>>(
     async checkPermissions(input){
       if(!writeAction)return {behavior:'allow' as const,updatedInput:input}
       return {behavior:'ask' as const,
-        message:'Allow Runner operation '+name+'? Review the target and environment before proceeding.'}
+        message:`Allow Runner operation ${name}? Review the target and environment before proceeding.`}
     },
-    toAutoClassifierInput(input){return name+': '+JSON.stringify(input)},
+    toAutoClassifierInput(input){return `${name}: ${JSON.stringify(input)}`},
     async call(input,context){
       return {data:await perform(input,context.abortController.signal)}
     },
@@ -114,7 +114,7 @@ async function spawnLocalRunner317(args:z.infer<typeof spawnSchema>){
   const command=[process.execPath,...childArgs].map(quoted).join(' ')+
     ' >> '+quoted(logPath)+' 2>&1 &'
   return {pid,pid_file:pidPath,log_path:logPath,health_port:args.health_port??8080,
-    command,equivalent:{api:apiUrl+'/v1/code/runners/self-hosted/runners'}}
+    command,equivalent:{api:`${apiUrl}/v1/code/runners/self-hosted/runners`}}
 }
 export const SELF_HOSTED_RUNNER_TOOLS:readonly Tool[]=[
   wizardTool317('self_hosted_runner_get_pool',
