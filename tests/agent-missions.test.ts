@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import {
   createMission, getMission, listMissions, linkMissionAssignment,
   finishMissionAssignment, updateMissionStatus, saveMissionCheckpoint, formatMission,
+  findMissionByAssignmentId,
 } from '../src/utils/agentMissions.ts'
 
 test('任务簿持久化任务目标、关联 Agent 与执行结果', async () => {
@@ -42,6 +43,24 @@ test('任务簿拒绝路径穿越、空目标和非法状态写入', async () =>
     const saved = await createMission('有效目标', '/project', root)
     await assert.rejects(() => saveMissionCheckpoint(saved.id, '', root), /阶段记录/)
     await assert.rejects(() => linkMissionAssignment(saved.id, 'a', 'agent', '', root), /有效/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('同名团队重复使用时只匹配当前项目中运行的长期任务', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yaoyaoche-mission-team-reuse-'))
+  try {
+    const oldMission = await createMission('旧项目', '/project/old', root)
+    const newMission = await createMission('新项目', '/project/new', root)
+    await linkMissionAssignment(oldMission.id, 'team:reused', 'team', '旧团队', root)
+    await finishMissionAssignment(oldMission.id, 'team:reused', 'completed', root)
+    await linkMissionAssignment(newMission.id, 'team:reused', 'team', '新团队', root)
+    assert.equal(await findMissionByAssignmentId('team:reused', root, '/project/new'), newMission.id)
+    assert.equal(await findMissionByAssignmentId('team:reused', root, '/project/old'), undefined)
+    assert.equal(await findMissionByAssignmentId('team:reused', root, '/project/other'), undefined)
+    await finishMissionAssignment(newMission.id, 'team:reused', 'completed', root)
+    assert.equal(await findMissionByAssignmentId('team:reused', root, '/project/new'), undefined)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
