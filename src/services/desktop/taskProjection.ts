@@ -8,6 +8,11 @@ export type DesktopTask = {
   toolUseId?: string
   taskType?: string
   workflowName?: string
+  runId?: string
+  isBackgrounded?: boolean
+  endTime?: number
+  totalPausedMs?: number
+  error?: unknown
   summary?: string
   lastToolName?: string
   outputFile?: string
@@ -29,6 +34,7 @@ export function projectTask(
   if (message.type !== 'system') return undefined
   if (message.subtype === 'task_started') {
     return {
+      ...previous,
       taskId: message.task_id,
       description: message.description,
       status: previous && terminalStatuses.has(previous.status) ? previous.status : 'running', updatedAt: now,
@@ -40,13 +46,8 @@ export function projectTask(
   // 2.1.317 emits patch-style task updates independently of the older
   // notification and progress events. Preserve the last terminal state when
   // delayed, duplicate or out-of-order updates arrive.
-  if ((message as { subtype: string }).subtype === 'task_updated') {
-    const update = message as unknown as {
-      task_id?: string
-      patch?: Record<string, unknown>
-    }
-    if (!update.task_id || !update.patch || typeof update.patch !== 'object') return undefined
-    const patch = update.patch
+  if (message.subtype === 'task_updated') {
+    const patch = message.patch
     const requestedStatus = patch.status
     const nextStatus = typeof requestedStatus === 'string' &&
       taskStatuses.has(requestedStatus as DesktopTask['status'])
@@ -55,9 +56,14 @@ export function projectTask(
       ? previous.status : nextStatus
     return {
       ...previous,
-      taskId: update.task_id,
+      taskId: message.task_id,
       description: typeof patch.description === 'string'
-        ? patch.description : previous?.description ?? update.task_id,
+        ? patch.description : previous?.description ?? message.task_id,
+      ...(typeof message.run_id === 'string' && { runId: message.run_id }),
+      ...(typeof patch.is_backgrounded === 'boolean' && { isBackgrounded: patch.is_backgrounded }),
+      ...(typeof patch.end_time === 'number' && { endTime: patch.end_time }),
+      ...(typeof patch.total_paused_ms === 'number' && { totalPausedMs: patch.total_paused_ms }),
+      ...(patch.error !== undefined && { error: patch.error }),
       status,
       updatedAt: now,
       ...(typeof patch.summary === 'string' && { summary: patch.summary }),
@@ -80,6 +86,7 @@ export function projectTask(
       status: previous?.status === 'completed' || previous?.status === 'failed' ||
         previous?.status === 'stopped' ? previous.status : 'running',
       updatedAt: now, 
+      ...previous,
       ...(previous?.toolUseId && { toolUseId: previous.toolUseId }),
       ...(message.tool_use_id && { toolUseId: message.tool_use_id }),
       ...(previous?.taskType && { taskType: previous.taskType }),
@@ -91,6 +98,7 @@ export function projectTask(
   }
   if (message.subtype === 'task_notification') {
     return {
+      ...previous,
       taskId: message.task_id,
       description: previous?.description ?? message.task_id,
       status: previous && terminalStatuses.has(previous.status) ? previous.status : message.status,
@@ -114,7 +122,47 @@ export function isAgentProgress(message: SDKMessage): boolean {
     message.subtype === 'task_started' ||
     message.subtype === 'task_progress' ||
     message.subtype === 'task_notification' ||
-    (message as { subtype: string }).subtype === 'task_updated' ||
-    (message as { subtype: string }).subtype === 'background_tasks_changed'
+    message.subtype === 'task_updated' ||
+    message.subtype === 'background_tasks_changed'
   )
+}
+
+/** Reconcile background tasks using the authoritative 2.1.317 collection event.
+ * Missing entries lose the background flag; they are never marked completed
+ * without an explicit terminal event from the SDK. */
+export function projectBackgroundTasks(
+  message: SDKMessage,
+  existing: ReadonlyMap<string, DesktopTask>,
+  now: number = Date.now(),
+): DesktopTask[] {
+  if (message.type !== 'system' || message.subtype !== 'background_tasks_changed') return []
+  const active = new Set<string>()
+  const result: DesktopTask[] = []
+  for (const item of message.tasks) {
+    if (!item.task_id) continue
+    active.add(item.task_id)
+    const previous = existing.get(item.task_id)
+    const requestedStatus = item.status
+    const status = previous && terminalStatuses.has(previous.status)
+      ? previous.status
+      : typeof requestedStatus === 'string' &&
+        taskStatuses.has(requestedStatus as DesktopTask['status'])
+        ? requestedStatus as DesktopTask['status'] : previous?.status ?? 'running'
+    const next: DesktopTask = {
+      ...previous,
+      taskId: item.task_id,
+      description: previous?.description ?? item.task_id,
+      status,
+      updatedAt: now,
+      isBackgrounded: true,
+      ...(item.task_type && { taskType: item.task_type }),
+    }
+    result.push(next)
+  }
+  for (const previous of existing.values()) {
+    if (previous.isBackgrounded && !active.has(previous.taskId)) {
+      result.push({ ...previous, isBackgrounded: false, updatedAt: now })
+    }
+  }
+  return result
 }
