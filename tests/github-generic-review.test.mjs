@@ -324,5 +324,6 @@ test('PR 差异格式检查基于 PR 原始补丁，保留文件与新增行号'
   assert.deepEqual(checkPullRequestPatch('diff --git a/a.ts b/a.ts\n@@ -1 +1 @@\n-const a=1\n+const a=2\n'), [])
   const source = readFileSync(new URL('../src/commands/review.ts', import.meta.url), 'utf8')
   assert.match(source, /checkPullRequestPatch\(prDiff\.stdout\)/)
-  assert.doesNotMatch(source, /prDiff\.code[\s\S]*?execFileNoThrow\('git', \['diff', '--check'\]/)
+  const prBranch = source.slice(source.indexOf('const prDiff ='), source.indexOf('  if (target)'))
+  assert.doesNotMatch(prBranch, /execFileNoThrow\('git', \['diff', '--check'\]/)
 })
