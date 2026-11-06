@@ -5,7 +5,6 @@ import { makeIndependentFetch } from './multimodel/transport.js'
 import { assertChatGPTAccountIdentity, getChatGPTAuthorization } from '../auth/chatgptOAuth.js'
 import { native317MessagesRequest, native317RequestHeaders } from './native317Wire.ts'
 import { createFoundryAzureTokenProvider } from './providerCredentials.ts'
-import { randomUUID } from 'crypto'
 import type { GoogleAuth } from 'google-auth-library'
 import {
   checkAndRefreshOAuthTokenIfNeeded,
@@ -20,7 +19,6 @@ import { getClaudeCodeUserAgent } from 'src/utils/userAgent.js'
 import { getSmallFastModel } from 'src/utils/model/model.js'
 import {
   getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
 } from 'src/utils/model/providers.js'
 import { getProxyFetchOptions } from 'src/utils/proxy.js'
 import {
@@ -410,8 +408,6 @@ function getCustomHeaders(): Record<string, string> {
   return customHeaders
 }
 
-export const CLIENT_REQUEST_ID_HEADER = 'x-client-request-id'
-
 function buildFetch(
   fetchOverride: ClientOptions['fetch'],
   source: string | undefined,
@@ -419,28 +415,17 @@ function buildFetch(
 ): ClientOptions['fetch'] {
   // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
   const inner = fetchOverride ?? globalThis.fetch
-  // Only send to the first-party API — Bedrock/Vertex/Foundry don't log it
-  // and unknown headers risk rejection by strict proxies (inc-4029 class).
-  const injectClientRequestId =
-    getAPIProvider() === 'firstParty' && isFirstPartyAnthropicBaseUrl()
   return (input, init) => {
     // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
     const headers = native317RequestHeaders(input, init)
-    // Generate a client-side request ID so timeouts (which return no server
-    // request ID) can still be correlated with server logs by the API team.
-    // Callers that want to track the ID themselves can pre-set the header.
-    if (injectClientRequestId && !headers.has(CLIENT_REQUEST_ID_HEADER)) {
-      headers.set(CLIENT_REQUEST_ID_HEADER, randomUUID())
-    }
     const request = getAPIProvider() === 'firstParty'
       ? native317MessagesRequest(input, { ...init, headers }, native317Auth)
       : { input, init: { ...init, headers } }
     try {
       // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
       const url = request.input instanceof Request ? request.input.url : String(request.input)
-      const id = headers.get(CLIENT_REQUEST_ID_HEADER)
       logForDebugging(
-        `[API REQUEST] ${new URL(url).pathname}${id ? ` ${CLIENT_REQUEST_ID_HEADER}=${id}` : ''} source=${source ?? 'unknown'}`,
+        `[API REQUEST] ${new URL(url).pathname} source=${source ?? 'unknown'}`,
       )
     } catch {
       // never let logging crash the fetch

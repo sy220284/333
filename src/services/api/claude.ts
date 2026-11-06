@@ -224,7 +224,7 @@ import { COMPACTABLE_TOOLS } from '../compact/microCompact.js'
 import { getInitializationStatus } from '../lsp/manager.js'
 import { isToolFromMcpServer } from '../mcp/utils.js'
 import { withStreamingVCR, withVCR } from '../vcr.js'
-import { CLIENT_REQUEST_ID_HEADER, getAnthropicClient } from './client.js'
+import { getAnthropicClient } from './client.js'
 import {
   ContextHintRecoveryError,
   createContextHintController,
@@ -1542,7 +1542,6 @@ async function* queryModel(
   const attemptStartTimes: number[] = []
   let stream: Stream<BetaRawMessageStreamEvent> | undefined = undefined
   let streamRequestId: string | null | undefined = undefined
-  let clientRequestId: string | undefined = undefined
   // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins -- Response is available in Node 18+ and is used by the SDK
   let streamResponse: Response | undefined = undefined
 
@@ -1823,14 +1822,6 @@ async function* queryModel(
           headlessProfilerCheckpoint('api_request_sent')
         }
 
-        // Generate and track client request ID so timeouts (which return no
-        // server request ID) can still be correlated with server logs.
-        // First-party only — 3P providers don't log it (inc-4029 class).
-        clientRequestId =
-          getAPIProvider() === 'firstParty' && isFirstPartyAnthropicBaseUrl()
-            ? randomUUID()
-            : undefined
-
         // Use raw stream instead of BetaMessageStream to avoid O(n²) partial JSON parsing
         // BetaMessageStream calls partialParse() on every input_json_delta, which we don't need
         // since we handle tool input accumulation ourselves
@@ -1843,12 +1834,7 @@ async function* queryModel(
           result = await anthropic.beta.messages
             .create(
               { ...params, stream: true },
-              {
-                signal,
-                ...(clientRequestId && {
-                  headers: { [CLIENT_REQUEST_ID_HEADER]: clientRequestId },
-                }),
-              },
+              { signal },
             )
             .withResponse()
         } catch (error) {
@@ -2804,7 +2790,6 @@ async function* queryModel(
           durationMsIncludingRetries: Date.now() - startIncludingRetries,
           attempt: attemptNumber,
           requestId,
-          clientRequestId,
           didFallBackToNonStreaming,
           queryTracking: options.queryTracking,
           querySource: options.querySource,
@@ -2860,7 +2845,6 @@ async function* queryModel(
         durationMsIncludingRetries: Date.now() - startIncludingRetries,
         attempt: attemptNumber,
         requestId,
-        clientRequestId,
         didFallBackToNonStreaming,
         queryTracking: options.queryTracking,
         querySource: options.querySource,
