@@ -72,8 +72,8 @@ function validate(test, execution, isCandidate) {
   const out = execution.stdout, err=execution.stderr
   if(execution.timed_out || execution.signal) return {ok:false,reason:'timed_out_or_terminated'}
   switch(test.id) {
-    case 'version': return {ok:execution.exit_code===0 && out.trim()===`${TARGET_RELEASE} (${isCandidate ? 'Qerivon' : 'Claude Code'})`,reason:'version'}
-    case 'version_verbose': return {ok:execution.exit_code===0 && out.trim()===`${TARGET_RELEASE} (${isCandidate ? 'Qerivon' : 'Claude Code'})\nCommit: ${TARGET_COMMIT}`,reason:'version_and_commit'}
+    case 'version': return {ok:execution.exit_code===0 && out.trim()===`${TARGET_RELEASE} (${isCandidate ? '摇摇车' : 'Claude Code'})`,reason:'version'}
+    case 'version_verbose': return {ok:execution.exit_code===0 && out.trim()===`${TARGET_RELEASE} (${isCandidate ? '摇摇车' : 'Claude Code'})\nCommit: ${TARGET_COMMIT}`,reason:'version_and_commit'}
     case 'help': return {ok:execution.exit_code===0 && /--autocompact/.test(out) && /--ax-screen-reader/.test(out) && /--output-format/.test(out),reason:'core_flags'}
     case 'mcp_help': return {ok:execution.exit_code===0 && /\bmcp\b/.test(out) && /add-json/.test(out) && /list/.test(out),reason:'mcp_help'}
     case 'plugin_help': return {ok:execution.exit_code===0 && /plugin/.test(out) && /marketplace/.test(out) && /list/.test(out),reason:'plugin_help'}

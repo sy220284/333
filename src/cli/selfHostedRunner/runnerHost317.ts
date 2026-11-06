@@ -682,14 +682,14 @@ function parseArgs(argv: readonly string[], env: NodeJS.ProcessEnv): CliOptions 
 export async function selfHostedRunnerMain317(argv: readonly string[]): Promise<void> {
   const config=parseArgs(argv,process.env)
   if(config==='help'){
-    process.stdout.write('Usage: qerivon self-hosted-runner [options]\n'+
+    process.stdout.write('Usage: yaoyaoche self-hosted-runner [options]\n'+
       '  --api-url <url>                 Runner API URL\n'+
       '  --environment-secret-file <path> Host environment credential\n'+
       '  --capacity <n>                 Concurrent sessions\n'+
       '  --base-dir <path>              Isolated sessions directory\n'+
       '  --health-port <port>           Local /healthz and /metrics listener (default 8080)\n'+
       '  --log-file <path>              Append operator-visible Runner logs\n'+
-      '  --exec-path <path>             Qerivon child executable\n'+
+      '  --exec-path <path>             摇摇车 child executable\n'+
       '  --drain-wait-sec <n>           Wait before terminating active sessions\n'+
       '  --release-idle-session-min <n> Release idle sessions after n minutes (0 disables)\n'+
       '  --hold-idle-file <path>        Keep idle sessions while a local marker is fresh\n'+

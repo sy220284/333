@@ -13,7 +13,7 @@ import {
 import { runBackgroundSupervisor } from './supervisor.ts'
 
 const DAEMON_HELP = [
-  'Usage: qerivon daemon [subcommand] [options]', '',
+  'Usage: yaoyaoche daemon [subcommand] [options]', '',
   'Service lifecycle:',
   '  run [json-path]   Run the supervisor in the foreground (default when piped)',
   '  status            Show daemon pid, version, uptime',
@@ -31,12 +31,12 @@ const DESCRIPTION = {
   agents: 'Manage background agents',
   attach: 'Open the background session in this terminal. ← returns to agent view, Ctrl+Z drops back to your shell. The session keeps running either way.',
   logs: "Print the background session's recent terminal output.",
-  stop: 'Stop a background session. Its conversation is kept; resume it later with qerivon attach.',
-  respawn: 'Restart a background session (or all of them) so it picks up the current Qerivon binary.',
+  stop: 'Stop a background session. Its conversation is kept; resume it later with yaoyaoche attach.',
+  respawn: 'Restart a background session (or all of them) so it picks up the current 摇摇车 binary.',
   rm: 'Delete a background session and its worktree. Unlike stop, works on already-exited sessions.',
 }
 const HELP = {
-  agents: ['Usage: qerivon agents [options]', '', DESCRIPTION.agents, '', 'Options:',
+  agents: ['Usage: yaoyaoche agents [options]', '', DESCRIPTION.agents, '', 'Options:',
     '  --add-dir <directory>          Include an additional allowed directory (repeatable)',
     '  --agent <agent>                Default agent for dispatched sessions',
     '  --all                          Include completed sessions in JSON output',
@@ -54,12 +54,12 @@ const HELP = {
     '  --settings <file-or-json>      Apply settings to dispatched sessions',
     '  --strict-mcp-config           Only use the supplied MCP server configuration',
     '  -h, --help                     Display help for command'].join('\n'),
-  attach: `Usage: qerivon attach <id|name>\n\n  ${DESCRIPTION.attach}`, 
-  logs: `Usage: qerivon logs <id|name>\n\n  ${DESCRIPTION.logs} Part of the session name works in place of the id.`, 
-  stop: `Usage: qerivon stop <id>\n\n  ${DESCRIPTION.stop}`, 
-  respawn: `Usage: qerivon respawn <id>|--all\n\n  ${DESCRIPTION.respawn}`, 
+  attach: `Usage: yaoyaoche attach <id|name>\n\n  ${DESCRIPTION.attach}`, 
+  logs: `Usage: yaoyaoche logs <id|name>\n\n  ${DESCRIPTION.logs} Part of the session name works in place of the id.`, 
+  stop: `Usage: yaoyaoche stop <id>\n\n  ${DESCRIPTION.stop}`, 
+  respawn: `Usage: yaoyaoche respawn <id>|--all\n\n  ${DESCRIPTION.respawn}`, 
   rm: [
-    'Usage: qerivon rm <id> [--discard-unpushed <commit>@<worktree-id>] [--force-remove-worktree <worktree-id>]', '',
+    'Usage: yaoyaoche rm <id> [--discard-unpushed <commit>@<worktree-id>] [--force-remove-worktree <worktree-id>]', '',
     `  ${DESCRIPTION.rm}`, 
     '  --discard-unpushed <commit>@<worktree-id>  also discard worktree unpushed commits and uncommitted changes,',
     '    only when the previously reported HEAD and worktree digest still match',
@@ -220,7 +220,7 @@ async function list(args) {
   } finally { ui.close() }
 }
 async function attach(id) {
-  if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error('qerivon attach requires an interactive terminal')
+  if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error('yaoyaoche attach requires an interactive terminal')
   let socket
   try { socket = await socketConnect() }
   catch (error) {
@@ -299,7 +299,7 @@ async function daemon(args) {
       await new Promise(resolve => setTimeout(resolve, 50))
     }
     if (isAlive(owner.pid)) throw new Error(`Background service pid ${owner.pid} is still running after shutdown`)
-    process.stdout.write('stopped\nnote: the next `qerivon agents` or `qerivon --bg` will start a new one\n')
+    process.stdout.write('stopped\nnote: the next `yaoyaoche agents` or `yaoyaoche --bg` will start a new one\n')
     return
   }
   if (action === 'uninstall') {
@@ -324,7 +324,7 @@ function rmOptions(args: string[]): BackgroundRmOptions317 {
     if (flag === '--discard-unpushed') {
       const value = inline || args[++i]
       const match = /^([a-f0-9]{40,64})@([a-f0-9]{12})$/i.exec(value || '')
-      if (!match) throw new Error("option '--discard-unpushed' requires <commit>@<worktree-id> previously reported by qerivon rm")
+      if (!match) throw new Error("option '--discard-unpushed' requires <commit>@<worktree-id> previously reported by yaoyaoche rm")
       out.discardUnpushed = { headSha: match[1], worktreeDigest: match[2] }
     } else if (flag === '--force-remove-worktree') {
       const value = inline || args[++i]
@@ -338,9 +338,9 @@ async function authForBackground(args) {
   const { enableConfigs, checkHasTrustDialogAccepted } = await import('../../utils/config.js')
   const { hasSkipDangerousModePermissionPrompt } = await import('../../utils/settings/settings.js')
   enableConfigs()
-  if (!checkHasTrustDialogAccepted()) throw new Error('Workspace not trusted. Run qerivon here and accept the trust prompt before using --bg.')
+  if (!checkHasTrustDialogAccepted()) throw new Error('Workspace not trusted. Run yaoyaoche here and accept the trust prompt before using --bg.')
   if ((args.includes('--dangerously-skip-permissions') || rootArg(args, '--permission-mode') === 'bypassPermissions') && !hasSkipDangerousModePermissionPrompt())
-    throw new Error('--bg with bypassPermissions requires accepting the disclaimer first. Run qerivon --dangerously-skip-permissions once interactively.')
+    throw new Error('--bg with bypassPermissions requires accepting the disclaimer first. Run yaoyaoche --dangerously-skip-permissions once interactively.')
 }
 function argValue(args, flag) {
   const index = args.findIndex(a => a === flag || a.startsWith(`${flag}=`))
@@ -366,7 +366,7 @@ export function validateBackgroundCliArgs(args) {
   const flags = activeBackgroundFlags(args)
   if (flags.has('--print') || flags.has('-p') ||
       [...flags].some(flag => flag.startsWith('--print=') || /^-[^-]*p/.test(flag))) {
-    return "--bg and --print conflict: --print never starts the interactive session that `qerivon agents` attaches to, so the job would be unattachable. The prompt is the positional — drop --print: `qerivon --bg '<task>'`."
+    return "--bg and --print conflict: --print never starts the interactive session that `yaoyaoche agents` attaches to, so the job would be unattachable. The prompt is the positional — drop --print: `yaoyaoche --bg '<task>'`."
   }
   if ([...flags].some(flag => flag === '--project-config-root' || flag.startsWith('--project-config-root='))) {
     return 'Background sessions are unavailable with --project-config-root. Run the task in a foreground session instead.'
@@ -415,10 +415,10 @@ export async function interceptBackgroundCli(args: string[]) : Promise<boolean> 
     }, { start: true })
     process.stdout.write([
       `backgrounded · ${response.id}`,
-      '  qerivon agents             list sessions',
-      `  qerivon attach ${response.id}    open in this terminal`,
-      `  qerivon logs ${response.id}      show recent output`,
-      `  qerivon stop ${response.id}      stop this session`,
+      '  yaoyaoche agents             list sessions',
+      `  yaoyaoche attach ${response.id}    open in this terminal`,
+      `  yaoyaoche logs ${response.id}      show recent output`,
+      `  yaoyaoche stop ${response.id}      stop this session`,
     ].concat('').join('\n'))
     return true
   }
@@ -439,7 +439,7 @@ export async function interceptBackgroundCli(args: string[]) : Promise<boolean> 
     return true
   }
   const id = options[0]
-  if (!id) throw new Error(`Usage: qerivon ${normalized} <id>`)
+  if (!id) throw new Error(`Usage: yaoyaoche ${normalized} <id>`)
   // Resolve against persisted records before starting a daemon; the official
   // x64 reports a missing id without booting a service or masking ENOJOB.
   const matches = await listSessions({ all: true })
