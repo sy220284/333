@@ -11,9 +11,10 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
   const oldProfile = process.env.USERPROFILE
   const oldFetch = globalThis.fetch
   const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 })
-  const jwk = { ...publicKey.export({ format: 'jwk' }), kid: 'test-openai-kid', alg: 'RS256', use: 'sig' }
+  const jwk = { ...publicKey.export({ format: 'jwk' }), kid: 'test-openai-kid', use: 'sig' }
   let nonce = ''
   let registration = 0
+  let failThirdExchangeOnce = true
   let currentScope = 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct'
   let callbackError: Error | null = null
   const opened: URL[] = []
@@ -48,6 +49,10 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
         assert.equal(grant, 'authorization_code')
         const clientId = new URLSearchParams(String(init?.body)).get('client_id')
         assert.ok(clientId)
+        if (clientId === 'oaiapp_333_three' && failThirdExchangeOnce) {
+          failThirdExchangeOnce = false
+          return Response.json({ error: 'invalid_grant' }, { status: 400 })
+        }
         const workspace = clientId === 'oaiapp_333_one' ? 'workspace-a' : 'workspace-b'
         const subject = clientId === 'oaiapp_333_one' ? 'user-a' : 'user-b'
         return Response.json({ id_token: makeToken(clientId, subject, workspace),
@@ -77,7 +82,8 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
       if (url.searchParams.get('client_id') === 'dynamic_agent_client') {
         registration += 1
         callback.searchParams.set('client_id', registration === 1
-          ? 'oaiapp_333_one' : 'oaiapp_333_two')
+          ? 'oaiapp_333_one' : registration === 2
+            ? 'oaiapp_333_two' : 'oaiapp_333_three')
       }
       // The browser callback is real loopback HTTP; external identity endpoints
       // are mocked above. No actual tokens, user sessions or costs are used.
@@ -158,6 +164,23 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
       }
       assert.equal(statSync(join(root, '.333', 'auth', 'chatgpt-accounts.json')).mode & 0o777, 0o600)
     }
+    // A dynamic client ID is issued before the code exchange. A rejected code
+    // must preserve that registration and use a fresh authorization challenge
+    // with the same issued client ID instead of registering again.
+    const originalActive = auth.getSavedChatGPTAccount()
+    await assert.rejects(auth.loginWithChatGPT({ addAccount: true }, browser), /HTTP 400/)
+    assert.equal(auth.getSavedChatGPTAccount(), originalActive)
+    const pendingPath = join(root, '.333', 'auth', 'chatgpt-pending-registration.json')
+    const pending = JSON.parse(readFileSync(pendingPath, 'utf8'))
+    assert.equal(pending.client_id, 'oaiapp_333_three')
+    assert.equal(statSync(pendingPath).mode & 0o777, 0o600)
+    const recovered = await auth.loginWithChatGPT({ resumePending: true }, browser)
+    assert.equal(recovered.clientId, 'oaiapp_333_three')
+    assert.equal(opened.at(-1)?.searchParams.get('client_id'), 'oaiapp_333_three')
+    assert.equal(opened.at(-1)?.searchParams.get('agent_name_hint'), null)
+    assert.equal((await auth.listChatGPTAccounts()).length, 3)
+    assert.equal(auth.getSavedChatGPTAccount() !== undefined, true)
+    assert.equal(callbackError, null)
   } finally {
     globalThis.fetch = oldFetch
     if (oldHome === undefined) delete process.env.HOME
