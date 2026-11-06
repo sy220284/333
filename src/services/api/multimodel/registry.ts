@@ -112,15 +112,22 @@ export async function discoverIndependentModelDetails(
     const top = typeof entry.top_provider === 'object' && entry.top_provider !== null ? entry.top_provider : {}
     const limits = typeof entry.limits === 'object' && entry.limits !== null ? entry.limits : {}
     const capabilities = typeof entry.capabilities === 'object' && entry.capabilities !== null ? entry.capabilities : {}
-    // max_input_tokens is an input-only limit, not the full context window.
+    // DashScope returns limits in model_info, while DeepSeek returns them
+    // at the root. The input-only cap is not a total context-window size.
+    const modelInfo = typeof entry.model_info === 'object' && entry.model_info !== null ? entry.model_info : {}
     const contextWindow = positiveInteger(
       entry.context_window ?? entry.context_length ?? entry.max_context_tokens ??
-      entry.max_model_len ?? limits.context_window ?? capabilities.context_window)
+      entry.max_model_len ?? modelInfo.context_window ??
+      limits.context_window ?? capabilities.context_window)
     const maxOutputTokens = positiveInteger(
       entry.max_output_tokens ?? entry.max_completion_tokens ?? entry.max_tokens ??
+      modelInfo.max_output_tokens ?? modelInfo.reasoning_max_output_tokens ??
       limits.max_output_tokens ?? limits.max_completion_tokens ??
       top.max_output_tokens ?? top.max_completion_tokens)
-    const modalities: unknown = entry.input_modalities ?? entry.architecture?.input_modalities
+    const inference = typeof entry.inference_metadata === 'object' && entry.inference_metadata !== null
+      ? entry.inference_metadata : {}
+    const modalities: unknown = entry.input_modalities ?? inference.request_modality ??
+      entry.architecture?.input_modalities
     // The DeepSeek /models contract publishes authoritative effort levels
     // per model, including updates which cannot be inferred from model names.
     const effort = entry.effort && typeof entry.effort === 'object' ? entry.effort : {}
@@ -131,12 +138,18 @@ export async function discoverIndependentModelDetails(
     const defaultEffort = typeof effort.default_level === 'string' &&
       supportedEffort?.includes(effort.default_level)
       ? effort.default_level : undefined
+    const advertisedFeatures: unknown = entry.features
     const supportsTools = Array.isArray(entry.supported_parameters)
-      ? entry.supported_parameters.includes('tools') : undefined
-    const supportsVision = Array.isArray(modalities) ? modalities.includes('image') : undefined
+      ? entry.supported_parameters.includes('tools')
+      : Array.isArray(advertisedFeatures)
+        ? advertisedFeatures.some(x => x === 'tools' || x === 'function_calling')
+        : undefined
+    const supportsVision = Array.isArray(modalities)
+      ? modalities.some(x => typeof x === 'string' && x.toLowerCase() === 'image') : undefined
     return [{ id,
-      ...(typeof entry.display_name === 'string' && entry.display_name.trim()
-        ? { displayName: entry.display_name.trim() } : {}),
+      ...((typeof entry.display_name === 'string' && entry.display_name.trim())
+        || (typeof entry.name === 'string' && entry.name.trim())
+        ? { displayName: String(entry.display_name || entry.name).trim() } : {}),
       ...(contextWindow ? { contextWindow } : {}),
       ...(maxOutputTokens ? { maxOutputTokens } : {}),
       ...(supportsTools !== undefined ? { supportsTools } : {}),

@@ -9,6 +9,7 @@ import { join } from 'node:path'
 import { isRetiredIndependentProvider, isRemovedIndependentModel, resolveIndependentModel } from './registry.js'
 import { getModelStorageRoot } from './storage.js'
 import { getSavedChatGPTAccount } from '../../auth/chatgptOAuth.js'
+import { getDocumentedModelPreset, MODEL_PROFILE_FIELDS, type ModelProfileField } from './referencePresets.js'
 
 const profilesFile = () => join(getModelStorageRoot(), 'profiles.json')
 const accountSuffix = '::account:'
@@ -31,7 +32,10 @@ export type IndependentModelProfile = {
   supportedEffort?: string[]
   defaultEffort?: string
   checkedAt?: string
-  source: 'provider' | 'manual'
+  source: 'provider' | 'manual' | 'preset'
+  /** Each field's origin, so mixed provider+reference profiles remain clear. */
+  parameterSources?: Partial<Record<ModelProfileField, 'provider' | 'manual' | 'preset'>>
+  referenceUrl?: string
 }
 
 function optionalPositiveInteger(value: unknown): number | undefined {
@@ -51,8 +55,23 @@ function validatedProfile(model: string, candidate: IndependentModelProfile): In
   if (contextWindow !== undefined && maxOutputTokens !== undefined && maxOutputTokens > contextWindow) {
     throw new Error('Model output limit cannot exceed context window')
   }
-  if (candidate.source !== 'provider' && candidate.source !== 'manual') {
+  if (candidate.source !== 'provider' && candidate.source !== 'manual' && candidate.source !== 'preset') {
     throw new Error('Unrecognized model profile origin')
+  }
+  if (candidate.parameterSources !== undefined) {
+    if (!candidate.parameterSources || typeof candidate.parameterSources !== 'object' ||
+        Array.isArray(candidate.parameterSources)) throw new Error('Invalid parameter source mapping')
+    for (const [field, source] of Object.entries(candidate.parameterSources)) {
+      if (!(MODEL_PROFILE_FIELDS as readonly string[]).includes(field) ||
+          !['provider', 'manual', 'preset'].includes(String(source))) {
+        throw new Error('Invalid parameter source entry')
+      }
+    }
+  }
+  if (candidate.referenceUrl !== undefined &&
+      (typeof candidate.referenceUrl !== 'string' ||
+        !candidate.referenceUrl.startsWith('https://'))) {
+    throw new Error('Invalid model reference URL')
   }
   for (const key of ['supportsTools', 'supportsVision', 'supportsReasoning'] as const) {
     if (candidate[key] !== undefined && typeof candidate[key] !== 'boolean') {
@@ -100,10 +119,34 @@ export function readIndependentProfiles(): Record<string, IndependentModelProfil
   }
   return active
 }
+function withDocumentedPreset(
+  model: string, saved: IndependentModelProfile | undefined,
+): IndependentModelProfile | undefined {
+  // A manual profile belongs to the user, including deliberate omissions.
+  if (saved?.source === 'manual') return saved
+  const preset = getDocumentedModelPreset(model)
+  if (!preset) return saved
+  const { referenceUrl, ...parameters } = preset
+  const parameterSources: IndependentModelProfile['parameterSources'] = {}
+  for (const field of MODEL_PROFILE_FIELDS) {
+    if (saved?.[field] !== undefined) {
+      parameterSources[field] = saved.parameterSources?.[field] ?? saved.source
+    } else if (parameters[field] !== undefined) {
+      parameterSources[field] = 'preset'
+    }
+  }
+  return {
+    ...parameters, ...saved,
+    source: saved?.source ?? 'preset',
+    parameterSources,
+    referenceUrl,
+  }
+}
+
 export function getIndependentProfile(model: string): IndependentModelProfile | undefined {
   if (!resolveIndependentModel(model)) return undefined
   const key = storedModelKey(model)
-  return key ? readIndependentProfiles()[key] : undefined
+  return withDocumentedPreset(model, key ? readIndependentProfiles()[key] : undefined)
 }
 export async function updateIndependentProfile(
   model: string,
@@ -114,9 +157,13 @@ export async function updateIndependentProfile(
   if (!key) throw new Error('Select an authorized ChatGPT account before modifying its model profile')
   const existing = readIndependentProfiles()
   // A provider's discovery response cannot overwrite an explicit user setting.
-  if (existing[key]?.source === 'manual' && patch.source === 'provider') return existing[key]
+  if (existing[key]?.source === 'manual' && patch.source !== 'manual') return existing[key]
   const next = validatedProfile(model, {
     ...existing[key], ...patch,
+    ...(patch.source === 'manual' ? { parameterSources: Object.fromEntries(
+      MODEL_PROFILE_FIELDS.filter(field => patch[field] !== undefined)
+        .map(field => [field, 'manual' as const]),
+    ) } : {}),
     source: patch.source, checkedAt: new Date().toISOString(),
   })
   const root = getModelStorageRoot()
@@ -149,12 +196,17 @@ export async function mergeDiscoveredModelProfiles(
     const id = `${provider}/${detail.id}`
     const key = storedModelKey(id, accountIdentity)
     if (!key || !resolveIndependentModel(id) || next[key]?.source === 'manual') continue
-    if (detail.contextWindow === undefined && detail.maxOutputTokens === undefined &&
-        detail.supportsTools === undefined && detail.supportsVision === undefined &&
-        detail.supportedEffort === undefined && detail.defaultEffort === undefined) continue
+    const base = withDocumentedPreset(id, next[key])
+    const detailed = detail as Record<string, unknown>
+    const providerFields = MODEL_PROFILE_FIELDS.filter(field => detailed[field] !== undefined)
+    if (!base && providerFields.length === 0) continue
+    const parameterSources = { ...base?.parameterSources }
+    for (const field of providerFields) parameterSources[field] = 'provider'
     next[key] = validatedProfile(id, {
-      ...next[key], ...detail,
-      source: 'provider', checkedAt,
+      ...base, ...detail,
+      parameterSources,
+      source: providerFields.length ? 'provider' : (base?.source ?? 'preset'),
+      checkedAt,
     })
     changed++
   }

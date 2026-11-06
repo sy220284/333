@@ -25,7 +25,8 @@ const { discoverIndependentModelDetails } = await import('../src/services/api/mu
 const { getModelFieldProfile } = await import('../src/services/api/multimodel/providerFields.ts')
 const { toChatCompletions } = await import('../src/services/api/multimodel/convert.ts')
 const { countIndependentModelTokens } = await import('../src/services/api/multimodel/tokenCounting.ts')
-const { readSavedModelCatalog } = await import('../src/services/api/multimodel/catalog.ts')
+const { readSavedModelCatalog, getConfiguredModelProviders, scanConfiguredModelProviders,
+  getConfiguredModelSnapshots } = await import('../src/services/api/multimodel/catalog.ts')
 const { readIndependentPricing } = await import('../src/services/api/multimodel/pricing.ts')
 const { getModelStorageRoot } = await import('../src/services/api/multimodel/storage.ts')
 const { resolveIndependentModel } = await import('../src/services/api/multimodel/registry.ts')
@@ -184,4 +185,63 @@ test('official DeepSeek discovery persists model-specific effort limits and defa
   await assert.rejects(updateIndependentProfile('deepseek/deepseek-v4-pro', {
     source: 'manual', supportedEffort: ['low'], defaultEffort: 'max',
   }), /default effort/)
+})
+
+test('documented model presets are available before provider metadata and are traceable', () => {
+  const profile = getIndependentProfile('minimax/MiniMax-M3.1-Flash')
+  assert.equal(profile?.contextWindow, 1_000_000)
+  assert.equal(profile?.maxOutputTokens, 524_288)
+  assert.equal(profile?.parameterSources?.maxOutputTokens, 'preset')
+  assert.match(profile?.referenceUrl ?? '', /^https:\/\//)
+  assert.equal(getIndependentProfile('openai/unlisted-openai-model'), undefined)
+})
+
+test('provider /models metadata overrides individual documented limits without erasing other defaults', async () => {
+  const model = 'qwen/qwen3.8-max'
+  const count = await mergeDiscoveredModelProfiles('qwen', [
+    { id: 'qwen3.8-max', contextWindow: 500_000 },
+  ])
+  assert.equal(count, 1)
+  const profile = getIndependentProfile(model)
+  assert.equal(profile?.contextWindow, 500_000)
+  assert.equal(profile?.maxOutputTokens, 131_072)
+  assert.equal(profile?.parameterSources?.contextWindow, 'provider')
+  assert.equal(profile?.parameterSources?.maxOutputTokens, 'preset')
+  assert.equal(readIndependentProfiles()[model]?.maxOutputTokens, 131_072)
+  await updateIndependentProfile(model, { source: 'manual',
+    contextWindow: 600_000, maxOutputTokens: 64_000 })
+  await mergeDiscoveredModelProfiles('qwen', [{ id: 'qwen3.8-max',
+    contextWindow: 400_000, maxOutputTokens: 32_000 }])
+  assert.equal(getIndependentProfile(model)?.contextWindow, 600_000)
+  assert.equal(getIndependentProfile(model)?.maxOutputTokens, 64_000)
+})
+
+test('Qwen model_info schema publishes full context and output metadata', async () => {
+  const mock = (async () => Response.json({ data: [{
+    id: 'qwen3.8-flash', name: 'Qwen 3.8 Flash',
+    model_info: { context_window: 1000000, max_input_tokens: 991808, max_output_tokens: 131072 },
+    inference_metadata: { request_modality: ['Text', 'Image'] },
+  }] })) as typeof fetch
+  const found = await discoverIndependentModelDetails('qwen', 'test', mock)
+  assert.deepEqual(found, [{ id: 'qwen3.8-flash', displayName: 'Qwen 3.8 Flash',
+    contextWindow: 1_000_000, maxOutputTokens: 131_072, supportsVision: true }])
+})
+
+test('configured-model scan sees only configured credentials and records partial failures', async () => {
+  await setProviderApiKey('minimax', 'test-minimax')
+  const saved = getConfiguredModelProviders({})
+  assert.ok(saved.includes('minimax'))
+  const other = saved.filter(name => name !== 'minimax')
+  const seen: string[] = []
+  const report = await scanConfiguredModelProviders(async provider => {
+    seen.push(provider)
+    if (provider === 'minimax') throw new Error('Local integration fixture')
+    return []
+  })
+  assert.ok(seen.includes('minimax'))
+  assert.deepEqual(report.filter(item => item.provider === 'minimax'), [
+    { provider: 'minimax', modelCount: 0, error: 'Local integration fixture' },
+  ])
+  assert.deepEqual(report.filter(item => item.provider !== 'minimax').length, other.length)
+  assert.ok(Array.isArray(getConfiguredModelSnapshots()))
 })

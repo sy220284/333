@@ -16,6 +16,10 @@ import { getCatalogModelsForProvider } from '../../../utils/model/modelCatalog.j
 import { getAPIProvider } from '../../../utils/model/providers.js'
 import { mergeDiscoveredModelProfiles } from './profiles.js'
 import { getModelStorageRoot } from './storage.js'
+import { readProviderApiKey, listProviderApiKeyAccounts } from '../../auth/apiKeyVault.js'
+import { getIndependentProfile } from './profiles.js'
+import { getContextWindowForModel, getModelMaxOutputTokens } from '../../../utils/context.js'
+import { getDocumentedModelPresetInventory } from './referencePresets.js'
 
 const catalogFile = () => join(getModelStorageRoot(), 'catalog.json')
 type ModelEntry = {
@@ -127,4 +131,72 @@ export function getRegisteredModelInventory(): RegisteredModel[] {
 
 export function listSupportedProviders(): IndependentProvider[] {
   return Object.keys(PROVIDERS) as IndependentProvider[]
+}
+
+/** Only these providers have usable local credentials; no secret values leave
+ * this process. The model list itself still comes from each provider. */
+export function getConfiguredModelProviders(env: NodeJS.ProcessEnv = process.env): IndependentProvider[] {
+  const saved = new Set<string>(listProviderApiKeyAccounts())
+  const configured: IndependentProvider[] = []
+  for (const [provider, definition] of Object.entries(PROVIDERS) as Array<[IndependentProvider, typeof PROVIDERS[IndependentProvider]]>) {
+    if (provider === 'chatgpt') {
+      if (getSavedChatGPTAccount()) configured.push(provider)
+    } else if ((definition.keyEnvironment && env[definition.keyEnvironment]) ||
+               (saved.has(provider) && readProviderApiKey(provider))) {
+      configured.push(provider)
+    }
+  }
+  return configured
+}
+
+export type ConfiguredModelSnapshot = {
+  model: string
+  provider: string
+  contextWindow: number
+  maxOutputTokens: number
+  defaultOutputTokens: number
+  contextSource: string
+  outputSource: string
+  referenceUrl?: string
+}
+
+/** Inspect local cached and reference limits without a network request. */
+export function getConfiguredModelSnapshots(): ConfiguredModelSnapshot[] {
+  return getSavedModelOptions().map(option => {
+    const profile = getIndependentProfile(option.value)
+    const output = getModelMaxOutputTokens(option.value)
+    return {
+      model: option.value,
+      provider: option.value.split('/')[0]!,
+      contextWindow: getContextWindowForModel(option.value),
+      maxOutputTokens: output.upperLimit,
+      defaultOutputTokens: output.default,
+      contextSource: profile?.parameterSources?.contextWindow ?? profile?.source ?? 'fallback',
+      outputSource: profile?.parameterSources?.maxOutputTokens ?? profile?.source ?? 'fallback',
+      ...(profile?.referenceUrl ? { referenceUrl: profile.referenceUrl } : {}),
+    }
+  })
+}
+
+export function getAvailableModelPresets() {
+  return getDocumentedModelPresetInventory()
+}
+
+/** Refresh precisely the configured accounts and report every attempted
+ * provider, including failures, without turning a partial scan into success. */
+export async function scanConfiguredModelProviders(
+  refresh: (provider: IndependentProvider) => Promise<ModelEntry[]> = refreshProviderModels,
+): Promise<Array<{ provider: IndependentProvider; modelCount: number; error?: string }>> {
+  const accounts = getConfiguredModelProviders()
+  if (accounts.length === 0) throw new Error('尚未找到已配置的模型服务商；请先设置 API Key 或登录账号')
+  const results: Array<{ provider: IndependentProvider; modelCount: number; error?: string }> = []
+  for (const provider of accounts) {
+    try {
+      const models = await refresh(provider)
+      results.push({ provider, modelCount: models.length })
+    } catch (error) {
+      results.push({ provider, modelCount: 0, error: error instanceof Error ? error.message : String(error) })
+    }
+  }
+  return results
 }

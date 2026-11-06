@@ -3204,18 +3204,40 @@ async function run(): Promise<CommanderCommand> {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     if (!result.toolRoundTrip) process.exitCode = 1;
   });
-  modelsCommand.command('refresh [provider]').description('从服务商刷新当前账号可用模型').action(async (provider?: string) => {
-    const { listSupportedProviders, refreshProviderModels } = await import('./services/api/multimodel/catalog.js');
-    const names = listSupportedProviders();
-    if (provider && !names.includes(provider as typeof names[number])) {
-      throw new Error(`未知服务商：${provider}。支持：${names.join(', ')}`);
-    }
-    const selected = provider ? [provider as typeof names[number]] : names;
-    for (const name of selected) {
-      const models = await refreshProviderModels(name);
-      process.stdout.write(`${name}: ${models.length} 个可用模型\n`);
-    }
-  });
+  modelsCommand.command('refresh [provider]').description('刷新指定服务商，默认仅查询已配置的账号')
+    .action(async (provider?: string) => {
+      const { listSupportedProviders, refreshProviderModels, scanConfiguredModelProviders } =
+        await import('./services/api/multimodel/catalog.js');
+      const names = listSupportedProviders();
+      if (provider && !names.includes(provider as typeof names[number])) {
+        throw new Error(`未知服务商：${provider}。支持：${names.join(', ')}`);
+      }
+      if (provider) {
+        const models = await refreshProviderModels(provider as typeof names[number]);
+        process.stdout.write(`${provider}: 已查询 ${models.length} 个模型\n`);
+      } else {
+        const results = await scanConfiguredModelProviders();
+        process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
+        if (results.some(result => result.error)) process.exitCode = 1;
+      }
+    });
+  modelsCommand.command('scan-configured').description('查询全部已配置模型并展示上下文、输出上限及参数来源')
+    .option('--offline', '只显示本地模型档案与文档预置参数，不连接 API')
+    .action(async (options: { offline?: boolean }) => {
+      const { scanConfiguredModelProviders, getConfiguredModelSnapshots } =
+        await import('./services/api/multimodel/catalog.js');
+      if (!options.offline) {
+        const results = await scanConfiguredModelProviders();
+        process.stdout.write(`${JSON.stringify({ providers: results }, null, 2)}\n`);
+        if (results.some(result => result.error)) process.exitCode = 1;
+      }
+      process.stdout.write(`${JSON.stringify({ models: getConfiguredModelSnapshots() }, null, 2)}\n`);
+    });
+  modelsCommand.command('presets').description('查看内置的模型上下文与输出预置值，以及原始资料链接')
+    .action(async () => {
+      const { getAvailableModelPresets } = await import('./services/api/multimodel/catalog.js');
+      process.stdout.write(`${JSON.stringify(getAvailableModelPresets(), null, 2)}\n`);
+    });
   const localSettings = program.command('local-settings').description('在本机保存和恢复设置历史');
   localSettings.command('snapshot').description('保存当前设置快照').action(async () => {
     const { snapshotLocalSettings } = await import('./services/localRuntime/settingsSnapshots.js');
