@@ -110,6 +110,33 @@ test('Chat completions streaming preserves interleaved tool fragments and termin
   assert.ok(result.some(x => x.delta?.partial_json === '{"file_path":"/a"}'))
   assert.equal(result.at(-1)?.type, 'message_stop')
 })
+test('missing provider tool-call ID fails safely instead of generating an unpairable ID', async () => {
+  const chatRoute = requireRoute('deepseek/deepseek-chat')
+  const chatRequest = new Request('https://333-model-bridge.invalid/v1/messages', {
+    method: 'POST', body: JSON.stringify({ ...body, model: 'deepseek/deepseek-chat' }),
+  })
+  const chatResult = await makeIndependentFetch(chatRoute, 'secret', async () => stream(
+    { choices: [{ delta: { tool_calls: [
+      { index: 0, function: { name: 'Read', arguments: '{}' } },
+    ] }, finish_reason: 'tool_calls' }] },
+  ))(chatRequest)
+  await assert.rejects(() => chatResult.text(), /stable name or ID/)
+
+  const responseRoute = requireRoute('openai/gpt-6.1-sol')
+  const responseRequest = new Request('https://333-model-bridge.invalid/v1/messages', {
+    method: 'POST', body: JSON.stringify(body),
+  })
+  const responseResult = await makeIndependentFetch(responseRoute, 'secret', async () => stream(
+    { type: 'response.output_item.done', output_index: 0, item: {
+      type: 'function_call', name: 'Read', arguments: '{}',
+    } },
+    { type: 'response.completed', response: { output: [], usage: {
+      input_tokens: 5, output_tokens: 2,
+    } } },
+  ))(responseRequest)
+  await assert.rejects(() => responseResult.text(), /stable name or ID/)
+})
+
 test('ChatGPT lists only model entries exposed for the connected account', async () => {
   const results = await discoverIndependentModels('chatgpt', 'oauth-token',
     (async () => new Response(JSON.stringify({ models: [
