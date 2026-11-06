@@ -122,7 +122,7 @@ test('old local model, profile and price caches exclude removed providers withou
       { provider: 'deepseek', id: 'deepseek-chat', discoveredAt: '2026-11-01' },
     ],
   }))
-  assert.deepEqual(readSavedModelCatalog().models.map(x => x.provider + '/' + x.id), [
+  assert.deepEqual(readSavedModelCatalog().models.map(x => `${x.provider}/${x.id}`), [
     'deepseek/deepseek-chat',
   ])
 
