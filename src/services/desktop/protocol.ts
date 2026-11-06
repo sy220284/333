@@ -56,3 +56,4 @@ export type DesktopEvent =
   | { event: 'permission.resolved'; sessionId: string; permissionId: string }
   | { event: 'agent.progress'; sessionId: string; turnId: string; task?: DesktopTask; message: SDKMessage }
   | { event: 'task.updated'; sessionId: string; task: DesktopTask }
+  | { event: 'task.persistence.error'; sessionId: string; error: string }
