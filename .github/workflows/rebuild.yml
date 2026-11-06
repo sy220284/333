@@ -414,10 +414,10 @@ jobs:
         id: acceptance_046
         continue-on-error: true
         run: node --test tests/m1-account-email-disclosure-317.test.mjs
-      - name: 317无共同Git历史审查：原生快照构建与调用链验证
+      - name: 333无共同Git历史审查：通用GitHub PR差异及执行链验证
         id: acceptance_047
         continue-on-error: true
-        run: node --test tests/m6-ultrareview-unrelated-history-317.test.mjs
+        run: node --test --test-name-pattern='无共同 Git 历史' tests/github-generic-review.test.mjs
       - name: 317云端审查启动配置与远端轮询一致性
         id: acceptance_045
         continue-on-error: true
@@ -695,7 +695,7 @@ jobs:
             failures=$((failures+1))
           fi
           if [ "${{ steps.acceptance_047.outcome }}" = failure ]; then
-            echo "::error::验收失败：317无共同历史审查未正确创建完整Git快照"
+            echo "::error::验收失败：333 无共同历史 PR 审查没有使用独立 GitHub 差异通道"
             failures=$((failures+1))
           fi
           if [ "${{ steps.acceptance_048.outcome }}" = failure ]; then

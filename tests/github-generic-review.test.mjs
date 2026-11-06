@@ -208,3 +208,51 @@ test('自定义模型接口必须使用 HTTPS，不能向 HTTP 地址发送模�
     assert.ok(requests[0].endsWith('/pulls/17'))
   }
 })
+
+
+test('无共同 Git 历史的 PR 审查依赖 GitHub 差异接口，无需创建原版云端快照', async () => {
+  const script = githubReviewerScript().replace(/^import .*$/gm, '')
+  const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor
+  const execute = new AsyncFunction('readFileSync','writeFileSync','execFileSync',
+    'process','fetch','setTimeout','clearTimeout','Buffer','URL','AbortController',script)
+  const commands = []
+  const urls = []
+  let finished = false
+  const env = {
+    GITHUB_REPOSITORY:'owner/repo', GITHUB_EVENT_PATH:'event.json',
+    GITHUB_EVENT_NAME:'workflow_dispatch', INPUT_PR_NUMBER:'8',
+    REVIEW_MODE:'normal', MODEL_PROVIDER:'openai-compatible',
+    MODEL_NAME:'test-model', MODEL_API_KEY:'test-secret', GH_TOKEN:'test-token',
+  }
+  const fetchMock = async url => {
+    urls.push(url)
+    if (url.endsWith('/pulls/8')) return {
+      ok:true, text:async()=>JSON.stringify({title:'独立 Git 历史 PR',head:{sha:'a1'}}),
+    }
+    if (url.endsWith('/issues/8/comments')) {
+      finished = true
+      return {ok:true, text:async()=>JSON.stringify({id:1})}
+    }
+    if (url === 'https://api.openai.com/v1/chat/completions') return {
+      ok:true, text:async()=>JSON.stringify({choices:[{message:{content:'已检查完整 PR 差异'}}]}),
+    }
+    throw new Error(String(url))
+  }
+  await execute(
+    ()=>JSON.stringify({}),
+    ()=>{},
+    (command,args)=>{
+      commands.push({command,args})
+      assert.equal(command,'gh')
+      assert.deepEqual(args.slice(0,3),['pr','diff','8'])
+      return 'diff --git a/orphan.ts b/orphan.ts\n+const orphan = true\n'
+    },
+    {env,stdout:{write(){}}},
+    fetchMock,()=>0,()=>{}, {byteLength: text => text.length},URL,
+    class {signal={};abort(){}},
+  )
+  assert.equal(commands.length,1)
+  assert.equal(finished,true)
+  assert.equal(urls.filter(url=>url.endsWith('/pulls/8')).length,1)
+  assert.equal(urls.filter(url=>url.endsWith('/issues/8/comments')).length,1)
+})
