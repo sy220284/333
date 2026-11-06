@@ -12,15 +12,19 @@ export function githubWorkflow(selection: GithubWorkflowSelection = 'both'): str
     '  pull_request_target:',
     '    types: [opened, synchronize, reopened, ready_for_review]',
   ]
-  const comments = selection === 'review' ? [] : [
+  // The review-only mode must still receive /yaoyaoche review comments.
+  // Developer tasks additionally subscribe to PR review comments and issues.
+  const comments = [
     '  issue_comment:',
     '    types: [created]',
-    '  pull_request_review_comment:',
-    '    types: [created]',
-    '  pull_request_review:',
-    '    types: [submitted]',
-    '  issues:',
-    '    types: [opened]',
+    ...(selection === 'review' ? [] : [
+      '  pull_request_review_comment:',
+      '    types: [created]',
+      '  pull_request_review:',
+      '    types: [submitted]',
+      '  issues:',
+      '    types: [opened]',
+    ]),
   ]
   const reviewComment = `(github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/yaoyaoche review') && ${membership})`
   const requested = (content: string): string => [
@@ -39,8 +43,7 @@ export function githubWorkflow(selection: GithubWorkflowSelection = 'both'): str
   ].join(' || ')
   const internalPR = "(github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository)"
   const reviewCases = ["github.event_name == 'workflow_dispatch'",
-    ...(selection === 'respond' ? [] : [internalPR]),
-    ...(selection === 'review' ? [] : [reviewComment])]
+    ...(selection === 'respond' ? [] : [internalPR, reviewComment])]
   return [
     'name: 摇摇车 GitHub 审查与开发',
     'on:',
