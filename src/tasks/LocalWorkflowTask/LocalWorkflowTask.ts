@@ -1,7 +1,7 @@
 import { isSuperAgentMode } from '../../utils/agentMode.js'
 import { requireActiveSelectedMission, linkMissionAssignment, finishMissionAssignment } from '../../utils/agentMissions.js'
 import { randomUUID } from 'node:crypto'
-import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, sep } from 'node:path'
 import { getSessionId, getOriginalCwd, getSessionProjectDir } from '../../bootstrap/state.js'
 import { createTaskStateBase, generateTaskId, type Task, type TaskStateBase, type SetAppState } from '../../Task.js'
@@ -118,7 +118,12 @@ export async function launchWorkflow(
       await mkdir(dir,{recursive:true,mode:0o700})
       await mkdir(dirname(scriptPath),{recursive:true,mode:0o700})
       await writeFile(scriptPath,input.script,{flag:'wx',mode:0o600})
-      await writeFile(journal,previousJournal,{flag:'wx',mode:0o600})
+      try {
+        await writeFile(journal,previousJournal,{flag:'wx',mode:0o600})
+      } catch(error) {
+        await rm(scriptPath,{force:true})
+        throw error
+      }
     }
     for(const line of previousJournal.split('\n')){
       if(!line.trim())continue

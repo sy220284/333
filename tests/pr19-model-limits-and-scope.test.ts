@@ -23,11 +23,18 @@ import { getStrictCommandScopeError } from '../src/utils/permissions/strictComma
 test('strict command scope cannot be widened by a classifier or an alternate tool', () => {
   const command = 'node --test check.mjs'
   assert.equal(getStrictCommandScopeError('Bash', { command }, command), undefined)
-  assert.match(getStrictCommandScopeError('Bash', { command: 'node -e "probe()"' }, command)!, /拒绝/)
-  assert.match(getStrictCommandScopeError('Bash', { command: command + ' && node -e "probe()"' }, command)!, /拒绝/)
-  assert.match(getStrictCommandScopeError('PowerShell', { command }, command)!, /拒绝/)
-  assert.match(getStrictCommandScopeError('Agent', {}, command)!, /拒绝/)
-  assert.match(getStrictCommandScopeError('mcp__shell__execute', { command }, command)!, /拒绝/)
+  const rejectedCalls = [
+    ['Bash', { command: 'node -e "probe()"' }],
+    ['Bash', { command: `${command} && node -e "probe()"` }],
+    ['PowerShell', { command }],
+    ['Agent', {}],
+    ['mcp__shell__execute', { command }],
+  ] as const
+  for (const [tool, input] of rejectedCalls) {
+    const rejected = getStrictCommandScopeError(tool, input, command)
+    assert.ok(rejected)
+    assert.match(rejected, /拒绝/)
+  }
   assert.equal(getStrictCommandScopeError('Read', {}, command), undefined)
   assert.equal(getStrictCommandScopeError('Bash', { command: 'node -e' }, undefined), undefined)
 })

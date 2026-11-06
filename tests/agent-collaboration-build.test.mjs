@@ -62,3 +62,12 @@ test('Workflow 恢复支持已结束的跨会话执行并保留原日志',()=>{
   assert.match(runtime,/writeFile\(journal,previousJournal,\{flag:'wx'/)
   assert.match(entry,/findWorkflowResumeSource/)
 })
+
+test('历史工作流恢复检查脚本和日志边界，失败时回滚新复制的脚本',()=>{
+  const history=read('src/tasks/LocalWorkflowTask/workflowHistory.ts')
+  assert.match(history,/journalPath.startsWith\(runRoot \+ sep\)/)
+  const run=read('src/tasks/LocalWorkflowTask/LocalWorkflowTask.ts')
+  assert.match(run,/await rm\(scriptPath,\{force:true\}\)/)
+  const entry=read('src/tools/WorkflowTool/WorkflowTool.ts')
+  assert.match(entry,/isHistoricalWorkflow/)
+})

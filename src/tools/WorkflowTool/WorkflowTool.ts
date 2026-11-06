@@ -41,7 +41,12 @@ async function resolveScript(input:z.infer<InputSchema>) {
     const scriptDir=workflowSessionScripts(projectDir,getSessionId())
     const runId=/-((?:wf_[0-9a-f]{8}-[0-9a-f]{3}))\.js$/.exec(path)?.[1]
     const isStoredWorkflow=path.startsWith(scriptDir+sep)&&!!runId
-    if(!isWorkspaceFile&&!isStoredWorkflow)throw new Error('Workflow script path is outside the workspace or session workflow directory')
+    const historical = !isWorkspaceFile && !isStoredWorkflow && input.resumeFromRunId
+      ? await findWorkflowResumeSource(projectDir,getSessionId(),input.resumeFromRunId)
+      : undefined
+    const isHistoricalWorkflow = historical?.scriptPath === path
+    if(!isWorkspaceFile&&!isStoredWorkflow&&!isHistoricalWorkflow)
+      throw new Error('Workflow script path is outside the workspace or an authorized workflow run')
     if(isStoredWorkflow){
       const metadata=await readWorkflowSummary(workflowSummaryPath(projectDir,getSessionId(),runId))
       if(metadata.sessionId!==getSessionId()||metadata.scriptPath!==path)

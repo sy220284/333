@@ -1,3 +1,4 @@
+import { type Dirent } from 'node:fs'
 import { readdir, realpath } from 'node:fs/promises'
 import { join, sep } from 'node:path'
 import { readWorkflowSummary, type WorkflowSummary317 } from './workflowSummaryStore.ts'
@@ -36,7 +37,7 @@ export async function readWorkflowHistory(projectDir: string, sessionId: string)
  * Each session still validates the original owner identity before disclosure.
  */
 export async function readProjectWorkflowHistory(projectDir: string): Promise<WorkflowHistoryResult317> {
- let entries
+ let entries: Dirent[]
  try { entries = await readdir(projectDir, { withFileTypes: true }) }
  catch (error) {
    if (error instanceof Error && 'code' in error && error.code === 'ENOENT')
@@ -74,12 +75,20 @@ export async function findWorkflowResumeSource(projectDir: string, sessionId: st
  if (!found.scriptPath.startsWith(scripts + sep) ||
      !found.scriptPath.endsWith(`-${runId}.js`))
    throw new Error('历史工作流脚本不属于其原会话')
- const [scriptRoot, scriptPath] = await Promise.all([realpath(scripts), realpath(found.scriptPath)])
- if (!scriptPath.startsWith(scriptRoot + sep))
-   throw new Error('历史工作流脚本指向原会话目录外')
- return {
-   sessionId: found.sessionId,
-   scriptPath,
-   journalPath: join(workflowRunDirectory(projectDir, found.sessionId, runId), 'journal.jsonl'),
- }
+ const runDirectory = workflowRunDirectory(projectDir, found.sessionId, runId)
+ const [projectRoot, sessionRoot, scriptRoot, scriptPath, runRoot, journalPath] = await Promise.all([
+   realpath(projectDir),
+   realpath(join(projectDir, found.sessionId)),
+   realpath(scripts),
+   realpath(found.scriptPath),
+   realpath(runDirectory),
+   realpath(join(runDirectory, 'journal.jsonl')),
+ ])
+ if (!sessionRoot.startsWith(projectRoot + sep) ||
+     !scriptRoot.startsWith(sessionRoot + sep) ||
+     !scriptPath.startsWith(scriptRoot + sep) ||
+     !runRoot.startsWith(sessionRoot + sep) ||
+     !journalPath.startsWith(runRoot + sep))
+   throw new Error('历史工作流的脚本或日志指向项目目录外')
+ return { sessionId: found.sessionId, scriptPath, journalPath }
 }

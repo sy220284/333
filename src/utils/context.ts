@@ -166,13 +166,13 @@ export function getModelMaxOutputTokens(model: string): {
   default: number
   upperLimit: number
 } {
-  if (resolveIndependentModel(model)) {
+  const independentRoute = resolveIndependentModel(model)
+  if (independentRoute) {
     const profile = getIndependentProfile(model)
     // Prefer the provider's published model profile. The M3.1 Flash
     // 512K ceiling is a documented reference if /models omits that field.
-    const route = resolveIndependentModel(model)!
-    const referenceMaximum = route.provider === 'minimax' &&
-      /^minimax-m3\.1-flash$/i.test(route.model) ? 524_288 : undefined
+    const referenceMaximum = independentRoute.provider === 'minimax' &&
+      /^minimax-m3\.1-flash$/i.test(independentRoute.model) ? 524_288 : undefined
     const maximum = profile?.maxOutputTokens ?? referenceMaximum ?? 4_096
     // Reasoning tokens share the completion budget. The MiniMax reference
     // recommends 128K for longer agent tasks, while permitting 512K explicitly.
