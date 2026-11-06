@@ -9,12 +9,26 @@ import { join } from 'node:path'
 
 const DIRECTORY = join(homedir(), '.333', 'feedback')
 export interface LocalFeedbackReport {
+  diagnostics?: LocalFeedbackDiagnostics
   id: string
   createdAt: string
   description: string
   source: '333-local'
 }
-export async function saveLocalFeedback(description: string): Promise<string> {
+export interface LocalFeedbackDiagnostics {
+  environment: {
+    version: string
+    platform: string
+    architecture: string
+    nodeVersion: string
+    activeModel: string | null
+  }
+  currentSessionCost: string
+  localEventCounts: Record<string, number>
+}
+
+/** One local feedback archive shared by CLI and diagnostics export. */
+export async function saveLocalFeedback(description: string, diagnostics?: LocalFeedbackDiagnostics): Promise<string> {
   const trimmed = description.trim()
   if (!trimmed) throw new Error('反馈内容为空')
   if (trimmed.length > 16_384) throw new Error('反馈内容不能超过 16384 字符')
@@ -22,6 +36,7 @@ export async function saveLocalFeedback(description: string): Promise<string> {
   const entry: LocalFeedbackReport = {
     id, createdAt: new Date().toISOString(), description: trimmed,
     source: '333-local',
+    ...(diagnostics ? { diagnostics } : {}),
   }
   await fs.mkdir(DIRECTORY, { recursive: true, mode: 0o700 })
   const path = join(DIRECTORY, `${id}.json`)
