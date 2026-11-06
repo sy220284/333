@@ -40,7 +40,7 @@ export function createDesktopTaskJournal(
     if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(sessionId)) {
       throw new TypeError('Invalid task journal session ID')
     }
-    return join(directory, sessionId + '.json')
+    return join(directory, `${sessionId}.json`)
   }
   return {
     async read(sessionId) {
@@ -66,7 +66,7 @@ export function createDesktopTaskJournal(
         const content = JSON.stringify(documentSchema.parse({ version: 1, tasks }))
         if (Buffer.byteLength(content) > 2_000_000) throw new Error('Desktop task journal exceeds its size limit')
         await mkdir(directory, { recursive: true, mode: 0o700 })
-        const tempPath = path + '.' + randomUUID() + '.tmp'
+        const tempPath = `${path}.${randomUUID()}.tmp`
         try {
           await writeFile(tempPath, content, { mode: 0o600, flag: 'wx' })
           await rename(tempPath, path)

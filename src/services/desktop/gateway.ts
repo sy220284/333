@@ -58,7 +58,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
   }
   function requireSession(sessionId: string): Entry {
     const entry = sessions.get(sessionId)
-    if (!entry) throw new Error('Desktop session is not open: ' + sessionId)
+    if (!entry) throw new Error(`Desktop session is not open: ${sessionId}`)
     return entry
   }
   function sdkOptions(selectedModel?: string): InternalOptions {
@@ -80,7 +80,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
   async function openSession(selectedModel?: string, resume?: string) {
     if (closed) throw new Error('Desktop gateway is closed')
     if (resume) {
-      if (sessions.has(resume) || opening.has(resume)) throw new Error('Session is already open: ' + resume)
+      if (sessions.has(resume) || opening.has(resume)) throw new Error(`Session is already open: ${resume}`)
       opening.add(resume)
     }
     let runtime: Headless | undefined
@@ -94,26 +94,27 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
               ),
             )).some(entry => entry.sessionId === resume)
           : !!await history.getSessionInfo(resume, { dir: cwd })
-        if (!known) throw new Error('No stored session in this workspace: ' + resume)
+        if (!known) throw new Error(`No stored session in this workspace: ${resume}`)
       }
       const tasks = resume ? await journal.read(resume) : []
       runtime = launch(sdkOptions(selectedModel), resume)
       const info = await initializeModels(runtime)
       if (closed) throw new Error('Desktop gateway closed during session initialization')
       const id = runtime.sessionId
-      if (sessions.has(id)) throw new Error('Desktop session already open: ' + id)
+      if (sessions.has(id)) throw new Error(`Desktop session already open: ${id}`)
+      const activeRuntime = runtime
       const entry: Entry = {
-        runtime,
+        runtime: activeRuntime,
         tasks: new Map(tasks.map(task => [task.taskId, task])),
         seenPermissions: new Set(),
         unsubscribe: [],
       }
       sessions.set(id, entry)
-      entry.unsubscribe.push(runtime.state.subscribe(() => emit({
-        event: 'session.state', sessionId: id, state: runtime!.state.getState(),
+      entry.unsubscribe.push(activeRuntime.state.subscribe(() => emit({
+        event: 'session.state', sessionId: id, state: activeRuntime.state.getState(),
       })))
-      entry.unsubscribe.push(runtime.permissions.subscribe(() => {
-        const pending = runtime!.permissions.getPending()
+      entry.unsubscribe.push(activeRuntime.permissions.subscribe(() => {
+        const pending = activeRuntime.permissions.getPending()
         const current = new Set(pending.map(item => item.id))
         for (const item of pending) if (!entry.seenPermissions.has(item.id)) {
           emit({ event: 'permission.request', sessionId: id, permission: item })
@@ -178,7 +179,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     const existing = sessions.get(sessionId)
     const tasks = existing ? [...existing.tasks.values()] : await journal.read(sessionId)
     const task = tasks.find(item => item.taskId === taskId)
-    if (!task) throw new Error('Task is not in the stored session: ' + taskId)
+    if (!task) throw new Error(`Task is not in the stored session: ${taskId}`)
     if (task.status === 'completed') throw new Error('Completed tasks do not require recovery')
     if (task.status === 'running') throw new Error('Task is already running')
     const restored = existing ? undefined : await openSession(undefined, sessionId)

@@ -8,10 +8,10 @@ const argv = process.argv.slice(2)
 for (let index = 0; index < argv.length; index++) {
   const key = argv[index]
   if (key !== '--cwd' && key !== '--model' && key !== '--data-dir' && key !== '--cli') {
-    throw new TypeError('Unknown desktop host option: ' + key)
+    throw new TypeError(`Unknown desktop host option: ${key}`)
   }
   const value = argv[++index]
-  if (!value) throw new TypeError('Missing desktop host option value for ' + key)
+  if (!value) throw new TypeError(`Missing desktop host option value for ${key}`)
   if (key === '--cwd') options.cwd = resolve(value)
   if (key === '--model') options.model = value
   if (key === '--data-dir') options.dataDir = resolve(value)

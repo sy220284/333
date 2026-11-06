@@ -20,7 +20,7 @@ export async function serveDesktopStdio(
   let outputError: Error | undefined
   function writeFrame(frame: DesktopReply | DesktopEvent): Promise<void> {
     if (outputError) return Promise.reject(outputError)
-    const line = JSON.stringify(frame) + '\n'
+    const line = `${JSON.stringify(frame)}\n`
     const step = writer.then(() => new Promise<void>((accept, reject) => {
       output.write(line, error => error ? reject(error) : accept())
     }))
@@ -62,6 +62,7 @@ export async function serveDesktopStdio(
     }
   }
 
+  let failure: unknown
   try {
     for await (const line of reader) {
       if (outputError) throw outputError
@@ -70,14 +71,16 @@ export async function serveDesktopStdio(
       task = handleLine(line).finally(() => pending.delete(task))
       pending.add(task)
     }
+  } catch (error) {
+    failure = error
   } finally {
     reader.close()
     stopEvents()
-    const shutdown = gateway.close()
-    const completed = await Promise.allSettled([...pending, shutdown])
+    const completed = await Promise.allSettled([...pending, gateway.close()])
     await writer
-    if (outputError) throw outputError
+    if (!failure) failure = outputError
     const first = completed.find((item): item is PromiseRejectedResult => item.status === 'rejected')
-    if (first) throw first.reason
+    if (!failure && first) failure = first.reason
   }
+  if (failure) throw failure
 }
