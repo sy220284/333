@@ -7,5 +7,7 @@ test('长期任务接入协调提示词与 Agent/Workflow 生命周期', () => {
   assert.match(read('src/tools/AgentTool/AgentTool.tsx'), /linkMissionAssignment/)
   assert.match(read('src/tools/AgentTool/agentToolUtils.ts'), /syncMissionOutcome/)
   assert.match(read('src/tasks/LocalWorkflowTask/LocalWorkflowTask.ts'), /linkMissionAssignment/)
+  assert.match(read('src/tools/TeamCreateTool/TeamCreateTool.ts'), /linkMissionAssignment/)
+  assert.match(read('src/tools/TeamDeleteTool/TeamDeleteTool.ts'), /finishMissionAssignment/)
   assert.match(read('src/commands/agents/agents.tsx'), /mission new/)
 })
