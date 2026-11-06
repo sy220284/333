@@ -23,19 +23,17 @@ const MAX_RELEASE_NOTES_SHOWN = 5
  * The flow is:
  * 1. User updates to a new version
  * 2. We fetch the changelog in the background and store it in config
- * 3. Next time the user starts Claude, the cached changelog is available immediately
+ * 3. Next time the user starts 333, the cached release notes are available immediately
  */
-export const CHANGELOG_URL =
-  'https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md'
-const RAW_CHANGELOG_URL =
-  'https://raw.githubusercontent.com/anthropics/claude-code/refs/heads/main/CHANGELOG.md'
+export const CHANGELOG_URL = 'https://github.com/sy220284/333/releases'
+const RELEASES_API_URL = 'https://api.github.com/repos/sy220284/333/releases?per_page=20'
 
 /**
  * Get the path for the cached changelog file.
- * The changelog is stored at ~/.claude/cache/changelog.md
+ * Independent release cache is stored under the configured home directory
  */
 function getChangelogCachePath(): string {
-  return join(getClaudeConfigHomeDir(), 'cache', 'changelog.md')
+  return join(getClaudeConfigHomeDir(), 'cache', 'changelog-333.md')
 }
 
 // In-memory cache populated by async reads. Sync callers (React render, sync
@@ -62,9 +60,17 @@ export async function fetchAndStoreChangelog(): Promise<void> {
     return
   }
 
-  const response = await axios.get(RAW_CHANGELOG_URL)
+  const response = await axios.get<unknown>(RELEASES_API_URL, {
+    timeout: 5000,
+    headers: { Accept: 'application/vnd.github+json' },
+  })
   if (response.status === 200) {
-    const changelogContent = response.data
+    if (!Array.isArray(response.data)) throw new Error('333 发布记录接口返回格式异常')
+    const releases = response.data as Array<{ tag_name?: string; body?: string; draft?: boolean }>
+    const entries = releases.filter(item => !item.draft && /^v?\d+\.\d+\.\d+/.test(item.tag_name ?? ''))
+    const changelogContent = '# 333 发布记录\n\n' + entries.map(item =>
+      '## ' + item.tag_name!.replace(/^v/, '') + '\n' + (item.body ?? '')
+    ).join('\n\n')
 
     // Skip write if content unchanged — writing Date.now() defeats the
     // dirty-check in saveGlobalConfig since the timestamp always differs.
