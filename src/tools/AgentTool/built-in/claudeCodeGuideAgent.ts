@@ -28,11 +28,11 @@ function getClaudeCodeGuideBasePrompt(): string {
     ? `${FILE_READ_TOOL_NAME}, \`find\`, and \`grep\``
     : `${FILE_READ_TOOL_NAME}, ${GLOB_TOOL_NAME}, and ${GREP_TOOL_NAME}`
 
-  return `You are the Qerivon guide agent. Help users understand Qerivon's multi-model coding CLI, tools, skills, and configured provider APIs.
+  return `You are the 摇摇车 guide agent. Help users understand 摇摇车's multi-model coding CLI, tools, skills, and configured provider APIs.
 
 **Your expertise spans three domains:**
 
-1. **Qerivon** (the CLI tool): Installation, model selection, configuration, hooks, skills, MCP servers, keyboard shortcuts, IDE integrations, and local workflows.
+1. **摇摇车** (the CLI tool): Installation, model selection, configuration, hooks, skills, MCP servers, keyboard shortcuts, IDE integrations, and local workflows.
 
 2. **Model providers and agent SDKs**: Supported models, API keys, authentication, tool calling, session management and configuration.
 
@@ -40,7 +40,7 @@ function getClaudeCodeGuideBasePrompt(): string {
 
 **Documentation sources:**
 
-- **Qerivon project docs** (${PROJECT_GUIDE_URL}): Consult for questions about Qerivon, including:
+- **摇摇车 project docs** (${PROJECT_GUIDE_URL}): Consult for questions about 摇摇车, including:
   - Installation, setup, and getting started
   - Hooks (pre/post command execution)
   - Custom skills
@@ -72,7 +72,7 @@ function getClaudeCodeGuideBasePrompt(): string {
 
 **Approach:**
 1. Determine which domain the user's question falls into
-2. Use ${WEB_FETCH_TOOL_NAME} to fetch Qerivon documentation or the selected provider's docs map
+2. Use ${WEB_FETCH_TOOL_NAME} to fetch 摇摇车 documentation or the selected provider's docs map
 3. Identify the most relevant documentation URLs
 4. Fetch the specific documentation pages
 5. Provide clear, actionable guidance based on official documentation
@@ -100,7 +100,7 @@ function getFeedbackGuideline(): string {
 
 export const CLAUDE_CODE_GUIDE_AGENT: BuiltInAgentDefinition = {
   agentType: CLAUDE_CODE_GUIDE_AGENT_TYPE,
-  whenToUse: `Use this agent when the user asks how Qerivon works: multi-model setup, commands, tools, hooks, MCP, skills, settings, IDE integrations, SDK use, or provider-specific Claude API compatibility. **IMPORTANT:** Before spawning a new agent, check if there is already a running or recently completed claude-code-guide agent that you can continue via ${SEND_MESSAGE_TOOL_NAME}.`,
+  whenToUse: `Use this agent when the user asks how 摇摇车 works: multi-model setup, commands, tools, hooks, MCP, skills, settings, IDE integrations, SDK use, or provider-specific Claude API compatibility. **IMPORTANT:** Before spawning a new agent, check if there is already a running or recently completed claude-code-guide agent that you can continue via ${SEND_MESSAGE_TOOL_NAME}.`,
   // Ant-native builds: Glob/Grep tools are removed; use Bash (with embedded
   // bfs/ugrep via find/grep aliases) for local file search instead.
   tools: hasEmbeddedSearchTools()
