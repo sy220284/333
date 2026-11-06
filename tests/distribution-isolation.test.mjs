@@ -46,7 +46,7 @@ test('desktop SDK host is shipped independently and handles protocol handshake o
   try {
     const release = join(sandbox, 'release');
     cpSync(releaseDir, release, { recursive: true });
-    const native = process.platform === 'win32' ? 'yaoyaoche-desktop.exe' : 'yaoyaoche-desktop';
+    const native = process.platform === 'win32' ? 'desktopHost.exe' : 'desktopHost';
     const response = spawnSync(join(release, native), [], {
       cwd: sandbox, encoding: 'utf8', timeout: 30_000,
       input: '{"id":"isolated-hello","method":"hello"}\n',
