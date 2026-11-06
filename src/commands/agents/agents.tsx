@@ -79,6 +79,8 @@ export async function call(
   args: string,
 ): Promise<React.ReactNode> {
   const value = args.trim()
+  // The terminal opens the management panel; SDK and desktop callers receive a status snapshot.
+  if (!value && context.options.isNonInteractiveSession) return call(onDone, context, 'status')
   if (!value) return <AgentCenter onDone={onDone} context={context} />
   const [verb, arg, ...rest] = value.split(/\s+/)
   if (verb === 'mode' && rest.length === 0 && (arg === 'master' || arg === 'super')) {

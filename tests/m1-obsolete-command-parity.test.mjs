@@ -21,11 +21,18 @@ test('/agents exposes the local collaboration center and an independent status c
   const index = source('src/commands/agents/index.ts')
   const implementation = source('src/commands/agents/agents.tsx')
   assert.match(index, /type: 'local-jsx'/)
+  assert.match(index, /supportsNonInteractive: true/)
   assert.match(index, /load: \(\) => import\('\.\/agents\.js'\)/)
   assert.match(implementation, /if \(verb === 'status'\)/)
   assert.match(implementation, /setAgentMode\(/)
   assert.match(implementation, /TeamCreateTool|team-create/)
   assert.match(implementation, /AgentCenter/)
+  assert.match(implementation, /context\.options\.isNonInteractiveSession\) return call\(onDone, context, 'status'\)/)
+  const main = source('src/main.tsx')
+  const slash = source('src/utils/processUserInput/processSlashCommand.tsx')
+  assert.match(main, /command\.type === 'local-jsx' && command\.supportsNonInteractive/)
+  assert.match(slash, /resultText: context\.options\.isNonInteractiveSession \? result : undefined/)
+  assert.match(slash, /returnedCommand\.type === 'local-jsx' && context\.options\.isNonInteractiveSession/)
 })
 
 test('2.1.317 suppresses redundant Agent classifier approval text but preserves other tool messages', () => {
@@ -121,7 +128,8 @@ test('rebuilt /agents status uses the local collaboration center without a model
   const targets = [['rebuilt', 'bun', [join(root, 'dist', 'cli.js')]]]
   try {
     for (const [label, command, prefix] of targets) {
-      const args = [...prefix, '--print', '--bare', '--output-format', 'json', '/agents status']
+      for (const invocation of ['/agents status', '/agents']) {
+      const args = [...prefix, '--print', '--bare', '--output-format', 'json', invocation]
       const run = spawnSync(command, args, {
         cwd: folder,
         env,
@@ -136,6 +144,7 @@ test('rebuilt /agents status uses the local collaboration center without a model
       assert.equal(result.num_turns, 0, `${label}: old wizard attempted model invocation`)
       assert.equal(result.is_error, false, `${label}: local command failed`)
       assert.match(result.result, /当前模式：/, `${label}: missing collaboration mode status`)
+      }
     }
   } finally {
     rmSync(folder, { recursive: true, force: true })
