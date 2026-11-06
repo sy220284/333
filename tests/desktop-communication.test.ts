@@ -6,6 +6,8 @@ import { join, resolve } from 'node:path'
 import { createHeadlessConversationSession } from '../src/services/conversation/headlessSession.js'
 import { createDesktopGateway } from '../src/services/desktop/gateway.js'
 import { createDesktopTaskJournal } from '../src/services/desktop/taskJournal.js'
+import { createMission, selectMission } from '../src/utils/agentMissions.js'
+import { getConfiguredAgentMode, setAgentMode } from '../src/utils/agentMode.js'
 import { DesktopRequestSchema } from '../src/services/desktop/protocol.js'
 import { projectTask } from '../src/services/desktop/taskProjection.js'
 import type { SDKMessage } from '../src/entrypoints/sdk/coreTypes.js'
@@ -233,6 +235,76 @@ test('a failed desktop journal write reports its error and later writes recover'
     await journal.write(sessionId, [{ ...running, status: 'completed' }])
     expect((await journal.read(sessionId))[0]?.status).toBe('completed')
   } finally {
+    await rm(cwd, { recursive: true, force: true })
+  }
+})
+
+test('desktop agent center manages project-scoped missions and teams through one protocol', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'desktop-agent-center-'))
+  const missionRoot = join(cwd, 'mission-data')
+  const previousMode = getConfiguredAgentMode()
+  const previousOverride = process.env.CLAUDE_CODE_COORDINATOR_MODE
+  const data = fixture()
+  const gateway = createDesktopGateway({ ...data.options, cwd, missionRoot })
+  try {
+    const initial = await gateway.handle(request('agents.overview')) as {
+      missions: Array<{ id: string }>; teams: Array<{ name: string }>;
+      activeSessions: number;
+    }
+    expect(initial.missions).toHaveLength(0)
+    expect(initial.teams).toEqual([])
+    expect(initial.activeSessions).toBe(0)
+    const created = await gateway.handle(request('missions.create', { objective: 'Finish verified code review' })) as {
+      id: string; objective: string;
+    }
+    expect(created.id).toMatch(/^mission_[a-f0-9]{16}$/)
+    const index = await gateway.handle(request('missions.list')) as {
+      selectedMissionId: string; missions: Array<{ id: string }>;
+    }
+    expect(index.selectedMissionId).toBe(created.id)
+    expect(index.missions.map(mission => mission.id)).toEqual([created.id])
+    const overview = await gateway.handle(request('agents.overview')) as { mode: string; selectedMissionId: string }
+    expect(overview.mode).toBe('super')
+    expect(overview.selectedMissionId).toBe(created.id)
+    await gateway.handle(request('agents.setMode', { mode: 'master' }))
+    const mode = await gateway.handle(request('agents.setMode', { mode: 'super' })) as { mode: string }
+    expect(mode.mode).toBe('super')
+
+    const other = await createMission('Other workspace', join(cwd, 'different-project'), missionRoot)
+    await expect(gateway.handle(request('missions.get', { missionId: other.id })))
+      .rejects.toThrow('different workspace')
+    await expect(gateway.handle(request('missions.select', { missionId: other.id })))
+      .rejects.toThrow('different workspace')
+    const checkpoint = await gateway.handle(request('missions.checkpoint', {
+      missionId: created.id, checkpoint: 'One stage verified',
+    })) as { checkpoint: string }
+    expect(checkpoint.checkpoint).toBe('One stage verified')
+    const paused = await gateway.handle(request('missions.updateStatus', {
+      missionId: created.id, status: 'paused',
+    })) as { status: string }
+    expect(paused.status).toBe('paused')
+    const resumed = await gateway.handle(request('missions.updateStatus', {
+      missionId: created.id, status: 'active',
+    })) as { status: string }
+    expect(resumed.status).toBe('active')
+    const completed = await gateway.handle(request('missions.updateStatus', {
+      missionId: created.id, status: 'completed',
+    })) as { status: string }
+    expect(completed.status).toBe('completed')
+    const persisted = await gateway.handle(request('missions.get', { missionId: created.id })) as {
+      status: string; checkpoint: string;
+    }
+    expect(persisted).toMatchObject({ status: 'completed', checkpoint: 'One stage verified' })
+    const cleared = await gateway.handle(request('missions.select', { missionId: null })) as {
+      selectedMissionId: string | null;
+    }
+    expect(cleared.selectedMissionId).toBeNull()
+  } finally {
+    selectMission(undefined, cwd)
+    setAgentMode(previousMode)
+    if (previousOverride === undefined) delete process.env.CLAUDE_CODE_COORDINATOR_MODE
+    else process.env.CLAUDE_CODE_COORDINATOR_MODE = previousOverride
+    await gateway.close()
     await rm(cwd, { recursive: true, force: true })
   }
 })
