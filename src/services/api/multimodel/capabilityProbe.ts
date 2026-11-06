@@ -6,10 +6,10 @@
 import { randomUUID } from 'node:crypto'
 import { promises as fs, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { homedir } from 'node:os'
 import { getIndependentApiKey, resolveIndependentModel } from './registry.js'
 import { getChatGPTAccessToken } from '../../auth/chatgptOAuth.js'
 import { makeIndependentFetch } from './transport.js'
+import { MODEL_STORAGE_ROOT } from './storage.js'
 type CapabilityReport = {
   model: string
   provider: string
@@ -21,7 +21,7 @@ type CapabilityReport = {
   toolRoundTrip: boolean
   details?: string
 }
-const path = join(homedir(),'.333','models','capabilities.json')
+const path = join(MODEL_STORAGE_ROOT, 'capabilities.json')
 function readReports(): CapabilityReport[] {
   try {
     const data = JSON.parse(readFileSync(path,'utf8'))
@@ -36,7 +36,7 @@ export function getSavedCapabilityReport(model: string): CapabilityReport | unde
   return readReports().find(item => item.model === model)
 }
 async function persist(report: CapabilityReport): Promise<void> {
-  const directory = join(homedir(),'.333','models')
+  const directory = MODEL_STORAGE_ROOT
   await fs.mkdir(directory, { recursive: true, mode: 0o700 })
   const list = readReports().filter(item => item.model !== report.model)
   list.push(report)
