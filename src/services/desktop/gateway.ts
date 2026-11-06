@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
 import { AgentInfoSchema, ModelInfoSchema } from '../../entrypoints/sdk/coreSchemas.js'
-import { getSessionInfo, getSessionMessages, listSessions } from '../../entrypoints/agentSdkTypes.js'
+import type { getSessionInfo, getSessionMessages, listSessions } from '../../entrypoints/agentSdkTypes.js'
 import type { InternalOptions, SDKSessionOptions } from '../../entrypoints/sdk/runtimeTypes.js'
 import { createHeadlessConversationSession } from '../conversation/headlessSession.js'
 import { createDesktopTaskJournal, type DesktopTaskJournal } from './taskJournal.js'
@@ -44,7 +44,20 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
   const cwd = resolve(options.cwd ?? process.cwd())
   const model = options.model
   const launch = options.createSession ?? createHeadlessConversationSession
-  const history = options.history ?? { listSessions, getSessionInfo, getSessionMessages }
+  // Only load the full Agent SDK history entrypoint when actually needed.
+  // Desktop sessions with injected or cached history stay renderer-neutral and
+  // do not initialize unrelated SDK modules merely by importing the gateway.
+  const history: HistoryService = options.history ?? {
+    async listSessions(...args: Parameters<typeof listSessions>) {
+      return (await import('../../entrypoints/agentSdkTypes.js')).listSessions(...args)
+    },
+    async getSessionInfo(...args: Parameters<typeof getSessionInfo>) {
+      return (await import('../../entrypoints/agentSdkTypes.js')).getSessionInfo(...args)
+    },
+    async getSessionMessages(...args: Parameters<typeof getSessionMessages>) {
+      return (await import('../../entrypoints/agentSdkTypes.js')).getSessionMessages(...args)
+    },
+  }
   const journal = options.journal ?? createDesktopTaskJournal(cwd, options.dataDir)
   const sessions = new Map<string, Entry>()
   const opening = new Set<string>()
