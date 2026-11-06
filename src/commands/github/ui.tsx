@@ -8,7 +8,7 @@ import TextInput from '../../components/TextInput.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import type { LocalJSXCommandCall, LocalJSXCommandOnDone } from '../../types/command.js'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
-import { call as runGithubCommand, setupRepository } from './github.js'
+import { call as runGithubCommand, setupRepository, verifyGithubInstalledWorkflow } from './github.js'
 import { getGithubModelOptions, configureGithubWizardModel, verifyGithubExistingActionsModel,
   getGithubActionsProviderOptions, type GithubModelOption, type GithubActionsProvider } from './modelConfig.js'
 import type { GithubWorkflowSelection } from './workflow.js'
@@ -99,13 +99,13 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
       setBusy(false)
     }
   }
-  async function perform(transferKey: boolean, reuseExisting = false): Promise<void> {
+  async function perform(transferKey: boolean, reuseExisting = false, keepWorkflow = false): Promise<void> {
     setBusy(true)
     try {
       const name = validRepository(repo)
       const existing = reuseExisting ? await verifyGithubExistingActionsModel(name) : ''
-      setStatus('检查仓库权限并创建 GitHub Actions 配置 PR…')
-      const url = await setupRepository(name, workflow)
+      setStatus(keepWorkflow ? '验证现有工作流及配套执行脚本…' : '检查仓库权限并创建 GitHub Actions 配置 PR…')
+      const url = keepWorkflow ? await verifyGithubInstalledWorkflow(name) : await setupRepository(name, workflow)
       if (transferKey) {
         setStatus('将选定 API 凭据独立写入 GitHub Actions Secrets…')
         await configureGithubWizardModel(name,
@@ -115,10 +115,10 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
           true,
         )
       }
-      const output = `GitHub 配置 PR：${url}\n仓库：${name}\n功能：${workflow}\n模型：${reuseExisting ? existing : transferKey ? (entry === 'new' ? `${provider}/${newModel}` : model) : '稍后独立配置'}\n请检查并合并配置 PR，工作流才会在仓库默认分支生效。`
+      const output = `GitHub ${keepWorkflow ? '工作流状态' : '配置结果'}：${url}\n仓库：${name}\n功能：${keepWorkflow ? '保留仓库已有工作流' : workflow}\n模型：${reuseExisting ? existing : transferKey ? (entry === 'new' ? `${provider}/${newModel}` : model) : '稍后独立配置'}\n${keepWorkflow ? '已保留原工作流，模型密钥配置完成后立即由原工作流使用。' : '请检查并合并配置 PR，工作流才会在仓库默认分支生效。'}`
       setApiKey('')
       setResult(output)
-      setStatus('配置完成，请检查并合并安装 PR。')
+      setStatus(keepWorkflow ? '现有工作流已验证并保留。' : '配置完成，请检查并合并安装 PR。')
       setStage('finished')
     } catch (error) {
       setStatus(`配置失败：${error instanceof Error ? error.message : String(error)}。可保留当前选择重试。`)
@@ -232,11 +232,15 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
             ? [{label:entry === 'new'?'确认安装并上传新 API Key':'确认安装并上传已保存的 API Key',value:'upload'}]
             : []),
           ...(entry === 'existing' ? [{label:'验证并复用仓库已有 Actions 配置',value:'reuse'}] : []),
+          ...(model || entry === 'new' ? [{label:'仅更新 Actions API Key，保留当前工作流',value:'secret-only'}] : []),
+          ...(entry === 'existing' ? [{label:'验证并保留现有工作流及模型配置',value:'reuse-only'}] : []),
           {label:'仅安装工作流，稍后配置 Actions 密钥',value:'install'},
           {label:'返回修改',value:'back'},
         ]} onChange={value=>{
           if (value === 'back') setStage('models')
-          else void perform(value === 'upload', value === 'reuse')
+          else void perform(value === 'upload' || value === 'secret-only',
+            value === 'reuse' || value === 'reuse-only',
+            value === 'secret-only' || value === 'reuse-only')
         }} onCancel={()=>setStage('models')}/>
       </Box>}
       {!busy && stage === 'finished' && <Box flexDirection="column" gap={1}>
