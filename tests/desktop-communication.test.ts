@@ -258,6 +258,8 @@ test('desktop agent center manages project-scoped missions and teams through one
     expect(initial.missions).toHaveLength(0)
     expect(initial.teams).toEqual([])
     expect(initial.activeSessions).toBe(0)
+    await expect(gateway.handle(request('agents.members', { teamName: 'different-project-team' })))
+      .rejects.toThrow('不属于当前项目')
     const created = await gateway.handle(request('missions.create', { objective: 'Finish verified code review' })) as {
       id: string; objective: string;
     }
