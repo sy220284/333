@@ -8,6 +8,7 @@ on:
       - 'src/services/localRuntime/**'
       - 'src/services/analytics/localDiagnostics.ts'
       - 'tests/multimodel-provider.test.ts'
+      - 'tests/chatgpt-oauth-accounts.test.ts'
       - 'tests/independent-local-features.test.ts'
       - '.github/workflows/independent-models.yml'
   workflow_dispatch:
@@ -58,4 +59,4 @@ jobs:
             .rebuild/public
           key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
       - name: 模拟七个直连服务商、退役缓存迁移与完整工具调用
-        run: bun test tests/multimodel-provider.test.ts tests/independent-local-features.test.ts
+        run: bun test tests/multimodel-provider.test.ts tests/chatgpt-oauth-accounts.test.ts tests/independent-local-features.test.ts
