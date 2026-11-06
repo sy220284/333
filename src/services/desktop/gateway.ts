@@ -79,6 +79,11 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
   const opening = new Set<string>()
   const ownerKey = randomUUID()
   const executingMissionJobs = new Map<string, { missionId: string; jobId: string; runId: string }>()
+  // Opt-in, event-driven queue runner: no timers, scheduled tasks or implicit
+  // recovery. It exists only while the trusted local desktop host is alive.
+  const activeMissionQueues = new Set<string>()
+  const drainingMissionQueues = new Set<string>()
+  const pendingQueueDrains = new Set<string>()
   const listeners = new Set<(event: DesktopEvent) => void>()
   let closed = false
 
@@ -220,6 +225,64 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     )
     executingMissionJobs.delete(sessionId)
     notifyJob(active.missionId, job)
+    triggerMissionQueue(active.missionId)
+  }
+
+  function notifyQueue(missionId: string, active: boolean, message?: string): void {
+    emit({ event: 'mission.queue.state', missionId, active, ...(message && { message }) })
+  }
+  function haltMissionQueue(missionId: string, message: string): void {
+    if (!activeMissionQueues.delete(missionId)) return
+    pendingQueueDrains.delete(missionId)
+    notifyQueue(missionId, false, message)
+  }
+  function triggerMissionQueue(missionId: string): void {
+    if (closed || !activeMissionQueues.has(missionId)) return
+    if (drainingMissionQueues.has(missionId)) {
+      pendingQueueDrains.add(missionId)
+      return
+    }
+    // A callback must never block the SDK stream waiting for another worker
+    // to initialize. Persist its terminal state first, then fill queue slots.
+    void drainMissionQueue(missionId).catch(error =>
+      haltMissionQueue(missionId, '自动派发停止：' + String(error)))
+  }
+  async function drainMissionQueue(missionId: string): Promise<void> {
+    if (drainingMissionQueues.has(missionId)) return
+    drainingMissionQueues.add(missionId)
+    try {
+      do {
+        pendingQueueDrains.delete(missionId)
+        if (closed || !activeMissionQueues.has(missionId)) break
+        const mission = await getScopedMission(missionId)
+        if (mission.status !== 'active') {
+          haltMissionQueue(missionId, '长期任务已暂停或完成，停止派发新工作项')
+          break
+        }
+        const jobs = await listMissionJobs(missionId, cwd, options.missionRoot)
+        const running = jobs.filter(job => job.status === 'running').length
+        const queued = jobs.filter(job => job.status === 'queued')
+        if (running === 0 && queued.length === 0) {
+          haltMissionQueue(missionId, '工作队列本轮已执行完毕；结果保留待审核')
+          break
+        }
+        const available = Math.max(0, 3 - running)
+        if (available > 0 && queued.length > 0) {
+          const launched = await Promise.allSettled(queued.slice(0, available).map(job =>
+            handle({ id: randomUUID(), method: 'missions.jobs.start', missionId, jobId: job.id }),
+          ))
+          const failure = launched.find((item): item is PromiseRejectedResult => item.status === 'rejected')
+          if (failure) {
+            haltMissionQueue(missionId, '工作项启动失败：' + String(failure.reason))
+            break
+          }
+        }
+      } while (pendingQueueDrains.has(missionId))
+    } finally {
+      drainingMissionQueues.delete(missionId)
+      if (activeMissionQueues.has(missionId) && pendingQueueDrains.has(missionId))
+        triggerMissionQueue(missionId)
+    }
   }
 
   async function send(sessionId: string, message: Parameters<Headless['send']>[0]) {
@@ -450,7 +513,10 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       }
       case 'missions.updateStatus': {
         await getScopedMission(request.missionId)
-        return updateMissionStatus(request.missionId, request.status, options.missionRoot)
+        const updated = await updateMissionStatus(request.missionId, request.status, options.missionRoot)
+        if (request.status !== 'active')
+          haltMissionQueue(request.missionId, '长期任务已' + request.status)
+        return updated
       }
       case 'missions.checkpoint': {
         await getScopedMission(request.missionId)
@@ -478,6 +544,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           throw error
         }
         notifyJob(mission.id, job)
+        triggerMissionQueue(mission.id)
         return job
       }
       case 'missions.jobs.start': {
@@ -549,6 +616,24 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
             .filter(job => job.status === 'queued').length,
         }
       }
+      case 'missions.jobs.runQueue': {
+        const mission = await getScopedMission(request.missionId)
+        if (mission.status !== 'active') throw new Error('长期任务已暂停或完成')
+        const firstStart = !activeMissionQueues.has(mission.id)
+        activeMissionQueues.add(mission.id)
+        if (firstStart) notifyQueue(mission.id, true, '已启动本地事件驱动队列派发')
+        triggerMissionQueue(mission.id)
+        return { active: true, missionId: mission.id }
+      }
+      case 'missions.jobs.haltQueue': {
+        await getScopedMission(request.missionId)
+        haltMissionQueue(request.missionId, '已停止派发新工作项；运行中任务仍按原权限执行')
+        return { active: false, missionId: request.missionId }
+      }
+      case 'missions.jobs.queueStatus': {
+        await getScopedMission(request.missionId)
+        return { active: activeMissionQueues.has(request.missionId) }
+      }
       case 'missions.jobs.approve': {
         const mission = await getScopedMission(request.missionId)
         const job = await approveMissionJob(mission.id, cwd, request.jobId, options.missionRoot)
@@ -563,6 +648,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         if (mission.status !== 'active') throw new Error('请先恢复长期任务后再重试')
         const job = await retryMissionJob(mission.id, cwd, request.jobId, options.missionRoot)
         notifyJob(mission.id, job)
+        triggerMissionQueue(mission.id)
         return job
       }
       case 'missions.jobs.recover': {
@@ -595,6 +681,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
   async function close(): Promise<void> {
     if (closed) return
     closed = true
+    for (const missionId of activeMissionQueues) haltMissionQueue(missionId, '桌面宿主关闭，本轮派发已停止')
     const ids = [...sessions.keys()]
     const results = await Promise.allSettled(ids.map(id => closeSessionInternal(id)))
     listeners.clear()
