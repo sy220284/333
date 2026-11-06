@@ -30,19 +30,19 @@ type Input = z.infer<InputSchema>
 type Output = z.infer<OutputSchema>
 
 function required(value: string | undefined, label: string): string {
-  if (!value?.trim()) throw new Error('缺少 ' + label)
+  if (!value?.trim()) throw new Error(`缺少 ${label}`)
   return value.trim()
 }
 
 async function execute(input: Input): Promise<string> {
   if (input.action === 'list') {
     const missions = (await listMissions()).filter(m => resolve(m.projectDir) === resolve(getCwd()))
-    return missions.length ? missions.map(m => m.id + ' [' + m.status + '] ' + m.objective).join('\n') : '本项目尚未创建超级智能体长期任务'
+    return missions.length ? missions.map(m => `${m.id} [${m.status}] ${m.objective}`).join('\n') : '本项目尚未创建超级智能体长期任务'
   }
   const selected = input.mission_id ?? getSelectedMissionId()
   const id = required(selected, '任务 ID，请先由用户通过 /agents mission new 创建')
   const mission = await getMission(id)
-  if (resolve(mission.projectDir) !== resolve(getCwd())) throw new Error('任务归属其他项目：' + mission.projectDir)
+  if (resolve(mission.projectDir) !== resolve(getCwd())) throw new Error(`任务归属其他项目：${mission.projectDir}`)
   if (input.action === 'show') return formatMission(mission)
   if (input.action === 'checkpoint') {
     const checkpoint = required(input.checkpoint, '阶段记录')
@@ -81,7 +81,7 @@ export const MissionTool = buildTool({
   isConcurrencySafe() { return false },
   isReadOnly(input) { return input.action === 'list' || input.action === 'show' },
   toAutoClassifierInput(input) { return [input.action, input.mission_id, input.assignment_id].filter(Boolean).join(' ') },
-  renderToolUseMessage(input) { return '长期任务 · ' + input.action },
+  renderToolUseMessage(input) { return `长期任务 · ${input.action}` },
   async call(input) {
     return { data: { success: true, text: await execute(input) } }
   },
