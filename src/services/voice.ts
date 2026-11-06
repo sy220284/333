@@ -262,7 +262,7 @@ export async function checkRecordingAvailability(): Promise<RecordingAvailabilit
     return {
       available: false,
       reason:
-        'Voice mode requires microphone access, but no audio device is available in this environment.\n\nTo use voice mode, run Claude Code locally instead.',
+        'Voice mode requires microphone access, but no audio device is available in this environment.\n\nTo use voice mode, run 333 locally instead.',
     }
   }
 

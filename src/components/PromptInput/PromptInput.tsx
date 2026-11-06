@@ -746,7 +746,7 @@ function PromptInput({
     if (feature('ULTRAPLAN') && ultraplanTriggers.length) {
       addNotification({
         key: 'ultraplan-active',
-        text: 'This prompt will launch an ultraplan session in Claude Code on the web',
+        text: 'This prompt requests hosted planning; use /plan for local planning in 333',
         priority: 'immediate',
         timeoutMs: 5000
       });

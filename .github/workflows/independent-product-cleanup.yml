@@ -7,6 +7,12 @@ on:
       - 'src/services/analytics/**'
       - 'src/screens/**'
       - 'tests/independent-product-cleanup.test.mjs'
+      - 'tests/brand-runtime-cleanup.test.mjs'
+      - 'tests/brand-animation.test.mjs'
+      - 'src/constants/system.ts'
+      - 'src/utils/attribution.ts'
+      - 'src/utils/releaseSource.ts'
+      - 'build/rebuild.mjs'
       - 'tests/github-generic-review.test.mjs'
       - '.github/workflows/independent-product-cleanup.yml'
   workflow_dispatch:
@@ -22,4 +28,4 @@ jobs:
         with:
           node-version: '26'
       - name: 测试审查模式、命令入口及禁用的官方回传
-        run: node --test tests/independent-product-cleanup.test.mjs tests/github-generic-review.test.mjs
+        run: node --test tests/independent-product-cleanup.test.mjs tests/brand-runtime-cleanup.test.mjs tests/brand-animation.test.mjs tests/github-generic-review.test.mjs
