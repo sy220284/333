@@ -205,7 +205,7 @@ jobs:
         run: node build/run-unregistered-tests.mjs --ci-oracle
   complete:
     name: 全量测试合并门禁
-    if: always()
+    if: ${{ !cancelled() }}
     needs: [inventory, build, core, supplemental, oracle]
     runs-on: ubuntu-latest
     steps:

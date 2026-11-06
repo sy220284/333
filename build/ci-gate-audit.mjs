@@ -101,7 +101,7 @@ if (!/node tools\/dev\/toolchain\.mjs check/.test(lockGate))
   errors.push('依赖锁缺失实际基准校验：m1-public-lock-sync.yml')
 const matrix = yaml('ci-test-matrix.yml')
 if (!/needs:\s*\[inventory, build, core, supplemental, oracle\]/.test(matrix) ||
-    !/if:\s*always\(\)/.test(matrix) ||
+    !/if:\s*\$\{\{ !cancelled\(\) \}\}/.test(matrix) ||
     !/\[\[ "\$\{result\}" != success \]\]/.test(matrix)) {
   errors.push('全量测试缺少失败汇总门禁：ci-test-matrix.yml')
 }

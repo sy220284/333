@@ -73,3 +73,9 @@ test('其他 PR、非祖先的成功记录不会被误用为增量基准', () =>
   ]
   assert.equal(selectBaseline(records, 19, head, () => false), null)
 })
+
+test('中止过期运行时汇总门禁不会继续占用 Runner', () => {
+  const read = name => readFileSync(new URL('../.github/workflows/' + name, import.meta.url), 'utf8')
+  assert.match(read('ci-on-demand.yml'), /if: \$\{\{ !cancelled\(\) \}\}/)
+  assert.match(read('ci-test-matrix.yml'), /if: \$\{\{ !cancelled\(\) \}\}/)
+})
