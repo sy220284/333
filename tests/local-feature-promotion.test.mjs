@@ -50,3 +50,21 @@ test('本地会话发现与简报功能不需要账号云门控', () => {
   assert.doesNotMatch(send, /getCurrentPeerIdentityKey|resolveAdvertisedRemoteRecipient|postInterClaudeMessage/)
   assert.match(send, /resolveLocalPeerRecipient/)
 })
+
+test('正式语音入口仅依赖本机 Whisper，旧云端语音重试和文本日志已移除', () => {
+  const commands = source('src/commands.ts')
+  assert.match(commands, /import voice from '.\/commands\/voice\/index\.js'/)
+  assert.match(commands, /^  voice,$/m)
+
+  const entry = source('src/commands/voice/index.ts')
+  assert.match(entry, /YAOYAOCHE_WHISPER_CLI/)
+  assert.match(entry, /YAOYAOCHE_WHISPER_MODEL/)
+  assert.doesNotMatch(entry, /claude-ai|getClaudeAIOAuthTokens|isAnthropicAuthEnabled/)
+
+  const voice = source('src/hooks/useVoice.ts')
+  assert.doesNotMatch(voice, /silentDropRetriedRef|fullAudioRef|tengu_voice_silent_drop_replay/)
+  assert.doesNotMatch(voice, /text\.slice\(0, 200\)|onTranscript: isFinal=\$\{String\(isFinal\)\} text=/)
+  const engine = source('src/services/voiceStreamSTT.ts')
+  assert.match(engine, /signal: cancel\.signal/)
+  assert.match(engine, /if \(cancel\.signal\.aborted\) return 'ws_already_closed'/)
+})
