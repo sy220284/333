@@ -23,6 +23,7 @@ type Entry = {
   unsubscribe: Array<() => void>
   consuming?: Promise<void>
   sending?: Promise<void>
+  cancelSend?: (error: Error) => void
   closing?: boolean
 }
 export type DesktopGatewayOptions = {
@@ -158,11 +159,16 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     // must never enqueue two turns into a single SDK stream simultaneously.
     let finishSend!: () => void
     entry.sending = new Promise<void>(resolve => { finishSend = resolve })
+    // Closing the host must not wait for a stuck SDK send/transport promise.
+    // Keep the SDK send observed by Promise.race and close the underlying
+    // runtime independently; a late send result cannot resurrect the turn.
+    const cancelled = new Promise<never>((_, reject) => { entry.cancelSend = reject })
     const turnId = randomUUID()
     try {
-      await entry.runtime.send(message)
+      await Promise.race([entry.runtime.send(message), cancelled])
       if (entry.closing || closed) throw new Error('Desktop session closed during send')
     } catch (error) {
+      entry.cancelSend = undefined
       entry.sending = undefined
       finishSend()
       throw error
@@ -193,6 +199,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       }
     }
     entry.consuming = pump()
+    entry.cancelSend = undefined
     entry.sending = undefined
     finishSend()
     return { sessionId, turnId }
@@ -287,6 +294,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     if (!entry) return
     if (entry.closing) throw new Error('Desktop session is already closing: ' + id)
     entry.closing = true
+    entry.cancelSend?.(new Error('Desktop session closed during send'))
     try {
       await entry.runtime.closeAndWait()
       if (entry.sending) await entry.sending

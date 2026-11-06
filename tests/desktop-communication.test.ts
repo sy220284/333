@@ -254,3 +254,17 @@ test('closing a desktop session while SDK send is pending rejects the delayed tu
   await Promise.all([failedSend, closing])
   await gateway.close()
 })
+
+test('desktop close cancels a stalled SDK send without waiting for the backend promise to resolve', async () => {
+  const blocked = new Promise<void>(() => {})
+  const data = fixture({ beforeSend: () => blocked })
+  const gateway = createDesktopGateway(data.options)
+  const opened = await gateway.handle(request('sessions.open')) as { sessionId: string }
+  const sending = gateway.handle(request('sessions.send', {
+    sessionId: opened.sessionId, message: 'blocked',
+  }))
+  const expectsRejection = expect(sending).rejects.toThrow('Desktop session closed during send')
+  const closing = gateway.handle(request('sessions.close', { sessionId: opened.sessionId }))
+  await Promise.all([expectsRejection, closing])
+  await gateway.close()
+})
