@@ -35,13 +35,15 @@ export function createSdkPermissionBroker() {
       suggestions: options.suggestions, toolUseID: options.toolUseID,
       requestId: options.requestId, blockedPath: options.blockedPath,
       mcpServer: options.mcpServer, decisionReason: options.decisionReason,
-      decisionType: options.decisionType, decisionCode: options.decisionCode,
+      decisionReasonType: options.decisionReasonType,
+      decisionReasonCode: options.decisionReasonCode,
       serverPolicyAskOnly: options.serverPolicyAskOnly,
       title: options.title, displayName: options.displayName,
       description: options.description, defaultToNo: options.defaultToNo,
       suppressAlwaysAllowRule: options.suppressAlwaysAllowRule,
       agentID: options.agentID, plugin: options.plugin,
       requiresUserInteraction: options.requiresUserInteraction,
+      serverPrompt: options.serverPrompt,
       computerFolder: options.computerFolder, matchedAskRule: options.matchedAskRule,
     }
     return new Promise<PermissionResult>(resolve => {
