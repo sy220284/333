@@ -88,11 +88,24 @@ function readLocalFeature<T>(name: string, defaultValue: T): T {
   if (environment && Object.hasOwn(environment, name)) return environment[name] as T
   const configured = getConfigOverrides()
   if (configured && Object.hasOwn(configured, name)) return configured[name] as T
+  // Preserve locally persisted settings from previous sessions while all
+  // remote feature requests are disabled. Absence keeps the caller's default.
+  const cached = getCachedFeatures()
+  if (Object.hasOwn(cached, name) && cached[name] !== undefined) return cached[name] as T
   return defaultValue
 }
 
+function getCachedFeatures(): Record<string, unknown> {
+  try {
+    return getGlobalConfig().cachedGrowthBookFeatures ?? {}
+  } catch {
+    // Config access is intentionally unavailable until bootstrap completes.
+    return {}
+  }
+}
+
 export function getAllGrowthBookFeatures(): Record<string, unknown> {
-  return { ...(getConfigOverrides() ?? {}), ...(getEnvOverrides() ?? {}) }
+  return { ...getCachedFeatures(), ...(getConfigOverrides() ?? {}), ...(getEnvOverrides() ?? {}) }
 }
 
 export function getGrowthBookConfigOverrides(): Record<string, unknown> {
