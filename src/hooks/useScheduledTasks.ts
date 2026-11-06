@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { onGrowthBookRefresh } from '../services/analytics/growthbook.js'
 import { useAppStateStore, useSetAppState } from '../state/AppState.js'
 import { isTerminalTaskStatus } from '../Task.js'
 import {
@@ -50,16 +51,13 @@ export function useScheduledTasks({
 
   const store = useAppStateStore()
   const setAppState = useSetAppState()
+  // Respond to /features on|off scheduled-tasks in the current session.
+  const cronEnabled = useSyncExternalStore(onGrowthBookRefresh, isKairosCronEnabled, () => false)
 
   useEffect(() => {
-    // Runtime gate checked here (not at the hook call site) so the hook
-    // stays unconditionally mounted — rules-of-hooks forbid wrapping the
-    // call in a dynamic condition. getFeatureValue_CACHED_WITH_REFRESH
-    // reads from disk; the 5-min TTL fires a background refetch but the
-    // effect won't re-run on value flip (assistantMode is the only dep),
-    // so this guard alone is launch-grain. The mid-session killswitch is
-    // the isKilled option below — check() polls it every tick.
-    if (!isKairosCronEnabled()) return
+    // Mount and stop the scheduler when the user's local preference changes.
+    // No timer or file watcher is kept alive while scheduling is disabled.
+    if (!cronEnabled) return
 
     // System-generated — hidden from queue preview and transcript UI.
     // In brief mode, executeForkedSlashCommand runs as a background
@@ -121,10 +119,9 @@ export function useScheduledTasks({
     })
     scheduler.start()
     return () => scheduler.stop()
-    // assistantMode is stable for the session lifetime; store/setAppState are
-    // stable refs from useSyncExternalStore; setMessages is a stable useCallback.
+    // Local preference changes mount or stop the scheduler; other refs remain stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assistantMode])
+  }, [assistantMode, cronEnabled])
 }
 
 function formatCronFireTime(d: Date): string {

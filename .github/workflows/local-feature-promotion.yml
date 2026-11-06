@@ -10,6 +10,7 @@ on:
       - 'src/services/mcp/**'
       - 'src/utils/agentSwarmsEnabled.ts'
       - 'src/utils/localCapabilities.ts'
+      - 'src/hooks/useScheduledTasks.ts'
       - 'src/utils/crossSessionMessaging.ts'
       - 'src/services/extractMemories/**'
       - 'src/tools/ListAgentsTool/**'

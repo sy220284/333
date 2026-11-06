@@ -32,6 +32,8 @@ test('自动记忆与定时任务需要用户明确开启和授权', () => {
   assert.match(memory, /isLocalCapabilityEnabled\('auto-memory'\)/)
   assert.match(cron, /isLocalCapabilityEnabled\('scheduled-tasks'\)/)
   assert.match(source('src/commands.ts'), /localFeatures,/)
+  const scheduler = source('src/hooks/useScheduledTasks.ts')
+  assert.match(scheduler, /useSyncExternalStore\(onGrowthBookRefresh, isKairosCronEnabled/)
 })
 test('本地会话发现与简报功能不需要账号云门控', () => {
   const listing = source('src/tools/ListAgentsTool/ListAgentsTool.ts')
