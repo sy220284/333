@@ -47,13 +47,35 @@ jobs:
         run: |
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
-      - name: 独立校验桌面所有控制接口及 SDK stream-json 双向实测
+      - name: 分套件独立校验通信接口及 SDK stream-json 双向实测
         run: |
-          bun test tests/conversation-headless.test.ts \
-            tests/desktop-communication.test.ts \
-            tests/desktop-stdio.test.ts \
-            tests/desktop-sdk-stream-json.test.ts \
-            tests/desktop-client.test.ts
+          set -euo pipefail
+          for suite in conversation-headless desktop-communication desktop-stdio desktop-sdk-stream-json desktop-client; do
+            echo "::group::桌面通信套件 ${suite}"
+            timeout --signal=TERM --kill-after=5s 60s bun test "tests/${suite}.test.ts"
+            echo "::endgroup::"
+          done
+
+  desktop-release:
+    name: 桌面宿主独立编译、协议握手与发行完整性
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: 读取固定工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
+      - name: 安装冻结的 SDK 及编译依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
       - name: 编译原 CLI 和独立桌面通信宿主并检查发布完整性
         run: |
           bun build/rebuild.mjs
