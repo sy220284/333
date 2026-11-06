@@ -75,11 +75,11 @@ jobs:
       - name: 自包含独立程序版本、帮助与宿主架构
         run: |
           set -euo pipefail
-          binary=dist/avenlo
-          if [[ "$M1_TARGET_PLATFORM" == win32-* ]]; then binary=dist/avenlo.exe; fi
+          binary=dist/qerivon
+          if [[ "$M1_TARGET_PLATFORM" == win32-* ]]; then binary=dist/qerivon.exe; fi
           "$binary" --version --verbose | tee "$RUNNER_TEMP/m1-317-six-version.txt"
           "$binary" --help > "$RUNNER_TEMP/m1-317-six-help.txt"
-          grep -F '2.1.317 (Avenlo)' "$RUNNER_TEMP/m1-317-six-version.txt"
+          grep -F '2.1.317 (Qerivon)' "$RUNNER_TEMP/m1-317-six-version.txt"
           grep -F 'Usage:' "$RUNNER_TEMP/m1-317-six-help.txt"
           node --input-type=module -e 'import assert from "node:assert/strict"; assert.equal(process.platform+"-"+process.arch,process.env.M1_TARGET_PLATFORM)'
       - name: 发行业务完整性与仓库外启动双重验证
@@ -108,7 +108,7 @@ jobs:
           import { createHash } from 'node:crypto'
           import { join } from 'node:path'
           const target=process.env.M1_TARGET_PLATFORM
-          const binary=join('dist',target.startsWith('win32-')?'avenlo.exe':'avenlo')
+          const binary=join('dist',target.startsWith('win32-')?'qerivon.exe':'qerivon')
           const bytes=readFileSync(binary)
           const evidence={target,source:'PR13 latest stable TypeScript 7',release:'2.1.317',
             compiled:true,executableSize:statSync(binary).size,
