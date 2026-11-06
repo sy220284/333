@@ -122,3 +122,22 @@ test('consumer errors close the underlying headless turn generator', async () =>
   expect(finalized).toBe(true)
   expect(runtime.getSnapshot().phase).toBe('failed')
 })
+
+test('headless SDK terminal errors publish failed state rather than success', async () => {
+  const launch = (() => ({
+    sessionId: 'failed-session',
+    initialization: Promise.resolve({}),
+    send: async () => {},
+    stream: async function* () {
+      yield { type: 'result', subtype: 'error_during_execution', is_error: true, errors: ['model failed'] }
+    },
+    control: async () => ({}),
+    close: () => {},
+    closeAndWait: async () => {},
+  })) as unknown as typeof import('../src/entrypoints/sdk/sessionRuntime317.js').createSessionRuntime317
+  const session = createHeadlessConversationSession({ model: 'test' }, undefined, launch)
+  await session.send('test')
+  for await (const _event of session.stream()) {}
+  expect(session.state.getState()).toEqual({ phase: 'failed', error: 'model failed' })
+  session.close()
+})

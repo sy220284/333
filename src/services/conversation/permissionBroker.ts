@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import type { CanUseTool } from '../../entrypoints/sdk/runtimeTypes.js'
 import type { PermissionResult, PermissionUpdate } from '../../entrypoints/sdk/coreTypes.js'
 
@@ -13,6 +14,7 @@ export type PendingSdkPermission = Readonly<{
  * approval: each tool request waits for a matching user decision or abort. */
 export function createSdkPermissionBroker() {
   let nextId = 0
+  const instanceId = randomUUID()
   let closed = false
   const pending = new Map<string, {
     request: PendingSdkPermission
@@ -29,7 +31,7 @@ export function createSdkPermissionBroker() {
     if (closed || options.signal.aborted) {
       return Promise.resolve({ behavior: 'deny', message: 'Tool permission request cancelled' })
     }
-    const id = `permission-${++nextId}`
+    const id = `${instanceId}:${++nextId}`
     const request: PendingSdkPermission = { id, toolName, input, suggestions: options.suggestions, toolUseID: options.toolUseID }
     return new Promise<PermissionResult>(resolve => {
       const onAbort = () => settle(id, { behavior: 'deny', message: 'Tool permission request cancelled' })

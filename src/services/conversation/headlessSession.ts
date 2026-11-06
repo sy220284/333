@@ -53,11 +53,19 @@ export function createHeadlessConversationSession(
     try {
       for await (const event of runtime.stream()) {
         messages.setMessages(previous => [...previous, event])
-        if (event.type === 'result') completed = true
+        if (event.type === 'result') {
+          completed = true
+          const wasCancelled = event.terminal_reason === 'aborted_tools' ||
+            event.terminal_reason === 'aborted_streaming'
+          if (event.is_error) {
+            setPhase(wasCancelled ? 'cancelled' : 'failed', event.errors.join('; ') || event.subtype)
+          } else {
+            setPhase(wasCancelled ? 'cancelled' : 'completed')
+          }
+        }
         yield event
       }
       if (!completed) throw new Error('SDK session stream ended without a result')
-      setPhase('completed')
     } catch (error) {
       failed = true
       setPhase('failed', error instanceof Error ? error.message : String(error))
