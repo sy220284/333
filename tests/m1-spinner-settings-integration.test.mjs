@@ -10,9 +10,9 @@ const root = resolve(import.meta.dirname, '..')
 test('2.1.310 user settings reach the real spinner tip registry', () => {
   const home = mkdtempSync(join(tmpdir(), '333-spinner-settings-'))
   try {
-    mkdirSync(join(home, '.claude'), { recursive: true })
+    mkdirSync(join(home, '.qerivon'), { recursive: true })
     writeFileSync(
-      join(home, '.claude', 'settings.json'),
+      join(home, '.qerivon', 'settings.json'),
       JSON.stringify({
         spinnerTipsOverride: {
           excludeDefault: true,
