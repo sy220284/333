@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, session } from 'electron'
 import { spawn, execFile } from 'node:child_process'
-import { existsSync, realpathSync, readFileSync } from 'node:fs'
-import { readdir, readFile, writeFile, rename, realpath } from 'node:fs/promises'
+import { existsSync, realpathSync } from 'node:fs'
+import { readdir, readFile, writeFile, rename, realpath, mkdir, rm } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { promisify } from 'node:util'
 import { createDesktopClient } from '../../src/services/desktop/client.js'
@@ -17,7 +17,7 @@ const permitted = new Set([
 ])
 type Host = { child: ReturnType<typeof spawn>; client: ReturnType<typeof createDesktopClient> }
 const hosts = new Map<string, Host>()
-let active = process.cwd()
+let active = process.env.HOME || process.env.USERPROFILE || process.cwd()
 let window: BrowserWindow | null = null
 let quitting = false
 
@@ -70,6 +70,7 @@ async function safeFile(path:string):Promise<string> {
   if(rel==='..'||rel.startsWith('..'+sep)||isAbsolute(rel))throw new Error('文件超出当前工作区')
   return file
 }
+const workspacePref = () => join(app.getPath('userData'), 'workspace.json')
 async function call(method:unknown,args:unknown):Promise<unknown>{
   if(typeof method!=='string'||!args||typeof args!=='object'||Array.isArray(args))throw new Error('无效桌面请求')
   const data=args as Record<string,unknown>
@@ -79,6 +80,8 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
     if(result.canceled||!result.filePaths[0])return {workspace:active,changed:false}
     const path=realpathSync(result.filePaths[0])
     active=path
+    await mkdir(app.getPath('userData'),{recursive:true})
+    await writeFile(workspacePref(),JSON.stringify({path}),{encoding:'utf8',mode:0o600})
     try {await connect(active).client.hello()}catch(error){return {workspace:active,changed:true,connected:false,error:String(error)}}
     return {workspace:active,changed:true,connected:true}
   }
@@ -104,7 +107,7 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
     if(answer.response!==1) return {saved:false}
     const temporary=path+'.yaoyao-'+process.pid+'.tmp'
     await writeFile(temporary,content,{flag:'wx'})
-    try{await rename(temporary,path)}catch(error){throw error}
+    try{await rename(temporary,path)}catch(error){await rm(temporary,{force:true});throw error}
     return {saved:true,path}
   }
   if(method==='workspace.gitStatus'||method==='workspace.gitDiff'){
@@ -143,7 +146,17 @@ function createWindow(){
 }
 app.whenReady().then(async()=>{
   session.defaultSession.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false))
-  ipcMain.handle('desktop:call',(_event,method,args)=>call(method,args))
+  const pref=workspacePref()
+  if(existsSync(pref)){
+    try {
+      const settings=JSON.parse(await readFile(pref,'utf8')) as {path?:unknown}
+      if(typeof settings.path==='string' && existsSync(settings.path)) active=realpathSync(settings.path)
+    }catch(error){console.error('桌面工作区记录读取失败：',error)}
+  }
+  ipcMain.handle('desktop:call',(event,method,args)=>{
+    if(event.sender!==window?.webContents) throw new Error('拒绝未知窗口调用')
+    return call(method,args)
+  })
   createWindow()
   app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0)createWindow()})
 })
