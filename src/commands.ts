@@ -49,6 +49,7 @@ const torch = feature('TORCH') ? require('./commands/torch.js').default : null
 import permissions from './commands/permissions/index.js'
 import plan from './commands/plan/index.js'
 import privacySettings from './commands/privacy-settings/index.js'
+import voice from './commands/voice/index.js'
 import hooks from './commands/hooks/index.js'
 import files from './commands/files/index.js'
 import branch from './commands/branch/index.js'
@@ -166,6 +167,7 @@ const COMMANDS = memoize((): Command[] => [
   permissions,
   plan,
   privacySettings,
+  voice,
   hooks,
   exportCommand,
   sandboxToggle,
