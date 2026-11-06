@@ -74,7 +74,10 @@ function verifyBaseAndExtensions(actual, official, commandLine) {
     assert.ok(actual.commands.includes(entry), `摇摇车 independent command absent: ${entry}`);
     assert.equal(actual.commands.filter(name => name === entry).length, 1);
   }
-  const removedFlags = commandLine === '--help'\n    ? ['--cloud', '--environment', '--remote-control', '--remote-control-session-name-prefix', '--teleport'] : [];\n  for (const flag of removedFlags) assert.equal(actual.flags.includes(flag), false, `Retired cloud flag remains public: ${flag}`);\n  assert.deepEqual(actual.flags, official.flags.filter(flag => !removedFlags.includes(flag)),
+  const removedFlags = commandLine === '--help'
+    ? ['--cloud', '--environment', '--remote-control', '--remote-control-session-name-prefix', '--teleport'] : [];
+  for (const flag of removedFlags) assert.equal(actual.flags.includes(flag), false, `Retired cloud flag remains public: ${flag}`);
+  assert.deepEqual(actual.flags, official.flags.filter(flag => !removedFlags.includes(flag)),
     `Original 2.1.317 flags must stay available: ${commandLine}`);
   const removed = commandLine === '--help' ? ['ultrareview'] : [];
   assert.deepEqual(actual.commands.filter(name => !additions.includes(name)),
