@@ -1,3 +1,5 @@
+import { getLocalPrivacyPreference } from '../services/localRuntime/privacyChoices.js'
+
 /**
  * Privacy level controls how much nonessential network traffic and telemetry
  * Claude Code generates.
@@ -5,14 +7,15 @@
  * Levels are ordered by restrictiveness:
  *   default < no-telemetry < essential-traffic
  *
- * - default:            Everything enabled.
- * - no-telemetry:       Analytics/telemetry disabled (Datadog, 1P events, feedback survey).
+ * - default:            本机诊断可用，非必要网络请求受现有配置约束。
+ * - no-telemetry:       不写入本地遥测、诊断事件。
  * - essential-traffic:  ALL nonessential network traffic disabled
- *                       (telemetry + auto-updates, grove, release notes, model capabilities, etc.).
+ *                       （包含自动更新、产品公告、非必要能力查询等）。
  *
  * The resolved level is the most restrictive signal from:
  *   CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC  →  essential-traffic
  *   DISABLE_TELEMETRY / DO_NOT_TRACK          →  no-telemetry
+ *   /privacy-settings                        →  持久化的本地隐私选择
  */
 
 type PrivacyLevel = 'default' | 'no-telemetry' | 'essential-traffic'
@@ -22,10 +25,11 @@ function enabled(value: string | undefined): boolean {
 }
 
 export function getPrivacyLevel(): PrivacyLevel {
-  if (enabled(process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC)) {
+  const local = getLocalPrivacyPreference()
+  if (enabled(process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC) || local === 'essential-traffic') {
     return 'essential-traffic'
   }
-  if (enabled(process.env.DISABLE_TELEMETRY) || enabled(process.env.DO_NOT_TRACK)) {
+  if (enabled(process.env.DISABLE_TELEMETRY) || enabled(process.env.DO_NOT_TRACK) || local === 'no-telemetry') {
     return 'no-telemetry'
   }
   return 'default'
@@ -52,8 +56,8 @@ export function isTelemetryDisabled(): boolean {
  * or null if unrestricted. Used for user-facing "unset X to re-enable" messages.
  */
 export function getEssentialTrafficOnlyReason(): string | null {
-  if (process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC) {
+  if (enabled(process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC)) {
     return 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'
   }
-  return null
+  return getLocalPrivacyPreference() === 'essential-traffic' ? '/privacy-settings' : null
 }

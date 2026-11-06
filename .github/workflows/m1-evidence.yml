@@ -20,7 +20,7 @@ on:
       - 'tests/m1-subagent-effort-317.test.mjs'
       - 'src/tools/AgentTool/subagentEffortPolicy.mjs'
       - 'src/tools/FileReadTool/**'
-      - 'tests/m1-privacy-settings.test.mjs'
+      - 'tests/m1-local-privacy-settings.test.ts'
       - 'tests/m1-snapshot-terminal-behavior.test.mjs'
       - 'tests/m1-source-gap-audit.test.mjs'
       - 'tests/m1-source-gap-ast.test.mjs'
@@ -196,7 +196,9 @@ jobs:
       - name: 验证Ink开发者工具本地连接及清理生命周期
         run: node --experimental-strip-types --test tests/m1-ink-devtools.test.mjs
       - name: 验证新版六层完整功能链及历史功能/场景回归
-        run: node --test tests/m1-workflow-cache.test.mjs tests/m1-workflow-commands.test.mjs tests/m1-workflow-meta-literal.test.mjs tests/m1-workflow-finalization.test.mjs tests/m1-workflow-history.test.mjs tests/m1-workflow-storage.test.mjs tests/m1-workflow-runtime.test.mjs tests/m1-monitor-protocol.test.mjs tests/m1-monitor-task-identity.test.mjs tests/m1-account-peer-discovery.test.mjs tests/upgrade-coverage.test.mjs tests/compare-317.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs tests/m1-privacy-settings.test.mjs tests/m1-snapshot-terminal-behavior.test.mjs tests/m1-source-gap-audit.test.mjs tests/m1-inline-map-audit.test.mjs tests/m1-doctor-source-restoration.test.mjs tests/m1-spinner-tips.test.mjs tests/m1-custom-spinner-tips.test.mjs tests/m1-list-agents.test.mjs tests/m1-tool-pool-single-source.test.mjs tests/m1-screen-reader-mode.test.mjs tests/m1-taskoutput-retirement.test.mjs
+        run: node --test tests/m1-workflow-cache.test.mjs tests/m1-workflow-commands.test.mjs tests/m1-workflow-meta-literal.test.mjs tests/m1-workflow-finalization.test.mjs tests/m1-workflow-history.test.mjs tests/m1-workflow-storage.test.mjs tests/m1-workflow-runtime.test.mjs tests/m1-monitor-protocol.test.mjs tests/m1-monitor-task-identity.test.mjs tests/m1-account-peer-discovery.test.mjs tests/upgrade-coverage.test.mjs tests/compare-317.test.mjs tests/m1-telemetry-policy.test.mjs tests/m1-release-routing.test.mjs tests/m1-snapshot-terminal-behavior.test.mjs tests/m1-source-gap-audit.test.mjs tests/m1-inline-map-audit.test.mjs tests/m1-doctor-source-restoration.test.mjs tests/m1-spinner-tips.test.mjs tests/m1-custom-spinner-tips.test.mjs tests/m1-list-agents.test.mjs tests/m1-tool-pool-single-source.test.mjs tests/m1-screen-reader-mode.test.mjs tests/m1-taskoutput-retirement.test.mjs
+      - name: 本地隐私设置验证
+        run: bun test tests/m1-local-privacy-settings.test.ts
       - name: 验证 CA 证书来源隔离与宿主管理边界
         run: node --experimental-strip-types --test tests/m1-ca-cert-source-policy.test.mjs
       - name: 验证禁用及企业策略限制 MCP 重新连接
