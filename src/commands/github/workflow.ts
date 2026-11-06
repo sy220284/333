@@ -41,9 +41,11 @@ export function githubWorkflow(selection: GithubWorkflowSelection = 'both'): str
     `(github.event_name == 'pull_request_review' && (${requested('github.event.review.body')}) && ${trusted('github.event.review.author_association')})`,
     `(github.event_name == 'issues' && (${requested('github.event.issue.body')}) && ${trusted('github.event.issue.author_association')})`,
   ].join(' || ')
-  const internalPR = "(github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository)"
+  // Trusted default-branch reviewer reads fork diffs as data and never checks out
+  // or executes a contributor's branch; preserve 317's external-PR coverage.
+  const anyPR = "github.event_name == 'pull_request_target'"
   const reviewCases = ["github.event_name == 'workflow_dispatch'",
-    ...(selection === 'respond' ? [] : [internalPR, reviewComment])]
+    ...(selection === 'respond' ? [] : [anyPR, reviewComment])]
   return [
     'name: 摇摇车 GitHub 审查与开发',
     'on:',
