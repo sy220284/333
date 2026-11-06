@@ -136,7 +136,7 @@ test('317 PTY host plus authenticated bg-spare forms one complete claim-to-outpu
         await Promise.race([exit,
           new Promise((_, reject) => setTimeout(() => reject(Error(name + ' integrated host hung')), 12000))])
         assert.equal(resultCode, 0, name + ' ' + stderr)
-        assert.ok(output.includes(`2.1.317 (${name === 'official' ? 'Claude Code' : '333'})`), name + ' ' + output)
+        assert.ok(output.includes(`2.1.317 (${name === 'official' ? 'Claude Code' : '333'})`), `${name} ${output}`)
         for (const event of ['hello', 'live', 'ping', 'exit'])
           assert.ok(controls.includes(event), name + ' missing ' + event + ' ' + JSON.stringify(controls))
         await until(() => !existsSync(claimSocket) && !existsSync(ptySocket))
