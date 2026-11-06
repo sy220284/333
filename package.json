@@ -10,7 +10,6 @@
   },
   "type": "module",
   "author": "333 contributors",
-  "license": "SEE LICENSE IN README.md",
   "description": "333 independent multi-model coding agent CLI",
   "homepage": "https://github.com/sy220284/333",
   "bugs": {
