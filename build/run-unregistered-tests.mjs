@@ -29,8 +29,8 @@ export function workflowRunCommands(source) {
   const lines = source.split(/\r?\n/)
   const commands = []
   for (let i = 0; i < lines.length; i++) {
-    const match = /^(\s*)run:\s*(.*)$/.exec(lines[i])
-    if (!match) continue
+    const match = /^(\s*)(?:-\s+)?run:\s*(.*)$/.exec(lines[i])
+    if (!match || match[1].length < 6) continue
     const indent = match[1].length
     const inline = match[2].trim()
     if (inline && !['|','>','|-','>-','|+','>+'].includes(inline)) {
