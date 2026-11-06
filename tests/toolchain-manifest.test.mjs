@@ -70,6 +70,15 @@ test('离线包与安装和回装流程使用同一权威清单 SHA', () => {
   }
 })
 
+test('PR 全量测试四类作业使用统一权威版本，不复制固定工具版本', () => {
+  const content = readFileSync(join(root, '.github/workflows/ci-test-matrix.yml'), 'utf8')
+  assert.equal((content.match(/node tools\/dev\/toolchain\.mjs gha-env/g) ?? []).length, 4)
+  assert.equal((content.match(/node-version: \$\{\{ env\.TOOLCHAIN_NODE_VERSION \}\}/g) ?? []).length, 4)
+  assert.equal((content.match(/bun-version: \$\{\{ env\.TOOLCHAIN_BUN_VERSION \}\}/g) ?? []).length, 3)
+  assert.match(content, /typescript@\$\{TOOLCHAIN_AST_TYPESCRIPT_VERSION\}/)
+  assert.doesNotMatch(content, /typescript@5\.9\.3|node-version: ['"]26['"]/)
+})
+
 test('bootstrap 脱离完整仓库仍能校验权威清单和锁文件', () => {
   const temp = mkdtempSync(join(tmpdir(), '333-toolchain-bootstrap-'))
   const directory = join(temp, 'tools/dev')
