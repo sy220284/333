@@ -80,7 +80,6 @@ import { isFirstPartyAnthropicBaseUrl } from './utils/model/providers.js'
 import exit from './commands/exit/index.js'
 import exportCommand from './commands/export/index.js'
 import model from './commands/model/index.js'
-import know from './commands/know.js'
 import outputStyle from './commands/output-style/index.js'
 import statusline from './commands/statusline.js'
 import effort from './commands/effort/index.js'
@@ -144,7 +143,6 @@ const COMMANDS = memoize((): Command[] => [
   memory,
   localFeatures,
   model,
-  know,
   outputStyle,
   plugin,
   pr_comments,

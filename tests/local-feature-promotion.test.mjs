@@ -44,6 +44,8 @@ test('本地会话发现与简报功能不需要账号云门控', () => {
   assert.match(listing, /const sessions = localSessions/)
   assert.doesNotMatch(brief, /tengu_kairos_brief/)
   assert.doesNotMatch(commands, /remoteEnv/)
+  assert.doesNotMatch(commands, /commands\/know\.js/)
+  assert.doesNotMatch(source('src/query/stopHooks.ts'), /scheduleKnowledgeNudge317/)
   const send = source('src/tools/SendMessageTool/SendMessageTool.ts')
   assert.doesNotMatch(send, /getCurrentPeerIdentityKey|resolveAdvertisedRemoteRecipient|postInterClaudeMessage/)
   assert.match(send, /resolveLocalPeerRecipient/)
