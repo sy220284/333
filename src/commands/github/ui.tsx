@@ -66,10 +66,16 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
       const child = execa('gh', [
         'auth', 'login', '--hostname', 'github.com',
         '--web', '--git-protocol', 'https', '--scopes', 'repo,workflow',
-      ], { reject:false, timeout:180000, stdin:'ignore' })
+      ], { reject:false, timeout:180000, stdin:'pipe' })
+      let displayed = ''
+      let pressedEnter = false
       const notify = (chunk: Buffer | string) => {
-        const line = String(chunk).replace(/\u001b\[[0-9;]*m/g,'').trim()
-        if (line) setStatus(line.slice(-1200))
+        displayed = (displayed + String(chunk).replace(/\u001b\[[0-9;]*m/g,'')).slice(-2500)
+        setStatus(displayed.slice(-1200))
+        if (!pressedEnter && /press enter|按回车|按下回车/i.test(displayed)) {
+          pressedEnter = true
+          child.stdin?.write('\n')
+        }
       }
       child.stdout?.on('data',notify)
       child.stderr?.on('data',notify)
