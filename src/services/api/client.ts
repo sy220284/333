@@ -2,7 +2,7 @@ import { getIndependentProfile } from './multimodel/profiles.js'
 import Anthropic, { type ClientOptions } from '@anthropic-ai/sdk'
 import { resolveIndependentModel, getIndependentApiKey, isRemovedIndependentModel } from './multimodel/registry.js'
 import { makeIndependentFetch } from './multimodel/transport.js'
-import { getChatGPTAuthorization } from '../auth/chatgptOAuth.js'
+import { assertChatGPTAccountIdentity, getChatGPTAuthorization } from '../auth/chatgptOAuth.js'
 import { native317MessagesRequest, native317RequestHeaders } from './native317Wire.ts'
 import { createFoundryAzureTokenProvider } from './providerCredentials.ts'
 import { randomUUID } from 'crypto'
@@ -129,17 +129,13 @@ export async function getAnthropicClient({
         // A long-lived SDK client must check disk-backed OAuth identity on
         // EVERY request, including while an old token remains valid.
         const sent = await getChatGPTAuthorization()
-        if (sent.account !== originalChatGPTAccount) {
-          throw new Error('ChatGPT account changed; create a new model client before sending requests')
-        }
+        assertChatGPTAccountIdentity(originalChatGPTAccount, sent)
         const response = await makeFetch(sent.token, sent.account)(request.clone())
         if (response.status !== 401) return response
         await response.body?.cancel()
         request.signal.throwIfAborted()
         const refreshed = await getChatGPTAuthorization(sent)
-        if (refreshed.account !== originalChatGPTAccount) {
-          throw new Error('ChatGPT account changed during token refresh')
-        }
+        assertChatGPTAccountIdentity(originalChatGPTAccount, refreshed)
         return makeFetch(refreshed.token, refreshed.account)(request)
       }),
     })
