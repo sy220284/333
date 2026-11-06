@@ -5,6 +5,7 @@ import { readdir, readFile, writeFile, rename, realpath, mkdir, rm, stat } from 
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { promisify } from 'node:util'
 import { createDesktopClient } from '../../src/services/desktop/client.js'
+import { listProviderApiKeyAccounts, setProviderApiKey, deleteProviderApiKey, validateApiKeyProvider } from '../../src/services/auth/apiKeyVault.js'
 
 const git = promisify(execFile)
 const permitted = new Set([
@@ -79,6 +80,23 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
   if(typeof method!=='string'||!args||typeof args!=='object'||Array.isArray(args))throw new Error('无效桌面请求')
   const data=args as Record<string,unknown>
   if(method==='app.info')return {workspace:active,platform:process.platform,version:app.getVersion()}
+  if(method==='credentials.list')return {providers:listProviderApiKeyAccounts()}
+  if(method==='credentials.set'){
+    const provider=validateApiKeyProvider(String(data.provider||''))
+    const key=data.key
+    if(typeof key!=='string')throw new Error('API Key 必须为字符串')
+    const answer=await dialog.showMessageBox(window!,{type:'question',title:'保存服务商凭证',buttons:['取消','保存'],defaultId:0,cancelId:0,message:'确认保存 '+provider+' 的 API Key？',detail:'密钥写入本地受保护凭证目录，后续会话将使用此密钥。'})
+    if(answer.response!==1)return {saved:false}
+    await setProviderApiKey(provider,key)
+    return {saved:true}
+  }
+  if(method==='credentials.remove'){
+    const provider=validateApiKeyProvider(String(data.provider||''))
+    const answer=await dialog.showMessageBox(window!,{type:'warning',title:'删除服务商凭证',buttons:['取消','确认删除'],defaultId:0,cancelId:0,message:'移除 '+provider+' 的已保存 API Key？'})
+    if(answer.response!==1)return {removed:false}
+    await deleteProviderApiKey(provider)
+    return {removed:true}
+  }
   if(method==='workspace.pick'){
     const result=await dialog.showOpenDialog(window!,{properties:['openDirectory'],title:'选择本地工作区'})
     if(result.canceled||!result.filePaths[0])return {workspace:active,changed:false}
