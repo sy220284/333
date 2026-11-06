@@ -96,6 +96,8 @@ test('GitHub PR 创建失败后保留已提交分支，并在重试时恢复 PR'
   await assert.rejects(f.run(),/GitHub API 503/)
   assert.equal(f.state.branchCreated,1)
   assert.equal(f.state.commits,1)
+  // A retried Actions job checks out the unchanged default branch afresh.
+  f.writes.set(f.file,'const status_old = true;\n')
   f.state.modelCalls=0
   await f.run()
   assert.equal(f.state.branchCreated,1)
