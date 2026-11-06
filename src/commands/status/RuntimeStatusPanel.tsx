@@ -58,14 +58,14 @@ function ChatGPTAccountsTab({ active }: { active: boolean }): React.ReactNode {
   return (
     <Box flexDirection="column" gap={1}>
       <Text bold>ChatGPT 账号与套餐调用授权</Text>
-      {status.accounts.length === 0 && <Text dimColor>尚未连接。运行 avenlo auth chatgpt-login 开始官方浏览器授权。</Text>}
+      {status.accounts.length === 0 && <Text dimColor>尚未连接。运行 qerivon auth chatgpt-login 开始官方浏览器授权。</Text>}
       {status.accounts.map(account => (
         <Box key={account.clientId + (account.workspaceId ?? '')} flexDirection="column">
           <Text>{account.active ? '● 当前' : '○ 已保存'} · {account.email ?? account.subject} · {account.clientId}</Text>
           <Text dimColor>工作区：{account.workspaceId ?? '未提供'} · 登录：{account.connected ? '已连接' : '已退出'} · 套餐调用：{account.planEnabled ? '已授权' : '未授权'}</Text>
         </Box>
       ))}
-      <Text dimColor>切换：avenlo auth chatgpt-switch &lt;clientId&gt;；新增：avenlo auth chatgpt-login --new；重新授权：avenlo auth chatgpt-login --account &lt;clientId&gt;</Text>
+      <Text dimColor>切换：qerivon auth chatgpt-switch &lt;clientId&gt;；新增：qerivon auth chatgpt-login --new；重新授权：qerivon auth chatgpt-login --account &lt;clientId&gt;</Text>
     </Box>
   )
 }
@@ -81,7 +81,7 @@ export function RuntimeStatusPanel({ onClose, context }: Props): React.ReactNode
   })
   return (
     <Pane color="permission">
-      <Tabs title="Avenlo 运行状态" color="permission" selectedTab={selectedTab}
+      <Tabs title="Qerivon 运行状态" color="permission" selectedTab={selectedTab}
         onTabChange={setSelectedTab} contentHeight={Math.max(15, Math.min(Math.floor(rows * 0.8), 30))}>
         <Tab id="overview" title="概览">
           <Status context={context} diagnosticsPromise={diagnosticsPromise} />

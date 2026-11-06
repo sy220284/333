@@ -119,17 +119,17 @@ export function ResumeTask({
     return <Box flexDirection="column" padding={1}>
         <Box flexDirection="row">
           <Spinner />
-          <Text bold>正在加载 Avenlo 会话…</Text>
+          <Text bold>正在加载 Qerivon 会话…</Text>
         </Box>
         <Text dimColor>
-          {retrying ? 'Retrying…' : 'Fetching your Avenlo sessions…'}
+          {retrying ? 'Retrying…' : 'Fetching your Qerivon sessions…'}
         </Text>
       </Box>;
   }
   if (loadErrorType) {
     return <Box flexDirection="column" padding={1}>
         <Text bold color="error">
-          Error loading Avenlo sessions
+          Error loading Qerivon sessions
         </Text>
 
         {renderErrorSpecificGuidance(loadErrorType)}
@@ -143,7 +143,7 @@ export function ResumeTask({
   if (sessions.length === 0) {
     return <Box flexDirection="column" padding={1}>
         <Text bold>
-          No Avenlo sessions found
+          No Qerivon sessions found
           {currentRepo && <Text> for {currentRepo}</Text>}
         </Text>
         <Box marginTop={1}>
@@ -261,7 +261,7 @@ function renderErrorSpecificGuidance(errorType: LoadErrorType): React.ReactNode 
         </Box>;
     case 'other':
       return <Box marginY={1} flexDirection="row">
-          <Text dimColor>抱歉，Avenlo 发生错误</Text>
+          <Text dimColor>抱歉，Qerivon 发生错误</Text>
         </Box>;
   }
 }

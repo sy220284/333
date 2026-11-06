@@ -49,7 +49,7 @@ const externalTips: Tip[] = [
   {
     id: 'new-user-warmup',
     content: async () =>
-      `Start with small features or bug fixes, ask Avenlo to propose a plan, and verify its suggested edits`,
+      `Start with small features or bug fixes, ask Qerivon to propose a plan, and verify its suggested edits`,
     cooldownSessions: 3,
     async isRelevant() {
       const config = getGlobalConfig()
@@ -96,7 +96,7 @@ const externalTips: Tip[] = [
   {
     id: 'git-worktrees',
     content: async () =>
-      'Use git worktrees to run multiple Avenlo sessions in parallel.',
+      'Use git worktrees to run multiple Qerivon sessions in parallel.',
     cooldownSessions: 10,
     isRelevant: async () => {
       try {
@@ -111,7 +111,7 @@ const externalTips: Tip[] = [
   {
     id: 'color-when-multi-clauding',
     content: async () =>
-      'Running multiple Avenlo sessions? Use /color and /rename to tell them apart at a glance.',
+      'Running multiple Qerivon sessions? Use /color and /rename to tell them apart at a glance.',
     cooldownSessions: 10,
     isRelevant: async () => {
       if (getCurrentSessionAgentColor()) return false
@@ -208,7 +208,7 @@ const externalTips: Tip[] = [
   {
     id: 'prompt-queue',
     content: async () =>
-      'Hit Enter to queue up additional messages while Avenlo is working.',
+      'Hit Enter to queue up additional messages while Qerivon is working.',
     cooldownSessions: 5,
     async isRelevant() {
       const config = getGlobalConfig()
@@ -218,14 +218,14 @@ const externalTips: Tip[] = [
   {
     id: 'enter-to-steer-in-relatime',
     content: async () =>
-      'Send messages to Avenlo while it works to steer the agent in real-time',
+      'Send messages to Qerivon while it works to steer the agent in real-time',
     cooldownSessions: 20,
     isRelevant: async () => true,
   },
   {
     id: 'todo-list',
     content: async () =>
-      'Ask Avenlo to create a todo list when working on complex tasks to track progress and remain on track',
+      'Ask Qerivon to create a todo list when working on complex tasks to track progress and remain on track',
     cooldownSessions: 20,
     isRelevant: async () => true,
   },
@@ -258,7 +258,7 @@ const externalTips: Tip[] = [
   },
   {
     id: 'ide-upsell-external-terminal',
-    content: async () => 'Connect Avenlo to your IDE · /ide',
+    content: async () => 'Connect Qerivon to your IDE · /ide',
     cooldownSessions: 4,
     async isRelevant() {
       if (isSupportedTerminal()) {
@@ -301,7 +301,7 @@ const externalTips: Tip[] = [
   {
     id: 'paste-images-mac',
     content: async () =>
-      'Paste images into Avenlo using control+v (not cmd+v!)',
+      'Paste images into Qerivon using control+v (not cmd+v!)',
     cooldownSessions: 10,
     isRelevant: async () => getPlatform() === 'macos',
   },
@@ -322,7 +322,7 @@ const externalTips: Tip[] = [
   {
     id: 'continue',
     content: async () =>
-      'Run avenlo --continue or avenlo --resume to resume a conversation',
+      'Run qerivon --continue or qerivon --resume to resume a conversation',
     cooldownSessions: 10,
     isRelevant: async () => true,
   },
@@ -406,7 +406,7 @@ const externalTips: Tip[] = [
         'off' | 'copy_a' | 'copy_b'
       >('tengu_tide_elm', 'off')
       return variant === 'copy_b'
-        ? `Use ${cmd} for better one-shot answers. Avenlo analyzes the task first.`
+        ? `Use ${cmd} for better one-shot answers. Qerivon analyzes the task first.`
         : `Working on something tricky? ${cmd} gives better first answers`
     },
     cooldownSessions: 3,
@@ -435,8 +435,8 @@ const externalTips: Tip[] = [
         'off' | 'copy_a' | 'copy_b'
       >('tengu_tern_alloy', 'off')
       return variant === 'copy_b'
-        ? `For big tasks, ask Avenlo to ${blue('use subagents')}. They work in parallel and keep your main thread clean.`
-        : `Say ${blue('"fan out subagents"')} and Avenlo can dispatch a team. Each one digs deep so nothing gets missed.`
+        ? `For big tasks, ask Qerivon to ${blue('use subagents')}. They work in parallel and keep your main thread clean.`
+        : `Say ${blue('"fan out subagents"')} and Qerivon can dispatch a team. Each one digs deep so nothing gets missed.`
     },
     cooldownSessions: 3,
     isRelevant: async () => {
