@@ -63,10 +63,16 @@ jobs:
           bun build/rebuild.mjs
           node build/compile-standalone.mjs
           node build/package-release.mjs
+      - name: 原样封装发行文件的执行权限与符号链接
+        run: |
+          test -f dist/cli.js
+          test -x dist/claude
+          tar -czf "${RUNNER_TEMP}/ci-distribution.tar.gz" -C dist .
       - uses: actions/upload-artifact@v4
         with:
           name: ci-shared-distribution
-          path: dist/
+          path: ${{ runner.temp }}/ci-distribution.tar.gz
+          compression-level: 0
           retention-days: 5
           if-no-files-found: error
   core:
@@ -95,7 +101,12 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: ci-shared-distribution
-          path: dist/
+          path: ${{ runner.temp }}/333-distribution
+      - name: 恢复共享发行文件及可执行权限
+        run: |
+          mkdir -p dist
+          tar -xzf "${RUNNER_TEMP}/333-distribution/ci-distribution.tar.gz" -C dist
+          test -x dist/claude
       - name: 运行核心测试
         run: npm run test:${{ matrix.suite }}
   supplemental:
@@ -142,7 +153,12 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: ci-shared-distribution
-          path: dist/
+          path: ${{ runner.temp }}/333-distribution
+      - name: 恢复共享发行文件及可执行权限
+        run: |
+          mkdir -p dist
+          tar -xzf "${RUNNER_TEMP}/333-distribution/ci-distribution.tar.gz" -C dist
+          test -x dist/claude
       - name: 并行执行补充测试，失败保留原始退出码
         run: node build/run-unregistered-tests.mjs --ci-supplemental --shard-count=6 --shard-index=${{ matrix.shard }} --exclude-oracle
   oracle:
@@ -167,7 +183,12 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: ci-shared-distribution
-          path: dist/
+          path: ${{ runner.temp }}/333-distribution
+      - name: 恢复共享发行文件及可执行权限
+        run: |
+          mkdir -p dist
+          tar -xzf "${RUNNER_TEMP}/333-distribution/ci-distribution.tar.gz" -C dist
+          test -x dist/claude
       - name: 官方 x64 原版获取与 SHA256 校验
         shell: bash
         run: |
