@@ -491,13 +491,16 @@ test('OpenRouter non-stream tool turns preserve signed and encrypted reasoning_d
     { role: 'assistant', content: modelReply.content },
     { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'call_1', content: 'ok' }] },
   ] }, 'openai/gpt-6.1-sol', 'openrouter', signature)
-  assert.deepEqual(followup.messages[0].reasoning_details, details)
-  assert.equal(followup.messages[0].tool_calls[0].id, 'call_1')
-  assert.equal(followup.messages[1].tool_call_id, 'call_1')
+  const followupAssistant = followup.messages.find((message: { role?: string }) => message.role === 'assistant')
+  const followupTool = followup.messages.find((message: { role?: string }) => message.role === 'tool')
+  assert.deepEqual(followupAssistant?.reasoning_details, details)
+  assert.equal(followupAssistant?.tool_calls[0].id, 'call_1')
+  assert.equal(followupTool?.tool_call_id, 'call_1')
   const wrongAccount = toChatCompletions({ ...body, messages: [
     { role: 'assistant', content: modelReply.content },
   ] }, 'openai/gpt-6.1-sol', 'openrouter', '333-replay:someone-else')
-  assert.equal(wrongAccount.messages[0].reasoning_details, undefined)
+  assert.equal(wrongAccount.messages.find((message: { role?: string }) =>
+    message.role === 'assistant')?.reasoning_details, undefined)
 })
 test('OpenRouter streamed reasoning fragments merge before being replayed', async () => {
   const route = requireRoute('openrouter/openai/gpt-6.1-sol')
