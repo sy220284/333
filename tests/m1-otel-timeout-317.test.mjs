@@ -43,7 +43,8 @@ test('普通模型和辅助 API 不再自动附加设备账户与会话追踪字
     assert.doesNotMatch(src, /getAPIMetadata|metadata:\s*getAPIMetadata|device_id:\s*getOrCreateUserID/)
   }
   const client = source('src/services/api/client.ts')
-  assert.doesNotMatch(client, /X-Claude-Code-Session-Id|['"]x-client-app['"]/)
+  assert.doesNotMatch(client, /X-Claude-Code-Session-Id|['"]x-client-app['"]|x-client-request-id|CLIENT_REQUEST_ID_HEADER/)
+  assert.doesNotMatch(source('src/services/api/logging.ts'), /clientRequestId|x-client-request-id/)
 })
 
 test('设置与记忆依赖本地目录，云端同步入口不再接入应用', () => {
