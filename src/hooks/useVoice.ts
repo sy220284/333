@@ -25,7 +25,6 @@ import { toError } from '../utils/errors.js'
 import { getSystemLocaleLanguage } from '../utils/intl.js'
 import { logError } from '../utils/log.js'
 import { getInitialSettings } from '../utils/settings/settings.js'
-import { sleep } from '../utils/sleep.js'
 
 // ─── Language normalization ─────────────────────────────────────────────
 
@@ -238,13 +237,6 @@ export function useVoice({
   // True if the early-error retry fired during this session.
   // Tracked for the tengu_voice_recording_completed analytics event.
   const retryUsedRef = useRef(false)
-  // Full audio captured this session, kept for silent-drop replay. ~1% of
-  // sessions get a sticky-broken CE pod that accepts audio but returns zero
-  // transcripts (anthropics/anthropic#287008 session-sticky variant); when
-  // finalize() resolves via no_data_timeout with hadAudioSignal=true, we
-  // replay the buffer on a fresh WS once. Bounded: 32KB/s × ~60s max ≈ 2MB.
-  const fullAudioRef = useRef<Buffer[]>([])
-  const silentDropRetriedRef = useRef(false)
   // Bumped when the early-error retry is scheduled. Captured per
   // attemptConnect — onError swallows stale-gen events (conn 1's
   // trailing close-error) but surfaces current-gen ones (conn 2's
@@ -311,7 +303,6 @@ export function useVoice({
     }
     accumulatedRef.current = ''
     audioLevelsRef.current = []
-    fullAudioRef.current = []
     setVoiceState(prev => {
       if (prev.voiceInterimTranscript === '' && !prev.voiceAudioLevels.length)
         return prev
@@ -368,96 +359,11 @@ export function useVoice({
         : Promise.resolve(undefined)
 
     void finalizePromise
-      .then(async finalizeSource => {
+      .then(() => {
         if (isStale()) return
-        // Silent-drop replay: when the server accepted audio (wsConnected),
-        // the mic captured real signal (hadAudioSignal), but finalize timed
-        // out with zero transcript — the ~1% session-sticky CE-pod bug.
-        // Replay the buffered audio on a fresh connection once. A 250ms
-        // backoff clears the same-pod rapid-reconnect race (same gap as the
-        // early-error retry path below).
-        if (
-          finalizeSource === 'no_data_timeout' &&
-          hadAudioSignal &&
-          wsConnected &&
-          !focusTriggered &&
-          focusFlushedChars === 0 &&
-          accumulatedRef.current.trim() === '' &&
-          !silentDropRetriedRef.current &&
-          fullAudioRef.current.length > 0
-        ) {
-          silentDropRetriedRef.current = true
-          logForDebugging(
-            `[voice] Silent-drop detected (no_data_timeout, ${String(fullAudioRef.current.length)} chunks); replaying on fresh connection`,
-          )
-          logEvent('tengu_voice_silent_drop_replay', {
-            recordingDurationMs,
-            chunkCount: fullAudioRef.current.length,
-          })
-          if (connectionRef.current) {
-            connectionRef.current.close()
-            connectionRef.current = null
-          }
-          const replayBuffer = fullAudioRef.current
-          await sleep(250)
-          if (isStale()) return
-          const stt = normalizeLanguageForSTT(getInitialSettings().language)
-          const keyterms = await getVoiceKeyterms()
-          if (isStale()) return
-          await new Promise<void>(resolve => {
-            void connectVoiceStream(
-              {
-                onTranscript: (t, isFinal) => {
-                  if (isStale()) return
-                  if (isFinal && t.trim()) {
-                    if (accumulatedRef.current) accumulatedRef.current += ' '
-                    accumulatedRef.current += t.trim()
-                  }
-                },
-                onError: () => resolve(),
-                onClose: () => {},
-                onReady: conn => {
-                  if (isStale()) {
-                    conn.close()
-                    resolve()
-                    return
-                  }
-                  connectionRef.current = conn
-                  const SLICE = 32_000
-                  let slice: Buffer[] = []
-                  let bytes = 0
-                  for (const c of replayBuffer) {
-                    if (bytes > 0 && bytes + c.length > SLICE) {
-                      conn.send(Buffer.concat(slice))
-                      slice = []
-                      bytes = 0
-                    }
-                    slice.push(c)
-                    bytes += c.length
-                  }
-                  if (slice.length) conn.send(Buffer.concat(slice))
-                  void conn.finalize().then(() => {
-                    conn.close()
-                    resolve()
-                  })
-                },
-              },
-              { language: stt.code, keyterms },
-            ).then(
-              c => {
-                if (!c) resolve()
-              },
-              () => resolve(),
-            )
-          })
-          if (isStale()) return
-        }
-        fullAudioRef.current = []
 
         const text = accumulatedRef.current.trim()
-        logForDebugging(
-          `[voice] Final transcript assembled (${String(text.length)} chars): "${text.slice(0, 200)}"`,
-        )
+        logForDebugging(`[voice] Final transcript assembled (${String(text.length)} chars)`)
 
         // Tracks silent-drop rate: transcriptChars=0 + hadAudioSignal=true
         // + recordingDurationMs>2000 = the bug backend PR #287008 fixes.
@@ -473,7 +379,6 @@ export function useVoice({
           recordingDurationMs,
           hadAudioSignal,
           retried,
-          silentDropRetried: silentDropRetriedRef.current,
           wsConnected,
           focusTriggered,
         })
@@ -496,12 +401,12 @@ export function useVoice({
             // WS never connected → audio never reached backend. Not a silent
             // drop; a connection failure (slow OAuth refresh, network, etc).
             onErrorRef.current?.(
-              'Voice connection failed. Check your network and try again.',
+              '本地语音识别未启动，请检查 Whisper 配置与录音权限。',
             )
           } else if (!hadAudioSignal) {
             // Distinguish silent mic (capture issue) from speech not recognized.
             onErrorRef.current?.(
-              'No audio detected from microphone. Check that the correct input device is selected and that Claude Code has microphone access.',
+              '麦克风没有收到音频，请检查输入设备和系统录音权限。',
             )
           } else {
             onErrorRef.current?.('No speech detected.')
@@ -651,8 +556,6 @@ export function useVoice({
     seenRepeatRef.current = false
     hasAudioSignalRef.current = false
     retryUsedRef.current = false
-    silentDropRetriedRef.current = false
-    fullAudioRef.current = []
     focusFlushedCharsRef.current = 0
     everConnectedRef.current = false
     const myGen = ++sessionGenRef.current
@@ -693,14 +596,7 @@ export function useVoice({
     audioLevelsRef.current = []
     const started = await voiceModule.startRecording(
       (chunk: Buffer) => {
-        // Copy for fullAudioRef replay buffer. send() in voiceStreamSTT
-        // copies again defensively — acceptable overhead at audio rates.
-        // Skip buffering in focus mode — replay is gated on !focusTriggered
-        // so the buffer is dead weight (up to ~20MB for a 10min session).
         const owned = Buffer.from(chunk)
-        if (!focusTriggeredRef.current) {
-          fullAudioRef.current.push(owned)
-        }
         if (connectionRef.current) {
           connectionRef.current.send(owned)
         } else {
@@ -784,7 +680,7 @@ export function useVoice({
             if (isStale()) return
             sawTranscript = true
             logForDebugging(
-              `[voice] onTranscript: isFinal=${String(isFinal)} text="${text}"`,
+              `[voice] onTranscript: isFinal=${String(isFinal)} length=${text.length}`,
             )
             if (isFinal && text.trim()) {
               if (focusTriggeredRef.current) {
@@ -792,7 +688,7 @@ export function useVoice({
                 // keep recording. This gives continuous transcription while
                 // the terminal is focused.
                 logForDebugging(
-                  `[voice] Focus mode: flushing final transcript immediately: "${text.trim()}"`,
+                  `[voice] Focus mode: flushing final transcript, length=${text.trim().length}`,
                 )
                 onTranscriptRef.current(text.trim())
                 focusFlushedCharsRef.current += text.trim().length
@@ -810,7 +706,7 @@ export function useVoice({
                 }
                 accumulatedRef.current += text.trim()
                 logForDebugging(
-                  `[voice] Accumulated final transcript: "${accumulatedRef.current}"`,
+                  `[voice] Accumulated final transcript length=${accumulatedRef.current.length}`,
                 )
                 // Clear interim since final supersedes it
                 setVoiceState(prev => {
@@ -894,7 +790,7 @@ export function useVoice({
             // (ws fires error then close 1006) is swallowed above.
             attemptGenRef.current++
             logError(new Error(`[voice] voice_stream error: ${error}`))
-            onErrorRef.current?.(`Voice stream error: ${error}`)
+            onErrorRef.current?.(`本地语音识别失败：${error}`)
             // Clear the audio buffer on error to avoid memory leaks
             audioBuffer.length = 0
             focusTriggeredRef.current = false
