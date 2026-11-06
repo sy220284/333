@@ -36,7 +36,7 @@ export function createWhatsNewFeed(releaseNotes: string[]): FeedConfig {
       text: note
     };
   });
-  const emptyMessage = process.env.USER_TYPE === 'ant' ? 'Unable to fetch latest claude-cli-internal commits' : 'Check the Claude Code changelog for updates';
+  const emptyMessage = process.env.USER_TYPE === 'ant' ? 'Unable to fetch latest claude-cli-internal commits' : '查看 333 的更新记录';
   return {
     title: process.env.USER_TYPE === 'ant' ? "What's new [ANT-ONLY: Latest CC commits]" : "What's new",
     lines,
@@ -57,7 +57,7 @@ export function createProjectOnboardingFeed(steps: Step[]): FeedConfig {
       text: `${checkmark}${text}`
     };
   });
-  const warningText = getCwd() === homedir() ? 'Note: You have launched claude in your home directory. For the best experience, launch it in a project directory instead.' : undefined;
+  const warningText = getCwd() === homedir() ? '当前位于用户主目录。建议在具体项目目录中启动 333，以便准确识别代码和工作区。' : undefined;
   if (warningText) {
     lines.push({
       text: warningText

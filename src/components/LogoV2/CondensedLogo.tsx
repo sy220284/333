@@ -32,7 +32,7 @@ export function CondensedLogo(): ReactNode {
   // Account for: condensed clawd width (11 chars) + gap (2) + padding (2) = 15 chars
   const textWidth = Math.max(columns - 15, 20)
 
-  // Truncate version to fit within available width, accounting for "Claude Code v" prefix
+  // Truncate version to fit within available width, accounting for "333 v" prefix
   const versionPrefix = '333 v'
   const truncatedVersion = truncate(
     version,

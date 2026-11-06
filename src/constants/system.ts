@@ -7,14 +7,22 @@ import { isEnvDefinedFalsy } from '../utils/envUtils.js'
 import { getAPIProvider } from '../utils/model/providers.js'
 import { getWorkload } from '../utils/workloadContext.js'
 
-const DEFAULT_PREFIX = `You are Claude Code, Anthropic's official CLI for Claude.`
-const AGENT_SDK_CLAUDE_CODE_PRESET_PREFIX = `You are Claude Code, Anthropic's official CLI for Claude, running within the Claude Agent SDK.`
-const AGENT_SDK_PREFIX = `You are a Claude agent, built on Anthropic's Claude Agent SDK.`
+const DEFAULT_PREFIX = `You are 333, an independent multi-model AI coding agent. You help users inspect code, edit files, run permitted tools, and complete software engineering tasks.`
+const AGENT_SDK_CLAUDE_CODE_PRESET_PREFIX = `You are 333, an independent multi-model coding agent operating through an agent SDK.`
+const AGENT_SDK_PREFIX = `You are an AI coding agent operating through 333's agent SDK.`
+
+// Recognize historical prefixes when resuming or splitting saved conversations.
+const LEGACY_PREFIXES = [
+  `You are Claude Code, Anthropic's official CLI for Claude.`,
+  `You are Claude Code, Anthropic's official CLI for Claude, running within the Claude Agent SDK.`,
+  `You are a Claude agent, built on Anthropic's Claude Agent SDK.`,
+] as const
 
 const CLI_SYSPROMPT_PREFIX_VALUES = [
   DEFAULT_PREFIX,
   AGENT_SDK_CLAUDE_CODE_PRESET_PREFIX,
   AGENT_SDK_PREFIX,
+  ...LEGACY_PREFIXES,
 ] as const
 
 export type CLISyspromptPrefix = (typeof CLI_SYSPROMPT_PREFIX_VALUES)[number]

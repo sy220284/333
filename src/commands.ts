@@ -99,7 +99,6 @@ import model from './commands/model/index.js'
 import know from './commands/know.js'
 import outputStyle from './commands/output-style/index.js'
 import remoteEnv from './commands/remote-env/index.js'
-import upgrade from './commands/upgrade/index.js'
 import statusline from './commands/statusline.js'
 import effort from './commands/effort/index.js'
 // insights.ts is 113KB (3200 lines, includes diffLines/html rendering). Lazy
@@ -107,7 +106,7 @@ import effort from './commands/effort/index.js'
 const usageReport: Command = {
   type: 'prompt',
   name: 'insights',
-  description: 'Generate a report analyzing your Claude Code sessions',
+  description: '分析当前 333 会话并生成报告',
   contentLength: 0,
   progressMessage: 'analyzing your sessions',
   source: 'builtin',
@@ -181,7 +180,6 @@ const COMMANDS = memoize((): Command[] => [
   review,
   rewind,
   terminalSetup,
-  upgrade,
   usageReport,
   ...(webCmd ? [webCmd] : []),
   ...(proactive ? [proactive] : []),

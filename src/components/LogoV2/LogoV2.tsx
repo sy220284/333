@@ -126,13 +126,13 @@ export function LogoV2() {
     // Accessibility uses the same live model, billing and workspace metadata
     // as the normal logo, without Clawd art, decorative borders or animation.
     return <Box flexDirection="column">
-      <Text>Claude Code v{version}</Text>
+      <Text>333 v{version}</Text>
       <Text>{fullModelDisplayName}{effortSuffix} · {billingType}</Text>
       <Text>{agentName ? `@${agentName} · ${cwd}` : cwd}</Text>
       {activePermissionMode === 'auto' && <>
-        <Text>Auto mode is now Claude Code's default permission mode.</Text>
-        <Text>Auto mode lets Claude handle permission prompts automatically. Claude checks each tool call for risky actions and prompt injection before executing, runs the ones it assesses as lower-risk, and blocks the rest.</Text>
-        <Text>https://code.claude.com/docs/en/permission-modes</Text>
+        <Text>自动模式已启用。</Text>
+        <Text>自动模式会评估每次工具调用中的高风险操作和提示注入风险，执行评估为低风险的操作并拦截其他操作。</Text>
+        
         <Text>auto mode on (shift+tab to cycle)</Text>
       </>}
       {announcement && <Text>{announcement}</Text>}
@@ -210,8 +210,8 @@ export function LogoV2() {
   }
   const layoutMode = getLayoutMode(columns);
   const userTheme = resolveThemeSetting(getGlobalConfig().theme);
-  const borderTitle = ` ${color("claude", userTheme)("Claude Code")} ${color("inactive", userTheme)(`v${version}`)} `;
-  const compactBorderTitle = color("claude", userTheme)(" Claude Code ");
+  const borderTitle = ` ${color("claude", userTheme)("333")} ${color("inactive", userTheme)(`v${version}`)} `;
+  const compactBorderTitle = color("claude", userTheme)(" 333 ");
   if (layoutMode === "compact") {
     let welcomeMessage = formatWelcomeMessage(username);
     if (stringWidth(welcomeMessage) > columns - 4) {
