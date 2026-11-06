@@ -9,7 +9,7 @@ import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import type { LocalJSXCommandCall, LocalJSXCommandOnDone } from '../../types/command.js'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
 import { call as runGithubCommand, setupRepository } from './github.js'
-import { getGithubModelOptions, configureGithubModel, configureGithubCustomModel,
+import { getGithubModelOptions, configureGithubWizardModel,
   getGithubActionsProviderOptions, type GithubModelOption, type GithubActionsProvider } from './modelConfig.js'
 import type { GithubWorkflowSelection } from './workflow.js'
 import { validRepository } from './repository.js'
@@ -106,13 +106,13 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
       setStatus('检查仓库权限并创建 GitHub Actions 配置 PR…')
       const url = await setupRepository(name, workflow)
       if (transferKey) {
-        if (!model) throw new Error('尚未选择模型')
         setStatus('将选定 API 凭据独立写入 GitHub Actions Secrets…')
-        if (entry === 'new') {
-          await configureGithubCustomModel(name,provider,newModel,apiKey,true)
-        } else {
-          await configureGithubModel(name,model,true)
-        }
+        await configureGithubWizardModel(name,
+          entry === 'new'
+            ? { kind: 'new', provider, model: newModel, apiKey }
+            : { kind: 'saved', id: model },
+          true,
+        )
       }
       const output = `GitHub 配置 PR：${url}\n仓库：${name}\n功能：${workflow}\n模型：${transferKey ? (entry === 'new' ? `${provider}/${newModel}` : model) : '稍后独立配置'}\n请检查并合并配置 PR，工作流才会在仓库默认分支生效。`
       setApiKey('')
