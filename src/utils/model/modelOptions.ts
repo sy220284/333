@@ -196,7 +196,7 @@ function getModelFamilyInfo(
   const currentVersionName = getCatalogModel(currentModel)?.display_name ??
     getMarketingNameForModel(currentModel)
   return currentVersionName
-    ? { alias: entry.family[0]!.toUpperCase() + entry.family.slice(1), currentVersionName }
+    ? { alias: entry.family.charAt(0).toUpperCase() + entry.family.slice(1), currentVersionName }
     : null
 }
 
