@@ -1,15 +1,14 @@
 /**
  * Claude Code 2.1.317 self-hosted runner operator API.
  * Source: chunk-qefetax7.js (WHe) and chunk-0fymexev.js.
- * Auth comes from the same Claude.ai OAuth session as the CLI.
+ * 管理凭据由操作员显式配置，和模型账号 OAuth 分离。
  */
-import {getOauthConfig} from '../../constants/oauth.js'
-import {prepareApiRequest} from '../../utils/teleport/api.js'
+import { resolveRunnerEndpoint } from './endpointPolicy.ts'
 import {readFile,open,stat} from 'node:fs/promises'
 import {resolve} from 'node:path'
 
 export const RUNNER_ADMIN_PREFIX_317='/v1/code/runners/self-hosted'
-export const RUNNER_OPERATOR_UI_317='Admin settings → Cloud environments → Self-hosted environments'
+export const RUNNER_OPERATOR_UI_317='用户自托管 Runner 服务 → 管理与状态接口'
 const ID=/^[a-zA-Z0-9_-]{1,256}$/
 export function runnerAdminId317(name:string,value:string):string{
   if(!ID.test(value))throw Error('Invalid '+name+'; use a tagged ID without spaces')
@@ -28,12 +27,11 @@ export type RunnerAdminDeps317={
 export async function runnerAdminRequest317(
   request:RunnerRequest317,deps:RunnerAdminDeps317={}
 ):Promise<Record<string,unknown>>{
-  const base=(deps.baseUrl??getOauthConfig().BASE_API_URL).replace(/\/+$/,'')
-  const url=new URL(base)
-  if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash)
-    throw Error('Runner API must use an HTTPS origin without credentials')
-  const accessToken=(await (deps.credentials??prepareApiRequest)()).accessToken
-  if(!accessToken)throw Error('Runner administration requires claude login')
+  const base=resolveRunnerEndpoint(deps.baseUrl ?? process.env.SELF_HOSTED_RUNNER_API_URL)
+  const accessToken=deps.credentials
+    ? (await deps.credentials()).accessToken
+    : process.env.SELF_HOSTED_RUNNER_ADMIN_TOKEN?.trim()
+  if(!accessToken)throw Error('Runner 管理需要显式设置 SELF_HOSTED_RUNNER_ADMIN_TOKEN')
   const response=await (deps.fetchImpl??fetch)(base+adminPath317(request.path),{
     method:request.method,
     headers:{'Authorization':'Bearer '+accessToken,
