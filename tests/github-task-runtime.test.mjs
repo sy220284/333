@@ -10,15 +10,19 @@ const compiled=new Fn('readFileSync','writeFileSync','readdirSync','mkdirSync','
  'resolve','relative','dirname','execFileSync','process','fetch','URL','AbortController',
  'setTimeout','clearTimeout','Buffer',githubTaskRunnerScript().replace(/^import .*$/gm,''))
 
-function scenario({association='OWNER',failPrOnce=false,body='/yaoyaoche task 修改并测试代码'}={}) {
+function scenario({association='OWNER',failPrOnce=false,body='/yaoyaoche task 修改并测试代码',prComment=false}={}) {
  const dir=mkdtempSync(join(tmpdir(),'github-task-test-'))
  mkdirSync(join(dir,'src'))
  const file=join(dir,'src','a.ts'),writes=new Map([[file,'const status_old = true;\n']])
  const api='https://api.github.com/repos/org/code'
- const event={issue:{number:77},comment:{id:991,body,
+ const event=prComment?{
+  pull_request:{number:77,title:'修复登录流程',body:'修复回归问题',base:{ref:'main'},head:{sha:'commit123'}},
+  comment:{id:991,body,path:'src/a.ts',line:4,diff_hunk:'@@ -3,1 +3,1 @@\n-old\n+new',
+    author_association:association},
+ }:{issue:{number:77,title:'修复登录流程',body:'讨论需求与验收方式'},comment:{id:991,body,
   author_association:association}}
  const env={GITHUB_REPOSITORY:'org/code',GITHUB_EVENT_PATH:'event.json',
-  GITHUB_EVENT_NAME:'issue_comment',MODEL_NAME:'test-model',
+  GITHUB_EVENT_NAME:prComment?'pull_request_review_comment':'issue_comment',MODEL_NAME:'test-model',
   MODEL_PROVIDER:'openai-compatible',MODEL_API_KEY:'fixture-key',GH_TOKEN:'fixture-token'}
  const history=[],state={modelCalls:0,branchCreated:0,commits:0,prs:0,failedPr:0,tests:0}
  const actions=[
@@ -32,6 +36,10 @@ function scenario({association='OWNER',failPrOnce=false,body='/yaoyaoche task �
   history.push({url,method:options.method,body:options.body})
   if(url==='https://api.openai.com/v1/chat/completions')
     return ok({choices:[{message:{content:JSON.stringify(actions[state.modelCalls++%actions.length])}}]})
+  if(url===`${api}/issues/77/comments?per_page=100`)
+    return ok([{user:{login:'reviewer'},body:'请先修复登录测试'}])
+  if(url===`${api}/pulls/77/files?per_page=100`)
+    return ok([{filename:'src/a.ts',status:'modified'}])
   if(url===api)return ok({default_branch:'main',private:true})
   if(url===`${api}/git/ref/heads/main`)return ok({object:{sha:'baseSha'}})
   if(url===`${api}/git/commits/baseSha`)return ok({tree:{sha:'baseTree'}})
@@ -116,5 +124,22 @@ test('旧版提及触发等价：正文中部 @yaoyaoche 也能执行通用开�
   assert.equal(f.state.tests,1)
   assert.equal(f.state.prs,1)
   assert.ok(f.history.some(x=>x.url.endsWith('/issues/77/comments')))
+ }finally{f.cleanup()}
+})
+
+test('PR 逐行评论任务保留原版上下文：文件、行号、差异片段和讨论历史',async()=>{
+ const f=scenario({prComment:true,body:'请 @yaoyaoche 修复这里的问题'})
+ try {
+  await f.run()
+  assert.equal(f.state.prs,1)
+  const first=f.history.find(x=>x.url==='https://api.openai.com/v1/chat/completions')
+  const request=JSON.parse(first.body)
+  const context=request.messages[1].content
+  assert.match(context,/修复登录流程/)
+  assert.match(context,/逐行评论文件：src\/a\.ts/)
+  assert.match(context,/逐行评论位置：4/)
+  assert.match(context,/相关代码：/)
+  assert.match(context,/请先修复登录测试/)
+  assert.match(context,/PR 变更文件/)
  }finally{f.cleanup()}
 })
