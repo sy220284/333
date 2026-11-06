@@ -34,7 +34,7 @@ function installationFixture({push=true,privateRepo=true,failPrOnce=false}={}) {
     Object.keys(state.branches).map(v=>({ref:'refs/heads/'+v})))
   if(args[0]==='api'&&path?.includes('/contents/')) {
    const key=path.split('/contents/')[1].split('?ref=')
-   const saved=files.get(key[1]+'|'+key[0])
+   const saved=files.get(decodeURIComponent(key[1])+'|'+key[0])
    return saved===undefined?{code:1,stderr:'HTTP 404 Not Found',stdout:''}:
     success({type:'file',encoding:'base64',content:Buffer.from(saved).toString('base64')})
   }
