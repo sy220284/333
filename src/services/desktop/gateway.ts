@@ -26,6 +26,7 @@ type Entry = {
   runtime: Headless
   tasks: Map<string, DesktopTask>
   seenPermissions: Set<string>
+  seenHostRequests: Set<string>
   unsubscribe: Array<() => void>
   consuming?: Promise<void>
   persisting?: Promise<void>
@@ -144,6 +145,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         runtime: activeRuntime,
         tasks: new Map(tasks.map(task => [task.taskId, task])),
         seenPermissions: new Set(),
+        seenHostRequests: new Set(),
         unsubscribe: [],
       }
       sessions.set(id, entry)
@@ -160,6 +162,17 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           emit({ event: 'permission.resolved', sessionId: id, permissionId: prior })
         }
         entry.seenPermissions = current
+      }))
+      entry.unsubscribe.push(activeRuntime.hostControls.subscribe(() => {
+        const pending = activeRuntime.hostControls.getPending()
+        const current = new Set(pending.map(item => item.id))
+        for (const item of pending) if (!entry.seenHostRequests.has(item.id)) {
+          emit({ event: 'host.request', sessionId: id, request: item })
+        }
+        for (const prior of entry.seenHostRequests) if (!current.has(prior)) {
+          emit({ event: 'host.resolved', sessionId: id, requestId: prior })
+        }
+        entry.seenHostRequests = current
       }))
       emit({ event: 'session.state', sessionId: id, state: runtime.state.getState() })
       return { sessionId: id, resumed: !!resume, ...info, tasks }
@@ -292,6 +305,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       case 'sessions.interrupt': {
         const entry = requireSession(request.sessionId)
         entry.runtime.permissions.cancelPending('Interrupted by desktop user')
+        entry.runtime.hostControls.cancelPending('Interrupted by desktop user')
         await entry.runtime.interrupt()
         return { sessionId: request.sessionId, requested: true }
       }
@@ -306,6 +320,17 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         }
         await requireSession(request.sessionId).runtime.control({ subtype: 'set_permission_mode', mode: request.mode })
         return { mode: request.mode }
+      }
+      case 'host.list': return requireSession(request.sessionId).runtime.hostControls.getPending()
+      case 'host.respond': {
+        const host = requireSession(request.sessionId).runtime.hostControls
+        if (!host.settle(request.requestId, request.response)) throw new Error('Host request expired or belongs to another session')
+        return { requestId: request.requestId, accepted: true }
+      }
+      case 'host.reject': {
+        const host = requireSession(request.sessionId).runtime.hostControls
+        if (!host.reject(request.requestId, request.reason)) throw new Error('Host request expired or belongs to another session')
+        return { requestId: request.requestId, accepted: true }
       }
       case 'permissions.list': return requireSession(request.sessionId).runtime.permissions.getPending()
       case 'permissions.decide': {
