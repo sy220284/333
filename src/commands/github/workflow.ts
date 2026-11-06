@@ -15,9 +15,28 @@ export function githubWorkflow(selection: GithubWorkflowSelection = 'both'): str
   const comments = selection === 'review' ? [] : [
     '  issue_comment:',
     '    types: [created]',
+    '  pull_request_review_comment:',
+    '    types: [created]',
+    '  pull_request_review:',
+    '    types: [submitted]',
+    '  issues:',
+    '    types: [opened]',
   ]
   const reviewComment = "(github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/yaoyaoche review') && " + membership + ")"
-  const taskComment = "(github.event_name == 'issue_comment' && (startsWith(github.event.comment.body, '/yaoyaoche task ') || startsWith(github.event.comment.body, '/yaoyaoche dev ') || startsWith(github.event.comment.body, '/yaoyaoche 开发 ')) && " + membership + ")"
+  const requested = (content: string): string => [
+    "startsWith(" + "content" + ", '/yaoyaoche task ')",
+    "startsWith(" + "content" + ", '/yaoyaoche dev ')",
+    "startsWith(" + "content" + ", '/yaoyaoche 开发 ')",
+    "startsWith(" + "content" + ", '@yaoyaoche ')",
+  ].join(' || ').replaceAll('content',content)
+  const trusted = (field: string): string =>
+    "contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\"]'), " + field + ')'
+  const taskComment = [
+    "(github.event_name == 'issue_comment' && (" + requested('github.event.comment.body') + ") && " + membership + ')',
+    "(github.event_name == 'pull_request_review_comment' && (" + requested('github.event.comment.body') + ") && " + trusted('github.event.comment.author_association') + ')',
+    "(github.event_name == 'pull_request_review' && (" + requested('github.event.review.body') + ") && " + trusted('github.event.review.author_association') + ')',
+    "(github.event_name == 'issues' && (" + requested('github.event.issue.body') + ") && " + trusted('github.event.issue.author_association') + ')',
+  ].join(' || ')
   const internalPR = "(github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository)"
   const reviewCases = ["github.event_name == 'workflow_dispatch'",
     ...(selection === 'respond' ? [] : [internalPR]),
