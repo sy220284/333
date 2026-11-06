@@ -4,7 +4,6 @@
  * A retired test or an inert last-commit filter must not claim CI success.
  */
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
 const base = new URL('../', import.meta.url)
 const root = file => new URL(file, base)
 const directory = root('.github/workflows/')

@@ -23,8 +23,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: 333-dev-toolchain-${{ github.ref }}
-  cancel-in-progress: true
+  group: 333-dev-toolchain-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
 
 jobs:
   package:
