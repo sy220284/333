@@ -37,6 +37,17 @@ test('最近提交只派发对应专项，多个提交累计改动合并为并�
   assert.equal(planned.rebuild, false)
 })
 
+test('超级智能体队列变化仅触发本地能力和桌面专项，不挤占全量门禁', () => {
+  const planned = routeChanges([
+    'src/services/agentCenter/missionJobs.ts',
+    'tests/mission-jobs.test.ts',
+  ])
+  assert.equal(planned['desktop-communication'], true)
+  assert.equal(planned['local-feature-promotion'], true)
+  assert.equal(planned['ci-test-matrix'], false)
+  assert.equal(planned['latest-stable-six-host'], false)
+})
+
 test('未知业务代码走通用检查，构建修改触发完整构建专项', () => {
   const unknown = routeChanges(['src/features/newCapability.ts'])
   assert.equal(unknown['dev-quality'], true)
