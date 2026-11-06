@@ -65,4 +65,11 @@ jobs:
             .rebuild/public
           key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
       - name: 模拟七个直连服务商、退役缓存迁移与完整工具调用
-        run: bun test tests/multimodel-provider.test.ts tests/chatgpt-oauth-accounts.test.ts tests/chatgpt-oauth-refresh.test.ts tests/independent-local-features.test.ts
+        # Account tests intentionally change HOME and the global fetch mock.
+        # Bun can execute test files in the same process; give each suite an
+        # independent process to prevent credentials and OAuth mocks crossing.
+        run: |
+          bun test tests/multimodel-provider.test.ts
+          bun test tests/chatgpt-oauth-accounts.test.ts
+          bun test tests/chatgpt-oauth-refresh.test.ts
+          bun test tests/independent-local-features.test.ts
