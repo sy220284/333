@@ -88,7 +88,18 @@ export async function connectVoiceStream(
   const chunks: Buffer[] = []
   let bytes = 0
   let closed = false
+  let closeEmitted = false
   let running: Promise<FinalizeSource> | null = null
+  const cancel = new AbortController()
+
+  function notifyClose(): void {
+    closed = true
+    chunks.length = 0
+    if (!closeEmitted) {
+      closeEmitted = true
+      callbacks.onClose()
+    }
+  }
 
   const connection: VoiceStreamConnection = {
     send(chunk) {
@@ -101,41 +112,48 @@ export async function connectVoiceStream(
       if (running) return running
       if (closed) return 'ws_already_closed'
       running = (async () => {
-        if (bytes === 0) return 'no_data_timeout'
-        const dir = await mkdtemp(join(tmpdir(), 'yaoyaoche-whisper-'))
-        const wav = join(dir, 'speech.wav')
-        const base = join(dir, 'result')
+        let dir: string | undefined
         try {
+          if (bytes === 0) return 'no_data_timeout'
+          dir = await mkdtemp(join(tmpdir(), 'yaoyaoche-whisper-'))
+          const wav = join(dir, 'speech.wav')
+          const base = join(dir, 'result')
           await writeFile(wav, pcmToWav(Buffer.concat(chunks)), { mode: 0o600 })
+          if (cancel.signal.aborted) return 'ws_already_closed'
+
           const args = ['-m', configured.model, '-f', wav, '-otxt', '-of', base]
           if (options?.language && /^[a-z]{2,5}$/i.test(options.language)) {
             args.push('-l', options.language.toLowerCase())
           }
           await execFileAsync(configured.executable, args, {
+            signal: cancel.signal,
             timeout: FINALIZE_TIMEOUTS_MS.safety,
             maxBuffer: 1024 * 1024,
             windowsHide: true,
           })
-          const transcript = (await readFile(`${base}.txt`, 'utf8')).trim()
+          if (cancel.signal.aborted) return 'ws_already_closed'
+          const transcript = (await readFile(base + '.txt', 'utf8')).trim()
+          if (cancel.signal.aborted) return 'ws_already_closed'
           if (transcript) callbacks.onTranscript(transcript, true)
           return transcript ? 'post_closestream_endpoint' : 'no_data_timeout'
         } catch (error) {
+          if (cancel.signal.aborted) return 'ws_already_closed'
           callbacks.onError(error instanceof Error ? error.message : String(error), { fatal: true })
           throw error
         } finally {
-          closed = true
-          chunks.length = 0
-          await rm(dir, { recursive: true, force: true })
-          callbacks.onClose()
+          try {
+            if (dir) await rm(dir, { recursive: true, force: true })
+          } finally {
+            notifyClose()
+          }
         }
       })()
       return running
     },
     close() {
       if (closed) return
-      closed = true
-      chunks.length = 0
-      callbacks.onClose()
+      cancel.abort()
+      notifyClose()
     },
     isConnected: () => !closed,
   }
