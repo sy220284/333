@@ -15,6 +15,28 @@ import { fileURLToPath } from 'node:url'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const WORKFLOW_ONLY = process.argv.includes('--workflow-only')
 const CI_SUPPLEMENTAL = process.argv.includes('--ci-supplemental')
+const CI_ORACLE = process.argv.includes('--ci-oracle')
+const EXCLUDE_ORACLE = process.argv.includes('--exclude-oracle')
+
+// Official native parity is executed once with a verified 2.1.317 binary,
+// rather than silently skipped on each of the six supplemental shards.
+export const ORACLE_TESTS = Object.freeze([
+  "tests/m1-coldstart-official-native-317.test.mjs",
+  "tests/m3-plugin-command-source-native-317.test.mjs",
+  "tests/m3-plugin-config-native-parity-317.test.mjs",
+  "tests/m3-plugin-details-native-parity-317.test.mjs",
+  "tests/m3-plugin-init-native-parity-317.test.mjs",
+  "tests/m3-plugin-tag-native-parity-317.test.mjs",
+  "tests/m4-plugin-prune-native-parity-317.test.mjs",
+  "tests/m1-317-json-wire-e2e.test.mjs",
+  "tests/m1-background-agent-parity.test.mjs",
+  "tests/m1-obsolete-command-parity.test.mjs",
+  "tests/m3-plugin-install-transaction-317.test.mjs",
+  "tests/m1-background-lifecycle.test.mjs",
+  "tests/fallback-529-integration.test.mjs",
+  "tests/upgrade-mode-integration.test.mjs"
+])
+const ORACLE_SET = new Set(ORACLE_TESTS)
 
 function walk(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
@@ -61,8 +83,13 @@ export function discoverUnregisteredTests(root = ROOT, options = {}) {
     .map(workflowRunCommands).join('\n')
   const workflowOnly = options.workflowOnly === true
   const supplemental = options.ciSupplemental === true
-  const pending = tests.filter(path => !commands.includes(path) &&
-    (supplemental || (workflowOnly ? workflows.includes(path) : !workflows.includes(path))))
+  const oracleOnly = options.ciOracle === true
+  const excludeOracle = options.excludeOracle === true
+  const pending = tests.filter(path =>
+    oracleOnly ? ORACLE_SET.has(path)
+      : !commands.includes(path) &&
+        (supplemental || (workflowOnly ? workflows.includes(path) : !workflows.includes(path))) &&
+        !(excludeOracle && ORACLE_SET.has(path)))
   // Registered means excluded from this execution mode. Keep the sets disjoint
   // for normal, workflow-only, and supplemental runs alike.
   const selected = new Set(pending)
@@ -162,7 +189,20 @@ function runTest(file, runtime, options = {}) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const { tests, registered, pending } = discoverUnregisteredTests(ROOT, { workflowOnly: WORKFLOW_ONLY, ciSupplemental: CI_SUPPLEMENTAL })
+  const { tests, registered, pending } = discoverUnregisteredTests(ROOT, {
+    workflowOnly: WORKFLOW_ONLY, ciSupplemental: CI_SUPPLEMENTAL,
+    ciOracle: CI_ORACLE, excludeOracle: EXCLUDE_ORACLE,
+  })
+  if (CI_ORACLE) {
+    const missing = ORACLE_TESTS.filter(path => !tests.includes(path))
+    if (missing.length) throw new Error('Official parity test missing from repository: ' + missing.join(', '))
+    if (!process.argv.includes('--list')) {
+      for (const key of ['CLAUDE_TARGET_X64', 'CLAUDE_REFERENCE_BIN']) {
+        if (!process.env[key] || !existsSync(process.env[key]))
+          throw new Error('Official parity cannot run without verified ' + key)
+      }
+    }
+  }
   const value = flag => {
     const item = process.argv.find(arg => arg.startsWith(flag + '='))
     return item ? Number(item.slice(flag.length + 1)) : null
@@ -175,7 +215,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const selected = pending.filter((_, i) => i % shardCount === shardIndex)
   const plan = selected.map(file => ({ file, runtime: runtimeForTest(file) }))
   console.log(JSON.stringify({
-    mode: CI_SUPPLEMENTAL ? 'ci-supplemental' : (WORKFLOW_ONLY ? 'workflow-only' : 'unregistered'),
+    mode: CI_ORACLE ? 'ci-oracle' : CI_SUPPLEMENTAL ? 'ci-supplemental' : (WORKFLOW_ONLY ? 'workflow-only' : 'unregistered'),
     total: tests.length, explicitlyScheduled: registered.length,
     candidateCount: pending.length, shardIndex, shardCount,
     discoveredForExecution: plan.length, planned: plan,

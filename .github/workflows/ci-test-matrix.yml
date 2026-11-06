@@ -107,6 +107,22 @@ jobs:
         shard: [0, 1, 2, 3, 4, 5]
     runs-on: ubuntu-latest
     timeout-minutes: 75
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: gateway_test
+          POSTGRES_PASSWORD: gateway_test
+          POSTGRES_DB: gateway_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gateway_test -d gateway_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      GATEWAY_TEST_POSTGRES_URL: postgres://gateway_test:gateway_test@127.0.0.1:5432/gateway_test
     steps:
       - uses: actions/checkout@v4
       - name: 读取统一工具链版本
@@ -128,11 +144,48 @@ jobs:
           name: ci-shared-distribution
           path: dist/
       - name: 并行执行补充测试，失败保留原始退出码
-        run: node build/run-unregistered-tests.mjs --ci-supplemental --shard-count=6 --shard-index=${{ matrix.shard }}
+        run: node build/run-unregistered-tests.mjs --ci-supplemental --shard-count=6 --shard-index=${{ matrix.shard }} --exclude-oracle
+  oracle:
+    name: 官方 2.1.317 二进制真实差分测试
+    needs: [inventory, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: 读取统一工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
+      - name: 恢复项目冻结依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-shared-distribution
+          path: dist/
+      - name: 官方 x64 原版获取与 SHA256 校验
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .rebuild/oracle
+          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
+            "https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude" \
+            -o .rebuild/oracle/claude
+          echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  .rebuild/oracle/claude" | sha256sum --check
+          chmod 700 .rebuild/oracle/claude
+          echo "CLAUDE_TARGET_X64=${GITHUB_WORKSPACE}/.rebuild/oracle/claude" >> "${GITHUB_ENV}"
+          echo "CLAUDE_REFERENCE_BIN=${GITHUB_WORKSPACE}/.rebuild/oracle/claude" >> "${GITHUB_ENV}"
+      - name: 官方对照不得跳过，逐项执行并保留失败结果
+        run: node build/run-unregistered-tests.mjs --ci-oracle
   complete:
     name: 全量测试合并门禁
     if: always()
-    needs: [inventory, build, core, supplemental]
+    needs: [inventory, build, core, supplemental, oracle]
     runs-on: ubuntu-latest
     steps:
       - name: 确保全部并行测试均成功
@@ -141,8 +194,9 @@ jobs:
           BUILD: ${{ needs.build.result }}
           CORE: ${{ needs.core.result }}
           SUPPLEMENTAL: ${{ needs.supplemental.result }}
+          ORACLE: ${{ needs.oracle.result }}
         run: |
-          for result in "${INVENTORY}" "${BUILD}" "${CORE}" "${SUPPLEMENTAL}"; do
+          for result in "${INVENTORY}" "${BUILD}" "${CORE}" "${SUPPLEMENTAL}" "${ORACLE}"; do
             if [[ "${result}" != success ]]; then
               echo "::error::测试门禁未成功：${result}"
               exit 1

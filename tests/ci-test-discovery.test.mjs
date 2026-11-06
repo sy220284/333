@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
+import { readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { discoverUnregisteredTests, workflowRunCommands } from '../build/run-unregistered-tests.mjs'
 
@@ -39,3 +40,11 @@ test('同时解析单行与多行 run，忽略普通 YAML 文本', () => {
   assert.match(commands,/tests\/two\.test\.ts/)
   assert.doesNotMatch(commands,/mislabeled/)
 })
+
+test('官方二进制对照只在专用任务执行，补充测试可排除重复', () => {
+  const source = readFileSync(new URL('../build/run-unregistered-tests.mjs', import.meta.url), 'utf8')
+  assert.match(source, /--ci-oracle/)
+  assert.match(source, /--exclude-oracle/)
+  assert.match(source, /Official parity cannot run without verified/)
+})
+
