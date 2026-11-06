@@ -2,6 +2,7 @@ import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.js'
 import type { Command } from '../commands.js'
 import { execFileNoThrow } from '../utils/execFileNoThrow.js'
 import { parseReviewRequest, type ReviewMode } from './reviewMode.js'
+import { checkPullRequestPatch } from './reviewPatch.js'
 
 const MODEL_INPUT_LIMIT = 110_000
 
@@ -15,8 +16,11 @@ async function evidence(mode: ReviewMode, target: string): Promise<string> {
   if (/^[1-9][0-9]*$/.test(target)) {
     const prDiff = await execFileNoThrow('gh', ['pr', 'diff', target], { timeout: 60000, useCwd: true })
     if (prDiff.code !== 0) throw new Error(`无法读取 PR #${target}：${prDiff.stderr}`)
-    const check = await execFileNoThrow('git', ['diff', '--check'], { timeout: 15000, useCwd: true })
-    const header = `目标：GitHub PR #${target}\n差异格式检查：${check.code === 0 ? '通过' : check.stdout || check.stderr}`
+    const errors = checkPullRequestPatch(prDiff.stdout)
+    const checkResult = errors.length
+      ? `发现 ${errors.length} 项疑似差异格式问题：\n${errors.slice(0, 30).join('\n')}`
+      : '通过'
+    const header = `目标：GitHub PR #${target}\n差异格式检查（同一份 PR 原始差异）：${checkResult}`
     if (Buffer.byteLength(prDiff.stdout, 'utf8') <= MODEL_INPUT_LIMIT) {
       return `${header}\n完整差异：\n${prDiff.stdout}`
     }
