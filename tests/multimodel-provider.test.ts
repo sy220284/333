@@ -391,7 +391,7 @@ test('provider errors redact echoed credentials in HTTP bodies, headers and stre
   assert.equal(http.headers.get('request-id'), null)
   assert.ok(!(await http.text()).includes(token))
   const sse = await makeIndependentFetch(route, token, async () =>
-    stream({ error: { message: 'Rejected ' + token } }))(req())
+    stream({ error: { message: `Rejected ${token}` } }))(req())
   await assert.rejects(() => sse.text(), error =>
     error instanceof Error && !error.message.includes(token) && error.message.includes('Rejected'))
 })
