@@ -171,6 +171,10 @@ export function claimMissionJob(
   return mutate(missionId, projectDir, doc => {
     const job = requireJob(doc, jobId)
     if (job.status !== 'queued') throw new Error('任务目前不能执行：' + job.status)
+    // A bounded shared worker pool: concurrent desktop hosts consult the
+    // same locked mission record before they allocate another SDK process.
+    if (doc.jobs.filter(item => item.status === 'running').length >= 3)
+      throw new Error('本长期任务最多同时执行 3 项工作，请等待或先恢复中断任务')
     if (job.attempt >= 20) throw new Error('任务执行已达到 20 次上限')
     const next: MissionJob = {
       ...job, status: 'running', attempt: job.attempt + 1,
