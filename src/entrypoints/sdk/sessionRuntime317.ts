@@ -6,7 +6,8 @@ import { randomUUID } from 'node:crypto'
 import { createInterface } from 'node:readline'
 import { extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { SDKControlRequest, SDKControlRequestInner, SDKControlInitializeRequest, SDKControlCancelRequest, SDKControlResponse } from './controlTypes.js'
+import type { SDKControlRequest, SDKControlRequestInner, SDKControlInitializeRequest, SDKControlCancelRequest, SDKControlResponse, SDKHostControlRequest } from './controlTypes.js'
+import { SDK_HOST_CONTROL_SUBTYPES } from './controlSchemas.js'
 import type { SDKMessage, SDKUserMessage } from './coreTypes.js'
 import type { HookCallback, InternalOptions, SDKSessionOptions } from './runtimeTypes.js'
 import { prepareExternalSession317, SDK_SESSION_UUID } from './externalSessionStore317.js'
@@ -14,6 +15,7 @@ import type { StdoutMessage } from './controlTypes.js'
 import { Stream } from '../../utils/stream.js'
 
 type ExternalSession = Awaited<ReturnType<typeof prepareExternalSession317>>
+const hostControlSubtypes = new Set<string>(['elicitation', ...SDK_HOST_CONTROL_SUBTYPES])
 
 export function createSessionRuntime317(
   options: SDKSessionOptions | InternalOptions,
@@ -269,6 +271,10 @@ function startSession(
           const callback = callbacks.get(request.callback_id)
           if (!callback) throw new Error('Unknown SDK hook callback')
           decision = await callback(request.input, request.tool_use_id, { signal: controller.signal })
+        } else if (hostControlSubtypes.has(request.subtype) && options.onControlRequest) {
+          decision = await options.onControlRequest(request as SDKHostControlRequest, {
+            signal: controller.signal, requestId: request_id,
+          })
         } else {
           throw new Error(`Unsupported SDK control request: ${request.subtype}`)
         }
