@@ -7,7 +7,14 @@ import { promises as fs, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import type { IndependentProvider } from '../api/multimodel/registry.js'
-const PATH = join(homedir(), '.333', 'auth', 'provider-api-keys.json')
+/** Use the same per-operation home resolution as the independent model catalog.
+ * A module-level path can keep a different HOME when Bun preloads modules. */
+function vaultPath(): string {
+  const configuredHome = process.platform === 'win32'
+    ? process.env.USERPROFILE
+    : process.env.HOME
+  return join(configuredHome || homedir(), '.333', 'auth', 'provider-api-keys.json')
+}
 type Vault = { schema: 1; keys: Partial<Record<IndependentProvider, string>> }
 const SUPPORTED = new Set<string>(['openai','deepseek','qwen','kimi','zhipu','minimax'])
 export function validateApiKeyProvider(provider: string): IndependentProvider {
@@ -17,7 +24,7 @@ export function validateApiKeyProvider(provider: string): IndependentProvider {
 export function readProviderApiKey(provider: IndependentProvider): string | undefined {
   validateApiKeyProvider(provider)
   let contents: string
-  try { contents = readFileSync(PATH, 'utf8') }
+  try { contents = readFileSync(vaultPath(), 'utf8') }
   catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
     throw error
@@ -30,7 +37,7 @@ export function readProviderApiKey(provider: IndependentProvider): string | unde
 }
 function readVault(): Vault {
   try {
-    const value = JSON.parse(readFileSync(PATH,'utf8')) as Vault
+    const value = JSON.parse(readFileSync(vaultPath(),'utf8')) as Vault
     if (value.schema !== 1 || !value.keys || typeof value.keys !== 'object') throw new Error('Invalid provider API key vault')
     // Preserve valid credentials; retired-provider keys are never restored
     // by future writes to the current provider vault.
@@ -42,12 +49,13 @@ function readVault(): Vault {
   }
 }
 async function writeVault(vault: Vault): Promise<void> {
-  await fs.mkdir(dirname(PATH), { recursive: true, mode: 0o700 })
-  const tmp = `${PATH}.${randomUUID()}.tmp`
+  const path = vaultPath()
+  await fs.mkdir(dirname(path), { recursive: true, mode: 0o700 })
+  const tmp = `${path}.${randomUUID()}.tmp`
   try {
     await fs.writeFile(tmp, JSON.stringify(vault), { mode: 0o600, flag: 'wx' })
-    await fs.rename(tmp, PATH)
-    await fs.chmod(PATH, 0o600)
+    await fs.rename(tmp, path)
+    await fs.chmod(path, 0o600)
   } finally { await fs.rm(tmp, { force: true }) }
 }
 export async function setProviderApiKey(provider: IndependentProvider, key: string): Promise<void> {
