@@ -7,6 +7,7 @@ import { mkdtempSync, existsSync, readFileSync, rmSync, realpathSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
+import { skipWhenUnixSocketUnavailable } from './helpers/unixSocketCapability.mjs'
 import { applyPreloadClaim317, validatePreloadClaim317, PRELOAD_RESET_KEYS_317 } from '../src/bootstrap/preload317.mjs'
 
 const root = resolve(import.meta.dirname, '..')
@@ -138,7 +139,8 @@ test('M1 C19-T02 preload claim validates every field before changing process sta
 })
 test('M1 C19-T02 official and rebuilt preload accept a claim, run --version, release socket and pid', {
   skip: process.platform === 'win32', timeout: 90_000,
-}, async () => {
+}, async t => {
+  if (await skipWhenUnixSocketUnavailable(t)) return
   const bins = [['rebuilt', 'bun', [cli]]]
   if (process.env.CLAUDE_TARGET_X64 || process.env.CLAUDE_REFERENCE_BIN) bins.unshift(['official', process.env.CLAUDE_TARGET_X64 || process.env.CLAUDE_REFERENCE_BIN, []])
   for (const [name, bin, prefix] of bins) {
@@ -168,7 +170,8 @@ test('M1 C19-T02 official and rebuilt preload accept a claim, run --version, rel
 })
 test('M1 C19-T02 preload TERM releases the claim socket and pid without a session', {
   skip: process.platform === 'win32', timeout: 30_000,
-}, async () => {
+}, async t => {
+  if (await skipWhenUnixSocketUnavailable(t)) return
   const home = mkdtempSync(join(tmpdir(), '333-preload-stop-'))
   const socket = join(home, 'claim.sock')
   const started = spawnPreload('bun', [cli], socket)
@@ -185,7 +188,8 @@ test('M1 C19-T02 preload TERM releases the claim socket and pid without a sessio
 
 test('M1 C19-T02 preloaded process uses claimed API host and auth for a real SSE model response', {
   skip: process.platform === 'win32', timeout: 90_000,
-}, async () => {
+}, async t => {
+  if (await skipWhenUnixSocketUnavailable(t)) return
   const requests = []
   const claimedSessionId = 'caller-chosen-preload-session'
   const event = (type, data) => 'event: ' + type + '\ndata: ' + JSON.stringify(data) + '\n\n'
