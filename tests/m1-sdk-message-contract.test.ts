@@ -2,6 +2,8 @@ import { expect, test } from 'bun:test'
 import {
   SDKAssistantMessageSchema,
   SDKUserMessageSchema,
+  SDKResultErrorSchema,
+  SDKResultMessageSchema,
   UUIDPlaceholder,
 } from '../src/entrypoints/sdk/coreSchemas.js'
 
@@ -28,4 +30,21 @@ test('SDK UUIDs preserve canonical session/message identifiers and reject non-UU
  expect(UUIDPlaceholder().safeParse('session-not-a-uuid').success).toBe(false)
  expect(SDKUserMessageSchema().safeParse({type:'user',uuid:'bad-id',
    parent_tool_use_id:null,message:{role:'user',content:'hello'}}).success).toBe(false)
+})
+
+test('2.1.317 API error envelope keeps success subtype but is_error=true', () => {
+  const usage = {
+    input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0,
+    cache_read_input_tokens: 0,
+  }
+  const event = {
+    type: 'result', subtype: 'success', is_error: true,
+    terminal_reason: 'api_error', result: 'Not logged in',
+    duration_ms: 1, duration_api_ms: 0, num_turns: 1,
+    stop_reason: null, session_id: uuid, total_cost_usd: 0,
+    usage, modelUsage: {}, permission_denials: [], errors: ['Not logged in'], uuid,
+  }
+  expect(SDKResultErrorSchema().safeParse(event).success).toBe(true)
+  expect(SDKResultMessageSchema().safeParse(event).success).toBe(true)
+  expect(SDKResultMessageSchema().safeParse({ ...event, is_error: false }).success).toBe(false)
 })

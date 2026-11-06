@@ -1517,6 +1517,9 @@ export const SDKResultErrorSchema = lazySchema(() =>
   z.object({
     type: z.literal('result'),
     subtype: z.enum([
+      // Official 2.1.317 uses the success subtype on some API error
+      // envelopes. is_error remains the authoritative outcome bit.
+      'success',
       'error_during_execution',
       'error_max_turns',
       'error_max_budget_usd',
