@@ -337,6 +337,36 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'missions', 'mission_jobs'],
         }
       case 'models.list': return models(request.sessionId)
+      case 'mcp.list': {
+        const { getMcpConfigsByScope, isMcpServerDisabled } = await import('../mcp/config.js')
+        const output: Array<{name:string;scope:string;type:string;disabled:boolean;url?:string}> = []
+        const errors: string[] = []
+        for(const scope of ['project','user','local'] as const){
+          const result=getMcpConfigsByScope(scope)
+          for(const [name,config] of Object.entries(result.servers)){
+            output.push({name,scope,type:config.type||'stdio',disabled:isMcpServerDisabled(name),...('url' in config&&typeof config.url==='string'?{url:config.url}:{})})
+          }
+          errors.push(...result.errors.map(e=>e.message))
+        }
+        return {servers:output,errors}
+      }
+      case 'mcp.add': {
+        const { addMcpConfig } = await import('../mcp/config.js')
+        await addMcpConfig(request.name,request.config,request.scope)
+        return {name:request.name,added:true}
+      }
+      case 'mcp.remove': {
+        const { removeMcpConfig } = await import('../mcp/config.js')
+        await removeMcpConfig(request.name,request.scope)
+        return {name:request.name,removed:true}
+      }
+      case 'mcp.toggle': {
+        const { getMcpConfigsByScope, setMcpServerEnabled } = await import('../mcp/config.js')
+        const configured=(['project','user','local'] as const).some(scope=>getMcpConfigsByScope(scope).servers[request.name])
+        if(!configured)throw new Error('MCP 服务器不存在：'+request.name)
+        setMcpServerEnabled(request.name,request.enabled)
+        return {name:request.name,enabled:request.enabled}
+      }
       case 'sessions.open': return openSession(request.model)
       case 'sessions.resume': return openSession(undefined, request.sessionId)
       case 'sessions.list': return history.listSessions({ dir: cwd, limit: request.limit, offset: request.offset })
