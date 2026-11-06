@@ -247,11 +247,13 @@ test('closing a desktop session while SDK send is pending rejects the delayed tu
   const first = gateway.handle(request('sessions.send', {
     sessionId: opened.sessionId, message: 'pending',
   }))
-  // Register the expected rejection before allowing the close to complete.
-  const failedSend = expect(first).rejects.toThrow('Desktop session closed during send')
+  // Start close while the SDK send is still pending, then release the
+  // simulated transport. Await the rejection only after both operations
+  // were allowed to advance; this probes the actual close/send race.
   const closing = gateway.handle(request('sessions.close', { sessionId: opened.sessionId }))
   permit()
-  await Promise.all([failedSend, closing])
+  await expect(first).rejects.toThrow('Desktop session closed during send')
+  await closing
   await gateway.close()
 })
 
