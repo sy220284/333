@@ -25,7 +25,7 @@ async function until(ready: () => boolean) {
 function request(method: DesktopRequest['method'], data: Record<string, unknown> = {}): DesktopRequest {
   return DesktopRequestSchema.parse({ id: randomUUID(), method, ...data })
 }
-function fixture(options: { beforeSend?: () => Promise<void> } = {}) {
+function fixture(fixtureOptions: { beforeSend?: () => Promise<void> } = {}) {
   let lastToolCallback: CanUseTool | undefined
   let lastControl: Record<string, unknown> | undefined
   const transcriptIds = new Set<string>()
@@ -61,7 +61,7 @@ function fixture(options: { beforeSend?: () => Promise<void> } = {}) {
         agents: [{ name: 'Explore', description: 'Finds files' }],
       }),
       async send(input: string) {
-        if (options.beforeSend) await options.beforeSend()
+        if (fixtureOptions.beforeSend) await fixtureOptions.beforeSend()
         content = input
       },
       async *stream() {
