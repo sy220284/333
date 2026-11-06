@@ -257,14 +257,14 @@ export function App(){
       setSelectedTeam(available.length?String(available[0].name||''):'')
   },[overview,selectedTeam])
   useEffect(()=>{
-    if(!selectedTeam){setTeamMembers([]);return}
+    if(!selectedTeam||!workspace){setTeamMembers([]);return}
     let live=true
     api.call<TeamMember[]>('agents.members',{teamName:selectedTeam})
       .then(members=>{if(live)setTeamMembers(members)})
       .catch(reason=>{if(live)setError(presentError(reason))})
     return()=>{live=false}
-  },[selectedTeam])
-  useEffect(()=>{if(view==='chat'&&messages.length>=0)scrollMessages()},[messages,view])
+  },[selectedTeam,workspace])
+  useEffect(()=>{if(view==='chat'&&messages.length>0)scrollMessages()},[messages,view])
   useEffect(()=>{
     let valid=true
     if(!selectedMission){setMissionJobs([]);return}
