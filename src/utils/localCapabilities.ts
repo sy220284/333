@@ -18,7 +18,7 @@ export const LOCAL_CAPABILITY_INFO = {
   },
   'agent-teams': {
     label: '多智能体协作',
-    detail: '允许多个智能体分工执行，可能产生额外模型调用',
+    detail: '团队与成员协作默认开放；创建成员仍按任务授权执行',
   },
 } as const
 
@@ -30,7 +30,7 @@ export function isLocalCapability(name: string): name is LocalCapability {
 }
 
 export function isLocalCapabilityEnabled(name: LocalCapability): boolean {
-  return getFeatureValue_CACHED_MAY_BE_STALE<boolean>(keyFor(name), false)
+  return getFeatureValue_CACHED_MAY_BE_STALE<boolean>(keyFor(name), name === 'agent-teams') === true
 }
 
 export function setLocalCapabilityEnabled(name: LocalCapability, enabled: boolean): void {

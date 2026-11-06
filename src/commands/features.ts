@@ -14,7 +14,7 @@ const call: LocalCommandCall = async args => {
     const rows = Object.entries(LOCAL_CAPABILITY_INFO).map(([id, info]) =>
       `${isLocalCapabilityEnabled(id as keyof typeof LOCAL_CAPABILITY_INFO) ? '已开启' : '已关闭'} · ${info.label} (${id})：${info.detail}`,
     )
-    return { type: 'text', value: ['本地高级功能（默认关闭）', ...rows, '', help].join('\n') }
+    return { type: 'text', value: ['本地高级功能（团队协作默认开启，其他高级功能按需开启）', ...rows, '', help].join('\n') }
   }
   if (!['on', 'enable', 'off', 'disable'].includes(action) || !name ||
       extra.length > 0 || !isLocalCapability(name)) {

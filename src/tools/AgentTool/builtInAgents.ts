@@ -29,19 +29,18 @@ export function getBuiltInAgents(): AgentDefinition[] {
     return []
   }
 
-  if (
-    feature('COORDINATOR_MODE') &&
-    isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE)
-  ) {
-    const { getCoordinatorAgents } =
-      require('../../coordinator/workerAgent.js') as typeof import('../../coordinator/workerAgent.js')
-    return getCoordinatorAgents()
-  }
-
   const agents: AgentDefinition[] = [
     GENERAL_PURPOSE_AGENT,
     STATUSLINE_SETUP_AGENT,
   ]
+
+  // Always register the coordinator worker so switching modes in a running
+  // session never leaves the Agent tool with an unavailable worker type.
+  if (feature('COORDINATOR_MODE')) {
+    const { getCoordinatorAgents } =
+      require('../../coordinator/workerAgent.js') as typeof import('../../coordinator/workerAgent.js')
+    agents.push(...getCoordinatorAgents())
+  }
 
   if (areExplorePlanAgentsEnabled()) {
     agents.push(EXPLORE_AGENT, PLAN_AGENT)
