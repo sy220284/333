@@ -40,7 +40,8 @@
 - `/agents mission new <任务目标>`：明确创建长期任务并选择超级智能体模式。
 - `/agents missions`：查看任务列表；`/agents mission show`：查看当前档案。
 - `/agents mission note <阶段记录>`：存储可恢复的进度摘要；`/agents mission use <ID>`：切换目标。
-- `/agents mission pause|resume|done`：控制任务记录的生命周期；`/agents mission clear`：取消当前选择，保留档案。
+- `/agents mission pause|resume|done`：控制任务档案的生命周期；暂停只阻止新关联执行，现有进程由 `/tasks` 管理。
+- `/agents mission continue [补充要求]`：用户明确发起继续执行，读取本地目标、阶段和关联记录后重新进入超级智能体对话并推进工作；无需重复描述整个项目。`/agents mission clear`：取消当前选择，保留档案。
 - `/agents mission attach <agent|team|workflow> <任务ID> <标题>`：关联已有执行；新启动的后台 Agent 和 Workflow 将自动关联当前有效任务。
 
 模式切换、任务档案读取本身不会创建工作进程或定时任务。继续执行需要用户授权和本机可用的模型运行环境。

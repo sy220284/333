@@ -115,10 +115,27 @@ export async function call(
       onDone(formatMission(await getMission(selected)), { display: 'system' })
       return null
     }
+    if (selected && action === 'continue') {
+      const mission = await getMission(selected)
+      if (mission.status !== 'active') {
+        throw new Error('任务状态为 ' + mission.status + '，请先执行 /agents mission resume')
+      }
+      setAgentMode('super')
+      const additional = value ? '用户补充要求：' + value + '\n' : ''
+      const nextInput = '继续已授权的超级智能体长期任务 ' + mission.id +
+        '。目标：' + mission.objective + '\n' +
+        '已有阶段记录：' + (mission.checkpoint || '尚无记录') + '\n' +
+        additional +
+        '请先检查任务档案和关联执行状态，复用已有成果，处理未完成工作；需要外部执行时按现有权限规则审批，并在实际核验后更新 Mission 阶段记录及结果。'
+      onDone('已读取长期任务档案，开始按当前用户指令继续：' + mission.id, {
+        display: 'system', nextInput, submitNextInput: true,
+      })
+      return null
+    }
     if (selected && ['pause', 'resume', 'done'].includes(action) && !value) {
       const status = action === 'pause' ? 'paused' : action === 'resume' ? 'active' : 'completed'
       const mission = await updateMissionStatus(selected, status)
-      onDone('任务状态已更新：' + mission.id + ' → ' + mission.status, { display: 'system' })
+      onDone('任务状态已更新：' + mission.id + ' → ' + mission.status + (status === 'paused' ? '\n已暂停新执行关联；现有 Agent 和 Workflow 仍按其独立生命周期运行，可从 /tasks 管理。' : ''), { display: 'system' })
       return null
     }
     if (selected && action === 'note' && value) {
@@ -133,7 +150,7 @@ export async function call(
       onDone('已关联执行任务：' + taskId, { display: 'system' })
       return null
     }
-    onDone('用法：/agents mission new <目标>；/agents missions；/agents mission use <ID>；/agents mission show|pause|resume|done|clear；/agents mission note <阶段记录>；/agents mission attach <agent|team|workflow> <任务ID> <标题>。', { display: 'system' })
+    onDone('用法：/agents mission new <目标>；/agents missions；/agents mission use <ID>；/agents mission show|pause|resume|done|clear|continue [新要求]；/agents mission note <阶段记录>；/agents mission attach <agent|team|workflow> <任务ID> <标题>。', { display: 'system' })
     return null
   }
   if (verb === 'list') {
