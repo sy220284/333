@@ -337,7 +337,7 @@ test('超级智能体工作项从入队、真实 SDK 会话、人工审核到长
     expect(jobList.map(job => job.id)).toEqual([queued.id])
     await expect(gateway.handle(request('missions.updateStatus', {
       missionId: mission.id, status: 'completed',
-    }))).rejects.toThrow('运行中')
+    }))).rejects.toThrow('执行工作项尚未完成或审核')
     await gateway.handle(request('missions.updateStatus', { missionId: mission.id, status: 'paused' }))
     await expect(gateway.handle(request('missions.jobs.start', {
       missionId: mission.id, jobId: queued.id,
@@ -415,9 +415,9 @@ test('一键并行分工只启动明确授权的工作项，并保留剩余队�
       event.event === 'mission.job.updated' && event.job.status === 'review').length >= 2)
     const jobs = await gateway.handle(request('missions.jobs.list', { missionId: mission.id })) as Array<{ id: string; status: string }>
     expect(jobs.find(job => job.id === ids[2])?.status).toBe('queued')
-    await expect(gateway.handle(request('missions.jobs.runBatch', {
+    expect(() => request('missions.jobs.runBatch', {
       missionId: mission.id, limit: 4,
-    }))).rejects.toThrow()
+    })).toThrow()
   } finally {
     selectMission(undefined, cwd)
     setAgentMode(beforeMode)
