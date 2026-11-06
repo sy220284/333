@@ -35,8 +35,6 @@ function getPromptContent(
   const username = process.env.USER || ''
 
   let prefix = ''
-  let reviewerArg = ' and `--reviewer anthropics/claude-code`'
-  let addReviewerArg = ' (and add `--add-reviewer anthropics/claude-code`)'
   let changelogSection = `
 
 ## Changelog
@@ -48,8 +46,6 @@ function getPromptContent(
 5. After creating/updating the PR, check if the user's CLAUDE.md mentions posting to Slack channels. If it does, use ToolSearch to search for "slack send message" tools. If ToolSearch finds a Slack tool, ask the user if they'd like you to post the PR URL to the relevant Slack channel. Only post if the user confirms. If ToolSearch returns no results or errors, skip this step silently—do not mention the failure, do not attempt workarounds, and do not try alternative approaches.`
   if (process.env.USER_TYPE === 'ant' && isUndercover()) {
     prefix = getUndercoverInstructions() + '\n'
-    reviewerArg = ''
-    addReviewerArg = ''
     changelogSection = ''
     slackStep = ''
   }
@@ -87,15 +83,15 @@ EOF
 )"
 \`\`\`
 3. Push the branch to origin
-4. If a PR already exists for this branch (check the gh pr view output above), update the PR title and body using \`gh pr edit\` to reflect the current diff${addReviewerArg}. Otherwise, create a pull request using \`gh pr create\` with heredoc syntax for the body${reviewerArg}.
-   - IMPORTANT: Keep PR titles short (under 70 characters). Use the body for details.
+4. If a PR already exists for this branch (check the gh pr view output above), update the PR title and body using \`gh pr edit\` to reflect the current diff. Otherwise, create a pull request using \`gh pr create\` with heredoc syntax for the body.
+   - IMPORTANT: Write the PR title and full description in Chinese. Keep the title short (under 70 characters). Report only verified test outcomes; mark unfinished checks.
 \`\`\`
-gh pr create --title "Short, descriptive title" --body "$(cat <<'EOF'
-## Summary
-<1-3 bullet points>
+gh pr create --title "用中文概述变更" --body "$(cat <<'EOF'
+## 变更摘要
+<使用中文说明变更内容>
 
-## Test plan
-[Bulleted markdown checklist of TODOs for testing the pull request...]${changelogSection}${effectivePrAttribution ? `\n\n${effectivePrAttribution}` : ''}
+## 验证结果
+<用中文列出已通过测试与尚未验证的事项>${changelogSection}${effectivePrAttribution ? `\n\n${effectivePrAttribution}` : ''}
 EOF
 )"
 \`\`\`
