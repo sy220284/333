@@ -1,4 +1,4 @@
-name: 333 高风险依赖兼容性验证
+name: 333 冻结依赖安全与关键接口专项验证
 
 on:
   pull_request:
@@ -6,6 +6,12 @@ on:
     paths:
       - '.github/workflows/governance-security-probe.yml'
       - 'tools/governance/**'
+      - 'build/public-dependencies.lock.json'
+      - 'build/install-public-deps.mjs'
+      - 'build/restore-dependencies.mjs'
+      - 'tests/m1-prometheus-security-317.test.mjs'
+      - 'tests/m1-telemetry-policy.test.mjs'
+      - 'tests/m3-plugin-install-config-317.test.mjs'
 
 permissions:
   contents: read
@@ -16,7 +22,7 @@ concurrency:
 
 jobs:
   probe:
-    name: 隔离环境验证依赖升级和行为差分
+    name: 隔离环境验证冻结依赖、安全边界和关键接口
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -27,12 +33,15 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
-      - name: 冻结基线构建及回归
-        run: npm run verify
-      - name: 候选升级和安全检查
+      - name: 校验冻结依赖并完成真实发行构建
         run: |
-          npm pkg set dependencies.zod=4.6.6 overrides.tmp=0.2.7 "overrides.zod=\$zod" --prefix .rebuild/public
-          npm install --prefix .rebuild/public --legacy-peer-deps --ignore-scripts --no-audit --no-fund --save-exact zod@4.6.6 sharp@0.35.5 @opentelemetry/exporter-prometheus@0.300.0
+          node tools/dev/toolchain.mjs check
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+          bun build/rebuild.mjs
+          node build/package-release.mjs
+      - name: 冻结依赖风险清单与供应链审计
+        run: |
           mkdir -p .rebuild/governance
           set +e
           npm audit --prefix .rebuild/public --json > .rebuild/governance/probe-audit.json
@@ -62,17 +71,22 @@ jobs:
           f.removeCallback()
           console.log('[OK] 四项真实依赖接口正常')
           EOF
-      - name: 候选依赖真实编译及现有功能测试
+      - name: 高风险依赖与隐私边界针对性功能回归
         run: |
-          bun build/rebuild.mjs
-          node build/package-release.mjs
-          npm run test:all
-      - name: 输出通过完整回归的候选冻结依赖锁
+          node --test \
+            tests/m1-prometheus-security-317.test.mjs \
+            tests/m1-telemetry-policy.test.mjs \
+            tests/m3-plugin-install-config-317.test.mjs \
+            tests/m1-plugin-install-migration-317.test.mjs \
+            tests/release-integrity.test.mjs \
+            tests/distribution-isolation.test.mjs \
+            tests/brand-runtime-cleanup.test.mjs \
+            tests/cli-parity.test.mjs
+      - name: 复核依赖锁未被专项验收意外修改
         run: |
-          echo 'SECURITY_LOCK_BEGIN'
-          base64 -w16384 .rebuild/public/package-lock.json
-          echo 'SECURITY_LOCK_END'
-      - name: 保存实际候选结果
+          node tools/dev/toolchain.mjs check
+          git diff --exit-code -- build/public-dependencies.lock.json package.json
+      - name: 保存冻结依赖风险评估和接口验证证据
         if: always()
         uses: actions/upload-artifact@v4
         with:

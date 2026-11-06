@@ -16,6 +16,7 @@ const required = [
   'independent-product-cleanup.yml',
   'dev-quality.yml',
   'codeql.yml',
+  'governance-security-probe.yml',
 ]
 for (const name of required) {
   if (!existsSync(root(`.github/workflows/${name}`))) {
@@ -59,6 +60,12 @@ for (const name of workflows) {
   if (/ref:\s*\$\{\{\s*github\.event\.pull_request\.number\s*\|\|/.test(source))
     errors.push(`checkout 误用 PR 编号作为分支名：${name}`)
 }
+const securityProbe = yaml('governance-security-probe.yml')
+if (/npm run (?:verify|test:all)/.test(securityProbe))
+  errors.push('高风险依赖门禁重复执行缺少独立环境的全量测试')
+if (!securityProbe.includes('tests/m1-prometheus-security-317.test.mjs') ||
+    !securityProbe.includes('tests/m1-telemetry-policy.test.mjs'))
+  errors.push('高风险依赖门禁缺失安全接口与隐私策略专项测试')
 const lockGate = yaml('m1-public-lock-sync.yml')
 if (/contents:\s*write/.test(lockGate) || /git\s+push\s+origin/.test(lockGate))
   errors.push('依赖锁门禁不得在审查时自动改写 PR：m1-public-lock-sync.yml')
