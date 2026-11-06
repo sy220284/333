@@ -169,5 +169,12 @@ export function applyChatModelFields(result: Wire, { provider, model, thinking, 
     else if (enabled) result.reasoning = { effort: 'high' }
     if (result.reasoning && result.reasoning.effort !== 'none') result.include_reasoning = true
   }
+  // Validate the normalized wire value against provider-discovered limits,
+  // including per-account changes in available reasoning levels.
+  const selectedEffort = result.reasoning_effort ?? result.reasoning?.effort
+  if (typeof selectedEffort === 'string' && selectedEffort !== 'none' &&
+      profile.supportedEffort.length && !profile.supportedEffort.includes(selectedEffort)) {
+    throw new Error(`模型 ${provider}/${model} 不支持推理档位 ${selectedEffort}；可用档位：${profile.supportedEffort.join(', ')}`)
+  }
   if (stream && profile.usageInStream) result.stream_options = { include_usage: true }
 }
