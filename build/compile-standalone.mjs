@@ -7,25 +7,32 @@ const dist = join(root, 'dist')
 const candidate = join(dist, 'cli.js')
 const nativeName = process.platform === 'win32' ? 'yaoyaoche.exe' : 'yaoyaoche'
 const executable = join(dist, nativeName)
+const desktopName = process.platform === 'win32' ? 'yaoyaoche-desktop.exe' : 'yaoyaoche-desktop'
+const desktopExecutable = join(dist, desktopName)
+const desktopSource = join(dist, 'desktopHost.js')
 const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
 
 if (!/^\d+\.\d+\.\d+$/.test(version)) throw Error('Invalid target release version')
-if (!existsSync(candidate)) throw Error('Run bun build/rebuild.mjs before compiling the standalone binary')
+if (!existsSync(candidate) || !existsSync(desktopSource))
+  throw Error('Run bun build/rebuild.mjs before compiling the standalone binaries')
 
-// Compile the actual JS emitted by the frozen source rebuild, not the old
-// checked-in root CLI or a downloaded official executable. This embeds Bun
-// and allows the distribution to run without a system Bun installation.
-const built = spawnSync('bun', ['build', 'dist/cli.js', '--compile', '--outfile', 'dist/yaoyaoche'], {
-  cwd: root,
-  stdio: 'inherit',
-  windowsHide: true,
-  timeout: 180_000,
-})
-if (built.error) throw built.error
-if (built.status !== 0) throw Error('Standalone compilation failed with exit ' + built.status)
-if (!existsSync(executable) || !statSync(executable).isFile() || statSync(executable).size < 10_000_000) {
-  throw Error('Standalone binary missing, unexpectedly small or not regular: ' + executable)
+// Compile both actual rebuilt sources with embedded Bun. The published CLI
+// and desktop SDK host then work without system Bun or repo node_modules.
+function compileStandalone(source, outfile) {
+  const built = spawnSync('bun', ['build', source, '--compile', '--outfile', outfile], {
+    cwd: root,
+    stdio: 'inherit',
+    windowsHide: true,
+    timeout: 180_000,
+  })
+  if (built.error) throw built.error
+  if (built.status !== 0) throw Error('Standalone compilation failed for ' + source + ' with exit ' + built.status)
+  const artifact = join(root, outfile)
+  if (!existsSync(artifact) || !statSync(artifact).isFile() || statSync(artifact).size < 10_000_000)
+    throw Error('Standalone binary missing, unexpectedly small or not regular: ' + artifact)
 }
+compileStandalone('dist/cli.js', 'dist/' + nativeName)
+compileStandalone('dist/desktopHost.js', 'dist/' + desktopName)
 
 function verify(args, expected) {
   const result = spawnSync(executable, args, {
@@ -42,3 +49,17 @@ function verify(args, expected) {
 verify(['--version'], stdout => stdout.trim() === `${version} (摇摇车)`)
 verify(['--help'], stdout => stdout.includes('Usage:') && stdout.includes('--print'))
 console.log('Verified independent ' + process.platform + ' binary: ' + executable)
+
+// Exercise the desktop protocol in the actual compiled binary. A successful
+// handshake must terminate after EOF without importing the REPL UI.
+const handshake = spawnSync(desktopExecutable, [], {
+  cwd: root, encoding: 'utf8', timeout: 30_000, windowsHide: true,
+  input: '{"id":"release-smoke","method":"hello"}\n',
+})
+if (handshake.error) throw handshake.error
+if (handshake.status !== 0) throw Error('Standalone desktop handshake failed: ' + handshake.stderr)
+const frames = handshake.stdout.trim().split('\n').map(line => JSON.parse(line))
+const reply = frames.find(frame => frame.id === 'release-smoke')
+if (!reply?.ok || reply.result?.protocolVersion !== 1 || reply.result?.transport !== 'stdio-jsonl')
+  throw Error('Standalone desktop protocol response mismatch: ' + handshake.stdout)
+console.log('Verified independent ' + process.platform + ' desktop host: ' + desktopExecutable)

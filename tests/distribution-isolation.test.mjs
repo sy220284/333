@@ -40,3 +40,21 @@ test('distributable starts outside repository with no source tree, original CLI,
     rmSync(isolation,{recursive:true,force:true});
   }
 });
+
+test('desktop SDK host is shipped independently and handles protocol handshake outside the source tree', () => {
+  const sandbox = mkdtempSync(join(tmpdir(), 'yaoyaoche-desktop-release-'));
+  try {
+    const release = join(sandbox, 'release');
+    cpSync(releaseDir, release, { recursive: true });
+    const native = process.platform === 'win32' ? 'yaoyaoche-desktop.exe' : 'yaoyaoche-desktop';
+    const response = spawnSync(join(release, native), [], {
+      cwd: sandbox, encoding: 'utf8', timeout: 30_000,
+      input: '{"id":"isolated-hello","method":"hello"}\n',
+      env: { ...process.env, PATH: '', Path: '' }, windowsHide: true,
+    });
+    assert.equal(response.error, undefined, String(response.error));
+    assert.equal(response.status, 0, response.stderr);
+    const frames = response.stdout.trim().split('\n').map(line => JSON.parse(line));
+    assert.equal(frames.find(frame => frame.id === 'isolated-hello')?.result?.protocolVersion, 1);
+  } finally { rmSync(sandbox, { recursive: true, force: true }); }
+});

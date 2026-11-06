@@ -43,6 +43,7 @@ test('release vendor inventory matches exactly the current source tree', () => {
   assert.deepEqual(packagedFiles, sourceFiles);
   assert.deepEqual(indexedFiles, sourceFiles);
   assert.ok(existsSync(join(dist,'cli.js')));
+  assert.ok(existsSync(join(dist,'desktopHost.js')));
   assert.ok(existsSync(join(dist,'launcher.cjs')));
 });
 test('official 2.1.317 Linux x64 native resources survive packaging and load in Node', {
@@ -175,4 +176,32 @@ test('release is runnable from an isolated folder without repository node_module
     });
     assert.equal(existsSync(sandbox), false, 'isolated release directory was not removed');
   }
+});
+
+test('packaged desktop bridge is SHA-256 verified and serves its protocol without a system Bun runtime', () => {
+  const native = process.platform === 'win32' ? 'yaoyaoche-desktop.exe' : 'yaoyaoche-desktop';
+  for (const name of ['desktopHost.js', 'desktopHost.js.map', native]) {
+    const path = join(dist, name);
+    assert.ok(existsSync(path), 'Missing desktop release artifact: ' + name);
+    const bytes = readFileSync(path);
+    const entry = metadata.files.find(file => file.path === name);
+    assert.ok(entry, 'Desktop artifact missing from integrity manifest: ' + name);
+    assert.equal(entry.bytes, bytes.length);
+    assert.equal(entry.sha256, createHash('sha256').update(bytes).digest('hex'));
+  }
+  const sandbox = mkdtempSync(join(tmpdir(), 'yaoyaoche-desktop-isolated-'));
+  try {
+    const result = spawnSync(join(dist, native), [], {
+      cwd: sandbox, encoding: 'utf8', timeout: 30_000,
+      input: '{"id":"from-release","method":"hello"}\n',
+      env: { ...process.env, PATH: '', Path: '' }, windowsHide: true,
+    });
+    assert.equal(result.error, undefined, String(result.error));
+    assert.equal(result.status, 0, result.stderr);
+    const frames = result.stdout.trim().split('\n').map(line => JSON.parse(line));
+    const hello = frames.find(frame => frame.id === 'from-release');
+    assert.equal(hello?.ok, true);
+    assert.equal(hello?.result?.protocolVersion, 1);
+    assert.equal(hello?.result?.transport, 'stdio-jsonl');
+  } finally { rmSync(sandbox, { recursive: true, force: true }); }
 });

@@ -9,17 +9,22 @@ const root = resolve(import.meta.dirname, '..');
 const releaseVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
 if (!/^\d+\.\d+\.\d+$/.test(releaseVersion)) throw Error('Invalid release version in package.json');
 const dist = join(root, 'dist');
-if (!existsSync(join(dist, 'cli.js'))) throw Error('First build the CLI from src/ with bun build/rebuild.mjs');
+if (!existsSync(join(dist, 'cli.js')) || !existsSync(join(dist, 'desktopHost.js')))
+  throw Error('First build CLI and desktop host from src/ with bun build/rebuild.mjs');
 const nativeName = process.platform === 'win32' ? 'yaoyaoche.exe' : 'yaoyaoche';
 const executable = join(dist, nativeName);
 if (!existsSync(executable) || !statSync(executable).isFile() || !statSync(executable).size)
   throw Error('Missing native executable: run node build/compile-standalone.mjs before packaging');
+const desktopNativeName = process.platform === 'win32' ? 'yaoyaoche-desktop.exe' : 'yaoyaoche-desktop';
+const desktopExecutable = join(dist, desktopNativeName);
+if (!existsSync(desktopExecutable) || !statSync(desktopExecutable).isFile() || !statSync(desktopExecutable).size)
+  throw Error('Missing native desktop host executable: run node build/compile-standalone.mjs before packaging');
 if (!existsSync(join(root, 'build/public-dependencies.lock.json'))) throw Error('Missing the verified public dependency lockfile');
 mkdirSync(dist,{recursive:true});
 // A release is a closed set of files: reject stale executables, old chunks and
 // unrelated build outputs before changing the previous package.
 const expectedRoot = new Set([
-  'cli.js', 'cli.js.map', nativeName, 'vendor', 'SOURCE_NOTICES.md',
+  'cli.js', 'cli.js.map', 'desktopHost.js', 'desktopHost.js.map', nativeName, desktopNativeName, 'vendor', 'SOURCE_NOTICES.md',
   'package.json', 'launcher.cjs', 'README.md', 'integrity.json', 'official-317',
 ]);
 for (const entry of readdirSync(dist, { withFileTypes: true })) {
@@ -117,7 +122,7 @@ const pkg = {
   private: true,
   description: `摇摇车 independent remote-model coding agent, compatible with release ${releaseVersion}`,
   type: 'module',
-  bin: { yaoyaoche: './launcher.cjs' },
+  bin: { yaoyaoche: './launcher.cjs', 'yaoyaoche-desktop': './' + desktopNativeName },
   engines: { node: '>=18' }
 };
 writeFileSync(join(dist,'package.json'), `${JSON.stringify(pkg,null,2)}\n`);
@@ -138,6 +143,12 @@ is required. On Linux/macOS use:
 \`\`\`
 On Windows run \`yaoyaoche.exe --version\`. With Node, the portable
 \`launcher.cjs\` forwards signals to the local compiled executable.
+
+The independently compiled desktop bridge starts with \`./yaoyaoche-desktop\`
+(or \`yaoyaoche-desktop.exe\` on Windows). It exchanges newline-delimited
+JSON through stdin/stdout. To check the local protocol without logging in:
+\`printf '{"id":"hello","method":"hello"}\\n' | ./yaoyaoche-desktop\`.
+The bridge uses the same SDK session and permission callbacks as the CLI.
 
 The \`official-317/\` directory contains 101 SHA-verified original embedded resources,\nwith their relative skill-script paths preserved and a pinned manifest.\nThe \`vendor/\` directory contains the platform-specific native resources and
 is included in the integrity manifest.
