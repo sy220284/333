@@ -31,7 +31,7 @@ export function parsePluginTestFastArgs317(
 }
 
 const PLUGIN_TEST_HELP_317 = [
-  'Usage: qerivon plugin test [dir]',
+  'Usage: yaoyaoche plugin test [dir]',
   '',
   "Run a mod's tests",
   '',

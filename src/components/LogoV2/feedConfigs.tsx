@@ -36,7 +36,7 @@ export function createWhatsNewFeed(releaseNotes: string[]): FeedConfig {
       text: note
     };
   });
-  const emptyMessage = '查看 Qerivon 的更新记录';
+  const emptyMessage = '查看 摇摇车 的更新记录';
   return {
     title: "What's new",
     lines,
@@ -57,7 +57,7 @@ export function createProjectOnboardingFeed(steps: Step[]): FeedConfig {
       text: `${checkmark}${text}`
     };
   });
-  const warningText = getCwd() === homedir() ? '当前位于用户主目录。建议在具体项目目录中启动 Qerivon，以便准确识别代码和工作区。' : undefined;
+  const warningText = getCwd() === homedir() ? '当前位于用户主目录。建议在具体项目目录中启动 摇摇车，以便准确识别代码和工作区。' : undefined;
   if (warningText) {
     lines.push({
       text: warningText

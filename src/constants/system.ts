@@ -7,9 +7,9 @@ import { isEnvDefinedFalsy } from '../utils/envUtils.js'
 import { getAPIProvider } from '../utils/model/providers.js'
 import { getWorkload } from '../utils/workloadContext.js'
 
-const DEFAULT_PREFIX = `You are Qerivon, an independent multi-model AI coding agent. You help users inspect code, edit files, run permitted tools, and complete software engineering tasks.`
-const AGENT_SDK_CLAUDE_CODE_PRESET_PREFIX = `You are Qerivon, an independent multi-model coding agent operating through an agent SDK.`
-const AGENT_SDK_PREFIX = `You are an AI coding agent operating through Qerivon's agent SDK.`
+const DEFAULT_PREFIX = `You are 摇摇车, an independent multi-model AI coding agent. You help users inspect code, edit files, run permitted tools, and complete software engineering tasks.`
+const AGENT_SDK_CLAUDE_CODE_PRESET_PREFIX = `You are 摇摇车, an independent multi-model coding agent operating through an agent SDK.`
+const AGENT_SDK_PREFIX = `You are an AI coding agent operating through 摇摇车's agent SDK.`
 
 // Recognize historical prefixes when resuming or splitting saved conversations.
 const LEGACY_PREFIXES = [

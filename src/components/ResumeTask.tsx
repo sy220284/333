@@ -119,17 +119,17 @@ export function ResumeTask({
     return <Box flexDirection="column" padding={1}>
         <Box flexDirection="row">
           <Spinner />
-          <Text bold>正在加载 Qerivon 会话…</Text>
+          <Text bold>正在加载 摇摇车 会话…</Text>
         </Box>
         <Text dimColor>
-          {retrying ? 'Retrying…' : 'Fetching your Qerivon sessions…'}
+          {retrying ? 'Retrying…' : 'Fetching your 摇摇车 sessions…'}
         </Text>
       </Box>;
   }
   if (loadErrorType) {
     return <Box flexDirection="column" padding={1}>
         <Text bold color="error">
-          Error loading Qerivon sessions
+          Error loading 摇摇车 sessions
         </Text>
 
         {renderErrorSpecificGuidance(loadErrorType)}
@@ -143,7 +143,7 @@ export function ResumeTask({
   if (sessions.length === 0) {
     return <Box flexDirection="column" padding={1}>
         <Text bold>
-          No Qerivon sessions found
+          No 摇摇车 sessions found
           {currentRepo && <Text> for {currentRepo}</Text>}
         </Text>
         <Box marginTop={1}>
@@ -261,7 +261,7 @@ function renderErrorSpecificGuidance(errorType: LoadErrorType): React.ReactNode 
         </Box>;
     case 'other':
       return <Box marginY={1} flexDirection="row">
-          <Text dimColor>抱歉，Qerivon 发生错误</Text>
+          <Text dimColor>抱歉，摇摇车 发生错误</Text>
         </Box>;
   }
 }
