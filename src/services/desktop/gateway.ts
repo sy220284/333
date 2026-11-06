@@ -28,6 +28,7 @@ type Entry = {
   seenPermissions: Set<string>
   unsubscribe: Array<() => void>
   consuming?: Promise<void>
+  persisting?: Promise<void>
   sending?: Promise<void>
   cancelSend?: (error: Error) => void
   closing?: boolean
@@ -74,6 +75,18 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
 
   function emit(event: DesktopEvent): void {
     for (const listener of listeners) listener(event)
+  }
+  // State persistence runs in order but never blocks SDK event delivery. A
+  // failed snapshot is visible to the host and the next complete snapshot
+  // can repair it without poisoning subsequent writes.
+  function scheduleTaskSnapshot(sessionId: string, entry: Entry): void {
+    const snapshot = [...entry.tasks.values()]
+    entry.persisting = (entry.persisting ?? Promise.resolve())
+      .then(() => journal.write(sessionId, snapshot))
+      .catch(error => emit({
+        event: 'task.persistence.error', sessionId,
+        error: error instanceof Error ? error.message : String(error),
+      }))
   }
   function subscribe(listener: (event: DesktopEvent) => void): () => void {
     if (closed) throw new Error('Desktop gateway is closed')
@@ -204,8 +217,8 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
             const task = projectTask(sdkMessage, oldTask)
             if (task) {
               entry.tasks.set(task.taskId, task)
-              await journal.write(sessionId, [...entry.tasks.values()])
               emit({ event: 'task.updated', sessionId, task })
+              scheduleTaskSnapshot(sessionId, entry)
             }
             emit({ event: 'agent.progress', sessionId, turnId, message: sdkMessage, ...(task && { task }) })
           }
@@ -374,6 +387,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       if (entry.sending) pending.push(entry.sending)
       if (entry.consuming) pending.push(entry.consuming)
       await Promise.all(pending)
+      if (entry.persisting) await entry.persisting
       const stale = [...entry.tasks.values()].map(task => task.status === 'running'
         ? { ...task, status: 'interrupted' as const } : task)
       if (stale.length) await journal.write(id, stale)
