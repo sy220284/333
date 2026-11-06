@@ -45,7 +45,11 @@ test('2.1.317 API error envelope keeps success subtype but is_error=true', () =>
     usage, modelUsage: {}, permission_denials: [], errors: ['Not logged in'], uuid,
   }
   expect(SDKResultErrorSchema().safeParse(event).success).toBe(true)
-  expect(SDKResultMessageSchema().safeParse(event).success).toBe(true)
+  const parsed = SDKResultMessageSchema().safeParse(event)
+  expect(parsed.success).toBe(true)
+  if (!parsed.success) throw parsed.error
+  // This must select the error variant; the success variant strips errors[].
+  expect('errors' in parsed.data && parsed.data.errors).toEqual(['Not logged in'])
   expect(SDKResultErrorSchema().safeParse({ ...event, is_error: false }).success).toBe(false)
   expect(SDKResultMessageSchema().safeParse({ ...event, is_error: false, terminal_reason: 'completed' }).success).toBe(true)
 })

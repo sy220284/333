@@ -1493,10 +1493,10 @@ export const SDKResultSuccessSchema = lazySchema(() =>
     subtype: z.literal('success'),
     duration_ms: z.number(),
     duration_api_ms: z.number(),
-    // Official 2.1.317 can emit subtype='success' with is_error=true on
-    // failed API responses. Keep the original wire contract and classify by
-    // is_error rather than interpreting the subtype alone.
-    is_error: z.boolean(),
+    // A non-error success result is always is_error=false. The separate
+    // error schema handles official subtype='success', is_error=true and
+    // preserves its errors[] instead of dropping them during parsing.
+    is_error: z.literal(false),
     terminal_reason: z.enum(['completed', 'api_error', 'prompt_too_long', 'max_turns', 'max_budget_usd', 'aborted_tools', 'aborted_streaming', 'hook_stopped', 'tool_deferred_unavailable', 'turn_setup_failed']).optional(),
     api_error_status: z.number().int().optional(),
     num_turns: z.number(),
