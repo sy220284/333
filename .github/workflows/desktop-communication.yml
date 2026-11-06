@@ -20,11 +20,11 @@ on:
 permissions:
   contents: read
 
-# Pin the validation to one exact commit, even when other PR jobs are replaced
-# by newer commits. The desktop gateway has its own acceptance boundary.
+# Match the repository-wide PR gating policy. Checkout below remains
+# pinned to the exact head SHA for each run.
 concurrency:
-  group: desktop-communication-${{ github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   desktop-contract:
