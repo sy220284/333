@@ -403,7 +403,7 @@ export async function runOrchestrator317(
 export async function selfHostedRunnerOrchestratorMain317(argv:readonly string[]):Promise<void>{
   const parsed=parseOrchestratorArgs317(argv)
   if(parsed==='help'){
-    process.stdout.write('Usage: claude self-hosted-runner orchestrator [options]\n'+
+    process.stdout.write('Usage: 333 self-hosted-runner orchestrator [options]\n'+
       '--environment-secret-file <path> --hooks-dir <path> [--hook-concurrency <n>]\n'+
       '[--hook-timeout <seconds>] [--expected-spawn-seconds <seconds>]\n'+
       '[--min-idle <n>] [--shutdown-drain-sec <seconds>] [--health-port <port>]\n')

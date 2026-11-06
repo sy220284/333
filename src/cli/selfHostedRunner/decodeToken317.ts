@@ -136,7 +136,7 @@ function parseCli(argv: readonly string[],env:NodeJS.ProcessEnv): {
   return {token,help,flags}
 }
 const HELP = [
-  'Usage: claude self-hosted-runner decode-token [token] [options]',
+  'Usage: 333 self-hosted-runner decode-token [token] [options]',
   '',
   'Decode a session-ingress JWT and print its claims as JSON to stdout.',
   'Token source: positional argument, CLAUDE_CODE_SESSION_ACCESS_TOKEN, or stdin.',

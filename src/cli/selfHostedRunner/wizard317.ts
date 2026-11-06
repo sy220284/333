@@ -14,8 +14,8 @@ const SESSION_OPENING={
   doctor:'Start the self-hosted runner doctor wizard. Ask for the symptom and use the diagnostic categories.',
 }
 const HELP={
-  setup:'Usage: claude self-hosted-runner setup [args...]\n\nInteractive wizard: create a cloud environment in the Admin UI, spawn a local runner, verify its registration, and write a cheat sheet.\nAny extra arguments are passed to the underlying Claude Code session.',
-  doctor:'Usage: claude self-hosted-runner doctor [args...]\n\nInteractive wizard: inspect the runner, local health metrics and logs; diagnose auth, network, lifecycle, queue and execution problems; create a redacted evidence bundle.\nAny extra arguments are passed to the underlying Claude Code session.',
+  setup:'Usage: 333 self-hosted-runner setup [args...]\n\nInteractive wizard: create a cloud environment in the Admin UI, spawn a local runner, verify its registration, and write a cheat sheet.\nAny extra arguments are passed to the underlying Claude Code session.',
+  doctor:'Usage: 333 self-hosted-runner doctor [args...]\n\nInteractive wizard: inspect the runner, local health metrics and logs; diagnose auth, network, lifecycle, queue and execution problems; create a redacted evidence bundle.\nAny extra arguments are passed to the underlying Claude Code session.',
 }
 function safeAdminUrl317(){
   // Identity is read through the same OAuth configuration as regular CLI.
