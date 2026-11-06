@@ -20,7 +20,7 @@
 ## GitHub 独立集成
 - GitHub 通过本机 GitHub CLI OAuth 授权，与模型认证分开；检查权限、选择仓库、创建分支、工作流文件、配置 PR。
 - 执行 /github setup owner/repo 生成安装 PR，合并后添加 GitHub Secret THREE333_MODEL_API_KEY 和变量 THREE333_MODEL_NAME、THREE333_MODEL_PROVIDER；可选 THREE333_MODEL_BASE_URL。
-- Actions 运行在用户自己仓库，通过 OpenAI 兼容接口、Anthropic 或 Gemini API 审查；Claude 仅为可选服务商。授权用户 @333 评论可以触发自动回复。
+- Actions 运行在用户自己仓库，通过受支持的模型直连 API（包括 OpenAI、Anthropic）审查；Claude 仅为可选服务商。授权用户 @333 评论可以触发自动回复。
 - Slack 通用接入可使用 https://mcp.slack.com/mcp（Streamable HTTP），但需注册具备 MCP 权限的 Slack App，配置固定的 OAuth Client ID/Secret 和回调地址，并获得工作区管理员许可；不需要 Claude 账号或 Anthropic API。可另行开发 Slack App 机器人，用 Events API 收取消息并回传任务结果。
 
 ## 安全约束
