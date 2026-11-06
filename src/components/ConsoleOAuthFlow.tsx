@@ -241,7 +241,7 @@ export function ConsoleOAuthFlow({
           state: 'success'
         });
         void sendNotification({
-          message: 'Avenlo 登录成功',
+          message: 'Qerivon 登录成功',
           notificationType: 'auth_success'
         }, terminal);
       }
@@ -364,7 +364,7 @@ function OAuthStatusMessage(t0) {
   switch (oauthStatus.state) {
     case "idle":
       {
-        const t1 = startingMessage ? startingMessage : "Avenlo can be used with your Claude subscription or billed based on API usage through your Console account.";
+        const t1 = startingMessage ? startingMessage : "Qerivon can be used with your Claude subscription or billed based on API usage through your Console account.";
         let t2;
         if ($[0] !== t1) {
           t2 = <Text bold={true}>{t1}</Text>;
@@ -460,7 +460,7 @@ function OAuthStatusMessage(t0) {
         let t2;
         let t3;
         if ($[13] === Symbol.for("react.memo_cache_sentinel")) {
-          t2 = <Text>Avenlo 支持 Amazon Bedrock、Microsoft Foundry 和 Vertex AI。配置环境变量后请重新启动。</Text>;
+          t2 = <Text>Qerivon 支持 Amazon Bedrock、Microsoft Foundry 和 Vertex AI。配置环境变量后请重新启动。</Text>;
           t3 = <Text>如果使用企业账户，请联系管理员获取配置说明。</Text>;
           $[13] = t2;
           $[14] = t3;
