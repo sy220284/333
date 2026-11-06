@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createDesktopGateway } from '../src/services/desktop/gateway.js'
+import { createSessionRuntime317 } from '../src/entrypoints/sdk/sessionRuntime317.js'
 import type { DesktopEvent } from '../src/services/desktop/protocol.js'
 import type { DesktopTask } from '../src/services/desktop/taskProjection.js'
 import type { DesktopGatewayOptions } from '../src/services/desktop/gateway.js'
@@ -72,14 +73,24 @@ reader.on('line', line => {
         awaiting = 'permission'
         out({ type: 'control_request', request_id: randomUUID(), request: {
           subtype: 'can_use_tool', tool_name: 'Bash', tool_use_id: 'tool-fake',
-          input: { command: 'pwd' },
+          input: { command: 'pwd' }, blocked_path: '/private',
+          decision_reason: 'Workspace permission rule',
+          decision_type: 'ask', default_to_no: true,
+          server_policy_ask_only: true, agent_id: 'agent-fixture',
+        } })
+      } else if (content === 'host') {
+        awaiting = 'host'
+        out({ type: 'control_request', request_id: randomUUID(), request: {
+          subtype: 'elicitation', mcp_server_name: 'fixture-mcp',
+          message: 'Select local workspace', mode: 'form',
+          requested_schema: { type: 'object' },
         } })
       } else if (content === 'interrupt') {
         awaiting = 'interrupt'
       } else {
         finish()
       }
-    } else if (frame.type === 'control_response' && awaiting === 'permission') {
+    } else if (frame.type === 'control_response' && (awaiting === 'permission' || awaiting === 'host')) {
       awaiting = null
       finish()
     }
@@ -131,9 +142,16 @@ test('desktop host uses real SDK stream-json child for models, approval, progres
       sessionId: opened.sessionId, message: 'approve' })
     await until(() => events.some(event => event.event === 'permission.request'))
     const pending = await gateway.handle({ id: 'permissions', method: 'permissions.list',
-      sessionId: opened.sessionId }) as Array<{ id: string; toolName: string }>
+      sessionId: opened.sessionId }) as Array<{
+        id: string; toolName: string; blockedPath: string;
+        decisionReason: string; defaultToNo: boolean; agentID: string;
+      }>
     expect(pending).toHaveLength(1)
     expect(pending[0]?.toolName).toBe('Bash')
+    expect(pending[0]).toMatchObject({
+      blockedPath: '/private', decisionReason: 'Workspace permission rule',
+      defaultToNo: true, agentID: 'agent-fixture',
+    })
     const permissionId = pending[0]?.id
     if (!permissionId) throw new Error('SDK never requested tool permission')
     await gateway.handle({ id: 'allow', method: 'permissions.decide',
@@ -147,6 +165,20 @@ test('desktop host uses real SDK stream-json child for models, approval, progres
       sessionId: opened.sessionId }) as DesktopTask[]
     expect(tasks[0]?.status).toBe('completed')
     expect(tasks[0]?.usage?.total_tokens).toBe(5)
+
+    // Exercise the real 2.1.317 SDK control_request -> desktop host ->
+    // control_response transport, without a renderer or cloud dependency.
+    await gateway.handle({ id: 'host-send', method: 'sessions.send',
+      sessionId: opened.sessionId, message: 'host' })
+    await until(() => events.some(event => event.event === 'host.request'))
+    const hostRequests = await gateway.handle({ id: 'host-list', method: 'host.list',
+      sessionId: opened.sessionId }) as Array<{ id: string; request: { subtype: string } }>
+    expect(hostRequests[0]?.request.subtype).toBe('elicitation')
+    await gateway.handle({ id: 'host-reply', method: 'host.respond',
+      sessionId: opened.sessionId, requestId: hostRequests[0]!.id,
+      response: { action: 'accept', content: { workspace: 'local' } } })
+    await until(() => events.filter(event =>
+      event.event === 'session.message' && event.message.type === 'result').length >= 2)
 
     await gateway.handle({ id: 'interrupt-send', method: 'sessions.send',
       sessionId: opened.sessionId, message: 'interrupt' })
@@ -165,6 +197,33 @@ test('desktop host uses real SDK stream-json child for models, approval, progres
   } finally {
     stop()
     await gateway.close()
+    await rm(cwd, { recursive: true, force: true })
+  }
+})
+
+test('external abortController closes SDK child and prevents more messages', { timeout: 20000 }, async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'sdk-abort-'))
+  const cli = join(cwd, 'mock-sdk-cli.mjs')
+  await writeFile(cli, fixtureCli)
+  try {
+    const alreadyAborted = new AbortController()
+    alreadyAborted.abort(new Error('Cancelled before spawn'))
+    expect(() => createSessionRuntime317({
+      model: 'mock-model', executable: 'node',
+      pathToClaudeCodeExecutable: cli, cwd,
+      abortController: alreadyAborted,
+    })).toThrow('Cancelled before spawn')
+
+    const controller = new AbortController()
+    const session = createSessionRuntime317({
+      model: 'mock-model', executable: 'node',
+      pathToClaudeCodeExecutable: cli, cwd, abortController: controller,
+    })
+    await session.initialization
+    controller.abort(new Error('Cancelled by host'))
+    await session.closeAndWait()
+    await expect(session.send('must not send')).rejects.toThrow()
+  } finally {
     await rm(cwd, { recursive: true, force: true })
   }
 })
