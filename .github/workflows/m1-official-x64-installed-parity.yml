@@ -65,9 +65,11 @@ jobs:
           echo 'eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  '"${resolved}" | sha256sum --check
           "${binary}" --help > "${RUNNER_TEMP}/claude-installed-help.txt"
           test -s "${RUNNER_TEMP}/claude-installed-help.txt"
-          printf 'CLAUDE_REFERENCE_BIN=%s\n' "${binary}" >> "${GITHUB_ENV}"
-          printf 'CLAUDE_INSTALLED_HOME=%s\n' "${HOME}" >> "${GITHUB_ENV}"
-          printf 'DISABLE_AUTOUPDATER=1\n' >> "${GITHUB_ENV}"
+          {
+            printf 'CLAUDE_REFERENCE_BIN=%s\n' "${binary}"
+            printf 'CLAUDE_INSTALLED_HOME=%s\n' "${HOME}"
+            printf 'DISABLE_AUTOUPDATER=1\n'
+          } >> "${GITHUB_ENV}"
           printf 'version=%s\nresolved=%s\nsha256=%s\n' \
             "${version}" "${resolved}" \
             'eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0' \

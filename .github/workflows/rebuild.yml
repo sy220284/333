@@ -142,7 +142,7 @@ jobs:
           # postgres:16 uses a temporary UNIX-socket-only server during initdb.
           # Wait for the final TCP listener and a real authenticated SQL query.
           ready=0
-          for i in $(seq 1 40); do
+          for ((i=1; i<=40; i++)); do
             if docker exec gateway-postgres-317 pg_isready -h 127.0.0.1 -p 5432 -U postgres -d postgres >/dev/null 2>&1; then
               ready=1
               break
@@ -188,7 +188,8 @@ jobs:
           set -euo pipefail
           for args in "gateway --help" "plugin eval --help" "plugin test --help"; do
             echo "::group::原版 claude $args"
-            ./.rebuild/oracle/claude $args
+            read -r -a arg_parts <<< "$args"
+            ./.rebuild/oracle/claude "${arg_parts[@]}"
             echo "::endgroup::"
           done
       - name: 按官方317原版x64同步并实测Linux原生模块

@@ -72,7 +72,7 @@ jobs:
           git add -A src native tests tools/dev build/install-public-deps.mjs build/public-dependencies.lock.json build/rebuild.mjs package.json tsconfig.json docs/upgrade/latest-stable-dependencies.json
           git diff --cached --quiet && { echo '没有产生任何更新'; exit 1; }
           git commit -m '全面升级最新稳定依赖并同步迁移源码接口'
-          git push origin HEAD:upgrade/toolchain-${GITHUB_RUN_ID}
+          git push origin "HEAD:upgrade/toolchain-${GITHUB_RUN_ID}"
       - name: 工具链版本与锁文件权威校验
         run: node tools/dev/toolchain.mjs check
       - name: MCP v2 全生产引用检查

@@ -107,7 +107,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in {1..20}; do
+          for ((attempt=1; attempt<=20; attempt++)); do
             check_id="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${PR_HEAD_SHA}/check-runs?per_page=100" \
               --jq '.check_runs | map(select(.name == "CodeQL" and .status == "completed")) | last | .id // empty')"
             if [[ -n "$check_id" ]]; then break; fi

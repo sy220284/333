@@ -50,13 +50,16 @@ jobs:
           console.log('Locked packages:',Object.keys(lock.packages).length)
           NODE
       - name: 将可复现锁写入当前PR
+        env:
+          PR_HEAD_REF: ${{ github.head_ref }}
         run: |
           if ! git diff --quiet -- build/public-dependencies.lock.json; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add build/public-dependencies.lock.json
             git commit -m '同步OpenTelemetry及LSP冻结依赖与版本锁'
-            git push origin HEAD:${{ github.head_ref }}
+            git check-ref-format --branch "${PR_HEAD_REF}"
+            git push origin "HEAD:refs/heads/${PR_HEAD_REF}"
           else
             echo '冻结锁与清单已一致'
           fi
