@@ -5,6 +5,8 @@ on:
       - 'src/commands/**'
       - 'src/components/**'
       - 'src/services/analytics/**'
+      - 'src/utils/review/**'
+      - 'src/main.tsx'
       - 'src/screens/**'
       - 'tests/independent-product-cleanup.test.mjs'
       - 'tests/brand-runtime-cleanup.test.mjs'

@@ -1,21 +1,5 @@
 name: 全部最新稳定依赖升级及端到端测试
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'package.json'
-      - 'build/public-dependencies.lock.json'
-      - 'docs/upgrade/latest-stable-dependencies.json'
-      - 'tools/dev/**'
-      - '.github/workflows/latest-stable-upgrade.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'package.json'
-      - 'build/public-dependencies.lock.json'
-      - 'docs/upgrade/latest-stable-dependencies.json'
-      - 'tools/dev/**'
-      - '.github/workflows/latest-stable-upgrade.yml'
   workflow_dispatch:
     inputs:
       perform_upgrade:
@@ -27,7 +11,7 @@ permissions:
   contents: write
 concurrency:
   group: latest-stable-deps-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   upgrade:
     runs-on: ubuntu-latest

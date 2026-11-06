@@ -4,18 +4,23 @@ on:
     branches: [main]
     paths:
       - 'src/services/api/multimodel/**'
-      - 'src/services/auth/chatgptOAuth.ts'
+      - 'src/services/auth/**'
+      - 'src/services/api/client.ts'
+      - 'src/services/api/claude.ts'
+      - 'src/QueryEngine.ts'
+      - 'src/query/**'
       - 'src/services/localRuntime/**'
       - 'src/services/analytics/localDiagnostics.ts'
       - 'tests/multimodel-provider.test.ts'
       - 'tests/chatgpt-oauth-accounts.test.ts'
       - 'tests/independent-local-features.test.ts'
+      - 'tests/permission-denial-*.test.ts'
       - '.github/workflows/independent-models.yml'
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: independent-models-${{ github.event.pull_request.head.sha || github.sha }}
+  group: independent-models-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 jobs:
   protocol:
@@ -36,7 +41,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '26'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4

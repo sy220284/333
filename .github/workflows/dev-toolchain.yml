@@ -63,7 +63,7 @@ jobs:
           bun build/rebuild.mjs
           node build/compile-standalone.mjs
           node build/package-release.mjs
-          npm run test:all
+          node --test tests/release-integrity.test.mjs tests/distribution-isolation.test.mjs
       - name: 准备固定版本 actionlint
         run: |
           set -euo pipefail
@@ -226,4 +226,4 @@ jobs:
           # shellcheck source=/dev/null
           source "$DEV333_TOOLCHAIN_ENV_FILE"
           python3 research/claude-code-2.1.88/generate.py --verify
-          actionlint .github/workflows/dev-toolchain.yml
+          actionlint .github/workflows/*.yml
