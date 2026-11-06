@@ -66,6 +66,7 @@ export function getIndependentApiKey(route: ProviderRoute, env: NodeJS.ProcessEn
 /** Live provider discovery is the authority for available model names. */
 export type IndependentModelDetail = {
   id: string
+  displayName?: string
   contextWindow?: number
   maxOutputTokens?: number
   supportsTools?: boolean
@@ -127,6 +128,8 @@ export async function discoverIndependentModelDetails(
       ? entry.supported_parameters.includes('tools') : undefined
     const supportsVision = Array.isArray(modalities) ? modalities.includes('image') : undefined
     return [{ id,
+      ...(typeof entry.display_name === 'string' && entry.display_name.trim()
+        ? { displayName: entry.display_name.trim() } : {}),
       ...(contextWindow ? { contextWindow } : {}),
       ...(maxOutputTokens ? { maxOutputTokens } : {}),
       ...(supportsTools !== undefined ? { supportsTools } : {}),
