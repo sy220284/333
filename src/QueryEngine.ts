@@ -1221,7 +1221,10 @@ export class QueryEngine {
     if (isApiError) {
       yield {
         type: 'result',
-        subtype: 'error_during_execution',
+        // The official 2.1.317 SDK uses the success result envelope even
+        // when an API response has failed. Consumers must inspect is_error
+        // and terminal_reason to determine the actual turn outcome.
+        subtype: 'success',
         is_error: true,
         terminal_reason: promptTooLong ? 'prompt_too_long' : 'api_error',
         ...(apiErrorStatus !== undefined && { api_error_status: apiErrorStatus }),
