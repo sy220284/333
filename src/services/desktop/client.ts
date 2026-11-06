@@ -3,6 +3,7 @@ import { createInterface } from 'node:readline'
 import type { Readable, Writable } from 'node:stream'
 import type { SDKUserMessage, SDKSessionInfo } from '../../entrypoints/sdk/coreTypes.js'
 import type { PendingSdkPermission } from '../conversation/permissionBroker.js'
+import type { PendingHostControl } from '../conversation/hostControlBroker.js'
 import type { DesktopTask } from './taskProjection.js'
 import type { AgentMission, AgentMissionStatus } from '../../utils/agentMissions.js'
 import type { AgentMode } from '../../utils/agentMode.js'
@@ -100,6 +101,11 @@ export function createDesktopClient(input: Readable, output: Writable) {
     interrupt: (sessionId: string) => invoke<{ requested: boolean }>({ method: 'sessions.interrupt', sessionId }),
     setModel: (sessionId: string, model: string) => invoke({ method: 'sessions.setModel', sessionId, model }),
     setPermissionMode: (sessionId: string, mode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'dontAsk') => invoke({ method: 'sessions.setPermissionMode', sessionId, mode }),
+    listHostRequests: (sessionId: string) => invoke<PendingHostControl[]>({ method: 'host.list', sessionId }),
+    respondToHost: (sessionId: string, requestId: string, response: Record<string, unknown>) =>
+      invoke({ method: 'host.respond', sessionId, requestId, response }),
+    rejectHostRequest: (sessionId: string, requestId: string, reason: string) =>
+      invoke({ method: 'host.reject', sessionId, requestId, reason }),
     listPermissions: (sessionId: string) => invoke<PendingSdkPermission[]>({ method: 'permissions.list', sessionId }),
     decidePermission: (sessionId: string, permissionId: string, decision: Extract<DesktopRequest, { method: 'permissions.decide' }>['decision']) =>
       invoke({ method: 'permissions.decide', sessionId, permissionId, decision }),
