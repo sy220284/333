@@ -472,7 +472,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
             claimed.instruction,
             '执行前核对已有文件和提交，禁止重复已产生的外部副作用。',
             '交付时报告实际文件/提交、测试证据及仍需人工审核的事项。',
-          ].join('\\n')
+          ].join('\n')
           const started = await send(openedSession, instruction)
           const updated = await bindMissionJobTurn(
             mission.id, cwd, claimed.id, claimed.runId!, openedSession,
