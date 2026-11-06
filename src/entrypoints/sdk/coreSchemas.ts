@@ -1493,9 +1493,8 @@ export const SDKResultSuccessSchema = lazySchema(() =>
     subtype: z.literal('success'),
     duration_ms: z.number(),
     duration_api_ms: z.number(),
-    // The original 2.1.317 CLI can report subtype=success with
-    // is_error=true for API/authentication failures. Preserve that wire shape.
-    is_error: z.boolean(),
+    // A successful result cannot carry a terminal API error.
+    is_error: z.literal(false),
     terminal_reason: z.enum(['completed', 'api_error', 'prompt_too_long', 'max_turns', 'max_budget_usd', 'aborted_tools', 'aborted_streaming', 'hook_stopped', 'tool_deferred_unavailable', 'turn_setup_failed']).optional(),
     api_error_status: z.number().int().optional(),
     num_turns: z.number(),

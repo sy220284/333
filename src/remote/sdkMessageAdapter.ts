@@ -53,7 +53,10 @@ function convertStreamEvent(msg: SDKPartialAssistantMessage): StreamEvent {
 function convertResultMessage(msg: SDKResultMessage): SystemMessage {
   const isError = msg.is_error === true || msg.subtype !== 'success'
   const content = isError
-    ? msg.errors?.join(', ') || 'Unknown error'
+    ? ('errors' in msg && Array.isArray(msg.errors)
+        ? msg.errors.join(', ')
+        : ('result' in msg && typeof msg.result === 'string' && msg.result
+            ? msg.result : 'Unknown error'))
     : 'Session completed successfully'
 
   return {
@@ -286,15 +289,15 @@ export function isSessionEndMessage(msg: SDKMessage): boolean {
  * Check if an SDKResultMessage indicates success
  */
 export function isSuccessResult(msg: SDKResultMessage): boolean {
-  return msg.subtype === 'success'
+  return msg.subtype === 'success' && msg.is_error !== true
 }
 
 /**
  * Extract the result text from a successful SDKResultMessage
  */
 export function getResultText(msg: SDKResultMessage): string | null {
-  if (msg.subtype === 'success') {
-    return msg.result
+  if (isSuccessResult(msg)) {
+    return 'result' in msg ? msg.result : null
   }
   return null
 }
