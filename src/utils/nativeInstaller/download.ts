@@ -1,7 +1,7 @@
 /**
  * Download functionality for native installer
  *
- * Handles downloading 333 native packages from approved sources:
+ * Handles downloading Qerivon native packages from approved sources:
  * - Artifactory NPM packages
  * - GCS bucket
  */

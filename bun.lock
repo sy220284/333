@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@anthropic-ai/claude-code",
+      "name": "@qerivon/agent-cli",
       "optionalDependencies": {
         "@img/sharp-darwin-arm64": "^0.34.2",
         "@img/sharp-darwin-x64": "^0.34.2",

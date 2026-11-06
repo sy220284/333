@@ -13,6 +13,9 @@ const AGENT_SDK_PREFIX = `You are an AI coding agent operating through Qerivon's
 
 // Recognize historical prefixes when resuming or splitting saved conversations.
 const LEGACY_PREFIXES = [
+  `You are 333, an independent multi-model AI coding agent. You help users inspect code, edit files, run permitted tools, and complete software engineering tasks.`,
+  `You are 333, an independent multi-model coding agent operating through an agent SDK.`,
+  `You are an AI coding agent operating through 333's agent SDK.`,
   `You are Claude Code, Anthropic's official CLI for Claude.`,
   `You are Claude Code, Anthropic's official CLI for Claude, running within the Claude Agent SDK.`,
   `You are a Claude agent, built on Anthropic's Claude Agent SDK.`,
