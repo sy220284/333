@@ -23,7 +23,7 @@ export function githubWorkflow(selection: GithubWorkflowSelection = 'both'): str
       '  pull_request_review:',
       '    types: [submitted]',
       '  issues:',
-      '    types: [opened]',
+      '    types: [opened, assigned]',
     ]),
   ]
   const reviewComment = `(github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/yaoyaoche review') && ${membership})`
@@ -31,7 +31,7 @@ export function githubWorkflow(selection: GithubWorkflowSelection = 'both'): str
     `startsWith(${content}, '/yaoyaoche task ')`,
     `startsWith(${content}, '/yaoyaoche dev ')`,
     `startsWith(${content}, '/yaoyaoche 开发 ')`,
-    `startsWith(${content}, '@yaoyaoche ')`,
+    `contains(${content}, '@yaoyaoche')`,
   ].join(' || ')
   const trusted = (field: string): string =>
     `contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), ${field})`
