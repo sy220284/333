@@ -1,4 +1,6 @@
 import { c as _c } from "react/compiler-runtime";
+import { createConversationMessageStore } from '../services/conversation/messageStore.js';
+import { createConversationTurnRuntime } from '../services/conversation/turnRuntime.js';
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { feature } from 'bun:bundle';
 import { spawnSync } from 'child_process';
@@ -22,7 +24,7 @@ import type { TabStatusKind } from '../ink/hooks/use-tab-status.js';
 import { CostThresholdDialog } from '../components/CostThresholdDialog.js';
 import { IdleReturnDialog } from '../components/IdleReturnDialog.js';
 import * as React from 'react';
-import { useEffect, useMemo, useRef, useState, useCallback, useDeferredValue, useLayoutEffect, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback, useDeferredValue, useLayoutEffect, useSyncExternalStore, type RefObject } from 'react';
 import { useNotifications } from '../context/notifications.js';
 import { sendNotification } from '../services/notifier.js';
 import { startPreventSleep, stopPreventSleep } from '../services/preventSleep.js';
@@ -1154,7 +1156,9 @@ export function REPL({
     registerLeaderToolUseConfirmQueue(setToolUseConfirmQueue);
     return () => unregisterLeaderToolUseConfirmQueue();
   }, [setToolUseConfirmQueue]);
-  const [messages, rawSetMessages] = useState<MessageType[]>(initialMessages ?? []);
+  const conversationMessageStore = useMemo(() => createConversationMessageStore<MessageType>(initialMessages ?? []), []);
+  const messages = useSyncExternalStore(conversationMessageStore.subscribe, conversationMessageStore.getSnapshot, conversationMessageStore.getSnapshot);
+  const rawSetMessages = conversationMessageStore.setMessages;
   const messagesRef = useRef(messages);
   // Stores the willowMode variant that was shown (or false if no hint shown).
   // Captured at hint_shown time so hint_converted telemetry reports the same
@@ -2527,6 +2531,7 @@ export function REPL({
     setAbortController,
     onBackgroundQuery: handleBackgroundQuery
   });
+  const conversationTurnRuntime = useMemo(() => createConversationTurnRuntime(query), []);
   const onQueryEvent = useCallback((event: Parameters<typeof handleMessageFromStream>[0]) => {
     if (event.type === 'stream_request_start') {
       thinkingPhaseStartedAtRef.current = null;
@@ -2770,7 +2775,7 @@ export function REPL({
     resetTurnHookDuration();
     resetTurnToolDuration();
     resetTurnClassifierDuration();
-    for await (const event of query({
+    await conversationTurnRuntime.run({
       messages: messagesIncludingNewMessages,
       systemPrompt,
       userContext,
@@ -2779,9 +2784,7 @@ export function REPL({
       toolUseContext,
       fallbackModel,
       querySource: getQuerySourceForREPL()
-    })) {
-      onQueryEvent(event);
-    }
+    }, onQueryEvent, abortController);
     queryCheckpoint('query_end');
 
     // Capture ant-only API metrics before resetLoadingState clears the ref.
@@ -2826,7 +2829,7 @@ export function REPL({
 
     // Signal that a query turn has completed successfully
     await onTurnComplete?.(messagesRef.current);
-  }, [initialMcpClients, resetLoadingState, getToolUseContext, toolPermissionContext, setAppState, customSystemPrompt, onTurnComplete, appendSystemPrompt, canUseTool, mainThreadAgentDefinition, onQueryEvent, sessionTitle, titleDisabled]);
+  }, [initialMcpClients, resetLoadingState, getToolUseContext, toolPermissionContext, setAppState, customSystemPrompt, onTurnComplete, appendSystemPrompt, canUseTool, mainThreadAgentDefinition, conversationTurnRuntime, onQueryEvent, sessionTitle, titleDisabled]);
   const onQuery = useCallback(async (newMessages: MessageType[], abortController: AbortController, shouldQuery: boolean, additionalAllowedTools: string[], mainLoopModelParam: string, onBeforeQueryCallback?: (input: string, newMessages: MessageType[]) => Promise<boolean>, input?: string, effort?: EffortValue): Promise<void> => {
     // If this is a teammate, mark them as active when starting a turn
     if (isAgentSwarmsEnabled()) {
