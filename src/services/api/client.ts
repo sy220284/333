@@ -1,5 +1,5 @@
 import Anthropic, { type ClientOptions } from '@anthropic-ai/sdk'
-import { resolveIndependentModel, getIndependentApiKey } from './multimodel/registry.js'
+import { resolveIndependentModel, getIndependentApiKey, isRemovedIndependentModel } from './multimodel/registry.js'
 import { makeIndependentFetch } from './multimodel/transport.js'
 import { getChatGPTAccessToken } from '../auth/chatgptOAuth.js'
 import { native317MessagesRequest, native317RequestHeaders } from './native317Wire.ts'
@@ -105,6 +105,9 @@ export async function getAnthropicClient({
 }): Promise<Anthropic> {
   // Independent remote models share the existing Agent, tools and prompts.
   // Resolve before Claude OAuth and Anthropic SDK credential checks.
+  if (model && isRemovedIndependentModel(model)) {
+    throw new Error(`模型 ${model} 已从 333 移除，请选择其他服务商模型`)
+  }
   const independent = resolveIndependentModel(model)
   if (independent) {
     const bearer = independent.provider === 'chatgpt'
