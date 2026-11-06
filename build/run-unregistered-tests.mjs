@@ -23,19 +23,43 @@ function walk(dir) {
   })
 }
 
+/** Extract only executable YAML run commands, excluding filters and labels. */
+export function workflowRunCommands(source) {
+  const lines = source.split(/\r?\n/)
+  const commands = []
+  for (let i = 0; i < lines.length; i++) {
+    const match = /^(\s*)run:\s*(.*)$/.exec(lines[i])
+    if (!match) continue
+    const indent = match[1].length
+    const inline = match[2].trim()
+    if (inline && !['|','>','|-','>-','|+','>+'].includes(inline)) {
+      commands.push(inline)
+      continue
+    }
+    while (i + 1 < lines.length) {
+      const row = lines[i + 1]
+      if (row.trim() && row.length - row.trimStart().length <= indent) break
+      commands.push(row)
+      i++
+    }
+  }
+  return commands.join('\n')
+}
+
 export function discoverUnregisteredTests(root = ROOT, options = {}) {
   const tests = walk(join(root, 'tests'))
     .map(abs => relative(root, abs).split(sep).join('/'))
     .filter(path => /\.test\.(mjs|ts)$/.test(path)).sort()
   const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
   const commands = Object.values(manifest.scripts ?? {}).join('\n')
+  // An entry in paths: or a retired workflow does not execute a test.
   const workflows = walk(join(root, '.github', 'workflows'))
     .filter(path => /\.ya?ml$/.test(path))
-    .map(path => readFileSync(path, 'utf8')).join('\n')
+    .map(path => readFileSync(path, 'utf8'))
+    .filter(source => /^  pull_request:\s*$/m.test(source))
+    .map(workflowRunCommands).join('\n')
   const workflowOnly = options.workflowOnly === true
-  const registered = tests.filter(path => workflowOnly
-    ? commands.includes(path) || !workflows.includes(path)
-    : commands.includes(path) || workflows.includes(path))
+  const registered = tests.filter(path => commands.includes(path) || workflows.includes(path))
   const pending = tests.filter(path => !commands.includes(path) &&
     (workflowOnly ? workflows.includes(path) : !workflows.includes(path)))
   if (pending.length + registered.length !== tests.length) throw Error('Test inventory inconsistent')
@@ -134,24 +158,37 @@ function runTest(file, runtime, options = {}) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const { tests, registered, pending } = discoverUnregisteredTests(ROOT, { workflowOnly: WORKFLOW_ONLY })
-  const plan = pending.map(file => ({ file, runtime: runtimeForTest(file) }))
+  const value = flag => {
+    const item = process.argv.find(arg => arg.startsWith(flag + '='))
+    return item ? Number(item.slice(flag.length + 1)) : null
+  }
+  const shardCount = value('--shard-count') ?? 1
+  const shardIndex = value('--shard-index') ?? 0
+  if (!Number.isSafeInteger(shardCount) || shardCount < 1 ||
+    !Number.isSafeInteger(shardIndex) || shardIndex < 0 || shardIndex >= shardCount)
+    throw new Error('无效测试分片范围')
+  const selected = pending.filter((_, i) => i % shardCount === shardIndex)
+  const plan = selected.map(file => ({ file, runtime: runtimeForTest(file) }))
   console.log(JSON.stringify({
     mode: WORKFLOW_ONLY ? 'workflow-only' : 'unregistered',
     total: tests.length, explicitlyScheduled: registered.length,
+    candidateCount: pending.length, shardIndex, shardCount,
     discoveredForExecution: plan.length, planned: plan,
   }, null, 2))
   if (!process.argv.includes('--list')) {
     const failures = []
+    let executed = 0
     for (const { file, runtime } of plan) {
+      executed++
       try {
         runTest(file, runtime)
       } catch (error) {
         failures.push({ test: file, runtime, cause: String(error) })
         console.error(JSON.stringify({ failedTest: file, runtime, cause: String(error) }))
-        if (!WORKFLOW_ONLY) break
+        if (process.argv.includes('--fail-fast')) break
       }
     }
-    console.log(JSON.stringify({ executed: plan.length, failed: failures.length, failures }, null, 2))
+    console.log(JSON.stringify({ executed, failed: failures.length, failures }, null, 2))
     if (failures.length) process.exitCode = 1
   }
 }
