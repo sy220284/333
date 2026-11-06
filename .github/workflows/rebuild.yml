@@ -168,7 +168,7 @@ jobs:
           set -euo pipefail
           test -f dist/cli.js
           expected_version=$(node -p "require('./package.json').version")
-          test "$(bun dist/cli.js --version)" = "$expected_version (Claude Code)"
+          test "$(bun dist/cli.js --version)" = "$expected_version (333)"
           bun dist/cli.js --help | grep -F -- '--print'
       - name: 取得已锁定SHA的原版2.1.317 Linux x64执行参考
         if: runner.os == 'Linux'
@@ -414,10 +414,10 @@ jobs:
         id: acceptance_046
         continue-on-error: true
         run: node --test tests/m1-account-email-disclosure-317.test.mjs
-      - name: 317无共同Git历史审查：原生快照构建与调用链验证
+      - name: 317无共同 Git 历史审查：验证通用 GitHub 差异审查和调用链
         id: acceptance_047
         continue-on-error: true
-        run: node --test tests/m6-ultrareview-unrelated-history-317.test.mjs
+        run: node --test --test-name-pattern='无共同 Git 历史' tests/github-generic-review.test.mjs
       - name: 317云端审查启动配置与远端轮询一致性
         id: acceptance_045
         continue-on-error: true

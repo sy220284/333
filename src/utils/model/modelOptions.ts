@@ -270,7 +270,7 @@ export function getModelOptions(fastMode: boolean = false): ModelOption[] {
     for (const entry of getCatalogModelsForProvider(catalogProvider)) {
       if (entry.family === 'mythos') continue // Model requires separate authorization
       const id = entry.provider_ids[catalogProvider]
-      if (typeof id !== 'string' || options.some(option => option.value !== null && parseUserSpecifiedModel(option.value) === id)) continue
+      if (typeof id !== 'string' || options.some(option => option.value === id)) continue
       const pricing = getModelPricingString(id)
       options.push({
         value: id,

@@ -38,7 +38,7 @@ test('通用 GitHub 工作流包含显式调用、授权用户触发和最小权
 
 test('极深审查是真实四轮审查加独立复核，支持三类模型 API', () => {
   const code=githubReviewerScript()
-  const syntax=spawnSync(process.execPath,['--input-type=module','--check'],{
+  const syntax=spawnSync('node',['--input-type=module','--check'],{
     input:code,encoding:'utf8'})
   assert.equal(syntax.status,0,syntax.stderr)
   for (const keyword of ['callModel(', '独立复核', '需求与代码行为', '模块调用与状态生命周期',
@@ -212,4 +212,87 @@ test('大型 PR 极深审查按全部差异分块，不丢失文件', async () =
   assert.ok(calls > 5, 'full PR coverage requires more calls than a single-input review')
   assert.match(report, /差异分块：[2-9]/)
   assert.match(report, /第 1\//)
+})
+
+test('自定义模型接口必须使用 HTTPS，不能向 HTTP 地址发送模型密钥', async () => {
+  const script = githubReviewerScript().replace(/^import .*$/gm, '')
+  const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor
+  const execute = new AsyncFunction('readFileSync','writeFileSync','execFileSync',
+    'process','fetch','setTimeout','clearTimeout','Buffer','URL','AbortController',script)
+  for (const provider of ['openai-compatible','openai-responses']) {
+    const requests = []
+    const env = {
+      GITHUB_REPOSITORY:'owner/repo', GITHUB_EVENT_PATH:'event.json',
+      GITHUB_EVENT_NAME:'workflow_dispatch', INPUT_PR_NUMBER:'17',
+      REVIEW_MODE:'normal', MODEL_PROVIDER:provider, MODEL_NAME:'test',
+      MODEL_API_KEY:'sensitive-key', GH_TOKEN:'test-token',
+      MODEL_BASE_URL:'http://evil.invalid/steal',
+    }
+    const request = async url => {
+      requests.push(url)
+      if (url.endsWith('/pulls/17')) return {
+        ok:true,text:async()=>JSON.stringify({title:'标题',head:{sha:'abc'}}),
+      }
+      throw new Error(`意外向外发送：${url}`)
+    }
+    await assert.rejects(execute(
+      ()=>JSON.stringify({}),
+      ()=>{},
+      ()=> 'diff --git a/a b/a\n+const x = 1\n',
+      {env,stdout:{write(){}}},
+      request,()=>0,()=>{},
+      {byteLength: data => data.length},URL,
+      class {signal={};abort(){}},
+    ),/HTTPS/,provider)
+    assert.equal(requests.length,1,provider)
+    assert.ok(requests[0].endsWith('/pulls/17'))
+  }
+})
+
+
+test('无共同 Git 历史的 PR 审查依赖 GitHub 差异接口，无需创建原版云端快照', async () => {
+  const script = githubReviewerScript().replace(/^import .*$/gm, '')
+  const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor
+  const execute = new AsyncFunction('readFileSync','writeFileSync','execFileSync',
+    'process','fetch','setTimeout','clearTimeout','Buffer','URL','AbortController',script)
+  const commands = []
+  const urls = []
+  let finished = false
+  const env = {
+    GITHUB_REPOSITORY:'owner/repo', GITHUB_EVENT_PATH:'event.json',
+    GITHUB_EVENT_NAME:'workflow_dispatch', INPUT_PR_NUMBER:'8',
+    REVIEW_MODE:'normal', MODEL_PROVIDER:'openai-compatible',
+    MODEL_NAME:'test-model', MODEL_API_KEY:'test-secret', GH_TOKEN:'test-token',
+  }
+  const fetchMock = async url => {
+    urls.push(url)
+    if (url.endsWith('/pulls/8')) return {
+      ok:true, text:async()=>JSON.stringify({title:'独立 Git 历史 PR',head:{sha:'a1'}}),
+    }
+    if (url.endsWith('/issues/8/comments')) {
+      finished = true
+      return {ok:true, text:async()=>JSON.stringify({id:1})}
+    }
+    if (url === 'https://api.openai.com/v1/chat/completions') return {
+      ok:true, text:async()=>JSON.stringify({choices:[{message:{content:'已检查完整 PR 差异'}}]}),
+    }
+    throw new Error(String(url))
+  }
+  await execute(
+    ()=>JSON.stringify({}),
+    ()=>{},
+    (command,args)=>{
+      commands.push({command,args})
+      assert.equal(command,'gh')
+      assert.deepEqual(args.slice(0,3),['pr','diff','8'])
+      return 'diff --git a/orphan.ts b/orphan.ts\n+const orphan = true\n'
+    },
+    {env,stdout:{write(){}}},
+    fetchMock,()=>0,()=>{}, {byteLength: text => text.length},URL,
+    class {signal={};abort(){}},
+  )
+  assert.equal(commands.length,1)
+  assert.equal(finished,true)
+  assert.equal(urls.filter(url=>url.endsWith('/pulls/8')).length,1)
+  assert.equal(urls.filter(url=>url.endsWith('/issues/8/comments')).length,1)
 })
