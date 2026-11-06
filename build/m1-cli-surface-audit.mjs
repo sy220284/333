@@ -62,6 +62,11 @@ const rows = []
 // Explicitly approved product-surface change: the standalone ultrareview CLI
 // was retired in favor of the unified /review extreme GitHub workflow.
 const retiredCommands = new Set(['ultrareview'])
+// User-approved local product scope: the upstream's official cloud control
+// flags have no local equivalent. Both sides must match this exact inventory;
+// newly missing options and unexpected additions still fail strict parity.
+const retiredCloudFlags = ['--cloud', '--environment', '--remote-control', '--remote-control-session-name-prefix', '--teleport']
+const intentionalLocalFlags = ['--proactive', '--strict-command']
 function normalizeProductName(usage) {
   return usage.replace(/^Usage: yaoyaoche(?= |$)/, 'Usage: claude')
 }
@@ -82,12 +87,16 @@ try {
     const commandHelp = `Usage: claude ${command}`
     const correctCommand = command === '' ? true : normalizedCandidateUsage.startsWith(commandHelp)
     const statusMatch = upstream.status === rebuilt.status
+    const approvedRootScope = command === '' &&
+      JSON.stringify(missing) === JSON.stringify(retiredCloudFlags) &&
+      JSON.stringify(extra) === JSON.stringify(intentionalLocalFlags)
     const explicitlyRetired = retiredCommands.has(command) &&
       upstream.usage.startsWith(commandHelp) &&
       !normalizedCandidateUsage.startsWith(commandHelp) &&
       missing.length > 0
     const status = explicitlyRetired ? 'APPROVED_RETIRED'
       : !statusMatch ? 'EXIT_MISMATCH'
+      : approvedRootScope ? 'APPROVED_LOCAL_ROOT_SCOPE'
       : !correctCommand ? 'WRONG_COMMAND_HELP'
       : missing.length > 0 || extra.length > 0 ? 'OPTIONS_MISMATCH'
       : upstream.usage !== normalizedCandidateUsage ? 'USAGE_TEXT_MISMATCH'
@@ -105,11 +114,16 @@ try {
       ![...retiredCommands].every(command => approvedRetirements.some(row => row.command === command))) {
     throw new Error('旧审查命令退役清单未按预期落实，必须人工核验命令是否复活或意外缺失')
   }
-  const differences = rows.filter(row => row.status !== 'MATCH' && row.status !== 'APPROVED_RETIRED')
+  const approvedRoot = rows.filter(row => row.status === 'APPROVED_LOCAL_ROOT_SCOPE')
+  if (approvedRoot.length !== 1 || approvedRoot[0]?.command !== '(root)')
+    throw new Error('本地化 CLI 预期移除及新增选项发生变化，必须逐项审计')
+  const differences = rows.filter(row => !['MATCH', 'APPROVED_RETIRED', 'APPROVED_LOCAL_ROOT_SCOPE'].includes(row.status))
   const result = { target, reference_version: referenceVersion, baseline: 'SHA-verified official Linux x64',
     evidence_scope: 'CLI help and public options, not functional behavior',
     commands_checked: rows.length, differences: differences.length,
     approved_retirements: approvedRetirements.map(row => row.command),
+    approved_root_cloud_flag_removals: retiredCloudFlags,
+    approved_root_local_flag_additions: intentionalLocalFlags,
     counts, rows,
   }
   writeFileSync(report, `${JSON.stringify(result, null, 2)}\n`)
