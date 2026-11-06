@@ -208,6 +208,28 @@ test('completed Responses streams are not blocked by a provider cancel that neve
   }
 })
 
+test('ChatGPT Responses rejects incomplete and failed streams until response.completed arrives', async () => {
+  const route = requireRoute('chatgpt/gpt-6.1-sol')
+  const request = () => new Request('https://333-model-bridge.invalid/v1/messages', {
+    method: 'POST', body: JSON.stringify({
+      ...body, model: 'chatgpt/gpt-6.1-sol', stream: true,
+    }),
+  })
+  const incomplete = await makeIndependentFetch(route, 'oauth-test', async () => stream(
+    { type: 'response.output_text.delta', delta: 'partial' },
+    { type: 'response.incomplete', response: {
+      incomplete_details: { reason: 'max_output_tokens' },
+    } },
+  ))(request())
+  await assert.rejects(() => incomplete.text(), /Responses incomplete.*max_output_tokens/)
+  const failed = await makeIndependentFetch(route, 'oauth-test', async () => stream(
+    { type: 'response.failed', response: {
+      error: { code: 'subscription_sharing_usage_limit_exceeded' },
+    } },
+  ))(request())
+  await assert.rejects(() => failed.text(), /subscription_sharing_usage_limit_exceeded/)
+})
+
 test('ChatGPT lists only model entries exposed for the connected account', async () => {
   const results = await discoverIndependentModels('chatgpt', 'oauth-token',
     (async () => new Response(JSON.stringify({ models: [
