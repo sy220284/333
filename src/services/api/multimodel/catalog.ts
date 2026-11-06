@@ -21,6 +21,7 @@ const catalogFile = () => join(getModelStorageRoot(), 'catalog.json')
 type ModelEntry = {
   provider: IndependentProvider
   id: string
+  displayName?: string
   discoveredAt: string
   account?: string
 }
@@ -52,8 +53,8 @@ export function getSavedModelOptions(): Array<{ value: string; label: string; de
   return readSavedModelCatalog().models.filter(model =>
     model.provider !== 'chatgpt' || (account !== undefined && model.account === account)).map(model => ({
     value: `${model.provider}/${model.id}`,
-    label: model.id,
-    description: `${model.provider} · ${model.id}`,
+    label: model.displayName ?? model.id,
+    description: `${model.provider} · ${model.id}`, 
   }))
 }
 export async function refreshProviderModels(provider: IndependentProvider): Promise<ModelEntry[]> {
@@ -63,9 +64,14 @@ export async function refreshProviderModels(provider: IndependentProvider): Prom
   const token = auth?.token ?? getIndependentApiKey(route)
   const details = await discoverIndependentModelDetails(provider, token)
   const at = new Date().toISOString()
-  const refreshed = [...new Set(details.map(item => item.id))]
-    .filter(name => name && name.length <= 300 && !Array.from(name).some(char => char.charCodeAt(0) < 32))
-    .map(name => ({ provider, id: name, discoveredAt: at, ...(auth && { account: auth.account }) }))
+  const seen = new Set<string>()
+  const refreshed = details.filter(item => {
+    if (!item.id || seen.has(item.id)) return false
+    seen.add(item.id)
+    return item.id.length <= 300 && !Array.from(item.id).some(char => char.charCodeAt(0) < 32)
+  }).map(item => ({ provider, id: item.id,
+    ...(item.displayName ? { displayName: item.displayName } : {}),
+    discoveredAt: at, ...(auth && { account: auth.account }) }))
   await mergeDiscoveredModelProfiles(provider, details)
   // Preserve all other providers while atomically replacing this provider.
   const root = getModelStorageRoot()
@@ -80,7 +86,10 @@ export async function refreshProviderModels(provider: IndependentProvider): Prom
     const current = readSavedModelCatalog()
     const next: SavedCatalog = {
       schema: 1,
-      models: [...current.models.filter(x => x.provider !== provider), ...refreshed],
+      // ChatGPT model lists belong to individual OAuth registrations. Keep
+      // other accounts' catalogs isolated and available after switching back.
+      models: [...current.models.filter(x => x.provider !== provider ||
+        (provider === 'chatgpt' && x.account !== auth?.account)), ...refreshed],
     }
     await fs.writeFile(tmp, JSON.stringify(next, null, 2), { encoding: 'utf8', mode: 0o600, flag: 'wx' })
     await fs.rename(tmp, file)
