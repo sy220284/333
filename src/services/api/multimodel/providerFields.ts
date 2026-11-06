@@ -4,6 +4,7 @@
  * are version-gated here. Never invent an unsupported parameter for a model.
  */
 import type { IndependentProvider } from './registry.js'
+import { getIndependentProfile } from './profiles.js'
 
 export type ModelFieldProfile = {
   protocol: 'responses' | 'chat-completions'
@@ -16,7 +17,7 @@ export type ModelFieldProfile = {
 }
 
 /** Inspectable, model-specific capabilities used by the request encoder and tests. */
-export function getModelFieldProfile(provider: IndependentProvider, model: string): ModelFieldProfile {
+function getBuiltinModelFieldProfile(provider: IndependentProvider, model: string): ModelFieldProfile {
   const id = model.toLowerCase()
   const common = { protocol: 'chat-completions' as const, outputTokenField: 'max_tokens' as const,
     usageInStream: false, replayReasoning: true }
@@ -50,6 +51,14 @@ export function getModelFieldProfile(provider: IndependentProvider, model: strin
   }
   return { ...common, thinkingField: 'reasoning', supportedEffort: ['low', 'medium', 'high', 'xhigh', 'max'],
     alwaysThinking: false, usageInStream: true }
+}
+
+/** Live model metadata takes precedence over version-based heuristics. */
+export function getModelFieldProfile(provider: IndependentProvider, model: string): ModelFieldProfile {
+  const base = getBuiltinModelFieldProfile(provider, model)
+  const discovered = getIndependentProfile(`${provider}/${model}`)
+  if (!discovered?.supportedEffort) return base
+  return { ...base, supportedEffort: discovered.supportedEffort }
 }
 
 type Wire = Record<string, any>
