@@ -1,0 +1,61 @@
+name: 333 独立模型协议与本地能力验证
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/services/api/multimodel/**'
+      - 'src/services/auth/chatgptOAuth.ts'
+      - 'src/services/localRuntime/**'
+      - 'src/services/analytics/localDiagnostics.ts'
+      - 'tests/multimodel-provider.test.ts'
+      - 'tests/independent-local-features.test.ts'
+      - '.github/workflows/independent-models.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: independent-models-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+jobs:
+  protocol:
+    name: 模型协议、流式工具及账号目录模拟验证
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Windows 允许完整长路径检出
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - uses: actions/cache/restore@v4
+        id: npm-cache
+        with:
+          path: |
+            ~/.npm
+            .rebuild/public
+          key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
+      - name: 恢复全量依赖与冻结的第三方包
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - uses: actions/cache/save@v4
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.npm
+            .rebuild/public
+          key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
+      - name: 模拟八个服务商的请求、缓存迁移与完整工具调用
+        run: bun test tests/multimodel-provider.test.ts tests/independent-local-features.test.ts

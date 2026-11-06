@@ -52,6 +52,28 @@ export function canonicalizeCatalogModel(model: string): string {
   return normalized.replace(/-\d{8}$/, '')
 }
 
+/** Legacy 3.x/4.x metadata remains available for explicitly chosen models. */
+export function isLegacyClaudeModel(model: string): boolean {
+  const id = getCatalogModel(model)?.id ?? canonicalizeCatalogModel(model)
+  return /^claude-(?:[a-z]+-)?(?:3|4)(?:-|$)/.test(id)
+}
+
+/** Only active generations are built-in presets. */
+export function getCatalogModelsForProvider(provider: CatalogProvider): CatalogModel[] {
+  return MODEL_CATALOG.models.filter(model => !isLegacyClaudeModel(model.id) && typeof model.provider_ids[provider] === 'string')
+}
+
+/** Choose each provider's actual family default instead of globally newest IDs. */
+export function getCatalogPreferredModelsForProvider(provider: CatalogProvider): CatalogModel[] {
+  const seen = new Set<string>()
+  return Object.keys(MODEL_CATALOG.aliases).flatMap(family => {
+    const model = getCatalogAliasModel(family, provider)
+    if (!model || isLegacyClaudeModel(model.id) || typeof model.provider_ids[provider] !== 'string' || seen.has(model.id)) return []
+    seen.add(model.id)
+    return [model]
+  })
+}
+
 export function getCatalogModel(model: string): CatalogModel | undefined {
   return getCatalogState().models.get(canonicalizeCatalogModel(model.replace(/\[1m\]$/i, '')))
 }

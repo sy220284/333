@@ -6,7 +6,6 @@ import {
 } from '@ant/claude-for-chrome-mcp'
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { format } from 'util'
-import { shutdownDatadog } from '../../services/analytics/datadog.js'
 import { shutdown1PEventLogging } from '../../services/analytics/firstPartyEventLogger.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import {
@@ -262,7 +261,6 @@ export async function runClaudeInChromeMcpServer(): Promise<void> {
     }
     exiting = true
     await shutdown1PEventLogging()
-    await shutdownDatadog()
     // eslint-disable-next-line custom-rules/no-process-exit
     process.exit(0)
   }

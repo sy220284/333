@@ -8,6 +8,8 @@ import { getModelCapability } from './model/modelCapabilities.js'
 import { getModelBehavior317 } from './model/modelBehavior317.js'
 import { getCatalogModel } from './model/modelCatalog.js'
 import { getAPIProvider } from './model/providers.js'
+import { resolveIndependentModel } from '../services/api/multimodel/registry.js'
+import { getIndependentProfile } from '../services/api/multimodel/profiles.js'
 
 // Model context window size (200k tokens for all models right now)
 export const MODEL_CONTEXT_WINDOW_DEFAULT = 200_000
@@ -45,6 +47,7 @@ export function has1mContext(model: string): boolean {
 
 // @[MODEL LAUNCH]: Update this pattern if the new model supports 1M context
 export function modelSupports1M(model: string): boolean {
+  if (resolveIndependentModel(model)) return (getIndependentProfile(model)?.contextWindow ?? 0) >= 1_000_000
   if (is1mContextDisabled()) {
     return false
   }
@@ -59,6 +62,13 @@ export function getContextWindowForModel(
   model: string,
   betas?: string[],
 ): number {
+  if (resolveIndependentModel(model)) {
+    // Provider discovery or an explicit user profile is authoritative.
+    // Unpublished limits get a conservative interim limit until configured.
+    const manual = Number(process.env.AGENT333_MAX_CONTEXT_TOKENS)
+    if (Number.isSafeInteger(manual) && manual > 0) return manual
+    return getIndependentProfile(model)?.contextWindow ?? 32_768
+  }
   const configured = Number(process.env.CLAUDE_CODE_MAX_CONTEXT_TOKENS)
   const canonical = getCanonicalName(model)
   const custom = !getCatalogModel(getModelBehavior317(model)) && !canonical.startsWith('claude-3-') &&
@@ -153,6 +163,11 @@ export function getModelMaxOutputTokens(model: string): {
   default: number
   upperLimit: number
 } {
+  if (resolveIndependentModel(model)) {
+    const profile = getIndependentProfile(model)
+    const maximum = profile?.maxOutputTokens ?? 4_096
+    return { default: Math.min(maximum, 8_192), upperLimit: maximum }
+  }
   let defaultTokens: number
   let upperLimit: number
 
