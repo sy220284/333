@@ -49,8 +49,7 @@ function getBuiltinModelFieldProfile(provider: IndependentProvider, model: strin
       outputTokenField: m31 ? 'max_completion_tokens' : 'max_tokens',
       usageInStream: true }
   }
-  return { ...common, thinkingField: 'reasoning', supportedEffort: ['low', 'medium', 'high', 'xhigh', 'max'],
-    alwaysThinking: false, usageInStream: true }
+  throw new Error(`未支持的模型服务商：${provider}`)
 }
 
 /** Live model metadata takes precedence over version-based heuristics. */
@@ -163,11 +162,6 @@ export function applyChatModelFields(result: Wire, { provider, model, thinking, 
     if (result.tool_choice && typeof result.tool_choice === 'object' && /^kimi-k2/.test(id)) {
       result.tool_choice = 'auto'
     }
-  } else if (provider === 'openrouter') {
-    if (effort) result.reasoning = { effort }
-    else if (disabled) result.reasoning = { effort: 'none' }
-    else if (enabled) result.reasoning = { effort: 'high' }
-    if (result.reasoning && result.reasoning.effort !== 'none') result.include_reasoning = true
   }
   // Validate the normalized wire value against provider-discovered limits,
   // including per-account changes in available reasoning levels.
