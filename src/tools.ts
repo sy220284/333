@@ -109,6 +109,7 @@ const SnipTool = feature('HISTORY_SNIP')
   ? require('./tools/SnipTool/SnipTool.js').SnipTool
   : null
 import { WorkflowTool } from './tools/WorkflowTool/WorkflowTool.js'
+import { MissionTool } from './tools/MissionTool/MissionTool.js'
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 import type { ToolPermissionContext } from './Tool.js'
 import { getDenyRuleForTool } from './utils/permissions/permissions.js'
@@ -212,6 +213,7 @@ export function getAllBaseTools(): Tools {
       : []),
       ...(process.env.USER_TYPE === 'ant' && REPLTool ? [REPLTool] : []),
     WorkflowTool,
+    MissionTool,
     ...(SleepTool ? [SleepTool] : []),
     ...cronTools,
     ...(RemoteTriggerTool ? [RemoteTriggerTool] : []),
