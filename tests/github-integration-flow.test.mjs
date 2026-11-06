@@ -108,11 +108,11 @@ test('审查只读、开发写入的 Actions 权限隔离与官方品牌解除�
  assert.match(onlyReview,/ref: \$\{\{ github\.event\.repository\.default_branch \}\}/)
  assert.match(onlyReview,/startsWith\(github\.event\.comment\.body, '\/yaoyaoche review'\)/)
  assert.doesNotMatch(onlyReview,/pull_request_review_comment:/)
- assert.doesNotMatch(onlyReview,/  task:\n/)
+ assert.doesNotMatch(onlyReview,/ {2}task:\n/)
  const onlyRespond=githubWorkflow('respond')
  assert.doesNotMatch(onlyRespond,/pull_request_target:/)
  assert.doesNotMatch(onlyRespond,/startsWith\(github\.event\.comment\.body, '\/yaoyaoche review'\)/)
- assert.match(onlyRespond,/  task:\n/)
+ assert.match(onlyRespond,/ {2}task:\n/)
 })
 function reviewerHarness(overrides={}) {
  const code=githubReviewerScript().replace(/^import .*$/gm,'')
