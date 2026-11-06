@@ -1873,6 +1873,42 @@ export const SDKTaskProgressMessageSchema = lazySchema(() =>
   }),
 )
 
+/** 2.1.317 incremental task status; the patch carries only changed fields. */
+export const SDKTaskUpdatedMessageSchema = lazySchema(() =>
+  z.object({
+    type: z.literal('system'),
+    subtype: z.literal('task_updated'),
+    task_id: z.string(),
+    run_id: z.string().optional(),
+    patch: z.object({
+      status: z.string().optional(),
+      description: z.string().optional(),
+      end_time: z.number().optional(),
+      total_paused_ms: z.number().optional(),
+      error: z.unknown().optional(),
+      is_backgrounded: z.boolean().optional(),
+    }).passthrough(),
+    uuid: UUIDPlaceholder(),
+    session_id: z.string(),
+  }),
+)
+
+/** Background task resynchronization sent after reconnect or task lifecycle changes. */
+export const SDKBackgroundTasksChangedMessageSchema = lazySchema(() =>
+  z.object({
+    type: z.literal('system'),
+    subtype: z.literal('background_tasks_changed'),
+    tasks: z.array(z.object({
+      task_id: z.string(),
+      task_type: z.string().optional(),
+      status: z.string().optional(),
+      owned_by_subagent: z.boolean().optional(),
+    }).passthrough()),
+    uuid: UUIDPlaceholder(),
+    session_id: z.string(),
+  }),
+)
+
 export const SDKToolUseSummaryMessageSchema = lazySchema(() =>
   z.object({
     type: z.literal('tool_use_summary'),
@@ -1978,6 +2014,8 @@ export const SDKMessageSchema = lazySchema(() =>
     SDKTaskNotificationMessageSchema(),
     SDKTaskStartedMessageSchema(),
     SDKTaskProgressMessageSchema(),
+    SDKTaskUpdatedMessageSchema(),
+    SDKBackgroundTasksChangedMessageSchema(),
     SDKSessionStateChangedMessageSchema(),
     SDKFilesPersistedEventSchema(),
     SDKToolUseSummaryMessageSchema(),
