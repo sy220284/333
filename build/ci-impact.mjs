@@ -183,7 +183,7 @@ export function selectBaseline(runs, number, head, isAncestor) {
     .sort((a, b) => a.created_at.localeCompare(b.created_at))[0]
   if (oldest) {
     try {
-      const parent = git('rev-parse', oldest.head_sha + '^')
+      const parent = git('rev-parse', `${oldest.head_sha}^`)
       if (existsAndAncestor(parent, head)) return { sha: parent, reason: 'first-pending-parent' }
     } catch { /* rewritten histories are handled by the complete PR diff below */ }
   }
@@ -201,13 +201,13 @@ async function workflowRuns(event, token) {
       encodeURIComponent(branch) + '&per_page=100&page=' + page
     const response = await fetch(url, {
       headers: {
-        Authorization: 'Bearer ' + token,
+        Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28',
       },
     })
     if (response.status === 404) return []
-    if (!response.ok) throw Error('查询 CI 历史失败：HTTP ' + response.status)
+    if (!response.ok) throw Error(`查询 CI 历史失败：HTTP ${response.status}`)
     const data = await response.json()
     const pageRuns = data.workflow_runs ?? []
     entries.push(...pageRuns)
@@ -235,29 +235,29 @@ export async function plan(event, token) {
   if (!base) {
     // First run / history reset: include all outstanding changes rather than omitting unverified edits.
     const baseRef = event.pull_request.base.ref
-    const baseBranch = 'refs/remotes/origin/' + baseRef
+    const baseBranch = `refs/remotes/origin/${baseRef}`
     base = git('merge-base', baseBranch, head)
     reason = 'initial-pr-baseline'
   }
   const files = changedFiles(base, head)
-  return { full, files, routes: routeChanges(files), baseline: reason + ':' + base }
+  return { full, files, routes: routeChanges(files), baseline: `${reason}:${base}` }
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const payload = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'))
     const result = await plan(payload, process.env.GITHUB_TOKEN)
-    const lines = ['full=' + String(result.full), 'baseline=' + result.baseline]
+    const lines = [`full=${String(result.full)}`, `baseline=${result.baseline}`]
     for (const [name, enabled] of Object.entries(result.routes))
-      lines.push(name.replaceAll('-', '_') + '=' + String(enabled))
-    appendFileSync(process.env.GITHUB_OUTPUT, lines.join('\n') + '\n')
+      lines.push(`${name.replaceAll('-', '_')}=${String(enabled)}`)
+    appendFileSync(process.env.GITHUB_OUTPUT, `${lines.join('\n')}\n`)
     console.log(JSON.stringify({
       full: result.full, baseline: result.baseline,
       changedFiles: result.files,
       selected: Object.entries(result.routes).filter(([, active]) => active).map(([name]) => name),
     }, null, 2))
   } catch (error) {
-    console.error('[ci-impact] 影响范围无法确定：' + String(error))
+    console.error(`[ci-impact] 影响范围无法确定：${String(error)}`)
     process.exitCode = 1
   }
 }
