@@ -180,6 +180,22 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
     assert.equal(opened.at(-1)?.searchParams.get('agent_name_hint'), null)
     assert.equal((await auth.listChatGPTAccounts()).length, 3)
     assert.equal(auth.getSavedChatGPTAccount() !== undefined, true)
+    // Routine reauthorization never forces a consent screen. A previously
+    // registered account can explicitly request ChatGPT plan permission.
+    assert.equal(opened.at(-1)?.searchParams.get('prompt'), null)
+    await assert.rejects(
+      auth.loginWithChatGPT({ addAccount: true, enablePlan: true }, browser),
+      /Choose one ChatGPT sign-in mode/,
+    )
+    const optedIn = await auth.loginWithChatGPT({
+      clientId: 'oaiapp_333_two', enablePlan: true,
+    }, browser)
+    assert.equal(optedIn.clientId, 'oaiapp_333_two')
+    assert.equal(optedIn.planEnabled, true)
+    assert.equal(opened.at(-1)?.searchParams.get('prompt'), 'consent')
+    assert.equal(opened.at(-1)?.searchParams.get('agent_name_hint'), null)
+    assert.equal((await auth.getChatGPTAuthorization()).token, 'access-oaiapp_333_two')
+    assert.equal((await auth.listChatGPTAccounts()).length, 3)
     assert.equal(callbackError, null)
   } finally {
     globalThis.fetch = oldFetch
