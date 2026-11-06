@@ -77,7 +77,7 @@ export function pcmToWav(pcm: Buffer): Buffer {
 
 export async function connectVoiceStream(
   callbacks: VoiceStreamCallbacks,
-  options?: { language?: string; keyterms?: string[] },
+  options?: { language?: string },
 ): Promise<VoiceStreamConnection | null> {
   const configured = getWhisperConfig()
   if (!configured) {
