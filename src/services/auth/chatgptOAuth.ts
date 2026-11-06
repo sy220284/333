@@ -20,6 +20,7 @@ const DIR = join(homedir(), '.333', 'auth')
 const FILE = join(DIR, 'chatgpt.json')
 const HOST_FILE = join(DIR, 'host.json')
 const ACCOUNT_FILE = join(DIR, 'chatgpt-registration.json')
+const ACCOUNTS_FILE = join(DIR, 'chatgpt-accounts.json')
 type Credential = {
   client_id: string
   ext_agent_host_id: string
@@ -33,7 +34,83 @@ type Credential = {
   scope: string
   expires_at: number
 }
-type Registration = { client_id: string; subject: string; email?: string }
+type Registration = { client_id: string; subject: string; email?: string; workspace_id?: string; credential?: Credential }
+type AccountStore = { schema: 2; active: string | null; accounts: Registration[] }
+/** A registration survives sign-out, and each account/workspace has an independent token record. */
+function registrationIdentity(registration: Pick<Registration, 'client_id' | 'subject' | 'workspace_id'>): string {
+  return JSON.stringify(registration.workspace_id
+    ? [registration.client_id, registration.subject, registration.workspace_id]
+    : [registration.client_id, registration.subject])
+}
+function validateAccountStore(value: AccountStore): AccountStore {
+  if (value.schema !== 2 || !Array.isArray(value.accounts) ||
+      (value.active !== null && typeof value.active !== 'string')) {
+    throw new Error('Invalid ChatGPT account index')
+  }
+  const identities = new Set<string>()
+  for (const entry of value.accounts) {
+    if (typeof entry?.client_id !== 'string' || !entry.client_id ||
+        typeof entry?.subject !== 'string' || !entry.subject) {
+      throw new Error('Invalid saved ChatGPT registration')
+    }
+    const identity = registrationIdentity(entry)
+    if (identities.has(identity)) throw new Error('Duplicate saved ChatGPT registration')
+    identities.add(identity)
+    if (entry.credential && (entry.credential.client_id !== entry.client_id ||
+        entry.credential.subject !== entry.subject ||
+        entry.credential.workspace_id !== entry.workspace_id)) {
+      throw new Error('ChatGPT credential identity does not match its registration')
+    }
+  }
+  if (value.active && !identities.has(value.active)) throw new Error('Selected ChatGPT account is missing')
+  return value
+}
+async function readAccounts(): Promise<AccountStore> {
+  const stored = await readJSON<AccountStore>(ACCOUNTS_FILE)
+  if (stored) return validateAccountStore(stored)
+  // Import the original single-account credential without discarding it.
+  const legacy = await readJSON<Credential>(FILE)
+  const oldRegistration = await readJSON<Registration>(ACCOUNT_FILE)
+  const entry = legacy ? { client_id: legacy.client_id, subject: legacy.subject,
+    ...(legacy.email ? { email: legacy.email } : {}),
+    ...(legacy.workspace_id ? { workspace_id: legacy.workspace_id } : {}),
+    credential: legacy } : oldRegistration
+  return entry ? { schema: 2, active: registrationIdentity(entry), accounts: [entry] }
+    : { schema: 2, active: null, accounts: [] }
+}
+async function saveAccounts(value: AccountStore): Promise<void> {
+  validateAccountStore(value)
+  await writePrivate(ACCOUNTS_FILE, value)
+  // The new atomic index takes precedence; discard duplicate legacy tokens.
+  await fs.rm(FILE, { force: true })
+  await fs.rm(ACCOUNT_FILE, { force: true })
+}
+function activeRegistration(value: AccountStore): Registration | undefined {
+  return value.accounts.find(entry => registrationIdentity(entry) === value.active)
+}
+export type ChatGPTAccountSummary = {
+  clientId: string; subject: string; email?: string; workspaceId?: string
+  active: boolean; connected: boolean; planEnabled: boolean
+}
+export async function listChatGPTAccounts(): Promise<ChatGPTAccountSummary[]> {
+  const store = await readAccounts()
+  return store.accounts.map(entry => ({
+    clientId: entry.client_id, subject: entry.subject, email: entry.email,
+    ...(entry.workspace_id ? { workspaceId: entry.workspace_id } : {}),
+    active: store.active === registrationIdentity(entry),
+    connected: Boolean(entry.credential?.access_token && entry.credential?.refresh_token),
+    planEnabled: Boolean(entry.credential && scopeGranted(entry.credential.scope)),
+  }))
+}
+export async function selectChatGPTAccount(clientId: string): Promise<void> {
+  await withCredentialLock(async () => {
+    const store = await readAccounts()
+    const registration = store.accounts.find(entry => entry.client_id === clientId)
+    if (!registration) throw new Error('ChatGPT account registration not found')
+    store.active = registrationIdentity(registration)
+    await saveAccounts(store)
+  })
+}
 type JWTPayload = { iss?: unknown; aud?: unknown; exp?: unknown; nbf?: unknown; sub?: unknown; nonce?: unknown; email?: unknown; 'https://api.openai.com/auth'?: unknown }
 async function readJSON<T>(file: string): Promise<T | null> {
   try { return JSON.parse(await fs.readFile(file, 'utf8')) as T }
@@ -130,7 +207,6 @@ async function refreshCredentials(current: Credential): Promise<Credential> {
     ...current, access_token: data.access_token, refresh_token: data.refresh_token,
     scope: scopes, expires_at: Date.now() + Number(data.expires_in ?? 3600) * 1000,
   }
-  await writePrivate(FILE, updated)
   return updated
 }
 async function withCredentialLock<T>(operation: () => Promise<T>): Promise<T> {
@@ -160,9 +236,12 @@ export async function getChatGPTAuthorization(
   rejected?: ChatGPTAuthorization,
 ): Promise<ChatGPTAuthorization> {
   const read = async () => {
-    const credential = await readJSON<Credential>(FILE)
+    const entry = activeRegistration(await readAccounts())
+    const credential = entry?.credential
     if (!credential) throw new Error('ChatGPT not connected; run 333 auth chatgpt-login')
-    if (!scopeGranted(credential.scope)) throw new Error('ChatGPT account lacks plan usage permission')
+    if (!scopeGranted(credential.scope)) {
+      throw new Error('ChatGPT plan usage is disabled. Reauthorize or use an API key.')
+    }
     if (rejected && accountIdentity(credential) !== rejected.account) {
       throw new Error('ChatGPT account changed while the request was pending')
     }
@@ -170,15 +249,20 @@ export async function getChatGPTAuthorization(
   }
   const usable = (credential: Credential) =>
     credential.access_token !== rejected?.token && credential.expires_at > Date.now() + 120_000
-  const credential = await read()
-  if (usable(credential)) return { token: credential.access_token, account: accountIdentity(credential) }
+  const original = await read()
+  if (usable(original)) return { token: original.access_token, account: accountIdentity(original) }
   return withCredentialLock(async () => {
-    const current = await read()
-    if (current.subject !== credential.subject || current.client_id !== credential.client_id ||
-        current.workspace_id !== credential.workspace_id) {
+    const store = await readAccounts()
+    const entry = activeRegistration(store)
+    const current = entry?.credential
+    if (!current || accountIdentity(current) !== accountIdentity(original)) {
       throw new Error('ChatGPT account changed while the request was pending')
     }
-    const selected = usable(current) ? current : await refreshCredentials(current)
+    if (usable(current)) return { token: current.access_token, account: accountIdentity(current) }
+    const selected = await refreshCredentials(current)
+    if (!entry) throw new Error('ChatGPT registration disappeared during refresh')
+    entry.credential = selected
+    await saveAccounts(store)
     return { token: selected.access_token, account: accountIdentity(selected) }
   })
 }
@@ -194,10 +278,17 @@ function openBrowser(url: string): void {
   child.on('error', () => { /* printed URL remains available if no browser is installed */ })
   child.unref()
 }
-export async function loginWithChatGPT(): Promise<{ email?: string; subject: string; clientId: string }> {
+export async function loginWithChatGPT(
+  options: { addAccount?: boolean; clientId?: string } = {},
+): Promise<{ email?: string; subject: string; clientId: string; planEnabled: boolean }> {
+  if (options.addAccount && options.clientId) throw new Error('Select an existing account or register a new one')
   const hostId = await getHostId()
-  const registration = await readJSON<Registration>(ACCOUNT_FILE)
-  const existing = await readJSON<Credential>(FILE)
+  const initialStore = await readAccounts()
+  const registration = options.addAccount ? undefined
+    : options.clientId ? initialStore.accounts.find(entry => entry.client_id === options.clientId)
+    : activeRegistration(initialStore)
+  if (options.clientId && !registration) throw new Error('Unknown ChatGPT client registration')
+  const existing = registration?.credential
   const clientId = registration?.client_id ?? 'dynamic_agent_client'
   const state = randomBytes(32).toString('base64url')
   const nonce = randomBytes(32).toString('base64url')
@@ -240,6 +331,7 @@ export async function loginWithChatGPT(): Promise<{ email?: string; subject: str
       ext_agent_host_id: hostId,
       ...(registration ? {} : { agent_name_hint: '333' }),
       ...(existing?.id_token && registration ? { id_token_hint: existing.id_token } : {}),
+      ...(registration?.email ? { login_hint: registration.email } : {}),
     })) url.searchParams.set(key, value)
     // A retained ID token is passed to the browser but never printed to logs.
     const displayURL = new URL(url)
@@ -276,7 +368,8 @@ export async function loginWithChatGPT(): Promise<{ email?: string; subject: str
     if (registration && registration.subject !== identity.subject) {
       throw new Error('ChatGPT account identity changed during reauthorization')
     }
-    if (!scopeGranted(tokens.scope)) throw new Error('ChatGPT login lacks the required usage scope')
+    // Identity-only sign-in is valid. Keep it available for later explicit
+    // consent or for choosing the user's independent OpenAI API key instead.
     const credential: Credential = {
       client_id: issuedId, ext_agent_host_id: hostId, subject: identity.subject,
       ...(identity.workspaceId ? { workspace_id: identity.workspaceId } : {}),
@@ -286,14 +379,30 @@ export async function loginWithChatGPT(): Promise<{ email?: string; subject: str
       expires_at: Date.now() + Number(tokens.expires_in ?? 3600) * 1000,
     }
     await withCredentialLock(async () => {
-      const current = await readJSON<Registration>(ACCOUNT_FILE)
-      if (current?.client_id !== registration?.client_id || current?.subject !== registration?.subject) {
-        throw new Error('ChatGPT account changed during login; restart the login flow')
+      const store = await readAccounts()
+      const previous = registration ? store.accounts.find(entry =>
+        registrationIdentity(entry) === registrationIdentity(registration)) : undefined
+      if (registration && !previous) throw new Error('ChatGPT registration changed during login')
+      if (previous && previous.workspace_id !== identity.workspaceId) {
+        throw new Error('ChatGPT workspace changed during reauthorization')
       }
-      await writePrivate(ACCOUNT_FILE, { client_id: issuedId, subject: identity.subject, email: identity.email })
-      await writePrivate(FILE, credential)
+      const updated: Registration = {
+        client_id: issuedId, subject: identity.subject,
+        ...(identity.workspaceId ? { workspace_id: identity.workspaceId } : {}),
+        ...(identity.email ? { email: identity.email } : {}),
+        credential,
+      }
+      const registered = store.accounts.findIndex(entry =>
+        registrationIdentity(entry) === registrationIdentity(updated))
+      if (registered >= 0) store.accounts[registered] = updated
+      else store.accounts.push(updated)
+      // A pending new login remains separate from the currently selected
+      // credentials until the ID token and grant have been verified.
+      store.active = registrationIdentity(updated)
+      await saveAccounts(store)
     })
-    return { subject: identity.subject, email: identity.email, clientId: issuedId }
+    return { subject: identity.subject, email: identity.email,
+      clientId: issuedId, planEnabled: scopeGranted(tokens.scope) }
   } finally {
     if (loginTimeout) clearTimeout(loginTimeout)
     server.close()
@@ -301,42 +410,54 @@ export async function loginWithChatGPT(): Promise<{ email?: string; subject: str
 }
 /** For model selection during startup. No remote request or token exposure. */
 export function getSavedChatGPTAccount(): string | undefined {
-  let source: string
-  try { source = readFileSync(FILE, 'utf8') }
-  catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
-    throw error
+  const readSync = <T>(file: string): T | null => {
+    try { return JSON.parse(readFileSync(file, 'utf8')) as T }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
+      throw error
+    }
   }
-  const credential = JSON.parse(source) as Partial<Credential>
-  if (typeof credential.refresh_token === 'string' && credential.refresh_token.length > 0 &&
-    typeof credential.access_token === 'string' && credential.access_token.length > 0 &&
-    typeof credential.scope === 'string' && scopeGranted(credential.scope) &&
-      typeof credential.client_id === 'string' && typeof credential.subject === 'string') {
-    return accountIdentity(credential as Credential)
+  const saved = readSync<AccountStore>(ACCOUNTS_FILE)
+  if (saved) {
+    const active = activeRegistration(validateAccountStore(saved))
+    const credential = active?.credential
+    return credential?.access_token && credential.refresh_token &&
+      scopeGranted(credential.scope) ? accountIdentity(credential) : undefined
   }
-  return undefined
+  const legacy = readSync<Credential>(FILE)
+  return legacy?.access_token && legacy.refresh_token && scopeGranted(legacy.scope)
+    ? accountIdentity(legacy) : undefined
 }
 export function hasSavedChatGPTAuthorization(): boolean {
   return getSavedChatGPTAccount() !== undefined
 }
-export async function chatGPTStatus(): Promise<{ connected: boolean; email?: string; clientId?: string }> {
-  const account = await readJSON<Credential>(FILE)
-  return account
-    ? { connected: scopeGranted(account.scope), email: account.email, clientId: account.client_id }
-    : { connected: false }
+export async function chatGPTStatus(): Promise<{
+  connected: boolean; email?: string; clientId?: string; planEnabled: boolean
+  accounts: ChatGPTAccountSummary[]
+}> {
+  const store = await readAccounts()
+  const account = activeRegistration(store)
+  const granted = Boolean(account?.credential && scopeGranted(account.credential.scope))
+  return {
+    connected: Boolean(account?.credential?.access_token),
+    ...(account?.email ? { email: account.email } : {}),
+    ...(account ? { clientId: account.client_id } : {}),
+    planEnabled: granted,
+    accounts: await listChatGPTAccounts(),
+  }
 }
-/** Clear local identity and registration together so another account can sign in. */
+/** Sign out of the active session while preserving the client registration and other accounts. */
 export async function logoutChatGPT(): Promise<void> {
-  const credential = await withCredentialLock(async () => {
-    const saved = await readJSON<Credential>(FILE)
-    await fs.rm(FILE, { force: true })
-    await fs.rm(ACCOUNT_FILE, { force: true })
-    return saved
-  })
   let revocationError: Error | null = null
-  if (credential) {
+  await withCredentialLock(async () => {
+    const store = await readAccounts()
+    const entry = activeRegistration(store)
+    const credential = entry?.credential
+    if (!credential) return
     try {
-      const response = await fetch(`${AUTHORITY}/.well-known/openid-configuration`)
+      const response = await fetch(`${AUTHORITY}/.well-known/openid-configuration`, {
+        signal: AbortSignal.timeout(15_000),
+      })
       if (!response.ok) throw new Error(`OIDC discovery HTTP ${response.status}`)
       const doc = await response.json() as { revocation_endpoint?: string }
       if (!doc.revocation_endpoint) throw new Error('OIDC provider does not advertise token revocation')
@@ -349,14 +470,19 @@ export async function logoutChatGPT(): Promise<void> {
         body: new URLSearchParams({
           client_id: credential.client_id, token: credential.refresh_token,
           token_type_hint: 'refresh_token',
-        }),
+        }), signal: AbortSignal.timeout(15_000),
       })
       if (!revoke.ok) throw new Error(`Token revocation HTTP ${revoke.status}`)
     } catch (error) {
       revocationError = error instanceof Error ? error : new Error(String(error))
+    } finally {
+      if (entry) {
+        delete entry.credential
+        await saveAccounts(store)
+      }
     }
-  }
+  })
   if (revocationError) {
-    throw new Error(`ChatGPT 本地账号与凭据已清除；远端撤销失败：${revocationError.message}`)
+    throw new Error(`ChatGPT 本地凭据已清除，注册信息已保留；远端撤销未确认：${revocationError.message}`)
   }
 }
