@@ -153,7 +153,10 @@ export type ConfiguredModelSnapshot = {
   model: string
   provider: string
   contextWindow: number
-  maxOutputTokens: number
+  /** null means the provider has not published a verified output ceiling. */
+  maxOutputTokens: number | null
+  /** The temporary runtime cap while an official ceiling is unverified. */
+  effectiveOutputCap: number
   defaultOutputTokens: number
   contextSource: string
   outputSource: string
@@ -172,10 +175,13 @@ export function getConfiguredModelSnapshots(): ConfiguredModelSnapshot[] {
       model: option.value,
       provider: option.value.split('/')[0]!,
       contextWindow: getContextWindowForModel(option.value),
-      maxOutputTokens: output.upperLimit,
+      maxOutputTokens: profile?.maxOutputTokens ?? null,
+      effectiveOutputCap: output.upperLimit,
       defaultOutputTokens: output.default,
-      contextSource: profile?.parameterSources?.contextWindow ?? profile?.source ?? 'fallback',
-      outputSource: profile?.parameterSources?.maxOutputTokens ?? profile?.source ?? 'fallback',
+      contextSource: profile?.contextWindow !== undefined
+        ? (profile.parameterSources?.contextWindow ?? profile.source) : 'fallback',
+      outputSource: profile?.maxOutputTokens !== undefined
+        ? (profile.parameterSources?.maxOutputTokens ?? profile.source) : 'unverified',
       ...(profile?.referenceUrl ? { referenceUrl: profile.referenceUrl } : {}),
     }
   })

@@ -39,7 +39,9 @@ function getBuiltinModelFieldProfile(provider: IndependentProvider, model: strin
     const isK28 = /^kimi-k2\.8/.test(id)
     return { ...common, thinkingField: isK3 || isK28 ? 'reasoning_effort' : 'thinking',
       supportedEffort: isK3 || isK28 ? ['low', 'high', 'max'] : [],
-      alwaysThinking: isK3 || isK28 || /^kimi-k2\.7-code/.test(id), usageInStream: true }
+      alwaysThinking: isK3 || isK28 || /^kimi-k2\.7-code/.test(id),
+      outputTokenField: /^kimi-k3(?:\.|$|-)/.test(id) ? 'max_completion_tokens' : 'max_tokens',
+      usageInStream: true }
   }
   if (provider === 'minimax') {
     const m31 = /^minimax-m3\.1/.test(id)
@@ -134,6 +136,12 @@ export function applyChatModelFields(result: Wire, { provider, model, thinking, 
       if (/^minimax-m3(?:-|$)/.test(id)) result.reasoning_split = true
     }
   } else if (provider === 'kimi') {
+    // Moonshot officially prefers max_completion_tokens; max_tokens is a
+    // deprecated alias. Preserve the caller's exact numeric budget.
+    if (profile.outputTokenField === 'max_completion_tokens') {
+      result.max_completion_tokens = result.max_tokens
+      delete result.max_tokens
+    }
     if (profile.thinkingField === 'reasoning_effort') {
       if (effort) {
         // Direct Moonshot K3.1 Pro supports low/high/max; hosted gateways

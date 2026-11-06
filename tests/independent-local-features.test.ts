@@ -264,3 +264,31 @@ test('provider effort restrictions displace an incompatible documented default',
   assert.deepEqual(profile?.supportedEffort, ['max'])
   assert.equal(profile?.defaultEffort, undefined)
 })
+
+test('Moonshot-served K3.1 Pro and Highspeed each advertise 1M shared output ceiling', async () => {
+  const { getModelMaxOutputTokens, getContextWindowForModel } =
+    await import('../src/utils/context.ts')
+  for (const name of ['kimi-k3.1-pro', 'kimi-k3.1-pro-highspeed']) {
+    const model = `kimi/${name}`
+    const profile = getIndependentProfile(model)
+    assert.equal(profile?.contextWindow, 1_048_576)
+    assert.equal(profile?.maxOutputTokens, 1_048_576)
+    assert.equal(profile?.parameterSources?.maxOutputTokens, 'preset')
+    assert.equal(getContextWindowForModel(model), 1_048_576)
+    assert.equal(getModelMaxOutputTokens(model).upperLimit, 1_048_576)
+    assert.match(profile?.referenceUrl ?? '', /kimi-k3-1-pro/)
+  }
+})
+
+test('an unpublished maximum is explicitly unverified instead of represented by the runtime fallback', async () => {
+  const { getConfiguredModelSnapshots } = await import('../src/services/api/multimodel/catalog.ts')
+  const root = getModelStorageRoot()
+  const previous = readSavedModelCatalog()
+  writeFileSync(join(root, 'catalog.json'), JSON.stringify({ schema: 1, models: [
+    ...previous.models, { provider: 'minimax', id: 'unknown-model', discoveredAt: new Date().toISOString() },
+  ] }))
+  const snapshot = getConfiguredModelSnapshots().find(x => x.model === 'minimax/unknown-model')
+  assert.equal(snapshot?.maxOutputTokens, null)
+  assert.equal(snapshot?.outputSource, 'unverified')
+  assert.equal(snapshot?.effectiveOutputCap, 4_096)
+})

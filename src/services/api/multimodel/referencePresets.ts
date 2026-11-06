@@ -24,7 +24,7 @@ const PRESETS: Readonly<Record<string, ModelReferencePreset>> = {
     supportsTools: true, supportsVision: true, supportsReasoning: true,
     supportedEffort: ['low', 'medium', 'high', 'xhigh', 'max'],
     defaultEffort: 'max',
-    referenceUrl: 'https://docs.cloudsway.net/zh/maasapi/api-reference/text/MiniMax-M3.1/',
+    referenceUrl: 'https://vercel.com/ai-gateway/models/minimax-m3.1-flash',
   },
   'deepseek/deepseek-flash': {
     contextWindow: 1_048_576, maxOutputTokens: 393_216,
@@ -59,9 +59,18 @@ const PRESETS: Readonly<Record<string, ModelReferencePreset>> = {
     referenceUrl: 'https://help.aliyun.com/zh/model-studio/glm-5-3-by-zhipu',
   },
   'kimi/kimi-k3.1-pro': {
-    contextWindow: 1_048_576, supportsVision: true, supportsReasoning: true,
-    // The developer model card does not publish a separate output ceiling.
-    referenceUrl: 'https://huggingface.co/moonshotai/Kimi-K3.1-Pro',
+    // Moonshot-served deployment: 1M total shared context and 1M output
+    // ceiling. Per request, the actual maximum is context minus input usage.
+    contextWindow: 1_048_576, maxOutputTokens: 1_048_576,
+    supportsTools: true, supportsVision: true, supportsReasoning: true,
+    supportedEffort: ['low', 'high', 'max'], defaultEffort: 'max',
+    referenceUrl: 'https://help.aliyun.com/zh/model-studio/kimi-k3-1-pro-by-moonshot',
+  },
+  'kimi/kimi-k3.1-pro-highspeed': {
+    contextWindow: 1_048_576, maxOutputTokens: 1_048_576,
+    supportsTools: true, supportsVision: true, supportsReasoning: true,
+    supportedEffort: ['low', 'high', 'max'], defaultEffort: 'max',
+    referenceUrl: 'https://help.aliyun.com/zh/model-studio/kimi-k3-1-pro-highspeed-by-moonshot',
   },
 }
 
