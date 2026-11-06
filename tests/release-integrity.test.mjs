@@ -104,6 +104,8 @@ test("repository package uses rebuilt launcher canonical entrypoint", () => {
   const releasePackage = JSON.parse(readFileSync(join(dist, 'package.json'), 'utf8'));
   assert.equal(rootPackage.bin.yaoyaoche, 'dist/launcher.cjs');
   assert.equal(releasePackage.bin.yaoyaoche, './launcher.cjs');
+  assert.equal(releasePackage.bin['yaoyaoche-desktop'], './' +
+    (process.platform === 'win32' ? 'desktopHost.exe' : 'desktopHost'));
   assert.ok(existsSync(join(root, rootPackage.bin.yaoyaoche)));
 });
 
@@ -183,7 +185,7 @@ test('release is runnable from an isolated folder without repository node_module
 });
 
 test('packaged desktop bridge is SHA-256 verified and serves its protocol without a system Bun runtime', () => {
-  const native = process.platform === 'win32' ? 'yaoyaoche-desktop.exe' : 'yaoyaoche-desktop';
+  const native = process.platform === 'win32' ? 'desktopHost.exe' : 'desktopHost';
   for (const name of ['desktopHost.js', 'desktopHost.js.map', native]) {
     const path = join(dist, name);
     assert.ok(existsSync(path), 'Missing desktop release artifact: ' + name);
