@@ -108,7 +108,7 @@ export function getCoordinatorUserContext(
   }
 
   const missionContext = getSelectedMissionPrompt()
-  if (missionContext) content += '\n\n' + missionContext
+  if (missionContext) content += `\n\n${missionContext}`
   return { workerToolsContext: content }
 }
 
