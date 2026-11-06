@@ -86,7 +86,7 @@ def probe(executable,mode,timeout,brand):
             os.close(master)
         raw=buffer.decode('utf8','replace')
         text=OSC.sub('',CSI.sub('',raw)).replace('\r','').strip()
-        model_match=re.search(r'\b(Opus|Sonnet|Haiku)\s+([0-9]+(?:\.[0-9]+)?)\s*·\s*API Usage Billing',text)
+        model_match=re.search(r'\b(Opus|Sonnet|Haiku)\s+([0-9]+(?:\.[0-9]+)?)\s*·\s*(?:API Usage Billing|API\s*用量计费)',text)
         model_name=' '.join(model_match.groups()) if model_match else None
         auto_on=bool(re.search(r'\bauto mode on\b',text,re.I))
         auto_notice=('Auto mode is now Claude Code' in text if brand=='official' else '自动模式已启用' in text)
@@ -95,7 +95,7 @@ def probe(executable,mode,timeout,brand):
                 'activation_banner': (f'[Screen Reader Mode: on via {mode}]' in text if mode!='off' else '[Screen Reader Mode: on' in text),
                 'flat_welcome':(bool(re.search(r'Welcome to Claude Code|Claude Code v2\.1\.317\b',text))
                                 if brand=='official' else bool(re.search(r'333 v2\.1\.317\b',text))),
-                'model_and_billing_visible':bool(re.search(r'\b(?:Opus|Sonnet|Haiku)\b[^\n]*Billing',text)),
+                'model_and_billing_visible':bool(model_match),
                  'model_name':model_name,
                  'auto_mode_active':auto_on,
                  'auto_mode_notice':auto_notice,

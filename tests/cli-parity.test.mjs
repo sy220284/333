@@ -66,7 +66,7 @@ assert.equal(official317.version, targetVersion);
 // these intentional additions may differ from the Claude reference.
 const independentCommands = {
   '--help': ['local-settings', 'local-tasks', 'models'],
-  'auth --help': ['api-key', 'chatgpt-login', 'chatgpt-logout', 'chatgpt-status'],
+  'auth --help': ['api-key', 'chatgpt-login', 'chatgpt-logout', 'chatgpt-status', 'chatgpt-accounts', 'chatgpt-switch'],
 };
 function verifyBaseAndExtensions(actual, official, commandLine) {
   const additions = independentCommands[commandLine] ?? [];

@@ -172,6 +172,9 @@ export async function checkGate_CACHED_OR_BLOCKING(name: string): Promise<boolea
 }
 export function refreshGrowthBookAfterAuthChange(): void { notifyListeners() }
 export function resetGrowthBook(_options: { preservePendingExposures?: boolean; preserveLoggedExposures?: boolean } = {}): void {
+  // Claim handoff changes the environment owner: parse local overrides again.
+  internalOverrides = null
+  overridesLoaded = false
   notifyListeners()
 }
 export async function refreshGrowthBookFeatures(): Promise<void> { notifyListeners() }

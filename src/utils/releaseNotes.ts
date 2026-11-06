@@ -68,9 +68,9 @@ export async function fetchAndStoreChangelog(): Promise<void> {
     if (!Array.isArray(response.data)) throw new Error('333 发布记录接口返回格式异常')
     const releases = response.data as Array<{ tag_name?: string; body?: string; draft?: boolean }>
     const entries = releases.filter(item => !item.draft && /^v?\d+\.\d+\.\d+/.test(item.tag_name ?? ''))
-    const changelogContent = '# 333 发布记录\n\n' + entries.map(item =>
-      '## ' + item.tag_name!.replace(/^v/, '') + '\n' + (item.body ?? '')
-    ).join('\n\n')
+    const changelogContent = `# 333 发布记录\n\n${entries.map(item =>
+      `## ${(item.tag_name ?? '').replace(/^v/, '')}\n${item.body ?? ''}`
+    ).join('\n\n')}`
 
     // Skip write if content unchanged — writing Date.now() defeats the
     // dirty-check in saveGlobalConfig since the timestamp always differs.

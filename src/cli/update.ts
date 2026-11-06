@@ -126,7 +126,7 @@ export async function update() : Promise<void> {
         writeToStdout(`Update available: ${MACRO.VERSION} → ${latest}\n`)
         writeToStdout('\n')
         writeToStdout('To update, run:\n')
-        writeToStdout(chalk.bold('  请通过原安装渠道升级 333') + '\n')
+        writeToStdout(`${chalk.bold('  请通过原安装渠道升级 333')}\n`)
       } else {
         writeToStdout('333 已是最新版本!\n')
       }
@@ -138,7 +138,7 @@ export async function update() : Promise<void> {
         writeToStdout('\n')
         writeToStdout('To update, run:\n')
         writeToStdout(
-          chalk.bold('  请通过原安装渠道升级 333') + '\n',
+          `${chalk.bold('  请通过原安装渠道升级 333')}\n`,
         )
       } else {
         writeToStdout('333 已是最新版本!\n')
@@ -150,7 +150,7 @@ export async function update() : Promise<void> {
         writeToStdout(`Update available: ${MACRO.VERSION} → ${latest}\n`)
         writeToStdout('\n')
         writeToStdout('To update, run:\n')
-        writeToStdout(chalk.bold('  请通过原安装渠道升级 333') + '\n')
+        writeToStdout(`${chalk.bold('  请通过原安装渠道升级 333')}\n`)
       } else {
         writeToStdout('333 已是最新版本!\n')
       }
@@ -238,7 +238,7 @@ export async function update() : Promise<void> {
 
       if (result.latestVersion === MACRO.VERSION) {
         writeToStdout(
-          chalk.green(`333 已是最新版本 (${MACRO.VERSION})`) + '\n',
+          `${chalk.green(`333 已是最新版本 (${MACRO.VERSION})`)}\n`,
         )
       } else {
         writeToStdout(
@@ -302,7 +302,7 @@ export async function update() : Promise<void> {
   // Check if versions match exactly, including any build metadata (like SHA)
   if (latestVersion === MACRO.VERSION) {
     writeToStdout(
-      chalk.green(`333 已是最新版本 (${MACRO.VERSION})`) + '\n',
+      `${chalk.green(`333 已是最新版本 (${MACRO.VERSION})`)}\n`,
     )
     await gracefulShutdown(0)
   }

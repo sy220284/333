@@ -79,7 +79,7 @@ export function discoverUnregisteredTests(root = ROOT, options = {}) {
   const workflows = walk(join(root, '.github', 'workflows'))
     .filter(path => /\.ya?ml$/.test(path))
     .map(path => readFileSync(path, 'utf8'))
-    .filter(source => /^  pull_request:\s*$/m.test(source))
+    .filter(source => /^ {2}pull_request:\s*$/m.test(source))
     .map(workflowRunCommands).join('\n')
   const workflowOnly = options.workflowOnly === true
   const supplemental = options.ciSupplemental === true
@@ -195,16 +195,16 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   })
   if (CI_ORACLE) {
     const missing = ORACLE_TESTS.filter(path => !tests.includes(path))
-    if (missing.length) throw new Error('Official parity test missing from repository: ' + missing.join(', '))
+    if (missing.length) throw new Error(`Official parity test missing from repository: ${missing.join(', ')}`)
     if (!process.argv.includes('--list')) {
       for (const key of ['CLAUDE_TARGET_X64', 'CLAUDE_REFERENCE_BIN']) {
         if (!process.env[key] || !existsSync(process.env[key]))
-          throw new Error('Official parity cannot run without verified ' + key)
+          throw new Error(`Official parity cannot run without verified ${key}`)
       }
     }
   }
   const value = flag => {
-    const item = process.argv.find(arg => arg.startsWith(flag + '='))
+    const item = process.argv.find(arg => arg.startsWith(`${flag}=`))
     return item ? Number(item.slice(flag.length + 1)) : null
   }
   const shardCount = value('--shard-count') ?? 1

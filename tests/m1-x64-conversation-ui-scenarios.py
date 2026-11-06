@@ -438,7 +438,7 @@ def main():
     parser.add_argument('--reference',required=True)
     parser.add_argument('--candidate',required=True)
     parser.add_argument('--report',required=True)
-    parser.add_argument('--target',default='2.1.310',help='Actual reference release; historical tests default to 2.1.310')
+    parser.add_argument('--target',default=json.loads((Path(__file__).resolve().parent.parent / 'docs/upgrade/m1-evidence/target-release.json').read_text('utf-8'))['target_version'],help='Actual reference release from the pinned target manifest')
     parser.add_argument('--strict-animations',action='store_true',help='Check glyph sets after dense capture; keep per-frame mismatch evidence')
     args=parser.parse_args()
     reference_version=subprocess.run([args.reference,'--version'],capture_output=True,text=True,timeout=12)

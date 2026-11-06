@@ -26,7 +26,7 @@ const retired = [
   'src/constants/github-app.ts',
 ]
 const errors = []
-for (const path of retired) if (existsSync(join(root, path))) errors.push('退役源码仍存在: ' + path)
+for (const path of retired) if (existsSync(join(root, path))) errors.push(`退役源码仍存在: ${path}`)
 
 const uiBrandHits = []
 const missingImports = []
@@ -77,7 +77,7 @@ const protectedUI = [
 for (const path of protectedUI) {
   const content = readFileSync(join(root, path), 'utf8').split('//# sourceMappingURL=')[0]
   if (/Claude Code v|<Clawd|AnimatedClawd|useOfficialMarketplaceNotification|anthropics\/claude-code/.test(content)) {
-    errors.push('用户主界面残留原厂品牌或已删除入口: ' + path)
+    errors.push(`用户主界面残留原厂品牌或已删除入口: ${path}`)
   }
 }
 const commitPrompt = readFileSync(join(root, 'src/commands/commit-push-pr.ts'),'utf8')
@@ -86,7 +86,7 @@ if (/--(?:add-)?reviewer anthropics\/claude-code/.test(commitPrompt)) {
 }
 for (const hit of missingImports) {
   if (retired.some(path => hit.resolved.replace(/\.js$/, '.ts') === path || hit.resolved === path)) {
-    errors.push('仍引用已删除模块: ' + hit.file + ' -> ' + hit.import)
+    errors.push(`仍引用已删除模块: ${hit.file} -> ${hit.import}`)
   }
 }
 const report = {
