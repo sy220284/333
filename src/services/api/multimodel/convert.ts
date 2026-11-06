@@ -156,21 +156,7 @@ export function toChatCompletions(body: AnthropicRequest, model: string, provide
     const calls = parts.filter(p => p.type === 'tool_use').map(p => ({
       id: p.id, type: 'function', function: { name: p.name, arguments: JSON.stringify(p.input ?? {}) },
     }))
-    const opaqueBlocks = provider === 'openrouter' && replaySignature
-      ? parts.filter(p => p.type === 'redacted_thinking' && typeof p.data === 'string' &&
-          p.data.startsWith(replaySignature + ':openrouter:'))
-      : []
-    const reasoningDetails = opaqueBlocks.flatMap(p => {
-      const serialized = p.data.slice((replaySignature + ':openrouter:').length)
-      const parsed: unknown = JSON.parse(serialized)
-      if (!Array.isArray(parsed) || !parsed.every(item =>
-        item && typeof item === 'object' &&
-        ['reasoning.text', 'reasoning.encrypted', 'reasoning.summary'].includes(item.type))) {
-        throw new Error('Invalid OpenRouter reasoning replay blocks')
-      }
-      return parsed
-    })
-    if (ordinary.length || calls.length || reasoningDetails.length) {
+    if (ordinary.length || calls.length) {
       messages.push({
         role: message.role,
         // DeepSeek tool-call assistant messages require a non-null content
@@ -181,10 +167,6 @@ export function toChatCompletions(body: AnthropicRequest, model: string, provide
         ...(calls.length ? { tool_calls: calls } : {}),
         ...(reasoningContent && (provider === 'deepseek' || provider === 'qwen' || provider === 'kimi' || provider === 'minimax')
           ? { reasoning_content: reasoningContent } : {}),
-        ...(provider === 'openrouter' && reasoningDetails.length
-          ? { reasoning_details: reasoningDetails } : {}),
-        ...(provider === 'openrouter' && reasoningContent && !reasoningDetails.length
-          ? { reasoning: reasoningContent } : {}),
       })
     }
   }
