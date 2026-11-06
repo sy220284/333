@@ -22,7 +22,6 @@ test('2.1.317: absent and false restrictions keep Remote Control eligible', () =
 })
 
 test('retired cloud command is absent while managed remote-control policy still has effect', () => {
-  const { existsSync } = require('node:fs')
   const commandUrl = new URL('../src/commands/bridge/index.ts', import.meta.url)
   assert.equal(existsSync(commandUrl), false)
   const enabled = readFileSync(new URL('../src/bridge/bridgeEnabled.ts', import.meta.url),'utf8')
