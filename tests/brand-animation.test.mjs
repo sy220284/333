@@ -6,7 +6,7 @@ import { test } from 'node:test'
 const root = resolve(import.meta.dirname, '..')
 const source = path => readFileSync(resolve(root, path), 'utf8')
 
-test('Avenlo 标识覆盖完整及精简欢迎界面，动效支持低动态和读屏模式', () => {
+test('Qerivon 标识覆盖完整及精简欢迎界面，动效支持低动态和读屏模式', () => {
   const logo = source('src/components/LogoV2/LogoV2.tsx')
   const condensed = source('src/components/LogoV2/CondensedLogo.tsx')
   const animated = source('src/components/LogoV2/AnimatedBrandMark.tsx')
@@ -16,8 +16,8 @@ test('Avenlo 标识覆盖完整及精简欢迎界面，动效支持低动态和�
   assert.ok(animated.includes('useAnimationFrame('))
   assert.ok(animated.includes('prefersReducedMotion'))
   assert.ok(animated.includes('isScreenReaderEnabled()'))
-  assert.ok(animated.includes('width={12} height={3}'))
-  assert.ok(source('src/components/LogoV2/BrandMark.tsx').includes('Avenlo'))
+  assert.ok(animated.includes('width={13} height={3}'))
+  assert.ok(source('src/components/LogoV2/BrandMark.tsx').includes('Qerivon'))
   assert.doesNotMatch(logo + condensed, /Clawd|AnimatedClawd|Claude Code/)
   for (const path of ['Clawd.tsx','AnimatedClawd.tsx','clawdAnimationData.ts','clawdAnimationData.mjs','clawdAnimationSelection.ts']) {
     assert.equal(existsSync(resolve(root, 'src/components/LogoV2', path)), false, path)

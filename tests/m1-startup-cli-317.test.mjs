@@ -7,7 +7,7 @@ import { join, resolve } from 'node:path'
 import { test } from 'node:test'
 
 const cli = resolve(import.meta.dirname, '../dist/cli.js')
-const standalone = resolve(import.meta.dirname, '../dist', process.platform === 'win32' ? 'avenlo.exe' : 'avenlo')
+const standalone = resolve(import.meta.dirname, '../dist', process.platform === 'win32' ? 'qerivon.exe' : 'qerivon')
 const nativeRuntimeMode = process.env.M1_NATIVE_BINARY_RUN === '1'
 const id = '11111111-1111-4111-8111-111111111111'
 const model = 'claude-sonnet-4-6'
@@ -26,7 +26,7 @@ test('deep-link argument injection is rejected before configuration side effects
   try {
     const result = spawnSync('bun', [cli, '--handle-uri', 'claude://open', '--settings', 'malicious'], { encoding: 'utf8', timeout: 5000, env: { ...process.env, CLAUDE_CONFIG_DIR: home } })
     assert.ifError(result.error); assert.equal(result.status, 1); assert.match(result.stderr, /argument injection/)
-    assert.equal(existsSync(join(home, '.avenlo.json')), false)
+    assert.equal(existsSync(join(home, '.qerivon.json')), false)
   } finally { rmSync(home, { recursive: true, force: true }) }
 })
 

@@ -145,15 +145,15 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
     assert.equal(profiles.getIndependentProfile('chatgpt/gpt-6.1-sol')?.contextWindow, 32000)
     assert.equal(profiles.getIndependentProfile('chatgpt/gpt-6.1-sol')?.supportsTools, true)
     assert.equal(callbackError, null)
-    const saved = JSON.parse(readFileSync(join(root, '.avenlo', 'auth', 'chatgpt-accounts.json'), 'utf8'))
+    const saved = JSON.parse(readFileSync(join(root, '.qerivon', 'auth', 'chatgpt-accounts.json'), 'utf8'))
     assert.equal(saved.schema, 2)
     assert.equal(saved.accounts.length, 2)
     // Index contains only account metadata; refresh and access tokens stay
     // isolated in per-account files with owner-only permissions.
-    const indexText = readFileSync(join(root, '.avenlo', 'auth', 'chatgpt-accounts.json'), 'utf8')
+    const indexText = readFileSync(join(root, '.qerivon', 'auth', 'chatgpt-accounts.json'), 'utf8')
     assert.ok(!indexText.includes('access-oaiapp_333_one'))
     assert.ok(!indexText.includes('refresh-oaiapp_333_two'))
-    const tokenDirectory = join(root, '.avenlo', 'auth', 'chatgpt-tokens')
+    const tokenDirectory = join(root, '.qerivon', 'auth', 'chatgpt-tokens')
     const files = readdirSync(tokenDirectory)
     assert.equal(files.length, 2)
     const records = files.map(name => JSON.parse(readFileSync(join(tokenDirectory, name), 'utf8')))
@@ -162,7 +162,7 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
       for (const name of files) {
         assert.equal(statSync(join(tokenDirectory, name)).mode & 0o777, 0o600)
       }
-      assert.equal(statSync(join(root, '.avenlo', 'auth', 'chatgpt-accounts.json')).mode & 0o777, 0o600)
+      assert.equal(statSync(join(root, '.qerivon', 'auth', 'chatgpt-accounts.json')).mode & 0o777, 0o600)
     }
     // A dynamic client ID is issued before the code exchange. A rejected code
     // must preserve that registration and use a fresh authorization challenge
@@ -170,7 +170,7 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
     const originalActive = auth.getSavedChatGPTAccount()
     await assert.rejects(auth.loginWithChatGPT({ addAccount: true }, browser), /HTTP 400/)
     assert.equal(auth.getSavedChatGPTAccount(), originalActive)
-    const pendingPath = join(root, '.avenlo', 'auth', 'chatgpt-pending-registration.json')
+    const pendingPath = join(root, '.qerivon', 'auth', 'chatgpt-pending-registration.json')
     const pending = JSON.parse(readFileSync(pendingPath, 'utf8'))
     assert.equal(pending.client_id, 'oaiapp_333_three')
     if (process.platform !== 'win32') assert.equal(statSync(pendingPath).mode & 0o777, 0o600)

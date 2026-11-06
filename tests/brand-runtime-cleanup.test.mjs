@@ -6,7 +6,7 @@ const root = resolve(import.meta.dirname, '..')
 const source = path => readFileSync(resolve(root, path), 'utf8')
 test('独立系统身份与历史会话前缀隔离', () => {
   const s = source('src/constants/system.ts')
-  assert.ok(s.includes('const DEFAULT_PREFIX = `You are Avenlo'))
+  assert.ok(s.includes('const DEFAULT_PREFIX = `You are Qerivon'))
   assert.ok(s.includes('const LEGACY_PREFIXES'))
   assert.ok(source('src/services/api/claude.ts').includes('getCLISyspromptPrefix'))
 })
@@ -24,12 +24,12 @@ test('过期推广清理并保留通用 GitHub 接口', () => {
   assert.ok(t.includes("'github-integration'"))
   assert.ok(t.includes("'feedback-command'"))
 })
-test('Avenlo 独立包名与原生更新来源受约束', () => {
+test('Qerivon 独立包名与原生更新来源受约束', () => {
   const build = source('build/rebuild.mjs')
-  assert.ok(build.includes("'MACRO.PACKAGE_URL': '\"@avenlo/agent-cli\"'"))
+  assert.ok(build.includes("'MACRO.PACKAGE_URL': '\"@qerivon/agent-cli\"'"))
   assert.ok(!build.includes("'MACRO.PACKAGE_URL': '\"@anthropic-ai"))
   const release = source('src/utils/releaseSource.ts')
-  assert.ok(release.includes('AVENLO_NATIVE_RELEASE_BASE_URL'))
+  assert.ok(release.includes('QERIVON_NATIVE_RELEASE_BASE_URL'))
   assert.ok(release.includes('claude-code-dist'))
   for (const p of ['src/utils/nativeInstaller/download.ts','src/utils/autoUpdater.ts']) {
     assert.ok(!source(p).includes('claude-code-dist-86c565'))
@@ -43,11 +43,11 @@ test('独立模型主请求与辅助请求不注入原厂计费头', () => {
   assert.match(side, /const attributionHeader = resolveIndependentModel\(model\)/)
 })
 
-test('安装器清理只处理 Avenlo 包，不触碰独立 Claude 安装目录', () => {
+test('安装器清理只处理 Qerivon 包，不触碰独立 Claude 安装目录', () => {
   const installer = source('src/utils/nativeInstaller/installer.ts')
   const doctor = source('src/utils/doctorDiagnostic.ts')
-  assert.ok(installer.includes("const ownPackage = '@avenlo/agent-cli'"))
+  assert.ok(installer.includes("const ownPackage = '@qerivon/agent-cli'"))
   assert.doesNotMatch(installer.slice(installer.indexOf('export async function cleanupNpmInstallations')), /rm\(localInstallDir|attemptNpmUninstall\(\s*'@anthropic-ai\/claude-code'/)
-  assert.ok(doctor.includes("const packagesToCheck = ['@avenlo/agent-cli']"))
+  assert.ok(doctor.includes("const packagesToCheck = ['@qerivon/agent-cli']"))
   assert.doesNotMatch(doctor, /uninstall @anthropic-ai\/claude-code/)
 })
