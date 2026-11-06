@@ -3671,11 +3671,27 @@ async function run(): Promise<CommanderCommand> {
       await deleteProviderApiKey(checkedProvider);
       process.stdout.write(`已删除 ${provider} 的本机 API Key\n`);
     });
-  auth.command('chatgpt-login').description('通过官方浏览器授权连接 ChatGPT 账号').action(async () => {
-    const { loginWithChatGPT } = await import('./services/auth/chatgptOAuth.js');
-    const identity = await loginWithChatGPT();
-    process.stdout.write(`ChatGPT 已连接：${identity.email ?? identity.subject}\n`);
+  auth.command('chatgpt-login').description('通过官方浏览器授权连接 ChatGPT 账号')
+    .option('--new', '注册新的 ChatGPT 账号或工作区')
+    .option('--account <clientId>', '重新授权已注册的 ChatGPT 账号')
+    .action(async (options: { new?: boolean; account?: string }) => {
+      const { loginWithChatGPT } = await import('./services/auth/chatgptOAuth.js');
+      const identity = await loginWithChatGPT({ addAccount: options.new, clientId: options.account });
+      process.stdout.write(`ChatGPT 已登录：${identity.email ?? identity.subject}\n`);
+      if (!identity.planEnabled) {
+        process.stdout.write('当前账号尚未授权套餐推理；可以重新授权或使用 OpenAI API Key。\n');
+      }
+    });
+  auth.command('chatgpt-accounts').description('列出已注册的 ChatGPT 账号和工作区').action(async () => {
+    const { listChatGPTAccounts } = await import('./services/auth/chatgptOAuth.js');
+    process.stdout.write(`${JSON.stringify(await listChatGPTAccounts(), null, 2)}\n`);
   });
+  auth.command('chatgpt-switch <clientId>').description('切换到已注册的 ChatGPT 账号')
+    .action(async (clientId: string) => {
+      const { selectChatGPTAccount } = await import('./services/auth/chatgptOAuth.js');
+      await selectChatGPTAccount(clientId);
+      process.stdout.write('ChatGPT 活动账号已切换。\n');
+    });
   auth.command('chatgpt-status').description('查看 ChatGPT 授权状态').action(async () => {
     const { chatGPTStatus } = await import('./services/auth/chatgptOAuth.js');
     process.stdout.write(`${JSON.stringify(await chatGPTStatus(), null, 2)}\n`);
