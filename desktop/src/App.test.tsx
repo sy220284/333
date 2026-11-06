@@ -65,6 +65,28 @@ describe('摇摇车真实桌面页面交互',()=>{
     }))
   })
 
+  it('两个后台智能体同时请求权限时逐项回传各自SDK会话',async()=>{
+    const user=userEvent.setup()
+    const SECOND='e9c46d7b-2766-49c8-9f2d-142c90a45d5a'
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await act(async()=>{
+      listener({event:'permission.request',sessionId:SID,permission:{id:'approval-main',toolName:'Bash',input:{command:'git status'}}})
+      listener({event:'permission.request',sessionId:SECOND,permission:{id:'approval-worker',toolName:'FileEdit',input:{file_path:'a.ts'}}})
+    })
+    const dialog=screen.getByRole('dialog',{name:'工具权限审批'})
+    expect(within(dialog).getByText(/另有 1 项待审操作/)).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button',{name:'允许本次操作'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('permissions.decide',{
+      sessionId:SID,permissionId:'approval-main',decision:{behavior:'allow'}
+    }))
+    await waitFor(()=>expect(within(dialog).getByText(/FileEdit/)).toBeInTheDocument())
+    await user.click(within(dialog).getByRole('button',{name:'允许本次操作'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('permissions.decide',{
+      sessionId:SECOND,permissionId:'approval-worker',decision:{behavior:'allow'}
+    }))
+  })
+
   it('MCP 配置列表可见，并将启停操作交给真实网关',async()=>{
     const user=userEvent.setup()
     render(<App/>)
