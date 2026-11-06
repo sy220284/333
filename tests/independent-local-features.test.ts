@@ -22,6 +22,7 @@ const { saveLocalFeedback, listLocalFeedback } = await import('../src/services/l
 const { updateIndependentProfile, getIndependentProfile, mergeDiscoveredModelProfiles, readIndependentProfiles } =
   await import('../src/services/api/multimodel/profiles.ts')
 const { discoverIndependentModelDetails } = await import('../src/services/api/multimodel/registry.ts')
+const { getModelFieldProfile } = await import('../src/services/api/multimodel/providerFields.ts')
 const { countIndependentModelTokens } = await import('../src/services/api/multimodel/tokenCounting.ts')
 const { readSavedModelCatalog } = await import('../src/services/api/multimodel/catalog.ts')
 const { readIndependentPricing } = await import('../src/services/api/multimodel/pricing.ts')
@@ -139,4 +140,27 @@ test('old local model, profile and price caches exclude removed providers withou
     'deepseek/deepseek-chat': { input: 0.3, output: 1.5 },
   }))
   assert.deepEqual(Object.keys(readIndependentPricing()), ['deepseek/deepseek-chat'])
+})
+
+
+test('official DeepSeek discovery persists model-specific effort limits and default', async () => {
+  const backend = (async () => Response.json({ data: [{
+    id: 'deepseek-v4-pro',
+    context_window: 1048576, max_output_tokens: 131072,
+    input_modalities: ['text', 'image'],
+    effort: { supported_levels: ['high', 'max'], default_level: 'max' },
+  }] })) as typeof fetch
+  const found = await discoverIndependentModelDetails('deepseek', 'mock-key', backend)
+  assert.deepEqual(found, [{
+    id: 'deepseek-v4-pro', contextWindow: 1048576, maxOutputTokens: 131072,
+    supportsVision: true, supportedEffort: ['high', 'max'], defaultEffort: 'max',
+  }])
+  assert.equal(await mergeDiscoveredModelProfiles('deepseek', found), 1)
+  const saved = getIndependentProfile('deepseek/deepseek-v4-pro')
+  assert.equal(saved?.defaultEffort, 'max')
+  assert.deepEqual(getModelFieldProfile('deepseek', 'deepseek-v4-pro').supportedEffort,
+    ['high', 'max'])
+  await assert.rejects(updateIndependentProfile('deepseek/deepseek-v4-pro', {
+    source: 'manual', supportedEffort: ['low'], defaultEffort: 'max',
+  }), /default effort/)
 })
