@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""M1 2.1.310 x64 本机模型 API + Read 工具调用闭环差分。
+"""M1 2.1.317 x64 本机模型 API + Read 工具调用闭环差分。
 
 必须明确传入发行程序，不读取用户凭据、不向外部服务发请求。
 仅验证 CLI 的本机模型协议和工具权限链，不宣称覆盖真实云服务。
@@ -16,7 +16,7 @@ import threading
 import time
 from socketserver import ThreadingMixIn
 
-BINARY_SHA256 = "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56"
+BINARY_SHA256 = "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0"
 MARKER = "M1_X64_MOCK_MODEL_OK"
 FIXTURE = "M1_READ_TOOL_FIXTURE_OK"
 MODEL = "claude-sonnet-4-5"
@@ -178,14 +178,14 @@ def main():
     args = parser.parse_args()
     checksum = hashlib.sha256(args.binary.read_bytes()).hexdigest()
     if checksum != BINARY_SHA256:
-        raise ValueError(f"2.1.310 官方二进制 SHA-256 不一致: {checksum}")
+        raise ValueError(f"2.1.317 官方二进制 SHA-256 不一致: {checksum}")
     with tempfile.TemporaryDirectory(prefix="m1-local-api-") as tmp:
         cases = []
         for mode in ("stream", "read", "denied"):
             scope = pathlib.Path(tmp, mode)
             scope.mkdir()
             cases.append(run_mode(str(args.binary.resolve()), mode, str(scope)))
-    report = {"schema": 1, "release": "2.1.310", "reference_sha256": checksum,
+    report = {"schema": 1, "release": "2.1.317", "reference_sha256": checksum,
               "scope": "LOCAL_LOOPBACK_MOCK_SSE_AND_REAL_READ_TOOL",
               "count": len(cases), "passed": sum(c["passed"] for c in cases),
               "cases": cases, "network": "only localhost model endpoint; no real API credentials"}
