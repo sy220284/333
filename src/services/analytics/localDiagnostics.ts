@@ -1,5 +1,5 @@
 /**
- * Local-only Qerivon diagnostic event journal. Events are metadata-only:
+ * Local-only 摇摇车 diagnostic event journal. Events are metadata-only:
  * no prompts, source code, filenames, credentials, or raw API responses.
  */
 import { promises as fs } from 'node:fs'
@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { registerCleanup } from '../../utils/cleanupRegistry.js'
 import { isTelemetryDisabled } from '../../utils/privacyLevel.js'
-const DIAGNOSTICS_DIR = join(homedir(), '.qerivon', 'diagnostics')
+const DIAGNOSTICS_DIR = join(homedir(), '.yaoyaoche', 'diagnostics')
 const JOURNAL = join(DIAGNOSTICS_DIR, 'events.ndjson')
 export function getLocalDiagnosticsFilePath(): string { return JOURNAL }
 const ARCHIVE = join(DIAGNOSTICS_DIR, 'events.previous.ndjson')
@@ -54,7 +54,7 @@ export function recordLocalEvent(event: string, raw: Record<string, unknown> = {
   const next = queue.then(() => appendEvent(event, attributes))
   queue = next.catch(error => {
     failure = error as Error
-    process.stderr.write(`[Qerivon diagnostics] ${String(error)}\n`)
+    process.stderr.write(`[摇摇车 diagnostics] ${String(error)}\n`)
   })
   return next
 }
