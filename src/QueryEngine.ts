@@ -14,6 +14,7 @@ import type {
   SDKCompactBoundaryMessage,
   SDKMessage,
   SDKPermissionDenial,
+  SDKResultError,
   SDKStatus,
   SDKUserMessageReplay,
 } from 'src/entrypoints/agentSdkTypes.js'
@@ -1219,7 +1220,7 @@ export class QueryEngine {
     }
 
     if (isApiError) {
-      yield {
+      const failedApiResult: SDKResultError = {
         type: 'result',
         // The official 2.1.317 SDK uses the success result envelope even
         // when an API response has failed. Consumers must inspect is_error
@@ -1243,6 +1244,7 @@ export class QueryEngine {
         result: textResult || `API request failed (stop_reason=${lastStopReason ?? 'unknown'})`,
         errors: [textResult || `API request failed (stop_reason=${lastStopReason ?? 'unknown'})`],
       }
+      yield failedApiResult
       return
     }
     yield {
