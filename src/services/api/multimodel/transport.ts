@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto'
+import { createHmac, randomUUID } from 'node:crypto'
 import type { IndependentModelProfile } from './profiles.js'
 import type { ProviderRoute } from './registry.js'
 import { type AnthropicRequest, toResponses, toChatCompletions } from './convert.js'
@@ -365,8 +365,11 @@ export function makeIndependentFetch(
       if (body.output_config) delete body.output_config.effort
     }
     const qualifiedModel = `${route.provider}/${route.model}`
-    const signature = `333-replay:${createHash('sha256')
-      .update(JSON.stringify([qualifiedModel, route.endpoint, accountIdentity])).digest('hex')}`
+    // Use the account/API key as an HMAC key, never as input to a fast
+    // publicly reproducible password hash. This stays stable across requests
+    // and across ChatGPT token refreshes (whose accountIdentity is stable).
+    const signature = `333-replay:${createHmac('sha256', accountIdentity)
+      .update(JSON.stringify([qualifiedModel, route.endpoint])).digest('hex')}`
     const payload = route.protocol === 'responses'
       ? toResponses(body, route.model, signature)
       : toChatCompletions(body, route.model, route.provider, signature)
