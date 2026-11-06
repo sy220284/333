@@ -6,6 +6,7 @@ import { makeIndependentFetch } from '../src/services/api/multimodel/transport.t
 import { getModelFieldProfile } from '../src/services/api/multimodel/providerFields.ts'
 import { runModelToolRoundTrip } from '../src/services/api/multimodel/capabilityProbe.ts'
 import { validateApiKeyProvider } from '../src/services/auth/apiKeyVault.ts'
+import { getChatGPTAccountIdentity } from '../src/services/auth/chatgptOAuth.ts'
 
 const body = {
   model: 'openai/gpt-6.1-sol',
@@ -135,6 +136,22 @@ test('missing provider tool-call ID fails safely instead of generating an unpair
     } } },
   ))(responseRequest)
   await assert.rejects(() => responseResult.text(), /stable name or ID/)
+})
+
+test('Codex-style ChatGPT workspace identity cannot leak model cache or replay across accounts', () => {
+  const legacy = getChatGPTAccountIdentity({ client_id: 'client', subject: 'user' })
+  const workspaceA = getChatGPTAccountIdentity({
+    client_id: 'client', subject: 'user', workspace_id: 'workspace-A',
+  })
+  const workspaceB = getChatGPTAccountIdentity({
+    client_id: 'client', subject: 'user', workspace_id: 'workspace-B',
+  })
+  assert.equal(legacy, '["client","user"]')
+  assert.notEqual(workspaceA, legacy)
+  assert.notEqual(workspaceA, workspaceB)
+  assert.equal(getChatGPTAccountIdentity({
+    client_id: 'client', subject: 'user', workspace_id: 'workspace-A',
+  }), workspaceA)
 })
 
 test('ChatGPT lists only model entries exposed for the connected account', async () => {
