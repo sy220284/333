@@ -72,7 +72,7 @@ test('登录、导出、思考设置和语音提示使用中文', () => {
   assert.match(read('src/components/ExportDialog.tsx'), /导出对话/)
   assert.match(read('src/components/ThinkingToggle.tsx'), /切换思考模式/)
   assert.match(read('src/components/InvalidConfigDialog.tsx'), /配置错误/)
-  assert.match(read('src/commands/voice/voice.ts'), /语音识别服务目前不支持/)
+  assert.match(read('src/services/voiceStreamSTT.ts'), /请设置 YAOYAOCHE_WHISPER_CLI 和 YAOYAOCHE_WHISPER_MODEL 的绝对路径/)
 })
 
 test('上下文用量页面各类项目均为中文', () => {

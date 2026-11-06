@@ -3756,7 +3756,7 @@ async function run(): Promise<CommanderCommand> {
     .action(async () => {
       const { getFeatureValue_CACHED_MAY_BE_STALE } = await import('./services/analytics/growthbook.js');
       if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_import', false)) {
-        process.stderr.write('`claude import` is not yet available in this build. Run `claude` and use /mcp or edit ~/.claude/settings.json directly.\n');
+        process.stderr.write('`yaoyaoche import` is not yet available in this build. Run `yaoyaoche` and use /mcp or edit ~/.yaoyaoche/settings.json directly.\n');
         process.exitCode = 1;
         return;
       }

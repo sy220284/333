@@ -54,15 +54,15 @@ try {
   for (const item of cases) {
     const original = run(reference, item.args)
     const rebuilt = run(candidate, item.args)
-    const expected = '`claude import` is not yet available in this build. Run `claude` and use /mcp or edit ~/.claude/settings.json directly.'
+    const referenceError = '`claude import` is not yet available in this build. Run `claude` and use /mcp or edit ~/.claude/settings.json directly.'\n    const candidateError = '`yaoyaoche import` is not yet available in this build. Run `yaoyaoche` and use /mcp or edit ~/.yaoyaoche/settings.json directly.'
     const helpMatches = (text, executable) =>
       text.includes(`Usage: ${executable} import [options] [source]`) &&
       text.includes('--dry-run') && text.includes('--yes')
     const passed = item.help
       ? original.status === 0 && rebuilt.status === 0 &&
-        helpMatches(original.stdout, 'claude') && helpMatches(rebuilt.stdout, '333')
+        helpMatches(original.stdout, 'claude') && helpMatches(rebuilt.stdout, 'yaoyaoche')
       : original.status === 1 && rebuilt.status === 1 &&
-        original.stderr === expected && rebuilt.stderr === expected &&
+        original.stderr === referenceError && rebuilt.stderr === candidateError &&
         original.stdout === '' && rebuilt.stdout === ''
     rows.push({
       case: item.id,

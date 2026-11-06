@@ -42,7 +42,7 @@ async function removeProject(key: string): Promise<void> {
   // The configuration writer protects existing credentials against stale
   // reads. Check its durable result before reporting a successful deletion.
   const durable = JSON.parse(await readFile(getGlobalClaudeFile(), 'utf8'))
-  if (Object.hasOwn(durable.projects ?? {}, key)) throw new Error(`Failed to remove projects[${JSON.stringify(key)}] from .claude.json — is your config directory writable?`)
+  if (Object.hasOwn(durable.projects ?? {}, key)) throw new Error(`Failed to remove projects[${JSON.stringify(key)}] from .yaoyaoche.json — is your config directory writable?`)
 }
 export async function purgeProjectHandler(path: string | undefined, options: PurgeOptions): Promise<void> {
   try {
@@ -65,7 +65,7 @@ export async function purgeProjectHandler(path: string | undefined, options: Pur
     }
     const home = getClaudeConfigHomeDir()
     const plan = await planPurge(home, project, { all: options.all, projectKeys, configAliases })
-    if (!plan.items.length) return cliError(options.all ? `No Claude Code project state found under ${home}.` : `No Claude Code project state found for ${project} under ${home}.`)
+    if (!plan.items.length) return cliError(options.all ? `No 摇摇车 project state found under ${home}.` : `No 摇摇车 project state found for ${project} under ${home}.`)
     const subject = options.all ? 'all projects' : project!
     process.stdout.write(`\nPurge plan for ${subject}:\n\n`)
     for (const item of plan.items) process.stdout.write(`  ${describe(item)}\n`)

@@ -9,14 +9,14 @@ import { test } from 'node:test'
 const cli = resolve(import.meta.dirname, '../dist/cli.js')
 test('MCP commands enforce transport/auth boundaries and durably clear one server', () => {
   const home = mkdtempSync(join(tmpdir(), '333-mcp-auth-cli-'))
-  const env = { ...process.env, CLAUDE_CONFIG_DIR: home, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', ENABLE_CLAUDEAI_MCP_SERVERS: 'false', DISABLE_TELEMETRY: '1' }
+  const env = { ...process.env, YAOYAOCHE_CONFIG_DIR: home, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', ENABLE_CLAUDEAI_MCP_SERVERS: 'false', DISABLE_TELEMETRY: '1' }
   const run = args => {
     const result = spawnSync('bun', [cli, 'mcp', ...args], { env, encoding: 'utf8', timeout: 25_000 })
     assert.ifError(result.error)
     return result
   }
   try {
-    writeFileSync(join(home, '.claude.json'), JSON.stringify({ mcpServers: {
+    writeFileSync(join(home, '.yaoyaoche.json'), JSON.stringify({ mcpServers: {
       local: { command: 'echo', args: ['hello'] },
       hosted: { type: 'http', url: 'https://gmail.mcp.claude.com/mcp' },
       demo: { type: 'http', url: 'https://example.com/mcp' },
@@ -63,7 +63,7 @@ test('MCP commands enforce transport/auth boundaries and durably clear one serve
     const cache = JSON.parse(readFileSync(join(home, 'mcp-needs-auth-cache.json'), 'utf8'))
     assert.equal(cache.demo, undefined); assert.deepEqual(cache.other, { timestamp: 2 })
   } finally {
-    // The isolated CLAUDE_CONFIG_DIR also scopes the macOS Keychain name.
+    // The isolated YAOYAOCHE_CONFIG_DIR also scopes the macOS Keychain name.
     // Delete the test keychain item so the test leaves no credentials behind.
     const cleanup = spawnSync('bun', ['-e', `
       import { getSecureStorage } from './src/utils/secureStorage/index.ts'

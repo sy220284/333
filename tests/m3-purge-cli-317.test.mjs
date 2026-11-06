@@ -14,10 +14,10 @@ test('purge CLI previews, validates, deletes its planned state and retains crede
   mkdirSync(project); mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, `${id}.jsonl`), JSON.stringify({ cwd: project }) + '\n')
   writeFileSync(join(home, 'history.jsonl'), JSON.stringify({ project }) + '\n')
-  writeFileSync(join(home, '.claude.json'), JSON.stringify({ projects: { [project]: { hasTrustDialogAccepted: true } } }))
+  writeFileSync(join(home, '.yaoyaoche.json'), JSON.stringify({ projects: { [project]: { hasTrustDialogAccepted: true } } }))
   writeFileSync(join(home, '.credentials.json'), '{"untouched":"yes"}')
   const run = args => {
-    const result = spawnSync('bun', [cli, ...args], { cwd: root, encoding: 'utf8', timeout: 25_000, env: { ...process.env, CLAUDE_CONFIG_DIR: home, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', DISABLE_TELEMETRY: '1' } })
+    const result = spawnSync('bun', [cli, ...args], { cwd: root, encoding: 'utf8', timeout: 25_000, env: { ...process.env, YAOYAOCHE_CONFIG_DIR: home, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', DISABLE_TELEMETRY: '1' } })
     assert.ifError(result.error)
     return result
   }
@@ -37,9 +37,9 @@ test('purge CLI previews, validates, deletes its planned state and retains crede
     assert.equal(result.status, 0, result.stderr); assert.match(result.stdout, /Purged 3 item/)
     assert.equal(existsSync(dir), false); assert.equal(existsSync(project), true)
     assert.equal(readFileSync(join(home, 'history.jsonl'), 'utf8'), '')
-    assert.equal(JSON.parse(readFileSync(join(home, '.claude.json'), 'utf8')).projects[project], undefined)
+    assert.equal(JSON.parse(readFileSync(join(home, '.yaoyaoche.json'), 'utf8')).projects[project], undefined)
     assert.equal(readFileSync(join(home, '.credentials.json'), 'utf8'), '{"untouched":"yes"}')
-    result = run(['purge', project, '--yes']); assert.equal(result.status, 1); assert.match(result.stderr, /No Claude Code project state/)
+    result = run(['purge', project, '--yes']); assert.equal(result.status, 1); assert.match(result.stderr, /No 摇摇车 project state/)
     result = run(['purge', '--all', '--yes']); assert.equal(result.status, 0, result.stderr); assert.match(result.stdout, /across all projects/)
     assert.equal(existsSync(join(home, 'history.jsonl')), false)
     assert.equal(readFileSync(join(home, '.credentials.json'), 'utf8'), '{"untouched":"yes"}')

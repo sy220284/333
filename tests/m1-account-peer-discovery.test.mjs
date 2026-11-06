@@ -158,25 +158,24 @@ test('credential-scoped session advertisement rejects previous login and organiz
 })
 
 
-test('account identity verification is wired through list, permission, validation and dispatch',async()=>{
- const source=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8')
- const [listing,sending,discovery]=await Promise.all([
-   source('src/tools/ListAgentsTool/ListAgentsTool.ts'),
-   source('src/tools/SendMessageTool/SendMessageTool.ts'),
-   source('src/bridge/peerDiscovery.ts'),
- ])
- assert.match(listing,/discoveredAccount\.identityKey === currentIdentity/)
- assert.match(listing,/rememberAccountRecipients\(account\.peers, Date\.now\(\), account\.identityKey\)/)
- assert.equal((sending.match(/await getCurrentPeerIdentityKey\(\)/g)||[]).length,4)
- assert.match(sending,/async checkPermissions/)
- assert.match(sending,/async validateInput/)
- assert.match(sending,/async call\(/)
- assert.match(discovery,/peerIdentityKey\(credentials\.accessToken, credentials\.orgUUID\)/)
- const bridge=await source('src/bridge/peerSessions.ts')
- assert.match(bridge,/peerIdentityKey\(accessToken, orgUUID\) !== expectedIdentityKey/)
- assert.match(sending,/postInterClaudeMessage\([\s\S]*?currentIdentityKey,\s*\)/)
+test('local-only peer tools never expose account-backed remote recipients', async () => {
+  const source = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
+  const [listing, sending, discovery, bridge] = await Promise.all([
+    source('src/tools/ListAgentsTool/ListAgentsTool.ts'),
+    source('src/tools/SendMessageTool/SendMessageTool.ts'),
+    source('src/bridge/peerDiscovery.ts'),
+    source('src/bridge/peerSessions.ts'),
+  ])
+  assert.match(listing, /listLiveLocalPeers\(/)
+  assert.match(listing, /localSessions/)
+  assert.doesNotMatch(listing, /discoverAuthenticatedPeers\(/)
+  assert.match(sending, /resolveLocalPeerRecipient\(/)
+  assert.match(sending, /sendToUdsSocket/)
+  assert.match(sending, /addr\.scheme === 'bridge'/)
+  assert.doesNotMatch(sending, /postInterClaudeMessage\(/)
+  assert.match(discovery, /peerIdentityKey\(credentials\.accessToken, credentials\.orgUUID\)/)
+  assert.match(bridge, /peerIdentityKey\(accessToken, orgUUID\) !== expectedIdentityKey/)
 })
-
 
 test('remote transport connectivity and remote worker action status remain distinct',()=>{
  const disconnected=mergeSessionPeers({
