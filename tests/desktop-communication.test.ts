@@ -258,13 +258,19 @@ test('closing a desktop session while SDK send is pending rejects the delayed tu
 })
 
 test('desktop close cancels a stalled SDK send without waiting for the backend promise to resolve', async () => {
+  let started!: () => void
+  const entered = new Promise<void>(resolve => { started = resolve })
   const blocked = new Promise<void>(() => {})
-  const data = fixture({ beforeSend: () => blocked })
+  const data = fixture({ beforeSend: () => { started(); return blocked } })
   const gateway = createDesktopGateway(data.options)
   const opened = await gateway.handle(request('sessions.open')) as { sessionId: string }
   const sending = gateway.handle(request('sessions.send', {
     sessionId: opened.sessionId, message: 'blocked',
   }))
+  // Wait for the SDK transport to actually enter the blocked send. Otherwise
+  // the close/send ordering depends on microtask scheduling, making a
+  // permanently pending mock appear to be a gateway shutdown deadlock.
+  await entered
   const expectsRejection = expect(sending).rejects.toThrow('Desktop session closed during send')
   const closing = gateway.handle(request('sessions.close', { sessionId: opened.sessionId }))
   await Promise.all([expectsRejection, closing])
