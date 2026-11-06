@@ -19,7 +19,14 @@ const SCOPE = 'openid profile email offline_access resource.invoke chatgpt.token
 // Resolve the home at the operation boundary rather than at module import.
 // This keeps independently started/tested sessions in their own credential
 // directory even if the module was previously loaded under another HOME.
-const authHome = (): string => join(homedir(), '.333', 'auth')
+const authHome = (): string => {
+  // Bun can memoize os.homedir() across test/session HOME changes on Unix.
+  // The explicit OS user-home environment is the source for this process.
+  const home = process.platform === 'win32'
+    ? process.env.USERPROFILE ?? process.env.HOME
+    : process.env.HOME
+  return join(home || homedir(), '.333', 'auth')
+}
 const authPaths = {
   get dir(): string { return authHome() },
   get legacyFile(): string { return join(authHome(), 'chatgpt.json') },
