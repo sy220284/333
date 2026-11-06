@@ -41,6 +41,24 @@ test('同时解析单行与多行 run，忽略普通 YAML 文本', () => {
   assert.doesNotMatch(commands,/mislabeled/)
 })
 
+test('ChatGPT 账号测试在全量回归与专项门禁中统一隔离执行', () => {
+  const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+  const modelCommand = manifest.scripts['test:multimodel']
+  const suites = [
+    'tests/multimodel-provider.test.ts',
+    'tests/chatgpt-oauth-accounts.test.ts',
+    'tests/chatgpt-oauth-refresh.test.ts',
+    'tests/independent-local-features.test.ts',
+  ]
+  assert.ok(manifest.scripts['test:bun'].includes('npm run test:multimodel'))
+  for (const suite of suites) {
+    assert.ok(modelCommand.split(' && ').includes(`bun test ${suite}`),
+      `${suite} must use a separate Bun process`)
+  }
+  const workflow = readFileSync(new URL('../.github/workflows/independent-models.yml', import.meta.url), 'utf8')
+  assert.match(workflow, /run: npm run test:multimodel/)
+})
+
 test('官方二进制对照只在专用任务执行，补充测试可排除重复', () => {
   const source = readFileSync(new URL('../build/run-unregistered-tests.mjs', import.meta.url), 'utf8')
   assert.match(source, /--ci-oracle/)
