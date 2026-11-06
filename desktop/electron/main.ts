@@ -9,13 +9,11 @@ import { listProviderApiKeyAccounts, setProviderApiKey, deleteProviderApiKey, va
 
 const git = promisify(execFile)
 const permitted = new Set([
-  'hello','models.list','sessions.open','sessions.resume','sessions.list','sessions.history',
+  'hello','models.list','mcp.list','mcp.add','mcp.remove','mcp.toggle','sessions.open','sessions.resume','sessions.list','sessions.history',
   'sessions.close','sessions.status','sessions.send','sessions.interrupt','sessions.setModel',
   'sessions.setPermissionMode','host.list','host.respond','host.reject','permissions.list',
   'permissions.decide','agents.overview','agents.setMode','missions.list','missions.get',
   'missions.create','missions.select','missions.updateStatus','missions.checkpoint',
-  'missions.jobs.list','missions.jobs.enqueue','missions.jobs.start','missions.jobs.runBatch',
-  'missions.jobs.approve','missions.jobs.retry','missions.jobs.recover','missions.jobs.cancel',
   'missions.jobs.list','missions.jobs.enqueue','missions.jobs.start','missions.jobs.runBatch',
   'missions.jobs.approve','missions.jobs.retry','missions.jobs.recover','missions.jobs.cancel',
   'tasks.list','tasks.stop','tasks.resume'
@@ -137,6 +135,17 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
     const args=method==='workspace.gitStatus'?['status','--short','--branch']:['diff','--','.' ]
     const result=await git('git',args,{cwd:active,timeout:12000,maxBuffer:2*1024*1024,windowsHide:true})
     return {text:result.stdout}
+  }
+  if(method==='mcp.add'||method==='mcp.remove'||method==='mcp.toggle'){
+    const name=String(data.name||'')
+    const details=method==='mcp.add'?JSON.stringify(data.config):method==='mcp.toggle'?'启用：'+String(data.enabled):'删除现有服务配置'
+    const answer=await dialog.showMessageBox(window!,{
+      type:'warning',title:'确认 MCP 服务器配置',
+      buttons:['取消','确认修改'],defaultId:0,cancelId:0,
+      message:'确认修改 MCP 服务：'+name,
+      detail:details+'\n所有 MCP 配置会遵守现有权限和企业策略。'
+    })
+    if(answer.response!==1)return {cancelled:true}
   }
   if(!permitted.has(method))throw new Error('未开放的桌面操作：'+method)
   if(method==='sessions.setPermissionMode'&&data.mode==='bypassPermissions'){
