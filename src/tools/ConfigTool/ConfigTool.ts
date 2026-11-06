@@ -243,8 +243,8 @@ export const ConfigTool = buildTool({
           data: {
             success: false,
             error: !isAnthropicAuthEnabled()
-              ? 'Voice mode requires a Claude.ai account. Please run /login to sign in.'
-              : 'Voice mode is not available.',
+              ? '请配置本机 Whisper CLI 和模型文件后启用语音转写'
+              : '本机语音转写引擎尚未配置或不可用',
           },
         }
       }
