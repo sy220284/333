@@ -147,7 +147,7 @@ export async function verifyGithubInstalledWorkflow(rawRepo: string): Promise<st
   async function getRemote(path: string): Promise<string> {
     const meta = JSON.parse(await gh(['api', `repos/${repo}/contents/${path}`]))
     if (meta.type !== 'file' || meta.encoding !== 'base64') {
-      throw new Error('现有 GitHub Actions 文件格式不符合预期：' + path)
+      throw new Error(`现有 GitHub Actions 文件格式不符合预期：${path}`)
     }
     return Buffer.from(String(meta.content).replace(/\s/g,''), 'base64').toString('utf8')
   }
