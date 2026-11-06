@@ -27,11 +27,11 @@ test('GitHub 仓库解析拒绝域名混淆、额外路径', () => {
 
 test('通用 GitHub 工作流包含显式调用、授权用户触发和最小权限', () => {
   const workflow = githubWorkflow()
-  assert.equal(GITHUB_WORKFLOW_PATH,'.github/workflows/qerivon-review.yml')
-  assert.equal(GITHUB_SCRIPT_PATH,'.github/scripts/qerivon-review.mjs')
+  assert.equal(GITHUB_WORKFLOW_PATH,'.github/workflows/yaoyaoche-review.yml')
+  assert.equal(GITHUB_SCRIPT_PATH,'.github/scripts/yaoyaoche-review.mjs')
   for (const value of ['workflow_dispatch:','pull_request_target:','issue_comment:',
-    'author_association','persist-credentials: false','QERIVON_MODEL_API_KEY',
-    'QERIVON_MODEL_PROVIDER','QERIVON_MODEL_NAME','mode:','run: node .github/scripts/qerivon-review.mjs']) {
+    'author_association','persist-credentials: false','YAOYAOCHE_MODEL_API_KEY',
+    'YAOYAOCHE_MODEL_PROVIDER','YAOYAOCHE_MODEL_NAME','mode:','run: node .github/scripts/yaoyaoche-review.mjs']) {
     assert.ok(workflow.includes(value),value)
   }
   assert.doesNotMatch(workflow,/extreme|极深/)
@@ -106,7 +106,7 @@ test('深度执行器完成两轮审查、独立复核、PR 评论及报告保�
     fetch,()=>0,()=>{}, {byteLength:s=>s.length},FakeURL,FakeAbortController,
   )
   assert.equal(modelCalls,3)
-  assert.ok(writes.get('qerivon-review-report.md').includes('第3轮核查结果'))
+  assert.ok(writes.get('yaoyaoche-review-report.md').includes('第3轮核查结果'))
   assert.equal(requests.filter(r=>r.url.endsWith('/issues/28/comments')).length,1)
   assert.equal(requests.filter(r=>r.url.startsWith('https://api.openai.com/')).length,3)
 })
@@ -150,7 +150,7 @@ test('审查后端支持 OpenAI Responses、Anthropic 和 OpenAI 兼容协议', 
       class {signal={};abort(){}},
     )
     assert.equal(requests.length,1,provider)
-    assert.ok(saved.get('qerivon-review-report.md').includes('审查完成'),provider)
+    assert.ok(saved.get('yaoyaoche-review-report.md').includes('审查完成'),provider)
     if(provider==='openai-responses') assert.ok(requests[0].body.input)
     if(provider==='anthropic') assert.ok(requests[0].headers['anthropic-version'])
     if(provider==='openai-compatible') assert.ok(requests[0].body.messages)

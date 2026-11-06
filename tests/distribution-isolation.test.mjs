@@ -20,7 +20,7 @@ function invoke(command, args, cwd) {
   return result.stdout;
 }
 test('distributable starts outside repository with no source tree, original CLI, or dependency cache', () => {
-  const isolation = mkdtempSync(join(tmpdir(),'qerivon-standalone-'));
+  const isolation = mkdtempSync(join(tmpdir(),'yaoyaoche-standalone-'));
   const packageDir = join(isolation,'release');
   try {
     cpSync(releaseDir, packageDir, {recursive:true});
@@ -31,7 +31,7 @@ test('distributable starts outside repository with no source tree, original CLI,
     assert.notEqual(createHash('sha256').update(source).digest('hex'),createHash('sha256').update(output).digest('hex'));
     const version=invoke('bun',[join(packageDir,'cli.js'),'--version'],isolation);
     const expectedVersion = JSON.parse(readFileSync(join(root,'package.json'),'utf8')).version;
-    assert.equal(version.trim(),`${expectedVersion} (Qerivon)`);
+    assert.equal(version.trim(),`${expectedVersion} (摇摇车)`);
     const help=invoke(process.execPath,[join(packageDir,'launcher.cjs'),'--help'],isolation);
     assert.match(help,/--print/);
     const plugin=invoke('bun',[join(packageDir,'cli.js'),'plugin','--help'],isolation);

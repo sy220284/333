@@ -40,7 +40,7 @@ test('2.1.317 background real lifecycle: dispatch, list, logs, stop, respawn, re
     // macOS resolves /var/... to /private/var/... during process.chdir().
     // Trust records must be keyed by the same canonical path the CLI observes.
     const cwd = realpathSync(cwdDir)
-    writeFileSync(join(config, name === 'rebuilt' ? '.qerivon.json' : '.claude.json'), JSON.stringify({
+    writeFileSync(join(config, name === 'rebuilt' ? '.yaoyaoche.json' : '.claude.json'), JSON.stringify({
       projects: { [cwd.replace(/\\/g, '/')]: { hasTrustDialogAccepted: true } },
     }))
     const env = {
