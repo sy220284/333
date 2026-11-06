@@ -1,7 +1,7 @@
+// biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { getIndependentProfile } from '../services/api/multimodel/profiles.js'
 import { resolveIndependentModel } from '../services/api/multimodel/registry.js'
 import { getModelFieldProfile } from '../services/api/multimodel/providerFields.js'
-// biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { getSettingsForSource } from './settings/settings.js'
 import { getEnabledSettingSources } from './settings/constants.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook.js'
