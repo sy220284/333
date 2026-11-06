@@ -1,4 +1,5 @@
 import { isEnvTruthy } from './envUtils.js'
+import { isLocalCapabilityEnabled } from './localCapabilities.js'
 
 /** Explicit opt-in via CLI --agent-teams or the existing agent-teams setting. */
 function isAgentTeamsFlagSet(): boolean {
@@ -22,7 +23,8 @@ export function isAgentSwarmsEnabled(): boolean {
   // External: require opt-in via env var or --agent-teams flag
   if (
     !isEnvTruthy(process.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS) &&
-    !isAgentTeamsFlagSet()
+    !isAgentTeamsFlagSet() &&
+    !isLocalCapabilityEnabled('agent-teams')
   ) {
     return false
   }

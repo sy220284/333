@@ -9,6 +9,7 @@ on:
       - 'src/skills/mcpSkills.ts'
       - 'src/services/mcp/**'
       - 'src/utils/agentSwarmsEnabled.ts'
+      - 'src/utils/localCapabilities.ts'
       - 'src/utils/crossSessionMessaging.ts'
       - 'src/services/extractMemories/**'
       - 'src/tools/ListAgentsTool/**'
@@ -18,6 +19,7 @@ on:
       - 'src/tools/ScheduleCronTool/**'
       - 'tests/local-feature-promotion.test.mjs'
       - 'tests/local-mcp-skill-discovery.test.ts'
+      - 'tests/local-feature-preferences.test.ts'
       - '.github/workflows/local-feature-promotion.yml'
   workflow_dispatch:
 concurrency:
@@ -45,3 +47,5 @@ jobs:
         run: node --test tests/local-feature-promotion.test.mjs
       - name: 验证本地 MCP 技能发现与读取
         run: bun test tests/local-mcp-skill-discovery.test.ts
+      - name: 验证高级功能本地设置和用户交互
+        run: bun test tests/local-feature-preferences.test.ts

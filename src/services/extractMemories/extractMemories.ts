@@ -16,6 +16,7 @@
 import { feature } from 'bun:bundle'
 import { basename } from 'path'
 import { isEnvTruthy } from '../../utils/envUtils.js'
+import { isLocalCapabilityEnabled } from '../../utils/localCapabilities.js'
 import { getIsRemoteMode } from '../../bootstrap/state.js'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
 import { ENTRYPOINT_NAME } from '../../memdir/memdir.js'
@@ -533,7 +534,8 @@ export function initExtractMemories(): void {
 
     // Automatic extraction creates a forked agent and incurs model calls.
     // It runs only after the user explicitly enables this local capability.
-    if (!isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_LOCAL_MEMORY_EXTRACTION)) {
+    if (!isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_LOCAL_MEMORY_EXTRACTION) &&
+        !isLocalCapabilityEnabled('auto-memory')) {
       return
     }
 

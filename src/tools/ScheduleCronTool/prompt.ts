@@ -1,6 +1,7 @@
 import { feature } from 'bun:bundle'
 import { DEFAULT_CRON_JITTER_CONFIG } from '../../utils/cronTasks.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
+import { isLocalCapabilityEnabled } from '../../utils/localCapabilities.js'
 
 export const DEFAULT_MAX_AGE_DAYS =
   DEFAULT_CRON_JITTER_CONFIG.recurringMaxAgeMs / (24 * 60 * 60 * 1000)
@@ -8,7 +9,8 @@ export const DEFAULT_MAX_AGE_DAYS =
 /** Scheduling is packaged but requires explicit local enablement. */
 export function isKairosCronEnabled(): boolean {
   return feature('AGENT_TRIGGERS')
-    ? isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_CRON) &&
+    ? (isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_CRON) ||
+        isLocalCapabilityEnabled('scheduled-tasks')) &&
         !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_CRON)
     : false
 }
