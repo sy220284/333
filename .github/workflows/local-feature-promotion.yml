@@ -1,0 +1,45 @@
+name: 本地能力转正与旧实验退役专项验收
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'build/rebuild.mjs'
+      - 'src/services/analytics/growthbook.ts'
+      - 'src/commands/**'
+      - 'src/skills/mcpSkills.ts'
+      - 'src/services/mcp/**'
+      - 'src/utils/agentSwarmsEnabled.ts'
+      - 'src/utils/crossSessionMessaging.ts'
+      - 'src/services/extractMemories/**'
+      - 'src/tools/ListAgentsTool/**'
+      - 'src/tools/BriefTool/**'
+      - 'src/tools/ScheduleCronTool/**'
+      - 'tests/local-feature-promotion.test.mjs'
+      - 'tests/local-mcp-skill-discovery.test.ts'
+      - '.github/workflows/local-feature-promotion.yml'
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+permissions:
+  contents: read
+jobs:
+  independent-features:
+    name: 真实技能资源发现与本地功能门禁
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 恢复项目依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 验证正式构建与退役边界
+        run: node --test tests/local-feature-promotion.test.mjs
+      - name: 验证本地 MCP 技能发现与读取
+        run: bun test tests/local-mcp-skill-discovery.test.ts
