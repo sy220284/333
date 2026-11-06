@@ -46,6 +46,7 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('missions.jobs.list', { missionId }),
   request('missions.jobs.enqueue', { missionId, title: z.string().trim().min(1).max(200), instruction: z.string().trim().min(1).max(6000) }),
   request('missions.jobs.start', { missionId, jobId }),
+  request('missions.jobs.runBatch', { missionId, limit: z.number().int().min(1).max(3).optional() }),
   request('missions.jobs.approve', { missionId, jobId }),
   request('missions.jobs.retry', { missionId, jobId }),
   request('missions.jobs.recover', { missionId, jobId }),
