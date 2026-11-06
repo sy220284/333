@@ -1,4 +1,7 @@
 import Anthropic, { type ClientOptions } from '@anthropic-ai/sdk'
+import { resolveIndependentModel, getIndependentApiKey, isRemovedIndependentModel } from './multimodel/registry.js'
+import { makeIndependentFetch } from './multimodel/transport.js'
+import { getChatGPTAccessToken } from '../auth/chatgptOAuth.js'
 import { native317MessagesRequest, native317RequestHeaders } from './native317Wire.ts'
 import { createFoundryAzureTokenProvider } from './providerCredentials.ts'
 import { randomUUID } from 'crypto'
@@ -100,6 +103,25 @@ export async function getAnthropicClient({
   fetchOverride?: ClientOptions['fetch']
   source?: string
 }): Promise<Anthropic> {
+  // Independent remote models share the existing Agent, tools and prompts.
+  // Resolve before Claude OAuth and Anthropic SDK credential checks.
+  if (model && isRemovedIndependentModel(model)) {
+    throw new Error(`模型 ${model} 已从 333 移除，请选择其他服务商模型`)
+  }
+  const independent = resolveIndependentModel(model)
+  if (independent) {
+    const bearer = independent.provider === 'chatgpt'
+      ? await getChatGPTAccessToken()
+      : getIndependentApiKey(independent)
+    return new Anthropic({
+      apiKey: '333-internal-provider-bridge',
+      baseURL: 'https://333-model-bridge.invalid',
+      maxRetries,
+      timeout: parseInt(process.env.API_TIMEOUT_MS || String(600 * 1000), 10),
+      fetch: makeIndependentFetch(independent, bearer, fetchOverride ?? globalThis.fetch),
+    })
+  }
+
   const containerId = process.env.CLAUDE_CODE_CONTAINER_ID
   const remoteSessionId = process.env.CLAUDE_CODE_REMOTE_SESSION_ID
   const clientApp = process.env.CLAUDE_AGENT_SDK_CLIENT_APP

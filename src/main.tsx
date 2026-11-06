@@ -756,7 +756,7 @@ async function run(): Promise<CommanderCommand> {
     }
     profileCheckpoint('preAction_after_settings_sync');
   });
-  program.name('claude').description(`Claude Code - starts an interactive session by default, use -p/--print for non-interactive output`).argument('[prompt]', 'Your prompt', String)
+  program.name('333').description(`333 - starts an interactive session by default, use -p/--print for non-interactive output`).argument('[prompt]', 'Your prompt', String)
   // Subcommands inherit helpOption via commander's copyInheritedSettings —
   // setting it once here covers mcp, plugin, auth, and all other subcommands.
   .helpOption('-h, --help', 'Display help for command').option('-d, --debug [filter]', 'Enable debug mode with optional category filtering (e.g., "api,hooks" or "!1p,!file")', (_value: string | true) => {
@@ -781,7 +781,7 @@ async function run(): Promise<CommanderCommand> {
     return Number.isFinite(n) ? n : undefined;
   }).hideHelp()).option('--from-pr [value]', 'Resume a session linked to a PR by PR number/URL, or open interactive picker with optional search term', value => value || true).option('--no-session-persistence', 'Disable session persistence - sessions will not be saved to disk and cannot be resumed (only works with --print)').addOption(new Option('--resume-session-at <message id>', 'When resuming, only messages up to and including the assistant message with <message.id> (use with --resume in print mode)').argParser(String).hideHelp()).addOption(new Option('--rewind-files <user-message-id>', 'Restore files to state at the specified user message and exit (requires --resume)').hideHelp())
   // @[MODEL LAUNCH]: Update the example model ID in the --model help text.
-  .option('--model <model>', `Model for the current session. Provide an alias for the latest model (e.g. 'sonnet' or 'opus') or a model's full name (e.g. 'claude-sonnet-4-6').`).addOption(new Option('--effort <level>', `Effort level for the current session (low, medium, high, xhigh, max)`).argParser((rawValue: string) => {
+  .option('--model <model>', `模型名称：Claude 原有别名或服务商/模型，如 openai/gpt-6.1-sol、deepseek/deepseek-chat、qwen/qwen-plus。`).addOption(new Option('--effort <level>', `Effort level for the current session (low, medium, high, xhigh, max)`).argParser((rawValue: string) => {
     const value = rawValue.trim().toLowerCase() === 'med' ? 'medium' : rawValue.trim().toLowerCase();
     const allowed = ['low', 'medium', 'high', 'xhigh', 'max'];
     if (!allowed.includes(value)) {
@@ -820,7 +820,7 @@ async function run(): Promise<CommanderCommand> {
     if (prompt === 'code') {
       logEvent('tengu_code_prompt_ignored', {});
       // biome-ignore lint/suspicious/noConsole:: intentional console output
-      console.warn(chalk.yellow('Tip: You can launch Claude Code with just `claude`'));
+      console.warn(chalk.yellow('Tip: You can launch 333 with just `333`'));
       prompt = undefined;
     }
 
@@ -3357,7 +3357,7 @@ async function run(): Promise<CommanderCommand> {
         pendingHookMessages
       }, renderAndRun);
     }
-  }).version(`${MACRO.VERSION} (Claude Code)`, '-v, --version', 'Output the version number');
+  }).version(`${MACRO.VERSION} (333)`, '-v, --version', 'Output the version number');
 
   // 2.1.310 options with functional consumers in this source tree.
   program.option('--bg, --background', 'Start the session in the background and return an id for attach/logs/stop/rm');
@@ -3462,7 +3462,7 @@ async function run(): Promise<CommanderCommand> {
   // claude mcp
 
   const mcp = program.command('mcp').description('Configure and manage MCP servers').configureHelp(createSortedHelpConfig()).enablePositionalOptions();
-  mcp.command('serve').description(`Start the Claude Code MCP server`).option('-d, --debug', 'Enable debug mode', () => true).option('--verbose', 'Override verbose mode setting from config', () => true).action(async ({
+  mcp.command('serve').description(`Start the 333 MCP server`).option('-d, --debug', 'Enable debug mode', () => true).option('--verbose', 'Override verbose mode setting from config', () => true).action(async ({
     debug,
     verbose
   }: {
@@ -3535,6 +3535,87 @@ async function run(): Promise<CommanderCommand> {
     await mcpResetChoicesHandler();
   });
 
+  const modelsCommand = program.command('models').description('查询已连接服务商的实际模型目录');
+  modelsCommand.command('list').description('查看内置模型及本地已发现模型')
+    .option('--json', '输出含来源和账号限制的完整模型目录')
+    .action(async (options: {json?: boolean}) => {
+      const { getRegisteredModelInventory } = await import('./services/api/multimodel/catalog.js');
+      const entries = getRegisteredModelInventory();
+      if (options.json) process.stdout.write(`${JSON.stringify(entries, null, 2)}\n`);
+      else for (const model of entries) process.stdout.write(`${model.id}\n`);
+    });
+  modelsCommand.command('profile <model>').description('查看该模型已验证的上下文、输出和工具能力').action(async (model: string) => {
+    const { getIndependentProfile } = await import('./services/api/multimodel/profiles.js');
+    const { getSavedCapabilityReport } = await import('./services/api/multimodel/capabilityProbe.js');
+    process.stdout.write(`${JSON.stringify({
+      model, profile: getIndependentProfile(model) ?? null,
+      lastProbe: getSavedCapabilityReport(model) ?? null,
+    }, null, 2)}\n`);
+  });
+  modelsCommand.command('limits <model>').description('明确指定模型真实上下文和最大输出 Token')
+    .requiredOption('--context <tokens>', '上下文窗口 Token 数')
+    .requiredOption('--output <tokens>', '最大输出 Token 数')
+    .action(async (model: string, options: { context: string; output: string }) => {
+      const { updateIndependentProfile } = await import('./services/api/multimodel/profiles.js');
+      const contextWindow = Number(options.context);
+      const maxOutputTokens = Number(options.output);
+      if (!Number.isSafeInteger(contextWindow) || !Number.isSafeInteger(maxOutputTokens)) {
+        throw new Error('上下文和输出限制必须是整数');
+      }
+      const result = await updateIndependentProfile(model, {
+        contextWindow, maxOutputTokens, source: 'manual',
+      });
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    });
+  modelsCommand.command('price <model>').description('设置模型每百万 Token 的美元费率（输入和输出）')
+    .requiredOption('--input <usd>', '输入每百万 Token 费用（美元）')
+    .requiredOption('--output <usd>', '输出每百万 Token 费用（美元）')
+    .action(async (model: string, options: {input:string;output:string}) => {
+      const { configureIndependentPricing } = await import('./services/api/multimodel/pricing.js');
+      await configureIndependentPricing(model,{input:Number(options.input),output:Number(options.output)});
+      process.stdout.write(`已保存 ${model} 的本地费率\n`);
+    });
+  modelsCommand.command('verify <model>').description('真实调用模型验证流式输出和工具能力（将产生少量 API 用量）').action(async (model: string) => {
+    const { verifyIndependentModel } = await import('./services/api/multimodel/capabilityProbe.js');
+    const result = await verifyIndependentModel(model);
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    if (!result.toolRoundTrip) process.exitCode = 1;
+  });
+  modelsCommand.command('refresh [provider]').description('从服务商刷新当前账号可用模型').action(async (provider?: string) => {
+    const { listSupportedProviders, refreshProviderModels } = await import('./services/api/multimodel/catalog.js');
+    const names = listSupportedProviders();
+    if (provider && !names.includes(provider as typeof names[number])) {
+      throw new Error(`未知服务商：${provider}。支持：${names.join(', ')}`);
+    }
+    const selected = provider ? [provider as typeof names[number]] : names;
+    for (const name of selected) {
+      const models = await refreshProviderModels(name);
+      process.stdout.write(`${name}: ${models.length} 个可用模型\n`);
+    }
+  });
+  const localSettings = program.command('local-settings').description('在本机保存和恢复设置历史');
+  localSettings.command('snapshot').description('保存当前设置快照').action(async () => {
+    const { snapshotLocalSettings } = await import('./services/localRuntime/settingsSnapshots.js');
+    const item = await snapshotLocalSettings();
+    process.stdout.write(`设置快照已保存：${item.id}\n`);
+  });
+  localSettings.command('list').description('列出本机设置快照').action(async () => {
+    const { listLocalSettingsSnapshots } = await import('./services/localRuntime/settingsSnapshots.js');
+    for (const item of await listLocalSettingsSnapshots()) {
+      process.stdout.write(`${item.id}  ${item.timestamp}  ${item.size} bytes\n`);
+    }
+  });
+  localSettings.command('restore <snapshot-id>').description('校验后恢复指定本机设置快照').action(async (id: string) => {
+    const { restoreLocalSettings } = await import('./services/localRuntime/settingsSnapshots.js');
+    await restoreLocalSettings(id);
+    process.stdout.write(`已恢复设置快照：${id}\n`);
+  });
+  program.command('local-tasks').description('查看本机任务履历').option('--json', '使用 JSON 输出').action(async (options: { json?: boolean }) => {
+    const { readLocalTasks } = await import('./services/localRuntime/taskJournal.js');
+    const tasks = await readLocalTasks();
+    if (options.json) process.stdout.write(`${JSON.stringify(tasks, null, 2)}\n`);
+    else for (const task of tasks) process.stdout.write(`${task.id}  ${task.status}  ${task.type}  ${task.description ?? ''}\n`);
+  });
   // claude auth
 
   const auth = program.command('auth').description('Manage authentication').configureHelp(createSortedHelpConfig());
@@ -3558,6 +3639,54 @@ async function run(): Promise<CommanderCommand> {
       console: useConsole,
       claudeai
     });
+  });
+  const providerKeys = auth.command('api-key').description('管理模型服务商的本地 API Key');
+  providerKeys.command('set <provider>').description('从安全输入或环境变量保存密钥')
+    .option('--from-env <name>', '从指定环境变量读取密钥')
+    .action(async (provider: string, options: { fromEnv?: string }) => {
+      const { validateApiKeyProvider, setProviderApiKey } = await import('./services/auth/apiKeyVault.js');
+      const checkedProvider = validateApiKeyProvider(provider);
+      let key: string;
+      if (options.fromEnv) {
+        key = process.env[options.fromEnv] ?? '';
+      } else {
+        if (process.stdin.isTTY) {
+          throw new Error('终端交互输入请先设置环境变量，再使用 --from-env；或从标准输入管道提供密钥');
+        }
+        let text = '';
+        for await (const chunk of process.stdin) {
+          text += chunk.toString();
+          if (text.length > 8192) throw new Error('API Key 输入过长');
+        }
+        key = text.trimEnd();
+      }
+      await setProviderApiKey(checkedProvider, key);
+      process.stdout.write(`已保存 ${provider} 的本机 API Key\n`);
+    });
+  providerKeys.command('list').description('列出已配置服务商（不显示密钥）').action(async () => {
+    const { listProviderApiKeyAccounts } = await import('./services/auth/apiKeyVault.js');
+    for (const provider of listProviderApiKeyAccounts()) process.stdout.write(`${provider}\n`);
+  });
+  providerKeys.command('delete <provider>').description('删除该服务商的本机 API Key')
+    .action(async (provider: string) => {
+      const { validateApiKeyProvider, deleteProviderApiKey } = await import('./services/auth/apiKeyVault.js');
+      const checkedProvider = validateApiKeyProvider(provider);
+      await deleteProviderApiKey(checkedProvider);
+      process.stdout.write(`已删除 ${provider} 的本机 API Key\n`);
+    });
+  auth.command('chatgpt-login').description('通过官方浏览器授权连接 ChatGPT 账号').action(async () => {
+    const { loginWithChatGPT } = await import('./services/auth/chatgptOAuth.js');
+    const identity = await loginWithChatGPT();
+    process.stdout.write(`ChatGPT 已连接：${identity.email ?? identity.subject}\n`);
+  });
+  auth.command('chatgpt-status').description('查看 ChatGPT 授权状态').action(async () => {
+    const { chatGPTStatus } = await import('./services/auth/chatgptOAuth.js');
+    process.stdout.write(`${JSON.stringify(await chatGPTStatus(), null, 2)}\n`);
+  });
+  auth.command('chatgpt-logout').description('撤销 ChatGPT 授权').action(async () => {
+    const { logoutChatGPT } = await import('./services/auth/chatgptOAuth.js');
+    await logoutChatGPT();
+    process.stdout.write('ChatGPT 已退出\n');
   });
   auth.command('status').description('Show authentication status').option('--json', 'Output as JSON (default)').option('--text', 'Output as human-readable text').action(async (opts: {
     json?: boolean;
@@ -3586,7 +3715,7 @@ async function run(): Promise<CommanderCommand> {
 
   // Plugin validate command
   const registerPurge = (parent: CommanderCommand, hidden = false) => {
-    parent.command('purge [path]', { hidden }).description('Remove local Claude Code state for a project').option('--dry-run', 'List what would be deleted without deleting anything').option('-y, --yes', 'Skip confirmation prompt').option('-i, --interactive', 'Prompt for each item before deleting').option('--all', 'Purge state for every project (mutually exclusive with [path])').action(async (path: string | undefined, options: { dryRun?: boolean; yes?: boolean; interactive?: boolean; all?: boolean }) => {
+    parent.command('purge [path]', { hidden }).description('Remove local 333 state for a project').option('--dry-run', 'List what would be deleted without deleting anything').option('-y, --yes', 'Skip confirmation prompt').option('-i, --interactive', 'Prompt for each item before deleting').option('--all', 'Purge state for every project (mutually exclusive with [path])').action(async (path: string | undefined, options: { dryRun?: boolean; yes?: boolean; interactive?: boolean; all?: boolean }) => {
       const { purgeProjectHandler } = await import('./cli/handlers/purge.js');
       await purgeProjectHandler(path, options);
     });
@@ -3607,7 +3736,7 @@ async function run(): Promise<CommanderCommand> {
         process.exitCode = 1;
       }
     });
-  const pluginCmd = program.command('plugin').alias('plugins').description('Manage Claude Code plugins').configureHelp(createSortedHelpConfig());
+  const pluginCmd = program.command('plugin').alias('plugins').description('Manage 333 plugins').configureHelp(createSortedHelpConfig());
   const pluginEvalCmd = pluginCmd.command('eval [target]')
     .description('Run eval cases against a plugin and report scored results')
     .option('--eval-dir <dir>', 'Directory within plugin that holds evaluation cases')
@@ -3695,7 +3824,7 @@ async function run(): Promise<CommanderCommand> {
   });
 
   // Marketplace subcommands
-  const marketplaceCmd = pluginCmd.command('marketplace').description('Manage Claude Code marketplaces').configureHelp(createSortedHelpConfig());
+  const marketplaceCmd = pluginCmd.command('marketplace').description('Manage 333 marketplaces').configureHelp(createSortedHelpConfig());
   marketplaceCmd.command('add <source>').description('Add a marketplace from a URL, path, or GitHub repo').addOption(coworkOption()).option('--claudeai', 'Add the marketplace of this name that claude.ai hosts for you, by its listed name or its local name (see: claude plugin marketplace list)').option('--sparse <paths...>', 'Limit checkout to specific directories via git sparse-checkout (for monorepos). Example: --sparse .claude-plugin plugins').option('--scope <scope>', 'Where to declare the marketplace: user (default), project, or local').option('--json', 'Print one machine-readable result line as the last line on stdout (same exit codes)').action(async (source: string, options: {
     cowork?: boolean;
     claudeai?: boolean;
@@ -4012,7 +4141,7 @@ async function run(): Promise<CommanderCommand> {
   // Keep the explicit exit and options from the real release. Treating import
   // as a chat prompt incorrectly starts a model query and loses --dry-run.
   program.command('import [source]')
-    .description('Import config from another AI coding agent into Claude Code')
+    .description('Import config from another AI coding agent into 333')
     .option('--dry-run', 'Show what would be imported without writing anything')
     .option('--yes', 'Skip the interactive picker. On headless surfaces, pass --yes=<digest> from the `/import` preview.')
     .action(async () => {

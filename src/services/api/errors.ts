@@ -26,9 +26,13 @@ import {
 } from 'src/utils/messages.js'
 import {
   getDefaultMainLoopModelSetting,
+  getDefaultOpusModel,
+  getDefaultSonnetModel,
+  getDefaultHaikuModel,
+  getDefaultFableModel,
   isNonCustomOpusModel,
 } from 'src/utils/model/model.js'
-import { getModelStrings } from 'src/utils/model/modelStrings.js'
+import { getCatalogModel } from 'src/utils/model/modelCatalog.js'
 import { getAPIProvider } from 'src/utils/model/providers.js'
 import { getIsNonInteractiveSession } from '../../bootstrap/state.js'
 import {
@@ -938,24 +942,19 @@ export function getAssistantMessageFromError(
  * Returns a model name suggestion, or undefined if no suggestion is applicable.
  */
 function get3PModelFallbackSuggestion(model: string): string | undefined {
-  if (getAPIProvider() === 'firstParty') {
-    return undefined
+  if (getAPIProvider() === 'firstParty') return undefined
+  const requested = getCatalogModel(model)
+  if (!requested) return undefined
+  const defaults: Record<string, () => string> = {
+    opus: getDefaultOpusModel,
+    sonnet: getDefaultSonnetModel,
+    haiku: getDefaultHaikuModel,
+    fable: getDefaultFableModel,
   }
-  // @[MODEL LAUNCH]: Add a fallback suggestion chain for the new model → previous version for 3P
-  const m = model.toLowerCase()
-  // If the failing model looks like an Opus 4.6 variant, suggest the default Opus (4.1 for 3P)
-  if (m.includes('opus-4-6') || m.includes('opus_4_6')) {
-    return getModelStrings().opus41
-  }
-  // If the failing model looks like a Sonnet 4.6 variant, suggest Sonnet 4.5
-  if (m.includes('sonnet-4-6') || m.includes('sonnet_4_6')) {
-    return getModelStrings().sonnet45
-  }
-  // If the failing model looks like a Sonnet 4.5 variant, suggest Sonnet 4
-  if (m.includes('sonnet-4-5') || m.includes('sonnet_4_5')) {
-    return getModelStrings().sonnet40
-  }
-  return undefined
+  const choose = defaults[requested.family]
+  if (!choose) return undefined
+  const next = choose()
+  return getCatalogModel(next)?.id === requested.id ? undefined : next
 }
 
 /**

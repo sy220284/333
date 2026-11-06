@@ -41,16 +41,12 @@ import {
 } from 'src/bootstrap/state.js'
 import {
   getOtelHeadersFromHelper,
-  getSubscriptionType,
-  is1PApiCustomer,
-  isClaudeAISubscriber,
 } from 'src/utils/auth.js'
 import { getPlatform, getWslVersion } from 'src/utils/platform.js'
 
 import { getCACertificates } from '../caCerts.js'
 import { registerCleanup } from '../cleanupRegistry.js'
 import { getHasFormattedOutput, logForDebugging } from '../debug.js'
-import { isEnvTruthy } from '../envUtils.js'
 import { errorMessage } from '../errors.js'
 import { getMTLSConfig } from '../mtls.js'
 import { getProxyUrl, shouldBypassProxy } from '../proxy.js'
@@ -323,7 +319,8 @@ async function getOtlpTraceExporters() {
 }
 
 export function isTelemetryEnabled() : boolean {
-  return isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_TELEMETRY)
+  // 333 local diagnostics supersede vendor/OTLP telemetry network exporters.
+  return false
 }
 
 function getBigQueryExportingReader() {
@@ -335,18 +332,8 @@ function getBigQueryExportingReader() {
 }
 
 function isBigQueryMetricsEnabled() {
-  // BigQuery metrics are enabled for:
-  // 1. API customers (excluding Claude.ai subscribers and Bedrock/Vertex)
-  // 2. Claude for Enterprise (C4E) users
-  // 3. Claude for Teams users
-  const subscriptionType = getSubscriptionType()
-  const isC4EOrTeamUser =
-    isClaudeAISubscriber() &&
-    (subscriptionType === 'enterprise' || subscriptionType === 'team')
-
-  return is1PApiCustomer() || isC4EOrTeamUser
+  return false
 }
-
 /**
  * Initialize beta tracing - a separate code path for detailed debugging.
  * Uses BETA_TRACING_ENDPOINT instead of OTEL_EXPORTER_OTLP_ENDPOINT.
@@ -511,7 +498,7 @@ export async function initializeTelemetry(): Promise<import('@opentelemetry/api'
 
   // Check if beta tracing is enabled - this is a separate code path
   // Available to all users who set ENABLE_BETA_TRACING_DETAILED=1 and BETA_TRACING_ENDPOINT
-  if (isBetaTracingEnabled()) {
+  if (telemetryEnabled && isBetaTracingEnabled()) {
     const betaTracingReady = initializeBetaTracing(resource).catch(error => {
       logForDebugging(
         `Beta tracing init failed: ${errorMessage(error)}`,

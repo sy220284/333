@@ -50,7 +50,7 @@ function sections(output) {
   return {flags:[...new Set(flags)].sort(),commands:[...new Set(commands)].sort()};
 }
 test('rebuilt CLI uses target version while original source is retained as old baseline', () => {
-  assert.equal(compiledHelp(['--version']).trim(), `${targetVersion} (Claude Code)`);
+  assert.equal(compiledHelp(['--version']).trim(), `${targetVersion} (333)`);
   assert.equal(originalHelp(['--version']).trim(), '2.1.88 (Claude Code)');
 });
 // The 2.1.88 CLI is retained for historical compatibility checks only.
@@ -60,6 +60,25 @@ const official317 = JSON.parse(
   readFileSync(resolve(root, 'tests/fixtures/claude-2.1.317-official-cli-help.json'), 'utf8'),
 );
 assert.equal(official317.version, targetVersion);
+
+// 333's additive interfaces are explicitly documented here. The official
+// 2.1.317 command and flag contract is still compared exhaustively; only
+// these intentional additions may differ from the Claude reference.
+const independentCommands = {
+  '--help': ['local-settings', 'local-tasks', 'models'],
+  'auth --help': ['api-key', 'chatgpt-login', 'chatgpt-logout', 'chatgpt-status'],
+};
+function verifyBaseAndExtensions(actual, official, commandLine) {
+  const additions = independentCommands[commandLine] ?? [];
+  for (const entry of additions) {
+    assert.ok(actual.commands.includes(entry), `333 independent command absent: ${entry}`);
+    assert.equal(actual.commands.filter(name => name === entry).length, 1);
+  }
+  assert.deepEqual(actual.flags, official.flags,
+    `Original 2.1.317 flags must stay available: ${commandLine}`);
+  assert.deepEqual(actual.commands.filter(name => !additions.includes(name)), official.commands,
+    `2.1.317 original commands changed: ${commandLine}`);
+}
 
 function nativeHelp(executable, args) {
   const output = spawnSync(executable, args, {
@@ -85,7 +104,7 @@ for (const [commandLine, expected] of Object.entries(official317.commands)) {
       assert.deepEqual(native, expected, `The official x64 reference changed: ${commandLine}`);
     }
     const actual = sections(compiledHelp(args));
-    assert.deepEqual(actual, expected, `2.1.317 CLI discrepancy: ${commandLine}`);
+    verifyBaseAndExtensions(actual, expected, commandLine);
   });
 }
 
@@ -102,8 +121,8 @@ test('317 hidden permission callback reaches the existing permission consumer', 
 });
 
 test('legacy -d2e alias is accepted by reconstructed Commander configuration', () => {
-  assert.match(compiledHelp(['-d2e','--help']), /Usage: claude/);
-  assert.match(compiledHelp(['--debug-to-stderr','--help']), /Usage: claude/);
+  assert.match(compiledHelp(['-d2e','--help']), /Usage: 333/);
+  assert.match(compiledHelp(['--debug-to-stderr','--help']), /Usage: 333/);
 });
 
 test('bootstrap route classification ignores literal prompt words after --', async () => {
@@ -120,7 +139,7 @@ test('bootstrap route classification ignores literal prompt words after --', asy
 
 test('2.1.317 hidden permission callback flag is accepted and reaches the SDK route', () => {
   const help = compiledHelp(['--permission-prompt-tool', 'mcp__permission', '--help'])
-  assert.match(help, /Usage: claude/)
+  assert.match(help, /Usage: 333/)
   assert.equal(sections(help).flags.includes('--permission-prompt-tool'), false,
     'the upstream hides this SDK-only flag from public help')
   if (process.platform === 'linux' && process.env.CLAUDE_TARGET_X64) {
