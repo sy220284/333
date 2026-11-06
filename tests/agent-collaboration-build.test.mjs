@@ -8,6 +8,8 @@ test('正式构建接入协调者，且 Worker 可在模式切换后继续发现
   assert.match(read('build/rebuild.mjs'), /'COORDINATOR_MODE'/)
   assert.match(read('src/tools/AgentTool/builtInAgents.ts'), /agents\.push\(\.\.\.getCoordinatorAgents\(\)\)/)
   assert.match(read('src/coordinator/coordinatorMode.ts'), /isSuperAgentMode\(\)/)
+  assert.match(read('src/utils/systemPrompt.ts'), /isSuperAgentMode\(\)/)
+  assert.match(read('src/QueryEngine.ts'), /getCoordinatorModule\?\.isCoordinatorMode\(\)/)
 })
 test('超级智能体工具池允许团队、智能体名录和工作流', () => {
   const source = read('src/constants/tools.ts')

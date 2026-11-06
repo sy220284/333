@@ -23,6 +23,9 @@ on:
       - 'tests/local-feature-preferences.test.ts'
       - 'tests/agent-collaboration-*.test.*'
       - 'tests/agent-missions*.test.*'
+      - 'tests/agent-mission-scope.test.ts'
+      - 'src/QueryEngine.ts'
+      - 'src/utils/systemPrompt.ts'
       - 'src/utils/agentMissions.ts'
       - 'src/tasks/LocalWorkflowTask/**'
       - 'src/tools/AgentTool/agentToolUtils.ts'
@@ -58,4 +61,4 @@ jobs:
       - name: 验证本地 MCP 技能发现与读取
         run: bun test tests/local-mcp-skill-discovery.test.ts
       - name: 验证高级功能本地设置和用户交互
-        run: bun test tests/local-feature-preferences.test.ts tests/agent-collaboration-mode.test.ts tests/agent-missions.test.ts
+        run: bun test tests/local-feature-preferences.test.ts tests/agent-collaboration-mode.test.ts tests/agent-missions.test.ts tests/agent-mission-scope.test.ts

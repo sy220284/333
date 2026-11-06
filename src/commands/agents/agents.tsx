@@ -100,6 +100,7 @@ export async function call(
     }
     if (action === 'use' && value) {
       const mission = await getMission(value)
+      if (mission.projectDir !== getCwd()) throw new Error('任务属于另一项目：' + mission.projectDir + '；请从该项目目录进入再选择。')
       selectMission(mission.id)
       onDone('已选中任务：' + mission.id + '（' + mission.status + '）', { display: 'system' })
       return null

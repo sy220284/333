@@ -325,7 +325,7 @@ export class QueryEngine {
         : null
 
     const coordinatorPrompt =
-      getCoordinatorModule && isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE)
+      getCoordinatorModule?.isCoordinatorMode()
         ? getCoordinatorModule.getCoordinatorSystemPrompt()
         : undefined
     const systemPrompt = asSystemPrompt([

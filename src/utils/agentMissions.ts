@@ -3,13 +3,14 @@
  * A mission is an authorized unit of work; assignments are individual Agent /
  * Workflow executions. The runtime never starts a job merely by loading one.
  */
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { z } from 'zod/v4'
 import { getFeatureValue_CACHED_MAY_BE_STALE, setGrowthBookConfigOverride } from '../services/analytics/growthbook.js'
 import { getClaudeConfigHomeDir } from './envUtils.js'
+import { getCwd } from './cwd.js'
 import * as lockfile from './lockfile.js'
 
 const AssignmentSchema = z.object({
@@ -59,13 +60,18 @@ function parseMission(content: string, path: string): AgentMission {
   }
 }
 
-export function getSelectedMissionId(): string | undefined {
-  const id = getFeatureValue_CACHED_MAY_BE_STALE<string>('local_agent_current_mission', '')
+/** Each project keeps its own active mission, even when multiple CLIs share a config home. */
+export function missionSelectionKey(projectDir: string): string {
+  const project = resolve(projectDir)
+  return 'local_agent_current_mission_' + createHash('sha256').update(project).digest('hex').slice(0, 20)
+}
+export function getSelectedMissionId(projectDir = getCwd()): string | undefined {
+  const id = getFeatureValue_CACHED_MAY_BE_STALE<string>(missionSelectionKey(projectDir), '')
   if (!id) return undefined
   return checkedId(id)
 }
-export function selectMission(id?: string): void {
-  setGrowthBookConfigOverride('local_agent_current_mission', id ? checkedId(id) : undefined)
+export function selectMission(id?: string, projectDir = getCwd()): void {
+  setGrowthBookConfigOverride(missionSelectionKey(projectDir), id ? checkedId(id) : undefined)
 }
 
 export async function createMission(objective: string, projectDir: string, root = defaultRoot()): Promise<AgentMission> {
@@ -161,6 +167,9 @@ export function getSelectedMissionPrompt(): string {
   const path = missionPath(id, defaultRoot())
   try {
     const mission = parseMission(readFileSync(path, 'utf8'), path)
+    if (resolve(mission.projectDir) !== resolve(getCwd())) {
+      return '该超级智能体任务归属其他项目，请切换至对应项目目录后恢复。'
+    }
     const assignments = mission.assignments.slice(-12).map(a =>
       a.kind + ':' + a.id + '(' + a.status + ') ' + a.title
     ).join('\n')
