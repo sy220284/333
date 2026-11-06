@@ -1,10 +1,10 @@
 /** Explicit, locally configured API pricing per million tokens. */
 import { promises as fs, readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { isRemovedIndependentModel, resolveIndependentModel } from './registry.js'
-const ROOT = join(homedir(), '.333', 'models')
+import { MODEL_STORAGE_ROOT } from './storage.js'
+const ROOT = MODEL_STORAGE_ROOT
 const FILE = join(ROOT, 'pricing.json')
 export type Price = { input: number; output: number; cacheRead?: number; cacheWrite?: number }
 function valid(price: Price): boolean {
