@@ -75,8 +75,13 @@ reader.on('line', line => {
           subtype: 'can_use_tool', tool_name: 'Bash', tool_use_id: 'tool-fake',
           input: { command: 'pwd' }, blocked_path: '/private',
           decision_reason: 'Workspace permission rule',
-          decision_type: 'ask', default_to_no: true,
-          server_policy_ask_only: true, agent_id: 'agent-fixture',
+          decision_reason_type: 'ask', decision_reason_code: 'project-policy',
+          mcp_server: { name: 'fixture-mcp', source: 'project' },
+          server_policy_ask_only: true, default_to_no: true,
+          agent_id: 'agent-fixture', plugin: 'fixture:commands',
+          server_prompt: 'The server requested explicit approval',
+          computer_folder: { path: '/workspace', computer_name: 'desktop' },
+          matched_ask_rule: { source: 'project', tool_name: 'Bash', rule_content: 'review' },
         } })
       } else if (content === 'host') {
         awaiting = 'host'
@@ -91,6 +96,9 @@ reader.on('line', line => {
         finish()
       }
     } else if (frame.type === 'control_response' && (awaiting === 'permission' || awaiting === 'host')) {
+      if (awaiting === 'permission' && frame.response?.response?.toolUseID !== 'tool-fake') {
+        throw new Error('SDK toolUseID was lost in the permission response')
+      }
       awaiting = null
       finish()
     }
@@ -144,12 +152,22 @@ test('desktop host uses real SDK stream-json child for models, approval, progres
     const pending = await gateway.handle({ id: 'permissions', method: 'permissions.list',
       sessionId: opened.sessionId }) as Array<{
         id: string; toolName: string; blockedPath: string;
-        decisionReason: string; defaultToNo: boolean; agentID: string;
+        decisionReason: string; decisionReasonType: string;
+        decisionReasonCode: string; defaultToNo: boolean; agentID: string;
+        mcpServer: { name: string; source: string };
+        plugin: string; serverPrompt: string;
+        computerFolder: { path: string; computer_name: string };
+        matchedAskRule: { source: string; toolName: string; ruleContent: string };
       }>
     expect(pending).toHaveLength(1)
     expect(pending[0]?.toolName).toBe('Bash')
     expect(pending[0]).toMatchObject({
       blockedPath: '/private', decisionReason: 'Workspace permission rule',
+      decisionReasonType: 'ask', decisionReasonCode: 'project-policy',
+      mcpServer: { name: 'fixture-mcp', source: 'project' },
+      plugin: 'fixture:commands', serverPrompt: 'The server requested explicit approval',
+      computerFolder: { path: '/workspace', computer_name: 'desktop' },
+      matchedAskRule: { source: 'project', toolName: 'Bash', ruleContent: 'review' },
       defaultToNo: true, agentID: 'agent-fixture',
     })
     const permissionId = pending[0]?.id
