@@ -42,3 +42,12 @@ test('独立模型主请求与辅助请求不注入原厂计费头', () => {
   assert.ok(main.includes("independentRoute ? '' : getAttributionHeader(fingerprint)"))
   assert.match(side, /const attributionHeader = resolveIndependentModel\(model\)/)
 })
+
+test('安装器清理只处理 333 包，不触碰独立 Claude 安装目录', () => {
+  const installer = source('src/utils/nativeInstaller/installer.ts')
+  const doctor = source('src/utils/doctorDiagnostic.ts')
+  assert.ok(installer.includes("const ownPackage = '@333/agent-cli'"))
+  assert.doesNotMatch(installer.slice(installer.indexOf('export async function cleanupNpmInstallations')), /rm\(localInstallDir|attemptNpmUninstall\(\s*'@anthropic-ai\/claude-code'/)
+  assert.ok(doctor.includes("const packagesToCheck = ['@333/agent-cli']"))
+  assert.doesNotMatch(doctor, /uninstall @anthropic-ai\/claude-code/)
+})

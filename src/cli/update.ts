@@ -283,20 +283,14 @@ export async function update() : Promise<void> {
     process.stderr.write('  • Network connectivity issues\n')
     process.stderr.write('  • npm registry is unreachable\n')
     process.stderr.write('  • Corporate proxy/firewall blocking npm\n')
-    if (MACRO.PACKAGE_URL && !MACRO.PACKAGE_URL.startsWith('@anthropic')) {
-      process.stderr.write(
-        '  • Internal/development build not published to npm\n',
-      )
+    if (MACRO.PACKAGE_URL === '@333/agent-cli') {
+      process.stderr.write('  • 333 包尚未发布到当前 npm 注册表\n')
     }
     process.stderr.write('\n')
     process.stderr.write('Try:\n')
     process.stderr.write('  • Check your internet connection\n')
     process.stderr.write('  • Run with --debug flag for more details\n')
-    const packageName =
-      MACRO.PACKAGE_URL ||
-      (process.env.USER_TYPE === 'ant'
-        ? '@anthropic-ai/claude-cli'
-        : '@anthropic-ai/claude-code')
+    const packageName = MACRO.PACKAGE_URL || '@333/agent-cli'
     process.stderr.write(
       `  • Manually check: npm view ${packageName} version\n`,
     )

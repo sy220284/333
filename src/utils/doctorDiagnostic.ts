@@ -17,7 +17,6 @@ import { getFsImplementation } from './fsOperations.js'
 import {
   getShellType,
   isRunningFromLocalInstallation,
-  localInstallationExists,
 } from './localInstaller.js'
 import {
   detectApk,
@@ -208,17 +207,9 @@ async function detectMultipleInstallations(): Promise<
   const fs = getFsImplementation()
   const installations: Array<{ type: string; path: string }> = []
 
-  // Check for local installation
-  const localPath = join(homedir(), '.claude', 'local')
-  if (await localInstallationExists()) {
-    installations.push({ type: 'npm-local', path: localPath })
-  }
-
-  // Check for global npm installation
-  const packagesToCheck = ['@anthropic-ai/claude-code']
-  if (MACRO.PACKAGE_URL && MACRO.PACKAGE_URL !== '@anthropic-ai/claude-code') {
-    packagesToCheck.push(MACRO.PACKAGE_URL)
-  }
+  // Treat only 333 packages as 333 installations. An existing Claude Code
+  // installation is independent and must not be marked for removal.
+  const packagesToCheck = ['@333/agent-cli']
   const npmResult = await execFileNoThrow('npm', [
     '-g',
     'config',
@@ -233,8 +224,8 @@ async function detectMultipleInstallations(): Promise<
     // Linux / macOS have prefix/bin/claude and prefix/lib/node_modules
     // Windows has prefix/claude and prefix/node_modules
     const globalBinPath = isWindows
-      ? join(npmPrefix, 'claude')
-      : join(npmPrefix, 'bin', 'claude')
+      ? join(npmPrefix, '333')
+      : join(npmPrefix, 'bin', '333')
 
     let globalBinExists = false
     try {
@@ -289,7 +280,7 @@ async function detectMultipleInstallations(): Promise<
   // Check for native installation
 
   // Check common native installation paths
-  const nativeBinPath = join(homedir(), '.local', 'bin', 'claude')
+  const nativeBinPath = join(homedir(), '.local', 'bin', '333')
   try {
     await fs.stat(nativeBinPath)
     installations.push({ type: 'native', path: nativeBinPath })
@@ -447,12 +438,7 @@ async function detectConfigurationIssues(
     }
   }
 
-  if (type === 'npm-global' && (await localInstallationExists())) {
-    warnings.push({
-      issue: 'Local installation exists but not being used',
-      fix: 'Consider using native installation: claude install',
-    })
-  }
+
 
   const existingAlias = await findClaudeAlias()
   const validAlias = await findValidClaudeAlias()
@@ -536,13 +522,7 @@ export async function getDoctorDiagnostic(): Promise<DiagnosticInfo> {
 
     for (const install of npmInstalls) {
       if (install.type === 'npm-global') {
-        let uninstallCmd = 'npm -g uninstall @anthropic-ai/claude-code'
-        if (
-          MACRO.PACKAGE_URL &&
-          MACRO.PACKAGE_URL !== '@anthropic-ai/claude-code'
-        ) {
-          uninstallCmd += ` && npm -g uninstall ${MACRO.PACKAGE_URL}`
-        }
+        const uninstallCmd = 'npm -g uninstall @333/agent-cli'
         warnings.push({
           issue: `Leftover npm global installation at ${install.path}`,
           fix: `Run: ${uninstallCmd}`,

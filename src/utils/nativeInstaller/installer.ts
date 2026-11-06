@@ -1662,46 +1662,20 @@ export async function cleanupNpmInstallations(): Promise<{
   const warnings: string[] = []
   let removed = 0
 
-  // Always attempt to remove @anthropic-ai/claude-code
-  const codePackageResult = await attemptNpmUninstall(
-    '@anthropic-ai/claude-code',
-  )
-  if (codePackageResult.success) {
-    removed++
-    if (codePackageResult.warning) {
-      warnings.push(codePackageResult.warning)
-    }
-  } else if (codePackageResult.error) {
-    errors.push(codePackageResult.error)
+  // Native migration may remove an earlier 333 npm installation only.
+  // Claude Code, other providers, and ~/.claude/local are independent software.
+  // Never remove their files or packages while installing 333.
+  const ownPackage = '@333/agent-cli'
+  if (MACRO.PACKAGE_URL !== ownPackage) {
+    errors.push('安装包身份与 333 不一致，已跳过 npm 清理，避免卸载其他软件')
+    return { removed, errors, warnings }
   }
-
-  // Also attempt to remove MACRO.PACKAGE_URL if it's defined and different
-  if (MACRO.PACKAGE_URL && MACRO.PACKAGE_URL !== '@anthropic-ai/claude-code') {
-    const macroPackageResult = await attemptNpmUninstall(MACRO.PACKAGE_URL)
-    if (macroPackageResult.success) {
-      removed++
-      if (macroPackageResult.warning) {
-        warnings.push(macroPackageResult.warning)
-      }
-    } else if (macroPackageResult.error) {
-      errors.push(macroPackageResult.error)
-    }
-  }
-
-  // Check for local installation at ~/.claude/local
-  const localInstallDir = join(homedir(), '.claude', 'local')
-
-  try {
-    await rm(localInstallDir, { recursive: true })
+  const result = await attemptNpmUninstall(ownPackage)
+  if (result.success) {
     removed++
-    logForDebugging(`Removed local installation at ${localInstallDir}`)
-  } catch (error) {
-    if (!isENOENT(error)) {
-      errors.push(`Failed to remove ${localInstallDir}: ${error}`)
-      logForDebugging(`Failed to remove local installation: ${error}`, {
-        level: 'error',
-      })
-    }
+    if (result.warning) warnings.push(result.warning)
+  } else if (result.error) {
+    errors.push(result.error)
   }
 
   return { removed, errors, warnings }
