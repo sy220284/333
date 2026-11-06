@@ -307,6 +307,10 @@ export function getDefaultEffortForModel(model: string): EffortValue | undefined
   if (route) {
     const allowed = getModelFieldProfile(route.provider, route.model).supportedEffort
     if (!allowed.length) return undefined
+    const discoveredDefault = getIndependentProfile(model)?.defaultEffort
+    if (discoveredDefault && allowed.includes(discoveredDefault)) {
+      return discoveredDefault as EffortLevel
+    }
     // Provider defaults follow the specific model generation, not Claude.
     if (route.provider === 'qwen' && allowed.includes('xhigh')) return 'xhigh'
     if ((route.provider === 'kimi' && /^kimi-k3\.1/i.test(route.model)) ||
