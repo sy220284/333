@@ -2,8 +2,10 @@
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-const configuredHome = process.platform === 'win32'
-  ? process.env.USERPROFILE
-  : process.env.HOME
-
-export const MODEL_STORAGE_ROOT = join(configuredHome || homedir(), '.333', 'models')
+/** Resolve per operation: tests and embedded runtimes can change the active HOME. */
+export function getModelStorageRoot(): string {
+  const configuredHome = process.platform === 'win32'
+    ? process.env.USERPROFILE
+    : process.env.HOME
+  return join(configuredHome || homedir(), '.333', 'models')
+}
