@@ -59,6 +59,12 @@ function run(executable, command) {
   }
 }
 const rows = []
+// Explicitly approved product-surface change: the standalone ultrareview CLI
+// was retired in favor of the unified /review extreme GitHub workflow.
+const retiredCommands = new Set(['ultrareview'])
+function normalizeProductName(usage) {
+  return usage.replace(/^Usage: 333(?= |$)/, 'Usage: claude')
+}
 try {
   const release = spawnSync(reference, ['--version'], {
     cwd: home, env, encoding: 'utf8', timeout: 12000,
@@ -72,12 +78,19 @@ try {
     const rebuilt = run(candidate, command)
     const missing = upstream.flags.filter(flag => !rebuilt.flags.includes(flag))
     const extra = rebuilt.flags.filter(flag => !upstream.flags.includes(flag))
-    const correctCommand = command === '' ? true : rebuilt.usage.startsWith(`Usage: claude ${command}`)
+    const normalizedCandidateUsage = normalizeProductName(rebuilt.usage)
+    const commandHelp = `Usage: claude ${command}`
+    const correctCommand = command === '' ? true : normalizedCandidateUsage.startsWith(commandHelp)
     const statusMatch = upstream.status === rebuilt.status
-    const status = !statusMatch ? 'EXIT_MISMATCH'
+    const explicitlyRetired = retiredCommands.has(command) &&
+      upstream.usage.startsWith(commandHelp) &&
+      !normalizedCandidateUsage.startsWith(commandHelp) &&
+      missing.length > 0
+    const status = explicitlyRetired ? 'APPROVED_RETIRED'
+      : !statusMatch ? 'EXIT_MISMATCH'
       : !correctCommand ? 'WRONG_COMMAND_HELP'
       : missing.length > 0 || extra.length > 0 ? 'OPTIONS_MISMATCH'
-      : upstream.usage !== rebuilt.usage ? 'USAGE_TEXT_MISMATCH'
+      : upstream.usage !== normalizedCandidateUsage ? 'USAGE_TEXT_MISMATCH'
       : 'MATCH'
     rows.push({ command: command || '(root)', status,
       reference_status: upstream.status, candidate_status: rebuilt.status,
@@ -87,14 +100,21 @@ try {
   const counts = Object.fromEntries(
     [...new Set(rows.map(row => row.status))].map(s => [s, rows.filter(row => row.status === s).length]),
   )
-  const differences = rows.filter(row => row.status !== 'MATCH')
+  const approvedRetirements = rows.filter(row => row.status === 'APPROVED_RETIRED')
+  if (approvedRetirements.length !== retiredCommands.size ||
+      ![...retiredCommands].every(command => approvedRetirements.some(row => row.command === command))) {
+    throw new Error('旧审查命令退役清单未按预期落实，必须人工核验命令是否复活或意外缺失')
+  }
+  const differences = rows.filter(row => row.status !== 'MATCH' && row.status !== 'APPROVED_RETIRED')
   const result = { target, reference_version: referenceVersion, baseline: 'SHA-verified official Linux x64',
     evidence_scope: 'CLI help and public options, not functional behavior',
     commands_checked: rows.length, differences: differences.length,
+    approved_retirements: approvedRetirements.map(row => row.command),
     counts, rows,
   }
   writeFileSync(report, `${JSON.stringify(result, null, 2)}\n`)
   console.log(JSON.stringify({ commands_checked: rows.length, differences: differences.length, counts,
+    approved_retirements: approvedRetirements.map(row => row.command),
     notable: differences.filter(r => r.status === 'WRONG_COMMAND_HELP' || r.missing_options.length > 0).map(r => ({ command:r.command, status:r.status, missing:r.missing_options })) }))
   if (differences.length) console.log(`::warning::官方${target} CLI全量差异仍有待升级项目；见取证JSON，尚未正式签收。`)
   if (strict && differences.length) process.exitCode = 1
