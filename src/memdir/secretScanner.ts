@@ -1,8 +1,7 @@
 /**
- * Client-side secret scanner for team memory (PSR M22174).
+ * Local secret scanner for team memory.
  *
- * Scans content for credentials before upload so secrets never leave the
- * user's machine. Uses a curated subset of high-confidence rules from
+ * Scans local memory content for credentials before persistence. Uses a curated subset of high-confidence rules from
  * gitleaks (https://github.com/gitleaks/gitleaks, MIT license) — only
  * rules with distinctive prefixes that have near-zero false-positive
  * rates are included. Generic keyword-context rules are omitted.
@@ -18,7 +17,7 @@
  *     Go regex are kept (JS $ matches end-of-string in default mode).
  */
 
-import { capitalize } from '../../utils/stringUtils.js'
+import { capitalize } from '../utils/stringUtils.js'
 
 type SecretRule = {
   /** Gitleaks rule ID (kebab-case), used in labels and analytics */
