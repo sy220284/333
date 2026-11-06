@@ -44,19 +44,22 @@ def probe(executable,mode,timeout,brand):
             'customApiKeyResponses':{'approved':['local-only'],'rejected':[]},
             'projects':{str(project):{'hasTrustDialogAccepted':True}},
         }
-        config_home=root/'.claude'
+        config_home=root/('.claude' if brand=='official' else '.yaoyaoche')
         config_home.mkdir()
-        # Both historical HOME and explicit CLAUDE_CONFIG_DIR locations.
-        for config_file in (root/'.claude.json',config_home/'.claude.json',config_home/'.config.json'):
+        # Each installation owns its onboarding and trusted-workspace state.
+        # The official binary must not see the independent agent's config.
+        global_file='.claude.json' if brand=='official' else '.yaoyaoche.json'
+        for config_file in (root/global_file,config_home/global_file,config_home/'.config.json'):
             config_file.write_text(json.dumps(global_config),encoding='utf8')
         env={k:v for k,v in os.environ.items() if not any(s in k.upper() for s in SECRETS)}
-        env.update({'HOME':str(root),'CLAUDE_CONFIG_DIR':str(config_home),'XDG_CONFIG_HOME':str(root/'.config'),
+        env.update({'HOME':str(root),'XDG_CONFIG_HOME':str(root/'.config'),
                     'XDG_CACHE_HOME':str(root/'.cache'),'TERM':'xterm-256color',
                     'NO_COLOR':'1','ANTHROPIC_API_KEY':'local-only',
                     'ANTHROPIC_BASE_URL':'http://127.0.0.1:9',
                     'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC':'1',
                     'DISABLE_TELEMETRY':'1','DISABLE_ERROR_REPORTING':'1',
                     'NO_PROXY':'localhost,127.0.0.1'})
+        env['CLAUDE_CONFIG_DIR' if brand=='official' else 'YAOYAOCHE_CONFIG_DIR']=str(config_home)
         cmd=[str(Path(executable).resolve())]
         if mode=='flag': cmd.append('--ax-screen-reader')
         if mode=='env': env['CLAUDE_AX_SCREEN_READER']='1'
@@ -94,7 +97,7 @@ def probe(executable,mode,timeout,brand):
                 'bytes':len(buffer),'cursor_control_sequences':len(CSI.findall(raw)),
                 'activation_banner': (f'[Screen Reader Mode: on via {mode}]' in text if mode!='off' else '[Screen Reader Mode: on' in text),
                 'flat_welcome':(bool(re.search(r'Welcome to Claude Code|Claude Code v2\.1\.317\b',text))
-                                if brand=='official' else bool(re.search(r'333 v2\.1\.317\b',text))),
+                                if brand=='official' else bool(re.search(r'摇摇车\s+v2\.1\.317\b',text))),
                 'model_and_billing_visible':bool(model_match),
                  'model_name':model_name,
                  'auto_mode_active':auto_on,
@@ -105,7 +108,8 @@ def probe(executable,mode,timeout,brand):
                 'prompt_ready': ('❯' in text or text.rstrip().endswith('$')),
                 'stage': ('theme-onboarding' if 'Choose the text style' in text
                            else 'workspace-trust' if 'trust' in text.lower() and 'folder' in text.lower()
-                           else 'session'),
+                           else 'theme-onboarding' if '选择适合当前终端的文字样式' in text
+                            else 'session'),
                  'has_decorative_art': ('████' in text or '░░░' in text or '…………………………………………' in text),
                  'text_excerpt':text[:450]}
 
