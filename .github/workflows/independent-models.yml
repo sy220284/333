@@ -68,8 +68,4 @@ jobs:
         # Account tests intentionally change HOME and the global fetch mock.
         # Bun can execute test files in the same process; give each suite an
         # independent process to prevent credentials and OAuth mocks crossing.
-        run: |
-          bun test tests/multimodel-provider.test.ts
-          bun test tests/chatgpt-oauth-accounts.test.ts
-          bun test tests/chatgpt-oauth-refresh.test.ts
-          bun test tests/independent-local-features.test.ts
+        run: npm run test:multimodel
