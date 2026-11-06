@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, cpSync, copyFileSync, chmodSync, readdirSync, readFileSync, statSync, lstatSync, writeFileSync, rmSync, renameSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { createReleasePackageManifest } from './release-package-manifest.mjs';
 import { verifyOfficialEmbeddedAssets317 } from './verify-official-embedded-assets.mjs';
 import { packageOfficialEmbeddedAssets317 } from './package-official-317-assets.mjs';
 verifyOfficialEmbeddedAssets317();
@@ -115,15 +116,7 @@ try {
 }
 packageOfficialEmbeddedAssets317(root, dist);
 copyFileSync(join(root,'SOURCE_NOTICES.md'),join(dist,'SOURCE_NOTICES.md'));
-const pkg = {
-  name: `yaoyaoche-agent-cli-${releaseVersion}-source-rebuild`,
-  version: `${releaseVersion}-rebuild.1`,
-  private: true,
-  description: `摇摇车 independent remote-model coding agent, compatible with release ${releaseVersion}`,
-  type: 'module',
-  bin: { yaoyaoche: './launcher.cjs', 'yaoyaoche-desktop': `./${desktopNativeName}` },
-  engines: { node: '>=18' }
-};
+const pkg = createReleasePackageManifest(releaseVersion, desktopNativeName);
 writeFileSync(join(dist,'package.json'), `${JSON.stringify(pkg,null,2)}\n`);
 // The launcher is maintained as executable source so lifecycle tests exercise
 // the exact artifact that ships (including SIGINT/SIGTERM propagation).
