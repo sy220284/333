@@ -45,7 +45,7 @@ test('remote uploads preserve event boundaries and never repeat previous batches
   const globals = globalThis as unknown as { MACRO?: { VERSION: string } }
   const previousMacro = globals.MACRO
   globals.MACRO = { VERSION: 'test' }
-  expect(getClaudeCodeUserAgent()).toBe('claude-code/test')
+  expect(getClaudeCodeUserAgent()).toBe('qerivon/test')
   const received: Array<{ payload: { uuid: string; event: { type: string; delta?: { text?: string } } }; ephemeral?: boolean }> = []
   const server = createServer(async (req, res) => {
     let raw = ''

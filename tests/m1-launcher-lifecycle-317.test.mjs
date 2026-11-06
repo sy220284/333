@@ -39,7 +39,7 @@ test('M1 C19-T02/T05: launcher preserves child exit status and arguments', {
   isolated(dir => {
     const bin = join(dir, 'bin')
     mkdirSync(bin)
-    const stub = join(dir, 'claude')
+    const stub = join(dir, 'qerivon')
     writeFileSync(stub, '#!/usr/bin/env node\n' +
       'process.stdout.write(JSON.stringify(process.argv.slice(2)) + "\\n"); process.exit(37)\n')
     chmodSync(stub, 0o755)
@@ -61,7 +61,7 @@ test('M1 C19-T02/T05: terminating launcher forwards SIGTERM to child and waits f
   try {
     const bin = join(dir, 'bin')
     mkdirSync(bin)
-    const stub = join(dir, 'claude')
+    const stub = join(dir, 'qerivon')
     const signalAck = join(dir, 'signal-ack')
     writeFileSync(stub, '#!/usr/bin/env node\n' +
       "const fs = require('node:fs');\n" +
