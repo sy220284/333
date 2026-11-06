@@ -3,6 +3,7 @@ import test from 'node:test'
 import { type ProviderRoute, PROVIDERS, resolveIndependentModel, getIndependentApiKey, discoverIndependentModels } from '../src/services/api/multimodel/registry.ts'
 import { type AnthropicRequest, toResponses, toChatCompletions } from '../src/services/api/multimodel/convert.ts'
 import { makeIndependentFetch } from '../src/services/api/multimodel/transport.ts'
+import { getModelFieldProfile } from '../src/services/api/multimodel/providerFields.ts'
 import { runModelToolRoundTrip } from '../src/services/api/multimodel/capabilityProbe.ts'
 import { validateApiKeyProvider } from '../src/services/auth/apiKeyVault.ts'
 
@@ -368,4 +369,90 @@ test('MiniMax inference and discovery default to the mainland China API', async 
     return Response.json({ data: [{ id: 'MiniMax-M3.1-Flash' }] })
   })
   assert.deepEqual(models, ['MiniMax-M3.1-Flash'])
+})
+
+
+test('official vendor field profiles expose model-generation capabilities', () => {
+  assert.deepEqual(getModelFieldProfile('qwen', 'qwen3.8-max').supportedEffort, ['low', 'medium', 'xhigh'])
+  assert.equal(getModelFieldProfile('qwen', 'qwen3.8-max').replayReasoning, true)
+  assert.equal(getModelFieldProfile('zhipu', 'glm-5.3-flash').alwaysThinking, true)
+  assert.equal(getModelFieldProfile('minimax', 'MiniMax-M3.1-Flash').outputTokenField, 'max_completion_tokens')
+  assert.equal(getModelFieldProfile('kimi', 'kimi-k3.1-pro').thinkingField, 'reasoning_effort')
+  assert.equal(getModelFieldProfile('openai', 'gpt-6.1-sol').protocol, 'responses')
+  assert.equal(getModelFieldProfile('chatgpt', 'gpt-6.1-sol').protocol, 'responses')
+})
+test('DeepSeek V4 enforces thinking-mode tool choice and ignores ineffective sampling fields', () => {
+  assert.throws(() => toChatCompletions({ ...body, tool_choice: { type: 'any' } },
+    'deepseek-v4-pro', 'deepseek'), /tool_choice=auto\/none/)
+  assert.throws(() => toChatCompletions({ ...body, thinking: { type: 'enabled' },
+    tool_choice: { type: 'tool', name: 'Read' } }, 'deepseek-v4-pro', 'deepseek'), /tool_choice/)
+  const disabled = toChatCompletions({ ...body, thinking: { type: 'disabled' },
+    tool_choice: { type: 'any' } }, 'deepseek-v4-pro', 'deepseek')
+  assert.equal(disabled.tool_choice, 'required')
+  assert.deepEqual(disabled.thinking, { type: 'disabled' })
+  const thinking = toChatCompletions({ ...body, temperature: 0.5, top_p: 0.7,
+    output_config: { effort: 'medium' } }, 'deepseek-v4-pro', 'deepseek')
+  assert.equal(thinking.reasoning_effort, 'high')
+  assert.equal(thinking.temperature, undefined)
+  assert.equal(thinking.top_p, undefined)
+  assert.throws(() => toChatCompletions({ ...body, thinking: { type: 'disabled' },
+    output_config: { effort: 'high' } }, 'deepseek-v4-pro', 'deepseek'), /同时指定/)
+})
+test('Qwen3.8 preserves separate historical reasoning and uses native effort ranks', () => {
+  const qwen = toChatCompletions({ ...body, thinking: { type: 'enabled' },
+    output_config: { effort: 'high' } }, 'qwen3.8-flash', 'qwen')
+  assert.equal(qwen.reasoning_effort, 'xhigh')
+  assert.equal(qwen.enable_thinking, true)
+  assert.equal(qwen.preserve_thinking, true)
+  const disabled = toChatCompletions({ ...body, thinking: { type: 'disabled' } }, 'qwen3.8-flash', 'qwen')
+  assert.equal(disabled.enable_thinking, false)
+  assert.equal(disabled.preserve_thinking, undefined)
+  assert.equal(toChatCompletions({ ...body, output_config: { effort: 'medium' } },
+    'qwen3.8-max', 'qwen').reasoning_effort, 'medium')
+})
+test('GLM model revisions reject forbidden thinking switches and map effort natively', () => {
+  const current = toChatCompletions({ ...body, output_config: { effort: 'low' } }, 'glm-5.3-Flash', 'zhipu')
+  assert.deepEqual(current.thinking, { type: 'enabled' })
+  assert.equal(current.reasoning_effort, 'low')
+  assert.equal(toChatCompletions({ ...body, output_config: { effort: 'low' } },
+    'glm-5.2', 'zhipu').reasoning_effort, 'high')
+  assert.throws(() => toChatCompletions({ ...body, thinking: { type: 'disabled' } },
+    'glm-5.3-Flash', 'zhipu'), /始终启用思考/)
+})
+test('Kimi K3 and K2 generations use distinct reasoning wire fields', () => {
+  assert.equal(toChatCompletions({ ...body, output_config: { effort: 'xhigh' } },
+    'kimi-k3', 'kimi').reasoning_effort, 'max')
+  assert.throws(() => toChatCompletions({ ...body, output_config: { effort: 'medium' } },
+    'kimi-k3.1-pro', 'kimi'), /仅支持 max/)
+  assert.equal(toChatCompletions({ ...body, output_config: { effort: 'max' } },
+    'kimi-k3.1-pro', 'kimi').reasoning_effort, 'max')
+  assert.deepEqual(toChatCompletions({ ...body, thinking: { type: 'enabled' } },
+    'kimi-k2.6', 'kimi').thinking, { type: 'enabled', keep: 'all' })
+  assert.deepEqual(toChatCompletions({ ...body }, 'kimi-k2.7-code', 'kimi').thinking,
+    { type: 'enabled', keep: 'all' })
+  assert.throws(() => toChatCompletions({ ...body, thinking: { type: 'disabled' } },
+    'kimi-k3', 'kimi'), /不支持关闭思考/)
+})
+test('MiniMax M3.1 uses reasoning split and completion budget; M3 uses adaptive thinking', () => {
+  const m31 = toChatCompletions({ ...body, thinking: { type: 'enabled' },
+    output_config: { effort: 'xhigh' } }, 'MiniMax-M3.1-Flash', 'minimax')
+  assert.equal(m31.max_tokens, undefined)
+  assert.equal(m31.max_completion_tokens, body.max_tokens)
+  assert.equal(m31.reasoning_split, true)
+  assert.equal(m31.reasoning_effort, 'xhigh')
+  assert.equal(m31.thinking, undefined)
+  assert.equal(m31.stream_options.include_usage, true)
+  const m3 = toChatCompletions({ ...body, thinking: { type: 'disabled' } }, 'MiniMax-M3', 'minimax')
+  assert.deepEqual(m3.thinking, { type: 'disabled' })
+  assert.equal(m3.reasoning_split, true)
+})
+test('OpenRouter passes reasoning controls and requests visible reasoning details', () => {
+  const enabled = toChatCompletions({ ...body, output_config: { effort: 'high' } },
+    'deepseek/deepseek-v4-pro', 'openrouter')
+  assert.deepEqual(enabled.reasoning, { effort: 'high' })
+  assert.equal(enabled.include_reasoning, true)
+  const disabled = toChatCompletions({ ...body, thinking: { type: 'disabled' } },
+    'deepseek/deepseek-v4-pro', 'openrouter')
+  assert.deepEqual(disabled.reasoning, { effort: 'none' })
+  assert.equal(disabled.include_reasoning, undefined)
 })
