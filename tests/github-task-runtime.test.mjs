@@ -33,25 +33,25 @@ function scenario({association='OWNER',failPrOnce=false}={}) {
   if(url==='https://api.openai.com/v1/chat/completions')
     return ok({choices:[{message:{content:JSON.stringify(actions[state.modelCalls++%actions.length])}}]})
   if(url===api)return ok({default_branch:'main',private:true})
-  if(url===api+'/git/ref/heads/main')return ok({object:{sha:'baseSha'}})
-  if(url===api+'/git/commits/baseSha')return ok({tree:{sha:'baseTree'}})
-  if(url===api+'/git/trees'&&options.method==='POST')return ok({sha:'newTree'})
-  if(url===api+'/git/commits'&&options.method==='POST'){state.commits++;return ok({sha:'newCommit'})}
-  if(url===api+'/git/refs'&&options.method==='POST'){state.branchCreated++;return ok({ref:'refs/heads/yaoyaoche/task-991'})}
-  if(url===api+'/git/ref/heads/yaoyaoche%2Ftask-991')
+  if(url===`${api}/git/ref/heads/main`)return ok({object:{sha:'baseSha'}})
+  if(url===`${api}/git/commits/baseSha`)return ok({tree:{sha:'baseTree'}})
+  if(url===`${api}/git/trees`&&options.method==='POST')return ok({sha:'newTree'})
+  if(url===`${api}/git/commits`&&options.method==='POST'){state.commits++;return ok({sha:'newCommit'})}
+  if(url===`${api}/git/refs`&&options.method==='POST'){state.branchCreated++;return ok({ref:'refs/heads/yaoyaoche/task-991'})}
+  if(url===`${api}/git/ref/heads/yaoyaoche%2Ftask-991`)
     return state.branchCreated?ok({object:{sha:'newCommit'}}):{status:404,ok:false,text:async()=>''}
-  if(url.startsWith(api+'/pulls?'))return ok([])
-  if(url===api+'/pulls'&&options.method==='POST'){
+  if(url.startsWith(`${api}/pulls?`))return ok([])
+  if(url===`${api}/pulls`&&options.method==='POST'){
    if(failPrOnce&&state.failedPr++===0)return{ok:false,status:503,text:async()=>'temporary'}
    state.prs++;return ok({html_url:'https://github.com/org/code/pull/99'})
   }
-  if(url===api+'/issues/77/comments'&&options.method==='POST')return ok({id:77})
-  throw new Error('Unexpected remote request '+url)
+  if(url===`${api}/issues/77/comments`&&options.method==='POST')return ok({id:77})
+  throw new Error(`Unexpected remote request ${url}`)
  }
  const read=path=> {
   if(path==='event.json')return JSON.stringify(event)
   const saved=writes.get(path)
-  if(saved===undefined)throw Error('Unexpected read '+path)
+  if(saved===undefined)throw Error(`Unexpected read ${path}`)
   return saved
  }
  const write=(path,body)=>writes.set(path,body)

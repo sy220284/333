@@ -17,7 +17,7 @@ function loadInstaller(mockGh) {
   const ctor=Object.getPrototypeOf(async()=>{}).constructor
   return new ctor('execFileNoThrow','githubWorkflow','githubReviewerScript',
     'githubTaskRunnerScript','validRepository','randomUUID','Buffer',
-    source+'\nreturn {setupRepository,dispatchReview}')(mockGh,githubWorkflow,
+    `${source}\nreturn {setupRepository,dispatchReview}`)(mockGh,githubWorkflow,
     githubReviewerScript,githubTaskRunnerScript,validRepository,()=> 'aabbccdd-0000',Buffer)
 }
 function installationFixture({push=true,privateRepo=true,failPrOnce=false}={}) {
@@ -31,10 +31,10 @@ function installationFixture({push=true,privateRepo=true,failPrOnce=false}={}) {
     return success({permissions:{push},private:privateRepo,default_branch:'main'})
   if(args[0]==='pr'&&args[1]==='list')return success([])
   if(args[0]==='api'&&path?.includes('matching-refs'))return success(
-    Object.keys(state.branches).map(v=>({ref:'refs/heads/'+v})))
+    Object.keys(state.branches).map(v=>({ref:`refs/heads/${v}`})))
   if(args[0]==='api'&&path?.includes('/contents/')) {
    const key=path.split('/contents/')[1].split('?ref=')
-   const saved=files.get(decodeURIComponent(key[1])+'|'+key[0])
+   const saved=files.get(`${decodeURIComponent(key[1])}|${key[0]}`)
    return saved===undefined?{code:1,stderr:'HTTP 404 Not Found',stdout:''}:
     success({type:'file',encoding:'base64',content:Buffer.from(saved).toString('base64')})
   }
@@ -49,14 +49,14 @@ function installationFixture({push=true,privateRepo=true,failPrOnce=false}={}) {
   if(args[0]==='api'&&path==='repos/org/code/git/commits')return success({sha:'commitSha'})
   if(args[0]==='api'&&path==='repos/org/code/git/refs'){
     const ref=args.find(v=>v.startsWith('ref=refs/heads/')).split('=')[1].slice('refs/heads/'.length)
-    state.branches[ref]=true;for(const x of state.tree)files.set(ref+'|'+x.path,x.content)
+    state.branches[ref]=true;for(const x of state.tree)files.set(`${ref}|${x.path}`,x.content)
     return success({})
   }
   if(args[0]==='pr'&&args[1]==='create'){
     if(failPrOnce&&state.prFailures++===0)return {code:1,stderr:'temporary GitHub API error',stdout:''}
     state.created++;return success('https://github.com/org/code/pull/77')
   }
-  throw new Error('Unexpected gh: '+args.join(' '))
+  throw new Error(`Unexpected gh: ${args.join(' ')}`)
  }
  return {exec,state,calls}
 }

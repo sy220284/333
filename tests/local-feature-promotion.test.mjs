@@ -1,16 +1,16 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-const source = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
+const source = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
 test('正式构建启用本地功能，剔除官方远控', () => {
   const line = source('build/rebuild.mjs').match(/features:\s*\[([^\]]+)\]/)?.[1]
   assert.ok(line, '无法读取正式编译开关')
   for (const name of ['MCP_SKILLS', 'QUICK_SEARCH', 'EXTRACT_MEMORIES', 'AGENT_TRIGGERS', 'KAIROS_BRIEF']) {
-    assert.ok(line.includes("'"+name+"'"), name + ' 未进入构建')
+    assert.ok(line.includes(`'${name}'`), `${name} 未进入构建`)
   }
   for (const retired of ['BRIDGE_MODE', 'CCR_REMOTE_SETUP', 'VOICE_MODE', 'ULTRAPLAN']) {
-    assert.ok(!line.includes("'"+retired+"'"), retired + ' 仍进入构建')
+    assert.ok(!line.includes(`'${retired}'`), `${retired} 仍进入构建`)
   }
 })
 test('历史云实验缓存不参与功能决策', () => {

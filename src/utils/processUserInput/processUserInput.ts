@@ -1,4 +1,3 @@
-import { feature } from 'bun:bundle'
 import type {
   Base64ImageSource,
   ContentBlockParam,
@@ -292,7 +291,7 @@ async function processUserInputBase(
   bridgeOrigin?: boolean,
   isMeta?: boolean,
   skipAttachments?: boolean,
-  preExpansionInput?: string,
+  _preExpansionInput?: string,
 ): Promise<ProcessUserInputBaseResult> {
   let inputString: string | null = null
   let precedingInputBlocks: ContentBlockParam[] = []

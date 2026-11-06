@@ -62,8 +62,8 @@ test('本地会话通信默认可用，用户可以明确关闭', () => {
 
 test('本地会话名称冲突必须显式指定引用，云端地址不能混入', () => {
   const p = (name: string, ref: string): LiveLocalPeer317 => ({
-    id: ref, name, ref, address: 'uds:/tmp/sessions/' + ref,
-    kind: 'interactive', status: 'busy', socketPath: '/tmp/sessions/' + ref,
+    id: ref, name, ref, address: `uds:/tmp/sessions/${ref}`,
+    kind: 'interactive', status: 'busy', socketPath: `/tmp/sessions/${ref}`,
   })
   const peers = [p('test', 'aaaaaa'), p('test', 'bbbbbb')]
   assert.deepEqual(resolveLocalPeerRecipient(peers, 'test'), {

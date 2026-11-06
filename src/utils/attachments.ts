@@ -1500,8 +1500,8 @@ export function getAgentListingDeltaAttachment(
 // Exported for compact.ts / reactiveCompact.ts — single source of truth for the gate.
 export function getMcpInstructionsDeltaAttachment(
   mcpClients: MCPServerConnection[],
-  tools: Tools,
-  model: string,
+  _tools: Tools,
+  _model: string,
   messages: Message[] | undefined,
 ): Attachment[] {
   if (!isMcpInstructionsDeltaEnabled()) return []

@@ -99,8 +99,6 @@ export function isBriefEnabled(): boolean {
   if (feature('KAIROS')) return true
   if (feature('KAIROS_BRIEF')) return true
   return false
-    ? (getKairosActive() || getUserMsgOptIn()) && isBriefEntitled()
-    : false
 }
 
 export const BriefTool = buildTool({

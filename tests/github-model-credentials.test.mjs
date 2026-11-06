@@ -28,7 +28,7 @@ function setup({saved=[],current='openai/gpt-6',key='sk-private-local'}={}) {
  }
  return builder('getSavedModelOptions','getIndependentApiKey','resolveIndependentModel',
   'getAnthropicApiKey','getMainLoopModel','execFileNoThrow','validRepository','process',
-  source+"\nreturn {getGithubModelOptions,getGithubModelOption,getGithubActionsProviderOptions,configureGithubModel,configureGithubCustomModel}")(
+  `${source}\nreturn {getGithubModelOptions,getGithubModelOption,getGithubActionsProviderOptions,configureGithubModel,configureGithubCustomModel}`)(
   ()=>saved,
   route=>route.provider==='chatgpt'?(()=>{throw Error('OAuth token requested')})():key,
   resolve,
