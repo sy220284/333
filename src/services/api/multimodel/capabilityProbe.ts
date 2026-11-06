@@ -9,7 +9,7 @@ import { join } from 'node:path'
 import { getIndependentApiKey, resolveIndependentModel } from './registry.js'
 import { getChatGPTAccessToken } from '../../auth/chatgptOAuth.js'
 import { makeIndependentFetch } from './transport.js'
-import { MODEL_STORAGE_ROOT } from './storage.js'
+import { getModelStorageRoot } from './storage.js'
 type CapabilityReport = {
   model: string
   provider: string
@@ -21,10 +21,10 @@ type CapabilityReport = {
   toolRoundTrip: boolean
   details?: string
 }
-const path = join(MODEL_STORAGE_ROOT, 'capabilities.json')
+const reportsFile = () => join(getModelStorageRoot(), 'capabilities.json')
 function readReports(): CapabilityReport[] {
   try {
-    const data = JSON.parse(readFileSync(path,'utf8'))
+    const data = JSON.parse(readFileSync(reportsFile(),'utf8'))
     if (!Array.isArray(data)) throw new Error('Invalid capability report storage')
     return data as CapabilityReport[]
   } catch (error) {
@@ -36,7 +36,8 @@ export function getSavedCapabilityReport(model: string): CapabilityReport | unde
   return readReports().find(item => item.model === model)
 }
 async function persist(report: CapabilityReport): Promise<void> {
-  const directory = MODEL_STORAGE_ROOT
+  const directory = getModelStorageRoot()
+  const path = join(directory, 'capabilities.json')
   await fs.mkdir(directory, { recursive: true, mode: 0o700 })
   const list = readReports().filter(item => item.model !== report.model)
   list.push(report)
