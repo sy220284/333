@@ -58,14 +58,33 @@ export type McpServerConfig =
   | McpServerConfigForProcessTransport
   | McpSdkServerConfigWithInstance
 
+export type SDKPermissionContext = {
+  signal: AbortSignal
+  suggestions?: PermissionUpdate[]
+  toolUseID?: string
+  requestId?: string
+  blockedPath?: string
+  mcpServer?: string
+  decisionReason?: string
+  decisionType?: string
+  decisionCode?: string
+  serverPolicyAskOnly?: boolean
+  title?: string
+  displayName?: string
+  description?: string
+  defaultToNo?: boolean
+  suppressAlwaysAllowRule?: boolean
+  agentID?: string
+  plugin?: Record<string, unknown>
+  requiresUserInteraction?: boolean
+  computerFolder?: string
+  matchedAskRule?: Record<string, unknown>
+}
+
 export type CanUseTool = (
   toolName: string,
   input: Record<string, unknown>,
-  options: {
-    signal: AbortSignal
-    suggestions?: PermissionUpdate[]
-    toolUseID?: string
-  },
+  options: SDKPermissionContext,
 ) => Promise<PermissionResult>
 
 export type HookCallback = (
@@ -173,6 +192,7 @@ export interface InternalQuery extends Query {
 export type SDKSessionOptions = {
   sessionStore?: SessionStore
   loadTimeoutMs?: number
+  abortController?: AbortController
   model: string
   pathToClaudeCodeExecutable?: string
   executable?: 'node' | 'bun'
