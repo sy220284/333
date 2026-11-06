@@ -1,11 +1,13 @@
 import { randomUUID } from 'node:crypto'
 import type { LocalCommandCall } from '../../types/command.js'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
-import { githubWorkflow, GITHUB_SCRIPT_PATH, GITHUB_WORKFLOW_PATH, type GithubWorkflowSelection } from './workflow.js'
+import { githubWorkflow, GITHUB_SCRIPT_PATH, GITHUB_TASK_SCRIPT_PATH, GITHUB_WORKFLOW_PATH, type GithubWorkflowSelection } from './workflow.js'
 import { githubReviewerScript } from './reviewerScript.js'
+import { githubTaskRunnerScript } from './taskRunnerScript.js'
+import { getGithubModelOptions, configureGithubModel } from './modelConfig.js'
 
 import { validRepository } from './repository.js'
-const HELP = '用法：/github status | auth | repos | setup [owner/repo] [review|respond|both] | secret <owner/repo> <环境变量名> | review <owner/repo> <PR> [normal|deep|security] | runs <owner/repo> | run <owner/repo> <运行ID> | cancel <owner/repo> <运行ID> | rerun <owner/repo> <运行ID>'
+const HELP = '用法：/github status | auth | repos | setup [owner/repo] [review|respond|both] | secret <owner/repo> <环境变量名> | models | model <owner/repo> <provider/model> | review <owner/repo> <PR> [normal|deep|security] | runs <owner/repo> | run <owner/repo> <运行ID> | cancel <owner/repo> <运行ID> | rerun <owner/repo> <运行ID>'
 const result = (value: string): { type:'text'; value:string } => ({type:'text',value})
 function validPr(raw: string): string {
   if (!/^[1-9][0-9]*$/.test(raw) || !Number.isSafeInteger(Number(raw)))
@@ -32,6 +34,7 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
 
   const workflow = githubWorkflow(selection)
   const script = githubReviewerScript()
+  const taskScript = githubTaskRunnerScript()
   const main = String(metadata.default_branch)
   async function remoteFile(path: string, ref: string): Promise<string | null> {
     const url = `repos/${repo}/contents/${path}?ref=${encodeURIComponent(ref)}`
@@ -58,7 +61,9 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
   if (!reusable) {
     const currentWorkflow = await remoteFile(GITHUB_WORKFLOW_PATH, main)
     const currentScript = await remoteFile(GITHUB_SCRIPT_PATH, main)
-    if (currentWorkflow === workflow && currentScript === script) {
+    const currentTaskScript = selection === 'review' ? null : await remoteFile(GITHUB_TASK_SCRIPT_PATH, main)
+    if (currentWorkflow === workflow && currentScript === script &&
+        (selection === 'review' || currentTaskScript === taskScript)) {
       return `仓库 ${repo} 已配置相同的 Actions 工作流`
     }
   }
@@ -69,7 +74,9 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
   if (reusable) {
     const currentWorkflow = await remoteFile(GITHUB_WORKFLOW_PATH, targetBranch)
     const currentScript = await remoteFile(GITHUB_SCRIPT_PATH, targetBranch)
-    if (currentWorkflow === workflow && currentScript === script) return reusable.url
+    const currentTaskScript = selection === 'review' ? null : await remoteFile(GITHUB_TASK_SCRIPT_PATH, targetBranch)
+    if (currentWorkflow === workflow && currentScript === script &&
+        (selection === 'review' || currentTaskScript === taskScript)) return reusable.url
   }
   const head = JSON.parse(await gh(['api', `repos/${repo}/git/ref/heads/${base}`]))
   const parent = String(head.object.sha)
@@ -77,6 +84,9 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
   const treeElements = [
     { path: GITHUB_WORKFLOW_PATH, mode: '100644', type: 'blob', content: workflow },
     { path: GITHUB_SCRIPT_PATH, mode: '100644', type: 'blob', content: script },
+    ...(selection === 'review' ? [] : [
+      { path: GITHUB_TASK_SCRIPT_PATH, mode: '100644', type: 'blob', content: taskScript },
+    ]),
   ]
   const tree = JSON.parse(await gh(['api', '--method', 'POST', `repos/${repo}/git/trees`, '--input', '-'],
     JSON.stringify({ base_tree: previous.tree.sha, tree: treeElements })))
@@ -90,9 +100,16 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
   }
   await gh(['api', '--method', 'POST', `repos/${repo}/git/refs`,
     '-f', `ref=refs/heads/${targetBranch}`, '-f', `sha=${commit.sha}`])
-  const body = '## 摇摇车 GitHub 通用集成\\n\\n通过 GitHub Actions 执行多模型审查，授权成员可使用 /yaoyaoche review 触发。' +
-    '\\n请配置 Secret YAOYAOCHE_MODEL_API_KEY、变量 YAOYAOCHE_MODEL_NAME 与 YAOYAOCHE_MODEL_PROVIDER。' +
-    '\\n支持 OpenAI 兼容协议、Responses 与 Anthropic；GitHub 授权和模型授权独立。'
+  const body = [
+    '## 摇摇车 GitHub 通用集成',
+    '通过 GitHub Actions 运行多模型代码审查和授权成员的评论开发任务。',
+    '### 启用步骤',
+    '1. 审查并合并本 PR，使工作流进入仓库默认分支。',
+    '2. 使用 /github models 查看可复用的本地 API 模型。',
+    '3. 明确确认后用 /github model <owner/repo> <provider/model> 单独配置 Actions 凭据。',
+    '4. 通过 /yaoyaoche review deep 审查，或 /yaoyaoche task <开发要求> 执行开发任务。',
+    'ChatGPT OAuth 保留在本机，GitHub Actions 需要单独的 API Key。',
+  ].join('\n')
   try {
     return await gh(['pr', 'create', '--repo', repo, '--head', targetBranch, '--base', main,
       '--title', '接入 摇摇车 通用 GitHub Actions 与多模型审查', '--body', body])
@@ -120,6 +137,14 @@ export const call: LocalCommandCall = async (args) => {
       const auth = '已通过 GitHub CLI OAuth 授权检查'
       const current = await execFileNoThrow('gh',['repo','view','--json','nameWithOwner','--jq','.nameWithOwner'],{timeout:10000,useCwd:true})
       return result(`${auth}\n当前仓库：${current.code===0 ? current.stdout.trim() : '未识别'}`)
+    }
+    if (action === 'models') {
+      const models = getGithubModelOptions()
+      return result(models.length ? models.map(m=>m.id+' · '+m.credentialSource).join('\n') :
+        '暂无可用于 Actions 的 API 模型；ChatGPT OAuth 无法用于 Actions。请先通过 /model 配置 API Key。')
+    }
+    if (action === 'model' && tokens.length===3) {
+      return result(await configureGithubModel(tokens[1], tokens[2], true))
     }
     if (action === 'repos') {
       await checkAuth()
