@@ -97,9 +97,9 @@ test('every packaged file matches signed-style SHA-256 content manifest', () => 
 test("repository package uses rebuilt launcher canonical entrypoint", () => {
   const rootPackage = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
   const releasePackage = JSON.parse(readFileSync(join(dist, 'package.json'), 'utf8'));
-  assert.equal(rootPackage.bin.qerivon, 'dist/launcher.cjs');
-  assert.equal(releasePackage.bin.qerivon, './launcher.cjs');
-  assert.ok(existsSync(join(root, rootPackage.bin.qerivon)));
+  assert.equal(rootPackage.bin.yaoyaoche, 'dist/launcher.cjs');
+  assert.equal(releasePackage.bin.yaoyaoche, './launcher.cjs');
+  assert.ok(existsSync(join(root, rootPackage.bin.yaoyaoche)));
 });
 
 test('new distributable CLI is distinct from original binary', () => {
@@ -107,7 +107,7 @@ test('new distributable CLI is distinct from original binary', () => {
   assert.notEqual(hash(join(root,'cli.js')),hash(join(dist,'cli.js')));
 });
 test('compiled platform executable is packaged, signed and runs without system Bun', () => {
-  const name = process.platform === 'win32' ? 'qerivon.exe' : 'qerivon';
+  const name = process.platform === 'win32' ? 'yaoyaoche.exe' : 'yaoyaoche';
   const binary = join(dist, name);
   assert.ok(existsSync(binary), name + ' missing from release');
   const bytes = readFileSync(binary);
@@ -116,7 +116,7 @@ test('compiled platform executable is packaged, signed and runs without system B
   assert.ok(record, 'Native executable missing from SHA-256 release manifest');
   assert.equal(record.bytes, bytes.length);
   assert.equal(record.sha256, createHash('sha256').update(bytes).digest('hex'));
-  const sandbox = mkdtempSync(join(tmpdir(), 'qerivon-native-launch-'));
+  const sandbox = mkdtempSync(join(tmpdir(), 'yaoyaoche-native-launch-'));
   try {
     const env = { ...process.env, PATH: '', Path: '' };
     for (const [entrypoint, args] of [
@@ -128,7 +128,7 @@ test('compiled platform executable is packaged, signed and runs without system B
       });
       assert.equal(actual.error, undefined, String(actual.error));
       assert.equal(actual.status, 0, actual.stderr);
-      assert.equal(actual.stdout.trim(), `${expectedVersion} (Qerivon)`);
+      assert.equal(actual.stdout.trim(), `${expectedVersion} (摇摇车)`);
     }
   } finally {
     rmSync(sandbox, { recursive: true, force: true });
@@ -137,11 +137,11 @@ test('compiled platform executable is packaged, signed and runs without system B
 test('installed launcher invokes newly built CLI', () => {
   const p=spawnSync(process.execPath,[join(dist,'launcher.cjs'),'--version'],{encoding:'utf8',timeout:15000});
   assert.equal(p.status,0,p.stderr);
-  assert.equal(p.stdout.trim(), `${expectedVersion} (Qerivon)`);
+  assert.equal(p.stdout.trim(), `${expectedVersion} (摇摇车)`);
 });
 
 test('release is runnable from an isolated folder without repository node_modules', () => {
-  const sandbox = mkdtempSync(join(tmpdir(), 'qerivon-distributable-'));
+  const sandbox = mkdtempSync(join(tmpdir(), 'yaoyaoche-distributable-'));
   try {
     const installed = join(sandbox, 'installed');
     cpSync(dist, installed, { recursive: true });
@@ -155,14 +155,14 @@ test('release is runnable from an isolated folder without repository node_module
       });
       assert.equal(p.error, undefined, p.error?.message);
       assert.equal(p.status, 0, JSON.stringify({ args, stdout: p.stdout?.slice(-1200), stderr: p.stderr?.slice(-1200) }));
-      if (args[0] === '--version') assert.equal(p.stdout.trim(), `${expectedVersion} (Qerivon)`);
+      if (args[0] === '--version') assert.equal(p.stdout.trim(), `${expectedVersion} (摇摇车)`);
       else assert.match(p.stdout, /Usage:/);
     }
     const p = spawnSync(process.execPath, [join(installed, 'launcher.cjs'), '--version'], {
       cwd: sandbox, encoding: 'utf8', timeout: 25000,
     });
     assert.equal(p.status, 0, p.stderr);
-    assert.equal(p.stdout.trim(), `${expectedVersion} (Qerivon)`);
+    assert.equal(p.stdout.trim(), `${expectedVersion} (摇摇车)`);
   } finally {
     // On Windows ARM64, the native launcher can exit before Windows releases
     // its just-executed .exe file handle. Node's built-in recursive removal
