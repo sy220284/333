@@ -358,3 +358,14 @@ test('provider errors redact echoed credentials in HTTP bodies, headers and stre
   await assert.rejects(() => sse.text(), error =>
     error instanceof Error && !error.message.includes(token) && error.message.includes('Rejected'))
 })
+
+test('MiniMax inference and discovery default to the mainland China API', async () => {
+  assert.equal(requireRoute('minimax/MiniMax-M3.1-Flash').endpoint,
+    'https://api.minimaxi.com/v1/chat/completions')
+  const models = await discoverIndependentModels('minimax', 'test-key', async (url, init) => {
+    assert.equal(String(url), 'https://api.minimaxi.com/v1/models')
+    assert.equal(new Headers(init?.headers).get('authorization'), 'Bearer test-key')
+    return Response.json({ data: [{ id: 'MiniMax-M3.1-Flash' }] })
+  })
+  assert.deepEqual(models, ['MiniMax-M3.1-Flash'])
+})

@@ -16,6 +16,8 @@ export interface ProviderRoute {
   keyEnvironment?: string
 }
 type Definition = { protocol: Protocol; endpoint: string; keyEnvironment?: string }
+const MINIMAX_API_ORIGIN = 'https://api.minimaxi.com'
+
 export const PROVIDERS: Readonly<Record<IndependentProvider, Definition>> = {
   openai: { protocol: 'responses', endpoint: 'https://api.openai.com/v1/responses', keyEnvironment: 'OPENAI_API_KEY' },
   chatgpt: { protocol: 'responses', endpoint: 'https://api.openai.com/v1/responses' },
@@ -23,7 +25,7 @@ export const PROVIDERS: Readonly<Record<IndependentProvider, Definition>> = {
   qwen: { protocol: 'chat-completions', endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', keyEnvironment: 'DASHSCOPE_API_KEY' },
   kimi: { protocol: 'chat-completions', endpoint: 'https://api.moonshot.cn/v1/chat/completions', keyEnvironment: 'MOONSHOT_API_KEY' },
   zhipu: { protocol: 'chat-completions', endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions', keyEnvironment: 'ZHIPU_API_KEY' },
-  minimax: { protocol: 'chat-completions', endpoint: 'https://api.minimax.io/v1/chat/completions', keyEnvironment: 'MINIMAX_API_KEY' },
+  minimax: { protocol: 'chat-completions', endpoint: `${MINIMAX_API_ORIGIN}/v1/chat/completions`, keyEnvironment: 'MINIMAX_API_KEY' },
   openrouter: { protocol: 'chat-completions', endpoint: 'https://openrouter.ai/api/v1/chat/completions', keyEnvironment: 'OPENROUTER_API_KEY' },
 }
 /** Explicit migration marker for previously saved provider entries. */
@@ -85,7 +87,7 @@ export async function discoverIndependentModelDetails(
     qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1/models',
     kimi: 'https://api.moonshot.cn/v1/models',
     zhipu: 'https://open.bigmodel.cn/api/paas/v4/models',
-    minimax: 'https://api.minimax.io/v1/models',
+    minimax: `${MINIMAX_API_ORIGIN}/v1/models`,
     openrouter: 'https://openrouter.ai/api/v1/models',
   }
   const response = await fetcher(addresses[provider], {
