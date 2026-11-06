@@ -4,6 +4,7 @@ import { buildTool, type ToolDef } from '../../Tool.js'
 import { lazySchema } from '../../utils/lazySchema.js'
 import { getCwd } from '../../utils/cwd.js'
 import { isSuperAgentMode } from '../../utils/agentMode.js'
+import { enqueueMissionJob, listMissionJobs, cancelMissionJob, missionJobAssignmentId } from '../../services/agentCenter/missionJobs.js'
 import {
   getSelectedMissionId, getMission, listMissions, formatMission,
   saveMissionCheckpoint, linkMissionAssignment, finishMissionAssignment,
@@ -11,12 +12,13 @@ import {
 } from '../../utils/agentMissions.js'
 
 const inputSchema = lazySchema(() => z.strictObject({
-  action: z.enum(['list', 'show', 'checkpoint', 'attach', 'finish', 'status']),
+  action: z.enum(['list', 'show', 'checkpoint', 'attach', 'finish', 'status', 'jobs', 'queue']),
   mission_id: z.string().optional(),
   checkpoint: z.string().optional(),
   assignment_id: z.string().optional(),
   kind: z.enum(['agent', 'workflow', 'team']).optional(),
   title: z.string().optional(),
+  instruction: z.string().optional(),
   assignment_status: z.enum(['running', 'completed', 'failed', 'killed']).optional(),
   mission_status: z.enum(['active', 'paused', 'completed']).optional(),
 }))
@@ -43,6 +45,25 @@ async function execute(input: Input): Promise<string> {
   const id = required(selected, '任务 ID，请先由用户通过 /agents mission new 创建')
   const mission = await getMission(id)
   if (resolve(mission.projectDir) !== resolve(getCwd())) throw new Error(`任务归属其他项目：${mission.projectDir}`)
+  if (input.action === 'jobs') {
+    const jobs = await listMissionJobs(id, getCwd())
+    return jobs.length
+      ? jobs.map(job => `${job.id} [${job.status}] ${job.title}（第 ${job.attempt} 次执行）`).join('\\n')
+      : '本长期任务尚无执行工作项'
+  }
+  if (input.action === 'queue') {
+    if (mission.status !== 'active') throw new Error('请先恢复长期任务后再规划工作项')
+    const title = required(input.title, 'title')
+    const instruction = required(input.instruction, 'instruction')
+    const job = await enqueueMissionJob(id, getCwd(), title, instruction)
+    try {
+      await linkMissionAssignment(id, missionJobAssignmentId(job.id), 'agent', job.title)
+    } catch (error) {
+      await cancelMissionJob(id, getCwd(), job.id)
+      throw error
+    }
+    return `已记录待执行工作项 ${job.id}：${job.title}。需用户明确启动后才进入 SDK 执行。`
+  }
   if (input.action === 'show') return formatMission(mission)
   if (input.action === 'checkpoint') {
     const checkpoint = required(input.checkpoint, '阶段记录')
@@ -75,13 +96,13 @@ export const MissionTool = buildTool({
   shouldDefer: true,
   maxResultSizeChars: 50_000,
   userFacingName() { return 'Mission' },
-  async description() { return '维护超级智能体本地长期任务：列出、查看、记录进度、关联执行、标记关联结果和任务状态。' },
-  async prompt() { return 'Use only for an existing user-authorized mission. Checkpoint after verified progress; attach worker and workflow IDs; finish each assignment with an evidence-backed outcome. Pausing the mission prevents new assignments but does not stop existing running processes. No action creates an agent or scheduler.' },
+  async description() { return '维护超级智能体本地长期任务：查看、规划执行工作项、记录进度、关联执行和任务状态。' },
+  async prompt() { return 'Use only for an existing user-authorized mission. The jobs action lists the persistent queue; queue records a planned job but never starts it. Checkpoint after verified progress; attach worker and workflow IDs; finish each assignment with an evidence-backed outcome. Pausing the mission prevents new assignments but does not stop existing running processes. No action creates an agent or scheduler.' },
   get inputSchema(): InputSchema { return inputSchema() },
   get outputSchema(): OutputSchema { return outputSchema() },
   isEnabled() { return isSuperAgentMode() },
   isConcurrencySafe() { return false },
-  isReadOnly(input) { return input.action === 'list' || input.action === 'show' },
+  isReadOnly(input) { return input.action === 'list' || input.action === 'show' || input.action === 'jobs' },
   toAutoClassifierInput(input) { return [input.action, input.mission_id, input.assignment_id].filter(Boolean).join(' ') },
   renderToolUseMessage(input) { return `长期任务 · ${input.action}` },
   async call(input) {
