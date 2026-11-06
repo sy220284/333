@@ -32,6 +32,7 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
     process.env.HOME = root
     process.env.USERPROFILE = root
     const auth = await import('../src/services/auth/chatgptOAuth.ts')
+    const profiles = await import('../src/services/api/multimodel/profiles.ts')
     globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url === 'https://auth.openai.com/.well-known/openid-configuration') {
@@ -88,12 +89,24 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
     assert.equal(first.planEnabled, true)
     const firstIdentity = auth.getSavedChatGPTAccount()
     assert.ok(firstIdentity)
-    assert.equal((await auth.getChatGPTAuthorization()).token, 'access-oaiapp_333_one')
+    const verifiedA = await auth.getChatGPTAuthorization()
+    assert.equal(verifiedA.token, 'access-oaiapp_333_one')
+    assert.equal(await profiles.mergeDiscoveredModelProfiles('chatgpt', [
+      { id: 'gpt-6.1-sol', contextWindow: 32000, supportsTools: true },
+    ], verifiedA.account), 1)
+    assert.equal(profiles.getIndependentProfile('chatgpt/gpt-6.1-sol')?.contextWindow, 32000)
     currentScope = 'openid profile email'
     const second = await auth.loginWithChatGPT({ addAccount: true }, browser)
     assert.equal(second.clientId, 'oaiapp_333_two')
     assert.equal(second.planEnabled, false)
     assert.equal(auth.getSavedChatGPTAccount(), undefined)
+    assert.equal(profiles.getIndependentProfile('chatgpt/gpt-6.1-sol'), undefined)
+    const accountB = auth.getChatGPTAccountIdentity({
+      client_id: 'oaiapp_333_two', subject: 'user-b', workspace_id: 'workspace-b',
+    })
+    assert.equal(await profiles.mergeDiscoveredModelProfiles('chatgpt', [
+      { id: 'gpt-6.1-sol', contextWindow: 16000, supportsTools: false },
+    ], accountB), 1)
     assert.equal((await auth.chatGPTStatus()).planEnabled, false)
     await assert.rejects(auth.getChatGPTAuthorization(), /plan usage is disabled/)
     const accounts = await auth.listChatGPTAccounts()
@@ -107,6 +120,7 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
     await auth.selectChatGPTAccount('oaiapp_333_one')
     assert.equal(auth.getSavedChatGPTAccount(), firstIdentity)
     assert.equal((await auth.getChatGPTAuthorization()).token, 'access-oaiapp_333_one')
+    assert.equal(profiles.getIndependentProfile('chatgpt/gpt-6.1-sol')?.contextWindow, 32000)
     await auth.logoutChatGPT()
     assert.deepEqual(revocations, ['refresh-oaiapp_333_one'])
     assert.equal((await auth.chatGPTStatus()).connected, false)
@@ -118,6 +132,12 @@ test('ChatGPT 官方动态注册、二账号隔离、授权范围、账号切换
     assert.equal(opened[2].searchParams.get('agent_name_hint'), null)
     assert.equal((await auth.getChatGPTAuthorization()).token, 'access-oaiapp_333_one')
     assert.equal((await auth.listChatGPTAccounts()).length, 2)
+    await auth.loginWithChatGPT({ clientId: 'oaiapp_333_two' }, browser)
+    assert.equal(profiles.getIndependentProfile('chatgpt/gpt-6.1-sol')?.contextWindow, 16000)
+    assert.equal(profiles.getIndependentProfile('chatgpt/gpt-6.1-sol')?.supportsTools, false)
+    await auth.selectChatGPTAccount('oaiapp_333_one')
+    assert.equal(profiles.getIndependentProfile('chatgpt/gpt-6.1-sol')?.contextWindow, 32000)
+    assert.equal(profiles.getIndependentProfile('chatgpt/gpt-6.1-sol')?.supportsTools, true)
     assert.equal(callbackError, null)
     const saved = JSON.parse(readFileSync(join(root, '.333', 'auth', 'chatgpt-accounts.json'), 'utf8'))
     assert.equal(saved.schema, 2)
