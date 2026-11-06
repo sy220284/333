@@ -15,12 +15,8 @@ function isAgentTeamsFlagSet(): boolean {
  * No remote experimentation or vendor entitlement is consulted.
  */
 export function isAgentSwarmsEnabled(): boolean {
-  // Ant: always on
-  if (process.env.USER_TYPE === 'ant') {
-    return true
-  }
-
-  // Explicit environment or CLI enables take precedence; otherwise use the local default.
+  // Local user setting is authoritative by default; explicit startup flags
+  // may enable the tool for this process without changing persisted settings.
   if (
     !isEnvTruthy(process.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS) &&
     !isAgentTeamsFlagSet() &&
