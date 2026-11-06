@@ -62,7 +62,7 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
       }
       setModels(getGithubModelOptions())
     } catch (error) {
-      setStatus('GitHub 初始化失败：' + (error instanceof Error ? error.message : String(error)))
+      setStatus(`GitHub 初始化失败：${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setBusy(false)
     }
@@ -80,7 +80,7 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
       let displayed = ''
       let pressedEnter = false
       const notify = (chunk: Buffer | string) => {
-        displayed = (displayed + String(chunk).replace(/\u001b\[[0-9;]*m/g,'')).slice(-2500)
+        displayed = (displayed + String(chunk).replace(new RegExp(String.raw`\x1b\[[0-9;]*m`, 'g'),'')).slice(-2500)
         setStatus(displayed.slice(-1200))
         if (!pressedEnter && /press enter|按回车|按下回车/i.test(displayed)) {
           pressedEnter = true
@@ -95,7 +95,7 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
       }
       await reload()
     } catch (error) {
-      setStatus('GitHub 登录失败：' + (error instanceof Error ? error.message : String(error)))
+      setStatus(`GitHub 登录失败：${error instanceof Error ? error.message : String(error)}`)
       setBusy(false)
     }
   }
@@ -114,18 +114,13 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
           await configureGithubModel(name,model,true)
         }
       }
-      const output = 'GitHub 配置 PR：' + url +
-        '\n仓库：' + name +
-        '\n功能：' + workflow +
-        '\n模型：' + (transferKey ? (entry === 'new' ? provider+'/'+newModel : model) : '稍后独立配置') +
-        '\n请检查并合并配置 PR，工作流才会在仓库默认分支生效。'
+      const output = `GitHub 配置 PR：${url}\n仓库：${name}\n功能：${workflow}\n模型：${transferKey ? (entry === 'new' ? `${provider}/${newModel}` : model) : '稍后独立配置'}\n请检查并合并配置 PR，工作流才会在仓库默认分支生效。`
       setApiKey('')
       setResult(output)
       setStatus('配置完成，请检查并合并安装 PR。')
       setStage('finished')
     } catch (error) {
-      setStatus('配置失败：' + (error instanceof Error ? error.message : String(error)) +
-        '。可保留当前选择重试。')
+      setStatus(`配置失败：${error instanceof Error ? error.message : String(error)}。可保留当前选择重试。`)
     } finally {
       setBusy(false)
     }
@@ -137,9 +132,9 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
     setStage('repos')
   }
   const repoOptions = [
-    ...(repo ? [{label:'当前仓库：'+repo,value:repo}] : []),
+    ...(repo ? [{label:`当前仓库：${repo}`,value:repo}] : []),
     ...repos.filter(r=>r.nameWithOwner !== repo).map(r=>({
-      label: r.nameWithOwner+(r.isPrivate?'（私有）':''),value:r.nameWithOwner,
+      label: `${r.nameWithOwner}${r.isPrivate?'（私有）':''}`,value:r.nameWithOwner,
     })),
     {label:'输入其他仓库地址',value:'__manual__',type:'input' as const,
       placeholder:'owner/repo 或 https://github.com/owner/repo',
@@ -224,7 +219,7 @@ function Wizard({ onDone }: { onDone: LocalJSXCommandOnDone }): React.ReactNode 
       </Box>}
       {!busy && stage === 'confirm' && <Box flexDirection="column" gap={1}>
         <Text>仓库：{repo}　工作流：{workflow}</Text>
-        <Text>模型：{entry === 'new' ? provider+'/'+newModel : (model || '稍后配置')}</Text>
+        <Text>模型：{entry === 'new' ? `${provider}/${newModel}` : (model || '稍后配置')}</Text>
         <Text dimColor>确认上传只将所选 API Key 发送到当前仓库的 GitHub Actions Secret，本地 OAuth 凭据保持独立。</Text>
         <Select options={[
           ...(model || entry === 'new'

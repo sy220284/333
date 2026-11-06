@@ -71,7 +71,7 @@ export async function setupRepository(raw: string, selection: GithubWorkflowSele
   // recoverable branch. Reuse it only if all generated files match exactly.
   if (!reusable) {
     const matching = JSON.parse(await gh(['api',
-      'repos/' + repo + '/git/matching-refs/heads/yaoyaoche/review-']))
+      `repos/${repo}/git/matching-refs/heads/yaoyaoche/review-`]))
     if (!Array.isArray(matching)) throw new Error('GitHub 分支列表格式不符合预期')
     for (const record of matching.slice(0,40)) {
       const candidate = String(record.ref || '').replace(/^refs\/heads\//,'')
@@ -163,7 +163,7 @@ export const call: LocalCommandCall = async (args) => {
     if (action === 'models') {
       const { getGithubModelOptions } = await import('./modelConfig.js')
       const models = getGithubModelOptions()
-      return result(models.length ? models.map(m=>m.id+' · '+m.credentialSource).join('\n') :
+      return result(models.length ? models.map(m=>`${m.id} · ${m.credentialSource}`).join('\n') :
         '暂无可用于 Actions 的 API 模型；ChatGPT OAuth 无法用于 Actions。请先通过 /model 配置 API Key。')
     }
     if (action === 'model' && tokens.length===3) {

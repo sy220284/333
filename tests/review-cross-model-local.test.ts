@@ -18,7 +18,7 @@ describe('用户按需选择第二模型交叉审查', () => {
   })
   it('实际请求通过 Agent 模型参数进行显式复核', () => {
     const code = readFileSync(join(import.meta.dir, '../src/commands/review.ts'), 'utf8')
-    expect(code).toContain('model=${JSON.stringify(cross.reviewer)}')
+    expect(code).toMatch(/model=\$\{JSON\.stringify\(cross\.reviewer\)\}/)
     expect(code).toContain('交叉复核未执行')
   })
 })

@@ -26,7 +26,7 @@ export function getGithubModelOptions(): GithubModelOption[] {
   const claude = getMainLoopModel()
   if (configuredClaudeKey() && typeof claude === 'string' && !claude.includes('/')) {
     models.push({
-      id: 'claude/' + claude, label: 'Claude · ' + claude, model: claude,
+      id: `claude/${claude}`, label: `Claude · ${claude}`, model: claude,
       protocol: 'anthropic', endpoint: 'https://api.anthropic.com/v1/messages',
       tokenField: 'max_tokens', credentialSource: '已配置的 Anthropic API Key',
     })
@@ -37,7 +37,7 @@ export function getGithubModelOptions(): GithubModelOption[] {
   if (typeof claude === 'string' && claude.includes('/') &&
       !known.some(entry => entry.value === claude)) {
     known.unshift({value:claude,label:claude.split('/').slice(1).join('/'),
-      description:claude+' · 当前使用模型'})
+      description:`${claude} · 当前使用模型`})
   }
   for (const saved of known) {
     const route = resolveIndependentModel(saved.value)
@@ -56,7 +56,7 @@ export function getGithubModelOptions(): GithubModelOption[] {
       protocol: route.protocol === 'responses' ? 'openai-responses' : 'openai-compatible',
       endpoint: route.endpoint,
       tokenField: route.provider === 'openai' ? 'max_completion_tokens' : 'max_tokens',
-      credentialSource: '本机 ' + route.provider + ' API Key',
+      credentialSource: `本机 ${route.provider} API Key`,
     })
   }
   return models
@@ -112,8 +112,7 @@ export async function configureGithubModel(
   for (const [name, value] of Object.entries(variables)) {
     await gh(['variable', 'set', name, '--repo', repo, '--body', value])
   }
-  return '仓库 ' + repo + ' 已单独配置 Actions 模型 ' + option.id +
-    '；本机授权状态及本地凭据文件未修改。'
+  return `仓库 ${repo} 已单独配置 Actions 模型 ${option.id}；本机授权状态及本地凭据文件未修改。`
 }
 
 export type GithubActionsProvider = 'openai' | 'deepseek' | 'qwen' | 'kimi' |
@@ -143,11 +142,11 @@ export async function configureGithubCustomModel(
   if(!supported.some(item=>item.value===provider))throw new Error('模型服务商不支持')
   if(!/^[A-Za-z0-9_./:-]{1,180}$/.test(model))throw new Error('模型名称格式无效')
   if(apiKey.length<5 || apiKey.length>8192 || apiKey.trim()!==apiKey ||
-    /[\u0000-\u001f]/.test(apiKey)) throw new Error('API Key 格式无效')
+    Array.from(apiKey).some(char => char.charCodeAt(0) < 32)) throw new Error('API Key 格式无效')
   const option=provider==='anthropic'
     ? {protocol:'anthropic',endpoint:'https://api.anthropic.com/v1/messages',tokenField:'max_tokens'}
     : (() => {
-      const route=resolveIndependentModel(provider+'/'+model)
+      const route=resolveIndependentModel(`${provider}/${model}`)
       if(!route||route.provider==='chatgpt')throw new Error('模型路由不存在')
       return {protocol:route.protocol==='responses'?'openai-responses':'openai-compatible',
         endpoint:route.endpoint,tokenField:provider==='openai'?'max_completion_tokens':'max_tokens'}
@@ -163,5 +162,5 @@ export async function configureGithubCustomModel(
   for(const [name,value] of Object.entries(variables)) {
     await gh(['variable','set',name,'--repo',repo,'--body',value])
   }
-  return 'GitHub Actions 已单独配置 '+provider+'/'+model+'；本机模型账号及密钥未改变。'
+  return `GitHub Actions 已单独配置 ${provider}/${model}；本机模型账号及密钥未改变。`
 }

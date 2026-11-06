@@ -27,9 +27,9 @@ export const call: LocalCommandCall = async args => {
   return {
     type: 'text',
     value: [
-      '本机隐私配置：' + stored + '（' + labels[stored] + '）',
-      '当前生效级别：' + effective + '；本地遥测：' + (isTelemetryDisabled() ? '关闭' : '开启'),
-      '配置文件：' + join(getClaudeConfigHomeDir(), 'privacy.json'),
+      `本机隐私配置：${stored}（${labels[stored]}）`,
+      `当前生效级别：${effective}；本地遥测：${isTelemetryDisabled() ? '关闭' : '开启'}`,
+      `配置文件：${join(getClaudeConfigHomeDir(), 'privacy.json')}`,
       '环境变量可进一步收紧隐私级别；上述设置与服务商账号隐私政策分别管理。',
     ].join('\n'),
   }

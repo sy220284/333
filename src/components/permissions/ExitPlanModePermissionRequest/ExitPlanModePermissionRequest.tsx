@@ -122,7 +122,6 @@ export function ExitPlanModePermissionRequest({
 }: PermissionRequestProps): React.ReactNode {
   const toolPermissionContext = useAppState(s => s.toolPermissionContext);
   const setAppState = useSetAppState();
-  const store = useAppStateStore();
   const {
     addNotification
   } = useNotifications();

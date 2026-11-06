@@ -21,8 +21,8 @@ export function parseCrossReviewSpec(args: string): { reviewer: string; request:
   if (!prefix) return null
   const rest = text.slice(prefix[0].length).trim()
   const match = /^(\S+)(?:\s+([\s\S]*))?$/.exec(rest)
-  if (!match) throw new Error('交叉复核需要指定模型：/review cross opus deep 19，或 /review cross provider/model security 19')
-  const reviewer = match[1]!
+  if (!match?.[1]) throw new Error('交叉复核需要指定模型：/review cross opus deep 19，或 /review cross provider/model security 19')
+  const reviewer = match[1]
   if (!/^(?:opus|sonnet|haiku|[^/\s]+\/[^\s]+)$/i.test(reviewer)) {
     throw new Error('复核模型须为 opus、sonnet、haiku 或配置过的 provider/model')
   }

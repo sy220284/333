@@ -116,7 +116,7 @@ export async function connectVoiceStream(
             maxBuffer: 1024 * 1024,
             windowsHide: true,
           })
-          const transcript = (await readFile(base + '.txt', 'utf8')).trim()
+          const transcript = (await readFile(`${base}.txt`, 'utf8')).trim()
           if (transcript) callbacks.onTranscript(transcript, true)
           return transcript ? 'post_closestream_endpoint' : 'no_data_timeout'
         } catch (error) {

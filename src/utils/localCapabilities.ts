@@ -23,7 +23,7 @@ export const LOCAL_CAPABILITY_INFO = {
 } as const
 
 export type LocalCapability = keyof typeof LOCAL_CAPABILITY_INFO
-const keyFor = (name: LocalCapability): string => 'local_capability_' + name
+const keyFor = (name: LocalCapability): string => `local_capability_${name}`
 
 export function isLocalCapability(name: string): name is LocalCapability {
   return Object.hasOwn(LOCAL_CAPABILITY_INFO, name)
