@@ -430,6 +430,47 @@ test('一键并行分工只启动明确授权的工作项，并保留剩余队�
   }
 })
 
+test('用户授权的持续任务队列自动补位、保持三项并发上限并允许终止', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'desktop-mission-queue-'))
+  const missionRoot = join(cwd, 'mission-store')
+  const previousMode = getConfiguredAgentMode()
+  const previousOverride = process.env.CLAUDE_CODE_COORDINATOR_MODE
+  const data = fixture()
+  const gateway = createDesktopGateway({ ...data.options, cwd, missionRoot })
+  const events: DesktopEvent[] = []
+  gateway.subscribe(event => events.push(event))
+  try {
+    const mission = await gateway.handle(request('missions.create', { objective: '自动推进五项独立验证任务' })) as { id: string }
+    const ids: string[] = []
+    for (let i = 0; i < 5; i++) {
+      const job = await gateway.handle(request('missions.jobs.enqueue', {
+        missionId: mission.id, title: '第' + i + '项工作', instruction: '核查项目单元' + i,
+      })) as { id: string }
+      ids.push(job.id)
+    }
+    expect((await gateway.handle(request('missions.jobs.queueStatus', { missionId: mission.id })) as { active: boolean }).active).toBe(false)
+    const result = await gateway.handle(request('missions.jobs.runQueue', { missionId: mission.id })) as { active: boolean }
+    expect(result.active).toBe(true)
+    await until(() => new Set(events.filter(event =>
+      event.event === 'mission.job.updated' && event.job.status === 'review').map(event =>
+      event.event === 'mission.job.updated' ? event.job.id : null)).size === 5)
+    await until(() => events.some(event => event.event === 'mission.queue.state' && event.active === false))
+    const jobs = await gateway.handle(request('missions.jobs.list', { missionId: mission.id })) as Array<{ id: string; status: string; attempt: number }>
+    expect(jobs.map(job => job.id).sort()).toEqual([...ids].sort())
+    expect(jobs.every(job => job.status === 'review' && job.attempt === 1)).toBe(true)
+    expect((await gateway.handle(request('missions.jobs.queueStatus', { missionId: mission.id })) as { active: boolean }).active).toBe(false)
+    const stop = await gateway.handle(request('missions.jobs.haltQueue', { missionId: mission.id })) as { active: boolean }
+    expect(stop.active).toBe(false)
+  } finally {
+    selectMission(undefined, cwd)
+    setAgentMode(previousMode)
+    if (previousOverride === undefined) delete process.env.CLAUDE_CODE_COORDINATOR_MODE
+    else process.env.CLAUDE_CODE_COORDINATOR_MODE = previousOverride
+    await gateway.close()
+    await rm(cwd, { recursive: true, force: true })
+  }
+})
+
 test('desktop serializes concurrent turns even while the first SDK send is pending', async () => {
   let permit!: () => void
   const sending = new Promise<void>(resolve => { permit = resolve })
