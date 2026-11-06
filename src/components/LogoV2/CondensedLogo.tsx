@@ -29,11 +29,11 @@ export function CondensedLogo(): ReactNode {
   // Prefer AppState.agent (set from --agent CLI flag) over settings
   const agentName = agent ?? agentNameFromSettings
   // Calculate available width for text content
-  // Account for: 333 brand mark width (9 chars) + gap (2) + padding (2) = 15 chars
+  // Account for: Avenlo brand mark width (12 chars) + gap (2) + padding (2) = 18 chars
   const textWidth = Math.max(columns - 15, 20)
 
-  // Truncate version to fit within available width, accounting for "333 v" prefix
-  const versionPrefix = '333 v'
+  // Truncate version to fit within available width, accounting for "Avenlo v" prefix
+  const versionPrefix = 'Avenlo v'
   const truncatedVersion = truncate(
     version,
     Math.max(textWidth - versionPrefix.length, 6),
@@ -67,7 +67,7 @@ export function CondensedLogo(): ReactNode {
       {/* Info */}
       <Box flexDirection="column">
         <Text>
-          <Text bold>333</Text>{' '}
+          <Text bold>Avenlo</Text>{' '}
           <Text dimColor>v{truncatedVersion}</Text>
         </Text>
         {shouldSplit ? (

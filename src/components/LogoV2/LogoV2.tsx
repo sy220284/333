@@ -126,7 +126,7 @@ export function LogoV2() {
     // Accessibility uses the same live model, billing and workspace metadata
     // as the normal logo, without graphical brand art, decorative borders or animation.
     return <Box flexDirection="column">
-      <Text>333 v{version}</Text>
+      <Text>Avenlo v{version}</Text>
       <Text>{fullModelDisplayName}{effortSuffix} · {billingType}</Text>
       <Text>{agentName ? `@${agentName} · ${cwd}` : cwd}</Text>
       {activePermissionMode === 'auto' && <>
@@ -210,8 +210,8 @@ export function LogoV2() {
   }
   const layoutMode = getLayoutMode(columns);
   const userTheme = resolveThemeSetting(getGlobalConfig().theme);
-  const borderTitle = ` ${color("professionalBlue", userTheme)("333")} ${color("inactive", userTheme)(`v${version}`)} `;
-  const compactBorderTitle = color("professionalBlue", userTheme)(" 333 ");
+  const borderTitle = ` ${color("professionalBlue", userTheme)("Avenlo")} ${color("inactive", userTheme)(`v${version}`)} `;
+  const compactBorderTitle = color("professionalBlue", userTheme)(" Avenlo ");
   if (layoutMode === "compact") {
     let welcomeMessage = formatWelcomeMessage(username);
     if (stringWidth(welcomeMessage) > columns - 4) {
