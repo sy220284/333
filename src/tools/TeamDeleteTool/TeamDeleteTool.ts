@@ -1,4 +1,5 @@
 import { z } from 'zod/v4'
+import { findMissionByAssignmentId, finishMissionAssignment } from '../../utils/agentMissions.js'
 import { logEvent } from '../../services/analytics/index.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../../services/analytics/metadata.js'
 import type { Tool } from '../../Tool.js'
@@ -99,6 +100,8 @@ export const TeamDeleteTool: Tool<InputSchema, Output> = buildTool({
       }
 
       await cleanupTeamDirectories(teamName)
+      const missionId = await findMissionByAssignmentId('team:' + teamName)
+      if (missionId) await finishMissionAssignment(missionId, 'team:' + teamName, 'completed')
       // Already cleaned — don't try again on gracefulShutdown.
       unregisterTeamForSessionCleanup(teamName)
 
