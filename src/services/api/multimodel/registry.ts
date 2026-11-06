@@ -30,12 +30,21 @@ export const PROVIDERS: Readonly<Record<IndependentProvider, Definition>> = {
 export function isRetiredIndependentProvider(provider: unknown): boolean {
   return provider === 'gemini' || provider === 'xai'
 }
+/** Apply model removals even when a gateway exposes those families. */
+export function isRemovedIndependentModel(model: string): boolean {
+  const slash = model.indexOf('/')
+  if (slash < 1) return false
+  const provider = model.slice(0, slash).toLowerCase()
+  if (isRetiredIndependentProvider(provider)) return true
+  const id = model.slice(slash + 1).toLowerCase()
+  return /(?:^|\/)(?:gemini|grok)(?:[-_.]|$)/.test(id)
+}
 export function resolveIndependentModel(model: string | undefined): ProviderRoute | null {
   if (!model) return null
   const index = model.indexOf('/')
   if (index < 1 || index === model.length - 1) return null
   const provider = model.slice(0, index).toLowerCase() as IndependentProvider
-  if (!Object.hasOwn(PROVIDERS, provider)) return null
+  if (isRemovedIndependentModel(model) || !Object.hasOwn(PROVIDERS, provider)) return null
   const config = PROVIDERS[provider]
   return {
     provider,
@@ -96,7 +105,8 @@ export async function discoverIndependentModelDetails(
       : entry.id
     if (typeof value !== 'string') return []
     const id = value
-    if (!id || id.length > 300 || Array.from(id).some(character => character.charCodeAt(0) < 32)) return []
+    if (!id || id.length > 300 || isRemovedIndependentModel(`${provider}/${id}`) ||
+        Array.from(id).some(character => character.charCodeAt(0) < 32)) return []
     const top = typeof entry.top_provider === 'object' && entry.top_provider !== null ? entry.top_provider : {}
     const contextWindow = positiveInteger(entry.context_length ?? entry.context_window ?? entry.max_input_tokens)
     const maxOutputTokens = positiveInteger(entry.max_output_tokens ?? entry.max_completion_tokens ?? top.max_completion_tokens)
