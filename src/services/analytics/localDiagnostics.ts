@@ -1,5 +1,5 @@
 /**
- * Local-only Avenlo diagnostic event journal. Events are metadata-only:
+ * Local-only Qerivon diagnostic event journal. Events are metadata-only:
  * no prompts, source code, filenames, credentials, or raw API responses.
  */
 import { promises as fs } from 'node:fs'
@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { registerCleanup } from '../../utils/cleanupRegistry.js'
 import { isTelemetryDisabled } from '../../utils/privacyLevel.js'
-const DIAGNOSTICS_DIR = join(homedir(), '.avenlo', 'diagnostics')
+const DIAGNOSTICS_DIR = join(homedir(), '.qerivon', 'diagnostics')
 const JOURNAL = join(DIAGNOSTICS_DIR, 'events.ndjson')
 const ARCHIVE = join(DIAGNOSTICS_DIR, 'events.previous.ndjson')
 const MAX_BYTES = 4 * 1024 * 1024
@@ -53,7 +53,7 @@ export function recordLocalEvent(event: string, raw: Record<string, unknown> = {
   const next = queue.then(() => appendEvent(event, attributes))
   queue = next.catch(error => {
     failure = error as Error
-    process.stderr.write(`[Avenlo diagnostics] ${String(error)}\n`)
+    process.stderr.write(`[Qerivon diagnostics] ${String(error)}\n`)
   })
   return next
 }

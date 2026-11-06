@@ -64,7 +64,7 @@ export function getAttributionTexts(): AttributionTexts {
   }
 
   // Default git authorship remains the user's own. Attribution is opt-in.
-  const defaultAttribution = `Generated with [Avenlo](${PRODUCT_URL})`
+  const defaultAttribution = `Generated with [Qerivon](${PRODUCT_URL})`
   const defaultCommit = ''
 
   const settings = getInitialSettings()
@@ -272,7 +272,7 @@ async function getTranscriptStats(): Promise<{
 /**
  * Get enhanced PR attribution text with Claude contribution stats.
  *
- * Format: "🤖 Generated with Avenlo (93% 3-shotted by claude-opus-4-5)"
+ * Format: "🤖 Generated with Qerivon (93% 3-shotted by claude-opus-4-5)"
  *
  * Rules:
  * - Shows Claude contribution percentage from commit attribution
@@ -313,7 +313,7 @@ export async function getEnhancedPRAttribution(
     return ''
   }
 
-  const defaultAttribution = `Generated with [Avenlo](${PRODUCT_URL})`
+  const defaultAttribution = `Generated with [Qerivon](${PRODUCT_URL})`
 
   // Get AppState first
   const appState = getAppState()
@@ -354,12 +354,12 @@ export async function getEnhancedPRAttribution(
     return defaultAttribution
   }
 
-  // Build the enhanced attribution: "🤖 Generated with Avenlo (93% 3-shotted by claude-opus-4-5, 2 memories recalled)"
+  // Build the enhanced attribution: "🤖 Generated with Qerivon (93% 3-shotted by claude-opus-4-5, 2 memories recalled)"
   const memSuffix =
     memoryAccessCount > 0
       ? `, ${memoryAccessCount} ${memoryAccessCount === 1 ? 'memory' : 'memories'} recalled`
       : ''
-  const summary = `Generated with [Avenlo](${PRODUCT_URL}) (model: ${shortModelName}, prompts: ${promptCount}${memSuffix})`
+  const summary = `Generated with [Qerivon](${PRODUCT_URL}) (model: ${shortModelName}, prompts: ${promptCount}${memSuffix})`
 
   logForDebugging(`PR Attribution: returning summary: ${summary}`)
   return summary

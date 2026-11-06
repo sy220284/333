@@ -70,7 +70,7 @@ function inspectToolRequest(text: string): ProbeResult & { toolId?: string } {
   if (!events.some(e => e.type === 'message_start') || !events.some(e => e.type === 'message_stop')) {
     return { stream: false, tool: false, roundTrip: false, details: 'Incomplete first streaming response' }
   }
-  const start = events.find(e => e.type === 'content_block_start' && e.content_block?.name === 'avenlo_probe')
+  const start = events.find(e => e.type === 'content_block_start' && e.content_block?.name === 'qerivon_probe')
   if (!start) return { stream: true, tool: false, roundTrip: false, details: 'Model did not invoke requested tool' }
   const toolId = start.content_block?.id
   if (typeof toolId !== 'string' || !toolId) {
@@ -96,15 +96,15 @@ export async function runModelToolRoundTrip(
 ): Promise<ProbeResult> {
   const body = {
     model,
-    system: [{ type: 'text', text: 'Compatibility test. Call avenlo_probe with ok=true; after its tool result, respond with exactly PROBE_OK.' }],
-    messages: [{ role: 'user', content: 'Call avenlo_probe({ok:true}) now.' }],
+    system: [{ type: 'text', text: 'Compatibility test. Call qerivon_probe with ok=true; after its tool result, respond with exactly PROBE_OK.' }],
+    messages: [{ role: 'user', content: 'Call qerivon_probe({ok:true}) now.' }],
     max_tokens: 256,
     stream: true,
     // Some reasoning providers accept only auto tool selection. The test
     // must exercise their real wire semantics, not request an invalid override.
     tool_choice: toolSelection === 'named'
-      ? { type: 'tool', name: 'avenlo_probe' } : { type: 'auto' },
-    tools: [{ name: 'avenlo_probe', description: 'Validate tool round-trip',
+      ? { type: 'tool', name: 'qerivon_probe' } : { type: 'auto' },
+    tools: [{ name: 'qerivon_probe', description: 'Validate tool round-trip',
       input_schema: { type: 'object', properties: { ok: { type: 'boolean' } },
         required: ['ok'], additionalProperties: false } }],
   }
@@ -116,7 +116,7 @@ export async function runModelToolRoundTrip(
     messages: [
       ...body.messages,
       { role: 'assistant', content: [{ type: 'tool_use', id: first.toolId,
-        name: 'avenlo_probe', input: { ok: true } }] },
+        name: 'qerivon_probe', input: { ok: true } }] },
       { role: 'user', content: [{ type: 'tool_result', tool_use_id: first.toolId,
         content: 'Tool succeeded. Respond with PROBE_OK.' }] },
     ],
@@ -144,7 +144,7 @@ export async function verifyIndependentModel(model: string): Promise<CapabilityR
   // another ChatGPT account/workspace boundary.
   const http = makeIndependentFetch(route, bearer, fetch, undefined, authorization?.account ?? bearer)
   const send = async (body: Record<string, unknown>): Promise<string> => {
-    const request = new Request('https://avenlo-model-bridge.invalid/v1/messages', {
+    const request = new Request('https://qerivon-model-bridge.invalid/v1/messages', {
       method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json' },
     })
     const response = await http(request, { signal: AbortSignal.timeout(30000) })

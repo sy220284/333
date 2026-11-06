@@ -7,5 +7,5 @@ export function getModelStorageRoot(): string {
   const configuredHome = process.platform === 'win32'
     ? process.env.USERPROFILE
     : process.env.HOME
-  return join(configuredHome || homedir(), '.avenlo', 'models')
+  return join(configuredHome || homedir(), '.qerivon', 'models')
 }

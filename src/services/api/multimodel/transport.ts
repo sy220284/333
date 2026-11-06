@@ -354,7 +354,7 @@ export function makeIndependentFetch(
   return async (input, init) => {
     const request = new Request(input, init)
     const url = new URL(request.url)
-    if (url.origin !== 'https://avenlo-model-bridge.invalid' || url.pathname !== '/v1/messages' || request.method !== 'POST') {
+    if (url.origin !== 'https://qerivon-model-bridge.invalid' || url.pathname !== '/v1/messages' || request.method !== 'POST') {
       throw new Error('Independent model bridge received an unexpected SDK endpoint')
     }
     const body = await request.json() as AnthropicRequest
@@ -378,7 +378,7 @@ export function makeIndependentFetch(
     // Use the account/API key as an HMAC key, never as input to a fast
     // publicly reproducible password hash. This stays stable across requests
     // and across ChatGPT token refreshes (whose accountIdentity is stable).
-    const signature = `avenlo-replay:${createHmac('sha256', accountIdentity)
+    const signature = `qerivon-replay:${createHmac('sha256', accountIdentity)
       .update(JSON.stringify([qualifiedModel, route.endpoint])).digest('hex')}`
     const payload = route.protocol === 'responses'
       ? toResponses(body, route.model, signature)
