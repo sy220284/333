@@ -141,6 +141,14 @@ async function withCredentialLock<T>(operation: () => Promise<T>): Promise<T> {
 }
 
 type ChatGPTAuthorization = { token: string; account: string }
+/** Shared request/refresh boundary for long-lived SDK clients. */
+export function assertChatGPTAccountIdentity(
+  boundAccount: string | undefined, current: Pick<ChatGPTAuthorization, 'account'>,
+): void {
+  if (!boundAccount || current.account !== boundAccount) {
+    throw new Error('ChatGPT account changed; create a new model client before sending requests')
+  }
+}
 /** Legacy records keep the original identity until their workspace is known. */
 export const getChatGPTAccountIdentity = (value: Pick<Credential, 'client_id' | 'subject' | 'workspace_id'>) =>
   JSON.stringify(value.workspace_id
