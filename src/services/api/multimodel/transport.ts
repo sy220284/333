@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { ProviderRoute } from './registry.js'
-import { type AnthropicRequest, toResponses, toChatCompletions, toGemini } from './convert.js'
+import { type AnthropicRequest, toResponses, toChatCompletions } from './convert.js'
 
 // biome-ignore lint/suspicious/noExplicitAny: Provider wire events have different shapes and are normalized here.
 type ObjectValue = Record<string, any>
@@ -181,27 +181,9 @@ function emitFromChat(
     if (choice.finish_reason) state.completed = true
   }
 }
-function emitFromGemini(
-  data: ObjectValue, events: AnthropicEvents,
-  state: { completed: boolean; calls: Array<ObjectValue> },
-): void {
-  if (data.error) throw new Error(`Gemini stream error: ${JSON.stringify(data.error)}`)
-  if (data.usageMetadata) events.setUsage(data.usageMetadata)
-  for (const candidate of data.candidates ?? []) {
-    for (const part of candidate.content?.parts ?? []) {
-      if (typeof part.text === 'string') events.text(part.text)
-      if (part.functionCall) state.calls.push({
-        name: part.functionCall.name,
-        id: `toolu_${randomUUID().replaceAll('-', '')}`,
-        arguments: JSON.stringify(part.functionCall.args ?? {}),
-      })
-    }
-    if (candidate.finishReason) state.completed = true
-  }
-}
 function materializeResponse(body: ObjectValue, route: ProviderRoute): ObjectValue {
   const content: ObjectValue[] = []
-  const usage = route.protocol === 'gemini' ? usageFrom(body.usageMetadata) : usageFrom(body.usage)
+  const usage = usageFrom(body.usage)
   if (route.protocol === 'responses') {
     for (const item of body.output ?? []) {
       if (item.type === 'message') {
@@ -211,20 +193,12 @@ function materializeResponse(body: ObjectValue, route: ProviderRoute): ObjectVal
         type: 'tool_use', id: item.call_id, name: item.name, input: JSON.parse(item.arguments || '{}'),
       })
     }
-  } else if (route.protocol === 'chat-completions') {
+  } else {
     const message = body.choices?.[0]?.message
     if (message?.content) content.push({ type: 'text', text: message.content })
     for (const call of message?.tool_calls ?? []) content.push({
       type: 'tool_use', id: call.id, name: call.function.name, input: JSON.parse(call.function.arguments || '{}'),
     })
-  } else {
-    for (const part of body.candidates?.[0]?.content?.parts ?? []) {
-      if (part.text) content.push({ type: 'text', text: part.text })
-      if (part.functionCall) content.push({
-        type: 'tool_use', id: `toolu_${randomUUID().replaceAll('-', '')}`,
-        name: part.functionCall.name, input: part.functionCall.args ?? {},
-      })
-    }
   }
   return {
     id: body.id ?? `msg_${randomUUID().replaceAll('-', '')}`, type: 'message', role: 'assistant',
@@ -250,8 +224,9 @@ export function makeIndependentFetch(
     if (body.model !== `${route.provider}/${route.model}`) {
       throw new Error('Independent model bridge request model changed unexpectedly')
     }
-    const payload = route.protocol === 'responses' ? toResponses(body, route.model)
-      : route.protocol === 'gemini' ? toGemini(body) : toChatCompletions(body, route.model)
+    const payload = route.protocol === 'responses'
+      ? toResponses(body, route.model)
+      : toChatCompletions(body, route.model)
     // Plan-sharing OAuth strictly requires streaming even for validation calls.
     if (route.provider === 'chatgpt') {
       // ChatGPT plan usage is a narrower Responses API profile than API-key
@@ -265,13 +240,10 @@ export function makeIndependentFetch(
       payload.store = false
       payload.stream = true
     }
-    const endpoint = route.protocol === 'gemini'
-      ? `${route.endpoint}/models/${encodeURIComponent(route.model)}:${body.stream ? 'streamGenerateContent?alt=sse&' : 'generateContent?'}key=${encodeURIComponent(bearer)}`
-      : route.endpoint
     const headers = new Headers({ 'content-type': 'application/json' })
-    if (route.protocol !== 'gemini') headers.set('Authorization', `Bearer ${bearer}`)
+    headers.set('Authorization', `Bearer ${bearer}`)
     const signal = init?.signal ?? request.signal
-    const response = await upstream(endpoint, {
+    const response = await upstream(route.endpoint, {
       method: 'POST', headers, body: JSON.stringify(payload), signal,
     })
     if (!response.ok) {
@@ -292,22 +264,18 @@ export function makeIndependentFetch(
         const events = new AnthropicEvents(route.model, emit)
         const rstate = { completed: false, text: false, tool: new Map<number, ObjectValue>() }
         const cstate = { completed: false, calls: new Map<number, ObjectValue>() }
-        const gstate = { completed: false, calls: [] as ObjectValue[] }
         try {
           for await (const chunk of sseMessages(responseBody)) {
             if (chunk === '[DONE]') continue
             if (route.protocol === 'responses') emitFromResponses(chunk, events, rstate)
-            else if (route.protocol === 'chat-completions') emitFromChat(chunk, events, cstate)
-            else emitFromGemini(chunk, events, gstate)
+            else emitFromChat(chunk, events, cstate)
           }
           if (route.protocol === 'responses' && !rstate.completed) throw new Error('Responses ended without response.completed')
           if (route.protocol === 'chat-completions' && !cstate.completed) throw new Error('Chat stream ended without a finish_reason')
-          if (route.protocol === 'gemini' && !gstate.completed) throw new Error('Gemini stream ended without a finishReason')
           for (const call of cstate.calls.values()) {
             if (!call.name) throw new Error('Chat stream returned tool call with no name')
             events.tool(call.name, call.id, call.arguments || '{}')
           }
-          for (const call of gstate.calls) events.tool(call.name, call.id, call.arguments)
           events.finish()
           controller.close()
         } catch (error) { controller.error(error) }
