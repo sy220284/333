@@ -4,8 +4,14 @@ import { getActiveAgentMode, setAgentMode } from '../../utils/agentMode.js'
 import {
   createMission, getMission, getSelectedMissionId, listMissions,
   saveMissionCheckpoint, selectMission, updateMissionStatus,
+  linkMissionAssignment, finishMissionAssignment,
 } from '../../utils/agentMissions.js'
 import { listProjectTeams } from '../../utils/teamDiscovery.js'
+import {
+  missionJobAssignmentId, listMissionJobs, enqueueMissionJob, claimMissionJob,
+  bindMissionJobTurn, settleMissionJob, approveMissionJob, retryMissionJob,
+  cancelMissionJob, recoverMissionJob, type MissionJob,
+} from '../agentCenter/missionJobs.js'
 import { AgentInfoSchema, ModelInfoSchema } from '../../entrypoints/sdk/coreSchemas.js'
 import type { getSessionInfo, getSessionMessages, listSessions } from '../../entrypoints/agentSdkTypes.js'
 import type { InternalOptions, SDKSessionOptions } from '../../entrypoints/sdk/runtimeTypes.js'
@@ -71,6 +77,8 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
   const journal = options.journal ?? createDesktopTaskJournal(cwd, options.dataDir)
   const sessions = new Map<string, Entry>()
   const opening = new Set<string>()
+  const ownerKey = randomUUID()
+  const executingMissionJobs = new Map<string, { missionId: string; jobId: string; runId: string }>()
   const listeners = new Set<(event: DesktopEvent) => void>()
   let closed = false
 
@@ -198,6 +206,22 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     finally { await probe.closeAndWait() }
   }
 
+  function notifyJob(missionId: string, job: MissionJob): void {
+    emit({ event: 'mission.job.updated', missionId, job })
+  }
+  async function settleExecutingJob(
+    sessionId: string, status: 'review' | 'failed' | 'interrupted', summary: string,
+  ): Promise<void> {
+    const active = executingMissionJobs.get(sessionId)
+    if (!active) return
+    const job = await settleMissionJob(
+      active.missionId, cwd, active.jobId, active.runId, status,
+      summary.slice(0, 4000), options.missionRoot,
+    )
+    executingMissionJobs.delete(sessionId)
+    notifyJob(active.missionId, job)
+  }
+
   async function send(sessionId: string, message: Parameters<Headless['send']>[0]) {
     const entry = requireSession(sessionId)
     if (entry.closing || entry.consuming || entry.sending)
@@ -224,6 +248,12 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       try {
         for await (const sdkMessage of entry.runtime.stream()) {
           emit({ event: 'session.message', sessionId, turnId, message: sdkMessage })
+          if (sdkMessage.type === 'result' && executingMissionJobs.has(sessionId)) {
+            const success = !sdkMessage.is_error && sdkMessage.subtype === 'success'
+            const summary = typeof sdkMessage.result === 'string' && sdkMessage.result.trim()
+              ? sdkMessage.result : success ? '模型执行已结束，等待人工核查' : '模型执行返回失败'
+            await settleExecutingJob(sessionId, success ? 'review' : 'failed', summary)
+          }
           if (isAgentProgress(sdkMessage)) {
             const oldTask = sdkMessage.type === 'system' && 'task_id' in sdkMessage
               ? entry.tasks.get(sdkMessage.task_id) : undefined
@@ -242,6 +272,14 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           error: error instanceof Error ? error.message : String(error),
         })
       } finally {
+        if (executingMissionJobs.has(sessionId)) {
+          try {
+            await settleExecutingJob(sessionId, 'interrupted', '执行流结束前未取得完整结果；请核对实际改动后手动重试')
+          } catch (error) {
+            emit({ event: 'session.error', sessionId, turnId,
+              error: '长期任务恢复记录失败：' + String(error) })
+          }
+        }
         entry.consuming = undefined
       }
     }
@@ -290,7 +328,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           protocolVersion: DESKTOP_PROTOCOL_VERSION,
           transport: 'stdio-jsonl',
           stream: 'sdk-stream-json',
-          capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'missions'],
+          capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'missions', 'mission_jobs'],
         }
       case 'models.list': return models(request.sessionId)
       case 'sessions.open': return openSession(request.model)
@@ -376,6 +414,108 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         await getScopedMission(request.missionId)
         return saveMissionCheckpoint(request.missionId, request.checkpoint, options.missionRoot)
       }
+      case 'missions.jobs.list': {
+        await getScopedMission(request.missionId)
+        return listMissionJobs(request.missionId, cwd, options.missionRoot)
+      }
+      case 'missions.jobs.enqueue': {
+        const mission = await getScopedMission(request.missionId)
+        if (mission.status !== 'active') throw new Error('当前长期任务已暂停或完成')
+        const job = await enqueueMissionJob(
+          mission.id, cwd, request.title, request.instruction, options.missionRoot,
+        )
+        try {
+          await linkMissionAssignment(
+            mission.id, missionJobAssignmentId(job.id), 'agent', job.title, options.missionRoot,
+          )
+        } catch (error) {
+          // The queued job has not started. Cancel it if linking the mission's
+          // completion gate fails so no unauthorized orphan can be dispatched.
+          const cancelled = await cancelMissionJob(mission.id, cwd, job.id, options.missionRoot)
+          notifyJob(mission.id, cancelled)
+          throw error
+        }
+        notifyJob(mission.id, job)
+        return job
+      }
+      case 'missions.jobs.start': {
+        const mission = await getScopedMission(request.missionId)
+        if (mission.status !== 'active') throw new Error('当前长期任务已暂停或完成')
+        const claimed = await claimMissionJob(
+          mission.id, cwd, request.jobId, ownerKey, process.pid, options.missionRoot,
+        )
+        notifyJob(mission.id, claimed)
+        let openedSession: string | undefined
+        try {
+          // Each user-requested dispatch gets its own native SDK session.
+          // Worker/tool permissions are still checked by the SDK broker.
+          setAgentMode('super')
+          const opened = await openSession()
+          openedSession = opened.sessionId
+          await bindMissionJobTurn(
+            mission.id, cwd, claimed.id, claimed.runId!, openedSession,
+            undefined, options.missionRoot,
+          )
+          executingMissionJobs.set(openedSession, {
+            missionId: mission.id, jobId: claimed.id, runId: claimed.runId!,
+          })
+          const instruction = [
+            '执行已授权的超级智能体工作项；保持项目目录与工具审批边界。',
+            '长期任务：' + mission.id + '。目标：' + mission.objective,
+            '工作项：' + claimed.title + '。执行尝试：' + claimed.attempt,
+            claimed.instruction,
+            '执行前核对已有文件和提交，禁止重复已产生的外部副作用。',
+            '交付时报告实际文件/提交、测试证据及仍需人工审核的事项。',
+          ].join('\\n')
+          const started = await send(openedSession, instruction)
+          const updated = await bindMissionJobTurn(
+            mission.id, cwd, claimed.id, claimed.runId!, openedSession,
+            started.turnId, options.missionRoot,
+          )
+          notifyJob(mission.id, updated)
+          return { sessionId: openedSession, turnId: started.turnId, job: updated }
+        } catch (error) {
+          executingMissionJobs.delete(openedSession ?? '')
+          const job = await settleMissionJob(
+            mission.id, cwd, claimed.id, claimed.runId!, 'failed',
+            '启动执行失败：' + String(error), options.missionRoot,
+          )
+          notifyJob(mission.id, job)
+          if (openedSession && sessions.has(openedSession)) await closeSessionInternal(openedSession)
+          throw error
+        }
+      }
+      case 'missions.jobs.approve': {
+        const mission = await getScopedMission(request.missionId)
+        const job = await approveMissionJob(mission.id, cwd, request.jobId, options.missionRoot)
+        await finishMissionAssignment(
+          mission.id, missionJobAssignmentId(job.id), 'completed', options.missionRoot,
+        )
+        notifyJob(mission.id, job)
+        return job
+      }
+      case 'missions.jobs.retry': {
+        const mission = await getScopedMission(request.missionId)
+        if (mission.status !== 'active') throw new Error('请先恢复长期任务后再重试')
+        const job = await retryMissionJob(mission.id, cwd, request.jobId, options.missionRoot)
+        notifyJob(mission.id, job)
+        return job
+      }
+      case 'missions.jobs.recover': {
+        const mission = await getScopedMission(request.missionId)
+        const job = await recoverMissionJob(mission.id, cwd, request.jobId, options.missionRoot)
+        notifyJob(mission.id, job)
+        return job
+      }
+      case 'missions.jobs.cancel': {
+        const mission = await getScopedMission(request.missionId)
+        const job = await cancelMissionJob(mission.id, cwd, request.jobId, options.missionRoot)
+        await finishMissionAssignment(
+          mission.id, missionJobAssignmentId(job.id), 'killed', options.missionRoot,
+        )
+        notifyJob(mission.id, job)
+        return job
+      }
       case 'tasks.list': {
         const active = sessions.get(request.sessionId)
         return active ? [...active.tasks.values()] : journal.read(request.sessionId)
@@ -412,6 +552,9 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       if (entry.sending) pending.push(entry.sending)
       if (entry.consuming) pending.push(entry.consuming)
       await Promise.all(pending)
+      if (executingMissionJobs.has(id)) {
+        await settleExecutingJob(id, 'interrupted', '桌面执行宿主关闭；请核查结果后显式重试')
+      }
       if (entry.persisting) await entry.persisting
       const stale = [...entry.tasks.values()].map(task => task.status === 'running'
         ? { ...task, status: 'interrupted' as const } : task)
