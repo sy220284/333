@@ -24,6 +24,8 @@ type Credential = {
   client_id: string
   ext_agent_host_id: string
   subject: string
+  /** Optional workspace identity from the verified ChatGPT ID token. */
+  workspace_id?: string
   email?: string
   id_token: string
   access_token: string
@@ -32,7 +34,7 @@ type Credential = {
   expires_at: number
 }
 type Registration = { client_id: string; subject: string; email?: string }
-type JWTPayload = { iss?: unknown; aud?: unknown; exp?: unknown; nbf?: unknown; sub?: unknown; nonce?: unknown; email?: unknown }
+type JWTPayload = { iss?: unknown; aud?: unknown; exp?: unknown; nbf?: unknown; sub?: unknown; nonce?: unknown; email?: unknown; 'https://api.openai.com/auth'?: unknown }
 async function readJSON<T>(file: string): Promise<T | null> {
   try { return JSON.parse(await fs.readFile(file, 'utf8')) as T }
   catch (error) {
@@ -58,7 +60,7 @@ async function getHostId(): Promise<string> {
   await writePrivate(HOST_FILE, { host_id: id })
   return id
 }
-async function validateIDToken(token: string, clientId: string, nonce: string): Promise<{ subject: string; email?: string }> {
+async function validateIDToken(token: string, clientId: string, nonce: string): Promise<{ subject: string; email?: string; workspaceId?: string }> {
   const pieces = token.split('.')
   if (pieces.length !== 3) throw new Error('OIDC token is malformed')
   const [headerPart, bodyPart, signaturePart] = pieces as [string, string, string]
@@ -92,7 +94,18 @@ async function validateIDToken(token: string, clientId: string, nonce: string): 
       claims.nonce !== nonce || typeof claims.sub !== 'string') {
     throw new Error('OpenAI ID token claims did not pass validation')
   }
-  return { subject: claims.sub, ...(typeof claims.email === 'string' ? { email: claims.email } : {}) }
+  // Codex distinguishes workspaces under the same ChatGPT user. Read this
+  // namespace only after verifying the issuer, signature, audience and nonce.
+  const accountClaim = claims['https://api.openai.com/auth']
+  const auth = accountClaim && typeof accountClaim === 'object'
+    ? accountClaim as { chatgpt_account_id?: unknown } : {}
+  const workspace = auth.chatgpt_account_id
+  return {
+    subject: claims.sub,
+    ...(typeof claims.email === 'string' ? { email: claims.email } : {}),
+    ...(typeof workspace === 'string' && workspace.length > 0 && workspace.trim() === workspace
+      ? { workspaceId: workspace } : {}),
+  }
 }
 function scopeGranted(scopes: string): boolean {
   return scopes.split(/\s+/).includes('chatgpt.tokens.use.direct')
@@ -128,7 +141,12 @@ async function withCredentialLock<T>(operation: () => Promise<T>): Promise<T> {
 }
 
 type ChatGPTAuthorization = { token: string; account: string }
-const accountIdentity = (value: Credential) => JSON.stringify([value.client_id, value.subject])
+/** Legacy records keep the original identity until their workspace is known. */
+export const getChatGPTAccountIdentity = (value: Pick<Credential, 'client_id' | 'subject' | 'workspace_id'>) =>
+  JSON.stringify(value.workspace_id
+    ? [value.client_id, value.subject, value.workspace_id]
+    : [value.client_id, value.subject])
+const accountIdentity = getChatGPTAccountIdentity
 
 export async function getChatGPTAuthorization(
   rejected?: ChatGPTAuthorization,
@@ -148,7 +166,8 @@ export async function getChatGPTAuthorization(
   if (usable(credential)) return { token: credential.access_token, account: accountIdentity(credential) }
   return withCredentialLock(async () => {
     const current = await read()
-    if (current.subject !== credential.subject || current.client_id !== credential.client_id) {
+    if (current.subject !== credential.subject || current.client_id !== credential.client_id ||
+        current.workspace_id !== credential.workspace_id) {
       throw new Error('ChatGPT account changed while the request was pending')
     }
     const selected = usable(current) ? current : await refreshCredentials(current)
@@ -252,6 +271,7 @@ export async function loginWithChatGPT(): Promise<{ email?: string; subject: str
     if (!scopeGranted(tokens.scope)) throw new Error('ChatGPT login lacks the required usage scope')
     const credential: Credential = {
       client_id: issuedId, ext_agent_host_id: hostId, subject: identity.subject,
+      ...(identity.workspaceId ? { workspace_id: identity.workspaceId } : {}),
       ...(identity.email ? { email: identity.email } : {}),
       id_token: tokens.id_token, access_token: tokens.access_token,
       refresh_token: tokens.refresh_token, scope: tokens.scope,
@@ -284,7 +304,7 @@ export function getSavedChatGPTAccount(): string | undefined {
     typeof credential.access_token === 'string' && credential.access_token.length > 0 &&
     typeof credential.scope === 'string' && scopeGranted(credential.scope) &&
       typeof credential.client_id === 'string' && typeof credential.subject === 'string') {
-    return JSON.stringify([credential.client_id, credential.subject])
+    return accountIdentity(credential as Credential)
   }
   return undefined
 }
