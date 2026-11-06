@@ -96,8 +96,15 @@ test('审查只读、开发写入的 Actions 权限隔离与官方品牌解除�
   'pull_request_review:','issues:','contents: read','contents: write',
   'yaoyaoche-task.mjs','persist-credentials: false'])assert.ok(yml.includes(text),text)
  assert.doesNotMatch(yml,/anthropics\/claude-code-action|CLAUDE_CODE_OAUTH_TOKEN/)
- assert.doesNotMatch(githubWorkflow('review'),/^\s+issue_comment:/m)
- assert.doesNotMatch(githubWorkflow('respond'),/^\s+pull_request_target:/m)
+ const onlyReview=githubWorkflow('review')
+ assert.match(onlyReview,/issue_comment:/)
+ assert.match(onlyReview,/startsWith\(github\.event\.comment\.body, '\/yaoyaoche review'\)/)
+ assert.doesNotMatch(onlyReview,/pull_request_review_comment:/)
+ assert.doesNotMatch(onlyReview,/  task:\n/)
+ const onlyRespond=githubWorkflow('respond')
+ assert.doesNotMatch(onlyRespond,/pull_request_target:/)
+ assert.doesNotMatch(onlyRespond,/startsWith\(github\.event\.comment\.body, '\/yaoyaoche review'\)/)
+ assert.match(onlyRespond,/  task:\n/)
 })
 function reviewerHarness(overrides={}) {
  const code=githubReviewerScript().replace(/^import .*$/gm,'')
