@@ -11,6 +11,7 @@ const id = z.string().min(1).max(128)
 const sessionId = z.string().uuid()
 const taskId = z.string().min(1).max(256)
 const missionId = z.string().regex(/^mission_[a-f0-9]{16}$/)
+const jobId = z.string().regex(/^job_[a-f0-9]{16}$/)
 const request = <T extends string, S extends z.ZodRawShape>(method: T, shape: S) =>
   z.object({ id, method: z.literal(method), ...shape }).strict()
 
@@ -42,6 +43,13 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('missions.select', { missionId: missionId.nullable() }),
   request('missions.updateStatus', { missionId, status: z.enum(['active', 'paused', 'completed']) }),
   request('missions.checkpoint', { missionId, checkpoint: z.string().trim().min(1).max(6000) }),
+  request('missions.jobs.list', { missionId }),
+  request('missions.jobs.enqueue', { missionId, title: z.string().trim().min(1).max(200), instruction: z.string().trim().min(1).max(6000) }),
+  request('missions.jobs.start', { missionId, jobId }),
+  request('missions.jobs.approve', { missionId, jobId }),
+  request('missions.jobs.retry', { missionId, jobId }),
+  request('missions.jobs.recover', { missionId, jobId }),
+  request('missions.jobs.cancel', { missionId, jobId }),
   request('tasks.list', { sessionId }),
   request('tasks.stop', { sessionId, taskId }),
   request('tasks.resume', { sessionId, taskId, prompt: z.string().min(1).optional() }),
@@ -62,4 +70,5 @@ export type DesktopEvent =
   | { event: 'permission.resolved'; sessionId: string; permissionId: string }
   | { event: 'agent.progress'; sessionId: string; turnId: string; task?: DesktopTask; message: SDKMessage }
   | { event: 'task.updated'; sessionId: string; task: DesktopTask }
+  | { event: 'mission.job.updated'; missionId: string; job: import('../agentCenter/missionJobs.js').MissionJob }
   | { event: 'task.persistence.error'; sessionId: string; error: string }
