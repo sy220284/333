@@ -67,7 +67,14 @@ try {
   const extraCandidateOptions = candidateOptions.filter(x => !referenceOptions.includes(x))
   assert.ok(referenceOptions.includes('--debug') && candidateOptions.includes('--debug'), '新版 debug 调试入口必须正常保留')
   assert.ok(!referenceOptions.includes('--mcp-debug') && !candidateOptions.includes('--mcp-debug'), '旧 MCP 调试入口已退场')
-  assert.deepEqual(extraCandidateOptions, [], '候选版不能额外公开已退场的旧版参数')
+  // Only these two user-facing local extensions are intentional. Retired
+  // official cloud/assistant switches remain strictly excluded.
+  const intentionalLocalOptions = ['--proactive', '--strict-command']
+  for (const flag of intentionalLocalOptions) {
+    assert.ok(extraCandidateOptions.includes(flag), `独立版新增参数缺失：${flag}`)
+  }
+  assert.deepEqual(extraCandidateOptions, intentionalLocalOptions,
+    '候选版存在未经确认的额外参数，需重新审查')
   writeFileSync(report, `${JSON.stringify({
     target: '2.1.317',
     scenario: 'retired-assistant-command-help',
