@@ -1,4 +1,5 @@
 import type { SDKHostControlRequest } from '../../entrypoints/sdk/controlTypes.js'
+import { SDKControlElicitationResponseSchema } from '../../entrypoints/sdk/controlSchemas.js'
 import type { HostControlRequestHandler } from '../../entrypoints/sdk/runtimeTypes.js'
 
 export type PendingHostControl = Readonly<{
@@ -27,9 +28,15 @@ export function createHostControlBroker() {
   const settle = (id: string, response: Record<string, unknown>): boolean => {
     const entry = pending.get(id)
     if (!entry) return false
+    // An MCP elicitation must receive the exact accept/decline/cancel shape.
+    // Reject malformed host replies while keeping the request available for
+    // an explicit correction by the user.
+    const validResponse = entry.item.request.subtype === 'elicitation'
+      ? SDKControlElicitationResponseSchema().parse(response)
+      : response
     pending.delete(id)
     entry.signal.removeEventListener('abort', entry.onAbort)
-    entry.resolve(response)
+    entry.resolve(validResponse)
     notify()
     return true
   }
