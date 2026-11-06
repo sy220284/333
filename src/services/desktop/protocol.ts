@@ -3,6 +3,7 @@ import { PermissionResultSchema, SDKUserMessageSchema } from '../../entrypoints/
 import type { SDKMessage } from '../../entrypoints/sdk/coreTypes.js'
 import type { HeadlessSessionSnapshot } from '../conversation/headlessSession.js'
 import type { PendingSdkPermission } from '../conversation/permissionBroker.js'
+import type { PendingHostControl } from '../conversation/hostControlBroker.js'
 import type { DesktopTask } from './taskProjection.js'
 
 export const DESKTOP_PROTOCOL_VERSION = 1
@@ -28,6 +29,9 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('sessions.interrupt', { sessionId }),
   request('sessions.setModel', { sessionId, model: z.string().min(1) }),
   request('sessions.setPermissionMode', { sessionId, mode: z.enum(['default', 'acceptEdits', 'bypassPermissions', 'plan', 'dontAsk']) }),
+  request('host.list', { sessionId }),
+  request('host.respond', { sessionId, requestId: id, response: z.record(z.string(), z.unknown()) }),
+  request('host.reject', { sessionId, requestId: id, reason: z.string().min(1).max(2000) }),
   request('permissions.list', { sessionId }),
   request('permissions.decide', { sessionId, permissionId: id, decision: PermissionResultSchema() }),
   request('agents.overview', {}),
@@ -52,6 +56,8 @@ export type DesktopEvent =
   | { event: 'session.state'; sessionId: string; state: HeadlessSessionSnapshot }
   | { event: 'session.message'; sessionId: string; turnId: string; message: SDKMessage }
   | { event: 'session.error'; sessionId: string; turnId?: string; error: string }
+  | { event: 'host.request'; sessionId: string; request: PendingHostControl }
+  | { event: 'host.resolved'; sessionId: string; requestId: string }
   | { event: 'permission.request'; sessionId: string; permission: PendingSdkPermission }
   | { event: 'permission.resolved'; sessionId: string; permissionId: string }
   | { event: 'agent.progress'; sessionId: string; turnId: string; task?: DesktopTask; message: SDKMessage }
