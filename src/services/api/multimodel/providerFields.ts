@@ -37,8 +37,7 @@ export function getModelFieldProfile(provider: IndependentProvider, model: strin
     const isK3 = /^kimi-k3(?:\.|$|-)/.test(id)
     const isK28 = /^kimi-k2\.8/.test(id)
     return { ...common, thinkingField: isK3 || isK28 ? 'reasoning_effort' : 'thinking',
-      supportedEffort: /^kimi-k3\.1/.test(id) ? ['max'] :
-        isK3 || isK28 ? ['low', 'high', 'max'] : [],
+      supportedEffort: isK3 || isK28 ? ['low', 'high', 'max'] : [],
       alwaysThinking: isK3 || isK28 || /^kimi-k2\.7-code/.test(id), usageInStream: true }
   }
   if (provider === 'minimax') {
@@ -128,16 +127,28 @@ export function applyChatModelFields(result: Wire, { provider, model, thinking, 
   } else if (provider === 'kimi') {
     if (profile.thinkingField === 'reasoning_effort') {
       if (effort) {
-        // K3.1 accepts max only, while K3 and K2.8 accept low/high/max.
-        if (/^kimi-k3\.1/.test(id) && effort !== 'max') {
-          throw new Error('Kimi K3.1 仅支持 max 推理强度')
-        }
+        // Direct Moonshot K3.1 Pro supports low/high/max; hosted gateways
+        // may expose a narrower set and must be profiled separately.
         result.reasoning_effort = effort === 'medium' ? 'high'
           : effort === 'xhigh' ? 'max' : effort
       }
+      // K3 and K3.1 fix sampler values server-side; sending overrides may
+      // make a valid reasoning request fail.
+      delete result.temperature
+      delete result.top_p
+    } else if (/^kimi-k2\.7-code/.test(id)) {
+      // Direct Moonshot K2.7 Code always reasons and rejects the thinking
+      // and reasoning_effort fields entirely.
+      delete result.thinking
+      delete result.reasoning_effort
+      delete result.temperature
+      delete result.top_p
     } else {
-      if (enabled || profile.alwaysThinking) result.thinking = { type: 'enabled', keep: 'all' }
+      if (enabled) result.thinking = { type: 'enabled' }
       if (disabled) result.thinking = { type: 'disabled' }
+      // K2.6 is the Moonshot revision that supports retaining all prior
+      // reasoning explicitly with thinking.keep.
+      if (/^kimi-k2\.6/.test(id) && enabled) result.thinking.keep = 'all'
     }
     if (result.tool_choice && typeof result.tool_choice === 'object' && /^kimi-k2/.test(id)) {
       result.tool_choice = 'auto'
