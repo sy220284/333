@@ -30,7 +30,7 @@ permissions:
 
 concurrency:
   # Preserve all three OS results for every source revision.
-  group: dev-quality-${{ github.event.pull_request.head.sha || github.sha }}
+  group: dev-quality-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:

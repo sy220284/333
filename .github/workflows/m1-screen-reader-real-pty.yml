@@ -36,7 +36,7 @@ permissions:
 
 # A validation of a specific source revision must finish even if PR7 advances.
 concurrency:
-  group: m1-screen-reader-pty-${{ github.sha }}
+  group: m1-screen-reader-pty-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:

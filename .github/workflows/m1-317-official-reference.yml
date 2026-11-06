@@ -52,7 +52,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: m1-317-reference-${{ github.event.pull_request.head.sha || github.sha }}
+  group: m1-317-reference-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -63,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.number || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
