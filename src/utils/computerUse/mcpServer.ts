@@ -5,7 +5,6 @@ import {
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { homedir } from 'os'
 
-import { shutdownDatadog } from '../../services/analytics/datadog.js'
 import { shutdown1PEventLogging } from '../../services/analytics/firstPartyEventLogger.js'
 import { initializeAnalyticsSink } from '../../services/analytics/sink.js'
 import { enableConfigs } from '../config.js'
@@ -92,7 +91,7 @@ export async function runComputerUseMcpServer(): Promise<void> {
   const shutdownAndExit = async (): Promise<void> => {
     if (exiting) return
     exiting = true
-    await Promise.all([shutdown1PEventLogging(), shutdownDatadog()])
+    await shutdown1PEventLogging()
     // eslint-disable-next-line custom-rules/no-process-exit
     process.exit(0)
   }

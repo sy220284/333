@@ -89,7 +89,7 @@ test('历史会话选择、代码回退和工作树退出中文化', () => {
 })
 
 test('重要交互：反馈、托管设置、MCP 审批、插件推荐中文化', () => {
-  assert.match(read('src/components/Feedback.tsx'), /提交反馈或问题报告/)
+  assert.match(read('src/commands/feedback/feedback.ts'), /本地诊断已导出/)
   assert.match(read('src/components/ManagedSettingsSecurityDialog/ManagedSettingsSecurityDialog.tsx'), /需要确认的设置/)
   assert.match(read('src/components/MCPServerApprovalDialog.tsx'), /仅允许此 MCP 服务器/)
   assert.match(read('src/components/InvalidSettingsDialog.tsx'), /设置错误/)

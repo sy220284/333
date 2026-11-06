@@ -627,18 +627,27 @@
     },
     {
       "id": "C20",
-      "name": "Slack Claude Tag/Code Review外部服务",
+      "name": "333 通用 GitHub 集成与本地/极深代码审查",
       "stage": 5,
       "owner": "C20",
       "flow": [
-        "外部事件/身份",
-        "Slack/PR消息处理",
-        "异步执行",
-        "结果/去重/权限"
+        "GitHub 独立授权和目标校验",
+        "选择普通、深度、安全或极深审查",
+        "审查证据采集与模型执行",
+        "结果复核与权限控制",
+        "报告与运行状态返回"
       ],
       "source_candidates": [
         {
-          "path": "src/commands/review/reviewRemote.ts",
+          "path": "src/commands/review.ts",
+          "exists_in_repo": true
+        },
+        {
+          "path": "src/commands/github/github.ts",
+          "exists_in_repo": true
+        },
+        {
+          "path": "src/commands/github/reviewerScript.ts",
           "exists_in_repo": true
         },
         {
@@ -646,8 +655,9 @@
           "exists_in_repo": true
         }
       ],
-      "acceptance": "Slack/Code Review真实服务端对照及重复事件",
-      "external_service_required": true
+      "acceptance": "本地三模式与 GitHub Actions 极深审查可达；原平台付费和订阅入口退役，通用 GitHub 授权、触发、审查与权限可验收",
+      "external_service_required": true,
+      "product_deviation": "按用户指令退役 Claude 官方云审查及 Slack 官方应用，使用通用 GitHub OAuth 和用户自有模型 API 实现独立极深审查"
     }
   ],
   "counts": {

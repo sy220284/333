@@ -12,7 +12,7 @@
     "src/cli/handlers/pluginEvalGraders317.ts",
     "src/cli/handlers/pluginEvalModel317.ts",
     "src/cli/handlers/pluginEvalWorkspace317.ts",
-    "src/cli/handlers/ultrareviewProtocol.ts",
+    "src/commands/reviewMode.ts",
     "src/entrypoints/runnerDeclaration317.ts",
     "src/entrypoints/startupRouting317.ts",
     "src/tasks/LocalWorkflowTask/workflowCacheKeys.ts",

@@ -43,7 +43,6 @@ import { launchRepl } from './replLauncher.js';
 import { hasGrowthBookEnvOverride, initializeGrowthBook, refreshGrowthBookAfterAuthChange } from './services/analytics/growthbook.js';
 import { fetchBootstrapData } from './services/api/bootstrap.js';
 import { type DownloadResult, downloadSessionFiles, type FilesApiConfig, parseFileSpecs } from './services/api/filesApi.js';
-import { prefetchPassesEligibility } from './services/api/referral.js';
 import { prefetchOfficialMcpUrls } from './services/mcp/officialRegistry.js';
 import type { McpSdkServerConfig, McpServerConfig, ScopedMcpServerConfig } from './services/mcp/types.js';
 import { isPolicyAllowed, loadPolicyLimits, refreshPolicyLimits, waitForPolicyLimitsToLoad } from './services/policyLimits/index.js';
@@ -2150,11 +2149,11 @@ async function run(): Promise<CommanderCommand> {
       }
     }
 
-    // Check quota status, fast mode, passes eligibility, and bootstrap data
+    // Check quota status, fast mode, and bootstrap data
     // after trust is established. These make API calls which could trigger
     // apiKeyHelper execution.
     // --bare / SIMPLE: skip — these are cache-warms for the REPL's
-    // first-turn responsiveness (quota, passes, fastMode, bootstrap data). Fast
+    // first-turn responsiveness (quota, fastMode, bootstrap data). Fast
     // mode doesn't apply to the Agent SDK anyway (see getFastModeUnavailableReason).
     const bgRefreshThrottleMs = getFeatureValue_CACHED_MAY_BE_STALE('tengu_cicada_nap_ms', 0);
     const lastPrefetched = getGlobalConfig().startupPrefetchedAt ?? 0;
@@ -2167,8 +2166,6 @@ async function run(): Promise<CommanderCommand> {
       // Fetch bootstrap data from the server and update all cache values.
       void fetchBootstrapData();
 
-      // TODO: Consolidate other prefetches into a single bootstrap request.
-      void prefetchPassesEligibility();
       if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_miraculo_the_bard', false)) {
         void prefetchFastModeStatus();
       } else {
@@ -3735,21 +3732,6 @@ async function run(): Promise<CommanderCommand> {
   });
 
   // Plugin install command
-  program.command('ultrareview [target]')
-    .usage('[target] [options]')
-    .description('Run a cloud-hosted multi-agent code review of the current branch (or a PR number / base branch) and print the findings')
-    .option('--json', 'Print the raw bugs.json payload instead of formatted findings')
-    .option('--no-post', 'Do not post the findings to the PR (the default; accepted for parity with the /ultrareview and /code-review ultra flags)')
-    .option('--post', 'Post the finished review findings to the PR as you (PR targets only; one plain comment, not a review)')
-    .option('--timeout <minutes>', 'Maximum minutes to wait for the review to finish (default: 45)')
-    .option('--trust-workspace', 'Trust the current folder for this run only, without asking (for scripts and CI)')
-    .action(async (target: string | undefined, options: {
-      json?: boolean; post?: boolean; timeout?: string; trustWorkspace?: boolean
-    }) => {
-      const { ultrareviewCliHandler } = await import('./cli/handlers/ultrareview.js')
-      await ultrareviewCliHandler(target, options)
-    })
-
   pluginCmd.command('install <plugin>').alias('i').description('Install a plugin from available marketplaces (use plugin@marketplace for specific marketplace)').option('-s, --scope <scope>', 'Installation scope: user, project, or local', 'user').option('--json', 'Print one machine-readable result line on stdout').option('--marketplace <source>', 'Install from a marketplace URL, repository, or path, adding it first if needed').option('--config <key=value>', 'Set a userConfig field; repeatable', (value: string, values: string[]) => [...values, value], []).option('--registry <url>', 'Use an alternate npm registry for npm-sourced plugins')
     .option('-y, --yes', 'Explicitly authorize the current marketplace-declared install command')
     .addOption(new Option('--accept-command <sha256>', 'Authorize exactly the displayed command hash for the current marketplace revision').conflicts('yes'))
