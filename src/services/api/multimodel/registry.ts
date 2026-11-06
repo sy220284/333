@@ -1,13 +1,13 @@
 import { readProviderApiKey } from '../../auth/apiKeyVault.js'
 /**
  * 333 model registry. Qualified IDs such as openai/gpt-6.1-sol or
- * gemini/gemini-3.8-flash select an independent remote API. Unqualified
+ * deepseek/deepseek-chat select an independent remote API. Unqualified
  * model IDs keep the existing Anthropic behavior and prompt content.
  */
 export type IndependentProvider =
-  | 'openai' | 'chatgpt' | 'gemini' | 'xai' | 'deepseek'
+  | 'openai' | 'chatgpt' | 'deepseek'
   | 'qwen' | 'kimi' | 'zhipu' | 'minimax' | 'openrouter'
-export type Protocol = 'responses' | 'chat-completions' | 'gemini'
+export type Protocol = 'responses' | 'chat-completions'
 export interface ProviderRoute {
   provider: IndependentProvider
   model: string
@@ -19,14 +19,16 @@ type Definition = { protocol: Protocol; endpoint: string; keyEnvironment?: strin
 export const PROVIDERS: Readonly<Record<IndependentProvider, Definition>> = {
   openai: { protocol: 'responses', endpoint: 'https://api.openai.com/v1/responses', keyEnvironment: 'OPENAI_API_KEY' },
   chatgpt: { protocol: 'responses', endpoint: 'https://api.openai.com/v1/responses' },
-  gemini: { protocol: 'gemini', endpoint: 'https://generativelanguage.googleapis.com/v1beta', keyEnvironment: 'GEMINI_API_KEY' },
-  xai: { protocol: 'chat-completions', endpoint: 'https://api.x.ai/v1/chat/completions', keyEnvironment: 'XAI_API_KEY' },
   deepseek: { protocol: 'chat-completions', endpoint: 'https://api.deepseek.com/chat/completions', keyEnvironment: 'DEEPSEEK_API_KEY' },
   qwen: { protocol: 'chat-completions', endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', keyEnvironment: 'DASHSCOPE_API_KEY' },
   kimi: { protocol: 'chat-completions', endpoint: 'https://api.moonshot.cn/v1/chat/completions', keyEnvironment: 'MOONSHOT_API_KEY' },
   zhipu: { protocol: 'chat-completions', endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions', keyEnvironment: 'ZHIPU_API_KEY' },
   minimax: { protocol: 'chat-completions', endpoint: 'https://api.minimax.io/v1/chat/completions', keyEnvironment: 'MINIMAX_API_KEY' },
   openrouter: { protocol: 'chat-completions', endpoint: 'https://openrouter.ai/api/v1/chat/completions', keyEnvironment: 'OPENROUTER_API_KEY' },
+}
+/** Explicit migration marker for previously saved provider entries. */
+export function isRetiredIndependentProvider(provider: unknown): boolean {
+  return provider === 'gemini' || provider === 'xai'
 }
 export function resolveIndependentModel(model: string | undefined): ProviderRoute | null {
   if (!model) return null
@@ -70,8 +72,6 @@ export async function discoverIndependentModelDetails(
   const addresses: Record<IndependentProvider, string> = {
     openai: 'https://api.openai.com/v1/models',
     chatgpt: 'https://api.openai.com/v1/models',
-    gemini: 'https://generativelanguage.googleapis.com/v1beta/models',
-    xai: 'https://api.x.ai/v1/models',
     deepseek: 'https://api.deepseek.com/models',
     qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1/models',
     kimi: 'https://api.moonshot.cn/v1/models',
@@ -79,15 +79,13 @@ export async function discoverIndependentModelDetails(
     minimax: 'https://api.minimax.io/v1/models',
     openrouter: 'https://openrouter.ai/api/v1/models',
   }
-  const url = provider === 'gemini'
-    ? `${addresses[provider]}?key=${encodeURIComponent(token)}` : addresses[provider]
-  const response = await fetcher(url, {
-    headers: provider === 'gemini' ? {} : { Authorization: `Bearer ${token}` },
+  const response = await fetcher(addresses[provider], {
+    headers: { Authorization: `Bearer ${token}` },
   })
   if (!response.ok) throw new Error(`Model discovery failed for ${provider}: HTTP ${response.status}`)
   const data = await response.json() as Record<string, unknown>
-  const list = provider === 'gemini' ? data.models
-    : provider === 'chatgpt' ? (Array.isArray(data.models) ? data.models : data.data)
+  const list = provider === 'chatgpt'
+    ? (Array.isArray(data.models) ? data.models : data.data)
     : data.data
   if (!Array.isArray(list)) throw new Error(`Invalid model discovery response from ${provider}`)
   return list.flatMap(entry => {
@@ -95,21 +93,18 @@ export async function discoverIndependentModelDetails(
     if (provider === 'chatgpt' && entry.visibility !== undefined && entry.visibility !== 'list') return []
     const value = provider === 'chatgpt'
       ? (typeof entry.slug === 'string' ? entry.slug : entry.id)
-      : provider === 'gemini' ? entry.name : entry.id
+      : entry.id
     if (typeof value !== 'string') return []
-    const id = value.startsWith('models/') ? value.slice('models/'.length) : value
+    const id = value
     if (!id || id.length > 300 || Array.from(id).some(character => character.charCodeAt(0) < 32)) return []
     const top = typeof entry.top_provider === 'object' && entry.top_provider !== null ? entry.top_provider : {}
-    const contextWindow = positiveInteger(entry.context_length ?? entry.context_window ?? entry.inputTokenLimit ?? entry.max_input_tokens)
-    const maxOutputTokens = positiveInteger(entry.outputTokenLimit ?? entry.max_output_tokens ?? entry.max_completion_tokens ?? top.max_completion_tokens)
-    const methods: unknown = entry.supportedGenerationMethods
-    const supportsTools = Array.isArray(methods) ? methods.includes('generateContent') : undefined
+    const contextWindow = positiveInteger(entry.context_length ?? entry.context_window ?? entry.max_input_tokens)
+    const maxOutputTokens = positiveInteger(entry.max_output_tokens ?? entry.max_completion_tokens ?? top.max_completion_tokens)
     const modalities: unknown = entry.architecture?.input_modalities
     const supportsVision = Array.isArray(modalities) ? modalities.includes('image') : undefined
     return [{ id,
       ...(contextWindow ? { contextWindow } : {}),
       ...(maxOutputTokens ? { maxOutputTokens } : {}),
-      ...(supportsTools !== undefined ? { supportsTools } : {}),
       ...(supportsVision !== undefined ? { supportsVision } : {}),
     }]
   })
