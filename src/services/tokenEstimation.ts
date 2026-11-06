@@ -24,7 +24,7 @@ import {
 } from '../utils/model/model.js'
 import { jsonStringify } from '../utils/slowOperations.js'
 import { isToolReferenceBlock } from '../utils/toolSearch.js'
-import { getAPIMetadata, getExtraBodyParams } from './api/claude.js'
+import { getExtraBodyParams } from './api/claude.js'
 import { getAnthropicClient } from './api/client.js'
 import { resolveIndependentModel } from './api/multimodel/registry.js'
 import { countIndependentModelTokens } from './api/multimodel/tokenCounting.js'
@@ -312,7 +312,6 @@ export async function countTokensViaHaikuFallback(
     messages: messagesToSend,
     tools: tools.length > 0 ? tools : undefined,
     ...(filteredBetas.length > 0 && { betas: filteredBetas }),
-    metadata: getAPIMetadata(),
     ...getExtraBodyParams(),
     // Enable thinking if messages contain thinking blocks
     ...(containsThinking && {

@@ -10,7 +10,6 @@ import { getSmallFastModel } from '../utils/model/model.js'
 import { isEssentialTrafficOnly } from '../utils/privacyLevel.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from './analytics/index.js'
 import { logEvent } from './analytics/index.js'
-import { getAPIMetadata } from './api/claude.js'
 import { getAnthropicClient } from './api/client.js'
 import {
   processRateLimitHeaders,
@@ -211,7 +210,6 @@ async function makeTestQuery() {
       model,
       max_tokens: 1,
       messages,
-      metadata: getAPIMetadata(),
       ...(betas.length > 0 ? { betas } : {}),
     })
     .asResponse()
