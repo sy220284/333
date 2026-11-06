@@ -47,7 +47,7 @@ function fixture(run) {
       if (officialFiles.has(file)) copyFileSync(join(root, file), dest)
       else writeFileSync(dest, file === 'package.json' ? '{"version":"2.1.317"}\n' : file)
     }
-    writeFileSync(join(dir, 'dist', process.platform === 'win32' ? 'qerivon.exe' : 'qerivon'), 'isolated release executable fixture')
+    writeFileSync(join(dir, 'dist', process.platform === 'win32' ? 'yaoyaoche.exe' : 'yaoyaoche'), 'isolated release executable fixture')
     run(dir)
   } finally {
     rmSync(dir, { recursive: true, force: true })

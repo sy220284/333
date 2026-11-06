@@ -4,7 +4,7 @@ import { resolve, join } from 'node:path'
 import { test } from 'node:test'
 
 const root = resolve(import.meta.dirname, '..')
-const native = join(root, 'dist', process.platform === 'win32' ? 'qerivon.exe' : 'qerivon')
+const native = join(root, 'dist', process.platform === 'win32' ? 'yaoyaoche.exe' : 'yaoyaoche')
 const sources = [
   ['Bun source rebuild', 'bun', [join(root, 'dist/cli.js')]],
   ['compiled standalone', native, []],
@@ -13,7 +13,7 @@ if (process.platform === 'linux' && process.env.CLAUDE_TARGET_X64)
   sources.unshift(['verified official x64', process.env.CLAUDE_TARGET_X64, []])
 
 for (const [name, command, prefix] of sources) {
-  const version = `2.1.317 (${name === 'verified official x64' ? 'Claude Code' : 'Qerivon'})`
+  const version = `2.1.317 (${name === 'verified official x64' ? 'Claude Code' : '摇摇车'})`
   const verbose = `${version}\nCommit: 3d3e7cb16b5577dccaee9520c8dc1189d02d61b7`
   test('M1 C19-T02: ' + name + ' fast version and verbose commit are byte-for-byte aligned', () => {
     for (const first of ['--version', '-v', '-V']) {

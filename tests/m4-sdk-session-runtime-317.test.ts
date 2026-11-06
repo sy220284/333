@@ -58,7 +58,7 @@ test('SDK sends multiple turns and resumes the transcript through the rebuilt CL
   assert.ok(address && typeof address !== 'string')
   const options = {
     cwd, model,
-    pathToClaudeCodeExecutable: resolve('dist', process.platform === 'win32' ? 'qerivon.exe' : 'qerivon'),
+    pathToClaudeCodeExecutable: resolve('dist', process.platform === 'win32' ? 'yaoyaoche.exe' : 'yaoyaoche'),
     env: {
       CLAUDE_CONFIG_DIR: join(cwd, 'config'),
       ANTHROPIC_BASE_URL: `http://127.0.0.1:${address.port}`,

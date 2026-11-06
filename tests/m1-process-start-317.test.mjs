@@ -64,7 +64,7 @@ test('M1 317: remote GC profiles two phases and releases both collectors', async
 
 test('M1 317: compiled executable terminates normally when remote GC is enabled', () => {
   const original = process.env.CLAUDE_REFERENCE_BIN
-  const native = join(root, 'dist', process.platform === 'win32' ? 'qerivon.exe' : 'qerivon')
+  const native = join(root, 'dist', process.platform === 'win32' ? 'yaoyaoche.exe' : 'yaoyaoche')
   const targets = [['rebuild',native]]
   if (original) targets.unshift(['official',original])
   for (const [label, executable] of targets) {
@@ -77,6 +77,6 @@ test('M1 317: compiled executable terminates normally when remote GC is enabled'
     })
     assert.equal(result.error, undefined, label + ' ' + String(result.error))
     assert.equal(result.status, 0, label + ' ' + result.stderr)
-    assert.equal(result.stdout.trim(), '2.1.317 (Qerivon)')
+    assert.equal(result.stdout.trim(), '2.1.317 (摇摇车)')
   }
 })
