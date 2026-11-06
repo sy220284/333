@@ -17,7 +17,11 @@ const brief = {
   type: 'local-jsx',
   name: 'brief',
   description: 'Toggle brief-only mode',
-  isEnabled: () => feature('KAIROS') || feature('KAIROS_BRIEF'),
+  isEnabled: () => {
+    if (feature('KAIROS')) return true
+    if (feature('KAIROS_BRIEF')) return true
+    return false
+  },
   immediate: true,
   load: () =>
     Promise.resolve({
