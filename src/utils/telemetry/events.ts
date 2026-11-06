@@ -17,8 +17,6 @@ export async function logOTelEvent(
   eventName: string,
   metadata: Record<string, string | undefined> = {},
 ): Promise<void> {
-  if (process.env.NODE_ENV === 'test') return
-
   const safe: Record<string, number | boolean> = {
     sequence: eventSequence++,
   }

@@ -9,6 +9,7 @@ import { registerCleanup } from '../../utils/cleanupRegistry.js'
 import { isTelemetryDisabled } from '../../utils/privacyLevel.js'
 const DIAGNOSTICS_DIR = join(homedir(), '.qerivon', 'diagnostics')
 const JOURNAL = join(DIAGNOSTICS_DIR, 'events.ndjson')
+export function getLocalDiagnosticsFilePath(): string { return JOURNAL }
 const ARCHIVE = join(DIAGNOSTICS_DIR, 'events.previous.ndjson')
 const MAX_BYTES = 4 * 1024 * 1024
 const MAX_ATTRIBUTE_KEYS = 40
