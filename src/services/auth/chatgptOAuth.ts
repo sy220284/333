@@ -97,6 +97,7 @@ function scopeGranted(scopes: string): boolean {
   return scopes.split(/\s+/).includes('chatgpt.tokens.use.direct')
 }
 async function refreshCredentials(current: Credential): Promise<Credential> {
+  const epoch = credentialEpoch
   const params = new URLSearchParams({
     grant_type: 'refresh_token', client_id: current.client_id,
     refresh_token: current.refresh_token, resource: RESOURCE,
@@ -115,10 +116,12 @@ async function refreshCredentials(current: Credential): Promise<Credential> {
     ...current, access_token: data.access_token, refresh_token: data.refresh_token,
     scope: scopes, expires_at: Date.now() + Number(data.expires_in ?? 3600) * 1000,
   }
+  if (epoch !== credentialEpoch) throw new Error('ChatGPT credentials changed while refresh was pending')
   await writePrivate(FILE, updated)
   return updated
 }
 let refreshing: Promise<Credential> | null = null
+let credentialEpoch = 0
 export async function getChatGPTAccessToken(): Promise<string> {
   const credential = await readJSON<Credential>(FILE)
   if (!credential) throw new Error('ChatGPT not connected; run 333 auth chatgpt-login')
@@ -217,6 +220,7 @@ export async function loginWithChatGPT(): Promise<{ email?: string; subject: str
     if (registration && registration.subject !== identity.subject) {
       throw new Error('ChatGPT account identity changed during reauthorization')
     }
+    if (!scopeGranted(tokens.scope)) throw new Error('ChatGPT login lacks the required usage scope')
     const credential: Credential = {
       client_id: issuedId, ext_agent_host_id: hostId, subject: identity.subject,
       ...(identity.email ? { email: identity.email } : {}),
@@ -224,9 +228,9 @@ export async function loginWithChatGPT(): Promise<{ email?: string; subject: str
       refresh_token: tokens.refresh_token, scope: tokens.scope,
       expires_at: Date.now() + Number(tokens.expires_in ?? 3600) * 1000,
     }
+    credentialEpoch++
     await writePrivate(ACCOUNT_FILE, { client_id: issuedId, subject: identity.subject, email: identity.email })
     await writePrivate(FILE, credential)
-    if (!scopeGranted(tokens.scope)) throw new Error('ChatGPT login succeeded but plan usage permission was not granted')
     return { subject: identity.subject, email: identity.email, clientId: issuedId }
   } finally {
     if (loginTimeout) clearTimeout(loginTimeout)
@@ -252,18 +256,36 @@ export async function chatGPTStatus(): Promise<{ connected: boolean; email?: str
     ? { connected: scopeGranted(account.scope), email: account.email, clientId: account.client_id }
     : { connected: false }
 }
+/** Clear local identity and registration together so another account can sign in. */
 export async function logoutChatGPT(): Promise<void> {
+  credentialEpoch++
   const credential = await readJSON<Credential>(FILE)
-  if (!credential) return
-  const response = await fetch(`${AUTHORITY}/.well-known/openid-configuration`)
-  if (!response.ok) throw new Error('Unable to find official ChatGPT token revocation endpoint')
-  const doc = await response.json() as { revocation_endpoint?: string }
-  const endpoint = new URL(doc.revocation_endpoint ?? '')
-  if (endpoint.protocol !== 'https:' || endpoint.hostname !== 'auth.openai.com') throw new Error('Invalid token revocation endpoint')
-  const revoke = await fetch(endpoint, { method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: credential.client_id, token: credential.refresh_token, token_type_hint: 'refresh_token' }),
-  })
-  if (!revoke.ok) throw new Error(`ChatGPT revocation failed: HTTP ${revoke.status}`)
+  let revocationError: Error | null = null
+  if (credential) {
+    try {
+      const response = await fetch(`${AUTHORITY}/.well-known/openid-configuration`)
+      if (!response.ok) throw new Error(`OIDC discovery HTTP ${response.status}`)
+      const doc = await response.json() as { revocation_endpoint?: string }
+      if (!doc.revocation_endpoint) throw new Error('OIDC provider does not advertise token revocation')
+      const endpoint = new URL(doc.revocation_endpoint)
+      if (endpoint.protocol !== 'https:' || endpoint.hostname !== 'auth.openai.com') {
+        throw new Error('Unexpected token revocation authority')
+      }
+      const revoke = await fetch(endpoint, {
+        method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: credential.client_id, token: credential.refresh_token,
+          token_type_hint: 'refresh_token',
+        }),
+      })
+      if (!revoke.ok) throw new Error(`Token revocation HTTP ${revoke.status}`)
+    } catch (error) {
+      revocationError = error instanceof Error ? error : new Error(String(error))
+    }
+  }
   await fs.rm(FILE, { force: true })
+  await fs.rm(ACCOUNT_FILE, { force: true })
+  if (revocationError) {
+    throw new Error(`ChatGPT 本地账号与凭据已清除；远端撤销失败：${revocationError.message}`)
+  }
 }

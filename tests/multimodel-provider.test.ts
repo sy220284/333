@@ -192,3 +192,37 @@ test('removed Gemini and xAI/Grok providers cannot be selected or configured', (
   assert.equal(resolveIndependentModel('deepseek/deepseek-chat')?.protocol, 'chat-completions')
   assert.equal(resolveIndependentModel('openai/gpt-6.1-sol')?.protocol, 'responses')
 })
+
+test('DeepSeek reasoning effort, thinking mode and previous reasoning are retained in tool sessions', () => {
+  const payload = toChatCompletions({
+    ...body, thinking: { type: 'enabled' }, output_config: { effort: 'max' },
+    messages: [{ role: 'assistant', content: [
+      { type: 'thinking', thinking: 'verified previous thought', signature: '' },
+      { type: 'tool_use', id: 'call_context', name: 'Read', input: { file_path: '/tmp' } },
+    ] }],
+  }, 'deepseek-v4-pro', 'deepseek')
+  assert.deepEqual(payload.thinking, { type: 'enabled' })
+  assert.equal(payload.reasoning_effort, 'max')
+  assert.equal(payload.messages[1].reasoning_content, 'verified previous thought')
+  assert.equal(payload.stream_options.include_usage, true)
+})
+test('Qwen and OpenRouter model-specific thinking controls are mapped without changing prompts', () => {
+  assert.equal(toChatCompletions({ ...body, thinking: { type: 'disabled' } }, 'qwen3.8-max', 'qwen').enable_thinking, false)
+  assert.equal(toChatCompletions({ ...body, output_config: { effort: 'high' } }, 'qwen3.8-max', 'openrouter').reasoning.effort, 'high')
+})
+test('Chat completions streaming retains reasoning blocks and reasoning token usage', async () => {
+  const route = requireRoute('deepseek/deepseek-v4-pro')
+  const backend = async () => stream(
+    { choices: [{ delta: { reasoning_content: 'inspected' } }] },
+    { choices: [{ delta: { content: 'result' }, finish_reason: 'stop' }],
+      usage: { prompt_tokens: 10, completion_tokens: 20, completion_tokens_details: { reasoning_tokens: 8 } } },
+  )
+  const req = new Request('https://333-model-bridge.invalid/v1/messages', {
+    method: 'POST', body: JSON.stringify({ ...body, model: 'deepseek/deepseek-v4-pro' }),
+  })
+  const response = await makeIndependentFetch(route, 'test', backend as typeof fetch)(req)
+  const events = messages(await response.text())
+  assert.equal(events.some(event => event.delta?.type === 'thinking_delta' && event.delta.thinking === 'inspected'), true)
+  assert.equal(events.some(event => event.delta?.type === 'text_delta' && event.delta.text === 'result'), true)
+  assert.equal(events.find(event => event.type === 'message_delta').usage.reasoning_output_tokens, 8)
+})

@@ -19,13 +19,16 @@ function usageFrom(value: ObjectValue | undefined): ObjectValue {
   return {
     input_tokens: value.input_tokens ?? value.prompt_tokens ?? value.promptTokenCount ?? 0,
     output_tokens: value.output_tokens ?? value.completion_tokens ?? value.candidatesTokenCount ?? 0,
-    cache_read_input_tokens: value.input_tokens_details?.cached_tokens ?? 0,
+    cache_read_input_tokens: value.input_tokens_details?.cached_tokens ??
+      value.prompt_tokens_details?.cached_tokens ?? value.prompt_cache_hit_tokens ?? 0,
+    reasoning_output_tokens: value.output_tokens_details?.reasoning_tokens ??
+      value.completion_tokens_details?.reasoning_tokens ?? 0,
   }
 }
 class AnthropicEvents {
   private index = 0
   private open: number | null = null
-  private activeType: 'text' | 'tool' | null = null
+  private activeType: 'text' | 'thinking' | 'tool' | null = null
   private hasTools = false
   private usage: ObjectValue = { input_tokens: 0, output_tokens: 0 }
   constructor(model: string, private readonly emit: (event: ObjectValue) => void) {
@@ -52,6 +55,18 @@ class AnthropicEvents {
     }
     this.emit({ type: 'content_block_delta', index: this.open, delta: { type: 'text_delta', text: delta } })
   }
+  thinking(delta: string): void {
+    if (!delta) return
+    if (this.activeType !== 'thinking') {
+      this.stopBlock()
+      this.open = this.index++
+      this.activeType = 'thinking'
+      this.emit({ type: 'content_block_start', index: this.open,
+        content_block: { type: 'thinking', thinking: '', signature: '' } })
+    }
+    this.emit({ type: 'content_block_delta', index: this.open,
+      delta: { type: 'thinking_delta', thinking: delta } })
+  }
   tool(name: string, id: string, argumentsJson: string): void {
     this.stopBlock()
     this.hasTools = true
@@ -66,7 +81,9 @@ class AnthropicEvents {
     this.stopBlock()
     this.emit({ type: 'message_delta', delta: {
       stop_reason: this.hasTools ? 'tool_use' : 'end_turn', stop_sequence: null,
-    }, usage: { output_tokens: this.usage.output_tokens } })
+    }, usage: { input_tokens: this.usage.input_tokens, output_tokens: this.usage.output_tokens,
+      cache_read_input_tokens: this.usage.cache_read_input_tokens,
+      reasoning_output_tokens: this.usage.reasoning_output_tokens } })
     this.emit({ type: 'message_stop' })
   }
 }
@@ -169,6 +186,7 @@ function emitFromChat(
   if (data.usage) events.setUsage(data.usage)
   for (const choice of data.choices ?? []) {
     const delta = choice.delta ?? {}
+    if (typeof delta.reasoning_content === 'string') events.thinking(delta.reasoning_content)
     if (typeof delta.content === 'string') events.text(delta.content)
     for (const call of delta.tool_calls ?? []) {
       const index = Number(call.index ?? 0)
@@ -178,7 +196,12 @@ function emitFromChat(
       if (call.function?.arguments) found.arguments += call.function.arguments
       state.calls.set(index, found)
     }
-    if (choice.finish_reason) state.completed = true
+    if (choice.finish_reason) {
+      if (!['stop', 'tool_calls', 'function_call'].includes(choice.finish_reason)) {
+        throw new Error(`Model stream ended with an incomplete or blocked response: ${choice.finish_reason}`)
+      }
+      state.completed = true
+    }
   }
 }
 function materializeResponse(body: ObjectValue, route: ProviderRoute): ObjectValue {
@@ -195,6 +218,7 @@ function materializeResponse(body: ObjectValue, route: ProviderRoute): ObjectVal
     }
   } else {
     const message = body.choices?.[0]?.message
+    if (message?.reasoning_content) content.push({ type: 'thinking', thinking: message.reasoning_content, signature: '' })
     if (message?.content) content.push({ type: 'text', text: message.content })
     for (const call of message?.tool_calls ?? []) content.push({
       type: 'tool_use', id: call.id, name: call.function.name, input: JSON.parse(call.function.arguments || '{}'),
@@ -226,7 +250,7 @@ export function makeIndependentFetch(
     }
     const payload = route.protocol === 'responses'
       ? toResponses(body, route.model)
-      : toChatCompletions(body, route.model)
+      : toChatCompletions(body, route.model, route.provider)
     // Plan-sharing OAuth strictly requires streaming even for validation calls.
     if (route.provider === 'chatgpt') {
       // ChatGPT plan usage is a narrower Responses API profile than API-key

@@ -1,6 +1,7 @@
 /** Protocol-aware request conversion. Preserve incoming prompt text verbatim. */
 // biome-ignore lint/suspicious/noExplicitAny: Wire payloads are dynamic before being normalized per provider.
 type JSONValue = Record<string, any>
+import type { IndependentProvider } from './registry.js'
 export type AnthropicRequest = {
   model: string
   messages: Array<{ role: 'user' | 'assistant'; content: string | JSONValue[] }>
@@ -116,13 +117,15 @@ function chatParts(parts: JSONValue[]): JSONValue[] {
     throw new Error(`Unsupported chat content block: ${String(block.type)}`)
   })
 }
-export function toChatCompletions(body: AnthropicRequest, model: string): JSONValue {
+export function toChatCompletions(body: AnthropicRequest, model: string, provider?: IndependentProvider): JSONValue {
   const messages: JSONValue[] = []
   const system = systemText(body.system)
   if (system) messages.push({ role: 'system', content: system })
   for (const message of body.messages) {
     const parts = allParts(message.content)
     const ordinary = chatParts(parts)
+    const reasoningContent = parts.filter(p => p.type === 'thinking' && typeof p.thinking === 'string')
+      .map(p => p.thinking as string).join('')
     const calls = parts.filter(p => p.type === 'tool_use').map(p => ({
       id: p.id, type: 'function', function: { name: p.name, arguments: JSON.stringify(p.input ?? {}) },
     }))
@@ -132,6 +135,8 @@ export function toChatCompletions(body: AnthropicRequest, model: string): JSONVa
         content: ordinary.length === 0 ? null : ordinary.length === 1 && ordinary[0].type === 'text'
           ? ordinary[0].text : ordinary,
         ...(calls.length ? { tool_calls: calls } : {}),
+        ...(reasoningContent && (provider === 'deepseek' || provider === 'qwen' || provider === 'kimi')
+          ? { reasoning_content: reasoningContent } : {}),
       })
     }
     for (const result of parts.filter(p => p.type === 'tool_result')) {
@@ -152,5 +157,26 @@ export function toChatCompletions(body: AnthropicRequest, model: string): JSONVa
   if (body.tool_choice?.type === 'none') result.tool_choice = 'none'
   if (body.tool_choice?.type === 'any') result.tool_choice = 'required'
   if (body.tool_choice?.type === 'tool') result.tool_choice = { type: 'function', function: { name: body.tool_choice.name } }
+  const requestedEffort = body.output_config?.effort
+  const effort = typeof requestedEffort === 'string' &&
+    ['low', 'medium', 'high', 'xhigh', 'max'].includes(requestedEffort)
+    ? requestedEffort : undefined
+  const thinking = body.thinking?.type
+  if (provider === 'deepseek') {
+    if (thinking === 'enabled' || thinking === 'adaptive') result.thinking = { type: 'enabled' }
+    if (thinking === 'disabled') result.thinking = { type: 'disabled' }
+    if (effort) result.reasoning_effort = effort === 'medium' || effort === 'xhigh' ? 'high' : effort
+  } else if (provider === 'qwen' && /^qwen3/i.test(model)) {
+    if (thinking === 'enabled' || thinking === 'adaptive') result.enable_thinking = true
+    if (thinking === 'disabled') result.enable_thinking = false
+  } else if (provider === 'openrouter') {
+    if (effort) result.reasoning = { effort }
+    else if (thinking === 'disabled') result.reasoning = { effort: 'none' }
+    else if (thinking === 'enabled' || thinking === 'adaptive') result.reasoning = { effort: 'high' }
+  }
+  // Explicitly request the terminal usage chunk where the provider supports it.
+  if (body.stream && (provider === 'deepseek' || provider === 'openrouter')) {
+    result.stream_options = { include_usage: true }
+  }
   return result
 }
