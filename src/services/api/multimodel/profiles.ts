@@ -7,10 +7,9 @@ import { randomUUID } from 'node:crypto'
 import { promises as fs, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { isRetiredIndependentProvider, isRemovedIndependentModel, resolveIndependentModel } from './registry.js'
-import { MODEL_STORAGE_ROOT } from './storage.js'
+import { getModelStorageRoot } from './storage.js'
 
-const ROOT = MODEL_STORAGE_ROOT
-const PATH = join(ROOT, 'profiles.json')
+const profilesFile = () => join(getModelStorageRoot(), 'profiles.json')
 
 export type IndependentModelProfile = {
   contextWindow?: number
@@ -53,7 +52,7 @@ function validatedProfile(model: string, candidate: IndependentModelProfile): In
 
 export function readIndependentProfiles(): Record<string, IndependentModelProfile> {
   let data: string
-  try { data = readFileSync(PATH, 'utf8') }
+  try { data = readFileSync(profilesFile(), 'utf8') }
   catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return {}
     throw error
@@ -87,13 +86,15 @@ export async function updateIndependentProfile(
     ...existing[model], ...patch,
     source: patch.source, checkedAt: new Date().toISOString(),
   })
-  await fs.mkdir(ROOT, { recursive: true, mode: 0o700 })
-  const temporary = join(ROOT, `profiles.${randomUUID()}.tmp`)
+  const root = getModelStorageRoot()
+  const file = join(root, 'profiles.json')
+  await fs.mkdir(root, { recursive: true, mode: 0o700 })
+  const temporary = join(root, `profiles.${randomUUID()}.tmp`)
   try {
     await fs.writeFile(temporary, JSON.stringify({ ...existing, [model]: next }, null, 2),
       { encoding: 'utf8', mode: 0o600, flag: 'wx' })
-    await fs.rename(temporary, PATH)
-    await fs.chmod(PATH, 0o600)
+    await fs.rename(temporary, file)
+    await fs.chmod(file, 0o600)
   } finally {
     await fs.rm(temporary, { force: true })
   }
@@ -121,13 +122,15 @@ export async function mergeDiscoveredModelProfiles(
     changed++
   }
   if (changed === 0) return 0
-  await fs.mkdir(ROOT, { recursive: true, mode: 0o700 })
-  const temporary = join(ROOT, `profiles.${randomUUID()}.tmp`)
+  const root = getModelStorageRoot()
+  const file = join(root, 'profiles.json')
+  await fs.mkdir(root, { recursive: true, mode: 0o700 })
+  const temporary = join(root, `profiles.${randomUUID()}.tmp`)
   try {
     await fs.writeFile(temporary, JSON.stringify(next, null, 2),
       { encoding: 'utf8', mode: 0o600, flag: 'wx' })
-    await fs.rename(temporary, PATH)
-    await fs.chmod(PATH, 0o600)
+    await fs.rename(temporary, file)
+    await fs.chmod(file, 0o600)
   } finally {
     await fs.rm(temporary, { force: true })
   }
