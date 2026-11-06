@@ -75,8 +75,8 @@ test('被中断的任务不自动重复执行；用户恢复后需再次显式�
 
 test('任务队列验证输入并守住项目和终态边界', async () => {
   await fixture(async (root, mission, project) => {
-    await expect(enqueueMissionJob(mission, project, ' ', '有效指令', root)).rejects.toThrow('标题')
-    await expect(enqueueMissionJob(mission, project, '有效标题', ' ', root)).rejects.toThrow('指令')
+    expect(() => enqueueMissionJob(mission, project, ' ', '有效指令', root)).toThrow('标题')
+    expect(() => enqueueMissionJob(mission, project, '有效标题', ' ', root)).toThrow('指令')
     await expect(listMissionJobs('../../etc/passwd', project, root)).rejects.toThrow('无效')
     const item = await enqueueMissionJob(mission, project, '停止项目', '用户决定终止', root)
     const cancelled = await cancelMissionJob(mission, project, item.id, root)
