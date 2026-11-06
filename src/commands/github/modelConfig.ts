@@ -164,3 +164,17 @@ export async function configureGithubCustomModel(
   }
   return `GitHub Actions 已单独配置 ${provider}/${model}；本机模型账号及密钥未改变。`
 }
+
+/** 统一选择器的已保存模型和新建模型分流；上传前不依赖另一模式的状态。 */
+export type GithubWizardModelSelection =
+  | { kind: 'saved'; id: string }
+  | { kind: 'new'; provider: GithubActionsProvider; model: string; apiKey: string }
+
+export async function configureGithubWizardModel(
+  repo: string, selected: GithubWizardModelSelection, explicitConsent: boolean,
+): Promise<string> {
+  if (selected.kind === 'new') {
+    return configureGithubCustomModel(repo, selected.provider, selected.model, selected.apiKey, explicitConsent)
+  }
+  return configureGithubModel(repo, selected.id, explicitConsent)
+}
