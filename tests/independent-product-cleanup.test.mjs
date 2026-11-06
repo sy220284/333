@@ -67,9 +67,12 @@ test('本地反馈导出要求显式描述，文件私密且不上传', () => {
   const src = source('src/commands/feedback/feedback.ts')
   assert.match(src, /if \(!description\)/)
   assert.match(src, /diagnostics/)
-  assert.match(src, /mode: 0o600/)
-  assert.match(src, /flag: 'wx'/)
+  const storage = source('src/services/localRuntime/feedbackReports.ts')
+  assert.match(src, /saveLocalFeedback\(description, diagnostics\)/)
+  assert.match(storage, /mode: 0o600/)
+  assert.match(storage, /flag: 'wx'/)
   assert.doesNotMatch(src, /https?:\/\/|axios|fetch\(/)
+  assert.doesNotMatch(storage, /https?:\/\/|axios|fetch\(/)
 })
 
 test('状态、规划、后台任务统一入口连接原运行时', () => {

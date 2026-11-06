@@ -55,11 +55,12 @@ try {
     const original = run(reference, item.args)
     const rebuilt = run(candidate, item.args)
     const expected = '`claude import` is not yet available in this build. Run `claude` and use /mcp or edit ~/.claude/settings.json directly.'
-    const helpMatches = text => text.includes('Usage: claude import [options] [source]') &&
+    const helpMatches = (text, executable) =>
+      text.includes(`Usage: ${executable} import [options] [source]`) &&
       text.includes('--dry-run') && text.includes('--yes')
     const passed = item.help
       ? original.status === 0 && rebuilt.status === 0 &&
-        helpMatches(original.stdout) && helpMatches(rebuilt.stdout)
+        helpMatches(original.stdout, 'claude') && helpMatches(rebuilt.stdout, '333')
       : original.status === 1 && rebuilt.status === 1 &&
         original.stderr === expected && rebuilt.stderr === expected &&
         original.stdout === '' && rebuilt.stdout === ''
