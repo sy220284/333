@@ -63,13 +63,13 @@ for (const name of workflows) {
   if (name === 'ci-on-demand.yml' || name === 'latest-stable-upgrade.yml') continue
   const source = yaml(name)
   if (/^ {2}pull_request:/m.test(source))
-    errors.push('专项工作流仍绕过统一调度直接响应 PR：' + name)
+    errors.push(`专项工作流仍绕过统一调度直接响应 PR：${name}`)
   if (!/^ {2}workflow_call:/m.test(source))
-    errors.push('专项工作流缺少可复用入口：' + name)
-  if (!dispatcher.includes('./.github/workflows/' + name))
-    errors.push('专项工作流未接入全量调度：' + name)
+    errors.push(`专项工作流缺少可复用入口：${name}`)
+  if (!dispatcher.includes(`./.github/workflows/${name}`))
+    errors.push(`专项工作流未接入全量调度：${name}`)
   if (/^ {2}group: \$\{\{ github\.workflow \}\}/m.test(source))
-    errors.push('可复用检查并发组未隔离：' + name)
+    errors.push(`可复用检查并发组未隔离：${name}`)
 }
 
 // A generic push trigger would bypass the router on the PR branch.
