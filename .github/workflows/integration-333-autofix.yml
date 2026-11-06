@@ -1,0 +1,43 @@
+name: PR19 安全格式修复
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: write
+jobs:
+  biome-safe-fixes:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'integration/333-independent-pr16-pr18-20261106'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integration/333-independent-pr16-pr18-20261106
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - name: 仅对 PR19 修改过的源代码应用 Biome 安全修复
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          mapfile -d '' -t all_files < <(git diff --name-only -z --diff-filter=ACMR origin/main...HEAD)
+          targets=()
+          for path in "${all_files[@]}"; do
+            case "$path" in
+              *.ts|*.tsx|*.mjs|*.js|*.jsx|*.cjs) [ -f "$path" ] && targets+=("$path") ;;
+            esac
+          done
+          if [ "${#targets[@]}" -eq 0 ]; then echo '没有需要修复的源码'; exit 0; fi
+          set +e
+          npx --yes @biomejs/biome@2.6.3 lint --write --max-diagnostics=none "${targets[@]}"
+          code=$?
+          set -e
+          echo "Biome 返回码：$code；未自动解决的问题仍由现有 CI 验收"
+          git add -- "${targets[@]}"
+          if git diff --cached --quiet; then echo '没有可提交的安全修复'; exit 0; fi
+          git config user.name '333 CI 安全格式修复'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m '自动修复 PR19 新增代码中的 Biome 安全风格问题'
+          git push origin HEAD:integration/333-independent-pr16-pr18-20261106
