@@ -2,6 +2,8 @@ import { getDirectConnectServerUrl, getSessionId } from '../bootstrap/state.js'
 import { stringWidth } from '../ink/stringWidth.js'
 import type { LogOption } from '../types/logs.js'
 import { getSubscriptionName, isClaudeAISubscriber } from './auth.js'
+import { getMainLoopModel } from './model/model.js'
+import { resolveIndependentModel } from '../services/api/multimodel/registry.js'
 import { getCwd } from './cwd.js'
 import { getDisplayPath } from './file.js'
 import {
@@ -248,14 +250,15 @@ export function getLogoDisplayData(): {
   const version = process.env.DEMO_VERSION ?? MACRO.VERSION
   const serverUrl = getDirectConnectServerUrl()
   const displayPath = process.env.DEMO_VERSION
-    ? '/code/claude'
+    ? '/project/333'
     : getDisplayPath(getCwd())
   const cwd = serverUrl
     ? `${displayPath} in ${serverUrl.replace(/^https?:\/\//, '')}`
     : displayPath
-  const billingType = isClaudeAISubscriber()
-    ? getSubscriptionName()
-    : 'API Usage Billing'
+  const activeProvider = resolveIndependentModel(getMainLoopModel())
+  const billingType = activeProvider
+    ? activeProvider.provider === 'chatgpt' ? 'ChatGPT 账号授权' : 'API 用量计费'
+    : isClaudeAISubscriber() ? getSubscriptionName() : 'API 用量计费'
   const agentName = getInitialSettings().agent
 
   return {
