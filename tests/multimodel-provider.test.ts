@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { type ProviderRoute, PROVIDERS, resolveIndependentModel, getIndependentApiKey, discoverIndependentModels } from '../src/services/api/multimodel/registry.ts'
+import { type ProviderRoute, PROVIDERS, resolveIndependentModel, getIndependentApiKey, discoverIndependentModels, discoverIndependentModelDetails } from '../src/services/api/multimodel/registry.ts'
 import { type AnthropicRequest, toResponses, toChatCompletions } from '../src/services/api/multimodel/convert.ts'
 import { makeIndependentFetch } from '../src/services/api/multimodel/transport.ts'
 import { getModelFieldProfile } from '../src/services/api/multimodel/providerFields.ts'
@@ -651,4 +651,15 @@ test('OpenAI API key inference keeps ordinary Responses tools protocol independe
   assert.equal(sent.tools[0].name, 'Read')
   assert.ok(sent.max_output_tokens > 0)
   assert.notEqual(sent.input[0].type, 'additional_tools')
+})
+
+test('ChatGPT 官方模型目录保留可选模型顺序、slug 与 display_name，隐藏模型不显示', async () => {
+  const models = await discoverIndependentModelDetails('chatgpt', 'oauth-token',
+    (async () => Response.json({ models: [
+      { slug: 'gpt-6.1-sol', display_name: 'GPT-6.1 Sol', visibility: 'list' },
+      { slug: 'secret-preview', display_name: 'Do Not Show', visibility: 'hidden' },
+      { slug: 'gpt-6.1-flash', display_name: 'GPT-6.1 Flash', visibility: 'list' },
+    ] })) as typeof fetch)
+  assert.deepEqual(models.map(x => x.id), ['gpt-6.1-sol', 'gpt-6.1-flash'])
+  assert.deepEqual(models.map(x => x.displayName), ['GPT-6.1 Sol', 'GPT-6.1 Flash'])
 })
