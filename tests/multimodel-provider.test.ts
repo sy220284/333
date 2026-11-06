@@ -226,3 +226,23 @@ test('Chat completions streaming retains reasoning blocks and reasoning token us
   assert.equal(events.some(event => event.delta?.type === 'text_delta' && event.delta.text === 'result'), true)
   assert.equal(events.find(event => event.type === 'message_delta').usage.reasoning_output_tokens, 8)
 })
+
+test('Qwen3.8 reasoning effort uses the provider-specific low/medium/xhigh range', () => {
+  const input = { ...body, output_config: { effort: 'max' } }
+  assert.equal(toChatCompletions(input, 'qwen3.8-max', 'qwen').reasoning_effort, 'xhigh')
+  assert.equal(toChatCompletions({ ...input, output_config: { effort: 'medium' } }, 'qwen3.8-max', 'qwen').reasoning_effort, 'medium')
+})
+test('GLM-5.3 thinking remains enabled and invalid disabled requests are rejected before billing', () => {
+  const payload = toChatCompletions({ ...body, thinking: { type: 'enabled' },
+    output_config: { effort: 'xhigh' } }, 'glm-5.3', 'zhipu')
+  assert.deepEqual(payload.thinking, { type: 'enabled' })
+  assert.equal(payload.reasoning_effort, 'max')
+  assert.throws(() => toChatCompletions({ ...body, thinking: { type: 'disabled' } }, 'glm-5.3', 'zhipu'), /始终启用思考/)
+})
+test('MiniMax M3.1 and Kimi K2.7 enforce documented thinking boundaries', () => {
+  assert.equal(toChatCompletions({ ...body, output_config: { effort: 'max' } }, 'MiniMax-M3.1-Flash', 'minimax').reasoning_effort, 'max')
+  assert.throws(() => toChatCompletions({ ...body, thinking: { type: 'disabled' } }, 'MiniMax-M3.1-Flash', 'minimax'), /保留推理能力/)
+  assert.throws(() => toChatCompletions({ ...body, thinking: { type: 'disabled' } }, 'kimi-k2.7-code', 'kimi'), /不支持关闭思考/)
+  const selected = toChatCompletions({ ...body, tool_choice: { type: 'tool', name: 'Read' } }, 'kimi-k2.7-code', 'kimi')
+  assert.equal(selected.tool_choice, 'auto')
+})
