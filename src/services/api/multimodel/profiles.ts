@@ -17,6 +17,9 @@ export type IndependentModelProfile = {
   supportsTools?: boolean
   supportsVision?: boolean
   supportsReasoning?: boolean
+  /** Exact permitted inference levels, when published by the provider. */
+  supportedEffort?: string[]
+  defaultEffort?: string
   checkedAt?: string
   source: 'provider' | 'manual'
 }
@@ -45,6 +48,18 @@ function validatedProfile(model: string, candidate: IndependentModelProfile): In
     if (candidate[key] !== undefined && typeof candidate[key] !== 'boolean') {
       throw new Error(`Invalid model capability: ${key}`)
     }
+  }
+  if (candidate.supportedEffort !== undefined) {
+    const allowed = new Set(['low', 'medium', 'high', 'xhigh', 'max'])
+    if (!Array.isArray(candidate.supportedEffort) ||
+        !candidate.supportedEffort.every(level => typeof level === 'string' && allowed.has(level)) ||
+        new Set(candidate.supportedEffort).size !== candidate.supportedEffort.length) {
+      throw new Error('Invalid model supported effort levels')
+    }
+  }
+  if (candidate.defaultEffort !== undefined && (typeof candidate.defaultEffort !== 'string' ||
+      !(candidate.supportedEffort ?? []).includes(candidate.defaultEffort))) {
+    throw new Error('Model default effort must appear in supported levels')
   }
   return { ...candidate, ...(contextWindow === undefined ? {} : { contextWindow }),
     ...(maxOutputTokens === undefined ? {} : { maxOutputTokens }) }
@@ -104,7 +119,8 @@ export async function updateIndependentProfile(
 /** Apply one provider discovery response as a single atomic update. */
 export async function mergeDiscoveredModelProfiles(
   provider: string,
-  details: ReadonlyArray<{ id: string; contextWindow?: number; maxOutputTokens?: number; supportsTools?: boolean; supportsVision?: boolean }>,
+  details: ReadonlyArray<{ id: string; contextWindow?: number; maxOutputTokens?: number;
+    supportsTools?: boolean; supportsVision?: boolean; supportedEffort?: string[]; defaultEffort?: string }>,
 ): Promise<number> {
   const current = readIndependentProfiles()
   const next = { ...current }
@@ -114,7 +130,8 @@ export async function mergeDiscoveredModelProfiles(
     const id = `${provider}/${detail.id}`
     if (!resolveIndependentModel(id) || next[id]?.source === 'manual') continue
     if (detail.contextWindow === undefined && detail.maxOutputTokens === undefined &&
-        detail.supportsTools === undefined && detail.supportsVision === undefined) continue
+        detail.supportsTools === undefined && detail.supportsVision === undefined &&
+        detail.supportedEffort === undefined && detail.defaultEffort === undefined) continue
     next[id] = validatedProfile(id, {
       ...next[id], ...detail,
       source: 'provider', checkedAt,
