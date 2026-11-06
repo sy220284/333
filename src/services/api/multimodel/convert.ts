@@ -171,32 +171,32 @@ export function toChatCompletions(body: AnthropicRequest, model: string, provide
     if (thinking === 'disabled') result.enable_thinking = false
     // Qwen3.8 uses low/medium/xhigh, while other Qwen revisions advertise
     // different effort sets. Keep unspecified values at the provider default.
-    if (effort && /^qwen3\\.8/i.test(model)) {
+    if (effort && /^qwen3\.8/i.test(model)) {
       result.reasoning_effort = effort === 'low' ? 'low' : effort === 'medium' ? 'medium' : 'xhigh'
     }
   } else if (provider === 'zhipu') {
-    const alwaysThinking = /^glm-5\\.3(?:-|$)/i.test(model)
+    const alwaysThinking = /^glm-5\.3(?:-|$)/i.test(model)
     if (thinking === 'disabled' && alwaysThinking) {
       throw new Error('GLM-5.3 系列始终启用思考；请选择 low 推理强度代替关闭')
     }
     if (thinking === 'enabled' || thinking === 'adaptive') result.thinking = { type: 'enabled' }
     if (thinking === 'disabled') result.thinking = { type: 'disabled' }
-    if (effort && /^glm-5\\.[23](?:-|$)/i.test(model)) {
+    if (effort && /^glm-5\.[23](?:-|$)/i.test(model)) {
       result.reasoning_effort = effort === 'low' && alwaysThinking ? 'low'
         : effort === 'max' || effort === 'xhigh' ? 'max' : 'high'
     }
   } else if (provider === 'minimax') {
-    const requiresReasoning = /^MiniMax-M3\\.1(?:-|$)|^MiniMax-M2\\./i.test(model)
+    const requiresReasoning = /^MiniMax-M3\.1(?:-|$)|^MiniMax-M2\./i.test(model)
     if (thinking === 'disabled' && requiresReasoning) {
       throw new Error('当前 MiniMax 模型必须保留推理能力；可通过 effort 降低强度')
     }
     // M3.1 exposes reasoning_effort in Chat Completions; other revisions
     // must negotiate their exact capabilities with the provider.
-    if (effort && /^MiniMax-M3\\.1(?:-|$)/i.test(model)) result.reasoning_effort = effort
+    if (effort && /^MiniMax-M3\.1(?:-|$)/i.test(model)) result.reasoning_effort = effort
     if (thinking === 'enabled' || thinking === 'adaptive') result.thinking = { type: 'adaptive' }
     if (thinking === 'disabled') result.thinking = { type: 'disabled' }
   } else if (provider === 'kimi') {
-    if (thinking === 'disabled' && /^kimi-k2\\.7-code/i.test(model)) {
+    if (thinking === 'disabled' && /^kimi-k2\.7-code/i.test(model)) {
       throw new Error('Kimi K2.7 Code 不支持关闭思考')
     }
     if (thinking === 'enabled' || thinking === 'adaptive') result.thinking = { type: 'enabled' }
