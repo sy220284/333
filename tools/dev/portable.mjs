@@ -8,6 +8,7 @@ const devDir = resolve(import.meta.dirname);
 const lock = join(devDir, 'package-lock.json');
 const target = join(devDir, 'node_modules');
 const expected = JSON.parse(readFileSync(join(devDir, 'package.json'), 'utf8')).devDependencies;
+const authority = join(devDir, 'toolchain.lock.json');
 
 function hash(file) {
   return createHash('sha256').update(readFileSync(file)).digest('hex');
@@ -31,6 +32,7 @@ if (!folder || !['pack', 'install'].includes(operation)) {
 const archive = join(folder, 'payload.tar.gz');
 const manifestPath = join(folder, 'manifest.json');
 if (operation === 'pack') {
+  exec(process.execPath, [join(devDir, 'toolchain.mjs'), 'check']);
   validate(target);
   mkdirSync(folder, { recursive: true });
   exec('tar', ['-czf', 'payload.tar.gz', '-C', devDir.replaceAll('\\', '/'), 'node_modules'], folder);
@@ -38,7 +40,8 @@ if (operation === 'pack') {
     schema: 1, component: '333-dev-tools', platform: process.platform, arch: process.arch,
     nodeMajor: Number(process.versions.node.split('.')[0]),
     typescript: expected.typescript, biome: expected['@biomejs/biome'],
-    lockSha256: hash(lock), archiveSha256: hash(archive),
+    lockSha256: hash(lock), toolchainSha256: hash(authority),
+    archiveSha256: hash(archive),
   }, null, 2)}\n`);
   console.log(`[OK] 已制作可迁移的离线开发包: ${folder}`);
 } else {
@@ -47,8 +50,9 @@ if (operation === 'pack') {
       meta.platform !== process.platform || meta.arch !== process.arch ||
       meta.nodeMajor !== Number(process.versions.node.split('.')[0]) ||
       meta.typescript !== expected.typescript || meta.biome !== expected['@biomejs/biome'] ||
-      meta.lockSha256 !== hash(lock) || meta.archiveSha256 !== hash(archive)) {
-    throw new Error('离线包平台、锁文件或 SHA-256 校验不通过');
+      meta.lockSha256 !== hash(lock) || meta.toolchainSha256 !== hash(authority) ||
+       meta.archiveSha256 !== hash(archive)) {
+    throw new Error('离线包平台、锁文件、权威依赖清单或 SHA-256 校验不通过');
   }
   if (existsSync(target)) throw new Error('现有 node_modules 已存在，拒绝覆盖');
   const temp = mkdtempSync(join(devDir, '.dev-tools-unpack-'));

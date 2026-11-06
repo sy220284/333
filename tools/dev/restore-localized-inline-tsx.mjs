@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { loadAstParser } from './ast-parser.mjs'
 /**
  * Recover pre-React-Compiler TSX and map each localized UI literal back to
  * its original TypeScript source location. Ambiguous mappings are rejected.
@@ -7,9 +8,7 @@
 import {readFileSync,writeFileSync,readdirSync,mkdirSync} from 'node:fs'
 import {join,resolve,dirname,basename} from 'node:path'
 import {fileURLToPath} from 'node:url'
-import {createRequire} from 'node:module'
-const require=createRequire(import.meta.url)
-const ts=require('typescript')
+const ts = await loadAstParser()
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..')
 const apply=process.argv.includes('--apply')
 const inline=/\/\/[#@]\s*sourceMappingURL=data:application\/json(?:;charset=utf-8)?;base64,([A-Za-z0-9+/=]+)\s*$/

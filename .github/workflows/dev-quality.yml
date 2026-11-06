@@ -53,14 +53,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: 读取权威工具链版本
+        shell: bash
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - name: 校验权威工具链版本
+        run: node tools/dev/toolchain.mjs check
       - name: 核验源码语言与文件格式契约
         run: node --test tests/language-file-contract.test.mjs
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.4
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
       - name: 安装独立开发工具与平台编译器
         run: npm run dev:bootstrap
       - name: 检查冻结开发依赖锁文件
@@ -99,9 +104,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - name: 读取权威工具链版本
+        shell: bash
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
       - name: 从锁文件准备完整 npm 依赖
         run: node build/install-public-deps.mjs
       - name: 审计已冻结依赖

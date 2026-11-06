@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// 2.1.310 ToolSearch runtime parity: real CLI, local fake model API, no credentials.
+// 2.1.317 ToolSearch runtime parity: real CLI, local fake model API, no credentials.
 import { createHash } from 'node:crypto'
-import { createReadStream, mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
+import { readFileSync, createReadStream, mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join, resolve, dirname } from 'node:path'
@@ -12,7 +12,8 @@ const args = process.argv.slice(2)
 if (args.length % 2) throw Error('Expected --key value pairs')
 const opt = Object.fromEntries(Array.from({ length: args.length / 2 }, (_, i) => [args[2*i], args[2*i+1]]))
 if (!opt['--reference'] || !opt['--report']) throw Error('Missing --reference / --report')
-const officialSha = 'b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56'
+const target = JSON.parse(readFileSync(new URL('../docs/upgrade/m1-evidence/target-release.json', import.meta.url), 'utf8'))
+const officialSha = target.verified_x64_sha256
 const digest = createHash('sha256')
 for await (const part of createReadStream(opt['--reference'])) digest.update(part)
 if (digest.digest('hex') !== officialSha) throw Error('Target binary checksum mismatch')

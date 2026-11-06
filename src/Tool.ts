@@ -168,6 +168,8 @@ export type ToolUseContext = {
     mcpClients: MCPServerConnection[]
     mcpResources: Record<string, ServerResource[]>
     isNonInteractiveSession: boolean
+    /** Print-mode stream-json requested incremental message events. */
+    includePartialMessages?: boolean
     agentDefinitions: AgentDefinitionsResult
     maxBudgetUsd?: number
     /** Forward subagent text/thinking as SDK assistant/user messages with parent ID. */

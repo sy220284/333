@@ -7,12 +7,12 @@
  *   node tools/upgrade/rewrite-317-types.mjs --apply
  *   node tools/upgrade/rewrite-317-types.mjs --check
  */
-import { createRequire } from 'node:module'
+import { loadAstParser } from '../dev/ast-parser.mjs'
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 
 const root = resolve(process.cwd())
-const ts = createRequire(join(root, 'tools/dev/package.json'))('typescript')
+const ts = await loadAstParser()
 const apply = process.argv.includes('--apply')
 const check = process.argv.includes('--check')
 const declarations = []

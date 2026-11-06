@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -9,7 +9,7 @@ const repoRoot = resolve(import.meta.dirname, '..')
 const binaries = [['rebuilt', 'bun', [join(repoRoot, 'dist/cli.js')]]]
 if (process.env.CLAUDE_TARGET_X64) binaries.push(['official', process.env.CLAUDE_TARGET_X64, []])
 
-test('2.1.317 plugin install --marketplace/--json: real local source, idempotency and failures', { timeout: 180_000 }, () => {
+test('2.1.317 plugin install --marketplace/--json: real local source, idempotency and failures', { timeout: 180_000 }, async () => {
   for (const [version, executable, prefix] of binaries) {
     const root = mkdtempSync(join(tmpdir(), '333-install-json-317-'))
     const home = join(root, 'home')
@@ -44,21 +44,46 @@ test('2.1.317 plugin install --marketplace/--json: real local source, idempotenc
       CI: '1',
     }
     for (const key of Object.keys(env)) if (key.startsWith('ANTHROPIC_')) delete env[key]
-    const run = args => {
-      const result = spawnSync(executable, [...prefix, ...args], {
-        cwd: home, env, encoding: 'utf8', timeout: 25_000,
-        maxBuffer: 4 * 1024 * 1024,
+    const run = args => new Promise((resolve, reject) => {
+      const child = spawn(executable, [...prefix, ...args], {
+        cwd: home, env, stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true, detached: process.platform !== 'win32',
       })
-      assert.equal(result.error, undefined, `${version}: ${result.error?.message}`)
-      return result
-    }
+      let stdout = ''
+      let stderr = ''
+      let timedOut = false
+      child.stdout.setEncoding('utf8').on('data', chunk => { stdout += chunk })
+      child.stderr.setEncoding('utf8').on('data', chunk => { stderr += chunk })
+      const timeout = setTimeout(() => {
+        timedOut = true
+        // Kill the whole process group: grandchildren may hold stdout pipes.
+        if (process.platform !== 'win32' && child.pid) {
+          try { process.kill(-child.pid, 'SIGKILL') }
+          catch (error) {
+            if (error.code !== 'ESRCH') reject(error)
+          }
+        } else child.kill('SIGKILL')
+      }, 25_000)
+      child.once('error', error => {
+        clearTimeout(timeout)
+        reject(error)
+      })
+      child.once('close', (status, signal) => {
+        clearTimeout(timeout)
+        if (timedOut) {
+          reject(new Error(`Plugin CLI exceeded 25s: ${JSON.stringify(args)}; signal=${signal}; stderr=${stderr.slice(-1500)}`))
+          return
+        }
+        resolve({ status, stdout, stderr })
+      })
+    })
     const readJsonLine = process => {
       const lines = process.stdout.trim().split(/\r?\n/)
       assert.equal(lines.length, 1, `${version}: expected one JSON line: ${process.stdout}`)
       return JSON.parse(lines[0])
     }
     try {
-      const first = run(['plugin', 'install', 'demo', '--marketplace', marketplace, '--config', 'mode=fast', '--config', 'token=secret-probe', '--registry', 'https://registry.example.test', '--json'])
+      const first = await run(['plugin', 'install', 'demo', '--marketplace', marketplace, '--config', 'mode=fast', '--config', 'token=secret-probe', '--registry', 'https://registry.example.test', '--json'])
       assert.equal(first.status, 0, `${version}: ${first.stderr}`)
       const created = readJsonLine(first)
       assert.equal(created.command, 'install')
@@ -72,13 +97,13 @@ test('2.1.317 plugin install --marketplace/--json: real local source, idempotenc
       const settings = JSON.parse(readFileSync(settingsFile, 'utf8'))
       assert.equal(settings.pluginConfigs['demo@m1-install-json'].options.mode, 'fast')
       assert.ok(!readFileSync(settingsFile, 'utf8').includes('secret-probe'))
-      const configured = run(['plugin', 'configure', 'demo@m1-install-json', '--json'])
+      const configured = await run(['plugin', 'configure', 'demo@m1-install-json', '--json'])
       assert.equal(configured.status, 0, `${version}: ${configured.stderr}`)
       const fields = JSON.parse(configured.stdout)
       assert.ok(fields.configured.includes('token'))
       assert.equal(fields.inputs.token, '')
 
-      const second = run(['plugin', 'install', 'demo', '--marketplace', marketplace, '--config', 'mode=slow', '--json'])
+      const second = await run(['plugin', 'install', 'demo', '--marketplace', marketplace, '--config', 'mode=slow', '--json'])
       assert.equal(second.status, 0, `${version}: ${second.stderr}`)
       const repeated = readJsonLine(second)
       assert.equal(repeated.pluginId, 'demo@m1-install-json')
@@ -88,7 +113,7 @@ test('2.1.317 plugin install --marketplace/--json: real local source, idempotenc
       assert.equal(repeated.configApplied, true)
       assert.equal(JSON.parse(readFileSync(settingsFile, 'utf8')).pluginConfigs['demo@m1-install-json'].options.mode, 'slow')
 
-      const rejected = run(['plugin', 'install', 'demo@m1-install-json', '--config', 'nonexistent=secret-probe', '--json'])
+      const rejected = await run(['plugin', 'install', 'demo@m1-install-json', '--config', 'nonexistent=secret-probe', '--json'])
       assert.equal(rejected.status, 0, `${version}: ${rejected.stderr}`)
       const refused = readJsonLine(rejected)
       assert.equal(refused.configApplied, false)
@@ -96,7 +121,7 @@ test('2.1.317 plugin install --marketplace/--json: real local source, idempotenc
       assert.ok(!rejected.stdout.includes('secret-probe'))
       assert.equal(JSON.parse(readFileSync(settingsFile, 'utf8')).pluginConfigs['demo@m1-install-json'].options.mode, 'slow')
 
-      const missing = run(['plugin', 'install', 'missing@m1-install-json', '--json'])
+      const missing = await run(['plugin', 'install', 'missing@m1-install-json', '--json'])
       assert.notEqual(missing.status, 0)
       const error = readJsonLine(missing)
       assert.equal(error.outcome, 'failed')

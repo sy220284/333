@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { loadAstParser } from './ast-parser.mjs'
 /**
  * Generate source-derived explicit return type annotations.
  * The inference engine makes no guessed type assertions or runtime changes.
@@ -6,10 +7,8 @@
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, resolve, join } from 'node:path'
-import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
-const require = createRequire(import.meta.url)
-const ts = require('typescript')
+const ts = await loadAstParser()
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const report = JSON.parse(readFileSync(resolve(root, '.rebuild/governance/type-migration-report.json'), 'utf8'))
 const configPath = resolve(root, '.rebuild/tsconfig.dev.json')

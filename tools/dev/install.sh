@@ -11,15 +11,15 @@ PROFILE=build
 ARTIFACTS_DIR="${DEV333_ARTIFACTS_DIR:-}"
 CONFIGURE_SHELL=false
 usage() {
-  cat <<'EOF'
+  cat <<EOF
 333 开发工具链（来自 777 的按需、锁版、离线 Artifact 安装机制）
 
 bash tools/dev/ai-toolchain.sh plan [build|full]
 bash tools/dev/ai-toolchain.sh check [build|full]
 bash tools/dev/ai-toolchain.sh install [build|full] --artifacts-dir PATH [--configure-shell]
 
-build: Node.js 24、Bun 1.4.4、固定 npm 依赖缓存、从 cli.js.map 恢复的依赖快照
-full : 额外包含 Python 3.12 与 actionlint 1.7.12
+build: Node.js $NODE_VERSION、Bun $BUN_VERSION、固定 npm 依赖缓存、从 cli.js.map 恢复的依赖快照
+full : 额外包含 Python $PYTHON_VERSION 与 actionlint $ACTIONLINT_VERSION
 Linux/WSL x64；macOS/Windows 继续使用 rebuild.yml 的三平台构建。
 组件必须来自当前 333 仓库 dev-toolchain.yml 生成的 GitHub Actions Artifacts。
 EOF
@@ -76,7 +76,8 @@ verify_part() {
     "NODE_MAJOR:$NODE_MAJOR" "BUN_VERSION:$BUN_VERSION" \
     "PYTHON_MAJOR:$PYTHON_MAJOR" "PYTHON_MINOR:$PYTHON_MINOR" \
     "ACTIONLINT_VERSION:$ACTIONLINT_VERSION" "SOURCE_MAP_SHA256:$SOURCE_MAP_SHA256" \
-    "PUBLIC_LOCK_SHA256:$(repo_lock_hash)"; do
+    "PUBLIC_LOCK_SHA256:$(repo_lock_hash)" \
+    "TOOLCHAIN_LOCK_SHA256:$(sha256sum "$TOOLCHAIN_DIR/toolchain.lock.json" | awk '{print $1}')"; do
     key="${spec%%:*}"
     expected="${spec#*:}"
     actual="$(get_meta "$folder" "$key")"

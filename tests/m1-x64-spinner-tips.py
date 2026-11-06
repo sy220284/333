@@ -24,6 +24,7 @@ EXPECTED = 'TeamQA:PROBE_ORGANIZATION_TIP'
 FIRST_PROMPT = 'SPINNER_FIRST_MARKER'
 SECOND_PROMPT = 'SPINNER_SECOND_MARKER'
 ANSWER = 'PROBE_DONE'
+TARGET_RELEASE = json.loads((Path(__file__).resolve().parent.parent / 'docs/upgrade/m1-evidence/target-release.json').read_text('utf-8'))['target_version']
 
 
 def message_has_text(message, role, expected):
@@ -80,7 +81,7 @@ def probe(executable, mode):
     )
     (home / '.claude.json').write_text(json.dumps({
         'hasCompletedOnboarding': True,
-        'lastOnboardingVersion': '2.1.310',
+        'lastOnboardingVersion': TARGET_RELEASE,
         'theme': 'dark',
         'customApiKeyResponses': {'approved': ['local-only'], 'rejected': []},
         'projects': {str(project): {'hasTrustDialogAccepted': True}},

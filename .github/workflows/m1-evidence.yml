@@ -175,12 +175,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: 读取升级工具链权威版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - name: 验证权威工具链及 PR13 升级成果
+        run: node tools/dev/toolchain.mjs check
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.4
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
       - name: 验证2.1.317统一验收目标及Read和子代理策略
         run: |
           node --test tests/m1-target-release-317.test.mjs tests/m1-target-release-runner.test.mjs
@@ -215,7 +219,7 @@ jobs:
           retention-days: 90
           if-no-files-found: error
       - name: 安装固定TypeScript校验器
-        run: npm install --prefix "${RUNNER_TEMP}/m1-typescript" --no-save --package-lock=false --ignore-scripts --no-audit --no-fund typescript@5.9.3
+        run: npm install --prefix "${RUNNER_TEMP}/m1-typescript" --no-save --package-lock=false --ignore-scripts --no-audit --no-fund "typescript@${TOOLCHAIN_AST_TYPESCRIPT_VERSION}"
       - name: 验证源码缺口扫描的资源文件、JSX映射与真实缺失识别
         env:
           M1_TYPESCRIPT_MODULE: ${{ runner.temp }}/m1-typescript/node_modules/typescript/lib/typescript.js
@@ -260,31 +264,35 @@ jobs:
         run: test -z "$(git status --porcelain)"
 
   m1-reference-linux-x64:
-    name: 2.1.310 原版 Linux x64 真实 CLI 对照
+    name: 2.1.317 原版 Linux x64 真实 CLI 对照
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: 读取升级工具链权威版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - name: 验证权威工具链及 PR13 升级成果
+        run: node tools/dev/toolchain.mjs check
       - name: 下载固定目标版官方 x64 程序
         run: |
           curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
-            "https://downloads.claude.ai/claude-code-releases/2.1.310/linux-x64/claude" \
-            --output "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
-          echo "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  ${RUNNER_TEMP}/claude-2.1.310-linux-x64" | sha256sum --check
-          chmod 700 "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
+            "https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude" \
+            --output "${RUNNER_TEMP}/claude-2.1.317-linux-x64"
+          echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  ${RUNNER_TEMP}/claude-2.1.317-linux-x64" | sha256sum --check
+          chmod 700 "${RUNNER_TEMP}/claude-2.1.317-linux-x64"
       - name: 使用隔离配置实际运行官方 x64 无授权功能矩阵
         run: |
           node build/m1-x64-reference-probe.mjs \
-            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --reference "${RUNNER_TEMP}/claude-2.1.317-linux-x64" \
             --report "${RUNNER_TEMP}/m1-reference-linux-x64.json"
       - name: 运行本机模拟API流式/Read工具权限闭环
         run: |
           python3 -m unittest discover -s tests -p 'm1_x64_stream_events_test.py'
           python3 tests/m1-x64-local-api.py \
-            --binary "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --binary "${RUNNER_TEMP}/claude-2.1.317-linux-x64" \
             --report "${RUNNER_TEMP}/m1-x64-local-api.json"
       - name: 保存本机API工具调用真实测试证据
         if: always()
@@ -311,9 +319,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: 读取升级工具链权威版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - name: 验证权威工具链及 PR13 升级成果
+        run: node tools/dev/toolchain.mjs check
       - name: 安装锁定版本的Biome
         run: npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
       - name: 对本PR源文件生成安全修复建议
@@ -350,12 +362,16 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: 读取升级工具链权威版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - name: 验证权威工具链及 PR13 升级成果
+        run: node tools/dev/toolchain.mjs check
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.4
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
       - name: 校验旧源码快照并恢复构建依赖
         run: |
           node build/verify-bundled-assets.mjs
@@ -391,34 +407,34 @@ jobs:
       - name: 准备官方x64对照程序与真实候选启动器
         run: |
           curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
-            "https://downloads.claude.ai/claude-code-releases/2.1.310/linux-x64/claude" \
-            --output "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
-          echo "b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56  ${RUNNER_TEMP}/claude-2.1.310-linux-x64" | sha256sum --check
-          chmod 700 "${RUNNER_TEMP}/claude-2.1.310-linux-x64"
+            "https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude" \
+            --output "${RUNNER_TEMP}/claude-2.1.317-linux-x64"
+          echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  ${RUNNER_TEMP}/claude-2.1.317-linux-x64" | sha256sum --check
+          chmod 700 "${RUNNER_TEMP}/claude-2.1.317-linux-x64"
           printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-current-cli"
           chmod 700 "${RUNNER_TEMP}/m1-current-cli"
-      - name: 对照官方2.1.310与重建版的真实伪终端屏幕阅读器输出
+      - name: 对照官方2.1.317与重建版的真实伪终端屏幕阅读器输出
         run: |
           python3 tests/m1-screen-reader-terminal-parity.py \
-            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --reference "${RUNNER_TEMP}/claude-2.1.317-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
             --report "${RUNNER_TEMP}/m1-screen-reader-terminal.json"
       - name: 对照真实 SDK 流事件顺序、响应标识与首字时间
         run: |
           node build/m1-sdk-stream-wire-parity.mjs \
-            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --reference "${RUNNER_TEMP}/claude-2.1.317-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
             --report "${RUNNER_TEMP}/m1-sdk-stream-wire.json"
       - name: 对照显式思考展示配置及关闭思考时的流事件
         run: |
           node build/m1-sdk-thinking-display-parity.mjs \
-            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --reference "${RUNNER_TEMP}/claude-2.1.317-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
             --report "${RUNNER_TEMP}/m1-sdk-thinking-display.json"
       - name: 执行同条件CLI差分采集（未对齐项仍保留在JSON，严格等价另验）
         run: |
           node build/m1-x64-reference-probe.mjs \
-            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --reference "${RUNNER_TEMP}/claude-2.1.317-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
             --allow-candidate-diff true \
             --require-candidate-cases "mcp_help,plugin_help,mcp_list_empty,plugin_list_empty,invalid_output,invalid_permission,json_without_login,stream_without_login" \
@@ -426,7 +442,7 @@ jobs:
       - name: 用隔离本机API严格验证单轮413终止及两轮会话自动恢复
         run: |
           node build/m1-413-recovery-probe.mjs \
-            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --reference "${RUNNER_TEMP}/claude-2.1.317-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
             --allow-candidate-diff false \
             --report "${RUNNER_TEMP}/m1-413-recovery-differential.json"
@@ -434,19 +450,19 @@ jobs:
         run: |
           python3 -m pip install --disable-pip-version-check pyte==0.8.2
           python3 tests/m1-x64-spinner-tips.py \
-            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --reference "${RUNNER_TEMP}/claude-2.1.317-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli"
       - name: 以真实ToolSearch调用核查新版延迟注册及当前候选差异
         run: |
           node build/m1-toolsearch-release-parity.mjs \
-            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --reference "${RUNNER_TEMP}/claude-2.1.317-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
             --allow-candidate-diff true \
             --report "${RUNNER_TEMP}/m1-toolsearch-differential.json"
       - name: 用真实 CLI 与本机模拟 API 验收 Monitor 和纯脚本 Workflow
         run: |
           node build/m1-monitor-workflow-roundtrip.mjs \
-            --reference "${RUNNER_TEMP}/claude-2.1.310-linux-x64" \
+            --reference "${RUNNER_TEMP}/claude-2.1.317-linux-x64" \
             --candidate "${RUNNER_TEMP}/m1-current-cli" \
             --report "${RUNNER_TEMP}/m1-monitor-workflow-roundtrip.json"
       - name: 空命令和流式无输出的隔离调试（不参与等价判定）

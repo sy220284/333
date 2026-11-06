@@ -24,11 +24,28 @@ def audit(root: Path, recover_to: Path | None = None) -> dict:
     char_count = 0
     byte_count = 0
     records = []
+    # 2.1.317 的官方 JS 资源可能是 Zstandard 原始字节；校验权威清单后归类。
+    repository = Path(__file__).resolve().parent.parent
+    asset_manifest = json.loads((repository / "build/official-embedded-assets-2.1.317.json").read_text("utf-8"))
+    pinned_assets = {item["path"]: item for item in asset_manifest["resources"]}
+    verified_binary_assets = 0
     for file in sorted(root.rglob("*")):
         if not file.is_file() or file.suffix not in EXTENSIONS:
             continue
         relative = file.relative_to(root).as_posix()
-        text = file.read_text("utf-8")
+        data = file.read_bytes()
+        if data.startswith(bytes.fromhex("28b52ffd")):
+            try:
+                asset_path = file.resolve().relative_to(repository).as_posix()
+            except ValueError as exc:
+                raise ValueError(f"压缩资源不属于经过验证的仓库: {file}") from exc
+            pinned = pinned_assets.get(asset_path)
+            digest = hashlib.sha256(data).hexdigest()
+            if not pinned or len(data) != pinned["bytes"] or digest != pinned["sha256"]:
+                raise ValueError(f"官方 2.1.317 压缩资源校验失败: {asset_path}")
+            verified_binary_assets += 1
+            continue
+        text = data.decode("utf-8")
         directives = DIRECTIVE.findall(text)
         inline = []
         for directive in directives:
@@ -91,6 +108,7 @@ def audit(root: Path, recover_to: Path | None = None) -> dict:
         "original_sources_recovered": recovered,
         "original_characters": char_count,
         "original_bytes": byte_count,
+        "verified_official_compressed_resources": verified_binary_assets,
         "records": records,
     }
 

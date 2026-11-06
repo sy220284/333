@@ -159,3 +159,41 @@ test('gateway 317: managed settings served to authenticated clients with correct
     expect(denied.status).toBe(404)
   } finally { await app.close() }
 })
+
+test('gateway 317: SSE idle deadline disabled and graceful shutdown awaits store closure once', async () => {
+  const events = []
+  let settings
+  const config = configuration('https://api.anthropic.com')
+  config.listen.port = 0
+  const service = await createGatewayService317(config, {
+    store: { ...store, async close() { events.push('store.close') } },
+    oidc: fakeOidc,
+    serve(options) {
+      settings = options
+      return {
+        async stop(force) {
+          events.push(`stop:${force}`)
+          await Promise.resolve()
+        },
+      }
+    },
+  })
+  expect(settings.idleTimeout).toBe(0)
+  await Promise.all([service.close(), service.close()])
+  expect(events).toEqual(['stop:false', 'store.close'])
+})
+
+test('gateway 317: explicit forced shutdown remains available', async () => {
+  const events = []
+  const config = configuration('https://api.anthropic.com')
+  config.listen.port = 0
+  const service = await createGatewayService317(config, {
+    store: { ...store, async close() { events.push('store.close') } },
+    oidc: fakeOidc,
+    serve() {
+      return { async stop(force) { events.push(`stop:${force}`) } }
+    },
+  })
+  await service.close(true)
+  expect(events).toEqual(['stop:true', 'store.close'])
+})

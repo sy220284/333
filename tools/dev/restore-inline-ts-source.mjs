@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { loadAstParser } from './ast-parser.mjs'
 /**
  * Recover fully typed TS/TSX originals embedded in compiler-produced inline
  * source maps. Only exact single-file source maps with a measurable reduction
@@ -12,10 +13,8 @@
 import { readdirSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve, relative, basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createRequire } from 'node:module'
 
-const require = createRequire(import.meta.url)
-const ts = require('typescript')
+const ts = await loadAstParser()
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const apply = process.argv.includes('--apply')
 const maxArg = process.argv.find(arg => arg.startsWith('--limit='))

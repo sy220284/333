@@ -1,0 +1,54 @@
+name: PR13 升级成果保护与 MCP v2 联合验收
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr13-upgrade-protection-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  baseline:
+    name: 依赖锁与功能基准防回退
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 读取权威工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - name: 检查权威工具链及 PR13 全量依赖和能力保护
+        run: node tools/dev/toolchain.mjs check
+      - name: 验证防回退门禁能实际拦截依赖变更和能力缺失
+        run: node --test tests/upgrade-protection.test.mjs tests/toolchain-manifest.test.mjs
+
+  mcp-v2:
+    name: MCP v2 真实协议和 SDK 新版功能验收
+    needs: baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: 读取权威工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
+      - name: 检查工具链和升级保护
+        run: node tools/dev/toolchain.mjs check
+      - name: 恢复严格锁定的新版发布依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: MCP v2 真实调用、双版本协商、参数校验和 SDK MCP 验收
+        run: bun test tests/m5-mcp-dual-era-317.test.ts tests/m5-sdk-mcp-factory-317.test.ts tests/m3-mcp-auth-317.test.ts tests/m3-plugin-channel-v2-317.test.ts tests/m3-plugin-init-v2-e2e-317.test.ts tests/m3-plugin-init-v2-e2e-317.test.ts

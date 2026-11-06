@@ -30,8 +30,15 @@ export function createSessionRuntime317(
     try {
       if (closed) throw new Error('SDK session is closed')
       const session = startSession(options, external.resume ?? sessionId, external.resume, external)
-      void session.exited.then(external.cleanup).catch(error => session.fail(error))
-      return session
+      const cleanup = session.exited.then(() => external.cleanup())
+      void cleanup.catch(error => session.fail(error))
+      return {
+        ...session,
+        async closeAndWait(): Promise<void> {
+          await session.closeAndWait()
+          await cleanup
+        },
+      }
     } catch (error) {
       await external.cleanup()
       throw error
@@ -48,6 +55,11 @@ export function createSessionRuntime317(
     close() {
       closed = true
       void ready.then(session => session.close(), () => {})
+    },
+    async closeAndWait(): Promise<void> {
+      closed = true
+      const session = await ready
+      await session.closeAndWait()
     },
   }
 }
@@ -157,6 +169,7 @@ function startSession(
   const reader = createInterface({ input: child.stdout, crlfDelay: Infinity })
   const messages = new Stream<SDKMessage>()
   let closed = false
+  let transportClosure: Promise<void> = Promise.resolve()
   let pending = false
   let reading = false
 
@@ -256,7 +269,17 @@ function startSession(
     closed = true
     for (const controller of permissions.values()) controller.abort()
     permissions.clear()
-    for (const server of sdkServers.values()) void server.transport.close()
+    const closeOps = [...sdkServers.values()].map(server => server.transport.close())
+    transportClosure = Promise.allSettled(closeOps).then(results => {
+      const rejected = results.find(result => result.status === 'rejected')
+      if (rejected?.status === 'rejected') throw rejected.reason
+    })
+    // Existing synchronous close() callers retain their API; async failure is
+    // stored and can be observed by the explicit closeAndWait() lifecycle API.
+    void transportClosure.catch(error => {
+      failure ??= error instanceof Error ? error : new Error(String(error))
+      queryOptions.stderr?.(`SDK MCP transport shutdown failed: ${String(error)}`)
+    })
     for (const request of requests.values()) request.reject(failure ?? new Error('SDK session is closed'))
     requests.clear()
     if (failure) messages.error(failure)
@@ -264,6 +287,14 @@ function startSession(
     reader.close()
     child.stdin.destroy()
     if (child.exitCode === null && child.signalCode === null) child.kill()
+  }
+
+  async function closeAndWait(): Promise<void> {
+    close()
+    // Child 'close' fires after process exit AND stdio streams have closed,
+    // which is necessary before a Windows workspace can be safely removed.
+    await exited
+    await transportClosure
   }
 
   async function pump(): Promise<void> {
@@ -369,5 +400,6 @@ function startSession(
       }
     },
     close,
+    closeAndWait,
   }
 }

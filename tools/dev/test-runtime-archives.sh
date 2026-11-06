@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # 拒绝仅因打包成功就判定可用：在移动后的独立位置真实执行 Node/Bun/Python/actionlint。
+TOOLCHAIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$TOOLCHAIN_DIR/toolchain-versions.env"
 ARTIFACTS_DIR="${1:-}"
 [ -n "$ARTIFACTS_DIR" ] && [ -d "$ARTIFACTS_DIR" ] || { echo "缺少 Artifact 目录" >&2; exit 2; }
 WORK="$(mktemp -d)"
@@ -11,9 +14,9 @@ for comp in node bun python actionlint; do
   (cd "$dir" && sha256sum -c SHA256SUMS)
   tar -xzf "$dir/payload.tar.gz" -C "$WORK"
 done
-[ "$("$WORK/node/bin/node" -p 'process.versions.node.split(".")[0]')" = 24 ]
+[ "$("$WORK/node/bin/node" -p 'process.versions.node')" = "$NODE_VERSION" ]
 PATH="$WORK/node/bin:$PATH" "$WORK/node/bin/npm" --version >/dev/null
-[ "$("$WORK/bun/bin/bun" --version)" = 1.4.4 ]
-env -u PYTHONHOME LD_LIBRARY_PATH="$WORK/python/lib" "$WORK/python/bin/python3" -c 'import ssl,hashlib,json,sys; assert sys.version_info >= (3,12)'
-"$WORK/bin/actionlint" -version | grep -F '1.7.12'
+[ "$("$WORK/bun/bin/bun" --version)" = "$BUN_VERSION" ]
+env -u PYTHONHOME LD_LIBRARY_PATH="$WORK/python/lib" "$WORK/python/bin/python3" -c 'import ssl,hashlib,json,sys; assert sys.version_info >= (int(sys.argv[1]),int(sys.argv[2]))' "$PYTHON_MAJOR" "$PYTHON_MINOR"
+"$WORK/bin/actionlint" -version | grep -F "$ACTIONLINT_VERSION"
 echo '[333-toolchain] 已验证全部四类离线运行时组件可执行'

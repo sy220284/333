@@ -193,7 +193,7 @@ test('自定义模型接口必须使用 HTTPS，不能向 HTTP 地址发送模�
       if (url.endsWith('/pulls/17')) return {
         ok:true,text:async()=>JSON.stringify({title:'标题',head:{sha:'abc'}}),
       }
-      throw new Error('意外向外发送：'+url)
+      throw new Error(`意外向外发送：${url}`)
     }
     await assert.rejects(execute(
       ()=>JSON.stringify({}),

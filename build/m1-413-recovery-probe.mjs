@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * 官方 2.1.310 与当前重建版的 413 上下文恢复行为差分。
+ * 官方 2.1.317 与当前重建版的 413 上下文恢复行为差分。
  * 隔离 HOME + 本机模拟 API，避免真实授权、付费请求和网络依赖。
  * 用法：
  * node build/m1-413-recovery-probe.mjs --reference /path/to/x64 --candidate /path/to/cli --report /tmp/result.json --allow-candidate-diff true
  */
 import { createHash } from 'node:crypto'
-import { createReadStream, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { readFileSync, createReadStream, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -17,7 +17,8 @@ const argv = process.argv.slice(2)
 if (argv.length % 2) throw Error('必须成对传入 --key value')
 const args = Object.fromEntries(Array.from({ length: argv.length / 2 }, (_, i) => [argv[2 * i], argv[2 * i + 1]]))
 if (!args['--reference'] || !args['--report']) throw Error('需要 --reference 和 --report')
-const expectedSha = 'b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56'
+const target = JSON.parse(readFileSync(new URL('../docs/upgrade/m1-evidence/target-release.json', import.meta.url), 'utf8'))
+const expectedSha = target.verified_x64_sha256
 const digest = createHash('sha256')
 for await (const chunk of createReadStream(args['--reference'])) digest.update(chunk)
 if (digest.digest('hex') !== expectedSha) throw Error('官方 x64 SHA-256 校验失败')
@@ -123,7 +124,7 @@ async function suite(bin) {
 const reference = await suite(args['--reference'])
 const candidate = args['--candidate'] ? await suite(args['--candidate']) : null
 const result = {
-  schema: 1, target: '2.1.310', scenario: 'context-overflow-413',
+  schema: 1, target: target.target_version, scenario: 'context-overflow-413',
   reference, candidate,
   reference_passed: reference.every(s => s.pass),
   candidate_passed: candidate?.every(s => s.pass) ?? null,

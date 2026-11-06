@@ -4,7 +4,6 @@
 import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createRequire } from 'node:module'
 import { spawnSync } from 'node:child_process'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -28,8 +27,8 @@ writeFileSync(strictConfig, JSON.stringify({
   include: [],
   exclude: [],
 }, null, 2) + '\n')
-const require = createRequire(import.meta.url)
-const tsc = require.resolve('typescript/bin/tsc')
+const tsc = resolve(root, 'tools/dev/node_modules/typescript/bin/tsc')
+if (!existsSync(tsc)) throw new Error('冻结的 TypeScript 7 编译入口缺失，请运行 npm run dev:bootstrap')
 const result = spawnSync(process.execPath,
   [tsc, '--noEmit', '--pretty', 'false', '-p', strictConfig],
   { cwd: root, stdio: 'inherit' })
