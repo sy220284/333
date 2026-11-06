@@ -14,7 +14,6 @@ import { isQueuedCommandEditable, popAllEditable } from 'src/utils/messageQueueM
 import stripAnsi from 'strip-ansi';
 import { companionReservedColumns } from '../../buddy/CompanionSprite.js';
 import { findBuddyTriggerPositions, useBuddyNotification } from '../../buddy/useBuddyNotification.js';
-import { FastModePicker } from '../../commands/fast/fast.js';
 import { getNativeCSIuTerminalDisplayName } from '../../commands/terminalSetup/terminalSetup.js';
 import { type Command, hasCommand } from '../../commands.js';
 import { useIsModalOverlayActive } from '../../context/overlayContext.js';
@@ -62,7 +61,7 @@ import type { EffortLevel } from '../../utils/effort.js';
 import { env } from '../../utils/env.js';
 import { errorMessage } from '../../utils/errors.js';
 import { isBilledAsExtraUsage } from '../../utils/extraUsage.js';
-import { getFastModeUnavailableReason, isFastModeAvailable, isFastModeCooldown, isFastModeEnabled, isFastModeSupportedByModel } from '../../utils/fastMode.js';
+import { isFastModeAvailable, isFastModeCooldown, isFastModeEnabled, isFastModeSupportedByModel } from '../../utils/fastMode.js';
 import { isFullscreenEnvEnabled } from '../../utils/fullscreen.js';
 import type { PromptInputHelpers } from '../../utils/handlePromptSubmit.js';
 import { getImageFromClipboard, PASTE_THRESHOLD } from '../../utils/imagePaste.js';
@@ -91,7 +90,6 @@ import type { TextHighlight } from '../../utils/textHighlighting.js';
 import type { Theme } from '../../utils/theme.js';
 import { findThinkingTriggerPositions, getRainbowColor, isUltrathinkEnabled } from '../../utils/thinking.js';
 import { findTokenBudgetPositions } from '../../utils/tokenBudget.js';
-import { findUltraplanTriggerPositions } from '../../utils/ultraplan/keyword.js';
 import { AutoModeOptInDialog } from '../AutoModeOptInDialog.js';
 import { BridgeDialog } from '../BridgeDialog.js';
 import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint.js';
@@ -406,7 +404,6 @@ function PromptInput({
   const [showQuickOpen, setShowQuickOpen] = useState(false);
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [showHistoryPicker, setShowHistoryPicker] = useState(false);
-  const [showFastModePicker, setShowFastModePicker] = useState(false);
   const [showThinkingToggle, setShowThinkingToggle] = useState(false);
   const [showAutoModeOptIn, setShowAutoModeOptIn] = useState(false);
   const [previousModeBeforeAuto, setPreviousModeBeforeAuto] = useState<PermissionMode | null>(null);
@@ -516,9 +513,6 @@ function PromptInput({
   });
   const displayedValue = useMemo(() => isSearchingHistory && historyMatch ? getValueFromInput(typeof historyMatch === 'string' ? historyMatch : historyMatch.display) : input, [isSearchingHistory, historyMatch, input]);
   const thinkTriggers = useMemo(() => findThinkingTriggerPositions(displayedValue), [displayedValue]);
-  const ultraplanSessionUrl = useAppState(s => s.ultraplanSessionUrl);
-  const ultraplanLaunching = useAppState(s => s.ultraplanLaunching);
-  const ultraplanTriggers = useMemo(() => feature('ULTRAPLAN') && !ultraplanSessionUrl && !ultraplanLaunching ? findUltraplanTriggerPositions(displayedValue) : [], [displayedValue, ultraplanSessionUrl, ultraplanLaunching]);
   const btwTriggers = useMemo(() => findBtwTriggerPositions(displayedValue), [displayedValue]);
   const buddyTriggers = useMemo(() => findBuddyTriggerPositions(displayedValue), [displayedValue]);
   const slashCommandTriggers = useMemo(() => {
@@ -695,21 +689,6 @@ function PromptInput({
       }
     }
 
-    // Same rainbow treatment for the ultraplan keyword
-    if (feature('ULTRAPLAN')) {
-      for (const trigger of ultraplanTriggers) {
-        for (let i = trigger.start; i < trigger.end; i++) {
-          highlights.push({
-            start: i,
-            end: i + 1,
-            color: getRainbowColor(i - trigger.start),
-            shimmerColor: getRainbowColor(i - trigger.start, true),
-            priority: 10
-          });
-        }
-      }
-    }
-
     // Rainbow for /buddy
     for (const trigger of buddyTriggers) {
       for (let i = trigger.start; i < trigger.end; i++) {
@@ -723,7 +702,7 @@ function PromptInput({
       }
     }
     return highlights;
-  }, [isSearchingHistory, historyQuery, historyMatch, historyFailedMatch, cursorOffset, btwTriggers, imageRefPositions, memberMentionHighlights, slashCommandTriggers, tokenBudgetTriggers, slackChannelTriggers, displayedValue, voiceInterimRange, thinkTriggers, ultraplanTriggers, buddyTriggers]);
+  }, [isSearchingHistory, historyQuery, historyMatch, historyFailedMatch, cursorOffset, btwTriggers, imageRefPositions, memberMentionHighlights, slashCommandTriggers, tokenBudgetTriggers, slackChannelTriggers, displayedValue, voiceInterimRange, thinkTriggers, buddyTriggers]);
   const {
     addNotification,
     removeNotification
@@ -742,18 +721,6 @@ function PromptInput({
       removeNotification('ultrathink-active');
     }
   }, [addNotification, removeNotification, thinkTriggers.length]);
-  useEffect(() => {
-    if (feature('ULTRAPLAN') && ultraplanTriggers.length) {
-      addNotification({
-        key: 'ultraplan-active',
-        text: 'This prompt requests hosted planning; use /plan for local planning in 333',
-        priority: 'immediate',
-        timeoutMs: 5000
-      });
-    } else {
-      removeNotification('ultraplan-active');
-    }
-  }, [addNotification, removeNotification, ultraplanTriggers.length]);
   // Track input length for stash hint
   const prevInputLengthRef = useRef(input.length);
   const peakInputLengthRef = useRef(input.length);
@@ -1364,14 +1331,6 @@ function PromptInput({
     }
   }, [helpOpen]);
 
-  // Handler for chat:fastMode - toggle fast mode picker
-  const handleFastModePicker = useCallback(() => {
-    setShowFastModePicker(prev => !prev);
-    if (helpOpen) {
-      setHelpOpen(false);
-    }
-  }, [helpOpen]);
-
   // Handler for chat:thinkingToggle - toggle thinking mode
   const handleThinkingToggle = useCallback(() => {
     setShowThinkingToggle(prev => !prev);
@@ -1651,12 +1610,6 @@ function PromptInput({
   useKeybinding('chat:messageActions', () => onMessageActionsEnter?.(), {
     context: 'Chat',
     isActive: !isModalOverlayActive && !isSearchingHistory
-  });
-
-  // Fast mode keybinding is only active when fast mode is enabled and available
-  useKeybinding('chat:fastMode', handleFastModePicker, {
-    context: 'Chat',
-    isActive: !isModalOverlayActive && isFastModeEnabled() && isFastModeAvailable()
   });
 
   // Handle help:dismiss keybinding (ESC closes help menu)
@@ -2038,26 +1991,6 @@ function PromptInput({
         <ModelPicker initial={mainLoopModel_} sessionModel={mainLoopModelForSession} onSelect={handleModelSelect} onCancel={handleModelCancel} isStandaloneCommand showFastModeNotice={isFastModeEnabled() && isFastMode && isFastModeSupportedByModel(mainLoopModel_) && isFastModeAvailable()} />
       </Box>;
   }, [showModelPicker, mainLoopModel_, mainLoopModelForSession, handleModelSelect, handleModelCancel]);
-  const handleFastModeSelect = useCallback((result?: string) => {
-    setShowFastModePicker(false);
-    if (result) {
-      addNotification({
-        key: 'fast-mode-toggled',
-        jsx: <Text>{result}</Text>,
-        priority: 'immediate',
-        timeoutMs: 3000
-      });
-    }
-  }, [addNotification]);
-
-  // Memoize the fast mode picker element
-  const fastModePickerElement = useMemo(() => {
-    if (!showFastModePicker) return null;
-    return <Box flexDirection="column" marginTop={1}>
-        <FastModePicker onDone={handleFastModeSelect} unavailableReason={getFastModeUnavailableReason()} />
-      </Box>;
-  }, [showFastModePicker, handleFastModeSelect]);
-
   // Memoized callbacks for thinking toggle
   const handleThinkingSelect = useCallback((enabled: boolean) => {
     setAppState(prev => ({
@@ -2130,9 +2063,6 @@ function PromptInput({
   // Show loop mode menu when requested (ant-only, eliminated from external builds)
   if (modelPickerElement) {
     return modelPickerElement;
-  }
-  if (fastModePickerElement) {
-    return fastModePickerElement;
   }
   if (thinkingToggleElement) {
     return thinkingToggleElement;

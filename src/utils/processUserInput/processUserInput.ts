@@ -164,7 +164,6 @@ export async function processUserInput({
     bridgeOrigin,
     isMeta,
     skipAttachments,
-    preExpansionInput,
   )
   queryCheckpoint('query_process_user_input_base_end')
 

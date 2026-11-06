@@ -2531,7 +2531,6 @@ export function buildExportData(
 
   return {
     metadata: {
-      username: process.env.SAFEUSER || process.env.USER || 'unknown',
       generated_at: new Date().toISOString(),
       claude_code_version: version,
       date_range: data.date_range,

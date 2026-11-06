@@ -64,7 +64,9 @@ export type Output = z.infer<OutputSchema>
 /** Brief output is a user-selectable local interaction mode. */
 export function isBriefEntitled(): boolean {
   // SendUserMessage is a user-selectable local interaction mode.
-  return feature('KAIROS') || feature('KAIROS_BRIEF')
+  if (feature('KAIROS')) return true
+  if (feature('KAIROS_BRIEF')) return true
+  return false
 }
 
 /**
@@ -94,7 +96,9 @@ export function isBriefEnabled(): boolean {
   // the ternary to `false` in external builds and then dead-code the BriefTool
   // object. Composing isBriefEntitled() alone (which has its own guard) is
   // semantically equivalent but defeats constant-folding across the boundary.
-  return feature('KAIROS') || feature('KAIROS_BRIEF')
+  if (feature('KAIROS')) return true
+  if (feature('KAIROS_BRIEF')) return true
+  return false
     ? (getKairosActive() || getUserMsgOptIn()) && isBriefEntitled()
     : false
 }
