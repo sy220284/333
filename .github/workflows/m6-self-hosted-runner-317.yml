@@ -39,7 +39,7 @@ jobs:
       - name: 核验317跨模块生产调用链与启动顺序
         run: node build/check-architecture-links317.mjs
       - name: Runner真实协议、宿主生命周期和错误路径测试
-        run: bun test tests/m6-self-hosted-runner-api-317.test.ts tests/m6-self-hosted-runner-host-317.test.ts tests/m6-self-hosted-runner-child-mode-317.test.ts tests/m6-self-hosted-runner-jwt-317.test.ts tests/m6-self-hosted-runner-workspace-317.test.ts tests/m6-self-hosted-runner-cli-args-317.test.ts tests/m6-self-hosted-runner-agents-317.test.ts tests/m6-runner-idle-hold-317.test.ts
+        run: bun test tests/m6-self-hosted-runner-endpoint-policy.test.ts tests/m6-self-hosted-runner-api-317.test.ts tests/m6-self-hosted-runner-host-317.test.ts tests/m6-self-hosted-runner-child-mode-317.test.ts tests/m6-self-hosted-runner-jwt-317.test.ts tests/m6-self-hosted-runner-workspace-317.test.ts tests/m6-self-hosted-runner-cli-args-317.test.ts tests/m6-self-hosted-runner-agents-317.test.ts tests/m6-runner-idle-hold-317.test.ts
       - name: Runner真实/healthz与/metrics服务、容量指标和关闭测试
         run: node --experimental-strip-types --test tests/m6-runner-health-317.test.mjs
       - name: Runner配置与诊断九项管理工具生产路径、权限、登录及API模拟
