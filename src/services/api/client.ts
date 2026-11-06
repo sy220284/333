@@ -111,7 +111,10 @@ export async function getAnthropicClient({
   }
   const independent = resolveIndependentModel(model)
   if (independent) {
-    let authorization = independent.provider === 'chatgpt' ? await getChatGPTAuthorization() : undefined
+    const authorization = independent.provider === 'chatgpt' ? await getChatGPTAuthorization() : undefined
+    // Bind the client to the exact account/workspace that created it.
+    // OAuth refresh may rotate tokens, but never change that identity.
+    const originalChatGPTAccount = authorization?.account
     const upstream = fetchOverride ?? globalThis.fetch
     const profile = getIndependentProfile(`${independent.provider}/${independent.model}`)
     const makeFetch = (token: string, account?: string) => makeIndependentFetch(independent, token, upstream, profile, account)
@@ -123,14 +126,21 @@ export async function getAnthropicClient({
       timeout: parseInt(process.env.API_TIMEOUT_MS || String(600 * 1000), 10),
       fetch: fetchIndependent ?? (async (input, init) => {
         const request = new Request(input, init)
-        const sent = authorization
-        if (!sent) throw new Error('ChatGPT authorization is missing from the current request')
+        // A long-lived SDK client must check disk-backed OAuth identity on
+        // EVERY request, including while an old token remains valid.
+        const sent = await getChatGPTAuthorization()
+        if (sent.account !== originalChatGPTAccount) {
+          throw new Error('ChatGPT account changed; create a new model client before sending requests')
+        }
         const response = await makeFetch(sent.token, sent.account)(request.clone())
         if (response.status !== 401) return response
         await response.body?.cancel()
         request.signal.throwIfAborted()
-        authorization = await getChatGPTAuthorization(sent)
-        return makeFetch(authorization.token, authorization.account)(request)
+        const refreshed = await getChatGPTAuthorization(sent)
+        if (refreshed.account !== originalChatGPTAccount) {
+          throw new Error('ChatGPT account changed during token refresh')
+        }
+        return makeFetch(refreshed.token, refreshed.account)(request)
       }),
     })
   }
