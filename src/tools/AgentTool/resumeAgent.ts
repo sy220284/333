@@ -195,6 +195,9 @@ export async function resumeAgentBackground({
     contentReplacementState: resumedReplacementState,
   }
 
+  // Resolve the mission before registering a task, so lookup failure cannot leave an orphaned running task.
+  const resumedMissionId = await findMissionByAssignmentId(String(agentId))
+
   // Skip name-registry write — original entry persists from the initial spawn
   const agentBackgroundTask = registerAsyncAgent({
     agentId,
@@ -231,7 +234,7 @@ export async function resumeAgentBackground({
   void runWithAgentContext(asyncAgentContext, () =>
     wrapWithCwd(() =>
       runAsyncAgentLifecycle({
-      missionId: await findMissionByAssignmentId(String(agentId)),
+      missionId: resumedMissionId,
         taskId: agentBackgroundTask.agentId,
         abortController: agentBackgroundTask.abortController!,
         makeStream: onCacheSafeParams =>
