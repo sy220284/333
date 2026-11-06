@@ -36,10 +36,7 @@ jobs:
       - name: 校验冻结依赖并完成真实发行构建
         run: |
           node tools/dev/toolchain.mjs check
-          node build/restore-dependencies.mjs
-          node build/install-public-deps.mjs
-          bun build/rebuild.mjs
-          node build/package-release.mjs
+          npm run rebuild
       - name: 冻结依赖风险清单与供应链审计
         run: |
           mkdir -p .rebuild/governance
