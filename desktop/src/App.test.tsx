@@ -543,6 +543,40 @@ describe('摇摇车真实桌面页面交互',()=>{
     await waitFor(()=>expect(call.mock.calls.filter(entry=>entry[0]==='agents.overview').length).toBeGreaterThan(prior))
   })
 
+  it('团队增员由原生 AgentTool 执行，需有效长期目标和用户确认',async()=>{
+    mockTeam={name:'原团队',leadSessionId:SID,memberCount:1,runningCount:0}
+    const user=userEvent.setup()
+    const confirm=vi.spyOn(window,'confirm').mockReturnValue(true)
+    try{
+      render(<App/>)
+      await screen.findByText('本地后台已连接')
+      await user.click(screen.getByRole('button',{name:'智能体团队'}))
+      await user.click(screen.getByRole('button',{name:/Super Agents 团队模式/}))
+      await waitFor(()=>expect(call).toHaveBeenCalledWith('agents.setMode',{mode:'super'}))
+      await user.click(screen.getByRole('button',{name:'智能体团队'}))
+      await screen.findByText('测试成员')
+      await user.type(screen.getByRole('textbox',{name:'新成员名称'}),'代码复核员')
+      await user.type(screen.getByRole('textbox',{name:'新成员执行任务'}),'独立检查核心调用链')
+      await user.click(screen.getByRole('button',{name:'请求启动成员'}))
+      await screen.findByText('请先选择并恢复有效的长期目标，再启动团队成员')
+      expect(call).not.toHaveBeenCalledWith('sessions.send',expect.anything())
+      await user.click(screen.getByRole('button',{name:'长期任务'}))
+      await user.type(screen.getByPlaceholderText('明确长期目标与交付要求…'),'独立审计')
+      await user.click(screen.getByRole('button',{name:'创建并选中任务'}))
+      await screen.findByRole('heading',{name:'独立审计'})
+      await user.click(screen.getByRole('button',{name:'智能体团队'}))
+      await user.click(screen.getByRole('button',{name:'请求启动成员'}))
+      await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.ensureOpen',{sessionId:SID}))
+      await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',expect.objectContaining({
+        sessionId:SID,message:expect.stringContaining('代码复核员'),
+      })))
+      const callText=String(call.mock.calls.find(args=>args[0]==='sessions.send')?.[1]?.message||'')
+      expect(callText).toContain('team_name')
+      expect(callText).toContain('原生 Agent 工具')
+      expect(confirm).toHaveBeenCalled()
+    }finally{confirm.mockRestore()}
+  })
+
   it('成员任务经项目受限信箱投递，不增加模型调用并可查看真实消息',async()=>{
     mockTeam={name:'原团队',leadSessionId:SID,memberCount:1,runningCount:0}
     const user=userEvent.setup()
