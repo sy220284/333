@@ -275,12 +275,20 @@ test('SDK preset tools and hook events reach the spawned CLI process', async () 
     env: { SDK_TEST_ARGS_PATH: argsPath },
     tools: { type: 'preset', preset: 'claude_code' },
     includeHookEvents: true,
+    plugins: [
+      { type: 'local', path: join(cwd, 'no-mcp-plugin'), skipMcpDiscovery: true },
+      { type: 'local', path: join(cwd, 'full-plugin') },
+    ],
   })
   try {
     await session.initialization
     const args = JSON.parse(await readFile(argsPath, 'utf8')) as string[]
     expect(args).toContain('--tools=default')
     expect(args).toContain('--include-hook-events')
+    expect(args).toContain('--plugin-dir-no-mcp')
+    expect(args).toContain(join(cwd, 'no-mcp-plugin'))
+    expect(args).toContain('--plugin-dir')
+    expect(args).toContain(join(cwd, 'full-plugin'))
     expect(args).toContain('--model')
     expect(args).toContain('model-example')
   } finally {
