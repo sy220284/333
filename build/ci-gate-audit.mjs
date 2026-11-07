@@ -44,7 +44,7 @@ for (const name of workflows) {
         !/cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' && github\.run_attempt == 1 \}\}/.test(source))
       errors.push('桌面发行版验收缺少旧提交回跑隔离')
   } else if (!/^ {2}cancel-in-progress: (true|\$\{\{ github\.event_name == 'pull_request' \}\})$/m.test(source)) {
-    errors.push('PR 检查没有取消过期运行：' + name)
+    errors.push(`PR 检查没有取消过期运行：${name}`)
   }
   if (/^ {2}group:.*(?:github\.sha|pull_request\.head\.sha)/m.test(source)) {
     errors.push(`并发分组仍绑定提交 SHA：${name}`)
@@ -124,7 +124,7 @@ if (existsSync(root('src/cli/gateway/')))
   errors.push('企业网关源码目录仍存在，请完成全量清退')
 const retiredGatewayTests = readdirSync(root('tests/')).filter(name => /^m6-gateway-.*\.test\.mjs$/.test(name))
 if (retiredGatewayTests.length)
-  errors.push('企业网关测试已无对应业务入口：' + retiredGatewayTests.join(','))
+  errors.push(`企业网关测试已无对应业务入口：${retiredGatewayTests.join(',')}`)
 
 if (workflows.includes('m6-self-hosted-runner-317.yml'))
   errors.push('已退役原厂 Runner 专项仍存在')
@@ -137,7 +137,7 @@ for (const path of [
   'src/skills/bundled/scheduleRemoteAgents.ts',
   'src/tools/RemoteTriggerTool/',
 ]) {
-  if (existsSync(root(path))) errors.push('企业云端服务遗留：' + path)
+  if (existsSync(root(path))) errors.push(`企业云端服务遗留：${path}`)
 }
 if (!existsSync(root('tests/enterprise-retirement-boundary.test.mjs')))
   errors.push('缺少企业退役与个人能力保护回归测试')

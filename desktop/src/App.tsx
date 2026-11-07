@@ -110,9 +110,9 @@ export function App(){
   const [visibleMessageCount,setVisibleMessageCount]=useState(120)
   const [followLatest,setFollowLatest]=useState(true)
   const [draft,setDraft]=useState('')
-  const [smartBudget,setSmartBudget]=useState(()=>window.localStorage.getItem(PREF+'smart-budget')??'')
+  const [smartBudget,setSmartBudget]=useState(()=>window.localStorage.getItem(`${PREF}smart-budget`)??'')
   const [smartPolicy,setSmartPolicy]=useState<'default'|'acceptEdits'|'plan'|'dontAsk'>(()=>{
-    const saved=window.localStorage.getItem(PREF+'smart-policy')
+    const saved=window.localStorage.getItem(`${PREF}smart-policy`)
     return saved==='acceptEdits'||saved==='plan'||saved==='dontAsk'?saved:'default'
   })
   const [smartHistory,setSmartHistory]=useState<SmartRecord[]>([])
@@ -268,8 +268,8 @@ export function App(){
       const globalInbox=['permission.request','permission.resolved','host.request','host.resolved','smart.finished']
       if(event.sessionId&&event.sessionId!==sessionRef.current&&!globalInbox.includes(event.event))return
       if(event.event==='smart.finished'){
-        void api.call<SmartRecord[]>('smart.history').then(setSmartHistory).catch(e=>setError('读取执行记录失败：'+presentError(e)))
-        if(event.sessionId===sessionRef.current)setActivity(old=>['智能执行已'+(event.status==='completed'?'完成':event.status==='interrupted'?'中断':'失败'),...old].slice(0,20))
+        void api.call<SmartRecord[]>('smart.history').then(setSmartHistory).catch(e=>setError(`读取执行记录失败：${presentError(e)}`))
+        if(event.sessionId===sessionRef.current)setActivity(old=>[`智能执行已${event.status==='completed'?'完成':event.status==='interrupted'?'中断':'失败'}`,...old].slice(0,20))
       }else if(event.event==='session.state'){
         const state=obj(event.state)
         setSessionPhase(String(state.phase??state.status??'idle'))
@@ -377,8 +377,8 @@ export function App(){
   },[isDark,themeVariant])
   useEffect(()=>{document.documentElement.dataset.motion=animate?'on':'off';window.localStorage.setItem(`${PREF}motion`,String(animate))},[animate])
   useEffect(()=>{window.localStorage.setItem(`${PREF}inspector`,String(rightOpen))},[rightOpen])
-  useEffect(()=>{window.localStorage.setItem(PREF+'smart-budget',smartBudget)},[smartBudget])
-  useEffect(()=>{window.localStorage.setItem(PREF+'smart-policy',smartPolicy)},[smartPolicy])
+  useEffect(()=>{window.localStorage.setItem(`${PREF}smart-budget`,smartBudget)},[smartBudget])
+  useEffect(()=>{window.localStorage.setItem(`${PREF}smart-policy`,smartPolicy)},[smartPolicy])
   useEffect(()=>{if(paletteOpen)paletteInputRef.current?.focus()},[paletteOpen])
   useEffect(()=>{
     const onKey=(event:KeyboardEvent)=>{
@@ -404,10 +404,10 @@ export function App(){
       })
       setSessionId(response.sessionId);sessionRef.current=response.sessionId
       setSessionPhase('running');setHistoryOnly(false);setTasks([])
-      setMessages([{id:'local-'+Date.now(),kind:'user',text,time:Date.now()}])
+      setMessages([{id:`local-${Date.now()}`,kind:'user',text,time:Date.now()}])
       setVisibleMessageCount(120);setFollowLatest(true);setDraft('')
       setPermissionMode(smartPolicy);setSmartInspection(null);setView('chat')
-      void api.call<SmartRecord[]>('smart.history').then(setSmartHistory).catch(e=>setError('读取执行记录失败：'+presentError(e)))
+      void api.call<SmartRecord[]>('smart.history').then(setSmartHistory).catch(e=>setError(`读取执行记录失败：${presentError(e)}`))
       void refresh()
     })
   }

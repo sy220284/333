@@ -24,12 +24,12 @@ test('所有新桌面显式操作自动核对 Electron 调用白名单和安全�
   const handled = new Set([...bridge.matchAll(/method===?'([^']+)'/g)].map(match => match[1]))
   const screens = ['src/App.tsx','src/components/layout/LocalMaintenance.tsx','src/components/layout/McpImportPanel.tsx']
   for (const screen of screens) {
-    const calls = [...read(screen).matchAll(/(?:\binvoke|api\.call)(?:<[^]*?>)?\(\s*'([a-z][a-z0-9_.]+)'/g)]
+    const calls = [...read(screen).matchAll(/(?:\binvoke|api\.call)(?:<[\s\S]*?>)?\(\s*'([a-z][a-z0-9_.]+)'/g)]
       .map(match => match[1])
-    assert.ok(calls.length > 1, screen + ' 未提取到界面后台操作')
+    assert.ok(calls.length > 1, `${screen} 未提取到界面后台操作`)
     for (const method of calls)
       assert.ok(allowed.has(method) || handled.has(method),
-        screen + ' 中 ' + method + ' 未连接到 Electron 后台')
+        `${screen} 中 ${method} 未连接到 Electron 后台`)
   }
 })
 
@@ -71,5 +71,5 @@ test('桌面功能接口不能只显示入口：每个实际请求都必须经 E
   const local=new Set([...electron.matchAll(/\bmethod\s*===\s*'([^']+)'/g)].map(m=>m[1]))
   const required=new Set([...source.matchAll(/\b(?:invoke|api\.call)(?:<[^>]+>)?\(\s*['"]([^'"]+)['"]/g)].map(m=>m[1]))
   assert.ok(required.size>=40,'实际桌面请求提取结果异常，检查测试扫描范围')
-  for(const method of required)assert.ok(allowed.has(method)||local.has(method),method+' 只有新 UI 入口，Electron 后台尚未放行')
+  for(const method of required)assert.ok(allowed.has(method)||local.has(method),`${method} 只有新 UI 入口，Electron 后台尚未放行`)
 })

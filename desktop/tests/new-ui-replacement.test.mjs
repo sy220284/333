@@ -69,8 +69,8 @@ test('PR22 MCP 本地配置及诊断清理使用统一新 UI 和真实后台',()
   const electron=src('../electron/main.ts')
   for(const method of ['system.diagnostics','data.purge.preview','data.purge.apply']){
     assert.ok(maintenance.includes(method))
-    assert.ok(gateway.includes("case '"+method+"'"))
-    assert.ok(protocol.includes("request('"+method+"'"))
+    assert.ok(gateway.includes(`case '${method}'`))
+    assert.ok(protocol.includes(`request('${method}'`))
   }
   assert.ok(maintenance.includes('确认后会关闭空闲会话'))
   assert.ok(app.includes('mcpEnvironment'))
