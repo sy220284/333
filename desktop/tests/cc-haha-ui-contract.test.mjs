@@ -22,3 +22,12 @@ test('六套界面主题和旧偏好同时可用',()=>{
   assert.match(app,/localStorage\.setItem\(`\$\{PREF\}dark`,String\(isDark\)\)/)
   assert.match(app,/localStorage\.setItem\(`\$\{PREF\}theme`,themeVariant\)/)
 })
+
+test('主题选择器覆盖旧暗色规则且窄窗口保留可见导航',()=>{
+ for (const name of ['white','paper','warm-classic','celadon','dark','ink-blue'])
+   assert.ok(css.includes(`:root[data-cc-theme=${name}]`))
+ assert.ok(css.includes('.cc-grouped-nav .nav-item span{display:inline'))
+ assert.ok(css.includes('.cc-workspace-shell .approval-target pre'))
+ assert.ok(css.includes('.cc-workspace-shell .command-dialog'))
+ assert.ok(css.includes('@media(prefers-reduced-motion:reduce)'))
+})

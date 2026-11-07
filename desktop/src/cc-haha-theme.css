@@ -1,7 +1,7 @@
 /* 新工作台视觉：根据用户提供的 cc-haha 界面结构与纸墨色彩重新编写。
    业务仍调用 333 desktopHost，避免引入 cc-haha 自有服务端和后台依赖。
    源设计参考 https://github.com/NanmiCoder/cc-haha；此文件为独立适配实现。 */
-[data-cc-theme=paper]{
+:root[data-cc-theme=paper]{
   color-scheme:light;
   --bg:#FBF9F4;--surface:#FFFFFF;--surface2:#F7F4EC;--surface3:#ECE6D8;
   --line:#E7E0CF;--text:#231D12;--muted:#6E6350;--subtle:#796E5B;
@@ -9,7 +9,7 @@
   --purple:#776154;--shadow:0 1px 3px rgba(64,49,26,.05),0 6px 24px rgba(64,49,26,.07);--radius:17px;
   --cc-sidebar:#F3EFE5;--cc-border-strong:#D5C9B0;--cc-soft-brand:#F3E6DA;--cc-primary:#231D12;--cc-on-primary:#FBF9F4;
 }
-[data-cc-theme=dark]{
+:root[data-cc-theme=dark]{
   color-scheme:dark;
   --bg:#201D17;--surface:#252119;--surface2:#2B271F;--surface3:#302B24;
   --line:#383226;--text:#F2EEE6;--muted:#C4BBA9;--subtle:#AAA08E;
@@ -116,28 +116,28 @@ body{background:var(--bg);color:var(--text);font-size:13px}
 @media(max-width:1140px){.cc-tab{max-width:132px}}
 
 /* 与 cc-haha 上传源码对应的另外四个可选配色，直接在本地切换，无远程资源。 */
-[data-cc-theme=white]{
+:root[data-cc-theme=white]{
  color-scheme:light;--bg:#FFFFFF;--surface:#FFFFFF;--surface2:#F5F5F3;--surface3:#F1F0EE;
  --line:#E9E8E5;--text:#1A1917;--muted:#494640;--subtle:#625E58;
  --accent:#A24A2E;--accent-bright:#8C3F26;--mint:#2E7D4F;--amber:#A5650F;--danger:#C42B3C;
  --purple:#6A5D52;--shadow:0 1px 2px rgba(28,25,23,.05),0 6px 20px rgba(28,25,23,.06);
  --cc-sidebar:#F7F7F6;--cc-border-strong:#D9D7D3;--cc-soft-brand:#F6ECE7;--cc-primary:#1A1917;--cc-on-primary:#FFFFFF;--radius:17px;
 }
-[data-cc-theme=warm-classic]{
+:root[data-cc-theme=warm-classic]{
  color-scheme:light;--bg:#F6F0E1;--surface:#F9F4E8;--surface2:#F1EBDA;--surface3:#E5DBC3;
  --line:#DED2B8;--text:#251E11;--muted:#6E6146;--subtle:#746951;
  --accent:#96442B;--accent-bright:#7C3620;--mint:#3E8153;--amber:#A8751F;--danger:#C74436;
  --purple:#7D6953;--shadow:0 1px 2px rgba(64,49,26,.05),0 6px 20px rgba(64,49,26,.08);
  --cc-sidebar:#EDE5D1;--cc-border-strong:#C8B897;--cc-soft-brand:#F0E1D0;--cc-primary:#251E11;--cc-on-primary:#F6F0E1;--radius:17px;
 }
-[data-cc-theme=celadon]{
+:root[data-cc-theme=celadon]{
  color-scheme:light;--bg:#F5F8F5;--surface:#FFFFFF;--surface2:#F0F4F0;--surface3:#E0E9E2;
  --line:#DCE5DE;--text:#1C231D;--muted:#5D6B60;--subtle:#667268;
  --accent:#96442B;--accent-bright:#7C3620;--mint:#3E8153;--amber:#A8751F;--danger:#C74436;
  --purple:#527E70;--shadow:0 1px 2px rgba(28,40,30,.04),0 6px 20px rgba(28,40,30,.06);
  --cc-sidebar:#EAF0EB;--cc-border-strong:#C6D4C9;--cc-soft-brand:#F0E7DC;--cc-primary:#1C231D;--cc-on-primary:#FFFFFF;--radius:17px;
 }
-[data-cc-theme=ink-blue]{
+:root[data-cc-theme=ink-blue]{
  color-scheme:dark;--bg:#1A1D24;--surface:#20242D;--surface2:#252A35;--surface3:#2C303C;
  --line:#2F3441;--text:#E8EAF0;--muted:#9AA1B2;--subtle:#858B97;
  --accent:#D07B52;--accent-bright:#DE8F66;--mint:#6FB58C;--amber:#D3A34C;--danger:#E0685E;
@@ -181,3 +181,56 @@ body{background:var(--bg);color:var(--text);font-size:13px}
 .cc-home-session>span:nth-child(2){flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:1100px){.cc-home-followups{grid-template-columns:1fr}}
 @media(max-width:960px){.cc-start-quick{grid-template-columns:1fr}.cc-home-page{padding:6px 0 35px}.cc-start-heading h2{font-size:23px}}
+
+/* UI 审计校正：新主题与旧 :root:not() 同等优先级，并覆盖旧蓝色组件材质。 */
+.cc-workspace-shell .main-content{background:var(--bg);background-image:none}
+.cc-workspace-shell .message-avatar,.cc-workspace-shell .model-symbol,
+.cc-workspace-shell .integration-icon,.cc-workspace-shell .command-result-icon{
+ background:var(--cc-soft-brand);color:var(--accent);border-color:var(--line)
+}
+.cc-workspace-shell .composer:focus-within{
+ border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent)
+}
+.cc-workspace-shell .modal-backdrop,.cc-workspace-shell .command-backdrop{
+ background:rgba(23,20,16,.60);backdrop-filter:blur(8px)
+}
+.cc-workspace-shell .approval-modal,.cc-workspace-shell .command-dialog{
+ background:var(--surface);border:1px solid var(--line);box-shadow:0 24px 64px rgba(24,20,13,.22)
+}
+.cc-workspace-shell .approval-target{background:var(--surface2);border-color:var(--line)}
+.cc-workspace-shell .approval-target pre{color:var(--text)}
+.cc-workspace-shell .modal-icon{color:var(--amber);background:var(--surface3)}
+.cc-workspace-shell .command-input-row{color:var(--accent);border-color:var(--line)}
+.cc-workspace-shell .command-input-row input,.cc-workspace-shell .command-result{color:var(--text)}
+.cc-workspace-shell .command-input-row input::placeholder{color:var(--subtle)}
+.cc-workspace-shell .command-result.selected,.cc-workspace-shell .command-result:hover{
+ background:var(--surface2);border-color:var(--line)
+}
+.cc-workspace-shell .command-result-content small,.cc-workspace-shell .command-empty{color:var(--muted)}
+.cc-workspace-shell .command-footer{background:var(--surface2);border-color:var(--line);color:var(--muted)}
+.cc-workspace-shell .markdown-code{background:var(--surface2);border-color:var(--line);box-shadow:none}
+.cc-workspace-shell .markdown-code-header{background:var(--surface3);border-color:var(--line)}
+.cc-workspace-shell .markdown-code pre{color:var(--text)}
+.cc-workspace-shell .markdown-code-language{color:var(--accent-bright)}
+.cc-workspace-shell .markdown-message a{color:var(--accent-bright)}
+.cc-workspace-shell .jump-to-latest{border-color:var(--line);box-shadow:var(--shadow)}
+.cc-workspace-shell .model-card,.cc-workspace-shell .mode-card{background:var(--surface);border-color:var(--line)}
+.cc-workspace-shell .nav-item:hover:not(.active){background:var(--surface2);color:var(--text)}
+.cc-workspace-shell .primary-button:hover:not(:disabled){filter:none;box-shadow:none}
+@media(max-width:940px){
+ .cc-sidebar{width:198px;flex-basis:198px;padding:14px 9px}
+ .cc-brand>div:last-child,.cc-workspace-picker .workspace-details,.cc-workspace-picker>svg:last-child,
+ .cc-sidebar-footer,.cc-sidebar .nav-counter{display:flex}
+ .cc-brand>div:last-child,.cc-workspace-picker .workspace-details{display:block}
+ .cc-grouped-nav .nav-item{justify-content:flex-start;padding:0 10px}
+ .cc-grouped-nav .nav-item span{display:inline;min-width:0}
+ .cc-workspace-picker{justify-content:flex-start}
+ .cc-brand{padding:3px 8px 16px}
+ .cc-sidebar-footer{flex-direction:column}
+ .cc-tabbar .cc-search{width:45px}
+ .cc-tabbar .cc-search kbd{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+ .cc-workspace-shell .command-dialog,.cc-workspace-shell .approval-modal,
+ .cc-workspace-shell .cc-quick-start,.cc-workspace-shell .cc-tab{animation:none;transition:none}
+}
