@@ -18,10 +18,15 @@ const SID='9b0c188a-66fd-4b30-82e0-f52f2f8dfc35'
 let listener:(event:AppEvent)=>void=()=>{}
 let showHistoricalJob=false
 let failMcpRefresh=false
+let suspendMcpRefresh=false
+let releaseMcpRefresh:(()=>void)|undefined
+let createdMission:{id:string;objective:string;status:string}|undefined
 let activeAgentMode:'master'|'super'='master'
 let mockTasks:Array<{taskId:string;description:string;status:string}>=[]
 let longHistory=false
 let manyFiles=false
+let failModelSelection=false
+let pickedOfflineWorkspace=false
 const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
   switch(method){
     case 'app.info': return {workspace:'/projects/example',platform:'linux',version:'0.1.0'}
@@ -30,7 +35,13 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     case 'sessions.list':return longHistory?[{sessionId:SID,title:'长历史会话'}]:[]
     case 'agents.overview':return {mode:activeAgentMode,teams:[],missions:[],activeSessions:0,activeTasks:0}
     case 'agents.setMode': activeAgentMode=args.mode==='super'?'super':'master'; return {mode:activeAgentMode}
-    case 'missions.list':return showHistoricalJob
+    case 'missions.create': {
+      createdMission={id:'mission_0123456789abcdef',objective:String(args.objective),status:'active'}
+      return createdMission
+    }
+    case 'missions.list':
+      if(createdMission)return {missions:[createdMission],selectedMissionId:createdMission.id}
+      return showHistoricalJob
       ? {missions:[{missionId:'mission-fixture',objective:'历史任务',status:'active'}],selectedMissionId:'mission-fixture'}
       : {missions:[],selectedMissionId:null}
     case 'missions.jobs.list':return showHistoricalJob
@@ -42,6 +53,9 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
       timestamp:'2026-11-06T12:00:00Z'
     }]
     case 'sessions.ensureOpen':return {sessionId:SID,resumed:true,tasks:[]}
+    case 'sessions.status':return {phase:'running'}
+    case 'workspace.pick':return pickedOfflineWorkspace?{workspace:'/projects/second',changed:true,connected:false}:{workspace:'/projects/example',changed:false}
+    case 'workspace.read':return {path:String(args.path),content:'原始内容'}
     case 'permissions.list':return []
     case 'host.list':return []
     case 'credentials.list':return {providers:['openai']}
@@ -51,10 +65,12 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
       return {path:'/projects/example',total:manyFiles?260:0,entries:Array.from({length:Math.max(0,end-offset)},(_,i)=>({name:`file-${offset+i}.ts`,path:`/projects/example/file-${offset+i}.ts`,directory:false}))}
     }
     case 'mcp.list':
+      if(suspendMcpRefresh)await new Promise<void>(resolve=>{releaseMcpRefresh=resolve})
       if(failMcpRefresh)throw new Error('MCP 服务离线')
       return {servers:[{name:'project-mcp',scope:'project',type:'http',url:'https://example.org/mcp',disabled:false}],errors:[]}
     case 'sessions.open':return {sessionId:SID,tasks:mockTasks}
     case 'sessions.send':return {sessionId:SID,turnId:'11afef34-e0a6-4c38-a743-1c451993fdb8'}
+    case 'sessions.setModel':if(failModelSelection)throw new Error('模型服务端拒绝切换');return {model:args.model}
     case 'permissions.decide':return {permissionId:args.permissionId,accepted:true}
     case 'credentials.set':return {saved:true}
     case 'mcp.toggle':return {name:args.name,enabled:args.enabled}
@@ -71,10 +87,98 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTasks=[];longHistory=false;manyFiles=false;window.localStorage.clear()})
+beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTasks=[];longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;window.localStorage.clear()})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
+  it('模型切换失败时保持原选择，避免界面显示并未生效的模型',async()=>{
+    failModelSelection=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'新建会话'}))
+    await user.click(screen.getByRole('button',{name:'模型管理'}))
+    const card=screen.getByText('MiniMax M3').closest('button')
+    expect(card).not.toBeNull()
+    await user.click(card!)
+    await screen.findByText('模型服务端拒绝切换')
+    expect(card).not.toHaveClass('selected')
+    expect(call).toHaveBeenCalledWith('sessions.setModel',{sessionId:SID,model:'minimax/M3'})
+  })
+
+
+  it('侧栏恢复会话后读取真实执行状态，避免显示前一个会话的状态',async()=>{
+    longHistory=true
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    const user=userEvent.setup()
+    await user.click(screen.getByRole('button',{name:'恢复会话：长历史会话'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.status',{sessionId:SID}))
+  })
+
+  it('切换断开的工作区会清空旧项目会话列表',async()=>{
+    longHistory=true
+    pickedOfflineWorkspace=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    expect(screen.getByRole('button',{name:'恢复会话：长历史会话'})).toBeInTheDocument()
+    await user.click(screen.getByTitle('/projects/example'))
+    await waitFor(()=>expect(screen.queryByRole('button',{name:'恢复会话：长历史会话'})).not.toBeInTheDocument())
+    expect(screen.getByText('后台未连接')).toBeInTheDocument()
+  })
+
+  it('打开新文件前会确认是否丢弃旧文件未保存的修改',async()=>{
+    manyFiles=true
+    const user=userEvent.setup()
+    const confirm=vi.spyOn(window,'confirm').mockReturnValue(false)
+    try{
+      render(<App/>)
+      await screen.findByText('本地后台已连接')
+      await user.click(screen.getByRole('button',{name:'项目文件'}))
+      await user.click(screen.getByRole('button',{name:'刷新文件'}))
+      await user.click(await screen.findByText('file-0.ts'))
+      const editor=await screen.findByRole('textbox',{name:'编辑当前文件'})
+      await user.clear(editor)
+      await user.type(editor,'未保存修改')
+      await user.click(screen.getByText('file-1.ts'))
+      expect(confirm).toHaveBeenCalled()
+      expect(editor).toHaveValue('未保存修改')
+      expect(call).not.toHaveBeenCalledWith('workspace.read',{path:'/projects/example/file-1.ts'})
+    }finally{confirm.mockRestore()}
+  })
+  it('cc-haha 新首页使用任务启动而非旧仪表盘，点击建议可进入真实输入流',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    expect(screen.getByRole('heading',{name:'今天，从哪里开始？'})).toBeInTheDocument()
+    expect(screen.getByRole('button',{name:'新建会话'})).toBeInTheDocument()
+    await user.click(screen.getByRole('button',{name:/分析当前项目结构/}))
+    expect(screen.getByRole('textbox',{name:'输入任务'})).toHaveValue('请分析当前项目的架构、主要模块与调用关系')
+    await user.click(screen.getByRole('button',{name:'发送'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',{
+      sessionId:SID,message:'请分析当前项目的架构、主要模块与调用关系'
+    }))
+  })
+
+  it('六套主题可以切换并在重新打开时恢复',async()=>{
+    const user=userEvent.setup()
+    const view=render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'设置与权限'}))
+    const selector=screen.getByRole('combobox',{name:'界面主题'})
+    expect(selector).toHaveValue('white')
+    await user.selectOptions(selector,'celadon')
+    expect(document.documentElement.dataset.ccTheme).toBe('celadon')
+    view.unmount()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'设置与权限'}))
+    expect(screen.getByRole('combobox',{name:'界面主题'})).toHaveValue('celadon')
+    await user.selectOptions(screen.getByRole('combobox',{name:'界面主题'}),'ink-blue')
+    expect(document.documentElement.dataset.theme).toBe('dark')
+  })
+
   it('替换后的项目侧栏可直接恢复真实会话并选中会话标签',async()=>{
     longHistory=true
     const user=userEvent.setup()
@@ -146,6 +250,22 @@ describe('摇摇车真实桌面页面交互',()=>{
     await screen.findByText(/刷新部分失败：MCP服务：MCP 服务离线/)
   })
 
+  it('长期任务创建后立即显示结果，MCP 服务卡住也不影响用户操作',async()=>{
+    suspendMcpRefresh=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'长期任务'}))
+    await user.type(screen.getByPlaceholderText('明确长期目标与交付要求…'),'真实安装版任务创建测试')
+    await user.click(screen.getByRole('button',{name:'创建并选中任务'}))
+    await waitFor(()=>expect(screen.getByRole('heading',{name:'真实安装版任务创建测试'})).toBeInTheDocument())
+    expect(screen.getByText('Super Agents 工作项')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('明确长期目标与交付要求…')).toHaveValue('')
+    expect(screen.getByRole('button',{name:'创建并选中任务'})).toBeDisabled() // no duplicate submission from an empty form
+    expect(call).toHaveBeenCalledWith('missions.create',{objective:'真实安装版任务创建测试'})
+    await act(async()=>{suspendMcpRefresh=false;releaseMcpRefresh?.()})
+  })
+
   it('加载真实工作区、模型和九个导航入口',async()=>{
     render(<App/>)
     await screen.findByText('本地后台已连接')
@@ -194,6 +314,28 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(within(dialog).getByRole('button',{name:'允许本次操作'}))
     await waitFor(()=>expect(call).toHaveBeenCalledWith('permissions.decide',{
       sessionId:SECOND,permissionId:'approval-worker',decision:{behavior:'allow'}
+    }))
+  })
+
+  it('不同会话复用同一个审批编号时都保留请求并分别审批',async()=>{
+    const user=userEvent.setup()
+    const other='cb5f81c9-782d-4b79-a7ba-b43db0249a1c'
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await act(async()=>{
+      listener({event:'permission.request',sessionId:SID,permission:{id:'req-1',toolName:'Bash',input:{command:'git status'}}})
+      listener({event:'permission.request',sessionId:other,permission:{id:'req-1',toolName:'FileEdit',input:{file_path:'other.ts'}}})
+    })
+    const dialog=screen.getByRole('dialog',{name:'工具权限审批'})
+    expect(within(dialog).getByText(/另有 1 项待审操作/)).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button',{name:'允许本次操作'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('permissions.decide',{
+      sessionId:SID,permissionId:'req-1',decision:{behavior:'allow'}
+    }))
+    await waitFor(()=>expect(within(dialog).getByText(/FileEdit/)).toBeInTheDocument())
+    await user.click(within(dialog).getByRole('button',{name:'允许本次操作'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('permissions.decide',{
+      sessionId:other,permissionId:'req-1',decision:{behavior:'allow'}
     }))
   })
 
@@ -315,14 +457,16 @@ describe('摇摇车真实桌面页面交互',()=>{
     const instance=render(<App/>)
     await screen.findByText('本地后台已连接')
     await user.click(screen.getByRole('button',{name:'设置与权限'}))
-    await user.click(screen.getByRole('checkbox',{name:/深色主题/}))
-    await waitFor(()=>expect(window.localStorage.getItem('yaoyaoche-desktop:dark')).toBe('false'))
+    const darkSwitch=screen.getByRole('checkbox',{name:/深色主题/}) as HTMLInputElement
+    const expectedDark=!darkSwitch.checked
+    await user.click(darkSwitch)
+    await waitFor(()=>expect(window.localStorage.getItem('yaoyaoche-desktop:dark')).toBe(String(expectedDark)))
     await user.click(screen.getByRole('button',{name:'收起详情'}))
     await waitFor(()=>expect(window.localStorage.getItem('yaoyaoche-desktop:inspector')).toBe('false'))
     instance.unmount()
     render(<App/>)
     await screen.findByText('本地后台已连接')
-    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(document.documentElement.dataset.theme).toBe(expectedDark?'dark':'light')
     expect(screen.getByRole('button',{name:'打开详情面板'})).toBeInTheDocument()
   })
 

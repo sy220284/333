@@ -228,6 +228,24 @@ test('真实 Linux 安装版启动 Electron 界面并完成本地 Host 连接', 
         await expectText('排队中')
         await screenshot(page.webSocketDebuggerUrl,'desktop/release/deployed-mission-queued-smoke.png')
 
+        // Complete the ordinary, non-model lifecycle in the actual installed
+        // application: pause, resume, checkpoint and preserve queued work.
+        await click('暂停')
+        await expectText('已暂停')
+        await click('恢复')
+        await expectText('执行中')
+        await fill('textarea[placeholder="填写已验证进度、修改和下一步工作…"]',
+          '安装版已验证：任务创建、工作项入队、暂停与恢复')
+        await click('记录进度')
+        await expectText('安装版已验证：任务创建、工作项入队、暂停与恢复')
+        const state = await evaluate(page.webSocketDebuggerUrl,
+          '(async()=>{const selection=await window.yaoyao.call("missions.list");const id=selection.selectedMissionId;return {mission:await window.yaoyao.call("missions.get",{missionId:id}),jobs:await window.yaoyao.call("missions.jobs.list",{missionId:id})}})()')
+        assert.equal(state.mission.status,'active')
+        assert.equal(state.jobs.length,1)
+        assert.equal(state.jobs[0].status,'queued')
+        assert.equal(state.jobs[0].attempt,0)
+        await screenshot(page.webSocketDebuggerUrl,'desktop/release/deployed-mission-lifecycle-smoke.png')
+
         await navigate('智能体团队','Super Agents 团队模式','desktop/release/deployed-agents-smoke.png')
         await click('Super Agents 团队模式')
         let mode = false

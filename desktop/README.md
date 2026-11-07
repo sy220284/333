@@ -12,7 +12,15 @@
 
 桌面主进程仅暴露受限 IPC，工作区文件操作受路径限制，危险权限模式通过系统弹窗确认。生产发行前需实测各平台独立安装、后台可执行程序路径和全套功能。
 
-[Figma 九页设计稿](https://www.figma.com/design/7tMuuOySLcOEtoKYftLuEV)
+## 新 UI 设计基准
+
+桌面外层已替换为 cc-haha 风格的项目侧栏、真实会话标签、多主题工作区。页面动作仍由摇摇车的可信本地 `desktopHost` 执行。
+
+- [新版布局、六套主题和行为规范](design/桌面体验与视觉规范.zh-CN.md)
+- [cc-haha → 333 保留、剔除与接口改造矩阵](docs/cc-haha-ui-replacement.zh-CN.md)
+- [Figma 原九页画板（旧版参考，尚待替换）](https://www.figma.com/design/7tMuuOySLcOEtoKYftLuEV)
+
+Figma Starter MCP 当前额度受限；新布局以仓库代码为准，Figma 同步和视觉截图尚待验收。
 
 ## Linux 安装与中文字形
 
