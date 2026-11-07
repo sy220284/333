@@ -1,25 +1,6 @@
 name: Super Agents 3.0 能力中心与规范记忆专项验收
 on:
-  pull_request:
-    paths:
-      - 'src/services/agentCenter/**'
-      - 'src/services/desktop/**'
-      - 'desktop/**'
-      - 'tests/*capability*.test.ts'
-      - 'tests/experience-memory.test.ts'
-      - 'tests/skill-workshop.test.ts'
-      - '.github/workflows/superagents-v3-foundation.yml'
-  push:
-    branches:
-      - integration/333-independent-pr16-pr18-20261106
-    paths:
-      - 'src/services/agentCenter/**'
-      - 'src/services/desktop/**'
-      - 'desktop/**'
-      - 'tests/*capability*.test.ts'
-      - 'tests/experience-memory.test.ts'
-      - 'tests/skill-workshop.test.ts'
-      - '.github/workflows/superagents-v3-foundation.yml'
+  workflow_call:
   workflow_dispatch:
 
 permissions:
