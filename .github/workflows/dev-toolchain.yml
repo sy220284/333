@@ -207,7 +207,10 @@ jobs:
           set -euo pipefail
           # shellcheck source=/dev/null
           source "$DEV333_TOOLCHAIN_ENV_FILE"
-          npm run verify
+          # 独立离线回装验收只使用随 Artifact 分发的工具和源码。
+          # PostgreSQL、AST5.9 及图形 Electron 安装版由真实环境专项运行，
+          # 且 portable 测试计划强制验证每个套件的工作流覆盖。
+          npm run verify:portable
           git diff --exit-code
       - name: full 档验证研究索引与工作流检查
         if: matrix.profile == 'full'

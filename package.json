@@ -21,6 +21,7 @@
     "test:release": "node --test tests/release-integrity.test.mjs",
     "test:all": "npm run test:core && node build/run-unregistered-tests.mjs --ci-supplemental",
     "verify": "npm run rebuild && npm run test:all",
+    "verify:portable": "npm run rebuild && npm run test:core && node build/run-unregistered-tests.mjs --ci-supplemental --ci-portable",
     "desktop:serve": "bun dist/desktopHost.js",
     "dev:desktop": "bun src/entrypoints/desktopHost.ts",
     "dev:bootstrap": "node tools/dev/dev.mjs bootstrap",
