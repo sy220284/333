@@ -8,7 +8,7 @@ import { createInterface } from 'node:readline'
 import { extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { SDKControlRequest, SDKControlRequestInner, SDKControlInitializeRequest, SDKControlCancelRequest, SDKControlResponse, SDKHostControlRequest } from './controlTypes.js'
-import { SDK_HOST_CONTROL_SUBTYPES } from './controlSchemas.js'
+import { SDK_HOST_CONTROL_SUBTYPES, SDKControlElicitationResponseSchema } from './controlSchemas.js'
 import type { SDKMessage, SDKUserMessage } from './coreTypes.js'
 import type { HookCallback, InternalOptions, SDKSessionOptions } from './runtimeTypes.js'
 import { prepareExternalSession317, SDK_SESSION_UUID } from './externalSessionStore317.js'
@@ -303,6 +303,30 @@ function startSession(
           const callback = callbacks.get(request.callback_id)
           if (!callback) throw new Error('Unknown SDK hook callback')
           decision = await callback(request.input, request.tool_use_id, { signal: controller.signal })
+        } else if (request.subtype === 'elicitation' && options.onElicitation) {
+          // The original SDK exposes a dedicated callback in camelCase.
+          // A null answer parks the request for another capable host.
+          const answer = await options.onElicitation({
+            serverName: request.mcp_server_name,
+            message: request.message,
+            mode: request.mode,
+            url: request.url,
+            elicitationId: request.elicitation_id,
+            requestedSchema: request.requested_schema,
+            title: request.title,
+            displayName: request.display_name,
+            description: request.description,
+          }, { signal: controller.signal, requestId: request_id })
+          if (answer === null) return
+          decision = SDKControlElicitationResponseSchema().parse(answer)
+        } else if (request.subtype === 'request_user_dialog' && options.onUserDialog) {
+          const answer = await options.onUserDialog({
+            dialogKind: request.dialog_kind,
+            payload: request.payload,
+            toolUseID: request.tool_use_id,
+          }, { signal: controller.signal, requestId: request_id })
+          if (answer === null) return
+          decision = answer
         } else if (hostControlSubtypes.has(request.subtype) && options.onControlRequest) {
           if (request.subtype === 'remote_control_work_secret' && request.session_id !== sessionId) {
             throw new Error('Work secret request names a different SDK session')

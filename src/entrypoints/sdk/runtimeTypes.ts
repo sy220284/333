@@ -25,7 +25,7 @@ import type {
   SdkPluginConfig,
   ThinkingConfig,
 } from './coreTypes.js'
-import type { SDKHookCallbackMatcher, SDKHookCallbackRequest, SDKHostControlRequest } from './controlTypes.js'
+import type { SDKHookCallbackMatcher, SDKHookCallbackRequest, SDKHostControlRequest, SDKControlElicitationResponse } from './controlTypes.js'
 
 /** Exactly the Zod object shape accepted by the SDK tool() factory. */
 export type AnyZodRawShape = Record<string, z.ZodType>
@@ -88,6 +88,19 @@ export type CanUseTool = (
   options: SDKPermissionContext,
 ) => Promise<PermissionResult | null>
 
+/** Official 2.1.317 public host callback entrypoints. */
+export type SDKOriginalElicitationHandler = (
+  request: { serverName: string; message: string; mode?: 'form'|'url'; url?: string;
+    elicitationId?: string; requestedSchema?: Record<string,unknown>;
+    title?: string; displayName?: string; description?: string },
+  options: { signal: AbortSignal; requestId: string },
+) => Promise<SDKControlElicitationResponse|null>
+
+export type SDKOriginalUserDialogHandler = (
+  request: { dialogKind?: unknown; payload?: unknown; toolUseID?: string },
+  options: { signal: AbortSignal; requestId: string },
+) => Promise<Record<string,unknown>|null>
+
 export type HostControlRequestHandler = (
   request: SDKHostControlRequest,
   options: { signal: AbortSignal; requestId: string },
@@ -133,6 +146,8 @@ export type Options = {
   permissionPromptToolName?: string
   canUseTool?: CanUseTool
   onControlRequest?: HostControlRequestHandler
+  onElicitation?: SDKOriginalElicitationHandler
+  onUserDialog?: SDKOriginalUserDialogHandler
   hooks?: HookCallbacks
   mcpServers?: Record<string, McpServerConfig>
   agents?: Record<string, AgentDefinition>
@@ -213,6 +228,8 @@ export type SDKSessionOptions = {
   disallowedTools?: string[]
   canUseTool?: CanUseTool
   onControlRequest?: HostControlRequestHandler
+  onElicitation?: SDKOriginalElicitationHandler
+  onUserDialog?: SDKOriginalUserDialogHandler
   hooks?: HookCallbacks
   /** Opt into the SDK prompt suggestion event stream. */
   promptSuggestions?: boolean
