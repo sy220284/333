@@ -26,3 +26,5 @@
 ## 企业模块清退
 
 个人版已移除企业网关、远程组织策略、管理员 API、原厂自托管 Runner 协议服务及其专项。基础检查执行 `tests/enterprise-retirement-boundary.test.mjs`，扫描生产源码并保护现有个人版核心模块。个人后台任务和桌面任务队列仍由本地能力与桌面专项验收。保留现有多模型、个人预算、权限与本地诊断的专项；相关增强能力登记于 `docs/features/personal-capability-extraction-backlog.zh-CN.md`，后续按独立任务验收。
+
+- `personal-retirement-boundary.yml` 验证原厂企业模块已经退出产品，个人多模型、费用、任务、工具权限及本地诊断仍在。Draft 按源码变更触发，待审执行完整验收；该专项同时支持本次清退分支的独立提交验收。
