@@ -132,18 +132,19 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
 
     const missionId = isSuperAgentMode() ? await requireActiveSelectedMission() : undefined
 
-    // If team already exists, generate a unique name instead of failing
-    const { teamName: finalTeamName, teamDir } = await reserveTeamDirectory(team_name)
-
-    // Generate a deterministic agent ID for the team lead
-    const leadAgentId = formatAgentId(TEAM_LEAD_NAME, finalTeamName)
+    // Validate the model before reserving a directory, so invalid model
+    // configurations do not leave empty team directories behind.
     const leadAgentType = agent_type || TEAM_LEAD_NAME
-    // Get the team lead's current model from AppState (handles session model, settings, CLI override)
     const leadModel = parseUserSpecifiedModel(
       appState.mainLoopModelForSession ??
         appState.mainLoopModel ??
         getDefaultMainLoopModel(),
     )
+
+    // Atomic across independent desktop-host processes: the same team name
+    // can never overwrite an existing roster.
+    const { teamName: finalTeamName, teamDir } = await reserveTeamDirectory(team_name)
+    const leadAgentId = formatAgentId(TEAM_LEAD_NAME, finalTeamName)
 
     const teamFilePath = getTeamFilePath(finalTeamName)
 
