@@ -6,7 +6,7 @@ import ts from 'typescript'
 
 const source=readFileSync(resolve(import.meta.dirname,'../src/projection.ts'),'utf8')
 const transpiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}})
-const compiled='data:text/javascript;base64,'+Buffer.from(transpiled.outputText).toString('base64')
+const compiled=`data:text/javascript;base64,${Buffer.from(transpiled.outputText).toString('base64')}`
 const {textFromMessage,itemFromMessage,statusName}=await import(compiled)
 
 test('真实用户与助手消息提取',()=>{
@@ -28,5 +28,5 @@ test('Electron 入口限制 IPC 与危险授权',()=>{
 test('桌面九类入口已连接实际后台请求',()=>{
   const app=readFileSync(resolve(import.meta.dirname,'../src/App.tsx'),'utf8')
   for(const method of ['sessions.open','sessions.send','sessions.interrupt','permissions.decide','missions.create','agents.setMode','models.list','workspace.list','workspace.read','workspace.gitStatus','missions.jobs.runBatch','missions.jobs.approve','credentials.list','credentials.set','mcp.list','mcp.add','mcp.toggle','mcp.remove'])
-    assert.ok(app.includes(method),'缺少 '+method)
+    assert.ok(app.includes(method),`缺少 ${method}`)
 })
