@@ -16,6 +16,7 @@ import { getTasksDir, notifyTasksUpdated } from '../tasks.js'
 import { getAgentName, getTeamName, isTeammate } from '../teammate.js'
 import { type BackendType, isPaneBackend } from './backends/types.js'
 import { TEAM_LEAD_NAME } from './constants.js'
+import { withTeamLifecycleLock } from './teamLifecycleLock.js'
 
 export const inputSchema = lazySchema(() =>
   z.strictObject({
@@ -654,45 +655,48 @@ async function killOrphanedTeammatePanes(teamName: string): Promise<void> {
  * Called when a swarm session is terminated.
  */
 export async function cleanupTeamDirectories(teamName: string): Promise<void> {
-  const sanitizedName = sanitizeName(teamName)
+  return withTeamLifecycleLock(teamName, async () => {
 
-  // Read team file to get worktree paths BEFORE deleting the team directory
-  const teamFile = readTeamFile(teamName)
-  const worktreePaths: string[] = []
-  if (teamFile) {
-    for (const member of teamFile.members) {
-      if (member.worktreePath) {
-        worktreePaths.push(member.worktreePath)
+    const sanitizedName = sanitizeName(teamName)
+
+    // Read team file to get worktree paths BEFORE deleting the team directory
+    const teamFile = readTeamFile(teamName)
+    const worktreePaths: string[] = []
+    if (teamFile) {
+      for (const member of teamFile.members) {
+        if (member.worktreePath) {
+          worktreePaths.push(member.worktreePath)
+        }
       }
     }
-  }
 
-  // Clean up worktrees first
-  for (const worktreePath of worktreePaths) {
-    await destroyWorktree(worktreePath)
-  }
+    // Clean up worktrees first
+    for (const worktreePath of worktreePaths) {
+      await destroyWorktree(worktreePath)
+    }
 
-  // Clean up team directory (~/.claude/teams/{team-name}/)
-  const teamDir = getTeamDir(teamName)
-  try {
-    await rm(teamDir, { recursive: true, force: true })
-    logForDebugging(`[TeammateTool] Cleaned up team directory: ${teamDir}`)
-  } catch (error) {
-    logForDebugging(
-      `[TeammateTool] Failed to clean up team directory ${teamDir}: ${errorMessage(error)}`,
-    )
-  }
+    // Clean up team directory (~/.claude/teams/{team-name}/)
+    const teamDir = getTeamDir(teamName)
+    try {
+      await rm(teamDir, { recursive: true, force: true })
+      logForDebugging(`[TeammateTool] Cleaned up team directory: ${teamDir}`)
+    } catch (error) {
+      logForDebugging(
+        `[TeammateTool] Failed to clean up team directory ${teamDir}: ${errorMessage(error)}`,
+      )
+    }
 
-  // Clean up tasks directory (~/.claude/tasks/{taskListId}/)
-  // The leader and teammates all store tasks under the sanitized team name.
-  const tasksDir = getTasksDir(sanitizedName)
-  try {
-    await rm(tasksDir, { recursive: true, force: true })
-    logForDebugging(`[TeammateTool] Cleaned up tasks directory: ${tasksDir}`)
-    notifyTasksUpdated()
-  } catch (error) {
-    logForDebugging(
-      `[TeammateTool] Failed to clean up tasks directory ${tasksDir}: ${errorMessage(error)}`,
-    )
-  }
+    // Clean up tasks directory (~/.claude/tasks/{taskListId}/)
+    // The leader and teammates all store tasks under the sanitized team name.
+    const tasksDir = getTasksDir(sanitizedName)
+    try {
+      await rm(tasksDir, { recursive: true, force: true })
+      logForDebugging(`[TeammateTool] Cleaned up tasks directory: ${tasksDir}`)
+      notifyTasksUpdated()
+    } catch (error) {
+      logForDebugging(
+        `[TeammateTool] Failed to clean up tasks directory ${tasksDir}: ${errorMessage(error)}`,
+      )
+    }
+  })
 }
