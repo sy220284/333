@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { readdir, stat } from 'node:fs/promises'
+import { readdir, stat, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
@@ -31,6 +31,31 @@ async function freePort() {
       server.close(() => resolve(port))
     })
   })
+}
+
+async function screenshot(pageUrl, path) {
+  const socket = new WebSocket(pageUrl)
+  const data = await new Promise((resolve, reject) => {
+    const deadline = setTimeout(() => {
+      socket.close()
+      reject(new Error('Electron 可视化截图超时'))
+    }, 7000)
+    socket.addEventListener('open', () =>
+      socket.send(JSON.stringify({ id: 2, method: 'Page.captureScreenshot', params: { format: 'png' } })))
+    socket.addEventListener('message', event => {
+      const frame = JSON.parse(event.data)
+      if (frame.id !== 2) return
+      clearTimeout(deadline)
+      socket.close()
+      if (typeof frame.result?.data !== 'string') reject(new Error('Electron 没有返回可视化截图'))
+      else resolve(frame.result.data)
+    })
+    socket.addEventListener('error', () => {
+      clearTimeout(deadline)
+      reject(new Error('Electron 截图调试通道已断开'))
+    })
+  })
+  await writeFile(path, Buffer.from(data, 'base64'))
 }
 
 async function evaluate(pageUrl, expression) {
@@ -115,6 +140,7 @@ test('真实 Linux 安装版启动 Electron 界面并完成本地 Host 连接', 
           result?.text?.includes('智能体') &&
           result?.text?.includes('本地后台已连接')) {
         assert.equal(result.state, 'complete')
+        await screenshot(page.webSocketDebuggerUrl, 'desktop/release/deployed-workbench-smoke.png')
         return
       }
       await sleep(550)
