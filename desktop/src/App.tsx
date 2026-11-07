@@ -449,13 +449,17 @@ export function App(){
       setSelectedTeam(available.length?String(available[0].name||''):'')
   },[overview,selectedTeam])
   useEffect(()=>{
-    if(!selectedTeam||!workspace){setTeamMembers([]);return}
+    const available=Array.isArray(overview.teams)?overview.teams as Item[]:[]
+    if(!selectedTeam||!workspace||!available.some(item=>String(item.name||'')===selectedTeam)){
+      setTeamMembers([])
+      return
+    }
     let live=true
     api.call<TeamMember[]>('agents.members',{teamName:selectedTeam})
       .then(members=>{if(live)setTeamMembers(members)})
       .catch(reason=>{if(live)setError(presentError(reason))})
     return()=>{live=false}
-  },[selectedTeam,workspace,overview])
+  },[selectedTeam,workspace,overview.teams])
   useEffect(()=>{if(view==='chat'&&followLatest&&messages.length>0&&streamRef.current){streamRef.current.scrollTop=streamRef.current.scrollHeight}},[messages,view,followLatest])
   useEffect(()=>{
     let valid=true
@@ -524,7 +528,7 @@ export function App(){
   async function requestTeamCreation(){
     if(mode!=='super'||!selectedMission||!teamNameDraft.trim()||!teamGoalDraft.trim())return
     const selected=missions.find(m=>missionId(m)===selectedMission)
-    if(!selected||selected.status!=='active'){setError('请先选择并恢复有效的长期目标');return}
+    if(selected?.status!=='active'){setError('请先选择并恢复有效的长期目标');return}
     const specification=JSON.stringify({name:teamNameDraft.trim(),goal:teamGoalDraft.trim()})
     await sendTeamInstruction(`用户授权在当前已选中的长期目标 ${selectedMission} 下创建团队。团队配置：${specification}。使用原生 TeamCreate 工具建队；创建前校验名称与项目归属，只创建团队，不启动新成员。请显示真实工具结果及最终团队名称。`)
   }
@@ -790,14 +794,15 @@ export function App(){
     })
   }
   async function viewJobSession(job:MissionJob){
-    if(!job.sessionId)return
+    const id=job.sessionId
+    if(!id)return
     const generation=++sessionGeneration.current,project=workspaceGeneration.current
     await operation('查看执行记录',async()=>{
-      const history=await invoke<HistoryPage>('sessions.history',{sessionId:job.sessionId,limit:200,offset:0,tail:true})
+      const history=await invoke<HistoryPage>('sessions.history',{sessionId:id,limit:200,offset:0,tail:true})
       if(generation!==sessionGeneration.current||project!==workspaceGeneration.current)return
       setMessages(history.messages.map((item,index)=>itemFromMessage(item,history.offset+index)).filter(Boolean) as ConversationItem[])
       setHistoryOffset(history.offset);setVisibleMessageCount(120);setFollowLatest(true)
-      sessionRef.current=job.sessionId!;setSessionId(job.sessionId!)
+      sessionRef.current=id;setSessionId(id)
       // Historical views must not start a worker; sending explicitly resumes.
       setHistoryOnly(true);setTasks([]);setSessionPhase('idle')
       applySessionConfiguration({model:job.model??null,permissionMode:job.permissionMode??null})

@@ -126,14 +126,14 @@ test('同一工作区不同 Mission 共享三项并发上限，完成后立即�
       enqueueMissionJob(another, project, 'D', '检查 D', root),
     ])
     const started = await Promise.all([
-      claimMissionJob(mission, project, tasks[0]!.id, randomUUID(), process.pid, root),
-      claimMissionJob(mission, project, tasks[1]!.id, randomUUID(), process.pid, root),
-      claimMissionJob(another, project, tasks[2]!.id, randomUUID(), process.pid, root),
+      claimMissionJob(mission, project, requiredIndex(tasks,0).id, randomUUID(), process.pid, root),
+      claimMissionJob(mission, project, requiredIndex(tasks,1).id, randomUUID(), process.pid, root),
+      claimMissionJob(another, project, requiredIndex(tasks,2).id, randomUUID(), process.pid, root),
     ])
-    await expect(claimMissionJob(another, project, tasks[3]!.id, randomUUID(), process.pid, root))
+    await expect(claimMissionJob(another, project, requiredIndex(tasks,3).id, randomUUID(), process.pid, root))
       .rejects.toThrow('同一项目最多并行')
-    await settleMissionJob(mission, project, started[0]!.id, requiredRunId(started[0]!), 'review', '已验证', root)
-    const resumed = await claimMissionJob(another, project, tasks[3]!.id, randomUUID(), process.pid, root)
+    await settleMissionJob(mission, project, requiredIndex(started,0).id, requiredRunId(requiredIndex(started,0)), 'review', '已验证', root)
+    const resumed = await claimMissionJob(another, project, requiredIndex(tasks,3).id, randomUUID(), process.pid, root)
     expect(resumed.status).toBe('running')
   })
 })

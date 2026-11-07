@@ -22,6 +22,15 @@ import type { DesktopTask } from '../src/services/desktop/taskProjection.js'
 import type { DesktopGatewayOptions } from '../src/services/desktop/gateway.js'
 import type { CanUseTool, HostControlRequestHandler } from '../src/entrypoints/sdk/runtimeTypes.js'
 
+function requiredIndex<T>(values:readonly T[],index:number):T{
+  const value=values[index]
+  if(value===undefined)throw new Error(`测试预期存在索引 ${index}，但数据缺失`)
+  return value
+}
+function requiredValue<T>(value:T|undefined,label:string):T{
+  if(value===undefined)throw new Error(`测试必要依赖缺失：${label}`)
+  return value
+}
 async function until(ready: () => boolean) {
   const deadline = Date.now() + 1500
   while (!ready()) {
@@ -470,17 +479,17 @@ test('多个宿主共享项目预算：并发预占不会超额，费用结算�
     const id=Array.from({length:8},()=>randomUUID())
     const checked=await Promise.allSettled(id.map((value,index)=>
       (index%2?second:first).reserve(value,0.4)))
-    const succeeded=checked.flatMap((x,i)=>x.status==='fulfilled'&&x.value.id?[id[i]!]:[])
+    const succeeded=checked.flatMap((x,i)=>x.status==='fulfilled'&&x.value.id?[requiredIndex(id,i)]:[])
     expect(succeeded).toHaveLength(3)
     expect(checked.filter(x=>x.status==='rejected')).toHaveLength(5)
     const total=await first.get()
     expect(total.reservedUsd).toBeCloseTo(1.2,5)
     expect(total.availableUsd).toBeCloseTo(0,5)
-    await second.charge(succeeded[0]!,0.11)
+    await second.charge(requiredIndex(succeeded,0),0.11)
     expect((await first.get()).spentUsd).toBeCloseTo(0.11,5)
-    await first.finish(succeeded[0]!,false)
+    await first.finish(requiredIndex(succeeded,0),false)
     expect((await second.get()).availableUsd).toBeCloseTo(0.29,5)
-    await first.finish(succeeded[1]!,true)
+    await first.finish(requiredIndex(succeeded,1),true)
     const uncertain=await second.get()
     expect(uncertain.uncertainReservations).toBe(1)
     expect(uncertain.reservedUsd).toBeCloseTo(0.8,5)
@@ -488,10 +497,10 @@ test('多个宿主共享项目预算：并发预占不会超额，费用结算�
     await expect(second.configure(0.5)).rejects.toThrow('低于已使用')
     await second.configure(2)
     expect((await first.get()).limitUsd).toBe(2)
-    const fixed=await first.resolveUnknown(succeeded[1]!,0.22)
+    const fixed=await first.resolveUnknown(requiredIndex(succeeded,1),0.22)
     expect(fixed.uncertainReservations).toBe(0)
     expect(fixed.spentUsd).toBeCloseTo(0.33,5)
-    await expect(first.resolveUnknown(succeeded[1]!,0)).rejects.toThrow('不存在')
+    await expect(first.resolveUnknown(requiredIndex(succeeded,1),0)).rejects.toThrow('不存在')
   }finally{await rm(root,{recursive:true,force:true})}
 })
 
@@ -555,7 +564,7 @@ test('多智能体工作项独立模型和只读权限准确传递 SDK 会话启
     ...fixtureData.options,cwd,missionRoot:root,
     createSession: (setting,resume)=>{
       options.push({...setting})
-      return fixtureData.options.createSession!(setting,resume)
+      return requiredValue(fixtureData.options.createSession,'SDK 会话工厂')(setting,resume)
     },
   })
   try{
@@ -982,7 +991,7 @@ test('桌面历史默认尾页覆盖 0、260 和 400 条记录，旧版正序分
   const data=fixture()
   let count=0
   const history={
-    ...data.options.history!,
+    ...requiredValue(data.options.history,'会话历史服务'),
     async getSessionMessages(_id:string,options?:{limit?:number;offset?:number}) {
       const all=Array.from({length:count},(_,i)=>({
         type:'assistant',uuid:`history-${i}`,session_id:randomUUID(),
@@ -1017,7 +1026,7 @@ test('会话独立模型和权限按工作区持久化，重启 SDK 恢复时重
   const root=await mkdtemp(join(tmpdir(),'desktop-settings-restart-'))
   const data=fixture()
   const launches:Array<{model?:string;permissionMode?:string}>=[]
-  const factory=data.options.createSession!
+  const factory=requiredValue(data.options.createSession,'SDK 会话工厂')
   const options:DesktopGatewayOptions={
     ...data.options,cwd:root,dataDir:join(root,'data'),
     createSession:(settings,resume)=>{
@@ -1063,7 +1072,7 @@ test('两个同时恢复相同会话的请求共享一次 SDK 启动且返回同
   const root=await mkdtemp(join(tmpdir(),'desktop-ensure-once-'))
   const original=fixture()
   let launches=0
-  const sessionFactory=original.options.createSession!
+  const sessionFactory=requiredValue(original.options.createSession,'SDK 会话工厂')
   const options:DesktopGatewayOptions={
     ...original.options,cwd:root,dataDir:join(root,'data'),
     createSession:(settings,id)=>{launches++;return sessionFactory(settings,id)},

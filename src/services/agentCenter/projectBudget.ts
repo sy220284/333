@@ -129,7 +129,7 @@ export function createProjectBudget(
       const actual=micros(actualCostUsd)
       return mutate(doc=>{
         const record=doc.leases.find(row=>row.id===id)
-        if(!record||!record.uncertain)throw new Error('待核实费用记录不存在或尚在执行')
+        if(!record?.uncertain)throw new Error('待核实费用记录不存在或尚在执行')
         const next={...doc,spent:doc.spent+actual,leases:doc.leases.filter(row=>row.id!==id)}
         return {document:next,result:snapshot(next)}
       })
