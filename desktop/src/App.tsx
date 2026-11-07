@@ -589,7 +589,7 @@ export function App(){
     }else{
       await operation('发送消息',async()=>{
         if(historyOnly){
-          const opened=await invoke<{sessionId:string;tasks?:Task[]}>('sessions.ensureOpen',{sessionId})
+          const opened=await invoke<SessionOpen>('sessions.ensureOpen',{sessionId})
           if(sessionRef.current!==sessionId)return
           setTasks(opened.tasks??[])
           applySessionConfiguration(opened)

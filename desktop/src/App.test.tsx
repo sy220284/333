@@ -699,7 +699,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     render(<App/>)
     await screen.findByText('本地后台已连接')
     await waitFor(()=>expect(releaseSessionList).toBeTypeOf('function'))
-    await user.click(screen.getByRole('button',{name:'打开本地项目'}))
+    await user.click(screen.getByTitle('/projects/example'))
     await screen.findByText('本地后台未连接')
     await act(async()=>releaseSessionList?.())
     expect(screen.queryByRole('button',{name:'恢复会话：长历史会话'})).not.toBeInTheDocument()
