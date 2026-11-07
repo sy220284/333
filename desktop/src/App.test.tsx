@@ -747,8 +747,11 @@ describe('摇摇车真实桌面页面交互',()=>{
     const sends=call.mock.calls.filter(args=>args[0]==='agents.team.message')
     expect(sends).toHaveLength(2)
     expect(sends[0]?.[1]).toMatchObject({messageId:expect.any(String)})
-    expect((sends[0]?.[1] as Record<string,unknown>).messageId).toBe(
-      (sends[1]?.[1] as Record<string,unknown>).messageId,
+    const firstSend=sends[0]
+    const secondSend=sends[1]
+    if(!firstSend||!secondSend)throw new Error('缺少跨智能体消息发送回执')
+    expect((firstSend[1] as Record<string,unknown>).messageId).toBe(
+      (secondSend[1] as Record<string,unknown>).messageId,
     )
   })
 

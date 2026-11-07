@@ -392,10 +392,9 @@ function startSession(
         if (!external) throw new Error('Unexpected SDK transcript mirror')
         // A mirror can arrive after close() while the child flushes its final files.
         await external.mirror(message.filePath, message.entries)
-      } else if (closed) {
-        continue
-      } else if (message.type === 'control_request') {
-        void respondToControl(message).catch(fail)
+      } else if (!closed) {
+        if (message.type === 'control_request') {
+          void respondToControl(message).catch(fail)
       } else if (message.type === 'control_cancel_request') {
         permissions.get(message.request_id)?.abort()
       } else if (message.type === 'control_response') {
@@ -416,8 +415,9 @@ function startSession(
           for (const parked of pending) void respondToControl(parked).catch(fail)
           request?.resolve(reply.response ?? {})
         }
-      } else {
-        messages.enqueue(message)
+        } else {
+          messages.enqueue(message)
+        }
       }
     }
     await exited

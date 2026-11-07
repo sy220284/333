@@ -260,15 +260,17 @@ export function App(){
       if(drafts.status==='fulfilled')setSkillDrafts(drafts.value.drafts??[])
       else setSkillDrafts([])
       const errors=[
-        ...(catalog.status==='rejected'?['能力目录：'+presentError(catalog.reason)]:[]),
-        ...(memory.status==='rejected'?['经验规范：'+presentError(memory.reason)]:[]),
-        ...(drafts.status==='rejected'?['技能候选：'+presentError(drafts.reason)]:[]),
+        ...(catalog.status==='rejected'?[`能力目录：${presentError(catalog.reason)}`]:[]),
+        ...(memory.status==='rejected'?[`经验规范：${presentError(memory.reason)}`]:[]),
+        ...(drafts.status==='rejected'?[`技能候选：${presentError(drafts.reason)}`]:[]),
       ]
       setCatalogError(errors.join('；'))
     })
     return()=>{active=false}
+  // biome-ignore lint/correctness/useExhaustiveDependencies: workspace and catalogRevision intentionally invalidate remote catalog responses.
   },[view,workspace,connected,catalogRevision])
   useEffect(()=>{viewRef.current=view},[view])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: selected team and workspace intentionally reset cached team inbox state.
   useEffect(()=>{setTeamInbox(null);setTeamNotice('');pendingTeamDelivery.current=null;pendingHandoff.current=null},[selectedTeam,workspace])
   useEffect(()=>{
     if(view!=='agents'||!connected)return
@@ -1274,8 +1276,8 @@ export function App(){
                 {agentActivities.length?agentActivities.slice(0,30).map(item=><div key={item.id} className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] p-3 last:border-0">
                   <span className="min-w-0 flex-1"><strong className="block truncate text-[12px]">{item.title}</strong><small className="text-[11px] text-[var(--color-text-tertiary)]">{item.source==='session-task'?'主子智能体':item.source==='mission-job'?'长期工作项':item.kind==='team'?'团队分工':'长期分工'} · {item.updatedAt}</small></span>
                   <Badge size="sm" tone={item.status==='completed'?'success':item.status==='running'||item.status==='review'?'warning':item.status==='failed'||item.status==='interrupted'?'danger':'neutral'}>{item.status}</Badge>
-                  {item.missionId&&<Button variant="secondary" size="sm" onClick={()=>{setSelectedMission(item.missionId!);setView('missions')}}>查看任务</Button>}
-                  {!item.missionId&&item.sessionId&&<Button variant="secondary" size="sm" onClick={()=>void resumeSession(item.sessionId!)}>打开会话</Button>}
+                  {item.missionId&&<Button variant="secondary" size="sm" onClick={()=>{if(item.missionId){setSelectedMission(item.missionId);setView('missions')}}}>查看任务</Button>}
+                  {!item.missionId&&item.sessionId&&<Button variant="secondary" size="sm" onClick={()=>item.sessionId&&void resumeSession(item.sessionId)}>打开会话</Button>}
                 </div>):<Empty icon={Activity} title="暂无已登记的协作活动" detail="任务创建、成员分工或子智能体执行后会显示真实记录。"/>}
               </Card>
             </Section>
@@ -1476,14 +1478,14 @@ export function App(){
                   {capabilityItems.map(item=><div key={item.id} className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2.5">
                     <Boxes size={16} className="shrink-0 text-[var(--color-text-secondary)]"/>
                     <div className="min-w-0 flex-1"><strong className="block truncate text-[12px]">{item.name}</strong>
-                      <p className="mt-1 truncate text-[11px] text-[var(--color-text-tertiary)]">{item.kind} · {item.source} · {item.scope}{item.version?' · v'+item.version:''}</p>
+                      <p className="mt-1 truncate text-[11px] text-[var(--color-text-tertiary)]">{item.kind} · {item.source} · {item.scope}{item.version?` · v${item.version}`:''}</p>
                       {item.description&&<p className="mt-1 line-clamp-2 text-[11px] text-[var(--color-text-secondary)]">{item.description}</p>}
                     </div>
                     <Badge size="xs" tone={item.status==='disabled'?'warning':'neutral'}>{item.status==='disabled'?'已禁用':item.status==='configured'?'已配置':'可发现'}</Badge>
                   </div>)}
                   {capabilityItems.length===0&&<Empty icon={Boxes} title="暂无已发现能力" detail="可在下方配置 MCP，或通过原有技能及插件加载器安装能力。"/>}
                 </div>
-                {capabilityWarnings.map((item,index)=><p key={index} role="alert" className="mt-2 text-[11px] text-[var(--color-warning)]">{item}</p>)}
+                {[...new Set(capabilityWarnings)].map(item=><p key={item} role="alert" className="mt-2 text-[11px] text-[var(--color-warning)]">{item}</p>)}
                 {catalogError&&<p role="alert" className="mt-2 text-[12px] text-[var(--color-error)]">{catalogError}</p>}
               </Card>
             </Section>
@@ -1522,7 +1524,7 @@ export function App(){
                   <p className="mt-2 text-[12px]">{item.principle}</p>
                   <details className="mt-2 text-[11px] text-[var(--color-text-secondary)]"><summary className="cursor-pointer">适用条件、复用步骤与证据</summary>
                     <p className="mt-2">场景：{item.scenario}</p><p>适用：{item.applicability}</p><p>失效：{item.invalidWhen}</p>
-                    <ol className="my-2 list-decimal pl-5">{item.procedure.map((step,index)=><li key={index}>{step}</li>)}</ol>
+                    <ol className="my-2 list-decimal pl-5">{item.procedure.map((step,index)=>({step,key:`${step}:${item.procedure.slice(0,index).filter(previous=>previous===step).length}`})).map(({step,key})=><li key={key}>{step}</li>)}</ol>
                     <p>验证：{item.verification}</p><p className="break-all">证据：{item.evidenceRefs.join('、')}</p>
                   </details>
                   {item.status==='candidate'&&<Button variant="secondary" size="sm" className="mt-2" onClick={()=>void operation('确认经验规范',async()=>{

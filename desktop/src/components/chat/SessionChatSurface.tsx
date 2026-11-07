@@ -39,6 +39,7 @@ export function SessionChatSurface(p:SessionChatSurfaceProps){
     if(!input)return
     input.style.height='auto'
     input.style.height=`${Math.min(input.scrollHeight,160)}px`
+  // biome-ignore lint/correctness/useExhaustiveDependencies: draft changes trigger controlled textarea remeasurement.
   },[p.draft,p.inputRef])
   return <section aria-label="AI 对话区" className="flex min-h-[540px] flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface-container-lowest)] shadow-[var(--shadow-card)]">
     <div className="flex min-h-[57px] shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] px-5 py-3">
