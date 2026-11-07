@@ -54,6 +54,10 @@ export const SPECIALISTS = Object.freeze({
     /^src\/services\/mcp\//, /^src\/services\/extractMemories\//, /^src\/services\/agentCenter\//,
     /^src\/utils\/(?:agent|localCapabilities|crossSessionMessaging|livePeerSessions)/,
     /^src\/hooks\/(?:useScheduledTasks|useMergedTools|useVoice)/,
+    /^src\/utils\/swarm\//,
+    /^src\/utils\/teammateMailbox\.ts$/,
+    /^src\/hooks\/useInboxPoller\.ts$/,
+    /^tests\/m4-(?:team|teammate|stale)/,
     /^tests\/(?:agent-|mission-jobs|local-feature|local-mcp|local-voice|proactive)/,
   ],
   'local-privacy': [
@@ -85,6 +89,9 @@ export const SPECIALISTS = Object.freeze({
   'm2-prompt-functional-integration-317': [
     /^src\/(prompts|systemPrompt)\//,
     /^src\/utils\/systemPrompt\.ts$/, /^src\/QueryEngine\.ts$/,
+    /^src\/query(?:\.ts|\/turnEffort317\.ts)$/,
+    /^src\/utils\/(?:thinking|effort|attachments)\.ts$/,
+    /^tests\/m2-ultrathink-turn-effort-317\.test\.ts$/,
     /^tests\/.*(?:prompt|system-prompt)/,
   ],
   'm6-gateway-providers-317': [
