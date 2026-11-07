@@ -174,7 +174,7 @@ test('真实 Linux 安装版启动 Electron 界面并完成本地 Host 连接', 
         // from the installed app while the native Host remains connected.
         async function navigate(label, expected, screenshotFile) {
           const clicked = await evaluate(page.webSocketDebuggerUrl,
-            `(()=>{const button=[...document.querySelectorAll('nav.nav-links button')].find(b=>b.textContent?.includes(${JSON.stringify(label)}));if(!button)return false;button.click();return true})()`)
+            `(()=>{const button=[...document.querySelectorAll('nav[aria-label="主要导航"] button')].find(b=>b.textContent?.includes(${JSON.stringify(label)}));if(!button)return false;button.click();return true})()`)
           assert.equal(clicked, true, `发行界面不存在导航入口：${label}`)
           await sleep(500)
           const text = await evaluate(page.webSocketDebuggerUrl, 'document.body?.innerText??""')
@@ -211,11 +211,11 @@ test('真实 Linux 安装版启动 Electron 界面并完成本地 Host 连接', 
             await sleep(140)
           }
           const diagnostic = await evaluate(page.webSocketDebuggerUrl,
-            '(async()=>{let backend;try{backend=await window.yaoyao.call("missions.list")}catch(error){backend={error:String(error)}}return {backend,input:document.querySelector(".mission-list-column textarea")?.value,disabled:document.querySelector(".mission-list-column button.primary-button")?.disabled}})()')
+            '(async()=>{let backend;try{backend=await window.yaoyao.call("missions.list")}catch(error){backend={error:String(error)}}return {backend,input:document.querySelector('textarea[placeholder="明确长期目标与交付要求…"]')?.value,disabled:[...document.querySelectorAll("button")].find(b=>b.textContent?.includes("创建并选中任务"))?.disabled}})()')
           throw new Error(`真实安装版未完成用户操作 ${text}；任务状态：${JSON.stringify(diagnostic)}；页面：${body.slice(0,1500)}`)
         }
 
-        await fill('.mission-list-column textarea','部署用户路径验收：离线检查长期目标与任务记录')
+        await fill('textarea[placeholder="明确长期目标与交付要求…"]','部署用户路径验收：离线检查长期目标与任务记录')
         await click('创建并选中任务')
         await expectText('部署用户路径验收：离线检查长期目标与任务记录')
         await expectText('Super Agents 工作项')
@@ -251,7 +251,7 @@ test('真实 Linux 安装版启动 Electron 界面并完成本地 Host 连接', 
         let mode = false
         for (let attempt = 0; attempt < 30; attempt++) {
           mode = await evaluate(page.webSocketDebuggerUrl,
-            'document.querySelector(".mode-card:nth-child(2)")?.classList.contains("selected")??false')
+            '[...document.querySelectorAll("button")].some(b=>b.textContent?.includes("Super Agents 团队模式")&&b.textContent?.includes("已启用"))')
           if (mode) break
           await sleep(120)
         }
