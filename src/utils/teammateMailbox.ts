@@ -25,6 +25,8 @@ import { logError } from './log.js'
 import { jsonParse, jsonStringify } from './slowOperations.js'
 import type { BackendType } from './swarm/backends/types.js'
 import { TEAM_LEAD_NAME } from './swarm/constants.js'
+import { getTeamFilePath } from './swarm/teamHelpers.js'
+import { withTeamLifecycleLock } from './swarm/teamLifecycleLock.js'
 import { sanitizePathComponent } from './tasks.js'
 import { getAgentName, getTeammateColor, getTeamName } from './teammate.js'
 
@@ -138,64 +140,74 @@ export async function writeToMailbox(
   message: Omit<TeammateMessage, 'read'>,
   teamName?: string,
 ): Promise<void> {
-  await ensureInboxDir(teamName)
-
-  const inboxPath = getInboxPath(recipientName, teamName)
-  const lockFilePath = `${inboxPath}.lock`
-
-  logForDebugging(
-    `[TeammateMailbox] writeToMailbox: recipient=${recipientName}, from=${message.from}, path=${inboxPath}`,
-  )
-
-  // Ensure the inbox file exists before locking (proper-lockfile requires the file to exist)
-  try {
-    await writeFile(inboxPath, '[]', { encoding: 'utf-8', flag: 'wx' })
-    logForDebugging(`[TeammateMailbox] writeToMailbox: created new inbox file`)
-  } catch (error) {
-    const code = getErrnoCode(error)
-    if (code !== 'EEXIST') {
-      logForDebugging(
-        `[TeammateMailbox] writeToMailbox: failed to create inbox file: ${error}`,
-      )
-      logError(error)
-      // A failed mailbox creation cannot be reported as delivered.
-      throw error
-    }
+  const resolvedTeam = teamName ?? getTeamName()
+  if (!resolvedTeam) {
+    throw new Error('Cannot send teammate message without an active team')
   }
+  // The parent guard must be acquired BEFORE creating any inbox path.
+  // Cleanup holds the same lock, so a late message cannot resurrect a team.
+  return withTeamLifecycleLock(resolvedTeam, async () => {
+    await readFile(getTeamFilePath(resolvedTeam), 'utf-8')
 
-  let release: (() => Promise<void>) | undefined
-  try {
-    release = await lockfile.lock(inboxPath, {
-      lockfilePath: lockFilePath,
-      ...LOCK_OPTIONS,
-    })
+    await ensureInboxDir(teamName)
 
-    // Re-read messages after acquiring lock to get the latest state
-    const messages = await readMailbox(recipientName, teamName)
+    const inboxPath = getInboxPath(recipientName, teamName)
+    const lockFilePath = `${inboxPath}.lock`
 
-    const newMessage: TeammateMessage = {
-      ...message,
-      read: false,
-    }
-
-    messages.push(newMessage)
-
-    await writeFile(inboxPath, jsonStringify(messages, null, 2), 'utf-8')
     logForDebugging(
-      `[TeammateMailbox] Wrote message to ${recipientName}'s inbox from ${message.from}`,
+      `[TeammateMailbox] writeToMailbox: recipient=${recipientName}, from=${message.from}, path=${inboxPath}`,
     )
-  } catch (error) {
-    logForDebugging(`Failed to write to inbox for ${recipientName}: ${error}`)
-    logError(error)
-    // SendMessage must never acknowledge a failed append/lock/rewrite.
-    throw error
-  } finally {
-    if (release) {
-      await release()
-    }
-  }
-}
 
+    // Ensure the inbox file exists before locking (proper-lockfile requires the file to exist)
+    try {
+      await writeFile(inboxPath, '[]', { encoding: 'utf-8', flag: 'wx' })
+      logForDebugging(`[TeammateMailbox] writeToMailbox: created new inbox file`)
+    } catch (error) {
+      const code = getErrnoCode(error)
+      if (code !== 'EEXIST') {
+        logForDebugging(
+          `[TeammateMailbox] writeToMailbox: failed to create inbox file: ${error}`,
+        )
+        logError(error)
+        // A failed mailbox creation cannot be reported as delivered.
+        throw error
+      }
+    }
+
+    let release: (() => Promise<void>) | undefined
+    try {
+      release = await lockfile.lock(inboxPath, {
+        lockfilePath: lockFilePath,
+        ...LOCK_OPTIONS,
+      })
+
+      // Re-read messages after acquiring lock to get the latest state
+      const messages = await readMailbox(recipientName, teamName)
+
+      const newMessage: TeammateMessage = {
+        ...message,
+        read: false,
+      }
+
+      messages.push(newMessage)
+
+      await writeFile(inboxPath, jsonStringify(messages, null, 2), 'utf-8')
+      logForDebugging(
+        `[TeammateMailbox] Wrote message to ${recipientName}'s inbox from ${message.from}`,
+      )
+    } catch (error) {
+      logForDebugging(`Failed to write to inbox for ${recipientName}: ${error}`)
+      logError(error)
+      // SendMessage must never acknowledge a failed append/lock/rewrite.
+      throw error
+    } finally {
+      if (release) {
+        await release()
+      }
+    }
+  })
+
+}
 /**
  * Mark a specific message in a teammate's inbox as read by index
  * Uses file locking to prevent race conditions
