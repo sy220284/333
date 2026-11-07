@@ -7,6 +7,7 @@ const app = readFileSync(from('../src/App.tsx'), 'utf8')
 const main = readFileSync(from('../src/main.tsx'), 'utf8')
 const theme = readFileSync(from('../src/theme/globals.css'), 'utf8')
 const layout = readFileSync(from('../src/theme/yaoyao-layout.css'), 'utf8')
+const card = readFileSync(from('../src/components/ui/Card.tsx'), 'utf8')
 const packageJson = JSON.parse(readFileSync(from('../package.json'), 'utf8'))
 
 test('旧界面入口和叠加主题从仓库与加载链路真正删除', () => {
@@ -28,7 +29,8 @@ test('引入 cc-haha 原生卡片按钮状态及空白页组件和完整主题�
     assert.ok(app.includes(`from './components/ui/${name}'`),`${name} 未实际接线`)
   }
   assert.ok(layout.includes('var(--color-surface-container-lowest)'))
-  assert.ok(layout.includes('var(--shadow-composer)'))
+  assert.ok(theme.includes('--shadow-composer:'))
+  assert.ok(card.includes('shadow-[var(--shadow-composer)]'))
   assert.ok(theme.includes('@theme {'))
   assert.ok(theme.includes('@keyframes'))
   assert.ok(packageJson.devDependencies['@tailwindcss/vite'])
