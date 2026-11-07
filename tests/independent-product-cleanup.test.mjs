@@ -30,6 +30,17 @@ test('正式菜单只提供统一入口及自主反馈', () => {
   assert.doesNotMatch(source('src/commands.ts'), /INTERNAL_ONLY_COMMANDS|agents-platform\/index\.js|commands\/mock-limits\/index\.js/)
 })
 
+test('官方企业Gateway及云端Runner不可通过CLI启动', () => {
+  const main=source('src/main.tsx')
+  const cli=source('src/entrypoints/cli.tsx')
+  assert.doesNotMatch(main,/program\.command\(['"]gateway['"]\)/)
+  assert.doesNotMatch(main,/runEnterpriseGateway317/)
+  assert.doesNotMatch(cli,/args\[0\]\s*===\s*['"]self-hosted-runner['"]/)
+  // Local background agents and desktop SDK remain explicitly available.
+  assert.match(cli,/main/)
+  assert.match(source('src/services/desktop/gateway.ts'),/case 'sessions\.open'/)
+})
+
 test('官方云远控、定时、同步及Slack机器人不能重新注册命令', () => {
   const commands=source('src/commands.ts')
   const registered=commands.slice(commands.indexOf('const COMMANDS ='),commands.indexOf('export const builtInCommandNames'))
