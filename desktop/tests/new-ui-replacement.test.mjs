@@ -24,7 +24,7 @@ test('桌面使用原生UI的新页面并不存在旧UI回退入口',()=>{
 test('清理原项目剩余未使用的布局样式，不影响错误提示',()=>{
   const layout=src('../src/theme/yaoyao-layout.css')
   for(const old of ['inline-approval','info-panel','mode-cards','integration-grid','model-grid','mode-card','model-card','provider-item','team-picker','list-row','mcp-row','compact-row','mission-list-item'])
-    assert.doesNotMatch(layout,new RegExp('\\\\.'+old+'(?![\\\\w-])'),old+' 仍存在')
+    assert.doesNotMatch(layout,new RegExp('\\.'+old+'(?![\\w-])'),old+' 仍存在')
   assert.ok(layout.includes('.error-banner,.offline-banner {'))
 })
 
