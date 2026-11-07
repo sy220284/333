@@ -22,11 +22,12 @@ import {
   getTeamFilePath,
   cleanupTeamDirectories,
   unregisterTeamForSessionCleanup,
-  readTeamFile,
   registerTeamForSessionCleanup,
   sanitizeName,
   writeTeamFileAsync,
 } from '../../utils/swarm/teamHelpers.js'
+import { rm } from 'node:fs/promises'
+import { reserveTeamDirectory } from '../../utils/swarm/teamReservation.js'
 import { assignTeammateColor } from '../../utils/swarm/teammateLayoutManager.js'
 import {
   ensureTasksDir,
@@ -34,7 +35,6 @@ import {
   setLeaderTeamName,
   clearLeaderTeamName,
 } from '../../utils/tasks.js'
-import { generateWordSlug } from '../../utils/words.js'
 import { TEAM_CREATE_TOOL_NAME } from './constants.js'
 import { getPrompt } from './prompt.js'
 import { renderToolUseMessage } from './UI.js'
@@ -61,20 +61,6 @@ export type Output = {
 }
 
 export type Input = z.infer<InputSchema>
-
-/**
- * Generates a unique team name by checking if the provided name already exists.
- * If the name already exists, generates a new word slug.
- */
-function generateUniqueTeamName(providedName: string): string {
-  // If the team doesn't exist, use the provided name
-  if (!readTeamFile(providedName)) {
-    return providedName
-  }
-
-  // Team exists, generate a new unique name
-  return generateWordSlug()
-}
 
 export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
   name: TEAM_CREATE_TOOL_NAME,
@@ -147,7 +133,7 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
     const missionId = isSuperAgentMode() ? await requireActiveSelectedMission() : undefined
 
     // If team already exists, generate a unique name instead of failing
-    const finalTeamName = generateUniqueTeamName(team_name)
+    const { teamName: finalTeamName, teamDir } = await reserveTeamDirectory(team_name)
 
     // Generate a deterministic agent ID for the team lead
     const leadAgentId = formatAgentId(TEAM_LEAD_NAME, finalTeamName)
@@ -181,7 +167,12 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
       ],
     }
 
-    await writeTeamFileAsync(finalTeamName, teamFile)
+    try {
+      await writeTeamFileAsync(finalTeamName, teamFile)
+    } catch (error) {
+      await rm(teamDir, { recursive: true, force: true })
+      throw error
+    }
     // Track for session-end cleanup — teams were left on disk forever
     // unless explicitly TeamDelete'd (gh-32730).
     registerTeamForSessionCleanup(finalTeamName)
