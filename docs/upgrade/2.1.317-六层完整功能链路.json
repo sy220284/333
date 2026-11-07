@@ -1409,7 +1409,7 @@
         "src/main.tsx",
         "src/cli/print.ts",
         "src/commands.ts",
-        "src/cli/handlers/purge.tsx",
+        "src/cli/handlers/purge.ts",
         "src/cli/jsonWireEscaping.mjs"
       ],
       "required_semantics": [
