@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   Activity, AlertCircle, ArrowRight, Bot, Boxes, Check, ChevronDown, ChevronRight,
-  CircleStop, ClipboardList, Cpu, FileCode2, Folder, FolderOpen,
+  CircleStop, ClipboardList, Code2, Cpu, FileCode2, Folder, FolderOpen,
   GitBranch, GitPullRequest, HardDrive, History, LayoutDashboard, ListChecks,
   LockKeyhole, MessageSquare, PanelRightClose,
   PanelRightOpen, Pause, Play, Plus, RefreshCw, Save, Search, Send, Settings2,
