@@ -75,6 +75,22 @@ beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcp
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
+  it('替换后的项目侧栏可直接恢复真实会话并选中会话标签',async()=>{
+    longHistory=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    expect(screen.getByRole('navigation',{name:'主要导航'})).toBeInTheDocument()
+    const recent=screen.getByRole('button',{name:'恢复会话：长历史会话'})
+    await user.click(recent)
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.ensureOpen',{sessionId:SID}))
+    expect(screen.getByRole('tab',{name:'标签页：会话 · 长历史会话'})).toHaveAttribute('aria-selected','true')
+    await user.click(screen.getByRole('button',{name:'项目文件'}))
+    expect(screen.getByRole('tab',{name:'标签页：项目文件'})).toHaveAttribute('aria-selected','true')
+    await user.click(screen.getByRole('tab',{name:'标签页：会话 · 长历史会话'}))
+    expect(screen.getByRole('tab',{name:'标签页：会话 · 长历史会话'})).toHaveAttribute('aria-selected','true')
+  })
+
   it('历史工作项仅查看不自动恢复，发送时才恢复原 SDK 会话',async()=>{
     showHistoricalJob=true
     const user=userEvent.setup()

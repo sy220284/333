@@ -606,12 +606,23 @@ export function App(){
     </aside>
     <div className="workspace-body">
       <header className="topbar cc-tabbar">
-        <div className="cc-tabs" role="tablist" aria-label="工作区标签页">
-          {(['chat','files','agents','missions','history'] as View[]).concat(['chat','files','agents','missions','history'].includes(view)?[]:[view]).map(id=>{
-            const item=NAV.find(entry=>entry.id===id)!
-            const Icon=item.icon
-            return <button key={id} type="button" role="tab" aria-selected={view===id} aria-label={`标签页：${item.label}`} className={`cc-tab ${view===id?'active':''}`} onClick={()=>setView(id)}><Icon size={15}/><span>{item.label}</span>{id===view&&<span className="cc-tab-active-mark"/>}</button>
+        <div className="cc-tabs" role="tablist" aria-label="会话与工作区标签">
+          <button type="button" role="tab" aria-selected={view==='chat'&&!sessionId} aria-label="标签页：新会话" className={`cc-tab cc-new-tab ${view==='chat'&&!sessionId?'active':''}`} onClick={()=>void createSession()}><Plus size={15}/><span>新会话</span></button>
+          {([
+            ...(sessionId&&!sessions.some(item=>String(item.sessionId||item.id||'')===sessionId)?[{sessionId,title:'当前会话'}]:[]),
+            ...sessions
+          ]).slice(0,6).map((item,index)=>{
+            const id=String(item.sessionId||item.id||'')
+            if(!id)return null
+            const label=String(item.summary||item.title||id.slice(0,8))
+            const active=view==='chat'&&sessionId===id
+            return <button type="button" role="tab" key={id+index} aria-selected={active} aria-label={`标签页：会话 · ${label}`} title={label} className={`cc-tab ${active?'active':''}`} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)}><MessageSquare size={15}/><span>会话 · {label}</span>{active&&<span className="cc-tab-active-mark"/>}</button>
           })}
+          {view!=='chat'&&(()=>{
+            const current=NAV.find(item=>item.id===view)!
+            const Icon=current.icon
+            return <button type="button" role="tab" aria-selected={true} aria-label={`标签页：${current.label}`} className="cc-tab active" onClick={()=>setView(view)}><Icon size={15}/><span>{current.label}</span><span className="cc-tab-active-mark"/></button>
+          })()}
         </div>
         <div className="topbar-actions">
           <button type="button" className="searchbar search-launcher cc-search" aria-label="搜索页面与操作" onClick={()=>{setPaletteOpen(true);setSearch('');setPaletteIndex(0)}}><Search size={15}/><span>搜索操作</span><kbd>Ctrl K</kbd></button>

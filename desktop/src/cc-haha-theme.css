@@ -108,3 +108,9 @@ body{background:var(--bg);color:var(--text);font-size:13px}
 @media (max-width:1280px){.cc-sidebar{width:225px;flex-basis:225px}.cc-search{width:116px}.cc-search span{display:none}.cc-welcome-graphic{width:125px;font-size:30px}}
 @media (max-width:960px){.cc-sidebar{width:198px;flex-basis:198px}.cc-tab{min-width:48px;padding:0 9px}.cc-tab span:nth-child(2){display:none}.cc-welcome-graphic{display:none}}
 @media(prefers-reduced-motion:reduce){.cc-tab,.cc-sidebar-action,.cc-session-row,.cc-grouped-nav .nav-item{transition:none}}
+
+/* 会话标签映射真实 SDK sessionId，恢复时由 333 的历史和授权模块接管。 */
+.cc-tab{max-width:212px}
+.cc-new-tab{min-width:90px}
+.cc-tab[aria-selected=true]{border-bottom-color:var(--surface)}
+@media(max-width:1140px){.cc-tab{max-width:132px}}
