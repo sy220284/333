@@ -29,6 +29,10 @@ jobs:
           bun test tests/m2-artifact-comment-pipeline-317.test.ts tests/m2-observer-lifecycle-317.test.ts tests/m2-knowledge-nudge-317.test.ts
       - name: 验证317 ultrathink当前轮与运行中输入提升
         run: bun test tests/m2-ultrathink-turn-effort-317.test.ts
+      - name: 验证317发行版真实模型请求的ultrathink开关与推理档位
+        run: |
+          bun build/rebuild.mjs
+          node --test tests/m2-ultrathink-release-request-317.test.mjs
       - name: 检查新功能与全仓类型
         run: |
           npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
