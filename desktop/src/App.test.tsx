@@ -15,6 +15,7 @@ Object.defineProperty(window,'localStorage',{configurable:true,value:{
   key:(index:number)=>[...preferenceStore.keys()][index]??null
 }})
 const SID='9b0c188a-66fd-4b30-82e0-f52f2f8dfc35'
+const OTHER='e9c46d7b-2766-49c8-9f2d-142c90a45d5a'
 let listener:(event:AppEvent)=>void=()=>{}
 let showHistoricalJob=false
 let failMcpRefresh=false
@@ -32,6 +33,13 @@ let longHistory=false
 let manyFiles=false
 let failModelSelection=false
 let pickedOfflineWorkspace=false
+let twoSessions=false
+let delayedHistoryId=''
+let releaseHistory:(()=>void)|undefined
+let delayedSessionList=false
+let releaseSessionList:(()=>void)|undefined
+let delayedSave=false
+let releaseSave:(()=>void)|undefined
 const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
   switch(method){
     case 'app.info': return {workspace:'/projects/example',platform:'linux',version:'0.1.0'}
@@ -57,7 +65,11 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
         uuid:'message-fast-smart',type:'assistant',message:{role:'assistant',content:[{type:'text',text:'智能执行已进入真实会话'}]}
       }})
       return {sessionId:SID,turnId:'fast-smart'}
-    case 'sessions.list':return longHistory?[{sessionId:SID,title:'长历史会话'}]:[]
+    case 'sessions.list':{
+      if(delayedSessionList)await new Promise<void>(resolve=>{releaseSessionList=resolve})
+      return twoSessions?[{sessionId:SID,title:'会话 A'},{sessionId:OTHER,title:'会话 B'}]
+        :longHistory?[{sessionId:SID,title:'长历史会话'}]:[]
+    }
     case 'agents.overview':return {mode:activeAgentMode,teams:mockTeam?[mockTeam]:[],missions:[],activeSessions:0,activeTasks:0}
     case 'agents.members':return mockTeam?[{agentId:'agent-test',name:'测试成员',agentType:'developer',model:'fixture-model',status:'idle'}]:[]
     case 'agents.setMode': activeAgentMode=args.mode==='super'?'super':'master'; return {mode:activeAgentMode}
@@ -73,15 +85,27 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     case 'missions.jobs.list':return showHistoricalJob
       ? [{id:'job-1',title:'审核旧执行',instruction:'分析来源',status:'completed',attempt:1,sessionId:SID}]
       : []
-    case 'sessions.history':return longHistory?Array.from({length:260},(_,i)=>({uuid:`long-${i}`,type:'assistant',message:{role:'assistant',content:[{type:'text',text:`历史-${i}`}]},timestamp:'2026-11-06T12:00:00Z'})):[{
-      uuid:'history-message-1',type:'assistant',
-      message:{role:'assistant',content:[{type:'text',text:'历史执行内容'}]},
-      timestamp:'2026-11-06T12:00:00Z'
-    }]
-    case 'sessions.ensureOpen':return {sessionId:SID,resumed:true,tasks:[]}
-    case 'sessions.status':return {phase:'running'}
+    case 'sessions.history':{
+      if(delayedHistoryId===args.sessionId)await new Promise<void>(resolve=>{releaseHistory=resolve})
+      const data=longHistory?Array.from({length:260},(_,i)=>({uuid:`long-${i}`,type:'assistant',message:{role:'assistant',content:[{type:'text',text:`历史-${i}`}]},timestamp:'2026-11-06T12:00:00Z'})):[{
+        uuid:`history-${String(args.sessionId||SID)}`,type:'assistant',
+        message:{role:'assistant',content:[{type:'text',text:twoSessions?(args.sessionId===SID?'会话 A 内容':'会话 B 内容'):'历史执行内容'}]},
+        timestamp:'2026-11-06T12:00:00Z'
+      }]
+      const skip=Number(args.offset||0),limit=Number(args.limit||200)
+      const end=args.tail?Math.max(0,data.length-skip):Math.min(data.length,skip+limit)
+      const offset=args.tail?Math.max(0,end-limit):skip
+      const messages=data.slice(offset,end)
+      return args.tail?{messages,total:data.length,offset}:messages
+    }
+    case 'sessions.ensureOpen':return {sessionId:String(args.sessionId),resumed:true,tasks:[],model:args.sessionId===OTHER?'minimax/M4':'minimax/M3',permissionMode:args.sessionId===OTHER?'plan':'default'}
+    case 'sessions.status':return {phase:args.sessionId===OTHER?'idle':'running',model:args.sessionId===OTHER?'minimax/M4':'minimax/M3',permissionMode:args.sessionId===OTHER?'plan':'default'}
     case 'workspace.pick':return pickedOfflineWorkspace?{workspace:'/projects/second',changed:true,connected:false}:{workspace:'/projects/example',changed:false}
-    case 'workspace.read':return {path:String(args.path),content:'原始内容'}
+    case 'workspace.read':return {path:String(args.path),content:String(args.path).includes('file-1')?'第二个文件':'原始内容'}
+    case 'workspace.write':{
+      if(delayedSave)await new Promise<void>(resolve=>{releaseSave=resolve})
+      return {saved:true,path:args.path}
+    }
     case 'permissions.list':return []
     case 'host.list':return []
     case 'credentials.list':return {providers:['openai']}
@@ -94,7 +118,7 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
       if(suspendMcpRefresh)await new Promise<void>(resolve=>{releaseMcpRefresh=resolve})
       if(failMcpRefresh)throw new Error('MCP 服务离线')
       return {servers:[{name:'project-mcp',scope:'project',type:'http',url:'https://example.org/mcp',disabled:false}],errors:[]}
-    case 'sessions.open':return {sessionId:SID,tasks:mockTasks}
+    case 'sessions.open':return {sessionId:SID,tasks:mockTasks,model:'minimax/M3',permissionMode:'default'}
     case 'sessions.send':
       if(String(args.message).includes('TeamCreate'))listener({
         event:'session.message',sessionId:SID,turnId:'11afef34-e0a6-4c38-a743-1c451993fdb8',
@@ -118,7 +142,7 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];smartRecord=undefined;budgetState={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]};longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;window.localStorage.clear()})
+beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];smartRecord=undefined;budgetState={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]};longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;twoSessions=false;delayedHistoryId='';releaseHistory=undefined;delayedSessionList=false;releaseSessionList=undefined;delayedSave=false;releaseSave=undefined;window.localStorage.clear()})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
@@ -599,7 +623,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     expect(screen.queryByRole('dialog',{name:'快速操作'})).not.toBeInTheDocument()
   })
 
-  it('长对话默认只渲染最近120条，历史消息可按需逐段展开',async()=>{
+  it('长对话优先载入最新200条，再从磁盘向前分页到最早消息',async()=>{
     longHistory=true
     const user=userEvent.setup()
     render(<App/>)
@@ -607,10 +631,11 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(screen.getByRole('button',{name:'长历史会话'}))
     await screen.findByText('历史-259')
     expect(screen.queryByText('历史-0')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button',{name:/加载更早的 120 条消息/}))
-    expect(screen.queryByText('历史-0')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button',{name:/加载更早的 20 条消息/}))
-    expect(screen.getByText('历史-0')).toBeInTheDocument()
+    expect(call).toHaveBeenCalledWith('sessions.history',{sessionId:SID,limit:200,offset:0,tail:true})
+    await user.click(screen.getByRole('button',{name:/加载更早的 80 条消息/}))
+    await user.click(screen.getByRole('button',{name:'从磁盘加载更早的消息'}))
+    await screen.findByText('历史-0')
+    expect(call).toHaveBeenCalledWith('sessions.history',{sessionId:SID,offset:0,limit:60})
   })
 
   it('文件列表分页向网关请求下一页并展示累计数量',async()=>{
