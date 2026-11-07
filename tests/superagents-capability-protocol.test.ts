@@ -49,6 +49,8 @@ test('桌面原生接口贯通技能候选、人工发布、经验提炼与核�
     expect(list.drafts[0]?.id).toBe(draft.id)
     const published=await gateway.handle(req('capabilities.skills.publish',{draftId:draft.id})) as {path:string}
     expect(await readFile(published.path,'utf8')).toContain('name: agent-brief-maker')
+    const discovered=await gateway.handle(req('capabilities.refresh')) as {items:Array<{name:string;kind:string}>;warnings:string[]}
+    expect(discovered.items.some(item=>item.name==='agent-brief-maker'&&item.kind==='skill')).toBe(true)
     await expect(gateway.handle(req('capabilities.skills.publish',{draftId:randomUUID()}))).rejects.toThrow()
     const proposed=await gateway.handle(req('experience.propose',{draft:experience})) as {id:string;status:string}
     expect(proposed.status).toBe('candidate')
