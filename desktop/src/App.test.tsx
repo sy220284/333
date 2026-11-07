@@ -801,7 +801,7 @@ describe('摇摇车真实桌面页面交互',()=>{
       releaseHostList?.()
     })
     expect(screen.getByRole('dialog',{name:'工具权限审批'})).toHaveTextContent('Bash')
-    expect(screen.getByText(/另有 .* 项待审操作/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/另有 .* 项待审操作/)).not.toBeInTheDocument()
     await user.click(screen.getByRole('button',{name:'允许本次操作'}))
     expect(await screen.findByRole('dialog',{name:'主机交互请求'})).toBeInTheDocument()
   })
