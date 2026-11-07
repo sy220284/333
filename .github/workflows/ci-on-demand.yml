@@ -61,6 +61,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: CI 调度规则与全量覆盖回归
         run: |
           node --test tests/ci-routing.test.mjs tests/ci-test-discovery.test.mjs
