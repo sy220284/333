@@ -133,8 +133,8 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
  * move any existing button. `xs` is new.
  */
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  xs: 'h-5 text-[11px] gap-1',
-  sm: 'h-6 text-xs gap-1.5',
+  xs: 'h-6 text-[11px] gap-1',
+  sm: 'h-7 text-xs gap-1.5',
   base: 'h-8 text-[13px] gap-1.5',
   md: 'h-9 text-sm gap-1.5',
   lg: 'h-10 text-sm gap-2',
@@ -159,8 +159,8 @@ const SIZE_PX: Record<ButtonSize, string> = {
  * is only a circle while the two agree, so these are not free to drift.
  */
 const SIZE_SQUARE: Record<ButtonSize, string> = {
-  xs: 'w-5',
-  sm: 'w-6',
+  xs: 'w-6',
+  sm: 'w-7',
   base: 'w-8',
   md: 'w-9',
   lg: 'w-10',

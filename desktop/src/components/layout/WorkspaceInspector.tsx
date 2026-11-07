@@ -9,8 +9,8 @@ export function WorkspaceInspector({connected,phase,model,mode,approvals,tasks,a
   projectBudget?:{limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number};
   onClose:()=>void;onPermissions:()=>void;onMissions:()=>void;onModels:()=>void;
 }){
-  return <aside aria-label="实时上下文" className="flex w-[268px] min-w-[268px] flex-col border-l border-[var(--color-border)] bg-[var(--color-surface-container-low)] max-[1150px]:w-[225px] max-[1150px]:min-w-[225px] max-[961px]:fixed max-[961px]:inset-y-0 max-[961px]:right-0 max-[961px]:z-40 max-[961px]:w-[min(88vw,340px)] max-[961px]:min-w-0 max-[961px]:shadow-2xl">
-    <div className="flex min-h-[55px] items-center justify-between border-b border-[var(--color-border)] px-4"><strong className="text-[12px]">实时上下文</strong><Button variant="ghost" size="sm" aria-label="收起详情" onClick={onClose}><X size={15}/></Button></div>
+  return <aside aria-label="实时上下文" className="yy-inspector flex w-[268px] min-w-[268px] flex-col border-l border-[var(--color-border)] bg-[var(--color-surface-container-low)] max-[1150px]:w-[225px] max-[1150px]:min-w-[225px] max-[961px]:fixed max-[961px]:inset-y-0 max-[961px]:right-0 max-[961px]:z-40 max-[961px]:w-[min(88vw,340px)] max-[961px]:min-w-0 max-[961px]:shadow-2xl">
+    <div className="flex min-h-[55px] items-center justify-between border-b border-[var(--color-border)] px-4"><strong className="text-[12px]">实时上下文</strong><Button variant="ghost" size="base" aria-label="收起详情" onClick={onClose}><X size={15}/></Button></div>
     <div className="min-h-0 flex-1 overflow-y-auto">
       <section className="border-b border-[var(--color-border)] p-4">
         <h3 className="mb-4 text-[10px] font-semibold tracking-[.13em] text-[var(--color-text-tertiary)]">运行状态</h3>
@@ -36,8 +36,8 @@ export function WorkspaceInspector({connected,phase,model,mode,approvals,tasks,a
           </Badge>
         </div>
         <div className="flex items-start justify-between gap-2 text-[11px]"><span className="text-[var(--color-text-tertiary)]">模型</span><strong className="max-w-[130px] truncate text-right" title={smartExecution.model}>{smartExecution.model}</strong></div>
-        <div className="flex justify-between gap-2 text-[11px]"><span className="text-[var(--color-text-tertiary)]">费用</span><strong>{smartExecution.costUsd===undefined?'结算中':`USD ${smartExecution.costUsd.toFixed(4)}`}</strong></div>
-        {smartExecution.budgetUsd!==undefined&&<div className="flex justify-between gap-2 text-[11px]"><span className="text-[var(--color-text-tertiary)]">上限</span><strong>USD {smartExecution.budgetUsd.toFixed(2)}</strong></div>}
+        <div className="flex justify-between text-[11px]"><span>费用</span><strong>{smartExecution.costUsd===undefined?'结算中':`USD ${smartExecution.costUsd.toFixed(4)}`}</strong></div>
+        {smartExecution.budgetUsd!==undefined&&<div className="flex justify-between text-[11px]"><span>上限</span><strong>USD {smartExecution.budgetUsd.toFixed(2)}</strong></div>}
       </section>}
       <section className="space-y-1 border-b border-[var(--color-border)] p-4">
         <h3 className="mb-3 text-[10px] font-semibold tracking-[.13em] text-[var(--color-text-tertiary)]">快捷操作</h3>

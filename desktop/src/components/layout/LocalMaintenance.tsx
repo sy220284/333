@@ -63,10 +63,10 @@ export function LocalMaintenance({ workspace, connected, onPurged }: {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><h3 className="flex items-center gap-2 text-[14px] font-semibold"><Activity size={17}/>系统诊断</h3>
             <p className="mt-1 text-[12px] text-[var(--color-text-secondary)]">安装与搜索环境、多模型凭证、MCP 配置和本地会话状态。</p></div>
-          <Button variant="secondary" size="base" disabled={!connected || Boolean(busy)} onClick={() => void diagnose()}>
+          <Button variant="secondary" size="base" loading={busy === 'diagnose'} disabled={!connected || Boolean(busy)} onClick={() => void diagnose()}>
             <RefreshCw size={14}/> {busy === 'diagnose' ? '检测中…' : '运行诊断'}</Button>
         </div>
-        {diagnostic && <div className="mt-4 space-y-3 text-[12px]">
+        {diagnostic && <div className="yy-reveal mt-4 space-y-3 text-[12px]">
           <div className="grid grid-cols-2 gap-3 max-[760px]:grid-cols-1">
             <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-container-low)] p-3">
               <strong>安装状态</strong><p className="mt-2 break-all">版本 {diagnostic.installation.version} · {diagnostic.installation.installationType}</p>
@@ -95,10 +95,10 @@ export function LocalMaintenance({ workspace, connected, onPurged }: {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><h3 className="flex items-center gap-2 text-[14px] font-semibold"><HardDrive size={17}/>本地数据管理</h3>
             <p className="mt-1 text-[12px] text-[var(--color-text-secondary)]">按当前工作区清理 AI 会话、任务和历史记录，保留项目源码及模型凭证。</p></div>
-          <Button variant="secondary" size="base" disabled={!connected || Boolean(busy) || !workspace} onClick={() => void inspect()}>预览清理清单</Button>
+          <Button variant="secondary" size="base" loading={busy === 'preview'} disabled={!connected || Boolean(busy) || !workspace} onClick={() => void inspect()}>{busy === 'preview' ? '读取中…' : '预览清理清单'}</Button>
         </div>
         <p className="mt-3 break-all text-[11px] text-[var(--color-text-tertiary)]">当前工作区：{workspace}</p>
-        {preview && <div className="mt-4 space-y-3">
+        {preview && <div className="yy-reveal mt-4 space-y-3">
           <div className="flex flex-wrap items-center gap-2"><Badge size="sm" tone="warning">{preview.items.length} 项待清理</Badge>
             <span className="text-[11px] text-[var(--color-text-secondary)]">当前打开会话：{preview.activeSessions}。确认后会关闭空闲会话；执行中的任务请先停止。</span></div>
           {preview.warnings.map(warning => <p key={warning} role="alert" className="text-[12px] text-[var(--color-error)]">{warning}</p>)}
@@ -111,11 +111,11 @@ export function LocalMaintenance({ workspace, connected, onPurged }: {
           {preview.items.length > 0 && <>
             <label className="flex items-start gap-2 text-[12px]"><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)}/>
               <span>已核对删除清单，确认永久删除该工作区的本地 AI 记录。</span></label>
-            <Button variant="danger-outline" size="base" disabled={!confirmed || Boolean(busy)} onClick={() => void purge()}>
+            <Button variant="danger-outline" size="base" loading={busy === 'purge'} disabled={!confirmed || Boolean(busy)} onClick={() => void purge()}>
               {busy === 'purge' ? '清理中…' : '确认清理所列记录'}</Button>
           </>}
         </div>}
-        {purgeResult && <div className="mt-4 text-[12px]" role="status">
+        {purgeResult && <div className="yy-reveal mt-4 text-[12px]" role="status">
           <p>实际清理：{purgeResult.deleted}/{purgeResult.total} 项</p>
           {purgeResult.errors?.map(message => <p key={message} className="mt-1 break-all text-[var(--color-error)]">{message}</p>)}
           {purgeResult.errors?.length ? <Button size="sm" variant="secondary" onClick={() => void inspect()}>重新检查剩余记录</Button> : null}

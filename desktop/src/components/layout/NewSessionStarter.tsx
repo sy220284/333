@@ -70,6 +70,7 @@ export function NewSessionStarter({
   onSuggestion, onOpenSession, onOpenHistory, onOpenMission, onOpenMissionBoard,
 }: Props) {
   const recentId = useId()
+  const optionsId = useId()
   const [showOptions, setShowOptions] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   return <div data-testid="new-session-starter" className="mx-auto flex w-full max-w-[880px] flex-col gap-8 pb-8 pt-6">
@@ -92,7 +93,7 @@ export function NewSessionStarter({
         }}
         className="min-h-[132px] w-full resize-y border-0! bg-transparent! p-3 text-[14px] leading-6 shadow-none! focus:shadow-none!"/>
       <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-[var(--color-border)] pt-3">
-        <Button variant="ghost" size="sm" onClick={() => setShowOptions(value => !value)} aria-expanded={showOptions}>
+        <Button variant="ghost" size="sm" onClick={() => setShowOptions(value => !value)} aria-expanded={showOptions} aria-controls={optionsId}>
           <Settings2 size={14}/>高级选项
         </Button>
         <span className="min-w-0 flex-1 text-[11px] text-[var(--color-text-tertiary)]">默认沿用当前模型与本地安全规则</span>
@@ -100,7 +101,7 @@ export function NewSessionStarter({
           <Play size={15}/>智能执行
         </Button>
       </div>
-      {showOptions && <div className="mt-4 grid grid-cols-3 gap-3 border-t border-[var(--color-border)] pt-4 max-[730px]:grid-cols-1">
+      {showOptions && <div id={optionsId} className="yy-reveal mt-4 grid grid-cols-3 gap-3 border-t border-[var(--color-border)] pt-4 max-[730px]:grid-cols-1">
         <label className="flex min-w-0 flex-col gap-2 text-[11px] text-[var(--color-text-secondary)]">
           执行模型
           <select aria-label="智能执行模型" value={selectedModel} onChange={event => onModel(event.target.value)}>
@@ -122,7 +123,18 @@ export function NewSessionStarter({
             <option value="dontAsk">未授权则拒绝</option>
           </select>
         </label>
-        <div className="col-span-full flex flex-wrap items-end gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-container-low)] p-3">
+      </div>}
+      <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-[var(--color-text-tertiary)]">
+        <span className="flex items-center gap-1.5"><FolderOpen size={13}/>{projectName || '选择项目'}</span>
+        <span className="flex items-center gap-1.5"><Bot size={13}/>{teamMode}</span>
+        <span className="flex items-center gap-1.5"><Cpu size={13}/>{modelName}</span>
+      </div>
+    </Card>
+    <Card surface="lowest" radius="xl" padding="lg" shadow="card" className="mx-auto w-full max-w-[720px]">
+      <section aria-label="项目共享预算设置">
+        <h3 className="text-[13px] font-semibold">项目共享预算设置</h3>
+        <p className="mt-1 text-[11px] leading-5 text-[var(--color-text-tertiary)]">管理当前项目全部本地会话与智能体共享的额度，不影响单次任务高级选项。</p>
+        <div className="flex flex-wrap items-end gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-container-low)] p-3">
           <label className="flex min-w-[200px] flex-1 flex-col gap-2 text-[11px] text-[var(--color-text-secondary)]">
             项目共享预算（美元）
             <input aria-label="项目共享预算" type="number" min="0.01" max="100000" step="0.01"
@@ -137,7 +149,7 @@ export function NewSessionStarter({
           </p>}
         </div>
         {budgetState?.uncertain.map(record=><div key={record.id}
-          className="col-span-full flex flex-wrap items-end gap-3 rounded-[var(--radius-md)] border border-[var(--color-warning)] p-3 text-[11px]">
+          className="flex flex-wrap items-end gap-3 rounded-[var(--radius-md)] border border-[var(--color-warning)] p-3 text-[11px]">
           <span className="min-w-0 flex-1">待核实费用 · 预占 USD {record.reservedUsd.toFixed(4)} · {record.id.slice(0,8)}</span>
           <label className="flex min-w-[130px] flex-col gap-1">实际产生费用（美元）
             <input type="number" min="0" step="0.0001" aria-label={`核实费用 ${record.id.slice(0,8)}`}
@@ -146,19 +158,14 @@ export function NewSessionStarter({
           <Button variant="secondary" size="sm" disabled={busy||!connected||unknownCosts[record.id]===undefined||!unknownCosts[record.id]?.trim()}
             onClick={()=>onResolveUnknown(record.id)}>确认实际账单并释放预占</Button>
         </div>)}
-        <p className="col-span-full m-0 text-[10px] leading-5 text-[var(--color-text-tertiary)]">
+        <p className="m-0 text-[10px] leading-5 text-[var(--color-text-tertiary)]">
           项目额度由全部本地 SDK 会话和智能体共享，执行前预占、模型返回后结算；最后一个模型请求仍可能超额，实际费用以服务商为准。
         </p>
-      </div>}
-      <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-[var(--color-text-tertiary)]">
-        <span className="flex items-center gap-1.5"><FolderOpen size={13}/>{projectName || '选择项目'}</span>
-        <span className="flex items-center gap-1.5"><Bot size={13}/>{teamMode}</span>
-        <span className="flex items-center gap-1.5"><Cpu size={13}/>{modelName}</span>
-      </div>
+      </section>
     </Card>
     <fieldset className="mx-auto grid w-full min-w-0 max-w-[720px] grid-cols-2 gap-3 border-0 p-0 max-[850px]:grid-cols-1" aria-label="建议的任务">
-      {suggestions.map(({label,subtitle,prompt,icon:Icon}) =>
-        <Card key={label} radius="lg" padding="none" surface="lowest" shadow="card" interactive lift>
+      {suggestions.map(({label,subtitle,prompt,icon:Icon},index) =>
+        <Card key={label} radius="lg" padding="none" surface="lowest" shadow="card" interactive lift className="yy-stagger-item" style={{animationDelay:`${index*40}ms`}}>
           <button type="button" onClick={() => {onSuggestion(prompt); inputRef.current?.focus()}}
             className="flex min-h-[78px] w-full items-center gap-3 p-4 text-left">
             <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-surface-container-low)] text-[var(--color-text-secondary)]"><Icon size={18}/></span>
@@ -167,7 +174,7 @@ export function NewSessionStarter({
           </button>
         </Card>)}
     </fieldset>
-    {executions.length > 0 && <section aria-label="智能执行记录" className="mx-auto w-full max-w-[720px] space-y-2">
+    {executions.length > 0 && <section aria-label="智能执行记录" className="yy-reveal mx-auto w-full max-w-[720px] space-y-2">
       <h3 className="flex items-center gap-2 text-[12px] font-semibold"><History size={14}/>最近智能执行</h3>
       <div className="grid grid-cols-2 gap-2 max-[750px]:grid-cols-1">
         {executions.slice(0,4).map(record =>

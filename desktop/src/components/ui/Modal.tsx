@@ -94,7 +94,7 @@ export function Modal({
         type="button"
         aria-label="关闭对话框"
         disabled={!dismissible}
-        className={`absolute inset-0 transition-opacity duration-200 ${variant === 'lightbox' ? 'bg-[var(--color-lightbox-scrim)]' : 'bg-[var(--color-modal-scrim)]'}`}
+        className={`yy-modal-backdrop absolute inset-0 transition-opacity duration-200 ${variant === 'lightbox' ? 'bg-[var(--color-lightbox-scrim)]' : 'bg-[var(--color-modal-scrim)]'}`}
         onClick={onClose}
       />
 
@@ -105,10 +105,10 @@ export function Modal({
         // `dialog-panel`, not `glass-panel`: the fill has to be opaque on its
         // own rather than leaning on a blur that may never run.
         className={(variant === 'lightbox'
-          ? 'relative flex h-dvh w-screen flex-col overflow-hidden text-[var(--color-media-fg)]'
+          ? 'yy-modal-panel relative flex h-dvh w-screen flex-col overflow-hidden text-[var(--color-media-fg)]'
           : variant === 'media'
-          ? 'relative flex h-[calc(100dvh-24px)] w-[calc(100vw-24px)] flex-col overflow-hidden rounded-[var(--radius-2xl)] bg-[var(--color-media-bg)] text-[var(--color-media-fg)]'
-          : 'dialog-panel relative flex max-h-[85vh] flex-col rounded-[var(--radius-3xl)]') + (className ? ` ${className}` : '')}
+          ? 'yy-modal-panel relative flex h-[calc(100dvh-24px)] w-[calc(100vw-24px)] flex-col overflow-hidden rounded-[var(--radius-2xl)] bg-[var(--color-media-bg)] text-[var(--color-media-fg)]'
+          : 'yy-modal-panel dialog-panel relative flex max-h-[85vh] flex-col rounded-[var(--radius-3xl)]') + (className ? ` ${className}` : '')}
         style={variant === 'lightbox' ? undefined : variant === 'media'
           ? { maxHeight: 'calc(100dvh - 24px)', maxWidth: 'calc(100vw - 24px)' }
           : { width, maxWidth: 'calc(100vw - 48px)' }}
