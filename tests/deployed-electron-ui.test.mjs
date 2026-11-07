@@ -141,6 +141,22 @@ test('真实 Linux 安装版启动 Electron 界面并完成本地 Host 连接', 
           result?.text?.includes('本地后台已连接')) {
         assert.equal(result.state, 'complete')
         await screenshot(page.webSocketDebuggerUrl, 'desktop/release/deployed-workbench-smoke.png')
+        // Verify actual packaged UI navigation, not only React test mocks.
+        // A user can reach the two different agent modes and the Mission board
+        // from the installed app while the native Host remains connected.
+        async function navigate(label, expected, screenshotFile) {
+          const clicked = await evaluate(page.webSocketDebuggerUrl,
+            `(()=>{const button=[...document.querySelectorAll('nav.nav-links button')].find(b=>b.textContent?.includes(${JSON.stringify(label)}));if(!button)return false;button.click();return true})()`)
+          assert.equal(clicked, true, `发行界面不存在导航入口：${label}`)
+          await sleep(500)
+          const text = await evaluate(page.webSocketDebuggerUrl, 'document.body?.innerText??""')
+          assert.ok(text.includes(expected),
+            `导航到 ${label} 后缺少真实功能内容 ${expected}：${text.slice(0,700)}`)
+          assert.ok(text.includes('本地后台已连接'), '切换页面后桌面宿主必须保持连接')
+          await screenshot(page.webSocketDebuggerUrl, screenshotFile)
+        }
+        await navigate('智能体团队','Super Agents 团队模式','desktop/release/deployed-agents-smoke.png')
+        await navigate('长期任务','创建长期任务','desktop/release/deployed-missions-smoke.png')
         return
       }
       await sleep(550)
