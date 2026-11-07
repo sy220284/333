@@ -24,6 +24,7 @@ let createdMission:{id:string;objective:string;status:string}|undefined
 let activeAgentMode:'master'|'super'='master'
 let mockTeam:{name:string;leadSessionId:string;memberCount:number;runningCount:number}|undefined
 let mockTasks:Array<{taskId:string;description:string;status:string}>=[]
+let smartRecord:{sessionId:string;model:string;permissionMode:string;status:'running'|'completed'|'failed'|'interrupted';startedAt:string;costUsd?:number;budgetUsd?:number}|undefined
 let longHistory=false
 let manyFiles=false
 let failModelSelection=false
@@ -33,6 +34,17 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     case 'app.info': return {workspace:'/projects/example',platform:'linux',version:'0.1.0'}
     case 'hello':return {protocolVersion:1,capabilities:['sessions','missions','agents']}
     case 'models.list':return {models:[{value:'minimax/M3',displayName:'MiniMax M3'}]}
+    case 'smart.inspect':return {model:String(args.model||'minimax/M3'),status:'configured',message:'本地模型已就绪',checkedOffline:true,contextWindow:64000,hasPricing:true}
+    case 'smart.history':return smartRecord?[smartRecord]:[]
+    case 'smart.execute':
+      smartRecord={sessionId:SID,model:String(args.model||'minimax/M3'),permissionMode:String(args.permissionMode||'default'),
+        status:'running',startedAt:new Date().toISOString(),...(args.maxBudgetUsd?{budgetUsd:Number(args.maxBudgetUsd)}:{})}
+      return {sessionId:SID,prepared:true,model:smartRecord.model}
+    case 'smart.start':
+      listener({event:'session.message',sessionId:SID,turnId:'fast-smart',message:{
+        uuid:'message-fast-smart',type:'assistant',message:{role:'assistant',content:[{type:'text',text:'智能执行已进入真实会话'}]}
+      }})
+      return {sessionId:SID,turnId:'fast-smart'}
     case 'sessions.list':return longHistory?[{sessionId:SID,title:'长历史会话'}]:[]
     case 'agents.overview':return {mode:activeAgentMode,teams:mockTeam?[mockTeam]:[],missions:[],activeSessions:0,activeTasks:0}
     case 'agents.members':return mockTeam?[{agentId:'agent-test',name:'测试成员',agentType:'developer',model:'fixture-model',status:'idle'}]:[]
@@ -94,7 +106,7 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;window.localStorage.clear()})
+beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];smartRecord=undefined;longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;window.localStorage.clear()})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
@@ -160,13 +172,42 @@ describe('摇摇车真实桌面页面交互',()=>{
     render(<App/>)
     await screen.findByText('本地后台已连接')
     expect(screen.getByRole('heading',{name:'今天，从哪里开始？'})).toBeInTheDocument()
-    expect(screen.getByRole('button',{name:'新建会话'})).toBeInTheDocument()
+    expect(screen.getByRole('button',{name:'智能执行'})).toBeDisabled()
     await user.click(screen.getByRole('button',{name:/分析当前项目结构/}))
-    expect(screen.getByRole('textbox',{name:'输入任务'})).toHaveValue('请分析当前项目的架构、主要模块与调用关系')
-    await user.click(screen.getByRole('button',{name:'发送'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',{
-      sessionId:SID,message:'请分析当前项目的架构、主要模块与调用关系'
-    }))
+    expect(screen.getByRole('textbox',{name:'智能执行任务'})).toHaveValue('请分析当前项目的架构、主要模块与调用关系')
+    await user.click(screen.getByRole('button',{name:'智能执行'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.execute',expect.objectContaining({
+      prompt:'请分析当前项目的架构、主要模块与调用关系',deferStart:true
+    })))
+    expect(call).toHaveBeenCalledWith('smart.start',{sessionId:SID})
+    expect(await screen.findByText('智能执行已进入真实会话')).toBeInTheDocument()
+  })
+
+  it('智能执行高级模型、预算、权限选择进入 SDK，费用状态显示在新 UI',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.type(screen.getByRole('textbox',{name:'智能执行任务'}),'检查项目依赖')
+    await user.click(screen.getByRole('button',{name:'高级选项'}))
+    await user.selectOptions(screen.getByRole('combobox',{name:'智能执行模型'}),'minimax/M3')
+    await user.type(screen.getByRole('spinbutton',{name:'智能执行费用上限'}),'2.50')
+    await user.selectOptions(screen.getByRole('combobox',{name:'智能执行权限'}),'plan')
+    await user.click(screen.getByRole('button',{name:'智能执行'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.execute',expect.objectContaining({
+      model:'minimax/M3',maxBudgetUsd:2.5,permissionMode:'plan',deferStart:true,
+    })))
+    expect(screen.getByText('智能执行已进入真实会话')).toBeInTheDocument()
+    await waitFor(()=>expect(screen.getAllByText(/上限 USD 2.50/).length).toBeGreaterThan(0))
+  })
+
+  it('模型离线自检提供实际档案，无需在线模型请求',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'模型管理'}))
+    await user.click(screen.getByRole('button',{name:/检查配置/}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.inspect',expect.any(Object)))
+    expect(await screen.findByText(/模型自检 ·/)).toBeInTheDocument()
   })
 
   it('六套主题可以切换并在重新打开时恢复',async()=>{
@@ -297,7 +338,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(screen.getByRole('button',{name:'AI 对话'}))
     await user.type(screen.getByRole('textbox',{name:'输入任务'}),'分析这个项目')
     await user.click(screen.getByRole('button',{name:'发送'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',{sessionId:SID,message:'分析这个项目'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.execute',expect.objectContaining({prompt:'分析这个项目',deferStart:true})))
     await act(async()=>listener({event:'permission.request',sessionId:SID,permission:{id:'approval-1',toolName:'Bash',input:{command:'bun test'}}}))
     const dialog=screen.getByRole('dialog',{name:'工具权限审批'})
     expect(within(dialog).getByText(/Bash/)).toBeInTheDocument()
@@ -461,7 +502,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(screen.getByRole('button',{name:'AI 对话'}))
     await user.type(screen.getByRole('textbox',{name:'输入任务'}),'第一次分析')
     await user.click(screen.getByRole('button',{name:'发送'}))
-    await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='sessions.open')).toHaveLength(1))
+    await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='smart.execute')).toHaveLength(1))
 
     await user.click(screen.getByRole('button',{name:'智能体团队'}))
     await user.click(screen.getByRole('button',{name:/Super Agents 团队模式/}))
@@ -470,8 +511,8 @@ describe('摇摇车真实桌面页面交互',()=>{
     await waitFor(()=>expect(screen.queryByText('第一次分析')).not.toBeInTheDocument())
     await user.type(screen.getByRole('textbox',{name:'输入任务'}),'第二次分析')
     await user.click(screen.getByRole('button',{name:'发送'}))
-    await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='sessions.open')).toHaveLength(2))
-    expect(call).toHaveBeenCalledWith('sessions.send',expect.objectContaining({message:'第二次分析'}))
+    await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='smart.execute')).toHaveLength(2))
+    expect(call).toHaveBeenCalledWith('smart.execute',expect.objectContaining({prompt:'第二次分析'}))
     expect(call).not.toHaveBeenCalledWith('sessions.close',expect.anything())
   })
 
