@@ -34,26 +34,26 @@ async function execute(input: Input): Promise<string> {
     return matches.length
       ? matches.map(item => [
           item.title,
-          '适用场景：'+item.scenario,
-          '核心原则：'+item.principle,
-          '操作规范：'+item.procedure.map((p,i)=>(i+1)+'. '+p).join('；'),
-          '适用：'+item.applicability,
-          '失效：'+item.invalidWhen,
-          '验收：'+item.verification,
-          '证据：'+item.evidenceRefs.join('、'),
+          `适用场景：${item.scenario}`,
+          `核心原则：${item.principle}`,
+          `操作规范：${item.procedure.map((p,i)=>`${i+1}. ${p}`).join('；')}`,
+          `适用：${item.applicability}`,
+          `失效：${item.invalidWhen}`,
+          `验收：${item.verification}`,
+          `证据：${item.evidenceRefs.join('、')}`,
         ].join('\n')).join('\n\n')
       : '没有找到经过人工审核且与当前任务相关的经验规范'
   }
   if (input.action === 'list') {
     const approved = await listProjectExperiences(projectDir)
     return approved.length
-      ? approved.map(item => item.key+'：'+item.title+'（已核验）').join('\n')
+      ? approved.map(item => `${item.key}：${item.title}（已核验）`).join('\n')
       : '本项目尚无经过审核的经验规范'
   }
   if (input.draft === undefined) throw new Error('提炼经验须提供完整规范对象')
   const prepared = validateExperienceDraft(input.draft)
   const candidate = await proposeProjectExperience(projectDir,prepared)
-  return '已提交候选规范 '+candidate.id+'：'+candidate.title+'。只有用户核对真实证据并明确审核后才用于长期召回。'
+  return `已提交候选规范 ${candidate.id}：${candidate.title}。只有用户核对真实证据并明确审核后才用于长期召回。`
 }
 
 export const ExperienceTool = buildTool({
@@ -71,8 +71,8 @@ export const ExperienceTool = buildTool({
   get outputSchema(): OutputSchema { return outputSchema() },
   isConcurrencySafe(input) { return input.action !== 'propose' },
   isReadOnly(input) { return input.action !== 'propose' },
-  toAutoClassifierInput(input) { return input.action+' '+(input.query??'') },
-  renderToolUseMessage(input) { return '经验规范 · '+input.action },
+  toAutoClassifierInput(input) { return `${input.action} ${input.query??''}` },
+  renderToolUseMessage(input) { return `经验规范 · ${input.action}` },
   async call(input) { return { data: { success:true, text: await execute(input) } } },
   mapToolResultToToolResultBlockParam(data:Output, toolUseID:string) {
     return {type:'tool_result' as const,tool_use_id:toolUseID,content:data.text}
