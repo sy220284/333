@@ -1,0 +1,60 @@
+name: Super Agents 3.0 能力中心与规范记忆专项验收
+on:
+  pull_request:
+    paths:
+      - 'src/services/agentCenter/**'
+      - 'src/services/desktop/**'
+      - 'desktop/**'
+      - 'tests/*capability*.test.ts'
+      - 'tests/experience-memory.test.ts'
+      - 'tests/skill-workshop.test.ts'
+      - '.github/workflows/superagents-v3-foundation.yml'
+  push:
+    branches:
+      - integration/333-independent-pr16-pr18-20261106
+    paths:
+      - 'src/services/agentCenter/**'
+      - 'src/services/desktop/**'
+      - 'desktop/**'
+      - 'tests/*capability*.test.ts'
+      - 'tests/experience-memory.test.ts'
+      - 'tests/skill-workshop.test.ts'
+      - '.github/workflows/superagents-v3-foundation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  foundation:
+    name: 经验规范、能力目录、技能发布与桌面安全链路
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: 读取固定工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: \${{ env.TOOLCHAIN_NODE_VERSION }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: \${{ env.TOOLCHAIN_BUN_VERSION }}
+      - name: 安装仓库冻结的构建依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 校验经验记忆、能力目录和自创技能的真实功能
+        run: |
+          bun test tests/experience-memory.test.ts tests/capability-catalog.test.ts tests/skill-workshop.test.ts tests/superagents-capability-protocol.test.ts
+      - name: 检查 Electron IPC 白名单和 UI 功能契约
+        run: |
+          cd desktop
+          node --test tests/maintenance-ui-contract.test.mjs tests/mission-ui-contract.test.mjs
+      - name: React 交互与桌面构建
+        run: |
+          cd desktop
+          npm install --no-audit --no-fund
+          npm run test:ui
+          npm run typecheck
+          npm run build
