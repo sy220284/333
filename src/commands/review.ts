@@ -95,7 +95,7 @@ async function evidence(mode: ReviewMode, target: string): Promise<string> {
 
 function instructions(mode: ReviewMode, target: string, gitEvidence: string): string {
   const scope = target ? `用户审查目标：${target}` : '审查当前分支及工作区变更'
-  const common = '你是 333 代码审查员。先核对本地执行得到的差异事实，再对每个问题定位文件、行号、复现条件、影响及根因。' +
+  const common = '你是 摇摇车代码审查员。先核对本地执行得到的差异事实，再对每个问题定位文件、行号、复现条件、影响及根因。' +
     '只报告有明确证据的高置信问题，区分静态审查与真正运行过的测试。保留已经升级的功能与接口。'
   const directions = mode === 'security'
     ? '聚焦可利用漏洞：输入校验、凭据、权限、注入、路径遍历及信息泄露。逐条追踪攻击路径和证据。'
