@@ -355,18 +355,18 @@ export function App(){
       }else if(event.event==='session.error'||event.event==='task.persistence.error'){
         setError(String(event.error||'任务执行异常'))
       }else if(event.event==='permission.request'){
-        permissionRevision.current.set(event.sessionId,(permissionRevision.current.get(event.sessionId)??0)+1)
+        permissionRevision.current.set(event.sessionId??'',(permissionRevision.current.get(event.sessionId??'')??0)+1)
         const p={...obj(event.permission),sessionId:String(event.sessionId||'')} as Permission
         setPermissions(old=>old.some(item=>item.id===p.id&&item.sessionId===p.sessionId)?old:[...old,p])
       }else if(event.event==='permission.resolved'){
-        permissionRevision.current.set(event.sessionId,(permissionRevision.current.get(event.sessionId)??0)+1)
+        permissionRevision.current.set(event.sessionId??'',(permissionRevision.current.get(event.sessionId??'')??0)+1)
         setPermissions(old=>old.filter(item=>item.id!==event.permissionId||item.sessionId!==event.sessionId))
       }else if(event.event==='host.request'){
-        hostRevision.current.set(event.sessionId,(hostRevision.current.get(event.sessionId)??0)+1)
+        hostRevision.current.set(event.sessionId??'',(hostRevision.current.get(event.sessionId??'')??0)+1)
         const r={...obj(event.request),sessionId:String(event.sessionId||'')} as HostRequest
         setHostRequests(old=>old.some(item=>item.id===r.id&&item.sessionId===r.sessionId)?old:[...old,r])
       }else if(event.event==='host.resolved'){
-        hostRevision.current.set(event.sessionId,(hostRevision.current.get(event.sessionId)??0)+1)
+        hostRevision.current.set(event.sessionId??'',(hostRevision.current.get(event.sessionId??'')??0)+1)
         setHostRequests(old=>old.filter(item=>item.id!==event.requestId||item.sessionId!==event.sessionId))
         setHostForms(old=>{const next={...old};delete next[`${event.sessionId}:${event.requestId}`];return next})
       }else if(event.event==='mission.queue.state'){
