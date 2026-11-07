@@ -3143,12 +3143,10 @@ async function run(): Promise<CommanderCommand> {
     } = await import('./cli/handlers/mcp.js');
     await mcpAddJsonHandler(name, json, options);
   });
-  mcp.command('add-from-claude-desktop').description('Import MCP servers from Claude Desktop (Mac and WSL only)').option('-s, --scope <scope>', 'Configuration scope (local, user, or project)', 'local').action(async (options: {
-    scope?: string;
+  mcp.command('add-from-claude-desktop').description('从本机 Claude Desktop 配置迁移 MCP 服务（仅文本输出）').option('-s, --scope <scope>', '配置范围', 'local').option('--dry-run', '预览导入内容').option('--yes', '显式确认批量导入').action(async (options: {
+    scope?: string; dryRun?: boolean; yes?: boolean;
   }) => {
-    const {
-      mcpAddFromDesktopHandler
-    } = await import('./cli/handlers/mcp.js');
+    const { mcpAddFromDesktopHandler } = await import('./cli/handlers/mcp.js');
     await mcpAddFromDesktopHandler(options);
   });
   mcp.command('reset-project-choices').description('Reset all approved and rejected project-scoped (.mcp.json) servers within this project').action(async () => {
@@ -3668,16 +3666,7 @@ async function run(): Promise<CommanderCommand> {
   });
   // END ANT-ONLY
 
-  // Setup token command
-  program.command('setup-token').description('Set up a long-lived authentication token (requires Claude subscription)').action(async () => {
-    const [{
-      setupTokenHandler
-    }, {
-      createRoot
-    }] = await Promise.all([import('./cli/handlers/util.js'), import('./ink.js')]);
-    const root = await createRoot(getBaseRenderOptions(false));
-    await setupTokenHandler(root);
-  });
+  // 旧 Claude 订阅长期 Token 入口已停用；请使用模型管理中的本地凭证配置。
 
   // Official 2.1.310 background agent CLI. The entrypoint fast path handles
   // commands without starting the interactive model. Register here as well so
@@ -3738,15 +3727,21 @@ async function run(): Promise<CommanderCommand> {
     }
   }
 
-  // Doctor command - check installation health
-  program.command('doctor').description('检查 摇摇车 更新器的运行状态。 Note: The workspace trust dialog is skipped and stdio servers from .mcp.json are spawned for health checks. Only use this command in directories you trust.').action(async () => {
-    const [{
-      doctorHandler
-    }, {
-      createRoot
-    }] = await Promise.all([import('./cli/handlers/util.js'), import('./ink.js')]);
-    const root = await createRoot(getBaseRenderOptions(false));
-    await doctorHandler(root);
+  // Non-graphical CLI diagnostics; desktop renders the same underlying checks.
+  program.command('doctor').description('检查本地安装、搜索工具、配置及更新状态').option('--json', '输出完整 JSON 诊断信息').action(async (options: { json?: boolean }) => {
+    const { getDoctorDiagnostic } = await import('./utils/doctorDiagnostic.js');
+    const diagnostic = await getDoctorDiagnostic();
+    if (options.json) {
+      process.stdout.write(JSON.stringify(diagnostic, null, 2) + '\n');
+      return;
+    }
+    process.stdout.write('摇摇车系统诊断\n');
+    process.stdout.write('版本：' + diagnostic.version + '\n');
+    process.stdout.write('安装方式：' + diagnostic.installationType + '\n');
+    process.stdout.write('路径：' + diagnostic.installationPath + '\n');
+    process.stdout.write('搜索工具：' + (diagnostic.ripgrepStatus.working ? '正常' : '异常') + '\n');
+    for (const warning of diagnostic.warnings) process.stdout.write('问题：' + warning.issue + '\n建议：' + warning.fix + '\n');
+    process.stdout.write('完整信息：yaoyaoche doctor --json\n');
   });
 
   // yaoyaoche update

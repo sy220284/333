@@ -6,17 +6,12 @@
 import { stat } from 'fs/promises';
 import pMap from 'p-map';
 import { cwd } from 'process';
-import React from 'react';
-import { MCPServerDesktopImportDialog } from '../../components/MCPServerDesktopImportDialog.js';
-import { render } from '../../ink.js';
-import { KeybindingSetup } from '../../keybindings/KeybindingProviderSetup.js';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../services/analytics/index.js';
 import { clearMcpClientConfig, clearServerTokensFromLocalStorage, getMcpClientConfig, readClientSecret, saveMcpClientSecret } from '../../services/mcp/auth.js';
 import { connectToServer, getMcpServerConnectionBatchSize } from '../../services/mcp/client.js';
 import { addMcpConfig, getAllMcpConfigs, getMcpConfigByName, getMcpConfigsByScope, removeMcpConfig } from '../../services/mcp/config.js';
 import { isMcpStdioServerConfig, type ConfigScope, type ScopedMcpServerConfig } from '../../services/mcp/types.js';
 import { describeMcpConfigFilePath, ensureConfigScope, getScopeLabel } from '../../services/mcp/utils.js';
-import { AppStateProvider } from '../../state/AppState.js';
 import { getCurrentProjectConfig, getGlobalConfig } from '../../utils/config.js';
 import { updateSettingsForSource } from '../../utils/settings/settings.js';
 import { isFsInaccessible } from '../../utils/errors.js';
@@ -314,38 +309,37 @@ export async function mcpAddJsonHandler(name: string, json: string, options: {
   }
 }
 
-// mcp add-from-claude-desktop (lines 4881–4927)
+// The legacy Ink multi-select has been replaced by a desktop import preview.
 export async function mcpAddFromDesktopHandler(options: {
-  scope?: string;
+  scope?: string; dryRun?: boolean; yes?: boolean;
 }): Promise<void> {
   try {
-    const scope = ensureConfigScope(options.scope);
-    const platform = getPlatform();
-    logEvent('tengu_mcp_add', {
-      scope: scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      platform: platform as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      source: 'desktop' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-    });
-    const {
-      readClaudeDesktopMcpServers
-    } = await import('../../utils/claudeDesktop.js');
-    const servers = await readClaudeDesktopMcpServers();
-    if (Object.keys(servers).length === 0) {
-      cliOk('No MCP servers found in Claude Desktop configuration or configuration file does not exist.');
+    const scope = ensureConfigScope(options.scope)
+    const { readClaudeDesktopMcpServers } = await import('../../utils/claudeDesktop.js')
+    const servers = await readClaudeDesktopMcpServers()
+    const names = Object.keys(servers)
+    if (!names.length) return cliOk('Claude Desktop 配置中没有 MCP 服务。')
+    if (!options.yes || options.dryRun) {
+      const known = new Set(Object.keys((await getAllMcpConfigs()).servers))
+      const lines = names.map(name => '  ' + name + (known.has(name) ? '（重名，导入时自动重命名）' : ''))
+      return cliOk('检测到 ' + names.length + ' 个 MCP 服务：\n' + lines.join('\n') +
+        '\n请使用桌面「技能与 MCP → 导入配置」逐项选择，或执行 --yes 全部导入。')
     }
-    const {
-      unmount
-    } = await render(<AppStateProvider>
-        <KeybindingSetup>
-          <MCPServerDesktopImportDialog servers={servers} scope={scope} onDone={() => {
-          unmount();
-        }} />
-        </KeybindingSetup>
-      </AppStateProvider>, {
-      exitOnCtrlC: true
-    });
+    const existing = new Set(Object.keys((await getAllMcpConfigs()).servers))
+    const imported: string[] = []
+    for (const sourceName of names) {
+      let name = sourceName
+      let counter = 2
+      while (existing.has(name)) name = sourceName.slice(0, 70) + '_' + counter++
+      const config = servers[sourceName]
+      if (!config) throw new Error('MCP 配置缺失：' + sourceName)
+      await addMcpConfig(name, config, scope)
+      existing.add(name)
+      imported.push(name)
+    }
+    return cliOk('已从 Claude Desktop 导入 ' + imported.length + ' 个 MCP 服务：' + imported.join('、'))
   } catch (error) {
-    cliError((error as Error).message);
+    return cliError(error instanceof Error ? error.message : String(error))
   }
 }
 

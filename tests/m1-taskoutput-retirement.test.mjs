@@ -15,10 +15,12 @@ test('2.1.310 live tools no longer register TaskOutput, Read remains available',
   assert.doesNotMatch(selector,/TaskOutputTool/)
   assert.match(selector,/FileReadTool/)
 })
-test('removed TASK_MAX_OUTPUT_LENGTH no longer advertised as active /doctor setting',()=>{
-  const doctor=source('src/screens/Doctor.tsx')
-  assert.doesNotMatch(doctor,/TASK_MAX_OUTPUT_LENGTH/)
-  assert.match(doctor,/BASH_MAX_OUTPUT_LENGTH/)
+test('诊断已迁入新桌面组件，不再依赖旧终端医生页面',()=>{
+  const panel=source('desktop/src/components/layout/LocalMaintenance.tsx')
+  const gateway=source('src/services/desktop/gateway.ts')
+  assert.doesNotMatch(panel,/TASK_MAX_OUTPUT_LENGTH/)
+  assert.match(panel,/system.diagnostics/)
+  assert.match(gateway,/getDoctorDiagnostic/)
 })
 test('live mock model API test asserts TaskOutput is absent on both native and rebuilt CLI',()=>{
   const testSource=source('tests/upgrade-mode-integration.test.mjs')
