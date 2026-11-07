@@ -168,12 +168,9 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
       ],
     }
 
-    try {
-      await writeTeamFileAsync(finalTeamName, teamFile)
-    } catch (error) {
-      await rm(teamDir, { recursive: true, force: true })
-      throw error
-    }
+    // Claim the name atomically inside the shared lifecycle lock. A losing
+    // creator must not delete the directory owned by the successful team.
+    await writeTeamFileAsync(finalTeamName, teamFile, true)
     // Track for session-end cleanup — teams were left on disk forever
     // unless explicitly TeamDelete'd (gh-32730).
     registerTeamForSessionCleanup(finalTeamName)
