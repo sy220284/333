@@ -21,6 +21,13 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('hello', {}),
   request('capabilities.list', {}),
   request('capabilities.refresh', {}),
+  request('capabilities.skills.drafts', {}),
+  request('capabilities.skills.createDraft', {
+    slug: z.string().regex(/^[a-z][a-z0-9-]{2,63}$/),
+    description: z.string().trim().min(12).max(240),
+    instructions: z.string().trim().min(60).max(20000),
+  }),
+  request('capabilities.skills.publish', { draftId: z.string().uuid() }),
   request('experience.list', { includeCandidates: z.boolean().optional() }),
   request('experience.search', { query: z.string().trim().min(1).max(400) }),
   request('experience.propose', { draft: z.unknown() }),
