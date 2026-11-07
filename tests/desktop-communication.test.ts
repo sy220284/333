@@ -405,7 +405,7 @@ test('一键并行分工只启动明确授权的工作项，并保留剩余队�
     const ids: string[] = []
     for (let index = 0; index < 3; index++) {
       const job = await gateway.handle(request('missions.jobs.enqueue', {
-        missionId: mission.id, title: '工作' + index, instruction: '逐项独立验证' + index,
+        missionId: mission.id, title: `工作${index}`, instruction: `逐项独立验证${index}`,
       })) as { id: string }
       ids.push(job.id)
     }
@@ -446,7 +446,7 @@ test('用户授权的持续任务队列自动补位、保持三项并发上限�
     const ids: string[] = []
     for (let i = 0; i < 5; i++) {
       const job = await gateway.handle(request('missions.jobs.enqueue', {
-        missionId: mission.id, title: '第' + i + '项工作', instruction: '核查项目单元' + i,
+        missionId: mission.id, title: `第${i}项工作`, instruction: `核查项目单元${i}`,
       })) as { id: string }
       ids.push(job.id)
     }
