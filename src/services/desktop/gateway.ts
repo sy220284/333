@@ -112,9 +112,10 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     if (!entry) throw new Error(`Desktop session is not open: ${sessionId}`)
     return entry
   }
-  function sdkOptions(selectedModel?: string): InternalOptions {
+  function sdkOptions(selectedModel?: string, sessionEnv?: Record<string, string | undefined>): InternalOptions {
     return {
       ...options.sessionOptions,
+      ...(sessionEnv ? { env: { ...options.sessionOptions?.env, ...sessionEnv } } : {}),
       cwd,
       ...(selectedModel || model ? { model: selectedModel ?? model } : {}),
       includePartialMessages: true,
@@ -128,7 +129,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     }))
   }
 
-  async function openSession(selectedModel?: string, resume?: string) {
+  async function openSession(selectedModel?: string, resume?: string, sessionEnv?: Record<string, string | undefined>) {
     if (closed) throw new Error('Desktop gateway is closed')
     if (resume) {
       if (sessions.has(resume) || opening.has(resume)) throw new Error(`Session is already open: ${resume}`)
@@ -148,7 +149,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         if (!known) throw new Error(`No stored session in this workspace: ${resume}`)
       }
       const tasks = resume ? await journal.read(resume) : []
-      runtime = launch(sdkOptions(selectedModel), resume)
+      runtime = launch(sdkOptions(selectedModel, sessionEnv), resume)
       const info = await initializeModels(runtime)
       if (closed) throw new Error('Desktop gateway closed during session initialization')
       const id = runtime.sessionId
@@ -566,8 +567,11 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         try {
           // Each user-requested dispatch gets its own native SDK session.
           // Worker/tool permissions are still checked by the SDK broker.
-          setAgentMode('super')
-          const opened = await openSession()
+          // Scope Coordinator Mode to this SDK child process only. Other
+          // desktop sessions keep the user's chosen master/super mode.
+          const opened = await openSession(undefined, undefined, {
+            CLAUDE_CODE_COORDINATOR_MODE: '1',
+          })
           openedSession = opened.sessionId
           await bindMissionJobTurn(
             mission.id, cwd, claimed.id, runId, openedSession,
