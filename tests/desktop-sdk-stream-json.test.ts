@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createDesktopGateway } from '../src/services/desktop/gateway.js'
@@ -245,5 +245,94 @@ test('external abortController closes SDK child and prevents more messages', { t
     await expect(session.send('must not send')).rejects.toThrow()
   } finally {
     await rm(cwd, { recursive: true, force: true })
+  }
+})
+
+
+// This fixture exercises the host/SDK control wire protocol as observed in the
+// official 2.1.317 Query.processControlRequest implementation.
+const controlParityCli = String.raw\`
+import { createInterface } from 'node:readline'
+import { writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+const out = frame => process.stdout.write(JSON.stringify(frame) + '\\n')
+const replies = []
+const reader = createInterface({ input: process.stdin, crlfDelay: Infinity })
+reader.on('line', line => {
+  const frame = JSON.parse(line)
+  if (frame.type === 'control_request' && frame.request.subtype === 'initialize') {
+    out({type:'control_response',response:{subtype:'success',request_id:frame.request_id,response:{
+      models:[{value:'parity-model',displayName:'Parity',description:'SDK protocol fixture'}],
+      agents:[],commands:[],output_style:'default',available_output_styles:[],account:{}
+    }}})
+  } else if (frame.type === 'user') {
+    const subtype = frame.message.content
+    const request = {subtype}
+    if (subtype === 'can_use_tool') {
+      Object.assign(request,{tool_name:'Bash',input:{command:'pwd'},tool_use_id:'fixture-tool'})
+    } else if (subtype === 'elicitation') {
+      Object.assign(request,{mcp_server_name:'fixture',message:'Select',mode:'form'})
+    } else if (subtype === 'request_user_dialog') {
+      Object.assign(request,{dialog_kind:'confirm',payload:{},tool_use_id:'fixture-tool'})
+    }
+    out({type:'control_request',request_id:'fixture-control',request})
+    setTimeout(() => {
+      writeFileSync(join(process.cwd(),'parity-replies.json'),JSON.stringify(replies))
+      out({type:'result',subtype:'success',is_error:false,errors:[],terminal_reason:'completed'})
+    }, 160)
+  } else if (frame.type === 'control_response') {
+    replies.push(frame.response)
+  }
+})
+\`
+
+test('SDK 2.1.317 host control preserves silent, decline and missing-callback semantics', { timeout: 30000 }, async () => {
+  const cases: Array<{
+    subtype: string
+    callback?: 'tool-null' | 'host-null'
+    expected: 'silent' | 'decline' | 'error'
+  }> = [
+    { subtype: 'can_use_tool', callback: 'tool-null', expected: 'silent' },
+    { subtype: 'can_use_tool', expected: 'error' },
+    { subtype: 'elicitation', expected: 'decline' },
+    { subtype: 'elicitation', callback: 'host-null', expected: 'silent' },
+    { subtype: 'request_user_dialog', expected: 'silent' },
+    { subtype: 'request_user_dialog', callback: 'host-null', expected: 'silent' },
+    { subtype: 'remote_tool_call', expected: 'silent' },
+    { subtype: 'host_auth_token_refresh', expected: 'error' },
+  ]
+  for (const scenario of cases) {
+    const cwd = await mkdtemp(join(tmpdir(), 'sdk-control-parity-'))
+    const cli = join(cwd,'mock-sdk-control.mjs')
+    await writeFile(cli, controlParityCli)
+    const session = createSessionRuntime317({
+      model: 'parity-model', executable: 'node',
+      pathToClaudeCodeExecutable: cli, cwd,
+      ...(scenario.callback === 'tool-null' ? { canUseTool: async () => null } : {}),
+      ...(scenario.callback === 'host-null' ? { onControlRequest: async () => null } : {}),
+    })
+    try {
+      await session.initialization
+      await session.send(scenario.subtype)
+      for await (const message of session.stream()) {
+        if (message.type === 'result') expect(message.is_error).toBe(false)
+      }
+      const replies = JSON.parse(await readFile(join(cwd,'parity-replies.json'),'utf8')) as Array<{
+        subtype: string; error?: string; response?: Record<string, unknown>
+      }>
+      if (scenario.expected === 'silent') {
+        expect(replies).toHaveLength(0)
+      } else if (scenario.expected === 'decline') {
+        expect(replies).toHaveLength(1)
+        expect(replies[0]?.subtype).toBe('success')
+        expect(replies[0]?.response).toEqual({ action: 'decline' })
+      } else {
+        expect(replies).toHaveLength(1)
+        expect(replies[0]?.subtype).toBe('error')
+      }
+    } finally {
+      await session.closeAndWait()
+      await rm(cwd,{recursive:true,force:true})
+    }
   }
 })
