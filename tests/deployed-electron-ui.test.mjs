@@ -157,6 +157,49 @@ test('真实 Linux 安装版启动 Electron 界面并完成本地 Host 连接', 
         }
         await navigate('智能体团队','Super Agents 团队模式','desktop/release/deployed-agents-smoke.png')
         await navigate('长期任务','创建长期任务','desktop/release/deployed-missions-smoke.png')
+
+        // Exercise the installed renderer -> Electron IPC -> compiled native
+        // Host -> durable on-disk Mission/Job flow, entirely offline.
+        async function fill(selector, value) {
+          const changed = await evaluate(page.webSocketDebuggerUrl,
+            `(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)return false;const klass=el.tagName==='TEXTAREA'?HTMLTextAreaElement:HTMLInputElement;const setter=Object.getOwnPropertyDescriptor(klass.prototype,'value')?.set;if(!setter)return false;setter.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event('input',{bubbles:true}));return true})()`)
+          assert.equal(changed, true, `发行界面缺少输入框 ${selector}`)
+          await sleep(120)
+        }
+        async function click(label) {
+          const found = await evaluate(page.webSocketDebuggerUrl,
+            `(()=>{const btn=[...document.querySelectorAll('button')].find(b=>b.textContent?.includes(${JSON.stringify(label)}));if(!btn||btn.disabled)return false;btn.click();return true})()`)
+          assert.equal(found, true, `发行界面按钮不可点击：${label}`)
+        }
+        async function expectText(text) {
+          let body = ''
+          for (let i = 0; i < 45; i++) {
+            body = await evaluate(page.webSocketDebuggerUrl,'document.body?.innerText??""')
+            if (body.includes(text)) return
+            await sleep(140)
+          }
+          throw new Error(`真实安装版未完成用户操作 ${text}，页面：${body.slice(0,1500)}`)
+        }
+
+        await fill('.mission-list-column textarea','部署用户路径验收：离线检查长期目标与任务记录')
+        await click('创建并选中任务')
+        await expectText('部署用户路径验收：离线检查长期目标与任务记录')
+        await expectText('Super Agents 工作项')
+        await screenshot(page.webSocketDebuggerUrl,'desktop/release/deployed-mission-created-smoke.png')
+
+        await fill('input[aria-label="工作项标题"]','离线工作项验收')
+        await fill('textarea[aria-label="工作项执行指令"]','仅验证持久化和页面交互，明确不启动模型')
+        await click('添加工作项')
+        await expectText('离线工作项验收')
+        await expectText('排队中')
+        await screenshot(page.webSocketDebuggerUrl,'desktop/release/deployed-mission-queued-smoke.png')
+
+        await navigate('智能体团队','Super Agents 团队模式','desktop/release/deployed-agents-smoke.png')
+        await click('Super Agents 团队模式')
+        const mode = await evaluate(page.webSocketDebuggerUrl,
+          'document.querySelector(".mode-card:nth-child(2)")?.classList.contains("selected")??false')
+        assert.equal(mode, true, '用户切换 Super Agents 模式后界面状态未更新')
+        await screenshot(page.webSocketDebuggerUrl,'desktop/release/deployed-agents-super-smoke.png')
         return
       }
       await sleep(550)
