@@ -86,12 +86,12 @@ export type CanUseTool = (
   toolName: string,
   input: Record<string, unknown>,
   options: SDKPermissionContext,
-) => Promise<PermissionResult>
+) => Promise<PermissionResult | null>
 
 export type HostControlRequestHandler = (
   request: SDKHostControlRequest,
   options: { signal: AbortSignal; requestId: string },
-) => Promise<Record<string, unknown>>
+) => Promise<Record<string, unknown> | null>
 
 export type HookCallback = (
   input: SDKHookCallbackRequest['input'],
