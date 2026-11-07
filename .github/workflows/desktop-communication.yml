@@ -105,7 +105,20 @@ jobs:
             desktop/release/*.AppImage
             desktop/release/*.deb
             desktop/release/deployed-workbench-smoke.png
+            desktop/release/deployed-agents-smoke.png
+            desktop/release/deployed-missions-smoke.png
 
+      - name: 独立保存桌面三个页面截图供用户体验复核
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yaoyaoche-linux-desktop-ui-views
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            desktop/release/deployed-workbench-smoke.png
+            desktop/release/deployed-agents-smoke.png
+            desktop/release/deployed-missions-smoke.png
   desktop-workbench:
     name: Electron 工作台类型、行为与打包前构建
     runs-on: ubuntu-latest
