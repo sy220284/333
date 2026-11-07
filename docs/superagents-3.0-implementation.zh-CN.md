@@ -146,6 +146,18 @@ feature、source path、test command、CI workflow/run URL、commit SHA、平台
 
 **需要继续独立核对：** 最新 SHA 的 6 个 Bun 新增文件、桌面通信、React 安装版及原有全仓类型门禁。原有权限迁移相关的五条 TypeScript 诊断属于另一个门禁整改范围；按提交差异明确归因，最终合并前仍须解决。此次不启用定时监控、外部云服务或自动派生子智能体。
 
+### 2026-11-07 追加：长期身份、协作交接及模型可用记忆
+
+- src/services/agentCenter/agentRegistry.ts：建立跨会话稳定 Agent ID、专业领域、能力关联、经验键、状态及历史角色；同一 Agent 可在不同 Mission/Team 动态换岗并保留旧角色记录。对应 tests/agent-registry.test.ts。
+- src/services/agentCenter/teamHandoffs.ts：为交接记录稳定 ID、发件人、收件人、输入成果、交付成果、验收结论与状态；采用原生团队信箱发送，支持重复投递幂等和重启后重试。对应 tests/team-handoffs.test.ts。
+- src/tools/ExperienceTool/ExperienceTool.ts：加入模型可调用的规范检索及候选提炼工具，模型没有经验批准权限；总控系统提示加入“从真实成功方法提炼规范、不记流水账”的行为要求。对应 tests/experience-tool.test.ts。
+- src/services/desktop/protocol.ts、gateway.ts、desktop/electron/main.ts 和 desktop/src/App.tsx：长期身份和角色创建、交接建立和查询、原生信箱投递重试、权限白名单和基础 UI。
+- tests/superagents-capability-protocol.test.ts：新增交接目标失效时保留记录的接口验证。上述新测试已登记入现有 Bun 与桌面专项门禁。
+
+**状态边界：** 长期身份档案已有本地真实持久化及动态分工接口，但尚未将 Profile 绑定到所有原生 SDK 执行会话；交接记录支持初始原生投递和状态机，但成员自动收件确认、跨团队自动接力还未接齐；群聊工作台目前仍使用现有桌面团队视图，新设计尚待完整实施。以上功能以最新 SHA 的 CI 和安装版结果为验收依据。
+
+**CI 结构检查：** 专项运行 42380715065 已在较早的 ff49825d 基线通过。后续增量提交的统一 CI 运行出现 workflow failure / 0 jobs 的情况，尚没有产生可核验的最新构建日志；代码已提交，但新增模块未获得与最终 SHA 对应的全链路通过证明，PR 继续保持 Draft。不得以先前专项结果替代最新版本验收。
+
 ### 后续设计不能丢失的完整目标
 
 - 长期 Agent 身份与按任务动态角色调配；
