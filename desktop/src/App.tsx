@@ -317,7 +317,6 @@ export function App(){
     }).catch(error=>{if(active)setError(`总控状态读取失败：${presentError(error)}`)})
     return()=>{active=false}
   },[view,workspace,connected,supervisorRevision])
-  // biome-ignore lint/correctness/useExhaustiveDependencies: switching workspace or handoff revision intentionally refreshes cached handoffs.
   // biome-ignore lint/correctness/useExhaustiveDependencies: project and artifact mutations invalidate the local artifact index.
   useEffect(()=>{
     if(!connected||!['agents','missions','files'].includes(view))return
@@ -327,6 +326,7 @@ export function App(){
     }).catch(error=>{if(active)setError(`成果索引读取失败：${presentError(error)}`)})
     return()=>{active=false}
   },[view,workspace,connected,artifactRevision])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: switching workspace or handoff revision intentionally refreshes cached handoffs.
   useEffect(()=>{
     if(view!=='agents'||!connected)return
     let active=true

@@ -70,7 +70,7 @@ test('桌面原生接口贯通技能候选、人工发布、经验提炼与核�
     })) as {status:string}
     expect(verifiedArtifact.status).toBe('approved')
     const proven=await gateway.handle(req('experience.propose',{
-      draft:{...experience,key:'research-artifact-proof',evidenceRefs:['artifact:'+savedArtifact.id]},
+      draft:{...experience,key:'research-artifact-proof',evidenceRefs:[`artifact:${savedArtifact.id}`]},
     })) as {id:string}
     const proof=await gateway.handle(req('experience.evidence.preview',{
       experienceId:proven.id,
