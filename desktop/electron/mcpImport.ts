@@ -28,19 +28,19 @@ export function parseMcpImportFile(input: unknown): ImportedMcpServer[] {
     const fields = Object.keys(raw)
     const assertFields = (allowed: string[]) => {
       const invalid = fields.filter(field => !allowed.includes(field))
-      if (invalid.length) throw new Error('配置含有暂不支持的字段，请先核对后导入：' + sourceName + ' · ' + invalid.join('、'))
+      if (invalid.length) throw new Error(`配置含有暂不支持的字段，请先核对后导入：${sourceName} · ${invalid.join('、')}`)
     }
     const validateMap = (value: unknown, label: string) => {
       if (value === undefined) return undefined
       const parsed = asObject(value)
       if (!parsed || Object.keys(parsed).length > 128 || Object.entries(parsed).some(([key, item]) =>
           !key || key.length > 120 || typeof item !== 'string' || item.length > 8192))
-        throw new Error('MCP ' + label + '不合法：' + sourceName)
+        throw new Error(`MCP ${label}不合法：${sourceName}`)
       return parsed as Record<string, string>
     }
     if (typeof raw.command === 'string' && raw.command.trim().length > 0 && raw.command.length <= 1024) {
       assertFields(['type', 'command', 'args', 'env'])
-      if (raw.type !== undefined && raw.type !== 'stdio') throw new Error('MCP 服务类型与启动方式冲突：' + sourceName)
+      if (raw.type !== undefined && raw.type !== 'stdio') throw new Error(`MCP 服务类型与启动方式冲突：${sourceName}`)
       const args = raw.args === undefined ? [] : raw.args
       if (!Array.isArray(args) || args.length > 80 || args.some(arg => typeof arg !== 'string' || arg.length > 1000))
         throw new Error(`MCP 启动参数不合法：${sourceName}`)
@@ -52,7 +52,7 @@ export function parseMcpImportFile(input: unknown): ImportedMcpServer[] {
       assertFields(['type', 'url', 'headers', 'headersHelper'])
       const headers = validateMap(raw.headers, '请求头')
       if (raw.headersHelper !== undefined && (typeof raw.headersHelper !== 'string' || !raw.headersHelper || raw.headersHelper.length > 1024))
-        throw new Error('MCP 请求头辅助命令不合法：' + sourceName)
+        throw new Error(`MCP 请求头辅助命令不合法：${sourceName}`)
       const url = new URL(raw.url)
       if (url.protocol !== 'https:' && url.protocol !== 'http:')
         throw new Error(`MCP URL 必须使用 HTTP(S)：${sourceName}`)
