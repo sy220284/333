@@ -577,7 +577,7 @@ export function App(){
       })
       return
     }
-    const team=(Array.isArray(overview.teams)?overview.teams as Item[])
+    const team=(Array.isArray(overview.teams)?overview.teams as Item[]:[])
       .find(item=>String(item.name||'')===selectedTeam)
     const leadSessionId=String(team?.leadSessionId||'')
     if(!leadSessionId){setError('团队缺少可恢复的负责人会话，请从创建该团队的原会话继续操作');return}
