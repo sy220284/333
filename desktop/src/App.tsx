@@ -745,7 +745,7 @@ export function App(){
       permissionRevision.current.clear();hostRevision.current.clear()
       currentFileRef.current=''
       setWorkspace(data.workspace);setFolder(data.workspace);setSessionId('');sessionRef.current='';setHistoryOnly(false);setMessages([])
-      setPermissions([]);setHostRequests([]);setHostForms({});setTasks([]);setFiles([]);setFileTotal(0)
+      setPermissions([]);setHostRequests([]);setHostForms({});setTasks([]);setAgentActivities([]);setAgentActivityCount(0);setFiles([]);setFileTotal(0)
       setSessions([]);setMissions([]);setSelectedMission('');setMissionJobs([]);setMissionActivity([]);setJobEvidence({});setOverview({});setTeamMembers([])
       setSessionPhase('idle');setActivity([]);setDraft('');setMissionQueueActive(false)
       setSelectedModel('');setPermissionMode('default');setModelVerified(false);setPermissionVerified(false)
