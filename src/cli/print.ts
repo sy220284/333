@@ -131,7 +131,6 @@ import { cwd } from 'process'
 import { getCwd } from 'src/utils/cwd.js'
 import omit from 'lodash-es/omit.js'
 import reject from 'lodash-es/reject.js'
-import { isPolicyAllowed } from 'src/services/policyLimits/index.js'
 import type { ReplBridgeHandle } from 'src/bridge/replBridge.js'
 import { getRemoteSessionUrl } from 'src/constants/product.js'
 import { buildBridgeConnectUrl } from 'src/bridge/bridgeStatusUtil.js'
@@ -4969,12 +4968,6 @@ async function loadInitialMessages(
   // Handle teleport in print mode
   if (options.teleport) {
     try {
-      if (!isPolicyAllowed('allow_remote_sessions')) {
-        throw new Error(
-          "Remote sessions are disabled by your organization's policy.",
-        )
-      }
-
       logEvent('tengu_teleport_print', {})
 
       if (typeof options.teleport !== 'string') {
