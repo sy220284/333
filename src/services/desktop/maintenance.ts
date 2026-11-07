@@ -28,7 +28,7 @@ async function removeProjectConfig(key: string): Promise<void> {
   const data: unknown = JSON.parse(await readFile(getGlobalClaudeFile(), 'utf8'))
   if (data && typeof data === 'object' && 'projects' in data) {
     const projects = (data as { projects?: Record<string, unknown> }).projects
-    if (projects && Object.hasOwn(projects, key)) throw new Error('本地项目配置未成功删除：' + key)
+    if (projects && Object.hasOwn(projects, key)) throw new Error(`本地项目配置未成功删除：${key}`)
   }
 }
 
@@ -40,7 +40,7 @@ export async function executeLocalProjectPurge(items: PurgeItem[]) {
       await executePurgeItem(item, { removeProject: removeProjectConfig })
       deleted++
     } catch (error) {
-      errors.push(item.path + '：' + (error instanceof Error ? error.message : String(error)))
+      errors.push(`${item.path}：${error instanceof Error ? error.message : String(error)}`)
     }
   }
   return { deleted, total: items.length, errors }

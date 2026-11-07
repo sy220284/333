@@ -92,7 +92,8 @@ function verifyBaseAndExtensions(actual, official, commandLine) {
   // Both commands are deliberately retired from this local product:
   // Ultrareview depends on official cloud review, and gateway is the retired
   // enterprise telemetry-forwarding CLI. Preserve all remaining 317 commands.
-  const removed = commandLine === '--help' ? ['ultrareview', 'gateway'] : [];
+  const removed = commandLine === '--help' ? ['ultrareview', 'gateway', 'setup-token'] : [];
+  for (const command of removed) assert.equal(actual.commands.includes(command), false, `Retired command remains exposed: ${command}`);
   assert.deepEqual(actual.commands.filter(name => !additions.includes(name)),
     official.commands.filter(name => !removed.includes(name)),
     `2.1.317 original commands changed beyond approved removals: ${commandLine}`);

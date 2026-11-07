@@ -60,7 +60,6 @@ import { getInitialFastModeSetting, isFastModeEnabled } from './utils/fastMode.j
 import { applyConfigEnvironmentVariables } from './utils/managedEnv.js';
 import { createSystemMessage, createUserMessage } from './utils/messages.js';
 import { getPlatform } from './utils/platform.js';
-import { getBaseRenderOptions } from './utils/renderOptions.js';
 import { getSessionIngressAuthToken } from './utils/sessionIngressAuth.js';
 import { settingsChangeDetector } from './utils/settings/changeDetector.js';
 import { skillChangeDetector } from './utils/skills/skillChangeDetector.js';
@@ -3732,15 +3731,15 @@ async function run(): Promise<CommanderCommand> {
     const { getDoctorDiagnostic } = await import('./utils/doctorDiagnostic.js');
     const diagnostic = await getDoctorDiagnostic();
     if (options.json) {
-      process.stdout.write(JSON.stringify(diagnostic, null, 2) + '\n');
+      process.stdout.write(`${JSON.stringify(diagnostic, null, 2)}\n`);
       return;
     }
     process.stdout.write('摇摇车系统诊断\n');
-    process.stdout.write('版本：' + diagnostic.version + '\n');
-    process.stdout.write('安装方式：' + diagnostic.installationType + '\n');
-    process.stdout.write('路径：' + diagnostic.installationPath + '\n');
-    process.stdout.write('搜索工具：' + (diagnostic.ripgrepStatus.working ? '正常' : '异常') + '\n');
-    for (const warning of diagnostic.warnings) process.stdout.write('问题：' + warning.issue + '\n建议：' + warning.fix + '\n');
+    process.stdout.write(`版本：${diagnostic.version}\n`);
+    process.stdout.write(`安装方式：${diagnostic.installationType}\n`);
+    process.stdout.write(`路径：${diagnostic.installationPath}\n`);
+    process.stdout.write(`搜索工具：${diagnostic.ripgrepStatus.working ? '正常' : '异常'}\n`);
+    for (const warning of diagnostic.warnings) process.stdout.write(`问题：${warning.issue}\n建议：${warning.fix}\n`);
     process.stdout.write('完整信息：yaoyaoche doctor --json\n');
   });
 

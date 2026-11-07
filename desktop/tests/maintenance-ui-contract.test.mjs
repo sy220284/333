@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, existsSync } from 'node:fs'
 
-const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
+const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
 test('本地诊断、数据清理、批量 MCP 导入连接实际桌面协议', () => {
   const app = read('src/App.tsx')
