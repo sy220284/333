@@ -47,7 +47,8 @@ type ProjectBudget={limitUsd:number|null;spentUsd:number;reservedUsd:number;avai
 type SmartInspection={model:string;status:string;message:string;checkedOffline:boolean;contextWindow?:number|null;maxOutputTokens?:number|null;outputSource?:string;toolRoundTrip?:boolean|null;hasPricing?:boolean}
 type McpServer={name:string;scope:string;type:string;disabled:boolean;url?:string}
 type CapabilityItem={id:string;name:string;kind:'tool'|'skill'|'workflow'|'plugin'|'mcp'|'command';source:string;scope:string;description:string;status:'available'|'configured'|'disabled';version?:string}
-type ExperienceItem={id:string;key:string;title:string;scenario:string;principle:string;procedure:string[];applicability:string;invalidWhen:string;verification:string;evidenceRefs:string[];tags:string[];status:'candidate'|'approved'|'retired';revision:number;verifiedBy?:string}
+type ExperienceItem={id:string;key:string;title:string;scenario:string;principle:string;procedure:string[];applicability:string;invalidWhen:string;verification:string;evidenceRefs:string[];tags:string[];status:'candidate'|'approved'|'retired';revision:number;verifiedBy?:string;reviewNote?:string}
+type ExperienceEvidence={checks:Array<{ref:string;status:'verified'|'manual'|'missing';detail:string;fingerprint?:string}>;mayApprove:boolean;requiresHumanReview:boolean}
 type SkillDraft={id:string;slug:string;description:string;instructions:string;state:'candidate'|'published';createdAt:string;publishedAt?:string}
 type TeamHandoff={id:string;teamName:string;from:string;to:string;summary:string;instruction:string;status:'draft'|'queued'|'acknowledged'|'running'|'review'|'completed'|'cancelled';inputRefs:string[];outputRefs:string[];reviewSummary?:string}
 type AgentProfile={id:string;name:string;description:string;domains:string[];capabilityIds:string[];experienceKeys:string[];status:'available'|'paused'|'retired';roles:Array<{id:string;role:string;purpose:string;state:'active'|'released';teamName?:string;missionId?:string}>;sessionBindings?:Array<{sessionId:string;roleId:string;boundAt:string}>}
@@ -128,6 +129,8 @@ export function App(){
   const [capabilityItems,setCapabilityItems]=useState<CapabilityItem[]>([])
   const [capabilityWarnings,setCapabilityWarnings]=useState<string[]>([])
   const [experienceItems,setExperienceItems]=useState<ExperienceItem[]>([])
+  const [experienceEvidence,setExperienceEvidence]=useState<Record<string,ExperienceEvidence>>({})
+  const [experienceReviewNotes,setExperienceReviewNotes]=useState<Record<string,string>>({})
   const [skillDrafts,setSkillDrafts]=useState<SkillDraft[]>([])
   const [skillSlug,setSkillSlug]=useState('')
   const [skillDescription,setSkillDescription]=useState('')
@@ -1619,15 +1622,32 @@ export function App(){
                 <div className="space-y-3">{experienceItems.filter(item=>item.status!=='retired').map(item=><div key={item.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
                   <div className="flex flex-wrap items-center gap-2"><strong className="flex-1 text-[12px]">{item.title}</strong><Badge size="xs" tone={item.status==='approved'?'success':'warning'}>{item.status==='approved'?'已核验':'待核验'}</Badge></div>
                   <p className="mt-2 text-[12px]">{item.principle}</p>
+                  {item.status==='approved'&&item.reviewNote&&<p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">审核依据：{item.reviewNote}</p>}
                   <details className="mt-2 text-[11px] text-[var(--color-text-secondary)]"><summary className="cursor-pointer">适用条件、复用步骤与证据</summary>
                     <p className="mt-2">场景：{item.scenario}</p><p>适用：{item.applicability}</p><p>失效：{item.invalidWhen}</p>
                     <ol className="my-2 list-decimal pl-5">{item.procedure.map((step,index)=>({step,key:`${step}:${item.procedure.slice(0,index).filter(previous=>previous===step).length}`})).map(({step,key})=><li key={key}>{step}</li>)}</ol>
                     <p>验证：{item.verification}</p><p className="break-all">证据：{item.evidenceRefs.join('、')}</p>
                   </details>
-                  {item.status==='candidate'&&<Button variant="secondary" size="sm" className="mt-2" onClick={()=>void operation('确认经验规范',async()=>{
-                    await invoke('experience.approve',{experienceId:item.id,reviewer:'桌面用户'})
-                    setCatalogRevision(value=>value+1)
-                  })}><ShieldCheck size={13}/>证据核对后确认</Button>}
+                  {item.status==='candidate'&&<div className="mt-3 space-y-2">
+                    <Button variant="secondary" size="sm" onClick={()=>void operation('检查经验来源',async()=>{
+                      const result=await invoke<ExperienceEvidence>('experience.evidence.preview',{experienceId:item.id})
+                      setExperienceEvidence(old=>({...old,[item.id]:result}))
+                    })}><Search size={13}/>核查来源证据</Button>
+                    {experienceEvidence[item.id]&&<div className="space-y-2 text-[11px]">
+                      {experienceEvidence[item.id].checks.map(check=><p key={check.ref} className={check.status==='missing'?'text-[var(--color-error)]':'text-[var(--color-text-secondary)]'}>
+                        {check.status==='verified'?'已核验':check.status==='manual'?'需人工核验':'证据缺失'} · {check.ref} · {check.detail}
+                      </p>)}
+                      <textarea aria-label={`经验审核意见 ${item.id.slice(0,8)}`} rows={2}
+                        value={experienceReviewNotes[item.id]??''} onChange={event=>setExperienceReviewNotes(old=>({...old,[item.id]:event.target.value}))}
+                        placeholder="具体说明核查了哪些真实成果、测试和适用条件"/>
+                      <Button variant="secondary" size="sm"
+                        disabled={Boolean(busy)||!experienceEvidence[item.id].mayApprove||(experienceReviewNotes[item.id]??'').trim().length<16}
+                        onClick={()=>void operation('批准复用规范',async()=>{
+                          await invoke('experience.approve',{experienceId:item.id,reviewer:'桌面用户',reviewNote:(experienceReviewNotes[item.id]??'').trim()})
+                          setCatalogRevision(value=>value+1)
+                        })}><ShieldCheck size={13}/>完成核验并批准规范</Button>
+                    </div>}
+                  </div>}
                 </div>)}
                 {experienceItems.every(item=>item.status==='retired')&&<Empty icon={ClipboardList} title="暂无可靠经验规范" detail="将实际任务中的成功方法提炼为候选规则，经证据审核后在这里复用。"/>}
                 </div>

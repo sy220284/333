@@ -1,10 +1,10 @@
 import { expect, test } from 'bun:test'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, mkdir, writeFile, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   validateExperienceDraft, proposeProjectExperience, listProjectExperiences,
-  approveProjectExperience, retireProjectExperience, findRelevantExperiences,
+  approveProjectExperience, retireProjectExperience, findRelevantExperiences, previewProjectExperienceEvidence,
 } from '../src/services/agentCenter/experienceMemory.js'
 
 const draft = {
@@ -36,7 +36,7 @@ test('候选不自动召回；人工审核后可检索；废弃后不能再召�
     expect(pending.status).toBe('candidate')
     expect(await listProjectExperiences(project, { root })).toHaveLength(0)
     expect(await findRelevantExperiences(project, '字幕', root)).toHaveLength(0)
-    const approved = await approveProjectExperience(project, pending.id, 'human-review', root)
+    const approved = await approveProjectExperience(project, pending.id, 'human-review', root, '已对实际字幕样本与导出成果逐条核对完成')
     expect(approved.status).toBe('approved')
     expect((await findRelevantExperiences(project, '字幕 时间轴', root))[0]?.id).toBe(pending.id)
     expect((await listProjectExperiences(project, { root }))[0]?.verifiedBy).toBe('human-review')
@@ -65,5 +65,36 @@ test('并发同 key 提议保留一条记录', async () => {
     const outcomes = await Promise.all([1, 2, 3, 4].map(() => proposeProjectExperience(project, draft, root)))
     expect(new Set(outcomes.map(x => x.id)).size).toBe(1)
     expect((await listProjectExperiences(project, { includeCandidates: true, root })).length).toBe(1)
+  })
+})
+
+test('真实文件证据指纹变动会令旧规范停止召回',async()=>{
+  await fixture(async(root,project)=>{
+    await mkdir(project)
+    await writeFile(join(project,'source.txt'),'v1')
+    const item=await proposeProjectExperience(project,{
+      ...draft,key:'file-evidence-rule',evidenceRefs:['file:source.txt'],
+    },root)
+    const preview=await previewProjectExperienceEvidence(project,item.id,root)
+    expect(preview.mayApprove).toBe(true)
+    expect(preview.checks[0]?.fingerprint).toBeTruthy()
+    await expect(approveProjectExperience(project,item.id,'tester',root,'简短')).rejects.toThrow()
+    await approveProjectExperience(project,item.id,'tester',root,'已读取源文件和真实测试，确认适用场景与复现方法')
+    expect(await findRelevantExperiences(project,'字幕',root)).toHaveLength(1)
+    await writeFile(join(project,'source.txt'),'v2')
+    expect(await findRelevantExperiences(project,'字幕',root)).toHaveLength(0)
+  })
+})
+test('越界软链接与缺失文件无法获批准',async()=>{
+  await fixture(async(root,project)=>{
+    await mkdir(project)
+    await writeFile(join(root,'outside'),'private')
+    await symlink(join(root,'outside'),join(project,'source.txt'))
+    const item=await proposeProjectExperience(project,{
+      ...draft,key:'file-escape-rule',evidenceRefs:['file:source.txt'],
+    },root)
+    expect((await previewProjectExperienceEvidence(project,item.id,root)).mayApprove).toBe(false)
+    await expect(approveProjectExperience(project,item.id,'tester',root,'已核对文件、测试和关键失败样例，申请批准'))
+      .rejects.toThrow('缺失')
   })
 })

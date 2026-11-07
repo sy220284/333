@@ -177,3 +177,10 @@ feature、source path、test command、CI workflow/run URL、commit SHA、平台
 - 对应测试：tests/agent-registry.test.ts、tests/handoff-tool.test.ts、tests/superagents-capability-protocol.test.ts、desktop/src/App.test.tsx。
 
 **尚待完整实现**：执行新建/恢复时自动匹配长期 Profile 与 Mission Job、跨团队依赖自动通知、成果真实性自动核查，以及完整群聊主界面；以最新 SHA 的 CI 为准。
+
+### 2026-11-07 经验来源可验证门禁
+
+- 新增 experience.evidence.preview：检查当前项目真实文件的 SHA256、Git 提交对象及已完成的 Mission Job；外部成果标注需要人工复核。
+- 审核长期经验时必须说明实际核验内容，并把文件指纹保存在已批准规范中；来源文件变动后，从主动召回排除相应旧规则。
+- 项目外软链接、缺失文件及伪造提交无法通过自动证据检查，仍保留审核意见与版本历史。客户端不能用一键批准代替来源核查。
+- 尚待扩展：外部链接在线核验与证据快照存档、跨项目可授权的通用规则推广、自动发现相似经验冲突。

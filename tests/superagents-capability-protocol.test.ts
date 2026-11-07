@@ -56,7 +56,7 @@ test('桌面原生接口贯通技能候选、人工发布、经验提炼与核�
     expect(proposed.status).toBe('candidate')
     const initially=await gateway.handle(req('experience.search',{query:'研究'})) as {experiences:unknown[]}
     expect(initially.experiences).toHaveLength(0)
-    await gateway.handle(req('experience.approve',{experienceId:proposed.id,reviewer:'桌面用户'}))
+    await gateway.handle(req('experience.approve',{experienceId:proposed.id,reviewer:'桌面用户',reviewNote:'已打开原始档案，逐条核对引用与研究结论'}))
     const approved=await gateway.handle(req('experience.search',{query:'研究'})) as {experiences:Array<{key:string}>}
     expect(approved.experiences[0]?.key).toBe('research-source-check')
     const handoffId=randomUUID()

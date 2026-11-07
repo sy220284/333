@@ -780,9 +780,13 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           await import('../agentCenter/experienceMemory.js')
         return proposeProjectExperience(cwd, validateExperienceDraft(request.draft), options.dataDir)
       }
+      case 'experience.evidence.preview': {
+        const { previewProjectExperienceEvidence } = await import('../agentCenter/experienceMemory.js')
+        return previewProjectExperienceEvidence(cwd, request.experienceId, options.dataDir)
+      }
       case 'experience.approve': {
         const { approveProjectExperience } = await import('../agentCenter/experienceMemory.js')
-        return approveProjectExperience(cwd, request.experienceId, request.reviewer, options.dataDir)
+        return approveProjectExperience(cwd, request.experienceId, request.reviewer, options.dataDir, request.reviewNote)
       }
       case 'experience.retire': {
         const { retireProjectExperience } = await import('../agentCenter/experienceMemory.js')
