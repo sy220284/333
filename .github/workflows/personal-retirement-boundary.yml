@@ -1,0 +1,56 @@
+name: 个人版企业功能退役与核心能力验收
+on:
+  push:
+    branches:
+      - chore/personal-capability-backlog-retire-enterprise-20261107
+  workflow_call:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: personal-retirement-boundary-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  source-boundary:
+    name: 企业退役源码、CI 路由和个人能力保护
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - name: 退役模块引用与个人核心代码验收
+        run: |
+          node --test tests/enterprise-retirement-boundary.test.mjs tests/ci-routing.test.mjs tests/ci-test-discovery.test.mjs tests/language-file-contract.test.mjs
+          node build/ci-gate-audit.mjs
+          node build/check-architecture-links317.mjs
+
+  runtime:
+    name: 多模型、个人任务、类型、编译运行回归
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.4'
+      - name: 恢复项目冻结的依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+      - name: 个人版主要功能验证
+        run: |
+          npm run test:multimodel
+          bun test tests/mission-jobs.test.ts
+          bun test tests/desktop-communication.test.ts
+          bun test tests/local-telemetry-privacy.test.ts
+      - name: 全仓 TypeScript 类型检查
+        run: node tools/dev/dev.mjs typecheck:all
+      - name: 个人版可执行程序真实重建
+        run: bun build/rebuild.mjs
