@@ -87,12 +87,6 @@ export const SPECIALISTS = Object.freeze({
     /^src\/utils\/systemPrompt\.ts$/, /^src\/QueryEngine\.ts$/,
     /^tests\/.*(?:prompt|system-prompt)/,
   ],
-  'm6-self-hosted-runner-317': [
-    /^src\/cli\/(selfHostedRunner|background)\//,
-    /^src\/bridge\/sessionRunner\.ts$/,
-    /^src\/bootstrap\/(socketOwnership317|ptyHost317|bgSpare317)\.ts$/,
-    /^tests\/(?:m6-(?:self-hosted|runner)|m1-background)/,
-  ],
   rebuild: [
     /^build\/(?:rebuild|compile-standalone|package-release|verify-bundled-assets)\.mjs$/,
     /^tests\/(?:distribution-isolation|release-integrity|rebuild)/,
