@@ -6,6 +6,7 @@
  * Part of the main.tsx React/JSX extraction effort. See sibling PRs
  * perf/extract-interactive-helpers and perf/launch-repl.
  */
+import { createElement } from 'react';
 import type { StatsStore } from './context/stats.js';
 import type { Root } from './ink.js';
 import { showSetupDialog } from './interactiveHelpers.js';
@@ -44,7 +45,7 @@ export async function launchInvalidSettingsDialog(root: Root, props: {
   const {
     InvalidSettingsDialog
   } = await import('./components/InvalidSettingsDialog.js');
-  return showSetupDialog(root, done => <InvalidSettingsDialog settingsErrors={props.settingsErrors} onContinue={done} onExit={props.onExit} />);
+  return showSetupDialog(root, done => createElement(InvalidSettingsDialog,{settingsErrors:props.settingsErrors,onContinue:done,onExit:props.onExit}));
 }
 
 /**
@@ -55,7 +56,7 @@ export async function launchTeleportResumeWrapper(root: Root): Promise<TeleportR
   const {
     TeleportResumeWrapper
   } = await import('./components/TeleportResumeWrapper.js');
-  return showSetupDialog<TeleportRemoteResponse | null>(root, done => <TeleportResumeWrapper onComplete={done} onCancel={() => done(null)} source="cliArg" />);
+  return showSetupDialog<TeleportRemoteResponse | null>(root, done => createElement(TeleportResumeWrapper,{onComplete:done,onCancel:()=>done(null),source:'cliArg'}));
 }
 
 /**
@@ -69,7 +70,7 @@ export async function launchTeleportRepoMismatchDialog(root: Root, props: {
   const {
     TeleportRepoMismatchDialog
   } = await import('./components/TeleportRepoMismatchDialog.js');
-  return showSetupDialog<string | null>(root, done => <TeleportRepoMismatchDialog targetRepo={props.targetRepo} initialPaths={props.initialPaths} onSelectPath={done} onCancel={() => done(null)} />);
+  return showSetupDialog<string | null>(root, done => createElement(TeleportRepoMismatchDialog,{targetRepo:props.targetRepo,initialPaths:props.initialPaths,onSelectPath:done,onCancel:()=>done(null)}));
 }
 
 /**
