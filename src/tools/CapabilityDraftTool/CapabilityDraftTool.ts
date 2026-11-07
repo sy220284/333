@@ -24,7 +24,7 @@ async function run(input:Input):Promise<string>{
   const project=getMissionExecutionProjectDir()
   if(input.action==='list'){
     const drafts=await listSkillDrafts(project)
-    return drafts.length?drafts.map(x=>x.slug+' ['+x.state+'] '+x.id).join('\n'):
+    return drafts.length?drafts.map(x=>`${x.slug} [${x.state}] ${x.id}`).join('\n'):
       '当前项目没有等待审核的自创技能候选'
   }
   if(!input.slug||!input.description||!input.instructions)
@@ -32,7 +32,7 @@ async function run(input:Input):Promise<string>{
   const draft=await createSkillDraft(project,{
     slug:input.slug,description:input.description,instructions:input.instructions,
   })
-  return '已创建待审核技能候选：'+draft.slug+'（'+draft.id+'）。用户可在桌面能力中心检查后发布；此操作未安装或运行技能。'
+  return `已创建待审核技能候选：${draft.slug}（${draft.id}）。用户可在桌面能力中心检查后发布；此操作未安装或运行技能。`
 }
 
 export const CapabilityDraftTool=buildTool({
@@ -46,8 +46,8 @@ export const CapabilityDraftTool=buildTool({
   get outputSchema():OutputSchema{return outputSchema()},
   isConcurrencySafe(input){return input.action==='list'},
   isReadOnly(input){return input.action==='list'},
-  toAutoClassifierInput(input){return input.action+' '+(input.slug??'')},
-  renderToolUseMessage(input){return '能力草稿 · '+input.action},
+  toAutoClassifierInput(input){return `${input.action} ${input.slug??''}`},
+  renderToolUseMessage(input){return `能力草稿 · ${input.action}`},
   async call(input){return {data:{success:true,text:await run(input)}}},
   mapToolResultToToolResultBlockParam(data:Output,toolUseID:string){
     return {type:'tool_result' as const,tool_use_id:toolUseID,content:data.text}
