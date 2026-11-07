@@ -251,7 +251,7 @@ test('external abortController closes SDK child and prevents more messages', { t
 
 // This fixture exercises the host/SDK control wire protocol as observed in the
 // official 2.1.317 Query.processControlRequest implementation.
-const controlParityCli = String.raw\`
+const controlParityCli = String.raw`
 import { createInterface } from 'node:readline'
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -284,7 +284,7 @@ reader.on('line', line => {
     replies.push(frame.response)
   }
 })
-\`
+`
 
 test('SDK 2.1.317 host control preserves silent, decline and missing-callback semantics', { timeout: 30000 }, async () => {
   const cases: Array<{
