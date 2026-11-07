@@ -140,6 +140,7 @@ export function App(){
     try{return await api.call<T>(method,args)}
     catch(e){const reason=presentError(e);setError(reason);throw e}
   },[])
+  const openChatLink=useCallback((url:string)=>{void invoke('external.open',{url}).catch(reason=>setError(presentError(reason)))},[invoke])
   const refresh=useCallback(async()=>{
     const queries=await Promise.allSettled([
       api.call<{models:Model[]}>('models.list'),
@@ -632,7 +633,7 @@ export function App(){
                           <time>{dateTime(message.time)}</time>
                         </div>
                         <div className="message-text">
-                          {message.kind==='assistant'?<MarkdownMessage text={message.text}/>:message.text}
+                          {message.kind==='assistant'?<MarkdownMessage text={message.text} onOpenLink={openChatLink}/>:message.text}
                         </div>
                       </div>
                     </div>
