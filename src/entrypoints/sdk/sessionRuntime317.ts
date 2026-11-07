@@ -439,6 +439,18 @@ function startSession(
     promptSuggestions: queryOptions.promptSuggestions,
     agentProgressSummaries: queryOptions.agentProgressSummaries,
   })).then(async result => {
+    // Native 2.1.317 fails closed when an onFailure:'block' Hook is configured
+    // but the attached CLI cannot prove that failure blocks execution.
+    const hasBlockingHooks = Object.values(queryOptions.hooks ?? {}).some(matchers =>
+      matchers?.some(matcher => matcher.onFailure === 'block'))
+    if (hasBlockingHooks) {
+      if (result.hook_on_failure_supported !== true) {
+        throw new Error('SDK CLI does not support onFailure: "block" for hooks; blocking execution cannot be guaranteed')
+      }
+      if (result.hooks_applied === false) {
+        throw new Error('SDK CLI did not register blocking hooks; start a new session or remove onFailure: "block"')
+      }
+    }
     const tokens = queryOptions.thinking
       ? queryOptions.thinking.type === 'enabled' ? queryOptions.thinking.budgetTokens : undefined
       : queryOptions.maxThinkingTokens
