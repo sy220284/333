@@ -2,7 +2,6 @@
 import { feature } from 'bun:bundle'
 import { readFile, stat } from 'fs/promises'
 import { dirname } from 'path'
-import { waitForRemoteManagedSettingsToLoad } from 'src/services/remoteManagedSettings/index.js'
 import { StructuredIO } from 'src/cli/structuredIO.js'
 import { RemoteIO } from 'src/cli/remoteIO.js'
 import {
@@ -1704,11 +1703,6 @@ function runHeadlessStreaming(
   // NOTE: Nested function required - needs closure access to applyMcpServerChanges and updateSdkMcp
   async function installPluginsAndApplyMcpInBackground(): Promise<void> {
     try {
-      // Remote management policies may be fetched, while user settings remain local.
-      await withDiagnosticsTiming('headless_managed_settings_wait', () =>
-        waitForRemoteManagedSettingsToLoad(),
-      )
-
       const pluginsInstalled = await installPluginsForHeadless()
 
       if (pluginsInstalled) {
