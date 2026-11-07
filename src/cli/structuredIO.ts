@@ -262,6 +262,16 @@ export class StructuredIO {
       .map(entry => entry.request)
       .filter(pr => pr.request.subtype === 'can_use_tool')
   }
+  getPendingUserDialogRequests() {
+    return Array.from(this.pendingRequests.values()).map(entry => entry.request)
+      .filter(pr => pr.request.subtype === 'request_user_dialog')
+  }
+
+  getPendingElicitationRequests() {
+    return Array.from(this.pendingRequests.values()).map(entry => entry.request)
+      .filter(pr => pr.request.subtype === 'elicitation')
+  }
+
   /** Retire only pending callbacks belonging to a replaced SDK hook set.
    * Their callers receive a real error, so onFailure:'block' remains effective. */
   retireSdkHookCallbackRequests(callbackIds: ReadonlySet<string>): number {
