@@ -4595,19 +4595,23 @@ function handleSetPermissionMode(
 
   // Check if trying to switch to auto mode without the classifier gate
   if (
-    feature('TRANSCRIPT_CLASSIFIER') &&
     request.mode === 'auto' &&
-    !isAutoModeGateEnabled()
+    (!feature('TRANSCRIPT_CLASSIFIER') || !isAutoModeGateEnabled())
   ) {
-    const reason = getAutoModeUnavailableReason()
+    // Never enter auto unless the actual classifier is compiled in and
+    // the selected model, current settings and live gate all permit it.
+    const reason = feature('TRANSCRIPT_CLASSIFIER')
+      ? getAutoModeUnavailableReason() : undefined
     output.enqueue({
       type: 'control_response',
       response: {
         subtype: 'error',
         request_id: requestId,
-        error: reason
-          ? `Cannot set permission mode to auto: ${getAutoModeUnavailableNotification(reason)}`
-          : 'Cannot set permission mode to auto',
+        error: !feature('TRANSCRIPT_CLASSIFIER')
+          ? 'Cannot set permission mode to auto: 当前版本未启用自动权限分类器'
+          : reason
+            ? `Cannot set permission mode to auto: ${getAutoModeUnavailableNotification(reason)}`
+            : 'Cannot set permission mode to auto: 模型或当前设置不支持',
       },
     })
     return toolPermissionContext
