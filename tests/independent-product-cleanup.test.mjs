@@ -34,7 +34,7 @@ test('官方云远控、定时、同步及Slack机器人不能重新注册命令
   const commands=source('src/commands.ts')
   const registered=commands.slice(commands.indexOf('const COMMANDS ='),commands.indexOf('export const builtInCommandNames'))
   for(const name of ['remoteControl','schedule','designSync','installSlackApp','teleport','ultrareview']) {
-    assert.doesNotMatch(registered,new RegExp(`^\\s+${name}\\s*,?\\s*$,'m'),`已退役原厂命令重新进入菜单：${name}`)
+    assert.doesNotMatch(registered,new RegExp(`^\\s+${name}\\s*,?\\s*$`, 'm'),`已退役原厂命令重新进入菜单：${name}`)
   }
   const cli=source('src/main.tsx')
   for(const name of ['remote-control','schedule','ultrareview','teleport']) {
