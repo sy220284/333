@@ -18,6 +18,6 @@ test('六套界面主题和旧偏好同时可用',()=>{
     assert.ok(css.includes(`[data-cc-theme=${theme}]`),`缺少主题：${theme}`)
     assert.ok(app.includes(`'${theme}'`),`缺少主题状态：${theme}`)
   }
-  assert.ok(app.includes('setItem(`${PREF}dark`'))
-  assert.ok(app.includes('setItem(`${PREF}theme`'))
+  assert.match(app,/localStorage\.setItem\(\`\$\{PREF\}dark\`,String\(isDark\)\)/)
+  assert.match(app,/localStorage\.setItem\(\`\$\{PREF\}theme\`,themeVariant\)/)
 })
