@@ -93,3 +93,12 @@ const { sessionId } = await desktop.openSession()
 await desktop.send(sessionId, '检查项目源码')
 // 后续由事件回调更新桌面视图
 ```
+
+
+## 多智能体隔离与审核链路（PR19）
+
+- `missions.jobs.start` 对每个工作项复用反编译版 AgentTool 的 `createAgentWorktree`，支持 Git Worktree 或用户配置的 WorktreeCreate Hook。每次执行保留原始工作树路径与分支；没有 Git 仓库或 Hook 的目录会给出明确错误，避免多任务共享代码目录。
+- `sessions.history`、`sessions.ensureOpen` 和 `sessions.resume` 根据已存档任务恢复原工作树，调用 `verifyResumedAgentWorktree`，原隔离目录消失时拒绝静默回退主工作区。
+- `missions.jobs.evidence` 按 Mission 和 Job 归属核对隔离工作树，在真实目录读取 Git 状态、未提交改动统计和从初始提交以来的新增提交，用于桌面人工审核；查看证据不会执行新的模型任务。
+- `missions.jobs.approve` 保持人工审核，读取任务簿时会通过 `reconcileMissionTerminalJobs` 修复 Job 与关联 Mission 终态的崩溃窗口；不可自动合并有冲突的代码。
+- `missions.jobs.runBatch/runQueue` 的并发名额在项目内跨 Mission 共享，借助本地文件锁确保多宿主一致；暂停和关闭宿主不触发未经许可的重启。

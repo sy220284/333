@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
+import { spawn, execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -211,6 +211,13 @@ test('真实桌面发行宿主和SDK子进程：工作项进入审核、人工�
   const cwd=join(root,'workspace'),config=join(root,'config'),data=join(root,'journal')
   const cli=join(root,'offline-sdk-cli.mjs')
   await Promise.all([mkdir(cwd),mkdir(config),mkdir(data)])
+  // Native AgentTool worktree creation requires an actual source checkout.
+  // Keep the deployed-host test on the production path, not an injected stub.
+  execFileSync('git',['init','-b','main'],{cwd})
+  await writeFile(join(cwd,'README.md'),'deployed worktree smoke test\n')
+  execFileSync('git',['add','README.md'],{cwd})
+  execFileSync('git',['-c','user.name=Test Fixture','-c','user.email=fixture@example.invalid',
+    'commit','-m','initial fixture'],{cwd})
   await writeFile(cli,offlineCli)
   let host
   try {
@@ -226,6 +233,11 @@ test('真实桌面发行宿主和SDK子进程：工作项进入审核、人工�
     const started=await host.call('missions.jobs.start',{missionId,jobId})
     assert.equal(started.ok,true,JSON.stringify(started))
     assert.match(started.result.sessionId,/^[a-f0-9-]{36}$/)
+    assert.ok(started.result.job.worktreePath,'任务未记录真实隔离工作树')
+    const evidence=await host.call('missions.jobs.evidence',{missionId,jobId})
+    assert.equal(evidence.ok,true,JSON.stringify(evidence))
+    assert.equal(evidence.result.isolated,true)
+    assert.equal(evidence.result.worktreePath,started.result.job.worktreePath)
     let found
     for(let i=0;i<80;i++){
       const response=await host.call('missions.jobs.list',{missionId})

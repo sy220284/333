@@ -109,7 +109,7 @@ test('跨桌面宿主最多并行三项执行，任务进入审核后释放槽�
       started.push(await claimMissionJob(mission, project, requiredIndex(jobs, i).id, randomUUID(), process.pid, root))
     }
     await expect(claimMissionJob(mission, project, requiredIndex(jobs, 3).id, randomUUID(), process.pid, root))
-      .rejects.toThrow('最多同时执行 3 项')
+      .rejects.toThrow('同一项目最多并行执行 3 项工作')
     await settleMissionJob(mission, project, requiredIndex(jobs, 0).id, requiredRunId(requiredIndex(started, 0)), 'review', '已输出交付内容', root)
     const next = await claimMissionJob(mission, project, requiredIndex(jobs, 3).id, randomUUID(), process.pid, root)
     expect(next.status).toBe('running')

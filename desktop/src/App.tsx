@@ -824,7 +824,7 @@ export function App(){
                       <p>独立工作树：<code className="break-all">{job.worktreePath}</code></p>
                       <Button variant="secondary" size="sm" onClick={()=>void inspectJobEvidence(job.id)}><GitBranch size={13}/>检查代码变更</Button>
                       {jobEvidence[job.id]&&<pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] bg-[var(--color-code-bg)] p-3 font-mono text-[11px]">{String(jobEvidence[job.id].status||'无未提交文件')}{'\n'}{String(jobEvidence[job.id].diffStat||'')}{'\n'}{String(jobEvidence[job.id].commits||'')}</pre>}
-                    </div>
+                    </div>}
                     <div className="mt-2 text-[11px] text-[var(--color-text-tertiary)]">执行次数：{job.attempt}{job.history?.length?` · 保留 ${job.history.length} 次执行记录`:''}</div>
                     {job.history?.length?<details className="mt-3 text-[11px]"><summary className="cursor-pointer text-[var(--color-brand)]">查看历史执行详情</summary>{job.history.map(rec=><div key={`${rec.attempt}-${rec.finishedAt}`} className="mt-2 border-l-2 border-[var(--color-brand)] p-2"><strong>第 {rec.attempt} 次 · {rec.status}</strong><span className="ml-2 text-[var(--color-text-tertiary)]">{new Date(rec.finishedAt).toLocaleString('zh-CN')}</span><p className="mt-1">{rec.summary}</p></div>)}</details>:null}
                     <div className="mt-3 flex flex-wrap gap-2">
