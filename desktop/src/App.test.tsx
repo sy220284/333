@@ -25,6 +25,7 @@ let activeAgentMode:'master'|'super'='master'
 let mockTasks:Array<{taskId:string;description:string;status:string}>=[]
 let longHistory=false
 let manyFiles=false
+let failModelSelection=false
 let pickedOfflineWorkspace=false
 const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
   switch(method){
@@ -69,6 +70,7 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
       return {servers:[{name:'project-mcp',scope:'project',type:'http',url:'https://example.org/mcp',disabled:false}],errors:[]}
     case 'sessions.open':return {sessionId:SID,tasks:mockTasks}
     case 'sessions.send':return {sessionId:SID,turnId:'11afef34-e0a6-4c38-a743-1c451993fdb8'}
+    case 'sessions.setModel':if(failModelSelection)throw new Error('模型服务端拒绝切换');return {model:args.model}
     case 'permissions.decide':return {permissionId:args.permissionId,accepted:true}
     case 'credentials.set':return {saved:true}
     case 'mcp.toggle':return {name:args.name,enabled:args.enabled}
@@ -85,10 +87,25 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTasks=[];longHistory=false;manyFiles=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;window.localStorage.clear()})
+beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTasks=[];longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;window.localStorage.clear()})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
+  it('模型切换失败时保持原选择，避免界面显示并未生效的模型',async()=>{
+    failModelSelection=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'新建会话'}))
+    await user.click(screen.getByRole('button',{name:'模型管理'}))
+    const card=screen.getByText('MiniMax M3').closest('button')
+    expect(card).not.toBeNull()
+    await user.click(card!)
+    await screen.findByText('模型服务端拒绝切换')
+    expect(card).not.toHaveClass('selected')
+    expect(call).toHaveBeenCalledWith('sessions.setModel',{sessionId:SID,model:'minimax/M3'})
+  })
+
 
   it('侧栏恢复会话后读取真实执行状态，避免显示前一个会话的状态',async()=>{
     longHistory=true

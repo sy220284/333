@@ -36,3 +36,20 @@ test('仓库审查入口不绑定指定 PR 编号',()=>{
  assert.equal(app.includes('审查当前 Git 工作区和 PR19'),false)
  assert.ok(app.includes('关联 Pull Request'))
 })
+
+test('六套主题的正文和辅助文字维持可读对比度',()=>{
+  const luminance=color=>{
+    const s=color.slice(1)
+    const channel=x=>{const v=parseInt(x,16)/255;return v<=0.04045?v/12.92:((v+.055)/1.055)**2.4}
+    return .2126*channel(s.slice(0,2))+.7152*channel(s.slice(2,4))+.0722*channel(s.slice(4,6))
+  }
+  const contrast=(a,b)=>{const x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}
+  for (const theme of ['white','paper','warm-classic','celadon','dark','ink-blue']){
+    const style=css.match(new RegExp(':root\\[data-cc-theme='+theme+'\\]\\{([^}]*)\\}'))
+    assert.ok(style,theme+' 缺少样式')
+    const tokens=Object.fromEntries([...style[1].matchAll(/--([a-z-]+):\\s*(#[0-9A-Fa-f]{6})/g)].map(m=>[m[1],m[2]]))
+    for (const textToken of ['text','muted','subtle','accent']){
+      assert.ok(contrast(tokens[textToken],tokens.surface)>=4.5,theme+' '+textToken+' 对比度不足')
+    }
+  }
+})
