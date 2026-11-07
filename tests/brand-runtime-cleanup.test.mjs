@@ -11,7 +11,8 @@ test('独立系统身份与历史会话前缀隔离', () => {
   assert.ok(source('src/services/api/claude.ts').includes('getCLISyspromptPrefix'))
 })
 test('Git 作者身份默认由用户控制，官方插件不自动安装', () => {
-  assert.doesNotMatch(source('src/screens/REPL.tsx'), /useOfficialMarketplaceNotification/)
+  assert.equal(existsSync(resolve(root,'src/screens/REPL.tsx')),false)
+  assert.doesNotMatch(source('desktop/src/App.tsx'), /useOfficialMarketplaceNotification/)
   assert.equal(existsSync(resolve(root,'src/hooks/useOfficialMarketplaceNotification.tsx')), false)
   const s = source('src/utils/attribution.ts')
   assert.ok(s.includes("const defaultCommit = ''"))

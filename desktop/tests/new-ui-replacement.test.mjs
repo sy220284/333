@@ -10,7 +10,15 @@ test('桌面使用原生UI的新页面并不存在旧UI回退入口',()=>{
   assert.equal(existsSync(new URL('../src/cc-haha-theme.css',import.meta.url)),false)
   assert.ok(app.includes('NewSessionStarter'))
   assert.ok(app.includes('SessionChatSurface'))
+  assert.ok(app.includes('WorkspaceInspector'))
+  assert.ok(app.includes('Modal'))
+  assert.ok(layout.includes('.markdown-message'))
+  assert.equal(app.includes('className="modal-backdrop"'),false)
+  assert.equal(app.includes('className="command-backdrop"'),false)
+  assert.equal(app.includes('className="inspector"'),false)
   assert.ok(layout.includes('.yy-nav-link'))
+  assert.equal(layout.includes('.text-button {'),false)
+  assert.equal(layout.includes('.git-output,'),false)
   assert.ok(layout.includes('.yy-tab'))
 })
 test('新 UI 业务入口对应实际回调，重要危险操作仍保留确认',()=>{
@@ -18,4 +26,15 @@ test('新 UI 业务入口对应实际回调，重要危险操作仍保留确认'
   for(const name of ['sessions.open','sessions.send','sessions.interrupt','sessions.setModel','agents.setMode','missions.jobs.runQueue','missions.jobs.approve','workspace.read','workspace.write','mcp.toggle','mcp.remove','host.reject'])assert.ok(app.includes(name),'缺少 '+name)
   assert.ok(app.includes('window.confirm'))
   assert.ok(app.includes('onSuggestion={toChat}'))
+})
+
+test('剔除未接入的原项目 UI 样式与冗余组件，不改变本地功能入口',()=>{
+  const theme=src('../src/theme/globals.css'),manifest=JSON.parse(src('../package.json'))
+  const sourceOnly=['.pet-mascot-button','.pet-window-root','[data-touch-h5]','.token-usage-root','.settings-zoom-control','.agent-teams-bot','.composer-pm','.code-viewer-area','.sidebar-resize-handle','.tab-strip-hit-region']
+  for(const item of sourceOnly)assert.equal(theme.includes(item),false,'未清理来源项目独有样式 '+item)
+  for(const token of ['--color-surface:','--color-brand:','--color-code-bg:','--shadow-composer:'])assert.ok(theme.includes(token),'缺少必要语义令牌 '+token)
+  assert.equal(existsSync(new URL('../src/components/ui/IconButton.tsx',import.meta.url)),false)
+  assert.equal(Boolean(manifest.devDependencies['@tailwindcss/typography']),false)
+  assert.equal(theme.includes('--color-activity-heat-'),false,'删除原来源独立热力图的无引用调色令牌')
+  assert.ok(theme.length<60000,'移植 CSS 仍带有大面积来源功能样式')
 })

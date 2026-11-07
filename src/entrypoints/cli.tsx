@@ -231,12 +231,15 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Desktop is a one-shot native handoff, not an interactive REPL. Handle it
-  // before main.tsx initializes terminal listeners and startup background tasks:
-  // those tasks otherwise keep error paths alive after their message is printed.
-  if (desktopRequest && !helpRequest) {
-    const { parseDesktopCliOptions, launchDesktopFromCli } =
-      await import('../cli/desktop/launch.ts');
+  // 交互式会话统一使用新桌面工作台，先于旧 Ink/REPL 的 main.tsx 导入。
+  const { isDesktopWorkbenchLaunch } = await import('./startupRouting317.ts');
+  if (!helpRequest && (desktopRequest || isDesktopWorkbenchLaunch(args))) {
+    if (!process.stdin.isTTY || !process.stdout.isTTY) {
+      process.stderr.write('交互式会话现由桌面工作台提供。无界面调用请使用 --print 或 SDK stream-json。\n');
+      process.exitCode = 1;
+      return;
+    }
+    const { parseDesktopCliOptions, launchDesktopFromCli } = await import('../cli/desktop/launch.ts');
     const { prompt, options } = parseDesktopCliOptions(args);
     process.exitCode = await launchDesktopFromCli({ prompt, options, argv: args });
     return;

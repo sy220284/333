@@ -47,3 +47,22 @@ export function classifyStartupArgs(args: string[]): StartupRouting317 {
     tmuxWorktreeRequest: tmux && worktree,
   }
 }
+
+/** 检测旧终端 REPL 启动意图，并优先路由至新的 Electron 工作台。 */
+const HEADLESS_OPTIONS = new Set(['-p','--print','--bare','--sdk-url','--input-format',
+  '--output-format','--init-only','--json','--bg','--background','--routine',
+  '--tmux','--eval-mock-server'])
+const DIRECT_COMMANDS = new Set(['agents','attach','auth','bridge','config','daemon','doctor',
+  'github','help','init','install','login','logout','logs','mcp','models','plugin',
+  'review','session','settings','skills','status','stop','kill','respawn','rm','tasks',
+  'update','upgrade','workflows', 'local-settings','local-tasks',
+  'setup-token','project','purge','plugins','auto-mode','import'])
+export function isDesktopWorkbenchLaunch(args: string[]): boolean {
+  const words = beforeDoubleDash(args)
+  if(words.some(word=>HEADLESS_OPTIONS.has(word) ||
+    [...HEADLESS_OPTIONS].some(option=>word.startsWith(option+'='))))return false
+  const first=words[0]
+  if(!first)return true
+  if(['--version','-v','-V','--help','-h','--update','--upgrade'].includes(first))return false
+  return first.startsWith('-') || !DIRECT_COMMANDS.has(first)
+}

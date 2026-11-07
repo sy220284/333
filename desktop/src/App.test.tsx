@@ -205,7 +205,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(screen.getByRole('button',{name:'设置与权限'}))
     expect(screen.getByRole('combobox',{name:'界面主题'})).toHaveValue('celadon')
     await user.selectOptions(screen.getByRole('combobox',{name:'界面主题'}),'ink-blue')
-    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(document.documentElement.dataset.theme).toBe('ink-blue')
   })
 
   it('替换后的项目侧栏可直接恢复真实会话并选中会话标签',async()=>{
@@ -499,7 +499,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     instance.unmount()
     render(<App/>)
     await screen.findByText('本地后台已连接')
-    expect(document.documentElement.dataset.theme).toBe(expectedDark?'dark':'light')
+    expect(document.documentElement.dataset.theme).toBe(expectedDark?'dark':'white')
     expect(screen.getByRole('button',{name:'打开详情面板'})).toBeInTheDocument()
   })
 

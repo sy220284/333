@@ -1,0 +1,41 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {readFileSync, existsSync} from 'node:fs'
+const src=path=>readFileSync(new URL(path,import.meta.url),'utf8')
+const app=src('../src/App.tsx')
+const chat=src('../src/components/chat/SessionChatSurface.tsx')
+const layout=src('../src/theme/yaoyao-layout.css')
+const entry=src('../../src/entrypoints/cli.tsx')
+const routing=src('../../src/entrypoints/startupRouting317.ts')
+test('新桌面可被屏幕阅读器定位主要区域、选项卡和会话',()=>{
+  assert.match(app,/<nav aria-label="主要导航"/)
+  assert.match(app,/role="tablist" aria-label="会话与工作区标签"/)
+  assert.match(app,/role="tab"[^>]*aria-selected=/)
+  assert.match(app,/aria-current=\{view===id\?'page':undefined\}/)
+  assert.match(app,/恢复会话：/)
+  assert.match(chat,/<section aria-label="AI 对话区"/)
+  assert.match(chat,/aria-label="输入任务"/)
+  assert.match(chat,/aria-label="发送"/)
+  assert.match(chat,/aria-label="停止当前执行"/)
+})
+test('警报、模型与权限选择有清晰读屏语义',()=>{
+  assert.match(app,/role="alert"/)
+  assert.match(chat,/aria-label="当前模型"/)
+  assert.match(chat,/aria-label="权限模式"/)
+  assert.match(app,/role="listbox"/)
+  assert.match(app,/role="option"/)
+})
+test('视觉焦点明确，系统低动态偏好生效',()=>{
+  assert.match(layout,/input:focus-visible,textarea:focus-visible,select:focus-visible/)
+  assert.match(layout,/@media\s*\(prefers-reduced-motion:\s*reduce\)/)
+  assert.match(layout,/\[data-motion=off\]/)
+  assert.match(layout,/\.markdown-message a:focus-visible/)
+})
+test('旧 Ink 会话及选择器均已删除，无界面协议仍可用',()=>{
+  assert.equal(existsSync(new URL('../../src/screens/REPL.tsx',import.meta.url)),false)
+  assert.equal(existsSync(new URL('../../src/screens/ResumeConversation.tsx',import.meta.url)),false)
+  assert.match(entry,/isDesktopWorkbenchLaunch\(args\)/)
+  assert.match(routing,/'--print'/)
+  assert.match(routing,/'--output-format'/)
+  assert.match(routing,/'--input-format'/)
+})

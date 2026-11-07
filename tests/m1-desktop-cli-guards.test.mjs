@@ -15,17 +15,17 @@ test('desktop clean interactive startup permits new, continue and UUID resume en
 
 test('desktop rejects print, SDK and redirected output before any desktop action', () => {
   for (const args of [['--desktop', '--print'], ['--desktop', '-p'], ['--desktop', '--sdk-url', 'ws://localhost'], ['--desktop', '--init-only']]) {
-    assert.match(validateDesktopInvocation({ ...valid, argv: args }), /can't run non-interactively/)
+    assert.match(validateDesktopInvocation({ ...valid, argv: args }), /无界面脚本/)
   }
-  assert.match(validateDesktopInvocation({ ...valid, stdoutIsTTY: false }), /can't run non-interactively/)
+  assert.match(validateDesktopInvocation({ ...valid, stdoutIsTTY: false }), /无界面脚本/)
 })
 
 test('desktop rejects conflicting flags, restricted environment, prompts and redirected input', () => {
-  assert.match(validateDesktopInvocation({ ...valid, argv: ['--desktop', '--model', 'opus'] }), /can't be combined with/)
+  assert.match(validateDesktopInvocation({ ...valid, argv: ['--desktop', '--model', 'opus'] }), /不支持以下参数/)
   assert.match(validateDesktopInvocation({ ...valid, env: { CLAUDE_CODE_SIMPLE: '1' } }), /bare mode/)
-  assert.match(validateDesktopInvocation({ ...valid, env: { CLAUDE_CODE_RESTRICTED: 'true' } }), /restricted session/)
-  assert.match(validateDesktopInvocation({ ...valid, prompt: 'write something' }), /doesn't take a prompt/)
-  assert.match(validateDesktopInvocation({ ...valid, stdinIsTTY: false }), /piped or redirected input/)
+  assert.match(validateDesktopInvocation({ ...valid, env: { CLAUDE_CODE_RESTRICTED: 'true' } }), /受限的/)
+  assert.equal(validateDesktopInvocation({ ...valid, prompt: 'write something' }), null)
+  assert.match(validateDesktopInvocation({ ...valid, stdinIsTTY: false }), /交互式启动/)
 })
 
 test('desktop precedence follows official startup checks for invalid combinations', () => {
@@ -33,7 +33,7 @@ test('desktop precedence follows official startup checks for invalid combination
     ...valid, argv: ['--desktop', '--print', '--model', 'opus'], env: { CLAUDE_CODE_SIMPLE: '1' },
     prompt: 'hello', stdinIsTTY: false,
   })
-  assert.match(result, /can't run non-interactively/)
+  assert.match(result, /无界面脚本/)
 })
 
 test('desktop bootstrap argument extraction matches new and resumed session entry paths', () => {

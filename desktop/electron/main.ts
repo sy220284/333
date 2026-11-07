@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron'
 import { spawn, execFile } from 'node:child_process'
-import { existsSync, realpathSync } from 'node:fs'
+import { existsSync, realpathSync, statSync } from 'node:fs'
 import { readdir, readFile, writeFile, rename, realpath, mkdir, rm, stat } from 'node:fs/promises'
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { promisify } from 'node:util'
@@ -25,7 +25,9 @@ const permitted = new Set([
 ])
 type Host = { child: ReturnType<typeof spawn>; client: ReturnType<typeof createDesktopClient> }
 const hosts = new Map<string, Host>()
-let active = process.env.HOME || process.env.USERPROFILE || process.cwd()
+const launchWorkspace=process.env.YAOYAO_INITIAL_WORKSPACE
+const hasLaunchWorkspace=Boolean(launchWorkspace&&existsSync(launchWorkspace)&&statSync(launchWorkspace).isDirectory())
+let active=hasLaunchWorkspace?realpathSync(launchWorkspace!):process.env.HOME||process.env.USERPROFILE||process.cwd()
 let window: BrowserWindow | null = null
 let quitting = false
 
@@ -98,7 +100,7 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
     await shell.openExternal(url.href)
     return {opened:true}
   }
-  if(method==='app.info')return {workspace:active,platform:process.platform,version:app.getVersion()}
+  if(method==='app.info')return {workspace:active,platform:process.platform,version:app.getVersion(),startupSessionId:process.env.YAOYAO_INITIAL_SESSION_ID||'',initialPrompt:process.env.YAOYAO_INITIAL_PROMPT||'',initialView:process.env.YAOYAO_INITIAL_VIEW||''}
   if(method==='credentials.list')return {providers:listProviderApiKeyAccounts()}
   if(method==='credentials.set'){
     const provider=validateApiKeyProvider(String(data.provider||''))
@@ -217,7 +219,7 @@ function createWindow(){
 app.whenReady().then(async()=>{
   session.defaultSession.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false))
   const pref=workspacePref()
-  if(existsSync(pref)){
+  if(!hasLaunchWorkspace&&existsSync(pref)){
     try {
       const settings=JSON.parse(await readFile(pref,'utf8')) as {path?:unknown}
       if(typeof settings.path==='string' && existsSync(settings.path)) active=realpathSync(settings.path)

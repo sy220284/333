@@ -44,11 +44,10 @@ describe('官方 2.1.310 对话状态与动画逻辑', () => {
     assert.equal(advanceAnimatedTokenCount(120, 0, 0), 120)
   })
 
-  it('短对话也会生成完成耗时记录，与官方终态一致', () => {
-    const repl = readFileSync(new URL('../src/screens/REPL.tsx', import.meta.url), 'utf8')
-    assert.match(repl, /if \(!abortController\.signal\.aborted && !proactiveActive\) \{/)
-    assert.doesNotMatch(repl, /turnDurationMs > 30000/)
-    assert.match(repl, /createTurnDurationMessage\(turnDurationMs, budgetInfo/)
+  it('桌面会话真实运行状态与时间戳可见',()=>{
+    const chat=readFileSync(new URL('../desktop/src/components/chat/SessionChatSurface.tsx',import.meta.url),'utf8')
+    assert.match(chat,/completed:'已完成'/)
+    assert.match(chat,/new Date\(m\.time\)/)
   })
 
   it('新版默认使用完整终端对话布局，同时保留主动关闭选项', () => {
