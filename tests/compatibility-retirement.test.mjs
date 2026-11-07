@@ -76,6 +76,7 @@ test('no old model remapping or one-shot migration fields remain', () => {
 
 test('旧终端主界面已删除，新桌面不再依赖旧模型迁移通知',()=>{
   assert.equal(existsSync(new URL('screens/REPL.tsx',root)),false)
+  assert.equal(existsSync(new URL('screens/ResumeConversation.tsx',root)),false)
   const app=readFileSync(new URL('../desktop/src/App.tsx',import.meta.url),'utf8')
   assert.doesNotMatch(app,/useModelMigrationNotifications/)
 })

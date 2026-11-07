@@ -59,6 +59,7 @@ test('retired private launchers leave the reusable SDK and desktop headless chai
 
 test('retired SSH UI and original REPL are physically absent', () => {
   assert.equal(existsSync(resolve(root, 'src/screens/REPL.tsx')), false)
+  assert.equal(existsSync(resolve(root, 'src/screens/ResumeConversation.tsx')), false)
   assert.equal(existsSync(resolve(root, 'src/hooks/useSSHSession.ts')), false)
   assert.equal(existsSync(resolve(root, 'src/ssh/SSHSessionManager.ts')), false)
 })

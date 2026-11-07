@@ -29,3 +29,15 @@ test('旧终端主界面源文件已删除，启动器不会导入 Ink 会话树
   assert.equal(launcher.includes("import('./components/App.js')"),false)
   assert.ok(launcher.includes('launchDesktopFromCli'))
 })
+
+test('恢复会话列表由新工作台历史页承接',()=>{
+  assert.equal(existsSync(new URL('../src/screens/ResumeConversation.tsx',import.meta.url)),false)
+  const dialogs=read('src/dialogLaunchers.tsx')
+  const entry=read('src/cli/desktop/launch.ts')
+  const shell=read('desktop/electron/main.ts')
+  const app=read('desktop/src/App.tsx')
+  assert.equal(dialogs.includes("import('./screens/ResumeConversation.js')"),false)
+  assert.ok(entry.includes("startupView='history'"))
+  assert.ok(shell.includes('YAOYAO_INITIAL_VIEW'))
+  assert.ok(app.includes("if(info.initialView==='history')setView('history')"))
+})

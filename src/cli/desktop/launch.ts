@@ -165,9 +165,11 @@ export async function launchDesktopFromCli({
   const invalid=validateDesktopInvocation({argv,prompt,stdinIsTTY,stdoutIsTTY,env})
   if(invalid)return reportError(invalid)
   let sessionId=''
-  if(options.resume!==undefined&&options.resume!==false){
-    if(typeof options.resume!=='string'||!UUID.test(options.resume))
-      return reportError('请在 --resume 后提供有效会话编号。')
+  let startupView=''
+  if(options.resume===true){
+    startupView='history'
+  }else if(typeof options.resume==='string'){
+    if(!UUID.test(options.resume))return reportError('会话编号格式无效。')
     sessionId=options.resume
     if(!await existsInProjects(sessionId))return reportError('找不到本机会话：'+sessionId)
   }else if(options.continue){
@@ -181,7 +183,8 @@ export async function launchDesktopFromCli({
     const child=spawn(exe.command,exe.args,{
       cwd:exe.cwd||process.cwd(),detached:true,stdio:'ignore',windowsHide:true,
       env:{...env,YAOYAO_INITIAL_WORKSPACE:process.cwd(),
-        YAOYAO_INITIAL_SESSION_ID:sessionId,YAOYAO_INITIAL_PROMPT:prompt},
+        YAOYAO_INITIAL_SESSION_ID:sessionId,YAOYAO_INITIAL_PROMPT:prompt,
+        YAOYAO_INITIAL_VIEW:startupView},
     })
     await new Promise<void>((resolve,reject)=>{
       child.once('error',reject)

@@ -100,7 +100,7 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
     await shell.openExternal(url.href)
     return {opened:true}
   }
-  if(method==='app.info')return {workspace:active,platform:process.platform,version:app.getVersion(),startupSessionId:process.env.YAOYAO_INITIAL_SESSION_ID||'',initialPrompt:process.env.YAOYAO_INITIAL_PROMPT||''}
+  if(method==='app.info')return {workspace:active,platform:process.platform,version:app.getVersion(),startupSessionId:process.env.YAOYAO_INITIAL_SESSION_ID||'',initialPrompt:process.env.YAOYAO_INITIAL_PROMPT||'',initialView:process.env.YAOYAO_INITIAL_VIEW||''}
   if(method==='credentials.list')return {providers:listProviderApiKeyAccounts()}
   if(method==='credentials.set'){
     const provider=validateApiKeyProvider(String(data.provider||''))
