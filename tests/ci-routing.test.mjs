@@ -5,7 +5,7 @@ import { SPECIALISTS, WORKFLOWS, routeChanges, selectBaseline } from '../build/c
 
 const active = plan => Object.entries(plan).filter(([, enabled]) => enabled).map(([name]) => name)
 
-test('28 个专项保留、统一入口调用，全量始终覆盖所有专项', () => {
+test('29 个专项保留、统一入口调用，全量始终覆盖所有专项', () => {
   const files = readdirSync(new URL('../.github/workflows/', import.meta.url))
     .filter(x => x.endsWith('.yml') && x !== 'ci-on-demand.yml' && x !== 'latest-stable-upgrade.yml')
   assert.deepEqual(WORKFLOWS.slice().sort(), files.map(x => x.slice(0, -4)).sort())
@@ -16,6 +16,30 @@ test('28 个专项保留、统一入口调用，全量始终覆盖所有专项',
     assert.doesNotMatch(yaml, /^ {2}pull_request:\s*$/m, `${name} 仍重复触发 PR`)
   }
   assert.deepEqual(active(routeChanges([], true)).sort(), WORKFLOWS.slice().sort())
+})
+
+test('企业网关变更单独触发协议、真实数据库和遥测专项', () => {
+  const gateway = routeChanges([
+    'src/cli/gateway/gatewayServer317.ts',
+    'src/cli/gateway/gatewayForward317.ts',
+    'src/services/remoteManagedSettings/index.ts',
+    'tests/m6-gateway-telemetry-policy-317.test.mjs',
+  ])
+  assert.equal(gateway['m6-gateway-providers-317'], true)
+  assert.equal(gateway['ci-test-matrix'], false)
+  assert.equal(gateway['latest-stable-six-host'], false)
+  const unrelated = routeChanges(['src/cli/selfHostedRunner/runnerAdmin317.ts'])
+  assert.equal(unrelated['m6-gateway-providers-317'], false)
+  assert.equal(unrelated['m6-self-hosted-runner-317'], true)
+  const full = routeChanges([], true)
+  assert.equal(full['m6-gateway-providers-317'], true)
+  const dispatcher = readFileSync(new URL('../.github/workflows/ci-on-demand.yml', import.meta.url), 'utf8')
+  assert.match(dispatcher, /needs.plan.outputs.m6_gateway_providers_317 == 'true'/)
+  assert.match(dispatcher, /\.\/\.github\/workflows\/m6-gateway-providers-317\.yml/)
+  const workflow = readFileSync(new URL('../.github/workflows/m6-gateway-providers-317.yml', import.meta.url), 'utf8')
+  assert.match(workflow, /GATEWAY_TEST_POSTGRES_URL/)
+  assert.match(workflow, /m6-gateway-telemetry-policy-317\.test\.mjs/)
+  assert.match(workflow, /m6-gateway-postgres-317\.test\.mjs/)
 })
 
 test('每次基础门禁固定启用、文档变更不启动全量检查', () => {
