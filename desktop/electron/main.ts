@@ -16,7 +16,7 @@ function requireWindow(): BrowserWindow {
 }
 const git = promisify(execFile)
 const permitted = new Set([
-  'hello','capabilities.list','capabilities.refresh','experience.list','experience.search','experience.propose','experience.approve','experience.retire','models.list','smart.execute','smart.start','smart.inspect','smart.history','budget.project.get','budget.project.set','budget.project.resolveUnknown','system.diagnostics','data.purge.preview','data.purge.apply','mcp.list','mcp.add','mcp.remove','mcp.toggle','sessions.open','sessions.resume','sessions.ensureOpen','sessions.list','sessions.history',
+  'hello','capabilities.list','capabilities.refresh','capabilities.skills.drafts','capabilities.skills.createDraft','capabilities.skills.publish','experience.list','experience.search','experience.propose','experience.approve','experience.retire','models.list','smart.execute','smart.start','smart.inspect','smart.history','budget.project.get','budget.project.set','budget.project.resolveUnknown','system.diagnostics','data.purge.preview','data.purge.apply','mcp.list','mcp.add','mcp.remove','mcp.toggle','sessions.open','sessions.resume','sessions.ensureOpen','sessions.list','sessions.history',
   'sessions.close','sessions.status','sessions.send','sessions.interrupt','sessions.setModel',
   'sessions.setPermissionMode','host.list','host.respond','host.reject','permissions.list',
   'permissions.decide','agents.overview','agents.activity','agents.members','agents.team.message','agents.team.inbox','agents.setMode','missions.list','missions.get',
