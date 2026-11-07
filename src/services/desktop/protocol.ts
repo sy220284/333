@@ -109,6 +109,9 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
     teamName: z.string().trim().min(1).max(128).optional(),
     missionId: z.string().min(1).max(160).optional(),
   }),
+  request('agents.profiles.bindSession', {
+    agentId: z.string().uuid(), roleId: z.string().uuid(), sessionId: z.string().uuid(),
+  }),
   request('agents.profiles.release', { agentId: z.string().uuid(), roleId: z.string().uuid() }),
   request('agents.profiles.status', { agentId: z.string().uuid(), status: z.enum(['available','paused','retired']) }),
   request('handoffs.list', {}),
@@ -122,6 +125,9 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
     inputRefs: z.array(z.string().min(3).max(400)).max(30),
   }),
   request('handoffs.retry', { handoffId: z.string().uuid() }),
+  request('handoffs.approve', {
+    handoffId: z.string().uuid(), reviewSummary: z.string().trim().min(10).max(1200),
+  }),
   request('agents.setMode', { mode: z.enum(['master', 'super']) }),
   request('missions.list', {}),
   request('missions.get', { missionId }),

@@ -69,6 +69,12 @@ test('桌面原生接口贯通技能候选、人工发布、经验提炼与核�
     expect(pending.handoffs.find(item=>item.id===handoffId)?.status).toBe('draft')
     await expect(gateway.handle(req('handoffs.retry',{handoffId}))).rejects.toThrow('团队')
     expect((await gateway.handle(req('handoffs.list')) as {handoffs:unknown[]}).handoffs).toHaveLength(1)
+    await expect(gateway.handle(req('agents.profiles.bindSession', {
+      agentId: randomUUID(), roleId: randomUUID(), sessionId: randomUUID(),
+    }))).rejects.toThrow('not open')
+    await expect(gateway.handle(req('handoffs.approve', {
+      handoffId, reviewSummary:'已核对所有产物与实际内容，无遗漏',
+    }))).rejects.toThrow('前置条件')
     expect(launched).toBe(0)
   }finally{
     await gateway.close()

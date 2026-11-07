@@ -108,6 +108,7 @@ const SnipTool = feature('HISTORY_SNIP')
 import { WorkflowTool } from './tools/WorkflowTool/WorkflowTool.js'
 import { MissionTool } from './tools/MissionTool/MissionTool.js'
 import { ExperienceTool } from './tools/ExperienceTool/ExperienceTool.js'
+import { HandoffTool } from './tools/HandoffTool/HandoffTool.js'
 import { CapabilityDraftTool } from './tools/CapabilityDraftTool/CapabilityDraftTool.js'
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 import type { ToolPermissionContext } from './Tool.js'
@@ -206,6 +207,7 @@ export function getAllBaseTools(): Tools {
     WorkflowTool,
     MissionTool,
     ExperienceTool,
+    HandoffTool,
     CapabilityDraftTool,
     ...(SleepTool ? [SleepTool] : []),
     ...cronTools,

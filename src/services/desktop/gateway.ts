@@ -987,6 +987,12 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           ...(request.missionId?{missionId:request.missionId}:{}),
         },options.dataDir)
       }
+      case 'agents.profiles.bindSession': {
+        requireSession(request.sessionId)
+        const { bindAgentProfileSession } = await import('../agentCenter/agentRegistry.js')
+        return bindAgentProfileSession(cwd, request.agentId, request.roleId,
+          request.sessionId, options.dataDir)
+      }
       case 'agents.profiles.release': {
         const { releaseAgentRole } = await import('../agentCenter/agentRegistry.js')
         return releaseAgentRole(cwd,request.agentId,request.roleId,options.dataDir)
@@ -1013,6 +1019,11 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
             message: `${current.summary}\n\n${current.instruction}\n交接编号：${current.id}${current.inputRefs.length ? `\n输入成果：${current.inputRefs.join('、')}` : ''}`,
             messageId: current.id,
           }), options.dataDir)
+      }
+      case 'handoffs.approve': {
+        const { changeTeamHandoff } = await import('../agentCenter/teamHandoffs.js')
+        return changeTeamHandoff(cwd, request.handoffId, 'completed', 'team-lead',
+          { reviewSummary: request.reviewSummary }, options.dataDir)
       }
       case 'handoffs.retry': {
         const { deliverTeamHandoff } = await import('../agentCenter/teamHandoffs.js')

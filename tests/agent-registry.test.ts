@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createAgentProfile,listAgentProfiles,assignAgentRole,releaseAgentRole,
+import { createAgentProfile,listAgentProfiles,assignAgentRole,releaseAgentRole,bindAgentProfileSession,
   updateAgentProfileStatus } from '../src/services/agentCenter/agentRegistry.js'
 
 async function fixture(fn:(root:string,project:string)=>Promise<void>){
@@ -56,5 +56,37 @@ test('并发注册同一身份只存一份',async()=>{
     const profiles=await Promise.all([1,2,3,4].map(()=>createAgentProfile(project,draft,root)))
     expect(new Set(profiles.map(p=>p.id)).size).toBe(1)
     expect((await listAgentProfiles(project,root))).toHaveLength(1)
+  })
+})
+
+test('稳定身份绑定真实会话，重复绑定幂等且避免两个角色混用', async () => {
+  await fixture(async (root, project) => {
+    const first = await createAgentProfile(project, defaultProfile(randomUUID()), root)
+    const role = (await assignAgentRole(project, first.id, {
+      role:'文案', purpose:'完成文章结构和可核验稿件',
+    },root)).roles[0]
+    if(!role)throw new Error('缺失已配置角色')
+    const sessionId = randomUUID()
+    const linked = await bindAgentProfileSession(project,first.id,role.id,sessionId,root)
+    expect(linked.sessionBindings).toHaveLength(1)
+    expect((await bindAgentProfileSession(project,first.id,role.id,sessionId,root)).revision)
+      .toBe(linked.revision)
+    await releaseAgentRole(project,first.id,role.id,root)
+    const secondRole = (await assignAgentRole(project,first.id,{
+      role:'审校',purpose:'检查文章引用资料和读者理解',
+    },root)).roles.at(-1)
+    if(!secondRole)throw new Error('缺失新角色')
+    await expect(bindAgentProfileSession(project,first.id,secondRole.id,sessionId,root))
+      .rejects.toThrow('历史身份混淆')
+    const second = await createAgentProfile(project,{
+      ...defaultProfile(randomUUID()),name:'独立审校成员',
+    },root)
+    const otherRole = (await assignAgentRole(project,second.id,{
+      role:'审校',purpose:'独立核对文章事实与数据',
+    },root)).roles[0]
+    if(!otherRole)throw new Error('缺失第二名成员角色')
+    await expect(bindAgentProfileSession(project,second.id,otherRole.id,sessionId,root))
+      .rejects.toThrow('另一长期身份')
+    expect((await listAgentProfiles(project,root))[0]?.sessionBindings[0]?.sessionId).toBe(sessionId)
   })
 })

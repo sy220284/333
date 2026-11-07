@@ -19,6 +19,12 @@ const roleSchema=z.strictObject({
   assignedAt:z.string().datetime(),
   releasedAt:z.string().datetime().optional(),
 })
+const bindingSchema = z.strictObject({
+  sessionId: z.string().uuid(),
+  roleId: z.string().uuid(),
+  boundAt: z.string().datetime(),
+})
+export type AgentSessionBinding = z.infer<typeof bindingSchema>
 const profileSchema=z.strictObject({
   id:z.string().uuid(),
   name:z.string().trim().min(2).max(100),
@@ -28,6 +34,7 @@ const profileSchema=z.strictObject({
   experienceKeys:z.array(z.string().regex(/^[a-z0-9][a-z0-9._-]{2,95}$/)).max(100),
   status:z.enum(['available','paused','retired']),
   roles:z.array(roleSchema).max(300),
+  sessionBindings:z.array(bindingSchema).max(300).default([]),
   revision:z.number().int().nonnegative(),
   createdAt:z.string().datetime(),
   updatedAt:z.string().datetime(),
@@ -116,7 +123,7 @@ export async function createAgentProfile(
     const now=new Date().toISOString()
     const profile=profileSchema.parse({
       ...parsed,capabilityIds:parsed.capabilityIds??[],experienceKeys:parsed.experienceKeys??[],
-      roles:[],status:'available',revision:0,createdAt:now,updatedAt:now,
+      roles:[],sessionBindings:[],status:'available',revision:0,createdAt:now,updatedAt:now,
     })
     return {doc:{...doc,agents:[...doc.agents,profile]},profile}
   })
@@ -177,5 +184,42 @@ export async function releaseAgentRole(
     const roles=profile.roles.map(r=>r.id===roleId?{...r,state:'released' as const,releasedAt:now}:r)
     const updated=profileSchema.parse({...profile,roles,revision:profile.revision+1,updatedAt:now})
     return {doc:{...doc,agents:doc.agents.map(p=>p.id===agentId?updated:p)},profile:updated}
+  })
+}
+
+/** A durable identity-to-session reference, never an implicit SDK launch. */
+export async function bindAgentProfileSession(
+  projectDir: string, agentId: string, roleId: string, sessionId: string,
+  root = getClaudeConfigHomeDir(),
+): Promise<AgentProfile> {
+  const uuid = z.string().uuid()
+  uuid.parse(agentId); uuid.parse(roleId); uuid.parse(sessionId)
+  return change(projectDir, root, doc => {
+    const profile = doc.agents.find(item => item.id === agentId)
+    if (!profile) throw new Error('长期智能体身份不存在')
+    if (profile.status !== 'available') throw new Error('长期身份暂停或退役，暂不可绑定新会话')
+    if (!profile.roles.some(role => role.id === roleId && role.state === 'active'))
+      throw new Error('必须绑定该智能体当前在岗职责')
+    const owner = doc.agents.find(item =>
+      item.sessionBindings.some(binding => binding.sessionId === sessionId))
+    if (owner && owner.id !== agentId)
+      throw new Error('原生会话已关联另一长期身份，须先核对归属')
+    const previous = profile.sessionBindings.find(binding => binding.sessionId === sessionId)
+    if (previous) {
+      if (previous.roleId !== roleId) throw new Error('原生会话已绑定其他职责，避免历史身份混淆')
+      return { doc, profile }
+    }
+    if (profile.sessionBindings.length >= 300) throw new Error('该智能体会话历史已达到容量上限')
+    const timestamp = new Date().toISOString()
+    const updated = profileSchema.parse({
+      ...profile,
+      sessionBindings: [...profile.sessionBindings, { sessionId, roleId, boundAt: timestamp }],
+      revision: profile.revision + 1,
+      updatedAt: timestamp,
+    })
+    return {
+      doc: { ...doc, agents: doc.agents.map(item => item.id === agentId ? updated : item) },
+      profile: updated,
+    }
   })
 }
