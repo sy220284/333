@@ -196,8 +196,13 @@ test('真实 Linux 安装版启动 Electron 界面并完成本地 Host 连接', 
 
         await navigate('智能体团队','Super Agents 团队模式','desktop/release/deployed-agents-smoke.png')
         await click('Super Agents 团队模式')
-        const mode = await evaluate(page.webSocketDebuggerUrl,
-          'document.querySelector(".mode-card:nth-child(2)")?.classList.contains("selected")??false')
+        let mode = false
+        for (let attempt = 0; attempt < 30; attempt++) {
+          mode = await evaluate(page.webSocketDebuggerUrl,
+            'document.querySelector(".mode-card:nth-child(2)")?.classList.contains("selected")??false')
+          if (mode) break
+          await sleep(120)
+        }
         assert.equal(mode, true, '用户切换 Super Agents 模式后界面状态未更新')
         await screenshot(page.webSocketDebuggerUrl,'desktop/release/deployed-agents-super-smoke.png')
         return
