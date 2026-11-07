@@ -58,7 +58,7 @@ test('工作项历史只读展示，发送时显式恢复 SDK 会话', () => {
 
 test('长期任务视图显示正确的检查点、执行次数、终态和异常恢复说明', () => {
   const app = source('src/App.tsx')
-  const css = source('src/styles.css')
+  const css = source('src/theme/yaoyao-layout.css')
   assert.match(app, /selected\.checkpoint/)
   assert.match(app, /执行次数：\{job\.attempt\}/)
   assert.match(app, /状态|待审核/)

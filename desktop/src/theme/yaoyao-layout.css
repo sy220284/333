@@ -191,3 +191,6 @@ textarea {resize:vertical;}
 @media(max-width:960px){.inspector{display:none;}.yy-sidebar-shell,.yy-sidebar{width:225px;min-width:225px;max-width:225px;}.yy-page-inner>.cc-home-page{padding:12px 0;}.cc-start-quick{grid-template-columns:1fr;}}
 @media(max-width:720px){.yy-sidebar-shell{position:absolute;z-index:var(--z-nav);transform:translateX(-100%);}.yy-page-inner{padding:15px;}.two-columns,.split-layout,.mission-page,.file-page,.integration-grid,.yy-page .mode-cards,.model-grid{grid-template-columns:1fr;}.cc-start-heading h2{font-size:27px;}}
 @media(prefers-reduced-motion:reduce){.cc-quick-start:hover{transform:none;}}
+
+/* 工作项与键盘聚焦状态统一使用原生主题焦点色。 */
+.job-card:focus-within {border-color:var(--color-border-focus);box-shadow:0 0 0 2px var(--color-brand-soft);}
