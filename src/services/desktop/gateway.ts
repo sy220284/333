@@ -245,7 +245,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     // A callback must never block the SDK stream waiting for another worker
     // to initialize. Persist its terminal state first, then fill queue slots.
     void drainMissionQueue(missionId).catch(error =>
-      haltMissionQueue(missionId, '自动派发停止：' + String(error)))
+      haltMissionQueue(missionId, `自动派发停止：${String(error)}`))
   }
   async function drainMissionQueue(missionId: string): Promise<void> {
     if (drainingMissionQueues.has(missionId)) return
@@ -273,7 +273,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           ))
           const failure = launched.find((item): item is PromiseRejectedResult => item.status === 'rejected')
           if (failure) {
-            haltMissionQueue(missionId, '工作项启动失败：' + String(failure.reason))
+            haltMissionQueue(missionId, `工作项启动失败：${String(failure.reason)}`)
             break
           }
         }
@@ -346,7 +346,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
             await settleExecutingJob(sessionId, 'interrupted', '执行流结束前未取得完整结果；请核对实际改动后手动重试')
           } catch (error) {
             emit({ event: 'session.error', sessionId, turnId,
-              error: '长期任务恢复记录失败：' + String(error) })
+              error: `长期任务恢复记录失败：${String(error)}` })
           }
         }
         entry.consuming = undefined
@@ -426,7 +426,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       case 'mcp.toggle': {
         const { getMcpConfigsByScope, setMcpServerEnabled } = await import('../mcp/config.js')
         const configured=(['project','user','local'] as const).some(scope=>getMcpConfigsByScope(scope).servers[request.name])
-        if(!configured)throw new Error('MCP 服务器不存在：'+request.name)
+        if(!configured)throw new Error(`MCP 服务器不存在：${request.name}`)
         setMcpServerEnabled(request.name,request.enabled)
         return {name:request.name,enabled:request.enabled}
       }
@@ -521,7 +521,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         await getScopedMission(request.missionId)
         const updated = await updateMissionStatus(request.missionId, request.status, options.missionRoot)
         if (request.status !== 'active')
-          haltMissionQueue(request.missionId, '长期任务已' + request.status)
+          haltMissionQueue(request.missionId, `长期任务已${request.status}`)
         return updated
       }
       case 'missions.checkpoint': {
@@ -560,6 +560,8 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           mission.id, cwd, request.jobId, ownerKey, process.pid, options.missionRoot,
         )
         notifyJob(mission.id, claimed)
+        const runId = claimed.runId
+        if (!runId) throw new Error('已领取工作项缺少执行标识')
         let openedSession: string | undefined
         try {
           // Each user-requested dispatch gets its own native SDK session.
@@ -568,27 +570,27 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           const opened = await openSession()
           openedSession = opened.sessionId
           await bindMissionJobTurn(
-            mission.id, cwd, claimed.id, claimed.runId!, openedSession,
+            mission.id, cwd, claimed.id, runId, openedSession,
             undefined, options.missionRoot,
           )
           executingMissionJobs.set(openedSession, {
-            missionId: mission.id, jobId: claimed.id, runId: claimed.runId!,
+            missionId: mission.id, jobId: claimed.id, runId: runId,
           })
           const instruction = [
             '执行已授权的超级智能体工作项；保持项目目录与工具审批边界。',
-            '长期任务：' + mission.id + '。目标：' + mission.objective,
-            '前次已核实的任务检查点：' + (mission.checkpoint || '暂无'),
-            '本工作项的既往执行结果：' + (claimed.history.slice(-3)
-              .map(record => '第' + record.attempt + '次：' + record.status + '；' + record.summary)
-              .join('；') || '暂无'),
-            '工作项：' + claimed.title + '。执行尝试：' + claimed.attempt,
+            `长期任务：${mission.id}。目标：${mission.objective}`,
+            `前次已核实的任务检查点：${mission.checkpoint || '暂无'}`,
+            `本工作项的既往执行结果：${(claimed.history.slice(-3)
+              .map(record => `第${record.attempt}次：${record.status}；${record.summary}`)
+              .join('；') || '暂无')}`,
+            `工作项：${claimed.title}。执行尝试：${claimed.attempt}`,
             claimed.instruction,
             '执行前核对已有文件和提交，禁止重复已产生的外部副作用。',
             '交付时报告实际文件/提交、测试证据及仍需人工审核的事项。',
           ].join('\n')
           const started = await send(openedSession, instruction)
           const updated = await bindMissionJobTurn(
-            mission.id, cwd, claimed.id, claimed.runId!, openedSession,
+            mission.id, cwd, claimed.id, runId, openedSession,
             started.turnId, options.missionRoot,
           )
           notifyJob(mission.id, updated)
@@ -596,8 +598,8 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         } catch (error) {
           executingMissionJobs.delete(openedSession ?? '')
           const job = await settleMissionJob(
-            mission.id, cwd, claimed.id, claimed.runId!, 'failed',
-            '启动执行失败：' + String(error), options.missionRoot,
+            mission.id, cwd, claimed.id, runId, 'failed',
+            `启动执行失败：${String(error)}`, options.missionRoot,
           )
           notifyJob(mission.id, job)
           if (openedSession && sessions.has(openedSession)) await closeSessionInternal(openedSession)
@@ -615,9 +617,13 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           handle({ id: randomUUID(), method: 'missions.jobs.start', missionId: mission.id, jobId: job.id }),
         ))
         return {
-          launched: outcomes.map((outcome, index) => outcome.status === 'fulfilled'
-            ? { jobId: jobs[index]!.id, ok: true, result: outcome.value }
-            : { jobId: jobs[index]!.id, ok: false, error: String(outcome.reason) }),
+          launched: jobs.map((job, index) => {
+            const outcome = outcomes[index]
+            if (!outcome) throw new Error('任务批量派发结果与原工作项数量不一致')
+            return outcome.status === 'fulfilled'
+              ? { jobId: job.id, ok: true, result: outcome.value }
+              : { jobId: job.id, ok: false, error: String(outcome.reason) }
+          }),
           remaining: (await listMissionJobs(mission.id, cwd, options.missionRoot))
             .filter(job => job.status === 'queued').length,
         }
