@@ -70,7 +70,7 @@ const independentFlags = {
   '--help': ['--proactive', '--strict-command'],
 }
 const independentCommands = {
-  '--help': ['local-settings', 'local-tasks', 'models'],
+  '--help': ['gateway', 'local-settings', 'local-tasks', 'models'],
   'auth --help': ['api-key', 'chatgpt-login', 'chatgpt-logout', 'chatgpt-status', 'chatgpt-accounts', 'chatgpt-switch'],
 };
 function verifyBaseAndExtensions(actual, official, commandLine) {
