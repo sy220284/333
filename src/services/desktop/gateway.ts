@@ -8,6 +8,7 @@ import {
   linkMissionAssignment, finishMissionAssignment,
 } from '../../utils/agentMissions.js'
 import { getTeammateStatuses, listProjectTeams } from '../../utils/teamDiscovery.js'
+import { readProjectTeamInbox, sendProjectTeamMessage } from './teamOperations.js'
 import {
   missionJobAssignmentId, listMissionJobs, enqueueMissionJob, claimMissionJob,
   bindMissionJobTurn, bindMissionJobWorkspace, settleMissionJob, approveMissionJob, retryMissionJob,
@@ -612,7 +613,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           protocolVersion: DESKTOP_PROTOCOL_VERSION,
           transport: 'stdio-jsonl',
           stream: 'sdk-stream-json',
-          capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'missions', 'mission_jobs', 'smart_execute', 'smart_start', 'smart_inspect', 'smart_history'],
+          capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'team_mailbox', 'missions', 'mission_jobs', 'smart_execute', 'smart_start', 'smart_inspect', 'smart_history'],
         }
       case 'budget.project.get': return projectBudget.reconcile()
       case 'budget.project.resolveUnknown':
@@ -849,6 +850,10 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           throw new Error('团队不属于当前项目或已解散')
         return getTeammateStatuses(request.teamName)
       }
+      case 'agents.team.message':
+        return sendProjectTeamMessage(cwd, request)
+      case 'agents.team.inbox':
+        return readProjectTeamInbox(cwd, request.teamName, request.memberName)
       case 'agents.setMode':
         setAgentMode(request.mode)
         return { mode: getActiveAgentMode() }
