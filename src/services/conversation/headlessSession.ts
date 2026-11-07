@@ -2,7 +2,7 @@ import { createSessionRuntime317 } from '../../entrypoints/sdk/sessionRuntime317
 import type { SDKMessage, SDKUserMessage } from '../../entrypoints/sdk/coreTypes.js'
 import type { InternalOptions, SDKSessionOptions } from '../../entrypoints/sdk/runtimeTypes.js'
 import { createStore } from '../../state/store.js'
-import { createConversationMessageStore } from './messageStore.js'
+import { createAppendOnlyConversationMessageStore } from './messageStore.js'
 import { createSdkPermissionBroker } from './permissionBroker.js'
 import { createHostControlBroker } from './hostControlBroker.js'
 
@@ -24,7 +24,7 @@ export function createHeadlessConversationSession(
     canUseTool: options.canUseTool ?? permissions.canUseTool,
     onControlRequest: options.onControlRequest ?? hostControls.onControlRequest,
   }, resume)
-  const messages = createConversationMessageStore<SDKMessage>()
+  const messages = createAppendOnlyConversationMessageStore<SDKMessage>()
   const state = createStore<HeadlessSessionSnapshot>({ phase: 'idle' })
   let busy = false
   let closed = false
@@ -58,7 +58,7 @@ export function createHeadlessConversationSession(
     let failed = false
     try {
       for await (const event of runtime.stream()) {
-        messages.setMessages(previous => [...previous, event])
+        messages.append(event)
         if (event.type === 'result') {
           completed = true
           const wasCancelled = event.terminal_reason === 'aborted_tools' ||
