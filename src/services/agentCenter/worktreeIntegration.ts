@@ -20,7 +20,7 @@ export type IntegrationPreview = {
   commits: string
   mergeTree?: string
 }
-type GitResult = { stdout: string; stderr: string; code: number }
+type GitResult = { stdout: string; stderr: string; code: number; error?: string }
 async function git(cwd: string, ...args: string[]): Promise<GitResult> {
   return execFileNoThrowWithCwd('git', args, { cwd, timeout: 120_000 })
 }

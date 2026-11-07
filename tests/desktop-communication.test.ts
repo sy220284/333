@@ -1,10 +1,12 @@
 import { expect, test } from 'bun:test'
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdir, mkdtemp, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, readFile, writeFile } from 'node:fs/promises'
+import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createHeadlessConversationSession } from '../src/services/conversation/headlessSession.js'
 import { createDesktopGateway } from '../src/services/desktop/gateway.js'
+import { previewWorktreeIntegration, integrateWorktree } from '../src/services/agentCenter/worktreeIntegration.js'
 import { createDesktopTaskJournal } from '../src/services/desktop/taskJournal.js'
 import { createMission, getMission, linkMissionAssignment, selectMission } from '../src/utils/agentMissions.js'
 import { enqueueMissionJob, approveMissionJob, missionJobAssignmentId } from '../src/services/agentCenter/missionJobs.js'
@@ -456,6 +458,57 @@ test('宿主重启时从已写入的 Job 终态恢复 Mission 关联，不重复
     await gateway.close()
     await rm(cwd,{recursive:true,force:true})
   }
+})
+
+test('真实 Git 工作树冲突预检、源代码保护、原子合并与幂等识别',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'worktree-integration-real-'))
+  const project=join(root,'project')
+  const worker=join(root,'worker')
+  await mkdir(project,{recursive:true})
+  function git(where:string,...args:string[]):string {
+    return execFileSync('git',args,{cwd:where,encoding:'utf8'}).trim()
+  }
+  try {
+    git(project,'init','-b','main')
+    git(project,'config','user.email','test@example.invalid')
+    git(project,'config','user.name','测试用户')
+    await writeFile(join(project,'README.md'),'initial\n')
+    git(project,'add','README.md');git(project,'commit','-m','start')
+    const baseline=git(project,'rev-parse','HEAD')
+    git(project,'worktree','add','-b','agent-work',worker)
+    await writeFile(join(worker,'agent-file.ts'),'export const value = 1\n')
+    git(worker,'add','agent-file.ts');git(worker,'commit','-m','agent output')
+    const preview=await previewWorktreeIntegration(project,worker,baseline)
+    expect(preview.canIntegrate).toBe(true)
+    expect(preview.changes).toContain('agent-file.ts')
+    expect(preview.mergeTree).toMatch(/^[a-f0-9]{40}$/)
+    const merged=await integrateWorktree(project,worker,baseline,
+      preview.targetHead,preview.sourceHead,root)
+    expect(merged.alreadyIntegrated).toBe(false)
+    expect(git(project,'rev-parse','HEAD')).toBe(merged.mergeCommit)
+    expect(await readFile(join(project,'agent-file.ts'),'utf8')).toContain('value = 1')
+    expect(git(project,'status','--porcelain')).toBe('')
+    const repeat=await previewWorktreeIntegration(project,worker,baseline)
+    expect(repeat.alreadyIntegrated).toBe(true)
+
+    // Start a new task from the merged main and create a genuine conflict.
+    const other=join(root,'worker-conflict')
+    const newBase=git(project,'rev-parse','HEAD')
+    git(project,'worktree','add','-b','agent-conflict',other)
+    await writeFile(join(other,'README.md'),'agent update\n')
+    git(other,'add','README.md');git(other,'commit','-m','agent conflicts')
+    await writeFile(join(project,'README.md'),'human update\n')
+    git(project,'add','README.md');git(project,'commit','-m','human conflicts')
+    const mainHead=git(project,'rev-parse','HEAD')
+    const conflict=await previewWorktreeIntegration(project,other,newBase)
+    expect(conflict.canIntegrate).toBe(false)
+    expect(conflict.reason).toContain('冲突')
+    expect(git(project,'rev-parse','HEAD')).toBe(mainHead)
+    expect(await readFile(join(project,'README.md'),'utf8')).toBe('human update\n')
+    await expect(integrateWorktree(project,other,newBase,mainHead,git(other,'rev-parse','HEAD'),root))
+      .rejects.toThrow('冲突')
+    expect(git(project,'rev-parse','HEAD')).toBe(mainHead)
+  }finally{await rm(root,{recursive:true,force:true})}
 })
 
 test('独立工作树合入 API 拒绝未审核工作项，不接受任意目录或提交',async()=>{

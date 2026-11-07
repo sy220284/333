@@ -903,6 +903,11 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         const job=jobs.find(item=>item.id===request.jobId)
         if(!job || job.status!=='completed')throw new Error('仅已审核完成的工作项可以合入')
         if(!job.worktreePath || !job.worktreeHead)throw new Error('缺少可核对的工作树和初始提交')
+        if(job.integrationCommit){
+          const preview=await previewWorktreeIntegration(cwd,job.worktreePath,job.worktreeHead)
+          if(!preview.alreadyIntegrated)throw new Error('项目历史已变化，需核对之前的合入提交')
+          return {mergeCommit:job.integrationCommit,alreadyIntegrated:true,job}
+        }
         const result=await integrateWorktree(cwd,job.worktreePath,job.worktreeHead,
           request.targetHead,request.sourceHead,options.missionRoot??getClaudeConfigHomeDir())
         const saved=await markMissionJobIntegrated(mission.id,cwd,job.id,result.mergeCommit,options.missionRoot)
