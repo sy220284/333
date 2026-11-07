@@ -60,6 +60,8 @@ reader.on('line', line => {
             promptSuggestions: frame.request.promptSuggestions,
             agentProgressSummaries: frame.request.agentProgressSummaries,
           },
+          hook_on_failure_supported: true,
+          hooks_applied: frame.request.hooks !== undefined,
         })
       } else if (frame.request.subtype === 'interrupt') {
         reply(frame.request_id)
@@ -139,6 +141,48 @@ test('SDK initialization forwards 2.1.317 prompt suggestions and agent progress 
     })
   } finally {
     await runtime.closeAndWait()
+    await rm(cwd, { recursive: true, force: true })
+  }
+})
+
+test('SDK blocking hooks require a verified native capability handshake', { timeout: 30000 }, async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'sdk-blocking-hook-'))
+  const hooks = { PreToolUse: [{
+    matcher: 'Bash',
+    onFailure: 'block' as const,
+    hooks: [async () => ({ decision: 'block' })],
+  }] }
+  const cases = [
+    { name: 'supported', replacement: '', ok: true },
+    { name: 'unsupported', replacement: 'hook_on_failure_supported: false,', ok: false },
+    { name: 'unregistered', replacement: 'hooks_applied: false,', ok: false },
+  ]
+  try {
+    for (const item of cases) {
+      const cli = join(cwd, item.name + '-sdk-cli.mjs')
+      const fixture = item.replacement
+        ? fixtureCli.replace(
+          item.name === 'unsupported' ? 'hook_on_failure_supported: true,' : 'hooks_applied: frame.request.hooks !== undefined,',
+          item.replacement,
+        )
+        : fixtureCli
+      await writeFile(cli, fixture)
+      const runtime = createSessionRuntime317({
+        cwd, executable: 'node', pathToClaudeCodeExecutable: cli, hooks,
+      })
+      try {
+        if (item.ok) {
+          await expect(runtime.initialization).resolves.toHaveProperty('hook_on_failure_supported', true)
+        } else {
+          await expect(runtime.initialization).rejects.toThrow(
+            item.name === 'unsupported' ? /does not support onFailure/ : /did not register blocking hooks/,
+          )
+        }
+      } finally {
+        await runtime.closeAndWait()
+      }
+    }
+  } finally {
     await rm(cwd, { recursive: true, force: true })
   }
 })
