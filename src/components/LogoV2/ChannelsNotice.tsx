@@ -207,7 +207,7 @@ function findUnmatched(entries: readonly ChannelEntry[], allowlist: ReturnType<t
   // Server-kind: build one Set from all scopes up front. getMcpConfigsByScope
   // is not cached (project scope walks the dir tree); getMcpConfigByName would
   // redo that walk per entry.
-  const scopes = ['enterprise', 'user', 'project', 'local'] as const;
+  const scopes = ['user', 'project', 'local'] as const;
   const configured = new Set<string>();
   for (const scope of scopes) {
     for (const name of Object.keys(getMcpConfigsByScope(scope).servers)) {
