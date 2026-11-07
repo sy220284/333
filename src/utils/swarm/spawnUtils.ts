@@ -42,17 +42,17 @@ export function buildInheritedCliFlags(options?: {
   const flags: string[] = []
   const { planModeRequired, permissionMode } = options || {}
 
-  // Propagate permission mode to teammates, but NOT if plan mode is required
-  // Plan mode takes precedence over bypass permissions for safety
-  if (planModeRequired) {
-    // Don't inherit bypass permissions when plan mode is required
+  // Explicitly carry the leader's effective mode. Omitting a manual-mode
+  // flag lets startup config enable auto mode in the teammate accidentally.
+  if (planModeRequired || permissionMode === 'plan') {
+    flags.push('--permission-mode plan')
   } else if (
     permissionMode === 'bypassPermissions' ||
-    getSessionBypassPermissionsMode()
+    (permissionMode === undefined && getSessionBypassPermissionsMode())
   ) {
     flags.push('--dangerously-skip-permissions')
-  } else if (permissionMode === 'acceptEdits') {
-    flags.push('--permission-mode acceptEdits')
+  } else {
+    flags.push(`--permission-mode ${permissionMode ?? 'default'}`)
   }
 
   // Propagate --model if explicitly set via CLI
