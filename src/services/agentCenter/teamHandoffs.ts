@@ -42,7 +42,7 @@ type Document = z.infer<typeof documentSchema>
 function storage(projectDir: string, root: string): string {
   if (!projectDir.trim()) throw new Error('交接必须指定项目')
   return join(root,'agent-handoffs',
-    createHash('sha256').update(resolve(projectDir)).digest('hex')+'.json')
+    `${createHash('sha256').update(resolve(projectDir)).digest('hex')}.json`)
 }
 function empty(projectDir:string):Document {
   return {version:1,projectDir:resolve(projectDir),revision:0,handoffs:[]}
@@ -73,7 +73,7 @@ async function change(projectDir:string,root:string,transform:(doc:Document)=>{d
     const next=documentSchema.parse({...result.doc,revision:previous.revision+1})
     const serialized=JSON.stringify(next,null,2)
     if(Buffer.byteLength(serialized)>8_000_000)throw new Error('团队交接记录超过容量限制')
-    const tmp=path+'.'+randomUUID()+'.tmp'
+    const tmp=`${path}.${randomUUID()}.tmp`
     try { await writeFile(tmp,serialized,{flag:'wx',mode:0o600});await rename(tmp,path) }
     finally { await rm(tmp,{force:true}) }
     return result.handoff
@@ -127,7 +127,7 @@ export async function changeTeamHandoff(
       if(before.status==='completed'||before.status==='cancelled')throw new Error('已完成交接无法取消')
       if(user!==before.from && user!=='team-lead')throw new Error('只有发送方或项目负责人可取消交接')
     }else if(before.status!==next[action]) {
-      throw new Error('交接状态前置条件未满足：'+before.status+' → '+action)
+      throw new Error(`交接状态前置条件未满足：${before.status} → ${action}`)
     }
     if(action==='queued'&&user!==before.from)throw new Error('只有发送者能确认原生信箱投递')
     if(['acknowledged','running','review'].includes(action)&&user!==before.to)
