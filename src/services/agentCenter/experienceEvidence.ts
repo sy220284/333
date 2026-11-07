@@ -8,6 +8,7 @@ import { readFile, realpath, stat } from 'node:fs/promises'
 import { isAbsolute, relative, resolve, sep } from 'node:path'
 import { promisify } from 'node:util'
 import { listMissionJobs } from './missionJobs.js'
+import { verifyProjectArtifact } from './artifactRegistry.js'
 
 const execute = promisify(execFile)
 export type ExperienceEvidenceCheck = {
@@ -57,6 +58,20 @@ export async function inspectExperienceEvidence(
         return {ref,status:'missing',detail:'当前项目没有该 Git 提交对象'} as ExperienceEvidenceCheck
       }
       return {ref,status:'missing',detail:'Git 对象类型不是提交'} as ExperienceEvidenceCheck
+    }
+    if (/^artifact:[0-9a-f-]{36}$/.test(ref)) {
+      try {
+        const result=await verifyProjectArtifact(projectDir,ref.slice(9),missionRoot)
+        if (!result.matches || result.artifact.status==='superseded')
+          return {ref,status:'missing',detail:'成果文件已变化或该版本被替代'} as ExperienceEvidenceCheck
+        return result.artifact.status==='approved'
+          ? {ref,status:'verified',detail:'成果已核对文件哈希并经人工验收',fingerprint:result.actualSha256}
+          : {ref,status:'manual',detail:'成果文件存在，但尚未通过独立人工审核'} as ExperienceEvidenceCheck
+      } catch (error) {
+        if (error instanceof Error && /未在当前项目登记|成果编号|ENOENT|路径/.test(error.message))
+          return {ref,status:'missing',detail:'该成果无法在当前项目核验'} as ExperienceEvidenceCheck
+        throw error
+      }
     }
     if (ref.startsWith('job:')) {
       const match=/^job:(mission_[0-9a-f]{16})\/(job_[0-9a-f]{16})$/.exec(ref)
