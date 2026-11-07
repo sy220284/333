@@ -11,6 +11,7 @@ import {
 import { api, type AppEvent, type Item } from './api'
 import { MarkdownMessage } from './MarkdownMessage'
 import { NewSessionStarter } from './components/layout/NewSessionStarter'
+import { SessionChatSurface } from './components/chat/SessionChatSurface'
 import { Badge } from './components/ui/Badge'
 import { Button } from './components/ui/Button'
 import { Card } from './components/ui/Card'
@@ -712,60 +713,18 @@ export function App(){
             onOpenMission={id=>{setSelectedMission(id);setView('missions')}}
             onOpenMissionBoard={()=>setView('missions')}
           />}
-          {view==='chat'&&<div className="chat-page">
-            <div className="chat-toolbar"><div className="toolbar-left"><StatusTag text={historyOnly?'历史记录':statusName(sessionPhase)} tone={sessionPhase==='running'?'warn':'good'}/>{sessionId&&<span className="session-id" title={sessionId}>会话 {sessionId.slice(0,8)}</span>}</div><div className="toolbar-right"><select aria-label="当前模型" disabled={historyOnly} value={selectedModel} onChange={e=>void selectModel(e.target.value)}><option value="">默认模型</option>{models.map(m=><option value={m.value} key={m.value}>{m.displayName||m.value}</option>)}</select><select aria-label="权限模式" disabled={historyOnly} value={permissionMode} onChange={e=>{const next=e.target.value;void operation('修改权限模式',async()=>{if(!sessionId)throw new Error('请先创建会话');await invoke('sessions.setPermissionMode',{sessionId,mode:next});setPermissionMode(next)})}}><option value="default">默认权限</option><option value="acceptEdits">允许编辑</option><option value="plan">规划模式</option><option value="dontAsk">拒绝后继续</option><option value="bypassPermissions">跳过确认（危险）</option></select>{sessionId&&!historyOnly&&<IconButton label="停止当前执行" onClick={()=>void operation('中断执行',()=>invoke('sessions.interrupt',{sessionId}))}><CircleStop size={18}/></IconButton>}</div></div>
-            <div className="message-stream" ref={streamRef} onScroll={event=>{
-              const element=event.currentTarget
-              setFollowLatest(element.scrollHeight-element.scrollTop-element.clientHeight<96)
-            }}>
-              {messages.length===0 ? (
-                <div className="chat-empty">
-                  <div className="chat-empty-icon"><Sparkles size={38}/></div>
-                  <h2>今天想完成什么？</h2>
-                  <p>分析项目、编写代码、管理任务，或者邀请智能体协作。</p>
-                  <div className="prompt-suggestions">
-                    {['分析当前工作区的项目结构','检查当前工作区最新代码问题','规划一个多智能体协作任务'].map(text=>(
-                      <button type="button" key={text} onClick={()=>setDraft(text)}>{text}<ArrowRight size={14}/></button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {messages.length>visibleMessageCount&&(
-                    <button type="button" className="load-older" onClick={()=>{
-                      setVisibleMessageCount(count=>count+120)
-                      setFollowLatest(false)
-                    }}>加载更早的 {Math.min(120,messages.length-visibleMessageCount)} 条消息</button>
-                  )}
-                  {messages.slice(-visibleMessageCount).map(message=>(
-                    <div className={`message ${message.kind}`} key={message.id}>
-                      <div className="message-avatar">
-                        {message.kind==='user'?<span>我</span>:message.kind==='assistant'?<Sparkles size={17}/>:<SquareTerminal size={16}/>}
-                      </div>
-                      <div className="message-content">
-                        <div className="message-meta">
-                          {message.kind==='user'?'你':message.kind==='assistant'?'摇摇车':'工具'}
-                          <time>{dateTime(message.time)}</time>
-                        </div>
-                        <div className="message-text">
-                          {message.kind==='assistant'?<MarkdownMessage text={message.text} onOpenLink={openChatLink}/>:message.text}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-              <div ref={messagesEnd}/>
-            </div>
-            {!followLatest&&messages.length>0&&(
-              <button type="button" className="jump-to-latest" onClick={()=>setFollowLatest(true)}>
-                回到最新消息 <ArrowRight size={14}/>
-              </button>
-            )}
-            {permissions.length>0&&<div className="inline-approval"><ShieldCheck size={18}/><span>{permissions.length} 项工具操作等待批准</span><button type="button" onClick={()=>setView('settings')}>查看审批<ArrowRight size={14}/></button></div>}
-            {historyOnly&&<div className="inline-approval"><History size={18}/><span>当前正在查看历史执行记录。发送新消息时将恢复原会话。</span></div>}
-            <div className="composer"><textarea ref={inputRef} aria-label="输入任务" value={draft} onChange={e=>setDraft(e.target.value)} placeholder="描述任务，支持使用文字引用项目文件与技能…" onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();void send()}}}/><div className="composer-footer"><div className="composer-hints"><span><Bot size={15}/> {mode==='super'?'Super Agents':'主子智能体'}</span><span>⌘ / Ctrl + Enter 发送</span></div><button type="button" className="primary-button send-button" disabled={!draft.trim()||Boolean(busy)||!connected} onClick={()=>void send()}><Send size={16}/>发送</button></div></div>
-          </div>}
+          {view==='chat'&&<SessionChatSurface
+            sessionId={sessionId} sessionPhase={sessionPhase} historyOnly={historyOnly}
+            models={models} selectedModel={selectedModel} permissionMode={permissionMode}
+            messages={messages} visibleMessageCount={visibleMessageCount} followLatest={followLatest} permissionsCount={permissions.length}
+            draft={draft} mode={mode} busy={Boolean(busy)} connected={connected}
+            streamRef={streamRef} messagesEnd={messagesEnd} inputRef={inputRef}
+            onModel={next=>void selectModel(next)}
+            onPermissionMode={next=>void operation('修改权限模式',async()=>{if(!sessionId)throw new Error('请先创建会话');await invoke('sessions.setPermissionMode',{sessionId,mode:next});setPermissionMode(next)})}
+            onStop={()=>void operation('中断执行',()=>invoke('sessions.interrupt',{sessionId}))}
+            onScrollBottom={setFollowLatest} onVisibleCount={setVisibleMessageCount} onFollowLatest={setFollowLatest}
+            onOpenApprovals={()=>setView('settings')} onDraft={setDraft} onSend={()=>void send()} onOpenLink={openChatLink}
+          />}
           {view==='agents'&&<div className="stack-page"><Section title="协作模式" subtitle="模式切换在新会话生效；已有会话及执行历史保留。仅在明确发起任务时运行智能体。"><div className="mode-cards"><button type="button" className={`mode-card ${mode==='master'?'selected':''}`} onClick={()=>void agentMode('master')}><div className="mode-icon"><Bot size={26}/></div><div><strong>主智能体 + 子智能体</strong><p>主智能体负责规划与汇总，子智能体并行执行独立工作。</p></div><span>{mode==='master'?<Check size={18}/>:<ArrowRight size={18}/>}</span></button><button type="button" className={`mode-card ${mode==='super'?'selected':''}`} onClick={()=>void agentMode('super')}><div className="mode-icon"><UsersRound size={27}/></div><div><strong>Super Agents 团队模式</strong><p>面向共享任务、团队通信、任务簿和长期目标协同。</p></div><span>{mode==='super'?<Check size={18}/>:<ArrowRight size={18}/>}</span></button></div></Section>
             <Section title="项目团队" subtitle="直接读取当前项目真实存在的团队和成员；跨会话团队可统一查看。" action={<button type="button" className="secondary-button" onClick={()=>void operation('刷新团队',refresh)}><RefreshCw size={15}/>刷新</button>}>
               {Array.isArray(overview.teams)&&overview.teams.length>0?
