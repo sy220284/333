@@ -972,6 +972,26 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         return sendProjectTeamMessage(cwd, request)
       case 'agents.team.inbox':
         return readProjectTeamInbox(cwd, request.teamName, request.memberName)
+      case 'artifacts.list': {
+        const { listProjectArtifacts } = await import('../agentCenter/artifactRegistry.js')
+        return { artifacts:await listProjectArtifacts(cwd,options.dataDir) }
+      }
+      case 'artifacts.register': {
+        const { registerProjectArtifact } = await import('../agentCenter/artifactRegistry.js')
+        return registerProjectArtifact(cwd,{
+          title:request.title,kind:request.kind,path:request.path,
+          ...(request.missionId?{missionId:request.missionId}:{}),
+          ...(request.jobId?{jobId:request.jobId}:{}),
+        },options.dataDir)
+      }
+      case 'artifacts.verify': {
+        const { verifyProjectArtifact } = await import('../agentCenter/artifactRegistry.js')
+        return verifyProjectArtifact(cwd,request.artifactId,options.dataDir)
+      }
+      case 'artifacts.approve': {
+        const { approveProjectArtifact } = await import('../agentCenter/artifactRegistry.js')
+        return approveProjectArtifact(cwd,request.artifactId,'桌面用户',request.reviewNote,options.dataDir)
+      }
       case 'supervisor.snapshot': {
         const { getProjectSupervisorSnapshot } = await import('../agentCenter/projectSupervisor.js')
         return getProjectSupervisorSnapshot(cwd,{dataDir:options.dataDir,missionRoot:options.missionRoot})

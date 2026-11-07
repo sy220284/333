@@ -51,6 +51,7 @@ type ExperienceItem={id:string;key:string;title:string;scenario:string;principle
 type ExperienceEvidence={checks:Array<{ref:string;status:'verified'|'manual'|'missing';detail:string;fingerprint?:string}>;mayApprove:boolean;requiresHumanReview:boolean}
 type SkillDraft={id:string;slug:string;description:string;instructions:string;state:'candidate'|'published';createdAt:string;publishedAt?:string}
 type TeamHandoff={id:string;teamName:string;from:string;to:string;summary:string;instruction:string;status:'draft'|'queued'|'acknowledged'|'running'|'review'|'completed'|'cancelled';inputRefs:string[];outputRefs:string[];reviewSummary?:string}
+type ArtifactItem={id:string;title:string;kind:'video'|'image'|'audio'|'document'|'code'|'other';path:string;sha256:string;byteSize:number;version:number;status:'registered'|'approved'|'superseded';reviewNote?:string;missionId?:string;jobId?:string}
 type SupervisorFinding={id:string;kind:'job'|'handoff'|'experience'|'skill'|'identity';priority:'review'|'blocked'|'followup';title:string;detail:string;nextAction:string;missionId?:string;jobId?:string;handoffId?:string;experienceId?:string;draftId?:string;agentId?:string}
 type SupervisorSnapshot={findings:SupervisorFinding[];counts:{blocked:number;review:number;followup:number}}
 type AgentProfile={id:string;name:string;description:string;domains:string[];capabilityIds:string[];experienceKeys:string[];status:'available'|'paused'|'retired';roles:Array<{id:string;role:string;purpose:string;state:'active'|'released';teamName?:string;missionId?:string}>;sessionBindings?:Array<{sessionId:string;roleId:string;boundAt:string}>}
@@ -175,6 +176,13 @@ export function App(){
   const [teamInbox,setTeamInbox]=useState<TeamInbox|null>(null)
   const [teamHandoffs,setTeamHandoffs]=useState<TeamHandoff[]>([])
   const [supervisor,setSupervisor]=useState<SupervisorSnapshot|null>(null)
+  const [artifacts,setArtifacts]=useState<ArtifactItem[]>([])
+  const [artifactRevision,setArtifactRevision]=useState(0)
+  const [artifactTitle,setArtifactTitle]=useState('')
+  const [artifactPath,setArtifactPath]=useState('')
+  const [artifactKind,setArtifactKind]=useState<ArtifactItem['kind']>('document')
+  const [artifactReviews,setArtifactReviews]=useState<Record<string,string>>({})
+  const [artifactChecks,setArtifactChecks]=useState<Record<string,boolean>>({})
   const [supervisorRevision,setSupervisorRevision]=useState(0)
   const [handoffReviewNotes,setHandoffReviewNotes]=useState<Record<string,string>>({})
   const [agentProfiles,setAgentProfiles]=useState<AgentProfile[]>([])
@@ -310,6 +318,15 @@ export function App(){
     return()=>{active=false}
   },[view,workspace,connected,supervisorRevision])
   // biome-ignore lint/correctness/useExhaustiveDependencies: switching workspace or handoff revision intentionally refreshes cached handoffs.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: project and artifact mutations invalidate the local artifact index.
+  useEffect(()=>{
+    if(!connected||!['agents','missions','files'].includes(view))return
+    let active=true
+    void api.call<{artifacts:ArtifactItem[]}>('artifacts.list').then(result=>{
+      if(active)setArtifacts(result.artifacts??[])
+    }).catch(error=>{if(active)setError(`成果索引读取失败：${presentError(error)}`)})
+    return()=>{active=false}
+  },[view,workspace,connected,artifactRevision])
   useEffect(()=>{
     if(view!=='agents'||!connected)return
     let active=true
@@ -1381,6 +1398,43 @@ export function App(){
                   </Card>
                 </div>:
                 <Card radius="lg" surface="lowest"><Empty icon={UsersRound} title="当前项目暂无团队" detail="先创建长期目标，然后在 Super Agents 模式下建立团队。" action={<Button variant="secondary" size="base" onClick={()=>setView('missions')}>创建长期目标 <ArrowRight size={14}/></Button>}/></Card>}
+            </Section>
+            <Section title="项目成果中心" subtitle="登记实际文件及指纹后才可用于项目交接与经验规范；审核人检查成果质量后可批准版本。" action={<Button variant="secondary" size="sm" onClick={()=>setArtifactRevision(v=>v+1)}><RefreshCw size={13}/>刷新成果</Button>}>
+              <Card radius="lg" surface="lowest" padding="lg" shadow="card">
+                <div className="grid grid-cols-3 gap-3 max-[950px]:grid-cols-1">
+                  <label className="space-y-1 text-[12px]">成果名称<input value={artifactTitle} onChange={e=>setArtifactTitle(e.target.value)} placeholder="例如：视频正式版"/></label>
+                  <label className="space-y-1 text-[12px]">项目内相对路径<input value={artifactPath} onChange={e=>setArtifactPath(e.target.value)} placeholder="output/final.mp4"/></label>
+                  <label className="space-y-1 text-[12px]">成果类型<select aria-label="成果类型" value={artifactKind} onChange={e=>setArtifactKind(e.target.value as ArtifactItem['kind'])}>
+                    <option value="video">视频</option><option value="image">图片</option><option value="audio">音频</option><option value="document">文档</option><option value="code">代码</option><option value="other">其他</option>
+                  </select></label>
+                </div>
+                <Button className="mt-3" size="sm" variant="secondary" disabled={Boolean(busy)||artifactTitle.trim().length<4||!artifactPath.trim()}
+                  onClick={()=>void operation('登记真实成果',async()=>{
+                    await invoke('artifacts.register',{title:artifactTitle.trim(),path:artifactPath.trim(),kind:artifactKind})
+                    setArtifactTitle('');setArtifactPath('')
+                    setArtifactRevision(v=>v+1)
+                  })}><Plus size={13}/>登记文件版本</Button>
+                <div className="mt-4 space-y-2">
+                  {artifacts.slice(-40).reverse().map(item=><div key={item.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3 text-[11px]">
+                    <div className="flex flex-wrap items-center gap-2"><strong className="flex-1 text-[12px]">{item.title}</strong><Badge size="xs" tone={item.status==='approved'?'success':item.status==='superseded'?'warning':'neutral'}>{item.status==='approved'?'已审核':item.status==='superseded'?'旧版本':'已登记'}</Badge></div>
+                    <p className="mt-1 break-all text-[var(--color-text-secondary)]">{item.path} · {item.kind} · 版本 {item.version} · {item.byteSize} 字节</p>
+                    <details className="mt-1"><summary className="cursor-pointer">来源指纹及引用编号</summary><p className="break-all">成果引用：artifact:{item.id}</p><p className="break-all">SHA256：{item.sha256}</p>{item.reviewNote&&<p>审核：{item.reviewNote}</p>}</details>
+                    {item.status==='registered'&&<div className="mt-2 space-y-2">
+                      <Button size="sm" variant="secondary" onClick={()=>void operation('核对成果指纹',async()=>{
+                        const result=await invoke<{matches:boolean}>('artifacts.verify',{artifactId:item.id})
+                        setArtifactChecks(old=>({...old,[item.id]:result.matches}))
+                        if(!result.matches)throw new Error('源文件已变化，请重新登记版本')
+                      })}><Search size={13}/>检查本地指纹</Button>
+                      {artifactChecks[item.id]&&<textarea aria-label={`成果审核意见 ${item.id.slice(0,8)}`} rows={2} value={artifactReviews[item.id]??''} onChange={e=>setArtifactReviews(old=>({...old,[item.id]:e.target.value}))} placeholder="填写实际查看了哪些文件内容、播放结果或测试结论"/>}
+                      {artifactChecks[item.id]&&<Button size="sm" variant="secondary" disabled={Boolean(busy)||(artifactReviews[item.id]??'').trim().length<16} onClick={()=>void operation('审核成果',async()=>{
+                        await invoke('artifacts.approve',{artifactId:item.id,reviewNote:(artifactReviews[item.id]??'').trim()})
+                        setArtifactRevision(v=>v+1)
+                      })}><ShieldCheck size={13}/>确认成果质量</Button>}
+                    </div>}
+                  </div>)}
+                  {!artifacts.length&&<Empty icon={FolderOpen} title="尚未登记可验证成果" detail="先在项目目录生成真实文件，再按相对路径登记其指纹与版本。"/>}
+                </div>
+              </Card>
             </Section>
             <Section title="团队交接记录" subtitle="显示原生信箱投递与任务交接状态；已排队仅证明消息写入，成员领取和完成需后续真实回执。" action={<Button variant="secondary" size="sm" onClick={()=>setHandoffRevision(v=>v+1)}><RefreshCw size={13}/>刷新交接</Button>}>
               <Card radius="lg" surface="lowest" padding="md" shadow="card">

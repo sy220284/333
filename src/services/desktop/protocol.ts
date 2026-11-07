@@ -96,6 +96,17 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
     teamName: z.string().min(1).max(128),
     memberName: z.string().min(1).max(128),
   }),
+  request('artifacts.list', {}),
+  request('artifacts.register', {
+    title:z.string().trim().min(4).max(200),
+    kind:z.enum(['video','image','audio','document','code','other']),
+    path:z.string().trim().min(1).max(2048),
+    missionId:z.string().regex(/^mission_[a-f0-9]{16}$/).optional(),
+    jobId:z.string().regex(/^job_[a-f0-9]{16}$/).optional(),
+  }),
+  request('artifacts.verify', { artifactId:z.string().uuid() }),
+  request('artifacts.approve', { artifactId:z.string().uuid(),
+    reviewNote:z.string().trim().min(16).max(1500) }),
   request('supervisor.snapshot', {}),
   request('agents.profiles.list', {}),
   request('agents.profiles.create', {
