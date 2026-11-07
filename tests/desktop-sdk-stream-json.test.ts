@@ -198,6 +198,28 @@ test('SDK blocking hooks require a verified native capability handshake', { time
   }
 })
 
+test('first SDK initialize re-delivers parked permission requests from an attached CLI', { timeout: 30000 }, async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'sdk-first-init-pending-'))
+  const cli = join(cwd, 'mock-sdk-cli.mjs')
+  await writeFile(cli, fixtureCli.replace('initializations > 1 ?', 'initializations >= 1 ?'))
+  let approved = 0
+  const runtime = createSessionRuntime317({
+    cwd, executable: 'node', pathToClaudeCodeExecutable: cli,
+    canUseTool: async (name, input) => {
+      if (name === 'Bash' && input.command === 'pwd') approved++
+      return { behavior: 'allow' }
+    },
+  })
+  try {
+    await runtime.initialization
+    await until(() => approved === 1)
+    expect(approved).toBe(1)
+  } finally {
+    await runtime.closeAndWait()
+    await rm(cwd, { recursive: true, force: true })
+  }
+})
+
 test('SDK re-initialize re-delivers parked permission requests without a second user turn', { timeout: 30000 }, async () => {
   const cwd = await mkdtemp(join(tmpdir(), 'sdk-parked-reinitialize-'))
   const cli = join(cwd, 'mock-sdk-cli.mjs')
