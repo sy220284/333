@@ -1,0 +1,154 @@
+{
+  "schema": 1,
+  "title": "个人版能力增强待分配清单",
+  "origin": {
+    "repo": "sy220284/333",
+    "pr": 19,
+    "sha": "5c2352a7848e8547f879cabb43e94754f9bd8cea"
+  },
+  "status": "待分配",
+  "tasks": [
+    {
+      "id": "PERSONAL-001",
+      "title": "按项目／智能体分层硬预算与流式计费",
+      "priority": "P0",
+      "assignee": null,
+      "status": "待分配",
+      "baseline": [
+        "src/main.tsx 已支持单次会话 --max-budget-usd",
+        "src/utils/modelCost.ts 和 src/services/api/multimodel/pricing.ts 已支持模型费用估算与用户本地价格配置",
+        "src/commands/cost/cost.ts 已支持查看当前费用"
+      ],
+      "sourcePaths": [
+        "src/cli/gateway/gatewaySpendMeter317.ts",
+        "src/cli/gateway/gatewaySpendStore317.ts",
+        "src/cli/gateway/gatewayAdmin317.ts"
+      ],
+      "gap": "缺少跨会话的项目、智能体、模型分层预算，以及并发任务原子扣额与超额阻断。",
+      "implementation": "把请求前额度检查、SSE token 最终计费、日周月预算及失败状态抽象为个人本地存储的 budget engine；保留用户设置、手动解锁/重置，支持跨会话；移除组织/RBAC/管理员接口、PostgreSQL 强依赖和 Anthropic 专用头。",
+      "acceptance": [
+        "同一项目多个并发 Agent 不得突破预算上限；额度达到时在模型发请求前拒绝并给出可操作提示",
+        "含流式中断、缓存 Token、不同模型单价和跨周/月边界的计费测试",
+        "没有后台企业服务、组织账号或网络遥测时仍可工作"
+      ]
+    },
+    {
+      "id": "PERSONAL-002",
+      "title": "按智能体／任务设定模型选择和故障降级",
+      "priority": "P0",
+      "assignee": null,
+      "status": "待分配",
+      "baseline": [
+        "src/services/api/multimodel/registry.ts 和 providerFields.ts 已支持独立模型及官方字段适配",
+        "src/commands/model/model.tsx 已支持交互选模型",
+        "src/services/desktop/gateway.ts 已公开模型/Agent 入口"
+      ],
+      "sourcePaths": [
+        "src/cli/gateway/gatewayConfig317.ts",
+        "src/cli/gateway/gatewayForward317.ts",
+        "src/cli/gateway/gatewayProviders317.ts"
+      ],
+      "gap": "个人版需要将模型选择落到每一个 Agent/任务，而不依赖统一企业网关和额外转换代理。",
+      "implementation": "将企业网关的模型映射/候选选择规则提炼为本地可配置的 Agent 模型档案，复用现有多模型 transport 和能力探测，按权限、成本、上下文和可用性选择候选与降级序列；模型 API Key 继续保存在本地凭据库。",
+      "acceptance": [
+        "用户可对主智能体、子智能体、团队成员分别配置首选模型和备选模型",
+        "能力不足或超出预算时显示原因并按明确规则切换，禁止偷偷改走其他服务商",
+        "CLI、桌面端和恢复会话取得同样的模型决策结果"
+      ]
+    },
+    {
+      "id": "PERSONAL-003",
+      "title": "个人智能体／项目权限模板与强制继承",
+      "priority": "P0",
+      "assignee": null,
+      "status": "待分配",
+      "baseline": [
+        "src/services/conversation/toolAuthorization.ts 已处理 CLI/SDK/桌面审批",
+        "src/services/mcp/config.ts 已包含 MCP allow/deny 与本地重连审查",
+        "src/utils/settings/types.ts 已提供允许/拒绝规则和插件/Hook 配置"
+      ],
+      "sourcePaths": [
+        "src/cli/gateway/gatewayManaged317.ts",
+        "src/utils/settings/mdm/settings.ts"
+      ],
+      "gap": "不同智能体重复配置审批权限；缺少可选择的个人安全模板及跨任务强制继承证据。",
+      "implementation": "保留已有本地权限执行链，把企业层叠合并和禁止降权的原则转为个人项目级模板；继承优先级清晰，用户在本机管理模板，子智能体不得扩大任务的文件/工具权限。",
+      "acceptance": [
+        "按项目、Agent、工具/MCP/路径配置模板，且更严格的父任务权限不会被下级放宽",
+        "跨 CLI/桌面/SDK 结果一致，已有权限拒绝和沙盒测试无回退",
+        "本地配置可导出导入，不依赖组织账号、MDM、远程策略"
+      ]
+    },
+    {
+      "id": "PERSONAL-004",
+      "title": "个人多设备任务执行池（本地或自有机器）",
+      "priority": "P1",
+      "assignee": null,
+      "status": "待分配",
+      "baseline": [
+        "src/services/agentCenter/missionJobs.ts 已有同项目任务队列与领取/终态",
+        "src/services/desktop/gateway.ts 已能查询、停止、恢复任务",
+        "src/services/conversation/headlessSession.ts 已支持无终端 SDK 会话"
+      ],
+      "sourcePaths": [
+        "src/cli/selfHostedRunner/runnerAdmin317.ts",
+        "src/cli/selfHostedRunner/runnerHost317.ts",
+        "src/cli/selfHostedRunner/orchestrator317.ts",
+        "src/cli/selfHostedRunner/endpointPolicy.ts"
+      ],
+      "gap": "现有任务队列主要面向当前本地宿主，跨设备工作分配、设备注册、断线恢复与可观测性仍需个人化。",
+      "implementation": "提炼 Runner 的心跳、领取、重试、会话/机器管理，接入现有 missionJobs；仅访问用户主动配对的本机/局域网/自有 HTTPS 节点，采用最小权限凭据；按需启动而非内置企业平台服务。",
+      "acceptance": [
+        "单机优先；用户显式添加第二台自有节点后可分配并追踪任务",
+        "断电/断线、重复领取、取消、恢复与路径隔离有可重复实测",
+        "所有模型凭据与用户项目数据默认留在授权设备，不向官方云上传"
+      ]
+    },
+    {
+      "id": "PERSONAL-005",
+      "title": "本地任务／工具／预算审计时间线",
+      "priority": "P1",
+      "assignee": null,
+      "status": "待分配",
+      "baseline": [
+        "src/services/analytics/localDiagnostics.ts 已有私有本地事件日志",
+        "src/utils/telemetry/localMetricsExporter.ts 仅汇总本地数值指标",
+        "src/services/desktop/taskJournal.ts 已保存部分任务状态"
+      ],
+      "sourcePaths": [
+        "src/cli/gateway/gatewayStore317.ts",
+        "src/cli/gateway/gatewaySpendMeter317.ts"
+      ],
+      "gap": "难以在一个界面按项目复盘谁执行了什么、为何拒绝、花费多少以及如何恢复。",
+      "implementation": "借鉴企业审计事件结构，将任务、工具审批、失败、预算变动写入本地按项目索引，默认最小元数据，绝不自动记录提示词、密钥、原始工具内容；桌面和 CLI 共用查询。",
+      "acceptance": [
+        "按项目/Agent/时间筛选并关联任务和费用，明确记录拒绝原因",
+        "隐私禁用时不写本地诊断；保护文件权限、数据留存和清理可配置",
+        "零外部联网、零设备/账号指纹，故障可按事件定位"
+      ]
+    },
+    {
+      "id": "PERSONAL-006",
+      "title": "本地多模型健康检查与统一策略检查页",
+      "priority": "P1",
+      "assignee": null,
+      "status": "待分配",
+      "baseline": [
+        "src/services/api/multimodel/catalog.ts 与 capabilityProbe.ts 已有模型能力信息",
+        "src/commands/model/model.tsx 和 src/services/desktop/gateway.ts 已有模型/状态入口"
+      ],
+      "sourcePaths": [
+        "src/cli/gateway/gatewayConfig317.ts",
+        "src/cli/gateway/gatewayDevice317.ts",
+        "src/cli/gateway/gatewayForward317.ts"
+      ],
+      "gap": "普通用户要在多个命令里逐个检查模型配置、可用性、费用、权限和任务执行机器。",
+      "implementation": "使用现有模型能力档案及本地配置，设计一页自检：凭据是否存在、模型上下文/工具/图像能力是否确认、预算状态与可执行设备；不移植企业 OIDC 或设备授权。",
+      "acceptance": [
+        "首次配置和切换模型都能显示确定参数、未公开参数与探测失败原因",
+        "无模型密钥、离线、欠费、模型权限缺失分别给出可操作提示",
+        "全部检测按用户操作触发，避免后台偷偷请求模型与产生费用"
+      ]
+    }
+  ]
+}
