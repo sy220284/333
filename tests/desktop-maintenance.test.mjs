@@ -58,9 +58,8 @@ test('桌面数据管理真实预览、令牌保护与文件清理，保留项�
     await mkdir(other, { recursive: true })
     await mkdir(directory, { recursive: true })
     await writeFile(join(project, 'source.ts'), 'export const preserved = true\n')
-    await writeFile(join(directory, session + '.jsonl'), JSON.stringify({ cwd: project }) + '\n')
-    await writeFile(join(home, 'history.jsonl'), JSON.stringify({ project, display: 'remove' }) + '\n' +
-      JSON.stringify({ project: other, display: 'keep' }) + '\n')
+    await writeFile(join(directory, `${session}.jsonl`), `${JSON.stringify({ cwd: project })}\n`)
+    await writeFile(join(home, 'history.jsonl'), `${JSON.stringify({ project, display: 'remove' })}\n${JSON.stringify({ project: other, display: 'keep' })}\n`)
     await writeFile(join(home, '.yaoyaoche.json'), JSON.stringify({ projects: { [project]: { hasTrustDialogAccepted: true } } }))
     await writeFile(join(home, '.credentials.json'), '{"key":"preserve"}')
     const result = spawnSync('bun', ['-e', childScript], {
