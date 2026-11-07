@@ -94,7 +94,7 @@ test('中止过期运行时汇总门禁不会继续占用 Runner', () => {
 test('所有保留 push 入口的工作流限定到指定分支，PR 提交只触发调度入口', () => {
   const files = readdirSync(new URL('../.github/workflows/', import.meta.url)).filter(x => x.endsWith('.yml'))
   for (const file of files) {
-    const lines = readFileSync(new URL('../.github/workflows/' + file, import.meta.url), 'utf8').split(/\r?\n/)
+    const lines = readFileSync(new URL(`../.github/workflows/${file}`, import.meta.url), 'utf8').split(/\r?\n/)
     const index = lines.findIndex(x => /^ {2}push:\s*$/.test(x))
     if (index < 0) continue
     let i = index + 1
