@@ -1,5 +1,5 @@
-import { mkdir, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { getTeamsDir } from '../envUtils.js'
 import { getErrnoCode } from '../errors.js'
 import * as lockfile from '../lockfile.js'
