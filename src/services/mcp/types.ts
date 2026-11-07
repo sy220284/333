@@ -9,7 +9,6 @@ export const ConfigScopeSchema = lazySchema(() =>
     'user',
     'project',
     'dynamic',
-    'enterprise',
     'claudeai',
     'managed',
   ]),
