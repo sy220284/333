@@ -746,6 +746,23 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         const { listCapabilityCatalog } = await import('../agentCenter/capabilityCatalog.js')
         return listCapabilityCatalog(cwd)
       }
+      case 'capabilities.skills.drafts': {
+        const { listSkillDrafts } = await import('../agentCenter/skillWorkshop.js')
+        return { drafts: await listSkillDrafts(cwd) }
+      }
+      case 'capabilities.skills.createDraft': {
+        const { createSkillDraft } = await import('../agentCenter/skillWorkshop.js')
+        return createSkillDraft(cwd, {
+          slug: request.slug, description: request.description, instructions: request.instructions,
+        })
+      }
+      case 'capabilities.skills.publish': {
+        const { publishSkillDraft } = await import('../agentCenter/skillWorkshop.js')
+        const result = await publishSkillDraft(cwd, request.draftId)
+        const { clearCommandsCache } = await import('../../commands.js')
+        clearCommandsCache()
+        return result
+      }
       case 'capabilities.list': {
         const { listCapabilityCatalog } = await import('../agentCenter/capabilityCatalog.js')
         return listCapabilityCatalog(cwd)
