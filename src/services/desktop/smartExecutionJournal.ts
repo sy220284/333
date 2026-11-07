@@ -55,7 +55,7 @@ export function createSmartExecutionJournal(
     catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
     }
-    const release = await lockfile.lock(file)
+    const release = await lockfile.lock(file, { retries: { retries: 8, minTimeout: 25, maxTimeout: 250 } })
     try {
       const next = verified(change(await read()))
       const content = JSON.stringify(next)
