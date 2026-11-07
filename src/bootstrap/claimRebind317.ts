@@ -16,7 +16,6 @@ export async function rebindClaimedSessionDependencies317(): Promise<void> {
     settingsCache,
     mdm,
     mdmRaw,
-    remoteSettings,
     growthBook,
     keychain,
     keychainPrefetch,
@@ -33,7 +32,6 @@ export async function rebindClaimedSessionDependencies317(): Promise<void> {
     import('../utils/settings/settingsCache.js'),
     import('../utils/settings/mdm/settings.js'),
     import('../utils/settings/mdm/rawRead.js'),
-    import('../services/remoteManagedSettings/syncCache.js'),
     import('../services/analytics/growthbook.js'),
     import('../utils/secureStorage/macOsKeychainHelpers.js'),
     import('../utils/secureStorage/keychainPrefetch.js'),
@@ -63,7 +61,6 @@ export async function rebindClaimedSessionDependencies317(): Promise<void> {
   settingsCache.clearPluginSettingsBase()
   mdm.clearMdmSettingsCache()
   mdmRaw.resetMdmRawReadForClaim317()
-  remoteSettings.resetSyncCache()
   // Official hUn() resets feature targeting for the claimed identity while
   // preserving exposure bookkeeping already emitted by the warm process.
   growthBook.resetGrowthBook({ preservePendingExposures: true,
