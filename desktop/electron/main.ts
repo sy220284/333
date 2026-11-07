@@ -181,7 +181,7 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
       type:'warning',title:'确认 MCP 服务器配置',
       buttons:['取消','确认修改'],defaultId:0,cancelId:0,
       message:`确认修改 MCP 服务：${name}`,
-      detail:`${details}\n所有 MCP 配置会遵守现有权限和企业策略。`
+      detail:`${details}\n所有 MCP 配置均遵守当前本地权限设置。`
     })
     if(answer.response!==1)return {cancelled:true}
   }
