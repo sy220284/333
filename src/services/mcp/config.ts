@@ -302,7 +302,7 @@ function getMcpDenylistSettings(): SettingsJson {
 }
 
 /**
- * Check if an MCP server is denied by enterprise policy
+ * Check if an MCP server is denied by local managed policy
  * Checks name-based, command-based, and URL-based restrictions
  * @param serverName The name of the server to check
  * @param config Optional server config for command/URL-based matching
@@ -355,7 +355,7 @@ function isMcpServerDenied(
 }
 
 /**
- * Check if an MCP server is allowed by enterprise policy
+ * Check if an MCP server is allowed by local managed policy
  * Checks name-based, command-based, and URL-based restrictions
  * @param serverName The name of the server to check
  * @param config Optional server config for command/URL-based matching
@@ -498,7 +498,7 @@ export function filterMcpServersByPolicy<T>(configs: Record<string, T>): {
 }
 
 /**
- * Check current user disablement and enterprise policy for every reconnect.
+ * Check current user disablement and local managed policy for every reconnect.
  * An existing cached connection is not permission to bypass updated policy.
  */
 export function getMcpReconnectBlockReason(
@@ -565,9 +565,6 @@ function expandEnvVars(config: McpServerConfig): {
     case 'sdk':
       expanded = config
       break
-    case 'claudeai-proxy':
-      expanded = config
-      break
   }
 
   return {
@@ -616,14 +613,14 @@ export async function addMcpConfig(
   // Check denylist (with config for command-based checks)
   if (isMcpServerDenied(name, validatedConfig)) {
     throw new Error(
-      `Cannot add MCP server "${name}": server is explicitly blocked by enterprise policy`,
+      `Cannot add MCP server "${name}": server is explicitly blocked by local managed policy`,
     )
   }
 
   // Check allowlist (with config for command-based checks)
   if (!isMcpServerAllowedByPolicy(name, validatedConfig)) {
     throw new Error(
-      `Cannot add MCP server "${name}": not allowed by enterprise policy`,
+      `Cannot add MCP server "${name}": not allowed by local managed policy`,
     )
   }
 
@@ -652,8 +649,6 @@ export async function addMcpConfig(
     }
     case 'dynamic':
       throw new Error('Cannot add MCP server to scope: dynamic')
-    case 'claudeai':
-      throw new Error('Cannot add MCP server to scope: claudeai')
   }
 
   // Add based on scope
@@ -950,7 +945,7 @@ export function getMcpConfigsByScope(
  * @returns The server configuration with scope, or undefined if not found
  */
 export function getMcpConfigByName(name: string): ScopedMcpServerConfig | null {
-  // When MCP is locked to plugin-only, only enterprise servers are reachable
+  // When MCP is locked to plugin-only, regular user-configured servers are restricted
   // by name. User/project/local servers are blocked — same as getClaudeCodeMcpConfigs().
   if (isRestrictedToPluginOnly('mcp')) {
     return null
@@ -986,7 +981,7 @@ export async function getClaudeCodeMcpConfigs(
   errors: PluginError[]
 }> {
   // Load other scopes — unless the managed policy locks MCP to plugin-only.
-  // Unlike the enterprise-exclusive block above, this keeps plugin servers.
+  // This preserves explicitly enabled plugin servers.
   const mcpLocked = isRestrictedToPluginOnly('mcp')
   const noServers: { servers: Record<string, ScopedMcpServerConfig> } = {
     servers: {},
