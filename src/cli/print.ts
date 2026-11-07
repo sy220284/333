@@ -1638,12 +1638,6 @@ function runHeadlessStreaming(
           headers: connection.config.headers,
           oauth: connection.config.oauth,
         }
-      } else if (connection.config.type === 'claudeai-proxy') {
-        config = {
-          type: 'claudeai-proxy' as const,
-          url: connection.config.url,
-          id: connection.config.id,
-        }
       } else if (isMcpStdioServerConfig(connection.config)) {
         config = {
           type: 'stdio' as const,
