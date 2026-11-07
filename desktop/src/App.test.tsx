@@ -75,6 +75,10 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     }
     case 'agents.overview':return {mode:activeAgentMode,teams:mockTeam?[mockTeam]:[],missions:[],activeSessions:0,activeTasks:0}
     case 'agents.members':return mockTeam?[{agentId:'agent-test',name:'测试成员',agentType:'developer',model:'fixture-model',status:'idle'}]:[]
+    case 'agents.team.message':return {queued:true,teamName:args.teamName,recipient:args.to,messageId:args.messageId}
+    case 'agents.team.inbox':return {teamName:args.teamName,memberName:args.memberName,messages:[
+      {from:'team-lead',text:'已提交检查任务',timestamp:'2026-11-07T12:00:00Z',read:false,messageId:SID},
+    ]}
     case 'agents.setMode': activeAgentMode=args.mode==='super'?'super':'master'; return {mode:activeAgentMode}
     case 'missions.create': {
       createdMission={id:'mission_0123456789abcdef',objective:String(args.objective),status:'active'}
@@ -536,7 +540,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     await waitFor(()=>expect(call.mock.calls.filter(entry=>entry[0]==='agents.overview').length).toBeGreaterThan(prior))
   })
 
-  it('成员任务通过团队负责人会话原生发送，不误建独立会话',async()=>{
+  it('成员任务经项目受限信箱投递，不增加模型调用并可查看真实消息',async()=>{
     mockTeam={name:'原团队',leadSessionId:SID,memberCount:1,runningCount:0}
     const user=userEvent.setup()
     render(<App/>)
@@ -546,11 +550,17 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(screen.getByRole('button',{name:'选为接收人'}))
     await user.type(screen.getByRole('textbox',{name:'团队成员工作指令'}),'验证当前代码并提交测试记录')
     await user.click(screen.getByRole('button',{name:'发送成员任务'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.ensureOpen',{sessionId:SID}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',expect.objectContaining({
-      sessionId:SID,message:expect.stringContaining('SendMessage')
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('agents.team.message',expect.objectContaining({
+      teamName:'原团队',to:'测试成员',message:'验证当前代码并提交测试记录',
+      messageId:expect.any(String),
     })))
+    expect(screen.getByRole('status')).toHaveTextContent('已写入 测试成员 的团队信箱')
+    expect(call).not.toHaveBeenCalledWith('sessions.send',expect.anything())
     expect(call).not.toHaveBeenCalledWith('sessions.open',expect.anything())
+    await user.click(screen.getByRole('button',{name:'查看信箱'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('agents.team.inbox',{teamName:'原团队',memberName:'测试成员'}))
+    expect(screen.getByText('已提交检查任务')).toBeInTheDocument()
+    expect(screen.getByText(/未读取/)).toBeInTheDocument()
   })
 
   it('Mission 的其他 SDK 会话进度能在任务板显示，且与当前对话互不混淆',async()=>{
