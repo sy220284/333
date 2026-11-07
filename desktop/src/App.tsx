@@ -932,7 +932,7 @@ export function App(){
                 <Button variant="primary" size="base" className="mt-4" onClick={()=>void installMcp()} disabled={!mcpName.trim()||!mcpTarget.trim()||Boolean(busy)}><Plus size={14}/>添加服务</Button>
               </Card>
             </Section>
-            <McpImportPanel onImported={()=>void refresh()}/>
+            <McpImportPanel key={workspace} onImported={()=>void refresh()}/>
             <p className="text-[11px] leading-5 text-[var(--color-text-tertiary)]">技能和插件检查会打开 AI 对话，MCP 管理已直接连接本地配置接口。</p>
           </div>}
           {view==='github'&&<div className="space-y-6">
