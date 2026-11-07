@@ -90,5 +90,6 @@ export type DesktopEvent =
   | { event: 'agent.progress'; sessionId: string; turnId: string; task?: DesktopTask; message: SDKMessage }
   | { event: 'task.updated'; sessionId: string; task: DesktopTask }
   | { event: 'mission.job.updated'; missionId: string; job: import('../agentCenter/missionJobs.js').MissionJob }
+  | { event: 'mission.activity'; missionId: string; jobId: string; sessionId: string; task: DesktopTask }
   | { event: 'mission.queue.state'; missionId: string; active: boolean; message?: string }
   | { event: 'task.persistence.error'; sessionId: string; error: string }

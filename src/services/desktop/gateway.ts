@@ -378,6 +378,11 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
               scheduleTaskSnapshot(sessionId, entry)
             }
             emit({ event: 'agent.progress', sessionId, turnId, message: sdkMessage, ...(task && { task }) })
+            const job = executingMissionJobs.get(sessionId)
+            if (job && task) emit({
+              event: 'mission.activity', missionId: job.missionId, jobId: job.jobId,
+              sessionId, task,
+            })
           }
         }
       } catch (error) {

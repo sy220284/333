@@ -34,6 +34,7 @@ type Task={taskId:string;status?:string;description?:string;[key:string]:unknown
 type JobStatus='queued'|'running'|'review'|'completed'|'failed'|'interrupted'|'cancelled'
 type MissionJob={id:string;title:string;instruction:string;status:JobStatus;attempt:number;summary?:string;sessionId?:string;worktreePath?:string;worktreeBranch?:string;history?:Array<{attempt:number;status:string;summary:string;finishedAt:string;sessionId?:string}>}
 type TeamMember={agentId:string;name:string;agentType?:string;model?:string;status:'running'|'idle'|'unknown'}
+type MissionActivity={key:string;jobId:string;sessionId:string;task:Task}
 type McpServer={name:string;scope:string;type:string;disabled:boolean;url?:string}
 const NAV:{id:View;label:string;icon:LucideIcon}[]=[
   {id:'dashboard',label:'工作台概览',icon:LayoutDashboard},
@@ -110,12 +111,17 @@ export function App(){
   const [mode,setMode]=useState<'master'|'super'>('master')
   const [overview,setOverview]=useState<Item>({})
   const [selectedTeam,setSelectedTeam]=useState('')
+  const [teamNameDraft,setTeamNameDraft]=useState('')
+  const [teamGoalDraft,setTeamGoalDraft]=useState('')
+  const [teamMemberDraft,setTeamMemberDraft]=useState('')
+  const [teamMemberInstruction,setTeamMemberInstruction]=useState('')
   const [teamMembers,setTeamMembers]=useState<TeamMember[]>([])
   const [missions,setMissions]=useState<Mission[]>([])
   const [selectedMission,setSelectedMission]=useState('')
   const [missionDraft,setMissionDraft]=useState('')
   const [checkpointDraft,setCheckpointDraft]=useState('')
   const [missionJobs,setMissionJobs]=useState<MissionJob[]>([])
+  const [missionActivity,setMissionActivity]=useState<MissionActivity[]>([])
   const [jobEvidence,setJobEvidence]=useState<Record<string,Item>>({})
   const [missionQueueActive,setMissionQueueActive]=useState(false)
   const [jobTitle,setJobTitle]=useState('')
@@ -255,7 +261,7 @@ export function App(){
       if(event.event==='desktop.disconnected'){
         setConnected(false);setError(String(event.error||'桌面后台连接已断开'));return
       }
-      const globalInbox=['permission.request','permission.resolved','host.request','host.resolved']
+      const globalInbox=['permission.request','permission.resolved','host.request','host.resolved','mission.activity']
       if(event.sessionId&&event.sessionId!==sessionRef.current&&!globalInbox.includes(event.event))return
       if(event.event==='session.state'){
         const state=obj(event.state)
@@ -282,6 +288,15 @@ export function App(){
         if(String(event.missionId||'')!==selectedMissionRef.current)return
         const updated=obj(event.job) as unknown as MissionJob
         setMissionJobs(old=>[updated,...old.filter(job=>job.id!==updated.id)])
+      }else if(event.event==='mission.activity'&&event.task){
+        if(String(event.missionId||'')!==selectedMissionRef.current)return
+        const task=obj(event.task) as Task
+        const jobId=String(event.jobId||'')
+        const id=`${event.sessionId}:${jobId}:${task.taskId}`
+        setMissionActivity(old=>[
+          {key:id,jobId,sessionId:String(event.sessionId||''),task},
+          ...old.filter(item=>item.key!==id)
+        ].slice(0,50))
       }else if(event.event==='task.updated'&&event.task){
         const task=obj(event.task) as unknown as Task
         setTasks(old=>[task,...old.filter(t=>t.taskId!==task.taskId)])
@@ -348,7 +363,8 @@ export function App(){
   useEffect(()=>{if(view==='chat'&&followLatest&&messages.length>0&&streamRef.current){streamRef.current.scrollTop=streamRef.current.scrollHeight}},[messages,view,followLatest])
   useEffect(()=>{
     let valid=true
-    if(!selectedMission){setMissionJobs([]);return}
+    setMissionActivity([])
+    if(!selectedMission){setMissionJobs([]);setMissionActivity([]);return}
     api.call<MissionJob[]>('missions.jobs.list',{missionId:selectedMission})
       .then(jobs=>{if(valid)setMissionJobs(jobs)})
       .catch(err=>{if(valid)setError(presentError(err))})
@@ -375,6 +391,42 @@ export function App(){
     window.addEventListener('keydown',onKey)
     return ()=>window.removeEventListener('keydown',onKey)
   },[])
+  /**
+   * Team actions go through the real coordinator SDK session. The native
+   * TeamCreate / SendMessage / TeamDelete tools retain their permission and
+   * lifecycle checks, and the UI never claims a requested tool has succeeded.
+   */
+  async function sendTeamInstruction(prompt:string,leaderSessionId?:string){
+    await operation('提交团队协作指令',async()=>{
+      const started=leaderSessionId
+        ? await invoke<{sessionId:string;tasks?:Task[]}>('sessions.ensureOpen',{sessionId:leaderSessionId})
+        : await invoke<{sessionId:string;tasks?:Task[]}>('sessions.open',selectedModel?{model:selectedModel}:{})
+      await invoke('sessions.send',{sessionId:started.sessionId,message:prompt})
+      setSessionId(started.sessionId);sessionRef.current=started.sessionId
+      setSessionPhase('running');setHistoryOnly(false);setTasks(started.tasks??[])
+      setMessages([{id:`local-team-${Date.now()}`,kind:'user',text:prompt,time:Date.now()}])
+      setVisibleMessageCount(120);setFollowLatest(true);setView('chat')
+    })
+  }
+  async function requestTeamCreation(){
+    if(mode!=='super'||!selectedMission||!teamNameDraft.trim()||!teamGoalDraft.trim())return
+    const selected=missions.find(m=>missionId(m)===selectedMission)
+    if(!selected||selected.status!=='active'){setError('请先选择并恢复有效的长期目标');return}
+    const specification=JSON.stringify({name:teamNameDraft.trim(),goal:teamGoalDraft.trim()})
+    await sendTeamInstruction(`用户授权在当前已选中的长期目标 ${selectedMission} 下创建团队。团队配置：${specification}。使用原生 TeamCreate 工具建队；创建前校验名称与项目归属，只创建团队，不启动新成员。请显示真实工具结果及最终团队名称。`)
+  }
+  async function requestTeamAction(action:'message'|'close'){
+    const team=(Array.isArray(overview.teams)?overview.teams as Item[]:[])
+      .find(item=>String(item.name||'')===selectedTeam)
+    const leadSessionId=String(team?.leadSessionId||'')
+    if(!leadSessionId){setError('团队缺少可恢复的负责人会话，请从创建该团队的原会话继续操作');return}
+    if(action==='message'&&(!teamMemberDraft.trim()||!teamMemberInstruction.trim()))return
+    if(action==='close'&&!window.confirm(`确定请求结束团队「${selectedTeam}」？会先向活动成员发送关闭请求，再使用 TeamDelete。`))return
+    const description=action==='message'
+      ? `使用原生 SendMessage 给团队成员 ${JSON.stringify(teamMemberDraft.trim())} 发送任务：${JSON.stringify(teamMemberInstruction.trim())}，确认团队和接收人身份，保留团队信箱记录。`
+      : '先通过原生 SendMessage/requestShutdown 请求现有成员退出，确认全部退出后使用 TeamDelete 完成团队清理，并报告实际结果。'
+    await sendTeamInstruction(`用户授权在负责人所属团队 ${JSON.stringify(selectedTeam)} 执行下述操作。确认所属项目和负责人身份后操作：${description} 禁止对其他团队执行。`,leadSessionId)
+  }
   async function createSession(){
     await operation('新建会话',async()=>{
       const response=await invoke<{sessionId:string;models?:Model[];tasks?:Task[]}>('sessions.open',selectedModel?{model:selectedModel}:{})
@@ -416,7 +468,7 @@ export function App(){
       if(!data.changed)return
       setWorkspace(data.workspace);setFolder(data.workspace);setSessionId('');sessionRef.current='';setHistoryOnly(false);setMessages([])
       setPermissions([]);setHostRequests([]);setTasks([]);setFiles([]);setFileTotal(0)
-      setSessions([]);setMissions([]);setSelectedMission('');setMissionJobs([]);setJobEvidence({});setOverview({});setTeamMembers([])
+      setSessions([]);setMissions([]);setSelectedMission('');setMissionJobs([]);setMissionActivity([]);setJobEvidence({});setOverview({});setTeamMembers([])
       setSessionPhase('idle');setActivity([]);setDraft('');setMissionQueueActive(false)
       setCurrentFile('');setGitStatus('');setGitDiff('')
       setConnected(Boolean(data.connected))
@@ -745,7 +797,19 @@ export function App(){
                 </Card>})}
               </div>
             </Section>
-            <Section title="项目团队" subtitle="从当前工作区读取团队和真实成员信息。" action={<Button variant="secondary" size="base" onClick={()=>void operation('刷新团队',refresh)}><RefreshCw size={14}/>刷新</Button>}>
+            <Section title="项目团队" subtitle="团队的创建、通信、退出沿用现有 Agent SDK 原生工具链。" action={<Button variant="secondary" size="base" onClick={()=>void operation('刷新团队',refresh)}><RefreshCw size={14}/>刷新</Button>}>
+              {mode==='super'&&<Card padding="lg" radius="lg" surface="lowest" shadow="card" className="mb-4">
+                <h3 className="mb-3 text-[13px] font-semibold">创建团队</h3>
+                <p className="mb-3 text-[11px] text-[var(--color-text-secondary)]">先选中有效的长期目标；提交后由 SDK 调用 TeamCreate，实际结果在会话中确认。</p>
+                <div className="grid grid-cols-2 gap-3 max-[850px]:grid-cols-1">
+                  <input aria-label="新团队名称" value={teamNameDraft} onChange={e=>setTeamNameDraft(e.target.value)} placeholder="例如：开发与验证组"/>
+                  <input aria-label="新团队目标" value={teamGoalDraft} onChange={e=>setTeamGoalDraft(e.target.value)} placeholder="例如：完成代码审计并交付测试记录"/>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] text-[var(--color-text-tertiary)]">当前长期目标：{selectedMission||'尚未选择'}</span>
+                  <Button variant="primary" size="base" disabled={Boolean(busy)||!teamNameDraft.trim()||!teamGoalDraft.trim()||!selectedMission} onClick={()=>void requestTeamCreation()}><UsersRound size={14}/>请求建立团队</Button>
+                </div>
+              </Card>}
               {Array.isArray(overview.teams)&&overview.teams.length>0?
                 <div className="grid grid-cols-[250px_minmax(0,1fr)] gap-4 max-[950px]:grid-cols-1">
                   <Card padding="sm" radius="lg" surface="lowest">
@@ -759,7 +823,17 @@ export function App(){
                       <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-surface-container)]"><Bot size={17}/></span>
                       <span className="min-w-0 flex-1"><strong className="block truncate text-[12px]">{member.name}</strong><small className="text-[11px] text-[var(--color-text-tertiary)]">{member.agentType||'通用智能体'} · {member.model||'默认模型'}</small></span>
                       <Badge size="sm" tone={member.status==='running'?'success':'neutral'}>{member.status==='running'?'执行中':member.status==='idle'?'空闲':'状态未知'}</Badge>
+                      <Button variant="secondary" size="sm" onClick={()=>setTeamMemberDraft(member.name)}>选为接收人</Button>
                     </div>):<Empty icon={UsersRound} title="当前团队没有活动成员" detail="实际创建成员后将显示角色与运行状态。"/>}
+                    <div className="mt-4 space-y-3 border-t border-[var(--color-border)] pt-4">
+                      <p className="text-[11px] text-[var(--color-text-secondary)]">由团队负责人的原生 SDK 会话执行通讯和退出，结果需以工具回执为准。</p>
+                      <input aria-label="团队消息接收人" value={teamMemberDraft} onChange={e=>setTeamMemberDraft(e.target.value)} placeholder="接收成员名称"/>
+                      <textarea aria-label="团队成员工作指令" rows={2} value={teamMemberInstruction} onChange={e=>setTeamMemberInstruction(e.target.value)} placeholder="明确分工、交付和检查条件"/>
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="secondary" size="sm" disabled={Boolean(busy)||!teamMemberDraft.trim()||!teamMemberInstruction.trim()} onClick={()=>void requestTeamAction('message')}><MessageSquare size={13}/>发送成员任务</Button>
+                        <Button variant="danger-outline" size="sm" disabled={Boolean(busy)} onClick={()=>void requestTeamAction('close')}><X size={13}/>请求结束团队</Button>
+                      </div>
+                    </div>
                   </Card>
                 </div>:
                 <Card radius="lg" surface="lowest"><Empty icon={UsersRound} title="当前项目暂无团队" detail="先创建长期目标，然后在 Super Agents 模式下建立团队。" action={<Button variant="secondary" size="base" onClick={()=>setView('missions')}>创建长期目标 <ArrowRight size={14}/></Button>}/></Card>}
@@ -812,6 +886,16 @@ export function App(){
                     <Button variant="secondary" size="base" disabled={!jobTitle.trim()||!jobInstruction.trim()||Boolean(busy)} onClick={()=>void addJob()}><Plus size={14}/>添加工作项</Button>
                   </div>
                 </div>
+                {missionActivity.length>0&&<div className="space-y-2">
+                  <h3 className="text-[13px] font-semibold">多会话智能体实时进度</h3>
+                  <Card radius="lg" padding="sm" surface="lowest">
+                    {missionActivity.slice(0,12).map(item=><div key={item.key} className="flex flex-wrap items-center gap-2 border-b border-[var(--color-border)] p-2 text-[11px] last:border-0">
+                      <Activity size={14}/><span className="min-w-0 flex-1">{item.task.description||item.task.taskId}</span>
+                      <Badge size="xs">{item.task.status||'进行中'}</Badge>
+                      <span className="font-mono text-[10px] text-[var(--color-text-tertiary)]">{item.sessionId.slice(0,8)}</span>
+                    </div>)}
+                  </Card>
+                </div>}
                 <div className="space-y-3">
                   {missionJobs.map(job=><Card key={job.id} radius="lg" padding="md" surface="base" border="solid" className="min-w-0">
                     <div className="flex flex-wrap items-center justify-between gap-2">

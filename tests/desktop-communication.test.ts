@@ -365,6 +365,9 @@ test('超级智能体工作项从入队、真实 SDK 会话、人工审核到长
     expect(getConfiguredAgentMode()).toBe(beforeMode)
     await until(() => events.some(event =>
       event.event === 'mission.job.updated' && event.job.id === queued.id && event.job.status === 'review'))
+    expect(events.some(event =>
+      event.event === 'mission.activity' && event.jobId === queued.id &&
+      event.sessionId === dispatched.sessionId && event.task.taskId === 'agent-1')).toBe(true)
     await expect(gateway.handle(request('missions.jobs.start', {
       missionId: mission.id, jobId: queued.id,
     }))).rejects.toThrow('不能执行')
