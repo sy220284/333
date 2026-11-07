@@ -558,8 +558,10 @@ export function App(){
   async function checkpoint(){
     if(!selectedMission||!checkpointDraft.trim())return
     await operation('记录检查点',async()=>{
-      await invoke('missions.checkpoint',{missionId:selectedMission,checkpoint:checkpointDraft.trim()})
-      setCheckpointDraft('');await refresh()
+      const updated=await invoke<Mission>('missions.checkpoint',{missionId:selectedMission,checkpoint:checkpointDraft.trim()})
+      setMissions(previous=>previous.map(item=>missionId(item)===missionId(updated)?updated:item))
+      setCheckpointDraft('')
+      void refresh().catch(error=>setError(presentError(error)))
     })
   }
   async function decision(id:string,allow:boolean){
