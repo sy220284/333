@@ -37,10 +37,12 @@ import { TEAM_LEAD_NAME } from '../utils/swarm/constants.js'
 import { getLeaderToolUseConfirmQueue } from '../utils/swarm/leaderPermissionBridge.js'
 import { sendPermissionResponseViaMailbox } from '../utils/swarm/permissionSync.js'
 import {
+  readTeamFileAsync,
   removeTeammateFromTeamFile,
   setMemberMode,
 } from '../utils/swarm/teamHelpers.js'
 import { unassignTeammateTasks } from '../utils/tasks.js'
+import { isStaleShutdownApproval } from '../utils/swarm/shutdownEpoch.js'
 import {
   getAgentName,
   isPlanModeRequired,
@@ -687,8 +689,46 @@ export function useInboxPoller({
         const parsed = isShutdownApproved(m.text)
         if (!parsed) continue
 
-        // Kill the pane if we have the info (pane-based teammates)
-        if (parsed.paneId && parsed.backendType) {
+        // The sender's name is reusable. Resolve the current instance and
+        // compare join time against the approval message before any side effect.
+        const teamName = currentAppState.teamContext?.teamName
+        const teammateId = Object.entries(
+          currentAppState.teamContext?.teammates ?? {},
+        ).find(([, teammate]) => teammate.name === parsed.from)?.[0]
+        const currentMember = teamName && teammateId
+          ? (await readTeamFileAsync(teamName))?.members.find(
+              member => member.agentId === teammateId,
+            )
+          : undefined
+        const approvalSentAt = Date.parse(m.timestamp)
+        if (
+          m.from !== parsed.from ||
+          !currentMember ||
+          isStaleShutdownApproval(currentMember.joinedAt, m.timestamp)
+        ) {
+          logForDebugging(
+            `[InboxPoller] Ignoring stale or unverified shutdown approval for ${parsed.from}`,
+          )
+          regularMessages.push(m)
+          continue
+        }
+        // The check must also be enforced by the mutator itself, so a member
+        // re-added between async reads cannot be removed by an older message.
+        const removed = removeTeammateFromTeamFile(teamName!, {
+          agentId: teammateId,
+          onlyIfJoinedBefore: approvalSentAt,
+        })
+        if (!removed) {
+          regularMessages.push(m)
+          continue
+        }
+
+        // Only terminate the pane belonging to the approved instance.
+        if (
+          parsed.paneId &&
+          parsed.backendType &&
+          parsed.paneId === currentMember.tmuxPaneId
+        ) {
           void (async () => {
             try {
               // Ensure backend classes are imported (no subprocess probes)
@@ -715,21 +755,9 @@ export function useInboxPoller({
         // Remove the teammate from teamContext.teammates so the count is accurate
         const teammateToRemove = parsed.from
         if (teammateToRemove && currentAppState.teamContext?.teammates) {
-          // Find the teammate ID by name
-          const teammateId = Object.entries(
-            currentAppState.teamContext.teammates,
-          ).find(([, t]) => t.name === teammateToRemove)?.[0]
-
           if (teammateId) {
-            // Remove from team file (leader owns team file mutations)
-            const teamName = currentAppState.teamContext?.teamName
-            if (teamName) {
-              removeTeammateFromTeamFile(teamName, {
-                agentId: teammateId,
-                name: teammateToRemove,
-              })
-            }
-
+            // Removal was already verified and committed before pane cleanup.
+            // Unassign tasks only for this specific member instance.
             // Unassign tasks and build notification message
             const { notificationMessage } = teamName
               ? await unassignTeammateTasks(
