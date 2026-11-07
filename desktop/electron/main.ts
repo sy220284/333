@@ -1,4 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron'
+import { randomUUID } from 'node:crypto'
+import { parseMcpImportFile, type ImportedMcpServer } from './mcpImport.js'
 import { spawn, execFile } from 'node:child_process'
 import { existsSync, realpathSync, statSync } from 'node:fs'
 import { readdir, readFile, writeFile, rename, realpath, mkdir, rm, stat } from 'node:fs/promises'
@@ -13,7 +15,7 @@ function requireWindow(): BrowserWindow {
 }
 const git = promisify(execFile)
 const permitted = new Set([
-  'hello','models.list','mcp.list','mcp.add','mcp.remove','mcp.toggle','sessions.open','sessions.resume','sessions.ensureOpen','sessions.list','sessions.history',
+  'hello','models.list','system.diagnostics','data.purge.preview','data.purge.apply','mcp.list','mcp.add','mcp.remove','mcp.toggle','sessions.open','sessions.resume','sessions.ensureOpen','sessions.list','sessions.history',
   'sessions.close','sessions.status','sessions.send','sessions.interrupt','sessions.setModel',
   'sessions.setPermissionMode','host.list','host.respond','host.reject','permissions.list',
   'permissions.decide','agents.overview','agents.members','agents.setMode','missions.list','missions.get',
@@ -29,6 +31,7 @@ const launchWorkspace=process.env.YAOYAO_INITIAL_WORKSPACE
 const hasLaunchWorkspace=Boolean(launchWorkspace&&existsSync(launchWorkspace)&&statSync(launchWorkspace).isDirectory())
 let active=launchWorkspace&&hasLaunchWorkspace?realpathSync(launchWorkspace):process.env.HOME||process.env.USERPROFILE||process.cwd()
 let window: BrowserWindow | null = null
+let pendingMcpImport: { token: string; workspace: string; servers: ImportedMcpServer[] } | undefined
 let quitting = false
 
 function executable(): { cmd:string; prefix:string[] } {
@@ -100,6 +103,61 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
     await shell.openExternal(url.href)
     return {opened:true}
   }
+  if(method==='mcp.import.pick'){
+    const chosen=await dialog.showOpenDialog(requireWindow(),{
+      title:'导入本地 MCP 配置文件',properties:['openFile'],
+      filters:[{name:'JSON 配置文件',extensions:['json']}]
+    })
+    if(chosen.canceled||!chosen.filePaths[0])return {cancelled:true}
+    const filepath=chosen.filePaths[0]
+    const details=await stat(filepath)
+    if(!details.isFile()||details.size>1024*1024)throw new Error('导入文件必须是小于 1 MiB 的 JSON 文件')
+    const servers=parseMcpImportFile(JSON.parse(await readFile(filepath,'utf8')))
+    const listing=await connect(active).client.invoke({method:'mcp.list'} as Parameters<ReturnType<typeof createDesktopClient>['invoke']>[0])
+    const registered=new Set((listing as {servers?:Array<{name:string}>}).servers?.map(item=>item.name)??[])
+    const token=randomUUID()
+    pendingMcpImport={token,workspace:active,servers}
+    return {token,source:basename(filepath),servers:servers.map(item=>({
+      sourceName:item.sourceName,name:item.name,type:item.config.type,collision:registered.has(item.name)
+    }))}
+  }
+  if(method==='mcp.import.apply'){
+    const draft=pendingMcpImport
+    if(!draft||draft.token!==data.token||draft.workspace!==active)throw new Error('MCP 导入预览已失效，请重新选择文件')
+    const scope=data.scope
+    if(scope!=='local'&&scope!=='user'&&scope!=='project')throw new Error('无效的 MCP 配置范围')
+    if(!Array.isArray(data.names)||data.names.some(name=>typeof name!=='string'))throw new Error('请选择要导入的 MCP 服务')
+    const selected=new Set(data.names as string[])
+    if(selected.size!==data.names.length||selected.size===0||draft.servers.some(item=>selected.has(item.sourceName)&&!item.name))
+      throw new Error('导入选择无效')
+    const importRows=draft.servers.filter(item=>selected.has(item.sourceName))
+    if(importRows.length!==selected.size)throw new Error('包含配置文件中不存在的服务')
+    const approval=await dialog.showMessageBox(requireWindow(),{
+      type:'warning',title:'确认批量导入 MCP 服务',
+      buttons:['取消','确认导入'],defaultId:0,cancelId:0,
+      message:'将导入 '+importRows.length+' 个本地 MCP 服务',
+      detail:'导入的命令、服务器地址和环境变量将存入所选配置范围。请仅导入可信来源。'
+    })
+    if(approval.response!==1)return {cancelled:true,added:[],errors:[]}
+    pendingMcpImport=undefined
+    const listing=await connect(active).client.invoke({method:'mcp.list'} as Parameters<ReturnType<typeof createDesktopClient>['invoke']>[0])
+    const used=new Set((listing as {servers?:Array<{name:string}>}).servers?.map(item=>item.name)??[])
+    const added:string[]=[]
+    const errors:string[]=[]
+    for(const item of importRows){
+      let name=item.name
+      let index=2
+      while(used.has(name))name=item.name.slice(0,73)+'_'+index++
+      try{
+        await connect(active).client.invoke({method:'mcp.add',name,scope,config:item.config} as Parameters<ReturnType<typeof createDesktopClient>['invoke']>[0])
+        used.add(name)
+        added.push(name)
+      }catch(error){
+        errors.push(item.sourceName+'：'+(error instanceof Error?error.message:String(error)))
+      }
+    }
+    return {added,errors}
+  }
   if(method==='app.info')return {workspace:active,platform:process.platform,version:app.getVersion(),startupSessionId:process.env.YAOYAO_INITIAL_SESSION_ID||'',initialPrompt:process.env.YAOYAO_INITIAL_PROMPT||'',initialView:process.env.YAOYAO_INITIAL_VIEW||''}
   if(method==='credentials.list')return {providers:listProviderApiKeyAccounts()}
   if(method==='credentials.set'){
@@ -123,6 +181,7 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
     if(result.canceled||!result.filePaths[0])return {workspace:active,changed:false}
     const path=realpathSync(result.filePaths[0])
     active=path
+    pendingMcpImport=undefined
     await mkdir(app.getPath('userData'),{recursive:true})
     await writeFile(workspacePref(),JSON.stringify({path}),{encoding:'utf8',mode:0o600})
     try {await connect(active).client.hello()}catch(error){return {workspace:active,changed:true,connected:false,error:String(error)}}
@@ -186,6 +245,16 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
       detail:`${details}\n所有 MCP 配置均遵守当前本地权限设置。`
     })
     if(answer.response!==1)return {cancelled:true}
+  }
+  if(method==='data.purge.apply'){
+    if(typeof data.token!=='string')throw new Error('无效清理确认凭据')
+    const confirmation=await dialog.showMessageBox(requireWindow(),{
+      type:'warning',title:'确认清理本地项目记录',
+      buttons:['取消','确认永久清理'],defaultId:0,cancelId:0,
+      message:'将永久清理本地工作区记录',
+      detail:'工作区：'+active+'。项目源码文件保留，相关 AI 会话、任务和历史可能被删除。此操作无法撤销。'
+    })
+    if(confirmation.response!==1)return {cancelled:true}
   }
   if(!permitted.has(method))throw new Error(`未开放的桌面操作：${method}`)
   if(method==='sessions.setPermissionMode'&&data.mode==='bypassPermissions'){

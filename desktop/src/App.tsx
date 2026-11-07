@@ -11,6 +11,8 @@ import {
 import { api, type AppEvent, type Item } from './api'
 import { NewSessionStarter } from './components/layout/NewSessionStarter'
 import { WorkspaceInspector } from './components/layout/WorkspaceInspector'
+import { LocalMaintenance } from './components/layout/LocalMaintenance'
+import { McpImportPanel } from './components/layout/McpImportPanel'
 import { SessionChatSurface } from './components/chat/SessionChatSurface'
 import { Badge } from './components/ui/Badge'
 import { Button } from './components/ui/Button'
@@ -930,6 +932,7 @@ export function App(){
                 <Button variant="primary" size="base" className="mt-4" onClick={()=>void installMcp()} disabled={!mcpName.trim()||!mcpTarget.trim()||Boolean(busy)}><Plus size={14}/>添加服务</Button>
               </Card>
             </Section>
+            <McpImportPanel onImported={()=>void refresh()}/>
             <p className="text-[11px] leading-5 text-[var(--color-text-tertiary)]">技能和插件检查会打开 AI 对话，MCP 管理已直接连接本地配置接口。</p>
           </div>}
           {view==='github'&&<div className="space-y-6">
@@ -958,6 +961,10 @@ export function App(){
     </div>):<Empty icon={ShieldCheck} title="当前没有待处理的审批" detail="受保护的工具操作会在这里请求许可。"/>}
   </Card></Section>
   <Section title="主机交互请求"><Card radius="lg" surface="lowest" shadow="card">{hostRequests.length?hostRequests.map(r=><div key={r.id} className="mb-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 last:mb-0"><strong className="text-[12px]">{String(r.type||'交互请求')}</strong><pre className="my-3 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] bg-[var(--color-code-bg)] p-3 font-mono text-[11px] text-[var(--color-code-fg)]">{json(r.request||r)}</pre><Button variant="danger-outline" size="base" onClick={()=>void operation('拒绝请求',async()=>{await invoke('host.reject',{sessionId:r.sessionId,requestId:r.id,reason:'用户在桌面端拒绝请求'});await refreshSession(r.sessionId)})}>拒绝请求</Button></div>):<p className="text-[12px] text-[var(--color-text-tertiary)]">没有需要处理的主机交互请求。</p>}</Card></Section>
+  <LocalMaintenance workspace={workspace} connected={connected} onPurged={()=>{
+    setSessionId('');sessionRef.current='';setSessions([]);setMessages([]);setTasks([]);setPermissions([]);setHostRequests([]);setSessionPhase('idle');
+    void refresh()
+  }}/>
   <Section title="外观与体验" subtitle="新项目的六套原生配色与统一动效。"><Card radius="lg" surface="lowest" shadow="card">
     <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] py-4"><span><strong className="text-[13px]">界面主题</strong><small className="mt-1 block text-[11px] text-[var(--color-text-tertiary)]">所有页面使用同一套设计令牌</small></span><select aria-label="界面主题" value={themeVariant} onChange={e=>setThemeVariant(e.target.value as ThemeVariant)}><option value="white">素白</option><option value="paper">纸墨</option><option value="warm-classic">经典暖色</option><option value="celadon">青瓷</option><option value="dark">墨夜</option><option value="ink-blue">墨夜蓝</option></select></div>
     <label className="flex cursor-pointer items-center justify-between gap-4 border-b border-[var(--color-border)] py-4"><span><strong className="text-[13px]">深色主题</strong><small className="mt-1 block text-[11px] text-[var(--color-text-tertiary)]">快速切换墨夜配色</small></span><input type="checkbox" checked={isDark} onChange={e=>setIsDark(e.target.checked)}/></label>

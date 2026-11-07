@@ -430,7 +430,13 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         if (!pending || pending.token !== request.token || Date.now() - pending.createdAt > 300000)
           throw new Error('清理预览已失效，请重新检查删除清单')
         pendingPurge = undefined
-        if (sessions.size > 0) throw new Error('当前有打开的 AI 会话。请先结束并关闭会话，再清理本地记录')
+        if (activeMissionQueues.size || drainingMissionQueues.size || executingMissionJobs.size ||
+            [...sessions.values()].some(entry => entry.sending || entry.consuming ||
+              [...entry.tasks.values()].some(task => task.status === 'running')))
+          throw new Error('当前仍有执行中的会话、智能体或任务队列。请先停止执行再清理')
+        // Explicit confirmation was received in the Electron main process.
+        // Idle SDK sessions must close before their on-disk transcripts can be removed.
+        for (const sessionId of [...sessions.keys()]) await closeSessionInternal(sessionId)
         const { planLocalProjectPurge, executeLocalProjectPurge } = await import('./maintenance.js')
         const current = await planLocalProjectPurge(cwd)
         const signature = (items: typeof current.items) => JSON.stringify(items.map(item => [item.kind, item.path, item.reason]))
