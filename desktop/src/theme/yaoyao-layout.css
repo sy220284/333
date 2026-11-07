@@ -70,3 +70,8 @@ textarea {resize:vertical;}
 
 /* 工作项与键盘聚焦状态统一使用原生主题焦点色。 */
 .job-card:focus-within {border-color:var(--color-border-focus);box-shadow:0 0 0 2px var(--color-brand-soft);}
+
+/* 与新主题动效令牌一致的系统减少动画策略。 */
+@media (prefers-reduced-motion: reduce) {
+  .yy-app *, .yy-app *::before, .yy-app *::after {animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important;}
+}
