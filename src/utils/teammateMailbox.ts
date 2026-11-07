@@ -8,7 +8,7 @@
  */
 
 import { mkdir, readFile, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { z } from 'zod/v4'
 import { TEAMMATE_MESSAGE_TAG } from '../constants/xml.js'
 import { PermissionModeSchema } from '../entrypoints/sdk/coreSchemas.js'
@@ -24,7 +24,7 @@ import { logError } from './log.js'
 import { jsonParse, jsonStringify } from './slowOperations.js'
 import type { BackendType } from './swarm/backends/types.js'
 import { TEAM_LEAD_NAME } from './swarm/constants.js'
-import { getTeamDir, getTeamFilePath } from './swarm/teamHelpers.js'
+import { getTeamDir, getTeamFilePath, type TeamFile } from './swarm/teamHelpers.js'
 import { withTeamLifecycleLock } from './swarm/teamLifecycleLock.js'
 import { sanitizePathComponent } from './tasks.js'
 import { getAgentName, getTeammateColor, getTeamName } from './teammate.js'
@@ -48,6 +48,8 @@ export type TeammateMessage = {
   read: boolean
   color?: string // Sender's assigned color (e.g., 'red', 'blue', 'green')
   summary?: string // 5-10 word summary shown as preview in the UI
+  /** Optional stable key for idempotent desktop delivery. */
+  messageId?: string
 }
 
 /**
@@ -138,6 +140,7 @@ export async function writeToMailbox(
   recipientName: string,
   message: Omit<TeammateMessage, 'read'>,
   teamName?: string,
+  scope?: { projectDir: string },
 ): Promise<void> {
   const resolvedTeam = teamName ?? getTeamName()
   if (!resolvedTeam) {
@@ -146,7 +149,19 @@ export async function writeToMailbox(
   // The parent guard must be acquired BEFORE creating any inbox path.
   // Cleanup holds the same lock, so a late message cannot resurrect a team.
   return withTeamLifecycleLock(resolvedTeam, async () => {
-    await readFile(getTeamFilePath(resolvedTeam), 'utf-8')
+    const teamFileContent = await readFile(getTeamFilePath(resolvedTeam), 'utf-8')
+    if (scope) {
+      // This scope check runs inside the team lifecycle lock, together with
+      // mailbox delivery. A removed member or team cannot be re-created by
+      // a stale desktop request.
+      const teamFile = jsonParse(teamFileContent) as TeamFile
+      const lead = teamFile?.members?.find(member => member.name === TEAM_LEAD_NAME)
+      if (!lead || resolve(teamFile.projectDir ?? lead.cwd) !== resolve(scope.projectDir))
+        throw new Error('团队不属于当前项目')
+      if (recipientName === TEAM_LEAD_NAME ||
+          !teamFile.members.some(member => member.name === recipientName))
+        throw new Error('接收人不属于当前团队')
+    }
 
     await ensureInboxDir(teamName)
 
@@ -182,6 +197,8 @@ export async function writeToMailbox(
 
       // Re-read messages after acquiring lock to get the latest state
       const messages = await readMailbox(recipientName, teamName)
+      // Retrying the same desktop request must not duplicate an assignment.
+      if (message.messageId && messages.some(existing => existing.messageId === message.messageId)) return
 
       const newMessage: TeammateMessage = {
         ...message,
