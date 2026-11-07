@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { parseMcpImportFile, type ImportedMcpServer } from './mcpImport.js'
+import { evictCurrentHost } from './hostRegistry.mjs'
 import { formatWorkspaceGitDiff } from './workspaceGitDiff.mjs'
 import { spawn, execFile } from 'node:child_process'
 import { existsSync, realpathSync, statSync } from 'node:fs'
@@ -54,26 +55,26 @@ function connect(dir:string):Host {
   })
   if(!child.stdout||!child.stdin||!child.stderr) throw new Error('无法建立本地后台通信')
   const client=createDesktopClient(child.stdout,child.stdin)
+  const host={child,client}
   let stderr=''
   child.stderr.setEncoding('utf8')
   child.stderr.on('data',(chunk:string)=>{ stderr=(stderr+chunk).slice(-20000) })
   client.onEvent(event=>{
-    if(active===dir&&!window?.isDestroyed())window?.webContents.send('desktop:event',event)
+    if(hosts.get(dir)===host&&active===dir&&!window?.isDestroyed())window?.webContents.send('desktop:event',event)
   })
   child.on('exit',(code,signal)=>{
-    hosts.delete(dir)
+    const current=evictCurrentHost(hosts,dir,host)
     client.close()
-    if(!quitting&&active===dir&&!window?.isDestroyed())window?.webContents.send('desktop:event',{
+    if(current&&!quitting&&active===dir&&!window?.isDestroyed())window?.webContents.send('desktop:event',{
       event:'desktop.disconnected',
       error:`本地后台已退出（${String(signal||code)}）${stderr?`：${stderr.slice(-400)}`:''}`
     })
   })
   child.on('error',error=>{
-    hosts.delete(dir)
+    const current=evictCurrentHost(hosts,dir,host)
     client.close()
-    if(active===dir)window?.webContents.send('desktop:event',{event:'desktop.disconnected',error:error.message})
+    if(current&&active===dir&&!window?.isDestroyed())window?.webContents.send('desktop:event',{event:'desktop.disconnected',error:error.message})
   })
-  const host={child,client}
   hosts.set(dir,host)
   return host
 }
