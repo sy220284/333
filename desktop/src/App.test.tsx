@@ -315,14 +315,16 @@ describe('摇摇车真实桌面页面交互',()=>{
     const instance=render(<App/>)
     await screen.findByText('本地后台已连接')
     await user.click(screen.getByRole('button',{name:'设置与权限'}))
-    await user.click(screen.getByRole('checkbox',{name:/深色主题/}))
-    await waitFor(()=>expect(window.localStorage.getItem('yaoyaoche-desktop:dark')).toBe('false'))
+    const darkSwitch=screen.getByRole('checkbox',{name:/深色主题/}) as HTMLInputElement
+    const expectedDark=!darkSwitch.checked
+    await user.click(darkSwitch)
+    await waitFor(()=>expect(window.localStorage.getItem('yaoyaoche-desktop:dark')).toBe(String(expectedDark)))
     await user.click(screen.getByRole('button',{name:'收起详情'}))
     await waitFor(()=>expect(window.localStorage.getItem('yaoyaoche-desktop:inspector')).toBe('false'))
     instance.unmount()
     render(<App/>)
     await screen.findByText('本地后台已连接')
-    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(document.documentElement.dataset.theme).toBe(expectedDark?'dark':'light')
     expect(screen.getByRole('button',{name:'打开详情面板'})).toBeInTheDocument()
   })
 
