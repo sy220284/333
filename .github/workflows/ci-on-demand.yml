@@ -66,6 +66,7 @@ jobs:
       - name: CI 调度规则与全量覆盖回归
         run: |
           node --test tests/ci-routing.test.mjs tests/ci-test-discovery.test.mjs tests/upgrade-317-coverage.test.mjs
+          node build/upgrade317-product-scope.mjs --check
           node build/ci-gate-audit.mjs
 
   governance-audit:
