@@ -150,6 +150,9 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       ...(selectedModel || model ? { model: selectedModel ?? model } : {}),
       includePartialMessages: true,
       forwardSubagentText: true,
+      // Display native background-agent summaries in the desktop task surface.
+      // Preserve an explicit host opt-out when summaries are undesirable.
+      agentProgressSummaries: options.sessionOptions?.agentProgressSummaries ?? true,
     }
   }
   function initializeModels(runtime: Headless) {
