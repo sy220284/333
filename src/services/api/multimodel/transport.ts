@@ -453,6 +453,10 @@ export function makeIndependentFetch(
             if (rstate.completed) break
           }
           if (cancelled) return
+          // Reader cancellation can end the upstream iterator without an
+          // explicit terminal SSE frame. Preserve the caller's AbortError or
+          // TimeoutError instead of misreporting a provider protocol failure.
+          signal.throwIfAborted()
           if (route.protocol === 'responses' && !rstate.completed) throw new Error('Responses ended without response.completed')
           if (route.protocol === 'chat-completions' && !cstate.completed) throw new Error('Chat stream ended without a finish_reason')
           for (const call of cstate.stopReason ? [] : cstate.calls.values()) {
@@ -463,8 +467,13 @@ export function makeIndependentFetch(
           controller.close()
         } catch (error) {
           if (!cancelled) {
-            const message = error instanceof Error ? error.message : String(error)
-            controller.error(new Error(redact(message)))
+            const cause = signal.aborted ? signal.reason : error
+            const message = cause instanceof Error ? cause.message : String(cause)
+            // Preserve cancellation vs provider-failure semantics for the
+            // SDK, CLI and desktop without leaking the bearer credential.
+            controller.error(signal.aborted
+              ? new DOMException(redact(message), cause instanceof Error ? cause.name : 'AbortError')
+              : new Error(redact(message)))
           }
         }
       },
