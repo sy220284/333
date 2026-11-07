@@ -181,12 +181,18 @@ export function App(){
         setMcpServers(data.servers??[]);setMcpErrors(data.errors??[])
       })
     ]
-    const results=await Promise.allSettled(queries)
-    if(!current())return
+    // A hung external provider must never hold the global action lock.
+    // Surface individual failures immediately instead of waiting for the
+    // slowest service before showing the user a reason.
     const names=['模型列表','历史会话','智能体概览','长期任务','模型凭证','MCP服务']
-    const failed=results.flatMap((result,index)=>result.status==='rejected'
-      ? [`${names[index]}：${presentError(result.reason)}`] : [])
-    if(failed.length)setError(`刷新部分失败：${failed.join('；')}`)
+    const failed:string[]=[]
+    queries.forEach((query,index)=>{
+      void query.catch(error=>{
+        if(!current())return
+        failed.push(`${names[index]}：${presentError(error)}`)
+        setError(`刷新部分失败：${failed.join('；')}`)
+      })
+    })
   },[])
   const refreshSession=useCallback(async(id:string)=>{
     const [p,h,t]=await Promise.allSettled([
