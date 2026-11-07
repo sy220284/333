@@ -47,9 +47,11 @@ export function createDesktopSessionSettingsJournal(
     write(id: string, settings: DesktopSessionSettings): Promise<void> {
       const path = pathFor(id)
       const content = JSON.stringify(schema.parse({ version: 1, ...settings }))
+      // The queue tracks completion, while the writer retains the rejected
+      // operation. A failed settings write must not block a concurrent read
+      // of the last committed model/permission settings.
       const previous = pending.get(id) ?? Promise.resolve()
-      const ready = previous.then(() => undefined, () => undefined)
-      const job = ready.then(async () => {
+      const job = previous.then(async () => {
         await mkdir(directory, { recursive: true, mode: 0o700 })
         const temporary = `${path}.${randomUUID()}.tmp`
         try {
@@ -57,9 +59,11 @@ export function createDesktopSessionSettingsJournal(
           await rename(temporary, path)
         } finally { await rm(temporary, { force: true }) }
       })
-      pending.set(id, job)
-      const clearPending = () => { if (pending.get(id) === job) pending.delete(id) }
-      void job.then(clearPending, clearPending)
+      const settled = job.then(() => undefined, () => undefined)
+      pending.set(id, settled)
+      void settled.then(() => {
+        if (pending.get(id) === settled) pending.delete(id)
+      })
       return job
     },
   }
