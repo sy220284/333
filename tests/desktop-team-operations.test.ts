@@ -38,6 +38,9 @@ test('桌面团队通信：权限边界、幂等、成员邮箱和销毁后不�
     const result = await gateway.handle(request) as { queued: boolean; recipient: string }
     expect(result).toMatchObject({ queued: true, recipient: 'worker' })
     await gateway.handle(request)
+    await expect(sendProjectTeamMessage(project, {
+      teamName: 'review', to: 'worker', message: '其他内容', messageId: requestId,
+    })).rejects.toThrow('同一消息标识对应不同内容')
     let mailbox = await readMailbox('worker', 'review')
     expect(mailbox).toHaveLength(1)
     expect(mailbox[0]).toMatchObject({
