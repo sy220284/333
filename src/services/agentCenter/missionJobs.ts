@@ -37,6 +37,8 @@ const jobSchema = z.object({
   worktreePath: z.string().min(1).max(4096).optional(),
   worktreeBranch: z.string().min(1).max(256).optional(),
   worktreeHead: z.string().min(1).max(128).optional(),
+  integrationCommit: z.string().regex(/^[0-9a-f]{40,64}$/).optional(),
+  integratedAt: z.string().datetime().optional(),
   summary: z.string().max(4000).optional(),
   history: z.array(historySchema).max(20),
 }).strict()
@@ -285,6 +287,22 @@ export function approveMissionJob(missionId: string, projectDir: string, jobId: 
     const next: MissionJob = { ...job, status: 'completed', updatedAt: now() }
     return { document: update(doc, job, next), job: next }
   }, root)
+}
+
+export function markMissionJobIntegrated(
+  missionId: string, projectDir: string, jobId: string, commit: string, root?: string,
+): Promise<MissionJob> {
+  if(!/^[0-9a-f]{40,64}$/.test(commit))throw new Error('合并提交格式错误')
+  return mutate(missionId,projectDir,doc=>{
+    const job=requireJob(doc,jobId)
+    if(job.status!=='completed')throw new Error('仅已审核完成的工作项可以合入')
+    if(job.integrationCommit){
+      if(job.integrationCommit!==commit)throw new Error('已记录其他合入提交，请先核对 Git 历史')
+      return {document:doc,job}
+    }
+    const next:MissionJob={...job,integrationCommit:commit,integratedAt:now(),updatedAt:now()}
+    return {document:update(doc,job,next),job:next}
+  },root)
 }
 
 export function retryMissionJob(missionId: string, projectDir: string, jobId: string, root?: string): Promise<MissionJob> {

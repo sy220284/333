@@ -458,6 +458,25 @@ test('宿主重启时从已写入的 Job 终态恢复 Mission 关联，不重复
   }
 })
 
+test('独立工作树合入 API 拒绝未审核工作项，不接受任意目录或提交',async()=>{
+  const cwd=await mkdtemp(join(tmpdir(),'desktop-integration-scope-'))
+  const root=join(cwd,'store')
+  const gateway=createDesktopGateway({...fixture().options,cwd,missionRoot:root})
+  try {
+    const mission=await gateway.handle(request('missions.create',{objective:'核查安全合入'})) as {id:string}
+    const job=await gateway.handle(request('missions.jobs.enqueue',{
+      missionId:mission.id,title:'未审核工作项',instruction:'不得合入',
+    })) as {id:string}
+    await expect(gateway.handle(request('missions.jobs.previewIntegrate',{
+      missionId:mission.id,jobId:job.id,
+    }))).rejects.toThrow('仅已审核完成')
+    await expect(gateway.handle(request('missions.jobs.integrate',{
+      missionId:mission.id,jobId:job.id,
+      sourceHead:'a'.repeat(40),targetHead:'b'.repeat(40),
+    }))).rejects.toThrow('仅已审核完成')
+  }finally{await gateway.close();await rm(cwd,{recursive:true,force:true})}
+})
+
 test('独立工作树贯穿执行和恢复，目录消失时不能回退项目根目录',async()=>{
   const cwd=await mkdtemp(join(tmpdir(),'desktop-job-worktree-'))
   const isolated=join(cwd,'isolated-job')

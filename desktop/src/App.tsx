@@ -32,7 +32,7 @@ type Permission={id:string;sessionId:string;toolName:string;input?:Item;descript
 type HostRequest={id:string;sessionId:string;type?:string;request?:unknown;[key:string]:unknown}
 type Task={taskId:string;status?:string;description?:string;[key:string]:unknown}
 type JobStatus='queued'|'running'|'review'|'completed'|'failed'|'interrupted'|'cancelled'
-type MissionJob={id:string;title:string;instruction:string;status:JobStatus;attempt:number;summary?:string;sessionId?:string;worktreePath?:string;worktreeBranch?:string;history?:Array<{attempt:number;status:string;summary:string;finishedAt:string;sessionId?:string}>}
+type MissionJob={id:string;title:string;instruction:string;status:JobStatus;attempt:number;summary?:string;sessionId?:string;worktreePath?:string;worktreeBranch?:string;integrationCommit?:string;history?:Array<{attempt:number;status:string;summary:string;finishedAt:string;sessionId?:string}>}
 type TeamMember={agentId:string;name:string;agentType?:string;model?:string;status:'running'|'idle'|'unknown'}
 type MissionActivity={key:string;jobId:string;sessionId:string;task:Task}
 type SmartRecord={sessionId:string;model:string;permissionMode:string;budgetUsd?:number;costUsd?:number;status:'running'|'completed'|'failed'|'interrupted';startedAt:string;finishedAt?:string}
@@ -609,6 +609,21 @@ export function App(){
       setJobEvidence(old=>({...old,[jobId]:result}))
     })
   }
+  async function integrateJob(jobId:string){
+    if(!selectedMission)return
+    await operation('核查并合入独立工作树',async()=>{
+      const check=await invoke<{canIntegrate:boolean;alreadyIntegrated:boolean;reason?:string;
+        sourceHead:string;targetHead:string;changes:string;commits:string}>(
+          'missions.jobs.previewIntegrate',{missionId:selectedMission,jobId})
+      if(check.alreadyIntegrated){await refreshJobs();return}
+      if(!check.canIntegrate)throw new Error(check.reason||'工作树暂不可合入')
+      if(!window.confirm(`将以下已审核提交合入当前主项目，确认继续？\\n${check.commits}\\n${check.changes}\\n源提交：${check.sourceHead.slice(0,12)}；目标：${check.targetHead.slice(0,12)}`))return
+      const done=await invoke<{mergeCommit:string}>('missions.jobs.integrate',{
+        missionId:selectedMission,jobId,sourceHead:check.sourceHead,targetHead:check.targetHead})
+      setActivity(old=>[`工作项已合入：${done.mergeCommit.slice(0,12)}`,...old].slice(0,20))
+      await refreshJobs()
+    })
+  }
   async function jobAction(method:string,jobId:string){
     if(!selectedMission)return
     if(method==='missions.jobs.approve' && !window.confirm('已核对代码、实际结果与测试记录，确认此工作项通过审核？'))return
@@ -960,6 +975,9 @@ export function App(){
                       {job.status==='queued'&&<Button variant="secondary" size="sm" onClick={()=>void jobAction('missions.jobs.start',job.id)}><Play size={13}/>执行</Button>}
                       {job.sessionId&&<Button variant="secondary" size="sm" onClick={()=>void viewJobSession(job)}><MessageSquare size={13}/>查看会话</Button>}
                       {job.status==='review'&&<Button variant="primary" size="sm" onClick={()=>void jobAction('missions.jobs.approve',job.id)}><Check size={13}/>审核通过</Button>}
+                       {job.status==='completed'&&job.worktreePath&&<Button variant="secondary" size="sm" disabled={Boolean(job.integrationCommit)} onClick={()=>void integrateJob(job.id)}>
+                         <GitPullRequest size={13}/>{job.integrationCommit?'已合入主项目':'核查并合入主项目'}
+                       </Button>}
                       {(job.status==='failed'||job.status==='interrupted')&&<Button variant="tonal" size="sm" onClick={()=>void jobAction('missions.jobs.retry',job.id)}><RefreshCw size={13}/>重新排队</Button>}
                       {job.status==='running'&&<Button variant="secondary" size="sm" onClick={()=>void jobAction('missions.jobs.recover',job.id)}><History size={13}/>检查中断</Button>}
                       {job.status==='running'&&job.sessionId&&<Button variant="secondary" size="sm" onClick={()=>void operation('中断工作项',async()=>{await invoke('sessions.interrupt',{sessionId:job.sessionId});await refreshJobs()})}><CircleStop size={13}/>中断</Button>}

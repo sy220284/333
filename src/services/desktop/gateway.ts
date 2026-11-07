@@ -11,9 +11,11 @@ import { getTeammateStatuses, listProjectTeams } from '../../utils/teamDiscovery
 import {
   missionJobAssignmentId, listMissionJobs, enqueueMissionJob, claimMissionJob,
   bindMissionJobTurn, bindMissionJobWorkspace, settleMissionJob, approveMissionJob, retryMissionJob,
-  cancelMissionJob, recoverMissionJob, type MissionJob,
+  cancelMissionJob, recoverMissionJob, markMissionJobIntegrated, type MissionJob,
 } from '../agentCenter/missionJobs.js'
 import { reconcileMissionTerminalJobs } from '../agentCenter/missionReconciliation.js'
+import { previewWorktreeIntegration, integrateWorktree } from '../agentCenter/worktreeIntegration.js'
+import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { AgentInfoSchema, ModelInfoSchema } from '../../entrypoints/sdk/coreSchemas.js'
 import type { getSessionInfo, getSessionMessages, listSessions } from '../../entrypoints/agentSdkTypes.js'
 import type { InternalOptions, SDKSessionOptions } from '../../entrypoints/sdk/runtimeTypes.js'
@@ -885,6 +887,27 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           if (openedSession && sessions.has(openedSession)) await closeSessionInternal(openedSession)
           throw error
         }
+      }
+      case 'missions.jobs.previewIntegrate': {
+        const mission=await getScopedMission(request.missionId)
+        const jobs=await listMissionJobs(mission.id,cwd,options.missionRoot)
+        const job=jobs.find(item=>item.id===request.jobId)
+        if(!job || job.status!=='completed')throw new Error('仅已审核完成的工作项可以合入')
+        if(!job.worktreePath || !job.worktreeHead)throw new Error('该任务没有可信隔离工作树或基线')
+        const check=await previewWorktreeIntegration(cwd,job.worktreePath,job.worktreeHead)
+        return {...check,recordedCommit:job.integrationCommit}
+      }
+      case 'missions.jobs.integrate': {
+        const mission=await getScopedMission(request.missionId)
+        const jobs=await listMissionJobs(mission.id,cwd,options.missionRoot)
+        const job=jobs.find(item=>item.id===request.jobId)
+        if(!job || job.status!=='completed')throw new Error('仅已审核完成的工作项可以合入')
+        if(!job.worktreePath || !job.worktreeHead)throw new Error('缺少可核对的工作树和初始提交')
+        const result=await integrateWorktree(cwd,job.worktreePath,job.worktreeHead,
+          request.targetHead,request.sourceHead,options.missionRoot??getClaudeConfigHomeDir())
+        const saved=await markMissionJobIntegrated(mission.id,cwd,job.id,result.mergeCommit,options.missionRoot)
+        notifyJob(mission.id,saved)
+        return {...result,job:saved}
       }
       case 'missions.jobs.evidence': {
         const mission = await getScopedMission(request.missionId)

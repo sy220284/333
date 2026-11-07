@@ -20,7 +20,7 @@ const permitted = new Set([
   'sessions.setPermissionMode','host.list','host.respond','host.reject','permissions.list',
   'permissions.decide','agents.overview','agents.members','agents.setMode','missions.list','missions.get',
   'missions.create','missions.select','missions.updateStatus','missions.checkpoint',
-  'missions.jobs.list','missions.jobs.enqueue','missions.jobs.start','missions.jobs.evidence','missions.jobs.runBatch',
+  'missions.jobs.list','missions.jobs.enqueue','missions.jobs.start','missions.jobs.evidence','missions.jobs.previewIntegrate','missions.jobs.integrate','missions.jobs.runBatch',
   'missions.jobs.approve','missions.jobs.retry','missions.jobs.recover','missions.jobs.cancel',
   'missions.jobs.runQueue','missions.jobs.haltQueue','missions.jobs.queueStatus',
   'tasks.list','tasks.stop','tasks.resume'
