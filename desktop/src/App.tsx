@@ -1040,7 +1040,7 @@ export function App(){
                 </div>
               </Card>
             </Section>
-            <Card radius="lg" surface="low"><div className="flex flex-wrap items-center gap-3"><ShieldCheck size={19} className="text-[var(--color-brand)]"/><span className="flex-1 text-[12px] text-[var(--color-text-secondary)]">模型参数、费率和工具能力以本地档案为准；自检不会自动发起付费调用。</span><Button variant="link" size="base" onClick={()=>toChat('检查当前配置的模型、服务商参数与上下文窗口，并列出需要修正的项')}>检查配置 <ArrowRight size={14}/></Button></div></Card>
+            <Card radius="lg" surface="low"><div className="flex flex-wrap items-center gap-3"><ShieldCheck size={19} className="text-[var(--color-brand)]"/><span className="flex-1 text-[12px] text-[var(--color-text-secondary)]">模型参数、费率和工具能力以本地档案为准；自检不会自动发起付费调用。</span><Button variant="link" size="base" onClick={()=>void operation('模型离线检查',async()=>setSmartInspection(await invoke<SmartInspection>('smart.inspect',selectedModel?{model:selectedModel}:{})))}>检查配置 <ArrowRight size={14}/></Button></div></Card>
           </div>}
           {view==='models'&&smartInspection&&<Card radius="lg" surface="lowest">
             <div className="flex items-center gap-2"><ShieldCheck size={17}/><strong>模型自检 · {smartInspection.model}</strong>
@@ -1050,7 +1050,7 @@ export function App(){
             {smartInspection.contextWindow&&<p className="mt-2 text-[11px] text-[var(--color-text-tertiary)]">上下文 {smartInspection.contextWindow.toLocaleString()} Token · 输出 {smartInspection.maxOutputTokens?.toLocaleString()??'待核实'}</p>}
             {smartInspection.hasPricing===false&&<p className="mt-2 text-[11px] text-[var(--color-text-tertiary)]">费率待补齐，设置费用上限时将提示。</p>}
           </Card>}
-                    {view==='integrations'&&<div className="space-y-7">
+          {view==='integrations'&&<div className="space-y-7">
             <div className="grid grid-cols-3 gap-4 max-[1100px]:grid-cols-1">
               {([{name:'技能 Skills',detail:'复用本地项目与用户级技能。',icon:WandSparkles,prompt:'列出当前工作区可用的全部技能，包括来源、功能、启用状态和使用方式',action:'检查已安装技能'},{name:'MCP 工具',detail:'让 AI 访问本地与外部工具。',icon:Boxes,prompt:'检查当前 MCP 服务器连接情况，列出服务、工具、授权和连接错误',action:'检查 MCP 连接'},{name:'插件与扩展',detail:'查看已注册的插件和扩展功能。',icon:Bot,prompt:'审计当前已安装的插件及其功能入口，检查是否能够正常调用',action:'检查插件'}]).map(item=>{const Icon=item.icon;return <Card key={item.name} radius="lg" surface="lowest" shadow="card" className="flex flex-col items-start gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-brand-soft)] text-[var(--color-brand)]"><Icon size={23}/></span>
