@@ -24,6 +24,8 @@ const retired = [
   'src/commands/upgrade/index.ts',
   'src/commands/upgrade/upgrade.tsx',
   'src/constants/github-app.ts',
+  'src/screens/REPL.tsx',
+  'src/screens/ResumeConversation.tsx',
 ]
 const errors = []
 for (const path of retired) if (existsSync(join(root, path))) errors.push(`退役源码仍存在: ${path}`)
@@ -72,7 +74,7 @@ const protectedUI = [
   'src/components/LogoV2/CondensedLogo.tsx',
   'src/components/HelpV2/HelpV2.tsx',
   'src/components/HelpV2/General.tsx',
-  'src/screens/REPL.tsx',
+  'desktop/src/App.tsx',
 ]
 for (const path of protectedUI) {
   const content = readFileSync(join(root, path), 'utf8').split('//# sourceMappingURL=')[0]
