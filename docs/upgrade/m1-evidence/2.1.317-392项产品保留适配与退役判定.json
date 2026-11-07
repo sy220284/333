@@ -541,7 +541,7 @@
       "version": "2.1.311",
       "disposition": "ADAPT_TO_LOCAL_EQUIVALENT",
       "policy_rule": "LOCAL_FEEDBACK",
-      "decision_reason": "官方反馈上传已改为本地加密/受限文件导出，按本地反馈行为验收",
+      "decision_reason": "官方反馈上传已改为限制访问权限的本地文件导出，按本地反馈行为验收",
       "official_update": "Fixed the feedback draft card showing its 1/2/0 and Esc shortcuts while the prompt has text, when those keys act on the prompt instead of the card",
       "local_contract": "独立 Electron 桌面 UI 与本地终端显示",
       "candidate_entrypoints": [
