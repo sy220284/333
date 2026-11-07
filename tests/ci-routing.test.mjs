@@ -5,7 +5,7 @@ import { SPECIALISTS, WORKFLOWS, routeChanges, selectBaseline } from '../build/c
 
 const active = plan => Object.entries(plan).filter(([, enabled]) => enabled).map(([name]) => name)
 
-test('28 个专项保留、统一入口调用，全量始终覆盖所有专项', () => {
+test('27 个专项保留、统一入口调用，全量始终覆盖所有专项', () => {
   const files = readdirSync(new URL('../.github/workflows/', import.meta.url))
     .filter(x => x.endsWith('.yml') && x !== 'ci-on-demand.yml' && x !== 'latest-stable-upgrade.yml')
   assert.deepEqual(WORKFLOWS.slice().sort(), files.map(x => x.slice(0, -4)).sort())
@@ -18,15 +18,14 @@ test('28 个专项保留、统一入口调用，全量始终覆盖所有专项',
   assert.deepEqual(active(routeChanges([], true)).sort(), WORKFLOWS.slice().sort())
 })
 
-test('已退役企业网关不再进入 CI；个人版 Runner 继续专项验收', () => {
+test('企业网关与原厂 Runner 均已清退，个人后台任务保持独立', () => {
   assert.equal(Object.hasOwn(SPECIALISTS, 'm6-gateway-providers-317'), false)
-  const runner = routeChanges(['src/cli/selfHostedRunner/runnerHost317.ts'])
-  assert.equal(runner['m6-self-hosted-runner-317'], true)
-  const full = routeChanges([], true)
-  assert.equal(Object.hasOwn(full, 'm6-gateway-providers-317'), false)
+  assert.equal(Object.hasOwn(SPECIALISTS, 'm6-self-hosted-runner-317'), false)
+  const plan = routeChanges(['src/services/agentCenter/missionJobs.ts'])
+  assert.equal(plan['local-feature-promotion'], true)
   const dispatcher = readFileSync(new URL('../.github/workflows/ci-on-demand.yml', import.meta.url), 'utf8')
-  assert.doesNotMatch(dispatcher, /needs\\.plan\\.outputs\\.m6_gateway_providers_317/)
-  assert.doesNotMatch(dispatcher, /uses: \\.\\/\\.github\\/workflows\\/m6-gateway-providers-317\\.yml/)
+  assert.doesNotMatch(dispatcher, /m6_gateway_providers_317|m6_self_hosted_runner_317/)
+  assert.deepEqual(active(routeChanges([], true)).sort(), WORKFLOWS.slice().sort())
 })
 
 test('每次基础门禁固定启用、文档变更不启动全量检查', () => {
@@ -37,12 +36,10 @@ test('最近提交只派发对应专项，多个提交累计改动合并为并�
   const touched = [
     'src/services/desktop/gateway.ts',
     'src/proactive/useProactive.ts',
-    'src/cli/selfHostedRunner/runner.ts',
   ]
   const planned = routeChanges(touched)
   assert.equal(planned['desktop-communication'], true)
   assert.equal(planned['local-feature-promotion'], true)
-  assert.equal(planned['m6-self-hosted-runner-317'], true)
   assert.equal(planned['ci-test-matrix'], false)
   assert.equal(planned['latest-stable-six-host'], false)
   assert.equal(planned.rebuild, false)
