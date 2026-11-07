@@ -68,6 +68,11 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
       const end=manyFiles?Math.min(260,offset+Number(args.limit||200)):0
       return {path:'/projects/example',total:manyFiles?260:0,entries:Array.from({length:Math.max(0,end-offset)},(_,i)=>({name:`file-${offset+i}.ts`,path:`/projects/example/file-${offset+i}.ts`,directory:false}))}
     }
+    case 'system.diagnostics':return {installation:{installationType:'本地安装',version:'2.1.317',installationPath:'/local/bin/yaoyao',autoUpdates:'manual',warnings:[],multipleInstallations:[],ripgrepStatus:{working:true,mode:'local'}},runtime:{cwd:'/projects/example',activeSessions:0,activeTasks:0},configuredProviders:['minimax'],mcp:[{scope:'project',count:1,errors:[]}],note:'已完成本地配置核查'}
+    case 'data.purge.preview':return {token:'f433a864-7cff-4cd3-9ae5-4f68e0b97b10',workspace:'/projects/example',activeSessions:0,items:[{path:'/projects/example/.yaoyaoche/sessions',kind:'dir',reason:'本地会话记录'}],warnings:[]}
+    case 'data.purge.apply':return {deleted:1,total:1,errors:[]}
+    case 'mcp.import.pick':return {token:'49c26b4d-d7b9-440a-9cb8-f2f762b074fb',source:'desktop-mcp.json',servers:[{sourceName:'primary',name:'primary',type:'stdio',collision:false},{sourceName:'clash',name:'clash',type:'http',collision:true}]}
+    case 'mcp.import.apply':return {added:['primary'],errors:[]}
     case 'mcp.list':
       if(suspendMcpRefresh)await new Promise<void>(resolve=>{releaseMcpRefresh=resolve})
       if(failMcpRefresh)throw new Error('MCP 服务离线')
@@ -189,6 +194,37 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(screen.getByRole('button',{name:/检查配置/}))
     await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.inspect',{}))
     expect(screen.getByText('沿用本地配置')).toBeInTheDocument()
+  })
+
+  it('新版系统诊断与清理界面通过确认后调用当前工作区协议',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'设置与权限'}))
+    await user.click(screen.getByRole('button',{name:'运行诊断'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('system.diagnostics'))
+    expect(await screen.findByText(/已完成本地配置核查/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button',{name:'预览清理清单'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('data.purge.preview'))
+    expect(await screen.findByText('/projects/example/.yaoyaoche/sessions')).toBeInTheDocument()
+    await user.click(screen.getByRole('checkbox',{name:/已核对删除清单/}))
+    await user.click(screen.getByRole('button',{name:'确认清理所列记录'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('data.purge.apply',{token:'f433a864-7cff-4cd3-9ae5-4f68e0b97b10'}))
+    expect(await screen.findByText('实际清理：1/1 项')).toBeInTheDocument()
+  })
+
+  it('新版 MCP 导入先预览、剔除同名默认选项，再按配置范围确认导入',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'技能与 MCP'}))
+    await user.click(screen.getByRole('button',{name:'选择配置文件'}))
+    expect(await screen.findByText('来源：desktop-mcp.json · 2 个服务')).toBeInTheDocument()
+    await user.click(screen.getByRole('button',{name:'导入选中的 1 个服务'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('mcp.import.apply',{
+      token:'49c26b4d-d7b9-440a-9cb8-f2f762b074fb',names:['primary'],scope:'project',
+    }))
+    expect(await screen.findByText(/成功导入：1 个/)).toBeInTheDocument()
   })
 
   it('六套主题可以切换并在重新打开时恢复',async()=>{
