@@ -146,7 +146,7 @@ test('SDK 源码变更覆盖协议与桌面专项，桌面窗口变更也走桌�
 })
 
 test('317升级链路运行门禁按变更自动选择真实专项，基础门禁不漏392证据',()=>{
-  for(const file of ['src/query.ts','src/query/turnEffort317.ts','tests/m2-ultrathink-turn-effort-317.test.ts']){
+  for(const file of ['src/query.ts','src/query/turnEffort317.ts','tests/m2-ultrathink-turn-effort-317.test.ts','tests/m2-ultrathink-release-request-317.test.mjs','build/rebuild.mjs']){
     const planned=routeChanges([file])
     assert.equal(planned['m2-prompt-functional-integration-317'],true,file)
     assert.equal(planned['ci-test-matrix'],false,file)
@@ -164,5 +164,6 @@ test('317升级链路运行门禁按变更自动选择真实专项，基础门�
   assert.match(local,/bun test tests\/m4-team-lifecycle-runtime-317\.test\.ts/)
   assert.match(local,/node --test tests\/m4-teammate-permission-inheritance-317\.test\.mjs/)
   assert.match(m2,/bun test tests\/m2-ultrathink-turn-effort-317\.test\.ts/)
+  assert.match(m2,/node --test tests\/m2-ultrathink-release-request-317\.test\.mjs/)
   assert.match(dispatcher,/tests\/upgrade317-evidence-report\.test\.mjs/)
 })
