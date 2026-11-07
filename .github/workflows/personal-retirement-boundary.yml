@@ -50,6 +50,8 @@ jobs:
           bun test tests/mission-jobs.test.ts
           bun test tests/desktop-communication.test.ts
           bun test tests/local-telemetry-privacy.test.ts
+          bun test tests/m3-mcp-auth-317.test.ts tests/m5-mcp-dual-era-317.test.ts tests/m5-sdk-mcp-factory-317.test.ts
+          node --test tests/m3-mcp-auth-cli-317.test.mjs
       - name: 全仓 TypeScript 类型检查
         run: node tools/dev/dev.mjs typecheck:all
       - name: 个人版可执行程序真实重建
