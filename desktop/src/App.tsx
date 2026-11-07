@@ -32,7 +32,7 @@ type Permission={id:string;sessionId:string;toolName:string;input?:Item;descript
 type HostRequest={id:string;sessionId:string;type?:string;request?:unknown;[key:string]:unknown}
 type Task={taskId:string;status?:string;description?:string;[key:string]:unknown}
 type JobStatus='queued'|'running'|'review'|'completed'|'failed'|'interrupted'|'cancelled'
-type MissionJob={id:string;title:string;instruction:string;status:JobStatus;attempt:number;summary?:string;sessionId?:string;worktreePath?:string;worktreeBranch?:string;integrationCommit?:string;history?:Array<{attempt:number;status:string;summary:string;finishedAt:string;sessionId?:string}>}
+type MissionJob={id:string;title:string;instruction:string;model?:string;permissionMode?:'default'|'plan'|'dontAsk';status:JobStatus;attempt:number;summary?:string;sessionId?:string;worktreePath?:string;worktreeBranch?:string;integrationCommit?:string;history?:Array<{attempt:number;status:string;summary:string;finishedAt:string;sessionId?:string}>}
 type TeamMember={agentId:string;name:string;agentType?:string;model?:string;status:'running'|'idle'|'unknown'}
 type MissionActivity={key:string;jobId:string;sessionId:string;task:Task}
 type SmartRecord={sessionId:string;model:string;permissionMode:string;budgetUsd?:number;costUsd?:number;status:'running'|'completed'|'failed'|'interrupted';startedAt:string;finishedAt?:string}
@@ -141,6 +141,8 @@ export function App(){
   const [missionQueueActive,setMissionQueueActive]=useState(false)
   const [jobTitle,setJobTitle]=useState('')
   const [jobInstruction,setJobInstruction]=useState('')
+  const [jobModel,setJobModel]=useState('')
+  const [jobPermission,setJobPermission]=useState<'default'|'plan'|'dontAsk'>('default')
   const [tasks,setTasks]=useState<Task[]>([])
   const [permissions,setPermissions]=useState<Permission[]>([])
   const [hostRequests,setHostRequests]=useState<HostRequest[]>([])
@@ -639,7 +641,11 @@ export function App(){
   async function addJob(){
     if(!selectedMission||!jobTitle.trim()||!jobInstruction.trim())return
     await operation('添加工作项',async()=>{
-      await invoke('missions.jobs.enqueue',{missionId:selectedMission,title:jobTitle.trim(),instruction:jobInstruction.trim()})
+      await invoke('missions.jobs.enqueue',{
+        missionId:selectedMission,title:jobTitle.trim(),instruction:jobInstruction.trim(),
+        ...(jobModel?{model:jobModel}:{}),
+        ...(jobPermission==='default'?{}:{permissionMode:jobPermission}),
+      })
       setJobTitle('');setJobInstruction('');await refreshJobs()
     })
   }
@@ -989,6 +995,21 @@ export function App(){
                   <div className="mt-3 space-y-3 rounded-[var(--radius-lg)] bg-[var(--color-surface-container-low)] p-4">
                     <input aria-label="工作项标题" placeholder="工作项标题" className="w-full" value={jobTitle} onChange={e=>setJobTitle(e.target.value)}/>
                     <textarea aria-label="工作项执行指令" rows={3} placeholder="给智能体的完整执行要求和验收条件" className="w-full" value={jobInstruction} onChange={e=>setJobInstruction(e.target.value)}/>
+                    <div className="grid grid-cols-2 gap-3 max-[850px]:grid-cols-1">
+                      <label className="flex flex-col gap-1.5 text-[11px]">工作项执行模型
+                        <select aria-label="工作项执行模型" value={jobModel} onChange={e=>setJobModel(e.target.value)}>
+                          <option value="">继承当前会话模型</option>
+                          {models.map(item=><option key={item.value} value={item.value}>{item.displayName||item.value}</option>)}
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-1.5 text-[11px]">工作项工具权限
+                        <select aria-label="工作项工具权限" value={jobPermission} onChange={e=>setJobPermission(e.target.value as typeof jobPermission)}>
+                          <option value="default">继承项目授权</option>
+                          <option value="plan">只规划不修改</option>
+                          <option value="dontAsk">默认拒绝未授权工具</option>
+                        </select>
+                      </label>
+                    </div>
                     <Button variant="secondary" size="base" disabled={!jobTitle.trim()||!jobInstruction.trim()||Boolean(busy)} onClick={()=>void addJob()}><Plus size={14}/>添加工作项</Button>
                   </div>
                 </div>
@@ -1009,6 +1030,7 @@ export function App(){
                       <Badge size="sm" tone={job.status==='completed'?'success':job.status==='review'||job.status==='running'?'warning':job.status==='failed'||job.status==='interrupted'?'danger':'neutral'}>{({queued:'排队中',running:'执行中',review:'待审核',completed:'已完成',failed:'执行失败',interrupted:'已中断',cancelled:'已取消'} as Record<string,string>)[job.status]||job.status}</Badge>
                     </div>
                     <p className="mt-2 whitespace-pre-wrap text-[12px] leading-5 text-[var(--color-text-secondary)]">{job.instruction}</p>
+                    {(job.model||job.permissionMode)&&<p className="mt-1 text-[10px] text-[var(--color-text-tertiary)]">执行模型：{job.model||'继承当前配置'} · 权限：{job.permissionMode||'项目默认'}</p>}
                     {job.summary&&<div className="mt-3 rounded-[var(--radius-sm)] bg-[var(--color-surface-container-low)] p-3 text-[12px] leading-6">{job.summary}</div>}
                     {job.worktreePath&&<div className="mt-3 space-y-2 border-l-2 border-[var(--color-brand)] pl-3 text-[11px]">
                       <p>独立工作树：<code className="break-all">{job.worktreePath}</code></p>

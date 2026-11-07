@@ -138,6 +138,19 @@ test('同一工作区不同 Mission 共享三项并发上限，完成后立即�
   })
 })
 
+test('工作项模型和权限在任务簿持久化，后续执行轮次不得改变所选值',async()=>{
+  await fixture(async(root,mission,project)=>{
+    const entry=await enqueueMissionJob(mission,project,'定向执行','只分析代码',root,{
+      model:'minimax/M3',permissionMode:'plan',
+    })
+    expect(entry.model).toBe('minimax/M3')
+    expect(entry.permissionMode).toBe('plan')
+    expect((await listMissionJobs(mission,project,root))[0]).toMatchObject({
+      model:'minimax/M3',permissionMode:'plan',
+    })
+  })
+})
+
 test('任务队列验证输入并守住项目和终态边界', async () => {
   await fixture(async (root, mission, project) => {
     expect(() => enqueueMissionJob(mission, project, ' ', '有效指令', root)).toThrow('标题')

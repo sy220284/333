@@ -846,6 +846,8 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         if (mission.status !== 'active') throw new Error('当前长期任务已暂停或完成')
         const job = await enqueueMissionJob(
           mission.id, cwd, request.title, request.instruction, options.missionRoot,
+          { ...(request.model?{model:request.model}:{}),
+            ...(request.permissionMode?{permissionMode:request.permissionMode}:{}) },
         )
         try {
           await linkMissionAssignment(
@@ -885,10 +887,11 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
             }, options.missionRoot,
           )
           notifyJob(mission.id, stored)
-          const opened = await openSession(undefined, undefined, {
+          const opened = await openSession(claimed.model, undefined, {
             CLAUDE_CODE_COORDINATOR_MODE: '1',
             YAOYAOCHE_MISSION_PROJECT_DIR: cwd,
-          }, workspace.cwd)
+          }, workspace.cwd,
+          claimed.permissionMode?{permissionMode:claimed.permissionMode}:{})
           openedSession = opened.sessionId
           await bindMissionJobTurn(
             mission.id, cwd, claimed.id, runId, openedSession,

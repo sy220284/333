@@ -212,6 +212,24 @@ describe('摇摇车真实桌面页面交互',()=>{
     await waitFor(()=>expect(screen.getAllByText(/上限 USD 2.50/).length).toBeGreaterThan(0))
   })
 
+  it('工作项模型和权限选择实际写入任务队列，不修改其他智能体',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'长期任务'}))
+    await user.type(screen.getByPlaceholderText('明确长期目标与交付要求…'),'不同模型协作')
+    await user.click(screen.getByRole('button',{name:'创建并选中任务'}))
+    await screen.findByRole('heading',{name:'不同模型协作'})
+    await user.type(screen.getByRole('textbox',{name:'工作项标题'}),'专属规划智能体')
+    await user.type(screen.getByRole('textbox',{name:'工作项执行指令'}),'分析项目调用链')
+    await user.selectOptions(screen.getByRole('combobox',{name:'工作项执行模型'}),'minimax/M3')
+    await user.selectOptions(screen.getByRole('combobox',{name:'工作项工具权限'}),'plan')
+    await user.click(screen.getByRole('button',{name:'添加工作项'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('missions.jobs.enqueue',expect.objectContaining({
+      model:'minimax/M3',permissionMode:'plan',
+    })))
+  })
+
   it('项目共享预算从新 UI 配置到真实本地网关，并显示使用与预占',async()=>{
     const user=userEvent.setup()
     render(<App/>)

@@ -24,6 +24,8 @@ const jobSchema = z.object({
   id: z.string().regex(/^job_[a-f0-9]{16}$/),
   title: z.string().min(1).max(200),
   instruction: z.string().min(1).max(6000),
+  model: z.string().min(1).max(300).optional(),
+  permissionMode: z.enum(['default','plan','dontAsk']).optional(),
   status: z.enum(['queued', 'running', 'review', 'completed', 'failed', 'interrupted', 'cancelled']),
   attempt: z.number().int().min(0).max(20),
   createdAt: z.string(),
@@ -150,6 +152,7 @@ async function mutate(
 export function enqueueMissionJob(
   missionId: string, projectDir: string, title: string, instruction: string,
   root?: string,
+  execution?: { model?: string; permissionMode?: 'default'|'plan'|'dontAsk' },
 ): Promise<MissionJob> {
   const trimmedTitle = title.trim()
   const trimmedInstruction = instruction.trim()
@@ -161,6 +164,9 @@ export function enqueueMissionJob(
     const job: MissionJob = {
       id: `job_${randomUUID().replaceAll('-', '').slice(0, 16)}`,
       title: trimmedTitle, instruction: trimmedInstruction, status: 'queued',
+      ...(execution?.model?{model:execution.model}:{}),
+      ...(execution?.permissionMode && execution.permissionMode!=='default'
+        ?{permissionMode:execution.permissionMode}:{}),
       attempt: 0, createdAt: time, updatedAt: time, history: [],
     }
     return { document: { ...doc, revision: doc.revision + 1, jobs: [...doc.jobs, job] }, job }

@@ -71,7 +71,12 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('missions.updateStatus', { missionId, status: z.enum(['active', 'paused', 'completed']) }),
   request('missions.checkpoint', { missionId, checkpoint: z.string().trim().min(1).max(6000) }),
   request('missions.jobs.list', { missionId }),
-  request('missions.jobs.enqueue', { missionId, title: z.string().trim().min(1).max(200), instruction: z.string().trim().min(1).max(6000) }),
+  request('missions.jobs.enqueue', {
+    missionId, title:z.string().trim().min(1).max(200),
+    instruction:z.string().trim().min(1).max(6000),
+    model:z.string().min(1).max(300).optional(),
+    permissionMode:z.enum(['default','plan','dontAsk']).optional(),
+  }),
   request('missions.jobs.start', { missionId, jobId }),
   request('missions.jobs.evidence', { missionId, jobId }),
   request('missions.jobs.previewIntegrate', { missionId, jobId }),

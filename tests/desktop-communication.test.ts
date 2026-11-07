@@ -546,6 +546,32 @@ test('真实 Git 工作树冲突预检、源代码保护、原子合并与幂等
   }finally{await rm(root,{recursive:true,force:true})}
 })
 
+test('多智能体工作项独立模型和只读权限准确传递 SDK 会话启动选项',async()=>{
+  const cwd=await mkdtemp(join(tmpdir(),'desktop-agent-policy-'))
+  const root=join(cwd,'private-store')
+  const options:Array<Record<string,unknown>>=[]
+  const fixtureData=fixture()
+  const session=createDesktopGateway({
+    ...fixtureData.options,cwd,missionRoot:root,
+    createSession: (setting,resume)=>{
+      options.push({...setting})
+      return fixtureData.options.createSession!(setting,resume)
+    },
+  })
+  try{
+    const mission=await session.handle(request('missions.create',{objective:'验证模型权限继承'})) as {id:string}
+    const job=await session.handle(request('missions.jobs.enqueue',{
+      missionId:mission.id,title:'定向规划',instruction:'只规划，不修改',
+      model:'fixture-model',permissionMode:'plan',
+    })) as {id:string}
+    const started=await session.handle(request('missions.jobs.start',{
+      missionId:mission.id,jobId:job.id,
+    })) as {sessionId:string}
+    expect(started.sessionId).toBeTruthy()
+    expect(options[0]).toMatchObject({model:'fixture-model',permissionMode:'plan'})
+  }finally{await session.close();await rm(cwd,{recursive:true,force:true})}
+})
+
 test('独立工作树合入 API 拒绝未审核工作项，不接受任意目录或提交',async()=>{
   const cwd=await mkdtemp(join(tmpdir(),'desktop-integration-scope-'))
   const root=join(cwd,'store')
