@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
 import {
   Activity, AlertCircle, ArrowRight, Bot, Boxes, Check, ChevronDown, ChevronRight,
   CircleStop, ClipboardList, Code2, Cpu, FileCode2, Folder, FolderOpen,
@@ -89,11 +89,23 @@ function Empty({icon:Icon,title,detail,action}:{icon:LucideIcon;title:string;det
 function Section({title,subtitle,action,children}:{title:string;subtitle?:string;action?:ReactNode;children:ReactNode}){
   return <section className="section"><div className="section-heading"><div><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div>{action}</div>{children}</section>
 }
+function handleTabListKeyDown(event:ReactKeyboardEvent<HTMLDivElement>){
+  if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return
+  const tabs=Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'))
+  const current=tabs.indexOf(document.activeElement as HTMLButtonElement)
+  if(current<0||tabs.length===0)return
+  event.preventDefault()
+  const next=event.key==='Home'?0:event.key==='End'?tabs.length-1:event.key==='ArrowRight'?(current+1)%tabs.length:(current-1+tabs.length)%tabs.length
+  tabs[next]?.focus()
+}
+
 export function App(){
   const [view,setView]=useState<View>('dashboard')
   const [workspace,setWorkspace]=useState('')
   const [connected,setConnected]=useState(false)
   const [error,setError]=useState('')
+  const [notice,setNotice]=useState<{id:number;text:string}|null>(null)
+  const [initialLoading,setInitialLoading]=useState(true)
   const [busy,setBusy]=useState('')
   const [sessionId,setSessionId]=useState('')
   const [sessionPhase,setSessionPhase]=useState('idle')
@@ -105,6 +117,7 @@ export function App(){
   const [credentialProvider,setCredentialProvider]=useState('openai')
   const [credentialInput,setCredentialInput]=useState('')
   const [mcpServers,setMcpServers]=useState<McpServer[]>([])
+  const [mcpAddOpen,setMcpAddOpen]=useState(true)
   const [mcpErrors,setMcpErrors]=useState<string[]>([])
   const [mcpName,setMcpName]=useState('')
   const [mcpType,setMcpType]=useState<'http'|'sse'|'stdio'>('http')
@@ -143,6 +156,7 @@ export function App(){
   const [missionActivity,setMissionActivity]=useState<MissionActivity[]>([])
   const [jobEvidence,setJobEvidence]=useState<Record<string,Item>>({})
   const [missionQueueActive,setMissionQueueActive]=useState(false)
+  const [updatedJobId,setUpdatedJobId]=useState('')
   const [jobTitle,setJobTitle]=useState('')
   const [jobInstruction,setJobInstruction]=useState('')
   const [jobModel,setJobModel]=useState('')
@@ -168,7 +182,6 @@ export function App(){
     return THEME_VARIANTS.some(theme=>theme===stored)?stored as ThemeVariant:loadPreference('dark',false)?'dark':'white'
   })
   const isDark=themeVariant==='dark'||themeVariant==='ink-blue'
-  const setIsDark=(checked:boolean)=>setThemeVariant(checked?'dark':'white')
   const [animate,setAnimate]=useState(()=>loadPreference('motion',true))
   const [permissionMode,setPermissionMode]=useState('default')
   const [modelVerified,setModelVerified]=useState(false)
@@ -187,6 +200,7 @@ export function App(){
   const directoryGeneration=useRef(0)
   const fileGeneration=useRef(0)
   const gitGeneration=useRef(0)
+  const jobHighlightTimer=useRef<ReturnType<typeof setTimeout>|null>(null)
   const operationSequence=useRef(0)
   const pendingOperations=useRef(new Map<number,string>())
   const permissionRevision=useRef(new Map<string,number>())
@@ -294,7 +308,7 @@ export function App(){
     const token=++operationSequence.current
     pendingOperations.current.set(token,name)
     setBusy(name)
-    try{await action()}
+    try{await action();setNotice({id:Date.now(),text:`${name}完成`})}
     catch(error){setError(presentError(error))}
     finally{
       pendingOperations.current.delete(token)
@@ -377,7 +391,12 @@ export function App(){
       }else if(event.event==='mission.job.updated'&&event.job){
         if(String(event.missionId||'')!==selectedMissionRef.current)return
         const updated=obj(event.job) as unknown as MissionJob
-        setMissionJobs(old=>[updated,...old.filter(job=>job.id!==updated.id)])
+        setMissionJobs(old=>old.some(job=>job.id===updated.id)
+          ? old.map(job=>job.id===updated.id?updated:job)
+          : [...old,updated])
+        setUpdatedJobId(updated.id)
+        if(jobHighlightTimer.current)clearTimeout(jobHighlightTimer.current)
+        jobHighlightTimer.current=setTimeout(()=>setUpdatedJobId(''),500)
       }else if(event.event==='mission.activity'&&event.task){
         if(String(event.missionId||'')!==selectedMissionRef.current)return
         const task=obj(event.task) as Task
@@ -440,8 +459,9 @@ export function App(){
         if(info.initialPrompt){setDraft(info.initialPrompt);setView('chat')}
         if(info.startupSessionId)await resumeSession(info.startupSessionId)
       }catch(e){if(alive){setConnected(false);setError(presentError(e))}}
+      finally{if(alive)setInitialLoading(false)}
     })()
-    return ()=>{alive=false;unsub()}
+    return ()=>{alive=false;unsub();if(jobHighlightTimer.current)clearTimeout(jobHighlightTimer.current)}
   },[refresh,resumeSession,syncMissionOverview])
   useEffect(()=>{
     const available=Array.isArray(overview.teams)?overview.teams as Item[]:[]
@@ -487,6 +507,12 @@ export function App(){
     requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-label="打开详情面板"]')?.focus())
   },[])
   useEffect(()=>{if(paletteOpen)paletteInputRef.current?.focus()},[paletteOpen])
+  useEffect(()=>{setMcpAddOpen(mcpServers.length===0)},[mcpServers.length])
+  useEffect(()=>{
+    if(!notice)return
+    const timer=setTimeout(()=>setNotice(current=>current?.id===notice.id?null:current),2800)
+    return()=>clearTimeout(timer)
+  },[notice])
   useEffect(()=>{if(permissions.length||hostRequests.length)setPaletteOpen(false)},[permissions.length,hostRequests.length])
   useEffect(()=>{
     const onKey=(event:KeyboardEvent)=>{
@@ -766,7 +792,7 @@ export function App(){
           'missions.jobs.previewIntegrate',{missionId:selectedMission,jobId})
       if(check.alreadyIntegrated){await refreshJobs();return}
       if(!check.canIntegrate)throw new Error(check.reason||'工作树暂不可合入')
-      if(!window.confirm(`将以下已审核提交合入当前主项目，确认继续？\\n${check.commits}\\n${check.changes}\\n源提交：${check.sourceHead.slice(0,12)}；目标：${check.targetHead.slice(0,12)}`))return
+      if(!window.confirm(`将以下已审核提交合入当前主项目，确认继续？\n${check.commits}\n${check.changes}\n源提交：${check.sourceHead.slice(0,12)}；目标：${check.targetHead.slice(0,12)}`))return
       const done=await invoke<{mergeCommit:string}>('missions.jobs.integrate',{
         missionId:selectedMission,jobId,sourceHead:check.sourceHead,targetHead:check.targetHead})
       setActivity(old=>[`工作项已合入：${done.mergeCommit.slice(0,12)}`,...old].slice(0,20))
@@ -916,18 +942,18 @@ export function App(){
       <aside className="sidebar-panel yy-sidebar flex h-full flex-col border-r border-[var(--color-border)] bg-[var(--color-surface-sidebar)]">
         <div className="flex h-[74px] shrink-0 items-center gap-3 px-5">
           <div className="yy-brand-seal flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-brand)] text-[var(--color-on-primary)]"><SquareTerminal size={22} strokeWidth={1.65}/></div>
-          <div className="min-w-0 flex-1"><div className="font-semibold text-[15px] tracking-[.035em]">摇摇车</div><div className="truncate text-[10px] uppercase tracking-[.16em] text-[var(--color-text-tertiary)]">Local AI Workspace</div></div>
-          <button type="button" aria-label="搜索页面与操作" className="yy-icon" onClick={()=>{if(permissions.length||hostRequests.length)return;setPaletteOpen(true);setSearch('');setPaletteIndex(0)}}><Search size={17}/></button>
+          <div className="yy-sidebar-brand-copy min-w-0 flex-1"><div className="font-semibold text-[15px] tracking-[.035em]">摇摇车</div><div className="truncate text-[10px] uppercase tracking-[.16em] text-[var(--color-text-tertiary)]">Local AI Workspace</div></div>
+          <button type="button" aria-label="搜索页面与操作" className="yy-icon yy-sidebar-search" onClick={()=>{if(permissions.length||hostRequests.length)return;setPaletteOpen(true);setSearch('');setPaletteIndex(0)}}><Search size={17}/></button>
         </div>
         <div className="px-3 pb-3">
           <button type="button" className="yy-project-picker flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-container-lowest)] p-3 text-left shadow-[var(--shadow-card)] transition-[border-color,background-color] hover:border-[var(--color-brand)]" onClick={()=>void selectWorkspace()} title={workspace||'选择工作区'}>
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-brand-soft)] text-[var(--color-on-brand-soft)]"><FolderOpen size={17}/></span>
-            <span className="min-w-0 flex-1"><strong className="block truncate text-[13px]">{workspace.split(/[\\/]/).filter(Boolean).at(-1)||'打开本地项目'}</strong><small className="block truncate text-[11px] text-[var(--color-text-tertiary)]">{workspace||'本机项目目录'}</small></span><ChevronDown size={14} className="shrink-0 text-[var(--color-text-tertiary)]"/>
+            <span className="yy-sidebar-project-copy min-w-0 flex-1"><strong className="block truncate text-[13px]">{workspace.split(/[\\/]/).filter(Boolean).at(-1)||'打开本地项目'}</strong><small className="block truncate text-[11px] text-[var(--color-text-tertiary)]">{workspace||'本机项目目录'}</small></span><ChevronDown size={14} className="shrink-0 text-[var(--color-text-tertiary)]"/>
           </button>
-          <Button block size="md" variant="primary" className="mt-3 justify-center" onClick={()=>void createSession()} disabled={Boolean(busy)}><Plus size={15}/> 新建会话</Button>
+          <Button block size="md" variant="primary" aria-label="新建会话" className="yy-sidebar-new mt-3 justify-center" loading={busy==='新建会话'} onClick={()=>void createSession()} disabled={Boolean(busy)&&busy!=='新建会话'}><Plus size={15}/><span className="yy-sidebar-new-label">新建会话</span></Button>
         </div>
         <div className="yy-sidebar-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-4">
-          <div className="flex items-center justify-between px-3 pb-2 pt-3 text-[10px] font-semibold tracking-[.12em] text-[var(--color-text-tertiary)]"><span>最近会话</span><button type="button" title="查看全部历史会话" aria-label="查看全部历史会话" className="yy-icon" onClick={()=>setView('history')}><History size={15}/></button></div>
+          <div className="yy-sidebar-section-label flex items-center justify-between px-3 pb-2 pt-3 text-[10px] font-semibold tracking-[.12em] text-[var(--color-text-tertiary)]"><span>最近会话</span><button type="button" title="查看全部历史会话" aria-label="查看全部历史会话" className="yy-icon" onClick={()=>setView('history')}><History size={15}/></button></div>
           <div className="space-y-0.5">
             {sessions.length===0?<div className="px-3 py-3 text-xs text-[var(--color-text-tertiary)]">尚无本地会话</div>:sessions.slice(0,8).map(item=>{
               const id=String(item.sessionId||item.id||'');if(!id)return null;
@@ -937,14 +963,14 @@ export function App(){
           </div>
           <nav aria-label="主要导航" className="mt-4">
             {NAV_GROUPS.map(group=><section key={group.label} className="mb-4">
-              <div className="px-3 pb-1.5 pt-3 text-[10px] font-semibold tracking-[.13em] text-[var(--color-text-tertiary)]">{group.label}</div>
+              <div className="yy-sidebar-group-label px-3 pb-1.5 pt-3 text-[10px] font-semibold tracking-[.13em] text-[var(--color-text-tertiary)]">{group.label}</div>
               <div className="space-y-0.5">{group.views.map(id=>{const item=NAV.find(entry=>entry.id===id);if(!item)return null;const Icon=item.icon;
-                return <button type="button" key={id} aria-current={view===id?'page':undefined} onClick={()=>setView(id)} className={`yy-nav-link ${view===id?'yy-nav-active':''}`}><Icon size={17} strokeWidth={1.7}/><span className="truncate">{item.label}</span>{id==='settings'&&permissions.length>0&&<Badge size="xs" tone="warning">{permissions.length}</Badge>}</button>
+                return <button type="button" key={id} aria-label={item.label} title={item.label} aria-current={view===id?'page':undefined} onClick={()=>setView(id)} className={`yy-nav-link ${view===id?'yy-nav-active':''}`}><Icon size={17} strokeWidth={1.7}/><span className="truncate">{item.label}</span>{id==='settings'&&permissions.length>0&&<Badge size="xs" tone="warning">{permissions.length}</Badge>}</button>
               })}</div>
             </section>)}
           </nav>
         </div>
-        <div className="shrink-0 border-t border-[var(--color-border)] px-5 py-4">
+        <div className="yy-sidebar-footer shrink-0 border-t border-[var(--color-border)] px-5 py-4">
           <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]"><span className={`h-2 w-2 rounded-full ${connected?'bg-[var(--color-success)]':'bg-[var(--color-error)]'}`}/><span>{connected?'本地后台已连接':'后台未连接'}</span></div>
           <div className="mt-1 text-[10px] leading-5 text-[var(--color-text-tertiary)]">执行记录保留在本机</div>
         </div>
@@ -952,18 +978,19 @@ export function App(){
     </div>
     <main id="content-area" className="yy-content flex min-w-0 flex-1 flex-col overflow-hidden">
       <header className="yy-tabbar flex h-[55px] shrink-0 items-stretch justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4">
-        <div role="tablist" aria-label="会话与工作区标签" className="yy-tab-strip flex min-w-0 flex-1 items-stretch gap-1 overflow-x-auto pt-2">
-          <button type="button" role="tab" aria-selected={view==='chat'&&!sessionId} aria-label="标签页：新会话" onClick={()=>void createSession()} className={`yy-tab ${view==='chat'&&!sessionId?'yy-tab-active':''}`}><Plus size={15}/><span>新会话</span></button>
+        <div role="tablist" aria-label="会话与工作区标签" onKeyDown={handleTabListKeyDown} className="yy-tab-strip flex min-w-0 flex-1 items-stretch gap-1 overflow-x-auto pt-2">
+          <button type="button" role="tab" aria-selected={view==='chat'&&!sessionId} tabIndex={view==='chat'&&!sessionId?0:-1} aria-label="标签页：新会话" onClick={()=>void createSession()} className={`yy-tab ${view==='chat'&&!sessionId?'yy-tab-active':''}`}><Plus size={15}/><span>新会话</span></button>
           {([...(sessionId&&!sessions.some(item=>String(item.sessionId||item.id||'')===sessionId)?[{sessionId,title:'当前会话'}]:[]),...sessions]).slice(0,7).map(item=>{
             const id=String(item.sessionId||item.id||'');if(!id)return null;
             const label=String(item.summary||item.title||id.slice(0,8)),active=view==='chat'&&sessionId===id;
-            return <button type="button" role="tab" key={id} aria-selected={active} aria-label={`标签页：会话 · ${label}`} title={label} className={`yy-tab ${active?'yy-tab-active':''}`} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)}><MessageSquare size={14}/><span className="max-w-44 truncate">{label}</span>{active&&<span className="yy-tab-dot"/>}</button>
+            return <button type="button" role="tab" key={id} aria-selected={active} tabIndex={active?0:-1} aria-label={`标签页：会话 · ${label}`} title={label} className={`yy-tab ${active?'yy-tab-active':''}`} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)}><MessageSquare size={14}/><span className="max-w-44 truncate">{label}</span>{active&&<span className="yy-tab-dot"/>}</button>
           })}
-          {view!=='chat'&&(()=>{const item=NAV.find(e=>e.id===view);if(!item)return null;const Icon=item.icon;return <button type="button" role="tab" aria-selected="true" aria-label={`标签页：${item.label}`} className="yy-tab yy-tab-active" onClick={()=>setView(view)}><Icon size={14}/><span>{item.label}</span><span className="yy-tab-dot"/></button>})()}
+          {view!=='chat'&&(()=>{const item=NAV.find(e=>e.id===view);if(!item)return null;const Icon=item.icon;return <button type="button" role="tab" aria-selected="true" tabIndex={0} aria-label={`标签页：${item.label}`} className="yy-tab yy-tab-active" onClick={()=>setView(view)}><Icon size={14}/><span>{item.label}</span><span className="yy-tab-dot"/></button>})()}
         </div>
         <div className="flex shrink-0 items-center gap-1.5 pb-1">
           <button type="button" aria-label="搜索操作" title="搜索操作 (Ctrl K)" className="yy-icon" onClick={()=>{if(permissions.length||hostRequests.length)return;setPaletteOpen(true);setSearch('');setPaletteIndex(0)}}><Search size={17}/></button>
-          <IconButton label="刷新数据" onClick={()=>void operation('刷新',refresh)}><RefreshCw size={17}/></IconButton>
+          {busy&&<span role="status" className="yy-global-busy mr-1 flex max-w-44 items-center gap-1.5 truncate text-[11px] text-[var(--color-text-secondary)]"><RefreshCw size={13} className="animate-spin"/><span className="truncate">{busy}</span></span>}
+          <IconButton label="刷新数据" disabled={busy==='刷新'} onClick={()=>void operation('刷新',refresh)}><RefreshCw size={17} className={busy==='刷新'?'animate-spin':undefined}/></IconButton>
           <IconButton label={rightOpen?'隐藏详情面板':'打开详情面板'} onClick={()=>setRightOpen(v=>!v)}>{rightOpen?<PanelRightClose size={17}/>:<PanelRightOpen size={17}/>}</IconButton>
         </div>
       </header>
@@ -971,8 +998,9 @@ export function App(){
         <div key={view} className="yy-page min-w-0 flex-1 overflow-y-auto" data-view={view}>
           <div className="yy-page-inner mx-auto w-full max-w-[1220px] px-6 py-6">
           {view!=='dashboard'&&<div className="page-header"><div><span className="eyebrow">YAOYAO / WORKSPACE</span><h1>{heading[0]}</h1><p>{heading[1]}</p></div><div className="header-action">{view==='chat'?<button type="button" className="primary-button" onClick={()=>void createSession()} disabled={Boolean(busy)}><Plus size={16}/>新建会话</button>:null}</div></div>}
-          {error&&<div className="error-banner" role="alert"><AlertCircle size={17}/><span>{error}</span><IconButton label="关闭错误" onClick={()=>setError('')}><X size={16}/></IconButton></div>}
-          {!connected&&<div className="offline-banner"><AlertCircle size={19}/><div><strong>本地执行引擎尚未连接</strong><p>请确认桌面 Host 已构建并可启动，或选择有效工作区。页面保留可访问，执行操作需要后台连接。</p></div><button type="button" className="secondary-button" onClick={()=>void operation('重连',async()=>{await invoke('hello');setConnected(true);await refresh()})}>重新连接</button></div>}
+          {error&&<div className="error-banner yy-reveal" role="alert"><AlertCircle size={17}/><span>{error}</span><IconButton label="关闭错误" onClick={()=>setError('')}><X size={16}/></IconButton></div>}
+          {initialLoading&&<div className="yy-initial-loading mb-4 flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-container-lowest)] p-4 text-[12px] text-[var(--color-text-secondary)]" role="status"><RefreshCw size={16} className="animate-spin"/><span>正在连接本地引擎并读取工作区…</span></div>}
+          {!connected&&!initialLoading&&<div className="offline-banner yy-reveal"><AlertCircle size={19}/><div><strong>本地执行引擎尚未连接</strong><p>请确认桌面 Host 已构建并可启动，或选择有效工作区。页面保留可访问，执行操作需要后台连接。</p></div><button type="button" className="secondary-button" onClick={()=>void operation('重连',async()=>{await invoke('hello');setConnected(true);await refresh()})}>重新连接</button></div>}
           {view==='dashboard'&&<NewSessionStarter
             projectName={workspace.split(/[\\/]/).filter(Boolean).at(-1)||''}
             modelName={models.find(m=>m.value===selectedModel)?.displayName||'默认模型'}
@@ -1009,12 +1037,12 @@ export function App(){
           />}
           {view==='agents'&&<div className="space-y-7">
             <Section title="协作模式" subtitle="模式切换对新会话生效，现有执行和历史记录保留。">
-              <div className="grid grid-cols-2 gap-4 max-[950px]:grid-cols-1">
+              <div className="yy-workspace-two grid grid-cols-2 gap-4 max-[950px]:grid-cols-1">
                 {([{id:'master' as const,name:'主智能体 + 子智能体',detail:'主智能体规划和整合，子智能体执行分工。',icon:Bot},{id:'super' as const,name:'Super Agents 团队模式',detail:'团队共享任务簿，协作执行复杂目标。',icon:UsersRound}]).map(option=>{const Icon=option.icon;return <Card key={option.id} radius="lg" padding="none" shadow="card" surface="lowest" interactive>
-                  <button type="button" onClick={()=>void agentMode(option.id)} className="flex w-full items-center gap-4 p-5 text-left">
+                  <button type="button" aria-pressed={mode===option.id} onClick={()=>void agentMode(option.id)} className="yy-mode-option flex w-full items-center gap-4 p-5 text-left">
                     <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-lg)] ${(mode===option.id?'bg-[var(--color-brand-soft)] text-[var(--color-on-brand-soft)]':'bg-[var(--color-surface-container)] text-[var(--color-text-secondary)]')}`}><Icon size={23}/></span>
                     <span className="min-w-0 flex-1"><strong className="block text-[14px] font-semibold">{option.name}</strong><small className="mt-1.5 block text-[12px] leading-5 text-[var(--color-text-secondary)]">{option.detail}</small></span>
-                    {mode===option.id?<Badge size="sm" tone="success"><Check size={13}/>已启用</Badge>:<ArrowRight size={16} className="text-[var(--color-text-tertiary)]"/>}
+                    {mode===option.id?<Badge size="sm" tone="success"><Check size={13}/>{busy==='切换智能体模式'?'正在切换':'已启用'}</Badge>:<ArrowRight size={16} className="text-[var(--color-text-tertiary)]"/>}
                   </button>
                 </Card>})}
               </div>
@@ -1033,7 +1061,7 @@ export function App(){
                 </div>
               </Card>}
               {Array.isArray(overview.teams)&&overview.teams.length>0?
-                <div className="grid grid-cols-[250px_minmax(0,1fr)] gap-4 max-[950px]:grid-cols-1">
+                <div className="yy-workspace-split grid grid-cols-[250px_minmax(0,1fr)] gap-4 max-[950px]:grid-cols-1">
                   <Card padding="sm" radius="lg" surface="lowest">
                     <div className="space-y-1">{(overview.teams as Item[]).map(team=>{const name=String(team.name||'');return <button type="button" key={name} onClick={()=>setSelectedTeam(name)} className={`flex w-full flex-col gap-1 rounded-[var(--radius-md)] px-3 py-3 text-left text-[12px] hover:bg-[var(--color-surface-hover)] ${(selectedTeam===name?'bg-[var(--color-brand-soft)]':'')}`}>
                       <span className="flex items-center gap-2 font-semibold"><UsersRound size={15}/>{name}</span><small className="text-[11px] text-[var(--color-text-tertiary)]">成员 {Number(team.memberCount||0)} · 执行中 {Number(team.runningCount||0)}</small>
@@ -1041,7 +1069,7 @@ export function App(){
                   </Card>
                   <Card padding="lg" radius="lg" surface="lowest">
                     <div className="mb-4 flex items-center justify-between gap-2"><h3 className="text-[14px] font-semibold">{selectedTeam||'选择团队'}</h3><Badge size="sm">已发现 {teamMembers.length} 位成员</Badge></div>
-                    {teamMembers.length?teamMembers.map(member=><div key={member.agentId} className="flex items-center gap-3 border-b border-[var(--color-border)] py-3 last:border-0">
+                    {teamMembers.length?teamMembers.map(member=><div key={member.agentId} className="yy-member-row flex items-center gap-3 border-b border-[var(--color-border)] py-3 last:border-0">
                       <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-surface-container)]"><Bot size={17}/></span>
                       <span className="min-w-0 flex-1"><strong className="block truncate text-[12px]">{member.name}</strong><small className="text-[11px] text-[var(--color-text-tertiary)]">{member.agentType||'通用智能体'} · {member.model||'默认模型'}</small></span>
                       <Badge size="sm" tone={member.status==='running'?'success':'neutral'}>{member.status==='running'?'执行中':member.status==='idle'?'空闲':'状态未知'}</Badge>
@@ -1072,12 +1100,12 @@ export function App(){
               </Card>
             </Section>
           </div>}
-          {view==='missions'&&<div className="grid grid-cols-[300px_minmax(0,1fr)] items-start gap-5 max-[1000px]:grid-cols-1">
+          {view==='missions'&&<div className="yy-workspace-split yy-missions-layout grid grid-cols-[300px_minmax(0,1fr)] items-start gap-5 max-[1000px]:grid-cols-1">
             <div className="flex flex-col gap-5">
               <Card radius="lg" surface="lowest" shadow="card">
                 <h2 className="mb-3 text-[14px] font-semibold">创建长期任务</h2>
                 <textarea value={missionDraft} onChange={e=>setMissionDraft(e.target.value)} rows={3} placeholder="明确长期目标与交付要求…" className="w-full"/>
-                <Button block variant="primary" size="md" className="mt-3" onClick={()=>void createMission()} disabled={!missionDraft.trim()||Boolean(busy)}><Plus size={15}/>创建并选中任务</Button>
+                <Button block variant="primary" size="md" className="mt-3" loading={busy==='创建长期任务'} onClick={()=>void createMission()} disabled={!missionDraft.trim()||(Boolean(busy)&&busy!=='创建长期任务')}><Plus size={15}/>创建并选中任务</Button>
               </Card>
               <Card radius="lg" surface="lowest" padding="sm">
                 <div className="flex items-center justify-between gap-2 px-2 py-2"><h2 className="flex items-center gap-2 text-[13px] font-semibold"><ListChecks size={16}/>任务簿</h2><Button variant="ghost" size="sm" aria-label="刷新任务簿" onClick={()=>void operation('刷新任务簿',refresh)}><RefreshCw size={14}/></Button></div>
@@ -1123,7 +1151,12 @@ export function App(){
                     <Button variant="secondary" size="base" disabled={!jobTitle.trim()||!jobInstruction.trim()||Boolean(busy)} onClick={()=>void addJob()}><Plus size={14}/>添加工作项</Button>
                   </div>
                 </div>
-                {missionActivity.length>0&&<div className="space-y-2">
+                <div className="yy-queue-controls flex flex-wrap gap-2 border-t border-[var(--color-border)] pt-4">
+                  <Button variant="secondary" size="base" onClick={()=>void operation('刷新工作项',()=>refreshJobs())}><RefreshCw size={14}/>刷新</Button>
+                  <Button variant="primary" size="base" onClick={()=>void batchJobs()} disabled={!missionJobs.some(job=>job.status==='queued')||Boolean(busy)}><UsersRound size={14}/>并行执行待办（最多三项）</Button>
+                  {missionQueueActive?<Button variant="secondary" size="base" onClick={()=>void haltMissionQueue()} disabled={Boolean(busy)}><Pause size={14}/>停止自动派发</Button>:<Button variant="tonal" size="base" onClick={()=>void runMissionQueue()} disabled={!missionJobs.some(job=>job.status==='queued')||Boolean(busy)||selected.status!=='active'}><Play size={14}/>持续推进队列</Button>}
+                </div>
+                {missionActivity.length>0&&<div className="yy-reveal space-y-2">
                   <h3 className="text-[13px] font-semibold">多会话智能体实时进度</h3>
                   <Card radius="lg" padding="sm" surface="lowest">
                     {missionActivity.slice(0,12).map(item=><div key={item.key} className="flex flex-wrap items-center gap-2 border-b border-[var(--color-border)] p-2 text-[11px] last:border-0">
@@ -1134,7 +1167,7 @@ export function App(){
                   </Card>
                 </div>}
                 <div className="space-y-3">
-                  {missionJobs.map(job=><Card key={job.id} radius="lg" padding="md" surface="base" border="solid" className="min-w-0">
+                  {missionJobs.map(job=><Card key={job.id} radius="lg" padding="md" surface="base" border="solid" data-updated={updatedJobId===job.id||undefined} className="yy-job-card min-w-0">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <h4 className="text-[13px] font-semibold">{job.title}</h4>
                       <Badge size="sm" tone={job.status==='completed'?'success':job.status==='review'||job.status==='running'?'warning':job.status==='failed'||job.status==='interrupted'?'danger':'neutral'}>{({queued:'排队中',running:'执行中',review:'待审核',completed:'已完成',failed:'执行失败',interrupted:'已中断',cancelled:'已取消'} as Record<string,string>)[job.status]||job.status}</Badge>
@@ -1165,11 +1198,6 @@ export function App(){
                   </Card>)}
                   {missionJobs.length===0&&<p className="text-[12px] text-[var(--color-text-tertiary)]">暂无工作项，添加后可按需开始。</p>}
                 </div>
-                <div className="flex flex-wrap gap-2 border-t border-[var(--color-border)] pt-4">
-                  <Button variant="secondary" size="base" onClick={()=>void operation('刷新工作项',()=>refreshJobs())}><RefreshCw size={14}/>刷新</Button>
-                  <Button variant="primary" size="base" onClick={()=>void batchJobs()} disabled={!missionJobs.some(job=>job.status==='queued')||Boolean(busy)}><UsersRound size={14}/>并行执行待办（最多三项）</Button>
-                  {missionQueueActive?<Button variant="secondary" size="base" onClick={()=>void haltMissionQueue()} disabled={Boolean(busy)}><Pause size={14}/>停止自动派发</Button>:<Button variant="tonal" size="base" onClick={()=>void runMissionQueue()} disabled={!missionJobs.some(job=>job.status==='queued')||Boolean(busy)||selected.status!=='active'}><Play size={14}/>持续推进队列</Button>}
-                </div>
                 <div className="border-t border-[var(--color-border)] pt-5">
                   <h3 className="mb-3 text-[13px] font-semibold">保存检查点</h3>
                   <textarea rows={4} placeholder="填写已验证进度、修改和下一步工作…" className="w-full" value={checkpointDraft} onChange={e=>setCheckpointDraft(e.target.value)}/>
@@ -1182,8 +1210,8 @@ export function App(){
               </div>:<Empty icon={ListChecks} title="选择一项长期任务" detail="查看目标、创建工作项、记录进度并控制执行。"/>}
             </Card>
           </div>}
-          {view==='files'&&<div className="grid min-h-[580px] grid-cols-[300px_minmax(0,1fr)] gap-4 max-[950px]:grid-cols-1">
-            <Card padding="none" radius="lg" surface="lowest" className="flex min-h-[470px] flex-col overflow-hidden">
+          {view==='files'&&<div className="yy-workspace-split yy-files-layout grid min-h-[580px] grid-cols-[300px_minmax(0,1fr)] gap-4 max-[950px]:grid-cols-1">
+            <Card padding="none" radius="lg" surface="lowest" className="yy-files-tree flex min-h-[470px] flex-col overflow-hidden">
               <div className="flex h-12 items-center justify-between border-b border-[var(--color-border)] px-4"><h2 className="flex items-center gap-2 text-[13px] font-semibold"><FolderOpen size={16}/>项目目录</h2><IconButton label="刷新文件" onClick={()=>void directory(folder||workspace)}><RefreshCw size={15}/></IconButton></div>
               <button type="button" title={workspace} onClick={()=>void directory(workspace)} className="flex items-center gap-2 px-4 py-3 text-left text-[11px] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"><HardDrive size={14}/><span className="truncate">{workspace.split(/[\\/]/).filter(Boolean).at(-1)||'工作区'}</span></button>
               {folder!==workspace&&<button type="button" className="px-4 py-2 text-left text-[11px] text-[var(--color-brand)] hover:bg-[var(--color-surface-hover)]" onClick={()=>void directory(folder.replace(/[\\/][^\\/]+$/,''))}>.. 上一级目录</button>}
@@ -1195,21 +1223,21 @@ export function App(){
                 {files.length>0&&fileTotal>files.length&&<Button block variant="secondary" size="base" disabled={Boolean(busy)} onClick={()=>void directory(folder,files.length)}>加载更多文件 · 已显示 {files.length}/{fileTotal}</Button>}
               </div>
             </Card>
-            <Card padding="none" radius="lg" surface="lowest" className="flex min-w-0 flex-col overflow-hidden">
-              <div className="flex h-12 items-center justify-between gap-3 border-b border-[var(--color-border)] px-4">
+            <Card padding="none" radius="lg" surface="lowest" className="yy-file-editor flex min-w-0 flex-col overflow-hidden">
+              <div className="yy-file-editor-header flex h-12 items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface-container-lowest)] px-4">
                 <div className="flex min-w-0 items-center gap-2 text-[12px] font-semibold"><FileCode2 size={16}/><span className="truncate">{currentFile?currentFile.split(/[\\/]/).at(-1):'文件预览'}</span></div>
-                {currentFile&&<Button variant={fileContent===savedContent?'ghost':'accent'} size="base" disabled={fileContent===savedContent} onClick={()=>void saveFile()}><Save size={14}/>保存文件</Button>}
+                {currentFile&&<Button variant={fileContent===savedContent?'ghost':'accent'} size="base" loading={busy==='保存文件'} disabled={fileContent===savedContent||(Boolean(busy)&&busy!=='保存文件')} onClick={()=>void saveFile()}><Save size={14}/>保存文件</Button>}
               </div>
               <div className="min-h-[340px] flex-1 bg-[var(--color-code-bg)] p-3">
-                {currentFile?<textarea spellCheck={false} aria-label="编辑当前文件" value={fileContent} onChange={e=>setFileContent(e.target.value)} className="h-[380px] w-full resize-y border-0! bg-transparent! font-mono text-[12px] leading-6 text-[var(--color-code-fg)] shadow-none!"/>:<Empty icon={FileCode2} title="选择文件开始预览" detail="从左侧打开文件，编辑完成后保存到当前工作区。"/>}
+                {currentFile?<textarea spellCheck={false} aria-label="编辑当前文件" value={fileContent} onChange={e=>setFileContent(e.target.value)} className="h-[clamp(340px,48vh,680px)] w-full resize-y border-0! bg-transparent! font-mono text-[12px] leading-6 text-[var(--color-code-fg)] shadow-none!"/>:<Empty icon={FileCode2} title="选择文件开始预览" detail="从左侧打开文件，编辑完成后保存到当前工作区。"/>}
               </div>
               <div className="border-t border-[var(--color-border)] p-4"><div className="mb-2 flex items-center justify-between"><h3 className="flex items-center gap-2 text-[12px] font-semibold"><GitBranch size={15}/>工作区差异</h3><Button variant="link" size="sm" onClick={()=>void refreshGit()}><RefreshCw size={14}/>刷新 Git</Button></div><pre className="max-h-[190px] overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] bg-[var(--color-surface-container-low)] p-3 font-mono text-[11px] text-[var(--color-text-secondary)]">{gitDiff||gitStatus||'此处显示实际 Git 状态与工作区改动。'}</pre></div>
             </Card>
           </div>}
           {view==='models'&&<div className="space-y-7">
             <Section title="发现的模型" subtitle="模型能力由当前桌面后台返回，选择后应用到真实会话。" action={<Button size="base" variant="secondary" onClick={()=>void operation('刷新模型',refresh)}><RefreshCw size={14}/>重新检测</Button>}>
-              <div className="grid grid-cols-2 gap-3 max-[1050px]:grid-cols-1">{models.map(model=><Card key={model.value} radius="lg" padding="none" surface="lowest" shadow="card" interactive>
-                <button type="button" onClick={()=>void selectModel(model.value)} className="flex w-full items-center gap-4 p-5 text-left">
+              <div className="yy-workspace-two grid grid-cols-2 gap-3 max-[1050px]:grid-cols-1">{models.map(model=><Card key={model.value} radius="lg" padding="none" surface="lowest" shadow="card" interactive>
+                <button type="button" aria-pressed={selectedModel===model.value} aria-busy={busy==='切换模型'&&selectedModel===model.value} onClick={()=>void selectModel(model.value)} className="yy-mode-option flex w-full items-center gap-4 p-5 text-left">
                   <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-lg)] ${(selectedModel===model.value?'bg-[var(--color-brand-soft)] text-[var(--color-on-brand-soft)]':'bg-[var(--color-surface-container-low)] text-[var(--color-text-secondary)]')}`}><Cpu size={22}/></span>
                   <span className="min-w-0 flex-1"><strong className="block truncate text-[14px] font-semibold">{model.displayName||model.value}</strong><code className="block truncate py-1 text-[11px] text-[var(--color-text-tertiary)]">{model.value}</code><small className="block text-[11px] text-[var(--color-text-secondary)]">{model.description||'由已配置的模型服务商提供'}</small></span>
                   {selectedModel===model.value&&<Badge size="sm" tone="success"><Check size={12}/>当前选择</Badge>}
@@ -1230,15 +1258,14 @@ export function App(){
                     <p className="text-[12px] leading-6 text-[var(--color-text-secondary)]">输入服务商密钥。保存需要系统确认，凭证由本地服务保管。</p>
                     <label htmlFor="provider-key" className="block text-[12px] font-semibold">API Key</label>
                     <input id="provider-key" className="w-full" type="password" autoComplete="off" placeholder="输入新的 API Key" value={credentialInput} onChange={e=>setCredentialInput(e.target.value)}/>
-                    <div className="flex flex-wrap gap-2"><Button variant="primary" size="base" onClick={()=>void saveCredential()} disabled={!credentialInput.trim()||Boolean(busy)}><Save size={14}/>保存凭证</Button><Button variant="danger-outline" size="base" onClick={()=>void removeCredential()} disabled={!savedProviders.includes(credentialProvider)||Boolean(busy)}>移除已保存密钥</Button></div>
+                    <div className="flex flex-wrap gap-2"><Button variant="primary" size="base" loading={busy==='保存模型密钥'} onClick={()=>void saveCredential()} disabled={!credentialInput.trim()||(Boolean(busy)&&busy!=='保存模型密钥')}><Save size={14}/>保存凭证</Button><Button variant="danger-outline" size="base" onClick={()=>void removeCredential()} disabled={!savedProviders.includes(credentialProvider)||Boolean(busy)}>移除已保存密钥</Button></div>
                     <p className="text-[11px] leading-5 text-[var(--color-text-tertiary)]">模型上下文窗口及参数以桌面后台实际返回的结果为准。</p>
                   </div>
                 </div>
               </Card>
             </Section>
             <Card radius="lg" surface="low"><div className="flex flex-wrap items-center gap-3"><ShieldCheck size={19} className="text-[var(--color-brand)]"/><span className="flex-1 text-[12px] text-[var(--color-text-secondary)]">模型参数、费率和工具能力以本地档案为准；自检不会自动发起付费调用。</span><Button variant="link" size="base" onClick={()=>void operation('模型离线检查',async()=>setSmartInspection(await invoke<SmartInspection>('smart.inspect',selectedModel?{model:selectedModel}:{})))}>检查配置 <ArrowRight size={14}/></Button></div></Card>
-          </div>}
-          {view==='models'&&smartInspection&&<Card radius="lg" surface="lowest">
+            {smartInspection&&<Card radius="lg" surface="lowest" className="yy-reveal">
             <div className="flex items-center gap-2"><ShieldCheck size={17}/><strong>模型自检 · {smartInspection.model}</strong>
               <Badge tone={smartInspection.status==='missing-credential'?'danger':'success'}>{smartInspection.status==='missing-credential'?'缺少凭证':'本地已检查'}</Badge>
             </div>
@@ -1246,8 +1273,9 @@ export function App(){
             {smartInspection.contextWindow&&<p className="mt-2 text-[11px] text-[var(--color-text-tertiary)]">上下文 {smartInspection.contextWindow.toLocaleString()} Token · 输出 {smartInspection.maxOutputTokens?.toLocaleString()??'待核实'}</p>}
             {smartInspection.hasPricing===false&&<p className="mt-2 text-[11px] text-[var(--color-text-tertiary)]">费率待补齐，设置费用上限时将提示。</p>}
           </Card>}
+  </div>}
           {view==='integrations'&&<div className="space-y-7">
-            <div className="grid grid-cols-3 gap-4 max-[1100px]:grid-cols-1">
+            <div className="yy-workspace-three grid grid-cols-3 gap-4 max-[1100px]:grid-cols-1">
               {([{name:'技能 Skills',detail:'复用本地项目与用户级技能。',icon:WandSparkles,prompt:'列出当前工作区可用的全部技能，包括来源、功能、启用状态和使用方式',action:'检查已安装技能'},{name:'MCP 工具',detail:'让 AI 访问本地与外部工具。',icon:Boxes,prompt:'检查当前 MCP 服务器连接情况，列出服务、工具、授权和连接错误',action:'检查 MCP 连接'},{name:'插件与扩展',detail:'查看已注册的插件和扩展功能。',icon:Bot,prompt:'审计当前已安装的插件及其功能入口，检查是否能够正常调用',action:'检查插件'}]).map(item=>{const Icon=item.icon;return <Card key={item.name} radius="lg" surface="lowest" shadow="card" className="flex flex-col items-start gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-brand-soft)] text-[var(--color-brand)]"><Icon size={23}/></span>
                 <h2 className="text-[15px] font-semibold">{item.name}</h2><p className="flex-1 text-[12px] text-[var(--color-text-secondary)]">{item.detail}</p>
@@ -1267,60 +1295,70 @@ export function App(){
                   {[...new Set(mcpErrors)].map(error=><p key={error} role="alert" className="text-[12px] text-[var(--color-error)]">{error}</p>)}
                 </div>
                 <div className="my-5 border-t border-[var(--color-border)]"/>
-                <h3 className="mb-4 text-[13px] font-semibold">添加 MCP 服务</h3>
-                <div className="grid grid-cols-2 gap-3 max-[800px]:grid-cols-1">
+                <details className="yy-mcp-add" open={mcpAddOpen} onToggle={event=>setMcpAddOpen(event.currentTarget.open)}><summary className="mb-4 cursor-pointer text-[13px] font-semibold">添加 MCP 服务</summary>
+                <div className="yy-workspace-form grid grid-cols-2 gap-3 max-[800px]:grid-cols-1">
                   <label className="space-y-1 text-[12px]">名称<input className="w-full" placeholder="例如 github-mcp" value={mcpName} onChange={e=>setMcpName(e.target.value)}/></label>
                   <label className="space-y-1 text-[12px]">连接方式<select className="w-full" value={mcpType} onChange={e=>setMcpType(e.target.value as typeof mcpType)}><option value="http">HTTP</option><option value="sse">SSE</option><option value="stdio">本地命令（stdio）</option></select></label>
                   <label className="space-y-1 text-[12px]">配置范围<select className="w-full" value={mcpScope} onChange={e=>setMcpScope(e.target.value as typeof mcpScope)}><option value="project">当前项目</option><option value="user">用户级</option><option value="local">本地项目级</option></select></label>
                   <label className="space-y-1 text-[12px]">{mcpType==='stdio'?'启动命令':'服务器 URL'}<input className="w-full" placeholder={mcpType==='stdio'?'例如 npx':'https://mcp.example.com/mcp'} value={mcpTarget} onChange={e=>setMcpTarget(e.target.value)}/></label>
-                  {mcpType==='stdio'&&<label className="col-span-2 space-y-1 text-[12px]">命令参数（每行一项）<textarea className="w-full" rows={3} value={mcpArguments} onChange={e=>setMcpArguments(e.target.value)} placeholder={"-y\n@example/server"}/></label>}
+                  {mcpType==='stdio'&&<label className="yy-field-span col-span-2 space-y-1 text-[12px]">命令参数（每行一项）<textarea className="w-full" rows={3} value={mcpArguments} onChange={e=>setMcpArguments(e.target.value)} placeholder={"-y\n@example/server"}/></label>}
                 </div>
-                <Button variant="primary" size="base" className="mt-4" onClick={()=>void installMcp()} disabled={!mcpName.trim()||!mcpTarget.trim()||Boolean(busy)}><Plus size={14}/>添加服务</Button>
-              </Card>
+                <Button variant="primary" size="base" className="mt-4" loading={busy==='添加 MCP 服务'} onClick={()=>void installMcp()} disabled={!mcpName.trim()||!mcpTarget.trim()||(Boolean(busy)&&busy!=='添加 MCP 服务')}><Plus size={14}/>添加服务</Button>
+                </details></Card>
             </Section>
             <McpImportPanel key={workspace} onImported={()=>void refresh()}/>
             <p className="text-[11px] leading-5 text-[var(--color-text-tertiary)]">技能和插件检查会打开 AI 对话，MCP 管理已直接连接本地配置接口。</p>
           </div>}
           {view==='github'&&<div className="space-y-6">
-  <Card surface="lowest" shadow="card" radius="lg"><div className="flex flex-wrap items-center gap-4"><span className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-brand-soft)] text-[var(--color-brand)]"><GitPullRequest size={24}/></span><div className="min-w-0 flex-1"><h2 className="text-[16px] font-semibold">项目 Git 工作区</h2><p className="mt-1 truncate text-[12px] text-[var(--color-text-tertiary)]">{workspace||'未打开项目'}</p><Badge size="xs" tone="success">本地仓库</Badge></div><Button variant="secondary" size="base" onClick={()=>void refreshGit()}><RefreshCw size={14}/>刷新状态</Button></div></Card>
-  <div className="grid grid-cols-2 gap-4 max-[950px]:grid-cols-1">
-    <Card surface="lowest" shadow="card" radius="lg"><h3 className="mb-3 flex items-center gap-2 text-[13px] font-semibold"><GitBranch size={16}/>工作区状态</h3><pre className="max-h-[250px] overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-md)] bg-[var(--color-code-bg)] p-4 font-mono text-[11px] text-[var(--color-code-fg)]">{gitStatus||'点击「刷新状态」获取当前仓库真实状态。'}</pre></Card>
-    <Card surface="lowest" shadow="card" radius="lg"><h3 className="mb-3 flex items-center gap-2 text-[13px] font-semibold"><ShieldCheck size={16}/>智能代码审查</h3><p className="mb-4 text-[12px] leading-6 text-[var(--color-text-secondary)]">调用已安装的 GitHub 工具，核查关联 Pull Request。</p><Button variant="primary" size="base" onClick={()=>toChat('审查当前 Git 工作区的最新修改与关联 Pull Request，按风险等级列出问题并附上代码位置')}><GitPullRequest size={14}/>发起 PR 审查</Button></Card>
-  </div>
-  <Card surface="lowest" shadow="card" radius="lg"><h3 className="mb-3 flex items-center gap-2 text-[13px] font-semibold"><Code2 size={16}/>未提交改动</h3><pre className="max-h-[420px] overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-md)] bg-[var(--color-code-bg)] p-4 font-mono text-[11px] text-[var(--color-code-fg)]">{gitDiff||'刷新后在这里查看 Git diff。'}</pre></Card>
+  <Card surface="lowest" shadow="card" radius="lg">
+    <div className="flex flex-wrap items-center gap-4">
+      <span className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-brand-soft)] text-[var(--color-brand)]"><GitPullRequest size={24}/></span>
+      <div className="min-w-0 flex-1"><h2 className="text-[16px] font-semibold">项目 Git 工作区</h2><p className="mt-1 truncate text-[12px] text-[var(--color-text-tertiary)]">{workspace||'未打开项目'}</p><Badge size="xs" tone="success">本地仓库</Badge></div>
+      <div className="flex flex-wrap gap-2"><Button variant="secondary" size="base" loading={busy==='读取 Git'} onClick={()=>void refreshGit()}><RefreshCw size={14}/>刷新状态</Button><Button variant="primary" size="base" onClick={()=>toChat('审查当前 Git 工作区的最新修改与关联 Pull Request，按风险等级列出问题并附上代码位置')}><GitPullRequest size={14}/>发起 PR 审查</Button></div>
+    </div>
+  </Card>
+  <Card surface="lowest" shadow="card" radius="lg"><h3 className="mb-3 flex items-center gap-2 text-[13px] font-semibold"><GitBranch size={16}/>工作区状态</h3><pre className="max-h-[320px] overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-md)] bg-[var(--color-code-bg)] p-4 font-mono text-[11px] text-[var(--color-code-fg)]">{gitStatus||'点击「刷新状态」获取当前仓库真实状态。'}</pre></Card>
+  <Card surface="lowest" shadow="card" radius="lg"><div className="mb-3 flex items-center justify-between gap-3"><h3 className="flex items-center gap-2 text-[13px] font-semibold"><Code2 size={16}/>未提交改动</h3><span className="text-[11px] text-[var(--color-text-tertiary)]">{gitDiff?'已加载实际差异':'尚未加载差异'}</span></div><pre className="max-h-[480px] overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-md)] bg-[var(--color-code-bg)] p-4 font-mono text-[11px] text-[var(--color-code-fg)]">{gitDiff||'刷新后在这里查看 Git diff；没有改动时将显示空状态。'}</pre></Card>
 </div>}
 {view==='history'&&<section className="space-y-4">
-  <div className="flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-semibold"><History size={17}/>本地会话</h2><Button variant="secondary" size="base" onClick={()=>void operation('刷新历史',refresh)}><RefreshCw size={14}/>刷新</Button></div>
+  <div className="flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-semibold"><History size={17}/>本地会话</h2><Button variant="secondary" size="base" loading={busy==='刷新历史'} onClick={()=>void operation('刷新历史',refresh)}><RefreshCw size={14}/>刷新</Button></div>
   <Card radius="lg" padding="sm" surface="lowest" shadow="card">
-    {sessions.length?sessions.map((s,i)=>{const id=String(s.sessionId||s.id||'');return <button type="button" key={id||i} disabled={!id} onClick={()=>void resumeSession(id)} className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border-b border-[var(--color-border)] px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-hover)] last:border-0">
+    {sessions.length?sessions.map((s,i)=>{const id=String(s.sessionId||s.id||'');return <button type="button" key={id||i} disabled={!id||Boolean(busy)} aria-busy={busy==='恢复会话'} onClick={()=>void resumeSession(id)} className="yy-history-row flex w-full items-center gap-3 rounded-[var(--radius-md)] border-b border-[var(--color-border)] px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-hover)] last:border-0">
       <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-surface-container)]"><History size={16}/></span><span className="min-w-0 flex-1"><strong className="block truncate text-[13px]">{String(s.summary||s.title||id||'会话')}</strong><small className="block truncate pt-1 font-mono text-[10px] text-[var(--color-text-tertiary)]">{id}</small></span><span className="text-[11px] text-[var(--color-brand)]">恢复</span><ChevronRight size={15}/>
-    </button>}):<Empty icon={History} title="没有历史会话" detail="会话记录按工作区保存，可从这里恢复。"/>}
+    </button>}):<Empty icon={History} title="没有历史会话" detail="会话记录按工作区保存，可从这里恢复。" action={<Button variant="secondary" size="base" onClick={()=>void createSession()}><Plus size={14}/>新建会话</Button>}/>}
   </Card>
 </section>}
 {view==='settings'&&<div className="space-y-6">
-  <Section title="工具权限审批" subtitle="审批请求回传到发起的 SDK 会话。"><Card surface="lowest" shadow="card" radius="lg">
+  <nav aria-label="设置分区" className="yy-settings-nav flex flex-wrap gap-2">
+    <Button variant="secondary" size="sm" onClick={()=>document.getElementById('settings-permissions')?.scrollIntoView({block:'start',behavior:animate&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches!==true?'smooth':'auto'})}>待处理请求</Button>
+    <Button variant="secondary" size="sm" onClick={()=>document.getElementById('settings-appearance')?.scrollIntoView({block:'start',behavior:animate&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches!==true?'smooth':'auto'})}>外观与体验</Button>
+    <Button variant="secondary" size="sm" onClick={()=>document.getElementById('settings-system')?.scrollIntoView({block:'start',behavior:animate&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches!==true?'smooth':'auto'})}>系统与数据</Button>
+  </nav>
+
+  <div id="settings-permissions" className="yy-settings-anchor"><Section title="工具权限审批" subtitle="审批请求回传到发起的 SDK 会话。"><Card surface="lowest" shadow="card" radius="lg">
     {permissions.length?permissions.map(p=><div key={`${p.sessionId}:${p.id}`} className="mb-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 last:mb-0">
       <div className="flex items-center gap-2"><LockKeyhole size={17} className="text-[var(--color-brand)]"/><strong className="text-[13px]">{p.toolName}</strong><Badge size="xs" tone="warning">待审</Badge></div>
       <p className="mt-2 text-[11px] text-[var(--color-text-tertiary)]">{p.description||'工具请求等待确认'} · 会话 {p.sessionId.slice(0,8)}</p>
       <pre className="my-3 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] bg-[var(--color-code-bg)] p-3 font-mono text-[11px] text-[var(--color-code-fg)]">{json(p.input)}</pre>
       <div className="flex justify-end gap-2"><Button variant="danger-outline" size="base" onClick={()=>void decision(p.sessionId,p.id,false)}>拒绝</Button><Button variant="primary" size="base" onClick={()=>void decision(p.sessionId,p.id,true)}>本次允许</Button></div>
     </div>):<Empty icon={ShieldCheck} title="当前没有待处理的审批" detail="受保护的工具操作会在这里请求许可。"/>}
-  </Card></Section>
+  </Card></Section></div>
   <Section title="主机交互请求"><Card radius="lg" surface="lowest" shadow="card">{hostRequests.length?hostRequests.map(r=><div key={`${r.sessionId}:${r.id}`} className="mb-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 last:mb-0"><strong className="text-[12px]">{String(r.type||'交互请求')}</strong><pre className="my-3 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] bg-[var(--color-code-bg)] p-3 font-mono text-[11px] text-[var(--color-code-fg)]">{json(r.request||r)}</pre><Button variant="danger-outline" size="base" onClick={()=>void operation('拒绝请求',async()=>{await invoke('host.reject',{sessionId:r.sessionId,requestId:r.id,reason:'用户在桌面端拒绝请求'});await refreshSession(r.sessionId)})}>拒绝请求</Button></div>):<p className="text-[12px] text-[var(--color-text-tertiary)]">没有需要处理的主机交互请求。</p>}</Card></Section>
-  <LocalMaintenance key={workspace} workspace={workspace} connected={connected} onPurged={()=>{
-    ++sessionGeneration.current;setSessionId('');sessionRef.current='';setSessions([]);setMessages([]);setHistoryOffset(0);setTasks([]);setSmartHistory([]);setSmartInspection(null);setProjectBudget(null);projectBudgetInitialized.current=false;setPermissions([]);setHostRequests([]);setSessionPhase('idle');
-    void refresh()
-  }}/>
-  <Section title="外观与体验" subtitle="新项目的六套原生配色与统一动效。"><Card radius="lg" surface="lowest" shadow="card">
+
+  <div id="settings-appearance" className="yy-settings-anchor"><Section title="外观与体验" subtitle="新项目的六套原生配色与统一动效。"><Card radius="lg" surface="lowest" shadow="card">
     <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] py-4"><span><strong className="text-[13px]">界面主题</strong><small className="mt-1 block text-[11px] text-[var(--color-text-tertiary)]">所有页面使用同一套设计令牌</small></span><select aria-label="界面主题" value={themeVariant} onChange={e=>setThemeVariant(e.target.value as ThemeVariant)}><option value="white">素白</option><option value="paper">纸墨</option><option value="warm-classic">经典暖色</option><option value="celadon">青瓷</option><option value="dark">墨夜</option><option value="ink-blue">墨夜蓝</option></select></div>
-    <label className="flex cursor-pointer items-center justify-between gap-4 border-b border-[var(--color-border)] py-4"><span><strong className="text-[13px]">深色主题</strong><small className="mt-1 block text-[11px] text-[var(--color-text-tertiary)]">快速切换墨夜配色</small></span><input type="checkbox" checked={isDark} onChange={e=>setIsDark(e.target.checked)}/></label>
     <label className="flex cursor-pointer items-center justify-between gap-4 border-b border-[var(--color-border)] py-4"><span><strong className="text-[13px]">动态效果</strong><small className="mt-1 block text-[11px] text-[var(--color-text-tertiary)]">悬停、转场和减少动效支持</small></span><input type="checkbox" checked={animate} onChange={e=>setAnimate(e.target.checked)}/></label>
     <div className="flex items-center justify-between gap-4 py-4"><span><strong className="text-[13px]">侧边上下文面板</strong><small className="mt-1 block text-[11px] text-[var(--color-text-tertiary)]">任务、模型与实时状态</small></span><Button variant="secondary" size="base" onClick={()=>setRightOpen(v=>!v)}>{rightOpen?'收起面板':'展开面板'}</Button></div>
-  </Card></Section>
+  </Card></Section></div>
+  <div id="settings-system" className="yy-settings-anchor"><Section title="系统与数据" subtitle="诊断本地环境，或清理当前工作区的 AI 执行记录。"><LocalMaintenance key={workspace} workspace={workspace} connected={connected} onPurged={()=>{
+    ++sessionGeneration.current;setSessionId('');sessionRef.current='';setSessions([]);setMessages([]);setHistoryOffset(0);setTasks([]);setSmartHistory([]);setSmartInspection(null);setProjectBudget(null);projectBudgetInitialized.current=false;setPermissions([]);setHostRequests([]);setSessionPhase('idle');
+    void refresh()
+  }}/></Section></div>
+  <div className="yy-legal-note"><span>本界面是非官方改造版。Based on cc-haha: </span><button type="button" onClick={()=>openChatLink('https://github.com/NanmiCoder/cc-haha')}>https://github.com/NanmiCoder/cc-haha</button><span> · Copyright (c) 2026 cc-haha</span></div>
 </div>}
           </div>
         </div>
-        {rightOpen&&<><button type="button" aria-label="关闭详情遮罩" className="hidden max-[961px]:block fixed inset-0 z-30 bg-black/40" onClick={closeInspector}/><WorkspaceInspector
+        {rightOpen&&<><button type="button" aria-label="关闭详情遮罩" className="yy-inspector-backdrop hidden max-[961px]:block fixed inset-0 z-30 bg-black/40" onClick={closeInspector}/><WorkspaceInspector
           connected={connected} phase={statusName(sessionPhase)} model={selectedModel} mode={mode}
           approvals={permissions.length} tasks={tasks.length} activity={activity} busy={busy}
           smartExecution={smartHistory.find(record=>record.sessionId===sessionId)}
@@ -1374,6 +1412,6 @@ export function App(){
     </div>
     <div className="mt-3 flex gap-4 border-t border-[var(--color-border)] pt-3 text-[10px] text-[var(--color-text-tertiary)]"><span>↑↓ 选择</span><span>Enter 执行</span><span>Esc 关闭</span></div>
   </Modal>
-  {view==='settings'&&<div className="yy-legal-note"><span>本界面是非官方改造版。Based on cc-haha: </span><button type="button" onClick={()=>openChatLink('https://github.com/NanmiCoder/cc-haha')}>https://github.com/NanmiCoder/cc-haha</button><span> · Copyright (c) 2026 cc-haha</span></div>}
+  {notice&&<div key={notice.id} className="yy-toast" role="status"><Check size={16}/><span>{notice.text}</span><button type="button" aria-label="关闭操作反馈" onClick={()=>setNotice(null)}><X size={14}/></button></div>}
   </div>
 }
