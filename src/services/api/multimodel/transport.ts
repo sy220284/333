@@ -418,7 +418,9 @@ export function makeIndependentFetch(
     if (isMiniMax) logForDebugging(`[multimodel] MiniMax POST ${route.endpoint}`)
     const response = await upstream(route.endpoint, {
       method: 'POST', headers, body: JSON.stringify(payload), signal,
-      ...(isMiniMax ? { redirect: 'error' } : {}),
+      // Provider endpoints are fixed. Never let a 30x forward a model prompt,
+      // tool arguments or account authorization to an unverified host.
+      redirect: 'error',
     })
     if (isMiniMax) logForDebugging(`[multimodel] MiniMax HTTP ${response.status}`)
     if (!response.ok) {
