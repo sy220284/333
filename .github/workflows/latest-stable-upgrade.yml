@@ -16,20 +16,6 @@ jobs:
   upgrade:
     runs-on: ubuntu-latest
     timeout-minutes: 150
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: gateway_test
-          POSTGRES_PASSWORD: gateway_test
-          POSTGRES_DB: gateway_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U gateway_test -d gateway_test"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
     steps:
       - uses: actions/checkout@v7
       - name: 读取权威工具链版本
@@ -97,7 +83,6 @@ jobs:
         id: build
         continue-on-error: true
         env:
-          GATEWAY_TEST_POSTGRES_URL: postgres://gateway_test:gateway_test@127.0.0.1:5432/gateway_test
           TS_COMPILER_PATH: ${{ runner.temp }}/333-ui-typescript/node_modules/typescript/lib/typescript.js
         run: |
           set -euo pipefail
