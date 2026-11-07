@@ -198,7 +198,8 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(screen.getByRole('button',{name:'创建并选中任务'}))
     await waitFor(()=>expect(screen.getByRole('heading',{name:'真实安装版任务创建测试'})).toBeInTheDocument())
     expect(screen.getByText('Super Agents 工作项')).toBeInTheDocument()
-    expect(screen.getByRole('button',{name:'创建并选中任务'})).not.toBeDisabled()
+    expect(screen.getByPlaceholderText('明确长期目标与交付要求…')).toHaveValue('')
+    expect(screen.getByRole('button',{name:'创建并选中任务'})).toBeDisabled() // no duplicate submission from an empty form
     expect(call).toHaveBeenCalledWith('missions.create',{objective:'真实安装版任务创建测试'})
     await act(async()=>{suspendMcpRefresh=false;releaseMcpRefresh?.()})
   })
