@@ -94,7 +94,10 @@ export function createProjectBudget(
     },
     async reserve(id:string, requestedUsd?:number):Promise<{id?:string;maxBudgetUsd?:number}>{
       if(requestedUsd!==undefined&&micros(requestedUsd)<=0)throw new Error('会话额度需要大于零')
-      return mutate(doc=>{
+      // Unlimited projects do not need a lease. Avoid forcing every ordinary
+      // SDK session (including 32-way startup) through the shared file lock.
+      if((await read()).limit===null)return requestedUsd===undefined?{}:{maxBudgetUsd:requestedUsd}
+      return mutate<{id?:string;maxBudgetUsd?:number}>(doc=>{
         if(doc.limit===null)return {document:doc,result:requestedUsd===undefined?{}:{maxBudgetUsd:requestedUsd}}
         if(doc.leases.some(item=>item.id===id))throw new Error('重复的预算预占标识')
         const available=doc.limit-doc.spent-reserved(doc)

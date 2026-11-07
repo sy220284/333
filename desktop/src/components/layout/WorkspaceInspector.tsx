@@ -20,7 +20,7 @@ export function WorkspaceInspector({connected,phase,model,mode,approvals,tasks,a
         <h3 className="text-[10px] font-semibold tracking-[.13em] text-[var(--color-text-tertiary)]">当前配置</h3>
         {([{label:'智能体模式',value:mode==='super'?'Super Agents':'主子模式'},{label:'当前模型',value:model||'默认模型'},{label:'待审权限',value:`${approvals} 项`},{label:'活动任务',value:String(tasks)}]).map(item=><div className="flex items-start justify-between gap-2 text-[11px]" key={item.label}><span className="text-[var(--color-text-tertiary)]">{item.label}</span><strong title={item.value} className="max-w-[125px] truncate text-right font-semibold">{item.value}</strong></div>)}
       </section>
-      {projectBudget?.limitUsd!==null&&projectBudget&&<section aria-label="项目共享预算状态" className="space-y-2 border-b border-[var(--color-border)] p-4">
+      {projectBudget&&projectBudget.limitUsd!==null&&<section aria-label="项目共享预算状态" className="space-y-2 border-b border-[var(--color-border)] p-4">
         <h3 className="text-[10px] font-semibold tracking-[.13em] text-[var(--color-text-tertiary)]">项目共享预算</h3>
         <div className="flex justify-between text-[11px]"><span>总额</span><strong>USD {projectBudget.limitUsd.toFixed(2)}</strong></div>
         <div className="flex justify-between text-[11px]"><span>已花费</span><strong>USD {projectBudget.spentUsd.toFixed(4)}</strong></div>

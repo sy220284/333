@@ -599,7 +599,10 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'missions', 'mission_jobs', 'smart_execute', 'smart_start', 'smart_inspect', 'smart_history'],
         }
       case 'budget.project.get': return projectBudget.reconcile()
-      case 'budget.project.set': return projectBudget.configure(request.limitUsd)
+      case 'budget.project.set':
+        if (opening.size || sessions.size || executingMissionJobs.size || activeMissionQueues.size)
+          throw new Error('修改项目共享预算前，请关闭当前工作区的会话和任务执行')
+        return projectBudget.configure(request.limitUsd)
       case 'smart.inspect': return inspectSmartModel(request.model)
       case 'smart.history': {
         await smartJournal.reconcile(ownerKey, new Set(sessions.keys()))
