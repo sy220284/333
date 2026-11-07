@@ -87,6 +87,16 @@ export const SPECIALISTS = Object.freeze({
     /^src\/utils\/systemPrompt\.ts$/, /^src\/QueryEngine\.ts$/,
     /^tests\/.*(?:prompt|system-prompt)/,
   ],
+  'm6-gateway-providers-317': [
+    /^src\/cli\/gateway\//,
+    /^src\/services\/api\/providerCredentials\.ts$/,
+    /^src\/services\/(remoteManagedSettings|policyLimits)\//,
+    /^src\/utils\/settings\/(mdm|managedPath)/,
+    /^src\/utils\/managedEnv\.ts$/,
+    /^tests\/m6-gateway-/,
+    /^tests\/m1-(telemetry-policy|prometheus-security)/,
+    /^docs\/gateway(?:\/|-)/,
+  ],
   'm6-self-hosted-runner-317': [
     /^src\/cli\/(selfHostedRunner|background)\//,
     /^src\/bridge\/sessionRunner\.ts$/,
