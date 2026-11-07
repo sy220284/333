@@ -972,6 +972,10 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         return sendProjectTeamMessage(cwd, request)
       case 'agents.team.inbox':
         return readProjectTeamInbox(cwd, request.teamName, request.memberName)
+      case 'supervisor.snapshot': {
+        const { getProjectSupervisorSnapshot } = await import('../agentCenter/projectSupervisor.js')
+        return getProjectSupervisorSnapshot(cwd,{dataDir:options.dataDir,missionRoot:options.missionRoot})
+      }
       case 'agents.profiles.list': {
         const { listAgentProfiles } = await import('../agentCenter/agentRegistry.js')
         return { agents: await listAgentProfiles(cwd, options.dataDir) }

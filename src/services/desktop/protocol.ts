@@ -96,6 +96,7 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
     teamName: z.string().min(1).max(128),
     memberName: z.string().min(1).max(128),
   }),
+  request('supervisor.snapshot', {}),
   request('agents.profiles.list', {}),
   request('agents.profiles.create', {
     agentId: z.string().uuid(),

@@ -51,6 +51,8 @@ type ExperienceItem={id:string;key:string;title:string;scenario:string;principle
 type ExperienceEvidence={checks:Array<{ref:string;status:'verified'|'manual'|'missing';detail:string;fingerprint?:string}>;mayApprove:boolean;requiresHumanReview:boolean}
 type SkillDraft={id:string;slug:string;description:string;instructions:string;state:'candidate'|'published';createdAt:string;publishedAt?:string}
 type TeamHandoff={id:string;teamName:string;from:string;to:string;summary:string;instruction:string;status:'draft'|'queued'|'acknowledged'|'running'|'review'|'completed'|'cancelled';inputRefs:string[];outputRefs:string[];reviewSummary?:string}
+type SupervisorFinding={id:string;kind:'job'|'handoff'|'experience'|'skill'|'identity';priority:'review'|'blocked'|'followup';title:string;detail:string;nextAction:string;missionId?:string;jobId?:string;handoffId?:string;experienceId?:string;draftId?:string;agentId?:string}
+type SupervisorSnapshot={findings:SupervisorFinding[];counts:{blocked:number;review:number;followup:number}}
 type AgentProfile={id:string;name:string;description:string;domains:string[];capabilityIds:string[];experienceKeys:string[];status:'available'|'paused'|'retired';roles:Array<{id:string;role:string;purpose:string;state:'active'|'released';teamName?:string;missionId?:string}>;sessionBindings?:Array<{sessionId:string;roleId:string;boundAt:string}>}
 const NAV:{id:View;label:string;icon:LucideIcon}[]=[
   {id:'dashboard',label:'工作台概览',icon:LayoutDashboard},
@@ -172,6 +174,8 @@ export function App(){
   const [teamMembers,setTeamMembers]=useState<TeamMember[]>([])
   const [teamInbox,setTeamInbox]=useState<TeamInbox|null>(null)
   const [teamHandoffs,setTeamHandoffs]=useState<TeamHandoff[]>([])
+  const [supervisor,setSupervisor]=useState<SupervisorSnapshot|null>(null)
+  const [supervisorRevision,setSupervisorRevision]=useState(0)
   const [handoffReviewNotes,setHandoffReviewNotes]=useState<Record<string,string>>({})
   const [agentProfiles,setAgentProfiles]=useState<AgentProfile[]>([])
   const [profilesRevision,setProfilesRevision]=useState(0)
@@ -297,6 +301,15 @@ export function App(){
     return()=>{active=false}
   },[view,workspace,connected,profilesRevision])
   // biome-ignore lint/correctness/useExhaustiveDependencies: workspace and handoff revision invalidate the read model.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: changes to project/revision invalidate supervisor read model.
+  useEffect(()=>{
+    if(!connected||!['agents','missions','dashboard'].includes(view))return
+    let active=true
+    void api.call<SupervisorSnapshot>('supervisor.snapshot').then(data=>{
+      if(active)setSupervisor(data)
+    }).catch(error=>{if(active)setError(`总控状态读取失败：${presentError(error)}`)})
+    return()=>{active=false}
+  },[view,workspace,connected,supervisorRevision])
   useEffect(()=>{
     if(view!=='agents'||!connected)return
     let active=true
@@ -1256,6 +1269,24 @@ export function App(){
                   </button>
                 </Card>})}
               </div>
+            </Section>
+            <Section title="总控待办与阻塞诊断" subtitle="只根据项目中真实的工作项、交接、经验和技能候选推断下一步，不会启动模型。" action={<Button variant="secondary" size="sm" onClick={()=>setSupervisorRevision(v=>v+1)}><RefreshCw size={13}/>刷新总控</Button>}>
+              <Card radius="lg" surface="lowest" padding="lg" shadow="card">
+                <div className="mb-3 flex flex-wrap gap-3 text-[11px] text-[var(--color-text-secondary)]">
+                  <span>阻塞 {supervisor?.counts.blocked??0}</span><span>待审核 {supervisor?.counts.review??0}</span><span>后续建议 {supervisor?.counts.followup??0}</span>
+                </div>
+                <div className="space-y-2">{supervisor?.findings.slice(0,25).map(item=><div key={item.id} className="flex flex-wrap items-start gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2">
+                  <div className="min-w-[180px] flex-1"><strong className="text-[12px]">{item.title}</strong><p className="text-[11px] text-[var(--color-text-secondary)]">{item.detail}</p><p className="mt-1 text-[11px]">{item.nextAction}</p></div>
+                  <Badge size="xs" tone={item.priority==='blocked'?'danger':item.priority==='review'?'warning':'neutral'}>{item.priority==='blocked'?'阻塞':item.priority==='review'?'待审核':'建议'}</Badge>
+                  <Button variant="secondary" size="sm" onClick={()=>{
+                    if(item.kind==='job'){if(item.missionId)setSelectedMission(item.missionId);setView('missions')}
+                    else if(item.kind==='experience'||item.kind==='skill')setView('integrations')
+                    else setView('agents')
+                  }}>查看</Button>
+                </div>)}
+                {!supervisor?.findings.length&&<Empty icon={ShieldCheck} title="当前没有需要跟进的项目异常" detail="仅对已经登记的项目记录做分析，新增任务与交付后可以刷新。"/>}
+                </div>
+              </Card>
             </Section>
             <Section title="长期智能体身份" subtitle="身份、经验与角色长期保留；角色可以随任务重配，执行会话仍由原生 Agent SDK 启动。">
               <Card radius="lg" surface="lowest" padding="lg" shadow="card">
