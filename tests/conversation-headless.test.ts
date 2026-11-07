@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { createConversationMessageStore } from '../src/services/conversation/messageStore.js'
+import { createConversationMessageStore, createAppendOnlyConversationMessageStore } from '../src/services/conversation/messageStore.js'
 import { createConversationAppStateStore } from '../src/services/conversation/appStateStore.js'
 import { createHeadlessConversationSession } from '../src/services/conversation/headlessSession.js'
 import { createConversationTurnRuntime } from '../src/services/conversation/turnRuntime.js'
@@ -16,6 +16,23 @@ test('headless message store publishes synchronous snapshots and supports unsubs
   messages.setMessages(['reset'])
   expect(messages.getSnapshot()).toEqual(['reset'])
   expect(notifications).toBe(1)
+})
+
+test('append-only headless stream retains stable snapshots with 100k messages', () => {
+  const history = createAppendOnlyConversationMessageStore<number>()
+  let notifications = 0
+  const unsubscribe = history.subscribe(() => { notifications++ })
+  for (let index = 0; index < 100_000; index++) history.append(index)
+  const first = history.getSnapshot()
+  expect(first).toHaveLength(100_000)
+  expect(first[0]).toBe(0)
+  expect(first[99_999]).toBe(99_999)
+  expect(history.getSnapshot()).toBe(first)
+  history.append(100_000)
+  expect(history.getSnapshot()).not.toBe(first)
+  expect(first).toHaveLength(100_000)
+  expect(notifications).toBe(100_001)
+  unsubscribe()
 })
 
 test('headless turn executes ordered events and final state without a renderer', async () => {
