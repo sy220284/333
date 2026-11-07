@@ -35,7 +35,7 @@ jobs:
       - name: 验证新 UI 无障碍与旧终端实际移除
         run: node --test desktop/tests/desktop-accessibility.test.mjs tests/desktop-tui-retirement.test.mjs
       - name: 安装桌面冻结依赖
-        run: npm ci --prefix desktop --ignore-scripts
+        run: cd desktop && npm install --no-audit --no-fund
       - name: 检查桌面类型与实际打包
         run: |
           npm --prefix desktop run typecheck
