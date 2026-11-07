@@ -248,6 +248,7 @@ export function App(){
     setPermissionVerified(value.permissionMode!==undefined&&value.permissionMode!==null)
   },[])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: workspace switch and publication revision intentionally invalidate catalog reads.
   useEffect(()=>{
     if(view!=='integrations'||!connected)return
     let active=true
@@ -276,25 +277,26 @@ export function App(){
       setCatalogError(errors.join('；'))
     })
     return()=>{active=false}
-  // biome-ignore lint/correctness/useExhaustiveDependencies: workspace and catalogRevision intentionally invalidate remote catalog responses.
   },[view,workspace,connected,catalogRevision])
   useEffect(()=>{viewRef.current=view},[view])
   // biome-ignore lint/correctness/useExhaustiveDependencies: selected team and workspace intentionally reset cached team inbox state.
   useEffect(()=>{setTeamInbox(null);setTeamNotice('');pendingTeamDelivery.current=null;pendingHandoff.current=null},[selectedTeam,workspace])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: workspace and profile mutation invalidate the roster projection.
   useEffect(()=>{
     if(view!=='agents'||!connected)return
     let active=true
     void api.call<{agents:AgentProfile[]}>('agents.profiles.list').then(data=>{
       if(active)setAgentProfiles(data.agents??[])
-    }).catch(error=>{if(active)setError('长期身份读取失败：'+presentError(error))})
+    }).catch(error=>{if(active)setError(`长期身份读取失败：${presentError(error)}`)})
     return()=>{active=false}
   },[view,workspace,connected,profilesRevision])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: workspace and handoff revision invalidate the read model.
   useEffect(()=>{
     if(view!=='agents'||!connected)return
     let active=true
     void api.call<{handoffs:TeamHandoff[]}>('handoffs.list').then(data=>{
       if(active)setTeamHandoffs(data.handoffs??[])
-    }).catch(error=>{if(active)setError('交接记录读取失败：'+presentError(error))})
+    }).catch(error=>{if(active)setError(`交接记录读取失败：${presentError(error)}`)})
     return()=>{active=false}
   },[view,workspace,connected,handoffRevision])
   useEffect(()=>{sessionRef.current=sessionId},[sessionId])
@@ -452,7 +454,7 @@ export function App(){
         instruction:teamMemberInstruction.trim(),
         inputRefs:[],
       })
-      setTeamNotice('已登记交接 '+result.id.slice(0,8)+'，状态：'+result.status+'；待成员读取、处理和返回证据。')
+      setTeamNotice(`已登记交接 ${result.id.slice(0,8)}，状态：${result.status}；待成员读取、处理和返回证据。`)
       pendingHandoff.current=null
       setHandoffRevision(v=>v+1)
     })
