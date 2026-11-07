@@ -53,14 +53,14 @@ textarea {resize:vertical;}
 .offline-banner button {margin-left:auto;}
 .yy-page .mode-cards,.integration-grid,.model-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
 .yy-page .mode-card,.model-card,.provider-item {display:flex;align-items:center;gap:12px;text-align:left;border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface-container-lowest);padding:15px;transition:border-color .15s,background .15s;}
-.team-picker,.list-row,.mcp-row,.compact-row,.mission-list-item,.job-card {display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--color-border);background:var(--color-surface-container-lowest);border-radius:var(--radius-md);font-size:12px;text-align:left;}
+.team-picker,.list-row,.mcp-row,.compact-row,.mission-list-item {display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--color-border);background:var(--color-surface-container-lowest);border-radius:var(--radius-md);font-size:12px;text-align:left;}
 .checkpoint {border-left:2px solid var(--color-brand);padding:10px;margin:8px 0;background:var(--color-surface-container-low);}
 .yy-legal-note {position:fixed;bottom:33px;right:15px;z-index:var(--z-popover);max-width:430px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:7px 10px;background:var(--color-surface-container-lowest);border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:9px;color:var(--color-text-tertiary);}
 .yy-legal-note button {color:var(--color-brand);text-decoration:underline;}
 [data-motion=off] *,[data-motion=off] *:before,[data-motion=off] *:after {animation-duration:.01ms!important;transition-duration:.01ms!important;}
 
 /* 工作项与键盘聚焦状态统一使用原生主题焦点色。 */
-.job-card:focus-within {border-color:var(--color-border-focus);box-shadow:0 0 0 2px var(--color-brand-soft);}
+
 
 /* 与新主题动效令牌一致的系统减少动画策略。 */
 @media (prefers-reduced-motion: reduce) {

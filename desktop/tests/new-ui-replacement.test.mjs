@@ -21,6 +21,14 @@ test('桌面使用原生UI的新页面并不存在旧UI回退入口',()=>{
   assert.equal(layout.includes('.git-output,'),false)
   assert.ok(layout.includes('.yy-tab'))
 })
+test('工作项卡片采用纵向结构，操作按钮保持可读', () => {
+  const app=src('../src/App.tsx'),layout=src('../src/theme/yaoyao-layout.css')
+  assert.equal(app.includes('className="job-card"'),false)
+  assert.equal(layout.includes('.job-card'),false)
+  assert.ok(app.includes('<Card key={job.id} radius="lg" padding="md"'))
+  assert.ok(app.includes('className="mt-3 flex flex-wrap gap-2"'))
+})
+
 test('新 UI 业务入口对应实际回调，重要危险操作仍保留确认',()=>{
   const app=src('../src/App.tsx')
   for(const name of ['sessions.open','sessions.send','sessions.interrupt','sessions.setModel','agents.setMode','missions.jobs.runQueue','missions.jobs.approve','workspace.read','workspace.write','mcp.toggle','mcp.remove','host.reject'])assert.ok(app.includes(name),`缺少 ${name}`)
