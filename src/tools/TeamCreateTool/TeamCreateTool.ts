@@ -168,9 +168,15 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
       ],
     }
 
-    // Claim the name atomically inside the shared lifecycle lock. A losing
-    // creator must not delete the directory owned by the successful team.
-    await writeTeamFileAsync(finalTeamName, teamFile, true)
+    // reserveTeamDirectory already claimed this unique directory. Complete
+    // the exclusive config write under the lifecycle guard; on failure only
+    // this creator owns the reservation, so its empty directory is safe to clean.
+    try {
+      await writeTeamFileAsync(finalTeamName, teamFile, true)
+    } catch (error) {
+      await rm(teamDir, { recursive: true, force: true })
+      throw error
+    }
     // Track for session-end cleanup — teams were left on disk forever
     // unless explicitly TeamDelete'd (gh-32730).
     registerTeamForSessionCleanup(finalTeamName)
