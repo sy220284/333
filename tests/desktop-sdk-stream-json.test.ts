@@ -56,6 +56,10 @@ reader.on('line', line => {
           models: [{ value: 'mock-model', displayName: 'Mock', description: 'Offline SDK' }],
           agents: [{ name: 'Explore', description: 'Searches' }],
           commands: [], output_style: 'default', available_output_styles: [], account: {},
+          initOptions: {
+            promptSuggestions: frame.request.promptSuggestions,
+            agentProgressSummaries: frame.request.agentProgressSummaries,
+          },
         })
       } else if (frame.request.subtype === 'interrupt') {
         reply(frame.request_id)
@@ -116,6 +120,28 @@ async function until(predicate: () => boolean) {
     await new Promise(resolve => setTimeout(resolve, 10))
   }
 }
+
+test('SDK initialization forwards 2.1.317 prompt suggestions and agent progress options', { timeout: 30000 }, async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'sdk-init-options-'))
+  const cli = join(cwd, 'mock-sdk-cli.mjs')
+  await writeFile(cli, fixtureCli)
+  const runtime = createSessionRuntime317({
+    cwd, executable: 'node', pathToClaudeCodeExecutable: cli,
+    promptSuggestions: true, agentProgressSummaries: true,
+  })
+  try {
+    const init = await runtime.initialization as {
+      initOptions?: { promptSuggestions?: boolean; agentProgressSummaries?: boolean }
+    }
+    expect(init.initOptions).toEqual({
+      promptSuggestions: true,
+      agentProgressSummaries: true,
+    })
+  } finally {
+    await runtime.closeAndWait()
+    await rm(cwd, { recursive: true, force: true })
+  }
+})
 
 test('desktop host uses real SDK stream-json child for models, approval, progress, interrupt and resume', { timeout: 30000 }, async () => {
   const cwd = await mkdtemp(join(tmpdir(), 'desktop-sdk-'))
