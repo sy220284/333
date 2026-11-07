@@ -61,21 +61,21 @@ export function reportUpgrade317() {
   const increment=new Map()
   for (const item of delta.items) {
     const disposition=currentScope.get(item.id)
-    assert(disposition,'unknown delta item '+item.id)
+    assert(disposition,`unknown delta item ${item.id}`)
     const retirement=item.stage==='RETIREMENT_BOUNDARY_CODE_TEST_PRESENT'
     const implemented=item.stage==='IMPLEMENTED_PENDING_RUNTIME'
-    assert(retirement||implemented,'unrecognized candidate stage for '+item.id)
+    assert(retirement||implemented,`unrecognized candidate stage for ${item.id}`)
     assert(retirement === (disposition==='EXCLUDE_RETIRED_FEATURE'),
-      'evidence stage conflicts with product scope for '+item.id)
+      `evidence stage conflicts with product scope for ${item.id}`)
     assert(Array.isArray(item.production_files) && item.production_files.length>0 &&
-      Array.isArray(item.tests) && item.tests.length>0,'source or tests missing for '+item.id)
-    unique(item.production_files,'sources of '+item.id)
-    unique(item.tests,'tests of '+item.id)
+      Array.isArray(item.tests) && item.tests.length>0,`source or tests missing for ${item.id}`)
+    unique(item.production_files,`sources of ${item.id}`)
+    unique(item.tests,`tests of ${item.id}`)
     for (const path of [...item.production_files,...item.tests]) {
-      assert(fileExists(path),'referenced source/test file missing for '+item.id+': '+path)
+      assert(fileExists(path),`referenced source/test file missing for ${item.id}: ${path}`)
     }
     assert(item.runtime_evidence===null,
-      'runtime evidence requires separate same-SHA validated signoff, not an unverified JSON value for '+item.id)
+      `runtime evidence requires separate same-SHA validated signoff, not an unverified JSON value for ${item.id}`)
     increment.set(item.id,item)
   }
   assert(Array.isArray(signoffs.chains),'chain signoff file must contain chains array')
@@ -83,7 +83,7 @@ export function reportUpgrade317() {
   const frozenById=new Map(snapshot.entries.map(item=>[item.id,item]))
   const candidates=sourceIds.map(id=>{
     const historical=frozenById.get(id)
-    assert(historical,'frozen baseline missing '+id)
+    assert(historical,`frozen baseline missing ${id}`)
     const proposal=increment.get(id)
     return {
       id,chain:chainById.get(id),scope:currentScope.get(id),
@@ -99,7 +99,8 @@ export function reportUpgrade317() {
   const byChain={}
   for (const entry of candidates) {
     const chain=entry.chain ?? 'UNCLASSIFIED'
-    const row=byChain[chain] ??= {total:0,incremental_candidates:0}
+    if (!byChain[chain]) byChain[chain] = {total:0,incremental_candidates:0}
+    const row=byChain[chain]
     row.total++
     if (increment.has(entry.id)) row.incremental_candidates++
   }
@@ -124,10 +125,10 @@ const invoked=process.argv[1] && resolve(process.argv[1])===fileURLToPath(import
 if (invoked) {
   try {
     const result=reportUpgrade317()
-    if (process.argv.includes('--json')) process.stdout.write(JSON.stringify(result,null,2)+'\n')
+    if (process.argv.includes('--json')) process.stdout.write(`${JSON.stringify(result,null,2)}\n`)
     else {
       const {items,...summary}=result
-      process.stdout.write(JSON.stringify(summary,null,2)+'\n')
+      process.stdout.write(`${JSON.stringify(summary,null,2)}\n`)
     }
   } catch (error) {
     process.stderr.write(`升级证据核验失败：${error instanceof Error?error.message:String(error)}\n`)
