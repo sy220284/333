@@ -34,12 +34,12 @@ function ToolOutput({text}:{text:string}){
 export function SessionChatSurface(p:SessionChatSurfaceProps){
   const runState=p.historyOnly?'历史记录':({running:'执行中',requires_action:'等待确认',completed:'已完成',cancelled:'已取消',failed:'执行失败'} as Record<string,string>)[p.sessionPhase]||'待命'
   const runTone=p.sessionPhase==='running'?'info':p.sessionPhase==='failed'?'danger':p.sessionPhase==='completed'?'success':'neutral'
+  // biome-ignore lint/correctness/useExhaustiveDependencies: changing draft must recompute the textarea height even when the ref is stable.
   useEffect(()=>{
     const input=p.inputRef.current
     if(!input)return
     input.style.height='auto'
     input.style.height=`${Math.min(input.scrollHeight,160)}px`
-  // biome-ignore lint/correctness/useExhaustiveDependencies: draft changes trigger controlled textarea remeasurement.
   },[p.draft,p.inputRef])
   return <section aria-label="AI 对话区" className="flex min-h-[540px] flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface-container-lowest)] shadow-[var(--shadow-card)]">
     <div className="flex min-h-[57px] shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] px-5 py-3">
