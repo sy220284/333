@@ -60,7 +60,7 @@ const DIRECT_COMMANDS = new Set(['agents','attach','auth','bridge','config','dae
 export function isDesktopWorkbenchLaunch(args: string[]): boolean {
   const words = beforeDoubleDash(args)
   if(words.some(word=>HEADLESS_OPTIONS.has(word) ||
-    [...HEADLESS_OPTIONS].some(option=>word.startsWith(option+'='))))return false
+    [...HEADLESS_OPTIONS].some(option=>word.startsWith(`${option}=`))))return false
   const first=words[0]
   if(!first)return true
   if(['--version','-v','-V','--help','-h','--update','--upgrade'].includes(first))return false

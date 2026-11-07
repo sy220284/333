@@ -166,9 +166,9 @@ export function StatusDot({ tone, size = 'sm', pulse = false, label, className, 
   return (
     <span
       {...rest}
-      role={label ? 'img' : undefined}
+      role="img"
       aria-label={label}
-      aria-hidden={label ? undefined : true}
+      aria-hidden={!label}
       className={cx(
         'inline-block shrink-0 rounded-full',
         DOT_SIZE[size],

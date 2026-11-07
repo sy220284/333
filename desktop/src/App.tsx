@@ -4,12 +4,11 @@ import {
   CircleStop, ClipboardList, Code2, Cpu, FileCode2, Folder, FolderOpen,
   GitBranch, GitPullRequest, HardDrive, History, LayoutDashboard, ListChecks,
   LockKeyhole, MessageSquare, PanelRightClose,
-  PanelRightOpen, Pause, Play, Plus, RefreshCw, Save, Search, Send, Settings2,
-  ShieldCheck, Sparkles, SquareTerminal, UsersRound, WandSparkles, X,
+  PanelRightOpen, Pause, Play, Plus, RefreshCw, Save, Search, Settings2,
+  ShieldCheck, SquareTerminal, UsersRound, WandSparkles, X,
   type LucideIcon
 } from 'lucide-react'
 import { api, type AppEvent, type Item } from './api'
-import { MarkdownMessage } from './MarkdownMessage'
 import { NewSessionStarter } from './components/layout/NewSessionStarter'
 import { WorkspaceInspector } from './components/layout/WorkspaceInspector'
 import { SessionChatSurface } from './components/chat/SessionChatSurface'
@@ -68,7 +67,6 @@ const TITLES:Record<View,[string,string]>={
 }
 const PREF='yaoyaoche-desktop:'
 function loadPreference(name:string,fallback:boolean){const value=window.localStorage.getItem(PREF+name);return value===null?fallback:value==='true'}
-function dateTime(ts:number){return new Date(ts).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}
 function obj(v:unknown):Item{return asObject(v)??{}}
 function presentError(v:unknown){return v instanceof Error?v.message:String(v)}
 function missionId(m:Mission){return String(m.missionId||m.id||'')}
@@ -82,12 +80,6 @@ function Empty({icon:Icon,title,detail,action}:{icon:LucideIcon;title:string;det
 }
 function Section({title,subtitle,action,children}:{title:string;subtitle?:string;action?:ReactNode;children:ReactNode}){
   return <section className="section"><div className="section-heading"><div><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div>{action}</div>{children}</section>
-}
-function StatusTag({text,tone='neutral'}:{text:string;tone?:'good'|'warn'|'neutral'|'danger'}){
-  return <Badge size="sm" tone={tone==='good'?'success':tone==='warn'?'warning':tone==='danger'?'danger':'neutral'}><span className="inline-block h-1.5 w-1.5 rounded-full bg-current"/>{text}</Badge>
-}
-function Panel({children,className=''}:{children:ReactNode;className?:string}){
-  return <Card shadow="none" radius="lg" padding="lg" className={`panel ${className}`}>{children}</Card>
 }
 export function App(){
   const [view,setView]=useState<View>('dashboard')
@@ -247,6 +239,22 @@ export function App(){
       ? [`${names[index]}：${presentError(item.reason)}`] : [])
     if(failed.length)setError(`会话信息刷新失败：${failed.join('；')}`)
   },[])
+  const operation=useCallback(async(name:string,action:()=>Promise<unknown>)=>{
+    setBusy(name)
+    try{await action()}catch(error){setError(presentError(error))}finally{setBusy('')}
+  },[])
+  const resumeSession=useCallback(async(id:string)=>{
+    await operation('恢复会话',async()=>{
+      const response=await invoke<{sessionId:string;tasks?:Task[]}>('sessions.ensureOpen',{sessionId:id})
+      setSessionId(response.sessionId);sessionRef.current=response.sessionId;setHistoryOnly(false);setTasks(response.tasks??[])
+      const history=await invoke<unknown>('sessions.history',{sessionId:id,limit:200,offset:0})
+      const rows=Array.isArray(history)?history:asObject(history)?.messages??[]
+      const next=(Array.isArray(rows)?rows:[]).map((item,index)=>itemFromMessage(item,index)).filter(Boolean) as ConversationItem[]
+      setMessages(next);setVisibleMessageCount(120);setFollowLatest(true);setView('chat');await refreshSession(id)
+      const status=await invoke<Item>('sessions.status',{sessionId:id})
+      setSessionPhase(String(status.phase??status.status??'idle'))
+    })
+  },[invoke,operation,refreshSession])
   useEffect(()=>{
     let alive=true
     const unsub=api.subscribe((event:AppEvent)=>{
@@ -333,7 +341,7 @@ export function App(){
       }catch(e){if(alive){setConnected(false);setError(presentError(e))}}
     })()
     return ()=>{alive=false;unsub()}
-  },[refresh])
+  },[refresh,resumeSession])
   useEffect(()=>{
     const available=Array.isArray(overview.teams)?overview.teams as Item[]:[]
     if(!available.some(team=>String(team.name||'')===selectedTeam))
@@ -379,10 +387,6 @@ export function App(){
     window.addEventListener('keydown',onKey)
     return ()=>window.removeEventListener('keydown',onKey)
   },[])
-  async function operation(name:string,action:()=>Promise<unknown>){
-    setBusy(name)
-    try{await action()}catch(error){setError(presentError(error))}finally{setBusy('')}
-  }
   async function executeSmart(){
     const text=draft.trim()
     if(!text||busy||!connected)return
@@ -410,18 +414,6 @@ export function App(){
       setSessionId(response.sessionId);sessionRef.current=response.sessionId;setSessionPhase('idle');setHistoryOnly(false);setMessages([]);setVisibleMessageCount(120);setFollowLatest(true)
       setTasks(response.tasks??[])
       setView('chat');await refresh()
-    })
-  }
-  async function resumeSession(id:string){
-    await operation('恢复会话',async()=>{
-      const response=await invoke<{sessionId:string;tasks?:Task[]}>('sessions.ensureOpen',{sessionId:id})
-      setSessionId(response.sessionId);sessionRef.current=response.sessionId;setHistoryOnly(false);setTasks(response.tasks??[])
-      const history=await invoke<unknown>('sessions.history',{sessionId:id,limit:200,offset:0})
-      const rows=Array.isArray(history)?history:asObject(history)?.messages??[]
-      const next=(Array.isArray(rows)?rows:[]).map((item,index)=>itemFromMessage(item,index)).filter(Boolean) as ConversationItem[]
-      setMessages(next);setVisibleMessageCount(120);setFollowLatest(true);setView('chat');await refreshSession(id)
-      const status=await invoke<Item>('sessions.status',{sessionId:id})
-      setSessionPhase(String(status.phase??status.status??'idle'))
     })
   }
   async function send(){
@@ -771,7 +763,7 @@ export function App(){
               <div className="grid grid-cols-2 gap-4 max-[950px]:grid-cols-1">
                 {([{id:'master' as const,name:'主智能体 + 子智能体',detail:'主智能体规划和整合，子智能体执行分工。',icon:Bot},{id:'super' as const,name:'Super Agents 团队模式',detail:'团队共享任务簿，协作执行复杂目标。',icon:UsersRound}]).map(option=>{const Icon=option.icon;return <Card key={option.id} radius="lg" padding="none" shadow="card" surface="lowest" interactive>
                   <button type="button" onClick={()=>void agentMode(option.id)} className="flex w-full items-center gap-4 p-5 text-left">
-                    <span className={'flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-lg)] '+(mode===option.id?'bg-[var(--color-brand-soft)] text-[var(--color-on-brand-soft)]':'bg-[var(--color-surface-container)] text-[var(--color-text-secondary)]')}><Icon size={23}/></span>
+                    <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-lg)] ${(mode===option.id?'bg-[var(--color-brand-soft)] text-[var(--color-on-brand-soft)]':'bg-[var(--color-surface-container)] text-[var(--color-text-secondary)]')}`}><Icon size={23}/></span>
                     <span className="min-w-0 flex-1"><strong className="block text-[14px] font-semibold">{option.name}</strong><small className="mt-1.5 block text-[12px] leading-5 text-[var(--color-text-secondary)]">{option.detail}</small></span>
                     {mode===option.id?<Badge size="sm" tone="success"><Check size={13}/>已启用</Badge>:<ArrowRight size={16} className="text-[var(--color-text-tertiary)]"/>}
                   </button>
@@ -782,7 +774,7 @@ export function App(){
               {Array.isArray(overview.teams)&&overview.teams.length>0?
                 <div className="grid grid-cols-[250px_minmax(0,1fr)] gap-4 max-[950px]:grid-cols-1">
                   <Card padding="sm" radius="lg" surface="lowest">
-                    <div className="space-y-1">{(overview.teams as Item[]).map(team=>{const name=String(team.name||'');return <button type="button" key={name} onClick={()=>setSelectedTeam(name)} className={'flex w-full flex-col gap-1 rounded-[var(--radius-md)] px-3 py-3 text-left text-[12px] hover:bg-[var(--color-surface-hover)] '+(selectedTeam===name?'bg-[var(--color-brand-soft)]':'')}>
+                    <div className="space-y-1">{(overview.teams as Item[]).map(team=>{const name=String(team.name||'');return <button type="button" key={name} onClick={()=>setSelectedTeam(name)} className={`flex w-full flex-col gap-1 rounded-[var(--radius-md)] px-3 py-3 text-left text-[12px] hover:bg-[var(--color-surface-hover)] ${(selectedTeam===name?'bg-[var(--color-brand-soft)]':'')}`}>
                       <span className="flex items-center gap-2 font-semibold"><UsersRound size={15}/>{name}</span><small className="text-[11px] text-[var(--color-text-tertiary)]">成员 {Number(team.memberCount||0)} · 执行中 {Number(team.runningCount||0)}</small>
                     </button>})}</div>
                   </Card>
@@ -818,7 +810,7 @@ export function App(){
               </Card>
               <Card radius="lg" surface="lowest" padding="sm">
                 <div className="flex items-center justify-between gap-2 px-2 py-2"><h2 className="flex items-center gap-2 text-[13px] font-semibold"><ListChecks size={16}/>任务簿</h2><Button variant="ghost" size="sm" aria-label="刷新任务簿" onClick={()=>void operation('刷新任务簿',refresh)}><RefreshCw size={14}/></Button></div>
-                <div className="space-y-1">{missions.map(m=><button type="button" key={missionId(m)} onClick={()=>{setSelectedMission(missionId(m));void operation('选择任务',()=>invoke('missions.select',{missionId:missionId(m)}))}} className={'flex min-h-[57px] w-full flex-col gap-2 rounded-[var(--radius-md)] border px-3 py-3 text-left transition-colors hover:border-[var(--color-brand)] '+(selectedMission===missionId(m)?'border-[var(--color-brand)] bg-[var(--color-brand-soft)]':'border-transparent bg-[var(--color-surface)]')}>
+                <div className="space-y-1">{missions.map(m=><button type="button" key={missionId(m)} onClick={()=>{setSelectedMission(missionId(m));void operation('选择任务',()=>invoke('missions.select',{missionId:missionId(m)}))}} className={`flex min-h-[57px] w-full flex-col gap-2 rounded-[var(--radius-md)] border px-3 py-3 text-left transition-colors hover:border-[var(--color-brand)] ${(selectedMission===missionId(m)?'border-[var(--color-brand)] bg-[var(--color-brand-soft)]':'border-transparent bg-[var(--color-surface)]')}`}>
                   <strong className="line-clamp-2 text-[12px]">{m.objective||'未命名任务'}</strong><Badge size="xs" tone={m.status==='paused'?'warning':m.status==='completed'?'neutral':'success'}>{m.status==='paused'?'已暂停':m.status==='completed'?'已完成':'执行中'}</Badge>
                 </button>)}
                 {missions.length===0&&<Empty icon={ClipboardList} title="任务簿为空" detail="创建目标后可登记工作项和检查点。"/>}</div>
@@ -853,8 +845,8 @@ export function App(){
                     </div>
                     <p className="mt-2 whitespace-pre-wrap text-[12px] leading-5 text-[var(--color-text-secondary)]">{job.instruction}</p>
                     {job.summary&&<div className="mt-3 rounded-[var(--radius-sm)] bg-[var(--color-surface-container-low)] p-3 text-[12px] leading-6">{job.summary}</div>}
-                    <div className="mt-2 text-[11px] text-[var(--color-text-tertiary)]">执行次数：{job.attempt}{job.history?.length?' · 保留 '+job.history.length+' 次执行记录':''}</div>
-                    {job.history?.length?<details className="mt-3 text-[11px]"><summary className="cursor-pointer text-[var(--color-brand)]">查看历史执行详情</summary>{job.history.map(rec=><div key={rec.attempt+'-'+rec.finishedAt} className="mt-2 border-l-2 border-[var(--color-brand)] p-2"><strong>第 {rec.attempt} 次 · {rec.status}</strong><span className="ml-2 text-[var(--color-text-tertiary)]">{new Date(rec.finishedAt).toLocaleString('zh-CN')}</span><p className="mt-1">{rec.summary}</p></div>)}</details>:null}
+                    <div className="mt-2 text-[11px] text-[var(--color-text-tertiary)]">执行次数：{job.attempt}{job.history?.length?` · 保留 ${job.history.length} 次执行记录`:''}</div>
+                    {job.history?.length?<details className="mt-3 text-[11px]"><summary className="cursor-pointer text-[var(--color-brand)]">查看历史执行详情</summary>{job.history.map(rec=><div key={`${rec.attempt}-${rec.finishedAt}`} className="mt-2 border-l-2 border-[var(--color-brand)] p-2"><strong>第 {rec.attempt} 次 · {rec.status}</strong><span className="ml-2 text-[var(--color-text-tertiary)]">{new Date(rec.finishedAt).toLocaleString('zh-CN')}</span><p className="mt-1">{rec.summary}</p></div>)}</details>:null}
                     <div className="mt-3 flex flex-wrap gap-2">
                       {job.status==='queued'&&<Button variant="secondary" size="sm" onClick={()=>void jobAction('missions.jobs.start',job.id)}><Play size={13}/>执行</Button>}
                       {job.sessionId&&<Button variant="secondary" size="sm" onClick={()=>void viewJobSession(job)}><MessageSquare size={13}/>查看会话</Button>}
@@ -891,7 +883,7 @@ export function App(){
               <button type="button" title={workspace} onClick={()=>void directory(workspace)} className="flex items-center gap-2 px-4 py-3 text-left text-[11px] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"><HardDrive size={14}/><span className="truncate">{workspace.split(/[\\/]/).filter(Boolean).at(-1)||'工作区'}</span></button>
               {folder!==workspace&&<button type="button" className="px-4 py-2 text-left text-[11px] text-[var(--color-brand)] hover:bg-[var(--color-surface-hover)]" onClick={()=>void directory(folder.replace(/[\\/][^\\/]+$/,''))}>.. 上一级目录</button>}
               <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2">
-                {files.map(file=><button type="button" key={file.path} onClick={()=>void (file.directory?directory(file.path):openFile(file.path))} className={'flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2.5 text-left text-[12px] transition-colors hover:bg-[var(--color-surface-hover)] '+(currentFile===file.path?'bg-[var(--color-brand-soft)] text-[var(--color-on-brand-soft)]':'text-[var(--color-text-secondary)]')}>
+                {files.map(file=><button type="button" key={file.path} onClick={()=>void (file.directory?directory(file.path):openFile(file.path))} className={`flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2.5 text-left text-[12px] transition-colors hover:bg-[var(--color-surface-hover)] ${(currentFile===file.path?'bg-[var(--color-brand-soft)] text-[var(--color-on-brand-soft)]':'text-[var(--color-text-secondary)]')}`}>
                   {file.directory?<Folder size={16}/>:<FileCode2 size={16}/>}<span className="min-w-0 flex-1 truncate">{file.name}</span>
                 </button>)}
                 {files.length===0&&<p className="p-4 text-[11px] text-[var(--color-text-tertiary)]">选择刷新以加载文件列表</p>}
@@ -913,7 +905,7 @@ export function App(){
             <Section title="发现的模型" subtitle="模型能力由当前桌面后台返回，选择后应用到真实会话。" action={<Button size="base" variant="secondary" onClick={()=>void operation('刷新模型',refresh)}><RefreshCw size={14}/>重新检测</Button>}>
               <div className="grid grid-cols-2 gap-3 max-[1050px]:grid-cols-1">{models.map(model=><Card key={model.value} radius="lg" padding="none" surface="lowest" shadow="card" interactive>
                 <button type="button" onClick={()=>void selectModel(model.value)} className="flex w-full items-center gap-4 p-5 text-left">
-                  <span className={'flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-lg)] '+(selectedModel===model.value?'bg-[var(--color-brand-soft)] text-[var(--color-on-brand-soft)]':'bg-[var(--color-surface-container-low)] text-[var(--color-text-secondary)]')}><Cpu size={22}/></span>
+                  <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-lg)] ${(selectedModel===model.value?'bg-[var(--color-brand-soft)] text-[var(--color-on-brand-soft)]':'bg-[var(--color-surface-container-low)] text-[var(--color-text-secondary)]')}`}><Cpu size={22}/></span>
                   <span className="min-w-0 flex-1"><strong className="block truncate text-[14px] font-semibold">{model.displayName||model.value}</strong><code className="block truncate py-1 text-[11px] text-[var(--color-text-tertiary)]">{model.value}</code><small className="block text-[11px] text-[var(--color-text-secondary)]">{model.description||'由已配置的模型服务商提供'}</small></span>
                   {selectedModel===model.value&&<Badge size="sm" tone="success"><Check size={12}/>当前选择</Badge>}
                 </button>
@@ -924,7 +916,7 @@ export function App(){
               <Card radius="lg" surface="lowest" padding="none" shadow="card">
                 <div className="grid grid-cols-[210px_minmax(0,1fr)] max-[900px]:grid-cols-1">
                   <div className="space-y-1 border-r border-[var(--color-border)] p-3 max-[900px]:border-b max-[900px]:border-r-0">
-                    {PROVIDERS.map(provider=><button type="button" key={provider.id} onClick={()=>{setCredentialProvider(provider.id);setCredentialInput('')}} className={'flex w-full items-center gap-2 rounded-[var(--radius-md)] p-3 text-left text-[12px] transition-colors hover:bg-[var(--color-surface-hover)] '+(credentialProvider===provider.id?'bg-[var(--color-brand-soft)]':'')}>
+                    {PROVIDERS.map(provider=><button type="button" key={provider.id} onClick={()=>{setCredentialProvider(provider.id);setCredentialInput('')}} className={`flex w-full items-center gap-2 rounded-[var(--radius-md)] p-3 text-left text-[12px] transition-colors hover:bg-[var(--color-surface-hover)] ${(credentialProvider===provider.id?'bg-[var(--color-brand-soft)]':'')}`}>
                       <Cpu size={16}/><span className="flex-1">{provider.name}</span><Badge size="xs" tone={savedProviders.includes(provider.id)?'success':'neutral'}>{savedProviders.includes(provider.id)?'已配置':'未配置'}</Badge>
                     </button>)}
                   </div>
@@ -953,14 +945,14 @@ export function App(){
             <Section title="MCP 服务器管理" subtitle="项目、用户及本地作用范围内的真实配置与状态。" action={<Button variant="secondary" size="base" onClick={()=>void operation('刷新 MCP',refresh)}><RefreshCw size={14}/>刷新</Button>}>
               <Card radius="lg" padding="lg" surface="lowest" shadow="card">
                 <div className="space-y-2">
-                  {mcpServers.map(server=><div key={server.scope+':'+server.name} className="flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
+                  {mcpServers.map(server=><div key={`${server.scope}:${server.name}`} className="flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
                     <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-surface-container-low)]"><Boxes size={18}/></span>
-                    <div className="min-w-[170px] flex-1"><div className="flex flex-wrap items-center gap-2"><strong className="text-[12px]">{server.name}</strong><Badge size="xs" tone={server.disabled?'warning':'success'}>{server.disabled?'已禁用':'已启用'}</Badge></div><p className="mt-1 break-all text-[11px] text-[var(--color-text-tertiary)]">{server.scope} · {server.type}{server.url?' · '+server.url:''}</p></div>
+                    <div className="min-w-[170px] flex-1"><div className="flex flex-wrap items-center gap-2"><strong className="text-[12px]">{server.name}</strong><Badge size="xs" tone={server.disabled?'warning':'success'}>{server.disabled?'已禁用':'已启用'}</Badge></div><p className="mt-1 break-all text-[11px] text-[var(--color-text-tertiary)]">{server.scope} · {server.type}{server.url?` · ${server.url}`:''}</p></div>
                     <Button variant="secondary" size="base" onClick={()=>void manageMcp(server,'mcp.toggle')}>{server.disabled?'启用':'禁用'}</Button>
                     <Button variant="danger-outline" size="base" onClick={()=>void manageMcp(server,'mcp.remove')}><X size={14}/>移除</Button>
                   </div>)}
                   {mcpServers.length===0&&<Empty icon={Boxes} title="暂无 MCP 服务" detail="添加服务后将在这里列出。"/>}
-                  {mcpErrors.map((error,i)=><p key={i} role="alert" className="text-[12px] text-[var(--color-error)]">{error}</p>)}
+                  {[...new Set(mcpErrors)].map(error=><p key={error} role="alert" className="text-[12px] text-[var(--color-error)]">{error}</p>)}
                 </div>
                 <div className="my-5 border-t border-[var(--color-border)]"/>
                 <h3 className="mb-4 text-[13px] font-semibold">添加 MCP 服务</h3>
@@ -994,7 +986,7 @@ export function App(){
 </section>}
 {view==='settings'&&<div className="space-y-6">
   <Section title="工具权限审批" subtitle="审批请求回传到发起的 SDK 会话。"><Card surface="lowest" shadow="card" radius="lg">
-    {permissions.length?permissions.map(p=><div key={p.sessionId+':'+p.id} className="mb-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 last:mb-0">
+    {permissions.length?permissions.map(p=><div key={`${p.sessionId}:${p.id}`} className="mb-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 last:mb-0">
       <div className="flex items-center gap-2"><LockKeyhole size={17} className="text-[var(--color-brand)]"/><strong className="text-[13px]">{p.toolName}</strong><Badge size="xs" tone="warning">待审</Badge></div>
       <p className="mt-2 text-[11px] text-[var(--color-text-tertiary)]">{p.description||'工具请求等待确认'} · 会话 {p.sessionId.slice(0,8)}</p>
       <pre className="my-3 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] bg-[var(--color-code-bg)] p-3 font-mono text-[11px] text-[var(--color-code-fg)]">{json(p.input)}</pre>
@@ -1046,7 +1038,7 @@ export function App(){
         <Button variant="primary" size="base" onClick={()=>void respondHost(requested.id,'accept')} disabled={Boolean(busy)}>已完成，继续</Button>
       </div>
     </>:requestedDetails.subtype==='elicitation'?<>
-      <div className="space-y-3">{Object.entries(requestedProperties).map(([key,value])=>{const field=obj(value),valueType=String(field.type||'string');return <label key={key} htmlFor={'host-field-'+key} className="flex flex-col gap-1.5 text-[12px]"><span>{String(field.title||key)}{Array.isArray(requestedSchema.required)&&requestedSchema.required.includes(key)?' *':''}</span>{Array.isArray(field.enum)?<select id={'host-field-'+key} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:e.target.value}))}><option value="">请选择</option>{field.enum.map((item:unknown)=><option key={String(item)} value={String(item)}>{String(item)}</option>)}</select>:valueType==='boolean'?<input id={'host-field-'+key} type="checkbox" checked={Boolean(hostForm[key])} onChange={e=>setHostForm(old=>({...old,[key]:e.target.checked}))}/>:<input id={'host-field-'+key} type={valueType==='number'||valueType==='integer'?'number':'text'} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:valueType==='number'||valueType==='integer'?Number(e.target.value):e.target.value}))}/>}</label>})}</div>
+      <div className="space-y-3">{Object.entries(requestedProperties).map(([key,value])=>{const field=obj(value),valueType=String(field.type||'string');return <label key={key} htmlFor={`host-field-${key}`} className="flex flex-col gap-1.5 text-[12px]"><span>{String(field.title||key)}{Array.isArray(requestedSchema.required)&&requestedSchema.required.includes(key)?' *':''}</span>{Array.isArray(field.enum)?<select id={`host-field-${key}`} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:e.target.value}))}><option value="">请选择</option>{field.enum.map((item:unknown)=><option key={String(item)} value={String(item)}>{String(item)}</option>)}</select>:valueType==='boolean'?<input id={`host-field-${key}`} type="checkbox" checked={Boolean(hostForm[key])} onChange={e=>setHostForm(old=>({...old,[key]:e.target.checked}))}/>:<input id={`host-field-${key}`} type={valueType==='number'||valueType==='integer'?'number':'text'} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:valueType==='number'||valueType==='integer'?Number(e.target.value):e.target.value}))}/>}</label>})}</div>
       <div className="mt-5 flex justify-end gap-2"><Button variant="danger-outline" size="base" onClick={()=>void respondHost(requested.id,'decline')}>拒绝</Button><Button variant="primary" size="base" onClick={()=>void respondHost(requested.id,'accept')}>提交输入</Button></div>
     </>:<div className="flex justify-end"><Button variant="secondary" size="base" onClick={()=>void operation('取消主机请求',async()=>{await invoke('host.reject',{sessionId:requested.sessionId,requestId:requested.id,reason:'桌面端未支持该主机交互类型'});setHostRequests(old=>old.filter(r=>r.id!==requested.id||r.sessionId!==requested.sessionId))})}>取消此请求</Button></div>}
   </Modal>}
@@ -1057,7 +1049,7 @@ export function App(){
       <kbd className="text-[10px] text-[var(--color-text-tertiary)]">ESC</kbd>
     </div>
     <div className="mt-2 max-h-[410px] overflow-y-auto" role="listbox" aria-label="可用命令">
-      {filteredCommands.length?filteredCommands.map((cmd,index)=>{const Icon=cmd.icon;return <button key={cmd.id} type="button" role="option" aria-selected={paletteIndex===index} onMouseEnter={()=>setPaletteIndex(index)} onClick={()=>runCommand(cmd)} className={'flex w-full items-center gap-3 rounded-[var(--radius-md)] p-3 text-left transition-colors hover:bg-[var(--color-surface-hover)] '+(paletteIndex===index?'bg-[var(--color-brand-soft)]':'')}>
+      {filteredCommands.length?filteredCommands.map((cmd,index)=>{const Icon=cmd.icon;return <button key={cmd.id} type="button" role="option" aria-selected={paletteIndex===index} onMouseEnter={()=>setPaletteIndex(index)} onClick={()=>runCommand(cmd)} className={`flex w-full items-center gap-3 rounded-[var(--radius-md)] p-3 text-left transition-colors hover:bg-[var(--color-surface-hover)] ${(paletteIndex===index?'bg-[var(--color-brand-soft)]':'')}`}>
         <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-surface-container-low)] text-[var(--color-brand)]"><Icon size={18}/></span>
         <span className="min-w-0 flex-1"><strong className="block truncate text-[12px]">{cmd.title}</strong><small className="mt-1 block truncate text-[11px] text-[var(--color-text-tertiary)]">{cmd.detail}</small></span><ArrowRight size={15}/>
       </button>}):<p className="py-9 text-center text-[12px] text-[var(--color-text-tertiary)]">没有匹配的操作。试试“会话”“任务”或“模型”。</p>}

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, existsSync } from 'node:fs'
-const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8')
+const read=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8')
 test('交互式 CLI 已切换至新桌面，SDK 仍可无界面调用',()=>{
   const cli=read('src/entrypoints/cli.tsx')
   const routing=read('src/entrypoints/startupRouting317.ts')

@@ -123,7 +123,7 @@ export function NewSessionStarter({
         <span className="flex items-center gap-1.5"><Cpu size={13}/>{modelName}</span>
       </div>
     </Card>
-    <div className="mx-auto grid w-full max-w-[720px] grid-cols-2 gap-3 max-[850px]:grid-cols-1" aria-label="建议的任务">
+    <div role="group" className="mx-auto grid w-full max-w-[720px] grid-cols-2 gap-3 max-[850px]:grid-cols-1" aria-label="建议的任务">
       {suggestions.map(({label,subtitle,prompt,icon:Icon}) =>
         <Card key={label} radius="lg" padding="none" surface="lowest" shadow="card" interactive lift>
           <button type="button" onClick={() => {onSuggestion(prompt); inputRef.current?.focus()}}

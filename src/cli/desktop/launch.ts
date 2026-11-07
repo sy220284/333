@@ -70,9 +70,9 @@ export function validateDesktopInvocation({
     return '桌面工作台需要交互式启动；无界面脚本请使用 --print 或 SDK 协议。'
   }
   const incompatible = argv.filter(arg => arg.startsWith('-') && arg !== '--' && !ALLOWED.has(arg.split('=')[0]))
-  if (incompatible.length) return '桌面模式不支持以下参数：' + incompatible.join(', ')
+  if (incompatible.length) return `桌面模式不支持以下参数：${incompatible.join(', ')}`
   for (const [flag, detail] of RESTRICTED) {
-    if (truthy(env[flag])) return '无法从受限的 ' + detail + ' 启动桌面工作台。'
+    if (truthy(env[flag])) return `无法从受限的 ${detail} 启动桌面工作台。`
   }
   if (prompt && prompt.length > 16384) return '初始任务文本过长，请在桌面工作台输入。'
   return null
@@ -100,12 +100,6 @@ async function existsInProjects(sessionId) {
   return false
 }
 
-async function isRunningBackgroundSession(sessionId) {
-  const { listSessions } = await import('../background/sessionStore.ts')
-  const sessions = await listSessions({ all: true })
-  return sessions.some(session => session.sessionId === sessionId && session.running)
-}
-
 function reportError(message) {
   process.stderr.write(`${message}\n`)
   return 1
@@ -119,7 +113,7 @@ function findDesktopExecutable(env:NodeJS.ProcessEnv,platform:NodeJS.Platform):D
   if(override){
     if(!isAbsolute(override))throw new Error('YAOYAO_DESKTOP_APP 必须为绝对路径')
     const target=override.endsWith('.app')?join(override,'Contents','MacOS','yaoyaoche'):override
-    if(!isFile(target))throw new Error('未找到指定的桌面程序：'+target)
+    if(!isFile(target))throw new Error(`未找到指定的桌面程序：${target}`)
     return {command:target,args:[]}
   }
   const home=env.HOME||env.USERPROFILE||''
@@ -132,8 +126,8 @@ function findDesktopExecutable(env:NodeJS.ProcessEnv,platform:NodeJS.Platform):D
          join(home,'Applications','摇摇车.app','Contents','MacOS','yaoyaoche')]
       : ['/opt/yaoyaoche/yaoyaoche','/usr/lib/yaoyaoche/yaoyaoche',
          join(home,'.local','share','yaoyaoche','yaoyaoche')]
-  const self=new Set([process.argv[1],process.execPath].filter(Boolean).map(path=>{
-    try{return realpathSync(path!)}catch{return path}
+  const self=new Set([process.argv[1],process.execPath].filter((path): path is string => Boolean(path)).map(path=>{
+    try{return realpathSync(path)}catch{return path}
   }))
   for(const path of candidates)if(isFile(path)&&!self.has(realpathSync(path)))
     return {command:path,args:[]}
@@ -171,7 +165,7 @@ export async function launchDesktopFromCli({
   }else if(typeof options.resume==='string'){
     if(!UUID.test(options.resume))return reportError('会话编号格式无效。')
     sessionId=options.resume
-    if(!await existsInProjects(sessionId))return reportError('找不到本机会话：'+sessionId)
+    if(!await existsInProjects(sessionId))return reportError(`找不到本机会话：${sessionId}`)
   }else if(options.continue){
     const {fetchLogs,getSessionIdFromLog}=await import('../../utils/sessionStorage.js')
     const [latest]=await fetchLogs(1)

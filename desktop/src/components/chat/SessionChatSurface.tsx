@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import { ArrowDown, ArrowRight, Bot, CircleStop, History, MessageSquare, Send, ShieldCheck, Sparkles, SquareTerminal } from 'lucide-react'
+import { ArrowDown, ArrowRight, Bot, CircleStop, History, Send, ShieldCheck, Sparkles, SquareTerminal } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
@@ -37,7 +37,7 @@ export function SessionChatSurface(p:SessionChatSurfaceProps){
       </div>:<>
         {p.messages.length>p.visibleMessageCount&&<Button variant="secondary" size="base" onClick={()=>{p.onVisibleCount(p.visibleMessageCount+120);p.onFollowLatest(false)}}>加载更早的 {Math.min(120,p.messages.length-p.visibleMessageCount)} 条消息</Button>}
         {p.messages.slice(-p.visibleMessageCount).map(m=><article key={m.id} className="mx-auto flex w-full max-w-[840px] gap-3">
-          <div className={'flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] '+(m.kind==='user'?'bg-[var(--color-brand-soft)] text-[var(--color-on-brand-soft)]':'bg-[var(--color-surface-container-low)] text-[var(--color-text-secondary)]')}>{m.kind==='user'?<span className="text-[11px]">我</span>:m.kind==='assistant'?<Sparkles size={16}/>:<SquareTerminal size={16}/>}</div>
+          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] ${(m.kind==='user'?'bg-[var(--color-brand-soft)] text-[var(--color-on-brand-soft)]':'bg-[var(--color-surface-container-low)] text-[var(--color-text-secondary)]')}`}>{m.kind==='user'?<span className="text-[11px]">我</span>:m.kind==='assistant'?<Sparkles size={16}/>:<SquareTerminal size={16}/>}</div>
           <div className="min-w-0 flex-1">
             <div className="mb-2 flex items-center gap-3"><span className="text-[12px] font-semibold">{m.kind==='user'?'你':m.kind==='assistant'?'摇摇车':'工具'}</span><time className="text-[10px] text-[var(--color-text-tertiary)]">{new Date(m.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}</time></div>
             {m.kind==='tool'?<TerminalChrome label="工具执行"><div className="max-h-96 overflow-auto px-4 py-3 font-mono text-xs whitespace-pre-wrap break-words">{m.text}</div></TerminalChrome>:<div className="whitespace-pre-wrap break-words text-[13px] leading-7 text-[var(--color-text-primary)]">{m.kind==='assistant'?<MarkdownMessage text={m.text} onOpenLink={p.onOpenLink}/>:m.text}</div>}
