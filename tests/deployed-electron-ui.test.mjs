@@ -1,0 +1,132 @@
+import assert from 'node:assert/strict'
+import { spawn } from 'node:child_process'
+import { readdir, stat } from 'node:fs/promises'
+import { createServer } from 'node:net'
+import { join, resolve } from 'node:path'
+import { test } from 'node:test'
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+
+async function findPackagedExecutable() {
+  const folder = resolve('desktop/release/linux-unpacked')
+  const names = await readdir(folder)
+  const excluded = /^(chrome-sandbox|chrome_crashpad_handler|chrome-wrapper|lib.*|LICENSE.*|resources|locales|swiftshader|v8_context_snapshot.*|icudtl\.dat|snapshot_blob.*|vk_swiftshader.*|version|\.DS_Store)$/
+  for (const name of names) {
+    if (excluded.test(name)) continue
+    const path = join(folder, name)
+    const info = await stat(path)
+    if (info.isFile() && (info.mode & 0o111) !== 0 && info.size > 8_000_000)
+      return path
+  }
+  throw new Error(`未发现已打包可执行程序，实际目录：${names.join(', ')}`)
+}
+
+async function freePort() {
+  return new Promise((resolve, reject) => {
+    const server = createServer()
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address()
+      const port = address.port
+      server.close(() => resolve(port))
+    })
+  })
+}
+
+async function evaluate(pageUrl, expression) {
+  const socket = new WebSocket(pageUrl)
+  return new Promise((resolve, reject) => {
+    const deadline = setTimeout(() => {
+      socket.close()
+      reject(new Error('打包 Electron 页面调试连接超时'))
+    }, 7000)
+    socket.addEventListener('open', () => {
+      socket.send(JSON.stringify({
+        id: 1, method: 'Runtime.evaluate',
+        params: { expression, returnByValue: true },
+      }))
+    })
+    socket.addEventListener('message', event => {
+      try {
+        const result = JSON.parse(event.data)
+        if (result.id !== 1) return
+        clearTimeout(deadline)
+        socket.close()
+        if (result.error || result.result?.exceptionDetails)
+          reject(new Error(JSON.stringify(result.error ?? result.result.exceptionDetails)))
+        else resolve(result.result?.result?.value)
+      } catch (error) {
+        clearTimeout(deadline)
+        socket.close()
+        reject(error)
+      }
+    })
+    socket.addEventListener('error', error => {
+      clearTimeout(deadline)
+      socket.close()
+      reject(new Error(`Electron 调试连接失败：${String(error.message)}`))
+    })
+  })
+}
+
+test('真实 Linux 安装版启动 Electron 界面并完成本地 Host 连接', {
+  timeout: 95000,
+}, async () => {
+  const exe = await findPackagedExecutable()
+  const port = await freePort()
+  const args = ['-a', exe, '--disable-gpu', '--disable-dev-shm-usage',
+    '--no-sandbox', '--remote-debugging-address=127.0.0.1',
+    `--remote-debugging-port=${port}`]
+  const child = spawn('xvfb-run', args, {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      ELECTRON_DISABLE_SECURITY_WARNINGS: '1',
+      YAOYAO_E2E_SMOKE: '1',
+    },
+    detached: true, stdio: ['ignore','pipe','pipe'],
+  })
+  let stderr = ''
+  child.stderr.on('data', data => { stderr = (stderr + data.toString()).slice(-5000) })
+  let launched = true
+  child.on('exit', () => { launched = false })
+  try {
+    const deadline = Date.now() + 50000
+    let page
+    while (Date.now() < deadline) {
+      if (!launched) throw new Error(`已打包Electron进程提前退出：${stderr}`)
+      try {
+        const response = await fetch(`http://127.0.0.1:${port}/json/list`, {
+          signal: AbortSignal.timeout(1500),
+        })
+        const tabs = await response.json()
+        page = tabs.find(tab => tab.type === 'page' && typeof tab.webSocketDebuggerUrl === 'string')
+        if (page) break
+      } catch { /* Chromium startup in progress */ }
+      await sleep(350)
+    }
+    if (!page) throw new Error(`Electron 页面没有启动或没有可连接的渲染进程：${stderr}`)
+    let last = ''
+    while (Date.now() < deadline) {
+      const result = await evaluate(page.webSocketDebuggerUrl,
+        '({title:document.title,text:document.body?.innerText??"",state:document.readyState})')
+      last = JSON.stringify(result).slice(0,1500)
+      if (result?.text?.includes('摇摇车') &&
+          result?.text?.includes('智能体') &&
+          result?.text?.includes('本地后台已连接')) {
+        assert.equal(result.state, 'complete')
+        return
+      }
+      await sleep(550)
+    }
+    throw new Error(`打包桌面页面未完成真实后端连接。页面：${last}，进程：${stderr}`)
+  } finally {
+    if (child.pid) {
+      try { process.kill(-child.pid, 'SIGTERM') } catch {}
+    }
+    await Promise.race([
+      new Promise(resolve => child.once('close', resolve)),
+      sleep(6000),
+    ])
+  }
+})
