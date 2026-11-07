@@ -20,6 +20,7 @@ const request = <T extends string, S extends z.ZodRawShape>(method: T, shape: S)
 export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('hello', {}),
   request('capabilities.list', {}),
+  request('capabilities.refresh', {}),
   request('experience.list', { includeCandidates: z.boolean().optional() }),
   request('experience.search', { query: z.string().trim().min(1).max(400) }),
   request('experience.propose', { draft: z.unknown() }),
