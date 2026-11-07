@@ -407,7 +407,7 @@ export function App(){
       setSessionPhase('running');setHistoryOnly(false);setTasks(started.tasks??[])
       setMessages([{id:`local-team-${Date.now()}`,kind:'user',text:prompt,time:Date.now()}])
       setVisibleMessageCount(120);setFollowLatest(true);setView('chat')
-      await invoke('sessions.send',{sessionId:started.sessionId,message:prompt}
+      await invoke('sessions.send',{sessionId:started.sessionId,message:prompt})
     })
   }
   async function requestTeamCreation(){
