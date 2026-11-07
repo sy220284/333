@@ -158,11 +158,6 @@
   --cc-diff-mark-gutter: #EFE3CF;
   --cc-code: #F7F6F4;
 
-  --cc-heat-0: #F0EFE9;
-  --cc-heat-1: #E8D6D0;
-  --cc-heat-2: #D1ADA2;
-  --cc-heat-3: #B8806F;
-  --cc-heat-4: #9C4F38;
   /* Model series: four hues for the four biggest models, then a neutral gray every other model shares.
      Validated per theme surface (lightness band, chroma, color-blind and normal-vision separation of
      neighbours, contrast); the gray is the one slot below 3:1, so the legend and day card name it. */
@@ -241,11 +236,6 @@
   --cc-diff-mark-gutter: #E9DCC5;
   --cc-code: #F5F1E4;
 
-  --cc-heat-0: #ECE6D8;
-  --cc-heat-1: #E5D1C8;
-  --cc-heat-2: #CFA99C;
-  --cc-heat-3: #B67E6B;
-  --cc-heat-4: #9C4F37;
   /* Model series: four hues for the four biggest models, then a neutral gray every other model shares.
      Validated per theme surface (lightness band, chroma, color-blind and normal-vision separation of
      neighbours, contrast); the gray is the one slot below 3:1, so the legend and day card name it. */
@@ -324,11 +314,6 @@
   --cc-diff-mark-gutter: #E5D5B6;
   --cc-code: #EFE8D3;
 
-  --cc-heat-0: #E5DBC3;
-  --cc-heat-1: #E1CAB9;
-  --cc-heat-2: #CCA491;
-  --cc-heat-3: #B57B65;
-  --cc-heat-4: #9C4E36;
   /* Model series: four hues for the four biggest models, then a neutral gray every other model shares.
      Validated per theme surface (lightness band, chroma, color-blind and normal-vision separation of
      neighbours, contrast); the gray is the one slot below 3:1, so the legend and day card name it. */
@@ -407,11 +392,6 @@
   --cc-diff-mark-gutter: #E4DBC6;
   --cc-code: #EFF4F0;
 
-  --cc-heat-0: #E0E9E2;
-  --cc-heat-1: #E0D0C9;
-  --cc-heat-2: #CBA99C;
-  --cc-heat-3: #B47E6C;
-  --cc-heat-4: #9C4F37;
   /* Model series: four hues for the four biggest models, then a neutral gray every other model shares.
      Validated per theme surface (lightness band, chroma, color-blind and normal-vision separation of
      neighbours, contrast); the gray is the one slot below 3:1, so the legend and day card name it. */
@@ -494,11 +474,6 @@
   --cc-diff-mark-gutter: #443822;
   --cc-code: #1A1813;
 
-  --cc-heat-0: #2B271F;
-  --cc-heat-1: #473224;
-  --cc-heat-2: #6D4631;
-  --cc-heat-3: #985D3F;
-  --cc-heat-4: #C5754E;
   /* Model series: four hues for the four biggest models, then a neutral gray every other model shares.
      Validated per theme surface (lightness band, chroma, color-blind and normal-vision separation of
      neighbours, contrast); the gray is the one slot below 3:1, so the legend and day card name it. */
@@ -579,11 +554,6 @@
   --cc-diff-mark-gutter: #3F382C;
   --cc-code: #15181E;
 
-  --cc-heat-0: #252A35;
-  --cc-heat-1: #42322E;
-  --cc-heat-2: #6A4638;
-  --cc-heat-3: #965D43;
-  --cc-heat-4: #C5754F;
   /* Model series: four hues for the four biggest models, then a neutral gray every other model shares.
      Validated per theme surface (lightness band, chroma, color-blind and normal-vision separation of
      neighbours, contrast); the gray is the one slot below 3:1, so the legend and day card name it. */
@@ -764,11 +734,6 @@
   --sidebar-panel-bg-image: none;
 
   /* Activity heatmap */
-  --color-activity-heat-0: var(--cc-heat-0);
-  --color-activity-heat-1: var(--cc-heat-1);
-  --color-activity-heat-2: var(--cc-heat-2);
-  --color-activity-heat-3: var(--cc-heat-3);
-  --color-activity-heat-4: var(--cc-heat-4);
   --color-series-1: var(--cc-series-1);
   --color-series-2: var(--cc-series-2);
   --color-series-3: var(--cc-series-3);

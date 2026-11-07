@@ -899,7 +899,7 @@ export function App(){
                     <label htmlFor="provider-key" className="block text-[12px] font-semibold">API Key</label>
                     <input id="provider-key" className="w-full" type="password" autoComplete="off" placeholder="输入新的 API Key" value={credentialInput} onChange={e=>setCredentialInput(e.target.value)}/>
                     <div className="flex flex-wrap gap-2"><Button variant="primary" size="base" onClick={()=>void saveCredential()} disabled={!credentialInput.trim()||Boolean(busy)}><Save size={14}/>保存凭证</Button><Button variant="danger-outline" size="base" onClick={()=>void removeCredential()} disabled={!savedProviders.includes(credentialProvider)||Boolean(busy)}>移除已保存密钥</Button></div>
-                    <p className="text-[11px] leading-5 text-[var(--color-text-tertiary)]">ChatGPT OAuth 使用独立授权流程；上下文窗口和模型参数由后台模型目录发现。</p>
+                    <p className="text-[11px] leading-5 text-[var(--color-text-tertiary)]">模型上下文窗口及参数以桌面后台实际返回的结果为准。</p>
                   </div>
                 </div>
               </Card>

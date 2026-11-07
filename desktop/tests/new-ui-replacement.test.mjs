@@ -33,5 +33,6 @@ test('剔除未接入的原项目 UI 样式与冗余组件，不改变本地功�
   for(const token of ['--color-surface:','--color-brand:','--color-code-bg:','--shadow-composer:'])assert.ok(theme.includes(token),'缺少必要语义令牌 '+token)
   assert.equal(existsSync(new URL('../src/components/ui/IconButton.tsx',import.meta.url)),false)
   assert.equal(Boolean(manifest.devDependencies['@tailwindcss/typography']),false)
+  assert.equal(theme.includes('--color-activity-heat-'),false,'删除原来源独立热力图的无引用调色令牌')
   assert.ok(theme.length<60000,'移植 CSS 仍带有大面积来源功能样式')
 })
