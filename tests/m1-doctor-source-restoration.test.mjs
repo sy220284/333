@@ -1,22 +1,24 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { readFileSync, existsSync } from 'node:fs'
 import { test } from 'node:test'
-import { fileURLToPath } from 'node:url'
 
-const root=resolve(fileURLToPath(new URL('..',import.meta.url)))
-const text=readFileSync(resolve(root,'src/screens/Doctor.tsx'),'utf8')
+const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
 
-test('Doctor应是可维护的原始TSX，而非React编译缓存展开结果',()=>{
-  assert.match(text,/export function Doctor\(\{ onDone \}: Props\)/)
-  assert.match(text,/getDoctorDiagnostic\(\)/)
-  assert.match(text,/useAppState\(s => s\.agentDefinitions\)/)
-  assert.doesNotMatch(text,/react\/compiler-runtime/)
-  assert.doesNotMatch(text,/react\.memo_cache_sentinel/)
+test('诊断能力保留在共享服务与纯文本 CLI，旧终端医生组件已清理', () => {
+  const diagnostic = read('src/utils/doctorDiagnostic.ts')
+  const main = read('src/main.tsx')
+  const gateway = read('src/services/desktop/gateway.ts')
+  const panel = read('desktop/src/components/layout/LocalMaintenance.tsx')
+  assert.match(diagnostic, /export async function getDoctorDiagnostic/)
+  assert.match(main, /program.command\('doctor'\)/)
+  assert.match(main, /--json/)
+  assert.match(gateway, /case 'system.diagnostics'/)
+  assert.match(panel, /system.diagnostics/)
+  assert.equal(existsSync(new URL('../src/screens/Doctor.tsx', import.meta.url)), false)
+  assert.equal(existsSync(new URL('../src/commands/doctor/doctor.tsx', import.meta.url)), false)
 })
-test('恢复原文后继续提示被拒绝的项目遥测配置而不展示秘密值',()=>{
-  assert.match(text,/getIgnoredProjectTelemetryEnvKeys\(\)/)
-  assert.match(text,/ignoredTelemetryKeys\.slice\(0, 5\)/)
-  assert.match(text,/Project telemetry settings ignored/)
-  assert.match(text,/Their values are never displayed/)
+
+test('旧 Claude 专属长期授权向导退出 CLI，模型凭证仍由桌面独立配置', () => {
+  assert.doesNotMatch(read('src/main.tsx'), /program.command\('setup-token'\)/)
+  assert.match(read('desktop/src/App.tsx'), /credentials.set/)
 })
