@@ -192,6 +192,7 @@ import { AwsAuthStatusManager } from 'src/utils/awsAuthStatusManager.js'
 import type { HookEvent } from 'src/entrypoints/agentSdkTypes.js'
 import {
   registerHookCallbacks,
+  replaceSdkHookCallbacks,
   setInitJsonSchema,
   getInitJsonSchema,
   setSdkAgentProgressSummariesEnabled,
@@ -4306,6 +4307,11 @@ export function getCanUseToolFn(
   }
 }
 
+const sdkHookRegistrations = new WeakMap<StructuredIO, {
+  hooks: Partial<Record<HookEvent, HookCallbackMatcher[]>>
+  callbackIds: Set<string>
+}>()
+
 async function handleInitializeRequest(
   request: SDKControlInitializeRequest,
   requestId: string,
@@ -4325,20 +4331,13 @@ async function handleInitializeRequest(
   agents: AgentDefinition[],
   getAppState: () => AppState,
 ): Promise<void> {
-  if (initialized) {
-    output.enqueue({
-      type: 'control_response',
-      response: {
-        subtype: 'error',
-        error: 'Already initialized',
-        request_id: requestId,
-        pending_permission_requests:
-          structuredIO.getPendingPermissionRequests(),
-      },
-    })
-    return
+  // 2.1.317 accepts a second initialize without re-applying session setup.
+  // The host may refresh hook callbacks, ask for native progress summaries
+  // and recover pending requests after reconnecting to the same CLI stream.
+  if (initialized && request.promptSuggestions === true) {
+    options.promptSuggestions = true
   }
-
+  if (!initialized) {
   // Apply systemPrompt/appendSystemPrompt from stdin to avoid ARG_MAX limits
   if (request.systemPrompt !== undefined) {
     options.systemPrompt = request.systemPrompt
@@ -4399,6 +4398,7 @@ async function handleInitializeRequest(
     }
   }
 
+  }
   const settings = getInitialSettings()
   const outputStyle = settings?.outputStyle || DEFAULT_OUTPUT_STYLE_NAME
   const availableOutputStyles = await getAllOutputStyles(getCwd())
@@ -4418,9 +4418,20 @@ async function handleInitializeRequest(
         }
       })
     }
-    registerHookCallbacks(hooks)
+    const previous = sdkHookRegistrations.get(structuredIO)
+    if (initialized) {
+      structuredIO.retireSdkHookCallbackRequests(previous?.callbackIds ?? new Set())
+      replaceSdkHookCallbacks(previous?.hooks ?? {}, hooks)
+    } else {
+      registerHookCallbacks(hooks)
+    }
+    sdkHookRegistrations.set(structuredIO, {
+      hooks,
+      callbackIds: new Set(Object.values(request.hooks).flatMap(matchers =>
+        matchers.flatMap(matcher => matcher.hookCallbackIds))),
+    })
   }
-  if (request.jsonSchema) {
+  if (!initialized && request.jsonSchema) {
     setInitJsonSchema(request.jsonSchema)
   }
   const initResponse: SDKControlInitializeResponse = {
@@ -4472,6 +4483,11 @@ async function handleInitializeRequest(
       subtype: 'success',
       request_id: requestId,
       response: initResponse,
+      ...(initialized && {
+        pending_permission_requests: structuredIO.getPendingPermissionRequests(),
+        pending_user_dialog_requests: structuredIO.getPendingUserDialogRequests(),
+        pending_elicitation_requests: structuredIO.getPendingElicitationRequests(),
+      }),
     },
   })
 
