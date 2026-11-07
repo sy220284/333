@@ -47,6 +47,15 @@ test('多个SDK会话共享审批收件箱，但结果只回到发起请求的�
   assert.doesNotMatch(app, /if\(!sessionId\)return\s+await operation\('权限审批'/)
 })
 
+test('工作项历史只读展示，发送时显式恢复 SDK 会话', () => {
+  const app = source('src/App.tsx')
+  const gateway = source('../src/services/desktop/gateway.ts')
+  assert.match(app, /setHistoryOnly\(true\)/)
+  assert.match(app, /if\(historyOnly\)/)
+  assert.match(app, /sessions\.ensureOpen/)
+  assert.match(gateway, /case 'sessions\.ensureOpen'/)
+})
+
 test('长期任务视图显示正确的检查点、执行次数、终态和异常恢复说明', () => {
   const app = source('src/App.tsx')
   const css = source('src/styles.css')
