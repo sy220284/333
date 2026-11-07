@@ -2,7 +2,6 @@
 /** Read the product-specific acceptance scope while retaining all official
  * release-note evidence. Classification never marks a feature implemented. */
 import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
 
 const matrixFile = new URL('../docs/upgrade/m1-evidence/2.1.317-392项完整功能链路分组矩阵.json',import.meta.url)
 const scopeFile = new URL('../docs/upgrade/m1-evidence/2.1.317-392项产品保留适配与退役判定.json',import.meta.url)
