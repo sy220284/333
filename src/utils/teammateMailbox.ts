@@ -17,7 +17,6 @@ import type { Message } from '../types/message.js'
 import { generateRequestId } from './agentId.js'
 import { count } from './array.js'
 import { logForDebugging } from './debug.js'
-import { getTeamsDir } from './envUtils.js'
 import { getErrnoCode } from './errors.js'
 import { lazySchema } from './lazySchema.js'
 import * as lockfile from './lockfile.js'
@@ -25,7 +24,7 @@ import { logError } from './log.js'
 import { jsonParse, jsonStringify } from './slowOperations.js'
 import type { BackendType } from './swarm/backends/types.js'
 import { TEAM_LEAD_NAME } from './swarm/constants.js'
-import { getTeamFilePath } from './swarm/teamHelpers.js'
+import { getTeamDir, getTeamFilePath } from './swarm/teamHelpers.js'
 import { withTeamLifecycleLock } from './swarm/teamLifecycleLock.js'
 import { sanitizePathComponent } from './tasks.js'
 import { getAgentName, getTeammateColor, getTeamName } from './teammate.js'
@@ -57,9 +56,10 @@ export type TeammateMessage = {
  */
 export function getInboxPath(agentName: string, teamName?: string): string {
   const team = teamName || getTeamName() || 'default'
-  const safeTeam = sanitizePathComponent(team)
   const safeAgentName = sanitizePathComponent(agentName)
-  const inboxDir = join(getTeamsDir(), safeTeam, 'inboxes')
+  // Team config and message inboxes must resolve to the same canonical
+  // directory, including mixed-case, punctuation and Chinese team names.
+  const inboxDir = join(getTeamDir(team), 'inboxes')
   const fullPath = join(inboxDir, `${safeAgentName}.json`)
   logForDebugging(
     `[TeammateMailbox] getInboxPath: agent=${agentName}, team=${team}, fullPath=${fullPath}`,
@@ -72,8 +72,7 @@ export function getInboxPath(agentName: string, teamName?: string): string {
  */
 async function ensureInboxDir(teamName?: string): Promise<void> {
   const team = teamName || getTeamName() || 'default'
-  const safeTeam = sanitizePathComponent(team)
-  const inboxDir = join(getTeamsDir(), safeTeam, 'inboxes')
+  const inboxDir = join(getTeamDir(team), 'inboxes')
   await mkdir(inboxDir, { recursive: true })
   logForDebugging(`[TeammateMailbox] Ensured inbox directory: ${inboxDir}`)
 }
