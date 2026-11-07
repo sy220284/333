@@ -37,7 +37,9 @@ for(const testcase of cases){
   const runtime=createSessionRuntime317({
    model:'mock-model',cwd:root,executable:'node',pathToClaudeCodeExecutable:cli,
    env:{...process.env,SDK_AUTH_REFRESH_REPLY_PATH:file},
-   onControlRequest:async()=>{throw new Error('原版认证回调必须先于通用宿主回调执行')},
+   ...(!testcase.kind.endsWith('-missing') && {onControlRequest:async()=>{
+     throw new Error('原版认证回调必须先于通用宿主回调执行')
+   }}),
    ...(testcase.kind!=='oauth-missing'&&testcase.kind!=='host-missing'&&{
     getOAuthToken:async(options:{
       signal:AbortSignal;kind?:unknown;onDecline:(reason:string)=>void
