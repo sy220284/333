@@ -4452,6 +4452,10 @@ async function handleInitializeRequest(
       apiProvider: getAPIProvider(),
     },
     pid: process.pid,
+    // Match the native 2.1.317 SDK safety handshake: a caller relying on
+    // onFailure: 'block' must know the CLI can enforce that policy.
+    hook_on_failure_supported: true,
+    ...(request.hooks !== undefined && { hooks_applied: true }),
   }
 
   if (isFastModeEnabled() && isFastModeAvailable()) {
