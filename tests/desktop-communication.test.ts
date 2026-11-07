@@ -453,6 +453,33 @@ test('a failed desktop journal write reports its error and later writes recover'
   }
 })
 
+test('desktop journal reads the last committed snapshot after a concurrent failed write', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'desktop-journal-read-failure-'))
+  try {
+    const journal = createDesktopTaskJournal(cwd, join(cwd, 'state'))
+    const id = randomUUID()
+    const saved: DesktopTask = {
+      taskId: 'last-good', description: 'Saved result',
+      status: 'completed', updatedAt: Date.now(),
+    }
+    await journal.write(id, [saved])
+    // Keep a reader pending behind a real validation failure. The writer
+    // still receives an error, while the reader sees the last durable state.
+    const failedWrite = journal.write(id, [
+      { ...saved, description: 'oversized'.repeat(300_000) },
+    ])
+    const failure = expect(failedWrite).rejects.toThrow('Desktop task journal exceeds its size limit')
+    const concurrentRead = journal.read(id)
+    await failure
+    expect((await concurrentRead)[0]).toMatchObject(saved)
+    const recovered = { ...saved, description: 'Recovered result' }
+    await journal.write(id, [recovered])
+    expect((await journal.read(id))[0]).toMatchObject(recovered)
+  } finally {
+    await rm(cwd, { recursive: true, force: true })
+  }
+})
+
 test('desktop agent center manages project-scoped missions and teams through one protocol', async () => {
   const cwd = await mkdtemp(join(tmpdir(), 'desktop-agent-center-'))
   const missionRoot = join(cwd, 'mission-data')
