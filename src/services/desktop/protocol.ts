@@ -15,7 +15,7 @@ const jobId = z.string().regex(/^job_[a-f0-9]{16}$/)
 const request = <T extends string, S extends z.ZodRawShape>(method: T, shape: S) => {
   // The envelope owns "id". Reusing it for a business ID silently overwrites
   // the caller's value when createDesktopClient assigns a correlation ID.
-  if (Object.prototype.hasOwnProperty.call(shape, 'id')) {
+  if (Object.hasOwn(shape, 'id')) {
     throw new Error(`Desktop request "${method}" conflicts with transport request ID`)
   }
   return z.object({ id, method: z.literal(method), ...shape }).strict()
