@@ -32,6 +32,9 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     case 'app.info': return {workspace:'/projects/example',platform:'linux',version:'0.1.0'}
     case 'hello':return {protocolVersion:1,capabilities:['sessions','missions','agents']}
     case 'models.list':return {models:[{value:'minimax/M3',displayName:'MiniMax M3'}]}
+    case 'smart.history':return []
+    case 'smart.inspect':return {model:args.model||'默认模型',status:'native',message:'沿用本地配置',checkedOffline:true}
+    case 'smart.execute':return {sessionId:SID,turnId:'11afef34-e0a6-4c38-a743-1c451993fdb8',model:args.model||'默认模型'}
     case 'sessions.list':return longHistory?[{sessionId:SID,title:'长历史会话'}]:[]
     case 'agents.overview':return {mode:activeAgentMode,teams:[],missions:[],activeSessions:0,activeTasks:0}
     case 'agents.setMode': activeAgentMode=args.mode==='super'?'super':'master'; return {mode:activeAgentMode}
@@ -147,18 +150,46 @@ describe('摇摇车真实桌面页面交互',()=>{
       expect(call).not.toHaveBeenCalledWith('workspace.read',{path:'/projects/example/file-1.ts'})
     }finally{confirm.mockRestore()}
   })
-  it('cc-haha 新首页使用任务启动而非旧仪表盘，点击建议可进入真实输入流',async()=>{
+  it('智能执行首页单次输入即可开始任务，不需要先建会话再发送',async()=>{
     const user=userEvent.setup()
     render(<App/>)
     await screen.findByText('本地后台已连接')
     expect(screen.getByRole('heading',{name:'今天，从哪里开始？'})).toBeInTheDocument()
-    expect(screen.getByRole('button',{name:'新建会话'})).toBeInTheDocument()
     await user.click(screen.getByRole('button',{name:/分析当前项目结构/}))
-    expect(screen.getByRole('textbox',{name:'输入任务'})).toHaveValue('请分析当前项目的架构、主要模块与调用关系')
-    await user.click(screen.getByRole('button',{name:'发送'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',{
-      sessionId:SID,message:'请分析当前项目的架构、主要模块与调用关系'
+    expect(screen.getByRole('textbox',{name:'智能执行任务'})).toHaveValue('请分析当前项目的架构、主要模块与调用关系')
+    await user.click(screen.getByRole('button',{name:'智能执行'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.execute',{
+      prompt:'请分析当前项目的架构、主要模块与调用关系',
     }))
+    expect(call.mock.calls.some(args=>args[0]==='sessions.open'||args[0]==='sessions.send')).toBe(false)
+  })
+
+  it('高级选项默认收起，显式设置模型预算和权限时由单次执行请求传递',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    expect(screen.queryByRole('spinbutton',{name:'智能执行费用上限'})).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button',{name:/高级选项/}))
+    await user.selectOptions(screen.getByRole('combobox',{name:'智能执行模型'}),'minimax/M3')
+    await user.type(screen.getByRole('spinbutton',{name:'智能执行费用上限'}),'2.50')
+    await user.selectOptions(screen.getByRole('combobox',{name:'智能执行权限'}),'plan')
+    await user.type(screen.getByRole('textbox',{name:'智能执行任务'}),'检查项目并测试')
+    await user.click(screen.getByRole('button',{name:'智能执行'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.execute',{
+      prompt:'检查项目并测试',model:'minimax/M3',maxBudgetUsd:2.5,permissionMode:'plan',
+    }))
+    expect(window.localStorage.getItem('yaoyaoche-desktop:smart-budget')).toBe('2.50')
+  })
+
+  it('模型自检读取离线真实数据，不通过聊天生成配置结论',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'模型管理'}))
+    await user.click(screen.getByRole('button',{name:/离线检查/}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.inspect',{}))
+    expect(screen.getByText('沿用本地配置')).toBeInTheDocument()
+    expect(call.mock.calls.some(args=>args[0]==='sessions.send')).toBe(false)
   })
 
   it('六套主题可以切换并在重新打开时恢复',async()=>{
@@ -366,7 +397,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(screen.getByRole('button',{name:'AI 对话'}))
     await user.type(screen.getByRole('textbox',{name:'输入任务'}),'第一次分析')
     await user.click(screen.getByRole('button',{name:'发送'}))
-    await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='sessions.open')).toHaveLength(1))
+    await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='smart.execute')).toHaveLength(1))
 
     await user.click(screen.getByRole('button',{name:'智能体团队'}))
     await user.click(screen.getByRole('button',{name:/Super Agents 团队模式/}))
@@ -375,8 +406,8 @@ describe('摇摇车真实桌面页面交互',()=>{
     await waitFor(()=>expect(screen.queryByText('第一次分析')).not.toBeInTheDocument())
     await user.type(screen.getByRole('textbox',{name:'输入任务'}),'第二次分析')
     await user.click(screen.getByRole('button',{name:'发送'}))
-    await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='sessions.open')).toHaveLength(2))
-    expect(call).toHaveBeenCalledWith('sessions.send',expect.objectContaining({message:'第二次分析'}))
+    await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='smart.execute')).toHaveLength(2))
+    expect(call).toHaveBeenCalledWith('smart.execute',expect.objectContaining({prompt:'第二次分析'}))
     expect(call).not.toHaveBeenCalledWith('sessions.close',expect.anything())
   })
 
