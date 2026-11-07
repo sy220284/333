@@ -150,7 +150,7 @@ export function App(){
   const [tasks,setTasks]=useState<Task[]>([])
   const [permissions,setPermissions]=useState<Permission[]>([])
   const [hostRequests,setHostRequests]=useState<HostRequest[]>([])
-  const [hostForm,setHostForm]=useState<Record<string,unknown>>({})
+  const [hostForms,setHostForms]=useState<Record<string,Record<string,unknown>>>({})
   const [rightOpen,setRightOpen]=useState(()=>loadPreference('inspector',true))
   const [search,setSearch]=useState('')
   const [paletteOpen,setPaletteOpen]=useState(false)
@@ -330,8 +330,9 @@ export function App(){
       const globalInbox=['permission.request','permission.resolved','host.request','host.resolved','mission.activity','smart.finished']
       if(event.sessionId&&event.sessionId!==sessionRef.current&&!globalInbox.includes(event.event))return
       if(event.event==='smart.finished'){
-        void api.call<SmartRecord[]>('smart.history').then(setSmartHistory)
-          .catch(e=>setError(`读取执行记录失败：${presentError(e)}`))
+        const project=workspaceGeneration.current
+        void api.call<SmartRecord[]>('smart.history').then(data=>{if(project===workspaceGeneration.current)setSmartHistory(data)})
+          .catch(e=>{if(project===workspaceGeneration.current)setError(`读取执行记录失败：${presentError(e)}`)})
         if(event.sessionId===sessionRef.current)
           setActivity(old=>[`智能执行已${event.status==='completed'?'完成':event.status==='interrupted'?'中断':'失败'}`,...old].slice(0,20))
       }else if(event.event==='session.state'){
@@ -346,10 +347,10 @@ export function App(){
         setPermissions(old=>old.filter(item=>item.id!==event.permissionId||item.sessionId!==event.sessionId))
       }else if(event.event==='host.request'){
         const r={...obj(event.request),sessionId:String(event.sessionId||'')} as HostRequest
-        setHostForm({})
         setHostRequests(old=>old.some(item=>item.id===r.id&&item.sessionId===r.sessionId)?old:[...old,r])
       }else if(event.event==='host.resolved'){
         setHostRequests(old=>old.filter(item=>item.id!==event.requestId||item.sessionId!==event.sessionId))
+        setHostForms(old=>{const next={...old};delete next[`${event.sessionId}:${event.requestId}`];return next})
       }else if(event.event==='mission.queue.state'){
         if(String(event.missionId||'')!==selectedMissionRef.current)return
         setMissionQueueActive(Boolean(event.active))
@@ -375,8 +376,9 @@ export function App(){
         const payload=obj(event.message)
         if(payload.type==='result'){
           syncMissionOverview()
-          void api.call<ProjectBudget>('budget.project.get').then(setProjectBudget)
-            .catch(err=>setError(`预算账本刷新失败：${presentError(err)}`))
+          const project=workspaceGeneration.current
+          void api.call<ProjectBudget>('budget.project.get').then(data=>{if(project===workspaceGeneration.current)setProjectBudget(data)})
+            .catch(err=>{if(project===workspaceGeneration.current)setError(`预算账本刷新失败：${presentError(err)}`)})
         }
         if(payload.type==='stream_event'){
           const streaming=obj(payload.event)
@@ -459,32 +461,41 @@ export function App(){
   useEffect(()=>{window.localStorage.setItem(`${PREF}smart-budget`,smartBudget)},[smartBudget])
   useEffect(()=>{window.localStorage.setItem(`${PREF}smart-policy`,smartPolicy)},[smartPolicy])
   useEffect(()=>{if(paletteOpen)paletteInputRef.current?.focus()},[paletteOpen])
+  useEffect(()=>{if(permissions.length||hostRequests.length)setPaletteOpen(false)},[permissions.length,hostRequests.length])
   useEffect(()=>{
     const onKey=(event:KeyboardEvent)=>{
       const mod=event.ctrlKey||event.metaKey
+      if(permissions.length||hostRequests.length){
+        if(mod&&['k','n'].includes(event.key.toLowerCase()))event.preventDefault()
+        return
+      }
       if(mod&&event.key.toLowerCase()==='k'){event.preventDefault();setPaletteOpen(true);setPaletteIndex(0)}
       if(mod&&event.key.toLowerCase()==='n'){event.preventDefault();void createSessionRef.current()}
-      if(event.key==='Escape'){setSearch('');setPaletteOpen(false)}
+      if(event.key==='Escape'){
+        setSearch('');setPaletteOpen(false)
+        if(window.innerWidth<=960)setRightOpen(false)
+      }
     }
     window.addEventListener('keydown',onKey)
     return ()=>window.removeEventListener('keydown',onKey)
-  },[])
+  },[permissions.length,hostRequests.length])
   /**
    * Team actions go through the real coordinator SDK session. The native
    * TeamCreate / SendMessage / TeamDelete tools retain their permission and
    * lifecycle checks, and the UI never claims a requested tool has succeeded.
    */
   async function sendTeamInstruction(prompt:string,leaderSessionId?:string){
+    const generation=++sessionGeneration.current,project=workspaceGeneration.current
     await operation('提交团队协作指令',async()=>{
       const started=leaderSessionId
-        ? await invoke<{sessionId:string;tasks?:Task[]}>('sessions.ensureOpen',{sessionId:leaderSessionId})
-        : await invoke<{sessionId:string;tasks?:Task[]}>('sessions.open',selectedModel?{model:selectedModel}:{})
-      // Reserve the visible SDK session before sending: an unusually fast
-      // tool/result stream can arrive before sessions.send resolves.
+        ? await invoke<SessionOpen>('sessions.ensureOpen',{sessionId:leaderSessionId})
+        : await invoke<SessionOpen>('sessions.open',selectedModel?{model:selectedModel}:{})
+      if(generation!==sessionGeneration.current||project!==workspaceGeneration.current)return
       setSessionId(started.sessionId);sessionRef.current=started.sessionId
       setSessionPhase('running');setHistoryOnly(false);setTasks(started.tasks??[])
       setMessages([{id:`local-team-${Date.now()}`,kind:'user',text:prompt,time:Date.now()}])
-      setVisibleMessageCount(120);setFollowLatest(true);setView('chat')
+      setHistoryOffset(0);setVisibleMessageCount(120);setFollowLatest(true);setView('chat')
+      applySessionConfiguration(started)
       await invoke('sessions.send',{sessionId:started.sessionId,message:prompt})
     })
   }
@@ -533,34 +544,39 @@ export function App(){
   async function executeSmart(){
     const text=draft.trim()
     if(!text||busy||!connected)return
+    const generation=++sessionGeneration.current,project=workspaceGeneration.current
     await operation('智能执行',async()=>{
       const maxBudgetUsd=smartBudget.trim()?Number(smartBudget):undefined
       if(maxBudgetUsd!==undefined&&(!Number.isFinite(maxBudgetUsd)||maxBudgetUsd<=0||maxBudgetUsd>100000))
         throw new Error('费用上限请输入大于 0 且不超过 100000 的美元金额')
       // One user gesture, two IPC phases. Bind the visible session before the
       // SDK starts streaming; fast tool events can no longer be lost.
-      const started=await invoke<{sessionId:string;prepared:true}>('smart.execute',{
+      const started=await invoke<{sessionId:string;prepared:true;model?:string}>('smart.execute',{
         prompt:text,deferStart:true,
         ...(selectedModel?{model:selectedModel}:{}),
         ...(maxBudgetUsd===undefined?{}:{maxBudgetUsd}),
         ...(smartPolicy==='default'?{}:{permissionMode:smartPolicy}),
       })
+      if(generation!==sessionGeneration.current||project!==workspaceGeneration.current)return
       setSessionId(started.sessionId);sessionRef.current=started.sessionId
       setSessionPhase('running');setHistoryOnly(false);setTasks([])
       setMessages([{id:`local-smart-${Date.now()}`,kind:'user',text,time:Date.now()}])
-      setVisibleMessageCount(120);setFollowLatest(true);setDraft('');setView('chat')
-      setPermissionMode(smartPolicy);setSmartInspection(null)
+      setHistoryOffset(0);setVisibleMessageCount(120);setFollowLatest(true);setDraft('');setView('chat')
+      applySessionConfiguration({model:started.model??(selectedModel||null),permissionMode:smartPolicy});setSmartInspection(null)
       await invoke('smart.start',{sessionId:started.sessionId})
-      void api.call<SmartRecord[]>('smart.history').then(setSmartHistory)
-        .catch(e=>setError(`读取执行记录失败：${presentError(e)}`))
+      void api.call<SmartRecord[]>('smart.history').then(data=>{if(project===workspaceGeneration.current)setSmartHistory(data)})
+        .catch(e=>{if(project===workspaceGeneration.current)setError(`读取执行记录失败：${presentError(e)}`)})
       void refresh()
     })
   }
   async function createSession(){
+    const generation=++sessionGeneration.current,project=workspaceGeneration.current
     await operation('新建会话',async()=>{
-      const response=await invoke<{sessionId:string;models?:Model[];tasks?:Task[]}>('sessions.open',selectedModel?{model:selectedModel}:{})
-      setSessionId(response.sessionId);sessionRef.current=response.sessionId;setSessionPhase('idle');setHistoryOnly(false);setMessages([]);setVisibleMessageCount(120);setFollowLatest(true)
-      setTasks(response.tasks??[])
+      const response=await invoke<SessionOpen>('sessions.open',selectedModel?{model:selectedModel}:{})
+      if(generation!==sessionGeneration.current||project!==workspaceGeneration.current)return
+      setSessionId(response.sessionId);sessionRef.current=response.sessionId;setSessionPhase('idle');setHistoryOnly(false)
+      setMessages([]);setHistoryOffset(0);setVisibleMessageCount(120);setFollowLatest(true)
+      setTasks(response.tasks??[]);applySessionConfiguration(response)
       setView('chat');await refresh()
     })
   }
@@ -574,7 +590,9 @@ export function App(){
       await operation('发送消息',async()=>{
         if(historyOnly){
           const opened=await invoke<{sessionId:string;tasks?:Task[]}>('sessions.ensureOpen',{sessionId})
+          if(sessionRef.current!==sessionId)return
           setTasks(opened.tasks??[])
+          applySessionConfiguration(opened)
           setHistoryOnly(false)
           await refreshSession(sessionId)
         }
@@ -593,7 +611,7 @@ export function App(){
       ++directoryGeneration.current;++fileGeneration.current;++gitGeneration.current
       currentFileRef.current=''
       setWorkspace(data.workspace);setFolder(data.workspace);setSessionId('');sessionRef.current='';setHistoryOnly(false);setMessages([])
-      setPermissions([]);setHostRequests([]);setTasks([]);setFiles([]);setFileTotal(0)
+      setPermissions([]);setHostRequests([]);setHostForms({});setTasks([]);setFiles([]);setFileTotal(0)
       setSessions([]);setMissions([]);setSelectedMission('');setMissionJobs([]);setMissionActivity([]);setJobEvidence({});setOverview({});setTeamMembers([])
       setSessionPhase('idle');setActivity([]);setDraft('');setMissionQueueActive(false)
       setSelectedModel('');setPermissionMode('default');setModelVerified(false);setPermissionVerified(false)
@@ -736,8 +754,10 @@ export function App(){
       const result=await invoke<unknown>(method,{missionId:selectedMission,jobId})
       const info=obj(result)
       if(method==='missions.jobs.start'&&typeof info.sessionId==='string'){
+        ++sessionGeneration.current
         setSessionId(info.sessionId);sessionRef.current=info.sessionId;setHistoryOnly(false)
-        setMessages([]);setVisibleMessageCount(120);setFollowLatest(true);setSessionPhase('idle');setTasks([])
+        applySessionConfiguration({})
+        setMessages([]);setHistoryOffset(0);setVisibleMessageCount(120);setFollowLatest(true);setSessionPhase('idle');setTasks([])
       }
       await refreshJobs()
       syncMissionOverview()
@@ -745,17 +765,16 @@ export function App(){
   }
   async function viewJobSession(job:MissionJob){
     if(!job.sessionId)return
+    const generation=++sessionGeneration.current,project=workspaceGeneration.current
     await operation('查看执行记录',async()=>{
-      const history=await invoke<unknown>('sessions.history',{sessionId:job.sessionId,limit:200,offset:0})
-      const rows=Array.isArray(history)?history:asObject(history)?.messages??[]
-      setMessages((Array.isArray(rows)?rows:[]).map((item,index)=>itemFromMessage(item,index)).filter(Boolean) as ConversationItem[])
-      const restoredSessionId=job.sessionId
-      if(!restoredSessionId)throw new Error('当前工作项没有可恢复的会话记录')
-      setSessionId(restoredSessionId);sessionRef.current=restoredSessionId
+      const history=await invoke<HistoryPage>('sessions.history',{sessionId:job.sessionId,limit:200,offset:0,tail:true})
+      if(generation!==sessionGeneration.current||project!==workspaceGeneration.current)return
+      setMessages(history.messages.map((item,index)=>itemFromMessage(item,history.offset+index)).filter(Boolean) as ConversationItem[])
+      setHistoryOffset(history.offset);setVisibleMessageCount(120);setFollowLatest(true)
+      sessionRef.current=job.sessionId!;setSessionId(job.sessionId!)
       // Historical views must not start a worker; sending explicitly resumes.
-      setHistoryOnly(true)
-      setTasks([])
-      setSessionPhase('idle')
+      setHistoryOnly(true);setTasks([]);setSessionPhase('idle')
+      applySessionConfiguration({model:job.model??null,permissionMode:job.permissionMode??null})
       setView('chat')
     })
   }
@@ -834,11 +853,15 @@ export function App(){
     await operation('主机请求',async()=>{
       const pending=hostRequests.find(request=>request.id===id&&request.sessionId===sessionId)
       if(!pending?.sessionId)throw new Error('主机请求已过期，请刷新会话')
-      await invoke('host.respond',{sessionId:pending.sessionId,requestId:id,response:action==='accept'&&obj(pending.request).mode!=='url'?{action,content:hostForm}:{action}})
-      setHostRequests(old=>old.filter(r=>r.id!==id||r.sessionId!==pending.sessionId));setHostForm({})
+      const key=`${pending.sessionId}:${id}`
+      await invoke('host.respond',{sessionId:pending.sessionId,requestId:id,response:action==='accept'&&obj(pending.request).mode!=='url'?{action,content:hostForms[key]??{}}:{action}})
+      setHostRequests(old=>old.filter(r=>r.id!==id||r.sessionId!==pending.sessionId))
+      setHostForms(old=>{const next={...old};delete next[key];return next})
     })
   }
   const requested=hostRequests[0]
+  const requestedKey=requested?`${requested.sessionId}:${requested.id}`:''
+  const hostForm=hostForms[requestedKey]??{}
   const requestedDetails=obj(requested?.request)
   const requestedSchema=obj(requestedDetails.requested_schema)
   const requestedProperties=obj(requestedSchema.properties)
