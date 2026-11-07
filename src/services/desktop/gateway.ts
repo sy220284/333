@@ -678,6 +678,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           notifyJob(mission.id, stored)
           const opened = await openSession(undefined, undefined, {
             CLAUDE_CODE_COORDINATOR_MODE: '1',
+            YAOYAOCHE_MISSION_PROJECT_DIR: cwd,
           }, workspace.cwd)
           openedSession = opened.sessionId
           await bindMissionJobTurn(

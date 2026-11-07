@@ -7,8 +7,27 @@ import { enqueueMissionJob, cancelMissionJob } from '../src/services/agentCenter
 import {
   createMission, getMission, listMissions, linkMissionAssignment,
   finishMissionAssignment, updateMissionStatus, saveMissionCheckpoint, formatMission,
-  findMissionByAssignmentId, getSelectedMissionId, selectMission, requireActiveSelectedMission,
+  findMissionByAssignmentId, getSelectedMissionId, selectMission, requireActiveSelectedMission, getMissionExecutionProjectDir,
 } from '../src/utils/agentMissions.ts'
+
+test('隔离工作树的 SDK 子进程按原项目归属定位 Mission',async()=>{
+  const before=process.env.YAOYAOCHE_MISSION_PROJECT_DIR
+  const root=await mkdtemp(join(tmpdir(),'yaoyao-mission-scope-'))
+  const project='/project/mission-worktree-original'
+  try {
+    const mission=await createMission('隔离开发仍须绑定原项目',project,root)
+    selectMission(mission.id,project)
+    process.env.YAOYAOCHE_MISSION_PROJECT_DIR=project
+    assert.equal(getMissionExecutionProjectDir('/project/different-worktree'),project)
+    assert.equal(getSelectedMissionId(),mission.id)
+    assert.equal(await requireActiveSelectedMission(undefined,root),mission.id)
+  }finally{
+    if(before===undefined)delete process.env.YAOYAOCHE_MISSION_PROJECT_DIR
+    else process.env.YAOYAOCHE_MISSION_PROJECT_DIR=before
+    selectMission(undefined,project)
+    await rm(root,{recursive:true,force:true})
+  }
+})
 
 test('任务簿持久化任务目标、关联 Agent 与执行结果', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yaoyaoche-missions-'))

@@ -1,5 +1,5 @@
 import { z } from 'zod/v4'
-import { requireActiveSelectedMission, linkMissionAssignment } from '../../utils/agentMissions.js'
+import { requireActiveSelectedMission, linkMissionAssignment, getMissionExecutionProjectDir } from '../../utils/agentMissions.js'
 import { isSuperAgentMode } from '../../utils/agentMode.js'
 import { getSessionId } from '../../bootstrap/state.js'
 import { logEvent } from '../../services/analytics/index.js'
@@ -154,6 +154,7 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
       createdAt: Date.now(),
       leadAgentId,
       leadSessionId: getSessionId(), // Store actual session ID for team discovery
+      projectDir: getMissionExecutionProjectDir(),
       members: [
         {
           agentId: leadAgentId,

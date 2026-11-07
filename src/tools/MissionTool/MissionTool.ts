@@ -2,13 +2,12 @@ import { z } from 'zod/v4'
 import { resolve } from 'node:path'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { lazySchema } from '../../utils/lazySchema.js'
-import { getCwd } from '../../utils/cwd.js'
 import { isSuperAgentMode } from '../../utils/agentMode.js'
 import { enqueueMissionJob, listMissionJobs, cancelMissionJob, missionJobAssignmentId } from '../../services/agentCenter/missionJobs.js'
 import {
   getSelectedMissionId, getMission, listMissions, formatMission,
   saveMissionCheckpoint, linkMissionAssignment, finishMissionAssignment,
-  updateMissionStatus,
+  updateMissionStatus, getMissionExecutionProjectDir,
 } from '../../utils/agentMissions.js'
 
 const inputSchema = lazySchema(() => z.strictObject({
@@ -38,7 +37,7 @@ function required(value: string | undefined, label: string): string {
 
 async function execute(input: Input): Promise<string> {
   if (input.action === 'list') {
-    const missions = (await listMissions()).filter(m => resolve(m.projectDir) === resolve(getCwd()))
+    const missions = (await listMissions()).filter(m => resolve(m.projectDir) === getMissionExecutionProjectDir())
     return missions.length ? missions.map(m => `${m.id} [${m.status}] ${m.objective}`).join('\n') : '本项目尚未创建超级智能体长期任务'
   }
   const selected = input.mission_id ?? getSelectedMissionId()
@@ -46,7 +45,7 @@ async function execute(input: Input): Promise<string> {
   const mission = await getMission(id)
   if (resolve(mission.projectDir) !== resolve(getCwd())) throw new Error(`任务归属其他项目：${mission.projectDir}`)
   if (input.action === 'jobs') {
-    const jobs = await listMissionJobs(id, getCwd())
+    const jobs = await listMissionJobs(id, getMissionExecutionProjectDir())
     return jobs.length
       ? jobs.map(job => `${job.id} [${job.status}] ${job.title}（第 ${job.attempt} 次执行）`).join('\n')
       : '本长期任务尚无执行工作项'
@@ -55,11 +54,11 @@ async function execute(input: Input): Promise<string> {
     if (mission.status !== 'active') throw new Error('请先恢复长期任务后再规划工作项')
     const title = required(input.title, 'title')
     const instruction = required(input.instruction, 'instruction')
-    const job = await enqueueMissionJob(id, getCwd(), title, instruction)
+    const job = await enqueueMissionJob(id, getMissionExecutionProjectDir(), title, instruction)
     try {
       await linkMissionAssignment(id, missionJobAssignmentId(job.id), 'agent', job.title)
     } catch (error) {
-      await cancelMissionJob(id, getCwd(), job.id)
+      await cancelMissionJob(id, getMissionExecutionProjectDir(), job.id)
       throw error
     }
     return `已记录待执行工作项 ${job.id}：${job.title}。需用户明确启动后才进入 SDK 执行。`

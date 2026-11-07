@@ -66,12 +66,20 @@ export function missionSelectionKey(projectDir: string): string {
   const project = resolve(projectDir)
   return `local_agent_current_mission_${createHash('sha256').update(project).digest('hex').slice(0, 20)}`
 }
-export function getSelectedMissionId(projectDir = getCwd()): string | undefined {
+/**
+ * Original checkout identity is independent of the active AgentTool worktree.
+ * Trusted desktop hosts pass it into their isolated SDK child only.
+ */
+export function getMissionExecutionProjectDir(projectDir = getCwd()): string {
+  const origin = process.env.YAOYAOCHE_MISSION_PROJECT_DIR
+  return origin ? resolve(origin) : resolve(projectDir)
+}
+export function getSelectedMissionId(projectDir = getMissionExecutionProjectDir()): string | undefined {
   const id = getFeatureValue_CACHED_MAY_BE_STALE<string>(missionSelectionKey(projectDir), '')
   if (!id) return undefined
   return checkedId(id)
 }
-export function selectMission(id?: string, projectDir = getCwd()): void {
+export function selectMission(id?: string, projectDir = getMissionExecutionProjectDir()): void {
   setGrowthBookConfigOverride(missionSelectionKey(projectDir), id ? checkedId(id) : undefined)
 }
 
@@ -172,7 +180,7 @@ export function getSelectedMissionPrompt(): string {
   const path = missionPath(id, defaultRoot())
   try {
     const mission = parseMission(readFileSync(path, 'utf8'), path)
-    if (resolve(mission.projectDir) !== resolve(getCwd())) {
+    if (resolve(mission.projectDir) !== getMissionExecutionProjectDir()) {
       return '该超级智能体任务归属其他项目，请切换至对应项目目录后恢复。'
     }
     const assignments = mission.assignments.slice(-12).map(a =>
@@ -195,7 +203,7 @@ export function getSelectedMissionPrompt(): string {
 
 /** All execution paths use the same project-scoped mandate check before side effects. */
 export async function requireActiveSelectedMission(
-  projectDir = getCwd(),
+  projectDir = getMissionExecutionProjectDir(),
   root = defaultRoot(),
 ): Promise<string | undefined> {
   const id = getSelectedMissionId(projectDir)

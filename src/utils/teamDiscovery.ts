@@ -17,6 +17,7 @@ export type TeamSummary = {
   memberCount: number
   runningCount: number
   idleCount: number
+  leadSessionId?: string
 }
 
 export type TeammateStatus = {
@@ -100,10 +101,11 @@ export async function listProjectTeams(projectDir: string): Promise<TeamSummary[
     if (!entry.isDirectory() || !/^[a-z0-9-]+$/.test(entry.name)) continue
     const team = readTeamFile(entry.name)
     if (!team?.members.some(member =>
-      member.name === TEAM_LEAD_NAME && resolve(member.cwd) === target)) continue
+      member.name === TEAM_LEAD_NAME && resolve(team.projectDir ?? member.cwd) === target)) continue
     const members = team.members.filter(member => member.name !== TEAM_LEAD_NAME)
     summaries.push({
       name: team.name,
+      ...(team.leadSessionId && { leadSessionId: team.leadSessionId }),
       memberCount: members.length,
       runningCount: members.filter(member => member.isActive !== false).length,
       idleCount: members.filter(member => member.isActive === false).length,

@@ -69,6 +69,7 @@ export type TeamFile = {
   createdAt: number
   leadAgentId: string
   leadSessionId?: string // Actual session UUID of the leader (for discovery)
+  projectDir?: string // Original project even when leader runs inside isolated worktree
   hiddenPaneIds?: string[] // Pane IDs that are currently hidden from the UI
   teamAllowedPaths?: TeamAllowedPath[] // Paths all teammates can edit without asking
   members: Array<{

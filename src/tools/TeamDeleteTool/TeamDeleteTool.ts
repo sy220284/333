@@ -1,5 +1,5 @@
 import { z } from 'zod/v4'
-import { findMissionByAssignmentId, finishMissionAssignment } from '../../utils/agentMissions.js'
+import { findMissionByAssignmentId, finishMissionAssignment, getMissionExecutionProjectDir } from '../../utils/agentMissions.js'
 import { logEvent } from '../../services/analytics/index.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../../services/analytics/metadata.js'
 import type { Tool } from '../../Tool.js'
@@ -105,7 +105,7 @@ export const TeamDeleteTool: Tool<InputSchema, Output> = buildTool({
       // when the separate mission journal needs repair.
       unregisterTeamForSessionCleanup(teamName)
       try {
-        const projectDir = teamFile?.members.find(member => member.name === TEAM_LEAD_NAME)?.cwd
+        const projectDir = teamFile?.projectDir ?? teamFile?.members.find(member => member.name === TEAM_LEAD_NAME)?.cwd ?? getMissionExecutionProjectDir()
         const missionId = await findMissionByAssignmentId(`team:${teamName}`, undefined, projectDir)
         if (missionId) await finishMissionAssignment(missionId, `team:${teamName}`, 'completed')
       } catch (error) {
