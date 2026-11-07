@@ -484,12 +484,12 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(screen.getByRole('button',{name:'智能体团队'}))
     await screen.findByText('执行单元 A')
     expect(screen.getByRole('button',{name:'停止任务'})).toBeInTheDocument()
-    expect(screen.queryByRole('button',{name:'继续任务'})).not.toBeInTheDocument()
+    expect(screen.queryByRole('button',{name:'请求续办任务'})).not.toBeInTheDocument()
     await user.click(screen.getByRole('button',{name:'停止任务'}))
     await waitFor(()=>expect(call).toHaveBeenCalledWith('tasks.stop',{sessionId:SID,taskId:'task-running'}))
   })
 
-  it('中断智能体的继续按钮真正向原SDK提交续跑要求',async()=>{
+  it('中断智能体的续办请求通过原SDK提交并保留真实结果',async()=>{
     const user=userEvent.setup()
     mockTasks=[{taskId:'task-interrupted',description:'未完成的代码审计',status:'interrupted'}]
     render(<App/>)
@@ -498,7 +498,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(screen.getByRole('button',{name:'智能体团队'}))
     await screen.findByText('未完成的代码审计')
     expect(screen.queryByRole('button',{name:'停止任务'})).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button',{name:'继续任务'}))
+    await user.click(screen.getByRole('button',{name:'请求续办任务'}))
     await waitFor(()=>expect(call).toHaveBeenCalledWith('tasks.resume',
       expect.objectContaining({sessionId:SID,taskId:'task-interrupted',
         prompt:expect.stringContaining('核对已有执行结果')})))
