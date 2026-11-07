@@ -1414,7 +1414,7 @@ export function App(){
           </Card>}
   </div>}
           {view==='integrations'&&<div className="space-y-7">
-            <Section title="统一能力目录" subtitle="读取本地实际安装的技能、插件、工作流和 MCP 配置；发现不等于已完成真实工具调用。" action={<Button variant="secondary" size="base" onClick={()=>setCatalogRevision(v=>v+1)}><RefreshCw size={14}/>刷新能力</Button>}>
+            <Section title="统一能力目录" subtitle="读取本地实际安装的技能、插件、工作流和 MCP 配置；发现不等于已完成真实工具调用。" action={<Button variant="secondary" size="base" onClick={()=>void operation('刷新能力目录',async()=>{const data=await invoke<{items:CapabilityItem[];warnings:string[]}>('capabilities.refresh');setCapabilityItems(data.items??[]);setCapabilityWarnings(data.warnings??[]);setCatalogRevision(v=>v+1)})}><RefreshCw size={14}/>刷新能力</Button>}>
               <Card radius="lg" surface="lowest" shadow="card" padding="lg">
                 <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-[var(--color-text-secondary)]">
                   <span>发现 {capabilityItems.length} 项能力</span>
