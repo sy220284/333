@@ -1,4 +1,4 @@
-import { closeSync, ftruncateSync, mkdirSync, openSync, readFileSync, writeFileSync, writeSync } from 'fs'
+import { closeSync, ftruncateSync, openSync, readFileSync, writeSync } from 'fs'
 import { mkdir, readFile, rm, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { z } from 'zod/v4'
