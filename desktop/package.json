@@ -1,5 +1,5 @@
 {
-  "name": "@yaoyaoche/desktop",
+  "name": "yaoyaoche-desktop",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -95,14 +95,17 @@
           "to": "bin/yaoyaoche"
         }
       ],
-      "maintainer": "摇摇车 contributors <208273231+sy220284@users.noreply.github.com>"
+      "maintainer": "摇摇车 contributors <208273231+sy220284@users.noreply.github.com>",
+      "syncDesktopName": true
     },
-    "executableName": "yaoyaoche"
+    "executableName": "yaoyaoche",
+    "artifactName": "yaoyaoche-${version}-${arch}.${ext}"
   },
   "description": "摇摇车本地智能体开发工作台，支持主子智能体与 Super Agents 团队协作。",
   "homepage": "https://github.com/sy220284/333",
   "author": {
     "name": "摇摇车 contributors",
     "email": "208273231+sy220284@users.noreply.github.com"
-  }
+  },
+  "desktopName": "yaoyaoche"
 }
