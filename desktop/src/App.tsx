@@ -573,7 +573,8 @@ export function App(){
   const requestedSchema=obj(requestedDetails.requested_schema)
   const requestedProperties=obj(requestedSchema.properties)
   const selected=missions.find(m=>missionId(m)===selectedMission)
-  function toChat(prompt:string){setDraft(prompt);setView('chat');requestAnimationFrame(()=>inputRef.current?.focus())}
+  function toChat(prompt:string){setDraft(prompt);setView('chat')}
+  useEffect(()=>{if(view==='chat'&&draft&&inputRef.current!==document.activeElement)inputRef.current?.focus()},[view,draft])
   createSessionRef.current=createSession
   const paletteCommands=[
     ...NAV.map(item=>({id:item.id,title:item.label,detail:'跳转到工作台页面',icon:item.icon,run:()=>setView(item.id)})),
