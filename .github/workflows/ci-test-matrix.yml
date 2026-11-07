@@ -117,22 +117,6 @@ jobs:
         shard: [0, 1, 2, 3, 4, 5]
     runs-on: ubuntu-latest
     timeout-minutes: 75
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: gateway_test
-          POSTGRES_PASSWORD: gateway_test
-          POSTGRES_DB: gateway_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U gateway_test -d gateway_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      GATEWAY_TEST_POSTGRES_URL: postgres://gateway_test:gateway_test@127.0.0.1:5432/gateway_test
     steps:
       - uses: actions/checkout@v4
       - name: 读取统一工具链版本
