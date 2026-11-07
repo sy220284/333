@@ -89,10 +89,9 @@ function verifyBaseAndExtensions(actual, official, commandLine) {
   assert.deepEqual(actual.flags.filter(flag => !addedFlags.includes(flag)),
     official.flags.filter(flag => !removedFlags.includes(flag)),
     `Original 2.1.317 flags must stay available: ${commandLine}`);
-  // Both commands are deliberately retired from this local product:
-  // Ultrareview depends on official cloud review, and gateway is the retired
-  // enterprise telemetry-forwarding CLI. Preserve all remaining 317 commands.
-  const removed = commandLine === '--help' ? ['ultrareview', 'gateway'] : [];
+  // 本地产品清退了云端 Ultrareview、企业网关及 Claude 订阅专用的 setup-token。
+  // 其他官方 2.1.317 命令仍严格对照，模型凭证由独立的本地模型管理配置。
+  const removed = commandLine === '--help' ? ['ultrareview', 'gateway', 'setup-token'] : [];
   assert.deepEqual(actual.commands.filter(name => !additions.includes(name)),
     official.commands.filter(name => !removed.includes(name)),
     `2.1.317 original commands changed beyond approved removals: ${commandLine}`);
