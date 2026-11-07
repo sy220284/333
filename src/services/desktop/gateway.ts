@@ -99,6 +99,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
   let pendingPurge: { token: string; createdAt: number; plan: import('./maintenance.js').LocalPurgePlan } | undefined
   let purgeRunning = false
   const opening = new Set<string>()
+  const ensuring = new Map<string, ReturnType<typeof openSession>>()
   const ownerKey = randomUUID()
   const executingMissionJobs = new Map<string, { missionId: string; jobId: string; runId: string }>()
   // Opt-in, event-driven queue runner: no timers, scheduled tasks or implicit
@@ -754,9 +755,20 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       case 'sessions.resume': return openSession(undefined, request.sessionId)
       case 'sessions.ensureOpen': {
         const existing = sessions.get(request.sessionId)
-        return existing
-          ? { sessionId: request.sessionId, resumed: false, tasks: [...existing.tasks.values()], model: existing.model, permissionMode: existing.permissionMode }
-          : openSession(undefined, request.sessionId)
+        if(existing) return {
+          sessionId: request.sessionId, resumed: false, tasks: [...existing.tasks.values()],
+          model: existing.model, permissionMode: existing.permissionMode,
+        }
+        // Multiple clicks may request the same session while the disk transcript
+        // and runtime are still opening. Reuse that one SDK launch.
+        const running = ensuring.get(request.sessionId)
+        if(running)return running
+        const pending = openSession(undefined, request.sessionId)
+        ensuring.set(request.sessionId,pending)
+        try{return await pending}
+        finally{
+          if(ensuring.get(request.sessionId)===pending)ensuring.delete(request.sessionId)
+        }
       }
       case 'sessions.list': return history.listSessions({ dir: cwd, limit: request.limit, offset: request.offset })
       case 'sessions.history': {

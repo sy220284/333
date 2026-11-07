@@ -1058,3 +1058,26 @@ test('重启后不允许将旧版跳过审批状态带入未授权的桌面宿�
       .rejects.toThrow('explicit host permission')
   }finally{await disallowed.close();await rm(root,{recursive:true,force:true})}
 })
+
+test('两个同时恢复相同会话的请求共享一次 SDK 启动且返回同一配置',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'desktop-ensure-once-'))
+  const original=fixture()
+  let launches=0
+  const sessionFactory=original.options.createSession!
+  const options:DesktopGatewayOptions={
+    ...original.options,cwd:root,dataDir:join(root,'data'),
+    createSession:(settings,id)=>{launches++;return sessionFactory(settings,id)},
+  }
+  const gateway=createDesktopGateway(options)
+  try {
+    const opened=await gateway.handle(request('sessions.open')) as {sessionId:string}
+    await gateway.handle(request('sessions.close',{sessionId:opened.sessionId}))
+    const before=launches
+    const first=gateway.handle(request('sessions.ensureOpen',{sessionId:opened.sessionId}))
+    const second=gateway.handle(request('sessions.ensureOpen',{sessionId:opened.sessionId}))
+    const [a,b]=await Promise.all([first,second]) as Array<{sessionId:string;model:string|null;permissionMode:string|null}>
+    expect(a.sessionId).toBe(opened.sessionId)
+    expect(b).toEqual(a)
+    expect(launches-before).toBe(1)
+  } finally {await gateway.close();await rm(root,{recursive:true,force:true})}
+})
