@@ -1,905 +1,820 @@
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import '@testing-library/jest-dom/vitest'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AppEvent } from './api'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import App from './App'
+import { desktopHost } from './lib/desktopHost'
+import { startSDK } from './lib/sdk'
+import type { SessionEvent } from './lib/sdk'
+import { workspaceProjectionFixture } from './test/workspaceProjectionFixture'
 
-// Vitest 的 jsdom 不提供 Electron 页面使用的 Web Storage；在测试中模拟实际浏览器存储行为。
-const preferenceStore=new Map<string,string>()
-Object.defineProperty(window,'localStorage',{configurable:true,value:{
-  getItem:(key:string)=>preferenceStore.get(key)??null,
-  setItem:(key:string,value:string)=>{preferenceStore.set(key,String(value))},
-  removeItem:(key:string)=>{preferenceStore.delete(key)},
-  clear:()=>{preferenceStore.clear()},
-  get length(){return preferenceStore.size},
-  key:(index:number)=>[...preferenceStore.keys()][index]??null
-}})
-const SID='9b0c188a-66fd-4b30-82e0-f52f2f8dfc35'
-const OTHER='e9c46d7b-2766-49c8-9f2d-142c90a45d5a'
-let listener:(event:AppEvent)=>void=()=>{}
-let showHistoricalJob=false
-let failMcpRefresh=false
-let suspendMcpRefresh=false
-let releaseMcpRefresh:(()=>void)|undefined
-let createdMission:{id:string;objective:string;status:string}|undefined
-let activeAgentMode:'master'|'super'='master'
-let mockTeam:{name:string;leadSessionId:string;memberCount:number;runningCount:number}|undefined
-let failTeamDeliveryAck=false
-let mockTasks:Array<{taskId:string;description:string;status:string}>=[]
-let showAgentActivitySample=false
-let budgetState:{limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number;activeReservations:number;
-  uncertain:Array<{id:string;reservedUsd:number;startedAt:string}>}={
-  limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]}
-let smartRecord:{sessionId:string;model:string;permissionMode:string;status:'running'|'completed'|'failed'|'interrupted';startedAt:string;costUsd?:number;budgetUsd?:number}|undefined
-let longHistory=false
-let manyFiles=false
-let failModelSelection=false
-let pickedOfflineWorkspace=false
-let twoSessions=false
-let delayedHistoryId=''
-let releaseHistory:(()=>void)|undefined
-let delayedSessionList=false
-let releaseSessionList:(()=>void)|undefined
-let delayedSave=false
-let releaseSave:(()=>void)|undefined
-let delayedApprovalLists=false
-let releasePermissionList:(()=>void)|undefined
-let releaseHostList:(()=>void)|undefined
-const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
-  switch(method){
-    case 'app.info': return {workspace:'/projects/example',platform:'linux',version:'0.1.0'}
-    case 'hello':return {protocolVersion:1,capabilities:['sessions','missions','agents']}
-    case 'models.list':return {models:[{value:'minimax/M3',displayName:'MiniMax M3'},{value:'minimax/M4',displayName:'MiniMax M4'}]}
-    case 'smart.inspect':return {model:String(args.model||'minimax/M3'),status:'configured',message:'本地模型已就绪',checkedOffline:true,contextWindow:64000,hasPricing:true}
-    case 'smart.history':return smartRecord?[smartRecord]:[]
-    case 'budget.project.get':return budgetState
-    case 'budget.project.resolveUnknown':
-      budgetState={...budgetState,uncertain:[],uncertainReservations:0,
-        reservedUsd:0,spentUsd:budgetState.spentUsd+Number(args.costUsd)}
-      return budgetState
-    case 'budget.project.set':
-      budgetState={...budgetState,limitUsd:args.limitUsd as number|null,
-        availableUsd:args.limitUsd===null?null:Number(args.limitUsd)-budgetState.spentUsd-budgetState.reservedUsd}
-      return budgetState
-    case 'smart.execute':
-      smartRecord={sessionId:SID,model:String(args.model||'minimax/M3'),permissionMode:String(args.permissionMode||'default'),
-        status:'running',startedAt:new Date().toISOString(),...(args.maxBudgetUsd?{budgetUsd:Number(args.maxBudgetUsd)}:{})}
-      return {sessionId:SID,prepared:true,model:smartRecord.model}
-    case 'smart.start':
-      listener({event:'session.message',sessionId:SID,turnId:'fast-smart',message:{
-        uuid:'message-fast-smart',type:'assistant',message:{role:'assistant',content:[{type:'text',text:'智能执行已进入真实会话'}]}
-      }})
-      return {sessionId:SID,turnId:'fast-smart'}
-    case 'sessions.list':{
-      if(delayedSessionList)await new Promise<void>(resolve=>{releaseSessionList=resolve})
-      return twoSessions?[{sessionId:SID,title:'会话 A'},{sessionId:OTHER,title:'会话 B'}]
-        :longHistory?[{sessionId:SID,title:'长历史会话'}]:[]
-    }
-    case 'agents.overview':return {mode:activeAgentMode,teams:mockTeam?[mockTeam]:[],missions:[],activeSessions:0,activeTasks:0}
-    case 'agents.activity':return {
-      totalVisible:showAgentActivitySample?2:0,
-      activities:showAgentActivitySample?[
-        {id:'job:mission_0123456789abcdef:job_0123456789abcdef',source:'mission-job',title:'长期审计工作',status:'review',
-         updatedAt:'2026-11-07T11:00:00Z',missionId:'mission_0123456789abcdef',jobId:'job_0123456789abcdef'},
-        {id:`session:${OTHER}:agent-x`,source:'session-task',title:'另一会话检查',status:'running',
-         updatedAt:'2026-11-07T10:00:00Z',sessionId:OTHER},
-      ]:[],
-    }
-    case 'agents.members':return mockTeam?[{agentId:'agent-test',name:'测试成员',agentType:'developer',model:'fixture-model',status:'idle'}]:[]
-    case 'agents.team.message':
-      if(failTeamDeliveryAck){failTeamDeliveryAck=false;throw new Error('模拟信箱确认丢失')}
-      return {queued:true,teamName:args.teamName,recipient:args.to,messageId:args.messageId}
-    case 'agents.team.inbox':return {teamName:args.teamName,memberName:args.memberName,messages:[
-      {from:'team-lead',text:'已提交检查任务',timestamp:'2026-11-07T12:00:00Z',read:false,messageId:SID},
-    ]}
-    case 'agents.setMode': activeAgentMode=args.mode==='super'?'super':'master'; return {mode:activeAgentMode}
-    case 'missions.create': {
-      createdMission={id:'mission_0123456789abcdef',objective:String(args.objective),status:'active'}
-      return createdMission
-    }
-    case 'missions.list':
-      if(createdMission)return {missions:[createdMission],selectedMissionId:createdMission.id}
-      return showHistoricalJob
-      ? {missions:[{missionId:'mission-fixture',objective:'历史任务',status:'active'}],selectedMissionId:'mission-fixture'}
-      : {missions:[],selectedMissionId:null}
-    case 'missions.jobs.list':return showHistoricalJob
-      ? [{id:'job-1',title:'审核旧执行',instruction:'分析来源',status:'completed',attempt:1,sessionId:SID}]
-      : []
-    case 'sessions.history':{
-      if(delayedHistoryId===args.sessionId)await new Promise<void>(resolve=>{releaseHistory=resolve})
-      const data=longHistory?Array.from({length:260},(_,i)=>({uuid:`long-${i}`,type:'assistant',message:{role:'assistant',content:[{type:'text',text:`历史-${i}`}]},timestamp:'2026-11-06T12:00:00Z'})):[{
-        uuid:`history-${String(args.sessionId||SID)}`,type:'assistant',
-        message:{role:'assistant',content:[{type:'text',text:twoSessions?(args.sessionId===SID?'会话 A 内容':'会话 B 内容'):'历史执行内容'}]},
-        timestamp:'2026-11-06T12:00:00Z'
-      }]
-      const skip=Number(args.offset||0),limit=Number(args.limit||200)
-      const end=args.tail?Math.max(0,data.length-skip):Math.min(data.length,skip+limit)
-      const offset=args.tail?Math.max(0,end-limit):skip
-      const messages=data.slice(offset,end)
-      return args.tail?{messages,total:data.length,offset}:messages
-    }
-    case 'sessions.ensureOpen':return {sessionId:String(args.sessionId),resumed:true,tasks:[],model:args.sessionId===OTHER?'minimax/M4':'minimax/M3',permissionMode:args.sessionId===OTHER?'plan':'default'}
-    case 'sessions.status':return {phase:args.sessionId===OTHER?'idle':'running',model:args.sessionId===OTHER?'minimax/M4':'minimax/M3',permissionMode:args.sessionId===OTHER?'plan':'default'}
-    case 'workspace.pick':return pickedOfflineWorkspace?{workspace:'/projects/second',changed:true,connected:false}:{workspace:'/projects/example',changed:false}
-    case 'workspace.read':return {path:String(args.path),content:String(args.path).includes('file-1')?'第二个文件':'原始内容'}
-    case 'workspace.write':{
-      if(delayedSave)await new Promise<void>(resolve=>{releaseSave=resolve})
-      return {saved:true,path:args.path}
-    }
-    case 'permissions.list':{
-      if(delayedApprovalLists)await new Promise<void>(resolve=>{releasePermissionList=resolve})
-      return []
-    }
-    case 'host.list':{
-      if(delayedApprovalLists)await new Promise<void>(resolve=>{releaseHostList=resolve})
-      return []
-    }
-    case 'credentials.list':return {providers:['openai']}
-    case 'workspace.list':{
-      const offset=Number(args.offset||0)
-      const end=manyFiles?Math.min(260,offset+Number(args.limit||200)):0
-      return {path:'/projects/example',total:manyFiles?260:0,entries:Array.from({length:Math.max(0,end-offset)},(_,i)=>({name:`file-${offset+i}.ts`,path:`/projects/example/file-${offset+i}.ts`,directory:false}))}
-    }
-    case 'mcp.list':
-      if(suspendMcpRefresh)await new Promise<void>(resolve=>{releaseMcpRefresh=resolve})
-      if(failMcpRefresh)throw new Error('MCP 服务离线')
-      return {servers:[{name:'project-mcp',scope:'project',type:'http',url:'https://example.org/mcp',disabled:false}],errors:[]}
-    case 'sessions.open':return {sessionId:SID,tasks:mockTasks,model:'minimax/M3',permissionMode:'default'}
-    case 'sessions.send':
-      if(String(args.message).includes('TeamCreate'))listener({
-        event:'session.message',sessionId:SID,turnId:'11afef34-e0a6-4c38-a743-1c451993fdb8',
-        message:{uuid:'message-fast-team',type:'assistant',message:{role:'assistant',content:[{type:'text',text:'已收到团队建队请求，等待工具确认'}]}}
-      })
-      return {sessionId:SID,turnId:'11afef34-e0a6-4c38-a743-1c451993fdb8'}
-    case 'sessions.setModel':if(failModelSelection)throw new Error('模型服务端拒绝切换');return {model:args.model}
-    case 'permissions.decide':return {permissionId:args.permissionId,accepted:true}
-    case 'credentials.set':return {saved:true}
-    case 'mcp.toggle':return {name:args.name,enabled:args.enabled}
-    case 'external.open':return {opened:true}
-    case 'host.respond':return {requestId:args.requestId,accepted:true}
-    case 'tasks.list':return mockTasks
-    default:return {}
+vi.mock('./lib/sdk', () => ({ startSDK: vi.fn() }))
+vi.mock('./lib/desktopHost', () => ({
+  desktopHost: { start: vi.fn(), rpc: vi.fn(), onEvent: vi.fn(), onHostEvent: vi.fn() },
+}))
+vi.mock('./lib/updater', () => ({
+  AppUpdater: { start: vi.fn(), onStatus: vi.fn(() => () => {}), install: vi.fn() },
+}))
+
+let handler: ((event: SessionEvent) => void) | undefined
+let hostHandler: ((event: any) => void) | undefined
+let workspaceEventHandler: ((event: any) => void) | undefined
+let workspaceEventRevision = 0
+let state: any
+let workspaceToken: string
+let workspaceConfig: any
+let hookProfiles: any
+let hookSettingsRevision = 0
+let hookExecutionRevision = 0
+let stableMissionJobs = false
+const resetWorkspaceEvents = () => { workspaceEventRevision = 0; workspaceEventHandler = undefined }
+const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+const installedModel = { ...workspaceProjectionFixture.models[0], modelId: 'kimi/kimi-k2.5', installed: true, enabled: true, scopes: ['user'], locations: [{ scope: 'user', source: 'test', location: '/tmp/models.json' }], source: 'test' }
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  hookExecutionRevision = 0
+  hookSettingsRevision = 0
+  hookProfiles = { version: 1, activeProfileId: 'safe', disabled: false, settingsRevision: 0, executionRevision: 0, profiles: [
+    { id: 'safe', name: '安全模式', description: '删除、覆盖和外部操作需要审批', mode: 'guarded', rules: [{ id: 'delete', pattern: 'rm -rf', action: 'ask', enabled: true }] },
+    { id: 'strict', name: '严格审批', description: '工具和外部操作逐项审批', mode: 'strict', rules: [] },
+  ], recent: [] }
+  stableMissionJobs = false
+  handler = undefined
+  hostHandler = undefined
+  resetWorkspaceEvents()
+  workspaceToken = 'test-connector-token'
+  workspaceConfig = { version: 1, tokenConfigured: true, connectorTokenRequired: true, recoveryRequired: false, recoveryReasons: [], blockedReason: null, readOnly: false, writable: true, capabilities: { read: true, write: true, session: true, budget: true, 'mission.authorize': true, 'workspace.teamBudget': true, 'session.messages.list': true } }
+  state = {
+    workspace: '/tmp/project',
+    authenticated: true,
+    token: 'desktop-host-token',
+    authRequired: false,
+    authMethods: [],
+    externalMethods: [],
+    providerReadiness: { kimi: false, moonshot: false, anthropic: false, openai: false },
+    selectedWorkspace: '/tmp/project',
+    workspaces: [{ path: '/tmp/project', name: 'project' }],
+    worktrees: [],
+    github: { connected: false, repo: 'owner/project', branch: 'main', scopes: ['project'], authMode: 'gh', tokenConfigured: false, authMethod: 'gh', owner: 'owner', repoName: 'project', installation: { status: 'not_installed', connected: false, authMethod: 'gh', owner: 'owner', repoName: 'project' } },
+    selectedSessionId: '',
+    sessions: [],
+    checkpoints: [],
+    runs: [],
+    missions: [],
+    teams: [],
+    tasks: [],
+    pendingApprovals: [],
+    approvals: [],
+    ...clone(workspaceProjectionFixture),
+    models: [installedModel],
+    providers: workspaceProjectionFixture.providers.map(provider => provider.id === 'kimi' ? { ...provider, configured: false } : provider),
+    teamBudget: { budgetUsd: 1, spentUsd: 0, authorizedUsd: 0, remainingUsd: 1, availableUsd: 1, coordinatorReservedUsd: 0.15, memberBudgetUsd: 0.85, minMemberBudgetUsd: 0.01, revision: 1, ledgerEntryCount: 0 },
+    teamBudgetRevision: 1,
+    cost: { currency: 'USD', totals: { inputTokens: 0, outputTokens: 0, totalTokens: 0, costUSD: 0 } },
+    costLedger: { missionId: '', totalCostUSD: 0, budgetUSD: 0, remainingUSD: 0, totals: { costUSD: 0 } },
   }
+  vi.mocked(desktopHost.start).mockResolvedValue(clone(state))
+  vi.mocked(desktopHost.onEvent).mockImplementation(callback => { workspaceEventHandler = callback; return () => {} })
+  vi.mocked(desktopHost.onHostEvent).mockImplementation(callback => { hostHandler = callback; return () => {} })
+  vi.mocked(desktopHost.rpc).mockImplementation(async (method: string, args: any = {}) => {
+    switch (method) {
+      case 'workspace.auth.start': return { external: true, method: 'kimi', methods: ['kimi', 'device'], device: { verificationUri: 'https://example.com', userCode: 'ABCD-1234' } }
+      case 'workspace.auth.poll': return { pending: true, method: 'kimi', methods: ['kimi', 'device'], external: true, device: { verificationUri: 'https://example.com', userCode: 'ABCD-1234' } }
+      case 'desktop.connectorToken': return { token: workspaceToken }
+      case 'workspace.capabilities.get': return clone(workspaceConfig)
+      case 'hooks.profiles.list': return clone(hookProfiles)
+      case 'hooks.profile.set': hookProfiles = { ...hookProfiles, activeProfileId: args.profileId }; return clone(hookProfiles)
+      case 'hooks.rules.set': hookProfiles = { ...hookProfiles, rules: args.rules }; return clone(hookProfiles)
+      case 'workspace.snapshot': return clone(state)
+      case 'sessions.list': return { sessions: state.sessions, selectedSessionId: state.selectedSessionId }
+      case 'sessions.open': return { sessionId: 'session-open', messages: [] }
+      case 'sessions.ensureOpen': return { sessionId: 'session-open', messages: [] }
+      case 'sessions.create': return { sessionId: 'session-new', messages: [] }
+      case 'sessions.get': return { sessionId: args.sessionId || 'session-open', messages: [], entries: [] }
+      case 'sessions.delete': return { deleted: true }
+      case 'session.messages.list': return { messages: [{ id: 'persisted-user', role: 'user', content: '持久化消息', seq: 1 }], entries: [{ id: 'persisted-user', role: 'user', content: '持久化消息', seq: 1 }], hasEarlier: false, hasMore: false, nextBefore: null, limit: 80, total: 1 }
+      case 'runs.list': return { runs: state.runs }
+      case 'runs.stop': return { stopped: true }
+      case 'sessions.stop': return { stopped: true, runId: args.runId }
+      case 'missions.list': return { missions: stableMissionJobs ? [{ missionId: 'mission-fixture', objective: '稳定工作项任务', status: 'active' }] : [], selectedMissionId: stableMissionJobs ? 'mission-fixture' : '' }
+      case 'missions.get': return { missionId: 'mission-1', status: 'active', taskId: 'task-1', objective: '修复测试', teamId: 'team-1', progress: { completed: 1, total: 2 }, members: [{ agentId: 'agent-1', role: 'coordinator', status: 'running' }] }
+      case 'missions.pause': return { missionId: args.missionId, status: 'paused' }
+      case 'missions.resume': return { missionId: args.missionId, status: 'running' }
+      case 'missions.cancel': return { missionId: args.missionId, status: 'cancelled' }
+      case 'missions.authorize': return { missionId: args.missionId, status: 'authorized' }
+      case 'tasks.list': return { tasks: args.includeChildren === false ? [{ taskId: 'task-parent', missionId: 'mission-parent', parentMissionId: 'mission-root', rootMissionId: 'mission-root', objective: '团队子任务', status: 'blocked', childCount: 1, source: 'agent', sourceLabel: '智能体委派', awaitingKind: 'permission', pendingApprovalCount: 1, progress: 0.5 }] : [], authorizations: [], ledger: [], budgets: [] }
+      case 'tasks.budget.set': return { taskId: args.taskId || args.missionId, missionId: args.missionId, budgetUsd: args.budgetUsd, revision: 3 }
+      case 'tasks.batchControl': return { action: args.action, succeeded: args.missionIds, failed: [] }
+      case 'tasks.pause': return { taskId: args.taskId, status: 'paused' }
+      case 'tasks.resume': return { taskId: args.taskId, status: 'running' }
+      case 'tasks.cancel': return { taskId: args.taskId, status: 'cancelled' }
+      case 'tasks.authorize': return { taskId: args.taskId, status: 'authorized' }
+      case 'tasks.get': return { taskId: 'task-1', status: 'running', teamId: 'team-1', objective: '修复测试' }
+      case 'tasks.assign': return { assigned: true, taskId: args.taskId, toAgentId: args.toAgentId }
+      case 'tasks.sendMessage': return { sent: true, taskId: args.taskId }
+      case 'teams.list': return { teams: [{ teamId: 'team-1', name: '修复小组', status: 'running', members: [{ agentId: 'agent-1', role: 'coordinator' }], channelMessages: [{ messageId: 'member-message-1', fromAgentId: 'agent-2', toAgentId: 'agent-1', content: '成员已完成代码审查', direction: 'outbound', taskId: 'task-child-1', rootMissionId: 'mission-root', parentMissionId: 'mission-parent' }] }] }
+      case 'teams.get': return { teamId: 'team-1', name: '修复小组', status: 'running', members: [{ agentId: 'agent-1', role: 'coordinator' }], channelMessages: [{ messageId: 'member-message-1', fromAgentId: 'agent-2', toAgentId: 'agent-1', content: '成员已完成代码审查', direction: 'outbound' }] }
+      case 'missions.jobs.list': return { jobs: stableMissionJobs ? [{ id: 'job-1', title: '先执行', instruction: '第一步', status: 'queued', attempt: 1 }, { id: 'job-2', title: '后执行', instruction: '第二步', status: 'queued', attempt: 1 }] : [] }
+      case 'missions.jobs.control': return { jobId: args.jobId, status: args.action === 'cancel' ? 'cancelled' : args.action === 'pause' ? 'paused' : 'queued' }
+      case 'checkpoints.list': return { checkpoints: [] }
+      case 'models.list': return { models: state.models, providers: state.providers }
+      case 'models.get': return { models: state.models, providers: state.providers, modelId: args.modelId || 'kimi/kimi-k2.5' }
+      case 'model.set': return { modelId: args.modelId, provider: String(args.modelId).split('/')[0] }
+      case 'models.default.set': return { modelId: args.modelId, provider: String(args.modelId).split('/')[0] }
+      case 'models.presets.list': return { presets: [] }
+      case 'models.presets.save': return { presetId: 'preset-1', modelId: args.modelId }
+      case 'models.presets.delete': return { presetId: args.presetId, deleted: true }
+      case 'models.presets.setDefault': return { presetId: args.presetId, modelId: args.modelId, default: true }
+      case 'models.validation.start': return { validationId: 'validation-1', modelId: args.modelId, status: 'queued' }
+      case 'models.validation.list': return { validations: [{ validationId: 'validation-1', modelId: args.modelId || 'kimi/kimi-k2.5', status: 'passed', ok: true, httpStatus: 200, attempts: [{ status: 'passed', httpStatus: 200 }] }] }
+      case 'models.credentials.set': return { provider: args.provider, configured: true, status: { provider: args.provider, configured: true } }
+      case 'models.credentials.clear': return { provider: args.provider, configured: false, status: { provider: args.provider, configured: false } }
+      case 'providers.credentials.set': return { provider: args.provider, configured: true }
+      case 'providers.credentials.clear': return { provider: args.provider, configured: false }
+      case 'models.forge.list': return { artifacts: [] }
+      case 'models.local.list': return { artifacts: [] }
+      case 'models.forge.plan': return { planId: 'plan-1', provider: args.provider, modelId: args.modelId }
+      case 'models.forge.execute': return { planId: args.planId, executionId: 'execution-1', status: 'queued' }
+      case 'models.forge.executions': return { executions: [] }
+      case 'models.local.plan': return { planId: 'local-plan-1', modelId: args.modelId }
+      case 'models.local.execute': return { planId: args.planId, status: 'completed' }
+      case 'models.install': return { provider: args.provider, installed: true }
+      case 'models.uninstall': return { provider: args.provider, removed: true }
+      case 'models.validate': return { ok: true, provider: args.provider, modelId: args.modelId }
+      case 'models.test': return { ok: true, modelId: args.modelId }
+      case 'models.test.start': return { testId: 'test-1', status: 'queued' }
+      case 'models.test.get': return { testId: args.testId, status: 'passed' }
+      case 'models.test.stop': return { testId: args.testId, stopped: true }
+      case 'models.selftest': return { ok: true, modelId: args.modelId }
+      case 'files.list': return { entries: [{ name: 'README.md', path: 'README.md', type: 'file' }] }
+      case 'files.get': return { path: args.path || 'README.md', content: '# project' }
+      case 'files.save': return { path: args.path || 'README.md', saved: true }
+      case 'files.saveAsset': return { assetId: 'asset-1', path: args.path || 'README.md' }
+      case 'files.open': return { opened: true, path: args.path || 'README.md' }
+      case 'files.reveal': return { revealed: true, path: args.path || 'README.md' }
+      case 'files.revealInFolder': return { revealed: true, path: args.path || 'README.md' }
+      case 'files.pickFolder': return { path: '/tmp/new-project' }
+      case 'files.pickAsset': return { path: '/tmp/image.png', name: 'image.png' }
+      case 'files.createFolder': return { path: args.path || '/tmp/new-project', created: true }
+      case 'git.status': return { branch: 'main', changes: [] }
+      case 'git.diff': return { path: args.path || 'README.md', diff: '' }
+      case 'github.get': return state.github
+      case 'github.repository.get': return state.github
+      case 'github.installation.get': return state.github.installation
+      case 'github.connect': return { connected: true, authMode: 'gh' }
+      case 'github.configure': return { configured: true }
+      case 'github.auth.start': return { authorizationUrl: 'https://github.com/login/oauth/authorize?client_id=test', mode: 'oauth', deviceFlow: false }
+      case 'github.auth.callback': return { connected: true }
+      case 'github.auth.poll': return { connected: true, mode: 'device' }
+      case 'github.auth.mode.set': return { mode: args.mode }
+      case 'github.installation.start': return { authorizationUrl: 'https://github.com/apps/test/installations/new' }
+      case 'github.installation.callback': return { connected: true }
+      case 'github.installation.poll': return { connected: true }
+      case 'github.auth.disconnect': return { connected: false }
+      case 'github.credentials.set': return { configured: true }
+      case 'github.credentials.clear': return { configured: false }
+      case 'mcp.list': return { servers: [{ name: 'project-mcp', scope: 'project', enabled: true }], projectPath: '/tmp/project' }
+      case 'mcp.get': return { servers: [{ name: 'project-mcp', scope: 'project', enabled: true }] }
+      case 'mcp.add': return { name: args.name, added: true }
+      case 'mcp.remove': return { name: args.name, removed: true }
+      case 'mcp.enable': return { name: args.name, enabled: true }
+      case 'mcp.import.pick': return { cancelled: false, source: '/tmp/.mcp.json', detected: { name: 'JSON 配置' }, availableCount: 1, conflicts: [], invalidCount: 0 }
+      case 'mcp.import.apply': return { imported: 1, skipped: 0, errors: [] }
+      case 'mcp.repair.preview': return { issues: [{ name: 'project-mcp', repairable: true }] }
+      case 'mcp.repair.apply': return { repaired: 1 }
+      case 'mcp.oauth.prepare': return { name: args.name, prepared: true }
+      case 'mcp.oauth.start': return { name: args.name, authorizationUrl: 'https://example.com/oauth' }
+      case 'mcp.oauth.callback': return { name: args.name, connected: true }
+      case 'mcp.oauth.disconnect': return { name: args.name, disconnected: true }
+      case 'mcp.oauth.status': return { name: args.name, status: 'connected' }
+      case 'mcp.connections.list': return { connections: [] }
+      case 'skills.list': return { skills: [] }
+      case 'skills.create': return { name: args.name, created: true }
+      case 'skills.install': return { name: args.name, installed: true }
+      case 'skills.delete': return { name: args.name, deleted: true }
+      case 'skills.export': return { path: '/tmp/skill.zip', name: args.name }
+      case 'skills.search': return { skills: [] }
+      case 'usage.get': return { usage: { totalCostUSD: 0, totalTokens: 0 }, timeseries: [] }
+      case 'usage.summary': return { totalCostUSD: 0, totalTokens: 0 }
+      case 'usage.timeseries': return { points: [] }
+      case 'usage.sessions': return { sessions: [] }
+      case 'activity.get': return { events: [] }
+      case 'workspace.select': return { path: args.path || '/tmp/new-project', name: 'new-project' }
+      case 'workspace.list': return { workspaces: state.workspaces, selectedWorkspace: state.selectedWorkspace }
+      case 'workspace.worktrees': return { worktrees: state.worktrees }
+      case 'workspace.worktree.create': return { path: '/tmp/worktree', branch: args.branch || 'feature' }
+      case 'workspace.worktree.remove': return { path: args.path, removed: true }
+      case 'workspace.diagnose': return { directory: state.selectedWorkspace, issues: [] }
+      case 'workspace.repair': return { repaired: true }
+      case 'workspace.open': return { opened: true, path: args.directory || state.selectedWorkspace }
+      case 'workspace.cost': return state.costLedger
+      case 'workspace.capabilities': return { capabilities: [], matrix: [] }
+      case 'workspace.protocols': return { protocols: [], matrix: [] }
+      case 'workspace.config.set': return { configured: true }
+      case 'workspace.teamBudget.get': return { ...state.teamBudget, teamBudgetRevision: state.teamBudgetRevision, workspace: state.selectedWorkspace }
+      case 'workspace.teamBudget.set': { const budgetUsd = Math.max(0.01, Number(args.budgetUsd) || 1); const revision = (state.teamBudgetRevision || 0) + 1; state.teamBudget = { ...state.teamBudget, budgetUsd, remainingUsd: budgetUsd, availableUsd: budgetUsd, memberBudgetUsd: budgetUsd * 0.85, revision }; state.teamBudgetRevision = revision; return { ...state.teamBudget, teamBudgetRevision: revision, workspace: state.selectedWorkspace } }
+      case 'permissions.list': return { permissions: [], rules: [] }
+      case 'permissions.set': return { mode: args.mode }
+      case 'permissions.allow': return { rule: args.rule, allowed: true }
+      case 'permissions.clear': return { cleared: true }
+      case 'approvals.list': return { approvals: state.approvals, pendingApprovals: state.pendingApprovals }
+      case 'approvals.get': return { approval: state.approvals.find((item: any) => item.id === args.approvalId) }
+      case 'approvals.respond': return { approvalId: args.approvalId, decision: args.decision, status: args.decision === 'allow' ? 'allowed' : 'denied' }
+      case 'approvals.allow': return { approvalId: args.approvalId, status: 'allowed' }
+      case 'approvals.deny': return { approvalId: args.approvalId, status: 'denied' }
+      case 'runs.checkpoint.list': return { checkpoints: [] }
+      case 'runs.checkpoint.restore': return { checkpointId: args.checkpointId, restored: true }
+      case 'runs.timeline.get': return { events: [], steps: [] }
+      case 'runs.messages.get': return { messages: [] }
+      case 'runs.events.get': return { events: [] }
+      case 'runs.steps.get': return { steps: [] }
+      case 'runs.cost.get': return state.costLedger
+      case 'workspace.subscribe': { workspaceEventRevision += 1; return { subscribed: true, revision: workspaceEventRevision, workspace: state.selectedWorkspace } }
+      case 'workspace.unsubscribe': return { subscribed: false }
+      case 'workspace.events': return { revision: workspaceEventRevision, workspace: state.selectedWorkspace }
+      case 'maintenance.diagnose': return { database: { integrity: 'ok', sizeBytes: 1024 }, retention: { temp: { sizeBytes: 1024 }, logs: { sizeBytes: 2048 }, updates: { sizeBytes: 0 }, cache: { sizeBytes: 0 } }, protected: ['source'] }
+      case 'maintenance.purge': return args.dryRun ? { reclaimableBytes: 1024, plans: [{ category: 'temp', fileCount: 1, sizeBytes: 1024 }] } : { reclaimedBytes: 1024, failed: 0, retained: 1 }
+      case 'updates.status': return { status: 'idle', currentVersion: '0.1.0' }
+      case 'updates.check': return { status: 'idle', currentVersion: '0.1.0' }
+      case 'updates.install': return { installing: true }
+      case 'plugins.search': return { plugins: [] }
+      case 'plugins.install': return { name: args.name, installed: true }
+      case 'plugins.uninstall': return { name: args.name, removed: true }
+      case 'plugins.installed': return { plugins: [] }
+      default: return {}
+    }
+  })
+  vi.mocked(startSDK).mockImplementation(async (_token, onEvent) => {
+    handler = onEvent
+    return { rpc: vi.fn(async (method: string) => method === 'workspace.capabilities.get' ? clone(workspaceConfig) : {}), stop: vi.fn() } as any
+  })
 })
-Object.defineProperty(window,'yaoyao',{value:{
-  call,
-  subscribe(handler:(event:AppEvent)=>void){listener=handler;return ()=>{listener=()=>{}}}
-},configurable:true})
-HTMLElement.prototype.scrollIntoView=vi.fn()
-const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};failTeamDeliveryAck=false;showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];showAgentActivitySample=false;smartRecord=undefined;budgetState={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]};longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;twoSessions=false;delayedHistoryId='';releaseHistory=undefined;delayedSessionList=false;releaseSessionList=undefined;delayedSave=false;releaseSave=undefined;delayedApprovalLists=false;releasePermissionList=undefined;releaseHostList=undefined;window.localStorage.clear()})
-afterEach(()=>cleanup())
-
-describe('摇摇车真实桌面页面交互',()=>{
-  it('模型切换失败时保持原选择，避免界面显示并未生效的模型',async()=>{
-    failModelSelection=true
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'新建会话'}))
-    await user.click(screen.getByRole('button',{name:'模型管理'}))
-    const card=screen.getByText('MiniMax M3').closest('button')
-    expect(card).not.toBeNull()
-    if(!card)throw new Error('模型选择按钮未渲染')
-    await user.click(card)
-    await screen.findByText('模型服务端拒绝切换')
-    expect(card).not.toHaveClass('selected')
-    expect(call).toHaveBeenCalledWith('sessions.setModel',{sessionId:SID,model:'minimax/M3'})
+describe('desktop workbench', () => {
+  it('uses the injected connector token to load workspace capabilities', async () => {
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })).toBeInTheDocument()
+    expect(desktopHost.rpc).toHaveBeenCalledWith('workspace.capabilities.get', expect.objectContaining({ workspace: '/tmp/project', token: 'test-connector-token' }), expect.any(Object))
+    expect(desktopHost.rpc).toHaveBeenCalledWith('workspace.teamBudget.get', { workspace: '/tmp/project', token: 'test-connector-token' }, expect.any(Object))
+    expect(desktopHost.rpc).toHaveBeenCalledWith('workspace.subscribe', { workspace: '/tmp/project', token: 'test-connector-token' }, expect.any(Object))
+    expect(desktopHost.rpc).not.toHaveBeenCalledWith('models.credentials.set', expect.anything(), expect.anything())
   })
 
-
-  it('侧栏恢复会话后读取真实执行状态，避免显示前一个会话的状态',async()=>{
-    longHistory=true
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    const user=userEvent.setup()
-    await user.click(screen.getByRole('button',{name:'恢复会话：长历史会话'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.status',{sessionId:SID}))
+  it('boots read-only with host-provided workspace configuration and capability snapshot', async () => {
+    workspaceToken = ''
+    workspaceConfig = { ...workspaceConfig, tokenConfigured: false, connectorTokenRequired: true, readOnly: true, writable: false, capabilities: { read: true, write: false } }
+    state.token = 'host-token-not-used-for-capabilities'
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })).toBeInTheDocument()
+    expect(desktopHost.rpc).toHaveBeenCalledWith('workspace.capabilities.get', { workspace: '/tmp/project', token: '' }, expect.any(Object))
+    expect(desktopHost.rpc).not.toHaveBeenCalledWith('workspace.config.set', expect.anything(), expect.anything())
+    expect(desktopHost.rpc).not.toHaveBeenCalledWith('workspace.config.get', expect.anything(), expect.anything())
   })
 
-  it('切换断开的工作区会清空旧项目会话列表',async()=>{
-    longHistory=true
-    pickedOfflineWorkspace=true
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    expect(screen.getByRole('button',{name:'恢复会话：长历史会话'})).toBeInTheDocument()
-    await user.click(screen.getByTitle('/projects/example'))
-    await waitFor(()=>expect(screen.queryByRole('button',{name:'恢复会话：长历史会话'})).not.toBeInTheDocument())
-    expect(screen.getByText('后台未连接')).toBeInTheDocument()
+  it('loads the authenticated model state without a setup gate or bootstrap key', async () => {
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })).toBeInTheDocument()
+    expect(screen.queryByText('完成初始设置')).not.toBeInTheDocument()
+    expect(screen.queryByText('首次启动，设置模型')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('默认模型')).toHaveValue('kimi/kimi-k2.5')
+    expect(desktopHost.rpc).not.toHaveBeenCalledWith('models.credentials.set', expect.anything(), expect.anything())
   })
 
-  it('打开新文件前会确认是否丢弃旧文件未保存的修改',async()=>{
-    manyFiles=true
-    const user=userEvent.setup()
-    const confirm=vi.spyOn(window,'confirm').mockReturnValue(false)
-    try{
-      render(<App/>)
-      await screen.findByText('本地后台已连接')
-      await user.click(screen.getByRole('button',{name:'项目文件'}))
-      await user.click(screen.getByRole('button',{name:'刷新文件'}))
-      await user.click(await screen.findByText('file-0.ts'))
-      const editor=await screen.findByRole('textbox',{name:'编辑当前文件'})
-      await user.clear(editor)
-      await user.type(editor,'未保存修改')
-      await user.click(screen.getByText('file-1.ts'))
-      expect(confirm).toHaveBeenCalled()
-      expect(editor).toHaveValue('未保存修改')
-      expect(call).not.toHaveBeenCalledWith('workspace.read',{path:'/projects/example/file-1.ts'})
-    }finally{confirm.mockRestore()}
-  })
-  it('新界面原生首页使用任务启动而非旧仪表盘，点击建议可进入真实输入流',async()=>{
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    expect(screen.getByRole('heading',{name:'今天，从哪里开始？'})).toBeInTheDocument()
-    expect(screen.getByRole('button',{name:'智能执行'})).toBeDisabled()
-    await user.click(screen.getByRole('button',{name:/分析当前项目结构/}))
-    expect(screen.getByRole('textbox',{name:'智能执行任务'})).toHaveValue('请分析当前项目的架构、主要模块与调用关系')
-    await user.click(screen.getByRole('button',{name:'智能执行'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.execute',expect.objectContaining({
-      prompt:'请分析当前项目的架构、主要模块与调用关系',deferStart:true
-    })))
-    expect(call).toHaveBeenCalledWith('smart.start',{sessionId:SID})
-    expect(await screen.findByText('智能执行已进入真实会话')).toBeInTheDocument()
+  it('keeps the model catalog available when a provider credential is missing', async () => {
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Kimi · kimi-k2.5' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '添加凭证' })).toBeInTheDocument()
   })
 
-  it('智能执行高级模型、预算、权限选择进入 SDK，费用状态显示在新 UI',async()=>{
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.type(screen.getByRole('textbox',{name:'智能执行任务'}),'检查项目依赖')
-    await user.click(screen.getByRole('button',{name:'高级选项'}))
-    await user.selectOptions(screen.getByRole('combobox',{name:'智能执行模型'}),'minimax/M3')
-    await user.type(screen.getByRole('spinbutton',{name:'智能执行费用上限'}),'2.50')
-    await user.selectOptions(screen.getByRole('combobox',{name:'智能执行权限'}),'plan')
-    await user.click(screen.getByRole('button',{name:'智能执行'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.execute',expect.objectContaining({
-      model:'minimax/M3',maxBudgetUsd:2.5,permissionMode:'plan',deferStart:true,
-    })))
-    expect(screen.getByText('智能执行已进入真实会话')).toBeInTheDocument()
-    await waitFor(()=>expect(screen.getAllByText(/上限 USD 2.50/).length).toBeGreaterThan(0))
+  it('renders the version note in normal document flow', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    expect(document.querySelector('.yy-legal-note')).toHaveTextContent('K3.1 V1.1版本 By YYTime')
   })
 
-  it('工作项模型和权限选择实际写入任务队列，不修改其他智能体',async()=>{
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'长期任务'}))
-    await user.type(screen.getByPlaceholderText('明确长期目标与交付要求…'),'不同模型协作')
-    await user.click(screen.getByRole('button',{name:'创建并选中任务'}))
-    await screen.findByRole('heading',{name:'不同模型协作'})
-    await user.type(screen.getByRole('textbox',{name:'工作项标题'}),'专属规划智能体')
-    await user.type(screen.getByRole('textbox',{name:'工作项执行指令'}),'分析项目调用链')
-    await user.selectOptions(screen.getByRole('combobox',{name:'工作项执行模型'}),'minimax/M3')
-    await user.selectOptions(screen.getByRole('combobox',{name:'工作项工具权限'}),'plan')
-    await user.click(screen.getByRole('button',{name:'添加工作项'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('missions.jobs.enqueue',expect.objectContaining({
-      model:'minimax/M3',permissionMode:'plan',
-    })))
+  it('submits workspace login only when the user submits it', async () => {
+    state.authenticated = false
+    state.authRequired = true
+    state.externalMethods = ['kimi']
+    state.authMethods = ['kimi']
+    vi.mocked(desktopHost.start).mockImplementation(async () => { throw Object.assign(new Error('AUTH_REQUIRED:请先完成本地工作区登录'), { code: 'AUTH_REQUIRED' }) })
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: '本地工作区登录' })).toBeInTheDocument()
+    expect(desktopHost.rpc).not.toHaveBeenCalledWith('workspace.auth.start', expect.anything(), expect.anything())
+    fireEvent.click(screen.getByRole('button', { name: '使用 Kimi 登录' }))
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('workspace.auth.start', { workspace: '/tmp/project', token: 'desktop-host-token', method: 'kimi', methods: ['kimi', 'device'], preferredMethods: ['kimi'], openExternal: true }, expect.any(Object)))
+    expect(await screen.findByText('ABCD-1234')).toBeInTheDocument()
   })
 
-  it('项目共享预算从新 UI 配置到真实本地网关，并显示使用与预占',async()=>{
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'高级选项'}))
-    await user.type(screen.getByRole('spinbutton',{name:'项目共享预算'}),'5.00')
-    await user.click(screen.getByRole('button',{name:'保存项目预算'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('budget.project.set',{limitUsd:5}))
-    expect(await screen.findByText(/可用 USD 5.0000/)).toBeInTheDocument()
+  it('loads a persisted session through session.messages.list', async () => {
+    state.sessions = [{ sessionId: 'session-persisted', name: '已有会话', workspace: '/tmp/project', cwd: '/tmp/project', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', messages: [{ role: 'user', content: 'summary' }] }]
+    state.selectedSessionId = 'session-persisted'
+    render(<App />)
+    expect(await screen.findByText('持久化消息')).toBeInTheDocument()
+    expect(desktopHost.rpc).toHaveBeenCalledWith('session.messages.list', { workspace: '/tmp/project', sessionId: 'session-persisted', token: 'test-connector-token' }, expect.any(Object))
+    expect(desktopHost.rpc).not.toHaveBeenCalledWith('sessions.get', expect.anything(), expect.anything())
   })
 
-  it('模型离线自检提供实际档案，无需在线模型请求',async()=>{
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'模型管理'}))
-    await user.click(screen.getByRole('button',{name:/检查配置/}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.inspect',expect.any(Object)))
-    expect(await screen.findByText(/模型自检 ·/)).toBeInTheDocument()
+  it('streams assistant output and completes without an extra session request', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.change(screen.getByLabelText('新任务目标'), { target: { value: '修复桌面测试' } })
+    fireEvent.click(screen.getByRole('button', { name: '开始执行' }))
+    await waitFor(() => expect(startSDK).toHaveBeenCalled())
+    expect(screen.getByRole('button', { name: '停止当前任务' })).toBeInTheDocument()
+    await act(async () => {
+      handler?.({ type: 'run.started', sessionId: 'session-open', runId: 'run-1', phase: 'running' })
+      handler?.({ type: 'message.delta', sessionId: 'session-open', runId: 'run-1', delta: '已完成' })
+      handler?.({ type: 'message.completed', sessionId: 'session-open', runId: 'run-1', message: { role: 'assistant', content: '已完成' } })
+      handler?.({ type: 'run.completed', sessionId: 'session-open', runId: 'run-1', phase: 'completed' })
+    })
+    expect(await screen.findByText('已完成')).toBeInTheDocument()
+    expect(desktopHost.rpc).not.toHaveBeenCalledWith('sessions.get', expect.anything(), expect.anything())
+    expect(desktopHost.rpc).not.toHaveBeenCalledWith('session.messages.list', expect.objectContaining({ sessionId: 'session-open' }), expect.anything())
+    expect(screen.getByRole('button', { name: '停止当前任务' })).toBeDisabled()
   })
 
-  it('六套主题可以切换并在重新打开时恢复',async()=>{
-    const user=userEvent.setup()
-    const view=render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'设置与权限'}))
-    const selector=screen.getByRole('combobox',{name:'界面主题'})
-    expect(selector).toHaveValue('white')
-    await user.selectOptions(selector,'celadon')
-    expect(document.documentElement.dataset.theme).toBe('celadon')
+  it('ignores a late delta after a run has completed', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.change(screen.getByLabelText('新任务目标'), { target: { value: '测试流式结束边界' } })
+    fireEvent.click(screen.getByRole('button', { name: '开始执行' }))
+    await waitFor(() => expect(startSDK).toHaveBeenCalled())
+    await act(async () => {
+      handler?.({ type: 'run.started', sessionId: 'session-open', runId: 'run-1', phase: 'running' })
+      handler?.({ type: 'message.delta', sessionId: 'session-open', runId: 'run-1', delta: '最终答案' })
+      handler?.({ type: 'run.completed', sessionId: 'session-open', runId: 'run-1', phase: 'completed' })
+      handler?.({ type: 'message.delta', sessionId: 'session-open', runId: 'run-1', delta: '，迟到片段' })
+    })
+    expect(screen.getByText('最终答案')).toBeInTheDocument()
+    expect(screen.queryByText(/迟到片段/)).not.toBeInTheDocument()
+  })
+
+  it('persists the draft while a local file picker is open', async () => {
+    let resolveFolder: ((value: any) => void) | undefined
+    vi.mocked(desktopHost.rpc).mockImplementation(async (method: string, args: any = {}) => {
+      if (method === 'files.pickFolder') return await new Promise(resolve => { resolveFolder = resolve })
+      if (method === 'workspace.select') return { path: '/tmp/new-project', name: 'new-project' }
+      if (method === 'desktop.connectorToken') return { token: workspaceToken }
+      if (method === 'workspace.capabilities.get') return clone(workspaceConfig)
+      if (method === 'workspace.teamBudget.get') return { ...state.teamBudget, teamBudgetRevision: state.teamBudgetRevision, workspace: state.selectedWorkspace }
+      if (method === 'workspace.snapshot') return clone(state)
+      if (method === 'sessions.list') return { sessions: [], selectedSessionId: '' }
+      if (method === 'workspace.teamBudget.set') return { ...state.teamBudget, budgetUsd: Number(args.budgetUsd) || 1 }
+      return {}
+    })
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.change(screen.getByLabelText('新任务目标'), { target: { value: '选择目录后继续这段任务草稿' } })
+    fireEvent.click(screen.getByRole('button', { name: '选择已有目录' }))
+    await waitFor(() => expect(resolveFolder).toBeDefined())
+    expect(screen.getByLabelText('新任务目标')).toHaveValue('选择目录后继续这段任务草稿')
+    await act(async () => { resolveFolder?.({ path: '/tmp/new-project' }) })
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('workspace.select', expect.objectContaining({ path: '/tmp/new-project', token: 'test-connector-token' }), expect.any(Object)))
+    expect(screen.getByLabelText('新任务目标')).toHaveValue('选择目录后继续这段任务草稿')
+  })
+
+  it('does not recreate an input draft after the user clears it', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.change(screen.getByLabelText('新任务目标'), { target: { value: '临时草稿' } })
+    fireEvent.change(screen.getByLabelText('新任务目标'), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: '历史' }))
+    fireEvent.click(screen.getByRole('button', { name: '工作台' }))
+    expect(screen.getByLabelText('新任务目标')).toHaveValue('')
+  })
+
+  it('keeps editing a saved file when workspace events arrive', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.click(screen.getByRole('button', { name: '文件' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'README.md' }))
+    const editor = await screen.findByDisplayValue('# project')
+    fireEvent.change(editor, { target: { value: '# project\n正在编辑' } })
+    await act(async () => { workspaceEventHandler?.({ revision: 1, event: { type: 'workspace.changed', path: 'README.md' } }) })
+    expect(screen.getByDisplayValue('# project\n正在编辑')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '保存文件' }))
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('files.save', expect.objectContaining({ path: 'README.md', content: '# project\n正在编辑', token: 'test-connector-token' }), expect.any(Object)))
+  })
+
+  it('keeps local model edits when the same workspace snapshot is refreshed', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    const budget = screen.getByLabelText('单次费用上限（美元）')
+    fireEvent.click(screen.getByRole('button', { name: '高级选项' }))
+    fireEvent.change(budget, { target: { value: '3.5' } })
+    await act(async () => { workspaceEventHandler?.({ revision: 1, event: { type: 'workspace.changed' } }) })
+    expect(screen.getByLabelText('单次费用上限（美元）')).toHaveValue(3.5)
+  })
+
+  it('replaces task projection fields without reviving cleared approvals', async () => {
+    state.pendingApprovals = [{ id: 'approval-1', title: '允许执行命令', status: 'pending' }]
+    state.approvals = clone(state.pendingApprovals)
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    state = { ...state, pendingApprovals: [], approvals: [], teams: [{ teamId: 'team-new', name: '新团队', members: [], channelMessages: [{ messageId: 'message-new', fromAgentId: 'agent-2', toAgentId: 'agent-1', content: '新的团队成员消息', direction: 'outbound' }] }] }
+    await act(async () => { workspaceEventHandler?.({ revision: 2, event: { type: 'workspace.changed' } }) })
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('workspace.snapshot', expect.objectContaining({ token: 'test-connector-token' }), expect.any(Object)))
+    expect(screen.queryByText('允许执行命令')).not.toBeInTheDocument()
+    expect(state.teams[0].channelMessages[0].content).toBe('新的团队成员消息')
+  })
+
+  it('retains the latest team state when an earlier snapshot returns late', async () => {
+    const snapshots: Array<(value: any) => void> = []
+    const original = desktopHost.rpc.getMockImplementation()!
+    vi.mocked(desktopHost.rpc).mockImplementation(async (method: string, args: any = {}) => {
+      if (method === 'workspace.snapshot') return await new Promise(resolve => snapshots.push(resolve))
+      return original(method, args)
+    })
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    await act(async () => {
+      workspaceEventHandler?.({ revision: 1, event: { type: 'team.updated', teamId: 'team-1', status: 'running', team: { teamId: 'team-1', status: 'running', channelMessages: [{ messageId: 'message-1', content: '旧消息' }] } } })
+      workspaceEventHandler?.({ revision: 2, event: { type: 'team.updated', teamId: 'team-1', status: 'completed', team: { teamId: 'team-1', status: 'completed', channelMessages: [{ messageId: 'message-2', content: '新消息' }] } } })
+    })
+    expect(snapshots).toHaveLength(2)
+    await act(async () => { snapshots[1]?.({ ...state, teams: [{ teamId: 'team-1', status: 'completed', channelMessages: [{ messageId: 'message-2', content: '新消息' }] }] }); await Promise.resolve() })
+    await act(async () => { snapshots[0]?.({ ...state, teams: [{ teamId: 'team-1', status: 'running', channelMessages: [{ messageId: 'message-1', content: '旧消息' }] }] }); await Promise.resolve() })
+    expect(screen.queryByText('旧消息')).not.toBeInTheDocument()
+  })
+
+  it('stops the active run through the desktop host', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.change(screen.getByLabelText('新任务目标'), { target: { value: '运行可停止任务' } })
+    fireEvent.click(screen.getByRole('button', { name: '开始执行' }))
+    await waitFor(() => expect(startSDK).toHaveBeenCalled())
+    await act(async () => { handler?.({ type: 'run.started', sessionId: 'session-open', runId: 'run-1', phase: 'running' }) })
+    fireEvent.click(screen.getByRole('button', { name: '停止当前任务' }))
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('sessions.stop', expect.objectContaining({ sessionId: 'session-open', runId: 'run-1', token: 'test-connector-token' }), expect.any(Object)))
+    expect(startSDK).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops the active run from the host event without creating a session', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.change(screen.getByLabelText('新任务目标'), { target: { value: '运行可停止任务' } })
+    fireEvent.click(screen.getByRole('button', { name: '开始执行' }))
+    await waitFor(() => expect(startSDK).toHaveBeenCalled())
+    await act(async () => { hostHandler?.({ type: 'run.started', sessionId: 'session-open', runId: 'run-1', phase: 'running' }) })
+    expect(screen.getByRole('button', { name: '停止当前任务' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: '停止当前任务' }))
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('sessions.stop', expect.objectContaining({ sessionId: 'session-open', runId: 'run-1', token: 'test-connector-token' }), expect.any(Object)))
+  })
+
+  it('renders pending approvals and responds through the host', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.change(screen.getByLabelText('新任务目标'), { target: { value: '运行审批任务' } })
+    fireEvent.click(screen.getByRole('button', { name: '开始执行' }))
+    await waitFor(() => expect(startSDK).toHaveBeenCalled())
+    await act(async () => { handler?.({ type: 'approval.requested', sessionId: 'session-open', runId: 'run-1', approval: { id: 'approval-1', title: '允许执行命令', detail: 'npm test', status: 'pending' } }) })
+    expect(await screen.findByText('允许执行命令')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '批准' }))
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('approvals.respond', expect.objectContaining({ approvalId: 'approval-1', decision: 'allow', token: 'test-connector-token' }), expect.any(Object)))
+  })
+
+  it('keeps a pending approval that arrives while an older session is opening', async () => {
+    let resolveMessages: ((value: any) => void) | undefined
+    const original = desktopHost.rpc.getMockImplementation()!
+    vi.mocked(desktopHost.rpc).mockImplementation(async (method: string, args: any = {}) => {
+      if (method === 'session.messages.list') return await new Promise(resolve => { resolveMessages = resolve })
+      return original(method, args)
+    })
+    state.sessions = [{ sessionId: 'session-persisted', name: '已有会话', workspace: '/tmp/project', cwd: '/tmp/project', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', messages: [] }]
+    state.selectedSessionId = 'session-persisted'
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    await act(async () => { hostHandler?.({ type: 'approval.requested', sessionId: 'session-persisted', runId: 'run-1', approval: { id: 'approval-1', title: '允许执行命令', detail: 'npm test', status: 'pending' } }) })
+    expect(await screen.findByText('允许执行命令')).toBeInTheDocument()
+    await act(async () => { resolveMessages?.({ messages: [], entries: [], hasEarlier: false, hasMore: false, nextBefore: null }); await Promise.resolve() })
+    expect(screen.getByText('允许执行命令')).toBeInTheDocument()
+  })
+
+  it('hydrates a missing team from a host team event', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.click(screen.getByRole('button', { name: '智能体' }))
+    await act(async () => { hostHandler?.({ type: 'team.updated', teamId: 'team-host', name: '宿主团队', team: { teamId: 'team-host', name: '宿主团队', status: 'running', members: [], channelMessages: [] } }) })
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('teams.get', expect.objectContaining({ teamId: 'team-host', token: 'test-connector-token' }), expect.any(Object)))
+    expect(await screen.findAllByText('修复小组')).not.toHaveLength(0)
+  })
+
+  it('keeps workspace-scoped team channels from another team out of the selected conversation', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.click(screen.getByRole('button', { name: '智能体' }))
+    fireEvent.click(await screen.findByRole('button', { name: /修复小组/ }))
+    expect(await screen.findByText('成员已完成代码审查')).toBeInTheDocument()
+    await act(async () => { hostHandler?.({ type: 'team.message', teamId: 'team-other', channelMessages: [{ messageId: 'other-message', fromAgentId: 'agent-9', toAgentId: 'agent-1', content: '其他团队消息' }], message: { messageId: 'other-message', fromAgentId: 'agent-9', toAgentId: 'agent-1', content: '其他团队消息' } }) })
+    expect(screen.queryByText('其他团队消息')).not.toBeInTheDocument()
+  })
+
+  it('renders direct task controls and batch actions from the task projection', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.click(screen.getByRole('button', { name: '任务' }))
+    expect(await screen.findByText('任务队列')).toBeInTheDocument()
+    expect(screen.getByText('暂停')).toBeInTheDocument()
+    expect(screen.getByText('继续')).toBeInTheDocument()
+    expect(screen.getByText('取消')).toBeInTheDocument()
+    expect(screen.getByText('审批')).toBeInTheDocument()
+    expect(screen.getByText('直接任务')).toBeInTheDocument()
+    expect(screen.getByText('团队子任务')).toBeInTheDocument()
+    expect(screen.getByText('根任务 mission-root')).toBeInTheDocument()
+    expect(screen.getByText('父任务 mission-root')).toBeInTheDocument()
+    expect(screen.getByText('子任务 1')).toBeInTheDocument()
+    expect(screen.getByText('等待权限 · 1')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: '选择任务 团队子任务' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '批量继续' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '全选当前任务' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '保存任务预算' })).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('团队子任务预算'), { target: { value: '2.5' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存任务预算' }))
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('tasks.budget.set', expect.objectContaining({ taskId: 'task-parent', missionId: 'mission-parent', budgetUsd: 2.5, token: 'test-connector-token' }), expect.any(Object)))
+    fireEvent.click(screen.getByRole('button', { name: '全选当前任务' }))
+    expect(screen.getByRole('button', { name: '批量暂停' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: '批量暂停' }))
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('tasks.batchControl', expect.objectContaining({ action: 'pause', missionIds: ['mission-parent'], token: 'test-connector-token' }), expect.any(Object)))
+  })
+
+  it('reloads mission jobs after control and refresh', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.click(screen.getByRole('button', { name: '任务' }))
+    await screen.findByText('任务队列')
+    const before = vi.mocked(desktopHost.rpc).mock.calls.filter(call => call[0] === 'missions.jobs.list').length
+    fireEvent.click(screen.getByRole('button', { name: '刷新任务' }))
+    await waitFor(() => expect(vi.mocked(desktopHost.rpc).mock.calls.filter(call => call[0] === 'missions.jobs.list').length).toBeGreaterThan(before))
+  })
+
+  it('does not silently substitute a placeholder mission for the requested team', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.click(screen.getByRole('button', { name: '智能体' }))
+    fireEvent.click(await screen.findByRole('button', { name: /修复小组/ }))
+    expect(await screen.findByText('协调者：agent-1')).toBeInTheDocument()
+    expect(screen.queryByText('任务不存在')).not.toBeInTheDocument()
+  })
+
+  it('shows model validation controls on the models page', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.click(screen.getByRole('button', { name: '模型' }))
+    expect(await screen.findByText('模型与凭证')).toBeInTheDocument()
+    expect(screen.getByText('测试模型')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '测试模型' }))
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('models.validation.start', expect.objectContaining({ modelId: 'kimi/kimi-k2.5', token: 'test-connector-token' }), expect.any(Object)))
+  })
+
+  it('opens model credentials without writing them during startup', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.click(screen.getByRole('button', { name: '添加凭证' }))
+    const input = await screen.findByLabelText('Kimi API Key')
+    fireEvent.change(input, { target: { value: 'sk-test-only-on-save' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存凭证' }))
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('models.credentials.set', { workspace: '/tmp/project', provider: 'kimi', credential: 'sk-test-only-on-save', token: 'test-connector-token' }, expect.any(Object)))
+    expect(vi.mocked(desktopHost.rpc).mock.calls.filter(call => call[0] === 'models.credentials.set')).toHaveLength(1)
+  })
+
+  it('opens the shared budget control without enabling the team creation form', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    expect(screen.getByLabelText('团队共享预算（美元）')).toHaveValue(1)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('团队共享预算（美元）'), { target: { value: '2.5' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存共享预算' }))
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('workspace.teamBudget.set', { workspace: '/tmp/project', token: 'test-connector-token', budgetUsd: 2.5 }, expect.any(Object)))
+    expect(await screen.findByText(/项目共享预算已保存：\$2\.5000/)).toBeInTheDocument()
+  })
+
+  it('saves the shared budget before creating a team task', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.change(screen.getByLabelText('团队共享预算（美元）'), { target: { value: '3.5' } })
+    fireEvent.click(screen.getByRole('button', { name: '创建团队任务' }))
+    fireEvent.change(screen.getByLabelText('团队目标'), { target: { value: '并行修复并验证桌面任务' } })
+    fireEvent.click(screen.getByRole('button', { name: '创建并开始' }))
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('workspace.teamBudget.set', { workspace: '/tmp/project', token: 'test-connector-token', budgetUsd: 3.5 }, expect.any(Object)))
+    await waitFor(() => expect(startSDK).toHaveBeenCalled())
+    const budgetCall = vi.mocked(desktopHost.rpc).mock.calls.findIndex(call => call[0] === 'workspace.teamBudget.set')
+    expect(budgetCall).toBeGreaterThanOrEqual(0)
+    expect(vi.mocked(startSDK).mock.calls.length).toBe(1)
+  })
+
+  it('refreshes the workspace budget after a host budget event', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    state.teamBudget = { ...state.teamBudget, budgetUsd: 4, remainingUsd: 4, availableUsd: 4, revision: 2 }
+    state.teamBudgetRevision = 2
+    await act(async () => { hostHandler?.({ type: 'workspace.budget.updated', budgetUsd: 4, revision: 2 }) })
+    await waitFor(() => expect(screen.getByLabelText('团队共享预算（美元）')).toHaveValue(4))
+    expect(desktopHost.rpc).toHaveBeenCalledWith('workspace.teamBudget.get', { workspace: '/tmp/project', token: 'test-connector-token' }, expect.any(Object))
+  })
+
+  it('persists display settings and exposes reduced motion at the application root', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.click(screen.getByRole('button', { name: '设置' }))
+    expect(await screen.findByText('本地设置')).toBeInTheDocument()
+    const motion = screen.getByRole('checkbox', { name: '减少动态效果' })
+    fireEvent.click(motion)
+    expect(document.querySelector('.yy-app')).toHaveAttribute('data-motion', 'off')
+    fireEvent.click(screen.getByRole('checkbox', { name: '深色主题' }))
+    expect(document.querySelector('.yy-app')).toHaveAttribute('data-theme', 'dark')
+  })
+
+  it('renders the inspector as a dismissible desktop drawer on narrow windows', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    const inspectorButton = screen.queryByRole('button', { name: '工作区详情' })
+    if (inspectorButton) fireEvent.click(inspectorButton)
+    expect(document.querySelector('.yy-inspector')).toBeInTheDocument()
+  })
+
+  it('supports keyboard navigation in tabs and collapsible advanced options', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    const options = screen.getByRole('button', { name: '高级选项' })
+    expect(options).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(options)
+    expect(options).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.keyDown(options, { key: 'Enter' })
+    expect(options).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('moves focus between navigation tabs without opening a session', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    const workbench = screen.getByRole('tab', { name: '工作台' })
+    const chat = screen.getByRole('tab', { name: '聊天' })
+    workbench.focus()
+    fireEvent.keyDown(workbench.parentElement!, { key: 'ArrowRight' })
+    expect(chat).toHaveFocus()
+    expect(workbench).toHaveAttribute('aria-selected', 'true')
+    fireEvent.keyDown(chat.parentElement!, { key: 'End' })
+    expect(screen.getByRole('tab', { name: '设置' })).toHaveFocus()
+    fireEvent.keyDown(chat.parentElement!, { key: 'Home' })
+    expect(workbench).toHaveFocus()
+    fireEvent.keyDown(workbench.parentElement!, { key: 'ArrowLeft' })
+    expect(screen.getByRole('tab', { name: '设置' })).toHaveFocus()
+    const opens = vi.mocked(desktopHost.rpc).mock.calls.filter(call => call[0] === 'sessions.open' || call[0] === 'sessions.ensureOpen')
+    expect(opens).toHaveLength(0)
+  })
+
+  it('shows a dismissible success toast after refreshing history', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.click(screen.getByRole('tab', { name: '历史' }))
+    fireEvent.click(await screen.findByRole('button', { name: '刷新历史' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('刷新历史完成')
+    fireEvent.click(screen.getByRole('button', { name: '关闭操作反馈' }))
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('keeps the MCP add form open while typing after expanding it', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.click(screen.getByRole('tab', { name: '集成' }))
+    const summary = await screen.findByText('添加 MCP 服务')
+    expect(summary.closest('details')).not.toHaveAttribute('open')
+    fireEvent.click(summary)
+    expect(summary.closest('details')).toHaveAttribute('open')
+    fireEvent.change(screen.getByPlaceholderText('服务名称'), { target: { value: 'added-mcp' } })
+    expect(summary.closest('details')).toHaveAttribute('open')
+    fireEvent.change(screen.getByPlaceholderText('https://example.com/mcp'), { target: { value: 'https://added.example.com/mcp' } })
+    fireEvent.click(screen.getByRole('button', { name: '添加 MCP 服务' }))
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('mcp.add', expect.objectContaining({ name: 'added-mcp', scope: 'project', config: { type: 'http', url: 'https://added.example.com/mcp' } }), expect.any(Object)))
+  })
+
+  it('keeps existing mission jobs in place and appends new jobs on workspace updates', async () => {
+    stableMissionJobs = true
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.click(screen.getByRole('tab', { name: '任务' }))
+    await screen.findByText('先执行')
+    const titles = () => Array.from(document.querySelectorAll('.yy-job-card h4'), node => node.textContent)
+    expect(titles()).toEqual(['先执行', '后执行'])
+    await act(async () => {
+      hostHandler?.({ type: 'mission.job.updated', job: { id: 'job-1', title: '先执行', instruction: '第一步', status: 'running', attempt: 1 } })
+    })
+    expect(titles()).toEqual(['先执行', '后执行'])
+    expect(document.querySelector('.yy-job-card')).toHaveAttribute('data-updated', 'true')
+    await act(async () => {
+      hostHandler?.({ type: 'mission.job.updated', job: { id: 'job-3', title: '新追加', instruction: '第三步', status: 'queued', attempt: 1 } })
+    })
+    expect(titles()).toEqual(['先执行', '后执行', '新追加'])
+  })
+
+  it('shows an inline hook save error without a blanket page reload', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.click(screen.getByRole('button', { name: '设置' }))
+    expect(await screen.findByText('Hooks 执行策略')).toBeInTheDocument()
+    expect(screen.getByText('删除、覆盖和外部操作需要审批')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Hook 执行策略'), { target: { value: 'strict' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存 Hooks 策略' }))
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('hooks.profile.set', expect.objectContaining({ profileId: 'strict', token: 'test-connector-token' }), expect.any(Object)))
+    expect(screen.queryByRole('button', { name: '重新连接' })).not.toBeInTheDocument()
+  })
+
+  it('renders a rejected workspace capability state without executing a write', async () => {
+    workspaceConfig = { ...workspaceConfig, readOnly: true, writable: false, capabilities: { read: true, write: false } }
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.change(screen.getByLabelText('新任务目标'), { target: { value: '只读状态不应执行' } })
+    expect(screen.getByRole('button', { name: '开始执行' })).toBeEnabled()
+    expect(desktopHost.rpc).not.toHaveBeenCalledWith('sessions.create', expect.anything(), expect.anything())
+  })
+
+  it('renders settings sections without turning the page into a debug dashboard', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.click(screen.getByRole('button', { name: '设置' }))
+    expect(await screen.findByText('本地设置')).toBeInTheDocument()
+    expect(screen.getByText('显示与交互')).toBeInTheDocument()
+    expect(screen.getByText('权限与执行策略')).toBeInTheDocument()
+    expect(screen.getByText('本地数据维护')).toBeInTheDocument()
+  })
+
+  it('keeps the selected model in the new-session options', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    expect(screen.getByLabelText('默认模型')).toHaveValue('kimi/kimi-k2.5')
+    fireEvent.change(screen.getByLabelText('默认模型'), { target: { value: 'kimi/kimi-k2.5' } })
+    await waitFor(() => expect(desktopHost.rpc).toHaveBeenCalledWith('models.default.set', expect.objectContaining({ modelId: 'kimi/kimi-k2.5' }), expect.any(Object)))
+  })
+
+  it('uses readable labels for core navigation', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    for (const label of ['工作台', '聊天', '智能体', '任务', '文件', '模型', '集成', 'GitHub', '历史', '设置']) expect(screen.getByRole('button', { name: label })).toBeInTheDocument()
+  })
+
+  it('does not put private credentials into visible startup content', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    expect(document.body.textContent).not.toContain('desktop-host-token')
+    expect(document.body.textContent).not.toContain('test-connector-token')
+    expect(document.body.textContent).not.toContain('sk-test')
+  })
+
+  it('cleans up the workspace event subscription on unmount', async () => {
+    const view = render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
     view.unmount()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'设置与权限'}))
-    expect(screen.getByRole('combobox',{name:'界面主题'})).toHaveValue('celadon')
-    await user.selectOptions(screen.getByRole('combobox',{name:'界面主题'}),'ink-blue')
-    expect(document.documentElement.dataset.theme).toBe('ink-blue')
+    expect(desktopHost.rpc).toHaveBeenCalledWith('workspace.unsubscribe', expect.objectContaining({ workspace: '/tmp/project', token: 'test-connector-token' }), expect.any(Object))
   })
 
-  it('替换后的项目侧栏可直接恢复真实会话并选中会话标签',async()=>{
-    longHistory=true
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    expect(screen.getByRole('navigation',{name:'主要导航'})).toBeInTheDocument()
-    const recent=screen.getByRole('button',{name:'恢复会话：长历史会话'})
-    await user.click(recent)
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.ensureOpen',{sessionId:SID}))
-    expect(screen.getByRole('tab',{name:'标签页：会话 · 长历史会话'})).toHaveAttribute('aria-selected','true')
-    await user.click(screen.getByRole('button',{name:'项目文件'}))
-    expect(screen.getByRole('tab',{name:'标签页：项目文件'})).toHaveAttribute('aria-selected','true')
-    await user.click(screen.getByRole('tab',{name:'标签页：会话 · 长历史会话'}))
-    expect(screen.getByRole('tab',{name:'标签页：会话 · 长历史会话'})).toHaveAttribute('aria-selected','true')
+  it('does not use a second theme toggle with competing state', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.click(screen.getByRole('button', { name: '设置' }))
+    expect(screen.getAllByRole('checkbox', { name: '深色主题' })).toHaveLength(1)
   })
 
-  it('历史工作项仅查看不自动恢复，发送时才恢复原 SDK 会话',async()=>{
-    showHistoricalJob=true
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'长期任务'}))
-    await screen.findByText('审核旧执行')
-    await user.click(screen.getByRole('button',{name:'查看会话'}))
-    await screen.findByText('历史执行内容')
-    expect(screen.getByText(/发送新消息时将恢复原会话/)).toBeInTheDocument()
-    expect(call).not.toHaveBeenCalledWith('sessions.ensureOpen',{sessionId:SID})
-    await user.type(screen.getByRole('textbox',{name:'输入任务'}),'继续原任务')
-    await user.click(screen.getByRole('button',{name:'发送'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.ensureOpen',{sessionId:SID}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',{sessionId:SID,message:'继续原任务'}))
-    expect(screen.queryByText(/发送新消息时将恢复原会话/)).not.toBeInTheDocument()
+  it('preserves host revision guards for permission requests', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    await act(async () => { hostHandler?.({ type: 'permission.requested', revision: 1, permission: { id: 'permission-1', status: 'pending', title: '新权限请求' } }) })
+    await act(async () => { hostHandler?.({ type: 'host.snapshot', revision: 1, pendingApprovals: [] }) })
+    expect(screen.queryByText('新权限请求')).not.toBeInTheDocument()
   })
 
-  it('MCP URL请求提供HTTPS浏览器访问、完成确认与明确拒绝',async()=>{
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await act(async()=>listener({event:'host.request',sessionId:SID,request:{
-      id:'mcp-url-1',request:{subtype:'elicitation',mode:'url',
-        url:'https://mcp.example.org/authorize',mcp_server_name:'测试服务器',message:'完成授权'}
-    }}))
-    const dialog=await screen.findByRole('dialog',{name:'主机交互请求'})
-    expect(within(dialog).getByText(/mcp.example.org\/authorize/)).toBeInTheDocument()
-    expect(within(dialog).queryByRole('button',{name:'提交输入'})).not.toBeInTheDocument()
-    await user.click(within(dialog).getByRole('button',{name:'在浏览器中打开'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('external.open',{url:'https://mcp.example.org/authorize'}))
-    expect(call).not.toHaveBeenCalledWith('host.respond',expect.anything())
-    await user.click(within(dialog).getByRole('button',{name:'已完成，继续'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('host.respond',{
-      sessionId:SID,requestId:'mcp-url-1',response:{action:'accept'}
-    }))
-    await act(async()=>listener({event:'host.request',sessionId:SID,request:{
-      id:'mcp-url-2',request:{subtype:'elicitation',mode:'url',
-        url:'javascript:alert(1)',mcp_server_name:'测试服务器',message:'可疑链接'}
-    }}))
-    const suspicious=await screen.findByRole('dialog',{name:'主机交互请求'})
-    expect(within(suspicious).getByRole('button',{name:'在浏览器中打开'})).toBeDisabled()
-    await user.click(within(suspicious).getByRole('button',{name:'拒绝访问'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('host.respond',{
-      sessionId:SID,requestId:'mcp-url-2',response:{action:'decline'}
-    }))
+  it('keeps task authorization revisions in the projection path', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    fireEvent.click(screen.getByRole('button', { name: '任务' }))
+    expect(await screen.findByText('任务队列')).toBeInTheDocument()
+    expect(desktopHost.rpc).toHaveBeenCalledWith('tasks.list', expect.objectContaining({ workspace: '/tmp/project', token: 'test-connector-token' }), expect.any(Object))
   })
 
-  it('刷新某项失败会显示具体模块和原因',async()=>{
-    failMcpRefresh=true
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await screen.findByText(/刷新部分失败：MCP服务：MCP 服务离线/)
+  it('does not require the advanced options to access the shared team budget', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    expect(screen.getByLabelText('团队共享预算（美元）')).toBeVisible()
+    expect(screen.getByRole('button', { name: '高级选项' })).toHaveAttribute('aria-expanded', 'false')
   })
 
-  it('长期任务创建后立即显示结果，MCP 服务卡住也不影响用户操作',async()=>{
-    suspendMcpRefresh=true
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'长期任务'}))
-    await user.type(screen.getByPlaceholderText('明确长期目标与交付要求…'),'真实安装版任务创建测试')
-    const probesBefore=call.mock.calls.filter(args=>args[0]==='models.list').length
-    const mcpBefore=call.mock.calls.filter(args=>args[0]==='mcp.list').length
-    await user.click(screen.getByRole('button',{name:'创建并选中任务'}))
-    await waitFor(()=>expect(screen.getByRole('heading',{name:'真实安装版任务创建测试'})).toBeInTheDocument())
-    expect(screen.getByText('Super Agents 工作项')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('明确长期目标与交付要求…')).toHaveValue('')
-    expect(screen.getByRole('button',{name:'创建并选中任务'})).toBeDisabled() // no duplicate submission from an empty form
-    expect(call).toHaveBeenCalledWith('missions.create',{objective:'真实安装版任务创建测试'})
-    expect(call.mock.calls.filter(args=>args[0]==='models.list')).toHaveLength(probesBefore)
-    expect(call.mock.calls.filter(args=>args[0]==='mcp.list')).toHaveLength(mcpBefore)
-    await act(async()=>{suspendMcpRefresh=false;releaseMcpRefresh?.()})
+  it('preserves long tool output access in the chat surface', async () => {
+    state.sessions = [{ sessionId: 'session-tools', name: '工具会话', workspace: '/tmp/project', cwd: '/tmp/project', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', messages: [] }]
+    state.selectedSessionId = 'session-tools'
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    expect(screen.getByRole('tab', { name: '聊天' })).toBeInTheDocument()
   })
 
-  it('加载真实工作区、模型和九个导航入口',async()=>{
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    const navigation=screen.getByRole('navigation',{name:'主要导航'})
-    expect(within(navigation).getByRole('button',{name:'工作台概览'})).toBeInTheDocument()
-    expect(within(navigation).getByRole('button',{name:'智能体团队'})).toBeInTheDocument()
-    expect(within(navigation).getByRole('button',{name:'长期任务'})).toBeInTheDocument()
-    expect(within(navigation).getByRole('button',{name:'项目文件'})).toBeInTheDocument()
-    expect(call).toHaveBeenCalledWith('models.list')
-    expect(call).toHaveBeenCalledWith('mcp.list')
+  it('keeps error presentation available without throwing during rendering', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('新建会话发送消息后收到工具审批并明确批准',async()=>{
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'AI 对话'}))
-    await user.type(screen.getByRole('textbox',{name:'输入任务'}),'分析这个项目')
-    await user.click(screen.getByRole('button',{name:'发送'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.execute',expect.objectContaining({prompt:'分析这个项目',deferStart:true})))
-    await act(async()=>listener({event:'permission.request',sessionId:SID,permission:{id:'approval-1',toolName:'Bash',input:{command:'bun test'}}}))
-    const dialog=screen.getByRole('dialog',{name:'工具权限审批'})
-    expect(within(dialog).getByText(/Bash/)).toBeInTheDocument()
-    await user.click(within(dialog).getByRole('button',{name:'允许本次操作'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('permissions.decide',{
-      sessionId:SID,permissionId:'approval-1',decision:{behavior:'allow'}
-    }))
+  it('retains responsive containers for workspace grids', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: '把一个目标，交给本地智能体。' })
+    expect(document.querySelector('.yy-page')).toBeInTheDocument()
+    expect(document.querySelector('.yy-page-inner')).toBeInTheDocument()
   })
-
-  it('两个后台智能体同时请求权限时逐项回传各自SDK会话',async()=>{
-    const user=userEvent.setup()
-    const SECOND='e9c46d7b-2766-49c8-9f2d-142c90a45d5a'
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await act(async()=>{
-      listener({event:'permission.request',sessionId:SID,permission:{id:'approval-main',toolName:'Bash',input:{command:'git status'}}})
-      listener({event:'permission.request',sessionId:SECOND,permission:{id:'approval-worker',toolName:'FileEdit',input:{file_path:'a.ts'}}})
-    })
-    const dialog=screen.getByRole('dialog',{name:'工具权限审批'})
-    expect(within(dialog).getByText(/另有 1 项待审操作/)).toBeInTheDocument()
-    await user.click(within(dialog).getByRole('button',{name:'允许本次操作'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('permissions.decide',{
-      sessionId:SID,permissionId:'approval-main',decision:{behavior:'allow'}
-    }))
-    await waitFor(()=>expect(within(dialog).getByText(/FileEdit/)).toBeInTheDocument())
-    await user.click(within(dialog).getByRole('button',{name:'允许本次操作'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('permissions.decide',{
-      sessionId:SECOND,permissionId:'approval-worker',decision:{behavior:'allow'}
-    }))
-  })
-
-  it('设置页按会话和编号精确审批，即使不同 SDK 会话使用了相同编号',async()=>{
-    const user=userEvent.setup()
-    const SECOND='e9c46d7b-2766-49c8-9f2d-142c90a45d5a'
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'设置与权限'}))
-    await act(async()=>{
-      listener({event:'permission.request',sessionId:SID,permission:{id:'same-request',toolName:'Bash',input:{command:'git status'}}})
-      listener({event:'permission.request',sessionId:SECOND,permission:{id:'same-request',toolName:'FileEdit',input:{file_path:'other.ts'}}})
-    })
-    const buttons=screen.getAllByRole('button',{name:'本次允许'})
-    expect(buttons).toHaveLength(2)
-    await user.click(buttons[1])
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('permissions.decide',{
-      sessionId:SECOND,permissionId:'same-request',decision:{behavior:'allow'}
-    }))
-    expect(call).not.toHaveBeenCalledWith('permissions.decide',{
-      sessionId:SID,permissionId:'same-request',decision:{behavior:'allow'}
-    })
-  })
-
-  it('不同会话复用同一个审批编号时都保留请求并分别审批',async()=>{
-    const user=userEvent.setup()
-    const other='cb5f81c9-782d-4b79-a7ba-b43db0249a1c'
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await act(async()=>{
-      listener({event:'permission.request',sessionId:SID,permission:{id:'req-1',toolName:'Bash',input:{command:'git status'}}})
-      listener({event:'permission.request',sessionId:other,permission:{id:'req-1',toolName:'FileEdit',input:{file_path:'other.ts'}}})
-    })
-    const dialog=screen.getByRole('dialog',{name:'工具权限审批'})
-    expect(within(dialog).getByText(/另有 1 项待审操作/)).toBeInTheDocument()
-    await user.click(within(dialog).getByRole('button',{name:'允许本次操作'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('permissions.decide',{
-      sessionId:SID,permissionId:'req-1',decision:{behavior:'allow'}
-    }))
-    await waitFor(()=>expect(within(dialog).getByText(/FileEdit/)).toBeInTheDocument())
-    await user.click(within(dialog).getByRole('button',{name:'允许本次操作'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('permissions.decide',{
-      sessionId:other,permissionId:'req-1',decision:{behavior:'allow'}
-    }))
-  })
-
-  it('MCP 配置列表可见，并将启停操作交给真实网关',async()=>{
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'技能与 MCP'}))
-    await screen.findByText('project-mcp')
-    await user.click(screen.getByRole('button',{name:'禁用'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('mcp.toggle',{name:'project-mcp',enabled:false}))
-  })
-
-  it('模型凭证通过专用接口写入且没有明文回显',async()=>{
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'模型管理'}))
-    await user.type(screen.getByLabelText('API Key'),'fake-testing-key-123')
-    await user.click(screen.getByRole('button',{name:'保存凭证'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('credentials.set',{provider:'openai',key:'fake-testing-key-123'}))
-    await waitFor(()=>expect(screen.getByLabelText('API Key')).toHaveValue(''))
-  })
-  it('创建团队入口先验证用户目标，再将真实 TeamCreate 指令提交给 SDK，会话能接续执行',async()=>{
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'智能体团队'}))
-    await user.click(screen.getByRole('button',{name:/Super Agents 团队模式/}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('agents.setMode',{mode:'super'}))
-    await user.click(screen.getByRole('button',{name:'长期任务'}))
-    await user.type(screen.getByPlaceholderText('明确长期目标与交付要求…'),'构建真实团队')
-    await user.click(screen.getByRole('button',{name:'创建并选中任务'}))
-    await screen.findByRole('heading',{name:'构建真实团队'})
-    await user.click(screen.getByRole('button',{name:'智能体团队'}))
-    await user.type(screen.getByRole('textbox',{name:'新团队名称'}),'代码验证组')
-    await user.type(screen.getByRole('textbox',{name:'新团队目标'}),'代码检查及自动化测试')
-    await user.click(screen.getByRole('button',{name:'请求建立团队'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',expect.objectContaining({
-      sessionId:SID,message:expect.stringContaining('TeamCreate')
-    })))
-    expect(call).toHaveBeenCalledWith('sessions.open',expect.any(Object))
-    expect(screen.getByRole('textbox',{name:'输入任务'})).toBeInTheDocument()
-    expect(screen.getByText('已收到团队建队请求，等待工具确认')).toBeInTheDocument()
-    const prior=call.mock.calls.filter(entry=>entry[0]==='agents.overview').length
-    await act(async()=>listener({
-      event:'session.message',sessionId:SID,turnId:'11afef34-e0a6-4c38-a743-1c451993fdb8',
-      message:{type:'result',subtype:'success',result:'团队建队工具已返回'}
-    }))
-    await waitFor(()=>expect(call.mock.calls.filter(entry=>entry[0]==='agents.overview').length).toBeGreaterThan(prior))
-  })
-
-  it('跨模式总览从统一查询获取历史任务，并接收其他会话实时更新且不污染当前任务',async()=>{
-    showAgentActivitySample=true
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'智能体团队'}))
-    await screen.findByText('长期审计工作')
-    expect(screen.getByText('另一会话检查')).toBeInTheDocument()
-    expect(call).toHaveBeenCalledWith('agents.activity')
-    await act(async()=>listener({
-      event:'task.updated',sessionId:OTHER,
-      task:{taskId:'new-agent',description:'跨会话并行核查',status:'running'},
-    }))
-    expect(await screen.findByText('跨会话并行核查')).toBeInTheDocument()
-    expect(screen.getByText('尚无运行中的智能体任务')).toBeInTheDocument()
-  })
-
-  it('团队增员由原生 AgentTool 执行，需有效长期目标和用户确认',async()=>{
-    mockTeam={name:'原团队',leadSessionId:SID,memberCount:1,runningCount:0}
-    const user=userEvent.setup()
-    const confirm=vi.spyOn(window,'confirm').mockReturnValue(true)
-    try{
-      render(<App/>)
-      await screen.findByText('本地后台已连接')
-      await user.click(screen.getByRole('button',{name:'智能体团队'}))
-      await user.click(screen.getByRole('button',{name:/Super Agents 团队模式/}))
-      await waitFor(()=>expect(call).toHaveBeenCalledWith('agents.setMode',{mode:'super'}))
-      await user.click(screen.getByRole('button',{name:'智能体团队'}))
-      await screen.findByText('测试成员')
-      await user.type(screen.getByRole('textbox',{name:'新成员名称'}),'代码复核员')
-      await user.type(screen.getByRole('textbox',{name:'新成员执行任务'}),'独立检查核心调用链')
-      await user.click(screen.getByRole('button',{name:'请求启动成员'}))
-      await screen.findByText('请先选择并恢复有效的长期目标，再启动团队成员')
-      expect(call).not.toHaveBeenCalledWith('sessions.send',expect.anything())
-      await user.click(screen.getByRole('button',{name:'长期任务'}))
-      await user.type(screen.getByPlaceholderText('明确长期目标与交付要求…'),'独立审计')
-      await user.click(screen.getByRole('button',{name:'创建并选中任务'}))
-      await screen.findByRole('heading',{name:'独立审计'})
-      await user.click(screen.getByRole('button',{name:'智能体团队'}))
-      await user.click(screen.getByRole('button',{name:'请求启动成员'}))
-      await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.ensureOpen',{sessionId:SID}))
-      await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',expect.objectContaining({
-        sessionId:SID,message:expect.stringContaining('代码复核员'),
-      })))
-      const callText=String(call.mock.calls.find(args=>args[0]==='sessions.send')?.[1]?.message||'')
-      expect(callText).toContain('team_name')
-      expect(callText).toContain('原生 Agent 工具')
-      expect(confirm).toHaveBeenCalled()
-    }finally{confirm.mockRestore()}
-  })
-
-  it('成员任务经项目受限信箱投递，不增加模型调用并可查看真实消息',async()=>{
-    mockTeam={name:'原团队',leadSessionId:SID,memberCount:1,runningCount:0}
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'智能体团队'}))
-    await screen.findByText('测试成员')
-    await user.click(screen.getByRole('button',{name:'选为接收人'}))
-    await user.type(screen.getByRole('textbox',{name:'团队成员工作指令'}),'验证当前代码并提交测试记录')
-    await user.click(screen.getByRole('button',{name:'发送成员任务'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('agents.team.message',expect.objectContaining({
-      teamName:'原团队',to:'测试成员',message:'验证当前代码并提交测试记录',
-      messageId:expect.any(String),
-    })))
-    expect(screen.getByText(/已写入 测试成员 的团队信箱/)).toBeInTheDocument()
-    expect(call).not.toHaveBeenCalledWith('sessions.send',expect.anything())
-    expect(call).not.toHaveBeenCalledWith('sessions.open',expect.anything())
-    await user.click(screen.getByRole('button',{name:'查看信箱'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('agents.team.inbox',{teamName:'原团队',memberName:'测试成员'}))
-    expect(screen.getByText('已提交检查任务')).toBeInTheDocument()
-    expect(screen.getByText(/未读取/)).toBeInTheDocument()
-  })
-
-  it('团队信箱确认丢失后重试沿用相同消息标识，避免重复投递',async()=>{
-    mockTeam={name:'原团队',leadSessionId:SID,memberCount:1,runningCount:0}
-    failTeamDeliveryAck=true
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'智能体团队'}))
-    await screen.findByText('测试成员')
-    await user.click(screen.getByRole('button',{name:'选为接收人'}))
-    await user.type(screen.getByRole('textbox',{name:'团队成员工作指令'}),'确认重试一致性')
-    await user.click(screen.getByRole('button',{name:'发送成员任务'}))
-    await screen.findByText('模拟信箱确认丢失')
-    await user.click(screen.getByRole('button',{name:'发送成员任务'}))
-    await screen.findByText(/已写入 测试成员 的团队信箱/)
-    const sends=call.mock.calls.filter(args=>args[0]==='agents.team.message')
-    expect(sends).toHaveLength(2)
-    expect(sends[0]?.[1]).toMatchObject({messageId:expect.any(String)})
-    expect((sends[0]?.[1] as Record<string,unknown>).messageId).toBe(
-      (sends[1]?.[1] as Record<string,unknown>).messageId,
-    )
-  })
-
-  it('Mission 的其他 SDK 会话进度能在任务板显示，且与当前对话互不混淆',async()=>{
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'长期任务'}))
-    await user.type(screen.getByPlaceholderText('明确长期目标与交付要求…'),'多会话进度核验')
-    await user.click(screen.getByRole('button',{name:'创建并选中任务'}))
-    await screen.findByRole('heading',{name:'多会话进度核验'})
-    await act(async()=>listener({
-      event:'mission.activity',missionId:'mission_0123456789abcdef',sessionId:SID,
-      jobId:'job_0123456789abcdef',task:{taskId:'agent-1',status:'running',description:'并行检查权限边界'},
-    }))
-    expect(await screen.findByText('并行检查权限边界')).toBeInTheDocument()
-    expect(screen.getByText('多会话智能体实时进度')).toBeInTheDocument()
-  })
-
-  it('切换智能体协作模式后发送消息必须启用新SDK会话，旧会话仍保留',async()=>{
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'AI 对话'}))
-    await user.type(screen.getByRole('textbox',{name:'输入任务'}),'第一次分析')
-    await user.click(screen.getByRole('button',{name:'发送'}))
-    await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='smart.execute')).toHaveLength(1))
-
-    await user.click(screen.getByRole('button',{name:'智能体团队'}))
-    await user.click(screen.getByRole('button',{name:/Super Agents 团队模式/}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('agents.setMode',{mode:'super'}))
-    await user.click(screen.getByRole('button',{name:'AI 对话'}))
-    await waitFor(()=>expect(screen.queryByText('第一次分析')).not.toBeInTheDocument())
-    await user.type(screen.getByRole('textbox',{name:'输入任务'}),'第二次分析')
-    await user.click(screen.getByRole('button',{name:'发送'}))
-    await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='smart.execute')).toHaveLength(2))
-    expect(call).toHaveBeenCalledWith('smart.execute',expect.objectContaining({prompt:'第二次分析'}))
-    expect(call).not.toHaveBeenCalledWith('sessions.close',expect.anything())
-  })
-
-  it('正在执行的智能体只显示停止，停止或失败的智能体只显示继续',async()=>{
-    const user=userEvent.setup()
-    mockTasks=[{taskId:'task-running',description:'执行单元 A',status:'running'}]
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'新建会话'}))
-    await user.click(screen.getByRole('button',{name:'智能体团队'}))
-    await screen.findByText('执行单元 A')
-    expect(screen.getByRole('button',{name:'停止任务'})).toBeInTheDocument()
-    expect(screen.queryByRole('button',{name:'请求续办任务'})).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button',{name:'停止任务'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('tasks.stop',{sessionId:SID,taskId:'task-running'}))
-  })
-
-  it('中断智能体的续办请求通过原SDK提交并保留真实结果',async()=>{
-    const user=userEvent.setup()
-    mockTasks=[{taskId:'task-interrupted',description:'未完成的代码审计',status:'interrupted'}]
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'新建会话'}))
-    await user.click(screen.getByRole('button',{name:'智能体团队'}))
-    await screen.findByText('未完成的代码审计')
-    expect(screen.queryByRole('button',{name:'停止任务'})).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button',{name:'请求续办任务'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('tasks.resume',
-      expect.objectContaining({sessionId:SID,taskId:'task-interrupted',
-        prompt:expect.stringContaining('核对已有执行结果')})))
-  })
-
-  it('全局命令中心可以搜索并进入对应页面',async()=>{
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.keyboard('{Control>}k{/Control}')
-    const palette=await screen.findByRole('dialog',{name:'快速操作'})
-    await user.type(within(palette).getByRole('textbox',{name:'搜索命令'}),'历史记录')
-    expect(within(palette).getByRole('option',{name:/历史记录/})).toBeInTheDocument()
-    await user.keyboard('{Enter}')
-    await screen.findByRole('heading',{name:'历史记录'})
-    expect(screen.queryByRole('dialog',{name:'快速操作'})).not.toBeInTheDocument()
-  })
-
-  it('长对话优先载入最新200条，再从磁盘向前分页到最早消息',async()=>{
-    longHistory=true
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'长历史会话'}))
-    await screen.findByText('历史-259')
-    expect(screen.queryByText('历史-0')).not.toBeInTheDocument()
-    expect(call).toHaveBeenCalledWith('sessions.history',{sessionId:SID,limit:200,offset:0,tail:true})
-    await user.click(screen.getByRole('button',{name:/加载更早的 80 条消息/}))
-    await user.click(screen.getByRole('button',{name:'从磁盘加载更早的消息'}))
-    await screen.findByText('历史-0')
-    expect(call).toHaveBeenCalledWith('sessions.history',{sessionId:SID,offset:0,limit:60})
-  })
-
-  it('文件列表分页向网关请求下一页并展示累计数量',async()=>{
-    manyFiles=true
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'项目文件'}))
-    await user.click(screen.getByRole('button',{name:'刷新文件'}))
-    await screen.findByText('file-199.ts')
-    const more=screen.getByRole('button',{name:/加载更多文件/})
-    expect(more).toHaveTextContent('200/260')
-    await user.click(more)
-    await screen.findByText('file-259.ts')
-    expect(call).toHaveBeenCalledWith('workspace.list',{path:'/projects/example',offset:200,limit:200})
-    expect(screen.queryByRole('button',{name:/加载更多文件/})).not.toBeInTheDocument()
-  })
-
-  it('外观和详情面板偏好在重启后仍保留',async()=>{
-    const user=userEvent.setup()
-    const instance=render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'设置与权限'}))
-    const themeSelect=screen.getByRole('combobox',{name:'界面主题'})
-    await user.selectOptions(themeSelect,'ink-blue')
-    await waitFor(()=>expect(window.localStorage.getItem('yaoyaoche-desktop:theme')).toBe('ink-blue'))
-    await waitFor(()=>expect(window.localStorage.getItem('yaoyaoche-desktop:dark')).toBe('true'))
-    await user.click(screen.getByRole('button',{name:'隐藏详情面板'}))
-    await waitFor(()=>expect(window.localStorage.getItem('yaoyaoche-desktop:inspector')).toBe('false'))
-    instance.unmount()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    expect(document.documentElement.dataset.theme).toBe('ink-blue')
-    expect(screen.getByRole('button',{name:'打开详情面板'})).toBeInTheDocument()
-  })
-
-  it('乱序恢复 A/B 会话时，A 的迟到历史不得覆盖 B 的消息、模型、权限和阶段',async()=>{
-    twoSessions=true
-    delayedHistoryId=SID
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'恢复会话：会话 A'}))
-    await waitFor(()=>expect(releaseHistory).toBeTypeOf('function'))
-    await user.click(screen.getByRole('button',{name:'恢复会话：会话 B'}))
-    await screen.findByText('会话 B 内容')
-    expect(screen.getByRole('combobox',{name:'权限模式'})).toHaveValue('plan')
-    expect(screen.getByRole('combobox',{name:'当前模型'})).toHaveValue('minimax/M4')
-    await act(async()=>releaseHistory?.())
-    expect(screen.getByText('会话 B 内容')).toBeInTheDocument()
-    expect(screen.queryByText('会话 A 内容')).not.toBeInTheDocument()
-    expect(screen.getByRole('combobox',{name:'权限模式'})).toHaveValue('plan')
-    expect(screen.getByRole('combobox',{name:'当前模型'})).toHaveValue('minimax/M4')
-  })
-
-  it('离线切换工作区时，旧项目尚未返回的会话刷新不得重新写回侧栏',async()=>{
-    longHistory=true
-    delayedSessionList=true
-    pickedOfflineWorkspace=true
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await waitFor(()=>expect(releaseSessionList).toBeTypeOf('function'))
-    await user.click(screen.getByTitle('/projects/example'))
-    await screen.findByText('后台未连接')
-    await act(async()=>releaseSessionList?.())
-    expect(screen.queryByRole('button',{name:'恢复会话：长历史会话'})).not.toBeInTheDocument()
-  })
-
-  it('并发宿主请求到达时，正在填写的表单按会话和请求编号独立保留',async()=>{
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    const makeRequest=(id:string,sessionId:string)=>({
-      event:'host.request' as const,sessionId,request:{id,request:{
-        subtype:'elicitation',mode:'form',title:'补充参数',
-        requested_schema:{type:'object',properties:{ticket:{type:'string',title:'工单编号'}}},
-      }},
-    })
-    await act(async()=>{
-      listener(makeRequest('form-A',SID))
-    })
-    const form=await screen.findByRole('dialog',{name:'主机交互请求'})
-    await user.type(within(form).getByRole('textbox',{name:'工单编号'}),'pending-A')
-    await act(async()=>listener(makeRequest('form-B',OTHER)))
-    expect(within(form).getByRole('textbox',{name:'工单编号'})).toHaveValue('pending-A')
-    await user.click(within(form).getByRole('button',{name:'提交输入'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('host.respond',{
-      sessionId:SID,requestId:'form-A',response:{action:'accept',content:{ticket:'pending-A'}},
-    }))
-    expect(within(screen.getByRole('dialog',{name:'主机交互请求'})).getByRole('textbox',{name:'工单编号'})).toHaveValue('')
-  })
-
-  it('工具审批期间禁用新建会话和命令面板快捷键，Tab 焦点保留在审批内',async()=>{
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await act(async()=>listener({event:'permission.request',sessionId:SID,permission:{
-      id:'needs-review',toolName:'Bash',input:{command:'pwd'},
-    }}))
-    const dialog=screen.getByRole('dialog',{name:'工具权限审批'})
-    await user.keyboard('{Control>}k{/Control}')
-    await user.keyboard('{Control>}n{/Control}')
-    await user.tab()
-    expect(dialog.contains(document.activeElement)).toBe(true)
-    expect(screen.queryByRole('dialog',{name:'快速操作'})).not.toBeInTheDocument()
-    expect(call).not.toHaveBeenCalledWith('sessions.open',expect.anything())
-  })
-
-  it('旧文件保存的迟到响应不应改变新文件的已保存内容基准',async()=>{
-    manyFiles=true
-    delayedSave=true
-    const user=userEvent.setup()
-    const confirm=vi.spyOn(window,'confirm').mockReturnValue(true)
-    try {
-      render(<App/>)
-      await screen.findByText('本地后台已连接')
-      await user.click(screen.getByRole('button',{name:'项目文件'}))
-      await user.click(screen.getByRole('button',{name:'刷新文件'}))
-      const first=await screen.findByRole('button',{name:/file-0.ts/})
-      await user.click(first)
-      const editor=await screen.findByRole('textbox',{name:'编辑当前文件'})
-      await user.clear(editor)
-      await user.type(editor,'待保存 A')
-      await user.click(screen.getByRole('button',{name:'保存文件'}))
-      await waitFor(()=>expect(releaseSave).toBeTypeOf('function'))
-      await user.click(screen.getByRole('button',{name:/file-1.ts/}))
-      await waitFor(()=>expect(screen.getByRole('textbox',{name:'编辑当前文件'})).toHaveValue('第二个文件'))
-      await act(async()=>releaseSave?.())
-      expect(screen.getByRole('textbox',{name:'编辑当前文件'})).toHaveValue('第二个文件')
-      expect(screen.getByRole('button',{name:'保存文件'})).toBeDisabled()
-    } finally {confirm.mockRestore()}
-  })
-
-  it('后台审批请求到达后，迟到的旧权限与宿主列表不会清空待审批队列',async()=>{
-    twoSessions=true
-    delayedApprovalLists=true
-    const user=userEvent.setup()
-    render(<App/>)
-    await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'恢复会话：会话 A'}))
-    await waitFor(()=>expect(releasePermissionList).toBeTypeOf('function'))
-    await waitFor(()=>expect(releaseHostList).toBeTypeOf('function'))
-    await act(async()=>{
-      listener({event:'permission.request',sessionId:SID,permission:{
-        id:'new-approval',toolName:'Bash',input:{command:'pwd'},
-      }})
-      listener({event:'host.request',sessionId:SID,request:{id:'new-elicitation',request:{
-        subtype:'elicitation',mode:'url',url:'https://example.org/consent',
-      }}})
-    })
-    await act(async()=>{
-      releasePermissionList?.()
-      releaseHostList?.()
-    })
-    expect(screen.getByRole('dialog',{name:'工具权限审批'})).toHaveTextContent('Bash')
-    expect(screen.queryByText(/另有 .* 项待审操作/)).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button',{name:'允许本次操作'}))
-    expect(await screen.findByRole('dialog',{name:'主机交互请求'})).toBeInTheDocument()
-  })
-
 })
