@@ -730,7 +730,10 @@ export function initialPermissionModeFromCLI({
   }
   if (permissionModeCli) {
     const parsedMode = permissionModeFromString(permissionModeCli)
-    if (feature('TRANSCRIPT_CLASSIFIER') && parsedMode === 'auto') {
+    if (parsedMode === 'auto') {
+      if (!feature('TRANSCRIPT_CLASSIFIER')) {
+        throw new Error('Cannot start auto permission mode: 当前版本未启用自动权限分类器')
+      }
       if (autoModeCircuitBrokenSync) {
         logForDebugging(
           'auto mode circuit breaker active (cached) — falling back to default',
@@ -761,8 +764,10 @@ export function initialPermissionModeFromCLI({
       })
     }
     // auto from settings requires the same gate check as from CLI
-    else if (feature('TRANSCRIPT_CLASSIFIER') && settingsMode === 'auto') {
-      if (autoModeCircuitBrokenSync) {
+    else if (settingsMode === 'auto') {
+      if (!feature('TRANSCRIPT_CLASSIFIER')) {
+        notification = '当前版本未启用自动权限分类器，已保留默认权限确认'
+      } else if (autoModeCircuitBrokenSync) {
         logForDebugging(
           'auto mode circuit breaker active (cached) — falling back to default',
           { level: 'warn' },
