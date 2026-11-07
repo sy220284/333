@@ -69,11 +69,7 @@ export function createSmartExecutionJournal(
   }
   return {
     async list() {
-      return (await read()).map(record =>
-        record.status === 'running'
-          ? { ...record, status: 'interrupted' as const }
-          : record
-      ).reverse()
+      return (await read()).reverse()
     },
     async start(record) {
       if (record.status !== 'running' || !record.sessionId || !record.model) throw new Error('Invalid execution start')
