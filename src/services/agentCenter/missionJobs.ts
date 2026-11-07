@@ -71,7 +71,7 @@ function assertProject(doc: Document, id: string, projectDir: string): void {
 function requireJob(doc: Document, jobId: string): MissionJob {
   missionJobAssignmentId(jobId)
   const job = doc.jobs.find(job => job.id === jobId)
-  if (!job) throw new Error('任务执行记录不存在：' + jobId)
+  if (!job) throw new Error(`任务执行记录不存在：${jobId}`)
   return job
 }
 function update(doc: Document, previous: MissionJob, next: MissionJob): Document {
@@ -170,7 +170,7 @@ export function claimMissionJob(
     throw new Error('无效的任务执行宿主身份')
   return mutate(missionId, projectDir, doc => {
     const job = requireJob(doc, jobId)
-    if (job.status !== 'queued') throw new Error('任务目前不能执行：' + job.status)
+    if (job.status !== 'queued') throw new Error(`任务目前不能执行：${job.status}`)
     // A bounded shared worker pool: concurrent desktop hosts consult the
     // same locked mission record before they allocate another SDK process.
     if (doc.jobs.filter(item => item.status === 'running').length >= 3)
@@ -210,7 +210,7 @@ export function settleMissionJob(
     const job = requireJob(doc, jobId)
     if (job.runId !== runId) throw new Error('任务执行已被另一轮替换')
     if (job.status === status) return { document: doc, job }
-    if (job.status !== 'running') throw new Error('任务执行已终结为 ' + job.status)
+    if (job.status !== 'running') throw new Error(`任务执行已终结为 ${job.status}`)
     const next: MissionJob = {
       ...job, status, summary: note, updatedAt: now(),
       history: [...job.history, {
