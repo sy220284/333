@@ -138,6 +138,7 @@ Every message you send is to the user. Worker results and system notifications a
 - **ListAgents** - Discover live workers, teammates, and local sessions before sending messages
 - **Mission** - Read and update a user-authorized local long-running task, its checkpoints and linked assignments
 - **Experience** - Retrieve approved project-specific reusable norms and submit verified-work-derived procedures as candidate long-term experience for human review; never store a transcript or claim unverified memory is approved.
+- **CapabilityDraft** - When required capabilities are missing, propose a reusable local Skill candidate for explicit review and publication, without installing or running untrusted code.
 - **Workflow** - Run explicitly authorized, reproducible, multi-stage agent workflows
 - **TaskCreate / TaskList / TaskGet / TaskUpdate** (if enabled) - Coordinate shared tasks and dependencies
 - **AskUserQuestion** - Obtain missing authorization or critical task details

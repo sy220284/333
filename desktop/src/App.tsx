@@ -49,7 +49,7 @@ type CapabilityItem={id:string;name:string;kind:'tool'|'skill'|'workflow'|'plugi
 type ExperienceItem={id:string;key:string;title:string;scenario:string;principle:string;procedure:string[];applicability:string;invalidWhen:string;verification:string;evidenceRefs:string[];tags:string[];status:'candidate'|'approved'|'retired';revision:number;verifiedBy?:string}
 type SkillDraft={id:string;slug:string;description:string;instructions:string;state:'candidate'|'published';createdAt:string;publishedAt?:string}
 type TeamHandoff={id:string;teamName:string;from:string;to:string;summary:string;instruction:string;status:'draft'|'queued'|'acknowledged'|'running'|'review'|'completed'|'cancelled';inputRefs:string[];outputRefs:string[];reviewSummary?:string}
-type AgentProfile={id:string;name:string;description:string;domains:string[];capabilityIds:string[];experienceKeys:string[];status:'available'|'paused'|'retired';roles:Array<{id:string;role:string;purpose:string;state:'active'|'released';teamName?:string;missionId?:string}>}
+type AgentProfile={id:string;name:string;description:string;domains:string[];capabilityIds:string[];experienceKeys:string[];status:'available'|'paused'|'retired';roles:Array<{id:string;role:string;purpose:string;state:'active'|'released';teamName?:string;missionId?:string}>;sessionBindings?:Array<{sessionId:string;roleId:string;boundAt:string}>}
 const NAV:{id:View;label:string;icon:LucideIcon}[]=[
   {id:'dashboard',label:'工作台概览',icon:LayoutDashboard},
   {id:'chat',label:'AI 对话',icon:MessageSquare},
@@ -168,6 +168,7 @@ export function App(){
   const [teamMembers,setTeamMembers]=useState<TeamMember[]>([])
   const [teamInbox,setTeamInbox]=useState<TeamInbox|null>(null)
   const [teamHandoffs,setTeamHandoffs]=useState<TeamHandoff[]>([])
+  const [handoffReviewNotes,setHandoffReviewNotes]=useState<Record<string,string>>({})
   const [agentProfiles,setAgentProfiles]=useState<AgentProfile[]>([])
   const [profilesRevision,setProfilesRevision]=useState(0)
   const [profileName,setProfileName]=useState('')
@@ -1267,7 +1268,16 @@ export function App(){
                       <p className="text-[11px] text-[var(--color-text-tertiary)]">领域：{agent.domains.join('、')}</p>
                       {agent.roles.filter(role=>role.state==='active').map(role=><p key={role.id} className="mt-1 text-[11px] text-[var(--color-text-secondary)]">在岗：{role.role} · {role.purpose}</p>)}
                     </div>
-                    <Button variant="secondary" size="sm" disabled={Boolean(busy)||agent.status!=='available'||profileRole.trim().length<2||profilePurpose.trim().length<8} onClick={()=>void assignLongLivedAgent(agent.id)}>分配当前角色</Button>
+                    <div className="flex flex-col gap-2">
+                      <Button variant="secondary" size="sm" disabled={Boolean(busy)||agent.status!=='available'||profileRole.trim().length<2||profilePurpose.trim().length<8} onClick={()=>void assignLongLivedAgent(agent.id)}>分配当前角色</Button>
+                      {sessionId&&!historyOnly&&agent.roles.filter(role=>role.state==='active').map(role=>
+                        <Button key={role.id} variant="secondary" size="sm" disabled={Boolean(busy)||agent.status!=='available'||Boolean(agent.sessionBindings?.some(binding=>binding.sessionId===sessionId&&binding.roleId===role.id))}
+                          onClick={()=>void operation('绑定原生会话',async()=>{
+                            await invoke('agents.profiles.bindSession',{agentId:agent.id,roleId:role.id,sessionId})
+                            setProfilesRevision(v=>v+1)
+                          })}>{agent.sessionBindings?.some(binding=>binding.sessionId===sessionId&&binding.roleId===role.id)?'会话已关联':`关联当前会话 · ${role.role}`}</Button>)}
+                      {agent.sessionBindings?.length?<p className="text-[11px] text-[var(--color-text-tertiary)]">累计关联 {agent.sessionBindings.length} 个原生会话</p>:null}
+                    </div>
                   </div>)}
                   {agentProfiles.length===0&&<Empty icon={Bot} title="尚无长期智能体身份" detail="填写名称、职责与专业领域；后续可围绕不同任务分配新角色。"/>}
                 </div>
@@ -1338,6 +1348,16 @@ export function App(){
                   <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">{h.from} → {h.to} · {h.teamName}</p>
                   <details className="mt-2 text-[11px]"><summary className="cursor-pointer">交接详情</summary><p className="whitespace-pre-wrap">{h.instruction}</p><p className="mt-1 break-all">编号：{h.id}</p>{h.outputRefs.length>0&&<p>产物：{h.outputRefs.join('、')}</p>}</details>
                   {h.status==='draft'&&<Button variant="secondary" size="sm" className="mt-2" onClick={()=>void operation('重试交接投递',async()=>{await invoke('handoffs.retry',{handoffId:h.id});setHandoffRevision(v=>v+1)})}>重试投递</Button>}
+                  {h.status==='review'&&<div className="mt-3 space-y-2">
+                    <p className="text-[11px] text-[var(--color-text-secondary)]">成员提交成果：{h.outputRefs.join('、')}。请打开并核对实际文件后验收。</p>
+                    <textarea aria-label={`交接验收意见 ${h.id.slice(0,8)}`} rows={2} value={handoffReviewNotes[h.id]??''} onChange={event=>setHandoffReviewNotes(old=>({...old,[h.id]:event.target.value}))} placeholder="记录具体检查过的成果及核验结论"/>
+                    <Button size="sm" variant="primary" disabled={Boolean(busy)||(handoffReviewNotes[h.id]??'').trim().length<10}
+                      onClick={()=>void operation('验收团队交接',async()=>{
+                        await invoke('handoffs.approve',{handoffId:h.id,reviewSummary:(handoffReviewNotes[h.id]??'').trim()})
+                        setHandoffRevision(v=>v+1)
+                      })}>核验后批准</Button>
+                  </div>}
+                  {h.status==='completed'&&h.reviewSummary&&<p className="mt-2 text-[11px]">验收结论：{h.reviewSummary}</p>
                 </div>)}
                 {teamHandoffs.length===0&&<Empty icon={ClipboardList} title="尚无跨成员交接" detail="使用团队成员区的『发送并追踪交接』建立持久化工作交接记录。"/>}
                 </div>

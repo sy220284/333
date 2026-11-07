@@ -168,3 +168,12 @@ feature、source path、test command、CI workflow/run URL、commit SHA、平台
 - 长期记忆从候选提炼为可验证规范，关联可靠证据与失效规则，能跨会话和授权项目复用。
 
 实施仍以本文件第一至六节确定的完整验收表为准；上述任一欠缺未取得真实证据前状态均为“待实施/待验收”。
+
+## 八、真实会话关联与成员交接验收（延续实施）
+
+- 长期 Agent Profile 增加 `sessionBindings`：把实际 SDK sessionId 与当时有效的 roleId 绑定，身份和历史角色跨关闭与恢复保留；UI 只允许关联当前已打开的本项目会话。同一会话不能被两个 Agent 或两个角色冒领。
+- 新增 Handoff 原生工具：成员先核对自己的原生收件箱与消息 ID，再按“签收→开工→提交成果引用”更新交接。负责人通过桌面界面填写核验结论后批准，消息投递不能直接变为完成。
+- 模型工具权限：协调者允许检索规范和生成技能候选；具名原生成员允许 Handoff；普通独立子任务不获得额外团队身份。
+- 对应测试：tests/agent-registry.test.ts、tests/handoff-tool.test.ts、tests/superagents-capability-protocol.test.ts、desktop/src/App.test.tsx。
+
+**尚待完整实现**：执行新建/恢复时自动匹配长期 Profile 与 Mission Job、跨团队依赖自动通知、成果真实性自动核查，以及完整群聊主界面；以最新 SHA 的 CI 为准。

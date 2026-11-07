@@ -15,6 +15,9 @@ Object.defineProperty(window,'localStorage',{configurable:true,value:{
   key:(index:number)=>[...preferenceStore.keys()][index]??null
 }})
 const SID='9b0c188a-66fd-4b30-82e0-f52f2f8dfc35'
+const PROFILE_ID='4210ae09-3494-44b6-9fb7-3937df0156a9'
+const ROLE_ID='80c707e0-225c-44aa-ac39-cb7504d5cb85'
+const HANDOFF_ID='74f15899-aa6c-45e5-83ce-f2876994910e'
 const OTHER='e9c46d7b-2766-49c8-9f2d-142c90a45d5a'
 let listener:(event:AppEvent)=>void=()=>{}
 let showHistoricalJob=false
@@ -28,6 +31,8 @@ let mockTeam:{name:string;leadSessionId:string;memberCount:number;runningCount:n
 let failTeamDeliveryAck=false
 let mockTasks:Array<{taskId:string;description:string;status:string}>=[]
 let showAgentActivitySample=false
+let showProfileSample=false
+let showHandoffReview=false
 let budgetState:{limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number;activeReservations:number;
   uncertain:Array<{id:string;reservedUsd:number;startedAt:string}>}={
   limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]}
@@ -87,6 +92,19 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
          updatedAt:'2026-11-07T10:00:00Z',sessionId:OTHER},
       ]:[],
     }
+    case 'agents.profiles.list':return {agents:showProfileSample?[{
+      id:PROFILE_ID,name:'文字研究成员',description:'维护可验证的研究与文字产出',domains:['研究','文案'],
+      capabilityIds:[],experienceKeys:[],status:'available',sessionBindings:[],roles:[{
+        id:ROLE_ID,role:'审校',purpose:'核查引用与复核编辑文案',state:'active',
+      }],
+    }]:[]}
+    case 'agents.profiles.bindSession':return {agentId:args.agentId,sessionId:args.sessionId}
+    case 'handoffs.list':return {handoffs:showHandoffReview?[{
+      id:HANDOFF_ID,teamName:'内容团队',from:'team-lead',to:'文案',summary:'报告初稿交付验收',
+      instruction:'将审核后的报告初稿交给负责人逐条核对来源和结构',
+      status:'review',inputRefs:[],outputRefs:['artifact:research:report-v1'],
+    }]:[]}
+    case 'handoffs.approve':return {handoffId:args.handoffId,status:'completed'}
     case 'agents.members':return mockTeam?[{agentId:'agent-test',name:'测试成员',agentType:'developer',model:'fixture-model',status:'idle'}]:[]
     case 'agents.team.message':
       if(failTeamDeliveryAck){failTeamDeliveryAck=false;throw new Error('模拟信箱确认丢失')}
@@ -174,7 +192,7 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};failTeamDeliveryAck=false;showHistoricalJob=false;stableMissionJobs=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];showAgentActivitySample=false;smartRecord=undefined;budgetState={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]};longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;twoSessions=false;delayedHistoryId='';releaseHistory=undefined;delayedSessionList=false;releaseSessionList=undefined;delayedSave=false;releaseSave=undefined;delayedApprovalLists=false;releasePermissionList=undefined;releaseHostList=undefined;window.localStorage.clear()})
+beforeEach(()=>{call.mockClear();listener=()=>{};failTeamDeliveryAck=false;showHistoricalJob=false;stableMissionJobs=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];showAgentActivitySample=false;showProfileSample=false;showHandoffReview=false;smartRecord=undefined;budgetState={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]};longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;twoSessions=false;delayedHistoryId='';releaseHistory=undefined;delayedSessionList=false;releaseSessionList=undefined;delayedSave=false;releaseSave=undefined;delayedApprovalLists=false;releasePermissionList=undefined;releaseHostList=undefined;window.localStorage.clear()})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
@@ -1008,4 +1026,34 @@ describe('摇摇车真实桌面页面交互',()=>{
     expect(await screen.findByRole('dialog',{name:'主机交互请求'})).toBeInTheDocument()
   })
 
+})
+
+describe('Super Agents 3.0 身份及交接端到端桌面操作',()=>{
+  it('只把已打开的原生会话关联到选定的稳定角色',async()=>{
+    showProfileSample=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'新建会话'}))
+    await user.click(screen.getByRole('button',{name:'智能体团队'}))
+    await screen.findByText('文字研究成员')
+    await user.click(screen.getByRole('button',{name:'关联当前会话 · 审校'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('agents.profiles.bindSession',{
+      agentId:PROFILE_ID,roleId:ROLE_ID,sessionId:SID,
+    }))
+  })
+  it('只有提交真实成果和审核意见后才能调用人工验收接口',async()=>{
+    showHandoffReview=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'智能体团队'}))
+    await screen.findByText('报告初稿交付验收')
+    expect(screen.getByRole('button',{name:'核验后批准'})).toBeDisabled()
+    await user.type(screen.getByRole('textbox',{name:'交接验收意见 74f15899'}),'已检查报告来源、结构和实际交付文件，结论通过。')
+    await user.click(screen.getByRole('button',{name:'核验后批准'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('handoffs.approve',{
+      handoffId:HANDOFF_ID,reviewSummary:'已检查报告来源、结构和实际交付文件，结论通过。',
+    }))
+  })
 })

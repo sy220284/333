@@ -45,8 +45,7 @@ async function execute(input: Input): Promise<string> {
     : input.action === 'start' ? 'running' : 'review'
   const accepted = await changeTeamHandoff(projectDir, handoff.id, state, person,
     state === 'review' ? { outputRefs: input.outputRefs } : {})
-  return `已更新交接 ${accepted.id}，状态 ${accepted.status}。` +
-    (state === 'review' ? '已提交成果引用，等待负责人实际核验。' : '')
+  return `已更新交接 ${accepted.id}，状态 ${accepted.status}。${state === 'review' ? '已提交成果引用，等待负责人实际核验。' : ''}`
 }
 export const HandoffTool = buildTool({
   name: 'Handoff',
