@@ -1196,6 +1196,7 @@ export const SdkPluginConfigSchema = lazySchema(() =>
       path: z
         .string()
         .describe('Absolute or relative path to the plugin directory'),
+      skipMcpDiscovery: z.boolean().optional(),
     })
     .describe('Configuration for loading a plugin.'),
 )
