@@ -80,6 +80,9 @@ jobs:
             }
           '
 
+      - name: 启动实际编译出的桌面宿主，完成本地任务闭环与重启部署验收
+        run: node --test tests/deployed-desktop-host.test.mjs
+
   desktop-workbench:
     name: Electron 工作台类型、行为与打包前构建
     runs-on: ubuntu-latest
