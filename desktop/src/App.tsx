@@ -187,6 +187,8 @@ export function App(){
   const directoryGeneration=useRef(0)
   const fileGeneration=useRef(0)
   const gitGeneration=useRef(0)
+  const operationSequence=useRef(0)
+  const pendingOperations=useRef(new Map<number,string>())
   const currentFileRef=useRef('')
   const viewRef=useRef<View>('dashboard')
   const applySessionConfiguration=useCallback((value:SessionConfiguration)=>{
@@ -285,8 +287,16 @@ export function App(){
     if(failed.length)setError(`会话信息刷新失败：${failed.join('；')}`)
   },[])
   const operation=useCallback(async(name:string,action:()=>Promise<unknown>)=>{
+    const token=++operationSequence.current
+    pendingOperations.current.set(token,name)
     setBusy(name)
-    try{await action()}catch(error){setError(presentError(error))}finally{setBusy('')}
+    try{await action()}
+    catch(error){setError(presentError(error))}
+    finally{
+      pendingOperations.current.delete(token)
+      const remaining=[...pendingOperations.current.values()]
+      setBusy(remaining.at(-1)??'')
+    }
   },[])
   const resumeSession=useCallback(async(id:string)=>{
     const generation=++sessionGeneration.current,project=workspaceGeneration.current

@@ -205,16 +205,22 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
     return {path,content:await readWorkspaceTextBounded(path)}
   }
   if(method==='workspace.write'){
+    const targetWorkspace=active
     const path=await safeFile(String(data.path||''))
+    if(active!==targetWorkspace)throw new Error('工作区已切换，请在当前项目中重新确认保存')
     const content=data.content
     if(typeof content!=='string'||Buffer.byteLength(content)>2*1024*1024)throw new Error('文件内容无效或超过限制')
     const answer=await dialog.showMessageBox(requireWindow(),{type:'warning',buttons:['取消','保存修改'],defaultId:0,cancelId:0,
       title:'确认修改文件',message:`将修改 ${basename(path)}`,detail:'保存前请确认文件修改符合当前任务要求。'})
     if(answer.response!==1) return {saved:false}
+    if(active!==targetWorkspace)throw new Error('工作区已切换，请在当前项目中重新确认保存')
     const temporary=`${path}.yaoyao-${process.pid}.tmp`
     const originalMode=(await stat(path)).mode & 0o777
     await writeFile(temporary,content,{flag:'wx',mode:originalMode})
-    try{await rename(temporary,path)}catch(error){await rm(temporary,{force:true});throw error}
+    try{
+      if(active!==targetWorkspace)throw new Error('工作区已切换，请在当前项目中重新确认保存')
+      await rename(temporary,path)
+    }catch(error){await rm(temporary,{force:true});throw error}
     return {saved:true,path}
   }
   if(method==='workspace.gitStatus'||method==='workspace.gitDiff'){
