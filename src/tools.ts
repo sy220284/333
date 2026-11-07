@@ -33,9 +33,6 @@ const cronTools = feature('AGENT_TRIGGERS')
       require('./tools/ScheduleCronTool/CronListTool.js').CronListTool,
     ]
   : []
-const RemoteTriggerTool = feature('AGENT_TRIGGERS_REMOTE')
-  ? require('./tools/RemoteTriggerTool/RemoteTriggerTool.js').RemoteTriggerTool
-  : null
 import { MonitorTool } from './tools/MonitorTool/MonitorTool.js'
 const SendUserFileTool = feature('KAIROS')
   ? require('./tools/SendUserFileTool/SendUserFileTool.js').SendUserFileTool
@@ -125,13 +122,6 @@ import {
 } from './tools/REPLTool/constants.js'
 export { REPL_ONLY_TOOLS }
 /* eslint-disable @typescript-eslint/no-require-imports */
-// Runner operator tools are available only inside the explicit setup/doctor
-// child session. Regular CLI/agents never load privileged Runner tools.
-const selfHostedRunnerWizardTools =
-  ['setup','doctor'].includes(process.env.CLAUDE_CODE_SELF_HOSTED_RUNNER_WIZARD ?? '')
-    ? (require('./cli/selfHostedRunner/wizardTools317.ts') as
-        typeof import('./cli/selfHostedRunner/wizardTools317.ts')).SELF_HOSTED_RUNNER_TOOLS
-    : []
 const getPowerShellTool = () => {
   if (!isPowerShellToolEnabled()) return null
   return (
@@ -193,7 +183,6 @@ export function getAllBaseTools(): Tools {
     WebSearchTool,
     TaskStopTool,
     AskUserQuestionTool,
-    ...selfHostedRunnerWizardTools,
     SkillTool,
     EnterPlanModeTool,
     ...(process.env.USER_TYPE === 'ant' ? [ConfigTool] : []),
@@ -216,7 +205,6 @@ export function getAllBaseTools(): Tools {
     MissionTool,
     ...(SleepTool ? [SleepTool] : []),
     ...cronTools,
-    ...(RemoteTriggerTool ? [RemoteTriggerTool] : []),
     MonitorTool,
     BriefTool,
     ...(SendUserFileTool ? [SendUserFileTool] : []),

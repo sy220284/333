@@ -3,21 +3,17 @@ import { quote } from 'shell-quote'
 import { createInterface, type Interface } from 'node:readline'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { getClaudeAIOAuthTokens, isAnthropicAuthEnabled } from '../../utils/auth.js'
-import { getOauthConfig } from '../../constants/oauth.js'
 import { AuthenticationCancelledError, performMCPOAuthFlow, revokeServerTokens } from '../../services/mcp/auth.js'
 import { removeMcpAuthCacheEntry } from '../../services/mcp/client.js'
 import { getAllMcpConfigs, getMcpConfigByName, isMcpServerDisabled } from '../../services/mcp/config.js'
 import type { ScopedMcpServerConfig } from '../../services/mcp/types.js'
 import { getProjectMcpServerStatus } from '../../services/mcp/utils.js'
-import { getGlobalConfig } from '../../utils/config.js'
-import { openBrowser } from '../../utils/browser.js'
 import { errorMessage } from '../../utils/errors.js'
 import { cliError, cliOk } from '../exit.js'
 
 const hostedHosts = new Set(['microsoft365.mcp.claude.com', 'gmail.mcp.claude.com', 'gcal.mcp.claude.com'])
 
 export function classifyMcpLogin(config: ScopedMcpServerConfig) {
-  if (config.type === 'claudeai-proxy') return { kind: 'claudeai-proxy' as const, config }
   if (config.type !== 'sse' && config.type !== 'http') return { kind: 'unsupported-transport' as const }
   let host = ''
   try { host = new URL(config.url).hostname.toLowerCase().replace(/\.$/, '') } catch { /* OAuth reports invalid configured URLs. */ }
@@ -54,7 +50,7 @@ async function lookupServer(name: string): Promise<ScopedMcpServerConfig> {
 
 function hostedMessage(name: string, scope?: string): string {
   const remove = ['local', 'project', 'user'].includes(scope ?? '') ? ` Remove the stale entry with: \`${quote(['claude', 'mcp', 'remove', name])}\`` : ''
-  return `"${name}" is Anthropic-hosted and doesn't support local OAuth. Connect it via Settings → Connectors on claude.ai (requires \`claude login\`), then it'll be available here automatically.${remove}`
+  return `"${name}" is Anthropic-hosted and doesn't support local OAuth. The organization-managed connector is retired in this personal build; configure an independent MCP endpoint instead.${remove}`
 }
 
 function authorizationMessage(browser: boolean, url: string): string {
@@ -65,16 +61,6 @@ export async function mcpLoginHandler(name: string, options: { browser: boolean 
   const result = classifyMcpLogin(await lookupServer(name))
   if (result.kind === 'unsupported-transport') return cliError(`"${name}" doesn't support OAuth login — it's only available for HTTP and SSE servers.`)
   if (result.kind === 'anthropic-hosted') return cliError(hostedMessage(name, result.config.scope))
-  if (result.kind === 'claudeai-proxy') {
-    const org = getGlobalConfig().oauthAccount?.organizationUuid
-    if (!org || !result.config.id) return cliError(`Couldn't build the claude.ai authorization link for "${name}". Make sure you're signed in (\`claude login\`).`)
-    const id = result.config.id.replace(/^mcprs/, 'mcpsrv')
-    const url = `${getOauthConfig().CLAUDE_AI_ORIGIN}/api/organizations/${encodeURIComponent(org)}/mcp/start-auth/${encodeURIComponent(id)}?product_surface=${encodeURIComponent(process.env.CLAUDE_CODE_ENTRYPOINT || 'cli')}`
-    if (options.browser) await openBrowser(url)
-    process.stdout.write(authorizationMessage(options.browser, url))
-    await removeMcpAuthCacheEntry(name)
-    return cliOk('Once authorized on claude.ai, the connector will be available the next time you start Claude Code.')
-  }
   const config = result.config
   if (Object.keys(config.headers ?? {}).some(key => key.toLowerCase() === 'authorization')) {
     return cliError(`"${name}" authenticates with the \`Authorization\` header in its configuration, so there's no separate login. Update that header to change its credentials.`)
@@ -136,7 +122,6 @@ export async function mcpLoginHandler(name: string, options: { browser: boolean 
 
 export async function mcpLogoutHandler(name: string): Promise<void> {
   const result = classifyMcpLogin(await lookupServer(name))
-  if (result.kind === 'claudeai-proxy') return cliOk(`"${name}" is a claude.ai connector — its credentials live on claude.ai, not this machine. Disconnect it at ${getOauthConfig().CLAUDE_AI_ORIGIN}/customize/connectors`)
   if (result.kind === 'unsupported-transport') return cliError(`"${name}" doesn't use OAuth — there are no stored credentials to clear.`)
   try {
     await revokeServerTokens(name, result.config)

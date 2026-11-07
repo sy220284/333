@@ -1,7 +1,6 @@
 import { feature } from 'bun:bundle'
 import { chmod, open, rename, stat, unlink } from 'fs/promises'
 import mapValues from 'lodash-es/mapValues.js'
-import memoize from 'lodash-es/memoize.js'
 import { dirname, join, parse } from 'path'
 import { getPlatform } from 'src/utils/platform.js'
 import type { PluginError } from '../../types/plugin.js'
@@ -21,7 +20,6 @@ import { logError } from '../../utils/log.js'
 import { getPluginMcpServers } from '../../utils/plugins/mcpPluginIntegration.js'
 import { loadAllPluginsCacheOnly } from '../../utils/plugins/pluginLoader.js'
 import { isSettingSourceEnabled } from '../../utils/settings/constants.js'
-import { getManagedFilePath } from '../../utils/settings/managedPath.js'
 import { isRestrictedToPluginOnly } from '../../utils/settings/pluginOnlyPolicy.js'
 import {
   getInitialSettings,
@@ -39,7 +37,6 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '../analytics/index.js'
-import { fetchClaudeAIMcpConfigsIfEligible } from './claudeai.js'
 import { expandEnvVarsInString } from './envExpansion.js'
 import {
   type ConfigScope,
@@ -56,13 +53,6 @@ import {
 } from './types.js'
 import { resolveMcpReconnectBlockReason } from './reconnectGate.js'
 import { getProjectMcpServerStatus } from './utils.js'
-
-/**
- * Get the path to the managed MCP configuration file
- */
-export function getEnterpriseMcpFilePath(): string {
-  return join(getManagedFilePath(), 'managed-mcp.json')
-}
 
 /**
  * Internal utility: Add scope to server configs
@@ -267,50 +257,6 @@ export function dedupPluginMcpServers(
 }
 
 /**
- * Filter claude.ai connectors, dropping any whose signature matches an enabled
- * manually-configured server. Manual wins: a user who wrote .mcp.json or ran
- * `claude mcp add` expressed higher intent than a connector toggled in the web UI.
- *
- * Connector keys are `claude.ai <DisplayName>` so they never key-collide with
- * manual servers in the merge — this content-based check catches the case where
- * both point at the same underlying URL (e.g. `mcp__slack__*` and
- * `mcp__claude_ai_Slack__*` both hitting mcp.slack.com, ~600 chars/turn wasted).
- *
- * Only enabled manual servers count as dedup targets — a disabled manual server
- * mustn't suppress its connector twin, or neither runs.
- */
-export function dedupClaudeAiMcpServers(
-  claudeAiServers: Record<string, ScopedMcpServerConfig>,
-  manualServers: Record<string, ScopedMcpServerConfig>,
-): {
-  servers: Record<string, ScopedMcpServerConfig>
-  suppressed: Array<{ name: string; duplicateOf: string }>
-} {
-  const manualSigs = new Map<string, string>()
-  for (const [name, config] of Object.entries(manualServers)) {
-    if (isMcpServerDisabled(name)) continue
-    const sig = getMcpServerSignature(config)
-    if (sig && !manualSigs.has(sig)) manualSigs.set(sig, name)
-  }
-
-  const servers: Record<string, ScopedMcpServerConfig> = {}
-  const suppressed: Array<{ name: string; duplicateOf: string }> = []
-  for (const [name, config] of Object.entries(claudeAiServers)) {
-    const sig = getMcpServerSignature(config)
-    const manualDup = sig !== null ? manualSigs.get(sig) : undefined
-    if (manualDup !== undefined) {
-      logForDebugging(
-        `Suppressing claude.ai connector "${name}": duplicates manually-configured "${manualDup}"`,
-      )
-      suppressed.push({ name, duplicateOf: manualDup })
-      continue
-    }
-    servers[name] = config
-  }
-  return { servers, suppressed }
-}
-
-/**
  * Convert a URL pattern with wildcards to a RegExp
  * Supports * as wildcard matching any characters
  * Examples:
@@ -356,7 +302,7 @@ function getMcpDenylistSettings(): SettingsJson {
 }
 
 /**
- * Check if an MCP server is denied by enterprise policy
+ * Check if an MCP server is denied by local managed policy
  * Checks name-based, command-based, and URL-based restrictions
  * @param serverName The name of the server to check
  * @param config Optional server config for command/URL-based matching
@@ -409,7 +355,7 @@ function isMcpServerDenied(
 }
 
 /**
- * Check if an MCP server is allowed by enterprise policy
+ * Check if an MCP server is allowed by local managed policy
  * Checks name-based, command-based, and URL-based restrictions
  * @param serverName The name of the server to check
  * @param config Optional server config for command/URL-based matching
@@ -552,7 +498,7 @@ export function filterMcpServersByPolicy<T>(configs: Record<string, T>): {
 }
 
 /**
- * Check current user disablement and enterprise policy for every reconnect.
+ * Check current user disablement and local managed policy for every reconnect.
  * An existing cached connection is not permission to bypass updated policy.
  */
 export function getMcpReconnectBlockReason(
@@ -619,9 +565,6 @@ function expandEnvVars(config: McpServerConfig): {
     case 'sdk':
       expanded = config
       break
-    case 'claudeai-proxy':
-      expanded = config
-      break
   }
 
   return {
@@ -657,13 +600,6 @@ export async function addMcpConfig(
     }
   }
 
-  // Block adding servers when enterprise MCP config exists (it has exclusive control)
-  if (doesEnterpriseMcpConfigExist()) {
-    throw new Error(
-      `Cannot add MCP server: enterprise MCP configuration is active and has exclusive control over MCP servers`,
-    )
-  }
-
   // Validate config first (needed for command-based policy checks)
   const result = McpServerConfigSchema().safeParse(config)
   if (!result.success) {
@@ -677,14 +613,14 @@ export async function addMcpConfig(
   // Check denylist (with config for command-based checks)
   if (isMcpServerDenied(name, validatedConfig)) {
     throw new Error(
-      `Cannot add MCP server "${name}": server is explicitly blocked by enterprise policy`,
+      `Cannot add MCP server "${name}": server is explicitly blocked by local managed policy`,
     )
   }
 
   // Check allowlist (with config for command-based checks)
   if (!isMcpServerAllowedByPolicy(name, validatedConfig)) {
     throw new Error(
-      `Cannot add MCP server "${name}": not allowed by enterprise policy`,
+      `Cannot add MCP server "${name}": not allowed by local managed policy`,
     )
   }
 
@@ -713,10 +649,6 @@ export async function addMcpConfig(
     }
     case 'dynamic':
       throw new Error('Cannot add MCP server to scope: dynamic')
-    case 'enterprise':
-      throw new Error('Cannot add MCP server to scope: enterprise')
-    case 'claudeai':
-      throw new Error('Cannot add MCP server to scope: claudeai')
   }
 
   // Add based on scope
@@ -896,7 +828,7 @@ export function getProjectMcpConfigsFromCwd(): {
  * @returns Servers with scope information and any validation errors
  */
 export function getMcpConfigsByScope(
-  scope: 'project' | 'user' | 'local' | 'enterprise',
+  scope: 'project' | 'user' | 'local',
 ): {
   servers: Record<string, ScopedMcpServerConfig>
   errors: ValidationError[]
@@ -1003,35 +935,7 @@ export function getMcpConfigsByScope(
         errors,
       }
     }
-    case 'enterprise': {
-      const enterpriseMcpPath = getEnterpriseMcpFilePath()
 
-      const { config, errors } = parseMcpConfigFromFilePath({
-        filePath: enterpriseMcpPath,
-        expandVars: true,
-        scope: 'enterprise',
-      })
-
-      // Missing enterprise config file is expected, but malformed files should report errors
-      if (!config) {
-        const nonMissingErrors = errors.filter(
-          e => !e.message.startsWith('MCP config file not found'),
-        )
-        if (nonMissingErrors.length > 0) {
-          logForDebugging(
-            `Enterprise MCP config errors for ${enterpriseMcpPath}: ${jsonStringify(nonMissingErrors.map(e => e.message))}`,
-            { level: 'error' },
-          )
-          return { servers: {}, errors: nonMissingErrors }
-        }
-        return { servers: {}, errors: [] }
-      }
-
-      return {
-        servers: addScopeToServers(config.mcpServers, scope),
-        errors,
-      }
-    }
   }
 }
 
@@ -1041,21 +945,16 @@ export function getMcpConfigsByScope(
  * @returns The server configuration with scope, or undefined if not found
  */
 export function getMcpConfigByName(name: string): ScopedMcpServerConfig | null {
-  const { servers: enterpriseServers } = getMcpConfigsByScope('enterprise')
-
-  // When MCP is locked to plugin-only, only enterprise servers are reachable
+  // When MCP is locked to plugin-only, regular user-configured servers are restricted
   // by name. User/project/local servers are blocked — same as getClaudeCodeMcpConfigs().
   if (isRestrictedToPluginOnly('mcp')) {
-    return enterpriseServers[name] ?? null
+    return null
   }
 
   const { servers: userServers } = getMcpConfigsByScope('user')
   const { servers: projectServers } = getMcpConfigsByScope('project')
   const { servers: localServers } = getMcpConfigsByScope('local')
 
-  if (enterpriseServers[name]) {
-    return enterpriseServers[name]
-  }
   if (localServers[name]) {
     return localServers[name]
   }
@@ -1072,41 +971,17 @@ export function getMcpConfigByName(name: string): ScopedMcpServerConfig | null {
 /**
  * Get Claude Code MCP configurations (excludes claude.ai servers from the
  * returned set — they're fetched separately and merged by callers).
- * This is fast: only local file reads; no awaited network calls on the
- * critical path. The optional extraDedupTargets promise (e.g. the in-flight
- * claude.ai connector fetch) is awaited only after loadAllPluginsCacheOnly() completes,
- * so the two overlap rather than serialize.
+ * MCP server configurations and plugins are loaded locally without account-based connector discovery.
  * @returns Claude Code server configurations with appropriate scopes
  */
 export async function getClaudeCodeMcpConfigs(
   dynamicServers: Record<string, ScopedMcpServerConfig> = {},
-  extraDedupTargets: Promise<
-    Record<string, ScopedMcpServerConfig>
-  > = Promise.resolve({}),
 ): Promise<{
   servers: Record<string, ScopedMcpServerConfig>
   errors: PluginError[]
 }> {
-  const { servers: enterpriseServers } = getMcpConfigsByScope('enterprise')
-
-  // If an enterprise mcp config exists, do not use any others; this has exclusive control over all MCP servers
-  // (enterprise customers often do not want their users to be able to add their own MCP servers).
-  if (doesEnterpriseMcpConfigExist()) {
-    // Apply policy filtering to enterprise servers
-    const filtered: Record<string, ScopedMcpServerConfig> = {}
-
-    for (const [name, serverConfig] of Object.entries(enterpriseServers)) {
-      if (!isMcpServerAllowedByPolicy(name, serverConfig)) {
-        continue
-      }
-      filtered[name] = serverConfig
-    }
-
-    return { servers: filtered, errors: [] }
-  }
-
   // Load other scopes — unless the managed policy locks MCP to plugin-only.
-  // Unlike the enterprise-exclusive block above, this keeps plugin servers.
+  // This preserves explicitly enabled plugin servers.
   const mcpLocked = isRestrictedToPluginOnly('mcp')
   const noServers: { servers: Record<string, ScopedMcpServerConfig> } = {
     servers: {},
@@ -1186,14 +1061,12 @@ export async function getClaudeCodeMcpConfigs(
   // Only servers that will actually connect are valid dedup targets — a
   // disabled manual server mustn't suppress a plugin server, or neither runs
   // (manual is skipped by name at connection time; plugin was removed here).
-  const extraTargets = await extraDedupTargets
   const enabledManualServers: Record<string, ScopedMcpServerConfig> = {}
   for (const [name, config] of Object.entries({
     ...userServers,
     ...approvedProjectServers,
     ...localServers,
     ...dynamicServers,
-    ...extraTargets,
   })) {
     if (
       !isMcpServerDisabled(name) &&
@@ -1269,34 +1142,7 @@ export async function getAllMcpConfigs(): Promise<{
   servers: Record<string, ScopedMcpServerConfig>
   errors: PluginError[]
 }> {
-  // In enterprise mode, don't load claude.ai servers (enterprise has exclusive control)
-  if (doesEnterpriseMcpConfigExist()) {
-    return getClaudeCodeMcpConfigs()
-  }
-
-  // Kick off the claude.ai fetch before getClaudeCodeMcpConfigs so it overlaps
-  // with loadAllPluginsCacheOnly() inside. Memoized — the awaited call below is a cache hit.
-  const claudeaiPromise = fetchClaudeAIMcpConfigsIfEligible() as Promise<Record<string, ScopedMcpServerConfig>>
-  const { servers: claudeCodeServers, errors } = await getClaudeCodeMcpConfigs(
-    {},
-    claudeaiPromise,
-  )
-  const { allowed: claudeaiMcpServers } = filterMcpServersByPolicy(
-    await claudeaiPromise,
-  )
-
-  // Suppress claude.ai connectors that duplicate an enabled manual server.
-  // Keys never collide (`slack` vs `claude.ai Slack`) so the merge below
-  // won't catch this — need content-based dedup by URL signature.
-  const { servers: dedupedClaudeAi } = dedupClaudeAiMcpServers(
-    claudeaiMcpServers,
-    claudeCodeServers,
-  )
-
-  // Merge with claude.ai having lowest precedence
-  const servers = Object.assign({}, dedupedClaudeAi, claudeCodeServers)
-
-  return { servers, errors }
+  return getClaudeCodeMcpConfigs()
 }
 
 /**
@@ -1477,15 +1323,6 @@ export function parseMcpConfigFromFilePath(params: {
   })
 }
 
-export const doesEnterpriseMcpConfigExist = memoize((): boolean => {
-  const { config } = parseMcpConfigFromFilePath({
-    filePath: getEnterpriseMcpFilePath(),
-    expandVars: true,
-    scope: 'enterprise',
-  })
-  return config !== null
-})
-
 /**
  * Check if MCP allowlist policy should only come from managed settings.
  * This is true when policySettings has allowManagedMcpServersOnly: true.
@@ -1495,21 +1332,6 @@ export const doesEnterpriseMcpConfigExist = memoize((): boolean => {
 export function shouldAllowManagedMcpServersOnly(): boolean {
   return (
     getSettingsForSource('policySettings')?.allowManagedMcpServersOnly === true
-  )
-}
-
-/**
- * Check if all MCP servers in a config are allowed with enterprise MCP config.
- */
-export function areMcpConfigsAllowedWithEnterpriseMcpConfig(
-  configs: Record<string, ScopedMcpServerConfig>,
-): boolean {
-  // NOTE: While all SDK MCP servers should be safe from a security perspective, we are still discussing
-  // what the best way to do this is. In the meantime, we are limiting this to claude-vscode for now to
-  // unbreak the VSCode extension for certain enterprise customers who have enterprise MCP config enabled.
-  // https://anthropic.slack.com/archives/C093UA0KLD7/p1764975463670109
-  return Object.values(configs).every(
-    c => c.type === 'sdk' && c.name === 'claude-vscode',
   )
 }
 

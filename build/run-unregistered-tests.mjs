@@ -29,7 +29,6 @@ export const PORTABLE_EXTERNAL_FIXTURES = Object.freeze({
   'tests/governance-contract-trace.test.mjs': '.github/workflows/governance-audit.yml',
   'tests/m1-ink-paste-event.test.mjs': '.github/workflows/m1-evidence.yml',
   'tests/m1-source-gap-ast.test.mjs': '.github/workflows/m1-evidence.yml',
-  'tests/m6-gateway-postgres-317.test.mjs': '.github/workflows/rebuild.yml',
 })
 
 export function verifyPortableCoverage(root = ROOT) {

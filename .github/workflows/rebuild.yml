@@ -122,40 +122,8 @@ jobs:
         run: node --test tests/m1-source-runtime-vendor-317.test.mjs
       - name: 317插件测试执行器：真实子进程、Hooks沙箱和退出码
         run: node --test tests/m3-plugin-test-runner-317.test.mjs
-      - name: 317企业网关真实鉴权、Bun服务和SSE上游验证
-        run: bun test tests/m6-gateway-runtime-317.test.mjs
-      - name: 317网关OAuth设备授权、OIDC批准、Token刷新撤销实测
-        run: bun test tests/m6-gateway-device-317.test.mjs
-      - name: 317网关JSONB身份字段读取及Token安全校验
-        run: node --test tests/m6-gateway-jsonb-317.test.mjs
       - name: 317模型请求Beta路径、版本、API Key/OAuth原生协议
         run: node --test tests/m2-native-api-wire-317.test.mjs
-      - name: 317企业网关真实Postgres事务及OAuth存储验证
-        if: runner.os == 'Linux'
-        run: |
-          set -euo pipefail
-          docker run --rm -d --name gateway-postgres-317 \
-            -e POSTGRES_PASSWORD=gateway-test-only \
-            -p 127.0.0.1:55432:5432 postgres:16
-          trap 'docker rm -f gateway-postgres-317 >/dev/null 2>&1 || true' EXIT
-          # postgres:16 uses a temporary UNIX-socket-only server during initdb.
-          # Wait for the final TCP listener and a real authenticated SQL query.
-          ready=0
-          for ((i=1; i<=40; i++)); do
-            if docker exec gateway-postgres-317 pg_isready -h 127.0.0.1 -p 5432 -U postgres -d postgres >/dev/null 2>&1; then
-              ready=1
-              break
-            fi
-            sleep 1
-          done
-          if [ "$ready" -ne 1 ]; then
-            docker logs gateway-postgres-317
-            echo 'PostgreSQL TCP service did not become ready' >&2
-            exit 1
-          fi
-          docker exec -e PGPASSWORD=gateway-test-only gateway-postgres-317 psql -h 127.0.0.1 -U postgres -d postgres -Atqc 'SELECT 1' | grep -qx '1'
-          GATEWAY_TEST_POSTGRES_URL='postgres://postgres:gateway-test-only@127.0.0.1:55432/postgres' \
-            bun test tests/m6-gateway-postgres-317.test.mjs
       - name: 317插件评测Windows工作区清理与结果保存
         run: node --test tests/m3-plugin-eval-cleanup-317.test.mjs
       - name: 317插件评测CLI真实模型SSE及双臂报告闭环
@@ -303,8 +271,6 @@ jobs:
         run: node --test tests/m3-plugin-test-options-317.test.mjs
       - name: 317插件测试VM计时器与异步错误追踪
         run: node --test tests/m3-plugin-test-timers-317.test.mjs
-      - name: 企业网关托管设置匹配与ETag原版协议
-        run: node --test tests/m6-gateway-managed-settings-317.test.mjs
       - name: 317模型目录、读取边界和嵌套会话
         id: acceptance_008
         continue-on-error: true

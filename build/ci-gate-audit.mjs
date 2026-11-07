@@ -17,7 +17,7 @@ const required = [
   'dev-quality.yml',
   'codeql.yml',
   'governance-security-probe.yml',
-  'm6-gateway-providers-317.yml',
+  'personal-retirement-boundary.yml',
 ]
 for (const name of required) {
   if (!existsSync(root(`.github/workflows/${name}`))) {
@@ -39,8 +39,7 @@ for (const name of workflows) {
   const source = yaml(name)
   if (!/^ {2}workflow_call:/m.test(source)) continue
   if (name === 'desktop-communication.yml') {
-    // Historical reruns must use a separate lane. Otherwise an old SHA's
-    // rerun cancels the newest packaged GUI acceptance run.
+    // Old SHA manual reruns must stay in a separate lane from latest PR checks.
     if (!/group: reusable-desktop-communication-.*github\.run_attempt == 1.*github\.run_id/.test(source) ||
         !/cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' && github\.run_attempt == 1 \}\}/.test(source))
       errors.push('桌面发行版验收缺少旧提交回跑隔离')
@@ -118,21 +117,30 @@ if (/contents:\s*write/.test(lockGate) || /git\s+push\s+origin/.test(lockGate))
   errors.push('依赖锁门禁不得在审查时自动改写 PR：m1-public-lock-sync.yml')
 if (!/node tools\/dev\/toolchain\.mjs check/.test(lockGate))
   errors.push('依赖锁缺失实际基准校验：m1-public-lock-sync.yml')
-const gatewayGate = yaml('m6-gateway-providers-317.yml')
-for (const requiredTest of [
-  'tests/m6-gateway-providers-317.test.mjs',
-  'tests/m6-gateway-cri-317.test.mjs',
-  'tests/m6-gateway-spend-integration-317.test.mjs',
-  'tests/m6-gateway-telemetry-policy-317.test.mjs',
-  'tests/m6-gateway-postgres-317.test.mjs',
-]) {
-  if (!gatewayGate.includes(requiredTest)) errors.push(`企业网关专项缺失真实验收：${requiredTest}`)
-}
-if (!dispatcher.includes('needs.plan.outputs.m6_gateway_providers_317'))
-  errors.push('企业网关未纳入 Draft 按需检查')
-if (!dispatcher.includes('m6-gateway-providers-317, m6-self-hosted-runner-317'))
-  errors.push('企业网关未纳入统一结果聚合')
+// Enterprise gateway is intentionally removed from the personal product.
+if (workflows.includes('m6-gateway-providers-317.yml'))
+  errors.push('已退役企业网关专项仍存在')
+if (existsSync(root('src/cli/gateway/')))
+  errors.push('企业网关源码目录仍存在，请完成全量清退')
+const retiredGatewayTests = readdirSync(root('tests/')).filter(name => /^m6-gateway-.*\.test\.mjs$/.test(name))
+if (retiredGatewayTests.length)
+  errors.push(`企业网关测试已无对应业务入口：${retiredGatewayTests.join(',')}`)
 
+if (workflows.includes('m6-self-hosted-runner-317.yml'))
+  errors.push('已退役原厂 Runner 专项仍存在')
+if (existsSync(root('src/cli/selfHostedRunner/')))
+  errors.push('原厂 Runner 源码仍存在')
+for (const path of [
+  'src/services/policyLimits/',
+  'src/services/remoteManagedSettings/',
+  'src/services/api/adminRequests.ts',
+  'src/skills/bundled/scheduleRemoteAgents.ts',
+  'src/tools/RemoteTriggerTool/',
+]) {
+  if (existsSync(root(path))) errors.push(`企业云端服务遗留：${path}`)
+}
+if (!existsSync(root('tests/enterprise-retirement-boundary.test.mjs')))
+  errors.push('缺少企业退役与个人能力保护回归测试')
 const matrix = yaml('ci-test-matrix.yml')
 if (!/needs:\s*\[inventory, build, core, supplemental, oracle\]/.test(matrix) ||
     !/if:\s*\$\{\{ !cancelled\(\) \}\}/.test(matrix) ||

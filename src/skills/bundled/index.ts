@@ -51,14 +51,6 @@ export function initBundledSkills(): void {
     // the skill's own isEnabled callback decides visibility.
     registerLoopSkill()
   }
-  if (feature('AGENT_TRIGGERS_REMOTE')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    const {
-      registerScheduleRemoteAgentsSkill,
-    } = require('./scheduleRemoteAgents.js')
-    /* eslint-enable @typescript-eslint/no-require-imports */
-    registerScheduleRemoteAgentsSkill()
-  }
   // Claude Code 2.1.317 registers both app-driving skills for normal
   // sessions. Local agents use the smaller built-in skill registry.
   if (process.env.CLAUDE_CODE_ENTRYPOINT !== 'local-agent') {

@@ -137,13 +137,14 @@
       "id": "2.1.317#046",
       "stage": "RETIREMENT_BOUNDARY_CODE_TEST_PRESENT",
       "production_files": [
-        "src/cli/gateway/gatewayServer317.ts",
-        "src/cli/gateway/gatewayConfig317.ts"
+        "src/services/desktop/gateway.ts",
+        "src/services/desktop/protocol.ts"
       ],
       "tests": [
-        "tests/m6-gateway-telemetry-policy-317.test.mjs"
+        "tests/enterprise-retirement-boundary.test.mjs",
+        "tests/local-telemetry-privacy.test.ts"
       ],
-      "notes": "移除Gateway指标/日志/追踪外发路由，拒绝forward_to配置",
+      "notes": "原厂企业网关与指标外发服务已删除，本地桌面网关与协议是保留能力；通过企业退役和本地隐私测试验证边界，功能完成度继续以同SHA测试验收",
       "runtime_evidence": null
     },
     {

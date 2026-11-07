@@ -166,8 +166,6 @@ export async function mcpListHandler(): Promise<void> {
         console.log(`${name}: ${server.url} (SSE) - ${status}`);
       } else if (server.type === 'http') {
         console.log(`${name}: ${server.url} (HTTP) - ${status}`);
-      } else if (server.type === 'claudeai-proxy') {
-        console.log(`${name}: ${server.url} - ${status}`);
       } else if (isMcpStdioServerConfig(server)) {
         const args = Array.isArray(server.args) ? server.args : [];
         console.log(`${name}: ${server.command} ${args.join(' ')} - ${status}`);

@@ -1,5 +1,4 @@
 import { filterSettingsCompactionEnv } from './managedCompactionEnv.ts'
-import { isRemoteManagedSettingsEligible } from '../services/remoteManagedSettings/syncCache.js'
 import { clearCACertsCache } from './caCerts.js'
 import { isEnvTruthy } from './envUtils.js'
 import {
@@ -106,7 +105,7 @@ function filterSettingsEnv(
  *
  * - userSettings (~/.claude/settings.json): controlled by the user, not project-specific
  * - flagSettings (--settings CLI flag or SDK inline settings): explicitly passed by the user
- * - policySettings (managed settings from enterprise API or local managed-settings.json):
+ * - policySettings (local administrator-managed settings):
  *   controlled by IT/admin (highest priority, cannot be overridden)
  *
  * Project-scoped sources (projectSettings, localSettings) are excluded because they live
@@ -167,14 +166,6 @@ export function applySafeConfigEnvironmentVariables(): void {
       filterSettingsEnv(getSettingsForSource(source)?.env),
     )
   }
-
-  // Compute remote-managed-settings eligibility now, with userSettings and
-  // flagSettings env applied. Eligibility reads CLAUDE_CODE_USE_BEDROCK,
-  // ANTHROPIC_BASE_URL — both settable via settings.env.
-  // getSettingsForSource('policySettings') below consults the remote cache,
-  // which guards on this. The two-phase structure makes the ordering
-  // dependency visible: non-policy env → eligibility → policy env.
-  isRemoteManagedSettingsEligible()
 
   Object.assign(
     process.env,
