@@ -41,7 +41,7 @@ test('源码六套主题通过单一 data-theme 选择器控制，不受旧主�
   }
   assert.match(app,/document\.documentElement\.dataset\.theme=themeVariant/)
   assert.doesNotMatch(app,/dataset\.ccTheme/)
-  assert.ok(layout.includes('@media(prefers-reduced-motion:reduce)'))
+  assert.match(layout, /@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)/)
   assert.ok(layout.includes('[data-motion=off]'))
 })
 test('新布局和全部十个业务入口接入 333 通信层，取消固定 PR19 操作', () => {
