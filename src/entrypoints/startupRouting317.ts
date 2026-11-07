@@ -55,7 +55,8 @@ const HEADLESS_OPTIONS = new Set(['-p','--print','--bare','--sdk-url','--input-f
 const DIRECT_COMMANDS = new Set(['agents','attach','auth','bridge','config','daemon','doctor',
   'github','help','init','install','login','logout','logs','mcp','models','plugin',
   'review','session','settings','skills','status','stop','kill','respawn','rm','tasks',
-  'update','upgrade','workflows'])
+  'update','upgrade','workflows', 'local-settings','local-tasks',
+  'setup-token','project','purge','plugins','auto-mode','import'])
 export function isDesktopWorkbenchLaunch(args: string[]): boolean {
   const words = beforeDoubleDash(args)
   if(words.some(word=>HEADLESS_OPTIONS.has(word) ||
