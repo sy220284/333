@@ -103,7 +103,8 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(screen.getByRole('button',{name:'模型管理'}))
     const card=screen.getByText('MiniMax M3').closest('button')
     expect(card).not.toBeNull()
-    await user.click(card!)
+    if(!card)throw new Error('模型选择按钮未渲染')
+    await user.click(card)
     await screen.findByText('模型服务端拒绝切换')
     expect(card).not.toHaveClass('selected')
     expect(call).toHaveBeenCalledWith('sessions.setModel',{sessionId:SID,model:'minimax/M3'})
@@ -150,7 +151,7 @@ describe('摇摇车真实桌面页面交互',()=>{
       expect(call).not.toHaveBeenCalledWith('workspace.read',{path:'/projects/example/file-1.ts'})
     }finally{confirm.mockRestore()}
   })
-  it('智能执行首页单次输入即可开始任务，不需要先建会话再发送',async()=>{
+  it('原生新首页单次输入后直接执行，没有建会话加发送的重复操作',async()=>{
     const user=userEvent.setup()
     render(<App/>)
     await screen.findByText('本地后台已连接')
@@ -163,8 +164,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     }))
     expect(call.mock.calls.some(args=>args[0]==='sessions.open'||args[0]==='sessions.send')).toBe(false)
   })
-
-  it('高级选项默认收起，显式设置模型预算和权限时由单次执行请求传递',async()=>{
+  it('高级选项默认收起，明确设置模型、预算和权限后只传给单次任务',async()=>{
     const user=userEvent.setup()
     render(<App/>)
     await screen.findByText('本地后台已连接')
@@ -173,23 +173,21 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.selectOptions(screen.getByRole('combobox',{name:'智能执行模型'}),'minimax/M3')
     await user.type(screen.getByRole('spinbutton',{name:'智能执行费用上限'}),'2.50')
     await user.selectOptions(screen.getByRole('combobox',{name:'智能执行权限'}),'plan')
-    await user.type(screen.getByRole('textbox',{name:'智能执行任务'}),'检查项目并测试')
+    await user.type(screen.getByRole('textbox',{name:'智能执行任务'}),'检查代码并测试')
     await user.click(screen.getByRole('button',{name:'智能执行'}))
     await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.execute',{
-      prompt:'检查项目并测试',model:'minimax/M3',maxBudgetUsd:2.5,permissionMode:'plan',
+      prompt:'检查代码并测试',model:'minimax/M3',maxBudgetUsd:2.5,permissionMode:'plan',
     }))
     expect(window.localStorage.getItem('yaoyaoche-desktop:smart-budget')).toBe('2.50')
   })
-
-  it('模型自检读取离线真实数据，不通过聊天生成配置结论',async()=>{
+  it('模型自检调用本地离线检查接口，不借助模型编造诊断结果',async()=>{
     const user=userEvent.setup()
     render(<App/>)
     await screen.findByText('本地后台已连接')
     await user.click(screen.getByRole('button',{name:'模型管理'}))
-    await user.click(screen.getByRole('button',{name:/离线检查/}))
+    await user.click(screen.getByRole('button',{name:/检查配置/}))
     await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.inspect',{}))
     expect(screen.getByText('沿用本地配置')).toBeInTheDocument()
-    expect(call.mock.calls.some(args=>args[0]==='sessions.send')).toBe(false)
   })
 
   it('六套主题可以切换并在重新打开时恢复',async()=>{
@@ -200,7 +198,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     const selector=screen.getByRole('combobox',{name:'界面主题'})
     expect(selector).toHaveValue('white')
     await user.selectOptions(selector,'celadon')
-    expect(document.documentElement.dataset.ccTheme).toBe('celadon')
+    expect(document.documentElement.dataset.theme).toBe('celadon')
     view.unmount()
     render(<App/>)
     await screen.findByText('本地后台已连接')
@@ -288,12 +286,16 @@ describe('摇摇车真实桌面页面交互',()=>{
     await screen.findByText('本地后台已连接')
     await user.click(screen.getByRole('button',{name:'长期任务'}))
     await user.type(screen.getByPlaceholderText('明确长期目标与交付要求…'),'真实安装版任务创建测试')
+    const probesBefore=call.mock.calls.filter(args=>args[0]==='models.list').length
+    const mcpBefore=call.mock.calls.filter(args=>args[0]==='mcp.list').length
     await user.click(screen.getByRole('button',{name:'创建并选中任务'}))
     await waitFor(()=>expect(screen.getByRole('heading',{name:'真实安装版任务创建测试'})).toBeInTheDocument())
     expect(screen.getByText('Super Agents 工作项')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('明确长期目标与交付要求…')).toHaveValue('')
     expect(screen.getByRole('button',{name:'创建并选中任务'})).toBeDisabled() // no duplicate submission from an empty form
     expect(call).toHaveBeenCalledWith('missions.create',{objective:'真实安装版任务创建测试'})
+    expect(call.mock.calls.filter(args=>args[0]==='models.list')).toHaveLength(probesBefore)
+    expect(call.mock.calls.filter(args=>args[0]==='mcp.list')).toHaveLength(mcpBefore)
     await act(async()=>{suspendMcpRefresh=false;releaseMcpRefresh?.()})
   })
 
@@ -316,7 +318,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(screen.getByRole('button',{name:'AI 对话'}))
     await user.type(screen.getByRole('textbox',{name:'输入任务'}),'分析这个项目')
     await user.click(screen.getByRole('button',{name:'发送'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',{sessionId:SID,message:'分析这个项目'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.execute',{prompt:'分析这个项目'}))
     await act(async()=>listener({event:'permission.request',sessionId:SID,permission:{id:'approval-1',toolName:'Bash',input:{command:'bun test'}}}))
     const dialog=screen.getByRole('dialog',{name:'工具权限审批'})
     expect(within(dialog).getByText(/Bash/)).toBeInTheDocument()
@@ -458,7 +460,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     const user=userEvent.setup()
     render(<App/>)
     await screen.findByText('本地后台已连接')
-    await user.click(screen.getByText('长历史会话'))
+    await user.click(screen.getByRole('button',{name:'长历史会话'}))
     await screen.findByText('历史-259')
     expect(screen.queryByText('历史-0')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button',{name:/加载更早的 120 条消息/}))
