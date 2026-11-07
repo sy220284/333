@@ -3,7 +3,8 @@ import { randomUUID } from 'node:crypto'
 import { parseMcpImportFile, type ImportedMcpServer } from './mcpImport.js'
 import { spawn, execFile } from 'node:child_process'
 import { existsSync, realpathSync, statSync } from 'node:fs'
-import { readdir, readFile, writeFile, rename, realpath, mkdir, rm, stat, open } from 'node:fs/promises'
+import { readdir, readFile, writeFile, rename, realpath, mkdir, rm, stat } from 'node:fs/promises'
+import { readWorkspaceTextBounded } from './workspaceFileRead.js'
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { promisify } from 'node:util'
 import { createDesktopClient } from '../../src/services/desktop/client.js'
@@ -201,26 +202,7 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
   }
   if(method==='workspace.read'){
     const path=await safeFile(String(data.path||''))
-    const maxBytes=2*1024*1024
-    const details=await stat(path)
-    if(!details.isFile()||details.size>maxBytes)throw new Error('文件过大或不是普通文件，请通过工具逐段阅读')
-    // A fixed-size read also bounds memory if the file grows after stat().
-    const handle=await open(path,'r')
-    try{
-      const current=await handle.stat()
-      if(!current.isFile()||current.size>maxBytes)throw new Error('文件过大或不是普通文件，请通过工具逐段阅读')
-      const buffer=Buffer.allocUnsafe(maxBytes+1)
-      let readBytes=0
-      while(readBytes<buffer.length){
-        const result=await handle.read(buffer,readBytes,buffer.length-readBytes,readBytes)
-        if(result.bytesRead===0)break
-        readBytes+=result.bytesRead
-      }
-      if(readBytes>maxBytes)throw new Error('文件过大，请通过工具逐段阅读')
-      const bytes=buffer.subarray(0,readBytes)
-      if(bytes.includes(0))throw new Error('二进制文件暂不提供文本预览')
-      return {path,content:bytes.toString('utf8')}
-    }finally{await handle.close()}
+    return {path,content:await readWorkspaceTextBounded(path)}
   }
   if(method==='workspace.write'){
     const path=await safeFile(String(data.path||''))
