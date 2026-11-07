@@ -211,7 +211,7 @@ test('真实 Linux 安装版启动 Electron 界面并完成本地 Host 连接', 
             await sleep(140)
           }
           const diagnostic = await evaluate(page.webSocketDebuggerUrl,
-            '(async()=>{let backend;try{backend=await window.yaoyao.call("missions.list")}catch(error){backend={error:String(error)}}return {backend,input:document.querySelector('textarea[placeholder="明确长期目标与交付要求…"]')?.value,disabled:[...document.querySelectorAll("button")].find(b=>b.textContent?.includes("创建并选中任务"))?.disabled}})()')
+            '(async()=>{let backend;try{backend=await window.yaoyao.call("missions.list")}catch(error){backend={error:String(error)}}return {backend,input:document.querySelector("textarea[placeholder^=明确]")?.value,disabled:[...document.querySelectorAll("button")].find(b=>b.textContent?.includes("创建并选中任务"))?.disabled}})()')
           throw new Error(`真实安装版未完成用户操作 ${text}；任务状态：${JSON.stringify(diagnostic)}；页面：${body.slice(0,1500)}`)
         }
 
