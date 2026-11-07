@@ -415,7 +415,8 @@ html,body,#root{min-width:840px}
 body{font-size:13px;letter-spacing:.004em}
 .app-shell{background:var(--bg)}
 .sidebar{background:linear-gradient(180deg,#121b2a 0%,#0f1622 100%);box-shadow:inset -1px 0 0 rgba(255,255,255,.015)}
-.brand-mark{border:1px solid rgba(188,199,255,.35);box-shadow:0 8px 25px rgba(71,81,190,.19);background:linear-gradient(135deg,#b0bcff 0%,#7d92ff 60%,#b5a0f8 100%)}
+.brand-mark{border:0;box-shadow:0 8px 25px rgba(71,81,190,.18);background:transparent;overflow:hidden;border-radius:11px}
+.brand-mark img{display:block;width:100%;height:100%;object-fit:cover}
 .nav-item{font-size:12px;font-weight:560;transition:background .17s ease,color .17s ease,transform .17s ease}
 .nav-item:hover:not(.active){background:rgba(155,171,216,.09)}
 .nav-item.active{background:linear-gradient(100deg,rgba(131,152,255,.19),rgba(131,152,255,.045));border-color:rgba(155,175,255,.19);box-shadow:inset 3px 0 0 var(--accent)}
