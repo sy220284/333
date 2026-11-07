@@ -168,9 +168,9 @@ test('任务队列验证输入并守住项目和终态边界', async () => {
 
 test('持久工作项保留长期身份和动态角色，并拒绝只有一半的身份参数',async()=>{
   await fixture(async(root,mission,project)=>{
-    await expect(enqueueMissionJob(mission,project,'单项','验证真实产物',root,{
+    expect(()=>enqueueMissionJob(mission,project,'单项','验证真实产物',root,{
       agentProfileId:randomUUID(),
-    })).rejects.toThrow('一起指定')
+    })).toThrow('一起指定')
     const agentProfileId=randomUUID(),roleId=randomUUID()
     const job=await enqueueMissionJob(mission,project,'角色任务','对代码检查归纳规范',root,{
       agentProfileId,roleId,
