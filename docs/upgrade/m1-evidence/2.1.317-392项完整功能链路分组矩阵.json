@@ -7888,11 +7888,11 @@
     "policy_document": "docs/upgrade/2.1.317-官方更新产品范围策略.zh-CN.md",
     "lookup": "node build/upgrade317-product-scope.mjs --mode active",
     "upstream_items": 392,
-    "retained_official_behavior": 221,
+    "retained_official_behavior": 220,
     "local_behavior_adaptation": 76,
-    "retired_upstream_only": 95,
-    "active_feature_acceptance_items": 297,
-    "retirement_safety_checks": 95,
+    "retired_upstream_only": 96,
+    "active_feature_acceptance_items": 296,
+    "retirement_safety_checks": 96,
     "note": "源矩阵 392 条不删；产品功能验收按分类执行，官方退役只验安全与隔离，不要求原版云服务可运行"
   }
 }
