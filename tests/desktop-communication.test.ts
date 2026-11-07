@@ -205,7 +205,7 @@ test('desktop restores an interrupted task after reopening its persisted SDK ses
     const continued = await restored.handle(request('tasks.resume', {
       sessionId: opened.sessionId, taskId: 'agent-1', prompt: 'finish the work',
     })) as { action: string; turnId: string }
-    expect(continued.action).toBe('continued')
+    expect(continued.action).toBe('continuation_requested')
     expect(continued.turnId).toBeTruthy()
   } finally { await restored.close() }
 })

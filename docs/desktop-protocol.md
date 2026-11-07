@@ -102,3 +102,8 @@ await desktop.send(sessionId, '检查项目源码')
 - `missions.jobs.evidence` 按 Mission 和 Job 归属核对隔离工作树，在真实目录读取 Git 状态、未提交改动统计和从初始提交以来的新增提交，用于桌面人工审核；查看证据不会执行新的模型任务。
 - `missions.jobs.approve` 保持人工审核，读取任务簿时会通过 `reconcileMissionTerminalJobs` 修复 Job 与关联 Mission 终态的崩溃窗口；不可自动合并有冲突的代码。
 - `missions.jobs.runBatch/runQueue` 的并发名额在项目内跨 Mission 共享，借助本地文件锁确保多宿主一致；暂停和关闭宿主不触发未经许可的重启。
+
+
+### 任务恢复动作的准确语义
+
+`tasks.resume` 没有 `prompt` 时只核对并恢复原 SDK 会话。明确传入 `prompt` 后返回 `action: continuation_requested`，表示继续请求已经发送，而不是提前断言 Agent 成功恢复。原版 LocalAgent 由 `SendMessage` 的已注册 ID / 磁盘记录执行真正的后台恢复；LocalWorkflow 使用 `Workflow.resumeFromRunId`；其他任务则在原会话核对副作用后续办。真实终态仍以 SDK `task_notification` 和工具结果为准。后台 Agent 尚未结束时，Mission Job 不得自动进入 `review`。

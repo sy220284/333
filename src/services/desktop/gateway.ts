@@ -433,9 +433,19 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     if (task.status === 'completed') throw new Error('Completed tasks do not require recovery')
     if (task.status === 'running') throw new Error('Task is already running')
     const restored = existing ? undefined : await openSession(undefined, sessionId)
-    // Restore the original SDK transcript before accepting explicit new work.
-    const turn = prompt ? await send(sessionId, `Continue task ${taskId} (${task.description}). ${prompt}`) : undefined
-    return { sessionId, task, restored: !!restored, action: turn ? 'continued' : 'context_restored', ...(turn && { turnId: turn.turnId }) }
+    // The SDK restores the parent transcript. The original decompiled
+    // SendMessage tool resumes a stopped Agent from its real agent transcript;
+    // Workflow uses its own resumeFromRunId. Ask for that native tool rather
+    // than claiming a generic prompt already restarted an agent.
+    const guidance = task.taskType === 'local_agent'
+      ? `请使用原生 SendMessage(to=${JSON.stringify(taskId)}) 对原智能体发送继续指令，复用它已有的执行上下文。先核对隔离工作树和工具结果。`
+      : task.taskType === 'local_workflow' && task.runId
+        ? `请使用原生 Workflow 工具的 resumeFromRunId=${JSON.stringify(task.runId)} 恢复已归档阶段，核对脚本和历史记录。`
+        : `请在原 SDK 会话中核对任务 ${taskId}（${task.description}）的实际进度和副作用，再处理剩余工作。`
+    const turn = prompt ? await send(sessionId, `${guidance} 用户授权的继续要求：${prompt}`) : undefined
+    return { sessionId, task, restored: !!restored,
+      action: turn ? 'continuation_requested' : 'context_restored',
+      ...(turn && { turnId: turn.turnId }) }
   }
 
   async function closeSession(sessionId: string) {

@@ -848,7 +848,7 @@ export function App(){
                   <span className="min-w-0 flex-1 truncate text-[12px]">{String(task.description||task.taskId)}</span>
                   <Badge size="sm" tone={task.status==='running'?'warning':'neutral'}>{String(task.status||'未知')}</Badge>
                   {sessionId&&task.status==='running'&&<Button variant="secondary" size="sm" aria-label="停止任务" onClick={()=>void operation('停止任务',async()=>{await invoke('tasks.stop',{sessionId,taskId:task.taskId});await refreshSession(sessionId)})}><CircleStop size={14}/>停止任务</Button>}
-                  {sessionId&&['interrupted','failed','stopped'].includes(String(task.status))&&<Button variant="tonal" size="sm" aria-label="继续任务" onClick={()=>void operation('恢复任务',async()=>{await invoke('tasks.resume',{sessionId,taskId:task.taskId,prompt:'先核对已有执行结果与文件改动，再继续尚未完成的工作并提供测试证据'});await refreshSession(sessionId)})}><Play size={14}/>继续任务</Button>}
+                  {sessionId&&['interrupted','failed','stopped'].includes(String(task.status))&&<Button variant="tonal" size="sm" aria-label="请求续办任务" onClick={()=>void operation('恢复任务',async()=>{await invoke('tasks.resume',{sessionId,taskId:task.taskId,prompt:'先核对已有执行结果与文件改动，再继续尚未完成的工作并提供测试证据'});await refreshSession(sessionId)})}><Play size={14}/>请求续办</Button>}
                 </div>):<Empty icon={UsersRound} title="尚无运行中的智能体任务" detail="从对话开始协作后，这里会显示执行任务与状态。"/>}
               </Card>
             </Section>
