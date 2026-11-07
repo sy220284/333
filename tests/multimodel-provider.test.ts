@@ -171,6 +171,33 @@ test('ChatGPT long-lived clients reject logout and account/workspace switches be
   assert.throws(() => assertChatGPTAccountIdentity(undefined, rotated), /account changed/)
 })
 
+test('aborting a live third-party SSE stream preserves AbortError and cancels upstream', async () => {
+  const route = requireRoute('deepseek/deepseek-chat')
+  let upstreamCancelled = false
+  const source = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(
+        'data: {"choices":[{"delta":{"content":"Started"}}]}\\n\\n',
+      ))
+    },
+    cancel() { upstreamCancelled = true },
+  })
+  const abort = new AbortController()
+  const client = makeIndependentFetch(route, 'secret', async () => new Response(source))
+  const request = new Request('https://yaoyaoche-model-bridge.invalid/v1/messages', {
+    method: 'POST',
+    body: JSON.stringify({ ...body, model: 'deepseek/deepseek-chat', stream: true }),
+    headers: { 'content-type': 'application/json' },
+  })
+  const response = await client(request, { signal: abort.signal })
+  const result = response.text()
+  abort.abort(new DOMException('User stopped the request', 'AbortError'))
+  await assert.rejects(result, (error: unknown) =>
+    error instanceof Error && error.name === 'AbortError' &&
+    error.message.includes('User stopped the request'))
+  assert.equal(upstreamCancelled, true)
+})
+
 test('completed Responses streams are not blocked by a provider cancel that never settles', async () => {
   let cancelCalled = false
   const encoder = new TextEncoder()
