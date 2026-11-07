@@ -89,7 +89,10 @@ function verifyBaseAndExtensions(actual, official, commandLine) {
   assert.deepEqual(actual.flags.filter(flag => !addedFlags.includes(flag)),
     official.flags.filter(flag => !removedFlags.includes(flag)),
     `Original 2.1.317 flags must stay available: ${commandLine}`);
-  const removed = commandLine === '--help' ? ['ultrareview'] : [];
+  // Both commands are deliberately retired from this local product:
+  // Ultrareview depends on official cloud review, and gateway is the retired
+  // enterprise telemetry-forwarding CLI. Preserve all remaining 317 commands.
+  const removed = commandLine === '--help' ? ['ultrareview', 'gateway'] : [];
   assert.deepEqual(actual.commands.filter(name => !additions.includes(name)),
     official.commands.filter(name => !removed.includes(name)),
     `2.1.317 original commands changed beyond approved removals: ${commandLine}`);
