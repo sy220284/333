@@ -13,7 +13,7 @@ function config(telemetry) {
     ...(telemetry===undefined?{}:{telemetry}),
   })
 }
-const source=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8')
+const source=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8')
 
 test('退休企业网关默认没有外部遥测目标',()=>{
   assert.deepEqual(config().telemetry.forward_to,[])
