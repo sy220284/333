@@ -34,11 +34,18 @@ function verified(records: unknown): SmartExecutionRecord[] {
   return records as SmartExecutionRecord[]
 }
 
+export function getSmartExecutionJournalFile(
+  projectDir: string,
+  rootDir: string = join(homedir(), '.yaoyaoche', 'smart-executions'),
+): string {
+  return join(resolve(rootDir), `${createHash('sha256').update(resolve(projectDir)).digest('hex')}.json`)
+}
+
 export function createSmartExecutionJournal(
   projectDir: string,
   rootDir: string = join(homedir(), '.yaoyaoche', 'smart-executions'),
 ): SmartExecutionJournal {
-  const file = join(resolve(rootDir), `${createHash('sha256').update(resolve(projectDir)).digest('hex')}.json`)
+  const file = getSmartExecutionJournalFile(projectDir, rootDir)
   async function read(): Promise<SmartExecutionRecord[]> {
     let raw: string
     try { raw = await readFile(file, 'utf8') }

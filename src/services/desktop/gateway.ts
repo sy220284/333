@@ -523,7 +523,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       }
       case 'data.purge.preview': {
         const { planLocalProjectPurge } = await import('./maintenance.js')
-        const plan = await planLocalProjectPurge(cwd)
+        const plan = await planLocalProjectPurge(cwd, options.dataDir)
         const token = randomUUID()
         pendingPurge = { token, createdAt: Date.now(), plan }
         return { token, workspace: plan.workspace, items: plan.items.map(item => ({ kind: item.kind, path: item.path, reason: item.reason })), warnings: plan.warnings, activeSessions: sessions.size }
@@ -533,7 +533,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         if (!pending || pending.token !== request.token || Date.now() - pending.createdAt > 300000)
           throw new Error('清理预览已失效，请重新检查删除清单')
         pendingPurge = undefined
-        if (activeMissionQueues.size || drainingMissionQueues.size || executingMissionJobs.size ||
+        if (smartActive.size || activeMissionQueues.size || drainingMissionQueues.size || executingMissionJobs.size ||
             [...sessions.values()].some(entry => entry.sending || entry.consuming ||
               [...entry.tasks.values()].some(task => task.status === 'running')))
           throw new Error('当前仍有执行中的会话、智能体或任务队列。请先停止执行再清理')
@@ -541,7 +541,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         // Idle SDK sessions must close before their on-disk transcripts can be removed.
         for (const sessionId of [...sessions.keys()]) await closeSessionInternal(sessionId)
         const { planLocalProjectPurge, executeLocalProjectPurge } = await import('./maintenance.js')
-        const current = await planLocalProjectPurge(cwd)
+        const current = await planLocalProjectPurge(cwd, options.dataDir)
         const signature = (items: typeof current.items) => JSON.stringify(items.map(item => [item.kind, item.path, item.reason]))
         if (signature(current.items) !== signature(pending.plan.items))
           throw new Error('清理内容已变化，请重新预览后确认')

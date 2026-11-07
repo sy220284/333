@@ -1,9 +1,10 @@
 import { test, expect } from 'bun:test'
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createSmartExecutionJournal } from '../src/services/desktop/smartExecutionJournal.js'
+import { createSmartExecutionJournal, getSmartExecutionJournalFile } from '../src/services/desktop/smartExecutionJournal.js'
+import { planLocalProjectPurge, executeLocalProjectPurge } from '../src/services/desktop/maintenance.js'
 import { createDesktopGateway, type DesktopGatewayOptions } from '../src/services/desktop/gateway.js'
 import { DesktopRequestSchema } from '../src/services/desktop/protocol.js'
 
@@ -36,6 +37,26 @@ test('智能执行本地账本保存任务元数据，禁止记录任务提示�
     expect(file).not.toContain('prompt')
     expect(file).not.toContain('API_KEY')
     expect(file).not.toContain('secret')
+  } finally { await rm(root, { force: true, recursive: true }) }
+})
+
+test('本地工作区清理预览和执行完整覆盖智能执行账本', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yaoyao-smart-purge-'))
+  const project = join(root, 'project')
+  const journalRoot = join(root, 'journal')
+  try {
+    await mkdir(project, { recursive: true })
+    const journal = createSmartExecutionJournal(project, journalRoot)
+    await journal.start({ sessionId: sid(), model: 'fixture-model',
+      permissionMode: 'default', status: 'running', startedAt: new Date().toISOString() })
+    const planned = await planLocalProjectPurge(project, journalRoot)
+    const path = getSmartExecutionJournalFile(project, journalRoot)
+    const matching = planned.items.filter(item => item.path === path)
+    expect(matching).toHaveLength(1)
+    expect(matching[0]?.kind).toBe('file')
+    const result = await executeLocalProjectPurge(matching)
+    expect(result).toMatchObject({ deleted: 1, total: 1, errors: [] })
+    expect(await journal.list()).toEqual([])
   } finally { await rm(root, { force: true, recursive: true }) }
 })
 
