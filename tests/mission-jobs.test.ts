@@ -9,6 +9,16 @@ import {
   recoverMissionJob, missionJobAssignmentId,
 } from '../src/services/agentCenter/missionJobs.js'
 
+function requiredIndex<T>(items: T[], index: number): T {
+  const value = items[index]
+  if (value === undefined) throw new Error(`测试缺少索引 ${index} 的工作项`)
+  return value
+}
+function requiredRunId(item: { runId?: string }): string {
+  if (!item.runId) throw new Error('执行记录没有分配 runId')
+  return item.runId
+}
+
 async function fixture(run: (root: string, mission: string, project: string) => Promise<void>) {
   const root = await mkdtemp(join(tmpdir(), 'mission-jobs-'))
   try {
@@ -21,7 +31,7 @@ async function fixture(run: (root: string, mission: string, project: string) => 
 test('任务队列持久化、双宿主并发抢占与审核闭环', async () => {
   await fixture(async (root, mission, project) => {
     const saved = await enqueueMissionJob(mission, project, '查明错误', '调查并交付可验证的修复', root)
-    expect(missionJobAssignmentId(saved.id)).toBe('mission-job:' + saved.id)
+    expect(missionJobAssignmentId(saved.id)).toBe(`mission-job:${saved.id}`)
     expect((await listMissionJobs(mission, project, root))[0]?.id).toBe(saved.id)
     const claims = await Promise.allSettled([
       claimMissionJob(mission, project, saved.id, randomUUID(), process.pid, root),
@@ -33,12 +43,12 @@ test('任务队列持久化、双宿主并发抢占与审核闭环', async () =>
     expect(claimed.attempt).toBe(1)
     expect(claimed.status).toBe('running')
     const sessionId = randomUUID(), turnId = randomUUID()
-    await bindMissionJobTurn(mission, project, saved.id, claimed.runId!, sessionId, turnId, root)
+    await bindMissionJobTurn(mission, project, saved.id, requiredRunId(claimed), sessionId, turnId, root)
     await expect(recoverMissionJob(mission, project, saved.id, root))
       .rejects.toThrow('仍存活')
-    const review = await settleMissionJob(mission, project, saved.id, claimed.runId!, 'review', '测试通过，等待人工确认', root)
+    const review = await settleMissionJob(mission, project, saved.id, requiredRunId(claimed), 'review', '测试通过，等待人工确认', root)
     expect(review.status).toBe('review')
-    await expect(retryMissionJob(mission, project, saved.id + 'bad', root)).rejects.toThrow('无效')
+    await expect(retryMissionJob(mission, project, `${saved.id}bad`, root)).rejects.toThrow('无效')
     const approved = await approveMissionJob(mission, project, saved.id, root)
     expect(approved.status).toBe('completed')
     expect((await approveMissionJob(mission, project, saved.id, root)).updatedAt).toBe(approved.updatedAt)
@@ -62,9 +72,9 @@ test('被中断的任务不自动重复执行；用户恢复后需再次显式�
     expect(retried.attempt).toBe(1)
     const second = await claimMissionJob(mission, project, queued.id, randomUUID(), process.pid, root)
     expect(second.attempt).toBe(2)
-    await expect(settleMissionJob(mission, project, queued.id, claimed.runId!, 'review', '旧轮结果', root))
+    await expect(settleMissionJob(mission, project, queued.id, requiredRunId(claimed), 'review', '旧轮结果', root))
       .rejects.toThrow('另一轮')
-    const failed = await settleMissionJob(mission, project, queued.id, second.runId!, 'failed', '工具调用失败', root)
+    const failed = await settleMissionJob(mission, project, queued.id, requiredRunId(second), 'failed', '工具调用失败', root)
     expect(failed.status).toBe('failed')
     expect(failed.history).toHaveLength(2)
     await expect(approveMissionJob(mission, project, queued.id, root)).rejects.toThrow('待审核')
@@ -77,16 +87,16 @@ test('跨桌面宿主最多并行三项执行，任务进入审核后释放槽�
   await fixture(async (root, mission, project) => {
     const jobs = []
     for (let i = 0; i < 4; i++) {
-      jobs.push(await enqueueMissionJob(mission, project, '任务' + i, '专项验证' + i, root))
+      jobs.push(await enqueueMissionJob(mission, project, `任务${i}`, `专项验证${i}`, root))
     }
     const started = []
     for (let i = 0; i < 3; i++) {
-      started.push(await claimMissionJob(mission, project, jobs[i]!.id, randomUUID(), process.pid, root))
+      started.push(await claimMissionJob(mission, project, requiredIndex(jobs, i).id, randomUUID(), process.pid, root))
     }
-    await expect(claimMissionJob(mission, project, jobs[3]!.id, randomUUID(), process.pid, root))
+    await expect(claimMissionJob(mission, project, requiredIndex(jobs, 3).id, randomUUID(), process.pid, root))
       .rejects.toThrow('最多同时执行 3 项')
-    await settleMissionJob(mission, project, jobs[0]!.id, started[0]!.runId!, 'review', '已输出交付内容', root)
-    const next = await claimMissionJob(mission, project, jobs[3]!.id, randomUUID(), process.pid, root)
+    await settleMissionJob(mission, project, requiredIndex(jobs, 0).id, requiredRunId(requiredIndex(started, 0)), 'review', '已输出交付内容', root)
+    const next = await claimMissionJob(mission, project, requiredIndex(jobs, 3).id, randomUUID(), process.pid, root)
     expect(next.status).toBe('running')
   })
 })
