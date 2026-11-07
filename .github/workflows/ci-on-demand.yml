@@ -8,8 +8,8 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: ci-on-demand-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-on-demand-${{ github.event.pull_request.number || github.ref }}-${{ github.run_attempt == 1 && 'latest' || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
 jobs:
   plan:
     name: 累计改动识别与检查计划
