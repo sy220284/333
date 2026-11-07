@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, session } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron'
 import { spawn, execFile } from 'node:child_process'
 import { existsSync, realpathSync } from 'node:fs'
 import { readdir, readFile, writeFile, rename, realpath, mkdir, rm, stat } from 'node:fs/promises'
@@ -82,6 +82,22 @@ const workspacePref = () => join(app.getPath('userData'), 'workspace.json')
 async function call(method:unknown,args:unknown):Promise<unknown>{
   if(typeof method!=='string'||!args||typeof args!=='object'||Array.isArray(args))throw new Error('无效桌面请求')
   const data=args as Record<string,unknown>
+  if(method==='external.open'){
+    const raw=data.url
+    if(typeof raw!=='string'||raw.length>8192)throw new Error('链接无效或过长')
+    let url:URL
+    try{url=new URL(raw)}catch{throw new Error('链接格式无效')}
+    if(url.protocol!=='https:'||!url.hostname||url.username||url.password)
+      throw new Error('仅允许打开无需内嵌凭证的 HTTPS 链接')
+    const choice=await dialog.showMessageBox(requireWindow(),{
+      type:'question',buttons:['取消','在浏览器中打开'],defaultId:0,cancelId:0,
+      title:'确认打开 MCP 授权链接',message:url.hostname,
+      detail:'此链接由 MCP 工具提供，将在系统浏览器中打开。请确认目标网站可信。'
+    })
+    if(choice.response!==1)return {opened:false}
+    await shell.openExternal(url.href)
+    return {opened:true}
+  }
   if(method==='app.info')return {workspace:active,platform:process.platform,version:app.getVersion()}
   if(method==='credentials.list')return {providers:listProviderApiKeyAccounts()}
   if(method==='credentials.set'){
