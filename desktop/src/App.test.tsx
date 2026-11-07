@@ -24,6 +24,7 @@ let releaseMcpRefresh:(()=>void)|undefined
 let createdMission:{id:string;objective:string;status:string}|undefined
 let activeAgentMode:'master'|'super'='master'
 let mockTeam:{name:string;leadSessionId:string;memberCount:number;runningCount:number}|undefined
+let failTeamDeliveryAck=false
 let mockTasks:Array<{taskId:string;description:string;status:string}>=[]
 let budgetState:{limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number;activeReservations:number;
   uncertain:Array<{id:string;reservedUsd:number;startedAt:string}>}={
@@ -75,7 +76,9 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     }
     case 'agents.overview':return {mode:activeAgentMode,teams:mockTeam?[mockTeam]:[],missions:[],activeSessions:0,activeTasks:0}
     case 'agents.members':return mockTeam?[{agentId:'agent-test',name:'测试成员',agentType:'developer',model:'fixture-model',status:'idle'}]:[]
-    case 'agents.team.message':return {queued:true,teamName:args.teamName,recipient:args.to,messageId:args.messageId}
+    case 'agents.team.message':
+      if(failTeamDeliveryAck){failTeamDeliveryAck=false;throw new Error('模拟信箱确认丢失')}
+      return {queued:true,teamName:args.teamName,recipient:args.to,messageId:args.messageId}
     case 'agents.team.inbox':return {teamName:args.teamName,memberName:args.memberName,messages:[
       {from:'team-lead',text:'已提交检查任务',timestamp:'2026-11-07T12:00:00Z',read:false,messageId:SID},
     ]}
@@ -155,7 +158,7 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];smartRecord=undefined;budgetState={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]};longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;twoSessions=false;delayedHistoryId='';releaseHistory=undefined;delayedSessionList=false;releaseSessionList=undefined;delayedSave=false;releaseSave=undefined;delayedApprovalLists=false;releasePermissionList=undefined;releaseHostList=undefined;window.localStorage.clear()})
+beforeEach(()=>{call.mockClear();listener=()=>{};failTeamDeliveryAck=false;showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];smartRecord=undefined;budgetState={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]};longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;twoSessions=false;delayedHistoryId='';releaseHistory=undefined;delayedSessionList=false;releaseSessionList=undefined;delayedSave=false;releaseSave=undefined;delayedApprovalLists=false;releasePermissionList=undefined;releaseHostList=undefined;window.localStorage.clear()})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
@@ -561,6 +564,28 @@ describe('摇摇车真实桌面页面交互',()=>{
     await waitFor(()=>expect(call).toHaveBeenCalledWith('agents.team.inbox',{teamName:'原团队',memberName:'测试成员'}))
     expect(screen.getByText('已提交检查任务')).toBeInTheDocument()
     expect(screen.getByText(/未读取/)).toBeInTheDocument()
+  })
+
+  it('团队信箱确认丢失后重试沿用相同消息标识，避免重复投递',async()=>{
+    mockTeam={name:'原团队',leadSessionId:SID,memberCount:1,runningCount:0}
+    failTeamDeliveryAck=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'智能体团队'}))
+    await screen.findByText('测试成员')
+    await user.click(screen.getByRole('button',{name:'选为接收人'}))
+    await user.type(screen.getByRole('textbox',{name:'团队成员工作指令'}),'确认重试一致性')
+    await user.click(screen.getByRole('button',{name:'发送成员任务'}))
+    await screen.findByText('模拟信箱确认丢失')
+    await user.click(screen.getByRole('button',{name:'发送成员任务'}))
+    await screen.findByText(/已写入 测试成员 的团队信箱/)
+    const sends=call.mock.calls.filter(args=>args[0]==='agents.team.message')
+    expect(sends).toHaveLength(2)
+    expect(sends[0]?.[1]).toMatchObject({messageId:expect.any(String)})
+    expect((sends[0]?.[1] as Record<string,unknown>).messageId).toBe(
+      (sends[1]?.[1] as Record<string,unknown>).messageId,
+    )
   })
 
   it('Mission 的其他 SDK 会话进度能在任务板显示，且与当前对话互不混淆',async()=>{
