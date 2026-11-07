@@ -48,7 +48,7 @@ type Doc=z.infer<typeof documentSchema>
 function filePath(projectDir:string,root:string):string {
   if(!projectDir.trim())throw new Error('长期智能体必须绑定项目')
   return join(root,'agent-profiles',
-    createHash('sha256').update(resolve(projectDir)).digest('hex')+'.json')
+    `${createHash('sha256').update(resolve(projectDir)).digest('hex')}.json`)
 }
 function blank(projectDir:string):Doc {
   return {version:1,projectDir:resolve(projectDir),revision:0,agents:[]}
@@ -81,7 +81,7 @@ async function change(
     const updated=documentSchema.parse({...doc,revision:before.revision+1})
     const raw=JSON.stringify(updated,null,2)
     if(Buffer.byteLength(raw)>4_000_000)throw new Error('智能体档案超过容量限制')
-    const temp=path+'.'+randomUUID()+'.tmp'
+    const temp=`${path}.${randomUUID()}.tmp`
     try{await writeFile(temp,raw,{flag:'wx',mode:0o600});await rename(temp,path)}
     finally{await rm(temp,{force:true})}
     return profile
