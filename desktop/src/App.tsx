@@ -478,6 +478,10 @@ export function App(){
   useEffect(()=>{window.localStorage.setItem(`${PREF}inspector`,String(rightOpen))},[rightOpen])
   useEffect(()=>{window.localStorage.setItem(`${PREF}smart-budget`,smartBudget)},[smartBudget])
   useEffect(()=>{window.localStorage.setItem(`${PREF}smart-policy`,smartPolicy)},[smartPolicy])
+  const closeInspector=useCallback(()=>{
+    setRightOpen(false)
+    requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-label="打开详情面板"]')?.focus())
+  },[])
   useEffect(()=>{if(paletteOpen)paletteInputRef.current?.focus()},[paletteOpen])
   useEffect(()=>{if(permissions.length||hostRequests.length)setPaletteOpen(false)},[permissions.length,hostRequests.length])
   useEffect(()=>{
@@ -491,12 +495,12 @@ export function App(){
       if(mod&&event.key.toLowerCase()==='n'){event.preventDefault();void createSessionRef.current()}
       if(event.key==='Escape'){
         setSearch('');setPaletteOpen(false)
-        if(window.innerWidth<=960)setRightOpen(false)
+        if(window.innerWidth<=960&&rightOpen)closeInspector()
       }
     }
     window.addEventListener('keydown',onKey)
     return ()=>window.removeEventListener('keydown',onKey)
-  },[permissions.length,hostRequests.length])
+  },[permissions.length,hostRequests.length,rightOpen,closeInspector])
   /**
    * Team actions go through the real coordinator SDK session. The native
    * TeamCreate / SendMessage / TeamDelete tools retain their permission and
@@ -1311,12 +1315,12 @@ export function App(){
 </div>}
           </div>
         </div>
-        {rightOpen&&<><button type="button" aria-label="关闭详情遮罩" className="hidden max-[961px]:block fixed inset-0 z-30 bg-black/40" onClick={()=>setRightOpen(false)}/><WorkspaceInspector
+        {rightOpen&&<><button type="button" aria-label="关闭详情遮罩" className="hidden max-[961px]:block fixed inset-0 z-30 bg-black/40" onClick={closeInspector}/><WorkspaceInspector
           connected={connected} phase={statusName(sessionPhase)} model={selectedModel} mode={mode}
           approvals={permissions.length} tasks={tasks.length} activity={activity} busy={busy}
           smartExecution={smartHistory.find(record=>record.sessionId===sessionId)}
           projectBudget={projectBudget??undefined}
-          onClose={()=>{setRightOpen(false);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-label="打开详情面板"]')?.focus())}} onPermissions={()=>setView('settings')} onMissions={()=>setView('missions')} onModels={()=>setView('models')}
+          onClose={closeInspector} onPermissions={()=>setView('settings')} onMissions={()=>setView('missions')} onModels={()=>setView('models')}
         /></>}
 
       </div>
