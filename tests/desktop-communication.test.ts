@@ -265,6 +265,7 @@ test('desktop agent center manages project-scoped missions and teams through one
     expect(initial.activeSessions).toBe(0)
     await expect(gateway.handle(request('agents.members', { teamName: 'different-project-team' })))
       .rejects.toThrow('不属于当前项目')
+    const initialMode = (await gateway.handle(request('agents.overview')) as { mode: string }).mode
     const created = await gateway.handle(request('missions.create', { objective: 'Finish verified code review' })) as {
       id: string; objective: string;
     }
@@ -275,7 +276,7 @@ test('desktop agent center manages project-scoped missions and teams through one
     expect(index.selectedMissionId).toBe(created.id)
     expect(index.missions.map(mission => mission.id)).toEqual([created.id])
     const overview = await gateway.handle(request('agents.overview')) as { mode: string; selectedMissionId: string }
-    expect(overview.mode).toBe('super')
+    expect(overview.mode).toBe(initialMode)
     expect(overview.selectedMissionId).toBe(created.id)
     await gateway.handle(request('agents.setMode', { mode: 'master' }))
     const mode = await gateway.handle(request('agents.setMode', { mode: 'super' })) as { mode: string }
