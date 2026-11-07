@@ -232,34 +232,3 @@ export function listGatewayModels317(config, identity) : Response {
     has_more: false,
   }, { headers:{ 'cache-control':'no-store' } })
 }
-
-const METRIC_PATHS = new Set(['/v1/logs','/v1/metrics','/v1/traces'])
-export async function forwardGatewayTelemetry317(request: { url: string|URL; headers: { get: (arg0: string) => string } }, context) : Promise<Response> {
-  const path = new URL(request.url).pathname
-  if (!METRIC_PATHS.has(path)) return new Response('not found', { status:404 })
-  const destinations = (context.config.telemetry.forward_to ?? []).filter(
-    entry => entry[path.slice(4)] === true)
-  if (!destinations.length) return new Response(null,{status:200})
-  let bytes
-  try { bytes = await readBoundedGatewayBody317(request, context.config.limits.max_request_bytes) }
-  catch { return new Response('request too large',{status:413}) }
-  const contentType = request.headers.get('content-type') ?? 'application/x-protobuf'
-  const encoding = request.headers.get('content-encoding')
-  const results = await Promise.allSettled(destinations.map(async target => {
-    const headers = new Headers(target.headers ?? {})
-    headers.set('content-type', contentType)
-    if (encoding) headers.set('content-encoding', encoding)
-    const res = await fetch(target.url, {
-      method:'POST', headers, body: bytes, redirect:'manual',
-      signal: AbortSignal.timeout(10000),
-    })
-    if (!res.ok) throw new Error('telemetry sink rejected request: ' + res.status)
-  }))
-  const rejected = results.filter(x => x.status === 'rejected')
-  if (rejected.length) {
-    await context.audit('telemetry.forward_failure', context.identity.sub, null,
-      { stream:path, failed:rejected.length })
-    return new Response('telemetry forwarding failed',{status:502})
-  }
-  return new Response(null,{status:200})
-}
