@@ -59,6 +59,16 @@ test('桌面原生接口贯通技能候选、人工发布、经验提炼与核�
     await gateway.handle(req('experience.approve',{experienceId:proposed.id,reviewer:'桌面用户'}))
     const approved=await gateway.handle(req('experience.search',{query:'研究'})) as {experiences:Array<{key:string}>}
     expect(approved.experiences[0]?.key).toBe('research-source-check')
+    const handoffId=randomUUID()
+    await expect(gateway.handle(req('handoffs.create',{
+      requestId:handoffId,teamName:'missing-team',to:'设计',
+      summary:'交接视觉规范',instruction:'根据已经审定的文案与素材检查视觉版式，并提供最终成果',
+      inputRefs:[],
+    }))).rejects.toThrow('团队')
+    const pending=await gateway.handle(req('handoffs.list')) as {handoffs:Array<{id:string;status:string}>}
+    expect(pending.handoffs.find(item=>item.id===handoffId)?.status).toBe('draft')
+    await expect(gateway.handle(req('handoffs.retry',{handoffId}))).rejects.toThrow('团队')
+    expect((await gateway.handle(req('handoffs.list')) as {handoffs:unknown[]}).handoffs).toHaveLength(1)
     expect(launched).toBe(0)
   }finally{
     await gateway.close()
