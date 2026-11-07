@@ -18,6 +18,7 @@ const sessionId = resumeIndex >= 0 ? args[resumeIndex + 1]
   : idIndex >= 0 ? args[idIndex + 1] : randomUUID()
 const out = frame => process.stdout.write(JSON.stringify(frame) + '\n')
 let awaiting = null
+let initializations = 0
 const taskId = 'agent-fixture'
 const usage = { total_tokens: 5, tool_uses: 1, duration_ms: 10 }
 const common = () => ({ session_id: sessionId, uuid: randomUUID() })
@@ -30,9 +31,9 @@ function result(reason = 'completed') {
     modelUsage: {}, permission_denials: [], ...common(),
   })
 }
-function reply(request_id, response = {}) {
+function reply(request_id, response = {}, metadata = {}) {
   out({ type: 'control_response', response: {
-    subtype: 'success', request_id, response,
+    subtype: 'success', request_id, response, ...metadata,
   } })
 }
 function finish() {
@@ -52,6 +53,7 @@ reader.on('line', line => {
     const frame = JSON.parse(line)
     if (frame.type === 'control_request') {
       if (frame.request.subtype === 'initialize') {
+        initializations++
         reply(frame.request_id, {
           models: [{ value: 'mock-model', displayName: 'Mock', description: 'Offline SDK' }],
           agents: [{ name: 'Explore', description: 'Searches' }],
@@ -62,7 +64,15 @@ reader.on('line', line => {
           },
           hook_on_failure_supported: true,
           hooks_applied: frame.request.hooks !== undefined,
-        })
+        }, initializations > 1 ? {
+          pending_permission_requests: [{
+            type: 'control_request', request_id: 'parked-from-previous-host',
+            request: {
+              subtype: 'can_use_tool', tool_name: 'Bash', tool_use_id: 'parked-tool',
+              input: { command: 'pwd' },
+            },
+          }],
+        } : {})
       } else if (frame.request.subtype === 'interrupt') {
         reply(frame.request_id)
         if (awaiting) { awaiting = null; result('aborted_streaming') }
@@ -183,6 +193,29 @@ test('SDK blocking hooks require a verified native capability handshake', { time
       }
     }
   } finally {
+    await rm(cwd, { recursive: true, force: true })
+  }
+})
+
+test('SDK re-initialize re-delivers parked permission requests without a second user turn', { timeout: 30000 }, async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'sdk-parked-reinitialize-'))
+  const cli = join(cwd, 'mock-sdk-cli.mjs')
+  await writeFile(cli, fixtureCli)
+  let pendingSeen = 0
+  const runtime = createSessionRuntime317({
+    cwd, executable: 'node', pathToClaudeCodeExecutable: cli,
+    canUseTool: async (toolName, input) => {
+      if (toolName === 'Bash' && input.command === 'pwd') pendingSeen++
+      return { behavior: 'allow' }
+    },
+  })
+  try {
+    await runtime.initialization
+    await runtime.control({ subtype: 'initialize' })
+    await until(() => pendingSeen === 1)
+    expect(pendingSeen).toBe(1)
+  } finally {
+    await runtime.closeAndWait()
     await rm(cwd, { recursive: true, force: true })
   }
 })
