@@ -30,6 +30,8 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('mcp.toggle', { name: z.string().min(1), enabled: z.boolean() }),
   request('sessions.open', { model: z.string().min(1).optional() }),
   request('sessions.resume', { sessionId }),
+  // Resume only on an explicit user action; an already active session is reused.
+  request('sessions.ensureOpen', { sessionId }),
   request('sessions.list', { limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() }),
   request('sessions.history', { sessionId, limit: z.number().int().min(1).max(500).optional(), offset: z.number().int().min(0).optional() }),
   request('sessions.close', { sessionId }),
