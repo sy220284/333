@@ -579,6 +579,25 @@ test('SDK 2.1.317 task_updated patch merges and cannot regress terminal tasks', 
   expect(projectTask(background, finished)).toBeUndefined()
 })
 
+test('task_progress updates description and timestamp while retaining terminal status', () => {
+  const base = {
+    taskId: 'task-1', description: '旧任务', status: 'running' as const,
+    updatedAt: 100, toolUseId: 'tool-original',
+  }
+  const progress = {
+    type: 'system', subtype: 'task_progress', task_id: 'task-1',
+    description: '新进度', usage: { total_tokens: 20, tool_uses: 2, duration_ms: 30 },
+  } as SDKMessage
+  expect(projectTask(progress, base, 130)).toMatchObject({
+    taskId: 'task-1', description: '新进度', status: 'running',
+    updatedAt: 130, toolUseId: 'tool-original',
+  })
+  const terminal = { ...base, status: 'completed' as const }
+  expect(projectTask(progress, terminal, 150)).toMatchObject({
+    status: 'completed', updatedAt: 150, description: '新进度',
+  })
+})
+
 test('desktop continues model events after a task journal write failure', async () => {
   const data = fixture()
   const disk = data.options.journal
