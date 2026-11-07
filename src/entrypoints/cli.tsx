@@ -130,67 +130,6 @@ async function main(): Promise<void> {
     if (await runPluginTestFastPath317(args.slice(2))) return;
   }
 
-  // Official 317 cli.js:429-459 dispatches self-hosted runner before REPL.
-  // Keep host registration, worker credentials and process lifecycle isolated.
-  if (args[0] === 'self-hosted-runner') {
-    profileCheckpoint('cli_self_hosted_runner_path');
-    try {
-      const operation = args[1];
-      switch (operation) {
-        case 'orchestrator': {
-          const { selfHostedRunnerOrchestratorMain317 } =
-            await import('../cli/selfHostedRunner/orchestrator317.ts');
-          await selfHostedRunnerOrchestratorMain317(args.slice(2));
-          break;
-        }
-        case 'setup': {
-          const { selfHostedRunnerSetupMain317 } =
-            await import('../cli/selfHostedRunner/setup317.ts');
-          await selfHostedRunnerSetupMain317(args.slice(2));
-          break;
-        }
-        case 'doctor': {
-          const { selfHostedRunnerDoctorMain317 } =
-            await import('../cli/selfHostedRunner/doctor317.ts');
-          await selfHostedRunnerDoctorMain317(args.slice(2));
-          break;
-        }
-        case 'code-sign': {
-          const { selfHostedRunnerCodeSignMain317 } =
-            await import('../cli/selfHostedRunner/codeSign317.ts');
-          await selfHostedRunnerCodeSignMain317(args.slice(2));
-          break;
-        }
-        case 'decode-token': {
-          const { selfHostedRunnerDecodeTokenMain317 } =
-            await import('../cli/selfHostedRunner/decodeToken317.ts');
-          await selfHostedRunnerDecodeTokenMain317(args.slice(2));
-          break;
-        }
-        default: {
-          const { selfHostedRunnerMain317 } = await import('../cli/selfHostedRunner/runnerHost317.ts');
-          await selfHostedRunnerMain317(args.slice(1));
-        }
-      }
-    } catch (error) {
-      const usage = error instanceof Error && error.name === 'RunnerUsageError317';
-      const jwtError = args[1] === 'decode-token' && error instanceof Error;
-      if (jwtError) {
-        process.stderr.write(error.message + '\n');
-        process.exitCode = 1;
-      } else if (usage) {
-        process.stderr.write('error: ' + error.message +
-          "\nRun 'yaoyaoche self-hosted-runner --help' for usage.\n");
-        process.exitCode = 2;
-      } else {
-        process.stderr.write('self-hosted-runner: ' +
-          (error instanceof Error ? error.message : String(error)) + '\n');
-        process.exitCode = 1;
-      }
-    }
-    return;
-  }
-
   // Official 2.1.317 runs the eval MCP stand-in independently of the REPL,
   // before chrome, daemon and background-session routing.
   if (args[0] === '--eval-mock-server') {
