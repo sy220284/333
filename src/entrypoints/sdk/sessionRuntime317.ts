@@ -135,7 +135,9 @@ function startSession(
   if (Array.isArray(queryOptions.tools)) args.push('--tools', queryOptions.tools.join(','))
   else if (queryOptions.tools) args.push('--tools=default')
   for (const dir of queryOptions.additionalDirectories ?? []) args.push('--add-dir', dir)
-  for (const plugin of queryOptions.plugins ?? []) args.push('--plugin-dir', plugin.path)
+  for (const plugin of queryOptions.plugins ?? []) {
+    args.push(plugin.skipMcpDiscovery ? '--plugin-dir-no-mcp' : '--plugin-dir', plugin.path)
+  }
   const sdkServers = new Map<string, {
     transport: SdkControlServerTransport
     pending: Map<string | number, (message: JSONRPCMessage) => void>
