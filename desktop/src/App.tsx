@@ -49,6 +49,7 @@ type CapabilityItem={id:string;name:string;kind:'tool'|'skill'|'workflow'|'plugi
 type ExperienceItem={id:string;key:string;title:string;scenario:string;principle:string;procedure:string[];applicability:string;invalidWhen:string;verification:string;evidenceRefs:string[];tags:string[];status:'candidate'|'approved'|'retired';revision:number;verifiedBy?:string}
 type SkillDraft={id:string;slug:string;description:string;instructions:string;state:'candidate'|'published';createdAt:string;publishedAt?:string}
 type TeamHandoff={id:string;teamName:string;from:string;to:string;summary:string;instruction:string;status:'draft'|'queued'|'acknowledged'|'running'|'review'|'completed'|'cancelled';inputRefs:string[];outputRefs:string[];reviewSummary?:string}
+type AgentProfile={id:string;name:string;description:string;domains:string[];capabilityIds:string[];experienceKeys:string[];status:'available'|'paused'|'retired';roles:Array<{id:string;role:string;purpose:string;state:'active'|'released';teamName?:string;missionId?:string}>}
 const NAV:{id:View;label:string;icon:LucideIcon}[]=[
   {id:'dashboard',label:'工作台概览',icon:LayoutDashboard},
   {id:'chat',label:'AI 对话',icon:MessageSquare},
@@ -167,6 +168,14 @@ export function App(){
   const [teamMembers,setTeamMembers]=useState<TeamMember[]>([])
   const [teamInbox,setTeamInbox]=useState<TeamInbox|null>(null)
   const [teamHandoffs,setTeamHandoffs]=useState<TeamHandoff[]>([])
+  const [agentProfiles,setAgentProfiles]=useState<AgentProfile[]>([])
+  const [profilesRevision,setProfilesRevision]=useState(0)
+  const [profileName,setProfileName]=useState('')
+  const [profileDescription,setProfileDescription]=useState('')
+  const [profileDomains,setProfileDomains]=useState('')
+  const [profileRole,setProfileRole]=useState('')
+  const [profilePurpose,setProfilePurpose]=useState('')
+  const pendingProfile=useRef<{key:string;id:string}|null>(null)
   const [handoffRevision,setHandoffRevision]=useState(0)
   const pendingHandoff=useRef<{key:string;requestId:string}|null>(null)
   const [teamNotice,setTeamNotice]=useState('')
@@ -272,6 +281,14 @@ export function App(){
   useEffect(()=>{viewRef.current=view},[view])
   // biome-ignore lint/correctness/useExhaustiveDependencies: selected team and workspace intentionally reset cached team inbox state.
   useEffect(()=>{setTeamInbox(null);setTeamNotice('');pendingTeamDelivery.current=null;pendingHandoff.current=null},[selectedTeam,workspace])
+  useEffect(()=>{
+    if(view!=='agents'||!connected)return
+    let active=true
+    void api.call<{agents:AgentProfile[]}>('agents.profiles.list').then(data=>{
+      if(active)setAgentProfiles(data.agents??[])
+    }).catch(error=>{if(active)setError('长期身份读取失败：'+presentError(error))})
+    return()=>{active=false}
+  },[view,workspace,connected,profilesRevision])
   useEffect(()=>{
     if(view!=='agents'||!connected)return
     let active=true
@@ -396,6 +413,32 @@ export function App(){
       setBusy(remaining.at(-1)??'')
     }
   },[])
+  async function createLongLivedAgent(){
+    const domains=profileDomains.split(/[，,、]/).map(v=>v.trim()).filter(Boolean)
+    const key=JSON.stringify([workspace,profileName.trim(),profileDescription.trim(),domains])
+    const agentId=pendingProfile.current?.key===key?pendingProfile.current.id:crypto.randomUUID()
+    pendingProfile.current={key,id:agentId}
+    await operation('建立长期智能体身份',async()=>{
+      await invoke('agents.profiles.create',{
+        agentId,name:profileName.trim(),description:profileDescription.trim(),domains,
+        capabilityIds:[],
+      })
+      pendingProfile.current=null
+      setProfileName('');setProfileDescription('');setProfileDomains('')
+      setProfilesRevision(v=>v+1)
+    })
+  }
+  async function assignLongLivedAgent(agentId:string){
+    await operation('调整长期智能体职责',async()=>{
+      await invoke('agents.profiles.assign',{
+        agentId,role:profileRole.trim(),purpose:profilePurpose.trim(),
+        ...(selectedTeam?{teamName:selectedTeam}:{}),
+        ...(selectedMission?{missionId:selectedMission}:{}),
+      })
+      setProfileRole('');setProfilePurpose('')
+      setProfilesRevision(v=>v+1)
+    })
+  }
   async function createTrackedHandoff(){
     if(!selectedTeam||!teamMemberDraft.trim()||teamMemberInstruction.trim().length<12)return
     const key=JSON.stringify([workspace,selectedTeam,teamMemberDraft.trim(),teamMemberInstruction.trim()])
@@ -1200,6 +1243,33 @@ export function App(){
                   </button>
                 </Card>})}
               </div>
+            </Section>
+            <Section title="长期智能体身份" subtitle="身份、经验与角色长期保留；角色可以随任务重配，执行会话仍由原生 Agent SDK 启动。">
+              <Card radius="lg" surface="lowest" padding="lg" shadow="card">
+                <div className="grid grid-cols-3 gap-3 max-[950px]:grid-cols-1">
+                  <label className="space-y-1 text-[12px]">智能体名称<input value={profileName} onChange={e=>setProfileName(e.target.value)} placeholder="例如：创意与调研"/></label>
+                  <label className="space-y-1 text-[12px]">长期职责描述<input value={profileDescription} onChange={e=>setProfileDescription(e.target.value)} placeholder="维护研究、策划与写作经验"/></label>
+                  <label className="space-y-1 text-[12px]">专业领域（逗号分隔）<input value={profileDomains} onChange={e=>setProfileDomains(e.target.value)} placeholder="调研,文案,视频"/></label>
+                </div>
+                <Button className="mt-3" variant="secondary" size="sm" disabled={Boolean(busy)||profileName.trim().length<2||profileDescription.trim().length<8||!profileDomains.trim()} onClick={()=>void createLongLivedAgent()}><Plus size={14}/>保存长期身份</Button>
+                <div className="mt-4 grid grid-cols-2 gap-3 max-[950px]:grid-cols-1">
+                  <label className="space-y-1 text-[12px]">当前任务角色<input value={profileRole} onChange={e=>setProfileRole(e.target.value)} placeholder="例如：剪辑 / UI / 调研"/></label>
+                  <label className="space-y-1 text-[12px]">本次职责与验收标准<input value={profilePurpose} onChange={e=>setProfilePurpose(e.target.value)} placeholder="例如：校对字幕并生成视频成果"/></label>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {agentProfiles.filter(a=>a.status!=='retired').map(agent=><div key={agent.id} className="flex flex-wrap items-start gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-surface-container)]"><Bot size={17}/></span>
+                    <div className="min-w-[200px] flex-1">
+                      <div className="flex flex-wrap items-center gap-2"><strong className="text-[12px]">{agent.name}</strong><Badge size="xs" tone={agent.status==='available'?'success':'warning'}>{agent.status==='available'?'可调配':'已暂停'}</Badge></div>
+                      <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">{agent.description}</p>
+                      <p className="text-[11px] text-[var(--color-text-tertiary)]">领域：{agent.domains.join('、')}</p>
+                      {agent.roles.filter(role=>role.state==='active').map(role=><p key={role.id} className="mt-1 text-[11px] text-[var(--color-text-secondary)]">在岗：{role.role} · {role.purpose}</p>)}
+                    </div>
+                    <Button variant="secondary" size="sm" disabled={Boolean(busy)||agent.status!=='available'||profileRole.trim().length<2||profilePurpose.trim().length<8} onClick={()=>void assignLongLivedAgent(agent.id)}>分配当前角色</Button>
+                  </div>)}
+                  {agentProfiles.length===0&&<Empty icon={Bot} title="尚无长期智能体身份" detail="填写名称、职责与专业领域；后续可围绕不同任务分配新角色。"/>}
+                </div>
+              </Card>
             </Section>
             <Section title="项目团队" subtitle="团队的创建、通信、退出沿用现有 Agent SDK 原生工具链。" action={<Button variant="secondary" size="base" onClick={()=>void operation('刷新团队',refresh)}><RefreshCw size={14}/>刷新</Button>}>
               {mode==='super'&&<Card padding="lg" radius="lg" surface="lowest" shadow="card" className="mb-4">
