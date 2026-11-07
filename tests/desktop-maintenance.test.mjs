@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
 
 const repository = fileURLToPath(new URL('../', import.meta.url))
-const childScript = String.raw`
+const childScript = `
 import { pathToFileURL } from 'node:url'
 import { join } from 'node:path'
 const repo = process.env.YAOYAO_TEST_SOURCE
