@@ -24,8 +24,8 @@ test('旧界面入口和叠加主题从仓库与加载链路真正删除', () =>
 })
 test('引入 cc-haha 原生卡片按钮状态及空白页组件和完整主题文件', () => {
   for (const name of ['Button','Card','Badge','EmptyState']) {
-    assert.ok(existsSync(from('../src/components/ui/'+name+'.tsx')),name+' 原生组件缺失')
-    assert.ok(app.includes("from './components/ui/"+name+"'"),name+' 未实际接线')
+    assert.ok(existsSync(from(`../src/components/ui/${name}.tsx`)),`${name} 原生组件缺失`)
+    assert.ok(app.includes(`from './components/ui/${name}'`),`${name} 未实际接线`)
   }
   assert.ok(layout.includes('var(--color-surface-container-lowest)'))
   assert.ok(layout.includes('var(--shadow-composer)'))
@@ -36,8 +36,8 @@ test('引入 cc-haha 原生卡片按钮状态及空白页组件和完整主题�
 })
 test('源码六套主题通过单一 data-theme 选择器控制，不受旧主题层覆盖', () => {
   for (const name of ['white','paper','warm-classic','celadon','dark','ink-blue']) {
-    assert.ok(theme.includes('[data-theme="'+name+'"]'),name+' 主题缺失')
-    assert.ok(app.includes("'"+name+"'"),name+' 主题状态缺失')
+    assert.ok(theme.includes(`[data-theme="${name}"]`),`${name} 主题缺失`)
+    assert.ok(app.includes(`'${name}'`),`${name} 主题状态缺失`)
   }
   assert.match(app,/document\.documentElement\.dataset\.theme=themeVariant/)
   assert.doesNotMatch(app,/dataset\.ccTheme/)
@@ -46,10 +46,10 @@ test('源码六套主题通过单一 data-theme 选择器控制，不受旧主�
 })
 test('新布局和全部十个业务入口接入 333 通信层，取消固定 PR19 操作', () => {
   for (const id of ['dashboard','chat','agents','missions','files','models','integrations','github','history','settings']) {
-    assert.ok(app.includes("{id:'"+id+"'"),id+' 未接入导航')
+    assert.ok(app.includes(`{id:'${id}'`),`${id} 未接入导航`)
   }
   for (const api of ['sessions.list','sessions.ensureOpen','sessions.send','sessions.interrupt','agents.setMode','missions.jobs.runQueue','workspace.read','workspace.write','models.list','mcp.list','permissions.decide']) {
-    assert.ok(app.includes(api),'丢失调用 '+api)
+    assert.ok(app.includes(api),`丢失调用 ${api}`)
   }
   assert.ok(app.includes('id="sidebar-shell"'))
   assert.ok(app.includes('id="content-area"'))
