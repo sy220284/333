@@ -968,6 +968,38 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         return sendProjectTeamMessage(cwd, request)
       case 'agents.team.inbox':
         return readProjectTeamInbox(cwd, request.teamName, request.memberName)
+      case 'handoffs.list': {
+        const { listTeamHandoffs } = await import('../agentCenter/teamHandoffs.js')
+        return { handoffs: await listTeamHandoffs(cwd, options.dataDir) }
+      }
+      case 'handoffs.create': {
+        const { recordTeamHandoff, deliverTeamHandoff } =
+          await import('../agentCenter/teamHandoffs.js')
+        const handoff = await recordTeamHandoff(cwd, {
+          id: request.requestId, from: 'team-lead', teamName: request.teamName,
+          to: request.to, summary: request.summary, instruction: request.instruction,
+          inputRefs: request.inputRefs, ...(request.taskId ? { taskId: request.taskId } : {}),
+        }, options.dataDir)
+        return deliverTeamHandoff(cwd, handoff.id, current =>
+          sendProjectTeamMessage(cwd, {
+            teamName: current.teamName, to: current.to,
+            message: current.summary + '\n\n' + current.instruction +
+              '\n交接编号：' + current.id +
+              (current.inputRefs.length ? '\n输入成果：' + current.inputRefs.join('、') : ''),
+            messageId: current.id,
+          }), options.dataDir)
+      }
+      case 'handoffs.retry': {
+        const { deliverTeamHandoff } = await import('../agentCenter/teamHandoffs.js')
+        return deliverTeamHandoff(cwd, request.handoffId, current =>
+          sendProjectTeamMessage(cwd, {
+            teamName: current.teamName, to: current.to,
+            message: current.summary + '\n\n' + current.instruction +
+              '\n交接编号：' + current.id +
+              (current.inputRefs.length ? '\n输入成果：' + current.inputRefs.join('、') : ''),
+            messageId: current.id,
+          }), options.dataDir)
+      }
       case 'agents.setMode':
         setAgentMode(request.mode)
         return { mode: getActiveAgentMode() }
