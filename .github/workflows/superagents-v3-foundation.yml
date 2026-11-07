@@ -36,10 +36,10 @@ jobs:
         run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: \${{ env.TOOLCHAIN_NODE_VERSION }}
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: \${{ env.TOOLCHAIN_BUN_VERSION }}
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
       - name: 安装仓库冻结的构建依赖
         run: |
           node build/restore-dependencies.mjs
