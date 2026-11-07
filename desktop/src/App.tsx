@@ -45,7 +45,7 @@ type ProjectBudget={limitUsd:number|null;spentUsd:number;reservedUsd:number;avai
   uncertain:Array<{id:string;reservedUsd:number;startedAt:string}>}
 type SmartInspection={model:string;status:string;message:string;checkedOffline:boolean;contextWindow?:number|null;maxOutputTokens?:number|null;outputSource?:string;toolRoundTrip?:boolean|null;hasPricing?:boolean}
 type McpServer={name:string;scope:string;type:string;disabled:boolean;url?:string}
-type CapabilityItem={id:string;name:string;kind:'skill'|'workflow'|'plugin'|'mcp'|'command';source:string;scope:string;description:string;status:'available'|'configured'|'disabled';version?:string}
+type CapabilityItem={id:string;name:string;kind:'tool'|'skill'|'workflow'|'plugin'|'mcp'|'command';source:string;scope:string;description:string;status:'available'|'configured'|'disabled';version?:string}
 type ExperienceItem={id:string;key:string;title:string;scenario:string;principle:string;procedure:string[];applicability:string;invalidWhen:string;verification:string;evidenceRefs:string[];tags:string[];status:'candidate'|'approved'|'retired';revision:number;verifiedBy?:string}
 type SkillDraft={id:string;slug:string;description:string;instructions:string;state:'candidate'|'published';createdAt:string;publishedAt?:string}
 const NAV:{id:View;label:string;icon:LucideIcon}[]=[
@@ -1427,7 +1427,7 @@ export function App(){
               <Card radius="lg" surface="lowest" shadow="card" padding="lg">
                 <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-[var(--color-text-secondary)]">
                   <span>发现 {capabilityItems.length} 项能力</span>
-                  {(['skill','plugin','workflow','mcp','command'] as const).map(kind=><span key={kind} className="rounded-[var(--radius-sm)] bg-[var(--color-surface-container-low)] px-2 py-1">{kind} {capabilityItems.filter(item=>item.kind===kind).length}</span>)}
+                  {(['tool','skill','plugin','workflow','mcp','command'] as const).map(kind=><span key={kind} className="rounded-[var(--radius-sm)] bg-[var(--color-surface-container-low)] px-2 py-1">{kind} {capabilityItems.filter(item=>item.kind===kind).length}</span>)}
                 </div>
                 <div className="max-h-[450px] space-y-2 overflow-auto">
                   {capabilityItems.map(item=><div key={item.id} className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2.5">
