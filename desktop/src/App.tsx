@@ -614,7 +614,7 @@ export function App(){
       </div>
       <div className="sidebar-footer cc-sidebar-footer">
         <div className="connection-line"><span className={`connection-light ${connected?'online':'offline'}`}/><span>{connected?'本地后台已连接':'后台未连接'}</span></div>
-        <span className="muted tiny">本地运行 · 数据留在当前设备</span>
+        <span className="muted tiny">会话记录存于本机 · 模型请求按配置发送</span>
       </div>
     </aside>
     <div className="workspace-body">
@@ -657,7 +657,7 @@ export function App(){
               <p>以当前项目为上下文开始工作，任务与执行记录都保存在本机。</p>
             </div>
             <div className="cc-starter-surface">
-              <button type="button" className="cc-start-input" onClick={()=>void createSession()} disabled={Boolean(busy)}>
+              <button type="button" className="cc-start-input" aria-label="新建会话" onClick={()=>void createSession()} disabled={Boolean(busy)}>
                 <MessageSquare size={19}/><span>打开新会话，输入今天的任务…</span><span className="cc-start-input-action"><Plus size={17}/></span>
               </button>
               <div className="cc-starter-foot"><span><Folder size={13}/>{workspace.split(/[\\/]/).filter(Boolean).at(-1)||'请选择项目'}</span><span><Bot size={13}/>{mode==='super'?'Super Agents':'主子智能体'}</span><span><Cpu size={13}/>{models.find(m=>m.value===selectedModel)?.displayName||'默认模型'}</span></div>

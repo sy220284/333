@@ -80,7 +80,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     render(<App/>)
     await screen.findByText('本地后台已连接')
     expect(screen.getByRole('heading',{name:'今天，从哪里开始？'})).toBeInTheDocument()
-    expect(screen.getByRole('button',{name:/打开新会话/})).toBeInTheDocument()
+    expect(screen.getByRole('button',{name:'新建会话'})).toBeInTheDocument()
     await user.click(screen.getByRole('button',{name:/分析当前项目结构/}))
     expect(screen.getByRole('textbox',{name:'输入任务'})).toHaveValue('请分析当前项目的架构、主要模块与调用关系')
     await user.click(screen.getByRole('button',{name:'发送'}))
