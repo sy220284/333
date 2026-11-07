@@ -27,6 +27,8 @@ type JobStatus='queued'|'running'|'review'|'completed'|'failed'|'interrupted'|'c
 type MissionJob={id:string;title:string;instruction:string;status:JobStatus;attempt:number;summary?:string;sessionId?:string;history?:Array<{attempt:number;status:string;summary:string;finishedAt:string;sessionId?:string}>}
 type TeamMember={agentId:string;name:string;agentType?:string;model?:string;status:'running'|'idle'|'unknown'}
 type McpServer={name:string;scope:string;type:string;disabled:boolean;url?:string}
+type SmartRecord={sessionId:string;model:string;permissionMode:string;budgetUsd?:number;costUsd?:number;status:'running'|'completed'|'failed'|'interrupted';startedAt:string;finishedAt?:string}
+type SmartInspection={model:string;status:string;message:string;checkedOffline:boolean;contextWindow?:number|null;maxOutputTokens?:number|null;outputSource?:string;toolRoundTrip?:boolean|null;hasPricing?:boolean}
 const NAV:{id:View;label:string;icon:LucideIcon}[]=[
   {id:'dashboard',label:'工作台概览',icon:LayoutDashboard},
   {id:'chat',label:'AI 对话',icon:MessageSquare},
@@ -101,6 +103,14 @@ export function App(){
   const [visibleMessageCount,setVisibleMessageCount]=useState(120)
   const [followLatest,setFollowLatest]=useState(true)
   const [draft,setDraft]=useState('')
+  const [smartAdvanced,setSmartAdvanced]=useState(false)
+  const [smartBudget,setSmartBudget]=useState(()=>window.localStorage.getItem(PREF+'smart-budget')??'')
+  const [smartPolicy,setSmartPolicy]=useState<'default'|'acceptEdits'|'plan'|'dontAsk'>(()=>{
+    const saved=window.localStorage.getItem(PREF+'smart-policy')
+    return saved==='acceptEdits'||saved==='plan'||saved==='dontAsk'?saved:'default'
+  })
+  const [smartHistory,setSmartHistory]=useState<SmartRecord[]>([])
+  const [smartInspection,setSmartInspection]=useState<SmartInspection|null>(null)
   const [mode,setMode]=useState<'master'|'super'>('master')
   const [overview,setOverview]=useState<Item>({})
   const [selectedTeam,setSelectedTeam]=useState('')
@@ -164,6 +174,7 @@ export function App(){
     const current=()=>generation===refreshGeneration.current
     const queries=[
       api.call<{models:Model[]}>('models.list').then(data=>{if(current())setModels(data.models??[])}),
+      api.call<SmartRecord[]>('smart.history').then(data=>{if(current())setSmartHistory(data??[])}),
       api.call<Item[]>('sessions.list',{limit:50,offset:0})
         .then(data=>{if(current())setSessions(Array.isArray(data)?data:[])}),
       api.call<Item>('agents.overview').then(data=>{
@@ -184,7 +195,7 @@ export function App(){
     // A hung external provider must never hold the global action lock.
     // Surface individual failures immediately instead of waiting for the
     // slowest service before showing the user a reason.
-    const names=['模型列表','历史会话','智能体概览','长期任务','模型凭证','MCP服务']
+    const names=['模型列表','智能执行历史','历史会话','智能体概览','长期任务','模型凭证','MCP服务']
     const failed:string[]=[]
     queries.forEach((query,index)=>{
       void query.catch(error=>{
@@ -221,9 +232,12 @@ export function App(){
       if(event.event==='desktop.disconnected'){
         setConnected(false);setError(String(event.error||'桌面后台连接已断开'));return
       }
-      const globalInbox=['permission.request','permission.resolved','host.request','host.resolved']
+      const globalInbox=['permission.request','permission.resolved','host.request','host.resolved','smart.finished']
       if(event.sessionId&&event.sessionId!==sessionRef.current&&!globalInbox.includes(event.event))return
-      if(event.event==='session.state'){
+      if(event.event==='smart.finished'){
+        void api.call<SmartRecord[]>('smart.history').then(setSmartHistory).catch(e=>setError('读取执行记录失败：'+presentError(e)))
+        if(event.sessionId===sessionRef.current)setActivity(old=>['智能执行已'+(event.status==='completed'?'完成':event.status==='interrupted'?'中断':'失败'),...old].slice(0,20))
+      }else if(event.event==='session.state'){
         const state=obj(event.state)
         setSessionPhase(String(state.phase??state.status??'idle'))
       }else if(event.event==='session.error'||event.event==='task.persistence.error'){
@@ -327,6 +341,8 @@ export function App(){
   },[isDark,themeVariant])
   useEffect(()=>{document.documentElement.dataset.motion=animate?'on':'off';window.localStorage.setItem(`${PREF}motion`,String(animate))},[animate])
   useEffect(()=>{window.localStorage.setItem(`${PREF}inspector`,String(rightOpen))},[rightOpen])
+  useEffect(()=>{window.localStorage.setItem(PREF+'smart-budget',smartBudget)},[smartBudget])
+  useEffect(()=>{window.localStorage.setItem(PREF+'smart-policy',smartPolicy)},[smartPolicy])
   useEffect(()=>{if(paletteOpen)paletteInputRef.current?.focus()},[paletteOpen])
   useEffect(()=>{
     const onKey=(event:KeyboardEvent)=>{
@@ -341,6 +357,27 @@ export function App(){
   async function operation(name:string,action:()=>Promise<unknown>){
     setBusy(name)
     try{await action()}catch(error){setError(presentError(error))}finally{setBusy('')}
+  }
+  async function executeSmart(){
+    const text=draft.trim()
+    if(!text||busy||!connected)return
+    await operation('智能执行',async()=>{
+      const maxBudgetUsd=smartBudget.trim()?Number(smartBudget):undefined
+      if(maxBudgetUsd!==undefined&&(!Number.isFinite(maxBudgetUsd)||maxBudgetUsd<=0||maxBudgetUsd>100000))throw new Error('费用上限请输入大于 0 且不超过 100000 的美元金额')
+      const response=await invoke<{sessionId:string;turnId:string;model:string}>('smart.execute',{
+        prompt:text,
+        ...(selectedModel?{model:selectedModel}:{}),
+        ...(maxBudgetUsd===undefined?{}:{maxBudgetUsd}),
+        ...(smartPolicy==='default'?{}:{permissionMode:smartPolicy}),
+      })
+      setSessionId(response.sessionId);sessionRef.current=response.sessionId
+      setSessionPhase('running');setHistoryOnly(false);setTasks([])
+      setMessages([{id:'local-'+Date.now(),kind:'user',text,time:Date.now()}])
+      setVisibleMessageCount(120);setFollowLatest(true);setDraft('')
+      setPermissionMode(smartPolicy);setSmartInspection(null);setView('chat')
+      void api.call<SmartRecord[]>('smart.history').then(setSmartHistory).catch(e=>setError('读取执行记录失败：'+presentError(e)))
+      void refresh()
+    })
   }
   async function createSession(){
     await operation('新建会话',async()=>{
@@ -367,13 +404,7 @@ export function App(){
     if(!text||busy)return
     setFollowLatest(true)
     if(!sessionId){
-      await operation('创建会话',async()=>{
-        const response=await invoke<{sessionId:string}>('sessions.open',selectedModel?{model:selectedModel}:{})
-        setSessionId(response.sessionId);sessionRef.current=response.sessionId;setSessionPhase('idle');setHistoryOnly(false);setMessages([]);setVisibleMessageCount(120);setFollowLatest(true)
-        await invoke('sessions.send',{sessionId:response.sessionId,message:text})
-        setMessages([{id:`local-${Date.now()}`,kind:'user',text,time:Date.now()}])
-        setDraft('');setView('chat')
-      })
+      await executeSmart()
     }else{
       await operation('发送消息',async()=>{
         if(historyOnly){
@@ -396,7 +427,7 @@ export function App(){
       setWorkspace(data.workspace);setFolder(data.workspace);setSessionId('');sessionRef.current='';setHistoryOnly(false);setMessages([])
       setPermissions([]);setHostRequests([]);setTasks([]);setFiles([]);setFileTotal(0)
       setSessions([]);setMissions([]);setSelectedMission('');setMissionJobs([]);setOverview({});setTeamMembers([])
-      setSessionPhase('idle');setActivity([]);setDraft('');setMissionQueueActive(false)
+      setSessionPhase('idle');setActivity([]);setDraft('');setSmartHistory([]);setSmartInspection(null);setMissionQueueActive(false)
       setCurrentFile('');setGitStatus('');setGitDiff('')
       setConnected(Boolean(data.connected))
       if(data.error)setError(data.error)
