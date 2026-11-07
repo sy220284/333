@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createHeadlessConversationSession } from '../src/services/conversation/headlessSession.js'
+import { createSessionRuntime317 } from '../src/entrypoints/sdk/sessionRuntime317.js'
 import { createDesktopGateway } from '../src/services/desktop/gateway.js'
 import { previewWorktreeIntegration, integrateWorktree } from '../src/services/agentCenter/worktreeIntegration.js'
 import { createProjectBudget } from '../src/services/agentCenter/projectBudget.js'
@@ -237,6 +238,55 @@ test('SDK task projector preserves terminal status and recovery journal persists
     } as SDKMessage, task)
     expect(done?.status).toBe('completed')
   } finally { await rm(cwd, { recursive: true, force: true }) }
+})
+
+test('SDK rejects conflicting permission providers and identical model fallback before spawn', () => {
+  expect(() => createSessionRuntime317({
+    model: 'model-example', fallbackModel: 'model-example',
+  })).toThrow('Fallback model cannot be the same as the main model')
+  expect(() => createSessionRuntime317({
+    model: 'model-example', permissionPromptToolName: 'stdio',
+    canUseTool: async () => ({ behavior: 'deny', message: 'Test rejection' }),
+  })).toThrow('canUseTool callback cannot be used with permissionPromptToolName')
+})
+
+test('SDK preset tools and hook events reach the spawned CLI process', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'sdk-startup-args-'))
+  const script = join(cwd, 'sdk-args.cjs')
+  const argsPath = join(cwd, 'args.json')
+  const fixtureScript = [
+    "const { writeFileSync } = require('node:fs')",
+    "const { createInterface } = require('node:readline')",
+    "writeFileSync(process.env.SDK_TEST_ARGS_PATH, JSON.stringify(process.argv.slice(2)))",
+    "createInterface({ input: process.stdin }).on('line', line => {",
+    "  const frame = JSON.parse(line)",
+    "  if (frame.type === 'control_request') {",
+    "    process.stdout.write(JSON.stringify({ type: 'control_response', response: {",
+    "      subtype: 'success', request_id: frame.request_id, response: {}",
+    "    } }) + '\\n')",
+    "  }",
+    "})",
+  ].join('\\n')
+  await writeFile(script, fixtureScript)
+  const session = createSessionRuntime317({
+    model: 'model-example',
+    cwd,
+    pathToClaudeCodeExecutable: script,
+    env: { SDK_TEST_ARGS_PATH: argsPath },
+    tools: { type: 'preset', preset: 'claude_code' },
+    includeHookEvents: true,
+  })
+  try {
+    await session.initialization
+    const args = JSON.parse(await readFile(argsPath, 'utf8')) as string[]
+    expect(args).toContain('--tools=default')
+    expect(args).toContain('--include-hook-events')
+    expect(args).toContain('--model')
+    expect(args).toContain('model-example')
+  } finally {
+    await session.closeAndWait()
+    await rm(cwd, { recursive: true, force: true })
+  }
 })
 
 test('SDK 2.1.317 task_updated and background metadata survive desktop restart', async () => {

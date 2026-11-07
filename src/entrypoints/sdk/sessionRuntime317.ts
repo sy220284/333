@@ -77,6 +77,15 @@ function startSession(
   resume?: string,
   external?: ExternalSession,
 ) {
+  const queryOptions: InternalOptions = options
+  // Match the official SDK contract before spawning the child: conflicting
+  // permission sources and identical primary/fallback models are errors.
+  if (options.canUseTool && queryOptions.permissionPromptToolName) {
+    throw new Error('canUseTool callback cannot be used with permissionPromptToolName. Please use one or the other.')
+  }
+  if (queryOptions.fallbackModel && queryOptions.model && queryOptions.fallbackModel === queryOptions.model) {
+    throw new Error('Fallback model cannot be the same as the main model. Please specify a different model for fallbackModel option.')
+  }
   const abortSignal = options.abortController?.signal
   if (abortSignal?.aborted) {
     throw abortSignal.reason instanceof Error ? abortSignal.reason : new Error('SDK session aborted before start')
@@ -91,7 +100,6 @@ function startSession(
     '--print', '--verbose', '--input-format', 'stream-json',
     '--output-format', 'stream-json',
   ]
-  const queryOptions: InternalOptions = options
   if (external) args.push('--session-mirror')
   if (options.model) args.push('--model', options.model)
   if (resume) args.push('--resume', resume)
@@ -121,9 +129,11 @@ function startSession(
     '--debug': queryOptions.debug,
     '--enable-auth-status': queryOptions.enableAuthStatus,
     '--forward-subagent-text': queryOptions.forwardSubagentText,
+    '--include-hook-events': queryOptions.includeHookEvents,
   }
   for (const [flag, enabled] of Object.entries(switches)) if (enabled) args.push(flag)
   if (Array.isArray(queryOptions.tools)) args.push('--tools', queryOptions.tools.join(','))
+  else if (queryOptions.tools) args.push('--tools=default')
   for (const dir of queryOptions.additionalDirectories ?? []) args.push('--add-dir', dir)
   for (const plugin of queryOptions.plugins ?? []) args.push('--plugin-dir', plugin.path)
   const sdkServers = new Map<string, {
