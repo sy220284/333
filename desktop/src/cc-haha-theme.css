@@ -159,6 +159,23 @@ body{background:var(--bg);color:var(--text);font-size:13px}
 .cc-start-input>span:nth-child(2){flex:1}
 .cc-start-input-action{display:grid;place-items:center;width:27px;height:27px;background:var(--cc-primary);border-radius:8px;color:var(--cc-on-primary)}
 .cc-start-input:hover .cc-start-input-action{background:var(--accent);color:#fff}
+/* 智能执行：一个任务输入入口，按需展开模型/预算/权限。 */
+.cc-smart-input{display:block;width:100%;min-height:126px;resize:vertical;background:transparent;border:0;outline:0;padding:15px;color:var(--text);font-family:inherit;font-size:14px;line-height:1.75}
+.cc-smart-input::placeholder{color:var(--muted)}
+.cc-starter-surface:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 11%,transparent)}
+.cc-smart-actions{display:flex;align-items:center;gap:12px;padding:9px 10px 13px}
+.cc-smart-actions .primary-button{flex-shrink:0;min-height:39px}
+.cc-smart-more{display:inline-flex;align-items:center;gap:6px;background:transparent;border:0;color:var(--muted);padding:7px 4px;font:inherit;font-size:11px;cursor:pointer}
+.cc-smart-more:hover{color:var(--accent)}
+.cc-smart-tip{margin-right:auto;color:var(--subtle);font-size:11px}
+.cc-smart-options{padding:14px 10px;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.cc-smart-options label{display:grid;gap:7px;color:var(--muted);font-size:11px;min-width:0}
+.cc-smart-options select,.cc-smart-options input{width:100%;min-width:0;border:1px solid var(--line);border-radius:9px;background:var(--surface2);color:var(--text);padding:9px;font:inherit;font-size:12px}
+.cc-smart-options p{grid-column:1/-1;margin:0;color:var(--subtle);font-size:10px;line-height:1.65}
+.cc-smart-inline{display:flex;align-items:center;gap:7px;padding:9px 13px;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:11px}
+.cc-smart-inspection{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.cc-smart-inspection p{width:100%;margin:0;color:var(--muted)}
+@media(max-width:750px){.cc-smart-options{grid-template-columns:1fr}.cc-smart-tip{display:none}}
 .cc-starter-foot{display:flex;align-items:center;gap:13px;border-top:1px solid var(--line);padding:11px 12px 2px;color:var(--subtle);font-size:10px;flex-wrap:wrap}
 .cc-starter-foot span{display:inline-flex;align-items:center;gap:5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cc-start-quick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;width:min(100%,720px);margin:0 auto 28px}
